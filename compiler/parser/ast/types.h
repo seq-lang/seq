@@ -38,6 +38,16 @@ struct Unification {
   void undo();
 };
 
+struct Generic {
+  std::string name;
+  int id;
+  TypePtr type;
+  // -1 is for tuple "generics"
+  Generic() : name(""), id(-1), type(nullptr) {}
+  Generic(const std::string name, TypePtr type, int id)
+      : name(name), id(id), type(type) {}
+};
+
 struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
 public:
   /// The following procedures implement the quintessential parts of
@@ -78,13 +88,17 @@ public:
   virtual std::shared_ptr<LinkType> getUnbound() { return nullptr; }
   virtual std::shared_ptr<StaticType> getStatic() { return nullptr; }
   virtual std::shared_ptr<ImportType> getImport() { return nullptr; }
+  // virtual bool isStatic() { return false; }
 };
 
 struct StaticType : public Type {
-  // std::unordered_map<std::string, TypePtr> unresolved;
-  // std::unique_ptr<Expr> expr;
-  int value;
+  std::vector<Generic> explicits;
+  std::unique_ptr<Expr> expr;
+  std::unique_ptr<int> value;
   StaticType(int v);
+  StaticType(const std::vector<Generic> &ex, std::unique_ptr<Expr> &&expr);
+  StaticType(const std::vector<Generic> &ex, std::unique_ptr<Expr> &&expr,
+             std::unique_ptr<int> &&v);
 
 public:
   virtual int unify(TypePtr typ, Unification &us) override;
@@ -93,18 +107,43 @@ public:
                       std::unordered_map<int, TypePtr> &cache) override;
 
 public:
-  // int evaluate();
-  bool hasUnbound() const override { return false; }
-  bool canRealize() const override { return true; }
+  bool hasUnbound() const override;
+  bool canRealize() const override;
   std::string toString(bool reduced = false) const override;
-  std::string realizeString() const override {
-    return fmt::format("{}", value);
-  }
+  std::string realizeString() const override;
   std::shared_ptr<StaticType> getStatic() override {
     return std::static_pointer_cast<StaticType>(shared_from_this());
   }
-  int getValue() const { return value; }
+  // int evaluate();
+  int getValue() const;
+  void evaluate();
+  // virtual bool isStatic() { return true; }
 };
+typedef std::shared_ptr<StaticType> StaticTypePtr;
+
+// struct StaticExprType : public Type {
+//   std::unordered_map<std::string, Generic> explicits;
+//   std::shared_ptr<Expr> expr;
+//   StaticExprType(const std::vector<Generic> &ex, std::shared_ptr<Expr> expr);
+
+// public:
+//   virtual int unify(TypePtr typ, Unification &us) override;
+//   TypePtr generalize(int level) override;
+//   TypePtr instantiate(int level, int &unboundCount,
+//                       std::unordered_map<int, TypePtr> &cache) override;
+
+// public:
+//   // int evaluate();
+//   bool hasUnbound() const override { return false; }
+//   bool canRealize() const override { return true; }
+//   std::string toString(bool reduced = false) const override;
+//   std::string realizeString() const override { return fmt::format("{}", getValue());
+//   } std::shared_ptr<StaticType> getStatic() override {
+//     return std::static_pointer_cast<StaticType>(shared_from_this());
+//   }
+//   int getValue() const;
+//   virtual bool isStatic() { return true; }
+// };
 typedef std::shared_ptr<StaticType> StaticTypePtr;
 
 struct ImportType : public Type {
@@ -164,8 +203,9 @@ struct LinkType : public Type {
   /// is static variable?
   bool isStatic;
 
-  LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr);
-  LinkType(TypePtr type) : kind(Link), id(0), level(0), type(type) {}
+  LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
+           bool isStatic = false);
+  LinkType(TypePtr type) : kind(Link), id(0), level(0), type(type), isStatic(false) {}
   virtual ~LinkType() {}
 
 public:
@@ -210,17 +250,6 @@ private:
  */
 typedef std::shared_ptr<ClassType> ClassTypePtr;
 struct ClassType : public Type {
-  struct Generic {
-    std::string name;
-    int id;
-    TypePtr type;
-    bool isStatic;
-    // -1 is for tuple "generics"
-    Generic(const std::string name, TypePtr type, int id, bool st = false)
-        : name(name), id(id), type(type), isStatic(st) {}
-
-    bool isAutomatic() const { return name == ""; }
-  };
   std::vector<Generic> explicits;
   ClassTypePtr parent;
 
@@ -233,8 +262,8 @@ public:
   std::vector<TypePtr> args;
 
   ClassType(ClassTypePtr c)
-      : explicits(c->explicits), parent(c->parent), name(c->name),
-        record(c->record), args(c->args) {}
+      : explicits(c->explicits), parent(c->parent), name(c->name), record(c->record),
+        args(c->args) {}
   ClassType(const std::string &name, bool isRecord = false,
             const std::vector<TypePtr> &args = std::vector<TypePtr>(),
             const std::vector<Generic> &explicits = std::vector<Generic>(),

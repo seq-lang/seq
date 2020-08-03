@@ -44,23 +44,6 @@ namespace ast {
 
 using namespace types;
 
-class StaticVisitor : public WalkVisitor {
-  std::shared_ptr<TypeContext> ctx;
-
-public:
-  std::unordered_map<string, TypePtr> statics;
-  int value;
-
-  using WalkVisitor::visit;
-  StaticVisitor(std::shared_ptr<TypeContext> ctx);
-  int transform(const Expr *e);
-  void visit(const IdExpr *) override;
-  void visit(const IntExpr *) override;
-  void visit(const IfExpr *) override;
-  void visit(const UnaryExpr *) override;
-  void visit(const BinaryExpr *) override;
-};
-
 TransformVisitor::TransformVisitor(shared_ptr<TypeContext> ctx,
                                    shared_ptr<vector<StmtPtr>> stmts)
     : ctx(ctx) {
@@ -201,8 +184,9 @@ void TransformVisitor::visit(const IdExpr *expr) {
   if (val->getClass() && !val->getClass()->getStatic())
     resultExpr->markType();
   if (ctx->isTypeChecking()) {
-    if (val->getClass() && val->getClass()->getStatic()) {
-      resultExpr = transform(N<IntExpr>(val->getType()->getStatic()->getValue()));
+    if (val->getStatic()) {
+      /// only happens in a "normal" code; type parameters are handled via StaticWalker
+      resultExpr = transform(N<IntExpr>(val->getStatic()->getValue()));
     } else {
       auto typ = val->getImport()
                      ? make_shared<types::ImportType>(val->getImport()->getFile())
@@ -406,9 +390,9 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
 void TransformVisitor::visit(const PipeExpr *expr) {
   auto extractType = [&](TypePtr t) {
     auto c = t->getClass();
-    if (c && c->name == "generator")
+    if (c && c->name == "generator") {
       return c->explicits[0].type;
-    else
+    } else
       return t;
   };
   auto updateType = [&](TypePtr t, int inTypePos, ExprPtr &fe) {
@@ -416,6 +400,8 @@ void TransformVisitor::visit(const PipeExpr *expr) {
     assert(f && f->getCallable());
     // exactly one empty slot!
     forceUnify(t, f->args[inTypePos + 1]);
+    LOG("unified {} / {} ~ {} {}", t->toString(), f->toString(), f->canRealize(),
+        f->getFunc());
     if (f->canRealize() && f->getFunc()) {
       auto r = realizeFunc(f->getFunc());
       forceUnify(f, r.type);
@@ -451,6 +437,8 @@ void TransformVisitor::visit(const PipeExpr *expr) {
           {l.op, transform(N<CallExpr>(transform(l.expr), N<EllipsisExpr>()))});
       inTypePos = 0;
     }
+    LOG("-- parsing {}; inType = {}; pos = {}", l.expr->toString(), inType->toString(),
+        inTypePos);
     if (ctx->isTypeChecking()) {
       inType = updateType(inType, inTypePos, items.back().expr);
       if (i < expr->items.size() - 1)
@@ -479,18 +467,36 @@ void TransformVisitor::visit(const IndexExpr *expr) {
   }
 
   vector<TypePtr> generics;
-  auto parseGeneric = [&](const ExprPtr &i) {
-    auto ti = transform(i, true);
-    if (ti->isType())
-      generics.push_back(ti->getType());
-    else
-      try {
-        StaticVisitor sv(ctx);
-        i->accept(sv);
-        generics.push_back(make_shared<StaticType>(sv.value));
-      } catch (exc::ParserException &) {
-        error(ti, "expected a type or a static expression");
+  auto parseStatic = [&](const ExprPtr &i) {
+    StaticVisitor sv(ctx);
+    auto t = sv.transform(i.get());
+    if (t.first) {
+      generics.push_back(make_shared<StaticType>(t.second));
+    } else {
+      /// special case: generic static expressions
+      vector<types::Generic> v;
+      for (auto &i : sv.captures)
+        v.push_back(i.second);
+      if (auto ie = dynamic_cast<IdExpr *>(i.get())) {
+        assert(v.size() == 1);
+        generics.push_back(ctx->instantiate(getSrcInfo(), v[0].type));
+      } else {
+        // this is compount static expressions
+        generics.push_back(make_shared<StaticType>(v, i->clone()));
       }
+    }
+  };
+  auto parseGeneric = [&](const ExprPtr &i) {
+    try { // TODO: handle this better
+      parseStatic(i);
+    } catch (exc::ParserException &e) {
+      LOG9("[index] failback, {}", e.what());
+      auto ti = transform(i, true);
+      if (ti->isType())
+        generics.push_back(ti->getType());
+      else
+        error(i, "expected a type or a static expression");
+    }
   };
 
   // Type or function realization (e.g. dict[type1, type2])
@@ -504,6 +510,8 @@ void TransformVisitor::visit(const IndexExpr *expr) {
     if (g->explicits.size() != generics.size())
       error("expected {} generics, got {}", g->explicits.size(), generics.size());
     for (int i = 0; i < generics.size(); i++)
+      /// Note: at this point, only single-variable static var expression (e.g. N) is
+      /// allowed, so unify will work as expected.
       forceUnify(g->explicits[i].type, generics[i]);
     auto t = e->getType();
     bool isType = e->isType();
@@ -584,9 +592,10 @@ void TransformVisitor::visit(const CallExpr *expr) {
           args.insert(args.begin(), {"", move(dotlhs)});
         e = N<IdExpr>(m->canonicalName);
         e->setType(ctx->instantiate(getSrcInfo(), m, c));
-      } else
+      } else {
         error("cannot find method '{}' in {} with arguments {}", d->member,
               c->toString(), v2s(targs));
+      }
     }
   }
   if (!e)
@@ -652,9 +661,9 @@ void TransformVisitor::visit(const CallExpr *expr) {
     auto t = make_shared<PartialType>(c, pending);
     generateVariardicStub("partial", pending.size());
     forceUnify(expr, t);
-    if (t->canRealize() && c->getFunc()) {
+    if (c->canRealize() && c->getFunc()) {
       auto r = realizeFunc(c->getFunc());
-      forceUnify(t, r.type);
+      forceUnify(c, r.type);
       fixExprName(e, r.fullName);
     }
     resultExpr = N<CallExpr>(move(e), move(reorderedArgs));
@@ -866,27 +875,53 @@ void CaptureVisitor::visit(const IdExpr *expr) {
     captures.insert(expr->value);
 }
 
-StaticVisitor::StaticVisitor(std::shared_ptr<TypeContext> ctx) : ctx(ctx), value(0) {}
+StaticVisitor::StaticVisitor(std::shared_ptr<TypeContext> ctx,
+                             const std::unordered_map<std::string, types::Generic> *m)
+    : ctx(ctx), map(m), evaluated(false), value(0) {}
 
-int StaticVisitor::transform(const Expr *e) {
-  StaticVisitor v(ctx);
+pair<bool, int> StaticVisitor::transform(const Expr *e) {
+  StaticVisitor v(ctx, map);
   e->accept(v);
-  for (auto &i : v.statics)
-    statics[i.first] = i.second;
-  return v.value;
+  for (auto &i : v.captures)
+    captures.insert({i.first, i.second});
+  return {v.evaluated, v.evaluated ? v.value : -1};
 }
 
 void StaticVisitor::visit(const IdExpr *expr) {
-  auto val = ctx->find(expr->value);
-  if (!val || !val->getClass() || !val->getClass()->getStatic())
-    error(expr->getSrcInfo(), "identifier '{}' is not a static expression",
-          expr->value);
-  auto t = dynamic_pointer_cast<StaticType>(val->getClass()->getType());
-  assert(t);
-  if (!t->canRealize())
-    statics[expr->value] = t;
-  else
-    value = t->getValue();
+  types::TypePtr t = nullptr;
+  if (ctx) {
+    auto val = ctx->find(expr->value);
+    if (!val)
+      error(expr->getSrcInfo(), "identifier '{}' not found", expr->value);
+    if (auto s = val->getStatic()) {
+      value = s->getValue(); // overwritten if not yet realized below
+      if (s->getType()) {
+        t = s->getType()->follow();
+      } else {
+        evaluated = true;
+      }
+    } else
+      error(expr->getSrcInfo(), "identifier '{}' is not a static expression",
+            expr->value);
+  } else {
+    assert(map);
+    auto val = map->find(expr->value);
+    if (val == map->end())
+      error(expr->getSrcInfo(), "identifier '{}' not found", expr->value);
+    t = val->second.type->follow();
+  }
+  if (!evaluated) {
+    if (t->getLink()) {
+      evaluated = false;
+      captures[expr->value] = {expr->value, t, t->getLink()->id};
+    } else if (auto ts = t->getStatic()) {
+      evaluated = t->canRealize();
+      assert(evaluated); // TODO: not sure if this is OK
+      value = ts->getValue();
+    } else {
+      evaluated = true; // value set above
+    }
+  }
 }
 
 void StaticVisitor::visit(const IntExpr *expr) {
@@ -894,57 +929,68 @@ void StaticVisitor::visit(const IntExpr *expr) {
     error(expr->getSrcInfo(), "not a static expression");
   try {
     value = std::stoull(expr->value, nullptr, 0);
+    evaluated = true;
   } catch (std::out_of_range &) {
     error(expr->getSrcInfo(), "integer {} out of range", expr->value);
   }
 }
 
 void StaticVisitor::visit(const UnaryExpr *expr) {
-  value = transform(expr->expr.get());
-  if (expr->op == "-")
-    value = -value;
-  else if (expr->op == "!")
-    value = !bool(value);
-  else
-    error(expr->getSrcInfo(), "not a static unary expression");
+  std::tie(evaluated, value) = transform(expr->expr.get());
+  if (evaluated) {
+    if (expr->op == "-")
+      value = -value;
+    else if (expr->op == "!")
+      value = !bool(value);
+    else
+      error(expr->getSrcInfo(), "not a static unary expression");
+  }
 }
 
 void StaticVisitor::visit(const IfExpr *expr) {
-  if (transform(expr->cond.get()))
-    value = transform(expr->eif.get());
-  else
-    value = transform(expr->eelse.get());
+  std::tie(evaluated, value) = transform(expr->cond.get());
+  // Note: both expressions must be evaluated at this time in order to capture all
+  //       unrealized variables (i.e. short-circuiting is not possible)
+  auto i = transform(expr->eif.get());
+  auto e = transform(expr->eelse.get());
+  if (evaluated)
+    std::tie(evaluated, value) = value ? i : e;
 }
 
 void StaticVisitor::visit(const BinaryExpr *expr) {
-  int lhs = transform(expr->lexpr.get());
-  int rhs = transform(expr->rexpr.get());
+  std::tie(evaluated, value) = transform(expr->lexpr.get());
+  bool evaluated2;
+  int value2;
+  std::tie(evaluated2, value2) = transform(expr->rexpr.get());
+  evaluated &= evaluated2;
+  if (!evaluated)
+    return;
   if (expr->op == "<")
-    value = lhs < rhs;
+    value = value < value2;
   else if (expr->op == "<=")
-    value = lhs <= rhs;
+    value = value <= value2;
   else if (expr->op == ">")
-    value = lhs > rhs;
+    value = value > value2;
   else if (expr->op == ">=")
-    value = lhs >= rhs;
+    value = value >= value2;
   else if (expr->op == "==")
-    value = lhs == rhs;
+    value = value == value2;
   else if (expr->op == "!=")
-    value = lhs != rhs;
+    value = value != value2;
   else if (expr->op == "&&")
-    value = lhs && rhs;
+    value = value && value2;
   else if (expr->op == "||")
-    value = lhs || rhs;
+    value = value || value2;
   else if (expr->op == "+")
-    value = lhs + rhs;
+    value = value + value2;
   else if (expr->op == "-")
-    value = lhs - rhs;
+    value = value - value2;
   else if (expr->op == "*")
-    value = lhs * rhs;
+    value = value * value2;
   else if (expr->op == "//")
-    value = lhs / rhs;
+    value = value / value2;
   else if (expr->op == "%")
-    value = lhs % rhs;
+    value = value % value2;
   else
     error(expr->getSrcInfo(), "not a static binary expression");
 }

@@ -164,7 +164,7 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
   vector<int> statics;
   for (auto &m : t->explicits)
     if (auto s = m.type->getStatic())
-      statics.push_back(s->value);
+      statics.push_back(s->getValue());
     else
       types.push_back(realizeType(m.type->getClass()));
   auto name = chop(t->name);

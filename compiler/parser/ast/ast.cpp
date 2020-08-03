@@ -15,13 +15,11 @@ namespace seq {
 namespace ast {
 
 string Expr::wrap(const string &s) const {
-  return format("({}{})", s,
-                _type ? format(" :type {}", _type->toString()) : "");
+  return format("({}{})", s, _type ? format(" :type {}", _type->toString()) : "");
 }
 
 Expr::Expr() : _type(nullptr), _isType(false) {}
-Expr::Expr(const Expr &e)
-    : seq::SrcObject(e), _type(e._type), _isType(e._isType) {}
+Expr::Expr(const Expr &e) : seq::SrcObject(e), _type(e._type), _isType(e._isType) {}
 
 NoneExpr::NoneExpr() : Expr() {}
 NoneExpr::NoneExpr(const NoneExpr &e) : Expr(e) {}
@@ -29,33 +27,24 @@ string NoneExpr::toString() const { return wrap("#none"); }
 
 BoolExpr::BoolExpr(bool v) : Expr(), value(v) {}
 BoolExpr::BoolExpr(const BoolExpr &e) : Expr(e), value(e.value) {}
-string BoolExpr::toString() const {
-  return wrap(format("#bool {}", int(value)));
-}
+string BoolExpr::toString() const { return wrap(format("#bool {}", int(value))); }
 
 IntExpr::IntExpr(int v) : Expr(), value(std::to_string(v)), suffix("") {}
-IntExpr::IntExpr(const IntExpr &e)
-    : Expr(e), value(e.value), suffix(e.suffix) {}
-IntExpr::IntExpr(const string &v, const string &s)
-    : Expr(), value(v), suffix(s) {}
+IntExpr::IntExpr(const IntExpr &e) : Expr(e), value(e.value), suffix(e.suffix) {}
+IntExpr::IntExpr(const string &v, const string &s) : Expr(), value(v), suffix(s) {}
 string IntExpr::toString() const {
-  return wrap(
-      format("#int {}{}", value, suffix == "" ? "" : format(" {}", suffix)));
+  return wrap(format("#int {}{}", value, suffix == "" ? "" : format(" {}", suffix)));
 }
 
 FloatExpr::FloatExpr(double v, const string &s) : Expr(), value(v), suffix(s) {}
-FloatExpr::FloatExpr(const FloatExpr &e)
-    : Expr(e), value(e.value), suffix(e.suffix) {}
+FloatExpr::FloatExpr(const FloatExpr &e) : Expr(e), value(e.value), suffix(e.suffix) {}
 string FloatExpr::toString() const {
-  return wrap(
-      format("#float {}{}", value, suffix == "" ? "" : format(" {}", suffix)));
+  return wrap(format("#float {}{}", value, suffix == "" ? "" : format(" {}", suffix)));
 }
 
 StringExpr::StringExpr(const string &v) : Expr(), value(v) {}
 StringExpr::StringExpr(const StringExpr &e) : Expr(e), value(e.value) {}
-string StringExpr::toString() const {
-  return wrap(format("#str '{}'", escape(value)));
-}
+string StringExpr::toString() const { return wrap(format("#str '{}'", escape(value))); }
 
 FStringExpr::FStringExpr(const string &v) : Expr(), value(v) {}
 FStringExpr::FStringExpr(const FStringExpr &e) : Expr(e), value(e.value) {}
@@ -65,17 +54,12 @@ string FStringExpr::toString() const {
 
 KmerExpr::KmerExpr(const string &v) : Expr(), value(v) {}
 KmerExpr::KmerExpr(const KmerExpr &e) : Expr(e), value(e.value) {}
-string KmerExpr::toString() const {
-  return wrap(format("#kmer '{}'", escape(value)));
-}
+string KmerExpr::toString() const { return wrap(format("#kmer '{}'", escape(value))); }
 
-SeqExpr::SeqExpr(const string &v, const string &p)
-    : Expr(), prefix(p), value(v) {}
-SeqExpr::SeqExpr(const SeqExpr &e)
-    : Expr(e), prefix(e.prefix), value(e.value) {}
+SeqExpr::SeqExpr(const string &v, const string &p) : Expr(), prefix(p), value(v) {}
+SeqExpr::SeqExpr(const SeqExpr &e) : Expr(e), prefix(e.prefix), value(e.value) {}
 string SeqExpr::toString() const {
-  return wrap(
-      format("#seq '{}'{}", value, prefix == "" ? "" : format(" {}", prefix)));
+  return wrap(format("#seq '{}'{}", value, prefix == "" ? "" : format(" {}", prefix)));
 }
 
 IdExpr::IdExpr(const string &v) : Expr(), value(v) {}
@@ -84,15 +68,11 @@ string IdExpr::toString() const { return wrap(format("#id {}", value)); }
 
 UnpackExpr::UnpackExpr(ExprPtr v) : Expr(), what(move(v)) {}
 UnpackExpr::UnpackExpr(const UnpackExpr &e) : Expr(e), what(CL(e.what)) {}
-string UnpackExpr::toString() const {
-  return wrap(format("#unpack {}", *what));
-}
+string UnpackExpr::toString() const { return wrap(format("#unpack {}", *what)); }
 
 TupleExpr::TupleExpr(vector<ExprPtr> &&i) : Expr(), items(move(i)) {}
 TupleExpr::TupleExpr(const TupleExpr &e) : Expr(e), items(CL(e.items)) {}
-string TupleExpr::toString() const {
-  return wrap(format("#tuple {}", combine(items)));
-}
+string TupleExpr::toString() const { return wrap(format("#tuple {}", combine(items))); }
 
 ListExpr::ListExpr(vector<ExprPtr> &&i) : Expr(), items(move(i)) {}
 ListExpr::ListExpr(const ListExpr &e) : Expr(e), items(CL(e.items)) {}
@@ -168,22 +148,17 @@ string IfExpr::toString() const {
   return wrap(format("#if {} {} {}", *cond, *eif, *eelse));
 }
 
-UnaryExpr::UnaryExpr(const string &o, ExprPtr e)
-    : Expr(), op(o), expr(move(e)) {}
-UnaryExpr::UnaryExpr(const UnaryExpr &e)
-    : Expr(e), op(e.op), expr(CL(e.expr)) {}
-string UnaryExpr::toString() const {
-  return wrap(format("#unary '{}' {}", op, *expr));
-}
+UnaryExpr::UnaryExpr(const string &o, ExprPtr e) : Expr(), op(o), expr(move(e)) {}
+UnaryExpr::UnaryExpr(const UnaryExpr &e) : Expr(e), op(e.op), expr(CL(e.expr)) {}
+string UnaryExpr::toString() const { return wrap(format("#unary '{}' {}", op, *expr)); }
 
 BinaryExpr::BinaryExpr(ExprPtr l, const string &o, ExprPtr r, bool i)
     : Expr(), op(o), lexpr(move(l)), rexpr(move(r)), inPlace(i) {}
 BinaryExpr::BinaryExpr(const BinaryExpr &e)
-    : Expr(e), op(e.op), lexpr(CL(e.lexpr)), rexpr(CL(e.rexpr)),
-      inPlace(e.inPlace) {}
+    : Expr(e), op(e.op), lexpr(CL(e.lexpr)), rexpr(CL(e.rexpr)), inPlace(e.inPlace) {}
 string BinaryExpr::toString() const {
-  return wrap(format("#binary {} '{}' {}{}", *lexpr, op, *rexpr,
-                     inPlace ? " :inplace" : ""));
+  return wrap(
+      format("#binary {} '{}' {}{}", *lexpr, op, *rexpr, inPlace ? " :inplace" : ""));
 }
 
 PipeExpr::Pipe PipeExpr::Pipe::clone() const { return {op, CL(expr)}; }
@@ -197,16 +172,14 @@ string PipeExpr::toString() const {
   return wrap(format("#pipe {}", fmt::join(s, " ")));
 }
 
-IndexExpr::IndexExpr(ExprPtr e, ExprPtr i)
-    : Expr(), expr(move(e)), index(move(i)) {}
+IndexExpr::IndexExpr(ExprPtr e, ExprPtr i) : Expr(), expr(move(e)), index(move(i)) {}
 IndexExpr::IndexExpr(const IndexExpr &e)
     : Expr(e), expr(CL(e.expr)), index(CL(e.index)) {}
 string IndexExpr::toString() const {
   return wrap(format("#index {} {}", *expr, *index));
 }
 
-TupleIndexExpr::TupleIndexExpr(ExprPtr e, int i)
-    : Expr(), expr(move(e)), index(i) {}
+TupleIndexExpr::TupleIndexExpr(ExprPtr e, int i) : Expr(), expr(move(e)), index(i) {}
 TupleIndexExpr::TupleIndexExpr(const TupleIndexExpr &e)
     : Expr(e), expr(CL(e.expr)), index(e.index) {}
 string TupleIndexExpr::toString() const {
@@ -222,8 +195,7 @@ string StackAllocExpr::toString() const {
 }
 
 CallExpr::Arg CallExpr::Arg::clone() const { return {name, CL(value)}; }
-CallExpr::CallExpr(const CallExpr &e)
-    : Expr(e), expr(CL(e.expr)), args(CL(e.args)) {}
+CallExpr::CallExpr(const CallExpr &e) : Expr(e), expr(CL(e.expr)), args(CL(e.args)) {}
 CallExpr::CallExpr(ExprPtr e, vector<CallExpr::Arg> &&a)
     : Expr(), expr(move(e)), args(move(a)) {}
 CallExpr::CallExpr(ExprPtr e, vector<ExprPtr> &&arg) : Expr(), expr(move(e)) {
@@ -251,13 +223,9 @@ string CallExpr::toString() const {
   return wrap(format("#call {}{}", *expr, s));
 }
 
-DotExpr::DotExpr(ExprPtr e, const string &m)
-    : Expr(), expr(move(e)), member(m) {}
-DotExpr::DotExpr(const DotExpr &e)
-    : Expr(e), expr(CL(e.expr)), member(e.member) {}
-string DotExpr::toString() const {
-  return wrap(format("#dot {} {}", *expr, member));
-}
+DotExpr::DotExpr(ExprPtr e, const string &m) : Expr(), expr(move(e)), member(m) {}
+DotExpr::DotExpr(const DotExpr &e) : Expr(e), expr(CL(e.expr)), member(e.member) {}
+string DotExpr::toString() const { return wrap(format("#dot {} {}", *expr, member)); }
 
 SliceExpr::SliceExpr(ExprPtr s, ExprPtr e, ExprPtr st)
     : Expr(), st(move(s)), ed(move(e)), step(move(st)) {}
@@ -275,18 +243,14 @@ string EllipsisExpr::toString() const { return wrap("#ellipsis"); }
 
 TypeOfExpr::TypeOfExpr(ExprPtr e) : Expr(), expr(move(e)) {}
 TypeOfExpr::TypeOfExpr(const TypeOfExpr &e) : Expr(e), expr(CL(e.expr)) {}
-string TypeOfExpr::toString() const {
-  return wrap(format("#typeof {}", *expr));
-}
+string TypeOfExpr::toString() const { return wrap(format("#typeof {}", *expr)); }
 
 PtrExpr::PtrExpr(ExprPtr e) : Expr(), expr(move(e)) {}
 PtrExpr::PtrExpr(const PtrExpr &e) : Expr(e), expr(CL(e.expr)) {}
 string PtrExpr::toString() const { return wrap(format("#ptr {}", *expr)); }
 
-LambdaExpr::LambdaExpr(vector<string> v, ExprPtr e)
-    : Expr(), vars(v), expr(move(e)) {}
-LambdaExpr::LambdaExpr(const LambdaExpr &e)
-    : Expr(e), vars(e.vars), expr(CL(e.expr)) {}
+LambdaExpr::LambdaExpr(vector<string> v, ExprPtr e) : Expr(), vars(v), expr(move(e)) {}
+LambdaExpr::LambdaExpr(const LambdaExpr &e) : Expr(e), vars(e.vars), expr(CL(e.expr)) {}
 string LambdaExpr::toString() const {
   return wrap(format("#lambda {} {}", fmt::join(vars, " "), *expr));
 }
@@ -314,9 +278,7 @@ SuiteStmt::SuiteStmt(StmtPtr s, StmtPtr s2, StmtPtr s3) {
     stmts.push_back(move(s3));
 }
 SuiteStmt::SuiteStmt(const SuiteStmt &s) : stmts(CL(s.stmts)) {}
-string SuiteStmt::toString() const {
-  return format("({})", combine(stmts, "\n  "));
-}
+string SuiteStmt::toString() const { return format("({})", combine(stmts, "\n  ")); }
 vector<Stmt *> SuiteStmt::getStatements() {
   vector<Stmt *> result;
   for (auto &s : stmts) {
@@ -356,14 +318,12 @@ AssignMemberStmt::AssignMemberStmt(ExprPtr l, const string &m, ExprPtr r)
 AssignMemberStmt::AssignMemberStmt(const AssignMemberStmt &s)
     : lhs(CL(s.lhs)), member(s.member), rhs(CL(s.rhs)) {}
 string AssignMemberStmt::toString() const {
-  return format("(#assign {} {} {})", *lhs, member, *rhs);
+  return format("(#assignmember {} {} {})", *lhs, member, *rhs);
 }
 
 UpdateStmt::UpdateStmt(ExprPtr l, ExprPtr r) : lhs(move(l)), rhs(move(r)) {}
 UpdateStmt::UpdateStmt(const UpdateStmt &s) : lhs(CL(s.lhs)), rhs(CL(s.rhs)) {}
-string UpdateStmt::toString() const {
-  return format("(#update {} {})", *lhs, *rhs);
-}
+string UpdateStmt::toString() const { return format("(#update {} {})", *lhs, *rhs); }
 
 DelStmt::DelStmt(ExprPtr e) : expr(move(e)) {}
 DelStmt::DelStmt(const DelStmt &s) : expr(CL(s.expr)) {}
@@ -390,11 +350,8 @@ AssertStmt::AssertStmt(const AssertStmt &s) : expr(CL(s.expr)) {}
 string AssertStmt::toString() const { return format("(#assert {})", *expr); }
 
 WhileStmt::WhileStmt(ExprPtr c, StmtPtr s) : cond(move(c)), suite(move(s)) {}
-WhileStmt::WhileStmt(const WhileStmt &s)
-    : cond(CL(s.cond)), suite(CL(s.suite)) {}
-string WhileStmt::toString() const {
-  return format("(#while {} {})", *cond, *suite);
-}
+WhileStmt::WhileStmt(const WhileStmt &s) : cond(CL(s.cond)), suite(CL(s.suite)) {}
+string WhileStmt::toString() const { return format("(#while {} {})", *cond, *suite); }
 
 ForStmt::ForStmt(ExprPtr v, ExprPtr i, StmtPtr s)
     : var(move(v)), iter(move(i)), suite(move(s)) {}
@@ -414,8 +371,7 @@ IfStmt::IfStmt(const IfStmt &s) : ifs(CL(s.ifs)) {}
 string IfStmt::toString() const {
   string s;
   for (auto &i : ifs)
-    s +=
-        format(" ({}{})", i.cond ? format(":cond {} ", *i.cond) : "", *i.suite);
+    s += format(" ({}{})", i.cond ? format(":cond {} ", *i.cond) : "", *i.suite);
   return format("(#if{})", s);
 }
 
@@ -423,8 +379,7 @@ MatchStmt::MatchStmt(ExprPtr w, vector<PatternPtr> &&p, vector<StmtPtr> &&c)
     : what(move(w)), patterns(move(p)), cases(move(c)) {
   assert(p.size() == c.size());
 }
-MatchStmt::MatchStmt(ExprPtr w, vector<pair<PatternPtr, StmtPtr>> &&v)
-    : what(move(w)) {
+MatchStmt::MatchStmt(ExprPtr w, vector<pair<PatternPtr, StmtPtr>> &&v) : what(move(w)) {
   for (auto &i : v) {
     patterns.push_back(move(i.first));
     cases.push_back(move(i.second));
@@ -441,50 +396,39 @@ string MatchStmt::toString() const {
 }
 
 ExtendStmt::ExtendStmt(ExprPtr e, StmtPtr s) : what(move(e)), suite(move(s)) {}
-ExtendStmt::ExtendStmt(const ExtendStmt &s)
-    : what(CL(s.what)), suite(CL(s.suite)) {}
-string ExtendStmt::toString() const {
-  return format("(#extend {} {})", *what, *suite);
-}
+ExtendStmt::ExtendStmt(const ExtendStmt &s) : what(CL(s.what)), suite(CL(s.suite)) {}
+string ExtendStmt::toString() const { return format("(#extend {} {})", *what, *suite); }
 
-ImportStmt::ImportStmt(const Item &f, const vector<Item> &w)
-    : from(f), what(w) {}
+ImportStmt::ImportStmt(const Item &f, const vector<Item> &w) : from(f), what(w) {}
 ImportStmt::ImportStmt(const ImportStmt &s) : from(s.from), what(s.what) {}
 string ImportStmt::toString() const {
   vector<string> s;
   for (auto &w : what) {
-    s.push_back(w.second.size() ? format("({} :as {})", w.first, w.second)
-                                : w.first);
+    s.push_back(w.second.size() ? format("({} :as {})", w.first, w.second) : w.first);
   }
   return format("(#import {}{})",
-                from.second.size()
-                    ? format("({} :as {})", from.first, from.second)
-                    : from.first,
+                from.second.size() ? format("({} :as {})", from.first, from.second)
+                                   : from.first,
                 s.size() ? format(" :what {}", fmt::join(s, " ")) : "");
 }
 
-ExternImportStmt::ExternImportStmt(const ImportStmt::Item &n, ExprPtr f,
-                                   ExprPtr t, vector<Param> &&a,
-                                   const string &l)
+ExternImportStmt::ExternImportStmt(const ImportStmt::Item &n, ExprPtr f, ExprPtr t,
+                                   vector<Param> &&a, const string &l)
     : name(n), from(move(f)), ret(move(t)), args(move(a)), lang(l) {}
 ExternImportStmt::ExternImportStmt(const ExternImportStmt &s)
-    : name(s.name), from(CL(s.from)), ret(CL(s.ret)), args(CL(s.args)),
-      lang(s.lang) {}
+    : name(s.name), from(CL(s.from)), ret(CL(s.ret)), args(CL(s.args)), lang(s.lang) {}
 string ExternImportStmt::toString() const {
   string as;
   for (auto &a : args)
     as += " " + a.toString();
   return format("(#extern {} :lang {} :typ {}{}{})",
-                name.second.size()
-                    ? format("({} :as {})", name.first, name.second)
-                    : name.first,
+                name.second.size() ? format("({} :as {})", name.first, name.second)
+                                   : name.first,
                 lang, *ret, args.size() ? " :args" + as : "",
                 from ? " :from" + from->toString() : "");
 }
 
-TryStmt::Catch TryStmt::Catch::clone() const {
-  return {var, CL(exc), CL(suite)};
-}
+TryStmt::Catch TryStmt::Catch::clone() const { return {var, CL(exc), CL(suite)}; }
 
 TryStmt::TryStmt(StmtPtr s, vector<Catch> &&c, StmtPtr f)
     : suite(move(s)), catches(move(c)), finally(move(f)) {}
@@ -496,8 +440,7 @@ string TryStmt::toString() const {
     s += format(" ({}{}{})", i.var != "" ? format(":var {} ", i.var) : "",
                 i.exc ? format(":exc {} ", *i.exc) : "", *i.suite);
   auto f = format("{}", *finally);
-  return format("(#try {}{}{})", *suite, s,
-                f.size() ? format(" :finally {}", f) : "");
+  return format("(#try {}{}{})", *suite, s, f.size() ? format(" :finally {}", f) : "");
 }
 
 GlobalStmt::GlobalStmt(const string &v) : var(v) {}
@@ -525,15 +468,12 @@ string FunctionStmt::toString() const {
     as += " " + a.toString();
   return format(
       "(#fun {}{}{}{}{} {})", name, ret ? " :ret " + ret->toString() : "",
-      generics.size() ? format(" :gen{}", gs) : "",
-      args.size() ? " :args" + as : "",
-      attributes.size() ? format(" :attrs ({})", fmt::join(attributes, " "))
-                        : "",
+      generics.size() ? format(" :gen{}", gs) : "", args.size() ? " :args" + as : "",
+      attributes.size() ? format(" :attrs ({})", fmt::join(attributes, " ")) : "",
       suite ? suite->toString() : "(#pass)");
 }
 
-PyDefStmt::PyDefStmt(const string &n, ExprPtr r, vector<Param> &&a,
-                     const string &s)
+PyDefStmt::PyDefStmt(const string &n, ExprPtr r, vector<Param> &&a, const string &s)
     : name(n), ret(move(r)), args(move(a)), code(s) {}
 PyDefStmt::PyDefStmt(const PyDefStmt &s)
     : name(s.name), ret(CL(s.ret)), args(CL(s.args)), code(s.code) {}
@@ -541,18 +481,17 @@ string PyDefStmt::toString() const {
   string as;
   for (auto &a : args)
     as += " " + a.toString();
-  return format("(#pydef {}{}{} '{}')", name,
-                ret ? " :ret " + ret->toString() : "",
+  return format("(#pydef {}{}{} '{}')", name, ret ? " :ret " + ret->toString() : "",
                 args.size() ? " :args" + as : "", escape(code));
 }
 
-ClassStmt::ClassStmt(bool i, const string &n, vector<Param> &&g,
-                     vector<Param> &&a, StmtPtr s, const vector<string> &at)
+ClassStmt::ClassStmt(bool i, const string &n, vector<Param> &&g, vector<Param> &&a,
+                     StmtPtr s, const vector<string> &at)
     : isRecord(i), name(n), generics(move(g)), args(move(a)), suite(move(s)),
       attributes(at) {}
 ClassStmt::ClassStmt(const ClassStmt &s)
-    : isRecord(s.isRecord), name(s.name), generics(CL(s.generics)),
-      args(CL(s.args)), suite(CL(s.suite)) {}
+    : isRecord(s.isRecord), name(s.name), generics(CL(s.generics)), args(CL(s.args)),
+      suite(CL(s.suite)) {}
 string ClassStmt::toString() const {
   string gs;
   for (auto &a : generics)
@@ -560,13 +499,11 @@ string ClassStmt::toString() const {
   string as;
   for (auto &a : args)
     as += " " + a.toString();
-  return format("(#{} {}{}{} {} {})", (isRecord ? "type" : "class"), name,
-                generics.size() ? format(" :gen{}", gs) : "",
-                args.size() ? " :args" + as : "",
-                attributes.size()
-                    ? format(" :attrs ({})", fmt::join(attributes, " "))
-                    : "",
-                *suite);
+  return format(
+      "(#{} {}{}{} {} {})", (isRecord ? "type" : "class"), name,
+      generics.size() ? format(" :gen{}", gs) : "", args.size() ? " :args" + as : "",
+      attributes.size() ? format(" :attrs ({})", fmt::join(attributes, " ")) : "",
+      *suite);
 }
 
 AssignEqStmt::AssignEqStmt(ExprPtr l, ExprPtr r, const string &o)
@@ -579,16 +516,13 @@ string AssignEqStmt::toString() const {
 
 YieldFromStmt::YieldFromStmt(ExprPtr e) : expr(move(e)) {}
 YieldFromStmt::YieldFromStmt(const YieldFromStmt &s) : expr(CL(s.expr)) {}
-string YieldFromStmt::toString() const {
-  return format("(#yieldfrom {})", *expr);
-}
+string YieldFromStmt::toString() const { return format("(#yieldfrom {})", *expr); }
 
 WithStmt::WithStmt(vector<ExprPtr> &&i, const vector<string> &v, StmtPtr s)
     : items(move(i)), vars(v), suite(move(s)) {
   assert(i.size() == v.size());
 }
-WithStmt::WithStmt(vector<pair<ExprPtr, string>> &&v, StmtPtr s)
-    : suite(move(s)) {
+WithStmt::WithStmt(vector<pair<ExprPtr, string>> &&v, StmtPtr s) : suite(move(s)) {
   for (auto &i : v) {
     items.push_back(move(i.first));
     vars.push_back(i.second);
@@ -622,49 +556,34 @@ string BoolPattern::toString() const { return format("(#bool {})", value); }
 
 StrPattern::StrPattern(const string &v) : Pattern(), value(v) {}
 StrPattern::StrPattern(const StrPattern &p) : Pattern(p), value(p.value) {}
-string StrPattern::toString() const {
-  return format("(#str '{}')", escape(value));
-}
+string StrPattern::toString() const { return format("(#str '{}')", escape(value)); }
 
 SeqPattern::SeqPattern(const string &v) : Pattern(), value(v) {}
 SeqPattern::SeqPattern(const SeqPattern &p) : Pattern(p), value(p.value) {}
-string SeqPattern::toString() const {
-  return format("(#seq '{}')", escape(value));
-}
+string SeqPattern::toString() const { return format("(#seq '{}')", escape(value)); }
 
 RangePattern::RangePattern(int s, int e) : Pattern(), start(s), end(e) {}
 RangePattern::RangePattern(const RangePattern &p)
     : Pattern(p), start(p.start), end(p.end) {}
-string RangePattern::toString() const {
-  return format("(#range {} {})", start, end);
-}
+string RangePattern::toString() const { return format("(#range {} {})", start, end); }
 
-TuplePattern::TuplePattern(vector<PatternPtr> &&p)
-    : Pattern(), patterns(move(p)) {}
+TuplePattern::TuplePattern(vector<PatternPtr> &&p) : Pattern(), patterns(move(p)) {}
 TuplePattern::TuplePattern(const TuplePattern &p)
     : Pattern(p), patterns(CL(p.patterns)) {}
 string TuplePattern::toString() const {
   return format("(#tuple {})", combine(patterns));
 }
 
-ListPattern::ListPattern(vector<PatternPtr> &&p)
-    : Pattern(), patterns(move(p)) {}
-ListPattern::ListPattern(const ListPattern &p)
-    : Pattern(p), patterns(CL(p.patterns)) {}
-string ListPattern::toString() const {
-  return format("(#list {})", combine(patterns));
-}
+ListPattern::ListPattern(vector<PatternPtr> &&p) : Pattern(), patterns(move(p)) {}
+ListPattern::ListPattern(const ListPattern &p) : Pattern(p), patterns(CL(p.patterns)) {}
+string ListPattern::toString() const { return format("(#list {})", combine(patterns)); }
 
 OrPattern::OrPattern(vector<PatternPtr> &&p) : Pattern(), patterns(move(p)) {}
-OrPattern::OrPattern(const OrPattern &p)
-    : Pattern(p), patterns(CL(p.patterns)) {}
-string OrPattern::toString() const {
-  return format("(#or {})", combine(patterns));
-}
+OrPattern::OrPattern(const OrPattern &p) : Pattern(p), patterns(CL(p.patterns)) {}
+string OrPattern::toString() const { return format("(#or {})", combine(patterns)); }
 
 WildcardPattern::WildcardPattern(const string &v) : Pattern(), var(v) {}
-WildcardPattern::WildcardPattern(const WildcardPattern &p)
-    : Pattern(p), var(p.var) {}
+WildcardPattern::WildcardPattern(const WildcardPattern &p) : Pattern(p), var(p.var) {}
 string WildcardPattern::toString() const {
   return var == "" ? "#wild" : format("(#wild {})", var);
 }

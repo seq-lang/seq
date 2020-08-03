@@ -119,8 +119,8 @@ shared_ptr<TypeItem::Item> TypeContext::addFunc(const string &name, types::TypeP
 }
 
 shared_ptr<TypeItem::Item> TypeContext::addStatic(const string &name, int value,
-                                                  bool global) {
-  auto t = make_shared<TypeItem::Static>(value, filename, getBase(), global);
+                                                  types::TypePtr type, bool global) {
+  auto t = make_shared<TypeItem::Static>(value, type, filename, getBase(), global);
   add(name, t);
   return t;
 }
@@ -192,8 +192,7 @@ types::TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo,
     error(srcInfo, "generics do not match");
   for (int i = 0; i < c->explicits.size(); i++) {
     assert(c->explicits[i].type);
-    g->explicits.push_back(
-        types::ClassType::Generic("", generics[i], c->explicits[i].id));
+    g->explicits.push_back(types::Generic("", generics[i], c->explicits[i].id));
   }
   return instantiate(srcInfo, root, g);
 }
@@ -226,7 +225,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   for (auto &t : genericTypes) {
     auto typ = make_shared<types::ClassType>(
         t, true, vector<types::TypePtr>(),
-        vector<types::ClassType::Generic>{
+        vector<types::Generic>{
             {"T",
              make_shared<types::LinkType>(types::LinkType::Generic,
                                           realizations->unboundCount),
@@ -240,11 +239,11 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   for (auto &t : genericTypes) {
     auto typ = make_shared<types::ClassType>(
         t, true, vector<types::TypePtr>(),
-        vector<types::ClassType::Generic>{
+        vector<types::Generic>{
             {"N",
              make_shared<types::LinkType>(types::LinkType::Generic,
                                           realizations->unboundCount),
-             realizations->unboundCount, true}});
+             realizations->unboundCount}});
     realizations->moduleNames[t] = 1;
     stdlib->addType(t, typ);
     stdlib->addType("." + t, typ);
@@ -273,6 +272,8 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   tv->stmts.push_back(move(t2));
   auto ctx = make_shared<TypeContext>(file, realizations, imports);
   imports->addImport(file, file, ctx);
+
+  LOG7("----------------------------------------------------------------------");
   return ctx;
 }
 

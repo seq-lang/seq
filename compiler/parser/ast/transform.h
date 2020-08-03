@@ -35,6 +35,26 @@ public:
   void visit(const IdExpr *) override;
 };
 
+class StaticVisitor : public WalkVisitor {
+  std::shared_ptr<TypeContext> ctx;
+  const std::unordered_map<std::string, types::Generic> *map;
+
+public:
+  std::unordered_map<std::string, types::Generic> captures;
+  bool evaluated;
+  int value;
+
+  using WalkVisitor::visit;
+  StaticVisitor(std::shared_ptr<TypeContext> ctx,
+                const std::unordered_map<std::string, types::Generic> *m = nullptr);
+  std::pair<bool, int> transform(const Expr *e);
+  void visit(const IdExpr *) override;
+  void visit(const IntExpr *) override;
+  void visit(const IfExpr *) override;
+  void visit(const UnaryExpr *) override;
+  void visit(const BinaryExpr *) override;
+};
+
 class TransformVisitor : public ASTVisitor, public SrcObject {
   std::shared_ptr<TypeContext> ctx;
   std::shared_ptr<std::vector<StmtPtr>> prependStmts;
@@ -44,12 +64,12 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
 
   /// Helper function that handles simple assignments
   /// (e.g. a = b, a.x = b or a[x] = b)
-  StmtPtr addAssignment(const Expr *lhs, const Expr *rhs,
-                        const Expr *type = nullptr, bool force = false);
+  StmtPtr addAssignment(const Expr *lhs, const Expr *rhs, const Expr *type = nullptr,
+                        bool force = false);
   /// Helper function that decomposes complex assignments into simple ones
   /// (e.g. a, *b, (c, d) = foo)
-  void processAssignment(const Expr *lhs, const Expr *rhs,
-                         std::vector<StmtPtr> &stmts, bool force = false);
+  void processAssignment(const Expr *lhs, const Expr *rhs, std::vector<StmtPtr> &stmts,
+                         bool force = false);
 
   StmtPtr getGeneratorBlock(const std::vector<GeneratorExpr::Body> &loops,
                             SuiteStmt *&prev);
@@ -58,17 +78,17 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
   std::string patchIfRealizable(types::TypePtr typ, bool isClass);
   void fixExprName(ExprPtr &e, const std::string &newName);
 
-  std::shared_ptr<TypeItem::Item>
-  processIdentifier(std::shared_ptr<TypeContext> tctx, const std::string &id);
+  std::shared_ptr<TypeItem::Item> processIdentifier(std::shared_ptr<TypeContext> tctx,
+                                                    const std::string &id);
 
   RealizationContext::FuncRealization realizeFunc(types::FuncTypePtr type);
   RealizationContext::ClassRealization realizeType(types::ClassTypePtr type);
+  int realizeStatic(types::StaticTypePtr st);
 
   ExprPtr conditionalMagic(const ExprPtr &expr, const std::string &type,
                            const std::string &magic);
   ExprPtr makeBoolExpr(const ExprPtr &e);
-  std::vector<types::ClassType::Generic>
-  parseGenerics(const std::vector<Param> &generics);
+  std::vector<types::Generic> parseGenerics(const std::vector<Param> &generics);
 
   StmtPtr addMethod(Stmt *s, const std::string &canonicalName);
   types::FuncTypePtr
@@ -79,11 +99,9 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
   bool wrapOptional(types::TypePtr lt, ExprPtr &rhs);
   std::string generateVariardicStub(const std::string &name, int len);
 
-  std::vector<int> callCallable(types::ClassTypePtr f,
-                                std::vector<CallExpr::Arg> &args,
+  std::vector<int> callCallable(types::ClassTypePtr f, std::vector<CallExpr::Arg> &args,
                                 std::vector<CallExpr::Arg> &reorderedArgs);
-  std::vector<int> callFunc(types::FuncTypePtr f,
-                            std::vector<CallExpr::Arg> &args,
+  std::vector<int> callFunc(types::FuncTypePtr f, std::vector<CallExpr::Arg> &args,
                             std::vector<CallExpr::Arg> &reorderedArgs);
   std::vector<int> callPartial(types::PartialTypePtr f,
                                std::vector<CallExpr::Arg> &args,
@@ -205,8 +223,7 @@ public:
     return r;
   }
 
-  template <typename T>
-  types::TypePtr forceUnify(const T *expr, types::TypePtr t) {
+  template <typename T> types::TypePtr forceUnify(const T *expr, types::TypePtr t) {
     if (expr->getType() && t) {
       types::Unification us;
       if (expr->getType()->unify(t, us) < 0) {
@@ -230,13 +247,11 @@ public:
         return t;
       us.undo();
     }
-    error("cannot unify {} and {}", t ? t->toString() : "-",
-          u ? u->toString() : "-");
+    error("cannot unify {} and {}", t ? t->toString() : "-", u ? u->toString() : "-");
     return nullptr;
   }
 
-  template <typename... TArgs>
-  void error(const char *format, TArgs &&... args) {
+  template <typename... TArgs> void error(const char *format, TArgs &&... args) {
     ast::error(getSrcInfo(), fmt::format(format, args...).c_str());
   }
 
@@ -247,8 +262,8 @@ public:
 
   template <typename T, typename... TArgs>
   void internalError(const char *format, TArgs &&... args) {
-    throw exc::ParserException(fmt::format(
-        "INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
+    throw exc::ParserException(
+        fmt::format("INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
   }
 };
 

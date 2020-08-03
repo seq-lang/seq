@@ -63,17 +63,17 @@ public:
 };
 
 class Static : public Item {
-  // types::TypePtr type;
+  types::TypePtr type;
   int value;
   // bool initialized;
 
 public:
-  Static(int value, const std::string &module, const std::string &base,
-         bool global = false)
-      : Item(module, base, global), /*type(type),*/ value(value) {}
+  Static(int value, types::TypePtr type, const std::string &module,
+         const std::string &base, bool global = false)
+      : Item(module, base, global), type(type), value(value) {}
   const Static *getStatic() const override { return this; }
   int getValue() const { return value; }
-  // types::TypePtr getType() const override { return type; }
+  types::TypePtr getType() const override { return type; }
   // bool isInitialized() const { return initialized; }
 };
 
@@ -157,8 +157,8 @@ public:
                                           bool global = false);
   std::shared_ptr<TypeItem::Item> addFunc(const std::string &name, types::TypePtr type,
                                           bool global = false);
-  std::shared_ptr<TypeItem::Item> addStatic(const std::string &name,
-                                            int value, // bool initialized = true,
+  std::shared_ptr<TypeItem::Item> addStatic(const std::string &name, int value,
+                                            types::TypePtr type = nullptr,
                                             bool global = false);
   void addGlobal(const std::string &name, types::TypePtr type);
   // void addRealization(types::TypePtr type);
