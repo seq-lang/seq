@@ -94,11 +94,7 @@ public:
 struct StaticType : public Type {
   std::vector<Generic> explicits;
   std::unique_ptr<Expr> expr;
-  std::unique_ptr<int> value;
-  StaticType(int v);
   StaticType(const std::vector<Generic> &ex, std::unique_ptr<Expr> &&expr);
-  StaticType(const std::vector<Generic> &ex, std::unique_ptr<Expr> &&expr,
-             std::unique_ptr<int> &&v);
 
 public:
   virtual int unify(TypePtr typ, Unification &us) override;
@@ -111,39 +107,11 @@ public:
   bool canRealize() const override;
   std::string toString(bool reduced = false) const override;
   std::string realizeString() const override;
+  int getValue() const;
   std::shared_ptr<StaticType> getStatic() override {
     return std::static_pointer_cast<StaticType>(shared_from_this());
   }
-  // int evaluate();
-  int getValue() const;
-  void evaluate();
-  // virtual bool isStatic() { return true; }
 };
-typedef std::shared_ptr<StaticType> StaticTypePtr;
-
-// struct StaticExprType : public Type {
-//   std::unordered_map<std::string, Generic> explicits;
-//   std::shared_ptr<Expr> expr;
-//   StaticExprType(const std::vector<Generic> &ex, std::shared_ptr<Expr> expr);
-
-// public:
-//   virtual int unify(TypePtr typ, Unification &us) override;
-//   TypePtr generalize(int level) override;
-//   TypePtr instantiate(int level, int &unboundCount,
-//                       std::unordered_map<int, TypePtr> &cache) override;
-
-// public:
-//   // int evaluate();
-//   bool hasUnbound() const override { return false; }
-//   bool canRealize() const override { return true; }
-//   std::string toString(bool reduced = false) const override;
-//   std::string realizeString() const override { return fmt::format("{}", getValue());
-//   } std::shared_ptr<StaticType> getStatic() override {
-//     return std::static_pointer_cast<StaticType>(shared_from_this());
-//   }
-//   int getValue() const;
-//   virtual bool isStatic() { return true; }
-// };
 typedef std::shared_ptr<StaticType> StaticTypePtr;
 
 struct ImportType : public Type {

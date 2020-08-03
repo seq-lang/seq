@@ -21,57 +21,28 @@ namespace types {
 
 TypePtr Type::follow() { return shared_from_this(); }
 
-StaticType::StaticType(int v) : expr(nullptr), value(std::make_unique<int>(v)) {}
 StaticType::StaticType(const std::vector<Generic> &ex, std::unique_ptr<Expr> &&e)
-    : explicits(ex), expr(move(e)), value(nullptr) {}
-StaticType::StaticType(const std::vector<Generic> &ex, std::unique_ptr<Expr> &&e,
-                       std::unique_ptr<int> &&v)
-    : explicits(ex), expr(move(e)), value(move(v)) {}
+    : explicits(ex), expr(move(e)) {}
 
 string StaticType::toString(bool reduced) const {
   vector<string> s;
   for (auto &e : explicits)
     s.push_back(fmt::format("{}={}", e.name, e.type->toString()));
-  return fmt::format("Static[{}; {}{}; {}]", join(s, ", "),
-                     value ? fmt::format("{}; ", *value) : "",
-                     expr ? expr->toString() : "-", canRealize());
-}
-
-void StaticType::evaluate() {
-  if (!value) {
-    assert(expr);
-    unordered_map<string, Generic> m;
-    for (auto &e : explicits)
-      m[e.name] = e;
-    StaticVisitor sv(nullptr, &m);
-    auto t = sv.transform(expr.get());
-    if (t.first)
-      value = std::make_unique<int>(t.second);
-  }
+  return fmt::format("Static[{}; {}]", join(s, ", "), expr->toString());
 }
 
 string StaticType::realizeString() const {
-  // if (!value) {
-  //   const_cast<StaticType *>(this)->evaluate();
-  //   assert(value);
-  // }
-  return fmt::format("{}", getValue());
+  assert(canRealize());
+  vector<string> deps;
+  for (auto &e : explicits)
+    deps.push_back(e.type->realizeString());
+  return fmt::format("{}{}", deps.size() ? join(deps, ";") : "", getValue());
 }
 
 int StaticType::unify(TypePtr typ, Unification &us) {
-
-  // s = 0;
-  //   for (int i = 0; i < explicits.size(); i++) {
-  //     if ((s = explicits[i].type->unify(t->explicits[i].type, us)) == -1)
-  //       return -1;
-  //     s1 += s;
-  //   }
   if (auto t = typ->getStatic()) {
     int s1 = 0;
-    if (value && t->value)
-      return *value == *t->value ? 0 : -1;
-    if (expr && t->expr && expr->toString() == t->expr->toString()) {
-      LOG7("{} {}", toString(), t->toString());
+    if (expr->toString() == t->expr->toString()) {
       int s = 0;
       for (int i = 0; i < explicits.size(); i++) {
         if ((s = explicits[i].type->unify(t->explicits[i].type, us)) == -1)
@@ -91,8 +62,7 @@ TypePtr StaticType::generalize(int level) {
   auto e = explicits;
   for (auto &t : e)
     t.type = t.type ? t.type->generalize(level) : nullptr;
-  auto c = make_shared<StaticType>(e, expr ? expr->clone() : nullptr,
-                                   value ? std::make_unique<int>(*value) : nullptr);
+  auto c = make_shared<StaticType>(e, expr->clone());
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -102,8 +72,7 @@ TypePtr StaticType::instantiate(int level, int &unboundCount,
   auto e = explicits;
   for (auto &t : e)
     t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
-  auto c = make_shared<StaticType>(e, expr ? expr->clone() : nullptr,
-                                   value ? std::make_unique<int>(*value) : nullptr);
+  auto c = make_shared<StaticType>(e, expr->clone());
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -123,19 +92,13 @@ bool StaticType::canRealize() const {
 }
 
 int StaticType::getValue() const {
-  if (!value) {
-    assert(expr);
-    unordered_map<string, Generic> m;
-    for (auto &e : explicits)
-      m[e.name] = e;
-    StaticVisitor sv(nullptr, &m);
-    auto t = sv.transform(expr.get());
-    assert(t.first);
-    return t.second;
-    // value = std::make_unique<int>(t.second);
-  } else {
-    return *value;
-  }
+  unordered_map<string, Generic> m;
+  for (auto &e : explicits)
+    m[e.name] = e;
+  StaticVisitor sv(nullptr, &m);
+  auto t = sv.transform(expr.get());
+  assert(t.first);
+  return t.second;
 }
 
 LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic)

@@ -157,6 +157,7 @@ public:
 
   void add(const std::string &name, std::shared_ptr<T> var) {
     assert(!name.empty());
+    // LOG7("^^ ++ {}", name);
     map[name].push_front(var);
     stack.front().push_back(name);
   }
@@ -168,6 +169,7 @@ public:
   void addBlock() { stack.push_front(std::vector<std::string>()); }
   void removeFromMap(const std::string &name) {
     auto i = map.find(name);
+    // LOG7("^^ -- {}", name);
     assert(!(i == map.end() || !i->second.size()));
     i->second.pop_front();
     if (!i->second.size())

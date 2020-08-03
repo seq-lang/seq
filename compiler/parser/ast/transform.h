@@ -40,7 +40,7 @@ class StaticVisitor : public WalkVisitor {
   const std::unordered_map<std::string, types::Generic> *map;
 
 public:
-  std::unordered_map<std::string, types::Generic> captures;
+  std::map<std::string, types::Generic> captures; // map so it is sorted
   bool evaluated;
   int value;
 

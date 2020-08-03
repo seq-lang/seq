@@ -186,7 +186,9 @@ void TransformVisitor::visit(const IdExpr *expr) {
   if (ctx->isTypeChecking()) {
     if (val->getStatic()) {
       /// only happens in a "normal" code; type parameters are handled via StaticWalker
-      resultExpr = transform(N<IntExpr>(val->getStatic()->getValue()));
+      auto s = val->getStatic()->getType()->getStatic();
+      assert(s);
+      resultExpr = transform(N<IntExpr>(s->getValue()));
     } else {
       auto typ = val->getImport()
                      ? make_shared<types::ImportType>(val->getImport()->getFile())
@@ -469,21 +471,20 @@ void TransformVisitor::visit(const IndexExpr *expr) {
   vector<TypePtr> generics;
   auto parseStatic = [&](const ExprPtr &i) {
     StaticVisitor sv(ctx);
-    auto t = sv.transform(i.get());
-    if (t.first) {
-      generics.push_back(make_shared<StaticType>(t.second));
+    sv.transform(i.get());
+    vector<types::Generic> v;
+    for (auto &i : sv.captures)
+      v.push_back(i.second);
+    /// special case: generic static expressions
+    if (auto ie = dynamic_cast<IdExpr *>(i.get())) {
+      assert(v.size() == 1);
+      generics.push_back(ctx->instantiate(getSrcInfo(), v[0].type));
     } else {
-      /// special case: generic static expressions
-      vector<types::Generic> v;
+      vector<string> s;
       for (auto &i : sv.captures)
-        v.push_back(i.second);
-      if (auto ie = dynamic_cast<IdExpr *>(i.get())) {
-        assert(v.size() == 1);
-        generics.push_back(ctx->instantiate(getSrcInfo(), v[0].type));
-      } else {
-        // this is compount static expressions
-        generics.push_back(make_shared<StaticType>(v, i->clone()));
-      }
+        s.push_back(i.first);
+      LOG7("static: {} -> {}", i->toString(), join(s, ", "));
+      generics.push_back(make_shared<StaticType>(v, i->clone()));
     }
   };
   auto parseGeneric = [&](const ExprPtr &i) {
@@ -893,16 +894,10 @@ void StaticVisitor::visit(const IdExpr *expr) {
     auto val = ctx->find(expr->value);
     if (!val)
       error(expr->getSrcInfo(), "identifier '{}' not found", expr->value);
-    if (auto s = val->getStatic()) {
-      value = s->getValue(); // overwritten if not yet realized below
-      if (s->getType()) {
-        t = s->getType()->follow();
-      } else {
-        evaluated = true;
-      }
-    } else
+    if (!val->getStatic())
       error(expr->getSrcInfo(), "identifier '{}' is not a static expression",
             expr->value);
+    t = val->getStatic()->getType()->follow();
   } else {
     assert(map);
     auto val = map->find(expr->value);
@@ -910,17 +905,17 @@ void StaticVisitor::visit(const IdExpr *expr) {
       error(expr->getSrcInfo(), "identifier '{}' not found", expr->value);
     t = val->second.type->follow();
   }
-  if (!evaluated) {
-    if (t->getLink()) {
-      evaluated = false;
-      captures[expr->value] = {expr->value, t, t->getLink()->id};
-    } else if (auto ts = t->getStatic()) {
-      evaluated = t->canRealize();
-      assert(evaluated); // TODO: not sure if this is OK
-      value = ts->getValue();
-    } else {
-      evaluated = true; // value set above
-    }
+  if (t->getLink()) {
+    evaluated = false;
+    captures[expr->value] = {expr->value, t, t->getLink()->id};
+  } else {
+    assert(t->getStatic() && t->getStatic()->explicits.size() <= 1);
+    captures[expr->value] = {
+        expr->value, t,
+        t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id : 0};
+    evaluated = t->canRealize();
+    if (evaluated)
+      value = t->getStatic()->getValue();
   }
 }
 
