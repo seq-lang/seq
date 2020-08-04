@@ -56,13 +56,13 @@ before_install:
   - |
     if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/ocaml)" ]]; then
       mkdir -p ${TRAVIS_BUILD_DIR}/ocaml
-      curl -L https://github.com/ocaml/ocaml/archive/4.02.3.tar.gz | tar zxf - -C ${TRAVIS_BUILD_DIR}/ocaml
-      cd ${TRAVIS_BUILD_DIR}/ocaml/ocaml-4.02.3
-      ./configure -no-curses
+      curl -L https://github.com/ocaml/ocaml/archive/4.07.1.tar.gz | tar zxf - -C ${TRAVIS_BUILD_DIR}/ocaml
+      cd ${TRAVIS_BUILD_DIR}/ocaml/ocaml-4.07.1
+      ./configure -no-curses -fPIC
       make world.opt
       cd -
     fi
-    cd ${TRAVIS_BUILD_DIR}/ocaml/ocaml-4.02.3
+    cd ${TRAVIS_BUILD_DIR}/ocaml/ocaml-4.07.1
     sudo make install
     cd -
 
