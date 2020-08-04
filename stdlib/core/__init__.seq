@@ -15,26 +15,22 @@ from core.collections.set import set
 from core.collections.dict import dict
 
 from core.str import *
+from core.int import *
+from core.float import *
 
-# from core.int import *
-# from core.float import *
+from core.sort import sorted
 
-# from core.sort import sorted
-
-# from core.file import File, gzFile, open, gzopen
-# from pickle import pickle, unpickle
-# from core.dlopen import dlsym as _dlsym
-
+from core.file import File, gzFile, open, gzopen
+from pickle import pickle, unpickle
+from core.dlopen import dlsym as _dlsym
 
 # # from core.python import init as _py_init, imp as _py_import, exec as _py_exec, pyobj
 
 # # from bio import *
 
-
-# # moved
-# @builtin
-# def _test_failed(file: str, line: int, msg: str):
-#     s = "\033[1;31mTEST FAILED:\033[0m " + file + " (line " + str(line) + ")"
-#     if msg:
-#         s += ": " + msg
-#     print s
+@builtin
+def _test_failed(file: str, line: int, msg: str):
+    s = "\033[1;31mTEST FAILED:\033[0m " + file + " (line " + str(line) + ")"
+    if msg:
+        s += ": " + msg
+    print s

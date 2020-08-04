@@ -52,20 +52,20 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file, bool is
 
     int st = 0, lim = 1000;
     for (int ci = st, ii = 0; ci < cases.size() && ii < lim; ci++, ii++) {
-      LOG("[[[ case {} ]]]", ci);
+      LOG3("[[[ case {} ]]]", ci);
       char abs[PATH_MAX + 1];
       realpath(file.c_str(), abs);
       auto stmts = ast::parseCode(abs, cases[ci]);
       auto ctx = ast::TypeContext::getContext(argv0, abs);
       auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false);
 
-      LOG("--- Done with typecheck ---");
+      LOG3("--- Done with typecheck ---");
       LOG3("{}", ast::FormatVisitor::format(ctx, tv, false, true));
       module = new seq::SeqModule();
       module->setFileName(abs);
       auto lctx = ast::LLVMContext::getContext(abs, ctx, module);
       ast::CodegenVisitor(lctx).transform(tv.get());
-      LOG("--- Done with codegen ---");
+      LOG3("--- Done with codegen ---");
       module->execute({}, {});
       // return module;
 

@@ -80,9 +80,9 @@ extend int:
     @internal
     def __new__(b: byte) -> int: pass
     @internal
-    def __new__[N](b: Int[N]) -> int: pass
+    def __new__[N: int](b: Int[N]) -> int: pass
     @internal
-    def __new__[N](b: UInt[N]) -> int: pass
+    def __new__[N: int](b: UInt[N]) -> int: pass
     @internal
     def __int__(self) -> int: pass
     @internal

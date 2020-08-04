@@ -242,7 +242,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
         vector<types::Generic>{
             {"N",
              make_shared<types::LinkType>(types::LinkType::Generic,
-                                          realizations->unboundCount),
+                                          realizations->unboundCount, 0, nullptr, true),
              realizations->unboundCount}});
     realizations->moduleNames[t] = 1;
     stdlib->addType(t, typ);

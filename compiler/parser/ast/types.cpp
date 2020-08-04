@@ -122,7 +122,6 @@ string LinkType::realizeString() const {
 
 bool LinkType::occurs(TypePtr typ, Unification &us) {
   if (auto t = typ->getLink()) {
-    assert(isStatic == t->isStatic);
     if (t->kind == Unbound) {
       if (t->id == id)
         return true;
@@ -136,8 +135,11 @@ bool LinkType::occurs(TypePtr typ, Unification &us) {
     } else {
       return false;
     }
-  } else if (isStatic) {
-    return !typ->getStatic();
+  } else if (auto t = typ->getStatic()) {
+    for (auto &g : t->explicits)
+      if (g.type && occurs(g.type, us))
+        return true;
+    return false;
   } else if (auto t = typ->getClass()) {
     for (auto &g : t->explicits)
       if (g.type && occurs(g.type, us))
@@ -159,10 +161,9 @@ int LinkType::unify(TypePtr typ, Unification &us) {
   if (kind == Link) {
     return type->unify(typ, us);
   } else if (kind == Generic) {
-    if (auto t = typ->getLink()) {
-      if (t->kind == Generic && id == t->id && isStatic == t->isStatic)
-        return 1;
-    }
+    auto t = typ->getLink();
+    if (t && t->kind == Generic && id == t->id && isStatic == t->isStatic)
+      return 1;
     return -1;
   } else { // if (kind == Unbound)
     if (auto t = typ->getLink()) {
@@ -175,7 +176,6 @@ int LinkType::unify(TypePtr typ, Unification &us) {
       else if (id == t->id)
         return 1;
     }
-    // statics N<-N+5? NO! N<-5? YES! <N><-<U>? YES!
     if (!occurs(typ, us)) {
       LOG9("UNIFY: {} <- {}", id, typ->toString());
       us.linked.push_back(static_pointer_cast<LinkType>(shared_from_this()));

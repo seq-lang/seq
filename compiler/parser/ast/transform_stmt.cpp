@@ -280,13 +280,15 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
   if (c->explicits.size() != generics.size())
     error("expected {} generics, got {}", c->explicits.size(), generics.size());
 
-  // TODO: handle statics here!
-  for (int i = 0; i < generics.size(); i++)
+  for (int i = 0; i < generics.size(); i++) {
+    auto l = c->explicits[i].type->getLink();
+    assert(l);
     ctx->addType(generics[i],
                  ctx->isTypeChecking()
                      ? make_shared<LinkType>(LinkType::Unbound, c->explicits[i].id,
-                                             ctx->getLevel())
+                                             ctx->getLevel(), nullptr, l->isStatic)
                      : nullptr);
+  }
   ctx->increaseLevel();
   ctx->pushBase(c->name);
   ctx->addBaseType(c);
