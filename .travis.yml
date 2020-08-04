@@ -65,6 +65,19 @@ before_install:
     sudo make install
     cd -
 
+  # build and cache ocamlbuild
+  - |
+    if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/ocamlbuild-0.12.0)" ]]; then
+      curl -L https://github.com/ocaml/ocamlbuild/archive/0.12.0.tar.gz | tar zxf - -C ${TRAVIS_BUILD_DIR}
+      cd ${TRAVIS_BUILD_DIR}/ocamlbuild-0.12.0
+      make configure
+      make
+      cd -
+    fi
+    cd ${TRAVIS_BUILD_DIR}/ocamlbuild-0.12.0
+    make install
+    cd -
+
 
   # fix Python:
   - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew link --overwrite python3; fi
@@ -135,6 +148,7 @@ cache:
   directories:
     - Tapir-LLVM
     - ocaml-4.07.1
+    - ocamlbuild-0.12.0
 
 notifications:
   webhooks:
