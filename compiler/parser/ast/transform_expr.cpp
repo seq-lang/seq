@@ -400,6 +400,20 @@ void TransformVisitor::visit(const PipeExpr *expr) {
   auto updateType = [&](TypePtr t, int inTypePos, ExprPtr &fe) {
     auto f = fe->getType()->getClass();
     assert(f && f->getCallable());
+    auto p = dynamic_pointer_cast<types::PartialType>(f);
+    if (p) {
+      int j = 0;
+      for (int i = 0; i < p->knownTypes.size(); i++)
+        if (!p->knownTypes[i]) {
+          if (j == inTypePos) {
+            j = i;
+            break;
+          }
+          j++;
+        }
+      inTypePos = j;
+    }
+    f = f->getCallable();
     // exactly one empty slot!
     forceUnify(t, f->args[inTypePos + 1]);
     LOG("unified {} / {} ~ {} {}", t->toString(), f->toString(), f->canRealize(),
@@ -407,7 +421,8 @@ void TransformVisitor::visit(const PipeExpr *expr) {
     if (f->canRealize() && f->getFunc()) {
       auto r = realizeFunc(f->getFunc());
       forceUnify(f, r.type);
-      fixExprName(fe, r.fullName);
+      if (p)
+        fixExprName(fe, r.fullName);
     }
     return f->args[0];
   };
@@ -639,45 +654,46 @@ void TransformVisitor::visit(const CallExpr *expr) {
 
   // Handle named and default arguments
   vector<CallExpr::Arg> reorderedArgs;
-  vector<int> pending;
-  if (auto f = c->getFunc())
-    pending = callFunc(f, args, reorderedArgs);
-  else if (auto f = dynamic_pointer_cast<types::PartialType>(c))
-    pending = callPartial(f, args, reorderedArgs);
-  else
-    pending = callCallable(c, args, reorderedArgs);
+  vector<int> availableArguments;
+  auto p = dynamic_pointer_cast<PartialType>(c);
+  if (p) {
+    c = p->getCallable();
+    LOG("switch from {} to {}", p->toString(), c->toString());
+    assert(c);
+  }
+  for (int i = 0; i < int(c->args.size()) - 1; i++)
+    if (!p || !p->knownTypes[i])
+      availableArguments.push_back(i);
+  auto pending = callFunc(c, args, reorderedArgs, availableArguments);
 
   // Realize functions that are passed as arguments
   for (auto &ra : reorderedArgs)
-    if (auto f = ra.value->getType()->getFunc()) {
-      if (f->canRealize()) {
+    if (ra.value->getType()->canRealize()) {
+      if (auto f = ra.value->getType()->getFunc()) {
         auto r = realizeFunc(f);
         forceUnify(f, r.type);
         fixExprName(ra.value, r.fullName);
       }
+      // TODO: realize partials
     }
 
+  if (c->canRealize() && c->getFunc()) {
+    auto r = realizeFunc(c->getFunc());
+    forceUnify(c, r.type);
+    if (!p)
+      fixExprName(e, r.fullName);
+  }
+  TypePtr t = make_shared<LinkType>(c->args[0]);
   if (pending.size()) {
     pending.pop_back();
-    auto t = make_shared<PartialType>(c, pending);
+    vector<char> known(c->args.size() - 1, 1);
+    for (auto p : pending)
+      known[p] = 0;
+    t = make_shared<PartialType>(c, known);
     generateVariardicStub("partial", pending.size());
-    forceUnify(expr, t);
-    if (c->canRealize() && c->getFunc()) {
-      auto r = realizeFunc(c->getFunc());
-      forceUnify(c, r.type);
-      fixExprName(e, r.fullName);
-    }
-    resultExpr = N<CallExpr>(move(e), move(reorderedArgs));
-    resultExpr->setType(t);
-  } else {
-    if (c->canRealize() && c->getFunc()) {
-      auto r = realizeFunc(c->getFunc());
-      forceUnify(c, r.type);
-      fixExprName(e, r.fullName);
-    }
-    resultExpr = N<CallExpr>(move(e), move(reorderedArgs));
-    resultExpr->setType(forceUnify(expr, make_shared<LinkType>(c->args[0])));
   }
+  resultExpr = N<CallExpr>(move(e), move(reorderedArgs));
+  resultExpr->setType(forceUnify(expr, t));
 }
 
 void TransformVisitor::visit(const DotExpr *expr) {
@@ -857,7 +873,18 @@ void TransformVisitor::visit(const LambdaExpr *expr) {
 
 // TODO
 void TransformVisitor::visit(const YieldExpr *expr) {
-  error("yieldexpr is not yet supported");
+  resultExpr = N<YieldExpr>();
+  if (ctx->isTypeChecking()) {
+    if (!ctx->getReturnType())
+      error("(yield) cannot be used outside of functions");
+    auto t =
+        forceUnify(ctx->getReturnType(),
+                   ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("generator"),
+                                           {ctx->addUnbound(getSrcInfo())}));
+    auto c = t->follow()->getClass();
+    assert(c);
+    resultExpr->setType(forceUnify(expr, c->explicits[0].type));
+  }
 }
 
 /*******************************/

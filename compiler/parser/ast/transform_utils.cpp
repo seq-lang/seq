@@ -242,40 +242,41 @@ FuncTypePtr TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
   return (*m)[scores[0].second];
 }
 
-vector<int> TransformVisitor::callCallable(types::ClassTypePtr f,
-                                           vector<CallExpr::Arg> &args,
-                                           vector<CallExpr::Arg> &reorderedArgs) {
-  assert(f->getCallable());
-  bool isPartial = false;
-  if (args.size() != f->args.size() - 1) {
-    if (args.size() == f->args.size() && CAST(args.back().value, EllipsisExpr)) {
-      isPartial = true;
-      args.pop_back();
-    } else {
-      error("too many arguments for {} (expected {}, got {})", f->toString(),
-            f->args.size() - 1, args.size());
-    }
-  }
-  vector<int> pending;
-  for (int i = 0; i < args.size(); i++) {
-    if (args[i].name != "")
-      error("argument '{}' missing (function pointers have argument "
-            "names elided)",
-            args[i].name);
-    reorderedArgs.push_back({"", move(args[i].value)});
+// vector<int> TransformVisitor::callCallable(types::TypePtr f,
+//                                            vector<CallExpr::Arg> &args,
+//                                            vector<CallExpr::Arg> &reorderedArgs) {
+//   assert(f->getCallable());
+//   bool isPartial = false;
+//   if (args.size() != f->args.size() - 1) {
+//     if (args.size() == f->args.size() && CAST(args.back().value, EllipsisExpr)) {
+//       isPartial = true;
+//       args.pop_back();
+//     } else {
+//       error("too many arguments for {} (expected {}, got {})", f->toString(),
+//             f->args.size() - 1, args.size());
+//     }
+//   }
+//   vector<int> pending;
+//   for (int i = 0; i < args.size(); i++) {
+//     if (args[i].name != "")
+//       error("argument '{}' missing (function pointers have argument "
+//             "names elided)",
+//             args[i].name);
+//     reorderedArgs.push_back({"", move(args[i].value)});
 
-    forceUnify(reorderedArgs[i].value, f->args[i + 1]);
-    if (CAST(reorderedArgs[i].value, EllipsisExpr))
-      pending.push_back(i);
-  }
-  if (isPartial || pending.size())
-    pending.push_back(args.size());
-  return pending;
-}
+//     forceUnify(reorderedArgs[i].value, f->args[i + 1]);
+//     if (CAST(reorderedArgs[i].value, EllipsisExpr))
+//       pending.push_back(i);
+//   }
+//   if (isPartial || pending.size())
+//     pending.push_back(args.size());
+//   return pending;
+// }
 
-vector<int> TransformVisitor::callFunc(types::FuncTypePtr f,
+vector<int> TransformVisitor::callFunc(types::ClassTypePtr f,
                                        vector<CallExpr::Arg> &args,
-                                       vector<CallExpr::Arg> &reorderedArgs) {
+                                       vector<CallExpr::Arg> &reorderedArgs,
+                                       const vector<int> &availableArguments) {
   vector<int> pending;
   bool isPartial = false;
   bool namesStarted = false;
@@ -291,35 +292,44 @@ vector<int> TransformVisitor::callFunc(types::FuncTypePtr f,
     else
       error("named argument {} repeated multiple times", args[i].name);
   }
-  if (namedArgs.size() == 0 && reorderedArgs.size() == f->args.size() &&
+
+  if (namedArgs.size() == 0 && reorderedArgs.size() == availableArguments.size() + 1 &&
       CAST(reorderedArgs.back().value, EllipsisExpr)) {
     isPartial = true;
     reorderedArgs.pop_back();
-  } else if (reorderedArgs.size() + namedArgs.size() > f->args.size() - 1) {
+  } else if (reorderedArgs.size() + namedArgs.size() > availableArguments.size()) {
     error("too many arguments for {} (expected {}, got {})", f->toString(),
-          f->args.size() - 1, reorderedArgs.size() + namedArgs.size());
+          availableArguments.size(), reorderedArgs.size() + namedArgs.size());
   }
 
-  auto ast = dynamic_cast<FunctionStmt *>(
-      ctx->getRealizations()->getAST(f->canonicalName).get());
-  assert(ast);
-  for (int i = 0, ra = reorderedArgs.size(); i < f->args.size() - 1; i++) {
+  FunctionStmt *ast = nullptr;
+  if (f->getFunc()) {
+    ast = dynamic_cast<FunctionStmt *>(
+        ctx->getRealizations()->getAST(f->getFunc()->canonicalName).get());
+    assert(ast);
+  }
+  if (!ast && namedArgs.size())
+    error("unexpected name '{}' (function pointers have argument "
+          "names elided)",
+          namedArgs.begin()->first);
+  for (int i = 0, ra = reorderedArgs.size(); i < availableArguments.size(); i++) {
     if (i >= ra) {
-      auto it = namedArgs.find(ast->args[i].name);
+      assert(ast);
+      auto it = namedArgs.find(ast->args[availableArguments[i]].name);
       if (it != namedArgs.end()) {
         reorderedArgs.push_back({"", move(it->second)});
         namedArgs.erase(it);
       } else if (ast->args[i].deflt) {
-        reorderedArgs.push_back({"", transform(ast->args[i].deflt)});
+        reorderedArgs.push_back(
+            {"", transform(ast->args[availableArguments[i]].deflt)});
       } else {
-        error("argument '{}' missing", ast->args[i].name);
+        error("argument '{}' missing", ast->args[availableArguments[i]].name);
       }
     }
     if (CAST(reorderedArgs[i].value, EllipsisExpr))
-      pending.push_back(i);
-
-    if (!wrapOptional(f->args[i + 1], reorderedArgs[i].value))
-      forceUnify(reorderedArgs[i].value, f->args[i + 1]);
+      pending.push_back(availableArguments[i]);
+    if (!wrapOptional(f->args[availableArguments[i] + 1], reorderedArgs[i].value))
+      forceUnify(reorderedArgs[i].value, f->args[availableArguments[i] + 1]);
   }
   for (auto &i : namedArgs)
     error(i.second, "unknown argument {}", i.first);
@@ -328,35 +338,36 @@ vector<int> TransformVisitor::callFunc(types::FuncTypePtr f,
   return pending;
 }
 
-vector<int> TransformVisitor::callPartial(types::PartialTypePtr f,
-                                          vector<CallExpr::Arg> &args,
-                                          vector<CallExpr::Arg> &reorderedArgs) {
-  // TODO: parse named arguments for partial functions
-  bool isPartial = false;
-  if (args.size() != f->pending.size()) {
-    if (args.size() == f->pending.size() + 1 && CAST(args.back().value, EllipsisExpr)) {
-      isPartial = true;
-      args.pop_back();
-    } else {
-      error("too many arguments for {} (expected {}, got {})", f->toString(),
-            f->pending.size(), args.size());
-    }
-  }
-  vector<int> pending;
-  for (int i = 0; i < args.size(); i++) {
-    if (args[i].name != "")
-      error("argument '{}' missing (partial calls have argument "
-            "names elided)",
-            args[i].name);
-    reorderedArgs.push_back({"", move(args[i].value)});
-    forceUnify(reorderedArgs[i].value, f->args[f->pending[i] + 1]);
-    if (CAST(reorderedArgs[i].value, EllipsisExpr))
-      pending.push_back(f->pending[i]);
-  }
-  if (isPartial || pending.size())
-    pending.push_back(args.size());
-  return pending;
-}
+// vector<int> TransformVisitor::callPartial(types::PartialTypePtr f,
+//                                           vector<CallExpr::Arg> &args,
+//                                           vector<CallExpr::Arg> &reorderedArgs) {
+//   // TODO: parse named arguments for partial functions
+//   bool isPartial = false;
+//   if (args.size() != f->args.size() - 1 - f->knownTypes.size()) {
+//     if (args.size() == f->args.size() - 1 - f->knownTypes.size() + 1 &&
+//         CAST(args.back().value, EllipsisExpr)) {
+//       isPartial = true;
+//       args.pop_back();
+//     } else {
+//       error("too many arguments for {} (expected {}, got {})", f->toString(),
+//             f->knownTypes.size(), args.size());
+//     }
+//   }
+//   vector<int> pending;
+//   for (int i = 0; i < args.size(); i++) {
+//     if (args[i].name != "")
+//       error("argument '{}' missing (partial calls have argument "
+//             "names elided)",
+//             args[i].name);
+//     reorderedArgs.push_back({"", move(args[i].value)});
+//     forceUnify(reorderedArgs[i].value, f->args[f->knownTypes[i] + 1]);
+//     if (CAST(reorderedArgs[i].value, EllipsisExpr))
+//       pending.push_back(f->knownTypes[i]);
+//   }
+//   if (isPartial || pending.size())
+//     pending.push_back(args.size());
+//   return pending;
+// }
 
 bool TransformVisitor::handleStackAlloc(const CallExpr *expr) {
   if (auto ix = CAST(expr->expr, IndexExpr)) {

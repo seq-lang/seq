@@ -38,6 +38,8 @@ struct Unification {
   void undo();
 };
 
+std::string v2b(const std::vector<char> &c);
+
 struct Generic {
   std::string name;
   int id;
@@ -281,11 +283,12 @@ public:
 };
 
 struct PartialType : public ClassType {
-  std::vector<int> pending;
-  PartialType(ClassTypePtr c, const std::vector<int> &p);
+  std::vector<char> knownTypes;
+  PartialType(ClassTypePtr c, const std::vector<char> &k);
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       std::unordered_map<int, TypePtr> &cache) override;
+  virtual int unify(TypePtr typ, Unification &us) override;
 };
 typedef std::shared_ptr<PartialType> PartialTypePtr;
 

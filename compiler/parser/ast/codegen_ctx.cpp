@@ -194,18 +194,16 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
     types.erase(types.begin());
     real.handle = seq::types::FuncType::get(types, ret);
   } else if (name.substr(0, 10) == "__partial_") {
-    types.clear();
-    for (auto &m : t->args)
-      types.push_back(realizeType(m->getClass()));
-    auto ret = types[0];
-    types.erase(types.begin());
-    auto fn = seq::types::FuncType::get(types, ret);
-    vector<seq::types::Type *> partials;
+    auto f = t->getCallable();
+    assert(f);
+    auto callee = realizeType(f);
+    vector<seq::types::Type *> partials(f->args.size() - 1, nullptr);
     auto p = std::dynamic_pointer_cast<types::PartialType>(t);
     assert(p);
-    for (auto i : p->pending)
-      partials.push_back(realizeType(t->args[i + 1]->getClass()));
-    real.handle = seq::types::PartialFuncType::get(fn, partials);
+    for (int i = 0; i < p->knownTypes.size(); i++)
+      if (p->knownTypes[i])
+        partials[i] = realizeType(f->args[i + 1]->getClass());
+    real.handle = seq::types::PartialFuncType::get(callee, partials);
   } else {
     vector<string> names;
     vector<seq::types::Type *> types;

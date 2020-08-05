@@ -414,6 +414,8 @@ bool ClassType::canRealize() const {
 }
 
 ClassTypePtr ClassType::getCallable() {
+  if (chop(name).substr(0, 10) == "__partial_")
+    return std::static_pointer_cast<ClassType>(explicits[0].type);
   if (isCallable(name))
     return std::static_pointer_cast<ClassType>(shared_from_this());
   return nullptr;
@@ -446,21 +448,44 @@ TypePtr FuncType::instantiate(int level, int &unboundCount,
                                canonicalName);
 }
 
-PartialType::PartialType(ClassTypePtr c, const vector<int> &pending)
-    : ClassType(fmt::format("__partial_{}", pending.size()), c->isRecord(), c->args,
-                c->explicits, c->parent),
-      pending(pending) {}
+string v2b(const vector<char> &c) {
+  string s(c.size(), '0');
+  for (int i = 0; i < c.size(); i++)
+    if (c[i])
+      s[i] = '1';
+  return s;
+}
+
+PartialType::PartialType(ClassTypePtr c, const vector<char> &k)
+    : ClassType(fmt::format("__partial_{}", v2b(k)), true, {}, {Generic("T", c, -1)},
+                nullptr),
+      knownTypes(k) {}
 
 TypePtr PartialType::generalize(int level) {
   return make_shared<PartialType>(
-      static_pointer_cast<ClassType>(ClassType::generalize(level)), pending);
+      static_pointer_cast<ClassType>(explicits[0].type->generalize(level)), knownTypes);
 }
 
 TypePtr PartialType::instantiate(int level, int &unboundCount,
                                  std::unordered_map<int, TypePtr> &cache) {
-  return make_shared<PartialType>(static_pointer_cast<ClassType>(ClassType::instantiate(
-                                      level, unboundCount, cache)),
-                                  pending);
+  return make_shared<PartialType>(
+      static_pointer_cast<ClassType>(
+          explicits[0].type->instantiate(level, unboundCount, cache)),
+      knownTypes);
+}
+
+int PartialType::unify(TypePtr typ, Unification &us) {
+  if (auto t = dynamic_pointer_cast<PartialType>(typ)) {
+    if (knownTypes.size() != t->knownTypes.size())
+      return -1;
+    for (int i = 0; i < knownTypes.size(); i++)
+      if (knownTypes[i] != t->knownTypes[i])
+        return -1;
+    return ClassType::unify(typ, us);
+  } else if (auto t = typ->getLink()) {
+    return t->unify(shared_from_this(), us);
+  }
+  return -1;
 }
 
 } // namespace types
