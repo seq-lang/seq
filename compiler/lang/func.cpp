@@ -410,6 +410,9 @@ void Func::codegen(Module *module) {
   if (hasAttribute("noinline")) {
     func->addFnAttr(Attribute::AttrKind::NoInline);
   }
+  if (config::config().profile) {
+    func->addFnAttr("xray-instruction-threshold", "200");
+  }
   func->setPersonalityFn(makePersonalityFunc(module));
   preambleBlock = BasicBlock::Create(context, "preamble", func);
   IRBuilder<> builder(preambleBlock);

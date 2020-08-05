@@ -35,13 +35,14 @@
 
 #define SEQ_VERSION_MAJOR 0
 #define SEQ_VERSION_MINOR 9
-#define SEQ_VERSION_PATCH 7
+#define SEQ_VERSION_PATCH 8
 
 namespace seq {
 namespace config {
 struct Config {
   llvm::LLVMContext context;
   bool debug;
+  bool profile;
 
   Config();
 };

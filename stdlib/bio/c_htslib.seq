@@ -27,13 +27,35 @@ from LD cimport bam_auxB2i(ptr[u8], idx: u32) -> int
 from LD cimport bam_auxB2f(ptr[u8], idx: u32) -> float
 from LD cimport sam_hdr_destroy(cobj)
 from LD cimport bam_destroy1(cobj)
+
+from LD cimport bcf_hdr_read(cobj) -> cobj
+from LD cimport bcf_read(cobj, cobj, cobj) -> i32
+from LD cimport bcf_unpack(cobj, i32) -> i32
+from LD cimport bcf_hdr_destroy(cobj)
+from LD cimport bcf_init() -> cobj
+from LD cimport bcf_destroy(cobj)
+from LD cimport bcf_get_variant_types(cobj) -> i32
+from LD cimport bcf_get_variant_type(cobj, i32) -> i32
+from LD cimport bcf_is_snp(cobj) -> i32
+from LD cimport bcf_has_filter(cobj, cobj, cobj) -> i32
+from LD cimport bcf_get_fmt(cobj, cobj, cobj) -> cobj
+from LD cimport bcf_get_info(cobj, cobj, cobj) -> cobj
+from LD cimport bcf_get_fmt_id(cobj, i32) -> cobj
+from LD cimport bcf_get_info_id(cobj, i32) -> cobj
+from LD cimport bcf_get_format_values(cobj, cobj, cobj, cobj, cobj, i32) -> i32
+from LD cimport bcf_hdr_id2int(cobj, i32, cobj) -> i32
+from LD cimport bcf_has_filter(cobj, cobj, cobj) -> i32
+from LD cimport bcf_hrec_format(cobj, cobj)
+from LD cimport bcf_clear(cobj)
+from LD cimport bcf_empty(cobj)
+from LD cimport bcf_dup(cobj) -> cobj
+from LD cimport bcf_get_info_values(cobj, cobj, ptr[byte], ptr[cobj], ptr[i32], i32) -> i32
+
 from LD cimport hts_version() -> cobj
 
 cimport seq_get_htsfile_fp(cobj) -> cobj
 cimport seq_is_htsfile_cram(cobj) -> bool
 cimport seq_is_htsfile_bgzf(cobj) -> bool
-
-# print str.from_ptr(hts_version())
 
 # Seq HTSlib
 def sam_itr_next(file: cobj, itr: cobj, r: cobj) -> int:

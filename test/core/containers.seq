@@ -348,3 +348,20 @@ def test_deque():
         dq.append(i)
     assert str(dq) == '[0, 1, 2, 3, 4]'
 test_deque()
+
+@test
+def test_interval_tree():
+    from bio.intervals import IntervalTree
+    t = IntervalTree()
+    t.add("chr1", 20, 30)
+    t.add("chr2", 10, 30)
+    t.add("chr1", 10, 25)
+    t.index()
+    overlaps = {(a.start, a.end) for a in t.overlap("chr1", 15, 22)}
+    assert overlaps == {(20, 30), (10, 25)}
+    assert "chr1" in t
+    assert "chr2" in t
+    assert "chr3" not in t
+    assert {(a.start, a.end) for a in t} == {(20, 30), (10, 30), (10, 25)}
+    assert len(t) == 3
+test_interval_tree()

@@ -1,0 +1,127 @@
+######################
+# Matching benchmark #
+######################
+from sys import argv
+from time import timing
+
+def match_fast1[K](k: K):
+    match k:
+        case s'T_T_T_T_T_T_T_T_T_T_T_T_T_T_T_T_..._A_A_A_A_A_A_A_A_A_A_A_A_A_A_A_A':
+            return True
+        case _:
+            return False
+
+def match_slow1[K](k: K):
+    for i in range(0, 32, 2):
+        if k[i] != k'T':
+            return False
+    for i in range(0, 32, 2):
+        if k[len(k) - 1 - i] != k'A':
+            return False
+    return True
+
+def test1[K](use_slow_match: bool):
+    n = 0
+    with timing(f'{K.len()}-mer ({use_slow_match=})'):
+        for s in FASTA(argv[1]) |> seqs:
+            for kmer in s |> kmers[K](1):
+                b = False
+                if use_slow_match:
+                    b = match_slow1(kmer)
+                else:
+                    b = match_fast1(kmer)
+                n += 1 if b else 0
+    print n
+
+def match_fast2[K](k: K):
+    match k:
+        case s'T_T_..._A_A':
+            return True
+        case _:
+            return False
+
+def match_slow2[K](k: K):
+    for i in range(0, 4, 2):
+        if k[i] != k'T':
+            return False
+    for i in range(0, 4, 2):
+        if k[len(k) - 1 - i] != k'A':
+            return False
+    return True
+
+def test2[K](use_slow_match: bool):
+    n = 0
+    with timing(f'{K.len()}-mer ({use_slow_match=})'):
+        for s in FASTA(argv[1]) |> seqs:
+            for kmer in s |> kmers[K](1):
+                b = False
+                if use_slow_match:
+                    b = match_slow2(kmer)
+                else:
+                    b = match_fast2(kmer)
+                n += 1 if b else 0
+    print n
+
+print 'TEST1:'
+test1[Kmer[64]](False)
+test1[Kmer[64]](True)
+test1[Kmer[96]](False)
+test1[Kmer[96]](True)
+test1[Kmer[128]](False)
+test1[Kmer[128]](True)
+test1[Kmer[160]](False)
+test1[Kmer[160]](True)
+test1[Kmer[192]](False)
+test1[Kmer[192]](True)
+test1[Kmer[224]](False)
+test1[Kmer[224]](True)
+test1[Kmer[256]](False)
+test1[Kmer[256]](True)
+test1[Kmer[288]](False)
+test1[Kmer[288]](True)
+test1[Kmer[320]](False)
+test1[Kmer[320]](True)
+test1[Kmer[352]](False)
+test1[Kmer[352]](True)
+test1[Kmer[384]](False)
+test1[Kmer[384]](True)
+test1[Kmer[416]](False)
+test1[Kmer[416]](True)
+test1[Kmer[448]](False)
+test1[Kmer[448]](True)
+test1[Kmer[480]](False)
+test1[Kmer[480]](True)
+test1[Kmer[512]](False)
+test1[Kmer[512]](True)
+
+print 'TEST2:'
+test2[Kmer[64]](False)
+test2[Kmer[64]](True)
+test2[Kmer[96]](False)
+test2[Kmer[96]](True)
+test2[Kmer[128]](False)
+test2[Kmer[128]](True)
+test2[Kmer[160]](False)
+test2[Kmer[160]](True)
+test2[Kmer[192]](False)
+test2[Kmer[192]](True)
+test2[Kmer[224]](False)
+test2[Kmer[224]](True)
+test2[Kmer[256]](False)
+test2[Kmer[256]](True)
+test2[Kmer[288]](False)
+test2[Kmer[288]](True)
+test2[Kmer[320]](False)
+test2[Kmer[320]](True)
+test2[Kmer[352]](False)
+test2[Kmer[352]](True)
+test2[Kmer[384]](False)
+test2[Kmer[384]](True)
+test2[Kmer[416]](False)
+test2[Kmer[416]](True)
+test2[Kmer[448]](False)
+test2[Kmer[448]](True)
+test2[Kmer[480]](False)
+test2[Kmer[480]](True)
+test2[Kmer[512]](False)
+test2[Kmer[512]](True)
