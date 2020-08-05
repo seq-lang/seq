@@ -419,22 +419,16 @@ ClassTypePtr ClassType::getCallable() {
   return nullptr;
 }
 
-FuncType::Arg FuncType::Arg::clone() const {
-  return {name, defaultValue ? defaultValue->clone() : nullptr};
-}
-
 FuncType::FuncType(const std::vector<TypePtr> &args, const vector<Generic> &explicits,
-                   ClassTypePtr parent, const string &canonicalName,
-                   const vector<FuncType::Arg> &ad)
+                   ClassTypePtr parent, const string &canonicalName)
     : ClassType(fmt::format("__function_{}", args.size()), true, args, explicits,
                 parent),
-      canonicalName(canonicalName), argDefs(CL(ad)) {}
+      canonicalName(canonicalName) {}
 
-FuncType::FuncType(ClassTypePtr c, const string &canonicalName,
-                   const vector<FuncType::Arg> &ad)
+FuncType::FuncType(ClassTypePtr c, const string &canonicalName)
     : ClassType(fmt::format("__function_{}", c->args.size()), c->record, c->args,
                 c->explicits, c->parent),
-      canonicalName(canonicalName), argDefs(CL(ad)) {}
+      canonicalName(canonicalName) {}
 
 string FuncType::realizeString() const {
   return ClassType::realizeString(canonicalName, true, 1);
@@ -442,15 +436,14 @@ string FuncType::realizeString() const {
 
 TypePtr FuncType::generalize(int level) {
   return make_shared<FuncType>(
-      static_pointer_cast<ClassType>(ClassType::generalize(level)), canonicalName,
-      argDefs);
+      static_pointer_cast<ClassType>(ClassType::generalize(level)), canonicalName);
 }
 
 TypePtr FuncType::instantiate(int level, int &unboundCount,
                               std::unordered_map<int, TypePtr> &cache) {
   return make_shared<FuncType>(static_pointer_cast<ClassType>(
                                    ClassType::instantiate(level, unboundCount, cache)),
-                               canonicalName, argDefs);
+                               canonicalName);
 }
 
 PartialType::PartialType(ClassTypePtr c, const vector<int> &pending)
@@ -469,22 +462,6 @@ TypePtr PartialType::instantiate(int level, int &unboundCount,
                                       level, unboundCount, cache)),
                                   pending);
 }
-
-// TODO:
-// else {
-//   return args[0]->canRealize();
-// }
-
-// FuncType::RealizationInfo::RealizationInfo(const string &name,
-//                                            const vector<int> &pending,
-//                                            const vector<Arg> &args,
-//                                            TypePtr base)
-//     : name(name), pending(pending), baseClass(base) {
-//   for (auto &a : args)
-//     this->args.push_back(
-//         {a.name, a.type, a.defaultValue ? a.defaultValue->clone() :
-//         nullptr});
-// }
 
 } // namespace types
 } // namespace ast

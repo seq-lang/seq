@@ -262,22 +262,13 @@ public:
  */
 typedef std::shared_ptr<FuncType> FuncTypePtr;
 struct FuncType : public ClassType {
-  struct Arg {
-    std::string name;
-    std::unique_ptr<Expr> defaultValue;
-    Arg clone() const;
-  };
   std::string canonicalName;
-  std::vector<Arg> argDefs; // name, value
-  TypePtr baseClass;
 
 public:
-  FuncType(ClassTypePtr c, const std::string &canonicalName = "",
-           const std::vector<Arg> &argDefs = std::vector<Arg>());
+  FuncType(ClassTypePtr c, const std::string &canonicalName = "");
   FuncType(const std::vector<TypePtr> &args = std::vector<TypePtr>(),
            const std::vector<Generic> &explicits = std::vector<Generic>(),
-           ClassTypePtr parent = nullptr, const std::string &canonicalName = "",
-           const std::vector<Arg> &argDefs = std::vector<Arg>());
+           ClassTypePtr parent = nullptr, const std::string &canonicalName = "");
 
 public:
   std::string realizeString() const override;

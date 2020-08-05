@@ -431,21 +431,14 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
       error("expected return type");
     vector<Param> args;
     vector<TypePtr> argTypes{transformType(stmt->ret)->getType()};
-    vector<FuncType::Arg> realizationArgs;
-    // vector<int> pending;
     for (auto &a : stmt->args) {
       if (a.deflt)
         error("default arguments not supported here");
       args.push_back({a.name, transformType(a.type), nullptr});
       argTypes.push_back(args.back().type->getType());
-      realizationArgs.push_back({a.name, nullptr});
-      // pending.push_back(pending.size());
     }
-    auto t = make_shared<FuncType>(argTypes, vector<Generic>(), nullptr, canonicalName,
-                                   realizationArgs); /// It has no parent type...
+    auto t = make_shared<FuncType>(argTypes, vector<Generic>(), nullptr, canonicalName);
     generateVariardicStub("function", argTypes.size());
-    // t->realizationInfo = make_shared<FuncType::RealizationInfo>(
-    // canonicalName, pending, realizationArgs);
     t->setSrcInfo(stmt->getSrcInfo());
     t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));
 
@@ -540,8 +533,6 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     auto genericTypes = parseGenerics(stmt->generics);
     ctx->increaseLevel();
     vector<Param> args;
-    vector<FuncType::Arg> realizationArgs;
-
     bool isClassMember = ctx->getBaseType() && !ctx->getBaseType()->getFunc();
 
     // If type checking is not active, make all arguments generic
@@ -595,9 +586,7 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
         typ = ctx->addUnbound(getSrcInfo(), false);
       }
       argTypes.push_back(typ);
-      args.push_back({a.name, move(typeAst)});
-      realizationArgs.push_back({a.name, a.deflt ? a.deflt->clone() : nullptr});
-      // pending.push_back(pending.size());
+      args.push_back({a.name, move(typeAst), a.deflt ? a.deflt->clone() : nullptr});
     }
     ctx->decreaseLevel();
     for (auto &g : stmt->generics) {
@@ -615,8 +604,7 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     if (ctx->getBaseType() && ctx->getBaseType()->getFunc())
       parentType = nullptr; // only relevant for methods; sub-functions must be
                             // realized in the block
-    auto t = make_shared<FuncType>(argTypes, genericTypes, parentType, canonicalName,
-                                   realizationArgs);
+    auto t = make_shared<FuncType>(argTypes, genericTypes, parentType, canonicalName);
     generateVariardicStub("function", argTypes.size());
     t->setSrcInfo(stmt->getSrcInfo());
     t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));

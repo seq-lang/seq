@@ -24,9 +24,9 @@ from core.file import File, gzFile, open, gzopen
 from pickle import pickle, unpickle
 from core.dlopen import dlsym as _dlsym
 
-# # from core.python import init as _py_init, imp as _py_import, exec as _py_exec, pyobj
+# from core.python import init as _py_init, imp as _py_import, exec as _py_exec, pyobj
 
-# # from bio import *
+# from bio import *
 
 @builtin
 def _test_failed(file: str, line: int, msg: str):

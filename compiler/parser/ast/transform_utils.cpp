@@ -299,21 +299,24 @@ vector<int> TransformVisitor::callFunc(types::FuncTypePtr f,
     error("too many arguments for {} (expected {}, got {})", f->toString(),
           f->args.size() - 1, reorderedArgs.size() + namedArgs.size());
   }
+
+  auto ast = dynamic_cast<FunctionStmt *>(
+      ctx->getRealizations()->getAST(f->canonicalName).get());
+  assert(ast);
   for (int i = 0, ra = reorderedArgs.size(); i < f->args.size() - 1; i++) {
     if (i >= ra) {
-      auto it = namedArgs.find(f->argDefs[i].name);
+      auto it = namedArgs.find(ast->args[i].name);
       if (it != namedArgs.end()) {
         reorderedArgs.push_back({"", move(it->second)});
         namedArgs.erase(it);
-      } else if (f->argDefs[i].defaultValue) {
-        reorderedArgs.push_back({"", transform(f->argDefs[i].defaultValue)});
+      } else if (ast->args[i].deflt) {
+        reorderedArgs.push_back({"", transform(ast->args[i].deflt)});
       } else {
-        error("argument '{}' missing", f->argDefs[i].name);
+        error("argument '{}' missing", ast->args[i].name);
       }
     }
     if (CAST(reorderedArgs[i].value, EllipsisExpr))
       pending.push_back(i);
-    // forceUnify(reorderedArgs[i].value, f->argDefs[i].type);
 
     if (!wrapOptional(f->args[i + 1], reorderedArgs[i].value))
       forceUnify(reorderedArgs[i].value, f->args[i + 1]);

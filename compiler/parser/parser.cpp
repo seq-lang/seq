@@ -32,6 +32,9 @@ void generateDocstr(const std::string &file) {
 seq::SeqModule *parse(const std::string &argv0, const std::string &file, bool isCode,
                       bool isTest) {
   try {
+    auto d = getenv("SEQ_DEBUG");
+    if (d)
+      __dbg_level__ = strtol(d, nullptr, 10);
     // auto stmts = isCode ? ast::parse_code(argv0, file) :
     // ast::parse_file(file);
 
