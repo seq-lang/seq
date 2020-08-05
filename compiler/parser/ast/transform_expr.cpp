@@ -365,7 +365,7 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
       resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
     } else if (le->getType()->getUnbound() || re->getType()->getUnbound()) {
       resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
-      resultExpr->setType(ctx->addUnbound(getSrcInfo()));
+      resultExpr->setType(forceUnify(expr, ctx->addUnbound(getSrcInfo())));
     } else {
       auto mi = magics.find(expr->op);
       if (mi == magics.end())
@@ -385,6 +385,7 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
       magic = format("__{}__", magic);
       resultExpr = transform(
           N<CallExpr>(N<DotExpr>(expr->lexpr->clone(), magic), expr->rexpr->clone()));
+      forceUnify(expr, resultExpr->getType());
     }
   }
 }
@@ -416,8 +417,6 @@ void TransformVisitor::visit(const PipeExpr *expr) {
     f = f->getCallable();
     // exactly one empty slot!
     forceUnify(t, f->args[inTypePos + 1]);
-    LOG("unified {} / {} ~ {} {}", t->toString(), f->toString(), f->canRealize(),
-        f->getFunc());
     if (f->canRealize() && f->getFunc()) {
       auto r = realizeFunc(f->getFunc());
       forceUnify(f, r.type);
@@ -454,8 +453,6 @@ void TransformVisitor::visit(const PipeExpr *expr) {
           {l.op, transform(N<CallExpr>(transform(l.expr), N<EllipsisExpr>()))});
       inTypePos = 0;
     }
-    LOG("-- parsing {}; inType = {}; pos = {}", l.expr->toString(), inType->toString(),
-        inTypePos);
     if (ctx->isTypeChecking()) {
       inType = updateType(inType, inTypePos, items.back().expr);
       if (i < expr->items.size() - 1)
@@ -658,7 +655,6 @@ void TransformVisitor::visit(const CallExpr *expr) {
   auto p = dynamic_pointer_cast<PartialType>(c);
   if (p) {
     c = p->getCallable();
-    LOG("switch from {} to {}", p->toString(), c->toString());
     assert(c);
   }
   for (int i = 0; i < int(c->args.size()) - 1; i++)

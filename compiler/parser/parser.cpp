@@ -73,6 +73,7 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file, bool is
       // return module;
 
       fmt::print(fo, "-------------------------------<hr/>\n");
+      LOG("--");
     }
     fclose(fo);
     exit(0);
