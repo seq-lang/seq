@@ -2,6 +2,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fstream>
+#include <gc.h>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -36,9 +37,11 @@ protected:
     const bool debug = get<1>(GetParam());
     assert(pipe(out_pipe) != -1);
     pid = fork();
+    GC_atfork_prepare();
     assert(pid != -1);
 
     if (pid == 0) {
+      GC_atfork_child();
       dup2(out_pipe[1], STDOUT_FILENO);
       close(out_pipe[0]);
       close(out_pipe[1]);
@@ -48,6 +51,7 @@ protected:
       fflush(stdout);
       exit(EXIT_SUCCESS);
     } else {
+      GC_atfork_parent();
       int status = -1;
       close(out_pipe[1]);
       assert(waitpid(pid, &status, 0) == pid);
