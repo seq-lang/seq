@@ -108,6 +108,12 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
   //  std::vector<CallExpr::Arg> &args,
   //  std::vector<CallExpr::Arg> &reorderedArgs);
   bool handleStackAlloc(const CallExpr *expr);
+  bool getTupleIndex(types::ClassTypePtr tuple, const ExprPtr &expr,
+                     const ExprPtr &index);
+  StmtPtr makeInternalFn(const std::string &name, ExprPtr &&ret, Param &&arg = Param(),
+                         Param &&arg2 = Param());
+  StmtPtr makeInternalFn(const std::string &name, ExprPtr &&ret,
+                         std::vector<Param> &&args);
 
 public:
   TransformVisitor(std::shared_ptr<TypeContext> ctx,

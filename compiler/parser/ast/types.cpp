@@ -254,14 +254,14 @@ bool LinkType::canRealize() const {
     return type->canRealize();
 }
 
-bool isTuple(const string &name) { return chop(name).substr(0, 8) == "__tuple_"; }
+bool isTuple(const string &name) { return chop(name).substr(0, 6) == "tuple."; }
 
 bool isCallable(const string &name) {
-  return chop(name).substr(0, 11) == "__function_" ||
-         chop(name).substr(0, 10) == "__partial_";
+  return chop(name).substr(0, 9) == "function." ||
+         chop(name).substr(0, 8) == "partial.";
 }
 
-bool isFunc(const string &name) { return chop(name).substr(0, 11) == "__function_"; }
+bool isFunc(const string &name) { return chop(name).substr(0, 9) == "function."; }
 
 ClassType::ClassType(const string &name, bool isRecord, const vector<TypePtr> &args,
                      const vector<Generic> &explicits, ClassTypePtr parent)
@@ -400,7 +400,7 @@ bool ClassType::hasUnbound() const {
 }
 
 bool ClassType::canRealize() const {
-  if (chop(name).substr(0, 11) == "__callable_") // traits cannot be realized
+  if (chop(name).substr(0, 9) == "callable.") // traits cannot be realized
     return false;
   for (int i = isCallable(name); i < args.size(); i++)
     if (!args[i]->canRealize())
@@ -416,7 +416,7 @@ bool ClassType::canRealize() const {
 }
 
 ClassTypePtr ClassType::getCallable() {
-  if (chop(name).substr(0, 10) == "__partial_")
+  if (chop(name).substr(0, 8) == "partial.")
     return std::static_pointer_cast<ClassType>(explicits[0].type);
   if (isCallable(name))
     return std::static_pointer_cast<ClassType>(shared_from_this());
@@ -425,12 +425,11 @@ ClassTypePtr ClassType::getCallable() {
 
 FuncType::FuncType(const std::vector<TypePtr> &args, const vector<Generic> &explicits,
                    ClassTypePtr parent, const string &canonicalName)
-    : ClassType(fmt::format("__function_{}", args.size()), true, args, explicits,
-                parent),
+    : ClassType(fmt::format("function.{}", args.size()), true, args, explicits, parent),
       canonicalName(canonicalName) {}
 
 FuncType::FuncType(ClassTypePtr c, const string &canonicalName)
-    : ClassType(fmt::format("__function_{}", c->args.size()), c->record, c->args,
+    : ClassType(fmt::format("function.{}", c->args.size()), c->record, c->args,
                 c->explicits, c->parent),
       canonicalName(canonicalName) {}
 
@@ -459,7 +458,7 @@ string v2b(const vector<char> &c) {
 }
 
 PartialType::PartialType(ClassTypePtr c, const vector<char> &k)
-    : ClassType(fmt::format("__partial_{}", v2b(k)), true, {}, {Generic("T", c, -1)},
+    : ClassType(fmt::format(".partial.{}", v2b(k)), true, {}, {Generic("T", c, -1)},
                 nullptr),
       knownTypes(k) {}
 

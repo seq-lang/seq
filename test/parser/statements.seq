@@ -80,7 +80,7 @@ a -= 1; print a  #: 7
 #%% del
 a = 5
 del a
-print a  #! ERROR: cannot find 'a'
+print a  #! ERROR: identifier 'a' not found
 
 #%% del_index
 y = {1: 'jedan', 2: 'dva'}

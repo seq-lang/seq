@@ -45,10 +45,10 @@
 // Level 7
 extern int __dbg_level__;
 extern int __level__;
-#define DBG(l, c, ...)                                                         \
-  {                                                                            \
-    if (__dbg_level__ >= l)                                                    \
-      fmt::print("{}" c "\n", std::string(2 * __level__, ' '), ##__VA_ARGS__); \
+#define DBG(l, c, ...)                                                                 \
+  {                                                                                    \
+    if (__dbg_level__ >= l)                                                            \
+      fmt::print("{}" c "\n", std::string(2 * __level__, ' '), ##__VA_ARGS__);         \
   }
 #define LOG(c, ...) DBG(0, c, ##__VA_ARGS__)
 #define LOG1(c, ...) DBG(1, c, ##__VA_ARGS__)
@@ -120,11 +120,10 @@ private:
   std::unique_ptr<llvm::TargetMachine> target;
   const llvm::DataLayout layout;
   llvm::orc::RTDyldObjectLinkingLayer objLayer;
-  llvm::orc::IRCompileLayer<decltype(objLayer), llvm::orc::SimpleCompiler>
-      comLayer;
+  llvm::orc::IRCompileLayer<decltype(objLayer), llvm::orc::SimpleCompiler> comLayer;
 
-  using OptimizeFunction = std::function<std::shared_ptr<llvm::Module>(
-      std::shared_ptr<llvm::Module>)>;
+  using OptimizeFunction =
+      std::function<std::shared_ptr<llvm::Module>(std::shared_ptr<llvm::Module>)>;
 
   llvm::orc::IRTransformLayer<decltype(comLayer), OptimizeFunction> optLayer;
 
@@ -158,4 +157,8 @@ void compilationError(const std::string &msg, const std::string &file = "",
 void compilationWarning(const std::string &msg, const std::string &file = "",
                         int line = 0, int col = 0);
 
+seq_int_t sliceAdjustIndices(seq_int_t length, seq_int_t *start, seq_int_t *stop,
+                             seq_int_t step);
+
+seq_int_t translateIndex(seq_int_t idx, seq_int_t len, bool clamp = false);
 } // namespace seq

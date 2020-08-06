@@ -164,7 +164,8 @@ string BinaryExpr::toString() const {
 PipeExpr::Pipe PipeExpr::Pipe::clone() const { return {op, CL(expr)}; }
 
 PipeExpr::PipeExpr(vector<PipeExpr::Pipe> &&i) : Expr(), items(move(i)) {}
-PipeExpr::PipeExpr(const PipeExpr &e) : Expr(e), items(CL(e.items)) {}
+PipeExpr::PipeExpr(const PipeExpr &e)
+    : Expr(e), items(CL(e.items)), inTypes(e.inTypes) {}
 string PipeExpr::toString() const {
   vector<string> s;
   for (auto &i : items)

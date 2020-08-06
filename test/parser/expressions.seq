@@ -106,13 +106,17 @@ def foo(a, b):
     return a+b
 bar = lambda c, d: c+d
 def hai(e):
-    while e < 0:
+    while e > 0:
         yield e
-        e -= 1
+        e -= 2
 def echo(s):
     print s
 foo(1,2) |> bar(4) |> echo  #: 7
-# foo(1,2) |> bar(4) |> hai |> echo
+foo(1,2) |> bar(4) |> hai |> echo
+#: 7
+#: 5
+#: 3
+#: 1
 
 #%% slice
 z = [1, 2, 3, 4, 5]

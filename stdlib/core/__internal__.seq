@@ -1,7 +1,10 @@
+cobj = ptr[byte]
+
 @internal
 type str(len: int, ptr: ptr[byte]):
     @internal
     def __new__(p: ptr[byte], l: int) -> str: pass
+type pyobj(p: cobj)
 
 extend ptr[T]:
     @internal
@@ -60,9 +63,6 @@ extend ptr[T]:
     def __prefetch_w2__(self) -> void: pass
     @internal
     def __prefetch_w3__(self) -> void: pass
-
-cobj = ptr[byte]
-type pyobj(p: cobj)
 
 extend int:
     @internal

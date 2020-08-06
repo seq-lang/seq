@@ -167,9 +167,14 @@ void CodegenVisitor::visit(const BinaryExpr *expr) {
 
 void CodegenVisitor::visit(const PipeExpr *expr) {
   vector<seq::Expr *> exprs;
-  for (int i = 0; i < expr->items.size(); i++)
+  vector<seq::types::Type *> inTypes;
+  for (int i = 0; i < expr->items.size(); i++) {
     exprs.push_back(transform(expr->items[i].expr));
+    inTypes.push_back(realizeType(expr->inTypes[i]->getClass()));
+    LOG("-- {}", inTypes.back()->getName());
+  }
   auto p = new seq::PipeExpr(exprs);
+  p->setIntermediateTypes(inTypes);
   for (int i = 0; i < expr->items.size(); i++)
     if (expr->items[i].op == "||>")
       p->setParallel(i);

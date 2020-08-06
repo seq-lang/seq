@@ -706,15 +706,12 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   LOG9("[stmt] add class {} -> {}", canonicalName, ct->toString());
 
   ctx->increaseLevel();
-  vector<string> strArgs;
-  string mainType;
   unordered_set<string> seenMembers;
+  ExprPtr mainType = nullptr;
   for (auto &a : stmt->args) {
     assert(a.type);
-    auto s = FormatVisitor::format(ctx, a.type);
-    strArgs.push_back(format("{}: {}", a.name, s));
-    if (!mainType.size())
-      mainType = s;
+    if (!mainType)
+      mainType = a.type->clone();
     auto t = transformType(a.type)->getType()->generalize(ctx->getLevel());
     ctx->getRealizations()->classes[canonicalName].members.push_back({a.name, t});
     if (seenMembers.find(a.name) != seenMembers.end())
@@ -723,8 +720,8 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     if (stmt->isRecord)
       ct->args.push_back(t);
   }
-  if (!mainType.size())
-    mainType = "void";
+  if (!mainType)
+    mainType = N<IdExpr>("void");
   if (stmt->isRecord) {
     ctx->addType(stmt->name, ct);
     ctx->addGlobal(canonicalName, ct);
@@ -732,48 +729,55 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   ctx->pushBase(stmt->name);
   ctx->addBaseType(ct);
   if (!in(stmt->attributes, "internal")) {
-    vector<string> genericNames;
+    vector<ExprPtr> genericNames;
     for (auto &g : stmt->generics)
-      genericNames.push_back(g.name);
-    auto codeType = format(
-        "{}{}", stmt->name,
-        genericNames.size() ? format("[{}]", fmt::join(genericNames, ", ")) : "");
-    string code;
+      genericNames.push_back(N<IdExpr>(g.name));
+    ExprPtr codeType = N<IdExpr>(stmt->name);
+    if (genericNames.size())
+      codeType = N<IndexExpr>(move(codeType), N<TupleExpr>(move(genericNames)));
+    vector<Param> args;
     if (!stmt->isRecord)
-      code = format("@internal\ndef __new__() -> {0}: pass\n"
-                    "@internal\ndef __bool__(self) -> bool: pass\n"
-                    "@internal\ndef __pickle__(self, dest: ptr[byte]) -> "
-                    "void: pass\n"
-                    "@internal\ndef __unpickle__(src: ptr[byte]) -> {0}: pass\n"
-                    "@internal\ndef __raw__(self) -> ptr[byte]: pass\n",
-                    codeType);
-    else
-      code = format("@internal\ndef __new__({1}) -> {0}: pass\n"
-                    "@internal\ndef __str__(self) -> str: pass\n"
-                    "@internal\ndef __getitem__(self, idx: int) -> {2}: pass\n"
-                    "@internal\ndef __iter__(self) -> generator[{2}]: pass\n"
-                    "@internal\ndef __len__(self) -> int: pass\n"
-                    "@internal\ndef __eq__(self, other: {0}) -> bool: pass\n"
-                    "@internal\ndef __ne__(self, other: {0}) -> bool: pass\n"
-                    "@internal\ndef __lt__(self, other: {0}) -> bool: pass\n"
-                    "@internal\ndef __gt__(self, other: {0}) -> bool: pass\n"
-                    "@internal\ndef __le__(self, other: {0}) -> bool: pass\n"
-                    "@internal\ndef __ge__(self, other: {0}) -> bool: pass\n"
-                    "@internal\ndef __hash__(self) -> int: pass\n"
-                    "@internal\ndef __contains__(self, what: {2}) -> bool: pass\n"
-                    "@internal\ndef __pickle__(self, dest: ptr[byte]) -> void: "
-                    "pass\n"
-                    "@internal\ndef __unpickle__(src: ptr[byte]) -> {0}: pass\n"
-                    "@internal\ndef __to_py__(self) -> pyobj: pass\n"
-                    "@internal\ndef __from_py__(src: pyobj) -> {0}: pass\n",
-                    codeType, fmt::join(strArgs, ", "), mainType);
-    if (!stmt->isRecord && stmt->args.size())
-      code += format("@internal\ndef __init__(self, {}) -> void: pass\n",
-                     fmt::join(strArgs, ", "));
-    auto methodNew =
-        parseCode(ctx->getFilename(), code, stmt->getSrcInfo().line, 100000);
-    for (auto s : methodNew->getStatements())
-      stmts.push_back(addMethod(s, canonicalName));
+      args.push_back(Param{"self"});
+    for (auto &a : stmt->args)
+      args.push_back(Param{a.name, a.type->clone()});
+    vector<StmtPtr> fns;
+    bool empty = canonicalName == ".tuple.0";
+    if (!stmt->isRecord) {
+      fns.push_back(makeInternalFn("__new__", codeType->clone()));
+      fns.push_back(makeInternalFn("__init__", N<IdExpr>("void"), move(args)));
+      fns.push_back(makeInternalFn("__bool__", N<IdExpr>("bool"), Param{"self"}));
+      fns.push_back(makeInternalFn("__pickle__", N<IdExpr>("void"), Param{"self"},
+                                   Param{"dest", N<IdExpr>("cobj")}));
+      fns.push_back(makeInternalFn("__unpickle__", codeType->clone(),
+                                   Param{"src", N<IdExpr>("cobj")}));
+      fns.push_back(makeInternalFn("__raw__", N<IdExpr>("cobj"), Param{"self"}));
+    } else {
+      fns.push_back(makeInternalFn("__new__", codeType->clone(), move(args)));
+      fns.push_back(makeInternalFn("__str__", N<IdExpr>("str"), Param{"self"}));
+      fns.push_back(makeInternalFn("__len__", N<IdExpr>("int"), Param{"self"}));
+      fns.push_back(makeInternalFn("__hash__", N<IdExpr>("int"), Param{"self"}));
+      fns.push_back(makeInternalFn(
+          "__iter__", N<IndexExpr>(N<IdExpr>("generator"), N<IdExpr>("int")),
+          Param{"self"}));
+      fns.push_back(makeInternalFn("__pickle__", N<IdExpr>("void"), Param{"self"},
+                                   Param{"dest", N<IdExpr>("cobj")}));
+      fns.push_back(makeInternalFn("__unpickle__", codeType->clone(),
+                                   Param{"src", N<IdExpr>("cobj")}));
+      fns.push_back(makeInternalFn("__getitem__",
+                                   empty ? N<IdExpr>("void") : mainType->clone(),
+                                   Param{"self"}, Param{"index", N<IdExpr>("int")}));
+      if (!empty)
+        fns.push_back(makeInternalFn("__contains__", N<IdExpr>("bool"), Param{"self"},
+                                     Param{"what", mainType->clone()}));
+      fns.push_back(makeInternalFn("__to_py__", N<IdExpr>("pyobj"), Param{"self"}));
+      fns.push_back(makeInternalFn("__from_py__", codeType->clone(),
+                                   Param{"src", N<IdExpr>("pyobj")}));
+      for (auto &m : {"__eq__", "__ne__", "__lt__", "__gt__", "__le__", "__ge__"})
+        fns.push_back(makeInternalFn(m, N<IdExpr>("bool"), Param{"self"},
+                                     Param{"what", codeType->clone()}));
+    }
+    for (auto &s : fns)
+      stmts.push_back(addMethod(s.get(), canonicalName));
   }
   for (auto s : stmt->suite->getStatements())
     stmts.push_back(addMethod(s, canonicalName));

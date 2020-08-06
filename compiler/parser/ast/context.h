@@ -110,6 +110,11 @@ public:
 
   std::unordered_map<std::string, types::TypePtr> globalNames;
   std::unordered_set<std::string> variardicCache;
+
+  int generatedID;
+  SrcInfo getGeneratedPos() {
+    return {"<generated>", generatedID, generatedID++, 0, 0};
+  }
 };
 
 class TypeContext;

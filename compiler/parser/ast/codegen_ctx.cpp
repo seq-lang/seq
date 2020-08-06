@@ -186,14 +186,14 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
   } else if (name == "optional") {
     assert(types.size() == 1 && statics.size() == 0);
     real.handle = seq::types::OptionalType::get(types[0]);
-  } else if (name.substr(0, 11) == "__function_") {
+  } else if (name.substr(0, 9) == "function.") {
     types.clear();
     for (auto &m : t->args)
       types.push_back(realizeType(m->getClass()));
     auto ret = types[0];
     types.erase(types.begin());
     real.handle = seq::types::FuncType::get(types, ret);
-  } else if (name.substr(0, 10) == "__partial_") {
+  } else if (name.substr(0, 8) == "partial.") {
     auto f = t->getCallable();
     assert(f);
     auto callee = realizeType(f);
@@ -215,7 +215,7 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
       vector<string> x;
       for (auto &t : types)
         x.push_back(t->getName());
-      if (name.substr(0, 8) == "__tuple_")
+      if (name.substr(0, 6) == "tuple.")
         name = "";
       real.handle = seq::types::RecordType::get(types, names, name);
     } else {

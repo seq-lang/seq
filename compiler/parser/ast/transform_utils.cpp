@@ -128,43 +128,69 @@ void TransformVisitor::fixExprName(ExprPtr &e, const string &newName) {
   }
 }
 
+StmtPtr TransformVisitor::makeInternalFn(const string &name, ExprPtr &&ret, Param &&arg,
+                                         Param &&arg2) {
+  vector<Param> p;
+  if (arg.name.size())
+    p.push_back(move(arg));
+  if (arg2.name.size())
+    p.push_back(move(arg2));
+  auto t = make_unique<FunctionStmt>(name, move(ret), vector<Param>{}, move(p), nullptr,
+                                     vector<string>{"internal"});
+  t->setSrcInfo(ctx->getRealizations()->getGeneratedPos());
+  return t;
+}
+StmtPtr TransformVisitor::makeInternalFn(const string &name, ExprPtr &&ret,
+                                         vector<Param> &&p) {
+  auto t = make_unique<FunctionStmt>(name, move(ret), vector<Param>{}, move(p), nullptr,
+                                     vector<string>{"internal"});
+  t->setSrcInfo(ctx->getRealizations()->getGeneratedPos());
+  return t;
+}
+
 string TransformVisitor::generateVariardicStub(const string &name, int len) {
   // TODO: handle name clashes (add special name character?)
-  auto typeName = fmt::format("__{}_{}", name, len);
-  assert(len >= 1);
+  auto typeName = fmt::format("{}.{}", name, len);
+  // LOG("{}", typeName);
   if (ctx->getRealizations()->variardicCache.find(typeName) ==
       ctx->getRealizations()->variardicCache.end()) {
+    if (name != "tuple")
+      assert(len >= 1);
     ctx->getRealizations()->variardicCache.insert(typeName);
-    vector<string> generics, args;
+    vector<Param> generics, args;
+    vector<ExprPtr> genericNames;
     for (int i = 1; i <= len; i++) {
-      generics.push_back(format("T{}", i));
-      args.push_back(format("a{0}: T{0}", i));
+      genericNames.push_back(N<IdExpr>(format("T{}", i)));
+      generics.push_back(Param{format("T{}", i), nullptr, nullptr});
+      args.push_back(Param{format("a{0}", i), N<IdExpr>(format("T{}", i)), nullptr});
     }
-    auto code =
-        format("type {}[{}]({})", typeName, join(generics, ", "), join(args, ", "));
+    ExprPtr type = N<IdExpr>(typeName);
+    if (genericNames.size())
+      type = N<IndexExpr>(move(type), N<TupleExpr>(move(genericNames)));
+    auto stmt = make_unique<ClassStmt>(true, typeName, move(generics), move(args),
+                                       nullptr, vector<string>{});
+    stmt->setSrcInfo(ctx->getRealizations()->getGeneratedPos());
 
+    vector<StmtPtr> fns;
     if (name == "function") {
-      code = format("@internal\n{0}:\n  @internal\n  def __str__(self: "
-                    "function[{1}]) -> str: pass\n "
-                    " @internal\n  "
-                    "def __new__(what: ptr[byte]) -> function[{1}]: pass\n",
-                    code, join(generics, ", "));
+      fns.push_back(
+          makeInternalFn("__new__", type->clone(), Param{"what", N<IdExpr>("cobj")}));
+      fns.push_back(makeInternalFn("__str__", N<IdExpr>("str"), Param{"self"}));
+      stmt->attributes.push_back("internal");
     } else if (name == "tuple") {
-      string str;
-      str = "  def __str__(self) -> str:\n";
-      str += format("    s = '('\n", len + 2);
+      string code = "def __str__(self) -> str:\n";
+      code += len ? "  s = '('\n" : "  s = '()'\n";
       for (int i = 0; i < len; i++) {
-        str += format("    s += self[{}].__str__()\n", i);
-        str += format("    s += '{}'\n", i == len - 1 ? ")" : ", ");
+        code += format("  s += self[{}].__str__()\n", i);
+        code += format("  s += '{}'\n", i == len - 1 ? ")" : ", ");
       }
-      str += "    return s\n";
-      code += ":\n" + str;
+      code += "  return s\n";
+      fns.push_back(parseCode(ctx->getFilename(), code)->getStatements()[0]->clone());
     } else if (name != "partial") {
       error("invalid variardic type");
     }
-    LOG7("[VAR] generating {}...\n{}", typeName, code);
-
-    auto a = parseCode(ctx->getFilename(), code);
+    // LOG7("[VAR] generating {}...\n{}", typeName, code);
+    stmt->suite = N<SuiteStmt>(move(fns));
     auto i = ctx->getImports()->getImport("");
     auto stmtPtr = dynamic_cast<SuiteStmt *>(i->statements.get());
     assert(stmtPtr);
@@ -172,7 +198,7 @@ string TransformVisitor::generateVariardicStub(const string &name, int len) {
     // TODO: move to stdlib?
     auto nc = make_shared<TypeContext>(
         i->tctx->getFilename(), i->tctx->getRealizations(), i->tctx->getImports());
-    stmtPtr->stmts.push_back(TransformVisitor(nc).transform(a));
+    stmtPtr->stmts.push_back(TransformVisitor(nc).transform(stmt));
     for (auto &ax : *nc)
       i->tctx->addToplevel(ax.first, ax.second.front());
   }
@@ -413,9 +439,9 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
     if (ctx->isTypeChecking() && typExpr && !typExpr->isType())
       error(typExpr, "expected type expression");
 
+    TypePtr typ = typExpr ? typExpr->getType() : nullptr;
     auto s = Nx<AssignStmt>(lhs, l->clone(), transform(rhs, true), move(typExpr), false,
                             force);
-    TypePtr typ = typExpr ? typExpr->getType() : nullptr;
     auto val = processIdentifier(ctx, l->value);
     if (!force && !typ && val && val->getVar() &&
         val->getModule() == ctx->getFilename() && val->getBase() == ctx->getBase()) {

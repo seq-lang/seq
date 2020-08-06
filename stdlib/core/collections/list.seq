@@ -8,6 +8,12 @@ class list[T]:
         self.arr = arr
         self.len = len
 
+    def __init__(self, it: generator[T]):
+        self.arr = array[T](10)
+        self.len = 0
+        for i in it:
+            self.append(i)
+
     def __init__(self, capacity: int):
         self.arr = array[T](capacity)
         self.len = 0
@@ -15,12 +21,6 @@ class list[T]:
     def __init__(self):
         self.arr = array[T](10)
         self.len = 0
-
-    def __init__(self, it: generator[T]):
-        self.arr = array[T](10)
-        self.len = 0
-        for i in it:
-            self.append(i)
 
     def __init__(self, other: list[T]):
         self.arr = array[T](other.len)

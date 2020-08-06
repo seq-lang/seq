@@ -430,9 +430,12 @@ void TransformVisitor::visit(const PipeExpr *expr) {
 
   vector<PipeExpr::Pipe> items;
   items.push_back({expr->items[0].op, transform(expr->items[0].expr)});
+  vector<types::TypePtr> types;
   TypePtr inType = nullptr;
-  if (ctx->isTypeChecking())
+  if (ctx->isTypeChecking()) {
     inType = extractType(items.back().expr->getType());
+    types.push_back(inType);
+  }
   int inTypePos = 0;
   for (int i = 1; i < expr->items.size(); i++) {
     auto &l = expr->items[i];
@@ -457,13 +460,16 @@ void TransformVisitor::visit(const PipeExpr *expr) {
     }
     if (ctx->isTypeChecking()) {
       inType = updateType(inType, inTypePos, items.back().expr);
+      types.push_back(inType);
       if (i < expr->items.size() - 1)
         inType = extractType(inType);
     }
   }
   resultExpr = N<PipeExpr>(move(items));
-  if (ctx->isTypeChecking())
+  if (ctx->isTypeChecking()) {
+    CAST(resultExpr, PipeExpr)->inTypes = types;
     resultExpr->setType(forceUnify(expr, inType));
+  }
 }
 
 void TransformVisitor::visit(const IndexExpr *expr) {
@@ -539,18 +545,49 @@ void TransformVisitor::visit(const IndexExpr *expr) {
     if (isType)
       resultExpr->markType();
     resultExpr->setType(t);
+  } else if (auto c = e->getType()->getClass()) {
+    if (!getTupleIndex(c, expr->expr, expr->index))
+      resultExpr = transform(N<CallExpr>(N<DotExpr>(expr->expr->clone(), "__getitem__"),
+                                         expr->index->clone()));
   } else {
-    if (auto c = e->getType()->getClass())
-      if (chop(c->name).substr(0, 8) == "__tuple_") {
-        if (auto ii = CAST(expr->index, IntExpr)) {
-          resultExpr =
-              transform(N<TupleIndexExpr>(expr->expr->clone(), std::stoll(ii->value)));
-          return;
-        }
-      }
-    resultExpr = transform(N<CallExpr>(N<DotExpr>(expr->expr->clone(), "__getitem__"),
-                                       expr->index->clone()));
+    resultExpr = N<IndexExpr>(move(e), transform(expr->index));
+    resultExpr->setType(expr->getType() ? expr->getType()
+                                        : ctx->addUnbound(getSrcInfo()));
   }
+}
+
+bool TransformVisitor::getTupleIndex(types::ClassTypePtr tuple, const ExprPtr &expr,
+                                     const ExprPtr &index) {
+  auto getInt = [](seq_int_t *o, const ExprPtr &e) {
+    if (!e) {
+      return true;
+    }
+    try {
+      if (auto i = CAST(e, IntExpr)) {
+        *o = std::stoll(i->value);
+        return true;
+      }
+    } catch (std::out_of_range &) {
+    }
+    return false;
+  };
+  if (chop(tuple->name).substr(0, 6) != "tuple.")
+    return false;
+  seq_int_t s = 0, e = tuple->args.size(), st = 1;
+  if (getInt(&s, index)) {
+    resultExpr = transform(N<TupleIndexExpr>(expr->clone(), translateIndex(s, e)));
+    return true;
+  } else if (auto i = CAST(index, SliceExpr)) {
+    if (!getInt(&s, i->st) || !getInt(&e, i->ed) || !getInt(&st, i->step))
+      return false;
+    auto sz = sliceAdjustIndices(tuple->args.size(), &s, &e, st);
+    vector<ExprPtr> te;
+    for (auto i = s; (st >= 0) ? (i < e) : (i >= e); i += st)
+      te.push_back(N<TupleIndexExpr>(expr->clone(), i));
+    resultExpr = transform(N<TupleExpr>(move(te)));
+    return true;
+  }
+  return false;
 }
 
 void TransformVisitor::visit(const TupleIndexExpr *expr) {
@@ -558,7 +595,7 @@ void TransformVisitor::visit(const TupleIndexExpr *expr) {
 
   auto e = transform(expr->expr);
   auto c = e->getType()->getClass();
-  assert(chop(c->name).substr(0, 8) == "__tuple_");
+  assert(chop(c->name).substr(0, 6) == "tuple.");
   if (expr->index < 0 || expr->index >= c->args.size())
     error("tuple index out of range (expected 0..{}, got {})", c->args.size() - 1,
           expr->index);
