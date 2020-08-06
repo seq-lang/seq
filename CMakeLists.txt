@@ -25,7 +25,7 @@ ExternalProject_Add(bdwgc
   URL https://github.com/ivmai/bdwgc/releases/download/v8.0.4/gc-8.0.4.tar.gz
   SOURCE_DIR ${CMAKE_BINARY_DIR}/bdwgc
   CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/bdwgc/configure CFLAGS=-fPIC --enable-threads=posix --enable-cplusplus --enable-thread-local-alloc --enable-large-config --prefix=${CMAKE_BINARY_DIR}/bdwgc/build
-  BUILD_COMMAND make LDFLAGS=-static
+  BUILD_COMMAND make CFLAGS-DHANDLE_FORK LDFLAGS=-static
   BUILD_IN_SOURCE ON
   INSTALL_DIR ${CMAKE_BINARY_DIR}/bdwgc/build
   INSTALL_COMMAND make install
