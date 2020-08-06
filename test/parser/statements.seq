@@ -1,0 +1,190 @@
+#%% pass
+pass
+
+#%% expr
+a = 5; b = 3
+print a, b  #: 5 3
+
+#%% assign
+a = 1
+print a  #: 1
+
+x, y = 1, 2
+print x, y  #: 1 2
+(x, y) = (3, 4)
+print x, y  #: 3 4
+x, y = (1, 2)
+print x, y  #: 1 2
+(x, y) = 3, 4
+print x, y  #: 3 4
+(x, y) = [3, 4]
+print x, y  #: 3 4
+[x, y] = [1, 2]
+print x, y  #: 1 2
+
+l = list(range(10))
+[a, b, *lx, c, d] = l
+print a, b, lx, c, d  #: 0 1 [2, 3, 4, 5, 6, 7] 8 9
+a, b, *lx = l
+print a, b, lx  #: 0 1 [2, 3, 4, 5, 6, 7, 8, 9]
+*lx, a, b = l
+print lx, a, b  #: [0, 1, 2, 3, 4, 5, 6, 7] 8 9
+*xz, a, b = (1, 2, 3, 4, 5)
+print xz, a, b  #: (1, 2, 3) 4 5
+(*ex,) = [1, 2, 3]
+print ex  #: [1, 2, 3]
+
+#%% assign_str
+sa, sb = 'XY'
+print sa, sb  #: X Y
+(sa, sb), sc = 'XY', 'Z'
+print sa, sb, sc  #: X Y Z
+sa, *la = 'X'
+print sa, la, 1  #: X  1
+sa, *la = 'XYZ'
+print sa, la  #: X YZ
+(xa,xb), *xc, xd = [1,2],'this'
+print xa, xb, xc, xd  #: 1 2 () this
+(a, b), (sc, *sl) = [1,2], 'this'
+print a, b, sc, sl  #: 1 2 t his
+
+#%% assign_err
+*x = range(5)  #! ERROR: invalid assignment
+
+#%% assign_types
+a: list[int] = []
+print a  #: []
+
+#%% assign_types_err
+a = 5
+a = 3.3  #! ERROR: cannot unify float and int
+
+#%% assign_err_2
+(sa, sb), sc = 'XYZ'  #! ERROR:
+
+#%% assign_err_3
+a, *b, c, *d = 1,2,3,4,5  #! ERROR: cannot unify slice and int
+
+#%% assign_shadow
+a = 5
+print a  #: 5
+a : str = 's'
+print a  #: s
+
+#%% assign_update_eq
+a = 5
+a += 3
+print a  #: 8
+a -= 1; print a  #: 7
+
+#%% del
+a = 5
+del a
+print a  #! ERROR: cannot find 'a'
+
+#%% del_index
+y = {1: 'jedan', 2: 'dva'}
+del y[2]
+print y  #: {1: jedan}
+
+#%% print
+print 1,
+print 1, 2  #: 1 1 2
+
+#%% return
+def foo():
+    return 1
+print foo()  #: 1
+
+def bar():
+    print 2
+    return
+    print 1
+bar()  #: 2
+
+#%% return_fail
+return 5  #! ERROR: ...
+
+#%% yield
+def foo():
+    yield 1
+print [i for i in foo()], str(foo())[:16]  #: [1], <generator at 0x
+
+#%% yield_void
+def foo():
+    yield
+    print 1
+y = foo()
+print done(y)  #: False
+next(y)  #: 1
+print done(y)  #: True
+
+#%% yield_return
+def foo():
+    yield 1
+    return
+    yield 2
+print list(foo())  #: [1]
+
+#%% yield_fail
+yield 5  #! ERROR: ...
+
+#%% assert
+assert bool(2) == True
+assert 3 == 4
+
+#%% while
+a = 3
+while a:
+    print a
+    a -= 1
+#: 3
+#: 2
+#: 1
+
+#%% for_break_continue
+for i in range(10):
+    if i % 2 == 0:
+        continue
+    print i
+    if i >= 5:
+        break
+#: 1
+#: 3
+#: 5
+
+#%% for_assignment
+l = [[1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11]]
+for a, *m, b in l:
+    print a + b, len(m)
+#: 5 2
+#: 14 3
+#: 21 0
+
+#%% if
+for a, b in [(1, 2), (3, 3), (5, 4)]
+    if a > b:
+        print '1',
+    elif a == b:
+        print '=',
+    else
+        print '2',
+print  #: 1 = 2
+
+#%% extend
+
+#%% import
+
+#%% try_throw
+
+#%% global
+
+#%% function
+
+#%% type_class
+
+#%% yield_from
+
+#%% with
+
+#%% pydef

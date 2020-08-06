@@ -324,6 +324,8 @@ void TransformVisitor::visit(const UnaryExpr *expr) {
       error("invalid unary operator '{}'", expr->op);
     magic = format("__{}__", magic);
     resultExpr = transform(N<CallExpr>(N<DotExpr>(expr->expr->clone(), magic)));
+    if (ctx->isTypeChecking())
+      forceUnify(expr, resultExpr->getType());
   }
 }
 

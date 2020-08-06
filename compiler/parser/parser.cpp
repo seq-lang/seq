@@ -29,79 +29,57 @@ void generateDocstr(const std::string &file) {
   // ast::parse_file(file)->accept(d);
 }
 
-seq::SeqModule *parse(const std::string &argv0, const std::string &file, bool isCode,
-                      bool isTest) {
+seq::SeqModule *parse(const std::string &argv0, const std::string &file,
+                      const string &code, bool isCode, bool isTest, int startLine) {
   try {
     auto d = getenv("SEQ_DEBUG");
     if (d)
       __dbg_level__ = strtol(d, nullptr, 10);
-    // auto stmts = isCode ? ast::parse_code(argv0, file) :
-    // ast::parse_file(file);
 
-    vector<string> cases;
-    string line, current;
-    std::ifstream fin(file);
-    while (std::getline(fin, line)) {
-      if (line == "--") {
-        cases.push_back(current);
-        current = "";
-      } else
-        current += line + "\n";
-    }
-    if (current.size())
-      cases.push_back(current);
-    FILE *fo = fopen("tmp/out.htm", "w");
+    char abs[PATH_MAX + 1];
+    realpath(file.c_str(), abs);
+
+    // fprintf(stderr, "%s\n", fmt::format("{} {} {}", abs, isCode, code).c_str());
+    auto ctx = ast::TypeContext::getContext(argv0, abs);
+    ast::StmtPtr stmts = nullptr;
+    if (!isCode)
+      stmts = ast::parseFile(abs);
+    else
+      stmts = ast::parseCode(abs, code, startLine);
+    auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false);
+    LOG3("--- Done with typecheck ---");
+
+    // FILE *fo = fopen("tmp/out.htm", "w");
+    // LOG3("{}", ast::FormatVisitor::format(ctx, tv, false, true));
+
     seq::SeqModule *module;
+    module = new seq::SeqModule();
+    module->setFileName(abs);
+    auto lctx = ast::LLVMContext::getContext(abs, ctx, module);
+    ast::CodegenVisitor(lctx).transform(tv.get());
+    LOG3("--- Done with codegen ---");
 
-    int st = 0, lim = 1000;
-    for (int ci = st, ii = 0; ci < cases.size() && ii < lim; ci++, ii++) {
-      LOG3("[[[ case {} ]]]", ci);
-      char abs[PATH_MAX + 1];
-      realpath(file.c_str(), abs);
-      auto stmts = ast::parseCode(abs, cases[ci]);
-      auto ctx = ast::TypeContext::getContext(argv0, abs);
-      auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false);
-
-      LOG3("--- Done with typecheck ---");
-      LOG3("{}", ast::FormatVisitor::format(ctx, tv, false, true));
-      module = new seq::SeqModule();
-      module->setFileName(abs);
-      auto lctx = ast::LLVMContext::getContext(abs, ctx, module);
-      ast::CodegenVisitor(lctx).transform(tv.get());
-      LOG3("--- Done with codegen ---");
-      module->execute({}, {});
-      // return module;
-
-      fmt::print(fo, "-------------------------------<hr/>\n");
-      LOG("--");
-    }
-    fclose(fo);
-    exit(0);
-
-    // auto cache = make_shared<ast::ImportCache>(argv0);
-    // auto stdlib = make_shared<ast::Context>(cache, module->getBlock(),
-    // module,
-    // nullptr, "");
-    // stdlib->loadStdlib(module->getArgVar());
-    // auto context =
-    // make_shared<ast::Context>(cache,
-    // module->getBlock(), module,
-    //  nullptr, file);
-    // ast::CodegenStmtVisitor(*context).transform(tv);
+    // fmt::print(fo, "-------------------------------<hr/>\n");
     return module;
   } catch (seq::exc::SeqException &e) {
     if (isTest) {
-      throw;
+      LOG("ERROR: {}", e.what());
+    } else {
+      seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
+                            e.getSrcInfo().col);
     }
-    seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
-                          e.getSrcInfo().col);
+    exit(EXIT_FAILURE);
     return nullptr;
   } catch (seq::exc::ParserException &e) {
-    if (isTest)
-      throw;
-    for (int i = 0; i < e.messages.size(); i++)
-      compilationMessage("\033[1;31merror:\033[0m", e.messages[i], e.locations[i].file,
-                         e.locations[i].line, e.locations[i].col);
+    for (int i = 0; i < e.messages.size(); i++) {
+      if (isTest) {
+        LOG("ERROR: {}", e.messages[i]);
+      } else {
+        compilationMessage("\033[1;31merror:\033[0m", e.messages[i],
+                           e.locations[i].file, e.locations[i].line,
+                           e.locations[i].col);
+      }
+    }
     exit(EXIT_FAILURE);
     return nullptr;
   }

@@ -41,6 +41,8 @@ string StaticType::realizeString() const {
 
 int StaticType::unify(TypePtr typ, Unification &us) {
   if (auto t = typ->getStatic()) {
+    auto v = getValue(), vt = t->getValue();
+    // A + 5 + 3; 3 + A + 5
     int s1 = 0;
     if (expr->toString() == t->expr->toString()) {
       int s = 0;
