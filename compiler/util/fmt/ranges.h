@@ -19,14 +19,14 @@
 
 // output only up to N items from the range.
 #ifndef FMT_RANGE_OUTPUT_LENGTH_LIMIT
-#  define FMT_RANGE_OUTPUT_LENGTH_LIMIT 256
+#define FMT_RANGE_OUTPUT_LENGTH_LIMIT 256
 #endif
 
 FMT_BEGIN_NAMESPACE
 
 template <typename Char> struct formatting_base {
   template <typename ParseContext>
-  FMT_CONSTEXPR auto parse(ParseContext& ctx) -> decltype(ctx.begin()) {
+  FMT_CONSTEXPR auto parse(ParseContext &ctx) -> decltype(ctx.begin()) {
     return ctx.begin();
   }
 };
@@ -34,8 +34,8 @@ template <typename Char> struct formatting_base {
 template <typename Char, typename Enable = void>
 struct formatting_range : formatting_base<Char> {
   static FMT_CONSTEXPR_DECL const std::size_t range_length_limit =
-      FMT_RANGE_OUTPUT_LENGTH_LIMIT;  // output only up to N items from the
-                                      // range.
+      FMT_RANGE_OUTPUT_LENGTH_LIMIT; // output only up to N items from the
+                                     // range.
   Char prefix;
   Char delimiter;
   Char postfix;
@@ -57,15 +57,16 @@ struct formatting_tuple : formatting_base<Char> {
 namespace internal {
 
 template <typename RangeT, typename OutputIterator>
-OutputIterator copy(const RangeT& range, OutputIterator out) {
+OutputIterator copy(const RangeT &range, OutputIterator out) {
   for (auto it = range.begin(), end = range.end(); it != end; ++it)
     *out++ = *it;
   return out;
 }
 
 template <typename OutputIterator>
-OutputIterator copy(const char* str, OutputIterator out) {
-  while (*str) *out++ = *str++;
+OutputIterator copy(const char *str, OutputIterator out) {
+  while (*str)
+    *out++ = *str++;
   return out;
 }
 
@@ -78,11 +79,11 @@ OutputIterator copy(char ch, OutputIterator out) {
 /// Return true value if T has std::string interface, like std::string_view.
 template <typename T> class is_like_std_string {
   template <typename U>
-  static auto check(U* p)
+  static auto check(U *p)
       -> decltype((void)p->find('a'), p->length(), (void)p->data(), int());
   template <typename> static void check(...);
 
- public:
+public:
   static FMT_CONSTEXPR_DECL const bool value =
       is_string<T>::value || !std::is_void<decltype(check<T>(nullptr))>::value;
 };
@@ -106,10 +107,10 @@ struct is_range_<
 /// tuple_size and tuple_element check.
 template <typename T> class is_tuple_like_ {
   template <typename U>
-  static auto check(U* p) -> decltype(std::tuple_size<U>::value, int());
+  static auto check(U *p) -> decltype(std::tuple_size<U>::value, int());
   template <typename> static void check(...);
 
- public:
+public:
   static FMT_CONSTEXPR_DECL const bool value =
       !std::is_void<decltype(check<T>(nullptr))>::value;
 };
@@ -141,51 +142,52 @@ using make_index_sequence = make_integer_sequence<std::size_t, N>;
 #endif
 
 template <class Tuple, class F, size_t... Is>
-void for_each(index_sequence<Is...>, Tuple&& tup, F&& f) FMT_NOEXCEPT {
+void for_each(index_sequence<Is...>, Tuple &&tup, F &&f) FMT_NOEXCEPT {
   using std::get;
   // using free function get<I>(T) now.
   const int _[] = {0, ((void)f(get<Is>(tup)), 0)...};
-  (void)_;  // blocks warnings
+  (void)_; // blocks warnings
 }
 
 template <class T>
-FMT_CONSTEXPR make_index_sequence<std::tuple_size<T>::value> get_indexes(
-    T const&) {
+FMT_CONSTEXPR make_index_sequence<std::tuple_size<T>::value>
+get_indexes(T const &) {
   return {};
 }
 
-template <class Tuple, class F> void for_each(Tuple&& tup, F&& f) {
+template <class Tuple, class F> void for_each(Tuple &&tup, F &&f) {
   const auto indexes = get_indexes(tup);
   for_each(indexes, std::forward<Tuple>(tup), std::forward<F>(f));
 }
 
 template <typename Arg, FMT_ENABLE_IF(!is_like_std_string<
                                       typename std::decay<Arg>::type>::value)>
-FMT_CONSTEXPR const char* format_str_quoted(bool add_space, const Arg&) {
+FMT_CONSTEXPR const char *format_str_quoted(bool add_space, const Arg &) {
   return add_space ? " {}" : "{}";
 }
 
 template <typename Arg, FMT_ENABLE_IF(is_like_std_string<
                                       typename std::decay<Arg>::type>::value)>
-FMT_CONSTEXPR const char* format_str_quoted(bool add_space, const Arg&) {
+FMT_CONSTEXPR const char *format_str_quoted(bool add_space, const Arg &) {
   return add_space ? " \"{}\"" : "\"{}\"";
 }
 
-FMT_CONSTEXPR const char* format_str_quoted(bool add_space, const char*) {
+FMT_CONSTEXPR const char *format_str_quoted(bool add_space, const char *) {
   return add_space ? " \"{}\"" : "\"{}\"";
 }
-FMT_CONSTEXPR const wchar_t* format_str_quoted(bool add_space, const wchar_t*) {
+FMT_CONSTEXPR const wchar_t *format_str_quoted(bool add_space,
+                                               const wchar_t *) {
   return add_space ? L" \"{}\"" : L"\"{}\"";
 }
 
-FMT_CONSTEXPR const char* format_str_quoted(bool add_space, const char) {
+FMT_CONSTEXPR const char *format_str_quoted(bool add_space, const char) {
   return add_space ? " '{}'" : "'{}'";
 }
-FMT_CONSTEXPR const wchar_t* format_str_quoted(bool add_space, const wchar_t) {
+FMT_CONSTEXPR const wchar_t *format_str_quoted(bool add_space, const wchar_t) {
   return add_space ? L" '{}'" : L"'{}'";
 }
 
-}  // namespace internal
+} // namespace internal
 
 template <typename T> struct is_tuple_like {
   static FMT_CONSTEXPR_DECL const bool value =
@@ -194,10 +196,10 @@ template <typename T> struct is_tuple_like {
 
 template <typename TupleT, typename Char>
 struct formatter<TupleT, Char, enable_if_t<fmt::is_tuple_like<TupleT>::value>> {
- private:
+private:
   // C++11 generic lambda for format()
   template <typename FormatContext> struct format_each {
-    template <typename T> void operator()(const T& v) {
+    template <typename T> void operator()(const T &v) {
       if (i > 0) {
         if (formatting.add_prepostfix_space) {
           *out++ = ' ';
@@ -211,22 +213,22 @@ struct formatter<TupleT, Char, enable_if_t<fmt::is_tuple_like<TupleT>::value>> {
       ++i;
     }
 
-    formatting_tuple<Char>& formatting;
-    std::size_t& i;
+    formatting_tuple<Char> &formatting;
+    std::size_t &i;
     typename std::add_lvalue_reference<decltype(
         std::declval<FormatContext>().out())>::type out;
   };
 
- public:
+public:
   formatting_tuple<Char> formatting;
 
   template <typename ParseContext>
-  FMT_CONSTEXPR auto parse(ParseContext& ctx) -> decltype(ctx.begin()) {
+  FMT_CONSTEXPR auto parse(ParseContext &ctx) -> decltype(ctx.begin()) {
     return formatting.parse(ctx);
   }
 
   template <typename FormatContext = format_context>
-  auto format(const TupleT& values, FormatContext& ctx) -> decltype(ctx.out()) {
+  auto format(const TupleT &values, FormatContext &ctx) -> decltype(ctx.out()) {
     auto out = ctx.out();
     std::size_t i = 0;
     internal::copy(formatting.prefix, out);
@@ -255,18 +257,19 @@ struct formatter<RangeT, Char,
   formatting_range<Char> formatting;
 
   template <typename ParseContext>
-  FMT_CONSTEXPR auto parse(ParseContext& ctx) -> decltype(ctx.begin()) {
+  FMT_CONSTEXPR auto parse(ParseContext &ctx) -> decltype(ctx.begin()) {
     return formatting.parse(ctx);
   }
 
   template <typename FormatContext>
-  typename FormatContext::iterator format(const RangeT& values,
-                                          FormatContext& ctx) {
+  typename FormatContext::iterator format(const RangeT &values,
+                                          FormatContext &ctx) {
     auto out = internal::copy(formatting.prefix, ctx.out());
     std::size_t i = 0;
     for (auto it = values.begin(), end = values.end(); it != end; ++it) {
       if (i > 0) {
-        if (formatting.add_prepostfix_space) *out++ = ' ';
+        if (formatting.add_prepostfix_space)
+          *out++ = ' ';
         out = internal::copy(formatting.delimiter, out);
       }
       out = format_to(out,
@@ -278,52 +281,53 @@ struct formatter<RangeT, Char,
         break;
       }
     }
-    if (formatting.add_prepostfix_space) *out++ = ' ';
+    if (formatting.add_prepostfix_space)
+      *out++ = ' ';
     return internal::copy(formatting.postfix, out);
   }
 };
 
 template <typename Char, typename... T> struct tuple_arg_join : internal::view {
-  const std::tuple<T...>& tuple;
+  const std::tuple<T...> &tuple;
   basic_string_view<Char> sep;
 
-  tuple_arg_join(const std::tuple<T...>& t, basic_string_view<Char> s)
+  tuple_arg_join(const std::tuple<T...> &t, basic_string_view<Char> s)
       : tuple{t}, sep{s} {}
 };
 
 template <typename Char, typename... T>
 struct formatter<tuple_arg_join<Char, T...>, Char> {
   template <typename ParseContext>
-  FMT_CONSTEXPR auto parse(ParseContext& ctx) -> decltype(ctx.begin()) {
+  FMT_CONSTEXPR auto parse(ParseContext &ctx) -> decltype(ctx.begin()) {
     return ctx.begin();
   }
 
   template <typename FormatContext>
-  typename FormatContext::iterator format(
-      const tuple_arg_join<Char, T...>& value, FormatContext& ctx) {
+  typename FormatContext::iterator
+  format(const tuple_arg_join<Char, T...> &value, FormatContext &ctx) {
     return format(value, ctx, internal::make_index_sequence<sizeof...(T)>{});
   }
 
- private:
+private:
   template <typename FormatContext, size_t... N>
-  typename FormatContext::iterator format(
-      const tuple_arg_join<Char, T...>& value, FormatContext& ctx,
-      internal::index_sequence<N...>) {
+  typename FormatContext::iterator
+  format(const tuple_arg_join<Char, T...> &value, FormatContext &ctx,
+         internal::index_sequence<N...>) {
     return format_args(value, ctx, std::get<N>(value.tuple)...);
   }
 
   template <typename FormatContext>
-  typename FormatContext::iterator format_args(
-      const tuple_arg_join<Char, T...>&, FormatContext& ctx) {
+  typename FormatContext::iterator
+  format_args(const tuple_arg_join<Char, T...> &, FormatContext &ctx) {
     // NOTE: for compilers that support C++17, this empty function instantiation
     // can be replaced with a constexpr branch in the variadic overload.
     return ctx.out();
   }
 
   template <typename FormatContext, typename Arg, typename... Args>
-  typename FormatContext::iterator format_args(
-      const tuple_arg_join<Char, T...>& value, FormatContext& ctx,
-      const Arg& arg, const Args&... args) {
+  typename FormatContext::iterator
+  format_args(const tuple_arg_join<Char, T...> &value, FormatContext &ctx,
+              const Arg &arg, const Args &... args) {
     using base = formatter<typename std::decay<Arg>::type, Char>;
     auto out = ctx.out();
     out = base{}.format(arg, ctx);
@@ -348,13 +352,13 @@ struct formatter<tuple_arg_join<Char, T...>, Char> {
   \endrst
  */
 template <typename... T>
-FMT_CONSTEXPR tuple_arg_join<char, T...> join(const std::tuple<T...>& tuple,
+FMT_CONSTEXPR tuple_arg_join<char, T...> join(const std::tuple<T...> &tuple,
                                               string_view sep) {
   return {tuple, sep};
 }
 
 template <typename... T>
-FMT_CONSTEXPR tuple_arg_join<wchar_t, T...> join(const std::tuple<T...>& tuple,
+FMT_CONSTEXPR tuple_arg_join<wchar_t, T...> join(const std::tuple<T...> &tuple,
                                                  wstring_view sep) {
   return {tuple, sep};
 }
@@ -371,17 +375,17 @@ FMT_CONSTEXPR tuple_arg_join<wchar_t, T...> join(const std::tuple<T...>& tuple,
   \endrst
  */
 template <typename T>
-arg_join<internal::iterator_t<const std::initializer_list<T>>, char> join(
-    std::initializer_list<T> list, string_view sep) {
+arg_join<internal::iterator_t<const std::initializer_list<T>>, char>
+join(std::initializer_list<T> list, string_view sep) {
   return join(std::begin(list), std::end(list), sep);
 }
 
 template <typename T>
-arg_join<internal::iterator_t<const std::initializer_list<T>>, wchar_t> join(
-    std::initializer_list<T> list, wstring_view sep) {
+arg_join<internal::iterator_t<const std::initializer_list<T>>, wchar_t>
+join(std::initializer_list<T> list, wstring_view sep) {
   return join(std::begin(list), std::end(list), sep);
 }
 
 FMT_END_NAMESPACE
 
-#endif  // FMT_RANGES_H_
+#endif // FMT_RANGES_H_
