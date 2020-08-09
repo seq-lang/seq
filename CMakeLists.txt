@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.9)
 project(Seq)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -19,21 +19,23 @@ find_package(Threads REQUIRED)
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
 option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
 find_package(ZLIB REQUIRED)
-
 include(ExternalProject)
 ExternalProject_Add(bdwgc
   URL https://github.com/ivmai/bdwgc/releases/download/v8.0.4/gc-8.0.4.tar.gz
   SOURCE_DIR ${CMAKE_BINARY_DIR}/bdwgc
-  CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/bdwgc/configure CFLAGS=-fPIC --enable-threads=posix --enable-cplusplus --enable-thread-local-alloc --enable-large-config --prefix=${CMAKE_BINARY_DIR}/bdwgc/build
-  BUILD_COMMAND make CFLAGS=-DHANDLE_FORK LDFLAGS=-static
+  CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/bdwgc/configure
+                  CFLAGS=-fPIC
+                  --enable-threads=posix
+                  --enable-cplusplus
+                  --enable-large-config
+                  --enable-thread-local-alloc
+                  --prefix=${CMAKE_BINARY_DIR}/bdwgc/build
+  BUILD_COMMAND $(MAKE) LDFLAGS=-static COMMAND $(MAKE) check
   BUILD_IN_SOURCE ON
   INSTALL_DIR ${CMAKE_BINARY_DIR}/bdwgc/build
-  INSTALL_COMMAND make install
-  LOG_DOWNLOAD ON
-  # LOG_CONFIGURE ON
-  # LOG_BUILD ON
-  # LOG_INSTALL ON
-)
+  INSTALL_COMMAND $(MAKE) install
+  LOG_DOWNLOAD ON)
+# --enable-handle-fork=yes --disable-shared --enable-static
 ExternalProject_Get_Property(bdwgc install_dir)
 set(BDWGC_DIR ${install_dir})
 
@@ -47,28 +49,35 @@ set(SEQRT_FILES runtime/lib.h
                 runtime/sw/ksw2_gg2_sse.cpp
                 runtime/sw/intersw.h
                 runtime/sw/intersw.cpp)
-add_library(seqrt OBJECT ${SEQRT_FILES})
+add_library(seqrt SHARED ${SEQRT_FILES})
 add_dependencies(seqrt bdwgc)
-target_include_directories(seqrt PRIVATE runtime ${BDWGC_DIR}/include)
-set_property(TARGET seqrt PROPERTY POSITION_INDEPENDENT_CODE 1)
+target_include_directories(seqrt PRIVATE ${BDWGC_DIR}/include runtime)
+target_link_libraries(seqrt PUBLIC ${ZLIB_LIBRARIES} ${BDWGC_DIR}/lib/libgc.a Threads::Threads)
 set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
 if(SEQ_THREADED)
+  find_package(OpenMP REQUIRED)
+  target_link_libraries(seqrt PUBLIC OpenMP::OpenMP_CXX)
   target_compile_definitions(seqrt PRIVATE THREADED=1)
 else()
   target_compile_definitions(seqrt PRIVATE THREADED=0)
 endif()
 
-
-add_library(seqrt_shared SHARED $<TARGET_OBJECTS:seqrt>)
-add_dependencies(seqrt_shared bdwgc)
-target_link_libraries(seqrt_shared PUBLIC ${ZLIB_LIBRARIES} ${BDWGC_DIR}/lib/libgc.a Threads::Threads)
-if (SEQ_THREADED)
-  find_package(OpenMP REQUIRED)
-  target_link_libraries(seqrt_shared PUBLIC OpenMP::OpenMP_CXX)
+add_library(seqrt_static_only STATIC ${SEQRT_FILES})
+add_dependencies(seqrt_static_only bdwgc)
+target_include_directories(seqrt_static_only PRIVATE ${BDWGC_DIR}/include runtime)
+set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
+if(SEQ_THREADED)
+  target_compile_definitions(seqrt_static_only PRIVATE THREADED=1)
+else()
+  target_compile_definitions(seqrt_static_only PRIVATE THREADED=0)
 endif()
-add_library(seqrt_static STATIC $<TARGET_OBJECTS:seqrt>)
-add_dependencies(seqrt_static bdwgc)
-target_link_libraries(seqrt_static ${BDWGC_DIR}/lib/libgc.a)
+set(SEQRT_STATIC ${CMAKE_BINARY_DIR}/libseqrt_static.a)
+add_custom_target(seqrt_static
+    COMMAND ar -x $<TARGET_FILE:seqrt_static_only>
+    COMMAND ar -x ${BDWGC_DIR}/lib/libgc.a
+    COMMAND ar -qcs ${SEQRT_STATIC} *.o
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    DEPENDS seqrt_static_only)
 
 # Seq parsing library
 execute_process(COMMAND ocamlc -where
@@ -85,12 +94,10 @@ ExternalProject_Add(menhir
   URL https://gitlab.inria.fr/fpottier/menhir/-/archive/20190924/menhir-20190924.tar.gz
   SOURCE_DIR ${CMAKE_BINARY_DIR}/menhir
   CONFIGURE_COMMAND ""
-  BUILD_COMMAND make -C src -j
+  BUILD_COMMAND $(MAKE) -C src -j
   BUILD_IN_SOURCE ON
   INSTALL_COMMAND ""
-  LOG_DOWNLOAD ON
-  # LOG_BUILD ON
-)
+  LOG_DOWNLOAD ON)
 ExternalProject_Get_Property(menhir SOURCE_DIR)
 set(MENHIR ${SOURCE_DIR}/src/_stage1/menhir.native)
 set(MENHIR_LIB ${SOURCE_DIR}/src/_stage1)
@@ -100,10 +107,7 @@ ExternalProject_Add(seqparse_target
   CONFIGURE_COMMAND cp -r ${CMAKE_SOURCE_DIR}/compiler/parser/ocaml ${CMAKE_BINARY_DIR}/seqparse
   BINARY_DIR ${CMAKE_BINARY_DIR}/seqparse
   BUILD_COMMAND make -C ocaml MENHIR=${MENHIR} MENHIR_LIB=${MENHIR_LIB}
-  INSTALL_COMMAND ""
-  # LOG_DOWNLOAD ON
-  # LOG_BUILD ON
-)
+  INSTALL_COMMAND "")
 ExternalProject_Get_Property(seqparse_target BINARY_DIR)
 set(LIB_SEQPARSE ${BINARY_DIR}/ocaml/seqparser.o)
 add_dependencies(seqparse_target menhir)
@@ -131,12 +135,11 @@ file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
                        compiler/parser/ast/format/*.cpp
                        compiler/util/*.cpp
                        compiler/util/fmt/*.cpp)
-
 add_library(seq SHARED ${SEQ_HPPFILES})
-add_dependencies(seq seqparse_target)
+add_dependencies(seq seqparse_target seqrt_static)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} seqrt_shared dl)
+target_link_libraries(seq ${LLVM_LIBS} seqrt dl)
 
 if(SEQ_JITBRIDGE)
   add_library(seqjit SHARED compiler/util/jit.cpp)
