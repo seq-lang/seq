@@ -47,7 +47,8 @@ before_install:
       cmake .. -DLLVM_INCLUDE_TESTS=OFF \
                -DLLVM_ENABLE_RTTI=ON \
                -DCMAKE_BUILD_TYPE=Release \
-               -DLLVM_TARGETS_TO_BUILD=host
+               -DLLVM_TARGETS_TO_BUILD=host \
+               -DLLVM_ENABLE_ZLIB=OFF
       cmake --build . --config Release
       cd -
     fi
@@ -57,7 +58,7 @@ before_install:
     if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/ocaml-4.07.1)" ]]; then
       curl -L https://github.com/ocaml/ocaml/archive/4.07.1.tar.gz | tar zxf - -C ${TRAVIS_BUILD_DIR}
       cd ${TRAVIS_BUILD_DIR}/ocaml-4.07.1
-      ./configure -no-curses -fPIC
+      ./configure -fPIC -no-pthread -no-debugger -no-debug-runtime
       make world.opt
       cd -
     fi
@@ -120,6 +121,32 @@ before_deploy:
   - export SEQ_STDLIB_ARCHIVE=seq-stdlib.tar.gz
   - tar -czf ${SEQ_BUILD_ARCHIVE} build
   - tar -czf ${SEQ_STDLIB_ARCHIVE} stdlib
+  - | 
+    cat >bintray.json <<<EOF 
+    {
+      "package": {
+         "name": "seq-develop",
+         "repo": "seq",
+         "subject": "inumanag",
+         "vcs_url": "https://github.com/seq-lang/seq",
+         "licenses": ["Apache 2.0"],
+      },
+      "version": {
+         "name": "nightly",
+      },
+      "files": [
+        {
+          "includePattern": "${SEQ_BUILD_ARCHIVE}",
+          "uploadPattern": "${TRAVIS_OS_NAME}/${SEQ_BUILD_ARCHIVE}"
+        },
+        {
+          "includePattern": "${SEQ_STDLIB_ARCHIVE}",
+          "uploadPattern": "${TRAVIS_OS_NAME}/${SEQ_STDLIB_ARCHIVE}"
+        }
+      ]
+    }
+    EOF
+
 
 deploy:
   - provider: releases
@@ -142,7 +169,12 @@ deploy:
     on:
       branch: master
       condition: $TRAVIS_OS_NAME = linux
-
+  - provider: bintray
+    key: 
+	secure: lGfhxQMpQhOk1UxYccjmRe8IcBIPpn66db92XOCPsELd6S2ZfyJSZgW0AQD51xf31k3s0wCbCn9USyB7oD8iIxGGKQgVB8BRvY+WS6ooO4DeUfXWhW0Hgw9yCrIXZTsO6QTz/DWiwrLYf4rn2vETezji9ou635uKYRB9Cq8gPWXd5QtZRn/YzwZnaOA+crKYcHDZC5Y6meXKPUW9DYvneheh2Tve4TTjc+YjykwAKrjIaaD/xmTcWS8kXBYFxdWsnORQprN3zNmqFNa/7nPHUG7/oI/rB/qdLxS1B3NPDVpLF8L6/OFV0ufqhQ9xLyRIJKegzKE7iLid2XMWKBJ6v5KN2GhVje5+EeKUWfYBuJfS/EDHeRpFf5T/cLpC1iy85X5tSqBV4x6OQsdfmW5gxiloeV76GUz4LErEUHQreZLk4eCDv3q8dGpV25hI7LHUzGvXdb7o6BZuxGGnz8JWhOKYl9fVc+ho2FxmW7Dr/dYik81o0Dmrg7gYM/q6SVdSTHWUg06nMy1LLvxS0TaiHR0Car8pgaQMglysw0PWuIN7+y7SV/X9z5bY7uQN92jcTvcfv0RpyZQ8a5J9TCQhIS+j36YiONz3UJ1R+m+QE3IyiY8Ws1rNUYTi7u6EUuW6/DVlsYhLW8EVslUgiFKJjG+YXACuF9N/XPYBCL+olWU=
+    file: bintray.json
+    skip_cleanup: true
+    on: develop
 cache:
   timeout: 1000
   directories:
