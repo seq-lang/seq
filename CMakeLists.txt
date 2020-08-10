@@ -14,6 +14,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib:$ORIGIN/")
 
 # Seq runtime library
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
