@@ -11,35 +11,48 @@ include_directories(compiler)
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+if(APPLE)
+    set(CMAKE_INSTALL_RPATH "@executable_path")
+else()
+    set(CMAKE_INSTALL_RPATH "$ORIGIN")
+endif()
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib:$ORIGIN/")
 
 # Seq runtime library
 option(SEQ_THREADED "compile runtime library for multithreading" OFF)
 option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
-set(CMAKE_FIND_LIBRARY_SUFFIXES_OLD ${CMAKE_FIND_LIBRARY_SUFFIXES})
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-find_package(ZLIB REQUIRED)
-set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES_OLD})
 include(ExternalProject)
+ExternalProject_Add(zlib
+  URL https://zlib.net/zlib-1.2.11.tar.gz
+  SOURCE_DIR ${CMAKE_BINARY_DIR}/zlib
+  CONFIGURE_COMMAND CC=${CMAKE_C_COMPILER} CFLAGS=-fPIC ${CMAKE_BINARY_DIR}/zlib/configure --64 --static --shared
+  BUILD_COMMAND $(MAKE)
+  BUILD_IN_SOURCE ON
+  INSTALL_COMMAND ""
+  LOG_DOWNLOAD NO)
+ExternalProject_Get_Property(zlib SOURCE_DIR)
+set(ZLIB_DIR ${SOURCE_DIR})
+
 ExternalProject_Add(bdwgc
   URL https://github.com/ivmai/bdwgc/releases/download/v8.0.4/gc-8.0.4.tar.gz
   SOURCE_DIR ${CMAKE_BINARY_DIR}/bdwgc
   CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/bdwgc/configure
-                  CFLAGS=-fPIC 
+                  CFLAGS=-fPIC
                   CC=${CMAKE_C_COMPILER}
                   --enable-threads=posix
                   --enable-large-config
                   --enable-thread-local-alloc
                   --prefix=${CMAKE_BINARY_DIR}/bdwgc/build
-  BUILD_COMMAND $(MAKE) LDFLAGS=-static COMMAND $(MAKE) check
+  # --enable-handle-fork=yes --disable-shared --enable-static
+  BUILD_COMMAND $(MAKE) LDFLAGS=-static
+  # COMMAND $(MAKE) check
   BUILD_IN_SOURCE ON
   INSTALL_DIR ${CMAKE_BINARY_DIR}/bdwgc/build
   INSTALL_COMMAND $(MAKE) install
-  LOG_DOWNLOAD ON)
-# --enable-handle-fork=yes --disable-shared --enable-static
+  LOG_DOWNLOAD NO)
 ExternalProject_Get_Property(bdwgc install_dir)
 set(BDWGC_DIR ${install_dir})
 
@@ -54,9 +67,14 @@ set(SEQRT_FILES runtime/lib.h
                 runtime/sw/intersw.h
                 runtime/sw/intersw.cpp)
 add_library(seqrt SHARED ${SEQRT_FILES})
-add_dependencies(seqrt bdwgc)
+add_dependencies(seqrt bdwgc zlib)
 target_include_directories(seqrt PRIVATE ${BDWGC_DIR}/include runtime)
-target_link_libraries(seqrt PUBLIC -static-libgcc -static-libstdc++ ${ZLIB_LIBRARIES} ${BDWGC_DIR}/lib/libgc.a Threads::Threads)
+target_link_libraries(seqrt PUBLIC
+  -Wl,--whole-archive
+  ${ZLIB_DIR}/libz.a
+  ${BDWGC_DIR}/lib/libgc.a
+  -Wl,--no-whole-archive
+  Threads::Threads)
 set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
 if(SEQ_THREADED)
   find_package(OpenMP REQUIRED)
@@ -101,7 +119,7 @@ ExternalProject_Add(menhir
   BUILD_COMMAND $(MAKE) -C src -j
   BUILD_IN_SOURCE ON
   INSTALL_COMMAND ""
-  LOG_DOWNLOAD ON)
+  LOG_DOWNLOAD OFF)
 ExternalProject_Get_Property(menhir SOURCE_DIR)
 set(MENHIR ${SOURCE_DIR}/src/_stage1/menhir.native)
 set(MENHIR_LIB ${SOURCE_DIR}/src/_stage1)
@@ -143,7 +161,7 @@ add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target seqrt_static)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} -static-libgcc -static-libstdc++ seqrt dl)
+target_link_libraries(seq ${LLVM_LIBS} dl seqrt)
 
 if(SEQ_JITBRIDGE)
   add_library(seqjit SHARED compiler/util/jit.cpp)

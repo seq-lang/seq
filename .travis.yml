@@ -48,7 +48,8 @@ before_install:
                -DLLVM_ENABLE_RTTI=ON \
                -DCMAKE_BUILD_TYPE=Release \
                -DLLVM_TARGETS_TO_BUILD=host \
-               -DLLVM_ENABLE_ZLIB=OFF
+               -DLLVM_ENABLE_ZLIB=OFF \
+               -DLLVM_ENABLE_TERMINFO=OFF
       cmake --build . --config Release
       cd -
     fi
