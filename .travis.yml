@@ -171,6 +171,7 @@ deploy:
       branch: master
       condition: $TRAVIS_OS_NAME = linux
   - provider: bintray
+    user: inumanag
     key:
       secure: lGfhxQMpQhOk1UxYccjmRe8IcBIPpn66db92XOCPsELd6S2ZfyJSZgW0AQD51xf31k3s0wCbCn9USyB7oD8iIxGGKQgVB8BRvY+WS6ooO4DeUfXWhW0Hgw9yCrIXZTsO6QTz/DWiwrLYf4rn2vETezji9ou635uKYRB9Cq8gPWXd5QtZRn/YzwZnaOA+crKYcHDZC5Y6meXKPUW9DYvneheh2Tve4TTjc+YjykwAKrjIaaD/xmTcWS8kXBYFxdWsnORQprN3zNmqFNa/7nPHUG7/oI/rB/qdLxS1B3NPDVpLF8L6/OFV0ufqhQ9xLyRIJKegzKE7iLid2XMWKBJ6v5KN2GhVje5+EeKUWfYBuJfS/EDHeRpFf5T/cLpC1iy85X5tSqBV4x6OQsdfmW5gxiloeV76GUz4LErEUHQreZLk4eCDv3q8dGpV25hI7LHUzGvXdb7o6BZuxGGnz8JWhOKYl9fVc+ho2FxmW7Dr/dYik81o0Dmrg7gYM/q6SVdSTHWUg06nMy1LLvxS0TaiHR0Car8pgaQMglysw0PWuIN7+y7SV/X9z5bY7uQN92jcTvcfv0RpyZQ8a5J9TCQhIS+j36YiONz3UJ1R+m+QE3IyiY8Ws1rNUYTi7u6EUuW6/DVlsYhLW8EVslUgiFKJjG+YXACuF9N/XPYBCL+olWU=
     file: bintray.json
