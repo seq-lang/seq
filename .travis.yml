@@ -19,7 +19,7 @@ jobs:
             - python-sphinx
             - doxygen
     - os: linux
-      dist: precise
+      dist: trusty
       compiler: clang
       addons:
         apt:
