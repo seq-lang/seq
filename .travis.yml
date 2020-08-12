@@ -59,12 +59,6 @@ before_install:
       sudo dpkg -i libiomp-dev_0.20140926-1_amd64.deb
       wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
       sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
-      curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
-      export PATH="/home/travis/.pyenv/bin:$PATH"
-      eval "$(pyenv init -)"
-      pyenv install 3.6.11
-      pyenv shell 3.6.11
-      eval "$(pyenv init -)"
       export CC=clang-4.0
       export CXX=clang++-4.0
     else
@@ -136,12 +130,9 @@ install:
 
   # install dependencies for docs:
   - |
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
       python3 -m pip install --upgrade pip
       python3 -m pip install wheel sphinx==1.7.5 sphinx-rtd-theme breathe==4.9.1 exhale
-    else
-      sudo pip3 install --upgrade pip
-      sudo pip3 install wheel sphinx sphinx-rtd-theme breathe exhale
     fi
 
 before_script:
@@ -162,7 +153,10 @@ script:
   - cmake --build build --config Release
   - build/seqtest
   - build/seqc test/core/helloworld.seq
-  - (cd docs/sphinx && make html 2> /dev/null)
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      (cd docs/sphinx && make html 2> /dev/null)
+    fi
   - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
   - export SEQ_STDLIB_ARCHIVE=seq-stdlib.tar.gz
   - |
@@ -219,7 +213,7 @@ deploy:
     skip_cleanup: true
     on:
       branch: master
-      condition: $TRAVIS_OS_NAME = linux
+      condition: $TRAVIS_OS_NAME = osx
   - provider: bintray
     user: inumanag
     key:
