@@ -46,19 +46,21 @@ before_install:
     if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
       wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
       sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+      sudo add-apt-repository -y ppa:fkrull/deadsnakes
       sudo apt-add-repository 'deb https://apt.llvm.org/precise/ llvm-toolchain-precise-4.0 main'
       # Workaround: https://github.com/skyportal/skyportal/commit/6e639e4b4af93323095b22bb3994ccc358a4b379
       sudo rm -f /etc/apt/sources.list.d/mongodb*
       sudo rm -f /etc/apt/sources.list.d/couchdb*
       sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
       sudo apt-get -q update
-      sudo apt-get -y install clang-4.0 clang++-4.0
+      sudo apt-get -y install clang-4.0 clang++-4.0 python3.5 python3.5-dev
       wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp5_0.20140926-1_amd64.deb
       sudo dpkg -i libiomp5_0.20140926-1_amd64.deb
       wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp-dev_0.20140926-1_amd64.deb
       sudo dpkg -i libiomp-dev_0.20140926-1_amd64.deb
       wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
       sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
+      wget -q -O - https://bootstrap.pypa.io/get-pip.py | sudo python3.5
       export CC=clang-4.0
       export CXX=clang++-4.0
     else
@@ -138,7 +140,11 @@ install:
 before_script:
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
   - export LDFLAGS="-L/usr/local/lib"
-  - export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      export SEQ_PYTHON=$(python3.5 test/python/find-python-library.py)
+    else
+      export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
+    fi
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
 
