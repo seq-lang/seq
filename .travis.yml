@@ -3,6 +3,10 @@ language: cpp
 jobs:
   include:
     - os: linux
+      dist: xenial
+    - os: linux
+      dist: trusty
+      compiler: clang
     - os: osx
 
 addons:
@@ -116,6 +120,34 @@ script:
   - build/seqtest
   - build/seqc test/core/helloworld.seq
   - (cd docs/sphinx && make html 2> /dev/null)
+  - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
+  - export SEQ_STDLIB_ARCHIVE=seq-stdlib.tar.gz
+  - |
+    cat > bintray.json << EOD
+    {
+      "package": {
+        "name": "seq-develop",
+        "repo": "seq",
+        "subject": "inumanag",
+        "vcs_url": "https://github.com/seq-lang/seq",
+        "licenses": ["Apache 2.0"]
+      },
+      "version": {
+        "name": "nightly"
+      },
+      "files": [
+        {
+          "includePattern": "${SEQ_BUILD_ARCHIVE}",
+          "uploadPattern": "${TRAVIS_OS_NAME}/${SEQ_BUILD_ARCHIVE}"
+        },
+        {
+          "includePattern": "${SEQ_STDLIB_ARCHIVE}",
+          "uploadPattern": "${TRAVIS_OS_NAME}/${SEQ_STDLIB_ARCHIVE}"
+        }
+      ]
+    }
+    EOD
+
 
 before_deploy:
   - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
