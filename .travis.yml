@@ -42,6 +42,12 @@ jobs:
         - sudo dpkg -i libiomp-dev_0.20140926-1_amd64.deb
         - wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
         - sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
+        - curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+        - export PATH="/home/travis/.pyenv/bin:$PATH"
+        - eval "$(pyenv init -)"
+        - pyenv install 3.6.11
+        - pyenv shell 3.6.11
+        - eval "$(pyenv init -)"
     # - os: osx
     #   addons:
     #     homebrew:
@@ -119,8 +125,14 @@ install:
   - cd -
 
   # install dependencies for docs:
-  - sudo pip3 install --upgrade pip
-  - sudo pip3 install wheel sphinx sphinx-rtd-theme breathe exhale
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      python3 -m pip install --upgrade pip
+      python3 -m pip install wheel sphinx==1.7.5 sphinx-rtd-theme breathe==4.9.1 exhale
+    else
+      sudo pip3 install --upgrade pip
+      sudo pip3 install wheel sphinx sphinx-rtd-theme breathe exhale
+    fi
 
 before_script:
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
