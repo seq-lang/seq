@@ -70,7 +70,7 @@ before_install:
     else
       export CC=clang
       export CXX=clang++
-    done
+    fi
 
   # build and cache LLVM/Tapir:
   - |
