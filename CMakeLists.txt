@@ -71,10 +71,12 @@ add_dependencies(seqrt bdwgc zlib)
 target_include_directories(seqrt PRIVATE ${BDWGC_DIR}/include runtime)
 if (APPLE)
   target_link_libraries(seqrt PUBLIC
+    -static-libstdc++
     -Wl,-force_load,${ZLIB_DIR}/libz.a -Wl,-force_load,${BDWGC_DIR}/lib/libgc.a
     Threads::Threads)
 else()
-target_link_libraries(seqrt PUBLIC
+  target_link_libraries(seqrt PUBLIC
+    -static-libstdc++
     -Wl,--whole-archive ${ZLIB_DIR}/libz.a ${BDWGC_DIR}/lib/libgc.a -Wl,--no-whole-archive
     Threads::Threads)
 endif()
@@ -164,7 +166,7 @@ add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target seqrt_static)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
-target_link_libraries(seq ${LLVM_LIBS} dl seqrt)
+target_link_libraries(seq -static-libstdc++ ${LLVM_LIBS} dl seqrt)
 
 if(SEQ_JITBRIDGE)
   add_library(seqjit SHARED compiler/util/jit.cpp)
@@ -173,7 +175,7 @@ endif()
 
 # Seq command-line tool
 add_executable(seqc runtime/main.cpp)
-target_link_libraries(seqc seq)
+target_link_libraries(seqc -static-libstdc++ seq)
 
 # Seq test
 # Download and unpack googletest at configure time
