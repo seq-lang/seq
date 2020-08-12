@@ -25,29 +25,6 @@ jobs:
           update: true
           packages:
             - doxygen
-      before_install:
-        # Pray that these repositories are still maintained...
-        - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-        - sudo apt-add-repository 'deb https://apt.llvm.org/precise/ llvm-toolchain-precise-4.0 main'
-        # Workaround: https://github.com/skyportal/skyportal/commit/6e639e4b4af93323095b22bb3994ccc358a4b379
-        - sudo rm -f /etc/apt/sources.list.d/mongodb*
-        - sudo rm -f /etc/apt/sources.list.d/couchdb*
-        - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
-        - sudo apt-get -q update
-        - sudo apt-get -y install clang-4.0 clang++-4.0
-        - wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp5_0.20140926-1_amd64.deb
-        - sudo dpkg -i libiomp5_0.20140926-1_amd64.deb
-        - wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp-dev_0.20140926-1_amd64.deb
-        - sudo dpkg -i libiomp-dev_0.20140926-1_amd64.deb
-        - wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
-        - sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
-        - curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
-        - export PATH="/home/travis/.pyenv/bin:$PATH"
-        - eval "$(pyenv init -)"
-        - pyenv install 3.6.11
-        - pyenv shell 3.6.11
-        - eval "$(pyenv init -)"
     # - os: osx
     #   addons:
     #     homebrew:
@@ -64,6 +41,37 @@ jobs:
     #         - wget
 
 before_install:
+  # Pray that these repositories are still maintained...
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+      sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+      sudo apt-add-repository 'deb https://apt.llvm.org/precise/ llvm-toolchain-precise-4.0 main'
+      # Workaround: https://github.com/skyportal/skyportal/commit/6e639e4b4af93323095b22bb3994ccc358a4b379
+      sudo rm -f /etc/apt/sources.list.d/mongodb*
+      sudo rm -f /etc/apt/sources.list.d/couchdb*
+      sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
+      sudo apt-get -q update
+      sudo apt-get -y install clang-4.0 clang++-4.0
+      wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp5_0.20140926-1_amd64.deb
+      sudo dpkg -i libiomp5_0.20140926-1_amd64.deb
+      wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp-dev_0.20140926-1_amd64.deb
+      sudo dpkg -i libiomp-dev_0.20140926-1_amd64.deb
+      wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
+      sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
+      curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+      export PATH="/home/travis/.pyenv/bin:$PATH"
+      eval "$(pyenv init -)"
+      pyenv install 3.6.11
+      pyenv shell 3.6.11
+      eval "$(pyenv init -)"
+      export CC=clang-4.0
+      export CXX=clang++-4.0
+    else
+      export CC=clang
+      export CXX=clang++
+    done
+
   # build and cache LLVM/Tapir:
   - |
     if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/Tapir-LLVM)" ]]; then
@@ -80,7 +88,9 @@ before_install:
                -DCMAKE_BUILD_TYPE=Release \
                -DLLVM_TARGETS_TO_BUILD=host \
                -DLLVM_ENABLE_ZLIB=OFF \
-               -DLLVM_ENABLE_TERMINFO=OFF
+               -DLLVM_ENABLE_TERMINFO=OFF \
+               -DCMAKE_C_COMPILER=${CC} \
+               -DCMAKE_CXX_COMPILER=${CXX}
       cmake --build . --config Release
       cd -
     fi
@@ -147,8 +157,8 @@ script:
     (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
                           -DSEQ_THREADED=ON \
                           -DLLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir` \
-                          -DCMAKE_C_COMPILER=clang \
-                          -DCMAKE_CXX_COMPILER=clang++)
+                          -DCMAKE_C_COMPILER=${CC} \
+                          -DCMAKE_CXX_COMPILER=${CXX})
   - cmake --build build --config Release
   - build/seqtest
   - build/seqc test/core/helloworld.seq
