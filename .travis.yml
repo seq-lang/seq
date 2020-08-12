@@ -166,7 +166,6 @@ script:
       (cd docs/sphinx && make html 2> /dev/null)
     fi
   - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
-  - export SEQ_STDLIB_ARCHIVE=seq-stdlib.tar.gz
   - |
     cat > bintray.json << EOD
     {
@@ -184,10 +183,6 @@ script:
         {
           "includePattern": "${SEQ_BUILD_ARCHIVE}",
           "uploadPattern": "${TRAVIS_OS_NAME}/${SEQ_BUILD_ARCHIVE}"
-        },
-        {
-          "includePattern": "${SEQ_STDLIB_ARCHIVE}",
-          "uploadPattern": "${TRAVIS_OS_NAME}/${SEQ_STDLIB_ARCHIVE}"
         }
       ],
       "publish": true
@@ -196,17 +191,18 @@ script:
 
 
 before_deploy:
-  - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
-  - export SEQ_STDLIB_ARCHIVE=seq-stdlib.tar.gz
-  - tar -czf ${SEQ_BUILD_ARCHIVE} build
-  - tar -czf ${SEQ_STDLIB_ARCHIVE} stdlib
+  - mkdir -p seq-deploy/bin seq-deploy/lib
+  - cp build/seqc seq-deploy/bin/
+  - cp build/libseq*.so seq-deploy/lib/
+  # - cp build/libseqrt_static.a seq-deploy/lib/
+  - cp -r stdlib seq-deploy/lib/
+  - tar -czf ${SEQ_BUILD_ARCHIVE} seq-deploy
 
 deploy:
   - provider: releases
     token: $GITHUB_TOKEN
     file:
       - ${SEQ_BUILD_ARCHIVE}
-      - ${SEQ_STDLIB_ARCHIVE}
     skip_cleanup: true
     on:
       repo: seq-lang/seq
