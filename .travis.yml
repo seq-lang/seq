@@ -140,11 +140,13 @@ install:
 before_script:
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
   - export LDFLAGS="-L/usr/local/lib"
-  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
       export SEQ_PYTHON=$(python3.5 test/python/find-python-library.py)
     else
       export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
     fi
+    echo ${SEQ_PYTHON}
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
 
