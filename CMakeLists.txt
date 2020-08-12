@@ -71,7 +71,7 @@ add_dependencies(seqrt bdwgc zlib)
 target_include_directories(seqrt PRIVATE ${BDWGC_DIR}/include runtime)
 if (APPLE)
   target_link_libraries(seqrt PUBLIC
-    -Wl,-force_load ${ZLIB_DIR}/libz.a ${BDWGC_DIR}/lib/libgc.a -Wl,-noforce_load
+    -Wl,-force_load,${ZLIB_DIR}/libz.a -Wl,-force_load,${BDWGC_DIR}/lib/libgc.a
     Threads::Threads)
 else()
 target_link_libraries(seqrt PUBLIC
