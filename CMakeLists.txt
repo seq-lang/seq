@@ -69,12 +69,15 @@ set(SEQRT_FILES runtime/lib.h
 add_library(seqrt SHARED ${SEQRT_FILES})
 add_dependencies(seqrt bdwgc zlib)
 target_include_directories(seqrt PRIVATE ${BDWGC_DIR}/include runtime)
+if (APPLE)
+  target_link_libraries(seqrt PUBLIC
+    -Wl,-force_load ${ZLIB_DIR}/libz.a ${BDWGC_DIR}/lib/libgc.a -Wl,-noforce_load
+    Threads::Threads)
+else()
 target_link_libraries(seqrt PUBLIC
-  -Wl,--whole-archive
-  ${ZLIB_DIR}/libz.a
-  ${BDWGC_DIR}/lib/libgc.a
-  -Wl,--no-whole-archive
-  Threads::Threads)
+    -Wl,--whole-archive ${ZLIB_DIR}/libz.a ${BDWGC_DIR}/lib/libgc.a -Wl,--no-whole-archive
+    Threads::Threads)
+endif()
 set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
 if(SEQ_THREADED)
   find_package(OpenMP REQUIRED)
