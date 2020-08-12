@@ -2,53 +2,56 @@ language: cpp
 
 jobs:
   include:
+    # - os: linux
+    #   dist: xenial
+    #   addons:
+    #     apt:
+    #       update: true
+    #       packages:
+    #         - libsnappy-dev
+    #         - binutils-dev
+    #         - libomp-dev
+    #         - libunwind-dev
+    #         - texinfo
+    #         - python3
+    #         - python3-pip
+    #         - python3-setuptools
+    #         - python-sphinx
+    #         - doxygen
     - os: linux
-      dist: xenial
+      dist: precise
       addons:
         apt:
           update: true
           packages:
-            - libsnappy-dev
-            - binutils-dev
-            - libomp-dev
-            - libunwind-dev
-            - texinfo
-            - python3
-            - python3-pip
-            - python3-setuptools
-            - python-sphinx
             - doxygen
-    - os: linux
-      dist: trusty
-      compiler: clang
-      addons:
-        apt:
-          update: true
-          packages:
-            - libsnappy-dev
-            - binutils-dev
-            # - libomp-dev
-            - libunwind7-dev
-            - texinfo
-            - python3
-            - python3-pip
-            - python3-setuptools
-            - python-sphinx
-            - doxygen
-    - os: osx
-      addons:
-        homebrew:
-          update: true
-          packages:
-            - snappy
-            - binutils
-            - libomp
-            - texinfo
-            - python3
-            - sphinx-doc
-            - doxygen
-            - cmake
-            - wget
+      before_install:
+        # Pray that these repositories are still maintained...
+        - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        - sudo apt-add-repository 'deb https://apt.llvm.org/precise/ llvm-toolchain-precise-4.0 main'
+        - sudo apt-get -q update
+        - sudo apt-get -y install clang-4.0 clang++-4.0
+        - wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp5_0.20140926-1_amd64.deb
+        - sudo dpkg -i libiomp5_0.20140926-1_amd64.deb
+        - wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp-dev_0.20140926-1_amd64.deb
+        - sudo dpkg -i libiomp-dev_0.20140926-1_amd64.deb
+        - wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
+        - sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
+    # - os: osx
+    #   addons:
+    #     homebrew:
+    #       update: true
+    #       packages:
+    #         - snappy
+    #         - binutils
+    #         - libomp
+    #         - texinfo
+    #         - python3
+    #         - sphinx-doc
+    #         - doxygen
+    #         - cmake
+    #         - wget
 
 before_install:
   # build and cache LLVM/Tapir:
@@ -158,7 +161,8 @@ script:
           "includePattern": "${SEQ_STDLIB_ARCHIVE}",
           "uploadPattern": "${TRAVIS_OS_NAME}/${SEQ_STDLIB_ARCHIVE}"
         }
-      ]
+      ],
+      "publish": true
     }
     EOD
 
