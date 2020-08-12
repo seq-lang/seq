@@ -158,7 +158,7 @@ script:
                           -DLLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir` \
                           -DCMAKE_C_COMPILER=${CC} \
                           -DCMAKE_CXX_COMPILER=${CXX})
-  - cmake --build build --config Release
+  - cmake --build build --config Release -- VERBOSE=1
   - build/seqtest
   - build/seqc test/core/helloworld.seq
   - |
@@ -185,7 +185,8 @@ script:
           "uploadPattern": "${TRAVIS_OS_NAME}/${SEQ_BUILD_ARCHIVE}"
         }
       ],
-      "publish": true
+      "publish": true,
+      "override": true
     }
     EOD
 
