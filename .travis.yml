@@ -4,37 +4,51 @@ jobs:
   include:
     - os: linux
       dist: xenial
+      addons:
+        apt:
+          update: true
+          packages:
+            - libsnappy-dev
+            - binutils-dev
+            - libomp-dev
+            - libunwind-dev
+            - texinfo
+            - python3
+            - python3-pip
+            - python3-setuptools
+            - python-sphinx
+            - doxygen
     - os: linux
-      dist: trusty
+      dist: precise
       compiler: clang
+      addons:
+        apt:
+          update: true
+          packages:
+            - libsnappy-dev
+            - binutils-dev
+            # - libomp-dev
+            - libunwind7-dev
+            - texinfo
+            - python3
+            - python3-pip
+            - python3-setuptools
+            - python-sphinx
+            - doxygen
     - os: osx
-
-addons:
-  apt:
-    update: true
-    packages:
-      - libsnappy-dev
-      - binutils-dev
-      - libomp-dev
-      - libunwind-dev
-      - texinfo
-      - python3
-      - python3-pip
-      - python3-setuptools
-      - python-sphinx
-      - doxygen
-  homebrew:
-    update: true
-    packages:
-      - snappy
-      - binutils
-      - libomp
-      - texinfo
-      - python3
-      - sphinx-doc
-      - doxygen
-      - cmake
-      - wget
+      addons:
+        homebrew:
+          update: true
+          packages:
+            - snappy
+            - binutils
+            - libomp
+            - texinfo
+            - python3
+            - sphinx-doc
+            - doxygen
+            - cmake
+            - wget
 
 before_install:
   # build and cache LLVM/Tapir:
