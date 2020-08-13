@@ -2,22 +2,6 @@ language: cpp
 
 jobs:
   include:
-    # - os: linux
-    #   dist: xenial
-    #   addons:
-    #     apt:
-    #       update: true
-    #       packages:
-    #         - libsnappy-dev
-    #         - binutils-dev
-    #         - libomp-dev
-    #         - libunwind-dev
-    #         - texinfo
-    #         - python3
-    #         - python3-pip
-    #         - python3-setuptools
-    #         - python-sphinx
-    #         - doxygen
     - os: linux
       dist: precise
       addons:
@@ -25,117 +9,49 @@ jobs:
           update: true
           packages:
             - doxygen
-    # - os: osx
-    #   addons:
-    #     homebrew:
-    #       update: true
-    #       packages:
-    #         - snappy
-    #         - binutils
-    #         - libomp
-    #         - texinfo
-    #         - python3
-    #         - sphinx-doc
-    #         - doxygen
-    #         - cmake
-    #         - wget
-
-before_install:
-  # Pray that these repositories are still maintained...
-  - |
-    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-      wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-      sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-      sudo add-apt-repository -y ppa:fkrull/deadsnakes
-      sudo apt-add-repository 'deb https://apt.llvm.org/precise/ llvm-toolchain-precise-4.0 main'
-      # Workaround: https://github.com/skyportal/skyportal/commit/6e639e4b4af93323095b22bb3994ccc358a4b379
-      sudo rm -f /etc/apt/sources.list.d/mongodb*
-      sudo rm -f /etc/apt/sources.list.d/couchdb*
-      sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
-      sudo apt-get -q update
-      sudo apt-get -y install clang-4.0 clang++-4.0 python3.5 python3.5-dev
-      wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp5_0.20140926-1_amd64.deb
-      sudo dpkg -i libiomp5_0.20140926-1_amd64.deb
-      wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp-dev_0.20140926-1_amd64.deb
-      sudo dpkg -i libiomp-dev_0.20140926-1_amd64.deb
-      wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
-      sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
-      wget -q -O - https://bootstrap.pypa.io/get-pip.py | sudo python3.5
-      export CC=clang-4.0
-      export CXX=clang++-4.0
-    else
-      export CC=clang
-      export CXX=clang++
-    fi
-
-  # build and cache LLVM/Tapir:
-  - |
-    if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/Tapir-LLVM)" ]]; then
-      git clone -b release_60-release https://github.com/seq-lang/Tapir-LLVM ${TRAVIS_BUILD_DIR}/Tapir-LLVM
-      mkdir ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
-      cd ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
-      if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-        export LLVM_BINUTILS_INCDIR=/usr/include
-      elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-        export LLVM_BINUTILS_INCDIR=/usr/local/opt/binutils/include
-      fi
-      cmake .. -DLLVM_INCLUDE_TESTS=OFF \
-               -DLLVM_ENABLE_RTTI=ON \
-               -DCMAKE_BUILD_TYPE=Release \
-               -DLLVM_TARGETS_TO_BUILD=host \
-               -DLLVM_ENABLE_ZLIB=OFF \
-               -DLLVM_ENABLE_TERMINFO=OFF \
-               -DCMAKE_C_COMPILER=${CC} \
-               -DCMAKE_CXX_COMPILER=${CXX}
-      cmake --build . --config Release
-      cd -
-    fi
-
-  # build and cache OCaml without curses
-  - |
-    if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/ocaml-4.07.1)" ]]; then
-      curl -L https://github.com/ocaml/ocaml/archive/4.07.1.tar.gz | tar zxf - -C ${TRAVIS_BUILD_DIR}
-      cd ${TRAVIS_BUILD_DIR}/ocaml-4.07.1
-      ./configure -fPIC -no-pthread -no-debugger -no-debug-runtime
-      make world.opt
-      cd -
-    fi
-    cd ${TRAVIS_BUILD_DIR}/ocaml-4.07.1
-    sudo make install
-    cd -
-
-  # build and cache ocamlbuild
-  - |
-    if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/ocamlbuild-0.12.0)" ]]; then
-      curl -L https://github.com/ocaml/ocamlbuild/archive/0.12.0.tar.gz | tar zxf - -C ${TRAVIS_BUILD_DIR}
-      cd ${TRAVIS_BUILD_DIR}/ocamlbuild-0.12.0
-      make configure
-      make
-      cd -
-    fi
-    cd ${TRAVIS_BUILD_DIR}/ocamlbuild-0.12.0
-    sudo make install
-    cd -
-
-
-  # fix Python:
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew link --overwrite python3; fi
-
-install:
-  # install htslib:
-  - wget -c https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2 -O - | tar -xj
-  - cd htslib-1.10.2
-  - ./configure CFLAGS="-fPIC" --disable-libcurl
-  - make
-  - sudo make install
-  - cd -
-
-  # install dependencies for docs:
-  - |
-    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-      python3 -m pip install --upgrade pip
-      python3 -m pip install wheel sphinx==1.7.5 sphinx-rtd-theme breathe==4.9.1 exhale
-    fi
+      before_install:
+        - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        - sudo add-apt-repository -y ppa:fkrull/deadsnakes
+        - sudo apt-add-repository 'deb https://apt.llvm.org/precise/ llvm-toolchain-precise-4.0 main'
+        # Workaround: https://github.com/skyportal/skyportal/commit/6e639e4b4af93323095b22bb3994ccc358a4b379
+        - sudo rm -f /etc/apt/sources.list.d/mongodb*
+        - sudo rm -f /etc/apt/sources.list.d/couchdb*
+        - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
+        - sudo apt-get -q update
+        - sudo apt-get -y install clang-4.0 clang++-4.0 python3.5 python3.5-dev
+        - wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp5_0.20140926-1_amd64.deb
+        - sudo dpkg -i libiomp5_0.20140926-1_amd64.deb
+        - wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp-dev_0.20140926-1_amd64.deb
+        - sudo dpkg -i libiomp-dev_0.20140926-1_amd64.deb
+        - wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
+        - sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
+        - wget -q -O - https://bootstrap.pypa.io/get-pip.py | sudo python3.5
+        - export CC=clang-4.0
+        - export CXX=clang++-4.0
+        - if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]]; then bash ${TRAVIS_BUILD_DIR}/deps.sh ; fi
+    - os: osx
+      addons:
+        homebrew:
+          update: true
+          packages:
+            - snappy
+            - binutils
+            - libomp
+            - texinfo
+            - python3
+            - sphinx-doc
+            - doxygen
+            - cmake
+            - wget
+      before_install:
+        - export CC=clang
+        - export CXX=clang++
+        - if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]]; then bash ${TRAVIS_BUILD_DIR}/deps.sh ; fi
+        - brew link --overwrite python3
+      install:
+        - python3 -m pip install --upgrade pip
+        - python3 -m pip install wheel sphinx==1.7.5 sphinx-rtd-theme breathe==4.9.1 exhale
 
 before_script:
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
@@ -155,16 +71,14 @@ script:
   - |
     (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
                           -DSEQ_THREADED=ON \
-                          -DLLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir` \
+                          -DSEQ_DEP=${TRAVIS_BUILD_DIR}/deps \
                           -DCMAKE_C_COMPILER=${CC} \
                           -DCMAKE_CXX_COMPILER=${CXX})
   - cmake --build build --config Release -- VERBOSE=1
+  - export LD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/deps/lib:${LD_LIBRARY_PATH}
   - build/seqtest
   - build/seqc test/core/helloworld.seq
-  - |
-    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-      (cd docs/sphinx && make html 2> /dev/null)
-    fi
+  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then (cd docs/sphinx && make html 2> /dev/null); fi
   - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
   - |
     cat > bintray.json << EOD
@@ -182,11 +96,11 @@ script:
       "files": [
         {
           "includePattern": "${SEQ_BUILD_ARCHIVE}",
-          "uploadPattern": "${TRAVIS_OS_NAME}/${SEQ_BUILD_ARCHIVE}"
+          "uploadPattern": "${TRAVIS_OS_NAME}/${SEQ_BUILD_ARCHIVE}",
+          "matrixParams": { "override": 1 }
         }
       ],
-      "publish": true,
-      "override": true
+      "publish": true
     }
     EOD
 
@@ -198,6 +112,8 @@ before_deploy:
   # - cp build/libseqrt_static.a seq-deploy/lib/
   - cp -r stdlib seq-deploy/lib/seq/
   - tar -czf ${SEQ_BUILD_ARCHIVE} seq-deploy
+  - du -sh seq-deploy
+  - du -sh deps
 
 deploy:
   - provider: releases
@@ -230,9 +146,7 @@ deploy:
 cache:
   timeout: 1000
   directories:
-    - Tapir-LLVM
-    - ocaml-4.07.1
-    - ocamlbuild-0.12.0
+    - deps
 
 notifications:
   webhooks:
