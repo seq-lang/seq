@@ -52,9 +52,9 @@ find_package(Threads REQUIRED)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 if(APPLE)
-    set(CMAKE_INSTALL_RPATH "@origin:@origin/../seq/lib")
+    set(CMAKE_INSTALL_RPATH "@origin:@origin/../lib/seq")
 else()
-    set(CMAKE_INSTALL_RPATH "$ORIGIN:$ORIGIN/../seq/lib")
+    set(CMAKE_INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib/seq")
 endif()
 
 # Seq runtime library
