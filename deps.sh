@@ -12,7 +12,7 @@ mkdir -p ${INSTALLDIR} ${SRCDIR}
 die() { echo "$*" 1>&2 ; exit 1; }
 
 # Tapir
-git clone -b release_60-release https://github.com/seq-lang/Tapir-LLVM ${SRCDIR}
+git clone -b release_60-release https://github.com/seq-lang/Tapir-LLVM ${SRCDIR}/Tapir-LLVM
 mkdir -p ${SRCDIR}/Tapir-LLVM/build
 cd ${SRCDIR}/Tapir-LLVM/build
 cmake .. \
