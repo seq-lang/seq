@@ -14,8 +14,9 @@ if(NOT DEFINED SEQ_DEP)
 endif()
 message(STATUS "Dependency directory: ${SEQ_DEP}")
 
-execute_process(COMMAND ${SEQ_DEP}/bin/llvm-config --cmakedir OUTPUT_VARIABLE LLVM_DIR)
-find_package(LLVM REQUIRED CONFIG)
+# execute_process(COMMAND ${SEQ_DEP}/bin/llvm-config --cmakedir OUTPUT_VARIABLE LLVM_DIR)
+# message(STATUS "LLVM config: ${LLVM_DIR}")
+find_package(LLVM REQUIRED CONFIG PATHS ${SEQ_DEP} NO_DEFAULT_PATH)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
