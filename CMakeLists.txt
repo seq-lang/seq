@@ -52,7 +52,7 @@ find_package(Threads REQUIRED)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 if(APPLE)
-    set(CMAKE_INSTALL_RPATH "@executable_path:@executable_path/../lib/seq")
+    set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/../lib/seq")
 else()
     set(CMAKE_INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib/seq")
 endif()
