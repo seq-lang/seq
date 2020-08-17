@@ -51,7 +51,7 @@ jobs:
         - brew link --overwrite python3
       install:
         - python3 -m pip install --upgrade pip
-        - python3 -m pip install wheel sphinx==1.7.5 sphinx-rtd-theme breathe==4.9.1 exhale
+        - python3 -m pip install wheel sphinx sphinx-rtd-theme breathe exhale
 
 before_script:
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
