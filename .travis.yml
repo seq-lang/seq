@@ -78,7 +78,7 @@ script:
   - export LD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/deps/lib:${LD_LIBRARY_PATH}
   - build/seqtest
   - build/seqc test/core/helloworld.seq
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then (cd docs/sphinx && make html 2> /dev/null); fi
+  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then make -C docs/sphinx html; fi
   - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
   - export SEQ_DEP_ARCHIVE=seq-deps-${TRAVIS_OS_NAME}.tar.bz2
   - |
