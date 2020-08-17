@@ -78,7 +78,7 @@ script:
   - export LD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/deps/lib:${LD_LIBRARY_PATH}
   - build/seqtest
   - build/seqc test/core/helloworld.seq
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then make -C docs/sphinx html; fi
+  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then make -C docs/sphinx html 2>/dev/null; fi
   - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
   - export SEQ_DEP_ARCHIVE=seq-deps-${TRAVIS_OS_NAME}.tar.bz2
   - |
@@ -114,7 +114,7 @@ script:
 before_deploy:
   - mkdir -p seq-deploy/bin seq-deploy/lib/seq
   - cp build/seqc seq-deploy/bin/
-  - cp build/libseq*.so seq-deploy/lib/seq/
+  - cp build/libseq*.{so,dylib} seq-deploy/lib/seq/
   # - cp build/libseqrt_static.a seq-deploy/lib/
   - cp -r stdlib seq-deploy/lib/seq/
   - tar -czf ${SEQ_BUILD_ARCHIVE} seq-deploy
