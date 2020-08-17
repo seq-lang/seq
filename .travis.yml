@@ -85,14 +85,14 @@ script:
     cat > bintray.json << EOD
     {
       "package": {
-        "name": "seq-develop",
+        "name": "seq",
         "repo": "seq",
-        "subject": "inumanag",
+        "subject": "seq-lang",
         "vcs_url": "https://github.com/seq-lang/seq",
         "licenses": ["Apache 2.0"]
       },
       "version": {
-        "name": "nightly"
+        "name": "develop"
       },
       "files": [
         {
