@@ -382,6 +382,7 @@ void types::RecordType::initOps() {
            iterFunc.setIns({this});
            iterFunc.setOut(types[0]);
            iterFunc.setArgNames({"self"});
+           iterFunc.setGenerator();
 
            VarExpr arg(iterFunc.getArgVar("self"));
            Block *body = iterFunc.getBlock();
@@ -389,8 +390,6 @@ void types::RecordType::initOps() {
              auto *yield = new Yield(new GetElemExpr(&arg, i + 1));
              yield->setBase(&iterFunc);
              body->add(yield);
-             if (i == 0)
-               iterFunc.sawYield(yield);
            }
 
            iter = iterFunc.getFunc(module);
