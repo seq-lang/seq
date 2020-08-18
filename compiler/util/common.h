@@ -14,15 +14,16 @@ struct SrcInfo {
   int col, endCol;
   int id; /// used to differentiate different
   SrcInfo(std::string file, int line, int endLine, int col, int endCol)
-      : file(std::move(file)), line(line), endLine(endLine), col(col), endCol(endCol) {
+      : file(std::move(file)), line(line), endLine(endLine), col(col),
+        endCol(endCol) {
     static int _id(0);
     id = _id++;
   };
   SrcInfo() : SrcInfo("<internal>", 0, 0, 0, 0){};
   friend std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c);
   bool operator==(const SrcInfo &src) const {
-    return /*(file == src.file) && (line == src.line) && (col == src.col) &&*/ (id ==
-                                                                                src.id);
+    return /*(file == src.file) && (line == src.line) && (col == src.col) &&*/ (
+        id == src.id);
   }
 };
 } // namespace seq
@@ -48,7 +49,8 @@ inline llvm::IntegerType *seqIntLLVM(llvm::LLVMContext &context) {
 }
 
 inline llvm::Constant *nullPtrLLVM(llvm::LLVMContext &context) {
-  return llvm::ConstantPointerNull::get(llvm::PointerType::getInt8PtrTy(context));
+  return llvm::ConstantPointerNull::get(
+      llvm::PointerType::getInt8PtrTy(context));
 }
 
 inline llvm::Constant *zeroLLVM(llvm::LLVMContext &context) {
@@ -63,8 +65,8 @@ inline llvm::Value *makeAlloca(llvm::Type *type, llvm::BasicBlock *block,
                                uint64_t n = 1) {
   llvm::LLVMContext &context = block->getContext();
   llvm::IRBuilder<> builder(block);
-  llvm::Value *ptr =
-      builder.CreateAlloca(type, llvm::ConstantInt::get(seqIntLLVM(context), n));
+  llvm::Value *ptr = builder.CreateAlloca(
+      type, llvm::ConstantInt::get(seqIntLLVM(context), n));
   return ptr;
 }
 
@@ -133,8 +135,10 @@ inline llvm::Function *makePersonalityFunc(llvm::Module *module) {
   llvm::LLVMContext &context = module->getContext();
   return llvm::cast<llvm::Function>(module->getOrInsertFunction(
       "seq_personality", llvm::IntegerType::getInt32Ty(context),
-      llvm::IntegerType::getInt32Ty(context), llvm::IntegerType::getInt32Ty(context),
-      llvm::IntegerType::getInt64Ty(context), llvm::IntegerType::getInt8PtrTy(context),
+      llvm::IntegerType::getInt32Ty(context),
+      llvm::IntegerType::getInt32Ty(context),
+      llvm::IntegerType::getInt64Ty(context),
+      llvm::IntegerType::getInt8PtrTy(context),
       llvm::IntegerType::getInt8PtrTy(context)));
 }
 
@@ -159,9 +163,9 @@ inline llvm::Function *makeThrowFunc(llvm::Module *module) {
 
 inline llvm::Function *makeTerminateFunc(llvm::Module *module) {
   llvm::LLVMContext &context = module->getContext();
-  auto *f = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("seq_terminate", llvm::Type::getVoidTy(context),
-                                  llvm::IntegerType::getInt8PtrTy(context)));
+  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      "seq_terminate", llvm::Type::getVoidTy(context),
+      llvm::IntegerType::getInt8PtrTy(context)));
   f->setDoesNotReturn();
   return f;
 }
@@ -174,7 +178,8 @@ public:
     setSrcInfo(std::move(info));
   }
 
-  explicit SeqException(const std::string &msg) noexcept : SeqException(msg, {}) {}
+  explicit SeqException(const std::string &msg) noexcept
+      : SeqException(msg, {}) {}
 
   SeqException(const SeqException &e) noexcept
       : SrcObject(e), std::runtime_error(e) // NOLINT
@@ -184,13 +189,13 @@ public:
 
 } // namespace seq
 
-#define SEQ_RETURN_CLONE(e)                                                            \
-  do {                                                                                 \
-    auto *__x = (e);                                                                   \
-    __x->setSrcInfo(getSrcInfo());                                                     \
-    if (getTryCatch())                                                                 \
-      __x->setTryCatch(getTryCatch()->clone(ref));                                     \
-    return __x;                                                                        \
+#define SEQ_RETURN_CLONE(e)                                                    \
+  do {                                                                         \
+    auto *__x = (e);                                                           \
+    __x->setSrcInfo(getSrcInfo());                                             \
+    if (getTryCatch())                                                         \
+      __x->setTryCatch(getTryCatch()->clone(ref));                             \
+    return __x;                                                                \
   } while (0)
 
 #if defined(TAPIR_VERSION_MAJOR)

@@ -41,7 +41,8 @@ static pair<bool, string> findExpectOnLine(const string &line) {
   return {false, ""};
 }
 
-static pair<vector<string>, bool> findExpects(const string &filename, bool isCode) {
+static pair<vector<string>, bool> findExpects(const string &filename,
+                                              bool isCode) {
   vector<string> result;
   bool isError = false;
   string line;
@@ -73,9 +74,10 @@ static pair<vector<string>, bool> findExpects(const string &filename, bool isCod
   return {result, isError};
 }
 
-class SeqTest : public testing::TestWithParam<
-                    tuple<string /*filename*/, bool /*debug*/, string /* case name */,
-                          string /* case code */, int /* case line */>> {
+class SeqTest
+    : public testing::TestWithParam<
+          tuple<string /*filename*/, bool /*debug*/, string /* case name */,
+                string /* case code */, int /* case line */>> {
   vector<char> buf;
   int out_pipe[2];
   pid_t pid;
@@ -98,8 +100,9 @@ public:
       auto file = getFilename(get<0>(GetParam()));
       auto code = get<3>(GetParam());
       auto startLine = get<4>(GetParam());
-      SeqModule *module = parse(ast::executable_path(""), file, code, code.size() > 0,
-                                /* isTest */ true, startLine);
+      SeqModule *module =
+          parse(ast::executable_path(""), file, code, code.size() > 0,
+                /* isTest */ true, startLine);
       execute(module, {file}, {}, get<1>(GetParam()));
       fflush(stdout);
       exit(EXIT_SUCCESS);
@@ -130,8 +133,8 @@ getTestNameFromParam(const testing::TestParamInfo<SeqTest::ParamType> &info) {
 
   return normname + (debug ? "_debug" : "");
 }
-static string
-getTypeTestNameFromParam(const testing::TestParamInfo<SeqTest::ParamType> &info) {
+static string getTypeTestNameFromParam(
+    const testing::TestParamInfo<SeqTest::ParamType> &info) {
   return getTestNameFromParam(info) + "_" + get<2>(info.param);
 }
 TEST_P(SeqTest, Run) {
@@ -147,7 +150,8 @@ TEST_P(SeqTest, Run) {
   string output = result();
   fprintf(stderr, "%s\n", output.c_str());
 
-  auto expects = findExpects(!isCase ? getFilename(file) : get<3>(GetParam()), isCase);
+  auto expects =
+      findExpects(!isCase ? getFilename(file) : get<3>(GetParam()), isCase);
   ASSERT_EQ(WEXITSTATUS(status), int(expects.second));
   const bool assertsFailed = output.find("TEST FAILED") != string::npos;
   EXPECT_FALSE(assertsFailed);
@@ -175,7 +179,8 @@ auto getTypeTests(const vector<string> &files) {
     while (getline(fin, l)) {
       if (l.substr(0, 3) == "#%%") {
         if (line)
-          cases.push_back({f, true, to_string(line) + "_" + testName, code, codeLine});
+          cases.push_back(
+              {f, true, to_string(line) + "_" + testName, code, codeLine});
         testName = l.substr(4);
         code = l + "\n";
         codeLine = line;
@@ -186,14 +191,16 @@ auto getTypeTests(const vector<string> &files) {
       line++;
     }
     if (line)
-      cases.push_back({f, true, to_string(line) + "_" + testName, code, codeLine});
+      cases.push_back(
+          {f, true, to_string(line) + "_" + testName, code, codeLine});
   }
   return cases;
 }
-INSTANTIATE_TEST_SUITE_P(TypeTests, SeqTest,
-                         testing::ValuesIn(getTypeTests({"parser/expressions.seq",
-                                                         "parser/statements.seq"})),
-                         getTypeTestNameFromParam);
+INSTANTIATE_TEST_SUITE_P(
+    TypeTests, SeqTest,
+    testing::ValuesIn(getTypeTests({"parser/expressions.seq",
+                                    "parser/statements.seq"})),
+    getTypeTestNameFromParam);
 
 // INSTANTIATE_TEST_SUITE_P(
 //     CoreTests, SeqTest,
@@ -202,11 +209,14 @@ INSTANTIATE_TEST_SUITE_P(TypeTests, SeqTest,
 //                                      "core/arithmetic.seq", "core/big.seq",
 //                                      "core/bltin.seq", "core/bwtsa.seq",
 //                                      "core/containers.seq", "core/empty.seq",
-//                                      "core/exceptions.seq", "core/formats.seq",
-//                                      "core/generators.seq", "core/generics.seq",
+//                                      "core/exceptions.seq",
+//                                      "core/formats.seq",
+//                                      "core/generators.seq",
+//                                      "core/generics.seq",
 //                                      "core/helloworld.seq", "core/kmers.seq",
 //                                      "core/match.seq", "core/proteins.seq",
-//                                      "core/range.seq", "core/serialization.seq",
+//                                      "core/range.seq",
+//                                      "core/serialization.seq",
 //                                      "core/trees.seq"),
 //                      testing::Values(true, false), testing::Values(false)),
 //     getTestNameFromParam);
@@ -225,9 +235,10 @@ INSTANTIATE_TEST_SUITE_P(TypeTests, SeqTest,
 //     StdlibTests, SeqTest,
 //     testing::Combine(
 //         testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
-//                         "stdlib/itertools_test.seq", "stdlib/bisect_test.seq",
-//                         "stdlib/sort_test.seq", "stdlib/random_test.seq",
-//                         "stdlib/heapq_test.seq", "stdlib/statistics_test.seq"),
+//                         "stdlib/itertools_test.seq",
+//                         "stdlib/bisect_test.seq", "stdlib/sort_test.seq",
+//                         "stdlib/random_test.seq", "stdlib/heapq_test.seq",
+//                         "stdlib/statistics_test.seq"),
 //         testing::Values(true, false)),
 //     getTestNameFromParam);
 
