@@ -171,7 +171,7 @@ void CodegenVisitor::visit(const PipeExpr *expr) {
   for (int i = 0; i < expr->items.size(); i++) {
     exprs.push_back(transform(expr->items[i].expr));
     inTypes.push_back(realizeType(expr->inTypes[i]->getClass()));
-    LOG("-- {}", inTypes.back()->getName());
+    // LOG("-- {}", inTypes.back()->getName());
   }
   auto p = new seq::PipeExpr(exprs);
   p->setIntermediateTypes(inTypes);
@@ -310,13 +310,9 @@ void CodegenVisitor::visit(const ReturnStmt *stmt) {
 }
 
 void CodegenVisitor::visit(const YieldStmt *stmt) {
-  if (!stmt->expr) {
-    resultStmt = N<seq::Yield>(nullptr);
-  } else {
-    auto ret = new seq::Yield(transform(stmt->expr));
-    ctx->getBase()->sawYield(ret);
-    resultStmt = ret;
-  }
+  auto ret = new seq::Yield(stmt->expr ? transform(stmt->expr) : nullptr);
+  ctx->getBase()->sawYield(ret);
+  resultStmt = ret;
 }
 
 void CodegenVisitor::visit(const AssertStmt *stmt) {

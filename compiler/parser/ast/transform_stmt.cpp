@@ -136,6 +136,8 @@ void TransformVisitor::visit(const PrintStmt *stmt) {
 
 // TODO check if in function!
 void TransformVisitor::visit(const ReturnStmt *stmt) {
+  if (!ctx->getBaseType() || !ctx->getBaseType()->getFunc())
+    error("expected function body");
   if (stmt->expr) {
     ctx->setReturnType();
     auto e = transform(stmt->expr);
@@ -148,6 +150,8 @@ void TransformVisitor::visit(const ReturnStmt *stmt) {
 }
 
 void TransformVisitor::visit(const YieldStmt *stmt) {
+  if (!ctx->getBaseType() || !ctx->getBaseType()->getFunc())
+    error("expected function body");
   ctx->setReturnType();
   if (stmt->expr) {
     auto e = transform(stmt->expr);

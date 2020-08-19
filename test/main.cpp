@@ -145,9 +145,10 @@ TEST_P(SeqTest, Run) {
   ASSERT_TRUE(WIFEXITED(status));
 
   string output = result();
-  fprintf(stderr, "%s\n", output.c_str());
 
   auto expects = findExpects(!isCase ? getFilename(file) : get<3>(GetParam()), isCase);
+  if (WEXITSTATUS(status) != int(expects.second))
+    fprintf(stderr, "%s\n", output.c_str());
   ASSERT_EQ(WEXITSTATUS(status), int(expects.second));
   const bool assertsFailed = output.find("TEST FAILED") != string::npos;
   EXPECT_FALSE(assertsFailed);

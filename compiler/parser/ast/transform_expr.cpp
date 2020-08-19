@@ -910,8 +910,8 @@ void TransformVisitor::visit(const LambdaExpr *expr) {
 void TransformVisitor::visit(const YieldExpr *expr) {
   resultExpr = N<YieldExpr>();
   if (ctx->isTypeChecking()) {
-    if (!ctx->getReturnType())
-      error("(yield) cannot be used outside of functions");
+    if (!ctx->getBaseType() || !ctx->getBaseType()->getFunc())
+      error("expected function body");
     auto t =
         forceUnify(ctx->getReturnType(),
                    ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("generator"),

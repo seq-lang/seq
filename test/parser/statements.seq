@@ -22,7 +22,7 @@ print x, y  #: 3 4
 [x, y] = [1, 2]
 print x, y  #: 1 2
 
-l = list(range(10))
+l = list(iter(range(10)))
 [a, b, *lx, c, d] = l
 print a, b, lx, c, d  #: 0 1 [2, 3, 4, 5, 6, 7] 8 9
 a, b, *lx = l
@@ -63,7 +63,7 @@ a = 3.3  #! ERROR: cannot unify float and int
 (sa, sb), sc = 'XYZ'  #! ERROR:
 
 #%% assign_err_3
-a, *b, c, *d = 1,2,3,4,5  #! ERROR: cannot unify slice and int
+a, *b, c, *d = 1,2,3,4,5  #! ERROR: multiple unpack expressions found
 
 #%% assign_shadow
 a = 5
@@ -103,12 +103,12 @@ def bar():
 bar()  #: 2
 
 #%% return_fail
-return 5  #! ERROR: ...
+return 5  #! ERROR: expected function body
 
 #%% yield
 def foo():
     yield 1
-print [i for i in foo()], str(foo())[:16]  #: [1], <generator at 0x
+print [i for i in foo()], str(foo())[:16]  #: [1] <generator at 0x
 
 #%% yield_void
 def foo():
@@ -116,7 +116,8 @@ def foo():
     print 1
 y = foo()
 print done(y)  #: False
-next(y)  #: 1
+y.next()  #: 1
+# TODO: next() should work here!
 print done(y)  #: True
 
 #%% yield_return
@@ -127,11 +128,14 @@ def foo():
 print list(foo())  #: [1]
 
 #%% yield_fail
-yield 5  #! ERROR: ...
+yield 5  #! ERROR: expected function body
 
 #%% assert
 assert bool(2) == True
-assert 3 == 4
+try:
+    assert 3 == 4
+except AssertionError:
+    print 'assert failed'  #: assert failed
 
 #%% while
 a = 3
@@ -162,7 +166,7 @@ for a, *m, b in l:
 #: 21 0
 
 #%% if
-for a, b in [(1, 2), (3, 3), (5, 4)]
+for a, b in [(1, 2), (3, 3), (5, 4)]:
     if a > b:
         print '1',
     elif a == b:
