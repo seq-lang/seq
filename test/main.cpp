@@ -74,6 +74,8 @@ static pair<vector<string>, bool> findExpects(const string &filename, bool isCod
   return {result, isError};
 }
 
+string argv0;
+
 class SeqTest : public testing::TestWithParam<
                     tuple<string /*filename*/, bool /*debug*/, string /* case name */,
                           string /* case code */, int /* case line */>> {
@@ -101,7 +103,7 @@ public:
       auto file = getFilename(get<0>(GetParam()));
       auto code = get<3>(GetParam());
       auto startLine = get<4>(GetParam());
-      SeqModule *module = parse(ast::executable_path(""), file, code, code.size() > 0,
+      SeqModule *module = parse(argv0, file, code, code.size() > 0,
                                 /* isTest */ true, startLine);
       execute(module, {file}, {}, get<1>(GetParam()));
       fflush(stdout);
@@ -247,6 +249,7 @@ INSTANTIATE_TEST_SUITE_P(TypeTests, SeqTest,
 //     getTestNameFromParam);
 
 int main(int argc, char *argv[]) {
+  argv0 = ast::executable_path(argv[0]);
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

@@ -581,7 +581,7 @@ bool TransformVisitor::getTupleIndex(types::ClassTypePtr tuple, const ExprPtr &e
   } else if (auto i = CAST(index, SliceExpr)) {
     if (!getInt(&s, i->st) || !getInt(&e, i->ed) || !getInt(&st, i->step))
       return false;
-    auto sz = sliceAdjustIndices(tuple->args.size(), &s, &e, st);
+    sliceAdjustIndices(tuple->args.size(), &s, &e, st);
     vector<ExprPtr> te;
     for (auto i = s; (st >= 0) ? (i < e) : (i >= e); i += st)
       te.push_back(N<TupleIndexExpr>(expr->clone(), i));

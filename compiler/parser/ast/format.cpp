@@ -45,11 +45,10 @@ string FormatVisitor::handleImport(const string &what, const string &file) {
   auto s = ctx->getImports()->getImport(file);
   auto old = ctx->getFilename();
   ctx->setFilename(s->filename);
-  auto t =
-      FormatVisitor(ctx, renderHTML).transform(s->statements.get(), indent + 1);
+  auto t = FormatVisitor(ctx, renderHTML).transform(s->statements.get(), indent + 1);
   ctx->setFilename(old);
-  return fmt::format("{} {}: # {}{}{}{}", keyword("%import"), what,
-                     escape(s->filename), newline(), pad(1), t);
+  return fmt::format("{} {}: # {}{}{}{}", keyword("%import"), what, escape(s->filename),
+                     newline(), pad(1), t);
 }
 
 string FormatVisitor::transform(const ExprPtr &expr) {
@@ -92,9 +91,7 @@ string FormatVisitor::keyword(const string &s) const {
 
 /*************************************************************************************/
 
-void FormatVisitor::visit(const NoneExpr *expr) {
-  result = renderExpr(expr, "None");
-}
+void FormatVisitor::visit(const NoneExpr *expr) { result = renderExpr(expr, "None"); }
 
 void FormatVisitor::visit(const BoolExpr *expr) {
   result = renderExpr(expr, "{}", expr->value ? "True" : "False");
@@ -157,8 +154,7 @@ void FormatVisitor::visit(const GeneratorExpr *expr) {
     string cond;
     for (auto &k : i.conds)
       cond += fmt::format(" if {}", transform(k));
-    s += fmt::format("for {} in {}{}", fmt::join(i.vars, ", "),
-                     i.gen->toString(), cond);
+    s += fmt::format("for {} in {}{}", i.vars->toString(), i.gen->toString(), cond);
   }
   if (expr->kind == GeneratorExpr::ListGenerator)
     result = renderExpr(expr, "[{} {}]", transform(expr->expr), s);
@@ -175,11 +171,10 @@ void FormatVisitor::visit(const DictGeneratorExpr *expr) {
     for (auto &k : i.conds)
       cond += fmt::format(" if {}", transform(k));
 
-    s += fmt::format("for {} in {}{}", fmt::join(i.vars, ", "),
-                     i.gen->toString(), cond);
+    s += fmt::format("for {} in {}{}", i.vars->toString(), i.gen->toString(), cond);
   }
-  result = renderExpr(expr, "{{{}: {} {}}}", transform(expr->key),
-                      transform(expr->expr), s);
+  result =
+      renderExpr(expr, "{{{}: {} {}}}", transform(expr->key), transform(expr->expr), s);
 }
 
 void FormatVisitor::visit(const IfExpr *expr) {
@@ -208,8 +203,7 @@ void FormatVisitor::visit(const PipeExpr *expr) {
 }
 
 void FormatVisitor::visit(const IndexExpr *expr) {
-  result =
-      renderExpr(expr, "{}[{}]", transform(expr->expr), transform(expr->index));
+  result = renderExpr(expr, "{}[{}]", transform(expr->expr), transform(expr->index));
 }
 
 void FormatVisitor::visit(const CallExpr *expr) {
@@ -253,8 +247,8 @@ void FormatVisitor::visit(const PtrExpr *expr) {
 }
 
 void FormatVisitor::visit(const LambdaExpr *expr) {
-  result = renderExpr(expr, "{} {}: {}", keyword("lambda"),
-                      join(expr->vars, ", "), transform(expr->expr));
+  result = renderExpr(expr, "{} {}: {}", keyword("lambda"), join(expr->vars, ", "),
+                      transform(expr->expr));
 }
 
 void FormatVisitor::visit(const YieldExpr *expr) {
@@ -274,18 +268,14 @@ void FormatVisitor::visit(const PassStmt *stmt) { result = keyword("pass"); }
 
 void FormatVisitor::visit(const BreakStmt *stmt) { result = keyword("break"); }
 
-void FormatVisitor::visit(const ContinueStmt *stmt) {
-  result = keyword("continue");
-}
+void FormatVisitor::visit(const ContinueStmt *stmt) { result = keyword("continue"); }
 
-void FormatVisitor::visit(const ExprStmt *stmt) {
-  result = transform(stmt->expr);
-}
+void FormatVisitor::visit(const ExprStmt *stmt) { result = transform(stmt->expr); }
 
 void FormatVisitor::visit(const AssignStmt *stmt) {
   if (stmt->type) {
-    result = fmt::format("{}: {} = {}", transform(stmt->lhs),
-                         transform(stmt->type), transform(stmt->rhs));
+    result = fmt::format("{}: {} = {}", transform(stmt->lhs), transform(stmt->type),
+                         transform(stmt->rhs));
   } else if (stmt->mustExist) {
     result = fmt::format("{}", transform(stmt->rhs));
   } else {
@@ -294,8 +284,7 @@ void FormatVisitor::visit(const AssignStmt *stmt) {
 }
 
 void FormatVisitor::visit(const UpdateStmt *stmt) {
-  result = fmt::format("{} = {}  # update", transform(stmt->lhs),
-                       transform(stmt->rhs));
+  result = fmt::format("{} = {}  # update", transform(stmt->lhs), transform(stmt->rhs));
 }
 
 void FormatVisitor::visit(const DelStmt *stmt) {
@@ -326,9 +315,9 @@ void FormatVisitor::visit(const WhileStmt *stmt) {
 }
 
 void FormatVisitor::visit(const ForStmt *stmt) {
-  result = fmt::format(
-      "{} {} {} {}:{}{}{}", keyword("for"), transform(stmt->var), keyword("in"),
-      transform(stmt->iter), newline(), pad(1), transform(stmt->suite, 1));
+  result = fmt::format("{} {} {} {}:{}{}{}", keyword("for"), transform(stmt->var),
+                       keyword("in"), transform(stmt->iter), newline(), pad(1),
+                       transform(stmt->suite, 1));
 }
 
 void FormatVisitor::visit(const IfStmt *stmt) {
@@ -336,12 +325,12 @@ void FormatVisitor::visit(const IfStmt *stmt) {
   string prefix = "";
   for (int i = 0; i < stmt->ifs.size(); i++) {
     if (stmt->ifs[i].cond)
-      ifs += fmt::format("{}{} {}:{}{}{}", i ? pad() : "",
-                         keyword(prefix + "if"), transform(stmt->ifs[i].cond),
-                         newline(), pad(1), transform(stmt->ifs[i].suite, 1));
+      ifs += fmt::format("{}{} {}:{}{}{}", i ? pad() : "", keyword(prefix + "if"),
+                         transform(stmt->ifs[i].cond), newline(), pad(1),
+                         transform(stmt->ifs[i].suite, 1));
     else
-      ifs += fmt::format("{}{}:{}{}{}", pad(), keyword("else"), newline(),
-                         pad(1), transform(stmt->ifs[i].suite, 1));
+      ifs += fmt::format("{}{}:{}{}{}", pad(), keyword("else"), newline(), pad(1),
+                         transform(stmt->ifs[i].suite, 1));
     prefix = "el";
   }
   result = ifs;
@@ -354,8 +343,8 @@ void FormatVisitor::visit(const MatchStmt *stmt) {
                      transform(stmt->patterns[ci]), newline(), pad(2),
                      transform(stmt->cases[ci], 2),
                      ci == stmt->cases.size() - 1 ? "" : newline());
-  result = fmt::format("{} {}:{}{}", keyword("match"), transform(stmt->what),
-                       newline(), s);
+  result =
+      fmt::format("{} {}:{}{}", keyword("match"), transform(stmt->what), newline(), s);
 }
 
 void FormatVisitor::visit(const ExtendStmt *stmt) {}
@@ -370,26 +359,24 @@ void FormatVisitor::visit(const ImportStmt *stmt) {
   };
 
   if (stmt->what.size() == 0) {
-    result += fmt::format(
-        "{} {}{}", keyword("import"), fix(stmt->from.first),
-        stmt->from.second == ""
-            ? ""
-            : fmt::format(" {} {} ", keyword("as"), stmt->from.second));
+    result +=
+        fmt::format("{} {}{}", keyword("import"), fix(stmt->from.first),
+                    stmt->from.second == ""
+                        ? ""
+                        : fmt::format(" {} {} ", keyword("as"), stmt->from.second));
   } else {
     vector<string> what;
     for (auto &w : stmt->what) {
       what.push_back(fmt::format(
           "{}{}", fix(w.first),
-          w.second == "" ? ""
-                         : fmt::format(" {} {} ", keyword("as"), w.second)));
+          w.second == "" ? "" : fmt::format(" {} {} ", keyword("as"), w.second)));
     }
     result += fmt::format("{} {} {} {}", keyword("from"), fix(stmt->from.first),
                           keyword("import"), fmt::join(what, ", "));
   }
 
   if (ctx) {
-    auto file =
-        ctx->getImports()->getImportFile(stmt->from.first, ctx->getFilename());
+    auto file = ctx->getImports()->getImportFile(stmt->from.first, ctx->getFilename());
     auto i = handleImport(stmt->from.first, file);
     if (!i.empty())
       result += fmt::format("{}{}{}{}", newline(), pad(), i, newline());
@@ -401,17 +388,17 @@ void FormatVisitor::visit(const ExternImportStmt *stmt) {}
 void FormatVisitor::visit(const TryStmt *stmt) {
   vector<string> catches;
   for (auto &c : stmt->catches) {
-    catches.push_back(fmt::format(
-        "{} {}{}:{}{}{}", keyword("catch"), transform(c.exc),
-        c.var == "" ? "" : fmt::format("{} {}", keyword("as"), c.var),
-        newline(), pad(1), transform(c.suite, 1)));
+    catches.push_back(
+        fmt::format("{} {}{}:{}{}{}", keyword("catch"), transform(c.exc),
+                    c.var == "" ? "" : fmt::format("{} {}", keyword("as"), c.var),
+                    newline(), pad(1), transform(c.suite, 1)));
   }
-  result = fmt::format(
-      "{}:{}{}{}{}{}", keyword("try"), newline(), pad(1),
-      transform(stmt->suite, 1), fmt::join(catches, ""),
-      stmt->finally ? fmt::format("{}:{}{}{}", keyword("finally"), newline(),
-                                  pad(1), transform(stmt->finally, 1))
-                    : "");
+  result = fmt::format("{}:{}{}{}{}{}", keyword("try"), newline(), pad(1),
+                       transform(stmt->suite, 1), fmt::join(catches, ""),
+                       stmt->finally
+                           ? fmt::format("{}:{}{}{}", keyword("finally"), newline(),
+                                         pad(1), transform(stmt->finally, 1))
+                           : "");
 }
 
 void FormatVisitor::visit(const GlobalStmt *stmt) {
@@ -436,29 +423,25 @@ void FormatVisitor::visit(const FunctionStmt *stmt) {
       attrs.push_back(fmt::format("@{}", a));
     vector<string> args;
     for (auto &a : fstmt->args)
-      args.push_back(
-          fmt::format("{}{}{}", a.name,
-                      a.type ? fmt::format(": {}", transform(a.type)) : "",
-                      a.deflt ? fmt::format(" = {}", transform(a.deflt)) : ""));
+      args.push_back(fmt::format(
+          "{}{}{}", a.name, a.type ? fmt::format(": {}", transform(a.type)) : "",
+          a.deflt ? fmt::format(" = {}", transform(a.deflt)) : ""));
     vector<string> generics;
     for (auto &a : fstmt->generics)
-      generics.push_back(
-          fmt::format("{}{}{}", a.name,
-                      a.type ? fmt::format(": {}", transform(a.type)) : "",
-                      a.deflt ? fmt::format(" = {}", transform(a.deflt)) : ""));
-    auto body = FormatVisitor(ctx, renderHTML)
-                    .transform(fstmt->suite.get(), indent + 1);
+      generics.push_back(fmt::format(
+          "{}{}{}", a.name, a.type ? fmt::format(": {}", transform(a.type)) : "",
+          a.deflt ? fmt::format(" = {}", transform(a.deflt)) : ""));
+    auto body =
+        FormatVisitor(ctx, renderHTML).transform(fstmt->suite.get(), indent + 1);
     auto name = fmt::format("{}{}{}", typeStart, real.fullName, typeEnd);
     name = fmt::format("{}{}{}", exprStart, name, exprEnd);
     result += fmt::format(
         "{}{}{} {}{}({}){}:{}{}{}", fi ? newline() + pad() : "",
-        attrs.size() ? join(attrs, ",") + newline() + pad() : "",
-        keyword("def"), name,
+        attrs.size() ? join(attrs, ",") + newline() + pad() : "", keyword("def"), name,
         generics.size() ? fmt::format("[{}]", fmt::join(generics, ", ")) : "",
         fmt::join(args, ", "),
-        fstmt->ret ? fmt::format(" -> {}", transform(fstmt->ret)) : "",
-        newline(), pad(1),
-        body.empty() ? fmt::format("{}", keyword("pass")) : body);
+        fstmt->ret ? fmt::format(" -> {}", transform(fstmt->ret)) : "", newline(),
+        pad(1), body.empty() ? fmt::format("{}", keyword("pass")) : body);
   }
 }
 
@@ -475,16 +458,16 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
       auto t = ctx->instantiate(real.type->getSrcInfo(), a.second, real.type);
       args.push_back(fmt::format("{}: {}", a.first, t->toString()));
     }
-    result = fmt::format("{} {}({})", keyword(key), real.fullName,
-                         fmt::join(args, ", "));
+    result =
+        fmt::format("{} {}({})", keyword(key), real.fullName, fmt::join(args, ", "));
   }
   bool added = 0;
   for (auto &m : c->methods) {
-    auto s = FormatVisitor(ctx, renderHTML)
-                 .transform(ctx->getRealizations()
-                                ->getAST(m.second.front()->canonicalName)
-                                .get(),
-                            indent);
+    auto s =
+        FormatVisitor(ctx, renderHTML)
+            .transform(
+                ctx->getRealizations()->getAST(m.second.front()->canonicalName).get(),
+                indent);
     if (s.size()) {
       if (result.size()) {
         if (result.substr(result.size() - newline().size()) != newline())
@@ -561,8 +544,7 @@ void FormatVisitor::visit(const GuardedPattern *pat) {
 }
 
 void FormatVisitor::visit(const BoundPattern *pat) {
-  result = fmt::format("({}) {} {}", transform(pat->pattern), keyword("as"),
-                       pat->var);
+  result = fmt::format("({}) {} {}", transform(pat->pattern), keyword("as"), pat->var);
 }
 
 } // namespace ast

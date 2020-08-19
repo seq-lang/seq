@@ -430,7 +430,8 @@ void CodegenVisitor::visit(const TryStmt *stmt) {
     /// TODO: get rid of typeinfo here?
     ctx->addBlock(r->addCatch(
         c.exc->getType() ? realizeType(c.exc->getType()->getClass()) : nullptr));
-    ctx->addVar(c.var, r->getVar(varIdx++));
+    if (!c.var.empty())
+      ctx->addVar(c.var, r->getVar(varIdx++));
     transform(c.suite);
     ctx->popBlock();
   }

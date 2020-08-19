@@ -20,22 +20,19 @@
 
 using namespace std;
 
-#define OcamlReturn(result)                                                    \
-  do {                                                                         \
-    auto caml__temp_result = (result);                                         \
-    caml_local_roots = caml__frame;                                            \
-    return (caml__temp_result);                                                \
+#define OcamlReturn(result)                                                            \
+  do {                                                                                 \
+    auto caml__temp_result = (result);                                                 \
+    caml_local_roots = caml__frame;                                                    \
+    return (caml__temp_result);                                                        \
   } while (0)
 
 namespace seq {
 namespace ast {
 
-string parse_string(value v) {
-  return string(String_val(v), caml_string_length(v));
-}
+string parse_string(value v) { return string(String_val(v), caml_string_length(v)); }
 
-template <typename TF>
-auto parse_list(value v, TF f) -> vector<decltype(f(v))> {
+template <typename TF> auto parse_list(value v, TF f) -> vector<decltype(f(v))> {
   auto helper = [](value v, TF f, vector<decltype(f(v))> &t) {
     CAMLparam1(v);
     while (v != Val_emptylist) {
@@ -50,11 +47,10 @@ auto parse_list(value v, TF f) -> vector<decltype(f(v))> {
 }
 
 template <typename TF> auto parse_optional(value v, TF f) -> decltype(f(v)) {
-  if (v == Val_int(0)) {
+  if (v == Val_int(0))
     return decltype(f(v))();
-  } else {
+  else
     return f(Field(v, 0));
-  }
 }
 
 seq::SrcInfo parse_pos(value val) {
@@ -71,11 +67,11 @@ seq::SrcInfo parse_pos(value val) {
 }
 
 unique_ptr<Expr> parse_expr(value val) {
-#define Return(x, ...)                                                         \
-  do {                                                                         \
-    auto _ret = make_unique<x##Expr>(__VA_ARGS__);                             \
-    _ret->setSrcInfo(pos);                                                     \
-    OcamlReturn(move(_ret));                                                   \
+#define Return(x, ...)                                                                 \
+  do {                                                                                 \
+    auto _ret = make_unique<x##Expr>(__VA_ARGS__);                                     \
+    _ret->setSrcInfo(pos);                                                             \
+    OcamlReturn(move(_ret));                                                           \
   } while (0)
 
   CAMLparam1(val);
@@ -84,9 +80,8 @@ unique_ptr<Expr> parse_expr(value val) {
 
   auto pos = parse_pos(Field(val, 0));
   v = Field(val, 1);
-  if (Is_long(v)) {
+  if (Is_long(v))
     seq::compilationError("[internal] long variant mismatch");
-  }
   int tv = Tag_val(v);
   t = Field(v, 0);
   switch (tv) {
@@ -131,21 +126,18 @@ unique_ptr<Expr> parse_expr(value val) {
     vector<GeneratorExpr::Body> loops;
     while (true) {
       f1 = Field(f1, 1); // TODO: ignore position here for now
-      loops.push_back({parse_list(Field(f1, 0), parse_string),
-                       parse_expr(Field(f1, 1)),
+      loops.push_back({parse_expr(Field(f1, 0)), parse_expr(Field(f1, 1)),
                        parse_list(Field(f1, 2), parse_expr)});
-      if (Field(f1, 3) == Val_int(0)) {
+      if (Field(f1, 3) == Val_int(0))
         break;
-      }
       f1 = Field(Field(f1, 3), 0);
     }
-    if (tv < 17) {
-      Return(Generator, static_cast<GeneratorExpr::Kind>(tv - 14),
-             parse_expr(f0), move(loops));
-    } else {
+    if (tv < 17)
+      Return(Generator, static_cast<GeneratorExpr::Kind>(tv - 14), parse_expr(f0),
+             move(loops));
+    else
       Return(DictGenerator, parse_expr(Field(f0, 0)), parse_expr(Field(f0, 1)),
              move(loops));
-    }
   }
   case 18:
     Return(If, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
@@ -158,17 +150,16 @@ unique_ptr<Expr> parse_expr(value val) {
   case 21:
     Return(Pipe, parse_list(t, [](value in) {
              CAMLparam1(in);
-             OcamlReturn((PipeExpr::Pipe{parse_string(Field(in, 0)),
-                                         parse_expr(Field(in, 1))}));
+             OcamlReturn((
+                 PipeExpr::Pipe{parse_string(Field(in, 0)), parse_expr(Field(in, 1))}));
            }));
   case 22:
     Return(Index, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)));
   case 23:
     Return(Call, parse_expr(Field(t, 0)), parse_list(Field(t, 1), [](value i) {
              CAMLparam1(i);
-             OcamlReturn(
-                 (CallExpr::Arg{parse_optional(Field(i, 0), parse_string),
-                                parse_expr(Field(i, 1))}));
+             OcamlReturn((CallExpr::Arg{parse_optional(Field(i, 0), parse_string),
+                                        parse_expr(Field(i, 1))}));
            }));
   case 24:
     Return(Slice, parse_optional(Field(t, 0), parse_expr),
@@ -183,8 +174,7 @@ unique_ptr<Expr> parse_expr(value val) {
   case 28:
     Return(Ptr, parse_expr(t));
   case 29:
-    Return(Lambda, parse_list(Field(t, 0), parse_string),
-           parse_expr(Field(t, 1)));
+    Return(Lambda, parse_list(Field(t, 0), parse_string), parse_expr(Field(t, 1)));
   case 30:
     Return(Yield, );
   default:
@@ -195,11 +185,11 @@ unique_ptr<Expr> parse_expr(value val) {
 }
 
 unique_ptr<Pattern> parse_pattern(value val) {
-#define Return(x, ...)                                                         \
-  do {                                                                         \
-    auto _ret = make_unique<x##Pattern>(__VA_ARGS__);                          \
-    _ret->setSrcInfo(pos);                                                     \
-    OcamlReturn(move(_ret));                                                   \
+#define Return(x, ...)                                                                 \
+  do {                                                                                 \
+    auto _ret = make_unique<x##Pattern>(__VA_ARGS__);                                  \
+    _ret->setSrcInfo(pos);                                                             \
+    OcamlReturn(move(_ret));                                                           \
   } while (0)
 
   CAMLparam1(val);
@@ -208,9 +198,8 @@ unique_ptr<Pattern> parse_pattern(value val) {
 
   auto pos = parse_pos(Field(val, 0));
   v = Field(val, 1);
-  if (Is_long(v)) {
+  if (Is_long(v))
     seq::compilationError("[internal] long variant mismatch ...");
-  }
   int tv = Tag_val(v);
   t = Field(v, 0);
   switch (tv) {
@@ -251,11 +240,11 @@ unique_ptr<Stmt> parse_stmt_list(value val) {
 }
 
 unique_ptr<Stmt> parse_stmt(value val) {
-#define Return(x, ...)                                                         \
-  do {                                                                         \
-    auto _ret = make_unique<x##Stmt>(__VA_ARGS__);                             \
-    _ret->setSrcInfo(pos);                                                     \
-    OcamlReturn(move(_ret));                                                   \
+#define Return(x, ...)                                                                 \
+  do {                                                                                 \
+    auto _ret = make_unique<x##Stmt>(__VA_ARGS__);                                     \
+    _ret->setSrcInfo(pos);                                                             \
+    OcamlReturn(move(_ret));                                                           \
   } while (0)
 
   CAMLparam1(val);
@@ -266,16 +255,15 @@ unique_ptr<Stmt> parse_stmt(value val) {
     CAMLparam1(p);
     CAMLlocal1(v);
     v = Field(p, 1); // ignore position
-    OcamlReturn((Param{parse_string(Field(v, 0)),
-                       parse_optional(Field(v, 1), parse_expr),
-                       parse_optional(Field(v, 2), parse_expr)}));
+    OcamlReturn(
+        (Param{parse_string(Field(v, 0)), parse_optional(Field(v, 1), parse_expr),
+               parse_optional(Field(v, 2), parse_expr)}));
   };
 
   auto pos = parse_pos(Field(val, 0));
   v = Field(val, 1);
-  if (Is_long(v)) {
+  if (Is_long(v))
     seq::compilationError("[internal] long variant mismatch ...");
-  }
   int tv = Tag_val(v);
   t = Field(v, 0);
   switch (tv) {
@@ -316,8 +304,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
            }));
   case 14:
     Return(Match, parse_expr(Field(t, 0)), parse_list(Field(t, 1), [](value i) {
-             return make_pair(parse_pattern(Field(i, 0)),
-                              parse_stmt_list(Field(i, 1)));
+             return make_pair(parse_pattern(Field(i, 0)), parse_stmt_list(Field(i, 1)));
            }));
   case 15:
     Return(Extend, parse_expr(Field(t, 0)), parse_stmt_list(Field(t, 1)));
@@ -331,11 +318,11 @@ unique_ptr<Stmt> parse_stmt(value val) {
                               parse_optional(Field(j, 1), parse_string));
            }));
   case 17:
-    Return(ExternImport,
-           make_pair(parse_string(Field(t, 2)),
-                     parse_optional(Field(t, 5), parse_string)),
-           parse_optional(Field(t, 1), parse_expr), parse_expr(Field(t, 3)),
-           parse_list(Field(t, 4), parse_param), parse_string(Field(t, 0)));
+    Return(
+        ExternImport,
+        make_pair(parse_string(Field(t, 2)), parse_optional(Field(t, 5), parse_string)),
+        parse_optional(Field(t, 1), parse_expr), parse_expr(Field(t, 3)),
+        parse_list(Field(t, 4), parse_param), parse_string(Field(t, 0)));
   case 18:
     Return(Try, parse_stmt_list(Field(t, 0)),
            parse_list(Field(t, 1),
@@ -343,22 +330,19 @@ unique_ptr<Stmt> parse_stmt(value val) {
                         CAMLparam1(t);
                         CAMLlocal1(v);
                         v = Field(t, 1); // ignore position
-                        OcamlReturn((TryStmt::Catch{
-                            parse_optional(Field(v, 1), parse_string),
-                            parse_optional(Field(v, 0), parse_expr),
-                            parse_stmt_list(Field(v, 2))}));
+                        OcamlReturn(
+                            (TryStmt::Catch{parse_optional(Field(v, 1), parse_string),
+                                            parse_optional(Field(v, 0), parse_expr),
+                                            parse_stmt_list(Field(v, 2))}));
                       }),
            parse_stmt_list(Field(t, 2)));
   case 19:
     Return(Global, parse_string(t));
   case 20:
     Return(Throw, parse_expr(t));
-  // | Special of (string * tstmt ann list * string list)
   case 23:
-    Return(Function, parse_string(Field(t, 0)),
-           parse_optional(Field(t, 1), parse_expr),
-           parse_list(Field(t, 2), parse_param),
-           parse_list(Field(t, 3), parse_param),
+    Return(Function, parse_string(Field(t, 0)), parse_optional(Field(t, 1), parse_expr),
+           parse_list(Field(t, 2), parse_param), parse_list(Field(t, 3), parse_param),
            std::shared_ptr<Stmt>(parse_stmt_list(Field(t, 4))),
            parse_list(Field(t, 5), [](value i) {
              return parse_string(Field(i, 1)); // ignore position for now
@@ -366,13 +350,10 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 24:
   case 25:
     Return(Class, tv == 25, parse_string(Field(t, 0)),
-           parse_list(Field(t, 1), parse_param),
-           parse_list(Field(t, 2), parse_param), parse_stmt_list(Field(t, 3)),
-           parse_list(Field(t, 4), [](value i) {
+           parse_list(Field(t, 1), parse_param), parse_list(Field(t, 2), parse_param),
+           parse_stmt_list(Field(t, 3)), parse_list(Field(t, 4), [](value i) {
              return parse_string(Field(i, 1)); // ignore position for now
            }));
-    //  case 26:
-    //    Return(Declare, parse_param(t));
   case 27:
     Return(AssignEq, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
            parse_string(Field(t, 2)));
@@ -382,14 +363,12 @@ unique_ptr<Stmt> parse_stmt(value val) {
     Return(With,
            parse_list(Field(t, 0),
                       [](value j) {
-                        return make_pair(
-                            parse_expr(Field(j, 0)),
-                            parse_optional(Field(j, 1), parse_string));
+                        return make_pair(parse_expr(Field(j, 0)),
+                                         parse_optional(Field(j, 1), parse_string));
                       }),
            parse_stmt_list(Field(t, 1)));
   case 30:
-    Return(PyDef, parse_string(Field(t, 0)),
-           parse_optional(Field(t, 1), parse_expr),
+    Return(PyDef, parse_string(Field(t, 0)), parse_optional(Field(t, 1), parse_expr),
            parse_list(Field(t, 2), parse_param), parse_string(Field(t, 3)));
   default:
     seq::compilationError("[internal] tag variant mismatch ...");
@@ -403,9 +382,8 @@ unique_ptr<SuiteStmt> ocamlParse(string file, string code, int line_offset,
   CAMLparam0();
   CAMLlocal3(p1, f, c);
   static value *closure_f = nullptr;
-  if (!closure_f) {
+  if (!closure_f)
     closure_f = (value *)caml_named_value("menhir_parse");
-  }
   f = caml_copy_string(file.c_str());
   c = caml_copy_string(code.c_str());
   value args[] = {f, c, Val_int(line_offset), Val_int(col_offset)};
@@ -424,8 +402,8 @@ void initOcaml() {
 SEQ_FUNC CAMLprim value seq_ocaml_exception(value msg, value file, value line,
                                             value col) {
   CAMLparam4(msg, file, line, col);
-  error(seq::SrcInfo(parse_string(file), Int_val(line), Int_val(line),
-                     Int_val(col), Int_val(col)),
+  error(seq::SrcInfo(parse_string(file), Int_val(line), Int_val(line), Int_val(col),
+                     Int_val(col)),
         parse_string(msg).c_str());
   CAMLreturn(Val_unit);
 }

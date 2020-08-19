@@ -53,8 +53,7 @@ string RealizationContext::generateCanonicalName(const SrcInfo &info,
 
 int &RealizationContext::getUnboundCount() { return unboundCount; }
 
-RealizationContext::ClassBody *
-RealizationContext::findClass(const std::string &name) {
+RealizationContext::ClassBody *RealizationContext::findClass(const std::string &name) {
   auto m = classes.find(name);
   if (m != classes.end())
     return &m->second;
@@ -72,8 +71,7 @@ RealizationContext::findMethod(const string &name, const string &method) const {
   return nullptr;
 }
 
-TypePtr RealizationContext::findMember(const string &name,
-                                       const string &member) const {
+TypePtr RealizationContext::findMember(const string &name, const string &member) const {
   auto m = classes.find(name);
   if (m != classes.end()) {
     for (auto &mm : m->second.members)
@@ -108,8 +106,7 @@ RealizationContext::getFuncRealizations(const string &name) {
 
 ImportContext::ImportContext(const string &argv0) : argv0(argv0) {}
 
-string ImportContext::getImportFile(const string &what,
-                                    const string &relativeTo,
+string ImportContext::getImportFile(const string &what, const string &relativeTo,
                                     bool forceStdlib) const {
   vector<string> paths;
   char abs[PATH_MAX + 1];
@@ -134,14 +131,15 @@ string ImportContext::getImportFile(const string &what,
   }
   for (auto &p : paths) {
     struct stat buffer;
-    if (!stat(p.c_str(), &buffer))
+    if (!stat(p.c_str(), &buffer)) {
+      // LOG("getting {}", p);
       return p;
+    }
   }
   return "";
 }
 
-const ImportContext::Import *
-ImportContext::getImport(const string &path) const {
+const ImportContext::Import *ImportContext::getImport(const string &path) const {
   auto i = imports.find(path);
   return i == imports.end() ? nullptr : &(i->second);
 }

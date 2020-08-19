@@ -84,7 +84,7 @@ tuple:
   | LP expr COMMA RP { $loc, Tuple [$2] }
   | LP expr COMMA FLNE(COMMA, expr) RP { $loc, Tuple ($2 :: $4) }
 dictitem: expr COLON expr { $1, $3 }
-comprehension: FOR FLNE(COMMA, ID) IN pipe_expr comprehension_if* comprehension?
+comprehension: FOR lassign IN pipe_expr comprehension_if* comprehension?
   { $loc, { var = $2; gen = flat_pipe $4; cond = $5; next = $6 } }
 comprehension_if: IF pipe_expr { $loc, snd (flat_pipe $2) }
 
@@ -96,6 +96,14 @@ expr:
   | PTR LP expr RP { $loc, Ptr $3 }
   | LAMBDA separated_list(COMMA, ID) COLON expr { $loc, Lambda ($2, $4) }
 expr_list: separated_nonempty_list(COMMA, expr) { $1 }
+
+lassign_term:
+  | ID { $loc, Id $1 }
+  | LS FL(COMMA, lassign_term) RS { $loc, List $2 }
+  | LP FL(COMMA, lassign_term) RP { $loc, Tuple $2 }
+  | MUL ID { $loc, Unpack ($loc($2), Id $2) }
+lassign: FLNE(COMMA, lassign_term) { match $1 with [l] -> l | l -> $loc, Tuple l }
+  /* | FL_HAS(COMMA, lassign) { $loc, Tuple $1 } */
 
 /* The following rules are defined in the order of operator precedence:
      pipes -> booleans -> conditionals -> arithmetics */
@@ -175,10 +183,8 @@ small_single_statement:
   | YIELD separated_list(COMMA, expr)
     { $loc, Yield (match $2 with [] -> None | [e] -> Some e | l -> Some ($loc, Tuple l)) }
   | YIELD FROM expr { $loc, YieldFrom $3 }
-  /* | TYPE ID EQ expr { $loc, TypeAlias ($2, $4) } */
   | THROW expr { $loc, Throw $2 }
 print_statement:
-  /* | PRINT { [$loc, Print ($loc, String "\n")] } */
   | PRINT FL_HAS(COMMA, expr)
     { let term, len = (if snd $2 then " " else "\n"), List.length (fst $2) in
       if len = 0 then [$loc, Print ($loc, String term)]
@@ -189,11 +195,7 @@ print_statement:
 single_statement:
   | NL { $loc, Pass () }
   | WHILE expr COLON suite { $loc, While ($2, $4) }
-  | FOR FLNE(COMMA, ID) IN expr COLON suite {
-    let var = $loc($2), match $2 with [e] -> Id e | l -> Tuple (List.map (fun i -> $loc($2), Id i) l) in
-    $loc, For (var, $4, $6) }
-  /* TODO: allow any lhs-expression without parentheses */
-  | FOR tuple IN expr COLON suite { $loc, For ($2, $4, $6) }
+  | FOR lassign IN expr COLON suite { $loc, For ($2, $4, $6) }
   | IF expr COLON suite { $loc, If [Some $2, $4] }
   | IF expr COLON suite elif_suite { $loc, If ((Some $2, $4) :: $5) }
   | MATCH expr COLON NL INDENT case_suite DEDENT { $loc, Match ($2, $6) }
@@ -260,9 +262,13 @@ finally: FINALLY COLON suite { $3 }
 with_statement: WITH FLNE(COMMA, with_clause) COLON suite { $loc, With ($2, $4) }
 with_clause: expr { $1, None } | expr AS ID { $1, Some $3 }
 
+%public decorator(X):
+  | decorator_term* X { $1 } /* AT dot_term NL | AT dot_term LP FL(COMMA, expr) RP NL */
+decorator_term:
+  | AT ID NL { $loc, $2 }
+
 func_statement:
-  | decorator* func
-    { List.map (function (pos, Function f) -> (pos, Function { f with fn_attrs = $1 }) | f -> f) $2 }
+  | func { $1 }
   | pyfunc { $1 }
 func:
   | func_def COLON suite
@@ -270,8 +276,8 @@ func:
   | extern_from? EXTERN FLNE(COMMA, extern_what) NL
     { List.map (fun (pos, e) -> pos, ImportExtern { e with lang = $2; e_from = $1 }) $3 }
 func_def:
-  | DEF ID generic_list? LP FL(COMMA, typed_param) RP func_ret_type?
-    { { fn_name = $2; fn_rettyp = $7; fn_generics = opt_val $3 []; fn_args = $5; fn_stmts = []; fn_attrs = [] } }
+  | decorator(DEF) ID generic_list? LP FL(COMMA, typed_param) RP func_ret_type?
+    { { fn_name = $2; fn_rettyp = $7; fn_generics = opt_val $3 []; fn_args = $5; fn_stmts = []; fn_attrs = $1 } }
 typed_param: ID param_type? default_val? { $loc, { name = $1; typ = $2; default = $3 } }
 generic_list: LS FLNE(COMMA, typed_param) RS { $2 }
 default_val: EQ expr { $2 }
@@ -286,28 +292,27 @@ extern_param:
   | expr { $loc, { name = ""; typ = Some $1; default = None } }
   | ID param_type { $loc, { name = $1; typ = Some $2; default = None } }
 extern_as: AS ID { $2 }
-decorator: AT ID NL { $loc, $2 } /* AT dot_term NL | AT dot_term LP FL(COMMA, expr) RP NL */
+
 pyfunc: PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON PYDEF_RAW { [$loc, PyDef ($2, $6, $4, $8)] }
 
 class_statement: cls | extend | typ { $1 }
 cls:
-  | decorator* CLASS ID generic_list? COLON NL INDENT dataclass_member+ DEDENT
+  | decorator(CLASS) ID generic_list? COLON NL INDENT dataclass_member+ DEDENT
     { let args = List.rev @@ List.fold_left
-        (fun acc i -> match i with Some (_, Declare d) -> d :: acc | _ -> acc) [] $8
+        (fun acc i -> match i with Some (_, Declare d) -> d :: acc | _ -> acc) [] $7
       in
       let members = List.rev @@ List.fold_left
-        (fun acc i -> match i with Some (_, Declare _) | None -> acc | Some p -> p :: acc) [] $8
+        (fun acc i -> match i with Some (_, Declare _) | None -> acc | Some p -> p :: acc) [] $7
       in
-      $loc, Class { class_name = $3; generics = opt_val $4 []; args; members; attrs = $1 } }
+      $loc, Class { class_name = $2; generics = opt_val $3 []; args; members; attrs = $1 } }
 dataclass_member: class_member { $1 } | decl_statement { Some $1 }
 class_member:
   | PASS NL | STRING NL { None }
   | func_statement { Some (List.hd $1) }
-  | decorator* func_def { Some ($loc, Function { $2 with fn_attrs = $1 }) }
 extend: EXTEND expr COLON NL INDENT class_member+ DEDENT { $loc, Extend ($2, filter_opt $6) }
 typ:
   | type_head NL { $loc, Type (snd $1) }
   | type_head COLON NL INDENT class_member+ DEDENT { $loc, Type { (snd $1) with members = filter_opt $5 } }
 type_head:
-  | decorator* TYPE ID generic_list? LP FL(COMMA, typed_param) RP
-    { $loc, { class_name = $3; generics = opt_val $4 []; args = $6; members = []; attrs = $1 } }
+  | decorator(TYPE) ID generic_list? LP FL(COMMA, typed_param) RP
+    { $loc, { class_name = $2; generics = opt_val $3 []; args = $5; members = []; attrs = $1 } }

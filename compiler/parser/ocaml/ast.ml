@@ -44,7 +44,7 @@ type texpr =
   | YieldTo of unit
 
 and tcomprehension =
-  { var : string list
+  { var : texpr ann
   ; gen : texpr ann
   ; cond : texpr ann list
   ; next : tcomprehension ann option

@@ -34,8 +34,7 @@ static bool typeMatch(const std::vector<T *> &v1, const std::vector<T *> &v2,
   return true;
 }
 
-types::Type::Type(std::string name, types::Type *parent, bool abstract,
-                  bool extendable)
+types::Type::Type(std::string name, types::Type *parent, bool abstract, bool extendable)
     : name(std::move(name)), parent(parent), abstract(abstract),
       extendable(extendable) {}
 
@@ -99,9 +98,8 @@ Value *types::Type::alloc(Value *count, BasicBlock *block) {
   return builder.CreatePointerCast(mem, getLLVMType(context)->getPointerTo());
 }
 
-Value *types::Type::call(BaseFunc *base, Value *self,
-                         const std::vector<Value *> &args, BasicBlock *block,
-                         BasicBlock *normal, BasicBlock *unwind) {
+Value *types::Type::call(BaseFunc *base, Value *self, const std::vector<Value *> &args,
+                         BasicBlock *block, BasicBlock *normal, BasicBlock *unwind) {
   throw exc::SeqException("cannot call type '" + getName() + "'");
 }
 
@@ -114,8 +112,7 @@ static Value *funcAsMethod(types::Type *type, BaseFunc *method, Value *self,
   return types::MethodType::get(type, funcType)->make(self, func, block);
 }
 
-static types::MethodType *funcAsMethodType(types::Type *type,
-                                           BaseFunc *method) {
+static types::MethodType *funcAsMethodType(types::Type *type, BaseFunc *method) {
   FuncExpr e(method);
   auto *funcType = dynamic_cast<types::FuncType *>(e.getType());
   assert(funcType);
@@ -135,8 +132,7 @@ static types::FuncType *funcAsStaticMethodType(BaseFunc *method) {
   return funcType;
 }
 
-Value *types::Type::memb(Value *self, const std::string &name,
-                         BasicBlock *block) {
+Value *types::Type::memb(Value *self, const std::string &name, BasicBlock *block) {
   initFields();
   initOps();
 
@@ -156,8 +152,7 @@ Value *types::Type::memb(Value *self, const std::string &name,
 
   auto iter2 = getVTable().fields.find(name);
   if (iter2 == getVTable().fields.end())
-    throw exc::SeqException("type '" + getName() + "' has no member '" + name +
-                            "'");
+    throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 
   IRBuilder<> builder(block);
   return builder.CreateExtractValue(self, iter2->second.first);
@@ -182,10 +177,8 @@ types::Type *types::Type::membType(const std::string &name) {
     return funcAsMethodType(this, iter1->second);
 
   auto iter2 = getVTable().fields.find(name);
-  if (iter2 == getVTable().fields.end() ||
-      iter2->second.second->is(types::Void))
-    throw exc::SeqException("type '" + getName() + "' has no member '" + name +
-                            "'");
+  if (iter2 == getVTable().fields.end() || iter2->second.second->is(types::Void))
+    throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 
   return iter2->second.second;
 }
@@ -207,8 +200,8 @@ Value *types::Type::staticMemb(const std::string &name, BasicBlock *block) {
   if (iter1 != getVTable().methods.end())
     return funcAsStaticMethod(iter1->second, block);
 
-  throw exc::SeqException("type '" + getName() + "' has no static member '" +
-                          name + "'");
+  throw exc::SeqException("type '" + getName() + "' has no static member '" + name +
+                          "'");
 }
 
 types::Type *types::Type::staticMembType(const std::string &name) {
@@ -228,8 +221,8 @@ types::Type *types::Type::staticMembType(const std::string &name) {
   if (iter1 != getVTable().methods.end())
     return funcAsStaticMethodType(iter1->second);
 
-  throw exc::SeqException("type '" + getName() + "' has no static member '" +
-                          name + "'");
+  throw exc::SeqException("type '" + getName() + "' has no static member '" + name +
+                          "'");
 }
 
 Value *types::Type::setMemb(Value *self, const std::string &name, Value *val,
@@ -238,8 +231,8 @@ Value *types::Type::setMemb(Value *self, const std::string &name, Value *val,
   auto iter = getVTable().fields.find(name);
 
   if (iter == getVTable().fields.end())
-    throw exc::SeqException("type '" + getName() +
-                            "' has no assignable member '" + name + "'");
+    throw exc::SeqException("type '" + getName() + "' has no assignable member '" +
+                            name + "'");
 
   IRBuilder<> builder(block);
   return builder.CreateInsertValue(self, val, iter->second.first);
@@ -308,8 +301,7 @@ BaseFunc *types::Type::getMethod(const std::string &name) {
 
   auto iter = getVTable().methods.find(name);
   if (iter == getVTable().methods.end())
-    throw exc::SeqException("type '" + getName() + "' has no method '" + name +
-                            "'");
+    throw exc::SeqException("type '" + getName() + "' has no method '" + name + "'");
 
   return iter->second;
 }
@@ -375,8 +367,7 @@ static types::Type *callType(BaseFunc *func, std::vector<types::Type *> args) {
   for (unsigned i = 1; i < funcType->numBaseTypes(); i++) {
     types::Type *exp = funcType->getBaseType(i);
     types::Type *got = args[i - 1];
-    if (exp->asGen() &&
-        got->hasMethod("__iter__")) // implicit generator conversion
+    if (exp->asGen() && got->hasMethod("__iter__")) // implicit generator conversion
       got = got->magicOut("__iter__", {});
     if (!types::is(got, exp))
       return nullptr;
@@ -386,8 +377,8 @@ static types::Type *callType(BaseFunc *func, std::vector<types::Type *> args) {
 }
 
 types::Type *types::Type::magicOut(const std::string &name,
-                                   std::vector<types::Type *> args,
-                                   bool nullOnMissing, bool overloadsOnly) {
+                                   std::vector<types::Type *> args, bool nullOnMissing,
+                                   bool overloadsOnly) {
   initOps();
 
   const bool isStatic = (!args.empty() && args.back() == nullptr);
@@ -418,16 +409,15 @@ types::Type *types::Type::magicOut(const std::string &name,
   if (nullOnMissing)
     return nullptr;
 
-  throw exc::SeqException("cannot find method '" + name + "' for type '" +
-                          getName() + "' with specified argument types " +
-                          argsVecToStr(args));
+  throw exc::SeqException("cannot find method '" + name + "' for type '" + getName() +
+                          "' with specified argument types " + argsVecToStr(args));
 }
 
 BaseFunc *types::Type::findMagic(const std::string &name,
                                  std::vector<types::Type *> args) {
   initOps();
 
-  LOG7("   .. looking for {} :: {} / {}", getName(), name, argsVecToStr(args));
+  LOG9("   .. looking for {} :: {} / {}", getName(), name, argsVecToStr(args));
   for (auto &magic : vtable.magic) {
     if (magic.name == name && typeMatch<>(args, magic.args))
       return magic.asFunc(this);
@@ -442,9 +432,8 @@ BaseFunc *types::Type::findMagic(const std::string &name,
   for (auto &magic : vtable.methods)
     LOG7("      .. in {}", magic.first);
 
-  throw exc::SeqException("cannot find method '" + name + "' for type '" +
-                          getName() + "' with specified argument types " +
-                          argsVecToStr(args));
+  throw exc::SeqException("cannot find method '" + name + "' for type '" + getName() +
+                          "' with specified argument types " + argsVecToStr(args));
 }
 
 Value *types::Type::callMagic(const std::string &name,
@@ -487,9 +476,8 @@ Value *types::Type::callMagic(const std::string &name,
     }
   }
 
-  throw exc::SeqException("cannot find method '" + name + "' for type '" +
-                          getName() + "' with specified argument types " +
-                          argsVecToStr(argTypes));
+  throw exc::SeqException("cannot find method '" + name + "' for type '" + getName() +
+                          "' with specified argument types " + argsVecToStr(argTypes));
 }
 
 static bool sortArgsByNames(std::vector<types::Type *> &argTypes,
@@ -540,8 +528,8 @@ static bool sortArgsByNames(std::vector<types::Type *> &argTypes,
 }
 
 types::Type *types::Type::initOut(std::vector<types::Type *> &args,
-                                  std::vector<std::string> names,
-                                  bool nullOnMissing, Func **initFunc) {
+                                  std::vector<std::string> names, bool nullOnMissing,
+                                  Func **initFunc) {
   initOps();
   if (names.empty())
     return magicOut("__init__", args, nullOnMissing);
@@ -598,8 +586,8 @@ types::Type *types::Type::initOut(std::vector<types::Type *> &args,
   if (nullOnMissing)
     return nullptr;
 
-  throw exc::SeqException("cannot find method '__init__' for type '" +
-                          getName() + "' with specified argument names/types " +
+  throw exc::SeqException("cannot find method '__init__' for type '" + getName() +
+                          "' with specified argument names/types " +
                           argsVecToStr(args, names));
 }
 
@@ -663,8 +651,8 @@ Value *types::Type::callInit(std::vector<types::Type *> argTypes,
     return call.codegen(nullptr, block);
   }
 
-  throw exc::SeqException("cannot find method '__init__' for type '" +
-                          getName() + "' with specified argument names/types " +
+  throw exc::SeqException("cannot find method '__init__' for type '" + getName() +
+                          "' with specified argument names/types " +
                           argsVecToStr(argTypes, names));
 }
 

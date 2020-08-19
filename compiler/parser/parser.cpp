@@ -30,8 +30,7 @@ void generateDocstr(const std::string &file) {
 }
 
 seq::SeqModule *parse(const std::string &argv0, const std::string &file,
-                      const string &code, bool isCode, bool isTest,
-                      int startLine) {
+                      const string &code, bool isCode, bool isTest, int startLine) {
   try {
     auto d = getenv("SEQ_DEBUG");
     if (d)
@@ -52,7 +51,7 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     LOG3("--- Done with typecheck ---");
 
     // FILE *fo = fopen("tmp/out.htm", "w");
-    // LOG3("{}", ast::FormatVisitor::format(ctx, tv, false, true));
+    LOG3("{}", ast::FormatVisitor::format(ctx, tv, false, true));
 
     seq::SeqModule *module;
     module = new seq::SeqModule();

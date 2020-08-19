@@ -16,11 +16,9 @@
 #include "parser/common.h"
 
 /// Macro that makes node cloneable and visitable
-#define NODE_UTILITY(X, Y)                                                     \
-  virtual X##Ptr clone() const override { return std::make_unique<Y>(*this); } \
-  virtual void accept(ASTVisitor &visitor) const override {                    \
-    visitor.visit(this);                                                       \
-  }
+#define NODE_UTILITY(X, Y)                                                             \
+  virtual X##Ptr clone() const override { return std::make_unique<Y>(*this); }         \
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 
 namespace seq {
 namespace ast {
@@ -118,8 +116,7 @@ struct Param {
   ExprPtr type;
   ExprPtr deflt;
   Param() : name(), type(nullptr), deflt(nullptr) {}
-  Param(const std::string &name, ExprPtr &&type = nullptr,
-        ExprPtr &&deflt = nullptr)
+  Param(const std::string &name, ExprPtr &&type = nullptr, ExprPtr &&deflt = nullptr)
       : name(name), type(move(type)), deflt(move(deflt)) {}
   Param clone() const;
   std::string toString() const;
@@ -266,7 +263,7 @@ struct GeneratorExpr : public Expr {
   /// where loops are: for vars... in gen (if conds...)?
   enum Kind { Generator, ListGenerator, SetGenerator };
   struct Body {
-    std::vector<std::string> vars;
+    ExprPtr vars;
     ExprPtr gen;
     std::vector<ExprPtr> conds;
     Body clone() const;
@@ -496,8 +493,7 @@ struct AssignStmt : public Stmt {
   /// force controls if lhs will shadow existing lhs or not.
   bool force;
 
-  AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t = nullptr, bool m = false,
-             bool f = false);
+  AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t = nullptr, bool m = false, bool f = false);
   AssignStmt(const AssignStmt &s);
   std::string toString() const override;
   NODE_UTILITY(Stmt, AssignStmt);
@@ -724,8 +720,7 @@ struct ClassStmt : public Stmt {
   std::vector<std::string> attributes;
 
   ClassStmt(bool i, const std::string &n, std::vector<Param> &&g,
-            std::vector<Param> &&a, StmtPtr s,
-            const std::vector<std::string> &at);
+            std::vector<Param> &&a, StmtPtr s, const std::vector<std::string> &at);
   ClassStmt(const ClassStmt &s);
   std::string toString() const override;
   NODE_UTILITY(Stmt, ClassStmt);
@@ -756,8 +751,7 @@ struct WithStmt : public Stmt {
   std::vector<std::string> vars;
   StmtPtr suite;
 
-  WithStmt(std::vector<ExprPtr> &&i, const std::vector<std::string> &v,
-           StmtPtr s);
+  WithStmt(std::vector<ExprPtr> &&i, const std::vector<std::string> &v, StmtPtr s);
   WithStmt(std::vector<std::pair<ExprPtr, std::string>> &&v, StmtPtr s);
   WithStmt(const WithStmt &s);
   std::string toString() const override;

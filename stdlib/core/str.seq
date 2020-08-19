@@ -213,6 +213,9 @@ extend str:
 
 # Helper methods
 
+    def _slice(self, i: int, j: int):
+        return str(self.ptr + i, j - i)
+
     def cati(v: generator[str], total: int):
         p = cobj(total)
         n = 0

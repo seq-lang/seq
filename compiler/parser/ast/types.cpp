@@ -21,8 +21,7 @@ namespace types {
 
 TypePtr Type::follow() { return shared_from_this(); }
 
-StaticType::StaticType(const std::vector<Generic> &ex,
-                       std::unique_ptr<Expr> &&e)
+StaticType::StaticType(const std::vector<Generic> &ex, std::unique_ptr<Expr> &&e)
     : explicits(ex), expr(move(e)) {}
 
 string StaticType::toString(bool reduced) const {
@@ -42,7 +41,6 @@ string StaticType::realizeString() const {
 
 int StaticType::unify(TypePtr typ, Unification &us) {
   if (auto t = typ->getStatic()) {
-    auto v = getValue(), vt = t->getValue();
     // A + 5 + 3; 3 + A + 5
     int s1 = 0;
     if (expr->toString() == t->expr->toString()) {
@@ -223,8 +221,8 @@ TypePtr LinkType::instantiate(int level, int &unboundCount,
     if (cache.find(id) != cache.end())
       return cache[id];
     // LOG9("instatiation: #{} -> ?{}", id, unboundCount);
-    return cache[id] = make_shared<LinkType>(Unbound, unboundCount++, level,
-                                             nullptr, isStatic);
+    return cache[id] =
+               make_shared<LinkType>(Unbound, unboundCount++, level, nullptr, isStatic);
   } else if (kind == Unbound) {
     return shared_from_this();
   } else { // if (kind == Link) {
@@ -262,15 +260,11 @@ bool isCallable(const string &name) {
          chop(name).substr(0, 8) == "partial.";
 }
 
-bool isFunc(const string &name) {
-  return chop(name).substr(0, 9) == "function.";
-}
+bool isFunc(const string &name) { return chop(name).substr(0, 9) == "function."; }
 
-ClassType::ClassType(const string &name, bool isRecord,
-                     const vector<TypePtr> &args,
+ClassType::ClassType(const string &name, bool isRecord, const vector<TypePtr> &args,
                      const vector<Generic> &explicits, ClassTypePtr parent)
-    : explicits(explicits), parent(parent), name(name), record(isRecord),
-      args(args) {}
+    : explicits(explicits), parent(parent), name(name), record(isRecord), args(args) {}
 
 string ClassType::toString(bool reduced) const {
   vector<string> gs;
@@ -284,8 +278,7 @@ string ClassType::toString(bool reduced) const {
       as.push_back(args[i]->toString(reduced));
     g += (g.size() && as.size() ? ";" : "") + join(as, ",");
   }
-  return fmt::format("{}{}{}",
-                     reduced && parent ? parent->toString(reduced) + ":" : "",
+  return fmt::format("{}{}{}", reduced && parent ? parent->toString(reduced) + ":" : "",
                      chop(name), g.size() ? fmt::format("[{}]", g) : "");
 }
 
@@ -296,15 +289,13 @@ string ClassType::realizeString(const string &className, bool deep,
     if (!a.name.empty())
       gs.push_back(a.type->realizeString());
   string s = join(gs, ",");
-  if (isCallable(
-          name)) { // special case as functions have separate generics as well
+  if (isCallable(name)) { // special case as functions have separate generics as well
     vector<string> as;
     for (int i = firstArg; i < args.size(); i++) // return type is elided!
       as.push_back(args[i]->realizeString());
     s += (s.size() && as.size() ? ";" : "") + join(as, ",");
   }
-  return fmt::format("{}{}{}",
-                     deep && parent ? parent->realizeString() + ":" : "",
+  return fmt::format("{}{}{}", deep && parent ? parent->realizeString() + ":" : "",
                      chop(className), s.empty() ? "" : fmt::format("[{}]", s));
 }
 
@@ -371,8 +362,7 @@ TypePtr ClassType::generalize(int level) {
   auto e = explicits;
   for (auto &t : e)
     t.type = t.type ? t.type->generalize(level) : nullptr;
-  auto p = parent ? static_pointer_cast<ClassType>(parent->generalize(level))
-                  : nullptr;
+  auto p = parent ? static_pointer_cast<ClassType>(parent->generalize(level)) : nullptr;
   auto c = make_shared<ClassType>(name, record, a, e, p);
   c->setSrcInfo(getSrcInfo());
   return c;
@@ -432,11 +422,9 @@ ClassTypePtr ClassType::getCallable() {
   return nullptr;
 }
 
-FuncType::FuncType(const std::vector<TypePtr> &args,
-                   const vector<Generic> &explicits, ClassTypePtr parent,
-                   const string &canonicalName)
-    : ClassType(fmt::format("function.{}", args.size()), true, args, explicits,
-                parent),
+FuncType::FuncType(const std::vector<TypePtr> &args, const vector<Generic> &explicits,
+                   ClassTypePtr parent, const string &canonicalName)
+    : ClassType(fmt::format("function.{}", args.size()), true, args, explicits, parent),
       canonicalName(canonicalName) {}
 
 FuncType::FuncType(ClassTypePtr c, const string &canonicalName)
@@ -450,16 +438,14 @@ string FuncType::realizeString() const {
 
 TypePtr FuncType::generalize(int level) {
   return make_shared<FuncType>(
-      static_pointer_cast<ClassType>(ClassType::generalize(level)),
-      canonicalName);
+      static_pointer_cast<ClassType>(ClassType::generalize(level)), canonicalName);
 }
 
 TypePtr FuncType::instantiate(int level, int &unboundCount,
                               std::unordered_map<int, TypePtr> &cache) {
-  return make_shared<FuncType>(
-      static_pointer_cast<ClassType>(
-          ClassType::instantiate(level, unboundCount, cache)),
-      canonicalName);
+  return make_shared<FuncType>(static_pointer_cast<ClassType>(
+                                   ClassType::instantiate(level, unboundCount, cache)),
+                               canonicalName);
 }
 
 string v2b(const vector<char> &c) {
@@ -471,14 +457,13 @@ string v2b(const vector<char> &c) {
 }
 
 PartialType::PartialType(ClassTypePtr c, const vector<char> &k)
-    : ClassType(fmt::format(".partial.{}", v2b(k)), true, {},
-                {Generic("T", c, -1)}, nullptr),
+    : ClassType(fmt::format(".partial.{}", v2b(k)), true, {}, {Generic("T", c, -1)},
+                nullptr),
       knownTypes(k) {}
 
 TypePtr PartialType::generalize(int level) {
   return make_shared<PartialType>(
-      static_pointer_cast<ClassType>(explicits[0].type->generalize(level)),
-      knownTypes);
+      static_pointer_cast<ClassType>(explicits[0].type->generalize(level)), knownTypes);
 }
 
 TypePtr PartialType::instantiate(int level, int &unboundCount,
