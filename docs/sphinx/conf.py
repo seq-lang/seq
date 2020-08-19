@@ -30,7 +30,7 @@ author = u'seq-lang'
 # The short X.Y version
 version = u'0.9'
 # The full version, including alpha/beta/rc tags
-release = u'0.9.7'
+release = u'0.9.9'
 
 # Logo path
 html_logo = '../images/logo.png'

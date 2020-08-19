@@ -28,7 +28,7 @@ template <bool IsSigned> struct int_checker {
 
 template <> struct int_checker<true> {
   template <typename T> static bool fits_in_int(T value) {
-    return value >= std::numeric_limits<int>::min() &&
+    return value >= (std::numeric_limits<int>::min)() &&
            value <= max_value<int>();
   }
   static bool fits_in_int(int) { return true; }
@@ -191,6 +191,10 @@ using internal::printf; // For printing into memory_buffer.
 
 template <typename Range> class printf_arg_formatter;
 
+template <typename Char>
+class basic_printf_parse_context : public basic_format_parse_context<Char> {
+  using basic_format_parse_context<Char>::basic_format_parse_context;
+};
 template <typename OutputIt, typename Char> class basic_printf_context;
 
 /**
@@ -307,6 +311,8 @@ public:
 };
 
 template <typename T> struct printf_formatter {
+  printf_formatter() = delete;
+
   template <typename ParseContext>
   auto parse(ParseContext &ctx) -> decltype(ctx.begin()) {
     return ctx.begin();
@@ -324,7 +330,9 @@ template <typename OutputIt, typename Char> class basic_printf_context {
 public:
   /** The character type for the output. */
   using char_type = Char;
+  using iterator = OutputIt;
   using format_arg = basic_format_arg<basic_printf_context>;
+  using parse_context_type = basic_printf_parse_context<Char>;
   template <typename T> using formatter_type = printf_formatter<T>;
 
 private:
@@ -332,7 +340,7 @@ private:
 
   OutputIt out_;
   basic_format_args<basic_printf_context> args_;
-  basic_format_parse_context<Char> parse_ctx_;
+  parse_context_type parse_ctx_;
 
   static void parse_flags(format_specs &specs, const Char *&it,
                           const Char *end);
@@ -359,9 +367,11 @@ public:
   OutputIt out() { return out_; }
   void advance_to(OutputIt it) { out_ = it; }
 
+  internal::locale_ref locale() { return {}; }
+
   format_arg arg(int id) const { return args_.get(id); }
 
-  basic_format_parse_context<Char> &parse_context() { return parse_ctx_; }
+  parse_context_type &parse_context() { return parse_ctx_; }
 
   FMT_CONSTEXPR void on_error(const char *message) {
     parse_ctx_.on_error(message);
@@ -604,9 +614,9 @@ make_wprintf_args(const Args &... args) {
 }
 
 template <typename S, typename Char = char_t<S>>
-inline std::basic_string<Char>
-vsprintf(const S &format,
-         basic_format_args<basic_printf_context_t<Char>> args) {
+inline std::basic_string<Char> vsprintf(
+    const S &format,
+    basic_format_args<basic_printf_context_t<type_identity_t<Char>>> args) {
   basic_memory_buffer<Char> buffer;
   printf(buffer, to_string_view(format), args);
   return to_string(buffer);
@@ -625,12 +635,13 @@ template <typename S, typename... Args,
           typename Char = enable_if_t<internal::is_string<S>::value, char_t<S>>>
 inline std::basic_string<Char> sprintf(const S &format, const Args &... args) {
   using context = basic_printf_context_t<Char>;
-  return vsprintf(to_string_view(format), {make_format_args<context>(args...)});
+  return vsprintf(to_string_view(format), make_format_args<context>(args...));
 }
 
 template <typename S, typename Char = char_t<S>>
-inline int vfprintf(std::FILE *f, const S &format,
-                    basic_format_args<basic_printf_context_t<Char>> args) {
+inline int vfprintf(
+    std::FILE *f, const S &format,
+    basic_format_args<basic_printf_context_t<type_identity_t<Char>>> args) {
   basic_memory_buffer<Char> buffer;
   printf(buffer, to_string_view(format), args);
   std::size_t size = buffer.size();
@@ -653,12 +664,13 @@ template <typename S, typename... Args,
 inline int fprintf(std::FILE *f, const S &format, const Args &... args) {
   using context = basic_printf_context_t<Char>;
   return vfprintf(f, to_string_view(format),
-                  {make_format_args<context>(args...)});
+                  make_format_args<context>(args...));
 }
 
 template <typename S, typename Char = char_t<S>>
-inline int vprintf(const S &format,
-                   basic_format_args<basic_printf_context_t<Char>> args) {
+inline int
+vprintf(const S &format,
+        basic_format_args<basic_printf_context_t<type_identity_t<Char>>> args) {
   return vfprintf(stdout, to_string_view(format), args);
 }
 
@@ -676,12 +688,13 @@ template <typename S, typename... Args,
 inline int printf(const S &format_str, const Args &... args) {
   using context = basic_printf_context_t<char_t<S>>;
   return vprintf(to_string_view(format_str),
-                 {make_format_args<context>(args...)});
+                 make_format_args<context>(args...));
 }
 
 template <typename S, typename Char = char_t<S>>
-inline int vfprintf(std::basic_ostream<Char> &os, const S &format,
-                    basic_format_args<basic_printf_context_t<Char>> args) {
+inline int vfprintf(
+    std::basic_ostream<Char> &os, const S &format,
+    basic_format_args<basic_printf_context_t<type_identity_t<Char>>> args) {
   basic_memory_buffer<Char> buffer;
   printf(buffer, to_string_view(format), args);
   internal::write(os, buffer);
@@ -692,9 +705,9 @@ inline int vfprintf(std::basic_ostream<Char> &os, const S &format,
 template <typename ArgFormatter, typename Char,
           typename Context =
               basic_printf_context<typename ArgFormatter::iterator, Char>>
-typename ArgFormatter::iterator vprintf(internal::buffer<Char> &out,
-                                        basic_string_view<Char> format_str,
-                                        basic_format_args<Context> args) {
+typename ArgFormatter::iterator
+vprintf(internal::buffer<Char> &out, basic_string_view<Char> format_str,
+        basic_format_args<type_identity_t<Context>> args) {
   typename ArgFormatter::iterator iter(out);
   Context(iter, format_str, args).template format<ArgFormatter>();
   return iter;
@@ -714,7 +727,7 @@ inline int fprintf(std::basic_ostream<Char> &os, const S &format_str,
                    const Args &... args) {
   using context = basic_printf_context_t<Char>;
   return vfprintf(os, to_string_view(format_str),
-                  {make_format_args<context>(args...)});
+                  make_format_args<context>(args...));
 }
 FMT_END_NAMESPACE
 

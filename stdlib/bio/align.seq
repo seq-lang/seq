@@ -110,11 +110,11 @@ extend CIGAR:
 
     @property
     def qlen(self: CIGAR):
-        return bam_cigar2qlen(self.len, self.value)
+        return bam_cigar2qlen(self._len, self._data)
 
     @property
     def rlen(self: CIGAR):
-        return bam_cigar2rlen(self.len, self.value)
+        return bam_cigar2rlen(self._len, self._data)
 
     def __getitem__(self: CIGAR, idx: int):
         if not (0 <= idx < len(self)):

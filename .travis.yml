@@ -3,78 +3,66 @@ language: cpp
 jobs:
   include:
     - os: linux
+      dist: precise
+      addons:
+        apt:
+          update: true
+          packages:
+            - doxygen
+      before_install:
+        - wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        - sudo add-apt-repository -y ppa:fkrull/deadsnakes
+        - sudo apt-add-repository 'deb https://apt.llvm.org/precise/ llvm-toolchain-precise-4.0 main'
+        # Workaround: https://github.com/skyportal/skyportal/commit/6e639e4b4af93323095b22bb3994ccc358a4b379
+        - sudo rm -f /etc/apt/sources.list.d/mongodb*
+        - sudo rm -f /etc/apt/sources.list.d/couchdb*
+        - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
+        - sudo apt-get -q update
+        - sudo apt-get -y install clang-4.0 clang++-4.0 python3.5 python3.5-dev
+        - wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp5_0.20140926-1_amd64.deb
+        - sudo dpkg -i libiomp5_0.20140926-1_amd64.deb
+        - wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp-dev_0.20140926-1_amd64.deb
+        - sudo dpkg -i libiomp-dev_0.20140926-1_amd64.deb
+        - wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
+        - sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
+        - wget -q -O - https://bootstrap.pypa.io/get-pip.py | sudo python3.5
+        - export CC=clang-4.0
+        - export CXX=clang++-4.0
+        - if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]]; then bash ${TRAVIS_BUILD_DIR}/deps.sh ; fi
     - os: osx
-
-addons:
-  apt:
-    update: true
-    packages:
-      - libsnappy-dev
-      - binutils-dev
-      - libomp-dev
-      - libunwind-dev
-      - texinfo
-      - python3
-      - python3-pip
-      - python3-setuptools
-      - python-sphinx
-      - doxygen
-      - ocaml
-  homebrew:
-    update: true
-    packages:
-      - snappy
-      - binutils
-      - libomp
-      - texinfo
-      - python3
-      - sphinx-doc
-      - doxygen
-      - cmake
-      - wget
-      - ocaml
-      - ocamlbuild
-
-before_install:
-  # build and cache LLVM/Tapir:
-  - |
-    if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/Tapir-LLVM)" ]]; then
-      git clone -b release_60-release https://github.com/seq-lang/Tapir-LLVM ${TRAVIS_BUILD_DIR}/Tapir-LLVM
-      mkdir ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
-      cd ${TRAVIS_BUILD_DIR}/Tapir-LLVM/build
-      if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-        export LLVM_BINUTILS_INCDIR=/usr/include
-      elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-        export LLVM_BINUTILS_INCDIR=/usr/local/opt/binutils/include
-      fi
-      cmake .. -DLLVM_INCLUDE_TESTS=OFF \
-               -DLLVM_ENABLE_RTTI=ON \
-               -DCMAKE_BUILD_TYPE=Release \
-               -DLLVM_TARGETS_TO_BUILD=host
-      cmake --build . --config Release
-      cd -
-    fi
-
-  # fix Python:
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then brew link --overwrite python3; fi
-
-install:
-  # install htslib:
-  - wget -c https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2 -O - | tar -xj
-  - cd htslib-1.10.2
-  - ./configure CFLAGS="-fPIC" --disable-libcurl
-  - make
-  - sudo make install
-  - cd -
-
-  # install dependencies for docs:
-  - sudo pip3 install --upgrade pip
-  - sudo pip3 install wheel sphinx sphinx-rtd-theme breathe exhale
+      addons:
+        homebrew:
+          update: true
+          packages:
+            - snappy
+            - binutils
+            - libomp
+            - texinfo
+            - python3
+            - sphinx-doc
+            - doxygen
+            - cmake
+            - wget
+      before_install:
+        - export CC=clang
+        - export CXX=clang++
+        - if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]]; then bash ${TRAVIS_BUILD_DIR}/deps.sh ; fi
+        - brew link --overwrite python3
+      install:
+        - python3 -m pip install --upgrade pip
+        - python3 -m pip install wheel sphinx sphinx-rtd-theme breathe exhale
 
 before_script:
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
   - export LDFLAGS="-L/usr/local/lib"
-  - export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
+      export SEQ_PYTHON=$(python3.5 test/python/find-python-library.py)
+    else
+      export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
+    fi
+    echo ${SEQ_PYTHON}
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
 
@@ -83,26 +71,68 @@ script:
   - |
     (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
                           -DSEQ_THREADED=ON \
-                          -DLLVM_DIR=`${TRAVIS_BUILD_DIR}/Tapir-LLVM/build/bin/llvm-config --cmakedir` \
-                          -DCMAKE_C_COMPILER=clang \
-                          -DCMAKE_CXX_COMPILER=clang++)
-  - cmake --build build --config Release
+                          -DSEQ_DEP=${TRAVIS_BUILD_DIR}/deps \
+                          -DCMAKE_C_COMPILER=${CC} \
+                          -DCMAKE_CXX_COMPILER=${CXX})
+  - cmake --build build --config Release -- VERBOSE=1
+  - export LD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/deps/lib:${LD_LIBRARY_PATH}
   - build/seqtest
   - build/seqc test/core/helloworld.seq
-  - (cd docs/sphinx && make html 2> /dev/null)
+  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then make -C docs/sphinx html 2>/dev/null; fi
+  - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
+  - export SEQ_DEP_ARCHIVE=seq-deps-${TRAVIS_OS_NAME}.tar.bz2
+  - |
+    cat > bintray.json << EOD
+    {
+      "package": {
+        "name": "seq",
+        "repo": "seq",
+        "subject": "seq-lang",
+        "vcs_url": "https://github.com/seq-lang/seq",
+        "licenses": ["Apache 2.0"]
+      },
+      "version": {
+        "name": "develop"
+      },
+      "files": [
+        {
+          "includePattern": "${SEQ_BUILD_ARCHIVE}",
+          "uploadPattern": "${TRAVIS_OS_NAME}/${SEQ_BUILD_ARCHIVE}",
+          "matrixParams": { "override": 1 }
+        },
+        {
+          "includePattern": "${SEQ_DEP_ARCHIVE}",
+          "uploadPattern": "${TRAVIS_OS_NAME}/${SEQ_DEP_ARCHIVE}",
+          "matrixParams": { "override": 1 }
+        }
+      ],
+      "publish": true
+    }
+    EOD
+
 
 before_deploy:
-  - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
-  - export SEQ_STDLIB_ARCHIVE=seq-stdlib.tar.gz
-  - tar -czf ${SEQ_BUILD_ARCHIVE} build
-  - tar -czf ${SEQ_STDLIB_ARCHIVE} stdlib
+  - mkdir -p seq-deploy/bin seq-deploy/lib/seq
+  - cp build/seqc seq-deploy/bin/
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      cp build/libseq*.dylib seq-deploy/lib/seq/ 
+    else 
+      cp build/libseq*.so seq-deploy/lib/seq/ 
+    fi
+  # - cp build/libseqrt_static.a seq-deploy/lib/
+  - cp -r stdlib seq-deploy/lib/seq/
+  - tar -czf ${SEQ_BUILD_ARCHIVE} seq-deploy
+  - tar -cjf ${SEQ_DEP_ARCHIVE} deps
+  - du -sh seq-deploy
+  - du -sh deps
+  - ls -lah ${SEQ_DEP_ARCHIVE}
 
 deploy:
   - provider: releases
     token: $GITHUB_TOKEN
     file:
       - ${SEQ_BUILD_ARCHIVE}
-      - ${SEQ_STDLIB_ARCHIVE}
     skip_cleanup: true
     on:
       repo: seq-lang/seq
@@ -117,12 +147,19 @@ deploy:
     skip_cleanup: true
     on:
       branch: master
-      condition: $TRAVIS_OS_NAME = linux
+      condition: $TRAVIS_OS_NAME = osx
+  - provider: bintray
+    user: inumanag
+    key:
+      secure: lGfhxQMpQhOk1UxYccjmRe8IcBIPpn66db92XOCPsELd6S2ZfyJSZgW0AQD51xf31k3s0wCbCn9USyB7oD8iIxGGKQgVB8BRvY+WS6ooO4DeUfXWhW0Hgw9yCrIXZTsO6QTz/DWiwrLYf4rn2vETezji9ou635uKYRB9Cq8gPWXd5QtZRn/YzwZnaOA+crKYcHDZC5Y6meXKPUW9DYvneheh2Tve4TTjc+YjykwAKrjIaaD/xmTcWS8kXBYFxdWsnORQprN3zNmqFNa/7nPHUG7/oI/rB/qdLxS1B3NPDVpLF8L6/OFV0ufqhQ9xLyRIJKegzKE7iLid2XMWKBJ6v5KN2GhVje5+EeKUWfYBuJfS/EDHeRpFf5T/cLpC1iy85X5tSqBV4x6OQsdfmW5gxiloeV76GUz4LErEUHQreZLk4eCDv3q8dGpV25hI7LHUzGvXdb7o6BZuxGGnz8JWhOKYl9fVc+ho2FxmW7Dr/dYik81o0Dmrg7gYM/q6SVdSTHWUg06nMy1LLvxS0TaiHR0Car8pgaQMglysw0PWuIN7+y7SV/X9z5bY7uQN92jcTvcfv0RpyZQ8a5J9TCQhIS+j36YiONz3UJ1R+m+QE3IyiY8Ws1rNUYTi7u6EUuW6/DVlsYhLW8EVslUgiFKJjG+YXACuF9N/XPYBCL+olWU=
+    file: bintray.json
+    skip_cleanup: true
+    on: develop
 
 cache:
   timeout: 1000
   directories:
-    - Tapir-LLVM
+    - deps
 
 notifications:
   webhooks:

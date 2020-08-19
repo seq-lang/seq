@@ -1249,13 +1249,13 @@ extend str:
             i += 1
             while i < str_len and not str._isspace(self.ptr[i]):
                 i += 1
-            l.append(self[j:i])
+            l.append(self._slice(j, i))
 
         if i < str_len:
             while i < str_len and str._isspace(self.ptr[i]):
                 i += 1
             if i != str_len:
-                l.append(self[i:str_len])
+                l.append(self._slice(i, str_len))
 
         return l
 
@@ -1276,13 +1276,13 @@ extend str:
             i -= 1
             while i >= 0 and not str._isspace(self.ptr[i]):
                 i -= 1
-            l.append(self[i+1:j+1])
+            l.append(self._slice(i+1, j+1))
 
         if i >= 0:
             while i >= 0 and str._isspace(self.ptr[i]):
                 i -= 1
             if i >= 0:
-                l.append(self[0:i+1])
+                l.append(self._slice(0, i+1))
 
         l.reverse()
         return l

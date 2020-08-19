@@ -550,3 +550,4 @@ typedef struct {
 SEQ_FUNC bool seq_is_htsfile_cram(htsFile *f) { return f->is_cram; }
 SEQ_FUNC bool seq_is_htsfile_bgzf(htsFile *f) { return f->is_bgzf; }
 SEQ_FUNC void *seq_get_htsfile_fp(htsFile *f) { return f->fp; }
+SEQ_FUNC double seq_i32_to_float(int32_t x) { return (double)(*(float *)&x); }

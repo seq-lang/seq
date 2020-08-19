@@ -575,3 +575,77 @@ test_parse_valid()
 test_parse_invalid_float()
 test_parse_invalid_missing_col()
 test_fasta_with_fai()
+
+# VCF tests
+def L(a): return [x for x in a]
+
+@test
+def test_parse_vcf_basic():
+    path = 'test/data/toy.vcf'
+    pos = [record.pos for record in VCF(path)]
+    chroms = [record.chrom for record in VCF(path)]
+    id = [record.id for record in VCF(path)]
+    ref = [record.ref for record in VCF(path)]
+    alts = [list(record.alts) for record in VCF(path)]
+    qual = [record.qual for record in VCF(path)]
+
+    assert chroms == ['20'] * 6
+    assert pos == [14369, 17329, 1110695, 1230236, 1234566, 1235236]
+    assert id == ['rs6054257', '', 'rs6040355', '', 'microsat1', '']
+    assert ref == [s'G', s'T', s'A', s'T', s'G', s'T']
+    assert alts == [[s'A'], [s'A'], [s'G', s'T'], list[seq](), [s'GA', s'GAC'], list[seq]()]
+    assert [str(x) for x in qual] == ['29.2', '3', '67', '47', '50', 'nan']
+
+'''
+@test
+def test_parse_vcf_samples():
+    path = 'test/data/toy.vcf'
+    samples = list[list[str]]()
+    for record in VCF(path):
+        samples.append([str(x) for x in record.samples])
+    assert samples == [['NA00001', 'NA00002', 'NA00003']] * 6
+
+@test
+def test_parse_vcf_filters():
+    path = 'test/data/toy.vcf'
+    filters = [L(record.filters) for record in VCF(path)]
+    assert filters == [['q10', 's50'], ['q10'], ['PASS'], ['PASS'], ['PASS'], list[str]()]
+
+@test
+def test_parse_vcf_format():
+    path = 'test/data/toy.vcf'
+    formats = [L(record.formats) for record in VCF(path)]
+    assert formats == [['GT', 'GQ', 'DP', 'HQ'], ['GT', 'GQ', 'DP', 'HQ'], ['GT', 'GQ', 'DP', 'HQ'], ['GT', 'GQ', 'DP', 'HQ'], ['GT', 'GQ', 'DP'], ['GT']]
+'''
+
+@test
+def test_parse_vcf_info():
+    path = 'test/data/toy.vcf'
+    AF = list[float]()
+    AA = list[str]()
+    for record in VCF('test/data/toy.vcf'):
+        try:
+            AF.append(record.info.get_float('AF'))
+        except:
+            AF.append(-1.)
+        try:
+            AA.append(record.info.get_str('AA'))
+        except:
+            AA.append('')
+
+    assert AA == ['String,Multi,Val', '', 'FA,DADA', 'T', 'G', '']
+    assert [str(x) for x in AF] == ['0.5', '0.017', '-1', '-1', '-1', '-1']
+
+    def info_list(record, key):
+        try:
+            return list(record.info.get_floats(key))
+        except:
+            return list[float]()
+    AF_full = [info_list(record, 'AF') for record in VCF(path)]
+    assert [[str(x) for x in a] for a in AF_full] == [['0.5'], ['0.017'], ['0.333', '0.667'], list[str](), list[str](), list[str]()]
+
+test_parse_vcf_basic()
+#test_parse_vcf_samples()
+#test_parse_vcf_filters()
+#test_parse_vcf_format()
+test_parse_vcf_info()
