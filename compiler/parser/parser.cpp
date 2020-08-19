@@ -30,7 +30,8 @@ void generateDocstr(const std::string &file) {
 }
 
 seq::SeqModule *parse(const std::string &argv0, const std::string &file,
-                      const string &code, bool isCode, bool isTest, int startLine) {
+                      const string &code, bool isCode, bool isTest,
+                      int startLine) {
   try {
     auto d = getenv("SEQ_DEBUG");
     if (d)
@@ -39,7 +40,8 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     char abs[PATH_MAX + 1];
     realpath(file.c_str(), abs);
 
-    // fprintf(stderr, "%s\n", fmt::format("{} {} {}", abs, isCode, code).c_str());
+    // fprintf(stderr, "%s\n", fmt::format("{} {} {}", abs, isCode,
+    // code).c_str());
     auto ctx = ast::TypeContext::getContext(argv0, abs);
     ast::StmtPtr stmts = nullptr;
     if (!isCode)

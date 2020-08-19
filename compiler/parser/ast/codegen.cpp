@@ -304,14 +304,13 @@ void CodegenVisitor::visit(const ReturnStmt *stmt) {
     resultStmt = N<seq::Return>(nullptr);
   } else {
     auto ret = new seq::Return(transform(stmt->expr));
-    ctx->getBase()->sawReturn(ret);
     resultStmt = ret;
   }
 }
 
 void CodegenVisitor::visit(const YieldStmt *stmt) {
   auto ret = new seq::Yield(stmt->expr ? transform(stmt->expr) : nullptr);
-  ctx->getBase()->sawYield(ret);
+  ctx->getBase()->setGenerator();
   resultStmt = ret;
 }
 

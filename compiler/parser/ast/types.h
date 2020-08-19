@@ -175,7 +175,8 @@ struct LinkType : public Type {
 
   LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
            bool isStatic = false);
-  LinkType(TypePtr type) : kind(Link), id(0), level(0), type(type), isStatic(false) {}
+  LinkType(TypePtr type)
+      : kind(Link), id(0), level(0), type(type), isStatic(false) {}
   virtual ~LinkType() {}
 
 public:
@@ -232,8 +233,8 @@ public:
   std::vector<TypePtr> args;
 
   ClassType(ClassTypePtr c)
-      : explicits(c->explicits), parent(c->parent), name(c->name), record(c->record),
-        args(c->args) {}
+      : explicits(c->explicits), parent(c->parent), name(c->name),
+        record(c->record), args(c->args) {}
   ClassType(const std::string &name, bool isRecord = false,
             const std::vector<TypePtr> &args = std::vector<TypePtr>(),
             const std::vector<Generic> &explicits = std::vector<Generic>(),
@@ -270,7 +271,8 @@ public:
   FuncType(ClassTypePtr c, const std::string &canonicalName = "");
   FuncType(const std::vector<TypePtr> &args = std::vector<TypePtr>(),
            const std::vector<Generic> &explicits = std::vector<Generic>(),
-           ClassTypePtr parent = nullptr, const std::string &canonicalName = "");
+           ClassTypePtr parent = nullptr,
+           const std::string &canonicalName = "");
 
 public:
   std::string realizeString() const override;

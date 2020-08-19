@@ -35,9 +35,8 @@ void BaseFunc::setEnclosingClass(types::Type *parentType) {
 
 Func::Func()
     : BaseFunc(), SrcObject(), external(false), name(), inTypes(),
-      outType(types::Void), outType0(types::Void), defaultArgs(),
-      scope(new Block()), argNames(), argVars(), attributes(),
-      parentFunc(nullptr), ret(nullptr), yield(nullptr), prefetch(false),
+      outType(types::Void), defaultArgs(), scope(new Block()), argNames(),
+      argVars(), attributes(), parentFunc(nullptr), prefetch(false),
       interAlign(false), gen(false), promise(nullptr), handle(nullptr),
       cleanup(nullptr), suspend(nullptr) {
   if (!this->argNames.empty())
@@ -54,29 +53,12 @@ void Func::setEnclosingFunc(BaseFunc *parentFunc) {
   this->parentFunc = p;
 }
 
-void Func::sawReturn(Return *ret) {
-  if (interAlign && ret->getExpr())
-    throw exc::SeqException(
-        "functions performing inter-sequence alignment cannot return a value",
-        getSrcInfo());
-  if (this->ret)
-    return;
-
-  this->ret = ret;
-}
-
-void Func::sawYield(Yield *yield) {
+void Func::setGenerator() {
   if (interAlign)
     throw exc::SeqException(
         "functions performing inter-sequence alignment cannot be generators",
         getSrcInfo());
-  if (this->yield)
-    return;
-
-  this->yield = yield;
   gen = true;
-  // outType = types::GenType::get(outType);
-  // outType0 = types::GenType::get(outType0);
 }
 
 void Func::addAttribute(std::string attr) {
@@ -100,8 +82,6 @@ void Func::addAttribute(std::string attr) {
     gen = true;
     outType =
         types::GenType::get(outType, types::GenType::GenTypeKind::PREFETCH);
-    outType0 =
-        types::GenType::get(outType0, types::GenType::GenTypeKind::PREFETCH);
   } else if (attr == "inter_align") {
     if (interAlign)
       return;
@@ -109,7 +89,7 @@ void Func::addAttribute(std::string attr) {
       throw exc::SeqException(
           "function cannot perform both prefetch and inter-sequence alignment",
           getSrcInfo());
-    if (!(outType->is(types::Void) && outType0->is(types::Void)))
+    if (!outType->is(types::Void))
       throw exc::SeqException("functions performing inter-sequence alignment "
                               "cannot return a value",
                               getSrcInfo());
@@ -117,8 +97,6 @@ void Func::addAttribute(std::string attr) {
     gen = true;
     types::RecordType *yieldType = PipeExpr::getInterAlignYieldType();
     outType =
-        types::GenType::get(yieldType, types::GenType::GenTypeKind::INTERALIGN);
-    outType0 =
         types::GenType::get(yieldType, types::GenType::GenTypeKind::INTERALIGN);
   }
 }
@@ -469,7 +447,7 @@ Value *Func::codegenYieldExpr(BasicBlock *&block, bool suspend) {
   return builder.CreateLoad(promise);
 }
 
-bool Func::isGen() { return yield != nullptr; }
+bool Func::isGen() { return gen && !prefetch && !interAlign; }
 
 std::vector<std::string> Func::getArgNames() { return argNames; }
 
@@ -494,7 +472,7 @@ void Func::setOut(types::Type *outType) {
     throw exc::SeqException(
         "functions performing inter-sequence alignment cannot return a value",
         getSrcInfo());
-  this->outType = outType0 = outType;
+  this->outType = outType;
 }
 
 void Func::setDefaults(std::vector<Expr *> defaultArgs) {

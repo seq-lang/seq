@@ -41,9 +41,7 @@ public:
   virtual types::FuncType *getFuncType();
   virtual llvm::Function *getFunc(llvm::Module *module);
   virtual void setEnclosingClass(types::Type *parentType);
-
-  virtual void sawReturn(Return *ret) {}
-  virtual void sawYield(Yield *ret) {}
+  virtual void setGenerator() {}
 };
 
 /**
@@ -66,9 +64,6 @@ private:
   /// Function return type
   types::Type *outType;
 
-  /// Original function return type, before deduction
-  types::Type *outType0;
-
   /// Default arguments, or null if none (corresponds to `inTypes` vector)
   std::vector<Expr *> defaultArgs;
 
@@ -87,14 +82,6 @@ private:
 
   /// Function enclosing this function, or null if none
   Func *parentFunc;
-
-  /// First return statement contained in this function,
-  /// or null if none
-  Return *ret;
-
-  /// First yield statement contained in this function,
-  /// or null if none
-  Yield *yield;
 
   /// Whether this function contains a `prefetch` statement
   bool prefetch;
@@ -134,8 +121,7 @@ public:
 
   std::string genericName();
   void setEnclosingFunc(BaseFunc *parentFunc);
-  void sawReturn(Return *ret) override;
-  void sawYield(Yield *yield) override;
+  void setGenerator() override;
   void addAttribute(std::string attr);
   std::vector<std::string> getAttributes();
   bool hasAttribute(const std::string &attr);

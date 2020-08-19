@@ -185,7 +185,8 @@ void TransformVisitor::visit(const IdExpr *expr) {
     resultExpr->markType();
   if (ctx->isTypeChecking()) {
     if (val->getStatic()) {
-      /// only happens in a "normal" code; type parameters are handled via StaticWalker
+      /// only happens in a "normal" code; type parameters are handled via
+      /// StaticWalker
       auto s = val->getStatic()->getType()->getStatic();
       assert(s);
       resultExpr = transform(N<IntExpr>(s->getValue()));
@@ -531,8 +532,8 @@ void TransformVisitor::visit(const IndexExpr *expr) {
     if (g->explicits.size() != generics.size())
       error("expected {} generics, got {}", g->explicits.size(), generics.size());
     for (int i = 0; i < generics.size(); i++)
-      /// Note: at this point, only single-variable static var expression (e.g. N) is
-      /// allowed, so unify will work as expected.
+      /// Note: at this point, only single-variable static var expression (e.g.
+      /// N) is allowed, so unify will work as expected.
       forceUnify(g->explicits[i].type, generics[i]);
     auto t = e->getType();
     bool isType = e->isType();
@@ -911,7 +912,7 @@ void TransformVisitor::visit(const YieldExpr *expr) {
   resultExpr = N<YieldExpr>();
   if (ctx->isTypeChecking()) {
     if (!ctx->getBaseType() || !ctx->getBaseType()->getFunc())
-      error("expected function body");
+      error("(yield) cannot be used outside of functions");
     auto t =
         forceUnify(ctx->getReturnType(),
                    ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("generator"),
@@ -1006,7 +1007,8 @@ void StaticVisitor::visit(const UnaryExpr *expr) {
 
 void StaticVisitor::visit(const IfExpr *expr) {
   std::tie(evaluated, value) = transform(expr->cond.get());
-  // Note: both expressions must be evaluated at this time in order to capture all
+  // Note: both expressions must be evaluated at this time in order to capture
+  // all
   //       unrealized variables (i.e. short-circuiting is not possible)
   auto i = transform(expr->eif.get());
   auto e = transform(expr->eelse.get());
