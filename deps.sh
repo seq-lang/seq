@@ -91,6 +91,7 @@ make -j$JOBS LDFLAGS=-static
 make install
 [ ! -f ${INSTALLDIR}/lib/libgc.a ] && die "gc library not found"
 
+# htslib
 wget -c https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2 -O - | tar jxf - -C ${SRCDIR}
 cd ${SRCDIR}/htslib-1.10.2
 ./configure \
@@ -100,5 +101,18 @@ cd ${SRCDIR}/htslib-1.10.2
 make -j$JOBS
 make install
 [ ! -f ${INSTALLDIR}/lib/libhts.a ] && die "htslib library not found"
+
+# openmp
+git clone -b release/11.x https://github.com/seq-lang/openmp ${SRCDIR}/openmp
+mkdir -p ${SRCDIR}/openmp/build
+cd ${SRCDIR}/openmp/build
+cmake .. \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER=${CC} \
+    -DCMAKE_CXX_COMPILER=${CXX} \
+    -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}
+make -j$JOBS
+make install
+[ ! -f ${INSTALLDIR}/lib/libomp.a ] && die "openmp library not found"
 
 echo "Dependency generation done: ${INSTALLDIR}"
