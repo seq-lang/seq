@@ -14,8 +14,9 @@ if(NOT DEFINED SEQ_DEP)
 endif()
 message(STATUS "Dependency directory: ${SEQ_DEP}")
 
-# execute_process(COMMAND ${SEQ_DEP}/bin/llvm-config --cmakedir OUTPUT_VARIABLE LLVM_DIR)
-# message(STATUS "LLVM config: ${LLVM_DIR}")
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 find_package(LLVM REQUIRED CONFIG PATHS ${SEQ_DEP} NO_DEFAULT_PATH)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
@@ -67,8 +68,6 @@ else()
 endif()
 
 # Seq runtime library
-option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
-
 set(SEQRT_FILES runtime/lib.h
                 runtime/lib.cpp
                 runtime/exc.cpp
@@ -84,20 +83,9 @@ target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include runtime)
 if (APPLE)
   target_link_libraries(seqrt PUBLIC seqomp -static-libstdc++ -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC})
 else()
-  target_link_libraries(seqrt PUBLIC seqomp -static-libstdc++ -Wl,--whole-archive ${ZLIB} ${BDWGC})
+  target_link_libraries(seqrt PUBLIC seqomp -static-libstdc++ -Wl,--whole-archive ${ZLIB} ${BDWGC} -Wl,--no-whole-archive)
 endif()
 set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
-
-add_library(seqrt_static_only STATIC ${SEQRT_FILES})
-target_include_directories(seqrt_static_only PRIVATE ${SEQ_DEP}/include runtime)
-set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
-set(SEQRT_STATIC ${CMAKE_BINARY_DIR}/libseqrt_static.a)
-add_custom_target(seqrt_static
-    COMMAND ar -x $<TARGET_FILE:seqrt_static_only>
-    COMMAND ar -x ${BDWGC}
-    COMMAND ar -qcs ${SEQRT_STATIC} *.o
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    DEPENDS seqrt_static_only)
 
 # Seq parsing library
 include_directories(${OCAML_STDLIB_PATH})
@@ -139,19 +127,14 @@ file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
                        compiler/util/*.cpp
                        compiler/util/fmt/*.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
-add_dependencies(seq seqparse_target seqrt_static)
+add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 target_link_libraries(seq -static-libstdc++ ${LLVM_LIBS} dl seqrt)
 
-if(SEQ_JITBRIDGE)
-  add_library(seqjit SHARED compiler/util/jit.cpp)
-  target_link_libraries(seqjit seq)
-endif()
-
 # Seq command-line tool
 add_executable(seqc runtime/main.cpp)
-target_link_libraries(seqc -static-libstdc++ seq)
+target_link_libraries(seqc -static-libstdc++ seq Threads::Threads)
 
 # Seq test
 # Download and unpack googletest at configure time

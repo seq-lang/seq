@@ -103,14 +103,15 @@ make install
 [ ! -f ${INSTALLDIR}/lib/libhts.a ] && die "htslib library not found"
 
 # openmp
-git clone -b release/11.x https://github.com/seq-lang/openmp ${SRCDIR}/openmp
+git clone https://github.com/llvm-mirror/openmp -b release_60 ${SRCDIR}/openmp
 mkdir -p ${SRCDIR}/openmp/build
 cd ${SRCDIR}/openmp/build
 cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=${CC} \
     -DCMAKE_CXX_COMPILER=${CXX} \
-    -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}
+    -DCMAKE_INSTALL_PREFIX=${INSTALLDIR} \
+    -DOPENMP_ENABLE_LIBOMPTARGET=0
 make -j$JOBS
 make install
 # [ ! -f ${INSTALLDIR}/lib/libomp.so ] && die "openmp library not found"

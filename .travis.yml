@@ -20,10 +20,6 @@ jobs:
         - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
         - sudo apt-get -q update
         - sudo apt-get -y install clang-4.0 clang++-4.0 python3.5 python3.5-dev
-        - wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp5_0.20140926-1_amd64.deb
-        - sudo dpkg -i libiomp5_0.20140926-1_amd64.deb
-        - wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp-dev_0.20140926-1_amd64.deb
-        - sudo dpkg -i libiomp-dev_0.20140926-1_amd64.deb
         - wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
         - sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
         - wget -q -O - https://bootstrap.pypa.io/get-pip.py | sudo python3.5
@@ -37,7 +33,6 @@ jobs:
           packages:
             - snappy
             - binutils
-            - libomp
             - texinfo
             - python3
             - sphinx-doc
@@ -70,7 +65,6 @@ script:
   - mkdir build
   - |
     (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
-                          -DSEQ_THREADED=ON \
                           -DSEQ_DEP=${TRAVIS_BUILD_DIR}/deps \
                           -DCMAKE_C_COMPILER=${CC} \
                           -DCMAKE_CXX_COMPILER=${CXX})
@@ -117,10 +111,11 @@ before_deploy:
   - |
     if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
       cp build/libseq*.dylib seq-deploy/lib/seq/ 
+      cp deps/lib/libomp.dylib seq-deploy/lib/seq/
     else 
-      cp build/libseq*.so seq-deploy/lib/seq/ 
+      cp build/libseq*.so seq-deploy/lib/seq/
+      cp deps/lib/libomp.so seq-deploy/lib/seq/ 
     fi
-  # - cp build/libseqrt_static.a seq-deploy/lib/
   - cp -r stdlib seq-deploy/lib/seq/
   - tar -czf ${SEQ_BUILD_ARCHIVE} seq-deploy
   - tar -cjf ${SEQ_DEP_ARCHIVE} deps
