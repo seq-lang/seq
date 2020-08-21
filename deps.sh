@@ -113,6 +113,6 @@ cmake .. \
     -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}
 make -j$JOBS
 make install
-[ ! -f ${INSTALLDIR}/lib/libomp.a ] && die "openmp library not found"
+# [ ! -f ${INSTALLDIR}/lib/libomp.so ] && die "openmp library not found"
 
 echo "Dependency generation done: ${INSTALLDIR}"
