@@ -367,8 +367,6 @@ static types::Type *callType(BaseFunc *func, std::vector<types::Type *> args) {
   for (unsigned i = 1; i < funcType->numBaseTypes(); i++) {
     types::Type *exp = funcType->getBaseType(i);
     types::Type *got = args[i - 1];
-    if (exp->asGen() && got->hasMethod("__iter__")) // implicit generator conversion
-      got = got->magicOut("__iter__", {});
     if (!types::is(got, exp))
       return nullptr;
   }
