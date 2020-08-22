@@ -31,6 +31,7 @@ jobs:
         homebrew:
           packages:
             - binutils
+            - sphinx-doc
             - texinfo
             - python3
             - doxygen
@@ -72,7 +73,13 @@ script:
   - cmake --build build --config Release -- VERBOSE=1
   - build/seqtest
   - build/seqc test/core/helloworld.seq
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then make -C docs/sphinx html 2>/dev/null; fi
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      if ! make -C docs/sphinx html 2>sphinx.log ; then
+        cat sphinx.log
+        false
+      fi
+    fi
   - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
   - export SEQ_DEP_ARCHIVE=seq-deps-${TRAVIS_OS_NAME}.tar.bz2
   - |
