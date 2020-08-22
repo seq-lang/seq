@@ -68,8 +68,9 @@ script:
                           -DSEQ_DEP=${TRAVIS_BUILD_DIR}/deps \
                           -DCMAKE_C_COMPILER=${CC} \
                           -DCMAKE_CXX_COMPILER=${CXX})
-  - cmake --build build --config Release -- VERBOSE=1
   - export LD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/deps/lib:${LD_LIBRARY_PATH}
+  - export DYLD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/deps/lib:${DYLD_LIBRARY_PATH}
+  - cmake --build build --config Release -- VERBOSE=1
   - build/seqtest
   - build/seqc test/core/helloworld.seq
   - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then make -C docs/sphinx html 2>/dev/null; fi
@@ -110,11 +111,11 @@ before_deploy:
   - cp build/seqc seq-deploy/bin/
   - |
     if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-      cp build/libseq*.dylib seq-deploy/lib/seq/ 
+      cp build/libseq*.dylib seq-deploy/lib/seq/
       cp deps/lib/libomp.dylib seq-deploy/lib/seq/
-    else 
+    else
       cp build/libseq*.so seq-deploy/lib/seq/
-      cp deps/lib/libomp.so seq-deploy/lib/seq/ 
+      cp deps/lib/libomp.so seq-deploy/lib/seq/
     fi
   - cp -r stdlib seq-deploy/lib/seq/
   - tar -czf ${SEQ_BUILD_ARCHIVE} seq-deploy
