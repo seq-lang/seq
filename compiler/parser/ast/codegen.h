@@ -36,8 +36,8 @@ class CodegenVisitor : public ASTVisitor, public SrcObject {
   seq::types::Type *realizeType(types::ClassTypePtr t);
   seq::BaseFunc *realizeFunc(const std::string &name);
 
-  std::shared_ptr<LLVMItem::Item>
-  processIdentifier(std::shared_ptr<LLVMContext> tctx, const std::string &id);
+  std::shared_ptr<LLVMItem::Item> processIdentifier(std::shared_ptr<LLVMContext> tctx,
+                                                    const std::string &id);
 
 public:
   CodegenVisitor(std::shared_ptr<LLVMContext> ctx);
@@ -120,8 +120,8 @@ private:
   }
   template <typename... TArgs>
   void internalError(const char *format, TArgs &&... args) {
-    throw exc::ParserException(fmt::format(
-        "INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
+    throw exc::ParserException(
+        fmt::format("INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
   }
 };
 

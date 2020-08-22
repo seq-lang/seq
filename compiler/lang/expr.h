@@ -219,8 +219,7 @@ private:
   std::vector<std::string> names;
 
 public:
-  explicit RecordExpr(std::vector<Expr *> exprs,
-                      std::vector<std::string> names = {});
+  explicit RecordExpr(std::vector<Expr *> exprs, std::vector<std::string> names = {});
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
 };
 
@@ -336,8 +335,7 @@ private:
   std::vector<std::string> names;
 
 public:
-  CallExpr(Expr *func, std::vector<Expr *> args,
-           std::vector<std::string> names = {});
+  CallExpr(Expr *func, std::vector<Expr *> args, std::vector<std::string> names = {});
   Expr *getFuncExpr() const;
   std::vector<Expr *> getArgs() const;
   void setFuncExpr(Expr *func);

@@ -79,8 +79,7 @@ public:
   /// @param base function containing the load
   /// @param block block to generate load in
   /// @param atomic whether this load is atomic
-  llvm::Value *load(BaseFunc *base, llvm::BasicBlock *block,
-                    bool atomic = false);
+  llvm::Value *load(BaseFunc *base, llvm::BasicBlock *block, bool atomic = false);
 
   /// Codegen's a store of this variable.
   /// @param base function containing the store

@@ -32,8 +32,8 @@ public:
   llvm::Value *memb(llvm::Value *self, const std::string &name,
                     llvm::BasicBlock *block) override;
 
-  llvm::Value *setMemb(llvm::Value *self, const std::string &name,
-                       llvm::Value *val, llvm::BasicBlock *block) override;
+  llvm::Value *setMemb(llvm::Value *self, const std::string &name, llvm::Value *val,
+                       llvm::BasicBlock *block) override;
 
   void initOps() override;
   llvm::Value *make(llvm::Value *ptr, llvm::Value *len,
@@ -49,8 +49,8 @@ public:
   llvm::Value *memb(llvm::Value *self, const std::string &name,
                     llvm::BasicBlock *block) override;
 
-  llvm::Value *setMemb(llvm::Value *self, const std::string &name,
-                       llvm::Value *val, llvm::BasicBlock *block) override;
+  llvm::Value *setMemb(llvm::Value *self, const std::string &name, llvm::Value *val,
+                       llvm::BasicBlock *block) override;
 
   void initOps() override;
   llvm::Value *make(llvm::Value *ptr, llvm::Value *len,

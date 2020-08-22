@@ -127,13 +127,15 @@ getTestNameFromParam(const testing::TestParamInfo<SeqTest::ParamType> &info) {
   const bool debug = get<1>(info.param);
 
   // normalize basename
-  size_t found1 = basename.find('/');
-  size_t found2 = basename.find('.');
-  assert(found1 != string::npos);
-  assert(found2 != string::npos);
-  assert(found2 > found1);
-  string normname = basename.substr(found1 + 1, found2 - found1 - 1);
-
+  // size_t found1 = basename.find('/');
+  // size_t found2 = basename.find('.');
+  // assert(found1 != string::npos);
+  // assert(found2 != string::npos);
+  // assert(found2 > found1);
+  // string normname = basename.substr(found1 + 1, found2 - found1 - 1);
+  string normname = basename;
+  replace(normname.begin(), normname.end(), '/', '_');
+  replace(normname.begin(), normname.end(), '.', '_');
   return normname + (debug ? "_debug" : "");
 }
 static string
@@ -202,24 +204,39 @@ INSTANTIATE_TEST_SUITE_P(TypeTests, SeqTest,
                                                          "parser/statements.seq"})),
                          getTypeTestNameFromParam);
 
-// INSTANTIATE_TEST_SUITE_P(
-//     CoreTests, SeqTest,
-//     testing::Combine(testing::Values("core/parser.seq", "core/align.seq",
-//                                      "core/arguments.seq",
-//                                      "core/arithmetic.seq", "core/big.seq",
-//                                      "core/bltin.seq", "core/bwtsa.seq",
-//                                      "core/containers.seq", "core/empty.seq",
-//                                      "core/exceptions.seq",
-//                                      "core/formats.seq",
-//                                      "core/generators.seq",
-//                                      "core/generics.seq",
-//                                      "core/helloworld.seq", "core/kmers.seq",
-//                                      "core/match.seq", "core/proteins.seq",
-//                                      "core/range.seq",
-//                                      "core/serialization.seq",
-//                                      "core/trees.seq"),
-//                      testing::Values(true, false), testing::Values(false)),
-//     getTestNameFromParam);
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(
+    CoreTests, SeqTest,
+    testing::Combine(
+      testing::Values(
+        "core/helloworld.seq",
+        "core/arithmetic.seq",
+        "core/parser.seq",
+        // F: "core/arguments.seq", // assertion error; waiting for ariya
+        // F: "core/generics.seq", // assertion failed
+        // F: "core/bltin.seq",
+        // F: "core/exceptions.seq",
+        // F: "core/generators.seq", // LLVM error
+        // F: "core/range.seq", // needs auto-unify
+        // F: "core/big.seq",
+        // F: "core/match.seq", // needs seq type
+        // F: "core/containers.seq", // unification
+        // F: "core/trees.seq",
+        // "core/align.seq",
+        // "core/bwtsa.seq",
+        // "core/formats.seq",
+        // "core/kmers.seq",
+        // "core/proteins.seq",
+        // "core/serialization.seq",
+        "core/empty.seq"
+      ),
+      testing::Values(true),
+      testing::Values(""),
+      testing::Values(""),
+      testing::Values(0)
+    ),
+    getTestNameFromParam);
+// clang-format on
 
 // INSTANTIATE_TEST_SUITE_P(
 //     PipelineTests, SeqTest,

@@ -55,14 +55,12 @@ void DocStmtVisitor::visit(const FunctionStmt *stmt) {
   for (auto &a : stmt->args)
     as += " " + a.toString();
   LOG("(#fun {}{}{}{}{}{})", stmt->name,
-      stmt->generics.size()
-          ? format(" :generics {}", fmt::join(stmt->generics, " "))
-          : "",
+      stmt->generics.size() ? format(" :generics {}", fmt::join(stmt->generics, " "))
+                            : "",
       stmt->ret ? " :return " + stmt->ret->toString() : "",
       stmt->args.size() ? " :args" + as : "",
-      stmt->attributes.size()
-          ? format(" :attrs ({})", fmt::join(stmt->attributes, " "))
-          : "",
+      stmt->attributes.size() ? format(" :attrs ({})", fmt::join(stmt->attributes, " "))
+                              : "",
       docstr.size() ? format(" :docstr \"{}\"", escape(docstr)) : "");
 }
 
@@ -83,8 +81,7 @@ void DocStmtVisitor::visit(const ClassStmt *stmt) {
   for (auto &a : stmt->args)
     as += " " + a.toString();
   LOG("(#{} {}{}{} {})", (stmt->isRecord ? "type" : "class"), stmt->name,
-      stmt->generics.size() ? format(" :gen {}", fmt::join(stmt->generics, " "))
-                            : "",
+      stmt->generics.size() ? format(" :gen {}", fmt::join(stmt->generics, " ")) : "",
       stmt->args.size() ? " :args" + as : "",
       docstr.size() ? format(" :docstr \"{}\"", escape(docstr)) : "");
 }

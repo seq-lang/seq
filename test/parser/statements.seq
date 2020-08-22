@@ -81,7 +81,7 @@ print a  #: 8
 a -= 1; print a  #: 7
 
 #%% assign_comprehension
-g = (b, a, c for a, *b, c in ['ABC','DEEEEF','FHGIJ'])
+g = ((b, a, c) for a, *b, c in ['ABC','DEEEEF','FHGIJ'])
 x, *q, y = list(g)  # TODO: auto-unroll as in Python
 print x, y, q  #: (B, A, C) (HGI, F, J) [(EEEE, D, F)]
 
@@ -181,22 +181,96 @@ for a, b in [(1, 2), (3, 3), (5, 4)]:
         print '=',
     else:
         print '2',
-print  #: 1 = 2
+print '_'  #: 2 = 1 _
 
 #%% extend
+extend int:
+    def run_lola_run(self):
+        while self > 0:
+            yield self
+            self -= 1
+print list((5).run_lola_run())  #: [5, 4, 3, 2, 1]
 
 #%% import
 
 #%% try_throw
+class MyError:
+    _hdr: ExcHeader
+    def __init__(self, message: str):
+        self._hdr = ('MyError', message, '', '', 0, 0)
+try:
+    raise MyError("hello!")
+except MyError as e:
+    print e._hdr.msg  #: hello!
+try:
+    raise OSError("hello os!")
+# TODO: except (MyError, OSError) as e:
+#     print e._hdr.msg
+except MyError:
+    print "my"
+except OSError:
+    print "os"  #: os
+finally:
+    print "whoa"  #: whoa
 
 #%% global
+a = 1
+def foo():
+    global a
+    a += 1
+print a,
+foo()
+print a  #: 1 2
 
-#%% function
+#%% global_scope_err
+a = 1
+def foo():
+    a += 1
+foo()  #! ERROR:
 
-#%% type_class
+#%% global_err
+a = 1
+global a  #! ERROR: 'global' is only applicable within function blocks
 
 #%% yield_from
+def foo():
+    yield from range(3)
+    yield from range(10, 13)
+    yield -1
+print list(foo())  #: [0, 1, 2, 10, 11, 12, -1]
 
 #%% with
-
-#%% pydef
+class Foo:
+    i: int
+    def __enter__(self: Foo):
+        print '> foo! ' + str(self.i)
+    def __exit__(self: Foo):
+        print '< foo! ' + str(self.i)
+    def foo(self: Foo):
+        print 'woof'
+class Bar:
+    s: str
+    def __enter__(self: Bar):
+        print '> bar! ' + self.s
+    def __exit__(self: Bar):
+        print '< bar! ' + self.s
+    def bar(self: Bar):
+        print 'meow'
+with Foo(0) as f:
+#: > foo! 0
+    f.foo()  #: woof
+#: < foo! 0
+with Foo(1) as f, Bar('s') as b:
+#: > foo! 1
+#: > bar! s
+    f.foo()  #: woof
+    b.bar()  #: meow
+#: < bar! s
+#: < foo! 1
+with Foo(2), Bar('t') as q:
+#: > foo! 2
+#: > bar! t
+    print 'eeh'  #: eeh
+    q.bar()  #: meow
+#: < bar! t
+#: < foo! 2

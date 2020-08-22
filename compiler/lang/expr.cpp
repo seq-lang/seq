@@ -3,8 +3,7 @@
 using namespace seq;
 using namespace llvm;
 
-Expr::Expr(types::Type *type)
-    : SrcObject(), type(type), tc(nullptr), name("") {}
+Expr::Expr(types::Type *type) : SrcObject(), type(type), tc(nullptr), name("") {}
 
 Expr::Expr() : Expr(types::Void) {}
 
@@ -95,15 +94,13 @@ Value *StrExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   BasicBlock *preambleBlock = base->getPreamble();
 
   GlobalVariable *strVar = new GlobalVariable(
-      *module,
-      llvm::ArrayType::get(IntegerType::getInt8Ty(context), s.length() + 1),
-      true, GlobalValue::PrivateLinkage,
-      ConstantDataArray::getString(context, s), "str_literal");
+      *module, llvm::ArrayType::get(IntegerType::getInt8Ty(context), s.length() + 1),
+      true, GlobalValue::PrivateLinkage, ConstantDataArray::getString(context, s),
+      "str_literal");
   strVar->setAlignment(1);
 
   IRBuilder<> builder(preambleBlock);
-  Value *str =
-      builder.CreateBitCast(strVar, IntegerType::getInt8PtrTy(context));
+  Value *str = builder.CreateBitCast(strVar, IntegerType::getInt8PtrTy(context));
   Value *len = ConstantInt::get(seqIntLLVM(context), s.length());
   return types::Str->make(str, len, preambleBlock);
 }
@@ -120,15 +117,13 @@ Value *SeqExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   BasicBlock *preambleBlock = base->getPreamble();
 
   GlobalVariable *seqVar = new GlobalVariable(
-      *module,
-      llvm::ArrayType::get(IntegerType::getInt8Ty(context), s.length() + 1),
-      true, GlobalValue::PrivateLinkage,
-      ConstantDataArray::getString(context, s), "seq_literal");
+      *module, llvm::ArrayType::get(IntegerType::getInt8Ty(context), s.length() + 1),
+      true, GlobalValue::PrivateLinkage, ConstantDataArray::getString(context, s),
+      "seq_literal");
   seqVar->setAlignment(1);
 
   IRBuilder<> builder(preambleBlock);
-  Value *seq =
-      builder.CreateBitCast(seqVar, IntegerType::getInt8PtrTy(context));
+  Value *seq = builder.CreateBitCast(seqVar, IntegerType::getInt8PtrTy(context));
   Value *len = ConstantInt::get(seqIntLLVM(context), s.length());
   return types::Seq->make(seq, len, preambleBlock);
 }
@@ -198,8 +193,7 @@ Value *ArrayExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return arr;
 }
 
-RecordExpr::RecordExpr(std::vector<Expr *> exprs,
-                       std::vector<std::string> names)
+RecordExpr::RecordExpr(std::vector<Expr *> exprs, std::vector<std::string> names)
     : exprs(std::move(exprs)), names(std::move(names)) {}
 
 Value *RecordExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
@@ -250,11 +244,9 @@ Value *UOpExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
   if (op == uop("!")) {
     Value *b = lhsType->boolValue(self, block, getTryCatch());
-    return types::Bool->callMagic("__invert__", {}, b, {}, block,
-                                  getTryCatch());
+    return types::Bool->callMagic("__invert__", {}, b, {}, block, getTryCatch());
   } else {
-    types::Type *outType =
-        lhsType->magicOut(op.magic, {}, /*nullOnMissing=*/true);
+    types::Type *outType = lhsType->magicOut(op.magic, {}, /*nullOnMissing=*/true);
     if (outType)
       return lhsType->callMagic(op.magic, {}, self, {}, block, getTryCatch());
     unsupportedUOpError(op.symbol, lhsType);
@@ -287,8 +279,7 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
     IRBuilder<> builder(block);
     lhs = builder.CreateTrunc(lhs, IntegerType::getInt1Ty(context));
-    BranchInst *branch =
-        builder.CreateCondBr(lhs, b1, b1); // one branch changed below
+    BranchInst *branch = builder.CreateCondBr(lhs, b1, b1); // one branch changed below
 
     Value *rhs = this->rhs->codegen(base, b1);
     rhs = this->rhs->getType()->boolValue(rhs, b1, getTryCatch());
@@ -321,21 +312,20 @@ Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
       types::Type *outType =
           lhsType->magicOut(op.magicInPlace, {rhsType}, /*nullOnMissing=*/true);
       if (outType && types::is(outType, lhsType))
-        return lhsType->callMagic(op.magicInPlace, {rhsType}, self, {arg},
-                                  block, getTryCatch());
+        return lhsType->callMagic(op.magicInPlace, {rhsType}, self, {arg}, block,
+                                  getTryCatch());
     }
 
     outType = lhsType->magicOut(op.magic, {rhsType}, /*nullOnMissing=*/true);
     if (outType)
-      return lhsType->callMagic(op.magic, {rhsType}, self, {arg}, block,
-                                getTryCatch());
+      return lhsType->callMagic(op.magic, {rhsType}, self, {arg}, block, getTryCatch());
 
     if (!op.magicReflected.empty()) {
       outType = rhsType->magicOut(op.magicReflected, {lhsType},
                                   /*nullOnMissing=*/true);
       if (outType)
-        return rhsType->callMagic(op.magicReflected, {lhsType}, arg, {self},
-                                  block, getTryCatch());
+        return rhsType->callMagic(op.magicReflected, {lhsType}, arg, {self}, block,
+                                  getTryCatch());
     }
 
     unsupportedBOpError(op.symbol, lhsType, rhsType);
@@ -533,18 +523,15 @@ Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   if (auto *func = dynamic_cast<Func *>(base)) {
     if (func->hasAttribute("prefetch") &&
         type->magicOut("__prefetch__", {idxType}, /*nullOnMissing=*/true)) {
-      type->callMagic("__prefetch__", {idxType}, arr, {idx}, block,
-                      getTryCatch());
+      type->callMagic("__prefetch__", {idxType}, arr, {idx}, block, getTryCatch());
       func->codegenYield(nullptr, nullptr, block, true);
     }
   }
 
-  return type->callMagic("__getitem__", {idxType}, arr, {idx}, block,
-                         getTryCatch());
+  return type->callMagic("__getitem__", {idxType}, arr, {idx}, block, getTryCatch());
 }
 
-ArrayContainsExpr::ArrayContainsExpr(Expr *val, Expr *arr)
-    : val(val), arr(arr) {}
+ArrayContainsExpr::ArrayContainsExpr(Expr *val, Expr *arr) : val(val), arr(arr) {}
 
 Value *ArrayContainsExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *valType = val->getType();
@@ -573,9 +560,8 @@ std::string GetElemExpr::getMemb() { return memb; }
 
 Value *GetElemExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   types::Type *type = rec->getType();
-  auto *func = type->hasMethod(memb)
-                   ? dynamic_cast<Func *>(type->getMethod(memb))
-                   : nullptr;
+  auto *func =
+      type->hasMethod(memb) ? dynamic_cast<Func *>(type->getMethod(memb)) : nullptr;
   Value *self = rec->codegen(base, block);
 
   if (func && func->hasAttribute("property")) {
@@ -601,8 +587,7 @@ Value *GetStaticElemExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return f.codegen(base, block);
 }
 
-CallExpr::CallExpr(Expr *func, std::vector<Expr *> args,
-                   std::vector<std::string> names)
+CallExpr::CallExpr(Expr *func, std::vector<Expr *> args, std::vector<std::string> names)
     : func(func), args(std::move(args)), names(std::move(names)) {}
 
 Expr *CallExpr::getFuncExpr() const { return func; }
@@ -720,8 +705,7 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
             paramExprs.zdrop = args[9];
             paramExprs.end_bonus = args[10];
 
-            types::GenType *gen =
-                baseFunc->getFuncType()->getBaseType(0)->asGen();
+            types::GenType *gen = baseFunc->getFuncType()->getBaseType(0)->asGen();
             assert(gen);
             gen->setAlignParams(paramExprs);
 
@@ -737,8 +721,7 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
             Value *query = self->codegen(base, block);
             Value *target = args[0]->codegen(base, block);
             types::RecordType *yieldType = PipeExpr::getInterAlignYieldType();
-            types::Type *resultType =
-                yieldType->getBaseType(2); // (CIGAR, score)
+            types::Type *resultType = yieldType->getBaseType(2); // (CIGAR, score)
             Value *yieldVal = yieldType->defaultValue(block);
             yieldVal = yieldType->setMemb(yieldVal, "query", query, block);
             yieldVal = yieldType->setMemb(yieldVal, "target", target, block);
@@ -768,8 +751,7 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
             flags = builder.CreateZExt(flags, seqIntLLVM(block->getContext()));
             Value *resultVal = resultType->defaultValue(block);
             resultVal = resultType->setMemb(resultVal, "_score", flags, block);
-            yieldVal =
-                yieldType->setMemb(yieldVal, "alignment", resultVal, block);
+            yieldVal = yieldType->setMemb(yieldVal, "alignment", resultVal, block);
 
             baseFunc->codegenYield(yieldVal, yieldType, block);
             yieldVal = baseFunc->codegenYieldExpr(block, /*suspend=*/false);
@@ -845,8 +827,7 @@ Value *CondExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
 
   BasicBlock *b1 = BasicBlock::Create(context, "", block->getParent());
-  BranchInst *branch0 =
-      builder.CreateCondBr(cond, b1, b1); // we set false-branch below
+  BranchInst *branch0 = builder.CreateCondBr(cond, b1, b1); // we set false-branch below
 
   Value *ifTrue = this->ifTrue->codegen(base, b1);
   builder.SetInsertPoint(b1);
@@ -928,8 +909,8 @@ Value *MatchExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   block = BasicBlock::Create(context, "", func);
   builder.SetInsertPoint(block);
 
-  PHINode *result = builder.CreatePHI(resType->getLLVMType(context),
-                                      (unsigned)patterns.size());
+  PHINode *result =
+      builder.CreatePHI(resType->getLLVMType(context), (unsigned)patterns.size());
   for (auto &binst : binsts) {
     binst.first->setSuccessor(0, block);
     result->addIncoming(binst.second, binst.first->getParent());
@@ -993,8 +974,7 @@ Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
       static int idx = 1;
       auto *finalizeFunc = cast<Function>(module->getOrInsertFunction(
           "seq.finalizer." + std::to_string(idx++), Type::getVoidTy(context),
-          IntegerType::getInt8PtrTy(context),
-          IntegerType::getInt8PtrTy(context)));
+          IntegerType::getInt8PtrTy(context), IntegerType::getInt8PtrTy(context)));
 
       BasicBlock *entry = BasicBlock::Create(context, "entry", finalizeFunc);
       Value *obj = finalizeFunc->arg_begin();
@@ -1022,8 +1002,7 @@ Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return type->initOut(types, names)->is(types::Void) ? self : ret;
 }
 
-MethodExpr::MethodExpr(Expr *self, Func *func)
-    : Expr(), self(self), func(func) {}
+MethodExpr::MethodExpr(Expr *self, Func *func) : Expr(), self(self), func(func) {}
 
 Value *MethodExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   auto *type = dynamic_cast<types::MethodType *>(getType());

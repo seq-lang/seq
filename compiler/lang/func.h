@@ -127,11 +127,10 @@ public:
   bool hasAttribute(const std::string &attr);
 
   void codegen(llvm::Module *module) override;
-  void codegenReturn(llvm::Value *val, types::Type *type,
-                     llvm::BasicBlock *&block, bool dryrun = false);
-  void codegenYield(llvm::Value *val, types::Type *type,
-                    llvm::BasicBlock *&block, bool empty = false,
-                    bool dryrun = false);
+  void codegenReturn(llvm::Value *val, types::Type *type, llvm::BasicBlock *&block,
+                     bool dryrun = false);
+  void codegenYield(llvm::Value *val, types::Type *type, llvm::BasicBlock *&block,
+                    bool empty = false, bool dryrun = false);
   llvm::Value *codegenYieldExpr(llvm::BasicBlock *&block, bool suspend = true);
 
   bool isGen() override;

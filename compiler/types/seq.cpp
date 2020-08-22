@@ -24,20 +24,17 @@ void types::BaseSeqType::initFields() {
 bool types::BaseSeqType::isAtomic() const { return false; }
 
 Type *types::BaseSeqType::getLLVMType(LLVMContext &context) const {
-  return StructType::get(seqIntLLVM(context),
-                         IntegerType::getInt8PtrTy(context));
+  return StructType::get(seqIntLLVM(context), IntegerType::getInt8PtrTy(context));
 }
 
 size_t types::BaseSeqType::size(Module *module) const {
-  return module->getDataLayout().getTypeAllocSize(
-      getLLVMType(module->getContext()));
+  return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 /* derived Seq type */
 types::SeqType::SeqType() : BaseSeqType("seq") {}
 
-Value *types::SeqType::memb(Value *self, const std::string &name,
-                            BasicBlock *block) {
+Value *types::SeqType::memb(Value *self, const std::string &name, BasicBlock *block) {
   return BaseSeqType::memb(self, name, block);
 }
 
@@ -93,8 +90,7 @@ types::SeqType *types::SeqType::get() noexcept {
 /* derived Str type */
 types::StrType::StrType() : BaseSeqType("str") {}
 
-Value *types::StrType::memb(Value *self, const std::string &name,
-                            BasicBlock *block) {
+Value *types::StrType::memb(Value *self, const std::string &name, BasicBlock *block) {
   return BaseSeqType::memb(self, name, block);
 }
 
@@ -117,67 +113,65 @@ void types::StrType::initOps() {
        true},
   };
 
-  addMethod(
-      "memcpy",
-      new BaseFuncLite(
-          {PtrType::get(Byte), PtrType::get(Byte), Int}, Void,
-          [](Module *module) {
-            const std::string name = "seq.memcpy";
-            Function *func = module->getFunction(name);
+  addMethod("memcpy",
+            new BaseFuncLite(
+                {PtrType::get(Byte), PtrType::get(Byte), Int}, Void,
+                [](Module *module) {
+                  const std::string name = "seq.memcpy";
+                  Function *func = module->getFunction(name);
 
-            if (!func) {
-              LLVMContext &context = module->getContext();
-              func = cast<Function>(module->getOrInsertFunction(
-                  name, llvm::Type::getVoidTy(context),
-                  IntegerType::getInt8PtrTy(context),
-                  IntegerType::getInt8PtrTy(context), seqIntLLVM(context)));
-              func->setDoesNotThrow();
-              func->setLinkage(GlobalValue::PrivateLinkage);
-              func->addFnAttr(Attribute::AlwaysInline);
-              auto iter = func->arg_begin();
-              Value *dst = iter++;
-              Value *src = iter++;
-              Value *len = iter;
-              BasicBlock *block = BasicBlock::Create(context, "entry", func);
-              makeMemCpy(dst, src, len, block);
-              IRBuilder<> builder(block);
-              builder.CreateRetVoid();
-            }
+                  if (!func) {
+                    LLVMContext &context = module->getContext();
+                    func = cast<Function>(module->getOrInsertFunction(
+                        name, llvm::Type::getVoidTy(context),
+                        IntegerType::getInt8PtrTy(context),
+                        IntegerType::getInt8PtrTy(context), seqIntLLVM(context)));
+                    func->setDoesNotThrow();
+                    func->setLinkage(GlobalValue::PrivateLinkage);
+                    func->addFnAttr(Attribute::AlwaysInline);
+                    auto iter = func->arg_begin();
+                    Value *dst = iter++;
+                    Value *src = iter++;
+                    Value *len = iter;
+                    BasicBlock *block = BasicBlock::Create(context, "entry", func);
+                    makeMemCpy(dst, src, len, block);
+                    IRBuilder<> builder(block);
+                    builder.CreateRetVoid();
+                  }
 
-            return func;
-          }),
-      true);
+                  return func;
+                }),
+            true);
 
-  addMethod(
-      "memmove",
-      new BaseFuncLite(
-          {PtrType::get(Byte), PtrType::get(Byte), Int}, Void,
-          [](Module *module) {
-            const std::string name = "seq.memmove";
-            Function *func = module->getFunction(name);
+  addMethod("memmove",
+            new BaseFuncLite(
+                {PtrType::get(Byte), PtrType::get(Byte), Int}, Void,
+                [](Module *module) {
+                  const std::string name = "seq.memmove";
+                  Function *func = module->getFunction(name);
 
-            if (!func) {
-              LLVMContext &context = module->getContext();
-              func = cast<Function>(module->getOrInsertFunction(
-                  name, llvm::Type::getVoidTy(context),
-                  IntegerType::getInt8PtrTy(context),
-                  IntegerType::getInt8PtrTy(context), seqIntLLVM(context)));
-              func->setDoesNotThrow();
-              func->setLinkage(GlobalValue::PrivateLinkage);
-              func->addFnAttr(Attribute::AlwaysInline);
-              auto iter = func->arg_begin();
-              Value *dst = iter++;
-              Value *src = iter++;
-              Value *len = iter;
-              BasicBlock *block = BasicBlock::Create(context, "entry", func);
-              makeMemMove(dst, src, len, block);
-              IRBuilder<> builder(block);
-              builder.CreateRetVoid();
-            }
+                  if (!func) {
+                    LLVMContext &context = module->getContext();
+                    func = cast<Function>(module->getOrInsertFunction(
+                        name, llvm::Type::getVoidTy(context),
+                        IntegerType::getInt8PtrTy(context),
+                        IntegerType::getInt8PtrTy(context), seqIntLLVM(context)));
+                    func->setDoesNotThrow();
+                    func->setLinkage(GlobalValue::PrivateLinkage);
+                    func->addFnAttr(Attribute::AlwaysInline);
+                    auto iter = func->arg_begin();
+                    Value *dst = iter++;
+                    Value *src = iter++;
+                    Value *len = iter;
+                    BasicBlock *block = BasicBlock::Create(context, "entry", func);
+                    makeMemMove(dst, src, len, block);
+                    IRBuilder<> builder(block);
+                    builder.CreateRetVoid();
+                  }
 
-            return func;
-          }),
-      true);
+                  return func;
+                }),
+            true);
 
   addMethod("memset",
             new BaseFuncLite(
@@ -199,8 +193,7 @@ void types::StrType::initOps() {
                     Value *dst = iter++;
                     Value *val = iter++;
                     Value *len = iter;
-                    BasicBlock *block =
-                        BasicBlock::Create(context, "entry", func);
+                    BasicBlock *block = BasicBlock::Create(context, "entry", func);
                     IRBuilder<> builder(block);
                     builder.CreateMemSet(dst, val, len, 0);
                     builder.CreateRetVoid();
@@ -228,8 +221,7 @@ types::StrType *types::StrType::get() noexcept {
  * k-mer types (fixed-length short sequences)
  */
 
-types::KMer::KMer(unsigned k)
-    : Type("k-mer", BaseType::get(), false, true), k(k) {
+types::KMer::KMer(unsigned k) : Type("k-mer", BaseType::get(), false, true), k(k) {
   if (k == 0 || k > MAX_LEN)
     throw exc::SeqException("k-mer length must be between 1 and " +
                             std::to_string(MAX_LEN));
@@ -244,8 +236,8 @@ Value *types::KMer::defaultValue(BasicBlock *block) {
 }
 
 // table mapping ASCII characters to 2-bit encodings
-static GlobalVariable *
-get2bitTable(Module *module, const std::string &name = "seq.2bit_table") {
+static GlobalVariable *get2bitTable(Module *module,
+                                    const std::string &name = "seq.2bit_table") {
   LLVMContext &context = module->getContext();
   Type *ty = IntegerType::getIntNTy(context, 2);
   GlobalVariable *table = module->getGlobalVariable(name);
@@ -257,20 +249,17 @@ get2bitTable(Module *module, const std::string &name = "seq.2bit_table") {
     v['G'] = v['g'] = ConstantInt::get(ty, 2);
     v['T'] = v['t'] = v['U'] = v['u'] = ConstantInt::get(ty, 3);
 
-    auto *arrTy =
-        llvm::ArrayType::get(IntegerType::getIntNTy(context, 2), v.size());
-    table =
-        new GlobalVariable(*module, arrTy, true, GlobalValue::PrivateLinkage,
-                           ConstantArray::get(arrTy, v), name);
+    auto *arrTy = llvm::ArrayType::get(IntegerType::getIntNTy(context, 2), v.size());
+    table = new GlobalVariable(*module, arrTy, true, GlobalValue::PrivateLinkage,
+                               ConstantArray::get(arrTy, v), name);
   }
 
   return table;
 }
 
 // table mapping 2-bit encodings to ASCII characters
-static GlobalVariable *
-get2bitTableInv(Module *module,
-                const std::string &name = "seq.2bit_table_inv") {
+static GlobalVariable *get2bitTableInv(Module *module,
+                                       const std::string &name = "seq.2bit_table_inv") {
   LLVMContext &context = module->getContext();
   GlobalVariable *table = module->getGlobalVariable(name);
 
@@ -293,8 +282,8 @@ static unsigned revcompBits(unsigned n) {
 }
 
 // table mapping 8-bit encoded 4-mers to reverse complement encoded 4-mers
-static GlobalVariable *
-getRevCompTable(Module *module, const std::string &name = "seq.revcomp_table") {
+static GlobalVariable *getRevCompTable(Module *module,
+                                       const std::string &name = "seq.revcomp_table") {
   LLVMContext &context = module->getContext();
   Type *ty = IntegerType::getInt8Ty(context);
   GlobalVariable *table = module->getGlobalVariable(name);
@@ -304,11 +293,9 @@ getRevCompTable(Module *module, const std::string &name = "seq.revcomp_table") {
     for (unsigned i = 0; i < v.size(); i++)
       v[i] = ConstantInt::get(ty, revcompBits(i));
 
-    auto *arrTy =
-        llvm::ArrayType::get(IntegerType::getInt8Ty(context), v.size());
-    table =
-        new GlobalVariable(*module, arrTy, true, GlobalValue::PrivateLinkage,
-                           ConstantArray::get(arrTy, v), name);
+    auto *arrTy = llvm::ArrayType::get(IntegerType::getInt8Ty(context), v.size());
+    table = new GlobalVariable(*module, arrTy, true, GlobalValue::PrivateLinkage,
+                               ConstantArray::get(arrTy, v), name);
   }
 
   return table;
@@ -323,8 +310,7 @@ getRevCompTable(Module *module, const std::string &name = "seq.revcomp_table") {
  * dir=false for left; dir=true for right
  */
 static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir) {
-  const std::string name =
-      "seq." + kmerType->getName() + ".sh" + (dir ? "r" : "l");
+  const std::string name = "seq." + kmerType->getName() + ".sh" + (dir ? "r" : "l");
   LLVMContext &context = module->getContext();
   Function *func = module->getFunction(name);
 
@@ -375,8 +361,7 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir) {
       Value *idx = builder.CreateSub(len, oneLLVM(context));
       idx = builder.CreateSub(idx, control);
       // true index if sequence reverse complemented:
-      Value *idxBack =
-          builder.CreateSub(builder.CreateSub(len, oneLLVM(context)), idx);
+      Value *idxBack = builder.CreateSub(builder.CreateSub(len, oneLLVM(context)), idx);
       idx = builder.CreateSelect(rc, idxBack, idx);
 
       kmerMod = builder.CreateLShr(result, 2);
@@ -422,10 +407,8 @@ static Function *getShiftFunc(types::KMer *kmerType, Module *module, bool dir) {
 /*
  * Seq-to-KMer initialization function
  */
-static Function *getInitFunc(types::KMer *kmerType, Module *module,
-                             bool rc = false) {
-  const std::string name =
-      "seq." + kmerType->getName() + ".init" + (rc ? ".rc" : "");
+static Function *getInitFunc(types::KMer *kmerType, Module *module, bool rc = false) {
+  const std::string name = "seq." + kmerType->getName() + ".init" + (rc ? ".rc" : "");
   LLVMContext &context = module->getContext();
   Function *func = module->getFunction(name);
 
@@ -451,8 +434,7 @@ static Function *getInitFunc(types::KMer *kmerType, Module *module,
     Value *kmer = kmerType->defaultValue(block);
 
     for (unsigned i = 0; i < k; i++) {
-      Value *base =
-          builder.CreateLoad(builder.CreateGEP(ptr, builder.getInt64(i)));
+      Value *base = builder.CreateLoad(builder.CreateGEP(ptr, builder.getInt64(i)));
       base = builder.CreateZExt(base, builder.getInt64Ty());
       Value *bits = builder.CreateLoad(
           builder.CreateInBoundsGEP(table, {builder.getInt64(0), base}));
@@ -462,8 +444,7 @@ static Function *getInitFunc(types::KMer *kmerType, Module *module,
       kmer = builder.CreateOr(kmer, shift);
     }
 
-    Value *kmerRC =
-        kmerType->callMagic("__invert__", {}, kmer, {}, block, nullptr);
+    Value *kmerRC = kmerType->callMagic("__invert__", {}, kmer, {}, block, nullptr);
     if (!rcVal) {
       Value *len = types::Seq->memb(seq, "len", block);
       rcVal = builder.CreateICmpSLT(len, zeroLLVM(context));
@@ -485,9 +466,8 @@ static Function *getStrFunc(types::KMer *kmerType, Module *module) {
   Function *func = module->getFunction(name);
 
   if (!func) {
-    func = cast<Function>(
-        module->getOrInsertFunction(name, types::Str->getLLVMType(context),
-                                    kmerType->getLLVMType(context)));
+    func = cast<Function>(module->getOrInsertFunction(
+        name, types::Str->getLLVMType(context), kmerType->getLLVMType(context)));
     func->setDoesNotThrow();
     func->setLinkage(GlobalValue::PrivateLinkage);
 
@@ -507,8 +487,7 @@ static Function *getStrFunc(types::KMer *kmerType, Module *module) {
       mask = builder.CreateAnd(kmer, mask);
       mask = builder.CreateLShr(mask, shift);
       mask = builder.CreateZExtOrTrunc(mask, builder.getInt64Ty());
-      Value *base =
-          builder.CreateInBoundsGEP(table, {builder.getInt64(0), mask});
+      Value *base = builder.CreateInBoundsGEP(table, {builder.getInt64(0), mask});
       base = builder.CreateLoad(base);
       Value *dest = builder.CreateGEP(buf, builder.getInt32(i));
       builder.CreateStore(base, dest);
@@ -589,8 +568,7 @@ static Value *codegenRevCompByLookup(types::KMer *kmerType, Value *self,
   // deal with remaining high bits:
   unsigned rem = k % 4;
   if (rem > 0) {
-    mask =
-        ConstantInt::get(kmerType->getLLVMType(context), (1u << (rem * 2)) - 1);
+    mask = ConstantInt::get(kmerType->getLLVMType(context), (1u << (rem * 2)) - 1);
     Value *slice = b.CreateShl(mask, (k - rem) * 2);
     slice = b.CreateAnd(self, slice);
     slice = b.CreateLShr(slice, (k - rem) * 2);
@@ -599,8 +577,7 @@ static Value *codegenRevCompByLookup(types::KMer *kmerType, Value *self,
     Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
     sliceRC = b.CreateLoad(sliceRC);
     sliceRC = b.CreateAShr(sliceRC,
-                           (4 - rem) *
-                               2); // slice isn't full 8-bits, so shift out junk
+                           (4 - rem) * 2); // slice isn't full 8-bits, so shift out junk
     sliceRC = b.CreateZExtOrTrunc(sliceRC, kmerType->getLLVMType(context));
     sliceRC = b.CreateAnd(sliceRC, mask);
     result = b.CreateOr(result, sliceRC);
@@ -609,8 +586,7 @@ static Value *codegenRevCompByLookup(types::KMer *kmerType, Value *self,
   return result;
 }
 
-static Value *codegenRevCompBySIMD(types::KMer *kmerType, Value *self,
-                                   IRBuilder<> &b) {
+static Value *codegenRevCompBySIMD(types::KMer *kmerType, Value *self, IRBuilder<> &b) {
   const unsigned k = kmerType->getK();
   LLVMContext &context = b.getContext();
   Value *comp = b.CreateNot(self);
@@ -679,17 +655,14 @@ void types::KMer::initOps() {
       {"__init__",
        {this},
        this,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return args[0];
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return args[0]; },
        false},
 
       {"__init__",
        {Seq},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Function *initFunc =
-             getInitFunc(this, b.GetInsertBlock()->getModule());
+         Function *initFunc = getInitFunc(this, b.GetInsertBlock()->getModule());
          return b.CreateCall(initFunc, args[0]);
        },
        false},
@@ -698,8 +671,7 @@ void types::KMer::initOps() {
        {Seq, Bool},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Function *initFunc =
-             getInitFunc(this, b.GetInsertBlock()->getModule(), true);
+         Function *initFunc = getInitFunc(this, b.GetInsertBlock()->getModule(), true);
          return b.CreateCall(initFunc, {args[0], args[1]});
        },
        false},
@@ -732,9 +704,7 @@ void types::KMer::initOps() {
       {"__copy__",
        {},
        this,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__getitem__",
@@ -748,8 +718,7 @@ void types::KMer::initOps() {
              b.CreateAdd(args[0], ConstantInt::get(seqIntLLVM(context), k));
          Value *negIdx = b.CreateICmpSLT(args[0], zeroLLVM(context));
          Value *idx = b.CreateSelect(negIdx, backIdx, args[0]);
-         Value *shift =
-             b.CreateSub(ConstantInt::get(seqIntLLVM(context), k - 1), idx);
+         Value *shift = b.CreateSub(ConstantInt::get(seqIntLLVM(context), k - 1), idx);
          shift = b.CreateShl(shift, 1); // 2 bits per base
          shift = b.CreateZExtOrTrunc(shift, type);
 
@@ -810,8 +779,7 @@ void types::KMer::initOps() {
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          Module *module = b.GetInsertBlock()->getModule();
-         return b.CreateCall(getShiftFunc(this, module, false),
-                             {self, args[0]});
+         return b.CreateCall(getShiftFunc(this, module, false), {self, args[0]});
        },
        false},
 
@@ -858,8 +826,7 @@ void types::KMer::initOps() {
          Value *diff = b.CreateOr(xor1, xor2);
 
          Function *popcnt = Intrinsic::getDeclaration(
-             b.GetInsertBlock()->getModule(), Intrinsic::ctpop,
-             {getLLVMType(context)});
+             b.GetInsertBlock()->getModule(), Intrinsic::ctpop, {getLLVMType(context)});
          Value *result = b.CreateCall(popcnt, diff);
          result = b.CreateZExtOrTrunc(result, seqIntLLVM(context));
          Value *resultNeg = b.CreateNeg(result);
@@ -961,8 +928,8 @@ void types::KMer::initOps() {
        Void,
        [iType](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          BasicBlock *block = b.GetInsertBlock();
-         iType->callMagic("__pickle__", {PtrType::get(Byte)}, self, {args[0]},
-                          block, nullptr);
+         iType->callMagic("__pickle__", {PtrType::get(Byte)}, self, {args[0]}, block,
+                          nullptr);
          return (Value *)nullptr;
        },
        false},
@@ -979,70 +946,67 @@ void types::KMer::initOps() {
   };
 
   if (k == 1) {
-    vtable.magic.push_back(
-        {"__init__",
-         {Byte},
-         this,
-         [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-           GlobalVariable *table =
-               get2bitTable(b.GetInsertBlock()->getModule());
-           Value *base = b.CreateZExt(args[0], b.getInt64Ty());
-           Value *bits =
-               b.CreateLoad(b.CreateInBoundsGEP(table, {b.getInt64(0), base}));
-           return bits;
-         },
-         false});
+    vtable.magic.push_back({"__init__",
+                            {Byte},
+                            this,
+                            [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+                              GlobalVariable *table =
+                                  get2bitTable(b.GetInsertBlock()->getModule());
+                              Value *base = b.CreateZExt(args[0], b.getInt64Ty());
+                              Value *bits = b.CreateLoad(
+                                  b.CreateInBoundsGEP(table, {b.getInt64(0), base}));
+                              return bits;
+                            },
+                            false});
   }
 
-  addMethod(
-      "len",
-      new BaseFuncLite(
-          {}, types::IntType::get(),
-          [this](Module *module) {
-            const std::string name = "seq." + getName() + ".len";
-            Function *func = module->getFunction(name);
+  addMethod("len",
+            new BaseFuncLite(
+                {}, types::IntType::get(),
+                [this](Module *module) {
+                  const std::string name = "seq." + getName() + ".len";
+                  Function *func = module->getFunction(name);
 
-            if (!func) {
-              LLVMContext &context = module->getContext();
-              func = cast<Function>(
-                  module->getOrInsertFunction(name, seqIntLLVM(context)));
-              func->setDoesNotThrow();
-              func->setLinkage(GlobalValue::PrivateLinkage);
-              func->addFnAttr(Attribute::AlwaysInline);
-              BasicBlock *block = BasicBlock::Create(context, "entry", func);
-              IRBuilder<> builder(block);
-              builder.CreateRet(ConstantInt::get(seqIntLLVM(context), this->k));
-            }
+                  if (!func) {
+                    LLVMContext &context = module->getContext();
+                    func = cast<Function>(
+                        module->getOrInsertFunction(name, seqIntLLVM(context)));
+                    func->setDoesNotThrow();
+                    func->setLinkage(GlobalValue::PrivateLinkage);
+                    func->addFnAttr(Attribute::AlwaysInline);
+                    BasicBlock *block = BasicBlock::Create(context, "entry", func);
+                    IRBuilder<> builder(block);
+                    builder.CreateRet(ConstantInt::get(seqIntLLVM(context), this->k));
+                  }
 
-            return func;
-          }),
-      true);
+                  return func;
+                }),
+            true);
 
-  addMethod(
-      "as_int",
-      new BaseFuncLite(
-          {this}, iType,
-          [this, iType](Module *module) {
-            const std::string name = "seq." + getName() + ".as_int";
-            Function *func = module->getFunction(name);
+  addMethod("as_int",
+            new BaseFuncLite(
+                {this}, iType,
+                [this, iType](Module *module) {
+                  const std::string name = "seq." + getName() + ".as_int";
+                  Function *func = module->getFunction(name);
 
-            if (!func) {
-              LLVMContext &context = module->getContext();
-              func = cast<Function>(module->getOrInsertFunction(
-                  name, iType->getLLVMType(context), getLLVMType(context)));
-              func->setDoesNotThrow();
-              func->setLinkage(GlobalValue::PrivateLinkage);
-              func->addFnAttr(Attribute::AlwaysInline);
-              Value *arg = func->arg_begin();
-              BasicBlock *block = BasicBlock::Create(context, "entry", func);
-              IRBuilder<> builder(block);
-              builder.CreateRet(
-                  builder.CreateBitCast(arg, iType->getLLVMType(context)));
-            }
+                  if (!func) {
+                    LLVMContext &context = module->getContext();
+                    func = cast<Function>(module->getOrInsertFunction(
+                        name, iType->getLLVMType(context), getLLVMType(context)));
+                    func->setDoesNotThrow();
+                    func->setLinkage(GlobalValue::PrivateLinkage);
+                    func->addFnAttr(Attribute::AlwaysInline);
+                    Value *arg = func->arg_begin();
+                    BasicBlock *block = BasicBlock::Create(context, "entry", func);
+                    IRBuilder<> builder(block);
+                    builder.CreateRet(
+                        builder.CreateBitCast(arg, iType->getLLVMType(context)));
+                  }
 
-            return func;
-          }),
-      true);
+                  return func;
+                }),
+            true);
 }
 
 bool types::KMer::isAtomic() const { return true; }
@@ -1057,8 +1021,7 @@ Type *types::KMer::getLLVMType(LLVMContext &context) const {
 }
 
 size_t types::KMer::size(Module *module) const {
-  return module->getDataLayout().getTypeAllocSize(
-      getLLVMType(module->getContext()));
+  return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 types::KMer *types::KMer::asKMer() { return this; }

@@ -53,13 +53,12 @@ void types::ArrayType::initOps() {
          auto *allocFunc = makeAllocFunc(module, getBaseType(0)->isAtomic());
          Value *ptr = memb(self, "ptr", block);
          Value *len = memb(self, "len", block);
-         Value *elemSize = ConstantInt::get(seqIntLLVM(context),
-                                            getBaseType(0)->size(module));
+         Value *elemSize =
+             ConstantInt::get(seqIntLLVM(context), getBaseType(0)->size(module));
          Value *numBytes = b.CreateMul(len, elemSize);
          Value *ptrCopy = b.CreateCall(allocFunc, numBytes);
          makeMemCpy(ptrCopy, ptr, numBytes, block);
-         ptrCopy =
-             b.CreateBitCast(ptrCopy, membType("ptr")->getLLVMType(context));
+         ptrCopy = b.CreateBitCast(ptrCopy, membType("ptr")->getLLVMType(context));
          Value *copy = make(ptrCopy, len, block);
          return copy;
        },
@@ -143,25 +142,20 @@ void types::ArrayType::initFields() {
   if (!vtable.fields.empty())
     return;
 
-  vtable.fields = {{"len", {0, Int}},
-                   {"ptr", {1, PtrType::get(getBaseType(0))}}};
+  vtable.fields = {{"len", {0, Int}}, {"ptr", {1, PtrType::get(getBaseType(0))}}};
 }
 
 unsigned types::ArrayType::numBaseTypes() const { return 1; }
 
-types::Type *types::ArrayType::getBaseType(unsigned idx) const {
-  return baseType;
-}
+types::Type *types::ArrayType::getBaseType(unsigned idx) const { return baseType; }
 
 Type *types::ArrayType::getLLVMType(LLVMContext &context) const {
-  return StructType::get(
-      seqIntLLVM(context),
-      PointerType::get(getBaseType(0)->getLLVMType(context), 0));
+  return StructType::get(seqIntLLVM(context),
+                         PointerType::get(getBaseType(0)->getLLVMType(context), 0));
 }
 
 size_t types::ArrayType::size(Module *module) const {
-  return module->getDataLayout().getTypeAllocSize(
-      getLLVMType(module->getContext()));
+  return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 Value *types::ArrayType::make(Value *ptr, Value *len, BasicBlock *block) {

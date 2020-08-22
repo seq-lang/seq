@@ -21,8 +21,7 @@ void types::PtrType::initOps() {
        {},
        Int,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         const size_t size =
-             getBaseType(0)->size(b.GetInsertBlock()->getModule());
+         const size_t size = getBaseType(0)->size(b.GetInsertBlock()->getModule());
          return ConstantInt::get(seqIntLLVM(b.getContext()), size);
        },
        true},
@@ -65,8 +64,7 @@ void types::PtrType::initOps() {
        {},
        PtrType::get(Byte),
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return b.CreateBitCast(self,
-                                IntegerType::getInt8PtrTy(b.getContext()));
+         return b.CreateBitCast(self, IntegerType::getInt8PtrTy(b.getContext()));
        },
        false},
 
@@ -81,9 +79,7 @@ void types::PtrType::initOps() {
       {"__copy__",
        {},
        this,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__bool__",
@@ -195,10 +191,9 @@ void types::PtrType::initOps() {
        Void,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          self = b.CreateBitCast(self, b.getInt8PtrTy());
-         Function *prefetch = Intrinsic::getDeclaration(
-             b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
-         b.CreateCall(prefetch,
-                      {self, b.getInt32(0), b.getInt32(0), b.getInt32(1)});
+         Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+                                                        Intrinsic::prefetch);
+         b.CreateCall(prefetch, {self, b.getInt32(0), b.getInt32(0), b.getInt32(1)});
          return (Value *)nullptr;
        },
        false},
@@ -208,10 +203,9 @@ void types::PtrType::initOps() {
        Void,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          self = b.CreateBitCast(self, b.getInt8PtrTy());
-         Function *prefetch = Intrinsic::getDeclaration(
-             b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
-         b.CreateCall(prefetch,
-                      {self, b.getInt32(0), b.getInt32(1), b.getInt32(1)});
+         Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+                                                        Intrinsic::prefetch);
+         b.CreateCall(prefetch, {self, b.getInt32(0), b.getInt32(1), b.getInt32(1)});
          return (Value *)nullptr;
        },
        false},
@@ -221,10 +215,9 @@ void types::PtrType::initOps() {
        Void,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          self = b.CreateBitCast(self, b.getInt8PtrTy());
-         Function *prefetch = Intrinsic::getDeclaration(
-             b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
-         b.CreateCall(prefetch,
-                      {self, b.getInt32(0), b.getInt32(2), b.getInt32(1)});
+         Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+                                                        Intrinsic::prefetch);
+         b.CreateCall(prefetch, {self, b.getInt32(0), b.getInt32(2), b.getInt32(1)});
          return (Value *)nullptr;
        },
        false},
@@ -234,10 +227,9 @@ void types::PtrType::initOps() {
        Void,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          self = b.CreateBitCast(self, b.getInt8PtrTy());
-         Function *prefetch = Intrinsic::getDeclaration(
-             b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
-         b.CreateCall(prefetch,
-                      {self, b.getInt32(0), b.getInt32(3), b.getInt32(1)});
+         Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+                                                        Intrinsic::prefetch);
+         b.CreateCall(prefetch, {self, b.getInt32(0), b.getInt32(3), b.getInt32(1)});
          return (Value *)nullptr;
        },
        false},
@@ -247,10 +239,9 @@ void types::PtrType::initOps() {
        Void,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          self = b.CreateBitCast(self, b.getInt8PtrTy());
-         Function *prefetch = Intrinsic::getDeclaration(
-             b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
-         b.CreateCall(prefetch,
-                      {self, b.getInt32(1), b.getInt32(0), b.getInt32(1)});
+         Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+                                                        Intrinsic::prefetch);
+         b.CreateCall(prefetch, {self, b.getInt32(1), b.getInt32(0), b.getInt32(1)});
          return (Value *)nullptr;
        },
        false},
@@ -260,10 +251,9 @@ void types::PtrType::initOps() {
        Void,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          self = b.CreateBitCast(self, b.getInt8PtrTy());
-         Function *prefetch = Intrinsic::getDeclaration(
-             b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
-         b.CreateCall(prefetch,
-                      {self, b.getInt32(1), b.getInt32(1), b.getInt32(1)});
+         Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+                                                        Intrinsic::prefetch);
+         b.CreateCall(prefetch, {self, b.getInt32(1), b.getInt32(1), b.getInt32(1)});
          return (Value *)nullptr;
        },
        false},
@@ -273,10 +263,9 @@ void types::PtrType::initOps() {
        Void,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          self = b.CreateBitCast(self, b.getInt8PtrTy());
-         Function *prefetch = Intrinsic::getDeclaration(
-             b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
-         b.CreateCall(prefetch,
-                      {self, b.getInt32(1), b.getInt32(2), b.getInt32(1)});
+         Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+                                                        Intrinsic::prefetch);
+         b.CreateCall(prefetch, {self, b.getInt32(1), b.getInt32(2), b.getInt32(1)});
          return (Value *)nullptr;
        },
        false},
@@ -286,10 +275,9 @@ void types::PtrType::initOps() {
        Void,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          self = b.CreateBitCast(self, b.getInt8PtrTy());
-         Function *prefetch = Intrinsic::getDeclaration(
-             b.GetInsertBlock()->getModule(), Intrinsic::prefetch);
-         b.CreateCall(prefetch,
-                      {self, b.getInt32(1), b.getInt32(3), b.getInt32(1)});
+         Function *prefetch = Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(),
+                                                        Intrinsic::prefetch);
+         b.CreateCall(prefetch, {self, b.getInt32(1), b.getInt32(3), b.getInt32(1)});
          return (Value *)nullptr;
        },
        false},
@@ -299,24 +287,21 @@ void types::PtrType::initOps() {
 bool types::PtrType::isAtomic() const { return false; }
 
 bool types::PtrType::is(types::Type *type) const {
-  return isGeneric(type) && (getBaseType(0)->is(types::Base) ||
-                             type->getBaseType(0)->is(types::Base) ||
-                             types::is(getBaseType(0), type->getBaseType(0)));
+  return isGeneric(type) &&
+         (getBaseType(0)->is(types::Base) || type->getBaseType(0)->is(types::Base) ||
+          types::is(getBaseType(0), type->getBaseType(0)));
 }
 
 unsigned types::PtrType::numBaseTypes() const { return 1; }
 
-types::Type *types::PtrType::getBaseType(unsigned idx) const {
-  return baseType;
-}
+types::Type *types::PtrType::getBaseType(unsigned idx) const { return baseType; }
 
 Type *types::PtrType::getLLVMType(LLVMContext &context) const {
   return PointerType::get(getBaseType(0)->getLLVMType(context), 0);
 }
 
 size_t types::PtrType::size(Module *module) const {
-  return module->getDataLayout().getTypeAllocSize(
-      getLLVMType(module->getContext()));
+  return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 types::PtrType *types::PtrType::get(Type *baseType) noexcept {

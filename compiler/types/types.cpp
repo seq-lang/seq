@@ -409,8 +409,10 @@ types::Type *types::Type::magicOut(const std::string &name,
   if (nullOnMissing)
     return nullptr;
 
-  throw exc::SeqException("cannot find method '" + name + "' for type '" + getName() +
-                          "' with specified argument types " + argsVecToStr(args));
+  seqassert(false,
+            "cannot find method '{}' for type '{}' with specified argument types {}",
+            name, getName(), argsVecToStr(args));
+  return nullptr;
 }
 
 BaseFunc *types::Type::findMagic(const std::string &name,
@@ -432,8 +434,10 @@ BaseFunc *types::Type::findMagic(const std::string &name,
   for (auto &magic : vtable.methods)
     LOG7("      .. in {}", magic.first);
 
-  throw exc::SeqException("cannot find method '" + name + "' for type '" + getName() +
-                          "' with specified argument types " + argsVecToStr(args));
+  seqassert(false,
+            "cannot find method '{}' for type '{}' with specified argument types {}",
+            name, getName(), argsVecToStr(args));
+  return nullptr;
 }
 
 Value *types::Type::callMagic(const std::string &name,
@@ -476,8 +480,10 @@ Value *types::Type::callMagic(const std::string &name,
     }
   }
 
-  throw exc::SeqException("cannot find method '" + name + "' for type '" + getName() +
-                          "' with specified argument types " + argsVecToStr(argTypes));
+  seqassert(false,
+            "cannot find method '{}' for type '{}' with specified argument types {}",
+            name, getName(), argsVecToStr(argTypes));
+  return nullptr;
 }
 
 static bool sortArgsByNames(std::vector<types::Type *> &argTypes,

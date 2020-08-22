@@ -65,9 +65,9 @@ private:
 template <typename T, typename Char> class is_streamable {
 private:
   template <typename U>
-  static bool_constant<!std::is_same<
-      decltype(std::declval<test_stream<Char> &>() << std::declval<U>()),
-      void_t<>>::value>
+  static bool_constant<
+      !std::is_same<decltype(std::declval<test_stream<Char> &>() << std::declval<U>()),
+                    void_t<>>::value>
   test(int);
 
   template <typename> static std::false_type test(...);
@@ -79,8 +79,7 @@ public:
 };
 
 // Write the content of buf to os.
-template <typename Char>
-void write(std::basic_ostream<Char> &os, buffer<Char> &buf) {
+template <typename Char> void write(std::basic_ostream<Char> &os, buffer<Char> &buf) {
   const Char *buf_data = buf.data();
   using unsigned_streamsize = std::make_unsigned<std::streamsize>::type;
   unsigned_streamsize size = buf.size();
@@ -94,8 +93,7 @@ void write(std::basic_ostream<Char> &os, buffer<Char> &buf) {
 }
 
 template <typename Char, typename T>
-void format_value(buffer<Char> &buf, const T &value,
-                  locale_ref loc = locale_ref()) {
+void format_value(buffer<Char> &buf, const T &value, locale_ref loc = locale_ref()) {
   formatbuf<Char> format_buf(buf);
   std::basic_ostream<Char> output(&format_buf);
 #if !defined(FMT_STATIC_THOUSANDS_SEPARATOR)
@@ -114,24 +112,22 @@ struct fallback_formatter<T, Char, enable_if_t<is_streamable<T, Char>::value>>
   auto parse(basic_format_parse_context<Char> &ctx) -> decltype(ctx.begin()) {
     return formatter<basic_string_view<Char>, Char>::parse(ctx);
   }
-  template <typename ParseCtx,
-            FMT_ENABLE_IF(std::is_same<
-                          ParseCtx, basic_printf_parse_context<Char>>::value)>
+  template <
+      typename ParseCtx,
+      FMT_ENABLE_IF(std::is_same<ParseCtx, basic_printf_parse_context<Char>>::value)>
   auto parse(ParseCtx &ctx) -> decltype(ctx.begin()) {
     return ctx.begin();
   }
 
   template <typename OutputIt>
-  auto format(const T &value, basic_format_context<OutputIt, Char> &ctx)
-      -> OutputIt {
+  auto format(const T &value, basic_format_context<OutputIt, Char> &ctx) -> OutputIt {
     basic_memory_buffer<Char> buffer;
     format_value(buffer, value, ctx.locale());
     basic_string_view<Char> str(buffer.data(), buffer.size());
     return formatter<basic_string_view<Char>, Char>::format(str, ctx);
   }
   template <typename OutputIt>
-  auto format(const T &value, basic_printf_context<OutputIt, Char> &ctx)
-      -> OutputIt {
+  auto format(const T &value, basic_printf_context<OutputIt, Char> &ctx) -> OutputIt {
     basic_memory_buffer<Char> buffer;
     format_value(buffer, value, ctx.locale());
     return std::copy(buffer.begin(), buffer.end(), ctx.out());

@@ -22,8 +22,8 @@ public:
   types::Type *getType() const;
   void setTryCatch(TryCatch *tc);
   TryCatch *getTryCatch() const;
-  virtual llvm::Value *codegen(BaseFunc *base, types::Type *type,
-                               llvm::Value *val, llvm::BasicBlock *&block) = 0;
+  virtual llvm::Value *codegen(BaseFunc *base, types::Type *type, llvm::Value *val,
+                               llvm::BasicBlock *&block) = 0;
   virtual bool isCatchAll();
 };
 

@@ -54,15 +54,14 @@ IntPattern::IntPattern(seq_int_t val) : Pattern(types::Int), val(val) {}
 
 BoolPattern::BoolPattern(bool val) : Pattern(types::Bool), val(val) {}
 
-StrPattern::StrPattern(std::string val)
-    : Pattern(types::Str), val(std::move(val)) {}
+StrPattern::StrPattern(std::string val) : Pattern(types::Str), val(std::move(val)) {}
 
 Value *IntPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                            BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   IRBuilder<> builder(block);
-  Value *pat = ConstantInt::get(types::Int->getLLVMType(context),
-                                (uint64_t)this->val, true);
+  Value *pat =
+      ConstantInt::get(types::Int->getLLVMType(context), (uint64_t)this->val, true);
   return builder.CreateICmpEQ(val, pat);
 }
 
@@ -70,8 +69,7 @@ Value *BoolPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                             BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   IRBuilder<> builder(block);
-  Value *pat =
-      ConstantInt::get(types::Bool->getLLVMType(context), (uint64_t)this->val);
+  Value *pat = ConstantInt::get(types::Bool->getLLVMType(context), (uint64_t)this->val);
   return builder.CreateICmpEQ(val, pat);
 }
 
@@ -79,8 +77,7 @@ Value *StrPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                            BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   Value *pat = StrExpr(this->val).codegen(base, block);
-  Value *b =
-      types::Str->callMagic("__eq__", {type}, pat, {val}, block, nullptr);
+  Value *b = types::Str->callMagic("__eq__", {type}, pat, {val}, block, nullptr);
   IRBuilder<> builder(block);
   return builder.CreateTrunc(b, IntegerType::getInt1Ty(context));
 }
@@ -135,8 +132,7 @@ Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
 
   assert(type->numBaseTypes() == 1);
   types::ArrayType *arrType = types::ArrayType::get(type->getBaseType(0));
-  if (!type->membType("len")->is(types::Int) ||
-      !type->membType("arr")->is(arrType)) {
+  if (!type->membType("len")->is(types::Int) || !type->membType("arr")->is(arrType)) {
     throw exc::SeqException("list type overriden");
   }
 
@@ -155,9 +151,8 @@ Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
     lenMatch = builder.CreateICmpEQ(len, expectedLen);
   }
 
-  block = BasicBlock::Create(
-      context, "",
-      block->getParent()); // block for checking array contents
+  block = BasicBlock::Create(context, "",
+                             block->getParent()); // block for checking array contents
   BranchInst *branch = builder.CreateCondBr(lenMatch, block, block);
 
   builder.SetInsertPoint(block);
@@ -166,38 +161,35 @@ Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
   if (hasStar) {
     for (unsigned i = 0; i < star; i++) {
       Value *idx = ConstantInt::get(seqIntLLVM(context), i);
-      Value *sub = type->callMagic("__getitem__", {types::Int}, val, {idx},
-                                   block, nullptr);
+      Value *sub =
+          type->callMagic("__getitem__", {types::Int}, val, {idx}, block, nullptr);
       Value *subRes = patterns[i]->codegen(
           base, type->magicOut("__getitem__", {types::Int}), sub, block);
-      builder.SetInsertPoint(
-          block); // recall that pattern codegen can change the block
+      builder.SetInsertPoint(block); // recall that pattern codegen can change the block
       result = builder.CreateAnd(result, subRes);
     }
 
     for (unsigned i = star + 1; i < patterns.size(); i++) {
       Value *idx = ConstantInt::get(seqIntLLVM(context), i);
       idx = builder.CreateAdd(idx, len);
-      idx = builder.CreateSub(
-          idx, ConstantInt::get(seqIntLLVM(context), patterns.size()));
+      idx = builder.CreateSub(idx,
+                              ConstantInt::get(seqIntLLVM(context), patterns.size()));
 
-      Value *sub = type->callMagic("__getitem__", {types::Int}, val, {idx},
-                                   block, nullptr);
+      Value *sub =
+          type->callMagic("__getitem__", {types::Int}, val, {idx}, block, nullptr);
       Value *subRes = patterns[i]->codegen(
           base, type->magicOut("__getitem__", {types::Int}), sub, block);
-      builder.SetInsertPoint(
-          block); // recall that pattern codegen can change the block
+      builder.SetInsertPoint(block); // recall that pattern codegen can change the block
       result = builder.CreateAnd(result, subRes);
     }
   } else {
     for (unsigned i = 0; i < patterns.size(); i++) {
       Value *idx = ConstantInt::get(seqIntLLVM(context), i);
-      Value *sub = type->callMagic("__getitem__", {types::Int}, val, {idx},
-                                   block, nullptr);
+      Value *sub =
+          type->callMagic("__getitem__", {types::Int}, val, {idx}, block, nullptr);
       Value *subRes = patterns[i]->codegen(
           base, type->magicOut("__getitem__", {types::Int}), sub, block);
-      builder.SetInsertPoint(
-          block); // recall that pattern codegen can change the block
+      builder.SetInsertPoint(block); // recall that pattern codegen can change the block
       result = builder.CreateAnd(result, subRes);
     }
   }
@@ -245,9 +237,8 @@ static Value *indexIntoSeq(Value *ptr, Value *lenActual, Value *rc, Value *idx,
   return builder.CreateSelect(rc, charRev, charFwd);
 }
 
-static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
-                                    BaseFunc *base, types::Type *type,
-                                    Value *val, BasicBlock *&block) {
+static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns, BaseFunc *base,
+                                    types::Type *type, Value *val, BasicBlock *&block) {
   unsigned star = 0;
   bool hasStar = false;
   for (unsigned i = 0; i < patterns.size(); i++) {
@@ -275,9 +266,8 @@ static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
     lenMatch = builder.CreateICmpEQ(lenActual, expectedLen);
   }
 
-  block = BasicBlock::Create(
-      context, "",
-      block->getParent()); // block for checking array contents
+  block = BasicBlock::Create(context, "",
+                             block->getParent()); // block for checking array contents
   BranchInst *branch = builder.CreateCondBr(lenMatch, block, block);
 
   builder.SetInsertPoint(block);
@@ -289,11 +279,10 @@ static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
         continue;
       Value *idx = ConstantInt::get(seqIntLLVM(context), i);
       Value *sub = indexIntoSeq(ptr, lenActual, rc, idx, block);
-      Value *c = ConstantInt::get(IntegerType::getInt8Ty(context),
-                                  (uint64_t)patterns[i]);
+      Value *c =
+          ConstantInt::get(IntegerType::getInt8Ty(context), (uint64_t)patterns[i]);
       Value *subRes = builder.CreateICmpEQ(sub, c);
-      builder.SetInsertPoint(
-          block); // recall that pattern codegen can change the block
+      builder.SetInsertPoint(block); // recall that pattern codegen can change the block
       result = builder.CreateAnd(result, subRes);
     }
 
@@ -302,15 +291,14 @@ static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
         continue;
       Value *idx = ConstantInt::get(seqIntLLVM(context), i);
       idx = builder.CreateAdd(idx, lenActual);
-      idx = builder.CreateSub(
-          idx, ConstantInt::get(seqIntLLVM(context), patterns.size()));
+      idx = builder.CreateSub(idx,
+                              ConstantInt::get(seqIntLLVM(context), patterns.size()));
 
       Value *sub = indexIntoSeq(ptr, lenActual, rc, idx, block);
-      Value *c = ConstantInt::get(IntegerType::getInt8Ty(context),
-                                  (uint64_t)patterns[i]);
+      Value *c =
+          ConstantInt::get(IntegerType::getInt8Ty(context), (uint64_t)patterns[i]);
       Value *subRes = builder.CreateICmpEQ(sub, c);
-      builder.SetInsertPoint(
-          block); // recall that pattern codegen can change the block
+      builder.SetInsertPoint(block); // recall that pattern codegen can change the block
       result = builder.CreateAnd(result, subRes);
     }
   } else {
@@ -319,11 +307,10 @@ static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
         continue;
       Value *idx = ConstantInt::get(seqIntLLVM(context), i);
       Value *sub = indexIntoSeq(ptr, lenActual, rc, idx, block);
-      Value *c = ConstantInt::get(IntegerType::getInt8Ty(context),
-                                  (uint64_t)patterns[i]);
+      Value *c =
+          ConstantInt::get(IntegerType::getInt8Ty(context), (uint64_t)patterns[i]);
       Value *subRes = builder.CreateICmpEQ(sub, c);
-      builder.SetInsertPoint(
-          block); // recall that pattern codegen can change the block
+      builder.SetInsertPoint(block); // recall that pattern codegen can change the block
       result = builder.CreateAnd(result, subRes);
     }
   }
@@ -345,9 +332,9 @@ static Value *codegenSeqMatchForSeq(const std::vector<char> &patterns,
   return resultFinal;
 }
 
-static Value *codegenSeqMatchForKmer(const std::vector<char> &patterns,
-                                     BaseFunc *base, types::KMer *type,
-                                     Value *val, BasicBlock *&block) {
+static Value *codegenSeqMatchForKmer(const std::vector<char> &patterns, BaseFunc *base,
+                                     types::KMer *type, Value *val,
+                                     BasicBlock *&block) {
   static const unsigned BRUTE_MATCH_K_CUTOFF = 256;
   static const unsigned BRUTE_MATCH_P_CUTOFF = 100;
 
@@ -392,8 +379,7 @@ static Value *codegenSeqMatchForKmer(const std::vector<char> &patterns,
   Type *llvmType = type->getLLVMType(context);
 
   // if k is small and pattern is small, brute force matching is fastest:
-  if (hasStar && k <= BRUTE_MATCH_K_CUTOFF &&
-      patterns.size() <= BRUTE_MATCH_P_CUTOFF) {
+  if (hasStar && k <= BRUTE_MATCH_K_CUTOFF && patterns.size() <= BRUTE_MATCH_P_CUTOFF) {
     types::KMer *k1Type = types::KMer::get(1);
 
     BasicBlock *succBlock = block;
@@ -415,9 +401,8 @@ static Value *codegenSeqMatchForKmer(const std::vector<char> &patterns,
       Value *idxVal = ConstantInt::get(seqIntLLVM(context), idx);
       Value *base = type->callMagic("__getitem__", {types::Int}, val, {idxVal},
                                     succBlock, nullptr);
-      Value *expected =
-          k1Type->callMagic("__init__", {types::Byte}, nullptr,
-                            {builder.getInt8(c)}, succBlock, nullptr);
+      Value *expected = k1Type->callMagic("__init__", {types::Byte}, nullptr,
+                                          {builder.getInt8(c)}, succBlock, nullptr);
       Value *match = builder.CreateICmpEQ(base, expected);
       succBlock = BasicBlock::Create(context, "", block->getParent());
       builder.CreateCondBr(match, succBlock, failBlock);
@@ -484,9 +469,8 @@ static Value *codegenSeqMatchForKmer(const std::vector<char> &patterns,
       SeqExpr sRight(rightString);
       Value *expectedSeqRight = sRight.codegen(base, block);
       typeRight = types::KMer::get(rightString.size());
-      expectedKmerRight =
-          typeRight->callMagic("__init__", {types::Seq}, nullptr,
-                               {expectedSeqRight}, block, nullptr);
+      expectedKmerRight = typeRight->callMagic("__init__", {types::Seq}, nullptr,
+                                               {expectedSeqRight}, block, nullptr);
     }
 
     IRBuilder<> builder(block);
@@ -534,16 +518,16 @@ static Value *codegenSeqMatchForKmer(const std::vector<char> &patterns,
       }
     }
 
-    Value *lhsEq = expectedKmerLeft
-                       ? builder.CreateICmpEQ(
-                             builder.CreateAnd(val, maskLeft),
-                             builder.CreateAnd(expectedKmerLeft, maskLeft))
-                       : succ;
-    Value *rhsEq = expectedKmerRight
-                       ? builder.CreateICmpEQ(
-                             builder.CreateAnd(val, maskRight),
-                             builder.CreateAnd(expectedKmerRight, maskRight))
-                       : succ;
+    Value *lhsEq =
+        expectedKmerLeft
+            ? builder.CreateICmpEQ(builder.CreateAnd(val, maskLeft),
+                                   builder.CreateAnd(expectedKmerLeft, maskLeft))
+            : succ;
+    Value *rhsEq =
+        expectedKmerRight
+            ? builder.CreateICmpEQ(builder.CreateAnd(val, maskRight),
+                                   builder.CreateAnd(expectedKmerRight, maskRight))
+            : succ;
     return builder.CreateAnd(lhsEq, rhsEq);
   }
 
@@ -574,10 +558,8 @@ Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
       break;
     case '.':
       if (hasStar)
-        throw exc::SeqException(
-            "at most one '...' allowed in sequence pattern");
-      if (!(i < pattern.size() - 2 && pattern[i + 1] == '.' &&
-            pattern[i + 2] == '.'))
+        throw exc::SeqException("at most one '...' allowed in sequence pattern");
+      if (!(i < pattern.size() - 2 && pattern[i + 1] == '.' && pattern[i + 2] == '.'))
         throw exc::SeqException("invalid sequence pattern: '" + pattern + "'");
       i += 2;
       patterns.push_back('\0');
@@ -600,8 +582,7 @@ Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
   }
 }
 
-OptPattern::OptPattern(Pattern *pattern)
-    : Pattern(types::Any), pattern(pattern) {}
+OptPattern::OptPattern(Pattern *pattern) : Pattern(types::Any), pattern(pattern) {}
 
 Value *OptPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                            BasicBlock *&block) {
@@ -624,8 +605,7 @@ Value *OptPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
   BranchInst *branch = builder.CreateCondBr(hasResult, block, block);
 
   Value *had = optType->val(val, block);
-  Value *patternResult =
-      pattern->codegen(base, optType->getBaseType(0), had, block);
+  Value *patternResult = pattern->codegen(base, optType->getBaseType(0), had, block);
   BasicBlock *checkBlock = block;
   builder.SetInsertPoint(block);
 
@@ -703,8 +683,7 @@ Value *GuardedPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
   guardResult = guard->getType()->boolValue(guardResult, block, getTryCatch());
   BasicBlock *checkBlock = block;
   builder.SetInsertPoint(block);
-  guardResult =
-      builder.CreateTrunc(guardResult, IntegerType::getInt1Ty(context));
+  guardResult = builder.CreateTrunc(guardResult, IntegerType::getInt1Ty(context));
 
   block = BasicBlock::Create(context, "",
                              block->getParent()); // final result block

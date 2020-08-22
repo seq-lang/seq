@@ -11,8 +11,8 @@ types::NumberType::NumberType() : Type("num", BaseType::get(), true) {}
 types::IntType::IntType() : Type("int", NumberType::get(), false, true) {}
 
 types::IntNType::IntNType(unsigned len, bool sign)
-    : Type(std::string(sign ? "i" : "u") + std::to_string(len),
-           NumberType::get(), false, true),
+    : Type(std::string(sign ? "i" : "u") + std::to_string(len), NumberType::get(),
+           false, true),
       len(len), sign(sign) {
   if (len == 0 || len > MAX_LEN)
     throw exc::SeqException("integer bit width must be between 1 and " +
@@ -61,9 +61,7 @@ void types::IntType::initOps() {
       {"__new__",
        {Int},
        Int,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return args[0];
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return args[0]; },
        true},
 
       {"__new__",
@@ -93,9 +91,7 @@ void types::IntType::initOps() {
       {"__int__",
        {},
        Int,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__str__",
@@ -114,17 +110,13 @@ void types::IntType::initOps() {
       {"__copy__",
        {},
        Int,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__hash__",
        {},
        Int,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       // int unary
@@ -141,9 +133,7 @@ void types::IntType::initOps() {
       {"__pos__",
        {},
        Int,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__neg__",
@@ -438,25 +428,23 @@ void types::IntType::initOps() {
   };
 
   for (unsigned i = 1; i <= IntNType::MAX_LEN; i++) {
-    vtable.magic.push_back(
-        {"__new__",
-         {IntNType::get(i, true)},
-         Int,
-         [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-           return b.CreateSExtOrTrunc(args[0],
-                                      Int->getLLVMType(b.getContext()));
-         },
-         true});
+    vtable.magic.push_back({"__new__",
+                            {IntNType::get(i, true)},
+                            Int,
+                            [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+                              return b.CreateSExtOrTrunc(
+                                  args[0], Int->getLLVMType(b.getContext()));
+                            },
+                            true});
 
-    vtable.magic.push_back(
-        {"__new__",
-         {IntNType::get(i, false)},
-         Int,
-         [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-           return b.CreateZExtOrTrunc(args[0],
-                                      Int->getLLVMType(b.getContext()));
-         },
-         true});
+    vtable.magic.push_back({"__new__",
+                            {IntNType::get(i, false)},
+                            Int,
+                            [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+                              return b.CreateZExtOrTrunc(
+                                  args[0], Int->getLLVMType(b.getContext()));
+                            },
+                            true});
   }
 }
 
@@ -473,9 +461,8 @@ static Function *getIntNPickleFunc(types::IntNType *type, Module *module) {
     func->setLinkage(GlobalValue::PrivateLinkage);
 
     auto *gzWrite = cast<Function>(module->getOrInsertFunction(
-        "gzwrite", IntegerType::getInt32Ty(context),
-        IntegerType::getInt8PtrTy(context), IntegerType::getInt8PtrTy(context),
-        IntegerType::getInt32Ty(context)));
+        "gzwrite", IntegerType::getInt32Ty(context), IntegerType::getInt8PtrTy(context),
+        IntegerType::getInt8PtrTy(context), IntegerType::getInt32Ty(context)));
     gzWrite->setDoesNotThrow();
 
     auto iter = func->arg_begin();
@@ -507,9 +494,8 @@ static Function *getIntNUnpickleFunc(types::IntNType *type, Module *module) {
     func->setLinkage(GlobalValue::PrivateLinkage);
 
     auto *gzRead = cast<Function>(module->getOrInsertFunction(
-        "gzread", IntegerType::getInt32Ty(context),
-        IntegerType::getInt8PtrTy(context), IntegerType::getInt8PtrTy(context),
-        IntegerType::getInt32Ty(context)));
+        "gzread", IntegerType::getInt32Ty(context), IntegerType::getInt8PtrTy(context),
+        IntegerType::getInt8PtrTy(context), IntegerType::getInt32Ty(context)));
     gzRead->setDoesNotThrow();
 
     Value *fp = func->arg_begin();
@@ -543,46 +529,37 @@ void types::IntNType::initOps() {
       {"__new__",
        {this},
        this,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return args[0];
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return args[0]; },
        true},
 
       {"__new__",
        {Int},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return sign
-                    ? b.CreateSExtOrTrunc(args[0], getLLVMType(b.getContext()))
-                    : b.CreateZExtOrTrunc(args[0], getLLVMType(b.getContext()));
+         return sign ? b.CreateSExtOrTrunc(args[0], getLLVMType(b.getContext()))
+                     : b.CreateZExtOrTrunc(args[0], getLLVMType(b.getContext()));
        },
        true},
 
       {"__new__",
        {IntNType::get(len, !sign)},
        this,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return args[0];
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return args[0]; },
        true},
 
       {"__int__",
        {},
        Int,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return sign ? b.CreateSExtOrTrunc(self,
-                                           Int->getLLVMType(b.getContext()))
-                     : b.CreateZExtOrTrunc(self,
-                                           Int->getLLVMType(b.getContext()));
+         return sign ? b.CreateSExtOrTrunc(self, Int->getLLVMType(b.getContext()))
+                     : b.CreateZExtOrTrunc(self, Int->getLLVMType(b.getContext()));
        },
        false},
 
       {"__copy__",
        {},
        this,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__hash__",
@@ -608,9 +585,7 @@ void types::IntNType::initOps() {
       {"__pos__",
        {},
        this,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__neg__",
@@ -658,8 +633,7 @@ void types::IntNType::initOps() {
        {this},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return sign ? b.CreateSDiv(self, args[0])
-                     : b.CreateUDiv(self, args[0]);
+         return sign ? b.CreateSDiv(self, args[0]) : b.CreateUDiv(self, args[0]);
        },
        false},
 
@@ -669,9 +643,8 @@ void types::IntNType::initOps() {
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          self = sign ? b.CreateSIToFP(self, Float->getLLVMType(b.getContext()))
                      : b.CreateUIToFP(self, Float->getLLVMType(b.getContext()));
-         args[0] =
-             sign ? b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()))
-                  : b.CreateUIToFP(args[0], Float->getLLVMType(b.getContext()));
+         args[0] = sign ? b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()))
+                        : b.CreateUIToFP(args[0], Float->getLLVMType(b.getContext()));
          return b.CreateFDiv(self, args[0]);
        },
        false},
@@ -680,8 +653,7 @@ void types::IntNType::initOps() {
        {this},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return sign ? b.CreateSRem(self, args[0])
-                     : b.CreateURem(self, args[0]);
+         return sign ? b.CreateSRem(self, args[0]) : b.CreateURem(self, args[0]);
        },
        false},
 
@@ -697,8 +669,7 @@ void types::IntNType::initOps() {
        {this},
        this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return sign ? b.CreateAShr(self, args[0])
-                     : b.CreateLShr(self, args[0]);
+         return sign ? b.CreateAShr(self, args[0]) : b.CreateLShr(self, args[0]);
        },
        false},
 
@@ -724,8 +695,8 @@ void types::IntNType::initOps() {
        {this},
        Bool,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Value *cmp = sign ? b.CreateICmpSLT(self, args[0])
-                           : b.CreateICmpULT(self, args[0]);
+         Value *cmp =
+             sign ? b.CreateICmpSLT(self, args[0]) : b.CreateICmpULT(self, args[0]);
          return b.CreateZExt(cmp, Bool->getLLVMType(b.getContext()));
        },
        false},
@@ -734,8 +705,8 @@ void types::IntNType::initOps() {
        {this},
        Bool,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Value *cmp = sign ? b.CreateICmpSGT(self, args[0])
-                           : b.CreateICmpUGT(self, args[0]);
+         Value *cmp =
+             sign ? b.CreateICmpSGT(self, args[0]) : b.CreateICmpUGT(self, args[0]);
          return b.CreateZExt(cmp, Bool->getLLVMType(b.getContext()));
        },
        false},
@@ -744,8 +715,8 @@ void types::IntNType::initOps() {
        {this},
        Bool,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Value *cmp = sign ? b.CreateICmpSLE(self, args[0])
-                           : b.CreateICmpULE(self, args[0]);
+         Value *cmp =
+             sign ? b.CreateICmpSLE(self, args[0]) : b.CreateICmpULE(self, args[0]);
          return b.CreateZExt(cmp, Bool->getLLVMType(b.getContext()));
        },
        false},
@@ -754,8 +725,8 @@ void types::IntNType::initOps() {
        {this},
        Bool,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Value *cmp = sign ? b.CreateICmpSGE(self, args[0])
-                           : b.CreateICmpUGE(self, args[0]);
+         Value *cmp =
+             sign ? b.CreateICmpSGE(self, args[0]) : b.CreateICmpUGE(self, args[0]);
          return b.CreateZExt(cmp, Bool->getLLVMType(b.getContext()));
        },
        false},
@@ -844,11 +815,9 @@ void types::IntNType::initOps() {
                     func->setDoesNotThrow();
                     func->setLinkage(GlobalValue::PrivateLinkage);
                     func->addFnAttr(Attribute::AlwaysInline);
-                    BasicBlock *block =
-                        BasicBlock::Create(context, "entry", func);
+                    BasicBlock *block = BasicBlock::Create(context, "entry", func);
                     IRBuilder<> builder(block);
-                    builder.CreateRet(
-                        ConstantInt::get(seqIntLLVM(context), this->len));
+                    builder.CreateRet(ConstantInt::get(seqIntLLVM(context), this->len));
                   }
 
                   return func;
@@ -857,62 +826,60 @@ void types::IntNType::initOps() {
 
   if (!sign && len % 2 == 0) {
     types::KMer *kType = types::KMer::get(len / 2);
-    addMethod(
-        "as_kmer",
-        new BaseFuncLite(
-            {this}, kType,
-            [this, kType](Module *module) {
-              const std::string name = "seq." + getName() + ".as_kmer";
-              Function *func = module->getFunction(name);
+    addMethod("as_kmer",
+              new BaseFuncLite(
+                  {this}, kType,
+                  [this, kType](Module *module) {
+                    const std::string name = "seq." + getName() + ".as_kmer";
+                    Function *func = module->getFunction(name);
 
-              if (!func) {
-                LLVMContext &context = module->getContext();
-                func = cast<Function>(module->getOrInsertFunction(
-                    name, kType->getLLVMType(context), getLLVMType(context)));
-                func->setDoesNotThrow();
-                func->setLinkage(GlobalValue::PrivateLinkage);
-                func->addFnAttr(Attribute::AlwaysInline);
-                Value *arg = func->arg_begin();
-                BasicBlock *block = BasicBlock::Create(context, "entry", func);
-                IRBuilder<> builder(block);
-                builder.CreateRet(
-                    builder.CreateBitCast(arg, kType->getLLVMType(context)));
-              }
+                    if (!func) {
+                      LLVMContext &context = module->getContext();
+                      func = cast<Function>(module->getOrInsertFunction(
+                          name, kType->getLLVMType(context), getLLVMType(context)));
+                      func->setDoesNotThrow();
+                      func->setLinkage(GlobalValue::PrivateLinkage);
+                      func->addFnAttr(Attribute::AlwaysInline);
+                      Value *arg = func->arg_begin();
+                      BasicBlock *block = BasicBlock::Create(context, "entry", func);
+                      IRBuilder<> builder(block);
+                      builder.CreateRet(
+                          builder.CreateBitCast(arg, kType->getLLVMType(context)));
+                    }
 
-              return func;
-            }),
-        true);
+                    return func;
+                  }),
+              true);
   }
 
   addMethod("popcnt",
-            new BaseFuncLite(
-                {this}, types::IntType::get(),
-                [this](Module *module) {
-                  const std::string name = "seq." + getName() + ".popcnt";
-                  Function *func = module->getFunction(name);
+            new BaseFuncLite({this}, types::IntType::get(),
+                             [this](Module *module) {
+                               const std::string name = "seq." + getName() + ".popcnt";
+                               Function *func = module->getFunction(name);
 
-                  if (!func) {
-                    LLVMContext &context = module->getContext();
-                    func = cast<Function>(module->getOrInsertFunction(
-                        name, seqIntLLVM(context), getLLVMType(context)));
-                    func->setDoesNotThrow();
-                    func->setLinkage(GlobalValue::PrivateLinkage);
-                    func->addFnAttr(Attribute::AlwaysInline);
-                    BasicBlock *block =
-                        BasicBlock::Create(context, "entry", func);
-                    Value *arg = func->arg_begin();
+                               if (!func) {
+                                 LLVMContext &context = module->getContext();
+                                 func = cast<Function>(module->getOrInsertFunction(
+                                     name, seqIntLLVM(context), getLLVMType(context)));
+                                 func->setDoesNotThrow();
+                                 func->setLinkage(GlobalValue::PrivateLinkage);
+                                 func->addFnAttr(Attribute::AlwaysInline);
+                                 BasicBlock *block =
+                                     BasicBlock::Create(context, "entry", func);
+                                 Value *arg = func->arg_begin();
 
-                    Function *popcnt = Intrinsic::getDeclaration(
-                        module, Intrinsic::ctpop, {getLLVMType(context)});
-                    IRBuilder<> builder(block);
-                    Value *count = builder.CreateCall(popcnt, arg);
-                    count =
-                        builder.CreateZExtOrTrunc(count, seqIntLLVM(context));
-                    builder.CreateRet(count);
-                  }
+                                 Function *popcnt = Intrinsic::getDeclaration(
+                                     module, Intrinsic::ctpop, {getLLVMType(context)});
+                                 IRBuilder<> builder(block);
+                                 Value *count = builder.CreateCall(popcnt, arg);
+                                 count = builder.CreateZExtOrTrunc(count,
+                                                                   seqIntLLVM(context));
+                                 builder.CreateRet(count);
+                               }
 
-                  return func;
-                }),
+                               return func;
+                             }),
             true);
 }
 
@@ -932,9 +899,7 @@ void types::FloatType::initOps() {
       {"__new__",
        {Float},
        Float,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return args[0];
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return args[0]; },
        true},
 
       {"__new__",
@@ -961,9 +926,7 @@ void types::FloatType::initOps() {
       {"__copy__",
        {},
        Float,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       // float unary
@@ -980,9 +943,7 @@ void types::FloatType::initOps() {
       {"__pos__",
        {},
        Float,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__neg__",
@@ -997,9 +958,9 @@ void types::FloatType::initOps() {
        {},
        Float,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Function *abs = Intrinsic::getDeclaration(
-             b.GetInsertBlock()->getModule(), Intrinsic::fabs,
-             {Float->getLLVMType(b.getContext())});
+         Function *abs =
+             Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(), Intrinsic::fabs,
+                                       {Float->getLLVMType(b.getContext())});
          return b.CreateCall(abs, self);
        },
        false},
@@ -1061,9 +1022,9 @@ void types::FloatType::initOps() {
        {Float},
        Float,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         Function *pow = Intrinsic::getDeclaration(
-             b.GetInsertBlock()->getModule(), Intrinsic::pow,
-             {Float->getLLVMType(b.getContext())});
+         Function *pow =
+             Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(), Intrinsic::pow,
+                                       {Float->getLLVMType(b.getContext())});
          return b.CreateCall(pow, {self, args[0]});
        },
        false},
@@ -1186,9 +1147,9 @@ void types::FloatType::initOps() {
        Float,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          args[0] = b.CreateSIToFP(args[0], Float->getLLVMType(b.getContext()));
-         Function *pow = Intrinsic::getDeclaration(
-             b.GetInsertBlock()->getModule(), Intrinsic::pow,
-             {Float->getLLVMType(b.getContext())});
+         Function *pow =
+             Intrinsic::getDeclaration(b.GetInsertBlock()->getModule(), Intrinsic::pow,
+                                       {Float->getLLVMType(b.getContext())});
          return b.CreateCall(pow, {self, args[0]});
        },
        false},
@@ -1284,26 +1245,22 @@ void types::BoolType::initOps() {
       {"__copy__",
        {},
        Bool,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__bool__",
        {},
        Bool,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__invert__",
        {},
        Bool,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return b.CreateZExt(b.CreateNot(b.CreateTrunc(
-                                 self, IntegerType::getInt1Ty(b.getContext()))),
-                             Bool->getLLVMType(b.getContext()));
+         return b.CreateZExt(
+             b.CreateNot(b.CreateTrunc(self, IntegerType::getInt1Ty(b.getContext()))),
+             Bool->getLLVMType(b.getContext()));
        },
        false},
 
@@ -1406,9 +1363,8 @@ GlobalVariable *types::ByteType::getByteCompTable(Module *module,
       v[from[i]] = ConstantInt::get(ty, (uint64_t)to[i]);
 
     auto *arrTy = llvm::ArrayType::get(ty, v.size());
-    table =
-        new GlobalVariable(*module, arrTy, true, GlobalValue::PrivateLinkage,
-                           ConstantArray::get(arrTy, v), name);
+    table = new GlobalVariable(*module, arrTy, true, GlobalValue::PrivateLinkage,
+                               ConstantArray::get(arrTy, v), name);
   }
 
   return table;
@@ -1430,9 +1386,7 @@ void types::ByteType::initOps() {
       {"__new__",
        {Byte},
        Byte,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return args[0];
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return args[0]; },
        true},
 
       {"__new__",
@@ -1459,9 +1413,7 @@ void types::ByteType::initOps() {
       {"__copy__",
        {},
        Byte,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__bool__",
@@ -1529,37 +1481,34 @@ void types::ByteType::initOps() {
        false},
   };
 
-  addMethod(
-      "comp",
-      new BaseFuncLite({Byte}, Byte,
-                       [](Module *module) {
-                         const std::string name = "seq.byte_comp";
-                         Function *func = module->getFunction(name);
+  addMethod("comp",
+            new BaseFuncLite(
+                {Byte}, Byte,
+                [](Module *module) {
+                  const std::string name = "seq.byte_comp";
+                  Function *func = module->getFunction(name);
 
-                         if (!func) {
-                           GlobalVariable *table = getByteCompTable(module);
+                  if (!func) {
+                    GlobalVariable *table = getByteCompTable(module);
 
-                           LLVMContext &context = module->getContext();
-                           func = cast<Function>(module->getOrInsertFunction(
-                               name, Byte->getLLVMType(context),
-                               Byte->getLLVMType(context)));
-                           func->setDoesNotThrow();
-                           func->setLinkage(GlobalValue::PrivateLinkage);
-                           func->addFnAttr(Attribute::AlwaysInline);
-                           Value *arg = func->arg_begin();
-                           BasicBlock *block =
-                               BasicBlock::Create(context, "entry", func);
-                           IRBuilder<> builder(block);
-                           arg = builder.CreateZExt(arg, builder.getInt64Ty());
-                           arg = builder.CreateInBoundsGEP(
-                               table, {builder.getInt64(0), arg});
-                           arg = builder.CreateLoad(arg);
-                           builder.CreateRet(arg);
-                         }
+                    LLVMContext &context = module->getContext();
+                    func = cast<Function>(module->getOrInsertFunction(
+                        name, Byte->getLLVMType(context), Byte->getLLVMType(context)));
+                    func->setDoesNotThrow();
+                    func->setLinkage(GlobalValue::PrivateLinkage);
+                    func->addFnAttr(Attribute::AlwaysInline);
+                    Value *arg = func->arg_begin();
+                    BasicBlock *block = BasicBlock::Create(context, "entry", func);
+                    IRBuilder<> builder(block);
+                    arg = builder.CreateZExt(arg, builder.getInt64Ty());
+                    arg = builder.CreateInBoundsGEP(table, {builder.getInt64(0), arg});
+                    arg = builder.CreateLoad(arg);
+                    builder.CreateRet(arg);
+                  }
 
-                         return func;
-                       }),
-      true);
+                  return func;
+                }),
+            true);
 }
 
 Type *types::IntType::getLLVMType(LLVMContext &context) const {
@@ -1585,8 +1534,7 @@ Type *types::ByteType::getLLVMType(LLVMContext &context) const {
 size_t types::IntType::size(Module *module) const { return sizeof(seq_int_t); }
 
 size_t types::IntNType::size(Module *module) const {
-  return module->getDataLayout().getTypeAllocSize(
-      getLLVMType(module->getContext()));
+  return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 size_t types::FloatType::size(Module *module) const { return sizeof(double); }

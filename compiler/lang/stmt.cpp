@@ -54,8 +54,7 @@ Stmt *Stmt::findEnclosingLoop() {
     stmt = stmt->getPrev();
   }
 
-  throw exc::SeqException("break or continue outside of loop",
-                          orig->getSrcInfo());
+  throw exc::SeqException("break or continue outside of loop", orig->getSrcInfo());
 }
 
 void Stmt::addBreakToEnclosingLoop(BranchInst *inst) {
@@ -124,6 +123,4 @@ void Stmt::codegen(BasicBlock *&block) {
   }
 }
 
-std::ostream &operator<<(std::ostream &os, Stmt &stmt) {
-  return os << stmt.getName();
-}
+std::ostream &operator<<(std::ostream &os, Stmt &stmt) { return os << stmt.getName(); }

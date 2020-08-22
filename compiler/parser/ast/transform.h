@@ -45,9 +45,8 @@ public:
   int value;
 
   using WalkVisitor::visit;
-  StaticVisitor(
-      std::shared_ptr<TypeContext> ctx,
-      const std::unordered_map<std::string, types::Generic> *m = nullptr);
+  StaticVisitor(std::shared_ptr<TypeContext> ctx,
+                const std::unordered_map<std::string, types::Generic> *m = nullptr);
   std::pair<bool, int> transform(const Expr *e);
   void visit(const IdExpr *) override;
   void visit(const IntExpr *) override;
@@ -65,12 +64,12 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
 
   /// Helper function that handles simple assignments
   /// (e.g. a = b, a.x = b or a[x] = b)
-  StmtPtr addAssignment(const Expr *lhs, const Expr *rhs,
-                        const Expr *type = nullptr, bool force = false);
+  StmtPtr addAssignment(const Expr *lhs, const Expr *rhs, const Expr *type = nullptr,
+                        bool force = false);
   /// Helper function that decomposes complex assignments into simple ones
   /// (e.g. a, *b, (c, d) = foo)
-  void processAssignment(const Expr *lhs, const Expr *rhs,
-                         std::vector<StmtPtr> &stmts, bool force = false);
+  void processAssignment(const Expr *lhs, const Expr *rhs, std::vector<StmtPtr> &stmts,
+                         bool force = false);
 
   StmtPtr getGeneratorBlock(const std::vector<GeneratorExpr::Body> &loops,
                             SuiteStmt *&prev);
@@ -79,8 +78,8 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
   std::string patchIfRealizable(types::TypePtr typ, bool isClass);
   void fixExprName(ExprPtr &e, const std::string &newName);
 
-  std::shared_ptr<TypeItem::Item>
-  processIdentifier(std::shared_ptr<TypeContext> tctx, const std::string &id);
+  std::shared_ptr<TypeItem::Item> processIdentifier(std::shared_ptr<TypeContext> tctx,
+                                                    const std::string &id);
 
   RealizationContext::FuncRealization realizeFunc(types::FuncTypePtr type);
   RealizationContext::ClassRealization realizeType(types::ClassTypePtr type);
@@ -103,8 +102,7 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
   // std::vector<int> callCallable(types::ClassTypePtr f,
   // std::vector<CallExpr::Arg> &args, std::vector<CallExpr::Arg>
   // &reorderedArgs);
-  std::vector<int> callFunc(types::ClassTypePtr f,
-                            std::vector<CallExpr::Arg> &args,
+  std::vector<int> callFunc(types::ClassTypePtr f, std::vector<CallExpr::Arg> &args,
                             std::vector<CallExpr::Arg> &reorderedArgs,
                             const std::vector<int> &availableArguments);
   // std::vector<int> callPartial(types::PartialTypePtr f,
@@ -113,8 +111,8 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
   bool handleStackAlloc(const CallExpr *expr);
   bool getTupleIndex(types::ClassTypePtr tuple, const ExprPtr &expr,
                      const ExprPtr &index);
-  StmtPtr makeInternalFn(const std::string &name, ExprPtr &&ret,
-                         Param &&arg = Param(), Param &&arg2 = Param());
+  StmtPtr makeInternalFn(const std::string &name, ExprPtr &&ret, Param &&arg = Param(),
+                         Param &&arg2 = Param());
   StmtPtr makeInternalFn(const std::string &name, ExprPtr &&ret,
                          std::vector<Param> &&args);
 
@@ -233,8 +231,7 @@ public:
     return r;
   }
 
-  template <typename T>
-  types::TypePtr forceUnify(const T *expr, types::TypePtr t) {
+  template <typename T> types::TypePtr forceUnify(const T *expr, types::TypePtr t) {
     if (expr->getType() && t) {
       types::Unification us;
       if (expr->getType()->unify(t, us) < 0) {
@@ -258,13 +255,11 @@ public:
         return t;
       us.undo();
     }
-    error("cannot unify {} and {}", t ? t->toString() : "-",
-          u ? u->toString() : "-");
+    error("cannot unify {} and {}", t ? t->toString() : "-", u ? u->toString() : "-");
     return nullptr;
   }
 
-  template <typename... TArgs>
-  void error(const char *format, TArgs &&... args) {
+  template <typename... TArgs> void error(const char *format, TArgs &&... args) {
     ast::error(getSrcInfo(), fmt::format(format, args...).c_str());
   }
 
@@ -275,8 +270,8 @@ public:
 
   template <typename T, typename... TArgs>
   void internalError(const char *format, TArgs &&... args) {
-    throw exc::ParserException(fmt::format(
-        "INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
+    throw exc::ParserException(
+        fmt::format("INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
   }
 };
 

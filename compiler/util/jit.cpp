@@ -46,18 +46,15 @@ FOREIGN void jit_execute(JitInstance *jit, const char *code) {
     // seq::ast::CodegenStmtVisitor(*jit->context).transform(tv);
     // jit->context->execJIT();
   } catch (seq::exc::SeqException &e) {
-    fmt::print(stderr, "error ({}:{}): {}", e.getSrcInfo().line,
-               e.getSrcInfo().col, e.what());
+    fmt::print(stderr, "error ({}:{}): {}", e.getSrcInfo().line, e.getSrcInfo().col,
+               e.what());
   }
 }
 
-FOREIGN char *jit_inspect(JitInstance *jit, const char *file, int line,
-                          int col) {
+FOREIGN char *jit_inspect(JitInstance *jit, const char *file, int line, int col) {
   return nullptr;
 }
 
 FOREIGN char *jit_document(JitInstance *jit, const char *id) { return nullptr; }
 
-FOREIGN char *jit_complete(JitInstance *jit, const char *prefix) {
-  return nullptr;
-}
+FOREIGN char *jit_complete(JitInstance *jit, const char *prefix) { return nullptr; }

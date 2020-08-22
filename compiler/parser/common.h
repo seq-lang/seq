@@ -46,8 +46,7 @@ struct SrcInfoHash {
   }
 };
 
-template <typename T>
-std::string join(const T &items, std::string delim = " ") {
+template <typename T> std::string join(const T &items, std::string delim = " ") {
   std::string s = "";
   for (int i = 0; i < items.size(); i++)
     s += (i ? delim : "") + items[i];

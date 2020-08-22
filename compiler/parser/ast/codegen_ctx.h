@@ -105,19 +105,16 @@ public:
               seq::BaseFunc *base, seq::SeqJIT *jit);
   virtual ~LLVMContext();
 
-  std::shared_ptr<LLVMItem::Item> find(const std::string &name,
-                                       bool onlyLocal = false,
+  std::shared_ptr<LLVMItem::Item> find(const std::string &name, bool onlyLocal = false,
                                        bool checkStdlib = true) const;
 
   using Context<LLVMItem::Item>::add;
   void addVar(const std::string &name, seq::Var *v, bool global = false);
-  void addType(const std::string &name, seq::types::Type *t,
-               bool global = false);
+  void addType(const std::string &name, seq::types::Type *t, bool global = false);
   void addFunc(const std::string &name, seq::BaseFunc *f, bool global = false);
   void addImport(const std::string &name, const std::string &import,
                  bool global = false);
-  void addBlock(seq::Block *newBlock = nullptr,
-                seq::BaseFunc *newBase = nullptr);
+  void addBlock(seq::Block *newBlock = nullptr, seq::BaseFunc *newBase = nullptr);
   void popBlock();
 
   void initJIT();
@@ -141,9 +138,9 @@ public:
   }
 
 public:
-  static std::shared_ptr<LLVMContext>
-  getContext(const std::string &file, std::shared_ptr<TypeContext> typeCtx,
-             seq::SeqModule *module);
+  static std::shared_ptr<LLVMContext> getContext(const std::string &file,
+                                                 std::shared_ptr<TypeContext> typeCtx,
+                                                 seq::SeqModule *module);
 };
 
 } // namespace ast

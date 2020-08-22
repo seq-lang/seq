@@ -55,8 +55,8 @@ class Import : public Item {
   std::string file;
 
 public:
-  Import(const std::string &file, const std::string &module,
-         const std::string &base, bool global = false)
+  Import(const std::string &file, const std::string &module, const std::string &base,
+         bool global = false)
       : Item(module, base, global), file(file) {}
   const Import *getImport() const override { return this; }
   std::string getFile() const { return file; }
@@ -149,15 +149,14 @@ public:
   types::TypePtr findInternal(const std::string &name) const;
 
   using Context<TypeItem::Item>::add;
+  std::shared_ptr<TypeItem::Item> addVar(const std::string &name, types::TypePtr type,
+                                         bool global = false);
   std::shared_ptr<TypeItem::Item>
-  addVar(const std::string &name, types::TypePtr type, bool global = false);
-  std::shared_ptr<TypeItem::Item> addImport(const std::string &name,
-                                            const std::string &import,
-                                            bool global = false);
-  std::shared_ptr<TypeItem::Item>
-  addType(const std::string &name, types::TypePtr type, bool global = false);
-  std::shared_ptr<TypeItem::Item>
-  addFunc(const std::string &name, types::TypePtr type, bool global = false);
+  addImport(const std::string &name, const std::string &import, bool global = false);
+  std::shared_ptr<TypeItem::Item> addType(const std::string &name, types::TypePtr type,
+                                          bool global = false);
+  std::shared_ptr<TypeItem::Item> addFunc(const std::string &name, types::TypePtr type,
+                                          bool global = false);
   std::shared_ptr<TypeItem::Item> addStatic(const std::string &name, int value,
                                             types::TypePtr type = nullptr,
                                             bool global = false);
@@ -201,11 +200,9 @@ public:
   /// the generic T gets mapped to int.
   types::TypePtr instantiate(const SrcInfo &srcInfo, types::TypePtr type);
   types::TypePtr instantiate(const SrcInfo &srcInfo, types::TypePtr type,
-                             types::ClassTypePtr generics,
-                             bool activate = true);
-  types::TypePtr
-  instantiateGeneric(const SrcInfo &srcInfo, types::TypePtr root,
-                     const std::vector<types::TypePtr> &generics);
+                             types::ClassTypePtr generics, bool activate = true);
+  types::TypePtr instantiateGeneric(const SrcInfo &srcInfo, types::TypePtr root,
+                                    const std::vector<types::TypePtr> &generics);
   ImportContext::Import importFile(const std::string &file);
 
 public:

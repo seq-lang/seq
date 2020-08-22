@@ -3,10 +3,10 @@
 using namespace seq;
 using namespace llvm;
 
-types::RecordType::RecordType(std::vector<Type *> types,
-                              std::vector<std::string> names, std::string name)
-    : Type(name, BaseType::get(), false, !name.empty()),
-      types(std::move(types)), names(std::move(names)) {
+types::RecordType::RecordType(std::vector<Type *> types, std::vector<std::string> names,
+                              std::string name)
+    : Type(name, BaseType::get(), false, !name.empty()), types(std::move(types)),
+      names(std::move(names)) {
   assert(this->names.empty() || this->names.size() == this->types.size());
 }
 
@@ -123,8 +123,7 @@ Function *types::RecordType::getContainsFunc(Module *module) {
     for (unsigned i = 0; i < types.size(); i++) {
       Value *m = memb(rec, std::to_string(i + 1), block);
       types::Type *eqType = types[i]->magicOut("__eq__", {types[i]});
-      Value *eq =
-          types[i]->callMagic("__eq__", {types[i]}, m, {val}, block, nullptr);
+      Value *eq = types[i]->callMagic("__eq__", {types[i]}, m, {val}, block, nullptr);
       eq = eqType->boolValue(eq, block, nullptr);
       builder.SetInsertPoint(block);
       eq = builder.CreateICmpNE(eq, builder.getInt8(0));
@@ -178,9 +177,9 @@ Function *types::RecordType::getCmpFunc(Module *module, int kind) {
   Function *func = module->getFunction(name);
 
   if (!func) {
-    func = cast<Function>(module->getOrInsertFunction(
-        name, types::Bool->getLLVMType(context), getLLVMType(context),
-        getLLVMType(context)));
+    func = cast<Function>(
+        module->getOrInsertFunction(name, types::Bool->getLLVMType(context),
+                                    getLLVMType(context), getLLVMType(context)));
     func->setLinkage(GlobalValue::PrivateLinkage);
     func->addFnAttr(Attribute::AlwaysInline);
 
@@ -198,8 +197,7 @@ Function *types::RecordType::getCmpFunc(Module *module, int kind) {
       Value *val2 = memb(r2, std::to_string(i + 1), block);
 
       types::Type *cmpType = types[i]->magicOut(magic, {types[i]});
-      Value *cmp =
-          types[i]->callMagic(magic, {types[i]}, val1, {val2}, block, nullptr);
+      Value *cmp = types[i]->callMagic(magic, {types[i]}, val1, {val2}, block, nullptr);
       cmp = cmpType->boolValue(cmp, block, nullptr);
       builder.SetInsertPoint(block);
       cmp = builder.CreateICmpNE(cmp, builder.getInt8(0));
@@ -212,13 +210,12 @@ Function *types::RecordType::getCmpFunc(Module *module, int kind) {
       } else {
         BasicBlock *eqBlock = BasicBlock::Create(context, "eq", func);
         types::Type *eqType = types[i]->magicOut("__eq__", {types[i]});
-        Value *eq = types[i]->callMagic("__eq__", {types[i]}, val1, {val2},
-                                        eqBlock, nullptr);
+        Value *eq =
+            types[i]->callMagic("__eq__", {types[i]}, val1, {val2}, eqBlock, nullptr);
         eq = eqType->boolValue(eq, eqBlock, nullptr);
         builder.SetInsertPoint(eqBlock);
         eq = builder.CreateICmpNE(eq, builder.getInt8(0));
-        builder.CreateCondBr(eq, next,
-                             (kind == LT || kind == GT) ? retFalse : retTrue);
+        builder.CreateCondBr(eq, next, (kind == LT || kind == GT) ? retFalse : retTrue);
 
         builder.SetInsertPoint(block);
         if (kind == LT || kind == GT) {
@@ -232,8 +229,7 @@ Function *types::RecordType::getCmpFunc(Module *module, int kind) {
     }
 
     builder.SetInsertPoint(block);
-    builder.CreateBr((kind == EQ || kind == LE || kind == GE) ? retTrue
-                                                              : retFalse);
+    builder.CreateBr((kind == EQ || kind == LE || kind == GE) ? retTrue : retFalse);
 
     builder.SetInsertPoint(retFalse);
     builder.CreateRet(builder.getInt8(0));
@@ -249,16 +245,14 @@ void types::RecordType::initOps() {
   if (!vtable.magic.empty())
     return;
 
-  static RecordType *pyObjType =
-      RecordType::get({PtrType::get(Byte)}, {"p"}, "pyobj");
+  static RecordType *pyObjType = RecordType::get({PtrType::get(Byte)}, {"p"}, "pyobj");
 
   vtable.magic = {
       {"__new__", types, this,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          Value *val = defaultValue(b.GetInsertBlock());
          for (unsigned i = 0; i < args.size(); i++)
-           val =
-               setMemb(val, std::to_string(i + 1), args[i], b.GetInsertBlock());
+           val = setMemb(val, std::to_string(i + 1), args[i], b.GetInsertBlock());
          return val;
        },
        true},
@@ -349,8 +343,7 @@ void types::RecordType::initOps() {
          Func *fixIndex = Func::getBuiltin("_tuple_fix_index");
          FuncExpr fixIndexExpr(fixIndex);
          ValueExpr idx(types::Int, args[0]);
-         ValueExpr len(types::Int,
-                       ConstantInt::get(seqIntLLVM(context), types.size()));
+         ValueExpr len(types::Int, ConstantInt::get(seqIntLLVM(context), types.size()));
          CallExpr fixIndexCall(&fixIndexExpr, {&idx, &len});
          Value *idxFixed = fixIndexCall.codegen(nullptr, block);
 
@@ -403,8 +396,7 @@ void types::RecordType::initOps() {
        {},
        Int,
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return ConstantInt::get(seqIntLLVM(b.getContext()), types.size(),
-                                 true);
+         return ConstantInt::get(seqIntLLVM(b.getContext()), types.size(), true);
        },
        false},
 
@@ -474,11 +466,9 @@ void types::RecordType::initOps() {
          for (unsigned i = 0; i < types.size(); i++) {
            Value *val = memb(self, std::to_string(i + 1), block);
            if (!types[i]->magicOut("__hash__", {})->is(Int))
-             throw exc::SeqException("__hash__ for type '" +
-                                     types[i]->getName() +
+             throw exc::SeqException("__hash__ for type '" + types[i]->getName() +
                                      "' does not return an 'int'");
-           Value *hash =
-               types[i]->callMagic("__hash__", {}, val, {}, block, nullptr);
+           Value *hash = types[i]->callMagic("__hash__", {}, val, {}, block, nullptr);
            Value *p1 = b.CreateShl(seed, 6);
            Value *p2 = b.CreateLShr(seed, 2);
            hash = b.CreateAdd(hash, phi);
@@ -516,14 +506,13 @@ void types::RecordType::initOps() {
          Module *module = block->getModule();
 
          auto *pyTupNew = cast<Function>(module->getOrInsertFunction(
-             "py_tuple_new.ptr[byte].int",
-             PtrType::get(Byte)->getLLVMType(context), seqIntLLVM(context)));
+             "py_tuple_new.ptr[byte].int", PtrType::get(Byte)->getLLVMType(context),
+             seqIntLLVM(context)));
 
          auto *pyTupSet = cast<Function>(module->getOrInsertFunction(
              "py_tuple_setitem.void.ptr[byte].int.ptr[byte]",
-             llvm::Type::getVoidTy(context),
-             PtrType::get(Byte)->getLLVMType(context), seqIntLLVM(context),
-             PtrType::get(Byte)->getLLVMType(context)));
+             llvm::Type::getVoidTy(context), PtrType::get(Byte)->getLLVMType(context),
+             seqIntLLVM(context), PtrType::get(Byte)->getLLVMType(context)));
 
          pyTupNew->setDoesNotThrow();
          pyTupSet->setDoesNotThrow();
@@ -533,11 +522,9 @@ void types::RecordType::initOps() {
          for (unsigned i = 0; i < types.size(); i++) {
            Value *val = memb(self, std::to_string(i + 1), block);
            if (!types[i]->magicOut("__to_py__", {})->is(pyObjType))
-             throw exc::SeqException("__to_py__ for type '" +
-                                     types[i]->getName() +
+             throw exc::SeqException("__to_py__ for type '" + types[i]->getName() +
                                      "' does not return a 'pyobj'");
-           Value *pyVal =
-               types[i]->callMagic("__to_py__", {}, val, {}, block, nullptr);
+           Value *pyVal = types[i]->callMagic("__to_py__", {}, val, {}, block, nullptr);
            Value *ptr = pyObjType->memb(pyVal, "p", block);
            b.CreateCall(pyTupSet,
                         {pyTup, ConstantInt::get(seqIntLLVM(context), i), ptr});
@@ -567,18 +554,16 @@ void types::RecordType::initOps() {
          Value *result = defaultValue(block);
          for (unsigned i = 0; i < types.size(); i++) {
            // last arg type being null means static magic:
-           if (!types::is(
-                   types[i]->magicOut("__from_py__", {pyObjType, nullptr}),
-                   types[i]))
-             throw exc::SeqException("__from_py__ for type '" +
-                                     types[i]->getName() +
+           if (!types::is(types[i]->magicOut("__from_py__", {pyObjType, nullptr}),
+                          types[i]))
+             throw exc::SeqException("__from_py__ for type '" + types[i]->getName() +
                                      "' returns a different type");
            Value *valPtr = b.CreateCall(
                pyTupGet, {pyTup, ConstantInt::get(seqIntLLVM(context), i)});
            Value *val = pyObjType->defaultValue(block);
            val = pyObjType->setMemb(val, "p", valPtr, block);
-           val = types[i]->callMagic("__from_py__", {pyObjType}, nullptr, {val},
-                                     block, nullptr);
+           val = types[i]->callMagic("__from_py__", {pyObjType}, nullptr, {val}, block,
+                                     nullptr);
            result = setMemb(result, std::to_string(i + 1), val, block);
          }
          return result;
@@ -592,8 +577,8 @@ void types::RecordType::initOps() {
          BasicBlock *block = b.GetInsertBlock();
          for (unsigned i = 0; i < types.size(); i++) {
            Value *val = memb(self, std::to_string(i + 1), block);
-           types[i]->callMagic("__pickle__", {PtrType::get(Byte)}, val,
-                               {args[0]}, block, nullptr);
+           types[i]->callMagic("__pickle__", {PtrType::get(Byte)}, val, {args[0]},
+                               block, nullptr);
          }
          return (Value *)nullptr;
        },
@@ -606,9 +591,8 @@ void types::RecordType::initOps() {
          BasicBlock *block = b.GetInsertBlock();
          Value *result = defaultValue(block);
          for (unsigned i = 0; i < types.size(); i++) {
-           Value *val =
-               types[i]->callMagic("__unpickle__", {PtrType::get(Byte)},
-                                   nullptr, {args[0]}, block, nullptr);
+           Value *val = types[i]->callMagic("__unpickle__", {PtrType::get(Byte)},
+                                            nullptr, {args[0]}, block, nullptr);
            result = setMemb(result, std::to_string(i + 1), val, block);
          }
          return result;
@@ -631,13 +615,9 @@ void types::RecordType::initFields() {
   }
 }
 
-unsigned types::RecordType::numBaseTypes() const {
-  return (unsigned)types.size();
-}
+unsigned types::RecordType::numBaseTypes() const { return (unsigned)types.size(); }
 
-types::Type *types::RecordType::getBaseType(unsigned idx) const {
-  return types[idx];
-}
+types::Type *types::RecordType::getBaseType(unsigned idx) const { return types[idx]; }
 
 Type *types::RecordType::getLLVMType(LLVMContext &context) const {
   std::vector<llvm::Type *> body;
@@ -655,8 +635,7 @@ void types::RecordType::addLLVMTypesToStruct(StructType *structType) {
 }
 
 size_t types::RecordType::size(Module *module) const {
-  return module->getDataLayout().getTypeAllocSize(
-      getLLVMType(module->getContext()));
+  return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 types::RecordType *types::RecordType::asRec() { return this; }

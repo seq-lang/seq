@@ -202,16 +202,14 @@ namespace internal {
 // color is a struct of either a rgb color or a terminal color.
 struct color_type {
   FMT_CONSTEXPR color_type() FMT_NOEXCEPT : is_rgb(), value{} {}
-  FMT_CONSTEXPR color_type(color rgb_color) FMT_NOEXCEPT : is_rgb(true),
-                                                           value{} {
+  FMT_CONSTEXPR color_type(color rgb_color) FMT_NOEXCEPT : is_rgb(true), value{} {
     value.rgb_color = static_cast<uint32_t>(rgb_color);
   }
   FMT_CONSTEXPR color_type(rgb rgb_color) FMT_NOEXCEPT : is_rgb(true), value{} {
     value.rgb_color = (static_cast<uint32_t>(rgb_color.r) << 16) |
                       (static_cast<uint32_t>(rgb_color.g) << 8) | rgb_color.b;
   }
-  FMT_CONSTEXPR color_type(terminal_color term_color) FMT_NOEXCEPT : is_rgb(),
-                                                                     value{} {
+  FMT_CONSTEXPR color_type(terminal_color term_color) FMT_NOEXCEPT : is_rgb(), value{} {
     value.term_color = static_cast<uint8_t>(term_color);
   }
   bool is_rgb;
@@ -254,8 +252,7 @@ public:
     return *this;
   }
 
-  friend FMT_CONSTEXPR text_style operator|(text_style lhs,
-                                            const text_style &rhs) {
+  friend FMT_CONSTEXPR text_style operator|(text_style lhs, const text_style &rhs) {
     return lhs |= rhs;
   }
 
@@ -283,8 +280,7 @@ public:
     return *this;
   }
 
-  friend FMT_CONSTEXPR text_style operator&(text_style lhs,
-                                            const text_style &rhs) {
+  friend FMT_CONSTEXPR text_style operator&(text_style lhs, const text_style &rhs) {
     return lhs &= rhs;
   }
 
@@ -325,10 +321,8 @@ private:
     }
   }
 
-  friend FMT_CONSTEXPR_DECL text_style fg(internal::color_type foreground)
-      FMT_NOEXCEPT;
-  friend FMT_CONSTEXPR_DECL text_style bg(internal::color_type background)
-      FMT_NOEXCEPT;
+  friend FMT_CONSTEXPR_DECL text_style fg(internal::color_type foreground) FMT_NOEXCEPT;
+  friend FMT_CONSTEXPR_DECL text_style bg(internal::color_type background) FMT_NOEXCEPT;
 
   internal::color_type foreground_color;
   internal::color_type background_color;
@@ -422,8 +416,7 @@ template <typename Char> struct ansi_color_escape {
 private:
   Char buffer[7u + 3u * 4u + 1u];
 
-  static FMT_CONSTEXPR void to_esc(uint8_t c, Char *out,
-                                   char delimiter) FMT_NOEXCEPT {
+  static FMT_CONSTEXPR void to_esc(uint8_t c, Char *out, char delimiter) FMT_NOEXCEPT {
     out[0] = static_cast<Char>('0' + c / 100);
     out[1] = static_cast<Char>('0' + c / 10 % 10);
     out[2] = static_cast<Char>('0' + c % 10);
@@ -485,14 +478,12 @@ void vformat_to(basic_memory_buffer<Char> &buf, const text_style &ts,
   }
   if (ts.has_foreground()) {
     has_style = true;
-    auto foreground =
-        internal::make_foreground_color<Char>(ts.get_foreground());
+    auto foreground = internal::make_foreground_color<Char>(ts.get_foreground());
     buf.append(foreground.begin(), foreground.end());
   }
   if (ts.has_background()) {
     has_style = true;
-    auto background =
-        internal::make_background_color<Char>(ts.get_background());
+    auto background = internal::make_background_color<Char>(ts.get_background());
     buf.append(background.begin(), background.end());
   }
   internal::vformat_to(buf, format_str, args);
@@ -517,8 +508,7 @@ void vprint(std::FILE *f, const text_style &ts, const S &format,
     fmt::print(fmt::emphasis::bold | fg(fmt::color::red),
                "Elapsed time: {0:.2f} seconds", 1.23);
  */
-template <typename S, typename... Args,
-          FMT_ENABLE_IF(internal::is_string<S>::value)>
+template <typename S, typename... Args, FMT_ENABLE_IF(internal::is_string<S>::value)>
 void print(std::FILE *f, const text_style &ts, const S &format_str,
            const Args &... args) {
   internal::check_format_string<Args...>(format_str);
@@ -534,8 +524,7 @@ void print(std::FILE *f, const text_style &ts, const S &format_str,
     fmt::print(fmt::emphasis::bold | fg(fmt::color::red),
                "Elapsed time: {0:.2f} seconds", 1.23);
  */
-template <typename S, typename... Args,
-          FMT_ENABLE_IF(internal::is_string<S>::value)>
+template <typename S, typename... Args, FMT_ENABLE_IF(internal::is_string<S>::value)>
 void print(const text_style &ts, const S &format_str, const Args &... args) {
   return print(stdout, ts, format_str, args...);
 }

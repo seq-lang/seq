@@ -23,8 +23,7 @@ public:
   Type *getBaseType(unsigned idx) const override;
   llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
   size_t size(llvm::Module *module) const override;
-  llvm::Value *make(llvm::Value *ptr, llvm::Value *len,
-                    llvm::BasicBlock *block);
+  llvm::Value *make(llvm::Value *ptr, llvm::Value *len, llvm::BasicBlock *block);
   static ArrayType *get(Type *baseType) noexcept;
   static ArrayType *get() noexcept;
 };

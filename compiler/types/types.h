@@ -72,8 +72,7 @@ public:
   /// @param abstract whether this type can be instantiated
   /// @param extendable whether this type can be extended via an
   ///                   `extend` statement
-  Type(std::string name, Type *parent, bool abstract = false,
-       bool extendable = false);
+  Type(std::string name, Type *parent, bool abstract = false, bool extendable = false);
 
   /// Returns a unique identifier for this type, based on
   /// the given name.
@@ -171,8 +170,7 @@ public:
   /// @param name name of the member
   /// @param block where to codegen the member
   /// @return member value
-  virtual llvm::Value *staticMemb(const std::string &name,
-                                  llvm::BasicBlock *block);
+  virtual llvm::Value *staticMemb(const std::string &name, llvm::BasicBlock *block);
 
   /// Returns the type of the specified static member (usually a
   /// method). This works for both regular and magic methods.
@@ -229,8 +227,7 @@ public:
   ///                      exception if magic is missing
   /// @return output type of specified magic method
   virtual Type *magicOut(const std::string &name, std::vector<Type *> args,
-                         bool nullOnMissing = false,
-                         bool overloadsOnly = false);
+                         bool nullOnMissing = false, bool overloadsOnly = false);
 
   BaseFunc *findMagic(const std::string &name, std::vector<types::Type *> args);
 
@@ -244,10 +241,8 @@ public:
   /// @param block where to codegen the call
   /// @param tc enclosing try-catch statement, or null if none
   /// @return result of calling the magic method
-  virtual llvm::Value *callMagic(const std::string &name,
-                                 std::vector<Type *> argTypes,
-                                 llvm::Value *self,
-                                 std::vector<llvm::Value *> args,
+  virtual llvm::Value *callMagic(const std::string &name, std::vector<Type *> argTypes,
+                                 llvm::Value *self, std::vector<llvm::Value *> args,
                                  llvm::BasicBlock *&block, TryCatch *tc);
 
   /// Returns the output type of the "__init__" magic method
@@ -263,8 +258,7 @@ public:
   ///                      exception if magic is missing
   /// @param initFunc will store resulting init function if non-null
   /// @return output type of "__init__" magic method
-  virtual Type *initOut(std::vector<Type *> &args,
-                        std::vector<std::string> names,
+  virtual Type *initOut(std::vector<Type *> &args, std::vector<std::string> names,
                         bool nullOnMissing = false, Func **initFunc = nullptr);
 
   /// Codegens a call to the "__init__" magic method. Throws
@@ -278,8 +272,7 @@ public:
   /// @param tc enclosing try-catch statement, or null if none
   /// @return result of calling the "__init__" magic method
   virtual llvm::Value *callInit(std::vector<Type *> argTypes,
-                                std::vector<std::string> names,
-                                llvm::Value *self,
+                                std::vector<std::string> names, llvm::Value *self,
                                 std::vector<llvm::Value *> args,
                                 llvm::BasicBlock *&block, TryCatch *tc);
 

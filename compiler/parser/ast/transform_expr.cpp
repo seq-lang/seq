@@ -781,6 +781,7 @@ void TransformVisitor::visit(const DotExpr *expr) {
           auto val = processIdentifier(ctx, name);
           assert(val);
           auto t = ctx->instantiate(getSrcInfo(), (*m)[0], c);
+          // clean-up unbounds of c here!
           resultExpr = N<IdExpr>(name);
           resultExpr->setType(t);
           auto newName = patchIfRealizable(t, val->getClass());

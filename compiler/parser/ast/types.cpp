@@ -107,9 +107,9 @@ LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic)
 
 string LinkType::toString(bool reduced) const {
   if (kind == Unbound)
-    return fmt::format("?{}{}", id, level, isStatic ? "_s" : "");
+    return fmt::format("?{}.{}", id, level, isStatic ? "_s" : "");
   else if (kind == Generic)
-    return fmt::format("#{}{}", id, level, isStatic ? "_s" : "");
+    return fmt::format("#{}.{}", id, level, isStatic ? "_s" : "");
   else
     return type->toString(reduced);
 }

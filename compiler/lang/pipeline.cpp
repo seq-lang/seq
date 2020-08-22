@@ -55,15 +55,14 @@ struct seq::PipeExpr::PipelineCodegenState {
   std::queue<bool> parallel;       // parallel ("||>") stages
   std::queue<types::Type *> types; // output type of each stage
 
-  bool inParallel; // whether current stage is in parallel section
-  bool inLoop;     // whether we are in a loop (i.e. past some generator stage)
+  bool inParallel;     // whether current stage is in parallel section
+  bool inLoop;         // whether we are in a loop (i.e. past some generator stage)
   bool nestedParallel; // whether this pipeline has multiple parallel stages
 
   DrainState drain; // drain state for prefetch and inter-align optimizations
 
   PipelineCodegenState(BasicBlock *block, std::queue<Expr *> stages,
-                       std::queue<bool> parallel,
-                       std::queue<types::Type *> types)
+                       std::queue<bool> parallel, std::queue<types::Type *> types)
       : type(nullptr), val(nullptr), block(block), stages(std::move(stages)),
         parallel(), types(types), inParallel(false), inLoop(false),
         nestedParallel(false), drain() {
@@ -77,10 +76,8 @@ struct seq::PipeExpr::PipelineCodegenState {
     nestedParallel = numParallels > 1;
   }
 
-  PipelineCodegenState getDrainState(Value *val, types::Type *type,
-                                     BasicBlock *block) {
-    PipelineCodegenState state(block, drain.stages, drain.parallel,
-                               drain.types);
+  PipelineCodegenState getDrainState(Value *val, types::Type *type, BasicBlock *block) {
+    PipelineCodegenState state(block, drain.stages, drain.parallel, drain.types);
     state.val = val;
     state.type = type;
     return state;
@@ -110,8 +107,7 @@ struct UnpackedStage {
         this->isCall = true;
       }
     } else if (auto *partialExpr = dynamic_cast<PartialCallExpr *>(stage)) {
-      if (auto *funcExpr =
-              dynamic_cast<FuncExpr *>(partialExpr->getFuncExpr())) {
+      if (auto *funcExpr = dynamic_cast<FuncExpr *>(partialExpr->getFuncExpr())) {
         this->func = funcExpr;
         this->args = partialExpr->getArgs();
         this->isCall = true;
@@ -232,9 +228,10 @@ static void applyCanonicalKmerOptimization(std::vector<Expr *> &stages,
 // make sure params are globals or literals, since codegen'ing in function entry
 // block
 template <typename E = IntExpr>
-static Value *validateAndCodegenInterAlignParamExpr(
-    Expr *e, const std::string &name, BaseFunc *base, BasicBlock *block,
-    bool i32 = false, types::Type *expectedType = types::Int) {
+static Value *
+validateAndCodegenInterAlignParamExpr(Expr *e, const std::string &name, BaseFunc *base,
+                                      BasicBlock *block, bool i32 = false,
+                                      types::Type *expectedType = types::Int) {
   if (!e)
     throw exc::SeqException("inter-sequence alignment parameter '" + name +
                             "' not specified");
@@ -252,48 +249,45 @@ static Value *validateAndCodegenInterAlignParamExpr(
                             "constants or global variables");
   Value *val = e->codegen(base, block);
   IRBuilder<> builder(block);
-  return builder.CreateZExtOrTrunc(val, i32 ? builder.getInt32Ty()
-                                            : builder.getInt8Ty());
+  return builder.CreateZExtOrTrunc(val,
+                                   i32 ? builder.getInt32Ty() : builder.getInt8Ty());
 }
 
 Value *PipeExpr::validateAndCodegenInterAlignParams(
-    types::GenType::InterAlignParams &paramExprs, BaseFunc *base,
-    BasicBlock *block) {
+    types::GenType::InterAlignParams &paramExprs, BaseFunc *base, BasicBlock *block) {
   types::RecordType *paramsType = PipeExpr::getInterAlignParamsType();
   Value *params = paramsType->defaultValue(block);
   Value *paramVal =
       validateAndCodegenInterAlignParamExpr(paramExprs.a, "a", base, block);
   params = paramsType->setMemb(params, "a", paramVal, block);
-  paramVal =
-      validateAndCodegenInterAlignParamExpr(paramExprs.b, "b", base, block);
+  paramVal = validateAndCodegenInterAlignParamExpr(paramExprs.b, "b", base, block);
   params = paramsType->setMemb(params, "b", paramVal, block);
-  paramVal = validateAndCodegenInterAlignParamExpr(paramExprs.ambig, "ambig",
-                                                   base, block);
+  paramVal =
+      validateAndCodegenInterAlignParamExpr(paramExprs.ambig, "ambig", base, block);
   params = paramsType->setMemb(params, "ambig", paramVal, block);
-  paramVal = validateAndCodegenInterAlignParamExpr(paramExprs.gapo, "gapo",
-                                                   base, block);
+  paramVal =
+      validateAndCodegenInterAlignParamExpr(paramExprs.gapo, "gapo", base, block);
   params = paramsType->setMemb(params, "gapo", paramVal, block);
-  paramVal = validateAndCodegenInterAlignParamExpr(paramExprs.gape, "gape",
-                                                   base, block);
+  paramVal =
+      validateAndCodegenInterAlignParamExpr(paramExprs.gape, "gape", base, block);
   params = paramsType->setMemb(params, "gape", paramVal, block);
   paramVal = validateAndCodegenInterAlignParamExpr<BoolExpr>(
       paramExprs.score_only, "score_only", base, block, /*i32=*/false,
       /*expectedType=*/types::Bool);
   params = paramsType->setMemb(params, "score_only", paramVal, block);
-  paramVal = validateAndCodegenInterAlignParamExpr(
-      paramExprs.bandwidth, "bandwidth", base, block, /*i32=*/true);
-  params = paramsType->setMemb(params, "bandwidth", paramVal, block);
-  paramVal = validateAndCodegenInterAlignParamExpr(paramExprs.zdrop, "zdrop",
+  paramVal = validateAndCodegenInterAlignParamExpr(paramExprs.bandwidth, "bandwidth",
                                                    base, block, /*i32=*/true);
+  params = paramsType->setMemb(params, "bandwidth", paramVal, block);
+  paramVal = validateAndCodegenInterAlignParamExpr(paramExprs.zdrop, "zdrop", base,
+                                                   block, /*i32=*/true);
   params = paramsType->setMemb(params, "zdrop", paramVal, block);
-  paramVal = validateAndCodegenInterAlignParamExpr(
-      paramExprs.end_bonus, "end_bonus", base, block, /*i32=*/true);
+  paramVal = validateAndCodegenInterAlignParamExpr(paramExprs.end_bonus, "end_bonus",
+                                                   base, block, /*i32=*/true);
   params = paramsType->setMemb(params, "end_bonus", paramVal, block);
   return params;
 }
 
-Value *PipeExpr::codegenPipe(BaseFunc *base,
-                             PipeExpr::PipelineCodegenState &state) {
+Value *PipeExpr::codegenPipe(BaseFunc *base, PipeExpr::PipelineCodegenState &state) {
   assert(state.stages.size() == state.parallel.size());
   if (state.stages.empty())
     return state.val;
@@ -349,8 +343,8 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
 
     BasicBlock *preamble = base->getPreamble();
     IRBuilder<> builder(preamble);
-    Value *states = makeAlloca(builder.getInt8PtrTy(), preamble,
-                               PipeExpr::SCHED_WIDTH_PREFETCH);
+    Value *states =
+        makeAlloca(builder.getInt8PtrTy(), preamble, PipeExpr::SCHED_WIDTH_PREFETCH);
     Value *next = makeAlloca(seqIntLLVM(context), preamble);
     Value *filled = makeAlloca(seqIntLLVM(context), preamble);
 
@@ -364,8 +358,7 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
 
     builder.SetInsertPoint(state.block);
     Value *N = builder.CreateLoad(filled);
-    Value *M =
-        ConstantInt::get(seqIntLLVM(context), PipeExpr::SCHED_WIDTH_PREFETCH);
+    Value *M = ConstantInt::get(seqIntLLVM(context), PipeExpr::SCHED_WIDTH_PREFETCH);
     Value *cond = builder.CreateICmpSLT(N, M);
     builder.CreateCondBr(cond, notFull, full);
 
@@ -407,8 +400,7 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
     builder.CreateCondBr(done, genDone, genNotDone);
 
     state.type = genType->getBaseType(0);
-    state.val =
-        state.type->is(types::Void) ? nullptr : genType->promise(gen, genDone);
+    state.val = state.type->is(types::Void) ? nullptr : genType->promise(gen, genDone);
 
     // store the current state for the drain step:
     state.drain.states = states;
@@ -438,8 +430,8 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
     builder.SetInsertPoint(genNotDone);
     nextVal = builder.CreateAdd(nextVal, oneLLVM(context));
     nextVal = builder.CreateAnd(
-        nextVal, ConstantInt::get(seqIntLLVM(context),
-                                  PipeExpr::SCHED_WIDTH_PREFETCH - 1));
+        nextVal,
+        ConstantInt::get(seqIntLLVM(context), PipeExpr::SCHED_WIDTH_PREFETCH - 1));
     builder.CreateStore(nextVal, next);
     builder.CreateBr(full0);
 
@@ -500,19 +492,19 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
     Value *pairsSize = builder.getInt64(pairType->size(module) * W);
     Value *histSize = builder.getInt64((MAX_SEQ_LEN8 + MAX_SEQ_LEN16 + 32) * 4);
     Value *states = builder.CreateCall(alloc, statesSize);
-    states = builder.CreateBitCast(
-        states, genType->getLLVMType(context)->getPointerTo());
+    states =
+        builder.CreateBitCast(states, genType->getLLVMType(context)->getPointerTo());
     Value *statesTemp = builder.CreateCall(alloc, statesSize);
-    statesTemp = builder.CreateBitCast(
-        statesTemp, genType->getLLVMType(context)->getPointerTo());
+    statesTemp = builder.CreateBitCast(statesTemp,
+                                       genType->getLLVMType(context)->getPointerTo());
     Value *bufRef = builder.CreateCall(allocAtomic, bufRefSize);
     Value *bufQer = builder.CreateCall(allocAtomic, bufQerSize);
     Value *pairs = builder.CreateCall(alloc, pairsSize);
-    pairs = builder.CreateBitCast(
-        pairs, pairType->getLLVMType(context)->getPointerTo());
+    pairs =
+        builder.CreateBitCast(pairs, pairType->getLLVMType(context)->getPointerTo());
     Value *pairsTemp = builder.CreateCall(alloc, pairsSize);
-    pairsTemp = builder.CreateBitCast(
-        pairsTemp, pairType->getLLVMType(context)->getPointerTo());
+    pairsTemp = builder.CreateBitCast(pairsTemp,
+                                      pairType->getLLVMType(context)->getPointerTo());
     Value *hist = builder.CreateCall(allocAtomic, histSize);
     hist = builder.CreateBitCast(hist, builder.getInt32Ty()->getPointerTo());
     Value *filled = makeAlloca(seqIntLLVM(context), preamble);
@@ -527,8 +519,8 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
     builder.CreateCondBr(cond, notFull0, full);
 
     builder.SetInsertPoint(full);
-    N = builder.CreateCall(flush, {pairs, bufRef, bufQer, states, N, params,
-                                   hist, pairsTemp, statesTemp});
+    N = builder.CreateCall(
+        flush, {pairs, bufRef, bufQer, states, N, params, hist, pairsTemp, statesTemp});
     builder.CreateStore(N, filled);
     cond = builder.CreateICmpSLT(N, M);
     builder.CreateCondBr(cond, notFull0, full); // keep flushing while full
@@ -550,8 +542,7 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
 
     builder.SetInsertPoint(notFull);
     N = builder.CreateLoad(filled);
-    N = builder.CreateCall(queue,
-                           {task, pairs, bufRef, bufQer, states, N, params});
+    N = builder.CreateCall(queue, {task, pairs, bufRef, bufQer, states, N, params});
     builder.CreateStore(N, filled);
     builder.CreateBr(exit);
     state.block = exit;
@@ -583,9 +574,8 @@ Value *PipeExpr::codegenPipe(BaseFunc *base,
         builder.CreateCondBr(cond, body, body); // we set true-branch below
 
     state.block = body;
-    state.val = state.type->is(types::Void)
-                    ? nullptr
-                    : genType->promise(gen, state.block);
+    state.val =
+        state.type->is(types::Void) ? nullptr : genType->promise(gen, state.block);
 
 #if SEQ_HAS_TAPIR
     if (parallelize) {
@@ -707,8 +697,7 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   IRBuilder<> builder(entry);
 
 #if SEQ_HAS_TAPIR
-  Function *syncStart =
-      Intrinsic::getDeclaration(module, Intrinsic::syncregion_start);
+  Function *syncStart = Intrinsic::getDeclaration(module, Intrinsic::syncregion_start);
   syncReg = builder.CreateCall(syncStart);
 #endif
 
@@ -786,8 +775,7 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
       builder.CreateCondBr(done, loop0, notDone);
       control->addIncoming(next, body);
 
-      BasicBlock *notDoneLoop =
-          BasicBlock::Create(context, "not_done_loop", func);
+      BasicBlock *notDoneLoop = BasicBlock::Create(context, "not_done_loop", func);
       BasicBlock *notDoneLoop0 = notDoneLoop;
 
       builder.SetInsertPoint(notDone);
@@ -827,9 +815,9 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
       builder.CreateCondBr(cond, loop, exit);
 
       builder.SetInsertPoint(loop);
-      N = builder.CreateCall(flush, {drain.pairs, drain.bufRef, drain.bufQer,
-                                     states, N, drain.params, drain.hist,
-                                     drain.pairsTemp, drain.statesTemp});
+      N = builder.CreateCall(flush, {drain.pairs, drain.bufRef, drain.bufQer, states, N,
+                                     drain.params, drain.hist, drain.pairsTemp,
+                                     drain.statesTemp});
       builder.CreateStore(N, filled);
       cond = builder.CreateICmpSGT(N, builder.getInt64(0));
       builder.CreateCondBr(cond, loop, exit); // keep flushing while not empty
@@ -866,17 +854,15 @@ types::RecordType *PipeExpr::getInterAlignYieldType() {
   static types::RecordType *resultType = types::RecordType::get(
       {cigarType, types::Int}, {"_cigar", "_score"}, "Alignment");
   return types::RecordType::get({types::Seq, types::Seq, resultType},
-                                {"query", "target", "alignment"},
-                                "InterAlignYield");
+                                {"query", "target", "alignment"}, "InterAlignYield");
 }
 
 types::RecordType *PipeExpr::getInterAlignParamsType() {
   auto *i8 = types::IntNType::get(8, true);
   auto *i32 = types::IntNType::get(32, true);
   return types::RecordType::get({i8, i8, i8, i8, i8, i8, i32, i32, i32},
-                                {"a", "b", "ambig", "gapo", "gape",
-                                 "score_only", "bandwidth", "zdrop",
-                                 "end_bonus"},
+                                {"a", "b", "ambig", "gapo", "gape", "score_only",
+                                 "bandwidth", "zdrop", "end_bonus"},
                                 "InterAlignParams");
 }
 

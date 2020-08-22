@@ -147,10 +147,11 @@ let test code =
   let stack = Stack.create () in
   Stack.push 0 stack;
   let state = Lexer.{ stack; offset = 0; ignore_newline = 0; fname = "test" } in
-  while true do
+  let finished = ref false in
+  while not !finished do
     let t = Lexer.token state lexbuf in
     match t with
-    | EOF -> eprintf "EOF\n%!"; exit 0
+    | EOF -> eprintf "EOF\n%!"; finished := true
     | NL | INDENT | DEDENT -> eprintf "%s\n%!" @@ print_token t
     | t -> eprintf "%s %!" @@ print_token t
   done

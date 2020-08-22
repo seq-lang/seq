@@ -20,9 +20,8 @@ public:
   unsigned argCount() const;
 
   llvm::Value *call(BaseFunc *base, llvm::Value *self,
-                    const std::vector<llvm::Value *> &args,
-                    llvm::BasicBlock *block, llvm::BasicBlock *normal,
-                    llvm::BasicBlock *unwind) override;
+                    const std::vector<llvm::Value *> &args, llvm::BasicBlock *block,
+                    llvm::BasicBlock *normal, llvm::BasicBlock *unwind) override;
 
   llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
@@ -41,12 +40,10 @@ class GenType : public Type {
 public:
   enum GenTypeKind { NORMAL, PREFETCH, INTERALIGN };
   struct InterAlignParams { // see bio/align.seq for definition
-    Expr *a, *b, *ambig, *gapo, *gape, *score_only, *bandwidth, *zdrop,
-        *end_bonus;
+    Expr *a, *b, *ambig, *gapo, *gape, *score_only, *bandwidth, *zdrop, *end_bonus;
     InterAlignParams()
         : a(nullptr), b(nullptr), ambig(nullptr), gapo(nullptr), gape(nullptr),
-          score_only(nullptr), bandwidth(nullptr), zdrop(nullptr),
-          end_bonus(nullptr) {}
+          score_only(nullptr), bandwidth(nullptr), zdrop(nullptr), end_bonus(nullptr) {}
   };
 
 private:
@@ -63,8 +60,8 @@ public:
 
   llvm::Value *defaultValue(llvm::BasicBlock *block) override;
   llvm::Value *done(llvm::Value *self, llvm::BasicBlock *block);
-  void resume(llvm::Value *self, llvm::BasicBlock *block,
-              llvm::BasicBlock *normal, llvm::BasicBlock *unwind);
+  void resume(llvm::Value *self, llvm::BasicBlock *block, llvm::BasicBlock *normal,
+              llvm::BasicBlock *unwind);
   llvm::Value *promise(llvm::Value *self, llvm::BasicBlock *block,
                        bool returnPtr = false);
   void send(llvm::Value *self, llvm::Value *val, llvm::BasicBlock *block);
@@ -83,8 +80,7 @@ public:
 
   GenType *asGen() override;
 
-  static GenType *get(Type *outType,
-                      GenTypeKind kind = GenTypeKind::NORMAL) noexcept;
+  static GenType *get(Type *outType, GenTypeKind kind = GenTypeKind::NORMAL) noexcept;
   static GenType *get(GenTypeKind kind = GenTypeKind::NORMAL) noexcept;
 };
 
@@ -106,9 +102,8 @@ public:
   bool isAtomic() const override;
 
   llvm::Value *call(BaseFunc *base, llvm::Value *self,
-                    const std::vector<llvm::Value *> &args,
-                    llvm::BasicBlock *block, llvm::BasicBlock *normal,
-                    llvm::BasicBlock *unwind) override;
+                    const std::vector<llvm::Value *> &args, llvm::BasicBlock *block,
+                    llvm::BasicBlock *normal, llvm::BasicBlock *unwind) override;
 
   llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
@@ -118,8 +113,7 @@ public:
   Type *getCallType(const std::vector<Type *> &inTypes) override;
   llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
   size_t size(llvm::Module *module) const override;
-  static PartialFuncType *get(Type *callee,
-                              std::vector<types::Type *> callTypes);
+  static PartialFuncType *get(Type *callee, std::vector<types::Type *> callTypes);
 
   llvm::Value *make(llvm::Value *func, std::vector<llvm::Value *> args,
                     llvm::BasicBlock *block);

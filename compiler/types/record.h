@@ -11,8 +11,7 @@ class RecordType : public Type {
 protected:
   std::vector<Type *> types;
   std::vector<std::string> names;
-  explicit RecordType(std::vector<Type *> types,
-                      std::vector<std::string> names = {},
+  explicit RecordType(std::vector<Type *> types, std::vector<std::string> names = {},
                       std::string name = "");
 
 public:
@@ -39,8 +38,7 @@ public:
   size_t size(llvm::Module *module) const override;
 
   RecordType *asRec() override;
-  static RecordType *get(std::vector<Type *> types,
-                         std::vector<std::string> names = {},
+  static RecordType *get(std::vector<Type *> types, std::vector<std::string> names = {},
                          std::string name = "");
 
 private:

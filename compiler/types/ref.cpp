@@ -25,24 +25,20 @@ static void codegenNotNoneCheck(Value *self, const std::string &name,
 
     GlobalVariable *strVar = new GlobalVariable(
         *module,
-        llvm::ArrayType::get(IntegerType::getInt8Ty(context),
-                             name.length() + 1),
-        true, GlobalValue::PrivateLinkage,
-        ConstantDataArray::getString(context, name), "str_memb");
+        llvm::ArrayType::get(IntegerType::getInt8Ty(context), name.length() + 1), true,
+        GlobalValue::PrivateLinkage, ConstantDataArray::getString(context, name),
+        "str_memb");
     strVar->setAlignment(1);
 
-    Value *str =
-        builder.CreateBitCast(strVar, IntegerType::getInt8PtrTy(context));
+    Value *str = builder.CreateBitCast(strVar, IntegerType::getInt8PtrTy(context));
     Value *len = ConstantInt::get(seqIntLLVM(context), name.length());
     Value *membVal = types::Str->make(str, len, builder.GetInsertBlock());
-    Function *ensureNotNone =
-        Func::getBuiltin("_ensure_not_none")->getFunc(module);
+    Function *ensureNotNone = Func::getBuiltin("_ensure_not_none")->getFunc(module);
     builder.CreateCall(ensureNotNone, {self, membVal});
   }
 }
 
-Value *types::RefType::memb(Value *self, const std::string &name,
-                            BasicBlock *block) {
+Value *types::RefType::memb(Value *self, const std::string &name, BasicBlock *block) {
   initFields();
   initOps();
   if (contents->numBaseTypes() > 0)
@@ -60,8 +56,7 @@ Value *types::RefType::memb(Value *self, const std::string &name,
   try {
     return contents->memb(x, name, block);
   } catch (exc::SeqException &) {
-    throw exc::SeqException("type '" + getName() + "' has no member '" + name +
-                            "'");
+    throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
   }
 }
 
@@ -82,8 +77,7 @@ types::Type *types::RefType::membType(const std::string &name) {
     }
   }
 
-  throw exc::SeqException("type '" + getName() + "' has no member '" + name +
-                          "'");
+  throw exc::SeqException("type '" + getName() + "' has no member '" + name + "'");
 }
 
 Value *types::RefType::setMemb(Value *self, const std::string &name, Value *val,
@@ -101,8 +95,7 @@ Value *types::RefType::setMemb(Value *self, const std::string &name, Value *val,
 }
 
 Value *types::RefType::defaultValue(BasicBlock *block) {
-  return ConstantPointerNull::get(
-      cast<PointerType>(getLLVMType(block->getContext())));
+  return ConstantPointerNull::get(cast<PointerType>(getLLVMType(block->getContext())));
 }
 
 void types::RefType::initOps() {
@@ -139,8 +132,8 @@ void types::RefType::initOps() {
              self, contents->getLLVMType(b.getContext())->getPointerTo());
          tuple = b.CreateLoad(tuple);
          BasicBlock *block = b.GetInsertBlock();
-         contents->callMagic("__pickle__", {PtrType::get(Byte)}, tuple,
-                             {args[0]}, block, nullptr);
+         contents->callMagic("__pickle__", {PtrType::get(Byte)}, tuple, {args[0]},
+                             block, nullptr);
          return (Value *)nullptr;
        },
        false},
@@ -151,9 +144,8 @@ void types::RefType::initOps() {
        [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          assert(contents);
          BasicBlock *block = b.GetInsertBlock();
-         Value *tuple =
-             contents->callMagic("__unpickle__", {PtrType::get(Byte)}, nullptr,
-                                 {args[0]}, block, nullptr);
+         Value *tuple = contents->callMagic("__unpickle__", {PtrType::get(Byte)},
+                                            nullptr, {args[0]}, block, nullptr);
          self = contents->alloc(nullptr, block);
          b.CreateStore(tuple, self);
          self = b.CreateBitCast(self, getLLVMType(b.getContext()));
@@ -164,9 +156,7 @@ void types::RefType::initOps() {
       {"__raw__",
        {},
        PtrType::get(Byte),
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
   };
 
@@ -176,8 +166,7 @@ void types::RefType::initOps() {
          [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
            self = b.CreateBitCast(self, getStructPointerType(b.getContext()));
            for (unsigned i = 0; i < args.size(); i++)
-             self = setMemb(self, std::to_string(i + 1), args[i],
-                            b.GetInsertBlock());
+             self = setMemb(self, std::to_string(i + 1), args[i], b.GetInsertBlock());
            self = b.CreateBitCast(self, getLLVMType(b.getContext()));
            return self;
          }});
@@ -250,9 +239,8 @@ types::MethodType::MethodType(types::Type *self, FuncType *func)
     : RecordType({self, func}, {"self", "func"}), self(self), func(func) {}
 
 Value *types::MethodType::call(BaseFunc *base, Value *self,
-                               const std::vector<Value *> &args,
-                               BasicBlock *block, BasicBlock *normal,
-                               BasicBlock *unwind) {
+                               const std::vector<Value *> &args, BasicBlock *block,
+                               BasicBlock *normal, BasicBlock *unwind) {
   Value *x = memb(self, "self", block);
   Value *f = memb(self, "func", block);
   std::vector<Value *> argsFull(args);
@@ -271,8 +259,7 @@ types::Type *types::MethodType::getBaseType(unsigned idx) const {
   return idx ? self : func;
 }
 
-types::Type *
-types::MethodType::getCallType(const std::vector<Type *> &inTypes) {
+types::Type *types::MethodType::getCallType(const std::vector<Type *> &inTypes) {
   std::vector<Type *> inTypesFull(inTypes);
   inTypesFull.insert(inTypesFull.begin(), self);
   return func->getCallType(inTypesFull);
@@ -286,7 +273,6 @@ Value *types::MethodType::make(Value *self, Value *func, BasicBlock *block) {
   return method;
 }
 
-types::MethodType *types::MethodType::get(types::Type *self,
-                                          types::FuncType *func) {
+types::MethodType *types::MethodType::get(types::Type *self, types::FuncType *func) {
   return new MethodType(self, func);
 }

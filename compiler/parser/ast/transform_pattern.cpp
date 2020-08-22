@@ -57,36 +57,36 @@ void TransformVisitor::visit(const StarPattern *pat) {
 void TransformVisitor::visit(const IntPattern *pat) {
   resultPattern = N<IntPattern>(pat->value);
   if (ctx->isTypeChecking())
-    resultPattern->setType(forceUnify(
-        pat, forceUnify(ctx->getMatchType(), ctx->findInternal("int"))));
+    resultPattern->setType(
+        forceUnify(pat, forceUnify(ctx->getMatchType(), ctx->findInternal("int"))));
 }
 
 void TransformVisitor::visit(const BoolPattern *pat) {
   resultPattern = N<BoolPattern>(pat->value);
   if (ctx->isTypeChecking())
-    resultPattern->setType(forceUnify(
-        pat, forceUnify(ctx->getMatchType(), ctx->findInternal("bool"))));
+    resultPattern->setType(
+        forceUnify(pat, forceUnify(ctx->getMatchType(), ctx->findInternal("bool"))));
 }
 
 void TransformVisitor::visit(const StrPattern *pat) {
   resultPattern = N<StrPattern>(pat->value);
   if (ctx->isTypeChecking())
-    resultPattern->setType(forceUnify(
-        pat, forceUnify(ctx->getMatchType(), ctx->findInternal("str"))));
+    resultPattern->setType(
+        forceUnify(pat, forceUnify(ctx->getMatchType(), ctx->findInternal("str"))));
 }
 
 void TransformVisitor::visit(const SeqPattern *pat) {
   resultPattern = N<SeqPattern>(pat->value);
   if (ctx->isTypeChecking())
-    resultPattern->setType(forceUnify(
-        pat, forceUnify(ctx->getMatchType(), ctx->findInternal("seq"))));
+    resultPattern->setType(
+        forceUnify(pat, forceUnify(ctx->getMatchType(), ctx->findInternal("seq"))));
 }
 
 void TransformVisitor::visit(const RangePattern *pat) {
   resultPattern = N<RangePattern>(pat->start, pat->end);
   if (ctx->isTypeChecking())
-    resultPattern->setType(forceUnify(
-        pat, forceUnify(ctx->getMatchType(), ctx->findInternal("int"))));
+    resultPattern->setType(
+        forceUnify(pat, forceUnify(ctx->getMatchType(), ctx->findInternal("int"))));
 }
 
 void TransformVisitor::visit(const TuplePattern *pat) {

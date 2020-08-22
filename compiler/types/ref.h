@@ -34,8 +34,8 @@ public:
 
   Type *membType(const std::string &name) override;
 
-  llvm::Value *setMemb(llvm::Value *self, const std::string &name,
-                       llvm::Value *val, llvm::BasicBlock *block) override;
+  llvm::Value *setMemb(llvm::Value *self, const std::string &name, llvm::Value *val,
+                       llvm::BasicBlock *block) override;
 
   llvm::Value *defaultValue(llvm::BasicBlock *block) override;
 
@@ -50,8 +50,7 @@ public:
 
   RefType *asRef() override;
 
-  llvm::Value *make(llvm::BasicBlock *block,
-                    std::vector<llvm::Value *> vals = {});
+  llvm::Value *make(llvm::BasicBlock *block, std::vector<llvm::Value *> vals = {});
   static RefType *get(std::string name);
   static RefType *none();
 };
@@ -67,16 +66,14 @@ public:
   void operator=(MethodType const &) = delete;
 
   llvm::Value *call(BaseFunc *base, llvm::Value *self,
-                    const std::vector<llvm::Value *> &args,
-                    llvm::BasicBlock *block, llvm::BasicBlock *normal,
-                    llvm::BasicBlock *unwind) override;
+                    const std::vector<llvm::Value *> &args, llvm::BasicBlock *block,
+                    llvm::BasicBlock *normal, llvm::BasicBlock *unwind) override;
 
   bool is(types::Type *type) const override;
   unsigned numBaseTypes() const override;
   Type *getBaseType(unsigned idx) const override;
   Type *getCallType(const std::vector<Type *> &inTypes) override;
-  llvm::Value *make(llvm::Value *self, llvm::Value *func,
-                    llvm::BasicBlock *block);
+  llvm::Value *make(llvm::Value *self, llvm::Value *func, llvm::BasicBlock *block);
   static MethodType *get(Type *self, FuncType *func);
 };
 } // namespace types

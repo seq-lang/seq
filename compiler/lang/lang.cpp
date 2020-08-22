@@ -29,8 +29,8 @@ void ExprStmt::codegen0(BasicBlock *&block) {
   if (dynamic_cast<types::PartialFuncType *>(expr->getType())) {
     SrcInfo src = getSrcInfo();
     compilationWarning(
-        "function call is partial; are there arguments missing on this call?",
-        src.file, src.line, src.col);
+        "function call is partial; are there arguments missing on this call?", src.file,
+        src.line, src.col);
   }
   expr->codegen(getBase(), block);
 }
@@ -46,12 +46,11 @@ void VarStmt::codegen0(BasicBlock *&block) {
   if (type && init) {
     types::Type *got = init->getType();
     if (!types::is(type, got))
-      throw exc::SeqException("expected var type '" + type->getName() +
-                              "', but got '" + got->getName() + "'");
+      throw exc::SeqException("expected var type '" + type->getName() + "', but got '" +
+                              got->getName() + "'");
   }
 
-  Value *val =
-      init ? init->codegen(getBase(), block) : type->defaultValue(block);
+  Value *val = init ? init->codegen(getBase(), block) : type->defaultValue(block);
   var->store(getBase(), val, block);
 }
 
@@ -85,9 +84,8 @@ void AssignIndex::codegen0(BasicBlock *&block) {
   Value *val = value->codegen(getBase(), block);
   Value *arr = array->codegen(getBase(), block);
   Value *idx = this->idx->codegen(getBase(), block);
-  array->getType()->callMagic("__setitem__",
-                              {this->idx->getType(), value->getType()}, arr,
-                              {idx, val}, block, getTryCatch());
+  array->getType()->callMagic("__setitem__", {this->idx->getType(), value->getType()},
+                              arr, {idx, val}, block, getTryCatch());
 }
 
 Del::Del(Var *var) : Stmt("del"), var(var) {}
@@ -97,14 +95,13 @@ void Del::codegen0(BasicBlock *&block) {
   var->store(getBase(), empty, block);
 }
 
-DelIndex::DelIndex(Expr *array, Expr *idx)
-    : Stmt("del []"), array(array), idx(idx) {}
+DelIndex::DelIndex(Expr *array, Expr *idx) : Stmt("del []"), array(array), idx(idx) {}
 
 void DelIndex::codegen0(BasicBlock *&block) {
   Value *arr = array->codegen(getBase(), block);
   Value *idx = this->idx->codegen(getBase(), block);
-  array->getType()->callMagic("__delitem__", {this->idx->getType()}, arr, {idx},
-                              block, getTryCatch());
+  array->getType()->callMagic("__delitem__", {this->idx->getType()}, arr, {idx}, block,
+                              getTryCatch());
 }
 
 AssignMember::AssignMember(Expr *expr, std::string memb, Expr *value)
@@ -189,11 +186,10 @@ Block *If::getBlock(unsigned int idx) {
 }
 
 TryCatch::TryCatch()
-    : Stmt("try"), scope(new Block(this)), catchTypes(), catchBlocks(),
-      catchVars(), finally(new Block(this)), exceptionBlock(nullptr),
-      exceptionRouteBlock(nullptr), finallyStart(nullptr), handlers(),
-      excFlag(nullptr), catchStore(nullptr), delegateDepth(nullptr),
-      retStore(nullptr) {}
+    : Stmt("try"), scope(new Block(this)), catchTypes(), catchBlocks(), catchVars(),
+      finally(new Block(this)), exceptionBlock(nullptr), exceptionRouteBlock(nullptr),
+      finallyStart(nullptr), handlers(), excFlag(nullptr), catchStore(nullptr),
+      delegateDepth(nullptr), retStore(nullptr) {}
 
 ConstantInt *TryCatch::state(LLVMContext &context, State s) {
   return ConstantInt::get(Type::getInt8Ty(context), s);
@@ -273,30 +269,26 @@ StructType *TryCatch::getPadType(LLVMContext &context) {
 }
 
 StructType *TryCatch::getExcType(LLVMContext &context) {
-  return StructType::get(getTypeInfoType(context),
-                         IntegerType::getInt8PtrTy(context));
+  return StructType::get(getTypeInfoType(context), IntegerType::getInt8PtrTy(context));
 }
 
-GlobalVariable *TryCatch::getTypeIdxVar(Module *module,
-                                        const std::string &name) {
+GlobalVariable *TryCatch::getTypeIdxVar(Module *module, const std::string &name) {
   LLVMContext &context = module->getContext();
   auto *typeInfoType = getTypeInfoType(context);
-  const std::string typeVarName =
-      "seq.typeidx." + (name.empty() ? "<all>" : name);
+  const std::string typeVarName = "seq.typeidx." + (name.empty() ? "<all>" : name);
   GlobalVariable *tidx = module->getGlobalVariable(typeVarName);
   int idx = types::Type::getID(name);
   if (!tidx)
     tidx = new GlobalVariable(
         *module, typeInfoType, true, GlobalValue::PrivateLinkage,
-        ConstantStruct::get(typeInfoType,
-                            ConstantInt::get(IntegerType::getInt32Ty(context),
-                                             (uint64_t)idx, false)),
+        ConstantStruct::get(
+            typeInfoType,
+            ConstantInt::get(IntegerType::getInt32Ty(context), (uint64_t)idx, false)),
         typeVarName);
   return tidx;
 }
 
-GlobalVariable *TryCatch::getTypeIdxVar(Module *module,
-                                        types::Type *catchType) {
+GlobalVariable *TryCatch::getTypeIdxVar(Module *module, types::Type *catchType) {
   return getTypeIdxVar(module, catchType ? catchType->getName() : "");
 }
 
@@ -350,10 +342,9 @@ void TryCatch::codegen0(BasicBlock *&block) {
 
   for (unsigned i = 0; i < catchTypes.size(); i++) {
     for (unsigned j = 0; j < i; j++) {
-      if (catchTypes[i] && catchTypes[j] &&
-          types::is(catchTypes[i], catchTypes[j]))
-        throw exc::SeqException("duplicate except type '" +
-                                catchTypes[i]->getName() + "'");
+      if (catchTypes[i] && catchTypes[j] && types::is(catchTypes[i], catchTypes[j]))
+        throw exc::SeqException("duplicate except type '" + catchTypes[i]->getName() +
+                                "'");
     }
   }
 
@@ -392,8 +383,7 @@ void TryCatch::codegen0(BasicBlock *&block) {
       BasicBlock::Create(context, "external_exception", func);
 
   // block which calls _Unwind_Resume
-  BasicBlock *unwindResumeBlock =
-      BasicBlock::Create(context, "unwind_resume", func);
+  BasicBlock *unwindResumeBlock = BasicBlock::Create(context, "unwind_resume", func);
 
   // clean up block which delete exception if needed
   BasicBlock *endBlock = BasicBlock::Create(context, "end", func);
@@ -443,10 +433,8 @@ void TryCatch::codegen0(BasicBlock *&block) {
   if (this != root) {
     Value *depthRead = builder.CreateLoad(delegateDepth);
     Value *delegate = builder.CreateICmpSGT(depthRead, zeroLLVM(context));
-    BasicBlock *finallyNormal =
-        BasicBlock::Create(context, "finally_normal", func);
-    BasicBlock *finallyDelegate =
-        BasicBlock::Create(context, "finally_delegate", func);
+    BasicBlock *finallyNormal = BasicBlock::Create(context, "finally_normal", func);
+    BasicBlock *finallyDelegate = BasicBlock::Create(context, "finally_delegate", func);
     builder.CreateCondBr(delegate, finallyDelegate, finallyNormal);
 
     builder.SetInsertPoint(finallyDelegate);
@@ -461,14 +449,13 @@ void TryCatch::codegen0(BasicBlock *&block) {
 
   builder.SetInsertPoint(finallyBlock);
   const bool supportBreakAndContinue = inLoop(this);
-  SwitchInst *theSwitch = builder.CreateSwitch(excFlagRead, endBlock,
-                                               supportBreakAndContinue ? 5 : 3);
+  SwitchInst *theSwitch =
+      builder.CreateSwitch(excFlagRead, endBlock, supportBreakAndContinue ? 5 : 3);
   theSwitch->addCase(excStateCaught, endBlock);
   theSwitch->addCase(excStateThrown, unwindResumeBlock);
 
   if (this == root) {
-    BasicBlock *finallyReturn =
-        BasicBlock::Create(context, "finally_return", func);
+    BasicBlock *finallyReturn = BasicBlock::Create(context, "finally_return", func);
     theSwitch->addCase(excStateReturn, finallyReturn);
     auto *f = dynamic_cast<Func *>(base);
 
@@ -491,8 +478,7 @@ void TryCatch::codegen0(BasicBlock *&block) {
     const bool outer = (getInnermostTryCatchBeforeLoop(this) == nullptr);
 
     if (outer) {
-      BasicBlock *finallyBreak =
-          BasicBlock::Create(context, "finally_break", func);
+      BasicBlock *finallyBreak = BasicBlock::Create(context, "finally_break", func);
       BasicBlock *finallyContinue =
           BasicBlock::Create(context, "finally_continue", func);
       theSwitch->addCase(excStateBreak, finallyBreak);
@@ -506,8 +492,8 @@ void TryCatch::codegen0(BasicBlock *&block) {
 
       builder.SetInsertPoint(finallyContinue);
       builder.CreateStore(excStateNotThrown, excFlag);
-      BranchInst *instContinue = builder.CreateBr(
-          block); // destination will be fixed by `setContinues`
+      BranchInst *instContinue =
+          builder.CreateBr(block); // destination will be fixed by `setContinues`
       addContinueToEnclosingLoop(instContinue);
     } else {
       assert(this != root);
@@ -601,8 +587,7 @@ void TryCatch::codegen0(BasicBlock *&block) {
 
   Value *unwindExceptionClass = builder.CreateLoad(builder.CreateStructGEP(
       unwindType,
-      builder.CreatePointerCast(unwindException, unwindType->getPointerTo()),
-      0));
+      builder.CreatePointerCast(unwindException, unwindType->getPointerTo()), 0));
 
   // check for foreign exceptions:
   builder.CreateCondBr(
@@ -617,8 +602,7 @@ void TryCatch::codegen0(BasicBlock *&block) {
 
   // reroute Seq exceptions:
   builder.SetInsertPoint(exceptionRouteBlock);
-  unwindException =
-      builder.CreateExtractValue(builder.CreateLoad(catchStore), 0);
+  unwindException = builder.CreateExtractValue(builder.CreateLoad(catchStore), 0);
   Value *excVal = builder.CreatePointerCast(
       builder.CreateConstGEP1_64(unwindException, (uint64_t)seq_exc_offset()),
       excType->getPointerTo());
@@ -638,8 +622,8 @@ void TryCatch::codegen0(BasicBlock *&block) {
                             : finallyStart);
 
   builder.SetInsertPoint(exceptionRouteBlock);
-  SwitchInst *switchToCatchBlock = builder.CreateSwitch(
-      objType, defaultRouteBlock, (unsigned)handlersFull.size());
+  SwitchInst *switchToCatchBlock =
+      builder.CreateSwitch(objType, defaultRouteBlock, (unsigned)handlersFull.size());
   for (unsigned i = 0; i < handlersFull.size(); i++) {
     BasicBlock *catchBlock = handlersFull[i];
     BasicBlock *catchBlock0 = catchBlock;
@@ -653,10 +637,10 @@ void TryCatch::codegen0(BasicBlock *&block) {
     catchBlock = depthSet;
 
     if (catchTypesFull[i]) {
-      switchToCatchBlock->addCase(
-          ConstantInt::get(IntegerType::getInt32Ty(context),
-                           (uint64_t)catchTypesFull[i]->getID(), true),
-          catchBlock);
+      switchToCatchBlock->addCase(ConstantInt::get(IntegerType::getInt32Ty(context),
+                                                   (uint64_t)catchTypesFull[i]->getID(),
+                                                   true),
+                                  catchBlock);
     }
 
     // codegen catch body if this block is ours (vs. a parent's):
@@ -665,16 +649,14 @@ void TryCatch::codegen0(BasicBlock *&block) {
       Var *var = catchVars[i];
 
       if (var) {
-        Value *obj =
-            builder.CreateBitCast(objPtr, catchTypes[i]->getLLVMType(context));
+        Value *obj = builder.CreateBitCast(objPtr, catchTypes[i]->getLLVMType(context));
         var->store(base, obj, catchBlock0);
       }
 
       builder.SetInsertPoint(catchBlock0);
       builder.CreateStore(excStateCaught, excFlag);
       catchBlocks[i]->codegen(catchBlock0);
-      builder.SetInsertPoint(
-          catchBlock0); // could be different after previous codegen
+      builder.SetInsertPoint(catchBlock0); // could be different after previous codegen
       builder.CreateBr(finallyStart);
     }
   }
@@ -692,12 +674,12 @@ void Throw::codegen0(BasicBlock *&block) {
   types::RefType *refType = type->asRef();
 
   if (!refType)
-    throw exc::SeqException("cannot throw non-reference type '" +
-                            type->getName() + "'");
+    throw exc::SeqException("cannot throw non-reference type '" + type->getName() +
+                            "'");
 
   static types::RecordType *excHeader = types::RecordType::get(
-      {types::Str, types::Str, types::Str, types::Str, types::Int, types::Int},
-      {}, "ExcHeader");
+      {types::Str, types::Str, types::Str, types::Str, types::Int, types::Int}, {},
+      "ExcHeader");
   if (refType->numBaseTypes() < 1 || !refType->getBaseType(0)->is(excHeader))
     throw exc::SeqException(
         "first member of thrown exception must be of type 'ExcHeader'");
@@ -739,10 +721,10 @@ void Throw::codegen0(BasicBlock *&block) {
   builder.SetInsertPoint(block);
   builder.CreateStore(hdr, hdrPtr);
 
-  Value *exc = builder.CreateCall(
-      excAllocFunc, {ConstantInt::get(IntegerType::getInt32Ty(context),
-                                      (uint64_t)type->getID(), true),
-                     obj});
+  Value *exc = builder.CreateCall(excAllocFunc,
+                                  {ConstantInt::get(IntegerType::getInt32Ty(context),
+                                                    (uint64_t)type->getID(), true),
+                                   obj});
 
   if (getTryCatch()) {
     Function *parent = block->getParent();
@@ -839,8 +821,7 @@ void While::codegen0(BasicBlock *&block) {
   BasicBlock *loop = loop0;
   builder.CreateBr(loop);
 
-  Value *cond =
-      this->cond->codegen(getBase(), loop); // recall: this can change `loop`
+  Value *cond = this->cond->codegen(getBase(), loop); // recall: this can change `loop`
   cond = this->cond->getType()->boolValue(cond, loop, getTryCatch());
   builder.SetInsertPoint(loop);
   cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
@@ -864,8 +845,7 @@ void While::codegen0(BasicBlock *&block) {
   setContinues(loop0);
 }
 
-For::For(Expr *gen)
-    : Stmt("for"), gen(gen), scope(new Block(this)), var(new Var()) {
+For::For(Expr *gen) : Stmt("for"), gen(gen), scope(new Block(this)), var(new Var()) {
   loop = true;
 }
 
@@ -882,16 +862,15 @@ void For::codegen0(BasicBlock *&block) {
   types::GenType *genType = type->asGen();
 
   if (!genType)
-    throw exc::SeqException("cannot iterate over object of type '" +
-                            type->getName() + "'");
+    throw exc::SeqException("cannot iterate over object of type '" + type->getName() +
+                            "'");
 
   LLVMContext &context = block->getContext();
   BasicBlock *entry = block;
   Function *func = entry->getParent();
 
   Value *gen = this->gen->codegen(getBase(), entry);
-  gen = this->gen->getType()->callMagic("__iter__", {}, gen, {}, entry,
-                                        getTryCatch());
+  gen = this->gen->getType()->callMagic("__iter__", {}, gen, {}, entry, getTryCatch());
 
   IRBuilder<> builder(entry);
   BasicBlock *loopCont = BasicBlock::Create(context, "for_cont", func);

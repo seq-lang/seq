@@ -3,10 +3,9 @@
 using namespace seq;
 using namespace llvm;
 
-types::FuncType::FuncType(std::vector<types::Type *> inTypes,
-                          types::Type *outType)
-    : Type("function", BaseType::get()), inTypes(std::move(inTypes)),
-      outType(outType) {}
+types::FuncType::FuncType(std::vector<types::Type *> inTypes, types::Type *outType)
+    : Type("function", BaseType::get()), inTypes(std::move(inTypes)), outType(outType) {
+}
 
 unsigned types::FuncType::argCount() const { return (unsigned)inTypes.size(); }
 
@@ -15,9 +14,8 @@ static types::OptionalType *asOpt(types::Type *type) {
 }
 
 Value *types::FuncType::call(BaseFunc *base, Value *self,
-                             const std::vector<Value *> &args,
-                             BasicBlock *block, BasicBlock *normal,
-                             BasicBlock *unwind) {
+                             const std::vector<Value *> &args, BasicBlock *block,
+                             BasicBlock *normal, BasicBlock *unwind) {
   // LLVMContext &context = block->getContext();
   IRBuilder<> builder(block);
   return normal ? (Value *)builder.CreateInvoke(self, normal, unwind, args)
@@ -25,12 +23,10 @@ Value *types::FuncType::call(BaseFunc *base, Value *self,
 }
 
 Value *types::FuncType::defaultValue(BasicBlock *block) {
-  return ConstantPointerNull::get(
-      cast<PointerType>(getLLVMType(block->getContext())));
+  return ConstantPointerNull::get(cast<PointerType>(getLLVMType(block->getContext())));
 }
 
-static Value *codegenStr(Value *self, const std::string &name,
-                         BasicBlock *block) {
+static Value *codegenStr(Value *self, const std::string &name, BasicBlock *block) {
   LLVMContext &context = block->getContext();
   IRBuilder<> builder(block);
   Value *ptr = builder.CreateBitCast(self, builder.getInt8PtrTy());
@@ -40,9 +36,8 @@ static Value *codegenStr(Value *self, const std::string &name,
   ValueExpr ptrVal(types::PtrType::get(types::Byte), ptr);
 
   GlobalVariable *nameVar = new GlobalVariable(
-      *block->getModule(),
-      llvm::ArrayType::get(builder.getInt8Ty(), name.length() + 1), true,
-      GlobalValue::PrivateLinkage, ConstantDataArray::getString(context, name),
+      *block->getModule(), llvm::ArrayType::get(builder.getInt8Ty(), name.length() + 1),
+      true, GlobalValue::PrivateLinkage, ConstantDataArray::getString(context, name),
       "typename_literal");
   nameVar->setAlignment(1);
 
@@ -115,14 +110,13 @@ static std::string expectedTypeName(types::Type *exp) {
 types::Type *types::FuncType::getCallType(const std::vector<Type *> &inTypes) {
   if (this->inTypes.size() != inTypes.size())
     throw exc::SeqException("expected " + std::to_string(this->inTypes.size()) +
-                            " argument(s), but got " +
-                            std::to_string(inTypes.size()));
+                            " argument(s), but got " + std::to_string(inTypes.size()));
 
   for (unsigned i = 0; i < inTypes.size(); i++)
     if (!compatibleArgType(inTypes[i], this->inTypes[i])) {
       throw exc::SeqException("expected function input type '" +
-                              expectedTypeName(this->inTypes[i]) +
-                              "', but got '" + inTypes[i]->getName() + "'");
+                              expectedTypeName(this->inTypes[i]) + "', but got '" +
+                              inTypes[i]->getName() + "'");
     }
 
   return outType;
@@ -138,24 +132,20 @@ Type *types::FuncType::getLLVMType(LLVMContext &context) const {
 }
 
 size_t types::FuncType::size(Module *module) const {
-  return module->getDataLayout().getTypeAllocSize(
-      getLLVMType(module->getContext()));
+  return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
-types::FuncType *types::FuncType::get(std::vector<Type *> inTypes,
-                                      Type *outType) {
+types::FuncType *types::FuncType::get(std::vector<Type *> inTypes, Type *outType) {
   return new FuncType(std::move(inTypes), outType);
 }
 
 types::GenType::GenType(Type *outType, GenTypeKind kind)
-    : Type("generator", BaseType::get()), outType(outType), kind(kind),
-      alnParams() {}
+    : Type("generator", BaseType::get()), outType(outType), kind(kind), alnParams() {}
 
 bool types::GenType::isAtomic() const { return false; }
 
 Value *types::GenType::defaultValue(BasicBlock *block) {
-  return ConstantPointerNull::get(
-      cast<PointerType>(getLLVMType(block->getContext())));
+  return ConstantPointerNull::get(cast<PointerType>(getLLVMType(block->getContext())));
 }
 
 Value *types::GenType::done(Value *self, BasicBlock *block) {
@@ -193,8 +183,7 @@ Value *types::GenType::promise(Value *self, BasicBlock *block, bool returnPtr) {
   Value *from = ConstantInt::get(IntegerType::getInt1Ty(context), 0);
 
   Value *ptr = builder.CreateCall(promFn, {self, aln, from});
-  ptr = builder.CreateBitCast(
-      ptr, PointerType::get(outType->getLLVMType(context), 0));
+  ptr = builder.CreateBitCast(ptr, PointerType::get(outType->getLLVMType(context), 0));
   return returnPtr ? ptr : builder.CreateLoad(ptr);
 }
 
@@ -215,9 +204,7 @@ void types::GenType::destroy(Value *self, BasicBlock *block) {
 
 bool types::GenType::fromPrefetch() { return kind == GenTypeKind::PREFETCH; }
 
-bool types::GenType::fromInterAlign() {
-  return kind == GenTypeKind::INTERALIGN;
-}
+bool types::GenType::fromInterAlign() { return kind == GenTypeKind::INTERALIGN; }
 
 void types::GenType::setAlignParams(GenType::InterAlignParams alnParams) {
   if (!fromInterAlign())
@@ -241,17 +228,13 @@ void types::GenType::initOps() {
       {"__iter__",
        {},
        this,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__raw__",
        {},
        PtrType::get(Byte),
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return self;
-       },
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) { return self; },
        false},
 
       {"__done__",
@@ -289,61 +272,59 @@ void types::GenType::initOps() {
        false},
   };
 
-  addMethod(
-      "next",
-      new BaseFuncLite(
-          {this}, outType,
-          [this](Module *module) {
-            const std::string name = "seq." + getName() + ".next";
-            Function *func = module->getFunction(name);
+  addMethod("next",
+            new BaseFuncLite(
+                {this}, outType,
+                [this](Module *module) {
+                  const std::string name = "seq." + getName() + ".next";
+                  Function *func = module->getFunction(name);
 
-            if (!func) {
-              LLVMContext &context = module->getContext();
-              func = cast<Function>(module->getOrInsertFunction(
-                  name, outType->getLLVMType(context), getLLVMType(context)));
-              func->setLinkage(GlobalValue::PrivateLinkage);
-              func->setDoesNotThrow();
-              func->setPersonalityFn(makePersonalityFunc(module));
-              func->addFnAttr(Attribute::AlwaysInline);
+                  if (!func) {
+                    LLVMContext &context = module->getContext();
+                    func = cast<Function>(module->getOrInsertFunction(
+                        name, outType->getLLVMType(context), getLLVMType(context)));
+                    func->setLinkage(GlobalValue::PrivateLinkage);
+                    func->setDoesNotThrow();
+                    func->setPersonalityFn(makePersonalityFunc(module));
+                    func->addFnAttr(Attribute::AlwaysInline);
 
-              Value *arg = func->arg_begin();
-              BasicBlock *entry = BasicBlock::Create(context, "entry", func);
-              Value *val = promise(arg, entry);
-              IRBuilder<> builder(entry);
-              builder.CreateRet(val);
-            }
+                    Value *arg = func->arg_begin();
+                    BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+                    Value *val = promise(arg, entry);
+                    IRBuilder<> builder(entry);
+                    builder.CreateRet(val);
+                  }
 
-            return func;
-          }),
-      true);
+                  return func;
+                }),
+            true);
 
-  addMethod(
-      "done",
-      new BaseFuncLite(
-          {this}, Bool,
-          [this](Module *module) {
-            const std::string name = "seq." + getName() + ".done";
-            Function *func = module->getFunction(name);
+  addMethod("done",
+            new BaseFuncLite(
+                {this}, Bool,
+                [this](Module *module) {
+                  const std::string name = "seq." + getName() + ".done";
+                  Function *func = module->getFunction(name);
 
-            if (!func) {
-              LLVMContext &context = module->getContext();
-              func = cast<Function>(module->getOrInsertFunction(
-                  name, Bool->getLLVMType(context), getLLVMType(context)));
-              func->setLinkage(GlobalValue::PrivateLinkage);
-              func->addFnAttr(Attribute::AlwaysInline);
+                  if (!func) {
+                    LLVMContext &context = module->getContext();
+                    func = cast<Function>(module->getOrInsertFunction(
+                        name, Bool->getLLVMType(context), getLLVMType(context)));
+                    func->setLinkage(GlobalValue::PrivateLinkage);
+                    func->addFnAttr(Attribute::AlwaysInline);
 
-              Value *arg = func->arg_begin();
-              BasicBlock *entry = BasicBlock::Create(context, "entry", func);
-              resume(arg, entry, nullptr, nullptr);
-              Value *val = done(arg, entry);
-              IRBuilder<> builder(entry);
-              val = builder.CreateZExt(val, Bool->getLLVMType(context));
-              builder.CreateRet(val);
-            }
+                    Value *arg = func->arg_begin();
+                    BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+                    resume(arg, entry, nullptr, nullptr);
+                    Value *val = done(arg, entry);
+                    IRBuilder<> builder(entry);
+                    val = builder.CreateZExt(val, Bool->getLLVMType(context));
+                    builder.CreateRet(val);
+                  }
 
-            return func;
-          }),
-      true);
+                  return func;
+                }),
+            true);
 
   addMethod("send",
             new BaseFuncLite(
@@ -355,8 +336,8 @@ void types::GenType::initOps() {
                   if (!func) {
                     LLVMContext &context = module->getContext();
                     func = cast<Function>(module->getOrInsertFunction(
-                        name, outType->getLLVMType(context),
-                        getLLVMType(context), outType->getLLVMType(context)));
+                        name, outType->getLLVMType(context), getLLVMType(context),
+                        outType->getLLVMType(context)));
                     func->setLinkage(GlobalValue::PrivateLinkage);
                     func->setDoesNotThrow();
                     func->addFnAttr(Attribute::AlwaysInline);
@@ -364,8 +345,7 @@ void types::GenType::initOps() {
                     auto iter = func->arg_begin();
                     Value *self = iter++;
                     Value *val = iter;
-                    BasicBlock *entry =
-                        BasicBlock::Create(context, "entry", func);
+                    BasicBlock *entry = BasicBlock::Create(context, "entry", func);
                     send(self, val, entry);
                     resume(self, entry, nullptr, nullptr);
                     IRBuilder<> builder(entry);
@@ -376,32 +356,31 @@ void types::GenType::initOps() {
                 }),
             true);
 
-  addMethod(
-      "destroy",
-      new BaseFuncLite(
-          {this}, Void,
-          [this](Module *module) {
-            const std::string name = "seq." + getName() + ".destroy";
-            Function *func = module->getFunction(name);
+  addMethod("destroy",
+            new BaseFuncLite(
+                {this}, Void,
+                [this](Module *module) {
+                  const std::string name = "seq." + getName() + ".destroy";
+                  Function *func = module->getFunction(name);
 
-            if (!func) {
-              LLVMContext &context = module->getContext();
-              func = cast<Function>(module->getOrInsertFunction(
-                  name, llvm::Type::getVoidTy(context), getLLVMType(context)));
-              func->setLinkage(GlobalValue::PrivateLinkage);
-              func->setDoesNotThrow();
-              func->addFnAttr(Attribute::AlwaysInline);
+                  if (!func) {
+                    LLVMContext &context = module->getContext();
+                    func = cast<Function>(module->getOrInsertFunction(
+                        name, llvm::Type::getVoidTy(context), getLLVMType(context)));
+                    func->setLinkage(GlobalValue::PrivateLinkage);
+                    func->setDoesNotThrow();
+                    func->addFnAttr(Attribute::AlwaysInline);
 
-              Value *arg = func->arg_begin();
-              BasicBlock *entry = BasicBlock::Create(context, "entry", func);
-              destroy(arg, entry);
-              IRBuilder<> builder(entry);
-              builder.CreateRetVoid();
-            }
+                    Value *arg = func->arg_begin();
+                    BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+                    destroy(arg, entry);
+                    IRBuilder<> builder(entry);
+                    builder.CreateRetVoid();
+                  }
 
-            return func;
-          }),
-      true);
+                  return func;
+                }),
+            true);
 }
 
 bool types::GenType::is(Type *type) const {
@@ -418,8 +397,7 @@ Type *types::GenType::getLLVMType(LLVMContext &context) const {
 }
 
 size_t types::GenType::size(Module *module) const {
-  return module->getDataLayout().getTypeAllocSize(
-      getLLVMType(module->getContext()));
+  return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 types::GenType *types::GenType::asGen() { return this; }
@@ -452,9 +430,8 @@ std::vector<types::Type *> types::PartialFuncType::getCallTypes() const {
 bool types::PartialFuncType::isAtomic() const { return contents->isAtomic(); }
 
 Value *types::PartialFuncType::call(BaseFunc *base, Value *self,
-                                    const std::vector<Value *> &args,
-                                    BasicBlock *block, BasicBlock *normal,
-                                    BasicBlock *unwind) {
+                                    const std::vector<Value *> &args, BasicBlock *block,
+                                    BasicBlock *normal, BasicBlock *unwind) {
   IRBuilder<> builder(block);
   std::vector<Value *> argsFull;
   Value *func = contents->memb(self, "1", block);
@@ -476,8 +453,7 @@ Value *types::PartialFuncType::defaultValue(BasicBlock *block) {
   return contents->defaultValue(block);
 }
 
-template <typename T>
-static bool nullMatch(std::vector<T *> v1, std::vector<T *> v2) {
+template <typename T> static bool nullMatch(std::vector<T *> v1, std::vector<T *> v2) {
   if (v1.size() != v2.size())
     return false;
 
@@ -491,8 +467,7 @@ static bool nullMatch(std::vector<T *> v1, std::vector<T *> v2) {
 
 bool types::PartialFuncType::is(types::Type *type) const {
   auto *p = dynamic_cast<types::PartialFuncType *>(type);
-  return p && nullMatch(callTypes, p->callTypes) &&
-         types::is(contents, p->contents);
+  return p && nullMatch(callTypes, p->callTypes) && types::is(contents, p->contents);
 }
 
 unsigned types::PartialFuncType::numBaseTypes() const {
@@ -510,15 +485,13 @@ types::PartialFuncType::getCallType(const std::vector<types::Type *> &inTypes) {
   for (auto *&type : types) {
     if (!type) {
       if (next >= inTypes.size())
-        throw exc::SeqException(
-            "too few arguments passed to partial function call");
+        throw exc::SeqException("too few arguments passed to partial function call");
       type = inTypes[next++];
     }
   }
 
   if (next < inTypes.size())
-    throw exc::SeqException(
-        "too many arguments passed to partial function call");
+    throw exc::SeqException("too many arguments passed to partial function call");
 
   return callee->getCallType(types);
 }
@@ -532,8 +505,7 @@ size_t types::PartialFuncType::size(Module *module) const {
 }
 
 types::PartialFuncType *
-types::PartialFuncType::get(types::Type *callee,
-                            std::vector<types::Type *> callTypes) {
+types::PartialFuncType::get(types::Type *callee, std::vector<types::Type *> callTypes) {
   return new types::PartialFuncType(callee, std::move(callTypes));
 }
 

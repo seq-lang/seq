@@ -34,18 +34,16 @@ class FormatVisitor : public ASTVisitor {
   std::string keywordStart, keywordEnd;
 
 private:
-  template <typename T, typename... Ts>
-  std::string renderExpr(T &&t, Ts &&... args) {
+  template <typename T, typename... Ts> std::string renderExpr(T &&t, Ts &&... args) {
     std::string s;
     if (renderType)
       s += fmt::format("{}{}{}", typeStart,
                        t->getType() ? t->getType()->toString() : "-", typeEnd);
-    return fmt::format("{}{}{}{}{}{}", exprStart, s, nodeStart,
-                       fmt::format(args...), nodeEnd, exprEnd);
+    return fmt::format("{}{}{}{}{}{}", exprStart, s, nodeStart, fmt::format(args...),
+                       nodeEnd, exprEnd);
   }
   template <typename... Ts> std::string renderComment(Ts &&... args) {
-    return fmt::format("{}{}{}", commentStart, fmt::format(args...),
-                       commentEnd);
+    return fmt::format("{}{}{}", commentStart, fmt::format(args...), commentEnd);
   }
   std::string pad(int indent = 0) const;
   std::string newline() const;

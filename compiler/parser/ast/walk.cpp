@@ -1,7 +1,7 @@
 #include "parser/ast/walk.h"
 
-#define WALK(x)                                                                \
-  if (x)                                                                       \
+#define WALK(x)                                                                        \
+  if (x)                                                                               \
   x->accept(*this)
 
 namespace seq {
