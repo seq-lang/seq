@@ -25,7 +25,7 @@ jobs:
         - wget -q -O - https://bootstrap.pypa.io/get-pip.py | sudo python3.5
         - export CC=clang-4.0
         - export CXX=clang++-4.0
-        - if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]]; then bash ${TRAVIS_BUILD_DIR}/deps.sh ; fi
+        - '[[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]] && bash ${TRAVIS_BUILD_DIR}/deps.sh'
     - os: osx
       addons:
         homebrew:
@@ -38,7 +38,7 @@ jobs:
       before_install:
         - export CC=clang
         - export CXX=clang++
-        - if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]]; then bash ${TRAVIS_BUILD_DIR}/deps.sh ; fi
+        - '[[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]] && bash ${TRAVIS_BUILD_DIR}/deps.sh'
         - brew link --overwrite python3
       install:
         - python3 -m pip install --upgrade pip
@@ -46,16 +46,18 @@ jobs:
 
 before_script:
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
+  - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - export LDFLAGS="-L/usr/local/lib"
   - |
     if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
       export SEQ_PYTHON=$(python3.5 test/python/find-python-library.py)
+      export LIBEXT="so"
+      sudo ldconfig
     else
       export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
+      export LIBEXT="dylib"
     fi
     echo ${SEQ_PYTHON}
-  - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
-  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
 
 script:
   - mkdir build
@@ -64,12 +66,11 @@ script:
                           -DSEQ_DEP=${TRAVIS_BUILD_DIR}/deps \
                           -DCMAKE_C_COMPILER=${CC} \
                           -DCMAKE_CXX_COMPILER=${CXX})
-  - export LD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/deps/lib:${LD_LIBRARY_PATH}
-  - export DYLD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/deps/lib:${DYLD_LIBRARY_PATH}
+  - ln -s ${TRAVIS_BUILD_DIR}/deps/lib/libomp.${LIBEXT} build/libomp.${LIBEXT}
   - cmake --build build --config Release -- VERBOSE=1
   - build/seqtest
   - build/seqc test/core/helloworld.seq
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then make -C docs/sphinx html 2>/dev/null; fi
+  - '[[ "${TRAVIS_OS_NAME}" == "osx" ]] && make -C docs/sphinx html 2>/dev/null'
   - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
   - export SEQ_DEP_ARCHIVE=seq-deps-${TRAVIS_OS_NAME}.tar.bz2
   - |
@@ -105,14 +106,8 @@ script:
 before_deploy:
   - mkdir -p seq-deploy/bin seq-deploy/lib/seq
   - cp build/seqc seq-deploy/bin/
-  - |
-    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-      cp build/libseq*.dylib seq-deploy/lib/seq/
-      cp deps/lib/libomp.dylib seq-deploy/lib/seq/
-    else
-      cp build/libseq*.so seq-deploy/lib/seq/
-      cp deps/lib/libomp.so seq-deploy/lib/seq/
-    fi
+  - cp build/libseq*.${LIBEXT} seq-deploy/lib/seq/
+  - cp deps/lib/libomp.${LIBEXT} seq-deploy/lib/seq/
   - cp -r stdlib seq-deploy/lib/seq/
   - tar -czf ${SEQ_BUILD_ARCHIVE} seq-deploy
   - tar -cjf ${SEQ_DEP_ARCHIVE} deps
