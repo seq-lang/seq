@@ -71,6 +71,9 @@ protected:
   /// Whether this statement represents a loop
   bool loop;
 
+  /// Enclosing try-catch, if explicitly specified
+  TryCatch *tc;
+
 public:
   explicit Stmt(std::string name);
 

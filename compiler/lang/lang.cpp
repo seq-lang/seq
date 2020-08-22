@@ -1031,6 +1031,7 @@ void Assert::codegen0(BasicBlock *&block) {
     Throw raise(&excArg);
     raise.setBase(getBase());
     raise.setSrcInfo(getSrcInfo());
+    raise.setTryCatch(getTryCatch());
     raise.codegen(fail);
 
     builder.SetInsertPoint(fail);

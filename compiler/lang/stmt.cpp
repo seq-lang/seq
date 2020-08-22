@@ -17,7 +17,7 @@ void Block::codegen(BasicBlock *&block) {
 
 Stmt::Stmt(std::string name)
     : SrcObject(), name(std::move(name)), base(nullptr), breaks(), continues(),
-      parent(nullptr), loop(false) {}
+      parent(nullptr), loop(false), tc(nullptr) {}
 
 std::string Stmt::getName() const { return name; }
 
@@ -65,9 +65,12 @@ void Stmt::addContinueToEnclosingLoop(BranchInst *inst) {
   findEnclosingLoop()->addContinue(inst);
 }
 
-void Stmt::setTryCatch(TryCatch *tc) {}
+void Stmt::setTryCatch(TryCatch *tc) { this->tc = tc; }
 
 TryCatch *Stmt::getTryCatch() {
+  if (tc)
+    return tc;
+
   Stmt *stmt = getPrev();
   Stmt *last = this;
 
