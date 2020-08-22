@@ -33,7 +33,7 @@ TypeContext::TypeContext(const std::string &filename,
                          shared_ptr<ImportContext> imports)
     : Context<TypeItem::Item>(filename, realizations, imports), // module(""),
       level(0), returnType(nullptr), matchType(nullptr), wasReturnTypeSet(false),
-      typecheck(true) {
+      typecheck(true), hasParent(0) {
   stack.push_front(vector<string>());
 }
 
@@ -51,7 +51,7 @@ shared_ptr<TypeItem::Item> TypeContext::find(const std::string &name,
       if (it->second->getFunc())
         return make_shared<TypeItem::Func>(it->second, "", "");
       else if (it->second->getClass())
-        return make_shared<TypeItem::Class>(it->second, "", "");
+        return make_shared<TypeItem::Class>(it->second, false, "", "");
     }
     return nullptr;
   } else if (name[0] == '/') {
@@ -76,7 +76,7 @@ shared_ptr<TypeItem::Item> TypeContext::find(const std::string &name,
                                          fit->second[name].base);
     auto cit = getRealizations()->classRealizations.find(it->second);
     if (cit != getRealizations()->classRealizations.end())
-      return make_shared<TypeItem::Class>(cit->second[name].type,
+      return make_shared<TypeItem::Class>(cit->second[name].type, false,
                                           "", // all classes/fn are toplevel
                                           cit->second[name].base);
   }
@@ -105,8 +105,8 @@ shared_ptr<TypeItem::Item> TypeContext::addImport(const string &name,
 }
 
 shared_ptr<TypeItem::Item> TypeContext::addType(const string &name, types::TypePtr type,
-                                                bool global) {
-  auto t = make_shared<TypeItem::Class>(type, filename, getBase(), global);
+                                                bool generic, bool global) {
+  auto t = make_shared<TypeItem::Class>(type, generic, filename, getBase(), global);
   add(name, t);
   return t;
 }
@@ -132,8 +132,11 @@ void TypeContext::addGlobal(const string &name, types::TypePtr type) {
   g[name] = type;
 }
 
-string TypeContext::getBase() const {
-  auto s = format("{}", fmt::join(bases, "."));
+string TypeContext::getBase(int skip) const {
+  vector<string> sp;
+  for (int i = 0; i < (int)bases.size() - skip; i++)
+    sp.push_back(bases[i]);
+  auto s = format("{}", fmt::join(sp, "."));
   return (s == "" ? "" : s + ".");
 }
 
@@ -149,7 +152,8 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
                                         realizations->getUnboundCount()++, level);
   t->setSrcInfo(srcInfo);
   if (setActive) {
-    LOG9("UNBOUND/{}: {} @ {} ", typecheck, t->toString(0), srcInfo);
+    if (typecheck)
+      LOG7("UB.{}: {}", t->toString(0), srcInfo);
     activeUnbounds.insert(t);
   }
   return t;
@@ -164,8 +168,9 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
   unordered_map<int, types::TypePtr> cache;
   if (generics)
     for (auto &g : generics->explicits)
-      if (g.type) {
-        // LOG7("{} inst: {} -> {}", type->toString(), g.id, g.type->toString());
+      if (g.type &&
+          !(g.type->getLink() && g.type->getLink()->kind == types::LinkType::Generic)) {
+        LOG7("{} inst: {} -> {}", type->toString(), g.id, g.type->toString());
         cache[g.id] = g.type;
       }
   auto t = type->instantiate(level, realizations->getUnboundCount(), cache);
@@ -175,12 +180,17 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
         continue;
       i.second->setSrcInfo(srcInfo);
       if (activate && activeUnbounds.find(i.second) == activeUnbounds.end()) {
-        LOG9("UNBOUND/{}: {} @ {} (during inst of {})", typecheck,
-             i.second->toString(0), srcInfo, type->toString());
+        if (typecheck) {
+          LOG7("UB.{} (during inst of {}): {}", i.second->toString(0), type->toString(),
+               srcInfo);
+          // if (i.second->toString(0) == "?6009.1")
+          //   LOG7("hi");
+        }
         activeUnbounds.insert(i.second);
       }
     }
   }
+  // LOG7("UB.Final: {}", t->toString());
   return t;
 }
 

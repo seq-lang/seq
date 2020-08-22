@@ -71,6 +71,8 @@ ExprPtr TransformVisitor::transformType(const ExprPtr &expr) {
   auto e = transform(expr.get(), true);
   if (ctx->isTypeChecking() && e && !e->isType())
     error("expected type expression");
+  if (ctx->isTypeChecking())
+    e->setType(ctx->instantiate(expr->getSrcInfo(), e->getType()));
   return e;
 }
 
@@ -191,9 +193,15 @@ void TransformVisitor::visit(const IdExpr *expr) {
       assert(s);
       resultExpr = transform(N<IntExpr>(s->getValue()));
     } else {
-      auto typ = val->getImport()
-                     ? make_shared<types::ImportType>(val->getImport()->getFile())
-                     : ctx->instantiate(getSrcInfo(), val->getType());
+      TypePtr typ;
+      if (val->getImport())
+        typ = make_shared<types::ImportType>(val->getImport()->getFile());
+      else if (val->getClass()) {
+        typ = val->getType(); // do not instantiate here!
+        if (val->getClass()->isGeneric() && val->getBase() == ctx->getBase(1))
+          ctx->hasParent = true;
+      } else
+        typ = ctx->instantiate(getSrcInfo(), val->getType());
       resultExpr->setType(forceUnify(resultExpr, typ));
       auto newName = patchIfRealizable(typ, val->getClass());
       if (!newName.empty())
@@ -528,16 +536,15 @@ void TransformVisitor::visit(const IndexExpr *expr) {
         parseGeneric(i);
     else
       parseGeneric(expr->index);
-    auto g = e->getType()->getClass();
+    auto g = ctx->instantiate(e->getSrcInfo(), e->getType())->getClass();
     if (g->explicits.size() != generics.size())
       error("expected {} generics, got {}", g->explicits.size(), generics.size());
     for (int i = 0; i < generics.size(); i++)
       /// Note: at this point, only single-variable static var expression (e.g.
       /// N) is allowed, so unify will work as expected.
       forceUnify(g->explicits[i].type, generics[i]);
-    auto t = e->getType();
     bool isType = e->isType();
-    t = forceUnify(expr, t);
+    auto t = forceUnify(expr, g);
     auto newName = patchIfRealizable(t, isType);
     if (!newName.empty())
       fixExprName(e, newName);
@@ -644,6 +651,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
         if (!dotlhs->isType())
           args.insert(args.begin(), {"", move(dotlhs)});
         e = N<IdExpr>(m->canonicalName);
+        LOG7("{} {}", m->toString(), c->toString());
         e->setType(ctx->instantiate(getSrcInfo(), m, c));
       } else {
         error("cannot find method '{}' in {} with arguments {}", d->member,
@@ -656,8 +664,8 @@ void TransformVisitor::visit(const CallExpr *expr) {
   forceUnify(expr->expr.get(), e->getType());
 
   // TODO: optional promition in findBestCall
-  if (e->isType()) { // Replace constructor with appropriate calls
-    auto c = e->getType()->getClass();
+  if (e->isType()) {                   // Replace constructor with appropriate calls
+    auto c = e->getType()->getClass(); // no need for instantiation
     assert(c);
     if (c->isRecord()) {
       vector<TypePtr> targs;
@@ -755,10 +763,12 @@ void TransformVisitor::visit(const DotExpr *expr) {
         error("identifier '{}' not found in {}", expr->member, s.substr(1));
       resultExpr = N<DotExpr>(N<IdExpr>(s), expr->member);
       if (ctx->isTypeChecking()) {
+        auto t = ival->getType();
         if (ival->getClass())
           resultExpr->markType();
-        resultExpr->setType(
-            forceUnify(expr, ctx->instantiate(getSrcInfo(), ival->getType())));
+        else
+          t = ctx->instantiate(expr->getSrcInfo(), t);
+        resultExpr->setType(forceUnify(expr, t));
         auto newName = patchIfRealizable(resultExpr->getType(), ival->getClass());
         if (!newName.empty())
           static_cast<DotExpr *>(resultExpr.get())->member = newName;
@@ -781,7 +791,6 @@ void TransformVisitor::visit(const DotExpr *expr) {
           auto val = processIdentifier(ctx, name);
           assert(val);
           auto t = ctx->instantiate(getSrcInfo(), (*m)[0], c);
-          // clean-up unbounds of c here!
           resultExpr = N<IdExpr>(name);
           resultExpr->setType(t);
           auto newName = patchIfRealizable(t, val->getClass());

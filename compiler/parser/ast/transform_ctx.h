@@ -90,16 +90,16 @@ public:
 
 class Class : public Item {
   types::TypePtr type;
-  // bool isStatic;
+  bool generic;
 
 public:
-  Class(types::TypePtr type, const std::string &module,
+  Class(types::TypePtr type, bool generic, const std::string &module,
         const std::string &base, /*bool isStatic = false,*/
         bool global = false)
-      : Item(module, base, global), type(type) /*,isStatic(isStatic)*/ {}
+      : Item(module, base, global), type(type), generic(generic) {}
   const Class *getClass() const override { return this; }
   types::TypePtr getType() const override { return type; }
-  // bool getStatic() const { return isStatic; }
+  bool isGeneric() const { return generic; }
 };
 
 class Func : public Item {
@@ -154,7 +154,7 @@ public:
   std::shared_ptr<TypeItem::Item>
   addImport(const std::string &name, const std::string &import, bool global = false);
   std::shared_ptr<TypeItem::Item> addType(const std::string &name, types::TypePtr type,
-                                          bool global = false);
+                                          bool generic = false, bool global = false);
   std::shared_ptr<TypeItem::Item> addFunc(const std::string &name, types::TypePtr type,
                                           bool global = false);
   std::shared_ptr<TypeItem::Item> addStatic(const std::string &name, int value,
@@ -165,7 +165,9 @@ public:
   void dump(int pad = 0) override;
 
 public:
-  std::string getBase() const;
+  bool hasParent;
+
+  std::string getBase(int skip = 0) const;
   // std::string getModule() const;
   void increaseLevel();
   void decreaseLevel();

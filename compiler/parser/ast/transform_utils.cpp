@@ -435,14 +435,19 @@ StmtPtr TransformVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
         Nx<AssignMemberStmt>(lhs, l->expr->clone(), l->member, rhs->clone()));
   } else if (auto l = dynamic_cast<const IdExpr *>(lhs)) {
     auto typExpr = transform(type, true);
-    if (ctx->isTypeChecking() && typExpr && !typExpr->isType())
-      error(typExpr, "expected type expression");
+    if (ctx->isTypeChecking()) {
+      if (typExpr && !typExpr->isType())
+        error(typExpr, "expected type expression");
+    }
 
     TypePtr typ = typExpr ? typExpr->getType() : nullptr;
+    if (ctx->isTypeChecking() && typExpr)
+      typ = ctx->instantiate(typExpr->getSrcInfo(), typ);
+
     auto s = Nx<AssignStmt>(lhs, l->clone(), transform(rhs, true), move(typExpr), false,
                             force);
     auto val = processIdentifier(ctx, l->value);
-    if (!force && !typ && val && val->getVar() &&
+    if (!force && !typExpr && val && val->getVar() &&
         val->getModule() == ctx->getFilename() && val->getBase() == ctx->getBase()) {
       if (ctx->isTypeChecking() && !wrapOptional(val->getType(), s->rhs))
         s->lhs->setType(forceUnify(s->rhs.get(), val->getType()));
@@ -544,7 +549,7 @@ vector<types::Generic> TransformVisitor::parseGenerics(const vector<Param> &gene
     if (g.type)
       ctx->addStatic(g.name, 0, tp);
     else
-      ctx->addType(g.name, tp);
+      ctx->addType(g.name, tp, true);
     ctx->getRealizations()->getUnboundCount()++;
   }
   return genericTypes;
@@ -598,12 +603,12 @@ RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t)
         if (auto s = g.type->getStatic())
           ctx->addStatic(g.name, 0, s);
         else if (!g.name.empty())
-          ctx->addType(g.name, g.type);
+          ctx->addType(g.name, g.type, true);
     for (auto &g : t->explicits)
       if (auto s = g.type->getStatic())
         ctx->addStatic(g.name, 0, s);
       else if (!g.name.empty())
-        ctx->addType(g.name, g.type);
+        ctx->addType(g.name, g.type, true);
     // There is no AST linked to internal functions, so just ignore them
     bool isInternal = in(ast.second->attributes, "internal");
     isInternal |= ast.second->suite == nullptr;
