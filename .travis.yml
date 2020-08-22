@@ -29,13 +29,9 @@ jobs:
     - os: osx
       addons:
         homebrew:
-          update: true
           packages:
-            - snappy
             - binutils
-            - texinfo
             - python3
-            - sphinx-doc
             - doxygen
             - cmake
             - wget
