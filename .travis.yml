@@ -25,7 +25,7 @@ jobs:
         - wget -q -O - https://bootstrap.pypa.io/get-pip.py | sudo python3.5
         - export CC=clang-4.0
         - export CXX=clang++-4.0
-        - '[[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]] && bash ${TRAVIS_BUILD_DIR}/deps.sh'
+        - if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]]; then bash ${TRAVIS_BUILD_DIR}/deps.sh; fi
     - os: osx
       addons:
         homebrew:
@@ -38,7 +38,7 @@ jobs:
       before_install:
         - export CC=clang
         - export CXX=clang++
-        - '[[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]] && bash ${TRAVIS_BUILD_DIR}/deps.sh'
+        - if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]]; then bash ${TRAVIS_BUILD_DIR}/deps.sh; fi
         - brew link --overwrite python3
       install:
         - python3 -m pip install --upgrade pip
@@ -70,7 +70,7 @@ script:
   - cmake --build build --config Release -- VERBOSE=1
   - build/seqtest
   - build/seqc test/core/helloworld.seq
-  - '[[ "${TRAVIS_OS_NAME}" == "osx" ]] && make -C docs/sphinx html 2>/dev/null'
+  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then make -C docs/sphinx html 2>/dev/null; fi
   - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
   - export SEQ_DEP_ARCHIVE=seq-deps-${TRAVIS_OS_NAME}.tar.bz2
   - |
