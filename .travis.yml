@@ -48,6 +48,7 @@ before_script:
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
   - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - export LDFLAGS="-L/usr/local/lib"
+  - export LD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/deps/lib:$LD_LIBRARY_PATH
   - |
     if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
       export SEQ_PYTHON=$(python3.5 test/python/find-python-library.py)
