@@ -37,6 +37,7 @@ jobs:
             - doxygen
             - cmake
             - wget
+          update: true
       before_install:
         - export CC=clang
         - export CXX=clang++
