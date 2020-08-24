@@ -48,6 +48,7 @@ string RealizationContext::generateCanonicalName(const SrcInfo &info,
   string newName = format("{}{}", name, num ? format(".{}", num) : "");
   num++;
   canonicalNames[info] = (newName[0] == '.' ? newName : "." + newName);
+  // LOG9("[canonical] {}:{} -> {}", info, name, canonicalNames[info]);
   return canonicalNames[info];
 }
 

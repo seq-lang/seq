@@ -198,8 +198,12 @@ void TransformVisitor::visit(const IdExpr *expr) {
         typ = make_shared<types::ImportType>(val->getImport()->getFile());
       else if (val->getClass()) {
         typ = val->getType(); // do not instantiate here!
-        if (val->getClass()->isGeneric() && val->getBase() == ctx->getBase(1))
-          ctx->hasParent = true;
+        if (val->getClass()->isGeneric() && val->getBase() != ctx->getBase()) {
+          assert(ctx->bases.size());
+          // TODO: which parent? works only for singly nested cases (e.g. nested classes
+          // won't work)
+          ctx->bases.back().referencesParent = true;
+        }
       } else
         typ = ctx->instantiate(getSrcInfo(), val->getType());
       resultExpr->setType(forceUnify(resultExpr, typ));
@@ -217,7 +221,7 @@ void TransformVisitor::visit(const UnpackExpr *expr) {
 
 // Transformed
 void TransformVisitor::visit(const TupleExpr *expr) {
-  auto name = generateVariardicStub("tuple", expr->items.size());
+  auto name = generateTupleStub(expr->items.size());
   resultExpr = transform(
       N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"), transform(expr->items)));
 }
@@ -486,14 +490,29 @@ void TransformVisitor::visit(const IndexExpr *expr) {
   if (auto i = CAST(expr->expr, IdExpr)) { // special case: tuples and functions
     if (i->value == "tuple" || i->value == "function") {
       auto t = CAST(expr->index, TupleExpr);
-      auto name = generateVariardicStub(i->value, t ? t->items.size() : 1);
+      int items = t ? t->items.size() : 1;
+      auto name =
+          i->value == "tuple" ? generateTupleStub(items) : generateFunctionStub(items);
       e = transform(N<IdExpr>(name), true);
     }
   }
   if (!e)
     e = transform(expr->expr, true);
   if (!ctx->isTypeChecking()) {
-    resultExpr = N<IndexExpr>(move(e), transform(expr->index));
+    if (e->isType()) {
+      // Make sure _not_ to do transform TupleExpr here
+      // otherwise generating variardic tuple.N's will get stuck in loop
+      vector<ExprPtr> it;
+      if (auto t = CAST(expr->index, TupleExpr))
+        for (auto &i : t->items)
+          it.push_back(transform(i));
+      else
+        it.push_back(transform(expr->index));
+      resultExpr =
+          N<IndexExpr>(move(e), it.size() == 1 ? move(it[0]) : N<TupleExpr>(move(it)));
+    } else {
+      resultExpr = N<IndexExpr>(move(e), transform(expr->index));
+    }
     return;
   }
 
@@ -512,7 +531,7 @@ void TransformVisitor::visit(const IndexExpr *expr) {
       vector<string> s;
       for (auto &i : sv.captures)
         s.push_back(i.first);
-      LOG7("static: {} -> {}", i->toString(), join(s, ", "));
+      // LOG7("static: {} -> {}", i->toString(), join(s, ", "));
       generics.push_back(make_shared<StaticType>(v, i->clone()));
     }
   };
@@ -734,7 +753,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
     for (auto p : pending)
       known[p] = 0;
     t = make_shared<PartialType>(c, known);
-    generateVariardicStub("partial", pending.size());
+    generatePartialStub(v2b(known));
   }
   resultExpr = N<CallExpr>(move(e), move(reorderedArgs));
   resultExpr->setType(forceUnify(expr, t));
@@ -917,16 +936,18 @@ void TransformVisitor::visit(const LambdaExpr *expr) {
   }
 }
 
-// TODO
 void TransformVisitor::visit(const YieldExpr *expr) {
   resultExpr = N<YieldExpr>();
   if (ctx->isTypeChecking()) {
-    if (!ctx->getBaseType() || !ctx->getBaseType()->getFunc())
+    if (!ctx->getLevel() || !ctx->bases.back().parent->getFunc())
       error("(yield) cannot be used outside of functions");
-    auto t =
-        forceUnify(ctx->getReturnType(),
-                   ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("generator"),
-                                           {ctx->addUnbound(getSrcInfo())}));
+    auto &base = ctx->bases.back();
+    auto t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("generator"),
+                                     {ctx->addUnbound(getSrcInfo())});
+    if (!base.returnType)
+      base.returnType = make_shared<types::TypePtr>(t);
+    else
+      t = forceUnify(*base.returnType, t);
     auto c = t->follow()->getClass();
     assert(c);
     resultExpr->setType(forceUnify(expr, c->explicits[0].type));

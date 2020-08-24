@@ -567,7 +567,7 @@ seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {
   assert(t && t->canRealize());
   auto it = ctx->getRealizations()->classRealizations.find(t->name);
   assert(it != ctx->getRealizations()->classRealizations.end());
-  auto it2 = it->second.find(t->realizeString(t->name, false));
+  auto it2 = it->second.find(t->realizeString(false));
   assert(it2 != it->second.end());
   assert(it2->second.handle);
   return it2->second.handle;

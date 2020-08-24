@@ -31,9 +31,7 @@ namespace ast {
 TypeContext::TypeContext(const std::string &filename,
                          shared_ptr<RealizationContext> realizations,
                          shared_ptr<ImportContext> imports)
-    : Context<TypeItem::Item>(filename, realizations, imports), // module(""),
-      level(0), returnType(nullptr), matchType(nullptr), wasReturnTypeSet(false),
-      typecheck(true), hasParent(0) {
+    : Context<TypeItem::Item>(filename, realizations, imports), typecheck(true) {
   stack.push_front(vector<string>());
 }
 
@@ -86,7 +84,7 @@ shared_ptr<TypeItem::Item> TypeContext::find(const std::string &name,
 types::TypePtr TypeContext::findInternal(const string &name) const {
   auto stdlib = imports->getImport("")->tctx;
   auto t = stdlib->find(name, false);
-  assert(t);
+  seqassert(t, "cannot find '{}'", name);
   return t->getType();
 }
 
@@ -132,28 +130,24 @@ void TypeContext::addGlobal(const string &name, types::TypePtr type) {
   g[name] = type;
 }
 
-string TypeContext::getBase(int skip) const {
-  vector<string> sp;
-  for (int i = 0; i < (int)bases.size() - skip; i++)
-    sp.push_back(bases[i]);
-  auto s = format("{}", fmt::join(sp, "."));
-  return (s == "" ? "" : s + ".");
+string TypeContext::getBase() const {
+  if (!bases.size())
+    return "";
+
+  if (auto f = bases.back().parent->getFunc())
+    return f->canonicalName;
+  assert(bases.back().parent->getClass());
+  return bases.back().parent->getClass()->name;
 }
-
-// string TypeContext::getModule() const { return module; }
-
-void TypeContext::increaseLevel() { level++; }
-
-void TypeContext::decreaseLevel() { level--; }
 
 shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
                                                     bool setActive) {
   auto t = make_shared<types::LinkType>(types::LinkType::Unbound,
-                                        realizations->getUnboundCount()++, level);
+                                        realizations->getUnboundCount()++, getLevel());
   t->setSrcInfo(srcInfo);
   if (setActive) {
     if (typecheck)
-      LOG7("UB.{}: {}", t->toString(0), srcInfo);
+      LOG7("[ub] new {}: {}", t->toString(0), srcInfo);
     activeUnbounds.insert(t);
   }
   return t;
@@ -170,10 +164,10 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
     for (auto &g : generics->explicits)
       if (g.type &&
           !(g.type->getLink() && g.type->getLink()->kind == types::LinkType::Generic)) {
-        LOG7("{} inst: {} -> {}", type->toString(), g.id, g.type->toString());
+        // LOG7("{} inst: {} -> {}", type->toString(), g.id, g.type->toString());
         cache[g.id] = g.type;
       }
-  auto t = type->instantiate(level, realizations->getUnboundCount(), cache);
+  auto t = type->instantiate(getLevel(), realizations->getUnboundCount(), cache);
   for (auto &i : cache) {
     if (auto l = i.second->getLink()) {
       if (l->kind != types::LinkType::Unbound)
@@ -181,10 +175,8 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
       i.second->setSrcInfo(srcInfo);
       if (activate && activeUnbounds.find(i.second) == activeUnbounds.end()) {
         if (typecheck) {
-          LOG7("UB.{} (during inst of {}): {}", i.second->toString(0), type->toString(),
-               srcInfo);
-          // if (i.second->toString(0) == "?6009.1")
-          //   LOG7("hi");
+          LOG7("[ub] #{} -> {} (during inst of {}): {}", i.first, i.second->toString(0),
+               type->toString(), srcInfo);
         }
         activeUnbounds.insert(i.second);
       }

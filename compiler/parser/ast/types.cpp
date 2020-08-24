@@ -272,34 +272,27 @@ string ClassType::toString(bool reduced) const {
     if (!a.name.empty())
       gs.push_back(a.type->toString(reduced));
   auto g = join(gs, ",");
-  if (isCallable(name)) { // special case as functions have generics as well
-    vector<string> as;
-    for (int i = 0; i < args.size(); i++)
-      as.push_back(args[i]->toString(reduced));
-    g += (g.size() && as.size() ? ";" : "") + join(as, ",");
-  }
+  // if (isCallable(name)) { // special case as functions have generics as well
+  //   vector<string> as;
+  //   for (int i = 0; i < args.size(); i++)
+  //     as.push_back(args[i]->toString(reduced));
+  //   g += (g.size() && as.size() ? ";" : "") + join(as, ",");
+  // }
   return fmt::format("{}{}{}", reduced && parent ? parent->toString(reduced) + ":" : "",
                      chop(name), g.size() ? fmt::format("[{}]", g) : "");
 }
 
-string ClassType::realizeString(const string &className, bool deep,
-                                int firstArg) const {
+string ClassType::realizeString(bool deep) const {
   vector<string> gs;
   for (auto &a : explicits)
     if (!a.name.empty())
       gs.push_back(a.type->realizeString());
   string s = join(gs, ",");
-  if (isCallable(name)) { // special case as functions have separate generics as well
-    vector<string> as;
-    for (int i = firstArg; i < args.size(); i++) // return type is elided!
-      as.push_back(args[i]->realizeString());
-    s += (s.size() && as.size() ? ";" : "") + join(as, ",");
-  }
   return fmt::format("{}{}{}", deep && parent ? parent->realizeString() + ":" : "",
-                     chop(className), s.empty() ? "" : fmt::format("[{}]", s));
+                     chop(name), s.empty() ? "" : fmt::format("[{}]", s));
 }
 
-string ClassType::realizeString() const { return realizeString(name, false); }
+string ClassType::realizeString() const { return realizeString(false); }
 
 int ClassType::unify(TypePtr typ, Unification &us) {
   if (auto t = typ->getClass()) {
@@ -322,14 +315,6 @@ int ClassType::unify(TypePtr typ, Unification &us) {
         return s1;
       if (isFunc(name) && isFunc(t->name))
         return s1;
-      // if ((isCallable(t->name) && chop(name).substr(0, 11) == "__callable_")
-      // ||
-      //     (isCallable(name) && chop(t->name).substr(0, 11) == "__callable_"))
-      //     {
-      //   // TODO: merge function types!
-      //   // just check arguments!
-      //   return s1;
-      // }
       if (name != t->name)
         return -1;
     }
@@ -399,8 +384,6 @@ bool ClassType::hasUnbound() const {
 }
 
 bool ClassType::canRealize() const {
-  if (chop(name).substr(0, 9) == "callable.") // traits cannot be realized
-    return false;
   for (int i = isCallable(name); i < args.size(); i++)
     if (!args[i]->canRealize())
       return false;
@@ -422,30 +405,55 @@ ClassTypePtr ClassType::getCallable() {
   return nullptr;
 }
 
-FuncType::FuncType(const std::vector<TypePtr> &args, const vector<Generic> &explicits,
-                   ClassTypePtr parent, const string &canonicalName)
-    : ClassType(fmt::format("function.{}", args.size()), true, args, explicits, parent),
-      canonicalName(canonicalName) {}
-
-FuncType::FuncType(ClassTypePtr c, const string &canonicalName)
-    : ClassType(fmt::format("function.{}", c->args.size()), c->record, c->args,
-                c->explicits, c->parent),
-      canonicalName(canonicalName) {}
+FuncType::FuncType(ClassTypePtr c, const string &canonicalName,
+                   const vector<Generic> &explicits)
+    : ClassType(c), canonicalName(canonicalName), functionExplicits(explicits) {}
 
 string FuncType::realizeString() const {
-  return ClassType::realizeString(canonicalName, true, 1);
+  vector<string> gs;
+  for (auto &a : functionExplicits)
+    if (!a.name.empty())
+      gs.push_back(a.type->realizeString());
+  string s = join(gs, ",");
+  vector<string> as;
+  for (int ai = 0; ai < args.size(); ai++)
+    as.push_back(args[ai]->realizeString());
+  string a = join(as, ",");
+  s = join(vector<string>{s, a}, ";");
+  return fmt::format("{}{}{}", parent ? parent->realizeString() + ":" : "",
+                     chop(canonicalName), s.empty() ? "" : fmt::format("[{}]", s));
 }
 
 TypePtr FuncType::generalize(int level) {
+  auto a = functionExplicits;
+  for (auto &t : a)
+    t.type = t.type ? t.type->generalize(level) : nullptr;
   return make_shared<FuncType>(
-      static_pointer_cast<ClassType>(ClassType::generalize(level)), canonicalName);
+      static_pointer_cast<ClassType>(ClassType::generalize(level)), canonicalName, a);
 }
 
 TypePtr FuncType::instantiate(int level, int &unboundCount,
                               std::unordered_map<int, TypePtr> &cache) {
+  auto a = functionExplicits;
+  for (auto &t : a)
+    t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
   return make_shared<FuncType>(static_pointer_cast<ClassType>(
                                    ClassType::instantiate(level, unboundCount, cache)),
-                               canonicalName);
+                               canonicalName, a);
+}
+
+bool FuncType::canRealize() const {
+  for (auto &t : functionExplicits)
+    if (t.type && !t.type->canRealize())
+      return false;
+  return ClassType::canRealize();
+}
+
+bool FuncType::hasUnbound() const {
+  for (auto &t : functionExplicits)
+    if (t.type && t.type->hasUnbound())
+      return true;
+  return ClassType::hasUnbound();
 }
 
 string v2b(const vector<char> &c) {
@@ -456,8 +464,23 @@ string v2b(const vector<char> &c) {
   return s;
 }
 
+string FuncType::toString(bool reduced) const {
+  vector<string> gs;
+  for (auto &a : functionExplicits)
+    if (!a.name.empty())
+      gs.push_back(a.type->toString(reduced));
+  string s = join(gs, ",");
+  vector<string> as;
+  for (int ai = 0; ai < args.size(); ai++)
+    as.push_back(args[ai]->toString(reduced));
+  string a = join(as, ",");
+  s = join(vector<string>{s, a}, ";");
+  return fmt::format("{}{}{}", parent ? parent->toString(reduced) + ":" : "",
+                     chop(canonicalName), s.empty() ? "" : fmt::format("[{}]", s));
+}
+
 PartialType::PartialType(ClassTypePtr c, const vector<char> &k)
-    : ClassType(fmt::format(".partial.{}", v2b(k)), true, {}, {Generic("T", c, -1)},
+    : ClassType(fmt::format("partial.{}", v2b(k)), true, {}, {Generic("T", c, -1)},
                 nullptr),
       knownTypes(k) {}
 

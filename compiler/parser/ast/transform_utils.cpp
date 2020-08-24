@@ -143,60 +143,133 @@ StmtPtr TransformVisitor::makeInternalFn(const string &name, ExprPtr &&ret,
   return t;
 }
 
-string TransformVisitor::generateVariardicStub(const string &name, int len) {
-  // TODO: handle name clashes (add special name character?)
-  auto typeName = fmt::format("{}.{}", name, len);
-  // LOG("{}", typeName);
-  if (ctx->getRealizations()->variardicCache.find(typeName) ==
-      ctx->getRealizations()->variardicCache.end()) {
-    if (name != "tuple")
-      assert(len >= 1);
-    ctx->getRealizations()->variardicCache.insert(typeName);
-    vector<Param> generics, args;
-    vector<ExprPtr> genericNames;
-    for (int i = 1; i <= len; i++) {
-      genericNames.push_back(N<IdExpr>(format("T{}", i)));
-      generics.push_back(Param{format("T{}", i), nullptr, nullptr});
-      args.push_back(Param{format("a{0}", i), N<IdExpr>(format("T{}", i)), nullptr});
-    }
-    ExprPtr type = N<IdExpr>(typeName);
-    if (genericNames.size())
-      type = N<IndexExpr>(move(type), N<TupleExpr>(move(genericNames)));
-    auto stmt = make_unique<ClassStmt>(true, typeName, move(generics), move(args),
-                                       nullptr, vector<string>{});
-    stmt->setSrcInfo(ctx->getRealizations()->getGeneratedPos());
+string TransformVisitor::generateFunctionStub(int len) {
+  auto typeName =
+      fmt::format(".function.{}", len); // dot needed here as we manually insert class
+  if (ctx->getRealizations()->variardicCache.find(typeName) !=
+      ctx->getRealizations()->variardicCache.end())
+    return typeName;
+  assert(len >= 1);
+  ctx->getRealizations()->variardicCache.insert(typeName);
+  auto stdlib = ctx->getImports()->getImport("");
 
-    vector<StmtPtr> fns;
-    if (name == "function") {
-      fns.push_back(
-          makeInternalFn("__new__", type->clone(), Param{"what", N<IdExpr>("cobj")}));
-      fns.push_back(makeInternalFn("__str__", N<IdExpr>("str"), Param{"self"}));
-      stmt->attributes.push_back("internal");
-    } else if (name == "tuple") {
-      string code = "def __str__(self) -> str:\n";
-      code += len ? "  s = '('\n" : "  s = '()'\n";
-      for (int i = 0; i < len; i++) {
-        code += format("  s += self[{}].__str__()\n", i);
-        code += format("  s += '{}'\n", i == len - 1 ? ")" : ", ");
-      }
-      code += "  return s\n";
-      fns.push_back(parseCode(ctx->getFilename(), code)->getStatements()[0]->clone());
-    } else if (name != "partial") {
-      error("invalid variardic type");
-    }
-    // LOG7("[VAR] generating {}...\n{}", typeName, code);
-    stmt->suite = N<SuiteStmt>(move(fns));
-    auto i = ctx->getImports()->getImport("");
-    auto stmtPtr = dynamic_cast<SuiteStmt *>(i->statements.get());
-    assert(stmtPtr);
-
-    // TODO: move to stdlib?
-    auto nc = make_shared<TypeContext>(
-        i->tctx->getFilename(), i->tctx->getRealizations(), i->tctx->getImports());
-    stmtPtr->stmts.push_back(TransformVisitor(nc).transform(stmt));
-    for (auto &ax : *nc)
-      i->tctx->addToplevel(ax.first, ax.second.front());
+  vector<Param> generics, args;
+  vector<ExprPtr> genericNames;
+  for (int i = 1; i <= len; i++) {
+    genericNames.push_back(N<IdExpr>(format("T{}", i)));
+    generics.push_back(Param{format("T{}", i), nullptr, nullptr});
+    args.push_back(Param{format("a{0}", i), N<IdExpr>(format("T{}", i)), nullptr});
   }
+  ExprPtr type = N<IdExpr>(typeName);
+  if (genericNames.size())
+    type = N<IndexExpr>(move(type), N<TupleExpr>(move(genericNames)));
+  auto stmt = make_unique<ClassStmt>(true, typeName, move(generics), CL(args), nullptr,
+                                     vector<string>{});
+  stmt->setSrcInfo(ctx->getRealizations()->getGeneratedPos());
+  auto ct = make_shared<ClassType>(typeName, true, vector<TypePtr>(),
+                                   parseGenerics(stmt->generics), nullptr);
+  ct->setSrcInfo(stmt->getSrcInfo());
+  ctx->getRealizations()->classASTs[typeName] = ct;
+
+  ctx->bases.push_back({ct});
+  for (auto &a : args) {
+    auto t = transformType(a.type)->getType()->generalize(ctx->getLevel() - 1);
+    ctx->getRealizations()->classes[typeName].members.push_back({a.name, t});
+    ct->args.push_back(t);
+  }
+  ctx->addGlobal(typeName, ct);
+
+  vector<StmtPtr> fns;
+  fns.push_back(
+      makeInternalFn("__new__", type->clone(), Param{"what", N<IdExpr>("cobj")}));
+  fns.push_back(makeInternalFn("__str__", N<IdExpr>("str"), Param{"self"}));
+  stmt->attributes.push_back("internal");
+  auto suite = N<SuiteStmt>();
+  for (auto &s : fns)
+    suite->stmts.push_back(addMethod(s.get(), typeName));
+  ctx->bases.pop_back();
+  for (auto &g : stmt->generics) {
+    auto val = ctx->find(g.name);
+    if (ctx->isTypeChecking())
+      if (auto tx = val->getType()) {
+        auto t = dynamic_pointer_cast<LinkType>(tx);
+        assert(t && t->kind == LinkType::Unbound);
+        t->kind = LinkType::Generic;
+      }
+    ctx->remove(g.name);
+  }
+
+  stmt->suite = move(suite);
+  dynamic_cast<SuiteStmt *>(stdlib->statements.get())->stmts.push_back(move(stmt));
+  return typeName;
+}
+
+string TransformVisitor::generateTupleStub(int len) {
+  auto typeName = fmt::format("tuple.{}", len);
+  if (ctx->getRealizations()->variardicCache.find(typeName) !=
+      ctx->getRealizations()->variardicCache.end())
+    return typeName;
+  ctx->getRealizations()->variardicCache.insert(typeName);
+  auto stdlib = ctx->getImports()->getImport("");
+
+  vector<Param> generics, args;
+  vector<ExprPtr> genericNames;
+  for (int i = 1; i <= len; i++) {
+    genericNames.push_back(N<IdExpr>(format("T{}", i)));
+    generics.push_back(Param{format("T{}", i), nullptr, nullptr});
+    args.push_back(Param{format("a{0}", i), N<IdExpr>(format("T{}", i)), nullptr});
+  }
+  ExprPtr type = N<IdExpr>(typeName);
+  if (genericNames.size())
+    type = N<IndexExpr>(move(type), N<TupleExpr>(move(genericNames)));
+  auto stmt = make_unique<ClassStmt>(true, typeName, move(generics), move(args),
+                                     nullptr, vector<string>{});
+  stmt->setSrcInfo(ctx->getRealizations()->getGeneratedPos());
+  string code = "def __str__(self) -> str:\n";
+  code += len ? "  s = '('\n" : "  s = '()'\n";
+  for (int i = 0; i < len; i++) {
+    code += format("  s += self[{}].__str__()\n", i);
+    code += format("  s += '{}'\n", i == len - 1 ? ")" : ", ");
+  }
+  code += "  return s\n";
+  auto fns = parseCode(ctx->getFilename(), code)->getStatements()[0]->clone();
+  // LOG7("[VAR] generating {}...\n{}", typeName, code);
+  stmt->suite = N<SuiteStmt>(move(fns));
+
+  auto nc = make_shared<TypeContext>(stdlib->tctx->getFilename(),
+                                     stdlib->tctx->getRealizations(),
+                                     stdlib->tctx->getImports());
+  auto newStmt = TransformVisitor(nc).transform(stmt);
+  dynamic_cast<SuiteStmt *>(stdlib->statements.get())->stmts.push_back(move(newStmt));
+  for (auto &ax : *nc)
+    stdlib->tctx->addToplevel(ax.first, ax.second.front());
+  return typeName;
+}
+
+string TransformVisitor::generatePartialStub(const string &flag) {
+  auto typeName = fmt::format("partial.{}", flag);
+  if (ctx->getRealizations()->variardicCache.find(typeName) !=
+      ctx->getRealizations()->variardicCache.end())
+    return typeName;
+  ctx->getRealizations()->variardicCache.insert(typeName);
+  auto stdlib = ctx->getImports()->getImport("");
+
+  vector<Param> generics, args;
+  generics.push_back(Param{"F", nullptr, nullptr});
+  args.push_back(Param{"f", N<IdExpr>("F"), nullptr});
+  vector<ExprPtr> genericNames;
+  genericNames.push_back(N<IdExpr>("F"));
+  ExprPtr type = N<IndexExpr>(N<IdExpr>(typeName), N<TupleExpr>(move(genericNames)));
+  auto stmt = make_unique<ClassStmt>(true, typeName, move(generics), move(args),
+                                     nullptr, vector<string>{});
+  stmt->setSrcInfo(ctx->getRealizations()->getGeneratedPos());
+  auto nc = make_shared<TypeContext>(stdlib->tctx->getFilename(),
+                                     stdlib->tctx->getRealizations(),
+                                     stdlib->tctx->getImports());
+  auto newStmt = TransformVisitor(nc).transform(stmt);
+  dynamic_cast<SuiteStmt *>(stdlib->statements.get())->stmts.push_back(move(newStmt));
+  for (auto &ax : *nc)
+    stdlib->tctx->addToplevel(ax.first, ax.second.front());
   return typeName;
 }
 
@@ -591,12 +664,10 @@ RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t)
     }
 
     LOG3("realizing fn {} -> {}", name, t->realizeString());
-    ctx->addBlock();
-    ctx->increaseLevel();
+    ctx->bases.push_back({t});
     assert(ctx->getRealizations()->funcASTs.find(name) !=
            ctx->getRealizations()->funcASTs.end());
     auto &ast = ctx->getRealizations()->funcASTs[name];
-    ctx->pushBase(ast.second->name);
     // Ensure that all inputs are realized
     for (auto p = t->parent; p; p = p->parent)
       for (auto &g : p->explicits)
@@ -617,11 +688,6 @@ RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t)
         assert(t->args[i] && !t->args[i]->hasUnbound());
         ctx->addVar(ast.second->args[i - 1].name, make_shared<LinkType>(t->args[i]));
       }
-    auto old = ctx->getReturnType();
-    auto oldSeen = ctx->wasReturnSet();
-    ctx->setReturnType(ret);
-    ctx->setWasReturnSet(false);
-    ctx->addBaseType(t);
 
     // __level__++;
 
@@ -634,14 +700,13 @@ RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t)
 
     auto realized = isInternal ? nullptr : realizeBlock(ast.second->suite.get());
     // __level__--;
-    ctx->popBase();
-    ctx->popBaseType();
 
-    if (realized && !ctx->wasReturnSet() && ret)
-      forceUnify(ctx->getReturnType(), ctx->findInternal("void"));
+    if (realized && !ctx->bases.back().returnType && ret) {
+      ctx->bases.back().returnType =
+          make_shared<types::TypePtr>(forceUnify(ret, ctx->findInternal("void")));
+    }
     assert(ret->canRealize() && ret->getClass());
     realizeType(ret->getClass());
-
     assert(ast.second->args.size() == t->args.size() - 1);
     vector<Param> args;
     for (auto &i : ast.second->args)
@@ -650,11 +715,7 @@ RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t)
     result.ast =
         Nx<FunctionStmt>(ast.second.get(), ast.second->name, nullptr, vector<Param>(),
                          move(args), move(realized), ast.second->attributes);
-    ctx->setReturnType(old);
-    ctx->setWasReturnSet(oldSeen);
-    ctx->decreaseLevel();
-    ctx->popBlock();
-    // ctx->addRealization(t);
+    ctx->bases.pop_back();
     return result;
   } catch (exc::ParserException &e) {
     e.trackRealize(fmt::format("{} (arguments {})", t->canonicalName, t->toString(1)),
@@ -666,8 +727,7 @@ RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t)
 RealizationContext::ClassRealization TransformVisitor::realizeType(ClassTypePtr t) {
   assert(t && t->canRealize());
   try {
-    auto rs =
-        t->realizeString(t->name, false); // necessary for generating __function stubs
+    auto rs = t->realizeString(false); // necessary for generating __function stubs
     auto it = ctx->getRealizations()->classRealizations.find(t->name);
     if (it != ctx->getRealizations()->classRealizations.end()) {
       auto it2 = it->second.find(rs);
@@ -708,12 +768,11 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, bool keepLast) {
     result = v.transform(result ? result.get() : stmt);
 
     int newUnbounds = 0;
-    for (auto i = ctx->getActiveUnbounds().begin();
-         i != ctx->getActiveUnbounds().end();) {
+    for (auto i = ctx->activeUnbounds.begin(); i != ctx->activeUnbounds.end();) {
       auto l = (*i)->getLink();
       assert(l);
       if (l->kind != LinkType::Unbound) {
-        i = ctx->getActiveUnbounds().erase(i);
+        i = ctx->activeUnbounds.erase(i);
         continue;
       }
       if (l->id >= minUnbound)
@@ -722,12 +781,12 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, bool keepLast) {
     }
 
     ctx->popBlock();
-    if (ctx->getActiveUnbounds().empty() || !newUnbounds) {
+    if (ctx->activeUnbounds.empty() || !newUnbounds) {
       break;
     } else {
       if (newUnbounds >= prevSize) {
         TypePtr fu = nullptr;
-        for (auto &ub : ctx->getActiveUnbounds())
+        for (auto &ub : ctx->activeUnbounds)
           if (ub->getLink()->id >= minUnbound) {
             if (!fu)
               fu = ub;

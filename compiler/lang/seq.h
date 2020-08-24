@@ -62,12 +62,13 @@ extern int __level__;
 
 #ifndef NDEBUG
 #define seqassert(expr, msg, ...)                                                      \
-  _seqassert(#expr, expr, __FILE__, __LINE__, fmt::format(msg, ##__VA_ARGS__))
+  ((expr) ? (void)(0)                                                                  \
+          : _seqassert(#expr, __FILE__, __LINE__, fmt::format(msg, ##__VA_ARGS__)))
 #else
 #define seqassert(expr, msg, ...) ;
 #endif
 #pragma clang diagnostic pop
-void _seqassert(const char *expr_str, bool expr, const char *file, int line,
+void _seqassert(const char *expr_str, const char *file, int line,
                 const std::string &msg);
 
 namespace seq {

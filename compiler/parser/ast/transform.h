@@ -97,7 +97,9 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
                bool failOnMultiple = false, types::TypePtr retType = nullptr);
 
   bool wrapOptional(types::TypePtr lt, ExprPtr &rhs);
-  std::string generateVariardicStub(const std::string &name, int len);
+  std::string generateFunctionStub(int len);
+  std::string generateTupleStub(int len);
+  std::string generatePartialStub(const std::string &flag);
 
   // std::vector<int> callCallable(types::ClassTypePtr f,
   // std::vector<CallExpr::Arg> &args, std::vector<CallExpr::Arg>

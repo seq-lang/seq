@@ -249,8 +249,7 @@ public:
   bool hasUnbound() const override;
   bool canRealize() const override;
   std::string toString(bool reduced = false) const override;
-  std::string realizeString(const std::string &n, bool deep = true,
-                            int firstArg = 0) const;
+  std::string realizeString(bool deep) const;
   std::string realizeString() const override;
   ClassTypePtr getClass() override {
     return std::static_pointer_cast<ClassType>(shared_from_this());
@@ -265,14 +264,15 @@ public:
 typedef std::shared_ptr<FuncType> FuncTypePtr;
 struct FuncType : public ClassType {
   std::string canonicalName;
+  std::vector<Generic> functionExplicits;
 
 public:
-  FuncType(ClassTypePtr c, const std::string &canonicalName = "");
-  FuncType(const std::vector<TypePtr> &args = std::vector<TypePtr>(),
-           const std::vector<Generic> &explicits = std::vector<Generic>(),
-           ClassTypePtr parent = nullptr, const std::string &canonicalName = "");
+  FuncType(ClassTypePtr c, const std::string &canonicalName,
+           const std::vector<Generic> &explicits);
 
 public:
+  bool hasUnbound() const override;
+  bool canRealize() const override;
   std::string realizeString() const override;
   FuncTypePtr getFunc() override {
     return std::static_pointer_cast<FuncType>(shared_from_this());
@@ -280,8 +280,10 @@ public:
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       std::unordered_map<int, TypePtr> &cache) override;
+  std::string toString(bool reduced = false) const override;
 };
 
+// partial_type := partial.pattern[func]
 struct PartialType : public ClassType {
   std::vector<char> knownTypes;
   PartialType(ClassTypePtr c, const std::vector<char> &k);
