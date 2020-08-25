@@ -148,11 +148,12 @@ void LLVMContext::execJIT(string varName, seq::Expr *varExpr) {
 // }
 
 seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
-  // LOG7("[codegen] looking for ty {} / {}", t->name, t->toString(true));
-  assert(t && t->canRealize());
+  t = t->getClass();
+  seqassert(t, "type must be set and a class");
+  seqassert(t->canRealize(), "{} must be realizable", t->toString());
   auto it = getRealizations()->classRealizations.find(t->name);
   assert(it != getRealizations()->classRealizations.end());
-  auto it2 = it->second.find(t->realizeString(false));
+  auto it2 = it->second.find(t->realizeString());
   assert(it2 != it->second.end());
   auto &real = it2->second;
   if (real.handle)
@@ -196,7 +197,7 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
   } else if (name.substr(0, 8) == "partial.") {
     auto f = t->getCallable();
     assert(f);
-    auto callee = realizeType(f);
+    auto callee = realizeType(f->getClass());
     vector<seq::types::Type *> partials(f->args.size() - 1, nullptr);
     auto p = std::dynamic_pointer_cast<types::PartialType>(t);
     assert(p);
@@ -209,7 +210,7 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
     vector<seq::types::Type *> types;
     for (auto &m : real.args) {
       names.push_back(m.first);
-      types.push_back(realizeType(m.second));
+      types.push_back(realizeType(m.second->getClass()));
     }
     if (t->isRecord()) {
       vector<string> x;
@@ -225,8 +226,6 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
       real.handle = cls;
     }
   }
-  // LOG7("{} -> {} -> {}", t->toString(), t->realizeString(t->name, false),
-  // real.handle->getName());
   return real.handle;
 }
 
@@ -246,7 +245,7 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
   for (auto &ff : realizations->classRealizations)
     for (auto &f : ff.second) {
       auto &real = f.second;
-      stdlib->lctx->realizeType(real.type);
+      stdlib->lctx->realizeType(real.type->getClass());
       stdlib->lctx->addType(real.fullName, real.handle);
     }
   for (auto &ff : realizations->funcRealizations)

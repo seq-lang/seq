@@ -5,6 +5,7 @@ type str(len: int, ptr: ptr[byte]):
     @internal
     def __new__(p: ptr[byte], l: int) -> str: pass
 type pyobj(p: cobj)
+cimport seq_print(str)
 
 extend ptr[T]:
     @internal

@@ -125,8 +125,8 @@ public:
     types::ClassTypePtr parent;
     ExprPtr parentAst;
     bool referencesParent;
-    std::shared_ptr<types::TypePtr> returnType;
-    Base(types::ClassTypePtr p = nullptr, bool r = false)
+    types::TypePtr returnType;
+    Base(types::ClassTypePtr p, bool r = false)
         : parent(p), parentAst(nullptr), referencesParent(r), returnType(nullptr) {}
   };
   std::vector<Base> bases;
@@ -163,7 +163,7 @@ public:
   void dump(int pad = 0) override;
 
 public:
-  std::string getBase() const;
+  std::string getBase(bool full = false) const;
   int getLevel() const { return bases.size(); }
   types::TypePtr getMatchType() const { return matchType; }
   void setMatchType(types::TypePtr t) { matchType = t; }

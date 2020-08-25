@@ -57,10 +57,9 @@ ExprPtr TransformVisitor::transform(const Expr *expr, bool allowTypes) {
   v.setSrcInfo(expr->getSrcInfo());
   expr->accept(v);
   LOG9("[expr] {} -> {}", *expr, *v.resultExpr);
-  if (v.resultExpr && v.resultExpr->getType() &&
-      v.resultExpr->getType()->canRealize()) {
-    if (auto c = v.resultExpr->getType()->getClass())
-      realizeType(c);
+  if (v.resultExpr && v.resultExpr->getType() && v.resultExpr->getType()->getClass() &&
+      v.resultExpr->getType()->getClass()->canRealize()) {
+    realizeType(v.resultExpr->getType()->getClass());
   }
   if (ctx->isTypeChecking() && !allowTypes && v.resultExpr && v.resultExpr->isType())
     error("unexpected type expression");
@@ -183,6 +182,17 @@ void TransformVisitor::visit(const IdExpr *expr) {
     if (newName.size() && newName[0] == '.')
       resultExpr = N<IdExpr>(newName);
   }
+
+  // Set parent
+  if ((val->getClass() && val->getClass()->isGeneric()) || val->getStatic()) {
+    assert(ctx->bases.size());
+    if (ctx->bases.size() > 1) {
+      auto cl = ctx->bases[ctx->bases.size() - 2].parent;
+      if (!cl->getFunc() && cl->name == val->getBase())
+        ctx->bases.back().referencesParent = true;
+    }
+  }
+
   if (val->getClass() && !val->getClass()->getStatic())
     resultExpr->markType();
   if (ctx->isTypeChecking()) {
@@ -196,15 +206,9 @@ void TransformVisitor::visit(const IdExpr *expr) {
       TypePtr typ;
       if (val->getImport())
         typ = make_shared<types::ImportType>(val->getImport()->getFile());
-      else if (val->getClass()) {
+      else if (val->getClass())
         typ = val->getType(); // do not instantiate here!
-        if (val->getClass()->isGeneric() && val->getBase() != ctx->getBase()) {
-          assert(ctx->bases.size());
-          // TODO: which parent? works only for singly nested cases (e.g. nested classes
-          // won't work)
-          ctx->bases.back().referencesParent = true;
-        }
-      } else
+      else
         typ = ctx->instantiate(getSrcInfo(), val->getType());
       resultExpr->setType(forceUnify(resultExpr, typ));
       auto newName = patchIfRealizable(typ, val->getClass());
@@ -941,13 +945,13 @@ void TransformVisitor::visit(const YieldExpr *expr) {
   if (ctx->isTypeChecking()) {
     if (!ctx->getLevel() || !ctx->bases.back().parent->getFunc())
       error("(yield) cannot be used outside of functions");
-    auto &base = ctx->bases.back();
     auto t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("generator"),
                                      {ctx->addUnbound(getSrcInfo())});
-    if (!base.returnType)
-      base.returnType = make_shared<types::TypePtr>(t);
+    auto &base = ctx->bases.back();
+    if (base.returnType)
+      t = forceUnify(base.returnType, t);
     else
-      t = forceUnify(*base.returnType, t);
+      base.returnType = t;
     auto c = t->follow()->getClass();
     assert(c);
     resultExpr->setType(forceUnify(expr, c->explicits[0].type));

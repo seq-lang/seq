@@ -51,7 +51,7 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     LOG3("--- Done with typecheck ---");
 
     // FILE *fo = fopen("tmp/out.htm", "w");
-    LOG3("{}", ast::FormatVisitor::format(ctx, tv, false, true));
+    // LOG3("{}", ast::FormatVisitor::format(ctx, tv, false, true));
 
     seq::SeqModule *module;
     module = new seq::SeqModule();

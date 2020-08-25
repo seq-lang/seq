@@ -62,7 +62,7 @@ seq::Expr *CodegenVisitor::transform(const Expr *expr) {
 
     auto t = expr->getType()->getClass();
     assert(t);
-    v.resultExpr->setType(realizeType(t));
+    v.resultExpr->setType(realizeType(t->getClass()));
   }
   return v.resultExpr;
 }
@@ -209,7 +209,8 @@ void CodegenVisitor::visit(const CallExpr *expr) {
 void CodegenVisitor::visit(const StackAllocExpr *expr) {
   auto c = expr->typeExpr->getType()->getClass();
   assert(c);
-  resultExpr = N<seq::ArrayExpr>(realizeType(c), transform(expr->expr), true);
+  resultExpr =
+      N<seq::ArrayExpr>(realizeType(c->getClass()), transform(expr->expr), true);
 }
 
 void CodegenVisitor::visit(const DotExpr *expr) {
@@ -564,10 +565,11 @@ void CodegenVisitor::visit(const GuardedPattern *pat) {
 }
 
 seq::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {
+  t = t->getClass();
   assert(t && t->canRealize());
   auto it = ctx->getRealizations()->classRealizations.find(t->name);
   assert(it != ctx->getRealizations()->classRealizations.end());
-  auto it2 = it->second.find(t->realizeString(false));
+  auto it2 = it->second.find(t->realizeString());
   assert(it2 != it->second.end());
   assert(it2->second.handle);
   return it2->second.handle;

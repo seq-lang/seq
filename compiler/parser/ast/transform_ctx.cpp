@@ -130,14 +130,24 @@ void TypeContext::addGlobal(const string &name, types::TypePtr type) {
   g[name] = type;
 }
 
-string TypeContext::getBase() const {
+string TypeContext::getBase(bool full) const {
   if (!bases.size())
     return "";
-
-  if (auto f = bases.back().parent->getFunc())
-    return f->canonicalName;
-  assert(bases.back().parent->getClass());
-  return bases.back().parent->getClass()->name;
+  if (!full) {
+    if (auto f = bases.back().parent->getFunc())
+      return f->canonicalName;
+    assert(bases.back().parent->getClass());
+    return bases.back().parent->getClass()->name;
+  } else {
+    vector<string> s;
+    for (auto &b : bases) {
+      if (auto f = b.parent->getFunc())
+        s.push_back(f->canonicalName);
+      else
+        s.push_back(b.parent->getClass()->name);
+    }
+    return join(s, ":");
+  }
 }
 
 shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,

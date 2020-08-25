@@ -249,7 +249,6 @@ public:
   bool hasUnbound() const override;
   bool canRealize() const override;
   std::string toString(bool reduced = false) const override;
-  std::string realizeString(bool deep) const;
   std::string realizeString() const override;
   ClassTypePtr getClass() override {
     return std::static_pointer_cast<ClassType>(shared_from_this());
@@ -265,6 +264,7 @@ typedef std::shared_ptr<FuncType> FuncTypePtr;
 struct FuncType : public ClassType {
   std::string canonicalName;
   std::vector<Generic> functionExplicits;
+  bool referencesParentGenerics; // true if a function references parent generics
 
 public:
   FuncType(ClassTypePtr c, const std::string &canonicalName,
@@ -276,6 +276,13 @@ public:
   std::string realizeString() const override;
   FuncTypePtr getFunc() override {
     return std::static_pointer_cast<FuncType>(shared_from_this());
+  }
+  ClassTypePtr getClass() override {
+    // Create new ClassType so that hasUnbound/canRealize do not resolve to FuncType
+    // ClassType::ClassType(const string &name, bool isRecord, const vector<TypePtr>
+    // &args,
+    //  const vector<Generic> &explicits, ClassTypePtr parent)
+    return std::make_shared<ClassType>(name, record, args, explicits, nullptr);
   }
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,

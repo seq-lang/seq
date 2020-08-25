@@ -144,12 +144,12 @@ StmtPtr TransformVisitor::makeInternalFn(const string &name, ExprPtr &&ret,
 }
 
 string TransformVisitor::generateFunctionStub(int len) {
-  auto typeName =
-      fmt::format(".function.{}", len); // dot needed here as we manually insert class
+  assert(len >= 1);
+  auto typeName = fmt::format(".function.{}",
+                              len - 1); // dot needed here as we manually insert class
   if (ctx->getRealizations()->variardicCache.find(typeName) !=
       ctx->getRealizations()->variardicCache.end())
     return typeName;
-  assert(len >= 1);
   ctx->getRealizations()->variardicCache.insert(typeName);
   auto stdlib = ctx->getImports()->getImport("");
 
@@ -166,41 +166,49 @@ string TransformVisitor::generateFunctionStub(int len) {
   auto stmt = make_unique<ClassStmt>(true, typeName, move(generics), CL(args), nullptr,
                                      vector<string>{});
   stmt->setSrcInfo(ctx->getRealizations()->getGeneratedPos());
-  auto ct = make_shared<ClassType>(typeName, true, vector<TypePtr>(),
-                                   parseGenerics(stmt->generics), nullptr);
+  auto ct = make_shared<ClassType>(typeName, true, vector<TypePtr>(), vector<Generic>(),
+                                   nullptr);
   ct->setSrcInfo(stmt->getSrcInfo());
   ctx->getRealizations()->classASTs[typeName] = ct;
 
-  ctx->bases.push_back({ct});
+  auto nc = make_shared<TypeContext>(stdlib->tctx->getFilename(),
+                                     stdlib->tctx->getRealizations(),
+                                     stdlib->tctx->getImports());
+  nc->bases.push_back({ct});
+  nc->bases.back().parentAst = type->clone();
+  auto tv = TransformVisitor(nc);
+
+  ct->explicits = tv.parseGenerics(stmt->generics, nc->getLevel() - 1);
   for (auto &a : args) {
-    auto t = transformType(a.type)->getType()->generalize(ctx->getLevel() - 1);
-    ctx->getRealizations()->classes[typeName].members.push_back({a.name, t});
+    auto t = tv.transformType(a.type)->getType()->generalize(nc->getLevel() - 1);
+    nc->getRealizations()->classes[typeName].members.push_back({a.name, t});
     ct->args.push_back(t);
   }
-  ctx->addGlobal(typeName, ct);
+  nc->addGlobal(typeName, ct);
 
   vector<StmtPtr> fns;
   fns.push_back(
-      makeInternalFn("__new__", type->clone(), Param{"what", N<IdExpr>("cobj")}));
-  fns.push_back(makeInternalFn("__str__", N<IdExpr>("str"), Param{"self"}));
+      tv.makeInternalFn("__new__", type->clone(), Param{"what", N<IdExpr>("cobj")}));
+  fns.push_back(tv.makeInternalFn("__str__", N<IdExpr>("str"), Param{"self"}));
   stmt->attributes.push_back("internal");
   auto suite = N<SuiteStmt>();
   for (auto &s : fns)
-    suite->stmts.push_back(addMethod(s.get(), typeName));
-  ctx->bases.pop_back();
+    suite->stmts.push_back(tv.addMethod(s.get(), typeName));
+  nc->bases.pop_back();
   for (auto &g : stmt->generics) {
-    auto val = ctx->find(g.name);
-    if (ctx->isTypeChecking())
+    auto val = nc->find(g.name);
+    if (nc->isTypeChecking())
       if (auto tx = val->getType()) {
         auto t = dynamic_pointer_cast<LinkType>(tx);
         assert(t && t->kind == LinkType::Unbound);
         t->kind = LinkType::Generic;
       }
-    ctx->remove(g.name);
+    nc->remove(g.name);
   }
 
   stmt->suite = move(suite);
   dynamic_cast<SuiteStmt *>(stdlib->statements.get())->stmts.push_back(move(stmt));
+  LOG7("[var] generated {}: {}", typeName, ct->toString());
   return typeName;
 }
 
@@ -337,39 +345,6 @@ FuncTypePtr TransformVisitor::findBestCall(ClassTypePtr c, const string &member,
   return (*m)[scores[0].second];
 }
 
-// vector<int> TransformVisitor::callCallable(types::TypePtr f,
-//                                            vector<CallExpr::Arg> &args,
-//                                            vector<CallExpr::Arg>
-//                                            &reorderedArgs) {
-//   assert(f->getCallable());
-//   bool isPartial = false;
-//   if (args.size() != f->args.size() - 1) {
-//     if (args.size() == f->args.size() && CAST(args.back().value,
-//     EllipsisExpr)) {
-//       isPartial = true;
-//       args.pop_back();
-//     } else {
-//       error("too many arguments for {} (expected {}, got {})", f->toString(),
-//             f->args.size() - 1, args.size());
-//     }
-//   }
-//   vector<int> pending;
-//   for (int i = 0; i < args.size(); i++) {
-//     if (args[i].name != "")
-//       error("argument '{}' missing (function pointers have argument "
-//             "names elided)",
-//             args[i].name);
-//     reorderedArgs.push_back({"", move(args[i].value)});
-
-//     forceUnify(reorderedArgs[i].value, f->args[i + 1]);
-//     if (CAST(reorderedArgs[i].value, EllipsisExpr))
-//       pending.push_back(i);
-//   }
-//   if (isPartial || pending.size())
-//     pending.push_back(args.size());
-//   return pending;
-// }
-
 vector<int> TransformVisitor::callFunc(types::ClassTypePtr f,
                                        vector<CallExpr::Arg> &args,
                                        vector<CallExpr::Arg> &reorderedArgs,
@@ -434,38 +409,6 @@ vector<int> TransformVisitor::callFunc(types::ClassTypePtr f,
     pending.push_back(args.size());
   return pending;
 }
-
-// vector<int> TransformVisitor::callPartial(types::PartialTypePtr f,
-//                                           vector<CallExpr::Arg> &args,
-//                                           vector<CallExpr::Arg>
-//                                           &reorderedArgs) {
-//   // TODO: parse named arguments for partial functions
-//   bool isPartial = false;
-//   if (args.size() != f->args.size() - 1 - f->knownTypes.size()) {
-//     if (args.size() == f->args.size() - 1 - f->knownTypes.size() + 1 &&
-//         CAST(args.back().value, EllipsisExpr)) {
-//       isPartial = true;
-//       args.pop_back();
-//     } else {
-//       error("too many arguments for {} (expected {}, got {})", f->toString(),
-//             f->knownTypes.size(), args.size());
-//     }
-//   }
-//   vector<int> pending;
-//   for (int i = 0; i < args.size(); i++) {
-//     if (args[i].name != "")
-//       error("argument '{}' missing (partial calls have argument "
-//             "names elided)",
-//             args[i].name);
-//     reorderedArgs.push_back({"", move(args[i].value)});
-//     forceUnify(reorderedArgs[i].value, f->args[f->knownTypes[i] + 1]);
-//     if (CAST(reorderedArgs[i].value, EllipsisExpr))
-//       pending.push_back(f->knownTypes[i]);
-//   }
-//   if (isPartial || pending.size())
-//     pending.push_back(args.size());
-//   return pending;
-// }
 
 bool TransformVisitor::handleStackAlloc(const CallExpr *expr) {
   if (auto ix = CAST(expr->expr, IndexExpr)) {
@@ -604,7 +547,8 @@ void TransformVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
   }
 }
 
-vector<types::Generic> TransformVisitor::parseGenerics(const vector<Param> &generics) {
+vector<types::Generic> TransformVisitor::parseGenerics(const vector<Param> &generics,
+                                                       int level) {
   auto genericTypes = vector<types::Generic>();
   for (auto &g : generics) {
     assert(!g.name.empty());
@@ -617,8 +561,8 @@ vector<types::Generic> TransformVisitor::parseGenerics(const vector<Param> &gene
                                bool(g.type)),
          ctx->getRealizations()->getUnboundCount()});
     auto tp = make_shared<LinkType>(LinkType::Unbound,
-                                    ctx->getRealizations()->getUnboundCount(),
-                                    ctx->getLevel(), nullptr, bool(g.type));
+                                    ctx->getRealizations()->getUnboundCount(), level,
+                                    nullptr, bool(g.type));
     if (g.type)
       ctx->addStatic(g.name, 0, tp);
     else
@@ -654,7 +598,6 @@ int TransformVisitor::realizeStatic(StaticTypePtr st) {
 RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t) {
   assert(t->canRealize());
   try {
-    auto ret = t->args[0];
     auto name = t->canonicalName;
     auto it = ctx->getRealizations()->funcRealizations.find(name);
     if (it != ctx->getRealizations()->funcRealizations.end()) {
@@ -665,6 +608,7 @@ RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t)
 
     LOG3("realizing fn {} -> {}", name, t->realizeString());
     ctx->bases.push_back({t});
+    ctx->bases.back().returnType = t->args[0];
     assert(ctx->getRealizations()->funcASTs.find(name) !=
            ctx->getRealizations()->funcASTs.end());
     auto &ast = ctx->getRealizations()->funcASTs[name];
@@ -689,8 +633,6 @@ RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t)
         ctx->addVar(ast.second->args[i - 1].name, make_shared<LinkType>(t->args[i]));
       }
 
-    // __level__++;
-
     // Need to populate funcRealization in advance to make recursive functions
     // viable
     auto &result =
@@ -699,14 +641,10 @@ RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t)
     ctx->getRealizations()->realizationLookup[t->realizeString()] = name;
 
     auto realized = isInternal ? nullptr : realizeBlock(ast.second->suite.get());
-    // __level__--;
-
-    if (realized && !ctx->bases.back().returnType && ret) {
-      ctx->bases.back().returnType =
-          make_shared<types::TypePtr>(forceUnify(ret, ctx->findInternal("void")));
-    }
-    assert(ret->canRealize() && ret->getClass());
-    realizeType(ret->getClass());
+    if (realized && !ctx->bases.back().returnType)
+      forceUnify(t->args[0], ctx->findInternal("void"));
+    assert(t->args[0]->getClass() && t->args[0]->getClass()->canRealize());
+    realizeType(t->args[0]->getClass());
     assert(ast.second->args.size() == t->args.size() - 1);
     vector<Param> args;
     for (auto &i : ast.second->args)
@@ -725,9 +663,13 @@ RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t)
 }
 
 RealizationContext::ClassRealization TransformVisitor::realizeType(ClassTypePtr t) {
+  t = t->getClass();
   assert(t && t->canRealize());
   try {
-    auto rs = t->realizeString(false); // necessary for generating __function stubs
+    // if (t->name == ".function.0")
+    // LOG7("here");
+    auto rs = t->realizeString(); // necessary for generating __function stubs
+
     auto it = ctx->getRealizations()->classRealizations.find(t->name);
     if (it != ctx->getRealizations()->classRealizations.end()) {
       auto it2 = it->second.find(rs);
@@ -739,7 +681,8 @@ RealizationContext::ClassRealization TransformVisitor::realizeType(ClassTypePtr 
     vector<pair<string, ClassTypePtr>> args;
     for (auto &m : ctx->getRealizations()->classes[t->name].members) {
       auto mt = ctx->instantiate(t->getSrcInfo(), m.second, t);
-      assert(mt->canRealize() && mt->getClass());
+      LOG7("member: {} -> {}: {}", m.first, m.second->toString(), mt->toString());
+      assert(mt->getClass() && mt->getClass()->canRealize());
       args.push_back(make_pair(m.first, realizeType(mt->getClass()).type));
     }
     ctx->getRealizations()->realizationLookup[rs] = t->name;
