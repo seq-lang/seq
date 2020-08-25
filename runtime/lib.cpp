@@ -3,6 +3,8 @@
 #include <cerrno>
 #include <chrono>
 #include <climits>
+#include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -16,11 +18,7 @@
 #include <unwind.h>
 #include <vector>
 
-#if THREADED
-#include <omp.h>
 #define GC_THREADS
-#endif
-
 #include "lib.h"
 #include "sw/ksw2.h"
 #include <gc.h>
@@ -31,23 +29,33 @@ using namespace std;
  * General
  */
 
+// the following is for manually invoking OpenMP "parallel for"
+typedef int32_t kmp_int32;
+typedef struct {
+  kmp_int32 reserved_1;
+  kmp_int32 flags;
+  kmp_int32 reserved_2;
+  kmp_int32 reserved_3;
+  char const *psource;
+} ident_t;
+typedef void (*kmpc_micro)(kmp_int32 *global_tid, kmp_int32 *bound_tid, ...);
+static ident_t dummy_loc = {0, 2, 0, 0, ";unknown;unknown;0;0;;"};
+extern "C" void __kmpc_fork_call(ident_t *, kmp_int32 nargs,
+                                 kmpc_micro microtask, ...);
+static void register_thread(kmp_int32 *global_tid, kmp_int32 *bound_tid) {
+  GC_stack_base sb;
+  GC_get_stack_base(&sb);
+  GC_register_my_thread(&sb);
+}
+
 void seq_exc_init();
 
 SEQ_FUNC void seq_init() {
   GC_INIT();
   GC_set_warn_proc(GC_ignore_warn_proc);
-
-#if THREADED
   GC_allow_register_threads();
-
-#pragma omp parallel
-  {
-    GC_stack_base sb;
-    GC_get_stack_base(&sb);
-    GC_register_my_thread(&sb);
-  }
-#endif
-
+  // equivalent to: #pragma omp parallel { register_thread }
+  __kmpc_fork_call(&dummy_loc, 0, (kmpc_micro)register_thread);
   seq_exc_init();
 }
 

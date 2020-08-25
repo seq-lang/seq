@@ -16,29 +16,13 @@ if [ "$ARCH" != "x86_64" ]; then
   exit 1
 fi
 
-case "$OS" in
-  "linux")  LIB_PATH_VAR="LD_LIBRARY_PATH" ;;
-  "darwin") LIB_PATH_VAR="DYLD_LIBRARY_PATH" ;;
-  *) exit 1 ;;
-esac
-
 SEQ_BUILD_ARCHIVE=seq-$OS-$ARCH.tar.gz
-SEQ_STDLIB_ARCHIVE=seq-stdlib.tar.gz
 
 mkdir -p $SEQ_INSTALL_DIR
 cd $SEQ_INSTALL_DIR
-wget -c https://github.com/seq-lang/seq/releases/latest/download/$SEQ_BUILD_ARCHIVE -O - | tar -xz
-wget -c https://github.com/seq-lang/seq/releases/latest/download/$SEQ_STDLIB_ARCHIVE -O - | tar -xz
-cp build/seqc build/libseq.* build/libseqrt.* .
-if [ "$OS" == "linux" ]; then
-  ln -s `find /usr/lib64/ -type f -name "libbz2.so.1*"` libbz2.so.1.0
-  ln -s `find /usr/lib64/ -type f -name "libomp.so*"`   libomp.so.5
-fi
-rm -rf build
+curl -L https://github.com/seq-lang/seq/releases/latest/download/$SEQ_BUILD_ARCHIVE | tar zxvf - --strip-components=1
 
 echo ""
 echo "Seq installed at: `pwd`"
-echo "Make sure to add the following lines to ~/.bash_profile:"
-echo "  export PATH=\"`pwd`:\$PATH\""
-echo "  export SEQ_PATH=\"`pwd`/stdlib\""
-echo "  export $LIB_PATH_VAR=\"\$$LIB_PATH_VAR:`pwd`\""
+echo "Make sure to update your PATH environment variable:"
+echo "  export PATH=\"`pwd`/bin:\$PATH\""

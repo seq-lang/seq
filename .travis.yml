@@ -20,34 +20,28 @@ jobs:
         - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
         - sudo apt-get -q update
         - sudo apt-get -y install clang-4.0 clang++-4.0 python3.5 python3.5-dev
-        - wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp5_0.20140926-1_amd64.deb
-        - sudo dpkg -i libiomp5_0.20140926-1_amd64.deb
-        - wget http://http.us.debian.org/debian/pool/main/o/openmprtl/libiomp-dev_0.20140926-1_amd64.deb
-        - sudo dpkg -i libiomp-dev_0.20140926-1_amd64.deb
         - wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
         - sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
         - wget -q -O - https://bootstrap.pypa.io/get-pip.py | sudo python3.5
         - export CC=clang-4.0
         - export CXX=clang++-4.0
-        - if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]]; then bash ${TRAVIS_BUILD_DIR}/deps.sh ; fi
+        - if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]]; then bash ${TRAVIS_BUILD_DIR}/deps.sh; fi
     - os: osx
       addons:
         homebrew:
-          update: true
           packages:
-            - snappy
             - binutils
-            - libomp
+            - sphinx-doc
             - texinfo
             - python3
-            - sphinx-doc
             - doxygen
             - cmake
             - wget
+          update: true
       before_install:
         - export CC=clang
         - export CXX=clang++
-        - if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]]; then bash ${TRAVIS_BUILD_DIR}/deps.sh ; fi
+        - if [[ -z "$(ls -A ${TRAVIS_BUILD_DIR}/deps)" ]]; then bash ${TRAVIS_BUILD_DIR}/deps.sh; fi
         - brew link --overwrite python3
       install:
         - python3 -m pip install --upgrade pip
@@ -55,30 +49,38 @@ jobs:
 
 before_script:
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
+  - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
   - export LDFLAGS="-L/usr/local/lib"
+  - export LD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/deps/lib:$LD_LIBRARY_PATH
   - |
     if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
       export SEQ_PYTHON=$(python3.5 test/python/find-python-library.py)
+      export LIBEXT="so"
+      sudo ldconfig
     else
       export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
+      export LIBEXT="dylib"
     fi
     echo ${SEQ_PYTHON}
-  - export SEQ_PATH="${TRAVIS_BUILD_DIR}/stdlib"
-  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo ldconfig; fi
 
 script:
   - mkdir build
   - |
     (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
-                          -DSEQ_THREADED=ON \
                           -DSEQ_DEP=${TRAVIS_BUILD_DIR}/deps \
                           -DCMAKE_C_COMPILER=${CC} \
                           -DCMAKE_CXX_COMPILER=${CXX})
+  - ln -s ${TRAVIS_BUILD_DIR}/deps/lib/libomp.${LIBEXT} build/libomp.${LIBEXT}
   - cmake --build build --config Release -- VERBOSE=1
-  - export LD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/deps/lib:${LD_LIBRARY_PATH}
   - build/seqtest
   - build/seqc test/core/helloworld.seq
-  - if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then make -C docs/sphinx html 2>/dev/null; fi
+  - |
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      if ! make -C docs/sphinx html 2>sphinx.log ; then
+        cat sphinx.log
+        false
+      fi
+    fi
   - export SEQ_BUILD_ARCHIVE=seq-`uname -s | awk '{print tolower($0)}'`-`uname -m`.tar.gz
   - export SEQ_DEP_ARCHIVE=seq-deps-${TRAVIS_OS_NAME}.tar.bz2
   - |
@@ -114,13 +116,8 @@ script:
 before_deploy:
   - mkdir -p seq-deploy/bin seq-deploy/lib/seq
   - cp build/seqc seq-deploy/bin/
-  - |
-    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-      cp build/libseq*.dylib seq-deploy/lib/seq/ 
-    else 
-      cp build/libseq*.so seq-deploy/lib/seq/ 
-    fi
-  # - cp build/libseqrt_static.a seq-deploy/lib/
+  - cp build/libseq*.${LIBEXT} seq-deploy/lib/seq/
+  - cp deps/lib/libomp.${LIBEXT} seq-deploy/lib/seq/
   - cp -r stdlib seq-deploy/lib/seq/
   - tar -czf ${SEQ_BUILD_ARCHIVE} seq-deploy
   - tar -cjf ${SEQ_DEP_ARCHIVE} deps

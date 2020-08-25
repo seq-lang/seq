@@ -17,8 +17,9 @@ if(NOT DEFINED SEQ_DEP)
 endif()
 message(STATUS "Dependency directory: ${SEQ_DEP}")
 
-# execute_process(COMMAND ${SEQ_DEP}/bin/llvm-config --cmakedir OUTPUT_VARIABLE LLVM_DIR)
-# message(STATUS "LLVM config: ${LLVM_DIR}")
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 find_package(LLVM REQUIRED CONFIG PATHS ${SEQ_DEP} NO_DEFAULT_PATH)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
@@ -50,8 +51,17 @@ if (NOT EXISTS ${MENHIRLIB}/menhirLib.cmx)
 endif()
 message(STATUS "Found Menhir: ${MENHIRLIB}")
 
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
+if (APPLE)
+  set(OMPLIB ${SEQ_DEP}/lib/libomp.dylib)
+else()
+  set(OMPLIB ${SEQ_DEP}/lib/libomp.so)
+endif()
+if (NOT EXISTS ${OMPLIB})
+  message(FATAL_ERROR "Cannot find ${OMPLIB}")
+endif()
+message(STATUS "Found OpenMP: ${OMPLIB}")
+add_library(seqomp SHARED IMPORTED)
+set_target_properties(seqomp PROPERTIES IMPORTED_LOCATION ${OMPLIB})
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 if(APPLE)
@@ -61,9 +71,6 @@ else()
 endif()
 
 # Seq runtime library
-option(SEQ_THREADED "compile runtime library for multithreading" OFF)
-option(SEQ_JITBRIDGE "support JIT interoperability" OFF)
-
 set(SEQRT_FILES runtime/lib.h
                 runtime/lib.cpp
                 runtime/exc.cpp
@@ -77,36 +84,11 @@ set(SEQRT_FILES runtime/lib.h
 add_library(seqrt SHARED ${SEQRT_FILES})
 target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include runtime)
 if (APPLE)
-  target_link_libraries(seqrt PUBLIC -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC} Threads::Threads)
+  target_link_libraries(seqrt PUBLIC seqomp -static-libstdc++ -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC})
 else()
-  target_link_libraries(seqrt PUBLIC -static-libstdc++ -Wl,--whole-archive ${ZLIB} ${BDWGC} -Wl,--no-whole-archive Threads::Threads)
+  target_link_libraries(seqrt PUBLIC seqomp -static-libstdc++ -Wl,--whole-archive ${ZLIB} ${BDWGC} -Wl,--no-whole-archive)
 endif()
 set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
-if(SEQ_THREADED)
-  find_package(OpenMP REQUIRED)
-  target_link_libraries(seqrt PUBLIC OpenMP::OpenMP_CXX)
-  target_compile_definitions(seqrt PRIVATE THREADED=1)
-  target_include_directories(seqrt PRIVATE ${OpenMP_CXX_INCLUDE_DIR})
-else()
-  target_compile_definitions(seqrt PRIVATE THREADED=0)
-endif()
-
-add_library(seqrt_static_only STATIC ${SEQRT_FILES})
-target_include_directories(seqrt_static_only PRIVATE ${SEQ_DEP}/include runtime)
-set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
-if(SEQ_THREADED)
-  target_compile_definitions(seqrt_static_only PRIVATE THREADED=1)
-  target_include_directories(seqrt_static_only PRIVATE ${OpenMP_CXX_INCLUDE_DIR})
-else()
-  target_compile_definitions(seqrt_static_only PRIVATE THREADED=0)
-endif()
-set(SEQRT_STATIC ${CMAKE_BINARY_DIR}/libseqrt_static.a)
-add_custom_target(seqrt_static
-    COMMAND ar -x $<TARGET_FILE:seqrt_static_only>
-    COMMAND ar -x ${BDWGC}
-    COMMAND ar -qcs ${SEQRT_STATIC} *.o
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    DEPENDS seqrt_static_only)
 
 # Seq parsing library
 include_directories(${OCAML_STDLIB_PATH})
@@ -148,7 +130,7 @@ file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
                        compiler/util/*.cpp
                        compiler/util/fmt/*.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
-add_dependencies(seq seqparse_target seqrt_static)
+add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 if (APPLE)
@@ -157,19 +139,9 @@ else()
   target_link_libraries(seq -static-libstdc++ ${LLVM_LIBS} dl seqrt)
 endif()
 
-if(SEQ_JITBRIDGE)
-  add_library(seqjit SHARED compiler/util/jit.cpp)
-  target_link_libraries(seqjit seq)
-endif()
-
 # Seq command-line tool
 add_executable(seqc runtime/main.cpp)
-if (APPLE)
-  target_link_libraries(seqc seq)
-else()
-  target_link_libraries(seqc -static-libstdc++ seq)
-endif()
-
+target_link_libraries(seqc -static-libstdc++ seq Threads::Threads)
 
 # Seq test
 # Download and unpack googletest at configure time
