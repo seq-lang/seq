@@ -498,8 +498,7 @@ void CodegenVisitor::visitMethods(const string &name) {
   if (c)
     for (auto &m : c->methods)
       for (auto &mm : m.second) {
-        FunctionStmt *f =
-            CAST(ctx->getRealizations()->getAST(mm->canonicalName), FunctionStmt);
+        FunctionStmt *f = CAST(ctx->getRealizations()->getAST(mm->name), FunctionStmt);
         visit(f);
       }
 }

@@ -103,7 +103,6 @@ string TransformVisitor::patchIfRealizable(TypePtr typ, bool isClass) {
       return r.fullName;
     } else if (typ->getFunc()) {
       auto r = realizeFunc(typ->getFunc());
-      forceUnify(typ, r.type);
       return r.fullName;
     }
   }
@@ -209,6 +208,12 @@ string TransformVisitor::generateFunctionStub(int len) {
   stmt->suite = move(suite);
   dynamic_cast<SuiteStmt *>(stdlib->statements.get())->stmts.push_back(move(stmt));
   LOG7("[var] generated {}: {}", typeName, ct->toString());
+  LOG7("[class] {}", ct->toString());
+  for (auto &m : ctx->getRealizations()->classes[typeName].members)
+    LOG7("       - member: {}: {}", m.first, m.second->toString());
+  for (auto &m : ctx->getRealizations()->classes[typeName].methods)
+    for (auto &f : m.second)
+      LOG7("       - method: {}: {}", m.first, f->toString());
   return typeName;
 }
 
@@ -251,6 +256,7 @@ string TransformVisitor::generateTupleStub(int len) {
   dynamic_cast<SuiteStmt *>(stdlib->statements.get())->stmts.push_back(move(newStmt));
   for (auto &ax : *nc)
     stdlib->tctx->addToplevel(ax.first, ax.second.front());
+
   return typeName;
 }
 
@@ -377,7 +383,7 @@ vector<int> TransformVisitor::callFunc(types::ClassTypePtr f,
   FunctionStmt *ast = nullptr;
   if (f->getFunc()) {
     ast = dynamic_cast<FunctionStmt *>(
-        ctx->getRealizations()->getAST(f->getFunc()->canonicalName).get());
+        ctx->getRealizations()->getAST(f->getFunc()->name).get());
     assert(ast);
   }
   if (!ast && namedArgs.size())
@@ -554,20 +560,12 @@ vector<types::Generic> TransformVisitor::parseGenerics(const vector<Param> &gene
     assert(!g.name.empty());
     if (g.type && g.type->toString() != "(#id int)")
       error("only int generic types are allowed");
-    genericTypes.push_back(
-        {g.name,
-         make_shared<LinkType>(LinkType::Generic,
-                               ctx->getRealizations()->getUnboundCount(), 0, nullptr,
-                               bool(g.type)),
-         ctx->getRealizations()->getUnboundCount()});
-    auto tp = make_shared<LinkType>(LinkType::Unbound,
-                                    ctx->getRealizations()->getUnboundCount(), level,
-                                    nullptr, bool(g.type));
+    auto tp = ctx->addUnbound(getSrcInfo(), level, true, bool(g.type));
+    genericTypes.push_back({g.name, tp, ctx->getRealizations()->getUnboundCount() - 1});
     if (g.type)
       ctx->addStatic(g.name, 0, tp);
     else
       ctx->addType(g.name, tp, true);
-    ctx->getRealizations()->getUnboundCount()++;
   }
   return genericTypes;
 }
@@ -598,7 +596,7 @@ int TransformVisitor::realizeStatic(StaticTypePtr st) {
 RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t) {
   assert(t->canRealize());
   try {
-    auto name = t->canonicalName;
+    auto name = t->name;
     auto it = ctx->getRealizations()->funcRealizations.find(name);
     if (it != ctx->getRealizations()->funcRealizations.end()) {
       auto it2 = it->second.find(t->realizeString());
@@ -608,17 +606,37 @@ RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t)
 
     LOG3("realizing fn {} -> {}", name, t->realizeString());
     ctx->bases.push_back({t});
-    ctx->bases.back().returnType = t->args[0];
     assert(ctx->getRealizations()->funcASTs.find(name) !=
            ctx->getRealizations()->funcASTs.end());
     auto &ast = ctx->getRealizations()->funcASTs[name];
     // Ensure that all inputs are realized
-    for (auto p = t->parent; p; p = p->parent)
-      for (auto &g : p->explicits)
+    int pi = 0;
+    for (auto p = t->parent; p; pi++) {
+      vector<Generic> *explicits = nullptr;
+      auto po = p;
+      if (auto y = p->getClass()) {
+        explicits = &(y->explicits);
+        p = y->parent;
+      } else if (auto y = p->getFunc()) {
+        explicits = &(y->explicits);
+        p = y->parent;
+      } else {
+        assert(false);
+      }
+      for (auto &g : *explicits)
         if (auto s = g.type->getStatic())
           ctx->addStatic(g.name, 0, s);
-        else if (!g.name.empty())
-          ctx->addType(g.name, g.type, true);
+        else if (!g.name.empty()) {
+          if (!pi && t->ignoreParentGenerics) {
+            LOG7("[realize] deleting generic {} ({})", g.name, g.type->toString());
+            forceUnify(g.type, ctx->findInternal("void"));
+          } else {
+            ctx->addType(g.name, g.type, true);
+          }
+        }
+      if (!pi && t->ignoreParentGenerics)
+        realizeType(po->getClass());
+    }
     for (auto &g : t->explicits)
       if (auto s = g.type->getStatic())
         ctx->addStatic(g.name, 0, s);
@@ -654,9 +672,10 @@ RealizationContext::FuncRealization TransformVisitor::realizeFunc(FuncTypePtr t)
         Nx<FunctionStmt>(ast.second.get(), ast.second->name, nullptr, vector<Param>(),
                          move(args), move(realized), ast.second->attributes);
     ctx->bases.pop_back();
+    forceUnify(t, result.type);
     return result;
   } catch (exc::ParserException &e) {
-    e.trackRealize(fmt::format("{} (arguments {})", t->canonicalName, t->toString(1)),
+    e.trackRealize(fmt::format("{} (arguments {})", t->name, t->toString(1)),
                    getSrcInfo());
     throw;
   }
@@ -681,7 +700,7 @@ RealizationContext::ClassRealization TransformVisitor::realizeType(ClassTypePtr 
     vector<pair<string, ClassTypePtr>> args;
     for (auto &m : ctx->getRealizations()->classes[t->name].members) {
       auto mt = ctx->instantiate(t->getSrcInfo(), m.second, t);
-      LOG7("member: {} -> {}: {}", m.first, m.second->toString(), mt->toString());
+      LOG7("- member: {} -> {}: {}", m.first, m.second->toString(), mt->toString());
       assert(mt->getClass() && mt->getClass()->canRealize());
       args.push_back(make_pair(m.first, realizeType(mt->getClass()).type));
     }
@@ -739,6 +758,7 @@ StmtPtr TransformVisitor::realizeBlock(const Stmt *stmt, bool keepLast) {
       }
       prevSize = newUnbounds;
     }
+    LOG7("===========================");
   }
   // Last pass; TODO: detect if it is needed...
   ctx->addBlock();

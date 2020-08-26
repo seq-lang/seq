@@ -145,10 +145,8 @@ bool LinkType::occurs(TypePtr typ, Unification &us) {
     for (auto &g : t->explicits)
       if (g.type && occurs(g.type, us))
         return true;
-    for (auto p = t->parent; p; p = p->parent)
-      for (auto &g : p->explicits)
-        if (g.type && occurs(g.type, us))
-          return true;
+    if (t->parent && occurs(t->parent, us))
+      return true;
     for (auto &t : t->args)
       if (occurs(t, us))
         return true;
@@ -220,7 +218,7 @@ TypePtr LinkType::instantiate(int level, int &unboundCount,
   if (kind == Generic) {
     if (cache.find(id) != cache.end())
       return cache[id];
-    // LOG9("instatiation: #{} -> ?{}", id, unboundCount);
+    LOG7("instatiation: #{} -> ?{}", id, unboundCount);
     return cache[id] =
                make_shared<LinkType>(Unbound, unboundCount++, level, nullptr, isStatic);
   } else if (kind == Unbound) {
@@ -263,7 +261,7 @@ bool isCallable(const string &name) {
 bool isFunc(const string &name) { return chop(name).substr(0, 9) == "function."; }
 
 ClassType::ClassType(const string &name, bool isRecord, const vector<TypePtr> &args,
-                     const vector<Generic> &explicits, ClassTypePtr parent)
+                     const vector<Generic> &explicits, TypePtr parent)
     : explicits(explicits), parent(parent), name(name), record(isRecord), args(args) {}
 
 string ClassType::toString(bool reduced) const {
@@ -338,7 +336,7 @@ TypePtr ClassType::generalize(int level) {
   auto e = explicits;
   for (auto &t : e)
     t.type = t.type ? t.type->generalize(level) : nullptr;
-  auto p = parent ? static_pointer_cast<ClassType>(parent->generalize(level)) : nullptr;
+  auto p = parent ? parent->generalize(level) : nullptr;
   auto c = make_shared<ClassType>(name, record, a, e, p);
   c->setSrcInfo(getSrcInfo());
   return c;
@@ -346,15 +344,17 @@ TypePtr ClassType::generalize(int level) {
 
 TypePtr ClassType::instantiate(int level, int &unboundCount,
                                unordered_map<int, TypePtr> &cache) {
+  auto e = explicits;
+  for (auto &t : e)
+    if (t.type) {
+      t.type = t.type->instantiate(level, unboundCount, cache);
+      if (cache.find(t.id) == cache.end())
+        cache[t.id] = t.type;
+    }
   auto a = args;
   for (auto &t : a)
     t = t->instantiate(level, unboundCount, cache);
-  auto e = explicits;
-  for (auto &t : e)
-    t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
-  auto p = parent ? static_pointer_cast<ClassType>(
-                        parent->instantiate(level, unboundCount, cache))
-                  : nullptr;
+  auto p = parent ? parent->instantiate(level, unboundCount, cache) : nullptr;
   auto c = make_shared<ClassType>(name, record, a, e, p);
   c->setSrcInfo(getSrcInfo());
   return c;
@@ -367,10 +367,8 @@ bool ClassType::hasUnbound() const {
   for (auto &t : explicits)
     if (t.type && t.type->hasUnbound())
       return true;
-  for (auto p = parent; p; p = p->parent)
-    for (auto &g : p->explicits)
-      if (g.type && g.type->hasUnbound())
-        return true;
+  if (parent && parent->hasUnbound())
+    return true;
   return false;
 }
 
@@ -381,10 +379,8 @@ bool ClassType::canRealize() const {
   for (auto &t : explicits)
     if (t.type && !t.type->canRealize())
       return false;
-  for (auto p = parent; p; p = p->parent)
-    for (auto &g : p->explicits)
-      if (g.type && !g.type->canRealize())
-        return false;
+  if (parent && !parent->canRealize())
+    return false;
   return true;
 }
 
@@ -396,75 +392,113 @@ ClassTypePtr ClassType::getCallable() {
   return nullptr;
 }
 
-FuncType::FuncType(ClassTypePtr c, const string &canonicalName,
-                   const vector<Generic> &explicits)
-    : ClassType(c), canonicalName(canonicalName), functionExplicits(explicits),
-      referencesParentGenerics(false) {}
+FuncType::FuncType(const string &name, ClassTypePtr funcClass,
+                   const vector<TypePtr> &args, const vector<Generic> &explicits,
+                   TypePtr parent, bool ignoreParentGenerics)
+    : explicits(explicits), parent(parent), funcClass(funcClass), name(name),
+      args(args), ignoreParentGenerics(ignoreParentGenerics) {}
+
+int FuncType::unify(TypePtr typ, Unification &us) { return getClass()->unify(typ, us); }
 
 string FuncType::realizeString() const {
   vector<string> gs;
-  for (auto &a : functionExplicits)
+  for (auto &a : explicits)
     if (!a.name.empty())
       gs.push_back(a.type->realizeString());
   string s = join(gs, ",");
   vector<string> as;
-  for (int ai = 0; ai < args.size(); ai++)
+  for (int ai = 1; ai < args.size(); ai++)
     as.push_back(args[ai]->realizeString());
   string a = join(as, ",");
-  if (s.size())
-    s = join(vector<string>{s, a}, ";");
-  return fmt::format("{}{}{}", parent ? parent->realizeString() + ":" : "",
-                     chop(canonicalName), s.empty() ? "" : fmt::format("[{}]", s));
+  s = s.size() ? join(vector<string>{s, a}, ";") : a;
+  return fmt::format("{}{}{}", parent ? parent->realizeString() + ":" : "", chop(name),
+                     s.empty() ? "" : fmt::format("[{}]", s));
+}
+
+string FuncType::toString(bool reduced) const {
+  vector<string> gs;
+  for (auto &a : explicits)
+    if (!a.name.empty())
+      gs.push_back(a.type->toString(reduced));
+  string s = join(gs, ",");
+  vector<string> as;
+  for (int ai = 0; ai < args.size(); ai++)
+    as.push_back(args[ai]->toString(reduced));
+  string a = join(as, ",");
+  s = s.size() ? join(vector<string>{s, a}, ";") : a;
+  return fmt::format("{}{}{}", parent ? parent->toString(reduced) + ":" : "",
+                     chop(name), s.empty() ? "" : fmt::format("[{}]", s));
 }
 
 TypePtr FuncType::generalize(int level) {
-  auto a = functionExplicits;
+  auto a = args;
   for (auto &t : a)
+    t = t->generalize(level);
+  auto e = explicits;
+  for (auto &t : e)
     t.type = t.type ? t.type->generalize(level) : nullptr;
-  return make_shared<FuncType>(
-      static_pointer_cast<ClassType>(ClassType::generalize(level)), canonicalName, a);
+  auto p = parent ? parent->generalize(level) : nullptr;
+  auto c = make_shared<FuncType>(name, funcClass, a, e, p, ignoreParentGenerics);
+  c->setSrcInfo(getSrcInfo());
+  return c;
 }
 
 TypePtr FuncType::instantiate(int level, int &unboundCount,
                               std::unordered_map<int, TypePtr> &cache) {
-  auto a = functionExplicits;
+  auto e = explicits;
+  for (auto &t : e)
+    if (t.type) {
+      t.type = t.type->instantiate(level, unboundCount, cache);
+      if (cache.find(t.id) == cache.end())
+        cache[t.id] = t.type;
+    }
+  auto a = args;
   for (auto &t : a)
-    t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
-  return make_shared<FuncType>(static_pointer_cast<ClassType>(
-                                   ClassType::instantiate(level, unboundCount, cache)),
-                               canonicalName, a);
+    t = t->instantiate(level, unboundCount, cache);
+  auto p = parent ? parent->instantiate(level, unboundCount, cache) : nullptr;
+  auto c = make_shared<FuncType>(name, funcClass, a, e, p, ignoreParentGenerics);
+  c->setSrcInfo(getSrcInfo());
+  return c;
 }
 
 bool FuncType::canRealize() const {
-  for (auto &t : functionExplicits)
+  for (auto &t : explicits)
     if (t.type && !t.type->canRealize())
       return false;
-  for (int i = 1; i < args.size(); i++) {
+  for (int i = 1; i < args.size(); i++)
     if (!args[i]->canRealize())
       return false;
-    assert(explicits[i].type && explicits[i].type->canRealize());
-  }
-  for (auto p = parent; p; p = p->parent)
-    for (auto &g : p->explicits)
-      if (g.type && !g.type->canRealize())
-        return false;
+  auto p = parent;
+  if (p && ignoreParentGenerics)
+    p = p->getClass() ? p->getClass()->parent
+                      : p->getFunc() ? p->getFunc()->parent : nullptr;
+  if (p && !p->canRealize())
+    return false;
   return true;
 }
 
 bool FuncType::hasUnbound() const {
-  for (auto &t : functionExplicits)
+  for (auto &t : explicits)
     if (t.type && t.type->hasUnbound())
       return true;
-  for (int i = 1; i < args.size(); i++) {
+  for (int i = 1; i < args.size(); i++)
     if (args[i]->hasUnbound())
       return true;
-    assert(explicits[i].type && !explicits[i].type->hasUnbound());
-  }
-  for (auto p = parent; p; p = p->parent)
-    for (auto &g : p->explicits)
-      if (g.type && g.type->hasUnbound())
-        return true;
+  auto p = parent;
+  if (p && ignoreParentGenerics)
+    p = p->getClass() ? p->getClass()->parent
+                      : p->getFunc() ? p->getFunc()->parent : nullptr;
+  if (p && p->hasUnbound())
+    return true;
   return false;
+}
+
+ClassTypePtr FuncType::getClass() {
+  vector<Generic> explicits;
+  for (int ai = 0; ai < args.size(); ai++)
+    explicits.push_back(
+        {fmt::format("T{}", ai), args[ai], funcClass->explicits[ai].id});
+  return make_shared<ClassType>(funcClass->name, true, args, explicits, nullptr);
 }
 
 string v2b(const vector<char> &c) {
@@ -473,22 +507,6 @@ string v2b(const vector<char> &c) {
     if (c[i])
       s[i] = '1';
   return s;
-}
-
-string FuncType::toString(bool reduced) const {
-  vector<string> gs;
-  for (auto &a : functionExplicits)
-    if (!a.name.empty())
-      gs.push_back(a.type->toString(reduced));
-  string s = join(gs, ",");
-  vector<string> as;
-  for (int ai = 0; ai < args.size(); ai++)
-    as.push_back(args[ai]->toString(reduced));
-  string a = join(as, ",");
-  if (s.size())
-    s = join(vector<string>{s, a}, ";");
-  return fmt::format("{}{}{}", parent ? parent->toString(reduced) + ":" : "",
-                     chop(canonicalName), s.empty() ? "" : fmt::format("[{}]", s));
 }
 
 PartialType::PartialType(ClassTypePtr c, const vector<char> &k)

@@ -174,7 +174,7 @@ void TransformVisitor::visit(const IdExpr *expr) {
   if (expr->value[0] != '.') {
     auto newName = expr->value;
     if (auto f = val->getFunc()) {
-      newName = dynamic_pointer_cast<types::FuncType>(f->getType())->canonicalName;
+      newName = dynamic_pointer_cast<types::FuncType>(f->getType())->name;
     } else if (auto f = val->getClass()) {
       if (auto t = dynamic_pointer_cast<types::ClassType>(f->getType()))
         newName = t->name;
@@ -188,7 +188,7 @@ void TransformVisitor::visit(const IdExpr *expr) {
     assert(ctx->bases.size());
     if (ctx->bases.size() > 1) {
       auto cl = ctx->bases[ctx->bases.size() - 2].parent;
-      if (!cl->getFunc() && cl->name == val->getBase())
+      if (!cl->getFunc() && cl->getClass()->name == val->getBase())
         ctx->bases.back().referencesParent = true;
     }
   }
@@ -384,7 +384,8 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
       resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
     } else if (le->getType()->getUnbound() || re->getType()->getUnbound()) {
       resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
-      resultExpr->setType(forceUnify(expr, ctx->addUnbound(getSrcInfo())));
+      resultExpr->setType(
+          forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->getLevel())));
     } else {
       auto mi = magics.find(expr->op);
       if (mi == magics.end())
@@ -438,7 +439,6 @@ void TransformVisitor::visit(const PipeExpr *expr) {
     forceUnify(t, f->args[inTypePos + 1]);
     if (f->canRealize() && f->getFunc()) {
       auto r = realizeFunc(f->getFunc());
-      forceUnify(f, r.type);
       if (p)
         fixExprName(fe, r.fullName);
     }
@@ -582,8 +582,9 @@ void TransformVisitor::visit(const IndexExpr *expr) {
                                          expr->index->clone()));
   } else {
     resultExpr = N<IndexExpr>(move(e), transform(expr->index));
-    resultExpr->setType(expr->getType() ? expr->getType()
-                                        : ctx->addUnbound(getSrcInfo()));
+    resultExpr->setType(expr->getType()
+                            ? expr->getType()
+                            : ctx->addUnbound(getSrcInfo(), ctx->getLevel()));
   }
 }
 
@@ -673,8 +674,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
       if (auto m = findBestCall(c, d->member, targs, true)) {
         if (!dotlhs->isType())
           args.insert(args.begin(), {"", move(dotlhs)});
-        e = N<IdExpr>(m->canonicalName);
-        LOG7("{} {}", m->toString(), c->toString());
+        e = N<IdExpr>(m->name);
         e->setType(ctx->instantiate(getSrcInfo(), m, c));
       } else {
         error("cannot find method '{}' in {} with arguments {}", d->member,
@@ -711,8 +711,9 @@ void TransformVisitor::visit(const CallExpr *expr) {
   auto c = e->getType()->getClass();
   if (!c) { // Unbound caller, will be handled later
     resultExpr = N<CallExpr>(move(e), move(args));
-    resultExpr->setType(expr->getType() ? expr->getType()
-                                        : ctx->addUnbound(getSrcInfo()));
+    resultExpr->setType(expr->getType()
+                            ? expr->getType()
+                            : ctx->addUnbound(getSrcInfo(), ctx->getLevel()));
     return;
   }
   if (c && !c->getCallable()) { // route to a call method
@@ -738,7 +739,6 @@ void TransformVisitor::visit(const CallExpr *expr) {
     if (ra.value->getType()->canRealize()) {
       if (auto f = ra.value->getType()->getFunc()) {
         auto r = realizeFunc(f);
-        forceUnify(f, r.type);
         fixExprName(ra.value, r.fullName);
       }
       // TODO: realize partials
@@ -746,7 +746,6 @@ void TransformVisitor::visit(const CallExpr *expr) {
 
   if (c->canRealize() && c->getFunc()) {
     auto r = realizeFunc(c->getFunc());
-    forceUnify(c, r.type);
     if (!p)
       fixExprName(e, r.fullName);
   }
@@ -804,13 +803,14 @@ void TransformVisitor::visit(const DotExpr *expr) {
   TypePtr typ = nullptr;
   if (ctx->isTypeChecking()) {
     if (lhs->getType()->getUnbound()) {
-      typ = expr->getType() ? expr->getType() : ctx->addUnbound(getSrcInfo());
+      typ = expr->getType() ? expr->getType()
+                            : ctx->addUnbound(getSrcInfo(), ctx->getLevel());
     } else if (auto c = lhs->getType()->getClass()) {
       if (auto m = ctx->getRealizations()->findMethod(c->name, expr->member)) {
         if (m->size() > 1)
           error("ambigious partial expression"); /// TODO
         if (lhs->isType()) {
-          auto name = (*m)[0]->canonicalName;
+          auto name = (*m)[0]->name;
           auto val = processIdentifier(ctx, name);
           assert(val);
           auto t = ctx->instantiate(getSrcInfo(), (*m)[0], c);
@@ -828,12 +828,11 @@ void TransformVisitor::visit(const DotExpr *expr) {
             args.push_back(N<EllipsisExpr>());
 
           auto ast = dynamic_cast<FunctionStmt *>(
-              ctx->getRealizations()->getAST(f->canonicalName).get());
+              ctx->getRealizations()->getAST(f->name).get());
           assert(ast);
           if (in(ast->attributes, "property"))
             args.pop_back();
-          resultExpr =
-              transform(N<CallExpr>(N<IdExpr>((*m)[0]->canonicalName), move(args)));
+          resultExpr = transform(N<CallExpr>(N<IdExpr>((*m)[0]->name), move(args)));
           return;
         }
       } else if (auto mm = ctx->getRealizations()->findMember(c->name, expr->member)) {
@@ -877,7 +876,7 @@ void TransformVisitor::visit(const SliceExpr *expr) {
 void TransformVisitor::visit(const EllipsisExpr *expr) {
   resultExpr = N<EllipsisExpr>();
   if (ctx->isTypeChecking())
-    resultExpr->setType(ctx->addUnbound(getSrcInfo()));
+    resultExpr->setType(ctx->addUnbound(getSrcInfo(), ctx->getLevel()));
 }
 
 // Should get transformed by other functions
@@ -946,7 +945,7 @@ void TransformVisitor::visit(const YieldExpr *expr) {
     if (!ctx->getLevel() || !ctx->bases.back().parent->getFunc())
       error("(yield) cannot be used outside of functions");
     auto t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("generator"),
-                                     {ctx->addUnbound(getSrcInfo())});
+                                     {ctx->addUnbound(getSrcInfo(), ctx->getLevel())});
     auto &base = ctx->bases.back();
     if (base.returnType)
       t = forceUnify(base.returnType, t);

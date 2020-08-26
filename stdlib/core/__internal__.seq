@@ -1,5 +1,4 @@
 cobj = ptr[byte]
-
 @internal
 type str(len: int, ptr: ptr[byte]):
     @internal

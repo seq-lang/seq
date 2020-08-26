@@ -50,8 +50,9 @@ PatternPtr TransformVisitor::transform(const Pattern *pat) {
 void TransformVisitor::visit(const StarPattern *pat) {
   resultPattern = N<StarPattern>();
   if (ctx->isTypeChecking())
-    resultPattern->setType(forceUnify(
-        pat, forceUnify(ctx->getMatchType(), ctx->addUnbound(getSrcInfo()))));
+    resultPattern->setType(
+        forceUnify(pat, forceUnify(ctx->getMatchType(),
+                                   ctx->addUnbound(getSrcInfo(), ctx->getLevel()))));
 }
 
 void TransformVisitor::visit(const IntPattern *pat) {
@@ -109,7 +110,7 @@ void TransformVisitor::visit(const ListPattern *pat) {
   auto p = N<ListPattern>(transform(pat->patterns));
   TypePtr t = nullptr;
   if (ctx->isTypeChecking()) {
-    TypePtr ty = ctx->addUnbound(getSrcInfo());
+    TypePtr ty = ctx->addUnbound(getSrcInfo(), ctx->getLevel());
     for (auto &pp : p->patterns)
       forceUnify(ty, pp->getType());
     t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("list"), {ty});

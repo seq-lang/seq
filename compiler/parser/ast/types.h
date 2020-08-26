@@ -221,7 +221,7 @@ private:
 typedef std::shared_ptr<ClassType> ClassTypePtr;
 struct ClassType : public Type {
   std::vector<Generic> explicits;
-  ClassTypePtr parent;
+  TypePtr parent;
 
 public:
   /// Global unique name for each type (generated from the getSrcPos())
@@ -237,7 +237,7 @@ public:
   ClassType(const std::string &name, bool isRecord = false,
             const std::vector<TypePtr> &args = std::vector<TypePtr>(),
             const std::vector<Generic> &explicits = std::vector<Generic>(),
-            ClassTypePtr parent = nullptr);
+            TypePtr parent = nullptr);
 
 public:
   virtual int unify(TypePtr typ, Unification &us) override;
@@ -261,29 +261,32 @@ public:
  * FuncType describes a (generic) function type that can be realized.
  */
 typedef std::shared_ptr<FuncType> FuncTypePtr;
-struct FuncType : public ClassType {
-  std::string canonicalName;
-  std::vector<Generic> functionExplicits;
-  bool referencesParentGenerics; // true if a function references parent generics
+struct FuncType : public Type {
+  std::vector<Generic> explicits;
+  TypePtr parent;
+  ClassTypePtr funcClass;
+
+  std::string name;
+  std::vector<TypePtr> args;
+
+  bool ignoreParentGenerics;
 
 public:
-  FuncType(ClassTypePtr c, const std::string &canonicalName,
-           const std::vector<Generic> &explicits);
+  FuncType(const std::string &name, ClassTypePtr funcClass,
+           const std::vector<TypePtr> &args = std::vector<TypePtr>(),
+           const std::vector<Generic> &explicits = std::vector<Generic>(),
+           TypePtr parent = nullptr,
+           bool ignoreParentGenerics = false);
 
 public:
+  virtual int unify(TypePtr typ, Unification &us) override;
   bool hasUnbound() const override;
   bool canRealize() const override;
   std::string realizeString() const override;
   FuncTypePtr getFunc() override {
     return std::static_pointer_cast<FuncType>(shared_from_this());
   }
-  ClassTypePtr getClass() override {
-    // Create new ClassType so that hasUnbound/canRealize do not resolve to FuncType
-    // ClassType::ClassType(const string &name, bool isRecord, const vector<TypePtr>
-    // &args,
-    //  const vector<Generic> &explicits, ClassTypePtr parent)
-    return std::make_shared<ClassType>(name, record, args, explicits, nullptr);
-  }
+  ClassTypePtr getClass() override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       std::unordered_map<int, TypePtr> &cache) override;

@@ -122,11 +122,11 @@ public:
   /// Current module-specific name prefix (stack of enclosing class/function
   /// scopes). Module toplevel has no base.
   struct Base {
-    types::ClassTypePtr parent;
+    types::TypePtr parent;
     ExprPtr parentAst;
     bool referencesParent;
     types::TypePtr returnType;
-    Base(types::ClassTypePtr p, bool r = false)
+    Base(types::TypePtr p, bool r = false)
         : parent(p), parentAst(nullptr), referencesParent(r), returnType(nullptr) {}
   };
   std::vector<Base> bases;
@@ -170,8 +170,9 @@ public:
   bool isTypeChecking() const { return typecheck; }
 
 public:
-  std::shared_ptr<types::LinkType> addUnbound(const SrcInfo &srcInfo,
-                                              bool setActive = true);
+  std::shared_ptr<types::LinkType> addUnbound(const SrcInfo &srcInfo, int level,
+                                              bool setActive = true,
+                                              bool isStatic = false);
   /// Calls `type->instantiate`, but populates the instantiation table
   /// with "parent" type.
   /// Example: for list[T].foo, list[int].foo will populate type of foo so that

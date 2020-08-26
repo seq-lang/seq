@@ -135,14 +135,14 @@ string TypeContext::getBase(bool full) const {
     return "";
   if (!full) {
     if (auto f = bases.back().parent->getFunc())
-      return f->canonicalName;
+      return f->name;
     assert(bases.back().parent->getClass());
     return bases.back().parent->getClass()->name;
   } else {
     vector<string> s;
     for (auto &b : bases) {
       if (auto f = b.parent->getFunc())
-        s.push_back(f->canonicalName);
+        s.push_back(f->name);
       else
         s.push_back(b.parent->getClass()->name);
     }
@@ -150,16 +150,15 @@ string TypeContext::getBase(bool full) const {
   }
 }
 
-shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo,
-                                                    bool setActive) {
+shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int level,
+                                                    bool setActive, bool isStatic) {
   auto t = make_shared<types::LinkType>(types::LinkType::Unbound,
-                                        realizations->getUnboundCount()++, getLevel());
+                                        realizations->getUnboundCount()++, level,
+                                        nullptr, isStatic);
   t->setSrcInfo(srcInfo);
-  if (setActive) {
-    if (typecheck)
-      LOG7("[ub] new {}: {}", t->toString(0), srcInfo);
+  LOG7("[ub] new {}: {} ({})", t->toString(0), srcInfo, setActive);
+  if (setActive)
     activeUnbounds.insert(t);
-  }
   return t;
 }
 
@@ -183,16 +182,14 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
       if (l->kind != types::LinkType::Unbound)
         continue;
       i.second->setSrcInfo(srcInfo);
-      if (activate && activeUnbounds.find(i.second) == activeUnbounds.end()) {
-        if (typecheck) {
-          LOG7("[ub] #{} -> {} (during inst of {}): {}", i.first, i.second->toString(0),
-               type->toString(), srcInfo);
-        }
-        activeUnbounds.insert(i.second);
+      if (activeUnbounds.find(i.second) == activeUnbounds.end()) {
+        LOG7("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
+             i.second->toString(0), type->toString(), srcInfo, activate);
+        if (activate)
+          activeUnbounds.insert(i.second);
       }
     }
   }
-  // LOG7("UB.Final: {}", t->toString());
   return t;
 }
 
