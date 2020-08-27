@@ -546,7 +546,6 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       ctx->addFunc(stmt->name, ctx->getRealizations()->funcASTs[canonicalName].first);
     return;
   }
-
   LOG7("[stmt] adding func {} (base: {})", canonicalName, ctx->getBase());
 
   vector<Param> args;
@@ -606,12 +605,11 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
 
   // Generalize generics
   // Ensure that implicit "generics" are also generalized
-  if (ctx->isTypeChecking())
-    for (auto g : generics) {
-      assert(g && g->getLink() && g->getLink()->kind != types::LinkType::Link);
-      if (g->getLink()->kind == LinkType::Unbound)
-        g->getLink()->kind = LinkType::Generic;
-    }
+  for (auto g : generics) {
+    assert(g && g->getLink() && g->getLink()->kind != types::LinkType::Link);
+    if (g->getLink()->kind == LinkType::Unbound)
+      g->getLink()->kind = LinkType::Generic;
+  }
   for (auto &g : stmt->generics)
     ctx->remove(g.name);
 
@@ -667,7 +665,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
 
   ctx->bases.push_back({ct});
   ct->explicits = parseGenerics(stmt->generics, ctx->getLevel() - 1);
-  LOG9("[stmt] added class {}: {}", canonicalName, ct->toString());
+  LOG7("[stmt] added class {}: {}", canonicalName, ct->toString());
 
   unordered_set<string> seenMembers;
   ExprPtr mainType = nullptr;

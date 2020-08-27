@@ -546,7 +546,7 @@ void TransformVisitor::visit(const IndexExpr *expr) {
       LOG9("[index] failback, {}", e.what());
       auto ti = transform(i, true);
       if (ti->isType())
-        generics.push_back(ti->getType());
+        generics.push_back(ctx->instantiate(getSrcInfo(), ti->getType()));
       else
         error(i, "expected a type or a static expression");
     }

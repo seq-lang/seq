@@ -561,7 +561,8 @@ vector<types::Generic> TransformVisitor::parseGenerics(const vector<Param> &gene
     if (g.type && g.type->toString() != "(#id int)")
       error("only int generic types are allowed");
     auto tp = ctx->addUnbound(getSrcInfo(), level, true, bool(g.type));
-    genericTypes.push_back({g.name, tp, ctx->getRealizations()->getUnboundCount() - 1});
+    genericTypes.push_back(
+        {g.name, tp->generalize(level), ctx->getRealizations()->getUnboundCount() - 1});
     if (g.type)
       ctx->addStatic(g.name, 0, tp);
     else
