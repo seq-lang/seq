@@ -175,35 +175,33 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
     assert(statics.size() == 1 && types.size() == 0);
     assert(statics[0] >= 1 && statics[0] <= 2048);
     real.handle = seq::types::IntNType::get(statics[0], name == "Int");
-  } else if (name == "array") {
+  } else if (name == "Array") {
     assert(types.size() == 1 && statics.size() == 0);
     real.handle = seq::types::ArrayType::get(types[0]);
-  } else if (name == "ptr") {
+  } else if (name == "Ptr") {
     assert(types.size() == 1 && statics.size() == 0);
     real.handle = seq::types::PtrType::get(types[0]);
-  } else if (name == "generator") {
+  } else if (name == "Generator") {
     assert(types.size() == 1 && statics.size() == 0);
     real.handle = seq::types::GenType::get(types[0]);
-  } else if (name == "optional") {
+  } else if (name == "Optional") {
     assert(types.size() == 1 && statics.size() == 0);
     real.handle = seq::types::OptionalType::get(types[0]);
-  } else if (name.substr(0, 9) == "function.") {
+  } else if (name.substr(0, 9) == "Function.") {
     types.clear();
     for (auto &m : t->args)
       types.push_back(realizeType(m->getClass()));
     auto ret = types[0];
     types.erase(types.begin());
     real.handle = seq::types::FuncType::get(types, ret);
-  } else if (name.substr(0, 8) == "partial.") {
-    auto f = t->getCallable();
+  } else if (name.substr(0, 8) == "Partial.") {
+    auto f = t->getCallable()->getClass();
     assert(f);
-    auto callee = realizeType(f->getClass());
+    auto callee = realizeType(f);
     vector<seq::types::Type *> partials(f->args.size() - 1, nullptr);
-    auto p = std::dynamic_pointer_cast<types::PartialType>(t);
-    assert(p);
-    for (int i = 0; i < p->knownTypes.size(); i++)
-      if (p->knownTypes[i])
-        partials[i] = realizeType(f->args[i + 1]->getClass());
+    for (int i = 8; i < name.size(); i++)
+      if (name[i] == '1')
+        partials[i] = realizeType(f->args[i - 8 + 1]->getClass());
     real.handle = seq::types::PartialFuncType::get(callee, partials);
   } else {
     vector<string> names;
@@ -216,7 +214,7 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
       vector<string> x;
       for (auto &t : types)
         x.push_back(t->getName());
-      if (name.substr(0, 6) == "tuple.")
+      if (name.substr(0, 6) == "Tuple.")
         name = "";
       real.handle = seq::types::RecordType::get(types, names, name);
     } else {
@@ -254,14 +252,14 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
       auto &real = f.second;
       auto ast = real.ast;
       if (in(ast->attributes, "internal")) {
-        // LOG7("[codegen] generating internal fn {} ~ {}", real.fullName,
-        // ast->name);
+        LOG7("[codegen] generating internal fn {} ~ {}", real.fullName, ast->name);
         vector<seq::types::Type *> types;
 
-        // static: has self as arg
-        assert(real.type->parent && real.type->parent->getClass());
-        seq::types::Type *typ =
-            stdlib->lctx->realizeType(real.type->parent->getClass());
+        auto p =
+            real.type->codegenParent ? real.type->codegenParent : real.type->parent;
+        seqassert(p && p->getClass(), "parent must be set ({})",
+                  p ? p->toString() : "-");
+        seq::types::Type *typ = stdlib->lctx->realizeType(p->getClass());
         int startI = 1;
         if (ast->args.size() && ast->args[0].name == "self")
           startI = 2;
@@ -269,7 +267,6 @@ shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
           types.push_back(stdlib->lctx->realizeType(real.type->args[i]->getClass()));
         real.handle = typ->findMagic(ast->name, types);
       } else {
-        // LOG7("[codegen] generating fn stub {}", real.fullName);
         real.handle = new seq::Func();
       }
       stdlib->lctx->addFunc(real.fullName, real.handle);

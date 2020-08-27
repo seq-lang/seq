@@ -1,30 +1,31 @@
-cobj = ptr[byte]
+cobj = Ptr[byte]
+
 @internal
-type str(len: int, ptr: ptr[byte]):
+type str(len: int, ptr: Ptr[byte]):
     @internal
-    def __new__(p: ptr[byte], l: int) -> str: pass
+    def __new__(p: Ptr[byte], l: int) -> str: pass
 type pyobj(p: cobj)
 cimport seq_print(str)
 
-extend ptr[T]:
+extend Ptr[T]:
     @internal
     def __elemsize__() -> int: pass
     @internal
     def __atomic__() -> bool: pass
     @internal
-    def as_byte(self) -> ptr[byte]: pass
+    def as_byte(self) -> Ptr[byte]: pass
     @internal
-    def __new__() -> ptr[T]: pass
+    def __new__() -> Ptr[T]: pass
     @internal
-    def __new__(other: ptr[byte]) -> ptr[T]: pass
+    def __new__(other: Ptr[byte]) -> Ptr[T]: pass
     @internal
-    def __new__(sz: int) -> ptr[T]: pass
+    def __new__(sz: int) -> Ptr[T]: pass
     @internal
-    def __new__(other: ptr[T]) -> ptr[T]: pass
+    def __new__(other: Ptr[T]) -> Ptr[T]: pass
     @internal
     def __int__(self) -> int: pass
     @internal
-    def __copy__(self) -> ptr[T]: pass
+    def __copy__(self) -> Ptr[T]: pass
     @internal
     def __bool__(self) -> bool: pass
     @internal
@@ -32,21 +33,21 @@ extend ptr[T]:
     @internal
     def __setitem__(self, index: int, what: T) -> void: pass
     @internal
-    def __add__(self, other: int) -> ptr[T]: pass
+    def __add__(self, other: int) -> Ptr[T]: pass
     @internal
-    def __sub__(self, other: ptr[T]) -> int: pass
+    def __sub__(self, other: Ptr[T]) -> int: pass
     @internal
-    def __eq__(self, other: ptr[T]) -> bool: pass
+    def __eq__(self, other: Ptr[T]) -> bool: pass
     @internal
-    def __ne__(self, other: ptr[T]) -> bool: pass
+    def __ne__(self, other: Ptr[T]) -> bool: pass
     @internal
-    def __lt__(self, other: ptr[T]) -> bool: pass
+    def __lt__(self, other: Ptr[T]) -> bool: pass
     @internal
-    def __gt__(self, other: ptr[T]) -> bool: pass
+    def __gt__(self, other: Ptr[T]) -> bool: pass
     @internal
-    def __le__(self, other: ptr[T]) -> bool: pass
+    def __le__(self, other: Ptr[T]) -> bool: pass
     @internal
-    def __ge__(self, other: ptr[T]) -> bool: pass
+    def __ge__(self, other: Ptr[T]) -> bool: pass
     @internal
     def __prefetch_r0__(self) -> void: pass
     @internal
@@ -162,7 +163,7 @@ extend int:
 
 extend str:
     def __new__() -> str:
-        return str(ptr[byte](), 0)
+        return str(Ptr[byte](), 0)
     def __new__[T](what: T) -> str: # lowest priority!
         return what.__str__()
     def __str__(what: str) -> str:
@@ -174,11 +175,11 @@ extend str:
     def __copy__(self) -> str:
         return self
     @internal
-    def memcpy(dest: ptr[byte], src: ptr[byte], len: int) -> void: pass
+    def memcpy(dest: Ptr[byte], src: Ptr[byte], len: int) -> void: pass
     @internal
-    def memmove(dest: ptr[byte], src: ptr[byte], len: int) -> void: pass
+    def memmove(dest: Ptr[byte], src: Ptr[byte], len: int) -> void: pass
     @internal
-    def memset(dest: ptr[byte], b: byte, len: int) -> void: pass
+    def memset(dest: Ptr[byte], b: byte, len: int) -> void: pass
 
 extend bool:
     @internal
@@ -310,27 +311,28 @@ extend float:
     @internal
     def __ge__(self, other: int) -> bool: pass
 
-extend optional[T]:  # type
+extend Optional[T]:  # type
     @internal
-    def __new__() -> optional[T]: pass
+    def __new__() -> Optional[T]: pass
     @internal
-    def __new__(what: T) -> optional[T]: pass
+    def __new__(what: T) -> Optional[T]: pass
     @internal
     def __bool__(self) -> bool: pass
     @internal
     def __invert__(self) -> T: pass
     def __str__(self) -> str:
         return 'None' if not self else str(~self)
+optional = Optional
 
-extend generator[T]:  # class
+extend Generator[T]:  # class
     @internal
-    def __iter__(self) -> generator[T]: pass
+    def __iter__(self) -> Generator[T]: pass
     @internal
-    def __raw__(self) -> ptr[byte]: pass
+    def __raw__(self) -> Ptr[byte]: pass
     @internal
     def __done__(self) -> bool: pass
     @internal
-    def __promise__(self) -> ptr[T]: pass
+    def __promise__(self) -> Ptr[T]: pass
     @internal
     def __resume__(self) -> void: pass
     @internal
@@ -344,15 +346,16 @@ extend generator[T]:  # class
     def send(self, what: T) -> T: pass
     @internal
     def destroy(self) -> void: pass
+generator = Generator
 
 @internal
-type array[T](len: int, ptr: ptr[T]):
+type Array[T](len: int, ptr: Ptr[T]):
     @internal
-    def __new__(len: int) -> array[T]: pass
+    def __new__(len: int) -> Array[T]: pass
     @internal
-    def __new__(data: ptr[T], len: int) -> array[T]: pass
+    def __new__(data: Ptr[T], len: int) -> Array[T]: pass
     @internal
-    def __copy__(self) -> array[T]: pass
+    def __copy__(self) -> Array[T]: pass
     @internal
     def __len__(self) -> int: pass
     @internal
@@ -360,13 +363,14 @@ type array[T](len: int, ptr: ptr[T]):
     @internal
     def __getitem__(self, index: int) -> T: pass
     @internal
-    def __slice__(self, l: int, r: int) -> array[T]: pass
+    def __slice__(self, l: int, r: int) -> Array[T]: pass
     @internal
-    def __slice_left__(self, r: int) -> array[T]: pass
+    def __slice_left__(self, r: int) -> Array[T]: pass
     @internal
-    def __slice_right__(self, l: int) -> array[T]: pass
+    def __slice_right__(self, l: int) -> Array[T]: pass
     @internal
     def __setitem__(self, index: int, what: T) -> void: pass
+array = Array
 
 extend Int[N]:
     @internal
@@ -424,9 +428,9 @@ extend Int[N]:
     @internal
     def __xor__(self, other: Int[N]) -> Int[N]: pass
     @internal
-    def __pickle__(self, dest: ptr[byte]) -> void: pass
+    def __pickle__(self, dest: Ptr[byte]) -> void: pass
     @internal
-    def __unpickle__(self, src: ptr[byte]) -> Int[N]: pass
+    def __unpickle__(self, src: Ptr[byte]) -> Int[N]: pass
     @internal
     def __str__(self) -> str: pass
     @internal
@@ -493,9 +497,9 @@ extend UInt[N]:
     @internal
     def __xor__(self, other: UInt[N]) -> UInt[N]: pass
     @internal
-    def __pickle__(self, dest: ptr[byte]) -> void: pass
+    def __pickle__(self, dest: Ptr[byte]) -> void: pass
     @internal
-    def __unpickle__(self, src: ptr[byte]) -> UInt[N]: pass
+    def __unpickle__(self, src: Ptr[byte]) -> UInt[N]: pass
     @internal
     def __str__(self) -> str: pass
     @internal
@@ -509,16 +513,16 @@ extend str:
         len1 = self.len
         len2 = other.len
         len3 = len1 + len2
-        p = ptr[byte](len3)
+        p = Ptr[byte](len3)
         str.memcpy(p, self.ptr, len1)
         str.memcpy(p + len1, other.ptr, len2)
         return str(p, len3)
 
 @internal
-type seq(len: int, ptr: ptr[byte]):
+type seq(len: int, ptr: Ptr[byte]):
     def __new__(s: str) -> seq:
         return (s.len, s.ptr)
-    def __new__(p: ptr[byte], l: int) -> seq:
+    def __new__(p: Ptr[byte], l: int) -> seq:
         return (l, p)
     def __str__(self) -> str:
         return str(self.ptr, self.len)

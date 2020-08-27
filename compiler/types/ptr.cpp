@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 types::PtrType::PtrType(Type *baseType)
-    : Type("ptr", BaseType::get()), baseType(baseType) {}
+    : Type("Ptr", BaseType::get()), baseType(baseType) {}
 
 Value *types::PtrType::defaultValue(BasicBlock *block) {
   LLVMContext &context = block->getContext();

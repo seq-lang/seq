@@ -160,12 +160,12 @@ void TransformVisitor::visit(const YieldStmt *stmt) {
   if (stmt->expr) {
     auto e = transform(stmt->expr);
     if (ctx->isTypeChecking())
-      t = ctx->instantiateGeneric(e->getSrcInfo(), ctx->findInternal("generator"),
+      t = ctx->instantiateGeneric(e->getSrcInfo(), ctx->findInternal("Generator"),
                                   {e->getType()});
     resultStmt = N<YieldStmt>(move(e));
   } else {
     if (ctx->isTypeChecking())
-      t = ctx->instantiateGeneric(stmt->getSrcInfo(), ctx->findInternal("generator"),
+      t = ctx->instantiateGeneric(stmt->getSrcInfo(), ctx->findInternal("Generator"),
                                   {ctx->findInternal("void")});
     resultStmt = N<YieldStmt>(nullptr);
   }
@@ -190,13 +190,13 @@ void TransformVisitor::visit(const WhileStmt *stmt) {
 }
 
 void TransformVisitor::visit(const ForStmt *stmt) {
-  auto iter = conditionalMagic(stmt->iter, "generator", "__iter__");
+  auto iter = conditionalMagic(stmt->iter, "Generator", "__iter__");
   TypePtr varType = nullptr;
   if (ctx->isTypeChecking()) {
     varType = ctx->addUnbound(stmt->var->getSrcInfo(), ctx->getLevel());
     if (!iter->getType()->getUnbound()) {
       auto iterType = iter->getType()->getClass();
-      if (!iterType || iterType->name != "generator")
+      if (!iterType || iterType->name != "Generator")
         error(iter, "expected a generator");
       forceUnify(varType, iterType->explicits[0].type);
     }
@@ -391,7 +391,7 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
   if (stmt->lang == "c" && stmt->from) {
     vector<StmtPtr> stmts;
     // ptr = _dlsym(FROM, WHAT)
-    stmts.push_back(N<AssignStmt>(N<IdExpr>("ptr"),
+    stmts.push_back(N<AssignStmt>(N<IdExpr>("Ptr"),
                                   N<CallExpr>(N<IdExpr>("_dlsym"), stmt->from->clone(),
                                               N<StringExpr>(stmt->name.first))));
     // f = function[ARGS](ptr)
@@ -401,8 +401,8 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
       args.push_back(a.type->clone());
     stmts.push_back(N<AssignStmt>(
         N<IdExpr>("f"),
-        N<CallExpr>(N<IndexExpr>(N<IdExpr>("function"), N<TupleExpr>(move(args))),
-                    N<IdExpr>("ptr"))));
+        N<CallExpr>(N<IndexExpr>(N<IdExpr>("Function"), N<TupleExpr>(move(args))),
+                    N<IdExpr>("Ptr"))));
     bool isVoid = true;
     if (stmt->ret) {
       if (auto f = CAST(stmt->ret, IdExpr))
@@ -597,8 +597,12 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
   auto ref = ctx->bases.back().referencesParent;
   ctx->bases.pop_back();
   t->parent = ctx->bases.back().parent;
-  if (!ref)
-    t->ignoreParentGenerics = true; //= ctx->bases[ctx->bases.size() - 2].parent;
+  if (isClassMember && !ref && canonicalName != ".Ptr.__elemsize__" &&
+      canonicalName != ".Ptr.__atomic__") {
+    t->codegenParent = t->parent;
+    t->parent =
+        ctx->bases.size() > 1 ? ctx->bases[ctx->bases.size() - 2].parent : nullptr;
+  }
 
   // Generalize generics
   // Ensure that implicit "generics" are also generalized
@@ -723,7 +727,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       fns.push_back(makeInternalFn("__len__", N<IdExpr>("int"), Param{"self"}));
       fns.push_back(makeInternalFn("__hash__", N<IdExpr>("int"), Param{"self"}));
       fns.push_back(makeInternalFn(
-          "__iter__", N<IndexExpr>(N<IdExpr>("generator"), N<IdExpr>("int")),
+          "__iter__", N<IndexExpr>(N<IdExpr>("Generator"), N<IdExpr>("int")),
           Param{"self"}));
       fns.push_back(makeInternalFn("__pickle__", N<IdExpr>("void"), Param{"self"},
                                    Param{"dest", N<IdExpr>("cobj")}));

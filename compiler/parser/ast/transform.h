@@ -102,15 +102,9 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
   std::string generateTupleStub(int len);
   std::string generatePartialStub(const std::string &flag);
 
-  // std::vector<int> callCallable(types::ClassTypePtr f,
-  // std::vector<CallExpr::Arg> &args, std::vector<CallExpr::Arg>
-  // &reorderedArgs);
-  std::vector<int> callFunc(types::ClassTypePtr f, std::vector<CallExpr::Arg> &args,
+  std::vector<int> callFunc(types::TypePtr f, std::vector<CallExpr::Arg> &args,
                             std::vector<CallExpr::Arg> &reorderedArgs,
                             const std::vector<int> &availableArguments);
-  // std::vector<int> callPartial(types::PartialTypePtr f,
-  //  std::vector<CallExpr::Arg> &args,
-  //  std::vector<CallExpr::Arg> &reorderedArgs);
   bool handleStackAlloc(const CallExpr *expr);
   bool getTupleIndex(types::ClassTypePtr tuple, const ExprPtr &expr,
                      const ExprPtr &index);

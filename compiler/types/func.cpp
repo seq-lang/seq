@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 types::FuncType::FuncType(std::vector<types::Type *> inTypes, types::Type *outType)
-    : Type("function", BaseType::get()), inTypes(std::move(inTypes)), outType(outType) {
+    : Type("Function", BaseType::get()), inTypes(std::move(inTypes)), outType(outType) {
 }
 
 unsigned types::FuncType::argCount() const { return (unsigned)inTypes.size(); }
@@ -140,7 +140,7 @@ types::FuncType *types::FuncType::get(std::vector<Type *> inTypes, Type *outType
 }
 
 types::GenType::GenType(Type *outType, GenTypeKind kind)
-    : Type("generator", BaseType::get()), outType(outType), kind(kind), alnParams() {}
+    : Type("Generator", BaseType::get()), outType(outType), kind(kind), alnParams() {}
 
 bool types::GenType::isAtomic() const { return false; }
 
@@ -412,7 +412,7 @@ types::GenType *types::GenType::get(GenTypeKind kind) noexcept {
 
 types::PartialFuncType::PartialFuncType(types::Type *callee,
                                         std::vector<types::Type *> callTypes)
-    : Type("partial", BaseType::get()), callee(callee),
+    : Type("Partial", BaseType::get()), callee(callee),
       callTypes(std::move(callTypes)) {
   std::vector<types::Type *> types;
   types.push_back(this->callee);

@@ -4,7 +4,7 @@ using namespace seq;
 using namespace llvm;
 
 types::ArrayType::ArrayType(Type *baseType)
-    : Type("array", BaseType::get()), baseType(baseType) {}
+    : Type("Array", BaseType::get()), baseType(baseType) {}
 
 Value *types::ArrayType::defaultValue(BasicBlock *block) {
   LLVMContext &context = block->getContext();

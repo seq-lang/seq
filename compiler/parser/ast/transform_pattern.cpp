@@ -99,7 +99,7 @@ void TransformVisitor::visit(const TuplePattern *pat) {
       types.push_back(pp->getType());
     // TODO: Ensure type...
     error("not yet implemented");
-    t = make_shared<ClassType>("tuple", true, types);
+    t = make_shared<ClassType>("Tuple", true, types);
   }
   resultPattern = move(p);
   if (ctx->isTypeChecking())

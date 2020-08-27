@@ -27,7 +27,7 @@ std::string types::RecordType::getName() const {
   if (named())
     return name;
 
-  std::string name = "tuple[";
+  std::string name = "Tuple[";
 
   for (unsigned i = 0; i < types.size(); i++) {
     name += types[i]->getName();

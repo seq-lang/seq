@@ -185,6 +185,8 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
       if (activeUnbounds.find(i.second) == activeUnbounds.end()) {
         LOG7("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
              i.second->toString(0), type->toString(), srcInfo, activate);
+        if (i.second->toString() == "?262.0")
+          assert(1);
         if (activate)
           activeUnbounds.insert(i.second);
       }
@@ -232,7 +234,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
     stdlib->addType(name, typ);
     stdlib->addType("." + name, typ);
   }
-  vector<string> genericTypes = {"ptr", "generator", "optional"};
+  vector<string> genericTypes = {"Ptr", "Generator", "Optional"};
   for (auto &t : genericTypes) {
     auto typ = make_shared<types::ClassType>(
         t, true, vector<types::TypePtr>(),
@@ -274,7 +276,7 @@ shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
   tv->stmts.push_back(move(t1));
   stdlib->unsetFlag("internal");
   stdlib->addVar("__argv__", make_shared<types::LinkType>(stdlib->instantiateGeneric(
-                                 SrcInfo(), stdlib->find("array")->getType(),
+                                 SrcInfo(), stdlib->find("Array")->getType(),
                                  {stdlib->find("str")->getType()})));
 
   stmts = parseFile(stdlibPath);

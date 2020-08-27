@@ -253,7 +253,7 @@ public:
   ClassTypePtr getClass() override {
     return std::static_pointer_cast<ClassType>(shared_from_this());
   }
-  ClassTypePtr getCallable();
+  TypePtr getCallable();
   bool isRecord() const { return record; }
 };
 
@@ -263,20 +263,17 @@ public:
 typedef std::shared_ptr<FuncType> FuncTypePtr;
 struct FuncType : public Type {
   std::vector<Generic> explicits;
-  TypePtr parent;
+  TypePtr parent, codegenParent;
   ClassTypePtr funcClass;
 
   std::string name;
   std::vector<TypePtr> args;
 
-  bool ignoreParentGenerics;
-
 public:
   FuncType(const std::string &name, ClassTypePtr funcClass,
            const std::vector<TypePtr> &args = std::vector<TypePtr>(),
            const std::vector<Generic> &explicits = std::vector<Generic>(),
-           TypePtr parent = nullptr,
-           bool ignoreParentGenerics = false);
+           TypePtr parent = nullptr, TypePtr codegenParent = nullptr);
 
 public:
   virtual int unify(TypePtr typ, Unification &us) override;
@@ -292,17 +289,6 @@ public:
                       std::unordered_map<int, TypePtr> &cache) override;
   std::string toString(bool reduced = false) const override;
 };
-
-// partial_type := partial.pattern[func]
-struct PartialType : public ClassType {
-  std::vector<char> knownTypes;
-  PartialType(ClassTypePtr c, const std::vector<char> &k);
-  TypePtr generalize(int level) override;
-  TypePtr instantiate(int level, int &unboundCount,
-                      std::unordered_map<int, TypePtr> &cache) override;
-  virtual int unify(TypePtr typ, Unification &us) override;
-};
-typedef std::shared_ptr<PartialType> PartialTypePtr;
 
 } // namespace types
 } // namespace ast

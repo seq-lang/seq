@@ -79,7 +79,7 @@ ExprPtr TransformVisitor::transformType(const ExprPtr &expr) {
 
 // Transformed
 void TransformVisitor::visit(const NoneExpr *expr) {
-  resultExpr = transform(N<CallExpr>(N<IdExpr>("optional")));
+  resultExpr = transform(N<CallExpr>(N<IdExpr>("Optional")));
 }
 
 void TransformVisitor::visit(const BoolExpr *expr) {
@@ -413,7 +413,7 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
 void TransformVisitor::visit(const PipeExpr *expr) {
   auto extractType = [&](TypePtr t) {
     auto c = t->getClass();
-    if (c && c->name == "generator") {
+    if (c && c->name == "Generator") {
       return c->explicits[0].type;
     } else
       return t;
@@ -421,25 +421,25 @@ void TransformVisitor::visit(const PipeExpr *expr) {
   auto updateType = [&](TypePtr t, int inTypePos, ExprPtr &fe) {
     auto f = fe->getType()->getClass();
     assert(f && f->getCallable());
-    auto p = dynamic_pointer_cast<types::PartialType>(f);
-    if (p) {
+    bool isPartial = f->name.substr(0, 9) == ".Partial.";
+    if (isPartial) {
       int j = 0;
-      for (int i = 0; i < p->knownTypes.size(); i++)
-        if (!p->knownTypes[i]) {
+      for (int i = 9; i < f->name.size(); i++)
+        if (f->name[i] == '0') {
           if (j == inTypePos) {
-            j = i;
+            j = i - 9;
             break;
           }
           j++;
         }
       inTypePos = j;
     }
-    f = f->getCallable();
+    f = f->getCallable()->getClass();
     // exactly one empty slot!
     forceUnify(t, f->args[inTypePos + 1]);
     if (f->canRealize() && f->getFunc()) {
       auto r = realizeFunc(f->getFunc());
-      if (p)
+      if (isPartial)
         fixExprName(fe, r.fullName);
     }
     return f->args[0];
@@ -603,7 +603,7 @@ bool TransformVisitor::getTupleIndex(types::ClassTypePtr tuple, const ExprPtr &e
     }
     return false;
   };
-  if (chop(tuple->name).substr(0, 6) != "tuple.")
+  if (chop(tuple->name).substr(0, 6) != "Tuple.")
     return false;
   seq_int_t s = 0, e = tuple->args.size(), st = 1;
   if (getInt(&s, index)) {
@@ -627,7 +627,7 @@ void TransformVisitor::visit(const TupleIndexExpr *expr) {
 
   auto e = transform(expr->expr);
   auto c = e->getType()->getClass();
-  assert(chop(c->name).substr(0, 6) == "tuple.");
+  assert(chop(c->name).substr(0, 6) == "Tuple.");
   if (expr->index < 0 || expr->index >= c->args.size())
     error("tuple index out of range (expected 0..{}, got {})", c->args.size() - 1,
           expr->index);
@@ -642,7 +642,7 @@ void TransformVisitor::visit(const StackAllocExpr *expr) {
   auto t = te->getType();
   resultExpr = N<StackAllocExpr>(move(te), move(e));
   if (ctx->isTypeChecking()) {
-    t = ctx->instantiateGeneric(expr->getSrcInfo(), ctx->findInternal("array"), {t});
+    t = ctx->instantiateGeneric(expr->getSrcInfo(), ctx->findInternal("Array"), {t});
     patchIfRealizable(t, true);
     resultExpr->setType(forceUnify(expr, t));
   }
@@ -708,7 +708,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
     return;
   }
 
-  auto c = e->getType()->getClass();
+  auto c = e->getType();
   if (!c) { // Unbound caller, will be handled later
     resultExpr = N<CallExpr>(move(e), move(args));
     resultExpr->setType(expr->getType()
@@ -716,7 +716,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
                             : ctx->addUnbound(getSrcInfo(), ctx->getLevel()));
     return;
   }
-  if (c && !c->getCallable()) { // route to a call method
+  if (c->getClass() && !c->getClass()->getCallable()) { // route to a call method
     resultExpr = transform(N<CallExpr>(N<DotExpr>(move(e), "__call__"), move(args)));
     return;
   }
@@ -724,13 +724,20 @@ void TransformVisitor::visit(const CallExpr *expr) {
   // Handle named and default arguments
   vector<CallExpr::Arg> reorderedArgs;
   vector<int> availableArguments;
-  auto p = dynamic_pointer_cast<PartialType>(c);
-  if (p) {
-    c = p->getCallable();
-    assert(c);
+  bool isPartial = false;
+  string knownTypes;
+  if (auto cc = dynamic_pointer_cast<types::ClassType>(c)) {
+    if (cc->name.substr(0, 9) == ".Partial.") {
+      isPartial = true;
+      knownTypes = cc->name.substr(9);
+      c = c->getClass()->getCallable();
+      assert(c);
+    }
   }
-  for (int i = 0; i < int(c->args.size()) - 1; i++)
-    if (!p || !p->knownTypes[i])
+  auto cc = c->getClass();
+  auto &t_args = cc->args;
+  for (int i = 0; i < int(t_args.size()) - 1; i++)
+    if (!isPartial || knownTypes[i] == '0')
       availableArguments.push_back(i);
   auto pending = callFunc(c, args, reorderedArgs, availableArguments);
 
@@ -746,17 +753,17 @@ void TransformVisitor::visit(const CallExpr *expr) {
 
   if (c->canRealize() && c->getFunc()) {
     auto r = realizeFunc(c->getFunc());
-    if (!p)
+    if (!isPartial)
       fixExprName(e, r.fullName);
   }
-  TypePtr t = make_shared<LinkType>(c->args[0]);
+  TypePtr t = make_shared<LinkType>(t_args[0]);
   if (pending.size()) {
     pending.pop_back();
-    vector<char> known(c->args.size() - 1, 1);
+    string known(t_args.size() - 1, '1');
     for (auto p : pending)
-      known[p] = 0;
-    t = make_shared<PartialType>(c, known);
-    generatePartialStub(v2b(known));
+      known[p] = '0';
+    auto v = generatePartialStub(known);
+    t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(v), {c});
   }
   resultExpr = N<CallExpr>(move(e), move(reorderedArgs));
   resultExpr->setType(forceUnify(expr, t));
@@ -905,7 +912,7 @@ void TransformVisitor::visit(const PtrExpr *expr) {
   if (ctx->isTypeChecking())
     resultExpr->setType(
         forceUnify(expr, ctx->instantiateGeneric(expr->getSrcInfo(),
-                                                 ctx->findInternal("ptr"), {t})));
+                                                 ctx->findInternal("Ptr"), {t})));
 }
 
 // Transformation
@@ -944,7 +951,7 @@ void TransformVisitor::visit(const YieldExpr *expr) {
   if (ctx->isTypeChecking()) {
     if (!ctx->getLevel() || !ctx->bases.back().parent->getFunc())
       error("(yield) cannot be used outside of functions");
-    auto t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("generator"),
+    auto t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("Generator"),
                                      {ctx->addUnbound(getSrcInfo(), ctx->getLevel())});
     auto &base = ctx->bases.back();
     if (base.returnType)

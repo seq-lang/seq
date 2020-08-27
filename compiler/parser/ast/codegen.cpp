@@ -262,7 +262,7 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
   auto var = i->value;
   // is it variable?
   if (stmt->rhs->isType()) {
-    ctx->addType(var, realizeType(stmt->rhs->getType()->getClass()));
+    // ctx->addType(var, realizeType(stmt->rhs->getType()->getClass()));
   } else {
     auto varStmt = new seq::VarStmt(transform(stmt->rhs), nullptr);
     if (ctx->isToplevel())
