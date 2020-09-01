@@ -3,7 +3,6 @@
 #include <vector>
 
 #include "parser/ast/ast.h"
-#include "parser/ast/transform.h"
 
 using std::dynamic_pointer_cast;
 using std::make_shared;
@@ -96,10 +95,13 @@ int StaticType::getValue() const {
   unordered_map<string, Generic> m;
   for (auto &e : explicits)
     m[e.name] = e;
-  StaticVisitor sv(nullptr, &m);
-  auto t = sv.transform(expr.get());
-  assert(t.first);
-  return t.second;
+
+  // StaticVisitor sv(nullptr, &m);
+  // auto t = sv.transform(expr.get());
+  // assert(t.first);
+  // return t.second;
+  assert(false);
+  return -1;
 }
 
 LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic)

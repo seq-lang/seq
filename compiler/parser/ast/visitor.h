@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 
+#include "parser/common.h"
+
 namespace seq {
 namespace ast {
 
@@ -41,6 +43,8 @@ struct LambdaExpr;
 struct YieldExpr;
 struct TupleIndexExpr;
 struct StackAllocExpr;
+struct StaticExpr;
+struct InstantiateExpr;
 
 struct AssignMemberStmt;
 struct SuiteStmt;
@@ -123,6 +127,8 @@ public:
   virtual void visit(const YieldExpr *);
   virtual void visit(const TupleIndexExpr *);
   virtual void visit(const StackAllocExpr *);
+  virtual void visit(const InstantiateExpr *);
+  virtual void visit(const StaticExpr *);
 
   virtual void visit(const AssignMemberStmt *);
   virtual void visit(const UpdateStmt *);
@@ -166,6 +172,50 @@ public:
   virtual void visit(const WildcardPattern *);
   virtual void visit(const GuardedPattern *);
   virtual void visit(const BoundPattern *);
+};
+
+template <typename TE, typename TS, typename TP>
+struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
+  virtual TE transform(const std::unique_ptr<Expr> &e) = 0;
+  virtual TS transform(const std::unique_ptr<Stmt> &e) = 0;
+  virtual TP transform(const std::unique_ptr<Pattern> &e) = 0;
+
+  // template <typename T, typename... Ts>
+  // auto transform(const std::unique_ptr<T> &t, Ts &&... args)
+  //     -> decltype(transform(t.get())) {
+  //   return transform(t.get(), std::forward<Ts>(args)...);
+  // }
+  template <typename T> auto transform(const std::vector<T> &ts) {
+    std::vector<T> r;
+    for (auto &e : ts)
+      r.push_back(transform(e));
+    return r;
+  }
+
+  template <typename Tn, typename... Ts> auto N(Ts &&... args) {
+    auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
+    t->setSrcInfo(getSrcInfo());
+    return t;
+  }
+  template <typename Tn, typename... Ts>
+  auto Nx(const seq::SrcObject *s, Ts &&... args) {
+    auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
+    t->setSrcInfo(s->getSrcInfo());
+    return t;
+  }
+
+  template <typename... TArgs> void error(const char *format, TArgs &&... args) {
+    ast::error(getSrcInfo(), fmt::format(format, args...).c_str());
+  }
+  template <typename T, typename... TArgs>
+  void error(const T &p, const char *format, TArgs &&... args) {
+    ast::error(p->getSrcInfo(), fmt::format(format, args...).c_str());
+  }
+  template <typename T, typename... TArgs>
+  void internalError(const char *format, TArgs &&... args) {
+    throw exc::ParserException(
+        fmt::format("INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
+  }
 };
 
 } // namespace ast

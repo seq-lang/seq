@@ -28,29 +28,7 @@ namespace ast {
 
 using namespace types;
 
-RealizationContext::RealizationContext() : unboundCount(0), generatedID(0) {}
-
-string RealizationContext::getCanonicalName(const SrcInfo &info) const {
-  auto it = canonicalNames.find(info);
-  if (it != canonicalNames.end())
-    return it->second;
-  assert(false);
-  return "";
-}
-
-string RealizationContext::generateCanonicalName(const SrcInfo &info,
-                                                 const string &name) {
-  auto it = canonicalNames.find(info);
-  if (it != canonicalNames.end())
-    return it->second;
-
-  auto &num = moduleNames[name];
-  string newName = format("{}{}", name, num ? format(".{}", num) : "");
-  num++;
-  canonicalNames[info] = (newName[0] == '.' ? newName : "." + newName);
-  // LOG9("[canonical] {}:{} -> {}", info, name, canonicalNames[info]);
-  return canonicalNames[info];
-}
+RealizationContext::RealizationContext() : unboundCount(0) {}
 
 int &RealizationContext::getUnboundCount() { return unboundCount; }
 
@@ -103,57 +81,6 @@ RealizationContext::getFuncRealizations(const string &name) {
   for (auto &i : funcRealizations[name])
     result.push_back(i.second);
   return result;
-}
-
-ImportContext::ImportContext(const string &argv0) : argv0(argv0) {}
-
-string ImportContext::getImportFile(const string &what, const string &relativeTo,
-                                    bool forceStdlib) const {
-  vector<string> paths;
-  char abs[PATH_MAX + 1];
-  if (!forceStdlib) {
-    realpath(relativeTo.c_str(), abs);
-    auto parent = dirname(abs);
-    paths.push_back(format("{}/{}.seq", parent, what));
-    paths.push_back(format("{}/{}/__init__.seq", parent, what));
-  }
-  if (auto c = getenv("SEQ_PATH")) {
-    char abs[PATH_MAX];
-    realpath(c, abs);
-    paths.push_back(format("{}/{}.seq", abs, what));
-    paths.push_back(format("{}/{}/__init__.seq", abs, what));
-  }
-  if (argv0 != "") {
-    for (auto loci : {"../lib/seq/stdlib", "../stdlib", "stdlib"}) {
-      strncpy(abs, executable_path(argv0.c_str()).c_str(), PATH_MAX);
-      auto parent = format("{}/{}", dirname(abs), loci);
-      realpath(parent.c_str(), abs);
-      paths.push_back(format("{}/{}.seq", abs, what));
-      paths.push_back(format("{}/{}/__init__.seq", abs, what));
-    }
-  }
-  for (auto &p : paths) {
-    struct stat buffer;
-    if (!stat(p.c_str(), &buffer)) {
-      // LOG("getting {}", p);
-      return p;
-    }
-  }
-  return "";
-}
-
-const ImportContext::Import *ImportContext::getImport(const string &path) const {
-  auto i = imports.find(path);
-  return i == imports.end() ? nullptr : &(i->second);
-}
-
-void ImportContext::addImport(const string &name, const string &file,
-                              shared_ptr<TypeContext> ctx) {
-  imports[name] = {file, ctx, nullptr};
-}
-
-void ImportContext::setBody(const string &name, StmtPtr body) {
-  imports[name].statements = move(body);
 }
 
 } // namespace ast

@@ -64,6 +64,7 @@ extend Ptr[T]:
     def __prefetch_w2__(self) -> void: pass
     @internal
     def __prefetch_w3__(self) -> void: pass
+ptr = Ptr
 
 extend int:
     @internal

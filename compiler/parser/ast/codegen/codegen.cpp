@@ -481,7 +481,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       if (a == "atomic")
         ctx->setFlag("atomic");
     }
-    if (in(real.ast->attributes, "$external")) {
+    if (in(real.ast->attributes, ".external")) {
       f->setName(chop(real.ast->name));
       f->setExternal();
     } else {

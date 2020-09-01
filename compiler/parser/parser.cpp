@@ -4,12 +4,12 @@
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/codegen.h"
-#include "parser/ast/codegen_ctx.h"
+#include "parser/ast/codegen/codegen.h"
+#include "parser/ast/codegen/codegen_ctx.h"
 #include "parser/ast/doc.h"
-#include "parser/ast/format.h"
-#include "parser/ast/transform.h"
-#include "parser/ast/transform_ctx.h"
+#include "parser/ast/format/format.h"
+#include "parser/ast/transform/transform.h"
+#include "parser/ast/transform/transform_ctx.h"
 #include "parser/ocaml.h"
 #include "parser/parser.h"
 #include "util/fmt/format.h"
@@ -39,16 +39,19 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     char abs[PATH_MAX + 1];
     realpath(file.c_str(), abs);
 
-    // fprintf(stderr, "%s\n", fmt::format("{} {} {}", abs, isCode,
-    // code).c_str());
-    auto ctx = ast::TypeContext::getContext(argv0, abs);
-    ast::StmtPtr stmts = nullptr;
-    if (!isCode)
-      stmts = ast::parseFile(abs);
-    else
-      stmts = ast::parseCode(abs, code, startLine);
-    auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false);
-    LOG3("--- Done with typecheck ---");
+    ast::StmtPtr codeStmt =
+        isCode ? ast::parseCode(abs, code, startLine) : ast::parseFile(abs);
+    auto transformed = ast::TransformVisitor::apply(argv0, move(codeStmt));
+    // fmt::print("{}\n", transformed->toString());
+    fmt::print("{}\n", ast::FormatVisitor::apply(transformed));
+
+    // auto ctx = ast::TypeContext::getContext(argv0, abs);
+    // if (!isCode)
+    //   stmts = ast::parseFile(abs);
+    // else
+    //   stmts = ast::parseCode(abs, code, startLine);
+    // auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false);
+    // LOG3("--- Done with typecheck ---");
 
     // FILE *fo = fopen("tmp/out.htm", "w");
     // LOG3("{}", ast::FormatVisitor::format(ctx, tv, false, true));
@@ -56,9 +59,9 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     seq::SeqModule *module;
     module = new seq::SeqModule();
     module->setFileName(abs);
-    auto lctx = ast::LLVMContext::getContext(abs, ctx, module);
-    ast::CodegenVisitor(lctx).transform(tv.get());
-    LOG3("--- Done with codegen ---");
+    // auto lctx = ast::LLVMContext::getContext(abs, ctx, module);
+    // ast::CodegenVisitor(lctx).transform(tv.get());
+    // LOG3("--- Done with codegen ---");
 
     return module;
   } catch (seq::exc::SeqException &e) {

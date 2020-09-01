@@ -26,6 +26,8 @@ string getTemporaryVar(const string &prefix, char p) {
                      ++tmpVarCounter);
 }
 
+string chop(const string &s) { return s.size() && s[0] == '.' ? s.substr(1) : s; }
+
 vector<string> split(const string &s, char delim) {
   vector<string> items;
   string item;

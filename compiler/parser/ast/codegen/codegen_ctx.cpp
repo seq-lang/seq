@@ -5,12 +5,9 @@
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/codegen.h"
-#include "parser/ast/codegen_ctx.h"
+#include "parser/ast/codegen/codegen.h"
+#include "parser/ast/codegen/codegen_ctx.h"
 #include "parser/ast/context.h"
-#include "parser/ast/format.h"
-#include "parser/ast/transform.h"
-#include "parser/ast/transform_ctx.h"
 #include "parser/common.h"
 #include "parser/ocaml.h"
 
@@ -24,8 +21,6 @@ using std::vector;
 
 namespace seq {
 namespace ast {
-
-string chop(const string &s) { return s.size() && s[0] == '.' ? s.substr(1) : s; }
 
 LLVMContext::LLVMContext(const string &filename,
                          shared_ptr<RealizationContext> realizations,
@@ -227,60 +222,60 @@ seq::types::Type *LLVMContext::realizeType(types::ClassTypePtr t) {
   return real.handle;
 }
 
-shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
-                                                shared_ptr<TypeContext> typeCtx,
-                                                seq::SeqModule *module) {
-  auto realizations = typeCtx->getRealizations();
-  auto imports = typeCtx->getImports();
-  auto stdlib = const_cast<ImportContext::Import *>(imports->getImport(""));
+// shared_ptr<LLVMContext> LLVMContext::getContext(const string &file,
+//                                                 shared_ptr<TypeContext> typeCtx,
+//                                                 seq::SeqModule *module) {
+//   auto realizations = typeCtx->getRealizations();
+//   auto imports = typeCtx->getImports();
+//   auto stdlib = const_cast<ImportContext::Import *>(imports->getImport(""));
 
-  auto block = module->getBlock();
-  seq::BaseFunc *base = module;
-  stdlib->lctx = make_shared<LLVMContext>(stdlib->filename, realizations, imports,
-                                          block, base, nullptr);
+//   auto block = module->getBlock();
+//   seq::BaseFunc *base = module;
+//   stdlib->lctx = make_shared<LLVMContext>(stdlib->filename, realizations, imports,
+//                                           block, base, nullptr);
 
-  // Now add all realization stubs
-  for (auto &ff : realizations->classRealizations)
-    for (auto &f : ff.second) {
-      auto &real = f.second;
-      stdlib->lctx->realizeType(real.type->getClass());
-      stdlib->lctx->addType(real.fullName, real.handle);
-    }
-  for (auto &ff : realizations->funcRealizations)
-    for (auto &f : ff.second) {
-      // Realization: f.second
-      auto &real = f.second;
-      auto ast = real.ast;
-      if (in(ast->attributes, "internal")) {
-        LOG7("[codegen] generating internal fn {} ~ {}", real.fullName, ast->name);
-        vector<seq::types::Type *> types;
+//   // Now add all realization stubs
+//   for (auto &ff : realizations->classRealizations)
+//     for (auto &f : ff.second) {
+//       auto &real = f.second;
+//       stdlib->lctx->realizeType(real.type->getClass());
+//       stdlib->lctx->addType(real.fullName, real.handle);
+//     }
+//   for (auto &ff : realizations->funcRealizations)
+//     for (auto &f : ff.second) {
+//       // Realization: f.second
+//       auto &real = f.second;
+//       auto ast = real.ast;
+//       if (in(ast->attributes, "internal")) {
+//         LOG7("[codegen] generating internal fn {} ~ {}", real.fullName, ast->name);
+//         vector<seq::types::Type *> types;
 
-        auto p =
-            real.type->codegenParent ? real.type->codegenParent : real.type->parent;
-        seqassert(p && p->getClass(), "parent must be set ({})",
-                  p ? p->toString() : "-");
-        seq::types::Type *typ = stdlib->lctx->realizeType(p->getClass());
-        int startI = 1;
-        if (ast->args.size() && ast->args[0].name == "self")
-          startI = 2;
-        for (int i = startI; i < real.type->args.size(); i++)
-          types.push_back(stdlib->lctx->realizeType(real.type->args[i]->getClass()));
-        real.handle = typ->findMagic(ast->name, types);
-      } else {
-        real.handle = new seq::Func();
-      }
-      stdlib->lctx->addFunc(real.fullName, real.handle);
-    }
+//         auto p =
+//             real.type->codegenParent ? real.type->codegenParent : real.type->parent;
+//         seqassert(p && p->getClass(), "parent must be set ({})",
+//                   p ? p->toString() : "-");
+//         seq::types::Type *typ = stdlib->lctx->realizeType(p->getClass());
+//         int startI = 1;
+//         if (ast->args.size() && ast->args[0].name == "self")
+//           startI = 2;
+//         for (int i = startI; i < real.type->args.size(); i++)
+//           types.push_back(stdlib->lctx->realizeType(real.type->args[i]->getClass()));
+//         real.handle = typ->findMagic(ast->name, types);
+//       } else {
+//         real.handle = new seq::Func();
+//       }
+//       stdlib->lctx->addFunc(real.fullName, real.handle);
+//     }
 
-  CodegenVisitor c(stdlib->lctx);
-  c.transform(stdlib->statements.get());
+//   CodegenVisitor c(stdlib->lctx);
+//   c.transform(stdlib->statements.get());
 
-  auto def = const_cast<ImportContext::Import *>(imports->getImport(file));
-  assert(def);
-  def->lctx =
-      make_shared<LLVMContext>(file, realizations, imports, block, base, nullptr);
-  return def->lctx;
-}
+//   auto def = const_cast<ImportContext::Import *>(imports->getImport(file));
+//   assert(def);
+//   def->lctx =
+//       make_shared<LLVMContext>(file, realizations, imports, block, base, nullptr);
+//   return def->lctx;
+// }
 
 } // namespace ast
 } // namespace seq

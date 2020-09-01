@@ -15,8 +15,8 @@
 #include <vector>
 
 #include "parser/ast/ast.h"
-#include "parser/ast/format.h"
-#include "parser/ast/transform_ctx.h"
+#include "parser/ast/format/format.h"
+#include "parser/ast/transform/transform_ctx.h"
 #include "parser/ast/types.h"
 #include "parser/ast/visitor.h"
 #include "parser/ast/walk.h"
@@ -25,72 +25,21 @@
 namespace seq {
 namespace ast {
 
-class CaptureVisitor : public WalkVisitor {
-  std::shared_ptr<TypeContext> ctx;
-
-public:
-  std::unordered_set<std::string> captures;
-  using WalkVisitor::visit;
-  CaptureVisitor(std::shared_ptr<TypeContext> ctx);
-  void visit(const IdExpr *) override;
-};
-
-class StaticVisitor : public WalkVisitor {
-  std::shared_ptr<TypeContext> ctx;
-  const std::unordered_map<std::string, types::Generic> *map;
-
-public:
-  std::map<std::string, types::Generic> captures; // map so it is sorted
-  bool evaluated;
-  int value;
-
-  using WalkVisitor::visit;
-  StaticVisitor(std::shared_ptr<TypeContext> ctx,
-                const std::unordered_map<std::string, types::Generic> *m = nullptr);
-  std::pair<bool, int> transform(const Expr *e);
-  void visit(const IdExpr *) override;
-  void visit(const IntExpr *) override;
-  void visit(const IfExpr *) override;
-  void visit(const UnaryExpr *) override;
-  void visit(const BinaryExpr *) override;
-};
-
-class TransformVisitor : public ASTVisitor, public SrcObject {
+class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr> {
   std::shared_ptr<TypeContext> ctx;
   std::shared_ptr<std::vector<StmtPtr>> prependStmts;
   ExprPtr resultExpr;
   StmtPtr resultStmt;
   PatternPtr resultPattern;
 
-  /// Helper function that handles simple assignments
-  /// (e.g. a = b, a.x = b or a[x] = b)
-  StmtPtr addAssignment(const Expr *lhs, const Expr *rhs, const Expr *type = nullptr,
-                        bool force = false);
-  /// Helper function that decomposes complex assignments into simple ones
-  /// (e.g. a, *b, (c, d) = foo)
-  void processAssignment(const Expr *lhs, const Expr *rhs, std::vector<StmtPtr> &stmts,
-                         bool force = false);
-
-  StmtPtr getGeneratorBlock(const std::vector<GeneratorExpr::Body> &loops,
-                            SuiteStmt *&prev);
   void prepend(StmtPtr s);
 
   std::string patchIfRealizable(types::TypePtr typ, bool isClass);
   void fixExprName(ExprPtr &e, const std::string &newName);
 
-  std::shared_ptr<TypeItem::Item> processIdentifier(std::shared_ptr<TypeContext> tctx,
-                                                    const std::string &id);
-
-  RealizationContext::FuncRealization realizeFunc(types::FuncTypePtr type);
-  RealizationContext::ClassRealization realizeType(types::ClassTypePtr type);
   int realizeStatic(types::StaticTypePtr st);
-
-  ExprPtr conditionalMagic(const ExprPtr &expr, const std::string &type,
-                           const std::string &magic);
-  ExprPtr makeBoolExpr(const ExprPtr &e);
   std::vector<types::Generic> parseGenerics(const std::vector<Param> &generics,
                                             int level);
-
   StmtPtr addMethod(Stmt *s, const std::string &canonicalName);
   types::FuncTypePtr
   findBestCall(types::ClassTypePtr c, const std::string &member,
@@ -98,30 +47,25 @@ class TransformVisitor : public ASTVisitor, public SrcObject {
                bool failOnMultiple = false, types::TypePtr retType = nullptr);
 
   bool wrapOptional(types::TypePtr lt, ExprPtr &rhs);
-  std::string generateFunctionStub(int len);
-  std::string generateTupleStub(int len);
-  std::string generatePartialStub(const std::string &flag);
-
   std::vector<int> callFunc(types::TypePtr f, std::vector<CallExpr::Arg> &args,
                             std::vector<CallExpr::Arg> &reorderedArgs,
                             const std::vector<int> &availableArguments);
-  bool handleStackAlloc(const CallExpr *expr);
   bool getTupleIndex(types::ClassTypePtr tuple, const ExprPtr &expr,
                      const ExprPtr &index);
-  StmtPtr makeInternalFn(const std::string &name, ExprPtr &&ret, Param &&arg = Param(),
-                         Param &&arg2 = Param());
-  StmtPtr makeInternalFn(const std::string &name, ExprPtr &&ret,
-                         std::vector<Param> &&args);
 
 public:
   TransformVisitor(std::shared_ptr<TypeContext> ctx,
                    std::shared_ptr<std::vector<StmtPtr>> stmts = nullptr);
 
-  ExprPtr transform(const Expr *e, bool allowTypes = false);
-  StmtPtr transform(const Stmt *s);
-  PatternPtr transform(const Pattern *p);
+  ExprPtr transform(const ExprPtr &e) override;
+  StmtPtr transform(const StmtPtr &s);
+  PatternPtr transform(const PatternPtr &p);
+  ExprPtr transform(const ExprPtr &e, bool allowTypes);
   ExprPtr transformType(const ExprPtr &expr);
-  StmtPtr realizeBlock(const Stmt *stmt, bool keepLast = false);
+
+  RealizationContext::FuncRealization realizeFunc(types::FuncTypePtr type);
+  RealizationContext::ClassRealization realizeType(types::ClassTypePtr type);
+  StmtPtr realizeBlock(const StmtPtr &stmt, bool keepLast = false);
 
 public:
   void visit(const NoneExpr *) override;
@@ -200,34 +144,6 @@ public:
   void visit(const BoundPattern *) override;
 
 public:
-  template <typename Tn, typename... Ts> auto N(Ts &&... args) {
-    auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
-    t->setSrcInfo(getSrcInfo());
-    return t;
-  }
-  template <typename Tn, typename... Ts>
-  auto Nx(const seq::SrcObject *s, Ts &&... args) {
-    auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
-    t->setSrcInfo(s->getSrcInfo());
-    return t;
-  }
-  template <typename Tt, typename... Ts> auto T(Ts &&... args) {
-    auto t = std::make_shared<Tt>(std::forward<Ts>(args)...);
-    t->setSrcInfo(getSrcInfo());
-    return t;
-  }
-  template <typename T, typename... Ts>
-  auto transform(const std::unique_ptr<T> &t, Ts &&... args)
-      -> decltype(transform(t.get())) {
-    return transform(t.get(), std::forward<Ts>(args)...);
-  }
-  template <typename T> auto transform(const std::vector<T> &ts) {
-    std::vector<T> r;
-    for (auto &e : ts)
-      r.push_back(transform(e));
-    return r;
-  }
-
   template <typename T> types::TypePtr forceUnify(const T *expr, types::TypePtr t) {
     if (expr->getType() && t) {
       types::Unification us;
@@ -255,21 +171,26 @@ public:
     error("cannot unify {} and {}", t ? t->toString() : "-", u ? u->toString() : "-");
     return nullptr;
   }
+};
 
-  template <typename... TArgs> void error(const char *format, TArgs &&... args) {
-    ast::error(getSrcInfo(), fmt::format(format, args...).c_str());
-  }
+class StaticVisitor : public WalkVisitor {
+  std::shared_ptr<TypeContext> ctx;
+  const std::unordered_map<std::string, types::Generic> *map;
 
-  template <typename T, typename... TArgs>
-  void error(const T &p, const char *format, TArgs &&... args) {
-    ast::error(p->getSrcInfo(), fmt::format(format, args...).c_str());
-  }
+public:
+  std::map<std::string, types::Generic> captures; // map so it is sorted
+  bool evaluated;
+  int value;
 
-  template <typename T, typename... TArgs>
-  void internalError(const char *format, TArgs &&... args) {
-    throw exc::ParserException(
-        fmt::format("INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
-  }
+  using WalkVisitor::visit;
+  StaticVisitor(std::shared_ptr<TypeContext> ctx,
+                const std::unordered_map<std::string, types::Generic> *m = nullptr);
+  std::pair<bool, int> transform(const Expr *e);
+  void visit(const IdExpr *) override;
+  void visit(const IntExpr *) override;
+  void visit(const IfExpr *) override;
+  void visit(const UnaryExpr *) override;
+  void visit(const BinaryExpr *) override;
 };
 
 } // namespace ast

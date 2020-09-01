@@ -1,0 +1,6 @@
+#%% basic
+a = 5
+b: float = 6.16
+c: optional[str] = None
+
+#%%

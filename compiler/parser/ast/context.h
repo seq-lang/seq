@@ -56,10 +56,8 @@ public: /* Names */
   int unboundCount;
 
 public:
-  /// Get canonical name for a SrcInfo
-  std::string getCanonicalName(const SrcInfo &info) const;
   /// Generate canonical name for a SrcInfo and original class/function name
-  std::string generateCanonicalName(const SrcInfo &info, const std::string &name);
+  std::string generateCanonicalName(const std::string &base, const std::string &name);
   int &getUnboundCount();
 
 public: /* Lookup */
@@ -110,40 +108,10 @@ public:
 
   std::unordered_map<std::string, types::TypePtr> globalNames;
   std::unordered_set<std::string> variardicCache;
-
-  int generatedID;
-  SrcInfo getGeneratedPos() {
-    return {"<generated>", generatedID, generatedID++, 0, 0};
-  }
-};
-
-class TypeContext;
-class LLVMContext;
-class ImportContext {
-public:
-  struct Import {
-    std::string filename;
-    std::shared_ptr<TypeContext> tctx;
-    std::shared_ptr<LLVMContext> lctx;
-    StmtPtr statements;
-  };
-
-private:
-  std::string argv0;
-  /// By convention, stdlib is stored as ""
-  std::unordered_map<std::string, Import> imports;
-
-public:
-  ImportContext(const std::string &argv0 = "");
-  std::string getImportFile(const std::string &what, const std::string &relativeTo,
-                            bool forceStdlib = false) const;
-  const Import *getImport(const std::string &path) const;
-  void addImport(const std::string &file, const std::string &name,
-                 std::shared_ptr<TypeContext> ctx);
-  void setBody(const std::string &name, StmtPtr body);
 };
 
 template <typename T> class Context : public std::enable_shared_from_this<Context<T>> {
+public:
   typedef std::unordered_map<std::string, std::deque<std::shared_ptr<T>>> Map;
 
 protected:
@@ -151,18 +119,16 @@ protected:
   std::deque<std::vector<std::string>> stack;
   std::unordered_set<std::string> flags;
 
-  std::shared_ptr<T> find(const std::string &name) const {
-    auto it = map.find(name);
-    return it != map.end() ? it->second.front() : nullptr;
-  }
-
 public:
   typename Map::iterator begin() { return map.begin(); }
   typename Map::iterator end() { return map.end(); }
 
+  std::shared_ptr<T> find(const std::string &name) const {
+    auto it = map.find(name);
+    return it != map.end() ? it->second.front() : nullptr;
+  }
   void add(const std::string &name, std::shared_ptr<T> var) {
     assert(!name.empty());
-    // LOG7("^^ ++ {}", name);
     map[name].push_front(var);
     stack.front().push_back(name);
   }
@@ -174,7 +140,6 @@ public:
   void addBlock() { stack.push_front(std::vector<std::string>()); }
   void removeFromMap(const std::string &name) {
     auto i = map.find(name);
-    // LOG7("^^ -- {}", name);
     assert(!(i == map.end() || !i->second.size()));
     i->second.pop_front();
     if (!i->second.size())
@@ -199,22 +164,17 @@ public:
   void setFlag(const std::string &s) { flags.insert(s); }
   void unsetFlag(const std::string &s) { flags.erase(s); }
   bool hasFlag(const std::string &s) { return flags.find(s) != flags.end(); }
+  bool isToplevel() const { return stack.size() == 1; }
 
 protected:
-  std::shared_ptr<RealizationContext> realizations;
-  std::shared_ptr<ImportContext> imports;
   std::string filename;
 
 public:
-  std::shared_ptr<RealizationContext> getRealizations() const { return realizations; }
-  std::shared_ptr<ImportContext> getImports() const { return imports; }
   std::string getFilename() const { return filename; }
   void setFilename(const std::string &f) { filename = f; }
 
 public:
-  Context(const std::string &filename, std::shared_ptr<RealizationContext> realizations,
-          std::shared_ptr<ImportContext> imports)
-      : realizations(realizations), imports(imports), filename(filename) {}
+  Context(const std::string &filename) : filename(filename) {}
   virtual ~Context() {}
   virtual void dump(int pad = 0) {}
 };

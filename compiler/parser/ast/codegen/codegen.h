@@ -15,7 +15,7 @@
 
 #include "lang/seq.h"
 #include "parser/ast/ast.h"
-#include "parser/ast/codegen_ctx.h"
+#include "parser/ast/codegen/codegen_ctx.h"
 #include "parser/ast/visitor.h"
 #include "parser/ast/walk.h"
 #include "parser/common.h"
@@ -23,7 +23,7 @@
 namespace seq {
 namespace ast {
 
-class CodegenVisitor : public ASTVisitor, public SrcObject {
+class CodegenVisitor : public ASTVisitor {
   std::shared_ptr<LLVMContext> ctx;
   seq::Expr *resultExpr;
   seq::Stmt *resultStmt;
@@ -102,27 +102,6 @@ public:
   void visit(const OrPattern *) override;
   void visit(const WildcardPattern *) override;
   void visit(const GuardedPattern *) override;
-
-private:
-  template <typename Tn, typename... Ts> auto N(Ts &&... args) {
-    return new Tn(std::forward<Ts>(args)...);
-  }
-  template <typename T, typename... Ts>
-  auto transform(const std::unique_ptr<T> &t, Ts &&... args)
-      -> decltype(transform(t.get())) {
-    return transform(t.get(), std::forward<Ts>(args)...);
-  }
-  template <typename T> auto transform(const std::vector<T> &ts) {
-    std::vector<T> r;
-    for (auto &e : ts)
-      r.push_back(transform(e));
-    return r;
-  }
-  template <typename... TArgs>
-  void internalError(const char *format, TArgs &&... args) {
-    throw exc::ParserException(
-        fmt::format("INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
-  }
 };
 
 } // namespace ast

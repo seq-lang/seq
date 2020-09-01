@@ -66,8 +66,10 @@ set_target_properties(seqomp PROPERTIES IMPORTED_LOCATION ${OMPLIB})
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 if(APPLE)
     set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/../lib/seq")
+    set(STATIC_LIBCPP "")
 else()
     set(CMAKE_INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib/seq")
+    set(STATIC_LIBCPP "-static-libstdc++")
 endif()
 
 # Seq runtime library
@@ -84,9 +86,9 @@ set(SEQRT_FILES runtime/lib.h
 add_library(seqrt SHARED ${SEQRT_FILES})
 target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include runtime)
 if (APPLE)
-  target_link_libraries(seqrt PUBLIC seqomp -static-libstdc++ -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC})
+  target_link_libraries(seqrt PUBLIC seqomp ${STATIC_LIBCPP} -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC})
 else()
-  target_link_libraries(seqrt PUBLIC seqomp -static-libstdc++ -Wl,--whole-archive ${ZLIB} ${BDWGC} -Wl,--no-whole-archive)
+  target_link_libraries(seqrt PUBLIC seqomp ${STATIC_LIBCPP} -Wl,--whole-archive ${ZLIB} ${BDWGC} -Wl,--no-whole-archive)
 endif()
 set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
 
@@ -111,24 +113,102 @@ set_property(SOURCE ${LIB_SEQPARSE} PROPERTY GENERATED 1)
 # Seq compiler library
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
-file(GLOB SEQ_HPPFILES compiler/lang/*.h
-                       compiler/types/*.h
-                       compiler/parser/*.h
-                       compiler/parser/ast/*.h
-                       compiler/parser/ast/transform/*.h
-                       compiler/parser/ast/codegen/*.h
-                       compiler/parser/ast/format/*.h
-                       compiler/util/*.h
-                       compiler/util/fmt/*.h)
-file(GLOB SEQ_CPPFILES compiler/lang/*.cpp
-                       compiler/types/*.cpp
-                       compiler/parser/*.cpp
-                       compiler/parser/ast/*.cpp
-                       compiler/parser/ast/transform/*.cpp
-                       compiler/parser/ast/codegen/*.cpp
-                       compiler/parser/ast/format/*.cpp
-                       compiler/util/*.cpp
-                       compiler/util/fmt/*.cpp)
+set(SEQ_HPPFILES  compiler/lang/expr.h
+                  compiler/lang/func.h
+                  compiler/lang/lang.h
+                  compiler/lang/ops.h
+                  compiler/lang/patterns.h
+                  compiler/lang/pipeline.h
+                  compiler/lang/seq.h
+                  compiler/lang/stmt.h
+                  compiler/lang/var.h
+                  compiler/parser/ast/ast.h
+                  # compiler/parser/ast/codegen/codegen.h
+                  # compiler/parser/ast/codegen/codegen_ctx.h
+                  compiler/parser/ast/context.h
+                  # compiler/parser/ast/doc.h
+                  compiler/parser/ast/format/format.h
+                  compiler/parser/ast/transform/transform.h
+                  compiler/parser/ast/transform/transform_ctx.h
+                  compiler/parser/ast/typecheck/typecheck.h
+                  compiler/parser/ast/typecheck/typecheck_ctx.h
+                  compiler/parser/ast/types.h
+                  compiler/parser/ast/visitor.h
+                  compiler/parser/ast/walk.h
+                  compiler/parser/common.h
+                  compiler/parser/ocaml.h
+                  compiler/parser/parser.h
+                  compiler/types/any.h
+                  compiler/types/array.h
+                  compiler/types/base.h
+                  compiler/types/func.h
+                  compiler/types/num.h
+                  compiler/types/optional.h
+                  compiler/types/ptr.h
+                  compiler/types/record.h
+                  compiler/types/ref.h
+                  compiler/types/seq.h
+                  compiler/types/types.h
+                  compiler/types/void.h
+                  compiler/util/common.h
+                  compiler/util/fmt/chrono.h
+                  compiler/util/fmt/color.h
+                  compiler/util/fmt/compile.h
+                  compiler/util/fmt/core.h
+                  compiler/util/fmt/format-inl.h
+                  compiler/util/fmt/format.h
+                  compiler/util/fmt/locale.h
+                  compiler/util/fmt/ostream.h
+                  compiler/util/fmt/posix.h
+                  compiler/util/fmt/printf.h
+                  compiler/util/fmt/ranges.h
+                  compiler/util/jit.h
+                  compiler/util/llvm.h
+                  compiler/util/tapir.h)
+set(SEQ_CPPFILES  compiler/lang/expr.cpp
+                  compiler/lang/func.cpp
+                  compiler/lang/lang.cpp
+                  compiler/lang/ops.cpp
+                  compiler/lang/patterns.cpp
+                  compiler/lang/pipeline.cpp
+                  compiler/lang/seq.cpp
+                  compiler/lang/stmt.cpp
+                  compiler/lang/var.cpp
+                  compiler/parser/ast/ast.cpp
+                  # compiler/parser/ast/codegen/codegen.cpp
+                  # compiler/parser/ast/codegen/codegen_ctx.cpp
+                  compiler/parser/ast/context.cpp
+                  # compiler/parser/ast/doc.cpp
+                  compiler/parser/ast/format/format.cpp
+                  compiler/parser/ast/transform/transform.cpp
+                  compiler/parser/ast/transform/transform_ctx.cpp
+                  compiler/parser/ast/typecheck/typecheck.cpp
+                  compiler/parser/ast/typecheck/typecheck_ctx.cpp
+                  # compiler/parser/ast/typecheck/typecheck_expr.cpp
+                  # compiler/parser/ast/typecheck/typecheck_pattern.cpp
+                  # compiler/parser/ast/typecheck/typecheck_stmt.cpp
+                  # compiler/parser/ast/typecheck/typecheck_types.cpp
+                  # compiler/parser/ast/typecheck/typecheck_utils.cpp
+                  compiler/parser/ast/types.cpp
+                  compiler/parser/ast/visitor.cpp
+                  compiler/parser/ast/walk.cpp
+                  compiler/parser/common.cpp
+                  compiler/parser/ocaml.cpp
+                  compiler/parser/parser.cpp
+                  compiler/types/any.cpp
+                  compiler/types/array.cpp
+                  compiler/types/base.cpp
+                  compiler/types/func.cpp
+                  compiler/types/num.cpp
+                  compiler/types/optional.cpp
+                  compiler/types/ptr.cpp
+                  compiler/types/record.cpp
+                  compiler/types/ref.cpp
+                  compiler/types/seq.cpp
+                  compiler/types/types.cpp
+                  compiler/types/void.cpp
+                  compiler/util/fmt/format.cpp
+                  compiler/util/jit.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})
@@ -136,12 +216,12 @@ llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmpar
 if (APPLE)
   target_link_libraries(seq ${LLVM_LIBS} dl seqrt)
 else()
-  target_link_libraries(seq -static-libstdc++ ${LLVM_LIBS} dl seqrt)
+  target_link_libraries(seq ${STATIC_LIBCPP} ${LLVM_LIBS} dl seqrt)
 endif()
 
 # Seq command-line tool
 add_executable(seqc runtime/main.cpp)
-target_link_libraries(seqc -static-libstdc++ seq Threads::Threads)
+target_link_libraries(seqc ${STATIC_LIBCPP} seq Threads::Threads)
 
 # Seq test
 # Download and unpack googletest at configure time

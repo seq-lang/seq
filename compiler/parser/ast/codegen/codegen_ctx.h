@@ -100,8 +100,7 @@ class LLVMContext : public Context<LLVMItem::Item> {
 
 public:
   LLVMContext(const std::string &filename,
-              std::shared_ptr<RealizationContext> realizations,
-              std::shared_ptr<ImportContext> imports, seq::Block *block,
+              std::shared_ptr<RealizationContext> realizations, seq::Block *block,
               seq::BaseFunc *base, seq::SeqJIT *jit);
   virtual ~LLVMContext();
 
@@ -138,9 +137,9 @@ public:
   }
 
 public:
-  static std::shared_ptr<LLVMContext> getContext(const std::string &file,
-                                                 std::shared_ptr<TypeContext> typeCtx,
-                                                 seq::SeqModule *module);
+  // static std::shared_ptr<LLVMContext> getContext(const std::string &file,
+  //                                                std::shared_ptr<TypeContext>
+  //                                                typeCtx, seq::SeqModule *module);
 };
 
 } // namespace ast

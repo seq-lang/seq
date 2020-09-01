@@ -12,15 +12,14 @@
 #include <string>
 #include <vector>
 
-#include "parser/ast/transform_ctx.h"
+#include "parser/ast/ast.h"
 #include "parser/ast/visitor.h"
 #include "parser/common.h"
 
 namespace seq {
 namespace ast {
 
-class FormatVisitor : public ASTVisitor {
-  std::shared_ptr<TypeContext> ctx;
+class FormatVisitor : public CallbackASTVisitor<std::string, std::string, std::string> {
   std::string result;
   std::string space;
   bool renderType, renderHTML;
@@ -50,26 +49,21 @@ private:
   std::string keyword(const std::string &s) const;
 
 public:
+  FormatVisitor(bool html);
+  std::string transform(const ExprPtr &e) override;
+  std::string transform(const StmtPtr &stmt) override;
+  std::string transform(const PatternPtr &ptr) override;
+  std::string transform(const StmtPtr &stmt, int indent);
+
   template <typename T>
-  static std::string format(std::shared_ptr<TypeContext> ctx, const T &stmt,
-                            bool html = false, bool init = false) {
-    auto t = FormatVisitor(ctx, html);
-    std::string h;
-    if (init)
-      h = t.handleImport("<stdlib>", "");
-    return fmt::format("{}{}{}{}", t.header, h, t.transform(stmt), t.footer);
+  static std::string apply(const T &stmt, bool html = false, bool init = false) {
+    auto t = FormatVisitor(html);
+    return fmt::format("{}{}{}", t.header, t.transform(stmt), t.footer);
   }
 
-  FormatVisitor(std::shared_ptr<TypeContext> ctx, bool html);
-
-  std::string transform(const Stmt *stmt, int indent = 0);
-  std::string transform(const ExprPtr &e);
-  std::string transform(const StmtPtr &stmt, int indent = 0) {
-    return transform(stmt.get(), indent);
-  }
-  std::string transform(const PatternPtr &ptr);
-
-  std::string handleImport(const std::string &what, const std::string &file);
+  void defaultVisit(const Expr *e) override { error("cannot format {}", *e); }
+  void defaultVisit(const Stmt *e) override { error("cannot format {}", *e); }
+  void defaultVisit(const Pattern *e) override { error("cannot format {}", *e); }
 
 public:
   void visit(const NoneExpr *) override;
@@ -88,6 +82,8 @@ public:
   void visit(const DictExpr *) override;
   void visit(const GeneratorExpr *) override;
   void visit(const DictGeneratorExpr *) override;
+  void visit(const InstantiateExpr *expr) override;
+  void visit(const StackAllocExpr *expr) override;
   void visit(const IfExpr *) override;
   void visit(const UnaryExpr *) override;
   void visit(const BinaryExpr *) override;
@@ -101,6 +97,7 @@ public:
   void visit(const PtrExpr *) override;
   void visit(const LambdaExpr *) override;
   void visit(const YieldExpr *) override;
+  void visit(const StaticExpr *) override;
 
   void visit(const SuiteStmt *) override;
   void visit(const PassStmt *) override;
@@ -109,6 +106,7 @@ public:
   void visit(const ContinueStmt *) override;
   void visit(const ExprStmt *) override;
   void visit(const AssignStmt *) override;
+  void visit(const AssignMemberStmt *) override;
   void visit(const DelStmt *) override;
   void visit(const PrintStmt *) override;
   void visit(const ReturnStmt *) override;
@@ -120,7 +118,6 @@ public:
   void visit(const MatchStmt *) override;
   void visit(const ExtendStmt *) override;
   void visit(const ImportStmt *) override;
-  void visit(const ExternImportStmt *) override;
   void visit(const TryStmt *) override;
   void visit(const GlobalStmt *) override;
   void visit(const ThrowStmt *) override;
@@ -148,6 +145,8 @@ public:
   friend std::ostream &operator<<(std::ostream &out, const FormatVisitor &c) {
     return out << c.result;
   }
+
+  using CallbackASTVisitor<std::string, std::string, std::string>::transform;
   template <typename T> std::string transform(const std::vector<T> &ts) {
     std::vector<std::string> r;
     for (auto &e : ts)

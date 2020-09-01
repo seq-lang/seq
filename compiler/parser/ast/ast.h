@@ -31,6 +31,33 @@ typedef std::unique_ptr<Expr> ExprPtr;
 typedef std::unique_ptr<Stmt> StmtPtr;
 typedef std::unique_ptr<Pattern> PatternPtr;
 
+template <typename T>
+std::string combine(const std::vector<T> &items, std::string delim = " ") {
+  std::string s = "";
+  for (int i = 0; i < items.size(); i++)
+    if (items[i])
+      s += (i ? delim : "") + items[i]->toString();
+  return s;
+}
+
+template <typename T> auto clone(const std::unique_ptr<T> &t) {
+  return t ? t->clone() : nullptr;
+}
+
+template <typename T> std::vector<T> clone(const std::vector<T> &t) {
+  std::vector<T> v;
+  for (auto &i : t)
+    v.push_back(clone(i));
+  return v;
+}
+
+template <typename T> std::vector<T> clone_nop(const std::vector<T> &t) {
+  std::vector<T> v;
+  for (auto &i : t)
+    v.push_back(i.clone());
+  return v;
+}
+
 struct Expr : public seq::SrcObject {
 private:
   /// Each expression comes with an associated type.
@@ -76,10 +103,6 @@ struct Stmt : public seq::SrcObject {
   virtual std::string toString() const = 0;
   /// Accept an AST walker/visitor
   virtual void accept(ASTVisitor &) const = 0;
-
-  /// Get child statements (e.g. block contents).
-  /// Returns the statement itself if it has no child statements.
-  virtual std::vector<Stmt *> getStatements();
 
   /// Allow pretty-printing to C++ streams
   friend std::ostream &operator<<(std::ostream &out, const Stmt &c) {
@@ -446,12 +469,13 @@ struct SuiteStmt : public Stmt {
   using Stmt::Stmt;
 
   std::vector<StmtPtr> stmts;
+  bool ownBlock;
 
-  SuiteStmt(std::vector<StmtPtr> &&s);
-  SuiteStmt(StmtPtr s, StmtPtr s2 = nullptr, StmtPtr s3 = nullptr);
+  SuiteStmt(std::vector<StmtPtr> &&s, bool o = false);
+  SuiteStmt(StmtPtr s, bool o = false);
+  SuiteStmt(StmtPtr s, StmtPtr s2, bool o = false);
   SuiteStmt(const SuiteStmt &s);
   std::string toString() const override;
-  std::vector<Stmt *> getStatements() override;
   NODE_UTILITY(Stmt, SuiteStmt);
 };
 
@@ -600,10 +624,10 @@ struct MatchStmt : public Stmt {
 };
 
 struct ExtendStmt : public Stmt {
-  ExprPtr what;
+  ExprPtr type;
   StmtPtr suite;
 
-  ExtendStmt(ExprPtr e, StmtPtr s);
+  ExtendStmt(ExprPtr t, StmtPtr s);
   ExtendStmt(const ExtendStmt &s);
   std::string toString() const override;
   NODE_UTILITY(Stmt, ExtendStmt);
@@ -685,12 +709,12 @@ struct FunctionStmt : public Stmt {
   ExprPtr ret;
   std::vector<Param> generics;
   std::vector<Param> args;
-  std::shared_ptr<Stmt> suite;
+  std::unique_ptr<Stmt> suite;
   /// List of attributes (e.g. @internal @prefetch)
   std::vector<std::string> attributes;
 
   FunctionStmt(const std::string &n, ExprPtr r, std::vector<Param> &&g,
-               std::vector<Param> &&a, std::shared_ptr<Stmt> s,
+               std::vector<Param> &&a, std::unique_ptr<Stmt> s,
                const std::vector<std::string> &at);
   FunctionStmt(const FunctionStmt &s);
   std::string toString() const override;
@@ -866,24 +890,6 @@ struct BoundPattern : public Pattern {
   NODE_UTILITY(Pattern, BoundPattern);
 };
 
-template <typename T> T CL(const T &v) { return v.clone(); }
-template <typename T> std::unique_ptr<T> CL(const std::unique_ptr<T> &v) {
-  return v ? v->clone() : nullptr;
-}
-template <typename T> std::vector<T> CL(const std::vector<T> &v) {
-  std::vector<T> r;
-  for (auto &i : v)
-    r.push_back(CL(i));
-  return r;
-}
-template <typename T>
-std::string combine(const std::vector<T> &items, std::string delim = " ") {
-  std::string s = "";
-  for (int i = 0; i < items.size(); i++)
-    s += (i ? delim : "") + items[i]->toString();
-  return s;
-}
-
 /// New AST nodes
 
 struct TupleIndexExpr : Expr {
@@ -896,6 +902,16 @@ struct TupleIndexExpr : Expr {
   NODE_UTILITY(Expr, TupleIndexExpr);
 };
 
+struct InstantiateExpr : Expr {
+  ExprPtr type;
+  std::vector<ExprPtr> params;
+
+  InstantiateExpr(ExprPtr e, std::vector<ExprPtr> &&i);
+  InstantiateExpr(const InstantiateExpr &n);
+  std::string toString() const override;
+  NODE_UTILITY(Expr, InstantiateExpr);
+};
+
 struct StackAllocExpr : Expr {
   ExprPtr typeExpr, expr;
 
@@ -903,6 +919,16 @@ struct StackAllocExpr : Expr {
   StackAllocExpr(const StackAllocExpr &n);
   std::string toString() const override;
   NODE_UTILITY(Expr, StackAllocExpr);
+};
+
+struct StaticExpr : public Expr {
+  /// Expression: lambda vars...: expr
+  ExprPtr expr;
+
+  StaticExpr(ExprPtr e);
+  StaticExpr(const StaticExpr &n);
+  std::string toString() const override;
+  NODE_UTILITY(Expr, StaticExpr);
 };
 
 struct AssignMemberStmt : Stmt {
@@ -924,8 +950,6 @@ struct UpdateStmt : public Stmt {
   std::string toString() const override;
   NODE_UTILITY(Stmt, UpdateStmt);
 };
-
-// A IS B?
 
 } // namespace ast
 } // namespace seq

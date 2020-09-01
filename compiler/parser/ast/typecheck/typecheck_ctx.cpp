@@ -1,4 +1,3 @@
-#include <libgen.h>
 #include <map>
 #include <memory>
 #include <stack>
@@ -9,9 +8,9 @@
 #include <vector>
 
 #include "parser/ast/ast.h"
-#include "parser/ast/transform.h"
 #include "parser/common.h"
 #include "parser/ocaml.h"
+#include "parser/typecheck/typecheck_ctx.h"
 
 using fmt::format;
 using std::dynamic_pointer_cast;
@@ -28,123 +27,41 @@ using std::vector;
 namespace seq {
 namespace ast {
 
-TypeContext::TypeContext(const std::string &filename,
-                         shared_ptr<RealizationContext> realizations,
-                         shared_ptr<ImportContext> imports)
-    : Context<TypeItem::Item>(filename, realizations, imports), typecheck(true) {
+TypeContext::TypeContext(const std::string &filename, shared_ptr<Cache> cache)
+    : Context<TypecheckItem>("", cache) {
   stack.push_front(vector<string>());
 }
 
-TypeContext::~TypeContext() {}
-
-shared_ptr<TypeItem::Item> TypeContext::find(const std::string &name,
-                                             bool checkStdlib) const {
-
-  // All functions & types that start with "." are global accross the modules
-  // This includes all realizations
-
-  if (name[0] == '.') {
-    auto it = getRealizations()->globalNames.find(name);
-    if (it != getRealizations()->globalNames.end()) {
-      if (it->second->getFunc())
-        return make_shared<TypeItem::Func>(it->second, "", "");
-      else if (it->second->getClass())
-        return make_shared<TypeItem::Class>(it->second, false, "", "");
-    }
-    return nullptr;
-  } else if (name[0] == '/') {
-    return make_shared<TypeItem::Import>(name, "", name.substr(1));
-  }
-
-  auto t = Context<TypeItem::Item>::find(name);
-  if (t)
-    return t;
-  auto stdlib = imports->getImport("")->tctx;
-  if (checkStdlib)
-    t = stdlib->find(name, false);
-  if (t)
-    return t;
-
-  auto it = getRealizations()->realizationLookup.find(name);
-  if (it != getRealizations()->realizationLookup.end()) {
-    auto fit = getRealizations()->funcRealizations.find(it->second);
-    if (fit != getRealizations()->funcRealizations.end())
-      return make_shared<TypeItem::Func>(fit->second[name].type,
-                                         "", // all classes/fn are toplevel
-                                         fit->second[name].base);
-    auto cit = getRealizations()->classRealizations.find(it->second);
-    if (cit != getRealizations()->classRealizations.end())
-      return make_shared<TypeItem::Class>(cit->second[name].type, false,
-                                          "", // all classes/fn are toplevel
-                                          cit->second[name].base);
-  }
-  return nullptr;
-}
-
 types::TypePtr TypeContext::findInternal(const string &name) const {
-  auto stdlib = imports->getImport("")->tctx;
-  auto t = stdlib->find(name, false);
+  auto t = find(name);
   seqassert(t, "cannot find '{}'", name);
   return t->getType();
 }
 
-shared_ptr<TypeItem::Item> TypeContext::addVar(const string &name, types::TypePtr type,
-                                               bool global) {
-  auto t = make_shared<TypeItem::Var>(type, filename, getBase(), global);
+shared_ptr<TypecheckItem> TransformContext::add(TypecheckItem::Kind kind,
+                                                const string &name,
+                                                const types::TypePtr type, bool global,
+                                                bool generic, bool stat) {
+  auto t = make_shared<TypecheckItem>(kind, type, getBase(), global, generic, stat);
   add(name, t);
   return t;
-}
-
-shared_ptr<TypeItem::Item> TypeContext::addImport(const string &name,
-                                                  const string &import, bool global) {
-  auto t = make_shared<TypeItem::Import>(import, filename, getBase(), global);
-  add(name, t);
-  return t;
-}
-
-shared_ptr<TypeItem::Item> TypeContext::addType(const string &name, types::TypePtr type,
-                                                bool generic, bool global) {
-  auto t = make_shared<TypeItem::Class>(type, generic, filename, getBase(), global);
-  add(name, t);
-  return t;
-}
-
-shared_ptr<TypeItem::Item> TypeContext::addFunc(const string &name, types::TypePtr type,
-                                                bool global) {
-  auto t = make_shared<TypeItem::Func>(type, filename, getBase(), global);
-  add(name, t);
-  return t;
-}
-
-shared_ptr<TypeItem::Item> TypeContext::addStatic(const string &name, int value,
-                                                  types::TypePtr type, bool global) {
-  auto t = make_shared<TypeItem::Static>(value, type, filename, getBase(), global);
-  add(name, t);
-  return t;
-}
-
-void TypeContext::addGlobal(const string &name, types::TypePtr type) {
-  assert(name[0] == '.');
-  auto &g = getRealizations()->globalNames;
-  assert(g.find(name) == g.end());
-  g[name] = type;
 }
 
 string TypeContext::getBase(bool full) const {
   if (!bases.size())
     return "";
   if (!full) {
-    if (auto f = bases.back().parent->getFunc())
+    if (auto f = bases.back().type->getFunc())
       return f->name;
-    assert(bases.back().parent->getClass());
-    return bases.back().parent->getClass()->name;
+    assert(bases.back().type->getClass());
+    return bases.back().type->getClass()->name;
   } else {
     vector<string> s;
     for (auto &b : bases) {
-      if (auto f = b.parent->getFunc())
+      if (auto f = b.type->getFunc())
         s.push_back(f->name);
       else
-        s.push_back(b.parent->getClass()->name);
+        s.push_back(b.type->getClass()->name);
     }
     return join(s, ":");
   }
@@ -298,12 +215,8 @@ void TypeContext::dump(int pad) {
   for (auto &i : ordered) {
     std::string s;
     auto t = i.second.front();
-    if (auto im = t->getImport()) {
-      LOG("{}{:.<25} {}", string(pad * 2, ' '), i.first, "<import>");
-      getImports()->getImport(im->getFile())->tctx->dump(pad + 1);
-    } else
-      LOG("{}{:.<25} {} {}", string(pad * 2, ' '), i.first,
-          t->getType()->toString(true), t->getBase());
+    LOG("{}{:.<25} {} {}", string(pad * 2, ' '), i.first, t->getType()->toString(true),
+        t->getBase());
   }
 }
 
