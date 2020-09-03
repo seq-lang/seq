@@ -123,8 +123,8 @@ set(SEQ_HPPFILES  compiler/lang/expr.h
                   compiler/lang/stmt.h
                   compiler/lang/var.h
                   compiler/parser/ast/ast.h
-                  # compiler/parser/ast/codegen/codegen.h
-                  # compiler/parser/ast/codegen/codegen_ctx.h
+                  compiler/parser/ast/codegen/codegen.h
+                  compiler/parser/ast/codegen/codegen_ctx.h
                   compiler/parser/ast/context.h
                   # compiler/parser/ast/doc.h
                   compiler/parser/ast/format/format.h
@@ -175,8 +175,8 @@ set(SEQ_CPPFILES  compiler/lang/expr.cpp
                   compiler/lang/stmt.cpp
                   compiler/lang/var.cpp
                   compiler/parser/ast/ast.cpp
-                  # compiler/parser/ast/codegen/codegen.cpp
-                  # compiler/parser/ast/codegen/codegen_ctx.cpp
+                  compiler/parser/ast/codegen/codegen.cpp
+                  compiler/parser/ast/codegen/codegen_ctx.cpp
                   compiler/parser/ast/context.cpp
                   # compiler/parser/ast/doc.cpp
                   compiler/parser/ast/format/format.cpp
@@ -184,11 +184,6 @@ set(SEQ_CPPFILES  compiler/lang/expr.cpp
                   compiler/parser/ast/transform/transform_ctx.cpp
                   compiler/parser/ast/typecheck/typecheck.cpp
                   compiler/parser/ast/typecheck/typecheck_ctx.cpp
-                  # compiler/parser/ast/typecheck/typecheck_expr.cpp
-                  # compiler/parser/ast/typecheck/typecheck_pattern.cpp
-                  # compiler/parser/ast/typecheck/typecheck_stmt.cpp
-                  # compiler/parser/ast/typecheck/typecheck_types.cpp
-                  # compiler/parser/ast/typecheck/typecheck_utils.cpp
                   compiler/parser/ast/types.cpp
                   compiler/parser/ast/visitor.cpp
                   compiler/parser/ast/walk.cpp

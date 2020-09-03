@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "parser/ast/ast.h"
+#include "parser/ast/typecheck/typecheck.h"
 
 using std::dynamic_pointer_cast;
 using std::make_shared;
@@ -92,16 +93,12 @@ bool StaticType::canRealize() const {
 }
 
 int StaticType::getValue() const {
-  unordered_map<string, Generic> m;
+  std::map<string, Generic> m;
   for (auto &e : explicits)
     m[e.name] = e;
-
-  // StaticVisitor sv(nullptr, &m);
-  // auto t = sv.transform(expr.get());
-  // assert(t.first);
-  // return t.second;
-  assert(false);
-  return -1;
+  auto t = StaticVisitor(m).transform(expr);
+  assert(t.first);
+  return t.second;
 }
 
 LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic)
@@ -178,9 +175,8 @@ int LinkType::unify(TypePtr typ, Unification &us) {
         return 1;
     }
     if (!occurs(typ, us)) {
-      LOG7("[unify] {} <- {}", id, typ->toString());
-      if (id == 239)
-        assert(1);
+      assert(!type);
+      LOG9("[unify] {} <- {}", id, typ->toString());
       us.linked.push_back(static_pointer_cast<LinkType>(shared_from_this()));
       kind = Link;
       type = typ;
@@ -222,7 +218,7 @@ TypePtr LinkType::instantiate(int level, int &unboundCount,
   if (kind == Generic) {
     if (cache.find(id) != cache.end())
       return cache[id];
-    LOG7("instatiation: #{} -> ?{}", id, unboundCount);
+    LOG9("[inst] #{} -> ?{}", id, unboundCount);
     return cache[id] =
                make_shared<LinkType>(Unbound, unboundCount++, level, nullptr, isStatic);
   } else if (kind == Unbound) {
@@ -255,14 +251,13 @@ bool LinkType::canRealize() const {
     return type->canRealize();
 }
 
-bool isTuple(const string &name) { return chop(name).substr(0, 6) == "Tuple."; }
+bool isTuple(const string &name) { return startswith(name, ".Tuple."); }
 
 bool isCallable(const string &name) {
-  return chop(name).substr(0, 9) == "Function." ||
-         chop(name).substr(0, 8) == "Partial.";
+  return startswith(name, ".Function.") || startswith(name, ".Partial.");
 }
 
-bool isFunc(const string &name) { return chop(name).substr(0, 9) == "Function."; }
+bool isFunc(const string &name) { return startswith(name, ".Function."); }
 
 ClassType::ClassType(const string &name, bool isRecord, const vector<TypePtr> &args,
                      const vector<Generic> &explicits, TypePtr parent)
@@ -275,7 +270,7 @@ string ClassType::toString(bool reduced) const {
       gs.push_back(a.type->toString(reduced));
   auto g = join(gs, ",");
   return fmt::format("{}{}{}", reduced && parent ? parent->toString(reduced) + ":" : "",
-                     chop(name), g.size() ? fmt::format("[{}]", g) : "");
+                     name, g.size() ? fmt::format("[{}]", g) : "");
 }
 
 string ClassType::realizeString() const {
@@ -284,7 +279,7 @@ string ClassType::realizeString() const {
     if (!a.name.empty())
       gs.push_back(a.type->realizeString());
   string s = join(gs, ",");
-  return fmt::format("{}{}{}", parent ? parent->realizeString() + ":" : "", chop(name),
+  return fmt::format("{}{}{}", parent ? parent->realizeString() + ":" : "", name,
                      s.empty() ? "" : fmt::format("[{}]", s));
 }
 
@@ -389,7 +384,7 @@ bool ClassType::canRealize() const {
 }
 
 TypePtr ClassType::getCallable() {
-  if (chop(name).substr(0, 8) == "Partial.")
+  if (startswith(name, ".Partial."))
     return explicits[0].type;
   if (isCallable(name))
     return shared_from_this();
@@ -415,7 +410,7 @@ string FuncType::realizeString() const {
     as.push_back(args[ai]->realizeString());
   string a = join(as, ",");
   s = s.size() ? join(vector<string>{s, a}, ";") : a;
-  return fmt::format("{}{}{}", parent ? parent->realizeString() + ":" : "", chop(name),
+  return fmt::format("{}{}{}", parent ? parent->realizeString() + ":" : "", name,
                      s.empty() ? "" : fmt::format("[{}]", s));
 }
 
@@ -430,8 +425,8 @@ string FuncType::toString(bool reduced) const {
     as.push_back(args[ai]->toString(reduced));
   string a = join(as, ",");
   s = s.size() ? join(vector<string>{s, a}, ";") : a;
-  return fmt::format("{}{}{}", parent ? parent->toString(reduced) + ":" : "",
-                     chop(name), s.empty() ? "" : fmt::format("[{}]", s));
+  return fmt::format("{}{}{}", parent ? parent->toString(reduced) + ":" : "", name,
+                     s.empty() ? "" : fmt::format("[{}]", s));
 }
 
 TypePtr FuncType::generalize(int level) {

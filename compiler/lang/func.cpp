@@ -161,6 +161,8 @@ void Func::codegen(Module *module) {
     return;
   }
 
+  if (mangledName == ".void")
+    assert(true);
   FunctionType *funcTypeLLVM =
       FunctionType::get(outType->getLLVMType(context), types, false);
   func = cast<Function>(module->getOrInsertFunction(mangledName, funcTypeLLVM));

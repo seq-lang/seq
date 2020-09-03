@@ -48,7 +48,7 @@ private:
 public:
   TransformVisitor(std::shared_ptr<TransformContext> ctx,
                    std::shared_ptr<std::vector<StmtPtr>> stmts = nullptr);
-  static StmtPtr apply(const std::string &argv0, StmtPtr s);
+  static StmtPtr apply(std::shared_ptr<Cache> cache, StmtPtr s);
 
   ExprPtr transform(const ExprPtr &e) override;
   StmtPtr transform(const StmtPtr &s) override;
@@ -58,6 +58,7 @@ public:
 
 public:
   void visit(const NoneExpr *) override;
+  void visit(const IntExpr *) override;
   void visit(const FStringExpr *) override;
   void visit(const KmerExpr *) override;
   void visit(const SeqExpr *) override;

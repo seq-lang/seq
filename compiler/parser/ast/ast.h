@@ -166,6 +166,9 @@ struct IntExpr : public Expr {
   /// Number suffix (e.g. "u" for "123u")
   std::string suffix;
 
+  int64_t intValue;
+  bool sign;
+
   IntExpr(int v);
   IntExpr(const IntExpr &n);
   IntExpr(const std::string &v, const std::string &s = "");
@@ -626,6 +629,7 @@ struct MatchStmt : public Stmt {
 struct ExtendStmt : public Stmt {
   ExprPtr type;
   StmtPtr suite;
+  std::vector<std::string> generics;
 
   ExtendStmt(ExprPtr t, StmtPtr s);
   ExtendStmt(const ExtendStmt &s);
@@ -924,8 +928,9 @@ struct StackAllocExpr : Expr {
 struct StaticExpr : public Expr {
   /// Expression: lambda vars...: expr
   ExprPtr expr;
+  std::set<std::string> captures;
 
-  StaticExpr(ExprPtr e);
+  StaticExpr(ExprPtr e, const std::set<std::string> &captures);
   StaticExpr(const StaticExpr &n);
   std::string toString() const override;
   NODE_UTILITY(Expr, StaticExpr);

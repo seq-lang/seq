@@ -13,8 +13,8 @@ using std::vector;
 namespace seq {
 namespace ast {
 
-FormatVisitor::FormatVisitor(bool html)
-    : renderType(false), renderHTML(html), indent(0) {
+FormatVisitor::FormatVisitor(bool html, std::shared_ptr<Cache> cache)
+    : renderType(false), renderHTML(html), indent(0), cache(cache) {
   if (renderHTML) {
     header = "<html><head><link rel=stylesheet href=code.css/></head>\n<body>";
     header += "<div class=code>\n";
@@ -38,7 +38,7 @@ FormatVisitor::FormatVisitor(bool html)
 }
 
 string FormatVisitor::transform(const ExprPtr &expr) {
-  FormatVisitor v(renderHTML);
+  FormatVisitor v(renderHTML, cache);
   if (expr)
     expr->accept(v);
   return v.result;
@@ -47,7 +47,7 @@ string FormatVisitor::transform(const ExprPtr &expr) {
 string FormatVisitor::transform(const StmtPtr &stmt) { return transform(stmt, 0); }
 
 string FormatVisitor::transform(const StmtPtr &stmt, int indent) {
-  FormatVisitor v(renderHTML);
+  FormatVisitor v(renderHTML, cache);
   v.indent = this->indent + indent;
   if (stmt)
     stmt->accept(v);
@@ -55,7 +55,7 @@ string FormatVisitor::transform(const StmtPtr &stmt, int indent) {
 }
 
 string FormatVisitor::transform(const PatternPtr &ptr) {
-  FormatVisitor v(renderHTML);
+  FormatVisitor v(renderHTML, cache);
   if (ptr)
     ptr->accept(v);
   return v.result;
@@ -212,7 +212,7 @@ void FormatVisitor::visit(const CallExpr *expr) {
 }
 
 void FormatVisitor::visit(const DotExpr *expr) {
-  result = renderExpr(expr, "{}.{}", transform(expr->expr), expr->member);
+  result = renderExpr(expr, "{} . {}", transform(expr->expr), expr->member);
 }
 
 void FormatVisitor::visit(const SliceExpr *expr) {
@@ -395,6 +395,15 @@ void FormatVisitor::visit(const ThrowStmt *stmt) {
 }
 
 void FormatVisitor::visit(const FunctionStmt *fstmt) {
+  if (cache &&
+      cache->realizationAsts.find(fstmt->name) != cache->realizationAsts.end()) {
+    fstmt = (const FunctionStmt *)(cache->realizationAsts[fstmt->name].get());
+  } else if (cache) {
+    for (auto &real : cache->realizations[fstmt->name])
+      result += transform(cache->realizationAsts[real.first]);
+    return;
+  }
+
   vector<string> attrs;
   for (auto &a : fstmt->attributes)
     attrs.push_back(fmt::format("@{}", a));
@@ -422,6 +431,15 @@ void FormatVisitor::visit(const FunctionStmt *fstmt) {
 }
 
 void FormatVisitor::visit(const ClassStmt *stmt) {
+  // if (cache &&
+  //     cache->realizationAsts.find(fstmt->name) != cache->realizationAsts.end()) {
+  //   fstmt = (const FunctionStmt *)(cache->realizationAsts[fstmt->name].get());
+  // } else if (cache) {
+  //   for (auto &real : cache->realizations[fstmt->name])
+  //     result += transform(cache->realizationAsts[real.first]);
+  //   return;
+  // }
+
   vector<string> args;
   string key = stmt->isRecord ? "type" : "class";
   for (auto &a : stmt->args)

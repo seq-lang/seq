@@ -3,6 +3,7 @@
 #include <string>
 
 #include "lang/seq.h"
+#include "parser/ast/ast.h"
 #include "parser/common.h"
 
 using std::string;
@@ -35,6 +36,10 @@ vector<string> split(const string &s, char delim) {
   while (std::getline(iss, item, delim))
     items.push_back(item);
   return items;
+}
+
+bool startswith(const string &s, const string &p) {
+  return s.size() >= p.size() && s.substr(0, p.size()) == p;
 }
 
 string escape(string s) {
@@ -83,6 +88,22 @@ void error(const char *format) { throw exc::ParserException(format); }
 
 void error(const ::seq::SrcInfo &p, const char *format) {
   throw exc::ParserException(format, p);
+}
+
+bool getInt(seq_int_t *o, const std::unique_ptr<Expr> &e, bool zeroOnNull) {
+  if (!e) {
+    if (zeroOnNull)
+      *o = 0;
+    return zeroOnNull;
+  }
+  try {
+    if (auto i = CAST(e, IntExpr)) {
+      *o = std::stoll(i->value);
+      return true;
+    }
+  } catch (std::out_of_range &) {
+  }
+  return false;
 }
 
 #ifdef __APPLE__

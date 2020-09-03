@@ -29,9 +29,12 @@ BoolExpr::BoolExpr(bool v) : Expr(), value(v) {}
 BoolExpr::BoolExpr(const BoolExpr &e) : Expr(e), value(e.value) {}
 string BoolExpr::toString() const { return wrap(format("#bool {}", int(value))); }
 
-IntExpr::IntExpr(int v) : Expr(), value(std::to_string(v)), suffix("") {}
-IntExpr::IntExpr(const IntExpr &e) : Expr(e), value(e.value), suffix(e.suffix) {}
-IntExpr::IntExpr(const string &v, const string &s) : Expr(), value(v), suffix(s) {}
+IntExpr::IntExpr(int v)
+    : Expr(), value(std::to_string(v)), suffix(""), intValue(v), sign(false) {}
+IntExpr::IntExpr(const IntExpr &e)
+    : Expr(e), value(e.value), suffix(e.suffix), intValue(e.intValue), sign(e.sign) {}
+IntExpr::IntExpr(const string &v, const string &s)
+    : Expr(), value(v), suffix(s), intValue(0), sign(false) {}
 string IntExpr::toString() const {
   return wrap(format("#int {}{}", value, suffix == "" ? "" : format(" {}", suffix)));
 }
@@ -275,8 +278,10 @@ string InstantiateExpr::toString() const {
   return wrap(format("#instantiate {} {}", *type, combine(params)));
 }
 
-StaticExpr::StaticExpr(ExprPtr e) : Expr(), expr(move(e)) {}
-StaticExpr::StaticExpr(const StaticExpr &e) : Expr(e), expr(ast::clone(e.expr)) {}
+StaticExpr::StaticExpr(ExprPtr e, const std::set<std::string> &c)
+    : Expr(), expr(move(e)), captures(c) {}
+StaticExpr::StaticExpr(const StaticExpr &e)
+    : Expr(e), expr(ast::clone(e.expr)), captures(e.captures) {}
 string StaticExpr::toString() const { return wrap(format("#static {}", *expr)); }
 
 Param Param::clone() const { return {name, ast::clone(type), ast::clone(deflt)}; }
@@ -411,7 +416,7 @@ string MatchStmt::toString() const {
 
 ExtendStmt::ExtendStmt(ExprPtr t, StmtPtr s) : type(move(t)), suite(move(s)) {}
 ExtendStmt::ExtendStmt(const ExtendStmt &s)
-    : type(ast::clone(s.type)), suite(ast::clone(s.suite)) {}
+    : type(ast::clone(s.type)), suite(ast::clone(s.suite)), generics(s.generics) {}
 string ExtendStmt::toString() const { return format("(#extend {} {})", *type, *suite); }
 
 ImportStmt::ImportStmt(const Item &f, const vector<Item> &w) : from(f), what(w) {}

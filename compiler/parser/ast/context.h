@@ -16,99 +16,99 @@
 namespace seq {
 namespace ast {
 
-struct RealizationContext {
-  /// List of class methods and members
-  /// Maps canonical class name to a map of methods and members
-  /// and their generalized types
-  struct ClassBody {
-    // Needs vector as the order is important
-    std::vector<std::pair<std::string, types::TypePtr>> members;
-    std::unordered_map<std::string, std::vector<types::FuncTypePtr>> methods;
-  };
-  std::unordered_map<std::string, ClassBody> classes;
+// struct RealizationContext {
+//   /// List of class methods and members
+//   /// Maps canonical class name to a map of methods and members
+//   /// and their generalized types
+//   struct ClassBody {
+//     // Needs vector as the order is important
+//     std::vector<std::pair<std::string, types::TypePtr>> members;
+//     std::unordered_map<std::string, std::vector<types::FuncTypePtr>> methods;
+//   };
+//   std::unordered_map<std::string, ClassBody> classes;
 
-  struct FuncRealization {
-    std::string fullName;
-    types::FuncTypePtr type;
-    std::shared_ptr<FunctionStmt> ast;
-    seq::BaseFunc *handle;
-    std::string base;
-  };
-  struct ClassRealization {
-    std::string fullName;
-    types::ClassTypePtr type;
-    std::vector<std::pair<std::string, types::ClassTypePtr>> args;
-    seq::types::Type *handle;
-    std::string base;
-  };
-  RealizationContext();
+//   struct FuncRealization {
+//     std::string fullName;
+//     types::FuncTypePtr type;
+//     std::shared_ptr<FunctionStmt> ast;
+//     seq::BaseFunc *handle;
+//     std::string base;
+//   };
+//   struct ClassRealization {
+//     std::string fullName;
+//     types::ClassTypePtr type;
+//     std::vector<std::pair<std::string, types::ClassTypePtr>> args;
+//     seq::types::Type *handle;
+//     std::string base;
+//   };
+//   RealizationContext();
 
-public: /* Names */
-  /// Name counter (how many times we used a name)
-  /// Used for generating unique name for each identifier
-  /// (e.g. if we have two def foo, one will be known as foo and one as foo.1
-  std::unordered_map<std::string, int> moduleNames;
-  /// Mapping to canonical names
-  /// (each SrcInfo positions maps to a unique canonical name)
-  std::unordered_map<SrcInfo, std::string, SrcInfoHash> canonicalNames;
-  /// Current unbound type ID counter.
-  /// Each unbound variable must have different ID.
-  int unboundCount;
+// public: /* Names */
+//   /// Name counter (how many times we used a name)
+//   /// Used for generating unique name for each identifier
+//   /// (e.g. if we have two def foo, one will be known as foo and one as foo.1
+//   std::unordered_map<std::string, int> moduleNames;
+//   /// Mapping to canonical names
+//   /// (each SrcInfo positions maps to a unique canonical name)
+//   std::unordered_map<SrcInfo, std::string, SrcInfoHash> canonicalNames;
+//   /// Current unbound type ID counter.
+//   /// Each unbound variable must have different ID.
 
-public:
-  /// Generate canonical name for a SrcInfo and original class/function name
-  std::string generateCanonicalName(const std::string &base, const std::string &name);
-  int &getUnboundCount();
+// public:
+//   /// Generate canonical name for a SrcInfo and original class/function name
+//   std::string generateCanonicalName(const std::string &base, const std::string
+//   &name); int &getUnboundCount();
 
-public: /* Lookup */
-public:
-  /// Getters and setters for the method/member/realization lookup tables
-  ClassBody *findClass(const std::string &name);
-  const std::vector<types::FuncTypePtr> *findMethod(const std::string &name,
-                                                    const std::string &method) const;
-  types::TypePtr findMember(const std::string &name, const std::string &member) const;
+// public: /* Lookup */
+// public:
+//   /// Getters and setters for the method/member/realization lookup tables
+//   ClassBody *findClass(const std::string &name);
+//   const std::vector<types::FuncTypePtr> *findMethod(const std::string &name,
+//                                                     const std::string &method) const;
+//   types::TypePtr findMember(const std::string &name, const std::string &member)
+//   const;
 
-public: /** Template ASTs **/
-  /// Template function ASTs.
-  /// Mapping from a canonical function name to a pair of
-  /// generalized function type and the untyped function AST.
-  std::unordered_map<std::string,
-                     std::pair<types::TypePtr, std::shared_ptr<FunctionStmt>>>
-      funcASTs;
-  /// Template class ASTs.
-  /// Mapping from a canonical class name to a pair of
-  /// generalized class type and the untyped class AST.
-  std::unordered_map<std::string, types::TypePtr> classASTs;
+// public: /** Template ASTs **/
+//   /// Template function ASTs.
+//   /// Mapping from a canonical function name to a pair of
+//   /// generalized function type and the untyped function AST.
+//   std::unordered_map<std::string,
+//                      std::pair<types::TypePtr, std::shared_ptr<FunctionStmt>>>
+//       funcASTs;
+//   /// Template class ASTs.
+//   /// Mapping from a canonical class name to a pair of
+//   /// generalized class type and the untyped class AST.
+//   std::unordered_map<std::string, types::TypePtr> classASTs;
 
-public:
-  std::shared_ptr<Stmt> getAST(const std::string &name) const;
+// public:
+//   std::shared_ptr<Stmt> getAST(const std::string &name) const;
 
-public: /* Realizations */
-  /// Current function realizations.
-  /// Mapping from a canonical function name to a hashtable
-  /// of realized and fully type-checked function ASTs.
-  std::unordered_map<std::string, std::unordered_map<std::string, FuncRealization>>
-      funcRealizations;
-  /// Current class realizations.
-  /// Mapping from a canonical class name to a hashtable
-  /// of realized and fully type-checked class ASTs.
+// public: /* Realizations */
+//   /// Current function realizations.
+//   /// Mapping from a canonical function name to a hashtable
+//   /// of realized and fully type-checked function ASTs.
+//   std::unordered_map<std::string, std::unordered_map<std::string, FuncRealization>>
+//       funcRealizations;
+//   /// Current class realizations.
+//   /// Mapping from a canonical class name to a hashtable
+//   /// of realized and fully type-checked class ASTs.
 
-  std::unordered_map<std::string, std::unordered_map<std::string, ClassRealization>>
-      classRealizations;
+//   std::unordered_map<std::string, std::unordered_map<std::string, ClassRealization>>
+//       classRealizations;
 
-  // Maps realizedName to canonicalName
-  std::unordered_map<std::string, std::string> realizationLookup;
+//   // Maps realizedName to canonicalName
+//   std::unordered_map<std::string, std::string> realizationLookup;
 
-  // std::vector<std::set<std::pair<std::string>>>
-  // realizationCache; // add newly realized functions here; useful for jit
+//   // std::vector<std::set<std::pair<std::string>>>
+//   // realizationCache; // add newly realized functions here; useful for jit
 
-public:
-  std::vector<ClassRealization> getClassRealizations(const std::string &name);
-  std::vector<FuncRealization> getFuncRealizations(const std::string &name);
+// public:
+//   std::vector<ClassRealization> getClassRealizations(const std::string &name);
+//   std::vector<FuncRealization> getFuncRealizations(const std::string &name);
 
-  std::unordered_map<std::string, types::TypePtr> globalNames;
-  std::unordered_set<std::string> variardicCache;
-};
+//   std::unordered_map<std::string, types::TypePtr> globalNames;
+//   std::unordered_set<std::string> variardicCache;
+// };
 
 template <typename T> class Context : public std::enable_shared_from_this<Context<T>> {
 public:

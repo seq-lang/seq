@@ -15,16 +15,17 @@
 
 #include "lang/seq.h"
 #include "parser/ast/ast.h"
+#include "parser/ast/cache.h"
 #include "parser/ast/codegen/codegen_ctx.h"
 #include "parser/ast/visitor.h"
-#include "parser/ast/walk.h"
 #include "parser/common.h"
 
 namespace seq {
 namespace ast {
 
-class CodegenVisitor : public ASTVisitor {
-  std::shared_ptr<LLVMContext> ctx;
+class CodegenVisitor
+    : public CallbackASTVisitor<seq::Expr *, seq::Stmt *, seq::Pattern *> {
+  std::shared_ptr<CodegenContext> ctx;
   seq::Expr *resultExpr;
   seq::Stmt *resultStmt;
   seq::Pattern *resultPattern;
@@ -35,16 +36,16 @@ class CodegenVisitor : public ASTVisitor {
 
   seq::types::Type *realizeType(types::ClassTypePtr t);
   seq::BaseFunc *realizeFunc(const std::string &name);
-
-  std::shared_ptr<LLVMItem::Item> processIdentifier(std::shared_ptr<LLVMContext> tctx,
-                                                    const std::string &id);
+  std::shared_ptr<CodegenItem> processIdentifier(std::shared_ptr<CodegenContext> tctx,
+                                                 const std::string &id);
 
 public:
-  CodegenVisitor(std::shared_ptr<LLVMContext> ctx);
+  CodegenVisitor(std::shared_ptr<CodegenContext> ctx);
+  static seq::SeqModule *apply(std::shared_ptr<Cache> cache, StmtPtr stmts);
 
-  seq::Expr *transform(const Expr *expr);
-  seq::Stmt *transform(const Stmt *stmt);
-  seq::Pattern *transform(const Pattern *pat);
+  seq::Expr *transform(const ExprPtr &expr) override;
+  seq::Stmt *transform(const StmtPtr &stmt) override;
+  seq::Pattern *transform(const PatternPtr &pat) override;
 
   void visitMethods(const std::string &name);
 
@@ -54,16 +55,11 @@ public:
   void visit(const FloatExpr *) override;
   void visit(const StringExpr *) override;
   void visit(const IdExpr *) override;
-  void visit(const TupleExpr *) override;
   void visit(const IfExpr *) override;
-  void visit(const UnaryExpr *) override;
-  void visit(const BinaryExpr *) override;
   void visit(const PipeExpr *) override;
-  void visit(const TupleIndexExpr *) override;
   void visit(const CallExpr *) override;
   void visit(const StackAllocExpr *) override;
   void visit(const DotExpr *) override;
-  // void visit(const EllipsisExpr *) override;
   void visit(const PtrExpr *) override;
   void visit(const YieldExpr *) override;
 
@@ -75,7 +71,6 @@ public:
   void visit(const AssignStmt *) override;
   void visit(const AssignMemberStmt *) override;
   void visit(const DelStmt *) override;
-  void visit(const PrintStmt *) override;
   void visit(const ReturnStmt *) override;
   void visit(const YieldStmt *) override;
   void visit(const AssertStmt *) override;
@@ -83,10 +78,9 @@ public:
   void visit(const ForStmt *) override;
   void visit(const IfStmt *) override;
   void visit(const MatchStmt *) override;
-  void visit(const ImportStmt *) override;
   void visit(const UpdateStmt *) override;
   void visit(const TryStmt *) override;
-  void visit(const GlobalStmt *) override;
+  // void visit(const GlobalStmt *) override;
   void visit(const ThrowStmt *) override;
   void visit(const FunctionStmt *) override;
   void visit(const ClassStmt *stmt) override;

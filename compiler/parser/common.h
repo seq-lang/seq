@@ -36,15 +36,19 @@ public:
 namespace ast {
 
 struct SrcInfoHash {
-  size_t operator()(const seq::SrcInfo &k) const {
-    // http://stackoverflow.com/a/1646913/126995
-    // size_t res = 17;
-    // res = res * 31 + std::hash<std::string>()(k.file);
-    // res = res * 31 + std::hash<int>()(k.line);
-    // res = res * 31 + std::hash<int>()(k.id);
-    return std::hash<int>()(k.id);
-  }
+  size_t operator()(const seq::SrcInfo &k) const { return std::hash<int>()(k.id); }
 };
+
+struct Expr;
+bool getInt(seq_int_t *o, const std::unique_ptr<ast::Expr> &e, bool zeroOnNull = true);
+std::vector<std::string> split(const std::string &s, char delim);
+std::string escape(std::string s);
+std::string executable_path(const char *argv0);
+std::string getTemporaryVar(const std::string &prefix = "", char p = '.');
+std::string chop(const std::string &s);
+bool startswith(const std::string &s, const std::string &p);
+void error(const char *format);
+void error(const SrcInfo &p, const char *format);
 
 template <typename T> std::string join(const T &items, std::string delim = " ") {
   std::string s = "";
@@ -52,24 +56,6 @@ template <typename T> std::string join(const T &items, std::string delim = " ") 
     s += (i ? delim : "") + items[i];
   return s;
 }
-
-std::vector<std::string> split(const std::string &s, char delim);
-
-std::string escape(std::string s);
-
-std::string executable_path(const char *argv0);
-
-void error(const char *format);
-void error(const SrcInfo &p, const char *format);
-
-std::string getTemporaryVar(const std::string &prefix = "", char p = '.');
-
-std::string chop(const std::string &s);
-
-// template <typename T, typename U> auto in(const T &c, U &i) {
-//   auto f = c.find(i);
-//   return f != c.end() ? f : nullptr;
-// }
 
 template <typename T, typename U> bool in(const std::vector<T> &c, const U &i) {
   auto f = std::find(c.begin(), c.end(), i);

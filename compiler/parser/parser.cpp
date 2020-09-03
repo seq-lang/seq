@@ -1,15 +1,15 @@
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
 
 #include "lang/seq.h"
+#include "parser/ast/cache.h"
 #include "parser/ast/codegen/codegen.h"
-#include "parser/ast/codegen/codegen_ctx.h"
-#include "parser/ast/doc.h"
 #include "parser/ast/format/format.h"
 #include "parser/ast/transform/transform.h"
-#include "parser/ast/transform/transform_ctx.h"
+#include "parser/ast/typecheck/typecheck.h"
 #include "parser/ocaml.h"
 #include "parser/parser.h"
 #include "util/fmt/format.h"
@@ -41,28 +41,37 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
 
     ast::StmtPtr codeStmt =
         isCode ? ast::parseCode(abs, code, startLine) : ast::parseFile(abs);
-    auto transformed = ast::TransformVisitor::apply(argv0, move(codeStmt));
-    // fmt::print("{}\n", transformed->toString());
-    fmt::print("{}\n", ast::FormatVisitor::apply(transformed));
 
-    // auto ctx = ast::TypeContext::getContext(argv0, abs);
-    // if (!isCode)
-    //   stmts = ast::parseFile(abs);
-    // else
-    //   stmts = ast::parseCode(abs, code, startLine);
-    // auto tv = ast::TransformVisitor(ctx).realizeBlock(stmts.get(), false);
-    // LOG3("--- Done with typecheck ---");
+    using namespace std::chrono;
+
+    auto cache = make_shared<ast::Cache>(argv0);
+
+    auto t = high_resolution_clock::now();
+    auto transformed = ast::TransformVisitor::apply(cache, move(codeStmt));
+    fmt::print(stderr, "[T] transform = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
+    // fmt::print("{}\n", transformed->toString());
+    FILE *fo = fopen("_dump.seq", "w");
+    fmt::print(fo, "=== Transform ===\n{}\n", ast::FormatVisitor::apply(transformed));
+    fflush(fo);
+
+    t = high_resolution_clock::now();
+    auto typechecked = ast::TypecheckVisitor::apply(cache, move(transformed));
+    fmt::print(stderr, "[T] typecheck = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
+    fmt::print(fo, "=== Typecheck ===\n{}\n",
+               ast::FormatVisitor::apply(typechecked, cache));
 
     // FILE *fo = fopen("tmp/out.htm", "w");
     // LOG3("{}", ast::FormatVisitor::format(ctx, tv, false, true));
 
-    seq::SeqModule *module;
-    module = new seq::SeqModule();
-    module->setFileName(abs);
-    // auto lctx = ast::LLVMContext::getContext(abs, ctx, module);
-    // ast::CodegenVisitor(lctx).transform(tv.get());
-    // LOG3("--- Done with codegen ---");
-
+    t = high_resolution_clock::now();
+    auto module = ast::CodegenVisitor::apply(cache, move(typechecked));
+    fmt::print(stderr, "[T] codegen   = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
     return module;
   } catch (seq::exc::SeqException &e) {
     if (isTest) {

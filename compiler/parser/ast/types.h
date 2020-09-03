@@ -192,7 +192,7 @@ public:
   std::string realizeString() const override;
 
   LinkTypePtr getLink() override {
-    return std::static_pointer_cast<LinkType>(follow());
+    return std::dynamic_pointer_cast<LinkType>(shared_from_this());
   }
   LinkTypePtr getUnbound() override {
     if (kind == Unbound)

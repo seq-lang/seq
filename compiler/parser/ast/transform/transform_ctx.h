@@ -95,10 +95,6 @@ public:
                                     const std::vector<types::TypePtr> &generics);
   std::string findFile(const std::string &what, const std::string &relativeTo,
                        bool forceStdlib = false) const;
-
-public:
-  static std::pair<std::shared_ptr<TransformContext>, StmtPtr>
-  getContext(const std::string &argv0);
 };
 
 } // namespace ast

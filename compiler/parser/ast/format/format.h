@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "parser/ast/ast.h"
+#include "parser/ast/cache.h"
 #include "parser/ast/visitor.h"
 #include "parser/common.h"
 
@@ -32,6 +33,8 @@ class FormatVisitor : public CallbackASTVisitor<std::string, std::string, std::s
   std::string commentStart, commentEnd;
   std::string keywordStart, keywordEnd;
 
+  std::shared_ptr<Cache> cache;
+
 private:
   template <typename T, typename... Ts> std::string renderExpr(T &&t, Ts &&... args) {
     std::string s;
@@ -49,15 +52,16 @@ private:
   std::string keyword(const std::string &s) const;
 
 public:
-  FormatVisitor(bool html);
+  FormatVisitor(bool html, std::shared_ptr<Cache> cache = nullptr);
   std::string transform(const ExprPtr &e) override;
   std::string transform(const StmtPtr &stmt) override;
   std::string transform(const PatternPtr &ptr) override;
   std::string transform(const StmtPtr &stmt, int indent);
 
   template <typename T>
-  static std::string apply(const T &stmt, bool html = false, bool init = false) {
-    auto t = FormatVisitor(html);
+  static std::string apply(const T &stmt, std::shared_ptr<Cache> cache = nullptr,
+                           bool html = false, bool init = false) {
+    auto t = FormatVisitor(html, cache);
     return fmt::format("{}{}{}", t.header, t.transform(stmt), t.footer);
   }
 

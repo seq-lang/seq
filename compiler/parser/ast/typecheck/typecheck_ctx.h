@@ -15,7 +15,7 @@
 namespace seq {
 namespace ast {
 
-class TypecheckItem {
+struct TypecheckItem {
   enum Kind { Func, Type, Var } kind;
   types::TypePtr type;
   std::string base;
@@ -24,7 +24,6 @@ class TypecheckItem {
   bool staticType;
   std::unordered_set<std::string> attributes;
 
-public:
   TypecheckItem(Kind k, types::TypePtr type, const std::string &base,
                 bool global = false, bool generic = false, bool stat = false)
       : kind(k), type(type), base(base), global(global), genericType(generic),
@@ -45,6 +44,8 @@ public:
 
 class TypeContext : public Context<TypecheckItem> {
 public:
+  std::shared_ptr<Cache> cache;
+
   struct Base {
     types::TypePtr type;
     types::TypePtr returnType;
@@ -58,10 +59,9 @@ public:
   std::set<types::TypePtr> activeUnbounds;
 
 public:
-  static StmtPtr apply(std::shared_ptr<Cache> cache);
   TypeContext(std::shared_ptr<Cache> cache);
 
-  // std::shared_ptr<TypecheckItem> find(const std::string &name) const;
+  std::shared_ptr<TypecheckItem> find(const std::string &name) const;
   types::TypePtr findInternal(const std::string &name) const;
 
   using Context<TypecheckItem>::add;
@@ -87,6 +87,28 @@ public:
                              types::ClassTypePtr generics, bool activate = true);
   types::TypePtr instantiateGeneric(const SrcInfo &srcInfo, types::TypePtr root,
                                     const std::vector<types::TypePtr> &generics);
+
+  const std::vector<types::FuncTypePtr> *findMethod(const std::string &typeName,
+                                                    const std::string &method) const {
+    auto m = cache->classMethods.find(typeName);
+    if (m != cache->classMethods.end()) {
+      auto t = m->second.find(method);
+      if (t != m->second.end())
+        return &t->second;
+    }
+    return nullptr;
+  }
+
+  types::TypePtr findMember(const std::string &typeName,
+                            const std::string &member) const {
+    auto m = cache->classMembers.find(typeName);
+    if (m != cache->classMembers.end()) {
+      for (auto &mm : m->second)
+        if (mm.first == member)
+          return mm.second;
+    }
+    return nullptr;
+  }
 };
 
 } // namespace ast

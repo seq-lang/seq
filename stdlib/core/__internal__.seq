@@ -1,10 +1,6 @@
-cobj = Ptr[byte]
-
-@internal
-type str(len: int, ptr: Ptr[byte]):
+extend str:
     @internal
     def __new__(p: Ptr[byte], l: int) -> str: pass
-type pyobj(p: cobj)
 cimport seq_print(str)
 
 extend Ptr[T]:

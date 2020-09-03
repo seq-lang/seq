@@ -77,9 +77,9 @@ shared_ptr<TransformItem> TransformContext::add(TransformItem::Kind kind,
 string TransformContext::generateCanonicalName(const string &name) {
   if (name.size() && name[0] == '.')
     return name;
-  auto &num = cache->moduleNames[name];
-  string newName = format("{}.{}{}", getBase(), name, num ? format(".{}", num) : "");
-  num++;
+  string newName = format("{}.{}", getBase(), name);
+  auto num = cache->moduleNames[newName]++;
+  newName = num ? format("{}.{}", newName, num) : newName;
   newName = newName[0] == '.' ? newName : "." + newName;
   cache->reverseLookup[newName] = name;
   return newName;
@@ -89,60 +89,6 @@ string TransformContext::getBase() const {
   if (!bases.size())
     return "";
   return bases.back().name;
-}
-
-pair<shared_ptr<TransformContext>, StmtPtr>
-TransformContext::getContext(const string &argv0) {
-  auto cache = make_shared<Cache>(argv0);
-  auto stdlib = make_shared<TransformContext>("", cache);
-  auto stdlibPath = stdlib->findFile("core", "", true);
-  if (stdlibPath == "")
-    error("cannot load standard library");
-  stdlib->setFilename(stdlibPath);
-  cache->imports[""] = {stdlibPath, stdlib};
-
-  for (auto &name : {"void", "bool", "byte", "int", "float"}) {
-    auto canonical = stdlib->generateCanonicalName(name);
-    stdlib->add(TransformItem::Type, name, canonical, true);
-    cache->asts[canonical] =
-        make_unique<ClassStmt>(true, canonical, vector<Param>(), vector<Param>(),
-                               nullptr, vector<string>{"internal"});
-  }
-  for (auto &name : {"Ptr", "Generator", "Optional", "Int", "UInt"}) {
-    auto canonical = stdlib->generateCanonicalName(name);
-    stdlib->add(TransformItem::Type, name, canonical, true);
-    vector<Param> generics;
-    generics.push_back({"T",
-                        string(name) == "Int" || string(name) == "UInt"
-                            ? make_unique<IdExpr>("int")
-                            : nullptr,
-                        nullptr});
-    cache->asts[canonical] =
-        make_unique<ClassStmt>(true, canonical, move(generics), vector<Param>(),
-                               nullptr, vector<string>{"internal"});
-  }
-
-  // Add preamble for variardic stubs
-  auto suite = make_unique<SuiteStmt>();
-  suite->stmts.push_back(make_unique<SuiteStmt>());
-
-  // Load __internal__
-  stdlib->setFlag("internal");
-  assert(stdlibPath.substr(stdlibPath.size() - 12) == "__init__.seq");
-  auto internal = stdlibPath.substr(0, stdlibPath.size() - 12) + "__internal__.seq";
-  stdlib->filename = internal;
-  StmtPtr stmts = parseFile(internal);
-  suite->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
-  auto canonical = stdlib->generateCanonicalName("__argv__");
-  stdlib->add(TransformItem::Var, "__argv__", canonical, true);
-  stdlib->unsetFlag("internal");
-
-  // Load stdlib
-  stdlib->filename = stdlibPath;
-  stmts = parseFile(stdlibPath);
-  suite->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
-
-  return {stdlib, move(suite)};
 }
 
 void TransformContext::dump(int pad) {

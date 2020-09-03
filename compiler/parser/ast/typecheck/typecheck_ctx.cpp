@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "parser/ast/ast.h"
+#include "parser/ast/typecheck/typecheck_ctx.h"
 #include "parser/common.h"
 #include "parser/ocaml.h"
-#include "parser/typecheck/typecheck_ctx.h"
 
 using fmt::format;
 using std::dynamic_pointer_cast;
@@ -27,9 +27,25 @@ using std::vector;
 namespace seq {
 namespace ast {
 
-TypeContext::TypeContext(const std::string &filename, shared_ptr<Cache> cache)
-    : Context<TypecheckItem>("", cache) {
+TypeContext::TypeContext(shared_ptr<Cache> cache)
+    : Context<TypecheckItem>(""), cache(cache) {
   stack.push_front(vector<string>());
+}
+
+shared_ptr<TypecheckItem> TypeContext::find(const std::string &name) const {
+  if (auto t = Context<TypecheckItem>::find(name))
+    return t;
+  if (!name.empty() && name[0] == '.') {
+    auto t = cache->astTypes.find(name);
+    if (t == cache->astTypes.end())
+      return nullptr;
+    else if (auto f = t->second->getFunc())
+      return make_shared<TypecheckItem>(TypecheckItem::Func, f, "");
+    else
+      return make_shared<TypecheckItem>(TypecheckItem::Type, t->second->getClass(), "");
+  }
+  // ((TransformContext *)this)->dump();
+  return nullptr;
 }
 
 types::TypePtr TypeContext::findInternal(const string &name) const {
@@ -38,10 +54,9 @@ types::TypePtr TypeContext::findInternal(const string &name) const {
   return t->getType();
 }
 
-shared_ptr<TypecheckItem> TransformContext::add(TypecheckItem::Kind kind,
-                                                const string &name,
-                                                const types::TypePtr type, bool global,
-                                                bool generic, bool stat) {
+shared_ptr<TypecheckItem> TypeContext::add(TypecheckItem::Kind kind, const string &name,
+                                           const types::TypePtr type, bool global,
+                                           bool generic, bool stat) {
   auto t = make_shared<TypecheckItem>(kind, type, getBase(), global, generic, stat);
   add(name, t);
   return t;
@@ -69,13 +84,10 @@ string TypeContext::getBase(bool full) const {
 
 shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int level,
                                                     bool setActive, bool isStatic) {
-  auto t = make_shared<types::LinkType>(types::LinkType::Unbound,
-                                        realizations->getUnboundCount()++, level,
-                                        nullptr, isStatic);
+  auto t = make_shared<types::LinkType>(types::LinkType::Unbound, cache->unboundCount++,
+                                        level, nullptr, isStatic);
   t->setSrcInfo(srcInfo);
-  if (!typecheck)
-    assert(1);
-  LOG7("[ub] new {}: {} ({}); tc={}", t->toString(0), srcInfo, setActive, typecheck);
+  LOG9("[ub] new {}: {} ({})", t->toString(0), srcInfo, setActive);
   if (setActive)
     activeUnbounds.insert(t);
   return t;
@@ -87,22 +99,21 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
 
 types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr type,
                                         types::ClassTypePtr generics, bool activate) {
-  unordered_map<int, types::TypePtr> cache;
+  unordered_map<int, types::TypePtr> genericCache;
   if (generics)
     for (auto &g : generics->explicits)
       if (g.type &&
           !(g.type->getLink() && g.type->getLink()->kind == types::LinkType::Generic)) {
-        // LOG7("{} inst: {} -> {}", type->toString(), g.id, g.type->toString());
-        cache[g.id] = g.type;
+        genericCache[g.id] = g.type;
       }
-  auto t = type->instantiate(getLevel(), realizations->getUnboundCount(), cache);
-  for (auto &i : cache) {
+  auto t = type->instantiate(getLevel(), cache->unboundCount, genericCache);
+  for (auto &i : genericCache) {
     if (auto l = i.second->getLink()) {
       if (l->kind != types::LinkType::Unbound)
         continue;
       i.second->setSrcInfo(srcInfo);
       if (activeUnbounds.find(i.second) == activeUnbounds.end()) {
-        LOG7("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
+        LOG9("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
              i.second->toString(0), type->toString(), srcInfo, activate);
         // if (i.second->toString() == "?262.0")
         // assert(1);
@@ -127,86 +138,6 @@ types::TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo,
     g->explicits.push_back(types::Generic("", generics[i], c->explicits[i].id));
   }
   return instantiate(srcInfo, root, g);
-}
-
-shared_ptr<TypeContext> TypeContext::getContext(const string &argv0,
-                                                const string &file) {
-  auto realizations = make_shared<RealizationContext>();
-  auto imports = make_shared<ImportContext>(argv0);
-
-  auto stdlibPath = imports->getImportFile("core", "", true);
-  if (stdlibPath == "")
-    error("cannot load standard library");
-  auto stdlib = make_shared<TypeContext>(stdlibPath, realizations, imports);
-  imports->addImport("", stdlibPath, stdlib);
-
-  unordered_map<string, seq::types::Type *> podTypes = {{"void", seq::types::Void},
-                                                        {"bool", seq::types::Bool},
-                                                        {"byte", seq::types::Byte},
-                                                        {"int", seq::types::Int},
-                                                        {"float", seq::types::Float}};
-  for (auto &t : podTypes) {
-    auto name = t.first;
-    auto typ = make_shared<types::ClassType>(name, true);
-    realizations->moduleNames[name] = 1;
-    realizations->classRealizations[name][name] = {name, typ, {}, t.second};
-    stdlib->addType(name, typ);
-    stdlib->addType("." + name, typ);
-  }
-  vector<string> genericTypes = {"Ptr", "Generator", "Optional"};
-  for (auto &t : genericTypes) {
-    auto typ = make_shared<types::ClassType>(
-        t, true, vector<types::TypePtr>(),
-        vector<types::Generic>{
-            {"T",
-             make_shared<types::LinkType>(types::LinkType::Generic,
-                                          realizations->unboundCount),
-             realizations->unboundCount}});
-    realizations->moduleNames[t] = 1;
-    stdlib->addType(t, typ);
-    stdlib->addType("." + t, typ);
-    realizations->unboundCount++;
-  }
-  genericTypes = {"Int", "UInt"};
-  for (auto &t : genericTypes) {
-    auto typ = make_shared<types::ClassType>(
-        t, true, vector<types::TypePtr>(),
-        vector<types::Generic>{
-            {"N",
-             make_shared<types::LinkType>(types::LinkType::Generic,
-                                          realizations->unboundCount, 0, nullptr, true),
-             realizations->unboundCount}});
-    realizations->moduleNames[t] = 1;
-    stdlib->addType(t, typ);
-    stdlib->addType("." + t, typ);
-    realizations->unboundCount++;
-  }
-
-  stdlib->setFlag("internal");
-  assert(stdlibPath.substr(stdlibPath.size() - 12) == "__init__.seq");
-  auto internal = stdlibPath.substr(0, stdlibPath.size() - 12) + "__internal__.seq";
-  stdlib->filename = internal;
-  auto stmts = parseFile(internal);
-  stdlib->filename = stdlibPath;
-
-  imports->setBody("", make_unique<SuiteStmt>());
-  SuiteStmt *tv = static_cast<SuiteStmt *>(imports->getImport("")->statements.get());
-  auto t1 = TransformVisitor(stdlib).realizeBlock(stmts.get(), true);
-  tv->stmts.push_back(move(t1));
-  stdlib->unsetFlag("internal");
-  stdlib->addVar("__argv__", make_shared<types::LinkType>(stdlib->instantiateGeneric(
-                                 SrcInfo(), stdlib->find("Array")->getType(),
-                                 {stdlib->find("str")->getType()})));
-
-  stmts = parseFile(stdlibPath);
-
-  auto t2 = TransformVisitor(stdlib).realizeBlock(stmts.get(), true);
-  tv->stmts.push_back(move(t2));
-  auto ctx = make_shared<TypeContext>(file, realizations, imports);
-  imports->addImport(file, file, ctx);
-
-  LOG7("----------------------------------------------------------------------");
-  return ctx;
 }
 
 void TypeContext::dump(int pad) {
