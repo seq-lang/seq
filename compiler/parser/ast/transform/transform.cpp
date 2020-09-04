@@ -668,7 +668,7 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
       if (!force && !s->type) {
         auto val = ctx->find(l->value);
         if (val && val->isVar() && val->getBase() == ctx->getBase())
-          return Nx<UpdateStmt>(p, move(s->lhs), move(s->rhs));
+          return Nx<UpdateStmt>(p, transform(lhs), move(s->rhs));
       }
       if (auto r = CAST(rhs, IdExpr)) { // simple rename?
         auto val = ctx->find(r->value);
@@ -687,7 +687,6 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
       else
         /// TODO: all toplevel variables are global now!
         ctx->add(TransformItem::Var, l->value, canonical, ctx->isToplevel());
-      LOG7("");
       return s;
     } else {
       error("invalid assignment");
@@ -951,6 +950,9 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     error("builtins must be defined at the toplevel");
 
   generateFunctionStub(stmt->args.size() + 1);
+  if (!isClassMember)
+    ctx->add(TransformItem::Func, stmt->name, canonicalName, ctx->isToplevel());
+
   ctx->bases.push_back({canonicalName});
   ctx->addBlock();
   for (auto &g : stmt->generics)
@@ -974,16 +976,18 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
   }
   auto referencesParent = isClassMember && ctx->bases.back().referencesParent;
   auto attributes = stmt->attributes;
+
+  if (isClassMember)
+    attributes.push_back(".class");
   if (referencesParent ||
       (canonicalName == ".Ptr.__elemsize__" || canonicalName == ".Ptr.__atomic__"))
     attributes.push_back(".method");
   ctx->bases.pop_back();
   ctx->popBlock();
 
-  if (!isClassMember)
-    ctx->add(TransformItem::Func, stmt->name, canonicalName, ctx->isToplevel());
   resultStmt = N<FunctionStmt>(canonicalName, move(ret), clone_nop(stmt->generics),
-                               move(args), move(suite), attributes);
+                               move(args), move(suite), attributes,
+                               isClassMember ? ctx->bases.back().name : "");
   ctx->cache->asts[canonicalName] = clone(resultStmt);
 }
 
@@ -1192,7 +1196,8 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
                         N<SuiteStmt>(move(stmts)), vector<string>()));
   } else if (stmt->lang == "c") {
     auto canonicalName = ctx->generateCanonicalName(stmt->name.first);
-    bool isClassMember = ctx->getLevel() && ctx->bases.back().isType();
+    if (ctx->getLevel() && ctx->bases.back().isType())
+      error("external functions cannot be class methods");
     if (!stmt->ret)
       error("expected return type");
     vector<Param> args;
@@ -1207,10 +1212,9 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
           {stmt->args[ai].name.empty() ? format(".a{}", ai) : stmt->args[ai].name,
            transformType(stmt->args[ai].type), nullptr});
     }
-    if (!isClassMember)
-      ctx->add(TransformItem::Func,
-               stmt->name.second != "" ? stmt->name.second : stmt->name.first,
-               canonicalName, ctx->isToplevel());
+    ctx->add(TransformItem::Func,
+             stmt->name.second != "" ? stmt->name.second : stmt->name.first,
+             canonicalName, ctx->isToplevel());
     resultStmt =
         N<FunctionStmt>(canonicalName, transformType(stmt->ret), vector<Param>(),
                         move(args), nullptr, vector<string>{".c"});

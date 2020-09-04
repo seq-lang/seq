@@ -2,5 +2,155 @@
 a = 5
 b: float = 6.16
 c: optional[str] = None
+print a, b, c  #: 5 6.16 None
 
-#%%
+#%% late_unify
+a = []
+a.append(1)
+print a  #: [1]
+
+#%% map_unify
+def map[T,S](l: list[T], f: function[S,T]):
+    return [f(x) for x in l]
+e = 1
+print map([1, 2, 3], lambda x: x+e)  #: [2, 3, 4]
+
+#%% nested
+def m4[TD](a: int, d: TD):
+    def m5[TE](a: int, d: TD, e: TE):
+        print a, d, e
+    m5(a, d, 1.12)
+m4(1, 's')  #: 1 s 1.12
+m4(1, True)  #: 1 True 1.12
+
+#%% nested_class
+class A[TA]:
+    a: TA
+    # lots of nesting:
+    def m4[TD](self: A[TA], d: TD):
+        def m5[TE](a: TA, d: TD, e: TE):
+            print a, d, e
+        m5(self.a, d, d)
+ax = A(42)
+ax.m4(1)  #: 42 1 1
+
+#%% static
+class A[TA]:
+    a: TA
+    def dump(a, b, c):
+        print a, b, c
+    def m2():
+        A.dump(1, 2, 's')
+    def __str__(self):
+        return 'A'
+A.dump(1, 2, 3)  #: 1 2 3
+A[int].m2()  #: 1 2 s
+A.m2()  #: 1 2 s
+c = A[str]('s')
+c.dump('y', 1.1)  #: A y 1.1
+
+#%% realization_big
+class A[TA,TB,TC]:
+    a: TA
+    b: TB
+    c: TC
+
+    def dump(a, b, c):
+        print a, b, c
+
+    # non-generic method:
+    def m0(self: A[TA,TB,TC], a: int):
+        print a
+
+    # basic generics:
+    def m1[X](self: A[TA,TB,TC], other: A[X,X,X]):
+        print other.a, other.b, other.c
+
+    # non-generic method referencing outer generics:
+    def m2(a: TA, b: TB, c: TC):
+        A.dump(a, b, c)
+
+    # generic args:
+    def m3(self, other):
+        return self.a
+
+    # lots of nesting:
+    def m4[TD](self: A[TA,TB,TC], d: TD):
+        def m5[TE](a: TA, b: TB, c: TC, d: TD, e: TE):
+            print a, b, c, d, e
+        m5(self.a, self.b, self.c, d, d)
+
+    # instantiating the type:
+    def m5(self):
+        x = A(self.a, self.b, self.c)
+        A.dump(x.a, x.b, x.c)
+
+    # deeply nested generic type:
+    def m6[T](v: array[array[array[T]]]):
+        return v[0][0][0]
+a1 = A(42, 3.14, "hello")
+a2 = A(1, 2, 3)
+a1.m1(a2)                           #: 1 2 3
+A[int,float,str].m2(1, 1.0, "one")  #: 1 1 one
+A[int,int,int].m2(11, 22, 33)       #: 11 22 33
+print a1.m3(a2)                     #: 42
+print a1.m3(a2)                     #: 42
+print a2.m3(a1)                     #: 1
+a1.m4(True)                         #: 42 3.14 hello True True
+a1.m4([1])                          #: 42 3.14 hello [1] [1]
+a2.m4("x")                          #: 1 2 3 x x
+a1.m5()                             #: 42 3.14 hello
+a2.m5()                             #: 1 2 3
+
+v1 = array[array[array[str]]](1)
+v2 = array[array[str]](1)
+v3 = array[str](1)
+v1[0] = v2
+v2[0] = v3
+v3[0] = "world"
+print A.m6(v1)                      #: world
+
+f = a2.m0
+f(99)                               #: 99
+
+#%% realization_small
+class B1[T]:
+    a: T
+    def foo[S](self: S) -> B1[int]:
+        return B1[int](111)
+b1 = B1[bool](True).foo()
+print b1.foo().a                    #: 111
+
+class B2[T]:
+    a: T
+    def foo[S](self: B2[S]):
+        return B2[int](222)
+b2 = B2[str]("x").foo()
+print b2.foo().a                    #: 222
+
+# explicit realization:
+def m7[T,S]():
+    print "works"
+m7[str,float]()                     #: works
+m7[str,float]()                     #: works
+m7[float,str]()                     #: works
+
+#%% recursive
+def foo(a):
+    if not a:
+        foo(True)
+    print a
+foo(0)
+#: True
+#: 0
+
+def bar(a):
+    def baz(x):
+        if not x:
+            bar(True)
+        print (x)
+    baz(a)
+bar(0)
+#: True
+#: 0
+

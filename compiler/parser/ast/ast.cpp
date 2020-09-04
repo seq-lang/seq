@@ -476,13 +476,14 @@ ThrowStmt::ThrowStmt(const ThrowStmt &s) : expr(ast::clone(s.expr)) {}
 string ThrowStmt::toString() const { return format("(#throw {})", *expr); }
 
 FunctionStmt::FunctionStmt(const string &n, ExprPtr r, vector<Param> &&g,
-                           vector<Param> &&a, StmtPtr s, const vector<string> &at)
+                           vector<Param> &&a, StmtPtr s, const vector<string> &at,
+                           const string &c)
     : name(n), ret(move(r)), generics(move(g)), args(move(a)), suite(move(s)),
-      attributes(at) {}
+      attributes(at), className(c) {}
 FunctionStmt::FunctionStmt(const FunctionStmt &s)
     : name(s.name), ret(ast::clone(s.ret)), generics(ast::clone_nop(s.generics)),
       args(ast::clone_nop(s.args)), suite(ast::clone(s.suite)),
-      attributes(s.attributes) {}
+      attributes(s.attributes), className(s.className) {}
 string FunctionStmt::toString() const {
   string gs;
   for (auto &a : generics)

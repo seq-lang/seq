@@ -46,12 +46,14 @@ class TypeContext : public Context<TypecheckItem> {
 public:
   std::shared_ptr<Cache> cache;
 
-  struct Base {
+  struct RealizationBase {
     types::TypePtr type;
     types::TypePtr returnType;
-    Base(types::TypePtr p) : type(p), returnType(nullptr) {}
+    std::unordered_map<std::string, types::TypePtr> visitedAsts;
   };
-  std::vector<Base> bases;
+  std::vector<RealizationBase> bases;
+
+  int typecheckLevel;
   /// Function parsing helpers: maintain current return type
   types::TypePtr matchType;
   /// Set of active unbound variables.
@@ -71,8 +73,9 @@ public:
   void dump(int pad = 0) override;
 
 public:
-  std::string getBase(bool full = false) const;
+  std::string getBase() const;
   int getLevel() const { return bases.size(); }
+  types::TypePtr findInVisited(const std::string &name) const;
 
 public:
   std::shared_ptr<types::LinkType> addUnbound(const SrcInfo &srcInfo, int level,

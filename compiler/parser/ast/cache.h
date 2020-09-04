@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <map>
 #include <ostream>
 #include <set>
 #include <string>
@@ -34,7 +35,6 @@ struct Cache {
 
   std::set<std::string> variardics;
   std::unordered_map<std::string, StmtPtr> asts;
-  std::unordered_map<std::string, types::TypePtr> astTypes;
 
   std::unordered_map<std::string,
                      std::unordered_map<std::string, std::vector<types::FuncTypePtr>>>

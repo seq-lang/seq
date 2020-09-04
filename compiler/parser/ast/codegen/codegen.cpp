@@ -122,14 +122,13 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
           if (isdigit(name[0])) // TODO: get rid of this hack
             name = names[names.size() - 2];
           LOG7("[codegen] generating internal fn {} -> {}", ast->name, name);
-          ctx->functions[f.first] = typ->findMagic(name, types);
+          ctx->functions[f.first] = {typ->findMagic(name, types), true};
         } else {
           auto fn = new seq::Func();
           fn->setName(f.first);
-          ctx->functions[f.first] = fn;
+          ctx->functions[f.first] = {fn, false};
         }
-        LOG7("adding {}", f.first);
-        ctx->addFunc(f.first, ctx->functions[f.first]);
+        ctx->addFunc(f.first, ctx->functions[f.first].first);
       }
   CodegenVisitor(ctx).transform(stmts);
   return module;
@@ -190,7 +189,6 @@ void CodegenVisitor::visit(const PipeExpr *expr) {
 }
 
 void CodegenVisitor::visit(const CallExpr *expr) {
-  LOG7("-- {}", expr->expr->toString());
   auto lhs = transform(expr->expr);
   vector<seq::Expr *> items;
   vector<string> names;
@@ -398,7 +396,11 @@ void CodegenVisitor::visit(const ThrowStmt *stmt) {
 
 void CodegenVisitor::visit(const FunctionStmt *stmt) {
   for (auto &real : ctx->cache->realizations[stmt->name]) {
-    auto f = (seq::Func *)ctx->functions[real.first];
+    auto &fp = ctx->functions[real.first];
+    if (fp.second)
+      continue;
+    fp.second = true;
+    auto f = (seq::Func *)fp.first;
     assert(f);
     auto ast = (FunctionStmt *)(ctx->cache->realizationAsts[real.first].get());
     assert(ast);

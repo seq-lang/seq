@@ -1,4 +1,5 @@
 #include "lang/seq.h"
+#include "parser/common.h"
 
 using namespace seq;
 using namespace llvm;
@@ -66,7 +67,7 @@ bool types::RecordType::is(types::Type *type) const {
   if (!isGeneric(type) || b != type->numBaseTypes())
     return false;
 
-  if (named()) {
+  if (named() && !ast::startswith(name, "Tuple.")) {
     auto *rec = dynamic_cast<types::RecordType *>(type);
     assert(rec);
     if (name != rec->name)

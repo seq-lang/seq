@@ -1,0 +1,548 @@
+# Basic types
+
+
+a = None
+print a
+a = 5
+print a
+
+--
+
+a = True
+print a
+
+--
+
+a = 51
+print a
+
+--
+
+a = 5.15
+print a
+
+--
+
+a = 'kthxbai'
+print a
+
+--
+
+a, b = 1, True
+c = f'and this is {a} followed by {b}'
+print c, f'{b}{a}', f'.. {1+a=} .. {b} ...'
+
+--
+
+a = s'ACGT'
+print a
+
+--
+
+# IdExpr deep test
+# KmerExpr
+# UnpackExpr
+
+e = ('str', 1, True, 5.15)
+print e, e[1]
+
+--
+
+g = []
+f = [1, 2, 3, 1, 2, 3]
+g.append(('str', 1, True, 5.15))
+print f, g
+
+gs = {1.12}
+print gs
+fs = {1, 2, 3, 1, 2, 3}
+gs.add(1.12)
+gs.add(1.13)
+print fs, gs
+
+gd = {1: 'jedan', 2: 'dva', 2: 'two', 3: 'tri'}
+fd = {}
+fd['jedan'] = 1
+fd['dva'] = 2
+print gd, fd
+
+# --
+
+--
+
+l = [i for i in range(10) if i%2 == 0]
+s = {i%3 for i in range(20)}
+d = {(i, j): f'item {i}/{j}'
+     for i in range(50) if i % 2 == 0 if i % 3 == 0
+     for j in range(2) if j == 1}
+
+z = 3
+g = (e for e in range(20) if e % z == 1)
+print l, s, d, g, list(g)
+
+--
+
+c = 5
+a = 1 if c < 5 else 2
+b = -(1 if c >= 5 else 2)
+print a, b
+
+--
+
+a, b = False, 1
+print not a, ~b, +b, -b, -(+(-b))
+
+--
+
+x, y = True, False
+a, b = 1, 2
+c = [1, 2, 3]
+
+print x and y, x or y
+print a+b, a-b, a*b, 5**b, a/b, a//b
+print a&b, a|b, a<<b, a>>b, a^b
+print a in c, a not in c
+
+# Todo: type instance
+
+--
+
+def foo(a, b):
+    return a+b
+bar = lambda c, d: c+d
+def hai(e):
+    while e < 0:
+        yield e
+        e -= 1
+def echo(s):
+    print s
+foo(1,2) |> bar(4) |> echo # hai |> echo
+
+--
+
+z = [1, 2, 3, 4, 5]
+y = (1, 'foo', True)
+print z[2], y[1]
+print z[:1], z[1:], z[1:3], z[:4:2], z[::-1]
+
+--
+
+a = 5
+# print typeof(a)
+z = list[typeof(a)]()
+z.append(6)
+print z
+
+--
+
+v = 5
+c = __ptr__(v)
+print int(c)
+
+--
+
+def mysum(start):
+    m = start
+    while True:
+        a = (yield)
+        if a == -1:
+            break
+        m += a
+    yield m
+iadder = mysum(0)
+next(iadder)
+for i in range(10):
+    iadder.send(i)
+print iadder.send(-1)
+
+
+
+
+# z= lambda x:x+1
+# print z(2)#, (lambda x: x+1)(2) # but why??
+
+# def map[T,S](l: list[T], f: function[S,T]):
+#     return [f(x) for x in l]
+# # print map([1, 2, 3], lambda x: x+1) fails, why?
+# ll = map([1, 2, 3], lambda x: x+1)
+# print ll # print directly fails... but why?
+
+# --
+
+# # FStringExpr / Kmer / pseq
+# # a = None
+# b: optional[int] = None
+# c = [1, 2]
+# d = []
+
+# x = 5
+# g = [1, x]
+# d.append(g)
+# (g, d)
+# z = 1
+# zp = __ptr__(z)
+# # set / dict
+
+# --
+
+# # x = [1,2,3,4,5]
+# # y = [1.1,2.2,3.3,4.4,5.5]
+# # [a+1 for a in x]
+# # (a+b for a in x if a%2==0 for b in y)
+# # ~1 if x else 2
+
+# --
+
+# a = [1, 2]
+# a.arr[0]
+# # *a
+
+# b = (1, 2.2, 's')
+# b[1]
+# b[0]
+# b[2]
+
+# --
+
+# def foo(a, b):
+#     return a+b
+# def bar(c, d):
+#     return c+d
+# def hai(e):
+#     while e < 0:
+#         yield e
+#         e -= 1
+# def echo(s):
+#     print s
+# foo(1,2) |> bar(4) |> hai |> echo
+
+# --
+
+# def foo(a, b, c, d=1, e='s'):
+#     print (a, b, c, d, e)
+# foo(1, 2, 3)
+
+# z = foo(..., ..., c=5.12)
+# z(b=1, a='s')
+
+# --
+
+# class X[T, N: int]:
+#     n: Int[N]
+#     t: list[T]
+
+# x = X(Int[8](1), ['a'])
+# (x.n, x.t)
+
+# --
+
+# # l = [1,2,3,4,5]
+# # l[1:3], l[::-1]
+# # --
+
+# # def foo[T, S](x: T):
+# #     return x
+# # foo(1)
+
+# def map[T,S](l: list[T], f: function[S,T]):
+#     return [f(x) for x in l]
+# ll = map([1, 2, 3], lambda x: x+1)
+
+# --
+
+# foo(__ptr__(1), __ptr__(1.1))
+
+# print typeof()
+# tuple/function idexpr
+
+
+
+
+# --
+
+
+# --
+
+# def foo[T, U: int](a: T, b: Int[U]) -> T:
+#     print U, b
+#     return a
+# z = Int[8](1) #, Int[8](2)
+# foo[int, 10](1, z)
+
+# foo(2, Int[33](2))
+# foo[int,10](2, Int[33](2))
+
+
+# --
+
+
+# --
+
+# a = []
+# b = []
+# def foo(x: tuple[list[int], list[float]]):
+#     print x
+# z = (a, b)
+# foo(z)
+# print a
+
+# print [1,2,3]
+# extend seq:
+#     def __len__(self: seq):
+#         return abs(self.len)
+#     def _slice_direct(self: seq, a: int, b: int):
+#         if self.len >= 0:
+#             return seq(self.ptr + a, b - a)
+#         else:
+#             return seq(self.ptr + (-self.len - b), -(b - a))
+#     def split(self: seq, k: int, step: int = 1):
+#         i = 0
+#         while i + k <= len(self):
+#             yield self._slice_direct(i,i+k)
+#             i += step
+#     def __str__(self) -> str:
+#         return str(self.ptr, self.len)
+#     def __getitem__(self: seq, idx: int):
+#         n = len(self)
+#         if idx < 0:
+#             idx += n
+#         if not (0 <= idx < n):
+#             raise IndexError("seq index out of range")
+#         if self.len >= 0:
+#             return seq(self.ptr + idx, 1)
+#         else:
+#             return seq(self.ptr + (n - idx - 1), -1)
+
+# class Pair[T]:
+#     a: T
+#     b: T
+
+#     def sum(self, c):
+#         return self.a + self.b + c
+
+#     def dump(self):
+#         print 'Pair:', self.a, self.b
+
+#     def swap(self):
+#         tmp = self.a
+#         self.a = self.b
+#         self.b = tmp
+
+#     def iter(self):
+#         yield self.a
+#         yield self.b
+
+# class X[T]:
+#     t: T
+
+#     def main[S](args: S):
+#         def f(s: seq):
+#             v = array[seq](s.len//32)
+#             i = 0
+#             for t in s.split(32, 32):
+#                 v[i] = t
+#                 i += 1
+#             return v
+
+#         def myiter(a):
+#             i = 0
+#             while i < a.len:
+#                 yield a[i]
+#                 i += 1
+
+#         #farr = array[function[array[seq], seq]](1)
+#         #farr[0] = f
+
+#         def ident(s):
+#             return s
+
+#         a = array[seq](2)
+#         a[0] = s'ACGT'
+#         a[1] = s'NANANANANANANANANANANANANANANANANANANANANANANANANANANANANANANANA'
+#         for i in enumerate(myiter(a)):
+#             print i[0], i[1]
+
+#         y = f(a[1])
+#         print y.len
+#         for i in enumerate(myiter(y)):
+#             print i[0], i[1]
+
+#         def process_input(input: seq):
+#             v = f(input)
+#             for r in enumerate(myiter(v)):
+#                 print r[0], r[1]
+#             print input
+#             print ident(input)
+#             print v.len
+
+#             print v[0]
+#             # match v[0]:
+#             #     case s'A...':
+#             #         print 'caught'
+#             #     case _:
+#             #         print 'default'
+
+#             for v1 in input.split(64,64):
+#                 print v1
+#                 for v2 in v1.split(32, 32):
+#                     for v3 in v2.split(16, 16):
+#                         print v3
+#                     print v2
+#                 print v1
+#             print ident(input)
+#             print v[1]
+#             b = (v[1], ((v)[2]), (v[1], 4.2))
+#             print b[2][1]
+#         myiter(args) |> process_input
+
+#     def main2():
+#         def hello():
+#             return "hello world"
+
+#         def hello2():
+#             print "hello again"
+
+#         print hello()
+#         hello2()
+#         print 42 + 2.2
+#         print -13
+#         x = 4.2
+#         print x
+#         x = .42
+#         print -x if x < 1 else +x
+#         b = (True, not True)
+#         print b[0]
+#         b = (b[0], not not False)
+#         print b[1]
+
+#         def fib(n: int) -> int:
+#             type F(f: function[int, int], x: int)
+#             def apply(f: function[int, int], x: int):
+#                 return f(x)
+#             def rec(pair: F):
+#                 return apply(pair.f, pair.x - 1) + apply(pair.f, pair.x - 2)
+#             return n if n <= 1 else rec(F(fib, n))
+
+#         def fib2(n) -> int:
+#             return n if n <= 1 else fib2(n-1) + fib2(n-2)
+
+#         # print fib(10)
+#         print fib2(10)
+
+#         for i in range(1 if b[0] else 2, 5 + 5):
+#             if i == 3: continue
+#             elif i >= 7:
+#                 break
+#             else:
+#                 for z in range(i, i + 1): print z
+
+#         type Person(name: str, age: int)
+
+#         def whois(person: Person):
+#             print person.name, person.age
+
+#         def birthday(person: Person):
+#             return Person(person.name, person.age + 1)
+
+#         joe = Person("Joe", 42)
+#         whois(joe)
+#         joe = birthday(joe)
+#         whois(joe)
+
+#         p = Pair[int](42, 19)
+#         print p.sum(100.1)  # 42 + 19 + 100 = 161
+#         print p.sum(100)
+#         p.dump()  # 42,19
+#         p.swap()
+#         for a in p.iter(): print a  # 19,42
+
+#         q = Pair(4.2, 1.9)
+#         print q.sum(10.0)
+#         for a in q.iter(): print a
+#         q.swap()
+#         Pair[float].dump(q)
+
+#         def add[T](a: T, b: T, c: T):
+#             return a + b + c
+
+#         # add_one = add(1, ..., ...)
+#         # add_two = add[int](3, ..., -1)
+#         print add[int](1, 2, 3)
+#         # print add_one(5, 0)
+#         # print 42 |> add_two
+
+# args = array[seq](1)
+# args[0] = s'ACATACCGGCCAATCGCGACAACGCAACAGAGAAAGAACTAGACGCTTGCTACATTATCGTTAACTCCTAAGCTCAAACCTAATGTGGCTAACTCCCCTTGGCCGGAACATAAGCCAAATCGTACGGCGACACGATACACGGCGGAGGACT'
+# X[str].main(args)
+# X[seq].main(args)
+# X[str].main2()
+# X[float].main2()
+
+# class list[T]:
+#     a: T
+#     i: int
+#     def __init__(self: list[T]):
+#         self.i=0
+#     def append(self: list[T], i: T):
+#         self.a = i
+#         self.i = 1
+#     def __str__(self: list[T]):
+#         return "hi"
+#     def __iter__(self: list[T]):
+#         yield self.a
+# l = list()
+# l.append(1.1)
+
+# def hai(i: int, b: float):
+#     pass
+
+# def hai[T](i: int, b: T):
+#     pass
+
+# def hai[T](i: int, b: T) -> T:
+#     return b
+# hai(1, 5)
+# hai(1, 15.5)
+
+# c = []
+# c.append('haha')
+# print c
+
+# for x in c:
+#     print x
+
+# d = [y for y in c]
+# (c, )
+# print d
+
+# ExternalProject_Add(tapir
+#   GIT_REPOSITORY https://github.com/seq-lang/Tapir-LLVM
+#   GIT_TAG origin/release_60-release
+#   SOURCE_DIR ${CMAKE_BINARY_DIR}/tapir
+#   CMAKE_ARGS
+#   CONFIGURE_COMMAND cmake .. -DLLVM_INCLUDE_TESTS=OFF \
+#                -DLLVM_ENABLE_RTTI=ON \
+#                -DCMAKE_BUILD_TYPE=Release \
+#                -DLLVM_TARGETS_TO_BUILD=host
+#   BUILD_COMMAND cmake --build . --config Release
+#   BUILD_IN_SOURCE ON
+#   INSTALL_DIR ${CMAKE_BINARY_DIR}/bdwgc/build
+#   INSTALL_COMMAND make install
+#   # LOG_DOWNLOAD ON
+#   # LOG_CONFIGURE ON
+#   # LOG_BUILD ON
+#   # LOG_INSTALL ON
+# )
+
+# ExternalProject_Add(ocaml
+#   URL https://github.com/ocaml/ocaml/archive/4.02.3.tar.gz
+#   SOURCE_DIR ${CMAKE_BINARY_DIR}/ocaml
+#   CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/ocaml/configure -prefix ${CMAKE_BINARY_DIR}/ocaml/build CC ${CMAKE_C_COMPILER}
+#   BUILD_COMMAND make world.opt -j
+#   BUILD_IN_SOURCE ON
+#   INSTALL_DIR ${CMAKE_BINARY_DIR}/ocaml/build
+#   INSTALL_COMMAND make install)
+# ExternalProject_Get_Property(ocaml install_dir)
+# set(OCAML_PREFIX "${install_dir}/bin/")
+# message(${OCAML_PREFIX})
+

@@ -181,9 +181,9 @@ seq::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
     assert(f);
     auto callee = realizeType(f);
     vector<seq::types::Type *> partials(f->args.size() - 1, nullptr);
-    for (int i = 8; i < name.size(); i++)
+    for (int i = 9; i < name.size(); i++)
       if (name[i] == '1')
-        partials[i] = realizeType(f->args[i - 8 + 1]->getClass());
+        partials[i - 9] = realizeType(f->args[i - 9 + 1]->getClass());
     handle = seq::types::PartialFuncType::get(callee, partials);
   } else {
     vector<string> names;

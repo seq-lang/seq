@@ -54,7 +54,7 @@ public:
   seq::TryCatch *tryCatch;
   seq::SeqJIT *jit;
   std::unordered_map<std::string, seq::types::Type *> types;
-  std::unordered_map<std::string, seq::BaseFunc *> functions;
+  std::unordered_map<std::string, std::pair<seq::BaseFunc *, bool>> functions;
 
 public:
   CodegenContext(std::shared_ptr<Cache> cache, seq::Block *block, seq::BaseFunc *base,

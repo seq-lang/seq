@@ -311,6 +311,8 @@ int ClassType::unify(TypePtr typ, Unification &us) {
       return -1;
 
     s = 0;
+    if (explicits.size() != t->explicits.size())
+      return -1;
     for (int i = 0; i < explicits.size(); i++) {
       if ((s = explicits[i].type->unify(t->explicits[i].type, us)) == -1)
         return -1;

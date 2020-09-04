@@ -28,21 +28,31 @@ namespace seq {
 namespace ast {
 
 TypeContext::TypeContext(shared_ptr<Cache> cache)
-    : Context<TypecheckItem>(""), cache(cache) {
+    : Context<TypecheckItem>(""), cache(cache), typecheckLevel(0) {
   stack.push_front(vector<string>());
+  bases.push_back({nullptr, nullptr});
 }
 
-shared_ptr<TypecheckItem> TypeContext::find(const std::string &name) const {
+types::TypePtr TypeContext::findInVisited(const string &name) const {
+  for (int bi = bases.size() - 1; bi >= 0; bi--) {
+    auto t = bases[bi].visitedAsts.find(name);
+    if (t == bases[bi].visitedAsts.end())
+      continue;
+    return t->second;
+  }
+  return nullptr;
+}
+
+shared_ptr<TypecheckItem> TypeContext::find(const string &name) const {
   if (auto t = Context<TypecheckItem>::find(name))
     return t;
   if (!name.empty() && name[0] == '.') {
-    auto t = cache->astTypes.find(name);
-    if (t == cache->astTypes.end())
-      return nullptr;
-    else if (auto f = t->second->getFunc())
-      return make_shared<TypecheckItem>(TypecheckItem::Func, f, "");
-    else
-      return make_shared<TypecheckItem>(TypecheckItem::Type, t->second->getClass(), "");
+    if (auto tt = findInVisited(name)) {
+      if (auto f = tt->getFunc())
+        return make_shared<TypecheckItem>(TypecheckItem::Func, f, "");
+      else
+        return make_shared<TypecheckItem>(TypecheckItem::Type, tt->getClass(), "");
+    }
   }
   // ((TransformContext *)this)->dump();
   return nullptr;
@@ -62,24 +72,14 @@ shared_ptr<TypecheckItem> TypeContext::add(TypecheckItem::Kind kind, const strin
   return t;
 }
 
-string TypeContext::getBase(bool full) const {
+string TypeContext::getBase() const {
   if (!bases.size())
     return "";
-  if (!full) {
-    if (auto f = bases.back().type->getFunc())
-      return f->name;
-    assert(bases.back().type->getClass());
-    return bases.back().type->getClass()->name;
-  } else {
-    vector<string> s;
-    for (auto &b : bases) {
-      if (auto f = b.type->getFunc())
-        s.push_back(f->name);
-      else
-        s.push_back(b.type->getClass()->name);
-    }
-    return join(s, ":");
-  }
+  vector<string> s;
+  for (auto &b : bases)
+    if (b.type)
+      s.push_back(b.type->realizeString());
+  return join(s, ":");
 }
 
 shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int level,

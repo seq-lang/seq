@@ -66,7 +66,7 @@ void Func::addAttribute(std::string attr) {
     auto name = genericName();
     auto i = name.find('['); // chop off realization part
     if (i != std::string::npos)
-      name = name.substr(0, i);
+      name = name.substr(1, i - 1);
     builtins[name] = this;
   } else if (attr == "prefetch") {
     if (prefetch)

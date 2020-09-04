@@ -148,7 +148,7 @@ void TypecheckVisitor::visit(const IdExpr *expr) {
   auto val = ctx->find(expr->value);
   if (!val)
     ctx->dump();
-  assert(val);
+  seqassert(val, "cannot find '{}'", expr->value);
   if (val->isStatic()) {
     auto s = val->getType()->getStatic();
     assert(s);
@@ -185,7 +185,7 @@ void TypecheckVisitor::visit(const BinaryExpr *expr) {
   if (le->getType()->getUnbound() || re->getType()->getUnbound()) {
     resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
     resultExpr->setType(
-        forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->getLevel())));
+        forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
   } else if (expr->op == "is") {
     if (!le->getType()->canRealize() || !le->getType()->canRealize()) {
       resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
@@ -378,7 +378,7 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
     resultExpr = N<IndexExpr>(move(e), transform(expr->index));
     resultExpr->setType(expr->getType()
                             ? expr->getType()
-                            : ctx->addUnbound(getSrcInfo(), ctx->getLevel()));
+                            : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
   }
 }
 
@@ -450,7 +450,7 @@ void TypecheckVisitor::visit(const CallExpr *expr) {
     resultExpr = N<CallExpr>(move(e), move(args));
     resultExpr->setType(expr->getType()
                             ? expr->getType()
-                            : ctx->addUnbound(getSrcInfo(), ctx->getLevel()));
+                            : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
     return;
   }
   if (c->getClass() && !c->getClass()->getCallable()) { // route to a call method
@@ -520,7 +520,7 @@ void TypecheckVisitor::visit(const DotExpr *expr) {
   TypePtr typ = nullptr;
   if (lhs->getType()->getUnbound()) {
     typ = expr->getType() ? expr->getType()
-                          : ctx->addUnbound(getSrcInfo(), ctx->getLevel());
+                          : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
   } else if (auto c = lhs->getType()->getClass()) {
     if (auto m = ctx->findMethod(c->name, expr->member)) {
       if (m->size() > 1)
@@ -564,7 +564,7 @@ void TypecheckVisitor::visit(const DotExpr *expr) {
 
 void TypecheckVisitor::visit(const EllipsisExpr *expr) {
   resultExpr = N<EllipsisExpr>();
-  resultExpr->setType(ctx->addUnbound(getSrcInfo(), ctx->getLevel()));
+  resultExpr->setType(ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
 }
 
 void TypecheckVisitor::visit(const TypeOfExpr *expr) {
@@ -591,10 +591,11 @@ void TypecheckVisitor::visit(const PtrExpr *expr) {
 
 void TypecheckVisitor::visit(const YieldExpr *expr) {
   resultExpr = N<YieldExpr>();
-  if (!ctx->getLevel() || !ctx->bases.back().type->getFunc())
+  if (ctx->bases.size() <= 1)
     error("(yield) cannot be used outside of functions");
-  auto t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(".Generator"),
-                                   {ctx->addUnbound(getSrcInfo(), ctx->getLevel())});
+  auto t =
+      ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(".Generator"),
+                              {ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)});
   auto &base = ctx->bases.back();
   if (base.returnType)
     t = forceUnify(base.returnType, t);
@@ -638,7 +639,7 @@ void TypecheckVisitor::visit(const AssignStmt *stmt) {
                : rhs->getType()->getFunc() ? TypecheckItem::Func : TypecheckItem::Var,
            l->value, rhs->getType(), l->value[0] == '.');
   if (l->value[0] == '.')
-    ctx->cache->astTypes[l->value] = rhs->getType();
+    ctx->bases.back().visitedAsts[l->value] = rhs->getType();
   resultStmt = N<AssignStmt>(clone(stmt->lhs), move(rhs), move(typExpr));
 }
 
@@ -711,7 +712,7 @@ void TypecheckVisitor::visit(const WhileStmt *stmt) {
 void TypecheckVisitor::visit(const ForStmt *stmt) {
   auto iter = transform(stmt->iter);
   TypePtr varType = nullptr;
-  varType = ctx->addUnbound(stmt->var->getSrcInfo(), ctx->getLevel());
+  varType = ctx->addUnbound(stmt->var->getSrcInfo(), ctx->typecheckLevel);
   if (!iter->getType()->getUnbound()) {
     auto iterType = iter->getType()->getClass();
     if (!iterType || iterType->name != ".Generator")
@@ -777,36 +778,37 @@ void TypecheckVisitor::visit(const ThrowStmt *stmt) {
 
 void TypecheckVisitor::visit(const FunctionStmt *stmt) {
   resultStmt = N<FunctionStmt>(stmt->name, nullptr, vector<Param>(), vector<Param>(),
-                               nullptr, stmt->attributes);
-  bool isClassMember = ctx->getLevel() && !ctx->bases.back().type->getFunc();
-  auto it = ctx->cache->astTypes.find(stmt->name);
-  if (it != ctx->cache->astTypes.end())
+                               nullptr, stmt->attributes, stmt->className);
+  bool isClassMember = in(stmt->attributes, ".class");
+
+  if (ctx->findInVisited(stmt->name))
     return;
 
   auto t = make_shared<FuncType>(
       stmt->name,
       ctx->findInternal(format(".Function.{}", stmt->args.size()))->getClass());
 
-  ctx->bases.push_back({t});
   ctx->addBlock();
-  t->explicits = parseGenerics(stmt->generics, ctx->getLevel() - 1); // level down
+  t->explicits = parseGenerics(stmt->generics, ctx->typecheckLevel); // level down
   vector<TypePtr> generics;
   for (auto &i : stmt->generics)
     generics.push_back(ctx->find(i.name)->getType());
+
+  ctx->typecheckLevel++;
   if (stmt->ret) {
     t->args.push_back(transformType(stmt->ret)->getType());
   } else {
-    t->args.push_back(ctx->addUnbound(getSrcInfo(), ctx->getLevel()));
+    t->args.push_back(ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
     generics.push_back(t->args.back());
   }
   for (auto &a : stmt->args) {
     t->args.push_back(a.type ? transformType(a.type)->getType()
-                             : ctx->addUnbound(getSrcInfo(), ctx->getLevel()));
+                             : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
     if (!a.type)
       generics.push_back(t->args.back());
     ctx->add(TypecheckItem::Var, a.name, t->args.back());
   }
-  ctx->bases.pop_back();
+  ctx->typecheckLevel--;
   if (stmt->name == ".unwrap")
     assert(1);
   for (auto &g : generics) { // Generalize generics
@@ -815,18 +817,22 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
       g->getLink()->kind = LinkType::Generic;
   }
   ctx->popBlock();
-  if (ctx->getLevel())
+  if (ctx->bases.size())
     t->parent = ctx->bases.back().type;
-  if (isClassMember && !in(stmt->attributes, ".method")) {
-    t->codegenParent = t->parent;
-    t->parent = ctx->getLevel() > 1 ? ctx->bases[ctx->bases.size() - 2].type : nullptr;
+  if (isClassMember) {
+    auto val = ctx->find(stmt->className);
+    assert(val && val->getType());
+    if (!in(stmt->attributes, ".method"))
+      t->codegenParent = val->getType();
+    else
+      t->parent = val->getType();
   }
 
   t->setSrcInfo(stmt->getSrcInfo());
-  t = std::static_pointer_cast<FuncType>(t->generalize(ctx->getLevel()));
+  t = std::static_pointer_cast<FuncType>(t->generalize(ctx->typecheckLevel));
   LOG7("[stmt] added func {}: {} (base={}; parent={})", stmt->name, t->toString(),
-       ctx->getBase(true), printParents(t->parent));
-  ctx->cache->astTypes[stmt->name] = t;
+       ctx->getBase(), printParents(t->parent));
+  ctx->bases.back().visitedAsts[stmt->name] = t;
 
   if ((in(stmt->attributes, "builtin") || in(stmt->attributes, ".c")) &&
       !t->canRealize())
@@ -840,41 +846,41 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
 void TypecheckVisitor::visit(const ClassStmt *stmt) {
   resultStmt = N<ClassStmt>(stmt->isRecord, stmt->name, vector<Param>(),
                             vector<Param>(), N<SuiteStmt>(), stmt->attributes);
-  auto it = ctx->cache->astTypes.find(stmt->name);
-  if (it != ctx->cache->astTypes.end())
+  if (ctx->findInVisited(stmt->name))
     return;
 
   vector<StmtPtr> stmts;
   stmts.push_back(move(resultStmt));
 
-  auto ct = make_shared<ClassType>(stmt->name, stmt->isRecord, vector<TypePtr>(),
-                                   vector<Generic>(),
-                                   ctx->getLevel() ? ctx->bases.back().type : nullptr);
+  auto ct = make_shared<ClassType>(
+      stmt->name, stmt->isRecord, vector<TypePtr>(), vector<Generic>(),
+      ctx->typecheckLevel ? ctx->bases.back().type : nullptr);
   ct->setSrcInfo(stmt->getSrcInfo());
   auto ctxi = make_shared<TypecheckItem>(TypecheckItem::Type, ct, ctx->getBase(), true);
   if (!stmt->isRecord) // add classes early
     ctx->add(stmt->name, ctxi);
-  ctx->cache->astTypes[stmt->name] = ct;
+  ctx->bases.back().visitedAsts[stmt->name] = ct;
 
-  ctx->bases.push_back({ct});
-  ct->explicits = parseGenerics(stmt->generics, ctx->getLevel() - 1);
+  ct->explicits = parseGenerics(stmt->generics, ctx->typecheckLevel);
+  ctx->typecheckLevel++;
   for (auto &a : stmt->args) {
-    auto t = transformType(a.type)->getType()->generalize(ctx->getLevel() - 1);
+    auto t = transformType(a.type)->getType()->generalize(ctx->typecheckLevel - 1);
     ctx->cache->classMembers[stmt->name].push_back({a.name, t});
     if (stmt->isRecord)
       ct->args.push_back(t);
   }
   if (stmt->isRecord)
     ctx->add(stmt->name, ctxi);
+
   if (stmt->suite)
     for (auto &s : ((SuiteStmt *)(stmt->suite.get()))->stmts) {
       auto t = transform(s);
       auto f = CAST(t, FunctionStmt)->name;
       ctx->cache->classMethods[stmt->name][ctx->cache->reverseLookup[f]].push_back(
-          ctx->cache->astTypes[f]->getFunc());
+          ctx->findInVisited(f)->getFunc());
       stmts.push_back(move(t));
     }
-  ctx->bases.pop_back();
+  ctx->typecheckLevel--;
 
   for (auto &g : stmt->generics) { // Generalize in place
     auto val = ctx->find(g.name);
@@ -886,8 +892,7 @@ void TypecheckVisitor::visit(const ClassStmt *stmt) {
     ctx->remove(g.name);
   }
 
-  LOG7("[class] {} (base={}, parent={})", ct->toString(), ctx->getBase(true),
-       printParents(ct->parent));
+  LOG7("[class] {} (parent={})", ct->toString(), printParents(ct->parent));
   for (auto &m : ctx->cache->classMembers[stmt->name])
     LOG7("       - member: {}: {}", m.first, m.second->toString());
   for (auto &m : ctx->cache->classMethods[stmt->name])
@@ -905,22 +910,22 @@ void TypecheckVisitor::visit(const ExtendStmt *stmt) {
   auto val = ctx->find(i->value);
   assert(val && val->isType());
   auto ct = val->getType()->getClass();
-  ctx->bases.push_back({ct});
   ctx->addBlock();
   for (int i = 0; i < stmt->generics.size(); i++) {
     auto l = ct->explicits[i].type->getLink();
     assert(l);
     ctx->add(TypecheckItem::Type, stmt->generics[i],
              make_shared<LinkType>(LinkType::Unbound, ct->explicits[i].id,
-                                   ctx->getLevel() - 1, nullptr, l->isStatic),
+                                   ctx->typecheckLevel - 1, nullptr, l->isStatic),
              false, true, l->isStatic);
   }
+  ctx->typecheckLevel++;
   vector<StmtPtr> stmts;
   for (auto &s : ((SuiteStmt *)(stmt->suite.get()))->stmts) {
     auto t = transform(s);
     auto f = CAST(t, FunctionStmt)->name;
     ctx->cache->classMethods[i->value][ctx->cache->reverseLookup[f]].push_back(
-        ctx->cache->astTypes[f]->getFunc());
+        ctx->findInVisited(f)->getFunc());
     stmts.push_back(move(t));
   }
   for (int i = 0; i < stmt->generics.size(); i++)
@@ -929,7 +934,7 @@ void TypecheckVisitor::visit(const ExtendStmt *stmt) {
       assert(t && t->kind == LinkType::Unbound);
       t->kind = LinkType::Generic;
     }
-  ctx->bases.pop_back();
+  ctx->typecheckLevel--;
   ctx->popBlock();
   resultStmt = N<SuiteStmt>(move(stmts));
 }
@@ -937,8 +942,9 @@ void TypecheckVisitor::visit(const ExtendStmt *stmt) {
 void TypecheckVisitor::visit(const StarPattern *pat) {
   resultPattern = N<StarPattern>();
 
-  resultPattern->setType(forceUnify(
-      pat, forceUnify(ctx->matchType, ctx->addUnbound(getSrcInfo(), ctx->getLevel()))));
+  resultPattern->setType(
+      forceUnify(pat, forceUnify(ctx->matchType,
+                                 ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel))));
 }
 
 void TypecheckVisitor::visit(const IntPattern *pat) {
@@ -991,7 +997,7 @@ void TypecheckVisitor::visit(const TuplePattern *pat) {
 
 void TypecheckVisitor::visit(const ListPattern *pat) {
   auto p = N<ListPattern>(transform(pat->patterns));
-  TypePtr t = ctx->addUnbound(getSrcInfo(), ctx->getLevel());
+  TypePtr t = ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
   for (auto &pp : p->patterns)
     forceUnify(t, pp->getType());
   t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(".list"), {t});
@@ -1312,9 +1318,25 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
       return it->second;
     }
 
-    LOG7("[realize] fn {} -> {}", t->name, t->realizeString());
+    int depth = 1;
+    for (auto p = t->parent; p;) {
+      if (auto f = p->getFunc()) {
+        depth++;
+        p = f->parent;
+      } else {
+        p = p->getClass()->parent;
+      }
+    }
+    auto oldBases = vector<TypeContext::RealizationBase>(ctx->bases.begin() + depth,
+                                                         ctx->bases.end());
+    while (ctx->bases.size() > depth)
+      ctx->bases.pop_back();
+
+    LOG7("[realize] fn {} -> {} : base {} ; depth = {}", t->name, t->realizeString(),
+         ctx->getBase(), depth);
     ctx->addBlock();
-    ctx->bases.push_back({t});
+    ctx->typecheckLevel++;
+    ctx->bases.push_back({t, nullptr});
     auto *ast = (FunctionStmt *)(ctx->cache->asts[t->name].get());
     int pi = 0;
     for (auto p = t->parent; p; pi++) {
@@ -1353,12 +1375,14 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     // Need to populate funcRealization in advance to make recursive functions
     // viable
     ctx->cache->realizations[t->name][t->realizeString()] = t;
-    ctx->cache->astTypes[t->realizeString()] = t;
+    ctx->bases[0].visitedAsts[t->realizeString()] = t; // realizations go to the top
     // ctx->getRealizations()->realizationLookup[t->realizeString()] = name;
 
     StmtPtr realized = nullptr;
     if (!isInternal) {
+      ctx->typecheckLevel++;
       realized = realizeBlock(ast->suite);
+      ctx->typecheckLevel--;
       forceUnify(t->args[0], ctx->bases.back().returnType ? ctx->bases.back().returnType
                                                           : ctx->findInternal("void"));
     }
@@ -1369,11 +1393,16 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     for (auto &i : ast->args)
       args.push_back({i.name, nullptr, nullptr});
 
+    LOG7("done with {}", t->realizeString());
     ctx->cache->realizationAsts[t->realizeString()] =
         Nx<FunctionStmt>(ast, t->realizeString(), nullptr, vector<Param>(), move(args),
                          move(realized), ast->attributes);
     ctx->bases.pop_back();
     ctx->popBlock();
+    ctx->typecheckLevel--;
+
+    ctx->bases.insert(ctx->bases.end(), oldBases.begin(), oldBases.end());
+
     return t;
   } catch (exc::ParserException &e) {
     e.trackRealize(fmt::format("{} (arguments {})", t->name, t->toString(1)),
@@ -1399,7 +1428,7 @@ types::TypePtr TypecheckVisitor::realizeType(types::TypePtr tt) {
           {m.first, realizeType(mt->getClass())});
     }
     // ctx->getRealizations()->realizationLookup[rs] = t->name;
-    ctx->cache->astTypes[t->realizeString()] = t;
+    ctx->bases[0].visitedAsts[t->realizeString()] = t; // realizations go to the top
     return ctx->cache->realizations[t->name][t->realizeString()] = t;
   } catch (exc::ParserException &e) {
     e.trackRealize(t->toString(), getSrcInfo());

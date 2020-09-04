@@ -716,10 +716,11 @@ struct FunctionStmt : public Stmt {
   std::unique_ptr<Stmt> suite;
   /// List of attributes (e.g. @internal @prefetch)
   std::vector<std::string> attributes;
+  std::string className;
 
   FunctionStmt(const std::string &n, ExprPtr r, std::vector<Param> &&g,
                std::vector<Param> &&a, std::unique_ptr<Stmt> s,
-               const std::vector<std::string> &at);
+               const std::vector<std::string> &at, const std::string &c = "");
   FunctionStmt(const FunctionStmt &s);
   std::string toString() const override;
   NODE_UTILITY(Stmt, FunctionStmt);
