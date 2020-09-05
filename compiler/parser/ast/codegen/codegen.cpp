@@ -84,6 +84,9 @@ seq::Pattern *CodegenVisitor::transform(const PatternPtr &ptr) {
     v.resultPattern->setSrcInfo(ptr->getSrcInfo());
     if (ctx->tryCatch)
       v.resultPattern->setTryCatch(ctx->tryCatch);
+    auto t = ptr->getType()->getClass();
+    assert(t);
+    v.resultPattern->setType(realizeType(t));
   }
   return v.resultPattern;
 }
@@ -255,7 +258,7 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
     // ctx->addType(var, realizeType(stmt->rhs->getType()->getClass()));
   } else {
     auto varStmt = new seq::VarStmt(transform(stmt->rhs), nullptr);
-    if (ctx->isToplevel())
+    if (var[0] == '.')
       varStmt->getVar()->setGlobal();
     varStmt->getVar()->setType(realizeType(stmt->rhs->getType()->getClass()));
     ctx->addVar(var, varStmt->getVar());
@@ -504,6 +507,7 @@ void CodegenVisitor::visit(const WildcardPattern *pat) {
   auto p = new seq::Wildcard();
   if (pat->var.size())
     ctx->addVar(pat->var, p->getVar());
+  p->getVar()->setType(realizeType(pat->getType()->getClass()));
   resultPattern = p;
 }
 

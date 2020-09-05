@@ -120,6 +120,7 @@ bool Func::hasAttribute(const std::string &attr) {
  */
 std::string Func::getMangledFuncName() {
   // don't mangle external, built-in ("seq."-prefixed) or exported functions:
+  return name;
   if (external || name.rfind("seq.", 0) == 0 || hasAttribute("export"))
     return name;
 

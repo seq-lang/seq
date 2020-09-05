@@ -267,9 +267,9 @@ void TypecheckVisitor::visit(const PipeExpr *expr) {
   vector<PipeExpr::Pipe> items;
   items.push_back({expr->items[0].op, transform(expr->items[0].expr)});
   vector<types::TypePtr> types;
-  TypePtr inType = nullptr;
-  inType = extractType(items.back().expr->getType());
+  TypePtr inType = items.back().expr->getType();
   types.push_back(inType);
+  inType = extractType(inType);
   int inTypePos = 0;
   for (int i = 1; i < expr->items.size(); i++) {
     auto &l = expr->items[i];
@@ -985,7 +985,6 @@ void TypecheckVisitor::visit(const ExtendStmt *stmt) {
 
 void TypecheckVisitor::visit(const StarPattern *pat) {
   resultPattern = N<StarPattern>();
-
   resultPattern->setType(
       forceUnify(pat, forceUnify(ctx->matchType,
                                  ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel))));
@@ -993,35 +992,30 @@ void TypecheckVisitor::visit(const StarPattern *pat) {
 
 void TypecheckVisitor::visit(const IntPattern *pat) {
   resultPattern = N<IntPattern>(pat->value);
-
   resultPattern->setType(
       forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal(".int"))));
 }
 
 void TypecheckVisitor::visit(const BoolPattern *pat) {
   resultPattern = N<BoolPattern>(pat->value);
-
   resultPattern->setType(
       forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal(".bool"))));
 }
 
 void TypecheckVisitor::visit(const StrPattern *pat) {
   resultPattern = N<StrPattern>(pat->value);
-
   resultPattern->setType(
       forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal(".str"))));
 }
 
 void TypecheckVisitor::visit(const SeqPattern *pat) {
   resultPattern = N<SeqPattern>(pat->value);
-
   resultPattern->setType(
       forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal(".seq"))));
 }
 
 void TypecheckVisitor::visit(const RangePattern *pat) {
   resultPattern = N<RangePattern>(pat->start, pat->end);
-
   resultPattern->setType(
       forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal(".int"))));
 }
@@ -1188,11 +1182,16 @@ string TypecheckVisitor::patchIfRealizable(TypePtr typ, bool isClass) {
 void TypecheckVisitor::fixExprName(ExprPtr &e, const string &newName) {
   if (auto i = CAST(e, CallExpr)) // partial calls
     fixExprName(i->expr, newName);
-  else if (auto i = CAST(e, IdExpr))
-    i->value = newName;
-  else if (auto i = CAST(e, DotExpr))
-    i->member = newName;
-  else {
+  else if (auto i = CAST(e, IdExpr)) {
+    if (newName != i->value) {
+      auto comp = split(newName, ':');
+      if (startswith(comp.back(), i->value)) {
+        // LOG("replace {} {} -> {}", startswith(comp.back(), i->value), i->value,
+        // newName);
+        i->value = newName;
+      }
+    }
+  } else {
     LOG("[fixExprName] can't fix {}", *e);
     assert(false);
   }

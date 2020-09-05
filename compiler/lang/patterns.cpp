@@ -572,7 +572,7 @@ Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
     ++i;
   }
 
-  if (type->is(types::Seq)) {
+  if (type->getName() == "seq") { // is(types::Seq)) {
     return codegenSeqMatchForSeq(patterns, base, type, val, block);
   } else if (types::KMer *kmerType = type->asKMer()) {
     return codegenSeqMatchForKmer(patterns, base, kmerType, val, block);

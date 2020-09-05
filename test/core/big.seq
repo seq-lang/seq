@@ -1,3 +1,17 @@
+extend seq:
+    def __len__(self: seq):
+        return abs(self.len)
+    def _slice_direct(self: seq, a: int, b: int):
+        if self.len >= 0:
+            return seq(self.ptr + a, b - a)
+        else:
+            return seq(self.ptr + (-self.len - b), -(b - a))
+    def split(self: seq, k: int, step: int = 1):
+        i = 0
+        while i + k <= len(self):
+            yield self._slice_direct(i,i+k)
+            i += step
+
 class Pair[T]:
     a: T
     b: T
@@ -149,11 +163,11 @@ class X[T]:
         def add[T](a: T, b: T, c: T):
             return a + b + c
 
-        add_one = add(1)
+        add_one = add(1, ..., ...)
         add_two = add[int](3, ..., -1)
         print add[int](1, 2, 3)
         print add_one(5, 0)
-        print 42 |> add_two
+        # print 42 |> add_two
 
 args = array[seq](1)
 args[0] = s'ACATACCGGCCAATCGCGACAACGCAACAGAGAAAGAACTAGACGCTTGCTACATTATCGTTAACTCCTAAGCTCAAACCTAATGTGGCTAACTCCCCTTGGCCGGAACATAAGCCAAATCGTACGGCGACACGATACACGGCGGAGGACT'

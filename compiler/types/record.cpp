@@ -64,6 +64,9 @@ bool types::RecordType::isAtomic() const {
 bool types::RecordType::is(types::Type *type) const {
   unsigned b = numBaseTypes();
 
+  if (ast::startswith(name, "Tuple.") && type->getName() == "seq")
+    assert(1);
+
   if (!isGeneric(type) || b != type->numBaseTypes())
     return false;
 
