@@ -20,7 +20,7 @@ from core.float import *
 
 # from core.sort import sorted
 
-# # from core.file import File, gzFile, open, gzopen
+from core.file import File, gzFile, open, gzopen
 # # from pickle import pickle, unpickle
 # # from core.dlopen import dlsym as _dlsym
 

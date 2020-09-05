@@ -254,7 +254,10 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
   auto i = CAST(stmt->lhs, IdExpr);
   assert(i);
   auto var = i->value;
-  if (stmt->rhs->isType()) {
+  if (!stmt->rhs) {
+    assert(var == ".__argv__");
+    ctx->addVar(var, ctx->getModule()->getArgVar());
+  } else if (stmt->rhs->isType()) {
     // ctx->addType(var, realizeType(stmt->rhs->getType()->getClass()));
   } else {
     auto varStmt = new seq::VarStmt(transform(stmt->rhs), nullptr);

@@ -673,18 +673,23 @@ void TypecheckVisitor::visit(const AssignStmt *stmt) {
 
   auto rhs = transform(stmt->rhs);
   auto typExpr = transformType(stmt->type);
-  if (typExpr && typExpr->getType()->getClass()) {
-    auto typ = ctx->instantiate(getSrcInfo(), typExpr->getType());
-    if (!wrapOptional(typ, rhs))
-      forceUnify(typ, rhs->getType());
+  types::TypePtr t;
+  if (!rhs) { // declarations
+    assert(typExpr);
+    ctx->add(TypecheckItem::Var, l->value, t = typExpr->getType(), l->value[0] == '.');
+  } else {
+    if (typExpr && typExpr->getType()->getClass()) {
+      auto typ = ctx->instantiate(getSrcInfo(), typExpr->getType());
+      if (!wrapOptional(typ, rhs))
+        forceUnify(typ, rhs->getType());
+    }
+    ctx->add(rhs->isType()
+                 ? TypecheckItem::Type
+                 : rhs->getType()->getFunc() ? TypecheckItem::Func : TypecheckItem::Var,
+             l->value, t = rhs->getType(), l->value[0] == '.');
   }
-
-  ctx->add(rhs->isType()
-               ? TypecheckItem::Type
-               : rhs->getType()->getFunc() ? TypecheckItem::Func : TypecheckItem::Var,
-           l->value, rhs->getType(), l->value[0] == '.');
   if (l->value[0] == '.')
-    ctx->bases.back().visitedAsts[l->value] = rhs->getType();
+    ctx->bases.back().visitedAsts[l->value] = t;
   resultStmt = N<AssignStmt>(clone(stmt->lhs), move(rhs), move(typExpr));
 }
 
@@ -1463,6 +1468,8 @@ types::TypePtr TypecheckVisitor::realizeType(types::TypePtr tt) {
       return it->second;
 
     LOG7("[realize] ty {} -> {}", t->name, t->realizeString());
+    ctx->bases[0].visitedAsts[t->realizeString()] = t; // realizations go to the top
+    ctx->cache->realizations[t->name][t->realizeString()] = t;
     for (auto &m : ctx->cache->classMembers[t->name]) {
       auto mt = ctx->instantiate(t->getSrcInfo(), m.second, t);
       LOG7("- member: {} -> {}: {}", m.first, m.second->toString(), mt->toString());
@@ -1470,9 +1477,8 @@ types::TypePtr TypecheckVisitor::realizeType(types::TypePtr tt) {
       ctx->cache->memberRealizations[t->realizeString()].push_back(
           {m.first, realizeType(mt->getClass())});
     }
+    return t;
     // ctx->getRealizations()->realizationLookup[rs] = t->name;
-    ctx->bases[0].visitedAsts[t->realizeString()] = t; // realizations go to the top
-    return ctx->cache->realizations[t->name][t->realizeString()] = t;
   } catch (exc::ParserException &e) {
     e.trackRealize(t->toString(), getSrcInfo());
     throw;

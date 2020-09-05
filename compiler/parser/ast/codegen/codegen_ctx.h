@@ -80,6 +80,7 @@ public:
 public:
   seq::BaseFunc *getBase() const { return bases[topBaseIndex]; }
   seq::Block *getBlock() const { return blocks[topBlockIndex]; }
+  seq::SeqModule *getModule() const { return (seq::SeqModule *)bases[0]; }
   bool isToplevel() const { return bases.size() == 1; }
   seq::SeqJIT *getJIT() { return jit; }
   seq::types::Type *getType(const std::string &name) const {

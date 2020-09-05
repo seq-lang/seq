@@ -103,12 +103,15 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s) {
     // Load __internal__
     stmts = parseFile(internal);
     suite->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
-    auto canonical = stdlib->generateCanonicalName("__argv__");
-    stdlib->add(TransformItem::Var, "__argv__", canonical, true);
     stdlib->unsetFlag("internal");
     // Load stdlib
     stdlib->setFilename(stdlibPath);
     stmts = parseFile(stdlibPath);
+    suite->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
+
+    stmts = make_unique<AssignStmt>(make_unique<IdExpr>("__argv__"), nullptr,
+                                    make_unique<IndexExpr>(make_unique<IdExpr>("Array"),
+                                                           make_unique<IdExpr>("str")));
     suite->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
   }
   auto ctx = static_pointer_cast<TransformContext>(cache->imports[""].ctx);
@@ -671,7 +674,7 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
       auto canonical = ctx->isToplevel() ? ctx->generateCanonicalName(l->value) : "";
       if (!canonical.empty())
         s->lhs = Nx<IdExpr>(p, canonical);
-      if (s->rhs->isType())
+      if (s->rhs && s->rhs->isType())
         ctx->add(TransformItem::Type, l->value, canonical, ctx->isToplevel());
       else
         /// TODO: all toplevel variables are global now!
