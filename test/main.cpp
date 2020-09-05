@@ -201,7 +201,8 @@ auto getTypeTests(const vector<string> &files) {
 }
 INSTANTIATE_TEST_SUITE_P(TypeTests, SeqTest,
                          testing::ValuesIn(getTypeTests({"parser/expressions.seq",
-                                                         "parser/statements.seq"})),
+                                                         "parser/statements.seq",
+                                                         "parser/types.seq"})),
                          getTypeTestNameFromParam);
 
 // clang-format off
@@ -212,9 +213,9 @@ INSTANTIATE_TEST_SUITE_P(
         "core/helloworld.seq",
         "core/arithmetic.seq",
         "core/parser.seq",
-        // F: "core/arguments.seq", // assertion error; waiting for ariya
-        // F: "core/generics.seq", // assertion failed
+        "core/generics.seq", // assertion failed
         // F: "core/bltin.seq",
+        // F: "core/arguments.seq", // assertion error; waiting for ariya
         // F: "core/exceptions.seq",
         // F: "core/generators.seq", // LLVM error
         // F: "core/range.seq", // needs auto-unify

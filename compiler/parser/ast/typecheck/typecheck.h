@@ -51,6 +51,10 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
   bool getTupleIndex(types::ClassTypePtr tuple, const ExprPtr &expr,
                      const ExprPtr &index);
 
+  void defaultVisit(const Expr *e) override;
+  void defaultVisit(const Stmt *s) override;
+  void defaultVisit(const Pattern *p) override;
+
 public:
   static StmtPtr apply(std::shared_ptr<Cache> cache, StmtPtr stmts);
   TypecheckVisitor(std::shared_ptr<TypeContext> ctx,
@@ -76,6 +80,7 @@ public:
   void visit(const BinaryExpr *) override;
   void visit(const PipeExpr *) override;
   void visit(const InstantiateExpr *) override;
+  void visit(const SliceExpr *) override;
   void visit(const IndexExpr *) override;
   void visit(const CallExpr *) override;
   void visit(const StackAllocExpr *) override;

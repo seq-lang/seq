@@ -48,33 +48,36 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
 
     auto t = high_resolution_clock::now();
     auto transformed = ast::TransformVisitor::apply(cache, move(codeStmt));
-    // fmt::print(stderr, "[T] transform = {:.1f}\n",
-    //            duration_cast<milliseconds>(high_resolution_clock::now() - t).count()
-    //            /
-    //                1000.0);
-    // FILE *fo = fopen("_dump.seq", "w");
-    // fmt::print(fo, "=== Transform ===\n{}\n",
-    // ast::FormatVisitor::apply(transformed)); fflush(fo);
+    FILE *fo;
+    if (!isTest) {
+      fmt::print(stderr, "[T] transform = {:.1f}\n",
+                 duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                     1000.0);
+      fo = fopen("_dump.seq", "w");
+      fmt::print(fo, "=== Transform ===\n{}\n", ast::FormatVisitor::apply(transformed));
+      fflush(fo);
+    }
 
     t = high_resolution_clock::now();
     auto typechecked = ast::TypecheckVisitor::apply(cache, move(transformed));
-    // fmt::print(stderr, "[T] typecheck = {:.1f}\n",
-    //            duration_cast<milliseconds>(high_resolution_clock::now() - t).count()
-    //            /
-    //                1000.0);
-    // fmt::print(fo, "=== Typecheck ===\n{}\n",
-    //            ast::FormatVisitor::apply(typechecked, cache));
-    // fflush(fo);
-
+    if (!isTest) {
+      fmt::print(stderr, "[T] typecheck = {:.1f}\n",
+                 duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                     1000.0);
+      fmt::print(fo, "=== Typecheck ===\n{}\n",
+                 ast::FormatVisitor::apply(typechecked, cache));
+      fflush(fo);
+    }
     // FILE *fo = fopen("tmp/out.htm", "w");
     // LOG3("{}", ast::FormatVisitor::format(ctx, tv, false, true));
 
     t = high_resolution_clock::now();
     auto module = ast::CodegenVisitor::apply(cache, move(typechecked));
-    // fmt::print(stderr, "[T] codegen   = {:.1f}\n",
-    //            duration_cast<milliseconds>(high_resolution_clock::now() - t).count()
-    //            /
-    //                1000.0);
+    if (!isTest) {
+      fmt::print(stderr, "[T] codegen   = {:.1f}\n",
+                 duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                     1000.0);
+    }
     return module;
   } catch (seq::exc::SeqException &e) {
     if (isTest) {

@@ -428,7 +428,7 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
 
 void TransformVisitor::visit(const PipeExpr *expr) {
   vector<PipeExpr::Pipe> p;
-  for (auto &i : p)
+  for (auto &i : expr->items)
     p.push_back({i.op, transform(i.expr)});
   resultExpr = N<PipeExpr>(move(p));
 }
@@ -561,30 +561,15 @@ void TransformVisitor::visit(const DotExpr *expr) {
 }
 
 void TransformVisitor::visit(const SliceExpr *expr) {
-  string prefix;
-  if (!expr->st && expr->ed)
-    prefix = "l";
-  else if (expr->st && !expr->ed)
-    prefix = "r";
-  else if (!expr->st && !expr->ed)
-    prefix = "e";
-  if (expr->step)
-    prefix += "s";
-
-  vector<ExprPtr> args;
-  if (expr->st)
-    args.push_back(clone(expr->st));
-  if (expr->ed)
-    args.push_back(clone(expr->ed));
-  if (expr->step)
-    args.push_back(clone(expr->step));
-  if (!args.size())
-    args.push_back(N<IntExpr>(0));
-  resultExpr = transform(N<CallExpr>(N<IdExpr>(prefix + "slice"), move(args)));
+  // Further transformed at typecheck stage  as we need raw SliceExpr for static tuple
+  // indices
+  resultExpr =
+      N<SliceExpr>(transform(expr->st), transform(expr->ed), transform(expr->step));
 }
 
 void TransformVisitor::visit(const TypeOfExpr *expr) {
   resultExpr = N<TypeOfExpr>(transform(expr->expr, true));
+  resultExpr->markType();
 }
 
 void TransformVisitor::visit(const PtrExpr *expr) {
@@ -650,8 +635,8 @@ void TransformVisitor::visit(const ExprStmt *stmt) {
 }
 
 void TransformVisitor::visit(const AssignStmt *stmt) {
-  auto add = [this](const ExprPtr &lhs, const ExprPtr &rhs, const ExprPtr &type,
-                    bool force) -> StmtPtr {
+  auto add = [&](const ExprPtr &lhs, const ExprPtr &rhs, const ExprPtr &type,
+                 bool force) -> StmtPtr {
     auto p = lhs.get();
     if (auto l = CAST(lhs, IndexExpr)) {
       vector<ExprPtr> args;
@@ -667,8 +652,12 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
                               false, force);
       if (!force && !s->type) {
         auto val = ctx->find(l->value);
-        if (val && val->isVar() && val->getBase() == ctx->getBase())
-          return Nx<UpdateStmt>(p, transform(lhs), move(s->rhs));
+        if (val && val->isVar()) {
+          if (val->getBase() == ctx->getBase())
+            return Nx<UpdateStmt>(p, transform(lhs), move(s->rhs));
+          else if (stmt->mustExist)
+            error("variable '{}' is not global", l->value);
+        }
       }
       if (auto r = CAST(rhs, IdExpr)) { // simple rename?
         auto val = ctx->find(r->value);
@@ -694,8 +683,8 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
     }
   };
   function<void(const ExprPtr &, const ExprPtr &, vector<StmtPtr> &, bool)> process =
-      [this, &process, &add](const ExprPtr &lhs, const ExprPtr &rhs,
-                             vector<StmtPtr> &stmts, bool force) -> void {
+      [&](const ExprPtr &lhs, const ExprPtr &rhs, vector<StmtPtr> &stmts,
+          bool force) -> void {
     vector<ExprPtr> lefts;
     if (auto l = CAST(lhs, TupleExpr)) {
       for (auto &i : l->items)
@@ -1051,7 +1040,6 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       args.push_back(Param{"self"});
     for (auto &a : stmt->args)
       args.push_back(Param{a.name, a.type->clone()});
-    bool empty = canonicalName == ".Tuple.0";
     if (!stmt->isRecord) {
       fns.push_back(makeInternalFn("__new__", clone(codeType)));
       fns.push_back(makeInternal("__init__", N<IdExpr>("void"), move(args)));
@@ -1062,6 +1050,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
                                    Param{"src", N<IdExpr>("cobj")}));
       fns.push_back(makeInternalFn("__raw__", N<IdExpr>("cobj"), Param{"self"}));
     } else {
+      bool empty = canonicalName == ".Tuple.0";
       fns.push_back(makeInternal("__new__", clone(codeType), move(args)));
       fns.push_back(makeInternalFn("__str__", N<IdExpr>(".str"), Param{"self"}));
       fns.push_back(makeInternalFn("__len__", N<IdExpr>(".int"), Param{"self"}));
@@ -1341,35 +1330,37 @@ string TransformVisitor::generateFunctionStub(int len) {
 }
 
 string TransformVisitor::generateTupleStub(int len) {
-  auto typeName = fmt::format("Tuple.{}", len);
-  if (ctx->cache->variardics.find(typeName) == ctx->cache->variardics.end()) {
-    ctx->cache->variardics.insert(typeName);
+  for (int len_i = 0; len_i <= len; len_i++) {
+    auto typeName = fmt::format("Tuple.{}", len_i);
+    if (ctx->cache->variardics.find(typeName) == ctx->cache->variardics.end()) {
+      ctx->cache->variardics.insert(typeName);
 
-    vector<Param> generics, args;
-    vector<ExprPtr> genericNames;
-    for (int i = 1; i <= len; i++) {
-      genericNames.push_back(N<IdExpr>(format("T{}", i)));
-      generics.push_back(Param{format("T{}", i), nullptr, nullptr});
-      args.push_back(Param{format("a{0}", i), N<IdExpr>(format("T{}", i)), nullptr});
+      vector<Param> generics, args;
+      vector<ExprPtr> genericNames;
+      for (int i = 1; i <= len_i; i++) {
+        genericNames.push_back(N<IdExpr>(format("T{}", i)));
+        generics.push_back(Param{format("T{}", i), nullptr, nullptr});
+        args.push_back(Param{format("a{0}", i), N<IdExpr>(format("T{}", i)), nullptr});
+      }
+      ExprPtr type = N<IdExpr>(typeName);
+      if (genericNames.size())
+        type = N<IndexExpr>(move(type), N<TupleExpr>(move(genericNames)));
+      string code = "def __str__(self) -> str:\n";
+      code += len_i ? "  s = '('\n" : "  s = '()'\n";
+      for (int i = 0; i < len_i; i++) {
+        code += format("  s += self[{}].__str__()\n", i);
+        code += format("  s += '{}'\n", i == len_i - 1 ? ")" : ", ");
+      }
+      code += "  return s\n";
+      auto fns = parseCode(ctx->getFilename(), code);
+      StmtPtr stmt = make_unique<ClassStmt>(true, typeName, move(generics), move(args),
+                                            move(fns), vector<string>{});
+      stmt->setSrcInfo(ctx->getGeneratedPos());
+      TransformVisitor(make_shared<TransformContext>("<generated>", ctx->cache))
+          .transform(stmt);
     }
-    ExprPtr type = N<IdExpr>(typeName);
-    if (genericNames.size())
-      type = N<IndexExpr>(move(type), N<TupleExpr>(move(genericNames)));
-    string code = "def __str__(self) -> str:\n";
-    code += len ? "  s = '('\n" : "  s = '()'\n";
-    for (int i = 0; i < len; i++) {
-      code += format("  s += self[{}].__str__()\n", i);
-      code += format("  s += '{}'\n", i == len - 1 ? ")" : ", ");
-    }
-    code += "  return s\n";
-    auto fns = parseCode(ctx->getFilename(), code);
-    StmtPtr stmt = make_unique<ClassStmt>(true, typeName, move(generics), move(args),
-                                          move(fns), vector<string>{});
-    stmt->setSrcInfo(ctx->getGeneratedPos());
-    TransformVisitor(make_shared<TransformContext>("<generated>", ctx->cache))
-        .transform(stmt);
   }
-  return "." + typeName;
+  return fmt::format(".Tuple.{}", len);
 }
 
 StmtPtr TransformVisitor::getGeneratorBlock(const vector<GeneratorExpr::Body> &loops,

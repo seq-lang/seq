@@ -34,8 +34,6 @@ CodegenContext::CodegenContext(shared_ptr<Cache> cache, seq::Block *block,
 shared_ptr<CodegenItem> CodegenContext::find(const string &name, bool onlyLocal,
                                              bool checkStdlib) const {
   auto i = Context<CodegenItem>::find(name);
-  if (i && i->isVar() && onlyLocal)
-    return (getBase() == i->getBase()) ? i : nullptr;
   if (i)
     return i;
   return nullptr;

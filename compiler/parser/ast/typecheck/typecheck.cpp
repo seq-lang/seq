@@ -122,6 +122,12 @@ StmtPtr TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   return v.realizeBlock(stmts, true);
 }
 
+void TypecheckVisitor::defaultVisit(const Expr *e) { resultExpr = e->clone(); }
+
+void TypecheckVisitor::defaultVisit(const Stmt *s) { resultStmt = s->clone(); }
+
+void TypecheckVisitor::defaultVisit(const Pattern *p) { resultPattern = p->clone(); }
+
 /*************************************************************************************/
 
 void TypecheckVisitor::visit(const BoolExpr *expr) {
@@ -217,7 +223,7 @@ void TypecheckVisitor::visit(const BinaryExpr *expr) {
     }
     magic = format("__{}__", magic);
     resultExpr = transform(
-        N<CallExpr>(N<DotExpr>(expr->lexpr->clone(), magic), expr->rexpr->clone()));
+        N<CallExpr>(N<DotExpr>(clone(expr->lexpr), magic), clone(expr->rexpr)));
     forceUnify(expr, resultExpr->getType());
   }
 }
@@ -231,13 +237,14 @@ void TypecheckVisitor::visit(const PipeExpr *expr) {
       return t;
   };
   auto updateType = [&](TypePtr t, int inTypePos, ExprPtr &fe) {
-    auto f = fe->getType()->getClass();
-    assert(f && f->getCallable());
-    bool isPartial = f->name.substr(0, 9) == ".Partial.";
+    auto f = fe->getType();
+    auto fc = f->getClass();
+    assert(f && fc->getCallable());
+    bool isPartial = startswith(fc->name, ".Partial.");
     if (isPartial) {
       int j = 0;
-      for (int i = 9; i < f->name.size(); i++)
-        if (f->name[i] == '0') {
+      for (int i = 9; i < fc->name.size(); i++)
+        if (fc->name[i] == '0') {
           if (j == inTypePos) {
             j = i - 9;
             break;
@@ -245,15 +252,16 @@ void TypecheckVisitor::visit(const PipeExpr *expr) {
           j++;
         }
       inTypePos = j;
+      f = fc->explicits[0].type;
+      fc = f->getClass();
     }
-    f = f->getCallable()->getClass();
-    forceUnify(t, f->args[inTypePos + 1]);
+    forceUnify(t, fc->args[inTypePos + 1]);
     if (f->canRealize() && f->getFunc()) {
       auto t = realizeFunc(f->getFunc());
       if (isPartial)
         fixExprName(fe, t->realizeString());
     }
-    return f->args[0];
+    return fc->args[0];
   };
 
   vector<PipeExpr::Pipe> items;
@@ -343,13 +351,46 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
   resultExpr->setType(t);
 }
 
+void TypecheckVisitor::visit(const SliceExpr *expr) {
+  string prefix;
+  if (!expr->st && expr->ed)
+    prefix = "l";
+  else if (expr->st && !expr->ed)
+    prefix = "r";
+  else if (!expr->st && !expr->ed)
+    prefix = "e";
+  if (expr->step)
+    prefix += "s";
+
+  vector<ExprPtr> args;
+  if (expr->st)
+    args.push_back(clone(expr->st));
+  if (expr->ed)
+    args.push_back(clone(expr->ed));
+  if (expr->step)
+    args.push_back(clone(expr->step));
+  if (!args.size())
+    args.push_back(N<IntExpr>(0));
+  resultExpr =
+      transform(N<CallExpr>(N<IdExpr>(format(".{}slice", prefix)), move(args)));
+}
+
 void TypecheckVisitor::visit(const IndexExpr *expr) {
   auto getTupleIndex = [&](auto tuple, const auto &expr, const auto &index) -> ExprPtr {
     if (!startswith(tuple->name, ".Tuple."))
       return nullptr;
+    auto getInt = [](seq_int_t *o, const ExprPtr &e) {
+      if (!e)
+        return true;
+      if (auto i = CAST(e, IntExpr)) {
+        *o = i->intValue;
+        return true;
+      }
+      return false;
+    };
     seq_int_t s = 0, e = tuple->args.size(), st = 1;
-    if (getInt(&s, index)) {
-      int i = translateIndex(s, e);
+    if (auto ex = CAST(index, IntExpr)) {
+      int i = translateIndex(ex->intValue, e);
       if (i < 0 || i >= e)
         error("tuple index out of range (expected 0..{}, got {})", e, i);
       return transform(N<DotExpr>(clone(expr), format("a{}", i + 1)));
@@ -363,7 +404,8 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
           error("tuple index out of range (expected 0..{}, got {})", e, i);
         te.push_back(N<DotExpr>(clone(expr), format("a{}", i + 1)));
       }
-      return transform(N<TupleExpr>(move(te)));
+      return transform(N<CallExpr>(
+          N<DotExpr>(N<IdExpr>(format(".Tuple.{}", te.size())), "__new__"), move(te)));
     }
     return nullptr;
   };
@@ -417,6 +459,9 @@ void TypecheckVisitor::visit(const CallExpr *expr) {
         error("cannot find method '{}' in {} with arguments {}", d->member,
               c->toString(), v2s(targs));
       }
+    } else {
+      resultExpr = N<CallExpr>(N<DotExpr>(move(dotlhs), d->member), move(args));
+      return;
     }
   }
   if (!e)
@@ -446,14 +491,15 @@ void TypecheckVisitor::visit(const CallExpr *expr) {
   }
 
   auto c = e->getType();
-  if (!c) { // Unbound caller, will be handled later
+  auto cc = c->getClass();
+  if (!cc) { // Unbound caller, will be handled later
     resultExpr = N<CallExpr>(move(e), move(args));
     resultExpr->setType(expr->getType()
                             ? expr->getType()
                             : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
     return;
   }
-  if (c->getClass() && !c->getClass()->getCallable()) { // route to a call method
+  if (!cc->getCallable()) { // route to a call method
     resultExpr = transform(N<CallExpr>(N<DotExpr>(move(e), "__call__"), move(args)));
     return;
   }
@@ -463,15 +509,14 @@ void TypecheckVisitor::visit(const CallExpr *expr) {
   vector<int> availableArguments;
   bool isPartial = false;
   string knownTypes;
-  if (auto cc = dynamic_pointer_cast<types::ClassType>(c)) {
-    if (cc->name.substr(0, 9) == ".Partial.") {
-      isPartial = true;
-      knownTypes = cc->name.substr(9);
-      c = c->getClass()->getCallable();
-      assert(c);
-    }
+  if (startswith(cc->name, ".Partial.")) {
+    isPartial = true;
+    knownTypes = cc->name.substr(9);
+    c = cc->explicits[0].type;
+    cc = c->getClass();
+    assert(cc);
   }
-  auto cc = c->getClass();
+
   auto &t_args = cc->args;
   for (int i = 0; i < int(t_args.size()) - 1; i++)
     if (!isPartial || knownTypes[i] == '0')
@@ -646,9 +691,8 @@ void TypecheckVisitor::visit(const AssignStmt *stmt) {
 void TypecheckVisitor::visit(const UpdateStmt *stmt) {
   auto l = transform(stmt->lhs);
   auto r = transform(stmt->rhs);
-  forceUnify(l->getType(), r->getType());
   if (!wrapOptional(l->getType(), r))
-    stmt->lhs->setType(forceUnify(r.get(), l->getType()));
+    forceUnify(r.get(), l->getType());
   resultStmt = N<UpdateStmt>(move(l), move(r));
 }
 
