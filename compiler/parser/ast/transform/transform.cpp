@@ -96,7 +96,8 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s) {
     auto internal = stdlibPath.substr(0, stdlibPath.size() - 12) + "__internal__.seq";
     stdlib->setFilename(internal);
     // Load core aliases
-    auto code = "cobj = Ptr[byte]\n@internal\ntype pyobj(p: cobj)\n"
+    auto code = "cobj = Ptr[byte]\n"
+                "@internal\ntype pyobj(p: cobj)\n"
                 "@internal\ntype str(len: int, ptr: Ptr[byte])\n";
     stmts = parseCode(internal, code);
     preamble->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
@@ -261,8 +262,10 @@ void TransformVisitor::visit(const SeqExpr *expr) {
 
 void TransformVisitor::visit(const IdExpr *expr) {
   auto val = ctx->find(expr->value);
-  if (!val)
+  if (!val) {
+    ctx->dump();
     error("identifier '{}' not found", expr->value);
+  }
   if (val->isVar()) {
     if (ctx->getBase() != val->getBase() && !val->isGlobal()) {
       if (ctx->captures.size())
@@ -291,7 +294,7 @@ void TransformVisitor::visit(const UnpackExpr *expr) {
 void TransformVisitor::visit(const TupleExpr *expr) {
   auto name = generateTupleStub(expr->items.size());
   resultExpr = transform(
-      N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"), transform(expr->items)));
+      N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"), clone(expr->items)));
 }
 
 void TransformVisitor::visit(const ListExpr *expr) {
@@ -511,7 +514,8 @@ void TransformVisitor::visit(const IndexExpr *expr) {
     else
       it.push_back(transformGeneric(expr->index));
     resultExpr = N<InstantiateExpr>(move(e), move(it));
-    resultExpr->markType();
+    if (!isFunc)
+      resultExpr->markType();
   } else {
     resultExpr = N<IndexExpr>(move(e), transform(expr->index));
   }
@@ -1150,7 +1154,7 @@ void TransformVisitor::visit(const ExtendStmt *stmt) {
 void TransformVisitor::visit(const ExternImportStmt *stmt) {
   if (stmt->lang == "c" && stmt->from) {
     vector<StmtPtr> stmts;
-    stmts.push_back(N<AssignStmt>(N<IdExpr>(".Ptr"),
+    stmts.push_back(N<AssignStmt>(N<IdExpr>("fptr"),
                                   N<CallExpr>(N<IdExpr>("_dlsym"), clone(stmt->from),
                                               N<StringExpr>(stmt->name.first))));
     vector<ExprPtr> args;
@@ -1160,7 +1164,7 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
     stmts.push_back(N<AssignStmt>(
         N<IdExpr>("f"),
         N<CallExpr>(N<IndexExpr>(N<IdExpr>("Function"), N<TupleExpr>(move(args))),
-                    N<IdExpr>(".Ptr"))));
+                    N<IdExpr>("fptr"))));
     bool isVoid = true;
     if (stmt->ret) {
       if (auto f = CAST(stmt->ret, IdExpr))
@@ -1171,7 +1175,7 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
     args.clear();
     for (int i = 0; i < stmt->args.size(); i++)
       args.push_back(
-          N<IdExpr>(stmt->args[i].name != "" ? stmt->args[i].name : format("$a{}", i)));
+          N<IdExpr>(stmt->args[i].name != "" ? stmt->args[i].name : format(".a{}", i)));
     auto call = N<CallExpr>(N<IdExpr>("f"), move(args));
     if (!isVoid)
       stmts.push_back(N<ReturnStmt>(move(call)));
@@ -1180,7 +1184,7 @@ void TransformVisitor::visit(const ExternImportStmt *stmt) {
     vector<Param> params;
     for (int i = 0; i < stmt->args.size(); i++)
       params.push_back(
-          {stmt->args[i].name != "" ? stmt->args[i].name : format("$a{}", i),
+          {stmt->args[i].name != "" ? stmt->args[i].name : format(".a{}", i),
            clone(stmt->args[i].type)});
     resultStmt = transform(
         N<FunctionStmt>(stmt->name.second != "" ? stmt->name.second : stmt->name.first,

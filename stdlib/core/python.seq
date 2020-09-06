@@ -226,15 +226,12 @@ def py_tuple_new(len: int) -> cobj:
     t = PyTuple_New(len)
     pyobj.exc_check()
     return t
-_force_py_tuple_new = py_tuple_new
 
 def py_tuple_setitem(obj: cobj, idx: int, val: cobj):
     PyTuple_SetItem(obj, idx, val)
     pyobj.exc_check()
-_force_py_tuple_setitem = py_tuple_setitem
 
 def py_tuple_getitem(obj: cobj, idx: int) -> cobj:
     t = PyTuple_GetItem(obj, idx)
     pyobj.exc_check()
     return t
-_force_py_tuple_getitem = py_tuple_getitem

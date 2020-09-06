@@ -85,7 +85,7 @@ void CodegenContext::popBlock() {
 void CodegenContext::initJIT() {
   jit = new seq::SeqJIT();
   auto fn = new seq::Func();
-  fn->setName("$jit_0");
+  fn->setName(".jit_0");
 
   addBlock(fn->getBlock(), fn);
   assert(topBaseIndex == topBlockIndex && topBlockIndex == 0);
@@ -116,7 +116,7 @@ void CodegenContext::execJIT(string varName, seq::Expr *varExpr) {
 
   // // Set up new block
   // auto fn = new seq::Func();
-  // fn->setName(format("$jit_{}", ++counter));
+  // fn->setName(format(".jit_{}", ++counter));
   // addBlock(fn->getBlock(), fn);
   // assert(topBaseIndex == topBlockIndex && topBlockIndex == 0);
 }

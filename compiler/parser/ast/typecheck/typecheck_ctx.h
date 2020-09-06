@@ -49,7 +49,8 @@ public:
   struct RealizationBase {
     types::TypePtr type;
     types::TypePtr returnType;
-    std::unordered_map<std::string, types::TypePtr> visitedAsts;
+    std::unordered_map<std::string, std::pair<TypecheckItem::Kind, types::TypePtr>>
+        visitedAsts;
   };
   std::vector<RealizationBase> bases;
 
@@ -75,7 +76,8 @@ public:
 public:
   std::string getBase() const;
   int getLevel() const { return bases.size(); }
-  types::TypePtr findInVisited(const std::string &name) const;
+  std::pair<TypecheckItem::Kind, types::TypePtr>
+  findInVisited(const std::string &name) const;
 
 public:
   std::shared_ptr<types::LinkType> addUnbound(const SrcInfo &srcInfo, int level,

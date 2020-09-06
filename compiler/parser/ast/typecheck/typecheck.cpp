@@ -335,6 +335,7 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
     }
     /// Note: at this point, only single-variable static var expression (e.g.
     /// N) is allowed, so unify will work as expected.
+    // LOG("{} {}", t->toString(), g->toString());
     if (g->getFunc())
       forceUnify(g->getFunc()->explicits[i].type, t);
     else
@@ -674,22 +675,24 @@ void TypecheckVisitor::visit(const AssignStmt *stmt) {
   auto rhs = transform(stmt->rhs);
   auto typExpr = transformType(stmt->type);
   types::TypePtr t;
+  TypecheckItem::Kind k;
   if (!rhs) { // declarations
     assert(typExpr);
-    ctx->add(TypecheckItem::Var, l->value, t = typExpr->getType(), l->value[0] == '.');
+    ctx->add(k = TypecheckItem::Var, l->value, t = typExpr->getType(),
+             l->value[0] == '.');
   } else {
     if (typExpr && typExpr->getType()->getClass()) {
       auto typ = ctx->instantiate(getSrcInfo(), typExpr->getType());
       if (!wrapOptional(typ, rhs))
         forceUnify(typ, rhs->getType());
     }
-    ctx->add(rhs->isType()
-                 ? TypecheckItem::Type
-                 : rhs->getType()->getFunc() ? TypecheckItem::Func : TypecheckItem::Var,
-             l->value, t = rhs->getType(), l->value[0] == '.');
+    k = rhs->isType()
+            ? TypecheckItem::Type
+            : (rhs->getType()->getFunc() ? TypecheckItem::Func : TypecheckItem::Var);
+    ctx->add(k, l->value, t = rhs->getType(), l->value[0] == '.');
   }
   if (l->value[0] == '.')
-    ctx->bases.back().visitedAsts[l->value] = t;
+    ctx->bases.back().visitedAsts[l->value] = {k, t};
   resultStmt = N<AssignStmt>(clone(stmt->lhs), move(rhs), move(typExpr));
 }
 
@@ -830,7 +833,7 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
                                nullptr, stmt->attributes, stmt->className);
   bool isClassMember = in(stmt->attributes, ".class");
 
-  if (ctx->findInVisited(stmt->name))
+  if (ctx->findInVisited(stmt->name).second)
     return;
 
   auto t = make_shared<FuncType>(
@@ -881,7 +884,7 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
   t = std::static_pointer_cast<FuncType>(t->generalize(ctx->typecheckLevel));
   LOG7("[stmt] added func {}: {} (base={}; parent={})", stmt->name, t->toString(),
        ctx->getBase(), printParents(t->parent));
-  ctx->bases.back().visitedAsts[stmt->name] = t;
+  ctx->bases.back().visitedAsts[stmt->name] = {TypecheckItem::Func, t};
 
   if ((in(stmt->attributes, "builtin") || in(stmt->attributes, ".c")) &&
       !t->canRealize())
@@ -895,7 +898,7 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
 void TypecheckVisitor::visit(const ClassStmt *stmt) {
   resultStmt = N<ClassStmt>(stmt->isRecord, stmt->name, vector<Param>(),
                             vector<Param>(), N<SuiteStmt>(), stmt->attributes);
-  if (ctx->findInVisited(stmt->name))
+  if (ctx->findInVisited(stmt->name).second)
     return;
 
   vector<StmtPtr> stmts;
@@ -908,7 +911,7 @@ void TypecheckVisitor::visit(const ClassStmt *stmt) {
   auto ctxi = make_shared<TypecheckItem>(TypecheckItem::Type, ct, ctx->getBase(), true);
   if (!stmt->isRecord) // add classes early
     ctx->add(stmt->name, ctxi);
-  ctx->bases.back().visitedAsts[stmt->name] = ct;
+  ctx->bases.back().visitedAsts[stmt->name] = {TypecheckItem::Type, ct};
 
   ct->explicits = parseGenerics(stmt->generics, ctx->typecheckLevel);
   ctx->typecheckLevel++;
@@ -926,7 +929,7 @@ void TypecheckVisitor::visit(const ClassStmt *stmt) {
       auto t = transform(s);
       auto f = CAST(t, FunctionStmt)->name;
       ctx->cache->classMethods[stmt->name][ctx->cache->reverseLookup[f]].push_back(
-          ctx->findInVisited(f)->getFunc());
+          ctx->findInVisited(f).second->getFunc());
       stmts.push_back(move(t));
     }
   ctx->typecheckLevel--;
@@ -974,7 +977,7 @@ void TypecheckVisitor::visit(const ExtendStmt *stmt) {
     auto t = transform(s);
     auto f = CAST(t, FunctionStmt)->name;
     ctx->cache->classMethods[i->value][ctx->cache->reverseLookup[f]].push_back(
-        ctx->findInVisited(f)->getFunc());
+        ctx->findInVisited(f).second->getFunc());
     stmts.push_back(move(t));
   }
   for (int i = 0; i < stmt->generics.size(); i++)
@@ -1185,9 +1188,9 @@ string TypecheckVisitor::patchIfRealizable(TypePtr typ, bool isClass) {
 }
 
 void TypecheckVisitor::fixExprName(ExprPtr &e, const string &newName) {
-  if (auto i = CAST(e, CallExpr)) // partial calls
+  if (auto i = CAST(e, CallExpr)) { // partial calls
     fixExprName(i->expr, newName);
-  else if (auto i = CAST(e, IdExpr)) {
+  } else if (auto i = CAST(e, IdExpr)) {
     if (newName != i->value) {
       auto comp = split(newName, ':');
       if (startswith(comp.back(), i->value)) {
@@ -1197,8 +1200,7 @@ void TypecheckVisitor::fixExprName(ExprPtr &e, const string &newName) {
       }
     }
   } else {
-    LOG("[fixExprName] can't fix {}", *e);
-    assert(false);
+    seqassert(false, "can't fix {}", e->toString());
   }
 }
 
@@ -1388,22 +1390,23 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     auto *ast = (FunctionStmt *)(ctx->cache->asts[t->name].get());
     int pi = 0;
     for (auto p = t->parent; p; pi++) {
-      vector<Generic> *explicits = nullptr;
-      auto po = p;
-      if (auto y = p->getClass()) {
-        explicits = &(y->explicits);
-        p = y->parent;
-      } else if (auto y = p->getFunc()) {
-        explicits = &(y->explicits);
+      if (auto y = p->getFunc()) {
+        for (auto &g : y->explicits)
+          if (auto s = g.type->getStatic())
+            ctx->add(TypecheckItem::Type, g.name, s, false, false, true);
+          else if (!g.name.empty())
+            ctx->add(TypecheckItem::Type, g.name, g.type, true);
         p = y->parent;
       } else {
-        assert(false);
+        auto c = p->getClass();
+        assert(c);
+        for (auto &g : c->explicits)
+          if (auto s = g.type->getStatic())
+            ctx->add(TypecheckItem::Type, g.name, s, false, false, true);
+          else if (!g.name.empty())
+            ctx->add(TypecheckItem::Type, g.name, g.type, true);
+        p = c->parent;
       }
-      for (auto &g : *explicits)
-        if (auto s = g.type->getStatic())
-          ctx->add(TypecheckItem::Type, g.name, s, false, false, true);
-        else if (!g.name.empty())
-          ctx->add(TypecheckItem::Type, g.name, g.type, true);
     }
     for (auto &g : t->explicits)
       if (auto s = g.type->getStatic())
@@ -1423,7 +1426,8 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     // Need to populate funcRealization in advance to make recursive functions
     // viable
     ctx->cache->realizations[t->name][t->realizeString()] = t;
-    ctx->bases[0].visitedAsts[t->realizeString()] = t; // realizations go to the top
+    ctx->bases[0].visitedAsts[t->realizeString()] = {TypecheckItem::Func,
+                                                     t}; // realizations go to the top
     // ctx->getRealizations()->realizationLookup[t->realizeString()] = name;
 
     StmtPtr realized = nullptr;
@@ -1468,7 +1472,8 @@ types::TypePtr TypecheckVisitor::realizeType(types::TypePtr tt) {
       return it->second;
 
     LOG7("[realize] ty {} -> {}", t->name, t->realizeString());
-    ctx->bases[0].visitedAsts[t->realizeString()] = t; // realizations go to the top
+    ctx->bases[0].visitedAsts[t->realizeString()] = {TypecheckItem::Type,
+                                                     t}; // realizations go to the top
     ctx->cache->realizations[t->name][t->realizeString()] = t;
     for (auto &m : ctx->cache->classMembers[t->name]) {
       auto mt = ctx->instantiate(t->getSrcInfo(), m.second, t);

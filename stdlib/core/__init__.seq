@@ -18,13 +18,12 @@ from core.str import *
 from core.int import *
 from core.float import *
 
-# from core.sort import sorted
+from core.sort import sorted
 
 from core.file import File, gzFile, open, gzopen
-# # from pickle import pickle, unpickle
-# # from core.dlopen import dlsym as _dlsym
-
-# # from core.python import init as _py_init, imp as _py_import, exec as _py_exec, pyobj
+from pickle import pickle, unpickle
+from core.dlopen import dlsym as _dlsym
+from core.python import init as _py_init, imp as _py_import, exec as _py_exec
 
 # # from bio import *
 

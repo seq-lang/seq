@@ -1,6 +1,11 @@
 extend str:
     @internal
     def __new__(p: Ptr[byte], l: int) -> str: pass
+
+extend pyobj:
+    @internal
+    def __new__(p: Ptr[byte]) -> pyobj: pass
+
 cimport seq_print(str)
 
 extend Ptr[T]:

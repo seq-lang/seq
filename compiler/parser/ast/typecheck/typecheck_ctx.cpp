@@ -33,26 +33,24 @@ TypeContext::TypeContext(shared_ptr<Cache> cache)
   bases.push_back({nullptr, nullptr});
 }
 
-types::TypePtr TypeContext::findInVisited(const string &name) const {
+pair<TypecheckItem::Kind, types::TypePtr>
+TypeContext::findInVisited(const string &name) const {
   for (int bi = bases.size() - 1; bi >= 0; bi--) {
     auto t = bases[bi].visitedAsts.find(name);
     if (t == bases[bi].visitedAsts.end())
       continue;
     return t->second;
   }
-  return nullptr;
+  return {TypecheckItem::Var, nullptr};
 }
 
 shared_ptr<TypecheckItem> TypeContext::find(const string &name) const {
   if (auto t = Context<TypecheckItem>::find(name))
     return t;
   if (!name.empty() && name[0] == '.') {
-    if (auto tt = findInVisited(name)) {
-      if (auto f = tt->getFunc())
-        return make_shared<TypecheckItem>(TypecheckItem::Func, f, "");
-      else
-        return make_shared<TypecheckItem>(TypecheckItem::Type, tt->getClass(), "");
-    }
+    auto tt = findInVisited(name);
+    if (tt.second)
+      return make_shared<TypecheckItem>(tt.first, tt.second, "");
   }
   // ((TransformContext *)this)->dump();
   return nullptr;

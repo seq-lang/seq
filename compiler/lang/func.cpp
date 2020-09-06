@@ -484,10 +484,8 @@ std::unordered_map<std::string, Func *> Func::builtins =
 Func *Func::getBuiltin(const std::string &name) {
   auto itr = builtins.find(name);
 
-  if (itr == builtins.end()) {
-    LOG("[ariya] can't find builtin {}", name);
-    assert(false);
-  }
+  if (itr == builtins.end())
+    seqassert(false, "can't find builtin {}", name);
   return itr->second;
 }
 

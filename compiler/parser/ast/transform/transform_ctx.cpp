@@ -129,10 +129,8 @@ string TransformContext::findFile(const string &what, const string &relativeTo,
   }
   for (auto &p : paths) {
     struct stat buffer;
-    if (!stat(p.c_str(), &buffer)) {
-      // LOG("getting {}", p);
+    if (!stat(p.c_str(), &buffer))
       return p;
-    }
   }
   return "";
 }
