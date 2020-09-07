@@ -16,7 +16,6 @@ static types::OptionalType *asOpt(types::Type *type) {
 Value *types::FuncType::call(BaseFunc *base, Value *self,
                              const std::vector<Value *> &args, BasicBlock *block,
                              BasicBlock *normal, BasicBlock *unwind) {
-  // LLVMContext &context = block->getContext();
   IRBuilder<> builder(block);
   return normal ? (Value *)builder.CreateInvoke(self, normal, unwind, args)
                 : builder.CreateCall(self, args);
@@ -67,6 +66,14 @@ void types::FuncType::initOps() {
        Str,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return codegenStr(self, "function", b.GetInsertBlock());
+       },
+       false},
+
+      {"__call__",
+       inTypes,
+       outType,
+       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+         return b.CreateCall(self, args);
        },
        false},
   };
