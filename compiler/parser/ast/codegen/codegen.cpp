@@ -381,8 +381,8 @@ void CodegenVisitor::visit(const TryStmt *stmt) {
   int varIdx = 0;
   for (auto &c : stmt->catches) {
     /// TODO: get rid of typeinfo here?
-    ctx->addBlock(r->addCatch(
-        c.exc->getType() ? realizeType(c.exc->getType()->getClass()) : nullptr));
+    ctx->addBlock(
+        r->addCatch(c.exc ? realizeType(c.exc->getType()->getClass()) : nullptr));
     if (!c.var.empty())
       ctx->addVar(c.var, r->getVar(varIdx++));
     transform(c.suite);
@@ -405,6 +405,10 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
     auto &fp = ctx->functions[real.first];
     if (fp.second)
       continue;
+
+    auto oldTryCatch = ctx->tryCatch;
+    ctx->tryCatch = nullptr;
+
     fp.second = true;
     auto f = (seq::Func *)fp.first;
     assert(f);
@@ -444,6 +448,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       transform(ast->suite);
     }
     ctx->popBlock();
+    ctx->tryCatch = oldTryCatch;
   }
 }
 

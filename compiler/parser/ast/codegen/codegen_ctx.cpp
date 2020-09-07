@@ -139,7 +139,7 @@ seq::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
     else
       types.push_back(realizeType(m.type->getClass()));
   auto name = t->name;
-  if (name == "void") {
+  if (name == ".void") {
     handle = seq::types::Void;
   } else if (name == ".bool") {
     handle = seq::types::Bool;

@@ -1,17 +1,3 @@
-extend seq:
-    def __len__(self: seq):
-        return abs(self.len)
-    def _slice_direct(self: seq, a: int, b: int):
-        if self.len >= 0:
-            return seq(self.ptr + a, b - a)
-        else:
-            return seq(self.ptr + (-self.len - b), -(b - a))
-    def split(self: seq, k: int, step: int = 1):
-        i = 0
-        while i + k <= len(self):
-            yield self._slice_direct(i,i+k)
-            i += step
-
 class Pair[T]:
     a: T
     b: T
@@ -274,7 +260,7 @@ X[float].main2()
 # EXPECT: Pair: 1.9 4.2
 # EXPECT: 6
 # EXPECT: 6
-# EXPECT: 44
+# -EXPECT: 44
 
 # main2():
 # EXPECT: hello world
@@ -304,4 +290,4 @@ X[float].main2()
 # EXPECT: Pair: 1.9 4.2
 # EXPECT: 6
 # EXPECT: 6
-# EXPECT: 44
+# -EXPECT: 44

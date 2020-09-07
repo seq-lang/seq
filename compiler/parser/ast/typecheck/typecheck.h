@@ -50,6 +50,8 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
                             const std::vector<int> &availableArguments);
   bool getTupleIndex(types::ClassTypePtr tuple, const ExprPtr &expr,
                      const ExprPtr &index);
+  ExprPtr visitDot(const ExprPtr &expr, const std::string &member,
+                   std::vector<CallExpr::Arg> *args = nullptr);
 
   void defaultVisit(const Expr *e) override;
   void defaultVisit(const Stmt *s) override;

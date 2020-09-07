@@ -87,6 +87,21 @@ extend pyobj:
         args_py = (~args).p if args else cobj()
         return pyobj.exc_wrap(pyobj(PyObject_CallObject(self.p, args_py)))
 
+    def _tuple_new(self, len: int) -> pyobj:
+        t = PyTuple_New(len)
+        pyobj.exc_check()
+        return pyobj(t)
+
+    def _tuple_set(self, idx: int, val: pyobj):
+        PyTuple_SetItem(self.p, idx, val.p)
+        pyobj.exc_check()
+
+    def _tuple_get(self, idx: int) -> pyobj:
+        t = PyTuple_GetItem(self.p, idx)
+        pyobj.exc_check()
+        return pyobj(t)
+
+
 _PY_INITIALIZED = False
 def init():
     global _PY_INITIALIZED
@@ -221,17 +236,3 @@ extend set[K]:
             pyobj.exc_check()
         return pyobj(pyset)
 
-# tuple[...]: We need to provide the following toplevel functions to LLVM
-def py_tuple_new(len: int) -> cobj:
-    t = PyTuple_New(len)
-    pyobj.exc_check()
-    return t
-
-def py_tuple_setitem(obj: cobj, idx: int, val: cobj):
-    PyTuple_SetItem(obj, idx, val)
-    pyobj.exc_check()
-
-def py_tuple_getitem(obj: cobj, idx: int) -> cobj:
-    t = PyTuple_GetItem(obj, idx)
-    pyobj.exc_check()
-    return t

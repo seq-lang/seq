@@ -272,6 +272,9 @@ string YieldExpr::toString() const { return "#yield"; }
 
 InstantiateExpr::InstantiateExpr(ExprPtr e, vector<ExprPtr> &&i)
     : Expr(), type(move(e)), params(move(i)) {}
+InstantiateExpr::InstantiateExpr(ExprPtr e, ExprPtr t) : Expr(), type(move(e)) {
+  params.push_back(move(t));
+}
 InstantiateExpr::InstantiateExpr(const InstantiateExpr &e)
     : Expr(e), type(ast::clone(e.type)), params(ast::clone(e.params)) {}
 string InstantiateExpr::toString() const {
@@ -384,6 +387,10 @@ IfStmt::If IfStmt::If::clone() const { return {ast::clone(cond), ast::clone(suit
 IfStmt::IfStmt(vector<IfStmt::If> &&i) : ifs(move(i)) {}
 IfStmt::IfStmt(ExprPtr cond, StmtPtr suite) {
   ifs.push_back(If{move(cond), move(suite)});
+}
+IfStmt::IfStmt(ExprPtr cond, StmtPtr suite, ExprPtr econd, StmtPtr esuite) {
+  ifs.push_back(If{move(cond), move(suite)});
+  ifs.push_back(If{move(econd), move(esuite)});
 }
 IfStmt::IfStmt(const IfStmt &s) : ifs(ast::clone_nop(s.ifs)) {}
 string IfStmt::toString() const {

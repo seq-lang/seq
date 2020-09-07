@@ -213,13 +213,13 @@ INSTANTIATE_TEST_SUITE_P(
         "core/helloworld.seq",
         "core/arithmetic.seq",
         "core/parser.seq",
-        "core/generics.seq", // assertion failed
-        // F: "core/bltin.seq",
-        // F: "core/arguments.seq", // assertion error; waiting for ariya
-        // F: "core/exceptions.seq",
-        // F: "core/generators.seq", // LLVM error
+        "core/generics.seq",
+        "core/generators.seq",
+        "core/exceptions.seq",
+        "core/big.seq",
+        // F: "core/bltin.seq", // weird max trick
+        // F: "core/arguments.seq", // some error
         // F: "core/range.seq", // needs auto-unify
-        // F: "core/big.seq",
         // F: "core/match.seq", // needs seq type
         // F: "core/containers.seq", // unification
         // F: "core/trees.seq",

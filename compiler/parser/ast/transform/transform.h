@@ -38,8 +38,8 @@ private:
   std::string generateFunctionStub(int len);
   std::string generateTupleStub(int len);
   std::string generatePartialStub(const std::string &flag);
-  StmtPtr makeInternalFn(const std::string &name, ExprPtr &&ret, Param &&arg = Param(),
-                         Param &&arg2 = Param());
+  StmtPtr codegenMagic(const std::string &op, const ExprPtr &typExpr,
+                       const std::vector<Param> &args, bool isRecord);
 
   void defaultVisit(const Expr *e) override;
   void defaultVisit(const Stmt *s) override;

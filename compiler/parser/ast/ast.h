@@ -609,6 +609,7 @@ struct IfStmt : public Stmt {
 
   IfStmt(std::vector<If> &&i);
   IfStmt(ExprPtr cond, StmtPtr suite);
+  IfStmt(ExprPtr cond, StmtPtr suite, ExprPtr econd, StmtPtr esuite);
   IfStmt(const IfStmt &s);
   std::string toString() const override;
   NODE_UTILITY(Stmt, IfStmt);
@@ -912,6 +913,7 @@ struct InstantiateExpr : Expr {
   std::vector<ExprPtr> params;
 
   InstantiateExpr(ExprPtr e, std::vector<ExprPtr> &&i);
+  InstantiateExpr(ExprPtr e, ExprPtr t);
   InstantiateExpr(const InstantiateExpr &n);
   std::string toString() const override;
   NODE_UTILITY(Expr, InstantiateExpr);

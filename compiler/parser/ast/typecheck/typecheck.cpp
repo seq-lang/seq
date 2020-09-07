@@ -70,6 +70,8 @@ ExprPtr TypecheckVisitor::transform(const ExprPtr &expr, bool allowTypes) {
   TypecheckVisitor v(ctx, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
   expr->accept(v);
+  // LOG9("{} | {} -> {}", expr->getSrcInfo().line, expr->toString(),
+  //  v.resultExpr->toString());
   if (v.resultExpr && v.resultExpr->getType() && v.resultExpr->getType()->getClass() &&
       v.resultExpr->getType()->getClass()->canRealize())
     realizeType(v.resultExpr->getType()->getClass());
@@ -117,7 +119,6 @@ void TypecheckVisitor::prepend(StmtPtr s) {
 
 StmtPtr TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto ctx = make_shared<TypeContext>(cache);
-  ctx->add(TypecheckItem::Type, "void", make_shared<ClassType>("void", true));
   TypecheckVisitor v(ctx);
   return v.realizeBlock(stmts, true);
 }
@@ -152,8 +153,8 @@ void TypecheckVisitor::visit(const StringExpr *expr) {
 
 void TypecheckVisitor::visit(const IdExpr *expr) {
   auto val = ctx->find(expr->value);
-  if (!val)
-    ctx->dump();
+  // if (!val)
+  // ctx->dump();
   seqassert(val, "cannot find '{}'", expr->value);
   if (val->isStatic()) {
     auto s = val->getType()->getStatic();
@@ -419,9 +420,8 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
                                          expr->index->clone()));
   } else {
     resultExpr = N<IndexExpr>(move(e), transform(expr->index));
-    resultExpr->setType(expr->getType()
-                            ? expr->getType()
-                            : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
+    resultExpr->setType(
+        forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
   }
 }
 
@@ -436,36 +436,78 @@ void TypecheckVisitor::visit(const StackAllocExpr *expr) {
   resultExpr->setType(forceUnify(expr, t));
 }
 
+ExprPtr TypecheckVisitor::visitDot(const ExprPtr &expr, const string &member,
+                                   vector<CallExpr::Arg> *args) {
+  auto lhs = transform(expr, true);
+  TypePtr typ = nullptr;
+  if (lhs->getType()->getUnbound()) {
+    typ = ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
+  } else if (auto c = lhs->getType()->getClass()) {
+    if (auto m = ctx->findMethod(c->name, member)) {
+      if (args) {
+        vector<pair<string, TypePtr>> targs;
+        if (!lhs->isType())
+          targs.push_back({"", c});
+        for (auto &a : *args)
+          targs.push_back({a.name, a.value->getType()});
+        if (auto m = findBestCall(c, member, targs, true)) {
+          if (!lhs->isType())
+            args->insert(args->begin(), {"", clone(lhs)});
+          auto e = N<IdExpr>(m->name);
+          e->setType(ctx->instantiate(getSrcInfo(), m, c));
+          return e;
+        } else {
+          error("cannot find method '{}' in {} with arguments {}", member,
+                c->toString(), v2s(targs));
+        }
+      } else if (m->size() > 1) {
+        typ = ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel); // determine later
+      } else if (lhs->isType()) {
+        auto name = (*m)[0]->name;
+        auto val = ctx->find(name);
+        assert(val);
+        auto t = ctx->instantiate(getSrcInfo(), (*m)[0], c);
+        auto e = N<IdExpr>(name);
+        e->setType(t);
+        auto newName = patchIfRealizable(t, val->isType());
+        if (!newName.empty())
+          e->value = newName;
+        return e;
+      } else { // cast y.foo to CLS.foo(y, ...)
+        auto f = (*m)[0];
+        vector<ExprPtr> args;
+        args.push_back(move(lhs));
+        for (int i = 0; i < std::max(1, (int)f->args.size() - 2); i++)
+          args.push_back(N<EllipsisExpr>());
+        auto ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
+        if (in(ast->attributes, "property"))
+          args.pop_back();
+        return transform(N<CallExpr>(N<IdExpr>((*m)[0]->name), move(args)));
+      }
+    } else if (auto mm = ctx->findMember(c->name, member)) {
+      typ = ctx->instantiate(getSrcInfo(), mm, c);
+    } else {
+      error("cannot find '{}' in {}", member, lhs->getType()->toString());
+    }
+  } else {
+    error("cannot find '{}' in {}", member, lhs->getType()->toString());
+  }
+  auto t = N<DotExpr>(move(lhs), member);
+  t->setType(typ);
+  return t;
+}
+
 void TypecheckVisitor::visit(const CallExpr *expr) {
-  ExprPtr e = nullptr;
   vector<CallExpr::Arg> args;
   for (auto &i : expr->args)
     args.push_back({i.name, transform(i.value)});
 
-  // Intercept obj.foo() calls and transform obj.foo(...) to foo(obj, ...)
-  if (auto d = CAST(expr->expr, DotExpr)) {
-    auto dotlhs = transform(d->expr, true);
-    if (auto c = dotlhs->getType()->getClass()) {
-      vector<pair<string, TypePtr>> targs;
-      if (!dotlhs->isType())
-        targs.push_back({"", c});
-      for (auto &a : args)
-        targs.push_back({a.name, a.value->getType()});
-      if (auto m = findBestCall(c, d->member, targs, true)) {
-        if (!dotlhs->isType())
-          args.insert(args.begin(), {"", move(dotlhs)});
-        e = N<IdExpr>(m->name);
-        e->setType(ctx->instantiate(getSrcInfo(), m, c));
-      } else {
-        error("cannot find method '{}' in {} with arguments {}", d->member,
-              c->toString(), v2s(targs));
-      }
-    } else {
-      resultExpr = N<CallExpr>(N<DotExpr>(move(dotlhs), d->member), move(args));
-      return;
-    }
-  }
-  if (!e)
+  if (expr->expr->getType() && expr->expr->getType()->toString() == "?2586.2")
+    assert(1);
+  ExprPtr e = nullptr;
+  if (auto d = CAST(expr->expr, DotExpr))
+    e = visitDot(d->expr, d->member, &args);
+  else
     e = transform(expr->expr, true);
   forceUnify(expr->expr.get(), e->getType());
 
@@ -495,9 +537,8 @@ void TypecheckVisitor::visit(const CallExpr *expr) {
   auto cc = c->getClass();
   if (!cc) { // Unbound caller, will be handled later
     resultExpr = N<CallExpr>(move(e), move(args));
-    resultExpr->setType(expr->getType()
-                            ? expr->getType()
-                            : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
+    resultExpr->setType(
+        forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
     return;
   }
   if (!cc->getCallable()) { // route to a call method
@@ -562,50 +603,8 @@ void TypecheckVisitor::visit(const CallExpr *expr) {
 }
 
 void TypecheckVisitor::visit(const DotExpr *expr) {
-  auto lhs = transform(expr->expr, true);
-  TypePtr typ = nullptr;
-  if (lhs->getType()->getUnbound()) {
-    typ = expr->getType() ? expr->getType()
-                          : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
-  } else if (auto c = lhs->getType()->getClass()) {
-    if (auto m = ctx->findMethod(c->name, expr->member)) {
-      if (m->size() > 1)
-        error("ambigious partial expression"); /// TODO
-      if (lhs->isType()) {
-        auto name = (*m)[0]->name;
-        auto val = ctx->find(name);
-        assert(val);
-        auto t = ctx->instantiate(getSrcInfo(), (*m)[0], c);
-        resultExpr = N<IdExpr>(name);
-        resultExpr->setType(t);
-        auto newName = patchIfRealizable(t, val->isType());
-        if (!newName.empty())
-          static_cast<IdExpr *>(resultExpr.get())->value = newName;
-        return;
-      } else { // cast y.foo to CLS.foo(y, ...)
-        auto f = (*m)[0];
-        vector<ExprPtr> args;
-        args.push_back(move(lhs));
-        for (int i = 0; i < std::max(1, (int)f->args.size() - 2); i++)
-          args.push_back(N<EllipsisExpr>());
-
-        auto ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
-        if (in(ast->attributes, "property"))
-          args.pop_back();
-        resultExpr = transform(N<CallExpr>(N<IdExpr>((*m)[0]->name), move(args)));
-        return;
-      }
-    } else if (auto mm = ctx->findMember(c->name, expr->member)) {
-      typ = ctx->instantiate(getSrcInfo(), mm, c);
-    } else {
-      error("cannot find '{}' in {}", expr->member, lhs->getType()->toString());
-    }
-  } else {
-    error("cannot find '{}' in {}", expr->member, lhs->getType()->toString());
-  }
-
-  resultExpr = N<DotExpr>(move(lhs), expr->member);
-  resultExpr->setType(forceUnify(expr, typ));
+  resultExpr = visitDot(expr->expr, expr->member);
+  forceUnify(expr, resultExpr->getType());
 }
 
 void TypecheckVisitor::visit(const EllipsisExpr *expr) {
@@ -738,7 +737,7 @@ void TypecheckVisitor::visit(const YieldStmt *stmt) {
     resultStmt = N<YieldStmt>(move(e));
   } else {
     t = ctx->instantiateGeneric(stmt->getSrcInfo(), ctx->findInternal(".Generator"),
-                                {ctx->findInternal("void")});
+                                {ctx->findInternal(".void")});
     resultStmt = N<YieldStmt>(nullptr);
   }
   auto &base = ctx->bases.back();
@@ -763,8 +762,7 @@ void TypecheckVisitor::visit(const WhileStmt *stmt) {
 
 void TypecheckVisitor::visit(const ForStmt *stmt) {
   auto iter = transform(stmt->iter);
-  TypePtr varType = nullptr;
-  varType = ctx->addUnbound(stmt->var->getSrcInfo(), ctx->typecheckLevel);
+  TypePtr varType = ctx->addUnbound(stmt->var->getSrcInfo(), ctx->typecheckLevel);
   if (!iter->getType()->getUnbound()) {
     auto iterType = iter->getType()->getClass();
     if (!iterType || iterType->name != ".Generator")
@@ -886,13 +884,15 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
        ctx->getBase(), printParents(t->parent));
   ctx->bases.back().visitedAsts[stmt->name] = {TypecheckItem::Func, t};
 
-  if ((in(stmt->attributes, "builtin") || in(stmt->attributes, ".c")) &&
-      !t->canRealize())
-    error("builtins and external functions must be realizable");
+  if (in(stmt->attributes, "builtin") || in(stmt->attributes, ".c")) {
+    if (!t->canRealize())
+      error("builtins and external functions must be realizable");
+    realizeFunc(ctx->instantiate(getSrcInfo(), t)->getFunc());
+  }
   // Class members are realized after the class is sealed to prevent premature
   // unification of class generics
-  if (!isClassMember && t->canRealize())
-    realizeFunc(ctx->instantiate(getSrcInfo(), t)->getFunc());
+  // if (!isClassMember && !in(stmt->attributes, "delay") && t->canRealize())
+  // realizeFunc(ctx->instantiate(getSrcInfo(), t)->getFunc());
 }
 
 void TypecheckVisitor::visit(const ClassStmt *stmt) {
@@ -949,8 +949,9 @@ void TypecheckVisitor::visit(const ClassStmt *stmt) {
     LOG7("       - member: {}: {}", m.first, m.second->toString());
   for (auto &m : ctx->cache->classMethods[stmt->name])
     for (auto &f : m.second) {
-      if (f->canRealize())
-        realizeFunc(ctx->instantiate(getSrcInfo(), f)->getFunc());
+      // auto ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
+      // if (f->canRealize() && !in(ast->attributes, "delay"))
+      // realizeFunc(ctx->instantiate(getSrcInfo(), f)->getFunc());
       LOG7("       - method: {}: {}", m.first, f->toString());
     }
   resultStmt = N<SuiteStmt>(move(stmts));
@@ -1220,8 +1221,9 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
                                            const vector<pair<string, TypePtr>> &args,
                                            bool failOnMultiple, TypePtr retType) {
   auto m = ctx->findMethod(c->name, member);
-  if (!m)
+  if (!m) {
     return nullptr;
+  }
 
   if (m->size() == 1) // works
     return (*m)[0];
@@ -1262,8 +1264,9 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
     if (s >= 0)
       scores.push_back({s, i});
   }
-  if (!scores.size())
+  if (!scores.size()) {
     return nullptr;
+  }
   sort(scores.begin(), scores.end(), std::greater<pair<int, int>>());
   if (failOnMultiple) {
     // for (int i = 1; i < scores.size(); i++)
@@ -1386,7 +1389,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
          ctx->getBase(), depth);
     ctx->addBlock();
     ctx->typecheckLevel++;
-    ctx->bases.push_back({t, nullptr});
+    ctx->bases.push_back({t, t->args[0]});
     auto *ast = (FunctionStmt *)(ctx->cache->asts[t->name].get());
     int pi = 0;
     for (auto p = t->parent; p; pi++) {
@@ -1433,10 +1436,16 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     StmtPtr realized = nullptr;
     if (!isInternal) {
       ctx->typecheckLevel++;
+      LOG9(">>> {}", t->realizeString());
       realized = realizeBlock(ast->suite);
+      LOG9("<<< {}", t->realizeString());
       ctx->typecheckLevel--;
-      forceUnify(t->args[0], ctx->bases.back().returnType ? ctx->bases.back().returnType
-                                                          : ctx->findInternal("void"));
+
+      if (!ast->ret && t->args[0]->getUnbound())
+        forceUnify(t->args[0], ctx->findInternal(".void"));
+      // if (stmt->)
+      // forceUnify(t->args[0], ctx->bases.back().returnType ?
+      // ctx->bases.back().returnType : ctx->findInternal(".void"));
     }
     assert(t->args[0]->getClass() && t->args[0]->getClass()->canRealize());
     realizeType(t->args[0]->getClass());
@@ -1534,11 +1543,13 @@ StmtPtr TypecheckVisitor::realizeBlock(const StmtPtr &stmt, bool keepLast) {
       }
       prevSize = newUnbounds;
     }
-    LOG7("===========================");
+    LOG7("=========================== {}",
+         ctx->bases.back().type ? ctx->bases.back().type->toString() : "-");
   }
   // Last pass; TODO: detect if it is needed...
   ctx->addBlock();
-  LOG7("===========================");
+  LOG7("=========================== {}",
+       ctx->bases.back().type ? ctx->bases.back().type->toString() : "-");
   result = TypecheckVisitor(ctx).transform(result);
   if (!keepLast)
     ctx->popBlock();

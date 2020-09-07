@@ -86,8 +86,8 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int 
                                         level, nullptr, isStatic);
   t->setSrcInfo(srcInfo);
   LOG9("[ub] new {}: {} ({})", t->toString(0), srcInfo, setActive);
-  // if (cache->unboundCount - 1 == 4006)
-  //   assert(1);
+  if (cache->unboundCount - 1 == 2586)
+    assert(1);
   if (setActive)
     activeUnbounds.insert(t);
   return t;
