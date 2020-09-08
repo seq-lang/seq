@@ -757,7 +757,8 @@ Func *Func::clone(Generic *ref) {
   return x;
 }
 
-std::unordered_map<std::string, Func *> Func::builtins = {};
+std::unordered_map<std::string, Func *> Func::builtins =
+  std::unordered_map<std::string, Func *>();
 Func *Func::getBuiltin(const std::string &name) {
   auto itr = builtins.find(name);
   assert(itr != builtins.end());

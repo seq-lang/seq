@@ -191,18 +191,20 @@ string ImportCache::getImportFile(const string &what, const string &relativeTo,
     paths.push_back(format("{}/{}.seq", parent, what));
     paths.push_back(format("{}/{}/__init__.seq", parent, what));
   }
-  if (argv0 != "") {
-    strncpy(abs, executable_path(argv0.c_str()).c_str(), PATH_MAX);
-    auto parent = format("{}/../stdlib", dirname(abs));
-    realpath(parent.c_str(), abs);
-    paths.push_back(format("{}/{}.seq", abs, what));
-    paths.push_back(format("{}/{}/__init__.seq", abs, what));
-  }
   if (auto c = getenv("SEQ_PATH")) {
     char abs[PATH_MAX];
     realpath(c, abs);
     paths.push_back(format("{}/{}.seq", abs, what));
     paths.push_back(format("{}/{}/__init__.seq", abs, what));
+  }
+  if (argv0 != "") {
+    for (auto loci: {"../lib/seq/stdlib", "../stdlib", "stdlib"}) {
+      strncpy(abs, executable_path(argv0.c_str()).c_str(), PATH_MAX);
+      auto parent = format("{}/{}", dirname(abs), loci);
+      realpath(parent.c_str(), abs);
+      paths.push_back(format("{}/{}.seq", abs, what));
+      paths.push_back(format("{}/{}/__init__.seq", abs, what));
+    }
   }
   // for (auto &x: paths) DBG("-- {}", x);
   for (auto &p : paths) {
