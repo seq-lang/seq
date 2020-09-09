@@ -10,7 +10,6 @@
 #include "lang/expr.h"
 #include "lang/func.h"
 #include "lang/lang.h"
-#include "lang/ops.h"
 #include "lang/patterns.h"
 #include "lang/pipeline.h"
 #include "lang/var.h"

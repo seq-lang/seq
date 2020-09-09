@@ -231,106 +231,45 @@ Value *IsExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return is;
 }
 
-UOpExpr::UOpExpr(Op op, Expr *lhs) : Expr(), op(std::move(op)), lhs(lhs) {}
+ShortCircuitExpr::ShortCircuitExpr(ShortCircuitExpr::Op op, Expr *lhs, Expr *rhs)
+    : Expr(types::Bool), op(op), lhs(lhs), rhs(rhs) {}
 
-static void unsupportedUOpError(std::string symbol, types::Type *lhs) {
-  throw exc::SeqException("bad operand type for unary " + symbol + ": '" +
-                          lhs->getName() + "'");
-}
-
-Value *UOpExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  types::Type *lhsType = lhs->getType();
-  Value *self = lhs->codegen(base, block);
-
-  if (op == uop("!")) {
-    Value *b = lhsType->boolValue(self, block, getTryCatch());
-    return types::Bool->callMagic("__invert__", {}, b, {}, block, getTryCatch());
-  } else {
-    types::Type *outType = lhsType->magicOut(op.magic, {}, /*nullOnMissing=*/true);
-    if (outType)
-      return lhsType->callMagic(op.magic, {}, self, {}, block, getTryCatch());
-    unsupportedUOpError(op.symbol, lhsType);
-    return nullptr;
-  }
-}
-
-BOpExpr::BOpExpr(Op op, Expr *lhs, Expr *rhs, bool inPlace)
-    : Expr(), op(std::move(op)), lhs(lhs), rhs(rhs), inPlace(inPlace) {}
-
-static void unsupportedBOpError(std::string symbol, types::Type *lhs,
-                                types::Type *rhs) {
-  throw exc::SeqException("unsupported operand type(s) for " + symbol + ": '" +
-                          lhs->getName() + "' and '" + rhs->getName() + "'");
-}
-
-Value *BOpExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
+Value *ShortCircuitExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
+  const bool isAnd = (op == ShortCircuitExpr::Op::AND);
+  const bool isOr = (op == ShortCircuitExpr::Op::OR);
+  assert(isAnd ^ isOr);
+  assert(lhs->getType()->is(types::Bool));
+  assert(rhs->getType()->is(types::Bool));
 
-  /*
-   * && and || are special-cased because of short-circuiting
-   */
-  if (op == bop("&&") || op == bop("||")) {
-    const bool isAnd = (op == bop("&&"));
+  Value *lhs = this->lhs->codegen(base, block);
+  lhs = this->lhs->getType()->boolValue(lhs, block, getTryCatch());
 
-    Value *lhs = this->lhs->codegen(base, block);
-    lhs = this->lhs->getType()->boolValue(lhs, block, getTryCatch());
+  BasicBlock *b1 = BasicBlock::Create(context, "", block->getParent());
 
-    BasicBlock *b1 = BasicBlock::Create(context, "", block->getParent());
+  IRBuilder<> builder(block);
+  lhs = builder.CreateTrunc(lhs, IntegerType::getInt1Ty(context));
+  BranchInst *branch = builder.CreateCondBr(lhs, b1, b1); // one branch changed below
 
-    IRBuilder<> builder(block);
-    lhs = builder.CreateTrunc(lhs, IntegerType::getInt1Ty(context));
-    BranchInst *branch = builder.CreateCondBr(lhs, b1, b1); // one branch changed below
+  Value *rhs = this->rhs->codegen(base, b1);
+  rhs = this->rhs->getType()->boolValue(rhs, b1, getTryCatch());
+  builder.SetInsertPoint(b1);
 
-    Value *rhs = this->rhs->codegen(base, b1);
-    rhs = this->rhs->getType()->boolValue(rhs, b1, getTryCatch());
-    builder.SetInsertPoint(b1);
+  BasicBlock *b2 = BasicBlock::Create(context, "", block->getParent());
+  builder.CreateBr(b2);
+  builder.SetInsertPoint(b2);
 
-    BasicBlock *b2 = BasicBlock::Create(context, "", block->getParent());
-    builder.CreateBr(b2);
-    builder.SetInsertPoint(b2);
+  Type *boolTy = types::Bool->getLLVMType(context);
+  Value *t = ConstantInt::get(boolTy, 1);
+  Value *f = ConstantInt::get(boolTy, 0);
 
-    Type *boolTy = types::Bool->getLLVMType(context);
-    Value *t = ConstantInt::get(boolTy, 1);
-    Value *f = ConstantInt::get(boolTy, 0);
+  PHINode *result = builder.CreatePHI(boolTy, 2);
+  result->addIncoming(isAnd ? f : t, block);
+  result->addIncoming(rhs, b1);
 
-    PHINode *result = builder.CreatePHI(boolTy, 2);
-    result->addIncoming(isAnd ? f : t, block);
-    result->addIncoming(rhs, b1);
-
-    branch->setSuccessor(isAnd ? 1 : 0, b2);
-    block = b2;
-    return result;
-  } else {
-    types::Type *lhsType = lhs->getType();
-    types::Type *rhsType = rhs->getType();
-    types::Type *outType = nullptr;
-    Value *self = lhs->codegen(base, block);
-    Value *arg = rhs->codegen(base, block);
-
-    if (inPlace) {
-      assert(!op.magicInPlace.empty());
-      types::Type *outType =
-          lhsType->magicOut(op.magicInPlace, {rhsType}, /*nullOnMissing=*/true);
-      if (outType && types::is(outType, lhsType))
-        return lhsType->callMagic(op.magicInPlace, {rhsType}, self, {arg}, block,
-                                  getTryCatch());
-    }
-
-    outType = lhsType->magicOut(op.magic, {rhsType}, /*nullOnMissing=*/true);
-    if (outType)
-      return lhsType->callMagic(op.magic, {rhsType}, self, {arg}, block, getTryCatch());
-
-    if (!op.magicReflected.empty()) {
-      outType = rhsType->magicOut(op.magicReflected, {lhsType},
-                                  /*nullOnMissing=*/true);
-      if (outType)
-        return rhsType->callMagic(op.magicReflected, {lhsType}, arg, {self}, block,
-                                  getTryCatch());
-    }
-
-    unsupportedBOpError(op.symbol, lhsType, rhsType);
-    return nullptr;
-  }
+  branch->setSuccessor(isAnd ? 1 : 0, b2);
+  block = b2;
+  return result;
 }
 
 AtomicExpr::AtomicExpr(AtomicExpr::Op op, Var *lhs, Expr *rhs)
@@ -371,181 +310,6 @@ Value *AtomicExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return nullptr;
 }
 
-ArrayLookupExpr::ArrayLookupExpr(Expr *arr, Expr *idx) : arr(arr), idx(idx) {}
-
-static types::RecordType *sliceTypeFromName(const std::string &name) {
-  using types::Int;
-  using types::RecordType;
-  static RecordType *eslice = RecordType::get({Int}, {}, "eslice");
-  static RecordType *rslice = RecordType::get({Int}, {}, "rslice");
-  static RecordType *lslice = RecordType::get({Int}, {}, "lslice");
-  static RecordType *slice = RecordType::get({Int, Int}, {}, "slice");
-  static RecordType *esslice = RecordType::get({Int}, {}, "esslice");
-  static RecordType *rsslice = RecordType::get({Int, Int}, {}, "rsslice");
-  static RecordType *lsslice = RecordType::get({Int, Int}, {}, "lsslice");
-  static RecordType *sslice = RecordType::get({Int, Int, Int}, {}, "sslice");
-  static std::vector<RecordType *> slices = {eslice,  rslice,  lslice,  slice,
-                                             esslice, rsslice, lsslice, sslice};
-  for (RecordType *rec : slices) {
-    if (rec->getName() == name)
-      return rec;
-  }
-  return nullptr;
-}
-
-struct Slice {
-  seq_int_t start;
-  seq_int_t stop;
-  seq_int_t step;
-};
-
-static Slice getSliceIndices(const std::vector<seq_int_t> &args,
-                             types::RecordType *sliceType, seq_int_t length) {
-  const std::string name = sliceType->getName();
-  if (name == "eslice") {
-    return {0, length, 1};
-  } else if (name == "rslice") {
-    return {args[0], length, 1};
-  } else if (name == "lslice") {
-    return {0, args[0], 1};
-  } else if (name == "slice") {
-    return {args[0], args[1], 1};
-  } else if (name == "esslice") {
-    const bool pos = args[0] > 0;
-    return {pos ? 0 : length, pos ? length : 0, args[0]};
-  } else if (name == "rsslice") {
-    const bool pos = args[1] > 0;
-    return {args[0], pos ? length : 0, args[1]};
-  } else if (name == "lsslice") {
-    const bool pos = args[1] > 0;
-    return {pos ? 0 : length, args[0], args[1]};
-  } else if (name == "sslice") {
-    return {args[0], args[1], args[2]};
-  } else {
-    assert(0);
-    return {0, 0, 0};
-  }
-}
-
-static bool extractIntLiteral(Expr *expr, seq_int_t &result) {
-  if (auto *idx = dynamic_cast<IntExpr *>(expr)) {
-    result = idx->value();
-    return true;
-  } else {
-    return false;
-  }
-}
-
-static bool extractSliceLiteral(Expr *expr, std::vector<seq_int_t> &args,
-                                types::RecordType *&sliceType) {
-  auto *construct = dynamic_cast<ConstructExpr *>(expr);
-  if (!construct)
-    return false;
-  auto *rec = dynamic_cast<types::RecordType *>(construct->getConstructType());
-  if (!rec)
-    return false;
-  sliceType = sliceTypeFromName(rec->getName());
-  if (!sliceType)
-    return false;
-
-  for (Expr *expr : construct->getArgs()) {
-    seq_int_t n = 0;
-    if (extractIntLiteral(expr, n)) {
-      args.push_back(n);
-    } else {
-      return false;
-    }
-  }
-
-  return args.size() == sliceType->numBaseTypes();
-}
-
-static bool getExprForTupleIndex(Expr *arr, Expr *idx, types::RecordType *rec,
-                                 GetElemExpr *result) {
-  seq_int_t idxLit = 0;
-  if (extractIntLiteral(idx, idxLit) &&
-      !rec->magicOut("__getitem__", {types::Int}, /*nullOnMissing=*/true,
-                     /*overloadsOnly=*/true)) {
-    seq_int_t idx = translateIndex(idxLit, rec->numBaseTypes());
-    *result = GetElemExpr(arr,
-                          (unsigned)(idx + 1)); // GetElemExpr is 1-based
-    return true;
-  }
-  return false;
-}
-
-static bool getExprForTupleSlice(Expr *arr, Expr *idx, types::RecordType *rec,
-                                 RecordExpr *result) {
-  std::vector<seq_int_t> args;
-  types::RecordType *sliceType = nullptr;
-  if (extractSliceLiteral(idx, args, sliceType) &&
-      !rec->magicOut("__getitem__", {sliceType}, /*nullOnMissing=*/true,
-                     /*overloadsOnly=*/true)) {
-    const seq_int_t length = rec->numBaseTypes();
-    Slice s = getSliceIndices(args, sliceType, length);
-    const seq_int_t resultLength =
-        sliceAdjustIndices(length, &s.start, &s.stop, s.step);
-
-    std::vector<Expr *> values;
-    if (resultLength > 0) {
-      for (seq_int_t i = s.start; (s.step >= 0) ? (i < s.stop) : (i >= s.stop);
-           i += s.step) {
-        values.push_back(new GetElemExpr(arr, (unsigned)(i + 1)));
-      }
-    }
-    *result = RecordExpr(values);
-    return true;
-  }
-  return false;
-}
-
-Value *ArrayLookupExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  types::Type *type = arr->getType();
-  types::RecordType *rec = type->asRec();
-  types::Type *idxType = this->idx->getType();
-
-  // check if this is a record lookup, and that __getitem__ is not overriden
-  if (rec) {
-    // simple x[i]
-    GetElemExpr e1(nullptr, {});
-    if (getExprForTupleIndex(arr, idx, rec, &e1))
-      return e1.codegen(base, block);
-
-    // slice x[i:j:k] (or variant thereof)
-    RecordExpr e2({});
-    if (getExprForTupleSlice(arr, idx, rec, &e2))
-      return e2.codegen(base, block);
-  }
-
-  Value *arr = this->arr->codegen(base, block);
-  Value *idx = this->idx->codegen(base, block);
-
-  if (auto *func = dynamic_cast<Func *>(base)) {
-    if (func->hasAttribute("prefetch") &&
-        type->magicOut("__prefetch__", {idxType}, /*nullOnMissing=*/true)) {
-      type->callMagic("__prefetch__", {idxType}, arr, {idx}, block, getTryCatch());
-      func->codegenYield(nullptr, nullptr, block, true);
-    }
-  }
-
-  return type->callMagic("__getitem__", {idxType}, arr, {idx}, block, getTryCatch());
-}
-
-ArrayContainsExpr::ArrayContainsExpr(Expr *val, Expr *arr) : val(val), arr(arr) {}
-
-Value *ArrayContainsExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  types::Type *valType = val->getType();
-  types::Type *arrType = arr->getType();
-
-  if (!arrType->magicOut("__contains__", {valType})->is(types::Bool))
-    throw exc::SeqException("__contains__ does not return a boolean value");
-
-  Value *val = this->val->codegen(base, block);
-  Value *arr = this->arr->codegen(base, block);
-  return arrType->callMagic("__contains__", {valType}, arr, {val}, block,
-                            getTryCatch());
-}
-
 GetElemExpr::GetElemExpr(Expr *rec, std::string memb)
     : rec(rec), memb(std::move(memb)) {
   name = "elem";
@@ -573,20 +337,6 @@ Value *GetElemExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return type->memb(self, memb, block);
 }
 
-GetStaticElemExpr::GetStaticElemExpr(types::Type *type, std::string memb)
-    : Expr(), type(type), memb(std::move(memb)) {
-  name = "static";
-}
-
-types::Type *GetStaticElemExpr::getTypeInExpr() const { return type; }
-
-std::string GetStaticElemExpr::getMemb() const { return memb; }
-
-Value *GetStaticElemExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  FuncExpr f(type->getMethod(memb));
-  return f.codegen(base, block);
-}
-
 CallExpr::CallExpr(Expr *func, std::vector<Expr *> args, std::vector<std::string> names)
     : func(func), args(std::move(args)), names(std::move(names)) {}
 
@@ -609,8 +359,6 @@ static bool isLiteralNegOne(Expr *e) {
 }
 
 Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  types::Type *type = getType(); // validates call
-
   // catch inter-sequence alignment calls
   // arguments are defined in stdlib/align.seq:
   /*
@@ -775,7 +523,7 @@ Value *CallExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
 
   // check if this is really a partial function
   if (saw_null) {
-    auto *partial = dynamic_cast<types::PartialFuncType *>(type);
+    auto *partial = dynamic_cast<types::PartialFuncType *>(getType());
     assert(partial);
     return partial->make(f, x, block);
   }
@@ -822,7 +570,6 @@ CondExpr::CondExpr(Expr *cond, Expr *ifTrue, Expr *ifFalse)
 Value *CondExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   Value *cond = this->cond->codegen(base, block);
-  cond = this->cond->getType()->boolValue(cond, block, getTryCatch());
   IRBuilder<> builder(block);
   cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
 
@@ -917,89 +664,6 @@ Value *MatchExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   }
 
   return result;
-}
-
-ConstructExpr::ConstructExpr(types::Type *type, std::vector<Expr *> args,
-                             std::vector<std::string> names)
-    : Expr(), type(type), args(std::move(args)), names(std::move(names)) {
-  // if all names are empty, clear names vector
-  bool empty = true;
-  for (const std::string &name : this->names) {
-    if (!name.empty()) {
-      empty = false;
-      break;
-    }
-  }
-  if (empty)
-    this->names.clear();
-}
-
-types::Type *ConstructExpr::getConstructType() { return type; }
-
-std::vector<Expr *> ConstructExpr::getArgs() { return args; }
-
-Value *ConstructExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  LLVMContext &context = block->getContext();
-
-  // special-case bool catch-all constructor:
-  if (type->is(types::Bool) && args.size() == 1) {
-    Value *val = args[0]->codegen(base, block);
-    return args[0]->getType()->boolValue(val, block, getTryCatch());
-  }
-
-  // special-case str catch-all constructor:
-  if (type->is(types::Str) && args.size() == 1) {
-    Value *val = args[0]->codegen(base, block);
-    return args[0]->getType()->strValue(val, block, getTryCatch());
-  }
-
-  Module *module = block->getModule();
-  getType(); // validates construction
-
-  std::vector<types::Type *> types;
-  for (auto *arg : args)
-    types.push_back(arg->getType());
-
-  std::vector<Value *> vals;
-  for (auto *arg : args)
-    vals.push_back(arg->codegen(base, block));
-
-  Value *self;
-
-  if (type->hasMethod("__new__")) {
-    self = type->callMagic("__new__", {}, nullptr, {}, block, getTryCatch());
-
-    if (type->hasMethod("__del__")) {
-      // make and register the finalizer
-      static int idx = 1;
-      auto *finalizeFunc = cast<Function>(module->getOrInsertFunction(
-          "seq.finalizer." + std::to_string(idx++), Type::getVoidTy(context),
-          IntegerType::getInt8PtrTy(context), IntegerType::getInt8PtrTy(context)));
-
-      BasicBlock *entry = BasicBlock::Create(context, "entry", finalizeFunc);
-      Value *obj = finalizeFunc->arg_begin();
-      IRBuilder<> builder(entry);
-      obj = builder.CreateBitCast(obj, type->getLLVMType(context));
-      type->callMagic("__del__", {}, obj, {}, entry, nullptr);
-      builder.SetInsertPoint(entry);
-      builder.CreateRetVoid();
-
-      auto *registerFunc = cast<Function>(module->getOrInsertFunction(
-          "seq_register_finalizer", Type::getVoidTy(context),
-          IntegerType::getInt8PtrTy(context), finalizeFunc->getType()));
-      registerFunc->setDoesNotThrow();
-
-      builder.SetInsertPoint(block);
-      obj = builder.CreateBitCast(self, IntegerType::getInt8PtrTy(context));
-      builder.CreateCall(registerFunc, {obj, finalizeFunc});
-    }
-  } else {
-    // no __new__ defined, so just pass default value to __init__
-    self = type->defaultValue(block);
-  }
-
-  Value *ret = type->callInit(types, names, self, vals, block, getTryCatch());
-  return type->initOut(types, names)->is(types::Void) ? self : ret;
 }
 
 MethodExpr::MethodExpr(Expr *self, Func *func) : Expr(), self(self), func(func) {}
