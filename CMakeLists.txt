@@ -116,7 +116,6 @@ add_definitions(${LLVM_DEFINITIONS})
 set(SEQ_HPPFILES  compiler/lang/expr.h
                   compiler/lang/func.h
                   compiler/lang/lang.h
-                  compiler/lang/ops.h
                   compiler/lang/patterns.h
                   compiler/lang/pipeline.h
                   compiler/lang/seq.h
@@ -168,7 +167,6 @@ set(SEQ_HPPFILES  compiler/lang/expr.h
 set(SEQ_CPPFILES  compiler/lang/expr.cpp
                   compiler/lang/func.cpp
                   compiler/lang/lang.cpp
-                  compiler/lang/ops.cpp
                   compiler/lang/patterns.cpp
                   compiler/lang/pipeline.cpp
                   compiler/lang/seq.cpp

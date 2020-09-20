@@ -130,11 +130,9 @@ void If::codegen0(BasicBlock *&block) {
   Function *func = block->getParent();
   IRBuilder<> builder(block);
   std::vector<BranchInst *> binsts;
-  TryCatch *tc = getTryCatch();
 
   for (unsigned i = 0; i < conds.size(); i++) {
     Value *cond = conds[i]->codegen(getBase(), block);
-    cond = conds[i]->getType()->boolValue(cond, block, tc);
     Block *branch = branches[i];
 
     builder.SetInsertPoint(block); // recall: expr codegen can change the block
@@ -822,7 +820,6 @@ void While::codegen0(BasicBlock *&block) {
   builder.CreateBr(loop);
 
   Value *cond = this->cond->codegen(getBase(), loop); // recall: this can change `loop`
-  cond = this->cond->getType()->boolValue(cond, loop, getTryCatch());
   builder.SetInsertPoint(loop);
   cond = builder.CreateTrunc(cond, IntegerType::getInt1Ty(context));
 
@@ -998,12 +995,9 @@ void Assert::codegen0(BasicBlock *&block) {
   const bool test = isTest(getBase());
 
   Value *check = expr->codegen(getBase(), block);
-  check = expr->getType()->boolValue(check, block, getTryCatch());
-
   Value *msgVal = nullptr;
   if (msg) {
     msgVal = msg->codegen(getBase(), block);
-    msgVal = msg->getType()->strValue(msgVal, block, getTryCatch());
   } else {
     msgVal = StrExpr("").codegen(getBase(), block);
   }

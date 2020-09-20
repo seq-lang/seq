@@ -1,6 +1,5 @@
 #pragma once
 
-#include "lang/ops.h"
 #include "lang/patterns.h"
 #include "types/ref.h"
 #include "types/types.h"
@@ -233,25 +232,17 @@ public:
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
 };
 
-class UOpExpr : public Expr {
-private:
-  Op op;
-  Expr *lhs;
-
+class ShortCircuitExpr : public Expr {
 public:
-  UOpExpr(Op op, Expr *lhs);
-  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-};
+  enum Op { AND, OR };
 
-class BOpExpr : public Expr {
 private:
-  Op op;
+  ShortCircuitExpr::Op op;
   Expr *lhs;
   Expr *rhs;
-  bool inPlace;
 
 public:
-  BOpExpr(Op op, Expr *lhs, Expr *rhs, bool inPlace = false);
+  ShortCircuitExpr(ShortCircuitExpr::Op op, Expr *lhs, Expr *rhs);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
 };
 
@@ -279,26 +270,6 @@ public:
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
 };
 
-class ArrayLookupExpr : public Expr {
-private:
-  Expr *arr;
-  Expr *idx;
-
-public:
-  ArrayLookupExpr(Expr *arr, Expr *idx);
-  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-};
-
-class ArrayContainsExpr : public Expr {
-private:
-  Expr *val;
-  Expr *arr;
-
-public:
-  ArrayContainsExpr(Expr *val, Expr *arr);
-  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-};
-
 class GetElemExpr : public Expr {
 private:
   Expr *rec;
@@ -309,20 +280,6 @@ public:
   GetElemExpr(Expr *rec, unsigned memb);
   Expr *getRec();
   std::string getMemb();
-  bool isRealized() const;
-  void setRealizeTypes(std::vector<types::Type *> types);
-  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
-};
-
-class GetStaticElemExpr : public Expr {
-private:
-  types::Type *type;
-  std::string memb;
-
-public:
-  GetStaticElemExpr(types::Type *type, std::string memb);
-  types::Type *getTypeInExpr() const;
-  std::string getMemb() const;
   bool isRealized() const;
   void setRealizeTypes(std::vector<types::Type *> types);
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
@@ -379,20 +336,6 @@ public:
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
   void setValue(Expr *value);
   void addCase(Pattern *pattern, Expr *expr);
-};
-
-class ConstructExpr : public Expr {
-private:
-  types::Type *type;
-  std::vector<Expr *> args;
-  std::vector<std::string> names;
-
-public:
-  ConstructExpr(types::Type *type, std::vector<Expr *> args,
-                std::vector<std::string> names = {});
-  types::Type *getConstructType();
-  std::vector<Expr *> getArgs();
-  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
 };
 
 class MethodExpr : public Expr {
