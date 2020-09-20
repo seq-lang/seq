@@ -174,15 +174,15 @@ seq::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
     auto ret = types[0];
     types.erase(types.begin());
     handle = seq::types::FuncType::get(types, ret);
-  } else if (startswith(name, ".Partial.")) {
-    auto f = t->getCallable()->getClass();
-    assert(f);
-    auto callee = realizeType(f);
-    vector<seq::types::Type *> partials(f->args.size() - 1, nullptr);
-    for (int i = 9; i < name.size(); i++)
-      if (name[i] == '1')
-        partials[i - 9] = realizeType(f->args[i - 9 + 1]->getClass());
-    handle = seq::types::PartialFuncType::get(callee, partials);
+    // } else if (startswith(name, ".Partial.")) {
+    //   auto f = t->getCallable()->getClass();
+    //   assert(f);
+    //   auto callee = realizeType(t->args[0]);
+    //   vector<seq::types::Type *> partials(f->args.size() - 1, nullptr);
+    //   for (int i = 9; i < name.size(); i++)
+    //     if (name[i] == '1')
+    //       partials[i - 9] = realizeType(f->args[i - 9 + 1]->getClass());
+    //   handle = seq::types::PartialFuncType::get(callee, partials);
   } else {
     vector<string> names;
     vector<seq::types::Type *> types;

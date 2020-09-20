@@ -52,6 +52,9 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
                      const ExprPtr &index);
   ExprPtr visitDot(const ExprPtr &expr, const std::string &member,
                    std::vector<CallExpr::Arg> *args = nullptr);
+  std::string generatePartialStub(const std::string &mask);
+  std::vector<StmtPtr> parseClass(const ClassStmt *stmt);
+  ExprPtr parseCall(const CallExpr *expr, types::TypePtr pipelineArg = nullptr);
 
   void defaultVisit(const Expr *e) override;
   void defaultVisit(const Stmt *s) override;

@@ -1259,7 +1259,7 @@ string TransformVisitor::generateFunctionStub(int len) {
     for (int i = 1; i <= len; i++) {
       genericNames.push_back(N<IdExpr>(format("T{}", i)));
       generics.push_back(Param{format("T{}", i), nullptr, nullptr});
-      args.push_back(Param{format("a{0}", i), N<IdExpr>(format("T{}", i)), nullptr});
+      args.push_back(Param{format(".a{0}", i), N<IdExpr>(format("T{}", i)), nullptr});
     }
     ExprPtr type = N<IdExpr>(typeName);
     if (genericNames.size())
@@ -1276,6 +1276,13 @@ string TransformVisitor::generateFunctionStub(int len) {
     fns.push_back(make_unique<FunctionStmt>("__str__", N<IdExpr>("str"),
                                             vector<Param>{}, move(p), nullptr,
                                             vector<string>{"internal"}));
+    // p.clear();
+    // p.push_back({"self", clone(type)});
+    // for (int i = 2; i <= len; i++)
+    //   p.push_back({format(".a{0}", i), N<IdExpr>(format("T{}", i)), nullptr});
+    // fns.push_back(make_unique<FunctionStmt>("__call__", N<IdExpr>("T1"),
+    //                                         vector<Param>{}, move(p), nullptr,
+    //                                         vector<string>{"internal"}));
 
     StmtPtr stmt =
         make_unique<ClassStmt>(true, typeName, move(generics), clone_nop(args),

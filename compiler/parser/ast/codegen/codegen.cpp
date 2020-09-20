@@ -177,10 +177,30 @@ void CodegenVisitor::visit(const IfExpr *expr) {
 }
 
 void CodegenVisitor::visit(const PipeExpr *expr) {
-  vector<seq::Expr *> exprs;
-  vector<seq::types::Type *> inTypes;
-  for (int i = 0; i < expr->items.size(); i++) {
-    exprs.push_back(transform(expr->items[i].expr));
+  vector<seq::Expr *> exprs{transform(expr->items[0].expr)};
+  vector<seq::types::Type *> inTypes{realizeType(expr->inTypes[0]->getClass())};
+  for (int i = 1; i < expr->items.size(); i++) {
+    auto e = CAST(expr->items[i].expr, CallExpr);
+    assert(e);
+    // LOG("{}", e->toString());
+
+    auto pfn = transform(e->expr);
+    // LOG(" -- {} ... {}", pfn->getType()->getName(), e->args.size());
+    vector<seq::Expr *> items(e->args.size(), nullptr);
+    vector<string> names(e->args.size(), "");
+    vector<seq::types::Type *> partials(e->args.size(), nullptr);
+    for (int ai = 0; ai < e->args.size(); ai++)
+      if (!CAST(e->args[ai].value, EllipsisExpr)) {
+        items[ai] = transform(e->args[ai].value);
+        partials[ai] = realizeType(e->args[ai].value->getType()->getClass());
+        // LOG(" -- {}: {} .. {}", ai, partials[ai]->getName(),
+        // items[ai]->getType()->getName());
+      }
+    auto p = new seq::PartialCallExpr(pfn, items, names);
+    p->setType(seq::types::PartialFuncType::get(pfn->getType(), partials));
+    // LOG(" ?? {}", p->getType()->getName())
+
+    exprs.push_back(p);
     inTypes.push_back(realizeType(expr->inTypes[i]->getClass()));
   }
   auto p = new seq::PipeExpr(exprs);
@@ -195,20 +215,14 @@ void CodegenVisitor::visit(const CallExpr *expr) {
   auto lhs = transform(expr->expr);
   vector<seq::Expr *> items;
   vector<string> names;
-  bool isPartial = false;
   for (auto &&i : expr->args) {
-    if (CAST(i.value, EllipsisExpr)) {
-      items.push_back(nullptr);
-      isPartial = true;
-    } else {
+    if (CAST(i.value, EllipsisExpr))
+      assert(false);
+    else
       items.push_back(transform(i.value));
-    }
     names.push_back("");
   }
-  if (isPartial)
-    resultExpr = new seq::PartialCallExpr(lhs, items, names);
-  else
-    resultExpr = new seq::CallExpr(lhs, items, names);
+  resultExpr = new seq::CallExpr(lhs, items, names);
 }
 
 void CodegenVisitor::visit(const StackAllocExpr *expr) {

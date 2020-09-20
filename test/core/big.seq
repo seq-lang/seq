@@ -153,7 +153,7 @@ class X[T]:
         add_two = add[int](3, ..., -1)
         print add[int](1, 2, 3)
         print add_one(5, 0)
-        # print 42 |> add_two
+        print 42 |> add_two
 
 args = array[seq](1)
 args[0] = s'ACATACCGGCCAATCGCGACAACGCAACAGAGAAAGAACTAGACGCTTGCTACATTATCGTTAACTCCTAAGCTCAAACCTAATGTGGCTAACTCCCCTTGGCCGGAACATAAGCCAAATCGTACGGCGACACGATACACGGCGGAGGACT'
@@ -260,7 +260,7 @@ X[float].main2()
 # EXPECT: Pair: 1.9 4.2
 # EXPECT: 6
 # EXPECT: 6
-# -EXPECT: 44
+# EXPECT: 44
 
 # main2():
 # EXPECT: hello world
@@ -290,4 +290,4 @@ X[float].main2()
 # EXPECT: Pair: 1.9 4.2
 # EXPECT: 6
 # EXPECT: 6
-# -EXPECT: 44
+# EXPECT: 44

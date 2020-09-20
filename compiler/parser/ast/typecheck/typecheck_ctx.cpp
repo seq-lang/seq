@@ -86,7 +86,7 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int 
                                         level, nullptr, isStatic);
   t->setSrcInfo(srcInfo);
   LOG9("[ub] new {}: {} ({})", t->toString(0), srcInfo, setActive);
-  if (cache->unboundCount - 1 == 2586)
+  if (cache->unboundCount - 1 == 2520)
     assert(1);
   if (setActive)
     activeUnbounds.insert(t);
@@ -99,6 +99,7 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
 
 types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr type,
                                         types::ClassTypePtr generics, bool activate) {
+  assert(type);
   unordered_map<int, types::TypePtr> genericCache;
   if (generics)
     for (auto &g : generics->explicits)
