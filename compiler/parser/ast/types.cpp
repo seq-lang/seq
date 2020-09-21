@@ -261,7 +261,8 @@ bool isFunc(const string &name) { return startswith(name, ".Function."); }
 
 ClassType::ClassType(const string &name, bool isRecord, const vector<TypePtr> &args,
                      const vector<Generic> &explicits, TypePtr parent)
-    : explicits(explicits), parent(parent), name(name), record(isRecord), args(args) {}
+    : explicits(explicits), parent(parent), isTrait(false), name(name),
+      record(isRecord), args(args) {}
 
 string ClassType::toString(bool reduced) const {
   vector<string> gs;
@@ -339,6 +340,7 @@ TypePtr ClassType::generalize(int level) {
     t.type = t.type ? t.type->generalize(level) : nullptr;
   auto p = parent ? parent->generalize(level) : nullptr;
   auto c = make_shared<ClassType>(name, record, a, e, p);
+  c->isTrait = isTrait;
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -357,6 +359,7 @@ TypePtr ClassType::instantiate(int level, int &unboundCount,
     t = t->instantiate(level, unboundCount, cache);
   auto p = parent ? parent->instantiate(level, unboundCount, cache) : nullptr;
   auto c = make_shared<ClassType>(name, record, a, e, p);
+  c->isTrait = isTrait;
   c->setSrcInfo(getSrcInfo());
   return c;
 }

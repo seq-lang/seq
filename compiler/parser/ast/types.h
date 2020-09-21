@@ -222,6 +222,7 @@ typedef std::shared_ptr<ClassType> ClassTypePtr;
 struct ClassType : public Type {
   std::vector<Generic> explicits;
   TypePtr parent;
+  bool isTrait;
 
 public:
   /// Global unique name for each type (generated from the getSrcPos())

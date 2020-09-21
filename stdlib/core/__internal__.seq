@@ -1,3 +1,9 @@
+# @trait
+# @internal
+# class Iterable[T]:
+#     pass
+
+
 extend str:
     @internal
     def __new__(p: Ptr[byte], l: int) -> str: pass

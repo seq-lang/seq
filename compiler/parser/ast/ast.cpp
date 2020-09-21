@@ -524,7 +524,8 @@ ClassStmt::ClassStmt(bool i, const string &n, vector<Param> &&g, vector<Param> &
       attributes(at) {}
 ClassStmt::ClassStmt(const ClassStmt &s)
     : isRecord(s.isRecord), name(s.name), generics(ast::clone_nop(s.generics)),
-      args(ast::clone_nop(s.args)), suite(ast::clone(s.suite)) {}
+      args(ast::clone_nop(s.args)), suite(ast::clone(s.suite)),
+      attributes(s.attributes) {}
 string ClassStmt::toString() const {
   string gs;
   for (auto &a : generics)

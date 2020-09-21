@@ -104,8 +104,8 @@ class set[K]:
         f = khash.__ac_fsize(n)
         flags_copy = ptr[u32](f)
         keys_copy = ptr[K](n)
-        str.memcpy(ptr[byte](flags_copy), ptr[byte](self._flags), f * _gc.sizeof[u32]())
-        str.memcpy(ptr[byte](keys_copy), ptr[byte](self._keys), n * _gc.sizeof[K]())
+        str.memcpy(flags_copy.as_byte(), self._flags.as_byte(), f * _gc.sizeof[u32]())
+        str.memcpy(keys_copy.as_byte(), self._keys.as_byte(), n * _gc.sizeof[K]())
         return set[K](n, self._size, self._n_occupied, self._upper_bound, flags_copy, keys_copy)
 
     def __str__(self: set[K]):

@@ -44,7 +44,7 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
   findBestCall(types::ClassTypePtr c, const std::string &member,
                const std::vector<std::pair<std::string, types::TypePtr>> &args,
                bool failOnMultiple = false, types::TypePtr retType = nullptr);
-  bool wrapOptional(types::TypePtr lt, ExprPtr &rhs);
+  bool castToOptional(types::TypePtr lt, ExprPtr &rhs);
   std::vector<int> callFunc(types::TypePtr f, std::vector<CallExpr::Arg> &args,
                             std::vector<CallExpr::Arg> &reorderedArgs,
                             const std::vector<int> &availableArguments);

@@ -69,6 +69,7 @@ ExprPtr TypecheckVisitor::transform(const ExprPtr &expr, bool allowTypes) {
     return nullptr;
   TypecheckVisitor v(ctx, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
+  LOG9("{}", expr->toString());
   expr->accept(v);
   // LOG9("{} | {} -> {}", expr->getSrcInfo().line, expr->toString(),
   //  v.resultExpr->toString());
@@ -177,6 +178,17 @@ void TypecheckVisitor::visit(const IdExpr *expr) {
 void TypecheckVisitor::visit(const IfExpr *expr) {
   auto e =
       N<IfExpr>(transform(expr->cond), transform(expr->eif), transform(expr->eelse));
+  auto ti = e->eif->getType()->getClass();
+  auto te = e->eelse->getType()->getClass();
+  if (ti && te) {
+    if (te->name != ti->name) {
+      if (ti->name == ".Optional")
+        e->eelse = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(e->eelse)));
+      else if (te->name == ".Optional")
+        e->eif = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(e->eif)));
+    }
+    forceUnify(e->eif->getType(), e->eelse->getType());
+  }
   e->setType(forceUnify(expr, e->eif->getType()));
   resultExpr = move(e);
 }
@@ -188,13 +200,21 @@ void TypecheckVisitor::visit(const BinaryExpr *expr) {
       {">", "gt"},      {">=", "ge"},     {"==", "eq"}, {"!=", "ne"},  {"<<", "lshift"},
       {">>", "rshift"}, {"&", "and"},     {"|", "or"},  {"^", "xor"}};
   auto le = transform(expr->lexpr);
-  auto re = transform(expr->rexpr);
-  if (le->getType()->getUnbound() || re->getType()->getUnbound()) {
+  auto re = CAST(expr->rexpr, NoneExpr) ? clone(expr->rexpr) : transform(expr->rexpr);
+  if (le->getType()->getUnbound() || !re->getType() || re->getType()->getUnbound()) {
     resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
     resultExpr->setType(
         forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
   } else if (expr->op == "is") {
-    if (!le->getType()->canRealize() || !le->getType()->canRealize()) {
+    if (CAST(expr->rexpr, NoneExpr)) {
+      if (le->getType()->getClass()->name != ".Optional")
+        error("only optionals can be compared to None");
+      resultExpr = transform(N<CallExpr>(
+          N<DotExpr>(N<CallExpr>(N<DotExpr>(move(le), "__bool__")), "__invert__")));
+      forceUnify(expr, resultExpr->getType());
+      return;
+    }
+    if (!le->getType()->canRealize() || !re->getType()->canRealize()) {
       resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
     } else {
       auto lc = realizeType(le->getType()->getClass());
@@ -266,7 +286,7 @@ void TypecheckVisitor::visit(const PipeExpr *expr) {
       items.push_back({l.op, parseCall(c.get(), inType)});
       inTypePos = 0;
     }
-    LOG("|> {} {}", inType->toString(), items.back().expr->toString());
+    // LOG("|> {} {}", inType->toString(), items.back().expr->toString());
     inType = items.back().expr->getType();
     types.push_back(inType);
     if (i < expr->items.size() - 1)
@@ -311,10 +331,15 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
     /// Note: at this point, only single-variable static var expression (e.g.
     /// N) is allowed, so unify will work as expected.
     // LOG("{} {}", t->toString(), g->toString());
-    if (g->getFunc())
+    if (g->getFunc()) {
+      if (i >= g->getFunc()->explicits.size())
+        error("expected {} generics", g->getFunc()->explicits.size());
       forceUnify(g->getFunc()->explicits[i].type, t);
-    else
+    } else {
+      if (i >= g->getClass()->explicits.size())
+        error("expected {} generics", g->getClass()->explicits.size());
       forceUnify(g->getClass()->explicits[i].type, t);
+    }
   }
   bool isType = e->isType();
   auto t = forceUnify(expr, g);
@@ -373,11 +398,16 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
     } else if (auto i = CAST(index, SliceExpr)) {
       if (!getInt(&s, i->st) || !getInt(&e, i->ed) || !getInt(&st, i->step))
         return nullptr;
+      if (i->step && !i->st)
+        s = st > 0 ? 0 : tuple->args.size();
+      if (i->step && !i->ed)
+        e = st > 0 ? tuple->args.size() : 0;
       sliceAdjustIndices(tuple->args.size(), &s, &e, st);
       vector<ExprPtr> te;
       for (auto i = s; (st >= 0) ? (i < e) : (i >= e); i += st) {
-        if (i < 0 || i >= e)
-          error("tuple index out of range (expected 0..{}, got {})", e, i);
+        if (i < 0 || i >= tuple->args.size())
+          error("tuple index out of range (expected 0..{}, got {})", tuple->args.size(),
+                i);
         te.push_back(N<DotExpr>(clone(expr), format("a{}", i + 1)));
       }
       return transform(N<CallExpr>(
@@ -460,6 +490,9 @@ ExprPtr TypecheckVisitor::visitDot(const ExprPtr &expr, const string &member,
       }
     } else if (auto mm = ctx->findMember(c->name, member)) {
       typ = ctx->instantiate(getSrcInfo(), mm, c);
+    } else if (c->name == ".Optional") {
+      return visitDot(transform(N<CallExpr>(N<DotExpr>(clone(expr), "__invert__"))),
+                      member, args);
     } else {
       error("cannot find '{}' in {}", member, lhs->getType()->toString());
     }
@@ -677,8 +710,13 @@ void TypecheckVisitor::visit(const AssignStmt *stmt) {
   } else {
     if (typExpr && typExpr->getType()->getClass()) {
       auto typ = ctx->instantiate(getSrcInfo(), typExpr->getType());
-      if (!wrapOptional(typ, rhs))
-        forceUnify(typ, rhs->getType());
+
+      auto lc = typ->getClass();
+      auto rc = rhs->getType()->getClass();
+      if (lc && lc->name == ".Optional" && rc && rc->name != lc->name)
+        rhs = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(rhs)));
+
+      forceUnify(typ, rhs->getType());
     }
     k = rhs->isType()
             ? TypecheckItem::Type
@@ -693,8 +731,12 @@ void TypecheckVisitor::visit(const AssignStmt *stmt) {
 void TypecheckVisitor::visit(const UpdateStmt *stmt) {
   auto l = transform(stmt->lhs);
   auto r = transform(stmt->rhs);
-  if (!wrapOptional(l->getType(), r))
-    forceUnify(r.get(), l->getType());
+
+  auto lc = l->getType()->getClass();
+  auto rc = r->getType()->getClass();
+  if (lc && lc->name == ".Optional" && rc && rc->name != lc->name)
+    r = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(r)));
+  forceUnify(r.get(), l->getType());
   resultStmt = N<UpdateStmt>(move(l), move(r));
 }
 
@@ -905,6 +947,8 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
   auto ct = make_shared<ClassType>(
       stmt->name, stmt->isRecord, vector<TypePtr>(), vector<Generic>(),
       ctx->typecheckLevel ? ctx->bases.back().type : nullptr);
+  if (in(stmt->attributes, "trait"))
+    ct->isTrait = true;
   ct->setSrcInfo(stmt->getSrcInfo());
   auto ctxi = make_shared<TypecheckItem>(TypecheckItem::Type, ct, ctx->getBase(), true);
   if (!stmt->isRecord) // add classes early
@@ -1203,7 +1247,7 @@ void TypecheckVisitor::fixExprName(ExprPtr &e, const string &newName) {
   }
 }
 
-bool TypecheckVisitor::wrapOptional(TypePtr lt, ExprPtr &rhs) {
+bool TypecheckVisitor::castToOptional(TypePtr lt, ExprPtr &rhs) {
   auto lc = lt->getClass();
   auto rc = rhs->getType()->getClass();
   if (lc && lc->name == ".Optional" && rc && rc->name != ".Optional") {
@@ -1243,14 +1287,37 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
     if (mt->args.size() - 1 != args.size())
       continue;
     for (int j = 0; j < args.size(); j++) {
+      auto mac = mt->args[j + 1]->getClass();
+      if (mac && mac->isTrait)
+        continue; // treat traits as generics
+      auto ac = args[j].second->getClass();
+
       Unification us;
       int u = args[j].second->unify(mt->args[j + 1], us);
       us.undo();
       if (u < 0) {
+        // if (member == "__add__" && c->name == ".int" && mac && mac->name == ".int")
+        // assert(1);
+        if (mac && mac->name == ".Optional" && ac && ac->name != mac->name) { // wrap
+          int u = args[j].second->unify(mac->explicits[0].type, us);
+          us.undo();
+          if (u >= 0) {
+            s += 2 * u;
+            continue;
+          }
+        }
+        if (ac && ac->name == ".Optional" && mac && ac->name != mac->name) { // unwrap
+          int u = ac->explicits[0].type->unify(mt->args[j + 1], us);
+          us.undo();
+          if (u >= 0) {
+            s += u;
+            continue;
+          }
+        }
         s = -1;
         break;
       } else {
-        s += u;
+        s += 3 * u;
       }
     }
     if (retType) {
@@ -1278,7 +1345,7 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
     //     break;
   }
   return (*m)[scores[0].second];
-}
+} // namespace ast
 
 vector<int> TypecheckVisitor::callFunc(types::TypePtr f, vector<CallExpr::Arg> &args,
                                        vector<CallExpr::Arg> &reorderedArgs,
@@ -1334,8 +1401,35 @@ vector<int> TypecheckVisitor::callFunc(types::TypePtr f, vector<CallExpr::Arg> &
     }
     if (CAST(reorderedArgs[i].value, EllipsisExpr))
       pending.push_back(availableArguments[i]);
-    if (!wrapOptional(t_args[availableArguments[i] + 1], reorderedArgs[i].value))
-      forceUnify(reorderedArgs[i].value, t_args[availableArguments[i] + 1]);
+
+    // unify arg (reorderedArgs) with signature (t_args)
+    // 1. check is it a trait?
+    auto &typ = t_args[availableArguments[i] + 1];
+    auto tc = typ->getClass();
+    auto c = reorderedArgs[i].value->getType()->getClass();
+    if (tc && (tc->isTrait || tc->name == ".Optional")) {
+      if (!c) // do not unify if not yet known
+        continue;
+      if (tc->name == ".Generator") {
+        if (c->name != tc->name)
+          reorderedArgs[i].value = transform(
+              N<CallExpr>(N<DotExpr>(move(reorderedArgs[i].value), "__iter__")));
+      } else if (startswith(tc->name, ".Function.")) {
+        if (!startswith(c->name, ".Function."))
+          reorderedArgs[i].value = transform(
+              N<CallExpr>(N<DotExpr>(move(reorderedArgs[i].value), "__call__")));
+      } else if (tc->name == ".Optional") {
+        if (c->name != tc->name)
+          reorderedArgs[i].value = transform(
+              N<CallExpr>(N<IdExpr>(".Optional"), move(reorderedArgs[i].value)));
+      } else {
+        error("cannot handle trait {}", tc->name);
+      }
+    } else if (tc && c && c->name == ".Optional") { // unwrap optional
+      reorderedArgs[i].value = transform(
+          N<CallExpr>(N<DotExpr>(move(reorderedArgs[i].value), "__invert__")));
+    }
+    forceUnify(reorderedArgs[i].value, typ);
   }
   for (auto &i : namedArgs)
     error(i.second, "unknown argument {}", i.first);

@@ -366,16 +366,16 @@ class list[T]:
         s = norig * _gc.sizeof[T]()
         if s:
             recycle = ptr[T](s)
-            str.memcpy(ptr[byte](recycle), ptr[byte](a.arr.ptr + ilow), s)
+            str.memcpy(recycle.as_byte(), (a.arr.ptr + ilow).as_byte(), s)
 
         if d < 0:
             tail = len(a) - ihigh
-            str.memmove(ptr[byte](a.arr.ptr + (ihigh + d)), ptr[byte](a.arr.ptr + ihigh), tail)
+            str.memmove((a.arr.ptr + (ihigh + d)).as_byte(), (a.arr.ptr + ihigh).as_byte(), tail)
             a._resize(len(a) + d)
         elif d > 0:
             k = len(a)
             a._resize(k + d)
-            str.memmove(ptr[byte](a.arr.ptr + (ihigh + d)), ptr[byte](a.arr.ptr + ihigh), (k - ihigh) * _gc.sizeof[T]())
+            str.memmove((a.arr.ptr + (ihigh + d)).as_byte(), (a.arr.ptr + ihigh).as_byte(), (k - ihigh) * _gc.sizeof[T]())
 
         k = 0
         while k < n:

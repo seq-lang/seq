@@ -74,7 +74,7 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s) {
                                  nullptr, vector<string>{"internal"});
       preamble->stmts.push_back(clone(cache->asts[canonical]));
     }
-    for (auto &name : {"Ptr", "Generator", "Optional", "Int", "UInt"}) {
+    for (auto &name : vector<string>{"Ptr", "Generator", "Optional", "Int", "UInt"}) {
       auto canonical = stdlib->generateCanonicalName(name);
       stdlib->add(TransformItem::Type, name, canonical, true);
       vector<Param> generics;
@@ -83,10 +83,12 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s) {
                               ? make_unique<IdExpr>("int")
                               : nullptr,
                           nullptr});
-      cache->asts[canonical] =
-          make_unique<ClassStmt>(true, canonical, move(generics), vector<Param>(),
-                                 nullptr, vector<string>{"internal"});
-      preamble->stmts.push_back(clone(cache->asts[canonical]));
+      auto c = make_unique<ClassStmt>(true, canonical, move(generics), vector<Param>(),
+                                      nullptr, vector<string>{"internal"});
+      if (name == "Generator")
+        c->attributes.push_back("trait");
+      preamble->stmts.push_back(clone(c));
+      cache->asts[canonical] = move(c);
     }
 
     StmtPtr stmts = nullptr;
@@ -415,9 +417,8 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
         N<DotExpr>(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__")), "__or__"),
         N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
   } else if (expr->op == "is not") {
-    resultExpr = transform(N<CallExpr>(
-        N<DotExpr>(N<BinaryExpr>(transform(expr->lexpr), "is", transform(expr->rexpr)),
-                   "__invert__")));
+    resultExpr = transform(N<CallExpr>(N<DotExpr>(
+        N<BinaryExpr>(clone(expr->lexpr), "is", clone(expr->rexpr)), "__invert__")));
   } else if (expr->op == "not in") {
     resultExpr = transform(
         N<UnaryExpr>("!", N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__contains__"),
@@ -425,6 +426,15 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
   } else if (expr->op == "in") {
     resultExpr = transform(N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__contains__"),
                                        clone(expr->lexpr)));
+  } else if (expr->op == "is") {
+    auto le = CAST(expr->lexpr, NoneExpr) ? clone(expr->lexpr) : transform(expr->lexpr);
+    auto re = CAST(expr->rexpr, NoneExpr) ? clone(expr->rexpr) : transform(expr->rexpr);
+    if (CAST(expr->lexpr, NoneExpr) && CAST(expr->rexpr, NoneExpr))
+      resultExpr = N<BoolExpr>(true);
+    else if (CAST(expr->lexpr, NoneExpr))
+      resultExpr = N<BinaryExpr>(move(re), expr->op, move(le));
+    else
+      resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
   } else {
     resultExpr =
         N<BinaryExpr>(transform(expr->lexpr), expr->op, transform(expr->rexpr));
@@ -1284,9 +1294,9 @@ string TransformVisitor::generateFunctionStub(int len) {
     //                                         vector<Param>{}, move(p), nullptr,
     //                                         vector<string>{"internal"}));
 
-    StmtPtr stmt =
-        make_unique<ClassStmt>(true, typeName, move(generics), clone_nop(args),
-                               N<SuiteStmt>(move(fns)), vector<string>{"internal"});
+    StmtPtr stmt = make_unique<ClassStmt>(true, typeName, move(generics),
+                                          clone_nop(args), N<SuiteStmt>(move(fns)),
+                                          vector<string>{"internal", "trait"});
     stmt->setSrcInfo(ctx->getGeneratedPos());
     TransformVisitor(make_shared<TransformContext>("<generated>", ctx->cache))
         .transform(stmt);

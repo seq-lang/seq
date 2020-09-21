@@ -94,9 +94,9 @@ class dict[K,V]:
         flags_copy = ptr[u32](f)
         keys_copy = ptr[K](n)
         vals_copy = ptr[V](n)
-        str.memcpy(ptr[byte](flags_copy), ptr[byte](self._flags), f * _gc.sizeof[u32]())
-        str.memcpy(ptr[byte](keys_copy), ptr[byte](self._keys), n * _gc.sizeof[K]())
-        str.memcpy(ptr[byte](vals_copy), ptr[byte](self._vals), n * _gc.sizeof[V]())
+        str.memcpy(flags_copy.as_byte(), self._flags.as_byte(), f * _gc.sizeof[u32]())
+        str.memcpy(keys_copy.as_byte(), self._keys.as_byte(), n * _gc.sizeof[K]())
+        str.memcpy(vals_copy.as_byte(), self._vals.as_byte(), n * _gc.sizeof[V]())
         return dict[K,V](n, self._size, self._n_occupied, self._upper_bound, flags_copy, keys_copy, vals_copy)
 
     def __str__(self: dict[K,V]):
