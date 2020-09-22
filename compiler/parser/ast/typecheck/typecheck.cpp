@@ -201,7 +201,8 @@ void TypecheckVisitor::visit(const BinaryExpr *expr) {
       {">>", "rshift"}, {"&", "and"},     {"|", "or"},  {"^", "xor"}};
   auto le = transform(expr->lexpr);
   auto re = CAST(expr->rexpr, NoneExpr) ? clone(expr->rexpr) : transform(expr->rexpr);
-  if (le->getType()->getUnbound() || !re->getType() || re->getType()->getUnbound()) {
+  if (le->getType()->getUnbound() ||
+      (expr->op != "is" && re->getType()->getUnbound())) {
     resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
     resultExpr->setType(
         forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
@@ -491,8 +492,8 @@ ExprPtr TypecheckVisitor::visitDot(const ExprPtr &expr, const string &member,
     } else if (auto mm = ctx->findMember(c->name, member)) {
       typ = ctx->instantiate(getSrcInfo(), mm, c);
     } else if (c->name == ".Optional") {
-      return visitDot(transform(N<CallExpr>(N<DotExpr>(clone(expr), "__invert__"))),
-                      member, args);
+      return visitDot(transform(N<CallExpr>(N<IdExpr>(".unwrap"), clone(expr))), member,
+                      args);
     } else {
       error("cannot find '{}' in {}", member, lhs->getType()->toString());
     }
@@ -1280,6 +1281,10 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
       error("[todo] named magic call");
 
   vector<pair<int, int>> scores;
+  if (c->name == ".deque" && args.size() == 2)
+    assert(1);
+  if (c->name == ".int" && args.size() == 2)
+    assert(1);
   for (int i = 0; i < m->size(); i++) {
     auto mt = dynamic_pointer_cast<FuncType>(
         ctx->instantiate(getSrcInfo(), (*m)[i], c, false));
@@ -1302,7 +1307,7 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
           int u = args[j].second->unify(mac->explicits[0].type, us);
           us.undo();
           if (u >= 0) {
-            s += 2 * u;
+            s += u + 2;
             continue;
           }
         }
@@ -1317,7 +1322,7 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
         s = -1;
         break;
       } else {
-        s += 3 * u;
+        s += u + 3;
       }
     }
     if (retType) {
@@ -1426,8 +1431,8 @@ vector<int> TypecheckVisitor::callFunc(types::TypePtr f, vector<CallExpr::Arg> &
         error("cannot handle trait {}", tc->name);
       }
     } else if (tc && c && c->name == ".Optional") { // unwrap optional
-      reorderedArgs[i].value = transform(
-          N<CallExpr>(N<DotExpr>(move(reorderedArgs[i].value), "__invert__")));
+      reorderedArgs[i].value =
+          transform(N<CallExpr>(N<IdExpr>(".unwrap"), move(reorderedArgs[i].value)));
     }
     forceUnify(reorderedArgs[i].value, typ);
   }
