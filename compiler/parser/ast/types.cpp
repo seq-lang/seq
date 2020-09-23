@@ -398,9 +398,9 @@ TypePtr ClassType::getCallable() {
 
 FuncType::FuncType(const string &name, ClassTypePtr funcClass,
                    const vector<TypePtr> &args, const vector<Generic> &explicits,
-                   TypePtr parent, TypePtr codegenParent)
-    : explicits(explicits), parent(parent), codegenParent(codegenParent),
-      funcClass(funcClass), name(name), args(args) {}
+                   TypePtr parent)
+    : explicits(explicits), parent(parent), funcClass(funcClass), name(name),
+      args(args) {}
 
 int FuncType::unify(TypePtr typ, Unification &us) { return getClass()->unify(typ, us); }
 
@@ -442,7 +442,7 @@ TypePtr FuncType::generalize(int level) {
   for (auto &t : e)
     t.type = t.type ? t.type->generalize(level) : nullptr;
   auto p = parent ? parent->generalize(level) : nullptr;
-  auto c = make_shared<FuncType>(name, funcClass, a, e, p, codegenParent);
+  auto c = make_shared<FuncType>(name, funcClass, a, e, p);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -460,7 +460,7 @@ TypePtr FuncType::instantiate(int level, int &unboundCount,
   for (auto &t : a)
     t = t->instantiate(level, unboundCount, cache);
   auto p = parent ? parent->instantiate(level, unboundCount, cache) : nullptr;
-  auto c = make_shared<FuncType>(name, funcClass, a, e, p, codegenParent);
+  auto c = make_shared<FuncType>(name, funcClass, a, e, p);
   c->setSrcInfo(getSrcInfo());
   return c;
 }

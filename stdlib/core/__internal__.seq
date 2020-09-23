@@ -577,6 +577,9 @@ type seq(len: int, ptr: Ptr[byte]):
             yield self._slice_direct(i,i+k)
             i += step
 
+extend str:
+    def __suffix_s__(s: str) -> seq:
+        return seq(s)
 
 @builtin
 def _test_failed(file: str, line: int, msg: str):

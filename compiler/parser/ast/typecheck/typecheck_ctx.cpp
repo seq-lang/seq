@@ -30,12 +30,12 @@ namespace ast {
 TypeContext::TypeContext(shared_ptr<Cache> cache)
     : Context<TypecheckItem>(""), cache(cache), typecheckLevel(0) {
   stack.push_front(vector<string>());
-  bases.push_back({nullptr, nullptr});
+  bases.push_back({"", nullptr, nullptr});
 }
 
 pair<TypecheckItem::Kind, types::TypePtr>
 TypeContext::findInVisited(const string &name) const {
-  for (int bi = bases.size() - 1; bi >= 0; bi--) {
+  for (int bi = int(bases.size()) - 1; bi >= 0; bi--) {
     auto t = bases[bi].visitedAsts.find(name);
     if (t == bases[bi].visitedAsts.end())
       continue;
@@ -86,7 +86,7 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int 
                                         level, nullptr, isStatic);
   t->setSrcInfo(srcInfo);
   LOG9("[ub] new {}: {} ({})", t->toString(0), srcInfo, setActive);
-  if (cache->unboundCount - 1 == 2677)
+  if (cache->unboundCount - 1 == 216)
     assert(1);
   if (setActive)
     activeUnbounds.insert(t);
@@ -116,8 +116,8 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
       if (activeUnbounds.find(i.second) == activeUnbounds.end()) {
         LOG9("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
              i.second->toString(0), type->toString(), srcInfo, activate);
-        // if (i.second->toString() == "?262.0")
-        // assert(1);
+        if (i.second->toString() == "?216.1")
+          assert(1);
         if (activate)
           activeUnbounds.insert(i.second);
       }

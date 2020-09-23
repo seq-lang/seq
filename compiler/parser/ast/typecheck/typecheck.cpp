@@ -154,8 +154,8 @@ void TypecheckVisitor::visit(const StringExpr *expr) {
 
 void TypecheckVisitor::visit(const IdExpr *expr) {
   auto val = ctx->find(expr->value);
-  // if (!val)
-  // ctx->dump();
+  if (!val)
+    ctx->dump();
   seqassert(val, "cannot find '{}'", expr->value);
   if (val->isStatic()) {
     auto s = val->getType()->getStatic();
@@ -866,7 +866,7 @@ void TypecheckVisitor::visit(const ThrowStmt *stmt) {
 
 void TypecheckVisitor::visit(const FunctionStmt *stmt) {
   resultStmt = N<FunctionStmt>(stmt->name, nullptr, vector<Param>(), vector<Param>(),
-                               nullptr, stmt->attributes, stmt->className);
+                               nullptr, stmt->attributes);
   bool isClassMember = in(stmt->attributes, ".class");
 
   if (ctx->findInVisited(stmt->name).second)
@@ -897,30 +897,29 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
     ctx->add(TypecheckItem::Var, a.name, t->args.back());
   }
   ctx->typecheckLevel--;
-  if (stmt->name == ".unwrap")
-    assert(1);
   for (auto &g : generics) { // Generalize generics
     assert(g && g->getLink() && g->getLink()->kind != types::LinkType::Link);
     if (g->getLink()->kind == LinkType::Unbound)
       g->getLink()->kind = LinkType::Generic;
   }
   ctx->popBlock();
-  if (ctx->bases.size())
-    t->parent = ctx->bases.back().type;
-  if (isClassMember) {
-    auto val = ctx->find(stmt->className);
+
+  auto &attributes = const_cast<FunctionStmt *>(stmt)->attributes;
+  if (isClassMember && in(attributes, ".method")) {
+    auto val = ctx->find(attributes[".class"]);
     assert(val && val->getType());
-    if (!in(stmt->attributes, ".method"))
-      t->codegenParent = val->getType();
-    else
-      t->parent = val->getType();
+    t->parent = val->getType();
+  } else {
+    t->parent = ctx->bases[ctx->findBase(attributes[".parentFunc"])].type;
   }
 
   t->setSrcInfo(stmt->getSrcInfo());
   t = std::static_pointer_cast<FuncType>(t->generalize(ctx->typecheckLevel));
   LOG7("[stmt] added func {}: {} (base={}; parent={})", stmt->name, t->toString(),
        ctx->getBase(), printParents(t->parent));
-  ctx->bases.back().visitedAsts[stmt->name] = {TypecheckItem::Func, t};
+
+  ctx->bases[ctx->findBase(attributes[".parentFunc"])].visitedAsts[stmt->name] = {
+      TypecheckItem::Func, t};
 
   if (in(stmt->attributes, "builtin") || in(stmt->attributes, ".c")) {
     if (!t->canRealize())
@@ -945,16 +944,20 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
   vector<StmtPtr> stmts;
   stmts.push_back(N<ClassStmt>(stmt->isRecord, stmt->name, vector<Param>(),
                                vector<Param>(), N<SuiteStmt>(), stmt->attributes));
+
+  auto &attributes = const_cast<ClassStmt *>(stmt)->attributes;
   auto ct = make_shared<ClassType>(
       stmt->name, stmt->isRecord, vector<TypePtr>(), vector<Generic>(),
-      ctx->typecheckLevel ? ctx->bases.back().type : nullptr);
+      ctx->bases[ctx->findBase(attributes[".parentFunc"])].type);
   if (in(stmt->attributes, "trait"))
     ct->isTrait = true;
   ct->setSrcInfo(stmt->getSrcInfo());
   auto ctxi = make_shared<TypecheckItem>(TypecheckItem::Type, ct, ctx->getBase(), true);
   if (!stmt->isRecord) // add classes early
     ctx->add(stmt->name, ctxi);
-  ctx->bases.back().visitedAsts[stmt->name] = {TypecheckItem::Type, ct};
+
+  ctx->bases[ctx->findBase(attributes[".parentFunc"])].visitedAsts[stmt->name] = {
+      TypecheckItem::Type, ct};
 
   ct->explicits = parseGenerics(stmt->generics, ctx->typecheckLevel);
   ctx->typecheckLevel++;
@@ -1487,7 +1490,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
          ctx->getBase(), depth);
     ctx->addBlock();
     ctx->typecheckLevel++;
-    ctx->bases.push_back({t, t->args[0]});
+    ctx->bases.push_back({t->name, t, t->args[0]});
     auto *ast = (FunctionStmt *)(ctx->cache->asts[t->name].get());
     int pi = 0;
     for (auto p = t->parent; p; pi++) {
@@ -1631,13 +1634,15 @@ StmtPtr TypecheckVisitor::realizeBlock(const StmtPtr &stmt, bool keepLast) {
     } else {
       if (newUnbounds >= prevSize) {
         TypePtr fu = nullptr;
+        int count = 0;
         for (auto &ub : ctx->activeUnbounds)
           if (ub->getLink()->id >= minUnbound) {
             if (!fu)
               fu = ub;
             LOG7("[realizeBlock] dangling {} @ {}", ub->toString(), ub->getSrcInfo());
+            count++;
           }
-        error(fu, "cannot resolve unbound variables");
+        error(fu, "cannot resolve {} unbound variables", count);
       }
       prevSize = newUnbounds;
     }
@@ -1684,7 +1689,8 @@ string TypecheckVisitor::generatePartialStub(const string &mask) {
     ctx->cache->reverseLookup[canonical] = "__new__";
     auto fn = make_unique<FunctionStmt>(
         canonical, clone(type), vector<Param>{}, clone_nop(args), nullptr,
-        vector<string>{"internal", ".class", ".method"}, typeName);
+        vector<string>{"internal", ".class", ".method"});
+    fn->attributes[".refParent"] = fn->attributes[".parent"] = typeName;
     ctx->cache->asts[canonical] = clone(fn);
     fns.push_back(move(fn));
     auto stmt =

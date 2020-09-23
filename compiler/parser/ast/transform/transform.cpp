@@ -86,7 +86,7 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s) {
       auto c = make_unique<ClassStmt>(true, canonical, move(generics), vector<Param>(),
                                       nullptr, vector<string>{"internal"});
       if (name == "Generator")
-        c->attributes.push_back("trait");
+        c->attributes["trait"] = "";
       preamble->stmts.push_back(clone(c));
       cache->asts[canonical] = move(c);
     }
@@ -280,12 +280,23 @@ void TransformVisitor::visit(const IdExpr *expr) {
   if (val->isType() && !val->isStatic())
     resultExpr->markType();
 
+  for (int i = int(ctx->bases.size()) - 1; i >= 0; i--)
+    if (ctx->bases[i].name == val->getBase()) {
+      for (int j = i + 1; j < ctx->bases.size(); j++) {
+        ctx->bases[j].parent = std::max(i, ctx->bases[j].parent);
+        assert(ctx->bases[j].parent < j);
+      }
+      return;
+    }
+  seqassert(val->getBase().empty(), "a variable '{}' has invalid base {}", expr->value,
+            val->getBase());
+
   // Check if function references the outer class generic
-  if (val->isGeneric() && ctx->bases.size() > 1) {
-    const auto &grandparent = ctx->bases[ctx->bases.size() - 2];
-    if (grandparent.isType() && grandparent.name == val->getBase())
-      ctx->bases.back().referencesParent = true;
-  }
+  // if (val->isGeneric() && ctx->bases.size() > 1) {
+  //   const auto &grandparent = ctx->bases[ctx->bases.size() - 2];
+  //   if (grandparent.isType() && grandparent.name == val->getBase())
+  //     ctx->bases.back().referencesParent = true;
+  // }
 }
 
 void TransformVisitor::visit(const UnpackExpr *expr) {
@@ -979,20 +990,34 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     suite = TransformVisitor(ctx).transform(stmt->suite);
     ctx->popBlock();
   }
-  auto referencesParent = isClassMember && ctx->bases.back().referencesParent;
-  auto attributes = stmt->attributes;
 
-  if (isClassMember)
-    attributes.push_back(".class");
-  if (referencesParent ||
-      (canonicalName == ".Ptr.__elemsize__" || canonicalName == ".Ptr.__atomic__"))
-    attributes.push_back(".method");
+  auto refParent =
+      ctx->bases.back().parent == -1 ? "" : ctx->bases[ctx->bases.back().parent].name;
   ctx->bases.pop_back();
   ctx->popBlock();
 
+  string parentFunc = "";
+  for (int i = int(ctx->bases.size()) - 1; i >= 0; i--)
+    if (!ctx->bases[i].isType()) {
+      parentFunc = ctx->bases[i].name;
+      break;
+    }
+  bool isMethod = (ctx->bases.size() && refParent == ctx->bases.back().name);
+  if (canonicalName == ".Ptr.__elemsize__" || canonicalName == ".Ptr.__atomic__")
+    isMethod = true;
+
+  auto attributes = stmt->attributes;
+  // parentFunc: outer function scope (not class)
+  // class: outer class scope
+  // method: set if function is a method; usually set iff it references
+  attributes[".parentFunc"] = parentFunc;
+  if (isClassMember) {
+    attributes[".class"] = ctx->bases.back().name;
+    if (isMethod)
+      attributes[".method"] = "";
+  }
   resultStmt = N<FunctionStmt>(canonicalName, move(ret), clone_nop(stmt->generics),
-                               move(args), move(suite), attributes,
-                               isClassMember ? ctx->bases.back().name : "");
+                               move(args), move(suite), attributes);
   ctx->cache->asts[canonicalName] = clone(resultStmt);
 }
 
@@ -1027,7 +1052,12 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   }
   if (stmt->isRecord) {
     ctx->popBlock();
+
+    auto old = TransformContext::Base{
+        ctx->bases.back().name, clone(ctx->bases.back().ast), ctx->bases.back().parent};
+    ctx->bases.pop_back();
     ctx->add(TransformItem::Type, stmt->name, canonicalName, ctx->isToplevel());
+    ctx->bases.push_back({old.name, move(old.ast), old.parent});
     ctx->addBlock();
     for (auto &g : stmt->generics)
       ctx->add(TransformItem::Type, g.name, "", false, true, bool(g.type));
@@ -1058,11 +1088,22 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   ctx->bases.pop_back();
   ctx->popBlock();
 
-  static_cast<ClassStmt *>(ctx->cache->asts[canonicalName].get())->suite = move(suite);
+  auto c = static_cast<ClassStmt *>(ctx->cache->asts[canonicalName].get());
+  c->suite = move(suite);
+  string parentFunc = "";
+  for (int i = int(ctx->bases.size()) - 1; i >= 0; i--)
+    if (!ctx->bases[i].isType()) {
+      parentFunc = ctx->bases[i].name;
+      break;
+    }
+  c->attributes[".parentFunc"] = parentFunc;
   resultStmt = clone(ctx->cache->asts[canonicalName]);
 }
 
 void TransformVisitor::visit(const ExtendStmt *stmt) {
+  if (ctx->bases.size())
+    error("extend only valid at the toplevel");
+
   ExprPtr type = nullptr;
   vector<string> generics;
   vector<ExprPtr> genericAst;

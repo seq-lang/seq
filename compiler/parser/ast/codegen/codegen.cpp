@@ -110,7 +110,11 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
         auto ast = (FunctionStmt *)(cache->asts[ff.first].get());
         if (in(ast->attributes, "internal")) {
           vector<seq::types::Type *> types;
-          auto p = t->codegenParent ? t->codegenParent : t->parent;
+          auto p = t->parent;
+          assert(in(ast->attributes, ".class"));
+          if (!in(ast->attributes, ".method")) // hack for non-generic types
+            p = ctx->cache->realizations[ast->attributes[".class"]]
+                                        [ast->attributes[".class"]];
           seqassert(p && p->getClass(), "parent must be set ({})",
                     p ? p->toString() : "-");
           seq::types::Type *typ = ctx->realizeType(p->getClass());
@@ -447,9 +451,9 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
     f->setIns(types);
     f->setArgNames(names);
     f->setOut(realizeType(t->args[0]->getClass()));
-    for (auto a : ast->attributes) {
-      f->addAttribute(a);
-      if (a == "atomic")
+    for (auto &a : ast->attributes) {
+      f->addAttribute(a.first);
+      if (a.first == "atomic")
         ctx->setFlag("atomic");
     }
     if (in(ast->attributes, ".c")) {

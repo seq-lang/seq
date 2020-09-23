@@ -129,11 +129,13 @@ public:
   }
   void add(const std::string &name, std::shared_ptr<T> var) {
     assert(!name.empty());
+    // LOG7("++ {}", name);
     map[name].push_front(var);
     stack.front().push_back(name);
   }
   void addToplevel(const std::string &name, std::shared_ptr<T> var) {
     assert(!name.empty());
+    // LOG7("+++ {}", name);
     map[name].push_back(var);
     stack.back().push_back(name); // add to the latest "level"
   }
@@ -141,6 +143,7 @@ public:
   void removeFromMap(const std::string &name) {
     auto i = map.find(name);
     assert(!(i == map.end() || !i->second.size()));
+    // LOG7("-- {}", name);
     i->second.pop_front();
     if (!i->second.size())
       map.erase(name);

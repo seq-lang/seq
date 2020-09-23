@@ -53,9 +53,11 @@ public:
   struct Base {
     std::string name;
     ExprPtr ast;
-    bool referencesParent;
+    int parent; // parent index; -1 for toplevel!
+    // bool referencesParent;
 
-    Base(const std::string &name) : name(name), ast(nullptr), referencesParent(false) {}
+    Base(const std::string &name, ExprPtr ast = nullptr, int parent = -1)
+        : name(name), ast(move(ast)), parent(parent) {}
     bool isType() const { return ast != nullptr; }
   };
   std::vector<Base> bases;

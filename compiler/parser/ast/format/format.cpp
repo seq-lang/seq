@@ -406,7 +406,8 @@ void FormatVisitor::visit(const FunctionStmt *fstmt) {
 
   vector<string> attrs;
   for (auto &a : fstmt->attributes)
-    attrs.push_back(fmt::format("@{}", a));
+    attrs.push_back(
+        fmt::format("@{}{}", a.first, a.second.empty() ? "" : ":" + a.second));
   vector<string> args;
   for (auto &a : fstmt->args)
     args.push_back(fmt::format(
@@ -440,11 +441,19 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
   //   return;
   // }
 
+  vector<string> attrs;
+
+  for (auto &a : stmt->attributes)
+    attrs.push_back(
+        fmt::format("@{}{}", a.first, a.second.empty() ? "" : ":" + a.second));
   vector<string> args;
   string key = stmt->isRecord ? "type" : "class";
   for (auto &a : stmt->args)
     args.push_back(fmt::format("{}: {}", a.name, transform(a.type)));
-  result = fmt::format("{} {}({})", keyword(key), stmt->name, fmt::join(args, ", "));
+  result = fmt::format("{}{} {}({})",
+                       attrs.size() ? join(attrs, newline() + pad()) + newline() + pad()
+                                    : "",
+                       keyword(key), stmt->name, fmt::join(args, ", "));
   if (stmt->suite)
     result += fmt::format(":{}{}", newline(), transform(stmt->suite, 1));
 }

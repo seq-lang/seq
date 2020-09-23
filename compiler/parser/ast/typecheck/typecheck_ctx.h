@@ -47,6 +47,7 @@ public:
   std::shared_ptr<Cache> cache;
 
   struct RealizationBase {
+    std::string name;
     types::TypePtr type;
     types::TypePtr returnType;
     std::unordered_map<std::string, std::pair<TypecheckItem::Kind, types::TypePtr>>
@@ -63,6 +64,14 @@ public:
 
 public:
   TypeContext(std::shared_ptr<Cache> cache);
+
+  int findBase(const std::string &b) {
+    for (int i = int(bases.size()) - 1; i >= 0; i--)
+      if (b == bases[i].name)
+        return i; // bases[i].type;
+    seqassert(false, "cannot find base '{}'", b);
+    return -1;
+  }
 
   std::shared_ptr<TypecheckItem> find(const std::string &name) const;
   types::TypePtr findInternal(const std::string &name) const;

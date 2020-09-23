@@ -62,6 +62,12 @@ template <typename T, typename U> bool in(const std::vector<T> &c, const U &i) {
   return f != c.end();
 }
 
+template <typename K, typename V, typename U>
+bool in(const std::map<K, V> &c, const U &i) {
+  auto f = c.find(i);
+  return f != c.end();
+}
+
 template <typename T> std::string v2s(const std::vector<T> &targs) {
   std::vector<std::string> args;
   for (auto &t : targs)

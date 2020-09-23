@@ -5,6 +5,7 @@
 #include "parser/ast/ast.h"
 
 using fmt::format;
+using std::map;
 using std::move;
 using std::pair;
 using std::string;
@@ -483,14 +484,19 @@ ThrowStmt::ThrowStmt(const ThrowStmt &s) : expr(ast::clone(s.expr)) {}
 string ThrowStmt::toString() const { return format("(#throw {})", *expr); }
 
 FunctionStmt::FunctionStmt(const string &n, ExprPtr r, vector<Param> &&g,
-                           vector<Param> &&a, StmtPtr s, const vector<string> &at,
-                           const string &c)
+                           vector<Param> &&a, StmtPtr s, const vector<string> &at)
+    : name(n), ret(move(r)), generics(move(g)), args(move(a)), suite(move(s)) {
+  for (auto &a : at)
+    attributes[a] = "";
+}
+FunctionStmt::FunctionStmt(const string &n, ExprPtr r, vector<Param> &&g,
+                           vector<Param> &&a, StmtPtr s, const map<string, string> &at)
     : name(n), ret(move(r)), generics(move(g)), args(move(a)), suite(move(s)),
-      attributes(at), className(c) {}
+      attributes(at) {}
 FunctionStmt::FunctionStmt(const FunctionStmt &s)
     : name(s.name), ret(ast::clone(s.ret)), generics(ast::clone_nop(s.generics)),
       args(ast::clone_nop(s.args)), suite(ast::clone(s.suite)),
-      attributes(s.attributes), className(s.className) {}
+      attributes(s.attributes) {}
 string FunctionStmt::toString() const {
   string gs;
   for (auto &a : generics)
@@ -499,9 +505,9 @@ string FunctionStmt::toString() const {
   for (auto &a : args)
     as += " " + a.toString();
   return format(
-      "(#fun {}{}{}{}{} {})", name, ret ? " :ret " + ret->toString() : "",
+      "(#fun {}{}{}{} {})", name, ret ? " :ret " + ret->toString() : "",
       generics.size() ? format(" :gen{}", gs) : "", args.size() ? " :args" + as : "",
-      attributes.size() ? format(" :attrs ({})", fmt::join(attributes, " ")) : "",
+      // attributes.size() ? format(" :attrs ({})", fmt::join(attributes, " ")) : "",
       suite ? suite->toString() : "(#pass)");
 }
 
@@ -519,9 +525,15 @@ string PyDefStmt::toString() const {
 }
 
 ClassStmt::ClassStmt(bool i, const string &n, vector<Param> &&g, vector<Param> &&a,
-                     StmtPtr s, const vector<string> &at)
+                     StmtPtr s, const map<string, string> &at)
     : isRecord(i), name(n), generics(move(g)), args(move(a)), suite(move(s)),
       attributes(at) {}
+ClassStmt::ClassStmt(bool i, const string &n, vector<Param> &&g, vector<Param> &&a,
+                     StmtPtr s, const vector<string> &at)
+    : isRecord(i), name(n), generics(move(g)), args(move(a)), suite(move(s)) {
+  for (auto &a : at)
+    attributes[a] = "";
+}
 ClassStmt::ClassStmt(const ClassStmt &s)
     : isRecord(s.isRecord), name(s.name), generics(ast::clone_nop(s.generics)),
       args(ast::clone_nop(s.args)), suite(ast::clone(s.suite)),
@@ -534,9 +546,9 @@ string ClassStmt::toString() const {
   for (auto &a : args)
     as += " " + a.toString();
   return format(
-      "(#{} {}{}{} {} {})", (isRecord ? "type" : "class"), name,
+      "(#{} {}{}{} {})", (isRecord ? "type" : "class"), name,
       generics.size() ? format(" :gen{}", gs) : "", args.size() ? " :args" + as : "",
-      attributes.size() ? format(" :attrs ({})", fmt::join(attributes, " ")) : "",
+      // attributes.size() ? format(" :attrs ({})", fmt::join(attributes, " ")) : "",
       *suite);
 }
 
