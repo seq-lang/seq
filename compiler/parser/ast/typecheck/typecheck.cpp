@@ -455,6 +455,8 @@ ExprPtr TypecheckVisitor::visitDot(const ExprPtr &expr, const string &member,
           targs.push_back({"", c});
         for (auto &a : *args)
           targs.push_back({a.name, a.value->getType()});
+        if ((*m)[0]->name == ".Interval.__new__")
+          assert(1);
         if (auto m = findBestCall(c, member, targs, true)) {
           if (!lhs->isType())
             args->insert(args->begin(), {"", clone(lhs)});

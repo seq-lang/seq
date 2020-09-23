@@ -1,7 +1,7 @@
 # cgranges implementation adapted from
 # https://github.com/lh3/cgranges
 type Interval(st: int, en: int, max: int, chrom_id: int):
-    def __init__(self: Interval, st: int, en: int, chrom_id: int) -> Interval:
+    def __new__(st: int, en: int, chrom_id: int) -> Interval:
         return (st, en, en, chrom_id)
 
     def with_max(self: Interval, max: int) -> Interval:
@@ -22,7 +22,7 @@ type Interval(st: int, en: int, max: int, chrom_id: int):
         return len(self) > 0
 
 type _StackCell(_x: int, _k: i32, _w: i32):
-    def __init__(self: _StackCell, k: int, x: int, w: int) -> _StackCell:
+    def __new__(k: int, x: int, w: int) -> _StackCell:
         return (x, i32(k), i32(w))
 
     @property
@@ -71,7 +71,7 @@ class IntervalTree:
     def _append(self: IntervalTree, intv: Interval):
         if self.n >= self.m:
             m = (3 * self.m)//2 + 1
-            self.a = ptr[Interval](_gc.realloc(ptr[byte](self.a), m * _gc.sizeof[Interval]()))
+            self.a = ptr[Interval](_gc.realloc(self.a.as_byte(), m * _gc.sizeof[Interval]()))
             self.m = m
         self.a[self.n] = intv
         self.n += 1

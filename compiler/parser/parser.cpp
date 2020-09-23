@@ -20,6 +20,7 @@ using std::vector;
 
 int __level__ = 0;
 int __dbg_level__ = 0;
+bool __isTest = false;
 
 namespace seq {
 
@@ -78,6 +79,7 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
                  duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
                      1000.0);
     }
+    __isTest = isTest;
     return module;
   } catch (seq::exc::SeqException &e) {
     if (isTest) {
@@ -107,7 +109,7 @@ void execute(seq::SeqModule *module, vector<string> args, vector<string> libs,
              bool debug) {
   config::config().debug = debug;
   // try {
-  module->execute(args, libs);
+  module->execute(args, libs, !__isTest);
   // } catch (exc::SeqException &e) {
   // compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
   //  e.getSrcInfo().col);

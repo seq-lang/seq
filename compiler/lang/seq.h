@@ -119,7 +119,7 @@ public:
   void optimize();
   void compile(const std::string &out);
   void execute(const std::vector<std::string> &args = {},
-               const std::vector<std::string> &libs = {});
+               const std::vector<std::string> &libs = {}, bool timeIt = false);
 };
 
 // following is largely from LLVM docs

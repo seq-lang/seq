@@ -468,7 +468,10 @@ public:
 } // namespace
 
 void SeqModule::execute(const std::vector<std::string> &args,
-                        const std::vector<std::string> &libs) {
+                        const std::vector<std::string> &libs, bool timeIt) {
+
+  using namespace std::chrono;
+  auto t = high_resolution_clock::now();
   const bool debug = config::config().debug;
   runCodegenPipeline();
   std::vector<std::string> functionNames;
@@ -477,6 +480,10 @@ void SeqModule::execute(const std::vector<std::string> &args,
       functionNames.push_back(f.getName());
     }
   }
+  if (timeIt)
+    fmt::print(stderr, "[T] llvmgen   = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
 
   std::unique_ptr<Module> owner(module);
   module = nullptr;
@@ -506,7 +513,13 @@ void SeqModule::execute(const std::vector<std::string> &args,
     }
   }
 
+  t = high_resolution_clock::now();
   eng->runFunctionAsMain(func, args, nullptr);
+  if (timeIt)
+    fmt::print(stderr, "[T] runtime   = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
+
   delete eng;
 }
 
