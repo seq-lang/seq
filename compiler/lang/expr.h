@@ -192,6 +192,18 @@ public:
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
 };
 
+class AssignExpr : public Expr {
+private:
+  Var *var;
+  Expr *value;
+  bool atomic;
+
+public:
+  AssignExpr(Var *var, Expr *value, bool atomic = false);
+  void setAtomic();
+  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+};
+
 class FuncExpr : public Expr {
 private:
   BaseFunc *func;

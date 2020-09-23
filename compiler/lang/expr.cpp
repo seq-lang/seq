@@ -150,6 +150,18 @@ Value *VarPtrExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return var->getPtr(base);
 }
 
+AssignExpr::AssignExpr(Var *var, Expr *value, bool atomic)
+    : var(var), value(value), atomic(atomic) {}
+
+void AssignExpr::setAtomic() { atomic = true; }
+
+Value *AssignExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
+  value->ensure(var->getType());
+  Value *val = value->codegen(base, block);
+  var->store(base, val, block, atomic);
+  return val;
+}
+
 FuncExpr::FuncExpr(BaseFunc *func) : Expr(func->getFuncType()), func(func) {
   name = "func";
 }
