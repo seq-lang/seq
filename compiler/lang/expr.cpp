@@ -150,6 +150,18 @@ Value *VarPtrExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   return var->getPtr(base);
 }
 
+AssignExpr::AssignExpr(Var *var, Expr *value, bool atomic)
+    : var(var), value(value), atomic(atomic) {}
+
+void AssignExpr::setAtomic() { atomic = true; }
+
+Value *AssignExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
+  value->ensure(var->getType());
+  Value *val = value->codegen(base, block);
+  var->store(base, val, block, atomic);
+  return val;
+}
+
 FuncExpr::FuncExpr(BaseFunc *func) : Expr(func->getFuncType()), func(func) {
   name = "func";
 }
@@ -703,4 +715,15 @@ TypeOfExpr::TypeOfExpr(Expr *val) : Expr(types::Str), val(val) {}
 Value *TypeOfExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   StrExpr s(val->getType()->getName());
   return s.codegen(base, block);
+}
+
+StmtExpr::StmtExpr(std::vector<Stmt *> stmts, Expr *expr)
+    : Expr(), stmts(std::move(stmts)), expr(expr) {}
+
+Value *StmtExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
+  for (Stmt *stmt : stmts) {
+    assert(stmt->getBase() == base);
+    stmt->codegen(block);
+  }
+  return expr->codegen(base, block);
 }
