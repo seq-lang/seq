@@ -393,4 +393,15 @@ public:
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
 };
 
+class Stmt;
+class StmtExpr : public Expr {
+private:
+  std::vector<Stmt *> stmts;
+  Expr *expr;
+
+public:
+  StmtExpr(std::vector<Stmt *> stmts, Expr *expr);
+  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+};
+
 } // namespace seq

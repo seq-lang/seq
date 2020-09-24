@@ -716,3 +716,14 @@ Value *TypeOfExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   StrExpr s(val->getType()->getName());
   return s.codegen(base, block);
 }
+
+StmtExpr::StmtExpr(std::vector<Stmt *> stmts, Expr *expr)
+    : Expr(), stmts(std::move(stmts)), expr(expr) {}
+
+Value *StmtExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
+  for (Stmt *stmt : stmts) {
+    assert(stmt->getBase() == base);
+    stmt->codegen(block);
+  }
+  return expr->codegen(base, block);
+}
