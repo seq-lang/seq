@@ -102,6 +102,7 @@ public:
   void visit(const LambdaExpr *) override;
   void visit(const YieldExpr *) override;
   void visit(const StaticExpr *) override;
+  void visit(const StmtExpr *expr) override;
 
   void visit(const SuiteStmt *) override;
   void visit(const PassStmt *) override;

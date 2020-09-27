@@ -54,11 +54,7 @@ string printParents(types::TypePtr t) {
   return ":" + s;
 }
 
-TypecheckVisitor::TypecheckVisitor(shared_ptr<TypeContext> ctx,
-                                   shared_ptr<vector<StmtPtr>> stmts)
-    : ctx(ctx) {
-  prependStmts = stmts ? stmts : make_shared<vector<StmtPtr>>();
-}
+TypecheckVisitor::TypecheckVisitor(shared_ptr<TypeContext> ctx) : ctx(ctx) {}
 
 ExprPtr TypecheckVisitor::transform(const ExprPtr &expr) {
   return transform(expr, false);
@@ -67,7 +63,7 @@ ExprPtr TypecheckVisitor::transform(const ExprPtr &expr) {
 ExprPtr TypecheckVisitor::transform(const ExprPtr &expr, bool allowTypes) {
   if (!expr)
     return nullptr;
-  TypecheckVisitor v(ctx, prependStmts);
+  TypecheckVisitor v(ctx);
   v.setSrcInfo(expr->getSrcInfo());
   LOG9("{}", expr->toString());
   expr->accept(v);
@@ -96,26 +92,16 @@ StmtPtr TypecheckVisitor::transform(const StmtPtr &stmt) {
   TypecheckVisitor v(ctx);
   v.setSrcInfo(stmt->getSrcInfo());
   stmt->accept(v);
-  if (v.prependStmts->size()) {
-    if (v.resultStmt)
-      v.prependStmts->push_back(move(v.resultStmt));
-    v.resultStmt = N<SuiteStmt>(move(*v.prependStmts));
-  }
   return move(v.resultStmt);
 }
 
 PatternPtr TypecheckVisitor::transform(const PatternPtr &pat) {
   if (!pat)
     return nullptr;
-  TypecheckVisitor v(ctx, prependStmts);
+  TypecheckVisitor v(ctx);
   v.setSrcInfo(pat->getSrcInfo());
   pat->accept(v);
   return move(v.resultPattern);
-}
-
-void TypecheckVisitor::prepend(StmtPtr s) {
-  if (auto t = transform(s))
-    prependStmts->push_back(move(t));
 }
 
 StmtPtr TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
@@ -533,13 +519,17 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr pipelin
       targs.push_back(a.value->getType());
     return transform(N<CallExpr>(N<DotExpr>(move(e), "__new__"), move(args)));
   } else if (e->isType()) {
-    string var = getTemporaryVar("typ");
     /// TODO: assumes that a class cannot have multiple __new__ magics
     /// WARN: passing e & args that have already been transformed
-    prepend(N<AssignStmt>(N<IdExpr>(var), N<CallExpr>(N<DotExpr>(move(e), "__new__"))));
-    prepend(
-        N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "__init__"), move(args))));
-    return transform(N<IdExpr>(var));
+    ExprPtr var = N<IdExpr>(getTemporaryVar("v"));
+    vector<StmtPtr> stmts;
+    stmts.push_back(transform(
+        N<AssignStmt>(clone(var), N<CallExpr>(N<DotExpr>(move(e), "__new__")))));
+    stmts.push_back(transform(
+        N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__init__"), move(args)))));
+    auto s = N<StmtExpr>(move(stmts), transform(var));
+    s->setType(s->expr->getType());
+    return s;
   } else if (!cc->getCallable()) {
     return transform(N<CallExpr>(N<DotExpr>(move(e), "__call__"), move(args)));
   }
@@ -595,7 +585,9 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr pipelin
 
     auto pt = generatePartialStub(known);
     string var = getTemporaryVar("partialIn");
-    prepend(N<AssignStmt>(N<IdExpr>(var), move(e)));
+
+    vector<StmtPtr> stmts;
+    stmts.push_back(transform(N<AssignStmt>(N<IdExpr>(var), move(e))));
     vector<ExprPtr> newArgs;
     newArgs.push_back(knownTypes.empty()
                           ? N<IdExpr>(var)
@@ -609,17 +601,20 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr pipelin
         ri++;
     }
     var = getTemporaryVar("partial");
-    prepend(
-        N<AssignStmt>(N<IdExpr>(var),
-                      N<CallExpr>(N<IdExpr>(format("{}.__new__", pt)), move(newArgs))));
-    return transform(N<IdExpr>(var));
+    stmts.push_back(transform(
+        N<AssignStmt>(N<IdExpr>(var), N<CallExpr>(N<IdExpr>(format("{}.__new__", pt)),
+                                                  move(newArgs)))));
+    auto s = N<StmtExpr>(move(stmts), transform(N<IdExpr>(var)));
+    s->setType(s->expr->getType());
+    return s;
   } else if (knownTypes.empty()) { // normal function
     e = N<CallExpr>(move(e), move(reorderedArgs));
     e->setType(forceUnify(expr, t));
     return e;
   } else { // partial that is fulfilled
     string var = getTemporaryVar("partialIn");
-    prepend(N<AssignStmt>(N<IdExpr>(var), move(e)));
+    vector<StmtPtr> stmts;
+    stmts.push_back(transform(N<AssignStmt>(N<IdExpr>(var), move(e))));
     vector<ExprPtr> newArgs;
     for (int i = 0, ri = 0; i < knownTypes.size(); i++)
       if (knownTypes[i] == '0')
@@ -629,7 +624,9 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr pipelin
     auto lhs = transform(N<DotExpr>(N<IdExpr>(var), ".ptr"));
     auto e = N<CallExpr>(move(lhs), move(newArgs));
     e->setType(forceUnify(expr, t));
-    return e;
+    auto s = N<StmtExpr>(move(stmts), move(e));
+    s->setType(s->expr->getType());
+    return s;
   }
 }
 
@@ -680,6 +677,16 @@ void TypecheckVisitor::visit(const YieldExpr *expr) {
   auto c = t->follow()->getClass();
   assert(c);
   resultExpr->setType(forceUnify(expr, c->explicits[0].type));
+}
+
+void TypecheckVisitor::visit(const StmtExpr *expr) {
+  vector<StmtPtr> stmts;
+  for (auto &s : expr->stmts)
+    stmts.push_back(transform(s));
+  auto e = transform(expr->expr);
+  auto t = e->getType();
+  resultExpr = N<StmtExpr>(move(stmts), move(e));
+  resultExpr->setType(forceUnify(expr, t));
 }
 
 void TypecheckVisitor::visit(const SuiteStmt *stmt) {

@@ -45,6 +45,7 @@ struct TupleIndexExpr;
 struct StackAllocExpr;
 struct StaticExpr;
 struct InstantiateExpr;
+struct StmtExpr;
 
 struct AssignMemberStmt;
 struct SuiteStmt;
@@ -129,6 +130,7 @@ public:
   virtual void visit(const StackAllocExpr *);
   virtual void visit(const InstantiateExpr *);
   virtual void visit(const StaticExpr *);
+  virtual void visit(const StmtExpr *);
 
   virtual void visit(const AssignMemberStmt *);
   virtual void visit(const UpdateStmt *);

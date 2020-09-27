@@ -62,6 +62,7 @@ public:
   void visit(const DotExpr *) override;
   void visit(const PtrExpr *) override;
   void visit(const YieldExpr *) override;
+  void visit(const StmtExpr *) override;
 
   void visit(const SuiteStmt *) override;
   void visit(const PassStmt *) override;
@@ -80,7 +81,6 @@ public:
   void visit(const MatchStmt *) override;
   void visit(const UpdateStmt *) override;
   void visit(const TryStmt *) override;
-  // void visit(const GlobalStmt *) override;
   void visit(const ThrowStmt *) override;
   void visit(const FunctionStmt *) override;
   void visit(const ClassStmt *stmt) override;

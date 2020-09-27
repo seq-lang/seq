@@ -466,6 +466,17 @@ struct YieldExpr : public Expr {
   NODE_UTILITY(Expr, YieldExpr);
 };
 
+struct StmtExpr : public Expr {
+  std::vector<StmtPtr> stmts;
+  ExprPtr expr;
+
+  StmtExpr(std::vector<StmtPtr> &&s, ExprPtr e);
+  StmtExpr(const StmtExpr &n);
+
+  std::string toString() const override;
+  NODE_UTILITY(Expr, StmtExpr);
+};
+
 struct SuiteStmt : public Stmt {
   /// Represents list (block) of statements.
   /// Does not necessarily imply new variable block.

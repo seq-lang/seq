@@ -253,6 +253,14 @@ void FormatVisitor::visit(const StaticExpr *expr) {
   result = renderExpr(expr, "{}", transform(expr->expr));
 }
 
+void FormatVisitor::visit(const StmtExpr *expr) {
+  string s;
+  for (int i = 0; i < expr->stmts.size(); i++)
+    s += format("{}{}", pad(2), transform(expr->stmts[i], 2));
+  result = renderExpr(expr, "({}{}{}{}{})", newline(), s, newline(), pad(2),
+                      transform(expr->expr));
+}
+
 void FormatVisitor::visit(const SuiteStmt *stmt) {
   for (int i = 0; i < stmt->stmts.size(); i++)
     result += transform(stmt->stmts[i]);

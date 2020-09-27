@@ -288,6 +288,14 @@ StaticExpr::StaticExpr(const StaticExpr &e)
     : Expr(e), expr(ast::clone(e.expr)), captures(e.captures) {}
 string StaticExpr::toString() const { return wrap(format("#static {}", *expr)); }
 
+StmtExpr::StmtExpr(vector<StmtPtr> &&s, ExprPtr e)
+    : Expr(), stmts(move(s)), expr(move(e)) {}
+StmtExpr::StmtExpr(const StmtExpr &e)
+    : Expr(e), stmts(ast::clone(e.stmts)), expr(ast::clone(e.expr)) {}
+string StmtExpr::toString() const {
+  return wrap(format("#stmt ({}) {}", combine(stmts, " "), *expr));
+}
+
 Param Param::clone() const { return {name, ast::clone(type), ast::clone(deflt)}; }
 string Param::toString() const {
   return format("({}{}{})", name, type ? " :typ " + type->toString() : "",

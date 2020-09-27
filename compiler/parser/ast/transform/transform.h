@@ -25,13 +25,11 @@ namespace ast {
 
 class TransformVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr> {
   std::shared_ptr<TransformContext> ctx;
-  std::shared_ptr<std::vector<StmtPtr>> prependStmts;
   ExprPtr resultExpr;
   StmtPtr resultStmt;
   PatternPtr resultPattern;
 
 private:
-  void prepend(StmtPtr s);
   StmtPtr getGeneratorBlock(const std::vector<GeneratorExpr::Body> &loops,
                             SuiteStmt *&prev);
   std::vector<StmtPtr> addMethods(const StmtPtr &s);
@@ -40,14 +38,15 @@ private:
   std::string generatePartialStub(const std::string &flag);
   StmtPtr codegenMagic(const std::string &op, const ExprPtr &typExpr,
                        const std::vector<Param> &args, bool isRecord);
+  ExprPtr makeAnonFn(std::vector<StmtPtr> &&stmts,
+                     const std::vector<std::string> &vars = std::vector<std::string>{});
 
   void defaultVisit(const Expr *e) override;
   void defaultVisit(const Stmt *s) override;
   void defaultVisit(const Pattern *p) override;
 
 public:
-  TransformVisitor(std::shared_ptr<TransformContext> ctx,
-                   std::shared_ptr<std::vector<StmtPtr>> stmts = nullptr);
+  TransformVisitor(std::shared_ptr<TransformContext> ctx);
   static StmtPtr apply(std::shared_ptr<Cache> cache, StmtPtr s);
 
   ExprPtr transform(const ExprPtr &e) override;

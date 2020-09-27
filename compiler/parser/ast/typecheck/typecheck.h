@@ -28,12 +28,10 @@ namespace ast {
 
 class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr> {
   std::shared_ptr<TypeContext> ctx;
-  std::shared_ptr<std::vector<StmtPtr>> prependStmts;
   ExprPtr resultExpr;
   StmtPtr resultStmt;
   PatternPtr resultPattern;
 
-  void prepend(StmtPtr s);
   std::vector<types::Generic> parseGenerics(const std::vector<Param> &generics,
                                             int level);
   std::string patchIfRealizable(types::TypePtr typ, bool isClass);
@@ -62,8 +60,7 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
 
 public:
   static StmtPtr apply(std::shared_ptr<Cache> cache, StmtPtr stmts);
-  TypecheckVisitor(std::shared_ptr<TypeContext> ctx,
-                   std::shared_ptr<std::vector<StmtPtr>> stmts = nullptr);
+  TypecheckVisitor(std::shared_ptr<TypeContext> ctx);
 
   ExprPtr transform(const ExprPtr &e) override;
   StmtPtr transform(const StmtPtr &s) override;
@@ -94,6 +91,7 @@ public:
   void visit(const TypeOfExpr *) override;
   void visit(const PtrExpr *) override;
   void visit(const YieldExpr *) override;
+  void visit(const StmtExpr *) override;
 
   void visit(const SuiteStmt *) override;
   void visit(const ExprStmt *) override;

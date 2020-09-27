@@ -41,6 +41,7 @@ void ASTVisitor::visit(const LambdaExpr *e) { defaultVisit(e); }
 void ASTVisitor::visit(const YieldExpr *e) { defaultVisit(e); }
 void ASTVisitor::visit(const InstantiateExpr *e) { defaultVisit(e); }
 void ASTVisitor::visit(const StaticExpr *e) { defaultVisit(e); }
+void ASTVisitor::visit(const StmtExpr *e) { defaultVisit(e); }
 
 void ASTVisitor::visit(const SuiteStmt *e) { defaultVisit(e); }
 void ASTVisitor::visit(const PassStmt *e) { defaultVisit(e); }

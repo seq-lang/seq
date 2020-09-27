@@ -46,11 +46,7 @@ namespace ast {
 
 using namespace types;
 
-TransformVisitor::TransformVisitor(shared_ptr<TransformContext> ctx,
-                                   shared_ptr<vector<StmtPtr>> stmts)
-    : ctx(ctx) {
-  prependStmts = stmts ? stmts : make_shared<vector<StmtPtr>>();
-}
+TransformVisitor::TransformVisitor(shared_ptr<TransformContext> ctx) : ctx(ctx) {}
 
 StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s) {
   auto suite = make_unique<SuiteStmt>();
@@ -134,7 +130,7 @@ ExprPtr TransformVisitor::transform(const ExprPtr &expr) {
 ExprPtr TransformVisitor::transform(const ExprPtr &expr, bool allowTypes) {
   if (!expr)
     return nullptr;
-  TransformVisitor v(ctx, prependStmts);
+  TransformVisitor v(ctx);
   v.setSrcInfo(expr->getSrcInfo());
   expr->accept(v);
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
@@ -156,26 +152,16 @@ StmtPtr TransformVisitor::transform(const StmtPtr &stmt) {
   TransformVisitor v(ctx);
   v.setSrcInfo(stmt->getSrcInfo());
   stmt->accept(v);
-  if (v.prependStmts->size()) {
-    if (v.resultStmt)
-      v.prependStmts->push_back(move(v.resultStmt));
-    v.resultStmt = N<SuiteStmt>(move(*v.prependStmts));
-  }
   return move(v.resultStmt);
 }
 
 PatternPtr TransformVisitor::transform(const PatternPtr &pat) {
   if (!pat)
     return nullptr;
-  TransformVisitor v(ctx, prependStmts);
+  TransformVisitor v(ctx);
   v.setSrcInfo(pat->getSrcInfo());
   pat->accept(v);
   return move(v.resultPattern);
-}
-
-void TransformVisitor::prepend(StmtPtr s) {
-  if (auto t = transform(s))
-    prependStmts->push_back(move(t));
 }
 
 void TransformVisitor::defaultVisit(const Expr *e) { resultExpr = e->clone(); }
@@ -310,87 +296,80 @@ void TransformVisitor::visit(const TupleExpr *expr) {
 }
 
 void TransformVisitor::visit(const ListExpr *expr) {
-  string listVar = getTemporaryVar("lst");
-  prepend(N<AssignStmt>(
-      N<IdExpr>(listVar),
+  vector<StmtPtr> stmts;
+  ExprPtr var = N<IdExpr>(getTemporaryVar("list"));
+  stmts.push_back(transform(N<AssignStmt>(
+      clone(var),
       N<CallExpr>(N<IdExpr>(".list"),
-                  expr->items.size() ? N<IntExpr>(expr->items.size()) : nullptr)));
+                  expr->items.size() ? N<IntExpr>(expr->items.size()) : nullptr))));
   for (int i = 0; i < expr->items.size(); i++)
-    prepend(N<ExprStmt>(
-        N<CallExpr>(N<DotExpr>(N<IdExpr>(listVar), "append"), clone(expr->items[i]))));
-  resultExpr = transform(N<IdExpr>(listVar));
+    stmts.push_back(transform(N<ExprStmt>(
+        N<CallExpr>(N<DotExpr>(clone(var), "append"), clone(expr->items[i])))));
+  resultExpr = N<StmtExpr>(move(stmts), transform(var));
 }
 
 void TransformVisitor::visit(const SetExpr *expr) {
-  string setVar = getTemporaryVar("set");
-  prepend(N<AssignStmt>(N<IdExpr>(setVar), N<CallExpr>(N<IdExpr>(".set"))));
+  vector<StmtPtr> stmts;
+  ExprPtr var = N<IdExpr>(getTemporaryVar("set"));
+  stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".set")))));
   for (int i = 0; i < expr->items.size(); i++)
-    prepend(N<ExprStmt>(
-        N<CallExpr>(N<DotExpr>(N<IdExpr>(setVar), "add"), clone(expr->items[i]))));
-  resultExpr = transform(N<IdExpr>(setVar));
+    stmts.push_back(transform(N<ExprStmt>(
+        N<CallExpr>(N<DotExpr>(clone(var), "add"), clone(expr->items[i])))));
+  resultExpr = N<StmtExpr>(move(stmts), transform(var));
 }
 
 void TransformVisitor::visit(const DictExpr *expr) {
-  string dictVar = getTemporaryVar("dict");
-  prepend(N<AssignStmt>(N<IdExpr>(dictVar), N<CallExpr>(N<IdExpr>(".dict"))));
+  vector<StmtPtr> stmts;
+  ExprPtr var = N<IdExpr>(getTemporaryVar("dict"));
+  stmts.push_back(
+      transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".dict")))));
   for (int i = 0; i < expr->items.size(); i++)
-    prepend(N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>(dictVar), "__setitem__"),
-                                    clone(expr->items[i].key),
-                                    clone(expr->items[i].value))));
-  resultExpr = transform(N<IdExpr>(dictVar));
+    stmts.push_back(transform(N<ExprStmt>(
+        N<CallExpr>(N<DotExpr>(clone(var), "__setitem__"), clone(expr->items[i].key),
+                    clone(expr->items[i].value)))));
+  resultExpr = N<StmtExpr>(move(stmts), transform(var));
 }
 
 void TransformVisitor::visit(const GeneratorExpr *expr) {
   SuiteStmt *prev;
   auto suite = getGeneratorBlock(expr->loops, prev);
-  string var = getTemporaryVar("gen");
+
+  vector<StmtPtr> stmts;
+  ExprPtr var = N<IdExpr>(getTemporaryVar("gen"));
   if (expr->kind == GeneratorExpr::ListGenerator) {
-    prepend(N<AssignStmt>(N<IdExpr>(var), N<CallExpr>(N<IdExpr>(".list"))));
-    prev->stmts.push_back(N<ExprStmt>(
-        N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "append"), clone(expr->expr))));
-    prepend(move(suite));
-  } else if (expr->kind == GeneratorExpr::SetGenerator) {
-    prepend(N<AssignStmt>(N<IdExpr>(var), N<CallExpr>(N<IdExpr>(".set"))));
+    stmts.push_back(
+        transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".list")))));
     prev->stmts.push_back(
-        N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "add"), clone(expr->expr))));
-    prepend(move(suite));
+        N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "append"), clone(expr->expr))));
+    stmts.push_back(transform(suite));
+    resultExpr = N<StmtExpr>(move(stmts), transform(var));
+  } else if (expr->kind == GeneratorExpr::SetGenerator) {
+    stmts.push_back(
+        transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".set")))));
+    prev->stmts.push_back(
+        N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "add"), clone(expr->expr))));
+    stmts.push_back(transform(suite));
+    resultExpr = N<StmtExpr>(move(stmts), transform(var));
   } else {
     prev->stmts.push_back(N<YieldStmt>(clone(expr->expr)));
-    string fnVar = getTemporaryVar("anonGen");
-
-    ctx->captures.push_back({});
-    prepend(N<FunctionStmt>(fnVar, nullptr, vector<Param>{}, vector<Param>(),
-                            move(suite), vector<string>{}));
-    assert(prependStmts->size());
-    auto f = CAST(prependStmts->back(), FunctionStmt);
-    assert(f);
-    vector<Param> params;
-    vector<CallExpr::Arg> args;
-    for (auto &c : ctx->captures.back()) {
-      params.push_back({c, nullptr, nullptr});
-      args.push_back({"", N<IdExpr>(c)});
-    }
-    ctx->captures.pop_back();
-    f->args = clone_nop(params);
-    static_cast<FunctionStmt *>(ctx->cache->asts[f->name].get())->args =
-        clone_nop(params);
-
-    prepend(N<AssignStmt>(N<IdExpr>(var),
-                          N<CallExpr>(N<DotExpr>(
-                              N<CallExpr>(N<IdExpr>(fnVar), move(args)), "__iter__"))));
+    stmts.push_back(move(suite));
+    resultExpr =
+        transform(N<CallExpr>(N<DotExpr>(makeAnonFn(move(stmts)), "__iter__")));
   }
-  resultExpr = transform(N<IdExpr>(var));
 }
 
 void TransformVisitor::visit(const DictGeneratorExpr *expr) {
   SuiteStmt *prev;
   auto suite = getGeneratorBlock(expr->loops, prev);
-  string var = getTemporaryVar("gen");
-  prepend(N<AssignStmt>(N<IdExpr>(var), N<CallExpr>(N<IdExpr>(".dict"))));
-  prev->stmts.push_back(N<ExprStmt>(N<CallExpr>(
-      N<DotExpr>(N<IdExpr>(var), "__setitem__"), clone(expr->key), clone(expr->expr))));
-  prepend(move(suite));
-  resultExpr = transform(N<IdExpr>(var));
+
+  vector<StmtPtr> stmts;
+  ExprPtr var = N<IdExpr>(getTemporaryVar("gen"));
+  stmts.push_back(
+      transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".dict")))));
+  prev->stmts.push_back(N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__setitem__"),
+                                                clone(expr->key), clone(expr->expr))));
+  stmts.push_back(transform(suite));
+  resultExpr = N<StmtExpr>(move(stmts), transform(var));
 }
 
 void TransformVisitor::visit(const IfExpr *expr) {
@@ -611,37 +590,17 @@ void TransformVisitor::visit(const PtrExpr *expr) {
 }
 
 void TransformVisitor::visit(const LambdaExpr *expr) {
-  vector<Param> params;
-  unordered_set<string> used;
-  for (auto &s : expr->vars)
-    params.push_back({s, nullptr, nullptr});
+  vector<StmtPtr> stmts;
+  stmts.push_back(N<ReturnStmt>(clone(expr->expr)));
+  auto c = makeAnonFn(move(stmts), expr->vars);
+  auto cc = CAST(CAST(c, StmtExpr)->expr, CallExpr);
 
-  string fnVar = getTemporaryVar("anonFn");
-  ctx->captures.push_back({});
-  prepend(N<FunctionStmt>(fnVar, nullptr, vector<Param>{}, move(params),
-                          N<ReturnStmt>(clone(expr->expr)), vector<string>{}));
-  assert(prependStmts->size());
-  auto f = CAST(prependStmts->back(), FunctionStmt);
-  assert(f);
-  params.clear();
-  vector<CallExpr::Arg> args;
-  for (auto &s : expr->vars)
-    params.push_back({s, nullptr, nullptr});
-  for (auto &c : ctx->captures.back()) {
-    params.push_back({c, nullptr, nullptr});
-    args.push_back({"", N<IdExpr>(c)});
-  }
-  ctx->captures.pop_back();
-  f->args = clone_nop(params);
-  static_cast<FunctionStmt *>(ctx->cache->asts[f->name].get())->args =
-      clone_nop(params);
-
-  if (args.size()) { // create partial call
+  if (cc->args.size()) { // create partial call
     for (int i = 0; i < expr->vars.size(); i++)
-      args.insert(args.begin(), {"", N<EllipsisExpr>()});
-    resultExpr = transform(N<CallExpr>(N<IdExpr>(fnVar), move(args)));
+      cc->args.insert(cc->args.begin(), {"", N<EllipsisExpr>()});
+    resultExpr = transform(c);
   } else {
-    resultExpr = transform(N<IdExpr>(fnVar));
+    resultExpr = transform(cc->expr);
   }
 }
 
@@ -1592,6 +1551,31 @@ StmtPtr TransformVisitor::codegenMagic(const string &op, const ExprPtr &typExpr,
                                      move(fargs), N<SuiteStmt>(move(stmts)), attrs);
   t->setSrcInfo(ctx->getGeneratedPos());
   return t;
+}
+
+ExprPtr TransformVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
+                                     const vector<string> &vars) {
+  vector<Param> params;
+  vector<CallExpr::Arg> args;
+
+  string name = getTemporaryVar("lambda");
+  ctx->captures.push_back({});
+  auto fs =
+      transform(N<FunctionStmt>(name, nullptr, vector<Param>{}, move(params),
+                                N<SuiteStmt>(move(stmts)), vector<string>{".inline"}));
+  auto f = CAST(fs, FunctionStmt);
+  for (auto &s : vars)
+    f->args.push_back({s, nullptr, nullptr});
+  for (auto &c : ctx->captures.back()) {
+    f->args.push_back({c, nullptr, nullptr});
+    args.push_back({"", N<IdExpr>(c)});
+  }
+  ((FunctionStmt *)(ctx->cache->asts[f->name].get()))->args = clone_nop(f->args);
+  ctx->captures.pop_back();
+
+  vector<StmtPtr> s;
+  s.push_back(move(fs));
+  return N<StmtExpr>(move(s), N<CallExpr>(N<IdExpr>(name), move(args)));
 }
 
 } // namespace ast

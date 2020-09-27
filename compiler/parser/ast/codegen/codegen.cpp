@@ -50,6 +50,7 @@ CodegenVisitor::CodegenVisitor(std::shared_ptr<CodegenContext> ctx)
 seq::Expr *CodegenVisitor::transform(const ExprPtr &expr) {
   if (!expr)
     return nullptr;
+  LOG7("-- {}", expr->toString());
   CodegenVisitor v(ctx);
   v.setSrcInfo(expr->getSrcInfo());
   expr->accept(v);
@@ -248,6 +249,16 @@ void CodegenVisitor::visit(const PtrExpr *expr) {
 
 void CodegenVisitor::visit(const YieldExpr *expr) {
   resultExpr = new seq::YieldExpr(ctx->getBase());
+}
+
+void CodegenVisitor::visit(const StmtExpr *expr) {
+  vector<seq::Stmt *> stmts;
+  for (auto &s : expr->stmts) {
+    auto sp = transform(s);
+    if (sp)
+      stmts.push_back(sp);
+  }
+  resultExpr = new seq::StmtExpr(stmts, transform(expr->expr));
 }
 
 void CodegenVisitor::visit(const SuiteStmt *stmt) {
