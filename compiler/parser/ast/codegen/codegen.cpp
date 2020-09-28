@@ -66,13 +66,18 @@ seq::Expr *CodegenVisitor::transform(const ExprPtr &expr) {
 }
 
 seq::Stmt *CodegenVisitor::transform(const StmtPtr &stmt) {
+  return transform(stmt, true);
+}
+
+seq::Stmt *CodegenVisitor::transform(const StmtPtr &stmt, bool addToBlock) {
   CodegenVisitor v(ctx);
   stmt->accept(v);
   v.setSrcInfo(stmt->getSrcInfo());
   if (v.resultStmt) {
     v.resultStmt->setSrcInfo(stmt->getSrcInfo());
     v.resultStmt->setBase(ctx->getBase());
-    ctx->getBlock()->add(v.resultStmt);
+    if (addToBlock)
+      ctx->getBlock()->add(v.resultStmt);
   }
   return v.resultStmt;
 }
@@ -253,12 +258,15 @@ void CodegenVisitor::visit(const YieldExpr *expr) {
 
 void CodegenVisitor::visit(const StmtExpr *expr) {
   vector<seq::Stmt *> stmts;
+
   for (auto &s : expr->stmts) {
-    auto sp = transform(s);
-    if (sp)
-      stmts.push_back(sp);
+    transform(s);
+    // auto sp = transform(s, false);
+    // if (sp)
+    //   stmts.push_back(sp);
   }
-  resultExpr = new seq::StmtExpr(stmts, transform(expr->expr));
+  resultExpr = transform(expr->expr);
+  // resultExpr = new seq::StmtExpr(stmts, transform(expr->expr));
 }
 
 void CodegenVisitor::visit(const SuiteStmt *stmt) {

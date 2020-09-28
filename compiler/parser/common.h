@@ -44,7 +44,7 @@ bool getInt(seq_int_t *o, const std::unique_ptr<ast::Expr> &e, bool zeroOnNull =
 std::vector<std::string> split(const std::string &s, char delim);
 std::string escape(std::string s);
 std::string executable_path(const char *argv0);
-std::string getTemporaryVar(const std::string &prefix = "", char p = '.');
+std::string getTemporaryVar(const std::string &prefix = "", char p = '$');
 std::string chop(const std::string &s);
 bool startswith(const std::string &s, const std::string &p);
 void error(const char *format);

@@ -246,12 +246,12 @@ void SeqModule::codegen(Module *module) {
 }
 
 static void verifyModuleFailFast(Module &module) {
-  auto fo = fopen("_llvm.dump", "w");
+  auto fo = fopen("_dump.llvm", "w");
   raw_fd_ostream fout(fileno(fo), true);
   fout << module;
   fout.close();
   if (verifyModule(module, &errs())) {
-    auto fo = fopen("_llvm.dump", "w");
+    auto fo = fopen("_dump.llvm", "w");
     raw_fd_ostream fout(fileno(fo), true);
     fout << module;
     fout.close();

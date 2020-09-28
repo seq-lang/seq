@@ -65,7 +65,7 @@ ExprPtr TypecheckVisitor::transform(const ExprPtr &expr, bool allowTypes) {
     return nullptr;
   TypecheckVisitor v(ctx);
   v.setSrcInfo(expr->getSrcInfo());
-  LOG9("{}", expr->toString());
+  LOG9("<< {} {}", (int64_t)expr.get(), expr->toString());
   expr->accept(v);
   // LOG9("{} | {} -> {}", expr->getSrcInfo().line, expr->toString(),
   //  v.resultExpr->toString());
@@ -73,6 +73,23 @@ ExprPtr TypecheckVisitor::transform(const ExprPtr &expr, bool allowTypes) {
       v.resultExpr->getType()->getClass()->canRealize())
     realizeType(v.resultExpr->getType()->getClass());
   seqassert(v.resultExpr, "cannot parse {}", expr->toString());
+  LOG9(">> {} {} {}", (int64_t)expr.get(), (int64_t)v.resultExpr.get(),
+       v.resultExpr->toString());
+  if (v.resultExpr->toString() ==
+      "(#stmt ((#assign (#id ._list_107) (#stmt ((#assign (#id ._v_120) (#call (#id "
+      ".list.__new__ :type .list[.int]:.list.__new__[.list[.int]]) :type .list[.int])) "
+      "(#expr (#call (#id .list.__init__.3 :type "
+      ".list[.int]:.list.__init__.3[?2489.2,.list[.int],.int]) (#id ._v_120 :type "
+      ".list[.int]) (#int 2 :type .int) :type ?2489.2))) (#id ._v_120 :type "
+      ".list[.int]) :type .list[.int])) (#expr (#call (#id "
+      ".list[.int]:.list.append[.list[.int],.int] :type "
+      ".list[.int]:.list.append[.void,.list[.int],.int]) (#id ._list_107 :type "
+      ".list[.int]) (#int 1 :type .int) :type .void)) (#expr (#call (#id "
+      ".list[.int]:.list.append[.list[.int],.int] :type "
+      ".list[.int]:.list.append[.void,.list[.int],.int]) (#id ._list_107 :type "
+      ".list[.int]) (#int 2 :type .int) :type .void))) (#id ._list_107 :type "
+      ".list[.int]) :type .list[.int])")
+    assert(1);
   return move(v.resultExpr);
 }
 
@@ -230,8 +247,7 @@ void TypecheckVisitor::visit(const BinaryExpr *expr) {
       error("cannot find magic '{}' for {}", magic, lc->toString());
     }
     magic = format("__{}__", magic);
-    resultExpr = transform(
-        N<CallExpr>(N<DotExpr>(clone(expr->lexpr), magic), clone(expr->rexpr)));
+    resultExpr = transform(N<CallExpr>(N<DotExpr>(move(le), magic), move(re)));
     forceUnify(expr, resultExpr->getType());
   }
 }
@@ -514,22 +530,17 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr pipelin
     e->setType(forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
     return e;
   } else if (e->isType() && cc->isRecord()) {
-    vector<TypePtr> targs;
-    for (auto &a : args)
-      targs.push_back(a.value->getType());
     return transform(N<CallExpr>(N<DotExpr>(move(e), "__new__"), move(args)));
   } else if (e->isType()) {
     /// TODO: assumes that a class cannot have multiple __new__ magics
     /// WARN: passing e & args that have already been transformed
     ExprPtr var = N<IdExpr>(getTemporaryVar("v"));
     vector<StmtPtr> stmts;
-    stmts.push_back(transform(
-        N<AssignStmt>(clone(var), N<CallExpr>(N<DotExpr>(move(e), "__new__")))));
-    stmts.push_back(transform(
-        N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__init__"), move(args)))));
-    auto s = N<StmtExpr>(move(stmts), transform(var));
-    s->setType(s->expr->getType());
-    return s;
+    stmts.push_back(
+        N<AssignStmt>(clone(var), N<CallExpr>(N<DotExpr>(move(e), "__new__"))));
+    stmts.push_back(
+        N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__init__"), move(args))));
+    return transform(N<StmtExpr>(move(stmts), clone(var)));
   } else if (!cc->getCallable()) {
     return transform(N<CallExpr>(N<DotExpr>(move(e), "__call__"), move(args)));
   }
@@ -605,7 +616,7 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr pipelin
         N<AssignStmt>(N<IdExpr>(var), N<CallExpr>(N<IdExpr>(format("{}.__new__", pt)),
                                                   move(newArgs)))));
     auto s = N<StmtExpr>(move(stmts), transform(N<IdExpr>(var)));
-    s->setType(s->expr->getType());
+    s->setType(forceUnify(expr, s->expr->getType()));
     return s;
   } else if (knownTypes.empty()) { // normal function
     e = N<CallExpr>(move(e), move(reorderedArgs));
@@ -622,10 +633,10 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr pipelin
       else
         newArgs.push_back(transform(N<DotExpr>(N<IdExpr>(var), format(".a{}", i + 1))));
     auto lhs = transform(N<DotExpr>(N<IdExpr>(var), ".ptr"));
-    auto e = N<CallExpr>(move(lhs), move(newArgs));
+    ExprPtr e = N<CallExpr>(move(lhs), move(newArgs));
     e->setType(forceUnify(expr, t));
     auto s = N<StmtExpr>(move(stmts), move(e));
-    s->setType(s->expr->getType());
+    s->setType(forceUnify(expr, s->expr->getType()));
     return s;
   }
 }
@@ -684,9 +695,9 @@ void TypecheckVisitor::visit(const StmtExpr *expr) {
   for (auto &s : expr->stmts)
     stmts.push_back(transform(s));
   auto e = transform(expr->expr);
-  auto t = e->getType();
+  auto t = forceUnify(expr, e->getType());
   resultExpr = N<StmtExpr>(move(stmts), move(e));
-  resultExpr->setType(forceUnify(expr, t));
+  resultExpr->setType(t);
 }
 
 void TypecheckVisitor::visit(const SuiteStmt *stmt) {
@@ -1546,9 +1557,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     StmtPtr realized = nullptr;
     if (!isInternal) {
       ctx->typecheckLevel++;
-      LOG9(">>> {}", t->realizeString());
       realized = realizeBlock(ast->suite);
-      LOG9("<<< {}", t->realizeString());
       ctx->typecheckLevel--;
 
       if (!ast->ret && t->args[0]->getUnbound())

@@ -46,6 +46,7 @@ public:
   seq::Expr *transform(const ExprPtr &expr) override;
   seq::Stmt *transform(const StmtPtr &stmt) override;
   seq::Pattern *transform(const PatternPtr &pat) override;
+  seq::Stmt *transform(const StmtPtr &stmt, bool addToBlock);
 
   void visitMethods(const std::string &name);
 

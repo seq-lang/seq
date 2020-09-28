@@ -342,6 +342,9 @@ void TransformVisitor::visit(const GeneratorExpr *expr) {
     prev->stmts.push_back(
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "append"), clone(expr->expr))));
     stmts.push_back(transform(suite));
+    LOG("-- {}", expr->toString());
+    for (auto &x : stmts)
+      LOG("<> {}", x->toString());
     resultExpr = N<StmtExpr>(move(stmts), transform(var));
   } else if (expr->kind == GeneratorExpr::SetGenerator) {
     stmts.push_back(

@@ -343,11 +343,8 @@ class list[T]:
     def _assign_slice(self, ilow: int, ihigh: int, v: optional[generator[T]]):
         a = self
         recycle = ptr[T]()
-        print ilow,ihigh,'-'
         vitem = list[T](a for a in ~v) if v else None
-        print 'here'
         n = len(vitem) if vitem is not None else 0
-        print ilow,ihigh,vitem,n
 
         if ilow < 0:
             ilow = 0
