@@ -88,23 +88,31 @@ class bntseq:
         return b
 
     def __init__(self: bntseq):
-        self._pac = ptr[u8]()
-        self._m_pac = 0
-        self._l_pac = 0
-        self._n_seqs = 0
-        self._anns = None
-        self._ambs = None
+        self._init(0)
 
     def __init__(self: bntseq, path: str):
-        m_pac = 0x10000
-        self._pac = ptr[u8](m_pac // 4)
-        str.memset(ptr[byte](self._pac), byte(0), m_pac // 4)
+        self._init(0x10000)
+        self._add_fasta(path)
+
+    def __init__(self: bntseq, sequence: seq):
+        self._init(0x10000)
+        self._add1('seq', sequence, '')
+
+    def _init(self: bntseq, m_pac: int):
+        if m_pac:
+            self._pac = ptr[u8](m_pac // 4)
+            str.memset(ptr[byte](self._pac), byte(0), m_pac // 4)
+        else:
+            self._pac = ptr[u8]()
         self._m_pac = m_pac
         self._l_pac = 0
         self._n_seqs = 0
-        self._anns = list[bntann]()
-        self._ambs = list[bntamb]()
-        self._add_fasta(path)
+        if m_pac:
+            self._anns = list[bntann]()
+            self._ambs = list[bntamb]()
+        else:
+            self._anns = None
+            self._ambs = None
 
     @property
     def _n_holes(self: bntseq):
@@ -509,6 +517,10 @@ class FMDIndex:
 
     def __init__(self: FMDIndex, path: str):
         self._bntseq = bntseq(path)
+        self._init_from_enc(self._bntseq._pac, self._bntseq._l_pac)
+
+    def __init__(self: FMDIndex, sequence: seq):
+        self._bntseq = bntseq(sequence)
         self._init_from_enc(self._bntseq._pac, self._bntseq._l_pac)
 
     def _init_from_enc(self: FMDIndex, p: ptr[u8], l: int):

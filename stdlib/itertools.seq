@@ -310,6 +310,7 @@ def groupby[K,V](iterable: generator[V], key: optional[function[K,V]] = None):
         yield currkey, group
     iterable.destroy()
 
+
 def zip_longest[T](a: generator[T], b: generator[T], fillvalue: T):
     a_done = False
     b_done = False
@@ -328,6 +329,19 @@ def zip_longest[T](a: generator[T], b: generator[T], fillvalue: T):
 
     a.destroy()
     b.destroy()
+
+
+def product(a, b, equals_ok: bool = True):
+    """
+    product(iterable, iterable, bool)
+
+    Return a Cartesian product of a and b.
+    """
+    for i in a:
+        for j in b:
+            if equals_ok or i != j:
+                yield (i, j)
+
 
 '''
 def product[T](iterables: generator[T], repeat: int):

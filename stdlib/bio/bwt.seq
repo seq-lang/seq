@@ -718,6 +718,24 @@ extend seq:
         B = _saisxx_bwt(p, n)
         return seq(B, n + 1)
 
+    def lcp(self: seq, sa: list[int]):
+        """
+        https://rahmannlab.gitlab.io/algorithmen-auf-sequenzen/pdfs/skript-aas.pdf, p. 61
+        """
+        n = len(self)
+        rank = [0] * n
+        for r in range(n):
+            rank[sa[r]] = r
+        lcp = [0] * (n + 1)
+        lp = 0
+        for p in range(n - 1):
+            r = rank[p]
+            pp = sa[r - 1]
+            while max(p, pp) + lp < len(self) and self[p + lp] == self[pp + lp]:
+                lp += 1
+            lcp[r], lp = lp, max(lp - 1, 0)
+        return lcp
+
 from bio.pseq import pseq
 extend pseq:
     def suffix_array(self: pseq):

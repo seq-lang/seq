@@ -146,6 +146,9 @@ extend Alignment:
     def __init__(self: Alignment) -> Alignment:
         return (CIGAR(), 0)
 
+    def __init__(self: Alignment, cigar: str, score: int) -> Alignment:
+        return (CIGAR(cigar), score)
+
     @property
     def cigar(self: Alignment):
         return self._cigar
