@@ -385,7 +385,7 @@ def SeqNSplit(bam_file, ref_file, output_sam, qual_ref, ndn, trim_overhang):
                     flag = getNewFlag(r, split_count)
                     line = getFileLine(r, str(r.read), "".join(section_cig), sec_ref_s, qual_ref, flag, bam)
                     split_queue.add((sec_ref_s, line))
-                    
+
         else:
             # check for overhang
             final_pos = r.pos
@@ -407,7 +407,7 @@ def SeqNSplit(bam_file, ref_file, output_sam, qual_ref, ndn, trim_overhang):
         while split_queue and split_queue.left[0] < line_queue.left[0]:
             f.write(split_queue.left[1]); f.write("\n")
             split_queue._delete(0, 0)
-            
+
     # empty queues
     while split_queue and split_queue.left[0] < line_queue.left[0]:
         f.write(split_queue.left[1]); f.write("\n")

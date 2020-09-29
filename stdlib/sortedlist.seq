@@ -31,7 +31,7 @@ class SortedList[T]:
     _lists: list[list[T]]
     _maxes: list[T]
     _offset: int
-    # _index: 
+    # _index:
 
     def __init__(self: SortedList[T]):
         self._len = 0
