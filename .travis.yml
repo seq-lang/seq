@@ -137,7 +137,7 @@ deploy:
   - provider: pages
     local_dir: docs/sphinx/_build/html
     target_branch: gh-pages
-    fqdn: seq-lang.org
+    fqdn: docs.seq-lang.org
     token: $GITHUB_TOKEN
     committer_from_gh: true
     keep_history: false
