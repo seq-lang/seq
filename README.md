@@ -33,7 +33,7 @@ Seq is a programming language for computational genomics and bioinformatics. Wit
 
 Seq is able to outperform Python code by up to 160x. Seq can further beat equivalent C/C++ code by up to 2x without any manual interventions, and also natively supports parallelism out of the box. Implementation details and benchmarks are discussed [in our paper](https://dl.acm.org/citation.cfm?id=3360551).
 
-Learn more by following the [tutorial](https://seq-lang.org/tutorial.html) or from the [cookbook](https://seq-lang.org/cookbook.html).
+Learn more by following the [tutorial](https://docs.seq-lang.org/tutorial.html) or from the [cookbook](https://docs.seq-lang.org/cookbook.html).
 
 ## Example
 
@@ -111,7 +111,7 @@ See [Building from Source](docs/sphinx/build.rst).
 
 ## Documentation
 
-Please check [seq-lang.org](https://seq-lang.org) for in-depth documentation.
+Please check [docs.seq-lang.org](https://docs.seq-lang.org) for in-depth documentation.
 
 ## Citing Seq
 
