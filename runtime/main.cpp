@@ -26,8 +26,7 @@ int main(int argc, char **argv) {
   opt<bool> profile("prof", desc("Profile LLVM IR using XRay"));
   opt<bool> docstr("docstr", desc("Generate docstrings"));
   opt<string> output(
-      "o",
-      desc("Write LLVM bitcode to specified file instead of running with JIT"));
+      "o", desc("Write LLVM bitcode to specified file instead of running with JIT"));
   cl::list<string> libs("L", desc("Load and link the specified library"));
   cl::list<string> args(ConsumeAfter, desc("<program arguments>..."));
 
@@ -40,7 +39,7 @@ int main(int argc, char **argv) {
   config::config().profile = profile.getValue();
 
   if (docstr.getValue()) {
-    generateDocstr(input);
+    generateDocstr(argv[0], input);
     return EXIT_SUCCESS;
   }
 

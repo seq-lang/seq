@@ -44,5 +44,8 @@ template <typename T> T &&fwdSrcInfo(T &&t, const seq::SrcInfo &i) {
   return std::forward<T>(t);
 }
 
+std::string getImportFile(const std::string &argv0, const std::string &what,
+                          const std::string &relativeTo, bool forceStdlib);
+
 } // namespace ast
 } // namespace seq

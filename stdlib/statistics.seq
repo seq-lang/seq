@@ -4,6 +4,9 @@ from math import frexp as _frexp, floor as _floor, fabs as _fabs, erf as _erf
 from math import gcd as _gcd, exp as _exp, log as _log, sqrt as _sqrt, tau as _tau, hypot as _hypot
 
 class StatisticsError:
+    """
+    A class docstring
+    """
     _hdr: ExcHeader
 
     def __init__(self: StatisticsError):

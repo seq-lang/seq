@@ -18,25 +18,25 @@ using std::vector;
 
 namespace seq {
 
-void generateDocstr(const std::string &file) {
-  DBG("DOC MODE! {}", 1);
-  ast::DocStmtVisitor d;
-  ast::parse_file(file)->accept(d);
+void generateDocstr(const std::string &argv0, const std::string &file) {
+  // DBG("DOC MODE! {}", 1);
+  auto j = ast::DocStmtVisitor::apply(argv0, file);
+  fmt::print("{}\n", j.dump());
 }
 
-seq::SeqModule *parse(const std::string &argv0, const std::string &file,
-                      bool isCode, bool isTest) {
+seq::SeqModule *parse(const std::string &argv0, const std::string &file, bool isCode,
+                      bool isTest) {
   try {
     auto stmts = isCode ? ast::parse_code(argv0, file) : ast::parse_file(file);
     auto tv = ast::TransformStmtVisitor().transform(move(stmts));
     auto module = new seq::SeqModule();
     module->setFileName(file);
     auto cache = make_shared<ast::ImportCache>(argv0);
-    auto stdlib = make_shared<ast::Context>(cache, module->getBlock(), module,
-                                            nullptr, "");
+    auto stdlib =
+        make_shared<ast::Context>(cache, module->getBlock(), module, nullptr, "");
     stdlib->loadStdlib(module->getArgVar());
-    auto context = make_shared<ast::Context>(cache, module->getBlock(), module,
-                                             nullptr, file);
+    auto context =
+        make_shared<ast::Context>(cache, module->getBlock(), module, nullptr, file);
     ast::CodegenStmtVisitor(*context).transform(tv);
     return module;
   } catch (seq::exc::SeqException &e) {

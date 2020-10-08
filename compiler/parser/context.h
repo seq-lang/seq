@@ -14,14 +14,14 @@ namespace seq {
 namespace ast {
 
 template <typename T> class VTable {
-  typedef std::unordered_map<std::string, std::stack<std::shared_ptr<T>>>
-      VTableMap;
+  typedef std::unordered_map<std::string, std::stack<std::shared_ptr<T>>> VTableMap;
 
 protected:
   VTableMap map;
   std::stack<std::vector<std::string>> stack;
   std::unordered_set<std::string> flags;
 
+public:
   std::shared_ptr<T> find(const std::string &name) const {
     auto it = map.find(name);
     if (it == map.end()) {
@@ -30,7 +30,6 @@ protected:
     return it->second.top();
   }
 
-public:
   typename VTableMap::iterator begin() { return map.begin(); }
   typename VTableMap::iterator end() { return map.end(); }
 
@@ -102,8 +101,7 @@ class TypeContextItem : public ContextItem {
   seq::types::Type *type;
 
 public:
-  TypeContextItem(seq::types::Type *t, seq::BaseFunc *base,
-                  bool global = false);
+  TypeContextItem(seq::types::Type *t, seq::BaseFunc *base, bool global = false);
 
   seq::types::Type *getType() const;
   seq::Expr *getExpr() const override;
@@ -127,8 +125,7 @@ struct ImportCache {
   std::unordered_map<std::string, std::shared_ptr<Context>> imports;
 
   ImportCache(const std::string &a = "") : argv0(a), stdlib(nullptr) {}
-  std::string getImportFile(const std::string &what,
-                            const std::string &relativeTo,
+  std::string getImportFile(const std::string &what, const std::string &relativeTo,
                             bool forceStdlib = false);
 };
 
@@ -143,8 +140,8 @@ class Context : public VTable<ContextItem> {
   seq::TryCatch *tryCatch;
 
 public:
-  Context(std::shared_ptr<ImportCache> cache, seq::Block *block,
-          seq::BaseFunc *base, seq::SeqJIT *jit, const std::string &filename);
+  Context(std::shared_ptr<ImportCache> cache, seq::Block *block, seq::BaseFunc *base,
+          seq::SeqJIT *jit, const std::string &filename);
   virtual ~Context() {}
   std::shared_ptr<ContextItem> find(const std::string &name,
                                     bool onlyLocal = false) const;
@@ -156,18 +153,16 @@ public:
   seq::types::Type *getType(const std::string &name) const;
   seq::types::Type *getEnclosingType();
   void setEnclosingType(seq::types::Type *t);
-  void addBlock(seq::Block *newBlock = nullptr,
-                seq::BaseFunc *newBase = nullptr);
+  void addBlock(seq::Block *newBlock = nullptr, seq::BaseFunc *newBase = nullptr);
   void popBlock();
 
   void loadStdlib(seq::Var *argVar = nullptr);
   void add(const std::string &name, std::shared_ptr<ContextItem> var);
   void add(const std::string &name, seq::Var *v, bool global = false);
   void add(const std::string &name, seq::types::Type *t, bool global = false);
-  void add(const std::string &name, seq::Func *f,
-           std::vector<std::string> names, bool global = false);
-  void add(const std::string &name, const std::string &import,
+  void add(const std::string &name, seq::Func *f, std::vector<std::string> names,
            bool global = false);
+  void add(const std::string &name, const std::string &import, bool global = false);
   std::string getFilename() const;
   std::shared_ptr<ImportCache> getCache();
 
