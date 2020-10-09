@@ -134,8 +134,8 @@ string executable_path(const char *argv0) {
 string executable_path(const char *argv0) { return string(argv0); }
 #endif
 
-string getImportFile(const string &argv0, const string &what, const string &relativeTo,
-                     bool forceStdlib) {
+string getImportFile(const string &argv0, const string &what,
+                     const string &relativeTo, bool forceStdlib) {
   using fmt::format;
   vector<string> paths;
   char abs[PATH_MAX + 1];

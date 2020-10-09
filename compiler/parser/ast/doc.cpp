@@ -46,9 +46,9 @@ json DocStmtVisitor::apply(const string &argv0, const vector<string> &files) {
   auto ast = parse_file(stdlib);
   shared->modules[""] = make_shared<DocContext>(shared);
   shared->modules[""]->file = stdlib;
-  for (auto &s : vector<string>{"void", "byte", "float", "seq", "bool", "int", "str",
-                                "ptr", "function", "generator", "tuple", "array",
-                                "Kmer", "Int", "UInt", "optional"}) {
+  for (auto &s : vector<string>{"void", "byte", "float", "seq", "bool", "int",
+                                "str", "ptr", "function", "generator", "tuple",
+                                "array", "Kmer", "Int", "UInt", "optional"}) {
     shared->j[to_string(shared->itemID)] = {
         {"kind", "class"}, {"name", s}, {"type", "type"}};
     shared->modules[""]->add(s, make_shared<int>(shared->itemID++));
@@ -83,7 +83,8 @@ string getDocstr(const StmtPtr &s) {
   return "";
 }
 
-vector<StmtPtr> DocStmtVisitor::flatten(StmtPtr stmt, string *docstr, bool deep) {
+vector<StmtPtr> DocStmtVisitor::flatten(StmtPtr stmt, string *docstr,
+                                        bool deep) {
   vector<StmtPtr> stmts;
   if (auto s = CAST(stmt, SuiteStmt)) {
     for (int i = 0; i < (deep ? s->stmts.size() : 1); i++) {
@@ -127,7 +128,8 @@ void DocStmtVisitor::transformModule(StmtPtr stmt) {
     if (id == "")
       continue;
     if (i < (flat.size() - 1) &&
-        (CAST(s, AssignStmt) || CAST(s, ExternImportStmt) || CAST(s, TypeAliasStmt))) {
+        (CAST(s, AssignStmt) || CAST(s, ExternImportStmt) ||
+         CAST(s, TypeAliasStmt))) {
       auto s = getDocstr(flat[i + 1]);
       if (!s.empty())
         ctx->shared->j[id]["doc"] = s;
@@ -175,8 +177,9 @@ bool isValidName(const string &s) {
 void DocStmtVisitor::visit(const FunctionStmt *stmt) {
   int id = ctx->shared->itemID++;
   ctx->add(stmt->name, make_shared<int>(id));
-  json j{
-      {"kind", "function"}, {"pos", jsonify(stmt->getSrcInfo())}, {"name", stmt->name}};
+  json j{{"kind", "function"},
+         {"pos", jsonify(stmt->getSrcInfo())},
+         {"name", stmt->name}};
 
   vector<json> args;
   for (auto &g : stmt->generics)
@@ -251,7 +254,8 @@ void DocStmtVisitor::visit(const ClassStmt *stmt) {
 void DocStmtVisitor::visit(const TypeAliasStmt *stmt) {
   int id = ctx->shared->itemID++;
   ctx->add(stmt->name, make_shared<int>(id));
-  json j{{"name", stmt->name}, {"kind", "alias"}, {"type", transform(stmt->expr)}};
+  json j{
+      {"name", stmt->name}, {"kind", "alias"}, {"type", transform(stmt->expr)}};
   ctx->shared->j[to_string(id)] = j;
   result = to_string(id);
 }
@@ -265,7 +269,8 @@ json DocStmtVisitor::jsonify(const seq::SrcInfo &s) {
 }
 
 void DocStmtVisitor::visit(const ImportStmt *stmt) {
-  auto file = getImportFile(ctx->shared->argv0, stmt->from.first, ctx->file, false);
+  auto file =
+      getImportFile(ctx->shared->argv0, stmt->from.first, ctx->file, false);
   if (file == "")
     ERROR(stmt, "cannot locate import '{}'", stmt->from.first);
 
@@ -282,7 +287,8 @@ void DocStmtVisitor::visit(const ImportStmt *stmt) {
 
   if (!stmt->what.size()) {
     // TODO
-    // ctx.add(stmt->from.second == "" ? stmt->from.first : stmt->from.second, file);
+    // ctx.add(stmt->from.second == "" ? stmt->from.first : stmt->from.second,
+    // file);
   } else if (stmt->what.size() == 1 && stmt->what[0].first == "*") {
     for (auto &i : *ictx)
       ctx->add(i.first, i.second.top());
@@ -304,8 +310,9 @@ void DocStmtVisitor::visit(const AssignStmt *stmt) {
     return;
   int id = ctx->shared->itemID++;
   ctx->add(e->value, make_shared<int>(id));
-  json j{
-      {"name", e->value}, {"kind", "variable"}, {"pos", jsonify(stmt->getSrcInfo())}};
+  json j{{"name", e->value},
+         {"kind", "variable"},
+         {"pos", jsonify(stmt->getSrcInfo())}};
   ctx->shared->j[to_string(id)] = j;
   result = to_string(id);
 }
@@ -369,7 +376,8 @@ void DocStmtVisitor::visit(const ExtendStmt *stmt) {
 
   string docstr;
   vector<string> members;
-  for (auto &f : flatten(move(const_cast<ExtendStmt *>(stmt)->suite), &docstr)) {
+  for (auto &f :
+       flatten(move(const_cast<ExtendStmt *>(stmt)->suite), &docstr)) {
     if (auto ff = CAST(f, FunctionStmt)) {
       auto i = transform(f);
       if (i != "")

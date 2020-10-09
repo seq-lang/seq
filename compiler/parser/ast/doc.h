@@ -60,7 +60,8 @@ public:
   std::string transform(const StmtPtr &e);
   void transformModule(StmtPtr stmt);
 
-  static json apply(const std::string &argv0, const std::vector<std::string> &files);
+  static json apply(const std::string &argv0,
+                    const std::vector<std::string> &files);
 
 public:
   virtual void visit(const FunctionStmt *) override;
