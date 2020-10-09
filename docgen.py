@@ -119,6 +119,7 @@ for mk, m in modules.items():
             f.write("\n")
             if v['kind'] == 'function' and 'attrs' in v and v['attrs']:
                 f.write("**Attributes:**" + ', '.join(f'`{x}`' for x in v['attrs']))
+                f.write("\n")
             if 'doc' in v:
                 f.write(parseDocstr(v['doc']) + "\n")
             f.write("\n")
