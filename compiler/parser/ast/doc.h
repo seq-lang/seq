@@ -60,13 +60,12 @@ public:
   std::string transform(const StmtPtr &e);
   void transformModule(StmtPtr stmt);
 
-  static json apply(const std::string &argv0, const std::string &file);
+  static json apply(const std::string &argv0, const std::vector<std::string> &files);
 
 public:
-  // virtual void visit(const SuiteStmt *) override;
   virtual void visit(const FunctionStmt *) override;
   virtual void visit(const ClassStmt *) override;
-  // virtual void visit(const ExtendStmt *) override;
+  virtual void visit(const ExtendStmt *) override;
   virtual void visit(const AssignStmt *) override;
   virtual void visit(const ImportStmt *) override;
   virtual void visit(const TypeAliasStmt *) override;

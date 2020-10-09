@@ -3,6 +3,12 @@ import random
 from math import frexp as _frexp, floor as _floor, fabs as _fabs, erf as _erf
 from math import gcd as _gcd, exp as _exp, log as _log, sqrt as _sqrt, tau as _tau, hypot as _hypot
 
+X = 5
+""" docstr for var """
+
+cimport xa(i: int) -> str
+""" dicstr for cimport """
+
 class StatisticsError:
     """
     A class docstring
