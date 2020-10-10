@@ -1,4 +1,7 @@
 type Contig(_tid: u32, _name: str, _len: int):
+    '''
+    Representation of a contig, consisting of an ID, name and length.
+    '''
     def __init__(self: Contig, tid: int, name: str, len: int) -> Contig:
         return (u32(tid), name, len)
 
@@ -42,7 +45,14 @@ type Contig(_tid: u32, _name: str, _len: int):
         return self.tid
 
 type Locus(_tid: u32, _pos: u32):
+    '''
+    Representation of a locus, consisting of a contig ID and 0-based position.
+    '''
     def __init__(self: Locus, tid: int, pos: int) -> Locus:
+        '''
+        Constructs a `Locus` with specified contig ID and 0-based position.
+        Negative positions indicate loci on the reverse strand.
+        '''
         return (u32(tid), u32(pos))
 
     def __lt__(self: Locus, other: Locus):
@@ -67,9 +77,15 @@ type Locus(_tid: u32, _pos: u32):
 
     @property
     def reversed(self: Locus):
+        '''
+        Whether this locus is on the reverse strand
+        '''
         return i32(int(self._pos)) < i32(0)
 
     def __invert__(self: Locus):
+        '''
+        Returns the corresponding `Locus` on the reverse strand
+        '''
         return Locus(self.tid, self.pos if self.reversed else -self.pos)
 
     def __str__(self: Locus):

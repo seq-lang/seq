@@ -1,5 +1,8 @@
 # Sequence reader in text, line-by-line format.
 type SeqReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
+    '''
+    Parser for a plain txt-based sequence format, with one sequence per line.
+    '''
     def __init__(self: SeqReader, path: str, validate: bool, gzip: bool, copy: bool) -> SeqReader:
         return (gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__(), validate, gzip, copy)
 

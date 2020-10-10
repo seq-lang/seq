@@ -40,6 +40,11 @@ type _StackCell(_x: int, _k: i32, _w: i32):
 type _Contig(name: str, len: int, root_k: int, n: int, off: int)
 
 class IntervalTree:
+    '''
+    Interval tree data structure.
+    Adapted from [cgranges](# cgranges implementation adapted from
+# https://github.com/lh3/cgranges).
+    '''
     a: ptr[Interval]
     n: int
     m: int
@@ -142,10 +147,17 @@ class IntervalTree:
         return k - 1
 
     def add(self: IntervalTree, chrom: str, start: int, end: int):
+        '''
+        Adds an interval to the tree. An interval is a chromosome name `chrom` and
+        0-based `start` and `end` (non-inclusive) positions.
+        '''
         chrom_id = self._chrom_id(chrom, end)
         self._append(Interval(start, end, chrom_id))
 
     def index(self: IntervalTree):
+        '''
+        Indexes the tree for querying.
+        '''
         self._index_prepare()
         i = 0
         n = len(self.contigs)
@@ -157,6 +169,9 @@ class IntervalTree:
             i += 1
 
     def overlap(self: IntervalTree, chrom: str, start: int, end: int):
+        '''
+        Yields all `Interval`s overlapping the argument interval.
+        '''
         chrom_id = self.hc.get(chrom, -1)
         if chrom_id == -1:
             return
@@ -208,6 +223,9 @@ class IntervalTree:
         return chrom in self.hc
 
     def __iter__(self: IntervalTree):
+        '''
+        Iterator over all intervals in the tree
+        '''
         i = 0
         n = self.n
         while i < n:
