@@ -6,7 +6,7 @@ Seq is a programming language for computational genomics and bioinformatics. Wit
 Source code is available `on GitHub <https://github.com/seq-lang/seq>`_. You can also learn more about Seq from `our paper <https://dl.acm.org/citation.cfm?id=3360551>`_ or by visiting our `Gitter chatroom <https://gitter.im/seq-lang/Seq?utm_source=share-link&utm_medium=link&utm_campaign=share-link>`_.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 10
 
    intro
    tutorial
@@ -15,7 +15,7 @@ Source code is available `on GitHub <https://github.com/seq-lang/seq>`_. You can
    embed
    build
    internals
-   api/doxygen
+   stdlib/index
 
 Frequently Asked Questions
 --------------------------

@@ -89,7 +89,8 @@ def heappop[T](heap: list[T]):
     return lastelt
 
 def heapreplace[T](heap: list[T], item: T):
-    """Pop and return the current smallest value, and add the new item.
+    """
+    Pop and return the current smallest value, and add the new item.
     This is more efficient than heappop() followed by heappush(), and can be
     more appropriate when using a fixed-size heap.  Note that the value
     returned may be larger than item!  That constrains reasonable uses of
@@ -110,7 +111,7 @@ def heappushpop[T](heap: list[T], item: T):
     return item
 
 def heapify[T](x: list[T]):
-    """Transform list into a heap, in-place, in O(len(x)) time."""
+    """Transform list into a heap, in-place, in $O(len(x))$ time."""
     n = len(x)
     # Transform bottom-up.  The largest index there's any point to looking at
     # is the largest with a child index in-range, so must have 2*i + 1 < n,
@@ -145,7 +146,8 @@ def _heapify_max[T](x: list[T]):
 
 @deduceall
 def nsmallest[S,T](n: int, iterable: generator[T], key: optional[function[S,T]] = None):
-    """Find the n smallest elements in a dataset.
+    """
+    Find the n smallest elements in a dataset.
     Equivalent to:  sorted(iterable, key=key)[:n]
     """
     if n == 1:
@@ -220,7 +222,8 @@ def nsmallest[S,T](n: int, iterable: generator[T], key: optional[function[S,T]] 
 
 @deduceall
 def nlargest[S,T](n: int, iterable: generator[T], key: optional[function[S,T]] = None):
-    """Find the n largest elements in a dataset.
+    """
+    Find the n largest elements in a dataset.
     Equivalent to:  sorted(iterable, key=key, reverse=True)[:n]
     """
     if n == 1:

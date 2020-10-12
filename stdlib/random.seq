@@ -143,7 +143,8 @@ class Generator:
 
 
     def seed(self):
-        """Initialize internal state from hashable object.
+        """
+        Initialize internal state from hashable object.
 
         For now a is set to its defaults a = None
         """
@@ -163,7 +164,8 @@ class Random:
     gen: Generator # comment for another error
 
     def __init__(self: Random, g: Generator):
-        """Initialize an instance.
+        """
+        Initialize an instance.
 
         Optional argument x controls seeding, as for Random.seed().
 
@@ -173,7 +175,8 @@ class Random:
         # self.gauss_next = None
 
     def seed(self):
-        """Initialize internal state from hashable object.
+        """
+        Initialize internal state from hashable object.
 
         None or no argument seeds from current time or from an operating
         system specific randomness source if available.
@@ -246,7 +249,8 @@ class Random:
         return r
 
     def randrange(self: Random, start: int, stop: int, step: int) -> int:
-        """Choose a random item from range(start, stop[, step]).
+        """
+        Choose a random item from range(start, stop[, step]).
 
         Return a randomly selected element from range(start, stop, step).
         This is equivalent to choice(range(start, stop, step)), but
@@ -309,7 +313,8 @@ class Random:
         return l[i]
 
     def shuffle(self: Random, x):
-        """Shuffle list x in place, and return None.
+        """
+        Shuffle list x in place, and return None.
 
         Optional argument random is a 0-argument function returning a
         random float in [0.0, 1.0); if it is the default None, the
@@ -337,7 +342,8 @@ class Random:
         return a + (b-a) * self.random()
 
     def triangular(self: Random, low: float, high: float, mode: float) -> float:
-        """Triangular distribution.
+        """
+        Triangular distribution.
 
         Continuous distribution bounded by given lower and upper limits,
         and having a given mode value in-between.
@@ -359,7 +365,8 @@ class Random:
         return low + (high - low) * _sqrt(u * c)
 
     def gammavariate(self: Random, alpha: float, beta: float) -> float:
-        """Gamma distribution.  Not the gamma function!
+        """
+        Gamma distribution.  Not the gamma function!
 
         Conditions on the parameters are alpha > 0 and beta > 0.
 
@@ -424,7 +431,8 @@ class Random:
             return x * beta
 
     def betavariate(self: Random, alpha: float, beta: float) -> float:
-        """Beta distribution.
+        """
+        Beta distribution.
         Conditions on the parameters are alpha > 0 and beta > 0.
         Returned values range between 0 and 1.
         """
@@ -437,7 +445,8 @@ class Random:
             return y / (y + self.gammavariate(beta, 1.0))
 
     def expovariate(self: Random, lambd: float) -> float:
-        """Exponential distribution.
+        """
+        Exponential distribution.
 
         lambd is 1.0 divided by the desired mean.  It should be
         nonzero.
@@ -454,7 +463,8 @@ class Random:
         return -_log(1.0 - self.random())/lambd
 
     def gauss(self: Random, mu: float, sigma: float) -> float:
-        """Gaussian distribution.
+        """
+        Gaussian distribution.
 
         mu is the mean, and sigma is the standard deviation.  This is
         slightly faster than the normalvariate() function.
@@ -475,13 +485,15 @@ class Random:
         return mu + z * sigma
 
     def paretovariate(self: Random, alpha: float) -> float:
-        """Pareto distribution.  alpha is the shape parameter."""
+        """
+        Pareto distribution.  alpha is the shape parameter."""
         random = self.random
         u = 1.0 - random()
         return 1.0 / u ** (1.0/alpha)
 
     def weibullvariate(self: Random, alpha: float, beta: float) -> float:
-        """Weibull distribution.
+        """
+        Weibull distribution.
 
         alpha is the scale parameter and beta is the shape parameter.
         """
@@ -490,7 +502,8 @@ class Random:
         return alpha * (-_log(u)) ** (1.0/beta)
 
     def normalvariate(self: Random, mu: float, sigma: float) -> float:
-        """Normal distribution.
+        """
+        Normal distribution.
 
         mu is the mean, and sigma is the standard deviation.
         """
@@ -506,7 +519,8 @@ class Random:
         return mu + z * sigma
 
     def lognormvariate(self: Random, mu: float, sigma: float) -> float:
-          """Log normal distribution.
+          """
+          Log normal distribution.
 
           If you take the natural logarithm of this distribution, you'll get a
           normal distribution with mean mu and standard deviation sigma.
@@ -515,7 +529,8 @@ class Random:
           return _exp(self.normalvariate(mu, sigma))
 
     def vonmisesvariate(self: Random, mu: float, kappa: float) -> float:
-        """Circular data distribution.
+        """
+        Circular data distribution.
 
         mu is the mean angle, expressed in radians between 0.0 and 2*pi, and
         kappa is the concentration parameter, which must be greater than or
@@ -552,7 +567,8 @@ class Random:
         return theta
 
     def sample[T](self: Random, population: list[T], k: int):
-        """Chooses k unique random elements from a population sequence or set.
+        """
+        Chooses k unique random elements from a population sequence or set.
 
         Returns a new list containing elements from the population while
         leaving the original population unchanged.  The resulting list is
@@ -598,7 +614,8 @@ class Random:
         return result
 
     def choices(self: Random, population, weights: list[int], cum_weights: list[int], k: int):
-        """Return a k sized list of population elements chosen with replacement.
+        """
+        Return a k sized list of population elements chosen with replacement.
 
         If the relative weights or cumulative weights are not specified,
         the selections are made with equal probability.

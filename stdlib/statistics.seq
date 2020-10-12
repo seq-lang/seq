@@ -27,13 +27,11 @@ class StatisticsError:
 
 def median[T](data: list[T]) -> float:
     """
-    median(data)
-
     Return the median (middle value) of numeric data.
 
     When the number of data points is odd, return the middle data point.
     When the number of data points is even, the median is interpolated by
-    taking the average of the two middle values:
+    taking the average of the two middle values
     """
     data = sorted(data)
     n = len(data)
@@ -47,8 +45,6 @@ def median[T](data: list[T]) -> float:
 
 def median_low[T](data: list[T]) -> float:
     """
-    median_low(data)
-
     Return the low median of numeric data.
 
     When the number of data points is odd, the middle value is returned.
@@ -65,8 +61,6 @@ def median_low[T](data: list[T]) -> float:
 
 def median_high[T](data: list[T]) -> float:
     """
-    median_high(data)
-
     Return the high median of data.
 
     When the number of data points is odd, the middle value is returned.
@@ -99,8 +93,6 @@ def _find_rteq[T](a: list[T], l: int, x: float):
 @deduceall
 def median_grouped[T,S](data: list[T], interval: S = 1) -> float:
     """
-    median_grouped(data, interval)
-
     Return the 50th percentile (median) of grouped continuous data.
     """
     data = sorted(data)
@@ -125,8 +117,6 @@ def median_grouped[T,S](data: list[T], interval: S = 1) -> float:
 
 def mode[T](data: list[T]) -> T:
     """
-    mode(data)
-
     Return the most common data point from discrete or nominal data.
 
     TODO/CAVEATS:
@@ -144,8 +134,6 @@ def mode[T](data: list[T]) -> T:
 
 def multimode[T](data: list[T]):
     """
-    multimode(data)
-
     Return a list of the most frequently occurring values.
 
     Will return more than one result if there are multiple modes
@@ -171,8 +159,6 @@ def multimode[T](data: list[T]):
 
 def quantiles[T](data: list[T], n: int = 4, method: str = 'exclusive') -> list[float]:
     """
-    quantiles(data, n, method)
-
     Divide *data* into *n* continuous intervals with equal probability.
 
     Returns a list of (n - 1) cut points separating the intervals.
@@ -246,8 +232,6 @@ def as_integer_ratio(x: float):
 
 def _lcm(x: int, y: int):
     """
-    _lcm(x, y)
-
     Returns the lowest common multiple bewteen x and y
     """
     greater = 0
@@ -265,8 +249,6 @@ def _lcm(x: int, y: int):
 
 def _sum(data: list[float]) -> float:
     """
-    _sum(data [, start]) -> (type, sum, count)
-
     Return a high-precision sum of the given numeric data as a fraction,
     together with the type to be converted to and the count of items.
 
@@ -306,8 +288,6 @@ def _sum(data: list[float]) -> float:
 
 def mean(data: list[float]) -> float:
     """
-    mean(data)
-
     Return the sample arithmetic mean of data.
 
     TODO/CAVEATS
@@ -323,8 +303,6 @@ def mean(data: list[float]) -> float:
 '''
 def fmean(data: list[float]) -> float:
     """
-    fmean(data)
-
     Convert data to floats and compute the arithmetic mean.
 
     TODO/CAVEATS
@@ -336,8 +314,6 @@ def fmean(data: list[float]) -> float:
 
 def geometric_mean(data: list[float]) -> float:
     """
-    geometric_mean(data)
-
     Convert data to floats and compute the geometric mean.
 
     Raises a StatisticsError if the input dataset is empty,
@@ -353,8 +329,6 @@ def geometric_mean(data: list[float]) -> float:
 
 def _fail_neg(values: list[float], errmsg: str):
     """
-    _fail_neg(values, errmsg)
-
     Iterate over values, failing if any are less than zero.
     """
     for x in values:
@@ -364,8 +338,6 @@ def _fail_neg(values: list[float], errmsg: str):
 
 def harmonic_mean(data: list[float]) -> float:
     """
-    harmonic_mean(data)
-
     Return the harmonic mean of data.
 
     The harmonic mean, sometimes called the subcontrary mean, is the
@@ -408,8 +380,6 @@ def _ss(data: list[float], c: float):
 
 def pvariance(data: list[float], mu: optional[float]=None):
     """
-    pvariance(data, mu)
-
     Return the population variance of `data`.
 
     Should contain atleast one value.
@@ -430,8 +400,6 @@ def pvariance(data: list[float], mu: optional[float]=None):
 
 def pstdev(data: list[float], mu: optional[float]=None):
     """
-    pstdev(data, mu)
-
     Return the square root of the population variance.
     """
     mu1 = ~mu if mu else mean(data)
@@ -440,8 +408,6 @@ def pstdev(data: list[float], mu: optional[float]=None):
 
 def variance(data: list[float], xbar: optional[float]=None):
     """
-    variance(data, xbar)
-
     Return the sample variance of data.
 
     Shoulw contain atleast two values.
@@ -457,8 +423,6 @@ def variance(data: list[float], xbar: optional[float]=None):
 
 def stdev(data, xbar: optional[float]=None):
     """
-    stdev(data, xbar)
-
     Return the square root of the sample variance.
     """
     xbar1 = ~xbar if xbar else mean(data)
@@ -507,8 +471,6 @@ class NormalDist:
     @property
     def mean(self: NormalDist):
         """
-        mean(self)
-
         Arithmetic mean of the normal distribution.
         """
         return self._mu
@@ -516,8 +478,6 @@ class NormalDist:
     @property
     def median(self: NormalDist):
         """
-        median(self)
-
         Return the median of the normal distribution
         """
         return self._mu
@@ -525,8 +485,6 @@ class NormalDist:
     @property
     def mode(self: NormalDist):
         """
-        mode(self)
-
         Return the mode of the normal distribution
 
         The mode is the value x where which the probability density
@@ -537,8 +495,6 @@ class NormalDist:
     @property
     def stdev(self: NormalDist):
         """
-        stdev(self)
-
         Standard deviation of the normal distribution.
         """
         return self._sigma
@@ -546,16 +502,12 @@ class NormalDist:
     @property
     def variance(self: NormalDist):
         """
-        variance(self)
-
         Square of the standard deviation.
         """
         return self._sigma ** 2.0
 
     def pdf(self, x):
         """
-        pdf(self, x)
-
         Probability density function.  P(x <= X < x+dx) / dx
         """
         variance = self._sigma ** 2.0
@@ -565,8 +517,6 @@ class NormalDist:
 
     def cdf(self, x):
         """
-        cdf(self, x)
-
         Cumulative distribution function.  P(X <= x)
         """
         if not self._sigma:
@@ -650,8 +600,6 @@ class NormalDist:
 
     def inv_cdf(self: NormalDist, p: float):
         """
-        inv_cdf(self, p)
-
         Inverse cumulative distribution function.  x : P(X <= x) = p
 
         Finds the value of the random variable such that the probability of
@@ -666,8 +614,6 @@ class NormalDist:
 
     def quantiles(self: NormalDist, n: int=4):
         """
-        quantiles(self, n)
-
         Divide into *n* continuous intervals with equal probability.
 
         Returns a list of (n - 1) cut points separating the intervals.
@@ -680,8 +626,6 @@ class NormalDist:
 
     def overlap(self: NormalDist, other: NormalDist) -> float:
         """
-        overlap(self, other)
-
         Compute the overlapping coefficient (OVL) between two normal distributions.
 
         Measures the agreement between two normal probability distributions.
@@ -713,8 +657,6 @@ class NormalDist:
 
     def samples[T](self: NormalDist, n: int):
         """
-        samples(self, n, seed)
-
         Generate *n* samples for a given mean and standard deviation.
 
         TODO/CAVEATS:
@@ -727,8 +669,6 @@ class NormalDist:
 
     def from_samples(data: list[float]):
         """
-        from_samples(cls, data)
-
         Make a normal distribution instance from sample data.
         TODO/CAVEATS:
         @jordan- Assumes input is a list of floats
@@ -738,7 +678,8 @@ class NormalDist:
         return NormalDist(xbar, stdev(data, xbar))
 
     def __add__(x1: NormalDist, x2: NormalDist):
-        """Add a constant or another NormalDist instance.
+        """
+        Add a constant or another NormalDist instance.
         If *other* is a constant, translate mu by the constant,
         leaving sigma unchanged.
         If *other* is a NormalDist, add both the means and the variances.
@@ -748,7 +689,8 @@ class NormalDist:
         return NormalDist(x1._mu + x2._mu, _hypot(x1._sigma, x2._sigma))
 
     def __add__(x1: NormalDist, x2: float):
-        """Add a constant or another NormalDist instance.
+        """
+        Add a constant or another NormalDist instance.
         If *other* is a constant, translate mu by the constant,
         leaving sigma unchanged.
         If *other* is a NormalDist, add both the means and the variances.
@@ -758,7 +700,8 @@ class NormalDist:
         return NormalDist(x1._mu + x2, x1._sigma)
 
     def __sub__(x1: NormalDist, x2: NormalDist):
-        """Subtract a constant or another NormalDist instance.
+        """
+        Subtract a constant or another NormalDist instance.
         If *other* is a constant, translate by the constant mu,
         leaving sigma unchanged.
         If *other* is a NormalDist, subtract the means and add the variances.
@@ -768,7 +711,8 @@ class NormalDist:
         return NormalDist(x1._mu - x2._mu, _hypot(x1._sigma, x2._sigma))
 
     def __sub__(x1: NormalDist, x2: float):
-        """Subtract a constant or another NormalDist instance.
+        """
+        Subtract a constant or another NormalDist instance.
         If *other* is a constant, translate by the constant mu,
         leaving sigma unchanged.
         If *other* is a NormalDist, subtract the means and add the variances.
@@ -778,14 +722,16 @@ class NormalDist:
         return NormalDist(x1._mu - x2, x1._sigma)
 
     def __mul__(x1: NormalDist, x2: float):
-        """Multiply both mu and sigma by a constant.
+        """
+        Multiply both mu and sigma by a constant.
         Used for rescaling, perhaps to change measurement units.
         Sigma is scaled with the absolute value of the constant.
         """
         return NormalDist(x1._mu * x2, x1._sigma * _fabs(x2))
 
     def __truediv__(x1: NormalDist, x2: float):
-        """Divide both mu and sigma by a constant.
+        """
+        Divide both mu and sigma by a constant.
         Used for rescaling, perhaps to change measurement units.
         Sigma is scaled with the absolute value of the constant.
         """

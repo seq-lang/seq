@@ -73,8 +73,6 @@ def max2(a, b):
 @builtin
 def len(x):
     """
-    len(x)
-
     Return the length of x
     """
     return x.__len__()
@@ -82,8 +80,6 @@ def len(x):
 @builtin
 def iter(x):
     """
-    iter(x)
-
     Return an iterator for the given object
     """
     return x.__iter__()
@@ -91,8 +87,6 @@ def iter(x):
 @builtin
 def copy(x):
     """
-    copy(x)
-
     Return a copy of x
     """
     return x.__copy__()
@@ -100,8 +94,6 @@ def copy(x):
 @builtin
 def abs(x):
     """
-    abs(x)
-
     Return the absolute value of x
     """
     return x.__abs__()
@@ -109,8 +101,6 @@ def abs(x):
 @builtin
 def hash(x):
     """
-    hash(x)
-
     Returns hashed value only for immutable objects
     """
     return x.__hash__()
@@ -118,8 +108,6 @@ def hash(x):
 @builtin
 def ord(s: str):
     """
-    ord(s)
-
     Return an integer representing the Unicode code point of s
     """
     if len(s) != 1:
@@ -129,8 +117,6 @@ def ord(s: str):
 @builtin
 def chr(i: int):
     """
-    chr(i)
-
     Return a string representing a character whose Unicode
     code point is an integer
     """
@@ -141,8 +127,6 @@ def chr(i: int):
 @builtin
 def next[T](g: generator[T], default: optional[T] = None):
     """
-    next(g)
-
     Return the next item from g
     """
     if g.done():
@@ -155,8 +139,6 @@ def next[T](g: generator[T], default: optional[T] = None):
 @builtin
 def any(x):
     """
-    any(x)
-
     Returns True if any item in x is true,
     False otherwise
     """
@@ -168,8 +150,6 @@ def any(x):
 @builtin
 def all(x):
     """
-    all(x)
-
     Returns True when all elements in x are true,
     False otherwise
     """
@@ -181,8 +161,6 @@ def all(x):
 @builtin
 def zip(a, b):
     """
-    zip(a, b)
-
     Returns a zip object, which is an iterator of tuples
     that aggregates elements based on the iterables passed
     """
@@ -195,8 +173,6 @@ def zip(a, b):
 @builtin
 def filter(f, x):
     """
-    filter(f, x)
-
     Returns all a from the iterable x that are filtered by f
     """
     for a in x:
@@ -206,8 +182,6 @@ def filter(f, x):
 @builtin
 def map(f, x):
     """
-    map(f, x)
-
     Applies a function on all a in x and returns map object
     """
     for a in x:
@@ -216,8 +190,6 @@ def map(f, x):
 @builtin
 def enumerate(x, start: int = 0):
     """
-    enumerate(x)
-
     Creates a tuple containing a count (from start which defaults
     to 0) and the values obtained from iterating over x
     """
@@ -229,8 +201,6 @@ def enumerate(x, start: int = 0):
 @builtin
 def echo(x):
     """
-    echo(x)
-
     Return the output of x
     """
     print x
@@ -239,8 +209,6 @@ def echo(x):
 @builtin
 def reversed(x):
     """
-    reversed(x)
-
     Return an iterator that accesses x in the reverse order
     """
     return x.__reversed__()
@@ -248,8 +216,6 @@ def reversed(x):
 @builtin
 def round(x, n) -> float:
     """
-    round(x, n)
-
     Return the x rounded off to the given
     n digits after the decimal point.
     """
@@ -259,8 +225,6 @@ def round(x, n) -> float:
 @builtin
 def sum(xi):
     """
-    sum(xi)
-
     Return the sum of the items added together from xi
     """
     x = iter(xi)
@@ -275,9 +239,7 @@ def sum(xi):
 
 @builtin
 def repr(x):
-    """
-    repr(x)
-    Return the string representation of x
+    """    Return the string representation of x
     """
     return x.__repr__()
 
