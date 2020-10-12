@@ -40,17 +40,11 @@ import sphinx.domains.python
 
 
 seq_sig_re = re.compile(
-    r'''^([\w.]*\.)?(\w+)\s*(?:\[\s*(.*)\s*\])?\s*(?:\(\s*(.*)\s*\)(?:\s*->\s*(.*))?)?$''', 
+    r'''^([\w.]*\.)?(\w+)\s*(?:\[\s*(.*)\s*\])?\s*(?:\(\s*(.*)\s*\)(?:\s*->\s*(.*))?)?$''',
     re.VERBOSE
 )
 
 def handle_signature(self, sig: str, signode: desc_signature) -> Tuple[str, str]:
-    """Transform a Python signature into RST nodes.
-    Return (fully qualified name of the thing, classname if any).
-    If inside a class, the current class name is handled intelligently:
-    * it is stripped from the displayed name if present
-    * it is added to the full name (return value) if not present
-    """
     m = seq_sig_re.match(sig)
     if m is None:
         raise ValueError
@@ -59,6 +53,7 @@ def handle_signature(self, sig: str, signode: desc_signature) -> Tuple[str, str]
     # determine module and class name (if applicable), as well as full name
     modname = self.options.get('module', self.env.ref_context.get('py:module'))
     classname = self.env.ref_context.get('py:class')
+    isextension = self.objtype == 'extension'
     if classname:
         add_module = False
         if prefix and (prefix == classname or
@@ -83,6 +78,8 @@ def handle_signature(self, sig: str, signode: desc_signature) -> Tuple[str, str]
             fullname = name
 
     signode['module'] = modname
+    if modname.startswith('..'):  # HACK: no idea why this happens
+        modname = modname[2:]
     signode['class'] = classname
     signode['fullname'] = fullname
 
@@ -90,17 +87,20 @@ def handle_signature(self, sig: str, signode: desc_signature) -> Tuple[str, str]
     if sig_prefix:
         signode += addnodes.desc_annotation(sig_prefix, sig_prefix)
 
-    if prefix:
-        signode += addnodes.desc_addname(prefix, prefix)
-    elif add_module and self.env.config.add_module_names:
-        if modname and modname != 'exceptions':
-            # exceptions are a special case, since they are documented in the
-            # 'exceptions' module.
-            nodetext = modname + '.'
-            signode += addnodes.desc_addname(nodetext, nodetext)
+    if not isextension:
+        if prefix:
+            signode += addnodes.desc_addname(prefix, prefix)
+        elif add_module and self.env.config.add_module_names:
+            if modname and modname != 'exceptions':
+                # exceptions are a special case, since they are documented in the
+                # 'exceptions' module.
+                nodetext = modname + '.'
+                signode += addnodes.desc_addname(nodetext, nodetext)
+        signode += addnodes.desc_name(name, name)
+    else:
+        ref = type_to_xref(str(name), self.env)
+        signode += addnodes.desc_name(name, name)
 
-    logger.warning(generics)
-    signode += addnodes.desc_name(name, name)
     if generics:
         signode += addnodes.desc_name("generics", "[" + generics + "]")
     if arglist:

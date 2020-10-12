@@ -9,6 +9,26 @@ X = 5
 cimport xa(i: int) -> str
 """ dicstr for cimport """
 
+extend seq:
+    def foo(self: seq, n: int):
+        """
+        Generators have a ``Yields`` section instead of a ``Returns`` section.
+
+        Args:
+            n: The upper limit of the range to generate, from 0 to `n` - 1.
+
+        Yields:
+            int: The next number in the range of 0 to `n` - 1.
+
+        Examples:
+            Examples should be written in doctest format, and should illustrate how
+            to use the function.
+
+            >>> print([i for i in example_generator(4)])
+            [0, 1, 2, 3]
+        """
+        pass
+
 class StatisticsError:
     """
     A class docstring
