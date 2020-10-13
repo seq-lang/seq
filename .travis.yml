@@ -45,7 +45,7 @@ jobs:
         - brew link --overwrite python3
       install:
         - python3 -m pip install --upgrade pip
-        - python3 -m pip install wheel sphinx sphinx-rtd-theme breathe exhale
+        - python3 -m pip install wheel sphinx sphinxcontrib-napoleon sphinx-rtd-theme breathe exhale
 
 before_script:
   - export PYTHONPATH="${TRAVIS_BUILD_DIR}/test/python"
@@ -76,6 +76,7 @@ script:
   - build/seqc test/core/helloworld.seq
   - |
     if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+      (cd docs/sphinx && python3 docgen.py ../../stdlib)
       if ! make -C docs/sphinx html 2>sphinx.log ; then
         cat sphinx.log
         false
