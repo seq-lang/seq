@@ -57,7 +57,7 @@ for directory, modules in parsed_modules.items():
             print(f".. seq:module:: {module}\n", file=f)
             print(f"{module}", file=f)
         else:
-            print("Seq standard library", file=f)
+            print("Standard Library Reference", file=f)
         print(f"========\n", file=f)
 
         print(".. toctree::\n", file=f)
@@ -143,8 +143,8 @@ for directory, (name, mid) in {(d, m) for d, mm in parsed_modules.items() for m 
         print(f".. seq:module:: {module}\n", file=f)
         print(f":seq:mod:`{module}`", file=f)
         print("-" * (len(module) + 11) + "\n", file=f)
-
-        print(f"Source code: `{directory}/{name}.seq <{directory}/{name}.seq>`_\n", file=f)
+        directory_prefix = directory + '/' if directory != '.' else ''
+        print(f"Source code: `{directory_prefix}{name}.seq <https://github.com/seq-lang/seq/blob/master/stdlib/{directory}/{name}.seq>`_\n", file=f)
         if 'doc' in j[mid]:
             print(parse_docstr(j[mid]['doc']), file=f)
 
