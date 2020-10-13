@@ -14,7 +14,6 @@ Source code is available `on GitHub <https://github.com/seq-lang/seq>`_. You can
    python
    embed
    build
-   internals
    stdlib/index
 
 Frequently Asked Questions
