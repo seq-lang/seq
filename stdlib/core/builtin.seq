@@ -201,7 +201,7 @@ def enumerate(x, start: int = 0):
 @builtin
 def echo(x):
     """
-    Return the output of x
+    Print and return argument
     """
     print x
     return x

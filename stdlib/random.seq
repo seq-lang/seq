@@ -372,6 +372,8 @@ class Random:
 
         The probability distribution function is:
 
+        ::
+
                     x ** (alpha - 1) * math.exp(-x / beta)
           pdf(x) =  --------------------------------------
                       math.gamma(alpha) * beta ** alpha
@@ -469,12 +471,6 @@ class Random:
         mu is the mean, and sigma is the standard deviation.  This is
         slightly faster than the normalvariate() function.
         Not thread-safe without a lock around calls.
-
-        for now:
-            z = self.gauss_next
-            self.gauss_next = None
-            if z = None:
-        z is set to be 0.0 in this function
         """
         random = self.random
         z = 0.0
