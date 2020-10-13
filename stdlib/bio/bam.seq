@@ -223,6 +223,13 @@ class SAMRecord:
         return self._htsr.tid
 
     @property
+    def flag(self: SAMRecord):
+        '''
+        Record flag
+        '''
+        return self._htsr.flag
+
+    @property
     def pos(self: SAMRecord):
         '''
         Record position (0-based)
