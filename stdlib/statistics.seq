@@ -3,36 +3,7 @@ import random
 from math import frexp as _frexp, floor as _floor, fabs as _fabs, erf as _erf
 from math import gcd as _gcd, exp as _exp, log as _log, sqrt as _sqrt, tau as _tau, hypot as _hypot
 
-X = 5
-""" docstr for var """
-
-cimport xa(i: int) -> str
-""" dicstr for cimport """
-
-extend seq:
-    def foo(self: seq, n: int):
-        """
-        Generators have a ``Yields`` section instead of a ``Returns`` section.
-
-        Args:
-            n: The upper limit of the range to generate, from 0 to `n` - 1.
-
-        Yields:
-            int: The next number in the range of 0 to `n` - 1.
-
-        Examples:
-            Examples should be written in doctest format, and should illustrate how
-            to use the function.
-
-            >>> print([i for i in example_generator(4)])
-            [0, 1, 2, 3]
-        """
-        pass
-
 class StatisticsError:
-    """
-    A class docstring
-    """
     _hdr: ExcHeader
 
     def __init__(self: StatisticsError):
@@ -138,9 +109,6 @@ def median_grouped[T,S](data: list[T], interval: S = 1) -> float:
 def mode[T](data: list[T]) -> T:
     """
     Return the most common data point from discrete or nominal data.
-
-    TODO/CAVEATS:
-    @jordan- implement mode with Counter(data).most_common(1) when Counter is implemented
     """
     counter = 0
     elem = data[0]
@@ -158,9 +126,6 @@ def multimode[T](data: list[T]):
 
     Will return more than one result if there are multiple modes
     or an empty list if *data* is empty.
-
-    TODO/CAVEATS:
-    @jordan- implement multimode with Counter(data).most_commone() when Counter is implemented
     """
     elem = data[0]
     counter = data.count(elem)
@@ -193,9 +158,6 @@ def quantiles[T](data: list[T], n: int = 4, method: str = 'exclusive') -> list[f
     If *method* is set to *inclusive*, *data* is treated as population
     data.  The minimum value is treated as the 0th percentile and the
     maximum value is treated as the 100th percentile.
-
-    TODO/CAVEATS:
-    @jordan- need to check if n<1 and len(data)<2 and correct method called
     """
     if n < 1:
         raise StatisticsError('n must be at least 1')
@@ -276,8 +238,8 @@ def _sum(data: list[float]) -> float:
     If ``data`` is empty, ``start`` (defaulting to 0) is returned.
 
     TODO/CAVEATS
-    @jordan - the start argument should default to 0 or 0.0
-            - Assumes input is floats
+      - The start argument should default to 0 or 0.0
+      - Assumes input is floats
     """
     if len(data) == 1:
         return data[0]
@@ -311,8 +273,8 @@ def mean(data: list[float]) -> float:
     Return the sample arithmetic mean of data.
 
     TODO/CAVEATS
-    @jordan - Assumes input is floats
-            - Does not address NAN or INF
+      - Assumes input is floats
+      - Does not address NAN or INF
     """
     n = len(data)
     if n < 1:
@@ -339,9 +301,9 @@ def geometric_mean(data: list[float]) -> float:
     Raises a StatisticsError if the input dataset is empty,
 
     TODO/CAVEATS:
-    @jordan- Assumes input is a list of floats
-           - uses mean instead of fmean for now
-           - Does not handle data that contains a zero, or if it contains a negative value.
+      - Assumes input is a list of floats
+      - Uses mean instead of fmean for now
+      - Does not handle data that contains a zero, or if it contains a negative value.
     """
     if len(data) < 1:
         raise StatisticsError("geometric mean requires a non-empty dataset")
@@ -407,7 +369,7 @@ def pvariance(data: list[float], mu: optional[float]=None):
     the data. If it is missing or None, the mean is automatically calculated.
 
     TODO/CAVEATS:
-    @jordan - Assumes input is a list of floats
+      - Assumes input is a list of floats
     """
     mu1 = ~mu if mu else mean(data)
 
@@ -678,11 +640,6 @@ class NormalDist:
     def samples[T](self: NormalDist, n: int):
         """
         Generate *n* samples for a given mean and standard deviation.
-
-        TODO/CAVEATS:
-        @jordan- for now seed is removed
-                 should be: `gauss = random.gauss if seed is None else random.Random(seed).gauss`
-                        ** having troubles with random.Random(seed).gauss
         """
         gauss = random.gauss
         return [gauss(self._mu, self._sigma) for i in range(n)]
@@ -691,8 +648,8 @@ class NormalDist:
         """
         Make a normal distribution instance from sample data.
         TODO/CAVEATS:
-        @jordan- Assumes input is a list of floats
-               - uses mean instead of fmean for now
+          - Assumes input is a list of floats
+          - Uses mean instead of fmean for now
         """
         xbar = mean(data)
         return NormalDist(xbar, stdev(data, xbar))
