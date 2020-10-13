@@ -56,9 +56,8 @@ seq::Expr *ImportContextItem::getExpr() const {
   return nullptr;
 }
 
-Context::Context(shared_ptr<ImportCache> cache, seq::Block *block,
-                 seq::BaseFunc *base, seq::SeqJIT *jit,
-                 const std::string &filename)
+Context::Context(shared_ptr<ImportCache> cache, seq::Block *block, seq::BaseFunc *base,
+                 seq::SeqJIT *jit, const std::string &filename)
     : cache(cache), filename(filename), jit(jit), enclosingType(nullptr),
       tryCatch(nullptr) {
   stack.push(vector<string>());
@@ -89,8 +88,7 @@ void Context::loadStdlib(seq::Var *argVar) {
   CodegenStmtVisitor(*this).transform(tv);
 }
 
-shared_ptr<ContextItem> Context::find(const string &name,
-                                      bool onlyLocal) const {
+shared_ptr<ContextItem> Context::find(const string &name, bool onlyLocal) const {
   auto i = VTable<ContextItem>::find(name);
   if (i && dynamic_cast<VarContextItem *>(i.get())) {
     if (onlyLocal) {
@@ -165,25 +163,22 @@ void Context::add(const string &name, seq::types::Type *t, bool global) {
       name, make_shared<TypeContextItem>(t, getBase(), global || isToplevel()));
 }
 
-void Context::add(const string &name, seq::Func *f, vector<string> names,
-                  bool global) {
+void Context::add(const string &name, seq::Func *f, vector<string> names, bool global) {
   // fmt::print("adding... {} {} \n", name, isToplevel());
   VTable<ContextItem>::add(
-      name, make_shared<FuncContextItem>(f, names, getBase(),
-                                         global || isToplevel()));
+      name, make_shared<FuncContextItem>(f, names, getBase(), global || isToplevel()));
 }
 
 void Context::add(const string &name, const string &import, bool global) {
   VTable<ContextItem>::add(
-      name, make_shared<ImportContextItem>(import, getBase(),
-                                           global || isToplevel()));
+      name, make_shared<ImportContextItem>(import, getBase(), global || isToplevel()));
 }
 
 string Context::getFilename() const { return filename; }
 
 string ImportCache::getImportFile(const string &what, const string &relativeTo,
                                   bool forceStdlib) {
-  return ast::getImportFile(argv0, what, relativeTo, stdlib);
+  return ast::getImportFile(argv0, what, relativeTo, forceStdlib);
 }
 
 shared_ptr<Context> Context::importFile(const string &file) {
