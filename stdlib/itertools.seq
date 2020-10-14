@@ -134,6 +134,8 @@ def compress(data, selectors):
     Forms a shorter iterator from selected data elements using the selectors to
     choose the data elements.
     """
+    return [d for d, s in zip(data, selectors) if s]
+
 def dropwhile(predicate, iterable):
     """
     Drop items from the iterable while predicate(item) is true.
