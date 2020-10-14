@@ -44,16 +44,14 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
                const std::vector<std::pair<std::string, types::TypePtr>> &args,
                bool failOnMultiple = false, types::TypePtr retType = nullptr);
   bool castToOptional(types::TypePtr lt, ExprPtr &rhs);
-  std::vector<int> callFunc(types::TypePtr f, std::vector<CallExpr::Arg> &args,
-                            std::vector<CallExpr::Arg> &reorderedArgs,
-                            const std::vector<int> &availableArguments);
   bool getTupleIndex(types::ClassTypePtr tuple, const ExprPtr &expr,
                      const ExprPtr &index);
   ExprPtr visitDot(const ExprPtr &expr, const std::string &member,
                    std::vector<CallExpr::Arg> *args = nullptr);
   std::string generatePartialStub(const std::string &mask, const std::string &oldMask);
   std::vector<StmtPtr> parseClass(const ClassStmt *stmt);
-  ExprPtr parseCall(const CallExpr *expr);
+  ExprPtr parseCall(const CallExpr *expr, types::TypePtr inType = nullptr,
+                    ExprPtr *extraStage = nullptr);
 
   void defaultVisit(const Expr *e) override;
   void defaultVisit(const Stmt *s) override;

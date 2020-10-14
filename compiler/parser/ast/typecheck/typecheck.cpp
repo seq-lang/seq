@@ -267,7 +267,10 @@ void TypecheckVisitor::visit(const PipeExpr *expr) {
   inType = extractType(inType);
   int inTypePos = 0;
   for (int i = 1; i < expr->items.size(); i++) {
-    auto &l = expr->items[i];
+    auto l = expr->items[i].clone();
+
+  reset:
+    // LOG("-> {} ; {} -> {}", ctx->iteration, inType->toString(), l.expr->toString());
     if (auto ce = CAST(l.expr, CallExpr)) {
       // TODO: what if this is a StmtExpr [e.g. a constructor]?
       int inTypePos = -1;
@@ -282,17 +285,33 @@ void TypecheckVisitor::visit(const PipeExpr *expr) {
         ce->args.insert(ce->args.begin(), {"", N<EllipsisExpr>(true)});
         inTypePos = 0;
       }
-      forceUnify(ce->args[inTypePos].value, inType);
-      items.push_back({l.op, parseCall(ce)});
+
+      // forceUnify(ce->args[inTypePos].value, inType);
+      ExprPtr st = nullptr;
+      auto n = parseCall(ce, inType, &st);
+      if (st) {
+        l = {"|>", move(st)};
+        i--;
+        goto reset;
+      }
+      items.push_back({l.op, move(n)});
     } else {
       auto c = N<CallExpr>(clone(l.expr), N<EllipsisExpr>(true));
-      forceUnify(c->args[0].value, inType);
-      items.push_back({l.op, parseCall(c.get())});
+      // forceUnify(c->args[0].value, inType);
+
+      ExprPtr st = nullptr;
+      auto n = parseCall(c.get(), inType, &st);
+      if (st) {
+        l = {"|>", move(st)};
+        i--;
+        goto reset;
+      }
+      items.push_back({l.op, move(n)});
       inTypePos = 0;
     }
-    // LOG("|> {} {}", inType->toString(), items.back().expr->toString());
     inType = items.back().expr->getType();
     types.push_back(inType);
+
     if (i < expr->items.size() - 1)
       inType = extractType(inType);
   }
@@ -510,11 +529,17 @@ ExprPtr TypecheckVisitor::visitDot(const ExprPtr &expr, const string &member,
 
 void TypecheckVisitor::visit(const CallExpr *expr) { resultExpr = parseCall(expr); }
 
-ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr) {
+ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
+                                    ExprPtr *extraStage) {
   vector<CallExpr::Arg> args;
   for (auto &i : expr->args) {
     args.push_back({i.name, transform(i.value)});
-    forceUnify(i.value, args.back().value->getType());
+    if (auto e = CAST(i.value, EllipsisExpr)) {
+      if (inType && e->isPipeArg)
+        forceUnify(inType, args.back().value->getType());
+      else
+        forceUnify(i.value, args.back().value->getType());
+    }
   }
 
   ExprPtr e = nullptr;
@@ -560,7 +585,102 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr) {
     if (knownTypes.empty() || knownTypes[i] == '0')
       availableArguments.push_back(i);
 
-  auto pending = callFunc(c, args, reorderedArgs, availableArguments);
+  // auto pending = callFunc(c, args, reorderedArgs, availableArguments);
+
+  vector<int> pending;
+  bool isPartial = false;
+  bool namesStarted = false;
+  unordered_map<string, ExprPtr> namedArgs;
+  for (int i = 0; i < args.size(); i++) {
+    if (args[i].name == "" && namesStarted)
+      error("unnamed argument after a named argument");
+    namesStarted |= args[i].name != "";
+    if (args[i].name == "")
+      reorderedArgs.push_back({"", move(args[i].value)});
+    else if (namedArgs.find(args[i].name) == namedArgs.end())
+      namedArgs[args[i].name] = move(args[i].value);
+    else
+      error("named argument {} repeated multiple times", args[i].name);
+  }
+
+  if (namedArgs.size() == 0 && reorderedArgs.size() == availableArguments.size() + 1 &&
+      CAST(reorderedArgs.back().value, EllipsisExpr)) {
+    isPartial = true;
+    forceUnify(reorderedArgs.back().value, ctx->findInternal(".void"));
+    reorderedArgs.pop_back();
+  } else if (reorderedArgs.size() + namedArgs.size() > availableArguments.size()) {
+    error("too many arguments for {} (expected {}, got {})", c->toString(),
+          availableArguments.size(), reorderedArgs.size() + namedArgs.size());
+  }
+
+  FunctionStmt *ast = nullptr;
+  auto &t_args = cc->args;
+  if (auto ff = c->getFunc())
+    ast = (FunctionStmt *)(ctx->cache->asts[ff->name].get());
+  if (!ast && namedArgs.size())
+    error("unexpected name '{}' (function pointers have argument "
+          "names elided)",
+          namedArgs.begin()->first);
+  for (int i = 0, ra = reorderedArgs.size(); i < availableArguments.size(); i++) {
+    if (i >= ra) {
+      assert(ast);
+      auto it = namedArgs.find(ast->args[availableArguments[i]].name);
+      if (it != namedArgs.end()) {
+        reorderedArgs.push_back({"", move(it->second)});
+        namedArgs.erase(it);
+      } else if (ast->args[i].deflt) {
+        reorderedArgs.push_back(
+            {"", transform(ast->args[availableArguments[i]].deflt)});
+      } else {
+        error("argument '{}' missing", ast->args[availableArguments[i]].name);
+      }
+    }
+    if (auto ee = CAST(reorderedArgs[i].value, EllipsisExpr))
+      if (!ee->isPipeArg)
+        pending.push_back(availableArguments[i]);
+
+    // unify arg (reorderedArgs) with signature (t_args)
+    // 1. check is it a trait?
+    auto &typ = t_args[availableArguments[i] + 1];
+    auto targetType = typ->getClass();
+    auto &arg = reorderedArgs[i].value;
+    auto c = arg->getType()->getClass();
+    if (targetType && (targetType->isTrait || targetType->name == ".Optional")) {
+      if (!c) // do not unify if not yet known
+        continue;
+      if (targetType->name == ".Generator") {
+        if (c->name != targetType->name) {
+          if (!extraStage) // do not do this in pipelines
+            arg = transform(N<CallExpr>(N<DotExpr>(move(arg), "__iter__")));
+        }
+      } else if (startswith(targetType->name, ".Function.")) {
+        if (!startswith(c->name, ".Function.") &&
+            !extraStage) // TODO: do this in pipelines later
+          arg = transform(N<CallExpr>(N<DotExpr>(move(arg), "__call__")));
+      } else if (targetType->name == ".Optional") {
+        if (c->name != targetType->name) {
+          if (extraStage && CAST(arg, EllipsisExpr)) {
+            *extraStage = N<DotExpr>(N<IdExpr>(".Optional"), "__new__");
+            return expr->clone();
+          } else
+            arg = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(arg)));
+        }
+      } else {
+        error("cannot handle trait {}", targetType->name);
+      }
+    } else if (targetType && c && c->name == ".Optional") { // unwrap optional
+      if (extraStage && CAST(arg, EllipsisExpr)) {
+        *extraStage = N<IdExpr>(".unwrap");
+        return expr->clone();
+      } else
+        arg = transform(N<CallExpr>(N<IdExpr>(".unwrap"), move(arg)));
+    }
+    forceUnify(reorderedArgs[i].value, typ);
+  }
+  for (auto &i : namedArgs)
+    error(i.second, "unknown argument {}", i.first);
+  if (isPartial || pending.size())
+    pending.push_back(args.size());
 
   // Realize functions that are passed as arguments
   for (auto &ra : reorderedArgs)
@@ -1378,98 +1498,6 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
     //     break;
   }
   return (*m)[scores[0].second];
-} // namespace ast
-
-vector<int> TypecheckVisitor::callFunc(types::TypePtr f, vector<CallExpr::Arg> &args,
-                                       vector<CallExpr::Arg> &reorderedArgs,
-                                       const vector<int> &availableArguments) {
-  vector<int> pending;
-  bool isPartial = false;
-  bool namesStarted = false;
-  unordered_map<string, ExprPtr> namedArgs;
-  for (int i = 0; i < args.size(); i++) {
-    if (args[i].name == "" && namesStarted)
-      error("unnamed argument after a named argument");
-    namesStarted |= args[i].name != "";
-    if (args[i].name == "")
-      reorderedArgs.push_back({"", move(args[i].value)});
-    else if (namedArgs.find(args[i].name) == namedArgs.end())
-      namedArgs[args[i].name] = move(args[i].value);
-    else
-      error("named argument {} repeated multiple times", args[i].name);
-  }
-
-  if (namedArgs.size() == 0 && reorderedArgs.size() == availableArguments.size() + 1 &&
-      CAST(reorderedArgs.back().value, EllipsisExpr)) {
-    isPartial = true;
-    forceUnify(reorderedArgs.back().value, ctx->findInternal(".void"));
-    reorderedArgs.pop_back();
-  } else if (reorderedArgs.size() + namedArgs.size() > availableArguments.size()) {
-    error("too many arguments for {} (expected {}, got {})", f->toString(),
-          availableArguments.size(), reorderedArgs.size() + namedArgs.size());
-  }
-
-  FunctionStmt *ast = nullptr;
-  auto fc = f->getClass();
-  auto &t_args = fc->args;
-  if (auto ff = f->getFunc())
-    ast = (FunctionStmt *)(ctx->cache->asts[ff->name].get());
-  if (!ast && namedArgs.size())
-    error("unexpected name '{}' (function pointers have argument "
-          "names elided)",
-          namedArgs.begin()->first);
-  for (int i = 0, ra = reorderedArgs.size(); i < availableArguments.size(); i++) {
-    if (i >= ra) {
-      assert(ast);
-      auto it = namedArgs.find(ast->args[availableArguments[i]].name);
-      if (it != namedArgs.end()) {
-        reorderedArgs.push_back({"", move(it->second)});
-        namedArgs.erase(it);
-      } else if (ast->args[i].deflt) {
-        reorderedArgs.push_back(
-            {"", transform(ast->args[availableArguments[i]].deflt)});
-      } else {
-        error("argument '{}' missing", ast->args[availableArguments[i]].name);
-      }
-    }
-    if (auto ee = CAST(reorderedArgs[i].value, EllipsisExpr))
-      if (!ee->isPipeArg)
-        pending.push_back(availableArguments[i]);
-
-    // unify arg (reorderedArgs) with signature (t_args)
-    // 1. check is it a trait?
-    auto &typ = t_args[availableArguments[i] + 1];
-    auto tc = typ->getClass();
-    auto c = reorderedArgs[i].value->getType()->getClass();
-    if (tc && (tc->isTrait || tc->name == ".Optional")) {
-      if (!c) // do not unify if not yet known
-        continue;
-      if (tc->name == ".Generator") {
-        if (c->name != tc->name)
-          reorderedArgs[i].value = transform(
-              N<CallExpr>(N<DotExpr>(move(reorderedArgs[i].value), "__iter__")));
-      } else if (startswith(tc->name, ".Function.")) {
-        if (!startswith(c->name, ".Function."))
-          reorderedArgs[i].value = transform(
-              N<CallExpr>(N<DotExpr>(move(reorderedArgs[i].value), "__call__")));
-      } else if (tc->name == ".Optional") {
-        if (c->name != tc->name)
-          reorderedArgs[i].value = transform(
-              N<CallExpr>(N<IdExpr>(".Optional"), move(reorderedArgs[i].value)));
-      } else {
-        error("cannot handle trait {}", tc->name);
-      }
-    } else if (tc && c && c->name == ".Optional") { // unwrap optional
-      reorderedArgs[i].value =
-          transform(N<CallExpr>(N<IdExpr>(".unwrap"), move(reorderedArgs[i].value)));
-    }
-    forceUnify(reorderedArgs[i].value, typ);
-  }
-  for (auto &i : namedArgs)
-    error(i.second, "unknown argument {}", i.first);
-  if (isPartial || pending.size())
-    pending.push_back(args.size());
-  return pending;
 }
 
 vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &generics,
