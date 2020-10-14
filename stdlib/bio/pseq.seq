@@ -2,6 +2,9 @@ from core.c_stubs import pseq
 from bio.align import Alignment
 
 extend pseq:  # order is consistent with str/seq
+    '''
+    Amino acid sequence
+    '''
     def __init__(self: pseq, p: cobj, n: int) -> pseq:
         return (n, p)
 
@@ -115,6 +118,10 @@ extend pseq:  # order is consistent with str/seq
         return pseq(p, n)
 
     def split(self: pseq, k: int, step: int):
+        '''
+        Iterator over length-`k` subsequences of the given sequence
+        with the specified step size.
+        '''
         i = 0
         while i + k <= len(self):
             yield self._slice_direct(i,i+k)
@@ -130,6 +137,11 @@ extend pseq:  # order is consistent with str/seq
             i -= 1
 
 def translate(s: seq, table: dict[seq, pseq] = None):
+    '''
+    Performs DNA to amino acid translation. An optional mapping from
+    length-3 DNA sequences to amino acids can be given via `table`,
+    otherwise the standard mapping is assumed.
+    '''
     def encode_triple(s: seq):
         if s.N():
             raise ValueError("codon '{s}' contains an ambiguous base")

@@ -1,7 +1,5 @@
 def bisect_left(a, x, lo: int = 0, hi: int = -1) -> int:
     """
-    bisect_left(a, x, lo, hi) -> int
-
     Return the index where to insert item x in list a, assuming a is sorted.
 
     The return value i is such that all e in a[:i] have e < x, and all e in
@@ -26,8 +24,6 @@ def bisect_left(a, x, lo: int = 0, hi: int = -1) -> int:
 
 def bisect_right(a, x, lo: int = 0, hi: int = -1) -> int:
     """
-    bisect_right(a, x, lo, hi) -> int
-
     Return the index where to insert item x in list a, assuming a is sorted.
 
     The return value i is such that all e in a[:i] have e <= x, and all e in
@@ -61,8 +57,6 @@ def bisect(a, x, lo: int, hi: int) -> int:
 
 def insort_left(a, x, lo: int = 0, hi: int = -1):
     """
-    insort_left(a, x, lo, hi)
-
     Insert item x in list a, and keep it sorted assuming a is sorted.
 
     If x is already in a, insert it to the left of the leftmost x.
@@ -75,8 +69,6 @@ def insort_left(a, x, lo: int = 0, hi: int = -1):
 
 def insort_right(a, x, lo: int = 0, hi: int = -1):
     """
-    insort_right(a, x, lo, hi)
-
     Insert item x in list a, and keep it sorted assuming a is sorted.
 
     If x is already in a, insert it to the right of the rightmost x.

@@ -18,10 +18,13 @@ using std::vector;
 
 namespace seq {
 
-void generateDocstr(const std::string &file) {
-  DBG("DOC MODE! {}", 1);
-  ast::DocStmtVisitor d;
-  ast::parse_file(file)->accept(d);
+void generateDocstr(const std::string &argv0) {
+  vector<string> files;
+  string s;
+  while (std::getline(std::cin, s))
+    files.push_back(s);
+  auto j = ast::DocStmtVisitor::apply(argv0, files);
+  fmt::print("{}\n", j.dump());
 }
 
 seq::SeqModule *parse(const std::string &argv0, const std::string &file,

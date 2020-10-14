@@ -98,28 +98,49 @@ type SAMAux(s: ptr[u8]):
 
     @property
     def i(self: SAMAux):
+        '''
+        Int value of this tag
+        '''
         return bam_aux2i(self.s)
 
     @property
     def f(self: SAMAux):
+        '''
+        Float value of this tag
+        '''
         return bam_aux2f(self.s)
 
     @property
     def A(self: SAMAux):
+        '''
+        Byte value of this tag
+        '''
         return bam_aux2A(self.s)
 
     @property
     def Z(self: SAMAux):
+        '''
+        String value of this tag
+        '''
         return str.from_ptr(bam_aux2Z(self.s))
 
     @property
     def B_len(self: SAMAux):
+        '''
+        Array length of this tag
+        '''
         return int(bam_auxB_len(self.s))
 
     def B2i(self: SAMAux, idx: int):
+        '''
+        `idx`th element of integer array comprising this tag
+        '''
         return bam_auxB2i(self.s, u32(idx))
 
     def B2f(self: SAMAux, idx: int):
+        '''
+        `idx`th element of float array comprising this tag
+        '''
         return bam_auxB2f(self.s, u32(idx))
 
     def __str__(self: SAMAux):
@@ -137,10 +158,16 @@ class SAMRecord:
 
     @property
     def name(self: SAMRecord):
+        '''
+        Read name of this record
+        '''
         return str(self._htsr.data, int(self._htsr.core._l_qname) - int(self._htsr.core._l_extranul) - 1)
 
     @property
     def query_name(self: SAMRecord):
+        '''
+        Alias of `name`
+        '''
         return self.name
 
     @property
@@ -160,10 +187,16 @@ class SAMRecord:
 
     @property
     def seq(self: SAMRecord):
+        '''
+        Record sequence
+        '''
         return self.read
 
     @property
     def qual(self: SAMRecord):
+        '''
+        Record quality string
+        '''
         if not self._qual:
             hts_qual = self._htsr.data + ((int(self._htsr.core._n_cigar) << 2) + int(self._htsr.core._l_qname) + ((int(self._htsr.core._l_qseq) + 1) >> 1))
             n = int(self._htsr.core._l_qseq)
@@ -177,91 +210,164 @@ class SAMRecord:
 
     @property
     def cigar(self: SAMRecord):
+        '''
+        Record `CIGAR`
+        '''
         return CIGAR(ptr[u32](self._htsr.data + int(self._htsr.core._l_qname)), int(self._htsr.core._n_cigar))
 
     @property
     def tid(self: SAMRecord):
+        '''
+        Record contig ID
+        '''
         return self._htsr.tid
 
     @property
+    def flag(self: SAMRecord):
+        '''
+        Record flag
+        '''
+        return self._htsr.flag
+
+    @property
     def pos(self: SAMRecord):
+        '''
+        Record position (0-based)
+        '''
         return self._htsr.pos
 
     @property
     def locus(self: SAMRecord):
+        '''
+        Record `Locus` consisting of `tid` and `pos`
+        '''
         pos = self.pos
         return Locus(self.tid, -pos if self.reversed else pos)
 
     @property
     def mate_tid(self: SAMRecord):
+        '''
+        Contig ID in mate's record
+        '''
         return self._htsr.mtid
 
     @property
     def mate_pos(self: SAMRecord):
+        '''
+        Position in mate's record (0-based)
+        '''
         return self._htsr.mpos
 
     @property
     def mate_locus(self: SAMRecord):
+        '''
+        Record `Locus` of mate's record consisting of `mate_tid` and `mate_pos`
+        '''
         pos = self.mate_pos
         return Locus(self.mate_tid, -pos if self.mate_reversed else pos)
 
     @property
     def mapq(self: SAMRecord):
+        '''
+        Record's mapping quality
+        '''
         return self._htsr.mapq
 
     @property
     def insert_size(self: SAMRecord):
+        '''
+        Record's insert size
+        '''
         return self._htsr.isize
 
     @property
     def paired(self: SAMRecord):
+        '''
+        Whether this record is paired
+        '''
         return self._htsr.flag & BAM_FREVERSE != 0
 
     @property
     def proper_pair(self: SAMRecord):
+        '''
+        Whether this record and its pair form a proper pair
+        '''
         return self._htsr.flag & BAM_FPROPER_PAIR != 0
 
     @property
     def unmapped(self: SAMRecord):
+        '''
+        Whether this record is unmapped
+        '''
         return self._htsr.flag & BAM_FUNMAP != 0
 
     @property
     def mate_unmapped(self: SAMRecord):
+        '''
+        Whether mate's record is unmapped
+        '''
         return self._htsr.flag & BAM_FMUNMAP != 0
 
     @property
     def reversed(self: SAMRecord):
+        '''
+        Whether this record is reverse complemented on the reference
+        '''
         return self._htsr.flag & BAM_FREVERSE != 0
 
     @property
     def mate_reversed(self: SAMRecord):
+        '''
+        Whether this record's mate is reverse complemented on the reference
+        '''
         return self._htsr.flag & BAM_FMREVERSE != 0
 
     @property
     def read1(self: SAMRecord):
+        '''
+        Whether this is the first read in the pair
+        '''
         return self._htsr.flag & BAM_FREAD1 != 0
 
     @property
     def read2(self: SAMRecord):
+        '''
+        Whether this is the second read in the pair
+        '''
         return self._htsr.flag & BAM_FREAD2 != 0
 
     @property
     def secondary(self: SAMRecord):
+        '''
+        Whether this is a seconday alignment
+        '''
         return self._htsr.flag & BAM_FSECONDARY != 0
 
     @property
     def qc_fail(self: SAMRecord):
+        '''
+        Whether this record failed quality control checks
+        '''
         return self._htsr.flag & BAM_FQCFAIL != 0
 
     @property
     def duplicate(self: SAMRecord):
+        '''
+        Whether this record is marked as a duplicate
+        '''
         return self._htsr.flag & BAM_FDUP != 0
 
     @property
     def supplementary(self: SAMRecord):
+        '''
+        Whether this record is supplementary
+        '''
         return self._htsr.flag & BAM_FSUPPLEMENTARY != 0
 
     def aux(self: SAMRecord, tag: str):
+        '''
+        Returns the auxiliary tag with the specified key.
+        '''
         if len(tag) != 2:
             raise ValueError(f"SAM aux tags are exactly two characters in length (got: tag of length {len(tag)})")
         tag_arr = (tag.ptr[0], tag.ptr[1])

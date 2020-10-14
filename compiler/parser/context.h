@@ -22,6 +22,7 @@ protected:
   std::stack<std::vector<std::string>> stack;
   std::unordered_set<std::string> flags;
 
+public:
   std::shared_ptr<T> find(const std::string &name) const {
     auto it = map.find(name);
     if (it == map.end()) {
@@ -30,7 +31,6 @@ protected:
     return it->second.top();
   }
 
-public:
   typename VTableMap::iterator begin() { return map.begin(); }
   typename VTableMap::iterator end() { return map.end(); }
 

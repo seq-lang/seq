@@ -12,8 +12,6 @@ def sorted[S,T](
     reverse: bool = False
 ):
     """
-    sorted(v)
-
     Return a sorted list of the elements in v
     """
     newlist = [a for a in v]
