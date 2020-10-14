@@ -218,11 +218,11 @@ INSTANTIATE_TEST_SUITE_P(
         "core/exceptions.seq",
         "core/big.seq",
         "core/containers.seq",
-        // F: "core/bltin.seq", // weird max trick
-        // F: "core/range.seq", // needs auto-unify
+        "core/trees.seq",
+        "core/range.seq",
         // F: "core/arguments.seq", // some error
-        // F: "core/match.seq", // needs seq type
-        // F: "core/trees.seq",
+        // F: "core/bltin.seq", // weird max trick
+        // F: "core/match.seq", // needs Kmer type
         // "core/align.seq",
         // "core/bwtsa.seq",
         // "core/formats.seq",

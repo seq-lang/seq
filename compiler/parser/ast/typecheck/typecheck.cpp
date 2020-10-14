@@ -71,7 +71,7 @@ ExprPtr TypecheckVisitor::transform(const ExprPtr &expr, bool allowTypes) {
     return nullptr;
   TypecheckVisitor v(ctx, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
-  LOG9("<< {} {}", (int64_t)expr.get(), expr->toString());
+  // LOG9("<< {} {}", (int64_t)expr.get(), expr->toString());
   expr->accept(v);
   // LOG9("{} | {} -> {}", expr->getSrcInfo().line, expr->toString(),
   //  v.resultExpr->toString());
@@ -79,8 +79,7 @@ ExprPtr TypecheckVisitor::transform(const ExprPtr &expr, bool allowTypes) {
       v.resultExpr->getType()->getClass()->canRealize())
     realizeType(v.resultExpr->getType()->getClass());
   seqassert(v.resultExpr, "cannot parse {}", expr->toString());
-  LOG9(">> {} {} {}", (int64_t)expr.get(), (int64_t)v.resultExpr.get(),
-       v.resultExpr->toString());
+  LOG9(">> {}", v.resultExpr->toString());
   return move(v.resultExpr);
 }
 
@@ -207,10 +206,13 @@ void TypecheckVisitor::visit(const BinaryExpr *expr) {
         forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
   } else if (expr->op == "is") {
     if (CAST(expr->rexpr, NoneExpr)) {
-      if (le->getType()->getClass()->name != ".Optional")
-        error("only optionals can be compared to None");
-      resultExpr = transform(N<CallExpr>(
-          N<DotExpr>(N<CallExpr>(N<DotExpr>(move(le), "__bool__")), "__invert__")));
+      if (le->getType()->getClass()->name != ".Optional") {
+        resultExpr = transform(N<BoolExpr>(false));
+        // error("only optionals can be compared to None");
+      } else {
+        resultExpr = transform(N<CallExpr>(
+            N<DotExpr>(N<CallExpr>(N<DotExpr>(move(le), "__bool__")), "__invert__")));
+      }
       forceUnify(expr, resultExpr->getType());
       return;
     }
@@ -456,8 +458,6 @@ ExprPtr TypecheckVisitor::visitDot(const ExprPtr &expr, const string &member,
           targs.push_back({"", c});
         for (auto &a : *args)
           targs.push_back({a.name, a.value->getType()});
-        if ((*m)[0]->name == ".Interval.__new__")
-          assert(1);
         if (auto m = findBestCall(c, member, targs, true)) {
           if (!lhs->isType())
             args->insert(args->begin(), {"", clone(lhs)});
@@ -733,11 +733,27 @@ void TypecheckVisitor::visit(const UpdateStmt *stmt) {
 void TypecheckVisitor::visit(const AssignMemberStmt *stmt) {
   auto lh = transform(stmt->lhs);
   auto rh = transform(stmt->rhs);
-  auto c = lh->getType()->getClass();
-  if (c && c->isRecord())
-    error("records are read-only ^ {} , {}", c->toString(), lh->toString());
-  auto mm = ctx->findMember(c->name, stmt->member);
-  forceUnify(ctx->instantiate(getSrcInfo(), mm, c), rh->getType());
+  auto lc = lh->getType()->getClass();
+  auto rc = rh->getType()->getClass();
+
+  auto mm = ctx->findMember(lc->name, stmt->member);
+  if (!mm && lc->name == ".Optional") {
+    resultStmt = transform(N<AssignMemberStmt>(
+        N<CallExpr>(N<IdExpr>(".unwrap"), clone(stmt->lhs)), stmt->member, move(rh)));
+    return;
+  }
+  if (!mm)
+    error("cannot find '{}'", stmt->member);
+
+  if (lc && lc->isRecord())
+    error("records are read-only ^ {} , {}", lc->toString(), lh->toString());
+
+  auto t = ctx->instantiate(getSrcInfo(), mm, lc);
+  lc = t->getClass();
+  if (lc && lc->name == ".Optional" && rc && rc->name != lc->name)
+    rh = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(rh)));
+  forceUnify(t, rh->getType());
+
   resultStmt = N<AssignMemberStmt>(move(lh), stmt->member, move(rh));
 }
 
@@ -747,10 +763,21 @@ void TypecheckVisitor::visit(const ReturnStmt *stmt) {
     auto e = transform(stmt->expr);
     auto &base = ctx->bases.back();
 
-    if (base.returnType)
+    if (base.returnType) {
+      auto l = base.returnType->getClass();
+      auto r = e->getType()->getClass();
+      if (l && r && r->name != l->name) {
+        if (l->name == ".Optional") {
+          e = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(e)));
+        }
+        // For now this only works if we already know that returnType is optional
+      }
       forceUnify(e->getType(), base.returnType);
-    else
+    } else {
       base.returnType = e->getType();
+    }
+
+    // HACK for return void in Partial.__call__
     if (startswith(base.name, ".Partial.") && endswith(base.name, ".__call__")) {
       auto c = e->getType()->getClass();
       if (c && c->name == ".void") {

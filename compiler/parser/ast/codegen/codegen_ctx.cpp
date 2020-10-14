@@ -174,35 +174,26 @@ seq::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
     auto ret = types[0];
     types.erase(types.begin());
     handle = seq::types::FuncType::get(types, ret);
-    // } else if (startswith(name, ".Partial.")) {
-    //   auto f = t->getCallable()->getClass();
-    //   assert(f);
-    //   auto callee = realizeType(t->args[0]);
-    //   vector<seq::types::Type *> partials(f->args.size() - 1, nullptr);
-    //   for (int i = 9; i < name.size(); i++)
-    //     if (name[i] == '1')
-    //       partials[i - 9] = realizeType(f->args[i - 9 + 1]->getClass());
-    //   handle = seq::types::PartialFuncType::get(callee, partials);
   } else {
     vector<string> names;
     vector<seq::types::Type *> types;
+    seq::types::RecordType *record;
+    if (t->isRecord()) {
+      handle = record = seq::types::RecordType::get(types, names, chop(name));
+    } else {
+      auto cls = seq::types::RefType::get(name);
+      cls->setContents(record = seq::types::RecordType::get(types, names, ""));
+      // cls->setDone();
+      handle = cls;
+    }
+    this->types[t->realizeString()] = handle;
+
+    // Must do this afterwards to avoid infinite loop with recursive types
     for (auto &m : cache->memberRealizations[t->realizeString()]) {
       names.push_back(m.first);
       types.push_back(realizeType(m.second->getClass()));
     }
-    if (t->isRecord()) {
-      vector<string> x;
-      for (auto &t : types)
-        x.push_back(t->getName());
-      // if (startswith(name, ".Tuple."))
-      // name = "";
-      handle = seq::types::RecordType::get(types, names, chop(name));
-    } else {
-      auto cls = seq::types::RefType::get(name);
-      cls->setContents(seq::types::RecordType::get(types, names, ""));
-      // cls->setDone();
-      handle = cls;
-    }
+    record->setContents(types, names);
   }
   return this->types[t->realizeString()] = handle;
 }
