@@ -30,8 +30,9 @@ using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 
-#define RETURN(T, ...)                                                                 \
-  (this->result = fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo()));        \
+#define RETURN(T, ...)                                                         \
+  (this->result =                                                              \
+       fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo()));           \
   return
 #define E(T, ...) make_unique<T>(__VA_ARGS__)
 #define EP(T, ...) fwdSrcInfo(make_unique<T>(__VA_ARGS__), expr->getSrcInfo())
@@ -67,7 +68,9 @@ void TransformExprVisitor::visit(const BoolExpr *expr) {
   RETURN(BoolExpr, expr->value);
 }
 
-void TransformExprVisitor::visit(const IntExpr *expr) { RETURN(IntExpr, expr->value); }
+void TransformExprVisitor::visit(const IntExpr *expr) {
+  RETURN(IntExpr, expr->value);
+}
 
 void TransformExprVisitor::visit(const FloatExpr *expr) {
   RETURN(FloatExpr, expr->value);
@@ -100,8 +103,8 @@ void TransformExprVisitor::visit(const FStringExpr *expr) {
           code = code.substr(0, code.size() - 1);
           items.push_back(EP(StringExpr, format("{}=", code)));
         }
-        items.push_back(
-            EP(CallExpr, EP(IdExpr, "str"), transform(parse_expr(code, offset))));
+        items.push_back(EP(CallExpr, EP(IdExpr, "str"),
+                           transform(parse_expr(code, offset))));
       }
       brace_start = i + 1;
     }
@@ -114,20 +117,21 @@ void TransformExprVisitor::visit(const FStringExpr *expr) {
         EP(StringExpr,
            expr->value.substr(brace_start, expr->value.size() - brace_start))));
   }
-  this->result = transform(
-      EP(CallExpr, EP(DotExpr, EP(IdExpr, "str"), "cat"), EP(ListExpr, move(items))));
+  this->result = transform(EP(CallExpr, EP(DotExpr, EP(IdExpr, "str"), "cat"),
+                              EP(ListExpr, move(items))));
 }
 
 void TransformExprVisitor::visit(const KmerExpr *expr) {
   this->result = transform(
-      EP(CallExpr, EP(IndexExpr, EP(IdExpr, "Kmer"), EP(IntExpr, expr->value.size())),
+      EP(CallExpr,
+         EP(IndexExpr, EP(IdExpr, "Kmer"), EP(IntExpr, expr->value.size())),
          EP(SeqExpr, expr->value)));
 }
 
 void TransformExprVisitor::visit(const SeqExpr *expr) {
   if (expr->prefix == "p") {
-    this->result =
-        transform(EP(CallExpr, EP(IdExpr, "pseq"), EP(StringExpr, expr->value)));
+    this->result = transform(
+        EP(CallExpr, EP(IdExpr, "pseq"), EP(StringExpr, expr->value)));
   } else if (expr->prefix == "s") {
     RETURN(SeqExpr, expr->value, expr->prefix);
   } else {
@@ -135,7 +139,9 @@ void TransformExprVisitor::visit(const SeqExpr *expr) {
   }
 }
 
-void TransformExprVisitor::visit(const IdExpr *expr) { RETURN(IdExpr, expr->value); }
+void TransformExprVisitor::visit(const IdExpr *expr) {
+  RETURN(IdExpr, expr->value);
+}
 
 void TransformExprVisitor::visit(const UnpackExpr *expr) {
   RETURN(CallExpr, EP(IdExpr, "list"), transform(expr->what));
@@ -155,15 +161,16 @@ void TransformExprVisitor::visit(const ListExpr *expr) {
   string listVar = getTemporaryVar("list");
   prependStmts.push_back(
       SPX(expr, AssignStmt, EP(IdExpr, headVar), transform(expr->items[0])));
-  prependStmts.push_back(
-      SPX(expr, AssignStmt, EP(IdExpr, listVar),
-          EP(CallExpr,
-             EP(IndexExpr, EP(IdExpr, "list"), EP(TypeOfExpr, EP(IdExpr, headVar))),
-             EP(IntExpr, expr->items.size()))));
+  prependStmts.push_back(SPX(
+      expr, AssignStmt, EP(IdExpr, listVar),
+      EP(CallExpr,
+         EP(IndexExpr, EP(IdExpr, "list"), EP(TypeOfExpr, EP(IdExpr, headVar))),
+         EP(IntExpr, expr->items.size()))));
 
-#define ADD(x)                                                                         \
-  prependStmts.push_back(SPX(                                                          \
-      expr, ExprStmt, EP(CallExpr, EP(DotExpr, EP(IdExpr, listVar), "append"), x)))
+#define ADD(x)                                                                 \
+  prependStmts.push_back(                                                      \
+      SPX(expr, ExprStmt,                                                      \
+          EP(CallExpr, EP(DotExpr, EP(IdExpr, listVar), "append"), x)))
   ADD(EP(IdExpr, headVar));
   for (int i = 1; i < expr->items.size(); i++) {
     ADD(transform(expr->items[i]));
@@ -182,12 +189,14 @@ void TransformExprVisitor::visit(const SetExpr *expr) {
   string setVar = getTemporaryVar("set");
   prependStmts.push_back(
       SPX(expr, AssignStmt, EP(IdExpr, headVar), transform(expr->items[0])));
-  prependStmts.push_back(SPX(expr, AssignStmt, EP(IdExpr, setVar),
-                             EP(CallExpr, EP(IndexExpr, EP(IdExpr, "set"),
-                                             EP(TypeOfExpr, EP(IdExpr, headVar))))));
-#define ADD(x)                                                                         \
-  prependStmts.push_back(                                                              \
-      SPX(expr, ExprStmt, EP(CallExpr, EP(DotExpr, EP(IdExpr, setVar), "add"), x)))
+  prependStmts.push_back(
+      SPX(expr, AssignStmt, EP(IdExpr, setVar),
+          EP(CallExpr, EP(IndexExpr, EP(IdExpr, "set"),
+                          EP(TypeOfExpr, EP(IdExpr, headVar))))));
+#define ADD(x)                                                                 \
+  prependStmts.push_back(                                                      \
+      SPX(expr, ExprStmt,                                                      \
+          EP(CallExpr, EP(DotExpr, EP(IdExpr, setVar), "add"), x)))
   ADD(EP(IdExpr, headVar));
   for (int i = 1; i < expr->items.size(); i++) {
     ADD(transform(expr->items[i]));
@@ -209,24 +218,25 @@ void TransformExprVisitor::visit(const DictExpr *expr) {
   string headKey = getTemporaryVar("headk");
   string headVal = getTemporaryVar("headv");
   string dictVar = getTemporaryVar("dict");
-  prependStmts.push_back(
-      SPX(expr, AssignStmt, EP(IdExpr, headKey), transform(expr->items[0].key)));
-  prependStmts.push_back(
-      SPX(expr, AssignStmt, EP(IdExpr, headVal), transform(expr->items[0].value)));
+  prependStmts.push_back(SPX(expr, AssignStmt, EP(IdExpr, headKey),
+                             transform(expr->items[0].key)));
+  prependStmts.push_back(SPX(expr, AssignStmt, EP(IdExpr, headVal),
+                             transform(expr->items[0].value)));
   vector<ExprPtr> types;
   types.push_back(EP(TypeOfExpr, EP(IdExpr, headKey)));
   types.push_back(EP(TypeOfExpr, EP(IdExpr, headVal)));
-  prependStmts.push_back(
-      SPX(expr, AssignStmt, EP(IdExpr, dictVar),
-          EP(CallExpr, EP(IndexExpr, EP(IdExpr, "dict"), EP(TupleExpr, move(types))))));
+  prependStmts.push_back(SPX(expr, AssignStmt, EP(IdExpr, dictVar),
+                             EP(CallExpr, EP(IndexExpr, EP(IdExpr, "dict"),
+                                             EP(TupleExpr, move(types))))));
 
-#define ADD(k, v)                                                                      \
-  vector<ExprPtr> _s;                                                                  \
-  _s.push_back(k);                                                                     \
-  _s.push_back(v);                                                                     \
-  prependStmts.push_back(                                                              \
-      SPX(expr, ExprStmt,                                                              \
-          EP(CallExpr, EP(DotExpr, EP(IdExpr, dictVar), "__setitem__"), move(_s))))
+#define ADD(k, v)                                                              \
+  vector<ExprPtr> _s;                                                          \
+  _s.push_back(k);                                                             \
+  _s.push_back(v);                                                             \
+  prependStmts.push_back(                                                      \
+      SPX(expr, ExprStmt,                                                      \
+          EP(CallExpr, EP(DotExpr, EP(IdExpr, dictVar), "__setitem__"),        \
+             move(_s))))
   ADD(EP(IdExpr, headKey), EP(IdExpr, headVal));
   for (int i = 1; i < expr->items.size(); i++) {
     ADD(transform(expr->items[i].key), transform(expr->items[i].value));
@@ -249,11 +259,13 @@ void TransformExprVisitor::visit(const DictGeneratorExpr *expr) {
   for (auto &l : expr->loops) {
     loops.push_back({l.vars, transform(l.gen), transform(l.conds)});
   }
-  RETURN(DictGeneratorExpr, transform(expr->key), transform(expr->expr), move(loops));
+  RETURN(DictGeneratorExpr, transform(expr->key), transform(expr->expr),
+         move(loops));
 }
 
 void TransformExprVisitor::visit(const IfExpr *expr) {
-  RETURN(IfExpr, transform(expr->cond), transform(expr->eif), transform(expr->eelse));
+  RETURN(IfExpr, transform(expr->cond), transform(expr->eif),
+         transform(expr->eelse));
 }
 
 void TransformExprVisitor::visit(const UnaryExpr *expr) {
@@ -318,7 +330,9 @@ void TransformExprVisitor::visit(const SliceExpr *expr) {
   this->result = EP(CallExpr, EP(IdExpr, prefix + "slice"), move(args));
 }
 
-void TransformExprVisitor::visit(const EllipsisExpr *expr) { RETURN(EllipsisExpr, ); }
+void TransformExprVisitor::visit(const EllipsisExpr *expr) {
+  RETURN(EllipsisExpr, );
+}
 
 void TransformExprVisitor::visit(const TypeOfExpr *expr) {
   RETURN(TypeOfExpr, transform(expr->expr));
@@ -328,16 +342,21 @@ void TransformExprVisitor::visit(const PtrExpr *expr) {
   RETURN(PtrExpr, transform(expr->expr));
 }
 
-void TransformExprVisitor::visit(const LambdaExpr *expr) { ERROR(expr, "TODO"); }
+void TransformExprVisitor::visit(const LambdaExpr *expr) {
+  ERROR(expr, "TODO");
+}
 
 void TransformExprVisitor::visit(const YieldExpr *expr) { RETURN(YieldExpr, ); }
 
 #undef RETURN
-#define RETURN(T, ...)                                                                 \
-  (this->result = fwdSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo()));        \
+#define RETURN(T, ...)                                                         \
+  (this->result =                                                              \
+       fwdSrcInfo(make_unique<T>(__VA_ARGS__), stmt->getSrcInfo()));           \
   return
 
-void TransformStmtVisitor::prepend(StmtPtr s) { prependStmts.push_back(move(s)); }
+void TransformStmtVisitor::prepend(StmtPtr s) {
+  prependStmts.push_back(move(s));
+}
 
 StmtPtr TransformStmtVisitor::transform(const Stmt *stmt) {
   // if (stmt->getSrcInfo().file.find("scratch.seq") != string::npos)
@@ -391,7 +410,9 @@ void TransformStmtVisitor::visit(const PassStmt *stmt) { RETURN(PassStmt, ); }
 
 void TransformStmtVisitor::visit(const BreakStmt *stmt) { RETURN(BreakStmt, ); }
 
-void TransformStmtVisitor::visit(const ContinueStmt *stmt) { RETURN(ContinueStmt, ); }
+void TransformStmtVisitor::visit(const ContinueStmt *stmt) {
+  RETURN(ContinueStmt, );
+}
 
 void TransformStmtVisitor::visit(const ExprStmt *stmt) {
   RETURN(ExprStmt, transform(stmt->expr));
@@ -405,8 +426,8 @@ StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
   } else if (auto l = dynamic_cast<const DotExpr *>(lhs)) {
     return SPX(lhs, AssignStmt, transform(lhs), transform(rhs));
   } else if (auto l = dynamic_cast<const IdExpr *>(lhs)) {
-    return SPX(lhs, AssignStmt, transform(lhs), transform(rhs), transform(type), false,
-               force);
+    return SPX(lhs, AssignStmt, transform(lhs), transform(rhs), transform(type),
+               false, force);
   } else {
     error(lhs->getSrcInfo(), "invalid assignment");
     return nullptr;
@@ -414,7 +435,8 @@ StmtPtr TransformStmtVisitor::addAssignment(const Expr *lhs, const Expr *rhs,
 }
 
 void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
-                                             vector<StmtPtr> &stmts, bool force) {
+                                             vector<StmtPtr> &stmts,
+                                             bool force) {
   vector<Expr *> lefts;
   if (auto l = dynamic_cast<const TupleExpr *>(lhs)) {
     for (auto &i : l->items) {
@@ -444,29 +466,30 @@ void TransformStmtVisitor::processAssignment(const Expr *lhs, const Expr *rhs,
     // TODO: RHS here (and below) will be transformed twice in order to avoid
     // messing up with unique_ptr. Better solution needed?
     processAssignment(
-        lefts[st], EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, st)).release(),
+        lefts[st],
+        EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, st)).release(),
         stmts, force);
   }
   if (unpack) {
-    processAssignment(
-        unpack->what.get(),
-        EPX(rhs, IndexExpr, transform(rhs),
-            EPX(rhs, SliceExpr, EPX(rhs, IntExpr, st),
-                lefts.size() == st + 1 ? nullptr
-                                       : EPX(rhs, IntExpr, -lefts.size() + st + 1),
-                nullptr))
-            .release(),
-        stmts, force);
+    processAssignment(unpack->what.get(),
+                      EPX(rhs, IndexExpr, transform(rhs),
+                          EPX(rhs, SliceExpr, EPX(rhs, IntExpr, st),
+                              lefts.size() == st + 1
+                                  ? nullptr
+                                  : EPX(rhs, IntExpr, -lefts.size() + st + 1),
+                              nullptr))
+                          .release(),
+                      stmts, force);
     st += 1;
     for (; st < lefts.size(); st++) {
       if (dynamic_cast<UnpackExpr *>(lefts[st])) {
         error(lefts[st]->getSrcInfo(), "two unpack expressions in assignment");
       }
-      processAssignment(
-          lefts[st],
-          EPX(rhs, IndexExpr, transform(rhs), EPX(rhs, IntExpr, -lefts.size() + st))
-              .release(),
-          stmts, force);
+      processAssignment(lefts[st],
+                        EPX(rhs, IndexExpr, transform(rhs),
+                            EPX(rhs, IntExpr, -lefts.size() + st))
+                            .release(),
+                        stmts, force);
     }
   }
 }
@@ -497,7 +520,8 @@ void TransformStmtVisitor::visit(const DelStmt *stmt) {
   // TODO later with types
   if (auto expr = dynamic_cast<const IndexExpr *>(stmt->expr.get())) {
     RETURN(ExprStmt,
-           transform(EP(CallExpr, EP(DotExpr, transform(expr->expr), "__delitem__"),
+           transform(EP(CallExpr,
+                        EP(DotExpr, transform(expr->expr), "__delitem__"),
                         transform(expr->index))));
   } else if (auto expr = dynamic_cast<const IdExpr *>(stmt->expr.get())) {
     RETURN(DelStmt, transform(expr));
@@ -590,11 +614,13 @@ void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
     vector<ExprPtr> args;
     args.push_back(transform(stmt->from));
     args.push_back(EPX(stmt, StringExpr, stmt->name.first));
-    stmts.push_back(SP(AssignStmt, EPX(stmt, IdExpr, "ptr"),
-                       EPX(stmt, CallExpr, EPX(stmt, IdExpr, "_dlsym"), move(args))));
+    stmts.push_back(
+        SP(AssignStmt, EPX(stmt, IdExpr, "ptr"),
+           EPX(stmt, CallExpr, EPX(stmt, IdExpr, "_dlsym"), move(args))));
     // f = function[ARGS](ptr)
     args.clear();
-    args.push_back(stmt->ret ? transform(stmt->ret) : EPX(stmt, IdExpr, "void"));
+    args.push_back(stmt->ret ? transform(stmt->ret)
+                             : EPX(stmt, IdExpr, "void"));
     for (auto &a : stmt->args) {
       args.push_back(transform(a.type));
     }
@@ -614,7 +640,8 @@ void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
     args.clear();
     int ia = 0;
     for (auto &a : stmt->args) {
-      args.push_back(EPX(stmt, IdExpr, a.name != "" ? a.name : format("$a{}", ia++)));
+      args.push_back(
+          EPX(stmt, IdExpr, a.name != "" ? a.name : format("$a{}", ia++)));
     }
     // return f(args)
     auto call = EPX(stmt, CallExpr, EPX(stmt, IdExpr, "f"), move(args));
@@ -630,7 +657,8 @@ void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
       params.push_back(
           {a.name != "" ? a.name : format("$a{}", ia++), transform(a.type)});
     }
-    RETURN(FunctionStmt, stmt->name.second != "" ? stmt->name.second : stmt->name.first,
+    RETURN(FunctionStmt,
+           stmt->name.second != "" ? stmt->name.second : stmt->name.first,
            transform(stmt->ret), vector<string>(), move(params),
            SP(SuiteStmt, move(stmts)), vector<string>());
   } else if (stmt->lang == "c") {
@@ -638,8 +666,8 @@ void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
     for (auto &a : stmt->args) {
       args.push_back({a.name, transform(a.type), transform(a.deflt)});
     }
-    RETURN(ExternImportStmt, stmt->name, transform(stmt->from), transform(stmt->ret),
-           move(args), stmt->lang);
+    RETURN(ExternImportStmt, stmt->name, transform(stmt->from),
+           transform(stmt->ret), move(args), stmt->lang);
   } else if (stmt->lang == "py") {
     vector<StmtPtr> stmts;
     string from = "";
@@ -648,15 +676,16 @@ void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
     } else {
       ERROR(stmt, "invalid pyimport query");
     }
-    auto call = EPX(stmt, CallExpr, // _py_import(LIB)[WHAT].call ( ...
-                    EPX(stmt, DotExpr,
-                        EPX(stmt, IndexExpr,
-                            EPX(stmt, CallExpr, EPX(stmt, IdExpr, "_py_import"),
-                                EPX(stmt, StringExpr, from)),
-                            EPX(stmt, StringExpr, stmt->name.first)),
-                        "call"),
-                    EPX(stmt, CallExpr, // ... x.__to_py__() )
-                        EPX(stmt, DotExpr, EPX(stmt, IdExpr, "x"), "__to_py__")));
+    auto call =
+        EPX(stmt, CallExpr, // _py_import(LIB)[WHAT].call ( ...
+            EPX(stmt, DotExpr,
+                EPX(stmt, IndexExpr,
+                    EPX(stmt, CallExpr, EPX(stmt, IdExpr, "_py_import"),
+                        EPX(stmt, StringExpr, from)),
+                    EPX(stmt, StringExpr, stmt->name.first)),
+                "call"),
+            EPX(stmt, CallExpr, // ... x.__to_py__() )
+                EPX(stmt, DotExpr, EPX(stmt, IdExpr, "x"), "__to_py__")));
     bool isVoid = true;
     if (stmt->ret) {
       if (auto f = dynamic_cast<IdExpr *>(stmt->ret.get())) {
@@ -670,13 +699,15 @@ void TransformStmtVisitor::visit(const ExternImportStmt *stmt) {
       stmts.push_back(
           SP(ReturnStmt,
              EPX(stmt, CallExpr,
-                 EPX(stmt, DotExpr, transform(stmt->ret), "__from_py__"), move(call))));
+                 EPX(stmt, DotExpr, transform(stmt->ret), "__from_py__"),
+                 move(call))));
     } else {
       stmts.push_back(SP(ExprStmt, move(call)));
     }
     vector<Param> params;
     params.push_back({"x", nullptr, nullptr});
-    RETURN(FunctionStmt, stmt->name.second != "" ? stmt->name.second : stmt->name.first,
+    RETURN(FunctionStmt,
+           stmt->name.second != "" ? stmt->name.second : stmt->name.first,
            transform(stmt->ret), vector<string>(), move(params),
            SP(SuiteStmt, move(stmts)), vector<string>{"pyhandle"});
   } else {
@@ -689,7 +720,8 @@ void TransformStmtVisitor::visit(const TryStmt *stmt) {
   for (auto &c : stmt->catches) {
     catches.push_back({c.var, transform(c.exc), transform(c.suite)});
   }
-  RETURN(TryStmt, transform(stmt->suite), move(catches), transform(stmt->finally));
+  RETURN(TryStmt, transform(stmt->suite), move(catches),
+         transform(stmt->finally));
 }
 
 void TransformStmtVisitor::visit(const GlobalStmt *stmt) {
@@ -705,8 +737,8 @@ void TransformStmtVisitor::visit(const FunctionStmt *stmt) {
   for (auto &a : stmt->args) {
     args.push_back({a.name, transform(a.type), transform(a.deflt)});
   }
-  RETURN(FunctionStmt, stmt->name, transform(stmt->ret), stmt->generics, move(args),
-         transform(stmt->suite), stmt->attributes);
+  RETURN(FunctionStmt, stmt->name, transform(stmt->ret), stmt->generics,
+         move(args), transform(stmt->suite), stmt->attributes);
 }
 
 void TransformStmtVisitor::visit(const ClassStmt *stmt) {
@@ -725,7 +757,8 @@ void TransformStmtVisitor::visit(const ClassStmt *stmt) {
         continue;
     error(s->getSrcInfo(), "types can only contain functions");
   }
-  RETURN(ClassStmt, stmt->isType, stmt->name, stmt->generics, move(args), move(suite));
+  RETURN(ClassStmt, stmt->isType, stmt->name, stmt->generics, move(args),
+         move(suite));
 }
 
 void TransformStmtVisitor::visit(const DeclareStmt *stmt) {
@@ -734,10 +767,10 @@ void TransformStmtVisitor::visit(const DeclareStmt *stmt) {
 }
 
 void TransformStmtVisitor::visit(const AssignEqStmt *stmt) {
-  RETURN(
-      AssignStmt, transform(stmt->lhs),
-      EPX(stmt, BinaryExpr, transform(stmt->lhs), stmt->op, transform(stmt->rhs), true),
-      nullptr, true);
+  RETURN(AssignStmt, transform(stmt->lhs),
+         EPX(stmt, BinaryExpr, transform(stmt->lhs), stmt->op,
+             transform(stmt->rhs), true),
+         nullptr, true);
 }
 
 void TransformStmtVisitor::visit(const YieldFromStmt *stmt) {
@@ -755,21 +788,22 @@ void TransformStmtVisitor::visit(const WithStmt *stmt) {
   vector<StmtPtr> content;
   for (int i = stmt->items.size() - 1; i >= 0; i--) {
     vector<StmtPtr> internals;
-    string var =
-        stmt->items[i].second == "" ? getTemporaryVar("with") : stmt->items[i].second;
+    string var = stmt->items[i].second == "" ? getTemporaryVar("with")
+                                             : stmt->items[i].second;
+    internals.push_back(SP(AssignStmt, EPX(stmt, IdExpr, var),
+                           transform(stmt->items[i].first)));
     internals.push_back(
-        SP(AssignStmt, EPX(stmt, IdExpr, var), transform(stmt->items[i].first)));
-    internals.push_back(
-        SP(ExprStmt, EPX(stmt, CallExpr,
-                         EPX(stmt, DotExpr, EPX(stmt, IdExpr, var), "__enter__"))));
+        SP(ExprStmt,
+           EPX(stmt, CallExpr,
+               EPX(stmt, DotExpr, EPX(stmt, IdExpr, var), "__enter__"))));
     internals.push_back(
         SP(TryStmt,
            content.size() ? transform(SP(SuiteStmt, move(content)))
                           : transform(stmt->suite),
            vector<TryStmt::Catch>(),
-           transform(SP(ExprStmt,
-                        EPX(stmt, CallExpr,
-                            EPX(stmt, DotExpr, EPX(stmt, IdExpr, var), "__exit__"))))));
+           transform(SP(ExprStmt, EPX(stmt, CallExpr,
+                                      EPX(stmt, DotExpr, EPX(stmt, IdExpr, var),
+                                          "__exit__"))))));
     content = move(internals);
   }
   vector<IfStmt::If> ifs;
@@ -783,25 +817,27 @@ void TransformStmtVisitor::visit(const PyDefStmt *stmt) {
   for (auto &a : stmt->args) {
     args.push_back(a.name);
   }
-  string code =
-      format("def {}({}):\n{}\n", stmt->name, fmt::join(args, ", "), stmt->code);
+  string code = format("def {}({}):\n{}\n", stmt->name, fmt::join(args, ", "),
+                       stmt->code);
   // DBG("py code:\n{}", code);
   vector<StmtPtr> stmts;
-  stmts.push_back(SP(ExprStmt, EPX(stmt, CallExpr, EPX(stmt, IdExpr, "_py_exec"),
-                                   EPX(stmt, StringExpr, code))));
+  stmts.push_back(
+      SP(ExprStmt, EPX(stmt, CallExpr, EPX(stmt, IdExpr, "_py_exec"),
+                       EPX(stmt, StringExpr, code))));
   // from __main__ pyimport foo () -> ret
   stmts.push_back(transform(SP(ExternImportStmt, make_pair(stmt->name, ""),
-                               EPX(stmt, IdExpr, "__main__"), transform(stmt->ret),
-                               vector<Param>(), "py")));
+                               EPX(stmt, IdExpr, "__main__"),
+                               transform(stmt->ret), vector<Param>(), "py")));
   RETURN(SuiteStmt, move(stmts));
 }
 
 #undef RETURN
-#define RETURN(T, ...)                                                                 \
-  (this->result = fwdSrcInfo(make_unique<T>(__VA_ARGS__), pat->getSrcInfo()));         \
+#define RETURN(T, ...)                                                         \
+  (this->result = fwdSrcInfo(make_unique<T>(__VA_ARGS__), pat->getSrcInfo())); \
   return
 
-TransformPatternVisitor::TransformPatternVisitor(TransformStmtVisitor &stmtVisitor)
+TransformPatternVisitor::TransformPatternVisitor(
+    TransformStmtVisitor &stmtVisitor)
     : stmtVisitor(stmtVisitor) {}
 
 PatternPtr TransformPatternVisitor::transform(const Pattern *ptr) {
@@ -810,7 +846,8 @@ PatternPtr TransformPatternVisitor::transform(const Pattern *ptr) {
   return move(v.result);
 }
 
-vector<PatternPtr> TransformPatternVisitor::transform(const vector<PatternPtr> &pats) {
+vector<PatternPtr>
+TransformPatternVisitor::transform(const vector<PatternPtr> &pats) {
   vector<PatternPtr> r;
   for (auto &e : pats) {
     r.push_back(transform(e));
@@ -818,7 +855,9 @@ vector<PatternPtr> TransformPatternVisitor::transform(const vector<PatternPtr> &
   return r;
 }
 
-void TransformPatternVisitor::visit(const StarPattern *pat) { RETURN(StarPattern, ); }
+void TransformPatternVisitor::visit(const StarPattern *pat) {
+  RETURN(StarPattern, );
+}
 
 void TransformPatternVisitor::visit(const IntPattern *pat) {
   RETURN(IntPattern, pat->value);
@@ -857,7 +896,8 @@ void TransformPatternVisitor::visit(const WildcardPattern *pat) {
 }
 
 void TransformPatternVisitor::visit(const GuardedPattern *pat) {
-  RETURN(GuardedPattern, transform(pat->pattern), stmtVisitor.transform(pat->cond));
+  RETURN(GuardedPattern, transform(pat->pattern),
+         stmtVisitor.transform(pat->cond));
 }
 
 void TransformPatternVisitor::visit(const BoundPattern *pat) {

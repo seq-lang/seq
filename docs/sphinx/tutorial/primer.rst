@@ -55,7 +55,7 @@ expression must have a type that can be inferred at the compile-time.
    """
 
    # The following escape sequences are supported:
-   #   \\, \', \", \a, \b, \f, \n, \r, \t, \v, 
+   #   \\, \', \", \a, \b, \f, \n, \r, \t, \v,
    #   \xHHH (HHH is hex code), \OOO (OOO is octal code)
 
    # Sequence types
@@ -98,13 +98,13 @@ Due to same reasons, you can only iterate over a homogenous tuple.
    t[x]  # compile error; x is not know at the compile time
 
    for i in t:  # compile error: tuple is heterogenous
-       print i 
+       print i
 
    # This is a homogenous tuple (all member types are the same)
-   u = (1, 2, 3)  # type: tuple[int, int, int]. 
+   u = (1, 2, 3)  # type: tuple[int, int, int].
    u[x]  # works because tuple members share the same type regardless of the x
    for i in u:  # works
-       print i 
+       print i
 
 ..
 
@@ -168,32 +168,32 @@ This is the list of binary operators and their magic methods:
 ======== ================ ==================================================
 Operator Magic method     Description
 ======== ================ ==================================================
-``+``    ``__add__``      addition 
-``-``    ``__sub__``      subtraction 
-``*``    ``__mul__``      multiplication) 
-``/``    ``__truediv__``  float division 
-``//``   ``__div__``      integer division 
-``**``   ``__pow__``      exponentiation 
-``%``    ``__mod__``      modulo 
+``+``    ``__add__``      addition
+``-``    ``__sub__``      subtraction
+``*``    ``__mul__``      multiplication)
+``/``    ``__truediv__``  float division
+``//``   ``__div__``      integer division
+``**``   ``__pow__``      exponentiation
+``%``    ``__mod__``      modulo
 ``@``    ``__matmul__``   matrix multiplication;
                           sequence alignment
-``&``    ``__and__``      bitwise and 
-``|``    ``__or__``       bitwise or 
-``^``    ``__xor__``      bitwise xor 
-``<<``   ``__lshift__``   left bit shift 
-``>>``   ``__rshift__``   right bit shift 
-``<``    ``__lt__``       less than 
-``<=``   ``__le__``       less or equal than 
-``>``    ``__gt__``       greater than 
-``>=``   ``__ge__``       greater or equal than 
-``==``   ``__eq__``       equal to 
-``!=``   ``__ne__``       not equal to 
-``in``   ``__contains__`` belongs to 
-``and``  none             boolean and (short-circuits) 
-``or``   none             boolean or (short-circuits) 
+``&``    ``__and__``      bitwise and
+``|``    ``__or__``       bitwise or
+``^``    ``__xor__``      bitwise xor
+``<<``   ``__lshift__``   left bit shift
+``>>``   ``__rshift__``   right bit shift
+``<``    ``__lt__``       less than
+``<=``   ``__le__``       less or equal than
+``>``    ``__gt__``       greater than
+``>=``   ``__ge__``       greater or equal than
+``==``   ``__eq__``       equal to
+``!=``   ``__ne__``       not equal to
+``in``   ``__contains__`` belongs to
+``and``  none             boolean and (short-circuits)
+``or``   none             boolean or (short-circuits)
 ======== ================ ==================================================
 
-Seq also has the following unary operators: 
+Seq also has the following unary operators:
 
 ======== ================ =============================
 Operator Magic method     Description
@@ -274,7 +274,7 @@ But lo and behold! Seq extends the Python conditional syntax with
    match str_expr():  # now it's a str expression
        case 'abc': print "it's ABC time!"
        case 'def' or 'ghi':  # you can chain multiple rules with "or" operator
-           print "it's not ABC time!" 
+           print "it's not ABC time!"
        case s if len(s) > 10: print "so looong!"  # conditional match expression
        case _: assert False
 
@@ -318,7 +318,7 @@ Standard fare:
    a = 10
    while a > 0:  # prints even numbers from 9 to 1
        a -= 1
-       if i % 2 == 1: 
+       if i % 2 == 1:
            continue
        print a
 
@@ -724,7 +724,7 @@ Let’s import some C functions:
 
    # Import and rename function
    cimport puts(cobj) -> void as print_line  # type cobj is C's pointer (void*, char*, etc.)
-   print_line("hi!".ptr)  # prints "hi!". 
+   print_line("hi!".ptr)  # prints "hi!".
                           # Note .ptr at the end of string--- needed to cast Seq's string to char*.
 
 ``cimport`` only works if the symbol is available to the program. If you
@@ -765,7 +765,7 @@ end, you can use Seq’s ``pydef`` block:
 
    import python
    pydef scipy_here_i_come(i: list[list[float]]) -> list[float]:
-       # Code within this block is executed by Python interpreter, 
+       # Code within this block is executed by Python interpreter,
        # and as such it must be valid Python code
        import scipy.linalg
        import numpy as np
@@ -793,7 +793,7 @@ Python’s dataclasses).
 
        def __init__(self: Foo, x: int, y: int):  # constructor
            self.x, self.y = x, y
-       
+
        def method(self: Foo):
            print self.x, self.y
    f = Foo(1, 2)
@@ -820,7 +820,7 @@ methods**:
            self.x, self.y = x, y
        def __init__(self: Foo, x: int, y: float):  # another constructor
            self.x, self.y = x, int(y)
-       
+
        def method(self: Foo):
            print self.x, self.y
    Foo().method()  # prints "0 0"
@@ -847,7 +847,7 @@ Classes create objects that are passed by-reference:
 .. code:: seq
 
    class Point:
-       x: int 
+       x: int
        y: int
        ...
 
