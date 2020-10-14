@@ -42,7 +42,8 @@ class SortedList[T]:
         self._offset = 0
 
     def clear(self):
-        """Remove all values from sorted list.
+        """
+        Remove all values from sorted list.
         Runtime complexity: `O(n)`
         """
         self._len = 0
@@ -58,7 +59,8 @@ class SortedList[T]:
         return self._lists[0][0]
 
     def add(self: SortedList[T], value: T):
-        """Add `value` to sorted list.
+        """
+        Add `value` to sorted list.
         Runtime complexity: `O(log(n))` -- approximate.
         >>> sl = SortedList()
         >>> sl.add(3)
@@ -84,7 +86,8 @@ class SortedList[T]:
 
 
     def _expand(self: SortedList[T], pos: int):
-        """Split sublists with length greater than double the load-factor.
+        """
+        Split sublists with length greater than double the load-factor.
         Updates the index when the sublist length is less than double the load
         level. This requires incrementing the nodes in a traversal from the
         leaf node to the root. For an example traversal see
@@ -103,7 +106,8 @@ class SortedList[T]:
 
 
     def _delete(self: SortedList[T], pos: int, idx: int):
-        """Delete value at the given `(pos, idx)`.
+        """
+        Delete value at the given `(pos, idx)`.
         Combines lists that are less than half the load level.
         Updates the index when the sublist length is more than half the load
         level. This requires decrementing the nodes in a traversal from the

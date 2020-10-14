@@ -300,7 +300,8 @@ cls:
       $loc, Class { class_name = $2; generics = opt_val $3 []; args; members } }
 dataclass_member: class_member { $1 } | decl_statement { Some $1 }
 class_member:
-  | PASS NL | STRING NL { None }
+  | PASS NL { None }
+  | STRING+ NL { Some ($loc, Expr ($loc, String (String.concat "" $1))) }
   | func_statement { Some (List.hd $1) }
 extend: EXTEND expr COLON NL INDENT class_member+ DEDENT { $loc, Extend ($2, filter_opt $6) }
 typ:

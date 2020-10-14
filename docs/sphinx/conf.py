@@ -15,10 +15,11 @@
 import os
 import sys
 
+sys.path.insert(0, os.path.abspath("./_ext"))
 def setup(sphinx):
     sys.path.insert(0, os.path.abspath('.'))
     from seqlex import SeqLexer
-    sphinx.add_lexer("seq", SeqLexer())
+    sphinx.add_lexer("seq", SeqLexer)
 
 
 # -- Project information -----------------------------------------------------
@@ -49,8 +50,9 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.githubpages',
     'sphinx.ext.intersphinx',
-    'breathe',
-    'exhale'
+    'seq'
+    # 'breathe',
+    # 'exhale'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -94,6 +96,7 @@ html_theme = 'sphinx_rtd_theme'
 #
 html_theme_options = {
     'style_nav_header_background': '#333131',
+    "collapse_navigation" : False
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -200,4 +203,4 @@ highlight_language = 'cpp'
 # -- Options for todo extension ----------------------------------------------
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = True
+# todo_include_todos = True

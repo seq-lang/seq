@@ -7,9 +7,7 @@ from algorithms.insertionsort import _insertion_sort
 from algorithms.heapsort import _heap_sort
 
 def _floor_log2(n: int) -> int:
-    """
-        Returns floor(log2(n))
-    """
+    """Returns floor(log2(n))"""
     log = 0
     while True:
         n >>= 1

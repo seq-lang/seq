@@ -593,9 +593,12 @@ void TransformStmtVisitor::visit(const ExtendStmt *stmt) {
   for (auto s : stmt->suite->getStatements()) {
     if (dynamic_cast<FunctionStmt *>(s)) {
       suite->stmts.push_back(transform(s));
-    } else {
-      error(s->getSrcInfo(), "types can be extended with functions only");
+      continue;
     }
+    if (auto e = dynamic_cast<ExprStmt *>(s))
+      if (dynamic_cast<StringExpr *>(e->expr.get()))
+        continue;
+    error(s->getSrcInfo(), "types can be extended with functions only");
   }
   RETURN(ExtendStmt, transform(stmt->what), move(suite));
 }
@@ -747,9 +750,12 @@ void TransformStmtVisitor::visit(const ClassStmt *stmt) {
   for (auto s : stmt->suite->getStatements()) {
     if (dynamic_cast<FunctionStmt *>(s)) {
       suite->stmts.push_back(transform(s));
-    } else {
-      error(s->getSrcInfo(), "types can only contain functions");
+      continue;
     }
+    if (auto e = dynamic_cast<ExprStmt *>(s))
+      if (dynamic_cast<StringExpr *>(e->expr.get()))
+        continue;
+    error(s->getSrcInfo(), "types can only contain functions");
   }
   RETURN(ClassStmt, stmt->isType, stmt->name, stmt->generics, move(args),
          move(suite));

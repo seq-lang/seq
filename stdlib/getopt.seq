@@ -1,4 +1,5 @@
-"""Parser for command line options.
+"""
+Parser for command line options.
 
 This module helps scripts to parse the command line arguments in
 sys.argv.  It supports the same conventions as the Unix getopt()
@@ -104,8 +105,7 @@ def getopt(
     shortopts: str,
     longopts: list[str] = list[str]()
 ):
-    """getopt(args, options[, long_options]) -> opts, args
-
+    """
     Parses command line options and parameter list.  args is the
     argument list to be parsed, without the leading reference to the
     running program.  Typically, this means "sys.argv[1:]".  shortopts

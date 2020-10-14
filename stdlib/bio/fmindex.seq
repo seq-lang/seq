@@ -63,6 +63,9 @@ def _unpickle_ptr[T](jar: Jar):
     return (p, n)
 
 class bntseq:
+    '''
+    Arbitrary-length 2-bit packed sequence, adapted from BWA
+    '''
     _pac: ptr[u8]
     _m_pac: int
     _l_pac: int
@@ -290,6 +293,9 @@ class bntseq:
         return seq(p, n)
 
 type FMInterval(_lo: int, _hi: int):
+    '''
+    FM-index interval
+    '''
     def __init__(self: FMInterval) -> FMInterval:
         return (-2, -1)
 
@@ -300,6 +306,9 @@ type FMInterval(_lo: int, _hi: int):
         return self._hi - self._lo + 1 if self else 0
 
 type FMDInterval(_lo: int, _lo_rev: int, _size: int):
+    '''
+    FMD-index interval
+    '''
     def __init__(self: FMDInterval) -> FMDInterval:
         return (0, 0, 0)
 
@@ -310,15 +319,27 @@ type FMDInterval(_lo: int, _lo_rev: int, _size: int):
         return self._size
 
     def forward(self: FMDInterval):
+        '''
+        Forward-direction `FMInterval` corresponding to this interval
+        '''
         return FMInterval(self._lo, self._lo + self._size - 1)
 
     def revcomp(self: FMDInterval):
+        '''
+        Reverse-direction `FMInterval` corresponding to this interval
+        '''
         return FMInterval(self._lo_rev, self._lo_rev + self._size - 1)
 
     def __invert__(self: FMDInterval):
+        '''
+        `FMDInterval` for the reverse complemented sequence
+        '''
         return FMDInterval(self._lo_rev, self._lo, self._size)
 
 type SMEM(_intv: FMDInterval, _start: u32, _stop: u32):
+    '''
+    Super-Maximal Exact Match (SMEM)
+    '''
     def __init__(self: SMEM, interval: FMDInterval, start: int, stop: int) -> SMEM:
         if not (0 <= start <= stop):
             raise ValueError('invalid SMEM start and stop coordinates')
@@ -338,14 +359,23 @@ type SMEM(_intv: FMDInterval, _start: u32, _stop: u32):
 
     @property
     def interval(self: SMEM):
+        '''
+        Corresponding `FMDInterval`
+        '''
         return self._intv
 
     @property
     def start(self: SMEM):
+        '''
+        SMEM start position on query (0-based)
+        '''
         return int(self._start)
 
     @property
     def stop(self: SMEM):
+        '''
+        SMEM stop position on query (non-inclusive; 0-based)
+        '''
         return int(self._stop)
 
 def _extend(self, ik: FMDInterval, c: int):
@@ -376,7 +406,11 @@ def smems(self,
           mems: list[SMEM] = None,
           prev: list[SMEM] = None,
           curr: list[SMEM] = None):
-    # adapted from BWA-MEM's bwt_smem1a()
+    '''
+    Returns a list of SMEMs given an FsM-index or FMD-index (`self`), a
+    query sequence (`q`) and a start position (`x`; 0-based).
+    Adapted from BWA-MEM's `bwt_smem1a()`.
+    '''
     l = len(q)
     if x < 0:
         x += l
@@ -459,6 +493,10 @@ OCC_INTERVAL   =  1 << OCC_INTV_SHIFT
 OCC_INTV_MASK  = OCC_INTERVAL - 1
 
 class FMDIndex:
+    '''
+    FMD-index: a bi-directional FM-index. Based on BWA-MEM's implementation.
+    Note that this implementation *does* perform SA-compression.
+    '''
     _seq_len: int
     _bwt_size: int
     _primary: int
@@ -516,10 +554,16 @@ class FMDIndex:
         self._bntseq = None
 
     def __init__(self: FMDIndex, path: str):
+        '''
+        Constructs an FM-index from the FASTA file at the specified path
+        '''
         self._bntseq = bntseq(path)
         self._init_from_enc(self._bntseq._pac, self._bntseq._l_pac)
 
     def __init__(self: FMDIndex, sequence: seq):
+        '''
+        Constructs an FM-index from the specified sequence
+        '''
         self._bntseq = bntseq(sequence)
         self._init_from_enc(self._bntseq._pac, self._bntseq._l_pac)
 
@@ -836,11 +880,17 @@ class FMDIndex:
         return FMInterval(k, l)
 
     def occ(self: FMDIndex, k: int, c: seq):
+        '''
+        FM-index *occ* operation
+        '''
         if len(c) != 1:
             raise ValueError("occ() expects length-1 sequence argument")
         return self._occ1(k, _enc(c._at(0)))
 
     def less(self: FMDIndex, c: seq):
+        '''
+        FM-index *less* operation
+        '''
         if len(c) != 1:
             raise ValueError("less() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -849,6 +899,9 @@ class FMDIndex:
         return self._L2[b + 1]
 
     def interval(self: FMDIndex, c: seq):
+        '''
+        `FMInterval` corresponding to given length-1 sequence
+        '''
         if len(c) != 1:
             raise ValueError("interval() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -859,6 +912,9 @@ class FMDIndex:
         return FMInterval(c0, c1)
 
     def biinterval(self: FMDIndex, c: seq):
+        '''
+        `FMDInterval` corresponding to given length-1 sequence
+        '''
         b = _enc(c._at(0))
         if b > 3:
             return FMDInterval()
@@ -875,9 +931,15 @@ class FMDIndex:
               mems: list[SMEM] = None,
               prev: list[SMEM] = None,
               curr: list[SMEM] = None):
+        '''
+        See `smems` function
+        '''
         return smems(self, q, x, min_intv, min_seed, mems, prev, curr)
 
     def update(self: FMDIndex, intv: FMInterval, c: seq):
+        '''
+        Returns given `FMInterval` extended by base `c`
+        '''
         if len(c) != 1:
             raise ValueError("update() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -891,6 +953,9 @@ class FMDIndex:
         return FMInterval(k, l)
 
     def biupdate(self: FMDIndex, intv: FMDInterval, c: seq):
+        '''
+        Returns given `FMDInterval` extended by base `c`
+        '''
         if len(c) != 1:
             raise ValueError("biupdate() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -899,9 +964,15 @@ class FMDIndex:
         return _extend(self, intv, b)
 
     def __getitem__(self: FMDIndex, x: tuple[FMInterval, seq]):
+        '''
+        Equivalent to `self.update(x[0], x[1])`.
+        '''
         return self.update(x[0], x[1])
 
     def __getitem__(self: FMDIndex, x: tuple[FMDInterval, seq]):
+        '''
+        Equivalent to `self.biupdate(x[0], x[1])`.
+        '''
         return self.biupdate(x[0], x[1])
 
     def _get_interval(self: FMDIndex, s: seq):
@@ -915,15 +986,33 @@ class FMDIndex:
         return intv
 
     def __getitem__(self: FMDIndex, intv: FMInterval):
+        '''
+        Iterator over all 0-based positions from specified interval
+        '''
         lo, hi = intv
         while lo <= hi:
             yield int(self._sa_get(lo))
             lo += 1
 
     def __getitem__(self: FMDIndex, s: seq):
+        '''
+        Iterator over all 0-based positions at which the given
+        sequence appears
+        '''
         return self[self._get_interval(s)]
 
+    def count(self: FMDIndex, s: seq):
+        '''
+        Returns how many times the given sequence appears in the index
+        '''
+        return len(self._get_interval(s))
+
     def results(self: FMDIndex, intv: FMInterval, both_strands: bool = False):
+        '''
+        Iterator over tuples (contig ID (`int`), contig name (`str`), 0-based position (`int`), reversed? (`bool`))
+        tuples corresponding to specified interval. `both_strands` determines whether to
+        include reverse complemented results.
+        '''
         lo, hi = intv
         while lo <= hi:
             pos, is_rev = self._bntseq.depos(self._sa_get(lo))
@@ -934,10 +1023,18 @@ class FMDIndex:
             lo += 1
 
     def loci(self: FMDIndex, intv: FMInterval, both_strands: bool = True):
+        '''
+        Iterator over `Locus` values contained in the specified interval.
+        `both_strands` determines whether to include reverse complemented results.
+        '''
         for rid, name, pos, is_rev in self.results(intv, both_strands):
             yield Locus(rid, -pos if is_rev else pos)
 
     def biresults(self: FMDIndex, smem: SMEM):
+        '''
+        Iterator over tuples (contig ID (`int`), contig name (`str`), 0-based position (`int`), reversed? (`bool`))
+        tuples corresponding to specified interval.
+        '''
         lo, lo_rev, size = smem.interval
         hi = lo + size - 1
         l = len(smem)
@@ -951,13 +1048,24 @@ class FMDIndex:
             lo += 1
 
     def biloci(self: FMDIndex, intv: FMDInterval):
+        '''
+        Iterator over `Locus` values contained in the specified interval.
+        '''
         for rid, name, pos, is_rev in self.biresults(intv):
             yield Locus(rid, -pos if is_rev else pos)
 
     def locate(self: FMDIndex, s: seq, both_strands: bool = False):
+        '''
+        `results` of interval corresponding to given sequence
+        '''
         return self.results(self._get_interval(s), both_strands)
 
     def sequence(self: FMDIndex, start: int, stop: int, rid: int = -1, name: str = ''):
+        '''
+        Obtains the underlying sequence from this index given 0-based `start` and `stop`
+        (non-inclusive) positions and either contig ID `rid` or contig name `name`.
+        Note that ambiguous bases are randomly replaced with A/C/G/T.
+        '''
         if rid >= 0 and name:
             raise ValueError("cannot specify both 'rid' and 'name' in call to sequence()")
 
@@ -978,16 +1086,26 @@ class FMDIndex:
         return self._bntseq.get_seq(startx, stopx)
 
     def contigs(self: FMDIndex):
+        '''
+        Iterator over `Contig`s contained in this index
+        '''
         i = 0
         for ann in self._bntseq._anns:
             yield Contig(tid=i, name=ann._name, len=ann._len)
             i += 1
 
     def contig(self: FMDIndex, rid: int):
+        '''
+        Returns the `Contig` with the specified ID
+        '''
         ann = self._bntseq._anns[rid]
         return Contig(tid=rid, name=ann._name, len=ann._len)
 
 class FMIndex:
+    '''
+    FM-index data structure.
+    Note that this implementation *does not* perform SA-compression.
+    '''
     _seq_len: int
     _bwt_size: int
     _n_occ: int
@@ -1191,6 +1309,9 @@ class FMIndex:
         self._FMD = False
 
     def __init__(self: FMIndex, s: seq):
+        '''
+        Constructs an FM-index from the specified sequence
+        '''
         if s.N():
             raise ValueError("cannot build FM-index for sequence containing ambiguous bases")
         n = len(s)
@@ -1211,10 +1332,17 @@ class FMIndex:
         self._bntseq = None
 
     def __init__(self: FMIndex, path: str):
+        '''
+        Constructs an FM-index from the FASTA file at the specified path
+        '''
         self._bntseq = bntseq(path)
         self._init_from_enc(self._bntseq._pac, self._bntseq._l_pac, FMD=False, packed=True)
 
     def __init__(self: FMIndex, path: str, FMD: bool):
+        '''
+        Constructs an FM-index from the FASTA file at the specified path.
+        `FMD` controls whether this index should be bi-directional.
+        '''
         self._bntseq = bntseq(path)
         self._init_from_enc(self._bntseq._pac, self._bntseq._l_pac, FMD=FMD, packed=True)
 
@@ -1252,11 +1380,17 @@ class FMIndex:
         return (self._occ4(k), self._occ4(l))
 
     def occ(self: FMIndex, k: int, c: seq):
+        '''
+        FM-index *occ* operation
+        '''
         if len(c) != 1:
             raise ValueError("occ() expects length-1 sequence argument")
         return self._occ1(k, _enc(c._at(0)))
 
     def less(self: FMDIndex, c: seq):
+        '''
+        FM-index *less* operation
+        '''
         if len(c) != 1:
             raise ValueError("less() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -1265,6 +1399,9 @@ class FMIndex:
         return self._L2[b + 1]
 
     def interval(self: FMIndex, c: seq):
+        '''
+        `FMInterval` corresponding to given length-1 sequence
+        '''
         if len(c) != 1:
             raise ValueError("interval() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -1279,6 +1416,9 @@ class FMIndex:
             raise ValueError("FMIndex instance is not FMD-index")
 
     def biinterval(self: FMIndex, c: seq):
+        '''
+        `FMDInterval` corresponding to given length-1 sequence
+        '''
         self._fmd_check()
         b = _enc(c._at(0))
         if b > 3:
@@ -1296,9 +1436,15 @@ class FMIndex:
               mems: list[SMEM] = None,
               prev: list[SMEM] = None,
               curr: list[SMEM] = None):
+        '''
+        See `smems` function
+        '''
         return smems(self, q, x, min_intv, min_seed, mems, prev, curr)
 
     def update(self: FMIndex, intv: FMInterval, c: seq):
+        '''
+        Returns given `FMInterval` extended by base `c`
+        '''
         if len(c) != 1:
             raise ValueError("update() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -1311,6 +1457,9 @@ class FMIndex:
         return FMInterval(c0 + occ1 + 1, c0 + occ2)
 
     def biupdate(self: FMIndex, intv: FMDInterval, c: seq):
+        '''
+        Returns given `FMDInterval` extended by base `c`
+        '''
         self._fmd_check()
         if len(c) != 1:
             raise ValueError("biupdate() expects length-1 sequence argument")
@@ -1320,9 +1469,15 @@ class FMIndex:
         return _extend(self, intv, b)
 
     def __getitem__(self: FMIndex, x: tuple[FMInterval, seq]):
+        '''
+        Equivalent to `self.update(x[0], x[1])`.
+        '''
         return self.update(x[0], x[1])
 
     def __getitem__(self: FMIndex, x: tuple[FMDInterval, seq]):
+        '''
+        Equivalent to `self.biupdate(x[0], x[1])`.
+        '''
         return self.biupdate(x[0], x[1])
 
     def __prefetch__(self: FMIndex, x: tuple[FMInterval, seq]):
@@ -1369,18 +1524,33 @@ class FMIndex:
         return intv
 
     def __getitem__(self: FMIndex, intv: FMInterval):
+        '''
+        Iterator over all 0-based positions from specified interval
+        '''
         lo, hi = intv
         while lo <= hi:
             yield int(self._get_sa(lo))
             lo += 1
 
     def __getitem__(self: FMIndex, s: seq):
+        '''
+        Iterator over all 0-based positions at which the given
+        sequence appears
+        '''
         return self[self._get_interval(s)]
 
     def count(self: FMIndex, s: seq):
+        '''
+        Returns how many times the given sequence appears in the index
+        '''
         return len(self._get_interval(s))
 
     def results(self: FMIndex, intv: FMInterval):
+        '''
+        Iterator over tuples (contig ID (`int`), contig name (`str`), 0-based position (`int`), reversed? (`bool`))
+        tuples corresponding to specified interval. `both_strands` determines whether to
+        include reverse complemented results.
+        '''
         if self._bntseq is None:
             raise ValueError("results() requires FASTA-based FM-index")
         lo, hi = intv
@@ -1395,12 +1565,20 @@ class FMIndex:
             lo += 1
 
     def loci(self: FMIndex, intv: FMInterval):
+        '''
+        Iterator over `Locus` values contained in the specified interval.
+        `both_strands` determines whether to include reverse complemented results.
+        '''
         if self._bntseq is None:
             raise ValueError("loci() requires FASTA-based FM-index")
         for rid, name, pos in self.results(intv):
             yield Locus(rid, pos)
 
     def biresults(self: FMIndex, smem: SMEM):
+        '''
+        Iterator over tuples (contig ID (`int`), contig name (`str`), 0-based position (`int`), reversed? (`bool`))
+        tuples corresponding to specified interval.
+        '''
         self._fmd_check()
         if self._bntseq is None:
             raise ValueError("biresults() requires FASTA-based FM-index")
@@ -1417,17 +1595,28 @@ class FMIndex:
             lo += 1
 
     def biloci(self: FMIndex, intv: FMDInterval):
+        '''
+        Iterator over `Locus` values contained in the specified interval.
+        '''
         if self._bntseq is None:
             raise ValueError("biloci() requires FASTA-based FM-index")
         for rid, name, pos, is_rev in self.biresults(intv):
             yield Locus(rid, -pos if is_rev else pos)
 
     def locate(self: FMIndex, s: seq):
+        '''
+        `results` of interval corresponding to given sequence
+        '''
         if self._bntseq is None:
             raise ValueError("locate() requires FASTA-based FM-index")
         return self.results(self._get_interval(s))
 
     def sequence(self: FMIndex, start: int, stop: int, rid: int = -1, name: str = ''):
+        '''
+        Obtains the underlying sequence from this index given 0-based `start` and `stop`
+        (non-inclusive) positions and either contig ID `rid` or contig name `name`.
+        Note that ambiguous bases are randomly replaced with A/C/G/T.
+        '''
         if self._bntseq is None:
             raise ValueError("sequence() requires FASTA-based FM-index")
         if rid >= 0 and name:
@@ -1450,6 +1639,9 @@ class FMIndex:
         return self._bntseq.get_seq(startx, stopx)
 
     def contigs(self: FMIndex):
+        '''
+        Iterator over `Contig`s contained in this index
+        '''
         if self._bntseq is None:
             raise ValueError("contigs() requires FASTA-based FM-index")
         i = 0
@@ -1458,5 +1650,8 @@ class FMIndex:
             i += 1
 
     def contig(self: FMIndex, rid: int):
+        '''
+        Returns the `Contig` with the specified ID
+        '''
         ann = self._bntseq._anns[rid]
         return Contig(tid=rid, name=ann._name, len=ann._len)

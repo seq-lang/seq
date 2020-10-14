@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
   config::config().profile = profile.getValue();
 
   if (docstr.getValue()) {
-    generateDocstr(input);
+    generateDocstr(argv[0]);
     return EXIT_SUCCESS;
   }
 

@@ -1,6 +1,7 @@
 #include "util/fmt/format.h"
 #include <libgen.h>
 #include <string>
+#include <sys/stat.h>
 
 #include "lang/seq.h"
 #include "parser/common.h"
@@ -132,6 +133,42 @@ string executable_path(const char *argv0) {
 #else
 string executable_path(const char *argv0) { return string(argv0); }
 #endif
+
+string getImportFile(const string &argv0, const string &what,
+                     const string &relativeTo, bool forceStdlib) {
+  using fmt::format;
+  vector<string> paths;
+  char abs[PATH_MAX + 1];
+  if (!forceStdlib) {
+    realpath(relativeTo.c_str(), abs);
+    auto parent = dirname(abs);
+    paths.push_back(format("{}/{}.seq", parent, what));
+    paths.push_back(format("{}/{}/__init__.seq", parent, what));
+  }
+  if (auto c = getenv("SEQ_PATH")) {
+    char abs[PATH_MAX];
+    realpath(c, abs);
+    paths.push_back(format("{}/{}.seq", abs, what));
+    paths.push_back(format("{}/{}/__init__.seq", abs, what));
+  }
+  if (argv0 != "") {
+    for (auto loci : {"../lib/seq/stdlib", "../stdlib", "stdlib"}) {
+      strncpy(abs, executable_path(argv0.c_str()).c_str(), PATH_MAX);
+      auto parent = format("{}/{}", dirname(abs), loci);
+      realpath(parent.c_str(), abs);
+      paths.push_back(format("{}/{}.seq", abs, what));
+      paths.push_back(format("{}/{}/__init__.seq", abs, what));
+    }
+  }
+  // for (auto &x: paths) DBG("-- {}", x);
+  for (auto &p : paths) {
+    struct stat buffer;
+    if (!stat(p.c_str(), &buffer)) {
+      return p;
+    }
+  }
+  return "";
+}
 
 } // namespace ast
 } // namespace seq

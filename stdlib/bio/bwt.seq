@@ -701,6 +701,9 @@ def _saisxx_bwt(T: ptr[byte], n: int, k: int = 256) -> ptr[byte]:
 
 extend seq:
     def suffix_array(self: seq):
+        '''
+        Suffix array of this sequence as a list of integers
+        '''
         p = self.ptr
         n = self.len
         if n < 0:  # revcomp'd
@@ -710,6 +713,9 @@ extend seq:
         return list[int](array[int](SA, n), n)
 
     def bwt(self: seq):
+        '''
+        Burrows-Wheeler transform of this sequence (contains `$`)
+        '''
         p = self.ptr
         n = self.len
         if n < 0:  # revcomp'd
@@ -719,9 +725,10 @@ extend seq:
         return seq(B, n + 1)
 
     def lcp(self: seq, sa: list[int]):
-        """
-        https://rahmannlab.gitlab.io/algorithmen-auf-sequenzen/pdfs/skript-aas.pdf, p. 61
-        """
+        '''
+        Longest common prefix array based on suffix array
+        [https://rahmannlab.gitlab.io/algorithmen-auf-sequenzen/pdfs/skript-aas.pdf](https://rahmannlab.gitlab.io/algorithmen-auf-sequenzen/pdfs/skript-aas.pdf), p. 61
+        '''
         n = len(self)
         rank = [0] * n
         for r in range(n):
@@ -739,12 +746,18 @@ extend seq:
 from bio.pseq import pseq
 extend pseq:
     def suffix_array(self: pseq):
+        '''
+        Suffix array of this sequence as a list of integers
+        '''
         p = self.ptr
         n = self.len
         SA = _saisxx(p, n)
         return list[int](array[int](SA, n), n)
 
     def bwt(self: pseq):
+        '''
+        Burrows-Wheeler transform of this sequence (contains `$`)
+        '''
         p = self.ptr
         n = self.len
         B = _saisxx_bwt(p, n)

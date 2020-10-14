@@ -9,13 +9,12 @@ Source code is available `on GitHub <https://github.com/seq-lang/seq>`_. You can
    :maxdepth: 1
 
    intro
-   tutorial
+   tutorial/index
    cookbook
    python
    embed
    build
-   internals
-   api/doxygen
+   stdlib/index
 
 Frequently Asked Questions
 --------------------------
