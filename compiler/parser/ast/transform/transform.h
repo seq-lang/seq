@@ -25,6 +25,7 @@ namespace ast {
 
 class TransformVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr> {
   std::shared_ptr<TransformContext> ctx;
+  std::shared_ptr<std::vector<StmtPtr>> prependStmts;
   ExprPtr resultExpr;
   StmtPtr resultStmt;
   PatternPtr resultPattern;
@@ -46,7 +47,8 @@ private:
   void defaultVisit(const Pattern *p) override;
 
 public:
-  TransformVisitor(std::shared_ptr<TransformContext> ctx);
+  TransformVisitor(std::shared_ptr<TransformContext> ctx,
+                   std::shared_ptr<std::vector<StmtPtr>> stmts = nullptr);
   static StmtPtr apply(std::shared_ptr<Cache> cache, StmtPtr s);
 
   ExprPtr transform(const ExprPtr &e) override;

@@ -6,7 +6,7 @@ print a  #: 5
 
 #%% none_unbound
 a = None
-#! ERROR: cannot resolve unbound variables
+#! ERROR: cannot resolve 1 unbound variables
 
 #%% bool
 a = True

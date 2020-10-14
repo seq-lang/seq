@@ -3,12 +3,12 @@ import sys
 class AVLNode[K,V]:
     key: K
     value: V
-    parent: AVLNode[K,V]
-    left: AVLNode[K,V]
-    right: AVLNode[K,V]
+    parent: Optional[AVLNode[K,V]]
+    left: Optional[AVLNode[K,V]]
+    right: Optional[AVLNode[K,V]]
     height: int
 
-    def __init__(self: AVLNode[K,V], parent: AVLNode[K,V], k: K, v: V):
+    def __init__(self: AVLNode[K,V], parent: Optional[AVLNode[K,V]], k: K, v: V):
         self.key = k
         self.value = v
         self.parent = parent
@@ -16,7 +16,7 @@ class AVLNode[K,V]:
         self.right = None
         self.height = -1
 
-    def find(self, k) -> AVLNode[K,V]:
+    def find(self, k):
         if k == self.key:
             return self
         elif k < self.key:
@@ -76,7 +76,7 @@ class AVLNode[K,V]:
             self.key, s.key = s.key, self.key
             return s.delete()
 
-    def __iter__(self: AVLNode[K,V]) -> AVLNode[K,V]:
+    def __iter__(self: AVLNode[K,V]):
         if self.left:
             for i in self.left:
                 yield i
@@ -95,17 +95,17 @@ def update_height(node):
     node.height = max(height(node.left), height(node.right)) + 1
 
 class AVL[K,V]:
-    root: AVLNode[K,V]
+    root: Optional[AVLNode[K,V]]
 
     def __init__(self: AVL[K,V]):
         self.root = None
 
-    def find(self, k) -> AVLNode[K,V]:
+    def find(self, k):
         if not self.root:
             return None
         return self.root.find(k)
 
-    def find_min(self) -> AVLNode[K,V]:
+    def find_min(self):
         if not self.root:
             return None
         return self.root.find_min()

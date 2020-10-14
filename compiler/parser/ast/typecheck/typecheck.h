@@ -28,6 +28,7 @@ namespace ast {
 
 class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr> {
   std::shared_ptr<TypeContext> ctx;
+  std::shared_ptr<std::vector<StmtPtr>> prependStmts;
   ExprPtr resultExpr;
   StmtPtr resultStmt;
   PatternPtr resultPattern;
@@ -50,9 +51,9 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
                      const ExprPtr &index);
   ExprPtr visitDot(const ExprPtr &expr, const std::string &member,
                    std::vector<CallExpr::Arg> *args = nullptr);
-  std::string generatePartialStub(const std::string &mask);
+  std::string generatePartialStub(const std::string &mask, const std::string &oldMask);
   std::vector<StmtPtr> parseClass(const ClassStmt *stmt);
-  ExprPtr parseCall(const CallExpr *expr, types::TypePtr pipelineArg = nullptr);
+  ExprPtr parseCall(const CallExpr *expr);
 
   void defaultVisit(const Expr *e) override;
   void defaultVisit(const Stmt *s) override;
@@ -60,7 +61,8 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
 
 public:
   static StmtPtr apply(std::shared_ptr<Cache> cache, StmtPtr stmts);
-  TypecheckVisitor(std::shared_ptr<TypeContext> ctx);
+  TypecheckVisitor(std::shared_ptr<TypeContext> ctx,
+                   std::shared_ptr<std::vector<StmtPtr>> stmts = nullptr);
 
   ExprPtr transform(const ExprPtr &e) override;
   StmtPtr transform(const StmtPtr &s) override;

@@ -46,7 +46,11 @@ namespace ast {
 
 using namespace types;
 
-TransformVisitor::TransformVisitor(shared_ptr<TransformContext> ctx) : ctx(ctx) {}
+TransformVisitor::TransformVisitor(shared_ptr<TransformContext> ctx,
+                                   shared_ptr<vector<StmtPtr>> stmts)
+    : ctx(ctx) {
+  prependStmts = stmts ? stmts : make_shared<vector<StmtPtr>>();
+}
 
 StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s) {
   auto suite = make_unique<SuiteStmt>();
@@ -130,7 +134,7 @@ ExprPtr TransformVisitor::transform(const ExprPtr &expr) {
 ExprPtr TransformVisitor::transform(const ExprPtr &expr, bool allowTypes) {
   if (!expr)
     return nullptr;
-  TransformVisitor v(ctx);
+  TransformVisitor v(ctx, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
   expr->accept(v);
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
@@ -152,13 +156,18 @@ StmtPtr TransformVisitor::transform(const StmtPtr &stmt) {
   TransformVisitor v(ctx);
   v.setSrcInfo(stmt->getSrcInfo());
   stmt->accept(v);
+  if (v.prependStmts->size()) {
+    if (v.resultStmt)
+      v.prependStmts->push_back(move(v.resultStmt));
+    v.resultStmt = N<SuiteStmt>(move(*v.prependStmts));
+  }
   return move(v.resultStmt);
 }
 
 PatternPtr TransformVisitor::transform(const PatternPtr &pat) {
   if (!pat)
     return nullptr;
-  TransformVisitor v(ctx);
+  TransformVisitor v(ctx, prependStmts);
   v.setSrcInfo(pat->getSrcInfo());
   pat->accept(v);
   return move(v.resultPattern);
@@ -342,9 +351,6 @@ void TransformVisitor::visit(const GeneratorExpr *expr) {
     prev->stmts.push_back(
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "append"), clone(expr->expr))));
     stmts.push_back(transform(suite));
-    LOG("-- {}", expr->toString());
-    for (auto &x : stmts)
-      LOG("<> {}", x->toString());
     resultExpr = N<StmtExpr>(move(stmts), transform(var));
   } else if (expr->kind == GeneratorExpr::SetGenerator) {
     stmts.push_back(
@@ -596,14 +602,13 @@ void TransformVisitor::visit(const LambdaExpr *expr) {
   vector<StmtPtr> stmts;
   stmts.push_back(N<ReturnStmt>(clone(expr->expr)));
   auto c = makeAnonFn(move(stmts), expr->vars);
-  auto cc = CAST(CAST(c, StmtExpr)->expr, CallExpr);
-
+  auto cc = CAST(c, CallExpr);
   if (cc->args.size()) { // create partial call
     for (int i = 0; i < expr->vars.size(); i++)
       cc->args.insert(cc->args.begin(), {"", N<EllipsisExpr>()});
     resultExpr = transform(c);
   } else {
-    resultExpr = transform(cc->expr);
+    resultExpr = move(cc->expr);
   }
 }
 
@@ -1030,18 +1035,35 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
                    N<SuiteStmt>(vector<StmtPtr>()), stmt->attributes);
 
   vector<StmtPtr> fns;
+  ExprPtr codeType = clone(ctx->bases.back().ast);
+  vector<string> magics{};
   if (!in(stmt->attributes, "internal")) {
-    ExprPtr codeType = clone(ctx->bases.back().ast);
-    vector<string> magics{};
-    if (!stmt->isRecord)
-      magics = {"new", "init", "raw", "pickle", "unpickle"};
-    else
-      magics = {"new",      "str",   "len",     "hash",   "iter",    "getitem",
-                "contains", "eq",    "ne",      "lt",     "gt",      "le",
-                "ge",       "to_py", "from_py", "pickle", "unpickle"};
-    for (auto &m : magics)
-      fns.push_back(codegenMagic(m, ctx->bases.back().ast, stmt->args, stmt->isRecord));
+    if (!stmt->isRecord) {
+      magics = {"new", "init", "raw"};
+      if (in(stmt->attributes, "total_ordering"))
+        for (auto &i : {"eq", "ne", "lt", "gt", "le", "ge"})
+          magics.push_back(i);
+      if (!in(stmt->attributes, "no_pickle"))
+        for (auto &i : {"pickle", "unpickle"})
+          magics.push_back(i);
+    } else {
+      magics = {"new", "str", "len", "hash"};
+      if (!in(stmt->attributes, "no_total_ordering"))
+        for (auto &i : {"eq", "ne", "lt", "gt", "le", "ge"})
+          magics.push_back(i);
+      if (!in(stmt->attributes, "no_pickle"))
+        for (auto &i : {"pickle", "unpickle"})
+          magics.push_back(i);
+      if (!in(stmt->attributes, "no_container"))
+        for (auto &i : {"iter", "getitem", "contains"})
+          magics.push_back(i);
+      if (!in(stmt->attributes, "no_python"))
+        for (auto &i : {"to_py", "from_py"})
+          magics.push_back(i);
+    }
   }
+  for (auto &m : magics)
+    fns.push_back(codegenMagic(m, ctx->bases.back().ast, stmt->args, stmt->isRecord));
   fns.push_back(clone(stmt->suite));
   auto suite = N<SuiteStmt>(vector<StmtPtr>{});
   for (auto &s : fns)
@@ -1561,14 +1583,14 @@ ExprPtr TransformVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
   vector<Param> params;
   vector<CallExpr::Arg> args;
 
-  string name = getTemporaryVar("lambda");
+  string name = getTemporaryVar("lambda", '.');
   ctx->captures.push_back({});
+  for (auto &s : vars)
+    params.push_back({s, nullptr, nullptr});
   auto fs =
       transform(N<FunctionStmt>(name, nullptr, vector<Param>{}, move(params),
                                 N<SuiteStmt>(move(stmts)), vector<string>{".inline"}));
   auto f = CAST(fs, FunctionStmt);
-  for (auto &s : vars)
-    f->args.push_back({s, nullptr, nullptr});
   for (auto &c : ctx->captures.back()) {
     f->args.push_back({c, nullptr, nullptr});
     args.push_back({"", N<IdExpr>(c)});
@@ -1576,9 +1598,9 @@ ExprPtr TransformVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
   ((FunctionStmt *)(ctx->cache->asts[f->name].get()))->args = clone_nop(f->args);
   ctx->captures.pop_back();
 
-  vector<StmtPtr> s;
-  s.push_back(move(fs));
-  return N<StmtExpr>(move(s), N<CallExpr>(N<IdExpr>(name), move(args)));
+  prependStmts->push_back(move(fs));
+
+  return N<CallExpr>(N<IdExpr>(name), move(args));
 }
 
 } // namespace ast

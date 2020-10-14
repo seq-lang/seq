@@ -16,6 +16,7 @@
 #include "parser/common.h"
 
 using fmt::format;
+using std::function;
 using std::get;
 using std::make_shared;
 using std::make_unique;
@@ -118,11 +119,16 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
           vector<seq::types::Type *> types;
           auto p = t->parent;
           assert(in(ast->attributes, ".class"));
-          if (!in(ast->attributes, ".method")) // hack for non-generic types
-            p = ctx->cache->realizations[ast->attributes[".class"]]
-                                        [ast->attributes[".class"]];
-          seqassert(p && p->getClass(), "parent must be set ({})",
-                    p ? p->toString() : "-");
+          if (!in(ast->attributes, ".method")) { // hack for non-generic types
+            for (auto &x : ctx->cache->realizations[ast->attributes[".class"]]) {
+              if (startswith(t->realizeString(), x.first)) {
+                p = x.second;
+                break;
+              }
+            }
+          }
+          seqassert(p && p->getClass(), "parent must be set ({}) for {}; parent={}",
+                    p ? p->toString() : "-", t->toString(), ast->attributes[".class"]);
           seq::types::Type *typ = ctx->realizeType(p->getClass());
           int startI = 1;
           if (ast->args.size() && ast->args[0].name == "self")
@@ -258,15 +264,16 @@ void CodegenVisitor::visit(const YieldExpr *expr) {
 
 void CodegenVisitor::visit(const StmtExpr *expr) {
   vector<seq::Stmt *> stmts;
-
-  for (auto &s : expr->stmts) {
-    transform(s);
-    // auto sp = transform(s, false);
-    // if (sp)
-    //   stmts.push_back(sp);
-  }
-  resultExpr = transform(expr->expr);
-  // resultExpr = new seq::StmtExpr(stmts, transform(expr->expr));
+  function<void(const vector<StmtPtr> &)> traverse = [&](const vector<StmtPtr> &ss) {
+    for (auto &s : ss) {
+      if (auto ss = CAST(s, SuiteStmt))
+        traverse(ss->stmts);
+      else if (auto ss = transform(s, false))
+        stmts.push_back(ss);
+    }
+  };
+  traverse(expr->stmts);
+  resultExpr = new seq::StmtExpr(stmts, transform(expr->expr));
 }
 
 void CodegenVisitor::visit(const SuiteStmt *stmt) {

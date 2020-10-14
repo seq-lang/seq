@@ -47,6 +47,7 @@ std::string executable_path(const char *argv0);
 std::string getTemporaryVar(const std::string &prefix = "", char p = '$');
 std::string chop(const std::string &s);
 bool startswith(const std::string &s, const std::string &p);
+bool endswith(const std::string &s, const std::string &p);
 void error(const char *format);
 void error(const SrcInfo &p, const char *format);
 

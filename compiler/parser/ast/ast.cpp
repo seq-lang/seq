@@ -248,8 +248,8 @@ string SliceExpr::toString() const {
                      step ? format(" :step {}", *step) : ""));
 }
 
-EllipsisExpr::EllipsisExpr() : Expr() {}
-EllipsisExpr::EllipsisExpr(const EllipsisExpr &e) : Expr(e) {}
+EllipsisExpr::EllipsisExpr(bool i) : Expr(), isPipeArg(i) {}
+EllipsisExpr::EllipsisExpr(const EllipsisExpr &e) : Expr(e), isPipeArg(e.isPipeArg) {}
 string EllipsisExpr::toString() const { return wrap("#ellipsis"); }
 
 TypeOfExpr::TypeOfExpr(ExprPtr e) : Expr(), expr(move(e)) {}

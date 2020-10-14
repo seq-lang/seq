@@ -61,6 +61,7 @@ public:
   /// Set of active unbound variables.
   /// If type checking is successful, all of them should be resolved.
   std::set<types::TypePtr> activeUnbounds;
+  int iteration;
 
 public:
   TypeContext(std::shared_ptr<Cache> cache);

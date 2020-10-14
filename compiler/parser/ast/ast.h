@@ -420,8 +420,10 @@ struct SliceExpr : public Expr {
 };
 
 struct EllipsisExpr : public Expr {
+  bool isPipeArg;
+
   /// Expression ..., currently used in partial calls
-  EllipsisExpr();
+  EllipsisExpr(bool i = false);
   EllipsisExpr(const EllipsisExpr &n);
 
   std::string toString() const override;

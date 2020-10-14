@@ -42,6 +42,10 @@ bool startswith(const string &s, const string &p) {
   return s.size() >= p.size() && s.substr(0, p.size()) == p;
 }
 
+bool endswith(const string &s, const string &p) {
+  return s.size() >= p.size() && s.substr(s.size() - p.size()) == p;
+}
+
 string escape(string s) {
   string r;
   for (unsigned char c : s) {

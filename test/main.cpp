@@ -217,7 +217,7 @@ INSTANTIATE_TEST_SUITE_P(
         "core/generators.seq",
         "core/exceptions.seq",
         "core/big.seq",
-        "core/containers.seq", // unification
+        "core/containers.seq",
         // F: "core/bltin.seq", // weird max trick
         // F: "core/range.seq", // needs auto-unify
         // F: "core/arguments.seq", // some error
