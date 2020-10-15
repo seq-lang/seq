@@ -112,7 +112,7 @@ class B[T]:
         self.b = a, b, c
 
     def __init__(self: B[T], a: T, b: T):
-        return (a, b)
+        self.a, self.b = a + b, (-1, -1, -1)
 
     @property
     def val(self: B[T]):
@@ -130,21 +130,24 @@ def test_named_construct1(_):
     assert B[float]([3.14], 1, b=2, c=3).val == (3.14, (1, 2, 3))
     assert B([3.14], 1, 2, c=3).val == (3.14, (1, 2, 3))
     assert B(foo=42, y='hello').val == ('hello', (42, 1, 0))
-    assert B(a='a', b='b') == ('a', 'b')
-    assert B(b='b', a='a') == ('a', 'b')
+    assert B(a='a', b='b').val == ('ab', (-1, -1, -1))
+    assert B(b='b', a='a').val == ('ab', (-1, -1, -1))
 test_named_construct1(0)
 
-type C(a: float, b: tuple[int,int,int]):
-    def __init__(self: C, y: float) -> C:
+type C:
+    a: float
+    b: tuple[int,int,int]
+
+    def __new__(y: float) -> C:
         return (y, (0, 0, 0))
 
-    def __init__(self: C, y: float, foo: int) -> C:
+    def __new__(y: float, foo: int) -> C:
         return (y, (foo, 1, 0))
 
-    def __init__(self: C, x: list[float], a: int, b: int, c: int) -> C:
+    def __new__(x: list[float], a: int, b: int, c: int) -> C:
         return (x[0], (a, b, c))
 
-    def __init__(self: C, a: int, b: int):
+    def __new__(a: int, b: int):
         return (a, b)
 
     @property

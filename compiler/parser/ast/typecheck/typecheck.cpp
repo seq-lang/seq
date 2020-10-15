@@ -585,8 +585,6 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
     if (knownTypes.empty() || knownTypes[i] == '0')
       availableArguments.push_back(i);
 
-  // auto pending = callFunc(c, args, reorderedArgs, availableArguments);
-
   vector<int> pending;
   bool isPartial = false;
   bool namesStarted = false;
@@ -628,7 +626,7 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
       if (it != namedArgs.end()) {
         reorderedArgs.push_back({"", move(it->second)});
         namedArgs.erase(it);
-      } else if (ast->args[i].deflt) {
+      } else if (ast->args[availableArguments[i]].deflt) {
         reorderedArgs.push_back(
             {"", transform(ast->args[availableArguments[i]].deflt)});
       } else {
@@ -1424,35 +1422,30 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
   // arguments or reordered arguments...
   if (member.substr(0, 2) != "__" || member.substr(member.size() - 2) != "__")
     error("overloaded non-magic method...");
-  for (auto &a : args)
-    if (!a.first.empty())
-      error("[todo] named magic call");
 
   vector<pair<int, int>> scores;
-  if (c->name == ".deque" && args.size() == 2)
-    assert(1);
-  if (c->name == ".int" && args.size() == 2)
-    assert(1);
   for (int i = 0; i < m->size(); i++) {
     auto mt = dynamic_pointer_cast<FuncType>(
         ctx->instantiate(getSrcInfo(), (*m)[i], c, false));
-    auto s = 0;
-    if (mt->args.size() - 1 != args.size())
+
+    vector<pair<string, TypePtr>> reorderedArgs;
+    int s;
+    if ((s = reorder(args, reorderedArgs, mt)) == -1)
       continue;
-    for (int j = 0; j < args.size(); j++) {
+    // LOG("{} in, {} passed!", args.size(), mt->name);
+
+    for (int j = 0; j < reorderedArgs.size(); j++) {
       auto mac = mt->args[j + 1]->getClass();
       if (mac && mac->isTrait)
         continue; // treat traits as generics
-      auto ac = args[j].second->getClass();
+      auto ac = reorderedArgs[j].second->getClass();
 
       Unification us;
-      int u = args[j].second->unify(mt->args[j + 1], us);
+      int u = reorderedArgs[j].second->unify(mt->args[j + 1], us);
       us.undo();
       if (u < 0) {
-        // if (member == "__add__" && c->name == ".int" && mac && mac->name == ".int")
-        // assert(1);
         if (mac && mac->name == ".Optional" && ac && ac->name != mac->name) { // wrap
-          int u = args[j].second->unify(mac->explicits[0].type, us);
+          int u = reorderedArgs[j].second->unify(mac->explicits[0].type, us);
           us.undo();
           if (u >= 0) {
             s += u + 2;
@@ -1712,6 +1705,59 @@ StmtPtr TypecheckVisitor::realizeBlock(const StmtPtr &stmt, bool keepLast) {
   if (!keepLast)
     ctx->popBlock();
   return result;
+}
+
+int TypecheckVisitor::reorder(const vector<pair<string, TypePtr>> &args,
+                              vector<pair<string, TypePtr>> &reorderedArgs,
+                              types::FuncTypePtr f) {
+  vector<int> availableArguments;
+  for (int i = 0; i < int(f->args.size()) - 1; i++)
+    availableArguments.push_back(i);
+  string knownTypes;
+
+  bool namesStarted = false;
+  unordered_map<string, TypePtr> namedArgs;
+  for (int i = 0; i < args.size(); i++) {
+    if (args[i].first == "" && namesStarted)
+      error("unnamed argument after a named argument");
+    namesStarted |= args[i].first != "";
+    if (args[i].first == "")
+      reorderedArgs.push_back({"", args[i].second});
+    else if (namedArgs.find(args[i].first) == namedArgs.end())
+      namedArgs[args[i].first] = args[i].second;
+    else
+      return -1;
+  }
+
+  if (reorderedArgs.size() + namedArgs.size() != availableArguments.size())
+    return -1;
+
+  int score = reorderedArgs.size() * 2;
+
+  FunctionStmt *ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
+  seqassert(ast, "AST not accessible for {}", f->name);
+  for (int i = 0, ra = reorderedArgs.size(); i < availableArguments.size(); i++) {
+    if (i >= ra) {
+      assert(ast);
+      auto it = namedArgs.find(ast->args[availableArguments[i]].name);
+      if (it != namedArgs.end()) {
+        reorderedArgs.push_back({"", it->second});
+        namedArgs.erase(it);
+        score += 2;
+      } else if (ast->args[i].deflt) {
+        if (ast->args[availableArguments[i]].type)
+          reorderedArgs.push_back({"", f->args[availableArguments[i] + 1]});
+        else { // TODO: does this even work? any dangling issues?
+          auto t = transform(ast->args[availableArguments[i]].deflt);
+          reorderedArgs.push_back({"", t->getType()});
+        }
+        score += 1;
+      } else {
+        return -1;
+      }
+    }
+  }
+  return score;
 }
 
 string TypecheckVisitor::generatePartialStub(const string &mask,

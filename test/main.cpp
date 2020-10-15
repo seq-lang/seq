@@ -184,7 +184,8 @@ auto getTypeTests(const vector<string> &files) {
     while (getline(fin, l)) {
       if (l.substr(0, 3) == "#%%") {
         if (line)
-          cases.push_back({f, true, to_string(line) + "_" + testName, code, codeLine});
+          cases.push_back(
+              make_tuple(f, true, to_string(line) + "_" + testName, code, codeLine));
         testName = l.substr(4);
         code = l + "\n";
         codeLine = line;
@@ -195,7 +196,8 @@ auto getTypeTests(const vector<string> &files) {
       line++;
     }
     if (line)
-      cases.push_back({f, true, to_string(line) + "_" + testName, code, codeLine});
+      cases.push_back(
+          make_tuple(f, true, to_string(line) + "_" + testName, code, codeLine));
   }
   return cases;
 }
@@ -221,7 +223,7 @@ INSTANTIATE_TEST_SUITE_P(
         "core/trees.seq",
         "core/range.seq",
         "core/bltin.seq",
-        // F: "core/arguments.seq", // some error
+        "core/arguments.seq",
         // F: "core/match.seq", // needs Kmer type
         // "core/align.seq",
         // "core/bwtsa.seq",

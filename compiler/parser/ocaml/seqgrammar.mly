@@ -249,7 +249,6 @@ assign_statement:
     { let all = List.map (function [l] -> l | l -> $loc, Tuple l) (List.rev ($1 :: $3)) in
       List.rev @@ List.map (fun i -> $loc, Assign (i, List.hd all, None)) (List.tl all) }
 %inline aug_eq: PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ | LSHEQ | RSHEQ | ANDEQ | OREQ | XOREQ { $1 }
-decl_statement: ID COLON expr NL { $loc, Declare ($loc, { name = $1; typ = Some $3; default = None }) }
 
 try_statement: TRY COLON suite catch* finally? { $loc, Try ($3, $4, opt_val $5 []) }
 catch:
@@ -308,7 +307,12 @@ cls_body:
         (fun acc i -> match i with Some (_, Declare _) | None -> acc | Some p -> p :: acc) [] $6
       in
       { class_name = $1; generics = opt_val $2 []; args; members; attrs = [] } }
-dataclass_member: class_member { $1 } | decl_statement { Some $1 }
+dataclass_member:
+  | class_member { $1 }
+  | ID COLON expr NL
+    { Some ($loc, Declare ($loc, { name = $1; typ = Some $3; default = None })) }
+  | ID COLON expr EQ expr NL
+    { Some ($loc, Declare ($loc, { name = $1; typ = Some $3; default = Some $5 })) }
 class_member:
   | PASS NL | STRING NL { None }
   | func_statement { Some (List.hd $1) }

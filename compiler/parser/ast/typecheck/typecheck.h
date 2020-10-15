@@ -52,6 +52,9 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
   std::vector<StmtPtr> parseClass(const ClassStmt *stmt);
   ExprPtr parseCall(const CallExpr *expr, types::TypePtr inType = nullptr,
                     ExprPtr *extraStage = nullptr);
+  int reorder(const std::vector<std::pair<std::string, types::TypePtr>> &args,
+              std::vector<std::pair<std::string, types::TypePtr>> &reorderedArgs,
+              types::FuncTypePtr f);
 
   void defaultVisit(const Expr *e) override;
   void defaultVisit(const Stmt *s) override;
