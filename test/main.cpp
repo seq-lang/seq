@@ -220,8 +220,8 @@ INSTANTIATE_TEST_SUITE_P(
         "core/containers.seq",
         "core/trees.seq",
         "core/range.seq",
+        "core/bltin.seq",
         // F: "core/arguments.seq", // some error
-        // F: "core/bltin.seq", // weird max trick
         // F: "core/match.seq", // needs Kmer type
         // "core/align.seq",
         // "core/bwtsa.seq",

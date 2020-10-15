@@ -1,23 +1,23 @@
-class min[T]:
-    def __init__(self: min[T], a: T, b: T) -> T:
+type min[T]:
+    def __new__(a: T, b: T) -> T:
         return a if a < b else b
 
-    def __init__(self: min[T], a: T, b: T, c: T) -> T:
+    def __new__(a: T, b: T, c: T) -> T:
         x = a if a < b else b
         return x if x < c else c
 
-    def __init__(self: min[T], a: T, b: T, c: T, d: T) -> T:
+    def __new__(a: T, b: T, c: T, d: T) -> T:
         x = a if a < b else b
         y = c if c < d else d
         return x if x < y else y
 
-    def __init__(self: min[T], a: T, b: T, c: T, d: T, e: T) -> T:
+    def __new__(a: T, b: T, c: T, d: T, e: T) -> T:
         x = a if a < b else b
         y = c if c < d else d
         z = x if x < y else y
         return z if z < e else e
 
-    def __init__(self: min[T], a: generator[T]) -> T:
+    def __new__(a: generator[T]) -> T:
         x = a.__iter__()
         if not x.done():
             s = x.next()
@@ -30,26 +30,26 @@ class min[T]:
             x.destroy()
         raise ValueError("empty sequence")
 
-class max[T]:
-    def __init__(self: max[T], a: T, b: T) -> T:
+type max[T]:
+    def __new__(a: T, b: T) -> T:
         return a if a > b else b
 
-    def __init__(self: max[T], a: T, b: T, c: T) -> T:
+    def __new__(a: T, b: T, c: T) -> T:
         x = a if a > b else b
         return x if x > c else c
 
-    def __init__(self: max[T], a: T, b: T, c: T, d: T) -> T:
+    def __new__(a: T, b: T, c: T, d: T) -> T:
         x = a if a > b else b
         y = c if c > d else d
         return x if x > y else y
 
-    def __init__(self: max[T], a: T, b: T, c: T, d: T, e: T) -> T:
+    def __new__(a: T, b: T, c: T, d: T, e: T) -> T:
         x = a if a > b else b
         y = c if c > d else d
         z = x if x > y else y
         return z if z > e else e
 
-    def __init__(self: max[T], a: generator[T]) -> T:
+    def __new__(a: generator[T]) -> T:
         x = a.__iter__()
         if not x.done():
             s = x.next()

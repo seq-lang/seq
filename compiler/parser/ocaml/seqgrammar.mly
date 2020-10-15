@@ -297,14 +297,17 @@ pyfunc: PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON PYDEF_RAW { [
 
 class_statement: cls | extend | typ { $1 }
 cls:
-  | decorator(CLASS) ID generic_list? COLON NL INDENT dataclass_member+ DEDENT
+  | decorator(CLASS) cls_body { $loc, Class $2 }
+  | decorator(TYPE) cls_body { $loc, Type $2 }
+cls_body:
+  | ID generic_list? COLON NL INDENT dataclass_member+ DEDENT
     { let args = List.rev @@ List.fold_left
-        (fun acc i -> match i with Some (_, Declare d) -> d :: acc | _ -> acc) [] $7
+        (fun acc i -> match i with Some (_, Declare d) -> d :: acc | _ -> acc) [] $6
       in
       let members = List.rev @@ List.fold_left
-        (fun acc i -> match i with Some (_, Declare _) | None -> acc | Some p -> p :: acc) [] $7
+        (fun acc i -> match i with Some (_, Declare _) | None -> acc | Some p -> p :: acc) [] $6
       in
-      $loc, Class { class_name = $2; generics = opt_val $3 []; args; members; attrs = $1 } }
+      { class_name = $1; generics = opt_val $2 []; args; members; attrs = [] } }
 dataclass_member: class_member { $1 } | decl_statement { Some $1 }
 class_member:
   | PASS NL | STRING NL { None }
