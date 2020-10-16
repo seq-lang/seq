@@ -541,6 +541,9 @@ extend UInt[N]:
     @internal
     def __str__(self) -> str: pass
     @internal
+    def __revcomp__(self) -> UInt[N]: pass
+
+    @internal
     def popcnt(self) -> int: pass
 
     def len() -> int:
