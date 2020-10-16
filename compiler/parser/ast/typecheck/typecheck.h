@@ -55,6 +55,7 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
   int reorder(const std::vector<std::pair<std::string, types::TypePtr>> &args,
               std::vector<std::pair<std::string, types::TypePtr>> &reorderedArgs,
               types::FuncTypePtr f);
+  void addFunctionGenerics(types::FuncTypePtr t);
 
   void defaultVisit(const Expr *e) override;
   void defaultVisit(const Stmt *s) override;

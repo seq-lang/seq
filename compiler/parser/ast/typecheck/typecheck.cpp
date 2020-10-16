@@ -613,12 +613,17 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
 
   FunctionStmt *ast = nullptr;
   auto &t_args = cc->args;
-  if (auto ff = c->getFunc())
+  if (auto ff = c->getFunc()) {
     ast = (FunctionStmt *)(ctx->cache->asts[ff->name].get());
-  if (!ast && namedArgs.size())
-    error("unexpected name '{}' (function pointers have argument "
-          "names elided)",
+  }
+
+  if (ast) {
+    ctx->addBlock();
+    addFunctionGenerics(c->getFunc());
+  } else if (!ast && namedArgs.size()) {
+    error("unexpected name '{}' (function pointers have argument names elided)",
           namedArgs.begin()->first);
+  }
   for (int i = 0, ra = reorderedArgs.size(); i < availableArguments.size(); i++) {
     if (i >= ra) {
       assert(ast);
@@ -679,6 +684,8 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
     error(i.second, "unknown argument {}", i.first);
   if (isPartial || pending.size())
     pending.push_back(args.size());
+  if (ast)
+    ctx->popBlock();
 
   // Realize functions that are passed as arguments
   for (auto &ra : reorderedArgs)
@@ -1436,8 +1443,10 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
 
     for (int j = 0; j < reorderedArgs.size(); j++) {
       auto mac = mt->args[j + 1]->getClass();
-      if (mac && mac->isTrait)
-        continue; // treat traits as generics
+      if (mac && mac->isTrait) // treat traits as generics
+        continue;
+      if (!reorderedArgs[j].second) // default arguments don't matter at all
+        continue;
       auto ac = reorderedArgs[j].second->getClass();
 
       Unification us;
@@ -1509,6 +1518,34 @@ vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &gene
   return genericTypes;
 }
 
+void TypecheckVisitor::addFunctionGenerics(FuncTypePtr t) {
+  int pi = 0;
+  for (auto p = t->parent; p; pi++) {
+    if (auto y = p->getFunc()) {
+      for (auto &g : y->explicits)
+        if (auto s = g.type->getStatic())
+          ctx->add(TypecheckItem::Type, g.name, s, false, false, true);
+        else if (!g.name.empty())
+          ctx->add(TypecheckItem::Type, g.name, g.type, true);
+      p = y->parent;
+    } else {
+      auto c = p->getClass();
+      assert(c);
+      for (auto &g : c->explicits)
+        if (auto s = g.type->getStatic())
+          ctx->add(TypecheckItem::Type, g.name, s, false, false, true);
+        else if (!g.name.empty())
+          ctx->add(TypecheckItem::Type, g.name, g.type, true);
+      p = c->parent;
+    }
+  }
+  for (auto &g : t->explicits)
+    if (auto s = g.type->getStatic())
+      ctx->add(TypecheckItem::Type, g.name, s, false, false, true);
+    else if (!g.name.empty())
+      ctx->add(TypecheckItem::Type, g.name, g.type, true);
+}
+
 types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
   auto t = tt->getFunc();
   assert(t && t->canRealize());
@@ -1539,31 +1576,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     ctx->typecheckLevel++;
     ctx->bases.push_back({t->name, t, t->args[0]});
     auto *ast = (FunctionStmt *)(ctx->cache->asts[t->name].get());
-    int pi = 0;
-    for (auto p = t->parent; p; pi++) {
-      if (auto y = p->getFunc()) {
-        for (auto &g : y->explicits)
-          if (auto s = g.type->getStatic())
-            ctx->add(TypecheckItem::Type, g.name, s, false, false, true);
-          else if (!g.name.empty())
-            ctx->add(TypecheckItem::Type, g.name, g.type, true);
-        p = y->parent;
-      } else {
-        auto c = p->getClass();
-        assert(c);
-        for (auto &g : c->explicits)
-          if (auto s = g.type->getStatic())
-            ctx->add(TypecheckItem::Type, g.name, s, false, false, true);
-          else if (!g.name.empty())
-            ctx->add(TypecheckItem::Type, g.name, g.type, true);
-        p = c->parent;
-      }
-    }
-    for (auto &g : t->explicits)
-      if (auto s = g.type->getStatic())
-        ctx->add(TypecheckItem::Type, g.name, s, false, false, true);
-      else if (!g.name.empty())
-        ctx->add(TypecheckItem::Type, g.name, g.type, true);
+    addFunctionGenerics(t);
     // There is no AST linked to internal functions, so just ignore them
     bool isInternal = in(ast->attributes, "internal");
     isInternal |= ast->suite == nullptr;
@@ -1745,11 +1758,11 @@ int TypecheckVisitor::reorder(const vector<pair<string, TypePtr>> &args,
         namedArgs.erase(it);
         score += 2;
       } else if (ast->args[i].deflt) {
-        if (ast->args[availableArguments[i]].type)
+        if (ast->args[availableArguments[i]].type) {
           reorderedArgs.push_back({"", f->args[availableArguments[i] + 1]});
-        else { // TODO: does this even work? any dangling issues?
-          auto t = transform(ast->args[availableArguments[i]].deflt);
-          reorderedArgs.push_back({"", t->getType()});
+        } else { // TODO: does this even work? any dangling issues?
+          // auto t = transform(ast->args[availableArguments[i]].deflt);
+          reorderedArgs.push_back({"", nullptr}); // really does not matter
         }
         score += 1;
       } else {

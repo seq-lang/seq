@@ -1397,7 +1397,10 @@ StmtPtr TransformVisitor::codegenMagic(const string &op, const ExprPtr &typExpr,
   if (op == "new") {
     ret = clone(typExpr);
     if (isRecord)
-      fargs = clone_nop(args);
+      for (int i = 0; i < args.size(); i++)
+        fargs.push_back(
+            {args[i].name, clone(args[i].type),
+             args[i].deflt ? clone(args[i].deflt) : N<CallExpr>(clone(args[i].type))});
     attrs.push_back("internal");
   } else if (op == "init") {
     assert(!isRecord);
@@ -1405,7 +1408,9 @@ StmtPtr TransformVisitor::codegenMagic(const string &op, const ExprPtr &typExpr,
     fargs.push_back({"self", clone(typExpr)});
     for (int i = 0; i < args.size(); i++) {
       stmts.push_back(N<AssignMemberStmt>(I("self"), args[i].name, I(args[i].name)));
-      fargs.push_back({args[i].name, clone(args[i].type)});
+      fargs.push_back(
+          {args[i].name, clone(args[i].type),
+           args[i].deflt ? clone(args[i].deflt) : N<CallExpr>(clone(args[i].type))});
     }
   } else if (op == "raw") {
     fargs.push_back({"self", clone(typExpr)});
