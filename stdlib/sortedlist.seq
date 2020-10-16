@@ -24,48 +24,199 @@ extend deque[T]:
             assert 0 <= idx < self._tail
             return self._arr[idx]
 
-DEFAULT_LOAD_FACTOR = 1000
+
 class SortedList[T]:
+    """
+    Sorted list is a sorted mutable sequence.
+
+    Sorted list values are maintained in sorted order.
+
+    Sorted list values must be comparable. The total ordering of values must
+    not change while they are stored in the sorted list.
+
+    Methods for adding values:
+
+    * :func:`SortedList.add`
+    * :func:`SortedList.update`
+    * :func:`SortedList.__add__`
+    * :func:`SortedList.__iadd__`
+    * :func:`SortedList.__mul__`
+    * :func:`SortedList.__imul__`
+
+    Methods for removing values:
+
+    * :func:`SortedList.clear`
+    * :func:`SortedList.discard`
+    * :func:`SortedList.remove`
+    * :func:`SortedList.pop`
+    * :func:`SortedList.__delitem__`
+
+    Methods for looking up values:
+
+    * :func:`SortedList.bisect_left`
+    * :func:`SortedList.bisect_right`
+    * :func:`SortedList.count`
+    * :func:`SortedList.index`
+    * :func:`SortedList.__contains__`
+    * :func:`SortedList.__getitem__`
+
+    Methods for iterating values:
+
+    * :func:`SortedList.irange`
+    * :func:`SortedList.islice`
+    * :func:`SortedList.__iter__`
+    * :func:`SortedList.__reversed__`
+
+    Methods for miscellany:
+
+    * :func:`SortedList.copy`
+    * :func:`SortedList.__len__`
+    * :func:`SortedList.__repr__`
+    * :func:`SortedList._check`
+    * :func:`SortedList._reset`
+
+    Sorted lists use lexicographical ordering semantics when compared to other
+    sequences.
+
+    Some methods of mutable sequences are not supported and will raise
+    not-implemented error.
+    """
     _len: int
     _load: int
     _lists: list[list[T]]
     _maxes: list[T]
     _offset: int
-    # _index:
+    _index: list[T]
+    DEFAULT_LOAD_FACTOR = 1000
 
-    def __init__(self: SortedList[T]):
+    def __init__(self: SortedList[T], iterable: optional[generator[T]] = None, key: optional[T] = None):
+        """
+        Initialize sorted list instance.
+
+        Optional `iterable` argument provides an initial iterable of values to
+        initialize the sorted list.
+
+        Runtime complexity: `0(n*log(n))`
+
+        >>> sl = SortedList()
+        >>> sl
+        SortedList([])
+        >>> sl = SortedList([3, 1, 2, 5, 4])
+        >>> sl
+        SortedList([1, 2, 3, 4, 5])
+        """
+        assert key is None
         self._len = 0
         self._load = DEFAULT_LOAD_FACTOR
         self._lists = list[list[T]]()
         self._maxes = list[T]()
-        # self._index = []
+        self._index = list[T]()
         self._offset = 0
 
-    def clear(self):
-        """Remove all values from sorted list.
+        if iterable is not None: self._update(~iterable)
+            
+
+    def __new__(cls: SortedList[T], iterable: optional[generator[T]] = None, key: optional[T] = None):
+        """
+        Create new sorted list or sorted-key list instance.
+
+        Optional `key`-function argument will return an instance of subtype
+        :class:`SortedKeyList`.
+
+        >>> sl = SortedList()
+        >>> isinstance(sl, SortedList)
+        True
+        >>> sl = SortedList(key=lambda x: -x)
+        >>> isinstance(sl, SortedList)
+        True
+        >>> isinstance(sl, SortedKeyList)
+        True
+
+        :param iterable: initial values (optional)
+        :param key: function used to extract comparison key (optional)
+        :return: sorted list or sorted-key list instance
+        """
+        if key is None: 
+            return object.__new__(cls)
+        else:
+            if cls is SortedList:
+                return object.__new__(SortedKeyList)
+            else:
+                raise TypeError('inherit SortedKeyList for key argument')
+
+
+    @property
+    def key(self: SortedList[T]):
+        """
+        Function used to extract comparison key from values.
+
+        Sorted list compares values directly so the key function is none.
+        """
+        return None
+
+
+    def _reset(self: SortedList[T], load: int):
+        """
+        Reset sorted list load factor.
+
+        The `load` specifies the load-factor of the list. The default load
+        factor of 1000 works well for lists from tens to tens-of-millions of
+        values. Good practice is to use a value that is the cube root of the
+        list size. With billions of elements, the best load factor depends on
+        your usage. It's best to leave the load factor at the default until you
+        start benchmarking.
+
+        See :doc:`implementation` and :doc:`performance-scale` for more
+        information.
+
+        Runtime complexity: `0(n)`
+
+        :param int load: load-factor for sorted lidts sublists
+        """
+        values = list[T]()
+        for i in self._lists:
+            values += i
+        self._clear()
+        self._load = load
+        self._update(values)
+
+
+    def clear(self: SortedList[T]):
+        """
+        Remove all values from sorted list.
+        
         Runtime complexity: `O(n)`
         """
         self._len = 0
         self._lists.clear()
         self._maxes.clear()
+        self._index.clear()
         self._offset = 0
-        # self._index.clear()
 
+    _clear = clear
+
+
+    # TODO: Not sure of purpose
     @property
     def left(self: SortedList[T]):
         if not self._lists:
             raise IndexError("list index out of range")
         return self._lists[0][0]
 
+
     def add(self: SortedList[T], value: T):
-        """Add `value` to sorted list.
+        """
+        Add `value` to sorted list.
+
         Runtime complexity: `O(log(n))` -- approximate.
+
         >>> sl = SortedList()
         >>> sl.add(3)
         >>> sl.add(1)
         >>> sl.add(2)
         >>> sl
         SortedList([1, 2, 3])
+
         :param value: value to add to sorted list
         """
         if self._maxes:
@@ -84,7 +235,9 @@ class SortedList[T]:
 
 
     def _expand(self: SortedList[T], pos: int):
-        """Split sublists with length greater than double the load-factor.
+        """
+        Split sublists with length greater than double the load-factor.
+
         Updates the index when the sublist length is less than double the load
         level. This requires incrementing the nodes in a traversal from the
         leaf node to the root. For an example traversal see
@@ -101,7 +254,145 @@ class SortedList[T]:
             self._lists.insert(pos + 1, half)
             _maxes.insert(pos + 1, half[-1])
 
+            del self._index[:]
+        else:
+            if self._index:
+                child = self._offset + pos
+                while child:
+                    self._index[child] += 1
+                    child = (child - 1) >> 1
+                self._index[0] += 1
 
+
+    def update(self: SortedList[T], iterable: list[T]):
+        """
+        Update sorted list by adding all values from `iterable`.
+
+        Runtime complexity: `O(k*log(n))` -- approximate.
+
+        >>> sl = SortedList()
+        >>> sl.update([3, 1, 2])
+        >>> sl
+        SortedList([1, 2, 3])
+
+        :param iterable: iterable of values to add
+        """
+        values = sorted(iterable)
+
+        if self._maxes:
+            if len(values) * 4 >= self._len:
+                values.extend(chain.from_iterable(self._lists))
+                values.sort()
+                self._clear()
+            else:
+                _add = self.add
+                for val in values:
+                    _add(val)
+                return
+        
+        self._lists.extend(values[pos:(pos + self._load)]
+                    for pos in range(0, len(values), self._load)) 
+        self._maxes.extend(sublist[-1] for sublist in self._lists)
+        self._len = len(values)
+        del self._index[:]
+
+    _update = update
+
+
+    def __contains__(self: SortedList[T], value):
+        """
+        Return true if `value` is an element of the sorted list.
+         
+        ``sl.__contains__(value)`` <==> ``value in sl``
+        
+        Runtime complexity: `O(log(n))`
+        
+        >>> sl = SortedList([1, 2, 3, 4, 5])
+        >>> 3 in sl
+        True
+        
+        :param value: search for value in sorted list
+        :return: true if `value` in sorted list
+        """
+        if not self._maxes:
+            return False
+
+        pos = bisect_left(self._maxes, value)
+
+        if pos == len(self._maxes):
+            return False
+
+        idx = bisect_left(self._lists[pos], value)
+
+        return self._lists[pos][idx] == value
+
+
+    def discard(self: SortedList[T], value):
+        """
+        Remove `value` from sorted list if it is a member.
+        
+        If `value` is not a member, do nothing.
+        
+        Runtime complexity: `O(log(n))` -- approximate.
+       
+        >>> sl = SortedList([1, 2, 3, 4, 5])
+        >>> sl.discard(5)
+        >>> sl.discard(0)
+        >>> sl == [1, 2, 3, 4]
+        True
+        
+        :param value: `value` to discard from sorted list
+        """
+        if not self._maxes:
+            return
+        
+        pos = bisect_left(self._maxes, value)
+
+        if pos == len(self._maxes):
+            return
+
+        idx = bisect_left(self._lists[pos], value)
+
+        if _lists[pos][idx] == value:
+            self._delete(pos, idx)
+
+
+    def remove(self: SortedList[T], value):
+        """
+        Remove `value` from sorted list; `value` must be a member.
+        
+        If `value` is not a member, raise ValueError.
+        
+        Runtime complexity: `O(log(n))` -- approximate.
+        
+        >>> sl = SortedList([1, 2, 3, 4, 5])
+        >>> sl.remove(5)
+        >>> sl == [1, 2, 3, 4]
+        True
+        >>> sl.remove(0)
+        Traceback (most recent call last):
+          ...
+        ValueError: 0 not in list
+        
+        :param value: `value` to remove from sorted list
+        :raises ValueError: if `value` is not in sorted list
+        """
+        if not self._maxes:
+            raise ValueError('{0!r} not in list'.format(value))
+        
+        pos = bisect_left(self._maxes, value)
+
+        if pos == len(self._maxes):
+            raise ValueError('{0!r} not in list'.format(value))
+
+        idx = bisect_left(self._lists[pos], value)
+
+        if self._lists[pos][idx] == value:
+            self._delete(pos, idx)
+        else:
+            raise ValueError('{0!r} not in list'.format(value))
+
+        
     def _delete(self: SortedList[T], pos: int, idx: int):
         """Delete value at the given `(pos, idx)`.
         Combines lists that are less than half the load level.
