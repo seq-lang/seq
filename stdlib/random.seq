@@ -296,12 +296,12 @@ class Random:
         """
         return self.gen.genrand_res53()
 
-    def choice[T](self: Random, seq: generator[T]) -> T:
+    def choice[T](self: Random, sequence: generator[T]) -> T:
         """
         Choose a random element from a non-empty sequence.
         """
         i = 0
-        l = list(seq)
+        l = list(sequence)
         try:
             i = self._randbelow_with_getrandbits(len(l))
         except ValueError:

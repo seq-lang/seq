@@ -32,7 +32,7 @@ class bntann:
     _name: str
     _anno: str
 
-    def __init__(self: bntann, name: str, anno: str, offset: int, len: int):
+    def __init__(self, name: str, anno: str, offset: int, len: int):
         self._offset = offset
         self._len = len
         self._n_ambs = 0
@@ -45,7 +45,7 @@ class bntamb:
     _len: int
     _amb: byte
 
-    def __init__(self: bntamb, offset: int, amb: byte):
+    def __init__(self, offset: int, amb: byte):
         self._offset = offset
         self._len = 1
         self._amb = amb
@@ -70,7 +70,7 @@ class bntseq:
     _anns: list[bntann]
     _ambs: list[bntamb]
 
-    def __pickle__(self: bntseq, jar: Jar):
+    def __pickle__(self, jar: Jar):
         pac_size = (self._l_pac // 4) + (0 if self._l_pac % 4 == 0 else 1)
         _pickle_ptr(self._pac, pac_size, jar)
         pickle((self._l_pac, self._n_seqs, self._anns, self._ambs), jar)
@@ -87,7 +87,7 @@ class bntseq:
         b._ambs = ambs
         return b
 
-    def __init__(self: bntseq):
+    def __init__(self):
         self._pac = ptr[u8]()
         self._m_pac = 0
         self._l_pac = 0
@@ -95,7 +95,7 @@ class bntseq:
         self._anns = None
         self._ambs = None
 
-    def __init__(self: bntseq, path: str):
+    def __init__(self, path: str):
         m_pac = 0x10000
         self._pac = ptr[u8](m_pac // 4)
         str.memset(ptr[byte](self._pac), byte(0), m_pac // 4)
@@ -107,20 +107,20 @@ class bntseq:
         self._add_fasta(path)
 
     @property
-    def _n_holes(self: bntseq):
+    def _n_holes(self):
         return len(self._ambs)
 
     def get_pac(pac: ptr[u8], l: int):
         return (pac[l >> 2] >> u8((~l & 3) << 1)) & u8(3)
 
-    def _get_pac(self: bntseq, l: int):
+    def _get_pac(self, l: int):
         return bntseq.get_pac(self._pac, l)
 
-    def _set_pac(self: bntseq, l: int, c: u8):
+    def _set_pac(self, l: int, c: u8):
         assert (l >> 2) < (self._m_pac // 4)
         self._pac[l >> 2] |= c << u8((~l & 3) << 1)
 
-    def _resize_pac_if_full(self: bntseq):
+    def _resize_pac_if_full(self):
         l_pac = self._l_pac
         m_pac = self._m_pac
         if l_pac == m_pac:
@@ -129,12 +129,12 @@ class bntseq:
             str.memset(ptr[byte](self._pac + l_pac//4), byte(0), (m_pac - l_pac) // 4)
             self._m_pac = m_pac
 
-    def _push_pac(self: bntseq, c: u8):
+    def _push_pac(self, c: u8):
         self._resize_pac_if_full()
         self._set_pac(self._l_pac, c)
         self._l_pac += 1
 
-    def _add1(self: bntseq, name: str, s: seq, anno: str):
+    def _add1(self, name: str, s: seq, anno: str):
         n = len(s)
         p = bntann(name, anno, 0 if self._n_seqs == 0 else self._anns[-1]._offset + self._anns[-1]._len, n)
         self._anns.append(p)
@@ -158,18 +158,18 @@ class bntseq:
             i += 1
         self._n_seqs += 1
 
-    def _add_fasta(self: bntseq, path: str):
+    def _add_fasta(self, path: str):
         for rec in FASTA(path):
             self._add1(rec.name, rec.seq, rec.comment)
 
-    def depos(self: bntseq, pos: int):
+    def depos(self, pos: int):
         l_pac = self._l_pac
         is_rev = (pos >= l_pac)
         if is_rev:
             pos = (l_pac << 1) - 1 - pos
         return (pos, is_rev)
 
-    def pos2rid(self: bntseq, pos: int):
+    def pos2rid(self, pos: int):
         if pos >= self._l_pac:
             return -1
         left = 0
@@ -187,7 +187,7 @@ class bntseq:
                 right = mid
         return mid
 
-    def intv2rid(self: bntseq, rb: int, re: int):
+    def intv2rid(self, rb: int, re: int):
         if rb < self._l_pac and re > self._l_pac:
             return -2
         assert rb <= re
@@ -195,7 +195,7 @@ class bntseq:
         rid_e = self._pos2rid(self._depos(re - 1)[0]) if rb < re else rid_b
         return rid_b if rid_b == rid_e else -1
 
-    def cnt_ambi(self: bntseq, pos: int, len: int):
+    def cnt_ambi(self, pos: int, len: int):
         left = 0
         right = self._n_holes
         nn = 0
@@ -213,13 +213,13 @@ class bntseq:
                 break
         return nn
 
-    def __len__(self: bntseq):
+    def __len__(self):
         return self._l_pac
 
-    def __bool__(self: bntseq):
+    def __bool__(self):
         return len(self) != 0
 
-    def _get_seq(self: bntseq, beg: int, end: int):
+    def _get_seq(self, beg: int, end: int):
         BASES = 'ACGT'
         pac = self._pac
         l_pac = self._l_pac
@@ -252,7 +252,7 @@ class bntseq:
         else:
             return seq()
 
-    def _fetch_seq(self: bntseq, beg: int, mid: int, end: int):
+    def _fetch_seq(self, beg: int, mid: int, end: int):
         if end < beg:
             beg, end = end, beg
         assert beg <= mid < end
@@ -270,7 +270,7 @@ class bntseq:
         s = self._get_seq(beg, end)
         return s, rid, beg, end
 
-    def get_seq(self: bntseq, lo: int, hi: int):
+    def get_seq(self, lo: int, hi: int):
         if not (0 <= lo < hi <= len(self)):
             return seq()
         n = hi - lo
@@ -285,29 +285,29 @@ type FMInterval(_lo: int, _hi: int):
     def __new__() -> FMInterval:
         return (-2, -1)
 
-    def __bool__(self: FMInterval):
+    def __bool__(self):
         return self._lo <= self._hi
 
-    def __len__(self: FMInterval):
+    def __len__(self):
         return self._hi - self._lo + 1 if self else 0
 
 type FMDInterval(_lo: int, _lo_rev: int, _size: int):
     def __new__() -> FMDInterval:
         return (0, 0, 0)
 
-    def __bool__(self: FMDInterval):
+    def __bool__(self):
         return self._size > 0
 
-    def __len__(self: FMDInterval):
+    def __len__(self):
         return self._size
 
-    def forward(self: FMDInterval):
+    def forward(self):
         return FMInterval(self._lo, self._lo + self._size - 1)
 
-    def revcomp(self: FMDInterval):
+    def revcomp(self):
         return FMInterval(self._lo_rev, self._lo_rev + self._size - 1)
 
-    def __invert__(self: FMDInterval):
+    def __invert__(self):
         return FMDInterval(self._lo_rev, self._lo, self._size)
 
 type SMEM(_intv: FMDInterval, _start: u32, _stop: u32):
@@ -322,22 +322,22 @@ type SMEM(_intv: FMDInterval, _start: u32, _stop: u32):
     def __new__() -> SMEM:
         return (FMDInterval(), u32(0), u32(0))
 
-    def __len__(self: SMEM):
+    def __len__(self):
         return int(self._stop - self._start)
 
-    def __bool__(self: SMEM):
+    def __bool__(self):
         return self._stop >= self._start
 
     @property
-    def interval(self: SMEM):
+    def interval(self):
         return self._intv
 
     @property
-    def start(self: SMEM):
+    def start(self):
         return int(self._start)
 
     @property
-    def stop(self: SMEM):
+    def stop(self):
         return int(self._stop)
 
 def _extend(self, ik: FMDInterval, c: int):
@@ -462,7 +462,7 @@ class FMDIndex:
     _sa_intv: int
     _bntseq: bntseq
 
-    def __pickle__(self: FMDIndex, jar: Jar):
+    def __pickle__(self, jar: Jar):
         pickle(self._seq_len, jar)
         pickle(self._primary, jar)
         pickle(self._sa_intv, jar)
@@ -495,7 +495,7 @@ class FMDIndex:
         fmi._bntseq = b
         return fmi
 
-    def __init__(self: FMDIndex):
+    def __init__(self):
         self._seq_len = 0
         self._bwt_size = 0
         self._primary = 0
@@ -507,11 +507,11 @@ class FMDIndex:
         self._sa_intv = 0
         self._bntseq = None
 
-    def __init__(self: FMDIndex, path: str):
+    def __init__(self, path: str):
         self._bntseq = bntseq(path)
         self._init_from_enc(self._bntseq._pac, self._bntseq._l_pac)
 
-    def _init_from_enc(self: FMDIndex, p: ptr[u8], l: int):
+    def _init_from_enc(self, p: ptr[u8], l: int):
         from bio.bwt import _saisxx
         def clear[T](p: ptr[T], n: int):
             i = 0
@@ -595,30 +595,30 @@ class FMDIndex:
         self._bwt_update()
         self._cal_sa(32)
 
-    def _bwt_get(self: FMDIndex, k: int):
+    def _bwt_get(self, k: int):
         # ((b)->bwt[((k)>>7<<4) + sizeof(bwtint_t) + (((k)&0x7f)>>4)])
         return int(self._bwt[(k>>7<<4) + 8 + ((k&0x7f)>>4)])
 
-    def _occ_intv(self: FMDIndex, k: int):
+    def _occ_intv(self, k: int):
         # ((b)->bwt + ((k)>>7<<4))
         return self._bwt + (k>>7<<4)
 
-    def _B0(self: FMDIndex, k: int):
+    def _B0(self, k: int):
         # (bwt_bwt(b, k)>>((~(k)&0xf)<<1)&3)
         return self._bwt_get(k) >> ((~k&0xf)<<1) & 3
 
-    def _B00(self: FMDIndex, k: int):
+    def _B00(self, k: int):
         # ((b)->bwt[(k)>>4]>>((~(k)&0xf)<<1)&3)
         return int(self._bwt[k>>4]) >> ((~k&0xf)<<1) & 3
 
     # compute inverse CSA
-    def _inv_psi(self: FMDIndex, k: int):
+    def _inv_psi(self, k: int):
         x = k - (1 if k > self._primary else 0)
         x = self._B0(x)
         x = self._L2[x] + self._occ(k, x)
         return 0 if k == self._primary else x
 
-    def _cal_sa(self: FMDIndex, intv: int):
+    def _cal_sa(self, intv: int):
         assert intv > 0 and (intv & (intv - 1)) == 0
         if self._sa:
             _gc.free(ptr[byte](self._sa))
@@ -638,7 +638,7 @@ class FMDIndex:
             self._sa[isa // intv] = sa
         self._sa[0] = -1  # before this line, bwt->sa[0] = bwt->seq_len
 
-    def _bwt_update(self: FMDIndex):
+    def _bwt_update(self):
         c = __array__[int](4)
         n_occ = (self._seq_len + OCC_INTERVAL - 1) // OCC_INTERVAL + 1
         self._bwt_size += n_occ * 8  # the new size
@@ -663,7 +663,7 @@ class FMDIndex:
         _gc.free(ptr[byte](self._bwt))
         self._bwt = buf
 
-    def _sa_get(self: FMDIndex, k: int):
+    def _sa_get(self, k: int):
         sa = 0
         mask = self._sa_intv - 1
         while k & mask:
@@ -681,7 +681,7 @@ class FMDIndex:
         y = (y & 0x3333333333333333) + (y >> 2 & 0x3333333333333333)
         return ((y + (y >> 4)) & 0xf0f0f0f0f0f0f0f) * 0x101010101010101 >> 56
 
-    def _occ(self: FMDIndex, k: int, c: int):
+    def _occ(self, k: int, c: int):
         if k == self._seq_len:
             return self._L2[c + 1] - self._L2[c]
         if k < 0:
@@ -706,7 +706,7 @@ class FMDIndex:
         return n
 
     # an analogy to bwt_occ() but more efficient, requiring k <= l
-    def _2occ(self: FMDIndex, k: int, l: int, c: int):
+    def _2occ(self, k: int, l: int, c: int):
         _k = k - 1 if k >= self._primary else k
         _l = l - 1 if l >= self._primary else l
         if _l // OCC_INTERVAL != _k // OCC_INTERVAL or k < 0 or l < 0:
@@ -739,11 +739,11 @@ class FMDIndex:
             ol = m
             return ok, ol
 
-    def __occ_aux4(self: FMDIndex, b: int):
+    def __occ_aux4(self, b: int):
         C = self._cnt_table
         return int(C[b&0xff] + C[b>>8&0xff] + C[b>>16&0xff] + C[b>>24])
 
-    def _occ4(self: FMDIndex, k: int):
+    def _occ4(self, k: int):
         cnt = __array__[int](4)
         if k < 0:
             return 0, 0, 0, 0
@@ -765,7 +765,7 @@ class FMDIndex:
         return cnt[0], cnt[1], cnt[2], cnt[3]
 
     # an analogy to bwt_occ4() but more efficient, requiring k <= l
-    def _2occ4(self: FMDIndex, k: int, l: int):
+    def _2occ4(self, k: int, l: int):
         cntk = __array__[int](4)
         cntl = __array__[int](4)
         _k = k - 1 if k >= self._primary else k
@@ -805,7 +805,7 @@ class FMDIndex:
             cntl[3] += y>>24
             return (cntk[0], cntk[1], cntk[2], cntk[3]), (cntl[0], cntl[1], cntl[2], cntl[3])
 
-    def _match_exact(self: FMDIndex, s: seq):
+    def _match_exact(self, s: seq):
         k = 0
         l = self._seq_len
         i = len(s) - 1
@@ -823,12 +823,12 @@ class FMDIndex:
             return -1, -2
         return FMInterval(k, l)
 
-    def occ(self: FMDIndex, k: int, c: seq):
+    def occ(self, k: int, c: seq):
         if len(c) != 1:
             raise ValueError("occ() expects length-1 sequence argument")
         return self._occ1(k, _enc(c._at(0)))
 
-    def less(self: FMDIndex, c: seq):
+    def less(self, c: seq):
         if len(c) != 1:
             raise ValueError("less() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -836,7 +836,7 @@ class FMDIndex:
             return -1
         return self._L2[b + 1]
 
-    def interval(self: FMDIndex, c: seq):
+    def interval(self, c: seq):
         if len(c) != 1:
             raise ValueError("interval() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -846,7 +846,7 @@ class FMDIndex:
         c1 = self._L2[b + 1]
         return FMInterval(c0, c1)
 
-    def biinterval(self: FMDIndex, c: seq):
+    def biinterval(self, c: seq):
         b = _enc(c._at(0))
         if b > 3:
             return FMDInterval()
@@ -855,7 +855,7 @@ class FMDIndex:
         x2 = int(self._L2[b + 1] - self._L2[b])
         return FMDInterval(x0, x1, x2)
 
-    def smems(self: FMDIndex,
+    def smems(self,
               q: seq,
               x: int = 0,
               min_intv: int = 1,
@@ -865,7 +865,7 @@ class FMDIndex:
               curr: list[SMEM] = None):
         return smems(self, q, x, min_intv, min_seed, mems, prev, curr)
 
-    def update(self: FMDIndex, intv: FMInterval, c: seq):
+    def update(self, intv: FMInterval, c: seq):
         if len(c) != 1:
             raise ValueError("update() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -878,7 +878,7 @@ class FMDIndex:
         l = self._L2[b] + ol
         return FMInterval(k, l)
 
-    def biupdate(self: FMDIndex, intv: FMDInterval, c: seq):
+    def biupdate(self, intv: FMDInterval, c: seq):
         if len(c) != 1:
             raise ValueError("biupdate() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -886,13 +886,13 @@ class FMDIndex:
             return FMDInterval()
         return _extend(self, intv, b)
 
-    def __getitem__(self: FMDIndex, x: tuple[FMInterval, seq]):
+    def __getitem__(self, x: tuple[FMInterval, seq]):
         return self.update(x[0], x[1])
 
-    def __getitem__(self: FMDIndex, x: tuple[FMDInterval, seq]):
+    def __getitem__(self, x: tuple[FMDInterval, seq]):
         return self.biupdate(x[0], x[1])
 
-    def _get_interval(self: FMDIndex, s: seq):
+    def _get_interval(self, s: seq):
         if not s:
             return FMInterval()
         intv = self.interval(s[-1])
@@ -902,16 +902,16 @@ class FMDIndex:
             i -= 1
         return intv
 
-    def __getitem__(self: FMDIndex, intv: FMInterval):
+    def __getitem__(self, intv: FMInterval):
         lo, hi = intv
         while lo <= hi:
             yield int(self._sa_get(lo))
             lo += 1
 
-    def __getitem__(self: FMDIndex, s: seq):
+    def __getitem__(self, s: seq):
         return self[self._get_interval(s)]
 
-    def results(self: FMDIndex, intv: FMInterval, both_strands: bool = False):
+    def results(self, intv: FMInterval, both_strands: bool = False):
         lo, hi = intv
         while lo <= hi:
             pos, is_rev = self._bntseq.depos(self._sa_get(lo))
@@ -921,11 +921,11 @@ class FMDIndex:
                 yield (rid, ann._name, pos - ann._offset, is_rev)
             lo += 1
 
-    def loci(self: FMDIndex, intv: FMInterval, both_strands: bool = True):
+    def loci(self, intv: FMInterval, both_strands: bool = True):
         for rid, name, pos, is_rev in self.results(intv, both_strands):
             yield Locus(rid, -pos if is_rev else pos)
 
-    def biresults(self: FMDIndex, smem: SMEM):
+    def biresults(self, smem: SMEM):
         lo, lo_rev, size = smem.interval
         hi = lo + size - 1
         l = len(smem)
@@ -938,14 +938,14 @@ class FMDIndex:
             yield (rid, ann._name, pos - ann._offset, is_rev)
             lo += 1
 
-    def biloci(self: FMDIndex, intv: FMDInterval):
+    def biloci(self, intv: FMDInterval):
         for rid, name, pos, is_rev in self.biresults(intv):
             yield Locus(rid, -pos if is_rev else pos)
 
-    def locate(self: FMDIndex, s: seq, both_strands: bool = False):
+    def locate(self, s: seq, both_strands: bool = False):
         return self.results(self._get_interval(s), both_strands)
 
-    def sequence(self: FMDIndex, start: int, stop: int, rid: int = -1, name: str = ''):
+    def sequence(self, start: int, stop: int, rid: int = -1, name: str = ''):
         if rid >= 0 and name:
             raise ValueError("cannot specify both 'rid' and 'name' in call to sequence()")
 
@@ -965,13 +965,13 @@ class FMDIndex:
         stopx += ann._offset
         return self._bntseq.get_seq(startx, stopx)
 
-    def contigs(self: FMDIndex):
+    def contigs(self):
         i = 0
         for ann in self._bntseq._anns:
             yield Contig(tid=i, name=ann._name, len=ann._len)
             i += 1
 
-    def contig(self: FMDIndex, rid: int):
+    def contig(self, rid: int):
         ann = self._bntseq._anns[rid]
         return Contig(tid=rid, name=ann._name, len=ann._len)
 
@@ -989,7 +989,7 @@ class FMIndex:
     _FMD: bool
     _bntseq: bntseq
 
-    def __pickle__(self: FMIndex, jar: Jar):
+    def __pickle__(self, jar: Jar):
         if not self._bntseq:
             raise ValueError("can only pickle FASTA-based FM-index")
         pickle(self._primary, jar)
@@ -1029,27 +1029,27 @@ class FMIndex:
         fmi._bntseq = b
         return fmi
 
-    def _B0(self: FMIndex, k: int):
+    def _B0(self, k: int):
         return int(self._bwt[k >> 4] >> u32(((~k & 0xf) << 1)) & u32(3))
 
-    def _init_sa(self: FMIndex, l: int, need_sa_hi: bool):
+    def _init_sa(self, l: int, need_sa_hi: bool):
         self._sa = ptr[u32](l + 1)
         if need_sa_hi:
             self._sa_hi = ptr[u8](l + 1)
         self._set_sa(idx=0, val=l)
 
-    def _set_sa(self: FMIndex, idx: int, val: int):
+    def _set_sa(self, idx: int, val: int):
         self._sa[idx] = u32(val)
         if self._sa_hi:
             self._sa_hi[idx] = u8((val >> 32) & 0xff)
 
-    def _get_sa(self: FMIndex, idx: int):
+    def _get_sa(self, idx: int):
         val = int(self._sa[idx])
         if self._sa_hi:
             val |= int(self._sa_hi[idx]) << 32
         return val
 
-    def _init_from_enc(self: FMIndex, p: ptr[u8], l: int, packed: bool = False, FMD: bool = False):
+    def _init_from_enc(self, p: ptr[u8], l: int, packed: bool = False, FMD: bool = False):
         from bio.bwt import _saisxx
         def clear[T](p: ptr[T], n: int):
             i = 0
@@ -1164,7 +1164,7 @@ class FMIndex:
 
         self._FMD = FMD
 
-    def __init__(self: FMIndex):
+    def __init__(self):
         self._seq_len = 0
         self._bwt_size = 0
         self._n_occ = 0
@@ -1178,7 +1178,7 @@ class FMIndex:
         self._bntseq = None
         self._FMD = False
 
-    def __init__(self: FMIndex, s: seq):
+    def __init__(self, s: seq):
         if s.N():
             raise ValueError("cannot build FM-index for sequence containing ambiguous bases")
         n = len(s)
@@ -1198,15 +1198,15 @@ class FMIndex:
         _gc.free(p)
         self._bntseq = None
 
-    def __init__(self: FMIndex, path: str):
+    def __init__(self, path: str):
         self._bntseq = bntseq(path)
         self._init_from_enc(self._bntseq._pac, self._bntseq._l_pac, FMD=False, packed=True)
 
-    def __init__(self: FMIndex, path: str, FMD: bool):
+    def __init__(self, path: str, FMD: bool):
         self._bntseq = bntseq(path)
         self._init_from_enc(self._bntseq._pac, self._bntseq._l_pac, FMD=FMD, packed=True)
 
-    def _occ1(self: FMIndex, k: int, c: int):
+    def _occ1(self, k: int, c: int):
         if k >= self._seq_len:
             return int(self._L2[c + 1] - self._L2[c])
         if k < 0:
@@ -1220,7 +1220,7 @@ class FMIndex:
             n -= 15 - (k&15)
         return n
 
-    def _occ4(self: FMIndex, k: int):
+    def _occ4(self, k: int):
         if k < 0:
             return 0, 0, 0, 0
         if k >= self._primary:
@@ -1236,15 +1236,15 @@ class FMIndex:
         cnt[3] += x >> 24
         return cnt[0], cnt[1], cnt[2], cnt[3]
 
-    def _2occ4(self: FMIndex, k: int, l: int):
+    def _2occ4(self, k: int, l: int):
         return (self._occ4(k), self._occ4(l))
 
-    def occ(self: FMIndex, k: int, c: seq):
+    def occ(self, k: int, c: seq):
         if len(c) != 1:
             raise ValueError("occ() expects length-1 sequence argument")
         return self._occ1(k, _enc(c._at(0)))
 
-    def less(self: FMDIndex, c: seq):
+    def less(self, c: seq):
         if len(c) != 1:
             raise ValueError("less() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -1252,7 +1252,7 @@ class FMIndex:
             return -1
         return self._L2[b + 1]
 
-    def interval(self: FMIndex, c: seq):
+    def interval(self, c: seq):
         if len(c) != 1:
             raise ValueError("interval() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -1262,11 +1262,11 @@ class FMIndex:
         c1 = self._L2[b + 1]
         return FMInterval(c0, c1)
 
-    def _fmd_check(self: FMIndex):
+    def _fmd_check(self):
         if not self._FMD:
             raise ValueError("FMIndex instance is not FMD-index")
 
-    def biinterval(self: FMIndex, c: seq):
+    def biinterval(self, c: seq):
         self._fmd_check()
         b = _enc(c._at(0))
         if b > 3:
@@ -1276,7 +1276,7 @@ class FMIndex:
         x2 = self._L2[b + 1] - self._L2[b]
         return FMDInterval(x0, x1, x2)
 
-    def smems(self: FMIndex,
+    def smems(self,
               q: seq,
               x: int = 0,
               min_intv: int = 1,
@@ -1286,7 +1286,7 @@ class FMIndex:
               curr: list[SMEM] = None):
         return smems(self, q, x, min_intv, min_seed, mems, prev, curr)
 
-    def update(self: FMIndex, intv: FMInterval, c: seq):
+    def update(self, intv: FMInterval, c: seq):
         if len(c) != 1:
             raise ValueError("update() expects length-1 sequence argument")
         b = _enc(c._at(0))
@@ -1298,7 +1298,7 @@ class FMIndex:
         occ2 = self._occ1(hi, b)
         return FMInterval(c0 + occ1 + 1, c0 + occ2)
 
-    def biupdate(self: FMIndex, intv: FMDInterval, c: seq):
+    def biupdate(self, intv: FMDInterval, c: seq):
         self._fmd_check()
         if len(c) != 1:
             raise ValueError("biupdate() expects length-1 sequence argument")
@@ -1307,13 +1307,13 @@ class FMIndex:
             return FMDInterval()
         return _extend(self, intv, b)
 
-    def __getitem__(self: FMIndex, x: tuple[FMInterval, seq]):
+    def __getitem__(self, x: tuple[FMInterval, seq]):
         return self.update(x[0], x[1])
 
-    def __getitem__(self: FMIndex, x: tuple[FMDInterval, seq]):
+    def __getitem__(self, x: tuple[FMDInterval, seq]):
         return self.biupdate(x[0], x[1])
 
-    def __prefetch__(self: FMIndex, x: tuple[FMInterval, seq]):
+    def __prefetch__(self, x: tuple[FMInterval, seq]):
         intv, c = x
         assert len(c) == 1
         lo, hi = intv
@@ -1330,7 +1330,7 @@ class FMIndex:
         (self._bwt + (k1//16)).__prefetch_r0__()
         (self._bwt + (k2//16)).__prefetch_r0__()
 
-    def __prefetch__(self: FMIndex, x: tuple[FMDInterval, seq]):
+    def __prefetch__(self, x: tuple[FMDInterval, seq]):
         intv, c = x
         lo, _, size = intv
         hi = lo + size - 1
@@ -1346,7 +1346,7 @@ class FMIndex:
         (self._bwt + (k1>>4)).__prefetch_r0__()
         (self._bwt + (k2>>4)).__prefetch_r0__()
 
-    def _get_interval(self: FMIndex, s: seq):
+    def _get_interval(self, s: seq):
         if not s:
             return FMInterval()
         intv = self.interval(s[-1])
@@ -1356,19 +1356,19 @@ class FMIndex:
             i -= 1
         return intv
 
-    def __getitem__(self: FMIndex, intv: FMInterval):
+    def __getitem__(self, intv: FMInterval):
         lo, hi = intv
         while lo <= hi:
             yield int(self._get_sa(lo))
             lo += 1
 
-    def __getitem__(self: FMIndex, s: seq):
+    def __getitem__(self, s: seq):
         return self[self._get_interval(s)]
 
-    def count(self: FMIndex, s: seq):
+    def count(self, s: seq):
         return len(self._get_interval(s))
 
-    def results(self: FMIndex, intv: FMInterval):
+    def results(self, intv: FMInterval):
         if self._bntseq is None:
             raise ValueError("results() requires FASTA-based FM-index")
         lo, hi = intv
@@ -1382,13 +1382,13 @@ class FMIndex:
             yield (rid, ann._name, pos - ann._offset)
             lo += 1
 
-    def loci(self: FMIndex, intv: FMInterval):
+    def loci(self, intv: FMInterval):
         if self._bntseq is None:
             raise ValueError("loci() requires FASTA-based FM-index")
         for rid, name, pos in self.results(intv):
             yield Locus(rid, pos)
 
-    def biresults(self: FMIndex, smem: SMEM):
+    def biresults(self, smem: SMEM):
         self._fmd_check()
         if self._bntseq is None:
             raise ValueError("biresults() requires FASTA-based FM-index")
@@ -1404,18 +1404,18 @@ class FMIndex:
             yield (rid, ann._name, pos - ann._offset, is_rev)
             lo += 1
 
-    def biloci(self: FMIndex, intv: FMDInterval):
+    def biloci(self, intv: FMDInterval):
         if self._bntseq is None:
             raise ValueError("biloci() requires FASTA-based FM-index")
         for rid, name, pos, is_rev in self.biresults(intv):
             yield Locus(rid, -pos if is_rev else pos)
 
-    def locate(self: FMIndex, s: seq):
+    def locate(self, s: seq):
         if self._bntseq is None:
             raise ValueError("locate() requires FASTA-based FM-index")
         return self.results(self._get_interval(s))
 
-    def sequence(self: FMIndex, start: int, stop: int, rid: int = -1, name: str = ''):
+    def sequence(self, start: int, stop: int, rid: int = -1, name: str = ''):
         if self._bntseq is None:
             raise ValueError("sequence() requires FASTA-based FM-index")
         if rid >= 0 and name:
@@ -1437,7 +1437,7 @@ class FMIndex:
         stopx += ann._offset
         return self._bntseq.get_seq(startx, stopx)
 
-    def contigs(self: FMIndex):
+    def contigs(self):
         if self._bntseq is None:
             raise ValueError("contigs() requires FASTA-based FM-index")
         i = 0
@@ -1445,6 +1445,6 @@ class FMIndex:
             yield Contig(tid=i, name=ann._name, len=ann._len)
             i += 1
 
-    def contig(self: FMIndex, rid: int):
+    def contig(self, rid: int):
         ann = self._bntseq._anns[rid]
         return Contig(tid=rid, name=ann._name, len=ann._len)

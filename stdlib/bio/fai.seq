@@ -1,26 +1,26 @@
 type FAIRecord(_name: str, _length: int, _offset: int, _linebases: int, _linewidth: int, _qualoffset: int):
     @property
-    def name(self: FAIRecord):
+    def name(self):
         return self._name
 
     @property
-    def length(self: FAIRecord):
+    def length(self):
         return self._length
 
     @property
-    def offset(self: FAIRecord):
+    def offset(self):
         return self._offset
 
     @property
-    def line_bases(self: FAIRecord):
+    def line_bases(self):
         return self._linebases
 
     @property
-    def line_width(self: FAIRecord):
+    def line_width(self):
         return self._linewidth
 
     @property
-    def qual_offset(self: FAIRecord):
+    def qual_offset(self):
         return self._qualoffset
 
 FAI_COL_NAMES = ["name", "length", "offset", "line_bases", "line_width", "qual_offset"]
@@ -31,28 +31,28 @@ class FAIReader:
     copy: bool
     _file: gzFile
 
-    def __init__(self: FAIReader, path: str, fastq: bool, validate: bool, copy: bool):
+    def __init__(self, path: str, fastq: bool, validate: bool, copy: bool):
         self.validate = validate
         self.copy = copy
         self._file = gzopen(path, "r")
         self.fastq = fastq
 
     @property
-    def file(self: FAIReader):
+    def file(self):
         return self._file
 
     @property
-    def num_necessary_cols(self: FAIReader):
+    def num_necessary_cols(self):
         return 6 if self.fastq else 5
 
-    def __iter__(self: FAIReader) -> FAIRecord:
+    def __iter__(self) -> FAIRecord:
         for lnum, l in enumerate(self.file._iter()):
             line = copy(l) if self.copy else l
             rec: FAIRecord = self._FAIRecord_from_str(line, lnum + 1)
             yield rec
         self.close()
 
-    def _FAIRecord_from_str(self: FAIReader, s: str, lnum: int):
+    def _FAIRecord_from_str(self, s: str, lnum: int):
         col_strs = s.split("\t")
 
         if self.validate and len(col_strs) < self.num_necessary_cols:
@@ -79,7 +79,7 @@ class FAIReader:
 
         return FAIRecord(name, length, offset, line_bases, line_width, qual_offset)
 
-    def _get_int_from_fai(self: FAIReader, val_str: str, col_name: str, lnum: int):
+    def _get_int_from_fai(self, val_str: str, col_name: str, lnum: int):
         if self.validate:
             try:
                 return int(val_str)
@@ -87,13 +87,13 @@ class FAIReader:
                 raise ValueError(f"{col_name}, must be integer, line: {lnum}")
         return int(val_str)
 
-    def close(self: FAIReader):
+    def close(self):
         self.file.close()
 
-    def __enter__(self: FAIReader):
+    def __enter__(self):
         pass
 
-    def __exit__(self: FAIReader):
+    def __exit__(self):
         self.close()
 
 def FAI(path: str, fastq: bool = False, validate: bool = True, copy: bool = True) -> FAIReader:

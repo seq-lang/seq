@@ -77,9 +77,20 @@ Value *StrPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
                            BasicBlock *&block) {
   LLVMContext &context = block->getContext();
   Value *pat = StrExpr(this->val).codegen(base, block);
-  Value *b = types::Str->callMagic("__eq__", {type}, pat, {val}, block, nullptr);
+  // Value *b = types::Str->callMagic("__eq__", {type}, pat, {val}, block, nullptr);
+
+  // Func *eqFn = Func::getBuiltin(".str.__eq__[.str,.str]");
+  Function *eqFn = block->getModule()->getFunction(".str.__eq__[.str,.str]");
+  // FuncExpr eqFnExpr(eqFn);
+  // ValueExpr slf(types::Str, pat);
+  // ValueExpr oth(types::Str, val);
+  // CallExpr eqFnCall(&eqFnExpr, {&slf, &oth});
+  // Value *b = eqFnCall.codegen(nullptr, block);
+
   IRBuilder<> builder(block);
-  return builder.CreateTrunc(b, IntegerType::getInt1Ty(context));
+  // Value *b = builder. eqFn->crea
+  return builder.CreateTrunc(builder.CreateCall(eqFn, {pat, val}),
+                             IntegerType::getInt1Ty(context));
 }
 
 RecordPattern::RecordPattern(std::vector<Pattern *> patterns)
@@ -577,7 +588,7 @@ Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
   } else if (types::KMer *kmerType = type->asKMer()) {
     return codegenSeqMatchForKmer(patterns, base, kmerType, val, block);
   } else {
-    assert(0);
+    seqassert(0, "unexpected {}", type->getName());
     return nullptr;
   }
 }

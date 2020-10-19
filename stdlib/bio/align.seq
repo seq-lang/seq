@@ -1,5 +1,21 @@
-from core.c_stubs import CIGAR, Alignment, pseq
+# Seq Alignment
+
 from c_htslib import bam_cigar2qlen, bam_cigar2rlen
+
+type CIGAR(_data: ptr[u32], _len: int)
+type Alignment(_cigar: CIGAR, _score: int)
+type pseq(len: int, ptr: cobj)
+
+cimport seq_align(seq, seq, ptr[i8], i8, i8, int, int, int, int, ptr[Alignment])
+cimport seq_align_dual(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, int, int, ptr[Alignment])
+cimport seq_align_splice(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, ptr[Alignment])
+cimport seq_align_global(seq, seq, ptr[i8], i8, i8, int, bool, ptr[Alignment])
+cimport seq_align_default(seq, seq, ptr[Alignment])
+cimport seq_palign(pseq, pseq, ptr[i8], i8, i8, int, int, int, int, ptr[Alignment])
+cimport seq_palign_dual(pseq, pseq, ptr[i8], i8, i8, i8, i8, int, int, int, int, ptr[Alignment])
+cimport seq_palign_global(pseq, pseq, ptr[i8], i8, i8, int, ptr[Alignment])
+cimport seq_palign_default(pseq, pseq, ptr[Alignment])
+
 
 # adapted from ksw2:
 _ALIGN_SCORE_NEG_INF = -0x40000000
@@ -50,7 +66,7 @@ type SubMat(mat: ptr[i8]):
             p[a2*N + a1] = i8(v)
         return (p,)
 
-    def __str__(self: SubMat):
+    def __str__(self):
         N = SubMat._N()
         s = []
         k = 0
@@ -64,10 +80,10 @@ extend CIGAR:
     def __new__() -> CIGAR:
         return (ptr[u32](), 0)
 
-    def __len__(self: CIGAR):
+    def __len__(self):
         return self._len
 
-    def __eq__(self: CIGAR, other: CIGAR):
+    def __eq__(self, other: CIGAR):
         if self._len != other._len:
             return False
         i = 0
@@ -77,15 +93,15 @@ extend CIGAR:
             i += 1
         return True
 
-    def __ne__(self: CIGAR, other: CIGAR):
+    def __ne__(self, other: CIGAR):
         return not (self == other)
 
-    def __copy__(self: CIGAR) -> CIGAR:
+    def __copy__(self) -> CIGAR:
         p = ptr[u32](self._len)
         str.memcpy(ptr[byte](p), ptr[byte](self._data), self._len * _gc.sizeof[u32]())
         return CIGAR(p, self._len)
 
-    def __bool__(self: CIGAR):
+    def __bool__(self):
         return self._len > 0
 
     def __new__(cigar: str) -> CIGAR:
@@ -109,31 +125,31 @@ extend CIGAR:
         return (p, len(ops))
 
     @property
-    def qlen(self: CIGAR):
+    def qlen(self):
         return bam_cigar2qlen(self._len, self._data)
 
     @property
-    def rlen(self: CIGAR):
+    def rlen(self):
         return bam_cigar2rlen(self._len, self._data)
 
-    def __getitem__(self: CIGAR, idx: int):
+    def __getitem__(self, idx: int):
         if not (0 <= idx < len(self)):
             raise IndexError("CIGAR index out of range")
         v = self._data[idx]
         return (int(v) >> 4, "MIDNSHP=XB"[int(v) & 0xf])
 
-    def __iter__(self: CIGAR):
+    def __iter__(self):
         for i in range(len(self)):
             yield self[i]
 
-    def __str__(self: CIGAR):
+    def __str__(self):
         v = list[str](len(self) * 2)
         for op in self:
             v.append(str(op[0]))
             v.append(str(op[1]))
         return str.cat(v)
 
-    def __reversed__(self: CIGAR):
+    def __reversed__(self):
         n = self._len
         p = ptr[u32](n)
         i = 0
@@ -147,14 +163,14 @@ extend Alignment:
         return (CIGAR(), 0)
 
     @property
-    def cigar(self: Alignment):
+    def cigar(self):
         return self._cigar
 
     @property
-    def score(self: Alignment):
+    def score(self):
         return self._score
 
-    def __bool__(self: Alignment):
+    def __bool__(self):
         return self._score != _ALIGN_SCORE_NEG_INF
 
 def _validate_match(m: int):
@@ -167,7 +183,7 @@ def _validate_gap(g: int):
 
 extend seq:
     @builtin
-    def align(self: seq,
+    def align(self,
               other: seq,
               a: int = 2,
               b: int = 4,
@@ -270,22 +286,22 @@ extend seq:
 
         out = Alignment()
         if kind == _ALIGN_KIND_REGULAR:
-            _C.seq_align(self, other, mat.ptr, i8(gapo), i8(gape), bandwidth, zdrop, end_bonus, flags, __ptr__(out))
+            seq_align(self, other, mat.ptr, i8(gapo), i8(gape), bandwidth, zdrop, end_bonus, flags, __ptr__(out))
         elif kind == _ALIGN_KIND_DUAL:
-            _C.seq_align_dual(self, other, mat.ptr, i8(gapo), i8(gape), i8(gapo2), i8(gape2), bandwidth, zdrop, end_bonus, flags, __ptr__(out))
+            seq_align_dual(self, other, mat.ptr, i8(gapo), i8(gape), i8(gapo2), i8(gape2), bandwidth, zdrop, end_bonus, flags, __ptr__(out))
         elif kind == _ALIGN_KIND_SPLICE:
-            _C.seq_align_splice(self, other, mat.ptr, i8(gapo), i8(gape), i8(gapo2), i8(gape2), zdrop, flags, __ptr__(out))
+            seq_align_splice(self, other, mat.ptr, i8(gapo), i8(gape), i8(gapo2), i8(gape2), zdrop, flags, __ptr__(out))
         else:
             assert False
         return out
 
-    def __matmul__(self: seq, other: seq):
+    def __matmul__(self, other: seq):
         out = Alignment()
-        _C.seq_align_default(self, other, __ptr__(out))
+        seq_align_default(self, other, __ptr__(out))
         return out
 
 extend pseq:
-    def align(self: pseq,
+    def align(self,
               other: pseq,
               mat: SubMat,
               gapo: int = 4,
@@ -336,16 +352,16 @@ extend pseq:
 
         out = Alignment()
         if kind == _ALIGN_KIND_REGULAR:
-            _C.seq_palign(self, other, mat.mat, i8(gapo), i8(gape), bandwidth, zdrop, end_bonus, flags, __ptr__(out))
+            seq_palign(self, other, mat.mat, i8(gapo), i8(gape), bandwidth, zdrop, end_bonus, flags, __ptr__(out))
         elif kind == _ALIGN_KIND_DUAL:
-            _C.seq_palign_dual(self, other, mat.mat, i8(gapo), i8(gape), i8(gapo2), i8(gape2), bandwidth, zdrop, end_bonus, flags, __ptr__(out))
+            seq_palign_dual(self, other, mat.mat, i8(gapo), i8(gape), i8(gapo2), i8(gape2), bandwidth, zdrop, end_bonus, flags, __ptr__(out))
         else:
             assert False
         return out
 
-    def __matmul__(self: pseq, other: pseq):
+    def __matmul__(self, other: pseq):
         out = Alignment()
-        _C.seq_palign_default(self, other, __ptr__(out))
+        seq_palign_default(self, other, __ptr__(out))
         return out
 
 # inter-sequence alignment
@@ -458,7 +474,7 @@ def _interaln_sort_pairs_len_ext(pairs_array: ptr[SeqPair], tmp_array: ptr[SeqPa
 
     return num_pairs128, num_pairs16, num_pairs1
 
-type InterAlignYield = tuple[seq,seq,Alignment]
+InterAlignYield = tuple[seq,seq,Alignment]
 
 @builtin
 @inline

@@ -11,9 +11,9 @@ def boolean(x: int) -> bool:
     if x: return True
     else: return False
 
-def take(n, seq):
+def take(n, sequence):
     """Convenience function for partially consuming a long of infinite iterable"""
-    return list(itertools.islice(seq, 0, n, 1))
+    return list(itertools.islice(sequence, 0, n, 1))
 
 @test
 def combinations():

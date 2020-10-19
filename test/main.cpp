@@ -224,7 +224,7 @@ INSTANTIATE_TEST_SUITE_P(
         "core/range.seq",
         "core/bltin.seq",
         "core/arguments.seq",
-        // F: "core/match.seq", // needs Kmer type
+        // F: "core/match.seq", // needs list & seq fixes
         // "core/align.seq",
         // "core/bwtsa.seq",
         // "core/formats.seq",

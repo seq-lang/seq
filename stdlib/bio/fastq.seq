@@ -2,30 +2,30 @@
 # https://en.wikipedia.org/wiki/FASTQ_format
 type FASTQRecord(_header: str, _read: seq, _qual: str):
     @property
-    def header(self: FASTQRecord):
+    def header(self):
         return self._header
 
     @property
-    def name(self: FASTQRecord):
+    def name(self):
         from bio.builtin import _split_header_on_space
         return _split_header_on_space(self.header)[0]
 
     @property
-    def comment(self: FASTQRecord):
+    def comment(self):
         from bio.builtin import _split_header_on_space
         return _split_header_on_space(self.header)[1]
 
     @property
-    def read(self: FASTQRecord):
+    def read(self):
         return self._read
 
     # FASTA compatibility
     @property
-    def seq(self: FASTQRecord):
+    def seq(self):
         return self._read
 
     @property
-    def qual(self: FASTQRecord):
+    def qual(self):
         return self._qual
 
 type FASTQReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
@@ -33,34 +33,34 @@ type FASTQReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
         return (gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__(), validate, gzip, copy)
 
     @property
-    def file(self: FASTQReader):
+    def file(self):
         assert not self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
         return ptr[File](p.ptr)[0]
 
     @property
-    def gzfile(self: FASTQReader):
+    def gzfile(self):
         assert self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
         return ptr[gzFile](p.ptr)[0]
 
-    def _preprocess_read(self: FASTQReader, a: str):
+    def _preprocess_read(self, a: str):
         from bio.builtin import _validate_str_as_seq
         if self.validate:
             return _validate_str_as_seq(a, self.copy)
         else:
             return copy(seq(a.ptr, a.len)) if self.copy else seq(a.ptr, a.len)
 
-    def _preprocess_qual(self: FASTQReader, a: str):
+    def _preprocess_qual(self, a: str):
         from bio.builtin import _validate_str_as_qual
         if self.validate:
             return _validate_str_as_qual(a, self.copy)
         else:
             return copy(a) if self.copy else a
 
-    def _iter_core(self: FASTQReader, file, seqs: bool) -> FASTQRecord:
+    def _iter_core(self, file, seqs: bool) -> FASTQRecord:
         line = 0
         name, read, qual = "", s"", ""
         for a in file._iter():
@@ -87,7 +87,7 @@ type FASTQReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
                     assert False
             line += 1
 
-    def __seqs__(self: FASTQReader):
+    def __seqs__(self):
         if self.gzip:
             for rec in self._iter_core(self.gzfile, seqs=True):
                 yield rec.seq
@@ -96,7 +96,7 @@ type FASTQReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
                 yield rec.seq
         self.close()
 
-    def __iter__(self: FASTQReader) -> FASTQRecord:
+    def __iter__(self) -> FASTQRecord:
         if not self.copy:
             raise ValueError("cannot iterate over FASTQ records with copy=False")
         if self.gzip:
@@ -105,22 +105,22 @@ type FASTQReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
             yield from self._iter_core(self.file, seqs=False)
         self.close()
 
-    def __blocks__(self: FASTQReader, size: int):
+    def __blocks__(self, size: int):
         from bio.block import _blocks
         if not self.copy:
             raise ValueError("cannot read sequences in blocks with copy=False")
         return _blocks(self.__iter__(), size)
 
-    def close(self: FASTQReader):
+    def close(self):
         if self.gzip:
             self.gzfile.close()
         else:
             self.file.close()
 
-    def __enter__(self: FASTQReader):
+    def __enter__(self):
         pass
 
-    def __exit__(self: FASTQReader):
+    def __exit__(self):
         self.close()
 
 def FASTQ(path: str, validate: bool = True, gzip: bool = True, copy: bool = True):

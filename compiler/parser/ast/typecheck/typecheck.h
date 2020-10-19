@@ -96,6 +96,7 @@ public:
   void visit(const PtrExpr *) override;
   void visit(const YieldExpr *) override;
   void visit(const StmtExpr *) override;
+  void visit(const StaticExpr *) override;
 
   void visit(const SuiteStmt *) override;
   void visit(const ExprStmt *) override;

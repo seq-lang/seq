@@ -3,74 +3,74 @@ type Contig(_tid: u32, _name: str, _len: int):
         return (u32(tid), name, len)
 
     @property
-    def tid(self: Contig):
+    def tid(self):
         return int(self._tid)
 
     @property
-    def name(self: Contig):
+    def name(self):
         return self._name
 
     @property
-    def len(self: Contig):
+    def len(self):
         return self._len
 
-    def __str__(self: Contig):
+    def __str__(self):
         return self.name
 
-    def __len__(self: Contig):
+    def __len__(self):
         return self.len
 
-    def __eq__(self: Contig, other: Contig):
+    def __eq__(self, other: Contig):
         return self.tid == other.tid
 
-    def __ne__(self: Contig, other: Contig):
+    def __ne__(self, other: Contig):
         return self.tid != other.tid
 
-    def __lt__(self: Contig, other: Contig):
+    def __lt__(self, other: Contig):
         return self.tid < other.tid
 
-    def __gt__(self: Contig, other: Contig):
+    def __gt__(self, other: Contig):
         return self.tid > other.tid
 
-    def __le__(self: Contig, other: Contig):
+    def __le__(self, other: Contig):
         return self.tid <= other.tid
 
-    def __ge__(self: Contig, other: Contig):
+    def __ge__(self, other: Contig):
         return self.tid >= other.tid
 
-    def __hash__(self: Contig):
+    def __hash__(self):
         return self.tid
 
 type Locus(_tid: u32, _pos: u32):
     def __new__(tid: int, pos: int) -> Locus:
         return (u32(tid), u32(pos))
 
-    def __lt__(self: Locus, other: Locus):
+    def __lt__(self, other: Locus):
         return (self.tid, self.pos) < (other.tid, other.pos)
 
-    def __gt__(self: Locus, other: Locus):
+    def __gt__(self, other: Locus):
         return (self.tid, self.pos) > (other.tid, other.pos)
 
-    def __le__(self: Locus, other: Locus):
+    def __le__(self, other: Locus):
         return (self.tid, self.pos) <= (other.tid, other.pos)
 
-    def __ge__(self: Locus, other: Locus):
+    def __ge__(self, other: Locus):
         return (self.tid, self.pos) >= (other.tid, other.pos)
 
     @property
-    def tid(self: Locus):
+    def tid(self):
         return int(self._tid)
 
     @property
-    def pos(self: Locus):
+    def pos(self):
         return abs(int(i32(int(self._pos))))
 
     @property
-    def reversed(self: Locus):
+    def reversed(self):
         return i32(int(self._pos)) < i32(0)
 
-    def __invert__(self: Locus):
+    def __invert__(self):
         return Locus(self.tid, self.pos if self.reversed else -self.pos)
 
-    def __str__(self: Locus):
+    def __str__(self):
         return f"Locus(tid={self.tid}, pos={self.pos}, reversed={self.reversed})"

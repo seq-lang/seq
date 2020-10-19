@@ -700,7 +700,7 @@ def _saisxx_bwt(T: ptr[byte], n: int, k: int = 256) -> ptr[byte]:
     return U
 
 extend seq:
-    def suffix_array(self: seq):
+    def suffix_array(self):
         p = self.ptr
         n = self.len
         if n < 0:  # revcomp'd
@@ -709,7 +709,7 @@ extend seq:
         SA = _saisxx(p, n)
         return list[int](array[int](SA, n), n)
 
-    def bwt(self: seq):
+    def bwt(self):
         p = self.ptr
         n = self.len
         if n < 0:  # revcomp'd
@@ -720,13 +720,13 @@ extend seq:
 
 from bio.pseq import pseq
 extend pseq:
-    def suffix_array(self: pseq):
+    def suffix_array(self):
         p = self.ptr
         n = self.len
         SA = _saisxx(p, n)
         return list[int](array[int](SA, n), n)
 
-    def bwt(self: pseq):
+    def bwt(self):
         p = self.ptr
         n = self.len
         B = _saisxx_bwt(p, n)

@@ -320,6 +320,11 @@ void TypecheckVisitor::visit(const PipeExpr *expr) {
   resultExpr->setType(forceUnify(expr, inType));
 }
 
+void TypecheckVisitor::visit(const StaticExpr *expr) {
+  // when visited "normally" just treat it as normal expression
+  resultExpr = transform(expr->expr);
+}
+
 void TypecheckVisitor::visit(const InstantiateExpr *expr) {
   ExprPtr e = transform(expr->type, true);
   auto g = ctx->instantiate(e->getSrcInfo(), e->getType());
@@ -349,6 +354,8 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
         t = make_shared<StaticType>(v, clone(s->expr));
       }
     } else {
+      if (!expr->params[i]->isType())
+        error(expr->params[i], "not a type");
       t = ctx->instantiate(getSrcInfo(), transformType(expr->params[i])->getType());
     }
     /// Note: at this point, only single-variable static var expression (e.g.
@@ -440,7 +447,17 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
   };
 
   ExprPtr e = transform(expr->expr, true);
-  if (auto c = e->getType()->getClass()) {
+  auto t = e->getType();
+  if (t->getFunc()) {
+    vector<ExprPtr> it;
+    if (auto t = CAST(expr->index, TupleExpr))
+      for (auto &i : t->items)
+        it.push_back(transform(i, true));
+    else
+      it.push_back(transform(expr->index, true));
+    LOG("-- {} -> INST {}", expr->toString(), e->toString());
+    resultExpr = transform(N<InstantiateExpr>(move(e), move(it)));
+  } else if (auto c = t->getClass()) {
     resultExpr = getTupleIndex(c, expr->expr, expr->index);
     if (!resultExpr)
       resultExpr = transform(N<CallExpr>(N<DotExpr>(expr->expr->clone(), "__getitem__"),
@@ -975,8 +992,16 @@ void TypecheckVisitor::visit(const IfStmt *stmt) {
 
 void TypecheckVisitor::visit(const MatchStmt *stmt) {
   auto w = transform(stmt->what);
-  auto oldMatchType = ctx->matchType;
-  ctx->matchType = w->getType();
+  auto matchType = w->getType();
+  auto matchTypeClass = matchType->getClass();
+
+  auto unifyType = [&](TypePtr t) {
+    auto tc = t->getClass();
+    if (tc && tc->name == ".seq" && matchTypeClass && matchTypeClass->name == ".Kmer")
+      return;
+    forceUnify(t, matchType);
+  };
+
   vector<PatternPtr> patterns;
   vector<StmtPtr> cases;
   for (auto ci = 0; ci < stmt->cases.size(); ci++) {
@@ -985,14 +1010,15 @@ void TypecheckVisitor::visit(const MatchStmt *stmt) {
       auto boundPat = transform(p->pattern);
       ctx->add(TypecheckItem::Var, p->var, boundPat->getType());
       patterns.push_back(move(boundPat));
+      unifyType(patterns.back()->getType());
       cases.push_back(transform(stmt->cases[ci]));
     } else {
       patterns.push_back(transform(stmt->patterns[ci]));
+      unifyType(patterns.back()->getType());
       cases.push_back(transform(stmt->cases[ci]));
     }
     ctx->popBlock();
   }
-  ctx->matchType = oldMatchType;
   resultStmt = N<MatchStmt>(move(w), move(patterns), move(cases));
 }
 
@@ -1191,51 +1217,43 @@ void TypecheckVisitor::visit(const ExtendStmt *stmt) {
 void TypecheckVisitor::visit(const StarPattern *pat) {
   resultPattern = N<StarPattern>();
   resultPattern->setType(
-      forceUnify(pat, forceUnify(ctx->matchType,
-                                 ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel))));
+      forceUnify(pat, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
 }
 
 void TypecheckVisitor::visit(const IntPattern *pat) {
   resultPattern = N<IntPattern>(pat->value);
-  resultPattern->setType(
-      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal(".int"))));
+  resultPattern->setType(forceUnify(pat, ctx->findInternal(".int")));
 }
 
 void TypecheckVisitor::visit(const BoolPattern *pat) {
   resultPattern = N<BoolPattern>(pat->value);
-  resultPattern->setType(
-      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal(".bool"))));
+  resultPattern->setType(forceUnify(pat, ctx->findInternal(".bool")));
 }
 
 void TypecheckVisitor::visit(const StrPattern *pat) {
   resultPattern = N<StrPattern>(pat->value);
-  resultPattern->setType(
-      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal(".str"))));
+  resultPattern->setType(forceUnify(pat, ctx->findInternal(".str")));
 }
 
 void TypecheckVisitor::visit(const SeqPattern *pat) {
   resultPattern = N<SeqPattern>(pat->value);
-  resultPattern->setType(
-      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal(".seq"))));
+  resultPattern->setType(forceUnify(pat, ctx->findInternal(".seq")));
 }
 
 void TypecheckVisitor::visit(const RangePattern *pat) {
   resultPattern = N<RangePattern>(pat->start, pat->end);
-  resultPattern->setType(
-      forceUnify(pat, forceUnify(ctx->matchType, ctx->findInternal(".int"))));
+  resultPattern->setType(forceUnify(pat, ctx->findInternal(".int")));
 }
 
 void TypecheckVisitor::visit(const TuplePattern *pat) {
   auto p = N<TuplePattern>(transform(pat->patterns));
-  TypePtr t = nullptr;
   vector<TypePtr> types;
   for (auto &pp : p->patterns)
     types.push_back(pp->getType());
-  // TODO: Ensure type...
-  error("not yet implemented");
-  t = make_shared<ClassType>("Tuple", true, types);
+  auto t = ctx->instantiateGeneric(
+      getSrcInfo(), ctx->findInternal(format(".Tuple.{}", types.size())), {types});
   resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
+  resultPattern->setType(forceUnify(pat, t));
 }
 
 void TypecheckVisitor::visit(const ListPattern *pat) {
@@ -1245,7 +1263,7 @@ void TypecheckVisitor::visit(const ListPattern *pat) {
     forceUnify(t, pp->getType());
   t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(".list"), {t});
   resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
+  resultPattern->setType(forceUnify(pat, t));
 }
 
 void TypecheckVisitor::visit(const OrPattern *pat) {
@@ -1255,21 +1273,22 @@ void TypecheckVisitor::visit(const OrPattern *pat) {
   for (auto &pp : p->patterns)
     forceUnify(t, pp->getType());
   resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
+  resultPattern->setType(forceUnify(pat, t));
 }
 
 void TypecheckVisitor::visit(const WildcardPattern *pat) {
   resultPattern = N<WildcardPattern>(pat->var);
+  auto t = forceUnify(pat, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
   if (pat->var != "")
-    ctx->add(TypecheckItem::Var, pat->var, ctx->matchType);
-  resultPattern->setType(forceUnify(pat, ctx->matchType));
+    ctx->add(TypecheckItem::Var, pat->var, t);
+  resultPattern->setType(t);
 }
 
 void TypecheckVisitor::visit(const GuardedPattern *pat) {
   auto p = N<GuardedPattern>(transform(pat->pattern), transform(pat->cond));
   auto t = p->pattern->getType();
   resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
+  resultPattern->setType(forceUnify(pat, t));
 }
 
 void TypecheckVisitor::visit(const BoundPattern *pat) {
@@ -1277,7 +1296,7 @@ void TypecheckVisitor::visit(const BoundPattern *pat) {
   auto t = p->pattern->getType();
   ctx->add(TypecheckItem::Var, p->var, t);
   resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, forceUnify(ctx->matchType, t)));
+  resultPattern->setType(forceUnify(pat, t));
 }
 
 /*******************************/
@@ -1428,7 +1447,7 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
   // Another assomption is that magic methods of interest have no default
   // arguments or reordered arguments...
   if (member.substr(0, 2) != "__" || member.substr(member.size() - 2) != "__")
-    error("overloaded non-magic method...");
+    error("overloaded non-magic method {} in {}", member, c->toString());
 
   vector<pair<int, int>> scores;
   for (int i = 0; i < m->size(); i++) {

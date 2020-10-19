@@ -509,7 +509,7 @@ void FormatVisitor::visit(const ListPattern *pat) {
   string r;
   for (auto &e : pat->patterns)
     r += transform(e) + ", ";
-  result = fmt::format("[{}}]", r);
+  result = fmt::format("[{}]", r);
 }
 
 void FormatVisitor::visit(const OrPattern *pat) {

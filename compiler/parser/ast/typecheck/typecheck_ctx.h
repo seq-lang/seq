@@ -56,8 +56,6 @@ public:
   std::vector<RealizationBase> bases;
 
   int typecheckLevel;
-  /// Function parsing helpers: maintain current return type
-  types::TypePtr matchType;
   /// Set of active unbound variables.
   /// If type checking is successful, all of them should be resolved.
   std::set<types::TypePtr> activeUnbounds;

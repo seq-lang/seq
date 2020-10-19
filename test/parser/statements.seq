@@ -281,3 +281,20 @@ with Foo(2), Bar('t') as q:
     q.bar()  #: meow
 #: < bar! t
 #: < foo! 2
+
+
+#%% auto_init
+class X[T]:
+    a: int = 4
+    b: int
+    c: T
+    d: str = 'oops'
+
+    def __str__(self):
+        return f'X({self.a},{self.b},{self.c},{self.d})'
+
+x = X[float]()
+print x  #: X(4,0,0,oops)
+
+y = X(c='darius',a=5)
+print y  #: X(5,0,darius,oops)

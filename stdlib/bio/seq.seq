@@ -1,18 +1,34 @@
+
+@internal
+type seq(len: int, ptr: Ptr[byte]):
+    def __new__(s: str) -> seq:
+        return (s.len, s.ptr)
+    def __new__(p: Ptr[byte], l: int) -> seq:
+        return (l, p)
+    def __str__(self) -> str:
+        return str(self.ptr, self.len)
+    def __len__(self):
+        return self.len if self.len >= 0 else -self.len
+
+extend str:
+    def __suffix_s__(s: str) -> seq:
+        return seq(s)
+
 type BaseCounts(A: int, C: int, G: int, T: int, N: int):
     def __new__() -> BaseCounts:
         return (0, 0, 0, 0, 0)
 
-    def __add__(self: BaseCounts, other: BaseCounts):
+    def __add__(self, other: BaseCounts):
         A1, C1, G1, T1, N1 = self
         A2, C2, G2, T2, N2 = other
         return BaseCounts(A1 + A2, C1 + C2, G1 + G2, T1 + T2, N1 + N2)
 
-    def __sub__(self: BaseCounts, other: BaseCounts):
+    def __sub__(self, other: BaseCounts):
         A1, C1, G1, T1, N1 = self
         A2, C2, G2, T2, N2 = other
         return BaseCounts(A1 - A2, C1 - C2, G1 - G2, T1 - T2, N1 - N2)
 
-    def add(self: BaseCounts, A: bool = False, C: bool = False, G: bool = False, T: bool = False, N: bool = False):
+    def add(self, A: bool = False, C: bool = False, G: bool = False, T: bool = False, N: bool = False):
         A1, C1, G1, T1, N1 = self
         if A:
             A1 += 1
@@ -26,7 +42,7 @@ type BaseCounts(A: int, C: int, G: int, T: int, N: int):
             N1 += 1
         return BaseCounts(A1, C1, G1, T1, N1)
 
-    def __str__(self: BaseCounts):
+    def __str__(self):
         A, C, G, T, N = self
         return f'BaseCounts({A=}, {C=}, {G=}, {T=}, {N=})'
 
@@ -37,7 +53,7 @@ extend seq:
     def __new__() -> seq:
         return seq(cobj(), 0)
 
-    def __eq__(self: seq, other: seq):
+    def __eq__(self, other: seq):
         n = len(self)
         if n != len(other):
             return False
@@ -48,10 +64,10 @@ extend seq:
             i += 1
         return True
 
-    def __ne__(self: seq, other: seq):
+    def __ne__(self, other: seq):
         return not (self == other)
 
-    def _cmp(self: seq, other: seq):
+    def _cmp(self, other: seq):
         self_len = len(self)
         other_len = len(other)
         n = min2(self_len, other_len)
@@ -64,19 +80,25 @@ extend seq:
             i += 1
         return self_len - other_len
 
-    def __lt__(self: seq, other: seq):
+    def __to_py__(self) -> pyobj:
+        return str(self.ptr, self.len).__to_py__()
+
+    def __from_py__(s: pyobj) -> seq:
+        return seq(str.__from_py__(s))
+
+    def __lt__(self, other: seq):
         return self._cmp(other) < 0
 
-    def __le__(self: seq, other: seq):
+    def __le__(self, other: seq):
         return self._cmp(other) <= 0
 
-    def __gt__(self: seq, other: seq):
+    def __gt__(self, other: seq):
         return self._cmp(other) > 0
 
-    def __ge__(self: seq, other: seq):
+    def __ge__(self, other: seq):
         return self._cmp(other) >= 0
 
-    def __str__(self: seq):
+    def __str__(self):
         if self.len >= 0:
             return str(self.ptr, self.len)
         n = -self.len
@@ -85,22 +107,22 @@ extend seq:
             p[i] = self._at(i)
         return str(p, n)
 
-    def __contains__(self: seq, other: seq):
+    def __contains__(self, other: seq):
         return str(other) in str(self)
 
-    def __len__(self: seq):
+    def __len__(self):
         return abs(self.len)
 
-    def __bool__(self: seq):
+    def __bool__(self):
         return self.len != 0
 
-    def __hash__(self: seq):
+    def __hash__(self):
         h = 0
         for i in range(len(self)):
             h = 31*h + int(self._at(i))
         return h
 
-    def __getitem__(self: seq, idx: int):
+    def __getitem__(self, idx: int):
         n = len(self)
         if idx < 0:
             idx += n
@@ -111,17 +133,17 @@ extend seq:
         else:
             return seq(self.ptr + (n - idx - 1), -1)
 
-    def _at(self: seq, idx: int):
+    def _at(self, idx: int):
         b = self.ptr[(-self.len - idx - 1) if (self.len < 0) else idx]
         return b.comp() if self.len < 0 else b
 
-    def _slice_direct(self: seq, a: int, b: int):
+    def _slice_direct(self, a: int, b: int):
         if self.len >= 0:
             return seq(self.ptr + a, b - a)
         else:
             return seq(self.ptr + (-self.len - b), -(b - a))
 
-    def __getitem__(self: seq, s: slice):
+    def __getitem__(self, s: slice):
         a, b = s
         n = len(self)
         if a < 0: a += n
@@ -130,7 +152,7 @@ extend seq:
         if b > n: b = n
         return self._slice_direct(a, b)
 
-    def __getitem__(self: seq, s: lslice):
+    def __getitem__(self, s: lslice):
         b = s.end
         n = len(self)
         if b < 0: b += n
@@ -140,7 +162,7 @@ extend seq:
         else:
             return seq(self.ptr + (n - b), -b)
 
-    def __getitem__(self: seq, s: rslice):
+    def __getitem__(self, s: rslice):
         a = s.start
         n = len(self)
         if a < 0: a += n
@@ -150,10 +172,10 @@ extend seq:
         else:
             return seq(self.ptr, -(n - a))
 
-    def __getitem__(self: seq, s: eslice):
+    def __getitem__(self, s: eslice):
         return self
 
-    def _copy_to(self: seq, p: cobj):
+    def _copy_to(self, p: cobj):
         if self.len >= 0:
             str.memcpy(p, self.ptr, self.len)
         else:
@@ -161,32 +183,32 @@ extend seq:
             for i in range(n):
                 p[i] = self.ptr[n - i - 1]
 
-    def __copy__(self: seq):
+    def __copy__(self):
         n = len(self)
         p = cobj(n)
         self._copy_to(p)
         return seq(p, n)
 
-    def split(self: seq, k: int, step: int = 1):
+    def split(self, k: int, step: int = 1):
         i = 0
         while i + k <= len(self):
             yield self._slice_direct(i,i+k)
             i += step
 
-    def __iter__(self: seq):
+    def __iter__(self):
         return self.split(1, 1)
 
-    def __reversed__(self: seq):
+    def __reversed__(self):
         i = len(self) - 1
         while i >= 0:
             yield self._slice_direct(i,i+1)
             i -= 1
 
-    def kmers[K](self: seq, step: int = 1):
+    def kmers[K](self, step: int = 1):
         for pos, kmer in self.kmers_with_pos[K](step):
             yield kmer
 
-    def kmers_canonical[K](self: seq):
+    def kmers_canonical[K](self):
         k = K.len()
         n = len(self)
         x0 = K()
@@ -205,7 +227,7 @@ extend seq:
                 l = 0
             i += 1
 
-    def kmers_canonical_with_pos[K](self: seq):
+    def kmers_canonical_with_pos[K](self):
         k = K.len()
         n = len(self)
         x0 = K()
@@ -224,7 +246,7 @@ extend seq:
                 l = 0
             i += 1
 
-    def kmers_with_pos[K](self: seq, step: int = 1):
+    def kmers_with_pos[K](self, step: int = 1):
         # This function is intentionally written this way. It could be simplified,
         # but this version was found to be the most performant due to inlining etc.
         k = K.len()
@@ -269,11 +291,11 @@ extend seq:
                         refresh = True
                 i += step
 
-    def _kmers_revcomp[K](self: seq, step: int):
+    def _kmers_revcomp[K](self, step: int):
         for pos, kmer in self._kmers_revcomp_with_pos[K](step):
             yield kmer
 
-    def _kmers_revcomp_with_pos[K](self: seq, step: int):
+    def _kmers_revcomp_with_pos[K](self, step: int):
         # This function is intentionally written this way. It could be simplified,
         # but this version was found to be the most performant due to inlining etc.
         k = K.len()
@@ -336,7 +358,7 @@ extend seq:
                 '\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04'
                 '\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04').ptr
 
-    def N(self: seq):
+    def N(self):
         nt4 = seq._nt4_table()
         i = 0
         n = len(self)
@@ -351,13 +373,13 @@ extend seq:
         if c == 4: return 4
         return c if n > 0 else 3 - c
 
-    def __int__(self: seq):
+    def __int__(self):
         if len(self) != 1:
             raise ValueError("sequence length is not 1")
         return seq._base_value(self.ptr[0], self.len)
 
     @property
-    def bases(self: seq):
+    def bases(self):
         p = __array__[int](5)
         p[0], p[1], p[2], p[3], p[4] = 0, 0, 0, 0, 0
         i = 0
@@ -368,10 +390,10 @@ extend seq:
         A, C, G, T, N = p
         return BaseCounts(A, C, G, T, N)
 
-    def __invert__(self: seq):
+    def __invert__(self):
         return seq(self.ptr, -self.len)
 
-    def __reversed__(self: seq):
+    def __reversed__(self):
         n = len(self)
         p = ptr[byte](n)
         i = 0

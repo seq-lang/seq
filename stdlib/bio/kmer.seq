@@ -1,0 +1,126 @@
+from bio.seq import seq
+
+type Kmer[K: int]:
+    x: UInt[2*K] = UInt[2*K](0)
+
+    def __new__(s: seq) -> Kmer[K]:
+        if len(s) != K:
+            raise ValueError("sequence length does not match k-mer type's")
+        two = UInt[2*K](2)
+        n = UInt[2*K](0)
+        i = 0
+        while i < len(s):
+            n <<= two
+            n |= UInt[2*K](int(s[i]))
+            i += 1
+        return Kmer[K](n)
+
+    def __new__(n: int):
+        return Kmer[K](UInt[2*K](n))
+
+    def __new__(kmer: Kmer[K]):
+        return kmer
+
+    def __int__(self):
+        return int(self.x)
+
+    def __copy__(self):
+        return self
+
+    def __invert__(self):
+        return Kmer[K](self.x.__revcomp__())
+
+    def __getitem__(self, idx: int):
+        if idx < 0:
+            idx += K
+        if idx < 0 or idx >= K:
+            raise IndexError("k-mer index out of range")
+        m = UInt[2*K](3)
+        s = UInt[2*K](2*(K - idx - 1))
+        y = (self.x & (m << s)) >> s
+        return Kmer[1](int(y))
+
+    def __lshift__(self, s: seq):
+        pass
+
+    def __rshift__(self, s: seq):
+        pass
+
+    def __sub__(self, other: Kmer[K]):
+        '''
+        Hamming distance algorithm:
+          input: kmer1, kmer2
+          mask1 = 0101...0101  (same bit width as encoded kmer)
+          mask2 = 1010...1010  (same bit width as encoded kmer)
+          popcnt(
+            (((kmer1 & mask1) ^ (kmer2 & mask1)) << 1) |
+            ((kmer1 & mask2) ^ (kmer2 & mask2))
+          )
+        '''
+        one   = UInt[2*K](1)
+        mask1 = UInt[2*K](0)
+        i = 0
+        while i < K:
+            mask1 |= one << UInt[2*K](2*i)
+        mask2 = mask1 << one
+        kmer1 = self.x
+        kmer2 = other.x
+        diff1 = (kmer1 & mask1) ^ (kmer2 & mask1)
+        diff2 = (kmer1 & mask2) ^ (kmer2 & mask2)
+        return ((diff1 << one) | diff2).popcnt()
+
+    def __hash__(self):
+        if K <= 32:
+            return int(self.x)
+        else:
+            lo = int(self.x & UInt[2*K](0xFFFFFFFFFFFFFFFF))
+            hi = int(self.x >> UInt[2*K](2*K - 64))
+            return lo ^ hi
+
+    def __len__(self):
+        return K
+
+    def __eq__(self, other: Kmer[K]):
+        return self.x == other.x
+
+    def __ne__(self, other: Kmer[K]):
+        return self.x != other.x
+
+    def __lt__(self, other: Kmer[K]):
+        return self.x < other.x
+
+    def __gt__(self, other: Kmer[K]):
+        return self.x > other.x
+
+    def __le__(self, other: Kmer[K]):
+        return self.x <= other.x
+
+    def __ge__(self, other: Kmer[K]):
+        return self.x >= other.x
+
+    def __contains__(self, s: seq):
+        return str(self) in str(s)
+
+    def __str__(self):
+        ACGT = (byte(65), byte(67), byte(71), byte(84))
+        p = ptr[byte](K)
+        x = self.x
+        i = K - 1
+        while i >= 0:
+            p[i] = ACGT[int(x & UInt[2*K](3))]
+            x >>= UInt[2*K](2)
+            i -= 1
+        return str(p, K)
+
+    def __pickle__(self, jar: Jar):
+        self.x.__pickle__(jar)
+
+    def __unpickle__(jar: Jar):
+        return Kmer[K](UInt[2*K].__unpickle__(jar))
+
+    def len():
+        return K
+
+    def as_int(self):
+        return self.x
+

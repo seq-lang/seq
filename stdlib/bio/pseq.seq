@@ -8,7 +8,7 @@ extend pseq:  # order is consistent with str/seq
     def __new__(s: str) -> pseq:
         return (s.len, s.ptr)
 
-    def __eq__(self: pseq, other: pseq):
+    def __eq__(self, other: pseq):
         n = len(self)
         if n != len(other):
             return False
@@ -19,10 +19,10 @@ extend pseq:  # order is consistent with str/seq
             i += 1
         return True
 
-    def __ne__(self: pseq, other: pseq):
+    def __ne__(self, other: pseq):
         return not (self == other)
 
-    def _cmp(self: pseq, other: pseq):
+    def _cmp(self, other: pseq):
         self_len = len(self)
         other_len = len(other)
         n = min2(self_len, other_len)
@@ -35,34 +35,34 @@ extend pseq:  # order is consistent with str/seq
             i += 1
         return self_len - other_len
 
-    def __lt__(self: pseq, other: pseq):
+    def __lt__(self, other: pseq):
         return self._cmp(other) < 0
 
-    def __le__(self: pseq, other: pseq):
+    def __le__(self, other: pseq):
         return self._cmp(other) <= 0
 
-    def __gt__(self: pseq, other: pseq):
+    def __gt__(self, other: pseq):
         return self._cmp(other) > 0
 
-    def __ge__(self: pseq, other: pseq):
+    def __ge__(self, other: pseq):
         return self._cmp(other) >= 0
 
-    def __str__(self: pseq):
+    def __str__(self):
         return str(self.ptr, self.len)
 
-    def __len__(self: pseq):
+    def __len__(self):
         return self.len
 
-    def __bool__(self: pseq):
+    def __bool__(self):
         return self.len != 0
 
-    def __hash__(self: pseq):
+    def __hash__(self):
         h = 0
         for i in range(len(self)):
             h = 31*h + int(self._at(i))
         return h
 
-    def __getitem__(self: pseq, idx: int):
+    def __getitem__(self, idx: int):
         n = len(self)
         if idx < 0:
             idx += n
@@ -70,16 +70,16 @@ extend pseq:  # order is consistent with str/seq
             raise IndexError("pseq index out of range")
         return pseq(self.ptr + idx, 1)
 
-    def _at(self: pseq, idx: int):
+    def _at(self, idx: int):
         return self.ptr[idx]
 
-    def _slice_direct(self: pseq, a: int, b: int):
+    def _slice_direct(self, a: int, b: int):
         return pseq(self.ptr + a, b - a)
 
-    def __getitem__(self: pseq, s: eslice):
+    def __getitem__(self, s: eslice):
         return self.__copy__()
 
-    def __getitem__(self: pseq, s: slice):
+    def __getitem__(self, s: slice):
         a, b = s
         n = len(self)
         if a < 0: a += n
@@ -88,42 +88,42 @@ extend pseq:  # order is consistent with str/seq
         if b > n: b = n
         return self._slice_direct(a, b)
 
-    def __getitem__(self: pseq, s: lslice):
+    def __getitem__(self, s: lslice):
         b = s.end
         n = len(self)
         if b < 0: b += n
         if b > n: b = n
         return pseq(self.ptr, b)
 
-    def __getitem__(self: pseq, s: rslice):
+    def __getitem__(self, s: rslice):
         a = s.start
         n = len(self)
         if a < 0: a += n
         if a > n: a = n
         return pseq(self.ptr + a, n - a)
 
-    def __getitem__(self: pseq, s: eslice):
+    def __getitem__(self, s: eslice):
         return self
 
-    def _copy_to(self: pseq, p: cobj):
+    def _copy_to(self, p: cobj):
         str.memcpy(p, self.ptr, self.len)
 
-    def __copy__(self: pseq):
+    def __copy__(self):
         n = len(self)
         p = cobj(n)
         self._copy_to(p)
         return pseq(p, n)
 
-    def split(self: pseq, k: int, step: int):
+    def split(self, k: int, step: int):
         i = 0
         while i + k <= len(self):
             yield self._slice_direct(i,i+k)
             i += step
 
-    def __iter__(self: pseq):
+    def __iter__(self):
         return self.split(1, 1)
 
-    def __reversed__(self: pseq):
+    def __reversed__(self):
         i = len(self) - 1
         while i >= 0:
             yield self._slice_direct(i,i+1)
@@ -133,7 +133,7 @@ def translate(s: seq, table: dict[seq, pseq] = None):
     def encode_triple(s: seq):
         if s.N():
             raise ValueError("codon '{s}' contains an ambiguous base")
-        type K1 = Kmer[1]
+        K1 = Kmer[1]
         a, b, c = K1(s[0]), K1(s[1]), K1(s[2])
         n = (int(c.as_int())       |
             (int(b.as_int()) << 2) |
@@ -170,5 +170,5 @@ def translate(s: seq, table: dict[seq, pseq] = None):
     return pseq(p, m)
 
 extend seq:
-    def translate(self: seq):
+    def translate(self):
         return translate(self)

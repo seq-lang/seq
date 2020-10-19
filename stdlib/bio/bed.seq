@@ -3,71 +3,71 @@ type BEDRecord(_chrom: str, _chromStart: int, _chromEnd: int,
                _thickEnd: int, _itemRgb: tuple[int, int, int], _blockCount: int,
                _blockSizes: list[int], _blockStarts: list[int], numCols: int):
     @property
-    def chrom(self: BEDRecord):
+    def chrom(self):
         return self._chrom
 
     @property
-    def chrom_start(self: BEDRecord):
+    def chrom_start(self):
         return self._chromStart
 
     @property
-    def chrom_end(self: BEDRecord):
+    def chrom_end(self):
         return self._chromEnd
 
     @property
-    def misc(self: BEDRecord):
+    def misc(self):
         return self._name
 
     @property
-    def score(self: BEDRecord):
+    def score(self):
         return self._score
 
     @property
-    def strand(self: BEDRecord):
+    def strand(self):
         return self._strand
 
     @property
-    def thick_start(self: BEDRecord):
+    def thick_start(self):
         return self._thickStart
 
     @property
-    def thick_end(self: BEDRecord):
+    def thick_end(self):
         return self._thickEnd
 
     @property
-    def item_rgb(self: BEDRecord):
+    def item_rgb(self):
         return self._itemRgb
 
     @property
-    def block_count(self: BEDRecord):
+    def block_count(self):
         return self._blockCount
 
     @property
-    def block_sizes(self: BEDRecord):
+    def block_sizes(self):
         return self._blockSizes
 
     @property
-    def block_starts(self: BEDRecord):
+    def block_starts(self):
         return self._blockStarts
 
     @property
-    def num_cols(self: BEDRecord):
+    def num_cols(self):
         return self._numCols
 
     @property
-    def __len__(self: BEDRecord):
+    def __len__(self):
         return self.num_cols
 
 type BEDReader(_file: gzFile, _header: list[str], validate: bool, copy: bool):
-    def __init__(self: BEDReader, path: str, validate: bool, copy: bool) -> BEDReader:
+    def __init__(self, path: str, validate: bool, copy: bool) -> BEDReader:
         return (gzopen(path, "r"), BEDReader.init_header(path), validate, copy)
 
     @property
-    def file(self: BEDReader):
+    def file(self):
         return self._file
 
     @property
-    def header(self: BEDReader) -> list[str]:
+    def header(self) -> list[str]:
         return self._header
 
     def init_header(path: str):
@@ -86,7 +86,7 @@ type BEDReader(_file: gzFile, _header: list[str], validate: bool, copy: bool):
         # a line is a header if it starts with #, browser or track
         return line[0] == "#" or line.startswith("browser") or line.startswith("track")
 
-    def __iter__(self: BEDReader):
+    def __iter__(self):
         i = 0
         buf = list[str](capacity=12)
         for line in self.file._iter():
@@ -120,7 +120,7 @@ type BEDReader(_file: gzFile, _header: list[str], validate: bool, copy: bool):
             if i != str_len:
                 l.append(s._slice(i, str_len))
 
-    def _BEDRecord_from_str(self: BEDReader, s: str, lnum: int, a: list[str]) -> BEDRecord:
+    def _BEDRecord_from_str(self, s: str, lnum: int, a: list[str]) -> BEDRecord:
         BEDReader._split_line(s, a)
         n = len(a)
         if n < 3:
@@ -173,7 +173,7 @@ type BEDReader(_file: gzFile, _header: list[str], validate: bool, copy: bool):
                          thick_start, thick_end, item_rgb, block_count,
                          block_sizes, block_starts, n)
 
-    def _get_int_from_bed(self: BEDReader, val: str, col_name: str, lnum: int) -> int:
+    def _get_int_from_bed(self, val: str, col_name: str, lnum: int) -> int:
         if self.validate:
             try:
                 return int(val)
@@ -181,7 +181,7 @@ type BEDReader(_file: gzFile, _header: list[str], validate: bool, copy: bool):
                 raise ValueError(f"{col_name}, must be integer, line: {lnum}")
         return int(val)
 
-    def _get_score_from_bed(self: BEDReader, val: str, col_name: str, lnum: int) -> float:
+    def _get_score_from_bed(self, val: str, col_name: str, lnum: int) -> float:
         if self.validate:
             f = 0.
             try:
@@ -192,7 +192,7 @@ type BEDReader(_file: gzFile, _header: list[str], validate: bool, copy: bool):
                 raise ValueError(f"{col_name}, must be float or integer between 0 and 1000, line {lnum}")
         return float(val)
 
-    def _get_block_vals_from_bed(self: BEDReader, val: str, blockCount: int, col_name: str, lnum: int) -> list[int]:
+    def _get_block_vals_from_bed(self, val: str, blockCount: int, col_name: str, lnum: int) -> list[int]:
         # blockCount specifies how many values we should expect in the val str
         # block_vals are a comma separated sequence of integers, found in the val str
         block_vals = val.split(",")
@@ -209,13 +209,13 @@ type BEDReader(_file: gzFile, _header: list[str], validate: bool, copy: bool):
                 block_list.append(int(v))
         return block_list
 
-    def close(self: BEDReader):
+    def close(self):
         self.file.close()
 
-    def __enter__(self: BEDReader):
+    def __enter__(self):
         pass
 
-    def __exit__(self: BEDReader):
+    def __exit__(self):
         self.close()
 
 def BED(path: str, validate: bool = True, copy: bool = True) -> BEDReader:

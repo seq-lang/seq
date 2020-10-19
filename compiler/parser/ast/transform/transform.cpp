@@ -466,65 +466,72 @@ void TransformVisitor::visit(const IndexExpr *expr) {
   }
   if (!e)
     e = transform(expr->expr, true);
-  bool isFunc = false;
-  if (auto i = CAST(e, IdExpr)) {
-    auto val = ctx->find(i->value);
-    if (val && val->isFunc())
-      isFunc = true;
-  }
-  if (e->isType() || isFunc) {
-    unordered_set<string> supported{"<",  "<=", ">", ">=", "==", "!=", "&&",
-                                    "||", "+",  "-", "*",  "//", "%"};
-    function<bool(const ExprPtr &, set<string> &)> isStatic =
-        [&](const ExprPtr &e, set<string> &captures) -> bool {
-      if (auto i = CAST(e, IdExpr)) {
-        auto val = ctx->find(i->value);
-        if (val && val->isStatic()) {
-          captures.insert(i->value);
-          return true;
-        }
-        return false;
-      } else if (auto i = CAST(e, BinaryExpr)) {
-        return (supported.find(i->op) != supported.end()) &&
-               isStatic(i->lexpr, captures) && isStatic(i->rexpr, captures);
-      } else if (auto i = CAST(e, UnaryExpr)) {
-        return ((i->op == "-") || (i->op == "!")) && isStatic(i->expr, captures);
-      } else if (auto i = CAST(e, IfExpr)) {
-        return isStatic(i->cond, captures) && isStatic(i->eif, captures) &&
-               isStatic(i->eelse, captures);
-      } else if (auto i = CAST(e, IntExpr)) {
-        if (i->suffix.size())
-          return false;
-        try {
-          std::stoull(i->value, nullptr, 0);
-        } catch (std::out_of_range &) {
-          return false;
-        }
+  unordered_set<string> supported{"<",  "<=", ">", ">=", "==", "!=", "&&",
+                                  "||", "+",  "-", "*",  "//", "%"};
+  function<bool(const ExprPtr &, set<string> &)> isStatic =
+      [&](const ExprPtr &e, set<string> &captures) -> bool {
+    if (auto i = CAST(e, IdExpr)) {
+      auto val = ctx->find(i->value);
+      if (val && val->isStatic()) {
+        captures.insert(i->value);
         return true;
-      } else {
+      }
+      return false;
+    } else if (auto i = CAST(e, BinaryExpr)) {
+      return (supported.find(i->op) != supported.end()) &&
+             isStatic(i->lexpr, captures) && isStatic(i->rexpr, captures);
+    } else if (auto i = CAST(e, UnaryExpr)) {
+      return ((i->op == "-") || (i->op == "!")) && isStatic(i->expr, captures);
+    } else if (auto i = CAST(e, IfExpr)) {
+      return isStatic(i->cond, captures) && isStatic(i->eif, captures) &&
+             isStatic(i->eelse, captures);
+    } else if (auto i = CAST(e, IntExpr)) {
+      if (i->suffix.size())
+        return false;
+      try {
+        std::stoull(i->value, nullptr, 0);
+      } catch (std::out_of_range &) {
         return false;
       }
-    };
-    auto transformGeneric = [&](const ExprPtr &i) -> ExprPtr {
-      auto t = transform(i, true);
-      set<string> captures;
-      if (isStatic(i, captures))
-        return N<StaticExpr>(clone(i), captures);
-      else if (t->isType())
-        return t;
-      error("must be a type or a static expression");
-      return nullptr;
-    };
-    vector<ExprPtr> it;
-    if (auto t = CAST(expr->index, TupleExpr))
-      for (auto &i : t->items)
-        it.push_back(transformGeneric(i));
+      return true;
+    } else {
+      return false;
+    }
+  };
+  auto transformGeneric = [&](const ExprPtr &i) -> ExprPtr {
+    auto t = transform(i, true);
+    set<string> captures;
+    if (isStatic(i, captures))
+      return N<StaticExpr>(clone(i), captures);
     else
-      it.push_back(transformGeneric(expr->index));
+      return t;
+  };
+  vector<ExprPtr> it;
+  if (auto t = CAST(expr->index, TupleExpr))
+    for (auto &i : t->items)
+      it.push_back(transformGeneric(i));
+  else
+    it.push_back(transformGeneric(expr->index));
+  bool allTypes = true;
+  bool hasRealTypes = false;
+  for (auto &i : it) {
+    bool isType = i->isType() || CAST(i, StaticExpr);
+    if (i->isType())
+      hasRealTypes = true;
+    if (!isType)
+      allTypes = false;
+    if (isType && !allTypes)
+      error(i, "invalid type expression");
+  }
+  if (!allTypes && e->isType())
+    error("expected type parameters");
+  if (allTypes && e->isType()) {
     resultExpr = N<InstantiateExpr>(move(e), move(it));
-    if (!isFunc)
-      resultExpr->markType();
-  } else {
+    resultExpr->markType();
+  } else if (allTypes && hasRealTypes) {
+    resultExpr = N<InstantiateExpr>(move(e), move(it));
+  } else { // for some functions we might need to delay the instantiation because of
+           // staticExprs...
     resultExpr = N<IndexExpr>(move(e), transform(expr->index));
   }
 }

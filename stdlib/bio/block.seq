@@ -2,11 +2,11 @@ class Block[T]:
     _data: ptr[T]
     _size: int
 
-    def __init__(self: Block[T], size: int):
+    def __init__(self, size: int):
         self._data = ptr[T](size)
         self._size = 0
 
-    def __iter__(self: Block[T]):
+    def __iter__(self):
         data = self._data
         size = self._size
         i = 0
@@ -14,21 +14,21 @@ class Block[T]:
             yield data[i]
             i += 1
 
-    def __getitem__(self: Block[T], idx: int):
+    def __getitem__(self, idx: int):
         if not (0 <= idx < len(self)):
             raise ValueError("block index out of range")
         return self._data[idx]
 
-    def __len__(self: Block[T]):
+    def __len__(self):
         return self._size
 
-    def __bool__(self: Block[T]):
+    def __bool__(self):
         return len(self) != 0
 
-    def __str__(self: Block[T]):
+    def __str__(self):
         return f'<block of size {self._size}>'
 
-    def _add(self: Block[T], elem: T):
+    def _add(self, elem: T):
         self._data[self._size] = elem
         self._size += 1
 

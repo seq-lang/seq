@@ -58,14 +58,14 @@ bcf_str_missing      = 0x07
 def ptr_off[T](base: ptr[byte], byte_offset: int) -> ptr[T]:
     return ptr[T](base + byte_offset)
 
-type char_pp = ptr[ptr[byte]]
-type char_p  = ptr[byte]
+char_pp = ptr[ptr[byte]]
+char_p  = ptr[byte]
 
 # l and m are size_t, assume i64
 type _kstring_t(_l: int,
                 _m: int,
                 _s: char_p):
-    def __copy__(self: _kstring_t) -> _kstring_t:
+    def __copy__(self) -> _kstring_t:
         p = ptr[byte](self._l)
         str.memcpy(p, self._s, self._l)
         return (self._l, self._l, p)
@@ -85,7 +85,7 @@ type _bcf_idinfo_t(_info0: u32,
                    _hrec2 : ptr[_bcf_hrec_t],
                    _id: i32):
 
-    def info(self: _bcf_idinfo_t, _type: int):
+    def info(self, _type: int):
         info = self._info0
         if _type == 1:
             info = self._info1
@@ -93,7 +93,7 @@ type _bcf_idinfo_t(_info0: u32,
             info = self._info2
         return info
 
-    def hrec(self: _bcf_idinfo_t, _type: int):
+    def hrec(self, _type: int):
         hrec = self._hrec0
         if _type == 1:
             hrec = self._hrec1
@@ -127,7 +127,7 @@ type _bcf_hdr_t(_n0: i32,
                 _m1: i32,
                 _m2: i32):
 
-    def n(self: _bcf_hdr_t, _type_code: int):
+    def n(self, _type_code: int):
         n = self._n0
         if _type_code == 1:
             n = self._n1
@@ -135,7 +135,7 @@ type _bcf_hdr_t(_n0: i32,
             n = self._n2
         return n
 
-    def id(self: _bcf_hdr_t, _type_code: int):
+    def id(self, _type_code: int):
         _id = self._id0
         if _type_code == 1:
             _id = self._id1
@@ -143,7 +143,7 @@ type _bcf_hdr_t(_n0: i32,
             _id = self._id2
         return _id
 
-    def _dict(self: _bcf_hdr_t, _type_code):
+    def _dict(self, _type_code):
         _dict = self._dict0
         if _type_code == 1:
             _dict = self._dict1
@@ -176,18 +176,18 @@ type _bcf_info_t(_key: i32,
                  ):
 
     @property
-    def v1(self: _bcf_info_t):
+    def v1(self):
         return self._v1
 
     @property
-    def key_code(self: _bcf_info_t):
+    def key_code(self):
         return self._key
 
-    def key_str(self: _bcf_info_t, bcf_hdr: ptr[_bcf_hdr_t]):
+    def key_str(self, bcf_hdr: ptr[_bcf_hdr_t]):
         key = _bcf_hdr_int2id(bcf_hdr, BCF_DT_ID, self._key)
         return str.from_ptr(key)
 
-    def key_code_from_ptr(self: _bcf_info_t):
+    def key_code_from_ptr(self):
         return ptr_off[i32](ptr[byte](__ptr__(self)), 0)[0]
 
     def self_ptr(self:_bcf_info_t):
@@ -207,7 +207,7 @@ type _bcf_dec_t(_m_fmt: i32, _m_info: i32, _m_id: i32, _m_als: i32, _m_allele: i
                 _var_type: i32,
                 _shared_dirty: i32,
                 _indiv_dirty: i32):
-    def __init__(self: _bcf_dec_t) -> _bcf_dec_t:
+    def __init__(self) -> _bcf_dec_t:
         return (i32(0), i32(0), i32(0), i32(0), i32(0), i32(0), i32(0), ptr[i32](),
                 char_p(), char_p(), char_pp(), ptr[_bcf_info_t](), ptr[_bcf_fmt_t](),
                 ptr[_variant_t](), i32(0), i32(-1), i32(0), i32(0))
@@ -229,22 +229,22 @@ type _bcf1_t(_pos: int,
              _errcode: i32):
 
     @property
-    def n_info(self: _bcf1_t):
+    def n_info(self):
         return self._n_info_allele & u32(0x0000ffff)
 
     @property
-    def n_allele(self: _bcf1_t):
+    def n_allele(self):
         return ((self._n_info_allele & u32(0xffff0000)) >> u32(16))
 
     @property
-    def n_sample(self: _bcf1_t):
+    def n_sample(self):
         return int((self._n_fmt_sample & u32(0xffffff00)) >> u32(8))
 
     @property
-    def n_fmt(self: _bcf1_t):
+    def n_fmt(self):
         return int(self._n_fmt_sample & u32(0x000000ff))
 
-    def __copy__(self: _bcf1_t):
+    def __copy__(self):
         pos, rlen, rid, qual, n_info_allele, n_fmt_sample, shared, indiv, d, max_unpack, unpacked, unpacked_size_0, unpacked_size_1, unpacked_size_2, errcode = self
         return _bcf1_t(pos, rlen, rid, qual, n_info_allele, n_fmt_sample, copy(shared), copy(indiv), _bcf_dec_t(), max_unpack, unpacked, unpacked_size_0, unpacked_size_1, unpacked_size_2, errcode)
 
@@ -298,14 +298,14 @@ def bcf_gt_allele(val: int):
     return int((u64(val) >> u64(1)) - u64(1))
 
 type BCFHeaderMetaData(bcf_hdr: ptr[_bcf_hdr_t], _type_code: int):
-    def __init__(self: BCFHeaderMetaData, bcf_hdr: ptr[_bcf_hdr_t], _type_code: int) -> BCFHeaderMetaData:
+    def __init__(self, bcf_hdr: ptr[_bcf_hdr_t], _type_code: int) -> BCFHeaderMetaData:
         return (bcf_hdr, _type_code)
 
     @property
-    def type_code(self: BCFHeaderMetaData):
+    def type_code(self):
         return self._type_code
 
-    def __len__(self: BCFHeaderMetaData):
+    def __len__(self):
         n = 0
         for i in range(self.bcf_hdr[0].n(int(BCF_DT_ID))):
             idpair = self.bcf_hdr[0].id(int(BCF_DT_ID)) + i
@@ -313,7 +313,7 @@ type BCFHeaderMetaData(bcf_hdr: ptr[_bcf_hdr_t], _type_code: int):
                 n += 1
             return n
 
-    def __iter__(self: BCFHeaderMetaData):
+    def __iter__(self):
         for i in range(int(self.bcf_hdr[0].n(int(BCF_DT_ID)))):
             idpair = self.bcf_hdr[0].id(int(BCF_DT_ID)) + i
             idinfo: _bcf_idinfo_t = idpair[0]._val[0]
@@ -322,54 +322,54 @@ type BCFHeaderMetaData(bcf_hdr: ptr[_bcf_hdr_t], _type_code: int):
                 yield str.from_ptr(idpair[0]._key)
 
 type BCFHeaderContigs(bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self: BCFHeaderContigs, bcf_hdr: ptr[_bcf_hdr_t]) -> BCFHeaderContigs:
+    def __init__(self, bcf_hdr: ptr[_bcf_hdr_t]) -> BCFHeaderContigs:
         return (bcf_hdr,)
 
-    def __iter__(self: BCFHeaderContigs):
+    def __iter__(self):
         for i in range(int(self.bcf_hdr[0].n(int(BCF_DT_CTG)))):
             yield str.from_ptr(_bcf_hdr_id2name(self.bcf_hdr, i))
 
 type BCFHeaderSamples(bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self: BCFHeaderSamples, bcf_hdr: ptr[_bcf_hdr_t]) -> BCFHeaderSamples:
+    def __init__(self, bcf_hdr: ptr[_bcf_hdr_t]) -> BCFHeaderSamples:
         return (bcf_hdr,)
 
-    def __iter__(self: BCFHeaderSamples):
+    def __iter__(self):
         for i in range(int(self.bcf_hdr[0].n(int(BCF_DT_SAMPLE)))):
             yield str.from_ptr(self.bcf_hdr[0]._samples[i])
 
-    def __getitem__(self: BCFHeaderSamples, index: int):
+    def __getitem__(self, index: int):
         if index < 0 or index >= int(self.bcf_hdr[0].n(int(BCF_DT_SAMPLE))):
             raise IndexError('Invalid sample index')
         return str.from_ptr(self.bcf_hdr[0]._samples[index])
 
 METADATA_TYPES = ('FILTER', 'INFO', 'FORMAT', 'CONTIG', 'STRUCTURED', 'GENERIC')
 type BCFHeaderRecord(bcf_hdr: ptr[_bcf_hdr_t], bcf_hrec: ptr[_bcf_hrec_t]):
-    def __init__(self: BCFHeaderRecord, bcf_hdr: ptr[_bcf_hdr_t], bcf_hrec: ptr[_bcf_hrec_t]) -> BCFHeaderRecord:
+    def __init__(self, bcf_hdr: ptr[_bcf_hdr_t], bcf_hrec: ptr[_bcf_hrec_t]) -> BCFHeaderRecord:
         return (bcf_hdr, bcf_hrec)
 
     @property
-    def hdr_type(self: BCFHeaderRecord):
+    def hdr_type(self):
         if not self.bcf_hrec:
             return ''
         return METADATA_TYPES[int(self.bcf_hrec[0]._type)]
 
     @property
-    def key(self: BCFHeaderRecord):
+    def key(self):
         return str.from_ptr(self.bcf_hrec[0]._key) if self.bcf_hrec and self.bcf_hrec[0]._key else ''
 
     @property
-    def value(self: BCFHeaderRecord):
+    def value(self):
         return str.from_ptr(self.bcf_hrec[0]._value) if self.bcf_hrec and self.bcf_hrec[0]._value else ''
 
     @property
-    def attrs(self: BCFHeaderRecord):
+    def attrs(self):
         r = self.bcf_hrec[0]
         attrs = list[tuple[str, str]]((str.from_ptr(r._keys[i]) if r._keys[i] else '',
                             str.from_ptr(r._vals[i]) if r._vals[i] else '')
                             for i in range(int(self.bcf_hrec[0]._nkeys)))
         return attrs
 
-    def __getitem__(self: BCFHeaderRecord, key: str):
+    def __getitem__(self, key: str):
         r = self.bcf_hrec
         if r:
             c_key = key.c_str()
@@ -378,30 +378,30 @@ type BCFHeaderRecord(bcf_hdr: ptr[_bcf_hdr_t], bcf_hrec: ptr[_bcf_hrec_t]):
                     return str.from_ptr(r[0]._vals[i]) if r[0]._vals[i] else ''
         raise KeyError('cant find key: ' + key)
 
-    def get(self: BCFHeaderRecord, key: str):
+    def get(self, key: str):
         try:
             return self[key]
         except KeyError:
             return ''
 
-    def __iter__(self: BCFHeaderRecord):
+    def __iter__(self):
         r = self.bcf_hrec
         if r:
             for i in range(int(r[0]._nkeys)):
                 if r[0]._keys[i]:
                     yield str.from_ptr(r[0]._keys[i])
 
-    def iterkeys(self: BCFHeaderRecord):
+    def iterkeys(self):
         return iter(self)
 
-    def itervalues(self: BCFHeaderRecord):
+    def itervalues(self):
         r = self.bcf_hrec
         if r:
             for i in range(int(r[0]._nkeys)):
                 if r[0]._keys[i]:
                     yield str.from_ptr(r[0]._vals[i]) if r[0].vals[i] else ''
 
-    def iteritems(self: BCFHeaderRecord):
+    def iteritems(self):
         r = self.bcf_hrec
         if r:
             for i in range(int(r[0]._nkeys)):
@@ -411,48 +411,48 @@ type BCFHeaderRecord(bcf_hdr: ptr[_bcf_hdr_t], bcf_hrec: ptr[_bcf_hrec_t]):
                     yield (key, val)
 
 type BCFHeader(bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self: BCFHeader, bcf_hdr: ptr[_bcf_hdr_t]) -> BCFHeader:
+    def __init__(self, bcf_hdr: ptr[_bcf_hdr_t]) -> BCFHeader:
         return (bcf_hdr,)
 
-    def __init__(self: BCFHeader) -> BCFHeader:
+    def __init__(self) -> BCFHeader:
         return (ptr[_bcf_hdr_t](),)
 
     @property
-    def info(self: BCFHeader):
+    def info(self):
         # get metadata for info fields in Header
         return BCFHeaderMetaData(self.bcf_hdr, int(BCF_HL_INFO))
 
     @property
-    def filters(self: BCFHeader):
+    def filters(self):
         return BCFHeaderMetaData(self.bcf_hdr, int(BCF_HL_FLT))
 
     @property
-    def formats(self: BCFHeader):
+    def formats(self):
         return BCFHeaderMetaData(self.bcf_hdr, int(BCF_HL_FMT))
 
     @property
-    def contigs(self: BCFHeader):
+    def contigs(self):
         return BCFHeaderContigs(self.bcf_hdr)
 
     @property
-    def samples(self: BCFHeader):
+    def samples(self):
         return BCFHeaderSamples(self.bcf_hdr)
 
-    def __iter__(self: BCFHeader):
+    def __iter__(self):
         for i in range(int(self.bcf_hdr[0]._nhrec)):
             yield BCFHeaderRecord(self.bcf_hdr, self.bcf_hdr[0]._hrec[i])
 
 VALUE_TYPES = ('Flag', 'Integer', 'Float', 'String')
 type BCFMetadata(bcf_hdr: ptr[_bcf_hdr_t], _type_code: int, _id: int):
-    def __init__(self: BCFMetadata, bcf_hdr: ptr[_bcf_hdr_t], _type_code: int, _id: int) -> BCFMetadata:
+    def __init__(self, bcf_hdr: ptr[_bcf_hdr_t], _type_code: int, _id: int) -> BCFMetadata:
         return (bcf_hdr, _type_code, _id)
 
     @property
-    def name(self: BCFMetadata):
+    def name(self):
         return str.from_ptr(self.bcf_hdr[0].id(int(BCF_DT_ID))[self._id]._key)
 
     @property
-    def bcf_type(self: BCFMetadata):
+    def bcf_type(self):
         if not check_header_id(self.bcf_hdr, i32(self._type_code), i32(self._id)):
             raise ValueError('Invalid header id')
         if self._type_code == int(BCF_HL_FLT):
@@ -460,7 +460,7 @@ type BCFMetadata(bcf_hdr: ptr[_bcf_hdr_t], _type_code: int, _id: int):
         return VALUE_TYPES[int(_bcf_hdr_id2type(self.bcf_hdr, i32(self._type_code), i32(self._id)))]
 
     @property
-    def record(self: BCFMetadata) -> BCFHeaderRecord:
+    def record(self) -> BCFHeaderRecord:
         if not check_header_id(self.bcf_hdr, i32(self._type_code), i32(self._id)):
             raise ValueError('Invalid header id')
 
@@ -470,7 +470,7 @@ type BCFMetadata(bcf_hdr: ptr[_bcf_hdr_t], _type_code: int, _id: int):
         return BCFHeaderRecord(self.bcf_hdr, hrec)
 
     @property
-    def description(self: BCFMetadata):
+    def description(self):
         return self.record.get('Description')
 
 # type_code is one of BCF_BT_*, or BCF_HT_FLAG or BCF_AUX_NONE
@@ -479,23 +479,23 @@ type BCFMetadata(bcf_hdr: ptr[_bcf_hdr_t], _type_code: int, _id: int):
 type BCFAux(_p: cobj, _type_code: i32, _is_array: bool):
     # accepts as T: i8, i16, i32
     @property
-    def val[T](self: BCFAux):
+    def val[T](self):
         if self._is_array:
             raise TypeError("This BCFAux represents an array, not a single value")
         return ptr[T](self._p)[0]
 
     @property
-    def arr[T](self: BCFAux):
+    def arr[T](self):
         if not self._is_array:
             raise TypeError("This BCFAux represents a single value, not an array")
         return ptr[list[T]](self._p)[0]
 
     @property
-    def type_code(self: BCFAux):
+    def type_code(self):
         return self._type_code
 
     @property
-    def is_array(self: BCFAux):
+    def is_array(self):
         return self._is_array
 
 def bcf_get_value_count(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], h1_type: i32, id: i32, sample: i32) -> tuple[i64, i32]:
@@ -633,10 +633,10 @@ def try_unpack(bcf1: ptr[_bcf1_t], mode: i32):
 type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
     # mapping from info keys: values
 
-    def __init__(self: VCFRecordInfo, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordInfo:
+    def __init__(self, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordInfo:
         return (bcf1, bcf_hdr)
 
-    def __iter__(self: VCFRecordInfo):
+    def __iter__(self):
         hdr = self.bcf_hdr
         r = self.bcf1
         try_unpack(r, BCF_UN_INFO)
@@ -649,7 +649,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
                 if key_s != 'END':
                     yield key_s
 
-    def __len__(self: VCFRecordInfo):
+    def __len__(self):
         count = 0
         for s in self:
             count += 1
@@ -668,7 +668,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
         if n == -4:
             raise ValueError(f"Fatal error when getting info for tag '{key}'")
 
-    def get_int(self: VCFRecordInfo, key: str):
+    def get_int(self, key: str):
         p = ptr[byte]()
         n = i32(0)
         status = bcf_get_info_values(cobj(self.bcf_hdr), cobj(self.bcf1), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_INT)
@@ -679,7 +679,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
         _C.free(p)
         return int(x)
 
-    def get_ints(self: VCFRecordInfo, key: str):
+    def get_ints(self, key: str):
         p = ptr[byte]()
         n = i32(0)
         status = bcf_get_info_values(cobj(self.bcf_hdr), cobj(self.bcf1), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_INT)
@@ -694,7 +694,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
             i += 1
         _C.free(p)
 
-    def get_float(self: VCFRecordInfo, key: str):
+    def get_float(self, key: str):
         p = ptr[byte]()
         n = i32(0)
         status = bcf_get_info_values(cobj(self.bcf_hdr), cobj(self.bcf1), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_REAL)
@@ -705,7 +705,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
         _C.free(p)
         return _C.seq_i32_to_float(x)
 
-    def get_floats(self: VCFRecordInfo, key: str):
+    def get_floats(self, key: str):
         p = ptr[byte]()
         n = i32(0)
         status = bcf_get_info_values(cobj(self.bcf_hdr), cobj(self.bcf1), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_REAL)
@@ -720,7 +720,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
             i += 1
         _C.free(p)
 
-    def get_str(self: VCFRecordInfo, key: str):
+    def get_str(self, key: str):
         p = ptr[byte]()
         n = i32(0)
         status = bcf_get_info_values(cobj(self.bcf_hdr), cobj(self.bcf1), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_STR)
@@ -731,7 +731,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
         _C.free(p)
         return str(buf, count)
 
-    def get_flag(self: VCFRecordInfo, key: str):
+    def get_flag(self, key: str):
         p = ptr[byte]()
         n = i32(0)
         status = bcf_get_info_values(cobj(self.bcf_hdr), cobj(self.bcf1), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_FLAG)
@@ -739,7 +739,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
         return status == 1
 
     '''
-    def __getitem__(self: VCFRecordInfo, key: str):
+    def __getitem__(self, key: str):
         hdr = self.bcf_hdr
         r = self.bcf1
 
@@ -774,24 +774,24 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
             raise KeyError(f"No key '{key}' in info field")
         return b
 
-    def iterkeys(self: VCFRecordInfo):
+    def iterkeys(self):
         return iter(self)
 
-    def itervalues(self: VCFRecordInfo):
+    def itervalues(self):
         for k in self.iterkeys():
             yield self[k]
 
-    def iteritems(self: VCFRecordInfo):
+    def iteritems(self):
         for k in self.iterkeys():
             yield (k, self[k])
     '''
 
 type VCFRecordSample(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], index: int):
-    def __init__(self: VCFRecordSample, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], index: int) -> VCFRecordSample:
+    def __init__(self, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], index: int) -> VCFRecordSample:
         return (bcf1, bcf_hdr, index)
 
     @property
-    def name(self: VCFRecordSample):
+    def name(self):
         try_unpack(self.bcf1, BCF_UN_ALL)
         return str.from_ptr(self.bcf_hdr[0]._samples[self.index])
 
@@ -799,7 +799,7 @@ type VCFRecordSample(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], index: int):
     # see class VariantRecordSample at:
     # https://github.com/pysam-developers/pysam/blob/master/pysam/libcbcf.pyx
     @property
-    def alleles(self: VCFRecordSample) -> list[seq]:
+    def alleles(self) -> list[seq]:
         r = self.bcf1[0]
         bcf_hdr = self.bcf_hdr
         index = self.index
@@ -842,22 +842,22 @@ type VCFRecordSample(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], index: int):
                 alleles.append(seq(str.from_ptr(r._d._allele[a]) if 0 <= a and a < nalleles else ''))
         return alleles
 
-    def __str__(self: VCFRecordSample):
+    def __str__(self):
         return self.name
 
 type VCFRecordSamples(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self: VCFRecordSamples, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordSamples:
+    def __init__(self, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordSamples:
         return (bcf1, bcf_hdr)
 
-    def __len__(self: VCFRecordSamples):
+    def __len__(self):
         return int(self.bcf1[0].n_sample)
 
-    def __iter__(self: VCFRecordSamples):
+    def __iter__(self):
         try_unpack(self.bcf1, BCF_UN_ALL)
         for i in range(int(len(self))):
             yield VCFRecordSample(self.bcf1, self.bcf_hdr, i)
 
-    def __getitem__(self: VCFRecordSamples, key: str) -> VCFRecordSample:
+    def __getitem__(self, key: str) -> VCFRecordSample:
         c_key = key.c_str()
         sample_index = int(bcf_hdr_id2int(cobj(self.bcf_hdr), BCF_DT_SAMPLE, c_key))
         if sample_index < 0 or sample_index >= self.bcf1[0].n_sample:
@@ -865,20 +865,20 @@ type VCFRecordSamples(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
         return VCFRecordSample(self.bcf1, self.bcf_hdr, sample_index)
 
 type VCFRecordFormat(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self: VCFRecordFormat, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordFormat:
+    def __init__(self, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordFormat:
         return (bcf1, bcf_hdr)
 
-    def __len__(self: VCFRecordFormat):
+    def __len__(self):
         return int(self.bcf1[0].n_fmt)
 
-    def __iter__(self: VCFRecordFormat):
+    def __iter__(self):
         try_unpack(self.bcf1, BCF_UN_FMT)
         for i in range(len(self)):
             fmt = self.bcf1[0]._d._fmt[i]
             if fmt._p:
                 yield str.from_ptr(_bcf_hdr_int2id(self.bcf_hdr, BCF_DT_ID, fmt._id))
 
-    def __getitem__(self: VCFRecordFormat, key: str) -> BCFMetadata:
+    def __getitem__(self, key: str) -> BCFMetadata:
         try_unpack(self.bcf1, BCF_UN_FMT)
         c_key = key.c_str()
         fmt = ptr[_bcf_fmt_t](bcf_get_fmt(cobj(self.bcf_hdr), cobj(self.bcf1), c_key))
@@ -889,74 +889,74 @@ type VCFRecordFormat(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
         return BCFMetadata(self.bcf_hdr, int(BCF_HL_FMT), int(fmt[0]._id))
 
 type VCFRecordFilter(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self: VCFRecordFilter, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordFilter:
+    def __init__(self, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordFilter:
         return (bcf1, bcf_hdr)
 
-    def __iter__(self: VCFRecordFilter):
+    def __iter__(self):
         for i in range(int(self.bcf1[0]._d._n_flt)):
             yield str.from_ptr(_bcf_hdr_int2id(self.bcf_hdr, BCF_DT_ID, self.bcf1[0]._d._flt[i]))
 
-    def __getitem__(self: VCFRecordFilter, key: str):
+    def __getitem__(self, key: str):
         c_key = key.c_str()
         _id = bcf_hdr_id2int(cobj(self.bcf_hdr), BCF_DT_ID, c_key)
         if not check_header_id(self.bcf_hdr, BCF_HL_FLT, _id) or not bcf_has_filter(cobj(self.bcf_hdr), cobj(self.bcf1), c_key):
             raise ValueError('Invalid header id')
         return BCFMetadata(self.bcf_hdr, int(BCF_HL_FLT), int(_id))
 
-    def __len__(self: VCFRecordFilter):
+    def __len__(self):
         return int(self.bcf1[0]._d._n_flt)
 
 # Modeled after:
 # https://pysam.readthedocs.io/en/latest/api.html#pysam.VariantRecord
 type VCFRecord(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self: VCFRecord, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecord:
+    def __init__(self, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecord:
         return (bcf1, bcf_hdr)
 
     @property
-    def info(self: VCFRecord):
+    def info(self):
         return VCFRecordInfo(self.bcf1, self.bcf_hdr)
 
     ''' XXX: removed for now until further testing
     @property
-    def samples(self: VCFRecord):
+    def samples(self):
         return VCFRecordSamples(self.bcf1, self.bcf_hdr)
 
     @property
-    def formats(self: VCFRecord):
+    def formats(self):
         return VCFRecordFormat(self.bcf1, self.bcf_hdr)
 
     @property
-    def filters(self: VCFRecord):
+    def filters(self):
         return VCFRecordFilter(self.bcf1, self.bcf_hdr)
     '''
 
     @property
-    def n_info(self: VCFRecord):
+    def n_info(self):
         return int(self.bcf1[0].n_info)
 
     @property
-    def chrom(self: VCFRecord):
+    def chrom(self):
         return str.from_ptr(_bcf_hdr_id2name(self.bcf_hdr, int(self.bcf1[0]._rid)))
 
     @property
-    def contig(self: VCFRecord):
+    def contig(self):
         return self.chrom
 
     @property
-    def pos(self: VCFRecord):
+    def pos(self):
         return int(self.bcf1[0]._pos)
 
     @property
-    def qual(self: VCFRecord):
+    def qual(self):
         return float(_C.seq_i32_to_float(i32(self.bcf1[0]._qual)))
 
     @property
-    def ref(self: VCFRecord):
+    def ref(self):
         allele = self.bcf1[0]._d._allele
         return seq(str.from_ptr(allele[0]) if allele else '')
 
     @property
-    def alts(self: VCFRecord):
+    def alts(self):
         b = self.bcf1[0]
         n = int(b.n_allele)
         allele = b._d._allele
@@ -968,16 +968,16 @@ type VCFRecord(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
             i += 1
 
     @property
-    def id(self: VCFRecord):
+    def id(self):
         _id = self.bcf1[0]._d._id
         # ascii code for '.' is 46. '.' indicates empty column
         return str.from_ptr(_id) if _id and _id[0] != byte(46) else ''
 
     @property
-    def rlen(self: VCFRecord):
+    def rlen(self):
         return int(self.bcf1[0]._rlen)
 
-    def __str__(self: VCFRecord):
+    def __str__(self):
         return "<VCFRecord: id: " + self.id + ", chrom: " + self.chrom + ", pos: " + str(self.pos) + ", rlen: " + str(self.rlen) + ", n_info: " + str(self.n_info) + ", qual: " + str(self.qual) + ", ref: " + str(self.ref) + ">"
 
 class BCFReader:
@@ -987,7 +987,7 @@ class BCFReader:
     _copy: bool
     _unpack_all: bool
 
-    def __init__(self: BCFReader, path: str, unpack_all: bool, copy: bool):
+    def __init__(self, path: str, unpack_all: bool, copy: bool):
         path_c_str = path.c_str()
         file = hts_open(path_c_str, "rb".c_str())
         if not file:
@@ -1003,20 +1003,20 @@ class BCFReader:
         self._unpack_all = unpack_all
 
     @property
-    def _bcf_hdr(self: BCFReader):
+    def _bcf_hdr(self):
         return self._hdr.bcf_hdr
 
     ''' XXX: removed for now until further testing
     @property
-    def header(self: BCFReader):
+    def header(self):
         return self._hdr
     '''
 
-    def _ensure_open(self: BCFReader):
+    def _ensure_open(self):
         if not self._file:
             raise IOError("I/O operation on closed VCF/BCF file")
 
-    def __iter__(self: BCFReader):
+    def __iter__(self):
         self._ensure_open()
         while True:
             status = int(bcf_read(self._file, cobj(self._bcf_hdr), self.__raw__()))
@@ -1037,7 +1037,7 @@ class BCFReader:
                 break
         self.close()
 
-    def close(self: BCFReader):
+    def close(self):
         if self._file:
             hts_close(self._file)
 
@@ -1049,13 +1049,13 @@ class BCFReader:
         self._file = cobj()
         self._hdr = BCFHeader()
 
-    def __enter__(self: BCFReader):
+    def __enter__(self):
         pass
 
-    def __exit__(self: BCFReader):
+    def __exit__(self):
         self.close()
 
-type VCFReader = BCFReader
+VCFReader = BCFReader
 
 def BCF(path: str, unpack_all: bool = True, copy: bool = True):
     return BCFReader(path, unpack_all, copy)

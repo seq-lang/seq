@@ -1,62 +1,48 @@
-@builtin
 def seqs(x):
     return x.__seqs__()
 
-@builtin
-def split(self: seq, k: int, step: int):
+def split(self, k: int, step: int):
     return self.split(k, step)
 
-@builtin
 def kmers[K](self: seq, step: int):
     return self.kmers[K](step)
 
-@builtin
 def kmers_with_pos[K](self: seq, step: int):
     return self.kmers_with_pos[K](step)
 
-@builtin
 def revcomp(s):
     return ~s
 
-@builtin
 def revcomp_with_pos(t):
     return (t[0], ~t[1])
 
-@builtin
 def _kmers_revcomp_with_pos[K](self: seq, step: int):
     return self._kmers_revcomp_with_pos[K](step)
 
-@builtin
 def _kmers_revcomp[K](self: seq, step: int):
     return self._kmers_revcomp[K](step)
 
-@builtin
 def canonical(k):
     kr = ~k
     return k if k < kr else kr
 
-@builtin
 def canonical_with_pos(t):
     return (t[0], canonical(t[1]))
 
-@builtin
 def _kmers_canonical[K](self: seq):
     return self.kmers_canonical[K]()
 
-@builtin
 def _kmers_canonical_with_pos[K](self: seq):
     return self.kmers_canonical_with_pos[K]()
 
-@builtin
 def _kmer_in_seq[K](kmer: K, s: seq) -> bool:
     for k in s.kmers[K](step=1):
         if k == kmer:
             return True
     return False
 
-@builtin
 def base[K,T](kmer: K, idx: int, b: T):
-    type U = typeof(kmer.as_int())
+    U = typeof(kmer.as_int())
     if idx < 0:
         idx += len(kmer)
     idx = K.len() - idx - 1

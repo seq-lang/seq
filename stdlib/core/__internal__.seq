@@ -276,6 +276,8 @@ extend byte:
     def __le__(self, other: byte) -> bool: pass
     @internal
     def __ge__(self, other: byte) -> bool: pass
+    @internal
+    def comp(self) -> byte: pass
 
 extend float:
     @internal
@@ -555,31 +557,6 @@ extend str:
         str.memcpy(p, self.ptr, len1)
         str.memcpy(p + len1, other.ptr, len2)
         return str(p, len3)
-
-@internal
-type seq(len: int, ptr: Ptr[byte]):
-    def __new__(s: str) -> seq:
-        return (s.len, s.ptr)
-    def __new__(p: Ptr[byte], l: int) -> seq:
-        return (l, p)
-    def __str__(self) -> str:
-        return str(self.ptr, self.len)
-    def __len__(self: seq):
-        return self.len if self.len >= 0 else -self.len
-    def _slice_direct(self: seq, a: int, b: int):
-        if self.len >= 0:
-            return seq(self.ptr + a, b - a)
-        else:
-            return seq(self.ptr + (-self.len - b), -(b - a))
-    def split(self: seq, k: int, step: int = 1):
-        i = 0
-        while i + k <= self.__len__():
-            yield self._slice_direct(i,i+k)
-            i += step
-
-extend str:
-    def __suffix_s__(s: str) -> seq:
-        return seq(s)
 
 @builtin
 def _test_failed(file: str, line: int, msg: str):

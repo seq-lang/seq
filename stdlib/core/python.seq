@@ -179,13 +179,6 @@ extend str:
         pyobj.exc_check()
         return r
 
-extend seq:
-    def __to_py__(self: seq) -> pyobj:
-        return str(self.ptr, self.len).__to_py__()
-
-    def __from_py__(s: pyobj) -> seq:
-        return seq(str.__from_py__(s))
-
 extend list[T]:
     def __to_py__(self: list[T]) -> pyobj:
         pylist = PyList_New(len(self))

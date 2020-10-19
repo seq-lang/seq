@@ -1,4 +1,5 @@
 from core.file import _gz_errcheck
+from bio.seq import seq
 
 def pickle[T](x: T, jar: Jar):
     x.__pickle__(jar)

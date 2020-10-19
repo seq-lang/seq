@@ -4,21 +4,21 @@ type Interval(st: int, en: int, max: int, chrom_id: int):
     def __new__(st: int, en: int, chrom_id: int) -> Interval:
         return (st, en, en, chrom_id)
 
-    def with_max(self: Interval, max: int) -> Interval:
+    def with_max(self, max: int) -> Interval:
         return (self.st, self.en, max, self.chrom_id)
 
     @property
-    def start(self: Interval):
+    def start(self):
         return int(self.st)
 
     @property
-    def end(self: Interval):
+    def end(self):
         return int(self.en)
 
-    def __len__(self: Interval):
+    def __len__(self):
         return self.end - self.start
 
-    def __bool__(self: Interval):
+    def __bool__(self):
         return len(self) > 0
 
 type _StackCell(_x: int, _k: i32, _w: i32):
@@ -26,15 +26,15 @@ type _StackCell(_x: int, _k: i32, _w: i32):
         return (x, i32(k), i32(w))
 
     @property
-    def k(self: _StackCell):
+    def k(self):
         return int(self._k)
 
     @property
-    def x(self: _StackCell):
+    def x(self):
         return int(self._x)
 
     @property
-    def w(self: _StackCell):
+    def w(self):
         return int(self._w)
 
 type _Contig(name: str, len: int, root_k: int, n: int, off: int)
@@ -46,7 +46,7 @@ class IntervalTree:
     contigs: list[_Contig]
     hc: dict[str, int]
 
-    def __init__(self: IntervalTree):
+    def __init__(self):
         M = 32
         self.a = ptr[Interval](M)
         self.n = 0
@@ -55,7 +55,7 @@ class IntervalTree:
         self.hc = dict[str, int]()
         self.hc.resize(1024)
 
-    def _chrom_id(self: IntervalTree, chrom: str, end: int):
+    def _chrom_id(self, chrom: str, end: int):
         contigs = self.contigs
         idx = self.hc.get(chrom, -1)
         if idx == -1:
@@ -68,7 +68,7 @@ class IntervalTree:
                 contigs[idx] = _Contig(contig.name, end, contig.root_k, contig.n, contig.off)
         return idx
 
-    def _append(self: IntervalTree, intv: Interval):
+    def _append(self, intv: Interval):
         if self.n >= self.m:
             m = (3 * self.m)//2 + 1
             self.a = ptr[Interval](_gc.realloc(self.a.as_byte(), m * _gc.sizeof[Interval]()))
@@ -76,7 +76,7 @@ class IntervalTree:
         self.a[self.n] = intv
         self.n += 1
 
-    def _is_sorted(self: IntervalTree):
+    def _is_sorted(self):
         i = 1
         while i < self.n:
             if self.a[i - 1].start > self.a[i].start:
@@ -84,14 +84,14 @@ class IntervalTree:
             i += 1
         return i == self.n
 
-    def _sort(self: IntervalTree):
+    def _sort(self):
         from algorithms.pdqsort import pdq_sort_array
         a = self.a
         n = self.n
         def key(intv: Interval) -> tuple[int,int]: return (intv.chrom_id, intv.start)
         pdq_sort_array(array[Interval](a, n), n, key)
 
-    def _index_prepare(self: IntervalTree):
+    def _index_prepare(self):
         if not self._is_sorted(): self._sort()
         p = self.a
         n = self.n
@@ -141,11 +141,11 @@ class IntervalTree:
             k += 1
         return k - 1
 
-    def add(self: IntervalTree, chrom: str, start: int, end: int):
+    def add(self, chrom: str, start: int, end: int):
         chrom_id = self._chrom_id(chrom, end)
         self._append(Interval(start, end, chrom_id))
 
-    def index(self: IntervalTree):
+    def index(self):
         self._index_prepare()
         i = 0
         n = len(self.contigs)
@@ -156,7 +156,7 @@ class IntervalTree:
             self.contigs[i] = contig
             i += 1
 
-    def overlap(self: IntervalTree, chrom: str, start: int, end: int):
+    def overlap(self, chrom: str, start: int, end: int):
         chrom_id = self.hc.get(chrom, -1)
         if chrom_id == -1:
             return
@@ -198,16 +198,16 @@ class IntervalTree:
                 stack[t] = _StackCell(z.k - 1, z.x + (1 << (z.k - 1)), 0)  # push the right child
                 t += 1
 
-    def __len__(self: IntervalTree):
+    def __len__(self):
         return self.n
 
-    def __bool__(self: IntervalTree):
+    def __bool__(self):
         return len(self) > 0
 
-    def __contains__(self: IntervalTree, chrom: str):
+    def __contains__(self, chrom: str):
         return chrom in self.hc
 
-    def __iter__(self: IntervalTree):
+    def __iter__(self):
         i = 0
         n = self.n
         while i < n:

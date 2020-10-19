@@ -41,63 +41,63 @@ type mem_alnreg_t(_rb: i64,
                   _frac_rep: u32,  # really a 32-bit float
                   _hash: u64):
     @property
-    def rb(self: mem_alnreg_t):
+    def rb(self):
         return int(self._rb)
 
     @property
-    def re(self: mem_alnreg_t):
+    def re(self):
         return int(self._re)
 
     @property
-    def qb(self: mem_alnreg_t):
+    def qb(self):
         return int(self._qb)
 
     @property
-    def qe(self: mem_alnreg_t):
+    def qe(self):
         return int(self._qe)
 
     @property
-    def rid(self: mem_alnreg_t):
+    def rid(self):
         return int(self._rid)
 
     @property
-    def score(self: mem_alnreg_t):
+    def score(self):
         return int(self._score)
 
     @property
-    def true_score(self: mem_alnreg_t):
+    def true_score(self):
         return int(self._truesc)
 
     @property
-    def sub(self: mem_alnreg_t):
+    def sub(self):
         return int(self._sub)
 
     @property
-    def alt_score(self: mem_alnreg_t):
+    def alt_score(self):
         return int(self._alt_sc)
 
     @property
-    def csub(self: mem_alnreg_t):
+    def csub(self):
         return int(self._csub)
 
     @property
-    def sub_n(self: mem_alnreg_t):
+    def sub_n(self):
         return int(self._sub_n)
 
     @property
-    def w(self: mem_alnreg_t):
+    def w(self):
         return int(self._w)
 
     @property
-    def seedcov(self: mem_alnreg_t):
+    def seedcov(self):
         return int(self._seedcov)
 
     @property
-    def secondary(self: mem_alnreg_t):
+    def secondary(self):
         return int(self._secondary)
 
     @property
-    def secondary_all(self: mem_alnreg_t):
+    def secondary_all(self):
         return int(self._secondary_all)
 
 type mem_aln_t(_pos: i64,
@@ -114,65 +114,65 @@ type mem_aln_t(_pos: i64,
         return self
 
     @property
-    def pos(self: mem_aln_t):
+    def pos(self):
         return int(self._pos)
 
     @property
-    def rid(self: mem_aln_t):
+    def rid(self):
         return int(self._rid)
 
     @property
-    def rev(self: mem_aln_t):
+    def rev(self):
         return bool(self._bitfields & u32(0x1))
 
     @property
-    def alt(self: mem_aln_t):
+    def alt(self):
         return bool(self._bitfields & u32(0x2))
 
     @property
-    def mapq(self: mem_aln_t):
+    def mapq(self):
         return int((self._bitfields & u32(0x3fc)) >> u32(2))
 
     @property
-    def NM(self: mem_aln_t):
+    def NM(self):
         return int((self._bitfields & u32(0xfffffc00)) >> u32(10))
 
     @property
-    def cigar(self: mem_aln_t):
+    def cigar(self):
         return CIGAR(self._cigar, int(self._n_cigar))
 
     @property
-    def score(self: mem_aln_t):
+    def score(self):
         return int(self._score)
 
     @property
-    def sub(self: mem_aln_t):
+    def sub(self):
         return int(self._sub)
 
     @property
-    def alt_score(self: mem_aln_t):
+    def alt_score(self):
         return int(self._alt_sc)
 
 type mem_alnreg_v(n: int, m: int, a: ptr[mem_alnreg_t]):
     def __new__() -> mem_alnreg_v:
         return (0, 0, ptr[mem_alnreg_t]())
 
-    def __getitem__(self: mem_alnreg_v, idx: int):
+    def __getitem__(self, idx: int):
         if not (0 <= idx < self.n):
             raise IndexError("alignment index out of range")
         return self.a[idx]
 
-    def __len__(self: mem_alnreg_v):
+    def __len__(self):
         return self.n
 
-    def __iter__(self: mem_alnreg_v):
+    def __iter__(self):
         i = 0
         while i < self.n:
             yield self.a[i]
             i += 1
 
 type bwaidx_t(_bwt: cobj, _bns: ptr[bntseq_t], _pac: cobj, _is_shm: i32, _l_mem: i64, _mem: cobj):
-    def name(self: bwaidx_t, aln: mem_aln_t):
+    def name(self, aln: mem_aln_t):
         def _strlen(p: ptr[byte]):
             n = 0
             while p[n]: n += 1
@@ -224,10 +224,10 @@ type BWA(opt: cobj, p: ptr[bwaidx_t]):
     def __new__(opt: cobj, hint: str) -> BWA:
         return (opt, bwa_idx_load(hint.c_str(), _BWA_IDX_ALL))
 
-    def name(self: BWA, aln: mem_aln_t):
+    def name(self, aln: mem_aln_t):
         return self.p[0].name(aln)
 
-    def reg2aln(self: BWA, s: seq, reg: mem_alnreg_t):
+    def reg2aln(self, s: seq, reg: mem_alnreg_t):
         cimport free(ptr[byte])
         a = mem_aln_t()
         mem_reg2aln(__ptr__(a), self.opt, self.p[0]._bns, self.p[0]._pac, i32(len(s)), s.ptr, __ptr__(reg))
@@ -244,7 +244,7 @@ type BWA(opt: cobj, p: ptr[bwaidx_t]):
         ptr[ptr[u32]](ptr[byte](__ptr__(a)) + 24)[0] = cigar  # note offset
         return a
 
-    def align(self: BWA, s: seq):
+    def align(self, s: seq):
         import core.gc as gc
         cimport free(ptr[byte])
         p = s.ptr if s.len >= 0 else str(s).ptr

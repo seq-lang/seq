@@ -1,18 +1,16 @@
-import bio.seq
+from builtin import *
 
-from bio.builtin import *
+from block import Block, blocks
+from locus import Locus
+from iter import Seqs
 
-from bio.block import Block, blocks
-from bio.locus import Locus
-from bio.iter import Seqs
+# from bio.align import SubMat, CIGAR, Alignment
+# from bio.pseq import pseq, translate
+# from bio.bwt import _saisxx, _saisxx_bwt
 
-from bio.align import SubMat, CIGAR, Alignment
-from bio.pseq import pseq, translate
-from bio.bwt import _saisxx, _saisxx_bwt
-
-from bio.fasta import FASTARecord, FASTA, pFASTARecord, pFASTA
-from bio.fastq import FASTQRecord, FASTQ
-from bio.fai import FAIRecord, FAI
-from bio.bam import SAMRecord, SAM, BAM, CRAM
-from bio.bed import BEDRecord, BED
-from bio.vcf import VCFRecord, VCF, BCF
+# from bio.fasta import FASTARecord, FASTA, pFASTARecord, pFASTA
+# from bio.fastq import FASTQRecord, FASTQ
+# from bio.fai import FAIRecord, FAI
+# from bio.bam import SAMRecord, SAM, BAM, CRAM
+# from bio.bed import BEDRecord, BED
+# from bio.vcf import VCFRecord, VCF, BCF
