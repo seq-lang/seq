@@ -129,6 +129,7 @@ Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
 
   bool hasStar = false;
   unsigned star = 0;
+  types::Type *innerType = nullptr;
 
   for (unsigned i = 0; i < patterns.size(); i++) {
     if (dynamic_cast<StarPattern *>(patterns[i])) {
@@ -138,15 +139,25 @@ Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
       }
       star = i;
       hasStar = true;
+    } else {
+      innerType = patterns[i]->getType();
     }
   }
 
-  assert(type->numBaseTypes() == 1);
-  types::ArrayType *arrType = types::ArrayType::get(type->getBaseType(0));
-  if (!type->membType("len")->is(types::Int) || !type->membType("arr")->is(arrType)) {
-    throw exc::SeqException("list type overriden");
+  if (!innerType) {
+    if (hasStar) {
+      // pattern: [...] ; match everything
+      IRBuilder<> builder(block);
+      return builder.getTrue();
+    } else {
+      // pattern: [] ; match empty list
+      Value *len = type->memb(val, "len", block);
+      IRBuilder<> builder(block);
+      return builder.CreateICmpEQ(len, zeroLLVM(context));
+    }
   }
 
+  types::ArrayType *arrType = types::ArrayType::get(innerType);
   Value *len = type->memb(val, "len", block);
   val = type->memb(val, "arr", block);
   type = arrType;
@@ -222,8 +233,8 @@ Value *ArrayPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
   return resultFinal;
 }
 
-SeqPattern::SeqPattern(std::string pattern)
-    : Pattern(types::Any), pattern(std::move(pattern)) {}
+SeqPattern::SeqPattern(std::string pattern, unsigned k)
+    : Pattern(types::Any), pattern(std::move(pattern)), k(k) {}
 
 // Returns the appropriate character for the given logical index, respecting
 // reverse complementation. Given `lenActual` should be non-negative.
@@ -583,13 +594,14 @@ Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
     ++i;
   }
 
-  if (type->getName() == "seq") { // is(types::Seq)) {
+  if (k == 0) {
+    assert(type->getName() == "seq");
     return codegenSeqMatchForSeq(patterns, base, type, val, block);
-  } else if (types::KMer *kmerType = type->asKMer()) {
-    return codegenSeqMatchForKmer(patterns, base, kmerType, val, block);
   } else {
-    seqassert(0, "unexpected {}", type->getName());
-    return nullptr;
+    types::KMer *kmerType = types::KMer::get(k);
+    IRBuilder<> builder(block);
+    val = builder.CreateExtractValue(val, 0); // kmer_type = { int_encoding }
+    return codegenSeqMatchForKmer(patterns, base, kmerType, val, block);
   }
 }
 
