@@ -138,6 +138,9 @@ type SAMAux(s: ptr[u8]):
     def _type(self: SAMAux):
         return SAMAux._byte_to_type(ptr[byte](self.s)[0])
 
+    def _array_type(self: SAMAux):
+        return SAMAux._byte_to_type(ptr[byte](self.s)[1])
+
     def _check_type(self: SAMAux, mask: int, code: str):
         if not self.s:
             raise ValueError("empty aux field")
@@ -147,9 +150,39 @@ type SAMAux(s: ptr[u8]):
 
     def _check_array_type(self: SAMAux, mask: int, code: str):
         self._check_type(AUX_TYPE_ARRAY, 'B')
-        t = SAMAux._byte_to_type(ptr[byte](self.s)[1])
+        t = self._array_type()
         if not (t & mask):
             raise TypeError(f"aux tag not of array type '{code}'")
+
+    @property
+    def tag_type(self: SAMAux):
+        '''
+        String representing the type of this tag.
+
+          - "int": use ``i`` property for int value
+          - "float": use ``f`` property for float value
+          - "char": use ``A`` property for byte value
+          - "string": use ``Z`` property for string value
+          - "array[int]": use ``B_len`` for array length and either ``B2i(index)`` to access elements
+          - "array[float]": use ``B_len`` for array length and either ``B2i(index)`` to access elements
+        '''
+        t = self._type()
+        if t & AUX_TYPE_INT:
+            return 'int'
+        if t & (AUX_TYPE_FLOAT | AUX_TYPE_DOUBLE):
+            return 'float'
+        if t & AUX_TYPE_CHAR:
+            return 'char'
+        if t & AUX_TYPE_STRING:
+            return 'string'
+        if t & AUX_TYPE_ARRAY:
+            t = self._array_type()
+            if t & AUX_TYPE_INT:
+                return 'array[int]'
+            if t & (AUX_TYPE_FLOAT | AUX_TYPE_DOUBLE):
+                return 'array[float]'
+            raise TypeError("invalid aux array type")
+        raise TypeError("invalid aux type")
 
     @property
     def i(self: SAMAux):
