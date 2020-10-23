@@ -12,6 +12,20 @@ BAM_FQCFAIL        =  512
 BAM_FDUP           = 1024
 BAM_FSUPPLEMENTARY = 2048
 
+AUX_TYPE_INT8      = 1
+AUX_TYPE_UINT8     = 2
+AUX_TYPE_INT16     = 4
+AUX_TYPE_UINT16    = 8
+AUX_TYPE_INT32     = 16
+AUX_TYPE_UINT32    = 32
+AUX_TYPE_FLOAT     = 64
+AUX_TYPE_DOUBLE    = 128
+AUX_TYPE_CHAR      = 256
+AUX_TYPE_STRING    = 512
+AUX_TYPE_ARRAY     = 2048
+
+AUX_TYPE_INT = AUX_TYPE_INT8 | AUX_TYPE_UINT8 | AUX_TYPE_INT16 | AUX_TYPE_UINT16 | AUX_TYPE_INT32 | AUX_TYPE_UINT32
+
 from bio.align import CIGAR
 from bio.locus import Contig, Locus
 
@@ -96,11 +110,53 @@ type SAMAux(s: ptr[u8]):
     def __bool__(self: SAMAux):
         return bool(self.s)
 
+    def _byte_to_type(t: byte):
+        if t == 'c'.ptr[0]:
+            return AUX_TYPE_INT8
+        if t == 'C'.ptr[0]:
+            return AUX_TYPE_UINT8
+        if t == 's'.ptr[0]:
+            return AUX_TYPE_INT16
+        if t == 'S'.ptr[0]:
+            return AUX_TYPE_UINT16
+        if t == 'i'.ptr[0]:
+            return AUX_TYPE_INT32
+        if t == 'I'.ptr[0]:
+            return AUX_TYPE_UINT32
+        if t == 'f'.ptr[0]:
+            return AUX_TYPE_FLOAT
+        if t == 'd'.ptr[0]:
+            return AUX_TYPE_DOUBLE
+        if t == 'A'.ptr[0]:
+            return AUX_TYPE_CHAR
+        if t == 'Z'.ptr[0] or t == 'H'.ptr[0]:
+            return AUX_TYPE_STRING
+        if t == 'B'.ptr[0]:
+            return AUX_TYPE_ARRAY
+        raise TypeError("unknown SAM aux type")
+
+    def _type(self: SAMAux):
+        return SAMAux._byte_to_type(ptr[byte](self.s)[0])
+
+    def _check_type(self: SAMAux, mask: int, code: str):
+        if not self.s:
+            raise ValueError("empty aux field")
+        t = self._type()
+        if not (t & mask):
+            raise TypeError(f"aux tag not of type '{code}'")
+
+    def _check_array_type(self: SAMAux, mask: int, code: str):
+        self._check_type(AUX_TYPE_ARRAY, 'B')
+        t = SAMAux._byte_to_type(ptr[byte](self.s)[1])
+        if not (t & mask):
+            raise TypeError(f"aux tag not of array type '{code}'")
+
     @property
     def i(self: SAMAux):
         '''
         Int value of this tag
         '''
+        self._check_type(AUX_TYPE_INT, 'i')
         return bam_aux2i(self.s)
 
     @property
@@ -108,6 +164,7 @@ type SAMAux(s: ptr[u8]):
         '''
         Float value of this tag
         '''
+        self._check_type(AUX_TYPE_FLOAT | AUX_TYPE_DOUBLE, 'f')
         return bam_aux2f(self.s)
 
     @property
@@ -115,6 +172,7 @@ type SAMAux(s: ptr[u8]):
         '''
         Byte value of this tag
         '''
+        self._check_type(AUX_TYPE_CHAR, 'A')
         return bam_aux2A(self.s)
 
     @property
@@ -122,6 +180,7 @@ type SAMAux(s: ptr[u8]):
         '''
         String value of this tag
         '''
+        self._check_type(AUX_TYPE_STRING, 'Z')
         return str.from_ptr(bam_aux2Z(self.s))
 
     @property
@@ -129,22 +188,32 @@ type SAMAux(s: ptr[u8]):
         '''
         Array length of this tag
         '''
+        self._check_type(AUX_TYPE_ARRAY, 'B')
         return int(bam_auxB_len(self.s))
 
     def B2i(self: SAMAux, idx: int):
         '''
         `idx`th element of integer array comprising this tag
         '''
+        self._check_array_type(AUX_TYPE_INT, 'i')
+        if idx > self.B_len:
+            raise IndexError('aux array index out of range')
         return bam_auxB2i(self.s, u32(idx))
 
     def B2f(self: SAMAux, idx: int):
         '''
         `idx`th element of float array comprising this tag
         '''
+        self._check_array_type(AUX_TYPE_FLOAT | AUX_TYPE_DOUBLE, 'f')
+        if idx > self.B_len:
+            raise IndexError('aux array index out of range')
         return bam_auxB2f(self.s, u32(idx))
 
     def __str__(self: SAMAux):
-        return str.from_ptr(bam_aux2Z(self.s))
+        return self.Z
+
+    def __len__(self: SAMAux):
+        return self.B_len
 
 class SAMRecord:
     _htsr: _bam1_t
