@@ -466,6 +466,14 @@ class SAMRecord:
         '''
         return self._htsr.flag & BAM_FSUPPLEMENTARY != 0
 
+    @property
+    def endpos(self: SAMRecord):
+        '''
+        The rightmost base position of an alignment on the reference genome
+        '''
+        b = self._htsr
+        return bam_endpos(cobj(__ptr__(b)))
+
     def aux(self: SAMRecord, tag: str):
         '''
         Returns the auxiliary tag with the specified key.
