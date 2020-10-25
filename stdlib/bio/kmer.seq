@@ -3,23 +3,33 @@ from bio.seq import seq
 type Kmer[K: int]:
     x: UInt[2*K] = UInt[2*K](0)
 
-    def __new__(s: seq) -> Kmer[K]:
-        if len(s) != K:
+    def __new__(s: seq, b: bool) -> Kmer[K]:
+        L = len(s)
+        if L != K:
             raise ValueError("sequence length does not match k-mer type's")
         two = UInt[2*K](2)
         n = UInt[2*K](0)
         i = 0
-        while i < len(s):
+        while i < L:
+            c = seq(s.ptr + i, 1).__int__()
+            if c > 3:
+                raise ValueError("sequence contains ambiguous bases")
             n <<= two
-            n |= UInt[2*K](int(s[i]))
+            n |= UInt[2*K](c)
             i += 1
-        return Kmer[K](n)
+        return Kmer[K](n.__revcomp__() if b else n)
+
+    def __new__(s: seq):
+        return Kmer[K](s, s.len < 0)
 
     def __new__(n: int):
         return Kmer[K](UInt[2*K](n))
 
     def __new__(kmer: Kmer[K]):
         return kmer
+
+    def __new__() -> Kmer[K]:
+        return Kmer[K](0)
 
     def __int__(self):
         return int(self.x)
@@ -40,13 +50,34 @@ type Kmer[K: int]:
         y = (self.x & (m << s)) >> s
         return Kmer[1](int(y))
 
-    def __lshift__(self, s: seq):
-        pass
+    def __lshift__(self: Kmer[K], s: seq):
+        two = UInt[2*K](2)
+        n = self.x
+        i = 0
+        while i < len(s):
+            c = s[i].__int__()
+            if c > 3:
+                raise ValueError("sequence contains ambiguous bases")
+            n <<= two
+            n |= UInt[2*K](c)
+            i += 1
+        return Kmer[K](n)
 
-    def __rshift__(self, s: seq):
-        pass
+    def __rshift__(self: Kmer[K], s: seq):
+        two = UInt[2*K](2)
+        n = self.x
+        i = 0
+        while i < len(s):
+            c = s[i].__int__()
+            if c > 3:
+                raise ValueError("sequence contains ambiguous bases")
+            sh = UInt[2*K](2*(K - i - 1))
+            n >>= two
+            n |= (UInt[2*K](c) << sh)
+            i += 1
+        return Kmer[K](n)
 
-    def __sub__(self, other: Kmer[K]):
+    def __sub__(self: Kmer[K], other: Kmer[K]):
         '''
         Hamming distance algorithm:
           input: kmer1, kmer2
@@ -62,6 +93,7 @@ type Kmer[K: int]:
         i = 0
         while i < K:
             mask1 |= one << UInt[2*K](2*i)
+            i += 1
         mask2 = mask1 << one
         kmer1 = self.x
         kmer2 = other.x
@@ -99,7 +131,7 @@ type Kmer[K: int]:
         return self.x >= other.x
 
     def __contains__(self, s: seq):
-        return str(self) in str(s)
+        return str(s) in str(self)
 
     def __str__(self):
         ACGT = (byte(65), byte(67), byte(71), byte(84))

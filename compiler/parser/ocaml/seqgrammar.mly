@@ -93,7 +93,6 @@ expr:
   | pipe_expr { flat_pipe $1 }
   | pipe_expr IF pipe_expr ELSE expr { $loc, IfExpr (flat_pipe $3, flat_pipe $1, $5) }
   | TYPEOF LP expr RP { $loc, TypeOf $3 }
-  | PTR LP expr RP { $loc, Ptr $3 }
   | LAMBDA separated_list(COMMA, ID) COLON expr { $loc, Lambda ($2, $4) }
 expr_list: separated_nonempty_list(COMMA, expr) { $1 }
 
@@ -140,6 +139,7 @@ arith_expr:
   ADD | SUB | MUL | DIV | FDIV | MOD | POW | AT | B_AND | B_OR | B_XOR | B_LSH | B_RSH { $1 }
 arith_term:
   | atom { $1 }
+  | PTR LP expr RP { $loc, Ptr $3 }
   | arith_term LP FL(COMMA, call_term) RP { $loc, Call ($1, $3) }
   | arith_term LP expr comprehension RP /* Generator: foo(x for x in y) */
     { $loc, Call ($1, [None, (($startpos($2), $endpos($5)), Generator ($3, $4))]) }

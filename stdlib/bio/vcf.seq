@@ -207,7 +207,7 @@ type _bcf_dec_t(_m_fmt: i32, _m_info: i32, _m_id: i32, _m_als: i32, _m_allele: i
                 _var_type: i32,
                 _shared_dirty: i32,
                 _indiv_dirty: i32):
-    def __init__(self) -> _bcf_dec_t:
+    def __new__() -> _bcf_dec_t:
         return (i32(0), i32(0), i32(0), i32(0), i32(0), i32(0), i32(0), ptr[i32](),
                 char_p(), char_p(), char_pp(), ptr[_bcf_info_t](), ptr[_bcf_fmt_t](),
                 ptr[_variant_t](), i32(0), i32(-1), i32(0), i32(0))
@@ -298,7 +298,7 @@ def bcf_gt_allele(val: int):
     return int((u64(val) >> u64(1)) - u64(1))
 
 type BCFHeaderMetaData(bcf_hdr: ptr[_bcf_hdr_t], _type_code: int):
-    def __init__(self, bcf_hdr: ptr[_bcf_hdr_t], _type_code: int) -> BCFHeaderMetaData:
+    def __new__(bcf_hdr: ptr[_bcf_hdr_t], _type_code: int) -> BCFHeaderMetaData:
         return (bcf_hdr, _type_code)
 
     @property
@@ -322,7 +322,7 @@ type BCFHeaderMetaData(bcf_hdr: ptr[_bcf_hdr_t], _type_code: int):
                 yield str.from_ptr(idpair[0]._key)
 
 type BCFHeaderContigs(bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self, bcf_hdr: ptr[_bcf_hdr_t]) -> BCFHeaderContigs:
+    def __new__(bcf_hdr: ptr[_bcf_hdr_t]) -> BCFHeaderContigs:
         return (bcf_hdr,)
 
     def __iter__(self):
@@ -330,7 +330,7 @@ type BCFHeaderContigs(bcf_hdr: ptr[_bcf_hdr_t]):
             yield str.from_ptr(_bcf_hdr_id2name(self.bcf_hdr, i))
 
 type BCFHeaderSamples(bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self, bcf_hdr: ptr[_bcf_hdr_t]) -> BCFHeaderSamples:
+    def __new__(bcf_hdr: ptr[_bcf_hdr_t]) -> BCFHeaderSamples:
         return (bcf_hdr,)
 
     def __iter__(self):
@@ -344,7 +344,7 @@ type BCFHeaderSamples(bcf_hdr: ptr[_bcf_hdr_t]):
 
 METADATA_TYPES = ('FILTER', 'INFO', 'FORMAT', 'CONTIG', 'STRUCTURED', 'GENERIC')
 type BCFHeaderRecord(bcf_hdr: ptr[_bcf_hdr_t], bcf_hrec: ptr[_bcf_hrec_t]):
-    def __init__(self, bcf_hdr: ptr[_bcf_hdr_t], bcf_hrec: ptr[_bcf_hrec_t]) -> BCFHeaderRecord:
+    def __new__(bcf_hdr: ptr[_bcf_hdr_t], bcf_hrec: ptr[_bcf_hrec_t]) -> BCFHeaderRecord:
         return (bcf_hdr, bcf_hrec)
 
     @property
@@ -411,10 +411,10 @@ type BCFHeaderRecord(bcf_hdr: ptr[_bcf_hdr_t], bcf_hrec: ptr[_bcf_hrec_t]):
                     yield (key, val)
 
 type BCFHeader(bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self, bcf_hdr: ptr[_bcf_hdr_t]) -> BCFHeader:
+    def __new__(bcf_hdr: ptr[_bcf_hdr_t]) -> BCFHeader:
         return (bcf_hdr,)
 
-    def __init__(self) -> BCFHeader:
+    def __new__() -> BCFHeader:
         return (ptr[_bcf_hdr_t](),)
 
     @property
@@ -444,7 +444,7 @@ type BCFHeader(bcf_hdr: ptr[_bcf_hdr_t]):
 
 VALUE_TYPES = ('Flag', 'Integer', 'Float', 'String')
 type BCFMetadata(bcf_hdr: ptr[_bcf_hdr_t], _type_code: int, _id: int):
-    def __init__(self, bcf_hdr: ptr[_bcf_hdr_t], _type_code: int, _id: int) -> BCFMetadata:
+    def __new__(bcf_hdr: ptr[_bcf_hdr_t], _type_code: int, _id: int) -> BCFMetadata:
         return (bcf_hdr, _type_code, _id)
 
     @property
@@ -633,7 +633,7 @@ def try_unpack(bcf1: ptr[_bcf1_t], mode: i32):
 type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
     # mapping from info keys: values
 
-    def __init__(self, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordInfo:
+    def __new__(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordInfo:
         return (bcf1, bcf_hdr)
 
     def __iter__(self):
@@ -787,7 +787,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
     '''
 
 type VCFRecordSample(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], index: int):
-    def __init__(self, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], index: int) -> VCFRecordSample:
+    def __new__(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], index: int) -> VCFRecordSample:
         return (bcf1, bcf_hdr, index)
 
     @property
@@ -846,7 +846,7 @@ type VCFRecordSample(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], index: int):
         return self.name
 
 type VCFRecordSamples(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordSamples:
+    def __new__(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordSamples:
         return (bcf1, bcf_hdr)
 
     def __len__(self):
@@ -865,7 +865,7 @@ type VCFRecordSamples(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
         return VCFRecordSample(self.bcf1, self.bcf_hdr, sample_index)
 
 type VCFRecordFormat(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordFormat:
+    def __new__(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordFormat:
         return (bcf1, bcf_hdr)
 
     def __len__(self):
@@ -889,7 +889,7 @@ type VCFRecordFormat(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
         return BCFMetadata(self.bcf_hdr, int(BCF_HL_FMT), int(fmt[0]._id))
 
 type VCFRecordFilter(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordFilter:
+    def __new__(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecordFilter:
         return (bcf1, bcf_hdr)
 
     def __iter__(self):
@@ -909,7 +909,7 @@ type VCFRecordFilter(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
 # Modeled after:
 # https://pysam.readthedocs.io/en/latest/api.html#pysam.VariantRecord
 type VCFRecord(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
-    def __init__(self, bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecord:
+    def __new__(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]) -> VCFRecord:
         return (bcf1, bcf_hdr)
 
     @property

@@ -193,10 +193,10 @@ void TypecheckVisitor::visit(const IfExpr *expr) {
 
 void TypecheckVisitor::visit(const BinaryExpr *expr) {
   auto magics = unordered_map<string, string>{
-      {"+", "add"},     {"-", "sub"},     {"*", "mul"}, {"**", "pow"}, {"/", "truediv"},
-      {"//", "div"},    {"@", "mathmul"}, {"%", "mod"}, {"<", "lt"},   {"<=", "le"},
-      {">", "gt"},      {">=", "ge"},     {"==", "eq"}, {"!=", "ne"},  {"<<", "lshift"},
-      {">>", "rshift"}, {"&", "and"},     {"|", "or"},  {"^", "xor"}};
+      {"+", "add"},     {"-", "sub"},    {"*", "mul"}, {"**", "pow"}, {"/", "truediv"},
+      {"//", "div"},    {"@", "matmul"}, {"%", "mod"}, {"<", "lt"},   {"<=", "le"},
+      {">", "gt"},      {">=", "ge"},    {"==", "eq"}, {"!=", "ne"},  {"<<", "lshift"},
+      {">>", "rshift"}, {"&", "and"},    {"|", "or"},  {"^", "xor"}};
   auto le = transform(expr->lexpr);
   auto re = CAST(expr->rexpr, NoneExpr) ? clone(expr->rexpr) : transform(expr->rexpr);
   if (le->getType()->getUnbound() ||
@@ -327,7 +327,7 @@ void TypecheckVisitor::visit(const StaticExpr *expr) {
 
 void TypecheckVisitor::visit(const InstantiateExpr *expr) {
   ExprPtr e = transform(expr->type, true);
-  LOG("-- in : {} -> {}", expr->type->toString(), e->toString());
+  // LOG("-- in : {} -> {}", expr->type->toString(), e->toString());
   auto g = ctx->instantiate(e->getSrcInfo(), e->getType());
   for (int i = 0; i < expr->params.size(); i++) {
     TypePtr t = nullptr;
@@ -375,8 +375,12 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
   bool isType = e->isType();
   auto t = forceUnify(expr, g);
   auto newName = patchIfRealizable(t, isType);
-  if (!newName.empty())
-    fixExprName(e, newName);
+  auto i = CAST(e, IdExpr);
+  if (!newName.empty() && i && newName != i->value) {
+    auto comp = split(newName, ':');
+    if (startswith(comp.back(), i->value))
+      i->value = newName;
+  }
   resultExpr = move(e); // will get replaced by identifier later on
   if (isType)
     resultExpr->markType();
@@ -456,7 +460,7 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
         it.push_back(transform(i, true));
     else
       it.push_back(transform(expr->index, true));
-    LOG("-- {} -> INST {}", expr->toString(), e->toString());
+    // LOG("-- {} -> INST {}", expr->toString(), e->toString());
     resultExpr = transform(N<InstantiateExpr>(move(e), move(it)));
   } else if (auto c = t->getClass()) {
     resultExpr = getTupleIndex(c, expr->expr, expr->index);
@@ -561,10 +565,20 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
   }
 
   ExprPtr e = nullptr;
-  if (auto d = CAST(expr->expr, DotExpr))
-    e = visitDot(d->expr, d->member, &args);
-  else
+  Expr *lhs = const_cast<CallExpr *>(expr)->expr.get();
+  if (auto i = CAST(expr->expr, IndexExpr))
+    lhs = i->expr.get();
+  else if (auto i = CAST(expr->expr, InstantiateExpr))
+    lhs = i->type.get();
+  if (auto i = dynamic_cast<DotExpr *>(lhs)) {
+    e = visitDot(i->expr, i->member, &args);
+    if (auto i = CAST(expr->expr, IndexExpr))
+      e = transform(N<IndexExpr>(move(e), clone(i->index)));
+    else if (auto i = CAST(expr->expr, InstantiateExpr))
+      e = transform(N<InstantiateExpr>(move(e), clone(i->params)));
+  } else {
     e = transform(expr->expr, true);
+  }
   forceUnify(expr->expr.get(), e->getType());
 
   auto c = e->getType();
@@ -706,15 +720,23 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
     ctx->popBlock();
 
   // Realize functions that are passed as arguments
+  auto fix = [&](ExprPtr &e, const string &newName) {
+    auto i = CAST(e, IdExpr);
+    if (!i || newName == i->value)
+      return;
+    auto comp = split(newName, ':');
+    if (startswith(comp.back(), i->value))
+      i->value = newName;
+  };
   for (auto &ra : reorderedArgs)
     if (ra.value->getType()->getFunc() && ra.value->getType()->canRealize()) {
       auto r = realizeFunc(ra.value->getType());
-      fixExprName(ra.value, r->realizeString());
+      fix(ra.value, r->realizeString());
     }
   if (c->canRealize() && c->getFunc()) {
     auto r = realizeFunc(c->getFunc());
     if (knownTypes.empty())
-      fixExprName(e, r->realizeString());
+      fix(e, r->realizeString());
   }
 
   // Emit final call
@@ -1404,22 +1426,7 @@ string TypecheckVisitor::patchIfRealizable(TypePtr typ, bool isClass) {
   return "";
 }
 
-void TypecheckVisitor::fixExprName(ExprPtr &e, const string &newName) {
-  if (auto i = CAST(e, CallExpr)) { // partial calls
-    fixExprName(i->expr, newName);
-  } else if (auto i = CAST(e, IdExpr)) {
-    if (newName != i->value) {
-      auto comp = split(newName, ':');
-      if (startswith(comp.back(), i->value)) {
-        // LOG("replace {} {} -> {}", startswith(comp.back(), i->value), i->value,
-        // newName);
-        i->value = newName;
-      }
-    }
-  } else {
-    seqassert(false, "can't fix {}", e->toString());
-  }
-}
+void TypecheckVisitor::fixExprName(ExprPtr &e, const string &newName) {}
 
 bool TypecheckVisitor::castToOptional(TypePtr lt, ExprPtr &rhs) {
   auto lc = lt->getClass();

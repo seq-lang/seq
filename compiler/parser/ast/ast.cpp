@@ -233,9 +233,10 @@ string CallExpr::toString() const {
   return wrap(format("#call {}{}", *expr, s));
 }
 
-DotExpr::DotExpr(ExprPtr e, const string &m) : Expr(), expr(move(e)), member(m) {}
+DotExpr::DotExpr(ExprPtr e, const string &m)
+    : Expr(), expr(move(e)), member(m), isMethod(false) {}
 DotExpr::DotExpr(const DotExpr &e)
-    : Expr(e), expr(ast::clone(e.expr)), member(e.member) {}
+    : Expr(e), expr(ast::clone(e.expr)), member(e.member), isMethod(e.isMethod) {}
 string DotExpr::toString() const { return wrap(format("#dot {} {}", *expr, member)); }
 
 SliceExpr::SliceExpr(ExprPtr s, ExprPtr e, ExprPtr st)

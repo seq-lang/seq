@@ -59,7 +59,7 @@ type BEDRecord(_chrom: str, _chromStart: int, _chromEnd: int,
         return self.num_cols
 
 type BEDReader(_file: gzFile, _header: list[str], validate: bool, copy: bool):
-    def __init__(self, path: str, validate: bool, copy: bool) -> BEDReader:
+    def __new__(path: str, validate: bool, copy: bool) -> BEDReader:
         return (gzopen(path, "r"), BEDReader.init_header(path), validate, copy)
 
     @property

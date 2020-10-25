@@ -402,6 +402,7 @@ struct CallExpr : public Expr {
 struct DotExpr : public Expr {
   ExprPtr expr;
   std::string member;
+  bool isMethod; // mark true for special handling of methods
 
   DotExpr(ExprPtr e, const std::string &m);
   DotExpr(const DotExpr &n);

@@ -224,11 +224,11 @@ INSTANTIATE_TEST_SUITE_P(
         "core/range.seq",
         "core/bltin.seq",
         "core/arguments.seq",
+        "core/kmers.seq",
         // F: "core/match.seq", // needs list & seq fixes
         // "core/align.seq",
         // "core/bwtsa.seq",
         // "core/formats.seq",
-        // "core/kmers.seq",  // realization error
         // "core/proteins.seq",  // auto-cast int[32] to int
         // "core/serialization.seq",  // auto-cast int[32] to int
         "core/empty.seq"

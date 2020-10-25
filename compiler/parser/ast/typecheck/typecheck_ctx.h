@@ -61,6 +61,8 @@ public:
   std::set<types::TypePtr> activeUnbounds;
   int iteration;
 
+  std::stack<bool> partializeMethod;
+
 public:
   TypeContext(std::shared_ptr<Cache> cache);
 

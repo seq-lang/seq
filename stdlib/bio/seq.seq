@@ -110,6 +110,12 @@ extend seq:
     def __contains__(self, other: seq):
         return str(other) in str(self)
 
+    def __contains__[K](self, kmer: K):
+        for k in self.kmers[K](step=1):
+            if k == kmer:
+                return True
+        return False
+
     def __len__(self):
         return abs(self.len)
 

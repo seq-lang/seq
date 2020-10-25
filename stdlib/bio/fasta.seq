@@ -22,7 +22,7 @@ type FASTARecord(_header: str, _seq: seq):
         return self._seq
 
 type FASTAReader(_file: cobj, fai: list[FAIRecord], validate: bool, gzip: bool, copy: bool):
-    def __init__(self, path: str, validate: bool, gzip: bool, copy: bool, fai: bool) -> FASTAReader:
+    def __new__(path: str, validate: bool, gzip: bool, copy: bool, fai: bool) -> FASTAReader:
         fai_list = list[FAIRecord]() if fai else None
         if fai:
             with FAI(path + ".fai") as fai_file:
@@ -136,7 +136,7 @@ type FASTAReader(_file: cobj, fai: list[FAIRecord], validate: bool, gzip: bool, 
             if n > 0:
                 yield (curname, copy(seq(p, n)) if self.copy else seq(p, n))
 
-    def __iter__(self) -> FASTARecord:
+    def __iter__(self):
         if self.gzip:
             yield from self._iter_core(self.gzfile)
         else:
@@ -282,7 +282,7 @@ type pFASTAReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
         if n > 0:
             yield (curname, copy(pseq(p, n)) if self.copy else pseq(p, n))
 
-    def __iter__(self) -> pFASTARecord:
+    def __iter__(self):
         if self.gzip:
             yield from self._iter_core(self.gzfile)
         else:

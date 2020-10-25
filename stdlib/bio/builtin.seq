@@ -35,12 +35,6 @@ def _kmers_canonical[K](self: seq):
 def _kmers_canonical_with_pos[K](self: seq):
     return self.kmers_canonical_with_pos[K]()
 
-def _kmer_in_seq[K](kmer: K, s: seq) -> bool:
-    for k in s.kmers[K](step=1):
-        if k == kmer:
-            return True
-    return False
-
 def base[K,T](kmer: K, idx: int, b: T):
     U = typeof(kmer.as_int())
     if idx < 0:

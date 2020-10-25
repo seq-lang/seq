@@ -96,7 +96,7 @@ type FASTQReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
                 yield rec.seq
         self.close()
 
-    def __iter__(self) -> FASTQRecord:
+    def __iter__(self):
         if not self.copy:
             raise ValueError("cannot iterate over FASTQ records with copy=False")
         if self.gzip:
