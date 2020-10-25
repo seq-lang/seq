@@ -24,6 +24,8 @@ TypePtr Type::follow() { return shared_from_this(); }
 StaticType::StaticType(const std::vector<Generic> &ex, std::unique_ptr<Expr> &&e)
     : explicits(ex), expr(move(e)) {}
 
+StaticType::StaticType(int i) { expr = std::make_unique<IntExpr>(i); }
+
 string StaticType::toString(bool reduced) const {
   vector<string> s;
   for (auto &e : explicits)
@@ -288,6 +290,11 @@ int ClassType::unify(TypePtr typ, Unification &us) {
   if (auto t = typ->getClass()) {
     if (isRecord() != t->isRecord())
       return -1;
+
+    if (name == ".int" && t->name == ".Int")
+      return t->explicits[0].type->unify(make_shared<StaticType>(64), us);
+    if (t->name == ".int" && name == ".Int")
+      return explicits[0].type->unify(make_shared<StaticType>(64), us);
 
     if (args.size() != t->args.size())
       return -1;

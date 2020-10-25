@@ -87,7 +87,7 @@ def test_non_atomic_set_pickle(x: set[A]):
 
     assert y == copy
 
-type K = Kmer[8]
+K = Kmer[8]
 test_pickle(42)
 test_pickle(3.14)
 test_pickle(True)

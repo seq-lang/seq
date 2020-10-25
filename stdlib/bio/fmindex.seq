@@ -53,13 +53,13 @@ class bntamb:
 def _pickle_ptr[T](p: ptr[T], n: int, jar: Jar):
     from pickle import _write_raw
     pickle(n, jar)
-    _write_raw(jar, ptr[byte](p), n * _gc.sizeof[T]())
+    _write_raw(jar, p.as_byte(), n * _gc.sizeof[T]())
 
 def _unpickle_ptr[T](jar: Jar):
     from pickle import _read_raw
     n = unpickle[int](jar)
     p = ptr[T](n)
-    _read_raw(jar, ptr[byte](p), n * _gc.sizeof[T]())
+    _read_raw(jar, p.as_byte(), n * _gc.sizeof[T]())
     return (p, n)
 
 class bntseq:
@@ -98,7 +98,7 @@ class bntseq:
     def __init__(self, path: str):
         m_pac = 0x10000
         self._pac = ptr[u8](m_pac // 4)
-        str.memset(ptr[byte](self._pac), byte(0), m_pac // 4)
+        str.memset(self._pac.as_byte(), byte(0), m_pac // 4)
         self._m_pac = m_pac
         self._l_pac = 0
         self._n_seqs = 0
@@ -125,8 +125,8 @@ class bntseq:
         m_pac = self._m_pac
         if l_pac == m_pac:
             m_pac <<= 1
-            self._pac = ptr[u8](_gc.realloc(ptr[byte](self._pac), m_pac // 4))
-            str.memset(ptr[byte](self._pac + l_pac//4), byte(0), (m_pac - l_pac) // 4)
+            self._pac = ptr[u8](_gc.realloc(self._pac.as_byte(), m_pac // 4))
+            str.memset((self._pac + l_pac//4).as_byte(), byte(0), (m_pac - l_pac) // 4)
             self._m_pac = m_pac
 
     def _push_pac(self, c: u8):
@@ -551,7 +551,7 @@ class FMDIndex:
             self._L2[i] += self._L2[i - 1]
             i += 1
 
-        SA = _saisxx(ptr[byte](ref_seq), l, k=4)
+        SA = _saisxx(ref_seq.as_byte(), l, k=4)
 
         s = ptr[u8](l + 1)
         clear(s, l + 1)
@@ -563,8 +563,8 @@ class FMDIndex:
             else:
                 s[i] = ref_seq[sa_val - 1]
             i += 1
-        _gc.free(ptr[byte](ref_seq))
-        _gc.free(ptr[byte](SA))
+        _gc.free(ref_seq.as_byte())
+        _gc.free(SA.as_byte())
 
         i = self._primary
         while i < l:
@@ -579,7 +579,7 @@ class FMDIndex:
         while i < l:
             self._bwt[i >> 4] |= u32(int(s[i]) << ((15 - (i & 15)) << 1))
             i += 1
-        _gc.free(ptr[byte](s))
+        _gc.free(s.as_byte())
 
         # generate cnt_table
         i = 0
@@ -621,7 +621,7 @@ class FMDIndex:
     def _cal_sa(self, intv: int):
         assert intv > 0 and (intv & (intv - 1)) == 0
         if self._sa:
-            _gc.free(ptr[byte](self._sa))
+            _gc.free(self._sa.as_byte())
         self._sa_intv = intv
         self._n_sa = (self._seq_len + intv) // intv
         self._sa = ptr[int](_gc.alloc_atomic(self._n_sa * _gc.sizeof[int]()))
@@ -651,16 +651,16 @@ class FMDIndex:
         k = 0
         while i < self._seq_len:
             if i % OCC_INTERVAL == 0:
-                str.memcpy(ptr[byte](buf + k), ptr[byte](c.ptr), 4 * 8)
+                str.memcpy((buf + k).as_byte(), c.ptr.as_byte(), 4 * 8)
                 k += 8  # in fact: sizeof(bwtint_t)=4*(sizeof(bwtint_t)/4)
             if i % 16 == 0:  # 16 == sizeof(uint32_t)/2
                 buf[k] = self._bwt[i//16]
                 k += 1
             c[self._B00(i)] += 1
             i += 1
-        str.memcpy(ptr[byte](buf + k), ptr[byte](c.ptr), 4 * 8)
+        str.memcpy((buf + k).as_byte(), c.ptr.as_byte(), 4 * 8)
         assert k + 8 == self._bwt_size
-        _gc.free(ptr[byte](self._bwt))
+        _gc.free(self._bwt.as_byte())
         self._bwt = buf
 
     def _sa_get(self, k: int):
@@ -749,7 +749,7 @@ class FMDIndex:
             return 0, 0, 0, 0
         k -= 1 if k >= self._primary else 0
         p = self._occ_intv(k)
-        str.memcpy(ptr[byte](cnt.ptr), ptr[byte](p), 4 * 8)
+        str.memcpy(cnt.ptr.as_byte(), p.as_byte(), 4 * 8)
         p += 8
         end = p + ((k>>4) - ((k&~OCC_INTV_MASK)>>4))  # this is the end point of the following loop
         x = 0
@@ -776,7 +776,7 @@ class FMDIndex:
             k -= 1 if k >= self._primary else 0
             l -= 1 if l >= self._primary else 0
             p = self._occ_intv(k)
-            str.memcpy(ptr[byte](cntk.ptr), ptr[byte](p), 4 * 8)
+            str.memcpy(cntk.ptr.as_byte(), p.as_byte(), 4 * 8)
             p += 8
             # prepare cntk[]
             endk = p + ((k>>4) - ((k&~OCC_INTV_MASK)>>4))
@@ -794,7 +794,7 @@ class FMDIndex:
                 p += 1
             tmp = int(p[0] & ~((u32(1)<<u32((~l&15)<<1)) - u32(1)))
             y += self.__occ_aux4(tmp) - (~l&15)
-            str.memcpy(ptr[byte](cntl.ptr), ptr[byte](cntk.ptr), 4 * 8)
+            str.memcpy(cntl.ptr.as_byte(), cntk.ptr.as_byte(), 4 * 8)
             cntk[0] += x&0xff
             cntk[1] += x>>8&0xff
             cntk[2] += x>>16&0xff
@@ -1092,12 +1092,12 @@ class FMIndex:
                 l *= 2
 
         self._init_sa(l, need_sa_hi)
-        SA = _saisxx(ptr[byte](ref_seq), l, k=4)
+        SA = _saisxx(ref_seq.as_byte(), l, k=4)
         i = 0
         while i < l:
             self._set_sa(idx=i+1, val=SA[i])
             i += 1
-        _gc.free(ptr[byte](SA))
+        _gc.free(SA.as_byte())
 
         s = ptr[u8](l + 1)
         clear(s, l + 1)
@@ -1110,7 +1110,7 @@ class FMIndex:
                 s[i] = ref_seq[sa_val - 1]
             i += 1
         if packed:
-            _gc.free(ptr[byte](ref_seq))
+            _gc.free(ref_seq.as_byte())
 
         i = self._primary
         while i < l:
@@ -1125,7 +1125,7 @@ class FMIndex:
         while i < l:
             self._bwt[i >> 4] |= u32(int(s[i]) << ((15 - (i & 15)) << 1))
             i += 1
-        _gc.free(ptr[byte](s))
+        _gc.free(s.as_byte())
 
         # calculate occ
         c = __array__[int](4)
@@ -1140,11 +1140,11 @@ class FMIndex:
         i = 0
         while i < l:
             if i % 16 == 0:
-                str.memcpy(ptr[byte](self._occ + (i//16) * 4), ptr[byte](c.ptr), 32)
+                str.memcpy((self._occ + (i//16) * 4).as_byte(), c.ptr.as_byte(), 32)
             c[self._B0(i)] += 1
             i += 1
 
-        str.memcpy(ptr[byte](self._L2 + 1), ptr[byte](c.ptr), 32)
+        str.memcpy((self._L2 + 1).as_byte(), c.ptr.as_byte(), 32)
 
         i = 2
         while i < 5:
@@ -1226,7 +1226,7 @@ class FMIndex:
         if k >= self._primary:
             k -= 1
         cnt = __array__[int](4)
-        str.memcpy(ptr[byte](cnt.ptr), ptr[byte](self._occ + (k >> 4 << 2)), 32)
+        str.memcpy(cnt.ptr.as_byte(), (self._occ + (k >> 4 << 2)).as_byte(), 32)
         b = int(self._bwt[k >> 4] & ~((u32(1) << u32((~k&15) << 1)) - u32(1)))
         x = int(self._cnt_table[b&0xff] + self._cnt_table[b>>8&0xff] + self._cnt_table[b>>16&0xff] + self._cnt_table[b>>24])
         x -= 15 - (k & 15)

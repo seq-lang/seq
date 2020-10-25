@@ -274,7 +274,7 @@ class SAMRecord:
         n = int(self._htsr.l_data) - (int(self._hts.core._n_cigar) << 2) - int(self._htsr.core._l_qname) -
             int(self._htsr.core._l_qseq) - ((int(self._htsr.core._l_qseq) + 1) >> 1)
         '''
-        return SAMAux(bam_aux_get(self.__raw__(), ptr[byte](__ptr__(tag_arr))))
+        return SAMAux(bam_aux_get(self.__raw__(), __ptr__(tag_arr).as_byte()))
 
 class BAMReader:
     _aln: _bam1_t

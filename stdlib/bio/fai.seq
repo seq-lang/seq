@@ -61,9 +61,9 @@ class FAIReader:
         name, length, offset = "", 0, 0
         line_bases, line_width, qual_offset = 0, 0, 0
 
-        val_ptrs: list[ptr[byte]] = [ptr[byte](__ptr__(name)), ptr[byte](__ptr__(length)),
-                                     ptr[byte](__ptr__(offset)), ptr[byte](__ptr__(line_bases)),
-                                     ptr[byte](__ptr__(line_width)), ptr[byte](__ptr__(qual_offset))]
+        val_ptrs: list[ptr[byte]] = [__ptr__(name).as_byte(), __ptr__(length).as_byte(),
+                                     __ptr__(offset).as_byte(), __ptr__(line_bases).as_byte(),
+                                     __ptr__(line_width).as_byte(), __ptr__(qual_offset).as_byte()]
 
         for i in range(self.num_necessary_cols):
             col_name = FAI_COL_NAMES[i]

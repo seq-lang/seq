@@ -203,18 +203,18 @@ def options(match_score: int = 1,
             unpaired_penalty: int = 17):
     # offsets below are based on BWA mem_opt_t definition
     opt = mem_opt_init()
-    p = ptr[i32](ptr[byte](opt) + 0 * 4); p[0] = i32(match_score)
-    p = ptr[i32](ptr[byte](opt) + 1 * 4); p[0] = i32(mismatch_score)
-    p = ptr[i32](ptr[byte](opt) + 2 * 4); p[0] = i32(open_del)
-    p = ptr[i32](ptr[byte](opt) + 3 * 4); p[0] = i32(extend_del)
-    p = ptr[i32](ptr[byte](opt) + 4 * 4); p[0] = i32(open_ins)
-    p = ptr[i32](ptr[byte](opt) + 5 * 4); p[0] = i32(extend_ins)
-    p = ptr[i32](ptr[byte](opt) + 6 * 4); p[0] = i32(unpaired_penalty)
-    p = ptr[i32](ptr[byte](opt) + 7 * 4); p[0] = i32(clip_penalty[0])
-    p = ptr[i32](ptr[byte](opt) + 8 * 4); p[0] = i32(clip_penalty[1])
-    p = ptr[i32](ptr[byte](opt) + 9 * 4); p[0] = i32(bandwidth)
-    p = ptr[i32](ptr[byte](opt) + 10 * 4); p[0] = i32(zdrop)
-    bwa_fill_scmat(i32(match_score), i32(mismatch_score), ptr[i8](ptr[byte](opt) + 140))
+    p = ptr[i32](opt + 0 * 4); p[0] = i32(match_score)
+    p = ptr[i32](opt + 1 * 4); p[0] = i32(mismatch_score)
+    p = ptr[i32](opt + 2 * 4); p[0] = i32(open_del)
+    p = ptr[i32](opt + 3 * 4); p[0] = i32(extend_del)
+    p = ptr[i32](opt + 4 * 4); p[0] = i32(open_ins)
+    p = ptr[i32](opt + 5 * 4); p[0] = i32(extend_ins)
+    p = ptr[i32](opt + 6 * 4); p[0] = i32(unpaired_penalty)
+    p = ptr[i32](opt + 7 * 4); p[0] = i32(clip_penalty[0])
+    p = ptr[i32](opt + 8 * 4); p[0] = i32(clip_penalty[1])
+    p = ptr[i32](opt + 9 * 4); p[0] = i32(bandwidth)
+    p = ptr[i32](opt + 10 * 4); p[0] = i32(zdrop)
+    bwa_fill_scmat(i32(match_score), i32(mismatch_score), ptr[i8](opt + 140))
     return opt
 
 type BWA(opt: cobj, p: ptr[bwaidx_t]):
@@ -240,8 +240,8 @@ type BWA(opt: cobj, p: ptr[bwaidx_t]):
             if u32(3) <= op < u32(0xf):
                 op += u32(1)
             cigar[i] = (n << u32(4)) | op
-        free(ptr[byte](a._cigar))
-        ptr[ptr[u32]](ptr[byte](__ptr__(a)) + 24)[0] = cigar  # note offset
+        free(a._cigar.as_byte())
+        ptr[ptr[u32]](__ptr__(a).as_byte() + 24)[0] = cigar  # note offset
         return a
 
     def align(self, s: seq):
@@ -253,7 +253,7 @@ type BWA(opt: cobj, p: ptr[bwaidx_t]):
         # marshal to GC:
         n_bytes = ar.n * gc.sizeof[mem_alnreg_t]()
         copy = gc.alloc_atomic(n_bytes)
-        str.memcpy(ptr[byte](copy), ptr[byte](ar.a), n_bytes)
-        free(ptr[byte](ar.a))
-        ptr[ptr[mem_alnreg_t]](ptr[byte](__ptr__(ar)) + 16)[0] = ptr[mem_alnreg_t](copy)  # note offset
+        str.memcpy(copy.as_byte(), ar.a.as_byte(), n_bytes)
+        free(ar.a.as_byte())
+        ptr[ptr[mem_alnreg_t]](__ptr__(ar).as_byte() + 16)[0] = ptr[mem_alnreg_t](copy)  # note offset
         return ar

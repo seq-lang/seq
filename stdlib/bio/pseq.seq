@@ -1,7 +1,4 @@
-from core.c_stubs import pseq
-from bio.align import Alignment
-
-extend pseq:  # order is consistent with str/seq
+type pseq(len: int, ptr: cobj):
     def __new__(p: cobj, n: int) -> pseq:
         return (n, p)
 

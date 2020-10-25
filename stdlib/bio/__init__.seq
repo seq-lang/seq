@@ -4,7 +4,7 @@ from block import Block, blocks
 from locus import Locus
 from iter import Seqs
 
-# from bio.align import SubMat, CIGAR, Alignment
+from bio.align import SubMat, CIGAR, Alignment
 # from bio.pseq import pseq, translate
 # from bio.bwt import _saisxx, _saisxx_bwt
 

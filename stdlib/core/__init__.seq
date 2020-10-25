@@ -25,7 +25,8 @@ from pickle import pickle, unpickle
 from core.dlopen import dlsym as _dlsym
 from core.python import init as _py_init, imp as _py_import, exec as _py_exec
 
-from bio.seq import seq
-from bio.kmer import Kmer
+from bio.seq import *
+from bio.kmer import *
+from bio.pseq import *
 from bio import *
 

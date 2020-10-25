@@ -97,6 +97,7 @@ struct StaticType : public Type {
   std::vector<Generic> explicits;
   std::unique_ptr<Expr> expr;
   StaticType(const std::vector<Generic> &ex, std::unique_ptr<Expr> &&expr);
+  StaticType(int i);
 
 public:
   virtual int unify(TypePtr typ, Unification &us) override;

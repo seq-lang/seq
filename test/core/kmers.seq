@@ -1,4 +1,4 @@
-type K = Kmer[5]
+K = Kmer[5]
 
 s = s'ACGTAACGTA'
 print s                       # EXPECT: ACGTAACGTA
@@ -88,8 +88,8 @@ print k1 >> s'G'   # EXPECT: GACGT
 print k1 << ~s'G'  # EXPECT: CGTAC
 print k1 >> ~s'G'  # EXPECT: CACGT
 
-type K100 = Kmer[100]
-type K1 = Kmer[1]
+K100 = Kmer[100]
+K1 = Kmer[1]
 print K100() |> base(-1, K1(s'C')) |> base(98, s'G') |> base(0, K1(s'T'))
 # EXPECT: TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGC
 

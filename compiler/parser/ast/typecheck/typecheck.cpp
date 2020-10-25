@@ -71,7 +71,7 @@ ExprPtr TypecheckVisitor::transform(const ExprPtr &expr, bool allowTypes) {
     return nullptr;
   TypecheckVisitor v(ctx, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
-  // LOG9("<< {} {}", (int64_t)expr.get(), expr->toString());
+  LOG9("<< {} {}", expr->toString(), expr->getSrcInfo());
   expr->accept(v);
   // LOG9("{} | {} -> {}", expr->getSrcInfo().line, expr->toString(),
   //  v.resultExpr->toString());
@@ -327,6 +327,7 @@ void TypecheckVisitor::visit(const StaticExpr *expr) {
 
 void TypecheckVisitor::visit(const InstantiateExpr *expr) {
   ExprPtr e = transform(expr->type, true);
+  LOG("-- in : {} -> {}", expr->type->toString(), e->toString());
   auto g = ctx->instantiate(e->getSrcInfo(), e->getType());
   for (int i = 0; i < expr->params.size(); i++) {
     TypePtr t = nullptr;

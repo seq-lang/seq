@@ -4,7 +4,6 @@ from c_htslib import bam_cigar2qlen, bam_cigar2rlen
 
 type CIGAR(_data: ptr[u32], _len: int)
 type Alignment(_cigar: CIGAR, _score: int)
-type pseq(len: int, ptr: cobj)
 
 cimport seq_align(seq, seq, ptr[i8], i8, i8, int, int, int, int, ptr[Alignment])
 cimport seq_align_dual(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, int, int, ptr[Alignment])
@@ -98,7 +97,7 @@ extend CIGAR:
 
     def __copy__(self) -> CIGAR:
         p = ptr[u32](self._len)
-        str.memcpy(ptr[byte](p), ptr[byte](self._data), self._len * _gc.sizeof[u32]())
+        str.memcpy(p.as_byte(), self._data.as_byte(), self._len * _gc.sizeof[u32]())
         return CIGAR(p, self._len)
 
     def __bool__(self):
@@ -182,7 +181,6 @@ def _validate_gap(g: int):
         raise ValueError("gap penalty for alignment must be in range [0, 127]")
 
 extend seq:
-    @builtin
     def align(self,
               other: seq,
               a: int = 2,
@@ -408,7 +406,7 @@ def _interaln_sort_pairs_len_ext(pairs_array: ptr[SeqPair], tmp_array: ptr[SeqPa
     num_pairs128 = 0
     num_pairs16  = 0
     num_pairs1   = 0
-    str.memset(ptr[byte](hist), byte(0), (_MAX_SEQ_LEN8 + _MAX_SEQ_LEN16 + 1) * _gc.sizeof[i32]())
+    str.memset(hist.as_byte(), byte(0), (_MAX_SEQ_LEN8 + _MAX_SEQ_LEN16 + 1) * _gc.sizeof[i32]())
 
     hist2 = hist + _MAX_SEQ_LEN8
     hist3 = hist + (_MAX_SEQ_LEN8 + _MAX_SEQ_LEN16)
@@ -561,6 +559,6 @@ def _interaln_flush(pairs_array: ptr[SeqPair],
         j = _interaln_queue(coro, pairs_array, seq_buf_ref, seq_buf_qer, tmp_pending, j, params)
         i += 1
     m = j
-    str.memcpy(ptr[byte](pending), ptr[byte](tmp_pending), m * _gc.sizeof[generator[InterAlignYield]]())
-    str.memset(ptr[byte](tmp_pending), byte(0), m * _gc.sizeof[generator[InterAlignYield]]())
+    str.memcpy(pending.as_byte(), tmp_pending.as_byte(), m * _gc.sizeof[generator[InterAlignYield]]())
+    str.memset(tmp_pending.as_byte(), byte(0), m * _gc.sizeof[generator[InterAlignYield]]())
     return m

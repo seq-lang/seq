@@ -188,7 +188,7 @@ type _bcf_info_t(_key: i32,
         return str.from_ptr(key)
 
     def key_code_from_ptr(self):
-        return ptr_off[i32](ptr[byte](__ptr__(self)), 0)[0]
+        return ptr_off[i32](__ptr__(self).as_byte(), 0)[0]
 
     def self_ptr(self:_bcf_info_t):
         return __ptr__(self)
