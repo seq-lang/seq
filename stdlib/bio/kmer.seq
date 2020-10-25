@@ -99,7 +99,8 @@ type Kmer[K: int]:
         kmer2 = other.x
         diff1 = (kmer1 & mask1) ^ (kmer2 & mask1)
         diff2 = (kmer1 & mask2) ^ (kmer2 & mask2)
-        return ((diff1 << one) | diff2).popcnt()
+        n = ((diff1 << one) | diff2).popcnt()
+        return -n if kmer1 < kmer2 else n
 
     def __hash__(self):
         if K <= 32:
