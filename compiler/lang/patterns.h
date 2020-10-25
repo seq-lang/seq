@@ -110,9 +110,10 @@ public:
 
 class SeqPattern : public Pattern {
   std::string pattern;
+  unsigned k;  // k-mer length if matching k-mers, else 0
 
 public:
-  explicit SeqPattern(std::string pattern);
+  explicit SeqPattern(std::string pattern, unsigned k = 0);
   llvm::Value *codegen(BaseFunc *base, types::Type *type, llvm::Value *val,
                        llvm::BasicBlock *&block) override;
 };
