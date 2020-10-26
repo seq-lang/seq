@@ -151,7 +151,7 @@ class gzFile:
 
     def write(self: gzFile, s: str):
         self._ensure_open()
-        _C.gzwrite(self.fp, s.ptr, i32(len(s)))
+        _C.gzwrite(self.fp, s.ptr, u32(len(s)))
         _gz_errcheck(self.fp)
 
     def write_gen[T](self: gzFile, g: generator[T]):
