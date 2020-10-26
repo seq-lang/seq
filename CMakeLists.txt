@@ -85,7 +85,6 @@ if (APPLE)
 else()
   target_link_libraries(seqrt PUBLIC seqomp -static-libstdc++ -Wl,--whole-archive ${ZLIB} ${BDWGC} -Wl,--no-whole-archive)
 endif()
-set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS "-march=native")
 
 # Seq parsing library
 include_directories(${OCAML_STDLIB_PATH})

@@ -2,6 +2,16 @@
 // https://github.com/bwa-mem2/bwa-mem2/blob/master/src/bandedSWA.cpp
 #pragma once
 
+#ifndef __has_attribute
+#define __has_attribute(x) 0
+#endif
+
+#if __has_attribute(always_inline)
+#define ALWAYS_INLINE __attribute__((always_inline))
+#else
+#define ALWAYS_INLINE inline
+#endif
+
 #include "ksw2.h"
 #include <cassert>
 #include <cstdint>
@@ -47,7 +57,8 @@ struct SeqPair {
 #define DUMMY2 100
 
 #ifndef __SSE4_1__
-static inline __m128i _mm_blendv_epi8(__m128i x, __m128i y, __m128i mask) {
+static ALWAYS_INLINE __m128i _mm_blendv_epi8(__m128i x, __m128i y,
+                                             __m128i mask) {
   // Replace bit in x with bit in y when matching bit in mask is set:
   return _mm_or_si128(_mm_andnot_si128(mask, x), _mm_and_si128(mask, y));
 }
@@ -64,57 +75,59 @@ template <> struct SIMD<128, 8> {
   using Vec = __m128i;
   using Cmp = Vec;
 
-  static inline Vec zero() { return _mm_setzero_si128(); }
+  static ALWAYS_INLINE Vec zero() { return _mm_setzero_si128(); }
 
-  static inline Cmp ff() { return _mm_set1_epi8(0xFF); }
+  static ALWAYS_INLINE Cmp ff() { return _mm_set1_epi8(0xFF); }
 
-  static inline Cmp vec2cmp(Vec a) { return a; }
+  static ALWAYS_INLINE Cmp vec2cmp(Vec a) { return a; }
 
-  static inline Vec set(int_t n) { return _mm_set1_epi8(n); }
+  static ALWAYS_INLINE Vec set(int_t n) { return _mm_set1_epi8(n); }
 
-  static inline Vec load(Vec *p) { return _mm_load_si128(p); }
+  static ALWAYS_INLINE Vec load(Vec *p) { return _mm_load_si128(p); }
 
-  static inline void store(Vec *p, Vec v) { _mm_store_si128(p, v); }
+  static ALWAYS_INLINE void store(Vec *p, Vec v) { _mm_store_si128(p, v); }
 
-  static inline Cmp eq(Vec a, Vec b) { return _mm_cmpeq_epi8(a, b); }
+  static ALWAYS_INLINE Cmp eq(Vec a, Vec b) { return _mm_cmpeq_epi8(a, b); }
 
-  static inline Cmp gt(Vec a, Vec b) { return _mm_cmpgt_epi8(a, b); }
+  static ALWAYS_INLINE Cmp gt(Vec a, Vec b) { return _mm_cmpgt_epi8(a, b); }
 
-  static inline Vec add(Vec a, Vec b) { return _mm_add_epi8(a, b); }
+  static ALWAYS_INLINE Vec add(Vec a, Vec b) { return _mm_add_epi8(a, b); }
 
-  static inline Vec sub(Vec a, Vec b) { return _mm_sub_epi8(a, b); }
+  static ALWAYS_INLINE Vec sub(Vec a, Vec b) { return _mm_sub_epi8(a, b); }
 
-  static inline Vec min(Vec a, Vec b) { return _mm_min_epi8(a, b); }
+  static ALWAYS_INLINE Vec min(Vec a, Vec b) { return _mm_min_epi8(a, b); }
 
-  static inline Vec max(Vec a, Vec b) { return _mm_max_epi8(a, b); }
+  static ALWAYS_INLINE Vec max(Vec a, Vec b) { return _mm_max_epi8(a, b); }
 
-  static inline Vec umin(Vec a, Vec b) { return _mm_min_epu8(a, b); }
+  static ALWAYS_INLINE Vec umin(Vec a, Vec b) { return _mm_min_epu8(a, b); }
 
-  static inline Vec umax(Vec a, Vec b) { return _mm_max_epu8(a, b); }
+  static ALWAYS_INLINE Vec umax(Vec a, Vec b) { return _mm_max_epu8(a, b); }
 
-  static inline Vec and_(Vec a, Vec b) { return _mm_and_si128(a, b); }
+  static ALWAYS_INLINE Vec and_(Vec a, Vec b) { return _mm_and_si128(a, b); }
 
-  static inline Vec or_(Vec a, Vec b) { return _mm_or_si128(a, b); }
+  static ALWAYS_INLINE Vec or_(Vec a, Vec b) { return _mm_or_si128(a, b); }
 
-  static inline Vec xor_(Vec a, Vec b) { return _mm_xor_si128(a, b); }
+  static ALWAYS_INLINE Vec xor_(Vec a, Vec b) { return _mm_xor_si128(a, b); }
 
-  static inline Cmp andc_(Cmp a, Cmp b) { return _mm_and_si128(a, b); }
+  static ALWAYS_INLINE Cmp andc_(Cmp a, Cmp b) { return _mm_and_si128(a, b); }
 
-  static inline Cmp orc_(Cmp a, Cmp b) { return _mm_or_si128(a, b); }
+  static ALWAYS_INLINE Cmp orc_(Cmp a, Cmp b) { return _mm_or_si128(a, b); }
 
-  static inline Cmp xorc_(Cmp a, Cmp b) { return _mm_xor_si128(a, b); }
+  static ALWAYS_INLINE Cmp xorc_(Cmp a, Cmp b) { return _mm_xor_si128(a, b); }
 
-  static inline Vec abs(Vec a) { return _mm_abs_epi8(a); }
+  static ALWAYS_INLINE Vec abs(Vec a) { return _mm_abs_epi8(a); }
 
-  static inline Vec blend(Vec a, Vec b, Cmp c) {
+  static ALWAYS_INLINE Vec blend(Vec a, Vec b, Cmp c) {
     return _mm_blendv_epi8(a, b, c);
   }
 
-  static inline bool all(Cmp c) {
+  static ALWAYS_INLINE bool all(Cmp c) {
     return (_mm_movemask_epi8(c) & DMASK) == DMASK;
   }
 
-  static inline bool none(Cmp c) { return (_mm_movemask_epi8(c) & DMASK) == 0; }
+  static ALWAYS_INLINE bool none(Cmp c) {
+    return (_mm_movemask_epi8(c) & DMASK) == 0;
+  }
 };
 
 template <> struct SIMD<256, 8> {
@@ -126,57 +139,99 @@ template <> struct SIMD<256, 8> {
   using Vec = __m256i;
   using Cmp = Vec;
 
-  static inline Vec zero() { return _mm256_setzero_si256(); }
+  static ALWAYS_INLINE Vec zero() __attribute__((target("avx2"))) {
+    return _mm256_setzero_si256();
+  }
 
-  static inline Cmp ff() { return _mm256_set1_epi8(0xFF); }
+  static ALWAYS_INLINE Cmp ff() __attribute__((target("avx2"))) {
+    return _mm256_set1_epi8(0xFF);
+  }
 
-  static inline Cmp vec2cmp(Vec a) { return a; }
+  static ALWAYS_INLINE Cmp vec2cmp(Vec a) { return a; }
 
-  static inline Vec set(int_t n) { return _mm256_set1_epi8(n); }
+  static ALWAYS_INLINE Vec set(int_t n) __attribute__((target("avx2"))) {
+    return _mm256_set1_epi8(n);
+  }
 
-  static inline Vec load(Vec *p) { return _mm256_load_si256(p); }
+  static ALWAYS_INLINE Vec load(Vec *p) __attribute__((target("avx2"))) {
+    return _mm256_load_si256(p);
+  }
 
-  static inline void store(Vec *p, Vec v) { _mm256_store_si256(p, v); }
+  static ALWAYS_INLINE void store(Vec *p, Vec v)
+      __attribute__((target("avx2"))) {
+    _mm256_store_si256(p, v);
+  }
 
-  static inline Cmp eq(Vec a, Vec b) { return _mm256_cmpeq_epi8(a, b); }
+  static ALWAYS_INLINE Cmp eq(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_cmpeq_epi8(a, b);
+  }
 
-  static inline Cmp gt(Vec a, Vec b) { return _mm256_cmpgt_epi8(a, b); }
+  static ALWAYS_INLINE Cmp gt(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_cmpgt_epi8(a, b);
+  }
 
-  static inline Vec add(Vec a, Vec b) { return _mm256_add_epi8(a, b); }
+  static ALWAYS_INLINE Vec add(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_add_epi8(a, b);
+  }
 
-  static inline Vec sub(Vec a, Vec b) { return _mm256_sub_epi8(a, b); }
+  static ALWAYS_INLINE Vec sub(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_sub_epi8(a, b);
+  }
 
-  static inline Vec min(Vec a, Vec b) { return _mm256_min_epi8(a, b); }
+  static ALWAYS_INLINE Vec min(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_min_epi8(a, b);
+  }
 
-  static inline Vec max(Vec a, Vec b) { return _mm256_max_epi8(a, b); }
+  static ALWAYS_INLINE Vec max(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_max_epi8(a, b);
+  }
 
-  static inline Vec umin(Vec a, Vec b) { return _mm256_min_epu8(a, b); }
+  static ALWAYS_INLINE Vec umin(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_min_epu8(a, b);
+  }
 
-  static inline Vec umax(Vec a, Vec b) { return _mm256_max_epu8(a, b); }
+  static ALWAYS_INLINE Vec umax(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_max_epu8(a, b);
+  }
 
-  static inline Vec and_(Vec a, Vec b) { return _mm256_and_si256(a, b); }
+  static ALWAYS_INLINE Vec and_(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_and_si256(a, b);
+  }
 
-  static inline Vec or_(Vec a, Vec b) { return _mm256_or_si256(a, b); }
+  static ALWAYS_INLINE Vec or_(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_or_si256(a, b);
+  }
 
-  static inline Vec xor_(Vec a, Vec b) { return _mm256_xor_si256(a, b); }
+  static ALWAYS_INLINE Vec xor_(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_xor_si256(a, b);
+  }
 
-  static inline Cmp andc_(Cmp a, Cmp b) { return _mm256_and_si256(a, b); }
+  static ALWAYS_INLINE Cmp andc_(Cmp a, Cmp b) __attribute__((target("avx2"))) {
+    return _mm256_and_si256(a, b);
+  }
 
-  static inline Cmp orc_(Cmp a, Cmp b) { return _mm256_or_si256(a, b); }
+  static ALWAYS_INLINE Cmp orc_(Cmp a, Cmp b) __attribute__((target("avx2"))) {
+    return _mm256_or_si256(a, b);
+  }
 
-  static inline Cmp xorc_(Cmp a, Cmp b) { return _mm256_xor_si256(a, b); }
+  static ALWAYS_INLINE Cmp xorc_(Cmp a, Cmp b) __attribute__((target("avx2"))) {
+    return _mm256_xor_si256(a, b);
+  }
 
-  static inline Vec abs(Vec a) { return _mm256_abs_epi8(a); }
+  static ALWAYS_INLINE Vec abs(Vec a) __attribute__((target("avx2"))) {
+    return _mm256_abs_epi8(a);
+  }
 
-  static inline Vec blend(Vec a, Vec b, Cmp c) {
+  static ALWAYS_INLINE Vec blend(Vec a, Vec b, Cmp c)
+      __attribute__((target("avx2"))) {
     return _mm256_blendv_epi8(a, b, c);
   }
 
-  static inline bool all(Cmp c) {
+  static ALWAYS_INLINE bool all(Cmp c) __attribute__((target("avx2"))) {
     return (_mm256_movemask_epi8(c) & DMASK) == DMASK;
   }
 
-  static inline bool none(Cmp c) {
+  static ALWAYS_INLINE bool none(Cmp c) __attribute__((target("avx2"))) {
     return (_mm256_movemask_epi8(c) & DMASK) == 0;
   }
 };
@@ -190,55 +245,102 @@ template <> struct SIMD<512, 8> {
   using Vec = __m512i;
   using Cmp = __mmask64;
 
-  static inline Vec zero() { return _mm512_setzero_si512(); }
+  static ALWAYS_INLINE Vec zero() __attribute__((target("avx512bw"))) {
+    return _mm512_setzero_si512();
+  }
 
-  static inline Cmp ff() { return DMASK; }
+  static ALWAYS_INLINE Cmp ff() { return DMASK; }
 
-  static inline Cmp vec2cmp(Vec a) { return _mm512_movepi8_mask(a); }
+  static ALWAYS_INLINE Cmp vec2cmp(Vec a) __attribute__((target("avx512bw"))) {
+    return _mm512_movepi8_mask(a);
+  }
 
-  static inline Vec set(int_t n) { return _mm512_set1_epi8(n); }
+  static ALWAYS_INLINE Vec set(int_t n) __attribute__((target("avx512bw"))) {
+    return _mm512_set1_epi8(n);
+  }
 
-  static inline Vec load(Vec *p) { return _mm512_load_si512(p); }
+  static ALWAYS_INLINE Vec load(Vec *p) __attribute__((target("avx512bw"))) {
+    return _mm512_load_si512(p);
+  }
 
-  static inline void store(Vec *p, Vec v) { _mm512_store_si512(p, v); }
+  static ALWAYS_INLINE void store(Vec *p, Vec v)
+      __attribute__((target("avx512bw"))) {
+    _mm512_store_si512(p, v);
+  }
 
-  static inline Cmp eq(Vec a, Vec b) { return _mm512_cmpeq_epi8_mask(a, b); }
+  static ALWAYS_INLINE Cmp eq(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_cmpeq_epi8_mask(a, b);
+  }
 
-  static inline Cmp gt(Vec a, Vec b) { return _mm512_cmpgt_epi8_mask(a, b); }
+  static ALWAYS_INLINE Cmp gt(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_cmpgt_epi8_mask(a, b);
+  }
 
-  static inline Vec add(Vec a, Vec b) { return _mm512_add_epi8(a, b); }
+  static ALWAYS_INLINE Vec add(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_add_epi8(a, b);
+  }
 
-  static inline Vec sub(Vec a, Vec b) { return _mm512_sub_epi8(a, b); }
+  static ALWAYS_INLINE Vec sub(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_sub_epi8(a, b);
+  }
 
-  static inline Vec min(Vec a, Vec b) { return _mm512_min_epi8(a, b); }
+  static ALWAYS_INLINE Vec min(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_min_epi8(a, b);
+  }
 
-  static inline Vec max(Vec a, Vec b) { return _mm512_max_epi8(a, b); }
+  static ALWAYS_INLINE Vec max(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_max_epi8(a, b);
+  }
 
-  static inline Vec umin(Vec a, Vec b) { return _mm512_min_epu8(a, b); }
+  static ALWAYS_INLINE Vec umin(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_min_epu8(a, b);
+  }
 
-  static inline Vec umax(Vec a, Vec b) { return _mm512_max_epu8(a, b); }
+  static ALWAYS_INLINE Vec umax(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_max_epu8(a, b);
+  }
 
-  static inline Vec and_(Vec a, Vec b) { return _mm512_and_si512(a, b); }
+  static ALWAYS_INLINE Vec and_(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_and_si512(a, b);
+  }
 
-  static inline Vec or_(Vec a, Vec b) { return _mm512_or_si512(a, b); }
+  static ALWAYS_INLINE Vec or_(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_or_si512(a, b);
+  }
 
-  static inline Vec xor_(Vec a, Vec b) { return _mm512_xor_si512(a, b); }
+  static ALWAYS_INLINE Vec xor_(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_xor_si512(a, b);
+  }
 
-  static inline Cmp andc_(Cmp a, Cmp b) { return a & b; }
+  static ALWAYS_INLINE Cmp andc_(Cmp a, Cmp b) { return a & b; }
 
-  static inline Cmp orc_(Cmp a, Cmp b) { return a | b; }
+  static ALWAYS_INLINE Cmp orc_(Cmp a, Cmp b) { return a | b; }
 
-  static inline Cmp xorc_(Cmp a, Cmp b) { return a ^ b; }
+  static ALWAYS_INLINE Cmp xorc_(Cmp a, Cmp b) { return a ^ b; }
 
-  static inline Vec abs(Vec a) { return _mm512_abs_epi8(a); }
+  static ALWAYS_INLINE Vec abs(Vec a) __attribute__((target("avx512bw"))) {
+    return _mm512_abs_epi8(a);
+  }
 
-  static inline Vec blend(Vec a, Vec b, Cmp c) {
+  static ALWAYS_INLINE Vec blend(Vec a, Vec b, Cmp c)
+      __attribute__((target("avx512bw"))) {
     return _mm512_mask_blend_epi8(c, a, b);
   }
 
-  static inline bool all(Cmp c) { return c == DMASK; }
+  static ALWAYS_INLINE bool all(Cmp c) { return c == DMASK; }
 
-  static inline bool none(Cmp c) { return c == 0; }
+  static ALWAYS_INLINE bool none(Cmp c) { return c == 0; }
 };
 
 template <> struct SIMD<128, 16> {
@@ -250,57 +352,59 @@ template <> struct SIMD<128, 16> {
   using Vec = __m128i;
   using Cmp = Vec;
 
-  static inline Vec zero() { return _mm_setzero_si128(); }
+  static ALWAYS_INLINE Vec zero() { return _mm_setzero_si128(); }
 
-  static inline Cmp ff() { return _mm_set1_epi8(0xFF); }
+  static ALWAYS_INLINE Cmp ff() { return _mm_set1_epi8(0xFF); }
 
-  static inline Cmp vec2cmp(Vec a) { return a; }
+  static ALWAYS_INLINE Cmp vec2cmp(Vec a) { return a; }
 
-  static inline Vec set(int_t n) { return _mm_set1_epi16(n); }
+  static ALWAYS_INLINE Vec set(int_t n) { return _mm_set1_epi16(n); }
 
-  static inline Vec load(Vec *p) { return _mm_load_si128(p); }
+  static ALWAYS_INLINE Vec load(Vec *p) { return _mm_load_si128(p); }
 
-  static inline void store(Vec *p, Vec v) { _mm_store_si128(p, v); }
+  static ALWAYS_INLINE void store(Vec *p, Vec v) { _mm_store_si128(p, v); }
 
-  static inline Cmp eq(Vec a, Vec b) { return _mm_cmpeq_epi16(a, b); }
+  static ALWAYS_INLINE Cmp eq(Vec a, Vec b) { return _mm_cmpeq_epi16(a, b); }
 
-  static inline Cmp gt(Vec a, Vec b) { return _mm_cmpgt_epi16(a, b); }
+  static ALWAYS_INLINE Cmp gt(Vec a, Vec b) { return _mm_cmpgt_epi16(a, b); }
 
-  static inline Vec add(Vec a, Vec b) { return _mm_add_epi16(a, b); }
+  static ALWAYS_INLINE Vec add(Vec a, Vec b) { return _mm_add_epi16(a, b); }
 
-  static inline Vec sub(Vec a, Vec b) { return _mm_sub_epi16(a, b); }
+  static ALWAYS_INLINE Vec sub(Vec a, Vec b) { return _mm_sub_epi16(a, b); }
 
-  static inline Vec min(Vec a, Vec b) { return _mm_min_epi16(a, b); }
+  static ALWAYS_INLINE Vec min(Vec a, Vec b) { return _mm_min_epi16(a, b); }
 
-  static inline Vec max(Vec a, Vec b) { return _mm_max_epi16(a, b); }
+  static ALWAYS_INLINE Vec max(Vec a, Vec b) { return _mm_max_epi16(a, b); }
 
-  static inline Vec umin(Vec a, Vec b) { return _mm_min_epu16(a, b); }
+  static ALWAYS_INLINE Vec umin(Vec a, Vec b) { return _mm_min_epu16(a, b); }
 
-  static inline Vec umax(Vec a, Vec b) { return _mm_max_epu16(a, b); }
+  static ALWAYS_INLINE Vec umax(Vec a, Vec b) { return _mm_max_epu16(a, b); }
 
-  static inline Vec and_(Vec a, Vec b) { return _mm_and_si128(a, b); }
+  static ALWAYS_INLINE Vec and_(Vec a, Vec b) { return _mm_and_si128(a, b); }
 
-  static inline Vec or_(Vec a, Vec b) { return _mm_or_si128(a, b); }
+  static ALWAYS_INLINE Vec or_(Vec a, Vec b) { return _mm_or_si128(a, b); }
 
-  static inline Vec xor_(Vec a, Vec b) { return _mm_xor_si128(a, b); }
+  static ALWAYS_INLINE Vec xor_(Vec a, Vec b) { return _mm_xor_si128(a, b); }
 
-  static inline Cmp andc_(Cmp a, Cmp b) { return _mm_and_si128(a, b); }
+  static ALWAYS_INLINE Cmp andc_(Cmp a, Cmp b) { return _mm_and_si128(a, b); }
 
-  static inline Cmp orc_(Cmp a, Cmp b) { return _mm_or_si128(a, b); }
+  static ALWAYS_INLINE Cmp orc_(Cmp a, Cmp b) { return _mm_or_si128(a, b); }
 
-  static inline Cmp xorc_(Cmp a, Cmp b) { return _mm_xor_si128(a, b); }
+  static ALWAYS_INLINE Cmp xorc_(Cmp a, Cmp b) { return _mm_xor_si128(a, b); }
 
-  static inline Vec abs(Vec a) { return _mm_abs_epi16(a); }
+  static ALWAYS_INLINE Vec abs(Vec a) { return _mm_abs_epi16(a); }
 
-  static inline Vec blend(Vec a, Vec b, Cmp c) {
+  static ALWAYS_INLINE Vec blend(Vec a, Vec b, Cmp c) {
     return _mm_blendv_epi8(a, b, c);
   }
 
-  static inline bool all(Cmp c) {
+  static ALWAYS_INLINE bool all(Cmp c) {
     return (_mm_movemask_epi8(c) & DMASK) == DMASK;
   }
 
-  static inline bool none(Cmp c) { return (_mm_movemask_epi8(c) & DMASK) == 0; }
+  static ALWAYS_INLINE bool none(Cmp c) {
+    return (_mm_movemask_epi8(c) & DMASK) == 0;
+  }
 };
 
 template <> struct SIMD<256, 16> {
@@ -312,57 +416,99 @@ template <> struct SIMD<256, 16> {
   using Vec = __m256i;
   using Cmp = Vec;
 
-  static inline Vec zero() { return _mm256_setzero_si256(); }
+  static ALWAYS_INLINE Vec zero() __attribute__((target("avx2"))) {
+    return _mm256_setzero_si256();
+  }
 
-  static inline Cmp ff() { return _mm256_set1_epi8(0xFF); }
+  static ALWAYS_INLINE Cmp ff() __attribute__((target("avx2"))) {
+    return _mm256_set1_epi8(0xFF);
+  }
 
-  static inline Cmp vec2cmp(Vec a) { return a; }
+  static ALWAYS_INLINE Cmp vec2cmp(Vec a) { return a; }
 
-  static inline Vec set(int_t n) { return _mm256_set1_epi16(n); }
+  static ALWAYS_INLINE Vec set(int_t n) __attribute__((target("avx2"))) {
+    return _mm256_set1_epi16(n);
+  }
 
-  static inline Vec load(Vec *p) { return _mm256_load_si256(p); }
+  static ALWAYS_INLINE Vec load(Vec *p) __attribute__((target("avx2"))) {
+    return _mm256_load_si256(p);
+  }
 
-  static inline void store(Vec *p, Vec v) { _mm256_store_si256(p, v); }
+  static ALWAYS_INLINE void store(Vec *p, Vec v)
+      __attribute__((target("avx2"))) {
+    _mm256_store_si256(p, v);
+  }
 
-  static inline Cmp eq(Vec a, Vec b) { return _mm256_cmpeq_epi16(a, b); }
+  static ALWAYS_INLINE Cmp eq(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_cmpeq_epi16(a, b);
+  }
 
-  static inline Cmp gt(Vec a, Vec b) { return _mm256_cmpgt_epi16(a, b); }
+  static ALWAYS_INLINE Cmp gt(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_cmpgt_epi16(a, b);
+  }
 
-  static inline Vec add(Vec a, Vec b) { return _mm256_add_epi16(a, b); }
+  static ALWAYS_INLINE Vec add(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_add_epi16(a, b);
+  }
 
-  static inline Vec sub(Vec a, Vec b) { return _mm256_sub_epi16(a, b); }
+  static ALWAYS_INLINE Vec sub(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_sub_epi16(a, b);
+  }
 
-  static inline Vec min(Vec a, Vec b) { return _mm256_min_epi16(a, b); }
+  static ALWAYS_INLINE Vec min(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_min_epi16(a, b);
+  }
 
-  static inline Vec max(Vec a, Vec b) { return _mm256_max_epi16(a, b); }
+  static ALWAYS_INLINE Vec max(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_max_epi16(a, b);
+  }
 
-  static inline Vec umin(Vec a, Vec b) { return _mm256_min_epu16(a, b); }
+  static ALWAYS_INLINE Vec umin(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_min_epu16(a, b);
+  }
 
-  static inline Vec umax(Vec a, Vec b) { return _mm256_max_epu16(a, b); }
+  static ALWAYS_INLINE Vec umax(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_max_epu16(a, b);
+  }
 
-  static inline Vec and_(Vec a, Vec b) { return _mm256_and_si256(a, b); }
+  static ALWAYS_INLINE Vec and_(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_and_si256(a, b);
+  }
 
-  static inline Vec or_(Vec a, Vec b) { return _mm256_or_si256(a, b); }
+  static ALWAYS_INLINE Vec or_(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_or_si256(a, b);
+  }
 
-  static inline Vec xor_(Vec a, Vec b) { return _mm256_xor_si256(a, b); }
+  static ALWAYS_INLINE Vec xor_(Vec a, Vec b) __attribute__((target("avx2"))) {
+    return _mm256_xor_si256(a, b);
+  }
 
-  static inline Cmp andc_(Cmp a, Cmp b) { return _mm256_and_si256(a, b); }
+  static ALWAYS_INLINE Cmp andc_(Cmp a, Cmp b) __attribute__((target("avx2"))) {
+    return _mm256_and_si256(a, b);
+  }
 
-  static inline Cmp orc_(Cmp a, Cmp b) { return _mm256_or_si256(a, b); }
+  static ALWAYS_INLINE Cmp orc_(Cmp a, Cmp b) __attribute__((target("avx2"))) {
+    return _mm256_or_si256(a, b);
+  }
 
-  static inline Cmp xorc_(Cmp a, Cmp b) { return _mm256_xor_si256(a, b); }
+  static ALWAYS_INLINE Cmp xorc_(Cmp a, Cmp b) __attribute__((target("avx2"))) {
+    return _mm256_xor_si256(a, b);
+  }
 
-  static inline Vec abs(Vec a) { return _mm256_abs_epi16(a); }
+  static ALWAYS_INLINE Vec abs(Vec a) __attribute__((target("avx2"))) {
+    return _mm256_abs_epi16(a);
+  }
 
-  static inline Vec blend(Vec a, Vec b, Cmp c) {
+  static ALWAYS_INLINE Vec blend(Vec a, Vec b, Cmp c)
+      __attribute__((target("avx2"))) {
     return _mm256_blendv_epi8(a, b, c);
   }
 
-  static inline bool all(Cmp c) {
+  static ALWAYS_INLINE bool all(Cmp c) __attribute__((target("avx2"))) {
     return (_mm256_movemask_epi8(c) & DMASK) == DMASK;
   }
 
-  static inline bool none(Cmp c) {
+  static ALWAYS_INLINE bool none(Cmp c) __attribute__((target("avx2"))) {
     return (_mm256_movemask_epi8(c) & DMASK) == 0;
   }
 };
@@ -376,55 +522,102 @@ template <> struct SIMD<512, 16> {
   using Vec = __m512i;
   using Cmp = __mmask32;
 
-  static inline Vec zero() { return _mm512_setzero_si512(); }
+  static ALWAYS_INLINE Vec zero() __attribute__((target("avx512bw"))) {
+    return _mm512_setzero_si512();
+  }
 
-  static inline Cmp ff() { return DMASK; }
+  static ALWAYS_INLINE Cmp ff() { return DMASK; }
 
-  static inline Cmp vec2cmp(Vec a) { return _mm512_movepi16_mask(a); }
+  static ALWAYS_INLINE Cmp vec2cmp(Vec a) __attribute__((target("avx512bw"))) {
+    return _mm512_movepi16_mask(a);
+  }
 
-  static inline Vec set(int_t n) { return _mm512_set1_epi16(n); }
+  static ALWAYS_INLINE Vec set(int_t n) __attribute__((target("avx512bw"))) {
+    return _mm512_set1_epi16(n);
+  }
 
-  static inline Vec load(Vec *p) { return _mm512_load_si512(p); }
+  static ALWAYS_INLINE Vec load(Vec *p) __attribute__((target("avx512bw"))) {
+    return _mm512_load_si512(p);
+  }
 
-  static inline void store(Vec *p, Vec v) { _mm512_store_si512(p, v); }
+  static ALWAYS_INLINE void store(Vec *p, Vec v)
+      __attribute__((target("avx512bw"))) {
+    _mm512_store_si512(p, v);
+  }
 
-  static inline Cmp eq(Vec a, Vec b) { return _mm512_cmpeq_epi16_mask(a, b); }
+  static ALWAYS_INLINE Cmp eq(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_cmpeq_epi16_mask(a, b);
+  }
 
-  static inline Cmp gt(Vec a, Vec b) { return _mm512_cmpgt_epi16_mask(a, b); }
+  static ALWAYS_INLINE Cmp gt(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_cmpgt_epi16_mask(a, b);
+  }
 
-  static inline Vec add(Vec a, Vec b) { return _mm512_add_epi16(a, b); }
+  static ALWAYS_INLINE Vec add(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_add_epi16(a, b);
+  }
 
-  static inline Vec sub(Vec a, Vec b) { return _mm512_sub_epi16(a, b); }
+  static ALWAYS_INLINE Vec sub(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_sub_epi16(a, b);
+  }
 
-  static inline Vec min(Vec a, Vec b) { return _mm512_min_epi16(a, b); }
+  static ALWAYS_INLINE Vec min(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_min_epi16(a, b);
+  }
 
-  static inline Vec max(Vec a, Vec b) { return _mm512_max_epi16(a, b); }
+  static ALWAYS_INLINE Vec max(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_max_epi16(a, b);
+  }
 
-  static inline Vec umin(Vec a, Vec b) { return _mm512_min_epu16(a, b); }
+  static ALWAYS_INLINE Vec umin(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_min_epu16(a, b);
+  }
 
-  static inline Vec umax(Vec a, Vec b) { return _mm512_max_epu16(a, b); }
+  static ALWAYS_INLINE Vec umax(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_max_epu16(a, b);
+  }
 
-  static inline Vec and_(Vec a, Vec b) { return _mm512_and_si512(a, b); }
+  static ALWAYS_INLINE Vec and_(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_and_si512(a, b);
+  }
 
-  static inline Vec or_(Vec a, Vec b) { return _mm512_or_si512(a, b); }
+  static ALWAYS_INLINE Vec or_(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_or_si512(a, b);
+  }
 
-  static inline Vec xor_(Vec a, Vec b) { return _mm512_xor_si512(a, b); }
+  static ALWAYS_INLINE Vec xor_(Vec a, Vec b)
+      __attribute__((target("avx512bw"))) {
+    return _mm512_xor_si512(a, b);
+  }
 
-  static inline Cmp andc_(Cmp a, Cmp b) { return a & b; }
+  static ALWAYS_INLINE Cmp andc_(Cmp a, Cmp b) { return a & b; }
 
-  static inline Cmp orc_(Cmp a, Cmp b) { return a | b; }
+  static ALWAYS_INLINE Cmp orc_(Cmp a, Cmp b) { return a | b; }
 
-  static inline Cmp xorc_(Cmp a, Cmp b) { return a ^ b; }
+  static ALWAYS_INLINE Cmp xorc_(Cmp a, Cmp b) { return a ^ b; }
 
-  static inline Vec abs(Vec a) { return _mm512_abs_epi16(a); }
+  static ALWAYS_INLINE Vec abs(Vec a) __attribute__((target("avx512bw"))) {
+    return _mm512_abs_epi16(a);
+  }
 
-  static inline Vec blend(Vec a, Vec b, Cmp c) {
+  static ALWAYS_INLINE Vec blend(Vec a, Vec b, Cmp c)
+      __attribute__((target("avx512bw"))) {
     return _mm512_mask_blend_epi16(c, a, b);
   }
 
-  static inline bool all(Cmp c) { return c == DMASK; }
+  static ALWAYS_INLINE bool all(Cmp c) { return c == DMASK; }
 
-  static inline bool none(Cmp c) { return c == 0; }
+  static ALWAYS_INLINE bool none(Cmp c) { return c == 0; }
 };
 
 template <unsigned W, unsigned N, bool CIGAR = false> class InterSW {
@@ -441,23 +634,24 @@ public:
           int32_t numPairs, int bandwidth);
 
 private:
-  static inline SeqPair getp(SeqPair *p, int idx, int numPairs) {
+  static ALWAYS_INLINE SeqPair getp(SeqPair *p, int idx, int numPairs) {
     static SeqPair empty = {0, 0, 0, -1, nullptr, 0};
     return idx < numPairs ? p[idx] : empty;
   }
 
-  static inline int64_t idr(const SeqPair &sp) {
+  static ALWAYS_INLINE int64_t idr(const SeqPair &sp) {
     return (int64_t)sp.id * LEN_LIMIT;
   }
 
-  static inline int64_t idq(const SeqPair &sp) {
+  static ALWAYS_INLINE int64_t idq(const SeqPair &sp) {
     return (int64_t)sp.id * LEN_LIMIT;
   }
 
-  void SWCore(uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow, uint_t ncol,
-              SeqPair *p, SeqPair *endp, uint_t h0[], int32_t numPairs,
-              int zdrop, uint_t w, uint_t qlen[], uint_t myband[], uint_t z[],
-              uint_t off[]);
+  void ALWAYS_INLINE SWCore(uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow,
+                            uint_t ncol, SeqPair *p, SeqPair *endp, uint_t h0[],
+                            int32_t numPairs, int zdrop, uint_t w,
+                            uint_t qlen[], uint_t myband[], uint_t z[],
+                            uint_t off[]);
 
   void SWBacktrace(bool is_rot, bool is_rev, int min_intron_len,
                    const uint_t *p, const uint_t *off, const uint_t *off_end,
@@ -473,6 +667,74 @@ private:
   int_t *F;
   int_t *H1, *H2;
 };
+
+template __attribute__((target("avx2"))) void
+InterSW<256, 8, false>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
+                           uint8_t *seqBufQer, int32_t numPairs, int bandwidth);
+template __attribute__((target("avx2"))) void
+InterSW<256, 8, true>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
+                          uint8_t *seqBufQer, int32_t numPairs, int bandwidth);
+template __attribute__((target("avx2"))) void
+InterSW<256, 16, false>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
+                            uint8_t *seqBufQer, int32_t numPairs,
+                            int bandwidth);
+template __attribute__((target("avx2"))) void
+InterSW<256, 16, true>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
+                           uint8_t *seqBufQer, int32_t numPairs, int bandwidth);
+
+template __attribute__((target("avx512bw"))) void
+InterSW<512, 8, false>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
+                           uint8_t *seqBufQer, int32_t numPairs, int bandwidth);
+template __attribute__((target("avx512bw"))) void
+InterSW<512, 8, true>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
+                          uint8_t *seqBufQer, int32_t numPairs, int bandwidth);
+template __attribute__((target("avx512bw"))) void
+InterSW<512, 16, false>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
+                            uint8_t *seqBufQer, int32_t numPairs,
+                            int bandwidth);
+template __attribute__((target("avx512bw"))) void
+InterSW<512, 16, true>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
+                           uint8_t *seqBufQer, int32_t numPairs, int bandwidth);
+
+template __attribute__((target("avx2"))) void InterSW<256, 8, false>::SWCore(
+    uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow, uint_t ncol, SeqPair *p,
+    SeqPair *endp, uint_t h0[], int32_t numPairs, int zdrop, uint_t w,
+    uint_t qlen[], uint_t myband[], uint_t z[], uint_t off[]);
+template __attribute__((target("avx2"))) void InterSW<256, 8, true>::SWCore(
+    uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow, uint_t ncol, SeqPair *p,
+    SeqPair *endp, uint_t h0[], int32_t numPairs, int zdrop, uint_t w,
+    uint_t qlen[], uint_t myband[], uint_t z[], uint_t off[]);
+template __attribute__((target("avx2"))) void InterSW<256, 16, false>::SWCore(
+    uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow, uint_t ncol, SeqPair *p,
+    SeqPair *endp, uint_t h0[], int32_t numPairs, int zdrop, uint_t w,
+    uint_t qlen[], uint_t myband[], uint_t z[], uint_t off[]);
+template __attribute__((target("avx2"))) void InterSW<256, 16, true>::SWCore(
+    uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow, uint_t ncol, SeqPair *p,
+    SeqPair *endp, uint_t h0[], int32_t numPairs, int zdrop, uint_t w,
+    uint_t qlen[], uint_t myband[], uint_t z[], uint_t off[]);
+
+template __attribute__((target("avx512bw"))) void
+InterSW<512, 8, false>::SWCore(uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow,
+                               uint_t ncol, SeqPair *p, SeqPair *endp,
+                               uint_t h0[], int32_t numPairs, int zdrop,
+                               uint_t w, uint_t qlen[], uint_t myband[],
+                               uint_t z[], uint_t off[]);
+template __attribute__((target("avx512bw"))) void InterSW<512, 8, true>::SWCore(
+    uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow, uint_t ncol, SeqPair *p,
+    SeqPair *endp, uint_t h0[], int32_t numPairs, int zdrop, uint_t w,
+    uint_t qlen[], uint_t myband[], uint_t z[], uint_t off[]);
+template __attribute__((target("avx512bw"))) void
+InterSW<512, 16, false>::SWCore(uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow,
+                                uint_t ncol, SeqPair *p, SeqPair *endp,
+                                uint_t h0[], int32_t numPairs, int zdrop,
+                                uint_t w, uint_t qlen[], uint_t myband[],
+                                uint_t z[], uint_t off[]);
+template __attribute__((target("avx512bw"))) void
+InterSW<512, 16, true>::SWCore(uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow,
+                               uint_t ncol, SeqPair *p, SeqPair *endp,
+                               uint_t h0[], int32_t numPairs, int zdrop,
+                               uint_t w, uint_t qlen[], uint_t myband[],
+                               uint_t z[], uint_t off[]);
 
 template <unsigned W, unsigned N, bool CIGAR>
 InterSW<W, N, CIGAR>::InterSW(const int o_del, const int e_del, const int o_ins,
@@ -1129,8 +1391,8 @@ void InterSW<W, N, CIGAR>::SWCore(uint_t seq1SoA[], uint_t seq2SoA[],
 // Backtrace code adapted from KSW2
 // https://github.com/lh3/ksw2
 
-static inline uint32_t *push_cigar(int *n_cigar, int *m_cigar, uint32_t *cigar,
-                                   uint32_t op, int len) {
+static ALWAYS_INLINE uint32_t *
+push_cigar(int *n_cigar, int *m_cigar, uint32_t *cigar, uint32_t op, int len) {
   if (*n_cigar == 0 || op != (cigar[(*n_cigar) - 1] & 0xf)) {
     if (*n_cigar == *m_cigar) {
       *m_cigar = *m_cigar ? (*m_cigar) << 1 : 4;
@@ -1207,25 +1469,3 @@ void InterSW<W, N, CIGAR>::SWBacktrace(bool is_rot, bool is_rev,
       cigar[n_cigar - 1 - i] = tmp;
   *m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
 }
-
-#if ((!__AVX512BW__) & (__AVX2__))
-typedef InterSW<256, 8, /*CIGAR=*/false> SW8;
-typedef InterSW<256, 8, /*CIGAR=*/true> SWbt8;
-typedef InterSW<256, 16, /*CIGAR=*/false> SW16;
-typedef InterSW<256, 16, /*CIGAR=*/true> SWbt16;
-#endif
-#if __AVX512BW__
-typedef InterSW<512, 8, /*CIGAR=*/false> SW8;
-typedef InterSW<512, 8, /*CIGAR=*/true> SWbt8;
-typedef InterSW<512, 16, /*CIGAR=*/false> SW16;
-typedef InterSW<512, 16, /*CIGAR=*/true> SWbt16;
-#endif
-#if ((!__AVX512BW__) & (!__AVX2__) & (__SSE2__))
-typedef InterSW<128, 8, /*CIGAR=*/false> SW8;
-typedef InterSW<128, 8, /*CIGAR=*/true> SWbt8;
-typedef InterSW<128, 16, /*CIGAR=*/false> SW16;
-typedef InterSW<128, 16, /*CIGAR=*/true> SWbt16;
-#endif
-#if ((!__AVX512BW__) & (!__AVX2__) & (!__SSE2__))
-#error "no SSE support on this architecture"
-#endif

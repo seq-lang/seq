@@ -16,9 +16,11 @@ struct InterAlignParams { // must be consistent with bio/align.seq
   int32_t end_bonus;
 };
 
-SEQ_FUNC void seq_inter_align128(InterAlignParams *paramsx,
-                                 SeqPair *seqPairArray, uint8_t *seqBufRef,
-                                 uint8_t *seqBufQer, int numPairs) {
+template <typename SW8, typename SWbt8>
+static inline void
+seq_inter_align128_generic(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                           uint8_t *seqBufRef, uint8_t *seqBufQer,
+                           int numPairs) {
   InterAlignParams params = *paramsx;
   const int8_t bandwidth = (0 <= params.bandwidth && params.bandwidth < 0xff)
                                ? params.bandwidth
@@ -36,9 +38,11 @@ SEQ_FUNC void seq_inter_align128(InterAlignParams *paramsx,
   }
 }
 
-SEQ_FUNC void seq_inter_align16(InterAlignParams *paramsx,
-                                SeqPair *seqPairArray, uint8_t *seqBufRef,
-                                uint8_t *seqBufQer, int numPairs) {
+template <typename SW16, typename SWbt16>
+static inline void seq_inter_align16_generic(InterAlignParams *paramsx,
+                                             SeqPair *seqPairArray,
+                                             uint8_t *seqBufRef,
+                                             uint8_t *seqBufQer, int numPairs) {
   InterAlignParams params = *paramsx;
   const int16_t bandwidth = (0 <= params.bandwidth && params.bandwidth < 0xffff)
                                 ? params.bandwidth
@@ -59,6 +63,7 @@ SEQ_FUNC void seq_inter_align16(InterAlignParams *paramsx,
 SEQ_FUNC void seq_inter_align1(InterAlignParams *paramsx, SeqPair *seqPairArray,
                                uint8_t *seqBufRef, uint8_t *seqBufQer,
                                int numPairs) {
+  typedef InterSW<128, 8, /*CIGAR=*/false> SW8;
   InterAlignParams params = *paramsx;
   int8_t a = params.a > 0 ? params.a : -params.a;
   int8_t b = params.b > 0 ? -params.b : params.b;
@@ -80,4 +85,84 @@ SEQ_FUNC void seq_inter_align1(InterAlignParams *paramsx, SeqPair *seqPairArray,
     sp->cigar = ez.cigar;
     sp->n_cigar = ez.n_cigar;
   }
+}
+
+__attribute__((target("default"))) void
+seq_inter_align128_proxy(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                         uint8_t *seqBufRef, uint8_t *seqBufQer, int numPairs) {
+  seq_inter_align1(paramsx, seqPairArray, seqBufRef, seqBufQer, numPairs);
+}
+
+__attribute__((target("sse2"))) void
+seq_inter_align128_proxy(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                         uint8_t *seqBufRef, uint8_t *seqBufQer, int numPairs) {
+  typedef InterSW<128, 8, /*CIGAR=*/false> SW8;
+  typedef InterSW<128, 8, /*CIGAR=*/true> SWbt8;
+  seq_inter_align128_generic<SW8, SWbt8>(paramsx, seqPairArray, seqBufRef,
+                                         seqBufQer, numPairs);
+}
+
+__attribute__((target("avx2"))) void
+seq_inter_align128_proxy(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                         uint8_t *seqBufRef, uint8_t *seqBufQer, int numPairs) {
+  typedef InterSW<256, 8, /*CIGAR=*/false> SW8;
+  typedef InterSW<256, 8, /*CIGAR=*/true> SWbt8;
+  seq_inter_align128_generic<SW8, SWbt8>(paramsx, seqPairArray, seqBufRef,
+                                         seqBufQer, numPairs);
+}
+
+__attribute__((target("avx512bw"))) void
+seq_inter_align128_proxy(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                         uint8_t *seqBufRef, uint8_t *seqBufQer, int numPairs) {
+  typedef InterSW<512, 8, /*CIGAR=*/false> SW8;
+  typedef InterSW<512, 8, /*CIGAR=*/true> SWbt8;
+  seq_inter_align128_generic<SW8, SWbt8>(paramsx, seqPairArray, seqBufRef,
+                                         seqBufQer, numPairs);
+}
+
+SEQ_FUNC void seq_inter_align128(InterAlignParams *paramsx,
+                                 SeqPair *seqPairArray, uint8_t *seqBufRef,
+                                 uint8_t *seqBufQer, int numPairs) {
+  seq_inter_align128_proxy(paramsx, seqPairArray, seqBufRef, seqBufQer,
+                           numPairs);
+}
+
+__attribute__((target("default"))) void
+seq_inter_align16_proxy(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                        uint8_t *seqBufRef, uint8_t *seqBufQer, int numPairs) {
+  seq_inter_align1(paramsx, seqPairArray, seqBufRef, seqBufQer, numPairs);
+}
+
+__attribute__((target("sse2"))) void
+seq_inter_align16_proxy(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                        uint8_t *seqBufRef, uint8_t *seqBufQer, int numPairs) {
+  typedef InterSW<128, 16, /*CIGAR=*/false> SW16;
+  typedef InterSW<128, 16, /*CIGAR=*/true> SWbt16;
+  seq_inter_align16_generic<SW16, SWbt16>(paramsx, seqPairArray, seqBufRef,
+                                          seqBufQer, numPairs);
+}
+
+__attribute__((target("avx2"))) void
+seq_inter_align16_proxy(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                        uint8_t *seqBufRef, uint8_t *seqBufQer, int numPairs) {
+  typedef InterSW<256, 16, /*CIGAR=*/false> SW16;
+  typedef InterSW<256, 16, /*CIGAR=*/true> SWbt16;
+  seq_inter_align16_generic<SW16, SWbt16>(paramsx, seqPairArray, seqBufRef,
+                                          seqBufQer, numPairs);
+}
+
+__attribute__((target("avx512bw"))) void
+seq_inter_align16_proxy(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                        uint8_t *seqBufRef, uint8_t *seqBufQer, int numPairs) {
+  typedef InterSW<512, 16, /*CIGAR=*/false> SW16;
+  typedef InterSW<512, 16, /*CIGAR=*/true> SWbt16;
+  seq_inter_align16_generic<SW16, SWbt16>(paramsx, seqPairArray, seqBufRef,
+                                          seqBufQer, numPairs);
+}
+
+SEQ_FUNC void seq_inter_align16(InterAlignParams *paramsx,
+                                SeqPair *seqPairArray, uint8_t *seqBufRef,
+                                uint8_t *seqBufQer, int numPairs) {
+  seq_inter_align16_proxy(paramsx, seqPairArray, seqBufRef, seqBufQer,
+                          numPairs);
 }
