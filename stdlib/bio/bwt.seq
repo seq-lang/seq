@@ -571,17 +571,17 @@ def _suffixsort[X](T: ptr[X], SA: ptr[int], fs: int, n: int, k: int, isbwt: bool
     m, name = r
     if m < 0:
         if flags & (1 | 4):
-            _gc.free(C.as_byte(Cp))
+            _gc.free(Cp.as_byte())
         if flags & 2:
-            _gc.free(B.as_byte(Bp))
+            _gc.free(Bp.as_byte())
         return -2
 
     # stage 2
     if name < m:
         if flags & 4:
-            _gc.free(C.as_byte(Cp))
+            _gc.free(Cp.as_byte())
         if flags & 2:
-            _gc.free(B.as_byte(Bp))
+            _gc.free(Bp.as_byte())
         newfs = (n + fs) - (m * 2)
         if flags & (1 | 4 | 64) == 0:
             if k + name <= newfs:
@@ -599,7 +599,7 @@ def _suffixsort[X](T: ptr[X], SA: ptr[int], fs: int, n: int, k: int, isbwt: bool
             i -= 1
         if _suffixsort(RA, SA, newfs, m, name, False) != 0:
             if flags & 1:
-                _gc.free(C.as_byte(Cp))
+                _gc.free(Cp.as_byte())
             return -2
         i = n - 1
         j = m - 1
@@ -655,9 +655,9 @@ def _suffixsort[X](T: ptr[X], SA: ptr[int], fs: int, n: int, k: int, isbwt: bool
         else:
             pidx = _stage3_sort(T, SA, C, B, n, m, k, flags, isbwt)
         if flags & (1 | 4):
-            _gc.free(C.as_byte(Cp))
+            _gc.free(Cp.as_byte())
         if flags & 2:
-            _gc.free(B.as_byte(Bp))
+            _gc.free(Bp.as_byte())
 
     return pidx
 

@@ -204,6 +204,9 @@ void TypecheckVisitor::visit(const BinaryExpr *expr) {
     resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
     resultExpr->setType(
         forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
+  } else if (expr->op == "&&" || expr->op == "||") {
+    resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
+    resultExpr->setType(ctx->findInternal(".bool"));
   } else if (expr->op == "is") {
     if (CAST(expr->rexpr, NoneExpr)) {
       if (le->getType()->getClass()->name != ".Optional") {
@@ -412,9 +415,21 @@ void TypecheckVisitor::visit(const SliceExpr *expr) {
 }
 
 void TypecheckVisitor::visit(const IndexExpr *expr) {
-  auto getTupleIndex = [&](auto tuple, const auto &expr, const auto &index) -> ExprPtr {
-    if (!startswith(tuple->name, ".Tuple."))
+  auto getTupleIndex = [&](ClassTypePtr tuple, const auto &expr,
+                           const auto &index) -> ExprPtr {
+    if (!tuple->isRecord())
       return nullptr;
+    if (tuple->name == ".Ptr" || tuple->name == ".Array" || tuple->name == ".Optional")
+      return nullptr;
+    if (!startswith(tuple->name, ".Tuple.")) { // avoid if there is a __getitem__ here
+      auto m = ctx->findMethod(tuple->name, "__getitem__");
+      if (m && m->size() > 1)
+        return nullptr;
+      // TODO : be smarter! there might be a compatible getitem?
+    }
+    // LOG("getting index for {}", tuple->name);
+    auto mm = ctx->cache->classMembers.find(tuple->name);
+    assert(mm != ctx->cache->classMembers.end());
     auto getInt = [](seq_int_t *o, const ExprPtr &e) {
       if (!e)
         return true;
@@ -429,7 +444,7 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
       int i = translateIndex(ex->intValue, e);
       if (i < 0 || i >= e)
         error("tuple index out of range (expected 0..{}, got {})", e, i);
-      return transform(N<DotExpr>(clone(expr), format("a{}", i + 1)));
+      return transform(N<DotExpr>(clone(expr), mm->second[i].first));
     } else if (auto i = CAST(index, SliceExpr)) {
       if (!getInt(&s, i->st) || !getInt(&e, i->ed) || !getInt(&st, i->step))
         return nullptr;
@@ -443,7 +458,7 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
         if (i < 0 || i >= tuple->args.size())
           error("tuple index out of range (expected 0..{}, got {})", tuple->args.size(),
                 i);
-        te.push_back(N<DotExpr>(clone(expr), format("a{}", i + 1)));
+        te.push_back(N<DotExpr>(clone(expr), mm->second[i].first));
       }
       return transform(N<CallExpr>(
           N<DotExpr>(N<IdExpr>(format(".Tuple.{}", te.size())), "__new__"), move(te)));
@@ -1596,6 +1611,18 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
                                                          ctx->bases.end());
     while (ctx->bases.size() > depth)
       ctx->bases.pop_back();
+
+    if (startswith(t->name, ".Tuple.") &&
+        (endswith(t->name, ".__iter__") || endswith(t->name, ".__getitem__"))) {
+      auto u = t->args[1]->getClass();
+      string s;
+      for (auto &a : u->args) {
+        if (s.empty())
+          s = a->realizeString();
+        else if (s != a->realizeString())
+          error("cannot iterate a heterogenous tuple");
+      }
+    }
 
     LOG7("[realize] fn {} -> {} : base {} ; depth = {}", t->name, t->realizeString(),
          ctx->getBase(), depth);

@@ -399,14 +399,51 @@ static void optimizeModule(Module *module) {
 
 void SeqModule::optimize() { optimizeModule(module); }
 
-void SeqModule::runCodegenPipeline() {
+void SeqModule::runCodegenPipeline(bool timeIt) {
+  using namespace std::chrono;
+  auto t = high_resolution_clock::now();
   codegen(module);
+  if (timeIt)
+    fmt::print(stderr, "[T] llvmgen/c = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
+  t = high_resolution_clock::now();
   verify();
+  if (timeIt)
+    fmt::print(stderr, "[T] llvmgen/v = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
+  t = high_resolution_clock::now();
   optimize();
+  if (timeIt)
+    fmt::print(stderr, "[T] llvmgen/o = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
+  t = high_resolution_clock::now();
   applyGCTransformations(module);
+  if (timeIt)
+    fmt::print(stderr, "[T] llvmgen/g = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
+  t = high_resolution_clock::now();
   verify();
+  if (timeIt)
+    fmt::print(stderr, "[T] llvmgen/v = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
+  t = high_resolution_clock::now();
   optimize();
+  if (timeIt)
+    fmt::print(stderr, "[T] llvmgen/o = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
+  t = high_resolution_clock::now();
   verify();
+  if (timeIt)
+    fmt::print(stderr, "[T] llvmgen/v = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
+  t = high_resolution_clock::now();
 #if SEQ_HAS_TAPIR
   tapir::resetOMPABI();
 #endif
@@ -473,7 +510,7 @@ void SeqModule::execute(const std::vector<std::string> &args,
   using namespace std::chrono;
   auto t = high_resolution_clock::now();
   const bool debug = config::config().debug;
-  runCodegenPipeline();
+  runCodegenPipeline(timeIt);
   std::vector<std::string> functionNames;
   if (debug) {
     for (Function &f : *module) {

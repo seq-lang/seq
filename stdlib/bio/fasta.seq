@@ -21,9 +21,9 @@ type FASTARecord(_header: str, _seq: seq):
     def seq(self):
         return self._seq
 
-type FASTAReader(_file: cobj, fai: list[FAIRecord], validate: bool, gzip: bool, copy: bool):
+type FASTAReader(_file: cobj, fai: Optional[List[FAIRecord]], validate: bool, gzip: bool, copy: bool):
     def __new__(path: str, validate: bool, gzip: bool, copy: bool, fai: bool) -> FASTAReader:
-        fai_list = list[FAIRecord]() if fai else None
+        fai_list = [] if fai else None
         if fai:
             with FAI(path + ".fai") as fai_file:
                 for record in fai_file:
@@ -35,14 +35,14 @@ type FASTAReader(_file: cobj, fai: list[FAIRecord], validate: bool, gzip: bool, 
         assert not self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
-        return ptr[File](p.ptr)[0]
+        return ptr[File](p.ptr.as_byte())[0]
 
     @property
     def gzfile(self):
         assert self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
-        return ptr[gzFile](p.ptr)[0]
+        return ptr[gzFile](p.ptr.as_byte())[0]
 
     def __seqs__(self):
         for rec in self:
@@ -71,7 +71,7 @@ type FASTAReader(_file: cobj, fai: list[FAIRecord], validate: bool, gzip: bool, 
         n += s.len
         return p, n, m
 
-    def _iter_core(self, file) -> FASTARecord:
+    def _iter_core(self, file) -> Generator[FASTARecord]:
         def header_check(rec_name: str, fai_name: str):
             if rec_name != fai_name:
                 raise ValueError(f"FASTA index name mismatch: got {repr(rec_name)} but expected {repr(fai_name)}")
@@ -264,7 +264,7 @@ type pFASTAReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
         n += s.len
         return p, n, m
 
-    def _iter_core(self, file) -> pFASTARecord:
+    def _iter_core(self, file) -> Generator[pFASTARecord]:
         m = 256
         p = ptr[byte](m)
         n = 0

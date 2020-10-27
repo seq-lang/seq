@@ -8,14 +8,14 @@ type SeqReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
         assert not self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
-        return ptr[File](p.ptr)[0]
+        return ptr[File](p.ptr.as_byte())[0]
 
     @property
     def gzfile(self):
         assert self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
-        return ptr[gzFile](p.ptr)[0]
+        return ptr[gzFile](p.ptr.as_byte())[0]
 
     def _preprocess(self, a: str):
         from bio.builtin import _validate_str_as_seq

@@ -644,8 +644,8 @@ def test_parse_vcf_info():
     AF_full = [info_list(record, 'AF') for record in VCF(path)]
     assert [[str(x) for x in a] for a in AF_full] == [['0.5'], ['0.017'], ['0.333', '0.667'], list[str](), list[str](), list[str]()]
 
-test_parse_vcf_basic()
+# test_parse_vcf_basic()
 #test_parse_vcf_samples()
 #test_parse_vcf_filters()
 #test_parse_vcf_format()
-test_parse_vcf_info()
+# test_parse_vcf_info()

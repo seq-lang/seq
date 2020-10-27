@@ -18,7 +18,7 @@ extend float:
             _gc.free(p)
 
         if end != p + n:
-            raise ValueError("could not convert string to float: " + s)
+            raise ValueError(f"could not convert string to float: {s}")
 
         return result
 

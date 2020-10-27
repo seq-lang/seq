@@ -377,7 +377,7 @@ void types::RecordType::initOps() {
            Func iterFunc;
            iterFunc.setName(iterName);
            iterFunc.setIns({this});
-           iterFunc.setOut(types[0]);
+           iterFunc.setOut(GenType::get(types[0]));
            iterFunc.setArgNames({"self"});
            iterFunc.setGenerator();
 

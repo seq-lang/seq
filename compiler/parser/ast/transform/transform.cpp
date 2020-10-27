@@ -407,14 +407,10 @@ void TransformVisitor::visit(const UnaryExpr *expr) {
 }
 
 void TransformVisitor::visit(const BinaryExpr *expr) {
-  if (expr->op == "&&") {
-    resultExpr = transform(N<CallExpr>(
-        N<DotExpr>(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__")), "__and__"),
-        N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
-  } else if (expr->op == "||") {
-    resultExpr = transform(N<CallExpr>(
-        N<DotExpr>(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__")), "__or__"),
-        N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
+  if (expr->op == "&&" || expr->op == "||") {
+    resultExpr = N<BinaryExpr>(
+        transform(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__"))), expr->op,
+        transform(N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
   } else if (expr->op == "is not") {
     resultExpr = transform(N<CallExpr>(N<DotExpr>(
         N<BinaryExpr>(clone(expr->lexpr), "is", clone(expr->rexpr)), "__invert__")));
@@ -1431,7 +1427,8 @@ StmtPtr TransformVisitor::codegenMagic(const string &op, const ExprPtr &typExpr,
   } else if (op == "iter") {
     fargs.push_back({"self", clone(typExpr)});
     ret = N<IndexExpr>(I("Generator"), args.size() ? clone(args[0].type) : I("void"));
-    attrs.push_back("internal");
+    for (int i = 0; i < args.size(); i++)
+      stmts.push_back(N<YieldStmt>(N<DotExpr>(N<IdExpr>("self"), args[i].name)));
   } else if (op == "eq") {
     fargs.push_back({"self", clone(typExpr)});
     fargs.push_back({"other", clone(typExpr)});

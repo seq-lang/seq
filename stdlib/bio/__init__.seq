@@ -10,7 +10,7 @@ from bio.bwt import _saisxx, _saisxx_bwt
 
 from bio.fasta import FASTARecord, FASTA, pFASTARecord, pFASTA
 from bio.fastq import FASTQRecord, FASTQ
-# from bio.fai import FAIRecord, FAI
-# from bio.bam import SAMRecord, SAM, BAM, CRAM
-# from bio.bed import BEDRecord, BED
-# from bio.vcf import VCFRecord, VCF, BCF
+from bio.fai import FAIRecord, FAI
+from bio.bam import SAMRecord, SAM, BAM, CRAM
+from bio.bed import BEDRecord, BED
+from bio.vcf import VCFRecord, VCF, BCF

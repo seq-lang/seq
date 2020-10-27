@@ -172,7 +172,7 @@ type _bcf_info_t(_key: i32,
                  _vptr: ptr[u8],
                  _vptr_len: u32,
                  _vptr_off_free: u32,  # bit field, vptr_off is first 31, _free is last
-                 _len: i32
+                 _len2: i32
                  ):
 
     @property
@@ -538,10 +538,10 @@ def bcf_array_to_object(data: cobj, type_code: i32, n: i32, count: i64, scalar: 
                 break
             if nums[i] != missing_val:
                 arr.append(nums[i])
-        return BCFAux(cobj(__ptr__(arr)), type_code, True)
+        return BCFAux(__ptr__(arr).as_byte(), type_code, True)
 
 
-    none_ret = BCFAux(cobj(data), BCF_AUX_NONE, False)
+    none_ret = BCFAux(data.as_byte(), BCF_AUX_NONE, False)
     if not data or n <= i32(0):
         return none_ret
 
@@ -561,7 +561,7 @@ def bcf_array_to_object(data: cobj, type_code: i32, n: i32, count: i64, scalar: 
         for c in b.split(','):
             if c.c_str()[0] != byte(bcf_str_missing):
                 arr.append(c)
-        return BCFAux(cobj(__ptr__(arr)), BCF_BT_CHAR, True)
+        return BCFAux(__ptr__(arr).as_byte(), BCF_BT_CHAR, True)
 
     else:
         if type_code == BCF_BT_INT8:
@@ -579,7 +579,7 @@ def bcf_array_to_object(data: cobj, type_code: i32, n: i32, count: i64, scalar: 
                 if not bcf_float_is_missing(i32(nums[i])):
                     v = _C.seq_i32_to_float(nums[i])
                     arr.append(v)
-            return BCFAux(cobj(__ptr__(arr)), BCF_BT_FLOAT, True)
+            return BCFAux(__ptr__(arr).as_byte(), BCF_BT_FLOAT, True)
         else:
             raise TypeError('unsupported info type code')
 
@@ -593,14 +593,14 @@ def bcf_info_get_value(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], info: ptr[_
     i = info[0]
     t = i._type
 
-    none_ret = BCFAux(cobj(bcf1), BCF_AUX_NONE, False)
+    none_ret = BCFAux(bcf1.as_byte(), BCF_AUX_NONE, False)
 
     if i._len == i32(0):
         if _bcf_hdr_id2type(bcf_hdr, BCF_HL_INFO, i._key) == u32(BCF_HT_FLAG):
             value_p = ptr[bool](1)
             value_p[0] = True
             # TODO BCF_HT_FLAG is the same as BCF_BT_NULL, this may lead to some confusion
-            return BCFAux(cobj(value_p), BCF_HT_FLAG, False)
+            return BCFAux(value_p.as_byte(), BCF_HT_FLAG, False)
         elif scalar != i32(0):
             # no value
             return none_ret
@@ -610,24 +610,24 @@ def bcf_info_get_value(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t], info: ptr[_
     elif i._len == i32(1):
         value = i32(i.v1)
         if i._type == BCF_BT_INT8:
-            return BCFAux(cobj(__ptr__(value)), BCF_BT_INT8, False) if i._v1 != i32(bcf_int8_missing) else none_ret
+            return BCFAux(__ptr__(value).as_byte(), BCF_BT_INT8, False) if i._v1 != i32(bcf_int8_missing) else none_ret
         elif i._type == BCF_BT_INT16:
-            return BCFAux(cobj(__ptr__(value)), BCF_BT_INT16, False) if i._v1 != i32(bcf_int16_missing) else none_ret
+            return BCFAux(__ptr__(value).as_byte(), BCF_BT_INT16, False) if i._v1 != i32(bcf_int16_missing) else none_ret
         elif i._type == BCF_BT_INT32:
-            return BCFAux(cobj(__ptr__(value)), BCF_BT_INT32, False) if i._v1 != i32(bcf_int32_missing) else none_ret
+            return BCFAux(__ptr__(value).as_byte(), BCF_BT_INT32, False) if i._v1 != i32(bcf_int32_missing) else none_ret
         elif i._type == BCF_BT_FLOAT:
             value_f = ptr[float](1)
             value_f[0] = _C.seq_i32_to_float(value)
-            return BCFAux(cobj(value_f), BCF_BT_FLOAT, False) if not bcf_float_is_missing(i._v1) else none_ret
+            return BCFAux(value_f.as_byte(), BCF_BT_FLOAT, False) if not bcf_float_is_missing(i._v1) else none_ret
         elif i._type == BCF_BT_CHAR:
-            return BCFAux(cobj(__ptr__(value)), BCF_BT_CHAR, False)
+            return BCFAux(__ptr__(value).as_byte(), BCF_BT_CHAR, False)
         else:
             raise TypeError('unsupported info type code')
     else:
-        return bcf_array_to_object(cobj(i._vptr), i._type, i._len, count, scalar)
+        return bcf_array_to_object(i._vptr.as_byte(), i._type, i._len, count, scalar)
 
 def try_unpack(bcf1: ptr[_bcf1_t], mode: i32):
-    if bcf_unpack(cobj(bcf1), mode) < i32(0):
+    if bcf_unpack(bcf1.as_byte(), mode) < i32(0):
         raise ValueError('Error unpacking in VCFRecord')
 
 type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
@@ -671,7 +671,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
     def get_int(self, key: str):
         p = ptr[byte]()
         n = i32(0)
-        status = bcf_get_info_values(cobj(self.bcf_hdr), cobj(self.bcf1), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_INT)
+        status = bcf_get_info_values(self.bcf_hdr.as_byte(), self.bcf1.as_byte(), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_INT)
         VCFRecordInfo._process_status(status, key)
         if int(status) != 1:
             raise ValueError(f"Multiple values for tag '{key}'")
@@ -682,7 +682,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
     def get_ints(self, key: str):
         p = ptr[byte]()
         n = i32(0)
-        status = bcf_get_info_values(cobj(self.bcf_hdr), cobj(self.bcf1), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_INT)
+        status = bcf_get_info_values(self.bcf_hdr.as_byte(), self.bcf1.as_byte(), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_INT)
         VCFRecordInfo._process_status(status, key)
 
         i = 0
@@ -697,7 +697,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
     def get_float(self, key: str):
         p = ptr[byte]()
         n = i32(0)
-        status = bcf_get_info_values(cobj(self.bcf_hdr), cobj(self.bcf1), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_REAL)
+        status = bcf_get_info_values(self.bcf_hdr.as_byte(), self.bcf1.as_byte(), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_REAL)
         VCFRecordInfo._process_status(status, key)
         if int(status) != 1:
             raise ValueError(f"Multiple values for tag '{key}'")
@@ -708,7 +708,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
     def get_floats(self, key: str):
         p = ptr[byte]()
         n = i32(0)
-        status = bcf_get_info_values(cobj(self.bcf_hdr), cobj(self.bcf1), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_REAL)
+        status = bcf_get_info_values(self.bcf_hdr.as_byte(), self.bcf1.as_byte(), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_REAL)
         VCFRecordInfo._process_status(status, key)
 
         i = 0
@@ -723,7 +723,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
     def get_str(self, key: str):
         p = ptr[byte]()
         n = i32(0)
-        status = bcf_get_info_values(cobj(self.bcf_hdr), cobj(self.bcf1), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_STR)
+        status = bcf_get_info_values(self.bcf_hdr.as_byte(), self.bcf1.as_byte(), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_STR)
         VCFRecordInfo._process_status(status, key)
         count = int(status)
         buf = ptr[byte](count)
@@ -734,7 +734,7 @@ type VCFRecordInfo(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
     def get_flag(self, key: str):
         p = ptr[byte]()
         n = i32(0)
-        status = bcf_get_info_values(cobj(self.bcf_hdr), cobj(self.bcf1), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_FLAG)
+        status = bcf_get_info_values(self.bcf_hdr.as_byte(), self.bcf1.as_byte(), key.c_str(), __ptr__(p), __ptr__(n), BCF_HT_FLAG)
         VCFRecordInfo._process_status(status, key)
         return status == 1
 
@@ -859,7 +859,7 @@ type VCFRecordSamples(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
 
     def __getitem__(self, key: str) -> VCFRecordSample:
         c_key = key.c_str()
-        sample_index = int(bcf_hdr_id2int(cobj(self.bcf_hdr), BCF_DT_SAMPLE, c_key))
+        sample_index = int(bcf_hdr_id2int(self.bcf_hdr.as_byte(), BCF_DT_SAMPLE, c_key))
         if sample_index < 0 or sample_index >= self.bcf1[0].n_sample:
             raise KeyError('invalid sample name: ' + key)
         return VCFRecordSample(self.bcf1, self.bcf_hdr, sample_index)
@@ -881,7 +881,7 @@ type VCFRecordFormat(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
     def __getitem__(self, key: str) -> BCFMetadata:
         try_unpack(self.bcf1, BCF_UN_FMT)
         c_key = key.c_str()
-        fmt = ptr[_bcf_fmt_t](bcf_get_fmt(cobj(self.bcf_hdr), cobj(self.bcf1), c_key))
+        fmt = ptr[_bcf_fmt_t](bcf_get_fmt(self.bcf_hdr.as_byte(), self.bcf1.as_byte(), c_key))
 
         if not fmt or not fmt[0]._p:
             raise KeyError('Unknown format: ' + key)
@@ -898,8 +898,8 @@ type VCFRecordFilter(bcf1: ptr[_bcf1_t], bcf_hdr: ptr[_bcf_hdr_t]):
 
     def __getitem__(self, key: str):
         c_key = key.c_str()
-        _id = bcf_hdr_id2int(cobj(self.bcf_hdr), BCF_DT_ID, c_key)
-        if not check_header_id(self.bcf_hdr, BCF_HL_FLT, _id) or not bcf_has_filter(cobj(self.bcf_hdr), cobj(self.bcf1), c_key):
+        _id = bcf_hdr_id2int(self.bcf_hdr.as_byte(), BCF_DT_ID, c_key)
+        if not check_header_id(self.bcf_hdr, BCF_HL_FLT, _id) or not bcf_has_filter(self.bcf_hdr.as_byte(), self.bcf1.as_byte(), c_key):
             raise ValueError('Invalid header id')
         return BCFMetadata(self.bcf_hdr, int(BCF_HL_FLT), int(_id))
 
@@ -1019,7 +1019,7 @@ class BCFReader:
     def __iter__(self):
         self._ensure_open()
         while True:
-            status = int(bcf_read(self._file, cobj(self._bcf_hdr), self.__raw__()))
+            status = int(bcf_read(self._file, self._bcf_hdr.as_byte(), self.__raw__()))
             if status == 0:
                 p = ptr[_bcf1_t](self.__raw__())
                 if self._copy:
@@ -1042,7 +1042,7 @@ class BCFReader:
             hts_close(self._file)
 
         if self._bcf_hdr:
-            bcf_hdr_destroy(cobj(self._bcf_hdr))
+            bcf_hdr_destroy(self._bcf_hdr.as_byte())
 
         bcf_empty(self.__raw__())
 

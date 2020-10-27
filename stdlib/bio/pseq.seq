@@ -126,7 +126,7 @@ type pseq(len: int, ptr: cobj):
             yield self._slice_direct(i,i+1)
             i -= 1
 
-def translate(s: seq, table: dict[seq, pseq] = None):
+def translate(s: seq, table: Optional[Dict[seq, pseq]] = None):
     def encode_triple(s: seq):
         if s.N():
             raise ValueError("codon '{s}' contains an ambiguous base")

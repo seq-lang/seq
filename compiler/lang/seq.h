@@ -106,7 +106,7 @@ private:
   llvm::Function *initFunc;
   llvm::Function *strlenFunc;
   llvm::Function *makeCanonicalMainFunc(llvm::Function *realMain);
-  void runCodegenPipeline();
+  void runCodegenPipeline(bool timeIt = false);
 
 public:
   SeqModule();

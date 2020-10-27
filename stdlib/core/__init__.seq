@@ -13,6 +13,9 @@ from core.builtin import *
 from core.collections.list import list
 from core.collections.set import set
 from core.collections.dict import dict
+List = list
+Set = set
+Dict = dict
 
 from core.str import *
 from core.int import *

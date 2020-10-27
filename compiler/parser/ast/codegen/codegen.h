@@ -57,6 +57,7 @@ public:
   void visit(const StringExpr *) override;
   void visit(const IdExpr *) override;
   void visit(const IfExpr *) override;
+  void visit(const BinaryExpr *) override;
   void visit(const PipeExpr *) override;
   void visit(const CallExpr *) override;
   void visit(const StackAllocExpr *) override;

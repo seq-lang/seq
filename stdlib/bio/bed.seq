@@ -1,7 +1,8 @@
 type BEDRecord(_chrom: str, _chromStart: int, _chromEnd: int,
                _name: str, _score: float, _strand: str, _thickStart: int,
                _thickEnd: int, _itemRgb: tuple[int, int, int], _blockCount: int,
-               _blockSizes: list[int], _blockStarts: list[int], numCols: int):
+               _blockSizes: Optional[list[int]], _blockStarts: Optional[list[int]],
+               numCols: int):
     @property
     def chrom(self):
         return self._chrom
@@ -136,8 +137,8 @@ type BEDReader(_file: gzFile, _header: list[str], validate: bool, copy: bool):
         thick_end: int = 0
         item_rgb: tuple[int, int, int] = (0, 0, 0)
         block_count: int = 0
-        block_sizes: list[int] = None
-        block_starts: list[int] = None
+        block_sizes = None
+        block_starts = None
 
         chrom = a[0]
         if self.copy: chrom = copy(chrom)
