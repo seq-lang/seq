@@ -228,9 +228,9 @@ INSTANTIATE_TEST_SUITE_P(
         "core/formats.seq",
         "core/proteins.seq",
         "core/align.seq",
+        "core/serialization.seq",
         // F: "core/match.seq", // needs list & seq fixes
         // "core/bwtsa.seq",
-        // "core/serialization.seq",  // auto-cast int[32] to int
         "core/empty.seq"
       ),
       testing::Values(true),

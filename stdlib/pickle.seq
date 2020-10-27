@@ -127,9 +127,9 @@ extend dict[K, V]:
             pickle(self._n_occupied, jar)
             pickle(self._upper_bound, jar)
             fsize = khash.__ac_fsize(self._n_buckets) if self._n_buckets > 0 else 0
-            _write_raw(jar, ptr[byte](self._flags), fsize * _gc.sizeof[u32]())
-            _write_raw(jar, ptr[byte](self._keys), self._n_buckets * _gc.sizeof[K]())
-            _write_raw(jar, ptr[byte](self._vals), self._n_buckets * _gc.sizeof[V]())
+            _write_raw(jar, self._flags.as_byte(), fsize * _gc.sizeof[u32]())
+            _write_raw(jar, self._keys.as_byte(), self._n_buckets * _gc.sizeof[K]())
+            _write_raw(jar, self._vals.as_byte(), self._n_buckets * _gc.sizeof[V]())
         else:
             pickle(self._n_buckets, jar)
             size = len(self)
@@ -151,9 +151,9 @@ extend dict[K, V]:
             flags = ptr[u32](fsize)
             keys = ptr[K](n_buckets)
             vals = ptr[V](n_buckets)
-            _read_raw(jar, ptr[byte](flags), fsize * _gc.sizeof[u32]())
-            _read_raw(jar, ptr[byte](keys), n_buckets * _gc.sizeof[K]())
-            _read_raw(jar, ptr[byte](vals), n_buckets * _gc.sizeof[V]())
+            _read_raw(jar, flags.as_byte(), fsize * _gc.sizeof[u32]())
+            _read_raw(jar, keys.as_byte(), n_buckets * _gc.sizeof[K]())
+            _read_raw(jar, vals.as_byte(), n_buckets * _gc.sizeof[V]())
 
             d._n_buckets = n_buckets
             d._size = size
@@ -183,8 +183,8 @@ extend set[K]:
             pickle(self._n_occupied, jar)
             pickle(self._upper_bound, jar)
             fsize = khash.__ac_fsize(self._n_buckets) if self._n_buckets > 0 else 0
-            _write_raw(jar, ptr[byte](self._flags), fsize * _gc.sizeof[u32]())
-            _write_raw(jar, ptr[byte](self._keys), self._n_buckets * _gc.sizeof[K]())
+            _write_raw(jar, self._flags.as_byte(), fsize * _gc.sizeof[u32]())
+            _write_raw(jar, self._keys.as_byte(), self._n_buckets * _gc.sizeof[K]())
         else:
             pickle(self._n_buckets, jar)
             size = len(self)
@@ -204,8 +204,8 @@ extend set[K]:
             fsize = khash.__ac_fsize(n_buckets) if n_buckets > 0 else 0
             flags = ptr[u32](fsize)
             keys = ptr[K](n_buckets)
-            _read_raw(jar, ptr[byte](flags), fsize * _gc.sizeof[u32]())
-            _read_raw(jar, ptr[byte](keys), n_buckets * _gc.sizeof[K]())
+            _read_raw(jar, flags.as_byte(), fsize * _gc.sizeof[u32]())
+            _read_raw(jar, keys.as_byte(), n_buckets * _gc.sizeof[K]())
 
             s._n_buckets = n_buckets
             s._size = size

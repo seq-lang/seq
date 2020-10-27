@@ -470,7 +470,7 @@ extend Int[N]:
     @internal
     def __pickle__(self, dest: Ptr[byte]) -> void: pass
     @internal
-    def __unpickle__(self, src: Ptr[byte]) -> Int[N]: pass
+    def __unpickle__(src: Ptr[byte]) -> Int[N]: pass
     @internal
     def __str__(self) -> str: pass
     @internal
@@ -539,7 +539,7 @@ extend UInt[N]:
     @internal
     def __pickle__(self, dest: Ptr[byte]) -> void: pass
     @internal
-    def __unpickle__(self, src: Ptr[byte]) -> UInt[N]: pass
+    def __unpickle__(src: Ptr[byte]) -> UInt[N]: pass
     @internal
     def __str__(self) -> str: pass
     @internal
