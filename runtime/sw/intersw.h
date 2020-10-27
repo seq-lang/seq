@@ -87,9 +87,13 @@ template <> struct SIMD<128, 8> {
 
   static ALWAYS_INLINE Vec sub(Vec a, Vec b) { return _mm_sub_epi8(a, b); }
 
-  static ALWAYS_INLINE Vec min(Vec a, Vec b) { return _mm_min_epi8(a, b); }
+  static ALWAYS_INLINE Vec min(Vec a, Vec b) __attribute__((target("sse4.1"))) {
+    return _mm_min_epi8(a, b);
+  }
 
-  static ALWAYS_INLINE Vec max(Vec a, Vec b) { return _mm_max_epi8(a, b); }
+  static ALWAYS_INLINE Vec max(Vec a, Vec b) __attribute__((target("sse4.1"))) {
+    return _mm_max_epi8(a, b);
+  }
 
   static ALWAYS_INLINE Vec umin(Vec a, Vec b) { return _mm_min_epu8(a, b); }
 
@@ -107,9 +111,12 @@ template <> struct SIMD<128, 8> {
 
   static ALWAYS_INLINE Cmp xorc_(Cmp a, Cmp b) { return _mm_xor_si128(a, b); }
 
-  static ALWAYS_INLINE Vec abs(Vec a) { return _mm_abs_epi8(a); }
+  static ALWAYS_INLINE Vec abs(Vec a) __attribute__((target("sse4.1"))) {
+    return _mm_abs_epi8(a);
+  }
 
-  static ALWAYS_INLINE Vec blend(Vec a, Vec b, Cmp c) {
+  static ALWAYS_INLINE Vec blend(Vec a, Vec b, Cmp c)
+      __attribute__((target("sse4.1"))) {
     return _mm_blendv_epi8(a, b, c);
   }
 
@@ -368,9 +375,15 @@ template <> struct SIMD<128, 16> {
 
   static ALWAYS_INLINE Vec max(Vec a, Vec b) { return _mm_max_epi16(a, b); }
 
-  static ALWAYS_INLINE Vec umin(Vec a, Vec b) { return _mm_min_epu16(a, b); }
+  static ALWAYS_INLINE Vec umin(Vec a, Vec b)
+      __attribute__((target("sse4.1"))) {
+    return _mm_min_epu16(a, b);
+  }
 
-  static ALWAYS_INLINE Vec umax(Vec a, Vec b) { return _mm_max_epu16(a, b); }
+  static ALWAYS_INLINE Vec umax(Vec a, Vec b)
+      __attribute__((target("sse4.1"))) {
+    return _mm_max_epu16(a, b);
+  }
 
   static ALWAYS_INLINE Vec and_(Vec a, Vec b) { return _mm_and_si128(a, b); }
 
@@ -384,9 +397,12 @@ template <> struct SIMD<128, 16> {
 
   static ALWAYS_INLINE Cmp xorc_(Cmp a, Cmp b) { return _mm_xor_si128(a, b); }
 
-  static ALWAYS_INLINE Vec abs(Vec a) { return _mm_abs_epi16(a); }
+  static ALWAYS_INLINE Vec abs(Vec a) __attribute__((target("sse4.1"))) {
+    return _mm_abs_epi16(a);
+  }
 
-  static ALWAYS_INLINE Vec blend(Vec a, Vec b, Cmp c) {
+  static ALWAYS_INLINE Vec blend(Vec a, Vec b, Cmp c)
+      __attribute__((target("sse4.1"))) {
     return _mm_blendv_epi8(a, b, c);
   }
 
@@ -660,6 +676,20 @@ private:
   int_t *H1, *H2;
 };
 
+template __attribute__((target("sse4.1"))) void
+InterSW<128, 8, false>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
+                           uint8_t *seqBufQer, int32_t numPairs, int bandwidth);
+template __attribute__((target("sse4.1"))) void
+InterSW<128, 8, true>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
+                          uint8_t *seqBufQer, int32_t numPairs, int bandwidth);
+template __attribute__((target("sse4.1"))) void
+InterSW<128, 16, false>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
+                            uint8_t *seqBufQer, int32_t numPairs,
+                            int bandwidth);
+template __attribute__((target("sse4.1"))) void
+InterSW<128, 16, true>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
+                           uint8_t *seqBufQer, int32_t numPairs, int bandwidth);
+
 template __attribute__((target("avx2"))) void
 InterSW<256, 8, false>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
                            uint8_t *seqBufQer, int32_t numPairs, int bandwidth);
@@ -687,6 +717,23 @@ InterSW<512, 16, false>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
 template __attribute__((target("avx512bw"))) void
 InterSW<512, 16, true>::SW(SeqPair *pairArray, uint8_t *seqBufRef,
                            uint8_t *seqBufQer, int32_t numPairs, int bandwidth);
+
+template __attribute__((target("sse4.1"))) void InterSW<128, 8, false>::SWCore(
+    uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow, uint_t ncol, SeqPair *p,
+    SeqPair *endp, uint_t h0[], int32_t numPairs, int zdrop, uint_t w,
+    uint_t qlen[], uint_t myband[], uint_t z[], uint_t off[]);
+template __attribute__((target("sse4.1"))) void InterSW<128, 8, true>::SWCore(
+    uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow, uint_t ncol, SeqPair *p,
+    SeqPair *endp, uint_t h0[], int32_t numPairs, int zdrop, uint_t w,
+    uint_t qlen[], uint_t myband[], uint_t z[], uint_t off[]);
+template __attribute__((target("sse4.1"))) void InterSW<128, 16, false>::SWCore(
+    uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow, uint_t ncol, SeqPair *p,
+    SeqPair *endp, uint_t h0[], int32_t numPairs, int zdrop, uint_t w,
+    uint_t qlen[], uint_t myband[], uint_t z[], uint_t off[]);
+template __attribute__((target("sse4.1"))) void InterSW<128, 16, true>::SWCore(
+    uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow, uint_t ncol, SeqPair *p,
+    SeqPair *endp, uint_t h0[], int32_t numPairs, int zdrop, uint_t w,
+    uint_t qlen[], uint_t myband[], uint_t z[], uint_t off[]);
 
 template __attribute__((target("avx2"))) void InterSW<256, 8, false>::SWCore(
     uint_t seq1SoA[], uint_t seq2SoA[], uint_t nrow, uint_t ncol, SeqPair *p,

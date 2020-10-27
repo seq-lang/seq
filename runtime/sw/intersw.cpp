@@ -194,7 +194,7 @@ SEQ_FUNC void seq_inter_align128(InterAlignParams *paramsx,
   } else if (intersw_simd & SIMD_AVX2) {
     seq_inter_align128_avx2(paramsx, seqPairArray, seqBufRef, seqBufQer,
                             numPairs);
-  } else if (intersw_simd & SIMD_SSE2) {
+  } else if (intersw_simd & SIMD_SSE4_1) {
     seq_inter_align128_sse2(paramsx, seqPairArray, seqBufRef, seqBufQer,
                             numPairs);
   } else {
@@ -247,7 +247,7 @@ SEQ_FUNC void seq_inter_align16(InterAlignParams *paramsx,
   } else if (intersw_simd & SIMD_AVX2) {
     seq_inter_align16_avx2(paramsx, seqPairArray, seqBufRef, seqBufQer,
                            numPairs);
-  } else if (intersw_simd & SIMD_SSE2) {
+  } else if (intersw_simd & SIMD_SSE4_1) {
     seq_inter_align16_sse2(paramsx, seqPairArray, seqBufRef, seqBufQer,
                            numPairs);
   } else {
