@@ -143,8 +143,7 @@ def _heapify_max[T](x: list[T]):
     for i in reversed(range(n//2)):
         _siftup_max(x, i)
 
-@deduceall
-def nsmallest[S,T](n: int, iterable: generator[T], key: optional[function[S,T]] = None):
+def nsmallest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,T]] = None):
     """Find the n smallest elements in a dataset.
     Equivalent to:  sorted(iterable, key=key)[:n]
     """
@@ -218,8 +217,7 @@ def nsmallest[S,T](n: int, iterable: generator[T], key: optional[function[S,T]] 
     result.sort()
     return [elem for k, order, elem in result]
 
-@deduceall
-def nlargest[S,T](n: int, iterable: generator[T], key: optional[function[S,T]] = None):
+def nlargest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,T]] = None):
     """Find the n largest elements in a dataset.
     Equivalent to:  sorted(iterable, key=key, reverse=True)[:n]
     """

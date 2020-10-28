@@ -4,8 +4,7 @@ from algorithms.insertionsort import insertion_sort_inplace
 from algorithms.heapsort import heap_sort_inplace
 from algorithms.qsort import qsort_inplace
 
-@deduceall
-def sorted[S,T](
+def sorted[T,S=int](
     v: generator[T],
     key: optional[function[S,T]] = None,
     algorithm: optional[str] = None,
@@ -44,8 +43,7 @@ def _sort_list[T,S](self: list[T], key: function[S,T], algorithm: str):
         raise ValueError("Algorithm '" + algorithm + "' does not exist")
 
 extend list[T]:
-    @deduceall
-    def sort[S](
+    def sort[S=int](
         self: list[T],
         key: optional[function[S,T]] = None,
         algorithm: optional[str] = None,

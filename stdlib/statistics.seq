@@ -87,8 +87,7 @@ def _find_rteq[T](a: list[T], l: int, x: float):
         return i-1
     assert False
 
-@deduceall
-def median_grouped[T,S](data: list[T], interval: S = 1) -> float:
+def median_grouped[T,S=int](data: list[T], interval: S = 1) -> float:
     """
     median_grouped(data, interval)
 

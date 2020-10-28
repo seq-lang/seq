@@ -671,6 +671,8 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
     error("unexpected name '{}' (function pointers have argument names elided)",
           namedArgs.begin()->first);
   }
+
+  bool unificationsDone = true;
   for (int i = 0, ra = reorderedArgs.size(); i < availableArguments.size(); i++) {
     if (i >= ra) {
       assert(ast);
@@ -696,8 +698,10 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
     auto &arg = reorderedArgs[i].value;
     auto c = arg->getType()->getClass();
     if (targetType && (targetType->isTrait || targetType->name == ".Optional")) {
-      if (!c) // do not unify if not yet known
+      if (!c) { // do not unify if not yet known
+        unificationsDone = false;
         continue;
+      }
       if (targetType->name == ".Generator") {
         if (c->name != targetType->name) {
           if (!extraStage) // do not do this in pipelines
@@ -712,8 +716,9 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
           if (extraStage && CAST(arg, EllipsisExpr)) {
             *extraStage = N<DotExpr>(N<IdExpr>(".Optional"), "__new__");
             return expr->clone();
-          } else
+          } else {
             arg = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(arg)));
+          }
         }
       } else {
         error("cannot handle trait {}", targetType->name);
@@ -722,9 +727,14 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
       if (extraStage && CAST(arg, EllipsisExpr)) {
         *extraStage = N<IdExpr>(".unwrap");
         return expr->clone();
-      } else
+      } else {
         arg = transform(N<CallExpr>(N<IdExpr>(".unwrap"), move(arg)));
+      }
     }
+
+    // if (ast)
+    //   LOG("-- {} : force {} -> {}", ast->name, reorderedArgs[i].value->toString(),
+    //       typ->toString());
     forceUnify(reorderedArgs[i].value, typ);
   }
   for (auto &i : namedArgs)
@@ -748,10 +758,26 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
       auto r = realizeFunc(ra.value->getType());
       fix(ra.value, r->realizeString());
     }
-  if (c->canRealize() && c->getFunc()) {
-    auto r = realizeFunc(c->getFunc());
-    if (knownTypes.empty())
-      fix(e, r->realizeString());
+  if (auto f = c->getFunc()) {
+    // Fetch the AST
+    auto ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
+    assert(ast);
+    for (int i = 0; i < f->explicits.size(); i++)
+      if (auto l = f->explicits[i].type->getLink()) {
+        if (unificationsDone && l && l->kind == LinkType::Unbound &&
+            ast->generics[i].deflt) {
+          // untouched unbound
+          LOG("-- transform {} -> {}", f->name, f->explicits[i].name,
+              ast->generics[i].deflt->toString());
+          auto t = transformType(ast->generics[i].deflt);
+          forceUnify(l, t->getType());
+        }
+      }
+    if (c->canRealize()) {
+      auto r = realizeFunc(f);
+      if (knownTypes.empty())
+        fix(e, r->realizeString());
+    }
   }
 
   // Emit final call
@@ -1549,8 +1575,8 @@ vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &gene
   auto genericTypes = vector<types::Generic>();
   for (auto &g : generics) {
     assert(!g.name.empty());
-    if (g.type && g.type->toString() != "(#id int)")
-      error("only int generic types are allowed");
+    if (g.type && g.type->toString() != "(#id .int)")
+      error("only int generic types are allowed / {}", g.type->toString());
     auto tp = ctx->addUnbound(getSrcInfo(), level, true, bool(g.type));
     genericTypes.push_back(
         {g.name, tp->generalize(level), ctx->cache->unboundCount - 1});

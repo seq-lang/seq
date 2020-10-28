@@ -229,9 +229,9 @@ INSTANTIATE_TEST_SUITE_P(
         "core/proteins.seq",
         "core/align.seq",
         "core/serialization.seq",
+        "core/empty.seq"
         // F: "core/match.seq", // needs list & seq fixes
         // "core/bwtsa.seq",
-        "core/empty.seq"
       ),
       testing::Values(true),
       testing::Values(""),

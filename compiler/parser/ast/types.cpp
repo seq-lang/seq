@@ -181,7 +181,7 @@ int LinkType::unify(TypePtr typ, Unification &us) {
       LOG9("[unify] {} <- {}", id, typ->toString());
       us.linked.push_back(static_pointer_cast<LinkType>(shared_from_this()));
       kind = Link;
-      type = typ;
+      type = typ->follow();
       return 0;
     } else {
       return -1;

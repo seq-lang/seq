@@ -258,8 +258,7 @@ def starmap(function, iterable):
     for args in iterable:
         yield function(args[0], args[1])
 
-@deduceall
-def groupby[K,V](iterable: generator[V], key: optional[function[K,V]] = None):
+def groupby[V,K=int](iterable: generator[V], key: optional[function[K,V]] = None):
     """
     groupby(iterable, key=None)
 
