@@ -767,8 +767,8 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
         if (unificationsDone && l && l->kind == LinkType::Unbound &&
             ast->generics[i].deflt) {
           // untouched unbound
-          LOG("-- transform {} -> {}", f->name, f->explicits[i].name,
-              ast->generics[i].deflt->toString());
+          // LOG("-- transform {} -> {}", f->name, f->explicits[i].name,
+          // ast->generics[i].deflt->toString());
           auto t = transformType(ast->generics[i].deflt);
           forceUnify(l, t->getType());
         }
@@ -942,23 +942,25 @@ void TypecheckVisitor::visit(const AssignMemberStmt *stmt) {
   auto lc = lh->getType()->getClass();
   auto rc = rh->getType()->getClass();
 
-  auto mm = ctx->findMember(lc->name, stmt->member);
-  if (!mm && lc->name == ".Optional") {
-    resultStmt = transform(N<AssignMemberStmt>(
-        N<CallExpr>(N<IdExpr>(".unwrap"), clone(stmt->lhs)), stmt->member, move(rh)));
-    return;
+  if (lc) {
+    auto mm = ctx->findMember(lc->name, stmt->member);
+    if (!mm && lc->name == ".Optional") {
+      resultStmt = transform(N<AssignMemberStmt>(
+          N<CallExpr>(N<IdExpr>(".unwrap"), clone(stmt->lhs)), stmt->member, move(rh)));
+      return;
+    }
+    if (!mm)
+      error("cannot find '{}'", stmt->member);
+
+    if (lc && lc->isRecord())
+      error("records are read-only ^ {} , {}", lc->toString(), lh->toString());
+
+    auto t = ctx->instantiate(getSrcInfo(), mm, lc);
+    lc = t->getClass();
+    if (lc && lc->name == ".Optional" && rc && rc->name != lc->name)
+      rh = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(rh)));
+    forceUnify(t, rh->getType());
   }
-  if (!mm)
-    error("cannot find '{}'", stmt->member);
-
-  if (lc && lc->isRecord())
-    error("records are read-only ^ {} , {}", lc->toString(), lh->toString());
-
-  auto t = ctx->instantiate(getSrcInfo(), mm, lc);
-  lc = t->getClass();
-  if (lc && lc->name == ".Optional" && rc && rc->name != lc->name)
-    rh = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(rh)));
-  forceUnify(t, rh->getType());
 
   resultStmt = N<AssignMemberStmt>(move(lh), stmt->member, move(rh));
 }

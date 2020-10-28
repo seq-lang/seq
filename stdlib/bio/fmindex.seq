@@ -67,8 +67,8 @@ class bntseq:
     _m_pac: int
     _l_pac: int
     _n_seqs: int
-    _anns: list[bntann]
-    _ambs: list[bntamb]
+    _anns: Optional[List[bntann]]
+    _ambs: Optional[List[bntamb]]
 
     def __pickle__(self, jar: Jar):
         pac_size = (self._l_pac // 4) + (0 if self._l_pac % 4 == 0 else 1)
@@ -138,7 +138,7 @@ class bntseq:
         n = len(s)
         p = bntann(name, anno, 0 if self._n_seqs == 0 else self._anns[-1]._offset + self._anns[-1]._len, n)
         self._anns.append(p)
-        q: bntamb = None
+        q = None
 
         lasts = byte(0)
         i = 0
@@ -365,9 +365,9 @@ def smems(self,
           x: int = 0,
           min_intv: int = 1,
           min_seed: int = 1,
-          mems: list[SMEM] = None,
-          prev: list[SMEM] = None,
-          curr: list[SMEM] = None):
+          mems: optional[list[SMEM]] = None,
+          prev: optional[list[SMEM]] = None,
+          curr: optional[list[SMEM]] = None):
     # adapted from BWA-MEM's bwt_smem1a()
     l = len(q)
     if x < 0:
@@ -460,7 +460,7 @@ class FMDIndex:
     _L2: ptr[int]
     _cnt_table: ptr[u32]
     _sa_intv: int
-    _bntseq: bntseq
+    _bntseq: Optional[bntseq]
 
     def __pickle__(self, jar: Jar):
         pickle(self._seq_len, jar)
@@ -690,7 +690,7 @@ class FMDIndex:
 
         # retrieve Occ at k/OCC_INTERVAL
         p = self._occ_intv(k)
-        n = ptr[int](p)[c]
+        n = ptr[int](p.as_byte())[c]
         p += 8  # jump to the start of the first FMDIndex cell
 
         # calculate Occ up to the last k/32
@@ -715,7 +715,7 @@ class FMDIndex:
             if k >= self._primary: k -= 1
             if l >= self._primary: l -= 1
             p = self._occ_intv(k)
-            n = ptr[int](p)[c]
+            n = ptr[int](p.as_byte())[c]
             p += 8
             # calculate ok
             j = k >> 5 << 5
@@ -860,9 +860,9 @@ class FMDIndex:
               x: int = 0,
               min_intv: int = 1,
               min_seed: int = 1,
-              mems: list[SMEM] = None,
-              prev: list[SMEM] = None,
-              curr: list[SMEM] = None):
+              mems: optional[list[SMEM]] = None,
+              prev: optional[list[SMEM]] = None,
+              curr: optional[list[SMEM]] = None):
         return smems(self, q, x, min_intv, min_seed, mems, prev, curr)
 
     def update(self, intv: FMInterval, c: seq):
@@ -949,7 +949,7 @@ class FMDIndex:
         if rid >= 0 and name:
             raise ValueError("cannot specify both 'rid' and 'name' in call to sequence()")
 
-        ann: bntann = None
+        ann = None
         if rid >= 0:
             ann = self._bntseq._anns[rid]
         else:
@@ -987,7 +987,7 @@ class FMIndex:
     _L2: ptr[int]
     _cnt_table: ptr[u32]
     _FMD: bool
-    _bntseq: bntseq
+    _bntseq: Optional[bntseq]
 
     def __pickle__(self, jar: Jar):
         if not self._bntseq:
@@ -1281,9 +1281,9 @@ class FMIndex:
               x: int = 0,
               min_intv: int = 1,
               min_seed: int = 1,
-              mems: list[SMEM] = None,
-              prev: list[SMEM] = None,
-              curr: list[SMEM] = None):
+              mems: optional[list[SMEM]] = None,
+              prev: optional[list[SMEM]] = None,
+              curr: optional[list[SMEM]] = None):
         return smems(self, q, x, min_intv, min_seed, mems, prev, curr)
 
     def update(self, intv: FMInterval, c: seq):
@@ -1421,7 +1421,7 @@ class FMIndex:
         if rid >= 0 and name:
             raise ValueError("cannot specify both 'rid' and 'name' in call to sequence()")
 
-        ann: bntann = None
+        ann = None
         if rid >= 0:
             ann = self._bntseq._anns[rid]
         else:
