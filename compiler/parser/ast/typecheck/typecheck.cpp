@@ -1579,7 +1579,7 @@ vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &gene
       error("only int generic types are allowed / {}", g.type->toString());
     auto tp = ctx->addUnbound(getSrcInfo(), level, true, bool(g.type));
     genericTypes.push_back(
-        {g.name, tp->generalize(level), ctx->cache->unboundCount - 1});
+        {g.name, tp->generalize(level), ctx->cache->unboundCount - 1, clone(g.deflt)});
     LOG7("[generic] {} -> {} {}", g.name, tp->toString(0), bool(g.type));
     ctx->add(TypecheckItem::Type, g.name, tp, false, true, bool(g.type));
   }
@@ -1773,11 +1773,15 @@ StmtPtr TypecheckVisitor::realizeBlock(const StmtPtr &stmt, bool keepLast) {
     if (ctx->activeUnbounds.empty() || !newUnbounds) {
       break;
     } else {
+
       if (newUnbounds >= prevSize) {
         TypePtr fu = nullptr;
         int count = 0;
         for (auto &ub : ctx->activeUnbounds)
           if (ub->getLink()->id >= minUnbound) {
+            // Attempt to use default generics here
+            // TODO: this is awfully inefficient way to do it
+            // if (ctx->...)
             if (!fu)
               fu = ub;
             LOG7("[realizeBlock] dangling {} @ {}", ub->toString(), ub->getSrcInfo());

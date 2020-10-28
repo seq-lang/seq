@@ -171,16 +171,20 @@ int LinkType::unify(TypePtr typ, Unification &us) {
         return t->type->unify(shared_from_this(), us);
       else if (t->kind == Generic)
         return -1;
-      else if (isStatic != t->isStatic) // t->kind == Unbound
+      else if (isStatic != t->isStatic)
         return -1;
       else if (id == t->id)
         return 1;
+      else if (id < t->id) // always merge later type into the earlier
+        return t->unify(shared_from_this(), us);
     }
     if (!occurs(typ, us)) {
       assert(!type);
       LOG9("[unify] {} <- {}", id, typ->toString());
       us.linked.push_back(static_pointer_cast<LinkType>(shared_from_this()));
       kind = Link;
+      assert(!typ->getLink() || typ->getLink()->kind != Unbound ||
+             typ->getLink()->id <= id);
       type = typ->follow();
       return 0;
     } else {

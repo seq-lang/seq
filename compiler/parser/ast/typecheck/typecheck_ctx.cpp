@@ -116,8 +116,8 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
       if (activeUnbounds.find(i.second) == activeUnbounds.end()) {
         LOG9("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
              i.second->toString(0), type->toString(), srcInfo, activate);
-        if (i.second->toString() == "?4219.2")
-          assert(1);
+        // if (i.second->toString() == "?4219.2")
+        // assert(1);
         if (activate)
           activeUnbounds.insert(i.second);
       }
