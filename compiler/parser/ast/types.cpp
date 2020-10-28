@@ -300,6 +300,12 @@ int ClassType::unify(TypePtr typ, Unification &us) {
     if (t->name == ".int" && name == ".Int")
       return explicits[0].type->unify(make_shared<StaticType>(64), us);
 
+    if (us.isMatch) {
+      if ((t->name == ".Kmer" && name == ".seq") ||
+          (name == ".Kmer" && t->name == ".seq"))
+        return 0;
+    }
+
     if (args.size() != t->args.size())
       return -1;
     int s1 = 0, s;

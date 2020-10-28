@@ -1,17 +1,22 @@
 from bio.seq import seq
 
 type Kmer[K: int]:
-    x: UInt[2*K] = UInt[2*K](0)
+    x: UInt[2*K]
 
-    def __new__(s: seq, b: bool) -> Kmer[K]:
-        L = len(s)
+    def __new__() -> Kmer[K]:
+        return Kmer[K](0)
+
+    def __new__(k: Kmer[K]) -> Kmer[K]:
+        return k
+
+    def __new__(p: ptr[byte], L: int, b: bool) -> Kmer[K]:
         if L != K:
             raise ValueError("sequence length does not match k-mer type's")
         two = UInt[2*K](2)
         n = UInt[2*K](0)
         i = 0
         while i < L:
-            c = seq(s.ptr + i, 1).__int__()
+            c = seq(p + i, 1).__int__()
             if c > 3:
                 raise ValueError("sequence contains ambiguous bases")
             n <<= two
@@ -19,17 +24,20 @@ type Kmer[K: int]:
             i += 1
         return Kmer[K](n.__revcomp__() if b else n)
 
-    def __new__(s: seq):
-        return Kmer[K](s, s.len < 0)
+    def __new__(s: seq) -> Kmer[K]:
+        return Kmer[K](s.ptr, len(s), s.len < 0)
 
-    def __new__(n: int):
+    def __new__(s: seq, rc: bool) -> Kmer[K]:
+        return Kmer[K](s.ptr, len(s), rc)
+
+    def __new__(s: seq) -> Kmer[K]:
+        return Kmer[K](s.ptr, len(s), s.len < 0)
+
+    def __new__(s: str) -> Kmer[K]:
+        return Kmer[K](s.ptr, s.len, False)
+
+    def __new__(n: int) -> Kmer[K]:
         return Kmer[K](UInt[2*K](n))
-
-    def __new__(kmer: Kmer[K]):
-        return kmer
-
-    def __new__() -> Kmer[K]:
-        return Kmer[K](0)
 
     def __int__(self):
         return int(self.x)

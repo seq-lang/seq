@@ -594,11 +594,14 @@ Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
     ++i;
   }
 
-  if (k == 0) {
-    assert(type->getName() == "seq");
+  if (type->getName() == ".seq" || type->getName() == "seq") {
     return codegenSeqMatchForSeq(patterns, base, type, val, block);
   } else {
-    types::KMer *kmerType = types::KMer::get(k);
+    auto t = dynamic_cast<types::RecordType *>(type);
+    seqassert(t && t->getTypes().size() == 1, "got {}", type->getName());
+    auto u = dynamic_cast<types::IntNType *>(t->getTypes()[0]);
+    assert(u && u->getLen() % 2 == 0);
+    types::KMer *kmerType = types::KMer::get(u->getLen() / 2);
     IRBuilder<> builder(block);
     val = builder.CreateExtractValue(val, 0); // kmer_type = { int_encoding }
     return codegenSeqMatchForKmer(patterns, base, kmerType, val, block);

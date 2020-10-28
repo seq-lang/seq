@@ -35,7 +35,9 @@ typedef std::shared_ptr<LinkType> LinkTypePtr;
 struct Unification {
   std::vector<LinkTypePtr> linked;
   std::vector<std::pair<LinkTypePtr, int>> leveled;
+  bool isMatch;
   void undo();
+  Unification() : isMatch(false) {}
 };
 
 std::string v2b(const std::vector<char> &c);

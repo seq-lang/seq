@@ -206,7 +206,7 @@ void TypecheckVisitor::visit(const BinaryExpr *expr) {
         forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
   } else if (expr->op == "&&" || expr->op == "||") {
     resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
-    resultExpr->setType(ctx->findInternal(".bool"));
+    resultExpr->setType(forceUnify(expr, ctx->findInternal(".bool")));
   } else if (expr->op == "is") {
     if (CAST(expr->rexpr, NoneExpr)) {
       if (le->getType()->getClass()->name != ".Optional") {
@@ -1062,10 +1062,17 @@ void TypecheckVisitor::visit(const MatchStmt *stmt) {
   auto matchTypeClass = matchType->getClass();
 
   auto unifyType = [&](TypePtr t) {
-    auto tc = t->getClass();
-    if (tc && tc->name == ".seq" && matchTypeClass && matchTypeClass->name == ".Kmer")
-      return;
-    forceUnify(t, matchType);
+    // auto tc = t->getClass();
+    // if (tc && tc->name == ".seq" && matchTypeClass && matchTypeClass->name ==
+    // ".Kmer")
+    //   return;
+    assert(t && matchType);
+    types::Unification us;
+    us.isMatch = true;
+    if (t->unify(matchType, us) < 0) {
+      us.undo();
+      error("cannot unify {} and {}", t->toString(), matchType->toString());
+    }
   };
 
   vector<PatternPtr> patterns;

@@ -244,7 +244,7 @@ void TransformVisitor::visit(const FStringExpr *expr) {
 void TransformVisitor::visit(const KmerExpr *expr) {
   resultExpr = transform(
       N<CallExpr>(N<IndexExpr>(N<IdExpr>(".Kmer"), N<IntExpr>(expr->value.size())),
-                  N<SeqExpr>(expr->value)));
+                  N<StringExpr>(expr->value)));
 }
 
 void TransformVisitor::visit(const SeqExpr *expr) {

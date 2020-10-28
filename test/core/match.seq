@@ -255,7 +255,7 @@ def test_tuple_match():
     match t:
         case (0, 0):
             assert False
-        case (a, b) if 40 < a < b < 100:
+        case (a, bb) if 40 < a < bb < 100:
             b = True
         case _:
             assert False
@@ -265,7 +265,7 @@ def test_tuple_match():
     match t:
         case (0, 0):
             assert False
-        case (a, b) if a == b:
+        case (a, bb) if a == bb:
             assert False
         case _:
             b = True
@@ -275,7 +275,7 @@ def test_tuple_match():
     match r:
         case (0, 0):
             assert False
-        case (a, b) if a == b:
+        case (a, bb) if a == bb:
             b = True
         case _:
             assert False
@@ -541,11 +541,11 @@ def test_list_match():
     match v:
         case []:
             assert False
-        case [2, ..., a, b] if (a,b) == (4,5):
+        case [2, ..., a, bb] if (a,bb) == (4,5):
             assert False
-        case [1, ..., a, b] if (a,b) == (4,5):
+        case [1, ..., a, bb] if (a,bb) == (4,5):
             b = True
-        case [3, ..., a, b] if (a,b) == (4,5):
+        case [3, ..., a, bb] if (a,bb) == (4,5):
             assert False
         case _:
             assert False
@@ -555,11 +555,11 @@ def test_list_match():
     match v:
         case []:
             assert False
-        case [2, ..., a, _, b] if (a,b) == (3,5):
+        case [2, ..., a, _, bb] if (a,bb) == (3,5):
             assert False
-        case [1, ..., a, _, b] if (a,b) == (3,5):
+        case [1, ..., a, _, bb] if (a,bb) == (3,5):
             b = True
-        case [3, ..., a, _, b] if (a,b) == (3,5):
+        case [3, ..., a, _, bb] if (a,bb) == (3,5):
             assert False
         case _:
             assert False

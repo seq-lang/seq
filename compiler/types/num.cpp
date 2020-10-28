@@ -1753,6 +1753,8 @@ size_t types::IntNType::size(Module *module) const {
   return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
+unsigned types::IntNType::getLen() const { return len; }
+
 size_t types::FloatType::size(Module *module) const { return sizeof(double); }
 
 size_t types::BoolType::size(Module *module) const { return sizeof(bool); }

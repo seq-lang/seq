@@ -224,7 +224,7 @@ INSTANTIATE_TEST_SUITE_P(
         "core/range.seq",
         "core/bltin.seq",
         "core/arguments.seq",
-        // F: "core/match.seq", // needs list & seq fixes
+        "core/match.seq",
         "core/kmers.seq",
         "core/formats.seq",
         "core/proteins.seq",
@@ -239,7 +239,6 @@ INSTANTIATE_TEST_SUITE_P(
       testing::Values(0)
     ),
     getTestNameFromParam);
-// clang-format on
 
 // INSTANTIATE_TEST_SUITE_P(
 //     PipelineTests, SeqTest,
@@ -254,13 +253,24 @@ INSTANTIATE_TEST_SUITE_P(
 // INSTANTIATE_TEST_SUITE_P(
 //     StdlibTests, SeqTest,
 //     testing::Combine(
-//         testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
-//                         "stdlib/itertools_test.seq",
-//                         "stdlib/bisect_test.seq", "stdlib/sort_test.seq",
-//                         "stdlib/random_test.seq", "stdlib/heapq_test.seq",
-//                         "stdlib/statistics_test.seq"),
-//         testing::Values(true, false)),
+//       testing::Values(
+//         "stdlib/str_test.seq",
+//         "stdlib/math_test.seq",
+//         "stdlib/itertools_test.seq",
+//         "stdlib/bisect_test.seq",
+//         "stdlib/sort_test.seq",
+//         "stdlib/random_test.seq",
+//         "stdlib/heapq_test.seq",
+//         "stdlib/statistics_test.seq",
+//         "python/pybridge.seq"
+//       ),
+//       testing::Values(true),
+//       testing::Values(""),
+//       testing::Values(""),
+//       testing::Values(0)
+//     ),
 //     getTestNameFromParam);
+// clang-format on
 
 // INSTANTIATE_TEST_SUITE_P(
 //     PythonTests, SeqTest,

@@ -49,6 +49,7 @@ public:
   llvm::Type *getLLVMType(llvm::LLVMContext &context) const override;
   size_t size(llvm::Module *module) const override;
   static IntNType *get(unsigned len = 32, bool sign = true);
+  unsigned getLen() const;
 };
 
 class FloatType : public Type {
