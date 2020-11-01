@@ -158,7 +158,7 @@ Full code listing
 .. code:: seq
 
     # SeqMap
-    # Seq tutorial -- Section 1
+    # Seq workshop -- Section 1
     # Reads and prints a FASTQ file.
     # Usage: seqc seqmap.seq <FASTQ path>
     from sys import argv
@@ -238,7 +238,7 @@ Full code listing
 .. code:: seq
 
     # SeqMap
-    # Seq tutorial -- Section 2
+    # Seq workshop -- Section 2
     # Reads and constructs a hash table index from an input
     # FASTA file.
     # Usage: seqc seqmap.seq <FASTA path> <FASTQ path>
@@ -339,7 +339,7 @@ Full code listing
 .. code:: seq
 
     # SeqMap
-    # Seq tutorial -- Section 3
+    # Seq workshop -- Section 3
     # Reads index constructed in Section 2 and looks up k-mers from
     # input reads to find candidate mappings.
     # Usage: seqc seqmap.seq <FASTA path> <FASTQ path>
@@ -462,7 +462,7 @@ Full code listing
 .. code:: seq
 
     # SeqMap
-    # Seq tutorial -- Section 4
+    # Seq workshop -- Section 4
     # Reads index constructed in Section 2 and looks up k-mers from
     # input reads to find candidate mappings, then performs alignment.
     # Usage: seqc seqmap.seq <FASTA path> <FASTQ path>
@@ -518,25 +518,27 @@ We can write this as a pipeline in Seq as follows:
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
                 candidates.increment(found - pos)
-        return record, candidates
-
-    def report_mappings(t):
-        record, candidates = t
         for pos,count in candidates.items():
             if count > 1:
-                query = record.read
-                target = reference[pos:pos + len(query)]
-                alignment = query.align(target)
-                print record.name, pos + 1, alignment.score, alignment.cigar
+                yield record, pos
 
-    FASTQ(argv[2]) |> iter |> find_candidates |> report_mappings
+    def align_and_output(t):
+        record, pos = t
+        query = record.read
+        target = reference[pos:pos + len(query)]
+        alignment = query.align(target)
+        print record.name, pos + 1, alignment.score, alignment.cigar
+
+Notice that ``find_candidates`` *yields* candidate alignments to ``align_and_output``,
+which then performs alignment and prints the results. In Seq, all values generated
+from one stage of a pipeline are passed to the next.
 
 Parallelism can be achieved using the parallel pipe operator, ``||>``, which
 tells the compiler that all subsequent stages can be executed in parallel:
 
 .. code:: seq
 
-    FASTQ(argv[2]) |> iter ||> find_candidates |> report_mappings
+    FASTQ(argv[2]) |> iter ||> find_candidates |> align_and_output
 
 Since the full program also involves loading the index, let's time the main
 pipeline using the ``timing`` module:
@@ -545,7 +547,7 @@ pipeline using the ``timing`` module:
 
     import timing
     with timing('mapping'):
-        FASTQ(argv[2]) |> iter ||> find_candidates |> report_mappings
+        FASTQ(argv[2]) |> iter ||> find_candidates |> align_and_output
 
 We can try this for different numbers of threads:
 
@@ -565,87 +567,7 @@ Full code listing
 .. code:: seq
 
     # SeqMap
-    # Seq tutorial -- Section 5
-    # Reads index constructed in Section 2 and looks up k-mers from
-    # input reads to find candidate mappings, then performs alignment.
-    # Implemented with Seq parallel pipelines.
-    # Usage: seqc seqmap.seq <FASTA path> <FASTQ path>
-    from sys import argv
-    from time import timing
-    import pickle
-    import gzip
-
-    type K = Kmer[32]
-    index: dict[K,int] = None
-
-    reference = s''
-    for record in FASTA(argv[1]):
-        reference = record.seq
-
-    with gzip.open(argv[1] + '.index', 'rb') as jar:
-        index = pickle.load[dict[K,int]](jar)
-
-    def find_candidates(record):
-        candidates = dict[int,int]()
-        for pos,kmer in record.read.kmers_with_pos[K](step=1):
-            found = index.get(min(kmer, ~kmer), -1)
-            if found > 0:
-                candidates.increment(found - pos)
-        return record, candidates
-
-    def report_mappings(t):
-        record, candidates = t
-        for pos,count in candidates.items():
-            if count > 1:
-                query = record.read
-                target = reference[pos:pos + len(query)]
-                alignment = query.align(target)
-                print record.name, pos + 1, alignment.score, alignment.cigar
-
-    with timing('mapping'):
-        FASTQ(argv[2]) |> iter |> find_candidates |> report_mappings
-
-
-Section 6: Domain-specific optimizations
-----------------------------------------
-
-Seq already performs numerous domain-specific optimizations under the hood.
-However, we can give the compiler a hint in this case to perform one more:
-*inter-sequence alignment*. This optimization entails batching sequences
-prior to alignment, then aligning multiple pairs using a very fast SIMD
-optimized alignment kernel.
-
-In Seq, we just need one additional function annotation to tell the compiler
-to perform this optimization:
-
-.. code:: seq
-
-    @inter_align
-    def report_mappings(t):
-        ...
-
-Let's run the program with and without this optimization:
-
-.. code:: seq
-
-    # without @inter_align
-    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
-    # mapping took 43.4457s
-
-    # with @inter_align
-    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
-    # mapping took 32.3241s
-
-(The timings with inter-sequence alignment will depend on the SIMD instruction
-sets your CPU supports; these numbers are from using AVX2.)
-
-Full code listing
-~~~~~~~~~~~~~~~~~
-
-.. code:: seq
-
-    # SeqMap
-    # Seq tutorial -- Section 6
+    # Seq workshop -- Section 6
     # Reads index constructed in Section 2 and looks up k-mers from
     # input reads to find candidate mappings, then performs alignment.
     # Implemented with Seq parallel pipelines using inter-seq. alignment.
@@ -671,20 +593,97 @@ Full code listing
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
                 candidates.increment(found - pos)
-        return record, candidates
-
-    @inter_align
-    def report_mappings(t):
-        record, candidates = t
         for pos,count in candidates.items():
             if count > 1:
-                query = record.read
-                target = reference[pos:pos + len(query)]
-                alignment = query.align(target)
-                print record.name, pos + 1, alignment.score, alignment.cigar
+                yield record, pos
 
-    def process_block(block):
-        block |> find_candidates |> report_mappings
+    def align_and_output(t):
+        record, pos = t
+        query = record.read
+        target = reference[pos:pos + len(query)]
+        alignment = query.align(target)
+        print record.name, pos + 1, alignment.score, alignment.cigar
 
     with timing('mapping'):
-        FASTQ(argv[2]) |> iter |> find_candidates |> report_mappings
+        FASTQ(argv[2]) |> iter |> find_candidates |> align_and_output
+
+
+Section 6: Domain-specific optimizations
+----------------------------------------
+
+Seq already performs numerous domain-specific optimizations under the hood.
+However, we can give the compiler a hint in this case to perform one more:
+*inter-sequence alignment*. This optimization entails batching sequences
+prior to alignment, then aligning multiple pairs using a very fast SIMD
+optimized alignment kernel.
+
+In Seq, we just need one additional function annotation to tell the compiler
+to perform this optimization:
+
+.. code:: seq
+
+    @inter_align
+    def align_and_output(t):
+        ...
+
+Let's run the program with and without this optimization:
+
+.. code:: seq
+
+    # without @inter_align
+    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
+    # mapping took 43.4457s
+
+    # with @inter_align
+    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
+    # mapping took 32.3241s
+
+(The timings with inter-sequence alignment will depend on the SIMD instruction
+sets your CPU supports; these numbers are from using AVX2.)
+
+Full code listing
+~~~~~~~~~~~~~~~~~
+
+.. code:: seq
+
+    # SeqMap
+    # Seq workshop -- Section 6
+    # Reads index constructed in Section 2 and looks up k-mers from
+    # input reads to find candidate mappings, then performs alignment.
+    # Implemented with Seq parallel pipelines using inter-seq. alignment.
+    # Usage: seqc seqmap.seq <FASTA path> <FASTQ path>
+    from sys import argv
+    from time import timing
+    import pickle
+    import gzip
+
+    type K = Kmer[32]
+    index: dict[K,int] = None
+
+    reference = s''
+    for record in FASTA(argv[1]):
+        reference = record.seq
+
+    with gzip.open(argv[1] + '.index', 'rb') as jar:
+        index = pickle.load[dict[K,int]](jar)
+
+    def find_candidates(record):
+        candidates = dict[int,int]()
+        for pos,kmer in record.read.kmers_with_pos[K](step=1):
+            found = index.get(min(kmer, ~kmer), -1)
+            if found > 0:
+                candidates.increment(found - pos)
+        for pos,count in candidates.items():
+            if count > 1:
+                yield record, pos
+
+    @inter_align
+    def align_and_output(t):
+        record, pos = t
+        query = record.read
+        target = reference[pos:pos + len(query)]
+        alignment = query.align(target)
+        print record.name, pos + 1, alignment.score, alignment.cigar
+
+    with timing('mapping'):
+        FASTQ(argv[2]) |> iter |> find_candidates |> align_and_output
