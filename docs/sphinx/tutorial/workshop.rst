@@ -497,8 +497,8 @@ Full code listing
         candidates.clear()
 
 
-Section 5: Using pipelines and parallelism
-------------------------------------------
+Section 5: Pipelines
+--------------------
 
 Pipelines are a very convenient Seq construct for expressing a variety
 of algorithms and applications. In fact, *SeqMap* can be thought of as
