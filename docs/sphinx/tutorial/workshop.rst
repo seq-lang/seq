@@ -8,7 +8,15 @@ showcase some of Seq's domain-specific features and optimizations.
 Getting Started
 ---------------
 
-Let's create a new directory to house our Seq code and test data:
+If you don't have Seq installed already, you can install it with one bash command:
+
+.. code:: bash
+
+    wget -O - https://git.io/JU2XK | bash
+
+Be sure to restart the shell for ``seqc`` to be added to your ``PATH`` (or add it manually).
+
+Now, let's create a new directory to house our Seq code and test data:
 
 .. code:: bash
 
@@ -399,7 +407,8 @@ where ``a`` is the match score, ``b`` is the mismatch cost, ``ambig`` is the
 ambiguous base (``N``) match score, ``gapo`` is the gap open cost and ``gape``
 the gap extension cost (i.e. a gap of length ``k`` costs ``gapo + (k * gape)``).
 There are many more parameters as well, controlling factors like alignment bandwidth,
-Z-drop, global/extension alignment and more; check the standard library reference
+Z-drop, global/extension alignment and more; check the
+`standard library reference <https://docs.seq-lang.org/stdlib/bio/align.html#bio.align.seq.align>`_
 for further details.
 
 For now, we'll use a simple ``query.align(target)``:
