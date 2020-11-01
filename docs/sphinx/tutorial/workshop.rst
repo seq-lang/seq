@@ -12,7 +12,7 @@ If you don't have Seq installed already, you can install it with one bash comman
 
 .. code:: bash
 
-    bash -c "$(wget -O - https://git.io/JU2XK)"
+    bash -c "$(wget -O - https://seq-lang.org/install.sh)"
 
 Be sure to restart the shell for ``seqc`` to be added to your ``PATH`` (or add it manually).
 

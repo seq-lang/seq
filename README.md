@@ -98,7 +98,7 @@ For a concrete example of `genomeindex`, check out our [re-implementation of SNA
 Pre-built binaries for Linux and macOS on x86_64 are available alongside [each release](https://github.com/seq-lang/seq/releases). We also have a script for downloading and installing pre-built versions:
 
 ```bash
-bash -c "$(wget -O - https://git.io/JU2XK)"
+bash -c "$(wget -O - https://seq-lang.org/install.sh)"
 ```
 
 ### Build from source
