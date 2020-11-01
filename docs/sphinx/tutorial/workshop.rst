@@ -531,7 +531,11 @@ We can write this as a pipeline in Seq as follows:
 
 Notice that ``find_candidates`` *yields* candidate alignments to ``align_and_output``,
 which then performs alignment and prints the results. In Seq, all values generated
-from one stage of a pipeline are passed to the next.
+from one stage of a pipeline are passed to the next. The Seq compiler performs many
+domain-specific optimizations on pipelines, one of which we focus on in the next section.
+
+(Optional) Parallelism
+~~~~~~~~~~~~~~~~~~~~~~
 
 Parallelism can be achieved using the parallel pipe operator, ``||>``, which
 tells the compiler that all subsequent stages can be executed in parallel:
@@ -555,11 +559,35 @@ We can try this for different numbers of threads:
 
     export OMP_NUM_THREADS=1
     seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
-    # mapping took 45.5079s
+    # mapping took 48.2858s
 
     export OMP_NUM_THREADS=2
     seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 35.886s
+
+Often, batching reads into larger blocks and processing those blocks in parallel can
+yield better performance, especially if each read is quick to process. This is also
+very easy to do in Seq:
+
+.. code:: seq
+
+    def process_block(block):
+        block |> iter |> find_candidates |> align_and_output
+
+    with timing('mapping'):
+        FASTQ(argv[2]) |> blocks(size=2000) ||> process_block
+
+And now:
+
+.. code:: bash
+
+    export OMP_NUM_THREADS=1
+    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
+    # mapping took 48.2858s
+
+    export OMP_NUM_THREADS=2
+    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
+    # mapping took 25.2648s
 
 Full code listing
 ~~~~~~~~~~~~~~~~~
