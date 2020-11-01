@@ -203,6 +203,7 @@ extend seq:
               splice_flank: bool = False):
         '''
         Performs Smith-Waterman alignment against another sequence.
+
           - `a`: match score
           - `b`: mismatch score
           - `ambig`: ambiguous (i.e. N) match score
@@ -339,6 +340,7 @@ extend pseq:
               rev_cigar: bool = False):
         '''
         Performs Smith-Waterman alignment against another sequence.
+
           - `mat`: score matrix
           - `gapo`: gap open cost
           - `gape`: gap extension cost
