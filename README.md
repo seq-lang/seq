@@ -98,12 +98,8 @@ For a concrete example of `genomeindex`, check out our [re-implementation of SNA
 Pre-built binaries for Linux and macOS on x86_64 are available alongside [each release](https://github.com/seq-lang/seq/releases). We also have a script for downloading and installing pre-built versions:
 
 ```bash
-wget -O - https://raw.githubusercontent.com/seq-lang/seq/master/install.sh | bash
+bash -c "$(wget -O - https://git.io/JU2XK)"
 ```
-
-This will install Seq in a new ``.seq`` directory within your home directory. Be sure to update ``~/.bash_profile`` as the script indicates afterwards!
-
-> Seq binaries require a [libomp](https://openmp.llvm.org/) to be present on your machine. `brew install libomp` or `apt install libomp5` should do the trick.
 
 ### Build from source
 

@@ -8,7 +8,7 @@ Simple!
 
 .. code:: bash
 
-   wget -O - https://git.io/JU2XK | bash
+   bash -c "$(wget -O - https://git.io/JU2XK)"
 
 Some features require `htslib <http://www.htslib.org/>`__ 1.10+ and
 Python 3.5+. If you want to use Python interop, you also need to point

@@ -11,7 +11,7 @@ Pre-built binaries for Linux and macOS on x86_64 are available alongside `each r
 
 .. code-block:: bash
 
-    wget -O - https://raw.githubusercontent.com/seq-lang/seq/master/install.sh | bash
+    bash -c "$(wget -O - https://git.io/JU2XK)"
 
 This will install Seq in a new ``.seq`` directory within your home directory. Be sure to update ``~/.bash_profile`` as the script indicates afterwards!
 
