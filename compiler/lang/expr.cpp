@@ -1399,7 +1399,19 @@ Value *GetElemExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   if (func && func->hasAttribute("property")) {
     Module *module = block->getModule();
     IRBuilder<> builder(block);
-    return builder.CreateCall(func->getFunc(module), self);
+    Function *f = func->getFunc(module);
+
+    if (getTryCatch()) {
+      LLVMContext &context = block->getContext();
+      Function *parent = block->getParent();
+      BasicBlock *unwind = getTryCatch()->getExceptionBlock();
+      BasicBlock *normal = BasicBlock::Create(context, "normal", parent);
+      Value *result = builder.CreateInvoke(f, normal, unwind, self);
+      block = normal;
+      return result;
+    } else {
+      return builder.CreateCall(f, self);
+    }
   }
 
   if (!types.empty()) {

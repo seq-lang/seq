@@ -29,13 +29,13 @@ Assuming that Seq was properly installed, you can use it as follows:
    seqc -o file.bc file.seq  # Compile file.seq to LLVM bytecode file file.bc
 
 It is highly recommended to use ``-d`` parameter for development
-purposes: the compilation is faster, stack traces are actually useful,
+purposes: compilation is faster, stack traces are actually useful,
 and it has some extra checks (e.g. null checks) that can save your life.
 
 Creating a stand-alone executable
 ---------------------------------
 
-Right now you have to do it manually (sorry!):
+Currently, stand-alone executables must be created manually:
 
 .. code:: bash
 
@@ -43,12 +43,12 @@ Right now you have to do it manually (sorry!):
    llc prog.bc -filetype=obj -o prog.o
    clang -L/path/to/libseqrt/ -lseqrt -lomp -ldl -pthread -o prog prog.o
 
-You might need to install LLVM to use ``llc``. Seq uses LLVM 6, so older
-versions of ``llc`` might fail. ``/path/to/libseqrt/`` would typically
+You might need to install LLVM to use ``llc``. Seq uses LLVM 6, so we
+advise against using older versions. ``/path/to/libseqrt/`` would typically
 be ``$HOME/.seq/lib/seq``.
 
 If you want to be able to easily distribute your executable, pass
 ``-Wl,-rpath,\$ORIGIN`` to ``clang`` and ship the ``libseqrt.so`` and
 ``libomp.so`` in the same directory with your executable. This is a
-Linux-specific argument; on macOS you might want to pass
+Linux-specific argument; on macOS you might want to use
 ``-Wl,-rpath,"@loader_path"`` instead.
