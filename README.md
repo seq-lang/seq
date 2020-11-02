@@ -29,13 +29,13 @@
 
 Seq is a programming language for computational genomics and bioinformatics. With a Python-compatible syntax and a host of domain-specific features and optimizations, Seq makes writing high-performance genomics software as easy as writing Python code, and achieves performance comparable to (and in many cases better than) C/C++.
 
-**Think of Seq as a strongly-typed and statically-compiled Python: all the bells and whistles of Python, boosted with strong type system, without any performance overhead.**
+**Think of Seq as a strongly-typed and statically-compiled Python: all the bells and whistles of Python, boosted with a strong type system, without any performance overhead.**
 
 Seq is able to outperform Python code by up to 160x. Seq can further beat equivalent C/C++ code by up to 2x without any manual interventions, and also natively supports parallelism out of the box. Implementation details and benchmarks are discussed [in our paper](https://dl.acm.org/citation.cfm?id=3360551).
 
-Learn more by following the [tutorial](https://docs.seq-lang.org/tutorial.html) or from the [cookbook](https://docs.seq-lang.org/cookbook.html).
+Learn more by following the [tutorial](https://docs.seq-lang.org/tutorial) or from the [cookbook](https://docs.seq-lang.org/cookbook).
 
-## Example
+## Examples
 
 Seq is a Python-compatible language, and the vast majority of Python programs should work without any modifications:
 
@@ -53,43 +53,55 @@ n = 1009
 print n, 'is', 'a' if check_prime(n) else 'not a', 'prime'
 ```
 
-Here is an example that showcases Seq's bioinformatics features: a seeding application in Seq using a hypothetical genome index, like what is typically found in seed-and-extend alignment algorithms:
+Here is an example showcasing Seq's bioinformatics features:
+
+```python
+s = s'ACGTACGT'    # sequence literal
+print s[2:5]       # subsequence
+print ~s           # reverse complement
+kmer = Kmer[8](s)  # convert to k-mer
+type K2 = Kmer[2]  # type definition
+
+# iterate over length-3 subsequences
+# with step 2
+for sub in s.split(3, step=2):
+    print sub[-1]  # last base
+
+    # iterate over 2-mers with step 1
+    for kmer in sub.kmers[K2](step=1):
+        print ~kmer  # '~' also works on k-mers
+```
+
+Seq provides native sequence and k-mer types, e.g. a 8-mer is represented by `Kmer[8]` as above.
+
+Here is a more complex example that counts occurrences of subsequences from a FASTQ file (`argv[2]`) in sequences obtained from a FASTA file (`argv[1]`) using an FM-index:
 
 ```python
 from sys import argv
-from genomeindex import *
-type K = Kmer[20]
+from bio.fmindex import FMIndex
+fmi = FMIndex(argv[1])
+k, step, n = 20, 20, 0
 
-# index and process 20-mers
+def add(count: int):
+    global n
+    n += count
+
 @prefetch
-def process(kmer: K,
-            index: GenomeIndex[K]):
-    hits_fwd = index[kmer]
-    hits_rev = index[~kmer]
-    ...
+def search(s: seq, fmi: FMIndex):
+    intv = fmi.interval(s[-1])
+    s = s[:-1]  # trim last base
+    while s and intv:
+        # backwards-extend intv
+        intv = fmi[intv, s[-1]]
+        s = s[:-1]  # trim last
+    # return count of occurrences
+    return len(intv)
 
-# index over 20-mers
-index = GenomeIndex[K](argv[1])
-
-# stride for k-merization
-stride = 10
-
-# sequence-processing pipeline
-(FASTQ(argv[2])
-  |> seqs
-  |> kmers[K](stride)
-  |> process(index))
+FASTQ(argv[2]) |> seqs |> split(k, step) |> search(fmi) |> add
+print 'total:', n
 ```
 
-A few notable aspects of this code:
-
-- Seq provides native k-mer types, e.g. a 20-mer is represented by `Kmer[20]` as above.
-- k-mers can be reverse-complemented with `~`.
-- Seq provides easy iteration over common formats like FASTQ (`FASTQ` above).
-- Complex pipelines are easily expressible in Seq (via the `|>` syntax).
-- Seq can perform pipeline transformations to make genomic index lookups faster via `@prefetch`.
-
-For a concrete example of `genomeindex`, check out our [re-implementation of SNAP's index](test/snap).
+The `@prefetch` annotation tells the compiler to perform a coroutine-based pipeline transformation to make the FM-index queries faster, by overlapping the cache miss latency from one query with other useful work. In practice, the single `@prefetch` line can provide a 2x performance improvement.
 
 ## Install
 
