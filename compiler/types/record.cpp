@@ -25,7 +25,7 @@ bool types::RecordType::empty() const { return types.empty(); }
 std::vector<types::Type *> types::RecordType::getTypes() { return types; }
 
 std::string types::RecordType::getName() const {
-  if (named())
+  if (named() && !ast::startswith(name, "Tuple."))
     return name;
 
   std::string name = "Tuple[";

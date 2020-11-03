@@ -250,26 +250,27 @@ INSTANTIATE_TEST_SUITE_P(
 //                      testing::Values(true, false)),
 //     getTestNameFromParam);
 
-// INSTANTIATE_TEST_SUITE_P(
-//     StdlibTests, SeqTest,
-//     testing::Combine(
-//       testing::Values(
-//         "stdlib/str_test.seq",
-//         "stdlib/math_test.seq",
-//         "stdlib/itertools_test.seq",
-//         "stdlib/bisect_test.seq",
-//         "stdlib/sort_test.seq",
-//         "stdlib/random_test.seq",
-//         "stdlib/heapq_test.seq",
-//         "stdlib/statistics_test.seq",
-//         "python/pybridge.seq"
-//       ),
-//       testing::Values(true),
-//       testing::Values(""),
-//       testing::Values(""),
-//       testing::Values(0)
-//     ),
-//     getTestNameFromParam);
+INSTANTIATE_TEST_SUITE_P(
+    StdlibTests, SeqTest,
+    testing::Combine(
+      testing::Values(
+        "stdlib/str_test.seq",
+        "stdlib/math_test.seq",
+        "stdlib/itertools_test.seq",
+        "stdlib/bisect_test.seq",
+        // "stdlib/sort_test.seq", // .rnd?
+        // "stdlib/random_test.seq",  // Unbound?
+        // "stdlib/heapq_test.seq", // there is old optional lurking somewhere in stdlib
+        // "stdlib/statistics_test.seq" // Unbound again?
+        // "python/pybridge.seq",
+        "core/empty.seq"
+      ),
+      testing::Values(true),
+      testing::Values(""),
+      testing::Values(""),
+      testing::Values(0)
+    ),
+    getTestNameFromParam);
 // clang-format on
 
 // INSTANTIATE_TEST_SUITE_P(

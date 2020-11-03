@@ -597,7 +597,7 @@ class Random:
                 result[i] = population[j]
         return result
 
-    def choices(self: Random, population, weights: list[int], cum_weights: list[int], k: int):
+    def choices(self: Random, population, weights: Optional[list[int]], cum_weights: Optional[list[int]], k: int):
         """Return a k sized list of population elements chosen with replacement.
 
         If the relative weights or cumulative weights are not specified,
@@ -660,7 +660,7 @@ def randint(a: int, b: int):
 def choice(s):
     return _rnd.choice(s)
 
-def choices(population, weights: list[int] = None, cum_weights: list[int] = None, k: int = 1):
+def choices(population, weights: optional[list[int]] = None, cum_weights: optional[list[int]] = None, k: int = 1):
     return _rnd.choices(population, weights, cum_weights, k)
 
 def shuffle(s):

@@ -1331,9 +1331,9 @@ string TransformVisitor::generateFunctionStub(int len) {
     //                                         vector<Param>{}, move(p), nullptr,
     //                                         vector<string>{"internal"}));
 
-    StmtPtr stmt = make_unique<ClassStmt>(true, typeName, move(generics),
-                                          clone_nop(args), N<SuiteStmt>(move(fns)),
-                                          vector<string>{"internal", "trait"});
+    StmtPtr stmt =
+        make_unique<ClassStmt>(true, typeName, move(generics), clone_nop(args),
+                               N<SuiteStmt>(move(fns)), vector<string>{"internal"});
     stmt->setSrcInfo(ctx->getGeneratedPos());
     TransformVisitor(make_shared<TransformContext>("<generated>", ctx->cache))
         .transform(stmt);

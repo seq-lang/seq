@@ -186,7 +186,7 @@ def filterfalse(predicate, iterable):
         if not predicate(x):
             yield x
 
-def permutations[T](pool: generator[T], r: optional[int] = None) -> list[T]:
+def permutations[T](pool: generator[T], r: optional[int] = None) -> Generator[List[T]]:
     """
     permutations(iterable, r)
 
@@ -217,7 +217,7 @@ def permutations[T](pool: generator[T], r: optional[int] = None) -> list[T]:
         if b == -1:
             return
 
-def accumulate(iterable, func, initial):
+def accumulate[T,S](iterable: Generator[T], func: Function[S,S,T], initial: S):
     """
     accumulate(iterable, func, initial)
 

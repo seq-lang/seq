@@ -500,31 +500,49 @@ void TypecheckVisitor::visit(const StackAllocExpr *expr) {
   resultExpr->setType(forceUnify(expr, t));
 }
 
-ExprPtr TypecheckVisitor::visitDot(const ExprPtr &expr, const string &member,
-                                   vector<CallExpr::Arg> *args) {
-  auto lhs = transform(expr, true);
+ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *args) {
+  auto lhs = transform(expr->expr, true);
   TypePtr typ = nullptr;
   if (lhs->getType()->getUnbound()) {
     typ = ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
   } else if (auto c = lhs->getType()->getClass()) {
-    if (auto m = ctx->findMethod(c->name, member)) {
+    if (auto m = ctx->findMethod(c->name, expr->member)) {
       if (args) {
         vector<pair<string, TypePtr>> targs;
         if (!lhs->isType())
           targs.push_back({"", c});
         for (auto &a : *args)
           targs.push_back({a.name, a.value->getType()});
-        if (auto m = findBestCall(c, member, targs, true)) {
+        if (auto m = findBestCall(c, expr->member, targs, true)) {
           if (!lhs->isType())
             args->insert(args->begin(), {"", clone(lhs)});
           auto e = N<IdExpr>(m->name);
           e->setType(ctx->instantiate(getSrcInfo(), m, c));
           return e;
         } else {
-          error("cannot find method '{}' in {} with arguments {}", member,
+          error("cannot find method '{}' in {} with arguments {}", expr->member,
                 c->toString(), v2s(targs));
         }
       } else if (m->size() > 1) {
+        // need to check is this a callable that we can use to instantiate the type
+        if (expr->getType() && expr->getType()->getClass()) {
+          auto dc = expr->getType()->getClass();
+          if (startswith(dc->name, ".Function.")) {
+            // we can, well, unify this
+            vector<pair<string, TypePtr>> targs;
+            for (auto i = 1; i < dc->explicits.size(); i++)
+              targs.push_back({"", dc->explicits[i].type});
+            if (auto m = findBestCall(c, expr->member, targs, true)) {
+              auto e = N<IdExpr>(m->name);
+              e->setType(ctx->instantiate(getSrcInfo(), m, c));
+              forceUnify(e, dc);
+              return e;
+            } else {
+              error("cannot find method '{}' in {} with arguments {}", expr->member,
+                    c->toString(), v2s(targs));
+            }
+          }
+        }
         typ = ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel); // determine later
       } else if (lhs->isType()) {
         auto name = (*m)[0]->name;
@@ -548,18 +566,20 @@ ExprPtr TypecheckVisitor::visitDot(const ExprPtr &expr, const string &member,
           args.pop_back();
         return transform(N<CallExpr>(N<IdExpr>((*m)[0]->name), move(args)));
       }
-    } else if (auto mm = ctx->findMember(c->name, member)) {
+    } else if (auto mm = ctx->findMember(c->name, expr->member)) {
       typ = ctx->instantiate(getSrcInfo(), mm, c);
     } else if (c->name == ".Optional") {
-      return visitDot(transform(N<CallExpr>(N<IdExpr>(".unwrap"), clone(expr))), member,
-                      args);
+      auto d =
+          N<DotExpr>(transform(N<CallExpr>(N<IdExpr>(".unwrap"), clone(expr->expr))),
+                     expr->member);
+      return visitDot(d.get(), args);
     } else {
-      error("cannot find '{}' in {}", member, lhs->getType()->toString());
+      error("cannot find '{}' in {}", expr->member, lhs->getType()->toString());
     }
   } else {
-    error("cannot find '{}' in {}", member, lhs->getType()->toString());
+    error("cannot find '{}' in {}", expr->member, lhs->getType()->toString());
   }
-  auto t = N<DotExpr>(move(lhs), member);
+  auto t = N<DotExpr>(move(lhs), expr->member);
   t->setType(typ);
   return t;
 }
@@ -586,7 +606,7 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
   else if (auto i = CAST(expr->expr, InstantiateExpr))
     lhs = i->type.get();
   if (auto i = dynamic_cast<DotExpr *>(lhs)) {
-    e = visitDot(i->expr, i->member, &args);
+    e = visitDot(i, &args);
     if (auto i = CAST(expr->expr, IndexExpr))
       e = transform(N<IndexExpr>(move(e), clone(i->index)));
     else if (auto i = CAST(expr->expr, InstantiateExpr))
@@ -733,8 +753,8 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
     }
 
     // if (ast)
-    //   LOG("-- {} : force {} -> {}", ast->name, reorderedArgs[i].value->toString(),
-    //       typ->toString());
+    // LOG("-- {} : force {} -> {}", ast->name, reorderedArgs[i].value->toString(),
+    // typ->toString());
     forceUnify(reorderedArgs[i].value, typ);
   }
   for (auto &i : namedArgs)
@@ -814,7 +834,7 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
 }
 
 void TypecheckVisitor::visit(const DotExpr *expr) {
-  resultExpr = visitDot(expr->expr, expr->member);
+  resultExpr = visitDot(expr);
   forceUnify(expr, resultExpr->getType());
 }
 
@@ -1494,16 +1514,12 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
                                            const vector<pair<string, TypePtr>> &args,
                                            bool failOnMultiple, TypePtr retType) {
   auto m = ctx->findMethod(c->name, member);
-  if (!m) {
+  if (!m)
     return nullptr;
-  }
-
   if (m->size() == 1) // works
     return (*m)[0];
 
   // TODO: For now, overloaded functions are only possible in magic methods
-  // Another assomption is that magic methods of interest have no default
-  // arguments or reordered arguments...
   if (member.substr(0, 2) != "__" || member.substr(member.size() - 2) != "__")
     error("overloaded non-magic method {} in {}", member, c->toString());
 

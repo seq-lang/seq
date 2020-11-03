@@ -69,9 +69,7 @@ void types::FuncType::initOps() {
        },
        false},
 
-      {"__call__",
-       inTypes,
-       outType,
+      {"__call__", inTypes, outType,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateCall(self, args);
        },
