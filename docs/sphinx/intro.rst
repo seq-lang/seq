@@ -11,7 +11,7 @@ Pre-built binaries for Linux and macOS on x86_64 are available alongside `each r
 
 .. code-block:: bash
 
-    bash -c "$(wget -O - https://seq-lang.org/install.sh)"
+    /bin/bash -c "$(curl -fsSL https://seq-lang.org/install.sh)"
 
 This will install Seq in a new ``.seq`` directory within your home directory. Be sure to update ``~/.bash_profile`` as the script indicates afterwards!
 

@@ -12,7 +12,7 @@ If you don't have Seq installed already, you can install it with one bash comman
 
 .. code:: bash
 
-    bash -c "$(wget -O - https://seq-lang.org/install.sh)"
+    /bin/bash -c "$(curl -fsSL https://seq-lang.org/install.sh)"
 
 Be sure to restart the shell for ``seqc`` to be added to your ``PATH`` (or add it manually).
 
@@ -22,9 +22,6 @@ Now, let's create a new directory to house our Seq code and test data:
 
     mkdir seqmap
     cd seqmap
-
-Now create a file ``seqmap.seq`` in this directory and open it with your
-favorite editor.
 
 We'll test *SeqMap* on the following data:
 
@@ -137,7 +134,7 @@ Now we can run this Seq program:
 
 .. code:: bash
 
-    seqc seqmap.seq data/reads.fq > out.txt
+    seqc section1.seq data/reads.fq > out.txt
 
 and view the results:
 
@@ -163,12 +160,14 @@ Pretty straightforward! FASTA files can be read in a very similar way.
 Full code listing
 ~~~~~~~~~~~~~~~~~
 
+:download:`click to download <../../workshop/section1.seq>`
+
 .. code:: seq
 
     # SeqMap
     # Seq workshop -- Section 1
     # Reads and prints a FASTQ file.
-    # Usage: seqc seqmap.seq <FASTQ path>
+    # Usage: seqc section1.seq <FASTQ path>
     from sys import argv
     for record in FASTQ(argv[1]):
         print record.name, record.seq
@@ -233,7 +232,7 @@ Run the program:
 
 .. code:: bash
 
-    seqc seqmap.seq data/chr22.fa
+    seqc section2.seq data/chr22.fa
 
 Now we should see a new file ``data/chr22.fa.index`` which stores our
 serialized index.
@@ -243,13 +242,15 @@ The nice thing is we should only have to build our index once!
 Full code listing
 ~~~~~~~~~~~~~~~~~
 
+:download:`click to download <../../workshop/section2.seq>`
+
 .. code:: seq
 
     # SeqMap
     # Seq workshop -- Section 2
     # Reads and constructs a hash table index from an input
     # FASTA file.
-    # Usage: seqc seqmap.seq <FASTA path> <FASTQ path>
+    # Usage: seqc section2.seq <FASTA path>
     from sys import argv
     import pickle
     import gzip
@@ -317,7 +318,7 @@ Run the program:
 
 .. code:: bash
 
-    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
+    seqc section3.seq data/chr22.fa data/reads.fq > out.txt
 
 Let's take a look at the output:
 
@@ -344,13 +345,15 @@ name (the first integer after the ``_``); not bad!
 Full code listing
 ~~~~~~~~~~~~~~~~~
 
+:download:`click to download <../../workshop/section3.seq>`
+
 .. code:: seq
 
     # SeqMap
     # Seq workshop -- Section 3
     # Reads index constructed in Section 2 and looks up k-mers from
     # input reads to find candidate mappings.
-    # Usage: seqc seqmap.seq <FASTA path> <FASTQ path>
+    # Usage: seqc section3.seq <FASTA path> <FASTQ path>
     from sys import argv
     import pickle
     import gzip
@@ -436,7 +439,7 @@ Run the program:
 
 .. code:: bash
 
-    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
+    seqc section4.seq data/chr22.fa data/reads.fq > out.txt
 
 And let's take a look at the output once again:
 
@@ -468,13 +471,15 @@ such improvements.
 Full code listing
 ~~~~~~~~~~~~~~~~~
 
+:download:`click to download <../../workshop/section4.seq>`
+
 .. code:: seq
 
     # SeqMap
     # Seq workshop -- Section 4
     # Reads index constructed in Section 2 and looks up k-mers from
     # input reads to find candidate mappings, then performs alignment.
-    # Usage: seqc seqmap.seq <FASTA path> <FASTQ path>
+    # Usage: seqc section4.seq <FASTA path> <FASTQ path>
     from sys import argv
     import pickle
     import gzip
@@ -567,11 +572,11 @@ We can try this for different numbers of threads:
 .. code:: bash
 
     export OMP_NUM_THREADS=1
-    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
+    seqc section5.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 48.2858s
 
     export OMP_NUM_THREADS=2
-    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
+    seqc section5.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 35.886s
 
 Often, batching reads into larger blocks and processing those blocks in parallel can
@@ -591,24 +596,26 @@ And now:
 .. code:: bash
 
     export OMP_NUM_THREADS=1
-    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
+    seqc section5.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 48.2858s
 
     export OMP_NUM_THREADS=2
-    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
+    seqc section5.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 25.2648s
 
 Full code listing
 ~~~~~~~~~~~~~~~~~
 
+:download:`click to download <../../workshop/section5.seq>`
+
 .. code:: seq
 
     # SeqMap
-    # Seq workshop -- Section 6
+    # Seq workshop -- Section 5
     # Reads index constructed in Section 2 and looks up k-mers from
     # input reads to find candidate mappings, then performs alignment.
-    # Implemented with Seq parallel pipelines using inter-seq. alignment.
-    # Usage: seqc seqmap.seq <FASTA path> <FASTQ path>
+    # Implemented with Seq pipelines.
+    # Usage: seqc section5.seq <FASTA path> <FASTQ path>
     from sys import argv
     from time import timing
     import pickle
@@ -668,11 +675,11 @@ Let's run the program with and without this optimization:
 .. code:: seq
 
     # without @inter_align
-    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
+    seqc section5.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 43.4457s
 
     # with @inter_align
-    seqc seqmap.seq data/chr22.fa data/reads.fq > out.txt
+    seqc section6.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 32.3241s
 
 (The timings with inter-sequence alignment will depend on the SIMD instruction
@@ -681,14 +688,16 @@ sets your CPU supports; these numbers are from using AVX2.)
 Full code listing
 ~~~~~~~~~~~~~~~~~
 
+:download:`click to download <../../workshop/section6.seq>`
+
 .. code:: seq
 
     # SeqMap
     # Seq workshop -- Section 6
     # Reads index constructed in Section 2 and looks up k-mers from
     # input reads to find candidate mappings, then performs alignment.
-    # Implemented with Seq parallel pipelines using inter-seq. alignment.
-    # Usage: seqc seqmap.seq <FASTA path> <FASTQ path>
+    # Implemented with Seq pipelines using inter-seq. alignment.
+    # Usage: seqc section6.seq <FASTA path> <FASTQ path>
     from sys import argv
     from time import timing
     import pickle

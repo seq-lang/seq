@@ -1,0 +1,27 @@
+# SeqMap
+# Seq workshop -- Section 3
+# Reads index constructed in Section 2 and looks up k-mers from
+# input reads to find candidate mappings.
+# Usage: seqc section3.seq <FASTA path> <FASTQ path>
+from sys import argv
+import pickle
+import gzip
+
+type K = Kmer[32]
+index: dict[K,int] = None
+
+with gzip.open(argv[1] + '.index', 'rb') as jar:
+    index = pickle.load[dict[K,int]](jar)
+
+candidates = dict[int,int]()  # position -> count mapping
+for record in FASTQ(argv[2]):
+    for pos,kmer in record.read.kmers_with_pos[K](step=1):
+        found = index.get(min(kmer, ~kmer), -1)
+        if found > 0:
+            candidates.increment(found - pos)
+
+    for pos,count in candidates.items():
+        if count > 1:
+            print record.name, pos + 1
+
+    candidates.clear()

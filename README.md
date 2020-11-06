@@ -110,7 +110,7 @@ The `@prefetch` annotation tells the compiler to perform a coroutine-based pipel
 Pre-built binaries for Linux and macOS on x86_64 are available alongside [each release](https://github.com/seq-lang/seq/releases). We also have a script for downloading and installing pre-built versions:
 
 ```bash
-bash -c "$(wget -O - https://seq-lang.org/install.sh)"
+/bin/bash -c "$(curl -fsSL https://seq-lang.org/install.sh)"
 ```
 
 ### Build from source

@@ -8,7 +8,7 @@ Simple!
 
 .. code:: bash
 
-   bash -c "$(wget -O - https://seq-lang.org/install.sh)"
+    /bin/bash -c "$(curl -fsSL https://seq-lang.org/install.sh)"
 
 Some features require `htslib <http://www.htslib.org/>`__ 1.10+ and
 Python 3.5+. If you want to use Python interop, you also need to point
@@ -24,9 +24,9 @@ Assuming that Seq was properly installed, you can use it as follows:
 
 .. code:: bash
 
-   seqc file.seq  # Compile and run file.seq
-   seqc -d file.seq  # Compile and run file.seq in debug mode
-   seqc -o file.bc file.seq  # Compile file.seq to LLVM bytecode file file.bc
+    seqc file.seq  # Compile and run file.seq
+    seqc -d file.seq  # Compile and run file.seq in debug mode
+    seqc -o file.bc file.seq  # Compile file.seq to LLVM bytecode file file.bc
 
 It is highly recommended to use ``-d`` parameter for development
 purposes: compilation is faster, stack traces are actually useful,
@@ -39,9 +39,9 @@ Currently, stand-alone executables must be created manually:
 
 .. code:: bash
 
-   seqc -o prog.bc prog.seq
-   llc prog.bc -filetype=obj -o prog.o
-   clang -L/path/to/libseqrt/ -lseqrt -lomp -ldl -pthread -o prog prog.o
+    seqc -o prog.bc prog.seq
+    llc prog.bc -filetype=obj -o prog.o
+    clang -L/path/to/libseqrt/ -lseqrt -lomp -ldl -pthread -o prog prog.o
 
 You might need to install LLVM to use ``llc``. Seq uses LLVM 6, so we
 advise against using older versions. ``/path/to/libseqrt/`` would typically
