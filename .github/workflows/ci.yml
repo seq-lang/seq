@@ -36,7 +36,7 @@ jobs:
 
       - name: Build Dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: /bin/bash deps.sh
+        run: /bin/bash deps.sh 2
         env:
           CC: clang
           CXX: clang++
