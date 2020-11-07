@@ -35,6 +35,14 @@ jobs:
           export LD_LIBRARY_PATH=./deps/lib:$LD_LIBRARY_PATH
           export SEQ_PYTHON=$(python test/python/find-python-library.py)
 
+      - name: Linux Setup
+        if: startsWith(matrix.os, 'ubuntu')
+        run: export LIBEXT="so"
+      
+      - name: macOS Setup
+        if: startsWith(matrix.os, 'macOS')
+        run: export LIBEXT="dylib"
+
       - name: Cache Dependencies
         id: cache-deps
         uses: actions/cache@v2
@@ -45,7 +53,7 @@ jobs:
 
       - name: Build Dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: ./deps.sh
+        run: /bin/bash deps.sh
 
       - name: Build
         run: |
