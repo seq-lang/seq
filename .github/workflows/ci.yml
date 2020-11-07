@@ -25,24 +25,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel sphinx sphinxcontrib-napoleon sphinx-rtd-theme breathe exhale
 
-      - name: Environment Setup
-        run: |
-          export CC=clang
-          export CXX=clang++
-          export PYTHONPATH="/test/python"
-          export SEQ_PATH="/stdlib"
-          export LDFLAGS="-L/usr/local/lib"
-          export LD_LIBRARY_PATH=./deps/lib:$LD_LIBRARY_PATH
-          export SEQ_PYTHON=$(python test/python/find-python-library.py)
-
-      - name: Linux Setup
-        if: startsWith(matrix.os, 'ubuntu')
-        run: export LIBEXT="so"
-      
-      - name: macOS Setup
-        if: startsWith(matrix.os, 'macOS')
-        run: export LIBEXT="dylib"
-
       - name: Cache Dependencies
         id: cache-deps
         uses: actions/cache@v2
@@ -54,18 +36,30 @@ jobs:
       - name: Build Dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: /bin/bash deps.sh
+        env:
+          CC: clang
+          CXX: clang++
 
       - name: Build
         run: |
           mkdir build
           (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
-                              -DSEQ_DEP=${TRAVIS_BUILD_DIR}/deps \
-                              -DCMAKE_C_COMPILER=${CC} \
-                              -DCMAKE_CXX_COMPILER=${CXX})
-          ln -s ./deps/lib/libomp.${LIBEXT} build/libomp.${LIBEXT}
+                                -DSEQ_DEP=${TRAVIS_BUILD_DIR}/deps \
+                                -DCMAKE_C_COMPILER=${CC} \
+                                -DCMAKE_CXX_COMPILER=${CXX})
+          [ -f ./deps/lib/libomp.so ] && ln -s ./deps/lib/libomp.so build/libomp.so
+          [ -f ./deps/lib/libomp.dylib ] && ln -s ./deps/lib/libomp.dylib build/libomp.dylib
           cmake --build build --config Release -- VERBOSE=1
+        env:
+          CC: clang
+          CXX: clang++
+          LD_LIBRARY_PATH: ./deps/lib:$LD_LIBRARY_PATH
 
       - name: Test
         run: |
           build/seqtest
           build/seqc test/core/helloworld.seq
+        env:
+          SEQ_PATH: ./stdlib
+          SEQ_PYTHON: $(python test/python/find-python-library.py)
+          PYTHONPATH: ./test/python
