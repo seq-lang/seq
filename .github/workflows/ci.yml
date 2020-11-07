@@ -44,7 +44,7 @@ jobs:
         run: |
           mkdir build
           (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
-                                -DSEQ_DEP=./deps \
+                                -DSEQ_DEP=../deps \
                                 -DCMAKE_C_COMPILER=${CC} \
                                 -DCMAKE_CXX_COMPILER=${CXX})
           [ -f ./deps/lib/libomp.so ] && ln -s ./deps/lib/libomp.so build/libomp.so
