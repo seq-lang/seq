@@ -24,7 +24,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install wheel sphinx sphinxcontrib-napoleon sphinx-rtd-theme breathe exhale
-          echo "SEQ_PYTHON=$($pythonLocation/lib/libpython3.8.*)" >> $GITHUB_ENV
+          echo "SEQ_PYTHON=$(python test/python/find-python-library.py)" >> $GITHUB_ENV
 
       - name: Check Python
         run: |
