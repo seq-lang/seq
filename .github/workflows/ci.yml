@@ -25,6 +25,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel sphinx sphinxcontrib-napoleon sphinx-rtd-theme breathe exhale
 
+      - name: Check Python
+        run: |
+          echo $SEQ_PATH
+          echo $SEQ_PYTHON
+          echo $PYTHONPATH
+          echo $LD_LIBRARY_PATH
+        env:
+          SEQ_PATH: ${{ `pwd`/stdlib }}
+          SEQ_PYTHON: ${{ ${pythonLocation}/lib/libpython3.8.* }}
+          PYTHONPATH: ${{ `pwd`/test/python }}
+          LD_LIBRARY_PATH: ${{ ${`pwd`/deps/lib:${LD_LIBRARY_PATH} }}
+
       - name: Cache Dependencies
         id: cache-deps
         uses: actions/cache@v2
@@ -42,8 +54,6 @@ jobs:
 
       - name: Build
         run: |
-          echo $LD_LIBRARY_PATH
-          ls -l `pwd`/deps/lib
           mkdir build
           (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
                                 -DSEQ_DEP=`pwd`/../deps \
@@ -60,6 +70,7 @@ jobs:
           build/seqtest
           build/seqc test/core/helloworld.seq
         env:
-          SEQ_PATH: ./stdlib
-          SEQ_PYTHON: $(python test/python/find-python-library.py)
-          PYTHONPATH: ./test/python
+          SEQ_PATH: ${{ `pwd`/stdlib }}
+          SEQ_PYTHON: ${{ ${pythonLocation}/lib/libpython3.8.* }}
+          PYTHONPATH: ${{ `pwd`/test/python }}
+          LD_LIBRARY_PATH: ${{ ${`pwd`/deps/lib:${LD_LIBRARY_PATH} }}
