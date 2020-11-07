@@ -24,13 +24,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install wheel sphinx sphinxcontrib-napoleon sphinx-rtd-theme breathe exhale
+          echo "SEQ_PYTHON=$($pythonLocation/lib/libpython3.8.*)" >> $GITHUB_ENV
 
       - name: Check Python
         run: |
-          echo ::set-env name=SEQ_PYTHON::$($pythonLocation/lib/libpython3.8.*)
-          echo ::set-env name=LD_LIBRARY_PATH::$($(pwd)/deps/lib:$LD_LIBRARY_PATH)
           echo $SEQ_PYTHON
-          echo $LD_LIBRARY_PATH
         env:
           SEQ_PATH: ./stdlib
           PYTHONPATH: ./test/python
@@ -65,8 +63,6 @@ jobs:
 
       - name: Test
         run: |
-          echo ::set-env name=SEQ_PYTHON::$($pythonLocation/lib/libpython3.8.*)
-          echo ::set-env name=LD_LIBRARY_PATH::$($(pwd)/deps/lib:$LD_LIBRARY_PATH)
           build/seqtest
           build/seqc test/core/helloworld.seq
         env:
