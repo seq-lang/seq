@@ -40,7 +40,7 @@ jobs:
         run: /bin/bash deps.sh 2
         env:
           CC: gcc-9
-          CXX: g++9
+          CXX: g++-9
 
       - name: Build
         run: |
