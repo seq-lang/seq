@@ -55,7 +55,6 @@ jobs:
         env:
           CC: clang
           CXX: clang++
-          LD_LIBRARY_PATH: `pwd`/deps/lib:$LD_LIBRARY_PATH
 
       - name: Test
         run: |
