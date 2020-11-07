@@ -32,10 +32,10 @@ jobs:
           echo $PYTHONPATH
           echo $LD_LIBRARY_PATH
         env:
-          SEQ_PATH: ${{ `pwd`/stdlib }}
+          SEQ_PATH: ${{ $(pwd)/stdlib }}
           SEQ_PYTHON: ${{ ${pythonLocation}/lib/libpython3.8.* }}
-          PYTHONPATH: ${{ `pwd`/test/python }}
-          LD_LIBRARY_PATH: ${{ ${`pwd`/deps/lib:${LD_LIBRARY_PATH} }}
+          PYTHONPATH: ${{ $(pwd)/test/python }}
+          LD_LIBRARY_PATH: ${{ ${$(pwd)/deps/lib:${LD_LIBRARY_PATH} }}
 
       - name: Cache Dependencies
         id: cache-deps
@@ -56,10 +56,10 @@ jobs:
         run: |
           mkdir build
           (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
-                                -DSEQ_DEP=`pwd`/../deps \
+                                -DSEQ_DEP=$(pwd)/../deps \
                                 -DCMAKE_C_COMPILER=${CC} \
                                 -DCMAKE_CXX_COMPILER=${CXX})
-          ln -s `pwd`/deps/lib/libomp.so `pwd`/build/libomp.so
+          ln -s $(pwd)/deps/lib/libomp.so $(pwd)/build/libomp.so
           cmake --build build --config Release -- VERBOSE=1
         env:
           CC: clang
@@ -70,7 +70,7 @@ jobs:
           build/seqtest
           build/seqc test/core/helloworld.seq
         env:
-          SEQ_PATH: ${{ `pwd`/stdlib }}
+          SEQ_PATH: ${{ $(pwd)/stdlib }}
           SEQ_PYTHON: ${{ ${pythonLocation}/lib/libpython3.8.* }}
-          PYTHONPATH: ${{ `pwd`/test/python }}
-          LD_LIBRARY_PATH: ${{ ${`pwd`/deps/lib:${LD_LIBRARY_PATH} }}
+          PYTHONPATH: ${{ $(pwd)/test/python }}
+          LD_LIBRARY_PATH: ${{ ${$(pwd)/deps/lib:${LD_LIBRARY_PATH} }}
