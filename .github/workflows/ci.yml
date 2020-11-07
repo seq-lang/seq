@@ -1,4 +1,4 @@
-name: Seq build and test
+name: Seq CI
 
 on:
   push:
@@ -18,18 +18,15 @@ jobs:
           - ubuntu-latest
           - macos-latest
     runs-on: ${{ matrix.os }}
-    name: Seq build and test
+    name: Seq CI
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
           python-version: '3.8'
 
-      - name: Install Python Packages
-        run: |
-          python -m pip install --upgrade pip
-          pip install wheel sphinx sphinxcontrib-napoleon sphinx-rtd-theme breathe exhale
-          echo "SEQ_PYTHON=$(python test/python/find-python-library.py)" >> $GITHUB_ENV
+      - name: Find Python
+        run: echo "SEQ_PYTHON=$(python test/python/find-python-library.py)" >> $GITHUB_ENV
 
       - name: Cache Dependencies
         id: cache-deps
@@ -42,8 +39,8 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: /bin/bash deps.sh 2
         env:
-          CC: clang
-          CXX: clang++
+          CC: gcc
+          CXX: g++
 
       - name: Build
         run: |
@@ -66,3 +63,24 @@ jobs:
         env:
           SEQ_PATH: ./stdlib
           PYTHONPATH: ./test/python
+
+      - name: Build Documentation
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get -y install doxygen
+          python -m pip install --upgrade pip
+          pip install wheel sphinx sphinxcontrib-napoleon sphinx-rtd-theme breathe exhale
+          (cd docs/sphinx && python docgen.py ../../stdlib)
+          if ! make -C docs/sphinx html 2>sphinx.log ; then
+            cat sphinx.log
+            false
+          fi
+
+      - name: Deploy Documentation
+        if: startsWith(matrix.os, 'ubuntu') && github.ref == 'refs/heads/master'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/sphinx/_build/html
+          cname: docs.seq-lang.org
+          force_orphan: true
