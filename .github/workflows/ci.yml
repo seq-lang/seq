@@ -26,13 +26,6 @@ jobs:
           pip install wheel sphinx sphinxcontrib-napoleon sphinx-rtd-theme breathe exhale
           echo "SEQ_PYTHON=$(python test/python/find-python-library.py)" >> $GITHUB_ENV
 
-      - name: Check Python
-        run: |
-          echo $SEQ_PYTHON
-        env:
-          SEQ_PATH: ./stdlib
-          PYTHONPATH: ./test/python
-
       - name: Cache Dependencies
         id: cache-deps
         uses: actions/cache@v2
@@ -57,6 +50,7 @@ jobs:
                                 -DCMAKE_CXX_COMPILER=${CXX})
           ln -s $(pwd)/deps/lib/libomp.so $(pwd)/build/libomp.so
           cmake --build build --config Release -- VERBOSE=1
+          echo "LD_LIBRARY_PATH=$(pwd)/deps/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
         env:
           CC: clang
           CXX: clang++
