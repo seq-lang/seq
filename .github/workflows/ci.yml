@@ -1,4 +1,4 @@
-name: Seq CI
+name: Seq build and test
 
 on:
   push:
@@ -11,9 +11,14 @@ on:
       - develop
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    name: Seq build
+  main:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+    runs-on: ${{ matrix.os }}
+    name: Seq build and test
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -30,8 +35,7 @@ jobs:
         id: cache-deps
         uses: actions/cache@v2
         with:
-          path: |
-            deps
+          path: deps
           key: ${{ runner.os }}-deps
 
       - name: Build Dependencies
