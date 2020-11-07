@@ -47,7 +47,7 @@ jobs:
                                 -DSEQ_DEP=`pwd`/../deps \
                                 -DCMAKE_C_COMPILER=${CC} \
                                 -DCMAKE_CXX_COMPILER=${CXX})
-          ln -s deps/lib/libomp.so build/libomp.so
+          ln -s `pwd`/deps/lib/libomp.so `pwd`/build/libomp.so
           cmake --build build --config Release -- VERBOSE=1
         env:
           CC: clang
