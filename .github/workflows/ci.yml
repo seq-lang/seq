@@ -27,15 +27,13 @@ jobs:
 
       - name: Check Python
         run: |
-          echo $SEQ_PATH
+          echo ::set-env name=SEQ_PYTHON::$($pythonLocation/lib/libpython3.8.*)
+          echo ::set-env name=LD_LIBRARY_PATH::$($(pwd)/deps/lib:$LD_LIBRARY_PATH)
           echo $SEQ_PYTHON
-          echo $PYTHONPATH
           echo $LD_LIBRARY_PATH
         env:
-          SEQ_PATH: ${{ $(pwd)/stdlib }}
-          SEQ_PYTHON: ${{ ${pythonLocation}/lib/libpython3.8.* }}
-          PYTHONPATH: ${{ $(pwd)/test/python }}
-          LD_LIBRARY_PATH: ${{ ${$(pwd)/deps/lib:${LD_LIBRARY_PATH} }}
+          SEQ_PATH: ./stdlib
+          PYTHONPATH: ./test/python
 
       - name: Cache Dependencies
         id: cache-deps
@@ -67,10 +65,10 @@ jobs:
 
       - name: Test
         run: |
+          echo ::set-env name=SEQ_PYTHON::$($pythonLocation/lib/libpython3.8.*)
+          echo ::set-env name=LD_LIBRARY_PATH::$($(pwd)/deps/lib:$LD_LIBRARY_PATH)
           build/seqtest
           build/seqc test/core/helloworld.seq
         env:
-          SEQ_PATH: ${{ $(pwd)/stdlib }}
-          SEQ_PYTHON: ${{ ${pythonLocation}/lib/libpython3.8.* }}
-          PYTHONPATH: ${{ $(pwd)/test/python }}
-          LD_LIBRARY_PATH: ${{ ${$(pwd)/deps/lib:${LD_LIBRARY_PATH} }}
+          SEQ_PATH: ./stdlib
+          PYTHONPATH: ./test/python
