@@ -44,7 +44,6 @@ jobs:
         run: |
           echo $LD_LIBRARY_PATH
           ls -l `pwd`/deps/lib
-          ls -l `pwd`/build
           mkdir build
           (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
                                 -DSEQ_DEP=`pwd`/../deps \
