@@ -39,8 +39,8 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: /bin/bash deps.sh 2
         env:
-          CC: gcc-9
-          CXX: g++-9
+          CC: clang -Wno-implicit-function-declaration
+          CXX: clang++
 
       - name: Build
         run: |
