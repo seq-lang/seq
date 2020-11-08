@@ -37,6 +37,7 @@ ${INSTALLDIR}/bin/llvm-config --cmakedir
 curl -L https://github.com/ocaml/ocaml/archive/4.07.1.tar.gz | tar zxf - -C ${SRCDIR}
 cd ${SRCDIR}/ocaml-4.07.1
 ./configure \
+    -cc ${CC} \
     -fPIC \
     -no-pthread \
     -no-debugger \

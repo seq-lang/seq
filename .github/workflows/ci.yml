@@ -39,8 +39,8 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: /bin/bash deps.sh 2
         env:
-          CC: gcc-8
-          CXX: g++-8
+          CC: gcc-9
+          CXX: g++-9
 
       - name: Build
         run: |
