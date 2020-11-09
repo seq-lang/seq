@@ -76,9 +76,7 @@ jobs:
           PYTHONPATH: ./test/python
 
       - name: Build Documentation
-        if: startsWith(matrix.os, 'ubuntu')
         run: |
-          sudo apt-get -y install doxygen
           python -m pip install --upgrade pip
           pip install wheel sphinx sphinxcontrib-napoleon sphinx-rtd-theme breathe exhale
           (cd docs/sphinx && python docgen.py ../../stdlib)
