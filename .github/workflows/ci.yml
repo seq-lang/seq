@@ -58,7 +58,7 @@ jobs:
             false
           fi
           cmake --build build --config Release -- VERBOSE=1
-          echo "LD_LIBRARY_PATH=$(pwd)/deps/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$(pwd)/deps/lib" >> $GITHUB_ENV
         env:
           CC: clang
           CXX: clang++
