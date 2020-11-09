@@ -49,16 +49,11 @@ jobs:
                                 -DSEQ_DEP=$(pwd)/../deps \
                                 -DCMAKE_C_COMPILER=${CC} \
                                 -DCMAKE_CXX_COMPILER=${CXX})
-          if [ -e deps/lib/libomp.so ] ; then
-            ln -s $(pwd)/deps/lib/libomp.so $(pwd)/build/libomp.so
-          elif [ -e deps/lib/libomp.dylib ] ; then
-            ln -s $(pwd)/deps/lib/libomp.dylib $(pwd)/build/libomp.dylib
-          else
-            echo "OpenMP library not found"
-            false
-          fi
+          if [ -e deps/lib/libomp.so ]; then ln -s $(pwd)/deps/lib/libomp.so $(pwd)/build/libomp.so; fi
+          if [ -e deps/lib/libomp.dylib ]; then ln -s $(pwd)/deps/lib/libomp.dylib $(pwd)/build/libomp.dylib; fi
           cmake --build build --config Release -- VERBOSE=1
-          echo "LD_LIBRARY_PATH=$(pwd)/deps/lib" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$(pwd)/deps/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$(pwd)/deps/lib:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
         env:
           CC: clang
           CXX: clang++
@@ -78,7 +73,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel sphinx sphinxcontrib-napoleon sphinx-rtd-theme breathe exhale
           (cd docs/sphinx && python docgen.py ../../stdlib)
-          if ! make -C docs/sphinx html 2>sphinx.log ; then
+          if ! make -C docs/sphinx html 2>sphinx.log; then
             cat sphinx.log
             false
           fi
