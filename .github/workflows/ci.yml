@@ -11,6 +11,22 @@ on:
       - develop
 
 jobs:
+  precise:
+    runs-on: ubuntu-latest
+    name: Ubuntu 12.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache Dependencies
+        id: cache-deps
+        uses: actions/cache@v2
+        with:
+          path: deps
+          key: ubuntu-precise-deps
+
+      - name: Main
+        uses: ./.github/actions/build-precise
+
   main:
     strategy:
       matrix:
@@ -37,7 +53,7 @@ jobs:
 
       - name: Build Dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: /bin/bash deps.sh 2
+        run: /bin/bash scripts/deps.sh 2
         env:
           CC: clang -Wno-implicit-function-declaration
           CXX: clang++
