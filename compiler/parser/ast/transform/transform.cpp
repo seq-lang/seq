@@ -916,8 +916,8 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
     if (stmt->what[0].second != "")
       error("cannot rename star-import");
     for (auto &i : *(import->second.ctx))
-      if (i.second.front()->isGlobal())
-        ctx->add(i.first, i.second.front());
+      if (i.second.front().second->isGlobal())
+        ctx->add(i.first, i.second.front().second);
   } else {
     for (auto &w : stmt->what) {
       auto c = import->second.ctx->find(w.first);

@@ -96,7 +96,7 @@ void TransformContext::dump(int pad) {
   LOG("base: {}", getBase());
   for (auto &i : ordered) {
     std::string s;
-    auto t = i.second.front();
+    auto t = i.second.front().second;
     LOG("{}{:.<25} {} {}", string(pad * 2, ' '), i.first, t->canonicalName,
         t->getBase());
   }

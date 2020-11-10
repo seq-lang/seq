@@ -112,7 +112,9 @@ namespace ast {
 
 template <typename T> class Context : public std::enable_shared_from_this<Context<T>> {
 public:
-  typedef std::unordered_map<std::string, std::deque<std::shared_ptr<T>>> Map;
+  typedef std::unordered_map<std::string,
+                             std::deque<std::pair<int, std::shared_ptr<T>>>>
+      Map; // tracks level as well
 
 protected:
   Map map;
@@ -125,18 +127,22 @@ public:
 
   std::shared_ptr<T> find(const std::string &name) const {
     auto it = map.find(name);
-    return it != map.end() ? it->second.front() : nullptr;
+    return it != map.end() ? it->second.front().second : nullptr;
   }
   void add(const std::string &name, std::shared_ptr<T> var) {
     assert(!name.empty());
     // LOG7("++ {}", name);
-    map[name].push_front(var);
+    map[name].push_front({stack.size(), var});
     stack.front().push_back(name);
   }
   void addToplevel(const std::string &name, std::shared_ptr<T> var) {
     assert(!name.empty());
     // LOG7("+++ {}", name);
-    map[name].push_back(var);
+    auto &m = map[name];
+    int pos = m.size();
+    while (pos > 0 && m[pos - 1].first == 1)
+      pos--;
+    m.insert(m.begin() + pos, {1, var});
     stack.back().push_back(name); // add to the latest "level"
   }
   void addBlock() { stack.push_front(std::vector<std::string>()); }

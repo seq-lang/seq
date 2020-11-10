@@ -259,9 +259,9 @@ INSTANTIATE_TEST_SUITE_P(
         "stdlib/itertools_test.seq",
         "stdlib/bisect_test.seq",
         "stdlib/random_test.seq",
-        "stdlib/statistics_test.seq"
+        "stdlib/statistics_test.seq",
         "stdlib/sort_test.seq",
-        "stdlib/heapq_test.seq",
+        // "stdlib/heapq_test.seq",
         // "python/pybridge.seq",
         "core/empty.seq"
       ),
@@ -272,12 +272,6 @@ INSTANTIATE_TEST_SUITE_P(
     ),
     getTestNameFromParam);
 // clang-format on
-
-// INSTANTIATE_TEST_SUITE_P(
-//     PythonTests, SeqTest,
-//     testing::Combine(testing::Values("python/pybridge.seq"),
-//                      testing::Values(true, false)),
-//     getTestNameFromParam);
 
 int main(int argc, char *argv[]) {
   argv0 = ast::executable_path(argv[0]);
