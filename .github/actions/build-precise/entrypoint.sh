@@ -51,7 +51,6 @@ build/seqc test/core/helloworld.seq
 # package
 export SEQ_BUILD_ARCHIVE=seq-$(uname -s | awk '{print tolower($0)}')-$(uname -m).tar.gz
 export SEQ_DEP_ARCHIVE=seq-deps-linux.tar.bz2
-echo ${SEQ_BUILD_ARCHIVE}
 mkdir -p seq-deploy/bin seq-deploy/lib/seq
 cp build/seqc seq-deploy/bin/
 cp build/libseq*.so seq-deploy/lib/seq/
