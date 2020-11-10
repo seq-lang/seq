@@ -180,10 +180,13 @@ struct LinkType : public Type {
   TypePtr type;
   /// is static variable?
   bool isStatic;
+  /// treat as class during the argument unification to exit the inconsistency loop
+  bool treatAsClass;
 
   LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
            bool isStatic = false);
-  LinkType(TypePtr type) : kind(Link), id(0), level(0), type(type), isStatic(false) {}
+  LinkType(TypePtr type)
+      : kind(Link), id(0), level(0), type(type), isStatic(false), treatAsClass(false) {}
   virtual ~LinkType() {}
 
 public:

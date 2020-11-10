@@ -523,32 +523,38 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
           error("cannot find method '{}' in {} with arguments {}", expr->member,
                 c->toString(), v2s(targs));
         }
-      } else if (m->size() > 1) {
+      }
+
+      FuncTypePtr bestCall = nullptr;
+      if (m->size() > 1) {
         // need to check is this a callable that we can use to instantiate the type
         if (expr->getType() && expr->getType()->getClass()) {
           auto dc = expr->getType()->getClass();
           if (startswith(dc->name, ".Function.")) {
-            // we can, well, unify this
-            vector<pair<string, TypePtr>> targs;
+            vector<pair<string, TypePtr>> targs; // we can, well, unify this
+            if (!lhs->isType())
+              targs.push_back({"", c});
             for (auto i = 1; i < dc->explicits.size(); i++)
               targs.push_back({"", dc->explicits[i].type});
-            if (auto m = findBestCall(c, expr->member, targs, true)) {
-              auto e = N<IdExpr>(m->name);
-              e->setType(ctx->instantiate(getSrcInfo(), m, c));
-              forceUnify(e, dc);
-              return e;
-            } else {
+            if (auto mc = findBestCall(c, expr->member, targs, true))
+              bestCall = mc;
+            else
               error("cannot find method '{}' in {} with arguments {}", expr->member,
                     c->toString(), v2s(targs));
-            }
           }
         }
-        typ = ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel); // determine later
-      } else if (lhs->isType()) {
-        auto name = (*m)[0]->name;
+      } else {
+        bestCall = (*m)[0];
+      }
+      if (!bestCall) {
+        // TODO: fix this and have better method for handling these cases
+        bestCall = (*m)[0];
+      }
+      if (lhs->isType()) {
+        auto name = bestCall->name;
         auto val = ctx->find(name);
         assert(val);
-        auto t = ctx->instantiate(getSrcInfo(), (*m)[0], c);
+        auto t = ctx->instantiate(getSrcInfo(), bestCall, c);
         auto e = N<IdExpr>(name);
         e->setType(t);
         auto newName = patchIfRealizable(t, val->isType());
@@ -556,7 +562,7 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
           e->value = newName;
         return e;
       } else { // cast y.foo to CLS.foo(y, ...)
-        auto f = (*m)[0];
+        auto f = bestCall;
         vector<ExprPtr> args;
         args.push_back(move(lhs));
         for (int i = 0; i < std::max(1, (int)f->args.size() - 2); i++)
@@ -564,7 +570,7 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
         auto ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
         if (in(ast->attributes, "property"))
           args.pop_back();
-        return transform(N<CallExpr>(N<IdExpr>((*m)[0]->name), move(args)));
+        return transform(N<CallExpr>(N<IdExpr>(bestCall->name), move(args)));
       }
     } else if (auto mm = ctx->findMember(c->name, expr->member)) {
       typ = ctx->instantiate(getSrcInfo(), mm, c);
@@ -599,58 +605,58 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
     }
   }
 
-  ExprPtr e = nullptr;
+  ExprPtr callee = nullptr;
   Expr *lhs = const_cast<CallExpr *>(expr)->expr.get();
   if (auto i = CAST(expr->expr, IndexExpr))
     lhs = i->expr.get();
   else if (auto i = CAST(expr->expr, InstantiateExpr))
     lhs = i->type.get();
   if (auto i = dynamic_cast<DotExpr *>(lhs)) {
-    e = visitDot(i, &args);
+    callee = visitDot(i, &args);
     if (auto i = CAST(expr->expr, IndexExpr))
-      e = transform(N<IndexExpr>(move(e), clone(i->index)));
+      callee = transform(N<IndexExpr>(move(callee), clone(i->index)));
     else if (auto i = CAST(expr->expr, InstantiateExpr))
-      e = transform(N<InstantiateExpr>(move(e), clone(i->params)));
+      callee = transform(N<InstantiateExpr>(move(callee), clone(i->params)));
   } else {
-    e = transform(expr->expr, true);
+    callee = transform(expr->expr, true);
   }
-  forceUnify(expr->expr.get(), e->getType());
+  forceUnify(expr->expr.get(), callee->getType());
 
-  auto c = e->getType();
-  auto cc = c->getClass();
-  if (!cc) { // Unbound caller, will be handled later
-    e = N<CallExpr>(move(e), move(args));
-    e->setType(forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
-    return e;
-  } else if (e->isType() && cc->isRecord()) {
-    return transform(N<CallExpr>(N<DotExpr>(move(e), "__new__"), move(args)));
-  } else if (e->isType()) {
-    /// TODO: assumes that a class cannot have multiple __new__ magics
-    /// WARN: passing e & args that have already been transformed
+  auto calleeType = callee->getType();
+  auto calleeClass = callee->getType()->getClass();
+  if (!calleeClass) { // Unbound caller, will be handled later
+    callee = N<CallExpr>(move(callee), move(args));
+    callee->setType(
+        forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
+    return callee;
+  } else if (callee->isType() && calleeClass->isRecord()) {
+    return transform(N<CallExpr>(N<DotExpr>(move(callee), "__new__"), move(args)));
+  } else if (callee->isType()) {
+    /// WARN: passing callee & args that have already been transformed
     ExprPtr var = N<IdExpr>(getTemporaryVar("v"));
     vector<StmtPtr> stmts;
     stmts.push_back(
-        N<AssignStmt>(clone(var), N<CallExpr>(N<DotExpr>(move(e), "__new__"))));
+        N<AssignStmt>(clone(var), N<CallExpr>(N<DotExpr>(move(callee), "__new__"))));
     stmts.push_back(
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__init__"), move(args))));
     return transform(N<StmtExpr>(move(stmts), clone(var)));
-  } else if (!cc->getCallable()) {
-    return transform(N<CallExpr>(N<DotExpr>(move(e), "__call__"), move(args)));
+  } else if (!calleeClass->getCallable()) {
+    return transform(N<CallExpr>(N<DotExpr>(move(callee), "__call__"), move(args)));
   }
 
   // Handle named and default arguments
   vector<CallExpr::Arg> reorderedArgs;
-  vector<int> availableArguments;
+  vector<int> argIndex;
   string knownTypes;
-  if (startswith(cc->name, ".Partial.")) {
-    knownTypes = cc->name.substr(9);
-    c = cc->args[0]; // args?
-    cc = c->getClass();
-    assert(cc);
+  if (startswith(calleeClass->name, ".Partial.")) {
+    knownTypes = calleeClass->name.substr(9);
+    calleeType = calleeClass->args[0];
+    calleeClass = calleeClass->args[0]->getClass();
+    assert(calleeClass);
   }
-  for (int i = 0; i < int(cc->args.size()) - 1; i++)
+  for (int i = 0; i < int(calleeClass->args.size()) - 1; i++)
     if (knownTypes.empty() || knownTypes[i] == '0')
-      availableArguments.push_back(i);
+      argIndex.push_back(i);
 
   vector<int> pending;
   bool isPartial = false;
@@ -668,105 +674,131 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
       error("named argument {} repeated multiple times", args[i].name);
   }
 
-  if (namedArgs.size() == 0 && reorderedArgs.size() == availableArguments.size() + 1 &&
+  if (namedArgs.size() == 0 && reorderedArgs.size() == argIndex.size() + 1 &&
       CAST(reorderedArgs.back().value, EllipsisExpr)) {
     isPartial = true;
     forceUnify(reorderedArgs.back().value, ctx->findInternal(".void"));
     reorderedArgs.pop_back();
-  } else if (reorderedArgs.size() + namedArgs.size() > availableArguments.size()) {
-    error("too many arguments for {} (expected {}, got {})", c->toString(),
-          availableArguments.size(), reorderedArgs.size() + namedArgs.size());
+  } else if (reorderedArgs.size() + namedArgs.size() > argIndex.size()) {
+    error("too many arguments for {} (expected {}, got {})", calleeType->toString(),
+          argIndex.size(), reorderedArgs.size() + namedArgs.size());
   }
 
   FunctionStmt *ast = nullptr;
-  auto &t_args = cc->args;
-  if (auto ff = c->getFunc()) {
+  if (auto ff = calleeType->getFunc())
     ast = (FunctionStmt *)(ctx->cache->asts[ff->name].get());
-  }
-
   if (ast) {
     ctx->addBlock();
-    addFunctionGenerics(c->getFunc());
+    addFunctionGenerics(calleeType->getFunc());
   } else if (!ast && namedArgs.size()) {
+    // LOG("{}", expr->toString());
     error("unexpected name '{}' (function pointers have argument names elided)",
           namedArgs.begin()->first);
   }
 
-  bool unificationsDone = true;
-  for (int i = 0, ra = reorderedArgs.size(); i < availableArguments.size(); i++) {
+  for (int i = 0, ra = reorderedArgs.size(); i < argIndex.size(); i++) {
     if (i >= ra) {
       assert(ast);
-      auto it = namedArgs.find(ast->args[availableArguments[i]].name);
+      auto it = namedArgs.find(ast->args[argIndex[i]].name);
       if (it != namedArgs.end()) {
         reorderedArgs.push_back({"", move(it->second)});
         namedArgs.erase(it);
-      } else if (ast->args[availableArguments[i]].deflt) {
-        reorderedArgs.push_back(
-            {"", transform(ast->args[availableArguments[i]].deflt)});
+      } else if (ast->args[argIndex[i]].deflt) {
+        reorderedArgs.push_back({"", transform(ast->args[argIndex[i]].deflt)});
       } else {
-        error("argument '{}' missing", ast->args[availableArguments[i]].name);
+        error("argument '{}' missing", ast->args[argIndex[i]].name);
       }
     }
     if (auto ee = CAST(reorderedArgs[i].value, EllipsisExpr))
       if (!ee->isPipeArg)
-        pending.push_back(availableArguments[i]);
-
-    // unify arg (reorderedArgs) with signature (t_args)
-    // 1. check is it a trait?
-    auto &typ = t_args[availableArguments[i] + 1];
-    auto targetType = typ->getClass();
-    auto &arg = reorderedArgs[i].value;
-    auto c = arg->getType()->getClass();
-    if (targetType && (targetType->isTrait || targetType->name == ".Optional")) {
-      if (!c) { // do not unify if not yet known
-        unificationsDone = false;
-        continue;
-      }
-      if (targetType->name == ".Generator") {
-        if (c->name != targetType->name) {
-          if (!extraStage) // do not do this in pipelines
-            arg = transform(N<CallExpr>(N<DotExpr>(move(arg), "__iter__")));
-        }
-      } else if (startswith(targetType->name, ".Function.")) {
-        if (!startswith(c->name, ".Function.") &&
-            !extraStage) // TODO: do this in pipelines later
-          arg = transform(N<CallExpr>(N<DotExpr>(move(arg), "__call__")));
-      } else if (targetType->name == ".Optional") {
-        if (c->name != targetType->name) {
-          if (extraStage && CAST(arg, EllipsisExpr)) {
-            *extraStage = N<DotExpr>(N<IdExpr>(".Optional"), "__new__");
-            return expr->clone();
-          } else {
-            arg = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(arg)));
-          }
-        }
-      } else {
-        error("cannot handle trait {}", targetType->name);
-      }
-    } else if (targetType && c && c->name == ".Optional") { // unwrap optional
-      if (extraStage && CAST(arg, EllipsisExpr)) {
-        *extraStage = N<IdExpr>(".unwrap");
-        return expr->clone();
-      } else {
-        arg = transform(N<CallExpr>(N<IdExpr>(".unwrap"), move(arg)));
-      }
-    }
-
-    // if (ast)
-    // LOG("-- {} : force {} -> {}", ast->name, reorderedArgs[i].value->toString(),
-    // typ->toString());
-    forceUnify(reorderedArgs[i].value, typ);
+        pending.push_back(argIndex[i]);
   }
   for (auto &i : namedArgs)
     error(i.second, "unknown argument {}", i.first);
   if (isPartial || pending.size())
     pending.push_back(args.size());
+
+  // Unification stage
+  bool unificationsDone = true;
+  for (int ri = 0; ri < reorderedArgs.size(); ri++) {
+    auto sigType = calleeClass->args[argIndex[ri] + 1]->getClass();
+    auto argType = reorderedArgs[ri].value->getType()->getClass();
+
+    if (sigType && (sigType->isTrait || sigType->name == ".Optional")) {
+      // Case 0: type not yet known
+      if (!argType && !(reorderedArgs[ri].value->getType()->getUnbound() &&
+                        reorderedArgs[ri]
+                            .value->getType()
+                            ->getUnbound()
+                            ->treatAsClass)) { // do not unify if not yet known
+        unificationsDone = false;
+      }
+      // Case 1: generator wrapping
+      else if (sigType->name == ".Generator" && argType &&
+               argType->name != sigType->name && !extraStage) {
+        // do not do this in pipelines
+        reorderedArgs[ri].value = transform(
+            N<CallExpr>(N<DotExpr>(move(reorderedArgs[ri].value), "__iter__")));
+        forceUnify(reorderedArgs[ri].value, sigType);
+      }
+      // Case 2: optional wrapping
+      else if (sigType->name == ".Optional" && argType &&
+               argType->name != sigType->name) {
+        if (extraStage && CAST(reorderedArgs[ri].value, EllipsisExpr)) {
+          *extraStage = N<DotExpr>(N<IdExpr>(".Optional"), "__new__");
+          return expr->clone();
+        } else {
+          reorderedArgs[ri].value = transform(
+              N<CallExpr>(N<IdExpr>(".Optional"), move(reorderedArgs[ri].value)));
+          forceUnify(reorderedArgs[ri].value, sigType);
+        }
+      }
+      // Case 3: Callables
+      // TODO: this is only allowed with Seq function calls;
+      // this won't be done with Function[] pointers or similar
+      // as it is not trivial to cast Partial to Function[]
+      else if (ast && startswith(sigType->name, ".Function.") && argType &&
+               !startswith(argType->name, ".Function.")) {
+        if (!startswith(argType->name, ".Partial.")) {
+          reorderedArgs[ri].value =
+              transform(N<DotExpr>(move(reorderedArgs[ri].value), "__call__"));
+          argType = reorderedArgs[ri].value->getType()->getClass();
+        }
+        if (argType && startswith(argType->name, ".Partial.")) {
+          forceUnify(argType->explicits[0].type, sigType->explicits[0].type);
+          if (argType->explicits.size() != sigType->explicits.size() + 1)
+            error("incompatible partial type");
+          for (int j = 1; j < sigType->explicits.size(); j++)
+            forceUnify(argType->explicits[j + 1].type, sigType->explicits[j].type);
+
+          callee->getType()->getFunc()->args[ri + 1] = argType;
+        } else {
+          forceUnify(reorderedArgs[ri].value, sigType);
+        }
+      }
+      // Otherwise, just unify as-is
+      else {
+        forceUnify(reorderedArgs[ri].value, sigType);
+      }
+    } else if (sigType && argType && argType->name == ".Optional") { // unwrap optional
+      if (extraStage && CAST(reorderedArgs[ri].value, EllipsisExpr)) {
+        *extraStage = N<IdExpr>(".unwrap");
+        return expr->clone();
+      } else {
+        reorderedArgs[ri].value =
+            transform(N<CallExpr>(N<IdExpr>(".unwrap"), move(reorderedArgs[ri].value)));
+        forceUnify(reorderedArgs[ri].value, sigType);
+      }
+    } else {
+      forceUnify(reorderedArgs[ri].value, calleeClass->args[argIndex[ri] + 1]);
+    }
+  }
   if (ast)
     ctx->popBlock();
 
   // Realize functions that are passed as arguments
-  auto fix = [&](ExprPtr &e, const string &newName) {
-    auto i = CAST(e, IdExpr);
+  auto fix = [&](ExprPtr &callee, const string &newName) {
+    auto i = CAST(callee, IdExpr);
     if (!i || newName == i->value)
       return;
     auto comp = split(newName, ':');
@@ -778,58 +810,48 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
       auto r = realizeFunc(ra.value->getType());
       fix(ra.value, r->realizeString());
     }
-  if (auto f = c->getFunc()) {
-    // Fetch the AST
-    auto ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
-    assert(ast);
+  if (auto f = calleeType->getFunc()) {
+    // Handle default generics (callee.g. foo[S, T=int])
     for (int i = 0; i < f->explicits.size(); i++)
       if (auto l = f->explicits[i].type->getLink()) {
         if (unificationsDone && l && l->kind == LinkType::Unbound &&
             ast->generics[i].deflt) {
-          // untouched unbound
-          // LOG("-- transform {} -> {}", f->name, f->explicits[i].name,
-          // ast->generics[i].deflt->toString());
           auto t = transformType(ast->generics[i].deflt);
           forceUnify(l, t->getType());
         }
       }
-    if (c->canRealize()) {
+    if (f->canRealize()) {
+      // LOG("~ {}", f->realizeString());
       auto r = realizeFunc(f);
       if (knownTypes.empty())
-        fix(e, r->realizeString());
+        fix(callee, r->realizeString());
     }
   }
 
   // Emit final call
   if (pending.size()) { // (still) partial?
     pending.pop_back();
-    string known(cc->args.size() - 1, '1');
+    string known(calleeClass->args.size() - 1, '1');
     for (auto p : pending)
       known[p] = '0';
-    // Gets function name
-    // if (known != knownTypes) {
     auto pt = generatePartialStub(known, knownTypes);
     vector<ExprPtr> a;
-    a.push_back(move(e));
+    a.push_back(move(callee));
     for (auto &r : reorderedArgs)
       if (!CAST(r.value, EllipsisExpr))
         a.push_back(move(r.value));
-    e = transform(N<CallExpr>(N<IdExpr>(pt), move(a)));
-    // LOG("[partial-pending] {}: {} -> {}", ctx->iteration, expr->toString(),
-    // e->toString());
-    forceUnify(expr, e->getType());
-    return e;
+    callee = transform(N<CallExpr>(N<IdExpr>(pt), move(a)));
+    forceUnify(expr, callee->getType());
+    return callee;
   } else if (knownTypes.empty()) { // normal function
-    e = N<CallExpr>(move(e), move(reorderedArgs));
-    // TypePtr t = make_shared<LinkType>(cc->args[0]);
-    e->setType(forceUnify(expr, cc->args[0]));
-    return e;
+    callee = N<CallExpr>(move(callee), move(reorderedArgs));
+    callee->setType(forceUnify(expr, calleeClass->args[0]));
+    return callee;
   } else { // partial that is fulfilled
-    e = transform(N<CallExpr>(N<DotExpr>(move(e), "__call__"), move(reorderedArgs)));
-    forceUnify(expr, e->getType());
-    // LOG("[partial-fulfilled] {}: {} -> {}", ctx->iteration, expr->toString(),
-    // e->toString());
-    return e;
+    callee = transform(
+        N<CallExpr>(N<DotExpr>(move(callee), "__call__"), move(reorderedArgs)));
+    forceUnify(expr, callee->getType());
+    return callee;
   }
 }
 
@@ -1243,8 +1265,24 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
     for (auto &s : ((SuiteStmt *)(stmt->suite.get()))->stmts) {
       auto t = transform(s);
       auto f = CAST(t, FunctionStmt)->name;
-      ctx->cache->classMethods[stmt->name][ctx->cache->reverseLookup[f]].push_back(
-          ctx->findInVisited(f).second->getFunc());
+      auto ss = CAST(s, FunctionStmt)->signature();
+      auto fp = ctx->findInVisited(f).second->getFunc();
+      auto &v = ctx->cache->classMethods[stmt->name][ctx->cache->reverseLookup[f]];
+      bool found = false;
+      for (auto &i : v) {
+        auto ast = (FunctionStmt *)(ctx->cache->asts[i->name].get());
+        assert(ast);
+        // LOG("{} . {} : {} -> {}", stmt->name, f, ss, ast->signature());
+        if (ast->signature() == ss) {
+          // LOG("fixing sig {} . {} : {} -> {} | {}", stmt->name, f, i->name, fp->name,
+          // ss);
+          i = fp;
+          found = true;
+          break;
+        }
+      }
+      if (!found)
+        v.push_back(fp);
       stmts.push_back(move(t));
     }
   ctx->typecheckLevel--;
@@ -1292,8 +1330,24 @@ void TypecheckVisitor::visit(const ExtendStmt *stmt) {
   for (auto &s : ((SuiteStmt *)(stmt->suite.get()))->stmts) {
     auto t = transform(s);
     auto f = CAST(t, FunctionStmt)->name;
-    ctx->cache->classMethods[i->value][ctx->cache->reverseLookup[f]].push_back(
-        ctx->findInVisited(f).second->getFunc());
+
+    auto ss = CAST(s, FunctionStmt)->signature();
+    auto fp = ctx->findInVisited(f).second->getFunc();
+    auto &v = ctx->cache->classMethods[i->value][ctx->cache->reverseLookup[f]];
+    bool found = false;
+    for (auto &i : v) {
+      auto ast = (FunctionStmt *)(ctx->cache->asts[i->name].get());
+      assert(ast);
+      if (ast->signature() == ss) {
+        // LOG("fixing sig {} . {} : {} -> {} | {}", stmt->type->toString(), f, i->name,
+        // fp->name, ss);
+        i = fp;
+        found = true;
+        break;
+      }
+    }
+    if (!found)
+      v.push_back(fp);
     stmts.push_back(move(t));
   }
   for (int i = 0; i < stmt->generics.size(); i++)
@@ -1305,7 +1359,7 @@ void TypecheckVisitor::visit(const ExtendStmt *stmt) {
   ctx->typecheckLevel--;
   ctx->popBlock();
   resultStmt = N<SuiteStmt>(move(stmts));
-}
+} // namespace ast
 
 void TypecheckVisitor::visit(const StarPattern *pat) {
   resultPattern = N<StarPattern>();
@@ -1832,9 +1886,9 @@ StmtPtr TypecheckVisitor::realizeBlock(const StmtPtr &stmt, bool keepLast) {
 int TypecheckVisitor::reorder(const vector<pair<string, TypePtr>> &args,
                               vector<pair<string, TypePtr>> &reorderedArgs,
                               types::FuncTypePtr f) {
-  vector<int> availableArguments;
+  vector<int> argIndex;
   for (int i = 0; i < int(f->args.size()) - 1; i++)
-    availableArguments.push_back(i);
+    argIndex.push_back(i);
   string knownTypes;
 
   bool namesStarted = false;
@@ -1851,26 +1905,26 @@ int TypecheckVisitor::reorder(const vector<pair<string, TypePtr>> &args,
       return -1;
   }
 
-  if (reorderedArgs.size() + namedArgs.size() != availableArguments.size())
+  if (reorderedArgs.size() + namedArgs.size() != argIndex.size())
     return -1;
 
   int score = reorderedArgs.size() * 2;
 
   FunctionStmt *ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
   seqassert(ast, "AST not accessible for {}", f->name);
-  for (int i = 0, ra = reorderedArgs.size(); i < availableArguments.size(); i++) {
+  for (int i = 0, ra = reorderedArgs.size(); i < argIndex.size(); i++) {
     if (i >= ra) {
       assert(ast);
-      auto it = namedArgs.find(ast->args[availableArguments[i]].name);
+      auto it = namedArgs.find(ast->args[argIndex[i]].name);
       if (it != namedArgs.end()) {
         reorderedArgs.push_back({"", it->second});
         namedArgs.erase(it);
         score += 2;
       } else if (ast->args[i].deflt) {
-        if (ast->args[availableArguments[i]].type) {
-          reorderedArgs.push_back({"", f->args[availableArguments[i] + 1]});
+        if (ast->args[argIndex[i]].type) {
+          reorderedArgs.push_back({"", f->args[argIndex[i] + 1]});
         } else { // TODO: does this even work? any dangling issues?
-          // auto t = transform(ast->args[availableArguments[i]].deflt);
+          // auto t = transform(ast->args[argIndex[i]].deflt);
           reorderedArgs.push_back({"", nullptr}); // really does not matter
         }
         score += 1;

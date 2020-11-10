@@ -431,19 +431,20 @@ void SeqModule::runCodegenPipeline(bool timeIt) {
     fmt::print(stderr, "[T] llvmgen/v = {:.1f}\n",
                duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
                    1000.0);
-  t = high_resolution_clock::now();
-  optimize();
-  if (timeIt)
-    fmt::print(stderr, "[T] llvmgen/o = {:.1f}\n",
-               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                   1000.0);
-  t = high_resolution_clock::now();
-  verify();
-  if (timeIt)
-    fmt::print(stderr, "[T] llvmgen/v = {:.1f}\n",
-               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                   1000.0);
-  t = high_resolution_clock::now();
+  if (!config::config().debug) {
+    t = high_resolution_clock::now();
+    optimize();
+    if (timeIt)
+      fmt::print(stderr, "[T] llvmgen/o = {:.1f}\n",
+                 duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                     1000.0);
+    t = high_resolution_clock::now();
+    verify();
+    if (timeIt)
+      fmt::print(stderr, "[T] llvmgen/v = {:.1f}\n",
+                 duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                     1000.0);
+  }
 #if SEQ_HAS_TAPIR
   tapir::resetOMPABI();
 #endif

@@ -258,10 +258,10 @@ INSTANTIATE_TEST_SUITE_P(
         "stdlib/math_test.seq",
         "stdlib/itertools_test.seq",
         "stdlib/bisect_test.seq",
-        // "stdlib/sort_test.seq", // .rnd?
-        // "stdlib/random_test.seq",  // Unbound?
-        // "stdlib/heapq_test.seq", // there is old optional lurking somewhere in stdlib
-        // "stdlib/statistics_test.seq" // Unbound again?
+        "stdlib/random_test.seq",
+        "stdlib/statistics_test.seq"
+        "stdlib/sort_test.seq",
+        "stdlib/heapq_test.seq",
         // "python/pybridge.seq",
         "core/empty.seq"
       ),

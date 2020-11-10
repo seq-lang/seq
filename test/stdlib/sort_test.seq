@@ -45,7 +45,7 @@ def test_sort2(name, sort):
     from random import shuffle
     fail = False
     print name
-    for N in (0, 1, 10, 100, 1000, 10000, 100000):
+    for N in (0, 1, 10, 100, 1000, 10000): #, 100000): # too slow; maybe add later?
         print N
         for i in range(1000):
             v = list(range(N))

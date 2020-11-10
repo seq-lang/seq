@@ -104,7 +104,8 @@ int StaticType::getValue() const {
 }
 
 LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic)
-    : kind(kind), id(id), level(level), type(type), isStatic(isStatic) {}
+    : kind(kind), id(id), level(level), type(type), isStatic(isStatic),
+      treatAsClass(false) {}
 
 string LinkType::toString(bool reduced) const {
   if (kind == Unbound)
@@ -337,8 +338,9 @@ int ClassType::unify(TypePtr typ, Unification &us) {
       s1 += s;
     }
     if (parent) {
-      if ((s = parent->unify(t->parent, us)) == -1)
+      if ((s = parent->unify(t->parent, us)) == -1) {
         return -1;
+      }
       s1 += s;
     }
     return s1;

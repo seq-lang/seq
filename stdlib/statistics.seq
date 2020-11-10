@@ -701,7 +701,7 @@ class NormalDist:
 
         return 1.0 - (_fabs(Y.cdf(x1) - X.cdf(x1)) + _fabs(Y.cdf(x2) - X.cdf(x2)))
 
-    def samples[T](self: NormalDist, n: int):
+    def samples(self: NormalDist, n: int):
         """
         samples(self, n, seed)
 

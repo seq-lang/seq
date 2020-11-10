@@ -741,6 +741,8 @@ struct FunctionStmt : public Stmt {
   FunctionStmt(const FunctionStmt &s);
   std::string toString() const override;
   NODE_UTILITY(Stmt, FunctionStmt);
+
+  std::string signature() const;
 };
 
 struct PyDefStmt : public Stmt {

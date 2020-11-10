@@ -519,6 +519,15 @@ string FunctionStmt::toString() const {
       // attributes.size() ? format(" :attrs ({})", fmt::join(attributes, " ")) : "",
       suite ? suite->toString() : "(#pass)");
 }
+string FunctionStmt::signature() const {
+  vector<string> s;
+  for (auto &a : generics)
+    s.push_back(a.name);
+  for (auto &a : args)
+    s.push_back(a.type ? a.type->toString() : "-");
+  // s.push_back(ret ? ret->toString() : "-");
+  return format("{}", join(s, ":"));
+}
 
 PyDefStmt::PyDefStmt(const string &n, ExprPtr r, vector<Param> &&a, const string &s)
     : name(n), ret(move(r)), args(move(a)), code(s) {}
