@@ -6,6 +6,8 @@ on:
       - master
       - develop
       - gh-actions
+    tags:
+      - '*'
   pull_request:
     branches:
       - develop
