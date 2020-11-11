@@ -74,6 +74,7 @@ void types::UnionType::initOps() {
     return;
 
   // add an __init__ for each type
+  int index = 0;
   for (types::Type *type : types) {
     vtable.magic.push_back(
         {"__init__",
@@ -83,6 +84,27 @@ void types::UnionType::initOps() {
            return make(type, args[0], b.GetInsertBlock());
          },
          false});
+
+    vtable.magic.push_back(
+        {"__is_" + std::to_string(index) + "__",
+         {},
+         Bool,
+         [this, type](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+           return b.CreateZExt(has(self, type, b.GetInsertBlock()),
+                               Bool->getLLVMType(b.getContext()));
+         },
+         false});
+
+    vtable.magic.push_back(
+        {"__get_" + std::to_string(index) + "__",
+         {},
+         type,
+         [this, type](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
+           return val(self, type, b.GetInsertBlock());
+         },
+         false});
+
+    index += 1;
   }
 }
 
@@ -161,11 +183,4 @@ Value *types::UnionType::val(Value *self, types::Type *type, BasicBlock *block) 
 
 types::UnionType *types::UnionType::get(std::vector<types::Type *> types) noexcept {
   return new UnionType(types);
-}
-
-types::UnionType *types::UnionType::clone(Generic *ref) {
-  std::vector<types::Type *> typesCloned;
-  for (types::Type *type : types)
-    typesCloned.push_back(type->clone(ref));
-  return get(typesCloned);
 }

@@ -147,6 +147,7 @@ set(SEQ_HPPFILES  compiler/lang/expr.h
                   compiler/types/ref.h
                   compiler/types/seq.h
                   compiler/types/types.h
+                  compiler/types/union.h
                   compiler/types/void.h
                   compiler/util/common.h
                   compiler/util/fmt/chrono.h
@@ -198,6 +199,7 @@ set(SEQ_CPPFILES  compiler/lang/expr.cpp
                   compiler/types/ref.cpp
                   compiler/types/seq.cpp
                   compiler/types/types.cpp
+                  compiler/types/union.cpp
                   compiler/types/void.cpp
                   compiler/util/fmt/format.cpp
                   compiler/util/jit.cpp)
