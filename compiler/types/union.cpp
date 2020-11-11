@@ -11,9 +11,8 @@ types::UnionType::UnionType(std::vector<types::Type *> types)
 }
 
 static void sortTypes(std::vector<types::Type *> &types) {
-  std::sort(types.begin(), types.end(), [](types::Type *a, types::Type *b) {
-    return a->getName() > b->getName();
-  });
+  std::sort(types.begin(), types.end(),
+            [](types::Type *a, types::Type *b) { return a->getName() > b->getName(); });
 }
 
 std::vector<types::Type *> types::UnionType::sortedTypes() const {
@@ -35,8 +34,8 @@ unsigned types::UnionType::indexFor(types::Type *type) const {
     if (types::is(ourTypes[i], type))
       return i;
   }
-  throw exc::SeqException("union '" + getName() + "' has no type '" +
-                          type->getName() + "'");
+  throw exc::SeqException("union '" + getName() + "' has no type '" + type->getName() +
+                          "'");
 }
 
 Value *types::UnionType::interpretAs(Value *data, llvm::Type *type,
@@ -116,9 +115,7 @@ bool types::UnionType::is(types::Type *type) const {
 
 unsigned types::UnionType::numBaseTypes() const { return types.size(); }
 
-types::Type *types::UnionType::getBaseType(unsigned idx) const {
-  return types[idx];
-}
+types::Type *types::UnionType::getBaseType(unsigned idx) const { return types[idx]; }
 
 StructType *types::UnionType::getLLVMType(LLVMContext &context) const {
   // TODO: We create a new DataLayout since we don't have access to module here.
@@ -134,27 +131,22 @@ StructType *types::UnionType::getLLVMType(LLVMContext &context) const {
 }
 
 size_t types::UnionType::size(Module *module) const {
-  return module->getDataLayout().getTypeAllocSize(
-      getLLVMType(module->getContext()));
+  return module->getDataLayout().getTypeAllocSize(getLLVMType(module->getContext()));
 }
 
 types::UnionType *types::UnionType::asUnion() { return this; }
 
-Value *types::UnionType::make(types::Type *type, Value *val,
-                              BasicBlock *block) {
+Value *types::UnionType::make(types::Type *type, Value *val, BasicBlock *block) {
   LLVMContext &context = block->getContext();
   Value *self = defaultValue(block);
   const unsigned which = indexFor(type);
-  self = setMemb(self, "which", ConstantInt::get(selectorType(context), which),
-                 block);
-  Value *data =
-      interpretAs(val, getLLVMType(context)->getElementType(1), block);
+  self = setMemb(self, "which", ConstantInt::get(selectorType(context), which), block);
+  Value *data = interpretAs(val, getLLVMType(context)->getElementType(1), block);
   self = setMemb(self, "data", data, block);
   return self;
 }
 
-Value *types::UnionType::has(Value *self, types::Type *type,
-                             BasicBlock *block) {
+Value *types::UnionType::has(Value *self, types::Type *type, BasicBlock *block) {
   LLVMContext &context = block->getContext();
   Value *whichGot = memb(self, "which", block);
   Value *whichExp = ConstantInt::get(selectorType(context), indexFor(type));
@@ -162,14 +154,12 @@ Value *types::UnionType::has(Value *self, types::Type *type,
   return builder.CreateICmpEQ(whichGot, whichExp);
 }
 
-Value *types::UnionType::val(Value *self, types::Type *type,
-                             BasicBlock *block) {
+Value *types::UnionType::val(Value *self, types::Type *type, BasicBlock *block) {
   Value *data = memb(self, "data", block);
   return interpretAs(data, type->getLLVMType(block->getContext()), block);
 }
 
-types::UnionType *
-types::UnionType::get(std::vector<types::Type *> types) noexcept {
+types::UnionType *types::UnionType::get(std::vector<types::Type *> types) noexcept {
   return new UnionType(types);
 }
 
@@ -178,124 +168,4 @@ types::UnionType *types::UnionType::clone(Generic *ref) {
   for (types::Type *type : types)
     typesCloned.push_back(type->clone(ref));
   return get(typesCloned);
-}
-
-types::OptionalType::OptionalType(seq::types::Type *baseType)
-    : Type("optional", BaseType::get()), baseType(baseType) {}
-
-/*
- * Reference types are special-cased since their empty value can just be the
- * null pointer.
- */
-bool types::OptionalType::isRefOpt() const {
-  return (baseType->asRef() != nullptr);
-}
-
-Value *types::OptionalType::defaultValue(BasicBlock *block) {
-  return make(nullptr, block);
-}
-
-void types::OptionalType::initFields() {
-  if (isRefOpt() || !vtable.fields.empty())
-    return;
-
-  vtable.fields = {{"has", {0, Void}}, {"val", {1, Void}}};
-}
-
-void types::OptionalType::initOps() {
-  if (!vtable.magic.empty())
-    return;
-
-  vtable.magic = {
-      {"__bool__",
-       {},
-       Bool,
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return b.CreateZExt(has(self, b.GetInsertBlock()),
-                             Bool->getLLVMType(b.getContext()));
-       },
-       false},
-
-      {"__invert__",
-       {},
-       getBaseType(0),
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return val(self, b.GetInsertBlock());
-       },
-       false},
-  };
-}
-
-bool types::OptionalType::isAtomic() const { return baseType->isAtomic(); }
-
-bool types::OptionalType::is(types::Type *type) const {
-  return isGeneric(type) && types::is(getBaseType(0), type->getBaseType(0));
-}
-
-unsigned types::OptionalType::numBaseTypes() const { return 1; }
-
-types::Type *types::OptionalType::getBaseType(unsigned idx) const {
-  return baseType;
-}
-
-Type *types::OptionalType::getLLVMType(LLVMContext &context) const {
-  if (isRefOpt())
-    return baseType->getLLVMType(context);
-  else
-    return StructType::get(IntegerType::getInt1Ty(context),
-                           baseType->getLLVMType(context));
-}
-
-size_t types::OptionalType::size(Module *module) const {
-  return module->getDataLayout().getTypeAllocSize(
-      getLLVMType(module->getContext()));
-}
-
-types::OptionalType *types::OptionalType::asOpt() { return this; }
-
-Value *types::OptionalType::make(Value *val, BasicBlock *block) {
-  LLVMContext &context = block->getContext();
-
-  if (isRefOpt())
-    return val ? val
-               : ConstantPointerNull::get(
-                     cast<PointerType>(getLLVMType(context)));
-  else {
-    IRBuilder<> builder(block);
-    Value *self = UndefValue::get(getLLVMType(context));
-    self = setMemb(
-        self, "has",
-        ConstantInt::get(IntegerType::getInt1Ty(context), val ? 1 : 0), block);
-    if (val)
-      self = setMemb(self, "val", val, block);
-    return self;
-  }
-}
-
-Value *types::OptionalType::has(Value *self, BasicBlock *block) {
-  if (isRefOpt()) {
-    LLVMContext &context = block->getContext();
-    IRBuilder<> builder(block);
-    return builder.CreateICmpNE(
-        self,
-        ConstantPointerNull::get(cast<PointerType>(getLLVMType(context))));
-  } else {
-    return memb(self, "has", block);
-  }
-}
-
-Value *types::OptionalType::val(Value *self, BasicBlock *block) {
-  return isRefOpt() ? self : memb(self, "val", block);
-}
-
-types::OptionalType *types::OptionalType::get(types::Type *baseType) noexcept {
-  return new OptionalType(baseType);
-}
-
-types::OptionalType *types::OptionalType::get() {
-  return get(types::BaseType::get());
-}
-
-types::OptionalType *types::OptionalType::clone(Generic *ref) {
-  return get(baseType->clone(ref));
 }

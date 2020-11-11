@@ -8,10 +8,10 @@ class TimeInterval:
     start: int
     msg: str
 
-    def __enter__(self: TimeInterval):
+    def __enter__(self):
         self.start = _C.seq_time()
 
-    def __exit__(self: TimeInterval):
+    def __exit__(self):
         from sys import stderr
         elapsed = float(_C.seq_time() - self.start) / 1e9
         if self.msg == "":

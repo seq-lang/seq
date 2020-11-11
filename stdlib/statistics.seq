@@ -6,14 +6,14 @@ from math import gcd as _gcd, exp as _exp, log as _log, sqrt as _sqrt, tau as _t
 class StatisticsError:
     _hdr: ExcHeader
 
-    def __init__(self: StatisticsError):
+    def __init__(self):
         self._hdr = ('StatisticsError', '', '', '', 0, 0)
 
-    def __init__(self: StatisticsError, message: str):
+    def __init__(self, message: str):
         self._hdr = ('StatisticsError', message, '', '', 0, 0)
 
     @property
-    def message(self: StatisticsError):
+    def message(self):
         return self._hdr.msg
 
 def median[T](data: list[T]) -> float:
@@ -418,53 +418,53 @@ class NormalDist:
     _mu: float
     _sigma: float
 
-    def __eq__(self: NormalDist, other: NormalDist):
+    def __eq__(self, other: NormalDist):
         return (self._mu - other._mu) < self.PRECISION and (self._sigma - other._sigma) < self.PRECISION
 
-    def _init(self: NormalDist, mu: float, sigma: float):
+    def _init(self, mu: float, sigma: float):
         self.PRECISION = 1e-6
         if sigma < 0.0:
             raise StatisticsError('sigma must be non-negative')
         self._mu = mu
         self._sigma = sigma
 
-    def __init__(self: NormalDist, mu: float, sigma: float):
+    def __init__(self, mu: float, sigma: float):
         self._init(float(mu), float(sigma))
 
-    def __init__(self: NormalDist, mu: int, sigma: int):
+    def __init__(self, mu: int, sigma: int):
         self._init(float(mu), float(sigma))
 
-    def __init__(self: NormalDist, mu: float, sigma: int):
+    def __init__(self, mu: float, sigma: int):
         self._init(float(mu), float(sigma))
 
-    def __init__(self: NormalDist, mu: int, sigma: float):
+    def __init__(self, mu: int, sigma: float):
         self._init(float(mu), float(sigma))
 
-    def __init__(self: NormalDist, mu: float):
+    def __init__(self, mu: float):
         self._init(mu, 1.0)
 
-    def __init__(self: NormalDist, mu: int):
+    def __init__(self, mu: int):
         self._init(float(mu), 1.0)
 
-    def __init__(self: NormalDist):
+    def __init__(self):
         self._init(0.0, 1.0)
 
     @property
-    def mean(self: NormalDist):
+    def mean(self):
         """
         Arithmetic mean of the normal distribution.
         """
         return self._mu
 
     @property
-    def median(self: NormalDist):
+    def median(self):
         """
         Return the median of the normal distribution
         """
         return self._mu
 
     @property
-    def mode(self: NormalDist):
+    def mode(self):
         """
         Return the mode of the normal distribution
 
@@ -474,14 +474,14 @@ class NormalDist:
         return self._mu
 
     @property
-    def stdev(self: NormalDist):
+    def stdev(self):
         """
         Standard deviation of the normal distribution.
         """
         return self._sigma
 
     @property
-    def variance(self: NormalDist):
+    def variance(self):
         """
         Square of the standard deviation.
         """
@@ -579,7 +579,7 @@ class NormalDist:
             x = -x
         return mu + (x * sigma)
 
-    def inv_cdf(self: NormalDist, p: float):
+    def inv_cdf(self, p: float):
         """
         Inverse cumulative distribution function.  x : P(X <= x) = p
 
@@ -593,7 +593,7 @@ class NormalDist:
             raise StatisticsError('cdf() not defined when sigma at or below zero')
         return self._normal_dist_inv_cdf(p, self._mu, self._sigma)
 
-    def quantiles(self: NormalDist, n: int=4):
+    def quantiles(self, n: int=4):
         """
         Divide into *n* continuous intervals with equal probability.
 
@@ -605,7 +605,7 @@ class NormalDist:
         """
         return [self.inv_cdf(float(i)/float(n)) for i in range(1, n)]
 
-    def overlap(self: NormalDist, other: NormalDist) -> float:
+    def overlap(self, other: NormalDist) -> float:
         """
         Compute the overlapping coefficient (OVL) between two normal distributions.
 
@@ -636,7 +636,7 @@ class NormalDist:
 
         return 1.0 - (_fabs(Y.cdf(x1) - X.cdf(x1)) + _fabs(Y.cdf(x2) - X.cdf(x2)))
 
-    def samples(self: NormalDist, n: int):
+    def samples(self, n: int):
         """
         Generate *n* samples for a given mean and standard deviation.
         """
@@ -731,8 +731,8 @@ class NormalDist:
     def __eq__(x1: NormalDist, x2: NormalDist):
         return x1._mu == x2._mu and x1._sigma == x2._sigma
 
-    def __hash__(self: NormalDist):
+    def __hash__(self):
         return hash((self._mu, self._sigma))
 
-    def __str__(self: NormalDist):
+    def __str__(self):
         return f'NormalDist(mu={self._mu}, sigma={self._sigma})'

@@ -172,9 +172,9 @@ def test_comparison_operator():
         return [heapq.heappop(data2).x for i in range(len(data))]
     class LT:
         x: float
-        def __init__(self: LT, x: float):
+        def __init__(self, x: float):
             self.x = x
-        def __lt__(self: LT, other: LT):
+        def __lt__(self, other: LT):
             return self.x > other.x
     data = [random() for i in range(100)]
     target = list(reversed(sorted(data)))

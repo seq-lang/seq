@@ -3,56 +3,56 @@ class File:
     buf: ptr[byte]
     fp: cobj
 
-    def __init__(self: File, fp: cobj):
+    def __init__(self, fp: cobj):
         self.fp = fp
         self._reset()
 
-    def __init__(self: File, path: str, mode: str):
+    def __init__(self, path: str, mode: str):
         self.fp = _C.fopen(path.c_str(), mode.c_str())
         if not self.fp:
             raise IOError("file " + path + " could not be opened")
         self._reset()
 
-    def _errcheck(self: File, msg: str):
+    def _errcheck(self, msg: str):
         err = int(_C.ferror(self.fp))
         if err:
             raise IOError("file I/O error: " + msg)
 
-    def __enter__(self: File):
+    def __enter__(self):
         pass
 
-    def __exit__(self: File):
+    def __exit__(self):
         self.close()
 
-    def __iter__(self: File):
+    def __iter__(self):
         for a in self._iter():
             yield copy(a)
 
-    def readlines(self: File):
+    def readlines(self):
         return [l for l in self]
 
-    def write(self: File, s: str):
+    def write(self, s: str):
         self._ensure_open()
         _C.fwrite(s.ptr, 1, len(s), self.fp)
         self._errcheck("error in write")
 
-    def write_gen[T](self: File, g: generator[T]):
+    def write_gen[T](self, g: generator[T]):
         for s in g:
             self.write(str(s))
 
-    def read(self: File, sz: int):
+    def read(self, sz: int):
         self._ensure_open()
         buf = ptr[byte](sz)
         ret = _C.fread(buf, 1, sz, self.fp)
         self._errcheck("error in read")
         return str(buf, ret)
 
-    def tell(self: File):
+    def tell(self):
         ret = _C.ftell(self.fp)
         self._errcheck("error in tell")
         return ret
 
-    def seek(self: File, offset: int, whence: int):
+    def seek(self, offset: int, whence: int):
         _C.fseek(self.fp, offset, i32(whence))
         self._errcheck("error in seek")
 
@@ -64,15 +64,15 @@ class File:
             _C.free(self.buf)
             self._reset()
 
-    def _ensure_open(self: File):
+    def _ensure_open(self):
         if not self.fp:
             raise IOError("I/O operation on closed file")
 
-    def _reset(self: File):
+    def _reset(self):
         self.buf = ptr[byte]()
         self.sz = 0
 
-    def _iter(self: File):
+    def _iter(self):
         self._ensure_open()
         while True:
             # pass pointers to individual class fields:
@@ -95,17 +95,17 @@ class gzFile:
     buf: ptr[byte]
     fp: cobj
 
-    def __init__(self: gzFile, fp: cobj):
+    def __init__(self, fp: cobj):
         self.fp = fp
         self._reset()
 
-    def __init__(self: gzFile, path: str, mode: str):
+    def __init__(self, path: str, mode: str):
         self.fp = _C.gzopen(path.c_str(), mode.c_str())
         if not self.fp:
             raise IOError("file " + path + " could not be opened")
         self._reset()
 
-    def _getline(self: gzFile):
+    def _getline(self):
         if not self.buf:
             self.sz = 128
             self.buf = ptr[byte](self.sz)
@@ -128,14 +128,14 @@ class gzFile:
 
         return offset
 
-    def __iter__(self: gzFile):
+    def __iter__(self):
         for a in self._iter():
             yield copy(a)
 
-    def __enter__(self: gzFile):
+    def __enter__(self):
         pass
 
-    def __exit__(self: gzFile):
+    def __exit__(self):
         self.close()
 
     def close(self):
@@ -146,28 +146,28 @@ class gzFile:
             _gc.free(self.buf)
             self._reset()
 
-    def readlines(self: gzFile):
+    def readlines(self):
         return [l for l in self]
 
-    def write(self: gzFile, s: str):
+    def write(self, s: str):
         self._ensure_open()
         _C.gzwrite(self.fp, s.ptr, u32(len(s)))
         _gz_errcheck(self.fp)
 
-    def write_gen[T](self: gzFile, g: generator[T]):
+    def write_gen[T](self, g: generator[T]):
         for s in g:
             self.write(str(s))
 
-    def tell(self: gzFile):
+    def tell(self):
         ret = _C.gztell(self.fp)
         _gz_errcheck(self.fp)
         return ret
 
-    def seek(self: gzFile, offset: int, whence: int):
+    def seek(self, offset: int, whence: int):
         _C.gzseek(self.fp, offset, i32(whence))
         _gz_errcheck(self.fp)
 
-    def _iter(self: gzFile):
+    def _iter(self):
         self._ensure_open()
         while True:
             # pass pointers to individual class fields:
@@ -179,11 +179,11 @@ class gzFile:
             else:
                 break
 
-    def _ensure_open(self: gzFile):
+    def _ensure_open(self):
         if not self.fp:
             raise IOError("I/O operation on closed file")
 
-    def _reset(self: gzFile):
+    def _reset(self):
         self.buf = cobj()
         self.sz = 0
 

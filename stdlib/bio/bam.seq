@@ -135,27 +135,27 @@ type SAMAux(s: ptr[u8]):
             return AUX_TYPE_ARRAY
         raise TypeError("unknown SAM aux type")
 
-    def _type(self: SAMAux):
-        return SAMAux._byte_to_type(ptr[byte](self.s)[0])
+    def _type(self):
+        return SAMAux._byte_to_type(self.s.as_byte()[0])
 
-    def _array_type(self: SAMAux):
-        return SAMAux._byte_to_type(ptr[byte](self.s)[1])
+    def _array_type(self):
+        return SAMAux._byte_to_type(self.s.as_byte()[1])
 
-    def _check_type(self: SAMAux, mask: int, code: str):
+    def _check_type(self, mask: int, code: str):
         if not self.s:
             raise ValueError("empty aux field")
         t = self._type()
         if not (t & mask):
             raise TypeError(f"aux tag not of type '{code}'")
 
-    def _check_array_type(self: SAMAux, mask: int, code: str):
+    def _check_array_type(self, mask: int, code: str):
         self._check_type(AUX_TYPE_ARRAY, 'B')
         t = self._array_type()
         if not (t & mask):
             raise TypeError(f"aux tag not of array type '{code}'")
 
     @property
-    def tag_type(self: SAMAux):
+    def tag_type(self):
         '''
         String representing the type of this tag.
 
@@ -369,112 +369,112 @@ class SAMRecord:
         return Locus(self.mate_tid, -pos if self.mate_reversed else pos)
 
     @property
-    def mapq(self: SAMRecord):
+    def mapq(self):
         '''
         Record's mapping quality
         '''
         return self._htsr.mapq
 
     @property
-    def insert_size(self: SAMRecord):
+    def insert_size(self):
         '''
         Record's insert size
         '''
         return self._htsr.isize
 
     @property
-    def paired(self: SAMRecord):
+    def paired(self):
         '''
         Whether this record is paired
         '''
         return self._htsr.flag & BAM_FREVERSE != 0
 
     @property
-    def proper_pair(self: SAMRecord):
+    def proper_pair(self):
         '''
         Whether this record and its pair form a proper pair
         '''
         return self._htsr.flag & BAM_FPROPER_PAIR != 0
 
     @property
-    def unmapped(self: SAMRecord):
+    def unmapped(self):
         '''
         Whether this record is unmapped
         '''
         return self._htsr.flag & BAM_FUNMAP != 0
 
     @property
-    def mate_unmapped(self: SAMRecord):
+    def mate_unmapped(self):
         '''
         Whether mate's record is unmapped
         '''
         return self._htsr.flag & BAM_FMUNMAP != 0
 
     @property
-    def reversed(self: SAMRecord):
+    def reversed(self):
         '''
         Whether this record is reverse complemented on the reference
         '''
         return self._htsr.flag & BAM_FREVERSE != 0
 
     @property
-    def mate_reversed(self: SAMRecord):
+    def mate_reversed(self):
         '''
         Whether this record's mate is reverse complemented on the reference
         '''
         return self._htsr.flag & BAM_FMREVERSE != 0
 
     @property
-    def read1(self: SAMRecord):
+    def read1(self):
         '''
         Whether this is the first read in the pair
         '''
         return self._htsr.flag & BAM_FREAD1 != 0
 
     @property
-    def read2(self: SAMRecord):
+    def read2(self):
         '''
         Whether this is the second read in the pair
         '''
         return self._htsr.flag & BAM_FREAD2 != 0
 
     @property
-    def secondary(self: SAMRecord):
+    def secondary(self):
         '''
         Whether this is a seconday alignment
         '''
         return self._htsr.flag & BAM_FSECONDARY != 0
 
     @property
-    def qc_fail(self: SAMRecord):
+    def qc_fail(self):
         '''
         Whether this record failed quality control checks
         '''
         return self._htsr.flag & BAM_FQCFAIL != 0
 
     @property
-    def duplicate(self: SAMRecord):
+    def duplicate(self):
         '''
         Whether this record is marked as a duplicate
         '''
         return self._htsr.flag & BAM_FDUP != 0
 
     @property
-    def supplementary(self: SAMRecord):
+    def supplementary(self):
         '''
         Whether this record is supplementary
         '''
         return self._htsr.flag & BAM_FSUPPLEMENTARY != 0
 
     @property
-    def endpos(self: SAMRecord):
+    def endpos(self):
         '''
         The rightmost base position of an alignment on the reference genome
         '''
         b = self._htsr
-        return bam_endpos(cobj(__ptr__(b)))
+        return bam_endpos(__ptr__(b).as_byte())
 
-    def aux(self: SAMRecord, tag: str):
+    def aux(self, tag: str):
         '''
         Returns the auxiliary tag with the specified key.
         '''
@@ -484,8 +484,7 @@ class SAMRecord:
         '''
         hts_aux = (self._htsr.data +
                     ((int(self._htsr.core._n_cigar) << 2) +
-                     int(self._htsr.core._l_qname) +
-                     ((int(self._htsr.core._l_qseq) + 1) >> 1) +
+                     int(self._htsr.core._lformats_l_qseq) + 1) >> 1) +
                      int(self._htsr.core._l_qseq)))
         n = int(self._htsr.l_data) - (int(self._hts.core._n_cigar) << 2) - int(self._htsr.core._l_qname) -
             int(self._htsr.core._l_qseq) - ((int(self._htsr.core._l_qseq) + 1) >> 1)

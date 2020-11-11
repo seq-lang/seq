@@ -7,6 +7,7 @@
 #include "lang/seq.h"
 #include "parser/ast/cache.h"
 #include "parser/ast/codegen/codegen.h"
+#include "parser/ast/doc/doc.h"
 #include "parser/ast/format/format.h"
 #include "parser/ast/transform/transform.h"
 #include "parser/ast/typecheck/typecheck.h"
@@ -29,7 +30,7 @@ void generateDocstr(const std::string &argv0) {
   string s;
   while (std::getline(std::cin, s))
     files.push_back(s);
-  auto j = ast::DocStmtVisitor::apply(argv0, files);
+  auto j = ast::DocVisitor::apply(argv0, files);
   fmt::print("{}\n", j.dump());
 }
 

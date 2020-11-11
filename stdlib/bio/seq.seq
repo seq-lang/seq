@@ -25,7 +25,7 @@ type BaseCounts(A: int, C: int, G: int, T: int, N: int):
         '''
         return (0, 0, 0, 0, 0)
 
-    def __add__(self: BaseCounts, other: BaseCounts):
+    def __add__(self, other: BaseCounts):
         '''
         Adds corresponding base counts
         '''
@@ -33,7 +33,7 @@ type BaseCounts(A: int, C: int, G: int, T: int, N: int):
         A2, C2, G2, T2, N2 = other
         return BaseCounts(A1 + A2, C1 + C2, G1 + G2, T1 + T2, N1 + N2)
 
-    def __sub__(self: BaseCounts, other: BaseCounts):
+    def __sub__(self, other: BaseCounts):
         '''
         Subtracts corresponding base counts
         '''
@@ -41,7 +41,7 @@ type BaseCounts(A: int, C: int, G: int, T: int, N: int):
         A2, C2, G2, T2, N2 = other
         return BaseCounts(A1 - A2, C1 - C2, G1 - G2, T1 - T2, N1 - N2)
 
-    def add(self: BaseCounts, A: bool = False, C: bool = False, G: bool = False, T: bool = False, N: bool = False):
+    def add(self, A: bool = False, C: bool = False, G: bool = False, T: bool = False, N: bool = False):
         '''
         Increments the specified base counts
         '''
@@ -211,7 +211,7 @@ extend seq:
         self._copy_to(p)
         return seq(p, n)
 
-    def split(self: seq, k: int, step: int = 1):
+    def split(self, k: int, step: int = 1):
         '''
         Iterator over length-`k` subsequences of the given sequence
         with the specified step size.
@@ -230,7 +230,7 @@ extend seq:
             yield self._slice_direct(i,i+1)
             i -= 1
 
-    def kmers[K](self: seq, step: int = 1):
+    def kmers[K](self, step: int = 1):
         '''
         Iterator over k-mers (type `K`) of the given sequence
         with the specified step size. Note that k-mers spanning
@@ -239,7 +239,7 @@ extend seq:
         for pos, kmer in self.kmers_with_pos[K](step):
             yield kmer
 
-    def kmers_canonical[K](self: seq):
+    def kmers_canonical[K](self):
         '''
         Iterator over canonical k-mers (type `K`) of the given sequence.
         Note that k-mers spanning ambiguous bases will be skipped.
@@ -264,7 +264,7 @@ extend seq:
                 l = 0
             i += 1
 
-    def kmers_canonical_with_pos[K](self: seq):
+    def kmers_canonical_with_pos[K](self):
         '''
         Iterator over (0-based index, canonical k-mer) tuples of the given
         sequence with the specified step size. Note that k-mers
@@ -288,7 +288,7 @@ extend seq:
                 l = 0
             i += 1
 
-    def kmers_with_pos[K](self: seq, step: int = 1):
+    def kmers_with_pos[K](self, step: int = 1):
         '''
         Iterator over (0-based index, k-mer) tuples of the given
         sequence with the specified step size. Note that k-mers
@@ -405,7 +405,7 @@ extend seq:
                 '\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04'
                 '\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04').ptr
 
-    def N(self: seq):
+    def N(self):
         '''
         Returns whether this sequence contains ambiguous bases.
         An ambiguous base is defined to be a non-ACGT base.
@@ -430,7 +430,7 @@ extend seq:
         return seq._base_value(self.ptr[0], self.len)
 
     @property
-    def bases(self: seq):
+    def bases(self):
         '''
         `BaseCount` for this sequence
         '''
@@ -444,7 +444,7 @@ extend seq:
         A, C, G, T, N = p
         return BaseCounts(A, C, G, T, N)
 
-    def __invert__(self: seq):
+    def __invert__(self):
         '''
         Reverse complemented sequence
         '''

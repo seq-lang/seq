@@ -23,14 +23,14 @@ import os
 class GetoptError:
     _hdr: ExcHeader
 
-    def __init__(self: GetoptError):
+    def __init__(self):
         self._hdr = ('GetoptError', '', '', '', 0, 0)
 
-    def __init__(self: GetoptError, message: str):
+    def __init__(self, message: str):
         self._hdr = ('GetoptError', message, '', '', 0, 0)
 
     @property
-    def message(self: GetoptError):
+    def message(self):
         return self._hdr.msg
 
 

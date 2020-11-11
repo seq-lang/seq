@@ -124,7 +124,7 @@ set(SEQ_HPPFILES  compiler/lang/expr.h
                   compiler/parser/ast/codegen/codegen.h
                   compiler/parser/ast/codegen/codegen_ctx.h
                   compiler/parser/ast/context.h
-                  # compiler/parser/ast/doc.h
+                  compiler/parser/ast/doc/doc.h
                   compiler/parser/ast/format/format.h
                   compiler/parser/ast/transform/transform.h
                   compiler/parser/ast/transform/transform_ctx.h
@@ -175,7 +175,7 @@ set(SEQ_CPPFILES  compiler/lang/expr.cpp
                   compiler/parser/ast/codegen/codegen.cpp
                   compiler/parser/ast/codegen/codegen_ctx.cpp
                   compiler/parser/ast/context.cpp
-                  # compiler/parser/ast/doc.cpp
+                  compiler/parser/ast/doc/doc.cpp
                   compiler/parser/ast/format/format.cpp
                   compiler/parser/ast/transform/transform.cpp
                   compiler/parser/ast/transform/transform_ctx.cpp

@@ -26,7 +26,7 @@ def sorted[T,S=int](
             newlist.sort(None, None, reverse)
     return newlist
 
-def _sort_list[T,S](self: list[T], key: function[S,T], algorithm: str):
+def _sort_list[T,S](self, key: function[S,T], algorithm: str):
     if algorithm == 'pdq':
         pdq_sort_inplace(self, key)
     elif algorithm == 'insertion':
@@ -42,7 +42,7 @@ def _sort_list[T,S](self: list[T], key: function[S,T], algorithm: str):
 
 extend list[T]:
     def sort[S=int](
-        self: list[T],
+        self,
         key: optional[function[S,T]] = None,
         algorithm: optional[str] = None,
         reverse: bool = False

@@ -110,35 +110,12 @@ public:
 
 class SeqPattern : public Pattern {
   std::string pattern;
-  unsigned k;  // k-mer length if matching k-mers, else 0
+  // unsigned k; // k-mer length if matching k-mers, else 0
 
 public:
-  explicit SeqPattern(std::string pattern, unsigned k = 0);
+  explicit SeqPattern(std::string pattern);
   llvm::Value *codegen(BaseFunc *base, types::Type *type, llvm::Value *val,
                        llvm::BasicBlock *&block) override;
-};
-
-class OptPattern : public Pattern {
-private:
-  Pattern *pattern;
-
-public:
-  explicit OptPattern(Pattern *pattern);
-  llvm::Value *codegen(BaseFunc *base, types::Type *type, llvm::Value *val,
-                       llvm::BasicBlock *&block) override;
-};
-
-class UnionPattern : public Pattern {
-private:
-  types::Type *innerType;
-  Pattern *pattern;
-
-public:
-  UnionPattern(types::Type *innerType, Pattern *pattern);
-  void resolveTypes(types::Type *type) override;
-  llvm::Value *codegen(BaseFunc *base, types::Type *type, llvm::Value *val,
-                       llvm::BasicBlock *&block) override;
-  UnionPattern *clone(Generic *ref) override;
 };
 
 class RangePattern : public Pattern {

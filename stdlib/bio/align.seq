@@ -165,7 +165,7 @@ extend Alignment:
     def __new__() -> Alignment:
         return (CIGAR(), 0)
 
-    def __init__(self: Alignment, cigar: str, score: int) -> Alignment:
+    def __init__(self, cigar: str, score: int) -> Alignment:
         return (CIGAR(cigar), score)
 
     @property
@@ -409,6 +409,13 @@ extend pseq:
         Uses Blosum-62, gap open cost 11 and gap extend cost 1.
         '''
         out = Alignment()
+        seq_palign_default(self, other, __ptr__(out))
+        return out
+
+# inter-sequence alignment
+# much of what follows is adapted from BWA-MEM2 (https://github.com/bwa-mem2/bwa-mem2)
+type InterAlignParams(a: i8, b: i8, ambig: i8, gapo: i8, gape: i8, score_only: i8, bandwidth: i32, zdrop: i32, end_bonus: i32)
+
 _LEN_LIMIT     = 512
 _MAX_SEQ_LEN8  = 128
 _MAX_SEQ_LEN16 = 32768

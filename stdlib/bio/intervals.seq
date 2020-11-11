@@ -146,7 +146,7 @@ class IntervalTree:
             k += 1
         return k - 1
 
-    def add(self: IntervalTree, chrom: str, start: int, end: int):
+    def add(self, chrom: str, start: int, end: int):
         '''
         Adds an interval to the tree. An interval is a chromosome name `chrom` and
         0-based `start` and `end` (non-inclusive) positions.
@@ -154,7 +154,7 @@ class IntervalTree:
         chrom_id = self._chrom_id(chrom, end)
         self._append(Interval(start, end, chrom_id))
 
-    def index(self: IntervalTree):
+    def index(self):
         '''
         Indexes the tree for querying.
         '''
@@ -168,7 +168,7 @@ class IntervalTree:
             self.contigs[i] = contig
             i += 1
 
-    def overlap(self: IntervalTree, chrom: str, start: int, end: int):
+    def overlap(self, chrom: str, start: int, end: int):
         '''
         Yields all `Interval`s overlapping the argument interval.
         '''
@@ -222,7 +222,7 @@ class IntervalTree:
     def __contains__(self, chrom: str):
         return chrom in self.hc
 
-    def __iter__(self: IntervalTree):
+    def __iter__(self):
         '''
         Iterator over all intervals in the tree
         '''

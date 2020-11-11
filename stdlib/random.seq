@@ -16,14 +16,14 @@ class Generator:
     state: array[u32]     # the array for the state vector
     next: int
 
-    def __init__(self: Generator):
+    def __init__(self):
         self.state = array[u32](N)
         self.next = N+1
 
-    def gettimeofday(self: Generator):
+    def gettimeofday(self):
         return _C.seq_time() * 1000
 
-    def init_genrand(self: Generator, s: u32):
+    def init_genrand(self, s: u32):
         """
         init_genrand(u32) -> void
 
@@ -34,7 +34,7 @@ class Generator:
             self.state[i] = u32(1812433253) * (self.state[i-1] ^ (self.state[i-1]) >> u32(30)) + u32(i)
         self.next = N
 
-    def init_by_array(self: Generator, init_key: array[u32], key_length: int):
+    def init_by_array(self, init_key: array[u32], key_length: int):
         """
         initialize by an array with array-length
         init_key is the array for initializing keys
@@ -69,7 +69,7 @@ class Generator:
 
         self.state[0] = u32(0x80000000)
 
-    def genrand_int32(self: Generator) -> u32:
+    def genrand_int32(self) -> u32:
         """
         genrand_int32() -> u32
 
@@ -114,7 +114,7 @@ class Generator:
 
         return y
 
-    def genrand_res53(self: Generator) -> float:
+    def genrand_res53(self) -> float:
         """
         genrand_res53() -> float
 
@@ -125,7 +125,7 @@ class Generator:
         b = self.genrand_int32() >> u32(6)
         return (int(a)*67108864.0 + int(b)) * (1.0 / 9007199254740992.0)
 
-    def random_seed_time_pid(self: Generator):
+    def random_seed_time_pid(self):
         """
         helper method for seed()
         """
@@ -163,7 +163,7 @@ can cover arbitrarily large ranges.
 class Random:
     gen: Generator # comment for another error
 
-    def __init__(self: Random, g: Generator):
+    def __init__(self, g: Generator):
         """
         Initialize an instance.
 
@@ -194,7 +194,7 @@ class Random:
         self.gen.seed()
         # self.gauss_next = None
 
-    def from_bytes_big(self: Random, b) -> int:
+    def from_bytes_big(self, b) -> int:
         """
         Return the integer represented by the given array of bytes.
         The argument b must either be a bytes-like object or an iterable
@@ -206,7 +206,7 @@ class Random:
             n |= int(b[x])
         return n
 
-    def getrandbits(self: Random, k: int) -> int:
+    def getrandbits(self, k: int) -> int:
         """
         getrandbits(k) -> x
         Generates an int with k random bits.
@@ -228,7 +228,7 @@ class Random:
 
         return self.from_bytes_big(wordarray.__slice__(0, words))
 
-    def bit_length(self: Random, n: int) -> int:
+    def bit_length(self, n: int) -> int:
         """
         """
         len = 0
@@ -237,7 +237,7 @@ class Random:
             n = int(u64(n) >> u64(1))
         return len
 
-    def _randbelow_with_getrandbits(self: Random, n: int) -> int:
+    def _randbelow_with_getrandbits(self, n: int) -> int:
         """
         Return a random int in the range [0,n).  Raises ValueError if n==0.
         """
@@ -248,7 +248,7 @@ class Random:
             r = getrandbits(k)
         return r
 
-    def randrange(self: Random, start: int, stop: int, step: int) -> int:
+    def randrange(self, start: int, stop: int, step: int) -> int:
         """
         Choose a random item from range(start, stop[, step]).
 
@@ -286,13 +286,13 @@ class Random:
 
         return start + step * self._randbelow_with_getrandbits(int(n))
 
-    def randint(self: Random, a: int, b: int):
+    def randint(self, a: int, b: int):
         """
         Return random integer in range [a, b], including both end points.
         """
         return self.randrange(a, b+1, 1)
 
-    def random(self: Random) -> float:
+    def random(self) -> float:
         """
         random(self) -> float
 
@@ -300,7 +300,7 @@ class Random:
         """
         return self.gen.genrand_res53()
 
-    def choice[T](self: Random, sequence: generator[T]) -> T:
+    def choice[T](self, sequence: generator[T]) -> T:
         """
         Choose a random element from a non-empty sequence.
         """
@@ -312,7 +312,7 @@ class Random:
             raise IndexError("Cannot choose from an empty sequence")
         return l[i]
 
-    def shuffle(self: Random, x):
+    def shuffle(self, x):
         """
         Shuffle list x in place, and return None.
 
@@ -335,13 +335,13 @@ class Random:
                 j = int(self.random() * (i+1))
                 x[i], x[j] = x[j], x[i]
 
-    def uniform(self: Random, a, b) -> float:
+    def uniform(self, a, b) -> float:
         """
         Get a random number in the range [a, b) or [a, b] depending on rounding.
         """
         return a + (b-a) * self.random()
 
-    def triangular(self: Random, low: float, high: float, mode: float) -> float:
+    def triangular(self, low: float, high: float, mode: float) -> float:
         """
         Triangular distribution.
 
@@ -364,7 +364,7 @@ class Random:
             low, high = high, low
         return low + (high - low) * _sqrt(u * c)
 
-    def gammavariate(self: Random, alpha: float, beta: float) -> float:
+    def gammavariate(self, alpha: float, beta: float) -> float:
         """
         Gamma distribution.  Not the gamma function!
 
@@ -432,7 +432,7 @@ class Random:
                     break
             return x * beta
 
-    def betavariate(self: Random, alpha: float, beta: float) -> float:
+    def betavariate(self, alpha: float, beta: float) -> float:
         """
         Beta distribution.
         Conditions on the parameters are alpha > 0 and beta > 0.
@@ -446,7 +446,7 @@ class Random:
         else:
             return y / (y + self.gammavariate(beta, 1.0))
 
-    def expovariate(self: Random, lambd: float) -> float:
+    def expovariate(self, lambd: float) -> float:
         """
         Exponential distribution.
 
@@ -464,7 +464,7 @@ class Random:
         # possibility of taking the log of zero.
         return -_log(1.0 - self.random())/lambd
 
-    def gauss(self: Random, mu: float, sigma: float) -> float:
+    def gauss(self, mu: float, sigma: float) -> float:
         """
         Gaussian distribution.
 
@@ -480,14 +480,14 @@ class Random:
         # self.gauss_next = _sin(x2pi) * g2rad
         return mu + z * sigma
 
-    def paretovariate(self: Random, alpha: float) -> float:
+    def paretovariate(self, alpha: float) -> float:
         """
         Pareto distribution.  alpha is the shape parameter."""
         random = self.random
         u = 1.0 - random()
         return 1.0 / u ** (1.0/alpha)
 
-    def weibullvariate(self: Random, alpha: float, beta: float) -> float:
+    def weibullvariate(self, alpha: float, beta: float) -> float:
         """
         Weibull distribution.
 
@@ -497,7 +497,7 @@ class Random:
         u = 1.0 - random()
         return alpha * (-_log(u)) ** (1.0/beta)
 
-    def normalvariate(self: Random, mu: float, sigma: float) -> float:
+    def normalvariate(self, mu: float, sigma: float) -> float:
         """
         Normal distribution.
 
@@ -514,7 +514,7 @@ class Random:
                 break
         return mu + z * sigma
 
-    def lognormvariate(self: Random, mu: float, sigma: float) -> float:
+    def lognormvariate(self, mu: float, sigma: float) -> float:
           """
           Log normal distribution.
 
@@ -524,7 +524,7 @@ class Random:
           """
           return _exp(self.normalvariate(mu, sigma))
 
-    def vonmisesvariate(self: Random, mu: float, kappa: float) -> float:
+    def vonmisesvariate(self, mu: float, kappa: float) -> float:
         """
         Circular data distribution.
 
@@ -562,7 +562,7 @@ class Random:
 
         return theta
 
-    def sample[T](self: Random, population: list[T], k: int):
+    def sample[T](self, population: list[T], k: int):
         """
         Chooses k unique random elements from a population sequence or set.
 
@@ -609,14 +609,9 @@ class Random:
                 result[i] = population[j]
         return result
 
-<<<<<<< HEAD
-    def choices(self: Random, population, weights: Optional[list[int]], cum_weights: Optional[list[int]], k: int):
-        """Return a k sized list of population elements chosen with replacement.
-=======
-    def choices(self: Random, population, weights: list[int], cum_weights: list[int], k: int):
+    def choices(self, population, weights: Optional[list[int]], cum_weights: Optional[list[int]], k: int):
         """
         Return a k sized list of population elements chosen with replacement.
->>>>>>> origin/develop
 
         If the relative weights or cumulative weights are not specified,
         the selections are made with equal probability.

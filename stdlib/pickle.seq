@@ -48,35 +48,35 @@ def _read[T](jar: Jar):
 # Extend core types to allow pickling
 
 extend int:
-    def __pickle__(self: int, jar: Jar):
+    def __pickle__(self, jar: Jar):
         _write(jar, self)
 
     def __unpickle__(jar: Jar):
         return _read[int](jar)
 
 extend float:
-    def __pickle__(self: float, jar: Jar):
+    def __pickle__(self, jar: Jar):
         _write(jar, self)
 
     def __unpickle__(jar: Jar):
         return _read[float](jar)
 
 extend bool:
-    def __pickle__(self: bool, jar: Jar):
+    def __pickle__(self, jar: Jar):
         _write(jar, self)
 
     def __unpickle__(jar: Jar):
         return _read[bool](jar)
 
 extend byte:
-    def __pickle__(self: byte, jar: Jar):
+    def __pickle__(self, jar: Jar):
         _write(jar, self)
 
     def __unpickle__(jar: Jar):
         return _read[byte](jar)
 
 extend str:
-    def __pickle__(self: str, jar: Jar):
+    def __pickle__(self, jar: Jar):
         _write(jar, self.len)
         _write_raw(jar, self.ptr, self.len)
 
@@ -87,7 +87,7 @@ extend str:
         return str(p, n)
 
 extend seq:
-    def __pickle__(self: seq, jar: Jar):
+    def __pickle__(self, jar: Jar):
         _write(jar, self.len)
         _write_raw(jar, self.ptr, abs(self.len))
 
@@ -99,7 +99,7 @@ extend seq:
         return seq(p, n)
 
 extend list[T]:
-    def __pickle__(self: list[T], jar: Jar):
+    def __pickle__(self, jar: Jar):
         n = len(self)
         pickle(n, jar)
         if _gc.atomic[T]():
@@ -119,7 +119,7 @@ extend list[T]:
         return list[T](arr, n)
 
 extend dict[K, V]:
-    def __pickle__(self: dict[K,V], jar: Jar):
+    def __pickle__(self, jar: Jar):
         import core.collections.khash as khash
         if _gc.atomic[K]() and _gc.atomic[V]():
             pickle(self._n_buckets, jar)
@@ -175,7 +175,7 @@ extend dict[K, V]:
         return d
 
 extend set[K]:
-    def __pickle__(self: set[K], jar: Jar):
+    def __pickle__(self, jar: Jar):
         import core.collections.khash as khash
         if _gc.atomic[K]():
             pickle(self._n_buckets, jar)

@@ -129,7 +129,7 @@ def string_search_KMP(text: str, pattern: str):
             else:
                 i += 1
 
-def replace_interleave(self: str, new: str, maxcount: int) -> str:
+def replace_interleave(self, new: str, maxcount: int) -> str:
     """
     Returns a string inserting the 'new' string everywhere.
     """
@@ -149,7 +149,7 @@ def replace_interleave(self: str, new: str, maxcount: int) -> str:
         res.append(self[j+1:])
     return str.cat(res)
 
-def replace_delete_substring(self: str, old: str, new: str, maxcount: int) -> str:
+def replace_delete_substring(self, old: str, new: str, maxcount: int) -> str:
     """
     Returns a string deleting any instances of the 'old' string in self and
     replaceing it with the 'new' string.

@@ -2,16 +2,16 @@ from bisect import bisect_right, bisect_left, insort
 from collections import deque
 
 extend deque[T]:
-    def _idx_check(self: deque[T], idx: int, msg: str):
+    def _idx_check(self, idx: int, msg: str):
         if self._head == self._tail or idx >= len(self) or idx < 0:
             raise IndexError(msg)
 
     @property
-    def left(self: deque[T]):
+    def left(self):
         self._idx_check(0, "list index out of range")
         return self._arr[self._head]
 
-    def __getitem__(self: deque[T], idx: int):
+    def __getitem__(self, idx: int):
         if idx < 0:
             idx += len(self)
         self._idx_check(idx, "list index out of range")
@@ -33,7 +33,7 @@ class SortedList[T]:
     _offset: int
     # _index:
 
-    def __init__(self: SortedList[T]):
+    def __init__(self):
         self._len = 0
         self._load = DEFAULT_LOAD_FACTOR
         self._lists = list[list[T]]()
@@ -53,12 +53,12 @@ class SortedList[T]:
         # self._index.clear()
 
     @property
-    def left(self: SortedList[T]):
+    def left(self):
         if not self._lists:
             raise IndexError("list index out of range")
         return self._lists[0][0]
 
-    def add(self: SortedList[T], value: T):
+    def add(self, value: T):
         """
         Add `value` to sorted list.
         Runtime complexity: `O(log(n))` -- approximate.
@@ -85,7 +85,7 @@ class SortedList[T]:
         self._len += 1
 
 
-    def _expand(self: SortedList[T], pos: int):
+    def _expand(self, pos: int):
         """
         Split sublists with length greater than double the load-factor.
         Updates the index when the sublist length is less than double the load
@@ -105,7 +105,7 @@ class SortedList[T]:
             _maxes.insert(pos + 1, half[-1])
 
 
-    def _delete(self: SortedList[T], pos: int, idx: int):
+    def _delete(self, pos: int, idx: int):
         """
         Delete value at the given `(pos, idx)`.
         Combines lists that are less than half the load level.
@@ -143,14 +143,14 @@ class SortedList[T]:
             del self._maxes[pos]
 
 
-    def __iter__(self: SortedList[T]):
+    def __iter__(self):
         for l in self._lists:
             yield from l
 
 
-    def __len__(self: SortedList[T]):
+    def __len__(self):
         return self._len
 
 
-    def __bool__(self: SortedList[T]):
+    def __bool__(self):
         return self._len > 0

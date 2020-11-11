@@ -18,7 +18,7 @@ class dict[K,V]:
 
 # Magic methods
 
-    def _init(self: dict[K,V]):
+    def _init(self):
         self._n_buckets = 0
         self._size = 0
         self._n_occupied = 0
@@ -27,26 +27,26 @@ class dict[K,V]:
         self._keys = ptr[K]()
         self._vals = ptr[V]()
 
-    def __init__(self: dict[K,V]):
+    def __init__(self):
         self._init()
 
-    def __init__(self: dict[K,V], g: generator[tuple[K,V]]):
+    def __init__(self, g: generator[tuple[K,V]]):
         self._init()
         for k,v in g:
             self[k] = v
 
-    def __init__(self: dict[K,V], g: tuple[K,V]):
+    def __init__(self, g: tuple[K,V]):
         self._init()
         k, v = g
         self[k] = v
 
-    def __getitem__(self: dict[K,V], key: K):
+    def __getitem__(self, key: K):
         x = self._kh_get(key)
         if x != self._kh_end():
             return self._vals[x]
         raise KeyError(str(key))
 
-    def prefetch(self: dict[K,V], key: K):
+    def prefetch(self, key: K):
         if self._n_buckets:
             mask = self._n_buckets - 1
             k = _dict_hash(key)
@@ -55,21 +55,21 @@ class dict[K,V]:
             (self._vals + i).__prefetch_r1__()
             (self._flags + (i >> 4)).__prefetch_r1__()
 
-    def __setitem__(self: dict[K,V], key: K, val: V):
+    def __setitem__(self, key: K, val: V):
         ret, x = self._kh_put(key)
         self._vals[x] = val
 
-    def __delitem__(self: dict[K,V], key: K):
+    def __delitem__(self, key: K):
         x = self._kh_get(key)
         if x != self._kh_end():
             self._kh_del(x)
         else:
             raise KeyError(str(key))
 
-    def __contains__(self: dict[K,V], key: K):
+    def __contains__(self, key: K):
         return self._kh_get(key) != self._kh_end()
 
-    def __eq__(self: dict[K,V], other: dict[K,V]):
+    def __eq__(self, other: dict[K,V]):
         if len(self) != len(other):
             return False
         for k,v in self.items():
@@ -77,16 +77,16 @@ class dict[K,V]:
                 return False
         return True
 
-    def __ne__(self: dict[K,V], other: dict[K,V]):
+    def __ne__(self, other: dict[K,V]):
         return not (self == other)
 
-    def __iter__(self: dict[K,V]):
+    def __iter__(self):
         return self.keys()
 
-    def __len__(self: dict[K,V]):
+    def __len__(self):
         return self._size
 
-    def __copy__(self: dict[K,V]):
+    def __copy__(self):
         if len(self) == 0:
             return dict[K,V]()
         n = self._n_buckets
@@ -99,7 +99,7 @@ class dict[K,V]:
         str.memcpy(vals_copy.as_byte(), self._vals.as_byte(), n * _gc.sizeof[V]())
         return dict[K,V](n, self._size, self._n_occupied, self._upper_bound, flags_copy, keys_copy, vals_copy)
 
-    def __str__(self: dict[K,V]):
+    def __str__(self):
         n = len(self)
         if n == 0:
             return "{}"
@@ -121,32 +121,32 @@ class dict[K,V]:
 
 # Helper methods
 
-    def resize(self: dict[K,V], new_n_buckets: int):
+    def resize(self, new_n_buckets: int):
         self._kh_resize(new_n_buckets)
 
-    def get(self: dict[K,V], key: K, s: V):
+    def get(self, key: K, s: V):
         x = self._kh_get(key)
         return self._vals[x] if x != self._kh_end() else s
 
-    def setdefault(self: dict[K,V], key: K, val: V):
+    def setdefault(self, key: K, val: V):
         ret, x = self._kh_put(key)
         if ret != 0:  # i.e. key not present
             self._vals[x] = val
             return val
         return self._vals[x]
 
-    def increment[T](self: dict[K,V], key: K, by: T = 1):
+    def increment[T](self, key: K, by: T = 1):
         ret, x = self._kh_put(key)
         if ret != 0:  # i.e. key not present
             self._vals[x] = by
         else:
             self._vals[x] += by
 
-    def update(self: dict[K,V], other: dict[K,V]):
+    def update(self, other: dict[K,V]):
         for k,v in other.items():
             self[k] = v
 
-    def pop(self: dict[K,V], key: K):
+    def pop(self, key: K):
         x = self._kh_get(key)
         if x != self._kh_end():
             v = self._vals[x]
@@ -154,25 +154,25 @@ class dict[K,V]:
             return v
         raise KeyError(str(key))
 
-    def clear(self: dict[K,V]):
+    def clear(self):
         self._kh_clear()
 
-    def items(self: dict[K,V]):
+    def items(self):
         i = self._kh_begin()
         while i < self._kh_end():
             if self._kh_exist(i):
                 yield self._keys[i], self._vals[i]
             i += 1
 
-    def keys(self: dict[K,V]):
+    def keys(self):
         for k,v in self.items():
             yield k
 
-    def values(self: dict[K,V]):
+    def values(self):
         for k,v in self.items():
             yield v
 
-    def copy(self: dict[K,V]):
+    def copy(self):
         return self.__copy__()
 
     def fromkeys[KS,V](ks: KS, v: V):
@@ -180,7 +180,7 @@ class dict[K,V]:
 
 # Internal helpers
 
-    def _kh_clear(self: dict[K,V]):
+    def _kh_clear(self):
         if self._flags:
             i = 0
             n = khash.__ac_fsize(self._n_buckets)
@@ -190,7 +190,7 @@ class dict[K,V]:
             self._size = 0
             self._n_occupied = 0
 
-    def _kh_get(self: dict[K,V], key: K):
+    def _kh_get(self, key: K):
         if self._n_buckets:
             step = 0
             mask = self._n_buckets - 1
@@ -206,7 +206,7 @@ class dict[K,V]:
         else:
             return 0
 
-    def _kh_resize(self: dict[K,V], new_n_buckets: int):
+    def _kh_resize(self, new_n_buckets: int):
         HASH_UPPER = 0.77
         new_flags = ptr[u32]()
         j = 1
@@ -276,7 +276,7 @@ class dict[K,V]:
             self._n_occupied = self._size
             self._upper_bound = int(self._n_buckets*HASH_UPPER + 0.5)
 
-    def _kh_put(self: dict[K,V], key: K):
+    def _kh_put(self, key: K):
         if self._n_occupied >= self._upper_bound:
             if self._n_buckets > (self._size << 1):
                 self._kh_resize(self._n_buckets - 1)
@@ -323,18 +323,18 @@ class dict[K,V]:
 
         return (ret, x)
 
-    def _kh_del(self: dict[K,V], x: int):
+    def _kh_del(self, x: int):
         if x != self._n_buckets and not khash.__ac_iseither(self._flags, x):
             khash.__ac_set_isdel_true(self._flags, x)
             self._size -= 1
 
-    def _kh_begin(self: dict[K,V]):
+    def _kh_begin(self):
         return 0
 
-    def _kh_end(self: dict[K,V]):
+    def _kh_end(self):
         return self._n_buckets
 
-    def _kh_exist(self: dict[K,V], x: int):
+    def _kh_exist(self, x: int):
         return not khash.__ac_iseither(self._flags, x)
 
 

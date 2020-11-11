@@ -76,13 +76,13 @@ type Locus(_tid: u32, _pos: u32):
         return abs(int(i32(int(self._pos))))
 
     @property
-    def reversed(self: Locus):
+    def reversed(self):
         '''
         Whether this locus is on the reverse strand
         '''
         return i32(int(self._pos)) < i32(0)
 
-    def __invert__(self: Locus):
+    def __invert__(self):
         '''
         Returns the corresponding `Locus` on the reverse strand
         '''

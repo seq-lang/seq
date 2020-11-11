@@ -22,7 +22,7 @@ extend float:
 
         return result
 
-    def __hash__(self: float):
+    def __hash__(self):
         HASH_BITS = 61
         HASH_MODULUS = (1 << HASH_BITS) - 1
         HASH_INF = 314159

@@ -58,7 +58,7 @@ type Kmer[K: int]:
         y = (self.x & (m << s)) >> s
         return Kmer[1](int(y))
 
-    def __lshift__(self: Kmer[K], s: seq):
+    def __lshift__(self, s: seq):
         two = UInt[2*K](2)
         n = self.x
         i = 0
@@ -71,7 +71,7 @@ type Kmer[K: int]:
             i += 1
         return Kmer[K](n)
 
-    def __rshift__(self: Kmer[K], s: seq):
+    def __rshift__(self, s: seq):
         two = UInt[2*K](2)
         n = self.x
         i = 0
@@ -85,7 +85,7 @@ type Kmer[K: int]:
             i += 1
         return Kmer[K](n)
 
-    def __sub__(self: Kmer[K], other: Kmer[K]):
+    def __sub__(self, other: Kmer[K]):
         '''
         Hamming distance algorithm:
           input: kmer1, kmer2

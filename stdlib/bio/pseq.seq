@@ -115,7 +115,7 @@ type pseq(len: int, ptr: cobj):
         self._copy_to(p)
         return pseq(p, n)
 
-    def split(self: pseq, k: int, step: int):
+    def split(self, k: int, step: int):
         '''
         Iterator over length-`k` subsequences of the given sequence
         with the specified step size.
