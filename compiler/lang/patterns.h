@@ -128,6 +128,19 @@ public:
                        llvm::BasicBlock *&block) override;
 };
 
+class UnionPattern : public Pattern {
+private:
+  types::Type *innerType;
+  Pattern *pattern;
+
+public:
+  UnionPattern(types::Type *innerType, Pattern *pattern);
+  void resolveTypes(types::Type *type) override;
+  llvm::Value *codegen(BaseFunc *base, types::Type *type, llvm::Value *val,
+                       llvm::BasicBlock *&block) override;
+  UnionPattern *clone(Generic *ref) override;
+};
+
 class RangePattern : public Pattern {
 private:
   seq_int_t a;

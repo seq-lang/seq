@@ -745,18 +745,11 @@ void Match::codegen0(BasicBlock *&block) {
 
   IRBuilder<> builder(block);
   types::Type *valType = value->getType();
-
-  bool seenCatchAll = false;
   for (auto *pattern : patterns) {
-    if (pattern->isCatchAll())
-      seenCatchAll = true;
+    pattern->resolveTypes(valType);
   }
 
-  if (!seenCatchAll)
-    throw exc::SeqException("match statement missing catch-all pattern");
-
   Value *val = value->codegen(getBase(), block);
-
   std::vector<BranchInst *> binsts;
 
   for (unsigned i = 0; i < patterns.size(); i++) {

@@ -19,12 +19,12 @@
 #include "types/base.h"
 #include "types/func.h"
 #include "types/num.h"
-#include "types/optional.h"
 #include "types/ptr.h"
 #include "types/record.h"
 #include "types/ref.h"
 #include "types/seq.h"
 #include "types/types.h"
+#include "types/union.h"
 #include "types/void.h"
 
 #include "util/common.h"
