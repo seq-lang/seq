@@ -87,8 +87,8 @@ extend pyobj:
         args_py = (~args).p if args else cobj()
         return pyobj.exc_wrap(pyobj(PyObject_CallObject(self.p, args_py)))
 
-    def _tuple_new(self, len: int) -> pyobj:
-        t = PyTuple_New(len)
+    def _tuple_new(length: int) -> pyobj:
+        t = PyTuple_New(length)
         pyobj.exc_check()
         return pyobj(t)
 

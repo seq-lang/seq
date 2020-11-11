@@ -658,6 +658,27 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
     return transform(N<CallExpr>(N<DotExpr>(move(callee), "__call__"), move(args)));
   }
 
+  FunctionStmt *ast = nullptr;
+  if (auto ff = calleeType->getFunc()) {
+    ast = (FunctionStmt *)(ctx->cache->asts[ff->name].get());
+    if (ast && in(ast->attributes, "pyhandle") &&
+        (args.size() != 1 ||
+         !(args[0].value->getType()->getClass() &&
+           startswith(args[0].value->getType()->getClass()->name, ".Tuple.")))) {
+      vector<ExprPtr> e;
+      for (auto &a : args) {
+        if (a.name != "")
+          error("named python calls are not yet supported");
+        e.push_back(move(a.value));
+      }
+      auto ne = transform(N<CallExpr>(
+          N<DotExpr>(N<IdExpr>(format(".Tuple.{}", args.size())), "__new__"), move(e)));
+      args.clear();
+      // LOG("fixed python call");
+      args.push_back({"", move(ne)});
+    }
+  }
+
   // Handle named and default arguments
   vector<CallExpr::Arg> reorderedArgs;
   vector<int> argIndex;
@@ -698,9 +719,6 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
           argIndex.size(), reorderedArgs.size() + namedArgs.size());
   }
 
-  FunctionStmt *ast = nullptr;
-  if (auto ff = calleeType->getFunc())
-    ast = (FunctionStmt *)(ctx->cache->asts[ff->name].get());
   if (ast) {
     ctx->addBlock();
     addFunctionGenerics(calleeType->getFunc());

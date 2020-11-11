@@ -48,7 +48,7 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     auto cache = make_shared<ast::Cache>(argv0);
 
     auto t = high_resolution_clock::now();
-    auto transformed = ast::TransformVisitor::apply(cache, move(codeStmt));
+    auto transformed = ast::TransformVisitor::apply(cache, move(codeStmt), abs);
     FILE *fo;
     if (!isTest) {
       fmt::print(stderr, "[T] transform = {:.1f}\n",

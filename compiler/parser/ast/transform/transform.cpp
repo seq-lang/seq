@@ -52,7 +52,8 @@ TransformVisitor::TransformVisitor(shared_ptr<TransformContext> ctx,
   prependStmts = stmts ? stmts : make_shared<vector<StmtPtr>>();
 }
 
-StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s) {
+StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s,
+                                const string &file) {
   auto suite = make_unique<SuiteStmt>();
   suite->stmts.push_back(make_unique<SuiteStmt>());
   auto *preamble = (SuiteStmt *)(suite->stmts[0].get());
@@ -117,6 +118,7 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s) {
     suite->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
   }
   auto ctx = static_pointer_cast<TransformContext>(cache->imports[""].ctx);
+  ctx->setFilename(file);
   auto stmts = TransformVisitor(ctx).transform(s);
 
   preamble->stmts.push_back(clone(cache->asts[".Function.1"])); // main dependency
@@ -542,6 +544,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
             N<StackAllocExpr>(transformType(ix->index), transform(expr->args[0].value));
         return;
       }
+  generateTupleStub(expr->args.size());
   vector<CallExpr::Arg> args;
   for (auto &i : expr->args)
     args.push_back({i.name, transform(i.value)});
@@ -899,6 +902,8 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
   auto file = ctx->findFile(stmt->from.first, ctx->getFilename());
   if (file.empty())
     error("cannot locate import '{}'", stmt->from.first);
+  // LOG("{} -> {} [{}; {}]", stmt->from.first, file, ctx->getFilename(),
+  // stmt->getSrcInfo());
 
   auto import = ctx->cache->imports.find(file);
   if (import == ctx->cache->imports.end()) {

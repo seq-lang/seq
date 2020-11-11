@@ -262,7 +262,7 @@ INSTANTIATE_TEST_SUITE_P(
         "stdlib/statistics_test.seq",
         "stdlib/sort_test.seq",
         "stdlib/heapq_test.seq",
-        // "python/pybridge.seq",
+        "python/pybridge.seq",
         "core/empty.seq"
       ),
       testing::Values(true),

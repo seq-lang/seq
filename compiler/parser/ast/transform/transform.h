@@ -49,7 +49,8 @@ private:
 public:
   TransformVisitor(std::shared_ptr<TransformContext> ctx,
                    std::shared_ptr<std::vector<StmtPtr>> stmts = nullptr);
-  static StmtPtr apply(std::shared_ptr<Cache> cache, StmtPtr s);
+  static StmtPtr apply(std::shared_ptr<Cache> cache, StmtPtr s,
+                       const std::string &file);
 
   ExprPtr transform(const ExprPtr &e) override;
   StmtPtr transform(const StmtPtr &s) override;
