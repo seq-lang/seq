@@ -2,6 +2,9 @@ def time():
     return _C.seq_time() / (1000 * 1000 * 1000)
 
 class TimeInterval:
+    """
+    Utility class for timing Seq code
+    """
     start: int
     msg: str
 
@@ -17,4 +20,13 @@ class TimeInterval:
             stderr.write(f'{self.msg} took {elapsed}s\n')
 
 def timing(msg: str = ""):
+    """
+    Example usage:
+
+    .. code-block:: seq
+
+        from time import timing
+        with timing('foo function'):
+            foo()  # prints runtime of foo
+    """
     return TimeInterval(0, msg)

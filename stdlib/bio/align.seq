@@ -35,6 +35,10 @@ _ALIGN_KIND_SPLICE  = 2
 _ALIGN_KIND_GLOBAL  = 3
 
 type SubMat(mat: ptr[i8]):
+    '''
+    Substitution matrix for amino acid alignment
+    '''
+
     def _N():
         return 23
 
@@ -161,6 +165,9 @@ extend Alignment:
     def __new__() -> Alignment:
         return (CIGAR(), 0)
 
+    def __init__(self: Alignment, cigar: str, score: int) -> Alignment:
+        return (CIGAR(cigar), score)
+
     @property
     def cigar(self):
         return self._cigar
@@ -204,6 +211,27 @@ extend seq:
               splice_fwd: bool = False,
               splice_rev: bool = False,
               splice_flank: bool = False):
+        '''
+        Performs Smith-Waterman alignment against another sequence.
+
+          - `a`: match score
+          - `b`: mismatch score
+          - `ambig`: ambiguous (i.e. N) match score
+          - `gapo`: gap open cost
+          - `gape`: gap extension cost
+          - `gapo2`: 2nd gap open cost for dual gap cost function
+          - `gape2`: 2nd gap extension cost for dual gap cost function
+          - `bandwidth`: bandwidth for DP alignment
+          - `zdrop`: off-diagonal drop-off to stop extension
+          - `end_bonus`: score bonus for reaching end of DP matrix
+          - `score_only`: if true, don’t compute CIGAR
+          - `right`: if true, right-align gaps
+          - `approx_max`: if true, approximate max
+          - `approx_drop`: if true, approximate Z-drop
+          - `rev_cigar`: if true, reverse CIGAR in output
+          - `ext_only`: if true, perform extension alignment
+          - `splice`: if true, perform spliced alignment
+        '''
 
         # validate args
         _validate_match(a)
@@ -316,6 +344,24 @@ extend pseq:
               approx_drop: bool = False,
               ext_only: bool = False,
               rev_cigar: bool = False):
+        '''
+        Performs Smith-Waterman alignment against another sequence.
+
+          - `mat`: score matrix
+          - `gapo`: gap open cost
+          - `gape`: gap extension cost
+          - `gapo2`: 2nd gap open cost for dual gap cost function
+          - `gape2`: 2nd gap extension cost for dual gap cost function
+          - `bandwidth`: bandwidth for DP alignment
+          - `zdrop`: off-diagonal drop-off to stop extension
+          - `end_bonus`: score bonus for reaching end of DP matrix
+          - `score_only`: if true, don’t compute CIGAR
+          - `right`: if true, right-align gaps
+          - `approx_max`: if true, approximate max
+          - `approx_drop`: if true, approximate Z-drop
+          - `rev_cigar`: if true, reverse CIGAR in output
+          - `ext_only`: if true, perform extension alignment
+        '''
 
         # validate args
         _validate_gap(gapo)
@@ -358,14 +404,11 @@ extend pseq:
         return out
 
     def __matmul__(self, other: pseq):
+        '''
+        Performs Smith-Waterman alignment against another sequence.
+        Uses Blosum-62, gap open cost 11 and gap extend cost 1.
+        '''
         out = Alignment()
-        seq_palign_default(self, other, __ptr__(out))
-        return out
-
-# inter-sequence alignment
-# much of what follows is adapted from BWA-MEM2 (https://github.com/bwa-mem2/bwa-mem2)
-type InterAlignParams(a: i8, b: i8, ambig: i8, gapo: i8, gape: i8, score_only: i8, bandwidth: i32, zdrop: i32, end_bonus: i32)
-
 _LEN_LIMIT     = 512
 _MAX_SEQ_LEN8  = 128
 _MAX_SEQ_LEN16 = 32768

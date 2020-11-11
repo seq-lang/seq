@@ -376,7 +376,7 @@ As a concrete example, consider Seq's built-in FM-index type, ``FMIndex``, and a
 
 That single ``@prefetch`` line can have a significant impact, especially for larger ``k``. Here is a graph of the performance of this exact snippet for various ``k`` using hg19 as the reference:
 
-.. image:: ../images/prefetch.png
+.. image:: ../../images/prefetch.png
     :width: 500px
     :align: center
     :alt: prefetch performance

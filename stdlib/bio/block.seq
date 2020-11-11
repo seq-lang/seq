@@ -1,4 +1,7 @@
 class Block[T]:
+    '''
+    Represents a block of data; useful in parallelization to batch data
+    '''
     _data: ptr[T]
     _size: int
 
@@ -43,6 +46,10 @@ def _blocks[T](g: generator[T], size: int):
         yield b
 
 def blocks(x, size: int):
+    '''
+    Partitions the given object into blocks of the specified size
+    by calling the `__blocks__` magic method.
+    '''
     if size <= 0:
         raise ValueError(f"invalid block size: {size}")
     return x.__blocks__(size)

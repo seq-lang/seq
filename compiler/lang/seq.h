@@ -33,7 +33,7 @@
 
 #define SEQ_VERSION_MAJOR 0
 #define SEQ_VERSION_MINOR 9
-#define SEQ_VERSION_PATCH 9
+#define SEQ_VERSION_PATCH 11
 
 #include "util/fmt/format.h"
 #include "util/fmt/ostream.h"

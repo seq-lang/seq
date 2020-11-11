@@ -84,5 +84,8 @@ std::string v2s(const std::vector<std::pair<std::string, T>> &targs) {
   return join(args, ", ");
 }
 
+std::string getImportFile(const std::string &argv0, const std::string &what,
+                          const std::string &relativeTo, bool forceStdlib);
+
 } // namespace ast
 } // namespace seq

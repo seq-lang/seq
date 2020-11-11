@@ -3,8 +3,6 @@ import collections
 
 def combinations[T](pool: generator[T], r: int):
     """
-    combinations(iterable, r)
-
     Return successive r-length combinations of elements in the iterable.
 
     combinations(range(4), 3) --> (0,1,2), (0,1,3), (0,2,3), (1,2,3)
@@ -30,8 +28,6 @@ def combinations[T](pool: generator[T], r: int):
 
 def combinations_with_replacement[T](pool: generator[T], r: int):
     """
-    combinations_with_replacement(iterable, r)
-
     Return successive r-length combinations of elements in the iterable
     allowing individual elements to have successive repeats.
     """
@@ -100,9 +96,7 @@ def islice[T](iterable: generator[T], start: int, stop: int, step: int):
 
 def count(start: float, step: float):
     """
-    count(start=0, step=1)
-
-    Return a count object whose .__next__() method returns consecutive values.
+    Return a count object whose __next__ method returns consecutive values.
     default: start = 0.0, step = 1.0
     """
     n = start
@@ -135,8 +129,6 @@ def cycle[T](iterable: generator[T]):
 
 def compress(data, selectors):
     """
-    compress(data, selectors)
-
     Return data elements corresponding to true selector elements.
 
     Forms a shorter iterator from selected data elements using the selectors to
@@ -146,8 +138,6 @@ def compress(data, selectors):
 
 def dropwhile(predicate, iterable):
     """
-    dropwhile(predicate, iterable)
-
     Drop items from the iterable while predicate(item) is true.
 
     Afterwards, return every element until the iterable is exhausted.
@@ -162,8 +152,6 @@ def dropwhile(predicate, iterable):
 
 def takewhile(predicate, iterable):
     """
-    takewhile(predicate, iterable)
-
     Return successive entries from an iterable as long as the predicate evaluates to true for each entry.
     """
     for x in iterable:
@@ -174,8 +162,6 @@ def takewhile(predicate, iterable):
 
 def filterfalse(predicate, iterable):
     """
-    filterfalse(function, iterable)
-
     Return those items of iterable for which function(item) is false.
 
     Unlike python, seq will not allow predicate to equal None for now.
@@ -188,8 +174,6 @@ def filterfalse(predicate, iterable):
 
 def permutations[T](pool: generator[T], r: optional[int] = None) -> Generator[List[T]]:
     """
-    permutations(iterable, r)
-
     Return successive r-length permutations of elements in the iterable.
     """
     pool_list = [a for a in pool]
@@ -219,8 +203,6 @@ def permutations[T](pool: generator[T], r: optional[int] = None) -> Generator[Li
 
 def accumulate[T,S](iterable: Generator[T], func: Function[S,S,T], initial: S):
     """
-    accumulate(iterable, func, initial)
-
     Return series of accumulated sums (or other binary function results).
 
     Default: func = operator.add, initial = None.
@@ -240,8 +222,6 @@ def accumulate[T,S](iterable: Generator[T], func: Function[S,S,T], initial: S):
 
 def chain(iterables):
     """
-    chain(iterables)
-
     For now chain() == chain.from_iterable()
     """
     for it in iterables:
@@ -250,8 +230,6 @@ def chain(iterables):
 
 def starmap(function, iterable):
     """
-    starmap(function, iterable)
-
     Return an iterator whose values are returned from the function
     evaluated with an argument tuple taken from the given sequence.
     """
@@ -260,8 +238,6 @@ def starmap(function, iterable):
 
 def groupby[V,K=int](iterable: generator[V], key: optional[function[K,V]] = None):
     """
-    groupby(iterable, key=None)
-
     make an iterator that returns consecutive keys and groups from the iterable
 
     iterable:
@@ -327,6 +303,16 @@ def zip_longest[T](a: generator[T], b: generator[T], fillvalue: T):
 
     a.destroy()
     b.destroy()
+
+def product(a, b, equals_ok: bool = True):
+    """
+    Return a Cartesian product of a and b.
+    """
+    for i in a:
+        for j in b:
+            if equals_ok or i != j:
+                yield (i, j)
+
 
 '''
 def product[T](iterables: generator[T], repeat: int):

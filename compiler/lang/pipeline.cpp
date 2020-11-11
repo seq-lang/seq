@@ -815,8 +815,9 @@ Value *PipeExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
       builder.CreateCondBr(cond, loop, exit);
 
       builder.SetInsertPoint(loop);
-      N = builder.CreateCall(flush, {drain.pairs, drain.bufRef, drain.bufQer, states, N,
-                                     drain.params, drain.hist, drain.pairsTemp,
+      Value *Nnew = builder.CreateLoad(filled);
+      N = builder.CreateCall(flush, {drain.pairs, drain.bufRef, drain.bufQer, states,
+                                     Nnew, drain.params, drain.hist, drain.pairsTemp,
                                      drain.statesTemp});
       builder.CreateStore(N, filled);
       cond = builder.CreateICmpSGT(N, builder.getInt64(0));

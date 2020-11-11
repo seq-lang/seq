@@ -789,8 +789,6 @@ extend str:
 
     def partition(self, sep: str) -> tuple[str, str, str]:
         """
-        str.partition(sep) -> (head, sep, tail)
-
         Search for the separator sep in str, and return the part before it,
         the separator itself, and the part after it.  If the separator is not
         found, return str and two empty strings.
@@ -807,8 +805,6 @@ extend str:
 
     def rpartition(self, sep: str) -> tuple[str, str, str]:
         """
-        str.rpartition(sep) -> (head, sep, tail)
-
         Search for the separator sep in str, starting at the end of str, and return
         the part before it, the separator itself, and the part after it.  If the
         separator is not found, return two empty strings and str.
@@ -1168,8 +1164,6 @@ extend str:
 
     def translate(self, table) -> str:
         """
-        translate(self, table)
-
         Return a copy with each character mapped by the given translation table.
 
         Unlike Python, translate() currently does not allow the translation

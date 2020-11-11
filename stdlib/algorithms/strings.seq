@@ -14,8 +14,6 @@ def rfilter_overlaps(v: generator[int], n: int):
 
 def string_search_slow(text: str, pattern: str):
     """
-    string_search_slow(text, pattern) -> generator
-
     Return a list containing the non-overlapping position of each index
     the pattern is found.
     """
@@ -31,8 +29,6 @@ def string_search_slow(text: str, pattern: str):
 
 def rstring_search_slow(text: str, pattern: str):
     """
-    rstring_search_slow(text, pattern) -> generator
-
     Return a list containing the non-overlapping position of each index
     the pattern is found from right to left.
     """
@@ -48,8 +44,6 @@ def rstring_search_slow(text: str, pattern: str):
 
 def string_search_rabin_karp(text: str, pattern: str, prime: int = 645419):
     """
-    string_search_rabin_karp(text, pattern, prime) -> generator
-
     Return a list containing the position of each index
     the pattern is found.
     """
@@ -85,8 +79,6 @@ def string_search_rabin_karp(text: str, pattern: str, prime: int = 645419):
 
 def computeLPArray(pattern: str, len_pat: int) -> list[int]:
     """
-    computeLPArray(pattern, len_pat) -> list
-
     Return a list containing the length of the maximum matching
     proper prefix of the pattern[0, 1, ..., i]
     """
@@ -110,8 +102,6 @@ def computeLPArray(pattern: str, len_pat: int) -> list[int]:
 
 def string_search_KMP(text: str, pattern: str):
     """
-    string_search_KMP(text, pattern) -> generator
-
     Knuth-Morris-Pratt algorithm
     Return a list containing the position of each index
     the pattern is found.
@@ -141,8 +131,6 @@ def string_search_KMP(text: str, pattern: str):
 
 def replace_interleave(self: str, new: str, maxcount: int) -> str:
     """
-    replace_interleave(self, new, maxcount) -> str
-
     Returns a string inserting the 'new' string everywhere.
     """
 
@@ -163,8 +151,6 @@ def replace_interleave(self: str, new: str, maxcount: int) -> str:
 
 def replace_delete_substring(self: str, old: str, new: str, maxcount: int) -> str:
     """
-    replace_delete_substring(self, old, maxcount) -> str
-
     Returns a string deleting any instances of the 'old' string in self and
     replaceing it with the 'new' string.
     """

@@ -1,4 +1,8 @@
 type pseq(len: int, ptr: cobj):
+    '''
+    Amino acid sequence
+    '''
+
     def __new__(p: cobj, n: int) -> pseq:
         return (n, p)
 
@@ -111,7 +115,11 @@ type pseq(len: int, ptr: cobj):
         self._copy_to(p)
         return pseq(p, n)
 
-    def split(self, k: int, step: int):
+    def split(self: pseq, k: int, step: int):
+        '''
+        Iterator over length-`k` subsequences of the given sequence
+        with the specified step size.
+        '''
         i = 0
         while i + k <= len(self):
             yield self._slice_direct(i,i+k)
@@ -126,7 +134,12 @@ type pseq(len: int, ptr: cobj):
             yield self._slice_direct(i,i+1)
             i -= 1
 
-def translate(s: seq, table: Optional[Dict[seq, pseq]] = None):
+def translate(s: seq, table: Optional[dict[seq, pseq]] = None):
+    '''
+    Performs DNA to amino acid translation. An optional mapping from
+    length-3 DNA sequences to amino acids can be given via `table`,
+    otherwise the standard mapping is assumed.
+    '''
     def encode_triple(s: seq):
         if s.N():
             raise ValueError("codon '{s}' contains an ambiguous base")

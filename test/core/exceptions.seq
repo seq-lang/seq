@@ -472,3 +472,21 @@ def test_with():
 # EXPECT: < bar! t
 # EXPECT: < foo! 2
 test_with()
+
+
+class PropClass:
+    x: int
+
+    @property
+    def foo(self: PropClass):
+        raise IOError('foo')
+
+def test_property_exceptions():
+    try:
+        PropClass(42).foo
+        print 'X'
+    except IOError as e:
+        print e.message
+
+# EXPECT: foo
+test_property_exceptions()

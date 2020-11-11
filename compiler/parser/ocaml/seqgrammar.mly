@@ -314,7 +314,8 @@ dataclass_member:
   | ID COLON expr EQ expr NL
     { Some ($loc, Declare ($loc, { name = $1; typ = Some $3; default = Some $5 })) }
 class_member:
-  | PASS NL | STRING NL { None }
+  | PASS NL { None }
+  | STRING+ NL { Some ($loc, Expr ($loc, String (String.concat "" $1))) }
   | func_statement { Some (List.hd $1) }
 extend: EXTEND expr COLON NL INDENT class_member+ DEDENT { $loc, Extend ($2, filter_opt $6) }
 typ:

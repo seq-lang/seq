@@ -25,6 +25,7 @@ from LD cimport bam_aux2Z(ptr[u8]) -> ptr[byte]
 from LD cimport bam_auxB_len(ptr[u8]) -> u32
 from LD cimport bam_auxB2i(ptr[u8], idx: u32) -> int
 from LD cimport bam_auxB2f(ptr[u8], idx: u32) -> float
+from LD cimport bam_endpos(cobj) -> int
 from LD cimport sam_hdr_destroy(cobj)
 from LD cimport bam_destroy1(cobj)
 

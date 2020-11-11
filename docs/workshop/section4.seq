@@ -1,0 +1,34 @@
+# SeqMap
+# Seq workshop -- Section 4
+# Reads index constructed in Section 2 and looks up k-mers from
+# input reads to find candidate mappings, then performs alignment.
+# Usage: seqc section4.seq <FASTA path> <FASTQ path>
+from sys import argv
+import pickle
+import gzip
+
+type K = Kmer[32]
+index: dict[K,int] = None
+
+reference = s''
+for record in FASTA(argv[1]):
+    reference = record.seq
+
+with gzip.open(argv[1] + '.index', 'rb') as jar:
+    index = pickle.load[dict[K,int]](jar)
+
+candidates = dict[int,int]()
+for record in FASTQ(argv[2]):
+    for pos,kmer in record.read.kmers_with_pos[K](step=1):
+        found = index.get(min(kmer, ~kmer), -1)
+        if found > 0:
+            candidates.increment(found - pos)
+
+    for pos,count in candidates.items():
+        if count > 1:
+            query = record.read
+            target = reference[pos:pos + len(query)]
+            alignment = query.align(target)
+            print record.name, pos + 1, alignment.score, alignment.cigar
+
+    candidates.clear()

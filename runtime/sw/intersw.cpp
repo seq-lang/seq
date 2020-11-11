@@ -4,6 +4,69 @@
 #include <cstdint>
 #include <cstdlib>
 
+// adapted from minimap2's KSW2 dispatch
+// https://github.com/lh3/minimap2/blob/master/ksw2_dispatch.c
+#define SIMD_SSE 0x1
+#define SIMD_SSE2 0x2
+#define SIMD_SSE3 0x4
+#define SIMD_SSSE3 0x8
+#define SIMD_SSE4_1 0x10
+#define SIMD_SSE4_2 0x20
+#define SIMD_AVX 0x40
+#define SIMD_AVX2 0x80
+#define SIMD_AVX512F 0x100
+
+#ifndef _MSC_VER
+// adapted from
+// https://github.com/01org/linux-sgx/blob/master/common/inc/internal/linux/cpuid_gnu.h
+void __cpuidex(int cpuid[4], int func_id, int subfunc_id) {
+#if defined(__x86_64__)
+  __asm__ volatile("cpuid"
+                   : "=a"(cpuid[0]), "=b"(cpuid[1]), "=c"(cpuid[2]),
+                     "=d"(cpuid[3])
+                   : "0"(func_id), "2"(subfunc_id));
+#else // on 32bit, ebx can NOT be used as PIC code
+  __asm__ volatile("xchgl %%ebx, %1; cpuid; xchgl %%ebx, %1"
+                   : "=a"(cpuid[0]), "=r"(cpuid[1]), "=c"(cpuid[2]),
+                     "=d"(cpuid[3])
+                   : "0"(func_id), "2"(subfunc_id));
+#endif
+}
+#endif
+
+static int intersw_simd = -1;
+
+static int x86_simd() {
+  int flag = 0, cpuid[4], max_id;
+  __cpuidex(cpuid, 0, 0);
+  max_id = cpuid[0];
+  if (max_id == 0)
+    return 0;
+  __cpuidex(cpuid, 1, 0);
+  if (cpuid[3] >> 25 & 1)
+    flag |= SIMD_SSE;
+  if (cpuid[3] >> 26 & 1)
+    flag |= SIMD_SSE2;
+  if (cpuid[2] >> 0 & 1)
+    flag |= SIMD_SSE3;
+  if (cpuid[2] >> 9 & 1)
+    flag |= SIMD_SSSE3;
+  if (cpuid[2] >> 19 & 1)
+    flag |= SIMD_SSE4_1;
+  if (cpuid[2] >> 20 & 1)
+    flag |= SIMD_SSE4_2;
+  if (cpuid[2] >> 28 & 1)
+    flag |= SIMD_AVX;
+  if (max_id >= 7) {
+    __cpuidex(cpuid, 7, 0);
+    if (cpuid[1] >> 5 & 1)
+      flag |= SIMD_AVX2;
+    if (cpuid[1] >> 16 & 1)
+      flag |= SIMD_AVX512F;
+  }
+  return flag;
+}
+
 struct InterAlignParams { // must be consistent with bio/align.seq
   int8_t a;
   int8_t b;
@@ -16,9 +79,11 @@ struct InterAlignParams { // must be consistent with bio/align.seq
   int32_t end_bonus;
 };
 
-SEQ_FUNC void seq_inter_align128(InterAlignParams *paramsx,
-                                 SeqPair *seqPairArray, uint8_t *seqBufRef,
-                                 uint8_t *seqBufQer, int numPairs) {
+template <typename SW8, typename SWbt8>
+static inline void
+seq_inter_align128_generic(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                           uint8_t *seqBufRef, uint8_t *seqBufQer,
+                           int numPairs) {
   InterAlignParams params = *paramsx;
   const int8_t bandwidth = (0 <= params.bandwidth && params.bandwidth < 0xff)
                                ? params.bandwidth
@@ -36,9 +101,11 @@ SEQ_FUNC void seq_inter_align128(InterAlignParams *paramsx,
   }
 }
 
-SEQ_FUNC void seq_inter_align16(InterAlignParams *paramsx,
-                                SeqPair *seqPairArray, uint8_t *seqBufRef,
-                                uint8_t *seqBufQer, int numPairs) {
+template <typename SW16, typename SWbt16>
+static inline void seq_inter_align16_generic(InterAlignParams *paramsx,
+                                             SeqPair *seqPairArray,
+                                             uint8_t *seqBufRef,
+                                             uint8_t *seqBufQer, int numPairs) {
   InterAlignParams params = *paramsx;
   const int16_t bandwidth = (0 <= params.bandwidth && params.bandwidth < 0xffff)
                                 ? params.bandwidth
@@ -59,6 +126,7 @@ SEQ_FUNC void seq_inter_align16(InterAlignParams *paramsx,
 SEQ_FUNC void seq_inter_align1(InterAlignParams *paramsx, SeqPair *seqPairArray,
                                uint8_t *seqBufRef, uint8_t *seqBufQer,
                                int numPairs) {
+  typedef InterSW<128, 8, /*CIGAR=*/false> SW8;
   InterAlignParams params = *paramsx;
   int8_t a = params.a > 0 ? params.a : -params.a;
   int8_t b = params.b > 0 ? -params.b : params.b;
@@ -79,5 +147,111 @@ SEQ_FUNC void seq_inter_align1(InterAlignParams *paramsx, SeqPair *seqPairArray,
     sp->score = (myflags & KSW_EZ_EXTZ_ONLY) ? ez.max : ez.score;
     sp->cigar = ez.cigar;
     sp->n_cigar = ez.n_cigar;
+  }
+}
+
+void seq_inter_align128_scalar(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                               uint8_t *seqBufRef, uint8_t *seqBufQer,
+                               int numPairs) {
+  seq_inter_align1(paramsx, seqPairArray, seqBufRef, seqBufQer, numPairs);
+}
+
+void seq_inter_align128_sse2(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                             uint8_t *seqBufRef, uint8_t *seqBufQer,
+                             int numPairs) {
+  typedef InterSW<128, 8, /*CIGAR=*/false> SW8;
+  typedef InterSW<128, 8, /*CIGAR=*/true> SWbt8;
+  seq_inter_align128_generic<SW8, SWbt8>(paramsx, seqPairArray, seqBufRef,
+                                         seqBufQer, numPairs);
+}
+
+void seq_inter_align128_avx2(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                             uint8_t *seqBufRef, uint8_t *seqBufQer,
+                             int numPairs) {
+  typedef InterSW<256, 8, /*CIGAR=*/false> SW8;
+  typedef InterSW<256, 8, /*CIGAR=*/true> SWbt8;
+  seq_inter_align128_generic<SW8, SWbt8>(paramsx, seqPairArray, seqBufRef,
+                                         seqBufQer, numPairs);
+}
+
+void seq_inter_align128_avx512(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                               uint8_t *seqBufRef, uint8_t *seqBufQer,
+                               int numPairs) {
+  typedef InterSW<512, 8, /*CIGAR=*/false> SW8;
+  typedef InterSW<512, 8, /*CIGAR=*/true> SWbt8;
+  seq_inter_align128_generic<SW8, SWbt8>(paramsx, seqPairArray, seqBufRef,
+                                         seqBufQer, numPairs);
+}
+
+SEQ_FUNC void seq_inter_align128(InterAlignParams *paramsx,
+                                 SeqPair *seqPairArray, uint8_t *seqBufRef,
+                                 uint8_t *seqBufQer, int numPairs) {
+  if (intersw_simd < 0)
+    intersw_simd = x86_simd();
+  if (intersw_simd & SIMD_AVX512F) {
+    seq_inter_align128_avx512(paramsx, seqPairArray, seqBufRef, seqBufQer,
+                              numPairs);
+  } else if (intersw_simd & SIMD_AVX2) {
+    seq_inter_align128_avx2(paramsx, seqPairArray, seqBufRef, seqBufQer,
+                            numPairs);
+  } else if (intersw_simd & SIMD_SSE4_1) {
+    seq_inter_align128_sse2(paramsx, seqPairArray, seqBufRef, seqBufQer,
+                            numPairs);
+  } else {
+    seq_inter_align128_scalar(paramsx, seqPairArray, seqBufRef, seqBufQer,
+                              numPairs);
+  }
+}
+
+void seq_inter_align16_scalar(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                              uint8_t *seqBufRef, uint8_t *seqBufQer,
+                              int numPairs) {
+  seq_inter_align1(paramsx, seqPairArray, seqBufRef, seqBufQer, numPairs);
+}
+
+void seq_inter_align16_sse2(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                            uint8_t *seqBufRef, uint8_t *seqBufQer,
+                            int numPairs) {
+  typedef InterSW<128, 16, /*CIGAR=*/false> SW16;
+  typedef InterSW<128, 16, /*CIGAR=*/true> SWbt16;
+  seq_inter_align16_generic<SW16, SWbt16>(paramsx, seqPairArray, seqBufRef,
+                                          seqBufQer, numPairs);
+}
+
+void seq_inter_align16_avx2(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                            uint8_t *seqBufRef, uint8_t *seqBufQer,
+                            int numPairs) {
+  typedef InterSW<256, 16, /*CIGAR=*/false> SW16;
+  typedef InterSW<256, 16, /*CIGAR=*/true> SWbt16;
+  seq_inter_align16_generic<SW16, SWbt16>(paramsx, seqPairArray, seqBufRef,
+                                          seqBufQer, numPairs);
+}
+
+void seq_inter_align16_avx512(InterAlignParams *paramsx, SeqPair *seqPairArray,
+                              uint8_t *seqBufRef, uint8_t *seqBufQer,
+                              int numPairs) {
+  typedef InterSW<512, 16, /*CIGAR=*/false> SW16;
+  typedef InterSW<512, 16, /*CIGAR=*/true> SWbt16;
+  seq_inter_align16_generic<SW16, SWbt16>(paramsx, seqPairArray, seqBufRef,
+                                          seqBufQer, numPairs);
+}
+
+SEQ_FUNC void seq_inter_align16(InterAlignParams *paramsx,
+                                SeqPair *seqPairArray, uint8_t *seqBufRef,
+                                uint8_t *seqBufQer, int numPairs) {
+  if (intersw_simd < 0)
+    intersw_simd = x86_simd();
+  if (intersw_simd & SIMD_AVX512F) {
+    seq_inter_align16_avx512(paramsx, seqPairArray, seqBufRef, seqBufQer,
+                             numPairs);
+  } else if (intersw_simd & SIMD_AVX2) {
+    seq_inter_align16_avx2(paramsx, seqPairArray, seqBufRef, seqBufQer,
+                           numPairs);
+  } else if (intersw_simd & SIMD_SSE4_1) {
+    seq_inter_align16_sse2(paramsx, seqPairArray, seqBufRef, seqBufQer,
+                           numPairs);
+  } else {
+    seq_inter_align16_scalar(paramsx, seqPairArray, seqBufRef, seqBufQer,
+                             numPairs);
   }
 }
