@@ -11,9 +11,42 @@ on:
       - develop
 
 jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check
+        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        id: check
+        run: echo "::set-output name=MAKE_RELEASE::true"
+
+      - name: Create Release
+        id: create_release
+        if: steps.check.outputs.MAKE_RELEASE
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Output Release URL File
+        if: steps.check.outputs.MAKE_RELEASE
+        run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+
+      - name: Save Release URL File for Publish
+        if: steps.check.outputs.MAKE_RELEASE
+        uses: actions/upload-artifact@v1
+        with:
+          name: release_url
+          path: release_url.txt
+
   precise:
     runs-on: ubuntu-latest
-    name: Ubuntu 12.04
+    name: Seq CI (ubuntu-precise)
+    needs: [release]
     steps:
       - uses: actions/checkout@v2
 
@@ -27,6 +60,28 @@ jobs:
       - name: Main
         uses: ./.github/actions/build-precise
 
+      - name: Get Release URL
+        id: get_release_url
+        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        run: |
+          echo ::set-output name=file_name::${REPOSITORY_NAME##*/}-${TAG_REF_NAME##*/v} # RepositoryName-v1.0.0
+          value=`cat release_url/release_url.txt`
+          echo ::set-output name=upload_url::$value
+        env:
+          TAG_REF_NAME: ${{ github.ref }}
+          REPOSITORY_NAME: ${{ github.repository }}
+
+      - name: Upload Release Asset
+        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release_url.outputs.upload_url }}
+          asset_path: ./seq-darwin-x86_64.tar.gz
+          asset_name: seq-darwin-x86_64.tar.gz
+          asset_content_type: application/gzip
+
   main:
     strategy:
       matrix:
@@ -35,6 +90,7 @@ jobs:
           - macos-latest
     runs-on: ${{ matrix.os }}
     name: Seq CI
+    needs: [release]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -55,25 +111,26 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: ./scripts/deps.sh 2
         env:
-          CC: clang -Wno-implicit-function-declaration
+          CC: clang
           CXX: clang++
 
       - name: Linux Setup
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          mkdir build
-          ln -s $(pwd)/deps/lib/libomp.so $(pwd)/build/libomp.so
-          echo "SEQ_HTSLIB=$(pwd)/deps/lib/libhts.so" >> $GITHUB_ENV
+          echo "LIBEXT=so" >> $GITHUB_ENV
+          echo "OS_NAME=linux" >> $GITHUB_ENV
 
       - name: macOS Setup
         if: startsWith(matrix.os, 'macos')
         run: |
-          mkdir build
-          ln -s $(pwd)/deps/lib/libomp.dylib $(pwd)/build/libomp.dylib
-          echo "SEQ_HTSLIB=$(pwd)/deps/lib/libhts.dylib" >> $GITHUB_ENV
+          echo "LIBEXT=dylib" >> $GITHUB_ENV
+          echo "OS_NAME=osx" >> $GITHUB_ENV
 
       - name: Build
         run: |
+          mkdir build
+          ln -s $(pwd)/deps/lib/libomp.${LIBEXT} $(pwd)/build/libomp.${LIBEXT}
+          echo "SEQ_HTSLIB=$(pwd)/deps/lib/libhts.${LIBEXT}" >> $GITHUB_ENV
           (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
                                 -DSEQ_DEP=$(pwd)/../deps \
                                 -DCMAKE_C_COMPILER=${CC} \
@@ -109,3 +166,43 @@ jobs:
           publish_dir: ./docs/sphinx/_build/html
           cname: docs.seq-lang.org
           force_orphan: true
+
+      - name: Artifact Environment
+        run: |
+          echo "SEQ_BUILD_ARCHIVE=seq-$(uname -s | awk '{print tolower($0)}')-$(uname -m).tar.gz" >> $GITHUB_ENV
+          echo "SEQ_DEP_ARCHIVE=seq-deps-${OS_NAME}.tar.bz2" >> $GITHUB_ENV
+
+      - name: Prepare Artifacts
+        run: |
+          mkdir -p seq-deploy/bin seq-deploy/lib/seq
+          cp build/seqc seq-deploy/bin/
+          cp build/libseq*.${LIBEXT} seq-deploy/lib/seq/
+          cp deps/lib/libomp.${LIBEXT} seq-deploy/lib/seq/
+          cp -r stdlib seq-deploy/lib/seq/
+          tar -czf ${SEQ_BUILD_ARCHIVE} seq-deploy
+          tar -cjf ${SEQ_DEP_ARCHIVE} deps
+          du -sh seq-deploy
+          du -sh deps
+          ls -lah ${SEQ_DEP_ARCHIVE}
+
+      - name: Get Release URL
+        id: get_release_url
+        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        run: |
+          echo ::set-output name=file_name::${REPOSITORY_NAME##*/}-${TAG_REF_NAME##*/v} # RepositoryName-v1.0.0
+          value=`cat release_url/release_url.txt`
+          echo ::set-output name=upload_url::$value
+        env:
+          TAG_REF_NAME: ${{ github.ref }}
+          REPOSITORY_NAME: ${{ github.repository }}
+
+      - name: Upload Release Asset
+        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v') && startsWith(matrix.os, 'macos')
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release_url.outputs.upload_url }}
+          asset_path: ./seq-darwin-x86_64.tar.gz
+          asset_name: seq-darwin-x86_64.tar.gz
+          asset_content_type: application/gzip
