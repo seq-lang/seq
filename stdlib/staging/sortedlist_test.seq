@@ -1,0 +1,23 @@
+import random
+from sortedlist import SortedList
+
+@test
+def test_init():
+    slt = SortedList()
+    assert slt.key is None
+    # slt._check()
+
+    slt = SortedList()
+    slt._reset(10000)
+    assert slt._load == 10000
+    # slt._check()
+
+    slt = SortedList(range(10000))
+    assert all(tup[0] == tup[1] for tup in zip(slt, range(10000)))
+
+    slt.clear()
+    assert slt._len == 0
+    assert slt._maxes == []
+    assert slt._lists == []
+    # slt._check()
+test_init()
