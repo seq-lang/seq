@@ -63,6 +63,7 @@ jobs:
         uses: ./.github/actions/build-precise
 
       - name: Load Release URL File
+        if: contains(github.ref, 'tags/v')
         uses: actions/download-artifact@v1
         with:
           name: release_url
@@ -85,8 +86,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_release_url.outputs.upload_url }}
-          asset_path: ./seq-darwin-x86_64.tar.gz
-          asset_name: seq-darwin-x86_64.tar.gz
+          asset_path: ./seq-linux-x86_64.tar.gz
+          asset_name: seq-linux-x86_64.tar.gz
           asset_content_type: application/gzip
 
   main:
@@ -193,6 +194,7 @@ jobs:
           ls -lah ${SEQ_DEP_ARCHIVE}
 
       - name: Load Release URL File
+        if: contains(github.ref, 'tags/v')
         uses: actions/download-artifact@v1
         with:
           name: release_url
