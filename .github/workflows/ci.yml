@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check
-        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        if: contains(github.ref, 'tags/v')
         id: check
         run: echo "::set-output name=MAKE_RELEASE::true"
 
@@ -64,7 +64,7 @@ jobs:
 
       - name: Get Release URL
         id: get_release_url
-        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        if: contains(github.ref, 'tags/v')
         run: |
           echo ::set-output name=file_name::${REPOSITORY_NAME##*/}-${TAG_REF_NAME##*/v} # RepositoryName-v1.0.0
           value=`cat release_url/release_url.txt`
@@ -74,7 +74,7 @@ jobs:
           REPOSITORY_NAME: ${{ github.repository }}
 
       - name: Upload Release Asset
-        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        if: contains(github.ref, 'tags/v')
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -189,7 +189,7 @@ jobs:
 
       - name: Get Release URL
         id: get_release_url
-        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        if: contains(github.ref, 'tags/v')
         run: |
           echo ::set-output name=file_name::${REPOSITORY_NAME##*/}-${TAG_REF_NAME##*/v} # RepositoryName-v1.0.0
           value=`cat release_url/release_url.txt`
@@ -199,7 +199,7 @@ jobs:
           REPOSITORY_NAME: ${{ github.repository }}
 
       - name: Upload Release Asset
-        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v') && startsWith(matrix.os, 'macos')
+        if: contains(github.ref, 'tags/v') && startsWith(matrix.os, 'macos')
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
