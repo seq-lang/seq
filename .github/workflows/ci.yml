@@ -62,6 +62,11 @@ jobs:
       - name: Main
         uses: ./.github/actions/build-precise
 
+      - name: Load Release URL File
+        uses: actions/download-artifact@v1
+        with:
+          name: release_url
+
       - name: Get Release URL
         id: get_release_url
         if: contains(github.ref, 'tags/v')
@@ -186,6 +191,11 @@ jobs:
           du -sh seq-deploy
           du -sh deps
           ls -lah ${SEQ_DEP_ARCHIVE}
+
+      - name: Load Release URL File
+        uses: actions/download-artifact@v1
+        with:
+          name: release_url
 
       - name: Get Release URL
         id: get_release_url
