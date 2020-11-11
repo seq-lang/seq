@@ -1226,6 +1226,9 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
 
   ctx->bases[ctx->findBase(attributes[".parentFunc"])].visitedAsts[stmt->name] = {
       TypecheckItem::Func, t};
+  ctx->add(TypecheckItem::Func, stmt->name, t, true, false, false);
+  // LOG("-> {}", stmt->name);
+  // ctx->addToplevel(stmt->name);
 
   if (in(stmt->attributes, "builtin") || in(stmt->attributes, ".c")) {
     if (!t->canRealize())
@@ -1729,8 +1732,11 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     }
     auto oldBases = vector<TypeContext::RealizationBase>(ctx->bases.begin() + depth,
                                                          ctx->bases.end());
-    while (ctx->bases.size() > depth)
+    // LOG("realizing {} ==> {}", t->name, t->realizeString());
+    while (ctx->bases.size() > depth) {
+      // LOG(" -- {}", ctx->bases.back().name);
       ctx->bases.pop_back();
+    }
 
     if (startswith(t->name, ".Tuple.") &&
         (endswith(t->name, ".__iter__") || endswith(t->name, ".__getitem__"))) {

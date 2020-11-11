@@ -261,7 +261,7 @@ INSTANTIATE_TEST_SUITE_P(
         "stdlib/random_test.seq",
         "stdlib/statistics_test.seq",
         "stdlib/sort_test.seq",
-        // "stdlib/heapq_test.seq",
+        "stdlib/heapq_test.seq",
         // "python/pybridge.seq",
         "core/empty.seq"
       ),
