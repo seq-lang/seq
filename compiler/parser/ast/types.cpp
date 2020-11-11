@@ -370,8 +370,8 @@ TypePtr ClassType::instantiate(int level, int &unboundCount,
   for (auto &t : e)
     if (t.type) {
       t.type = t.type->instantiate(level, unboundCount, cache);
-      if (cache.find(t.id) == cache.end())
-        cache[t.id] = t.type;
+      // if (cache.find(t.id) == cache.end())
+      // cache[t.id] = t.type;
     }
   auto a = args;
   for (auto &t : a)
