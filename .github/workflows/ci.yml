@@ -13,11 +13,16 @@ on:
 jobs:
   release:
     name: Create GitHub Release
-    if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
     runs-on: ubuntu-latest
     steps:
+      - name: Check
+        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        id: check
+        run: echo "::set-output name=MAKE_RELEASE::true"
+
       - name: Create Release
         id: create_release
+        if: steps.check.outputs.MAKE_RELEASE
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -28,9 +33,11 @@ jobs:
           prerelease: false
 
       - name: Output Release URL File
+        if: steps.check.outputs.MAKE_RELEASE
         run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
 
       - name: Save Release URL File for Publish
+        if: steps.check.outputs.MAKE_RELEASE
         uses: actions/upload-artifact@v1
         with:
           name: release_url
@@ -38,7 +45,8 @@ jobs:
 
   precise:
     runs-on: ubuntu-latest
-    name: Ubuntu 12.04
+    name: Seq CI (ubuntu-precise)
+    needs: [release]
     steps:
       - uses: actions/checkout@v2
 
@@ -82,6 +90,7 @@ jobs:
           - macos-latest
     runs-on: ${{ matrix.os }}
     name: Seq CI
+    needs: [release]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
