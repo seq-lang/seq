@@ -80,11 +80,14 @@ TypePtr StaticType::instantiate(int level, int &unboundCount,
   return c;
 }
 
-bool StaticType::hasUnbound() const {
+vector<TypePtr> StaticType::getUnbounds() const {
+  vector<TypePtr> u;
   for (auto &t : explicits)
-    if (t.type && t.type->hasUnbound())
-      return true;
-  return false;
+    if (t.type) {
+      auto tu = t.type->getUnbounds();
+      u.insert(u.begin(), tu.begin(), tu.end());
+    }
+  return u;
 }
 
 bool StaticType::canRealize() const {
@@ -104,8 +107,7 @@ int StaticType::getValue() const {
 }
 
 LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic)
-    : kind(kind), id(id), level(level), type(type), isStatic(isStatic),
-      treatAsClass(false) {}
+    : kind(kind), id(id), level(level), type(type), isStatic(isStatic) {}
 
 string LinkType::toString(bool reduced) const {
   if (kind == Unbound)
@@ -243,12 +245,12 @@ TypePtr LinkType::follow() {
     return shared_from_this();
 }
 
-bool LinkType::hasUnbound() const {
+vector<TypePtr> LinkType::getUnbounds() const {
   if (kind == Unbound)
-    return true;
+    return {std::const_pointer_cast<Type>(shared_from_this())};
   else if (kind == Link)
-    return type->hasUnbound();
-  return false;
+    return type->getUnbounds();
+  return {};
 }
 
 bool LinkType::canRealize() const {
@@ -383,16 +385,22 @@ TypePtr ClassType::instantiate(int level, int &unboundCount,
   return c;
 }
 
-bool ClassType::hasUnbound() const {
-  for (int i = 0; i < args.size(); i++)
-    if (args[i]->hasUnbound())
-      return true;
+vector<TypePtr> ClassType::getUnbounds() const {
+  vector<TypePtr> u;
+  for (int i = 0; i < args.size(); i++) {
+    auto tu = args[i]->getUnbounds();
+    u.insert(u.begin(), tu.begin(), tu.end());
+  }
   for (auto &t : explicits)
-    if (t.type && t.type->hasUnbound())
-      return true;
-  if (parent && parent->hasUnbound())
-    return true;
-  return false;
+    if (t.type) {
+      auto tu = t.type->getUnbounds();
+      u.insert(u.begin(), tu.begin(), tu.end());
+    }
+  if (parent) {
+    auto tu = parent->getUnbounds();
+    u.insert(u.begin(), tu.begin(), tu.end());
+  }
+  return u;
 }
 
 bool ClassType::canRealize() const {
@@ -509,16 +517,22 @@ bool FuncType::canRealize() const {
   return true;
 }
 
-bool FuncType::hasUnbound() const {
+vector<TypePtr> FuncType::getUnbounds() const {
+  vector<TypePtr> u;
   for (auto &t : explicits)
-    if (t.type && t.type->hasUnbound())
-      return true;
-  for (int i = 1; i < args.size(); i++)
-    if (args[i]->hasUnbound())
-      return true;
-  if (parent && parent->hasUnbound())
-    return true;
-  return false;
+    if (t.type) {
+      auto tu = t.type->getUnbounds();
+      u.insert(u.begin(), tu.begin(), tu.end());
+    }
+  for (int i = 1; i < args.size(); i++) {
+    auto tu = args[i]->getUnbounds();
+    u.insert(u.begin(), tu.begin(), tu.end());
+  }
+  if (parent) {
+    auto tu = parent->getUnbounds();
+    u.insert(u.begin(), tu.begin(), tu.end());
+  }
+  return u;
 }
 
 ClassTypePtr FuncType::getClass() {

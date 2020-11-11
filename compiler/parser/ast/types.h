@@ -79,7 +79,7 @@ public:
   virtual TypePtr follow();
   /// Does this type have an unbound type within
   /// (e.g. list[?] has while list[int] does not)
-  virtual bool hasUnbound() const = 0;
+  virtual std::vector<TypePtr> getUnbounds() const = 0;
   /// Can we realize this type?
   virtual bool canRealize() const = 0;
 
@@ -113,7 +113,7 @@ public:
                       std::unordered_map<int, TypePtr> &cache) override;
 
 public:
-  bool hasUnbound() const override;
+  std::vector<TypePtr> getUnbounds() const override;
   bool canRealize() const override;
   std::string toString(bool reduced = false) const override;
   std::string realizeString() const override;
@@ -142,7 +142,7 @@ public:
   }
 
 public:
-  bool hasUnbound() const override { return false; }
+  std::vector<TypePtr> getUnbounds() const override { return {}; }
   bool canRealize() const override { return false; }
   std::string toString(bool reduced) const override {
     return fmt::format("<{}>", name);
@@ -180,13 +180,10 @@ struct LinkType : public Type {
   TypePtr type;
   /// is static variable?
   bool isStatic;
-  /// treat as class during the argument unification to exit the inconsistency loop
-  bool treatAsClass;
 
   LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
            bool isStatic = false);
-  LinkType(TypePtr type)
-      : kind(Link), id(0), level(0), type(type), isStatic(false), treatAsClass(false) {}
+  LinkType(TypePtr type) : kind(Link), id(0), level(0), type(type), isStatic(false) {}
   virtual ~LinkType() {}
 
 public:
@@ -197,7 +194,7 @@ public:
 
 public:
   TypePtr follow() override;
-  bool hasUnbound() const override;
+  std::vector<TypePtr> getUnbounds() const override;
   bool canRealize() const override;
   std::string toString(bool reduced) const override;
   std::string realizeString() const override;
@@ -258,7 +255,7 @@ public:
                       std::unordered_map<int, TypePtr> &cache) override;
 
 public:
-  bool hasUnbound() const override;
+  std::vector<TypePtr> getUnbounds() const override;
   bool canRealize() const override;
   std::string toString(bool reduced = false) const override;
   std::string realizeString() const override;
@@ -289,7 +286,7 @@ public:
 
 public:
   virtual int unify(TypePtr typ, Unification &us) override;
-  bool hasUnbound() const override;
+  std::vector<TypePtr> getUnbounds() const override;
   bool canRealize() const override;
   std::string realizeString() const override;
   FuncTypePtr getFunc() override {

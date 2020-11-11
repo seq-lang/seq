@@ -164,8 +164,8 @@ void TypecheckVisitor::visit(const IdExpr *expr) {
     TypePtr typ = val->getType();
     if (val->isType())
       resultExpr->markType();
-    else
-      typ = ctx->instantiate(getSrcInfo(), val->getType());
+    // else
+    typ = ctx->instantiate(getSrcInfo(), val->getType());
     resultExpr->setType(forceUnify(resultExpr, typ));
     auto newName = patchIfRealizable(typ, val->isType());
     if (!newName.empty())
@@ -501,6 +501,16 @@ void TypecheckVisitor::visit(const StackAllocExpr *expr) {
 }
 
 ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *args) {
+  auto isMethod = [&](FuncTypePtr f) {
+    auto ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
+    return in(ast->attributes, ".method");
+  };
+  auto deactivateUnbounds = [&](TypePtr t) {
+    auto ub = t->getUnbounds();
+    for (auto &u : ub)
+      ctx->activeUnbounds.erase(u);
+  };
+
   auto lhs = transform(expr->expr, true);
   TypePtr typ = nullptr;
   if (lhs->getType()->getUnbound()) {
@@ -518,6 +528,8 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
             args->insert(args->begin(), {"", clone(lhs)});
           auto e = N<IdExpr>(m->name);
           e->setType(ctx->instantiate(getSrcInfo(), m, c));
+          if (lhs->isType() && !isMethod(m))
+            deactivateUnbounds(c);
           return e;
         } else {
           error("cannot find method '{}' in {} with arguments {}", expr->member,
@@ -560,6 +572,8 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
         auto newName = patchIfRealizable(t, val->isType());
         if (!newName.empty())
           e->value = newName;
+        if (!isMethod(bestCall))
+          deactivateUnbounds(c);
         return e;
       } else { // cast y.foo to CLS.foo(y, ...)
         auto f = bestCall;
@@ -726,11 +740,12 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
 
     if (sigType && (sigType->isTrait || sigType->name == ".Optional")) {
       // Case 0: type not yet known
-      if (!argType && !(reorderedArgs[ri].value->getType()->getUnbound() &&
+      if (!argType) /* && !(reorderedArgs[ri].value->getType()->getUnbound() &&
                         reorderedArgs[ri]
                             .value->getType()
                             ->getUnbound()
-                            ->treatAsClass)) { // do not unify if not yet known
+                            ->treatAsClass)) { // do not unify if not yet known */
+      {
         unificationsDone = false;
       }
       // Case 1: generator wrapping
@@ -853,7 +868,7 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
     forceUnify(expr, callee->getType());
     return callee;
   }
-}
+} // namespace ast
 
 void TypecheckVisitor::visit(const DotExpr *expr) {
   resultExpr = visitDot(expr);
@@ -1741,7 +1756,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     isInternal |= ast->suite == nullptr;
     if (!isInternal)
       for (int i = 1; i < t->args.size(); i++) {
-        assert(t->args[i] && !t->args[i]->hasUnbound());
+        assert(t->args[i] && !t->args[i]->getUnbounds().size());
         ctx->add(TypecheckItem::Var, ast->args[i - 1].name,
                  make_shared<LinkType>(t->args[i]));
       }

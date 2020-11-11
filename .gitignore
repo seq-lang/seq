@@ -13,6 +13,7 @@
 *.so
 *.pyc
 build/
+build_release/
 
 # Packages #
 ############
