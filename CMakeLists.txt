@@ -120,7 +120,10 @@ set(SEQ_HPPFILES  compiler/lang/expr.h
                   compiler/lang/seq.h
                   compiler/lang/stmt.h
                   compiler/lang/var.h
-                  compiler/parser/ast/ast.h
+                  compiler/parser/ast/ast/expr.h
+                  compiler/parser/ast/ast/stmt.h
+                  compiler/parser/ast/ast/pattern.h
+                  compiler/parser/ast/ast/visitor.h
                   compiler/parser/ast/codegen/codegen.h
                   compiler/parser/ast/codegen/codegen_ctx.h
                   compiler/parser/ast/context.h
@@ -131,7 +134,6 @@ set(SEQ_HPPFILES  compiler/lang/expr.h
                   compiler/parser/ast/typecheck/typecheck.h
                   compiler/parser/ast/typecheck/typecheck_ctx.h
                   compiler/parser/ast/types.h
-                  compiler/parser/ast/visitor.h
                   compiler/parser/ast/walk.h
                   compiler/parser/common.h
                   compiler/parser/ocaml.h
@@ -172,7 +174,10 @@ set(SEQ_CPPFILES  compiler/lang/expr.cpp
                   compiler/lang/seq.cpp
                   compiler/lang/stmt.cpp
                   compiler/lang/var.cpp
-                  compiler/parser/ast/ast.cpp
+                  compiler/parser/ast/ast/expr.cpp
+                  compiler/parser/ast/ast/stmt.cpp
+                  compiler/parser/ast/ast/pattern.cpp
+                  compiler/parser/ast/ast/visitor.cpp
                   compiler/parser/ast/codegen/codegen.cpp
                   compiler/parser/ast/codegen/codegen_ctx.cpp
                   compiler/parser/ast/context.cpp
@@ -183,7 +188,6 @@ set(SEQ_CPPFILES  compiler/lang/expr.cpp
                   compiler/parser/ast/typecheck/typecheck.cpp
                   compiler/parser/ast/typecheck/typecheck_ctx.cpp
                   compiler/parser/ast/types.cpp
-                  compiler/parser/ast/visitor.cpp
                   compiler/parser/ast/walk.cpp
                   compiler/parser/common.cpp
                   compiler/parser/ocaml.cpp

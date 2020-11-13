@@ -3,24 +3,23 @@
  *
  * Author: inumanag
  * License: see LICENSE
+ *
+ * TODO: Add comment AST nodes
  * *****************************************************************************)
 
-%{
-  open Ast
-%}
+%{ open Ast %}
 
 /* constants */
-%token <string * string> INT_S SEQ
-%token <float * string> FLOAT_S
-%token <string> STRING ID FSTRING KMER EXTERN PYDEF_RAW
+%token <string * string> INT STRING
+%token <float * string> FLOAT
+%token <string> ID PYDEF_RAW
 /* blocks & parentheses */
 %token INDENT DEDENT EOF NL DOT COLON SEMICOLON COMMA OF
 %token LP RP /* () */ LS RS /* [] */ LB RB /* {} */
 /* keywords */
-%token FOR WHILE CONTINUE BREAK IF ELSE ELIF MATCH CASE EXTEND
-%token DEF RETURN YIELD LAMBDA PYDEF TYPE CLASS TYPEOF AS PTR
+%token IF ELSE ELIF MATCH CASE FOR WHILE CONTINUE BREAK TRY EXCEPT FINALLY THROW WITH
+%token DEF RETURN YIELD LAMBDA CLASS TYPEOF AS
 %token IMPORT FROM GLOBAL PRINT PASS ASSERT DEL TRUE FALSE NONE
-%token TRY EXCEPT FINALLY THROW WITH
 /* operators */
 %token<string> EQ ELLIPSIS ADD SUB MUL DIV FDIV POW MOD
 %token<string> PLUSEQ MINEQ MULEQ DIVEQ FDIVEQ POWEQ MODEQ AT GEQ
@@ -56,16 +55,9 @@ reverse_separated_nonempty_llist(separator, X):
 atom:
   | NONE { $loc, Empty () }
   | ID { $loc, Id $1 }
-  | INT_S { $loc, Int $1 }
-  | FLOAT_S { $loc, Float $1 }
-  | STRING+ { $loc, String (String.concat "" $1) }
-  | FSTRING+ { $loc, FString (String.concat "" $1) }
-  | SEQ+
-    { $loc, Seq (fst (List.hd $1), String.concat "" @@ List.map (fun (i, j) ->
-        if i <> fst (List.hd $1)
-          then raise (Ast.SyntaxError ("cannot concatenate different types", $startpos));
-        j) $1) }
-  | KMER { $loc, Kmer $1 }
+  | INT { $loc, Int $1 }
+  | FLOAT { $loc, Float $1 }
+  | string { $loc, String $1 }
   | bool { $loc, Bool $1 }
   | tuple { $1 }
   | LS FL(COMMA, expr) RS { $loc, List $2 }
@@ -76,9 +68,16 @@ atom:
   | LS expr comprehension RS { $loc, ListGenerator ($2, $3) }
   | LB expr comprehension RB { $loc, SetGenerator ($2, $3) }
   | LB dictitem comprehension RB { $loc, DictGenerator ($2, $3) }
-  | MUL ID { $loc, Unpack ($loc($2), Id $2) }
-  | MUL tuple { $loc, Unpack $2 }
+  | MUL ID { $loc, Star ($loc($2), Id $2) }
+  | MUL tuple { $loc, Star $2 }
 bool: TRUE { true } | FALSE { false }
+string: STRING+ {
+  fst (List.hd $1),
+  List.map (fun (i, j) ->
+      if i <> fst (List.hd $1)
+      then raise (Ast.SyntaxError ("cannot concatenate different types", $startpos));
+      j) $1 |> String.concat ""
+  }
 tuple:
   | LP RP { $loc, Tuple [] }
   | LP expr COMMA RP { $loc, Tuple [$2] }
@@ -100,9 +99,8 @@ lassign_term:
   | ID { $loc, Id $1 }
   | LS FL(COMMA, lassign_term) RS { $loc, List $2 }
   | LP FL(COMMA, lassign_term) RP { $loc, Tuple $2 }
-  | MUL ID { $loc, Unpack ($loc($2), Id $2) }
+  | MUL ID { $loc, Star ($loc($2), Id $2) }
 lassign: FLNE(COMMA, lassign_term) { match $1 with [l] -> l | l -> $loc, Tuple l }
-  /* | FL_HAS(COMMA, lassign) { $loc, Tuple $1 } */
 
 /* The following rules are defined in the order of operator precedence:
      pipes -> booleans -> conditionals -> arithmetics */
@@ -139,7 +137,6 @@ arith_expr:
   ADD | SUB | MUL | DIV | FDIV | MOD | POW | AT | B_AND | B_OR | B_XOR | B_LSH | B_RSH { $1 }
 arith_term:
   | atom { $1 }
-  | PTR LP expr RP { $loc, Ptr $3 }
   | arith_term LP FL(COMMA, call_term) RP { $loc, Call ($1, $3) }
   | arith_term LP expr comprehension RP /* Generator: foo(x for x in y) */
     { $loc, Call ($1, [None, (($startpos($2), $endpos($5)), Generator ($3, $4))]) }
@@ -170,7 +167,6 @@ small_statement:
   | DEL FLNE(COMMA, expr) { List.map (fun e -> fst e, Del e) $2 }
   | ASSERT FLNE(COMMA, expr) { List.map (fun e -> fst e, Assert e) $2 }
   | GLOBAL FLNE(COMMA, ID) { List.map (fun e -> $loc, Global e) $2 }
-  /* | PREFETCH FLNE(COMMA, expr) { List.map (fun e -> fst e, Prefetch e) $2 } */
   | print_statement { $1 }
   | import_statement { $1 }
   | assign_statement { $1 }
@@ -187,19 +183,20 @@ small_single_statement:
 print_statement:
   | PRINT FL_HAS(COMMA, expr)
     { let term, len = (if snd $2 then " " else "\n"), List.length (fst $2) in
-      if len = 0 then [$loc, Print ($loc, String term)]
+      if len = 0 then [$loc, Print ($loc, String ("", term))]
       else List.concat (List.mapi (fun i e -> [fst e, Print e;
-                                               fst e, Print (fst e, String (if i < len - 1 then " " else term))])
+                                               fst e, Print (fst e, String ("", if i < len - 1 then " " else term))])
                                   (fst $2)) }
 
 single_statement:
   | NL { $loc, Pass () }
-  | WHILE expr COLON suite { $loc, While ($2, $4) }
-  | FOR lassign IN expr COLON suite { $loc, For ($2, $4, $6) }
+  | WHILE expr COLON suite { $loc, While ($2, $4, []) }
+  | WHILE expr COLON suite ELSE COLON suite { $loc, While ($2, $4, $7) }
+  | FOR lassign IN expr COLON suite { $loc, For ($2, $4, $6, []) }
+  | FOR lassign IN expr COLON suite ELSE COLON suite { $loc, For ($2, $4, $6, $9) }
   | IF expr COLON suite { $loc, If [Some $2, $4] }
   | IF expr COLON suite elif_suite { $loc, If ((Some $2, $4) :: $5) }
   | MATCH expr COLON NL INDENT case_suite DEDENT { $loc, Match ($2, $6) }
-  /* | decl_statement  */
   | try_statement | with_statement | class_statement { $1 }
 suite:
   | FLNE(SEMICOLON, small_statement) NL { List.concat $1 }
@@ -219,35 +216,38 @@ case_type:
   | ID { $loc, WildcardPattern (match $1 with "_" -> None | s -> Some s) }
   | case_int { $loc, IntPattern $1 }
   | bool { $loc, BoolPattern $1 }
-  | STRING { $loc, StrPattern $1 }
-  | SEQ { $loc, SeqPattern (snd $1) } /* TODO: no protein matching? */
+  | string { $loc, StrPattern $1 }
   | LP separated_nonempty_list(COMMA, case_or) RP { $loc, TuplePattern $2 }
   | LS FL(COMMA, case_or) RS { $loc, ListPattern $2 }
   | case_int ELLIPSIS case_int { $loc, RangePattern($1, $3) }
 case_int:
-  | INT_S { Int64.of_string (fst $1) }
-  | ADD INT_S { Int64.of_string (fst $2) }
-  | SUB INT_S { Int64.neg (Int64.of_string (fst $2)) }
+  | INT { Int64.of_string (fst $1) }
+  | ADD INT { Int64.of_string (fst $2) }
+  | SUB INT { Int64.neg (Int64.of_string (fst $2)) }
 
 import_statement:
-  | FROM dot_term IMPORT MUL
-    { [$loc, Import ((flatten_dot ~sep:"/" $2, None), ["*", None])] }
-  | FROM dot_term IMPORT FLNE(COMMA, import_term)
-    { let what = List.map (fun (_, (what, ias)) -> (flatten_dot ~sep:"/" what, ias)) $4 in
-      [$loc, Import ((flatten_dot ~sep:"/" $2, None), what)] }
   | IMPORT FLNE(COMMA, import_term)
-    { List.map (fun (pos, (from, import_as)) -> pos, Import ((flatten_dot ~sep:"/" from, import_as), [])) $2 }
+    { List.map (fun (pos, (from, import_as)) -> pos, Import { from; what = None; import_as }) $2 }
+  | FROM expr IMPORT MUL
+    { [$loc, Import { from = $2; what = Some ($loc($4), String ("", "*")); import_as = None}] }
+  | FROM expr IMPORT FLNE(COMMA, import_term)
+    { List.map (fun (pos, (from, import_as)) -> pos, Import { from; what = Some $2; import_as }) $4 }
 import_term:
-  | dot_term { $loc, ($1, None) }
-  | dot_term AS ID { $loc, ($1, Some $3) }
+  | import_lterm { $loc, ($1, None) }
+  | import_lterm AS ID { $loc, ($1, Some $3) }
+import_lterm:
+  | dot_term { $1 }
+  | ID LP FL(COMMA, typed_param) RP func_ret_type?
+    { let e_typ = match $5 with Some typ -> typ | None -> $loc($4), Id "void" in
+      $loc, FuncDef ($1, $3, Some e_typ) }
 dot_term: ID { $loc, Id $1 } | dot_term DOT ID { $loc, Dot ($1, $3) }
 
 assign_statement:
   | expr aug_eq expr { [$loc, AssignEq ($1, $3, String.sub $2 0 (String.length $2 - 1))] }
-  | ID COLON expr EQ expr { [$loc, Assign (($loc($1), Id $1), $5, Some $3)] }
+  | ID COLON expr EQ expr { [$loc, Assign (($loc($1), Id $1), Some $5, Some $3)] }
   | expr_list EQ separated_nonempty_list(EQ, expr_list)
     { let all = List.map (function [l] -> l | l -> $loc, Tuple l) (List.rev ($1 :: $3)) in
-      List.rev @@ List.map (fun i -> $loc, Assign (i, List.hd all, None)) (List.tl all) }
+      List.rev @@ List.map (fun i -> $loc, Assign (i, Some (List.hd all), None)) (List.tl all) }
 %inline aug_eq: PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ | LSHEQ | RSHEQ | ANDEQ | OREQ | XOREQ { $1 }
 
 try_statement: TRY COLON suite catch* finally? { $loc, Try ($3, $4, opt_val $5 []) }
@@ -268,12 +268,10 @@ decorator_term:
 
 func_statement:
   | func { $1 }
-  | pyfunc { $1 }
+  | func_def COLON PYDEF_RAW { [$loc, Function { $1 with fn_stmts = [$loc, Expr ($loc, String ("", $3))]; fn_attrs = ($loc, "extern") :: ($1).fn_attrs }] }
 func:
   | func_def COLON suite
     { [$loc, Function { $1 with fn_stmts = $3 }] }
-  | extern_from? EXTERN FLNE(COMMA, extern_what) NL
-    { List.map (fun (pos, e) -> pos, ImportExtern { e with lang = $2; e_from = $1 }) $3 }
 func_def:
   | decorator(DEF) ID generic_list? LP FL(COMMA, typed_param) RP func_ret_type?
     { { fn_name = $2; fn_rettyp = $7; fn_generics = opt_val $3 []; fn_args = $5; fn_stmts = []; fn_attrs = $1 } }
@@ -282,45 +280,32 @@ generic_list: LS FLNE(COMMA, typed_param) RS { $2 }
 default_val: EQ expr { $2 }
 param_type: COLON expr { $2 }
 func_ret_type: OF expr { $2 }
-extern_from: FROM dot_term { $2 }
-extern_what:
-  | ID LP FL(COMMA, extern_param) RP func_ret_type? extern_as?
-    { let e_typ = match $5 with Some typ -> typ | None -> $loc($4), Id "void" in
-      $loc, { lang = ""; e_from = None; e_name = $1; e_typ; e_args = $3; e_as = $6 } }
-extern_param:
-  | expr { $loc, { name = ""; typ = Some $1; default = None } }
-  | ID param_type { $loc, { name = $1; typ = Some $2; default = None } }
-extern_as: AS ID { $2 }
 
-pyfunc: PYDEF ID LP FL(COMMA, typed_param) RP func_ret_type? COLON PYDEF_RAW { [$loc, PyDef ($2, $6, $4, $8)] }
-
-class_statement: cls | extend | typ { $1 }
-cls:
-  | decorator(CLASS) cls_body { $loc, Class $2 }
-  | decorator(TYPE) cls_body { $loc, Type $2 }
+class_statement: cls { $1 }
+cls: decorator(CLASS) cls_body { $loc, Class $2 }
 cls_body:
   | ID generic_list? COLON NL INDENT dataclass_member+ DEDENT
     { let args = List.rev @@ List.fold_left
-        (fun acc i -> match i with Some (_, Declare d) -> d :: acc | _ -> acc) [] $6
+        (fun acc i -> match i with
+          | Some (pos, Assign ((_, Id name), default, typ)) -> (pos, { name; typ; default }) :: acc
+          | _ -> acc) [] $6
       in
       let members = List.rev @@ List.fold_left
-        (fun acc i -> match i with Some (_, Declare _) | None -> acc | Some p -> p :: acc) [] $6
+        (fun acc i -> match i with Some (_, Assign _) | None -> acc | Some p -> p :: acc) [] $6
       in
       { class_name = $1; generics = opt_val $2 []; args; members; attrs = [] } }
 dataclass_member:
-  | class_member { $1 }
-  | ID COLON expr NL
-    { Some ($loc, Declare ($loc, { name = $1; typ = Some $3; default = None })) }
-  | ID COLON expr EQ expr NL
-    { Some ($loc, Declare ($loc, { name = $1; typ = Some $3; default = Some $5 })) }
-class_member:
   | PASS NL { None }
-  | STRING+ NL { Some ($loc, Expr ($loc, String (String.concat "" $1))) }
+  | ID COLON expr NL
+    { Some ($loc, Assign (($loc, Id $1), None, Some $3)) }
+  | ID COLON expr EQ expr NL
+    { Some ($loc, Assign (($loc, Id $1), Some $5, Some $3)) }
+  | string NL { Some ($loc, Expr ($loc, String $1)) }
   | func_statement { Some (List.hd $1) }
-extend: EXTEND expr COLON NL INDENT class_member+ DEDENT { $loc, Extend ($2, filter_opt $6) }
-typ:
+
+/* typ:
   | type_head NL { $loc, Type (snd $1) }
   | type_head COLON NL INDENT class_member+ DEDENT { $loc, Type { (snd $1) with members = filter_opt $5 } }
 type_head:
   | decorator(TYPE) ID generic_list? LP FL(COMMA, typed_param) RP
-    { $loc, { class_name = $2; generics = opt_val $3 []; args = $5; members = []; attrs = $1 } }
+    { $loc, { class_name = $2; generics = opt_val $3 []; args = $5; members = []; attrs = $1 } } */

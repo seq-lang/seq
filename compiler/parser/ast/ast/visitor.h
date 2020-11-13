@@ -17,11 +17,8 @@ struct BoolExpr;
 struct IntExpr;
 struct FloatExpr;
 struct StringExpr;
-struct FStringExpr;
-struct KmerExpr;
-struct SeqExpr;
 struct IdExpr;
-struct UnpackExpr;
+struct StarExpr;
 struct TupleExpr;
 struct ListExpr;
 struct SetExpr;
@@ -38,9 +35,9 @@ struct DotExpr;
 struct SliceExpr;
 struct EllipsisExpr;
 struct TypeOfExpr;
-struct PtrExpr;
 struct LambdaExpr;
 struct YieldExpr;
+struct PtrExpr;
 struct TupleIndexExpr;
 struct StackAllocExpr;
 struct StaticExpr;
@@ -63,9 +60,7 @@ struct WhileStmt;
 struct ForStmt;
 struct IfStmt;
 struct MatchStmt;
-struct ExtendStmt;
 struct ImportStmt;
-struct ExternImportStmt;
 struct TryStmt;
 struct GlobalStmt;
 struct ThrowStmt;
@@ -75,13 +70,11 @@ struct AssignEqStmt;
 struct YieldFromStmt;
 struct WithStmt;
 struct UpdateStmt;
-struct PyDefStmt;
 
 struct StarPattern;
 struct IntPattern;
 struct BoolPattern;
 struct StrPattern;
-struct SeqPattern;
 struct RangePattern;
 struct TuplePattern;
 struct ListPattern;
@@ -102,11 +95,8 @@ public:
   virtual void visit(const IntExpr *);
   virtual void visit(const FloatExpr *);
   virtual void visit(const StringExpr *);
-  virtual void visit(const FStringExpr *);
-  virtual void visit(const KmerExpr *);
-  virtual void visit(const SeqExpr *);
   virtual void visit(const IdExpr *);
-  virtual void visit(const UnpackExpr *);
+  virtual void visit(const StarExpr *);
   virtual void visit(const TupleExpr *);
   virtual void visit(const ListExpr *);
   virtual void visit(const SetExpr *);
@@ -123,9 +113,9 @@ public:
   virtual void visit(const SliceExpr *);
   virtual void visit(const EllipsisExpr *);
   virtual void visit(const TypeOfExpr *);
-  virtual void visit(const PtrExpr *);
   virtual void visit(const LambdaExpr *);
   virtual void visit(const YieldExpr *);
+  virtual void visit(const PtrExpr *);
   virtual void visit(const TupleIndexExpr *);
   virtual void visit(const StackAllocExpr *);
   virtual void visit(const InstantiateExpr *);
@@ -149,9 +139,7 @@ public:
   virtual void visit(const ForStmt *);
   virtual void visit(const IfStmt *);
   virtual void visit(const MatchStmt *);
-  virtual void visit(const ExtendStmt *);
   virtual void visit(const ImportStmt *);
-  virtual void visit(const ExternImportStmt *);
   virtual void visit(const TryStmt *);
   virtual void visit(const GlobalStmt *);
   virtual void visit(const ThrowStmt *);
@@ -166,7 +154,6 @@ public:
   virtual void visit(const IntPattern *);
   virtual void visit(const BoolPattern *);
   virtual void visit(const StrPattern *);
-  virtual void visit(const SeqPattern *);
   virtual void visit(const RangePattern *);
   virtual void visit(const TuplePattern *);
   virtual void visit(const ListPattern *);
@@ -178,17 +165,12 @@ public:
 
 template <typename TE, typename TS, typename TP>
 struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
-  virtual TE transform(const std::unique_ptr<Expr> &e) = 0;
-  virtual TS transform(const std::unique_ptr<Stmt> &e) = 0;
-  virtual TP transform(const std::unique_ptr<Pattern> &e) = 0;
+  virtual TE transform(const unique_ptr<Expr> &e) = 0;
+  virtual TS transform(const unique_ptr<Stmt> &e) = 0;
+  virtual TP transform(const unique_ptr<Pattern> &e) = 0;
 
-  // template <typename T, typename... Ts>
-  // auto transform(const std::unique_ptr<T> &t, Ts &&... args)
-  //     -> decltype(transform(t.get())) {
-  //   return transform(t.get(), std::forward<Ts>(args)...);
-  // }
-  template <typename T> auto transform(const std::vector<T> &ts) {
-    std::vector<T> r;
+  template <typename T> auto transform(const vector<T> &ts) {
+    vector<T> r;
     for (auto &e : ts)
       r.push_back(transform(e));
     return r;
@@ -199,6 +181,7 @@ struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
     t->setSrcInfo(getSrcInfo());
     return t;
   }
+
   template <typename Tn, typename... Ts>
   auto Nx(const seq::SrcObject *s, Ts &&... args) {
     auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
@@ -209,10 +192,12 @@ struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
   template <typename... TArgs> void error(const char *format, TArgs &&... args) {
     ast::error(getSrcInfo(), fmt::format(format, args...).c_str());
   }
+
   template <typename T, typename... TArgs>
   void error(const T &p, const char *format, TArgs &&... args) {
     ast::error(p->getSrcInfo(), fmt::format(format, args...).c_str());
   }
+
   template <typename T, typename... TArgs>
   void internalError(const char *format, TArgs &&... args) {
     throw exc::ParserException(

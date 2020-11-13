@@ -78,12 +78,9 @@
       scan 0;
       Buffer.contents buf
     in
-    match String.lowercase_ascii (String.sub pfx 0 1) with
-    | "r" -> P.STRING (fix_literals ~is_raw:true u)
-    | ("s" | "p") as p -> P.SEQ (p, fix_literals u)
-    | "k" -> P.KMER (fix_literals u)
-    | "f" -> P.FSTRING (fix_literals u)
-    | _ -> P.STRING (fix_literals u)
+    match pfx with
+    | "r" | "R" -> P.STRING ("r", fix_literals ~is_raw:true u)
+    | _ -> P.STRING (fix_literals u, pfx)
 }
 
 (* Lexer regex expressions *)
@@ -105,8 +102,8 @@ let float = pointfloat | expfloat
 let escape = '\\' _
 let alpha = ['a'-'z' 'A'-'Z' '_']
 let alphanum = ['A'-'Z' 'a'-'z' '0'-'9' '_']
-let stringprefix = ('s' | 'S')? ('r' | 'R')? ('k' | 'K')? ('p' | 'P')? ('f' | 'F')?
-let intsuffix = ('s' | 'S' | 'z' | 'Z' | 'u' | 'U')
+let intsuffix = alpha alphanum*
+let stringprefix = alpha alphanum*
 let ident = alpha alphanum*
 
 (* Main handler *)
@@ -172,7 +169,6 @@ and read state = parse
       | "as"       -> P.AS
       | "pass"     -> P.PASS
       | "while"    -> P.WHILE
-      | "type"     -> P.TYPE
       | "lambda"   -> P.LAMBDA
       | "assert"   -> P.ASSERT
       | "global"   -> P.GLOBAL
@@ -180,11 +176,7 @@ and read state = parse
       | "from"     -> P.FROM
       | "class"    -> P.CLASS
       | "typeof"   -> P.TYPEOF
-      | "__ptr__"  -> P.PTR
-      | "extend"   -> P.EXTEND
-      | "cimport"  -> P.EXTERN "c"
-      | "pyimport" -> P.EXTERN "py"
-      | "pydef"    -> is_pydef := true; P.PYDEF
+      | "@extern"  -> is_pydef := true; P.PASS
       | "del"      -> P.DEL
       | "None"     -> P.NONE
       | "try"      -> P.TRY
@@ -255,10 +247,10 @@ and read state = parse
   | "/"   as op { P.DIV (char_to_string op) }
   | "%"   as op { P.MOD (char_to_string op) }
 
-  | (int | hexint) as i { P.INT_S (i, "") }
-  | float as f { P.FLOAT_S (float_of_string f, "") }
-  | ((int | hexint) as i) (intsuffix as k) { P.INT_S (i, char_to_string k) }
-  | (float as f) (intsuffix as k) { P.FLOAT_S (float_of_string f, char_to_string k) }
+  | (int | hexint) as i { P.INT (i, "") }
+  | float as f { P.FLOAT (float_of_string f, "") }
+  | ((int | hexint) as i) (intsuffix as k) { P.INT (i, k) }
+  | (float as f) (intsuffix as k) { P.FLOAT (float_of_string f, k) }
   | eof { P.EOF }
   | _ { raise (Ast.SyntaxError (Format.sprintf "Unknown token '%s'" (L.lexeme lexbuf), lexbuf.lex_start_p)) }
 
@@ -303,7 +295,8 @@ and pydef_offset buf state = parse
     { if state.p_offset >= state.start then B.add_string buf (char_to_string t);
       state.p_offset <- state.p_offset + (if t = ' ' then 1 else 8);
       pydef_offset buf state lexbuf }
-  | _
-    { if state.p_offset <= state.start
+  | _ as c
+    { if c == '\n' then lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1 };
+      if state.p_offset <= state.start
       then state.trail <- state.p_offset
       else (B.add_string buf (L.lexeme lexbuf); pydef buf state lexbuf) }

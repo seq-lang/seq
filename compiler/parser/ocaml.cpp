@@ -96,31 +96,25 @@ unique_ptr<Expr> parse_expr(value val) {
   case 4:
     Return(String, parse_string(t));
   case 5:
-    Return(FString, parse_string(t));
-  case 6:
-    Return(Kmer, parse_string(t));
-  case 7:
-    Return(Seq, parse_string(Field(t, 1)), parse_string(Field(t, 0)));
-  case 8:
     Return(Id, parse_string(t));
-  case 9:
-    Return(Unpack, parse_expr(t));
-  case 10:
+  case 6:
+    Return(Star, parse_expr(t));
+  case 7:
     Return(Tuple, parse_list(t, parse_expr));
-  case 11:
+  case 8:
     Return(List, parse_list(t, parse_expr));
-  case 12:
+  case 9:
     Return(Set, parse_list(t, parse_expr));
-  case 13:
+  case 10:
     Return(Dict, parse_list(t, [](value in) {
              CAMLparam1(in);
              OcamlReturn((DictExpr::KeyValue{parse_expr(Field(in, 0)),
                                              parse_expr(Field(in, 1))}));
            }));
-  case 14:
-  case 15:
-  case 16:
-  case 17: {
+  case 11:
+  case 12:
+  case 13:
+  case 14: {
     f0 = Field(t, 0);
     f1 = Field(t, 1);
     vector<GeneratorExpr::Body> loops;
@@ -139,43 +133,41 @@ unique_ptr<Expr> parse_expr(value val) {
       Return(DictGenerator, parse_expr(Field(f0, 0)), parse_expr(Field(f0, 1)),
              move(loops));
   }
-  case 18:
+  case 15:
     Return(If, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
            parse_expr(Field(t, 2)));
-  case 19:
+  case 16:
     Return(Unary, parse_string(Field(t, 0)), parse_expr(Field(t, 1)));
-  case 20:
+  case 17:
     Return(Binary, parse_expr(Field(t, 0)), parse_string(Field(t, 1)),
            parse_expr(Field(t, 2)));
-  case 21:
+  case 18:
     Return(Pipe, parse_list(t, [](value in) {
              CAMLparam1(in);
              OcamlReturn((
                  PipeExpr::Pipe{parse_string(Field(in, 0)), parse_expr(Field(in, 1))}));
            }));
-  case 22:
+  case 19:
     Return(Index, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)));
-  case 23:
+  case 20:
     Return(Call, parse_expr(Field(t, 0)), parse_list(Field(t, 1), [](value i) {
              CAMLparam1(i);
              OcamlReturn((CallExpr::Arg{parse_optional(Field(i, 0), parse_string),
                                         parse_expr(Field(i, 1))}));
            }));
-  case 24:
+  case 21:
     Return(Slice, parse_optional(Field(t, 0), parse_expr),
            parse_optional(Field(t, 1), parse_expr),
            parse_optional(Field(t, 2), parse_expr));
-  case 25:
+  case 22:
     Return(Dot, parse_expr(Field(t, 0)), parse_string(Field(t, 1)));
-  case 26:
+  case 23:
     Return(Ellipsis, );
-  case 27:
+  case 24:
     Return(TypeOf, parse_expr(t));
-  case 28:
-    Return(Ptr, parse_expr(t));
-  case 29:
+  case 25:
     Return(Lambda, parse_list(Field(t, 0), parse_string), parse_expr(Field(t, 1)));
-  case 30:
+  case 26:
     Return(Yield, );
   default:
     seq::compilationError("[internal] tag variant mismatch ...");
@@ -277,7 +269,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
     Return(Expr, parse_expr(t));
   case 4:
     f0 = Field(t, 3);
-    Return(Assign, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
+    Return(Assign, parse_expr(Field(t, 0)), parse_optional(Field(t, 1), parse_expr),
            parse_optional(Field(t, 2), parse_expr));
   case 5:
     Return(Del, parse_expr(t));
@@ -290,40 +282,24 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 9:
     Return(Assert, parse_expr(t));
   case 10:
-    assert(false);
-    // Return(TypeAlias, parse_string(Field(t, 0)), parse_expr(Field(t, 1)));
-  case 11:
-    Return(While, parse_expr(Field(t, 0)), parse_stmt_list(Field(t, 1)));
-  case 12:
-    Return(For, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
+    Return(While, parse_expr(Field(t, 0)), parse_stmt_list(Field(t, 1)),
            parse_stmt_list(Field(t, 2)));
-  case 13:
+  case 11:
+    Return(For, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
+           parse_stmt_list(Field(t, 2)), parse_stmt_list(Field(t, 3)));
+  case 12:
     Return(If, parse_list(t, [](value i) {
              return IfStmt::If{parse_optional(Field(i, 0), parse_expr),
                                parse_stmt_list(Field(i, 1))};
            }));
-  case 14:
+  case 13:
     Return(Match, parse_expr(Field(t, 0)), parse_list(Field(t, 1), [](value i) {
              return make_pair(parse_pattern(Field(i, 0)), parse_stmt_list(Field(i, 1)));
            }));
+  case 14:
+    Return(Import, parse_expr(Field(t, 0)), parse_optional(Field(t, 1), parse_expr),
+           parse_optional(Field(t, 1), parse_string));
   case 15:
-    Return(Extend, parse_expr(Field(t, 0)), parse_stmt_list(Field(t, 1)));
-  case 16:
-    f0 = Field(t, 0);
-    Return(Import,
-           make_pair(parse_string(Field(f0, 0)),
-                     parse_optional(Field(f0, 1), parse_string)),
-           parse_list(Field(t, 1), [](value j) {
-             return make_pair(parse_string(Field(j, 0)),
-                              parse_optional(Field(j, 1), parse_string));
-           }));
-  case 17:
-    Return(
-        ExternImport,
-        make_pair(parse_string(Field(t, 2)), parse_optional(Field(t, 5), parse_string)),
-        parse_optional(Field(t, 1), parse_expr), parse_expr(Field(t, 3)),
-        parse_list(Field(t, 4), parse_param), parse_string(Field(t, 0)));
-  case 18:
     Return(Try, parse_stmt_list(Field(t, 0)),
            parse_list(Field(t, 1),
                       [](value t) {
@@ -336,29 +312,28 @@ unique_ptr<Stmt> parse_stmt(value val) {
                                             parse_stmt_list(Field(v, 2))}));
                       }),
            parse_stmt_list(Field(t, 2)));
-  case 19:
+  case 16:
     Return(Global, parse_string(t));
-  case 20:
+  case 17:
     Return(Throw, parse_expr(t));
-  case 23:
+  case 18:
     Return(Function, parse_string(Field(t, 0)), parse_optional(Field(t, 1), parse_expr),
            parse_list(Field(t, 2), parse_param), parse_list(Field(t, 3), parse_param),
            parse_stmt_list(Field(t, 4)), parse_list(Field(t, 5), [](value i) {
              return parse_string(Field(i, 1)); // ignore position for now
            }));
-  case 24:
-  case 25:
+  case 19:
     Return(Class, tv == 25, parse_string(Field(t, 0)),
            parse_list(Field(t, 1), parse_param), parse_list(Field(t, 2), parse_param),
            parse_stmt_list(Field(t, 3)), parse_list(Field(t, 4), [](value i) {
              return parse_string(Field(i, 1)); // ignore position for now
            }));
-  case 27:
+  case 20:
     Return(AssignEq, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
            parse_string(Field(t, 2)));
-  case 28:
+  case 21:
     Return(YieldFrom, parse_expr(t));
-  case 29:
+  case 22:
     Return(With,
            parse_list(Field(t, 0),
                       [](value j) {
@@ -366,9 +341,6 @@ unique_ptr<Stmt> parse_stmt(value val) {
                                          parse_optional(Field(j, 1), parse_string));
                       }),
            parse_stmt_list(Field(t, 1)));
-  case 30:
-    Return(PyDef, parse_string(Field(t, 0)), parse_optional(Field(t, 1), parse_expr),
-           parse_list(Field(t, 2), parse_param), parse_string(Field(t, 3)));
   default:
     seq::compilationError("[internal] tag variant mismatch ...");
     return nullptr;

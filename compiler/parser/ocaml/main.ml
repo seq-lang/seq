@@ -17,22 +17,18 @@ let print_token t =
   | WITH -> "WITH"
   | WHILE -> "WHILE"
   | TYPEOF -> "TYPEOF"
-  | TYPE -> "TYPE"
   | TRY -> "TRY"
   | TRUE -> "TRUE"
   | THROW -> "THROW"
   | SUB s -> sprintf "SUB(%s)" s
-  | STRING s -> sprintf "STRING(%s)" s
+  | STRING(p,s) -> sprintf "STRING(%s,%s)" p s
   | SPIPE s -> sprintf "SPIPE(%s)" s
-  | SEQ(a,b)-> sprintf "SEQ(%s,%s)" a b
   | SEMICOLON -> "SEMICOLON"
   | RSHEQ s -> sprintf "RSHEQ(%s)" s
   | RS -> "RS"
   | RP -> "RP"
   | RETURN -> "RETURN"
   | RB -> "RB"
-  | PYDEF -> "PYDEF"
-  | PTR -> "PTR"
   | PRINT -> "PRINT"
   | PPIPE s -> sprintf "PPIPE(%s)" s
   | POWEQ s -> sprintf "POWEQ(%s)" s
@@ -61,10 +57,9 @@ let print_token t =
   | LEQ s -> sprintf "LEQ(%s)" s
   | LB -> "LB"
   | LAMBDA -> "LAMBDA"
-  | KMER s -> sprintf "KMER(%s)" s
   | ISNOT s -> sprintf "ISNOT(%s)" s
   | IS s -> sprintf "IS(%s)" s
-  | INT_S(a,b) -> sprintf "INT_S(%s,%s)" a b
+  | INT(a,b) -> sprintf "INT(%s,%s)" a b
   | INDENT -> "INDENT"
   | IN s -> sprintf "IN(%s)" s
   | IMPORT -> "IMPORT"
@@ -73,16 +68,13 @@ let print_token t =
   | GREAT s -> sprintf "GREAT(%s)" s
   | GLOBAL -> "GLOBAL"
   | GEQ s -> sprintf "GEQ(%s)" s
-  | FSTRING s -> sprintf "FSTRING(%s)" s
   | FROM -> "FROM"
   | FOR -> "FOR"
-  | FLOAT_S(f,s) -> sprintf "FLOAT_S(%f,%s)" f s
+  | FLOAT(f,s) -> sprintf "FLOAT(%f,%s)" f s
   | FINALLY -> "FINALLY"
   | FDIVEQ s -> sprintf "FDIVEQ(%s)" s
   | FDIV s -> sprintf "FDIV(%s)" s
   | FALSE -> "FALSE"
-  | EXTERN s -> sprintf "EXTERN(%s)" s
-  | EXTEND -> "EXTEND"
   | EXCEPT -> "EXCEPT"
   | EQ s -> sprintf "EQ(%s)" s
   | EOF -> "EOF"

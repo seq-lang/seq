@@ -1,5 +1,7 @@
-#include "parser/ast/visitor.h"
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/visitor.h"
+#include "parser/ast/ast/expr.h"
+#include "parser/ast/ast/pattern.h"
+#include "parser/ast/ast/stmt.h"
 
 namespace seq {
 namespace ast {
