@@ -391,6 +391,80 @@ class SortedList[T]:
             del self._maxes[pos]
 
 
+    def _check(self: SortedList[T]):
+        """
+        Check invariants of sorted list.
+
+        Runtime complexity: `0(n)`
+        """
+        try:
+            assert self._load >= 4
+            assert len(self._maxes) == len(self._lists)
+            assert self._len == sum(len(sublist) for sublist in self._lists)
+
+            # Check all sublists are sorted.
+
+            for sublist in self._lists:
+                for pos in range(1, len(sublist)):
+                    assert sublist[pos - 1] <= sublist[pos]
+            
+            # Check beginning/end of sublists are sorted.
+
+            for pos in range(1, len(self._lists)):
+                assert self._lists[pos - 1][-1] <= self._lists[pos][0]
+
+            # Check _maxes index is the last value of each sublist.
+
+            for pos in range(len(self._maxes)):
+                assert self._maxes[pos] == self._lists[pos][-1]
+            
+            # Check sublists lengths are less than double load-factor.
+
+            double = self._load << 1
+            assert all(len(sublist) <= double for sublist in self._lists)
+
+            # Check sublist lengths are greater than half load-factor for all
+            # but the last sublist.
+
+            half = self._load >> 1
+            for pos in range(0, len(self._lists) - 1):
+                assert len(self._lists[pos]) >= half
+
+            if self._index:
+                assert self._len == self._index[0]
+                assert len(self._index) == self._offset + len(self._lists)
+
+                # Check index leaf nodes equal length of sublists.
+
+                for pos in range(len(self._lists)):
+                    leaf = self._index[self._offset + pos]
+                    assert leaf == len(self._lists[pos])
+
+                # Check index branch nodes are the sum of their children
+                
+                for pos in range(self._offset):
+                    child = (pos << 1) + 1
+                    if child >= len(self._index):
+                        assert self._index[pos] == 0
+                    elif child + 1 == len(self._index):
+                        assert self._index[pos] == self._index[child]
+                    else:
+                        child_sum = self._index[child] + self._index[child + 1]
+                        assert child_sum == self._index[pos]
+        except:
+            # traceback.print_exc(file=sys.stdout)
+            print('len', self._len)
+            print('load', self._load)
+            print('offset', self._offset)
+            print('len_index', len(self._index))
+            print('index', self._index)
+            print('len_maxes', len(self._maxes))
+            print('maxes', self._maxes)
+            print('len_lists', len(self._lists))
+            print('lists', self._lists)
+            # raise
+
+
     def __iter__(self: SortedList[T]):
         for l in self._lists:
             yield from l
