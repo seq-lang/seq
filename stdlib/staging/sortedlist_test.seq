@@ -3,21 +3,24 @@ from sortedlist import SortedList
 
 @test
 def test_init():
-    slt = SortedList()
+    slt = SortedList[int]()
     assert slt.key is None
-    # slt._check()
+    #slt._check()
 
-    slt = SortedList()
+    slt = SortedList[int]()
     slt._reset(10000)
     assert slt._load == 10000
-    # slt._check()
+    #slt._check()
 
-    slt = SortedList(range(10000))
+    # slt = SortedList[int](range(10000)) - changed due to lack of optional arguments
+    slt = SortedList[int]()
+    slt.update(list[int](range(10000)))
     assert all(tup[0] == tup[1] for tup in zip(slt, range(10000)))
 
     slt.clear()
     assert slt._len == 0
-    assert slt._maxes == []
-    assert slt._lists == []
-    # slt._check()
+    assert slt._maxes == list[int]()
+    assert slt._lists == list[list[int]]()
+    #slt._check()
+
 test_init()

@@ -89,12 +89,9 @@ class SortedList[T]:
     _index: list[T]
     _offset: int
 
-    def __init__(self: SortedList[T], iterable: optional[generator[T]] = None, key: optional[T] = None):
+    def __init__(self: SortedList[T]):
         """
         Initialize sorted list instance.
-
-        Optional `iterable` argument provides an initial iterable of values to
-        initialize the sorted list.
 
         Runtime complexity: `0(n*log(n))`
 
@@ -105,15 +102,12 @@ class SortedList[T]:
         >>> sl
         SortedList([1, 2, 3, 4, 5])
         """
-        assert key is None
         self._len = 0
         self._load = DEFAULT_LOAD_FACTOR
         self._lists = list[list[T]]()
         self._maxes = list[T]()
         self._index = list[T]()
         self._offset = 0
-
-        if iterable is not None: self.update(~iterable)
         
 
     @property
