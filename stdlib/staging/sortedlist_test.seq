@@ -1,5 +1,6 @@
 import random
 from sortedlist import SortedList
+from itertools import chain
 
 @test
 def test_init():
@@ -24,6 +25,7 @@ def test_init():
     slt._check()
 test_init()
 
+@test
 def test_add():
     random.seed(0)
     slt = SortedList[int]()
@@ -41,4 +43,26 @@ def test_add():
         slt3.add(random.random())
         slt3._check()
 test_add()
+
+@test
+def test_update():
+    slt = SortedList[int]()
+
+    slt.update(list[int](range(1000)))
+    assert len(slt) == 1000
+    slt._check()
+
+    slt.update(list[int](range(100)))
+    assert len(slt) == 1100
+    slt._check()
+
+    slt.update(list[int](range(10000)))
+    assert len(slt) == 11100
+    slt._check()
+
+    values = sorted(list[int](range(1000)) + list[int](range(100)) + list[int](range(10000)))
+    assert all(tup[0] == tup[1] for tup in zip(slt, values))
+test_update()
+
+
 
