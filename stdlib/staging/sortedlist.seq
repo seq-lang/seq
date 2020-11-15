@@ -1,5 +1,6 @@
 from bisect import bisect_right, bisect_left, insort
 from collections import deque
+from itertools import chain
 
 extend deque[T]:
     def _idx_check(self: deque[T], idx: int, msg: str):
@@ -244,7 +245,7 @@ class SortedList[T]:
 
         if self._maxes:
             if len(values) * 4 >= self._len:
-                # values.extend(chain.from_iterable(self._lists))
+                values.extend(chain.from_iterable(self._lists))
                 values.sort()
                 self.clear()
             else:
@@ -253,9 +254,9 @@ class SortedList[T]:
                     _add(val)
                 return
         
-        #self._lists.extend(values[pos:(pos + self._load)]
-         #           for pos in range(0, len(values), self._load)) 
-        #self._maxes.extend(sublist[-1] for sublist in self._lists)
+        self._lists.extend(values[pos:(pos + self._load)]
+                    for pos in range(0, len(values), self._load)) 
+        self._maxes.extend(sublist[-1] for sublist in self._lists)
         self._len = len(values)
         del self._index[:]
 
