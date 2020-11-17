@@ -245,18 +245,20 @@ class SortedList[T]:
 
         if self._maxes:
             if len(values) * 4 >= self._len:
-                values.extend(chain.from_iterable(self._lists))
+                self._lists.append(values)
+                values = list[T]()
+                for i in self._lists:
+                    values += i
                 values.sort()
                 self.clear()
             else:
-                _add = self.add
                 for val in values:
-                    _add(val)
+                    self.add(val)
                 return
-        
-        self._lists.extend(values[pos:(pos + self._load)]
+    
+        self._lists.ext(values[pos:(pos + self._load)]
                     for pos in range(0, len(values), self._load)) 
-        self._maxes.extend(sublist[-1] for sublist in self._lists)
+        self._maxes.ext(sublist[-1] for sublist in self._lists)
         self._len = len(values)
         del self._index[:]
 
