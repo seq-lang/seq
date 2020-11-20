@@ -263,7 +263,7 @@ class SortedList[T]:
         del self._index[:]
 
 
-    def __contains__(self: SortedList[T], value):
+    def __contains__(self: SortedList[T], value: T):
         """
         Return true if `value` is an element of the sorted list.
          
@@ -291,7 +291,7 @@ class SortedList[T]:
         return self._lists[pos][idx] == value
 
 
-    def discard(self: SortedList[T], value):
+    def discard(self: SortedList[T], value: T):
         """
         Remove `value` from sorted list if it is a member.
         
@@ -321,7 +321,7 @@ class SortedList[T]:
             self._delete(pos, idx)
 
 
-    def remove(self: SortedList[T], value):
+    def remove(self: SortedList[T], value: T):
         """
         Remove `value` from sorted list; `value` must be a member.
         
@@ -455,7 +455,7 @@ class SortedList[T]:
                         child_sum = self._index[child] + self._index[child + 1]
                         assert child_sum == self._index[pos]
         except:
-            # traceback.print_exc(file=sys.stdout)
+            #traceback.print_exc(file=sys.stdout)
             print('len', self._len)
             print('load', self._load)
             print('offset', self._offset)
@@ -465,7 +465,7 @@ class SortedList[T]:
             print('maxes', self._maxes)
             print('len_lists', len(self._lists))
             print('lists', self._lists)
-            # raise
+            raise ValueError("exception in _check")
 
 
     def __iter__(self: SortedList[T]):
