@@ -79,5 +79,26 @@ def test_contains():
     slt._check
 test_contains()
 
+@test
+def test_discard():
+    slt = SortedList[int]()
+    
+    # assert slt.discard(0) == None - Can't compare void with none
+    assert len(slt) == 0
+    slt._check()
+
+    slt.update([1, 2, 2, 2, 3, 3, 5])
+    slt._reset(4)
+
+    slt.discard(6)
+    slt._check()
+    slt.discard(4)
+    slt._check()
+    slt.discard(2)
+    slt._check()
+
+    assert all(tup[0] == tup[1] for tup in zip(slt, [1, 2, 2, 3, 3, 5]))
+test_discard()
+
 
 
