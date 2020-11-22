@@ -17,6 +17,12 @@
 #include "parser/ast/types.h"
 #include "parser/common.h"
 
+//  1 AssignStmt)
+//  2 ClassStmt)
+//  2 ExprStmt)
+//  4 SuiteStmt)
+//  8 FunctionStmt)
+
 namespace seq {
 namespace ast {
 
@@ -37,7 +43,7 @@ struct Stmt : public seq::SrcObject {
     return out << c.toString();
   }
 };
-typedef unique_ptr<Stmt> StmtPtr;
+using StmtPtr = unique_ptr<Stmt>;
 
 struct SuiteStmt : public Stmt {
   /// Represents list (block) of statements.
@@ -50,10 +56,12 @@ struct SuiteStmt : public Stmt {
   SuiteStmt(vector<StmtPtr> &&s, bool o = false);
   SuiteStmt(StmtPtr s, bool o = false);
   SuiteStmt(StmtPtr s, StmtPtr s2, bool o = false);
+  SuiteStmt(StmtPtr s, StmtPtr s2, StmtPtr s3, bool o = false);
   SuiteStmt(const SuiteStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, SuiteStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct PassStmt : public Stmt {
@@ -61,7 +69,8 @@ struct PassStmt : public Stmt {
   PassStmt(const PassStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, PassStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct BreakStmt : public Stmt {
@@ -69,7 +78,8 @@ struct BreakStmt : public Stmt {
   BreakStmt(const BreakStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, BreakStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct ContinueStmt : public Stmt {
@@ -77,7 +87,8 @@ struct ContinueStmt : public Stmt {
   ContinueStmt(const ContinueStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, ContinueStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct ExprStmt : public Stmt {
@@ -87,7 +98,8 @@ struct ExprStmt : public Stmt {
   ExprStmt(const ExprStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, ExprStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct AssignStmt : public Stmt {
@@ -102,7 +114,8 @@ struct AssignStmt : public Stmt {
   AssignStmt(const AssignStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, AssignStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct AssignEqStmt : public Stmt {
@@ -114,7 +127,8 @@ struct AssignEqStmt : public Stmt {
   AssignEqStmt(const AssignEqStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, AssignEqStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct DelStmt : public Stmt {
@@ -124,7 +138,8 @@ struct DelStmt : public Stmt {
   DelStmt(const DelStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, DelStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct PrintStmt : public Stmt {
@@ -134,7 +149,8 @@ struct PrintStmt : public Stmt {
   PrintStmt(const PrintStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, PrintStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct ReturnStmt : public Stmt {
@@ -145,7 +161,8 @@ struct ReturnStmt : public Stmt {
   ReturnStmt(const ReturnStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, ReturnStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct YieldStmt : public Stmt {
@@ -156,7 +173,8 @@ struct YieldStmt : public Stmt {
   YieldStmt(const YieldStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, YieldStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct AssertStmt : public Stmt {
@@ -166,7 +184,8 @@ struct AssertStmt : public Stmt {
   AssertStmt(const AssertStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, AssertStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct WhileStmt : public Stmt {
@@ -175,11 +194,12 @@ struct WhileStmt : public Stmt {
   StmtPtr suite;
   StmtPtr elseSuite;
 
-  WhileStmt(ExprPtr c, StmtPtr s, StmtPtr e);
+  WhileStmt(ExprPtr c, StmtPtr s, StmtPtr e = nullptr);
   WhileStmt(const WhileStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, WhileStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct ForStmt : public Stmt {
@@ -193,7 +213,8 @@ struct ForStmt : public Stmt {
   ForStmt(const ForStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, ForStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct IfStmt : public Stmt {
@@ -214,7 +235,8 @@ struct IfStmt : public Stmt {
   IfStmt(const IfStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, IfStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct MatchStmt : public Stmt {
@@ -227,18 +249,24 @@ struct MatchStmt : public Stmt {
   MatchStmt(const MatchStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, MatchStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct ImportStmt : public Stmt {
   ExprPtr from, what;
+  vector<Param> args;
+  ExprPtr ret;
   string as;
+  int dots;
 
-  ImportStmt(ExprPtr f, ExprPtr w, string a = "");
+  ImportStmt(ExprPtr f, ExprPtr w, vector<Param> &&p, ExprPtr r, string a = "",
+             int d = 0);
   ImportStmt(const ImportStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, ImportStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct TryStmt : public Stmt {
@@ -258,7 +286,8 @@ struct TryStmt : public Stmt {
   TryStmt(const TryStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, TryStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct GlobalStmt : public Stmt {
@@ -268,7 +297,8 @@ struct GlobalStmt : public Stmt {
   GlobalStmt(const GlobalStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, GlobalStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct ThrowStmt : public Stmt {
@@ -278,7 +308,8 @@ struct ThrowStmt : public Stmt {
   ThrowStmt(const ThrowStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, ThrowStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct FunctionStmt : public Stmt {
@@ -299,7 +330,8 @@ struct FunctionStmt : public Stmt {
   string signature() const;
 
   string toString() const override;
-  NODE_UTILITY(Stmt, FunctionStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct ClassStmt : public Stmt {
@@ -318,7 +350,8 @@ struct ClassStmt : public Stmt {
   ClassStmt(const ClassStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, ClassStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct YieldFromStmt : public Stmt {
@@ -328,7 +361,8 @@ struct YieldFromStmt : public Stmt {
   YieldFromStmt(const YieldFromStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, YieldFromStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct WithStmt : public Stmt {
@@ -341,7 +375,8 @@ struct WithStmt : public Stmt {
   WithStmt(const WithStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, WithStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 /// Post-transform AST nodes
@@ -355,7 +390,8 @@ struct AssignMemberStmt : Stmt {
   AssignMemberStmt(const AssignMemberStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, AssignMemberStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct UpdateStmt : public Stmt {
@@ -365,7 +401,8 @@ struct UpdateStmt : public Stmt {
   UpdateStmt(const UpdateStmt &s);
 
   string toString() const override;
-  NODE_UTILITY(Stmt, UpdateStmt);
+  StmtPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 } // namespace ast

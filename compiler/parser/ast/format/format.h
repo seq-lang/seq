@@ -12,55 +12,54 @@
 #include <string>
 #include <vector>
 
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/ast.h"
 #include "parser/ast/cache.h"
-#include "parser/ast/visitor.h"
 #include "parser/common.h"
 
 namespace seq {
 namespace ast {
 
-class FormatVisitor : public CallbackASTVisitor<std::string, std::string, std::string> {
-  std::string result;
-  std::string space;
+class FormatVisitor : public CallbackASTVisitor<string, string, string> {
+  string result;
+  string space;
   bool renderType, renderHTML;
   int indent;
 
-  std::string header, footer, nl;
-  std::string typeStart, typeEnd;
-  std::string nodeStart, nodeEnd;
-  std::string exprStart, exprEnd;
-  std::string commentStart, commentEnd;
-  std::string keywordStart, keywordEnd;
+  string header, footer, nl;
+  string typeStart, typeEnd;
+  string nodeStart, nodeEnd;
+  string exprStart, exprEnd;
+  string commentStart, commentEnd;
+  string keywordStart, keywordEnd;
 
-  std::shared_ptr<Cache> cache;
+  shared_ptr<Cache> cache;
 
 private:
-  template <typename T, typename... Ts> std::string renderExpr(T &&t, Ts &&... args) {
-    std::string s;
+  template <typename T, typename... Ts> string renderExpr(T &&t, Ts &&...args) {
+    string s;
     if (renderType)
       s += fmt::format("{}{}{}", typeStart,
                        t->getType() ? t->getType()->toString() : "-", typeEnd);
     return fmt::format("{}{}{}{}{}{}", exprStart, s, nodeStart, fmt::format(args...),
                        nodeEnd, exprEnd);
   }
-  template <typename... Ts> std::string renderComment(Ts &&... args) {
+  template <typename... Ts> string renderComment(Ts &&...args) {
     return fmt::format("{}{}{}", commentStart, fmt::format(args...), commentEnd);
   }
-  std::string pad(int indent = 0) const;
-  std::string newline() const;
-  std::string keyword(const std::string &s) const;
+  string pad(int indent = 0) const;
+  string newline() const;
+  string keyword(const string &s) const;
 
 public:
-  FormatVisitor(bool html, std::shared_ptr<Cache> cache = nullptr);
-  std::string transform(const ExprPtr &e) override;
-  std::string transform(const StmtPtr &stmt) override;
-  std::string transform(const PatternPtr &ptr) override;
-  std::string transform(const StmtPtr &stmt, int indent);
+  FormatVisitor(bool html, shared_ptr<Cache> cache = nullptr);
+  string transform(const ExprPtr &e) override;
+  string transform(const StmtPtr &stmt) override;
+  string transform(const PatternPtr &ptr) override;
+  string transform(const StmtPtr &stmt, int indent);
 
   template <typename T>
-  static std::string apply(const T &stmt, std::shared_ptr<Cache> cache = nullptr,
-                           bool html = false, bool init = false) {
+  static string apply(const T &stmt, shared_ptr<Cache> cache = nullptr,
+                      bool html = false, bool init = false) {
     auto t = FormatVisitor(html, cache);
     return fmt::format("{}{}{}", t.header, t.transform(stmt), t.footer);
   }
@@ -75,11 +74,8 @@ public:
   void visit(const IntExpr *) override;
   void visit(const FloatExpr *) override;
   void visit(const StringExpr *) override;
-  void visit(const FStringExpr *) override;
-  void visit(const KmerExpr *) override;
-  void visit(const SeqExpr *) override;
   void visit(const IdExpr *) override;
-  void visit(const UnpackExpr *) override;
+  void visit(const StarExpr *) override;
   void visit(const TupleExpr *) override;
   void visit(const ListExpr *) override;
   void visit(const SetExpr *) override;
@@ -121,7 +117,6 @@ public:
   void visit(const ForStmt *) override;
   void visit(const IfStmt *) override;
   void visit(const MatchStmt *) override;
-  void visit(const ExtendStmt *) override;
   void visit(const ImportStmt *) override;
   void visit(const TryStmt *) override;
   void visit(const GlobalStmt *) override;
@@ -131,13 +126,11 @@ public:
   void visit(const AssignEqStmt *) override;
   void visit(const YieldFromStmt *) override;
   void visit(const WithStmt *) override;
-  void visit(const PyDefStmt *) override;
 
   void visit(const StarPattern *) override;
   void visit(const IntPattern *) override;
   void visit(const BoolPattern *) override;
   void visit(const StrPattern *) override;
-  void visit(const SeqPattern *) override;
   void visit(const RangePattern *) override;
   void visit(const TuplePattern *) override;
   void visit(const ListPattern *) override;
@@ -151,9 +144,9 @@ public:
     return out << c.result;
   }
 
-  using CallbackASTVisitor<std::string, std::string, std::string>::transform;
-  template <typename T> std::string transform(const std::vector<T> &ts) {
-    std::vector<std::string> r;
+  using CallbackASTVisitor<string, string, string>::transform;
+  template <typename T> string transform(const vector<T> &ts) {
+    vector<string> r;
     for (auto &e : ts)
       r.push_back(transform(e));
     return fmt::format("{}", fmt::join(r, ", "));

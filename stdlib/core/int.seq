@@ -1,4 +1,5 @@
-extend int:
+@extend
+class int:
 
 # Magic methods
 
@@ -50,6 +51,7 @@ extend int:
 
         return result
 
-extend byte:
+@extend
+class byte:
     def __repr__(self):
         return str(__ptr__(self), 1).__repr__()

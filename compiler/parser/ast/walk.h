@@ -2,14 +2,13 @@
 /// Should delete it later...
 #pragma once
 
-#include "parser/ast/ast.h"
-#include "parser/ast/visitor.h"
+#include "parser/ast/ast/ast.h"
 
 namespace seq {
 namespace ast {
 
 struct WalkVisitor : public ASTVisitor {
-  virtual void visit(const UnpackExpr *) override;
+  virtual void visit(const StarExpr *) override;
   virtual void visit(const TupleExpr *) override;
   virtual void visit(const ListExpr *) override;
   virtual void visit(const SetExpr *) override;

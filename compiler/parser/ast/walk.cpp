@@ -7,7 +7,7 @@
 namespace seq {
 namespace ast {
 
-void WalkVisitor::visit(const UnpackExpr *e) { WALK(e->what); }
+void WalkVisitor::visit(const StarExpr *e) { WALK(e->what); }
 
 void WalkVisitor::visit(const TupleExpr *e) {
   for (auto &i : e->items)

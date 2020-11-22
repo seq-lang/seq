@@ -12,12 +12,12 @@ SG_MAGICCONST = 1.0 + _log(4.5)
 TWOPI = 2.0 * _pi
 
 # http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/MT2002/CODES/mt19937ar.c
-class Generator:
-    state: array[u32]     # the array for the state vector
+class RandomGenerator:
+    state: Array[u32]     # the array for the state vector
     next: int
 
     def __init__(self):
-        self.state = array[u32](N)
+        self.state = Array[u32](N)
         self.next = N+1
 
     def gettimeofday(self):
@@ -34,7 +34,7 @@ class Generator:
             self.state[i] = u32(1812433253) * (self.state[i-1] ^ (self.state[i-1]) >> u32(30)) + u32(i)
         self.next = N
 
-    def init_by_array(self, init_key: array[u32], key_length: int):
+    def init_by_array(self, init_key: Array[u32], key_length: int):
         """
         initialize by an array with array-length
         init_key is the array for initializing keys
@@ -161,9 +161,9 @@ Optionally, implement a getrandbits() method so that randrange()
 can cover arbitrarily large ranges.
 """
 class Random:
-    gen: Generator # comment for another error
+    gen: RandomGenerator # comment for another error
 
-    def __init__(self, g: Generator):
+    def __init__(self, g: RandomGenerator):
         """
         Initialize an instance.
 
@@ -300,7 +300,7 @@ class Random:
         """
         return self.gen.genrand_res53()
 
-    def choice[T](self, sequence: generator[T]) -> T:
+    def choice[T](self, sequence: Generator[T]) -> T:
         """
         Choose a random element from a non-empty sequence.
         """
@@ -562,7 +562,7 @@ class Random:
 
         return theta
 
-    def sample[T](self, population: list[T], k: int):
+    def sample[T](self, population: List[T], k: int):
         """
         Chooses k unique random elements from a population sequence or set.
 
@@ -599,7 +599,7 @@ class Random:
                 result[i] = pool[j]
                 pool[j] = pool[n-i-1]   # move non-selected item into vacancy
         else:
-            selected = set[int]()
+            selected = Set[int]()
             selected_add = selected.add
             for i in range(k):
                 j = randbelow(n)
@@ -609,7 +609,7 @@ class Random:
                 result[i] = population[j]
         return result
 
-    def choices(self, population, weights: Optional[list[int]], cum_weights: Optional[list[int]], k: int):
+    def choices(self, population, weights: Optional[List[int]], cum_weights: Optional[List[int]], k: int):
         """
         Return a k sized list of population elements chosen with replacement.
 
@@ -618,12 +618,12 @@ class Random:
 
         Since weights and cum_weights is assumed to be positive, we will replace None with [-1].
         """
-        def accumulate(weights: list[int]) -> list[int]:
+        def accumulate(weights: List[int]) -> List[int]:
             """
             Calculate cum_weights
             """
             n = len(weights)
-            cum_weight = list[int](n)
+            cum_weight = List[int](n)
             accum = 0
             if n > 0:
                 for i in range(n):
@@ -648,7 +648,7 @@ class Random:
         return [population[_bisect(cum_weights, int(random() * total), 0, hi)]
                 for i in range(k)]
 
-_gen = Generator()
+_gen = RandomGenerator()
 _rnd = Random(_gen)
 
 def seed(a: int):
@@ -659,7 +659,7 @@ seed(int(_time()))
 def getrandbits(k: int):
     return _rnd.getrandbits(k)
 
-def randrange(start: int, stop: optional[int] = None, step: int = 1):
+def randrange(start: int, stop: Optional[int] = None, step: int = 1):
     stopx = start
     if stop:
         stopx = ~stop
@@ -673,7 +673,7 @@ def randint(a: int, b: int):
 def choice(s):
     return _rnd.choice(s)
 
-def choices(population, weights: optional[list[int]] = None, cum_weights: optional[list[int]] = None, k: int = 1):
+def choices(population, weights: Optional[List[int]] = None, cum_weights: Optional[List[int]] = None, k: int = 1):
     return _rnd.choices(population, weights, cum_weights, k)
 
 def shuffle(s):
@@ -688,7 +688,7 @@ def random():
 def uniform(a, b):
     return _rnd.uniform(a, b)
 
-def triangular(low: float = 0.0, high: float = 1.0, mode: optional[float] = None):
+def triangular(low: float = 0.0, high: float = 1.0, mode: Optional[float] = None):
     return _rnd.triangular(low, high, ~mode if mode else (low + high)/2)
 
 def betavariate(alpha: float, beta: float):

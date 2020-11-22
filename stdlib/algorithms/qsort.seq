@@ -1,18 +1,18 @@
-def _med3[S,T](a: int, b: int, c: int, d: array[T], k: function[S,T]):
+def _med3[S,T](a: int, b: int, c: int, d: Array[T], k: Function[S,T]):
     return ((b if (k(d[b]) < k(d[c])) else (c if k(d[a]) < k(d[c]) else a))
                if (k(d[a]) < k(d[b])) else (b if (k(d[b]) > k(d[c])) else (c if k(d[a]) > k(d[c]) else a)))
 
-def _swap[T](i: int, j: int, a: array[T]):
+def _swap[T](i: int, j: int, a: Array[T]):
     a[i], a[j] = a[j], a[i]
 
-def _vecswap[T](i: int, j: int, n: int, a: array[T]):
+def _vecswap[T](i: int, j: int, n: int, a: Array[T]):
     while n > 0:
         _swap(i, j, a)
         i += 1
         j += 1
         n -= 1
 
-def _qsort[S,T](arr: array[T], frm: int, cnt: int, keyf: function[S,T]):
+def _qsort[S,T](arr: Array[T], frm: int, cnt: int, keyf: Function[S,T]):
     if cnt <= 7:
         i = frm + 1
         while i < frm + cnt:
@@ -74,7 +74,7 @@ def _qsort[S,T](arr: array[T], frm: int, cnt: int, keyf: function[S,T]):
     if span > 1:
         _qsort(arr, hi - span, span, keyf)
 
-def qsort_array[S,T](collection: array[T], size: int, keyf: function[S,T]):
+def qsort_array[S,T](collection: Array[T], size: int, keyf: Function[S,T]):
     """
         Pattern-defeating Quicksort
         By Orson Peters, published at https://github.com/orlp/pdqsort
@@ -83,7 +83,7 @@ def qsort_array[S,T](collection: array[T], size: int, keyf: function[S,T]):
     """
     _qsort(collection, 0, size, keyf)
 
-def qsort_inplace[S,T](collection: list[T], keyf: function[S,T]):
+def qsort_inplace[S,T](collection: List[T], keyf: Function[S,T]):
     """
         Pattern-defeating Quicksort
         By Orson Peters, published at https://github.com/orlp/pdqsort
@@ -92,7 +92,7 @@ def qsort_inplace[S,T](collection: list[T], keyf: function[S,T]):
     """
     qsort_array(collection.arr, collection.len, keyf)
 
-def qsort[S,T](collection: list[T], keyf: function[S,T]) -> list[T]:
+def qsort[S,T](collection: List[T], keyf: Function[S,T]) -> List[T]:
     """
         Pattern-defeating Quicksort
         By Orson Peters, published at https://github.com/orlp/pdqsort

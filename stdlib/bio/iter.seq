@@ -1,8 +1,14 @@
 # Sequence reader in text, line-by-line format.
-type SeqReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
+@tuple
+class SeqReader:
     '''
     Parser for a plain txt-based sequence format, with one sequence per line.
+
     '''
+    _file: cobj
+    validate: bool
+    gzip: bool
+    copy: bool
 
     def __new__(path: str, validate: bool, gzip: bool, copy: bool) -> SeqReader:
         return (gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__(), validate, gzip, copy)
@@ -12,14 +18,14 @@ type SeqReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
         assert not self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
-        return ptr[File](p.ptr.as_byte())[0]
+        return Ptr[File](p.ptr.as_byte())[0]
 
     @property
     def gzfile(self):
         assert self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
-        return ptr[gzFile](p.ptr.as_byte())[0]
+        return Ptr[gzFile](p.ptr.as_byte())[0]
 
     def _preprocess(self, a: str):
         from bio.builtin import _validate_str_as_seq
@@ -65,7 +71,8 @@ type SeqReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
 def Seqs(path: str, validate: bool = True, gzip: bool = True, copy: bool = True):
     return SeqReader(path=path, validate=validate, gzip=gzip, copy=copy)
 
-extend str:
+@extend
+class str:
     def __seqs__(self):
         return iter(Seqs(self))
 

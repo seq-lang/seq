@@ -13,11 +13,6 @@
 
 using fmt::format;
 using std::make_pair;
-using std::make_shared;
-using std::pair;
-using std::shared_ptr;
-using std::string;
-using std::vector;
 
 namespace seq {
 namespace ast {

@@ -148,7 +148,7 @@ public:
   virtual void visit(const AssignEqStmt *);
   virtual void visit(const YieldFromStmt *);
   virtual void visit(const WithStmt *);
-  virtual void visit(const PyDefStmt *);
+  // virtual void visit(const PyDefStmt *);
 
   virtual void visit(const StarPattern *);
   virtual void visit(const IntPattern *);
@@ -176,30 +176,30 @@ struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
     return r;
   }
 
-  template <typename Tn, typename... Ts> auto N(Ts &&... args) {
+  template <typename Tn, typename... Ts> auto N(Ts &&...args) {
     auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
     t->setSrcInfo(getSrcInfo());
     return t;
   }
 
   template <typename Tn, typename... Ts>
-  auto Nx(const seq::SrcObject *s, Ts &&... args) {
+  auto Nx(const seq::SrcObject *s, Ts &&...args) {
     auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
     t->setSrcInfo(s->getSrcInfo());
     return t;
   }
 
-  template <typename... TArgs> void error(const char *format, TArgs &&... args) {
+  template <typename... TArgs> void error(const char *format, TArgs &&...args) {
     ast::error(getSrcInfo(), fmt::format(format, args...).c_str());
   }
 
   template <typename T, typename... TArgs>
-  void error(const T &p, const char *format, TArgs &&... args) {
+  void error(const T &p, const char *format, TArgs &&...args) {
     ast::error(p->getSrcInfo(), fmt::format(format, args...).c_str());
   }
 
   template <typename T, typename... TArgs>
-  void internalError(const char *format, TArgs &&... args) {
+  void internalError(const char *format, TArgs &&...args) {
     throw exc::ParserException(
         fmt::format("INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
   }

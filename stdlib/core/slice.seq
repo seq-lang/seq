@@ -1,15 +1,10 @@
-type eslice(_: int)
-# """ [:] """
+@tuple
+class Slice:
+    start: Optional[int]
+    stop: Optional[int]
+    step: Optional[int]
 
-type rslice(start: int)
-# """ [start:] """
-
-type lslice(end: int)
-# """ [:end] """
-
-type slice(start: int, end: int):
-    # adapted from PySlice_AdjustIndices
-    def adjust_indices(length: int, start: optional[int] = None, stop: optional[int] = None, step: optional[int] = None):
+    def adjust_indices(self, length: int):
         def adjust_indices_helper(length: int, start: int, stop: int, step: int):
             if start < 0:
                 start += length
@@ -33,26 +28,14 @@ type slice(start: int, end: int):
                     return start, stop, step, (stop - start - 1) // step + 1
 
             return start, stop, step, 0
-        stepx = ~step if step else 1
+        stepx = ~self.step if self.step else 1
         startx = 0
         stopx = 0
         assert stepx != 0
         if stepx > 0:
-            startx = ~start if start else 0
-            stopx = ~stop if stop else length
+            startx = ~self.start if self.start else 0
+            stopx = ~self.stop if self.stop else length
         else:
-            startx = ~start if start else length - 1
-            stopx = ~stop if stop else -(length + 1)
+            startx = ~self.start if self.start else length - 1
+            stopx = ~self.stop if self.stop else -(length + 1)
         return adjust_indices_helper(length, startx, stopx, stepx)
-
-type esslice(step: int)
-# """ [::step] """
-
-type rsslice(start: int, step: int)
-# """ [start::step] """
-
-type lsslice(end: int, step: int)
-# """ [:end:step] """
-
-type sslice(start: int, end: int, step: int)
-# """ [start:end:step] """

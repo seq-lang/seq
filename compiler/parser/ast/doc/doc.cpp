@@ -9,7 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/ast.h"
 #include "parser/ast/doc/doc.h"
 #include "parser/ast/format/format.h"
 #include "parser/common.h"
@@ -18,18 +18,10 @@
 
 using fmt::format;
 using std::get;
-using std::make_shared;
-using std::make_unique;
 using std::move;
 using std::ostream;
-using std::shared_ptr;
 using std::stack;
-using std::string;
 using std::to_string;
-using std::unique_ptr;
-using std::unordered_map;
-using std::unordered_set;
-using std::vector;
 
 #define CAST(s, T) dynamic_cast<T *>(s.get())
 
@@ -66,7 +58,7 @@ json DocVisitor::apply(const string &argv0, const vector<string> &files) {
   return shared->j;
 }
 
-std::shared_ptr<int> DocContext::find(const std::string &s) {
+shared_ptr<int> DocContext::find(const string &s) {
   auto i = Context<int>::find(s);
   if (!i && this != shared->modules[""].get())
     return shared->modules[""]->find(s);
@@ -101,7 +93,7 @@ json DocVisitor::transform(const ExprPtr &expr) {
   return v.resultExpr;
 }
 
-std::string DocVisitor::transform(const StmtPtr &stmt) {
+string DocVisitor::transform(const StmtPtr &stmt) {
   DocVisitor v(ctx);
   stmt->accept(v);
   return v.resultStmt;
@@ -117,7 +109,7 @@ void DocVisitor::transformModule(StmtPtr stmt) {
     auto id = transform(s);
     if (id == "")
       continue;
-    if (i < (flat.size() - 1) && (CAST(s, AssignStmt) || CAST(s, ExternImportStmt))) {
+    if (i < (flat.size() - 1) && CAST(s, AssignStmt)) {
       auto s = getDocstr(flat[i + 1]);
       if (!s.empty())
         ctx->shared->j[id]["doc"] = s;
@@ -197,6 +189,9 @@ void DocVisitor::visit(const FunctionStmt *stmt) {
     j["doc"] = docstr;
   ctx->shared->j[to_string(id)] = j;
   resultStmt = to_string(id);
+
+  // {"extern", stmt->lang}};
+  // j["dylib"] = bool(stmt->from);
 }
 
 void DocVisitor::visit(const ClassStmt *stmt) {
@@ -241,6 +236,8 @@ void DocVisitor::visit(const ClassStmt *stmt) {
     j["doc"] = docstr;
   ctx->shared->j[to_string(id)] = j;
   resultStmt = to_string(id);
+
+  // {"type", "extension"}, {"parent", to_string(*i)}
 }
 
 json DocVisitor::jsonify(const seq::SrcInfo &s) {
@@ -252,36 +249,36 @@ json DocVisitor::jsonify(const seq::SrcInfo &s) {
 }
 
 void DocVisitor::visit(const ImportStmt *stmt) {
-  auto file = getImportFile(ctx->shared->argv0, stmt->from.first, ctx->file, false);
-  if (file == "")
-    error(stmt, "cannot locate import '{}'", stmt->from.first);
+  // auto file = getImportFile(ctx->shared->argv0, stmt->from.first, ctx->file, false);
+  // if (file == "")
+  //   error(stmt, "cannot locate import '{}'", stmt->from.first);
 
-  auto ictx = ctx;
-  auto it = ctx->shared->modules.find(file);
-  if (it == ctx->shared->modules.end()) {
-    ictx = make_shared<DocContext>(ctx->shared);
-    ictx->file = file;
-    auto ast = ast::parseFile(file);
-    DocVisitor(ictx).transformModule(move(ast));
-  } else {
-    ictx = it->second;
-  }
+  // auto ictx = ctx;
+  // auto it = ctx->shared->modules.find(file);
+  // if (it == ctx->shared->modules.end()) {
+  //   ictx = make_shared<DocContext>(ctx->shared);
+  //   ictx->file = file;
+  //   auto ast = ast::parseFile(file);
+  //   DocVisitor(ictx).transformModule(move(ast));
+  // } else {
+  //   ictx = it->second;
+  // }
 
-  if (!stmt->what.size()) {
-    // TODO
-    // ctx.add(stmt->from.second == "" ? stmt->from.first : stmt->from.second,
-    // file);
-  } else if (stmt->what.size() == 1 && stmt->what[0].first == "*") {
-    for (auto &i : *ictx)
-      ctx->add(i.first, i.second[0].second);
-  } else
-    for (auto &w : stmt->what) {
-      if (auto c = ictx->find(w.first)) {
-        ctx->add(w.second == "" ? w.first : w.second, c);
-      } else {
-        error(stmt, "symbol '{}' not found in {}", w.first, file);
-      }
-    }
+  // if (!stmt->what.size()) {
+  //   // TODO
+  //   // ctx.add(stmt->from.second == "" ? stmt->from.first : stmt->from.second,
+  //   // file);
+  // } else if (stmt->what.size() == 1 && stmt->what[0].first == "*") {
+  //   for (auto &i : *ictx)
+  //     ctx->add(i.first, i.second[0].second);
+  // } else
+  //   for (auto &w : stmt->what) {
+  //     if (auto c = ictx->find(w.first)) {
+  //       ctx->add(w.second == "" ? w.first : w.second, c);
+  //     } else {
+  //       error(stmt, "symbol '{}' not found in {}", w.first, file);
+  //     }
+  //   }
 }
 
 void DocVisitor::visit(const AssignStmt *stmt) {
@@ -294,86 +291,6 @@ void DocVisitor::visit(const AssignStmt *stmt) {
   ctx->add(e->value, make_shared<int>(id));
   json j{
       {"name", e->value}, {"kind", "variable"}, {"pos", jsonify(stmt->getSrcInfo())}};
-  ctx->shared->j[to_string(id)] = j;
-  resultStmt = to_string(id);
-}
-
-void DocVisitor::visit(const ExternImportStmt *stmt) {
-  int id = ctx->shared->itemID++;
-  auto name = stmt->name.second != "" ? stmt->name.second : stmt->name.first;
-  ctx->add(name, make_shared<int>(id));
-
-  json j{{"name", name},
-         {"kind", "function"},
-         {"pos", jsonify(stmt->getSrcInfo())},
-         {"extern", stmt->lang}};
-
-  vector<json> args;
-  if (stmt->ret)
-    j["return"] = transform(stmt->ret);
-  for (auto &a : stmt->args) {
-    json j;
-    j["name"] = a.name;
-    j["type"] = transform(a.type);
-  }
-  j["dylib"] = bool(stmt->from);
-  j["args"] = args;
-  ctx->shared->j[to_string(id)] = j;
-  resultStmt = to_string(id);
-}
-
-void DocVisitor::visit(const ExtendStmt *stmt) {
-  string name;
-  vector<string> generics;
-  if (auto w = CAST(stmt->type, IdExpr)) {
-    name = w->value;
-  } else if (auto w = CAST(stmt->type, IndexExpr)) {
-    auto e = CAST(w->expr, IdExpr);
-    assert(e);
-    name = e->value;
-    if (auto t = CAST(w->index, TupleExpr)) {
-      for (auto &ti : t->items) {
-        auto l = CAST(ti, IdExpr);
-        assert(l);
-        generics.push_back(l->value);
-      }
-    } else if (auto l = CAST(w->index, IdExpr)) {
-      generics.push_back(l->value);
-    } else {
-      error(stmt, "invalid generic variable");
-    }
-  }
-  auto i = ctx->find(name);
-  if (!i)
-    error(stmt, "cannot find '{}'", name);
-
-  json j{{"kind", "class"}, {"type", "extension"}, {"parent", to_string(*i)}};
-  j["pos"] = jsonify(stmt->getSrcInfo());
-  if (generics.size())
-    j["generics"] = generics;
-
-  for (auto &g : generics)
-    ctx->add(g, make_shared<int>(0));
-
-  string docstr;
-  vector<string> members;
-  for (auto &f : flatten(move(const_cast<ExtendStmt *>(stmt)->suite), &docstr)) {
-    if (auto ff = CAST(f, FunctionStmt)) {
-      auto i = transform(f);
-      if (i != "")
-        members.push_back(i);
-      if (isValidName(ff->name))
-        ctx->remove(ff->name);
-    }
-  }
-  j["members"] = members;
-  if (docstr.size())
-    j["doc"] = docstr;
-
-  for (auto &g : generics)
-    ctx->remove(g);
-
-  int id = ctx->shared->itemID++;
   ctx->shared->j[to_string(id)] = j;
   resultStmt = to_string(id);
 }

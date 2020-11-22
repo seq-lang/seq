@@ -4,11 +4,8 @@
 #include <sys/stat.h>
 
 #include "lang/seq.h"
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/ast.h"
 #include "parser/common.h"
-
-using std::string;
-using std::vector;
 
 namespace seq {
 
@@ -95,7 +92,7 @@ void error(const ::seq::SrcInfo &p, const char *format) {
   throw exc::ParserException(format, p);
 }
 
-bool getInt(seq_int_t *o, const std::unique_ptr<Expr> &e, bool zeroOnNull) {
+bool getInt(seq_int_t *o, const unique_ptr<Expr> &e, bool zeroOnNull) {
   if (!e) {
     if (zeroOnNull)
       *o = 0;
@@ -115,7 +112,7 @@ bool getInt(seq_int_t *o, const std::unique_ptr<Expr> &e, bool zeroOnNull) {
 #include <mach-o/dyld.h>
 
 string executable_path(const char *argv0) {
-  typedef std::vector<char> char_vector;
+  typedef vector<char> char_vector;
   char_vector buf(1024, 0);
   uint32_t size = static_cast<uint32_t>(buf.size());
   bool havePath = false;
@@ -141,8 +138,8 @@ string executable_path(const char *argv0) {
 #include <unistd.h>
 
 string executable_path(const char *argv0) {
-  typedef std::vector<char> char_vector;
-  typedef std::vector<char>::size_type size_type;
+  typedef vector<char> char_vector;
+  typedef vector<char>::size_type size_type;
   char_vector buf(1024, 0);
   size_type size = buf.size();
   bool havePath = false;
@@ -170,8 +167,8 @@ string executable_path(const char *argv0) {
 string executable_path(const char *argv0) { return string(argv0); }
 #endif
 
-string getImportFile(const string &argv0, const string &what,
-                     const string &relativeTo, bool forceStdlib) {
+string getImportFile(const string &argv0, const string &what, const string &relativeTo,
+                     bool forceStdlib) {
   using fmt::format;
   vector<string> paths;
   char abs[PATH_MAX + 1];

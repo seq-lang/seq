@@ -1,6 +1,11 @@
 # FASTQ format parser
 # https://en.wikipedia.org/wiki/FASTQ_format
-type FASTQRecord(_header: str, _read: seq, _qual: str):
+@tuple
+class FASTQRecord:
+    _header: str
+    _read: seq
+    _qual: str
+
     @property
     def header(self):
         return self._header
@@ -28,7 +33,13 @@ type FASTQRecord(_header: str, _read: seq, _qual: str):
     def qual(self):
         return self._qual
 
-type FASTQReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
+@tuple
+class FASTQReader:
+    _file: cobj
+    validate: bool
+    gzip: bool
+    copy: bool
+
     def __new__(path: str, validate: bool, gzip: bool, copy: bool) -> FASTQReader:
         return (gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__(), validate, gzip, copy)
 
@@ -37,14 +48,14 @@ type FASTQReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
         assert not self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
-        return ptr[File](p.ptr.as_byte())[0]
+        return Ptr[File](p.ptr.as_byte())[0]
 
     @property
     def gzfile(self):
         assert self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
-        return ptr[gzFile](p.ptr.as_byte())[0]
+        return Ptr[gzFile](p.ptr.as_byte())[0]
 
     def _preprocess_read(self, a: str):
         from bio.builtin import _validate_str_as_seq

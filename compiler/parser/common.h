@@ -1,18 +1,20 @@
 #pragma once
 
 #include <iostream>
+#include <map>
+#include <memory>
+#include <set>
 #include <sstream>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "lang/seq.h"
 
-/// Macro that makes node cloneable and visitable
-#define NODE_UTILITY(X, Y)                                                             \
-  virtual X##Ptr clone() const override { return std::make_unique<Y>(*this); }         \
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
-
+using std::make_shared;
+using std::make_unique;
 using std::map;
 using std::pair;
 using std::set;
@@ -28,20 +30,18 @@ namespace seq {
 namespace exc {
 class ParserException : public std::runtime_error {
 public:
-  std::vector<SrcInfo> locations;
-  std::vector<std::string> messages;
+  vector<SrcInfo> locations;
+  vector<string> messages;
 
 public:
-  ParserException(const std::string &msg, SrcInfo info) noexcept
-      : std::runtime_error(msg) {
+  ParserException(const string &msg, SrcInfo info) noexcept : std::runtime_error(msg) {
     messages.push_back(msg);
     locations.push_back(info);
   }
-  explicit ParserException(const std::string &msg) noexcept
-      : ParserException(msg, {}) {}
+  explicit ParserException(const string &msg) noexcept : ParserException(msg, {}) {}
   ParserException(const ParserException &e) noexcept : std::runtime_error(e) {}
 
-  void trackRealize(const std::string &msg, SrcInfo i) {
+  void trackRealize(const string &msg, SrcInfo i) {
     locations.push_back(i);
     messages.push_back(fmt::format("while realizing {}", msg));
   }
@@ -55,79 +55,76 @@ struct SrcInfoHash {
 };
 
 struct Expr;
-bool getInt(seq_int_t *o, const std::unique_ptr<ast::Expr> &e, bool zeroOnNull = true);
-std::vector<std::string> split(const std::string &s, char delim);
-std::string escape(std::string s);
-std::string executable_path(const char *argv0);
-std::string getTemporaryVar(const std::string &prefix = "", char p = '$');
-std::string chop(const std::string &s);
-bool startswith(const std::string &s, const std::string &p);
-bool endswith(const std::string &s, const std::string &p);
+bool getInt(seq_int_t *o, const unique_ptr<ast::Expr> &e, bool zeroOnNull = true);
+vector<string> split(const string &s, char delim);
+string escape(string s);
+string executable_path(const char *argv0);
+string getTemporaryVar(const string &prefix = "", char p = '$');
+string chop(const string &s);
+bool startswith(const string &s, const string &p);
+bool endswith(const string &s, const string &p);
 void error(const char *format);
 void error(const SrcInfo &p, const char *format);
 
-template <typename T> std::string join(const T &items, std::string delim = " ") {
-  std::string s = "";
+template <typename T> string join(const T &items, string delim = " ") {
+  string s = "";
   for (int i = 0; i < items.size(); i++)
     s += (i ? delim : "") + items[i];
   return s;
 }
 
-template <typename T, typename U> bool in(const std::vector<T> &c, const U &i) {
+template <typename T, typename U> bool in(const vector<T> &c, const U &i) {
   auto f = std::find(c.begin(), c.end(), i);
   return f != c.end();
 }
 
-template <typename T>
-std::string combine(const std::vector<T> &items, std::string delim = " ") {
-  std::string s = "";
+template <typename T> string combine(const vector<T> &items, string delim = " ") {
+  string s = "";
   for (int i = 0; i < items.size(); i++)
     if (items[i])
       s += (i ? delim : "") + items[i]->toString();
   return s;
 }
 
-template <typename T> auto clone(const std::unique_ptr<T> &t) {
+template <typename T> auto clone(const unique_ptr<T> &t) {
   return t ? t->clone() : nullptr;
 }
 
-template <typename T> std::vector<T> clone(const std::vector<T> &t) {
-  std::vector<T> v;
+template <typename T> vector<T> clone(const vector<T> &t) {
+  vector<T> v;
   for (auto &i : t)
     v.push_back(clone(i));
   return v;
 }
 
-template <typename T> std::vector<T> clone_nop(const std::vector<T> &t) {
-  std::vector<T> v;
+template <typename T> vector<T> clone_nop(const vector<T> &t) {
+  vector<T> v;
   for (auto &i : t)
     v.push_back(i.clone());
   return v;
 }
 
-template <typename K, typename V, typename U>
-bool in(const std::map<K, V> &c, const U &i) {
+template <typename K, typename V, typename U> bool in(const map<K, V> &c, const U &i) {
   auto f = c.find(i);
   return f != c.end();
 }
 
-template <typename T> std::string v2s(const std::vector<T> &targs) {
-  std::vector<std::string> args;
+template <typename T> string v2s(const vector<T> &targs) {
+  vector<string> args;
   for (auto &t : targs)
     args.push_back(t->toString());
   return join(args, ", ");
 }
 
-template <typename T>
-std::string v2s(const std::vector<std::pair<std::string, T>> &targs) {
-  std::vector<std::string> args;
+template <typename T> string v2s(const vector<std::pair<string, T>> &targs) {
+  vector<string> args;
   for (auto &t : targs)
     args.push_back(t.second->toString());
   return join(args, ", ");
 }
 
-std::string getImportFile(const std::string &argv0, const std::string &what,
-                          const std::string &relativeTo, bool forceStdlib);
+string getImportFile(const string &argv0, const string &what, const string &relativeTo,
+                     bool forceStdlib);
 
 } // namespace ast
 } // namespace seq

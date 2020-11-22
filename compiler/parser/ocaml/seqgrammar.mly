@@ -227,19 +227,30 @@ case_int:
 
 import_statement:
   | IMPORT FLNE(COMMA, import_term)
-    { List.map (fun (pos, (from, import_as)) -> pos, Import { from; what = None; import_as }) $2 }
-  | FROM expr IMPORT MUL
-    { [$loc, Import { from = $2; what = Some ($loc($4), String ("", "*")); import_as = None}] }
-  | FROM expr IMPORT FLNE(COMMA, import_term)
-    { List.map (fun (pos, (from, import_as)) -> pos, Import { from; what = Some $2; import_as }) $4 }
+    { $2 |> List.map (fun (pos, ((imp_from, imp_args, imp_ret), imp_as)) ->
+                        pos, Import { imp_from; imp_what = None; imp_args; imp_ret; imp_as; imp_dots = 0 }) }
+  | FROM import_from_expr IMPORT MUL
+    { let imp_dots, imp_from = $2 in
+      [$loc, Import { imp_from;
+                      imp_what = Some ($loc($4), Id "*");
+                      imp_args = [];
+                      imp_ret = None;
+                      imp_as = None;
+                      imp_dots}] }
+  | FROM import_from_expr IMPORT FLNE(COMMA, import_term)
+    { let imp_dots, imp_from = $2 in
+      $4 |> List.map (fun (pos, ((i, imp_args, imp_ret), imp_as)) ->
+                        pos, Import { imp_from; imp_what = Some i; imp_args; imp_ret; imp_as; imp_dots }) }
+import_from_expr:
+  | expr { (0, $1) }
+  | DOT+ expr { (List.length $1, $2) }
 import_term:
   | import_lterm { $loc, ($1, None) }
   | import_lterm AS ID { $loc, ($1, Some $3) }
 import_lterm:
-  | dot_term { $1 }
-  | ID LP FL(COMMA, typed_param) RP func_ret_type?
-    { let e_typ = match $5 with Some typ -> typ | None -> $loc($4), Id "void" in
-      $loc, FuncDef ($1, $3, Some e_typ) }
+  | dot_term { ($1, [], None) }
+  | dot_term LP FL(COMMA, import_param) RP func_ret_type? { $1, $3, $5 }
+import_param: expr { $loc, { name = ""; typ = Some $1; default = None } }
 dot_term: ID { $loc, Id $1 } | dot_term DOT ID { $loc, Dot ($1, $3) }
 
 assign_statement:
@@ -268,7 +279,10 @@ decorator_term:
 
 func_statement:
   | func { $1 }
-  | func_def COLON PYDEF_RAW { [$loc, Function { $1 with fn_stmts = [$loc, Expr ($loc, String ("", $3))]; fn_attrs = ($loc, "extern") :: ($1).fn_attrs }] }
+  | func_def COLON PYDEF_RAW {
+      [$loc, Function { $1 with fn_stmts = [$loc, Expr ($loc, String ("", $3))];
+                                fn_attrs = ($loc, ".python") :: ($1).fn_attrs }]
+    }
 func:
   | func_def COLON suite
     { [$loc, Function { $1 with fn_stmts = $3 }] }
@@ -282,7 +296,7 @@ param_type: COLON expr { $2 }
 func_ret_type: OF expr { $2 }
 
 class_statement: cls { $1 }
-cls: decorator(CLASS) cls_body { $loc, Class $2 }
+cls: decorator(CLASS) cls_body { $loc, Class { $2 with attrs = $1 } }
 cls_body:
   | ID generic_list? COLON NL INDENT dataclass_member+ DEDENT
     { let args = List.rev @@ List.fold_left

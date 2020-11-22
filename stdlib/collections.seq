@@ -1,17 +1,17 @@
 class deque[T]:
-    _arr: array[T]
+    _arr: Array[T]
     _head: int
     _tail: int
     _maxlen: int
 
-    def __init__(self, arr: array[T], head: int, tail: int, maxlen: int):
+    def __init__(self, arr: Array[T], head: int, tail: int, maxlen: int):
         self._arr = arr
         self._head = head
         self._tail = tail
         self._maxlen = maxlen
 
     def __init__(self):
-        self._arr = array[T](16)
+        self._arr = Array[T](16)
         self._head = 0
         self._tail = 0
         self._maxlen = -1
@@ -20,13 +20,13 @@ class deque[T]:
         cap = 1
         while cap < maxlen:
             cap *= 2
-        self._arr = array[T](cap)
+        self._arr = Array[T](cap)
         self._head = 0
         self._tail = 0
         self._maxlen = maxlen
 
-    def __init__(self, it: generator[T]):
-        self._arr = array[T](16)
+    def __init__(self, it: Generator[T]):
+        self._arr = Array[T](16)
         self._head = 0
         self._tail = 0
         self._maxlen = -1
@@ -42,7 +42,7 @@ class deque[T]:
         n = len(self._arr)
         r = n - p
         new_cap = n * 2
-        new_arr = array[T](new_cap)
+        new_arr = Array[T](new_cap)
         for i in range(r):
             new_arr[i] = self._arr[p + i]
         for i in range(p):
@@ -111,4 +111,4 @@ class deque[T]:
         return self.__copy__()
 
     def __str__(self):
-        return str(list[T](iter(self)))
+        return str(List[T](iter(self)))

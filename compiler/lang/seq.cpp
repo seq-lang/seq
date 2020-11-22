@@ -526,7 +526,7 @@ void SeqModule::execute(const std::vector<std::string> &args,
   std::unique_ptr<Module> owner(module);
   module = nullptr;
   EngineBuilder EB(std::move(owner));
-  EB.setMCJITMemoryManager(make_unique<BoehmGCMemoryManager>());
+  EB.setMCJITMemoryManager(llvm::make_unique<BoehmGCMemoryManager>());
   EB.setUseOrcMCJITReplacement(true);
   ExecutionEngine *eng = EB.create();
 

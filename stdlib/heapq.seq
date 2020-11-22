@@ -3,7 +3,7 @@
 # 'heap' is a heap at all indices >= startpos, except possibly for pos.  pos
 # is the index of a leaf with a possibly out-of-order value.  Restore the
 # heap invariant.
-def _siftdown[T](heap: list[T], startpos: int, pos: int):
+def _siftdown[T](heap: List[T], startpos: int, pos: int):
     newitem = heap[pos]
     # Follow the path to the root, moving parents down until finding a place
     # newitem fits.
@@ -17,7 +17,7 @@ def _siftdown[T](heap: list[T], startpos: int, pos: int):
         break
     heap[pos] = newitem
 
-def _siftup[T](heap: list[T], pos: int):
+def _siftup[T](heap: List[T], pos: int):
     endpos = len(heap)
     startpos = pos
     newitem = heap[pos]
@@ -37,7 +37,7 @@ def _siftup[T](heap: list[T], pos: int):
     heap[pos] = newitem
     _siftdown(heap, startpos, pos)
 
-def _siftdown_max[T](heap: list[T], startpos: int, pos: int):
+def _siftdown_max[T](heap: List[T], startpos: int, pos: int):
     'Maxheap variant of _siftdown'
     newitem = heap[pos]
     # Follow the path to the root, moving parents down until finding a place
@@ -52,7 +52,7 @@ def _siftdown_max[T](heap: list[T], startpos: int, pos: int):
         break
     heap[pos] = newitem
 
-def _siftup_max[T](heap: list[T], pos: int):
+def _siftup_max[T](heap: List[T], pos: int):
     'Maxheap variant of _siftup'
     endpos = len(heap)
     startpos = pos
@@ -73,12 +73,12 @@ def _siftup_max[T](heap: list[T], pos: int):
     heap[pos] = newitem
     _siftdown_max(heap, startpos, pos)
 
-def heappush[T](heap: list[T], item: T):
+def heappush[T](heap: List[T], item: T):
     """Push item onto heap, maintaining the heap invariant."""
     heap.append(item)
     _siftdown(heap, 0, len(heap)-1)
 
-def heappop[T](heap: list[T]):
+def heappop[T](heap: List[T]):
     """Pop the smallest item off the heap, maintaining the heap invariant."""
     lastelt = heap.pop()    # raises appropriate IndexError if heap is empty
     if heap:
@@ -88,7 +88,7 @@ def heappop[T](heap: list[T]):
         return returnitem
     return lastelt
 
-def heapreplace[T](heap: list[T], item: T):
+def heapreplace[T](heap: List[T], item: T):
     """
     Pop and return the current smallest value, and add the new item.
     This is more efficient than heappop() followed by heappush(), and can be
@@ -102,14 +102,14 @@ def heapreplace[T](heap: list[T], item: T):
     _siftup(heap, 0)
     return returnitem
 
-def heappushpop[T](heap: list[T], item: T):
+def heappushpop[T](heap: List[T], item: T):
     """Fast version of a heappush followed by a heappop."""
     if heap and heap[0] < item:
         item, heap[0] = heap[0], item
         _siftup(heap, 0)
     return item
 
-def heapify[T](x: list[T]):
+def heapify[T](x: List[T]):
     """Transform list into a heap, in-place, in $O(len(x))$ time."""
     n = len(x)
     # Transform bottom-up.  The largest index there's any point to looking at
@@ -120,7 +120,7 @@ def heapify[T](x: list[T]):
     for i in reversed(range(n//2)):
         _siftup(x, i)
 
-def _heappop_max[T](heap: list[T]):
+def _heappop_max[T](heap: List[T]):
     """Maxheap version of a heappop."""
     lastelt = heap.pop()    # raises appropriate IndexError if heap is empty
     if heap:
@@ -130,25 +130,25 @@ def _heappop_max[T](heap: list[T]):
         return returnitem
     return lastelt
 
-def _heapreplace_max[T](heap: list[T], item: T):
+def _heapreplace_max[T](heap: List[T], item: T):
     """Maxheap version of a heappop followed by a heappush."""
     returnitem = heap[0]    # raises appropriate IndexError if heap is empty
     heap[0] = item
     _siftup_max(heap, 0)
     return returnitem
 
-def _heapify_max[T](x: list[T]):
+def _heapify_max[T](x: List[T]):
     """Transform list into a maxheap, in-place, in O(len(x)) time."""
     n = len(x)
     for i in reversed(range(n//2)):
         _siftup_max(x, i)
 
-def nsmallest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,T]] = None):
+def nsmallest[T,S=int](n: int, iterable: Generator[T], key: Optional[Function[S,T]] = None):
     """Find the n smallest elements in a dataset.
     Equivalent to:  sorted(iterable, key=key)[:n]
     """
     if n == 1:
-        v = list[T](1)
+        v = List[T](1)
         for a in iterable:
             if not v:
                 v.append(a)
@@ -165,7 +165,7 @@ def nsmallest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,
         it = iter(iterable)
         # put the range(n) first so that zip() doesn't
         # consume one too many elements from the iterator
-        result = list[tuple[T,int]](n)
+        result = List[Tuple[T,int]](n)
         done = False
         for i in range(n):
             if it.done():
@@ -174,7 +174,7 @@ def nsmallest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,
             result.append((it.next(), i))
         if not result:
             it.destroy()
-            return list[T](0)
+            return List[T](0)
         _heapify_max(result)
         top = result[0][0]
         order = n
@@ -191,7 +191,7 @@ def nsmallest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,
 
     # General case, slowest method
     it = iter(iterable)
-    result = list[tuple[S,int,T]](n)
+    result = List[Tuple[S,int,T]](n)
     done = False
     for i in range(n):
         if it.done():
@@ -201,7 +201,7 @@ def nsmallest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,
         result.append(((~key)(elem), i, elem))
     if not result:
         it.destroy()
-        return list[T](0)
+        return List[T](0)
     _heapify_max(result)
     top = result[0][0]
     order = n
@@ -217,12 +217,12 @@ def nsmallest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,
     result.sort()
     return [elem for k, order, elem in result]
 
-def nlargest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,T]] = None):
+def nlargest[T,S=int](n: int, iterable: Generator[T], key: Optional[Function[S,T]] = None):
     """Find the n largest elements in a dataset.
     Equivalent to:  sorted(iterable, key=key, reverse=True)[:n]
     """
     if n == 1:
-        v = list[T](1)
+        v = List[T](1)
         for a in iterable:
             if not v:
                 v.append(a)
@@ -237,7 +237,7 @@ def nlargest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,T
     # When key is none, use simpler decoration
     if not key:
         it = iter(iterable)
-        result = list[tuple[T,int]](n)
+        result = List[Tuple[T,int]](n)
         done = False
         for i in range(0, -n, -1):
             if it.done():
@@ -246,7 +246,7 @@ def nlargest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,T
             result.append((it.next(), i))
         if not result:
             it.destroy()
-            return list[T](0)
+            return List[T](0)
         heapify(result)
         top = result[0][0]
         order = -n
@@ -263,7 +263,7 @@ def nlargest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,T
 
     # General case, slowest method
     it = iter(iterable)
-    result = list[tuple[S,int,T]](n)
+    result = List[Tuple[S,int,T]](n)
     done = False
     for i in range(0, -n, -1):
         if it.done():
@@ -272,7 +272,7 @@ def nlargest[T,S=int](n: int, iterable: generator[T], key: optional[function[S,T
         elem = it.next()
         result.append(((~key)(elem), i, elem))
     if not result:
-        return list[T](0)
+        return List[T](0)
     heapify(result)
     top = result[0][0]
     order = -n

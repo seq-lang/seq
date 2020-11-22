@@ -16,12 +16,7 @@ using fmt::format;
 using std::dynamic_pointer_cast;
 using std::make_shared;
 using std::pair;
-using std::shared_ptr;
 using std::stack;
-using std::string;
-using std::unordered_map;
-using std::unordered_set;
-using std::vector;
 
 namespace seq {
 namespace ast {
@@ -32,7 +27,7 @@ using namespace types;
 
 // int &RealizationContext::getUnboundCount() { return unboundCount; }
 
-// RealizationContext::ClassBody *RealizationContext::findClass(const std::string &name)
+// RealizationContext::ClassBody *RealizationContext::findClass(const string &name)
 // {
 //   auto m = classes.find(name);
 //   if (m != classes.end())
@@ -40,7 +35,7 @@ using namespace types;
 //   return nullptr;
 // }
 
-// const std::vector<FuncTypePtr> *
+// const vector<FuncTypePtr> *
 // RealizationContext::findMethod(const string &name, const string &method) const {
 //   auto m = classes.find(name);
 //   if (m != classes.end()) {

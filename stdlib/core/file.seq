@@ -1,6 +1,6 @@
 class File:
     sz: int
-    buf: ptr[byte]
+    buf: Ptr[byte]
     fp: cobj
 
     def __init__(self, fp: cobj):
@@ -36,13 +36,13 @@ class File:
         _C.fwrite(s.ptr, 1, len(s), self.fp)
         self._errcheck("error in write")
 
-    def write_gen[T](self, g: generator[T]):
+    def write_gen[T](self, g: Generator[T]):
         for s in g:
             self.write(str(s))
 
     def read(self, sz: int):
         self._ensure_open()
-        buf = ptr[byte](sz)
+        buf = Ptr[byte](sz)
         ret = _C.fread(buf, 1, sz, self.fp)
         self._errcheck("error in read")
         return str(buf, ret)
@@ -69,14 +69,14 @@ class File:
             raise IOError("I/O operation on closed file")
 
     def _reset(self):
-        self.buf = ptr[byte]()
+        self.buf = Ptr[byte]()
         self.sz = 0
 
     def _iter(self):
         self._ensure_open()
         while True:
             # pass pointers to individual class fields:
-            rd = _C.getline(ptr[ptr[byte]](self.__raw__() + 8), ptr[int](self.__raw__()), self.fp)
+            rd = _C.getline(Ptr[Ptr[byte]](self.__raw__() + 8), Ptr[int](self.__raw__()), self.fp)
             if rd != -1:
                 if self.buf[rd - 1] == byte(10):
                     rd -= 1
@@ -92,7 +92,7 @@ def _gz_errcheck(stream: cobj):
 
 class gzFile:
     sz: int
-    buf: ptr[byte]
+    buf: Ptr[byte]
     fp: cobj
 
     def __init__(self, fp: cobj):
@@ -108,7 +108,7 @@ class gzFile:
     def _getline(self):
         if not self.buf:
             self.sz = 128
-            self.buf = ptr[byte](self.sz)
+            self.buf = Ptr[byte](self.sz)
 
         offset = 0
         while True:
@@ -154,7 +154,7 @@ class gzFile:
         _C.gzwrite(self.fp, s.ptr, u32(len(s)))
         _gz_errcheck(self.fp)
 
-    def write_gen[T](self, g: generator[T]):
+    def write_gen[T](self, g: Generator[T]):
         for s in g:
             self.write(str(s))
 

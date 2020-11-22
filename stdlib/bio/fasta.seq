@@ -2,7 +2,11 @@
 # https://en.wikipedia.org/wiki/FASTA_format
 from bio.fai import FAIRecord, FAI
 
-type FASTARecord(_header: str, _seq: seq):
+@tuple
+class FASTARecord:
+    _header: str
+    _seq: seq
+
     @property
     def header(self):
         return self._header
@@ -21,7 +25,14 @@ type FASTARecord(_header: str, _seq: seq):
     def seq(self):
         return self._seq
 
-type FASTAReader(_file: cobj, fai: Optional[List[FAIRecord]], validate: bool, gzip: bool, copy: bool):
+@tuple
+class FASTAReader:
+    _file: cobj
+    fai: Optional[List[FAIRecord]]
+    validate: bool
+    gzip: bool
+    copy: bool
+
     def __new__(path: str, validate: bool, gzip: bool, copy: bool, fai: bool) -> FASTAReader:
         fai_list = [] if fai else None
         if fai:
@@ -35,14 +46,14 @@ type FASTAReader(_file: cobj, fai: Optional[List[FAIRecord]], validate: bool, gz
         assert not self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
-        return ptr[File](p.ptr.as_byte())[0]
+        return Ptr[File](p.ptr.as_byte())[0]
 
     @property
     def gzfile(self):
         assert self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
-        return ptr[gzFile](p.ptr.as_byte())[0]
+        return Ptr[gzFile](p.ptr.as_byte())[0]
 
     def __seqs__(self):
         for rec in self:
@@ -53,7 +64,7 @@ type FASTAReader(_file: cobj, fai: Optional[List[FAIRecord]], validate: bool, gz
         if not _is_iupac_nt(b):
             raise ValueError(f"invalid base {repr(b)} at position {i} of sequence")
 
-    def _append(p: ptr[byte], n: int, m: int, s: str, validate: bool):
+    def _append(p: Ptr[byte], n: int, m: int, s: str, validate: bool):
         if n + s.len > m:
             m <<= 1
             if n + s.len > m:
@@ -78,7 +89,7 @@ type FASTAReader(_file: cobj, fai: Optional[List[FAIRecord]], validate: bool, gz
 
         if self.fai is not None:
             idx = 0
-            p = ptr[byte]()
+            p = Ptr[byte]()
             n = 0
             m = 0
             prev_header = ''
@@ -95,7 +106,7 @@ type FASTAReader(_file: cobj, fai: Optional[List[FAIRecord]], validate: bool, gz
                         yield rec
                     prev_header = copy(a[1:])
                     n = self.fai[idx].length
-                    p = ptr[byte](n)
+                    p = Ptr[byte](n)
                     m = 0
                     idx += 1
                 else:
@@ -120,7 +131,7 @@ type FASTAReader(_file: cobj, fai: Optional[List[FAIRecord]], validate: bool, gz
                 yield rec
         else:
             m = 256
-            p = ptr[byte](m)
+            p = Ptr[byte](m)
             n = 0
             curname = ""
 
@@ -187,7 +198,7 @@ type FASTAReader(_file: cobj, fai: Optional[List[FAIRecord]], validate: bool, gz
 
             m = fai_rec.length
             n = 0
-            p = ptr[byte](m)
+            p = Ptr[byte](m)
 
             for a in file._iter():
                 if not a or a[0] == ">":
@@ -210,7 +221,11 @@ def FASTA(path: str, validate: bool = True, gzip: bool = True, copy: bool = True
     return FASTAReader(path=path, validate=validate, gzip=gzip, copy=copy, fai=fai)
 
 from bio.pseq import pseq
-type pFASTARecord(_name: str, _seq: pseq):
+@tuple
+class pFASTARecord:
+    _name: str
+    _seq: pseq
+
     @property
     def name(self):
         return self._name
@@ -219,7 +234,13 @@ type pFASTARecord(_name: str, _seq: pseq):
     def seq(self):
         return self._seq
 
-type pFASTAReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
+@tuple
+class pFASTAReader:
+    _file: cobj
+    validate: bool
+    gzip: bool
+    copy: bool
+
     def __new__(path: str, validate: bool, gzip: bool, copy: bool) -> pFASTAReader:
         return (gzopen(path, "r").__raw__() if gzip else open(path, "r").__raw__(), validate, gzip, copy)
 
@@ -228,14 +249,14 @@ type pFASTAReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
         assert not self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
-        return ptr[File](p.ptr)[0]
+        return Ptr[File](p.ptr)[0]
 
     @property
     def gzfile(self):
         assert self.gzip
         p = __array__[cobj](1)
         p.ptr[0] = self._file
-        return ptr[gzFile](p.ptr)[0]
+        return Ptr[gzFile](p.ptr)[0]
 
     def __seqs__(self):
         for rec in self:
@@ -246,7 +267,7 @@ type pFASTAReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
         if not _is_iupac_aa(b):
             raise ValueError(f"invalid amino acid {repr(b)} at position {i} of sequence")
 
-    def _append(p: ptr[byte], n: int, m: int, s: str, validate: bool):
+    def _append(p: Ptr[byte], n: int, m: int, s: str, validate: bool):
         if n + s.len > m:
             m <<= 1
             if n + s.len > m:
@@ -266,7 +287,7 @@ type pFASTAReader(_file: cobj, validate: bool, gzip: bool, copy: bool):
 
     def _iter_core(self, file) -> Generator[pFASTARecord]:
         m = 256
-        p = ptr[byte](m)
+        p = Ptr[byte](m)
         n = 0
         curname = ""
 

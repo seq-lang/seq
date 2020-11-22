@@ -20,7 +20,7 @@ struct CodegenItem {
   enum Kind { Func, Type, Var } kind;
   seq::BaseFunc *base;
   bool global;
-  std::unordered_set<std::string> attributes;
+  unordered_set<string> attributes;
   union {
     seq::Var *var;
     seq::BaseFunc *func;
@@ -39,41 +39,38 @@ public:
   seq::BaseFunc *getFunc() const { return isFunc() ? handle.func : nullptr; }
   seq::types::Type *getType() const { return isType() ? handle.type : nullptr; }
   seq::Var *getVar() const { return isVar() ? handle.var : nullptr; }
-  bool hasAttr(const std::string &s) const {
-    return attributes.find(s) != attributes.end();
-  }
+  bool hasAttr(const string &s) const { return attributes.find(s) != attributes.end(); }
 };
 
 class CodegenContext : public Context<CodegenItem> {
-  std::vector<seq::BaseFunc *> bases;
-  std::vector<seq::Block *> blocks;
+  vector<seq::BaseFunc *> bases;
+  vector<seq::Block *> blocks;
   int topBlockIndex, topBaseIndex;
 
 public:
-  std::shared_ptr<Cache> cache;
+  shared_ptr<Cache> cache;
   seq::TryCatch *tryCatch;
   seq::SeqJIT *jit;
-  std::unordered_map<std::string, seq::types::Type *> types;
-  std::unordered_map<std::string, std::pair<seq::BaseFunc *, bool>> functions;
+  unordered_map<string, seq::types::Type *> types;
+  unordered_map<string, pair<seq::BaseFunc *, bool>> functions;
 
 public:
-  CodegenContext(std::shared_ptr<Cache> cache, seq::Block *block, seq::BaseFunc *base,
+  CodegenContext(shared_ptr<Cache> cache, seq::Block *block, seq::BaseFunc *base,
                  seq::SeqJIT *jit);
 
-  std::shared_ptr<CodegenItem> find(const std::string &name, bool onlyLocal = false,
-                                    bool checkStdlib = true) const;
+  shared_ptr<CodegenItem> find(const string &name, bool onlyLocal = false,
+                               bool checkStdlib = true) const;
 
   using Context<CodegenItem>::add;
-  void addVar(const std::string &name, seq::Var *v, bool global = false);
-  void addType(const std::string &name, seq::types::Type *t, bool global = false);
-  void addFunc(const std::string &name, seq::BaseFunc *f, bool global = false);
-  void addImport(const std::string &name, const std::string &import,
-                 bool global = false);
+  void addVar(const string &name, seq::Var *v, bool global = false);
+  void addType(const string &name, seq::types::Type *t, bool global = false);
+  void addFunc(const string &name, seq::BaseFunc *f, bool global = false);
+  void addImport(const string &name, const string &import, bool global = false);
   void addBlock(seq::Block *newBlock = nullptr, seq::BaseFunc *newBase = nullptr);
   void popBlock();
 
   void initJIT();
-  void execJIT(std::string varName = "", seq::Expr *varExpr = nullptr);
+  void execJIT(string varName = "", seq::Expr *varExpr = nullptr);
 
   seq::types::Type *realizeType(types::ClassTypePtr t);
 
@@ -83,7 +80,7 @@ public:
   seq::SeqModule *getModule() const { return (seq::SeqModule *)bases[0]; }
   bool isToplevel() const { return bases.size() == 1; }
   seq::SeqJIT *getJIT() { return jit; }
-  seq::types::Type *getType(const std::string &name) const {
+  seq::types::Type *getType(const string &name) const {
     auto val = find(name);
     assert(val && val->getType());
     if (val)

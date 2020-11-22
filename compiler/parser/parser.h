@@ -12,8 +12,7 @@ SeqModule *parse(const std::string &argv0, const std::string &file,
                  int startLine = 0);
 void execute(seq::SeqModule *module, std::vector<std::string> args = {},
              std::vector<std::string> libs = {}, bool debug = false);
-void compile(seq::SeqModule *module, const std::string &out,
-             bool debug = false);
+void compile(seq::SeqModule *module, const std::string &out, bool debug = false);
 void generateDocstr(const std::string &argv0);
 
 } // namespace seq

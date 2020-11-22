@@ -173,7 +173,8 @@ except ValueError:
 
 
 #%% optional_methods
-extend int:
+@extend
+class int:
     def x(self):
         print 'x()!', self
 

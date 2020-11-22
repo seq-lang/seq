@@ -1,125 +1,125 @@
 # Seq runtime functions
-cimport seq_alloc(int) -> cobj
-cimport seq_alloc_atomic(int) -> cobj
-cimport seq_realloc(cobj, int) -> cobj
-cimport seq_free(cobj)
-cimport seq_gc_add_roots(cobj, cobj)
-cimport seq_gc_remove_roots(cobj, cobj)
-cimport seq_gc_clear_roots()
-cimport seq_gc_exclude_static_roots(cobj, cobj)
-cimport seq_strdup(cobj) -> str
-cimport seq_str_ptr(ptr[byte]) -> str
-cimport seq_check_errno() -> str
-cimport seq_stdin() -> cobj
-cimport seq_stdout() -> cobj
-cimport seq_stderr() -> cobj
-cimport seq_env() -> ptr[cobj]
-cimport seq_time() -> int
-cimport seq_time_monotonic() -> int
-cimport seq_pid() -> int
-cimport seq_lock_new() -> cobj
-cimport seq_lock_acquire(cobj, bool, float) -> bool
-cimport seq_lock_release(cobj)
-cimport seq_rlock_new() -> cobj
-cimport seq_rlock_acquire(cobj, bool, float) -> bool
-cimport seq_rlock_release(cobj)
-cimport seq_is_macos() -> bool
-cimport seq_i32_to_float(i32) -> float
+from C import seq_alloc(int) -> cobj
+from C import seq_alloc_atomic(int) -> cobj
+from C import seq_realloc(cobj, int) -> cobj
+from C import seq_free(cobj)
+from C import seq_gc_add_roots(cobj, cobj)
+from C import seq_gc_remove_roots(cobj, cobj)
+from C import seq_gc_clear_roots()
+from C import seq_gc_exclude_static_roots(cobj, cobj)
+from C import seq_strdup(cobj) -> str
+from C import seq_str_ptr(Ptr[byte]) -> str
+from C import seq_check_errno() -> str
+from C import seq_stdin() -> cobj
+from C import seq_stdout() -> cobj
+from C import seq_stderr() -> cobj
+from C import seq_env() -> Ptr[cobj]
+from C import seq_time() -> int
+from C import seq_time_monotonic() -> int
+from C import seq_pid() -> int
+from C import seq_lock_new() -> cobj
+from C import seq_lock_acquire(cobj, bool, float) -> bool
+from C import seq_lock_release(cobj)
+from C import seq_rlock_new() -> cobj
+from C import seq_rlock_acquire(cobj, bool, float) -> bool
+from C import seq_rlock_release(cobj)
+from C import seq_is_macos() -> bool
+from C import seq_i32_to_float(i32) -> float
 
 # <string.h>
-cimport strtoll(cobj, ptr[cobj], i32) -> int
-cimport strtod(cobj, ptr[cobj]) -> float
-cimport strlen(cobj) -> int
+from C import strtoll(cobj, Ptr[cobj], i32) -> int
+from C import strtod(cobj, Ptr[cobj]) -> float
+from C import strlen(cobj) -> int
 
 # <ctype.h>
-cimport isdigit(int) -> int
-cimport isspace(int) -> int
-cimport isupper(int) -> int
-cimport islower(int) -> int
-cimport toupper(int) -> int
-cimport tolower(int) -> int
-cimport isalnum(int) -> int
-cimport isalpha(int) -> int
-cimport istitle(int) -> int
+from C import isdigit(int) -> int
+from C import isspace(int) -> int
+from C import isupper(int) -> int
+from C import islower(int) -> int
+from C import toupper(int) -> int
+from C import tolower(int) -> int
+from C import isalnum(int) -> int
+from C import isalpha(int) -> int
+from C import istitle(int) -> int
 
 # <math.h>
-cimport ceil(float) -> float
-cimport floor(float) -> float
-cimport fabs(float) -> float
-cimport fmod(float, float) -> float
-cimport exp(float) -> float
-cimport expm1(float) -> float
-cimport ldexp(float, int) -> float
-cimport log(float) -> float
-cimport log2(float) -> float
-cimport log10(float) -> float
-cimport sqrt(float) -> float
-cimport pow(float, float) -> float
-cimport round(float) -> float
-cimport acos(float) -> float
-cimport asin(float) -> float
-cimport atan(float) -> float
-cimport atan2(float, float) -> float
-cimport cos(float) -> float
-cimport sin(float) -> float
-cimport tan(float) -> float
-cimport cosh(float) -> float
-cimport sinh(float) -> float
-cimport tanh(float) -> float
-cimport acosh(float) -> float
-cimport asinh(float) -> float
-cimport atanh(float) -> float
-cimport copysign(float, float) -> float
-cimport log1p(float) -> float
-cimport trunc(float) -> float
-cimport log2(float) -> float
-cimport erf(float) -> float
-cimport erfc(float) -> float
-cimport tgamma(float) -> float
-cimport lgamma(float) -> float
-cimport remainder(float, float) -> float
-cimport frexp(float, ptr[Int[32]]) -> float
-cimport modf(float, ptr[float]) -> float
+from C import ceil(float) -> float
+from C import floor(float) -> float
+from C import fabs(float) -> float
+from C import fmod(float, float) -> float
+from C import exp(float) -> float
+from C import expm1(float) -> float
+from C import ldexp(float, int) -> float
+from C import log(float) -> float
+from C import log2(float) -> float
+from C import log10(float) -> float
+from C import sqrt(float) -> float
+from C import pow(float, float) -> float
+from C import round(float) -> float
+from C import acos(float) -> float
+from C import asin(float) -> float
+from C import atan(float) -> float
+from C import atan2(float, float) -> float
+from C import cos(float) -> float
+from C import sin(float) -> float
+from C import tan(float) -> float
+from C import cosh(float) -> float
+from C import sinh(float) -> float
+from C import tanh(float) -> float
+from C import acosh(float) -> float
+from C import asinh(float) -> float
+from C import atanh(float) -> float
+from C import copysign(float, float) -> float
+from C import log1p(float) -> float
+from C import trunc(float) -> float
+from C import log2(float) -> float
+from C import erf(float) -> float
+from C import erfc(float) -> float
+from C import tgamma(float) -> float
+from C import lgamma(float) -> float
+from C import remainder(float, float) -> float
+from C import frexp(float, Ptr[Int[32]]) -> float
+from C import modf(float, Ptr[float]) -> float
 
 # <stdio.h>
-cimport ferror(cobj) -> i32
-cimport fgetc(cobj) -> i32
-cimport fopen(cobj, cobj) -> cobj
-cimport fclose(cobj) -> int
-cimport fread(cobj, int, int, cobj) -> int
-cimport fwrite(cobj, int, int, cobj) -> int
-cimport ftell(cobj) -> int
-cimport fseek(cobj, int, i32) -> i32
-cimport fgets(cobj, int, cobj) -> cobj
-cimport getline(ptr[cobj], n: ptr[int], file: cobj) -> int
+from C import ferror(cobj) -> i32
+from C import fgetc(cobj) -> i32
+from C import fopen(cobj, cobj) -> cobj
+from C import fclose(cobj) -> int
+from C import fread(cobj, int, int, cobj) -> int
+from C import fwrite(cobj, int, int, cobj) -> int
+from C import ftell(cobj) -> int
+from C import fseek(cobj, int, i32) -> i32
+from C import fgets(cobj, int, cobj) -> cobj
+from C import getline(Ptr[cobj], Ptr[int], cobj) -> int
 
 # <stdlib.h>
-cimport exit(int)
-cimport system(cmd: cobj) -> int
-cimport free(cobj)
-cimport atoi(cobj) -> int
+from C import exit(int)
+from C import system(cobj) -> int
+from C import free(cobj)
+from C import atoi(cobj) -> int
 
 # <dlfcn.h>
-cimport dlerror() -> cobj
-cimport dlopen(cobj, int) -> cobj
-cimport dlsym(cobj, cobj) -> cobj
-cimport dlclose(cobj) -> i32
+from C import dlerror() -> cobj
+from C import dlopen(cobj, int) -> cobj
+from C import dlsym(cobj, cobj) -> cobj
+from C import dlclose(cobj) -> i32
 RTLD_NOW = 2
 RTLD_GLOBAL = 8
 
 # <zlib.h>
-cimport gzopen(cobj, cobj) -> cobj
-cimport gzerror(cobj, ptr[i32]) -> cobj
-cimport gzgetc(cobj) -> i32
-cimport gzgets(cobj, cobj, i32) -> cobj
-cimport gzclose(cobj) -> int
-cimport gzread(cobj, cobj, u32) -> i32
-cimport gzwrite(cobj, cobj, u32) -> i32
-cimport gztell(cobj) -> int
-cimport gzseek(cobj, int, i32) -> int
+from C import gzopen(cobj, cobj) -> cobj
+from C import gzerror(cobj, Ptr[i32]) -> cobj
+from C import gzgetc(cobj) -> i32
+from C import gzgets(cobj, cobj, i32) -> cobj
+from C import gzclose(cobj) -> int
+from C import gzread(cobj, cobj, u32) -> i32
+from C import gzwrite(cobj, cobj, u32) -> i32
+from C import gztell(cobj) -> int
+from C import gzseek(cobj, int, i32) -> int
 
 # OpenMP
-cimport omp_get_num_threads() -> i32
-cimport omp_get_thread_num() -> i32
-cimport omp_get_max_threads() -> i32
-cimport omp_get_num_procs() -> i32
+from C import omp_get_num_threads() -> i32
+from C import omp_get_thread_num() -> i32
+from C import omp_get_max_threads() -> i32
+from C import omp_get_num_procs() -> i32

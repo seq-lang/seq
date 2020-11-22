@@ -50,7 +50,7 @@ class bntamb:
         self._len = 1
         self._amb = amb
 
-def _pickle_ptr[T](p: ptr[T], n: int, jar: Jar):
+def _pickle_ptr[T](p: Ptr[T], n: int, jar: Jar):
     from pickle import _write_raw
     pickle(n, jar)
     _write_raw(jar, p.as_byte(), n * _gc.sizeof[T]())
@@ -58,7 +58,7 @@ def _pickle_ptr[T](p: ptr[T], n: int, jar: Jar):
 def _unpickle_ptr[T](jar: Jar):
     from pickle import _read_raw
     n = unpickle[int](jar)
-    p = ptr[T](n)
+    p = Ptr[T](n)
     _read_raw(jar, p.as_byte(), n * _gc.sizeof[T]())
     return (p, n)
 
@@ -66,7 +66,7 @@ class bntseq:
     '''
     Arbitrary-length 2-bit packed sequence, adapted from BWA
     '''
-    _pac: ptr[u8]
+    _pac: Ptr[u8]
     _m_pac: int
     _l_pac: int
     _n_seqs: int
@@ -81,7 +81,7 @@ class bntseq:
     def __unpickle__(jar: Jar):
         b = bntseq()
         pac, _ = _unpickle_ptr[u8](jar)
-        l_pac, n_seqs, anns, ambs = unpickle[tuple[int, int, list[bntann], list[bntamb]]](jar)
+        l_pac, n_seqs, anns, ambs = unpickle[Tuple[int, int, List[bntann], List[bntamb]]](jar)
         b._pac = pac
         b._m_pac = l_pac
         b._l_pac = l_pac
@@ -103,21 +103,21 @@ class bntseq:
 
     def _init(self, m_pac: int):
         if m_pac:
-            self._pac = ptr[u8](m_pac // 4)
+            self._pac = Ptr[u8](m_pac // 4)
             str.memset(self._pac.as_byte(), byte(0), m_pac // 4)
         else:
-            self._pac = ptr[u8]()
+            self._pac = Ptr[u8]()
         self._m_pac = m_pac
         self._l_pac = 0
         self._n_seqs = 0
-        self._anns = list[bntann]()
-        self._ambs = list[bntamb]()
+        self._anns = List[bntann]()
+        self._ambs = List[bntamb]()
 
     @property
     def _n_holes(self):
         return len(self._ambs)
 
-    def get_pac(pac: ptr[u8], l: int):
+    def get_pac(pac: Ptr[u8], l: int):
         return (pac[l >> 2] >> u8((~l & 3) << 1)) & u8(3)
 
     def _get_pac(self, l: int):
@@ -132,7 +132,7 @@ class bntseq:
         m_pac = self._m_pac
         if l_pac == m_pac:
             m_pac <<= 1
-            self._pac = ptr[u8](_gc.realloc(self._pac.as_byte(), m_pac // 4))
+            self._pac = Ptr[u8](_gc.realloc(self._pac.as_byte(), m_pac // 4))
             str.memset((self._pac + l_pac//4).as_byte(), byte(0), (m_pac - l_pac) // 4)
             self._m_pac = m_pac
 
@@ -239,7 +239,7 @@ class bntseq:
         if beg >= l_pac or end <= l_pac:
             l = 0
             n = end - beg
-            p = ptr[byte](n)
+            p = Ptr[byte](n)
             if beg > l_pac:  # reverse strand
                 beg_f = (l_pac << 1) - 1 - end
                 end_f = (l_pac << 1) - 1 - beg
@@ -281,19 +281,20 @@ class bntseq:
         if not (0 <= lo < hi <= len(self)):
             return seq()
         n = hi - lo
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         i = lo
         while i < hi:
             p[i - lo] = 'ACGT'.ptr[int(self._get_pac(i))]
             i += 1
         return seq(p, n)
 
-type FMInterval(_lo: int, _hi: int):
+@tuple
+class FMInterval:
     '''
     FM-index interval
     '''
-    def __new__() -> FMInterval:
-        return (-2, -1)
+    _lo: int = -2
+    _hi: int = -1
 
     def __bool__(self):
         return self._lo <= self._hi
@@ -301,10 +302,16 @@ type FMInterval(_lo: int, _hi: int):
     def __len__(self):
         return self._hi - self._lo + 1 if self else 0
 
-type FMDInterval(_lo: int, _lo_rev: int, _size: int):
+@tuple
+class FMDInterval:
     '''
     FMD-index interval
     '''
+
+    _lo: int
+    _lo_rev: int
+    _size: int
+
     def __new__() -> FMDInterval:
         return (0, 0, 0)
 
@@ -332,10 +339,16 @@ type FMDInterval(_lo: int, _lo_rev: int, _size: int):
         '''
         return FMDInterval(self._lo_rev, self._lo, self._size)
 
-type SMEM(_intv: FMDInterval, _start: u32, _stop: u32):
+@tuple
+class SMEM:
     '''
     Super-Maximal Exact Match (SMEM)
     '''
+
+    _intv: FMDInterval
+    _start: u32
+    _stop: u32
+
     def __new__(interval: FMDInterval, start: int, stop: int) -> SMEM:
         if not (0 <= start <= stop):
             raise ValueError('invalid SMEM start and stop coordinates')
@@ -399,9 +412,9 @@ def smems(self,
           x: int = 0,
           min_intv: int = 1,
           min_seed: int = 1,
-          mems: optional[list[SMEM]] = None,
-          prev: optional[list[SMEM]] = None,
-          curr: optional[list[SMEM]] = None):
+          mems: Optional[List[SMEM]] = None,
+          prev: Optional[List[SMEM]] = None,
+          curr: Optional[List[SMEM]] = None):
     '''
     Returns a list of SMEMs given an FsM-index or FMD-index (`self`), a
     query sequence (`q`) and a start position (`x`; 0-based).
@@ -414,19 +427,19 @@ def smems(self,
         raise ValueError("sequence index out of range")
 
     if mems is None:
-        mems = list[SMEM]()
+        mems = List[SMEM]()
     else:
         mems.clear()
     if q[x].N():
         return x + 1, mems
 
     if prev is None:
-        prev = list[SMEM]()
+        prev = List[SMEM]()
     else:
         prev.clear()
 
     if curr is None:
-        curr = list[SMEM]()
+        curr = List[SMEM]()
     else:
         curr.clear()
 
@@ -496,11 +509,11 @@ class FMDIndex:
     _seq_len: int
     _bwt_size: int
     _primary: int
-    _bwt: ptr[u32]
-    _sa: ptr[int]
+    _bwt: Ptr[u32]
+    _sa: Ptr[int]
     _n_sa: int
-    _L2: ptr[int]
-    _cnt_table: ptr[u32]
+    _L2: Ptr[int]
+    _cnt_table: Ptr[u32]
     _sa_intv: int
     _bntseq: Optional[bntseq]
 
@@ -541,11 +554,11 @@ class FMDIndex:
         self._seq_len = 0
         self._bwt_size = 0
         self._primary = 0
-        self._bwt = ptr[u32]()
-        self._sa = ptr[int]()
+        self._bwt = Ptr[u32]()
+        self._sa = Ptr[int]()
         self._n_sa = 0
-        self._L2 = ptr[int]()
-        self._cnt_table = ptr[u32]()
+        self._L2 = Ptr[int]()
+        self._cnt_table = Ptr[u32]()
         self._sa_intv = 0
         self._bntseq = None
 
@@ -563,9 +576,9 @@ class FMDIndex:
         self._bntseq = bntseq(sequence)
         self._init_from_enc(self._bntseq._pac, self._bntseq._l_pac)
 
-    def _init_from_enc(self, p: ptr[u8], l: int):
+    def _init_from_enc(self, p: Ptr[u8], l: int):
         from bio.bwt import _saisxx
-        def clear[T](p: ptr[T], n: int):
+        def clear[T](p: Ptr[T], n: int):
             i = 0
             while i < n:
                 p[i] = T()
@@ -576,14 +589,14 @@ class FMDIndex:
 
         len_L2 = 5
         len_count_table = 256
-        self._L2 = ptr[int](len_L2)
+        self._L2 = Ptr[int](len_L2)
         clear(self._L2, len_L2)
-        self._cnt_table = ptr[u32](len_count_table)
+        self._cnt_table = Ptr[u32](len_count_table)
         clear(self._cnt_table, len_count_table)
 
         # calculate bwt
         self._seq_len = 2*l
-        ref_seq = ptr[u8](2*l)
+        ref_seq = Ptr[u8](2*l)
         i = 0
         while i < l:
             b = bntseq.get_pac(p, i)
@@ -605,7 +618,7 @@ class FMDIndex:
 
         SA = _saisxx(ref_seq.as_byte(), l, k=4)
 
-        s = ptr[u8](l + 1)
+        s = Ptr[u8](l + 1)
         clear(s, l + 1)
         i = 0
         while i <= l:
@@ -624,7 +637,7 @@ class FMDIndex:
             i += 1
 
         self._bwt_size = (l + 15) // 16
-        self._bwt = ptr[u32](self._bwt_size)
+        self._bwt = Ptr[u32](self._bwt_size)
         clear(self._bwt, self._bwt_size)
 
         i = 0
@@ -676,7 +689,7 @@ class FMDIndex:
             _gc.free(self._sa.as_byte())
         self._sa_intv = intv
         self._n_sa = (self._seq_len + intv) // intv
-        self._sa = ptr[int](_gc.alloc_atomic(self._n_sa * _gc.sizeof[int]()))
+        self._sa = Ptr[int](_gc.alloc_atomic(self._n_sa * _gc.sizeof[int]()))
         isa = 0
         sa = self._seq_len
         i = 0
@@ -694,7 +707,7 @@ class FMDIndex:
         c = __array__[int](4)
         n_occ = (self._seq_len + OCC_INTERVAL - 1) // OCC_INTERVAL + 1
         self._bwt_size += n_occ * 8  # the new size
-        buf = ptr[u32](self._bwt_size)  # will be the new bwt
+        buf = Ptr[u32](self._bwt_size)  # will be the new bwt
         c[0] = 0
         c[1] = 0
         c[2] = 0
@@ -742,7 +755,7 @@ class FMDIndex:
 
         # retrieve Occ at k/OCC_INTERVAL
         p = self._occ_intv(k)
-        n = ptr[int](p.as_byte())[c]
+        n = Ptr[int](p.as_byte())[c]
         p += 8  # jump to the start of the first FMDIndex cell
 
         # calculate Occ up to the last k/32
@@ -767,7 +780,7 @@ class FMDIndex:
             if k >= self._primary: k -= 1
             if l >= self._primary: l -= 1
             p = self._occ_intv(k)
-            n = ptr[int](p.as_byte())[c]
+            n = Ptr[int](p.as_byte())[c]
             p += 8
             # calculate ok
             j = k >> 5 << 5
@@ -924,9 +937,9 @@ class FMDIndex:
               x: int = 0,
               min_intv: int = 1,
               min_seed: int = 1,
-              mems: optional[list[SMEM]] = None,
-              prev: optional[list[SMEM]] = None,
-              curr: optional[list[SMEM]] = None):
+              mems: Optional[List[SMEM]] = None,
+              prev: Optional[List[SMEM]] = None,
+              curr: Optional[List[SMEM]] = None):
         '''
         See `smems` function
         '''
@@ -959,13 +972,13 @@ class FMDIndex:
             return FMDInterval()
         return _extend(self, intv, b)
 
-    def __getitem__(self, x: tuple[FMInterval, seq]):
+    def __getitem__(self, x: Tuple[FMInterval, seq]):
         '''
         Equivalent to `self.update(x[0], x[1])`.
         '''
         return self.update(x[0], x[1])
 
-    def __getitem__(self, x: tuple[FMDInterval, seq]):
+    def __getitem__(self, x: Tuple[FMDInterval, seq]):
         '''
         Equivalent to `self.biupdate(x[0], x[1])`.
         '''
@@ -1076,7 +1089,7 @@ class FMDIndex:
             if ann is None:
                 raise ValueError(f"no annotation with name {repr(name)}")
 
-        startx, stopx, stepx, lenx = slice.adjust_indices(length=ann._len, start=start, stop=stop)
+        startx, stopx, stepx, lenx = Slice(start, stop).adjust_indices(ann._len)
         startx += ann._offset
         stopx += ann._offset
         return self._bntseq.get_seq(startx, stopx)
@@ -1106,12 +1119,12 @@ class FMIndex:
     _bwt_size: int
     _n_occ: int
     _primary: int
-    _bwt: ptr[u32]
-    _occ: ptr[int]
-    _sa: ptr[u32]
-    _sa_hi: ptr[u8]
-    _L2: ptr[int]
-    _cnt_table: ptr[u32]
+    _bwt: Ptr[u32]
+    _occ: Ptr[int]
+    _sa: Ptr[u32]
+    _sa_hi: Ptr[u8]
+    _L2: Ptr[int]
+    _cnt_table: Ptr[u32]
     _FMD: bool
     _bntseq: Optional[bntseq]
 
@@ -1148,7 +1161,7 @@ class FMIndex:
         fmi._bwt = bwt
         fmi._occ = occ
         fmi._sa = sa
-        fmi._sa_hi = sa_hi if n_sa_hi > 0 else ptr[u8]()
+        fmi._sa_hi = sa_hi if n_sa_hi > 0 else Ptr[u8]()
         fmi._L2 = L2
         fmi._cnt_table = cnt_table
         fmi._FMD = FMD
@@ -1159,9 +1172,9 @@ class FMIndex:
         return int(self._bwt[k >> 4] >> u32(((~k & 0xf) << 1)) & u32(3))
 
     def _init_sa(self, l: int, need_sa_hi: bool):
-        self._sa = ptr[u32](l + 1)
+        self._sa = Ptr[u32](l + 1)
         if need_sa_hi:
-            self._sa_hi = ptr[u8](l + 1)
+            self._sa_hi = Ptr[u8](l + 1)
         self._set_sa(idx=0, val=l)
 
     def _set_sa(self, idx: int, val: int):
@@ -1175,9 +1188,9 @@ class FMIndex:
             val |= int(self._sa_hi[idx]) << 32
         return val
 
-    def _init_from_enc(self, p: ptr[u8], l: int, packed: bool = False, FMD: bool = False):
+    def _init_from_enc(self, p: Ptr[u8], l: int, packed: bool = False, FMD: bool = False):
         from bio.bwt import _saisxx
-        def clear[T](p: ptr[T], n: int):
+        def clear[T](p: Ptr[T], n: int):
             i = 0
             while i < n:
                 p[i] = T()
@@ -1196,15 +1209,15 @@ class FMIndex:
         assert not (FMD and not packed)
         len_L2 = 5
         len_count_table = 256
-        self._L2 = ptr[int](len_L2)
+        self._L2 = Ptr[int](len_L2)
         clear(self._L2, len_L2)
-        self._cnt_table = ptr[u32](len_count_table)
+        self._cnt_table = Ptr[u32](len_count_table)
         clear(self._cnt_table, len_count_table)
 
         # calculate bwt
         self._seq_len = l
 
-        ref_seq = ptr[u8](2*l if FMD else l) if packed else p
+        ref_seq = Ptr[u8](2*l if FMD else l) if packed else p
         if packed:
             i = 0
             while i < l:
@@ -1225,7 +1238,7 @@ class FMIndex:
             i += 1
         _gc.free(SA.as_byte())
 
-        s = ptr[u8](l + 1)
+        s = Ptr[u8](l + 1)
         clear(s, l + 1)
         i = 0
         while i <= l:
@@ -1244,7 +1257,7 @@ class FMIndex:
             i += 1
 
         self._bwt_size = (l + 15) // 16
-        self._bwt = ptr[u32](self._bwt_size)
+        self._bwt = Ptr[u32](self._bwt_size)
         clear(self._bwt, self._bwt_size)
 
         i = 0
@@ -1260,7 +1273,7 @@ class FMIndex:
         c[2] = 0
         c[3] = 0
         self._n_occ = (l + 15) // 16 * 4
-        self._occ = ptr[int](self._n_occ)
+        self._occ = Ptr[int](self._n_occ)
         clear(self._occ, self._n_occ)
 
         i = 0
@@ -1295,12 +1308,12 @@ class FMIndex:
         self._bwt_size = 0
         self._n_occ = 0
         self._primary = 0
-        self._bwt = ptr[u32]()
-        self._occ = ptr[int]()
-        self._sa = ptr[u32]()
-        self._sa_hi = ptr[u8]()
-        self._L2 = ptr[int]()
-        self._cnt_table = ptr[u32]()
+        self._bwt = Ptr[u32]()
+        self._occ = Ptr[int]()
+        self._sa = Ptr[u32]()
+        self._sa_hi = Ptr[u8]()
+        self._L2 = Ptr[int]()
+        self._cnt_table = Ptr[u32]()
         self._bntseq = None
         self._FMD = False
 
@@ -1311,7 +1324,7 @@ class FMIndex:
         if s.N():
             raise ValueError("cannot build FM-index for sequence containing ambiguous bases")
         n = len(s)
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         if s.len > 0:
             i = 0
             while i < n:
@@ -1323,7 +1336,7 @@ class FMIndex:
                 p[n - 1 - i] = byte(3 - _enc(s.ptr[i]))
                 i -= 1
 
-        self._init_from_enc(ptr[u8](p), n, FMD=False, packed=False)
+        self._init_from_enc(Ptr[u8](p), n, FMD=False, packed=False)
         _gc.free(p)
         self._bntseq = None
 
@@ -1429,9 +1442,9 @@ class FMIndex:
               x: int = 0,
               min_intv: int = 1,
               min_seed: int = 1,
-              mems: optional[list[SMEM]] = None,
-              prev: optional[list[SMEM]] = None,
-              curr: optional[list[SMEM]] = None):
+              mems: Optional[List[SMEM]] = None,
+              prev: Optional[List[SMEM]] = None,
+              curr: Optional[List[SMEM]] = None):
         '''
         See `smems` function
         '''
@@ -1464,19 +1477,19 @@ class FMIndex:
             return FMDInterval()
         return _extend(self, intv, b)
 
-    def __getitem__(self, x: tuple[FMInterval, seq]):
+    def __getitem__(self, x: Tuple[FMInterval, seq]):
         '''
         Equivalent to `self.update(x[0], x[1])`.
         '''
         return self.update(x[0], x[1])
 
-    def __getitem__(self, x: tuple[FMDInterval, seq]):
+    def __getitem__(self, x: Tuple[FMDInterval, seq]):
         '''
         Equivalent to `self.biupdate(x[0], x[1])`.
         '''
         return self.biupdate(x[0], x[1])
 
-    def __prefetch__(self, x: tuple[FMInterval, seq]):
+    def __prefetch__(self, x: Tuple[FMInterval, seq]):
         intv, c = x
         assert len(c) == 1
         lo, hi = intv
@@ -1493,7 +1506,7 @@ class FMIndex:
         (self._bwt + (k1//16)).__prefetch_r0__()
         (self._bwt + (k2//16)).__prefetch_r0__()
 
-    def __prefetch__(self, x: tuple[FMDInterval, seq]):
+    def __prefetch__(self, x: Tuple[FMDInterval, seq]):
         intv, c = x
         lo, _, size = intv
         hi = lo + size - 1
@@ -1629,7 +1642,7 @@ class FMIndex:
             if ann is None:
                 raise ValueError(f"no annotation with name {repr(name)}")
 
-        startx, stopx, stepx, lenx = slice.adjust_indices(length=ann._len, start=start, stop=stop)
+        startx, stopx, stepx, lenx = Slice(start, stop).adjust_indices(ann._len)
         startx += ann._offset
         stopx += ann._offset
         return self._bntseq.get_seq(startx, stopx)

@@ -1,6 +1,10 @@
 
 @internal
-type seq(len: int, ptr: Ptr[byte]):
+@tuple
+class seq:
+    len: int
+    ptr: Ptr[byte]
+
     def __new__(s: str) -> seq:
         return (s.len, s.ptr)
     def __new__(p: Ptr[byte], l: int) -> seq:
@@ -10,14 +14,21 @@ type seq(len: int, ptr: Ptr[byte]):
     def __len__(self):
         return self.len if self.len >= 0 else -self.len
 
-extend str:
-    def __suffix_s__(s: str) -> seq:
+@extend
+class str:
+    def __prefix_s__[N: int = 0](s: str) -> seq:
         return seq(s)
 
-type BaseCounts(A: int, C: int, G: int, T: int, N: int):
+@tuple
+class BaseCounts:
     '''
     Representation of base counts of a sequence
     '''
+    A: int
+    C: int
+    G: int
+    T: int
+    N: int
 
     def __new__() -> BaseCounts:
         '''
@@ -62,7 +73,8 @@ type BaseCounts(A: int, C: int, G: int, T: int, N: int):
         A, C, G, T, N = self
         return f'BaseCounts({A=}, {C=}, {G=}, {T=}, {N=})'
 
-extend seq:
+@extend
+class seq:
     def __new__(s: str) -> seq:
         return seq(s.ptr, s.len)
 
@@ -118,7 +130,7 @@ extend seq:
         if self.len >= 0:
             return str(self.ptr, self.len)
         n = -self.len
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         for i in range(n):
             p[i] = self._at(i)
         return str(p, n)
@@ -165,37 +177,36 @@ extend seq:
         else:
             return seq(self.ptr + (-self.len - b), -(b - a))
 
-    def __getitem__(self, s: slice):
-        a, b = s
-        n = len(self)
-        if a < 0: a += n
-        if b < 0: b += n
-        if a > n: a = n
-        if b > n: b = n
-        return self._slice_direct(a, b)
-
-    def __getitem__(self, s: lslice):
-        b = s.end
-        n = len(self)
-        if b < 0: b += n
-        if b > n: b = n
-        if self.len >= 0:
-            return seq(self.ptr, b)
+    def __getitem__(self, s: Slice):
+        assert s.step is None
+        if s.start is None and s.stop is None and s.step is None:
+            return self.__copy__()
+        elif s.start is None:
+            b = ~s.stop
+            n = len(self)
+            if b < 0: b += n
+            if b > n: b = n
+            if self.len >= 0:
+                return seq(self.ptr, b)
+            else:
+                return seq(self.ptr + (n - b), -b)
+        elif s.stop is None:
+            a = ~s.start
+            n = len(self)
+            if a < 0: a += n
+            if a > n: a = n
+            if self.len >= 0:
+                return seq(self.ptr + a, n - a)
+            else:
+                return seq(self.ptr, -(n - a))
         else:
-            return seq(self.ptr + (n - b), -b)
-
-    def __getitem__(self, s: rslice):
-        a = s.start
-        n = len(self)
-        if a < 0: a += n
-        if a > n: a = n
-        if self.len >= 0:
-            return seq(self.ptr + a, n - a)
-        else:
-            return seq(self.ptr, -(n - a))
-
-    def __getitem__(self, s: eslice):
-        return self
+            a, b = ~s.start, ~s.stop
+            n = len(self)
+            if a < 0: a += n
+            if b < 0: b += n
+            if a > n: a = n
+            if b > n: b = n
+            return self._slice_direct(a, b)
 
     def _copy_to(self, p: cobj):
         if self.len >= 0:
@@ -452,7 +463,7 @@ extend seq:
 
     def __reversed__(self):
         n = len(self)
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         i = 0
         while i < n:
             p[i] = self._at(n - i - 1)

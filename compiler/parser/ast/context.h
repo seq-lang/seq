@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/stmt.h"
 #include "parser/ast/types.h"
 #include "parser/common.h"
 
@@ -22,24 +22,24 @@ namespace ast {
 //   /// and their generalized types
 //   struct ClassBody {
 //     // Needs vector as the order is important
-//     std::vector<std::pair<std::string, types::TypePtr>> members;
-//     std::unordered_map<std::string, std::vector<types::FuncTypePtr>> methods;
+//     vector<std::pair<string, types::TypePtr>> members;
+//     unordered_map<string, vector<types::FuncTypePtr>> methods;
 //   };
-//   std::unordered_map<std::string, ClassBody> classes;
+//   unordered_map<string, ClassBody> classes;
 
 //   struct FuncRealization {
-//     std::string fullName;
+//     string fullName;
 //     types::FuncTypePtr type;
-//     std::shared_ptr<FunctionStmt> ast;
+//     shared_ptr<FunctionStmt> ast;
 //     seq::BaseFunc *handle;
-//     std::string base;
+//     string base;
 //   };
 //   struct ClassRealization {
-//     std::string fullName;
+//     string fullName;
 //     types::ClassTypePtr type;
-//     std::vector<std::pair<std::string, types::ClassTypePtr>> args;
+//     vector<std::pair<string, types::ClassTypePtr>> args;
 //     seq::types::Type *handle;
-//     std::string base;
+//     string base;
 //   };
 //   RealizationContext();
 
@@ -47,95 +47,94 @@ namespace ast {
 //   /// Name counter (how many times we used a name)
 //   /// Used for generating unique name for each identifier
 //   /// (e.g. if we have two def foo, one will be known as foo and one as foo.1
-//   std::unordered_map<std::string, int> moduleNames;
+//   unordered_map<string, int> moduleNames;
 //   /// Mapping to canonical names
 //   /// (each SrcInfo positions maps to a unique canonical name)
-//   std::unordered_map<SrcInfo, std::string, SrcInfoHash> canonicalNames;
+//   unordered_map<SrcInfo, string, SrcInfoHash> canonicalNames;
 //   /// Current unbound type ID counter.
 //   /// Each unbound variable must have different ID.
 
 // public:
 //   /// Generate canonical name for a SrcInfo and original class/function name
-//   std::string generateCanonicalName(const std::string &base, const std::string
+//   string generateCanonicalName(const string &base, const string
 //   &name); int &getUnboundCount();
 
 // public: /* Lookup */
 // public:
 //   /// Getters and setters for the method/member/realization lookup tables
-//   ClassBody *findClass(const std::string &name);
-//   const std::vector<types::FuncTypePtr> *findMethod(const std::string &name,
-//                                                     const std::string &method) const;
-//   types::TypePtr findMember(const std::string &name, const std::string &member)
+//   ClassBody *findClass(const string &name);
+//   const vector<types::FuncTypePtr> *findMethod(const string &name,
+//                                                     const string &method) const;
+//   types::TypePtr findMember(const string &name, const string &member)
 //   const;
 
 // public: /** Template ASTs **/
 //   /// Template function ASTs.
 //   /// Mapping from a canonical function name to a pair of
 //   /// generalized function type and the untyped function AST.
-//   std::unordered_map<std::string,
-//                      std::pair<types::TypePtr, std::shared_ptr<FunctionStmt>>>
+//   unordered_map<string,
+//                      std::pair<types::TypePtr, shared_ptr<FunctionStmt>>>
 //       funcASTs;
 //   /// Template class ASTs.
 //   /// Mapping from a canonical class name to a pair of
 //   /// generalized class type and the untyped class AST.
-//   std::unordered_map<std::string, types::TypePtr> classASTs;
+//   unordered_map<string, types::TypePtr> classASTs;
 
 // public:
-//   std::shared_ptr<Stmt> getAST(const std::string &name) const;
+//   shared_ptr<Stmt> getAST(const string &name) const;
 
 // public: /* Realizations */
 //   /// Current function realizations.
 //   /// Mapping from a canonical function name to a hashtable
 //   /// of realized and fully type-checked function ASTs.
-//   std::unordered_map<std::string, std::unordered_map<std::string, FuncRealization>>
+//   unordered_map<string, unordered_map<string, FuncRealization>>
 //       funcRealizations;
 //   /// Current class realizations.
 //   /// Mapping from a canonical class name to a hashtable
 //   /// of realized and fully type-checked class ASTs.
 
-//   std::unordered_map<std::string, std::unordered_map<std::string, ClassRealization>>
+//   unordered_map<string, unordered_map<string, ClassRealization>>
 //       classRealizations;
 
 //   // Maps realizedName to canonicalName
-//   std::unordered_map<std::string, std::string> realizationLookup;
+//   unordered_map<string, string> realizationLookup;
 
-//   // std::vector<std::set<std::pair<std::string>>>
+//   // vector<set<std::pair<string>>>
 //   // realizationCache; // add newly realized functions here; useful for jit
 
 // public:
-//   std::vector<ClassRealization> getClassRealizations(const std::string &name);
-//   std::vector<FuncRealization> getFuncRealizations(const std::string &name);
+//   vector<ClassRealization> getClassRealizations(const string &name);
+//   vector<FuncRealization> getFuncRealizations(const string &name);
 
-//   std::unordered_map<std::string, types::TypePtr> globalNames;
-//   std::unordered_set<std::string> variardicCache;
+//   unordered_map<string, types::TypePtr> globalNames;
+//   unordered_set<string> variardicCache;
 // };
 
 template <typename T> class Context : public std::enable_shared_from_this<Context<T>> {
 public:
-  typedef std::unordered_map<std::string,
-                             std::deque<std::pair<int, std::shared_ptr<T>>>>
+  typedef unordered_map<string, std::deque<std::pair<int, shared_ptr<T>>>>
       Map; // tracks level as well
 
 protected:
   Map map;
-  std::deque<std::vector<std::string>> stack;
-  std::unordered_set<std::string> flags;
+  std::deque<vector<string>> stack;
+  unordered_set<string> flags;
 
 public:
   typename Map::iterator begin() { return map.begin(); }
   typename Map::iterator end() { return map.end(); }
 
-  std::shared_ptr<T> find(const std::string &name) const {
+  shared_ptr<T> find(const string &name) const {
     auto it = map.find(name);
     return it != map.end() ? it->second.front().second : nullptr;
   }
-  void add(const std::string &name, std::shared_ptr<T> var) {
+  void add(const string &name, shared_ptr<T> var) {
     assert(!name.empty());
     // LOG7("++ {}", name);
     map[name].push_front({stack.size(), var});
     stack.front().push_back(name);
   }
-  void addToplevel(const std::string &name, std::shared_ptr<T> var) {
+  void addToplevel(const string &name, shared_ptr<T> var) {
     assert(!name.empty());
     // LOG7("+++ {}", name);
     auto &m = map[name];
@@ -145,8 +144,8 @@ public:
     m.insert(m.begin() + pos, {1, var});
     stack.back().push_back(name); // add to the latest "level"
   }
-  void addBlock() { stack.push_front(std::vector<std::string>()); }
-  void removeFromMap(const std::string &name) {
+  void addBlock() { stack.push_front(vector<string>()); }
+  void removeFromMap(const string &name) {
     auto i = map.find(name);
     assert(!(i == map.end() || !i->second.size()));
     // LOG7("-- {}", name);
@@ -159,7 +158,7 @@ public:
       removeFromMap(name);
     stack.pop_front();
   }
-  void remove(const std::string &name) {
+  void remove(const string &name) {
     removeFromMap(name);
     for (auto &s : stack) {
       auto i = std::find(s.begin(), s.end(), name);
@@ -170,20 +169,20 @@ public:
     }
     assert(false);
   }
-  void setFlag(const std::string &s) { flags.insert(s); }
-  void unsetFlag(const std::string &s) { flags.erase(s); }
-  bool hasFlag(const std::string &s) { return flags.find(s) != flags.end(); }
+  void setFlag(const string &s) { flags.insert(s); }
+  void unsetFlag(const string &s) { flags.erase(s); }
+  bool hasFlag(const string &s) { return flags.find(s) != flags.end(); }
   bool isToplevel() const { return stack.size() == 1; }
 
 protected:
-  std::string filename;
+  string filename;
 
 public:
-  std::string getFilename() const { return filename; }
-  void setFilename(const std::string &f) { filename = f; }
+  string getFilename() const { return filename; }
+  void setFilename(const string &f) { filename = f; }
 
 public:
-  Context(const std::string &filename) : filename(filename) {}
+  Context(const string &filename) : filename(filename) {}
   virtual ~Context() {}
   virtual void dump(int pad = 0) {}
 };

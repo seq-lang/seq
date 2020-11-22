@@ -18,18 +18,18 @@ namespace ast {
 struct TypecheckItem {
   enum Kind { Func, Type, Var } kind;
   types::TypePtr type;
-  std::string base;
+  string base;
   bool global;
   bool genericType;
   bool staticType;
-  std::unordered_set<std::string> attributes;
+  unordered_set<string> attributes;
 
-  TypecheckItem(Kind k, types::TypePtr type, const std::string &base,
-                bool global = false, bool generic = false, bool stat = false)
+  TypecheckItem(Kind k, types::TypePtr type, const string &base, bool global = false,
+                bool generic = false, bool stat = false)
       : kind(k), type(type), base(base), global(global), genericType(generic),
         staticType(stat) {}
 
-  std::string getBase() const { return base; }
+  string getBase() const { return base; }
   bool isGlobal() const { return global; }
   bool isVar() const { return kind == Var; }
   bool isFunc() const { return kind == Func; }
@@ -37,36 +37,34 @@ struct TypecheckItem {
   bool isGeneric() const { return isType() && genericType; }
   bool isStatic() const { return isType() && staticType; }
   types::TypePtr getType() const { return type; }
-  bool hasAttr(const std::string &s) const {
-    return attributes.find(s) != attributes.end();
-  }
+  bool hasAttr(const string &s) const { return attributes.find(s) != attributes.end(); }
 };
 
 class TypeContext : public Context<TypecheckItem> {
 public:
-  std::shared_ptr<Cache> cache;
+  shared_ptr<Cache> cache;
 
   struct RealizationBase {
-    std::string name;
+    string name;
     types::TypePtr type;
     types::TypePtr returnType;
-    std::unordered_map<std::string, std::pair<TypecheckItem::Kind, types::TypePtr>>
+    unordered_map<string, std::pair<TypecheckItem::Kind, types::TypePtr>>
         visitedAsts;
   };
-  std::vector<RealizationBase> bases;
+  vector<RealizationBase> bases;
 
   int typecheckLevel;
   /// Set of active unbound variables.
   /// If type checking is successful, all of them should be resolved.
-  std::set<types::TypePtr> activeUnbounds;
+  set<types::TypePtr> activeUnbounds;
   int iteration;
 
   std::stack<bool> partializeMethod;
 
 public:
-  TypeContext(std::shared_ptr<Cache> cache);
+  TypeContext(shared_ptr<Cache> cache);
 
-  int findBase(const std::string &b) {
+  int findBase(const string &b) {
     for (int i = int(bases.size()) - 1; i >= 0; i--)
       if (b == bases[i].name)
         return i; // bases[i].type;
@@ -74,25 +72,24 @@ public:
     return -1;
   }
 
-  std::shared_ptr<TypecheckItem> find(const std::string &name) const;
-  types::TypePtr findInternal(const std::string &name) const;
+  shared_ptr<TypecheckItem> find(const string &name) const;
+  types::TypePtr findInternal(const string &name) const;
 
   using Context<TypecheckItem>::add;
-  std::shared_ptr<TypecheckItem> add(TypecheckItem::Kind kind, const std::string &name,
-                                     types::TypePtr type = nullptr, bool global = false,
-                                     bool generic = false, bool stat = false);
+  shared_ptr<TypecheckItem> add(TypecheckItem::Kind kind, const string &name,
+                                types::TypePtr type = nullptr, bool global = false,
+                                bool generic = false, bool stat = false);
   void dump(int pad = 0) override;
 
 public:
-  std::string getBase() const;
+  string getBase() const;
   int getLevel() const { return bases.size(); }
   std::pair<TypecheckItem::Kind, types::TypePtr>
-  findInVisited(const std::string &name) const;
+  findInVisited(const string &name) const;
 
 public:
-  std::shared_ptr<types::LinkType> addUnbound(const SrcInfo &srcInfo, int level,
-                                              bool setActive = true,
-                                              bool isStatic = false);
+  shared_ptr<types::LinkType> addUnbound(const SrcInfo &srcInfo, int level,
+                                         bool setActive = true, bool isStatic = false);
   /// Calls `type->instantiate`, but populates the instantiation table
   /// with "parent" type.
   /// Example: for list[T].foo, list[int].foo will populate type of foo so that
@@ -101,10 +98,10 @@ public:
   types::TypePtr instantiate(const SrcInfo &srcInfo, types::TypePtr type,
                              types::ClassTypePtr generics, bool activate = true);
   types::TypePtr instantiateGeneric(const SrcInfo &srcInfo, types::TypePtr root,
-                                    const std::vector<types::TypePtr> &generics);
+                                    const vector<types::TypePtr> &generics);
 
-  const std::vector<types::FuncTypePtr> *findMethod(const std::string &typeName,
-                                                    const std::string &method) const {
+  const vector<types::FuncTypePtr> *findMethod(const string &typeName,
+                                               const string &method) const {
     auto m = cache->classMethods.find(typeName);
     if (m != cache->classMethods.end()) {
       auto t = m->second.find(method);
@@ -114,8 +111,7 @@ public:
     return nullptr;
   }
 
-  types::TypePtr findMember(const std::string &typeName,
-                            const std::string &member) const {
+  types::TypePtr findMember(const string &typeName, const string &member) const {
     auto m = cache->classMembers.find(typeName);
     if (m != cache->classMembers.end()) {
       for (auto &mm : m->second)

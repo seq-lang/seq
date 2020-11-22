@@ -2,7 +2,9 @@ from core.aliases import *
 import core.c_stubs as _C
 import core.gc as _gc
 
-from core.slice import *
+from core.slice import Slice
+slice = Slice
+
 from core.err import *
 from core.optional import unwrap as _unwrap
 from core.range import range
@@ -10,12 +12,12 @@ from core.box import Box
 
 from core.builtin import *
 
-from core.collections.list import list
-from core.collections.set import set
-from core.collections.dict import dict
-List = list
-Set = set
-Dict = dict
+from core.collections.list import List
+from core.collections.set import Set
+from core.collections.dict import Dict
+list = List
+set = Set
+dict = Dict
 
 from core.str import *
 from core.int import *

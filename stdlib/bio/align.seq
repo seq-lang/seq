@@ -2,18 +2,25 @@
 
 from c_htslib import bam_cigar2qlen, bam_cigar2rlen
 
-type CIGAR(_data: ptr[u32], _len: int)
-type Alignment(_cigar: CIGAR, _score: int)
+@tuple
+class CIGAR:
+    _data: Ptr[u32]
+    _len: int
 
-cimport seq_align(seq, seq, ptr[i8], i8, i8, int, int, int, int, ptr[Alignment])
-cimport seq_align_dual(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, int, int, ptr[Alignment])
-cimport seq_align_splice(seq, seq, ptr[i8], i8, i8, i8, i8, int, int, ptr[Alignment])
-cimport seq_align_global(seq, seq, ptr[i8], i8, i8, int, bool, ptr[Alignment])
-cimport seq_align_default(seq, seq, ptr[Alignment])
-cimport seq_palign(pseq, pseq, ptr[i8], i8, i8, int, int, int, int, ptr[Alignment])
-cimport seq_palign_dual(pseq, pseq, ptr[i8], i8, i8, i8, i8, int, int, int, int, ptr[Alignment])
-cimport seq_palign_global(pseq, pseq, ptr[i8], i8, i8, int, ptr[Alignment])
-cimport seq_palign_default(pseq, pseq, ptr[Alignment])
+@tuple
+class Alignment:
+    _cigar: CIGAR
+    _score: int
+
+from C import seq_align(seq, seq, Ptr[i8], i8, i8, int, int, int, int, Ptr[Alignment])
+from C import seq_align_dual(seq, seq, Ptr[i8], i8, i8, i8, i8, int, int, int, int, Ptr[Alignment])
+from C import seq_align_splice(seq, seq, Ptr[i8], i8, i8, i8, i8, int, int, Ptr[Alignment])
+from C import seq_align_global(seq, seq, Ptr[i8], i8, i8, int, bool, Ptr[Alignment])
+from C import seq_align_default(seq, seq, Ptr[Alignment])
+from C import seq_palign(pseq, pseq, Ptr[i8], i8, i8, int, int, int, int, Ptr[Alignment])
+from C import seq_palign_dual(pseq, pseq, Ptr[i8], i8, i8, i8, i8, int, int, int, int, Ptr[Alignment])
+from C import seq_palign_global(pseq, pseq, Ptr[i8], i8, i8, int, Ptr[Alignment])
+from C import seq_palign_default(pseq, pseq, Ptr[Alignment])
 
 
 # adapted from ksw2:
@@ -34,15 +41,17 @@ _ALIGN_KIND_DUAL    = 1
 _ALIGN_KIND_SPLICE  = 2
 _ALIGN_KIND_GLOBAL  = 3
 
-type SubMat(mat: ptr[i8]):
+@tuple
+class SubMat:
     '''
     Substitution matrix for amino acid alignment
     '''
+    mat: Ptr[i8]
 
     def _N():
         return 23
 
-    def __new__(d: dict[tuple[str, str], int]) -> SubMat:
+    def __new__(d: Dict[Tuple[str, str], int]) -> SubMat:
         def aa_code(c: str):
             if len(c) != 1:
                 raise ValueError("sequence length != 1: " + c)
@@ -57,7 +66,7 @@ type SubMat(mat: ptr[i8]):
             raise ValueError("unknown amino acid code: " + c)
 
         N = SubMat._N()
-        p = ptr[i8](N * N)
+        p = Ptr[i8](N * N)
         for i in range(N * N):
             p[i] = i8(0)
         for k,v in d.items():
@@ -79,9 +88,10 @@ type SubMat(mat: ptr[i8]):
                 k += 1
         return ''.join(s)
 
-extend CIGAR:
+@extend
+class CIGAR:
     def __new__() -> CIGAR:
-        return (ptr[u32](), 0)
+        return (Ptr[u32](), 0)
 
     def __len__(self):
         return self._len
@@ -100,7 +110,7 @@ extend CIGAR:
         return not (self == other)
 
     def __copy__(self) -> CIGAR:
-        p = ptr[u32](self._len)
+        p = Ptr[u32](self._len)
         str.memcpy(p.as_byte(), self._data.as_byte(), self._len * _gc.sizeof[u32]())
         return CIGAR(p, self._len)
 
@@ -108,7 +118,7 @@ extend CIGAR:
         return self._len > 0
 
     def __new__(cigar: str) -> CIGAR:
-        ops = list[int]()
+        ops = List[int]()
         d = 0
         for c in cigar:
             if c.isdigit():
@@ -122,7 +132,7 @@ extend CIGAR:
                 raise ValueError(f"invalid CIGAR string {repr(cigar)}: unexpected {repr(c)}")
         if d != 0:
             raise ValueError(f"unclosed cigar op in string {repr(cigar)}")
-        p = ptr[u32](len(ops))
+        p = Ptr[u32](len(ops))
         for i, o in enumerate(ops):
             p[i] = u32(o)
         return (p, len(ops))
@@ -146,7 +156,7 @@ extend CIGAR:
             yield self[i]
 
     def __str__(self):
-        v = list[str](len(self) * 2)
+        v = List[str](len(self) * 2)
         for op in self:
             v.append(str(op[0]))
             v.append(str(op[1]))
@@ -154,14 +164,15 @@ extend CIGAR:
 
     def __reversed__(self):
         n = self._len
-        p = ptr[u32](n)
+        p = Ptr[u32](n)
         i = 0
         while i < n:
             p[i] = self._data[n - i - 1]
             i += 1
         return CIGAR(p, n)
 
-extend Alignment:
+@extend
+class Alignment:
     def __new__() -> Alignment:
         return (CIGAR(), 0)
 
@@ -187,7 +198,8 @@ def _validate_gap(g: int):
     if g < 0 or g >= 128:
         raise ValueError("gap penalty for alignment must be in range [0, 127]")
 
-extend seq:
+@extend
+class seq:
     def align(self,
               other: seq,
               a: int = 2,
@@ -326,7 +338,8 @@ extend seq:
         seq_align_default(self, other, __ptr__(out))
         return out
 
-extend pseq:
+@extend
+class pseq:
     def align(self,
               other: pseq,
               mat: SubMat,
@@ -414,26 +427,39 @@ extend pseq:
 
 # inter-sequence alignment
 # much of what follows is adapted from BWA-MEM2 (https://github.com/bwa-mem2/bwa-mem2)
-type InterAlignParams(a: i8, b: i8, ambig: i8, gapo: i8, gape: i8, score_only: i8, bandwidth: i32, zdrop: i32, end_bonus: i32)
+@tuple
+class InterAlignParams:
+    a: i8
+    b: i8
+    ambig: i8
+    gapo: i8
+    gape: i8
+    score_only: i8
+    bandwidth: i32
+    zdrop: i32
+    end_bonus: i32
 
 _LEN_LIMIT     = 512
 _MAX_SEQ_LEN8  = 128
 _MAX_SEQ_LEN16 = 32768
 
-type SeqPair(
-    id: i32,
-    len1: i32, len2: i32,
-    score: i32,
-    cigar: ptr[u32], n_cigar: i32,
-    flags: i32):
+@tuple
+class SeqPair:
+    id: i32
+    len1: i32
+    len2: i32
+    score: i32
+    cigar: Ptr[u32]
+    n_cigar: i32
+    flags: i32
 
     def __new__(id: int, len1: int, len2: int, flags: int) -> SeqPair:
-        return (i32(id), i32(len1), i32(len2), i32(_ALIGN_SCORE_NEG_INF), ptr[u32](), i32(0), i32(flags))
+        return (i32(id), i32(len1), i32(len2), i32(_ALIGN_SCORE_NEG_INF), Ptr[u32](), i32(0), i32(flags))
 
 # (!) caller must ensure len(s) <= LEN_LIMIT
 @builtin
 @inline
-def _interaln_add_to_buf(s: seq, buf: ptr[byte], step: int, idx: int):
+def _interaln_add_to_buf(s: seq, buf: Ptr[byte], step: int, idx: int):
     n = len(s)
     nt4 = seq._nt4_table()
     if s.len >= 0:
@@ -450,7 +476,7 @@ def _interaln_add_to_buf(s: seq, buf: ptr[byte], step: int, idx: int):
 
 @builtin
 @inline
-def _interaln_sort_pairs_len_ext(pairs_array: ptr[SeqPair], tmp_array: ptr[SeqPair], count: int, hist: ptr[i32]) -> tuple[int,int,int]:
+def _interaln_sort_pairs_len_ext(pairs_array: Ptr[SeqPair], tmp_array: Ptr[SeqPair], count: int, hist: Ptr[i32]) -> Tuple[int,int,int]:
     def _max(a: i32, b: i32) -> i32: return a if a > b else b
     def _min(a: i32, b: i32) -> i32: return a if a < b else b
     num_pairs128 = 0
@@ -522,15 +548,15 @@ def _interaln_sort_pairs_len_ext(pairs_array: ptr[SeqPair], tmp_array: ptr[SeqPa
 
     return num_pairs128, num_pairs16, num_pairs1
 
-InterAlignYield = tuple[seq,seq,Alignment]
+InterAlignYield = Tuple[seq,seq,Alignment]
 
 @builtin
 @inline
-def _interaln_queue(coro: generator[InterAlignYield],
-                    pairs_array: ptr[SeqPair],
-                    seq_buf_ref: ptr[byte],
-                    seq_buf_qer: ptr[byte],
-                    pending: ptr[generator[InterAlignYield]],
+def _interaln_queue(coro: Generator[InterAlignYield],
+                    pairs_array: Ptr[SeqPair],
+                    seq_buf_ref: Ptr[byte],
+                    seq_buf_qer: Ptr[byte],
+                    pending: Ptr[Generator[InterAlignYield]],
                     m: int,
                     params: InterAlignParams) -> int:
     coro.__resume__()  # resume coro to get next sequence to align
@@ -571,18 +597,18 @@ def _interaln_queue(coro: generator[InterAlignYield],
 
 @builtin
 @inline
-def _interaln_flush(pairs_array: ptr[SeqPair],
-                    seq_buf_ref: ptr[byte],
-                    seq_buf_qer: ptr[byte],
-                    pending: ptr[generator[InterAlignYield]],
+def _interaln_flush(pairs_array: Ptr[SeqPair],
+                    seq_buf_ref: Ptr[byte],
+                    seq_buf_qer: Ptr[byte],
+                    pending: Ptr[Generator[InterAlignYield]],
                     m: int,
                     params: InterAlignParams,
-                    hist: ptr[i32],
-                    tmp_array: ptr[SeqPair],
-                    tmp_pending: ptr[generator[InterAlignYield]]) -> int:
-    cimport seq_inter_align128(ptr[InterAlignParams], ptr[SeqPair], ptr[byte], ptr[byte], int)
-    cimport seq_inter_align16(ptr[InterAlignParams], ptr[SeqPair], ptr[byte], ptr[byte], int)
-    cimport seq_inter_align1(ptr[InterAlignParams], ptr[SeqPair], ptr[byte], ptr[byte], int)
+                    hist: Ptr[i32],
+                    tmp_array: Ptr[SeqPair],
+                    tmp_pending: Ptr[Generator[InterAlignYield]]) -> int:
+    from C import seq_inter_align128(Ptr[InterAlignParams], Ptr[SeqPair], Ptr[byte], Ptr[byte], int)
+    from C import seq_inter_align16(Ptr[InterAlignParams], Ptr[SeqPair], Ptr[byte], Ptr[byte], int)
+    from C import seq_inter_align1(Ptr[InterAlignParams], Ptr[SeqPair], Ptr[byte], Ptr[byte], int)
     num_pairs128, num_pairs16, num_pairs1 = _interaln_sort_pairs_len_ext(pairs_array, tmp_array, m, hist)
 
     # we use align16 everywhere for now
@@ -609,6 +635,6 @@ def _interaln_flush(pairs_array: ptr[SeqPair],
         j = _interaln_queue(coro, pairs_array, seq_buf_ref, seq_buf_qer, tmp_pending, j, params)
         i += 1
     m = j
-    str.memcpy(pending.as_byte(), tmp_pending.as_byte(), m * _gc.sizeof[generator[InterAlignYield]]())
-    str.memset(tmp_pending.as_byte(), byte(0), m * _gc.sizeof[generator[InterAlignYield]]())
+    str.memcpy(pending.as_byte(), tmp_pending.as_byte(), m * _gc.sizeof[Generator[InterAlignYield]]())
+    str.memset(tmp_pending.as_byte(), byte(0), m * _gc.sizeof[Generator[InterAlignYield]]())
     return m

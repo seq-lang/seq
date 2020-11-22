@@ -24,11 +24,11 @@ using std::move;
 using std::ostream;
 using std::pair;
 using std::stack;
-using std::string;
-using std::unique_ptr;
-using std::unordered_map;
-using std::unordered_set;
-using std::vector;
+using string;
+using unique_ptr;
+using unordered_map;
+using unordered_set;
+using vector;
 
 #define RETURN(T, ...)                                                         \
   (this->result =                                                              \

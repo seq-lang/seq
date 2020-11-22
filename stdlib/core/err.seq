@@ -1,11 +1,13 @@
 # Warning(!): This type must be consistent with the exception
 # header type defined in runtime/exc.cpp.
-type ExcHeader(typename: str,
-               msg: str,
-               func: str,
-               file: str,
-               line: int,
-               col: int)
+@tuple
+class ExcHeader:
+    typename: str
+    msg: str
+    func: str
+    file: str
+    line: int
+    col: int
 
 class OSError:
     _hdr: ExcHeader

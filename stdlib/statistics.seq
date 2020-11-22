@@ -16,7 +16,7 @@ class StatisticsError:
     def message(self):
         return self._hdr.msg
 
-def median[T](data: list[T]) -> float:
+def median[T](data: List[T]) -> float:
     """
     Return the median (middle value) of numeric data.
 
@@ -34,7 +34,7 @@ def median[T](data: list[T]) -> float:
         i = n//2
         return (data[i - 1] + data[i]) / 2
 
-def median_low[T](data: list[T]) -> float:
+def median_low[T](data: List[T]) -> float:
     """
     Return the low median of numeric data.
 
@@ -50,7 +50,7 @@ def median_low[T](data: list[T]) -> float:
     else:
         return float(data[n//2 -1])
 
-def median_high[T](data: list[T]) -> float:
+def median_high[T](data: List[T]) -> float:
     """
     Return the high median of data.
 
@@ -63,7 +63,7 @@ def median_high[T](data: list[T]) -> float:
         raise StatisticsError("no median for empty data")
     return float(data[n//2])
 
-def _find_lteq[T](a: list[T], x: float):
+def _find_lteq[T](a: List[T], x: float):
     """
     Locate the leftmost value exactly equal to x
     """
@@ -72,7 +72,7 @@ def _find_lteq[T](a: list[T], x: float):
         return i
     assert False
 
-def _find_rteq[T](a: list[T], l: int, x: float):
+def _find_rteq[T](a: List[T], l: int, x: float):
     """
     Locate the rightmost value exactly equal to x
     """
@@ -81,7 +81,7 @@ def _find_rteq[T](a: list[T], l: int, x: float):
         return i-1
     assert False
 
-def median_grouped[T,S=int](data: list[T], interval: S = 1) -> float:
+def median_grouped[T,S=int](data: List[T], interval: S = 1) -> float:
     """
     Return the 50th percentile (median) of grouped continuous data.
     """
@@ -105,7 +105,7 @@ def median_grouped[T,S=int](data: list[T], interval: S = 1) -> float:
     f = l2 - l1 + 1
     return L + interval*(n/2 - cf)/f
 
-def mode[T](data: list[T]) -> T:
+def mode[T](data: List[T]) -> T:
     """
     Return the most common data point from discrete or nominal data.
     """
@@ -119,7 +119,7 @@ def mode[T](data: list[T]) -> T:
             elem = i
     return elem
 
-def multimode[T](data: list[T]):
+def multimode[T](data: List[T]):
     """
     Return a list of the most frequently occurring values.
 
@@ -129,19 +129,19 @@ def multimode[T](data: list[T]):
     elem = data[0]
     counter = data.count(elem)
     li = sorted(data)
-    mulmode = list[T]()
+    mulmode = List[T]()
 
     for i in li:
         curr_frequency = data.count(i)
         if curr_frequency > counter:
-            mulmode = list[T]()
+            mulmode = List[T]()
             mulmode.append(i)
             counter = curr_frequency
         elif curr_frequency == counter and i not in mulmode:
             mulmode.append(i)
     return mulmode
 
-def quantiles[T](data: list[T], n: int = 4, method: str = 'exclusive') -> list[float]:
+def quantiles[T](data: List[T], n: int = 4, method: str = 'exclusive') -> List[float]:
     """
     Divide *data* into *n* continuous intervals with equal probability.
 
@@ -167,7 +167,7 @@ def quantiles[T](data: list[T], n: int = 4, method: str = 'exclusive') -> list[f
 
     if method == 'inclusive':
         m = ld - 1
-        result = list[float]()
+        result = List[float]()
         for i in range(1, n):
             j = i * m // n
             delta = (i * m) - (j * n)
@@ -176,7 +176,7 @@ def quantiles[T](data: list[T], n: int = 4, method: str = 'exclusive') -> list[f
         return result
     if method == 'exclusive':
         m = ld + 1
-        result = list[float]()
+        result = List[float]()
         for i in range(1, n):
             j = i * m // n                               # rescale i to m/n
             j = 1 if j < 1 else ld-1 if j > ld-1 else j  # clamp to 1 .. ld-1
@@ -228,7 +228,7 @@ def _lcm(x: int, y: int):
         greater += 1
 
 
-def _sum(data: list[float]) -> float:
+def _sum(data: List[float]) -> float:
     """
     Return a high-precision sum of the given numeric data as a fraction,
     together with the type to be converted to and the count of items.
@@ -267,7 +267,7 @@ def _sum(data: list[float]) -> float:
     total = n/d
     return total
 
-def mean(data: list[float]) -> float:
+def mean(data: List[float]) -> float:
     """
     Return the sample arithmetic mean of data.
 
@@ -282,7 +282,7 @@ def mean(data: list[float]) -> float:
     return total/n
 
 '''
-def fmean(data: list[float]) -> float:
+def fmean(data: List[float]) -> float:
     """
     Convert data to floats and compute the arithmetic mean.
 
@@ -293,7 +293,7 @@ def fmean(data: list[float]) -> float:
     pass
 '''
 
-def geometric_mean(data: list[float]) -> float:
+def geometric_mean(data: List[float]) -> float:
     """
     Convert data to floats and compute the geometric mean.
 
@@ -308,7 +308,7 @@ def geometric_mean(data: list[float]) -> float:
         raise StatisticsError("geometric mean requires a non-empty dataset")
     return _exp(mean(list(map(_log, data))))
 
-def _fail_neg(values: list[float], errmsg: str):
+def _fail_neg(values: List[float], errmsg: str):
     """
     Iterate over values, failing if any are less than zero.
     """
@@ -317,7 +317,7 @@ def _fail_neg(values: list[float], errmsg: str):
             raise StatisticsError(errmsg)
         yield x
 
-def harmonic_mean(data: list[float]) -> float:
+def harmonic_mean(data: List[float]) -> float:
     """
     Return the harmonic mean of data.
 
@@ -337,7 +337,7 @@ def harmonic_mean(data: list[float]) -> float:
         return x
     total = 0.0
 
-    li = list[float](n)
+    li = List[float](n)
     for x in _fail_neg(data, errmsg):
         if x == 0.0:
             return 0.0
@@ -345,7 +345,7 @@ def harmonic_mean(data: list[float]) -> float:
     total = _sum(li)
     return n/total
 
-def _ss(data: list[float], c: float):
+def _ss(data: List[float], c: float):
     """
     Return sum of square deviations of sequence data.
 
@@ -359,7 +359,7 @@ def _ss(data: list[float], c: float):
     total -= total2**2/len(data)
     return total
 
-def pvariance(data: list[float], mu: optional[float]=None):
+def pvariance(data: List[float], mu: Optional[float]=None):
     """
     Return the population variance of `data`.
 
@@ -379,7 +379,7 @@ def pvariance(data: list[float], mu: optional[float]=None):
     ss = _ss(data, mu1)
     return ss/n
 
-def pstdev(data: list[float], mu: optional[float]=None):
+def pstdev(data: List[float], mu: Optional[float]=None):
     """
     Return the square root of the population variance.
     """
@@ -387,7 +387,7 @@ def pstdev(data: list[float], mu: optional[float]=None):
     var = pvariance(data, mu1)
     return _sqrt(var)
 
-def variance(data: list[float], xbar: optional[float]=None):
+def variance(data: List[float], xbar: Optional[float]=None):
     """
     Return the sample variance of data.
 
@@ -402,7 +402,7 @@ def variance(data: list[float], xbar: optional[float]=None):
     ss = _ss(data, xbar1)
     return ss/(n-1)
 
-def stdev(data, xbar: optional[float]=None):
+def stdev(data, xbar: Optional[float]=None):
     """
     Return the square root of the sample variance.
     """
@@ -643,7 +643,7 @@ class NormalDist:
         gauss = random.gauss
         return [gauss(self._mu, self._sigma) for i in range(n)]
 
-    def from_samples(data: list[float]):
+    def from_samples(data: List[float]):
         """
         Make a normal distribution instance from sample data.
         TODO/CAVEATS:

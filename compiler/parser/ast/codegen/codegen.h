@@ -14,10 +14,9 @@
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/ast.h"
 #include "parser/ast/cache.h"
 #include "parser/ast/codegen/codegen_ctx.h"
-#include "parser/ast/visitor.h"
 #include "parser/common.h"
 
 namespace seq {
@@ -25,7 +24,7 @@ namespace ast {
 
 class CodegenVisitor
     : public CallbackASTVisitor<seq::Expr *, seq::Stmt *, seq::Pattern *> {
-  std::shared_ptr<CodegenContext> ctx;
+  shared_ptr<CodegenContext> ctx;
   seq::Expr *resultExpr;
   seq::Stmt *resultStmt;
   seq::Pattern *resultPattern;
@@ -35,20 +34,20 @@ class CodegenVisitor
   void defaultVisit(const Pattern *expr) override;
 
   seq::types::Type *realizeType(types::ClassTypePtr t);
-  seq::BaseFunc *realizeFunc(const std::string &name);
-  std::shared_ptr<CodegenItem> processIdentifier(std::shared_ptr<CodegenContext> tctx,
-                                                 const std::string &id);
+  seq::BaseFunc *realizeFunc(const string &name);
+  shared_ptr<CodegenItem> processIdentifier(shared_ptr<CodegenContext> tctx,
+                                            const string &id);
 
 public:
-  CodegenVisitor(std::shared_ptr<CodegenContext> ctx);
-  static seq::SeqModule *apply(std::shared_ptr<Cache> cache, StmtPtr stmts);
+  CodegenVisitor(shared_ptr<CodegenContext> ctx);
+  static seq::SeqModule *apply(shared_ptr<Cache> cache, StmtPtr stmts);
 
   seq::Expr *transform(const ExprPtr &expr) override;
   seq::Stmt *transform(const StmtPtr &stmt) override;
   seq::Pattern *transform(const PatternPtr &pat) override;
   seq::Stmt *transform(const StmtPtr &stmt, bool addToBlock);
 
-  void visitMethods(const std::string &name);
+  void visitMethods(const string &name);
 
 public:
   void visit(const BoolExpr *) override;
@@ -91,7 +90,6 @@ public:
   void visit(const IntPattern *) override;
   void visit(const BoolPattern *) override;
   void visit(const StrPattern *) override;
-  void visit(const SeqPattern *) override;
   void visit(const RangePattern *) override;
   void visit(const TuplePattern *) override;
   void visit(const ListPattern *) override;

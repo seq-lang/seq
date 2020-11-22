@@ -30,7 +30,7 @@ struct Pattern : public seq::SrcObject {
   /// Convert node to a string
   virtual string toString() const = 0;
   /// Accept an AST walker/visitor
-  virtual void accept(ASTVisitor &) const = 0;
+  virtual void accept(ASTVisitor &visitor) const = 0;
 
   types::TypePtr getType() const { return type; }
   void setType(types::TypePtr t) { type = t; }
@@ -40,14 +40,15 @@ struct Pattern : public seq::SrcObject {
     return out << c.toString();
   }
 };
-typedef unique_ptr<Pattern> PatternPtr;
+using PatternPtr = unique_ptr<Pattern>;
 
 struct StarPattern : public Pattern {
   StarPattern();
   StarPattern(const StarPattern &p);
 
   string toString() const override;
-  NODE_UTILITY(Pattern, StarPattern);
+  PatternPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct IntPattern : public Pattern {
@@ -57,7 +58,8 @@ struct IntPattern : public Pattern {
   IntPattern(const IntPattern &p);
 
   string toString() const override;
-  NODE_UTILITY(Pattern, IntPattern);
+  PatternPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct BoolPattern : public Pattern {
@@ -67,18 +69,20 @@ struct BoolPattern : public Pattern {
   BoolPattern(const BoolPattern &p);
 
   string toString() const override;
-  NODE_UTILITY(Pattern, BoolPattern);
+  PatternPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct StrPattern : public Pattern {
-  string prefix;
   string value;
+  string prefix;
 
-  StrPattern(string p, string v);
+  StrPattern(string v, string p = "");
   StrPattern(const StrPattern &p);
 
   string toString() const override;
-  NODE_UTILITY(Pattern, StrPattern);
+  PatternPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct RangePattern : public Pattern {
@@ -88,7 +92,8 @@ struct RangePattern : public Pattern {
   RangePattern(const RangePattern &p);
 
   string toString() const override;
-  NODE_UTILITY(Pattern, RangePattern);
+  PatternPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct TuplePattern : public Pattern {
@@ -98,7 +103,8 @@ struct TuplePattern : public Pattern {
   TuplePattern(const TuplePattern &p);
 
   string toString() const override;
-  NODE_UTILITY(Pattern, TuplePattern);
+  PatternPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct ListPattern : public Pattern {
@@ -108,7 +114,8 @@ struct ListPattern : public Pattern {
   ListPattern(const ListPattern &p);
 
   string toString() const override;
-  NODE_UTILITY(Pattern, ListPattern);
+  PatternPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct OrPattern : public Pattern {
@@ -118,7 +125,8 @@ struct OrPattern : public Pattern {
   OrPattern(const OrPattern &p);
 
   string toString() const override;
-  NODE_UTILITY(Pattern, OrPattern);
+  PatternPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct WildcardPattern : public Pattern {
@@ -128,7 +136,8 @@ struct WildcardPattern : public Pattern {
   WildcardPattern(const WildcardPattern &p);
 
   string toString() const override;
-  NODE_UTILITY(Pattern, WildcardPattern);
+  PatternPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct GuardedPattern : public Pattern {
@@ -139,7 +148,8 @@ struct GuardedPattern : public Pattern {
   GuardedPattern(const GuardedPattern &p);
 
   string toString() const override;
-  NODE_UTILITY(Pattern, GuardedPattern);
+  PatternPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct BoundPattern : public Pattern {
@@ -150,7 +160,8 @@ struct BoundPattern : public Pattern {
   BoundPattern(const BoundPattern &p);
 
   string toString() const override;
-  NODE_UTILITY(Pattern, BoundPattern);
+  PatternPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 } // namespace ast

@@ -1,10 +1,5 @@
-# @trait
-# @internal
-# class Iterable[T]:
-#     pass
-
-
-extend str:
+@extend
+class str:
     @internal
     def __new__(p: Ptr[byte], l: int) -> str: pass
 
@@ -38,13 +33,15 @@ extend str:
 
         return str(buf, total)
 
-extend pyobj:
+@extend
+class pyobj:
     @internal
     def __new__(p: Ptr[byte]) -> pyobj: pass
 
-cimport seq_print(str)
+from C import seq_print(str)
 
-extend Ptr[T]:
+@extend
+class Ptr[T]:
     @internal
     def __elemsize__() -> int: pass
     @internal
@@ -103,7 +100,8 @@ extend Ptr[T]:
     def __prefetch_w3__(self) -> void: pass
 ptr = Ptr
 
-extend int:
+@extend
+class int:
     @internal
     def __new__() -> int: pass
     def __new__[T](what: T) -> int: # lowest priority!
@@ -199,7 +197,8 @@ extend int:
     @internal
     def __ge__(self, other: float) -> bool: pass
 
-extend str:
+@extend
+class str:
     def __new__() -> str:
         return str(Ptr[byte](), 0)
     def __new__[T](what: T) -> str: # lowest priority!
@@ -219,7 +218,8 @@ extend str:
     @internal
     def memset(dest: Ptr[byte], b: byte, len: int) -> void: pass
 
-extend bool:
+@extend
+class bool:
     @internal
     def __new__() -> bool: pass
     def __new__[T](what: T) -> bool: # lowest priority!
@@ -251,7 +251,8 @@ extend bool:
     @internal
     def __xor__(self, other: bool) -> bool: pass
 
-extend byte:
+@extend
+class byte:
     @internal
     def __new__() -> byte: pass
     @internal
@@ -279,7 +280,8 @@ extend byte:
     @internal
     def comp(self) -> byte: pass
 
-extend float:
+@extend
+class float:
     @internal
     def __new__() -> float: pass
     @internal
@@ -351,7 +353,8 @@ extend float:
     @internal
     def __ge__(self, other: int) -> bool: pass
 
-extend Optional[T]:  # type
+@extend
+class Optional[T]:  # type
     @internal
     def __new__() -> Optional[T]: pass
     @internal
@@ -364,7 +367,8 @@ extend Optional[T]:  # type
         return 'None' if not self else str(~self)
 optional = Optional
 
-extend Generator[T]:  # class
+@extend
+class Generator[T]:  # class
     @internal
     def __iter__(self) -> Generator[T]: pass
     @internal
@@ -389,7 +393,11 @@ extend Generator[T]:  # class
 generator = Generator
 
 @internal
-type Array[T](len: int, ptr: Ptr[T]):
+@tuple
+class Array[T]:
+    len: int
+    ptr: Ptr[T]
+
     @internal
     def __new__(len: int) -> Array[T]: pass
     @internal
@@ -412,7 +420,8 @@ type Array[T](len: int, ptr: Ptr[T]):
     def __setitem__(self, index: int, what: T) -> void: pass
 array = Array
 
-extend Int[N]:
+@extend
+class Int[N]:
     @internal
     def __new__() -> Int[N]: pass
     @internal
@@ -479,7 +488,8 @@ extend Int[N]:
     def len() -> int:
         return N
 
-extend UInt[N]:
+@extend
+class UInt[N]:
     @internal
     def __new__() -> UInt[N]: pass
     @internal
@@ -551,7 +561,8 @@ extend UInt[N]:
     def len() -> int:
         return N
 
-extend str:
+@extend
+class str:
     def __add__(self, other: str) -> str:
         len1 = self.len
         len2 = other.len

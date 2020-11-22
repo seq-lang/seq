@@ -134,7 +134,8 @@ def test_named_construct1(_):
     assert B(b='b', a='a').val == ('ab', (-1, -1, -1))
 test_named_construct1(0)
 
-type C:
+@tuple
+class C:
     a: float
     b: tuple[int,int,int]
 

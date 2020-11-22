@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/ast.h"
 #include "parser/ast/transform/transform.h"
 #include "parser/ast/transform/transform_ctx.h"
 #include "parser/common.h"
@@ -16,28 +16,20 @@
 
 using fmt::format;
 using std::dynamic_pointer_cast;
-using std::make_shared;
-using std::make_unique;
-using std::pair;
-using std::shared_ptr;
 using std::stack;
 using std::static_pointer_cast;
-using std::string;
-using std::unordered_map;
-using std::unordered_set;
-using std::vector;
 
 namespace seq {
 namespace ast {
 
-TransformContext::TransformContext(const std::string &filename, shared_ptr<Cache> cache)
+TransformContext::TransformContext(const string &filename, shared_ptr<Cache> cache)
     : Context<TransformItem>(filename), cache(cache) {
   stack.push_front(vector<string>());
 }
 
 TransformContext::~TransformContext() {}
 
-shared_ptr<TransformItem> TransformContext::find(const std::string &name) const {
+shared_ptr<TransformItem> TransformContext::find(const string &name) const {
   auto t = Context<TransformItem>::find(name);
   if (t)
     return t;
@@ -95,7 +87,7 @@ void TransformContext::dump(int pad) {
   auto ordered = std::map<string, decltype(map)::mapped_type>(map.begin(), map.end());
   LOG("base: {}", getBase());
   for (auto &i : ordered) {
-    std::string s;
+    string s;
     auto t = i.second.front().second;
     LOG("{}{:.<25} {} {}", string(pad * 2, ' '), i.first, t->canonicalName,
         t->getBase());

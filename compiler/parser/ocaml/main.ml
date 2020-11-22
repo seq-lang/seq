@@ -143,12 +143,12 @@ let test code =
   while not !finished do
     let t = Lexer.token state lexbuf in
     match t with
-    | EOF -> eprintf "EOF\n%!"; finished := true
-    | NL | INDENT | DEDENT -> eprintf "%s\n%!" @@ print_token t
-    | t -> eprintf "%s %!" @@ print_token t
+    | EOF -> printf "EOF\n%!"; finished := true
+    | NL | INDENT | DEDENT -> printf "%s\n%!" @@ print_token t
+    | t -> printf "%s %!" @@ print_token t
   done
 
-let parse file code line_offset col_offset =
+let parse file code line_offset col_offset debug =
   let lexbuf = Lexing.from_string (code ^ "\n") in
   lexbuf.lex_curr_p
   <- { pos_fname = file
@@ -157,7 +157,7 @@ let parse file code line_offset col_offset =
      ; pos_bol = -col_offset
      };
   try
-    (* test code; *)
+    if debug > 0 then test code;
     let stack = Stack.create () in
     Stack.push 0 stack;
     let state = Lexer.{ stack; offset = 0; ignore_newline = 0; fname = file } in

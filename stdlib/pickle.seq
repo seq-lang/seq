@@ -47,46 +47,52 @@ def _read[T](jar: Jar):
 
 # Extend core types to allow pickling
 
-extend int:
+@extend
+class int:
     def __pickle__(self, jar: Jar):
         _write(jar, self)
 
     def __unpickle__(jar: Jar):
         return _read[int](jar)
 
-extend float:
+@extend
+class float:
     def __pickle__(self, jar: Jar):
         _write(jar, self)
 
     def __unpickle__(jar: Jar):
         return _read[float](jar)
 
-extend bool:
+@extend
+class bool:
     def __pickle__(self, jar: Jar):
         _write(jar, self)
 
     def __unpickle__(jar: Jar):
         return _read[bool](jar)
 
-extend byte:
+@extend
+class byte:
     def __pickle__(self, jar: Jar):
         _write(jar, self)
 
     def __unpickle__(jar: Jar):
         return _read[byte](jar)
 
-extend str:
+@extend
+class str:
     def __pickle__(self, jar: Jar):
         _write(jar, self.len)
         _write_raw(jar, self.ptr, self.len)
 
     def __unpickle__(jar: Jar):
         n = _read[int](jar)
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         _read_raw(jar, p, n)
         return str(p, n)
 
-extend seq:
+@extend
+class seq:
     def __pickle__(self, jar: Jar):
         _write(jar, self.len)
         _write_raw(jar, self.ptr, abs(self.len))
@@ -94,11 +100,12 @@ extend seq:
     def __unpickle__(jar: Jar):
         n = _read[int](jar)
         m = abs(n)
-        p = ptr[byte](m)
+        p = Ptr[byte](m)
         _read_raw(jar, p, m)
         return seq(p, n)
 
-extend list[T]:
+@extend
+class List[T]:
     def __pickle__(self, jar: Jar):
         n = len(self)
         pickle(n, jar)
@@ -110,15 +117,16 @@ extend list[T]:
 
     def __unpickle__(jar: Jar):
         n = unpickle[int](jar)
-        arr = array[T](n)
+        arr = Array[T](n)
         if _gc.atomic[T]():
             _read_raw(jar, (arr.ptr).as_byte(), n * _gc.sizeof[T]())
         else:
             for i in range(n):
                 arr[i] = unpickle[T](jar)
-        return list[T](arr, n)
+        return List[T](arr, n)
 
-extend dict[K, V]:
+@extend
+class Dict[K, V]:
     def __pickle__(self, jar: Jar):
         import core.collections.khash as khash
         if _gc.atomic[K]() and _gc.atomic[V]():
@@ -141,16 +149,16 @@ extend dict[K, V]:
 
     def __unpickle__(jar: Jar):
         import core.collections.khash as khash
-        d = dict[K,V]()
+        d = Dict[K,V]()
         if _gc.atomic[K]() and _gc.atomic[V]():
             n_buckets = unpickle[int](jar)
             size = unpickle[int](jar)
             n_occupied = unpickle[int](jar)
             upper_bound = unpickle[int](jar)
             fsize = khash.__ac_fsize(n_buckets) if n_buckets > 0 else 0
-            flags = ptr[u32](fsize)
-            keys = ptr[K](n_buckets)
-            vals = ptr[V](n_buckets)
+            flags = Ptr[u32](fsize)
+            keys = Ptr[K](n_buckets)
+            vals = Ptr[V](n_buckets)
             _read_raw(jar, flags.as_byte(), fsize * _gc.sizeof[u32]())
             _read_raw(jar, keys.as_byte(), n_buckets * _gc.sizeof[K]())
             _read_raw(jar, vals.as_byte(), n_buckets * _gc.sizeof[V]())
@@ -174,7 +182,8 @@ extend dict[K, V]:
                 i += 1
         return d
 
-extend set[K]:
+@extend
+class Set[K]:
     def __pickle__(self, jar: Jar):
         import core.collections.khash as khash
         if _gc.atomic[K]():
@@ -195,15 +204,15 @@ extend set[K]:
 
     def __unpickle__(jar: Jar):
         import core.collections.khash as khash
-        s = set[K]()
+        s = Set[K]()
         if _gc.atomic[K]():
             n_buckets = unpickle[int](jar)
             size = unpickle[int](jar)
             n_occupied = unpickle[int](jar)
             upper_bound = unpickle[int](jar)
             fsize = khash.__ac_fsize(n_buckets) if n_buckets > 0 else 0
-            flags = ptr[u32](fsize)
-            keys = ptr[K](n_buckets)
+            flags = Ptr[u32](fsize)
+            keys = Ptr[K](n_buckets)
             _read_raw(jar, flags.as_byte(), fsize * _gc.sizeof[u32]())
             _read_raw(jar, keys.as_byte(), n_buckets * _gc.sizeof[K]())
 

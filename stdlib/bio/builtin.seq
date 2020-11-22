@@ -131,7 +131,7 @@ def _validate_str_as_seq(s: str, copy: bool = False):
     n = s.len
     i = 0
     if copy:
-        q = ptr[byte](n)
+        q = Ptr[byte](n)
         while i < n:
             b = p[i]
             ensure_valid(b, i)
@@ -153,7 +153,7 @@ def _validate_str_as_qual(s: str, copy: bool = False):
     n = s.len
     i = 0
     if copy:
-        q = ptr[byte](n)
+        q = Ptr[byte](n)
         while i < n:
             b = p[i]
             ensure_valid(b, i)

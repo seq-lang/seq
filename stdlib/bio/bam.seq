@@ -32,49 +32,58 @@ from bio.locus import Contig, Locus
 from c_htslib import *
 
 # This type must be consistent with htslib:
-type _sam_hdr_t(n_targets: i32,
-                ignore_sam_err: i32,
-                l_text: int,
-                target_len: ptr[u32],
-                cigar_tab: ptr[byte],
-                target_name: ptr[ptr[byte]],
-                text: ptr[byte],
-                sdict: cobj,
-                hrecs: cobj,
-                ref_count: u32):
-    def contigs(self) -> list[Contig]:
+@tuple
+class _sam_hdr_t:
+    n_targets: i32
+    ignore_sam_err: i32
+    l_text: int
+    target_len: Ptr[u32]
+    cigar_tab: Ptr[byte]
+    target_name: Ptr[Ptr[byte]]
+    text: Ptr[byte]
+    sdict: cobj
+    hrecs: cobj
+    ref_count: u32
+
+    def contigs(self) -> List[Contig]:
         return [Contig(tid=i, name=str.from_ptr(self.target_name[i]), len=int(self.target_len[i]))
                   for i in range(int(self.n_targets))]
 
 # This type must be consistent with htslib:
-type _bam_core_t(_pos: i64,
-                 _tid: i32,
-                 _bin: u16,
-                 _qual: u8,
-                 _l_extranul: u8,
-                 _flag: u16,
-                 _l_qname: u16,
-                 _n_cigar: u32,
-                 _l_qseq: i32,
-                 _mtid: i32,
-                 _mpos: i64,
-                 _isize: i64):
+@tuple
+class _bam_core_t:
+    _pos: i64
+    _tid: i32
+    _bin: u16
+    _qual: u8
+    _l_extranul: u8
+    _flag: u16
+    _l_qname: u16
+    _n_cigar: u32
+    _l_qseq: i32
+    _mtid: i32
+    _mpos: i64
+    _isize: i64
+
     def __new__() -> _bam_core_t:
         return (i64(0), i32(0), u16(0), u8(0), u8(0), u16(0), u16(0), u32(0), i32(0), i32(0), i64(0), i64(0))
 
 # This type must be consistent with htslib:
-type _bam1_t(core: _bam_core_t,
-             id: u64,
-             data: ptr[byte],
-             l_data: i32,
-             m_data: u32,
-             mem_policy: u32):
+@tuple
+class _bam1_t:
+    core: _bam_core_t
+    id: u64
+    data: Ptr[byte]
+    l_data: i32
+    m_data: u32
+    mem_policy: u32
+
     def __new__() -> _bam1_t:
         BAM_USER_OWNS_STRUCT = 1  # see htslib's sam.h
-        return (_bam_core_t(), u64(0), ptr[byte](), i32(0), u32(0), u32(BAM_USER_OWNS_STRUCT))
+        return (_bam_core_t(), u64(0), Ptr[byte](), i32(0), u32(0), u32(BAM_USER_OWNS_STRUCT))
 
     def __copy__(self) -> _bam1_t:
-        data = ptr[byte](int(self.l_data))
+        data = Ptr[byte](int(self.l_data))
         str.memcpy(data, self.data, int(self.l_data))
         return (self.core, self.id, data, self.l_data, u32(self.l_data), self.mem_policy)
 
@@ -106,7 +115,10 @@ type _bam1_t(core: _bam_core_t,
     def isize(self):
         return int(self.core._isize)
 
-type SAMAux(s: ptr[u8]):
+@tuple
+class SAMAux:
+    s: Ptr[u8]
+
     def __bool__(self):
         return bool(self.s)
 
@@ -163,8 +175,8 @@ type SAMAux(s: ptr[u8]):
           - "float": use ``f`` property for float value
           - "char": use ``A`` property for byte value
           - "string": use ``Z`` property for string value
-          - "array[int]": use ``B_len`` for array length and either ``B2i(index)`` to access elements
-          - "array[float]": use ``B_len`` for array length and either ``B2i(index)`` to access elements
+          - "Array[int]": use ``B_len`` for array length and either ``B2i(index)`` to access elements
+          - "Array[float]": use ``B_len`` for array length and either ``B2i(index)`` to access elements
         '''
         t = self._type()
         if t & AUX_TYPE_INT:
@@ -178,9 +190,9 @@ type SAMAux(s: ptr[u8]):
         if t & AUX_TYPE_ARRAY:
             t = self._array_type()
             if t & AUX_TYPE_INT:
-                return 'array[int]'
+                return 'Array[int]'
             if t & (AUX_TYPE_FLOAT | AUX_TYPE_DOUBLE):
-                return 'array[float]'
+                return 'Array[float]'
             raise TypeError("invalid aux array type")
         raise TypeError("invalid aux type")
 
@@ -278,7 +290,7 @@ class SAMRecord:
             hts_seq = self._htsr.data + ((int(self._htsr.core._n_cigar) << 2) + int(self._htsr.core._l_qname))
             n = int(self._htsr.core._l_qseq)
             seq_nt16_str = "=ACMGRSVTWYHKDBN"  # see htslib's hts.c
-            buf = ptr[byte](n)
+            buf = Ptr[byte](n)
             i = 0
             while i < n:
                 buf[i] = seq_nt16_str.ptr[int(hts_seq[i>>1]) >> ((~i&1)<<2) & 0xf]
@@ -302,7 +314,7 @@ class SAMRecord:
         if not self._qual:
             hts_qual = self._htsr.data + ((int(self._htsr.core._n_cigar) << 2) + int(self._htsr.core._l_qname) + ((int(self._htsr.core._l_qseq) + 1) >> 1))
             n = int(self._htsr.core._l_qseq)
-            buf = ptr[byte](n)
+            buf = Ptr[byte](n)
             i = 0
             while i < n:
                 buf[i] = byte(int(hts_qual[i]) + 33)
@@ -315,7 +327,7 @@ class SAMRecord:
         '''
         Record `CIGAR`
         '''
-        return CIGAR(ptr[u32](self._htsr.data + int(self._htsr.core._l_qname)), int(self._htsr.core._n_cigar))
+        return CIGAR(Ptr[u32](self._htsr.data + int(self._htsr.core._l_qname)), int(self._htsr.core._n_cigar))
 
     @property
     def tid(self):
@@ -498,7 +510,7 @@ class BAMReader:
     _idx: cobj
     _hdr: cobj
     _itr: cobj
-    _contigs: list[Contig]
+    _contigs: List[Contig]
 
     def __init__(self, path: str, region: str, copy: bool):
         path_c_str, region_c_str = path.c_str(), region.c_str()
@@ -525,7 +537,7 @@ class BAMReader:
         self._idx = idx
         self._hdr = hdr
         self._itr = itr
-        self._contigs = ptr[_sam_hdr_t](hdr)[0].contigs()
+        self._contigs = Ptr[_sam_hdr_t](hdr)[0].contigs()
 
     def seek(self, region: str):
         if self._itr:
@@ -592,7 +604,7 @@ class SAMReader:
     _copy: bool
     _file: cobj
     _hdr: cobj
-    _contigs: list[Contig]
+    _contigs: List[Contig]
 
     def __init__(self, path: str, copy: bool):
         path_c_str = path.c_str()
@@ -606,7 +618,7 @@ class SAMReader:
         self._copy = copy
         self._file = file
         self._hdr = hdr
-        self._contigs = ptr[_sam_hdr_t](hdr)[0].contigs()
+        self._contigs = Ptr[_sam_hdr_t](hdr)[0].contigs()
 
     def _ensure_open(self):
         if not self._file:

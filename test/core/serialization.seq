@@ -1,7 +1,10 @@
 import pickle
 
-type MyType(a: i32, b: str, c: float):
-    pass
+@tuple
+class MyType:
+    a: i32
+    b: str
+    c: float
 
 class A:
     a: int

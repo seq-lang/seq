@@ -184,7 +184,8 @@ for a, b in [(1, 2), (3, 3), (5, 4)]:
 print '_'  #: 2 = 1 _
 
 #%% extend
-extend int:
+@extend
+class int:
     def run_lola_run(self):
         while self > 0:
             yield self

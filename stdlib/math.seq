@@ -359,9 +359,9 @@ def gcd(a: float, b: float) -> float:
         a, b = b%a, a
     return b
 
-def frexp(x: float) -> tuple[float, int]:
+def frexp(x: float) -> Tuple[float, int]:
     """
-    frexp(float) -> tuple[float, int]
+    frexp(float) -> Tuple[float, int]
 
     The returned value is the mantissa and the integer pointed
     to by exponent is the exponent. The resultant value is
@@ -371,9 +371,9 @@ def frexp(x: float) -> tuple[float, int]:
     res = _C.frexp(float(x), __ptr__(tmp))
     return (res, int(tmp))
 
-def modf(x: float) -> tuple[float, float]:
+def modf(x: float) -> Tuple[float, float]:
     """
-    modf(float) -> tuple[float, float]
+    modf(float) -> Tuple[float, float]
 
     The returned value is the fraction component (part after
     the decimal), and sets integer to the integer component.

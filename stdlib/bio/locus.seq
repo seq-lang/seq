@@ -1,7 +1,13 @@
-type Contig(_tid: u32, _name: str, _len: int):
+@tuple
+class Contig:
     '''
     Representation of a contig, consisting of an ID, name and length.
     '''
+
+    _tid: u32
+    _name: str
+    _len: int
+
     def __new__(tid: int, name: str, len: int) -> Contig:
         return (u32(tid), name, len)
 
@@ -44,10 +50,15 @@ type Contig(_tid: u32, _name: str, _len: int):
     def __hash__(self):
         return self.tid
 
-type Locus(_tid: u32, _pos: u32):
+@tuple
+class Locus:
     '''
     Representation of a locus, consisting of a contig ID and 0-based position.
     '''
+
+    _tid: u32
+    _pos: u32
+
     def __new__(tid: int, pos: int) -> Locus:
         '''
         Constructs a `Locus` with specified contig ID and 0-based position.

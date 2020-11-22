@@ -1,6 +1,8 @@
-from slice import slice
-
-type range(start: int, stop: int, step: int):
+@tuple
+class range:
+    start: int
+    stop: int
+    step: int
 
 # Magic methods
 
@@ -26,57 +28,15 @@ type range(start: int, stop: int, step: int):
             raise IndexError("range object index out of range")
         return self._get(idx)
 
-    def __getitem__(self, s: eslice):
-        return self
-
-    def __getitem__(self, s: slice):
-        start, stop, step, length = slice.adjust_indices(self.__len__(), start=s.start, stop=s.end)
-        substep = self.step * step
-        substart = self._get(start)
-        substop = self._get(stop)
-        return range(substart, substop, substep)
-
-    def __getitem__(self, s: lslice):
-        start, stop, step, length = slice.adjust_indices(self.__len__(), stop=s.end)
-        substep = self.step * step
-        substart = self._get(start)
-        substop = self._get(stop)
-        return range(substart, substop, substep)
-
-    def __getitem__(self, s: rslice):
-        start, stop, step, length = slice.adjust_indices(self.__len__(), start=s.start)
-        substep = self.step * step
-        substart = self._get(start)
-        substop = self._get(stop)
-        return range(substart, substop, substep)
-
-    def __getitem__(self, s: esslice):
-        start, stop, step, length = slice.adjust_indices(self.__len__(), step=s.step)
-        substep = self.step * step
-        substart = self._get(start)
-        substop = self._get(stop)
-        return range(substart, substop, substep)
-
-    def __getitem__(self, s: rsslice):
-        start, stop, step, length = slice.adjust_indices(self.__len__(), start=s.start, step=s.step)
-        substep = self.step * step
-        substart = self._get(start)
-        substop = self._get(stop)
-        return range(substart, substop, substep)
-
-    def __getitem__(self, s: lsslice):
-        start, stop, step, length = slice.adjust_indices(self.__len__(), stop=s.end, step=s.step)
-        substep = self.step * step
-        substart = self._get(start)
-        substop = self._get(stop)
-        return range(substart, substop, substep)
-
-    def __getitem__(self, s: sslice):
-        start, stop, step, length = slice.adjust_indices(self.__len__(), start=s.start, stop=s.end, step=s.step)
-        substep = self.step * step
-        substart = self._get(start)
-        substop = self._get(stop)
-        return range(substart, substop, substep)
+    def __getitem__(self, s: Slice):
+        if s.start is None and s.stop is None and s.step is None:
+            return self
+        else:
+            start, stop, step, length = s.adjust_indices(self.__len__())
+            substep = self.step * step
+            substart = self._get(start)
+            substop = self._get(stop)
+            return range(substart, substop, substep)
 
     def __contains__(self, idx: int):
         start, stop, step = self.start, self.stop, self.step

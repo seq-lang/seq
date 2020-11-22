@@ -21,7 +21,7 @@ a = 5.15
 print a  #: 5.15
 
 #%% float_error
-print 5.__str__()  #! ERROR: parsing error: unexpected keyword ('__str__')
+print 5.__str__()  #! ERROR: parsing error
 
 #%% string
 a = 'kthxbai'

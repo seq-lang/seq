@@ -1,5 +1,5 @@
 /**
- * ast.h
+ * expr.h
  * Describes Seq AST.
  */
 
@@ -11,10 +11,28 @@
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/ast/stmt.h"
 #include "parser/ast/ast/visitor.h"
 #include "parser/ast/types.h"
 #include "parser/common.h"
+
+//  1 BinaryExpr)
+//  1 DotExpr)
+//  1 IfExpr)
+//  1 ListExpr)
+//  1 PipeExpr)
+//  1 SliceExpr)
+//  1 StringExpr)
+//  1 UnaryExpr)
+//  2 InstantiateExpr)
+//  2 StarExpr)
+//  2 StaticExpr)
+//  3 CallExpr)
+//  4 IntExpr)
+//  6 IndexExpr)
+//  6 NoneExpr)
+//  7 TupleExpr)
+//  9 EllipsisExpr)
+// 30 IdExpr)
 
 namespace seq {
 namespace ast {
@@ -33,10 +51,10 @@ public:
   Expr();
   Expr(const Expr &e);
   virtual ~Expr();
-  virtual unique_ptr<Expr> clone() const = 0;
 
   /// Convert node to a string
   virtual string toString() const = 0;
+  virtual unique_ptr<Expr> clone() const = 0;
   /// Accept an AST walker/visitor
   virtual void accept(ASTVisitor &) const = 0;
 
@@ -45,14 +63,17 @@ public:
   void setType(types::TypePtr t);
   bool isType() const;
   void markType();
-  string wrap(const string &) const;
+  string wrap(string) const;
 
   /// Allow pretty-printing to C++ streams
   friend std::ostream &operator<<(std::ostream &out, const Expr &c) {
     return out << c.toString();
   }
+
+  virtual bool isIdExpr(string v) const { return false; }
+  virtual string getIdExpr() const { return ""; }
 };
-typedef unique_ptr<Expr> ExprPtr;
+using ExprPtr = unique_ptr<Expr>;
 
 /// Type that models the function parameters (name: type = deflt)
 struct Param {
@@ -61,9 +82,9 @@ struct Param {
   ExprPtr deflt;
 
   Param(string name = "", ExprPtr type = nullptr, ExprPtr deflt = nullptr);
-  Param clone() const;
 
   string toString() const;
+  Param clone() const;
 };
 
 struct NoneExpr : public Expr {
@@ -71,7 +92,8 @@ struct NoneExpr : public Expr {
   NoneExpr(const NoneExpr &e);
 
   string toString() const override;
-  NODE_UTILITY(Expr, NoneExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct BoolExpr : public Expr {
@@ -81,7 +103,8 @@ struct BoolExpr : public Expr {
   BoolExpr(const BoolExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, BoolExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct IntExpr : public Expr {
@@ -92,12 +115,13 @@ struct IntExpr : public Expr {
   int64_t intValue;
   bool sign;
 
-  IntExpr(int v);
+  IntExpr(long long v, bool s = false);
   IntExpr(string v, string s = "");
   IntExpr(const IntExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, IntExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct FloatExpr : public Expr {
@@ -109,18 +133,20 @@ struct FloatExpr : public Expr {
   FloatExpr(const FloatExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, FloatExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct StringExpr : public Expr {
-  string prefix;
   string value;
+  string prefix;
 
-  StringExpr(string v = "", string prefix = "");
+  StringExpr(string v, string prefix = "");
   StringExpr(const StringExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, StringExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct IdExpr : public Expr {
@@ -130,7 +156,11 @@ struct IdExpr : public Expr {
   IdExpr(const IdExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, IdExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+
+  bool isIdExpr(string v) const override { return value == v; }
+  string getIdExpr() const override { return value; }
 };
 
 struct StarExpr : public Expr {
@@ -140,7 +170,8 @@ struct StarExpr : public Expr {
   StarExpr(const StarExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, StarExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct TupleExpr : public Expr {
@@ -150,7 +181,8 @@ struct TupleExpr : public Expr {
   TupleExpr(const TupleExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, TupleExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct ListExpr : public Expr {
@@ -160,7 +192,8 @@ struct ListExpr : public Expr {
   ListExpr(const ListExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, ListExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct SetExpr : public Expr {
@@ -170,7 +203,8 @@ struct SetExpr : public Expr {
   SetExpr(const SetExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, SetExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct DictExpr : public Expr {
@@ -185,7 +219,8 @@ struct DictExpr : public Expr {
   DictExpr(const DictExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, DictExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct GeneratorBody {
@@ -209,7 +244,8 @@ struct GeneratorExpr : public Expr {
   GeneratorExpr(const GeneratorExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, GeneratorExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct DictGeneratorExpr : public Expr {
@@ -222,7 +258,8 @@ struct DictGeneratorExpr : public Expr {
   DictGeneratorExpr(const DictGeneratorExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, DictGeneratorExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct IfExpr : public Expr {
@@ -232,7 +269,8 @@ struct IfExpr : public Expr {
   IfExpr(const IfExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, IfExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct UnaryExpr : public Expr {
@@ -243,7 +281,8 @@ struct UnaryExpr : public Expr {
   UnaryExpr(const UnaryExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, UnaryExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct BinaryExpr : public Expr {
@@ -256,7 +295,8 @@ struct BinaryExpr : public Expr {
   BinaryExpr(const BinaryExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, BinaryExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct PipeExpr : public Expr {
@@ -277,7 +317,8 @@ struct PipeExpr : public Expr {
   PipeExpr(const PipeExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, PipeExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct IndexExpr : public Expr {
@@ -287,7 +328,8 @@ struct IndexExpr : public Expr {
   IndexExpr(const IndexExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, IndexExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct CallExpr : public Expr {
@@ -311,7 +353,8 @@ struct CallExpr : public Expr {
   CallExpr(const CallExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, CallExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct DotExpr : public Expr {
@@ -322,7 +365,8 @@ struct DotExpr : public Expr {
   DotExpr(const DotExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, DotExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct SliceExpr : public Expr {
@@ -333,7 +377,8 @@ struct SliceExpr : public Expr {
   SliceExpr(const SliceExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, SliceExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct EllipsisExpr : public Expr {
@@ -344,7 +389,8 @@ struct EllipsisExpr : public Expr {
   EllipsisExpr(const EllipsisExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, EllipsisExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct TypeOfExpr : public Expr {
@@ -354,7 +400,8 @@ struct TypeOfExpr : public Expr {
   TypeOfExpr(const TypeOfExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, TypeOfExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct LambdaExpr : public Expr {
@@ -366,7 +413,8 @@ struct LambdaExpr : public Expr {
   LambdaExpr(const LambdaExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, LambdaExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct YieldExpr : public Expr {
@@ -375,11 +423,13 @@ struct YieldExpr : public Expr {
   YieldExpr(const YieldExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, YieldExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 /// Post-transform AST nodes
 
+struct Stmt;
 struct StmtExpr : public Expr {
   vector<unique_ptr<Stmt>> stmts;
   ExprPtr expr;
@@ -388,7 +438,8 @@ struct StmtExpr : public Expr {
   StmtExpr(const StmtExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, StmtExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct PtrExpr : public Expr {
@@ -398,7 +449,8 @@ struct PtrExpr : public Expr {
   PtrExpr(const PtrExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, PtrExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct TupleIndexExpr : Expr {
@@ -409,7 +461,8 @@ struct TupleIndexExpr : Expr {
   TupleIndexExpr(const TupleIndexExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, TupleIndexExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct InstantiateExpr : Expr {
@@ -421,7 +474,8 @@ struct InstantiateExpr : Expr {
   InstantiateExpr(const InstantiateExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, InstantiateExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct StackAllocExpr : Expr {
@@ -431,7 +485,8 @@ struct StackAllocExpr : Expr {
   StackAllocExpr(const StackAllocExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, StackAllocExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 struct StaticExpr : public Expr {
@@ -443,7 +498,8 @@ struct StaticExpr : public Expr {
   StaticExpr(const StaticExpr &n);
 
   string toString() const override;
-  NODE_UTILITY(Expr, StaticExpr);
+  ExprPtr clone() const override;
+  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
 };
 
 } // namespace ast

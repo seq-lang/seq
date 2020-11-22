@@ -15,11 +15,10 @@
 #include <utility>
 #include <vector>
 
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/ast.h"
 #include "parser/ast/format/format.h"
 #include "parser/ast/typecheck/typecheck_ctx.h"
 #include "parser/ast/types.h"
-#include "parser/ast/visitor.h"
 #include "parser/ast/walk.h"
 #include "parser/common.h"
 
@@ -27,32 +26,31 @@ namespace seq {
 namespace ast {
 
 class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr> {
-  std::shared_ptr<TypeContext> ctx;
-  std::shared_ptr<std::vector<StmtPtr>> prependStmts;
+  shared_ptr<TypeContext> ctx;
+  shared_ptr<vector<StmtPtr>> prependStmts;
   ExprPtr resultExpr;
   StmtPtr resultStmt;
   PatternPtr resultPattern;
 
-  std::vector<types::Generic> parseGenerics(const std::vector<Param> &generics,
-                                            int level);
-  std::string patchIfRealizable(types::TypePtr typ, bool isClass);
-  void fixExprName(ExprPtr &e, const std::string &newName);
+  vector<types::Generic> parseGenerics(const vector<Param> &generics, int level);
+  string patchIfRealizable(types::TypePtr typ, bool isClass);
+  void fixExprName(ExprPtr &e, const string &newName);
 
-  StmtPtr addMethod(Stmt *s, const std::string &canonicalName);
-  types::FuncTypePtr
-  findBestCall(types::ClassTypePtr c, const std::string &member,
-               const std::vector<std::pair<std::string, types::TypePtr>> &args,
-               bool failOnMultiple = false, types::TypePtr retType = nullptr);
+  StmtPtr addMethod(Stmt *s, const string &canonicalName);
+  types::FuncTypePtr findBestCall(types::ClassTypePtr c, const string &member,
+                                  const vector<std::pair<string, types::TypePtr>> &args,
+                                  bool failOnMultiple = false,
+                                  types::TypePtr retType = nullptr);
   bool castToOptional(types::TypePtr lt, ExprPtr &rhs);
   bool getTupleIndex(types::ClassTypePtr tuple, const ExprPtr &expr,
                      const ExprPtr &index);
-  ExprPtr visitDot(const DotExpr *expr, std::vector<CallExpr::Arg> *args = nullptr);
-  std::string generatePartialStub(const std::string &mask, const std::string &oldMask);
-  std::vector<StmtPtr> parseClass(const ClassStmt *stmt);
+  ExprPtr visitDot(const DotExpr *expr, vector<CallExpr::Arg> *args = nullptr);
+  string generatePartialStub(const string &mask, const string &oldMask);
+  vector<StmtPtr> parseClass(const ClassStmt *stmt);
   ExprPtr parseCall(const CallExpr *expr, types::TypePtr inType = nullptr,
                     ExprPtr *extraStage = nullptr);
-  int reorder(const std::vector<std::pair<std::string, types::TypePtr>> &args,
-              std::vector<std::pair<std::string, types::TypePtr>> &reorderedArgs,
+  int reorder(const vector<std::pair<string, types::TypePtr>> &args,
+              vector<std::pair<string, types::TypePtr>> &reorderedArgs,
               types::FuncTypePtr f);
   void addFunctionGenerics(types::FuncTypePtr t);
 
@@ -61,9 +59,9 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
   void defaultVisit(const Pattern *p) override;
 
 public:
-  static StmtPtr apply(std::shared_ptr<Cache> cache, StmtPtr stmts);
-  TypecheckVisitor(std::shared_ptr<TypeContext> ctx,
-                   std::shared_ptr<std::vector<StmtPtr>> stmts = nullptr);
+  static StmtPtr apply(shared_ptr<Cache> cache, StmtPtr stmts);
+  TypecheckVisitor(shared_ptr<TypeContext> ctx,
+                   shared_ptr<vector<StmtPtr>> stmts = nullptr);
 
   ExprPtr transform(const ExprPtr &e) override;
   StmtPtr transform(const StmtPtr &s) override;
@@ -110,7 +108,6 @@ public:
   void visit(const ForStmt *) override;
   void visit(const IfStmt *) override;
   void visit(const MatchStmt *) override;
-  void visit(const ExtendStmt *) override;
   void visit(const TryStmt *) override;
   void visit(const ThrowStmt *) override;
   void visit(const FunctionStmt *) override;
@@ -120,7 +117,6 @@ public:
   void visit(const IntPattern *) override;
   void visit(const BoolPattern *) override;
   void visit(const StrPattern *) override;
-  void visit(const SeqPattern *) override;
   void visit(const RangePattern *) override;
   void visit(const TuplePattern *) override;
   void visit(const ListPattern *) override;
@@ -145,7 +141,7 @@ public:
     return t;
   }
   template <typename T>
-  types::TypePtr forceUnify(const std::unique_ptr<T> &expr, types::TypePtr t) {
+  types::TypePtr forceUnify(const unique_ptr<T> &expr, types::TypePtr t) {
     return forceUnify(expr.get(), t);
   }
 
@@ -162,14 +158,14 @@ public:
 };
 
 class StaticVisitor : public WalkVisitor {
-  std::map<std::string, types::Generic> &generics;
+  map<string, types::Generic> &generics;
 
 public:
   bool evaluated;
   int value;
 
   using WalkVisitor::visit;
-  StaticVisitor(std::map<std::string, types::Generic> &m);
+  StaticVisitor(map<string, types::Generic> &m);
   std::pair<bool, int> transform(const ExprPtr &e);
   void visit(const IdExpr *) override;
   void visit(const IntExpr *) override;

@@ -1,4 +1,7 @@
-type Lock(p: cobj):
+@tuple
+class Lock:
+    p: cobj
+
     def __new__() -> Lock:
         return (_C.seq_lock_new(),)
 
@@ -16,7 +19,10 @@ type Lock(p: cobj):
     def __exit__(self):
         self.release()
 
-type RLock(p: cobj):
+@tuple
+class RLock:
+    p: cobj
+
     def __new__() -> RLock:
         return (_C.seq_rlock_new(),)
 

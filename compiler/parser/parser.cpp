@@ -15,17 +15,14 @@
 #include "parser/parser.h"
 #include "util/fmt/format.h"
 
-using std::make_shared;
-using std::string;
-using std::vector;
-
+int __ocaml_time__ = 0;
 int __level__ = 0;
 int __dbg_level__ = 0;
 bool __isTest = false;
 
 namespace seq {
 
-void generateDocstr(const std::string &argv0) {
+void generateDocstr(const string &argv0) {
   vector<string> files;
   string s;
   while (std::getline(std::cin, s))
@@ -34,8 +31,8 @@ void generateDocstr(const std::string &argv0) {
   fmt::print("{}\n", j.dump());
 }
 
-seq::SeqModule *parse(const std::string &argv0, const std::string &file,
-                      const string &code, bool isCode, bool isTest, int startLine) {
+seq::SeqModule *parse(const string &argv0, const string &file, const string &code,
+                      bool isCode, bool isTest, int startLine) {
   try {
     auto d = getenv("SEQ_DEBUG");
     if (d)
@@ -55,9 +52,12 @@ seq::SeqModule *parse(const std::string &argv0, const std::string &file,
     auto transformed = ast::TransformVisitor::apply(cache, move(codeStmt), abs);
     FILE *fo;
     if (!isTest) {
-      fmt::print(stderr, "[T] transform = {:.1f}\n",
-                 duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                     1000.0);
+      fmt::print(stderr, "[T] ocaml = {:.1f}\n", __ocaml_time__ / 1000.0);
+      fmt::print(
+          stderr, "[T] transform = {:.1f}\n",
+          (duration_cast<milliseconds>(high_resolution_clock::now() - t).count() -
+           __ocaml_time__) /
+              1000.0);
       fo = fopen("_dump.seq", "w");
       fmt::print(fo, "=== Transform ===\n{}\n", ast::FormatVisitor::apply(transformed));
       fflush(fo);

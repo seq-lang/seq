@@ -1,7 +1,10 @@
-type pseq(len: int, ptr: cobj):
+@tuple
+class pseq:
     '''
     Amino acid sequence
     '''
+    len: int
+    ptr: cobj
 
     def __new__(p: cobj, n: int) -> pseq:
         return (n, p)
@@ -77,34 +80,30 @@ type pseq(len: int, ptr: cobj):
     def _slice_direct(self, a: int, b: int):
         return pseq(self.ptr + a, b - a)
 
-    def __getitem__(self, s: eslice):
-        return self.__copy__()
-
-    def __getitem__(self, s: slice):
-        a, b = s
-        n = len(self)
-        if a < 0: a += n
-        if b < 0: b += n
-        if a > n: a = n
-        if b > n: b = n
-        return self._slice_direct(a, b)
-
-    def __getitem__(self, s: lslice):
-        b = s.end
-        n = len(self)
-        if b < 0: b += n
-        if b > n: b = n
-        return pseq(self.ptr, b)
-
-    def __getitem__(self, s: rslice):
-        a = s.start
-        n = len(self)
-        if a < 0: a += n
-        if a > n: a = n
-        return pseq(self.ptr + a, n - a)
-
-    def __getitem__(self, s: eslice):
-        return self
+    def __getitem__(self, s: Slice):
+        assert s.step is None
+        if s.start is None and s.stop is None and s.step is None:
+            return self.__copy__()
+        elif s.start is None:
+            b = ~s.stop
+            n = len(self)
+            if b < 0: b += n
+            if b > n: b = n
+            return pseq(self.ptr, b)
+        elif s.stop is None:
+            a = ~s.start
+            n = len(self)
+            if a < 0: a += n
+            if a > n: a = n
+            return pseq(self.ptr + a, n - a)
+        else:
+            a, b = ~s.start, ~s.stop
+            n = len(self)
+            if a < 0: a += n
+            if b < 0: b += n
+            if a > n: a = n
+            if b > n: b = n
+            return self._slice_direct(a, b)
 
     def _copy_to(self, p: cobj):
         str.memcpy(p, self.ptr, self.len)
@@ -134,7 +133,7 @@ type pseq(len: int, ptr: cobj):
             yield self._slice_direct(i,i+1)
             i -= 1
 
-def translate(s: seq, table: Optional[dict[seq, pseq]] = None):
+def translate(s: seq, table: Optional[Dict[seq, pseq]] = None):
     '''
     Performs DNA to amino acid translation. An optional mapping from
     length-3 DNA sequences to amino acids can be given via `table`,
@@ -179,6 +178,12 @@ def translate(s: seq, table: Optional[dict[seq, pseq]] = None):
         j += 1
     return pseq(p, m)
 
-extend seq:
+@extend
+class seq:
     def translate(self):
         return translate(self)
+
+@extend
+class str:
+    def __prefix_p__[N: int = 0](s: str) -> pseq:
+        return pseq(s)

@@ -6,14 +6,14 @@ def _set_hash(key):
     k = hash(key)
     return (k >> 33) ^ k ^ (k << 11)
 
-class set[K]:
+class Set[K]:
     _n_buckets: int
     _size: int
     _n_occupied: int
     _upper_bound: int
 
-    _flags: ptr[u32]
-    _keys: ptr[K]
+    _flags: Ptr[u32]
+    _keys: Ptr[K]
 
 # Magic methods
     def _init(self):
@@ -21,50 +21,50 @@ class set[K]:
         self._size = 0
         self._n_occupied = 0
         self._upper_bound = 0
-        self._flags = ptr[u32]()
-        self._keys = ptr[K]()
+        self._flags = Ptr[u32]()
+        self._keys = Ptr[K]()
 
     def __init__(self):
         self._init()
 
-    def __init__(self, g: generator[K]):
+    def __init__(self, g: Generator[K]):
         self._init()
         for a in g:
             self.add(a)
 
-    def __sub__(self, other: set[K]):
+    def __sub__(self, other: Set[K]):
         return self.difference(other)
 
-    def __isub__(self, other: set[K]):
+    def __isub__(self, other: Set[K]):
         self.difference_update(other)
         return self
 
-    def __and__(self, other: set[K]):
+    def __and__(self, other: Set[K]):
         return self.intersection(other)
 
-    def __iand__(self, other: set[K]):
+    def __iand__(self, other: Set[K]):
         self.intersection_update(other)
         return self
 
-    def __or__(self, other: set[K]):
+    def __or__(self, other: Set[K]):
         return self.union(other)
 
-    def __ior__(self, other: set[K]):
+    def __ior__(self, other: Set[K]):
         for a in other:
             self.add(a)
         return self
 
-    def __xor__(self, other: set[K]):
+    def __xor__(self, other: Set[K]):
         return self.symmetric_difference(other)
 
-    def __ixor__(self, other: set[K]):
+    def __ixor__(self, other: Set[K]):
         self.symmetric_difference_update(other)
         return self
 
     def __contains__(self, key: K):
         return self._kh_get(key) != self._kh_end()
 
-    def __eq__(self, other: set[K]):
+    def __eq__(self, other: Set[K]):
         if len(self) != len(other):
             return False
         for k in self:
@@ -72,19 +72,19 @@ class set[K]:
                 return False
         return True
 
-    def __ne__(self, other: set[K]):
+    def __ne__(self, other: Set[K]):
         return not (self == other)
 
-    def __le__(self, other: set[K]):
+    def __le__(self, other: Set[K]):
         return self.issubset(other)
 
-    def __ge__(self, other: set[K]):
+    def __ge__(self, other: Set[K]):
         return self.issuperset(other)
 
-    def __lt__(self, other: set[K]):
+    def __lt__(self, other: Set[K]):
         return self != other and self <= other
 
-    def __gt__(self, other: set[K]):
+    def __gt__(self, other: Set[K]):
         return self != other and self >= other
 
     def __iter__(self):
@@ -99,21 +99,21 @@ class set[K]:
 
     def __copy__(self):
         if len(self) == 0:
-            return set[K]()
+            return Set[K]()
         n = self._n_buckets
         f = khash.__ac_fsize(n)
-        flags_copy = ptr[u32](f)
-        keys_copy = ptr[K](n)
+        flags_copy = Ptr[u32](f)
+        keys_copy = Ptr[K](n)
         str.memcpy(flags_copy.as_byte(), self._flags.as_byte(), f * _gc.sizeof[u32]())
         str.memcpy(keys_copy.as_byte(), self._keys.as_byte(), n * _gc.sizeof[K]())
-        return set[K](n, self._size, self._n_occupied, self._upper_bound, flags_copy, keys_copy)
+        return Set[K](n, self._size, self._n_occupied, self._upper_bound, flags_copy, keys_copy)
 
     def __str__(self):
         n = len(self)
         if n == 0:
             return "{}"
         else:
-            lst = list[str]()
+            lst = List[str]()
             lst.append("{")
             first = True
             for k in self:
@@ -134,7 +134,7 @@ class set[K]:
     def add(self, key: K):
         self._kh_put(key)
 
-    def update(self, other: set[K]):
+    def update(self, other: Set[K]):
         for k in other:
             self.add(k)
 
@@ -157,33 +157,33 @@ class set[K]:
         if x != self._kh_end():
             self._kh_del(x)
 
-    def difference(self, other: set[K]):
-        s = set[K]()
+    def difference(self, other: Set[K]):
+        s = Set[K]()
         for a in self:
             if a not in other:
                 s.add(a)
         return s
 
-    def difference_update(self, other: set[K]):
+    def difference_update(self, other: Set[K]):
         for a in other:
             self.discard(a)
 
-    def intersection(self, other: set[K]):
+    def intersection(self, other: Set[K]):
         if len(other) < len(self):
             self, other = other, self
-        s = set[K]()
+        s = Set[K]()
         for a in self:
             if a in other:
                 s.add(a)
         return s
 
-    def intersection_update(self, other: set[K]):
+    def intersection_update(self, other: Set[K]):
         for a in self:
             if a not in other:
                 self.discard(a)
 
-    def symmetric_difference(self, other: set[K]):
-        s = set[K]()
+    def symmetric_difference(self, other: Set[K]):
+        s = Set[K]()
         for a in self:
             if a not in other:
                 s.add(a)
@@ -192,7 +192,7 @@ class set[K]:
                 s.add(a)
         return s
 
-    def symmetric_difference_update(self, other: set[K]):
+    def symmetric_difference_update(self, other: Set[K]):
         for a in other:
             if a in self:
                 self.discard(a)
@@ -200,8 +200,8 @@ class set[K]:
             if a in other:
                 self.discard(a)
 
-    def union(self, other: set[K]):
-        s = set[K]()
+    def union(self, other: Set[K]):
+        s = Set[K]()
         s.resize(max2(self._n_buckets, other._n_buckets))
         for a in self:
             s.add(a)
@@ -209,7 +209,7 @@ class set[K]:
             s.add(a)
         return s
 
-    def isdisjoint(self, other: set[K]):
+    def isdisjoint(self, other: Set[K]):
         if len(other) < len(self):
             self, other = other, self
         for a in self:
@@ -217,7 +217,7 @@ class set[K]:
                 return False
         return True
 
-    def issubset(self, other: set[K]):
+    def issubset(self, other: Set[K]):
         if len(other) < len(self):
             return False
         for a in self:
@@ -225,7 +225,7 @@ class set[K]:
                 return False
         return True
 
-    def issuperset(self, other: set[K]):
+    def issuperset(self, other: Set[K]):
         return other.issubset(self)
 
     def clear(self):
@@ -265,7 +265,7 @@ class set[K]:
 
     def _kh_resize(self, new_n_buckets: int):
         HASH_UPPER = 0.77
-        new_flags = ptr[u32]()
+        new_flags = Ptr[u32]()
         j = 1
 
         # round up to next power of 2
@@ -285,14 +285,14 @@ class set[K]:
             j = 0
         else:
             fsize = khash.__ac_fsize(new_n_buckets)
-            new_flags = ptr[u32](fsize)
+            new_flags = Ptr[u32](fsize)
             i = 0
             while i < fsize:
                 new_flags[i] = u32(0xaaaaaaaa)
                 i += 1
 
             if self._n_buckets < new_n_buckets:
-                self._keys = ptr[K](_gc.realloc(self._keys.as_byte(), new_n_buckets * _gc.sizeof[K]()))
+                self._keys = Ptr[K](_gc.realloc(self._keys.as_byte(), new_n_buckets * _gc.sizeof[K]()))
 
         if j:
             j = 0
@@ -321,7 +321,7 @@ class set[K]:
                 j += 1
 
             if self._n_buckets > new_n_buckets:
-                self._keys = ptr[K](_gc.realloc(self._keys.as_byte(), new_n_buckets * _gc.sizeof[K]()))
+                self._keys = Ptr[K](_gc.realloc(self._keys.as_byte(), new_n_buckets * _gc.sizeof[K]()))
 
             self._flags = new_flags
             self._n_buckets = new_n_buckets

@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/stmt.h"
 #include "parser/ast/context.h"
 #include "parser/common.h"
 
@@ -20,36 +20,36 @@ namespace ast {
 struct TransformItem;
 
 struct Cache {
-  std::unordered_map<std::string, int> moduleNames;
-  std::unordered_map<std::string, std::string> reverseLookup;
+  unordered_map<string, int> moduleNames;
+  unordered_map<string, string> reverseLookup;
   int generatedID;
   int unboundCount;
 
   struct Import {
-    std::string filename;
-    std::shared_ptr<Context<TransformItem>> ctx;
+    string filename;
+    shared_ptr<Context<TransformItem>> ctx;
   };
-  std::string argv0;
+  string argv0;
   /// By convention, stdlib is stored as ""
-  std::unordered_map<std::string, Import> imports;
+  unordered_map<string, Import> imports;
 
-  std::set<std::string> variardics;
-  std::unordered_map<std::string, StmtPtr> asts;
+  set<string> variardics;
+  unordered_map<string, StmtPtr> asts;
 
-  std::unordered_map<std::string,
-                     std::unordered_map<std::string, std::vector<types::FuncTypePtr>>>
+  unordered_map<string,
+                     unordered_map<string, vector<types::FuncTypePtr>>>
       classMethods;
-  std::unordered_map<std::string, std::vector<std::pair<std::string, types::TypePtr>>>
+  unordered_map<string, vector<std::pair<string, types::TypePtr>>>
       classMembers;
-  std::unordered_map<std::string, std::unordered_map<std::string, types::TypePtr>>
+  unordered_map<string, unordered_map<string, types::TypePtr>>
       realizations;
-  std::unordered_map<std::string, std::vector<std::pair<std::string, types::TypePtr>>>
+  unordered_map<string, vector<std::pair<string, types::TypePtr>>>
       memberRealizations;
-  std::unordered_map<std::string, StmtPtr> realizationAsts;
-  std::unordered_map<std::string, types::TypePtr> partials;
+  unordered_map<string, StmtPtr> realizationAsts;
+  unordered_map<string, types::TypePtr> partials;
 
 public:
-  Cache(const std::string &argv0 = "")
+  Cache(const string &argv0 = "")
       : generatedID(0), unboundCount(0), argv0(argv0) {}
 };
 

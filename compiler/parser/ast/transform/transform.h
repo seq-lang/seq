@@ -9,48 +9,52 @@
 
 #include <string>
 #include <tuple>
-#include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/ast.h"
 #include "parser/ast/transform/transform_ctx.h"
 #include "parser/ast/types.h"
-#include "parser/ast/visitor.h"
 #include "parser/common.h"
 
 namespace seq {
 namespace ast {
 
 class TransformVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr> {
-  std::shared_ptr<TransformContext> ctx;
-  std::shared_ptr<std::vector<StmtPtr>> prependStmts;
+  shared_ptr<TransformContext> ctx;
+  shared_ptr<vector<StmtPtr>> prependStmts;
   ExprPtr resultExpr;
   StmtPtr resultStmt;
   PatternPtr resultPattern;
 
 private:
-  StmtPtr getGeneratorBlock(const std::vector<GeneratorExpr::Body> &loops,
-                            SuiteStmt *&prev);
-  std::vector<StmtPtr> addMethods(const StmtPtr &s);
-  std::string generateFunctionStub(int len);
-  std::string generateTupleStub(int len);
-  std::string generatePartialStub(const std::string &flag);
-  StmtPtr codegenMagic(const std::string &op, const ExprPtr &typExpr,
-                       const std::vector<Param> &args, bool isRecord);
-  ExprPtr makeAnonFn(std::vector<StmtPtr> &&stmts,
-                     const std::vector<std::string> &vars = std::vector<std::string>{});
+  StmtPtr getGeneratorBlock(const vector<GeneratorBody> &loops, SuiteStmt *&prev);
+  vector<StmtPtr> addMethods(const StmtPtr &s);
+  string generateFunctionStub(int len);
+  string generateTupleStub(int len);
+  string generatePartialStub(const string &flag);
+  StmtPtr codegenMagic(const string &op, const ExprPtr &typExpr,
+                       const vector<Param> &args, bool isRecord);
+  ExprPtr makeAnonFn(vector<StmtPtr> &&stmts,
+                     const vector<string> &vars = vector<string>{});
+  ExprPtr transformInt(string value, string suffix);
+  ExprPtr parseFString(string value);
+
+  StmtPtr parseCImport(string name, const vector<Param> &args, const ExprPtr &ret,
+                       string altName);
+  StmtPtr parseDylibCImport(const ExprPtr &dylib, string name,
+                            const vector<Param> &args, const ExprPtr &ret,
+                            string altName);
+  StmtPtr parsePythonImport(const ExprPtr &what, string as);
 
   void defaultVisit(const Expr *e) override;
   void defaultVisit(const Stmt *s) override;
   void defaultVisit(const Pattern *p) override;
 
 public:
-  TransformVisitor(std::shared_ptr<TransformContext> ctx,
-                   std::shared_ptr<std::vector<StmtPtr>> stmts = nullptr);
-  static StmtPtr apply(std::shared_ptr<Cache> cache, StmtPtr s,
-                       const std::string &file);
+  TransformVisitor(shared_ptr<TransformContext> ctx,
+                   shared_ptr<vector<StmtPtr>> stmts = nullptr);
+  static StmtPtr apply(shared_ptr<Cache> cache, StmtPtr s, const string &file);
 
   ExprPtr transform(const ExprPtr &e) override;
   StmtPtr transform(const StmtPtr &s) override;
@@ -61,11 +65,9 @@ public:
 public:
   void visit(const NoneExpr *) override;
   void visit(const IntExpr *) override;
-  void visit(const FStringExpr *) override;
-  void visit(const KmerExpr *) override;
-  void visit(const SeqExpr *) override;
+  void visit(const StringExpr *) override;
   void visit(const IdExpr *) override;
-  void visit(const UnpackExpr *) override;
+  void visit(const StarExpr *) override;
   void visit(const TupleExpr *) override;
   void visit(const ListExpr *) override;
   void visit(const SetExpr *) override;
@@ -81,10 +83,11 @@ public:
   void visit(const DotExpr *) override;
   void visit(const SliceExpr *) override;
   void visit(const TypeOfExpr *) override;
-  void visit(const PtrExpr *) override;
   void visit(const LambdaExpr *) override;
 
   void visit(const SuiteStmt *) override;
+  void visit(const ContinueStmt *) override;
+  void visit(const BreakStmt *) override;
   void visit(const ExprStmt *) override;
   void visit(const AssignStmt *) override;
   void visit(const DelStmt *) override;
@@ -96,9 +99,7 @@ public:
   void visit(const ForStmt *) override;
   void visit(const IfStmt *) override;
   void visit(const MatchStmt *) override;
-  void visit(const ExtendStmt *) override;
   void visit(const ImportStmt *) override;
-  void visit(const ExternImportStmt *) override;
   void visit(const TryStmt *) override;
   void visit(const GlobalStmt *) override;
   void visit(const ThrowStmt *) override;
@@ -107,7 +108,6 @@ public:
   void visit(const AssignEqStmt *) override;
   void visit(const YieldFromStmt *) override;
   void visit(const WithStmt *) override;
-  void visit(const PyDefStmt *) override;
   void visit(const TuplePattern *) override;
   void visit(const ListPattern *) override;
   void visit(const OrPattern *) override;

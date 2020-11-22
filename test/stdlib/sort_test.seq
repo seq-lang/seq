@@ -9,7 +9,7 @@ def key(n: int):
 
 def gen_list(n: int):
     import random
-    v = list[int](n)
+    v = List[int](n)
     for _ in range(n):
         v.append(random.randint(0, 10000))
     return v
@@ -25,7 +25,7 @@ def ensure_sorted(v):
         assert key(v[i]) <= key(v[i + 1])
 
 v0 = gen_list(100)
-v1 = list[int](len(v0))
+v1 = List[int](len(v0))
 
 def test_sort1(name, sort):
     copy_to(v0, v1)

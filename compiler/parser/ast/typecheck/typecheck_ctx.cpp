@@ -7,22 +7,14 @@
 #include <unordered_set>
 #include <vector>
 
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/ast.h"
 #include "parser/ast/typecheck/typecheck_ctx.h"
 #include "parser/common.h"
 #include "parser/ocaml.h"
 
 using fmt::format;
 using std::dynamic_pointer_cast;
-using std::make_shared;
-using std::make_unique;
-using std::pair;
-using std::shared_ptr;
 using std::stack;
-using std::string;
-using std::unordered_map;
-using std::unordered_set;
-using std::vector;
 
 namespace seq {
 namespace ast {
@@ -148,7 +140,7 @@ void TypeContext::dump(int pad) {
   auto ordered = std::map<string, decltype(map)::mapped_type>(map.begin(), map.end());
   LOG("base: {}", getBase());
   for (auto &i : ordered) {
-    std::string s;
+    string s;
     auto t = i.second.front().second;
     LOG("{}{:.<25} {} {}", string(pad * 2, ' '), i.first, t->getType()->toString(true),
         t->getBase());

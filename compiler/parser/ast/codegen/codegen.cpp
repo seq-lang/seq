@@ -1,16 +1,13 @@
 #include "util/fmt/format.h"
-#include "util/fmt/ostream.h"
 #include <memory>
-#include <ostream>
 #include <stack>
 #include <string>
 #include <tuple>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/ast.h"
 #include "parser/ast/codegen/codegen.h"
 #include "parser/ast/codegen/codegen_ctx.h"
 #include "parser/common.h"
@@ -18,17 +15,8 @@
 using fmt::format;
 using std::function;
 using std::get;
-using std::make_shared;
-using std::make_unique;
 using std::move;
-using std::ostream;
-using std::shared_ptr;
 using std::stack;
-using std::string;
-using std::unique_ptr;
-using std::unordered_map;
-using std::unordered_set;
-using std::vector;
 
 namespace seq {
 namespace ast {
@@ -45,13 +33,14 @@ void CodegenVisitor::defaultVisit(const Pattern *n) {
   seqassert(false, "invalid node {}", *n);
 }
 
-CodegenVisitor::CodegenVisitor(std::shared_ptr<CodegenContext> ctx)
-    : ctx(ctx), resultExpr(nullptr), resultStmt(nullptr), resultPattern(nullptr) {}
+CodegenVisitor::CodegenVisitor(shared_ptr<CodegenContext> ctx)
+    : ctx(move(ctx)), resultExpr(nullptr), resultStmt(nullptr), resultPattern(nullptr) {
+}
 
 seq::Expr *CodegenVisitor::transform(const ExprPtr &expr) {
   if (!expr)
     return nullptr;
-  LOG7("-- {}", expr->toString());
+  //  LOG7("-- {}", expr->toString());
   CodegenVisitor v(ctx);
   v.setSrcInfo(expr->getSrcInfo());
   expr->accept(v);
@@ -131,7 +120,7 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
                     p ? p->toString() : "-", t->toString(), ast->attributes[".class"]);
           seq::types::Type *typ = ctx->realizeType(p->getClass());
           int startI = 1;
-          if (ast->args.size() && ast->args[0].name == "self")
+          if (!ast->args.empty() && ast->args[0].name == "self")
             startI = 2;
           for (int i = startI; i < t->args.size(); i++)
             types.push_back(ctx->realizeType(t->args[i]->getClass()));
@@ -243,7 +232,7 @@ void CodegenVisitor::visit(const CallExpr *expr) {
       assert(false);
     else
       items.push_back(transform(i.value));
-    names.push_back("");
+    names.emplace_back("");
   }
   resultExpr = new seq::CallExpr(lhs, items, names);
 }
@@ -271,8 +260,8 @@ void CodegenVisitor::visit(const YieldExpr *expr) {
 
 void CodegenVisitor::visit(const StmtExpr *expr) {
   vector<seq::Stmt *> stmts;
-  function<void(const vector<StmtPtr> &)> traverse = [&](const vector<StmtPtr> &ss) {
-    for (auto &s : ss) {
+  function<void(const vector<StmtPtr> &)> traverse = [&](const vector<StmtPtr> &vss) {
+    for (auto &s : vss) {
       if (auto ss = CAST(s, SuiteStmt))
         traverse(ss->stmts);
       else if (auto ss = transform(s, false))
@@ -503,16 +492,6 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
   }
 }
 
-void CodegenVisitor::visitMethods(const string &name) {
-  // auto c = ctx->getRealizations()->findClass(name);
-  // if (c)
-  //   for (auto &m : c->methods)
-  //     for (auto &mm : m.second) {
-  //       FunctionStmt *f = CAST(ctx->getRealizations()->getAST(mm->name),
-  //       FunctionStmt); visit(f);
-  //     }
-}
-
 void CodegenVisitor::visit(const ClassStmt *stmt) {
   // visitMethods(ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo()));
 }
@@ -530,11 +509,10 @@ void CodegenVisitor::visit(const BoolPattern *pat) {
 }
 
 void CodegenVisitor::visit(const StrPattern *pat) {
-  resultPattern = new seq::StrPattern(pat->value);
-}
-
-void CodegenVisitor::visit(const SeqPattern *pat) {
-  resultPattern = new seq::SeqPattern(pat->value);
+  if (pat->prefix == "s")
+    resultPattern = new seq::SeqPattern(pat->value);
+  else
+    resultPattern = new seq::StrPattern(pat->value);
 }
 
 void CodegenVisitor::visit(const RangePattern *pat) {
@@ -564,7 +542,7 @@ void CodegenVisitor::visit(const OrPattern *pat) {
 
 void CodegenVisitor::visit(const WildcardPattern *pat) {
   auto p = new seq::Wildcard();
-  if (pat->var.size())
+  if (!pat->var.empty())
     ctx->addVar(pat->var, p->getVar());
   p->getVar()->setType(realizeType(pat->getType()->getClass()));
   resultPattern = p;

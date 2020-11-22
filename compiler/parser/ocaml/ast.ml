@@ -38,7 +38,6 @@ type texpr =
   | TypeOf of texpr ann
   | Lambda of (string list * texpr ann)
   | YieldTo of unit
-  | FuncDef of (string * param ann list * texpr ann option)
 
 and tcomprehension =
   { var : texpr ann
@@ -64,31 +63,27 @@ type tstmt =
   | Return of texpr ann option
   | Yield of texpr ann option
   | Assert of texpr ann
-  (* | TypeAlias of (string * texpr ann) *)
   | While of (texpr ann * tstmt ann list * tstmt ann list)
   | For of (texpr ann * texpr ann * tstmt ann list * tstmt ann list)
   | If of (texpr ann option * tstmt ann list) list
   | Match of (texpr ann * (pattern ann * tstmt ann list) list)
-  (* | Extend of (texpr ann * tstmt ann list) *)
   | Import of import
-  (* | ImportExtern of eimport *)
   | Try of (tstmt ann list * catch ann list * tstmt ann list)
   | Global of string
   | Throw of texpr ann
-  (* | Prefetch of texpr ann *)
-  (* | Special of (string * tstmt ann list * string list) *)
   | Function of fn_t
   | Class of class_t
-  (* | Declare of param ann *)
   | AssignEq of (texpr ann * texpr ann * string)
   | YieldFrom of texpr ann
   | With of ((texpr ann * string option) list * tstmt ann list)
-  (* | ExternCode of string *)
 
 and import =
-  { from: texpr ann
-  ; what: texpr ann option
-  ; import_as: string option
+  { imp_from: texpr ann
+  ; imp_what: texpr ann option
+  ; imp_args: param ann list
+  ; imp_ret: texpr ann option
+  ; imp_as: string option
+  ; imp_dots: int
   }
 
 and catch =
@@ -119,7 +114,6 @@ and pattern =
   | IntPattern of int64
   | BoolPattern of bool
   | StrPattern of (string * string)
-  (* | SeqPattern of string *)
   | RangePattern of (int64 * int64)
   | TuplePattern of pattern ann list
   | ListPattern of pattern ann list

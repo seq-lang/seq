@@ -1,7 +1,8 @@
 from bisect import bisect_right, bisect_left, insort
 from collections import deque
 
-extend deque[T]:
+@extend
+class deque[T]:
     def _idx_check(self, idx: int, msg: str):
         if self._head == self._tail or idx >= len(self) or idx < 0:
             raise IndexError(msg)
@@ -28,16 +29,16 @@ DEFAULT_LOAD_FACTOR = 1000
 class SortedList[T]:
     _len: int
     _load: int
-    _lists: list[list[T]]
-    _maxes: list[T]
+    _lists: List[List[T]]
+    _maxes: List[T]
     _offset: int
     # _index:
 
     def __init__(self):
         self._len = 0
         self._load = DEFAULT_LOAD_FACTOR
-        self._lists = list[list[T]]()
-        self._maxes = list[T]()
+        self._lists = List[List[T]]()
+        self._maxes = List[T]()
         # self._index = []
         self._offset = 0
 

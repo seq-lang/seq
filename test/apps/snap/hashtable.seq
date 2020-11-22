@@ -29,9 +29,9 @@ class SNAPHashTable[K,V]:
             self.table[i] = (invalid_val, K())
 
     def __init__(self: SNAPHashTable[K,V], p: ptr[byte]):
-        cimport snap_hashtable_ptr(ptr[byte]) -> ptr[tuple[V,K]]
-        cimport snap_hashtable_len(ptr[byte]) -> int
-        cimport snap_hashtable_invalid_val(ptr[byte]) -> V
+        from C import snap_hashtable_ptr(ptr[byte]) -> ptr[tuple[V,K]]
+        from C import snap_hashtable_len(ptr[byte]) -> int
+        from C import snap_hashtable_invalid_val(ptr[byte]) -> V
         self.table = array[tuple[V,K]](snap_hashtable_ptr(p), snap_hashtable_len(p))
         self.invalid_val = snap_hashtable_invalid_val(p)
 

@@ -22,12 +22,12 @@ class GenomeIndex[K]:
 
     def __init__(self: GenomeIndex[K], dir: str):
         assert Kmer[16].len() <= K.len() <= Kmer[32].len()
-        cimport snap_index_from_dir(ptr[byte]) -> ptr[byte]
-        cimport snap_index_ht_count(ptr[byte]) -> int
-        cimport snap_index_ht_get(ptr[byte], int) -> ptr[byte]
-        cimport snap_index_overflow_ptr(ptr[byte]) -> ptr[u32]
-        cimport snap_index_overflow_len(ptr[byte]) -> int
-        cimport snap_index_count_of_bases(ptr[byte]) -> int
+        from C import snap_index_from_dir(ptr[byte]) -> ptr[byte]
+        from C import snap_index_ht_count(ptr[byte]) -> int
+        from C import snap_index_ht_get(ptr[byte], int) -> ptr[byte]
+        from C import snap_index_overflow_ptr(ptr[byte]) -> ptr[u32]
+        from C import snap_index_overflow_len(ptr[byte]) -> int
+        from C import snap_index_count_of_bases(ptr[byte]) -> int
 
         p = snap_index_from_dir(dir.c_str())
         assert p

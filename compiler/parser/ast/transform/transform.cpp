@@ -14,7 +14,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/stmt.h"
 #include "parser/ast/transform/transform.h"
 #include "parser/ast/transform/transform_ctx.h"
 #include "parser/ast/types.h"
@@ -26,20 +26,11 @@ using std::deque;
 using std::dynamic_pointer_cast;
 using std::function;
 using std::get;
-using std::make_shared;
-using std::make_unique;
 using std::move;
 using std::ostream;
 using std::pair;
-using std::set;
-using std::shared_ptr;
 using std::stack;
 using std::static_pointer_cast;
-using std::string;
-using std::unique_ptr;
-using std::unordered_map;
-using std::unordered_set;
-using std::vector;
 
 namespace seq {
 namespace ast {
@@ -72,7 +63,7 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s,
       stdlib->add(TransformItem::Type, name, canonical, true);
       cache->asts[canonical] =
           make_unique<ClassStmt>(true, canonical, vector<Param>(), vector<Param>(),
-                                 nullptr, vector<string>{"internal"});
+                                 nullptr, vector<string>{"internal", "tuple"});
       preamble->stmts.push_back(clone(cache->asts[canonical]));
     }
     for (auto &name : vector<string>{"Ptr", "Generator", "Optional", "Int", "UInt"}) {
@@ -85,7 +76,7 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s,
                               : nullptr,
                           nullptr});
       auto c = make_unique<ClassStmt>(true, canonical, move(generics), vector<Param>(),
-                                      nullptr, vector<string>{"internal"});
+                                      nullptr, vector<string>{"internal", "tuple"});
       if (name == "Generator")
         c->attributes["trait"] = "";
       preamble->stmts.push_back(clone(c));
@@ -99,8 +90,8 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s,
     stdlib->setFilename(internal);
     // Load core aliases
     auto code = "cobj = Ptr[byte]\n"
-                "@internal\ntype pyobj(p: cobj)\n"
-                "@internal\ntype str(len: int, ptr: Ptr[byte])\n";
+                "@internal\n@tuple\nclass pyobj:\n  p: cobj\n"
+                "@internal\n@tuple\nclass str:\n  len: int\n  ptr: Ptr[byte]\n";
     stmts = parseCode(internal, code);
     preamble->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
     // Load __internal__
@@ -188,74 +179,21 @@ void TransformVisitor::visit(const NoneExpr *expr) {
 }
 
 void TransformVisitor::visit(const IntExpr *expr) {
-  resultExpr = expr->clone();
-  auto i = (IntExpr *)resultExpr.get();
-  try {
-    if (expr->suffix == "u") {
-      i->intValue = std::stoull(expr->value, nullptr, 0);
-      i->sign = true;
-    } else if (expr->suffix == "") {
-      i->intValue = std::stoull(expr->value, nullptr, 0);
-    } else {
-      string fnName = format("__int_suffix_{}__", expr->suffix);
-      if (ctx->find(fnName))
-        resultExpr =
-            transform(N<CallExpr>(N<IdExpr>(fnName), N<StringExpr>(expr->value)));
-      else
-        error("unknown suffix '{}'", expr->suffix);
-    }
-  } catch (std::out_of_range &) {
-    error("integer {} out of range", expr->value);
+  resultExpr = transformInt(expr->value, expr->suffix);
+}
+
+void TransformVisitor::visit(const StringExpr *expr) {
+  if (expr->prefix == "f") {
+    resultExpr = parseFString(expr->value);
+  } else if (!expr->prefix.empty()) {
+    resultExpr = transform(
+        N<CallExpr>(N<IndexExpr>(N<DotExpr>(N<IdExpr>(".str"),
+                                            format("__prefix_{}__", expr->prefix)),
+                                 N<IntExpr>(expr->value.size())),
+                    N<StringExpr>(expr->value)));
+  } else {
+    resultExpr = expr->clone();
   }
-}
-
-void TransformVisitor::visit(const FStringExpr *expr) {
-  int braceCount = 0, braceStart = 0;
-  vector<ExprPtr> items;
-  for (int i = 0; i < expr->value.size(); i++) {
-    if (expr->value[i] == '{') {
-      if (braceStart < i)
-        items.push_back(N<StringExpr>(expr->value.substr(braceStart, i - braceStart)));
-      if (!braceCount)
-        braceStart = i + 1;
-      braceCount++;
-    } else if (expr->value[i] == '}') {
-      braceCount--;
-      if (!braceCount) {
-        string code = expr->value.substr(braceStart, i - braceStart);
-        auto offset = expr->getSrcInfo();
-        offset.col += i;
-        if (code.size() && code.back() == '=') {
-          code = code.substr(0, code.size() - 1);
-          items.push_back(N<StringExpr>(format("{}=", code)));
-        }
-        items.push_back(N<CallExpr>(N<IdExpr>("str"), parseExpr(code, offset)));
-      }
-      braceStart = i + 1;
-    }
-  }
-  if (braceCount)
-    error("f-string braces are not balanced");
-  if (braceStart != expr->value.size())
-    items.push_back(
-        N<StringExpr>(expr->value.substr(braceStart, expr->value.size() - braceStart)));
-  resultExpr = transform(
-      N<CallExpr>(N<DotExpr>(N<IdExpr>("str"), "cat"), N<ListExpr>(move(items))));
-}
-
-void TransformVisitor::visit(const KmerExpr *expr) {
-  resultExpr = transform(
-      N<CallExpr>(N<IndexExpr>(N<IdExpr>(".Kmer"), N<IntExpr>(expr->value.size())),
-                  N<StringExpr>(expr->value)));
-}
-
-void TransformVisitor::visit(const SeqExpr *expr) {
-  if (expr->prefix == "p")
-    resultExpr = transform(N<CallExpr>(N<IdExpr>(".pseq"), N<StringExpr>(expr->value)));
-  else if (expr->prefix == "s")
-    resultExpr = transform(N<CallExpr>(N<IdExpr>(".seq"), N<StringExpr>(expr->value)));
-  else
-    error("invalid prefix '{}'", expr->prefix);
 }
 
 void TransformVisitor::visit(const IdExpr *expr) {
@@ -287,17 +225,10 @@ void TransformVisitor::visit(const IdExpr *expr) {
     }
   seqassert(val->getBase().empty(), "a variable '{}' has invalid base {}", expr->value,
             val->getBase());
-
-  // Check if function references the outer class generic
-  // if (val->isGeneric() && ctx->bases.size() > 1) {
-  //   const auto &grandparent = ctx->bases[ctx->bases.size() - 2];
-  //   if (grandparent.isType() && grandparent.name == val->getBase())
-  //     ctx->bases.back().referencesParent = true;
-  // }
 }
 
-void TransformVisitor::visit(const UnpackExpr *expr) {
-  resultExpr = transform(N<CallExpr>(N<IdExpr>(".list"), clone(expr->what)));
+void TransformVisitor::visit(const StarExpr *expr) {
+  resultExpr = transform(N<CallExpr>(N<IdExpr>(".List"), clone(expr->what)));
 }
 
 void TransformVisitor::visit(const TupleExpr *expr) {
@@ -311,7 +242,7 @@ void TransformVisitor::visit(const ListExpr *expr) {
   ExprPtr var = N<IdExpr>(getTemporaryVar("list"));
   stmts.push_back(transform(N<AssignStmt>(
       clone(var),
-      N<CallExpr>(N<IdExpr>(".list"),
+      N<CallExpr>(N<IdExpr>(".List"),
                   expr->items.size() ? N<IntExpr>(expr->items.size()) : nullptr))));
   for (int i = 0; i < expr->items.size(); i++)
     stmts.push_back(transform(N<ExprStmt>(
@@ -322,7 +253,7 @@ void TransformVisitor::visit(const ListExpr *expr) {
 void TransformVisitor::visit(const SetExpr *expr) {
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(getTemporaryVar("set"));
-  stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".set")))));
+  stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Set")))));
   for (int i = 0; i < expr->items.size(); i++)
     stmts.push_back(transform(N<ExprStmt>(
         N<CallExpr>(N<DotExpr>(clone(var), "add"), clone(expr->items[i])))));
@@ -333,7 +264,7 @@ void TransformVisitor::visit(const DictExpr *expr) {
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(getTemporaryVar("dict"));
   stmts.push_back(
-      transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".dict")))));
+      transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Dict")))));
   for (int i = 0; i < expr->items.size(); i++)
     stmts.push_back(transform(N<ExprStmt>(
         N<CallExpr>(N<DotExpr>(clone(var), "__setitem__"), clone(expr->items[i].key),
@@ -349,14 +280,14 @@ void TransformVisitor::visit(const GeneratorExpr *expr) {
   ExprPtr var = N<IdExpr>(getTemporaryVar("gen"));
   if (expr->kind == GeneratorExpr::ListGenerator) {
     stmts.push_back(
-        transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".list")))));
+        transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".List")))));
     prev->stmts.push_back(
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "append"), clone(expr->expr))));
     stmts.push_back(transform(suite));
     resultExpr = N<StmtExpr>(move(stmts), transform(var));
   } else if (expr->kind == GeneratorExpr::SetGenerator) {
     stmts.push_back(
-        transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".set")))));
+        transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Set")))));
     prev->stmts.push_back(
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "add"), clone(expr->expr))));
     stmts.push_back(transform(suite));
@@ -376,7 +307,7 @@ void TransformVisitor::visit(const DictGeneratorExpr *expr) {
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(getTemporaryVar("gen"));
   stmts.push_back(
-      transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".dict")))));
+      transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Dict")))));
   prev->stmts.push_back(N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__setitem__"),
                                                 clone(expr->key), clone(expr->expr))));
   stmts.push_back(transform(suite));
@@ -447,23 +378,21 @@ void TransformVisitor::visit(const PipeExpr *expr) {
 
 void TransformVisitor::visit(const IndexExpr *expr) {
   ExprPtr e = nullptr;
-  if (auto i = CAST(expr->expr, IdExpr)) { // special case: tuples and functions
-    if (i->value == "tuple" || i->value == "Tuple") {
-      auto t = CAST(expr->index, TupleExpr);
-      int items = t ? t->items.size() : 1;
-      auto name = generateTupleStub(items);
-      e = transformType(N<IdExpr>(name));
-      e->markType();
-    } else if (i->value == "function" || i->value == "Function") {
-      auto t = CAST(expr->index, TupleExpr);
-      int items = t ? t->items.size() : 1;
-      auto name = generateFunctionStub(items);
-      e = transformType(N<IdExpr>(name));
-      e->markType();
-    }
-  }
-  if (!e)
+  if (expr->expr->isIdExpr("tuple") || expr->expr->isIdExpr("Tuple")) {
+    auto t = CAST(expr->index, TupleExpr);
+    int items = t ? t->items.size() : 1;
+    auto name = generateTupleStub(items);
+    e = transformType(N<IdExpr>(name));
+    e->markType();
+  } else if (expr->expr->isIdExpr("function") || expr->expr->isIdExpr("Function")) {
+    auto t = CAST(expr->index, TupleExpr);
+    int items = t ? t->items.size() : 1;
+    auto name = generateFunctionStub(items);
+    e = transformType(N<IdExpr>(name));
+    e->markType();
+  } else {
     e = transform(expr->expr, true);
+  }
   unordered_set<string> supported{"<",  "<=", ">", ">=", "==", "!=", "&&",
                                   "||", "+",  "-", "*",  "//", "%"};
   function<bool(const ExprPtr &, set<string> &)> isStatic =
@@ -499,8 +428,8 @@ void TransformVisitor::visit(const IndexExpr *expr) {
   auto transformGeneric = [&](const ExprPtr &i) -> ExprPtr {
     auto t = transform(i, true);
     set<string> captures;
-    if (isStatic(i, captures))
-      return N<StaticExpr>(clone(i), captures);
+    if (isStatic(t, captures))
+      return N<StaticExpr>(clone(t), move(captures));
     else
       return t;
   };
@@ -530,20 +459,32 @@ void TransformVisitor::visit(const IndexExpr *expr) {
     resultExpr = N<InstantiateExpr>(move(e), move(it));
   } else { // for some functions we might need to delay the instantiation because of
            // staticExprs...
-    resultExpr = N<IndexExpr>(move(e), transform(expr->index));
+    resultExpr =
+        N<IndexExpr>(move(e), it.size() == 1 ? move(it[0]) : N<TupleExpr>(move(it)));
   }
 }
 
 void TransformVisitor::visit(const CallExpr *expr) {
-  if (auto ix = CAST(expr->expr, IndexExpr))
-    if (auto id = CAST(ix->expr, IdExpr))
-      if (id->value == "__array__") {
-        if (expr->args.size() != 1)
-          error("__array__ requires only size argument");
-        resultExpr =
-            N<StackAllocExpr>(transformType(ix->index), transform(expr->args[0].value));
-        return;
+  if (expr->expr->isIdExpr("__ptr__")) {
+    if (expr->args.size() == 1) {
+      if (auto id = CAST(expr->args[0].value, IdExpr)) {
+        auto v = ctx->find(id->value);
+        if (v && v->isVar()) {
+          resultExpr = N<PtrExpr>(transform(expr->args[0].value));
+          return;
+        }
       }
+    }
+    error("__ptr__ requires a variable");
+  }
+  if (auto ix = CAST(expr->expr, IndexExpr))
+    if (ix->expr->isIdExpr("__array__")) {
+      if (expr->args.size() != 1)
+        error("__array__ requires only size argument");
+      resultExpr =
+          N<StackAllocExpr>(transformType(ix->index), transform(expr->args[0].value));
+      return;
+    }
   generateTupleStub(expr->args.size());
   vector<CallExpr::Arg> args;
   for (auto &i : expr->args)
@@ -593,17 +534,6 @@ void TransformVisitor::visit(const TypeOfExpr *expr) {
   resultExpr->markType();
 }
 
-void TransformVisitor::visit(const PtrExpr *expr) {
-  if (auto i = CAST(expr->expr, IdExpr)) {
-    auto v = ctx->find(i->value);
-    if (v && v->isVar()) {
-      resultExpr = N<PtrExpr>(transform(expr->expr));
-      return;
-    }
-  }
-  error("__ptr__ requires a variable");
-}
-
 void TransformVisitor::visit(const LambdaExpr *expr) {
   vector<StmtPtr> stmts;
   stmts.push_back(N<ReturnStmt>(clone(expr->expr)));
@@ -628,6 +558,24 @@ void TransformVisitor::visit(const SuiteStmt *stmt) {
   if (stmt->ownBlock)
     ctx->popBlock();
   resultStmt = N<SuiteStmt>(move(r), stmt->ownBlock);
+}
+
+void TransformVisitor::visit(const ContinueStmt *stmt) {
+  if (ctx->loops.empty())
+    error("continue outside of a loop");
+  resultStmt = stmt->clone();
+}
+
+void TransformVisitor::visit(const BreakStmt *stmt) {
+  if (ctx->loops.empty())
+    error("break outside of a loop");
+  if (!ctx->loops.back().empty()) {
+    resultStmt = N<SuiteStmt>(
+        transform(N<AssignStmt>(N<IdExpr>(ctx->loops.back()), N<BoolExpr>(false))),
+        stmt->clone());
+  } else {
+    resultStmt = stmt->clone();
+  }
 }
 
 void TransformVisitor::visit(const ExprStmt *stmt) {
@@ -705,10 +653,10 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
     } else {
       newRhs = clone(rhs);
     }
-    UnpackExpr *unpack = nullptr;
+    StarExpr *unpack = nullptr;
     int st = 0;
     for (; st < lefts.size(); st++) {
-      if (auto u = CAST(lefts[st], UnpackExpr)) {
+      if (auto u = CAST(lefts[st], StarExpr)) {
         unpack = u;
         break;
       }
@@ -726,7 +674,7 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
               stmts, force);
       st += 1;
       for (; st < lefts.size(); st++) {
-        if (CAST(lefts[st], UnpackExpr))
+        if (CAST(lefts[st], StarExpr))
           error(lefts[st], "multiple unpack expressions found");
         process(move(lefts[st]),
                 Nx<IndexExpr>(p, clone(newRhs), Nx<IntExpr>(p, -lefts.size() + st)),
@@ -794,17 +742,39 @@ void TransformVisitor::visit(const AssertStmt *stmt) {
 
 void TransformVisitor::visit(const WhileStmt *stmt) {
   ExprPtr cond = N<CallExpr>(N<DotExpr>(clone(stmt->cond), "__bool__"));
-  resultStmt = N<WhileStmt>(transform(cond), transform(stmt->suite));
+  string breakVar;
+  StmtPtr assign = nullptr;
+  if (stmt->elseSuite) {
+    breakVar = getTemporaryVar("no_break");
+    assign = N<AssignStmt>(N<IdExpr>(breakVar), N<BoolExpr>(true));
+  }
+  ctx->loops.push_back(breakVar);
+  StmtPtr whilestmt = N<WhileStmt>(transform(cond), transform(stmt->suite));
+  ctx->loops.pop_back();
+  if (stmt->elseSuite) {
+    resultStmt =
+        N<SuiteStmt>(move(assign), move(whilestmt),
+                     N<IfStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>(breakVar), "__bool__")),
+                               transform(stmt->elseSuite)));
+  } else {
+    resultStmt = move(whilestmt);
+  }
 }
 
 void TransformVisitor::visit(const ForStmt *stmt) {
   ExprPtr iter = N<CallExpr>(N<DotExpr>(clone(stmt->iter), "__iter__"));
+  string breakVar;
+  StmtPtr assign = nullptr, forstmt = nullptr;
+  if (stmt->elseSuite) {
+    breakVar = getTemporaryVar("no_break");
+    assign = N<AssignStmt>(N<IdExpr>(breakVar), N<BoolExpr>(true));
+  }
+  ctx->loops.push_back(breakVar);
   ctx->addBlock();
   if (auto i = CAST(stmt->var, IdExpr)) {
     string varName = i->value;
     ctx->add(TransformItem::Var, varName);
-    resultStmt =
-        N<ForStmt>(transform(stmt->var), transform(iter), transform(stmt->suite));
+    forstmt = N<ForStmt>(transform(stmt->var), transform(iter), transform(stmt->suite));
   } else {
     string varName = getTemporaryVar("for");
     ctx->add(TransformItem::Var, varName);
@@ -813,10 +783,20 @@ void TransformVisitor::visit(const ForStmt *stmt) {
     stmts.push_back(N<AssignStmt>(clone(stmt->var), clone(var), nullptr, false,
                                   /* force */ true));
     stmts.push_back(clone(stmt->suite));
-    resultStmt =
+    forstmt =
         N<ForStmt>(clone(var), transform(iter), transform(N<SuiteStmt>(move(stmts))));
   }
   ctx->popBlock();
+  ctx->loops.pop_back();
+
+  if (stmt->elseSuite) {
+    resultStmt =
+        N<SuiteStmt>(move(assign), move(forstmt),
+                     N<IfStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>(breakVar), "__bool__")),
+                               transform(stmt->elseSuite)));
+  } else {
+    resultStmt = move(forstmt);
+  }
 }
 
 void TransformVisitor::visit(const IfStmt *stmt) {
@@ -899,11 +879,43 @@ void TransformVisitor::visit(const GlobalStmt *stmt) {
 }
 
 void TransformVisitor::visit(const ImportStmt *stmt) {
-  auto file = ctx->findFile(stmt->from.first, ctx->getFilename());
+  if (ctx->getLevel() && ctx->bases.back().isType())
+    error("imports cannot be located within classes");
+
+  if (stmt->from->isIdExpr("C")) {
+    if (auto i = CAST(stmt->what, IdExpr))
+      resultStmt = parseCImport(i->value, stmt->args, stmt->ret, stmt->as);
+    else if (auto d = CAST(stmt->what, DotExpr))
+      resultStmt =
+          parseDylibCImport(d->expr, d->member, stmt->args, stmt->ret, stmt->as);
+    else
+      error("invalid C import");
+    return;
+  } else if (stmt->from->isIdExpr("python")) {
+    resultStmt = parsePythonImport(stmt->what, stmt->as);
+    return;
+  }
+
+  vector<string> dirs;
+  Expr *e = stmt->from.get();
+  while (auto d = dynamic_cast<DotExpr *>(e)) {
+    dirs.push_back(d->member);
+    e = d->expr.get();
+  }
+  if (e->getIdExpr().empty() || !stmt->args.empty() || stmt->ret ||
+      (stmt->what && stmt->what->getIdExpr().empty()))
+    error("invalid import statement");
+  dirs.push_back(e->getIdExpr());
+  // TODO: enforce locality with ".abc"
+  seqassert(stmt->dots >= 0, "invalid ImportStmt.dots");
+  for (int i = 0; i < stmt->dots - 1; i++)
+    dirs.push_back("..");
+  string path;
+  for (int i = dirs.size() - 1; i >= 0; i--)
+    path += dirs[i] + (i ? "/" : "");
+  auto file = ctx->findFile(path, ctx->getFilename());
   if (file.empty())
-    error("cannot locate import '{}'", stmt->from.first);
-  // LOG("{} -> {} [{}; {}]", stmt->from.first, file, ctx->getFilename(),
-  // stmt->getSrcInfo());
+    error("cannot locate import '{}'", stmt->from->toString());
 
   auto import = ctx->cache->imports.find(file);
   if (import == ctx->cache->imports.end()) {
@@ -914,26 +926,45 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
     resultStmt = N<SuiteStmt>(move(sn), true);
   }
 
-  if (!stmt->what.size()) {
-    ctx->add(TransformItem::Import,
-             stmt->from.second == "" ? stmt->from.first : stmt->from.second, file);
-  } else if (stmt->what.size() == 1 && stmt->what[0].first == "*") {
-    if (stmt->what[0].second != "")
+  if (!stmt->what) {
+    ctx->add(TransformItem::Import, stmt->as.empty() ? path : stmt->as, file);
+  } else if (stmt->what->isIdExpr("*")) {
+    if (!stmt->as.empty())
       error("cannot rename star-import");
     for (auto &i : *(import->second.ctx))
       if (i.second.front().second->isGlobal())
         ctx->add(i.first, i.second.front().second);
   } else {
-    for (auto &w : stmt->what) {
-      auto c = import->second.ctx->find(w.first);
-      if (!c || !c->isGlobal())
-        error("symbol '{}' not found in {}", w.first, file);
-      ctx->add(w.second == "" ? w.first : w.second, c);
-    }
+    auto i = stmt->what->getIdExpr();
+    auto c = import->second.ctx->find(i);
+    if (!c || !c->isGlobal())
+      error("symbol '{}' not found in {}", i, file);
+    ctx->add(stmt->as.empty() ? i : stmt->as, c);
   }
 }
 
 void TransformVisitor::visit(const FunctionStmt *stmt) {
+  if (in(stmt->attributes, ".python") || in(stmt->attributes, "python")) {
+    auto s = CAST(stmt->suite, ExprStmt);
+    if (!s) {
+      auto ss = CAST(stmt->suite, SuiteStmt);
+      if (ss && ss->stmts.size() == 1)
+        s = CAST(ss->stmts[0], ExprStmt);
+    }
+    if (!s || !CAST(s->expr, StringExpr))
+      error("malformed external definition");
+    string code = CAST(s->expr, StringExpr)->value;
+    vector<string> args;
+    for (auto &a : stmt->args)
+      args.push_back(a.name);
+    code = format("def {}({}):\n{}\n", stmt->name, fmt::join(args, ", "), code);
+    resultStmt = transform(N<SuiteStmt>(
+        N<ExprStmt>(N<CallExpr>(N<IdExpr>("_py_exec"), N<StringExpr>(code))),
+        N<ImportStmt>(N<IdExpr>("python"), N<IdExpr>(stmt->name), clone_nop(stmt->args),
+                      clone(stmt->ret))));
+    return;
+  }
+
   auto canonicalName = ctx->generateCanonicalName(stmt->name);
   bool isClassMember = ctx->getLevel() && ctx->bases.back().isType();
 
@@ -995,280 +1026,148 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
       attributes[".method"] = "";
   }
   resultStmt = N<FunctionStmt>(canonicalName, move(ret), move(newGenerics), move(args),
-                               move(suite), attributes);
+                               move(suite), move(attributes));
   ctx->cache->asts[canonicalName] = clone(resultStmt);
 }
 
 void TransformVisitor::visit(const ClassStmt *stmt) {
-  auto canonicalName = ctx->generateCanonicalName(stmt->name);
-  if (ctx->bases.size() && ctx->bases.back().isType())
-    error("nested classes are not supported");
+  bool extension = in(stmt->attributes, "extend");
+  if (extension && stmt->attributes.size() != 1)
+    error("extend cannot be mixed with other attributes");
+  if (extension && ctx->bases.size())
+    error("extend only valid at the toplevel");
 
-  if (!stmt->isRecord)
-    ctx->add(TransformItem::Type, stmt->name, canonicalName, ctx->isToplevel());
+  bool isRecord = in(stmt->attributes, "tuple") || stmt->isRecord;
+
+  string canonicalName;
+  const ClassStmt *originalAST = nullptr;
+  if (!extension) {
+    canonicalName = ctx->generateCanonicalName(stmt->name);
+    if (ctx->bases.size() && ctx->bases.back().isType())
+      error("nested classes are not supported");
+    if (!isRecord)
+      ctx->add(TransformItem::Type, stmt->name, canonicalName, ctx->isToplevel());
+    originalAST = stmt;
+  } else {
+    auto val = ctx->find(stmt->name);
+    if (!val && val->kind != TransformItem::Type)
+      error("cannot find type {} to extend", stmt->name);
+    canonicalName = val->canonicalName;
+    const auto &astIter = ctx->cache->asts.find(canonicalName);
+    assert(astIter != ctx->cache->asts.end());
+    originalAST = CAST(astIter->second, ClassStmt);
+    assert(originalAST);
+    if (originalAST->generics.size() != stmt->generics.size())
+      error("generics do not match");
+  }
+
   ctx->bases.push_back({canonicalName});
   ctx->bases.back().ast = N<IdExpr>(stmt->name);
-
   if (stmt->generics.size()) {
     vector<ExprPtr> genAst;
-    for (auto &g : stmt->generics)
-      genAst.push_back(N<IdExpr>(g.name));
+    for (int gi = 0; gi < originalAST->generics.size(); gi++)
+      genAst.push_back(N<IdExpr>(stmt->generics[gi].name));
     ctx->bases.back().ast =
         N<IndexExpr>(N<IdExpr>(stmt->name), N<TupleExpr>(move(genAst)));
   }
 
   ctx->addBlock();
   vector<Param> newGenerics;
-  for (auto &g : stmt->generics) {
-    if (g.deflt)
+  for (int gi = 0; gi < originalAST->generics.size(); gi++) {
+    if (originalAST->generics[gi].deflt)
       error("default generics not supported in types");
-    ctx->add(TransformItem::Type, g.name, "", false, true, g.type != nullptr);
-    newGenerics.push_back({g.name, transformType(g.type), transform(g.deflt, true)});
+    ctx->add(TransformItem::Type, stmt->generics[gi].name, "", false, true,
+             originalAST->generics[gi].type != nullptr);
+    newGenerics.push_back({stmt->generics[gi].name,
+                           transformType(originalAST->generics[gi].type),
+                           transform(originalAST->generics[gi].deflt, true)});
   }
-  unordered_set<string> seenMembers;
   vector<Param> args;
-  for (auto &a : stmt->args) {
-    seqassert(a.type, "no type provided for '{}'", a.name);
-    if (seenMembers.find(a.name) != seenMembers.end())
-      error(a.type, "'{}' declared twice", a.name);
-    seenMembers.insert(a.name);
-    args.push_back({a.name, transformType(a.type), nullptr});
-  }
-  if (stmt->isRecord) {
-    ctx->popBlock();
-
-    auto old = TransformContext::Base{
-        ctx->bases.back().name, clone(ctx->bases.back().ast), ctx->bases.back().parent};
-    ctx->bases.pop_back();
-    ctx->add(TransformItem::Type, stmt->name, canonicalName, ctx->isToplevel());
-    ctx->bases.push_back({old.name, move(old.ast), old.parent});
-    ctx->addBlock();
-    for (auto &g : stmt->generics)
-      ctx->add(TransformItem::Type, g.name, "", false, true, bool(g.type));
-  }
-
-  ctx->cache->asts[canonicalName] =
-      N<ClassStmt>(stmt->isRecord, canonicalName, move(newGenerics), move(args),
-                   N<SuiteStmt>(vector<StmtPtr>()), stmt->attributes);
-
-  vector<StmtPtr> fns;
-  ExprPtr codeType = clone(ctx->bases.back().ast);
-  vector<string> magics{};
-  if (!in(stmt->attributes, "internal")) {
-    if (!stmt->isRecord) {
-      magics = {"new", "init", "raw"};
-      if (in(stmt->attributes, "total_ordering"))
-        for (auto &i : {"eq", "ne", "lt", "gt", "le", "ge"})
-          magics.push_back(i);
-      if (!in(stmt->attributes, "no_pickle"))
-        for (auto &i : {"pickle", "unpickle"})
-          magics.push_back(i);
-    } else {
-      magics = {"new", "str", "len", "hash"};
-      if (!in(stmt->attributes, "no_total_ordering"))
-        for (auto &i : {"eq", "ne", "lt", "gt", "le", "ge"})
-          magics.push_back(i);
-      if (!in(stmt->attributes, "no_pickle"))
-        for (auto &i : {"pickle", "unpickle"})
-          magics.push_back(i);
-      if (!in(stmt->attributes, "no_container"))
-        for (auto &i : {"iter", "getitem", "contains"})
-          magics.push_back(i);
-      if (!in(stmt->attributes, "no_python"))
-        for (auto &i : {"to_py", "from_py"})
-          magics.push_back(i);
-    }
-  }
-  for (auto &m : magics)
-    fns.push_back(codegenMagic(m, ctx->bases.back().ast, stmt->args, stmt->isRecord));
-  fns.push_back(clone(stmt->suite));
   auto suite = N<SuiteStmt>(vector<StmtPtr>{});
-  for (auto &s : fns)
-    for (auto &sp : addMethods(s))
+  if (!extension) {
+    unordered_set<string> seenMembers;
+    for (auto &a : stmt->args) {
+      seqassert(a.type, "no type provided for '{}'", a.name);
+      if (seenMembers.find(a.name) != seenMembers.end())
+        error(a.type, "'{}' declared twice", a.name);
+      seenMembers.insert(a.name);
+      args.push_back({a.name, transformType(a.type), nullptr});
+    }
+    if (isRecord) {
+      ctx->popBlock();
+
+      auto old =
+          TransformContext::Base{ctx->bases.back().name, clone(ctx->bases.back().ast),
+                                 ctx->bases.back().parent};
+      ctx->bases.pop_back();
+      ctx->add(TransformItem::Type, stmt->name, canonicalName, ctx->isToplevel());
+      ctx->bases.push_back({old.name, move(old.ast), old.parent});
+      ctx->addBlock();
+      for (int gi = 0; gi < originalAST->generics.size(); gi++)
+        ctx->add(TransformItem::Type, stmt->generics[gi].name, "", false, true,
+                 originalAST->generics[gi].type != nullptr);
+    }
+
+    ctx->cache->asts[canonicalName] = N<ClassStmt>(
+        isRecord, canonicalName, move(newGenerics), move(args),
+        N<SuiteStmt>(vector<StmtPtr>()), map<string, string>(stmt->attributes));
+
+    vector<StmtPtr> fns;
+    ExprPtr codeType = clone(ctx->bases.back().ast);
+    vector<string> magics{};
+    if (!in(stmt->attributes, "internal")) {
+      if (!isRecord) {
+        magics = {"new", "init", "raw"};
+        if (in(stmt->attributes, "total_ordering"))
+          for (auto &i : {"eq", "ne", "lt", "gt", "le", "ge"})
+            magics.push_back(i);
+        if (!in(stmt->attributes, "no_pickle"))
+          for (auto &i : {"pickle", "unpickle"})
+            magics.push_back(i);
+      } else {
+        magics = {"new", "str", "len", "hash"};
+        if (!in(stmt->attributes, "no_total_ordering"))
+          for (auto &i : {"eq", "ne", "lt", "gt", "le", "ge"})
+            magics.push_back(i);
+        if (!in(stmt->attributes, "no_pickle"))
+          for (auto &i : {"pickle", "unpickle"})
+            magics.push_back(i);
+        if (!in(stmt->attributes, "no_container"))
+          for (auto &i : {"iter", "getitem", "contains"})
+            magics.push_back(i);
+        if (!in(stmt->attributes, "no_python"))
+          for (auto &i : {"to_py", "from_py"})
+            magics.push_back(i);
+      }
+    }
+    for (auto &m : magics)
+      fns.push_back(codegenMagic(m, ctx->bases.back().ast, stmt->args, isRecord));
+    fns.push_back(clone(stmt->suite));
+    for (auto &s : fns)
+      for (auto &sp : addMethods(s))
+        suite->stmts.push_back(move(sp));
+  } else {
+    for (auto &sp : addMethods(stmt->suite))
       suite->stmts.push_back(move(sp));
+  }
   ctx->bases.pop_back();
   ctx->popBlock();
 
-  auto c = static_cast<ClassStmt *>(ctx->cache->asts[canonicalName].get());
-  c->suite = move(suite);
-  string parentFunc = "";
-  for (int i = int(ctx->bases.size()) - 1; i >= 0; i--)
-    if (!ctx->bases[i].isType()) {
-      parentFunc = ctx->bases[i].name;
-      break;
-    }
-  c->attributes[".parentFunc"] = parentFunc;
-  resultStmt = clone(ctx->cache->asts[canonicalName]);
-}
-
-void TransformVisitor::visit(const ExtendStmt *stmt) {
-  if (ctx->bases.size())
-    error("extend only valid at the toplevel");
-
-  ExprPtr type = nullptr;
-  vector<string> generics;
-  vector<ExprPtr> genericAst;
-  if (auto e = CAST(stmt->type, IndexExpr)) {
-    type = transformType(e->expr);
-    if (auto t = CAST(e->index, TupleExpr)) {
-      for (auto &ti : t->items)
-        if (auto s = CAST(ti, IdExpr)) {
-          generics.push_back(s->value);
-          genericAst.push_back(clone(ti));
-        } else {
-          error(ti, "invalid generic identifier");
-        }
-    } else if (auto i = CAST(e->index, IdExpr)) {
-      generics.push_back(i->value);
-      genericAst.push_back(i->clone());
-    } else {
-      error(e->index, "invalid generic identifier");
-    }
+  if (!extension) {
+    auto c = static_cast<ClassStmt *>(ctx->cache->asts[canonicalName].get());
+    c->suite = move(suite);
+    string parentFunc = "";
+    for (int i = int(ctx->bases.size()) - 1; i >= 0; i--)
+      if (!ctx->bases[i].isType()) {
+        parentFunc = ctx->bases[i].name;
+        break;
+      }
+    c->attributes[".parentFunc"] = parentFunc;
+    resultStmt = clone(ctx->cache->asts[canonicalName]);
   } else {
-    type = transformType(stmt->type);
+    resultStmt = N<ClassStmt>(isRecord, canonicalName, move(newGenerics), move(args),
+                              move(suite), map<string, string>(stmt->attributes));
   }
-  string canonicalName;
-  if (auto i = CAST(type, IdExpr))
-    canonicalName = i->value;
-  else
-    error("'{}' is not a valid type", type->toString());
-
-  const auto &astIter = ctx->cache->asts.find(canonicalName);
-  assert(astIter != ctx->cache->asts.end());
-  const auto *ast = CAST(astIter->second, ClassStmt);
-  assert(ast);
-
-  ctx->bases.push_back({canonicalName});
-  ctx->addBlock();
-  ctx->bases.back().ast = N<IdExpr>(ctx->cache->reverseLookup[canonicalName]);
-  if (genericAst.size())
-    ctx->bases.back().ast =
-        N<IndexExpr>(N<IdExpr>(ctx->cache->reverseLookup[canonicalName]),
-                     N<TupleExpr>(move(genericAst)));
-  if (generics.size() != ast->generics.size())
-    error("expected {} generics, got {}", ast->generics.size(), generics.size());
-  for (int i = 0; i < generics.size(); i++)
-    ctx->add(TransformItem::Type, generics[i], "", false, true,
-             ast->generics[i].type != nullptr);
-
-  auto fns = addMethods(stmt->suite);
-  ctx->bases.pop_back();
-  ctx->popBlock();
-
-  auto e = N<ExtendStmt>(N<IdExpr>(canonicalName), N<SuiteStmt>(move(fns)));
-  e->generics = generics;
-  resultStmt = move(e);
-}
-
-void TransformVisitor::visit(const ExternImportStmt *stmt) {
-  if (stmt->lang == "c" && stmt->from) {
-    vector<StmtPtr> stmts;
-    stmts.push_back(N<AssignStmt>(N<IdExpr>("fptr"),
-                                  N<CallExpr>(N<IdExpr>("_dlsym"), clone(stmt->from),
-                                              N<StringExpr>(stmt->name.first))));
-    vector<ExprPtr> args;
-    args.push_back(stmt->ret ? clone(stmt->ret) : N<IdExpr>("void"));
-    for (auto &a : stmt->args)
-      args.push_back(clone(a.type));
-    stmts.push_back(N<AssignStmt>(
-        N<IdExpr>("f"),
-        N<CallExpr>(N<IndexExpr>(N<IdExpr>("Function"), N<TupleExpr>(move(args))),
-                    N<IdExpr>("fptr"))));
-    bool isVoid = true;
-    if (stmt->ret) {
-      if (auto f = CAST(stmt->ret, IdExpr))
-        isVoid = f->value == "void";
-      else
-        isVoid = false;
-    }
-    args.clear();
-    for (int i = 0; i < stmt->args.size(); i++)
-      args.push_back(
-          N<IdExpr>(stmt->args[i].name != "" ? stmt->args[i].name : format(".a{}", i)));
-    auto call = N<CallExpr>(N<IdExpr>("f"), move(args));
-    if (!isVoid)
-      stmts.push_back(N<ReturnStmt>(move(call)));
-    else
-      stmts.push_back(N<ExprStmt>(move(call)));
-    vector<Param> params;
-    for (int i = 0; i < stmt->args.size(); i++)
-      params.push_back(
-          {stmt->args[i].name != "" ? stmt->args[i].name : format(".a{}", i),
-           clone(stmt->args[i].type)});
-    resultStmt = transform(
-        N<FunctionStmt>(stmt->name.second != "" ? stmt->name.second : stmt->name.first,
-                        clone(stmt->ret), vector<Param>(), move(params),
-                        N<SuiteStmt>(move(stmts)), vector<string>()));
-  } else if (stmt->lang == "c") {
-    auto canonicalName = ctx->generateCanonicalName(stmt->name.first);
-    if (ctx->getLevel() && ctx->bases.back().isType())
-      error("external functions cannot be class methods");
-    if (!stmt->ret)
-      error("expected return type");
-    vector<Param> args;
-    vector<TypePtr> argTypes{};
-    generateFunctionStub(stmt->args.size() + 1);
-    for (int ai = 0; ai < stmt->args.size(); ai++) {
-      if (stmt->args[ai].deflt)
-        error("default arguments not supported here");
-      if (!stmt->args[ai].type)
-        error("type for '{}' not specified", stmt->args[ai].name);
-      args.push_back(
-          {stmt->args[ai].name.empty() ? format(".a{}", ai) : stmt->args[ai].name,
-           transformType(stmt->args[ai].type), nullptr});
-    }
-    ctx->add(TransformItem::Func,
-             stmt->name.second != "" ? stmt->name.second : stmt->name.first,
-             canonicalName, ctx->isToplevel());
-    resultStmt =
-        N<FunctionStmt>(canonicalName, transformType(stmt->ret), vector<Param>(),
-                        move(args), nullptr, vector<string>{".c"});
-    ctx->cache->asts[canonicalName] = clone(resultStmt);
-  } else if (stmt->lang == "py") {
-    vector<StmtPtr> stmts;
-    string from = "";
-    if (auto i = CAST(stmt->from, IdExpr))
-      from = i->value;
-    else
-      error("invalid pyimport query");
-    auto call = N<CallExpr>(N<DotExpr>(N<IndexExpr>(N<CallExpr>(N<IdExpr>("_py_import"),
-                                                                N<StringExpr>(from)),
-                                                    N<StringExpr>(stmt->name.first)),
-                                       "call"),
-                            N<CallExpr>(N<DotExpr>(N<IdExpr>("x"), "__to_py__")));
-    bool isVoid = true;
-    if (stmt->ret) {
-      if (auto f = CAST(stmt->ret, IdExpr))
-        isVoid = f->value == "void";
-      else
-        isVoid = false;
-    }
-    if (!isVoid)
-      stmts.push_back(N<ReturnStmt>(
-          N<CallExpr>(N<DotExpr>(clone(stmt->ret), "__from_py__"), move(call))));
-    else
-      stmts.push_back(N<ExprStmt>(move(call)));
-    vector<Param> params;
-    params.push_back({"x", nullptr, nullptr});
-    resultStmt = transform(
-        N<FunctionStmt>(stmt->name.second != "" ? stmt->name.second : stmt->name.first,
-                        clone(stmt->ret), vector<Param>(), move(params),
-                        N<SuiteStmt>(move(stmts)), vector<string>{"pyhandle"}));
-  } else {
-    error("language '{}' not supported", stmt->lang);
-  }
-}
-
-void TransformVisitor::visit(const PyDefStmt *stmt) {
-  vector<string> args;
-  for (auto &a : stmt->args)
-    args.push_back(a.name);
-  string code =
-      format("def {}({}):\n{}\n", stmt->name, fmt::join(args, ", "), stmt->code);
-  resultStmt = transform(
-      N<SuiteStmt>(N<ExprStmt>(N<CallExpr>(N<IdExpr>("_py_exec"), N<StringExpr>(code))),
-                   N<ExternImportStmt>(make_pair(stmt->name, ""), N<IdExpr>("__main__"),
-                                       clone(stmt->ret), vector<Param>(), "py")));
 }
 
 void TransformVisitor::visit(const TuplePattern *pat) {
@@ -1298,6 +1197,74 @@ void TransformVisitor::visit(const GuardedPattern *pat) {
 void TransformVisitor::visit(const BoundPattern *pat) {
   resultPattern = N<BoundPattern>(pat->var, transform(pat->pattern));
   ctx->add(TransformItem::Var, pat->var);
+}
+
+/*************************************************************************************/
+
+ExprPtr TransformVisitor::transformInt(string value, string suffix) {
+  auto isdigit = [](const string &s) {
+    for (auto c : s)
+      if (!std::isdigit(c))
+        return false;
+    return true;
+  };
+  auto to_int = [](string s) {
+    if (startswith(s, "0b") || startswith(s, "0B"))
+      return std::stoull(s.substr(2), nullptr, 2);
+    return std::stoull(s, nullptr, 0);
+  };
+  try {
+    if (suffix.empty())
+      return N<IntExpr>(to_int(value));
+    if (suffix == "u")
+      return N<IntExpr>(to_int(value), true);
+    if (suffix[0] == 'u' && isdigit(suffix.substr(1)))
+      return transform(N<CallExpr>(
+          N<IndexExpr>(N<IdExpr>(".UInt"), N<IntExpr>(std::stoi(suffix.substr(1)))),
+          N<StringExpr>(value)));
+    if (suffix[0] == 'i' && isdigit(suffix.substr(1)))
+      return transform(N<CallExpr>(
+          N<IndexExpr>(N<IdExpr>(".Int"), N<IntExpr>(std::stoi(suffix.substr(1)))),
+          N<StringExpr>(value)));
+  } catch (std::out_of_range &) {
+    error("integer {} out of range", value);
+  }
+  return transform(
+      N<CallExpr>(N<DotExpr>(N<IdExpr>(".int"), format("__suffix_{}__", suffix)),
+                  N<StringExpr>(value)));
+}
+
+ExprPtr TransformVisitor::parseFString(string value) {
+  int braceCount = 0, braceStart = 0;
+  vector<ExprPtr> items;
+  for (int i = 0; i < value.size(); i++) {
+    if (value[i] == '{') {
+      if (braceStart < i)
+        items.push_back(N<StringExpr>(value.substr(braceStart, i - braceStart)));
+      if (!braceCount)
+        braceStart = i + 1;
+      braceCount++;
+    } else if (value[i] == '}') {
+      braceCount--;
+      if (!braceCount) {
+        string code = value.substr(braceStart, i - braceStart);
+        auto offset = getSrcInfo();
+        offset.col += i;
+        if (code.size() && code.back() == '=') {
+          code = code.substr(0, code.size() - 1);
+          items.push_back(N<StringExpr>(format("{}=", code)));
+        }
+        items.push_back(N<CallExpr>(N<IdExpr>("str"), parseExpr(code, offset)));
+      }
+      braceStart = i + 1;
+    }
+  }
+  if (braceCount)
+    error("f-string braces are not balanced");
+  if (braceStart != value.size())
+    items.push_back(N<StringExpr>(value.substr(braceStart, value.size() - braceStart)));
+  return transform(
+      N<CallExpr>(N<DotExpr>(N<IdExpr>("str"), "cat"), N<ListExpr>(move(items))));
 }
 
 string TransformVisitor::generateFunctionStub(int len) {
@@ -1338,7 +1305,7 @@ string TransformVisitor::generateFunctionStub(int len) {
 
     StmtPtr stmt = make_unique<ClassStmt>(true, typeName, move(generics),
                                           clone_nop(args), N<SuiteStmt>(move(fns)),
-                                          vector<string>{"internal", "trait"});
+                                          vector<string>{"internal", "trait", "tuple"});
     stmt->setSrcInfo(ctx->getGeneratedPos());
     TransformVisitor(make_shared<TransformContext>("<generated>", ctx->cache))
         .transform(stmt);
@@ -1357,7 +1324,7 @@ string TransformVisitor::generateTupleStub(int len) {
         args.push_back(Param{format("a{0}", i), N<IdExpr>(format("T{}", i)), nullptr});
       }
       StmtPtr stmt = make_unique<ClassStmt>(true, typeName, move(generics), move(args),
-                                            nullptr, vector<string>{});
+                                            nullptr, vector<string>{"tuple"});
       stmt->setSrcInfo(ctx->getGeneratedPos());
       TransformVisitor(make_shared<TransformContext>("<generated>", ctx->cache))
           .transform(stmt);
@@ -1366,7 +1333,7 @@ string TransformVisitor::generateTupleStub(int len) {
   return fmt::format(".Tuple.{}", len);
 }
 
-StmtPtr TransformVisitor::getGeneratorBlock(const vector<GeneratorExpr::Body> &loops,
+StmtPtr TransformVisitor::getGeneratorBlock(const vector<GeneratorBody> &loops,
                                             SuiteStmt *&prev) {
   StmtPtr suite = N<SuiteStmt>(), newSuite = nullptr;
   prev = (SuiteStmt *)suite.get();
@@ -1395,6 +1362,7 @@ vector<StmtPtr> TransformVisitor::addMethods(const StmtPtr &s) {
     for (auto &ss : sp->stmts)
       for (auto &u : addMethods(ss))
         v.push_back(move(u));
+  } else if (CAST(s, ExprStmt) && CAST(CAST(s, ExprStmt)->expr, StringExpr)) {
   } else if (!CAST(s, FunctionStmt)) {
     error(s, "expected a function (only functions are allowed within type "
              "definitions)");
@@ -1595,8 +1563,9 @@ StmtPtr TransformVisitor::codegenMagic(const string &op, const ExprPtr &typExpr,
     seqassert(false, "invalid magic {}", op);
   }
 #undef I
-  auto t = make_unique<FunctionStmt>(format("__{}__", op), move(ret), vector<Param>{},
-                                     move(fargs), N<SuiteStmt>(move(stmts)), attrs);
+  auto t =
+      make_unique<FunctionStmt>(format("__{}__", op), move(ret), vector<Param>{},
+                                move(fargs), N<SuiteStmt>(move(stmts)), move(attrs));
   t->setSrcInfo(ctx->getGeneratedPos());
   return t;
 }
@@ -1624,6 +1593,91 @@ ExprPtr TransformVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
   prependStmts->push_back(move(fs));
 
   return N<CallExpr>(N<IdExpr>(name), move(args));
+}
+
+StmtPtr TransformVisitor::parseCImport(string name, const vector<Param> &args,
+                                       const ExprPtr &ret, string altName) {
+  auto canonicalName = ctx->generateCanonicalName(name);
+  vector<Param> fnArgs;
+  vector<TypePtr> argTypes{};
+  generateFunctionStub(args.size() + 1);
+  for (int ai = 0; ai < args.size(); ai++) {
+    if (args[ai].deflt)
+      error("default arguments not supported here");
+    if (!args[ai].type)
+      error("type for '{}' not specified", args[ai].name);
+    fnArgs.push_back({format(".a{}", ai), transformType(args[ai].type), nullptr});
+  }
+  ctx->add(TransformItem::Func, altName.empty() ? name : altName, canonicalName,
+           ctx->isToplevel());
+  auto f = N<FunctionStmt>(
+      canonicalName, ret ? transformType(ret) : transformType(N<IdExpr>("void")),
+      vector<Param>(), move(fnArgs), nullptr, vector<string>{".c"});
+  ctx->cache->asts[canonicalName] = clone(f);
+  return f;
+}
+
+StmtPtr TransformVisitor::parseDylibCImport(const ExprPtr &dylib, string name,
+                                            const vector<Param> &args,
+                                            const ExprPtr &ret, string altName) {
+  vector<StmtPtr> stmts;
+  stmts.push_back(
+      N<AssignStmt>(N<IdExpr>("fptr"), N<CallExpr>(N<IdExpr>("_dlsym"), clone(dylib),
+                                                   N<StringExpr>(name))));
+  vector<ExprPtr> fnArgs;
+  fnArgs.push_back(ret ? clone(ret) : N<IdExpr>("void"));
+  for (auto &a : args)
+    fnArgs.push_back(clone(a.type));
+  stmts.push_back(N<AssignStmt>(
+      N<IdExpr>("f"),
+      N<CallExpr>(N<IndexExpr>(N<IdExpr>("Function"), N<TupleExpr>(move(fnArgs))),
+                  N<IdExpr>("fptr"))));
+  bool isVoid = true;
+  if (ret) {
+    if (auto f = CAST(ret, IdExpr))
+      isVoid = f->value == "void";
+    else
+      isVoid = false;
+  }
+  fnArgs.clear();
+  for (int i = 0; i < args.size(); i++)
+    fnArgs.push_back(N<IdExpr>(args[i].name != "" ? args[i].name : format(".a{}", i)));
+  auto call = N<CallExpr>(N<IdExpr>("f"), move(fnArgs));
+  if (!isVoid)
+    stmts.push_back(N<ReturnStmt>(move(call)));
+  else
+    stmts.push_back(N<ExprStmt>(move(call)));
+  vector<Param> params;
+  for (int i = 0; i < args.size(); i++)
+    params.push_back(
+        {args[i].name != "" ? args[i].name : format(".a{}", i), clone(args[i].type)});
+  return transform(N<FunctionStmt>(altName.empty() ? name : altName, clone(ret),
+                                   vector<Param>(), move(params),
+                                   N<SuiteStmt>(move(stmts)), vector<string>()));
+}
+
+// from python import X.Y -> import X; from X import Y ... ?
+// from python import Y -> get Y? works---good! not: import Y; return import
+StmtPtr TransformVisitor::parsePythonImport(const ExprPtr &what, string as) {
+  vector<StmtPtr> stmts;
+  string from = "";
+
+  vector<string> dirs;
+  Expr *e = what.get();
+  while (auto d = dynamic_cast<DotExpr *>(e)) {
+    dirs.push_back(d->member);
+    e = d->expr.get();
+  }
+  if (e->getIdExpr().empty())
+    error("invalid import statement");
+  dirs.push_back(e->getIdExpr());
+  string name = dirs[0], lib;
+  for (int i = dirs.size() - 1; i > 0; i--)
+    lib += dirs[i] + (i > 1 ? "." : "");
+  return transform(N<AssignStmt>(
+      N<IdExpr>(name), N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_py_import"),
+                                   N<StringExpr>(name), N<StringExpr>(lib))));
+  // imp = pyobj._py_import("foo", "lib")
 }
 
 } // namespace ast

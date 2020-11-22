@@ -15,10 +15,12 @@
 #include <caml/mlvalues.h>
 
 #include "lang/seq.h"
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/ast.h"
 #include "parser/common.h"
 
 using namespace std;
+
+extern int __ocaml_time__;
 
 #define OcamlReturn(result)                                                            \
   do {                                                                                 \
@@ -94,7 +96,7 @@ unique_ptr<Expr> parse_expr(value val) {
   case 3:
     Return(Float, Double_val(Field(t, 0)), parse_string(Field(t, 1)));
   case 4:
-    Return(String, parse_string(t));
+    Return(String, parse_string(Field(t, 1)), parse_string(Field(t, 0)));
   case 5:
     Return(Id, parse_string(t));
   case 6:
@@ -108,7 +110,7 @@ unique_ptr<Expr> parse_expr(value val) {
   case 10:
     Return(Dict, parse_list(t, [](value in) {
              CAMLparam1(in);
-             OcamlReturn((DictExpr::KeyValue{parse_expr(Field(in, 0)),
+             OcamlReturn((DictExpr::DictItem{parse_expr(Field(in, 0)),
                                              parse_expr(Field(in, 1))}));
            }));
   case 11:
@@ -117,7 +119,7 @@ unique_ptr<Expr> parse_expr(value val) {
   case 14: {
     f0 = Field(t, 0);
     f1 = Field(t, 1);
-    vector<GeneratorExpr::Body> loops;
+    vector<GeneratorBody> loops;
     while (true) {
       f1 = Field(f1, 1); // TODO: ignore position here for now
       loops.push_back({parse_expr(Field(f1, 0)), parse_expr(Field(f1, 1)),
@@ -126,9 +128,9 @@ unique_ptr<Expr> parse_expr(value val) {
         break;
       f1 = Field(Field(f1, 3), 0);
     }
-    if (tv < 17)
-      Return(Generator, static_cast<GeneratorExpr::Kind>(tv - 14), parse_expr(f0),
-             move(loops));
+    if (tv < 14)
+      Return(Generator, static_cast<GeneratorExpr::GeneratorKind>(tv - 11),
+             parse_expr(f0), move(loops));
     else
       Return(DictGenerator, parse_expr(Field(f0, 0)), parse_expr(Field(f0, 1)),
              move(loops));
@@ -202,22 +204,20 @@ unique_ptr<Pattern> parse_pattern(value val) {
   case 2:
     Return(Bool, Bool_val(t));
   case 3:
-    Return(Str, parse_string(t));
+    Return(Str, parse_string(Field(t, 1)), parse_string(Field(t, 0)));
   case 4:
-    Return(Seq, parse_string(t));
-  case 5:
     Return(Range, Int64_val(Field(t, 0)), Int64_val(Field(t, 1)));
-  case 6:
+  case 5:
     Return(Tuple, parse_list(t, parse_pattern));
-  case 7:
+  case 6:
     Return(List, parse_list(t, parse_pattern));
-  case 8:
+  case 7:
     Return(Or, parse_list(t, parse_pattern));
-  case 9:
+  case 8:
     Return(Wildcard, parse_optional(t, parse_string));
-  case 10:
+  case 9:
     Return(Guarded, parse_pattern(Field(t, 0)), parse_expr(Field(t, 1)));
-  case 11:
+  case 10:
     Return(Bound, parse_string(Field(t, 0)), parse_pattern(Field(t, 1)));
   default:
     seq::compilationError("[internal] tag variant mismatch ...");
@@ -298,7 +298,9 @@ unique_ptr<Stmt> parse_stmt(value val) {
            }));
   case 14:
     Return(Import, parse_expr(Field(t, 0)), parse_optional(Field(t, 1), parse_expr),
-           parse_optional(Field(t, 1), parse_string));
+           parse_list(Field(t, 2), parse_param),
+           parse_optional(Field(t, 3), parse_expr),
+           parse_optional(Field(t, 4), parse_string), Int_val(Field(t, 5)));
   case 15:
     Return(Try, parse_stmt_list(Field(t, 0)),
            parse_list(Field(t, 1),
@@ -350,6 +352,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
 
 unique_ptr<SuiteStmt> ocamlParse(string file, string code, int line_offset,
                                  int col_offset) {
+  bool debug = __dbg_level__ > 7;
   CAMLparam0();
   CAMLlocal3(p1, f, c);
   static value *closure_f = nullptr;
@@ -357,8 +360,8 @@ unique_ptr<SuiteStmt> ocamlParse(string file, string code, int line_offset,
     closure_f = (value *)caml_named_value("menhir_parse");
   f = caml_copy_string(file.c_str());
   c = caml_copy_string(code.c_str());
-  value args[] = {f, c, Val_int(line_offset), Val_int(col_offset)};
-  p1 = caml_callbackN(*closure_f, 4, args);
+  value args[] = {f, c, Val_int(line_offset), Val_int(col_offset), Val_int(debug)};
+  p1 = caml_callbackN(*closure_f, 5, args);
   OcamlReturn(make_unique<SuiteStmt>(parse_optional(p1, [](value v) {
     CAMLparam1(v);
     return parse_list(v, parse_stmt);
@@ -381,12 +384,20 @@ SEQ_FUNC CAMLprim value seq_ocaml_exception(value msg, value file, value line,
 
 unique_ptr<SuiteStmt> parseCode(string file, string code, int line_offset,
                                 int col_offset) {
+  using namespace std::chrono;
   static bool initialized(false);
   if (!initialized) {
+    auto t = high_resolution_clock::now();
     initOcaml();
+    __ocaml_time__ +=
+        duration_cast<milliseconds>(high_resolution_clock::now() - t).count();
     initialized = true;
   }
-  return ocamlParse(file, code, line_offset, col_offset);
+  auto t = high_resolution_clock::now();
+  auto s = ocamlParse(file, code, line_offset, col_offset);
+  __ocaml_time__ +=
+      duration_cast<milliseconds>(high_resolution_clock::now() - t).count();
+  return s;
 }
 
 unique_ptr<Expr> parseExpr(string code, const seq::SrcInfo &offset) {

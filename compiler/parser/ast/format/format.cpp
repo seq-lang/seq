@@ -6,14 +6,11 @@
 #include "parser/ast/format/format.h"
 
 using fmt::format;
-using std::string;
-using std::unordered_set;
-using std::vector;
 
 namespace seq {
 namespace ast {
 
-FormatVisitor::FormatVisitor(bool html, std::shared_ptr<Cache> cache)
+FormatVisitor::FormatVisitor(bool html, shared_ptr<Cache> cache)
     : renderType(false), renderHTML(html), indent(0), cache(cache) {
   if (renderHTML) {
     header = "<html><head><link rel=stylesheet href=code.css/></head>\n<body>";
@@ -94,23 +91,11 @@ void FormatVisitor::visit(const StringExpr *expr) {
   result = renderExpr(expr, "\"{}\"", escape(expr->value));
 }
 
-void FormatVisitor::visit(const FStringExpr *expr) {
-  result = renderExpr(expr, "f\"{}\"", escape(expr->value));
-}
-
-void FormatVisitor::visit(const KmerExpr *expr) {
-  result = renderExpr(expr, "k\"{}\"", escape(expr->value));
-}
-
-void FormatVisitor::visit(const SeqExpr *expr) {
-  result = renderExpr(expr, "{}\"{}\"", expr->prefix, escape(expr->value));
-}
-
 void FormatVisitor::visit(const IdExpr *expr) {
   result = renderExpr(expr, "{}", expr->value);
 }
 
-void FormatVisitor::visit(const UnpackExpr *expr) {
+void FormatVisitor::visit(const StarExpr *expr) {
   result = renderExpr(expr, "*{}", transform(expr->what));
 }
 
@@ -357,25 +342,13 @@ void FormatVisitor::visit(const MatchStmt *stmt) {
       fmt::format("{} {}:{}{}", keyword("match"), transform(stmt->what), newline(), s);
 }
 
-void FormatVisitor::visit(const ExtendStmt *stmt) {}
-
 void FormatVisitor::visit(const ImportStmt *stmt) {
-  if (stmt->what.size() == 0) {
-    result +=
-        fmt::format("{} {}{}", keyword("import"), stmt->from.first,
-                    stmt->from.second == ""
-                        ? ""
-                        : fmt::format(" {} {} ", keyword("as"), stmt->from.second));
-  } else {
-    vector<string> what;
-    for (auto &w : stmt->what) {
-      what.push_back(fmt::format(
-          "{}{}", w.first,
-          w.second == "" ? "" : fmt::format(" {} {} ", keyword("as"), w.second)));
-    }
-    result += fmt::format("{} {} {} {}", keyword("from"), stmt->from.first,
-                          keyword("import"), fmt::join(what, ", "));
-  }
+  auto as = stmt->as.empty() ? "" : fmt::format(" {} {} ", keyword("as"), stmt->as);
+  if (!stmt->what)
+    result += fmt::format("{} {}{}", keyword("import"), transform(stmt->from), as);
+  else
+    result += fmt::format("{} {} {} {}{}", keyword("from"), transform(stmt->from),
+                          keyword("import"), transform(stmt->what), as);
 }
 
 void FormatVisitor::visit(const TryStmt *stmt) {
@@ -474,8 +447,6 @@ void FormatVisitor::visit(const YieldFromStmt *stmt) {
 
 void FormatVisitor::visit(const WithStmt *stmt) {}
 
-void FormatVisitor::visit(const PyDefStmt *stmt) {}
-
 void FormatVisitor::visit(const StarPattern *pat) { this->result = "..."; }
 
 void FormatVisitor::visit(const IntPattern *pat) {
@@ -488,10 +459,6 @@ void FormatVisitor::visit(const BoolPattern *pat) {
 
 void FormatVisitor::visit(const StrPattern *pat) {
   result = fmt::format("\"{}\"", escape(pat->value));
-}
-
-void FormatVisitor::visit(const SeqPattern *pat) {
-  result = fmt::format("s\"{}\"", escape(pat->value));
 }
 
 void FormatVisitor::visit(const RangePattern *pat) {

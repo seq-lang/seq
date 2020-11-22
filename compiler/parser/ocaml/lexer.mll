@@ -80,7 +80,7 @@
     in
     match pfx with
     | "r" | "R" -> P.STRING ("r", fix_literals ~is_raw:true u)
-    | _ -> P.STRING (fix_literals u, pfx)
+    | _ -> P.STRING (String.lowercase_ascii pfx, fix_literals u)
 }
 
 (* Lexer regex expressions *)
@@ -89,21 +89,25 @@ let white = [' ' '\t']
 let comment = '#' [^ '\n' '\r']*
 
 let digit = ['0'-'9']
+let bindigit = ['0' '1']
 let hexdigit = ['0'-'9' 'a'-'f' 'A'-'F']
-let int = digit+
-let hexint = '0' ['x' 'X'] hexdigit+
-let fraction = '.' digit+
+let int = digit | digit (digit | '_')* digit
+let binint = '0' ['b' 'B'] (bindigit | bindigit (bindigit | '_')* bindigit)
+let hexint = '0' ['x' 'X'] (hexdigit | hexdigit (hexdigit | '_')* hexdigit)
+let fraction = '.' (digit | digit (digit | '_')* digit)
 let danglingfloat = int '.'
-let pointfloat = int? fraction | danglingfloat
-let exponent = ['e' 'E'] ['+' '-']? digit+
-let expfloat = (int | pointfloat) exponent
+let pointfloat = int? fraction
+let exponent = ['e' 'E'] ['+' '-']? (digit | digit (digit | '_')* digit)
+let expfloat = (int | pointfloat | danglingfloat) exponent
 let float = pointfloat | expfloat
 
 let escape = '\\' _
 let alpha = ['a'-'z' 'A'-'Z' '_']
 let alphanum = ['A'-'Z' 'a'-'z' '0'-'9' '_']
-let intsuffix = alpha alphanum*
-let stringprefix = alpha alphanum*
+(* let stringprefix = ('s' | 'S')? ('r' | 'R')? ('k' | 'K')? ('p' | 'P')? ('f' | 'F')? *)
+(* let intsuffix = ('s' | 'S' | 'z' | 'Z' | 'u' | 'U') *)
+let intsuffix = (alpha alphanum*)?
+let stringprefix = (alpha alphanum*)?
 let ident = alpha alphanum*
 
 (* Main handler *)
@@ -176,7 +180,7 @@ and read state = parse
       | "from"     -> P.FROM
       | "class"    -> P.CLASS
       | "typeof"   -> P.TYPEOF
-      | "@extern"  -> is_pydef := true; P.PASS
+      (* | "@python"  -> is_pydef := true; P.PASS *)
       | "del"      -> P.DEL
       | "None"     -> P.NONE
       | "try"      -> P.TRY
@@ -191,10 +195,10 @@ and read state = parse
       | "not"      -> P.NOT "!"
       | _          -> P.ID id }
 
-  | stringprefix '\''     { single_string state (L.lexeme lexbuf) lexbuf }
-  | stringprefix '"'      { double_string state (L.lexeme lexbuf) lexbuf }
-  | stringprefix "'''"    { single_docstr state (L.lexeme lexbuf) lexbuf }
-  | stringprefix "\"\"\"" { double_docstr state (L.lexeme lexbuf) lexbuf }
+  | (stringprefix as p) '\''     { single_string state p lexbuf }
+  | (stringprefix as p) '"'      { double_string state p lexbuf }
+  | (stringprefix as p) "'''"    { single_docstr state p lexbuf }
+  | (stringprefix as p) "\"\"\"" { double_docstr state p lexbuf }
 
   (* | "$" { escaped_id state lexbuf } *)
   | "(" { ignore_nl state; P.LP }
@@ -247,10 +251,11 @@ and read state = parse
   | "/"   as op { P.DIV (char_to_string op) }
   | "%"   as op { P.MOD (char_to_string op) }
 
-  | (int | hexint) as i { P.INT (i, "") }
+  | (int | binint | hexint) as i { P.INT (i, "") }
+  | ((int | binint | hexint) as i) (intsuffix as k) { P.INT (i, String.lowercase_ascii k) }
+  | danglingfloat as f { P.FLOAT (float_of_string f, "") }
   | float as f { P.FLOAT (float_of_string f, "") }
-  | ((int | hexint) as i) (intsuffix as k) { P.INT (i, k) }
-  | (float as f) (intsuffix as k) { P.FLOAT (float_of_string f, k) }
+  | (float as f) (intsuffix as k) { P.FLOAT (float_of_string f, String.lowercase_ascii k) }
   | eof { P.EOF }
   | _ { raise (Ast.SyntaxError (Format.sprintf "Unknown token '%s'" (L.lexeme lexbuf), lexbuf.lex_start_p)) }
 
@@ -295,8 +300,7 @@ and pydef_offset buf state = parse
     { if state.p_offset >= state.start then B.add_string buf (char_to_string t);
       state.p_offset <- state.p_offset + (if t = ' ' then 1 else 8);
       pydef_offset buf state lexbuf }
-  | _ as c
-    { if c == '\n' then lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + 1 };
-      if state.p_offset <= state.start
+  | _
+    { if state.p_offset <= state.start
       then state.trail <- state.p_offset
       else (B.add_string buf (L.lexeme lexbuf); pydef buf state lexbuf) }

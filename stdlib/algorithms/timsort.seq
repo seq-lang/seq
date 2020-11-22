@@ -4,7 +4,7 @@ MIN_GALLOP = 7
 
 from algorithms.insertionsort import _insertion_sort
 
-def _count_run[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T]) -> tuple[int,int]:
+def _count_run[S,T](arr: Array[T], begin: int, end: int, keyf: Function[S,T]) -> Tuple[int,int]:
     """
         Returns the # of elements in the next run and if the run is "inorder" or "reversed"
     """
@@ -44,13 +44,13 @@ def _merge_compute_minrun(n: int) -> int:
         n >>=1
     return n + r
 
-def _reverse_sortslice[T](arr: array[T], begin: int, end: int):
+def _reverse_sortslice[T](arr: Array[T], begin: int, end: int):
     if end - begin < 2:
         return
     arr[begin], arr[end - 1] = arr[end - 1], arr[begin]
     _reverse_sortslice(arr, begin + 1, end - 1)
 
-def _modified_comp[S,T](a: T, b: T, keyf: function[S,T], left: bool) -> bool:
+def _modified_comp[S,T](a: T, b: T, keyf: Function[S,T], left: bool) -> bool:
     """
         Abstracts the left or right compare in gallop
     """
@@ -59,7 +59,7 @@ def _modified_comp[S,T](a: T, b: T, keyf: function[S,T], left: bool) -> bool:
     else:
         return keyf(a) < keyf(b)
 
-def _gallop[S,T](arr: array[T], a: tuple[int,int], b: tuple[int,int], keyf: function[S,T], hint: int, left: bool) -> int:
+def _gallop[S,T](arr: Array[T], a: Tuple[int,int], b: Tuple[int,int], keyf: Function[S,T], hint: int, left: bool) -> int:
     """
         Gallop for Timsort
     """
@@ -115,10 +115,10 @@ def _gallop[S,T](arr: array[T], a: tuple[int,int], b: tuple[int,int], keyf: func
 
     return ofs
 
-def _merge_with_gallop[S,T](arr: array[T], a: tuple[int,int], b: tuple[int,int], keyf: function[S,T]):
+def _merge_with_gallop[S,T](arr: Array[T], a: Tuple[int,int], b: Tuple[int,int], keyf: Function[S,T]):
     min_gallop = MIN_GALLOP
 
-    combined = array[T](a[1] + b[1])
+    combined = Array[T](a[1] + b[1])
     a_copy = combined.__slice__(0, a[1])
     b_copy = combined.__slice__(a[1], len(combined))
 
@@ -201,7 +201,7 @@ def _merge_with_gallop[S,T](arr: array[T], a: tuple[int,int], b: tuple[int,int],
         j += 1
         k += 1
 
-def _merge_at[S,T](arr: array[T], a: tuple[int,int], b: tuple[int,int], keyf: function[S,T]):
+def _merge_at[S,T](arr: Array[T], a: Tuple[int,int], b: Tuple[int,int], keyf: Function[S,T]):
     start_a, len_a = a
     start_b, len_b = b
 
@@ -218,7 +218,7 @@ def _merge_at[S,T](arr: array[T], a: tuple[int,int], b: tuple[int,int], keyf: fu
 
     _merge_with_gallop(arr, (start_a, len_a), (start_b, len_b), keyf)
 
-def _merge_collapse[S,T](arr: array[T], stack: list[tuple[int,int]], keyf: function[S,T]):
+def _merge_collapse[S,T](arr: Array[T], stack: List[Tuple[int,int]], keyf: Function[S,T]):
     if len(stack) <= 1:
         return
 
@@ -260,18 +260,18 @@ def _merge_collapse[S,T](arr: array[T], stack: list[tuple[int,int]], keyf: funct
             stack.append((B[0], B[1] + C[1]))
             return
 
-def _final_merge[S,T](arr: array[T], stack: list[tuple[int,int]], keyf: function[S,T]):
+def _final_merge[S,T](arr: Array[T], stack: List[Tuple[int,int]], keyf: Function[S,T]):
     while len(stack) > 1:
         C = stack.pop()
         B = stack.pop()
         _merge_at(arr, B, C, keyf)
         stack.append((B[0], B[1] + C[1]))
 
-def _tim_sort[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T]):
+def _tim_sort[S,T](arr: Array[T], begin: int, end: int, keyf: Function[S,T]):
     if end - begin < 2:
         return
 
-    merge_pending = list[tuple[int,int]]()
+    merge_pending = List[Tuple[int,int]]()
     minrun = _merge_compute_minrun(end - begin)
     i = begin
     while i < end:
@@ -290,7 +290,7 @@ def _tim_sort[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T]):
 
     _final_merge(arr, merge_pending, keyf)
 
-def tim_sort_array[S,T](collection: array[T], size: int, keyf: function[S,T]):
+def tim_sort_array[S,T](collection: Array[T], size: int, keyf: Function[S,T]):
     """
         Timsort
         By Tim Peters, published at https://github.com/python/cpython/blob/master/Objects/listobject.c#L2187
@@ -299,7 +299,7 @@ def tim_sort_array[S,T](collection: array[T], size: int, keyf: function[S,T]):
     """
     _tim_sort(collection, 0, size, keyf)
 
-def tim_sort_inplace[S,T](collection: list[T], keyf: function[S,T]):
+def tim_sort_inplace[S,T](collection: List[T], keyf: Function[S,T]):
     """
         Timsort
         By Tim Peters, published at https://github.com/python/cpython/blob/master/Objects/listobject.c#L2187
@@ -308,7 +308,7 @@ def tim_sort_inplace[S,T](collection: list[T], keyf: function[S,T]):
     """
     tim_sort_array(collection.arr, collection.len, keyf)
 
-def tim_sort[S,T](collection: list[T], keyf: function[S,T]) -> list[T]:
+def tim_sort[S,T](collection: List[T], keyf: Function[S,T]) -> List[T]:
     """
         Timsort
         By Tim Peters, published at https://github.com/python/cpython/blob/master/Objects/listobject.c#L2187

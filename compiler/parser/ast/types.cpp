@@ -2,18 +2,12 @@
 #include <string>
 #include <vector>
 
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/ast.h"
 #include "parser/ast/typecheck/typecheck.h"
 
 using std::dynamic_pointer_cast;
-using std::make_shared;
 using std::min;
-using std::pair;
-using std::shared_ptr;
 using std::static_pointer_cast;
-using std::string;
-using std::unordered_map;
-using std::vector;
 
 namespace seq {
 namespace ast {
@@ -21,7 +15,7 @@ namespace types {
 
 TypePtr Type::follow() { return shared_from_this(); }
 
-StaticType::StaticType(const std::vector<Generic> &ex, std::unique_ptr<Expr> &&e)
+StaticType::StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&e)
     : explicits(ex), expr(move(e)) {}
 
 StaticType::StaticType(int i) { expr = std::make_unique<IntExpr>(i); }
@@ -98,7 +92,7 @@ bool StaticType::canRealize() const {
 }
 
 int StaticType::getValue() const {
-  std::map<string, Generic> m;
+  map<string, Generic> m;
   for (auto &e : explicits)
     m[e.name] = e;
   auto t = StaticVisitor(m).transform(expr);
@@ -488,7 +482,7 @@ TypePtr FuncType::generalize(int level) {
 }
 
 TypePtr FuncType::instantiate(int level, int &unboundCount,
-                              std::unordered_map<int, TypePtr> &cache) {
+                              unordered_map<int, TypePtr> &cache) {
   auto e = explicits;
   for (auto &t : e)
     if (t.type) {

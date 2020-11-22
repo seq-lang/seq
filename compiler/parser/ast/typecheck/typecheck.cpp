@@ -15,7 +15,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "parser/ast/ast.h"
+#include "parser/ast/ast/ast.h"
 #include "parser/ast/transform/transform.h"
 #include "parser/ast/transform/transform_ctx.h"
 #include "parser/ast/typecheck/typecheck.h"
@@ -28,20 +28,10 @@ using fmt::format;
 using std::deque;
 using std::dynamic_pointer_cast;
 using std::get;
-using std::make_shared;
-using std::make_unique;
-using std::map;
 using std::move;
 using std::ostream;
-using std::pair;
-using std::shared_ptr;
 using std::stack;
 using std::static_pointer_cast;
-using std::string;
-using std::unique_ptr;
-using std::unordered_map;
-using std::unordered_set;
-using std::vector;
 
 namespace seq {
 namespace ast {
@@ -155,6 +145,8 @@ void TypecheckVisitor::visit(const IdExpr *expr) {
   if (!val)
     ctx->dump();
   seqassert(val, "cannot find '{}'", expr->value);
+  if (expr->value == ".Generator")
+    assert(1);
   if (val->isStatic()) {
     auto s = val->getType()->getStatic();
     assert(s);
@@ -391,27 +383,11 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
 }
 
 void TypecheckVisitor::visit(const SliceExpr *expr) {
-  string prefix;
-  if (!expr->st && expr->ed)
-    prefix = "l";
-  else if (expr->st && !expr->ed)
-    prefix = "r";
-  else if (!expr->st && !expr->ed)
-    prefix = "e";
-  if (expr->step)
-    prefix += "s";
-
-  vector<ExprPtr> args;
-  if (expr->st)
-    args.push_back(clone(expr->st));
-  if (expr->ed)
-    args.push_back(clone(expr->ed));
-  if (expr->step)
-    args.push_back(clone(expr->step));
-  if (!args.size())
-    args.push_back(N<IntExpr>(0));
-  resultExpr =
-      transform(N<CallExpr>(N<IdExpr>(format(".{}slice", prefix)), move(args)));
+  ExprPtr none = N<CallExpr>(N<DotExpr>(N<IdExpr>(".Optional"), "__new__"));
+  resultExpr = transform(N<CallExpr>(N<IdExpr>(".Slice"),
+                                     expr->st ? clone(expr->st) : transform(none),
+                                     expr->ed ? clone(expr->ed) : transform(none),
+                                     expr->step ? clone(expr->step) : transform(none)));
 }
 
 void TypecheckVisitor::visit(const IndexExpr *expr) {
@@ -445,6 +421,15 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
       if (i < 0 || i >= e)
         error("tuple index out of range (expected 0..{}, got {})", e, i);
       return transform(N<DotExpr>(clone(expr), mm->second[i].first));
+    } else if (auto sx = CAST(index, StaticExpr)) {
+      map<string, types::Generic> m;
+      auto sv = StaticVisitor(m);
+      auto r = sv.transform(sx->expr);
+      assert(r.first);
+      int i = translateIndex(r.second, e);
+      if (i < 0 || i >= e)
+        error("tuple index out of range (expected 0..{}, got {})", e, i);
+      return transform(N<DotExpr>(clone(expr), mm->second[i].first));
     } else if (auto i = CAST(index, SliceExpr)) {
       if (!getInt(&s, i->st) || !getInt(&e, i->ed) || !getInt(&st, i->step))
         return nullptr;
@@ -472,9 +457,9 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
     vector<ExprPtr> it;
     if (auto t = CAST(expr->index, TupleExpr))
       for (auto &i : t->items)
-        it.push_back(transform(i, true));
+        it.push_back(clone(i));
     else
-      it.push_back(transform(expr->index, true));
+      it.push_back(clone(expr->index));
     // LOG("-- {} -> INST {}", expr->toString(), e->toString());
     resultExpr = transform(N<InstantiateExpr>(move(e), move(it)));
   } else if (auto c = t->getClass()) {
@@ -1190,7 +1175,7 @@ void TypecheckVisitor::visit(const ThrowStmt *stmt) {
 
 void TypecheckVisitor::visit(const FunctionStmt *stmt) {
   resultStmt = N<FunctionStmt>(stmt->name, nullptr, vector<Param>(), vector<Param>(),
-                               nullptr, stmt->attributes);
+                               nullptr, map<string, string>(stmt->attributes));
   bool isClassMember = in(stmt->attributes, ".class");
 
   if (ctx->findInVisited(stmt->name).second)
@@ -1260,43 +1245,66 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
 }
 
 void TypecheckVisitor::visit(const ClassStmt *stmt) {
-  if (ctx->findInVisited(stmt->name).second)
-    resultStmt = N<ClassStmt>(stmt->isRecord, stmt->name, vector<Param>(),
-                              vector<Param>(), N<SuiteStmt>(), stmt->attributes);
+  if (ctx->findInVisited(stmt->name).second && !in(stmt->attributes, "extend"))
+    resultStmt =
+        N<ClassStmt>(stmt->isRecord, stmt->name, vector<Param>(), vector<Param>(),
+                     N<SuiteStmt>(), map<string, string>(stmt->attributes));
   else
     resultStmt = N<SuiteStmt>(parseClass(stmt));
 }
 
 vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
+  bool extension = in(stmt->attributes, "extend");
+
   vector<StmtPtr> stmts;
+  seqassert(stmt->isRecord == in(stmt->attributes, "tuple"),
+            "attribute mismatch for {} ({})", stmt->name, stmt->isRecord);
   stmts.push_back(N<ClassStmt>(stmt->isRecord, stmt->name, vector<Param>(),
-                               vector<Param>(), N<SuiteStmt>(), stmt->attributes));
+                               vector<Param>(), N<SuiteStmt>(),
+                               map<string, string>(stmt->attributes)));
 
-  auto &attributes = const_cast<ClassStmt *>(stmt)->attributes;
-  auto ct = make_shared<ClassType>(
-      stmt->name, stmt->isRecord, vector<TypePtr>(), vector<Generic>(),
-      ctx->bases[ctx->findBase(attributes[".parentFunc"])].type);
-  if (in(stmt->attributes, "trait"))
-    ct->isTrait = true;
-  ct->setSrcInfo(stmt->getSrcInfo());
-  auto ctxi = make_shared<TypecheckItem>(TypecheckItem::Type, ct, ctx->getBase(), true);
-  if (!stmt->isRecord) // add classes early
-    ctx->add(stmt->name, ctxi);
+  ClassTypePtr ct;
+  if (!extension) {
+    auto &attributes = const_cast<ClassStmt *>(stmt)->attributes;
+    ct = make_shared<ClassType>(
+        stmt->name, stmt->isRecord, vector<TypePtr>(), vector<Generic>(),
+        ctx->bases[ctx->findBase(attributes[".parentFunc"])].type);
+    if (in(stmt->attributes, "trait"))
+      ct->isTrait = true;
+    ct->setSrcInfo(stmt->getSrcInfo());
+    auto ctxi =
+        make_shared<TypecheckItem>(TypecheckItem::Type, ct, ctx->getBase(), true);
+    if (!stmt->isRecord) // add classes early
+      ctx->add(stmt->name, ctxi);
 
-  ctx->bases[ctx->findBase(attributes[".parentFunc"])].visitedAsts[stmt->name] = {
-      TypecheckItem::Type, ct};
+    ctx->bases[ctx->findBase(attributes[".parentFunc"])].visitedAsts[stmt->name] = {
+        TypecheckItem::Type, ct};
 
-  ct->explicits = parseGenerics(stmt->generics, ctx->typecheckLevel);
-  ctx->typecheckLevel++;
-  for (auto &a : stmt->args) {
-    auto t = transformType(a.type)->getType()->generalize(ctx->typecheckLevel - 1);
-    ctx->cache->classMembers[stmt->name].push_back({a.name, t});
+    ct->explicits = parseGenerics(stmt->generics, ctx->typecheckLevel);
+    ctx->typecheckLevel++;
+    for (auto &a : stmt->args) {
+      auto t = transformType(a.type)->getType()->generalize(ctx->typecheckLevel - 1);
+      ctx->cache->classMembers[stmt->name].push_back({a.name, t});
+      if (stmt->isRecord)
+        ct->args.push_back(t);
+    }
+    ctx->typecheckLevel--;
     if (stmt->isRecord)
-      ct->args.push_back(t);
+      ctx->add(stmt->name, ctxi);
+  } else {
+    auto val = ctx->find(stmt->name);
+    assert(val && val->isType());
+    ct = val->getType()->getClass();
+    for (int i = 0; i < stmt->generics.size(); i++) {
+      auto l = ct->explicits[i].type->getLink();
+      ctx->add(TypecheckItem::Type, stmt->generics[i].name,
+               make_shared<LinkType>(LinkType::Unbound, ct->explicits[i].id,
+                                     ctx->typecheckLevel - 1, nullptr, l->isStatic),
+               false, true, l->isStatic);
+    }
   }
-  if (stmt->isRecord)
-    ctx->add(stmt->name, ctxi);
 
+  ctx->typecheckLevel++;
   if (stmt->suite)
     for (auto &s : ((SuiteStmt *)(stmt->suite.get()))->stmts) {
       auto t = transform(s);
@@ -1308,10 +1316,7 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
       for (auto &i : v) {
         auto ast = (FunctionStmt *)(ctx->cache->asts[i->name].get());
         assert(ast);
-        // LOG("{} . {} : {} -> {}", stmt->name, f, ss, ast->signature());
         if (ast->signature() == ss) {
-          // LOG("fixing sig {} . {} : {} -> {} | {}", stmt->name, f, i->name, fp->name,
-          // ss);
           i = fp;
           found = true;
           break;
@@ -1323,7 +1328,7 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
     }
   ctx->typecheckLevel--;
 
-  for (auto &g : stmt->generics) { // Generalize in place
+  for (auto &g : stmt->generics) {
     auto val = ctx->find(g.name);
     if (auto g = val->getType()) {
       assert(g && g->getLink() && g->getLink()->kind != types::LinkType::Link);
@@ -1346,57 +1351,6 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
   return stmts;
 }
 
-void TypecheckVisitor::visit(const ExtendStmt *stmt) {
-  auto i = CAST(stmt->type, IdExpr);
-  assert(i);
-  auto val = ctx->find(i->value);
-  assert(val && val->isType());
-  auto ct = val->getType()->getClass();
-  ctx->addBlock();
-  for (int i = 0; i < stmt->generics.size(); i++) {
-    auto l = ct->explicits[i].type->getLink();
-    assert(l);
-    ctx->add(TypecheckItem::Type, stmt->generics[i],
-             make_shared<LinkType>(LinkType::Unbound, ct->explicits[i].id,
-                                   ctx->typecheckLevel - 1, nullptr, l->isStatic),
-             false, true, l->isStatic);
-  }
-  ctx->typecheckLevel++;
-  vector<StmtPtr> stmts;
-  for (auto &s : ((SuiteStmt *)(stmt->suite.get()))->stmts) {
-    auto t = transform(s);
-    auto f = CAST(t, FunctionStmt)->name;
-
-    auto ss = CAST(s, FunctionStmt)->signature();
-    auto fp = ctx->findInVisited(f).second->getFunc();
-    auto &v = ctx->cache->classMethods[i->value][ctx->cache->reverseLookup[f]];
-    bool found = false;
-    for (auto &i : v) {
-      auto ast = (FunctionStmt *)(ctx->cache->asts[i->name].get());
-      assert(ast);
-      if (ast->signature() == ss) {
-        // LOG("fixing sig {} . {} : {} -> {} | {}", stmt->type->toString(), f, i->name,
-        // fp->name, ss);
-        i = fp;
-        found = true;
-        break;
-      }
-    }
-    if (!found)
-      v.push_back(fp);
-    stmts.push_back(move(t));
-  }
-  for (int i = 0; i < stmt->generics.size(); i++)
-    if (ct->explicits[i].type) {
-      auto t = ctx->find(stmt->generics[i])->getType()->getLink();
-      assert(t && t->kind == LinkType::Unbound);
-      t->kind = LinkType::Generic;
-    }
-  ctx->typecheckLevel--;
-  ctx->popBlock();
-  resultStmt = N<SuiteStmt>(move(stmts));
-} // namespace ast
-
 void TypecheckVisitor::visit(const StarPattern *pat) {
   resultPattern = N<StarPattern>();
   resultPattern->setType(
@@ -1414,13 +1368,11 @@ void TypecheckVisitor::visit(const BoolPattern *pat) {
 }
 
 void TypecheckVisitor::visit(const StrPattern *pat) {
-  resultPattern = N<StrPattern>(pat->value);
-  resultPattern->setType(forceUnify(pat, ctx->findInternal(".str")));
-}
-
-void TypecheckVisitor::visit(const SeqPattern *pat) {
-  resultPattern = N<SeqPattern>(pat->value);
-  resultPattern->setType(forceUnify(pat, ctx->findInternal(".seq")));
+  resultPattern = N<StrPattern>(pat->value, pat->prefix);
+  if (pat->prefix == "s")
+    resultPattern->setType(forceUnify(pat, ctx->findInternal(".seq")));
+  else
+    resultPattern->setType(forceUnify(pat, ctx->findInternal(".str")));
 }
 
 void TypecheckVisitor::visit(const RangePattern *pat) {
@@ -1444,7 +1396,7 @@ void TypecheckVisitor::visit(const ListPattern *pat) {
   TypePtr t = ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
   for (auto &pp : p->patterns)
     forceUnify(t, pp->getType());
-  t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(".list"), {t});
+  t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(".List"), {t});
   resultPattern = move(p);
   resultPattern->setType(forceUnify(pat, t));
 }
@@ -1484,7 +1436,7 @@ void TypecheckVisitor::visit(const BoundPattern *pat) {
 
 /*******************************/
 
-StaticVisitor::StaticVisitor(std::map<string, types::Generic> &m)
+StaticVisitor::StaticVisitor(map<string, types::Generic> &m)
     : generics(m), evaluated(false), value(0) {}
 
 pair<bool, int> StaticVisitor::transform(const ExprPtr &e) {
@@ -1690,7 +1642,7 @@ vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &gene
   auto genericTypes = vector<types::Generic>();
   for (auto &g : generics) {
     assert(!g.name.empty());
-    if (g.type && g.type->toString() != "(#id .int)")
+    if (g.type && !g.type->isIdExpr(".int"))
       error("only int generic types are allowed / {}", g.type->toString());
     auto tp = ctx->addUnbound(getSrcInfo(), level, true, bool(g.type));
     genericTypes.push_back(
@@ -1817,7 +1769,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     LOG7("done with {}", t->realizeString());
     ctx->cache->realizationAsts[t->realizeString()] =
         Nx<FunctionStmt>(ast, t->realizeString(), nullptr, vector<Param>(), move(args),
-                         move(realized), ast->attributes);
+                         move(realized), map<string, string>(ast->attributes));
     ctx->bases.pop_back();
     ctx->popBlock();
     ctx->typecheckLevel--;
@@ -1874,7 +1826,7 @@ StmtPtr TypecheckVisitor::realizeBlock(const StmtPtr &stmt, bool keepLast) {
     result = TypecheckVisitor(ctx).transform(result ? result : stmt);
 
     int newUnbounds = 0;
-    std::set<types::TypePtr> newActiveUnbounds;
+    set<types::TypePtr> newActiveUnbounds;
     for (auto i = ctx->activeUnbounds.begin(); i != ctx->activeUnbounds.end();) {
       auto l = (*i)->getLink();
       assert(l);
@@ -2004,9 +1956,10 @@ string TypecheckVisitor::generatePartialStub(const string &mask,
                         N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), ".ptr"),
                                                   move(callArgs))),
                         vector<string>{});
-    StmtPtr stmt = make_unique<ClassStmt>(
-        true, typeName, move(generics), move(args), move(func),
-        vector<string>{"no_total_ordering", "no_pickle", "no_container", "no_python"});
+    StmtPtr stmt =
+        make_unique<ClassStmt>(true, typeName, move(generics), move(args), move(func),
+                               vector<string>{"tuple", "no_total_ordering", "no_pickle",
+                                              "no_container", "no_python"});
 
     auto tctx = static_pointer_cast<TransformContext>(ctx->cache->imports[""].ctx);
     stmt = TransformVisitor(tctx).transform(stmt);

@@ -1,4 +1,5 @@
-extend float:
+@extend
+class float:
 
 # Magic methods
 

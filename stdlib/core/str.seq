@@ -1,4 +1,5 @@
-extend str:
+@extend
+class str:
 
 # Magic methods
 
@@ -37,7 +38,7 @@ extend str:
         return self._cmp(other) >= 0
 
     def __repr__(self):
-        v = list[str](len(self) + 2)
+        v = List[str](len(self) + 2)
         v.append("'")
         for c in self:
             d = c
@@ -64,44 +65,23 @@ extend str:
             raise IndexError("string index out of range")
         return str(self.ptr + idx, 1)
 
-    def __getitem__(self, s: eslice):
-        return self.__copy__()
-
-    def __getitem__(self, s: slice):
-        start, stop, step, length = slice.adjust_indices(len(self), start=s.start, stop=s.end)
-        return str(self.ptr + start, length)
-
-    def __getitem__(self, s: lslice):
-        start, stop, step, length = slice.adjust_indices(len(self), stop=s.end)
-        return str(self.ptr, length)
-
-    def __getitem__(self, s: rslice):
-        start, stop, step, length = slice.adjust_indices(len(self), start=s.start)
-        return str(self.ptr + start, length)
+    def __getitem__(self, s: Slice):
+        if s.start is None and s.stop is None and s.step is None:
+            return self.__copy__()
+        elif s.step is None:
+            start, stop, step, length = s.adjust_indices(len(self))
+            return str(self.ptr + start, length)
+        else:
+            start, stop, step, length = s.adjust_indices(len(self))
+            return self._make_from_range(start, stop, step, length)
 
     def _make_from_range(self, start: int, stop: int, step: int, length: int):
-        p = ptr[byte](length)
+        p = Ptr[byte](length)
         j = 0
         for i in range(start, stop, step):
             p[j] = self.ptr[i]
             j += 1
         return str(p, length)
-
-    def __getitem__(self, s: esslice):
-        start, stop, step, length = slice.adjust_indices(len(self), step=s.step)
-        return self._make_from_range(start, stop, step, length)
-
-    def __getitem__(self, s: rsslice):
-        start, stop, step, length = slice.adjust_indices(len(self), start=s.start, step=s.step)
-        return self._make_from_range(start, stop, step, length)
-
-    def __getitem__(self, s: lsslice):
-        start, stop, step, length = slice.adjust_indices(len(self), stop=s.end, step=s.step)
-        return self._make_from_range(start, stop, step, length)
-
-    def __getitem__(self, s: sslice):
-        start, stop, step, length = slice.adjust_indices(len(self), start=s.start, stop=s.end, step=s.step)
-        return self._make_from_range(start, stop, step, length)
 
     def __iter__(self):
         i = 0
@@ -139,7 +119,7 @@ extend str:
         p[n] = byte(0)
         return p
 
-    def cat(v: list[str]):
+    def cat(v: List[str]):
         total = 0
         for s in v:
             total += len(s)
@@ -163,11 +143,14 @@ extend str:
 
 import algorithms.strings as algorithms
 
-type __str_internal_join(s: str):
-    def __new__(s: str, x: generator[str]) -> __str_internal_join:
+@tuple
+class __str_internal_join:
+    s: str
+
+    def __new__(s: str, x: Generator[str]) -> __str_internal_join:
         if len(s) == 0:
             return (str.cat(list(x)), )
-        v = list[str]()
+        v = List[str]()
         for a in x:
             v.append(a)
             v.append(s)
@@ -175,7 +158,7 @@ type __str_internal_join(s: str):
             del v[-1]
         return (str.cat(v), )
 
-    def __new__(s: str, x: list[str]) -> __str_internal_join:
+    def __new__(s: str, x: List[str]) -> __str_internal_join:
         if len(x) == 0:
             return ('', )
         if len(x) == 1:
@@ -193,7 +176,7 @@ type __str_internal_join(s: str):
             i += 1
 
         # copy to new buffer
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         r = 0
         i = 0
         while i < len(x):
@@ -207,7 +190,8 @@ type __str_internal_join(s: str):
         return (str(p, n), )
 
 
-extend str:
+@extend
+class str:
     def __contains__(self, pattern: str):
         return self.find(pattern, 0, len(self)) >= 0
 
@@ -216,7 +200,7 @@ extend str:
     def _slice(self, i: int, j: int):
         return str(self.ptr + i, j - i)
 
-    def cati(v: generator[str], total: int):
+    def cati(v: Generator[str], total: int):
         p = cobj(total)
         n = 0
         for s in v:
@@ -224,7 +208,7 @@ extend str:
             n += s.len
         return str(p, total)
 
-    def cati_ext(v: generator[str]):
+    def cati_ext(v: Generator[str]):
         sz = 10
         p = cobj(sz)
         n = 0
@@ -243,7 +227,7 @@ extend str:
 
     def from_ptr(t: cobj) -> str:
         n = _C.strlen(t)
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         str.memcpy(p, t, n)
         return str(p, n)
 
@@ -465,7 +449,7 @@ extend str:
         n = len(self)
         if n == 0:
             return ''
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         for i in range(n):
             p[i] = byte(_C.tolower(int(self.ptr[i])))
         return str(p, n)
@@ -480,7 +464,7 @@ extend str:
         n = len(self)
         if n == 0:
             return ''
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         for i in range(n):
             p[i] = byte(_C.toupper(int(self.ptr[i])))
         return str(p, n)
@@ -518,7 +502,7 @@ extend str:
         n = len(self)
         if n == 0:
             return ''
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         for i in range(n):
             if _C.islower(int(self.ptr[i])):
                 p[i] = byte(_C.toupper(int(self.ptr[i])))
@@ -542,7 +526,7 @@ extend str:
         if n == 0:
             return ''
 
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         for i in range(n):
             if _C.islower(int(self.ptr[i])):
                 # lowercase to uppercase
@@ -627,7 +611,7 @@ extend str:
         if width <= len(self):
             return self
 
-        s = list[str]()
+        s = List[str]()
         if self and (self[0] == '+' or self[0] == '-'):
             # move sign to beginning of string
             s.append(self[0])
@@ -787,7 +771,7 @@ extend str:
         rstr = lstr.rstrip(chars)
         return rstr
 
-    def partition(self, sep: str) -> tuple[str, str, str]:
+    def partition(self, sep: str) -> Tuple[str, str, str]:
         """
         Search for the separator sep in str, and return the part before it,
         the separator itself, and the part after it.  If the separator is not
@@ -803,7 +787,7 @@ extend str:
 
         return self[:pos],sep,self[pos+len(sep):]
 
-    def rpartition(self, sep: str) -> tuple[str, str, str]:
+    def rpartition(self, sep: str) -> Tuple[str, str, str]:
         """
         Search for the separator sep in str, starting at the end of str, and return
         the part before it, the separator itself, and the part after it.  If the
@@ -824,7 +808,7 @@ extend str:
 
         return self[:pos1], sep, self[pos1+len(sep):]
 
-    def split(self, sep: optional[str] = None, maxsplit: int = -1) -> list[str]:
+    def split(self, sep: Optional[str] = None, maxsplit: int = -1) -> List[str]:
         """
         str.split([sep [,maxsplit]]) -> list of strings
 
@@ -839,7 +823,7 @@ extend str:
         sepx = ~sep
 
         li = list(algorithms.filter_overlaps(self._search(sepx), len(sepx)))
-        str_split = list[str]()
+        str_split = List[str]()
 
         # no delimiter found
         if len(li) == 0:
@@ -877,7 +861,7 @@ extend str:
 
         return str_split
 
-    def rsplit(self, sep: optional[str] = None, maxsplit: int = -1) -> list[str]:
+    def rsplit(self, sep: Optional[str] = None, maxsplit: int = -1) -> List[str]:
         """
         str.rsplit([sep [,maxsplit]]) -> list of strings
 
@@ -892,7 +876,7 @@ extend str:
         sepx = ~sep
 
         li = list(algorithms.rfilter_overlaps(reversed(list(self._search(sepx))), len(sepx)))
-        str_split = list[str]()
+        str_split = List[str]()
         end_of_li = len(li) - 1
 
         if len(li) == 0:
@@ -934,7 +918,7 @@ extend str:
         str_split.reverse()
         return str_split
 
-    def splitlines(self, keepends: bool = False) -> list[str]:
+    def splitlines(self, keepends: bool = False) -> List[str]:
         """
         str.splitlines([keepends]) -> list of strings
 
@@ -942,7 +926,7 @@ extend str:
         Line breaks are not included in the resulting list unless keepends
         is given and true.
         """
-        line_split = list[str]()
+        line_split = List[str]()
 
         prev = 0
         for i in range(len(self)):
@@ -1143,7 +1127,7 @@ extend str:
         incr = 0
         i = 0   # chars up to and including most recent \n or \r
         j = 0   # chars since most recent \n or \r (use in tab calculations)
-        u = list[str]()
+        u = List[str]()
         j = 0   # same as first pass
 
         # create output string and fill it
@@ -1210,7 +1194,7 @@ extend str:
                 i -= 1
         yield from algorithms.rstring_search_slow(self, pattern)
 
-    def _getfirst(v: generator[int]):
+    def _getfirst(v: Generator[int]):
         n = -1
         if not v.done():
             n = v.next()
@@ -1231,7 +1215,7 @@ extend str:
 
     def _split_whitespace(self, maxcount: int):
         PREALLOC_MAX = 12
-        l = list[str](PREALLOC_MAX if maxcount >= PREALLOC_MAX else maxcount + 1)
+        l = List[str](PREALLOC_MAX if maxcount >= PREALLOC_MAX else maxcount + 1)
 
         str_len = len(self)
         i = 0
@@ -1258,7 +1242,7 @@ extend str:
 
     def _rsplit_whitespace(self, maxcount: int):
         PREALLOC_MAX = 12
-        l = list[str](PREALLOC_MAX if maxcount >= PREALLOC_MAX else maxcount + 1)
+        l = List[str](PREALLOC_MAX if maxcount >= PREALLOC_MAX else maxcount + 1)
 
         str_len = len(self)
         i = str_len - 1

@@ -7,7 +7,7 @@ def dlext():
 def dlerror():
     return str.from_ptr(_C.dlerror())
 
-_DLOPEN_CACHE = dict[str, cobj]()
+_DLOPEN_CACHE = Dict[str, cobj]()
 def dlopen(name: str, flag: int = _C.RTLD_NOW | _C.RTLD_GLOBAL) -> cobj:
     if name in _DLOPEN_CACHE:
         return _DLOPEN_CACHE[name]
@@ -23,7 +23,7 @@ def _dlsym(handle: cobj, name: str) -> cobj:
         raise CError(dlerror())
     return fn
 
-_DLSYM_CACHE = dict[str, cobj]()
+_DLSYM_CACHE = Dict[str, cobj]()
 def dlsym(lib: str, name: str) -> cobj:
     key = lib + "/" + name
     if key in _DLSYM_CACHE:

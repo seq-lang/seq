@@ -1,6 +1,7 @@
 from bio.seq import seq
 
-type Kmer[K: int]:
+@tuple
+class Kmer[K: int]:
     x: UInt[2*K]
 
     def __new__() -> Kmer[K]:
@@ -9,7 +10,7 @@ type Kmer[K: int]:
     def __new__(k: Kmer[K]) -> Kmer[K]:
         return k
 
-    def __new__(p: ptr[byte], L: int, b: bool) -> Kmer[K]:
+    def __new__(p: Ptr[byte], L: int, b: bool) -> Kmer[K]:
         if L != K:
             raise ValueError("sequence length does not match k-mer type's")
         two = UInt[2*K](2)
@@ -144,7 +145,7 @@ type Kmer[K: int]:
 
     def __str__(self):
         ACGT = (byte(65), byte(67), byte(71), byte(84))
-        p = ptr[byte](K)
+        p = Ptr[byte](K)
         x = self.x
         i = K - 1
         while i >= 0:
@@ -165,3 +166,7 @@ type Kmer[K: int]:
     def as_int(self):
         return self.x
 
+@extend
+class str:
+    def __prefix_k__[N: int](s: str) -> Kmer[N]:
+        return Kmer[N](s)

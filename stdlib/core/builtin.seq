@@ -1,4 +1,5 @@
-type min[T]:
+@tuple
+class min[T]:
     def __new__(a: T, b: T) -> T:
         return a if a < b else b
 
@@ -17,7 +18,7 @@ type min[T]:
         z = x if x < y else y
         return z if z < e else e
 
-    def __new__(a: generator[T]) -> T:
+    def __new__(a: Generator[T]) -> T:
         x = a.__iter__()
         if not x.done():
             s = x.next()
@@ -30,7 +31,8 @@ type min[T]:
             x.destroy()
         raise ValueError("empty sequence")
 
-type max[T]:
+@tuple
+class max[T]:
     def __new__(a: T, b: T) -> T:
         return a if a > b else b
 
@@ -49,7 +51,7 @@ type max[T]:
         z = x if x > y else y
         return z if z > e else e
 
-    def __new__(a: generator[T]) -> T:
+    def __new__(a: Generator[T]) -> T:
         x = a.__iter__()
         if not x.done():
             s = x.next()
@@ -117,7 +119,7 @@ def chr(i: int):
     p[0] = byte(i)
     return str(p, 1)
 
-def next[T](g: generator[T], default: optional[T] = None):
+def next[T](g: Generator[T], default: Optional[T] = None):
     """
     Return the next item from g
     """
@@ -233,7 +235,7 @@ def _tuple_fix_index(idx: int, len: int) -> int:
     return idx
 
 @builtin
-def _tuple_str(strs: ptr[str], n: int) -> str:
+def _tuple_str(strs: Ptr[str], n: int) -> str:
     total = 2  # one for each of '(' and ')'
     i = 0
     while i < n:
@@ -242,7 +244,7 @@ def _tuple_str(strs: ptr[str], n: int) -> str:
             total += 2  # ", "
         i += 1
 
-    buf = ptr[byte](total)
+    buf = Ptr[byte](total)
     where = 0
     buf[where] = byte(40)  # '('
     where += 1
@@ -264,11 +266,11 @@ def _tuple_str(strs: ptr[str], n: int) -> str:
     return str(buf, total)
 
 @builtin
-def _raw_type_str(p: ptr[byte], name: str) -> str:
+def _raw_type_str(p: Ptr[byte], name: str) -> str:
     pstr = _C.seq_str_ptr(p)
     # '<[name] at [pstr]>'
     total = 1 + name.len + 4 + pstr.len + 1
-    buf = ptr[byte](total)
+    buf = Ptr[byte](total)
     where = 0
 
     buf[where] = byte(60)   # '<'
@@ -290,6 +292,6 @@ def _raw_type_str(p: ptr[byte], name: str) -> str:
     return str(buf, total)
 
 @builtin
-def _ensure_not_none(p: ptr[byte], memb: str):
+def _ensure_not_none(p: Ptr[byte], memb: str):
     if not p:
         raise AttributeError("'NoneType' object has no attribute '" + memb + "'")
