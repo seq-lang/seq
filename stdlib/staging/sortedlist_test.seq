@@ -117,5 +117,35 @@ def test_remove():
     assert all(tup[0] == tup[1] for tup in zip(slt, [1, 2, 2, 3, 3, 5]))
 test_remove()
 
+# FIXME?
+"""
+def test_remove_valueerror1():
+    slt = SortedList()
+    with pytest.raises(ValueError):
+        slt.remove(0)
 
+def test_remove_valueerror2():
+    slt = SortedList(range(100))
+    slt._reset(10)
+    with pytest.raises(ValueError):
+        slt.remove(100)
 
+def test_remove_valueerror3():
+    slt = SortedList([1, 2, 2, 2, 3, 3, 5])
+    with pytest.raises(ValueError):
+        slt.remove(4)
+"""
+
+@test
+def test_delete():
+    slt = SortedList[int]()
+    slt.update(list[int](range(20)))
+    slt._reset(4)
+    slt._check()
+    for val in range(20):
+        slt.remove(val)
+        slt._check()
+    assert len(slt) == 0
+    assert slt._maxes == list[int]()
+    assert slt._lists == list[list[int]]()
+test_delete()
