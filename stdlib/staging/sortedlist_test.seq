@@ -100,5 +100,22 @@ def test_discard():
     assert all(tup[0] == tup[1] for tup in zip(slt, [1, 2, 2, 3, 3, 5]))
 test_discard()
 
+@test
+def test_remove():
+    slt = SortedList[int]()
+
+    # assert slt.discard(0) == None - Can't compare void with none
+    assert len(slt) == 0
+    slt._check()
+
+    slt.update([1, 2, 2, 2, 3, 3, 5])
+    slt._reset(4)
+
+    slt.remove(2)
+    slt._check()
+
+    assert all(tup[0] == tup[1] for tup in zip(slt, [1, 2, 2, 3, 3, 5]))
+test_remove()
+
 
 
