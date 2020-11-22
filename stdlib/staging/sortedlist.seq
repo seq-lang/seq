@@ -342,19 +342,19 @@ class SortedList[T]:
         :raises ValueError: if `value` is not in sorted list
         """
         if not self._maxes:
-            raise ValueError('{0!r} not in list'.format(value))
+            raise ValueError(f'{value} not in list')
         
         pos = bisect_left(self._maxes, value)
 
         if pos == len(self._maxes):
-            raise ValueError('{0!r} not in list'.format(value))
+            raise ValueError(f'{value} not in list')
 
         idx = bisect_left(self._lists[pos], value)
 
         if self._lists[pos][idx] == value:
             self._delete(pos, idx)
         else:
-            raise ValueError('{0!r} not in list'.format(value))
+            raise ValueError(f'{value} not in list')
 
         
     def _delete(self: SortedList[T], pos: int, idx: int):
