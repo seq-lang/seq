@@ -35,8 +35,13 @@ seq::SeqModule *parse(const string &argv0, const string &file, const string &cod
                       bool isCode, bool isTest, int startLine) {
   try {
     auto d = getenv("SEQ_DEBUG");
-    if (d)
-      __dbg_level__ = strtol(d, nullptr, 10);
+    if (d) {
+      auto s = string(d);
+      __dbg_level__ |= s.find('t') != string::npos ? (1 << 0) : 0; // time
+      __dbg_level__ |= s.find('r') != string::npos ? (1 << 2) : 0; // realize
+      __dbg_level__ |= s.find('T') != string::npos ? (1 << 4) : 0; // typecheck
+      __dbg_level__ |= s.find('l') != string::npos ? (1 << 5) : 0; // lexer
+    }
 
     char abs[PATH_MAX + 1];
     realpath(file.c_str(), abs);
@@ -50,39 +55,34 @@ seq::SeqModule *parse(const string &argv0, const string &file, const string &cod
 
     auto t = high_resolution_clock::now();
     auto transformed = ast::TransformVisitor::apply(cache, move(codeStmt), abs);
-    FILE *fo;
     if (!isTest) {
-      fmt::print(stderr, "[T] ocaml = {:.1f}\n", __ocaml_time__ / 1000.0);
-      fmt::print(
-          stderr, "[T] transform = {:.1f}\n",
-          (duration_cast<milliseconds>(high_resolution_clock::now() - t).count() -
-           __ocaml_time__) /
-              1000.0);
-      fo = fopen("_dump.seq", "w");
-      fmt::print(fo, "=== Transform ===\n{}\n", ast::FormatVisitor::apply(transformed));
-      fflush(fo);
+      LOG_TIME("[T] ocaml = {:.1f}\n", __ocaml_time__ / 1000.0);
+      LOG_TIME("[T] transform = {:.1f}\n",
+               (duration_cast<milliseconds>(high_resolution_clock::now() - t).count() -
+                __ocaml_time__) /
+                   1000.0);
+      if (__dbg_level__) {
+        auto fo = fopen("_dump_transform.seq", "w");
+        fmt::print(fo, "{}", ast::FormatVisitor::apply(transformed));
+        fclose(fo);
+      }
     }
 
     t = high_resolution_clock::now();
     auto typechecked = ast::TypecheckVisitor::apply(cache, move(transformed));
     if (!isTest) {
-      fmt::print(stderr, "[T] typecheck = {:.1f}\n",
-                 duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                     1000.0);
-      fmt::print(fo, "=== Typecheck ===\n{}\n",
-                 ast::FormatVisitor::apply(typechecked, cache));
-      fflush(fo);
+      LOG_TIME("[T] typecheck = {:.1f}\n",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
+      if (__dbg_level__) {
+        auto fo = fopen("_dump_typecheck.seq", "w");
+        fmt::print(fo, "{}", ast::FormatVisitor::apply(typechecked, cache));
+        fclose(fo);
+      }
     }
-    // FILE *fo = fopen("tmp/out.htm", "w");
-    // LOG3("{}", ast::FormatVisitor::format(ctx, tv, false, true));
 
     t = high_resolution_clock::now();
     auto module = ast::CodegenVisitor::apply(cache, move(typechecked));
-    if (!isTest) {
-      fmt::print(stderr, "[T] codegen   = {:.1f}\n",
-                 duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                     1000.0);
-    }
     __isTest = isTest;
     return module;
   } catch (seq::exc::SeqException &e) {

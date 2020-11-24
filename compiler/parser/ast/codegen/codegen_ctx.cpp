@@ -124,7 +124,6 @@ seq::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
   if (it != types.end())
     return it->second;
 
-  // LOG7("[codegen] generating ty {}", real.fullName);
   seq::types::Type *handle = nullptr;
   vector<seq::types::Type *> types;
   vector<int> statics;

@@ -177,7 +177,7 @@ int LinkType::unify(TypePtr typ, Unification &us) {
     }
     if (!occurs(typ, us)) {
       assert(!type);
-      LOG9("[unify] {} <- {}", id, typ->toString());
+      LOG_TYPECHECK("[unify] {} <- {}", id, typ->toString());
       us.linked.push_back(static_pointer_cast<LinkType>(shared_from_this()));
       kind = Link;
       assert(!typ->getLink() || typ->getLink()->kind != Unbound ||
@@ -221,7 +221,7 @@ TypePtr LinkType::instantiate(int level, int &unboundCount,
   if (kind == Generic) {
     if (cache.find(id) != cache.end())
       return cache[id];
-    LOG9("[inst] #{} -> ?{}", id, unboundCount);
+    LOG_TYPECHECK("[inst] #{} -> ?{}", id, unboundCount);
     return cache[id] =
                make_shared<LinkType>(Unbound, unboundCount++, level, nullptr, isStatic);
   } else if (kind == Unbound) {

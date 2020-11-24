@@ -45,19 +45,24 @@
 // Level 7
 extern int __dbg_level__;
 extern int __level__;
-#define DBG(l, c, ...)                                                                 \
+#define DBG(c, ...)                                                                    \
+  fmt::print("{}" c "\n", std::string(2 * __level__, ' '), ##__VA_ARGS__)
+#define LOG(c, ...) DBG(c, ##__VA_ARGS__)
+#define LOG_TIME(c, ...)                                                               \
   {                                                                                    \
-    if (__dbg_level__ >= l)                                                            \
-      fmt::print("{}" c "\n", std::string(2 * __level__, ' '), ##__VA_ARGS__);         \
+    if (__dbg_level__ & (1 << 0))                                                      \
+      DBG(c, ##__VA_ARGS__);                                                           \
   }
-#define LOG(c, ...) DBG(0, c, ##__VA_ARGS__)
-#define LOG1(c, ...) DBG(1, c, ##__VA_ARGS__)
-#define LOG2(c, ...) DBG(2, c, ##__VA_ARGS__)
-#define LOG3(c, ...) DBG(3, c, ##__VA_ARGS__)
-#define LOG4(c, ...) DBG(4, c, ##__VA_ARGS__)
-#define LOG7(c, ...) DBG(7, c, ##__VA_ARGS__)
-#define LOG8(c, ...) DBG(8, c, ##__VA_ARGS__)
-#define LOG9(c, ...) DBG(9, c, ##__VA_ARGS__)
+#define LOG_REALIZE(c, ...)                                                            \
+  {                                                                                    \
+    if (__dbg_level__ & (1 << 2))                                                      \
+      DBG(c, ##__VA_ARGS__);                                                           \
+  }
+#define LOG_TYPECHECK(c, ...)                                                          \
+  {                                                                                    \
+    if (__dbg_level__ & (1 << 4))                                                      \
+      DBG(c, ##__VA_ARGS__);                                                           \
+  }
 #define CAST(s, T) dynamic_cast<T *>(s.get())
 
 #ifndef NDEBUG

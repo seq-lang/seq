@@ -80,7 +80,7 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int 
   auto t = make_shared<types::LinkType>(types::LinkType::Unbound, cache->unboundCount++,
                                         level, nullptr, isStatic);
   t->setSrcInfo(srcInfo);
-  LOG9("[ub] new {}: {} ({})", t->toString(0), srcInfo, setActive);
+  LOG_TYPECHECK("[ub] new {}: {} ({})", t->toString(0), srcInfo, setActive);
   if (cache->unboundCount - 1 == 4219)
     assert(1);
   if (setActive)
@@ -109,8 +109,8 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
         continue;
       i.second->setSrcInfo(srcInfo);
       if (activeUnbounds.find(i.second) == activeUnbounds.end()) {
-        LOG9("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
-             i.second->toString(0), type->toString(), srcInfo, activate);
+        LOG_TYPECHECK("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
+                      i.second->toString(0), type->toString(), srcInfo, activate);
         // if (i.second->toString() == "?4219.2")
         // assert(1);
         if (activate)

@@ -352,7 +352,7 @@ unique_ptr<Stmt> parse_stmt(value val) {
 
 unique_ptr<SuiteStmt> ocamlParse(string file, string code, int line_offset,
                                  int col_offset) {
-  bool debug = __dbg_level__ > 7;
+  bool debug = __dbg_level__ & (1 << 5);
   CAMLparam0();
   CAMLlocal3(p1, f, c);
   static value *closure_f = nullptr;
