@@ -553,11 +553,18 @@ void LLVMFunc::codegen(Module *module) {
   SMDiagnostic err;
   std::unique_ptr<MemoryBuffer> buf = MemoryBuffer::getMemBuffer(code);
   assert(buf);
-  const bool fail = llvm::parseAssemblyInto(buf->getMemBufferRef(), *module, err);
-  if (fail) {
-    err.print("<llvm function>", errs());
-    throw exc::SeqException("@llvm function error parsing IR");
+  std::unique_ptr<Module> sub = llvm::parseIR(buf->getMemBufferRef(), err, context);
+  if (!sub) {
+    std::string bufStr;
+    llvm::raw_string_ostream buf(bufStr);
+    err.print("LLVM", buf);
+    throw exc::SeqException(buf.str());
   }
+  sub->setDataLayout(module->getDataLayout());
+
+  llvm::Linker L(*module);
+  const bool fail = L.linkInModule(std::move(sub));
+  assert(!fail);
   func = module->getFunction(name);
   assert(func);
 }
