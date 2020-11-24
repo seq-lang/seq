@@ -1622,6 +1622,8 @@ StmtPtr TransformVisitor::parseCImport(string name, const vector<Param> &args,
   ctx->add(TransformItem::Func, altName.empty() ? name : altName, canonicalName,
            ctx->isToplevel());
   StmtPtr body = code ? N<ExprStmt>(code->clone()) : nullptr;
+  if (code && !ret)
+    error("LLVM functions must have a return type");
   auto f = N<FunctionStmt>(
       canonicalName, ret ? transformType(ret) : transformType(N<IdExpr>("void")),
       vector<Param>(), move(fnArgs), move(body), vector<string>{code ? "llvm" : ".c"});

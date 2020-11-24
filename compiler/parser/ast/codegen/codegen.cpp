@@ -1,5 +1,6 @@
 #include "util/fmt/format.h"
 #include <memory>
+#include <sstream>
 #include <stack>
 #include <string>
 #include <tuple>
@@ -472,7 +473,24 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       assert(c);
       auto sp = CAST(c->expr, StringExpr);
       assert(sp);
-      f->setCode(sp->value);
+
+      std::istringstream sin(sp->value);
+      string l, declare, code;
+      bool isDeclare = true;
+      while (std::getline(sin, l)) {
+        string lp = l;
+        lp.erase(lp.begin(), std::find_if(lp.begin(), lp.end(), [](unsigned char ch) {
+                   return !std::isspace(ch);
+                 }));
+        if (!startswith(lp, "declare "))
+          isDeclare = false;
+        if (isDeclare)
+          declare += lp + "\n";
+        else
+          code += l + "\n";
+      }
+      f->setDeclares(declare);
+      f->setCode(code);
     } else {
       auto f = dynamic_cast<seq::Func *>(fp.first);
       assert(f);
@@ -505,7 +523,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       ctx->popBlock();
     }
   }
-}
+} // namespace ast
 
 void CodegenVisitor::visit(const ClassStmt *stmt) {
   // visitMethods(ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo()));
