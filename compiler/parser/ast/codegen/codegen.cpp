@@ -40,7 +40,6 @@ CodegenVisitor::CodegenVisitor(shared_ptr<CodegenContext> ctx)
 seq::Expr *CodegenVisitor::transform(const ExprPtr &expr) {
   if (!expr)
     return nullptr;
-  //  LOG7("-- {}", expr->toString());
   CodegenVisitor v(ctx);
   v.setSrcInfo(expr->getSrcInfo());
   expr->accept(v);
@@ -129,7 +128,7 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
           auto name = names.back();
           if (isdigit(name[0])) // TODO: get rid of this hack
             name = names[names.size() - 2];
-          LOG7("[codegen] generating internal fn {} -> {}", ast->name, name);
+          LOG_REALIZE("[codegen] generating internal fn {} -> {}", ast->name, name);
           ctx->functions[f.first] = {typ->findMagic(name, types), true};
         } else {
           auto fn = new seq::Func();
@@ -194,10 +193,8 @@ void CodegenVisitor::visit(const PipeExpr *expr) {
   for (int i = 1; i < expr->items.size(); i++) {
     auto e = CAST(expr->items[i].expr, CallExpr);
     assert(e);
-    // LOG("{}", e->toString());
 
     auto pfn = transform(e->expr);
-    // LOG(" -- {} ... {}", pfn->getType()->getName(), e->args.size());
     vector<seq::Expr *> items(e->args.size(), nullptr);
     vector<string> names(e->args.size(), "");
     vector<seq::types::Type *> partials(e->args.size(), nullptr);
@@ -205,12 +202,9 @@ void CodegenVisitor::visit(const PipeExpr *expr) {
       if (!CAST(e->args[ai].value, EllipsisExpr)) {
         items[ai] = transform(e->args[ai].value);
         partials[ai] = realizeType(e->args[ai].value->getType()->getClass());
-        // LOG(" -- {}: {} .. {}", ai, partials[ai]->getName(),
-        // items[ai]->getType()->getName());
       }
     auto p = new seq::PartialCallExpr(pfn, items, names);
     p->setType(seq::types::PartialFuncType::get(pfn->getType(), partials));
-    // LOG(" ?? {}", p->getType()->getName())
 
     exprs.push_back(p);
     inTypes.push_back(realizeType(expr->inTypes[i]->getClass()));
@@ -456,7 +450,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
     assert(ast);
     if (in(ast->attributes, "internal"))
       continue;
-    LOG7("[codegen] generating fn {}", real.first);
+    LOG_REALIZE("[codegen] generating fn {}", real.first);
     f->setName(real.first);
     f->setSrcInfo(getSrcInfo());
     if (!ctx->isToplevel())

@@ -61,15 +61,11 @@ ExprPtr TypecheckVisitor::transform(const ExprPtr &expr, bool allowTypes) {
     return nullptr;
   TypecheckVisitor v(ctx, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
-  LOG9("<< {} {}", expr->toString(), expr->getSrcInfo());
   expr->accept(v);
-  // LOG9("{} | {} -> {}", expr->getSrcInfo().line, expr->toString(),
-  //  v.resultExpr->toString());
   if (v.resultExpr && v.resultExpr->getType() && v.resultExpr->getType()->getClass() &&
       v.resultExpr->getType()->getClass()->canRealize())
     realizeType(v.resultExpr->getType()->getClass());
   seqassert(v.resultExpr, "cannot parse {}", expr->toString());
-  LOG9(">> {}", v.resultExpr->toString());
   return move(v.resultExpr);
 }
 
@@ -265,7 +261,6 @@ void TypecheckVisitor::visit(const PipeExpr *expr) {
     auto l = expr->items[i].clone();
 
   reset:
-    // LOG("-> {} ; {} -> {}", ctx->iteration, inType->toString(), l.expr->toString());
     if (auto ce = CAST(l.expr, CallExpr)) {
       // TODO: what if this is a StmtExpr [e.g. a constructor]?
       int inTypePos = -1;
@@ -322,7 +317,6 @@ void TypecheckVisitor::visit(const StaticExpr *expr) {
 
 void TypecheckVisitor::visit(const InstantiateExpr *expr) {
   ExprPtr e = transform(expr->type, true);
-  // LOG("-- in : {} -> {}", expr->type->toString(), e->toString());
   auto g = ctx->instantiate(e->getSrcInfo(), e->getType());
   for (int i = 0; i < expr->params.size(); i++) {
     TypePtr t = nullptr;
@@ -356,7 +350,6 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
     }
     /// Note: at this point, only single-variable static var expression (e.g.
     /// N) is allowed, so unify will work as expected.
-    // LOG("{} {}", t->toString(), g->toString());
     if (g->getFunc()) {
       if (i >= g->getFunc()->explicits.size())
         error("expected {} generics", g->getFunc()->explicits.size());
@@ -403,7 +396,6 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
         return nullptr;
       // TODO : be smarter! there might be a compatible getitem?
     }
-    // LOG("getting index for {}", tuple->name);
     auto mm = ctx->cache->classMembers.find(tuple->name);
     assert(mm != ctx->cache->classMembers.end());
     auto getInt = [](seq_int_t *o, const ExprPtr &e) {
@@ -460,7 +452,6 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
         it.push_back(clone(i));
     else
       it.push_back(clone(expr->index));
-    // LOG("-- {} -> INST {}", expr->toString(), e->toString());
     resultExpr = transform(N<InstantiateExpr>(move(e), move(it)));
   } else if (auto c = t->getClass()) {
     resultExpr = getTupleIndex(c, expr->expr, expr->index);
@@ -659,7 +650,6 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
       auto ne = transform(N<CallExpr>(
           N<DotExpr>(N<IdExpr>(format(".Tuple.{}", args.size())), "__new__"), move(e)));
       args.clear();
-      // LOG("fixed python call");
       args.push_back({"", move(ne)});
     }
   }
@@ -708,7 +698,6 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
     ctx->addBlock();
     addFunctionGenerics(calleeType->getFunc());
   } else if (!ast && namedArgs.size()) {
-    // LOG("{}", expr->toString());
     error("unexpected name '{}' (function pointers have argument names elided)",
           namedArgs.begin()->first);
   }
@@ -839,7 +828,6 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
         }
       }
     if (f->canRealize()) {
-      // LOG("~ {}", f->realizeString());
       auto r = realizeFunc(f);
       if (knownTypes.empty())
         fix(callee, r->realizeString());
@@ -926,10 +914,7 @@ void TypecheckVisitor::visit(const StmtExpr *expr) {
   vector<StmtPtr> stmts;
   for (auto &s : expr->stmts)
     stmts.push_back(transform(s));
-  // LOG("-> {}", expr->expr->toString());
   auto e = transform(expr->expr);
-  // LOG("<- {}", e->toString());
-  // LOG("-- setting type {} to {}", expr->toString(), e->getType()->toString());
   auto t = forceUnify(expr, e->getType());
   resultExpr = N<StmtExpr>(move(stmts), move(e));
   resultExpr->setType(t);
@@ -1224,14 +1209,12 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
 
   t->setSrcInfo(stmt->getSrcInfo());
   t = std::static_pointer_cast<FuncType>(t->generalize(ctx->typecheckLevel));
-  LOG7("[stmt] added func {}: {} (base={}; parent={})", stmt->name, t->toString(),
-       ctx->getBase(), printParents(t->parent));
+  LOG_REALIZE("[stmt] added func {}: {} (base={}; parent={})", stmt->name,
+              t->toString(), ctx->getBase(), printParents(t->parent));
 
   ctx->bases[ctx->findBase(attributes[".parentFunc"])].visitedAsts[stmt->name] = {
       TypecheckItem::Func, t};
   ctx->add(TypecheckItem::Func, stmt->name, t, true, false, false);
-  // LOG("-> {}", stmt->name);
-  // ctx->addToplevel(stmt->name);
 
   if (in(stmt->attributes, "builtin") || in(stmt->attributes, ".c")) {
     if (!t->canRealize())
@@ -1338,15 +1321,15 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
     ctx->remove(g.name);
   }
 
-  LOG7("[class] {} (parent={})", ct->toString(), printParents(ct->parent));
+  LOG_REALIZE("[class] {} (parent={})", ct->toString(), printParents(ct->parent));
   for (auto &m : ctx->cache->classMembers[stmt->name])
-    LOG7("       - member: {}: {}", m.first, m.second->toString());
+    LOG_REALIZE("       - member: {}: {}", m.first, m.second->toString());
   for (auto &m : ctx->cache->classMethods[stmt->name])
     for (auto &f : m.second) {
       // auto ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
       // if (f->canRealize() && !in(ast->attributes, "delay"))
       // realizeFunc(ctx->instantiate(getSrcInfo(), f)->getFunc());
-      LOG7("       - method: {}: {}", m.first, f->toString());
+      LOG_REALIZE("       - method: {}: {}", m.first, f->toString());
     }
   return stmts;
 }
@@ -1574,7 +1557,6 @@ FuncTypePtr TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
     int s;
     if ((s = reorder(args, reorderedArgs, mt)) == -1)
       continue;
-    // LOG("{} in, {} passed!", args.size(), mt->name);
 
     for (int j = 0; j < reorderedArgs.size(); j++) {
       auto mac = mt->args[j + 1]->getClass();
@@ -1647,7 +1629,7 @@ vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &gene
     auto tp = ctx->addUnbound(getSrcInfo(), level, true, bool(g.type));
     genericTypes.push_back(
         {g.name, tp->generalize(level), ctx->cache->unboundCount - 1, clone(g.deflt)});
-    LOG7("[generic] {} -> {} {}", g.name, tp->toString(0), bool(g.type));
+    LOG_REALIZE("[generic] {} -> {} {}", g.name, tp->toString(0), bool(g.type));
     ctx->add(TypecheckItem::Type, g.name, tp, false, true, bool(g.type));
   }
   return genericTypes;
@@ -1702,11 +1684,8 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     }
     auto oldBases = vector<TypeContext::RealizationBase>(ctx->bases.begin() + depth,
                                                          ctx->bases.end());
-    // LOG("realizing {} ==> {}", t->name, t->realizeString());
-    while (ctx->bases.size() > depth) {
-      // LOG(" -- {}", ctx->bases.back().name);
+    while (ctx->bases.size() > depth)
       ctx->bases.pop_back();
-    }
 
     if (startswith(t->name, ".Tuple.") &&
         (endswith(t->name, ".__iter__") || endswith(t->name, ".__getitem__"))) {
@@ -1720,8 +1699,8 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
       }
     }
 
-    LOG7("[realize] fn {} -> {} : base {} ; depth = {}", t->name, t->realizeString(),
-         ctx->getBase(), depth);
+    LOG_REALIZE("[realize] fn {} -> {} : base {} ; depth = {}", t->name,
+                t->realizeString(), ctx->getBase(), depth);
     ctx->addBlock();
     ctx->typecheckLevel++;
     ctx->bases.push_back({t->name, t, t->args[0]});
@@ -1766,7 +1745,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     for (auto &i : ast->args)
       args.push_back({i.name, nullptr, nullptr});
 
-    LOG7("done with {}", t->realizeString());
+    LOG_REALIZE("done with {}", t->realizeString());
     ctx->cache->realizationAsts[t->realizeString()] =
         Nx<FunctionStmt>(ast, t->realizeString(), nullptr, vector<Param>(), move(args),
                          move(realized), map<string, string>(ast->attributes));
@@ -1792,13 +1771,14 @@ types::TypePtr TypecheckVisitor::realizeType(types::TypePtr tt) {
     if (it != ctx->cache->realizations[t->name].end())
       return it->second;
 
-    LOG7("[realize] ty {} -> {}", t->name, t->realizeString());
+    LOG_REALIZE("[realize] ty {} -> {}", t->name, t->realizeString());
     ctx->bases[0].visitedAsts[t->realizeString()] = {TypecheckItem::Type,
                                                      t}; // realizations go to the top
     ctx->cache->realizations[t->name][t->realizeString()] = t;
     for (auto &m : ctx->cache->classMembers[t->name]) {
       auto mt = ctx->instantiate(t->getSrcInfo(), m.second, t);
-      LOG7("- member: {} -> {}: {}", m.first, m.second->toString(), mt->toString());
+      LOG_REALIZE("- member: {} -> {}: {}", m.first, m.second->toString(),
+                  mt->toString());
       assert(mt->getClass() && mt->getClass()->canRealize());
       ctx->cache->memberRealizations[t->realizeString()].push_back(
           {m.first, realizeType(mt->getClass())});
@@ -1854,20 +1834,21 @@ StmtPtr TypecheckVisitor::realizeBlock(const StmtPtr &stmt, bool keepLast) {
             // if (ctx->...)
             if (!fu)
               fu = ub;
-            LOG7("[realizeBlock] dangling {} @ {}", ub->toString(), ub->getSrcInfo());
+            LOG_TYPECHECK("[realizeBlock] dangling {} @ {}", ub->toString(),
+                          ub->getSrcInfo());
             count++;
           }
         error(fu, "cannot resolve {} unbound variables", count);
       }
       prevSize = newUnbounds;
     }
-    LOG7("=========================== {}",
-         ctx->bases.back().type ? ctx->bases.back().type->toString() : "-");
+    LOG_TYPECHECK("=========================== {}",
+                  ctx->bases.back().type ? ctx->bases.back().type->toString() : "-");
   }
   // Last pass; TODO: detect if it is needed...
   ctx->addBlock();
-  LOG7("=========================== {}",
-       ctx->bases.back().type ? ctx->bases.back().type->toString() : "-");
+  LOG_TYPECHECK("=========================== {}",
+                ctx->bases.back().type ? ctx->bases.back().type->toString() : "-");
   result = TypecheckVisitor(ctx).transform(result);
   if (!keepLast)
     ctx->popBlock();

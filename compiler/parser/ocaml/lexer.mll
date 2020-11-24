@@ -25,7 +25,7 @@
     ; mutable trail: int
     }
 
-  let is_pydef = ref false
+  let is_extern = ref 0
 
   let char_to_string = String.make 1
   let ignore_nl t = t.ignore_newline <- t.ignore_newline + 1
@@ -116,8 +116,8 @@ rule token state = parse
     { (* TODO: Python-style indentation detection (i.e. more strict rules) *)
       let cur = state.offset in
       let last = Stack.top state.stack in
-      if cur < last then (ignore (Stack.pop state.stack); P.DEDENT)
-      else if cur > last then (Stack.push cur state.stack; P.INDENT)
+      if cur < last then (ignore (Stack.pop state.stack); [P.DEDENT])
+      else if cur > last then (Stack.push cur state.stack; [P.INDENT])
       else read state lexbuf }
 
 (* Token rules *)
@@ -129,19 +129,26 @@ and read state = parse
       ; pos_bol = lexbuf.lex_curr_p.pos_cnum
       };
       if state.ignore_newline <= 0 then (
-        let pydef_start = if !is_pydef then state.offset else 0 in
+        let pydef_start = if !is_extern > 10 then state.offset else 0 in
         state.offset <- 0;
-        if !is_pydef then (
+        if !is_extern > 10 then (
           let buf = B.create 100 in
           let pstate = { start = pydef_start; p_offset = 0; trail = 0 } in
           pydef_offset buf pstate lexbuf;
-          is_pydef := false;
+          is_extern := 0;
           lexbuf.lex_curr_pos <- lexbuf.lex_curr_pos - state.offset - 1;
+          let code = Buffer.contents buf in
+          let code_lines = Seq.fold_left (fun c s -> match s with '\n' -> c + 1 | _ -> c) 0 (String.to_seq code) in
+          lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + code_lines + 1 };
           if pstate.trail = 0 (* encountered newline \n *)
           then state.offset <- Stack.top state.stack
           else state.offset <- pstate.trail;
-          P.PYDEF_RAW (Buffer.contents buf)
-        ) else (offset state lexbuf; P.NL)
+          [P.EXTERN code; P.NL]
+        ) else (
+          is_extern := 0;
+          offset state lexbuf;
+          [P.NL]
+        )
       )
       else read state lexbuf }
   | '\\' newline white*
@@ -152,111 +159,112 @@ and read state = parse
       read state lexbuf }
   | white+ { read state lexbuf }
 
-  | "is" white+ "not" white+ { P.ISNOT "is not" }
-  | "not" white+ "in" white+ { P.NOTIN "not in" }
+  | "is" white+ "not" white+ { [P.ISNOT "is not"] }
+  | "not" white+ "in" white+ { [P.NOTIN "not in"] }
+  | "@" (("python" | "llvm") as l) white* newline { is_extern := 1; [P.AT("@"); P.ID(l); P.NL] }
   | ident as id
     { match id with
-      | "True"     -> P.TRUE
-      | "False"    -> P.FALSE
-      | "if"       -> P.IF
-      | "elif"     -> P.ELIF
-      | "else"     -> P.ELSE
-      | "def"      -> P.DEF
-      | "for"      -> P.FOR
-      | "break"    -> P.BREAK
-      | "continue" -> P.CONTINUE
-      | "print"    -> P.PRINT
-      | "return"   -> P.RETURN
-      | "yield"    -> P.YIELD
-      | "match"    -> P.MATCH
-      | "case"     -> P.CASE
-      | "as"       -> P.AS
-      | "pass"     -> P.PASS
-      | "while"    -> P.WHILE
-      | "lambda"   -> P.LAMBDA
-      | "assert"   -> P.ASSERT
-      | "global"   -> P.GLOBAL
-      | "import"   -> P.IMPORT
-      | "from"     -> P.FROM
-      | "class"    -> P.CLASS
-      | "typeof"   -> P.TYPEOF
-      (* | "@python"  -> is_pydef := true; P.PASS *)
-      | "del"      -> P.DEL
-      | "None"     -> P.NONE
-      | "try"      -> P.TRY
-      | "except"   -> P.EXCEPT
-      | "finally"  -> P.FINALLY
-      | "with"     -> P.WITH
-      | "raise"    -> P.THROW
-      | "is"       -> P.IS "is"
-      | "in"       -> P.IN "in"
-      | "or"       -> P.OR "||"
-      | "and"      -> P.AND "&&"
-      | "not"      -> P.NOT "!"
-      | _          -> P.ID id }
+      | "True"     -> [P.TRUE]
+      | "False"    -> [P.FALSE]
+      | "if"       -> [P.IF]
+      | "elif"     -> [P.ELIF]
+      | "else"     -> [P.ELSE]
+      | "def"      -> (if !is_extern > 0 then is_extern := !is_extern + 10); [P.DEF]
+      | "for"      -> [P.FOR]
+      | "break"    -> [P.BREAK]
+      | "continue" -> [P.CONTINUE]
+      | "print"    -> [P.PRINT]
+      | "return"   -> [P.RETURN]
+      | "yield"    -> [P.YIELD]
+      | "match"    -> [P.MATCH]
+      | "case"     -> [P.CASE]
+      | "as"       -> [P.AS]
+      | "pass"     -> [P.PASS]
+      | "while"    -> [P.WHILE]
+      | "lambda"   -> [P.LAMBDA]
+      | "assert"   -> [P.ASSERT]
+      | "global"   -> [P.GLOBAL]
+      | "import"   -> [P.IMPORT]
+      | "from"     -> [P.FROM]
+      | "class"    -> [P.CLASS]
+      | "typeof"   -> [P.TYPEOF]
+      | "del"      -> [P.DEL]
+      | "None"     -> [P.NONE]
+      | "try"      -> [P.TRY]
+      | "except"   -> [P.EXCEPT]
+      | "finally"  -> [P.FINALLY]
+      | "with"     -> [P.WITH]
+      | "raise"    -> [P.THROW]
+      | "is"       -> [P.IS "is"]
+      | "in"       -> [P.IN "in"]
+      | "or"       -> [P.OR "||"]
+      | "and"      -> [P.AND "&&"]
+      | "not"      -> [P.NOT "!"]
+      | _          -> [P.ID id]
+    }
 
-  | (stringprefix as p) '\''     { single_string state p lexbuf }
-  | (stringprefix as p) '"'      { double_string state p lexbuf }
-  | (stringprefix as p) "'''"    { single_docstr state p lexbuf }
-  | (stringprefix as p) "\"\"\"" { double_docstr state p lexbuf }
+  | (stringprefix as p) '\''     { [single_string state p lexbuf] }
+  | (stringprefix as p) '"'      { [double_string state p lexbuf] }
+  | (stringprefix as p) "'''"    { [single_docstr state p lexbuf] }
+  | (stringprefix as p) "\"\"\"" { [double_docstr state p lexbuf] }
 
   (* | "$" { escaped_id state lexbuf } *)
-  | "(" { ignore_nl state; P.LP }
-  | ")" { aware_nl state; P.RP }
-  | "[" { ignore_nl state; P.LS }
-  | "]" { aware_nl state; P.RS }
-  | "{" { ignore_nl state; P.LB }
-  | "}" { aware_nl state; P.RB }
+  | "(" { ignore_nl state; [P.LP] }
+  | ")" { aware_nl state; [P.RP] }
+  | "[" { ignore_nl state; [P.LS] }
+  | "]" { aware_nl state; [P.RS] }
+  | "{" { ignore_nl state; [P.LB] }
+  | "}" { aware_nl state; [P.RB] }
 
-  | "|="  as op { P.OREQ op }
-  | "&="  as op { P.ANDEQ op }
-  | "^="  as op { P.XOREQ op }
-  | "<<=" as op { P.LSHEQ op }
-  | ">>=" as op { P.RSHEQ op }
-  | "<<"  as op { P.B_LSH op }
-  | ">>"  as op { P.B_RSH op }
-  | "&"   as op { P.B_AND (char_to_string op) }
-  | "^"   as op { P.B_XOR (char_to_string op) }
-  | "~"   as op { P.B_NOT (char_to_string op) }
-  | "||>" as op { P.PPIPE op }
-  | ">|"  as op { P.SPIPE op }
-  | "|>"  as op { P.PIPE  op }
-  | "|"   as op { P.B_OR  (char_to_string op) }
-  | "="   as op { P.EQ        (char_to_string op) }
-  | "..." as op { P.ELLIPSIS  op }
-  | "@"   as op { P.AT        (char_to_string op) }
-  | "->"  { P.OF }
-  | ":"   { P.COLON }
-  | ";"   { P.SEMICOLON }
-  | ","   { P.COMMA }
-  | "."   { P.DOT }
-  | "+="  as op { P.PLUSEQ op }
-  | "-="  as op { P.MINEQ op }
-  | "**=" as op { P.POWEQ op }
-  | "*="  as op { P.MULEQ op }
-  | "//=" as op { P.FDIVEQ op }
-  | "/="  as op { P.DIVEQ op }
-  | "%="  as op { P.MODEQ op }
-  | "+"   as op { P.ADD (char_to_string op) }
-  | "-"   as op { P.SUB (char_to_string op) }
-  | "**"  as op { P.POW op }
-  | "*"   as op { P.MUL (char_to_string op) }
-  | "=="  as op { P.EEQ op }
-  | "!="  as op { P.NEQ op }
-  | ">="  as op { P.GEQ op }
-  | ">"   as op { P.GREAT (char_to_string op) }
-  | "<="  as op { P.LEQ op }
-  | "<"   as op { P.LESS (char_to_string op) }
-  | "//"  as op { P.FDIV op }
-  | "/"   as op { P.DIV (char_to_string op) }
-  | "%"   as op { P.MOD (char_to_string op) }
+  | "|="  as op { [P.OREQ op] }
+  | "&="  as op { [P.ANDEQ op] }
+  | "^="  as op { [P.XOREQ op] }
+  | "<<=" as op { [P.LSHEQ op] }
+  | ">>=" as op { [P.RSHEQ op] }
+  | "<<"  as op { [P.B_LSH op] }
+  | ">>"  as op { [P.B_RSH op] }
+  | "&"   as op { [P.B_AND (char_to_string op)] }
+  | "^"   as op { [P.B_XOR (char_to_string op)] }
+  | "~"   as op { [P.B_NOT (char_to_string op)] }
+  | "||>" as op { [P.PPIPE op] }
+  | ">|"  as op { [P.SPIPE op] }
+  | "|>"  as op { [P.PIPE  op] }
+  | "|"   as op { [P.B_OR  (char_to_string op)] }
+  | "="   as op { [P.EQ        (char_to_string op)] }
+  | "..." as op { [P.ELLIPSIS  op] }
+  | "@"   as op { [P.AT        (char_to_string op)] }
+  | "->"  { [P.OF] }
+  | ":"   { [P.COLON] }
+  | ";"   { [P.SEMICOLON] }
+  | ","   { [P.COMMA] }
+  | "."   { [P.DOT] }
+  | "+="  as op { [P.PLUSEQ op] }
+  | "-="  as op { [P.MINEQ op] }
+  | "**=" as op { [P.POWEQ op] }
+  | "*="  as op { [P.MULEQ op] }
+  | "//=" as op { [P.FDIVEQ op] }
+  | "/="  as op { [P.DIVEQ op] }
+  | "%="  as op { [P.MODEQ op] }
+  | "+"   as op { [P.ADD (char_to_string op)] }
+  | "-"   as op { [P.SUB (char_to_string op)] }
+  | "**"  as op { [P.POW op] }
+  | "*"   as op { [P.MUL (char_to_string op)] }
+  | "=="  as op { [P.EEQ op] }
+  | "!="  as op { [P.NEQ op] }
+  | ">="  as op { [P.GEQ op] }
+  | ">"   as op { [P.GREAT (char_to_string op)] }
+  | "<="  as op { [P.LEQ op] }
+  | "<"   as op { [P.LESS (char_to_string op)] }
+  | "//"  as op { [P.FDIV op] }
+  | "/"   as op { [P.DIV (char_to_string op)] }
+  | "%"   as op { [P.MOD (char_to_string op)] }
 
-  | (int | binint | hexint) as i { P.INT (i, "") }
-  | ((int | binint | hexint) as i) (intsuffix as k) { P.INT (i, String.lowercase_ascii k) }
-  | danglingfloat as f { P.FLOAT (float_of_string f, "") }
-  | float as f { P.FLOAT (float_of_string f, "") }
-  | (float as f) (intsuffix as k) { P.FLOAT (float_of_string f, String.lowercase_ascii k) }
-  | eof { P.EOF }
+  | (int | binint | hexint) as i { [P.INT (i, "")] }
+  | ((int | binint | hexint) as i) (intsuffix as k) { [P.INT (i, String.lowercase_ascii k)] }
+  | danglingfloat as f { [P.FLOAT (float_of_string f, "")] }
+  | float as f { [P.FLOAT (float_of_string f, "")] }
+  | (float as f) (intsuffix as k) { [P.FLOAT (float_of_string f, String.lowercase_ascii k)] }
+  | eof { [P.EOF] }
   | _ { raise (Ast.SyntaxError (Format.sprintf "Unknown token '%s'" (L.lexeme lexbuf), lexbuf.lex_start_p)) }
 
 (* Indentation rules *)
@@ -284,7 +292,7 @@ and double_docstr state prefix = shortest
   | ([^ '\\'] | escape)* eof { raise (Ast.SyntaxError ("string not closed", lexbuf.lex_start_p)) }
 
 (* PyDef lexing *)
-
+(* TODO: handle newlines in pydef block... *)
 and pydef buf state = parse
   | eof {}
   | white* newline

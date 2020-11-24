@@ -106,17 +106,28 @@ let print_token t =
   | ANDEQ s -> sprintf "ANDEQ(%s)" s
   | AND s -> sprintf "AND(%s)" s
   | ADD s -> sprintf "ADD(%s)" s
-  | PYDEF_RAW s -> sprintf "PYDEF_RAW(\n%s)" s
+  | EXTERN s -> sprintf "EXTERN(\n%s)" s
 
 
 module I = Seqgrammar.MenhirInterpreter
 
-let rec loop lexbuf state checkpoint =
+let find_map f t =
+  let rec loop = function
+    | [] -> None
+    | x :: l -> match f x with None -> loop l | Some _ as r -> r
+  in
+  loop t
+
+let rec loop lexbuf state cache checkpoint =
   match checkpoint with
+  | I.Accepted v -> Some v
   | I.InputNeeded _env ->
-    let token = Lexer.token state lexbuf in
-    let checkpoint = I.offer checkpoint (token, lexbuf.lex_start_p, lexbuf.lex_curr_p) in
-    loop lexbuf state checkpoint
+    ( match cache with 
+      | [] ->
+        loop lexbuf state (Lexer.token state lexbuf) checkpoint
+      | t :: ts ->
+        let ch = I.offer checkpoint (t, lexbuf.lex_start_p, lexbuf.lex_curr_p) in
+        loop lexbuf state ts ch )
   | I.HandlingError _env ->
     let state = I.current_state_number _env in
     let msg =
@@ -127,25 +138,27 @@ let rec loop lexbuf state checkpoint =
         else sprintf ": %s" msg
       with Not_found -> ""
     in
+    let msg = sprintf ": '%s'" (Lexing.lexeme lexbuf) in
     let msg, pos =  (sprintf "parsing error%s" msg), lexbuf.lex_start_p in
     raise_exception msg pos.pos_fname (pos.pos_lnum + 1) (pos.pos_cnum - pos.pos_bol + 1);
     None
-  | I.Shifting _ | I.AboutToReduce _ -> loop lexbuf state (I.resume checkpoint)
-  | I.Accepted v -> Some v
+  | I.Shifting _ | I.AboutToReduce _ -> loop lexbuf state cache (I.resume checkpoint)
   | I.Rejected -> assert false
 
-let test code =
+let test file code =
+  let open Seqgrammar in
+  printf "[lex] file: %s\n[lex]   %!" file;
   let lexbuf = Lexing.from_string (code ^ "\n") in
   let stack = Stack.create () in
   Stack.push 0 stack;
   let state = Lexer.{ stack; offset = 0; ignore_newline = 0; fname = "test" } in
   let finished = ref false in
   while not !finished do
-    let t = Lexer.token state lexbuf in
-    match t with
-    | EOF -> printf "EOF\n%!"; finished := true
-    | NL | INDENT | DEDENT -> printf "%s\n%!" @@ print_token t
-    | t -> printf "%s %!" @@ print_token t
+    Lexer.token state lexbuf |> List.iter (function
+      | EOF -> printf "EOF\n%!"; finished := true
+      | (NL | INDENT | DEDENT) as t -> printf "%s\n[lex]   %!" @@ print_token t
+      | t -> printf "%s %!" @@ print_token t
+    )
   done
 
 let parse file code line_offset col_offset debug =
@@ -157,11 +170,11 @@ let parse file code line_offset col_offset debug =
      ; pos_bol = -col_offset
      };
   try
-    if debug > 0 then test code;
+    if debug > 0 then test file code;
     let stack = Stack.create () in
     Stack.push 0 stack;
     let state = Lexer.{ stack; offset = 0; ignore_newline = 0; fname = file } in
-    loop lexbuf state (Seqgrammar.Incremental.program lexbuf.lex_curr_p)
+    loop lexbuf state [] (Seqgrammar.Incremental.program lexbuf.lex_curr_p)
   with Ast.SyntaxError (s, pos) ->
     let s = sprintf "lexing error: %s" s in
     raise_exception s file (pos.pos_lnum + 1) (pos.pos_cnum - pos.pos_bol + 1);

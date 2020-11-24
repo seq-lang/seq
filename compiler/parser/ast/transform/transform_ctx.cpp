@@ -49,10 +49,6 @@ shared_ptr<TransformItem> TransformContext::find(const string &name) const {
     else if (CAST(t->second, FunctionStmt))
       return make_shared<TransformItem>(TransformItem::Func, "", name, true);
   }
-  // LOG7("{} / {} ({:x} | {:x})", name, getFilename(), size_t(stdlib.get()),
-  //      size_t(this));
-  // ((TransformContext *)this)->dump();
-  // stdlib->dump();
   return nullptr;
 }
 

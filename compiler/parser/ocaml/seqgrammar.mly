@@ -12,7 +12,7 @@
 /* constants */
 %token <string * string> INT STRING
 %token <float * string> FLOAT
-%token <string> ID PYDEF_RAW
+%token <string> ID EXTERN
 /* blocks & parentheses */
 %token INDENT DEDENT EOF NL DOT COLON SEMICOLON COMMA OF
 %token LP RP /* () */ LS RS /* [] */ LB RB /* {} */
@@ -278,14 +278,8 @@ decorator_term:
   | AT ID NL { $loc, $2 }
 
 func_statement:
-  | func { $1 }
-  | func_def COLON PYDEF_RAW {
-      [$loc, Function { $1 with fn_stmts = [$loc, Expr ($loc, String ("", $3))];
-                                fn_attrs = ($loc, ".python") :: ($1).fn_attrs }]
-    }
-func:
-  | func_def COLON suite
-    { [$loc, Function { $1 with fn_stmts = $3 }] }
+  | func_def COLON EXTERN { [$loc, Function { $1 with fn_stmts = [$loc, Expr ($loc, String ("", $3))] }] }
+  | func_def COLON suite { [$loc, Function { $1 with fn_stmts = $3 }] }
 func_def:
   | decorator(DEF) ID generic_list? LP FL(COMMA, typed_param) RP func_ret_type?
     { { fn_name = $2; fn_rettyp = $7; fn_generics = opt_val $3 []; fn_args = $5; fn_stmts = []; fn_attrs = $1 } }

@@ -417,7 +417,7 @@ BaseFunc *types::Type::findMagic(const std::string &name,
                                  std::vector<types::Type *> args) {
   initOps();
 
-  LOG9("   .. looking for {} :: {} / {}", getName(), name, argsVecToStr(args));
+  LOG_REALIZE("   .. looking for {} :: {} / {}", getName(), name, argsVecToStr(args));
   for (auto &magic : vtable.magic) {
     if (magic.name == name && typeMatch<>(args, magic.args))
       return magic.asFunc(this);
@@ -428,9 +428,9 @@ BaseFunc *types::Type::findMagic(const std::string &name,
   }
 
   for (auto &magic : vtable.magic)
-    LOG9("      .. in {} : {}", magic.name, argsVecToStr(magic.args));
+    LOG_REALIZE("      .. in {} : {}", magic.name, argsVecToStr(magic.args));
   for (auto &magic : vtable.methods)
-    LOG9("      .. in {}", magic.first);
+    LOG_REALIZE("      .. in {}", magic.first);
 
   seqassert(false,
             "cannot find method '{}' for type '{}' with specified argument types {}",
