@@ -944,7 +944,7 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
 }
 
 void TransformVisitor::visit(const FunctionStmt *stmt) {
-  if (in(stmt->attributes, ".python") || in(stmt->attributes, "python")) {
+  if (in(stmt->attributes, "python")) {
     auto s = CAST(stmt->suite, ExprStmt);
     if (!s) {
       auto ss = CAST(stmt->suite, SuiteStmt);
@@ -962,6 +962,15 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
         N<ExprStmt>(N<CallExpr>(N<IdExpr>("_py_exec"), N<StringExpr>(code))),
         N<ImportStmt>(N<IdExpr>("python"), N<IdExpr>(stmt->name), clone_nop(stmt->args),
                       clone(stmt->ret))));
+    return;
+  }
+  if (in(stmt->attributes, "llvm")) {
+    auto s = CAST(stmt->suite, SuiteStmt);
+    assert(s && s->stmts.size() == 1);
+    auto sp = CAST(s->stmts[0], ExprStmt);
+    seqassert(sp && CAST(sp->expr, StringExpr), "invalid llvm");
+    resultStmt =
+        parseCImport(stmt->name, stmt->args, stmt->ret, "", CAST(sp->expr, StringExpr));
     return;
   }
 
@@ -1596,7 +1605,8 @@ ExprPtr TransformVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
 }
 
 StmtPtr TransformVisitor::parseCImport(string name, const vector<Param> &args,
-                                       const ExprPtr &ret, string altName) {
+                                       const ExprPtr &ret, string altName,
+                                       StringExpr *code) {
   auto canonicalName = ctx->generateCanonicalName(name);
   vector<Param> fnArgs;
   vector<TypePtr> argTypes{};
@@ -1606,13 +1616,15 @@ StmtPtr TransformVisitor::parseCImport(string name, const vector<Param> &args,
       error("default arguments not supported here");
     if (!args[ai].type)
       error("type for '{}' not specified", args[ai].name);
-    fnArgs.push_back({format(".a{}", ai), transformType(args[ai].type), nullptr});
+    fnArgs.push_back({args[ai].name.empty() ? format(".a{}", ai) : args[ai].name,
+                      transformType(args[ai].type), nullptr});
   }
   ctx->add(TransformItem::Func, altName.empty() ? name : altName, canonicalName,
            ctx->isToplevel());
+  StmtPtr body = code ? N<ExprStmt>(code->clone()) : nullptr;
   auto f = N<FunctionStmt>(
       canonicalName, ret ? transformType(ret) : transformType(N<IdExpr>("void")),
-      vector<Param>(), move(fnArgs), nullptr, vector<string>{".c"});
+      vector<Param>(), move(fnArgs), move(body), vector<string>{code ? "llvm" : ".c"});
   ctx->cache->asts[canonicalName] = clone(f);
   return f;
 }

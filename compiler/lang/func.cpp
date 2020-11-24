@@ -507,6 +507,8 @@ types::FuncType *BaseFuncLite::getFuncType() {
   return types::FuncType::get(inTypes, outType);
 }
 
+LLVMFunc::LLVMFunc() : BaseFunc() {}
+
 LLVMFunc::LLVMFunc(std::string name, std::vector<std::string> argNames,
                    std::vector<types::Type *> inTypes, types::Type *outType,
                    std::string llvmCode)
@@ -572,3 +574,18 @@ void LLVMFunc::codegen(Module *module) {
 types::FuncType *LLVMFunc::getFuncType() {
   return types::FuncType::get(inTypes, outType);
 }
+
+void LLVMFunc::setIns(std::vector<types::Type *> inTypes) {
+  this->inTypes = std::move(inTypes);
+}
+
+void LLVMFunc::setArgNames(std::vector<std::string> argNames) {
+  this->argNames = std::move(argNames);
+  assert(inTypes.size() == this->argNames.size());
+}
+
+void LLVMFunc::setOut(types::Type *outType) { this->outType = outType; }
+
+void LLVMFunc::setName(std::string name) { this->name = std::move(name); }
+
+void LLVMFunc::setCode(std::string code) { this->llvmCode = std::move(code); }

@@ -130,6 +130,10 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
             name = names[names.size() - 2];
           LOG_REALIZE("[codegen] generating internal fn {} -> {}", ast->name, name);
           ctx->functions[f.first] = {typ->findMagic(name, types), true};
+        } else if (in(ast->attributes, "llvm")) {
+          auto fn = new seq::LLVMFunc();
+          fn->setName(f.first);
+          ctx->functions[f.first] = {fn, false};
         } else {
           auto fn = new seq::Func();
           fn->setName(f.first);
@@ -439,50 +443,67 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
     auto &fp = ctx->functions[real.first];
     if (fp.second)
       continue;
-
-    auto oldTryCatch = ctx->tryCatch;
-    ctx->tryCatch = nullptr;
-
     fp.second = true;
-    auto f = (seq::Func *)fp.first;
-    assert(f);
+
     auto ast = (FunctionStmt *)(ctx->cache->realizationAsts[real.first].get());
     assert(ast);
     if (in(ast->attributes, "internal"))
       continue;
-    LOG_REALIZE("[codegen] generating fn {}", real.first);
-    f->setName(real.first);
-    f->setSrcInfo(getSrcInfo());
-    if (!ctx->isToplevel())
-      f->setEnclosingFunc(ctx->getBase());
-    ctx->addBlock(f->getBlock(), f);
+
     vector<string> names;
     vector<seq::types::Type *> types;
-
     auto t = real.second->getFunc();
     for (int i = 1; i < t->args.size(); i++) {
       types.push_back(realizeType(t->args[i]->getClass()));
       names.push_back(ast->args[i - 1].name);
     }
-    f->setIns(types);
-    f->setArgNames(names);
-    f->setOut(realizeType(t->args[0]->getClass()));
-    for (auto &a : ast->attributes) {
-      f->addAttribute(a.first);
-      if (a.first == "atomic")
-        ctx->setFlag("atomic");
-    }
-    if (in(ast->attributes, ".c")) {
-      auto newName = ctx->cache->reverseLookup[stmt->name];
-      f->setName(newName);
-      f->setExternal();
+
+    LOG_REALIZE("[codegen] generating fn {}", real.first);
+    if (in(stmt->attributes, "llvm")) {
+      auto f = dynamic_cast<seq::LLVMFunc *>(fp.first);
+      assert(f);
+      f->setName(real.first);
+      f->setIns(types);
+      f->setArgNames(names);
+      f->setOut(realizeType(t->args[0]->getClass()));
+      // auto s = CAST(ast->suite, SuiteStmt);
+      // assert(s && s->stmts.size() == 1);
+      auto c = CAST(ast->suite, ExprStmt);
+      assert(c);
+      auto sp = CAST(c->expr, StringExpr);
+      assert(sp);
+      f->setCode(sp->value);
     } else {
-      for (auto &arg : names)
-        ctx->addVar(arg, f->getArgVar(arg));
-      transform(ast->suite);
+      auto f = dynamic_cast<seq::Func *>(fp.first);
+      assert(f);
+      f->setName(real.first);
+      f->setSrcInfo(getSrcInfo());
+      if (!ctx->isToplevel())
+        f->setEnclosingFunc(ctx->getBase());
+      ctx->addBlock(f->getBlock(), f);
+      f->setIns(types);
+      f->setArgNames(names);
+      f->setOut(realizeType(t->args[0]->getClass()));
+      for (auto &a : ast->attributes) {
+        f->addAttribute(a.first);
+        if (a.first == "atomic")
+          ctx->setFlag("atomic");
+      }
+      if (in(ast->attributes, ".c")) {
+        auto newName = ctx->cache->reverseLookup[stmt->name];
+        f->setName(newName);
+        f->setExternal();
+      } else {
+        auto oldTryCatch = ctx->tryCatch;
+        ctx->tryCatch = nullptr;
+        for (auto &arg : names)
+          ctx->addVar(arg, f->getArgVar(arg));
+
+        transform(ast->suite);
+        ctx->tryCatch = oldTryCatch;
+      }
+      ctx->popBlock();
     }
-    ctx->popBlock();
-    ctx->tryCatch = oldTryCatch;
   }
 }
 

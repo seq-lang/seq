@@ -1216,7 +1216,8 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
       TypecheckItem::Func, t};
   ctx->add(TypecheckItem::Func, stmt->name, t, true, false, false);
 
-  if (in(stmt->attributes, "builtin") || in(stmt->attributes, ".c")) {
+  if (in(stmt->attributes, "builtin") || in(stmt->attributes, ".c") ||
+      in(stmt->attributes, "llvm")) {
     if (!t->canRealize())
       error("builtins and external functions must be realizable");
     realizeFunc(ctx->instantiate(getSrcInfo(), t)->getFunc());
@@ -1728,7 +1729,10 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
       ctx->typecheckLevel++;
       auto oldIter = ctx->iteration;
       ctx->iteration = 0;
-      realized = realizeBlock(ast->suite);
+      if (in(ast->attributes, "llvm"))
+        realized = clone(ast->suite);
+      else
+        realized = realizeBlock(ast->suite);
       ctx->iteration = oldIter;
       ctx->typecheckLevel--;
 

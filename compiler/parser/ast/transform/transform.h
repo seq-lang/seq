@@ -41,7 +41,7 @@ private:
   ExprPtr parseFString(string value);
 
   StmtPtr parseCImport(string name, const vector<Param> &args, const ExprPtr &ret,
-                       string altName);
+                       string altName, StringExpr *code = nullptr);
   StmtPtr parseDylibCImport(const ExprPtr &dylib, string name,
                             const vector<Param> &args, const ExprPtr &ret,
                             string altName);
