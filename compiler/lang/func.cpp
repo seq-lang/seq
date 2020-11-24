@@ -507,20 +507,16 @@ types::FuncType *BaseFuncLite::getFuncType() {
   return types::FuncType::get(inTypes, outType);
 }
 
-LLVMFunc::LLVMFunc() : BaseFunc() {}
-
-LLVMFunc::LLVMFunc(std::string name, std::vector<std::string> argNames,
-                   std::vector<types::Type *> inTypes, types::Type *outType,
-                   std::string llvmCode)
-    : BaseFunc(), name(std::move(name)), argNames(std::move(argNames)),
-      inTypes(std::move(inTypes)), outType(outType), llvmCode(std::move(llvmCode)) {}
+LLVMFunc::LLVMFunc()
+    : BaseFunc(), name(), argNames(), inTypes(), outType(nullptr), llvmCode(),
+      declares() {}
 
 std::string LLVMFunc::createParsableModuleString(LLVMContext &context) {
   assert(argNames.size() == inTypes.size());
   std::string bufStr;
   llvm::raw_string_ostream buf(bufStr);
 
-  buf << "define ";
+  buf << declares << "\ndefine ";
 
   llvm::Type *llvmType = outType->getLLVMType(context);
   llvmType->print(buf);
@@ -557,18 +553,11 @@ void LLVMFunc::codegen(Module *module) {
   SMDiagnostic err;
   std::unique_ptr<MemoryBuffer> buf = MemoryBuffer::getMemBuffer(code);
   assert(buf);
-  std::unique_ptr<Module> sub = llvm::parseIR(buf->getMemBufferRef(), err, context);
-  if (!sub) {
+  const bool fail = llvm::parseAssemblyInto(buf->getMemBufferRef(), *module, err);
+  if (fail) {
     err.print("<llvm function>", errs());
     throw exc::SeqException("@llvm function error parsing IR");
   }
-  sub->setDataLayout(module->getDataLayout());
-
-  llvm::Linker L(*module);
-  const bool link = L.linkInModule(std::move(sub));
-  assert(!link);
-  func = module->getFunction(name);
-  assert(func);
 }
 
 types::FuncType *LLVMFunc::getFuncType() {
@@ -589,3 +578,7 @@ void LLVMFunc::setOut(types::Type *outType) { this->outType = outType; }
 void LLVMFunc::setName(std::string name) { this->name = std::move(name); }
 
 void LLVMFunc::setCode(std::string code) { this->llvmCode = std::move(code); }
+
+void LLVMFunc::setDeclares(std::string declares) {
+  this->declares = std::move(declares);
+}

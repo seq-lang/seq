@@ -191,22 +191,22 @@ private:
   /// LLVM code contained in the body of this function
   std::string llvmCode;
 
+  /// Declarations to include outside LLVM function
+  std::string declares;
+
   /// Makes a parsable LLVM IR module
   std::string createParsableModuleString(llvm::LLVMContext &context);
 
 public:
   LLVMFunc();
-  LLVMFunc(std::string name, std::vector<std::string> argNames,
-           std::vector<types::Type *> inTypes, types::Type *outType,
-           std::string llvmCode);
   void codegen(llvm::Module *module) override;
   types::FuncType *getFuncType() override;
-
   void setIns(std::vector<types::Type *> inTypes);
   void setArgNames(std::vector<std::string> argNames);
   void setOut(types::Type *outType);
   void setName(std::string name);
   void setCode(std::string code);
+  void setDeclares(std::string declares);
 };
 
 } // namespace seq
