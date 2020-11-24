@@ -558,6 +558,8 @@ void LLVMFunc::codegen(Module *module) {
     err.print("<llvm function>", errs());
     throw exc::SeqException("@llvm function error parsing IR");
   }
+  func = module->getFunction(name);
+  assert(func);
 }
 
 types::FuncType *LLVMFunc::getFuncType() {
