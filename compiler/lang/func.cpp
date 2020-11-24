@@ -119,8 +119,9 @@ bool Func::hasAttribute(const std::string &attr) {
  * the name.
  */
 std::string Func::getMangledFuncName() {
-  // don't mangle external, built-in ("seq."-prefixed) or exported functions:
   return name;
+  /*
+  // don't mangle external, built-in ("seq."-prefixed) or exported functions:
   if (external || name.rfind("seq.", 0) == 0 || hasAttribute("export"))
     return name;
 
@@ -139,6 +140,7 @@ std::string Func::getMangledFuncName() {
     mangled += "." + funcType->getBaseType(i)->getName();
 
   return mangled;
+  */
 }
 
 void Func::codegen(Module *module) {
@@ -502,5 +504,71 @@ void BaseFuncLite::codegen(Module *module) {
 }
 
 types::FuncType *BaseFuncLite::getFuncType() {
+  return types::FuncType::get(inTypes, outType);
+}
+
+LLVMFunc::LLVMFunc(std::string name, std::vector<std::string> argNames,
+                   std::vector<types::Type *> inTypes, types::Type *outType,
+                   std::string llvmCode)
+    : BaseFunc(), name(std::move(name)), argNames(std::move(argNames)),
+      inTypes(std::move(inTypes)), outType(outType), llvmCode(std::move(llvmCode)) {}
+
+std::string LLVMFunc::createParsableModuleString(LLVMContext &context) {
+  assert(argNames.size() == inTypes.size());
+  std::string bufStr;
+  llvm::raw_string_ostream buf(bufStr);
+
+  buf << "define ";
+
+  llvm::Type *llvmType = outType->getLLVMType(context);
+  llvmType->print(buf);
+
+  buf << " @\"" << name << "\"(";
+  for (unsigned i = 0; i < argNames.size(); i++) {
+    llvmType = inTypes[i]->getLLVMType(context);
+    llvmType->print(buf);
+    buf << " " << argNames[i];
+    if (i < argNames.size() - 1)
+      buf << ", ";
+  }
+  buf << ") {\n" << llvmCode << "\n}";
+  return buf.str();
+}
+
+void LLVMFunc::codegen(Module *module) {
+  if (this->module != module) {
+    func = nullptr;
+    this->module = module;
+  }
+
+  if (func)
+    return;
+
+  LLVMContext &context = module->getContext();
+  auto *cached = module->getFunction(name);
+  if (cached) {
+    func = cast<Function>(cached);
+    return;
+  }
+
+  const std::string code = createParsableModuleString(context);
+  SMDiagnostic err;
+  std::unique_ptr<MemoryBuffer> buf = MemoryBuffer::getMemBuffer(code);
+  assert(buf);
+  std::unique_ptr<Module> sub = llvm::parseIR(buf->getMemBufferRef(), err, context);
+  if (!sub) {
+    err.print("<llvm function>", errs());
+    throw exc::SeqException("@llvm function error parsing IR");
+  }
+  sub->setDataLayout(module->getDataLayout());
+
+  llvm::Linker L(*module);
+  const bool link = L.linkInModule(std::move(sub));
+  assert(!link);
+  func = module->getFunction(name);
+  assert(func);
+}
+
+types::FuncType *LLVMFunc::getFuncType() {
   return types::FuncType::get(inTypes, outType);
 }

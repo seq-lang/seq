@@ -170,4 +170,36 @@ public:
   types::FuncType *getFuncType() override;
 };
 
+/**
+ * Representation of LLVM functions defined within Seq using
+ * the \@llvm annotation.
+ */
+class LLVMFunc : public BaseFunc {
+private:
+  /// Mangled name of this function
+  std::string name;
+
+  /// Argument names for this function; will be used in LLVM IR
+  std::vector<std::string> argNames;
+
+  /// Function argument types
+  std::vector<types::Type *> inTypes;
+
+  /// Function return type
+  types::Type *outType;
+
+  /// LLVM code contained in the body of this function
+  std::string llvmCode;
+
+  /// Makes a parsable LLVM IR module
+  std::string createParsableModuleString(llvm::LLVMContext &context);
+
+public:
+  LLVMFunc(std::string name, std::vector<std::string> argNames,
+           std::vector<types::Type *> inTypes, types::Type *outType,
+           std::string llvmCode);
+  void codegen(llvm::Module *module) override;
+  types::FuncType *getFuncType() override;
+};
+
 } // namespace seq
