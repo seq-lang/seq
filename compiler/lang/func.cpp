@@ -527,7 +527,7 @@ std::string LLVMFunc::createParsableModuleString(LLVMContext &context) {
   for (unsigned i = 0; i < argNames.size(); i++) {
     llvmType = inTypes[i]->getLLVMType(context);
     llvmType->print(buf);
-    buf << " " << argNames[i];
+    buf << " %" << argNames[i];
     if (i < argNames.size() - 1)
       buf << ", ";
   }
