@@ -213,6 +213,7 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Combine(
       testing::Values(
         "core/helloworld.seq",
+        "core/llvmops.seq",
         "core/arithmetic.seq",
         "core/parser.seq",
         "core/generics.seq",
