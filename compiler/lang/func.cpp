@@ -170,8 +170,10 @@ void Func::codegen(Module *module) {
       FunctionType::get(outType->getLLVMType(context), types, false);
   func = cast<Function>(module->getOrInsertFunction(mangledName, funcTypeLLVM));
 
-  if (external)
+  if (external) {
+    func->setDoesNotThrow();
     return;
+  }
 
   if (hasAttribute("export")) {
     if (parentType || parentFunc)
@@ -567,6 +569,7 @@ void LLVMFunc::codegen(Module *module) {
   assert(!fail);
   func = module->getFunction(name);
   assert(func);
+  func->addFnAttr(Attribute::AttrKind::AlwaysInline);
 }
 
 types::FuncType *LLVMFunc::getFuncType() {
