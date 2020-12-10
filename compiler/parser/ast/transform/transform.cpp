@@ -341,9 +341,16 @@ void TransformVisitor::visit(const UnaryExpr *expr) {
 
 void TransformVisitor::visit(const BinaryExpr *expr) {
   if (expr->op == "&&" || expr->op == "||") {
-    resultExpr = N<BinaryExpr>(
-        transform(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__"))), expr->op,
-        transform(N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
+    if (expr->op == "&&") {
+      resultExpr = transform(N<IfExpr>(
+          transform(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__"))),
+          N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__")), N<BoolExpr>(false)));
+    } else {
+      resultExpr = transform(N<IfExpr>(
+          transform(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__"))),
+          N<BoolExpr>(true), N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
+    }
+
   } else if (expr->op == "is not") {
     resultExpr = transform(N<CallExpr>(N<DotExpr>(
         N<BinaryExpr>(clone(expr->lexpr), "is", clone(expr->rexpr)), "__invert__")));
@@ -762,9 +769,14 @@ void TransformVisitor::visit(const WhileStmt *stmt) {
 }
 
 void TransformVisitor::visit(const ForStmt *stmt) {
-  ExprPtr iter = N<CallExpr>(N<DotExpr>(clone(stmt->iter), "__iter__"));
+  auto gen = getTemporaryVar();
+  prependStmts->push_back(transform(N<AssignStmt>(
+      N<IdExpr>(gen), N<CallExpr>(N<DotExpr>(clone(stmt->iter), "__iter__")))));
+  ExprPtr iter = N<IdExpr>(gen);
+
   string breakVar;
-  StmtPtr assign = nullptr, forstmt = nullptr;
+  StmtPtr assign = nullptr;
+  unique_ptr<ForStmt> forstmt;
   if (stmt->elseSuite) {
     breakVar = getTemporaryVar("no_break");
     assign = N<AssignStmt>(N<IdExpr>(breakVar), N<BoolExpr>(true));
@@ -786,6 +798,9 @@ void TransformVisitor::visit(const ForStmt *stmt) {
     forstmt =
         N<ForStmt>(clone(var), transform(iter), transform(N<SuiteStmt>(move(stmts))));
   }
+  forstmt->next = transform(N<CallExpr>(N<DotExpr>(N<IdExpr>(gen), "next")));
+  forstmt->done = transform(N<CallExpr>(N<DotExpr>(N<IdExpr>(gen), "done")));
+
   ctx->popBlock();
   ctx->loops.pop_back();
 
@@ -800,12 +815,30 @@ void TransformVisitor::visit(const ForStmt *stmt) {
 }
 
 void TransformVisitor::visit(const IfStmt *stmt) {
-  vector<IfStmt::If> ifs;
-  for (auto &i : stmt->ifs)
-    ifs.push_back({transform(i.cond ? N<CallExpr>(N<DotExpr>(clone(i.cond), "__bool__"))
-                                    : nullptr),
-                   transform(i.suite)});
-  resultStmt = N<IfStmt>(move(ifs));
+  if (stmt->ifs.size() == 1 && !stmt->ifs[0].cond) {
+    resultStmt = transform(stmt->ifs[0].suite);
+    return;
+  }
+
+  vector<IfStmt::If> topIf;
+  vector<IfStmt::If> subIf;
+
+  for (auto i = 0; i < stmt->ifs.size(); ++i) {
+    if (i == 0) {
+      topIf.emplace_back(
+          transform(N<CallExpr>(N<DotExpr>(clone(stmt->ifs[i].cond), "__bool__"))),
+          transform(stmt->ifs[i].suite));
+    } else {
+      subIf.emplace_back(clone(stmt->ifs[i].cond), clone(stmt->ifs[i].suite));
+    }
+  }
+
+  if (subIf.empty()) {
+    resultStmt = N<IfStmt>(move(topIf));
+  } else {
+    topIf.emplace_back(nullptr, N<IfStmt>(move(subIf)));
+    resultStmt = N<IfStmt>(move(topIf));
+  }
 }
 
 void TransformVisitor::visit(const MatchStmt *stmt) {

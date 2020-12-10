@@ -2,9 +2,9 @@
 #include <memory>
 #include <string>
 #include <sys/stat.h>
+#include <utility>
 #include <vector>
 
-#include "lang/seq.h"
 #include "parser/ast/codegen/codegen.h"
 #include "parser/ast/codegen/codegen_ctx.h"
 #include "parser/ast/context.h"
@@ -17,13 +17,13 @@ using std::make_pair;
 namespace seq {
 namespace ast {
 
-CodegenContext::CodegenContext(shared_ptr<Cache> cache, seq::Block *block,
-                               seq::BaseFunc *base, seq::SeqJIT *jit)
-    : Context<CodegenItem>(""), cache(cache), tryCatch(nullptr), jit(jit) {
+CodegenContext::CodegenContext(shared_ptr<Cache> cache, seq::ir::SeriesFlow *top,
+                               seq::ir::Func *base)
+    : Context<CodegenItem>(""), cache(std::move(cache)) {
   stack.push_front(vector<string>());
   topBaseIndex = topBlockIndex = 0;
-  if (block)
-    addBlock(block, base);
+  if (top)
+    addSeries(top, base);
 }
 
 shared_ptr<CodegenItem> CodegenContext::find(const string &name, bool onlyLocal,
@@ -34,89 +34,88 @@ shared_ptr<CodegenItem> CodegenContext::find(const string &name, bool onlyLocal,
   return nullptr;
 }
 
-void CodegenContext::addVar(const string &name, seq::Var *v, bool global) {
+void CodegenContext::addVar(const string &name, seq::ir::Var *v, bool global) {
   auto i =
       make_shared<CodegenItem>(CodegenItem::Var, getBase(), global || isToplevel());
   i->handle.var = v;
   add(name, i);
 }
 
-void CodegenContext::addType(const string &name, seq::types::Type *t, bool global) {
+void CodegenContext::addType(const string &name, seq::ir::types::Type *t, bool global) {
   auto i =
       make_shared<CodegenItem>(CodegenItem::Type, getBase(), global || isToplevel());
   i->handle.type = t;
   add(name, i);
 }
 
-void CodegenContext::addFunc(const string &name, seq::BaseFunc *f, bool global) {
+void CodegenContext::addFunc(const string &name, seq::ir::Func *f, bool global) {
   auto i =
       make_shared<CodegenItem>(CodegenItem::Func, getBase(), global || isToplevel());
   i->handle.func = f;
   add(name, i);
 }
 
-void CodegenContext::addBlock(seq::Block *newBlock, seq::BaseFunc *newBase) {
-  Context<CodegenItem>::addBlock();
-  if (newBlock)
-    topBlockIndex = blocks.size();
-  blocks.push_back(newBlock);
+void CodegenContext::addSeries(seq::ir::SeriesFlow *s, seq::ir::Func *newBase) {
+  if (s)
+    topBlockIndex = series.size();
+  series.push_back(s);
   if (newBase)
     topBaseIndex = bases.size();
   bases.push_back(newBase);
 }
 
-void CodegenContext::popBlock() {
+void CodegenContext::popSeries() {
   bases.pop_back();
   topBaseIndex = bases.size() - 1;
   while (topBaseIndex && !bases[topBaseIndex])
     topBaseIndex--;
-  blocks.pop_back();
-  topBlockIndex = blocks.size() - 1;
-  while (topBlockIndex && !blocks[topBlockIndex])
+  series.pop_back();
+  topBlockIndex = series.size() - 1;
+  while (topBlockIndex && !series[topBlockIndex])
     topBlockIndex--;
   Context<CodegenItem>::popBlock();
 }
 
-void CodegenContext::initJIT() {
-  jit = new seq::SeqJIT();
-  auto fn = new seq::Func();
-  fn->setName(".jit_0");
+// void CodegenContext::initJIT() {
+//  jit = new seq::SeqJIT();
+//  auto fn = new seq::Func();
+//  fn->setName(".jit_0");
+//
+//  addBlock(fn->getBlock(), fn);
+//  assert(topBaseIndex == topBlockIndex && topBlockIndex == 0);
+//
+//  execJIT();
+//}
+//
+// void CodegenContext::execJIT(string varName, seq::Expr *varExpr) {
+//  // static int counter = 0;
+//
+//  // assert(jit != nullptr);
+//  // assert(bases.size() == 1);
+//  // jit->addFunc((seq::Func *)bases[0]);
+//
+//  // vector<pair<string, shared_ptr<CodegenItem>>> items;
+//  // for (auto &name : stack.front()) {
+//  //   auto i = find(name);
+//  //   if (i && i->isGlobal())
+//  //     items.push_back(make_pair(name, i));
+//  // }
+//  // popBlock();
+//  // for (auto &i : items)
+//  //   add(i.first, i.second);
+//  // if (varExpr) {
+//  //   auto var = jit->addVar(varExpr);
+//  //   add(varName, var);
+//  // }
+//
+//  // // Set up new block
+//  // auto fn = new seq::Func();
+//  // fn->setName(format(".jit_{}", ++counter));
+//  // addBlock(fn->getBlock(), fn);
+//  // assert(topBaseIndex == topBlockIndex && topBlockIndex == 0);
+//}
 
-  addBlock(fn->getBlock(), fn);
-  assert(topBaseIndex == topBlockIndex && topBlockIndex == 0);
-
-  execJIT();
-}
-
-void CodegenContext::execJIT(string varName, seq::Expr *varExpr) {
-  // static int counter = 0;
-
-  // assert(jit != nullptr);
-  // assert(bases.size() == 1);
-  // jit->addFunc((seq::Func *)bases[0]);
-
-  // vector<pair<string, shared_ptr<CodegenItem>>> items;
-  // for (auto &name : stack.front()) {
-  //   auto i = find(name);
-  //   if (i && i->isGlobal())
-  //     items.push_back(make_pair(name, i));
-  // }
-  // popBlock();
-  // for (auto &i : items)
-  //   add(i.first, i.second);
-  // if (varExpr) {
-  //   auto var = jit->addVar(varExpr);
-  //   add(varName, var);
-  // }
-
-  // // Set up new block
-  // auto fn = new seq::Func();
-  // fn->setName(format(".jit_{}", ++counter));
-  // addBlock(fn->getBlock(), fn);
-  // assert(topBaseIndex == topBlockIndex && topBlockIndex == 0);
-}
-
-seq::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
+seq::ir::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
   t = t->getClass();
   seqassert(t, "type must be set and a class");
   seqassert(t->canRealize(), "{} must be realizable", t->toString());
@@ -124,61 +123,67 @@ seq::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
   if (it != types.end())
     return it->second;
 
-  seq::types::Type *handle = nullptr;
-  vector<seq::types::Type *> types;
+  seq::ir::types::Type *handle = nullptr;
+  vector<seq::ir::types::Type *> types;
+  vector<types::ClassTypePtr> unrealizedTypes;
   vector<int> statics;
   for (auto &m : t->explicits)
     if (auto s = m.type->getStatic())
       statics.push_back(s->getValue());
-    else
+    else {
       types.push_back(realizeType(m.type->getClass()));
+      unrealizedTypes.push_back(m.type->getClass());
+    }
   auto name = t->name;
   if (name == ".void") {
-    handle = seq::types::Void;
+    handle = new seq::ir::types::Type(name);
   } else if (name == ".bool") {
-    handle = seq::types::Bool;
+    handle = new seq::ir::types::Type(name);
   } else if (name == ".byte") {
-    handle = seq::types::Byte;
+    handle = new seq::ir::types::Type(name);
   } else if (name == ".int") {
-    handle = seq::types::Int;
+    handle = new seq::ir::types::Type(name);
   } else if (name == ".float") {
-    handle = seq::types::Float;
+    handle = new seq::ir::types::Type(name);
   } else if (name == ".str") {
-    handle = seq::types::Str;
+    handle = new seq::ir::types::Type(name);
   } else if (name == ".Int" || name == ".UInt") {
     assert(statics.size() == 1 && types.size() == 0);
     assert(statics[0] >= 1 && statics[0] <= 2048);
-    handle = seq::types::IntNType::get(statics[0], name == ".Int");
+    handle = new seq::ir::types::IntNType(statics[0], name == ".Int");
   } else if (name == ".Array") {
     assert(types.size() == 1 && statics.size() == 0);
-    handle = seq::types::ArrayType::get(types[0]);
+    handle = new seq::ir::types::ArrayType(
+        getPointer(unrealizedTypes[0]),
+        realizeType(std::make_shared<types::ClassType>(".bool")));
   } else if (name == ".Ptr") {
     assert(types.size() == 1 && statics.size() == 0);
-    handle = seq::types::PtrType::get(types[0]);
+    handle = new seq::ir::types::PointerType(types[0]);
   } else if (name == ".Generator") {
     assert(types.size() == 1 && statics.size() == 0);
-    handle = seq::types::GenType::get(types[0]);
+    handle = new seq::ir::types::GeneratorType(types[0]);
   } else if (name == ".Optional") {
     assert(types.size() == 1 && statics.size() == 0);
-    handle = seq::types::OptionalType::get(types[0]);
+    handle = new seq::ir::types::OptionalType(
+        getPointer(unrealizedTypes[0]),
+        realizeType(std::make_shared<types::ClassType>(".bool")));
   } else if (startswith(name, ".Function.")) {
     types.clear();
     for (auto &m : t->args)
       types.push_back(realizeType(m->getClass()));
     auto ret = types[0];
     types.erase(types.begin());
-    handle = seq::types::FuncType::get(types, ret);
+    handle = new seq::ir::types::FuncType(name, ret, types);
   } else {
     vector<string> names;
-    vector<seq::types::Type *> types;
-    seq::types::RecordType *record;
+    vector<seq::ir::types::Type *> types;
+    seq::ir::types::RecordType *record;
     if (t->isRecord()) {
-      handle = record = seq::types::RecordType::get(types, names, chop(name));
+      handle = record = new seq::ir::types::RecordType(name);
     } else {
-      auto cls = seq::types::RefType::get(name);
-      cls->setContents(record = seq::types::RecordType::get(types, names, ""));
-      // cls->setDone();
-      handle = cls;
+      auto contents = std::make_unique<seq::ir::types::RecordType>(name + ".contents");
+      record = contents.get();
+      handle = new seq::ir::types::RefType(name, std::move(contents));
     }
     this->types[t->realizeString()] = handle;
 
@@ -187,9 +192,23 @@ seq::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
       names.push_back(m.first);
       types.push_back(realizeType(m.second->getClass()));
     }
-    record->setContents(types, names);
+    record->realize(types, names);
   }
+  getModule()->types.push_back(std::unique_ptr<seq::ir::types::Type>(handle));
   return this->types[t->realizeString()] = handle;
+}
+
+seq::ir::types::PointerType *CodegenContext::getPointer(types::ClassTypePtr t) {
+  t = t->getClass();
+  auto pointerName = fmt::format(FMT_STRING(".Ptr[{}]"), t->realizeString());
+  auto it = types.find(pointerName);
+  if (it != types.end())
+    return dynamic_cast<seq::ir::types::PointerType *>(it->second);
+
+  auto pointer = std::make_unique<seq::ir::types::PointerType>(realizeType(t));
+  this->types[pointerName] = pointer.get();
+  getModule()->types.push_back(std::move(pointer));
+  return (seq::ir::types::PointerType *)this->types[pointerName];
 }
 
 } // namespace ast

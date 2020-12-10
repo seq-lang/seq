@@ -15,6 +15,8 @@
 #include "parser/parser.h"
 #include "util/fmt/format.h"
 
+#include "sir/module.h"
+
 int __ocaml_time__ = 0;
 int __level__ = 0;
 int __dbg_level__ = 0;
@@ -84,7 +86,7 @@ seq::SeqModule *parse(const string &argv0, const string &file, const string &cod
     t = high_resolution_clock::now();
     auto module = ast::CodegenVisitor::apply(cache, move(typechecked));
     __isTest = isTest;
-    return module;
+    return nullptr;
   } catch (seq::exc::SeqException &e) {
     if (isTest) {
       LOG("ERROR: {}", e.what());

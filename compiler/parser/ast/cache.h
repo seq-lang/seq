@@ -36,21 +36,15 @@ struct Cache {
   set<string> variardics;
   unordered_map<string, StmtPtr> asts;
 
-  unordered_map<string,
-                     unordered_map<string, vector<types::FuncTypePtr>>>
-      classMethods;
-  unordered_map<string, vector<std::pair<string, types::TypePtr>>>
-      classMembers;
-  unordered_map<string, unordered_map<string, types::TypePtr>>
-      realizations;
-  unordered_map<string, vector<std::pair<string, types::TypePtr>>>
-      memberRealizations;
+  unordered_map<string, unordered_map<string, vector<types::FuncTypePtr>>> classMethods;
+  unordered_map<string, vector<std::pair<string, types::TypePtr>>> classMembers;
+  unordered_map<string, unordered_map<string, types::TypePtr>> realizations;
+  unordered_map<string, vector<std::pair<string, types::TypePtr>>> memberRealizations;
   unordered_map<string, StmtPtr> realizationAsts;
   unordered_map<string, types::TypePtr> partials;
 
 public:
-  Cache(const string &argv0 = "")
-      : generatedID(0), unboundCount(0), argv0(argv0) {}
+  Cache(const string &argv0 = "") : generatedID(0), unboundCount(0), argv0(argv0) {}
 };
 
 } // namespace ast

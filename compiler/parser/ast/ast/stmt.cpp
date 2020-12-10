@@ -120,7 +120,8 @@ ForStmt::ForStmt(ExprPtr v, ExprPtr i, StmtPtr s, StmtPtr e)
 }
 ForStmt::ForStmt(const ForStmt &s)
     : var(ast::clone(s.var)), iter(ast::clone(s.iter)), suite(ast::clone(s.suite)),
-      elseSuite(ast::clone(s.elseSuite)) {}
+      elseSuite(ast::clone(s.elseSuite)), done(ast::clone(s.done)),
+      next(ast::clone(s.next)) {}
 string ForStmt::toString() const {
   return format("[FOR {} {} {}{}]", *var, *iter, *suite,
                 elseSuite ? format(" ELSE {}", *elseSuite) : "");

@@ -209,6 +209,9 @@ struct ForStmt : public Stmt {
   StmtPtr suite;
   StmtPtr elseSuite;
 
+  ExprPtr done;
+  ExprPtr next;
+
   ForStmt(ExprPtr v, ExprPtr i, StmtPtr s, StmtPtr e = nullptr);
   ForStmt(const ForStmt &s);
 
@@ -224,6 +227,10 @@ struct IfStmt : public Stmt {
     StmtPtr suite;
 
     If clone() const;
+    If() = default;
+    If(ExprPtr cond, StmtPtr suite) : cond(std::move(cond)), suite(std::move(suite)) {}
+    If(If &&other) = default;
+    If &operator=(If &&other) = default;
   };
 
   /// Last member of ifs has cond = nullptr (else block)

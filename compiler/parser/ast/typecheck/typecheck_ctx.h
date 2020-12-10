@@ -48,8 +48,7 @@ public:
     string name;
     types::TypePtr type;
     types::TypePtr returnType;
-    unordered_map<string, std::pair<TypecheckItem::Kind, types::TypePtr>>
-        visitedAsts;
+    unordered_map<string, std::pair<TypecheckItem::Kind, types::TypePtr>> visitedAsts;
   };
   vector<RealizationBase> bases;
 

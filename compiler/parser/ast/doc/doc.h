@@ -56,8 +56,7 @@ public:
   static json apply(const string &argv0, const vector<string> &files);
   void transformModule(StmtPtr stmt);
   json jsonify(const seq::SrcInfo &s);
-  vector<StmtPtr> flatten(StmtPtr stmt, string *docstr = nullptr,
-                          bool deep = true);
+  vector<StmtPtr> flatten(StmtPtr stmt, string *docstr = nullptr, bool deep = true);
 
 public:
   virtual void visit(const IdExpr *) override;
