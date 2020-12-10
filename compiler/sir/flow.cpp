@@ -85,7 +85,8 @@ ForFlow::ForFlow(std::string name, FlowPtr setup, OperandPtr cond, FlowPtr check
                  FlowPtr body, FlowPtr update)
     : Flow(std::move(name)), setup(std::move(setup)), check(std::move(check)),
       body(std::move(body)), update(std::move(update)), cond(std::move(cond)) {
-  dedupeFlows(this, {this->setup.get(), this->check.get(), this->body.get(), this->update.get()});
+  dedupeFlows(this, {this->setup.get(), this->check.get(), this->body.get(),
+                     this->update.get()});
   this->cond->parent = this;
 }
 
@@ -123,7 +124,8 @@ IfFlow::IfFlow(std::string name, OperandPtr cond, FlowPtr check, FlowPtr trueBra
                FlowPtr falseBranch)
     : Flow(std::move(name)), check(std::move(check)), trueBranch(std::move(trueBranch)),
       falseBranch(std::move(falseBranch)), cond(std::move(cond)) {
-  dedupeFlows(this, {this->check.get(), this->trueBranch.get(), this->falseBranch.get()});
+  dedupeFlows(this,
+              {this->check.get(), this->trueBranch.get(), this->falseBranch.get()});
   this->cond->parent = this;
 }
 

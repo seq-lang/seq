@@ -343,12 +343,12 @@ void TransformVisitor::visit(const BinaryExpr *expr) {
   if (expr->op == "&&" || expr->op == "||") {
     if (expr->op == "&&") {
       resultExpr = transform(N<IfExpr>(
-          clone(expr->lexpr),
-          N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__")), N<BoolExpr>(false)));
+          clone(expr->lexpr), N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__")),
+          N<BoolExpr>(false)));
     } else {
-      resultExpr = transform(N<IfExpr>(
-          clone(expr->lexpr),
-          N<BoolExpr>(true), N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
+      resultExpr =
+          transform(N<IfExpr>(clone(expr->lexpr), N<BoolExpr>(true),
+                              N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
     }
 
   } else if (expr->op == "is not") {

@@ -18,8 +18,9 @@ Func::Func(std::vector<std::string> argNames, types::FuncType *type)
   this->body->parent = this;
 }
 
-Func::Func(std::string name) : Var(std::move(name), nullptr, true), vars(this),
-                               body(std::make_unique<SeriesFlow>("body")){
+Func::Func(std::string name)
+    : Var(std::move(name), nullptr, true), vars(this),
+      body(std::make_unique<SeriesFlow>("body")) {
   this->body->parent = this;
 }
 
@@ -48,7 +49,8 @@ std::ostream &Func::doFormat(std::ostream &os) const {
     fmt::print(os, FMT_STRING("{}\n"), *argVar.var);
   }
   fmt::print(os, FMT_STRING(") -> {} [\n"),
-             type ? dynamic_cast<types::FuncType *>(type)->rType->referenceString() : "internal");
+             type ? dynamic_cast<types::FuncType *>(type)->rType->referenceString()
+                  : "internal");
 
   for (const auto &var : vars) {
     fmt::print(os, FMT_STRING("{}\n"), *var);

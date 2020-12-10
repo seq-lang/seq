@@ -209,9 +209,10 @@ void CodegenVisitor::visit(const CallExpr *expr) {
 void CodegenVisitor::visit(const StackAllocExpr *expr) {
   auto c = expr->typeExpr->getType()->getClass();
   assert(c);
-  result = CodegenResult(
-      Nx<StackAllocRvalue>(expr, dynamic_cast<ir::types::ArrayType *>(realizeType(expr->getType()->getClass())),
-                           toOperand(transform(expr->expr))));
+  result = CodegenResult(Nx<StackAllocRvalue>(
+      expr,
+      dynamic_cast<ir::types::ArrayType *>(realizeType(expr->getType()->getClass())),
+      toOperand(transform(expr->expr))));
 }
 
 void CodegenVisitor::visit(const DotExpr *expr) {
@@ -272,8 +273,7 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
   if (!stmt->rhs) {
     assert(var == ".__argv__");
     if (!ctx->getModule()->argVar)
-      ctx->getModule()->argVar =
-          Nx<ir::Var>(stmt, "argv", ctx->getArgvType());
+      ctx->getModule()->argVar = Nx<ir::Var>(stmt, "argv", ctx->getArgvType());
     ctx->addVar(var, ctx->getModule()->argVar.get());
   } else if (stmt->rhs->isType()) {
     // ctx->addType(var, realizeType(stmt->rhs->getType()->getClass()));
@@ -515,9 +515,6 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
     for (int i = 1; i < t->args.size(); i++) {
       names.push_back(ast->args[i - 1].name);
     }
-
-    if (in(stmt->attributes, "internal"))
-      printf("foo");
 
     LOG_REALIZE("[codegen] generating fn {}", real.first);
     if (in(stmt->attributes, "llvm")) {

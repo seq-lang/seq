@@ -147,8 +147,8 @@ seq::ir::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
   } else if (name == ".str") {
     auto *bytePtrType = getPointer(make_shared<types::ClassType>(".byte"));
     auto *intType = realizeType(make_shared<types::ClassType>(".int"));
-    handle = new seq::ir::types::RecordType(name, {intType, bytePtrType},
-                                            {"len", "ptr"});
+    handle =
+        new seq::ir::types::RecordType(name, {intType, bytePtrType}, {"len", "ptr"});
   } else if (name == ".Int" || name == ".UInt") {
     assert(statics.size() == 1 && types.size() == 0);
     assert(statics[0] >= 1 && statics[0] <= 2048);
@@ -213,7 +213,6 @@ seq::ir::types::ArrayType *CodegenContext::getArgvType() {
   this->types[arrayName] = array.get();
   getModule()->types.push_back(std::move(array));
   return (seq::ir::types::ArrayType *)this->types[arrayName];
-
 }
 
 seq::ir::types::PointerType *CodegenContext::getPointer(types::ClassTypePtr t) {
