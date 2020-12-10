@@ -14,7 +14,7 @@ void Rvalue::accept(util::SIRVisitor &v) { v.visit(this); }
 
 MemberRvalue::MemberRvalue(OperandPtr var, std::string field)
     : var(std::move(var)), field(std::move(field)) {
-  var->parent = this;
+  this->var->parent = this;
 }
 
 void MemberRvalue::accept(util::SIRVisitor &v) { v.visit(this); }
@@ -62,7 +62,7 @@ std::ostream &OperandRvalue::doFormat(std::ostream &os) const { return os << *op
 
 StackAllocRvalue::StackAllocRvalue(types::ArrayType *arrayType, OperandPtr count)
     : arrayType(arrayType), count(std::move(count)) {
-  count->parent = this;
+  this->count->parent = this;
 }
 
 void StackAllocRvalue::accept(util::SIRVisitor &v) { v.visit(this); }

@@ -9,17 +9,18 @@ namespace seq {
 namespace ir {
 
 Func::Func(std::vector<std::string> argNames, types::FuncType *type)
-    : Var(type, true), vars(this) {
+    : Var(type, true), vars(this), body(std::make_unique<SeriesFlow>("body")) {
   for (int i = 0; i < argNames.size(); ++i) {
     auto newVar = std::make_unique<Var>(argNames[i], type->argTypes[i]);
     args.emplace_back(argNames[i], newVar.get());
     vars.push_back(std::move(newVar));
   }
-  body->parent = this;
+  this->body->parent = this;
 }
 
-Func::Func(std::string name) : Var(std::move(name), nullptr, true), vars(this) {
-  body->parent = this;
+Func::Func(std::string name) : Var(std::move(name), nullptr, true), vars(this),
+                               body(std::make_unique<SeriesFlow>("body")){
+  this->body->parent = this;
 }
 
 void Func::accept(util::SIRVisitor &v) { v.visit(this); }
@@ -47,13 +48,13 @@ std::ostream &Func::doFormat(std::ostream &os) const {
     fmt::print(os, FMT_STRING("{}\n"), *argVar.var);
   }
   fmt::print(os, FMT_STRING(") -> {} [\n"),
-             dynamic_cast<types::FuncType *>(type)->rType->referenceString());
+             type ? dynamic_cast<types::FuncType *>(type)->rType->referenceString() : "internal");
 
   for (const auto &var : vars) {
     fmt::print(os, FMT_STRING("{}\n"), *var);
   }
 
-  os << "]{";
+  os << "]{\n";
 
   if (internal) {
     fmt::print(os, FMT_STRING("internal: {}.{}\n"), parentType->referenceString(),

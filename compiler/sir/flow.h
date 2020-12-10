@@ -117,7 +117,8 @@ struct TryCatchFlow : Flow {
     Var *catchVar;
 
     explicit Catch(FlowPtr handler, types::Type *type = nullptr,
-                   Var *catchVar = nullptr);
+                   Var *catchVar = nullptr)
+        : handler(std::move(handler)), type(type), catchVar(catchVar) {}
 
     void setName(std::string n) { handler->setName(std::move(n)); }
     const std::string &getName() const { return handler->getName(); }

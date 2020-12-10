@@ -102,7 +102,7 @@ SIRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
 
           auto fn = make_unique<seq::ir::Func>(ast->name);
           fn->setInternal(typ, name);
-          ctx->functions[f.first] = {fn.get(), true};
+          ctx->functions[f.first] = {fn.get(), false};
           ctx->getModule()->globals.push_back(move(fn));
         } else if (in(ast->attributes, "llvm")) {
           auto fn = make_unique<seq::ir::Func>(ast->name);
@@ -122,6 +122,7 @@ SIRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
         }
         ctx->addFunc(f.first, ctx->functions[f.first].first);
       }
+  ctx->getBase()->body->series.push_back(make_unique<BlockFlow>("start"));
   CodegenVisitor(ctx).transform(stmts);
   return unique_ptr<SIRModule>(module);
 }
@@ -187,6 +188,8 @@ void CodegenVisitor::visit(const IfExpr *expr) {
                                                 move(check), move(trueSeries),
                                                 move(falseSeries)));
   ctx->getSeries()->series.push_back(Nx<BlockFlow>(expr, "ifexpr_done"));
+
+  result = CodegenResult(Nx<VarOperand>(expr, ifExprResVar));
 }
 
 void CodegenVisitor::visit(const CallExpr *expr) {
@@ -207,7 +210,7 @@ void CodegenVisitor::visit(const StackAllocExpr *expr) {
   auto c = expr->typeExpr->getType()->getClass();
   assert(c);
   result = CodegenResult(
-      Nx<StackAllocRvalue>(expr, dynamic_cast<ir::types::ArrayType *>(realizeType(c)),
+      Nx<StackAllocRvalue>(expr, dynamic_cast<ir::types::ArrayType *>(realizeType(expr->getType()->getClass())),
                            toOperand(transform(expr->expr))));
 }
 
@@ -233,10 +236,12 @@ void CodegenVisitor::visit(const YieldExpr *expr) {
 }
 
 void CodegenVisitor::visit(const StmtExpr *expr) {
+  ctx->addScope();
   for (auto &s : expr->stmts) {
     transform(s);
   }
   result = transform(expr->expr);
+  ctx->popScope();
 }
 
 void CodegenVisitor::visit(const SuiteStmt *stmt) {
@@ -268,13 +273,13 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
     assert(var == ".__argv__");
     if (!ctx->getModule()->argVar)
       ctx->getModule()->argVar =
-          Nx<ir::Var>(stmt, "argv", realizeType(stmt->lhs->getType()->getClass()));
+          Nx<ir::Var>(stmt, "argv", ctx->getArgvType());
     ctx->addVar(var, ctx->getModule()->argVar.get());
   } else if (stmt->rhs->isType()) {
     // ctx->addType(var, realizeType(stmt->rhs->getType()->getClass()));
   } else {
     auto *newVar =
-        Nr<ir::Var>(stmt, var, realizeType(stmt->lhs->getType()->getClass()));
+        Nr<ir::Var>(stmt, var, realizeType(stmt->rhs->getType()->getClass()));
     if (var[0] == '.') {
       newVar->global = true;
       ctx->getModule()->globals.push_back(wrap(newVar));
@@ -283,7 +288,7 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
     }
     ctx->addVar(var, newVar, var[0] == '.');
     ctx->getInsertPoint()->instructions.push_back(Nx<AssignInstr>(
-        stmt, Nx<VarLvalue>(stmt, newVar), toRvalue(transform(stmt->lhs))));
+        stmt, Nx<VarLvalue>(stmt, newVar), toRvalue(transform(stmt->rhs))));
   }
 }
 
@@ -503,8 +508,6 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
 
     auto ast = (FunctionStmt *)(ctx->cache->realizationAsts[real.first].get());
     assert(ast);
-    if (in(ast->attributes, "internal"))
-      continue;
 
     vector<string> names;
     vector<seq::types::Type *> types;
@@ -512,6 +515,9 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
     for (int i = 1; i < t->args.size(); i++) {
       names.push_back(ast->args[i - 1].name);
     }
+
+    if (in(stmt->attributes, "internal"))
+      printf("foo");
 
     LOG_REALIZE("[codegen] generating fn {}", real.first);
     if (in(stmt->attributes, "llvm")) {
@@ -549,7 +555,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       f->setSrcInfo(getSrcInfo());
       //      if (!ctx->isToplevel())
       //        f->p
-      ctx->addBlock();
+      ctx->addScope();
       ctx->addSeries(f->body.get(), f);
       f->realize(dynamic_cast<ir::types::FuncType *>(realizeType(t->getClass())),
                  names);
@@ -564,10 +570,11 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       } else if (!in(ast->attributes, "internal")) {
         for (auto &arg : names)
           ctx->addVar(arg, f->getArgVar(arg));
+        f->body->series.push_back(Nx<BlockFlow>(stmt, "start"));
         transform(ast->suite);
       }
       ctx->popSeries();
-      ctx->popBlock();
+      ctx->popScope();
     }
   }
 } // namespace ast

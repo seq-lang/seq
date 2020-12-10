@@ -57,8 +57,8 @@ std::ostream &SeriesFlow::doFormat(std::ostream &os) const {
 WhileFlow::WhileFlow(std::string name, OperandPtr cond, FlowPtr check, FlowPtr body)
     : Flow(std::move(name)), check(std::move(check)), body(std::move(body)),
       cond(std::move(cond)) {
-  dedupeFlows(this, {check.get(), body.get()});
-  cond->parent = this;
+  dedupeFlows(this, {this->check.get(), this->body.get()});
+  this->cond->parent = this;
 }
 
 void WhileFlow::accept(util::SIRVisitor &v) { v.visit(this); }
@@ -85,8 +85,8 @@ ForFlow::ForFlow(std::string name, FlowPtr setup, OperandPtr cond, FlowPtr check
                  FlowPtr body, FlowPtr update)
     : Flow(std::move(name)), setup(std::move(setup)), check(std::move(check)),
       body(std::move(body)), update(std::move(update)), cond(std::move(cond)) {
-  dedupeFlows(this, {setup.get(), check.get(), body.get(), update.get()});
-  cond->parent = this;
+  dedupeFlows(this, {this->setup.get(), this->check.get(), this->body.get(), this->update.get()});
+  this->cond->parent = this;
 }
 
 void ForFlow::accept(util::SIRVisitor &v) { v.visit(this); }
@@ -123,8 +123,8 @@ IfFlow::IfFlow(std::string name, OperandPtr cond, FlowPtr check, FlowPtr trueBra
                FlowPtr falseBranch)
     : Flow(std::move(name)), check(std::move(check)), trueBranch(std::move(trueBranch)),
       falseBranch(std::move(falseBranch)), cond(std::move(cond)) {
-  dedupeFlows(this, {check.get(), trueBranch.get(), falseBranch.get()});
-  cond->parent = this;
+  dedupeFlows(this, {this->check.get(), this->trueBranch.get(), this->falseBranch.get()});
+  this->cond->parent = this;
 }
 
 void IfFlow::accept(util::SIRVisitor &v) { v.visit(this); }
@@ -149,11 +149,6 @@ std::ostream &IfFlow::doFormat(std::ostream &os) const {
   if (falseBranch)
     fmt::print(os, FMT_STRING("else {{\n{}\n}}"), *falseBranch);
   return os;
-}
-
-TryCatchFlow::Catch::Catch(FlowPtr handler, types::Type *type, Var *catchVar)
-    : handler(std::move(handler)), type(type), catchVar(catchVar) {
-  handler->name = fmt::format(FMT_STRING("catch.{}"), handler->name);
 }
 
 void TryCatchFlow::accept(util::SIRVisitor &v) { v.visit(this); }

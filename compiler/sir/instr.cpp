@@ -20,8 +20,8 @@ void Instr::accept(util::SIRVisitor &v) { v.visit(this); }
 
 AssignInstr::AssignInstr(LvaluePtr left, RvaluePtr right)
     : left(std::move(left)), right(std::move(right)) {
-  left->parent = this;
-  right->parent = this;
+  this->left->parent = this;
+  this->right->parent = this;
 }
 
 void AssignInstr::accept(util::SIRVisitor &v) { v.visit(this); }
@@ -32,7 +32,7 @@ std::ostream &AssignInstr::doFormat(std::ostream &os) const {
 }
 
 RvalueInstr::RvalueInstr(RvaluePtr rvalue) : rvalue(std::move(rvalue)) {
-  rvalue->parent = this;
+  this->rvalue->parent = this;
 }
 
 void RvalueInstr::accept(util::SIRVisitor &v) { v.visit(this); }
@@ -57,7 +57,8 @@ std::ostream &ContinueInstr::doFormat(std::ostream &os) const {
 }
 
 ReturnInstr::ReturnInstr(RvaluePtr value) : value(std::move(value)) {
-  value->parent = this;
+  if (value)
+    this->value->parent = this;
 }
 
 void ReturnInstr::accept(util::SIRVisitor &v) { v.visit(this); }
@@ -72,7 +73,8 @@ std::ostream &ReturnInstr::doFormat(std::ostream &os) const {
 }
 
 YieldInstr::YieldInstr(RvaluePtr value) : value(std::move(value)) {
-  value->parent = this;
+  if (value)
+    this->value->parent = this;
 }
 
 void YieldInstr::accept(util::SIRVisitor &v) { v.visit(this); }
@@ -87,7 +89,8 @@ std::ostream &YieldInstr::doFormat(std::ostream &os) const {
 }
 
 ThrowInstr::ThrowInstr(RvaluePtr value) : value(std::move(value)) {
-  value->parent = this;
+  if (value)
+    this->value->parent = this;
 }
 
 void ThrowInstr::accept(util::SIRVisitor &v) { v.visit(this); }
@@ -99,7 +102,8 @@ std::ostream &ThrowInstr::doFormat(std::ostream &os) const {
 
 AssertInstr::AssertInstr(RvaluePtr value, std::string msg)
     : value(std::move(value)), msg(std::move(msg)) {
-  value->parent = this;
+  if (value)
+    this->value->parent = this;
 }
 
 void AssertInstr::accept(util::SIRVisitor &v) { v.visit(this); }

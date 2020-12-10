@@ -93,14 +93,16 @@ private:
 public:
   decltype(auto) insert(iterator pos, Ptr value) {
     value->setParent(parent);
+    auto name = deduplicateName(value.get());
     auto it = internalList.insert(pos, wrapper(std::move(value)));
-    symbolTable[deduplicateName(value.get())] = it;
+    symbolTable[name] = it;
     return it;
   }
   decltype(auto) insert(const_iterator pos, Ptr value) {
     value->setParent(parent);
+    auto name = deduplicateName(value.get());
     auto it = internalList.insert(pos, wrapper(std::move(value)));
-    symbolTable[deduplicateName(value.get())] = it;
+    symbolTable[name] = it;
     return it;
   }
   decltype(auto) erase(iterator pos) {
@@ -113,10 +115,11 @@ public:
   }
   decltype(auto) push_back(Ptr value) {
     value->setParent(parent);
+    auto name = deduplicateName(value.get());
     internalList.push_back(wrapper(std::move(value)));
     auto it = internalList.end();
     --it;
-    symbolTable[deduplicateName(value.get())] = it;
+    symbolTable[name] = it;
   }
   void pop_back() {
     symbolTable.erase(symbolTable.find((*internalList.back())->getName()));
@@ -124,8 +127,9 @@ public:
   }
   void push_front(Ptr value) {
     value->setParent(parent);
+    auto name = deduplicateName(value.get());
     internalList.push_front(wrapper(std::move(value)));
-    symbolTable[deduplicateName(value.get())] = internalList.fron();
+    symbolTable[name] = internalList.fron();
   }
   void pop_front() {
     symbolTable.erase(symbolTable.find((*internalList.front())->getName()));

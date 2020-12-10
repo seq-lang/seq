@@ -99,6 +99,7 @@ public:
       return val->getType();
     return nullptr;
   }
+  seq::ir::types::ArrayType *getArgvType();
 
 private:
   seq::ir::types::PointerType *getPointer(types::ClassTypePtr t);

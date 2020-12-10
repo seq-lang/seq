@@ -73,7 +73,6 @@ void CodegenContext::popSeries() {
   topBlockIndex = series.size() - 1;
   while (topBlockIndex && !series[topBlockIndex])
     topBlockIndex--;
-  Context<CodegenItem>::popBlock();
 }
 
 // void CodegenContext::initJIT() {
@@ -146,7 +145,10 @@ seq::ir::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
   } else if (name == ".float") {
     handle = new seq::ir::types::Type(name);
   } else if (name == ".str") {
-    handle = new seq::ir::types::Type(name);
+    auto *bytePtrType = getPointer(make_shared<types::ClassType>(".byte"));
+    auto *intType = realizeType(make_shared<types::ClassType>(".int"));
+    handle = new seq::ir::types::RecordType(name, {intType, bytePtrType},
+                                            {"len", "ptr"});
   } else if (name == ".Int" || name == ".UInt") {
     assert(statics.size() == 1 && types.size() == 0);
     assert(statics[0] >= 1 && statics[0] <= 2048);
@@ -196,6 +198,22 @@ seq::ir::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
   }
   getModule()->types.push_back(std::unique_ptr<seq::ir::types::Type>(handle));
   return this->types[t->realizeString()] = handle;
+}
+
+seq::ir::types::ArrayType *CodegenContext::getArgvType() {
+  auto *strPointerType = getPointer(make_shared<types::ClassType>(".str"));
+  auto *intType = realizeType(make_shared<types::ClassType>(".int"));
+  auto arrayName = ".Array[.str]";
+
+  auto it = types.find(arrayName);
+  if (it != types.end())
+    return dynamic_cast<seq::ir::types::ArrayType *>(it->second);
+
+  auto array = std::make_unique<seq::ir::types::ArrayType>(strPointerType, intType);
+  this->types[arrayName] = array.get();
+  getModule()->types.push_back(std::move(array));
+  return (seq::ir::types::ArrayType *)this->types[arrayName];
+
 }
 
 seq::ir::types::PointerType *CodegenContext::getPointer(types::ClassTypePtr t) {

@@ -12,7 +12,7 @@ namespace ir {
 SIRModule::SIRModule(std::string name)
     : AttributeHolder(std::move(name)), globals(this), types(this),
       mainFunc(std::make_unique<Func>("main")) {
-  mainFunc->parent = this;
+  this->mainFunc->parent = this;
 }
 
 void SIRModule::accept(util::SIRVisitor &v) { v.visit(this); }
