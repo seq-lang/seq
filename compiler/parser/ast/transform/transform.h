@@ -105,7 +105,6 @@ public:
   void visit(const ThrowStmt *) override;
   void visit(const FunctionStmt *) override;
   void visit(const ClassStmt *) override;
-  void visit(const AssignEqStmt *) override;
   void visit(const YieldFromStmt *) override;
   void visit(const WithStmt *) override;
   void visit(const TuplePattern *) override;

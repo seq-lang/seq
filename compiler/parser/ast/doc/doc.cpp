@@ -199,7 +199,7 @@ void DocVisitor::visit(const ClassStmt *stmt) {
   ctx->add(stmt->name, make_shared<int>(id));
   json j{{"name", stmt->name},
          {"kind", "class"},
-         {"type", stmt->isRecord ? "type" : "class"}};
+         {"type", stmt->isRecord() ? "type" : "class"}};
 
   vector<json> args;
   vector<string> generics;
@@ -282,8 +282,6 @@ void DocVisitor::visit(const ImportStmt *stmt) {
 }
 
 void DocVisitor::visit(const AssignStmt *stmt) {
-  if (stmt->mustExist)
-    return;
   auto e = CAST(stmt->lhs, IdExpr);
   if (!e)
     return;

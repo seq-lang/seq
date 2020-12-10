@@ -1,3 +1,11 @@
+/*
+ * parser.h --- Seq AST parser.
+ *
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
+ */
+
 #pragma once
 
 #include <string>
@@ -10,8 +18,8 @@ namespace seq {
 SeqModule *parse(const std::string &argv0, const std::string &file,
                  const std::string &code = "", bool isCode = false, bool isTest = false,
                  int startLine = 0);
-void execute(seq::SeqModule *module, std::vector<std::string> args = {},
-             std::vector<std::string> libs = {}, bool debug = false);
+void execute(seq::SeqModule *module, const std::vector<std::string> &args = {},
+             const std::vector<std::string> &libs = {}, bool debug = false);
 void compile(seq::SeqModule *module, const std::string &out, bool debug = false);
 void generateDocstr(const std::string &argv0);
 

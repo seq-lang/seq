@@ -1,8 +1,16 @@
+/*
+ * pattern.cpp --- Seq AST match-case patterns.
+ *
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
+ */
+
 #include <memory>
-#include <string>
 #include <vector>
 
 #include "parser/ast/ast/pattern.h"
+#include "parser/ast/ast/visitor.h"
 
 using fmt::format;
 using std::move;
@@ -11,81 +19,91 @@ namespace seq {
 namespace ast {
 
 Pattern::Pattern() : type(nullptr) {}
-Pattern::Pattern(const Pattern &e) : seq::SrcObject(e), type(e.type) {}
+types::TypePtr Pattern::getType() const { return type; }
+void Pattern::setType(types::TypePtr t) { this->type = move(t); }
 
-StarPattern::StarPattern() : Pattern() {}
-StarPattern::StarPattern(const StarPattern &p) : Pattern(p) {}
 string StarPattern::toString() const { return "(STAR)"; }
 PatternPtr StarPattern::clone() const { return make_unique<StarPattern>(*this); }
+void StarPattern::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-IntPattern::IntPattern(int v) : Pattern(), value(v) {}
-IntPattern::IntPattern(const IntPattern &p) : Pattern(p), value(p.value) {}
+IntPattern::IntPattern(int value) : Pattern(), value(value) {}
 string IntPattern::toString() const { return format("(INT {})", value); }
 PatternPtr IntPattern::clone() const { return make_unique<IntPattern>(*this); }
+void IntPattern::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-BoolPattern::BoolPattern(bool v) : Pattern(), value(v) {}
-BoolPattern::BoolPattern(const BoolPattern &p) : Pattern(p), value(p.value) {}
+BoolPattern::BoolPattern(bool value) : Pattern(), value(value) {}
 string BoolPattern::toString() const { return format("(BOOL {})", value); }
 PatternPtr BoolPattern::clone() const { return make_unique<BoolPattern>(*this); }
+void BoolPattern::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-StrPattern::StrPattern(string v, string p) : Pattern(), value(v), prefix(p) {}
-StrPattern::StrPattern(const StrPattern &p)
-    : Pattern(p), value(p.value), prefix(p.prefix) {}
+StrPattern::StrPattern(string value, string prefix)
+    : Pattern(), value(move(value)), prefix(move(prefix)) {}
 string StrPattern::toString() const {
   return format("(STR '{}' PREFIX={})", escape(value), prefix);
 }
 PatternPtr StrPattern::clone() const { return make_unique<StrPattern>(*this); }
+void StrPattern::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-RangePattern::RangePattern(int s, int e) : Pattern(), start(s), end(e) {}
-RangePattern::RangePattern(const RangePattern &p)
-    : Pattern(p), start(p.start), end(p.end) {}
-string RangePattern::toString() const { return format("(RANGE {} {})", start, end); }
+RangePattern::RangePattern(int start, int stop) : Pattern(), start(start), stop(stop) {}
+string RangePattern::toString() const { return format("(RANGE {} {})", start, stop); }
 PatternPtr RangePattern::clone() const { return make_unique<RangePattern>(*this); }
+void RangePattern::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-TuplePattern::TuplePattern(vector<PatternPtr> &&p) : Pattern(), patterns(move(p)) {}
-TuplePattern::TuplePattern(const TuplePattern &p)
-    : Pattern(p), patterns(ast::clone(p.patterns)) {}
+TuplePattern::TuplePattern(vector<PatternPtr> &&patterns)
+    : Pattern(), patterns(move(patterns)) {}
+TuplePattern::TuplePattern(const TuplePattern &pattern)
+    : Pattern(pattern), patterns(ast::clone(pattern.patterns)) {}
 string TuplePattern::toString() const {
   return format("(TUPLE {})", combine(patterns));
 }
 PatternPtr TuplePattern::clone() const { return make_unique<TuplePattern>(*this); }
+void TuplePattern::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-ListPattern::ListPattern(vector<PatternPtr> &&p) : Pattern(), patterns(move(p)) {}
-ListPattern::ListPattern(const ListPattern &p)
-    : Pattern(p), patterns(ast::clone(p.patterns)) {}
+ListPattern::ListPattern(vector<PatternPtr> &&patterns)
+    : Pattern(), patterns(move(patterns)) {}
+ListPattern::ListPattern(const ListPattern &pattern)
+    : Pattern(pattern), patterns(ast::clone(pattern.patterns)) {}
 string ListPattern::toString() const { return format("(LIST {})", combine(patterns)); }
 PatternPtr ListPattern::clone() const { return make_unique<ListPattern>(*this); }
+void ListPattern::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-OrPattern::OrPattern(vector<PatternPtr> &&p) : Pattern(), patterns(move(p)) {}
-OrPattern::OrPattern(const OrPattern &p)
-    : Pattern(p), patterns(ast::clone(p.patterns)) {}
+OrPattern::OrPattern(vector<PatternPtr> &&patterns)
+    : Pattern(), patterns(move(patterns)) {}
+OrPattern::OrPattern(const OrPattern &pattern)
+    : Pattern(pattern), patterns(ast::clone(pattern.patterns)) {}
 string OrPattern::toString() const { return format("(OR {})", combine(patterns)); }
 PatternPtr OrPattern::clone() const { return make_unique<OrPattern>(*this); }
+void OrPattern::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-WildcardPattern::WildcardPattern(string v) : Pattern(), var(v) {}
-WildcardPattern::WildcardPattern(const WildcardPattern &p) : Pattern(p), var(p.var) {}
+WildcardPattern::WildcardPattern(string var) : Pattern(), var(move(var)) {}
 string WildcardPattern::toString() const {
-  return var == "" ? "(WILD)" : format("(WILD {})", var);
+  return var.empty() ? "(WILD)" : format("(WILD {})", var);
 }
 PatternPtr WildcardPattern::clone() const {
   return make_unique<WildcardPattern>(*this);
 }
+void WildcardPattern::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-GuardedPattern::GuardedPattern(PatternPtr p, ExprPtr c)
-    : Pattern(), pattern(move(p)), cond(move(c)) {}
-GuardedPattern::GuardedPattern(const GuardedPattern &p)
-    : Pattern(p), pattern(ast::clone(p.pattern)), cond(ast::clone(p.cond)) {}
+GuardedPattern::GuardedPattern(PatternPtr pattern, ExprPtr cond)
+    : Pattern(), pattern(move(pattern)), cond(move(cond)) {}
+GuardedPattern::GuardedPattern(const GuardedPattern &pattern)
+    : Pattern(pattern), pattern(ast::clone(pattern.pattern)),
+      cond(ast::clone(pattern.cond)) {}
 string GuardedPattern::toString() const {
-  return format("(GUARD {} {})", *pattern, *cond);
+  return format("(GUARD {} {})", pattern->toString(), cond->toString());
 }
 PatternPtr GuardedPattern::clone() const { return make_unique<GuardedPattern>(*this); }
+void GuardedPattern::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-BoundPattern::BoundPattern(string v, PatternPtr p)
-    : Pattern(), var(v), pattern(move(p)) {}
-BoundPattern::BoundPattern(const BoundPattern &p)
-    : Pattern(p), var(p.var), pattern(ast::clone(p.pattern)) {}
-string BoundPattern::toString() const { return format("(BOUND {} {})", var, *pattern); }
+BoundPattern::BoundPattern(string var, PatternPtr pattern)
+    : Pattern(), var(move(var)), pattern(move(pattern)) {}
+BoundPattern::BoundPattern(const BoundPattern &pattern)
+    : Pattern(pattern), var(pattern.var), pattern(ast::clone(pattern.pattern)) {}
+string BoundPattern::toString() const {
+  return format("(BOUND {} {})", var, pattern->toString());
+}
 PatternPtr BoundPattern::clone() const { return make_unique<BoundPattern>(*this); }
+void BoundPattern::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
 } // namespace ast
 } // namespace seq

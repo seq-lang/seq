@@ -52,8 +52,8 @@ void WalkVisitor::visit(const DictGeneratorExpr *e) {
 
 void WalkVisitor::visit(const IfExpr *e) {
   WALK(e->cond);
-  WALK(e->eif);
-  WALK(e->eelse);
+  WALK(e->ifexpr);
+  WALK(e->elsexpr);
 }
 
 void WalkVisitor::visit(const UnaryExpr *e) { WALK(e->expr); }
@@ -82,8 +82,8 @@ void WalkVisitor::visit(const CallExpr *e) {
 void WalkVisitor::visit(const DotExpr *e) { WALK(e->expr); }
 
 void WalkVisitor::visit(const SliceExpr *e) {
-  WALK(e->st);
-  WALK(e->ed);
+  WALK(e->start);
+  WALK(e->stop);
   WALK(e->step);
 }
 

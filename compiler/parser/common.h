@@ -1,3 +1,11 @@
+/*
+ * common.h --- Common utilities.
+ *
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
+ */
+
 #pragma once
 
 #include <iostream>
@@ -25,24 +33,35 @@ using std::unordered_map;
 using std::unordered_set;
 using std::vector;
 
+#include "compiler/util/fmt/format.h"
+#include "compiler/util/fmt/ostream.h"
+
 namespace seq {
 
 namespace exc {
+
+/**
+ * Parser error exception.
+ * Used for parsing, transformation and type-checking errors.
+ */
 class ParserException : public std::runtime_error {
 public:
+  /// These vectors (stacks) store an error stack-trace.
   vector<SrcInfo> locations;
   vector<string> messages;
 
 public:
-  ParserException(const string &msg, SrcInfo info) noexcept : std::runtime_error(msg) {
+  ParserException(const string &msg, const SrcInfo &info) noexcept
+      : std::runtime_error(msg) {
     messages.push_back(msg);
     locations.push_back(info);
   }
   explicit ParserException(const string &msg) noexcept : ParserException(msg, {}) {}
   ParserException(const ParserException &e) noexcept : std::runtime_error(e) {}
 
-  void trackRealize(const string &msg, SrcInfo i) {
-    locations.push_back(i);
+  /// Add an error message to the current stack trace
+  void trackRealize(const string &msg, const SrcInfo &info) {
+    locations.push_back(info);
     messages.push_back(fmt::format("while realizing {}", msg));
   }
 };
@@ -50,46 +69,62 @@ public:
 
 namespace ast {
 
-struct SrcInfoHash {
-  size_t operator()(const seq::SrcInfo &k) const { return std::hash<int>()(k.id); }
-};
+/// String and collection utilities
 
-struct Expr;
-bool getInt(seq_int_t *o, const unique_ptr<ast::Expr> &e, bool zeroOnNull = true);
-vector<string> split(const string &s, char delim);
-string escape(string s);
-string executable_path(const char *argv0);
-string getTemporaryVar(const string &prefix = "", char p = '$');
-string chop(const string &s);
-bool startswith(const string &s, const string &p);
-bool endswith(const string &s, const string &p);
-void error(const char *format);
-void error(const SrcInfo &p, const char *format);
-
-template <typename T> string join(const T &items, string delim = " ") {
-  string s = "";
+/// Split a delim-separated string into a vector of strings
+vector<string> split(const string &str, char delim);
+/// Escape a C string (replace \n with \\n etc.)
+string escape(const string &str);
+/// Remove leading dot from a string.
+string chop(const string &str);
+/// True if a string s starts with prefix.
+bool startswith(const string &str, const string &prefix);
+/// True if a string s ends with suffix.
+bool endswith(const string &str, const string &suffix);
+/// Combine items separated by a delimiter into a string.
+template <typename T> string join(const T &items, const string &delim = " ") {
+  string s;
   for (int i = 0; i < items.size(); i++)
     s += (i ? delim : "") + items[i];
   return s;
 }
-
-template <typename T, typename U> bool in(const vector<T> &c, const U &i) {
-  auto f = std::find(c.begin(), c.end(), i);
-  return f != c.end();
-}
-
-template <typename T> string combine(const vector<T> &items, string delim = " ") {
-  string s = "";
+/// Combine items separated by a delimiter into a string.
+template <typename T>
+string combine(const vector<T> &items, const string &delim = " ") {
+  string s;
   for (int i = 0; i < items.size(); i++)
     if (items[i])
       s += (i ? delim : "") + items[i]->toString();
   return s;
 }
+/// @return True if an item is found in a vector vec.
+template <typename T, typename U> bool in(const vector<T> &vec, const U &item) {
+  auto f = std::find(vec.begin(), vec.end(), item);
+  return f != vec.end();
+}
+/// @return True if an item is found in a map m.
+template <typename K, typename V, typename U>
+bool in(const map<K, V> &m, const U &item) {
+  auto f = m.find(item);
+  return f != m.end();
+}
 
+/// AST utilities
+
+/// Return a uniquely named temporary variable of a format "{sigil}_{prefix}{counter}".
+/// Sigil should ideally be unlexable symbol.
+string getTemporaryVar(const string &prefix = "", char sigil = '$');
+/// Raise a parsing error.
+void error(const char *format);
+/// Raise a parsing error at a source location p.
+void error(const SrcInfo &info, const char *format);
+
+/// Clones a pointer even if it is a nullptr.
 template <typename T> auto clone(const unique_ptr<T> &t) {
   return t ? t->clone() : nullptr;
 }
 
+/// Clones a vector of clonable pointer objects.
 template <typename T> vector<T> clone(const vector<T> &t) {
   vector<T> v;
   for (auto &i : t)
@@ -97,6 +132,7 @@ template <typename T> vector<T> clone(const vector<T> &t) {
   return v;
 }
 
+/// Clones a vector of clonable objects.
 template <typename T> vector<T> clone_nop(const vector<T> &t) {
   vector<T> v;
   for (auto &i : t)
@@ -104,25 +140,15 @@ template <typename T> vector<T> clone_nop(const vector<T> &t) {
   return v;
 }
 
-template <typename K, typename V, typename U> bool in(const map<K, V> &c, const U &i) {
-  auto f = c.find(i);
-  return f != c.end();
-}
+/// Path utilities
 
-template <typename T> string v2s(const vector<T> &targs) {
-  vector<string> args;
-  for (auto &t : targs)
-    args.push_back(t->toString());
-  return join(args, ", ");
-}
+/// Detect a absolute path of the current executable (whose argv0 is known).
+/// @return Absolute executable path or argv0 if one cannot be found.
+string executable_path(const char *argv0);
 
-template <typename T> string v2s(const vector<std::pair<string, T>> &targs) {
-  vector<string> args;
-  for (auto &t : targs)
-    args.push_back(t.second->toString());
-  return join(args, ", ");
-}
-
+/// Find an import file what given an executable path (argv0) either in the standard
+/// library or relative to a file relativeTo. Set forceStdlib for searching only the
+/// standard library.
 string getImportFile(const string &argv0, const string &what, const string &relativeTo,
                      bool forceStdlib);
 

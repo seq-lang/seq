@@ -162,20 +162,20 @@ void TypecheckVisitor::visit(const IdExpr *expr) {
 }
 
 void TypecheckVisitor::visit(const IfExpr *expr) {
-  auto e =
-      N<IfExpr>(transform(expr->cond), transform(expr->eif), transform(expr->eelse));
-  auto ti = e->eif->getType()->getClass();
-  auto te = e->eelse->getType()->getClass();
+  auto e = N<IfExpr>(transform(expr->cond), transform(expr->ifexpr),
+                     transform(expr->elsexpr));
+  auto ti = e->ifexpr->getType()->getClass();
+  auto te = e->elsexpr->getType()->getClass();
   if (ti && te) {
     if (te->name != ti->name) {
       if (ti->name == ".Optional")
-        e->eelse = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(e->eelse)));
+        e->elsexpr = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(e->elsexpr)));
       else if (te->name == ".Optional")
-        e->eif = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(e->eif)));
+        e->ifexpr = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(e->ifexpr)));
     }
-    forceUnify(e->eif->getType(), e->eelse->getType());
+    forceUnify(e->ifexpr->getType(), e->elsexpr->getType());
   }
-  e->setType(forceUnify(expr, e->eif->getType()));
+  e->setType(forceUnify(expr, e->ifexpr->getType()));
   resultExpr = move(e);
 }
 
@@ -316,21 +316,20 @@ void TypecheckVisitor::visit(const StaticExpr *expr) {
 }
 
 void TypecheckVisitor::visit(const InstantiateExpr *expr) {
-  ExprPtr e = transform(expr->type, true);
+  ExprPtr e = transform(expr->typeExpr, true);
   auto g = ctx->instantiate(e->getSrcInfo(), e->getType());
-  for (int i = 0; i < expr->params.size(); i++) {
+  for (int i = 0; i < expr->typeParams.size(); i++) {
     TypePtr t = nullptr;
-    if (auto s = CAST(expr->params[i], StaticExpr)) {
+    if (auto s = CAST(expr->typeParams[i], StaticExpr)) {
       map<string, Generic> m;
       for (auto g : s->captures) {
         auto val = ctx->find(g);
         assert(val && val->isStatic());
         auto t = val->getType()->follow();
         m[g] = {g, t,
-                t->getLink()
-                    ? t->getLink()->id
-                    : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
-                                                       : 0};
+                t->getLink()                       ? t->getLink()->id
+                : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
+                                                   : 0};
       }
       auto sv = StaticVisitor(m);
       sv.transform(s->expr);
@@ -344,9 +343,9 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
         t = make_shared<StaticType>(v, clone(s->expr));
       }
     } else {
-      if (!expr->params[i]->isType())
-        error(expr->params[i], "not a type");
-      t = ctx->instantiate(getSrcInfo(), transformType(expr->params[i])->getType());
+      if (!expr->typeParams[i]->isType())
+        error(expr->typeParams[i], "not a type");
+      t = ctx->instantiate(getSrcInfo(), transformType(expr->typeParams[i])->getType());
     }
     /// Note: at this point, only single-variable static var expression (e.g.
     /// N) is allowed, so unify will work as expected.
@@ -378,8 +377,8 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
 void TypecheckVisitor::visit(const SliceExpr *expr) {
   ExprPtr none = N<CallExpr>(N<DotExpr>(N<IdExpr>(".Optional"), "__new__"));
   resultExpr = transform(N<CallExpr>(N<IdExpr>(".Slice"),
-                                     expr->st ? clone(expr->st) : transform(none),
-                                     expr->ed ? clone(expr->ed) : transform(none),
+                                     expr->start ? clone(expr->start) : transform(none),
+                                     expr->stop ? clone(expr->stop) : transform(none),
                                      expr->step ? clone(expr->step) : transform(none)));
 }
 
@@ -423,11 +422,11 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
         error("tuple index out of range (expected 0..{}, got {})", e, i);
       return transform(N<DotExpr>(clone(expr), mm->second[i].first));
     } else if (auto i = CAST(index, SliceExpr)) {
-      if (!getInt(&s, i->st) || !getInt(&e, i->ed) || !getInt(&st, i->step))
+      if (!getInt(&s, i->start) || !getInt(&e, i->stop) || !getInt(&st, i->step))
         return nullptr;
-      if (i->step && !i->st)
+      if (i->step && !i->start)
         s = st > 0 ? 0 : tuple->args.size();
-      if (i->step && !i->ed)
+      if (i->step && !i->stop)
         e = st > 0 ? tuple->args.size() : 0;
       sliceAdjustIndices(tuple->args.size(), &s, &e, st);
       vector<ExprPtr> te;
@@ -496,9 +495,9 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
       if (args) {
         vector<pair<string, TypePtr>> targs;
         if (!lhs->isType())
-          targs.push_back({"", c});
+          targs.emplace_back(make_pair("", c));
         for (auto &a : *args)
-          targs.push_back({a.name, a.value->getType()});
+          targs.emplace_back(make_pair(a.name, a.value->getType()));
         if (auto m = findBestCall(c, expr->member, targs, true)) {
           if (!lhs->isType())
             args->insert(args->begin(), {"", clone(lhs)});
@@ -508,8 +507,11 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
             deactivateUnbounds(c);
           return e;
         } else {
+          vector<string> nice;
+          for (auto &t : targs)
+            nice.emplace_back(format("{} = {}", t.first, t.second->toString()));
           error("cannot find method '{}' in {} with arguments {}", expr->member,
-                c->toString(), v2s(targs));
+                c->toString(), join(nice, ", "));
         }
       }
 
@@ -521,14 +523,18 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
           if (startswith(dc->name, ".Function.")) {
             vector<pair<string, TypePtr>> targs; // we can, well, unify this
             if (!lhs->isType())
-              targs.push_back({"", c});
+              targs.emplace_back(make_pair("", c));
             for (auto i = 1; i < dc->explicits.size(); i++)
-              targs.push_back({"", dc->explicits[i].type});
+              targs.emplace_back(make_pair("", dc->explicits[i].type));
             if (auto mc = findBestCall(c, expr->member, targs, true))
               bestCall = mc;
-            else
+            else {
+              vector<string> nice;
+              for (auto &t : targs)
+                nice.emplace_back(format("{} = {}", t.first, t.second->toString()));
               error("cannot find method '{}' in {} with arguments {}", expr->member,
-                    c->toString(), v2s(targs));
+                    c->toString(), join(nice, ", "));
+            }
           }
         }
       } else {
@@ -600,13 +606,13 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
   if (auto i = CAST(expr->expr, IndexExpr))
     lhs = i->expr.get();
   else if (auto i = CAST(expr->expr, InstantiateExpr))
-    lhs = i->type.get();
+    lhs = i->typeExpr.get();
   if (auto i = dynamic_cast<DotExpr *>(lhs)) {
     callee = visitDot(i, &args);
     if (auto i = CAST(expr->expr, IndexExpr))
       callee = transform(N<IndexExpr>(move(callee), clone(i->index)));
     else if (auto i = CAST(expr->expr, InstantiateExpr))
-      callee = transform(N<InstantiateExpr>(move(callee), clone(i->params)));
+      callee = transform(N<InstantiateExpr>(move(callee), clone(i->typeParams)));
   } else {
     callee = transform(expr->expr, true);
   }
@@ -937,8 +943,8 @@ void TypecheckVisitor::visit(const ExprStmt *stmt) {
 }
 
 void TypecheckVisitor::visit(const AssignStmt *stmt) {
-  auto l = CAST(stmt->lhs, IdExpr);
-  assert(l);
+  auto l = stmt->lhs->getId();
+  seqassert(l, "invalid AssignStmt {}", stmt->toString());
 
   auto rhs = transform(stmt->rhs);
   auto typExpr = transformType(stmt->type);
@@ -1230,9 +1236,8 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
 
 void TypecheckVisitor::visit(const ClassStmt *stmt) {
   if (ctx->findInVisited(stmt->name).second && !in(stmt->attributes, "extend"))
-    resultStmt =
-        N<ClassStmt>(stmt->isRecord, stmt->name, vector<Param>(), vector<Param>(),
-                     N<SuiteStmt>(), map<string, string>(stmt->attributes));
+    resultStmt = N<ClassStmt>(stmt->name, vector<Param>(), vector<Param>(),
+                              N<SuiteStmt>(), map<string, string>(stmt->attributes));
   else
     resultStmt = N<SuiteStmt>(parseClass(stmt));
 }
@@ -1241,24 +1246,21 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
   bool extension = in(stmt->attributes, "extend");
 
   vector<StmtPtr> stmts;
-  seqassert(stmt->isRecord == in(stmt->attributes, "tuple"),
-            "attribute mismatch for {} ({})", stmt->name, stmt->isRecord);
-  stmts.push_back(N<ClassStmt>(stmt->isRecord, stmt->name, vector<Param>(),
-                               vector<Param>(), N<SuiteStmt>(),
-                               map<string, string>(stmt->attributes)));
+  stmts.push_back(N<ClassStmt>(stmt->name, vector<Param>(), vector<Param>(),
+                               N<SuiteStmt>(), map<string, string>(stmt->attributes)));
 
   ClassTypePtr ct;
   if (!extension) {
     auto &attributes = const_cast<ClassStmt *>(stmt)->attributes;
     ct = make_shared<ClassType>(
-        stmt->name, stmt->isRecord, vector<TypePtr>(), vector<Generic>(),
+        stmt->name, stmt->isRecord(), vector<TypePtr>(), vector<Generic>(),
         ctx->bases[ctx->findBase(attributes[".parentFunc"])].type);
     if (in(stmt->attributes, "trait"))
       ct->isTrait = true;
     ct->setSrcInfo(stmt->getSrcInfo());
     auto ctxi =
         make_shared<TypecheckItem>(TypecheckItem::Type, ct, ctx->getBase(), true);
-    if (!stmt->isRecord) // add classes early
+    if (!stmt->isRecord()) // add classes early
       ctx->add(stmt->name, ctxi);
 
     ctx->bases[ctx->findBase(attributes[".parentFunc"])].visitedAsts[stmt->name] = {
@@ -1269,11 +1271,11 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
     for (auto &a : stmt->args) {
       auto t = transformType(a.type)->getType()->generalize(ctx->typecheckLevel - 1);
       ctx->cache->classMembers[stmt->name].push_back({a.name, t});
-      if (stmt->isRecord)
+      if (stmt->isRecord())
         ct->args.push_back(t);
     }
     ctx->typecheckLevel--;
-    if (stmt->isRecord)
+    if (stmt->isRecord())
       ctx->add(stmt->name, ctxi);
   } else {
     auto val = ctx->find(stmt->name);
@@ -1360,7 +1362,7 @@ void TypecheckVisitor::visit(const StrPattern *pat) {
 }
 
 void TypecheckVisitor::visit(const RangePattern *pat) {
-  resultPattern = N<RangePattern>(pat->start, pat->end);
+  resultPattern = N<RangePattern>(pat->start, pat->stop);
   resultPattern->setType(forceUnify(pat, ctx->findInternal(".int")));
 }
 
@@ -1464,8 +1466,8 @@ void StaticVisitor::visit(const IfExpr *expr) {
   // Note: both expressions must be evaluated at this time in order to capture
   // all
   //       unrealized variables (i.e. short-circuiting is not possible)
-  auto i = transform(expr->eif);
-  auto e = transform(expr->eelse);
+  auto i = transform(expr->ifexpr);
+  auto e = transform(expr->elsexpr);
   if (evaluated)
     std::tie(evaluated, value) = value ? i : e;
 }
@@ -1625,7 +1627,7 @@ vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &gene
   auto genericTypes = vector<types::Generic>();
   for (auto &g : generics) {
     assert(!g.name.empty());
-    if (g.type && !g.type->isIdExpr(".int"))
+    if (g.type && !g.type->isId(".int"))
       error("only int generic types are allowed / {}", g.type->toString());
     auto tp = ctx->addUnbound(getSrcInfo(), level, true, bool(g.type));
     genericTypes.push_back(
@@ -1747,7 +1749,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     assert(ast->args.size() == t->args.size() - 1);
     vector<Param> args;
     for (auto &i : ast->args)
-      args.push_back({i.name, nullptr, nullptr});
+      args.emplace_back(Param{i.name, nullptr, nullptr});
 
     LOG_REALIZE("done with {}", t->realizeString());
     ctx->cache->realizationAsts[t->realizeString()] =
@@ -1920,7 +1922,7 @@ string TypecheckVisitor::generatePartialStub(const string &mask,
 
     vector<Param> generics, args, missingArgs;
     vector<ExprPtr> genericNames, callArgs;
-    args.push_back({".ptr", nullptr, nullptr});
+    args.emplace_back(Param{".ptr", nullptr, nullptr});
     missingArgs.push_back(Param{"self", nullptr, nullptr});
     for (int i = 0; i <= mask.size(); i++) {
       genericNames.push_back(N<IdExpr>(format("T{}", i)));
@@ -1942,7 +1944,7 @@ string TypecheckVisitor::generatePartialStub(const string &mask,
                                                   move(callArgs))),
                         vector<string>{});
     StmtPtr stmt =
-        make_unique<ClassStmt>(true, typeName, move(generics), move(args), move(func),
+        make_unique<ClassStmt>(typeName, move(generics), move(args), move(func),
                                vector<string>{"tuple", "no_total_ordering", "no_pickle",
                                               "no_container", "no_python"});
 

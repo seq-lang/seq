@@ -1,7 +1,10 @@
 #include "lang/seq.h"
+#include <chrono>
 
 using namespace seq;
 using namespace llvm;
+
+extern int _ll_time;
 
 BaseFunc::BaseFunc()
     : parentType(nullptr), module(nullptr), preambleBlock(nullptr), func(nullptr) {}
@@ -551,6 +554,9 @@ void LLVMFunc::codegen(Module *module) {
     return;
   }
 
+  using namespace std::chrono;
+  auto t = high_resolution_clock::now();
+
   const std::string code = createParsableModuleString(context);
   SMDiagnostic err;
   std::unique_ptr<MemoryBuffer> buf = MemoryBuffer::getMemBuffer(code);
@@ -570,6 +576,8 @@ void LLVMFunc::codegen(Module *module) {
   func = module->getFunction(name);
   assert(func);
   func->addFnAttr(Attribute::AttrKind::AlwaysInline);
+
+  _ll_time += duration_cast<milliseconds>(high_resolution_clock::now() - t).count();
 }
 
 types::FuncType *LLVMFunc::getFuncType() {

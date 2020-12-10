@@ -1,93 +1,36 @@
+/*
+ * visitor.h --- Seq AST visitors.
+ *
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
+ */
+
 #pragma once
 
 #include <memory>
 #include <vector>
 
+#include "parser/ast/ast/expr.h"
+#include "parser/ast/ast/pattern.h"
+#include "parser/ast/ast/stmt.h"
 #include "parser/common.h"
 
 namespace seq {
 namespace ast {
 
-struct Expr;
-struct Stmt;
-struct Pattern;
-
-struct NoneExpr;
-struct BoolExpr;
-struct IntExpr;
-struct FloatExpr;
-struct StringExpr;
-struct IdExpr;
-struct StarExpr;
-struct TupleExpr;
-struct ListExpr;
-struct SetExpr;
-struct DictExpr;
-struct GeneratorExpr;
-struct DictGeneratorExpr;
-struct IfExpr;
-struct UnaryExpr;
-struct BinaryExpr;
-struct PipeExpr;
-struct IndexExpr;
-struct CallExpr;
-struct DotExpr;
-struct SliceExpr;
-struct EllipsisExpr;
-struct TypeOfExpr;
-struct LambdaExpr;
-struct YieldExpr;
-struct PtrExpr;
-struct TupleIndexExpr;
-struct StackAllocExpr;
-struct StaticExpr;
-struct InstantiateExpr;
-struct StmtExpr;
-
-struct AssignMemberStmt;
-struct SuiteStmt;
-struct PassStmt;
-struct BreakStmt;
-struct ContinueStmt;
-struct ExprStmt;
-struct AssignStmt;
-struct DelStmt;
-struct PrintStmt;
-struct ReturnStmt;
-struct YieldStmt;
-struct AssertStmt;
-struct WhileStmt;
-struct ForStmt;
-struct IfStmt;
-struct MatchStmt;
-struct ImportStmt;
-struct TryStmt;
-struct GlobalStmt;
-struct ThrowStmt;
-struct FunctionStmt;
-struct ClassStmt;
-struct AssignEqStmt;
-struct YieldFromStmt;
-struct WithStmt;
-struct UpdateStmt;
-
-struct StarPattern;
-struct IntPattern;
-struct BoolPattern;
-struct StrPattern;
-struct RangePattern;
-struct TuplePattern;
-struct ListPattern;
-struct OrPattern;
-struct WildcardPattern;
-struct GuardedPattern;
-struct BoundPattern;
-
+/**
+ * Base Seq AST visitor.
+ * Each visit() by default calls an appropriate defaultVisit().
+ */
 struct ASTVisitor {
 protected:
-  virtual void defaultVisit(const Expr *e);
-  virtual void defaultVisit(const Stmt *e);
-  virtual void defaultVisit(const Pattern *e);
+  /// Default expression node visitor if a particular visitor is not overloaded.
+  virtual void defaultVisit(const Expr *expr);
+  /// Default statement node visitor if a particular visitor is not overloaded.
+  virtual void defaultVisit(const Stmt *stmt);
+  /// Default pattern node visitor if a particular visitor is not overloaded.
+  virtual void defaultVisit(const Pattern *pattern);
 
 public:
   virtual void visit(const NoneExpr *);
@@ -145,10 +88,8 @@ public:
   virtual void visit(const ThrowStmt *);
   virtual void visit(const FunctionStmt *);
   virtual void visit(const ClassStmt *);
-  virtual void visit(const AssignEqStmt *);
   virtual void visit(const YieldFromStmt *);
   virtual void visit(const WithStmt *);
-  // virtual void visit(const PyDefStmt *);
 
   virtual void visit(const StarPattern *);
   virtual void visit(const IntPattern *);
@@ -164,11 +105,19 @@ public:
 };
 
 template <typename TE, typename TS, typename TP>
+/**
+ * Callback AST visitor.
+ * This visitor extends base ASTVisitor and stores node's source location (SrcObject).
+ * Function transform() will visit a node and return the appropriate transformation. As
+ * each node type (expression, statement, or a pattern) might return a different type,
+ * this visitor is generic for each different return type.
+ */
 struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
-  virtual TE transform(const unique_ptr<Expr> &e) = 0;
-  virtual TS transform(const unique_ptr<Stmt> &e) = 0;
-  virtual TP transform(const unique_ptr<Pattern> &e) = 0;
+  virtual TE transform(const unique_ptr<Expr> &expr) = 0;
+  virtual TS transform(const unique_ptr<Stmt> &stmt) = 0;
+  virtual TP transform(const unique_ptr<Pattern> &pattern) = 0;
 
+  /// Convenience method that transforms a vector of nodes.
   template <typename T> auto transform(const vector<T> &ts) {
     vector<T> r;
     for (auto &e : ts)
@@ -176,12 +125,15 @@ struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
     return r;
   }
 
+  /// Convenience method that constructs a node with the visitor's source location.
   template <typename Tn, typename... Ts> auto N(Ts &&...args) {
     auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
     t->setSrcInfo(getSrcInfo());
     return t;
   }
 
+  /// Convenience method that constructs a node.
+  /// @param s source location.
   template <typename Tn, typename... Ts>
   auto Nx(const seq::SrcObject *s, Ts &&...args) {
     auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
@@ -189,15 +141,18 @@ struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
     return t;
   }
 
+  /// Convenience method that raises an error at the current source location.
   template <typename... TArgs> void error(const char *format, TArgs &&...args) {
     ast::error(getSrcInfo(), fmt::format(format, args...).c_str());
   }
 
+  /// Convenience method that raises an error at the source location of p.
   template <typename T, typename... TArgs>
   void error(const T &p, const char *format, TArgs &&...args) {
     ast::error(p->getSrcInfo(), fmt::format(format, args...).c_str());
   }
 
+  /// Convenience method that raises an internal error.
   template <typename T, typename... TArgs>
   void internalError(const char *format, TArgs &&...args) {
     throw exc::ParserException(

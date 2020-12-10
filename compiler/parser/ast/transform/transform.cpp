@@ -3,11 +3,8 @@
  */
 
 #include "util/fmt/format.h"
-#include "util/fmt/ostream.h"
 #include <deque>
 #include <memory>
-#include <ostream>
-#include <stack>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -39,8 +36,8 @@ using namespace types;
 
 TransformVisitor::TransformVisitor(shared_ptr<TransformContext> ctx,
                                    shared_ptr<vector<StmtPtr>> stmts)
-    : ctx(ctx) {
-  prependStmts = stmts ? stmts : make_shared<vector<StmtPtr>>();
+    : ctx(move(ctx)) {
+  prependStmts = stmts ? move(stmts) : make_shared<vector<StmtPtr>>();
 }
 
 StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s,
@@ -52,7 +49,7 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s,
   if (cache->imports.find("") == cache->imports.end()) {
     auto stdlib = make_shared<TransformContext>("", cache);
     auto stdlibPath = stdlib->findFile("core", "", true);
-    if (stdlibPath == "")
+    if (stdlibPath.empty())
       ast::error("cannot load standard library");
     stdlib->setFilename(stdlibPath);
     cache->imports[""] = {stdlibPath, stdlib};
@@ -62,20 +59,20 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s,
       auto canonical = stdlib->generateCanonicalName(name);
       stdlib->add(TransformItem::Type, name, canonical, true);
       cache->asts[canonical] =
-          make_unique<ClassStmt>(true, canonical, vector<Param>(), vector<Param>(),
-                                 nullptr, vector<string>{"internal", "tuple"});
+          make_unique<ClassStmt>(canonical, vector<Param>(), vector<Param>(), nullptr,
+                                 vector<string>{"internal", "tuple"});
       preamble->stmts.push_back(clone(cache->asts[canonical]));
     }
     for (auto &name : vector<string>{"Ptr", "Generator", "Optional", "Int", "UInt"}) {
       auto canonical = stdlib->generateCanonicalName(name);
       stdlib->add(TransformItem::Type, name, canonical, true);
       vector<Param> generics;
-      generics.push_back({"T",
-                          string(name) == "Int" || string(name) == "UInt"
-                              ? make_unique<IdExpr>(".int")
-                              : nullptr,
-                          nullptr});
-      auto c = make_unique<ClassStmt>(true, canonical, move(generics), vector<Param>(),
+      generics.emplace_back(Param{"T",
+                                  string(name) == "Int" || string(name) == "UInt"
+                                      ? make_unique<IdExpr>(".int")
+                                      : nullptr,
+                                  nullptr});
+      auto c = make_unique<ClassStmt>(canonical, move(generics), vector<Param>(),
                                       nullptr, vector<string>{"internal", "tuple"});
       if (name == "Generator")
         c->attributes["trait"] = "";
@@ -113,9 +110,9 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s,
   auto stmts = TransformVisitor(ctx).transform(s);
 
   preamble->stmts.push_back(clone(cache->asts[".Function.1"])); // main dependency
-  for (auto &s : cache->variardics)
-    if (s != ".Function.1")
-      preamble->stmts.push_back(clone(cache->asts["." + s]));
+  for (auto &v : cache->variardics)
+    if (v != ".Function.1")
+      preamble->stmts.push_back(clone(cache->asts["." + v]));
   suite->stmts.push_back(move(stmts));
   return move(suite);
 }
@@ -149,7 +146,7 @@ StmtPtr TransformVisitor::transform(const StmtPtr &stmt) {
   TransformVisitor v(ctx);
   v.setSrcInfo(stmt->getSrcInfo());
   stmt->accept(v);
-  if (v.prependStmts->size()) {
+  if (!v.prependStmts->empty()) {
     if (v.resultStmt)
       v.prependStmts->push_back(move(v.resultStmt));
     v.resultStmt = N<SuiteStmt>(move(*v.prependStmts));
@@ -204,7 +201,7 @@ void TransformVisitor::visit(const IdExpr *expr) {
   }
   if (val->isVar()) {
     if (ctx->getBase() != val->getBase() && !val->isGlobal()) {
-      if (ctx->captures.size())
+      if (!ctx->captures.empty())
         ctx->captures.back().insert(expr->value);
       else
         error("cannot access non-toplevel variable '{}'", expr->value);
@@ -243,10 +240,10 @@ void TransformVisitor::visit(const ListExpr *expr) {
   stmts.push_back(transform(N<AssignStmt>(
       clone(var),
       N<CallExpr>(N<IdExpr>(".List"),
-                  expr->items.size() ? N<IntExpr>(expr->items.size()) : nullptr))));
-  for (int i = 0; i < expr->items.size(); i++)
-    stmts.push_back(transform(N<ExprStmt>(
-        N<CallExpr>(N<DotExpr>(clone(var), "append"), clone(expr->items[i])))));
+                  !expr->items.empty() ? N<IntExpr>(expr->items.size()) : nullptr))));
+  for (auto &it : expr->items)
+    stmts.push_back(transform(
+        N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "append"), clone(it)))));
   resultExpr = N<StmtExpr>(move(stmts), transform(var));
 }
 
@@ -254,9 +251,9 @@ void TransformVisitor::visit(const SetExpr *expr) {
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(getTemporaryVar("set"));
   stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Set")))));
-  for (int i = 0; i < expr->items.size(); i++)
-    stmts.push_back(transform(N<ExprStmt>(
-        N<CallExpr>(N<DotExpr>(clone(var), "add"), clone(expr->items[i])))));
+  for (auto &it : expr->items)
+    stmts.push_back(
+        transform(N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "add"), clone(it)))));
   resultExpr = N<StmtExpr>(move(stmts), transform(var));
 }
 
@@ -265,10 +262,9 @@ void TransformVisitor::visit(const DictExpr *expr) {
   ExprPtr var = N<IdExpr>(getTemporaryVar("dict"));
   stmts.push_back(
       transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Dict")))));
-  for (int i = 0; i < expr->items.size(); i++)
-    stmts.push_back(transform(N<ExprStmt>(
-        N<CallExpr>(N<DotExpr>(clone(var), "__setitem__"), clone(expr->items[i].key),
-                    clone(expr->items[i].value)))));
+  for (auto &it : expr->items)
+    stmts.push_back(transform(N<ExprStmt>(N<CallExpr>(
+        N<DotExpr>(clone(var), "__setitem__"), clone(it.key), clone(it.value)))));
   resultExpr = N<StmtExpr>(move(stmts), transform(var));
 }
 
@@ -317,7 +313,7 @@ void TransformVisitor::visit(const DictGeneratorExpr *expr) {
 void TransformVisitor::visit(const IfExpr *expr) {
   resultExpr =
       N<IfExpr>(transform(N<CallExpr>(N<DotExpr>(clone(expr->cond), "__bool__"))),
-                transform(expr->eif), transform(expr->eelse));
+                transform(expr->ifexpr), transform(expr->elsexpr));
 }
 
 void TransformVisitor::visit(const UnaryExpr *expr) {
@@ -378,16 +374,14 @@ void TransformVisitor::visit(const PipeExpr *expr) {
 
 void TransformVisitor::visit(const IndexExpr *expr) {
   ExprPtr e = nullptr;
-  if (expr->expr->isIdExpr("tuple") || expr->expr->isIdExpr("Tuple")) {
-    auto t = CAST(expr->index, TupleExpr);
-    int items = t ? t->items.size() : 1;
-    auto name = generateTupleStub(items);
+  if (expr->expr->isId("tuple") || expr->expr->isId("Tuple")) {
+    auto t = expr->index->getTuple();
+    auto name = generateTupleStub(t ? t->items.size() : 1);
     e = transformType(N<IdExpr>(name));
     e->markType();
-  } else if (expr->expr->isIdExpr("function") || expr->expr->isIdExpr("Function")) {
-    auto t = CAST(expr->index, TupleExpr);
-    int items = t ? t->items.size() : 1;
-    auto name = generateFunctionStub(items);
+  } else if (expr->expr->isId("function") || expr->expr->isId("Function")) {
+    auto t = expr->index->getTuple();
+    auto name = generateFunctionStub(t ? t->items.size() : 1);
     e = transformType(N<IdExpr>(name));
     e->markType();
   } else {
@@ -410,8 +404,8 @@ void TransformVisitor::visit(const IndexExpr *expr) {
     } else if (auto i = CAST(e, UnaryExpr)) {
       return ((i->op == "-") || (i->op == "!")) && isStatic(i->expr, captures);
     } else if (auto i = CAST(e, IfExpr)) {
-      return isStatic(i->cond, captures) && isStatic(i->eif, captures) &&
-             isStatic(i->eelse, captures);
+      return isStatic(i->cond, captures) && isStatic(i->ifexpr, captures) &&
+             isStatic(i->elsexpr, captures);
     } else if (auto i = CAST(e, IntExpr)) {
       if (i->suffix.size())
         return false;
@@ -465,7 +459,7 @@ void TransformVisitor::visit(const IndexExpr *expr) {
 }
 
 void TransformVisitor::visit(const CallExpr *expr) {
-  if (expr->expr->isIdExpr("__ptr__")) {
+  if (expr->expr->isId("__ptr__")) {
     if (expr->args.size() == 1) {
       if (auto id = CAST(expr->args[0].value, IdExpr)) {
         auto v = ctx->find(id->value);
@@ -478,7 +472,7 @@ void TransformVisitor::visit(const CallExpr *expr) {
     error("__ptr__ requires a variable");
   }
   if (auto ix = CAST(expr->expr, IndexExpr))
-    if (ix->expr->isIdExpr("__array__")) {
+    if (ix->expr->isId("__array__")) {
       if (expr->args.size() != 1)
         error("__array__ requires only size argument");
       resultExpr =
@@ -525,8 +519,8 @@ void TransformVisitor::visit(const DotExpr *expr) {
 void TransformVisitor::visit(const SliceExpr *expr) {
   // Further transformed at typecheck stage  as we need raw SliceExpr for static tuple
   // indices
-  resultExpr =
-      N<SliceExpr>(transform(expr->st), transform(expr->ed), transform(expr->step));
+  resultExpr = N<SliceExpr>(transform(expr->start), transform(expr->stop),
+                            transform(expr->step));
 }
 
 void TransformVisitor::visit(const TypeOfExpr *expr) {
@@ -584,7 +578,7 @@ void TransformVisitor::visit(const ExprStmt *stmt) {
 
 void TransformVisitor::visit(const AssignStmt *stmt) {
   auto add = [&](const ExprPtr &lhs, const ExprPtr &rhs, const ExprPtr &type,
-                 bool force) -> StmtPtr {
+                 bool shadow, bool mustExist) -> StmtPtr {
     auto p = lhs.get();
     if (auto l = CAST(lhs, IndexExpr)) {
       vector<ExprPtr> args;
@@ -596,14 +590,13 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
     } else if (auto l = CAST(lhs, DotExpr)) {
       return Nx<AssignMemberStmt>(p, transform(l->expr), l->member, transform(rhs));
     } else if (auto l = CAST(lhs, IdExpr)) {
-      auto s = Nx<AssignStmt>(p, clone(lhs), transform(rhs, true), transformType(type),
-                              false, force);
-      if (!force && !s->type) {
+      auto s = Nx<AssignStmt>(p, clone(lhs), transform(rhs, true), transformType(type));
+      if (!shadow && !s->type) {
         auto val = ctx->find(l->value);
         if (val && val->isVar()) {
           if (val->getBase() == ctx->getBase())
             return Nx<UpdateStmt>(p, transform(lhs), move(s->rhs));
-          else if (stmt->mustExist)
+          else if (mustExist)
             error("variable '{}' is not global", l->value);
         }
       }
@@ -630,9 +623,9 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
       return nullptr;
     }
   };
-  function<void(const ExprPtr &, const ExprPtr &, vector<StmtPtr> &, bool)> process =
-      [&](const ExprPtr &lhs, const ExprPtr &rhs, vector<StmtPtr> &stmts,
-          bool force) -> void {
+  function<void(const ExprPtr &, const ExprPtr &, vector<StmtPtr> &, bool, bool)>
+      process = [&](const ExprPtr &lhs, const ExprPtr &rhs, vector<StmtPtr> &stmts,
+                    bool shadow, bool mustExist) -> void {
     vector<ExprPtr> lefts;
     if (auto l = CAST(lhs, TupleExpr)) {
       for (auto &i : l->items)
@@ -641,7 +634,7 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
       for (auto &i : l->items)
         lefts.push_back(clone(i));
     } else {
-      stmts.push_back(add(lhs, rhs, nullptr, force));
+      stmts.push_back(add(lhs, rhs, nullptr, shadow, mustExist));
       return;
     }
     auto p = rhs.get();
@@ -649,7 +642,7 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
     if (!CAST(rhs, IdExpr)) { // store any non-trivial expression
       auto var = getTemporaryVar("assign");
       newRhs = Nx<IdExpr>(p, var);
-      stmts.push_back(add(newRhs, rhs, nullptr, force));
+      stmts.push_back(add(newRhs, rhs, nullptr, shadow, mustExist));
     } else {
       newRhs = clone(rhs);
     }
@@ -660,46 +653,42 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
         unpack = u;
         break;
       }
-      process(move(lefts[st]), Nx<IndexExpr>(p, clone(newRhs), Nx<IntExpr>(p, st)),
-              stmts, force);
+      process(lefts[st], Nx<IndexExpr>(p, clone(newRhs), Nx<IntExpr>(p, st)), stmts,
+              shadow, mustExist);
     }
     if (unpack) {
-      process(move(unpack->what),
+      process(unpack->what,
               Nx<IndexExpr>(p, clone(newRhs),
                             Nx<SliceExpr>(p, Nx<IntExpr>(p, st),
                                           lefts.size() == st + 1
                                               ? nullptr
                                               : Nx<IntExpr>(p, -lefts.size() + st + 1),
                                           nullptr)),
-              stmts, force);
+              stmts, shadow, mustExist);
       st += 1;
       for (; st < lefts.size(); st++) {
         if (CAST(lefts[st], StarExpr))
           error(lefts[st], "multiple unpack expressions found");
-        process(move(lefts[st]),
+        process(lefts[st],
                 Nx<IndexExpr>(p, clone(newRhs), Nx<IntExpr>(p, -lefts.size() + st)),
-                stmts, force);
+                stmts, shadow, mustExist);
       }
     }
   };
 
   vector<StmtPtr> stmts;
-  if (stmt->type) {
-    if (auto i = CAST(stmt->lhs, IdExpr))
-      stmts.push_back(add(stmt->lhs, stmt->rhs, stmt->type, stmt->force));
+  if (stmt->rhs && stmt->rhs->getBinary() && stmt->rhs->getBinary()->inPlace) {
+    seqassert(!stmt->type, "invalid AssignStmt {}", stmt->toString());
+    process(stmt->lhs, stmt->rhs, stmts, false, true);
+  } else if (stmt->type) {
+    if (stmt->lhs->getId())
+      stmts.push_back(add(stmt->lhs, stmt->rhs, stmt->type, true, false));
     else
       error("invalid type specifier");
   } else {
-    process(stmt->lhs, stmt->rhs, stmts, stmt->force);
+    process(stmt->lhs, stmt->rhs, stmts, false, false);
   }
   resultStmt = stmts.size() == 1 ? move(stmts[0]) : N<SuiteStmt>(move(stmts));
-}
-
-void TransformVisitor::visit(const AssignEqStmt *stmt) {
-  resultStmt = transform(
-      N<AssignStmt>(clone(stmt->lhs),
-                    N<BinaryExpr>(clone(stmt->lhs), stmt->op, clone(stmt->rhs), true),
-                    nullptr, true));
 }
 
 void TransformVisitor::visit(const DelStmt *stmt) {
@@ -780,8 +769,7 @@ void TransformVisitor::visit(const ForStmt *stmt) {
     ctx->add(TransformItem::Var, varName);
     auto var = N<IdExpr>(varName);
     vector<StmtPtr> stmts;
-    stmts.push_back(N<AssignStmt>(clone(stmt->var), clone(var), nullptr, false,
-                                  /* force */ true));
+    stmts.push_back(N<AssignStmt>(clone(stmt->var), clone(var)));
     stmts.push_back(clone(stmt->suite));
     forstmt =
         N<ForStmt>(clone(var), transform(iter), transform(N<SuiteStmt>(move(stmts))));
@@ -882,16 +870,16 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
   if (ctx->getLevel() && ctx->bases.back().isType())
     error("imports cannot be located within classes");
 
-  if (stmt->from->isIdExpr("C")) {
-    if (auto i = CAST(stmt->what, IdExpr))
+  if (stmt->from->isId("C")) {
+    if (auto i = stmt->what->getId())
       resultStmt = parseCImport(i->value, stmt->args, stmt->ret, stmt->as);
-    else if (auto d = CAST(stmt->what, DotExpr))
+    else if (auto d = stmt->what->getDot())
       resultStmt =
           parseDylibCImport(d->expr, d->member, stmt->args, stmt->ret, stmt->as);
     else
       error("invalid C import");
     return;
-  } else if (stmt->from->isIdExpr("python")) {
+  } else if (stmt->from->isId("python")) {
     resultStmt = parsePythonImport(stmt->what, stmt->as);
     return;
   }
@@ -902,10 +890,10 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
     dirs.push_back(d->member);
     e = d->expr.get();
   }
-  if (e->getIdExpr().empty() || !stmt->args.empty() || stmt->ret ||
-      (stmt->what && stmt->what->getIdExpr().empty()))
+  if (!e->getId() || !stmt->args.empty() || stmt->ret ||
+      (stmt->what && !stmt->what->getId()))
     error("invalid import statement");
-  dirs.push_back(e->getIdExpr());
+  dirs.push_back(e->getId()->value);
   // TODO: enforce locality with ".abc"
   seqassert(stmt->dots >= 0, "invalid ImportStmt.dots");
   for (int i = 0; i < stmt->dots - 1; i++)
@@ -928,18 +916,19 @@ void TransformVisitor::visit(const ImportStmt *stmt) {
 
   if (!stmt->what) {
     ctx->add(TransformItem::Import, stmt->as.empty() ? path : stmt->as, file);
-  } else if (stmt->what->isIdExpr("*")) {
+  } else if (stmt->what->isId("*")) {
     if (!stmt->as.empty())
       error("cannot rename star-import");
     for (auto &i : *(import->second.ctx))
       if (i.second.front().second->isGlobal())
         ctx->add(i.first, i.second.front().second);
   } else {
-    auto i = stmt->what->getIdExpr();
-    auto c = import->second.ctx->find(i);
+    auto i = stmt->what->getId();
+    seqassert(i, "not a valid expression");
+    auto c = import->second.ctx->find(i->value);
     if (!c || !c->isGlobal())
-      error("symbol '{}' not found in {}", i, file);
-    ctx->add(stmt->as.empty() ? i : stmt->as, c);
+      error("symbol '{}' not found in {}", i->value, file);
+    ctx->add(stmt->as.empty() ? i->value : stmt->as, c);
   }
 }
 
@@ -964,18 +953,28 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
                       clone(stmt->ret))));
     return;
   }
+
+  auto canonicalName = ctx->generateCanonicalName(stmt->name);
+  bool isClassMember = ctx->getLevel() && ctx->bases.back().isType();
+
   if (in(stmt->attributes, "llvm")) {
     auto s = CAST(stmt->suite, SuiteStmt);
     assert(s && s->stmts.size() == 1);
     auto sp = CAST(s->stmts[0], ExprStmt);
     seqassert(sp && CAST(sp->expr, StringExpr), "invalid llvm");
+
+    vector<Param> args;
+    for (int ia = 0; ia < stmt->args.size(); ia++) {
+      auto &a = stmt->args[ia];
+      auto typeAst = transformType(a.type);
+      if (!typeAst && isClassMember && ia == 0 && a.name == "self")
+        typeAst = transformType(ctx->bases[ctx->bases.size() - 1].ast);
+      args.push_back(Param{a.name, move(typeAst), transform(a.deflt)});
+    }
     resultStmt =
-        parseCImport(stmt->name, stmt->args, stmt->ret, "", CAST(sp->expr, StringExpr));
+        parseCImport(stmt->name, args, stmt->ret, "", CAST(sp->expr, StringExpr));
     return;
   }
-
-  auto canonicalName = ctx->generateCanonicalName(stmt->name);
-  bool isClassMember = ctx->getLevel() && ctx->bases.back().isType();
 
   if (in(stmt->attributes, "builtin") && (ctx->getLevel() || isClassMember))
     error("builtins must be defined at the toplevel");
@@ -984,12 +983,13 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
   if (!isClassMember)
     ctx->add(TransformItem::Func, stmt->name, canonicalName, ctx->isToplevel());
 
-  ctx->bases.push_back({canonicalName});
+  ctx->bases.push_back(TransformContext::Base{canonicalName});
   ctx->addBlock();
   vector<Param> newGenerics;
   for (auto &g : stmt->generics) {
     ctx->add(TransformItem::Type, g.name, "", false, true, g.type != nullptr);
-    newGenerics.push_back({g.name, transformType(g.type), transform(g.deflt, true)});
+    newGenerics.push_back(
+        Param{g.name, transformType(g.type), transform(g.deflt, true)});
   }
 
   vector<Param> args;
@@ -998,7 +998,7 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     auto typeAst = transformType(a.type);
     if (!typeAst && isClassMember && ia == 0 && a.name == "self")
       typeAst = transformType(ctx->bases[ctx->bases.size() - 2].ast);
-    args.push_back({a.name, move(typeAst), transform(a.deflt)});
+    args.push_back(Param{a.name, move(typeAst), transform(a.deflt)});
     ctx->add(TransformItem::Var, a.name);
   }
   auto ret = transformType(stmt->ret);
@@ -1046,7 +1046,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
   if (extension && ctx->bases.size())
     error("extend only valid at the toplevel");
 
-  bool isRecord = in(stmt->attributes, "tuple") || stmt->isRecord;
+  bool isRecord = stmt->isRecord();
 
   string canonicalName;
   const ClassStmt *originalAST = nullptr;
@@ -1087,9 +1087,9 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       error("default generics not supported in types");
     ctx->add(TransformItem::Type, stmt->generics[gi].name, "", false, true,
              originalAST->generics[gi].type != nullptr);
-    newGenerics.push_back({stmt->generics[gi].name,
-                           transformType(originalAST->generics[gi].type),
-                           transform(originalAST->generics[gi].deflt, true)});
+    newGenerics.push_back(Param{stmt->generics[gi].name,
+                                transformType(originalAST->generics[gi].type),
+                                transform(originalAST->generics[gi].deflt, true)});
   }
   vector<Param> args;
   auto suite = N<SuiteStmt>(vector<StmtPtr>{});
@@ -1100,7 +1100,7 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
       if (seenMembers.find(a.name) != seenMembers.end())
         error(a.type, "'{}' declared twice", a.name);
       seenMembers.insert(a.name);
-      args.push_back({a.name, transformType(a.type), nullptr});
+      args.push_back(Param{a.name, transformType(a.type), nullptr});
     }
     if (isRecord) {
       ctx->popBlock();
@@ -1118,8 +1118,8 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     }
 
     ctx->cache->asts[canonicalName] = N<ClassStmt>(
-        isRecord, canonicalName, move(newGenerics), move(args),
-        N<SuiteStmt>(vector<StmtPtr>()), map<string, string>(stmt->attributes));
+        canonicalName, move(newGenerics), move(args), N<SuiteStmt>(vector<StmtPtr>()),
+        map<string, string>(stmt->attributes));
 
     vector<StmtPtr> fns;
     ExprPtr codeType = clone(ctx->bases.back().ast);
@@ -1174,8 +1174,8 @@ void TransformVisitor::visit(const ClassStmt *stmt) {
     c->attributes[".parentFunc"] = parentFunc;
     resultStmt = clone(ctx->cache->asts[canonicalName]);
   } else {
-    resultStmt = N<ClassStmt>(isRecord, canonicalName, move(newGenerics), move(args),
-                              move(suite), map<string, string>(stmt->attributes));
+    resultStmt = N<ClassStmt>(canonicalName, move(newGenerics), move(args), move(suite),
+                              map<string, string>(stmt->attributes));
   }
 }
 
@@ -1295,12 +1295,12 @@ string TransformVisitor::generateFunctionStub(int len) {
 
     vector<StmtPtr> fns;
     vector<Param> p;
-    p.push_back({"what", N<IdExpr>("cobj")});
+    p.push_back(Param{"what", N<IdExpr>("cobj")});
     fns.push_back(make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{},
                                             move(p), nullptr,
                                             vector<string>{"internal"}));
     p.clear();
-    p.push_back({"self", clone(type)});
+    p.push_back(Param{"self", clone(type)});
     fns.push_back(make_unique<FunctionStmt>("__str__", N<IdExpr>("str"),
                                             vector<Param>{}, move(p), nullptr,
                                             vector<string>{"internal"}));
@@ -1312,8 +1312,8 @@ string TransformVisitor::generateFunctionStub(int len) {
     //                                         vector<Param>{}, move(p), nullptr,
     //                                         vector<string>{"internal"}));
 
-    StmtPtr stmt = make_unique<ClassStmt>(true, typeName, move(generics),
-                                          clone_nop(args), N<SuiteStmt>(move(fns)),
+    StmtPtr stmt = make_unique<ClassStmt>(typeName, move(generics), clone_nop(args),
+                                          N<SuiteStmt>(move(fns)),
                                           vector<string>{"internal", "trait", "tuple"});
     stmt->setSrcInfo(ctx->getGeneratedPos());
     TransformVisitor(make_shared<TransformContext>("<generated>", ctx->cache))
@@ -1332,7 +1332,7 @@ string TransformVisitor::generateTupleStub(int len) {
         generics.push_back(Param{format("T{}", i), nullptr, nullptr});
         args.push_back(Param{format("a{0}", i), N<IdExpr>(format("T{}", i)), nullptr});
       }
-      StmtPtr stmt = make_unique<ClassStmt>(true, typeName, move(generics), move(args),
+      StmtPtr stmt = make_unique<ClassStmt>(typeName, move(generics), move(args),
                                             nullptr, vector<string>{"tuple"});
       stmt->setSrcInfo(ctx->getGeneratedPos());
       TransformVisitor(make_shared<TransformContext>("<generated>", ctx->cache))
@@ -1391,63 +1391,62 @@ StmtPtr TransformVisitor::codegenMagic(const string &op, const ExprPtr &typExpr,
   if (op == "new") {
     ret = clone(typExpr);
     if (isRecord)
-      for (int i = 0; i < args.size(); i++)
-        fargs.push_back(
-            {args[i].name, clone(args[i].type),
-             args[i].deflt ? clone(args[i].deflt) : N<CallExpr>(clone(args[i].type))});
-    attrs.push_back("internal");
+      for (auto &a : args)
+        fargs.emplace_back(
+            Param{a.name, clone(a.type),
+                  a.deflt ? clone(a.deflt) : N<CallExpr>(clone(a.type))});
+    attrs.emplace_back("internal");
   } else if (op == "init") {
     assert(!isRecord);
     ret = I("void");
-    fargs.push_back({"self", clone(typExpr)});
-    for (int i = 0; i < args.size(); i++) {
-      stmts.push_back(N<AssignMemberStmt>(I("self"), args[i].name, I(args[i].name)));
-      fargs.push_back(
-          {args[i].name, clone(args[i].type),
-           args[i].deflt ? clone(args[i].deflt) : N<CallExpr>(clone(args[i].type))});
+    fargs.emplace_back(Param{"self", clone(typExpr)});
+    for (auto &a : args) {
+      stmts.push_back(N<AssignMemberStmt>(I("self"), a.name, I(a.name)));
+      fargs.emplace_back(Param{a.name, clone(a.type),
+                               a.deflt ? clone(a.deflt) : N<CallExpr>(clone(a.type))});
     }
   } else if (op == "raw") {
-    fargs.push_back({"self", clone(typExpr)});
+    fargs.emplace_back(Param{"self", clone(typExpr)});
     ret = I("cobj");
-    attrs.push_back("internal");
+    attrs.emplace_back("internal");
   } else if (op == "getitem") {
-    fargs.push_back({"self", clone(typExpr)});
-    fargs.push_back({"index", I("int")});
-    ret = args.size() ? clone(args[0].type) : I("void");
-    attrs.push_back("internal");
+    fargs.emplace_back(Param{"self", clone(typExpr)});
+    fargs.emplace_back(Param{"index", I("int")});
+    ret = !args.empty() ? clone(args[0].type) : I("void");
+    attrs.emplace_back("internal");
   } else if (op == "iter") {
-    fargs.push_back({"self", clone(typExpr)});
-    ret = N<IndexExpr>(I("Generator"), args.size() ? clone(args[0].type) : I("void"));
-    for (int i = 0; i < args.size(); i++)
-      stmts.push_back(N<YieldStmt>(N<DotExpr>(N<IdExpr>("self"), args[i].name)));
+    fargs.emplace_back(Param{"self", clone(typExpr)});
+    ret = N<IndexExpr>(I("Generator"), !args.empty() ? clone(args[0].type) : I("void"));
+    for (auto &a : args)
+      stmts.emplace_back(N<YieldStmt>(N<DotExpr>(N<IdExpr>("self"), a.name)));
   } else if (op == "eq") {
-    fargs.push_back({"self", clone(typExpr)});
-    fargs.push_back({"other", clone(typExpr)});
+    fargs.emplace_back(Param{"self", clone(typExpr)});
+    fargs.emplace_back(Param{"other", clone(typExpr)});
     ret = I("bool");
-    for (int i = 0; i < args.size(); i++)
+    for (auto &a : args)
       stmts.push_back(N<IfStmt>(
-          N<UnaryExpr>("!", N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), args[i].name),
-                                                   "__eq__"),
-                                        N<DotExpr>(I("other"), args[i].name))),
+          N<UnaryExpr>("!",
+                       N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), a.name), "__eq__"),
+                                   N<DotExpr>(I("other"), a.name))),
           N<ReturnStmt>(N<BoolExpr>(false))));
-    stmts.push_back(N<ReturnStmt>(N<BoolExpr>(true)));
+    stmts.emplace_back(N<ReturnStmt>(N<BoolExpr>(true)));
   } else if (op == "ne") {
-    fargs.push_back({"self", clone(typExpr)});
-    fargs.push_back({"other", clone(typExpr)});
+    fargs.emplace_back(Param{"self", clone(typExpr)});
+    fargs.emplace_back(Param{"other", clone(typExpr)});
     ret = I("bool");
-    for (int i = 0; i < args.size(); i++)
-      stmts.push_back(N<IfStmt>(
-          N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), args[i].name), "__ne__"),
-                      N<DotExpr>(I("other"), args[i].name)),
-          N<ReturnStmt>(N<BoolExpr>(true))));
+    for (auto &a : args)
+      stmts.emplace_back(
+          N<IfStmt>(N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), a.name), "__ne__"),
+                                N<DotExpr>(I("other"), a.name)),
+                    N<ReturnStmt>(N<BoolExpr>(true))));
     stmts.push_back(N<ReturnStmt>(N<BoolExpr>(false)));
   } else if (op == "lt" || op == "gt") {
-    fargs.push_back({"self", clone(typExpr)});
-    fargs.push_back({"other", clone(typExpr)});
+    fargs.emplace_back(Param{"self", clone(typExpr)});
+    fargs.emplace_back(Param{"other", clone(typExpr)});
     ret = I("bool");
     vector<StmtPtr> *v = &stmts;
     for (int i = 0; i < (int)args.size() - 1; i++) {
-      v->push_back(N<IfStmt>(
+      v->emplace_back(N<IfStmt>(
           N<CallExpr>(
               N<DotExpr>(N<DotExpr>(I("self"), args[i].name), format("__{}__", op)),
               N<DotExpr>(I("other"), args[i].name)),
@@ -1458,18 +1457,18 @@ StmtPtr TransformVisitor::codegenMagic(const string &op, const ExprPtr &typExpr,
       v = &((SuiteStmt *)(((IfStmt *)(v->back().get()))->ifs.back().suite).get())
                ->stmts;
     }
-    if (args.size())
-      v->push_back(N<ReturnStmt>(N<CallExpr>(
+    if (!args.empty())
+      v->emplace_back(N<ReturnStmt>(N<CallExpr>(
           N<DotExpr>(N<DotExpr>(I("self"), args.back().name), format("__{}__", op)),
           N<DotExpr>(I("other"), args.back().name))));
-    stmts.push_back(N<ReturnStmt>(N<BoolExpr>(false)));
+    stmts.emplace_back(N<ReturnStmt>(N<BoolExpr>(false)));
   } else if (op == "le" || op == "ge") {
-    fargs.push_back({"self", clone(typExpr)});
-    fargs.push_back({"other", clone(typExpr)});
+    fargs.emplace_back(Param{"self", clone(typExpr)});
+    fargs.emplace_back(Param{"other", clone(typExpr)});
     ret = I("bool");
     vector<StmtPtr> *v = &stmts;
     for (int i = 0; i < (int)args.size() - 1; i++) {
-      v->push_back(N<IfStmt>(
+      v->emplace_back(N<IfStmt>(
           N<UnaryExpr>("!", N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), args[i].name),
                                                    format("__{}__", op)),
                                         N<DotExpr>(I("other"), args[i].name))),
@@ -1480,93 +1479,94 @@ StmtPtr TransformVisitor::codegenMagic(const string &op, const ExprPtr &typExpr,
       v = &((SuiteStmt *)(((IfStmt *)(v->back().get()))->ifs.back().suite).get())
                ->stmts;
     }
-    if (args.size())
-      v->push_back(N<ReturnStmt>(N<CallExpr>(
+    if (!args.empty())
+      v->emplace_back(N<ReturnStmt>(N<CallExpr>(
           N<DotExpr>(N<DotExpr>(I("self"), args.back().name), format("__{}__", op)),
           N<DotExpr>(I("other"), args.back().name))));
-    stmts.push_back(N<ReturnStmt>(N<BoolExpr>(true)));
+    stmts.emplace_back(N<ReturnStmt>(N<BoolExpr>(true)));
   } else if (op == "hash") {
-    fargs.push_back({"self", clone(typExpr)});
+    fargs.emplace_back(Param{"self", clone(typExpr)});
     ret = I("int");
-    stmts.push_back(N<AssignStmt>(I("seed"), N<IntExpr>(0)));
-    for (int i = 0; i < args.size(); i++)
+    stmts.emplace_back(N<AssignStmt>(I("seed"), N<IntExpr>(0)));
+    for (auto &a : args)
       stmts.push_back(N<UpdateStmt>(
           I("seed"),
           N<BinaryExpr>(
               I("seed"), "^",
               N<BinaryExpr>(
-                  N<BinaryExpr>(N<CallExpr>(N<DotExpr>(
-                                    N<DotExpr>(I("self"), args[i].name), "__hash__")),
+                  N<BinaryExpr>(N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), a.name),
+                                                       "__hash__")),
                                 "+", N<IntExpr>(0x9e3779b9)),
                   "+",
                   N<BinaryExpr>(N<BinaryExpr>(I("seed"), "<<", N<IntExpr>(6)), "+",
                                 N<BinaryExpr>(I("seed"), ">>", N<IntExpr>(2)))))));
-    stmts.push_back(N<ReturnStmt>(I("seed")));
-    attrs.push_back("delay");
+    stmts.emplace_back(N<ReturnStmt>(I("seed")));
+    attrs.emplace_back("delay");
   } else if (op == "pickle") {
-    fargs.push_back({"self", clone(typExpr)});
-    fargs.push_back({"dest", I("cobj")});
+    fargs.emplace_back(Param{"self", clone(typExpr)});
+    fargs.emplace_back(Param{"dest", I("cobj")});
     ret = I("void");
-    for (int i = 0; i < args.size(); i++)
-      stmts.push_back(N<ExprStmt>(N<CallExpr>(
-          N<DotExpr>(N<DotExpr>(I("self"), args[i].name), "__pickle__"), I("dest"))));
-    attrs.push_back("delay");
+    for (auto &a : args)
+      stmts.emplace_back(N<ExprStmt>(N<CallExpr>(
+          N<DotExpr>(N<DotExpr>(I("self"), a.name), "__pickle__"), I("dest"))));
+    attrs.emplace_back("delay");
   } else if (op == "unpickle") {
-    fargs.push_back({"src", I("cobj")});
+    fargs.emplace_back(Param{"src", I("cobj")});
     ret = clone(typExpr);
-    vector<CallExpr::Arg> a;
-    for (int i = 0; i < args.size(); i++)
-      a.push_back(
-          {"", N<CallExpr>(N<DotExpr>(clone(args[i].type), "__unpickle__"), I("src"))});
-    stmts.push_back(N<ReturnStmt>(N<CallExpr>(clone(typExpr), move(a))));
-    attrs.push_back("delay");
+    vector<CallExpr::Arg> ar;
+    for (auto &a : args)
+      ar.emplace_back(CallExpr::Arg{
+          "", N<CallExpr>(N<DotExpr>(clone(a.type), "__unpickle__"), I("src"))});
+    stmts.emplace_back(N<ReturnStmt>(N<CallExpr>(clone(typExpr), move(ar))));
+    attrs.emplace_back("delay");
   } else if (op == "len") {
-    fargs.push_back({"self", clone(typExpr)});
+    fargs.emplace_back(Param{"self", clone(typExpr)});
     ret = I("int");
-    stmts.push_back(N<ReturnStmt>(N<IntExpr>(args.size())));
+    stmts.emplace_back(N<ReturnStmt>(N<IntExpr>(args.size())));
   } else if (op == "contains") {
-    fargs.push_back({"self", clone(typExpr)});
-    fargs.push_back({"what", args.size() ? clone(args[0].type) : I("void")});
+    fargs.emplace_back(Param{"self", clone(typExpr)});
+    fargs.emplace_back(Param{"what", args.size() ? clone(args[0].type) : I("void")});
     ret = I("bool");
-    attrs.push_back("internal");
+    attrs.emplace_back("internal");
   } else if (op == "to_py") {
-    fargs.push_back({"self", clone(typExpr)});
+    fargs.emplace_back(Param{"self", clone(typExpr)});
     ret = I("pyobj");
-    stmts.push_back(
+    stmts.emplace_back(
         N<AssignStmt>(I("o"), N<CallExpr>(N<DotExpr>(I("pyobj"), "_tuple_new"),
                                           N<IntExpr>(args.size()))));
     for (int i = 0; i < args.size(); i++)
       stmts.push_back(N<ExprStmt>(N<CallExpr>(
           N<DotExpr>(I("o"), "_tuple_set"), N<IntExpr>(i),
           N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), args[i].name), "__to_py__")))));
-    stmts.push_back(N<ReturnStmt>(I("o")));
-    attrs.push_back("delay");
+    stmts.emplace_back(N<ReturnStmt>(I("o")));
+    attrs.emplace_back("delay");
   } else if (op == "from_py") {
-    fargs.push_back({"src", I("pyobj")});
+    fargs.emplace_back(Param{"src", I("pyobj")});
     ret = clone(typExpr);
-    vector<CallExpr::Arg> a;
+    vector<CallExpr::Arg> ar;
     for (int i = 0; i < args.size(); i++)
-      a.push_back({"", N<CallExpr>(N<DotExpr>(clone(args[i].type), "__from_py__"),
-                                   N<CallExpr>(N<DotExpr>(I("src"), "_tuple_get"),
-                                               N<IntExpr>(i)))});
-    stmts.push_back(N<ReturnStmt>(N<CallExpr>(clone(typExpr), move(a))));
-    attrs.push_back("delay");
+      ar.push_back(CallExpr::Arg{
+          "",
+          N<CallExpr>(N<DotExpr>(clone(args[i].type), "__from_py__"),
+                      N<CallExpr>(N<DotExpr>(I("src"), "_tuple_get"), N<IntExpr>(i)))});
+    stmts.emplace_back(N<ReturnStmt>(N<CallExpr>(clone(typExpr), move(ar))));
+    attrs.emplace_back("delay");
   } else if (op == "str") {
-    fargs.push_back({"self", clone(typExpr)});
+    fargs.emplace_back(Param{"self", clone(typExpr)});
     ret = I("str");
-    if (args.size()) {
-      stmts.push_back(
+    if (!args.empty()) {
+      stmts.emplace_back(
           N<AssignStmt>(I("a"), N<CallExpr>(N<IndexExpr>(I("__array__"), I("str")),
                                             N<IntExpr>(args.size()))));
       for (int i = 0; i < args.size(); i++)
         stmts.push_back(N<ExprStmt>(N<CallExpr>(
             N<DotExpr>(I("a"), "__setitem__"), N<IntExpr>(i),
             N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), args[i].name), "__str__")))));
-      stmts.push_back(N<ReturnStmt>(N<CallExpr>(N<DotExpr>(I("str"), "_tuple_str"),
-                                                N<DotExpr>(I("a"), "ptr"),
-                                                N<IntExpr>(args.size()))));
+      stmts.emplace_back(N<ReturnStmt>(N<CallExpr>(N<DotExpr>(I("str"), "_tuple_str"),
+                                                   N<DotExpr>(I("a"), "ptr"),
+                                                   N<IntExpr>(args.size()))));
     } else {
-      stmts.push_back(N<ReturnStmt>(N<StringExpr>("()")));
+      stmts.emplace_back(N<ReturnStmt>(N<StringExpr>("()")));
     }
   } else {
     seqassert(false, "invalid magic {}", op);
@@ -1587,13 +1587,13 @@ ExprPtr TransformVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
   string name = getTemporaryVar("lambda", '.');
   ctx->captures.push_back({});
   for (auto &s : vars)
-    params.push_back({s, nullptr, nullptr});
+    params.emplace_back(Param{s, nullptr, nullptr});
   auto fs =
       transform(N<FunctionStmt>(name, nullptr, vector<Param>{}, move(params),
                                 N<SuiteStmt>(move(stmts)), vector<string>{".inline"}));
   auto f = CAST(fs, FunctionStmt);
   for (auto &c : ctx->captures.back()) {
-    f->args.push_back({c, nullptr, nullptr});
+    f->args.emplace_back(Param{c, nullptr, nullptr});
     args.push_back({"", N<IdExpr>(c)});
   }
   ((FunctionStmt *)(ctx->cache->asts[f->name].get()))->args = clone_nop(f->args);
@@ -1616,8 +1616,9 @@ StmtPtr TransformVisitor::parseCImport(string name, const vector<Param> &args,
       error("default arguments not supported here");
     if (!args[ai].type)
       error("type for '{}' not specified", args[ai].name);
-    fnArgs.push_back({args[ai].name.empty() ? format(".a{}", ai) : args[ai].name,
-                      transformType(args[ai].type), nullptr});
+    fnArgs.emplace_back(
+        Param{args[ai].name.empty() ? format(".a{}", ai) : args[ai].name,
+              transformType(args[ai].type), nullptr});
   }
   ctx->add(TransformItem::Func, altName.empty() ? name : altName, canonicalName,
            ctx->isToplevel());
@@ -1663,8 +1664,8 @@ StmtPtr TransformVisitor::parseDylibCImport(const ExprPtr &dylib, string name,
     stmts.push_back(N<ExprStmt>(move(call)));
   vector<Param> params;
   for (int i = 0; i < args.size(); i++)
-    params.push_back(
-        {args[i].name != "" ? args[i].name : format(".a{}", i), clone(args[i].type)});
+    params.emplace_back(Param{args[i].name != "" ? args[i].name : format(".a{}", i),
+                              clone(args[i].type)});
   return transform(N<FunctionStmt>(altName.empty() ? name : altName, clone(ret),
                                    vector<Param>(), move(params),
                                    N<SuiteStmt>(move(stmts)), vector<string>()));
@@ -1682,9 +1683,9 @@ StmtPtr TransformVisitor::parsePythonImport(const ExprPtr &what, string as) {
     dirs.push_back(d->member);
     e = d->expr.get();
   }
-  if (e->getIdExpr().empty())
+  if (!e->getId())
     error("invalid import statement");
-  dirs.push_back(e->getIdExpr());
+  dirs.push_back(e->getId()->value);
   string name = dirs[0], lib;
   for (int i = dirs.size() - 1; i > 0; i--)
     lib += dirs[i] + (i > 1 ? "." : "");

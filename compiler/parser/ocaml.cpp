@@ -1,13 +1,17 @@
-#include <algorithm>
+/*
+ * ocaml.cpp --- OCaml/C++ AST bridge.
+ *
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
+ */
+
 #include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include "util/fmt/format.h"
-#include "util/fmt/ostream.h"
 
 #include <caml/alloc.h>
 #include <caml/callback.h>
@@ -20,7 +24,7 @@
 
 using namespace std;
 
-extern int __ocaml_time__;
+extern int _ocaml_time;
 
 #define OcamlReturn(result)                                                            \
   do {                                                                                 \
@@ -34,6 +38,7 @@ namespace ast {
 
 string parse_string(value v) { return string(String_val(v), caml_string_length(v)); }
 
+/// Convert a list of OCaml items to a C++ vector.
 template <typename TF> auto parse_list(value v, TF f) -> vector<decltype(f(v))> {
   auto helper = [](value v, TF f, vector<decltype(f(v))> &t) {
     CAMLparam1(v);
@@ -48,6 +53,7 @@ template <typename TF> auto parse_list(value v, TF f) -> vector<decltype(f(v))> 
   return t;
 }
 
+/// Convert an OCaml optional to a C++ pointer (nullptr for None).
 template <typename TF> auto parse_optional(value v, TF f) -> decltype(f(v)) {
   if (v == Val_int(0))
     return decltype(f(v))();
@@ -55,6 +61,7 @@ template <typename TF> auto parse_optional(value v, TF f) -> decltype(f(v)) {
     return f(Field(v, 0));
 }
 
+/// Convert a OCaml position information to a seq::SrcInfo object.
 seq::SrcInfo parse_pos(value val) {
   CAMLparam1(val);
   CAMLlocal2(p0, p1);
@@ -68,7 +75,8 @@ seq::SrcInfo parse_pos(value val) {
   return seq::SrcInfo(file, line1 + 1, line2 + 1, col1 + 1, col2 + 1);
 }
 
-unique_ptr<Expr> parse_expr(value val) {
+/// Convert a OCaml AST expression to a ExprPtr.
+ExprPtr parse_expr(value val) {
 #define Return(x, ...)                                                                 \
   do {                                                                                 \
     auto _ret = make_unique<x##Expr>(__VA_ARGS__);                                     \
@@ -142,7 +150,7 @@ unique_ptr<Expr> parse_expr(value val) {
     Return(Unary, parse_string(Field(t, 0)), parse_expr(Field(t, 1)));
   case 17:
     Return(Binary, parse_expr(Field(t, 0)), parse_string(Field(t, 1)),
-           parse_expr(Field(t, 2)));
+           parse_expr(Field(t, 2)), Bool_val(Field(t, 3)));
   case 18:
     Return(Pipe, parse_list(t, [](value in) {
              CAMLparam1(in);
@@ -178,7 +186,8 @@ unique_ptr<Expr> parse_expr(value val) {
 #undef Return
 }
 
-unique_ptr<Pattern> parse_pattern(value val) {
+/// Convert a OCaml AST pattern to a PatternPtr.
+PatternPtr parse_pattern(value val) {
 #define Return(x, ...)                                                                 \
   do {                                                                                 \
     auto _ret = make_unique<x##Pattern>(__VA_ARGS__);                                  \
@@ -226,12 +235,15 @@ unique_ptr<Pattern> parse_pattern(value val) {
 #undef Return
 }
 
-unique_ptr<Stmt> parse_stmt(value val);
-unique_ptr<Stmt> parse_stmt_list(value val, bool block = true) {
+StmtPtr parse_stmt(value val);
+
+/// Convert a list of OCaml AST statements to a SuiteStmt pointer.
+StmtPtr parse_stmt_list(value val, bool block = true) {
   return StmtPtr(new SuiteStmt(parse_list(val, parse_stmt), block));
 }
 
-unique_ptr<Stmt> parse_stmt(value val) {
+/// Convert a OCaml AST statement to a StmtPtr.
+StmtPtr parse_stmt(value val) {
 #define Return(x, ...)                                                                 \
   do {                                                                                 \
     auto _ret = make_unique<x##Stmt>(__VA_ARGS__);                                     \
@@ -268,7 +280,6 @@ unique_ptr<Stmt> parse_stmt(value val) {
   case 3:
     Return(Expr, parse_expr(t));
   case 4:
-    f0 = Field(t, 3);
     Return(Assign, parse_expr(Field(t, 0)), parse_optional(Field(t, 1), parse_expr),
            parse_optional(Field(t, 2), parse_expr));
   case 5:
@@ -325,17 +336,14 @@ unique_ptr<Stmt> parse_stmt(value val) {
              return parse_string(Field(i, 1)); // ignore position for now
            }));
   case 19:
-    Return(Class, tv == 25, parse_string(Field(t, 0)),
-           parse_list(Field(t, 1), parse_param), parse_list(Field(t, 2), parse_param),
-           parse_stmt_list(Field(t, 3)), parse_list(Field(t, 4), [](value i) {
+    Return(Class, parse_string(Field(t, 0)), parse_list(Field(t, 1), parse_param),
+           parse_list(Field(t, 2), parse_param), parse_stmt_list(Field(t, 3)),
+           parse_list(Field(t, 4), [](value i) {
              return parse_string(Field(i, 1)); // ignore position for now
            }));
   case 20:
-    Return(AssignEq, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)),
-           parse_string(Field(t, 2)));
-  case 21:
     Return(YieldFrom, parse_expr(t));
-  case 22:
+  case 21:
     Return(With,
            parse_list(Field(t, 0),
                       [](value j) {
@@ -350,9 +358,10 @@ unique_ptr<Stmt> parse_stmt(value val) {
 #undef Return
 }
 
-unique_ptr<SuiteStmt> ocamlParse(string file, string code, int line_offset,
-                                 int col_offset) {
-  bool debug = __dbg_level__ & (1 << 5);
+/// Call Menhir parser on code with the appropriate offset and file information.
+StmtPtr ocamlParse(const string &file, const string &code, int line_offset,
+                   int col_offset) {
+  bool debug = _dbg_level & (1 << 5);
   CAMLparam0();
   CAMLlocal3(p1, f, c);
   static value *closure_f = nullptr;
@@ -368,11 +377,14 @@ unique_ptr<SuiteStmt> ocamlParse(string file, string code, int line_offset,
   })));
 }
 
+/// Initialize the OCaml runtime (must be called only once before any OCaml function is
+/// called).
 void initOcaml() {
-  const char *argv[] = {"parser", 0};
+  const char *argv[] = {"parser", nullptr};
   caml_main((char **)argv);
 }
 
+/// OCaml error handler (called when an OCaml exception is raised).
 SEQ_FUNC CAMLprim value seq_ocaml_exception(value msg, value file, value line,
                                             value col) {
   CAMLparam4(msg, file, line, col);
@@ -382,33 +394,32 @@ SEQ_FUNC CAMLprim value seq_ocaml_exception(value msg, value file, value line,
   CAMLreturn(Val_unit);
 }
 
-unique_ptr<SuiteStmt> parseCode(string file, string code, int line_offset,
-                                int col_offset) {
+StmtPtr parseCode(const string &file, const string &code, int line_offset,
+                  int col_offset) {
   using namespace std::chrono;
+
+  // Initialize
   static bool initialized(false);
   if (!initialized) {
     auto t = high_resolution_clock::now();
     initOcaml();
-    __ocaml_time__ +=
+    _ocaml_time +=
         duration_cast<milliseconds>(high_resolution_clock::now() - t).count();
     initialized = true;
   }
   auto t = high_resolution_clock::now();
   auto s = ocamlParse(file, code, line_offset, col_offset);
-  __ocaml_time__ +=
-      duration_cast<milliseconds>(high_resolution_clock::now() - t).count();
+  _ocaml_time += duration_cast<milliseconds>(high_resolution_clock::now() - t).count();
   return s;
 }
 
-unique_ptr<Expr> parseExpr(string code, const seq::SrcInfo &offset) {
+ExprPtr parseExpr(const string &code, const seq::SrcInfo &offset) {
   auto result = parseCode(offset.file, code, offset.line, offset.col);
-  assert(result->stmts.size() == 1);
-  auto s = CAST(result->stmts[0], ExprStmt);
-  assert(s);
-  return move(s->expr);
+  assert(result->getSuite() && result->getSuite()->stmts[0]->getExpr());
+  return move(const_cast<ExprStmt *>(result->getSuite()->stmts[0]->getExpr())->expr);
 }
 
-unique_ptr<SuiteStmt> parseFile(string file) {
+StmtPtr parseFile(const string &file) {
   string result, line;
   if (file == "-") {
     while (getline(cin, line))

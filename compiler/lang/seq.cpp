@@ -16,6 +16,8 @@ using namespace llvm::orc;
 #include "llvm/CodeGen/CommandFlags.def"
 #endif
 
+extern int _ll_time;
+
 void _seqassert(const char *expr_str, const char *file, int line,
                 const std::string &msg) {
   std::cerr << "Assert failed:\t" << msg << "\n"
@@ -404,46 +406,46 @@ void SeqModule::runCodegenPipeline(bool timeIt) {
   auto t = high_resolution_clock::now();
   codegen(module);
   if (timeIt)
-    fmt::print(stderr, "[T] llvmgen/c = {:.1f}\n",
-               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                   1000.0);
+    LOG_TIME("[T] llvmgen/c = {:.1f}",
+             duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                 1000.0);
   t = high_resolution_clock::now();
   verify();
   if (timeIt)
-    fmt::print(stderr, "[T] llvmgen/v = {:.1f}\n",
-               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                   1000.0);
+    LOG_TIME("[T] llvmgen/v = {:.1f}",
+             duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                 1000.0);
   t = high_resolution_clock::now();
   optimize();
   if (timeIt)
-    fmt::print(stderr, "[T] llvmgen/o = {:.1f}\n",
-               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                   1000.0);
+    LOG_TIME("[T] llvmgen/o = {:.1f}",
+             duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                 1000.0);
   t = high_resolution_clock::now();
   applyGCTransformations(module);
   if (timeIt)
-    fmt::print(stderr, "[T] llvmgen/g = {:.1f}\n",
-               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                   1000.0);
+    LOG_TIME("[T] llvmgen/g = {:.1f}",
+             duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                 1000.0);
   t = high_resolution_clock::now();
   verify();
   if (timeIt)
-    fmt::print(stderr, "[T] llvmgen/v = {:.1f}\n",
-               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                   1000.0);
+    LOG_TIME("[T] llvmgen/v = {:.1f}",
+             duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                 1000.0);
   if (!config::config().debug) {
     t = high_resolution_clock::now();
     optimize();
     if (timeIt)
-      fmt::print(stderr, "[T] llvmgen/o = {:.1f}\n",
-                 duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                     1000.0);
+      LOG_TIME("[T] llvmgen/o = {:.1f}",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
     t = high_resolution_clock::now();
     verify();
     if (timeIt)
-      fmt::print(stderr, "[T] llvmgen/v = {:.1f}\n",
-                 duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                     1000.0);
+      LOG_TIME("[T] llvmgen/v = {:.1f}",
+               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                   1000.0);
   }
 #if SEQ_HAS_TAPIR
   tapir::resetOMPABI();
@@ -518,10 +520,12 @@ void SeqModule::execute(const std::vector<std::string> &args,
       functionNames.push_back(f.getName());
     }
   }
-  if (timeIt)
-    fmt::print(stderr, "[T] llvmgen   = {:.1f}\n",
-               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                   1000.0);
+  if (timeIt) {
+    LOG_TIME("[T] llvmgen/L = {:.1f}", _ll_time / 1000.0);
+    LOG_TIME("[T] llvmgen   = {:.1f}",
+             duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                 1000.0);
+  }
 
   std::unique_ptr<Module> owner(module);
   module = nullptr;
@@ -554,9 +558,9 @@ void SeqModule::execute(const std::vector<std::string> &args,
   t = high_resolution_clock::now();
   eng->runFunctionAsMain(func, args, nullptr);
   if (timeIt)
-    fmt::print(stderr, "[T] runtime   = {:.1f}\n",
-               duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
-                   1000.0);
+    LOG_TIME("[T] runtime   = {:.1f}",
+             duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                 1000.0);
 
   delete eng;
 }

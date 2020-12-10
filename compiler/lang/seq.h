@@ -43,24 +43,23 @@
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 
 // Level 7
-extern int __dbg_level__;
-extern int __level__;
-#define DBG(c, ...)                                                                    \
-  fmt::print("{}" c "\n", std::string(2 * __level__, ' '), ##__VA_ARGS__)
+extern int _dbg_level;
+extern int _level;
+#define DBG(c, ...) fmt::print("{}" c "\n", std::string(2 * _level, ' '), ##__VA_ARGS__)
 #define LOG(c, ...) DBG(c, ##__VA_ARGS__)
 #define LOG_TIME(c, ...)                                                               \
   {                                                                                    \
-    if (__dbg_level__ & (1 << 0))                                                      \
+    if (_dbg_level & (1 << 0))                                                         \
       DBG(c, ##__VA_ARGS__);                                                           \
   }
 #define LOG_REALIZE(c, ...)                                                            \
   {                                                                                    \
-    if (__dbg_level__ & (1 << 2))                                                      \
+    if (_dbg_level & (1 << 2))                                                         \
       DBG(c, ##__VA_ARGS__);                                                           \
   }
 #define LOG_TYPECHECK(c, ...)                                                          \
   {                                                                                    \
-    if (__dbg_level__ & (1 << 4))                                                      \
+    if (_dbg_level & (1 << 4))                                                         \
       DBG(c, ##__VA_ARGS__);                                                           \
   }
 #define CAST(s, T) dynamic_cast<T *>(s.get())

@@ -103,8 +103,10 @@ public:
       auto file = getFilename(get<0>(GetParam()));
       auto code = get<3>(GetParam());
       auto startLine = get<4>(GetParam());
-      SeqModule *module = parse(argv0, file, code, code.size() > 0,
+      SeqModule *module = parse(argv0, file, code, !code.empty(),
                                 /* isTest */ true, startLine);
+      if (!module)
+        exit(EXIT_FAILURE);
       execute(module, {file}, {}, get<1>(GetParam()));
       fflush(stdout);
       exit(EXIT_SUCCESS);
@@ -213,7 +215,7 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Combine(
       testing::Values(
         "core/helloworld.seq",
-        "core/llvmops.seq",
+        // "core/llvmops.seq",
         "core/arithmetic.seq",
         "core/parser.seq",
         "core/generics.seq",

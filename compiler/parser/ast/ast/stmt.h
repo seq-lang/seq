@@ -1,6 +1,9 @@
-/**
- * ast.h
- * Describes Seq AST.
+/*
+ * stmt.h --- Seq AST statements.
+ *
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
  */
 
 #pragma once
@@ -13,212 +16,253 @@
 #include "lang/seq.h"
 #include "parser/ast/ast/expr.h"
 #include "parser/ast/ast/pattern.h"
-#include "parser/ast/ast/visitor.h"
 #include "parser/ast/types.h"
 #include "parser/common.h"
-
-//  1 AssignStmt)
-//  2 ClassStmt)
-//  2 ExprStmt)
-//  4 SuiteStmt)
-//  8 FunctionStmt)
 
 namespace seq {
 namespace ast {
 
+// Forward declarations
+struct ASTVisitor;
+struct ClassStmt;
+struct ExprStmt;
+struct SuiteStmt;
+struct FunctionStmt;
+
+/**
+ * A Seq AST statement.
+ * Each AST statement owns its children and is intended to be instantiated as a
+ * unique_ptr.
+ */
 struct Stmt : public seq::SrcObject {
   Stmt() = default;
-  Stmt(const Stmt &s);
-  Stmt(const seq::SrcInfo &s);
-  virtual ~Stmt();
-  virtual unique_ptr<Stmt> clone() const = 0;
+  Stmt(const Stmt &s) = default;
+  explicit Stmt(const seq::SrcInfo &s);
 
-  /// Convert node to a string
+  /// Convert a node to an S-expression.
   virtual string toString() const = 0;
-  /// Accept an AST walker/visitor
+  /// Deep copy a node.
+  virtual unique_ptr<Stmt> clone() const = 0;
+  /// Accept an AST visitor.
   virtual void accept(ASTVisitor &) const = 0;
 
-  /// Allow pretty-printing to C++ streams
-  friend std::ostream &operator<<(std::ostream &out, const Stmt &c) {
-    return out << c.toString();
+  /// Allow pretty-printing to C++ streams.
+  friend std::ostream &operator<<(std::ostream &out, const Stmt &stmt) {
+    return out << stmt.toString();
   }
+
+  /// Convenience virtual functions to avoid unnecessary dynamic_cast calls.
+  virtual const ClassStmt *getClass() const { return nullptr; }
+  virtual const ExprStmt *getExpr() const { return nullptr; }
+  virtual const SuiteStmt *getSuite() const { return nullptr; }
+  virtual const FunctionStmt *getFunction() const { return nullptr; }
 };
 using StmtPtr = unique_ptr<Stmt>;
 
+/// Suite (block of statements) statement (stmts...).
+/// @example a = 5; foo(1)
 struct SuiteStmt : public Stmt {
-  /// Represents list (block) of statements.
-  /// Does not necessarily imply new variable block.
   using Stmt::Stmt;
 
   vector<StmtPtr> stmts;
+  /// True if a suite defines new variable-scoping block.
   bool ownBlock;
 
-  SuiteStmt(vector<StmtPtr> &&s, bool o = false);
-  SuiteStmt(StmtPtr s, bool o = false);
-  SuiteStmt(StmtPtr s, StmtPtr s2, bool o = false);
-  SuiteStmt(StmtPtr s, StmtPtr s2, StmtPtr s3, bool o = false);
-  SuiteStmt(const SuiteStmt &s);
+  explicit SuiteStmt(vector<StmtPtr> &&stmts, bool ownBlock = false);
+  /// Single-statement suite constructor.
+  explicit SuiteStmt(StmtPtr stmt, bool ownBlock = false);
+  /// Two-statement suite constructor.
+  SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, bool ownBlock = false);
+  /// Three-statement suite constructor.
+  SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, StmtPtr stmt3, bool o = false);
+  SuiteStmt(const SuiteStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
+
+  const SuiteStmt *getSuite() const override { return this; }
 };
 
+/// Pass statement.
+/// @example pass
 struct PassStmt : public Stmt {
-  PassStmt();
-  PassStmt(const PassStmt &s);
+  PassStmt() = default;
+  PassStmt(const PassStmt &stmt) = default;
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// Break statement.
+/// @example break
 struct BreakStmt : public Stmt {
-  BreakStmt();
-  BreakStmt(const BreakStmt &s);
+  BreakStmt() = default;
+  BreakStmt(const BreakStmt &stmt) = default;
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// Continue statement.
+/// @example continue
 struct ContinueStmt : public Stmt {
-  ContinueStmt();
-  ContinueStmt(const ContinueStmt &s);
+  ContinueStmt() = default;
+  ContinueStmt(const ContinueStmt &stmt) = default;
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// Expression statement (expr).
+/// @example 3 + foo()
 struct ExprStmt : public Stmt {
   ExprPtr expr;
 
-  ExprStmt(ExprPtr e);
-  ExprStmt(const ExprStmt &s);
+  explicit ExprStmt(ExprPtr expr);
+  ExprStmt(const ExprStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
+
+  const ExprStmt *getExpr() const override { return this; }
 };
 
+/// Assignment statement (lhs: type = rhs).
+/// @example a = 5
+/// @example a: Optional[int] = 5
+/// @example a, b, c = 5, *z
 struct AssignStmt : public Stmt {
-  /// Statement: lhs : type = rhs
   ExprPtr lhs, rhs, type;
-  /// mustExist indicates that lhs must exist (e.g. a += b).
-  bool mustExist;
-  /// force controls if lhs will shadow existing lhs or not.
-  bool force;
 
-  AssignStmt(ExprPtr l, ExprPtr r, ExprPtr t = nullptr, bool m = false, bool f = false);
-  AssignStmt(const AssignStmt &s);
+  AssignStmt(ExprPtr lhs, ExprPtr rhs, ExprPtr type = nullptr);
+  AssignStmt(const AssignStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
-struct AssignEqStmt : public Stmt {
-  /// Statement: lhs op= rhs
-  ExprPtr lhs, rhs;
-  string op;
-
-  AssignEqStmt(ExprPtr l, ExprPtr r, const string &o);
-  AssignEqStmt(const AssignEqStmt &s);
-
-  string toString() const override;
-  StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
-};
-
+/// Deletion statement (del expr).
+/// @example del a
+/// @example del a[5]
 struct DelStmt : public Stmt {
   ExprPtr expr;
 
-  DelStmt(ExprPtr e);
-  DelStmt(const DelStmt &s);
+  explicit DelStmt(ExprPtr expr);
+  DelStmt(const DelStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// Print statement (print expr).
+/// @example print a
+/// @note OCaml transforms print a, b into a SuiteStmt of PrintStmt statements
 struct PrintStmt : public Stmt {
   ExprPtr expr;
 
-  PrintStmt(ExprPtr i);
-  PrintStmt(const PrintStmt &s);
+  explicit PrintStmt(ExprPtr expr);
+  PrintStmt(const PrintStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// Return statement (return expr).
+/// @example return
+/// @example return a
 struct ReturnStmt : public Stmt {
-  /// Might be nullptr for empty return/yield statements
+  /// nullptr if this is an empty return/yield statements.
   ExprPtr expr;
 
-  ReturnStmt(ExprPtr e);
-  ReturnStmt(const ReturnStmt &s);
+  explicit ReturnStmt(ExprPtr expr = nullptr);
+  ReturnStmt(const ReturnStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// Yield statement (yield expr).
+/// @example yield
+/// @example yield a
 struct YieldStmt : public Stmt {
-  /// Might be nullptr for empty return/yield statements
+  /// nullptr if this is an empty return/yield statements.
   ExprPtr expr;
 
-  YieldStmt(ExprPtr e);
-  YieldStmt(const YieldStmt &s);
+  explicit YieldStmt(ExprPtr expr = nullptr);
+  YieldStmt(const YieldStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// Assert statement (assert expr).
+/// @example assert a
+/// @note OCaml transforms assert a, b into a SuiteStmt of AssertStmt statements
 struct AssertStmt : public Stmt {
   ExprPtr expr;
 
-  AssertStmt(ExprPtr e);
-  AssertStmt(const AssertStmt &s);
+  explicit AssertStmt(ExprPtr expr);
+  AssertStmt(const AssertStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// While loop statement (while cond: suite; else: elseSuite).
+/// @example while True: print
+/// @example while True: break
+///          else: print
 struct WhileStmt : public Stmt {
-  /// Statement: while cond: suite
   ExprPtr cond;
   StmtPtr suite;
+  /// nullptr if there is no else suite.
   StmtPtr elseSuite;
 
-  WhileStmt(ExprPtr c, StmtPtr s, StmtPtr e = nullptr);
-  WhileStmt(const WhileStmt &s);
+  WhileStmt(ExprPtr cond, StmtPtr suite, StmtPtr elseSuite = nullptr);
+  WhileStmt(const WhileStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// For loop statement (for var in iter: suite; else elseSuite).
+/// @example for a, b in c: print
+/// @example for i in j: break
+///          else: print
 struct ForStmt : public Stmt {
-  /// Statement: for var in iter: suite
   ExprPtr var;
   ExprPtr iter;
   StmtPtr suite;
   StmtPtr elseSuite;
 
-  ForStmt(ExprPtr v, ExprPtr i, StmtPtr s, StmtPtr e = nullptr);
-  ForStmt(const ForStmt &s);
+  ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite = nullptr);
+  ForStmt(const ForStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// If block statement (if cond: suite; (elif cond: suite)...).
+/// @example if a: foo()
+/// @example if a: foo()
+///          elif b: bar()
+/// @example if a: foo()
+///          elif b: bar()
+///          else: baz()
 struct IfStmt : public Stmt {
-  /// Statement: if cond: suite;
   struct If {
     ExprPtr cond;
     StmtPtr suite;
@@ -226,52 +270,83 @@ struct IfStmt : public Stmt {
     If clone() const;
   };
 
-  /// Last member of ifs has cond = nullptr (else block)
+  /// Last member's cond is nullptr if there is more than one element (else block).
   vector<If> ifs;
 
-  IfStmt(vector<If> &&i);
+  explicit IfStmt(vector<If> &&ifs);
+  /// Convenience constructor (if cond: suite).
   IfStmt(ExprPtr cond, StmtPtr suite);
-  IfStmt(ExprPtr cond, StmtPtr suite, ExprPtr econd, StmtPtr esuite);
-  IfStmt(const IfStmt &s);
+  /// Convenience constructor (if cond: suite; elif elseCond: elseSuite).
+  /// elseCond can be nullptr (for unconditional else suite).
+  IfStmt(ExprPtr cond, StmtPtr suite, ExprPtr elseCond, StmtPtr elseSuite);
+  IfStmt(const IfStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// Match statement (match what: (case pattern: case)...).
+/// @example match a:
+///          case 1: print
+///          case _: pass
 struct MatchStmt : public Stmt {
   ExprPtr what;
   vector<PatternPtr> patterns;
   vector<StmtPtr> cases;
 
-  MatchStmt(ExprPtr w, vector<PatternPtr> &&p, vector<StmtPtr> &&c);
-  MatchStmt(ExprPtr w, vector<pair<PatternPtr, StmtPtr>> &&v);
-  MatchStmt(const MatchStmt &s);
+  MatchStmt(ExprPtr what, vector<PatternPtr> &&patterns, vector<StmtPtr> &&cases);
+  /// Convenience constructor for parsing OCaml objects.
+  MatchStmt(ExprPtr what, vector<pair<PatternPtr, StmtPtr>> &&patternCasePairs);
+  MatchStmt(const MatchStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// Import statement.
+/// This node describes various kinds of import statements:
+///  - from from import what (as as)
+///  - import what (as as)
+///  - from c import what(args...) (-> ret) (as as)
+///  - from .(dots...)from import what (as as)
+/// @example import a
+/// @example from b import a
+/// @example from ...b import a as ai
+/// @example from c import foo(int) -> int as bar
+/// @example from python.numpy import ndarray
+/// @example from python import numpy.ndarray as nd
 struct ImportStmt : public Stmt {
   ExprPtr from, what;
-  vector<Param> args;
-  ExprPtr ret;
   string as;
+  /// Number of dots in a relative import (e.g. dots is 3 for "from ...foo").
   int dots;
+  /// Function argument types for C imports.
+  vector<Param> args;
+  /// Function return type for C imports.
+  ExprPtr ret;
 
-  ImportStmt(ExprPtr f, ExprPtr w, vector<Param> &&p, ExprPtr r, string a = "",
-             int d = 0);
-  ImportStmt(const ImportStmt &s);
+  ImportStmt(ExprPtr from, ExprPtr what, vector<Param> &&args, ExprPtr ret = nullptr,
+             string as = "", int dots = 0);
+  ImportStmt(const ImportStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// Try-catch statement (try: suite; (catch var (as exc): suite)...; finally: finally).
+/// @example: try: a
+///           catch e: pass
+///           catch e as Exc: pass
+///           catch: pass
+///           finally: print
 struct TryStmt : public Stmt {
   struct Catch {
+    /// empty string if a catch is unnamed.
     string var;
+    /// nullptr if there is no explicit exception type.
     ExprPtr exc;
     StmtPtr suite;
 
@@ -280,129 +355,169 @@ struct TryStmt : public Stmt {
 
   StmtPtr suite;
   vector<Catch> catches;
+  /// nullptr if there is no finally block.
   StmtPtr finally;
 
-  TryStmt(StmtPtr s, vector<Catch> &&c, StmtPtr f);
-  TryStmt(const TryStmt &s);
+  TryStmt(StmtPtr suite, vector<Catch> &&catches, StmtPtr finally = nullptr);
+  TryStmt(const TryStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
-struct GlobalStmt : public Stmt {
-  string var;
-
-  GlobalStmt(string v);
-  GlobalStmt(const GlobalStmt &s);
-
-  string toString() const override;
-  StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
-};
-
+/// Throw statement (raise expr).
+/// @example: raise a
 struct ThrowStmt : public Stmt {
   ExprPtr expr;
 
-  ThrowStmt(ExprPtr e);
-  ThrowStmt(const ThrowStmt &s);
+  explicit ThrowStmt(ExprPtr expr);
+  ThrowStmt(const ThrowStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// Global variable statement (global var).
+/// @example: global a
+struct GlobalStmt : public Stmt {
+  string var;
+
+  explicit GlobalStmt(string var);
+  GlobalStmt(const GlobalStmt &stmt) = default;
+
+  string toString() const override;
+  StmtPtr clone() const override;
+  void accept(ASTVisitor &visitor) const override;
+};
+
+/// Function statement (@(attributes...) def name[generics...](args...) -> ret: suite).
+/// @example: @some_attribute
+///           def foo[T=int, U: int](a, b: int = 0) -> list[T]: pass
 struct FunctionStmt : public Stmt {
   string name;
+  /// nullptr if return type is not specified.
   ExprPtr ret;
   vector<Param> generics;
   vector<Param> args;
   StmtPtr suite;
-  /// List of attributes (e.g. @internal @prefetch)
+  /// Hash-map of attributes (e.g. @internal, @prefetch).
+  /// Some (internal) attributes might have a value associated with them, thus a map to
+  /// store them.
   map<string, string> attributes;
 
-  FunctionStmt(string n, ExprPtr r, vector<Param> &&g, vector<Param> &&a, StmtPtr s,
-               vector<string> &&at);
-  FunctionStmt(string n, ExprPtr r, vector<Param> &&g, vector<Param> &&a, StmtPtr s,
-               map<string, string> &&at);
-  FunctionStmt(const FunctionStmt &s);
-
-  string signature() const;
+  FunctionStmt(string name, ExprPtr ret, vector<Param> &&generics, vector<Param> &&args,
+               StmtPtr suite, map<string, string> &&attributes);
+  /// Convenience constructor for attributes with empty values.
+  FunctionStmt(string name, ExprPtr ret, vector<Param> &&generics, vector<Param> &&args,
+               StmtPtr suite, vector<string> &&attributes);
+  FunctionStmt(const FunctionStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
+
+  /// @return a function signature that consists of generics and arguments in a
+  /// S-expression form.
+  /// @example (T U (int 0))
+  string signature() const;
+
+  const FunctionStmt *getFunction() const override { return this; }
 };
 
+/// Class statement (@(attributes...) class name[generics...]: args... ; suite).
+/// @example: @type
+///           class F[T]:
+///              m: T
+///              def __new__() -> F[T]: ...
 struct ClassStmt : public Stmt {
-  /// Is it type (record) or a class?
-  bool isRecord;
   string name;
   vector<Param> generics;
   vector<Param> args;
   StmtPtr suite;
+  /// Hash-map of attributes (e.g. @internal, @prefetch).
+  /// Some (internal) attributes might have a value associated with them, thus a map to
+  /// store them.
   map<string, string> attributes;
 
-  ClassStmt(bool i, string n, vector<Param> &&g, vector<Param> &&a, StmtPtr s,
-            vector<string> &&at);
-  ClassStmt(bool i, string n, vector<Param> &&g, vector<Param> &&a, StmtPtr s,
+  ClassStmt(string n, vector<Param> &&g, vector<Param> &&a, StmtPtr s,
             map<string, string> &&at);
-  ClassStmt(const ClassStmt &s);
+  /// Convenience constructor for attributes with empty values.
+  ClassStmt(string name, vector<Param> &&generics, vector<Param> &&args, StmtPtr suite,
+            vector<string> &&attributes);
+  ClassStmt(const ClassStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
+
+  /// @return true if a class is a tuple-like record (e.g. has a "@tuple" attribute)
+  bool isRecord() const;
+
+  const ClassStmt *getClass() const override { return this; }
 };
 
+/// Yield-from statement (yield from expr).
+/// @example: yield from it
 struct YieldFromStmt : public Stmt {
   ExprPtr expr;
 
-  YieldFromStmt(ExprPtr e);
-  YieldFromStmt(const YieldFromStmt &s);
+  explicit YieldFromStmt(ExprPtr expr);
+  YieldFromStmt(const YieldFromStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// With statement (with (item as var)...: suite).
+/// @example: with foo(), bar() as b: pass
 struct WithStmt : public Stmt {
   vector<ExprPtr> items;
+  /// empty string if a corresponding item is unnamed
   vector<string> vars;
   StmtPtr suite;
 
-  WithStmt(vector<ExprPtr> &&i, vector<string> &&v, StmtPtr s);
-  WithStmt(vector<pair<ExprPtr, string>> &&v, StmtPtr s);
-  WithStmt(const WithStmt &s);
+  WithStmt(vector<ExprPtr> &&items, vector<string> &&vars, StmtPtr suite);
+  /// Convenience constructor for parsing OCaml objects.
+  WithStmt(vector<pair<ExprPtr, string>> &&itemVarPairs, StmtPtr suite);
+  WithStmt(const WithStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
-/// Post-transform AST nodes
+/// The following nodes are created after the transform stage.
 
-struct AssignMemberStmt : Stmt {
+/// Member assignment statement (lhs.member = rhs).
+/// @example: a.x = b
+struct AssignMemberStmt : public Stmt {
   ExprPtr lhs;
   string member;
   ExprPtr rhs;
 
-  AssignMemberStmt(ExprPtr l, string m, ExprPtr r);
-  AssignMemberStmt(const AssignMemberStmt &s);
+  AssignMemberStmt(ExprPtr lhs, string member, ExprPtr rhs);
+  AssignMemberStmt(const AssignMemberStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
+/// Update assignment statement (lhs = rhs).
+/// Only valid if lhs exists.
+/// @example: lhs = rhs
 struct UpdateStmt : public Stmt {
   ExprPtr lhs, rhs;
 
-  UpdateStmt(ExprPtr l, ExprPtr r);
-  UpdateStmt(const UpdateStmt &s);
+  UpdateStmt(ExprPtr lhs, ExprPtr rhs);
+  UpdateStmt(const UpdateStmt &stmt);
 
   string toString() const override;
   StmtPtr clone() const override;
-  virtual void accept(ASTVisitor &visitor) const override { visitor.visit(this); }
+  void accept(ASTVisitor &visitor) const override;
 };
 
 } // namespace ast

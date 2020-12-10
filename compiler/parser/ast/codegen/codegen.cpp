@@ -23,15 +23,15 @@ namespace seq {
 namespace ast {
 
 void CodegenVisitor::defaultVisit(const Expr *n) {
-  seqassert(false, "invalid node {}", *n);
+  seqassert(false, "invalid node {}", n->toString());
 }
 
 void CodegenVisitor::defaultVisit(const Stmt *n) {
-  seqassert(false, "invalid node {}", *n);
+  seqassert(false, "invalid node {}", n->toString());
 }
 
 void CodegenVisitor::defaultVisit(const Pattern *n) {
-  seqassert(false, "invalid node {}", *n);
+  seqassert(false, "invalid node {}", n->toString());
 }
 
 CodegenVisitor::CodegenVisitor(shared_ptr<CodegenContext> ctx)
@@ -188,8 +188,8 @@ void CodegenVisitor::visit(const BinaryExpr *expr) {
 }
 
 void CodegenVisitor::visit(const IfExpr *expr) {
-  resultExpr = new seq::CondExpr(transform(expr->cond), transform(expr->eif),
-                                 transform(expr->eelse));
+  resultExpr = new seq::CondExpr(transform(expr->cond), transform(expr->ifexpr),
+                                 transform(expr->elsexpr));
 }
 
 void CodegenVisitor::visit(const PipeExpr *expr) {
@@ -549,7 +549,7 @@ void CodegenVisitor::visit(const StrPattern *pat) {
 }
 
 void CodegenVisitor::visit(const RangePattern *pat) {
-  resultPattern = new seq::RangePattern(pat->start, pat->end);
+  resultPattern = new seq::RangePattern(pat->start, pat->stop);
 }
 
 void CodegenVisitor::visit(const TuplePattern *pat) {

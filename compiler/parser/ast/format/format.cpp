@@ -108,7 +108,8 @@ void FormatVisitor::visit(const ListExpr *expr) {
 }
 
 void FormatVisitor::visit(const InstantiateExpr *expr) {
-  result = renderExpr(expr, "{}[{}]", transform(expr->type), transform(expr->params));
+  result = renderExpr(expr, "{}[{}]", transform(expr->typeExpr),
+                      transform(expr->typeParams));
 }
 
 void FormatVisitor::visit(const StackAllocExpr *expr) {
@@ -157,8 +158,8 @@ void FormatVisitor::visit(const DictGeneratorExpr *expr) {
 }
 
 void FormatVisitor::visit(const IfExpr *expr) {
-  result = renderExpr(expr, "{} if {} else {}", transform(expr->eif),
-                      transform(expr->cond), transform(expr->eelse));
+  result = renderExpr(expr, "{} if {} else {}", transform(expr->ifexpr),
+                      transform(expr->cond), transform(expr->elsexpr));
 }
 
 void FormatVisitor::visit(const UnaryExpr *expr) {
@@ -202,11 +203,11 @@ void FormatVisitor::visit(const DotExpr *expr) {
 
 void FormatVisitor::visit(const SliceExpr *expr) {
   string s;
-  if (expr->st)
-    s += transform(expr->st);
+  if (expr->start)
+    s += transform(expr->start);
   s += ":";
-  if (expr->ed)
-    s += transform(expr->ed);
+  if (expr->stop)
+    s += transform(expr->stop);
   s += ":";
   if (expr->step)
     s += transform(expr->step);
@@ -266,8 +267,6 @@ void FormatVisitor::visit(const AssignStmt *stmt) {
   if (stmt->type) {
     result = fmt::format("{}: {} = {}", transform(stmt->lhs), transform(stmt->type),
                          transform(stmt->rhs));
-  } else if (stmt->mustExist) {
-    result = fmt::format("{}", transform(stmt->rhs));
   } else {
     result = fmt::format("{} = {}", transform(stmt->lhs), transform(stmt->rhs));
   }
@@ -428,7 +427,7 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
     attrs.push_back(
         fmt::format("@{}{}", a.first, a.second.empty() ? "" : ":" + a.second));
   vector<string> args;
-  string key = stmt->isRecord ? "type" : "class";
+  string key = stmt->isRecord() ? "type" : "class";
   for (auto &a : stmt->args)
     args.push_back(fmt::format("{}: {}", a.name, transform(a.type)));
   result = fmt::format("{}{} {}({})",
@@ -438,8 +437,6 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
   if (stmt->suite)
     result += fmt::format(":{}{}", newline(), transform(stmt->suite, 1));
 }
-
-void FormatVisitor::visit(const AssignEqStmt *stmt) {}
 
 void FormatVisitor::visit(const YieldFromStmt *stmt) {
   result = fmt::format("{} {}", keyword("yield from"), transform(stmt->expr));
@@ -462,7 +459,7 @@ void FormatVisitor::visit(const StrPattern *pat) {
 }
 
 void FormatVisitor::visit(const RangePattern *pat) {
-  result = fmt::format("{} ... {}", pat->start, pat->end);
+  result = fmt::format("{} ... {}", pat->start, pat->stop);
 }
 
 void FormatVisitor::visit(const TuplePattern *pat) {
