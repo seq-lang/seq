@@ -1687,7 +1687,7 @@ StmtPtr TransformVisitor::parseLLVMImport(const Stmt *codeStmt) {
         if (!expr->isType() && !expr->getStatic())
           error(expr, "expression {} is not a type or static expression",
                 expr->toString());
-        LOG("~~> {} -> {}", exprCode, expr->toString());
+        //        LOG("~~> {} -> {}", exprCode, expr->toString());
         items.push_back(N<ExprStmt>(move(expr)));
       }
       braceStart = i + 1;
