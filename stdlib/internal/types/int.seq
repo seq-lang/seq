@@ -19,9 +19,10 @@ class int:
     def __new__(b: byte) -> int:
         %0 = zext i8 %b to i64
         ret i64 %0
-    @internal
-    def __new__[N: int](b: Int[N]) -> int:
-        pass
+    @llvm
+    def __new__[N: int](what: Int[N]) -> int:
+        %0 = sext i{N} %what to i64
+        ret i64 %0
     @internal
     def __new__[N: int](b: UInt[N]) -> int:
         pass
