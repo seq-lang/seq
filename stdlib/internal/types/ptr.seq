@@ -84,11 +84,6 @@ class Ptr[T]:
     @internal
     def __prefetch_w3__(self) -> void:
         pass
-
-    # @llvm
-    # def as_byte(self) -> Ptr[byte]:
-    #     %1 = bitcast {T}* %self to i8*
-    #     ret i8* %1
     # @llvm
     # def __new__() -> Ptr[T]:
     #     ret {T}* null
@@ -218,3 +213,4 @@ class Ptr[T]:
     #     ret void
 ptr = Ptr
 Jar = Ptr[byte]
+cobj = Ptr[byte]

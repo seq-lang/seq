@@ -22,16 +22,17 @@ namespace ast {
 
 // Forward declarations
 struct ASTVisitor;
-struct IdExpr;
-struct EllipsisExpr;
-struct TupleExpr;
-struct NoneExpr;
 struct BinaryExpr;
-struct IndexExpr;
-struct IntExpr;
 struct CallExpr;
 struct DotExpr;
+struct EllipsisExpr;
+struct IdExpr;
+struct IndexExpr;
+struct IntExpr;
+struct NoneExpr;
 struct StaticExpr;
+struct StringExpr;
+struct TupleExpr;
 struct Stmt;
 
 /**
@@ -76,16 +77,17 @@ public:
 
   /// Convenience virtual functions to avoid unnecessary dynamic_cast calls.
   virtual bool isId(string &&val) const { return false; }
-  virtual const IdExpr *getId() const { return nullptr; }
-  virtual const EllipsisExpr *getEllipsis() const { return nullptr; }
-  virtual const TupleExpr *getTuple() const { return nullptr; }
-  virtual const NoneExpr *getNone() const { return nullptr; }
-  virtual const IndexExpr *getIndex() const { return nullptr; }
-  virtual const IntExpr *getInt() const { return nullptr; }
   virtual const BinaryExpr *getBinary() const { return nullptr; }
   virtual const CallExpr *getCall() const { return nullptr; }
   virtual const DotExpr *getDot() const { return nullptr; }
+  virtual const EllipsisExpr *getEllipsis() const { return nullptr; }
+  virtual const IdExpr *getId() const { return nullptr; }
+  virtual const IndexExpr *getIndex() const { return nullptr; }
+  virtual const IntExpr *getInt() const { return nullptr; }
+  virtual const NoneExpr *getNone() const { return nullptr; }
   virtual const StaticExpr *getStatic() const { return nullptr; }
+  virtual const StringExpr *getString() const { return nullptr; }
+  virtual const TupleExpr *getTuple() const { return nullptr; }
 
 protected:
   /// Add a type to S-expression string.
@@ -186,6 +188,8 @@ struct StringExpr : public Expr {
   string toString() const override;
   ExprPtr clone() const override;
   void accept(ASTVisitor &visitor) const override;
+
+  const StringExpr *getString() const override { return this; }
 };
 
 /// Identifier expression (value).

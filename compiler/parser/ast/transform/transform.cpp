@@ -84,12 +84,12 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s,
     // stdlib->setFlag("internal");
     assert(stdlibPath.substr(stdlibPath.size() - 12) == "__init__.seq");
     // auto internal = stdlibPath.substr(0, stdlibPath.size() - 12) +
-    // "__internal__.seq"; stdlib->setFilename(internal); Load core aliases auto code =
-    // "cobj = Ptr[byte]\n"
-    //             "@internal\n@tuple\nclass pyobj:\n  p: cobj\n"
-    //             "@internal\n@tuple\nclass str:\n  len: int\n  ptr: Ptr[byte]\n";
-    // stmts = parseCode(internal, code);
-    // preamble->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
+    // "__internal__.seq"; stdlib->setFilename(internal);
+    // Define str and pyobj before everything to support Function and Tuple definitions
+    auto code = "@internal\n@tuple\nclass pyobj:\n  p: Ptr[byte]\n"
+                "@internal\n@tuple\nclass str:\n  len: int\n  ptr: Ptr[byte]\n";
+    preamble->stmts.push_back(
+        TransformVisitor(stdlib).transform(parseCode(stdlibPath, code)));
     // Load __internal__
     // stmts = parseFile(internal);
     // suite->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
@@ -386,52 +386,12 @@ void TransformVisitor::visit(const IndexExpr *expr) {
   } else {
     e = transform(expr->expr, true);
   }
-  unordered_set<string> supported{"<",  "<=", ">", ">=", "==", "!=", "&&",
-                                  "||", "+",  "-", "*",  "//", "%"};
-  function<bool(const ExprPtr &, set<string> &)> isStatic =
-      [&](const ExprPtr &e, set<string> &captures) -> bool {
-    if (auto i = CAST(e, IdExpr)) {
-      auto val = ctx->find(i->value);
-      if (val && val->isStatic()) {
-        captures.insert(i->value);
-        return true;
-      }
-      return false;
-    } else if (auto i = CAST(e, BinaryExpr)) {
-      return (supported.find(i->op) != supported.end()) &&
-             isStatic(i->lexpr, captures) && isStatic(i->rexpr, captures);
-    } else if (auto i = CAST(e, UnaryExpr)) {
-      return ((i->op == "-") || (i->op == "!")) && isStatic(i->expr, captures);
-    } else if (auto i = CAST(e, IfExpr)) {
-      return isStatic(i->cond, captures) && isStatic(i->ifexpr, captures) &&
-             isStatic(i->elsexpr, captures);
-    } else if (auto i = CAST(e, IntExpr)) {
-      if (i->suffix.size())
-        return false;
-      try {
-        std::stoull(i->value, nullptr, 0);
-      } catch (std::out_of_range &) {
-        return false;
-      }
-      return true;
-    } else {
-      return false;
-    }
-  };
-  auto transformGeneric = [&](const ExprPtr &i) -> ExprPtr {
-    auto t = transform(i, true);
-    set<string> captures;
-    if (isStatic(t, captures))
-      return N<StaticExpr>(clone(t), move(captures));
-    else
-      return t;
-  };
   vector<ExprPtr> it;
   if (auto t = CAST(expr->index, TupleExpr))
     for (auto &i : t->items)
-      it.push_back(transformGeneric(i));
+      it.push_back(transformGenericExpr(i));
   else
-    it.push_back(transformGeneric(expr->index));
+    it.push_back(transformGenericExpr(expr->index));
   bool allTypes = true;
   bool hasRealTypes = false;
   for (auto &i : it) {
@@ -1006,7 +966,10 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
   StmtPtr suite = nullptr;
   if (!in(stmt->attributes, "internal") && !in(stmt->attributes, ".c")) {
     ctx->addBlock();
-    suite = TransformVisitor(ctx).transform(stmt->suite);
+    if (in(stmt->attributes, "llvm"))
+      suite = parseLLVMImport(stmt->suite->firstInBlock());
+    else
+      suite = TransformVisitor(ctx).transform(stmt->suite);
     ctx->popBlock();
   }
 
@@ -1296,7 +1259,7 @@ string TransformVisitor::generateFunctionStub(int len) {
 
     vector<StmtPtr> fns;
     vector<Param> p;
-    p.push_back(Param{"what", N<IdExpr>("cobj")});
+    p.push_back(Param{"what", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte"))});
     fns.push_back(make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{},
                                             move(p), nullptr,
                                             vector<string>{"internal"}));
@@ -1408,7 +1371,7 @@ StmtPtr TransformVisitor::codegenMagic(const string &op, const ExprPtr &typExpr,
     }
   } else if (op == "raw") {
     fargs.emplace_back(Param{"self", clone(typExpr)});
-    ret = I("cobj");
+    ret = N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte"));
     attrs.emplace_back("internal");
   } else if (op == "getitem") {
     fargs.emplace_back(Param{"self", clone(typExpr)});
@@ -1505,14 +1468,15 @@ StmtPtr TransformVisitor::codegenMagic(const string &op, const ExprPtr &typExpr,
     attrs.emplace_back("delay");
   } else if (op == "pickle") {
     fargs.emplace_back(Param{"self", clone(typExpr)});
-    fargs.emplace_back(Param{"dest", I("cobj")});
+    fargs.emplace_back(
+        Param{"dest", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte"))});
     ret = I("void");
     for (auto &a : args)
       stmts.emplace_back(N<ExprStmt>(N<CallExpr>(
           N<DotExpr>(N<DotExpr>(I("self"), a.name), "__pickle__"), I("dest"))));
     attrs.emplace_back("delay");
   } else if (op == "unpickle") {
-    fargs.emplace_back(Param{"src", I("cobj")});
+    fargs.emplace_back(Param{"src", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte"))});
     ret = clone(typExpr);
     vector<CallExpr::Arg> ar;
     for (auto &a : args)
@@ -1694,6 +1658,89 @@ StmtPtr TransformVisitor::parsePythonImport(const ExprPtr &what, string as) {
       N<IdExpr>(name), N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_py_import"),
                                    N<StringExpr>(name), N<StringExpr>(lib))));
   // imp = pyobj._py_import("foo", "lib")
+}
+
+StmtPtr TransformVisitor::parseLLVMImport(const Stmt *codeStmt) {
+  if (!codeStmt->getExpr() || !codeStmt->getExpr()->expr->getString())
+    error("invalid LLVM function");
+
+  auto code = codeStmt->getExpr()->expr->getString()->value;
+  vector<StmtPtr> items;
+  auto se = N<StringExpr>("");
+  string &finalCode = se->value;
+  items.push_back(N<ExprStmt>(move(se)));
+  int braceCount = 0, braceStart = 0;
+  for (int i = 0; i < code.size(); i++) {
+    if (code[i] == '{') {
+      if (braceStart < i)
+        finalCode += code.substr(braceStart, i - braceStart + 1);
+      if (!braceCount)
+        braceStart = i + 1;
+      braceCount++;
+    } else if (code[i] == '}') {
+      braceCount--;
+      if (!braceCount) {
+        string exprCode = code.substr(braceStart, i - braceStart);
+        auto offset = getSrcInfo();
+        offset.col += i;
+        auto expr = transformGenericExpr(parseExpr(exprCode, offset));
+        if (!expr->isType() && !expr->getStatic())
+          error(expr, "expression {} is not a type or static expression",
+                expr->toString());
+        LOG("~~> {} -> {}", exprCode, expr->toString());
+        items.push_back(N<ExprStmt>(move(expr)));
+      }
+      braceStart = i + 1;
+      finalCode += '}';
+    }
+  }
+  if (braceCount)
+    error("f-string braces are not balanced");
+  if (braceStart != code.size())
+    finalCode += code.substr(braceStart, code.size() - braceStart);
+
+  return N<SuiteStmt>(move(items));
+}
+
+ExprPtr TransformVisitor::transformGenericExpr(const ExprPtr &i) {
+  auto t = transform(i, true);
+  set<string> captures;
+  if (isStaticExpr(t, captures))
+    return N<StaticExpr>(clone(t), move(captures));
+  else
+    return t;
+}
+
+bool TransformVisitor::isStaticExpr(const ExprPtr &expr, set<string> &captures) {
+  static unordered_set<string> supported{"<",  "<=", ">", ">=", "==", "!=", "&&",
+                                         "||", "+",  "-", "*",  "//", "%"};
+  if (auto ei = expr->getId()) {
+    auto val = ctx->find(ei->value);
+    if (val && val->isStatic()) {
+      captures.insert(ei->value);
+      return true;
+    }
+    return false;
+  } else if (auto eb = expr->getBinary()) {
+    return (supported.find(eb->op) != supported.end()) &&
+           isStaticExpr(eb->lexpr, captures) && isStaticExpr(eb->rexpr, captures);
+  } else if (auto eu = CAST(expr, UnaryExpr)) {
+    return ((eu->op == "-") || (eu->op == "!")) && isStaticExpr(eu->expr, captures);
+  } else if (auto ef = CAST(expr, IfExpr)) {
+    return isStaticExpr(ef->cond, captures) && isStaticExpr(ef->ifexpr, captures) &&
+           isStaticExpr(ef->elsexpr, captures);
+  } else if (auto eit = expr->getInt()) {
+    if (eit->suffix.size())
+      return false;
+    try {
+      std::stoull(eit->value, nullptr, 0);
+    } catch (std::out_of_range &) {
+      return false;
+    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 } // namespace ast

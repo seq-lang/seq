@@ -46,6 +46,9 @@ private:
                             const vector<Param> &args, const ExprPtr &ret,
                             string altName);
   StmtPtr parsePythonImport(const ExprPtr &what, string as);
+  StmtPtr parseLLVMImport(const Stmt *codeStmt);
+  bool isStaticExpr(const ExprPtr &expr, set<string> &captures);
+  ExprPtr transformGenericExpr(const ExprPtr &expr);
 
   void defaultVisit(const Expr *e) override;
   void defaultVisit(const Stmt *s) override;

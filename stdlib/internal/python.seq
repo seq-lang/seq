@@ -36,6 +36,10 @@ from C import LD.PyDict_Next(cobj, Ptr[int], Ptr[cobj], Ptr[cobj]) -> int
 
 @extend
 class pyobj:
+    @internal
+    def __new__(p: Ptr[byte]) -> pyobj:
+        pass
+
     def __getitem__(self, name: str):
         return pyobj.exc_wrap(pyobj(PyObject_GetAttrString(self.p, name.c_str())))
 

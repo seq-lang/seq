@@ -1,8 +1,0 @@
-@internal
-@tuple
-class pyobj:
-    p: Ptr[byte]
-
-    @internal
-    def __new__(p: Ptr[byte]) -> pyobj:
-        pass

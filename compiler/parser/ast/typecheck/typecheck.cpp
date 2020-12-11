@@ -327,10 +327,9 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
         assert(val && val->isStatic());
         auto t = val->getType()->follow();
         m[g] = {g, t,
-                t->getLink()
-                    ? t->getLink()->id
-                    : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
-                                                       : 0};
+                t->getLink()                       ? t->getLink()->id
+                : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
+                                                   : 0};
       }
       auto sv = StaticVisitor(m);
       sv.transform(s->expr);
@@ -1732,10 +1731,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
       ctx->typecheckLevel++;
       auto oldIter = ctx->iteration;
       ctx->iteration = 0;
-      if (in(ast->attributes, "llvm"))
-        realized = clone(ast->suite);
-      else
-        realized = realizeBlock(ast->suite);
+      realized = realizeBlock(ast->suite);
       ctx->iteration = oldIter;
       ctx->typecheckLevel--;
 

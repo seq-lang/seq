@@ -468,8 +468,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       f->setArgNames(names);
       f->setOut(realizeType(t->args[0]->getClass()));
       // auto s = CAST(ast->suite, SuiteStmt);
-      // assert(s && s->stmts.size() == 1);
-      // LOG("--> {}", ast->suite->toString());
+      // assert(s && s->stmts.size() == 1)
       auto c = ast->suite->firstInBlock();
       assert(c);
       auto e = c->getExpr();
@@ -477,7 +476,26 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       auto sp = CAST(e->expr, StringExpr);
       assert(sp);
 
-      std::istringstream sin(sp->value);
+      fmt::dynamic_format_arg_store<fmt::format_context> store;
+      //        LOG("{}", real.first);
+      //        LOG("--> {}", sp->value);
+      auto &ss = ast->suite->getSuite()->stmts;
+      for (int i = 1; i < ss.size(); i++) {
+        auto &ex = ss[i]->getExpr()->expr;
+        if (auto ei = ex->getInt()) { // static expr
+          store.push_back(ei->intValue);
+        } else {
+          seqassert(ex->isType() && ex->getType(), "invalid LLVM type argument {}",
+                    ex->toString());
+          store.push_back(realizeType(ex->getType()->getClass())->getLLVMTypeStr());
+        }
+        //        LOG("--> {}", ex->getType() ? ex->getType()->toString() : "-");
+      }
+      string res = fmt::vformat(sp->value, store);
+      if (ss.size() > 1)
+        LOG("[FINAL] {} -->\n {}", real.first, res);
+
+      std::istringstream sin(res);
       string l, declare, code;
       bool isDeclare = true;
       vector<string> lines;
