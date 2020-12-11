@@ -133,8 +133,13 @@ void CodegenVisitor::visit(const BoolExpr *expr) {
 }
 
 void CodegenVisitor::visit(const IntExpr *expr) {
-  result = CodegenResult(
-      Nx<LiteralOperand>(expr, expr->value, realizeType(expr->getType()->getClass())));
+  if (!expr->sign)
+    result = CodegenResult(
+        Nx<LiteralOperand>(expr, int64_t(uint64_t(expr->intValue)),
+                           realizeType(expr->getType()->getClass())));
+  else
+    result = CodegenResult(Nx<LiteralOperand>(expr, expr->intValue,
+                                              realizeType(expr->getType()->getClass())));
 }
 
 void CodegenVisitor::visit(const FloatExpr *expr) {
@@ -413,7 +418,7 @@ void CodegenVisitor::visit(const ForStmt *stmt) {
   ctx->getSeries()->series.push_back(Nx<ForFlow>(stmt, "for", move(setupSeries),
                                                  Nx<VarOperand>(stmt, doneVar), nullptr,
                                                  move(bodySeries), move(updateSeries)));
-  ctx->getSeries()->series.push_back(Nx<BlockFlow>(stmt, "while_done"));
+  ctx->getSeries()->series.push_back(Nx<BlockFlow>(stmt, "for_done"));
 }
 
 void CodegenVisitor::visit(const IfStmt *stmt) {

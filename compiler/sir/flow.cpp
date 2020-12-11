@@ -149,7 +149,7 @@ std::ostream &IfFlow::doFormat(std::ostream &os) const {
     fmt::print(os, FMT_STRING("({}) "), *check);
   fmt::print(os, FMT_STRING("{}) {{\n{}\n}}"), *cond, *trueBranch);
   if (falseBranch)
-    fmt::print(os, FMT_STRING("else {{\n{}\n}}"), *falseBranch);
+    fmt::print(os, FMT_STRING(" else {{\n{}\n}}"), *falseBranch);
   return os;
 }
 

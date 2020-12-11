@@ -46,7 +46,7 @@ Var *Func::getArgVar(const std::string &n) {
 std::ostream &Func::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("def {}(\n"), name);
   for (const auto &argVar : args) {
-    fmt::print(os, FMT_STRING("{}\n"), *argVar.var);
+    fmt::print(os, FMT_STRING("{}\n"), argVar.name);
   }
   fmt::print(os, FMT_STRING(") -> {} [\n"),
              type ? dynamic_cast<types::FuncType *>(type)->rType->referenceString()
