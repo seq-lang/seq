@@ -56,6 +56,10 @@ struct Stmt : public seq::SrcObject {
   virtual const ExprStmt *getExpr() const { return nullptr; }
   virtual const SuiteStmt *getSuite() const { return nullptr; }
   virtual const FunctionStmt *getFunction() const { return nullptr; }
+
+  /// @return the first statement in a suite; if a statement is not a suite, returns the
+  /// statement itself
+  virtual const Stmt *firstInBlock() const { return this; }
 };
 using StmtPtr = unique_ptr<Stmt>;
 
@@ -82,6 +86,9 @@ struct SuiteStmt : public Stmt {
   void accept(ASTVisitor &visitor) const override;
 
   const SuiteStmt *getSuite() const override { return this; }
+  const Stmt *firstInBlock() const override {
+    return stmts.empty() ? nullptr : stmts[0].get();
+  }
 };
 
 /// Pass statement.

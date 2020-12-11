@@ -1,5 +1,5 @@
 import os
-from core.dlopen import dlext
+from internal.dlopen import dlext
 LD = os.getenv('SEQ_PYTHON', default='libpython.' + dlext())
 
 from C import LD.PyUnicode_AsEncodedString(cobj, cobj, cobj) -> cobj

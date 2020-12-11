@@ -1,0 +1,46 @@
+@extend
+class bool:
+    @internal
+    def __new__() -> bool:
+        pass
+    def __new__[T](what: T) -> bool: # lowest priority!
+        return what.__bool__()
+    @internal
+    def __str__(self) -> str:
+        pass
+    @internal
+    def __copy__(self) -> bool:
+        pass
+    @internal
+    def __bool__(self) -> bool:
+        pass
+    @internal
+    def __invert__(self) -> bool:
+        pass
+    @internal
+    def __eq__(self, other: bool) -> bool:
+        pass
+    @internal
+    def __ne__(self, other: bool) -> bool:
+        pass
+    @internal
+    def __lt__(self, other: bool) -> bool:
+        pass
+    @internal
+    def __gt__(self, other: bool) -> bool:
+        pass
+    @internal
+    def __le__(self, other: bool) -> bool:
+        pass
+    @internal
+    def __ge__(self, other: bool) -> bool:
+        pass
+    @internal
+    def __and__(self, other: bool) -> bool:
+        pass
+    @internal
+    def __or__(self, other: bool) -> bool:
+        pass
+    @internal
+    def __xor__(self, other: bool) -> bool:
+        pass

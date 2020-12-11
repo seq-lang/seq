@@ -276,7 +276,7 @@ class BWA:
         return a
 
     def align(self, s: seq):
-        import core.gc as gc
+        import internal.gc as gc
         from C import free(Ptr[byte])
         p = s.ptr if s.len >= 0 else str(s).ptr
         ar = mem_alnreg_v()

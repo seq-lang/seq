@@ -327,9 +327,10 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
         assert(val && val->isStatic());
         auto t = val->getType()->follow();
         m[g] = {g, t,
-                t->getLink()                       ? t->getLink()->id
-                : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
-                                                   : 0};
+                t->getLink()
+                    ? t->getLink()->id
+                    : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
+                                                       : 0};
       }
       auto sv = StaticVisitor(m);
       sv.transform(s->expr);
@@ -1222,8 +1223,8 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
       TypecheckItem::Func, t};
   ctx->add(TypecheckItem::Func, stmt->name, t, true, false, false);
 
-  if (in(stmt->attributes, "builtin") || in(stmt->attributes, ".c") ||
-      in(stmt->attributes, "llvm")) {
+  if (in(stmt->attributes, "builtin") || in(stmt->attributes, ".c") /*||
+      in(stmt->attributes, "llvm")*/) {
     if (!t->canRealize())
       error("builtins and external functions must be realizable");
     realizeFunc(ctx->instantiate(getSrcInfo(), t)->getFunc());

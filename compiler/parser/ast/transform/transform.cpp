@@ -48,7 +48,7 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s,
 
   if (cache->imports.find("") == cache->imports.end()) {
     auto stdlib = make_shared<TransformContext>("", cache);
-    auto stdlibPath = stdlib->findFile("core", "", true);
+    auto stdlibPath = stdlib->findFile("internal", "", true);
     if (stdlibPath.empty())
       ast::error("cannot load standard library");
     stdlib->setFilename(stdlibPath);
@@ -81,20 +81,19 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s,
     }
 
     StmtPtr stmts = nullptr;
-    stdlib->setFlag("internal");
+    // stdlib->setFlag("internal");
     assert(stdlibPath.substr(stdlibPath.size() - 12) == "__init__.seq");
-    auto internal = stdlibPath.substr(0, stdlibPath.size() - 12) + "__internal__.seq";
-    stdlib->setFilename(internal);
-    // Load core aliases
-    auto code = "cobj = Ptr[byte]\n"
-                "@internal\n@tuple\nclass pyobj:\n  p: cobj\n"
-                "@internal\n@tuple\nclass str:\n  len: int\n  ptr: Ptr[byte]\n";
-    stmts = parseCode(internal, code);
-    preamble->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
+    // auto internal = stdlibPath.substr(0, stdlibPath.size() - 12) +
+    // "__internal__.seq"; stdlib->setFilename(internal); Load core aliases auto code =
+    // "cobj = Ptr[byte]\n"
+    //             "@internal\n@tuple\nclass pyobj:\n  p: cobj\n"
+    //             "@internal\n@tuple\nclass str:\n  len: int\n  ptr: Ptr[byte]\n";
+    // stmts = parseCode(internal, code);
+    // preamble->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
     // Load __internal__
-    stmts = parseFile(internal);
-    suite->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
-    stdlib->unsetFlag("internal");
+    // stmts = parseFile(internal);
+    // suite->stmts.push_back(TransformVisitor(stdlib).transform(stmts));
+    // stdlib->unsetFlag("internal");
     // Load stdlib
     stdlib->setFilename(stdlibPath);
     stmts = parseFile(stdlibPath);
@@ -957,24 +956,24 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
   auto canonicalName = ctx->generateCanonicalName(stmt->name);
   bool isClassMember = ctx->getLevel() && ctx->bases.back().isType();
 
-  if (in(stmt->attributes, "llvm")) {
-    auto s = CAST(stmt->suite, SuiteStmt);
-    assert(s && s->stmts.size() == 1);
-    auto sp = CAST(s->stmts[0], ExprStmt);
-    seqassert(sp && CAST(sp->expr, StringExpr), "invalid llvm");
+  // if (in(stmt->attributes, "llvm")) {
+  //   auto s = CAST(stmt->suite, SuiteStmt);
+  //   assert(s && s->stmts.size() == 1);
+  //   auto sp = CAST(s->stmts[0], ExprStmt);
+  //   seqassert(sp && CAST(sp->expr, StringExpr), "invalid llvm");
 
-    vector<Param> args;
-    for (int ia = 0; ia < stmt->args.size(); ia++) {
-      auto &a = stmt->args[ia];
-      auto typeAst = transformType(a.type);
-      if (!typeAst && isClassMember && ia == 0 && a.name == "self")
-        typeAst = transformType(ctx->bases[ctx->bases.size() - 1].ast);
-      args.push_back(Param{a.name, move(typeAst), transform(a.deflt)});
-    }
-    resultStmt =
-        parseCImport(stmt->name, args, stmt->ret, "", CAST(sp->expr, StringExpr));
-    return;
-  }
+  //   vector<Param> args;
+  //   for (int ia = 0; ia < stmt->args.size(); ia++) {
+  //     auto &a = stmt->args[ia];
+  //     auto typeAst = transformType(a.type);
+  //     if (!typeAst && isClassMember && ia == 0 && a.name == "self")
+  //       typeAst = transformType(ctx->bases[ctx->bases.size() - 1].ast);
+  //     args.push_back(Param{a.name, move(typeAst), transform(a.deflt)});
+  //   }
+  //   resultStmt =
+  //       parseCImport(stmt->name, args, stmt->ret, "", CAST(sp->expr, StringExpr));
+  //   return;
+  // }
 
   if (in(stmt->attributes, "builtin") && (ctx->getLevel() || isClassMember))
     error("builtins must be defined at the toplevel");
@@ -1001,6 +1000,8 @@ void TransformVisitor::visit(const FunctionStmt *stmt) {
     args.push_back(Param{a.name, move(typeAst), transform(a.deflt)});
     ctx->add(TransformItem::Var, a.name);
   }
+  if (!stmt->ret && in(stmt->attributes, "llvm"))
+    error("LLVM functions must have a return type");
   auto ret = transformType(stmt->ret);
   StmtPtr suite = nullptr;
   if (!in(stmt->attributes, "internal") && !in(stmt->attributes, ".c")) {

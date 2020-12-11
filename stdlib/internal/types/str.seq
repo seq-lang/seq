@@ -1,0 +1,69 @@
+@extend
+class str:
+    @internal
+    def __new__(p: Ptr[byte], l: int) -> str:
+        pass
+    def __new__() -> str:
+        return str(Ptr[byte](), 0)
+    def __new__[T](what: T) -> str: # lowest priority!
+        return what.__str__()
+    def __str__(what: str) -> str:
+        return what
+    def __len__(self) -> int:
+        return self.len
+    def __bool__(self) -> bool:
+        return self.len != 0
+    def __copy__(self) -> str:
+        return self
+    @llvm
+    def memcpy(dest: Ptr[byte], src: Ptr[byte], len: int) -> void:
+        declare void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest, i8* %src, i64 %len, i32 %align, i1 %isvolatile)
+        call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest, i8* %src, i64 %len, i32 0, i1 false)
+        ret void
+    @llvm
+    def memmove(dest: Ptr[byte], src: Ptr[byte], len: int) -> void:
+        declare void @llvm.memmove.p0i8.p0i8.i64(i8* %dest, i8* %src, i64 %len, i32 %align, i1 %isvolatile)
+        call void @llvm.memmove.p0i8.p0i8.i64(i8* %dest, i8* %src, i64 %len, i32 0, i1 false)
+        ret void
+    @llvm
+    def memset(dest: Ptr[byte], val: byte, len: int) -> void:
+        declare void @llvm.memset.p0i8.i64(i8* %dest, i8 %val, i64 %len, i32 %align, i1 %isvolatile)
+        call void @llvm.memset.p0i8.i64(i8* %dest, i8 %val, i64 %len, i32 0, i1 false)
+        ret void
+    def __add__(self, other: str) -> str:
+        len1 = self.len
+        len2 = other.len
+        len3 = len1 + len2
+        p = Ptr[byte](len3)
+        str.memcpy(p, self.ptr, len1)
+        str.memcpy(p + len1, other.ptr, len2)
+        return str(p, len3)
+    def _tuple_str(strs: Ptr[str], n: int) -> str:
+        total = 2  # one for each of '(' and ')'
+        i = 0
+        while i < n:
+            total += strs[i].len
+            if i < n - 1:
+                total += 2  # ", "
+            i += 1
+
+        buf = Ptr[byte](total)
+        where = 0
+        buf[where] = byte(40)  # '('
+        where += 1
+
+        i = 0
+        while i < n:
+            s = strs[i]
+            l = s.len
+            str.memcpy(buf + where, s.ptr, l)
+            where += l
+            if i < n - 1:
+                buf[where] = byte(44)  # ','
+                where += 1
+                buf[where] = byte(32)  # ' '
+                where += 1
+            i += 1
+        buf[where] = byte(41)  # ')'
+
+        return str(buf, total)

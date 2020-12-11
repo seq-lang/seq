@@ -1,0 +1,267 @@
+@extend
+class float:
+    @internal
+    def __new__() -> float:
+        pass
+    @internal
+    def __new__(f: float) -> float:
+        pass
+    @llvm
+    def __new__(i: int) -> float:
+        %tmp = sitofp i64 %i to double
+        ret double %tmp
+    @internal
+    def __str__(self) -> str:
+        pass
+    @internal
+    def __copy__(self) -> float:
+        pass
+    @internal
+    def __bool__(self) -> bool:
+        pass
+    @internal
+    def __pos__(self) -> float:
+        pass
+    @internal
+    def __neg__(self) -> float:
+        pass
+    @internal
+    def __div__(self, other: float) -> float:
+        pass
+    @internal
+    def __div__(self, other: int) -> float:
+        pass
+    @internal
+    def __pow__(self, other: float) -> float:
+        pass
+    @internal
+    def __pow__(self, other: int) -> float:
+        pass
+
+    @llvm
+    def __add__(a: float, b: float) -> float:
+        %tmp = fadd double %a, %b
+        ret double %tmp
+    @internal
+    def __add__(self, other: int) -> float:
+        pass
+    @llvm
+    def __sub__(a: float, b: float) -> float:
+        %tmp = fsub double %a, %b
+        ret double %tmp
+    @internal
+    def __sub__(self, other: int) -> float:
+        pass
+    @llvm
+    def __mul__(a: float, b: float) -> float:
+        %tmp = fmul double %a, %b
+        ret double %tmp
+    @internal
+    def __mul__(self, other: int) -> float:
+        pass
+    @llvm
+    def __truediv__(a: float, b: float) -> float:
+        %tmp = fdiv double %a, %b
+        ret double %tmp
+    @internal
+    def __truediv__(self, other: int) -> float:
+        pass
+    @llvm
+    def __mod__(a: float, b: float) -> float:
+        %tmp = frem double %a, %b
+        ret double %tmp
+    @internal
+    def __mod__(self, other: int) -> float:
+        pass
+    @llvm
+    def __eq__(a: float, b: float) -> bool:
+        %tmp = fcmp oeq double %a, %b
+        %res = zext i1 %tmp to i8
+        ret i8 %res
+    @internal
+    def __eq__(self, other: int) -> bool:
+        pass
+    @llvm
+    def __ne__(a: float, b: float) -> bool:
+        entry:
+            %tmp = fcmp one double %a, %b
+            %res = zext i1 %tmp to i8
+            ret i8 %res
+    @internal
+    def __ne__(self, other: int) -> bool:
+        pass
+    @llvm
+    def __lt__(a: float, b: float) -> bool:
+        %tmp = fcmp olt double %a, %b
+        %res = zext i1 %tmp to i8
+        ret i8 %res
+    @internal
+    def __lt__(self, other: int) -> bool:
+        pass
+    @llvm
+    def __gt__(a: float, b: float) -> bool:
+        %tmp = fcmp ogt double %a, %b
+        %res = zext i1 %tmp to i8
+        ret i8 %res
+    @internal
+    def __gt__(self, other: int) -> bool:
+        pass
+    @llvm
+    def __le__(a: float, b: float) -> bool:
+        %tmp = fcmp ole double %a, %b
+        %res = zext i1 %tmp to i8
+        ret i8 %res
+    @internal
+    def __le__(self, other: int) -> bool:
+        pass
+    @llvm
+    def __ge__(a: float, b: float) -> bool:
+        %tmp = fcmp oge double %a, %b
+        %res = zext i1 %tmp to i8
+        ret i8 %res
+    @internal
+    def __ge__(self, other: int) -> bool:
+        pass
+    @llvm
+    def sqrt(a: float) -> float:
+        declare double @llvm.sqrt.f64(double %a)
+        %tmp = call double @llvm.sqrt.f64(double %a)
+        ret double %tmp
+    @llvm
+    def sin(a: float) -> float:
+        declare double @llvm.sin.f64(double %a)
+        %tmp = call double @llvm.sin.f64(double %a)
+        ret double %tmp
+    @llvm
+    def cos(a: float) -> float:
+        declare double @llvm.cos.f64(double %a)
+        %tmp = call double @llvm.cos.f64(double %a)
+        ret double %tmp
+    @llvm
+    def exp(a: float) -> float:
+        declare double @llvm.exp.f64(double %a)
+        %tmp = call double @llvm.exp.f64(double %a)
+        ret double %tmp
+    @llvm
+    def exp2(a: float) -> float:
+        declare double @llvm.exp2.f64(double %a)
+        %tmp = call double @llvm.exp2.f64(double %a)
+        ret double %tmp
+    @llvm
+    def log(a: float) -> float:
+        declare double @llvm.log.f64(double %a)
+        %tmp = call double @llvm.log.f64(double %a)
+        ret double %tmp
+    @llvm
+    def log10(a: float) -> float:
+        declare double @llvm.log10.f64(double %a)
+        %tmp = call double @llvm.log10.f64(double %a)
+        ret double %tmp
+    @llvm
+    def log2(a: float) -> float:
+        declare double @llvm.log2.f64(double %a)
+        %tmp = call double @llvm.log2.f64(double %a)
+        ret double %tmp
+    @llvm
+    def __abs__(a: float) -> float:
+        declare double @llvm.fabs.f64(double %a)
+        %tmp = call double @llvm.fabs.f64(double %a)
+        ret double %tmp
+    @llvm
+    def __floor__(a: float) -> float:
+        declare double @llvm.floor.f64(double %a)
+        %tmp = call double @llvm.floor.f64(double %a)
+        ret double %tmp
+    @llvm
+    def __ceil__(a: float) -> float:
+        declare double @llvm.ceil.f64(double %a)
+        %tmp = call double @llvm.ceil.f64(double %a)
+        ret double %tmp
+    @llvm
+    def __trunc__(a: float) -> float:
+        declare double @llvm.trunc.f64(double %a)
+        %tmp = call double @llvm.trunc.f64(double %a)
+        ret double %tmp
+    @llvm
+    def rint(a: float) -> float:
+        declare double @llvm.rint.f64(double %a)
+        %tmp = call double @llvm.rint.f64(double %a)
+        ret double %tmp
+    @llvm
+    def nearbyint(a: float) -> float:
+        declare double @llvm.nearbyint.f64(double %a)
+        %tmp = call double @llvm.nearbyint.f64(double %a)
+        ret double %tmp
+    @llvm
+    def __round__(a: float) -> float:
+        declare double @llvm.round.f64(double %a)
+        %tmp = call double @llvm.round.f64(double %a)
+        ret double %tmp
+    @llvm
+    def __pow__(a: float, b: float) -> float:
+        declare double @llvm.pow.f64(double %a, double %b)
+        %tmp = call double @llvm.pow.f64(double %a, double %b)
+        ret double %tmp
+    @llvm
+    def min(a: float, b: float) -> float:
+        declare double @llvm.minnum.f64(double %a, double %b)
+        %tmp = call double @llvm.minnum.f64(double %a, double %b)
+        ret double %tmp
+    @llvm
+    def max(a: float, b: float) -> float:
+        declare double @llvm.maxnum.f64(double %a, double %b)
+        %tmp = call double @llvm.maxnum.f64(double %a, double %b)
+        ret double %tmp
+    @llvm
+    def copysign(a: float, b: float) -> float:
+        declare double @llvm.copysign.f64(double %a, double %b)
+        %tmp = call double @llvm.copysign.f64(double %a, double %b)
+        ret double %tmp
+    @llvm
+    def fma(a: float, b: float, c: float) -> float:
+        declare double @llvm.fma.f64(double %a, double %b, double %c)
+        %tmp = call double @llvm.fma.f64(double %a, double %b, double %c)
+        ret double %tmp
+    def __hash__(self):
+        from C import frexp(float, Ptr[Int[32]]) -> float
+
+        HASH_BITS = 61
+        HASH_MODULUS = (1 << HASH_BITS) - 1
+        HASH_INF = 314159
+        HASH_NAN = 0
+        INF = 1.0 / 0.0
+        NAN = 0.0 / 0.0
+        v = self
+
+        if v == INF or v == -INF:
+            return HASH_INF if v > 0 else -HASH_INF
+        if v == NAN:
+            return HASH_NAN
+
+        _e = i32(0)
+        m = frexp(v, __ptr__(_e))
+        e = int(_e)
+
+        sign = 1
+        if m < 0:
+            sign = -1
+            m = -m
+
+        x = 0
+        while m:
+            x = ((x << 28) & HASH_MODULUS) | x >> (HASH_BITS - 28)
+            m *= 268435456.0  # 2**28
+            e -= 28
+            y = int(m)
+            m -= y
+            x += y
+            if x >= HASH_MODULUS:
+                x -= HASH_MODULUS
+
+        e = e % HASH_BITS if e >= 0 else HASH_BITS - 1 - ((-1-e) % HASH_BITS)
+        x = ((x << e) & HASH_MODULUS) | x >> (HASH_BITS - e)
+
+        x = x * sign
+        if x == -1:
+            x = -2
+        return x

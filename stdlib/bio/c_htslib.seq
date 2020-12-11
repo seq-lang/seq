@@ -1,5 +1,5 @@
 import os
-from core.dlopen import dlext
+from internal.dlopen import dlext
 LD = os.getenv('SEQ_HTSLIB', default='libhts.' + dlext())
 
 # <htslib.h>

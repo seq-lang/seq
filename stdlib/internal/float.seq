@@ -1,0 +1,21 @@
+@extend
+class float:
+    def __new__(s: str) -> float:
+        buf = __array__[byte](32)
+        n = s.__len__()
+        need_dyn_alloc = (n >= buf.__len__())
+
+        p = _gc.alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
+        str.memcpy(p, s.ptr, n)
+        p[n] = byte(0)
+
+        end = cobj()
+        result = _C.strtod(p, __ptr__(end))
+
+        if need_dyn_alloc:
+            _gc.free(p)
+
+        if end != p + n:
+            raise ValueError(f"could not convert string to float: {s}")
+
+        return result

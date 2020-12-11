@@ -1,6 +1,5 @@
 @extend
 class str:
-
 # Magic methods
 
     def __hash__(self):

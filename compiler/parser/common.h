@@ -77,10 +77,14 @@ vector<string> split(const string &str, char delim);
 string escape(const string &str);
 /// Remove leading dot from a string.
 string chop(const string &str);
-/// True if a string s starts with prefix.
+/// True if a string str starts with a prefix.
 bool startswith(const string &str, const string &prefix);
-/// True if a string s ends with suffix.
+/// True if a string str ends with a suffix.
 bool endswith(const string &str, const string &suffix);
+/// Trims whitespace at the beginning of the string.
+void ltrim(string &str);
+/// Trims whitespace at the end of the string.
+void rtrim(string &str);
 /// Combine items separated by a delimiter into a string.
 template <typename T> string join(const T &items, const string &delim = " ") {
   string s;

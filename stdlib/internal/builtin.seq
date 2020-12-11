@@ -295,3 +295,48 @@ def _raw_type_str(p: Ptr[byte], name: str) -> str:
 def _ensure_not_none(p: Ptr[byte], memb: str):
     if not p:
         raise AttributeError("'NoneType' object has no attribute '" + memb + "'")
+
+@extend
+class int:
+    def _from_str(s: str, base: int):
+        if base < 0 or base > 36 or base == 1:
+            raise ValueError("int() base must be >= 2 and <= 36, or 0")
+
+        buf = __array__[byte](32)
+        n = len(s)
+        need_dyn_alloc = (n >= len(buf))
+
+        p = _gc.alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
+        str.memcpy(p, s.ptr, n)
+        p[n] = byte(0)
+
+        end = cobj()
+        result = _C.strtoll(p, __ptr__(end), i32(base))
+
+        if need_dyn_alloc:
+            _gc.free(p)
+
+        if end != p + n:
+            raise ValueError("invalid literal for int() with base " + str(base) + ": " + s)
+
+        return result
+
+@builtin
+def _test_failed(file: str, line: int, msg: str):
+    s = "\033[1;31mTEST FAILED:\033[0m " + file + " (line " + str(line) + ")"
+    if msg:
+        s += ": " + msg
+    print s
+
+def check_errno(prefix: str):
+    msg = _C.seq_check_errno()
+    if msg:
+        raise OSError(prefix + msg)
+
+@builtin
+def _make_assert_error(msg: str) -> AssertionError:
+    return AssertionError(msg)
+
+@builtin
+def _handle_exit(e: SystemExit):
+    _C.exit(e.status)

@@ -1,0 +1,37 @@
+@internal
+@tuple
+class Array[T]:
+    len: int
+    ptr: Ptr[T]
+
+    @internal
+    def __new__(len: int) -> Array[T]:
+        pass
+    @internal
+    def __new__(data: Ptr[T], len: int) -> Array[T]:
+        pass
+    @internal
+    def __copy__(self) -> Array[T]:
+        pass
+    @internal
+    def __len__(self) -> int:
+        pass
+    @internal
+    def __bool__(self) -> bool:
+        pass
+    @internal
+    def __getitem__(self, index: int) -> T:
+        pass
+    @internal
+    def __slice__(self, l: int, r: int) -> Array[T]:
+        pass
+    @internal
+    def __slice_left__(self, r: int) -> Array[T]:
+        pass
+    @internal
+    def __slice_right__(self, l: int) -> Array[T]:
+        pass
+    @internal
+    def __setitem__(self, index: int, what: T) -> void:
+        pass
+array = Array

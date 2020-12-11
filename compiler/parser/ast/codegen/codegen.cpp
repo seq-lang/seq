@@ -469,28 +469,35 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       f->setOut(realizeType(t->args[0]->getClass()));
       // auto s = CAST(ast->suite, SuiteStmt);
       // assert(s && s->stmts.size() == 1);
-      auto c = CAST(ast->suite, ExprStmt);
+      // LOG("--> {}", ast->suite->toString());
+      auto c = ast->suite->firstInBlock();
       assert(c);
-      auto sp = CAST(c->expr, StringExpr);
+      auto e = c->getExpr();
+      assert(e);
+      auto sp = CAST(e->expr, StringExpr);
       assert(sp);
 
       std::istringstream sin(sp->value);
       string l, declare, code;
       bool isDeclare = true;
+      vector<string> lines;
       while (std::getline(sin, l)) {
         string lp = l;
-        lp.erase(lp.begin(), std::find_if(lp.begin(), lp.end(), [](unsigned char ch) {
-                   return !std::isspace(ch);
-                 }));
-        if (!startswith(lp, "declare "))
+        ltrim(lp);
+        rtrim(lp);
+        if (isDeclare && !startswith(lp, "declare ")) {
           isDeclare = false;
+          if (!lp.empty() && lp.back() != ':')
+            lines.push_back("entry:");
+        }
         if (isDeclare)
           declare += lp + "\n";
         else
-          code += l + "\n";
+          lines.push_back(l);
       }
       f->setDeclares(declare);
-      f->setCode(code);
+      // LOG("--\n{}\n", join(lines, "\n"));
+      f->setCode(join(lines, "\n"));
     } else {
       auto f = dynamic_cast<seq::Func *>(fp.first);
       assert(f);

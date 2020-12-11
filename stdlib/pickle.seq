@@ -1,4 +1,4 @@
-from core.file import _gz_errcheck
+from internal.file import _gz_errcheck
 from bio.seq import seq
 
 def pickle[T](x: T, jar: Jar):
@@ -128,7 +128,7 @@ class List[T]:
 @extend
 class Dict[K, V]:
     def __pickle__(self, jar: Jar):
-        import core.collections.khash as khash
+        import internal.khash as khash
         if _gc.atomic[K]() and _gc.atomic[V]():
             pickle(self._n_buckets, jar)
             pickle(self._size, jar)
@@ -148,7 +148,7 @@ class Dict[K, V]:
                 pickle(v, jar)
 
     def __unpickle__(jar: Jar):
-        import core.collections.khash as khash
+        import internal.khash as khash
         d = Dict[K,V]()
         if _gc.atomic[K]() and _gc.atomic[V]():
             n_buckets = unpickle[int](jar)
@@ -185,7 +185,7 @@ class Dict[K, V]:
 @extend
 class Set[K]:
     def __pickle__(self, jar: Jar):
-        import core.collections.khash as khash
+        import internal.khash as khash
         if _gc.atomic[K]():
             pickle(self._n_buckets, jar)
             pickle(self._size, jar)
@@ -203,7 +203,7 @@ class Set[K]:
                 pickle(k, jar)
 
     def __unpickle__(jar: Jar):
-        import core.collections.khash as khash
+        import internal.khash as khash
         s = Set[K]()
         if _gc.atomic[K]():
             n_buckets = unpickle[int](jar)

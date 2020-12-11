@@ -1,0 +1,211 @@
+
+@extend
+class Int[N]:
+    @internal
+    def __new__() -> Int[N]:
+        pass
+    @internal
+    def __new__(what: Int[N]) -> Int[N]:
+        pass
+    @internal
+    def __new__(what: int) -> Int[N]:
+        pass
+    @internal
+    def __new__(what: UInt[N]) -> Int[N]:
+        pass
+    @internal
+    def __copy__(self) -> Int[N]:
+        pass
+    @internal
+    def __hash__(self) -> int:
+        pass
+    @internal
+    def __bool__(self) -> bool:
+        pass
+    @internal
+    def __pos__(self) -> Int[N]:
+        pass
+    @internal
+    def __neg__(self) -> Int[N]:
+        pass
+    @internal
+    def __invert__(self) -> Int[N]:
+        pass
+    @internal
+    def __add__(self, other: Int[N]) -> Int[N]:
+        pass
+    @internal
+    def __sub__(self, other: Int[N]) -> Int[N]:
+        pass
+    @internal
+    def __mul__(self, other: Int[N]) -> Int[N]:
+        pass
+    @internal
+    def __div__(self, other: Int[N]) -> Int[N]:
+        pass
+    @internal
+    def __truediv__(self, other: Int[N]) -> float:
+        pass
+    @internal
+    def __mod__(self, other: Int[N]) -> Int[N]:
+        pass
+    @internal
+    def __lshift__(self, other: Int[N]) -> Int[N]:
+        pass
+    @internal
+    def __rshift__(self, other: Int[N]) -> Int[N]:
+        pass
+    @internal
+    def __eq__(self, other: Int[N]) -> bool:
+        pass
+    @internal
+    def __ne__(self, other: Int[N]) -> bool:
+        pass
+    @internal
+    def __lt__(self, other: Int[N]) -> bool:
+        pass
+    @internal
+    def __gt__(self, other: Int[N]) -> bool:
+        pass
+    @internal
+    def __le__(self, other: Int[N]) -> bool:
+        pass
+    @internal
+    def __ge__(self, other: Int[N]) -> bool:
+        pass
+    @internal
+    def __and__(self, other: Int[N]) -> Int[N]:
+        pass
+    @internal
+    def __or__(self, other: Int[N]) -> Int[N]:
+        pass
+    @internal
+    def __xor__(self, other: Int[N]) -> Int[N]:
+        pass
+    @internal
+    def __pickle__(self, dest: Ptr[byte]) -> void:
+        pass
+    @internal
+    def __unpickle__(src: Ptr[byte]) -> Int[N]:
+        pass
+    @internal
+    def __str__(self) -> str:
+        pass
+    @internal
+    def popcnt(self) -> int:
+        pass
+    def len() -> int:
+        return N
+
+@extend
+class UInt[N]:
+    @internal
+    def __new__() -> UInt[N]:
+        pass
+    @internal
+    def __new__(what: UInt[N]) -> UInt[N]:
+        pass
+    @internal
+    def __new__(what: int) -> UInt[N]:
+        pass
+    @internal
+    def __new__(what: Int[N]) -> UInt[N]:
+        pass
+    @internal
+    def __int__(self) -> int:
+        pass
+    @internal
+    def __copy__(self) -> UInt[N]:
+        pass
+    @internal
+    def __hash__(self) -> int:
+        pass
+    @internal
+    def __bool__(self) -> bool:
+        pass
+    @internal
+    def __pos__(self) -> UInt[N]:
+        pass
+    @internal
+    def __neg__(self) -> UInt[N]:
+        pass
+    @internal
+    def __invert__(self) -> UInt[N]:
+        pass
+    @internal
+    def __add__(self, other: UInt[N]) -> UInt[N]:
+        pass
+    @internal
+    def __sub__(self, other: UInt[N]) -> UInt[N]:
+        pass
+    @internal
+    def __mul__(self, other: UInt[N]) -> UInt[N]:
+        pass
+    @internal
+    def __div__(self, other: UInt[N]) -> UInt[N]:
+        pass
+    @internal
+    def __truediv__(self, other: UInt[N]) -> float:
+        pass
+    @internal
+    def __mod__(self, other: UInt[N]) -> UInt[N]:
+        pass
+    @internal
+    def __lshift__(self, other: UInt[N]) -> UInt[N]:
+        pass
+    @internal
+    def __rshift__(self, other: UInt[N]) -> UInt[N]:
+        pass
+    @internal
+    def __eq__(self, other: UInt[N]) -> bool:
+        pass
+    @internal
+    def __ne__(self, other: UInt[N]) -> bool:
+        pass
+    @internal
+    def __lt__(self, other: UInt[N]) -> bool:
+        pass
+    @internal
+    def __gt__(self, other: UInt[N]) -> bool:
+        pass
+    @internal
+    def __le__(self, other: UInt[N]) -> bool:
+        pass
+    @internal
+    def __ge__(self, other: UInt[N]) -> bool:
+        pass
+    @internal
+    def __and__(self, other: UInt[N]) -> UInt[N]:
+        pass
+    @internal
+    def __or__(self, other: UInt[N]) -> UInt[N]:
+        pass
+    @internal
+    def __xor__(self, other: UInt[N]) -> UInt[N]:
+        pass
+    @internal
+    def __pickle__(self, dest: Ptr[byte]) -> void:
+        pass
+    @internal
+    def __unpickle__(src: Ptr[byte]) -> UInt[N]:
+        pass
+    @internal
+    def __str__(self) -> str:
+        pass
+    @internal
+    def __revcomp__(self) -> UInt[N]:
+        pass
+    @internal
+    def popcnt(self) -> int:
+        pass
+    def len() -> int:
+        return N
+
+i8 = Int[8]
+i16 = Int[16]
+i32 = Int[32]
+i64 = Int[64]
+u8 = UInt[8]
+u16 = UInt[16]
+u32 = UInt[32]
+u64 = UInt[64]

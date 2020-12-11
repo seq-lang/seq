@@ -253,10 +253,10 @@ static void verifyModuleFailFast(Module &module) {
   fout << module;
   fout.close();
   if (verifyModule(module, &errs())) {
-    auto fo = fopen("_dump.ll", "w");
-    raw_fd_ostream fout(fileno(fo), true);
-    fout << module;
-    fout.close();
+    // auto fo = fopen("_dump.ll", "w");
+    // raw_fd_ostream fout(fileno(fo), true);
+    // fout << module;
+    // fout.close();
     assert(0);
   }
 }
@@ -405,10 +405,17 @@ void SeqModule::runCodegenPipeline(bool timeIt) {
   using namespace std::chrono;
   auto t = high_resolution_clock::now();
   codegen(module);
-  if (timeIt)
+  if (timeIt) {
     LOG_TIME("[T] llvmgen/c = {:.1f}",
              duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
                  1000.0);
+
+    auto fo = fopen("_dump_raw.ll", "w");
+    raw_fd_ostream fout(fileno(fo), true);
+    fout << *module;
+    fout.close();
+  }
+
   t = high_resolution_clock::now();
   verify();
   if (timeIt)

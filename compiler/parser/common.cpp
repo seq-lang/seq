@@ -78,6 +78,18 @@ bool endswith(const string &str, const string &suffix) {
   return str.size() >= suffix.size() &&
          str.substr(str.size() - suffix.size()) == suffix;
 }
+void ltrim(string &str) {
+  str.erase(str.begin(), std::find_if(str.begin(), str.end(), [](unsigned char ch) {
+              return !std::isspace(ch);
+            }));
+}
+void rtrim(string &str) {
+  /// https://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
+  str.erase(std::find_if(str.rbegin(), str.rend(),
+                         [](unsigned char ch) { return !std::isspace(ch); })
+                .base(),
+            str.end());
+}
 
 /// AST utilities
 
