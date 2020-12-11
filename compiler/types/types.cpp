@@ -697,6 +697,14 @@ types::UnionType *types::Type::asUnion() { return nullptr; }
 
 types::KMer *types::Type::asKMer() { return nullptr; }
 
+std::string types::Type::getLLVMTypeStr() {
+  llvm::Type *llvmType = getLLVMType(config::config().context);
+  std::string bufStr;
+  llvm::raw_string_ostream buf(bufStr);
+  llvmType->print(buf);
+  return buf.str();
+}
+
 BaseFunc *MagicMethod::asFunc(types::Type *type) const {
   std::vector<types::Type *> argsFull(args);
   if (!isStatic)

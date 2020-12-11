@@ -341,6 +341,11 @@ public:
   /// RTTI/`dynamic_cast` so that generic types can be converted
   /// to their actual types.
   virtual KMer *asKMer();
+
+  /// Returns the LLVM string representation of this type,
+  /// e.g. "i64" for "int", "double" for "float" etc.
+  /// Uses default config's LLVM context.
+  virtual std::string getLLVMTypeStr();
 };
 
 /// Convenience method for checking if two types are equal.
