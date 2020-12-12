@@ -119,8 +119,8 @@ def _merge_with_gallop[S,T](arr: Array[T], a: Tuple[int,int], b: Tuple[int,int],
     min_gallop = MIN_GALLOP
 
     combined = Array[T](a[1] + b[1])
-    a_copy = combined.__slice__(0, a[1])
-    b_copy = combined.__slice__(a[1], len(combined))
+    a_copy = combined.slice(0, a[1])
+    b_copy = combined.slice(a[1], len(combined))
 
     j = 0
     for i in range(a[0], a[0] + a[1]):

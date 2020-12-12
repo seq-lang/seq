@@ -1,14 +1,5 @@
 # Seq runtime functions
-from C import seq_alloc(int) -> cobj
-from C import seq_alloc_atomic(int) -> cobj
-from C import seq_realloc(cobj, int) -> cobj
-from C import seq_free(cobj)
-from C import seq_gc_add_roots(cobj, cobj)
-from C import seq_gc_remove_roots(cobj, cobj)
-from C import seq_gc_clear_roots()
-from C import seq_gc_exclude_static_roots(cobj, cobj)
 from C import seq_strdup(cobj) -> str
-from C import seq_str_ptr(Ptr[byte]) -> str
 from C import seq_check_errno() -> str
 from C import seq_stdin() -> cobj
 from C import seq_stdout() -> cobj
@@ -28,7 +19,6 @@ from C import seq_i32_to_float(i32) -> float
 
 # <string.h>
 from C import strtoll(cobj, Ptr[cobj], i32) -> int
-from C import strtod(cobj, Ptr[cobj]) -> float
 from C import strlen(cobj) -> int
 
 # <ctype.h>

@@ -2,7 +2,7 @@
 class Int[N]:
     @llvm
     def __new__() -> Int[N]:
-        ret i{N} 0
+        ret i{=N} 0
     def __new__(what: Int[N]) -> Int[N]:
         return what
     @internal
@@ -11,129 +11,129 @@ class Int[N]:
     # @llvm
     # def __new__(what: int) -> Int[N]:
     #     # TODO: ext
-    #     %0 = trunc i64 %what to i{N}
-    #     ret i{N} %0
+    #     %0 = trunc i64 %what to i{=N}
+    #     ret i{=N} %0
     @llvm
     def __new__(what: UInt[N]) -> Int[N]:
-        ret i{N} %what
+        ret i{=N} %what
     def __copy__(self) -> Int[N]:
         return self
     def __hash__(self) -> int:
         return int(self)
     @llvm
     def __bool__(self) -> bool:
-        %0 = icmp ne i{N} %self, 0
+        %0 = icmp ne i{=N} %self, 0
         %1 = zext i1 %0 to i8
         ret i8 %1
     def __pos__(self) -> Int[N]:
         return self
     @llvm
     def __neg__(self) -> Int[N]:
-        %0 = sub i{N} 0, %self
-        ret i{N} %0
+        %0 = sub i{=N} 0, %self
+        ret i{=N} %0
     @llvm
     def __invert__(self) -> Int[N]:
-        %0 = xor i{N} %self, -1
-        ret i{N} %0
+        %0 = xor i{=N} %self, -1
+        ret i{=N} %0
     @llvm
     def __add__(self, other: Int[N]) -> Int[N]:
-        %0 = add i{N} %self, %other
-        ret i{N} %0
+        %0 = add i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __sub__(self, other: Int[N]) -> Int[N]:
-        %0 = sub i{N} %self, %other
-        ret i{N} %0
+        %0 = sub i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __mul__(self, other: Int[N]) -> Int[N]:
-        %0 = mul i{N} %self, %other
-        ret i{N} %0
+        %0 = mul i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __div__(self, other: Int[N]) -> Int[N]:
-        %0 = sdiv i{N} %self, %other
-        ret i{N} %0
+        %0 = sdiv i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __truediv__(self, other: Int[N]) -> float:
-        %0 = sitofp i{N} %self to double
-        %1 = sitofp i{N} %other to double
+        %0 = sitofp i{=N} %self to double
+        %1 = sitofp i{=N} %other to double
         %2 = fdiv double %0, %1
         ret double %2
     @llvm
     def __mod__(self, other: Int[N]) -> Int[N]:
-        %0 = srem i{N} %self, %other
-        ret i{N} %0
+        %0 = srem i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __lshift__(self, other: Int[N]) -> Int[N]:
-        %0 = shl i{N} %self, %other
-        ret i{N} %0
+        %0 = shl i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __rshift__(self, other: Int[N]) -> Int[N]:
-        %0 = ashr i{N} %self, %other
-        ret i{N} %0
+        %0 = ashr i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __eq__(self, other: Int[N]) -> bool:
-        %0 = icmp eq i{N} %self, %other
+        %0 = icmp eq i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
     @llvm
     def __ne__(self, other: Int[N]) -> bool:
-        %0 = icmp ne i{N} %self, %other
+        %0 = icmp ne i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
     @llvm
     def __lt__(self, other: Int[N]) -> bool:
-        %0 = icmp slt i{N} %self, %other
+        %0 = icmp slt i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
     @llvm
     def __gt__(self, other: Int[N]) -> bool:
-        %0 = icmp sgt i{N} %self, %other
+        %0 = icmp sgt i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
     @llvm
     def __le__(self, other: Int[N]) -> bool:
-        %0 = icmp sle i{N} %self, %other
+        %0 = icmp sle i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
     @llvm
     def __ge__(self, other: Int[N]) -> bool:
-        %0 = icmp sge i{N} %self, %other
+        %0 = icmp sge i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
     @llvm
     def __and__(self, other: Int[N]) -> Int[N]:
-        %0 = and i{N} %self, %other
-        ret i{N} %0
+        %0 = and i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __or__(self, other: Int[N]) -> Int[N]:
-        %0 = or i{N} %self, %other
-        ret i{N} %0
+        %0 = or i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __xor__(self, other: Int[N]) -> Int[N]:
-        %0 = xor i{N} %self, %other
-        ret i{N} %0
+        %0 = xor i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __pickle__(self, dest: Ptr[byte]) -> void:
         declare i32 @gzwrite(i8*, i8*, i32)
-        %0 = alloca i{N}
-        store i{N} %self, i{N}* %0
-        %1 = bitcast i{N}* %0 to i8*
+        %0 = alloca i{=N}
+        store i{=N} %self, i{=N}* %0
+        %1 = bitcast i{=N}* %0 to i8*
         %2 = call i32 @gzwrite(i8* %dest, i8* %1, i32 1)
         ret void
     @llvm
     def __unpickle__(src: Ptr[byte]) -> Int[N]:
         declare i32 @gzread(i8*, i8*, i32)
-        %0 = alloca i{N}
-        %1 = bitcast i{N}* %0 to i8*
+        %0 = alloca i{=N}
+        %1 = bitcast i{=N}* %0 to i8*
         %2 = call i32 @gzread(i8* %src, i8* %1, i32 1)
-        %3 = load i{N}, i{N}* %0
-        ret i{N} %3
+        %3 = load i{=N}, i{=N}* %0
+        ret i{=N} %3
     def __str__(self) -> str:
         return seq_str_int(int(self))
     @llvm
     def _popcnt(self) -> Int[N]:
-        declare i{N} @llvm.ctpop.i{N}(i{N})
-        %0 = call i{N} @llvm.ctpop.i{N}(i{N} %self)
-        ret i{N} %0
+        declare i{=N} @llvm.ctpop.i{=N}(i{=N})
+        %0 = call i{=N} @llvm.ctpop.i{=N}(i{=N} %self)
+        ret i{=N} %0
     def popcnt(self):
         return int(self._popcnt())
     def len() -> int:
@@ -143,7 +143,7 @@ class Int[N]:
 class UInt[N]:
     @llvm
     def __new__() -> UInt[N]:
-        ret i{N} 0
+        ret i{=N} 0
     def __new__(what: UInt[N]) -> UInt[N]:
         return what
     @internal
@@ -152,126 +152,126 @@ class UInt[N]:
     # @llvm
     # def __new__(what: int) -> UInt[N]:
     #     # TODO: ext
-    #     %0 = trunc i64 %what to i{N}
-    #     ret i{N} %0
+    #     %0 = trunc i64 %what to i{=N}
+    #     ret i{=N} %0
     @llvm
     def __new__(what: Int[N]) -> UInt[N]:
-        ret i{N} %what
+        ret i{=N} %what
     def __copy__(self) -> UInt[N]:
         return self
     def __hash__(self) -> int:
         return int(self)
     @llvm
     def __bool__(self) -> bool:
-        %0 = icmp ne i{N} %self, 0
+        %0 = icmp ne i{=N} %self, 0
         %1 = zext i1 %0 to i8
         ret i8 %1
     def __pos__(self) -> UInt[N]:
         return self
     @llvm
     def __neg__(self) -> UInt[N]:
-        %0 = sub i{N} 0, %self
-        ret i{N} %0
+        %0 = sub i{=N} 0, %self
+        ret i{=N} %0
     @llvm
     def __invert__(self) -> UInt[N]:
-        %0 = xor i{N} %self, -1
-        ret i{N} %0
+        %0 = xor i{=N} %self, -1
+        ret i{=N} %0
     @llvm
     def __add__(self, other: UInt[N]) -> UInt[N]:
-        %0 = add i{N} %self, %other
-        ret i{N} %0
+        %0 = add i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __sub__(self, other: UInt[N]) -> UInt[N]:
-        %0 = sub i{N} %self, %other
-        ret i{N} %0
+        %0 = sub i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __mul__(self, other: UInt[N]) -> UInt[N]:
-        %0 = mul i{N} %self, %other
-        ret i{N} %0
+        %0 = mul i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __div__(self, other: UInt[N]) -> UInt[N]:
-        %0 = udiv i{N} %self, %other
-        ret i{N} %0
+        %0 = udiv i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __truediv__(self, other: UInt[N]) -> float:
-        %0 = uitofp i{N} %self to double
-        %1 = uitofp i{N} %other to double
+        %0 = uitofp i{=N} %self to double
+        %1 = uitofp i{=N} %other to double
         %2 = fdiv double %0, %1
         ret double %2
     @llvm
     def __mod__(self, other: UInt[N]) -> UInt[N]:
-        %0 = urem i{N} %self, %other
-        ret i{N} %0
+        %0 = urem i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __lshift__(self, other: UInt[N]) -> UInt[N]:
-        %0 = shl i{N} %self, %other
-        ret i{N} %0
+        %0 = shl i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __rshift__(self, other: UInt[N]) -> UInt[N]:
-        %0 = lshr i{N} %self, %other
-        ret i{N} %0
+        %0 = lshr i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __eq__(self, other: UInt[N]) -> bool:
-        %0 = icmp eq i{N} %self, %other
+        %0 = icmp eq i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
     @llvm
     def __ne__(self, other: UInt[N]) -> bool:
-        %0 = icmp ne i{N} %self, %other
+        %0 = icmp ne i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
     @llvm
     def __lt__(self, other: UInt[N]) -> bool:
-        %0 = icmp ult i{N} %self, %other
+        %0 = icmp ult i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
     @llvm
     def __gt__(self, other: UInt[N]) -> bool:
-        %0 = icmp ugt i{N} %self, %other
+        %0 = icmp ugt i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
     @llvm
     def __le__(self, other: UInt[N]) -> bool:
-        %0 = icmp ule i{N} %self, %other
+        %0 = icmp ule i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
     @llvm
     def __ge__(self, other: UInt[N]) -> bool:
-        %0 = icmp uge i{N} %self, %other
+        %0 = icmp uge i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
     @llvm
     def __and__(self, other: UInt[N]) -> UInt[N]:
-        %0 = and i{N} %self, %other
-        ret i{N} %0
+        %0 = and i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __or__(self, other: UInt[N]) -> UInt[N]:
-        %0 = or i{N} %self, %other
-        ret i{N} %0
+        %0 = or i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __xor__(self, other: UInt[N]) -> UInt[N]:
-        %0 = xor i{N} %self, %other
-        ret i{N} %0
+        %0 = xor i{=N} %self, %other
+        ret i{=N} %0
     @llvm
     def __pickle__(self, dest: Ptr[byte]) -> void:
         declare i32 @gzwrite(i8*, i8*, i32)
-        %0 = alloca i{N}
-        store i{N} %self, i{N}* %0
-        %1 = bitcast i{N}* %0 to i8*
-        %sz = getelementptr %i{N}* null, i32 1
-        %szi = ptrtoint %i{N}* %sz to i32
+        %0 = alloca i{=N}
+        store i{=N} %self, i{=N}* %0
+        %1 = bitcast i{=N}* %0 to i8*
+        %sz = getelementptr i{=N}, i{=N}* null, i32 1
+        %szi = ptrtoint i{=N}* %sz to i32
         %2 = call i32 @gzwrite(i8* %dest, i8* %1, i32 %szi)
         ret void
     @llvm
     def __unpickle__(src: Ptr[byte]) -> UInt[N]:
         declare i32 @gzread(i8*, i8*, i32)
-        %0 = alloca i{N}
-        %1 = bitcast i{N}* %0 to i8*
-        %sz = getelementptr %i{N}* null, i32 1
-        %szi = ptrtoint %i{N}* %sz to i32
+        %0 = alloca i{=N}
+        %1 = bitcast i{=N}* %0 to i8*
+        %sz = getelementptr i{=N}, i{=N}* null, i32 1
+        %szi = ptrtoint i{=N}* %sz to i32
         %2 = call i32 @gzread(i8* %src, i8* %1, i32 %szi)
-        %3 = load i{N}, i{N}* %0
-        ret i{N} %3
+        %3 = load i{=N}, i{=N}* %0
+        ret i{=N} %3
     def __str__(self) -> str:
         return seq_str_int(int(self))
     def popcnt(self):
@@ -283,23 +283,23 @@ class UInt[N]:
     # @llvm
     # def __revcomp__(self) -> UInt[N]:
     #     @seq.revcomp_table = private constant [256 x i8] c"\FF\BF\7F?\EF\AFo/\DF\9F_\1F\CF\8FO\0F\FB\BB\7B;\EB\ABk+\DB\9B[\1B\CB\8BK\0B\F7\B7w7\E7\A7g'\D7\97W\17\C7\87G\07\F3\B3s3\E3\A3c#\D3\93S\13\C3\83C\03\FE\BE~>\EE\AEn.\DE\9E^\1E\CE\8EN\0E\FA\BAz:\EA\AAj*\DA\9AZ\1A\CA\8AJ\0A\F6\B6v6\E6\A6f&\D6\96V\16\C6\86F\06\F2\B2r2\E2\A2b\22\D2\92R\12\C2\82B\02\FD\BD\7D=\ED\ADm-\DD\9D]\1D\CD\8DM\0D\F9\B9y9\E9\A9i)\D9\99Y\19\C9\89I\09\F5\B5u5\E5\A5e%\D5\95U\15\C5\85E\05\F1\B1q1\E1\A1a!\D1\91Q\11\C1\81A\01\FC\BC|<\EC\ACl,\DC\9C\5C\1C\CC\8CL\0C\F8\B8x8\E8\A8h(\D8\98X\18\C8\88H\08\F4\B4t4\E4\A4d$\D4\94T\14\C4\84D\04\F0\B0p0\E0\A0` \D0\90P\10\C0\80@\00"
-    #     %0 = and i{N} %self, 255
-    #     %1 = lshr i{N} %0, 0
-    #     %2 = zext i{N} %1 to i64
+    #     %0 = and i{=N} %self, 255
+    #     %1 = lshr i{=N} %0, 0
+    #     %2 = zext i{=N} %1 to i64
     #     %3 = getelementptr inbounds [256 x i8], [256 x i8]* @seq.revcomp_table, i64 0, i64 %2
     #     %4 = load i8, i8* %3
-    #     %5 = zext i8 %4 to i{N}
-    #     %6 = shl i{N} %5, 8
-    #     %7 = or i{N} 0, %6
-    #     %8 = and i{N} %self, -256
-    #     %9 = lshr i{N} %8, 8
-    #     %10 = zext i{N} %9 to i64
+    #     %5 = zext i8 %4 to i{=N}
+    #     %6 = shl i{=N} %5, 8
+    #     %7 = or i{=N} 0, %6
+    #     %8 = and i{=N} %self, -256
+    #     %9 = lshr i{=N} %8, 8
+    #     %10 = zext i{=N} %9 to i64
     #     %11 = getelementptr inbounds [256 x i8], [256 x i8]* @seq.revcomp_table, i64 0, i64 %10
     #     %12 = load i8, i8* %11
-    #     %13 = zext i8 %12 to i{N}
-    #     %14 = shl i{N} %13, 0
-    #     %15 = or i{N} %7, %14
-    #     ret i{N} %15
+    #     %13 = zext i8 %12 to i{=N}
+    #     %14 = shl i{=N} %13, 0
+    #     %15 = or i{=N} %7, %14
+    #     ret i{=N} %15
     def len() -> int:
         return N
 

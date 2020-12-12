@@ -1,127 +1,108 @@
+import internal.gc as gc
+
+from C import seq_str_float(float) -> str
+from C import strtod(cobj, Ptr[cobj]) -> float
+
 @extend
 class float:
-    @internal
     def __new__() -> float:
-        pass
-    @internal
+        return 0.0
     def __new__(f: float) -> float:
-        pass
+        return f
     @llvm
     def __new__(i: int) -> float:
         %tmp = sitofp i64 %i to double
         ret double %tmp
-    @internal
     def __str__(self) -> str:
-        pass
-    @internal
+        return seq_str_float(self)
     def __copy__(self) -> float:
-        pass
-    @internal
+        return self
+    @llvm
     def __bool__(self) -> bool:
-        pass
-    @internal
+        %0 = fcmp one double %self, 0.000000e+00
+        %1 = zext i1 %0 to i8
+        ret i8 %1
     def __pos__(self) -> float:
-        pass
-    @internal
+        return self
     def __neg__(self) -> float:
-        pass
-    @internal
-    def __div__(self, other: float) -> float:
-        pass
-    @internal
-    def __div__(self, other: int) -> float:
-        pass
-    @internal
-    def __pow__(self, other: float) -> float:
-        pass
-    @internal
-    def __pow__(self, other: int) -> float:
-        pass
-
+        return 0.0 - self
     @llvm
     def __add__(a: float, b: float) -> float:
         %tmp = fadd double %a, %b
         ret double %tmp
-    @internal
     def __add__(self, other: int) -> float:
-        pass
+        return self.__add__(float(other))
     @llvm
     def __sub__(a: float, b: float) -> float:
         %tmp = fsub double %a, %b
         ret double %tmp
-    @internal
     def __sub__(self, other: int) -> float:
-        pass
+        return self.__sub__(float(other))
     @llvm
     def __mul__(a: float, b: float) -> float:
         %tmp = fmul double %a, %b
         ret double %tmp
-    @internal
     def __mul__(self, other: int) -> float:
-        pass
+        return self.__mul__(float(other))
+    def __div__(self, other: float) -> float:
+        return self.__truediv__(other).__floor__()
+    def __div__(self, other: int) -> float:
+        return self.__div__(float(other))
     @llvm
     def __truediv__(a: float, b: float) -> float:
         %tmp = fdiv double %a, %b
         ret double %tmp
-    @internal
     def __truediv__(self, other: int) -> float:
-        pass
+        return self.__truediv__(float(other))
     @llvm
     def __mod__(a: float, b: float) -> float:
         %tmp = frem double %a, %b
         ret double %tmp
-    @internal
     def __mod__(self, other: int) -> float:
-        pass
+        return self.__mod__(float(other))
     @llvm
     def __eq__(a: float, b: float) -> bool:
         %tmp = fcmp oeq double %a, %b
         %res = zext i1 %tmp to i8
         ret i8 %res
-    @internal
     def __eq__(self, other: int) -> bool:
-        pass
+        return self.__eq__(float(other))
     @llvm
     def __ne__(a: float, b: float) -> bool:
         entry:
             %tmp = fcmp one double %a, %b
             %res = zext i1 %tmp to i8
             ret i8 %res
-    @internal
     def __ne__(self, other: int) -> bool:
-        pass
+        return self.__ne__(float(other))
     @llvm
     def __lt__(a: float, b: float) -> bool:
         %tmp = fcmp olt double %a, %b
         %res = zext i1 %tmp to i8
         ret i8 %res
-    @internal
     def __lt__(self, other: int) -> bool:
-        pass
+        return self.__lt__(float(other))
     @llvm
     def __gt__(a: float, b: float) -> bool:
         %tmp = fcmp ogt double %a, %b
         %res = zext i1 %tmp to i8
         ret i8 %res
-    @internal
     def __gt__(self, other: int) -> bool:
-        pass
+        return self.__gt__(float(other))
     @llvm
     def __le__(a: float, b: float) -> bool:
         %tmp = fcmp ole double %a, %b
         %res = zext i1 %tmp to i8
         ret i8 %res
-    @internal
     def __le__(self, other: int) -> bool:
-        pass
+        return self.__le__(float(other))
     @llvm
     def __ge__(a: float, b: float) -> bool:
         %tmp = fcmp oge double %a, %b
         %res = zext i1 %tmp to i8
         ret i8 %res
-    @internal
     def __ge__(self, other: int) -> bool:
-        pass
+        return self.__ge__(float(other))
     @llvm
     def sqrt(a: float) -> float:
         declare double @llvm.sqrt.f64(double %a)
@@ -202,6 +183,8 @@ class float:
         declare double @llvm.pow.f64(double %a, double %b)
         %tmp = call double @llvm.pow.f64(double %a, double %b)
         ret double %tmp
+    def __pow__(self, other: int) -> float:
+        return self.__pow__(float(other))
     @llvm
     def min(a: float, b: float) -> float:
         declare double @llvm.minnum.f64(double %a, double %b)
@@ -265,3 +248,23 @@ class float:
         if x == -1:
             x = -2
         return x
+
+    def __new__(s: str) -> float:
+        buf = __array__[byte](32)
+        n = s.__len__()
+        need_dyn_alloc = (n >= buf.__len__())
+
+        p = gc.alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
+        str.memcpy(p, s.ptr, n)
+        p[n] = byte(0)
+
+        end = cobj()
+        result = strtod(p, __ptr__(end))
+
+        if need_dyn_alloc:
+            gc.free(p)
+
+        if end != p + n:
+            raise ValueError("could not convert string to float: " + s)
+
+        return result

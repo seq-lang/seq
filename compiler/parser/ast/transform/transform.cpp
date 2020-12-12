@@ -1669,35 +1669,50 @@ StmtPtr TransformVisitor::parseLLVMImport(const Stmt *codeStmt) {
   auto se = N<StringExpr>("");
   string &finalCode = se->value;
   items.push_back(N<ExprStmt>(move(se)));
+
+  auto escape = [](const string &str, int s, int l) {
+    string t;
+    t.reserve(l);
+    for (int i = s; i < s + l; i++)
+      if (str[i] == '{')
+        t += "{{";
+      else if (str[i] == '}')
+        t += "}}";
+      else
+        t += str[i];
+    return t;
+  };
+
   int braceCount = 0, braceStart = 0;
   for (int i = 0; i < code.size(); i++) {
-    if (code[i] == '{') {
+    if (i < code.size() - 1 && code[i] == '{' && code[i + 1] == '=') {
       if (braceStart < i)
-        finalCode += code.substr(braceStart, i - braceStart + 1);
-      if (!braceCount)
-        braceStart = i + 1;
-      braceCount++;
-    } else if (code[i] == '}') {
-      braceCount--;
+        finalCode += escape(code, braceStart, i - braceStart) + '{';
       if (!braceCount) {
-        string exprCode = code.substr(braceStart, i - braceStart);
-        auto offset = getSrcInfo();
-        offset.col += i;
-        auto expr = transformGenericExpr(parseExpr(exprCode, offset));
-        if (!expr->isType() && !expr->getStatic())
-          error(expr, "expression {} is not a type or static expression",
-                expr->toString());
-        //        LOG("~~> {} -> {}", exprCode, expr->toString());
-        items.push_back(N<ExprStmt>(move(expr)));
+        braceStart = i + 2;
+        braceCount++;
+      } else {
+        error("invalid LLVM substitution");
       }
+    } else if (braceCount && code[i] == '}') {
+      braceCount--;
+      string exprCode = code.substr(braceStart, i - braceStart);
+      auto offset = getSrcInfo();
+      offset.col += i;
+      auto expr = transformGenericExpr(parseExpr(exprCode, offset));
+      if (!expr->isType() && !expr->getStatic())
+        error(expr, "expression {} is not a type or static expression",
+              expr->toString());
+      //        LOG("~~> {} -> {}", exprCode, expr->toString());
+      items.push_back(N<ExprStmt>(move(expr)));
       braceStart = i + 1;
       finalCode += '}';
     }
   }
   if (braceCount)
-    error("f-string braces are not balanced");
+    error("invalid LLVM substitution");
   if (braceStart != code.size())
-    finalCode += code.substr(braceStart, code.size() - braceStart);
+    finalCode += escape(code, braceStart, code.size() - braceStart);
 
   return N<SuiteStmt>(move(items));
 }

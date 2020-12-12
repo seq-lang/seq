@@ -335,4 +335,4 @@ class List[T]:
     def _copy_arr(self, start: int, stop: int, length: int):
         if length <= 0:
             return Array[T](Ptr[T](), 0)
-        return copy(self.arr.__slice__(start, stop))
+        return copy(self.arr.slice(start, stop))

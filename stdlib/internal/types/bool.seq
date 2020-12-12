@@ -1,46 +1,62 @@
+from C import seq_str_bool(bool) -> str
+
 @extend
 class bool:
-    @internal
     def __new__() -> bool:
-        pass
+        return False
     def __new__[T](what: T) -> bool: # lowest priority!
         return what.__bool__()
-    @internal
     def __str__(self) -> str:
-        pass
-    @internal
+        return seq_str_bool(self)
     def __copy__(self) -> bool:
-        pass
-    @internal
+        return self
     def __bool__(self) -> bool:
-        pass
-    @internal
+        return self
+    @llvm
     def __invert__(self) -> bool:
-        pass
-    @internal
+        %0 = trunc i8 %self to i1
+        %1 = xor i1 %0, true
+        %2 = zext i1 %1 to i8
+        ret i8 %2
+    @llvm
     def __eq__(self, other: bool) -> bool:
-        pass
-    @internal
+        %0 = icmp eq i8 %self, %other
+        %1 = zext i1 %0 to i8
+        ret i8 %1
+    @llvm
     def __ne__(self, other: bool) -> bool:
-        pass
-    @internal
+        %0 = icmp ne i8 %self, %other
+        %1 = zext i1 %0 to i8
+        ret i8 %1
+    @llvm
     def __lt__(self, other: bool) -> bool:
-        pass
-    @internal
+        %0 = icmp ult i8 %self, %other
+        %1 = zext i1 %0 to i8
+        ret i8 %1
+    @llvm
     def __gt__(self, other: bool) -> bool:
-        pass
-    @internal
+        %0 = icmp ugt i8 %self, %other
+        %1 = zext i1 %0 to i8
+        ret i8 %1
+    @llvm
     def __le__(self, other: bool) -> bool:
-        pass
-    @internal
+        %0 = icmp ule i8 %self, %other
+        %1 = zext i1 %0 to i8
+        ret i8 %1
+    @llvm
     def __ge__(self, other: bool) -> bool:
-        pass
-    @internal
+        %0 = icmp uge i8 %self, %other
+        %1 = zext i1 %0 to i8
+        ret i8 %1
+    @llvm
     def __and__(self, other: bool) -> bool:
-        pass
-    @internal
+        %0 = and i8 %self, %other
+        ret i8 %0
+    @llvm
     def __or__(self, other: bool) -> bool:
-        pass
-    @internal
+        %0 = or i8 %self, %other
+        ret i8 %0
+    @llvm
     def __xor__(self, other: bool) -> bool:
-        pass
+        %0 = xor i8 %self, %other
+        ret i8 %0

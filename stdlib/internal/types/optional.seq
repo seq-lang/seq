@@ -1,17 +1,25 @@
 @extend
-class Optional[T]:  # type
+class Optional[T]:
     @internal
     def __new__() -> Optional[T]:
         pass
+        # ret { i1, {=T} } { i1 false, {=T} undef }
     @internal
     def __new__(what: T) -> Optional[T]:
         pass
+        # %0 = insertvalue { i1, {=T} } { i1 true, {=T} undef }, {=T} %what, 1
+        # ret { i1, {=T} } %0
     @internal
     def __bool__(self) -> bool:
         pass
+        # %0 = extractvalue { i1, {=T} } %self, 0
+        # %1 = zext i1 %0 to i8
+        # ret i8 %1
     @internal
     def __invert__(self) -> T:
         pass
+        # %0 = extractvalue { i1, {=T} } %self, 1
+        # ret {=T} %0
     def __str__(self) -> str:
         return 'None' if not self else str(~self)
 optional = Optional

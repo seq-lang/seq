@@ -226,7 +226,7 @@ class Random:
             wordarray[i] = u32(r)
             k -= 32
 
-        return self.from_bytes_big(wordarray.__slice__(0, words))
+        return self.from_bytes_big(wordarray.slice(0, words))
 
     def bit_length(self, n: int) -> int:
         """

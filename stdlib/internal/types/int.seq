@@ -1,14 +1,16 @@
+from C import seq_str_int(int) -> str
+
 @llvm
 def _int_sext[N: int](what) -> int:
-    %0 = sext i{N} %what to i64
+    %0 = sext i{=N} %what to i64
     ret i64 %0
 @llvm
 def _int_zext[N: int](what) -> int:
-    %0 = zext i{N} %what to i64
+    %0 = zext i{=N} %what to i64
     ret i64 %0
 @llvm
 def _int_trunc[N: int](what) -> int:
-    %0 = trunc i{N} %what to i64
+    %0 = trunc i{=N} %what to i64
     ret i64 %0
 
 
