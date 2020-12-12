@@ -337,4 +337,4 @@ class Dict[K,V]:
     def _kh_exist(self, x: int):
         return not khash.__ac_iseither(self._flags, x)
 
-
+dict = Dict

@@ -336,3 +336,4 @@ class List[T]:
         if length <= 0:
             return Array[T](Ptr[T](), 0)
         return copy(self.arr.slice(start, stop))
+list = List

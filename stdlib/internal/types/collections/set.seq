@@ -389,4 +389,4 @@ class Set[K]:
     def _kh_exist(self, x: int):
         return not khash.__ac_iseither(self._flags, x)
 
-
+set = Set

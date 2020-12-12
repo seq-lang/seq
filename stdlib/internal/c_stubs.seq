@@ -1,4 +1,5 @@
 # Seq runtime functions
+from C import seq_print(str)
 from C import seq_strdup(cobj) -> str
 from C import seq_check_errno() -> str
 from C import seq_stdin() -> cobj
