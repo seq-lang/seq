@@ -1,3 +1,17 @@
+@llvm
+def _int_sext[N: int](what) -> int:
+    %0 = sext i{N} %what to i64
+    ret i64 %0
+@llvm
+def _int_zext[N: int](what) -> int:
+    %0 = zext i{N} %what to i64
+    ret i64 %0
+@llvm
+def _int_trunc[N: int](what) -> int:
+    %0 = trunc i{N} %what to i64
+    ret i64 %0
+
+
 @extend
 class int:
     @llvm
@@ -19,13 +33,21 @@ class int:
     def __new__(b: byte) -> int:
         %0 = zext i8 %b to i64
         ret i64 %0
-    @llvm
-    def __new__[N: int](what: Int[N]) -> int:
-        %0 = sext i{N} %what to i64
-        ret i64 %0
     @internal
-    def __new__[N: int](b: UInt[N]) -> int:
+    def __new__[N: int](what: Int[N]) -> int:
         pass
+    @internal
+    def __new__[N: int](what: UInt[N]) -> int:
+        pass
+    # TODO: needs compile-time ifs
+    # def __new__[N: int](what: Int[N]) -> int:
+    #     if N >= 64:
+    #         return _int_trunc[N](what)
+    #     return _int_sext[N](what)
+    # def __new__[N: int](what: UInt[N]) -> int:
+    #     if N >= 64:
+    #         return _int_trunc[N](what)
+    #     return _int_zext[N](what)
     def __int__(self) -> int:
         return self
     def __str__(self) -> str:

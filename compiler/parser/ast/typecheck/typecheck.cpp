@@ -1640,7 +1640,6 @@ vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &gene
 
 void TypecheckVisitor::addFunctionGenerics(FuncTypePtr t) {
   int pi = 0;
-  LOG("{}", t->realizeString());
   for (auto p = t->parent; p; pi++) {
     if (auto y = p->getFunc()) {
       for (auto &g : y->explicits)
@@ -1653,11 +1652,9 @@ void TypecheckVisitor::addFunctionGenerics(FuncTypePtr t) {
       auto c = p->getClass();
       assert(c);
       for (auto &g : c->explicits)
-        if (auto s = g.type->getStatic()) {
-          LOG("--{}", g.name);
-
+        if (auto s = g.type->getStatic())
           ctx->add(TypecheckItem::Type, g.name, s, false, false, true);
-        } else if (!g.name.empty())
+        else if (!g.name.empty())
           ctx->add(TypecheckItem::Type, g.name, g.type, true);
       p = c->parent;
     }

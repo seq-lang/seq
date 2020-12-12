@@ -492,8 +492,8 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
         //        LOG("--> {}", ex->getType() ? ex->getType()->toString() : "-");
       }
       string res = fmt::vformat(sp->value, store);
-      if (ss.size() > 1)
-        LOG("[FINAL] {} -->\n {}", real.first, res);
+      //      if (ss.size() > 1)
+      //        LOG("[FINAL] {} -->\n {}", real.first, res);
 
       std::istringstream sin(res);
       string l, declare, code;
@@ -504,9 +504,12 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
         ltrim(lp);
         rtrim(lp);
         if (isDeclare && !startswith(lp, "declare ")) {
-          isDeclare = false;
-          if (!lp.empty() && lp.back() != ':')
-            lines.push_back("entry:");
+          bool isConst = lp.find("private constant") != string::npos;
+          if (!isConst) {
+            isDeclare = false;
+            if (!lp.empty() && lp.back() != ':')
+              lines.push_back("entry:");
+          }
         }
         if (isDeclare)
           declare += lp + "\n";

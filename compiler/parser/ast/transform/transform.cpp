@@ -67,11 +67,11 @@ StmtPtr TransformVisitor::apply(shared_ptr<Cache> cache, StmtPtr s,
       auto canonical = stdlib->generateCanonicalName(name);
       stdlib->add(TransformItem::Type, name, canonical, true);
       vector<Param> generics;
-      generics.emplace_back(Param{"T",
-                                  string(name) == "Int" || string(name) == "UInt"
-                                      ? make_unique<IdExpr>(".int")
-                                      : nullptr,
-                                  nullptr});
+      generics.emplace_back(Param{
+          string(name) == "Int" || string(name) == "UInt" ? "N" : "T",
+          string(name) == "Int" || string(name) == "UInt" ? make_unique<IdExpr>(".int")
+                                                          : nullptr,
+          nullptr});
       auto c = make_unique<ClassStmt>(canonical, move(generics), vector<Param>(),
                                       nullptr, vector<string>{"internal", "tuple"});
       if (name == "Generator")
