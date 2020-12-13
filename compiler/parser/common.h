@@ -71,7 +71,7 @@ namespace ast {
 
 /// String and collection utilities
 
-/// Split a delim-separated string into a vector of strings
+/// Split a delimiter-separated string into a vector of strings
 vector<string> split(const string &str, char delim);
 /// Escape a C string (replace \n with \\n etc.)
 string escape(const string &str);
@@ -115,9 +115,6 @@ bool in(const map<K, V> &m, const U &item) {
 
 /// AST utilities
 
-/// Return a uniquely named temporary variable of a format "{sigil}_{prefix}{counter}".
-/// Sigil should ideally be unlexable symbol.
-string getTemporaryVar(const string &prefix = "", char sigil = '$');
 /// Raise a parsing error.
 void error(const char *format);
 /// Raise a parsing error at a source location p.
@@ -128,7 +125,7 @@ template <typename T> auto clone(const unique_ptr<T> &t) {
   return t ? t->clone() : nullptr;
 }
 
-/// Clones a vector of clonable pointer objects.
+/// Clones a vector of cloneable pointer objects.
 template <typename T> vector<T> clone(const vector<T> &t) {
   vector<T> v;
   for (auto &i : t)
@@ -136,7 +133,7 @@ template <typename T> vector<T> clone(const vector<T> &t) {
   return v;
 }
 
-/// Clones a vector of clonable objects.
+/// Clones a vector of cloneable objects.
 template <typename T> vector<T> clone_nop(const vector<T> &t) {
   vector<T> v;
   for (auto &i : t)
@@ -156,5 +153,5 @@ string executable_path(const char *argv0);
 string getImportFile(const string &argv0, const string &what, const string &relativeTo,
                      bool forceStdlib);
 
-} // namespace tmp
+} // namespace ast
 } // namespace seq

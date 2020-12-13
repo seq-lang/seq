@@ -26,7 +26,7 @@ struct ASTVisitor;
 
 /**
  * A Seq AST match-case pattern.
- * Each AST patern owns its children and is intended to be instantiated as a
+ * Each AST pattern owns its children and is intended to be instantiated as a
  * unique_ptr.
  */
 struct Pattern : public seq::SrcObject {

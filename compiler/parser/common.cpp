@@ -94,11 +94,6 @@ void rtrim(string &str) {
 /// AST utilities
 
 /// TODO: move to a cache
-int tmpVarCounter = 0;
-string getTemporaryVar(const string &prefix, char sigil) {
-  return fmt::format("{}{}_{}", sigil ? fmt::format("{}_", sigil) : "", prefix,
-                     ++tmpVarCounter);
-}
 void error(const char *format) { throw exc::ParserException(format); }
 void error(const ::seq::SrcInfo &info, const char *format) {
   throw exc::ParserException(format, info);

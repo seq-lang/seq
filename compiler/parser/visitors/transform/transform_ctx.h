@@ -44,7 +44,8 @@ class TransformContext : public Context<TransformItem> {
 public:
   shared_ptr<Cache> cache;
   SrcInfo getGeneratedPos() {
-    return {"<generated>", cache->generatedID, cache->generatedID++, 0, 0};
+    return {"<generated>", cache->generatedSrcInfoCount, cache->generatedSrcInfoCount++,
+            0, 0};
   }
 
 public:
@@ -73,7 +74,8 @@ public:
   shared_ptr<TransformItem> add(TransformItem::Kind kind, const string &name,
                                 const string &canonicalName = "", bool global = false,
                                 bool generic = false, bool stat = false);
-  void dump(int pad = 0) override;
+  void dump() override { dump(0); }
+  void dump(int pad);
 
 public:
   string getBase() const;

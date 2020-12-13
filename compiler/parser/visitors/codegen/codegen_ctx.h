@@ -75,6 +75,7 @@ public:
   seq::types::Type *realizeType(types::ClassType *t);
 
 public:
+  void dump() override {}
   seq::BaseFunc *getBase() const { return bases[topBaseIndex]; }
   seq::Block *getBlock() const { return blocks[topBlockIndex]; }
   seq::SeqModule *getModule() const { return (seq::SeqModule *)bases[0]; }

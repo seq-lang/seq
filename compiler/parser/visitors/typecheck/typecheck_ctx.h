@@ -78,7 +78,10 @@ public:
   shared_ptr<TypecheckItem> add(TypecheckItem::Kind kind, const string &name,
                                 types::TypePtr type = nullptr, bool global = false,
                                 bool generic = false, bool stat = false);
-  void dump(int pad = 0) override;
+  void dump() override { dump(0); }
+
+protected:
+  void dump(int pad);
 
 public:
   string getBase() const;
@@ -111,8 +114,8 @@ public:
   }
 
   types::TypePtr findMember(const string &typeName, const string &member) const {
-    auto m = cache->classMembers.find(typeName);
-    if (m != cache->classMembers.end()) {
+    auto m = cache->classFields.find(typeName);
+    if (m != cache->classFields.end()) {
       for (auto &mm : m->second)
         if (mm.first == member)
           return mm.second;

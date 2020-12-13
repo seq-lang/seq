@@ -65,10 +65,10 @@ string TransformContext::generateCanonicalName(const string &name) {
   if (name.size() && name[0] == '.')
     return name;
   string newName = format("{}.{}", getBase(), name);
-  auto num = cache->moduleNames[newName]++;
+  auto num = cache->identifierCount[newName]++;
   newName = num ? format("{}.{}", newName, num) : newName;
   newName = newName[0] == '.' ? newName : "." + newName;
-  cache->reverseLookup[newName] = name;
+  cache->reverseIdentifierLookup[newName] = name;
   return newName;
 }
 

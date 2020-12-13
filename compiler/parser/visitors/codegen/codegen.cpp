@@ -537,7 +537,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
           ctx->setFlag("atomic");
       }
       if (in(ast->attributes, ".c")) {
-        auto newName = ctx->cache->reverseLookup[stmt->name];
+        auto newName = ctx->cache->reverseIdentifierLookup[stmt->name];
         f->setName(newName);
         f->setExternal();
       } else {

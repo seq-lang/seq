@@ -389,8 +389,8 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
         return nullptr;
       // TODO : be smarter! there might be a compatible getitem?
     }
-    auto mm = ctx->cache->classMembers.find(tuple->name);
-    assert(mm != ctx->cache->classMembers.end());
+    auto mm = ctx->cache->classFields.find(tuple->name);
+    assert(mm != ctx->cache->classFields.end());
     auto getInt = [](seq_int_t *o, const ExprPtr &e) {
       if (!e)
         return true;
@@ -623,7 +623,7 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
     return transform(N<CallExpr>(N<DotExpr>(move(callee), "__new__"), move(args)));
   } else if (callee->isType()) {
     /// WARN: passing callee & args that have already been transformed
-    ExprPtr var = N<IdExpr>(getTemporaryVar("v"));
+    ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("v"));
     vector<StmtPtr> stmts;
     stmts.push_back(
         N<AssignStmt>(clone(var), N<CallExpr>(N<DotExpr>(move(callee), "__new__"))));
@@ -1269,7 +1269,7 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
     ctx->typecheckLevel++;
     for (auto &a : stmt->args) {
       auto t = transformType(a.type)->getType()->generalize(ctx->typecheckLevel - 1);
-      ctx->cache->classMembers[stmt->name].push_back({a.name, t});
+      ctx->cache->classFields[stmt->name].push_back({a.name, t});
       if (stmt->isRecord())
         ct->args.push_back(t);
     }
@@ -1296,7 +1296,8 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
       auto f = CAST(t, FunctionStmt)->name;
       auto ss = CAST(s, FunctionStmt)->signature();
       auto fp = ctx->findInVisited(f).second->getFunc();
-      auto &v = ctx->cache->classMethods[stmt->name][ctx->cache->reverseLookup[f]];
+      auto &v =
+          ctx->cache->classMethods[stmt->name][ctx->cache->reverseIdentifierLookup[f]];
       bool found = false;
       for (auto &i : v) {
         auto ast = (FunctionStmt *)(ctx->cache->asts[i->name].get());
@@ -1324,7 +1325,7 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
   }
 
   LOG_REALIZE("[class] {} (parent={})", ct->toString(), printParents(ct->parent));
-  for (auto &m : ctx->cache->classMembers[stmt->name])
+  for (auto &m : ctx->cache->classFields[stmt->name])
     LOG_REALIZE("       - member: {}: {}", m.first, m.second->toString());
   for (auto &m : ctx->cache->classMethods[stmt->name])
     for (auto &f : m.second) {
@@ -1764,12 +1765,12 @@ types::TypePtr TypecheckVisitor::realizeType(types::TypePtr tt) {
     ctx->bases[0].visitedAsts[t->realizeString()] = {TypecheckItem::Type,
                                                      t}; // realizations go to the top
     ctx->cache->realizations[t->name][t->realizeString()] = t;
-    for (auto &m : ctx->cache->classMembers[t->name]) {
+    for (auto &m : ctx->cache->classFields[t->name]) {
       auto mt = ctx->instantiate(t->getSrcInfo(), m.second, t.get());
       LOG_REALIZE("- member: {} -> {}: {}", m.first, m.second->toString(),
                   mt->toString());
       assert(mt->getClass() && mt->getClass()->canRealize());
-      ctx->cache->memberRealizations[t->realizeString()].push_back(
+      ctx->cache->fieldRealizations[t->realizeString()].push_back(
           {m.first, realizeType(mt->getClass())});
     }
     return t;

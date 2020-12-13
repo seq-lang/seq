@@ -234,7 +234,7 @@ void TransformVisitor::visit(const TupleExpr *expr) {
 
 void TransformVisitor::visit(const ListExpr *expr) {
   vector<StmtPtr> stmts;
-  ExprPtr var = N<IdExpr>(getTemporaryVar("list"));
+  ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("list"));
   stmts.push_back(transform(N<AssignStmt>(
       clone(var),
       N<CallExpr>(N<IdExpr>(".List"),
@@ -247,7 +247,7 @@ void TransformVisitor::visit(const ListExpr *expr) {
 
 void TransformVisitor::visit(const SetExpr *expr) {
   vector<StmtPtr> stmts;
-  ExprPtr var = N<IdExpr>(getTemporaryVar("set"));
+  ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("set"));
   stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Set")))));
   for (auto &it : expr->items)
     stmts.push_back(
@@ -257,7 +257,7 @@ void TransformVisitor::visit(const SetExpr *expr) {
 
 void TransformVisitor::visit(const DictExpr *expr) {
   vector<StmtPtr> stmts;
-  ExprPtr var = N<IdExpr>(getTemporaryVar("dict"));
+  ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("dict"));
   stmts.push_back(
       transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Dict")))));
   for (auto &it : expr->items)
@@ -271,7 +271,7 @@ void TransformVisitor::visit(const GeneratorExpr *expr) {
   auto suite = getGeneratorBlock(expr->loops, prev);
 
   vector<StmtPtr> stmts;
-  ExprPtr var = N<IdExpr>(getTemporaryVar("gen"));
+  ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("gen"));
   if (expr->kind == GeneratorExpr::ListGenerator) {
     stmts.push_back(
         transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".List")))));
@@ -299,7 +299,7 @@ void TransformVisitor::visit(const DictGeneratorExpr *expr) {
   auto suite = getGeneratorBlock(expr->loops, prev);
 
   vector<StmtPtr> stmts;
-  ExprPtr var = N<IdExpr>(getTemporaryVar("gen"));
+  ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("gen"));
   stmts.push_back(
       transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Dict")))));
   prev->stmts.push_back(N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__setitem__"),
@@ -598,7 +598,7 @@ void TransformVisitor::visit(const AssignStmt *stmt) {
     auto p = rhs.get();
     ExprPtr newRhs = nullptr;
     if (!CAST(rhs, IdExpr)) { // store any non-trivial expression
-      auto var = getTemporaryVar("assign");
+      auto var = ctx->cache->getTemporaryVar("assign");
       newRhs = Nx<IdExpr>(p, var);
       stmts.push_back(add(newRhs, rhs, nullptr, shadow, mustExist));
     } else {
@@ -678,7 +678,7 @@ void TransformVisitor::visit(const YieldStmt *stmt) {
 }
 
 void TransformVisitor::visit(const YieldFromStmt *stmt) {
-  auto var = getTemporaryVar("yield");
+  auto var = ctx->cache->getTemporaryVar("yield");
   resultStmt = transform(
       N<ForStmt>(N<IdExpr>(var), clone(stmt->expr), N<YieldStmt>(N<IdExpr>(var))));
 }
@@ -692,7 +692,7 @@ void TransformVisitor::visit(const WhileStmt *stmt) {
   string breakVar;
   StmtPtr assign = nullptr;
   if (stmt->elseSuite) {
-    breakVar = getTemporaryVar("no_break");
+    breakVar = ctx->cache->getTemporaryVar("no_break");
     assign = N<AssignStmt>(N<IdExpr>(breakVar), N<BoolExpr>(true));
   }
   ctx->loops.push_back(breakVar);
@@ -713,7 +713,7 @@ void TransformVisitor::visit(const ForStmt *stmt) {
   string breakVar;
   StmtPtr assign = nullptr, forstmt = nullptr;
   if (stmt->elseSuite) {
-    breakVar = getTemporaryVar("no_break");
+    breakVar = ctx->cache->getTemporaryVar("no_break");
     assign = N<AssignStmt>(N<IdExpr>(breakVar), N<BoolExpr>(true));
   }
   ctx->loops.push_back(breakVar);
@@ -723,7 +723,7 @@ void TransformVisitor::visit(const ForStmt *stmt) {
     ctx->add(TransformItem::Var, varName);
     forstmt = N<ForStmt>(transform(stmt->var), transform(iter), transform(stmt->suite));
   } else {
-    string varName = getTemporaryVar("for");
+    string varName = ctx->cache->getTemporaryVar("for");
     ctx->add(TransformItem::Var, varName);
     auto var = N<IdExpr>(varName);
     vector<StmtPtr> stmts;
@@ -795,7 +795,8 @@ void TransformVisitor::visit(const WithStmt *stmt) {
   vector<StmtPtr> content;
   for (int i = stmt->items.size() - 1; i >= 0; i--) {
     vector<StmtPtr> internals;
-    string var = stmt->vars[i] == "" ? getTemporaryVar("with") : stmt->vars[i];
+    string var =
+        stmt->vars[i] == "" ? ctx->cache->getTemporaryVar("with") : stmt->vars[i];
     internals.push_back(N<AssignStmt>(N<IdExpr>(var), clone(stmt->items[i])));
     internals.push_back(
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "__enter__"))));
@@ -1548,7 +1549,7 @@ ExprPtr TransformVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
   vector<Param> params;
   vector<CallExpr::Arg> args;
 
-  string name = getTemporaryVar("lambda", '.');
+  string name = ctx->cache->getTemporaryVar("lambda", '.');
   ctx->captures.push_back({});
   for (auto &s : vars)
     params.emplace_back(Param{s, nullptr, nullptr});

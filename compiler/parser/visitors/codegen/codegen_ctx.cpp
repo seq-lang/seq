@@ -183,7 +183,7 @@ seq::types::Type *CodegenContext::realizeType(types::ClassType *t) {
     this->types[t->realizeString()] = handle;
 
     // Must do this afterwards to avoid infinite loop with recursive types
-    for (auto &m : cache->memberRealizations[t->realizeString()]) {
+    for (auto &m : cache->fieldRealizations[t->realizeString()]) {
       names.push_back(m.first);
       types.push_back(realizeType(m.second->getClass().get()));
     }
