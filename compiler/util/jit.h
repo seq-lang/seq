@@ -7,7 +7,7 @@
 struct JitInstance {
   int counter;
   // TODO: JIT later
-  // std::shared_ptr<seq::ast::Context> context;
+  // std::shared_ptr<seq::tmp::Context> context;
 };
 
 FOREIGN JitInstance *jit_init();

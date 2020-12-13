@@ -12,14 +12,14 @@
 #include <vector>
 
 #include "lang/seq.h"
-#include "parser/ast/cache.h"
-#include "parser/ast/codegen/codegen.h"
-#include "parser/ast/doc/doc.h"
-#include "parser/ast/format/format.h"
-#include "parser/ast/transform/transform.h"
-#include "parser/ast/typecheck/typecheck.h"
-#include "parser/ocaml.h"
+#include "parser/cache.h"
+#include "parser/ocaml/ocaml.h"
 #include "parser/parser.h"
+#include "parser/visitors/codegen/codegen.h"
+#include "parser/visitors/doc/doc.h"
+#include "parser/visitors/format/format.h"
+#include "parser/visitors/transform/transform.h"
+#include "parser/visitors/typecheck/typecheck.h"
 #include "util/fmt/format.h"
 
 int _ocaml_time = 0;

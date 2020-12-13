@@ -156,5 +156,5 @@ string executable_path(const char *argv0);
 string getImportFile(const string &argv0, const string &what, const string &relativeTo,
                      bool forceStdlib);
 
-} // namespace ast
+} // namespace tmp
 } // namespace seq
