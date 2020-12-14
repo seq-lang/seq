@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "parser/ast.h"
+#include "parser/cache.h"
 #include "parser/visitors/visitor.h"
 
 using fmt::format;
@@ -305,7 +306,7 @@ string ClassStmt::toString() const {
 }
 StmtPtr ClassStmt::clone() const { return make_unique<ClassStmt>(*this); }
 void ClassStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
-bool ClassStmt::isRecord() const { return in(attributes, "tuple"); }
+bool ClassStmt::isRecord() const { return in(attributes, ATTR_TUPLE); }
 
 YieldFromStmt::YieldFromStmt(ExprPtr expr) : expr(move(expr)) {}
 YieldFromStmt::YieldFromStmt(const YieldFromStmt &stmt)

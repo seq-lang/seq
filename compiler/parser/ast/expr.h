@@ -30,6 +30,7 @@ struct IdExpr;
 struct IndexExpr;
 struct IntExpr;
 struct NoneExpr;
+struct StarExpr;
 struct StaticExpr;
 struct StringExpr;
 struct TupleExpr;
@@ -85,6 +86,7 @@ public:
   virtual const IndexExpr *getIndex() const { return nullptr; }
   virtual const IntExpr *getInt() const { return nullptr; }
   virtual const NoneExpr *getNone() const { return nullptr; }
+  virtual const StarExpr *getStar() const { return nullptr; }
   virtual const StaticExpr *getStatic() const { return nullptr; }
   virtual const StringExpr *getString() const { return nullptr; }
   virtual const TupleExpr *getTuple() const { return nullptr; }
@@ -138,7 +140,7 @@ struct BoolExpr : public Expr {
 /// @example 13u
 /// @example 000_010b
 struct IntExpr : public Expr {
-  /// Expression value is stored as a string that is parsed during the transform stage.
+  /// Expression value is stored as a string that is parsed during the simplify stage.
   string value;
   /// Number suffix (e.g. "u" for "123u").
   string suffix;
@@ -218,6 +220,8 @@ struct StarExpr : public Expr {
   string toString() const override;
   ExprPtr clone() const override;
   void accept(ASTVisitor &visitor) const override;
+
+  const StarExpr *getStar() const override { return this; }
 };
 
 /// Tuple expression ((items...)).
@@ -522,7 +526,7 @@ struct YieldExpr : public Expr {
   void accept(ASTVisitor &visitor) const override;
 };
 
-/// The following nodes are created after the transform stage.
+/// The following nodes are created after the simplify stage.
 
 /// Statement expression (stmts...; expr).
 /// Statements are evaluated only if the expression is evaluated

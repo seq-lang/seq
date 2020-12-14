@@ -39,7 +39,7 @@ shared_ptr<TypecheckItem> TypeContext::find(const string &name) const {
     if (tt.second)
       return make_shared<TypecheckItem>(tt.first, tt.second, "");
   }
-  // ((TransformContext *)this)->dump();
+  // ((SimplifyContext *)this)->dump();
   return nullptr;
 }
 

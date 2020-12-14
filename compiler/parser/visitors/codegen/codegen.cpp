@@ -104,7 +104,7 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
     for (auto &f : ff.second)
       if (auto t = f.second->getFunc()) {
         auto ast = (FunctionStmt *)(cache->asts[ff.first].get());
-        if (in(ast->attributes, "internal")) {
+        if (in(ast->attributes, ATTR_INTERNAL)) {
           vector<seq::types::Type *> types;
           auto p = t->parent;
           assert(in(ast->attributes, ".class"));
@@ -127,7 +127,7 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
 
           auto names = split(ast->name, '.');
           auto name = names.back();
-          if (isdigit(name[0])) // TODO: get rid of this hack
+          if (std::isdigit(name[0])) // TODO: get rid of this hack
             name = names[names.size() - 2];
           LOG_REALIZE("[codegen] generating internal fn {} -> {}", ast->name, name);
           ctx->functions[f.first] = {typ->findMagic(name, types), true};
@@ -448,7 +448,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
 
     auto ast = (FunctionStmt *)(ctx->cache->realizationAsts[real.first].get());
     assert(ast);
-    if (in(ast->attributes, "internal"))
+    if (in(ast->attributes, ATTR_INTERNAL))
       continue;
 
     vector<string> names;

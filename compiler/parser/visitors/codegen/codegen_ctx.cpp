@@ -6,7 +6,7 @@
 
 #include "lang/seq.h"
 #include "parser/common.h"
-#include "parser/context.h"
+#include "parser/ctx.h"
 #include "parser/ocaml/ocaml.h"
 #include "parser/visitors/codegen/codegen.h"
 #include "parser/visitors/codegen/codegen_ctx.h"

@@ -1,5 +1,5 @@
 /**
- * transform.h
+ * simplify.h
  * Type checking AST walker.
  *
  * Simplifies a given AST and generates types for each expression node.

@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "expr.h"
 #include "parser/ast.h"
 #include "parser/visitors/visitor.h"
 

@@ -13,8 +13,8 @@
 
 #include "parser/ast.h"
 #include "parser/common.h"
-#include "parser/visitors/transform/transform.h"
-#include "parser/visitors/transform/transform_ctx.h"
+#include "parser/visitors/simplify/simplify.h"
+#include "parser/visitors/simplify/simplify_ctx.h"
 #include "parser/visitors/typecheck/typecheck.h"
 #include "parser/visitors/typecheck/typecheck_ctx.h"
 
@@ -132,8 +132,8 @@ void TypecheckVisitor::visit(const StringExpr *expr) {
 
 void TypecheckVisitor::visit(const IdExpr *expr) {
   auto val = ctx->find(expr->value);
-  if (!val)
-    ctx->dump();
+  //  if (!val)
+  //    ctx->dump();
   seqassert(val, "cannot find '{}'", expr->value);
   if (expr->value == ".Generator")
     assert(1);
@@ -1697,7 +1697,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     auto *ast = (FunctionStmt *)(ctx->cache->asts[t->name].get());
     addFunctionGenerics(t);
     // There is no AST linked to internal functions, so just ignore them
-    bool isInternal = in(ast->attributes, "internal");
+    bool isInternal = in(ast->attributes, ATTR_INTERNAL);
     isInternal |= ast->suite == nullptr;
     if (!isInternal)
       for (int i = 1; i < t->args.size(); i++) {
@@ -1886,7 +1886,7 @@ int TypecheckVisitor::reorder(const vector<pair<string, TypePtr>> &args,
         if (ast->args[argIndex[i]].type) {
           reorderedArgs.push_back({"", f->args[argIndex[i] + 1]});
         } else { // TODO: does this even work? any dangling issues?
-          // auto t = transform(tmp->args[argIndex[i]].deflt);
+          // auto t = simplify(tmp->args[argIndex[i]].deflt);
           reorderedArgs.push_back({"", nullptr}); // really does not matter
         }
         score += 1;
@@ -1927,13 +1927,13 @@ string TypecheckVisitor::generatePartialStub(const string &mask,
                         N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), ".ptr"),
                                                   move(callArgs))),
                         vector<string>{});
-    StmtPtr stmt =
-        make_unique<ClassStmt>(typeName, move(generics), move(args), move(func),
-                               vector<string>{"tuple", "no_total_ordering", "no_pickle",
-                                              "no_container", "no_python"});
+    StmtPtr stmt = make_unique<ClassStmt>(
+        typeName, move(generics), move(args), move(func),
+        vector<string>{ATTR_TUPLE, "no_total_ordering", "no_pickle", "no_container",
+                       "no_python"});
 
-    auto tctx = static_pointer_cast<TransformContext>(ctx->cache->imports[""].ctx);
-    stmt = TransformVisitor(tctx).transform(stmt);
+    auto tctx = static_pointer_cast<SimplifyContext>(ctx->cache->imports[""].ctx);
+    stmt = SimplifyVisitor(tctx).transform(stmt);
     stmt = TypecheckVisitor(ctx).transform(stmt);
     prependStmts->push_back(move(stmt));
   }
@@ -1964,8 +1964,8 @@ string TypecheckVisitor::generatePartialStub(const string &mask,
         fnName, nullptr, vector<Param>{}, move(args),
         N<SuiteStmt>(N<ReturnStmt>(N<CallExpr>(move(callee), move(newArgs)))),
         vector<string>{});
-    auto tctx = static_pointer_cast<TransformContext>(ctx->cache->imports[""].ctx);
-    stmt = TransformVisitor(tctx).transform(stmt);
+    auto tctx = static_pointer_cast<SimplifyContext>(ctx->cache->imports[""].ctx);
+    stmt = SimplifyVisitor(tctx).transform(stmt);
     stmt = TypecheckVisitor(ctx).transform(stmt);
     prependStmts->push_back(move(stmt));
   }

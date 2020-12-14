@@ -265,7 +265,7 @@
 			],
 			[
 				"Transform",
-				"TransformVisitor"
+				"SimplifyVisitor"
 			],
 			[
 				"ty",
@@ -281,7 +281,7 @@
 			],
 			[
 				"Trans",
-				"TransformVisitor"
+				"SimplifyVisitor"
 			],
 			[
 				"rea",
@@ -1472,7 +1472,7 @@
 			"catch",
 			"processiden",
 			"'",
-			"TransformVisitor",
+			"SimplifyVisitor",
 			"static",
 			"StaticType",
 			"static",

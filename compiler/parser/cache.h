@@ -16,13 +16,20 @@
 
 #include "parser/ast.h"
 #include "parser/common.h"
-#include "parser/context.h"
+#include "parser/ctx.h"
 
 namespace seq {
 namespace ast {
 
+const string STDLIB_IMPORT = "";
+const string STDLIB_INTERNAL_MODULE = "internal";
+
+const string ATTR_INTERNAL = "internal";
+const string ATTR_TUPLE = "tuple";
+const string ATTR_TRAIT = "trait";
+
 /// Forward declarations
-struct TransformItem;
+struct SimplifyItem;
 
 /**
  * Cache encapsulation that holds data structures shared across various transformation
@@ -51,8 +58,8 @@ struct Cache {
   struct Import {
     /// Absolute filename of an import.
     string filename;
-    /// Import transform context.
-    shared_ptr<Context<TransformItem>> ctx;
+    /// Import simplify context.
+    shared_ptr<Context<SimplifyItem>> ctx;
   };
 
   /// Absolute path of seqc executable (if available).

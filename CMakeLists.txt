@@ -127,7 +127,7 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/parser/ast/types.h
         compiler/parser/visitors/visitor.h
         compiler/parser/common.h
-        compiler/parser/context.h
+        compiler/parser/ctx.h
         compiler/parser/ocaml/ocaml.h
         compiler/parser/parser.h
         compiler/parser/visitors/codegen/codegen.h
@@ -135,8 +135,8 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/parser/visitors/doc/doc.h
         compiler/parser/visitors/walkexpr/walk.h
         compiler/parser/visitors/format/format.h
-        compiler/parser/visitors/transform/transform.h
-        compiler/parser/visitors/transform/transform_ctx.h
+        compiler/parser/visitors/simplify/simplify.h
+        compiler/parser/visitors/simplify/simplify_ctx.h
         compiler/parser/visitors/typecheck/typecheck.h
         compiler/parser/visitors/typecheck/typecheck_ctx.h
         compiler/types/any.h
@@ -183,8 +183,8 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/parser/visitors/codegen/codegen_ctx.cpp
         compiler/parser/visitors/doc/doc.cpp
         compiler/parser/visitors/format/format.cpp
-        compiler/parser/visitors/transform/transform.cpp
-        compiler/parser/visitors/transform/transform_ctx.cpp
+        compiler/parser/visitors/simplify/simplify.cpp
+        compiler/parser/visitors/simplify/simplify_ctx.cpp
         compiler/parser/visitors/typecheck/typecheck.cpp
         compiler/parser/visitors/typecheck/typecheck_ctx.cpp
         compiler/parser/ast/types.cpp
@@ -206,7 +206,8 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/types/union.cpp
         compiler/types/void.cpp
         compiler/util/fmt/format.cpp
-        compiler/util/jit.cpp)
+        compiler/util/jit.cpp
+        compiler/parser/visitors/simplify/simplify_expr.cpp compiler/parser/visitors/simplify/simplify_stmt.cpp compiler/parser/visitors/simplify/simplify_pattern.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})

@@ -69,7 +69,7 @@ struct StarPattern : public Pattern {
 
 /// Int pattern (value).
 /// @example case 1
-/// TODO: Use string-based IntExpr and parse the integer in transform stage.
+/// TODO: Use string-based IntExpr and parse the integer in simplify stage.
 struct IntPattern : public Pattern {
   int value;
 

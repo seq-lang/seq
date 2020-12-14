@@ -85,6 +85,8 @@ bool endswith(const string &str, const string &suffix);
 void ltrim(string &str);
 /// Trims whitespace at the end of the string.
 void rtrim(string &str);
+/// True if a string only contains digits.
+bool isdigit(const string &str);
 /// Combine items separated by a delimiter into a string.
 template <typename T> string join(const T &items, const string &delim = " ") {
   string s;
@@ -109,6 +111,12 @@ template <typename T, typename U> bool in(const vector<T> &vec, const U &item) {
 /// @return True if an item is found in a map m.
 template <typename K, typename V, typename U>
 bool in(const map<K, V> &m, const U &item) {
+  auto f = m.find(item);
+  return f != m.end();
+}
+/// @return True if an item is found in an unordered_map m.
+template <typename K, typename V, typename U>
+bool in(const unordered_map<K, V> &m, const U &item) {
   auto f = m.find(item);
   return f != m.end();
 }
@@ -151,7 +159,7 @@ string executable_path(const char *argv0);
 /// library or relative to a file relativeTo. Set forceStdlib for searching only the
 /// standard library.
 string getImportFile(const string &argv0, const string &what, const string &relativeTo,
-                     bool forceStdlib);
+                     bool forceStdlib = false);
 
 } // namespace ast
 } // namespace seq

@@ -90,6 +90,12 @@ void rtrim(string &str) {
                 .base(),
             str.end());
 }
+bool isdigit(const string &str) {
+  for (const auto c : str)
+    if (!std::isdigit(c))
+      return false;
+  return true;
+}
 
 /// AST utilities
 

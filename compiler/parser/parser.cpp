@@ -18,7 +18,7 @@
 #include "parser/visitors/codegen/codegen.h"
 #include "parser/visitors/doc/doc.h"
 #include "parser/visitors/format/format.h"
-#include "parser/visitors/transform/transform.h"
+#include "parser/visitors/simplify/simplify.h"
 #include "parser/visitors/typecheck/typecheck.h"
 #include "util/fmt/format.h"
 
@@ -53,10 +53,10 @@ seq::SeqModule *parse(const string &argv0, const string &file, const string &cod
     auto cache = make_shared<ast::Cache>(argv0);
 
     auto t = high_resolution_clock::now();
-    auto transformed = ast::TransformVisitor::apply(cache, move(codeStmt), abs);
+    auto transformed = ast::SimplifyVisitor::apply(cache, move(codeStmt), abs);
     if (!isTest) {
       LOG_TIME("[T] ocaml = {:.1f}", _ocaml_time / 1000.0);
-      LOG_TIME("[T] transform = {:.1f}",
+      LOG_TIME("[T] simplify = {:.1f}",
                (duration_cast<milliseconds>(high_resolution_clock::now() - t).count() -
                 _ocaml_time) /
                    1000.0);

@@ -417,7 +417,7 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
   //   fstmt = (const FunctionStmt *)(cache->realizationAsts[fstmt->name].get());
   // } else if (cache) {
   //   for (auto &real : cache->realizations[fstmt->name])
-  //     result += transform(cache->realizationAsts[real.first]);
+  //     result += simplify(cache->realizationAsts[real.first]);
   //   return;
   // }
 

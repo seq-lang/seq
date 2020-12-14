@@ -48,14 +48,12 @@ private:
   string filename;
 
 public:
-  explicit Context(string filename) : filename(move(filename)) {}
+  explicit Context(string filename) : filename(move(filename)) {
+    /// Add a top-level block to the stack.
+    stack.push_front(vector<string>());
+  }
   virtual ~Context() = default;
 
-  /// Return a top-most object with a given identifier or nullptr if it does not exist.
-  shared_ptr<T> find(const string &name) const {
-    auto it = map.find(name);
-    return it != map.end() ? it->second.front().second : nullptr;
-  }
   /// Add an object to the top of the stack.
   void add(const string &name, shared_ptr<T> var) {
     seqassert(!name.empty(), "adding an empty identifier");
@@ -86,6 +84,11 @@ public:
       }
     }
     seqassert(false, "cannot find {} in the stack", name);
+  }
+  /// Return a top-most object with a given identifier or nullptr if it does not exist.
+  virtual shared_ptr<T> find(const string &name) const {
+    auto it = map.find(name);
+    return it != map.end() ? it->second.front().second : nullptr;
   }
   /// Add a new block (i.e. adds a stack level).
   void addBlock() { stack.push_front(vector<string>()); }

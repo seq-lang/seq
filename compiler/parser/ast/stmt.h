@@ -496,7 +496,7 @@ struct WithStmt : public Stmt {
   void accept(ASTVisitor &visitor) const override;
 };
 
-/// The following nodes are created after the transform stage.
+/// The following nodes are created after the simplify stage.
 
 /// Member assignment statement (lhs.member = rhs).
 /// @example: a.x = b

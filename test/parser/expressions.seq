@@ -1,36 +1,6 @@
-#%% none
-a = None
-print a  #: None
-a = 5
-print a  #: 5
-
 #%% none_unbound
 a = None
 #! ERROR: cannot resolve 1 unbound variables
-
-#%% bool
-a = True
-print a  #: True
-
-#%% int
-a = 51
-print a  #: 51
-
-#%% float
-a = 5.15
-print a  #: 5.15
-
-#%% float_error
-print 5.__str__()  #! ERROR: parsing error: '__str__'
-
-#%% string
-a = 'kthxbai'
-print a  #: kthxbai
-
-#%% fstring
-a, b = 1, True
-c = f'and this is {a} followed by {b}'
-print c, f'{b}{a}', f'.. {1+a=} .. {b} ...'  #: and this is 1 followed by True True1 .. 1+a=2 .. True ...
 
 #%% seq
 a = s'ACGT'
@@ -56,15 +26,6 @@ fs = {1, 2, 3, 1, 2, 3}
 gs.add(1.12)
 gs.add(1.13)
 print fs, gs  #: {1, 2, 3} {1.13, 1.12}
-
-#%% dict
-gd = {1: 'jedan', 2: 'dva', 2: 'two', 3: 'tri'}
-fd = {}
-fd['jedan'] = 1
-fd['dva'] = 2
-print gd, fd  #: {1: jedan, 2: two, 3: tri} {jedan: 1, dva: 2}
-
-# #%%
 
 #%% collection_generator
 l = [(i, j, f'i{i}/{j}')
