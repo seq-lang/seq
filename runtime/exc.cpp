@@ -39,8 +39,7 @@ static int64_t ourBaseFromUnwindOffset;
 static const unsigned char ourBaseExcpClassChars[] = {'o', 'b', 'j', '\0',
                                                       's', 'e', 'q', '\0'};
 
-static uint64_t genClass(const unsigned char classChars[],
-                         size_t classCharsSize) {
+static uint64_t genClass(const unsigned char classChars[], size_t classCharsSize) {
   uint64_t ret = classChars[0];
 
   for (unsigned i = 1; i < classCharsSize; i++) {
@@ -394,8 +393,7 @@ static bool handleActionValue(int64_t *resultAction, uint8_t TTypeEncoding,
                               _Unwind_Exception *exceptionObject) {
   bool ret = false;
 
-  if (!resultAction || !exceptionObject ||
-      (exceptionClass != ourBaseExceptionClass))
+  if (!resultAction || !exceptionObject || (exceptionClass != ourBaseExceptionClass))
     return ret;
 
   auto *excp = (struct OurBaseException_t *)(((char *)exceptionObject) +
@@ -441,8 +439,7 @@ static bool handleActionValue(int64_t *resultAction, uint8_t TTypeEncoding,
 }
 
 static _Unwind_Reason_Code handleLsda(int version, const uint8_t *lsda,
-                                      _Unwind_Action actions,
-                                      uint64_t exceptionClass,
+                                      _Unwind_Action actions, uint64_t exceptionClass,
                                       _Unwind_Exception *exceptionObject,
                                       _Unwind_Context *context) {
   _Unwind_Reason_Code ret = _URC_CONTINUE_UNWIND;
@@ -520,8 +517,8 @@ static _Unwind_Reason_Code handleLsda(int version, const uint8_t *lsda,
 
       if (actionEntry) {
         exceptionMatched =
-            handleActionValue(&actionValue, ttypeEncoding, ClassInfo,
-                              actionEntry, exceptionClass, exceptionObject);
+            handleActionValue(&actionValue, ttypeEncoding, ClassInfo, actionEntry,
+                              exceptionClass, exceptionObject);
       }
 
       if (!(actions & _UA_SEARCH_PHASE)) {
@@ -558,15 +555,13 @@ static _Unwind_Reason_Code handleLsda(int version, const uint8_t *lsda,
   return ret;
 }
 
-SEQ_FUNC _Unwind_Reason_Code seq_personality(int version,
-                                             _Unwind_Action actions,
+SEQ_FUNC _Unwind_Reason_Code seq_personality(int version, _Unwind_Action actions,
                                              uint64_t exceptionClass,
                                              _Unwind_Exception *exceptionObject,
                                              _Unwind_Context *context) {
   const auto *lsda = (uint8_t *)_Unwind_GetLanguageSpecificData(context);
   // The real work of the personality function is captured here
-  return handleLsda(version, lsda, actions, exceptionClass, exceptionObject,
-                    context);
+  return handleLsda(version, lsda, actions, exceptionClass, exceptionObject, context);
 }
 
 SEQ_FUNC int64_t seq_exc_offset() {
