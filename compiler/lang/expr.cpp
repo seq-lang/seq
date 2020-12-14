@@ -739,3 +739,58 @@ Value *StmtExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   }
   return expr->codegen(base, block);
 }
+
+SpecialExpr::SpecialExpr(SpecialExpr::Kind kind) : kind(kind), args() {}
+
+SpecialExpr *SpecialExpr::ptr(Var *var) {
+  auto *s = new SpecialExpr(Kind::PTR);
+  s->args.ptrArgs = var;
+  return s;
+}
+
+SpecialExpr *SpecialExpr::array(seq_int_t len) {
+  auto *s = new SpecialExpr(Kind::ARRAY);
+  s->args.arrayArgs = len;
+  return s;
+}
+
+SpecialExpr *SpecialExpr::elemSize(types::Type *type) {
+  auto *s = new SpecialExpr(Kind::ELEMSIZE);
+  s->args.elemSizeArgs = type;
+  return s;
+}
+
+SpecialExpr *SpecialExpr::atomic(types::Type *type) {
+  auto *s = new SpecialExpr(Kind::ATOMIC);
+  s->args.atomicArgs = type;
+  return s;
+}
+
+Value *SpecialExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
+  LLVMContext &context = block->getContext();
+  switch (kind) {
+  case Kind::PTR: {
+    return args.ptrArgs->getPtr(base);
+  }
+  case Kind::ARRAY: {
+    auto *type = dynamic_cast<types::ArrayType *>(getType());
+    assert(type != nullptr);
+    BasicBlock *preambleBlock = base->getPreamble();
+    IRBuilder<> builder(preambleBlock);
+    Value *len = ConstantInt::get(seqIntLLVM(context), args.arrayArgs);
+    Value *ptr = builder.CreateAlloca(type->getBaseType(0)->getLLVMType(context), len);
+    Value *arr = type->make(ptr, len, block);
+    return arr;
+  }
+  case Kind::ELEMSIZE: {
+    const size_t size = args.elemSizeArgs->size(block->getModule());
+    return ConstantInt::get(seqIntLLVM(context), size);
+  }
+  case Kind::ATOMIC: {
+    const unsigned atomic = args.atomicArgs->isAtomic() ? 1 : 0;
+    return ConstantInt::get(types::Bool->getLLVMType(context), atomic);
+  }
+  }
+  assert(0);
+  return nullptr;
+}

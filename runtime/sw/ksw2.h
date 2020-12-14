@@ -8,7 +8,7 @@
 
 #define KSW_EZ_SCORE_ONLY 0x01 // don't record alignment path/cigar
 #define KSW_EZ_RIGHT 0x02      // right-align gaps
-#define KSW_EZ_GENERIC_SC                                                      \
+#define KSW_EZ_GENERIC_SC                                                              \
   0x04 // without this flag: match/mismatch only; last symbol is a wildcard
 #define KSW_EZ_APPROX_MAX 0x08  // approximate max; this is faster with sse
 #define KSW_EZ_APPROX_DROP 0x10 // approximate Z-drop; faster with sse
@@ -51,33 +51,31 @@ typedef struct {
  * @param flag      flag (see KSW_EZ_* macros)
  * @param ez        (out) scores and cigar
  */
-void ksw_extz(void *km, int qlen, const uint8_t *query, int tlen,
-              const uint8_t *target, int8_t m, const int8_t *mat, int8_t q,
-              int8_t e, int w, int zdrop, int flag, ksw_extz_t *ez);
+void ksw_extz(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target,
+              int8_t m, const int8_t *mat, int8_t q, int8_t e, int w, int zdrop,
+              int flag, ksw_extz_t *ez);
 
 void ksw_extz2_sse(void *km, int qlen, const uint8_t *query, int tlen,
                    const uint8_t *target, int8_t m, const int8_t *mat, int8_t q,
-                   int8_t e, int w, int zdrop, int end_bonus, int flag,
-                   ksw_extz_t *ez);
+                   int8_t e, int w, int zdrop, int end_bonus, int flag, ksw_extz_t *ez);
 
-void ksw_extd(void *km, int qlen, const uint8_t *query, int tlen,
-              const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo,
-              int8_t gape, int8_t gapo2, int8_t gape2, int w, int zdrop,
-              int flag, ksw_extz_t *ez);
+void ksw_extd(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target,
+              int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int8_t gapo2,
+              int8_t gape2, int w, int zdrop, int flag, ksw_extz_t *ez);
 
 void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen,
-                   const uint8_t *target, int8_t m, const int8_t *mat,
-                   int8_t gapo, int8_t gape, int8_t gapo2, int8_t gape2, int w,
-                   int zdrop, int end_bonus, int flag, ksw_extz_t *ez);
+                   const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo,
+                   int8_t gape, int8_t gapo2, int8_t gape2, int w, int zdrop,
+                   int end_bonus, int flag, ksw_extz_t *ez);
 
 void ksw_exts2_sse(void *km, int qlen, const uint8_t *query, int tlen,
-                   const uint8_t *target, int8_t m, const int8_t *mat,
-                   int8_t gapo, int8_t gape, int8_t gapo2, int8_t noncan,
-                   int zdrop, int flag, ksw_extz_t *ez);
+                   const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo,
+                   int8_t gape, int8_t gapo2, int8_t noncan, int zdrop, int flag,
+                   ksw_extz_t *ez);
 
 void ksw_extf2_sse(void *km, int qlen, const uint8_t *query, int tlen,
-                   const uint8_t *target, int8_t mch, int8_t mis, int8_t e,
-                   int w, int xdrop, ksw_extz_t *ez);
+                   const uint8_t *target, int8_t mch, int8_t mis, int8_t e, int w,
+                   int xdrop, ksw_extz_t *ez);
 
 /**
  * Global alignment
@@ -90,22 +88,20 @@ void ksw_extf2_sse(void *km, int qlen, const uint8_t *query, int tlen,
  *
  * @return          score of the alignment
  */
-int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen,
-           const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo,
-           int8_t gape, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_);
-int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen,
-            const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo,
-            int8_t gape, int w, int *m_cigar_, int *n_cigar_,
-            uint32_t **cigar_);
+int ksw_gg(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target,
+           int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *m_cigar_,
+           int *n_cigar_, uint32_t **cigar_);
+int ksw_gg2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target,
+            int8_t m, const int8_t *mat, int8_t gapo, int8_t gape, int w, int *m_cigar_,
+            int *n_cigar_, uint32_t **cigar_);
 int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen,
                 const uint8_t *target, int8_t m, const int8_t *mat, int8_t gapo,
-                int8_t gape, int w, int *m_cigar_, int *n_cigar_,
-                uint32_t **cigar_);
+                int8_t gape, int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_);
 
 void *ksw_ll_qinit(void *km, int size, int qlen, const uint8_t *query, int m,
                    const int8_t *mat);
-int ksw_ll_i16(void *q, int tlen, const uint8_t *target, int gapo, int gape,
-               int *qe, int *te);
+int ksw_ll_i16(void *q, int tlen, const uint8_t *target, int gapo, int gape, int *qe,
+               int *te);
 
 #ifdef __cplusplus
 }
@@ -143,11 +139,11 @@ static inline uint32_t *ksw_push_cigar(void *km, int *n_cigar, int *m_cigar,
 //   \tilde{E} and 4 for \tilde{F} bit 3/0x08: 1 if a continuation on the E
 //   state (bit 5/0x20 for a continuation on \tilde{E}) bit 4/0x10: 1 if a
 //   continuation on the F state (bit 6/0x40 for a continuation on \tilde{F})
-static inline void ksw_backtrack(
-    void *km, int is_rot, int is_rev, int min_intron_len, const uint8_t *p,
-    const int *off, const int *off_end, int n_col, int i0, int j0,
-    int *m_cigar_, int *n_cigar_,
-    uint32_t **cigar_) { // p[] - lower 3 bits: which type gets the max; bit
+static inline void
+ksw_backtrack(void *km, int is_rot, int is_rev, int min_intron_len, const uint8_t *p,
+              const int *off, const int *off_end, int n_col, int i0, int j0,
+              int *m_cigar_, int *n_cigar_,
+              uint32_t **cigar_) { // p[] - lower 3 bits: which type gets the max; bit
   int n_cigar = 0, m_cigar = *m_cigar_, i = i0, j = j0, r, state = 0;
   uint32_t *cigar = *cigar_, tmp;
   while (i >= 0 && j >= 0) { // at the beginning of the loop, _state_ tells us
@@ -168,8 +164,7 @@ static inline void ksw_backtrack(
       tmp = force_state < 0 ? p[(size_t)i * n_col + j - off[i]] : 0;
     }
     if (state == 0)
-      state =
-          tmp & 7; // if requesting the H state, find state one maximizes it.
+      state = tmp & 7; // if requesting the H state, find state one maximizes it.
     else if (!(tmp >> (state + 2) & 1))
       state = 0; // if requesting other states, _state_ stays the same if it is
                  // a continuation; otherwise, set to H
@@ -200,8 +195,7 @@ static inline void ksw_backtrack(
                            j + 1); // first insertion
   if (!is_rev)
     for (i = 0; i < (n_cigar >> 1); ++i) // reverse CIGAR
-      tmp = cigar[i], cigar[i] = cigar[n_cigar - 1 - i],
-      cigar[n_cigar - 1 - i] = tmp;
+      tmp = cigar[i], cigar[i] = cigar[n_cigar - 1 - i], cigar[n_cigar - 1 - i] = tmp;
   *m_cigar_ = m_cigar, *n_cigar_ = n_cigar, *cigar_ = cigar;
 }
 
@@ -215,8 +209,8 @@ static inline void ksw_reset_extz(ksw_extz_t *ez) {
   ez->reach_end = 0;
 }
 
-static inline int ksw_apply_zdrop(ksw_extz_t *ez, int is_rot, int32_t H, int a,
-                                  int b, int zdrop, int8_t e) {
+static inline int ksw_apply_zdrop(ksw_extz_t *ez, int is_rot, int32_t H, int a, int b,
+                                  int zdrop, int8_t e) {
   int r, t;
   if (is_rot)
     r = a, t = b;
