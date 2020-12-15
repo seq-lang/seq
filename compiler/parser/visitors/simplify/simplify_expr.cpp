@@ -26,10 +26,10 @@ namespace ast {
 using namespace types;
 
 ExprPtr SimplifyVisitor::transform(const ExprPtr &expr) {
-  return transform(expr, false);
+  return transform(expr.get(), false);
 }
 
-ExprPtr SimplifyVisitor::transform(const ExprPtr &expr, bool allowTypes) {
+ExprPtr SimplifyVisitor::transform(const Expr *expr, bool allowTypes) {
   if (!expr)
     return nullptr;
   SimplifyVisitor v(ctx, prependStmts);
@@ -41,7 +41,7 @@ ExprPtr SimplifyVisitor::transform(const ExprPtr &expr, bool allowTypes) {
 }
 
 ExprPtr SimplifyVisitor::transformType(const ExprPtr &expr) {
-  auto e = transform(expr, true);
+  auto e = transform(expr.get(), true);
   if (e && !e->isType())
     error("expected type expression");
   return e;
@@ -346,20 +346,20 @@ void SimplifyVisitor::visit(const IndexExpr *expr) {
     e->markType();
   } else if (expr->expr->isId("function") || expr->expr->isId("Function")) {
     auto t = expr->index->getTuple();
-    auto name = generateFunctionStub(t ? int(t->items.size()) : 1);
+    auto name = generateFunctionStub(t ? int(t->items.size()) - 1 : 0);
     e = transformType(N<IdExpr>(name));
     e->markType();
   } else {
-    e = transform(expr->expr, true);
+    e = transform(expr->expr.get(), true);
   }
   // IndexExpr[i1, ..., iN] is internally stored as IndexExpr[TupleExpr[i1, ..., iN]]
   // for N > 1, so make sure to check that case.
   vector<ExprPtr> it;
   if (auto t = expr->index->getTuple())
     for (auto &i : t->items)
-      it.push_back(transformGenericExpr(i));
+      it.push_back(transformIndexExpr(i));
   else
-    it.push_back(transformGenericExpr(expr->index));
+    it.push_back(transformIndexExpr(expr->index));
 
   // Below we check if this is a proper instantiation expression.
   bool allTypes = true;
@@ -417,7 +417,7 @@ void SimplifyVisitor::visit(const CallExpr *expr) {
   vector<CallExpr::Arg> args;
   for (auto &i : expr->args)
     args.push_back({i.name, transform(i.value)});
-  resultExpr = N<CallExpr>(transform(expr->expr, true), move(args));
+  resultExpr = N<CallExpr>(transform(expr->expr.get(), true), move(args));
 }
 
 /// Perform the import flattening transformation:
@@ -452,7 +452,7 @@ void SimplifyVisitor::visit(const DotExpr *expr) {
       return;
     }
   }
-  resultExpr = N<DotExpr>(transform(expr->expr, true), expr->member);
+  resultExpr = N<DotExpr>(transform(expr->expr.get(), true), expr->member);
 }
 
 // This expression is transformed during the type-checking stage
@@ -464,7 +464,7 @@ void SimplifyVisitor::visit(const SliceExpr *expr) {
 
 /// TypeOf expressions will be handled during the type-checking stage.
 void SimplifyVisitor::visit(const TypeOfExpr *expr) {
-  resultExpr = N<TypeOfExpr>(transform(expr->expr, true));
+  resultExpr = N<TypeOfExpr>(transform(expr->expr.get(), true));
   resultExpr->markType();
 }
 
@@ -489,7 +489,7 @@ void SimplifyVisitor::visit(const LambdaExpr *expr) {
   }
 }
 
-ExprPtr SimplifyVisitor::transformInt(string value, string suffix) {
+ExprPtr SimplifyVisitor::transformInt(const string &value, const string &suffix) {
   auto to_int = [](const string &s) {
     if (startswith(s, "0b") || startswith(s, "0B"))
       return std::stoull(s.substr(2), nullptr, 2);
@@ -585,7 +585,7 @@ StmtPtr SimplifyVisitor::getGeneratorBlock(const vector<GeneratorBody> &loops,
   prev = (SuiteStmt *)suite.get();
   for (auto &l : loops) {
     newSuite = N<SuiteStmt>();
-    SuiteStmt *nextPrev = (SuiteStmt *)newSuite.get();
+    auto nextPrev = (SuiteStmt *)newSuite.get();
 
     prev->stmts.push_back(N<ForStmt>(l.vars->clone(), l.gen->clone(), move(newSuite)));
     prev = nextPrev;
@@ -597,6 +597,50 @@ StmtPtr SimplifyVisitor::getGeneratorBlock(const vector<GeneratorBody> &loops,
     }
   }
   return suite;
+}
+
+ExprPtr SimplifyVisitor::transformIndexExpr(const ExprPtr &expr) {
+  auto t = transform(expr.get(), true);
+  set<string> captures;
+  if (isStaticExpr(t.get(), captures))
+    return N<StaticExpr>(clone(t), move(captures));
+  else
+    return t;
+}
+
+bool SimplifyVisitor::isStaticExpr(const Expr *expr, set<string> &captures) {
+  static unordered_set<string> supported{"<",  "<=", ">", ">=", "==", "!=", "&&",
+                                         "||", "+",  "-", "*",  "//", "%"};
+  if (auto ei = expr->getId()) {
+    auto val = ctx->find(ei->value);
+    if (val && val->isStatic()) {
+      captures.insert(ei->value);
+      return true;
+    }
+    return false;
+  } else if (auto eb = expr->getBinary()) {
+    return (supported.find(eb->op) != supported.end()) &&
+           isStaticExpr(eb->lexpr.get(), captures) &&
+           isStaticExpr(eb->rexpr.get(), captures);
+  } else if (auto eu = expr->getUnary()) {
+    return ((eu->op == "-") || (eu->op == "!")) &&
+           isStaticExpr(eu->expr.get(), captures);
+  } else if (auto ef = expr->getIf()) {
+    return isStaticExpr(ef->cond.get(), captures) &&
+           isStaticExpr(ef->ifexpr.get(), captures) &&
+           isStaticExpr(ef->elsexpr.get(), captures);
+  } else if (auto eit = expr->getInt()) {
+    if (!eit->suffix.empty())
+      return false;
+    try {
+      std::stoull(eit->value, nullptr, 0);
+    } catch (std::out_of_range &) {
+      return false;
+    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 ExprPtr SimplifyVisitor::makeAnonFn(vector<StmtPtr> &&stmts,

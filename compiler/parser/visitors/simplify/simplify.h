@@ -64,13 +64,15 @@ public:
 
   /// Transforms an AST expression node.
   /// @raise ParserException if a node describes a type (use transformType instead).
+  ExprPtr transform(const Expr *e);
   ExprPtr transform(const ExprPtr &e) override;
   /// Transforms an AST statement node.
+  StmtPtr transform(const Stmt *s);
   StmtPtr transform(const StmtPtr &s) override;
   /// Transforms an AST pattern node.
   PatternPtr transform(const PatternPtr &p) override;
   /// Transforms an AST expression node.
-  ExprPtr transform(const ExprPtr &e, bool allowTypes);
+  ExprPtr transform(const Expr *e, bool allowTypes = false);
   /// Transforms an AST type expression node.
   /// @raise ParserException if a node does not describe a type (use transform instead).
   ExprPtr transformType(const ExprPtr &expr);
@@ -141,7 +143,7 @@ private:
   /// Converts binary integers (0bXXX), unsigned integers (XXXu), fixed-width integers
   /// (XXXuN and XXXiN), and other suffix integers to a corresponding integer value or a
   /// constructor.
-  ExprPtr transformInt(string value, string suffix);
+  ExprPtr transformInt(const string &value, const string &suffix);
   /// Converts a Python-like F-string (f"foo {x+1} bar") to a concatenation:
   ///   str.cat(["foo ", str(x + 1), " bar"]).
   /// Also supports "{x=}" specifier (that prints the raw expression as well).
@@ -156,6 +158,21 @@ private:
   /// @param prev (out-argument) A pointer to the innermost block (suite) where a
   /// comprehension (or generator) expression should reside.
   StmtPtr getGeneratorBlock(const vector<GeneratorBody> &loops, SuiteStmt *&prev);
+  /// Transform an index expression: allow for type expressions, and check if an
+  /// expression is a static expression. If so, return StaticExpr.
+  ExprPtr transformIndexExpr(const ExprPtr &expr);
+  /// Returns true if an expression is compile-time static expression.
+  /// Such expression is of a form:
+  ///   an integer (IntExpr) without any suffix that is within i64 range
+  ///   a static generic
+  ///   [-,not] a
+  ///   a [+,-,*,//,%,and,or,==,!=,<,<=,>,>=] b
+  ///     (note: and/or will NOT short-circuit)
+  ///   a if cond else b
+  ///     (note: cond is static, and is true if non-zero, false otherwise).
+  ///     (note: both branches will be evaluated).
+  /// All static generics will be captured and stored in captures out-parameter.
+  bool isStaticExpr(const Expr *expr, set<string> &captures);
   /// Make an anonymous function _lambda_XX with provided statements and argument names.
   /// Function definition is prepended to the current statement.
   /// If the statements refer to outer variables, those variables will be captured and
@@ -168,20 +185,80 @@ private:
   ExprPtr makeAnonFn(vector<StmtPtr> &&stmts,
                      const vector<string> &argNames = vector<string>{});
 
-  vector<StmtPtr> addMethods(const StmtPtr &s);
-  string generateFunctionStub(int len);
-  StmtPtr codegenMagic(const string &op, const ExprPtr &typExpr,
-                       const vector<Param> &args, bool isRecord);
-
-  StmtPtr parseCImport(string name, const vector<Param> &args, const ExprPtr &ret,
-                       string altName, StringExpr *code = nullptr);
-  StmtPtr parseDylibCImport(const ExprPtr &dylib, string name,
+  /// Transforms a simple assignment:
+  ///   a[x] = b -> a.__setitem__(x, b)
+  ///   a.x = b -> AssignMemberStmt
+  ///   a : type = b -> AssignStmt
+  ///   a = b -> AssignStmt or UpdateStmt if a exists in the same scope (or is global)
+  StmtPtr parseAssignment(const Expr *lhs, const Expr *rhs, const Expr *type,
+                          bool shadow, bool mustExist);
+  /// Unpack an assignment expression lhs = rhs into a list of simple assignment
+  /// expressions (either a = b, or a.x = b, or a[x] = b).
+  /// Used to handle various Python unpacking rules, such as:
+  ///   (a, b) = c
+  ///   a, b = c
+  ///   [a, *x, b] = c.
+  /// Non-trivial right-hand expressions are first stored in a temporary variable:
+  ///   a, b = c, d + foo() -> tmp = (c, d + foo); a = tmp[0]; b = tmp[1].
+  /// Processes each assignment recursively to support cases like:
+  ///   a, (b, c)) = d
+  void unpackAssignments(const Expr *lhs, const Expr *rhs, vector<StmtPtr> &stmts,
+                         bool shadow, bool mustExist);
+  /// Transform a C import (from C import foo(int) -> float as f) to:
+  ///   @.c
+  ///   def foo(a1: int) -> float: pass
+  ///   f = foo (only if altName is provided).
+  StmtPtr parseCImport(const string &name, const vector<Param> &args,
+                       const ExprPtr &ret, const string &altName);
+  /// Transform a dynamic C import (from C import lib.foo(int) -> float as f) to:
+  ///   def foo(a1: int) -> float:
+  ///     fptr = _dlsym(lib, "foo")
+  ///     f = Function[float, int](fptr)
+  ///     return f(a1)  (if return type is void, just call f(a1))
+  StmtPtr parseCDylibImport(const ExprPtr &dylib, const string &name,
                             const vector<Param> &args, const ExprPtr &ret,
-                            string altName);
-  StmtPtr parsePythonImport(const ExprPtr &what, string as);
-  StmtPtr parseLLVMImport(const Stmt *codeStmt);
-  bool isStaticExpr(const ExprPtr &expr, set<string> &captures);
-  ExprPtr transformGenericExpr(const ExprPtr &expr);
+                            const string &altName);
+  StmtPtr parsePythonImport(const ExprPtr &what, const string &as);
+  /// Transform Python code @python def foo(x): <python code> to:
+  ///   _py_exec("def foo(x): <python code>")
+  ///   from python import foo
+  StmtPtr parsePythonDefinition(const string &name, const vector<Param> &args,
+                                const Stmt *codeStmt);
+  /// Transform LLVM code @llvm def foo(x: int) -> float: <llvm code> to:
+  ///   def foo(x: int) -> float:
+  ///     StringExpr("<llvm code>")
+  ///     SuiteStmt(referenced_types)
+  /// As LLVM code can reference types and static expressions in {= expr} block,
+  /// all such referenced expression will be stored in the above referenced_types.
+  /// "<llvm code>" will also be transformed accordingly: each {= expr} reference will
+  /// be replaced with {} so that fmt::format can easily later fill the gaps.
+  /// Note that any brace ({ or }) that is not part of {= expr} reference will be
+  /// escaped (e.g. { -> {{ and } -> }}) so that fmt::format can print them as-is.
+  StmtPtr parseLLVMDefinition(const Stmt *codeStmt);
+  /// Generate a function type Function.N[TR, T1, ..., TN] as follows:
+  ///   @internal @tuple @trait
+  ///   class Function.N[TR, T1, ..., TN]:
+  ///     @internal
+  ///     def __new__(what: Ptr[byte]) -> Function.N[TR, T1, ..., TN]: pass
+  ///     @internal
+  ///     def __str__(self: Function.N[TR, T1, ..., TN]) -> str: pass
+  /// Return the canonical name of Function.N.
+  string generateFunctionStub(int n);
+  /// Generate a magic method __op__ for a type described by typExpr and type arguments
+  /// args.
+  /// Currently able to generate:
+  ///   Contructors: __new__, __init__
+  ///   Utilities: __raw__, __hash__, __Str__
+  ///   Iteration: __iter__, __getitem__, __len__, __contains__
+  //    Comparisons: __eq__, __ne__, __lt__, __le__, __gt__, __ge__
+  //    Pickling: __pickle__, __unpickle__
+  //    Python: __to_py__, __from_py__
+  StmtPtr codegenMagic(const string &op, const Expr *typExpr, const vector<Param> &args,
+                       bool isRecord);
+  // Return a list of all function statements within a given class suite. Checks each
+  // suite recursively, and assumes that each statement is either a function or a
+  // doc-string.
+  vector<const Stmt *> getClassMethods(const Stmt *s);
 };
 
 } // namespace ast

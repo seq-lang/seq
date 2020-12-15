@@ -71,10 +71,12 @@ namespace ast {
 
 /// String and collection utilities
 
-/// Split a delimiter-separated string into a vector of strings
+/// Split a delimiter-separated string into a vector of strings.
 vector<string> split(const string &str, char delim);
-/// Escape a C string (replace \n with \\n etc.)
+/// Escape a C string (replace \n with \\n etc.).
 string escape(const string &str);
+/// Escape an F-string braces (replace { and } with {{ and }}).
+string escapeFStringBraces(const string &str, int start, int len);
 /// Remove leading dot from a string.
 string chop(const string &str);
 /// True if a string str starts with a prefix.

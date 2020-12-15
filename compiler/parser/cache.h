@@ -18,15 +18,26 @@
 #include "parser/common.h"
 #include "parser/ctx.h"
 
+#define STDLIB_IMPORT ""
+#define STDLIB_INTERNAL_MODULE "internal"
+#define ATTR_INTERNAL "internal"
+#define ATTR_TUPLE "tuple"
+#define ATTR_TRAIT "trait"
+#define ATTR_EXTERN_C ".c"
+#define ATTR_EXTERN_LLVM ".c"
+#define ATTR_EXTERN_PYTHON ".c"
+#define ATTR_BUILTIN "builtin"
+#define ATTR_PARENT_FUNCTION ".parentFunc"
+#define ATTR_PARENT_CLASS ".parentClass"
+#define ATTR_NOT_STATIC ".notStatic"
+#define ATTR_TOTAL_ORDERING "total_ordering"
+#define ATTR_CONTAINER "container"
+#define ATTR_PYTHON "python"
+#define ATTR_PICKLE "pickle"
+#define ATTR_NO(x) ("no_" x)
+
 namespace seq {
 namespace ast {
-
-const string STDLIB_IMPORT = "";
-const string STDLIB_INTERNAL_MODULE = "internal";
-
-const string ATTR_INTERNAL = "internal";
-const string ATTR_TUPLE = "tuple";
-const string ATTR_TRAIT = "trait";
 
 /// Forward declarations
 struct SimplifyItem;

@@ -334,8 +334,8 @@ struct ImportStmt : public Stmt {
   /// Function return type for C imports.
   ExprPtr ret;
 
-  ImportStmt(ExprPtr from, ExprPtr what, vector<Param> &&args, ExprPtr ret = nullptr,
-             string as = "", int dots = 0);
+  ImportStmt(ExprPtr from, ExprPtr what, vector<Param> &&args = vector<Param>{},
+             ExprPtr ret = nullptr, string as = "", int dots = 0);
   ImportStmt(const ImportStmt &stmt);
 
   string toString() const override;

@@ -109,9 +109,9 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
 
   // Move all auto-generated variardic types to the preamble.
   // Ensure that Function.1 is the first (as all others depend on it!)
-  preamble->stmts.emplace_back(clone(cache->asts[".Function.1"]));
+  preamble->stmts.emplace_back(clone(cache->asts[".Function.0"]));
   for (auto &v : cache->variardics)
-    if (v != ".Function.1")
+    if (v != ".Function.0")
       preamble->stmts.emplace_back(clone(cache->asts["." + v]));
   // Move the transformed node to the end
   suite->stmts.emplace_back(move(stmts));
@@ -122,154 +122,6 @@ SimplifyVisitor::SimplifyVisitor(shared_ptr<SimplifyContext> ctx,
                                  shared_ptr<vector<StmtPtr>> stmts)
     : ctx(move(ctx)) {
   prependStmts = stmts ? move(stmts) : make_shared<vector<StmtPtr>>();
-}
-
-StmtPtr SimplifyVisitor::parseCImport(string name, const vector<Param> &args,
-                                      const ExprPtr &ret, string altName,
-                                      StringExpr *code) {
-  auto canonicalName = ctx->generateCanonicalName(name);
-  vector<Param> fnArgs;
-  vector<TypePtr> argTypes{};
-  generateFunctionStub(args.size() + 1);
-  for (int ai = 0; ai < args.size(); ai++) {
-    if (args[ai].deflt)
-      error("default arguments not supported here");
-    if (!args[ai].type)
-      error("type for '{}' not specified", args[ai].name);
-    fnArgs.emplace_back(
-        Param{args[ai].name.empty() ? format(".a{}", ai) : args[ai].name,
-              transformType(args[ai].type), nullptr});
-  }
-  ctx->add(SimplifyItem::Func, altName.empty() ? name : altName, canonicalName,
-           ctx->isToplevel());
-  StmtPtr body = code ? N<ExprStmt>(code->clone()) : nullptr;
-  if (code && !ret)
-    error("LLVM functions must have a return type");
-  auto f = N<FunctionStmt>(
-      canonicalName, ret ? transformType(ret) : transformType(N<IdExpr>("void")),
-      vector<Param>(), move(fnArgs), move(body), vector<string>{code ? "llvm" : ".c"});
-  ctx->cache->asts[canonicalName] = clone(f);
-  return f;
-}
-
-StmtPtr SimplifyVisitor::parseDylibCImport(const ExprPtr &dylib, string name,
-                                           const vector<Param> &args,
-                                           const ExprPtr &ret, string altName) {
-  vector<StmtPtr> stmts;
-  stmts.push_back(
-      N<AssignStmt>(N<IdExpr>("fptr"), N<CallExpr>(N<IdExpr>("_dlsym"), clone(dylib),
-                                                   N<StringExpr>(name))));
-  vector<ExprPtr> fnArgs;
-  fnArgs.push_back(ret ? clone(ret) : N<IdExpr>("void"));
-  for (auto &a : args)
-    fnArgs.push_back(clone(a.type));
-  stmts.push_back(N<AssignStmt>(
-      N<IdExpr>("f"),
-      N<CallExpr>(N<IndexExpr>(N<IdExpr>("Function"), N<TupleExpr>(move(fnArgs))),
-                  N<IdExpr>("fptr"))));
-  bool isVoid = true;
-  if (ret) {
-    if (auto f = CAST(ret, IdExpr))
-      isVoid = f->value == "void";
-    else
-      isVoid = false;
-  }
-  fnArgs.clear();
-  for (int i = 0; i < args.size(); i++)
-    fnArgs.push_back(N<IdExpr>(args[i].name != "" ? args[i].name : format(".a{}", i)));
-  auto call = N<CallExpr>(N<IdExpr>("f"), move(fnArgs));
-  if (!isVoid)
-    stmts.push_back(N<ReturnStmt>(move(call)));
-  else
-    stmts.push_back(N<ExprStmt>(move(call)));
-  vector<Param> params;
-  for (int i = 0; i < args.size(); i++)
-    params.emplace_back(Param{args[i].name != "" ? args[i].name : format(".a{}", i),
-                              clone(args[i].type)});
-  return transform(N<FunctionStmt>(altName.empty() ? name : altName, clone(ret),
-                                   vector<Param>(), move(params),
-                                   N<SuiteStmt>(move(stmts)), vector<string>()));
-}
-
-// from python import X.Y -> import X; from X import Y ... ?
-// from python import Y -> get Y? works---good! not: import Y; return import
-StmtPtr SimplifyVisitor::parsePythonImport(const ExprPtr &what, string as) {
-  vector<StmtPtr> stmts;
-  string from = "";
-
-  vector<string> dirs;
-  Expr *e = what.get();
-  while (auto d = dynamic_cast<DotExpr *>(e)) {
-    dirs.push_back(d->member);
-    e = d->expr.get();
-  }
-  if (!e->getId())
-    error("invalid import statement");
-  dirs.push_back(e->getId()->value);
-  string name = dirs[0], lib;
-  for (int i = dirs.size() - 1; i > 0; i--)
-    lib += dirs[i] + (i > 1 ? "." : "");
-  return transform(N<AssignStmt>(
-      N<IdExpr>(name), N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_py_import"),
-                                   N<StringExpr>(name), N<StringExpr>(lib))));
-  // imp = pyobj._py_import("foo", "lib")
-}
-
-StmtPtr SimplifyVisitor::parseLLVMImport(const Stmt *codeStmt) {
-  if (!codeStmt->getExpr() || !codeStmt->getExpr()->expr->getString())
-    error("invalid LLVM function");
-
-  auto code = codeStmt->getExpr()->expr->getString()->value;
-  vector<StmtPtr> items;
-  auto se = N<StringExpr>("");
-  string &finalCode = se->value;
-  items.push_back(N<ExprStmt>(move(se)));
-
-  auto escape = [](const string &str, int s, int l) {
-    string t;
-    t.reserve(l);
-    for (int i = s; i < s + l; i++)
-      if (str[i] == '{')
-        t += "{{";
-      else if (str[i] == '}')
-        t += "}}";
-      else
-        t += str[i];
-    return t;
-  };
-
-  int braceCount = 0, braceStart = 0;
-  for (int i = 0; i < code.size(); i++) {
-    if (i < code.size() - 1 && code[i] == '{' && code[i + 1] == '=') {
-      if (braceStart < i)
-        finalCode += escape(code, braceStart, i - braceStart) + '{';
-      if (!braceCount) {
-        braceStart = i + 2;
-        braceCount++;
-      } else {
-        error("invalid LLVM substitution");
-      }
-    } else if (braceCount && code[i] == '}') {
-      braceCount--;
-      string exprCode = code.substr(braceStart, i - braceStart);
-      auto offset = getSrcInfo();
-      offset.col += i;
-      auto expr = transformGenericExpr(parseExpr(exprCode, offset));
-      if (!expr->isType() && !expr->getStatic())
-        error(expr, "expression {} is not a type or static expression",
-              expr->toString());
-      //        LOG("~~> {} -> {}", exprCode, expr->toString());
-      items.push_back(N<ExprStmt>(move(expr)));
-      braceStart = i + 1;
-      finalCode += '}';
-    }
-  }
-  if (braceCount)
-    error("invalid LLVM substitution");
-  if (braceStart != code.size())
-    finalCode += escape(code, braceStart, code.size() - braceStart);
-
-  return N<SuiteStmt>(move(items));
 }
 
 } // namespace ast

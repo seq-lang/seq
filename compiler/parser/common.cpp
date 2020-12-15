@@ -68,6 +68,19 @@ string escape(const string &str) {
   }
   return r;
 }
+string escapeFStringBraces(const string &str, int start, int len) {
+  string t;
+  t.reserve(len);
+  for (int i = start; i < start + len; i++)
+    if (str[i] == '{')
+      t += "{{";
+    else if (str[i] == '}')
+      t += "}}";
+    else
+      t += str[i];
+  return t;
+};
+
 string chop(const string &str) {
   return !str.empty() && str[0] == '.' ? str.substr(1) : str;
 }

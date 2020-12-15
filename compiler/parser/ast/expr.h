@@ -27,13 +27,16 @@ struct CallExpr;
 struct DotExpr;
 struct EllipsisExpr;
 struct IdExpr;
+struct IfExpr;
 struct IndexExpr;
 struct IntExpr;
+struct ListExpr;
 struct NoneExpr;
 struct StarExpr;
 struct StaticExpr;
 struct StringExpr;
 struct TupleExpr;
+struct UnaryExpr;
 struct Stmt;
 
 /**
@@ -83,13 +86,16 @@ public:
   virtual const DotExpr *getDot() const { return nullptr; }
   virtual const EllipsisExpr *getEllipsis() const { return nullptr; }
   virtual const IdExpr *getId() const { return nullptr; }
+  virtual const IfExpr *getIf() const { return nullptr; }
   virtual const IndexExpr *getIndex() const { return nullptr; }
   virtual const IntExpr *getInt() const { return nullptr; }
+  virtual const ListExpr *getList() const { return nullptr; }
   virtual const NoneExpr *getNone() const { return nullptr; }
   virtual const StarExpr *getStar() const { return nullptr; }
   virtual const StaticExpr *getStatic() const { return nullptr; }
   virtual const StringExpr *getString() const { return nullptr; }
   virtual const TupleExpr *getTuple() const { return nullptr; }
+  virtual const UnaryExpr *getUnary() const { return nullptr; }
 
 protected:
   /// Add a type to S-expression string.
@@ -250,6 +256,8 @@ struct ListExpr : public Expr {
   string toString() const override;
   ExprPtr clone() const override;
   void accept(ASTVisitor &visitor) const override;
+
+  const ListExpr *getList() const override { return this; }
 };
 
 /// Set expression ({items...}).
@@ -337,6 +345,8 @@ struct IfExpr : public Expr {
   string toString() const override;
   ExprPtr clone() const override;
   void accept(ASTVisitor &visitor) const override;
+
+  const IfExpr *getIf() const override { return this; }
 };
 
 /// Unary expression [op expr].
@@ -351,6 +361,8 @@ struct UnaryExpr : public Expr {
   string toString() const override;
   ExprPtr clone() const override;
   void accept(ASTVisitor &visitor) const override;
+
+  const UnaryExpr *getUnary() const override { return this; }
 };
 
 /// Binary expression [lexpr op rexpr].
