@@ -4,6 +4,15 @@ Workshop
 In this workshop, we will build a toy read mapper called *SeqMap* to
 showcase some of Seq's domain-specific features and optimizations.
 
+Code Listings
+-------------
+
+- **Section 1**: :ref:`section1-code` ｜ :download:`click to download <../../workshop/section1.seq>`
+- **Section 2**: :ref:`section2-code` ｜ :download:`click to download <../../workshop/section2.seq>`
+- **Section 3**: :ref:`section3-code` ｜ :download:`click to download <../../workshop/section3.seq>`
+- **Section 4**: :ref:`section4-code` ｜ :download:`click to download <../../workshop/section4.seq>`
+- **Section 5**: :ref:`section5-code` ｜ :download:`click to download <../../workshop/section5.seq>`
+- **Section 6**: :ref:`section6-code` ｜ :download:`click to download <../../workshop/section6.seq>`
 
 Getting Started
 ---------------
@@ -32,7 +41,7 @@ Let's download this data into a new folder called ``data``:
 
 .. code:: bash
 
-    wget -c http://seq.csail.mit.edu/data.tar.gz -O - | tar -xz
+    curl -L http://seq.csail.mit.edu/data.tar.gz | tar zxf - -C .
 
 What does this data actually look like? Let's take a look:
 
@@ -157,6 +166,8 @@ and view the results:
 
 Pretty straightforward! FASTA files can be read in a very similar way.
 
+.. _section1-code:
+
 Full code listing
 ~~~~~~~~~~~~~~~~~
 
@@ -238,6 +249,8 @@ Now we should see a new file ``data/chr22.fa.index`` which stores our
 serialized index.
 
 The nice thing is we should only have to build our index once!
+
+.. _section2-code:
 
 Full code listing
 ~~~~~~~~~~~~~~~~~
@@ -341,6 +354,8 @@ Let's take a look at the output:
 
 Notice that most positions we reported match the position from the read
 name (the first integer after the ``_``); not bad!
+
+.. _section3-code:
 
 Full code listing
 ~~~~~~~~~~~~~~~~~
@@ -449,16 +464,16 @@ And let's take a look at the output once again:
 
 .. code:: text
 
-    chr22_16993648_16994131_1:0:0_2:0:0_0/1 16993648 -1 101M
-    chr22_28253010_28253558_1:0:0_0:0:0_1/1 28253010 -1 101M
-    chr22_44541236_44541725_0:1:0_0:0:0_3/1 44541236 -1 101M
-    chr22_31651867_31652385_2:0:0_2:0:0_7/1 31651867 -2 101M
-    chr22_21584577_21585142_1:0:0_1:0:0_a/1 21584577 -1 101M
-    chr22_46629499_46629977_0:0:0_2:0:0_b/1 47088563 -15 20M1I4M1D76M
-    chr22_46629499_46629977_0:0:0_2:0:0_b/1 51103174 -11 20M1I4M1D76M
-    chr22_46629499_46629977_0:0:0_2:0:0_b/1 46795988 -12 20M1I4M1D76M
-    chr22_16269615_16270134_0:0:0_1:0:0_c/1 50577316 -14 101M
-    chr22_16269615_16270134_0:0:0_1:0:0_c/1 16269615 0 101M
+    chr22_16993648_16994131_1:0:0_2:0:0_0/1 16993648 196 101M
+    chr22_28253010_28253558_1:0:0_0:0:0_1/1 28253010 196 101M
+    chr22_44541236_44541725_0:1:0_0:0:0_3/1 44541236 196 101M
+    chr22_31651867_31652385_2:0:0_2:0:0_7/1 31651867 190 101M
+    chr22_21584577_21585142_1:0:0_1:0:0_a/1 21584577 196 101M
+    chr22_46629499_46629977_0:0:0_2:0:0_b/1 47088563 110 20M1I4M1D76M
+    chr22_46629499_46629977_0:0:0_2:0:0_b/1 51103174 134 20M1I4M1D76M
+    chr22_46629499_46629977_0:0:0_2:0:0_b/1 46795988 128 20M1I4M1D76M
+    chr22_16269615_16270134_0:0:0_1:0:0_c/1 50577316 118 101M
+    chr22_16269615_16270134_0:0:0_1:0:0_c/1 16269615 202 101M
 
 Most of the alignments contain only matches or mismatches (``M``), which
 is to be expected as insertions and deletions are far less common. In fact,
@@ -467,6 +482,8 @@ the three mappings containing indels appear to be incorrect!
 A more thorough mapping scheme would also look at alignment scores before
 reporting mappings, although for the purposes of this workshop we'll ignore
 such improvements.
+
+.. _section4-code:
 
 Full code listing
 ~~~~~~~~~~~~~~~~~
@@ -603,6 +620,8 @@ And now:
     seqc section5.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 25.2648s
 
+.. _section5-code:
+
 Full code listing
 ~~~~~~~~~~~~~~~~~
 
@@ -684,6 +703,8 @@ Let's run the program with and without this optimization:
 
 (The timings with inter-sequence alignment will depend on the SIMD instruction
 sets your CPU supports; these numbers are from using AVX2.)
+
+.. _section6-code:
 
 Full code listing
 ~~~~~~~~~~~~~~~~~
