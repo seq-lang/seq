@@ -1,4 +1,5 @@
 from C import seq_str_int(int) -> str
+from C import seq_str_uint(int) -> str
 
 @llvm
 def _int_sext[N: int](what) -> int:

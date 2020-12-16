@@ -1,3 +1,5 @@
+import internal.gc as gc
+
 class List[T]:
     arr: Array[T]
     len: int
@@ -32,11 +34,11 @@ class List[T]:
         return self.len
 
     def __bool__(self):
-        return len(self) > 0
+        return self.__len__() > 0
 
     def __getitem__(self, idx: int):
         if idx < 0:
-            idx += len(self)
+            idx += self.__len__()
         self._idx_check(idx, "list index out of range")
         return self.arr[idx]
 
@@ -45,13 +47,13 @@ class List[T]:
 
     def __setitem__(self, idx: int, val: T):
         if idx < 0:
-            idx += len(self)
+            idx += self.__len__()
         self._idx_check(idx, "list assignment index out of range")
         self.arr[idx] = val
 
     def __delitem__(self, idx: int):
         if idx < 0:
-            idx += len(self)
+            idx += self.__len__()
         self._idx_check(idx, "list assignment index out of range")
         while idx < self.len - 1:
             self.arr[idx] = self.arr[idx + 1]
@@ -59,9 +61,9 @@ class List[T]:
         self.len -= 1
 
     def __eq__(self, other: List[T]):
-        if len(self) != len(other):
+        if self.__len__() != other.__len__():
             return False
-        for i in range(len(self)):
+        for i in range(self.__len__()):
             if self.arr[i] != other.arr[i]:
                 return False
         return True
@@ -73,12 +75,12 @@ class List[T]:
         if s.start is None and s.stop is None and s.step is None:
             return self.__copy__()
         if s.step is None:
-            start, stop, step, length = s.adjust_indices(len(self))
+            start, stop, step, length = s.adjust_indices(self.__len__())
             return List[T](self._copy_arr(start, stop, length), length)
         else:
             if ~(s.step) == 0:
                 self._slice_error()
-            start, stop, step, length = s.adjust_indices(len(self))
+            start, stop, step, length = s.adjust_indices(self.__len__())
             other = List[T](length)
             for i in range(start, stop, step):
                 other.append(self.arr[i])
@@ -90,14 +92,14 @@ class List[T]:
             for a in other:
                 self.append(a)
         else:
-            start, stop, step, length = s.adjust_indices(len(self))
+            start, stop, step, length = s.adjust_indices(self.__len__())
             self._assign_slice(start, stop, other)
 
     def __delitem__(self, s: Slice):
         if s.start is None and s.stop is None and s.step is None:
             self.clear()
         else:
-            start, stop, step, length = s.adjust_indices(len(self))
+            start, stop, step, length = s.adjust_indices(self.__len__())
             self._assign_slice(start, stop, None)
 
     def __contains__(self, x: T):
@@ -157,10 +159,10 @@ class List[T]:
             self.clear()
             return self
 
-        len0 = len(self)
+        len0 = self.__len__()
         new_cap = n * len0
         if self.arr.len < new_cap:
-            p = Ptr[T](_gc.realloc(self.arr.ptr.as_byte(), new_cap * _gc.sizeof[T]()))
+            p = Ptr[T](gc.realloc(self.arr.ptr.as_byte(), new_cap * gc.sizeof[T]()))
             self.arr = Array[T](p, new_cap)
 
         idx = len0
@@ -177,7 +179,7 @@ class List[T]:
         return self
 
     def __str__(self) -> str:
-        n = len(self)
+        n = self.__len__()
         if n == 0:
             return "[]"
         else:
@@ -202,7 +204,7 @@ class List[T]:
             self.append(a)
 
     def insert(self, idx: int, x: T):
-        n = len(self)
+        n = self.__len__()
         if idx < 0:
             idx += n
             if idx < 0:
@@ -218,10 +220,10 @@ class List[T]:
         self.len += 1
 
     def pop(self, idx: int = -1):
-        if len(self) == 0:
+        if self.__len__() == 0:
             raise IndexError("pop from empty list")
         if idx < 0:
-            idx += len(self)
+            idx += self.__len__()
         self._idx_check(idx, "pop index out of range")
         x = self[idx]
         del self[idx]
@@ -273,7 +275,7 @@ class List[T]:
         raise IndexError("slice step cannot be zero")
 
     def _resize(self, new_cap: int):
-        p = Ptr[T](_gc.realloc(self.arr.ptr.as_byte(), new_cap * _gc.sizeof[T]()))
+        p = Ptr[T](gc.realloc(self.arr.ptr.as_byte(), new_cap * gc.sizeof[T]()))
         self.arr = Array[T](p, new_cap)
 
     def _resize_if_full(self):
@@ -292,38 +294,38 @@ class List[T]:
         a = self
         recycle = Ptr[T]()
         vitem = List[T](a for a in ~v) if v else None
-        n = len(vitem) if vitem is not None else 0
+        n = vitem.__len__() if vitem is not None else 0
 
         if ilow < 0:
             ilow = 0
-        elif ilow > len(a):
-            ilow = len(a)
+        elif ilow > a.__len__():
+            ilow = a.__len__()
 
         if ihigh < ilow:
             ihigh = ilow
-        elif ihigh > len(a):
-            ihigh = len(a)
+        elif ihigh > a.__len__():
+            ihigh = a.__len__()
 
         norig = ihigh - ilow
         assert norig >= 0
         d = n - norig
-        if len(a) + d == 0:
+        if a.__len__() + d == 0:
             a.clear()
             return
 
-        s = norig * _gc.sizeof[T]()
+        s = norig * gc.sizeof[T]()
         if s:
             recycle = Ptr[T](s)
             str.memcpy(recycle.as_byte(), (a.arr.ptr + ilow).as_byte(), s)
 
         if d < 0:
-            tail = len(a) - ihigh
+            tail = a.__len__() - ihigh
             str.memmove((a.arr.ptr + (ihigh + d)).as_byte(), (a.arr.ptr + ihigh).as_byte(), tail)
-            a._resize(len(a) + d)
+            a._resize(a.__len__() + d)
         elif d > 0:
-            k = len(a)
+            k = a.__len__()
             a._resize(k + d)
-            str.memmove((a.arr.ptr + (ihigh + d)).as_byte(), (a.arr.ptr + ihigh).as_byte(), (k - ihigh) * _gc.sizeof[T]())
+            str.memmove((a.arr.ptr + (ihigh + d)).as_byte(), (a.arr.ptr + ihigh).as_byte(), (k - ihigh) * gc.sizeof[T]())
 
         k = 0
         while k < n:
@@ -335,5 +337,5 @@ class List[T]:
     def _copy_arr(self, start: int, stop: int, length: int):
         if length <= 0:
             return Array[T](Ptr[T](), 0)
-        return copy(self.arr.slice(start, stop))
+        return self.arr.slice(start, stop).__copy__()
 list = List

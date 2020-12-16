@@ -1,7 +1,6 @@
 # Seq runtime functions
 from C import seq_print(str)
 from C import seq_strdup(cobj) -> str
-from C import seq_check_errno() -> str
 from C import seq_stdin() -> cobj
 from C import seq_stdout() -> cobj
 from C import seq_stderr() -> cobj
@@ -15,12 +14,7 @@ from C import seq_lock_release(cobj)
 from C import seq_rlock_new() -> cobj
 from C import seq_rlock_acquire(cobj, bool, float) -> bool
 from C import seq_rlock_release(cobj)
-from C import seq_is_macos() -> bool
 from C import seq_i32_to_float(i32) -> float
-
-# <string.h>
-from C import strtoll(cobj, Ptr[cobj], i32) -> int
-from C import strlen(cobj) -> int
 
 # <ctype.h>
 from C import isdigit(int) -> int
@@ -89,14 +83,6 @@ from C import exit(int)
 from C import system(cobj) -> int
 from C import free(cobj)
 from C import atoi(cobj) -> int
-
-# <dlfcn.h>
-from C import dlerror() -> cobj
-from C import dlopen(cobj, int) -> cobj
-from C import dlsym(cobj, cobj) -> cobj
-from C import dlclose(cobj) -> i32
-RTLD_NOW = 2
-RTLD_GLOBAL = 8
 
 # <zlib.h>
 from C import gzopen(cobj, cobj) -> cobj

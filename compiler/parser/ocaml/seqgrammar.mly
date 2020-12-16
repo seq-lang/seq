@@ -243,6 +243,7 @@ import_statement:
                         pos, Import { imp_from; imp_what = Some i; imp_args; imp_ret; imp_as; imp_dots }) }
 import_from_expr:
   | expr { (0, $1) }
+  | DOT+ { (List.length $1, ($loc, Id "")) }
   | DOT+ expr { (List.length $1, $2) }
 import_term:
   | import_lterm { $loc, ($1, None) }

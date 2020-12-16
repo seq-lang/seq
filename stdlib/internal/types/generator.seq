@@ -1,9 +1,8 @@
 import internal.gc as gc
-from C import seq_str_ptr(Ptr[byte]) -> str
 
 @builtin
 def _raw_type_str(p: Ptr[byte], name: str) -> str:
-    pstr = seq_str_ptr(p)
+    pstr = p.__str__()
     # '<[name] at [pstr]>'
     total = 1 + name.len + 4 + pstr.len + 1
     buf = Ptr[byte](total)

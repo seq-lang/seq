@@ -16,7 +16,7 @@
 namespace seq {
 
 SeqModule *parse(const std::string &argv0, const std::string &file,
-                 const std::string &code = "", bool isCode = false, bool isTest = false,
+                 const std::string &code = "", bool isCode = false, int isTest = 0,
                  int startLine = 0);
 void execute(seq::SeqModule *module, const std::vector<std::string> &args = {},
              const std::vector<std::string> &libs = {}, bool debug = false);

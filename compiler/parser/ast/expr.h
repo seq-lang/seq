@@ -153,9 +153,8 @@ struct IntExpr : public Expr {
 
   /// Parsed value and sign for "normal" 64-bit integers.
   int64_t intValue;
-  bool sign;
 
-  explicit IntExpr(long long intValue, bool sign = false);
+  explicit IntExpr(long long intValue);
   explicit IntExpr(const string &value, string suffix = "");
   IntExpr(const IntExpr &expr) = default;
 

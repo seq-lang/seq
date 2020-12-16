@@ -1,3 +1,6 @@
+from internal.gc import alloc_atomic, free
+from C import strtoll(cobj, Ptr[cobj], i32) -> int
+
 @tuple
 class min[T]:
     def __new__(a: T, b: T) -> T:
@@ -204,8 +207,8 @@ def round(x, n) -> float:
     Return the x rounded off to the given
     n digits after the decimal point.
     """
-    nx = _C.pow(10.0, float(n))
-    return _C.round(float(x * nx)) / nx
+    nx = float.__pow__(10.0, n)
+    return float.__round__(x * nx) / nx
 
 def sum(xi):
     """
@@ -226,50 +229,6 @@ def repr(x):
     """
     return x.__repr__()
 
-@builtin
-def _tuple_fix_index(idx: int, len: int) -> int:
-    if idx < 0:
-        idx += len
-    if idx < 0 or idx >= len:
-        raise IndexError("tuple index out of range")
-    return idx
-
-@builtin
-def _tuple_str(strs: Ptr[str], n: int) -> str:
-    total = 2  # one for each of '(' and ')'
-    i = 0
-    while i < n:
-        total += strs[i].len
-        if i < n - 1:
-            total += 2  # ", "
-        i += 1
-
-    buf = Ptr[byte](total)
-    where = 0
-    buf[where] = byte(40)  # '('
-    where += 1
-
-    i = 0
-    while i < n:
-        s = strs[i]
-        l = s.len
-        str.memcpy(buf + where, s.ptr, l)
-        where += l
-        if i < n - 1:
-            buf[where] = byte(44)  # ','
-            where += 1
-            buf[where] = byte(32)  # ' '
-            where += 1
-        i += 1
-    buf[where] = byte(41)  # ')'
-
-    return str(buf, total)
-
-@builtin
-def _ensure_not_none(p: Ptr[byte], memb: str):
-    if not p:
-        raise AttributeError("'NoneType' object has no attribute '" + memb + "'")
-
 @extend
 class int:
     def _from_str(s: str, base: int):
@@ -280,37 +239,17 @@ class int:
         n = len(s)
         need_dyn_alloc = (n >= len(buf))
 
-        p = _gc.alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
+        p = alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
         str.memcpy(p, s.ptr, n)
         p[n] = byte(0)
 
         end = cobj()
-        result = _C.strtoll(p, __ptr__(end), i32(base))
+        result = strtoll(p, __ptr__(end), i32(base))
 
         if need_dyn_alloc:
-            _gc.free(p)
+            free(p)
 
         if end != p + n:
             raise ValueError("invalid literal for int() with base " + str(base) + ": " + s)
 
         return result
-
-@builtin
-def _test_failed(file: str, line: int, msg: str):
-    s = "\033[1;31mTEST FAILED:\033[0m " + file + " (line " + str(line) + ")"
-    if msg:
-        s += ": " + msg
-    print s
-
-def check_errno(prefix: str):
-    msg = _C.seq_check_errno()
-    if msg:
-        raise OSError(prefix + msg)
-
-@builtin
-def _make_assert_error(msg: str) -> AssertionError:
-    return AssertionError(msg)
-
-@builtin
-def _handle_exit(e: SystemExit):
-    _C.exit(e.status)

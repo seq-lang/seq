@@ -321,10 +321,9 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
         assert(val && val->isStatic());
         auto t = val->getType()->follow();
         m[g] = {g, t,
-                t->getLink()
-                    ? t->getLink()->id
-                    : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
-                                                       : 0};
+                t->getLink()                       ? t->getLink()->id
+                : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
+                                                   : 0};
       }
       auto sv = StaticVisitor(m);
       sv.transform(s->expr);
@@ -385,9 +384,9 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
     if (tuple->name == ".Ptr" || tuple->name == ".Array" || tuple->name == ".Optional")
       return nullptr;
     if (!startswith(tuple->name, ".Tuple.")) { // avoid if there is a __getitem__ here
-      auto m = ctx->findMethod(tuple->name, "__getitem__");
-      if (m && m->size() > 1)
-        return nullptr;
+      // auto m = ctx->findMethod(tuple->name, "__getitem__");
+      // if (m && m->size() > 1)
+      return nullptr;
       // TODO : be smarter! there might be a compatible getitem?
     }
     auto mm = ctx->cache->classFields.find(tuple->name);
@@ -473,7 +472,7 @@ void TypecheckVisitor::visit(const StackAllocExpr *expr) {
 ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *args) {
   auto isMethod = [&](FuncTypePtr f) {
     auto ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
-    return in(ast->attributes, ".method");
+    return in(ast->attributes, ATTR_NOT_STATIC);
   };
   auto deactivateUnbounds = [&](Type *t) {
     auto ub = t->getUnbounds();
@@ -1165,7 +1164,7 @@ void TypecheckVisitor::visit(const ThrowStmt *stmt) {
 void TypecheckVisitor::visit(const FunctionStmt *stmt) {
   resultStmt = N<FunctionStmt>(stmt->name, nullptr, vector<Param>(), vector<Param>(),
                                nullptr, map<string, string>(stmt->attributes));
-  bool isClassMember = in(stmt->attributes, ".class");
+  bool isClassMember = in(stmt->attributes, ATTR_PARENT_CLASS);
 
   if (ctx->findInVisited(stmt->name).second)
     return;
@@ -1205,12 +1204,12 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
       args, explicits);
 
   auto &attributes = const_cast<FunctionStmt *>(stmt)->attributes;
-  if (isClassMember && in(attributes, ".method")) {
-    auto val = ctx->find(attributes[".class"]);
+  if (isClassMember && in(attributes, ATTR_NOT_STATIC)) {
+    auto val = ctx->find(attributes[ATTR_PARENT_CLASS]);
     assert(val && val->getType());
     t->parent = val->getType();
   } else {
-    t->parent = ctx->bases[ctx->findBase(attributes[".parentFunc"])].type;
+    t->parent = ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])].type;
   }
 
   t->setSrcInfo(stmt->getSrcInfo());
@@ -1218,11 +1217,11 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
   LOG_REALIZE("[stmt] added func {}: {} (base={}; parent={})", stmt->name,
               t->toString(), ctx->getBase(), printParents(t->parent));
 
-  ctx->bases[ctx->findBase(attributes[".parentFunc"])].visitedAsts[stmt->name] = {
-      TypecheckItem::Func, t};
+  ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])]
+      .visitedAsts[stmt->name] = {TypecheckItem::Func, t};
   ctx->add(TypecheckItem::Func, stmt->name, t, true, false, false);
 
-  if (in(stmt->attributes, "builtin") || in(stmt->attributes, ".c") /*||
+  if (in(stmt->attributes, ATTR_BUILTIN) || in(stmt->attributes, ATTR_EXTERN_C) /*||
       in(stmt->attributes, "llvm")*/) {
     if (!t->canRealize())
       error("builtins and external functions must be realizable");
@@ -1254,7 +1253,7 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
     auto &attributes = const_cast<ClassStmt *>(stmt)->attributes;
     ct = make_shared<ClassType>(
         stmt->name, stmt->isRecord(), vector<TypePtr>(), vector<Generic>(),
-        ctx->bases[ctx->findBase(attributes[".parentFunc"])].type);
+        ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])].type);
     if (in(stmt->attributes, "trait"))
       ct->isTrait = true;
     ct->setSrcInfo(stmt->getSrcInfo());
@@ -1263,8 +1262,8 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
     if (!stmt->isRecord()) // add classes early
       ctx->add(stmt->name, ctxi);
 
-    ctx->bases[ctx->findBase(attributes[".parentFunc"])].visitedAsts[stmt->name] = {
-        TypecheckItem::Type, ct};
+    ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])]
+        .visitedAsts[stmt->name] = {TypecheckItem::Type, ct};
 
     ct->explicits = parseGenerics(stmt->generics, ctx->typecheckLevel);
     ctx->typecheckLevel++;

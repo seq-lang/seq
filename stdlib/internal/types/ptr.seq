@@ -1,3 +1,5 @@
+from C import seq_str_ptr(Ptr[byte]) -> str
+
 @extend
 class Ptr[T]:
     @internal
@@ -138,6 +140,8 @@ class Ptr[T]:
     def as_byte(self) -> Ptr[byte]:
         %0 = bitcast {=T}* %self to i8*
         ret i8* %0
+    def __str__(self) -> str:
+        return seq_str_ptr(self.as_byte())
 ptr = Ptr
 Jar = Ptr[byte]
 cobj = Ptr[byte]

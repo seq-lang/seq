@@ -47,10 +47,10 @@ string BoolExpr::toString() const { return wrapType(format("BOOL {}", int(value)
 ExprPtr BoolExpr::clone() const { return make_unique<BoolExpr>(*this); }
 void BoolExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-IntExpr::IntExpr(long long intValue, bool sign)
-    : Expr(), value(std::to_string(intValue)), intValue(intValue), sign(sign) {}
+IntExpr::IntExpr(long long intValue)
+    : Expr(), value(std::to_string(intValue)), intValue(intValue) {}
 IntExpr::IntExpr(const string &value, string suffix)
-    : Expr(), value(), suffix(move(suffix)), intValue(0), sign(false) {
+    : Expr(), value(), suffix(move(suffix)), intValue(0) {
   for (auto c : value)
     if (c != '_')
       this->value += c;

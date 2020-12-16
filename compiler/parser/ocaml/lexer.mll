@@ -79,7 +79,7 @@
       Buffer.contents buf
     in
     match pfx with
-    | "r" | "R" -> P.STRING ("r", fix_literals ~is_raw:true u)
+    | "r" | "R" -> P.STRING ("", fix_literals ~is_raw:true u)
     | _ -> P.STRING (String.lowercase_ascii pfx, fix_literals u)
 }
 

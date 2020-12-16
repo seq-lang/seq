@@ -58,8 +58,11 @@ public:
   CodegenContext(shared_ptr<Cache> cache, seq::Block *block, seq::BaseFunc *base,
                  seq::SeqJIT *jit);
 
-  shared_ptr<CodegenItem> find(const string &name, bool onlyLocal = false,
+  shared_ptr<CodegenItem> find(const string &name, bool onlyLocal,
                                bool checkStdlib = true) const;
+  shared_ptr<CodegenItem> find(const string &name) const override {
+    return find(name, false, true);
+  }
 
   using Context<CodegenItem>::add;
   void addVar(const string &name, seq::Var *v, bool global = false);

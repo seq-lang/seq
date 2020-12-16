@@ -1,3 +1,5 @@
+from C import strlen(cobj) -> int
+
 @extend
 class str:
     @internal
@@ -38,6 +40,18 @@ class str:
         str.memcpy(p, self.ptr, len1)
         str.memcpy(p + len1, other.ptr, len2)
         return str(p, len3)
+    def c_str(self):
+        n = self.__len__()
+        assert n >= 0
+        p = cobj(n + 1)
+        str.memcpy(p, self.ptr, n)
+        p[n] = byte(0)
+        return p
+    def from_ptr(t: cobj) -> str:
+        n = strlen(t)
+        p = Ptr[byte](n)
+        str.memcpy(p, t, n)
+        return str(p, n)
     def _tuple_str(strs: Ptr[str], n: int) -> str:
         total = 2  # one for each of '(' and ')'
         i = 0
@@ -46,12 +60,10 @@ class str:
             if i < n - 1:
                 total += 2  # ", "
             i += 1
-
         buf = Ptr[byte](total)
         where = 0
         buf[where] = byte(40)  # '('
         where += 1
-
         i = 0
         while i < n:
             s = strs[i]
@@ -65,5 +77,4 @@ class str:
                 where += 1
             i += 1
         buf[where] = byte(41)  # ')'
-
         return str(buf, total)

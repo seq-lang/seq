@@ -58,7 +58,7 @@ json DocVisitor::apply(const string &argv0, const vector<string> &files) {
   return shared->j;
 }
 
-shared_ptr<int> DocContext::find(const string &s) {
+shared_ptr<int> DocContext::find(const string &s) const {
   auto i = Context<int>::find(s);
   if (!i && this != shared->modules[""].get())
     return shared->modules[""]->find(s);

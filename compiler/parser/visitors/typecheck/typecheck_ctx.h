@@ -71,7 +71,7 @@ public:
     return -1;
   }
 
-  shared_ptr<TypecheckItem> find(const string &name) const;
+  shared_ptr<TypecheckItem> find(const string &name) const override;
   types::TypePtr findInternal(const string &name) const;
 
   using Context<TypecheckItem>::add;

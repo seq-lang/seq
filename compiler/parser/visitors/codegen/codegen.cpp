@@ -107,9 +107,10 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
         if (in(ast->attributes, ATTR_INTERNAL)) {
           vector<seq::types::Type *> types;
           auto p = t->parent;
-          assert(in(ast->attributes, ".class"));
-          if (!in(ast->attributes, ".method")) { // hack for non-generic types
-            for (auto &x : ctx->cache->realizations[ast->attributes[".class"]]) {
+          assert(in(ast->attributes, ATTR_PARENT_CLASS));
+          if (!in(ast->attributes, ATTR_NOT_STATIC)) { // hack for non-generic types
+            for (auto &x :
+                 ctx->cache->realizations[ast->attributes[ATTR_PARENT_CLASS]]) {
               if (startswith(t->realizeString(), x.first)) {
                 p = x.second;
                 break;
@@ -117,7 +118,8 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
             }
           }
           seqassert(p && p->getClass(), "parent must be set ({}) for {}; parent={}",
-                    p ? p->toString() : "-", t->toString(), ast->attributes[".class"]);
+                    p ? p->toString() : "-", t->toString(),
+                    ast->attributes[ATTR_PARENT_CLASS]);
           seq::types::Type *typ = ctx->realizeType(p->getClass().get());
           int startI = 1;
           if (!ast->args.empty() && ast->args[0].name == "self")
@@ -151,10 +153,7 @@ void CodegenVisitor::visit(const BoolExpr *expr) {
 }
 
 void CodegenVisitor::visit(const IntExpr *expr) {
-  if (expr->sign)
-    resultExpr = new seq::IntExpr(uint64_t(expr->intValue));
-  else
-    resultExpr = new seq::IntExpr(expr->intValue);
+  resultExpr = new seq::IntExpr(expr->intValue);
 }
 
 void CodegenVisitor::visit(const FloatExpr *expr) {

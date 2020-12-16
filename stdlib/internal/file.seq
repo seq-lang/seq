@@ -1,3 +1,4 @@
+from internal.gc import realloc, free
 class File:
     sz: int
     buf: Ptr[byte]
@@ -124,7 +125,7 @@ class gzFile:
                 break
 
             self.sz *= 2
-            self.buf = _gc.realloc(self.buf, self.sz)
+            self.buf = realloc(self.buf, self.sz)
 
         return offset
 
@@ -143,7 +144,7 @@ class gzFile:
             _C.gzclose(self.fp)
             self.fp = cobj()
         if self.buf:
-            _gc.free(self.buf)
+            free(self.buf)
             self._reset()
 
     def readlines(self):

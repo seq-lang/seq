@@ -40,8 +40,8 @@ ExprPtr SimplifyVisitor::transform(const Expr *expr, bool allowTypes) {
   return move(v.resultExpr);
 }
 
-ExprPtr SimplifyVisitor::transformType(const ExprPtr &expr) {
-  auto e = transform(expr.get(), true);
+ExprPtr SimplifyVisitor::transformType(const Expr *expr) {
+  auto e = transform(expr, true);
   if (e && !e->isType())
     error("expected type expression");
   return e;
@@ -118,11 +118,12 @@ void SimplifyVisitor::visit(const IdExpr *expr) {
 }
 
 /// Transform a star-expression *args to:
-///   List(args).
+///   List(args.__iter__()).
 /// This function is called only if other nodes (CallExpr, AssignStmt, ListExpr) do not
 /// handle their star-expression cases.
 void SimplifyVisitor::visit(const StarExpr *expr) {
-  resultExpr = transform(N<CallExpr>(N<IdExpr>(".List"), clone(expr->what)));
+  resultExpr = transform(N<CallExpr>(
+      N<IdExpr>(".List"), N<CallExpr>(N<DotExpr>(clone(expr->what), "__iter__"))));
 }
 
 /// Transform a tuple (a1, ..., aN) to:
@@ -309,13 +310,13 @@ void SimplifyVisitor::visit(const BinaryExpr *expr) {
     auto re = expr->rexpr->getNone() ? clone(expr->rexpr) : transform(expr->rexpr);
     if (expr->lexpr->getNone() && expr->rexpr->getNone())
       resultExpr = N<BoolExpr>(true);
-    else if (CAST(expr->lexpr, NoneExpr))
+    else if (expr->lexpr->getNone())
       resultExpr = N<BinaryExpr>(move(re), expr->op, move(le));
     else
       resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
   } else {
-    resultExpr =
-        N<BinaryExpr>(transform(expr->lexpr), expr->op, transform(expr->rexpr));
+    resultExpr = N<BinaryExpr>(transform(expr->lexpr), expr->op, transform(expr->rexpr),
+                               expr->inPlace);
   }
 }
 
@@ -342,12 +343,12 @@ void SimplifyVisitor::visit(const IndexExpr *expr) {
   if (expr->expr->isId("tuple") || expr->expr->isId("Tuple")) {
     auto t = expr->index->getTuple();
     auto name = generateTupleStub(t ? int(t->items.size()) : 1);
-    e = transformType(N<IdExpr>(name));
+    e = transformType(N<IdExpr>(name).get());
     e->markType();
   } else if (expr->expr->isId("function") || expr->expr->isId("Function")) {
     auto t = expr->index->getTuple();
     auto name = generateFunctionStub(t ? int(t->items.size()) - 1 : 0);
-    e = transformType(N<IdExpr>(name));
+    e = transformType(N<IdExpr>(name).get());
     e->markType();
   } else {
     e = transform(expr->expr.get(), true);
@@ -397,19 +398,20 @@ void SimplifyVisitor::visit(const IndexExpr *expr) {
 /// Also generate Tuple.N (if a call has N arguments) to allow passing arguments as a
 /// tuple to Python methods later on.
 void SimplifyVisitor::visit(const CallExpr *expr) {
-  if (expr->expr->isId("__ptr__") && expr->args.size() == 1 &&
-      expr->args[0].value->getId()) {
-    auto v = ctx->find(expr->args[0].value->getId()->value);
-    if (v && v->isVar()) {
-      resultExpr = N<PtrExpr>(transform(expr->args[0].value));
-      return;
+  if (expr->expr->isId("__ptr__")) {
+    if (expr->args.size() == 1 && expr->args[0].value->getId()) {
+      auto v = ctx->find(expr->args[0].value->getId()->value);
+      if (v && v->isVar()) {
+        resultExpr = N<PtrExpr>(transform(expr->args[0].value));
+        return;
+      }
     }
     error("__ptr__ only accepts a single argument (variable identifier)");
   }
   if (expr->expr->getIndex() && expr->expr->getIndex()->expr->isId("__array__")) {
     if (expr->args.size() != 1)
       error("__array__ only accepts a single argument (size)");
-    resultExpr = N<StackAllocExpr>(transformType(expr->expr->getIndex()->index),
+    resultExpr = N<StackAllocExpr>(transformType(expr->expr->getIndex()->index.get()),
                                    transform(expr->args[0].value));
     return;
   }
@@ -498,9 +500,10 @@ ExprPtr SimplifyVisitor::transformInt(const string &value, const string &suffix)
   try {
     if (suffix.empty())
       return N<IntExpr>(to_int(value));
-    /// Unsigned numbers
+    /// Unsigned numbers: use UInt[64] for that
     if (suffix == "u")
-      return N<IntExpr>(to_int(value), true);
+      return transform(N<CallExpr>(N<IndexExpr>(N<IdExpr>(".UInt"), N<IntExpr>(64)),
+                                   N<IntExpr>(to_int(value))));
     /// Fixed-precision numbers (uXXX and iXXX)
     /// NOTE: you cannot use binary (0bXXX) format with those numbers.
     /// TODO: implement non-string constructor for these cases.
@@ -655,7 +658,7 @@ ExprPtr SimplifyVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
   auto fs =
       transform(N<FunctionStmt>(name, nullptr, vector<Param>{}, move(params),
                                 N<SuiteStmt>(move(stmts)), vector<string>{".inline"}));
-  auto f = CAST(fs, FunctionStmt);
+  auto f = const_cast<FunctionStmt *>(fs->getFunction());
   for (auto &c : ctx->captures.back()) {
     f->args.emplace_back(Param{c, nullptr, nullptr});
     args.emplace_back(CallExpr::Arg{"", N<IdExpr>(c)});

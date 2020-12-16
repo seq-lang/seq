@@ -110,14 +110,6 @@ class str:
         str.memcpy(p, self.ptr, n)
         return str(p, n)
 
-    def c_str(self):
-        n = len(self)
-        assert n >= 0
-        p = cobj(n + 1)
-        str.memcpy(p, self.ptr, n)
-        p[n] = byte(0)
-        return p
-
     def cat(v: List[str]):
         total = 0
         for s in v:
@@ -223,12 +215,6 @@ class str:
 
     def join(self, l):
         return __str_internal_join(self, l).s
-
-    def from_ptr(t: cobj) -> str:
-        n = _C.strlen(t)
-        p = Ptr[byte](n)
-        str.memcpy(p, t, n)
-        return str(p, n)
 
     def isdigit(self) -> bool:
         """

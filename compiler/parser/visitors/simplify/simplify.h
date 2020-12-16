@@ -26,7 +26,7 @@ namespace ast {
  *  - All imports are flattened making the resulting AST a self-containing (but fairly
  *    large) AST.
  *  - All identifiers are normalized (no two distinct objects share the same name).
- *  - Variardic stubs are generated (e.g. Tuple.N and Function.N classes).
+ *  - Variardic classes (Tuple.N and Function.N) are generated.
  *  - Any AST node that can be trivially represented as a set of "simpler" nodes
  *    type is transformed accordingly. If a transformation requires a type information,
  *    it is delayed until the next transformation stage (type-checking).
@@ -55,27 +55,30 @@ public:
   /// Static method that applies SimplifyStage on a given AST node.
   /// @param cache Pointer to the shared transformation cache.
   /// @param file Filename of a AST node.
-  static StmtPtr apply(shared_ptr<Cache> cache, const StmtPtr &node,
-                       const string &file);
+  /// @param barebones Set if barebones standard library is used during testing.
+  static StmtPtr apply(shared_ptr<Cache> cache, const StmtPtr &node, const string &file,
+                       bool barebones = false);
 
 public:
   explicit SimplifyVisitor(shared_ptr<SimplifyContext> ctx,
                            shared_ptr<vector<StmtPtr>> stmts = nullptr);
 
-  /// Transforms an AST expression node.
+  /// Transform an AST expression node.
   /// @raise ParserException if a node describes a type (use transformType instead).
-  ExprPtr transform(const Expr *e);
-  ExprPtr transform(const ExprPtr &e) override;
-  /// Transforms an AST statement node.
-  StmtPtr transform(const Stmt *s);
-  StmtPtr transform(const StmtPtr &s) override;
-  /// Transforms an AST pattern node.
-  PatternPtr transform(const PatternPtr &p) override;
-  /// Transforms an AST expression node.
-  ExprPtr transform(const Expr *e, bool allowTypes = false);
-  /// Transforms an AST type expression node.
+  ExprPtr transform(const ExprPtr &expr) override;
+  /// Transform an AST statement node.
+  StmtPtr transform(const StmtPtr &stmt) override;
+  /// Transform an AST pattern node.
+  PatternPtr transform(const PatternPtr &pattern) override;
+  /// Transform an AST expression node (pointer convenience method).
+  ExprPtr transform(const Expr *expr);
+  /// Transform an AST statement node (pointer convenience method).
+  StmtPtr transform(const Stmt *stmt);
+  /// Transform an AST expression node.
+  ExprPtr transform(const Expr *expr, bool allowTypes = false);
+  /// Transform an AST type expression node.
   /// @raise ParserException if a node does not describe a type (use transform instead).
-  ExprPtr transformType(const ExprPtr &expr);
+  ExprPtr transformType(const Expr *expr);
 
 private:
   /// These functions just clone a given node (nothing to be simplified).
@@ -84,7 +87,7 @@ private:
   void defaultVisit(const Pattern *p) override;
 
 public:
-  /// The following visitors are documented in simplify.cpp.
+  /// The following visitors are documented in a corresponding implementation file.
   void visit(const NoneExpr *) override;
   void visit(const IntExpr *) override;
   void visit(const StringExpr *) override;
@@ -142,7 +145,10 @@ public:
 private:
   /// Converts binary integers (0bXXX), unsigned integers (XXXu), fixed-width integers
   /// (XXXuN and XXXiN), and other suffix integers to a corresponding integer value or a
-  /// constructor.
+  /// constructor:
+  ///   123u -> UInt[64](123)
+  ///   123i56 -> Int[56]("123")  (same for UInt)
+  ///   123pf -> int.__suffix_pf__("123")
   ExprPtr transformInt(const string &value, const string &suffix);
   /// Converts a Python-like F-string (f"foo {x+1} bar") to a concatenation:
   ///   str.cat(["foo ", str(x + 1), " bar"]).
@@ -201,7 +207,7 @@ private:
   /// Non-trivial right-hand expressions are first stored in a temporary variable:
   ///   a, b = c, d + foo() -> tmp = (c, d + foo); a = tmp[0]; b = tmp[1].
   /// Processes each assignment recursively to support cases like:
-  ///   a, (b, c)) = d
+  ///   a, (b, c) = d
   void unpackAssignments(const Expr *lhs, const Expr *rhs, vector<StmtPtr> &stmts,
                          bool shadow, bool mustExist);
   /// Transform a C import (from C import foo(int) -> float as f) to:
@@ -247,8 +253,8 @@ private:
   /// Generate a magic method __op__ for a type described by typExpr and type arguments
   /// args.
   /// Currently able to generate:
-  ///   Contructors: __new__, __init__
-  ///   Utilities: __raw__, __hash__, __Str__
+  ///   Constructors: __new__, __init__
+  ///   Utilities: __raw__, __hash__, __str__
   ///   Iteration: __iter__, __getitem__, __len__, __contains__
   //    Comparisons: __eq__, __ne__, __lt__, __le__, __gt__, __ge__
   //    Pickling: __pickle__, __unpickle__

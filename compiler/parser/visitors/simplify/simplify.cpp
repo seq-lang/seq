@@ -34,7 +34,7 @@ namespace ast {
 using namespace types;
 
 StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
-                               const string &file) {
+                               const string &file, bool barebones) {
   // A transformed AST node
   auto suite = make_unique<SuiteStmt>();
   suite->stmts.push_back(make_unique<SuiteStmt>());
@@ -50,6 +50,8 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     if (stdlibPath.empty() ||
         stdlibPath.substr(stdlibPath.size() - 12) != "__init__.seq")
       ast::error("cannot load standard library");
+    if (barebones)
+      stdlibPath = stdlibPath.substr(0, stdlibPath.size() - 5) + "test__.seq";
     stdlib->setFilename(stdlibPath);
     cache->imports[STDLIB_IMPORT] = {stdlibPath, stdlib};
 
@@ -109,9 +111,9 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
 
   // Move all auto-generated variardic types to the preamble.
   // Ensure that Function.1 is the first (as all others depend on it!)
-  preamble->stmts.emplace_back(clone(cache->asts[".Function.0"]));
+  preamble->stmts.emplace_back(clone(cache->asts[".Function.1"]));
   for (auto &v : cache->variardics)
-    if (v != ".Function.0")
+    if (v != ".Function.1")
       preamble->stmts.emplace_back(clone(cache->asts["." + v]));
   // Move the transformed node to the end
   suite->stmts.emplace_back(move(stmts));

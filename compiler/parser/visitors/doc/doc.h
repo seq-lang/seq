@@ -41,7 +41,7 @@ struct DocContext : public Context<int> {
     stack.push_front(vector<string>());
   }
   virtual ~DocContext() {}
-  shared_ptr<int> find(const string &s);
+  shared_ptr<int> find(const string &s) const override;
 };
 
 struct DocVisitor : public CallbackASTVisitor<json, string, string> {

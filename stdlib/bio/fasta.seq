@@ -1,6 +1,7 @@
 # FASTA format parser
 # https://en.wikipedia.org/wiki/FASTA_format
 from bio.fai import FAIRecord, FAI
+from internal.gc import realloc
 
 @tuple
 class FASTARecord:
@@ -69,7 +70,7 @@ class FASTAReader:
             m <<= 1
             if n + s.len > m:
                 m = n + s.len
-            p = _gc.realloc(p, m)
+            p = realloc(p, m)
         if validate:
             i = 0
             while i < s.len:
@@ -272,7 +273,7 @@ class pFASTAReader:
             m <<= 1
             if n + s.len > m:
                 m = n + s.len
-            p = _gc.realloc(p, m)
+            p = realloc(p, m)
         if validate:
             i = 0
             while i < s.len:

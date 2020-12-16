@@ -44,6 +44,7 @@ SEQ_FUNC int64_t seq_exc_offset();
 SEQ_FUNC uint64_t seq_exc_class();
 
 SEQ_FUNC seq_str_t seq_str_int(seq_int_t n);
+SEQ_FUNC seq_str_t seq_str_uint(seq_int_t n);
 SEQ_FUNC seq_str_t seq_str_float(double f);
 SEQ_FUNC seq_str_t seq_str_bool(bool b);
 SEQ_FUNC seq_str_t seq_str_byte(char c);

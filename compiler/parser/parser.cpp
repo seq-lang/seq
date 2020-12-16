@@ -31,7 +31,7 @@ bool _isTest = false;
 namespace seq {
 
 seq::SeqModule *parse(const string &argv0, const string &file, const string &code,
-                      bool isCode, bool isTest, int startLine) {
+                      bool isCode, int isTest, int startLine) {
   try {
     auto d = getenv("SEQ_DEBUG");
     if (d) {
@@ -53,7 +53,8 @@ seq::SeqModule *parse(const string &argv0, const string &file, const string &cod
     auto cache = make_shared<ast::Cache>(argv0);
 
     auto t = high_resolution_clock::now();
-    auto transformed = ast::SimplifyVisitor::apply(cache, move(codeStmt), abs);
+    auto transformed =
+        ast::SimplifyVisitor::apply(cache, move(codeStmt), abs, isTest > 1);
     if (!isTest) {
       LOG_TIME("[T] ocaml = {:.1f}", _ocaml_time / 1000.0);
       LOG_TIME("[T] simplify = {:.1f}",
