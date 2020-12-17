@@ -704,7 +704,7 @@ Foo(1).__to_py__(p) #! ERROR: cannot find '__to_py__' in .Foo
 
 #%% python
 from python import os
-print os['name'], os.name  #: posix posix
+print os.name  #: posix
 
 from python import datetime
 z = datetime.datetime.utcfromtimestamp(0)

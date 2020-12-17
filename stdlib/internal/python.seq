@@ -6,6 +6,7 @@ from C import LD.PyUnicode_AsEncodedString(cobj, cobj, cobj) -> cobj
 from C import LD.PyBytes_AsString(cobj) -> cobj
 from C import LD.PyErr_Fetch(Ptr[cobj], Ptr[cobj], Ptr[cobj])
 from C import LD.PyObject_GetAttrString(cobj, cobj) -> cobj
+from C import LD.PyObject_GetAttr(cobj, cobj) -> cobj
 from C import LD.PyObject_Str(cobj) -> cobj
 from C import LD.PyRun_SimpleString(cobj)
 from C import LD.Py_IncRef(cobj)
@@ -54,8 +55,14 @@ class pyobj:
     def __new__(p: Ptr[byte]) -> pyobj:
         return (p, )
 
-    def __getitem__(self, name: str):
+    def _getattr(self, name: str):
         return pyobj.exc_wrap(pyobj(PyObject_GetAttrString(self.p, name.c_str())))
+
+    def __getitem__(self, t):
+        return self._getattr("__getitem__")(t)
+
+    def __add__(self, t):
+        return self._getattr("__add__")(t)
 
     def __setitem__(self, name: str, val: pyobj):
         return pyobj.exc_wrap(pyobj(PyObject_SetAttrString(self.p, name.c_str(), val.p)))
@@ -70,7 +77,7 @@ class pyobj:
         return self
 
     def __str__(self):
-        return str.__from_py__(self.__getitem__("__str__").__call__[pyobj]())
+        return str.__from_py__(self._getattr("__str__").__call__[pyobj]())
 
     def to_str(self, errors: str, empty: str = "") -> str:
         obj = PyUnicode_AsEncodedString(self.p, "utf-8".c_str(), errors.c_str())

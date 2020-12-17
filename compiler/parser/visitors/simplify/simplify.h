@@ -229,7 +229,7 @@ private:
   /// Transform a Python function import (from python import lib.foo(int) -> float as f)
   /// to:
   ///   def f(a0: int) -> float:
-  ///     f = pyobj._import("lib")["foo"]
+  ///     f = pyobj._import("lib")._getattr("foo")
   ///     return float.__from_py__(f(a0))
   /// If a return type is nullptr, the function just returns f (raw pyobj).
   StmtPtr parsePythonImport(const Expr *what, const vector<Param> &args,

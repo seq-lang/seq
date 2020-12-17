@@ -867,12 +867,13 @@ StmtPtr SimplifyVisitor::parsePythonImport(const Expr *what, const vector<Param>
         N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_import"), N<StringExpr>(name))));
 
   // Typed function import: from python import foo.bar(int) -> float.
-  // f = pyobj._import("lib")["name"]
-  auto call =
-      N<AssignStmt>(N<IdExpr>("f"),
-                    N<IndexExpr>(N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_import"),
-                                             N<StringExpr>(lib)),
-                                 N<StringExpr>(name)));
+  // f = pyobj._import("lib")._getattr("name")
+  auto call = N<AssignStmt>(
+      N<IdExpr>("f"),
+      N<CallExpr>(N<DotExpr>(N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_import"),
+                                         N<StringExpr>(lib)),
+                             "_getattr"),
+                  N<StringExpr>(name)));
   // Make a call expression: f(args...)
   vector<Param> params;
   vector<ExprPtr> callArgs;

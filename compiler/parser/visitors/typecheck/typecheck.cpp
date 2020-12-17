@@ -571,7 +571,7 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
                      expr->member);
       return visitDot(d.get(), args);
     } else if (c->name == ".pyobj") {
-      return transform(N<CallExpr>(N<DotExpr>(clone(expr->expr), "__getitem__"),
+      return transform(N<CallExpr>(N<DotExpr>(clone(expr->expr), "_getattr"),
                                    N<StringExpr>(expr->member)));
     } else {
       error("cannot find '{}' in {}", expr->member, lhs->getType()->toString());
