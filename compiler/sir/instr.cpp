@@ -1,115 +1,103 @@
 #include "instr.h"
 
-#include "util/fmt/format.h"
-
-#include "flow.h"
-#include "lvalue.h"
-#include "rvalue.h"
-
-#include "util/visitor.h"
+#include "util/iterators.h"
 
 namespace seq {
 namespace ir {
 
-std::string Instr::referenceString() const {
-  return fmt::format(FMT_STRING("{}.{}"), parent ? parent->referenceString() : "",
-                     name);
-}
-
-void Instr::accept(util::SIRVisitor &v) { v.visit(this); }
-
-AssignInstr::AssignInstr(LvaluePtr left, RvaluePtr right)
-    : left(std::move(left)), right(std::move(right)) {
-  this->left->parent = this;
-  this->right->parent = this;
-}
-
-void AssignInstr::accept(util::SIRVisitor &v) { v.visit(this); }
-
 std::ostream &AssignInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{} = {};"), *left, *right);
+  fmt::print(os, FMT_STRING("store({}{}{}, {})"), *lhs, field.empty() ? "" : ".", field,
+             *rhs);
   return os;
 }
 
-RvalueInstr::RvalueInstr(RvaluePtr rvalue) : rvalue(std::move(rvalue)) {
-  this->rvalue->parent = this;
+types::Type *LoadInstr::getType() const {
+  auto *ptrType = dynamic_cast<types::PointerType *>(ptr->getType());
+  assert(ptrType);
+  if (!field.empty()) {
+    auto *memberedBase = dynamic_cast<types::MemberedType *>(ptrType->getBase());
+    assert(memberedBase);
+    return memberedBase->getMemberType(field);
+  }
+  return ptrType->getBase();
 }
 
-void RvalueInstr::accept(util::SIRVisitor &v) { v.visit(this); }
-
-std::ostream &RvalueInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{};"), *rvalue);
+std::ostream &LoadInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("load({}{}{})"), *ptr, field.empty() ? "" : ".", field);
   return os;
 }
 
-void BreakInstr::accept(util::SIRVisitor &v) { v.visit(this); }
+types::Type *CallInstr::getType() const {
+  auto *funcType = dynamic_cast<types::FuncType *>(func->getType());
+  assert(funcType);
+  return funcType->getReturnType();
+}
+
+std::ostream &CallInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("call({}, {})"), *func,
+             fmt::join(util::dereference_adaptor(args.begin()),
+                       util::dereference_adaptor(args.end()), ", "));
+  return os;
+}
+
+std::ostream &StackAllocInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("stack_alloc({})"), *arrayType, *count);
+  return os;
+}
+
+std::ostream &YieldInInstr::doFormat(std::ostream &os) const {
+  return os << "yield_in()";
+}
+
+std::ostream &TernaryInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("ternary({}, {}, {})"), *cond, trueValue, *falseValue);
+  return os;
+}
 
 std::ostream &BreakInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("break {};"), target->referenceString());
+  fmt::print(os, FMT_STRING("break({})"), *getTarget());
   return os;
 }
-
-void ContinueInstr::accept(util::SIRVisitor &v) { v.visit(this); }
 
 std::ostream &ContinueInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("continue {};"), target->referenceString());
+  fmt::print(os, FMT_STRING("continue({})"), *getTarget());
   return os;
 }
-
-ReturnInstr::ReturnInstr(RvaluePtr value) : value(std::move(value)) {
-  if (value)
-    this->value->parent = this;
-}
-
-void ReturnInstr::accept(util::SIRVisitor &v) { v.visit(this); }
 
 std::ostream &ReturnInstr::doFormat(std::ostream &os) const {
   if (value) {
-    fmt::print(os, FMT_STRING("return {};"), *value);
+    fmt::print(os, FMT_STRING("return({})"), *value);
   } else {
-    os << "return;";
+    os << "return()";
   }
   return os;
 }
-
-YieldInstr::YieldInstr(RvaluePtr value) : value(std::move(value)) {
-  if (value)
-    this->value->parent = this;
-}
-
-void YieldInstr::accept(util::SIRVisitor &v) { v.visit(this); }
 
 std::ostream &YieldInstr::doFormat(std::ostream &os) const {
   if (value) {
-    fmt::print(os, FMT_STRING("yield {};"), *value);
+    fmt::print(os, FMT_STRING("yield({})"), *value);
   } else {
-    os << "yield;";
+    os << "yield()";
   }
   return os;
 }
 
-ThrowInstr::ThrowInstr(RvaluePtr value) : value(std::move(value)) {
-  if (value)
-    this->value->parent = this;
-}
-
-void ThrowInstr::accept(util::SIRVisitor &v) { v.visit(this); }
-
 std::ostream &ThrowInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("throw {};"), *value);
+  if (value) {
+    fmt::print(os, FMT_STRING("throw({})"), *value);
+  } else {
+    os << "throw()";
+  }
   return os;
 }
 
-AssertInstr::AssertInstr(RvaluePtr value, std::string msg)
-    : value(std::move(value)), msg(std::move(msg)) {
-  if (value)
-    this->value->parent = this;
+std::ostream &AssertInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("assert({}, \"{}\")"), *value, msg);
+  return os;
 }
 
-void AssertInstr::accept(util::SIRVisitor &v) { v.visit(this); }
-
-std::ostream &AssertInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("assert {}, \"{}\";"), *value, msg);
+std::ostream &FlowInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("inline_flow({}, {})"), *flow, *val);
   return os;
 }
 

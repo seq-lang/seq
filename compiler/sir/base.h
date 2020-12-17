@@ -1,78 +1,67 @@
 #pragma once
 
 #include <iostream>
-#include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
-
-#include "util/common.h"
 
 #include "util/fmt/format.h"
 #include "util/fmt/ostream.h"
 
+#include "attribute.h"
+#include "util/visitor.h"
+
 namespace seq {
 namespace ir {
 
-extern const std::string kSrcInfoAttribute;
-extern const std::string kFuncAttribute;
+class IRModule;
 
-/// Base for SIR attributes.
-struct Attribute {
-  virtual ~Attribute() noexcept = default;
-
-  friend std::ostream &operator<<(std::ostream &os, const Attribute &a) {
-    return a.doFormat(os);
-  }
-
+/// Mixin class for IR nodes that need ids.
+class IdMixin {
 private:
-  virtual std::ostream &doFormat(std::ostream &os) const = 0;
+  /// the global id counter
+  static int currentId;
+  /// the instance's id
+  int id;
+
+public:
+  /// Resets the global id counter.
+  static void resetId();
+
+  IdMixin() : id(currentId++) {}
+  virtual ~IdMixin() = default;
+
+  /// @return the node's id.
+  int getId() const { return id; }
 };
 
-using AttributePtr = std::unique_ptr<Attribute>;
-
-/// Attribute containing SrcInfo
-struct SrcInfoAttribute : public Attribute {
-  /// source info
-  seq::SrcInfo info;
-
-  /// Constructs a SrcInfoAttribute.
-  /// @param info the source info
-  explicit SrcInfoAttribute(seq::SrcInfo info) : info(std::move(info)) {}
-  SrcInfoAttribute() = default;
-
-  std::ostream &doFormat(std::ostream &os) const override { return os << info; }
-};
-
-/// Attribute containing function information
-struct FuncAttribute : public Attribute {
-  /// attributes map
-  std::map<std::string, std::string> attributes;
-
-  /// Constructs a FuncAttribute.
-  /// @param attributes the map of attributes
-  explicit FuncAttribute(std::map<std::string, std::string> attributes)
-      : attributes(std::move(attributes)) {}
-  FuncAttribute() = default;
-
-  /// @return true if the map contains val, false otherwise
-  bool has(const std::string &val) const;
-
-  std::ostream &doFormat(std::ostream &os) const override;
-};
-
-/// Base of all SIR objects.
-struct AttributeHolder {
+/// Base for named IR nodes.
+class IRNode {
+private:
+  /// the node's name
   std::string name;
-  AttributeHolder *parent = nullptr;
+  /// key-value attribute store
+  std::map<std::string, AttributePtr> kvStore;
+  /// the module
+  IRModule *module = nullptr;
 
-  explicit AttributeHolder(std::string name = "") : name(std::move(name)) {}
+public:
+  /// Constructs a node.
+  /// @param name the node's name
+  explicit IRNode(std::string name = "") : name(std::move(name)) {}
 
-  virtual ~AttributeHolder() noexcept = default;
+  virtual ~IRNode() = default;
 
-  void setName(std::string n) { name = std::move(n); }
+  /// @return the node's name
   const std::string &getName() const { return name; }
-  void setParent(AttributeHolder *p) { parent = p; }
+  /// Sets the node's name
+  /// @param n the new name
+  void setName(std::string n) { name = std::move(n); }
+
+  /// Accepts visitors.
+  /// @param v the visitor
+  virtual void accept(util::SIRVisitor &v) = 0;
 
   /// Sets an attribute
   /// @param key the attribute's key
@@ -90,12 +79,14 @@ struct AttributeHolder {
   /// @param key the key
   /// @tparam AttributeType the return type
   template <typename AttributeType = Attribute>
-  AttributeType *getAttribute(const std::string &key) {
+  AttributeType *getAttribute(const std::string &key) const {
     auto it = kvStore.find(key);
     return it != kvStore.end() ? static_cast<AttributeType *>(it->second.get())
                                : nullptr;
   }
 
+  /// Helper to add source information.
+  /// @param the source information
   void setSrcInfo(seq::SrcInfo s) {
     setAttribute(kSrcInfoAttribute, std::make_unique<SrcInfoAttribute>(std::move(s)));
   }
@@ -103,16 +94,27 @@ struct AttributeHolder {
   /// @return a text representation of a reference to the object
   virtual std::string referenceString() const { return name; }
 
-  friend std::ostream &operator<<(std::ostream &os, const AttributeHolder &a) {
+  friend std::ostream &operator<<(std::ostream &os, const IRNode &a) {
     return a.doFormat(os);
   }
 
-private:
-  /// key-value attribute store
-  std::map<std::string, AttributePtr> kvStore;
+  /// @return the IR module
+  IRModule *getModule() const { return module; }
+  /// Sets the module.
+  /// @param m the new module
+  void setModule(IRModule *m) { module = m; }
 
+private:
   virtual std::ostream &doFormat(std::ostream &os) const = 0;
 };
 
 } // namespace ir
 } // namespace seq
+
+namespace fmt {
+using seq::ir::IRNode;
+
+template <typename Char>
+struct formatter<IRNode, Char> : fmt::v6::internal::fallback_formatter<IRNode, Char> {};
+
+} // namespace fmt

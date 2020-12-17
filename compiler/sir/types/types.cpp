@@ -5,37 +5,29 @@
 
 #include "util/fmt/format.h"
 
+#include "sir/util/iterators.h"
 #include "sir/util/visitor.h"
 
 namespace seq {
 namespace ir {
 namespace types {
 
-void Type::accept(util::SIRVisitor &v) { v.visit(this); }
-
-std::string Type::referenceString() const {
-  return fmt::format(FMT_STRING("{}.{}"), parent ? parent->referenceString() : "",
-                     name);
-}
-
-std::ostream &Type::doFormat(std::ostream &os) const { return os << name; }
+std::ostream &Type::doFormat(std::ostream &os) const { return os << referenceString(); }
 
 RecordType::RecordType(std::string name, std::vector<Type *> fieldTypes,
                        std::vector<std::string> fieldNames)
-    : MemberedType(std::move(name)) {
+    : TypeBase(std::move(name)) {
   for (auto i = 0; i < fieldTypes.size(); ++i) {
     fields.emplace_back(fieldNames[i], fieldTypes[i]);
   }
 }
 
 RecordType::RecordType(std::string name, std::vector<Type *> mTypes)
-    : MemberedType(std::move(name)) {
+    : TypeBase(std::move(name)) {
   for (int i = 0; i < mTypes.size(); ++i) {
     fields.emplace_back(std::to_string(i + 1), mTypes[i]);
   }
 }
-
-void RecordType::accept(util::SIRVisitor &v) { v.visit(this); }
 
 Type *RecordType::getMemberType(const std::string &n) {
   auto it =
@@ -51,7 +43,7 @@ void RecordType::realize(std::vector<Type *> mTypes, std::vector<std::string> mN
 }
 
 std::ostream &RecordType::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: ("), name);
+  fmt::print(os, FMT_STRING("{}: ("), referenceString());
   for (auto i = 0; i < fields.size(); ++i) {
     auto sep = i + 1 != fields.size() ? ", " : "";
     fmt::print(os, FMT_STRING("{}: {}{}"), fields[i].name,
@@ -61,17 +53,13 @@ std::ostream &RecordType::doFormat(std::ostream &os) const {
   return os;
 }
 
-void RefType::accept(util::SIRVisitor &v) { v.visit(this); }
-
 std::ostream &RefType::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: ref({})"), name, *contents);
+  fmt::print(os, FMT_STRING("{}: ref({})"), referenceString(), *contents);
   return os;
 }
 
-void FuncType::accept(util::SIRVisitor &v) { v.visit(this); }
-
 std::ostream &FuncType::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: ("), name);
+  fmt::print(os, FMT_STRING("{}: ("), referenceString());
   for (auto it = argTypes.begin(); it != argTypes.end(); ++it) {
     auto sep = it + 1 != argTypes.end() ? ", " : "";
     fmt::print(os, FMT_STRING("{}{}"), (*it)->referenceString(), sep);
@@ -80,38 +68,46 @@ std::ostream &FuncType::doFormat(std::ostream &os) const {
   return os;
 }
 
-PointerType::PointerType(Type *base)
-    : Type(fmt::format(FMT_STRING(".Pointer[{}]"), base->name)), base(base) {}
+std::string FuncType::getName(Type *rType, const std::vector<Type *> &argTypes) {
+  auto wrap = [](auto it) -> auto {
+    auto f = [](auto it) { return it->referenceString(); };
+    return util::function_iterator_adaptor<decltype(it), decltype(f)>(it, std::move(f));
+  };
 
-void PointerType::accept(util::SIRVisitor &v) { v.visit(this); }
+  return fmt::format(FMT_STRING(".Function.{}[{}]"), rType->referenceString(),
+                     fmt::join(wrap(argTypes.begin()), wrap(argTypes.end()), ", "));
+}
 
-OptionalType::OptionalType(PointerType *pointerBase, Type *flagType)
-    : RecordType(fmt::format(FMT_STRING(".Optional[{}]"), pointerBase->base->name),
-                 {flagType, pointerBase}, {"has", "val"}),
-      base(pointerBase->base) {}
+std::string PointerType::getName(Type *base) {
+  return fmt::format(FMT_STRING(".Pointer[{}]"), base->referenceString());
+}
 
-void OptionalType::accept(util::SIRVisitor &v) { v.visit(this); }
+OptionalType::OptionalType(Type *pointerType, Type *flagType)
+    : TypeBase(getName(dynamic_cast<PointerType *>(pointerType)->getBase()),
+               std::vector<Type *>{flagType, pointerType},
+               std::vector<std::string>{"has", "val"}),
+      base(dynamic_cast<PointerType *>(pointerType)->getBase()) {}
 
-ArrayType::ArrayType(PointerType *pointerBase, Type *countType)
-    : RecordType(fmt::format(FMT_STRING(".Array[{}]"), pointerBase->base->name),
-                 {countType, pointerBase}, {"len", "ptr"}),
-      base(pointerBase->base) {}
+std::string OptionalType::getName(Type *base) {
+  return fmt::format(FMT_STRING(".Optional[{}]"), base->referenceString());
+}
 
-void ArrayType::accept(util::SIRVisitor &v) { v.visit(this); }
+ArrayType::ArrayType(Type *pointerType, Type *countType)
+    : TypeBase(getName(dynamic_cast<PointerType *>(pointerType)->getBase()),
+               std::vector<Type *>{countType, pointerType},
+               std::vector<std::string>{"len", "ptr"}),
+      base(dynamic_cast<PointerType *>(pointerType)->getBase()) {}
 
-GeneratorType::GeneratorType(Type *base)
-    : Type(fmt::format(FMT_STRING(".Generator[{}]"), base->name)), base(base) {}
+std::string ArrayType::getName(Type *base) {
+  return fmt::format(FMT_STRING(".Array[{}]"), base->referenceString());
+}
 
-void GeneratorType::accept(util::SIRVisitor &v) { v.visit(this); }
+std::string GeneratorType::getName(Type *base) {
+  return fmt::format(FMT_STRING(".Generator[{}]"), base->referenceString());
+}
 
-IntNType::IntNType(unsigned int len, bool sign)
-    : Type(fmt::format(FMT_STRING(".{}Int{}"), sign ? "" : "U", len)), len(len),
-      sign(sign) {}
-
-void IntNType::accept(util::SIRVisitor &v) { v.visit(this); }
-
-std::string IntNType::oppositeSignName() const {
-  return fmt::format(FMT_STRING(".{}Int{}"), sign ? "U" : "", len);
+std::string IntNType::getName(unsigned int len, bool sign) {
+  return fmt::format(FMT_STRING(".{}Int{}"), sign ? "" : "U", len);
 }
 
 } // namespace types

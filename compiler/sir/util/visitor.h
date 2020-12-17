@@ -1,29 +1,74 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
-#include "sir/sir.h"
-
-#include "util/fmt/format.h"
+#include "runtime/lib.h"
 
 #define DEFAULT_VISIT(x)                                                               \
-  virtual void visit(x *n) { throw std::runtime_error("cannot visit node"); }
+  virtual void visit(seq::ir::x *) { throw std::runtime_error("cannot visit node"); }
 
 namespace seq {
 namespace ir {
 
-namespace util {
-using namespace seq::ir;
+namespace types {
+class Type;
+class RecordType;
+class RefType;
+class FuncType;
+class OptionalType;
+class ArrayType;
+class PointerType;
+class GeneratorType;
+class IntNType;
+} // namespace types
 
-struct LLVMOperand;
+class IRModule;
+
+class Func;
+class Var;
+
+class Value;
+class ValueProxy;
+
+class Flow;
+class BlockFlow;
+class SeriesFlow;
+class WhileFlow;
+class ForFlow;
+class TryCatchFlow;
+
+class Constant;
+
+template <typename ValueType> class TemplatedConstant;
+
+class Instr;
+class AssignInstr;
+class LoadInstr;
+class CallInstr;
+class StackAllocInstr;
+class YieldInInstr;
+class TernaryInstr;
+class BreakInstr;
+class ContinueInstr;
+class ReturnInstr;
+class YieldInstr;
+class ThrowInstr;
+class AssertInstr;
+class FlowInstr;
+
+namespace util {
 
 /// Base for SIR visitors
 class SIRVisitor {
 public:
-  DEFAULT_VISIT(SIRModule);
+  DEFAULT_VISIT(IRModule);
 
   DEFAULT_VISIT(Func);
   DEFAULT_VISIT(Var);
+
+  DEFAULT_VISIT(Value);
+  DEFAULT_VISIT(ValueProxy);
 
   DEFAULT_VISIT(Flow);
   DEFAULT_VISIT(BlockFlow);
@@ -32,29 +77,26 @@ public:
   DEFAULT_VISIT(ForFlow);
   DEFAULT_VISIT(TryCatchFlow);
 
+  DEFAULT_VISIT(Constant);
+  DEFAULT_VISIT(TemplatedConstant<seq_int_t>);
+  DEFAULT_VISIT(TemplatedConstant<float>);
+  DEFAULT_VISIT(TemplatedConstant<bool>);
+  DEFAULT_VISIT(TemplatedConstant<std::string>);
+
   DEFAULT_VISIT(Instr);
   DEFAULT_VISIT(AssignInstr);
-  DEFAULT_VISIT(RvalueInstr);
+  DEFAULT_VISIT(LoadInstr);
+  DEFAULT_VISIT(CallInstr);
+  DEFAULT_VISIT(StackAllocInstr);
+  DEFAULT_VISIT(YieldInInstr);
+  DEFAULT_VISIT(TernaryInstr);
   DEFAULT_VISIT(BreakInstr);
   DEFAULT_VISIT(ContinueInstr);
   DEFAULT_VISIT(ReturnInstr);
   DEFAULT_VISIT(YieldInstr);
-
-  DEFAULT_VISIT(Rvalue);
-  DEFAULT_VISIT(MemberRvalue);
-  DEFAULT_VISIT(CallRvalue);
-  DEFAULT_VISIT(OperandRvalue);
-  DEFAULT_VISIT(StackAllocRvalue);
-
-  DEFAULT_VISIT(Lvalue);
-  DEFAULT_VISIT(VarLvalue);
-  DEFAULT_VISIT(VarMemberLvalue);
-
-  DEFAULT_VISIT(Operand);
-  DEFAULT_VISIT(VarOperand);
-  DEFAULT_VISIT(VarPointerOperand);
-  DEFAULT_VISIT(LiteralOperand);
-  DEFAULT_VISIT(LLVMOperand);
+  DEFAULT_VISIT(ThrowInstr);
+  DEFAULT_VISIT(AssertInstr);
+  DEFAULT_VISIT(FlowInstr);
 
   DEFAULT_VISIT(types::Type);
   DEFAULT_VISIT(types::RecordType);
@@ -65,117 +107,6 @@ public:
   DEFAULT_VISIT(types::PointerType);
   DEFAULT_VISIT(types::GeneratorType);
   DEFAULT_VISIT(types::IntNType);
-};
-
-/// CRTP Base for SIR visitors that return from transform.
-template <typename Derived, typename Context, typename ModuleResult,
-          typename FlowResult, typename VarResult, typename InstrResult,
-          typename RvalResult, typename LvalResult, typename OpResult,
-          typename TypeResult>
-class CallbackIRVisitor : public SIRVisitor {
-protected:
-  std::shared_ptr<Context> ctx;
-  ModuleResult moduleResult{};
-  FlowResult flowResult{};
-  VarResult varResult{};
-  InstrResult instrResult{};
-  RvalResult rvalResult{};
-  LvalResult lvalResult{};
-  OpResult opResult{};
-  TypeResult typeResult{};
-
-public:
-  explicit CallbackIRVisitor(std::shared_ptr<Context> ctx) : ctx(std::move(ctx)) {}
-
-  template <typename... Args>
-  ModuleResult transform(const std::unique_ptr<ir::SIRModule> &module, Args... args) {
-    Derived v(ctx, args...);
-    module->accept(v);
-    return v.moduleResult;
-  }
-  template <typename... Args>
-  FlowResult transform(const std::unique_ptr<ir::Flow> &f, Args... args) {
-    Derived v(ctx, args...);
-    f->accept(v);
-    return v.flowResult;
-  }
-  template <typename... Args>
-  VarResult transform(const std::unique_ptr<ir::Var> &var, Args... args) {
-    Derived v(ctx, args...);
-    var->accept(v);
-    return v.varResult;
-  }
-  template <typename... Args>
-  InstrResult transform(const std::unique_ptr<ir::Instr> &instr, Args... args) {
-    Derived v(ctx, args...);
-    instr->accept(v);
-    return v.instrResult;
-  }
-  template <typename... Args>
-  RvalResult transform(const std::unique_ptr<ir::Rvalue> &rval, Args... args) {
-    Derived v(ctx, args...);
-    rval->accept(v);
-    return v.rvalResult;
-  }
-  template <typename... Args>
-  LvalResult transform(const std::unique_ptr<Lvalue> &lval, Args... args) {
-    Derived v(ctx, args...);
-    lval->accept(v);
-    return v.lvalResult;
-  }
-  template <typename... Args>
-  OpResult transform(const std::unique_ptr<Operand> &op, Args... args) {
-    Derived v(ctx, args...);
-    op->accept(v);
-    return v.opResult;
-  }
-  template <typename... Args>
-  TypeResult transform(const std::unique_ptr<types::Type> &typ, Args... args) {
-    Derived v(ctx, args...);
-    typ->accept(v);
-    return v.typeResult;
-  }
-  template <typename... Args>
-  ModuleResult transform(ir::SIRModule *module, Args... args) {
-    Derived v(ctx, args...);
-    module->accept(v);
-    return v.moduleResult;
-  }
-  template <typename... Args> FlowResult transform(ir::Flow *f, Args... args) {
-    Derived v(ctx, args...);
-    f->accept(v);
-    return v.flowResult;
-  }
-  template <typename... Args> VarResult transform(ir::Var *var, Args... args) {
-    Derived v(ctx, args...);
-    var->accept(v);
-    return v.varResult;
-  }
-  template <typename... Args> InstrResult transform(ir::Instr *instr, Args... args) {
-    Derived v(ctx, args...);
-    instr->accept(v);
-    return v.instrResult;
-  }
-  template <typename... Args> RvalResult transform(ir::Rvalue *rval, Args... args) {
-    Derived v(ctx, args...);
-    rval->accept(v);
-    return v.rvalResult;
-  }
-  template <typename... Args> LvalResult transform(Lvalue *lval, Args... args) {
-    Derived v(ctx, args...);
-    lval->accept(v);
-    return v.lvalResult;
-  }
-  template <typename... Args> OpResult transform(Operand *op, Args... args) {
-    Derived v(ctx, args...);
-    op->accept(v);
-    return v.opResult;
-  }
-  template <typename... Args> TypeResult transform(types::Type *typ, Args... args) {
-    Derived v(ctx, args...);
-    typ->accept(v);
-    return v.typeResult;
-  }
 };
 
 } // namespace util

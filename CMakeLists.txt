@@ -168,18 +168,17 @@ set(SEQ_HPPFILES  compiler/lang/expr.h
                   compiler/util/tapir.h
                   compiler/sir/types/types.h
                   compiler/sir/util/context.h
-                  compiler/sir/util/internal.h
-                  compiler/sir/util/named_list.h
+                  compiler/sir/util/iterators.h
                   compiler/sir/util/visitor.h
+                  compiler/sir/attribute.h
                   compiler/sir/base.h
+                  compiler/sir/constant.h
                   compiler/sir/flow.h
                   compiler/sir/func.h
                   compiler/sir/instr.h
-                  compiler/sir/lvalue.h
                   compiler/sir/module.h
-                  compiler/sir/operand.h
-                  compiler/sir/rvalue.h
                   compiler/sir/sir.h
+                  compiler/sir/value.h
                   compiler/sir/var.h)
 set(SEQ_CPPFILES  compiler/lang/expr.cpp
                   compiler/lang/func.cpp
@@ -223,14 +222,12 @@ set(SEQ_CPPFILES  compiler/lang/expr.cpp
                   compiler/util/fmt/format.cpp
                   compiler/util/jit.cpp
                   compiler/sir/types/types.cpp
+                  compiler/sir/attribute.cpp
                   compiler/sir/base.cpp
                   compiler/sir/flow.cpp
                   compiler/sir/func.cpp
                   compiler/sir/instr.cpp
-                  compiler/sir/lvalue.cpp
                   compiler/sir/module.cpp
-                  compiler/sir/operand.cpp
-                  compiler/sir/rvalue.cpp
                   compiler/sir/var.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
