@@ -21,7 +21,7 @@ _DLOPEN_CACHE = Dict[str, cobj]()
 def dlopen(name: str, flag: int = RTLD_NOW | RTLD_GLOBAL) -> cobj:
     if name in _DLOPEN_CACHE:
         return _DLOPEN_CACHE[name]
-    h = c_dlopen(name.c_str(), flag)
+    h = c_dlopen(cobj(0) if name == "" else name.c_str(), flag)
     if h == cobj():
         raise CError(dlerror())
     _DLOPEN_CACHE[name] = h

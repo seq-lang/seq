@@ -3,7 +3,7 @@
 
 from random import randint
 from bio.locus import Contig, Locus
-from internal.gc import sizeof, free, alloc_atomic
+from internal.gc import sizeof, free, alloc_atomic, realloc
 
 # obeys A < C < G < T
 def _enc(b: byte):

@@ -329,15 +329,16 @@ void SimplifyVisitor::visit(const ImportStmt *stmt) {
   if (stmt->from->isId("C")) {
     /// Handle C imports
     if (auto i = stmt->what->getId())
-      resultStmt = parseCImport(i->value, stmt->args, stmt->ret, stmt->as);
+      resultStmt = parseCImport(i->value, stmt->args, stmt->ret.get(), stmt->as);
     else if (auto d = stmt->what->getDot())
-      resultStmt =
-          parseCDylibImport(d->expr, d->member, stmt->args, stmt->ret, stmt->as);
+      resultStmt = parseCDylibImport(d->expr.get(), d->member, stmt->args,
+                                     stmt->ret.get(), stmt->as);
     else
       seqassert(false, "invalid C import statement");
     return;
-  } else if (stmt->from->isId("python")) {
-    resultStmt = parsePythonImport(stmt->what, stmt->as);
+  } else if (stmt->from->isId("python") && stmt->what) {
+    resultStmt =
+        parsePythonImport(stmt->what.get(), stmt->args, stmt->ret.get(), stmt->as);
     return;
   }
 
@@ -412,8 +413,8 @@ void SimplifyVisitor::visit(const ImportStmt *stmt) {
 void SimplifyVisitor::visit(const FunctionStmt *stmt) {
   if (in(stmt->attributes, ATTR_EXTERN_PYTHON)) {
     // Handle Python code separately
-    resultStmt =
-        parsePythonDefinition(stmt->name, stmt->args, stmt->suite->firstInBlock());
+    resultStmt = parsePythonDefinition(stmt->name, stmt->args, stmt->ret.get(),
+                                       stmt->suite->firstInBlock());
     return;
   }
 
@@ -780,7 +781,7 @@ void SimplifyVisitor::unpackAssignments(const Expr *lhs, const Expr *rhs,
 }
 
 StmtPtr SimplifyVisitor::parseCImport(const string &name, const vector<Param> &args,
-                                      const ExprPtr &ret, const string &altName) {
+                                      const Expr *ret, const string &altName) {
   auto canonicalName = ctx->generateCanonicalName(name);
   vector<Param> fnArgs;
   generateFunctionStub(args.size());
@@ -795,24 +796,23 @@ StmtPtr SimplifyVisitor::parseCImport(const string &name, const vector<Param> &a
   ctx->add(SimplifyItem::Func, altName.empty() ? name : altName, canonicalName,
            ctx->isToplevel());
   auto f = N<FunctionStmt>(
-      canonicalName,
-      ret ? transformType(ret.get()) : transformType(N<IdExpr>("void").get()),
+      canonicalName, ret ? transformType(ret) : transformType(N<IdExpr>("void").get()),
       vector<Param>(), move(fnArgs), nullptr, vector<string>{ATTR_EXTERN_C});
   ctx->cache->asts[canonicalName] = clone(f);
   return f;
 }
 
-StmtPtr SimplifyVisitor::parseCDylibImport(const ExprPtr &dylib, const string &name,
-                                           const vector<Param> &args,
-                                           const ExprPtr &ret, const string &altName) {
+StmtPtr SimplifyVisitor::parseCDylibImport(const Expr *dylib, const string &name,
+                                           const vector<Param> &args, const Expr *ret,
+                                           const string &altName) {
   vector<StmtPtr> stmts;
   // fptr = _dlsym(dylib, "name")
   stmts.push_back(
-      N<AssignStmt>(N<IdExpr>("fptr"), N<CallExpr>(N<IdExpr>("_dlsym"), clone(dylib),
+      N<AssignStmt>(N<IdExpr>("fptr"), N<CallExpr>(N<IdExpr>("_dlsym"), dylib->clone(),
                                                    N<StringExpr>(name))));
   // Prepare Function[args...]
   vector<ExprPtr> fnArgs;
-  fnArgs.emplace_back(ret ? clone(ret) : N<IdExpr>("void"));
+  fnArgs.emplace_back(ret ? ret->clone() : N<IdExpr>("void"));
   for (const auto &a : args) {
     seqassert(a.name.empty(), "unexpected argument name");
     seqassert(!a.deflt, "unexpected default argument");
@@ -839,38 +839,66 @@ StmtPtr SimplifyVisitor::parseCDylibImport(const ExprPtr &dylib, const string &n
   // Prepare final FunctionStmt and transform it
   for (int i = 0; i < args.size(); i++)
     params.emplace_back(Param{format(".a{}", i), clone(args[i].type)});
-  return transform(N<FunctionStmt>(altName.empty() ? name : altName, clone(ret),
-                                   vector<Param>(), move(params),
-                                   N<SuiteStmt>(move(stmts)), vector<string>()));
+  return transform(N<FunctionStmt>(
+      altName.empty() ? name : altName, ret ? ret->clone() : nullptr, vector<Param>(),
+      move(params), N<SuiteStmt>(move(stmts)), vector<string>()));
 }
 
-// from python import X.Y -> import X; from X import Y ... ?
-// from python import Y -> get Y? works---good! not: import Y; return import
-StmtPtr SimplifyVisitor::parsePythonImport(const ExprPtr &what, const string &as) {
-  vector<StmtPtr> stmts;
-  string from;
-
+StmtPtr SimplifyVisitor::parsePythonImport(const Expr *what, const vector<Param> &args,
+                                           const Expr *ret, const string &altName) {
+  // Get a module name (e.g. os.path)
   vector<string> dirs;
-  Expr *e = what.get();
-  while (auto d = dynamic_cast<DotExpr *>(e)) {
+  auto e = what;
+  while (auto d = e->getDot()) {
     dirs.push_back(d->member);
     e = d->expr.get();
   }
-  if (!e->getId())
-    error("invalid import statement");
+  seqassert(e && e->getId(), "invalid import python statement");
   dirs.push_back(e->getId()->value);
   string name = dirs[0], lib;
   for (int i = int(dirs.size()) - 1; i > 0; i--)
     lib += dirs[i] + (i > 1 ? "." : "");
-  return transform(N<AssignStmt>(
-      N<IdExpr>(name), N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_py_import"),
-                                   N<StringExpr>(name), N<StringExpr>(lib))));
-  // imp = pyobj._py_import("foo", "lib")
+
+  // Simple module import: from python import foo
+  if (!ret && args.empty())
+    // altName = pyobj._import("name")
+    return transform(N<AssignStmt>(
+        N<IdExpr>(altName.empty() ? name : altName),
+        N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_import"), N<StringExpr>(name))));
+
+  // Typed function import: from python import foo.bar(int) -> float.
+  // f = pyobj._import("lib")["name"]
+  auto call =
+      N<AssignStmt>(N<IdExpr>("f"),
+                    N<IndexExpr>(N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_import"),
+                                             N<StringExpr>(lib)),
+                                 N<StringExpr>(name)));
+  // Make a call expression: f(args...)
+  vector<Param> params;
+  vector<ExprPtr> callArgs;
+  for (int i = 0; i < args.size(); i++) {
+    params.emplace_back(Param{format("a{}", i), clone(args[i].type), nullptr});
+    callArgs.emplace_back(N<IdExpr>(format("a{}", i)));
+  }
+  // Make a return expression: return f(args...),
+  // or return retType.__from_py__(f(args...))
+  ExprPtr retExpr = N<CallExpr>(N<IdExpr>("f"), move(callArgs));
+  if (ret && !ret->isId("void"))
+    retExpr = N<CallExpr>(N<DotExpr>(ret->clone(), "__from_py__"), move(retExpr));
+  StmtPtr retStmt = nullptr;
+  if (ret && ret->isId("void"))
+    retStmt = N<ExprStmt>(move(retExpr));
+  else
+    retStmt = N<ReturnStmt>(move(retExpr));
+  // Return a wrapper function
+  return transform(N<FunctionStmt>(
+      altName.empty() ? name : altName, ret ? ret->clone() : nullptr, vector<Param>(),
+      move(params), N<SuiteStmt>(move(call), move(retStmt)), vector<string>()));
 }
 
 StmtPtr SimplifyVisitor::parsePythonDefinition(const string &name,
                                                const vector<Param> &args,
-                                               const Stmt *codeStmt) {
+                                               const Expr *ret, const Stmt *codeStmt) {
   seqassert(codeStmt && codeStmt->getExpr() && codeStmt->getExpr()->expr->getString(),
             "invalid Python definition");
   auto code = codeStmt->getExpr()->expr->getString()->value;
@@ -878,9 +906,11 @@ StmtPtr SimplifyVisitor::parsePythonDefinition(const string &name,
   for (const auto &a : args)
     pyargs.emplace_back(a.name);
   code = format("def {}({}):\n{}\n", name, join(pyargs, ", "), code);
-  return transform(
-      N<SuiteStmt>(N<ExprStmt>(N<CallExpr>(N<IdExpr>("_py_exec"), N<StringExpr>(code))),
-                   N<ImportStmt>(N<IdExpr>("python"), N<IdExpr>(name))));
+  return transform(N<SuiteStmt>(
+      N<ExprStmt>(
+          N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_exec"), N<StringExpr>(code))),
+      N<ImportStmt>(N<IdExpr>("python"), N<DotExpr>(N<IdExpr>("__main__"), name),
+                    clone_nop(args), ret ? ret->clone() : nullptr)));
 }
 
 StmtPtr SimplifyVisitor::parseLLVMDefinition(const Stmt *codeStmt) {
@@ -934,9 +964,13 @@ string SimplifyVisitor::generateFunctionStub(int n) {
     generics.emplace_back(Param{"TR", nullptr, nullptr});
     vector<ExprPtr> genericNames;
     genericNames.emplace_back(N<IdExpr>("TR"));
+    // TODO: remove this args hack
+    vector<Param> args;
+    args.emplace_back(Param{".ret", N<IdExpr>("TR"), nullptr});
     for (int i = 1; i <= n; i++) {
       genericNames.emplace_back(N<IdExpr>(format("T{}", i)));
       generics.emplace_back(Param{format("T{}", i), nullptr, nullptr});
+      args.emplace_back(Param{format(".a{}", i), N<IdExpr>(format("T{}", i)), nullptr});
     }
     ExprPtr type = N<IndexExpr>(N<IdExpr>(typeName), N<TupleExpr>(move(genericNames)));
 
@@ -956,7 +990,7 @@ string SimplifyVisitor::generateFunctionStub(int n) {
                                                vector<string>{ATTR_INTERNAL}));
     // class Function.N[TR, T1, ..., TN]
     StmtPtr stmt = make_unique<ClassStmt>(
-        typeName, move(generics), vector<Param>{}, N<SuiteStmt>(move(fns)),
+        typeName, move(generics), move(args), N<SuiteStmt>(move(fns)),
         vector<string>{ATTR_INTERNAL, ATTR_TRAIT, ATTR_TUPLE});
     stmt->setSrcInfo(ctx->generateSrcInfo());
     // Parse this function in a clean context.

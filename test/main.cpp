@@ -181,7 +181,7 @@ TEST_P(SeqTest, Run) {
 auto getTypeTests(const vector<string> &files) {
   vector<tuple<string, bool, string, string, int, bool>> cases;
   for (auto &f : files) {
-    bool barebones = f == "parser/simplify.seq";
+    bool barebones = false;
     string l;
     ifstream fin(string(TEST_DIR) + "/" + f);
     string code, testName;
@@ -193,7 +193,9 @@ auto getTypeTests(const vector<string> &files) {
         if (line)
           cases.emplace_back(make_tuple(f, true, to_string(line) + "_" + testName, code,
                                         codeLine, barebones));
-        testName = l.substr(4);
+        auto t = seq::ast::split(l.substr(4), ',');
+        barebones = (t.size() > 1 && t[1] == "barebones");
+        testName = t[0];
         code = l + "\n";
         codeLine = line;
         test++;

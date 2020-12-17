@@ -321,9 +321,10 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
         assert(val && val->isStatic());
         auto t = val->getType()->follow();
         m[g] = {g, t,
-                t->getLink()                       ? t->getLink()->id
-                : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
-                                                   : 0};
+                t->getLink()
+                    ? t->getLink()->id
+                    : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
+                                                       : 0};
       }
       auto sv = StaticVisitor(m);
       sv.transform(s->expr);
@@ -569,6 +570,9 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
           N<DotExpr>(transform(N<CallExpr>(N<IdExpr>(".unwrap"), clone(expr->expr))),
                      expr->member);
       return visitDot(d.get(), args);
+    } else if (c->name == ".pyobj") {
+      return transform(N<CallExpr>(N<DotExpr>(clone(expr->expr), "__getitem__"),
+                                   N<StringExpr>(expr->member)));
     } else {
       error("cannot find '{}' in {}", expr->member, lhs->getType()->toString());
     }
@@ -631,27 +635,29 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__init__"), move(args))));
     return transform(N<StmtExpr>(move(stmts), clone(var)));
   } else if (!calleeClass->getCallable()) {
+    if (calleeClass->name == ".pyobj") {
+      if (args.size() != 1 ||
+          !(args[0].value->getType()->getClass() &&
+            startswith(args[0].value->getType()->getClass()->name, ".Tuple."))) {
+        vector<ExprPtr> e;
+        for (auto &a : args) {
+          if (a.name != "")
+            error("named python calls are not yet supported");
+          e.push_back(move(a.value));
+        }
+        auto ne = transform(N<CallExpr>(
+            N<DotExpr>(N<IdExpr>(format(".Tuple.{}", args.size())), "__new__"),
+            move(e)));
+        args.clear();
+        args.push_back({"", move(ne)});
+      }
+    }
     return transform(N<CallExpr>(N<DotExpr>(move(callee), "__call__"), move(args)));
   }
 
   FunctionStmt *ast = nullptr;
   if (auto ff = calleeType->getFunc()) {
     ast = (FunctionStmt *)(ctx->cache->asts[ff->name].get());
-    if (ast && in(ast->attributes, "pyhandle") &&
-        (args.size() != 1 ||
-         !(args[0].value->getType()->getClass() &&
-           startswith(args[0].value->getType()->getClass()->name, ".Tuple.")))) {
-      vector<ExprPtr> e;
-      for (auto &a : args) {
-        if (a.name != "")
-          error("named python calls are not yet supported");
-        e.push_back(move(a.value));
-      }
-      auto ne = transform(N<CallExpr>(
-          N<DotExpr>(N<IdExpr>(format(".Tuple.{}", args.size())), "__new__"), move(e)));
-      args.clear();
-      args.push_back({"", move(ne)});
-    }
   }
 
   // Handle named and default arguments

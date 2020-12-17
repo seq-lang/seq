@@ -20,6 +20,7 @@
 %token IF ELSE ELIF MATCH CASE FOR WHILE CONTINUE BREAK TRY EXCEPT FINALLY THROW WITH
 %token DEF RETURN YIELD LAMBDA CLASS TYPEOF AS
 %token IMPORT FROM GLOBAL PRINT PASS ASSERT DEL TRUE FALSE NONE
+/* %token ARROW */
 /* operators */
 %token<string> EQ ELLIPSIS ADD SUB MUL DIV FDIV POW MOD
 %token<string> PLUSEQ MINEQ MULEQ DIVEQ FDIVEQ POWEQ MODEQ AT GEQ
@@ -93,6 +94,7 @@ expr:
   | pipe_expr IF pipe_expr ELSE expr { $loc, IfExpr (flat_pipe $3, flat_pipe $1, $5) }
   | TYPEOF LP expr RP { $loc, TypeOf $3 }
   | LAMBDA separated_list(COMMA, ID) COLON expr { $loc, Lambda ($2, $4) }
+  /* | LP separated_list(COMMA, ID) ARROW pipe_expr RP { $loc, Lambda ($2, $4) } */
 expr_list: separated_nonempty_list(COMMA, expr) { $1 }
 
 lassign_term:
@@ -192,8 +194,10 @@ single_statement:
   | NL { $loc, Pass () }
   | WHILE expr COLON suite { $loc, While ($2, $4, []) }
   | WHILE expr COLON suite ELSE COLON suite { $loc, While ($2, $4, $7) }
+  | WHILE expr COLON suite ELSE NOT BREAK COLON suite { $loc, While ($2, $4, $9) }
   | FOR lassign IN expr COLON suite { $loc, For ($2, $4, $6, []) }
   | FOR lassign IN expr COLON suite ELSE COLON suite { $loc, For ($2, $4, $6, $9) }
+  | FOR lassign IN expr COLON suite ELSE NOT BREAK COLON suite { $loc, For ($2, $4, $6, $11) }
   | IF expr COLON suite { $loc, If [Some $2, $4] }
   | IF expr COLON suite elif_suite { $loc, If ((Some $2, $4) :: $5) }
   | MATCH expr COLON NL INDENT case_suite DEDENT { $loc, Match ($2, $6) }

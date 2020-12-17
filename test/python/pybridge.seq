@@ -1,9 +1,7 @@
-import python
-
 @test
 def test_basic():
-    from python import mymodule.multiply
-    assert int(multiply(3, 4)) == 12
+    from python import mymodule
+    assert str(mymodule.multiply(3, 4)) == '12'
 test_basic()
 
 @test
@@ -14,23 +12,23 @@ def test_pybridge():
     assert test_pydef(5) == '01234'
 test_pybridge()
 
-from python import mymodule.print_args
+from python import mymodule
 @test
 def test_conversions():
     T = tuple[dict[str,float],tuple[int,float]]
-    t = print_args(
+    t = mymodule.print_args(
         (4,5),
         {'a': 3.14, 'b': 2.123},
         True,
         {s'ACGT'},
         [['abc'], ['1.1', '2.2'], list[str]()]
     )
-    assert T(t) == ({'a': 3.14, 'b': 2.123}, (222, 3.14))
+    assert T.__from_py__(t) == ({'a': 3.14, 'b': 2.123}, (222, 3.14))
 test_conversions()
 
 @test
 def test_pythrow():
-    from python import mymodule.throw_exc as te
+    from python import mymodule.throw_exc() -> void as te
     try:
         te()
     except PyError as e:

@@ -214,22 +214,31 @@ private:
   ///   @.c
   ///   def foo(a1: int) -> float: pass
   ///   f = foo (only if altName is provided).
-  StmtPtr parseCImport(const string &name, const vector<Param> &args,
-                       const ExprPtr &ret, const string &altName);
+  StmtPtr parseCImport(const string &name, const vector<Param> &args, const Expr *ret,
+                       const string &altName);
   /// Transform a dynamic C import (from C import lib.foo(int) -> float as f) to:
   ///   def foo(a1: int) -> float:
   ///     fptr = _dlsym(lib, "foo")
   ///     f = Function[float, int](fptr)
   ///     return f(a1)  (if return type is void, just call f(a1))
-  StmtPtr parseCDylibImport(const ExprPtr &dylib, const string &name,
-                            const vector<Param> &args, const ExprPtr &ret,
+  StmtPtr parseCDylibImport(const Expr *dylib, const string &name,
+                            const vector<Param> &args, const Expr *ret,
                             const string &altName);
-  StmtPtr parsePythonImport(const ExprPtr &what, const string &as);
-  /// Transform Python code @python def foo(x): <python code> to:
-  ///   _py_exec("def foo(x): <python code>")
-  ///   from python import foo
+  /// Transform a Python module import (from python import module as f) to:
+  ///   f = pyobj._import("module")
+  /// Transform a Python function import (from python import lib.foo(int) -> float as f)
+  /// to:
+  ///   def f(a0: int) -> float:
+  ///     f = pyobj._import("lib")["foo"]
+  ///     return float.__from_py__(f(a0))
+  /// If a return type is nullptr, the function just returns f (raw pyobj).
+  StmtPtr parsePythonImport(const Expr *what, const vector<Param> &args,
+                            const Expr *ret, const string &altName);
+  /// Transform a Python codeblock @python def foo(x: int, y) -> int: <python code> to:
+  ///   pyobj._exec("def foo(x, y): <python code>")
+  ///   from python import __main__.foo(int, _) -> int
   StmtPtr parsePythonDefinition(const string &name, const vector<Param> &args,
-                                const Stmt *codeStmt);
+                                const Expr *ret, const Stmt *codeStmt);
   /// Transform LLVM code @llvm def foo(x: int) -> float: <llvm code> to:
   ///   def foo(x: int) -> float:
   ///     StringExpr("<llvm code>")

@@ -34,6 +34,21 @@ from C import LD.PyDict_New() -> cobj
 from C import LD.PyDict_SetItem(cobj, cobj, cobj) -> cobj
 from C import LD.PyDict_Next(cobj, Ptr[int], Ptr[cobj], Ptr[cobj]) -> int
 
+_PY_MODULE_CACHE = Dict[str, pyobj]()
+
+_PY_INITIALIZED = False
+def init():
+    global _PY_INITIALIZED
+    if _PY_INITIALIZED:
+        return
+    Py_Initialize()
+    _PY_INITIALIZED = True
+
+def ensure_initialized():
+    if not _PY_INITIALIZED:
+        init()
+        # raise ValueError("Python not initialized; make sure to 'import python'")
+
 @extend
 class pyobj:
     def __new__(p: Ptr[byte]) -> pyobj:
@@ -53,6 +68,9 @@ class pyobj:
 
     def __from_py__(self):
         return self
+
+    def __str__(self):
+        return str.__from_py__(self.__getitem__("__str__").__call__[pyobj]())
 
     def to_str(self, errors: str, empty: str = "") -> str:
         obj = PyUnicode_AsEncodedString(self.p, "utf-8".c_str(), errors.c_str())
@@ -87,8 +105,8 @@ class pyobj:
     def decref(self):
         Py_DecRef(self.p)
 
-    def call(self, args : Optional[pyobj] = None):
-        args_py = (~args).p if args else cobj()
+    def __call__[T](self, args : Optional[T] = None):
+        args_py = (~args).__to_py__().p if args else cobj()
         return pyobj.exc_wrap(pyobj(PyObject_CallObject(self.p, args_py)))
 
     def _tuple_new(length: int) -> pyobj:
@@ -105,38 +123,21 @@ class pyobj:
         pyobj.exc_check()
         return pyobj(t)
 
+    def _import(name: str):
+        ensure_initialized()
+        if name in _PY_MODULE_CACHE:
+            return _PY_MODULE_CACHE[name]
+        m = pyobj.exc_wrap(pyobj(PyImport_ImportModule(name.c_str())))
+        _PY_MODULE_CACHE[name] = m
+        return m
 
-_PY_INITIALIZED = False
-def init():
-    global _PY_INITIALIZED
-    if _PY_INITIALIZED:
-        return
-    Py_Initialize()
-    _PY_INITIALIZED = True
-
-def ensure_initialized():
-    if not _PY_INITIALIZED:
-        raise ValueError("Python not initialized; make sure to 'import python'")
+    def _exec(code: str):
+        ensure_initialized()
+        PyRun_SimpleString(code.c_str())
 
 def none():
     raise NotImplementedError()
 
-def _imp(name: str) -> pyobj:
-    ensure_initialized()
-    return pyobj.exc_wrap(pyobj(PyImport_ImportModule(name.c_str())))
-
-_PY_MODULE_CACHE = Dict[str, pyobj]()
-def imp(name: str):
-    ensure_initialized()
-    if name in _PY_MODULE_CACHE:
-        return _PY_MODULE_CACHE[name]
-    m = _imp(name)
-    _PY_MODULE_CACHE[name] = m
-    return m
-
-def exec(code: str):
-    ensure_initialized()
-    PyRun_SimpleString(code.c_str())
 
 # Type conversions
 

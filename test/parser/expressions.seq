@@ -1,6 +1,36 @@
+#%% none
+a = None
+print a  #: None
+a = 5
+print a  #: 5
+
 #%% none_unbound
 a = None
 #! ERROR: cannot resolve 1 unbound variables
+
+#%% bool
+a = True
+print a  #: True
+
+#%% int
+a = 51
+print a  #: 51
+
+#%% float
+a = 5.15
+print a  #: 5.15
+
+#%% float_error
+print 5.__str__()  #! ERROR: parsing error: '__str__'
+
+#%% string
+a = 'kthxbai'
+print a  #: kthxbai
+
+#%% fstring
+a, b = 1, True
+c = f'and this is {a} followed by {b}'
+print c, f'{b}{a}', f'.. {1+a=} .. {b} ...'  #: and this is 1 followed by True True1 .. 1+a=2 .. True ...
 
 #%% seq
 a = s'ACGT'
@@ -27,6 +57,20 @@ gs.add(1.12)
 gs.add(1.13)
 print fs, gs  #: {1, 2, 3} {1.13, 1.12}
 
+#%% dict
+gd = {1: 'jedan', 2: 'dva', 2: 'two', 3: 'tri'}
+fd = {}
+fd['jedan'] = 1
+fd['dva'] = 2
+print gd, fd  #: {1: jedan, 2: two, 3: tri} {jedan: 1, dva: 2}
+
+# #%%
+
+#%% collection_generator
+l = [(i, j, f'i{i}/{j}')
+     for i in range(50) if i % 2 == 0 if i % 3 == 0
+     for j in range(2) if j == 1]
+print l #: [(0, 1, i0/1), (6, 1, i6/1), (12, 1, i12/1), (18, 1, i18/1), (24, 1, i24/1), (30, 1, i30/1), (36, 1, i36/1), (42, 1, i42/1), (48, 1, i48/1)]
 
 s = {i%3 for i in range(20)}
 print s #: {0, 1, 2}
@@ -34,14 +78,30 @@ print s #: {0, 1, 2}
 d = {i: j for i in range(10) if i < 1 for j in range(10)}
 print d  #: {0: 9}
 
+#%% generator
+z = 3
+g = (e for e in range(20) if e % z == 1)
+print str(g)[:13], list(g)  #: <generator at [1, 4, 7, 10, 13, 16, 19]
 
+#%% if
+c = 5
+a = 1 if c < 5 else 2
+b = -(1 if c >= 5 else 2)
+print a, b  #: 2 -1
+
+#%% unary
+a, b = False, 1
+print not a, ~b, +b, -b, -(+(-b))  #: True -2 1 -1 1
 
 #%% binary
 x, y = True, False
 a, b = 1, 2
+c = [1, 2, 3]
+
 print x and y, x or y  #: False True
 print a+b, a-b, a*b, 5**b, a/b, a//b  #: 3 -1 2 25 0.5 0
 print a&b, a|b, a<<b, a>>b, a^b  #: 0 3 4 0 3
+print a in c, a not in c  #: True False
 
 # Todo: type instance
 

@@ -237,6 +237,7 @@ and read state = parse
   | "="   as op { [P.EQ        (char_to_string op)] }
   | "..." as op { [P.ELLIPSIS  op] }
   | "@"   as op { [P.AT        (char_to_string op)] }
+  (* | "=>"  { [P.ARROW] } *)
   | "->"  { [P.OF] }
   | ":"   { [P.COLON] }
   | ";"   { [P.SEMICOLON] }
