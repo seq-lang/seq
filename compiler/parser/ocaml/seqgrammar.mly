@@ -20,6 +20,7 @@
 %token IF ELSE ELIF MATCH CASE FOR WHILE CONTINUE BREAK TRY EXCEPT FINALLY THROW WITH
 %token DEF RETURN YIELD LAMBDA CLASS TYPEOF AS
 %token IMPORT FROM GLOBAL PRINT PASS ASSERT DEL TRUE FALSE NONE
+/* %token ARROW */
 /* operators */
 %token<string> EQ ELLIPSIS ADD SUB MUL DIV FDIV POW MOD
 %token<string> PLUSEQ MINEQ MULEQ DIVEQ FDIVEQ POWEQ MODEQ AT GEQ
@@ -93,6 +94,7 @@ expr:
   | pipe_expr IF pipe_expr ELSE expr { $loc, IfExpr (flat_pipe $3, flat_pipe $1, $5) }
   | TYPEOF LP expr RP { $loc, TypeOf $3 }
   | LAMBDA separated_list(COMMA, ID) COLON expr { $loc, Lambda ($2, $4) }
+  /* | LP separated_list(COMMA, ID) ARROW pipe_expr RP { $loc, Lambda ($2, $4) } */
 expr_list: separated_nonempty_list(COMMA, expr) { $1 }
 
 lassign_term:
@@ -111,10 +113,10 @@ pipe_expr:
   | l = bool_expr; p = SPIPE; r = pipe_expr { $loc, (p, l) :: (snd r) }
 bool_expr:
   | bool_and_expr { $1 }
-  | bool_and_expr OR bool_expr { $loc, Binary ($1, $2, $3) }
+  | bool_and_expr OR bool_expr { $loc, Binary ($1, $2, $3, false) }
 bool_and_expr:
   | cond_expr { flat_cond $1 }
-  | cond_expr AND bool_and_expr { $loc, Binary (flat_cond $1, $2, $3) }
+  | cond_expr AND bool_and_expr { $loc, Binary (flat_cond $1, $2, $3, false) }
 cond_expr:
   | arith_expr { $loc, Cond (snd $1) }
   | NOT cond_expr { $loc, Cond (Unary ("!", flat_cond $2)) }
@@ -124,7 +126,7 @@ cond_expr:
 
 arith_expr:
   | arith_term { $1 }
-  | arith_expr arith_op arith_expr { $loc, Binary ($1, $2, $3) }
+  | arith_expr arith_op arith_expr { $loc, Binary ($1, $2, $3, false) }
   | SUB+ arith_term | B_NOT+ arith_term | ADD+ arith_term /* Unary */
     { let cnt = List.length $1 in
       $loc, match cnt mod 2, List.hd $1, snd $2 with
@@ -192,8 +194,10 @@ single_statement:
   | NL { $loc, Pass () }
   | WHILE expr COLON suite { $loc, While ($2, $4, []) }
   | WHILE expr COLON suite ELSE COLON suite { $loc, While ($2, $4, $7) }
+  | WHILE expr COLON suite ELSE NOT BREAK COLON suite { $loc, While ($2, $4, $9) }
   | FOR lassign IN expr COLON suite { $loc, For ($2, $4, $6, []) }
   | FOR lassign IN expr COLON suite ELSE COLON suite { $loc, For ($2, $4, $6, $9) }
+  | FOR lassign IN expr COLON suite ELSE NOT BREAK COLON suite { $loc, For ($2, $4, $6, $11) }
   | IF expr COLON suite { $loc, If [Some $2, $4] }
   | IF expr COLON suite elif_suite { $loc, If ((Some $2, $4) :: $5) }
   | MATCH expr COLON NL INDENT case_suite DEDENT { $loc, Match ($2, $6) }
@@ -243,6 +247,7 @@ import_statement:
                         pos, Import { imp_from; imp_what = Some i; imp_args; imp_ret; imp_as; imp_dots }) }
 import_from_expr:
   | expr { (0, $1) }
+  | DOT+ { (List.length $1, ($loc, Id "")) }
   | DOT+ expr { (List.length $1, $2) }
 import_term:
   | import_lterm { $loc, ($1, None) }
@@ -254,7 +259,7 @@ import_param: expr { $loc, { name = ""; typ = Some $1; default = None } }
 dot_term: ID { $loc, Id $1 } | dot_term DOT ID { $loc, Dot ($1, $3) }
 
 assign_statement:
-  | expr aug_eq expr { [$loc, AssignEq ($1, $3, String.sub $2 0 (String.length $2 - 1))] }
+  | expr aug_eq expr { [$loc, Assign ($1, Some ($loc, Binary ($1, String.sub $2 0 (String.length $2 - 1), $3, true)), None)] }
   | ID COLON expr EQ expr { [$loc, Assign (($loc($1), Id $1), Some $5, Some $3)] }
   | expr_list EQ separated_nonempty_list(EQ, expr_list)
     { let all = List.map (function [l] -> l | l -> $loc, Tuple l) (List.rev ($1 :: $3)) in
@@ -303,7 +308,7 @@ cls_body:
       in
       { class_name = $1; generics = opt_val $2 []; args; members; attrs = [] } }
 dataclass_member:
-  | PASS NL { None }
+  | NL | PASS NL { None }
   | ID COLON expr NL
     { Some ($loc, Assign (($loc, Id $1), None, Some $3)) }
   | ID COLON expr EQ expr NL

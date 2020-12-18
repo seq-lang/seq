@@ -54,7 +54,7 @@ SOFTWARE.
 // #include <nlohmann/detail/conversions/from_json.hpp>
 
 
-#include <algorithm> // transform
+#include <algorithm> // simplify
 #include <array> // array
 #include <forward_list> // forward_list
 #include <iterator> // inserter, front_inserter, end
@@ -17149,7 +17149,7 @@ class basic_json
 
     [RFC 7159](http://rfc7159.net/rfc7159) states:
     > Software implementations are typically required to test names of object
-    > members for equality. Implementations that transform the textual
+    > members for equality. Implementations that simplify the textual
     > representation into sequences of Unicode code units and then perform the
     > comparison numerically, code unit by code unit, are interoperable in the
     > sense that implementations will agree in all cases on equality or
@@ -21801,7 +21801,7 @@ class basic_json
             JSON_THROW(type_error::create(308, "cannot use push_back() with " + std::string(type_name())));
         }
 
-        // transform null object into an array
+        // simplify null object into an array
         if (is_null())
         {
             m_type = value_t::array;
@@ -21836,7 +21836,7 @@ class basic_json
             JSON_THROW(type_error::create(308, "cannot use push_back() with " + std::string(type_name())));
         }
 
-        // transform null object into an array
+        // simplify null object into an array
         if (is_null())
         {
             m_type = value_t::array;
@@ -21886,7 +21886,7 @@ class basic_json
             JSON_THROW(type_error::create(308, "cannot use push_back() with " + std::string(type_name())));
         }
 
-        // transform null object into an object
+        // simplify null object into an object
         if (is_null())
         {
             m_type = value_t::object;
@@ -21989,7 +21989,7 @@ class basic_json
             JSON_THROW(type_error::create(311, "cannot use emplace_back() with " + std::string(type_name())));
         }
 
-        // transform null object into an array
+        // simplify null object into an array
         if (is_null())
         {
             m_type = value_t::array;
@@ -22042,7 +22042,7 @@ class basic_json
             JSON_THROW(type_error::create(311, "cannot use emplace() with " + std::string(type_name())));
         }
 
-        // transform null object into an object
+        // simplify null object into an object
         if (is_null())
         {
             m_type = value_t::object;

@@ -1,31 +1,23 @@
-#include "util/fmt/format.h"
+/*
+ * common.cpp --- Common utilities.
+ *
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
+ */
+
 #include <libgen.h>
 #include <string>
 #include <sys/stat.h>
 
 #include "lang/seq.h"
-#include "parser/ast/ast/ast.h"
 #include "parser/common.h"
+#include "util/fmt/format.h"
 
 namespace seq {
-
-std::ostream &operator<<(std::ostream &out, const ::seq::SrcInfo &c) {
-  char buf[PATH_MAX + 1];
-  strncpy(buf, c.file.c_str(), PATH_MAX);
-  auto f = basename(buf);
-  out << f << ":" << c.line << ":" << c.col;
-  return out;
-}
-
 namespace ast {
 
-int tmpVarCounter = 0;
-string getTemporaryVar(const string &prefix, char p) {
-  return fmt::format("{}{}_{}", p ? fmt::format("{}_", p) : "", prefix,
-                     ++tmpVarCounter);
-}
-
-string chop(const string &s) { return s.size() && s[0] == '.' ? s.substr(1) : s; }
+/// String and collection utilities
 
 vector<string> split(const string &s, char delim) {
   vector<string> items;
@@ -35,18 +27,9 @@ vector<string> split(const string &s, char delim) {
     items.push_back(item);
   return items;
 }
-
-bool startswith(const string &s, const string &p) {
-  return s.size() >= p.size() && s.substr(0, p.size()) == p;
-}
-
-bool endswith(const string &s, const string &p) {
-  return s.size() >= p.size() && s.substr(s.size() - p.size()) == p;
-}
-
-string escape(string s) {
+string escape(const string &str) {
   string r;
-  for (unsigned char c : s) {
+  for (unsigned char c : str) {
     switch (c) {
     case '\a':
       r += "\\a";
@@ -85,28 +68,57 @@ string escape(string s) {
   }
   return r;
 }
+string escapeFStringBraces(const string &str, int start, int len) {
+  string t;
+  t.reserve(len);
+  for (int i = start; i < start + len; i++)
+    if (str[i] == '{')
+      t += "{{";
+    else if (str[i] == '}')
+      t += "}}";
+    else
+      t += str[i];
+  return t;
+};
 
+string chop(const string &str) {
+  return !str.empty() && str[0] == '.' ? str.substr(1) : str;
+}
+bool startswith(const string &str, const string &prefix) {
+  return str.size() >= prefix.size() && str.substr(0, prefix.size()) == prefix;
+}
+bool endswith(const string &str, const string &suffix) {
+  return str.size() >= suffix.size() &&
+         str.substr(str.size() - suffix.size()) == suffix;
+}
+void ltrim(string &str) {
+  str.erase(str.begin(), std::find_if(str.begin(), str.end(), [](unsigned char ch) {
+              return !std::isspace(ch);
+            }));
+}
+void rtrim(string &str) {
+  /// https://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
+  str.erase(std::find_if(str.rbegin(), str.rend(),
+                         [](unsigned char ch) { return !std::isspace(ch); })
+                .base(),
+            str.end());
+}
+bool isdigit(const string &str) {
+  for (const auto c : str)
+    if (!std::isdigit(c))
+      return false;
+  return true;
+}
+
+/// AST utilities
+
+/// TODO: move to a cache
 void error(const char *format) { throw exc::ParserException(format); }
-
-void error(const ::seq::SrcInfo &p, const char *format) {
-  throw exc::ParserException(format, p);
+void error(const ::seq::SrcInfo &info, const char *format) {
+  throw exc::ParserException(format, info);
 }
 
-bool getInt(seq_int_t *o, const unique_ptr<Expr> &e, bool zeroOnNull) {
-  if (!e) {
-    if (zeroOnNull)
-      *o = 0;
-    return zeroOnNull;
-  }
-  try {
-    if (auto i = CAST(e, IntExpr)) {
-      *o = std::stoll(i->value);
-      return true;
-    }
-  } catch (std::out_of_range &) {
-  }
-  return false;
-}
+/// Path utilities
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
@@ -114,7 +126,7 @@ bool getInt(seq_int_t *o, const unique_ptr<Expr> &e, bool zeroOnNull) {
 string executable_path(const char *argv0) {
   typedef vector<char> char_vector;
   char_vector buf(1024, 0);
-  uint32_t size = static_cast<uint32_t>(buf.size());
+  auto size = static_cast<uint32_t>(buf.size());
   bool havePath = false;
   bool shouldContinue = true;
   do {
@@ -179,12 +191,11 @@ string getImportFile(const string &argv0, const string &what, const string &rela
     paths.push_back(format("{}/{}/__init__.seq", parent, what));
   }
   if (auto c = getenv("SEQ_PATH")) {
-    char abs[PATH_MAX];
     realpath(c, abs);
     paths.push_back(format("{}/{}.seq", abs, what));
     paths.push_back(format("{}/{}/__init__.seq", abs, what));
   }
-  if (argv0 != "") {
+  if (!argv0.empty()) {
     for (auto loci : {"../lib/seq/stdlib", "../stdlib", "stdlib"}) {
       strncpy(abs, executable_path(argv0.c_str()).c_str(), PATH_MAX);
       auto parent = format("{}/{}", dirname(abs), loci);
@@ -197,7 +208,8 @@ string getImportFile(const string &argv0, const string &what, const string &rela
   for (auto &p : paths) {
     struct stat buffer;
     if (!stat(p.c_str(), &buffer)) {
-      return p;
+      realpath(p.c_str(), abs);
+      return string(abs);
     }
   }
   return "";

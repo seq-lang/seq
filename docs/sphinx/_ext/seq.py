@@ -193,7 +193,7 @@ class SeqDomain(PythonDomain):
 
 def setup(app):
     app.add_domain(SeqDomain)
-    app.connect('object-description-transform', filter_meta_fields)
+    app.connect('object-description-simplify', filter_meta_fields)
 
     return {
         'version': '0.1',

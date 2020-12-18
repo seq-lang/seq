@@ -79,7 +79,7 @@
       Buffer.contents buf
     in
     match pfx with
-    | "r" | "R" -> P.STRING ("r", fix_literals ~is_raw:true u)
+    | "r" | "R" -> P.STRING ("", fix_literals ~is_raw:true u)
     | _ -> P.STRING (String.lowercase_ascii pfx, fix_literals u)
 }
 
@@ -140,10 +140,14 @@ and read state = parse
           let code = Buffer.contents buf in
           let code_lines = Seq.fold_left (fun c s -> match s with '\n' -> c + 1 | _ -> c) 0 (String.to_seq code) in
           lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_lnum = lexbuf.lex_curr_p.pos_lnum + code_lines + 1 };
-          if pstate.trail = 0 (* encountered newline \n *)
-          then state.offset <- Stack.top state.stack
-          else state.offset <- pstate.trail;
-          [P.EXTERN code; P.NL]
+          (* Printf.eprintf "[pd] %d %d %d \n%!" pstate.trail (Stack.top state.stack) state.offset ; *)
+          match pstate.trail with
+          | 0 ->
+            state.offset <- 0;
+            (P.EXTERN code) :: P.NL :: token state lexbuf
+          | _ ->
+            state.offset <- pstate.trail;
+            (P.EXTERN code) :: P.NL :: token state lexbuf
         ) else (
           is_extern := 0;
           offset state lexbuf;
@@ -233,6 +237,7 @@ and read state = parse
   | "="   as op { [P.EQ        (char_to_string op)] }
   | "..." as op { [P.ELLIPSIS  op] }
   | "@"   as op { [P.AT        (char_to_string op)] }
+  (* | "=>"  { [P.ARROW] } *)
   | "->"  { [P.OF] }
   | ":"   { [P.COLON] }
   | ";"   { [P.SEMICOLON] }

@@ -1,8 +1,10 @@
-/**
- * types.h
- * Type definitions and type inference algorithm.
+/*
+ * types.h --- Seq type definitions.
+ * Contains a basic implementation of Hindley-Milner's W algorithm.
  *
- * Basic implementation of Hindley-Milner's W algorithm.
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
  */
 
 #pragma once
@@ -14,8 +16,6 @@
 
 #include "parser/common.h"
 
-// #define TYPE_DEBUG
-
 namespace seq {
 namespace ast {
 
@@ -23,25 +23,160 @@ struct Expr;
 
 namespace types {
 
+/// Forward declarations
+
 struct FuncType;
 struct ClassType;
 struct LinkType;
 struct StaticType;
-struct ImportType;
-struct Type;
-typedef shared_ptr<Type> TypePtr;
-typedef shared_ptr<LinkType> LinkTypePtr;
 
-struct Unification {
-  vector<LinkTypePtr> linked;
-  vector<std::pair<LinkTypePtr, int>> leveled;
-  bool isMatch;
-  void undo();
-  Unification() : isMatch(false) {}
+/**
+ * A type instance that contains the basic plumbing for type inference.
+ * The virtual methods are designed for Hindley-Milner's Algorithm W inference.
+ * For more information, consult https://github.com/tomprimozic/type-systems.
+ *
+ * Type instances are widely mutated during the type inference and each type is intended
+ * to be instantiated and manipulated as a shared_ptr.
+ */
+struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
+  /// A structure that keeps the list of unification steps that can be undone later.
+  /// Needed because the unify() is destructive.
+  struct Unification {
+    /// List of unbound types that have been changed.
+    vector<LinkType *> linked;
+    /// List of unbound types whose level has been changed.
+    vector<pair<LinkType *, int>> leveled;
+    /// HACK: True if this unification is part of match statement.
+    /// Used only for force-matching Kmer and seq types in a match statement.
+    bool isMatch;
+
+  public:
+    Unification() : isMatch(false) {}
+    /// Undo the unification step.
+    void undo();
+  };
+
+public:
+  /// Unifies a given type with the current type.
+  /// ⚠️ Destructive operation! (both the current and a given type are modified).
+  /// @param typ A given type.
+  /// @param undo A reference to Unification structure to track the unification steps
+  ///             and allow later undoing of the unification procedure.
+  /// @return Unification score: -1 for failure, anything >= 0 for success.
+  ///         Higher scores indicate "better" unifications.
+  virtual int unify(shared_ptr<Type> &typ, Unification &undo) = 0;
+  /// Generalize all unbound types whose level is below the provided level.
+  /// This method replaces all unbound types with a generic types (e.g. ?1 -> T1).
+  /// Note that the generalized type keeps the unbound type's ID.
+  virtual shared_ptr<Type> generalize(int level) = 0;
+  /// Instantiate all generic types. Inverse of generalize(): it replaces all
+  /// generic types with new unbound types (e.g. T1 -> ?1234).
+  /// Note that the instantiated type has a distinct and unique ID.
+  /// @param level Level of the instantiation.
+  /// @param unboundCount A reference of the unbound counter to ensure that no two
+  ///                     unbound types share the same ID.
+  /// @param cache A reference to a lookup table to ensure that all instances of a
+  ///              generic point to the same unbound type (e.g. dict[T, list[T]] should
+  ///              be instantiated as dict[?1, list[?1]]).
+  virtual shared_ptr<Type> instantiate(int level, int &unboundCount,
+                                       unordered_map<int, shared_ptr<Type>> &cache) = 0;
+
+public:
+  /// Get the final type (follow through all LinkType links).
+  /// For example, for (a->b->c->d) it returns d.
+  virtual shared_ptr<Type> follow();
+  /// Obtain the list of internal unbound types.
+  virtual vector<shared_ptr<Type>> getUnbounds() const { return {}; }
+  /// True if a type is realizable.
+  virtual bool canRealize() const = 0;
+  /// Pretty-print facility.
+  /// @param reduced If True, do not print parent types.
+  virtual string toString() const = 0;
+  /// Print the realization string.
+  /// Similar to toString, but does not print the data unnecessary for realization
+  /// (e.g. the function return type).
+  virtual string realizeString() const = 0;
+
+  /// Convenience virtual functions to avoid unnecessary dynamic_cast calls.
+  virtual shared_ptr<FuncType> getFunc() { return nullptr; }
+  virtual shared_ptr<ClassType> getClass() { return nullptr; }
+  virtual shared_ptr<LinkType> getLink() { return nullptr; }
+  virtual shared_ptr<LinkType> getUnbound() { return nullptr; }
+  virtual shared_ptr<StaticType> getStatic() { return nullptr; }
+};
+typedef shared_ptr<Type> TypePtr;
+
+/**
+ * A basic type-inference building block.
+ * LinkType is a metatype (or a type state) that describes the current information about
+ * the expression type:
+ *   - Link: underlying expression type is known and can be accessed through a pointer
+ *           type (link).
+ *   - Unbound: underlying expression type is currently unknown and is being inferred.
+ *              An unbound is represented as ?id (e.g. ?3).
+ *   - Generic: underlyng expression type is unknown.
+ *              Unlike unbound types, generic types cannot be inferred as-is and must be
+ *              instantiated prior to the inferrence.
+ *              Used only in fucntion and class definitions.
+ *              A generic is represented as Tid (e.g. T3).
+ */
+struct LinkType : public Type {
+  /// Enumeration describing the current state.
+  enum Kind { Unbound, Generic, Link } kind;
+  /// The unique identifier of an unbound or generic type.
+  int id;
+  /// The type-checking level of an unbound type.
+  int level;
+  /// The type to which LinkType points to. nullptr if unknown (unbound or generic).
+  TypePtr type;
+  /// True if a type is a static type (e.g. N in Int[N: int]).
+  bool isStatic;
+
+public:
+  LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
+           bool isStatic = false);
+  /// Convenience constructor for linked types.
+  explicit LinkType(TypePtr type);
+
+public:
+  int unify(TypePtr &typ, Unification &undo) override;
+  TypePtr generalize(int level) override;
+  TypePtr instantiate(int level, int &unboundCount,
+                      unordered_map<int, TypePtr> &cache) override;
+
+public:
+  TypePtr follow() override;
+  vector<TypePtr> getUnbounds() const override;
+  bool canRealize() const override;
+  string toString() const override;
+  string realizeString() const override;
+
+  shared_ptr<LinkType> getLink() override {
+    return std::static_pointer_cast<LinkType>(shared_from_this());
+  }
+  shared_ptr<LinkType> getUnbound() override;
+  shared_ptr<FuncType> getFunc() override {
+    return kind == Link ? type->getFunc() : nullptr;
+  }
+  shared_ptr<ClassType> getClass() override {
+    return kind == Link ? type->getClass() : nullptr;
+  }
+  shared_ptr<StaticType> getStatic() override {
+    return kind == Link ? type->getStatic() : nullptr;
+  }
+
+private:
+  /// Checks if a current (unbound) type ocurrs within a given type.
+  /// Needed to prevent recursive unifications (e.g. ?1 with list[?1]).
+  bool occurs(Type *typ, Type::Unification &undo);
 };
 
-string v2b(const vector<char> &c);
+/// Done till here
 
+/**
+ * A generic type declaration.
+ * Each generic is defined by its name and unique ID.
+ */
 struct Generic {
   string name;
   int id;
@@ -54,170 +189,6 @@ struct Generic {
       : name(name), id(id), type(type), deflt(deflt) {}
   Generic(const string name, TypePtr type, int id, unique_ptr<Expr> deflt)
       : name(name), id(id), type(type), deflt(move(deflt)) {}
-};
-
-struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
-public:
-  /// The following procedures implement the quintessential parts of
-  /// Hindley-Milner's Algorithm W.
-  ///
-  /// (a) Unification: merge (unify) t with the current type.
-  virtual int unify(TypePtr t, Unification &us) = 0;
-  /// (b) Generalization: generalize all unbound types
-  ///     whose level is less than [level] to generic types.
-  virtual TypePtr generalize(int level) = 0;
-  /// (c) Instantiation: instantiate all generic types as unbound types.
-  ///     Uses [cache] lookup to ensure that same generics are linked with same
-  ///     unbound types (e.g. dict[T, list[T]] should get instantiated to
-  ///                         dict[?1, list[?1]]).
-  virtual TypePtr instantiate(int level, int &unboundCount,
-                              unordered_map<int, TypePtr> &cache) = 0;
-
-public:
-  /// Get the  type (follow all links)
-  virtual TypePtr follow();
-  /// Does this type have an unbound type within
-  /// (e.g. list[?] has while list[int] does not)
-  virtual vector<TypePtr> getUnbounds() const = 0;
-  /// Can we realize this type?
-  virtual bool canRealize() const = 0;
-
-  /// Pretty-printing.
-  virtual string toString(bool reduced = false) const = 0;
-  virtual string realizeString() const = 0;
-  /// Allow pretty-printing to C++ streams
-  // friend std::ostream &operator<<(std::ostream &out, const Type &c) {
-  //   return out << c.toString();
-  // }
-
-  virtual shared_ptr<FuncType> getFunc() { return nullptr; }
-  virtual shared_ptr<ClassType> getClass() { return nullptr; }
-  virtual shared_ptr<LinkType> getLink() { return nullptr; }
-  virtual shared_ptr<LinkType> getUnbound() { return nullptr; }
-  virtual shared_ptr<StaticType> getStatic() { return nullptr; }
-  virtual shared_ptr<ImportType> getImport() { return nullptr; }
-  // virtual bool isStatic() { return false; }
-};
-
-struct StaticType : public Type {
-  vector<Generic> explicits;
-  unique_ptr<Expr> expr;
-  StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&expr);
-  StaticType(int i);
-
-public:
-  virtual int unify(TypePtr typ, Unification &us) override;
-  TypePtr generalize(int level) override;
-  TypePtr instantiate(int level, int &unboundCount,
-                      unordered_map<int, TypePtr> &cache) override;
-
-public:
-  vector<TypePtr> getUnbounds() const override;
-  bool canRealize() const override;
-  string toString(bool reduced = false) const override;
-  string realizeString() const override;
-  int getValue() const;
-  shared_ptr<StaticType> getStatic() override {
-    return std::static_pointer_cast<StaticType>(shared_from_this());
-  }
-};
-typedef shared_ptr<StaticType> StaticTypePtr;
-
-struct ImportType : public Type {
-  string name;
-
-public:
-  ImportType(const string &name) : name(name) {}
-
-  int unify(TypePtr typ, Unification &us) override {
-    if (auto t = CAST(typ, ImportType))
-      return name == t->name ? 0 : -1;
-    return -1;
-  }
-  TypePtr generalize(int level) override { return shared_from_this(); }
-  TypePtr instantiate(int level, int &unboundCount,
-                      unordered_map<int, TypePtr> &cache) override {
-    return shared_from_this();
-  }
-
-public:
-  vector<TypePtr> getUnbounds() const override { return {}; }
-  bool canRealize() const override { return false; }
-  string toString(bool reduced) const override { return fmt::format("<{}>", name); }
-  string realizeString() const override { assert(false); }
-  shared_ptr<ImportType> getImport() override {
-    return std::static_pointer_cast<ImportType>(shared_from_this());
-  }
-};
-typedef shared_ptr<ImportType> ImportTypePtr;
-
-/**
- * LinkType is a fundamental type classifier.
- * It has three states:
- * - Unbound: type is currently unknown and will be (hopefully)
- *            made "known" (e.g. casted to Link) through the
- *            unification algorithm.
- *            Unbounds are casted to Generics during the generalization.
- *            Represented as ?-id (e.g. ?-3).
- * - Generic: type is a generic type.
- *            Generics are casted to Unbounds during the instantiation.
- *            Represented as T-id (e.g. T-3).
- * - Link:    a link to another type.
- *            Represented as &type (e.g. &int).
- *
- * Type for each non-type expression is expressed as a LinkType.
- */
-struct LinkType : public Type {
-  enum Kind { Unbound, Generic, Link } kind;
-  /// ID of unbound and generic variants. Should not clash!
-  int id;
-  /// Level of unbound variant
-  int level;
-  /// Type of link variant. nullptr otherwise.
-  TypePtr type;
-  /// is static variable?
-  bool isStatic;
-
-  LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
-           bool isStatic = false);
-  LinkType(TypePtr type) : kind(Link), id(0), level(0), type(type), isStatic(false) {}
-  virtual ~LinkType() {}
-
-public:
-  int unify(TypePtr typ, Unification &us) override;
-  TypePtr generalize(int level) override;
-  TypePtr instantiate(int level, int &unboundCount,
-                      unordered_map<int, TypePtr> &cache) override;
-
-public:
-  TypePtr follow() override;
-  vector<TypePtr> getUnbounds() const override;
-  bool canRealize() const override;
-  string toString(bool reduced) const override;
-  string realizeString() const override;
-
-  LinkTypePtr getLink() override {
-    return std::dynamic_pointer_cast<LinkType>(shared_from_this());
-  }
-  LinkTypePtr getUnbound() override {
-    if (kind == Unbound)
-      return std::static_pointer_cast<LinkType>(shared_from_this());
-    if (kind == Link)
-      return type->getUnbound();
-    return nullptr;
-  }
-  shared_ptr<FuncType> getFunc() override {
-    return std::dynamic_pointer_cast<FuncType>(follow());
-  }
-  shared_ptr<ClassType> getClass() override {
-    return std::dynamic_pointer_cast<ClassType>(follow());
-  }
-  shared_ptr<StaticType> getStatic() override {
-    return std::dynamic_pointer_cast<StaticType>(follow());
-  }
-
-private:
-  bool occurs(TypePtr typ, Unification &us);
 };
 
 /**
@@ -246,7 +217,7 @@ public:
             TypePtr parent = nullptr);
 
 public:
-  virtual int unify(TypePtr typ, Unification &us) override;
+  virtual int unify(TypePtr &typ, Unification &us) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       unordered_map<int, TypePtr> &cache) override;
@@ -254,9 +225,9 @@ public:
 public:
   vector<TypePtr> getUnbounds() const override;
   bool canRealize() const override;
-  string toString(bool reduced = false) const override;
+  string toString() const override;
   string realizeString() const override;
-  ClassTypePtr getClass() override {
+  shared_ptr<ClassType> getClass() override {
     return std::static_pointer_cast<ClassType>(shared_from_this());
   }
   TypePtr getCallable();
@@ -276,25 +247,73 @@ struct FuncType : public Type {
   vector<TypePtr> args;
 
 public:
-  FuncType(const string &name, ClassTypePtr funcClass,
+  FuncType(const string &name, ClassType *funcClass,
            const vector<TypePtr> &args = vector<TypePtr>(),
            const vector<Generic> &explicits = vector<Generic>(),
            TypePtr parent = nullptr);
 
 public:
-  virtual int unify(TypePtr typ, Unification &us) override;
+  virtual int unify(TypePtr &typ, Unification &us) override;
   vector<TypePtr> getUnbounds() const override;
   bool canRealize() const override;
   string realizeString() const override;
-  FuncTypePtr getFunc() override {
+  shared_ptr<FuncType> getFunc() override {
     return std::static_pointer_cast<FuncType>(shared_from_this());
   }
-  ClassTypePtr getClass() override;
+  shared_ptr<ClassType> getClass() override { return funcClass; }
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       unordered_map<int, TypePtr> &cache) override;
-  string toString(bool reduced = false) const override;
+  string toString() const override;
 };
+
+struct StaticType : public Type {
+  vector<Generic> explicits;
+  unique_ptr<Expr> expr;
+  StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&expr);
+  StaticType(int i);
+
+public:
+  virtual int unify(TypePtr &typ, Unification &us) override;
+  TypePtr generalize(int level) override;
+  TypePtr instantiate(int level, int &unboundCount,
+                      unordered_map<int, TypePtr> &cache) override;
+
+public:
+  vector<TypePtr> getUnbounds() const override;
+  bool canRealize() const override;
+  string toString() const override;
+  string realizeString() const override;
+  int getValue() const;
+  shared_ptr<StaticType> getStatic() override {
+    return std::static_pointer_cast<StaticType>(shared_from_this());
+  }
+};
+typedef shared_ptr<StaticType> StaticTypePtr;
+
+struct ImportType : public Type {
+  string name;
+
+public:
+  ImportType(string name) : name(move(name)) {}
+
+  int unify(TypePtr &typ, Unification &us) override {
+    if (auto t = CAST(typ, ImportType))
+      return name == t->name ? 0 : -1;
+    return -1;
+  }
+  TypePtr generalize(int level) override { return shared_from_this(); }
+  TypePtr instantiate(int level, int &unboundCount,
+                      unordered_map<int, TypePtr> &cache) override {
+    return shared_from_this();
+  }
+
+public:
+  bool canRealize() const override { return false; }
+  string toString() const override { return fmt::format("<{}>", name); }
+  string realizeString() const override { assert(false); }
+};
+typedef shared_ptr<ImportType> ImportTypePtr;
 
 } // namespace types
 } // namespace ast

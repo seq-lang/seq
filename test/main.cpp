@@ -76,9 +76,10 @@ static pair<vector<string>, bool> findExpects(const string &filename, bool isCod
 
 string argv0;
 
-class SeqTest : public testing::TestWithParam<
-                    tuple<string /*filename*/, bool /*debug*/, string /* case name */,
-                          string /* case code */, int /* case line */>> {
+class SeqTest
+    : public testing::TestWithParam<tuple<
+          string /*filename*/, bool /*debug*/, string /* case name */,
+          string /* case code */, int /* case line */, bool /* barebones stdlib */>> {
   vector<char> buf;
   int out_pipe[2];
   pid_t pid;
@@ -103,8 +104,10 @@ public:
       auto file = getFilename(get<0>(GetParam()));
       auto code = get<3>(GetParam());
       auto startLine = get<4>(GetParam());
-      SeqModule *module = parse(argv0, file, code, code.size() > 0,
-                                /* isTest */ true, startLine);
+      SeqModule *module = parse(argv0, file, code, !code.empty(),
+                                /* isTest */ 1 + get<5>(GetParam()), startLine);
+      if (!module)
+        exit(EXIT_FAILURE);
       execute(module, {file}, {}, get<1>(GetParam()));
       fflush(stdout);
       exit(EXIT_SUCCESS);
@@ -168,13 +171,17 @@ TEST_P(SeqTest, Run) {
     EXPECT_EQ(results.size(), expects.first.size());
     if (expects.first.size() == results.size()) {
       for (unsigned i = 0; i < expects.first.size(); i++)
-        EXPECT_EQ(results[i], expects.first[i]);
+        if (expects.second)
+          EXPECT_EQ(results[i].substr(0, expects.first[i].size()), expects.first[i]);
+        else
+          EXPECT_EQ(results[i], expects.first[i]);
     }
   }
 }
 auto getTypeTests(const vector<string> &files) {
-  vector<tuple<string, bool, string, string, int>> cases;
+  vector<tuple<string, bool, string, string, int, bool>> cases;
   for (auto &f : files) {
+    bool barebones = false;
     string l;
     ifstream fin(string(TEST_DIR) + "/" + f);
     string code, testName;
@@ -184,9 +191,11 @@ auto getTypeTests(const vector<string> &files) {
     while (getline(fin, l)) {
       if (l.substr(0, 3) == "#%%") {
         if (line)
-          cases.push_back(
-              make_tuple(f, true, to_string(line) + "_" + testName, code, codeLine));
-        testName = l.substr(4);
+          cases.emplace_back(make_tuple(f, true, to_string(line) + "_" + testName, code,
+                                        codeLine, barebones));
+        auto t = seq::ast::split(l.substr(4), ',');
+        barebones = (t.size() > 1 && t[1] == "barebones");
+        testName = t[0];
         code = l + "\n";
         codeLine = line;
         test++;
@@ -196,24 +205,25 @@ auto getTypeTests(const vector<string> &files) {
       line++;
     }
     if (line)
-      cases.push_back(
-          make_tuple(f, true, to_string(line) + "_" + testName, code, codeLine));
+      cases.emplace_back(make_tuple(f, true, to_string(line) + "_" + testName, code,
+                                    codeLine, barebones));
   }
   return cases;
 }
-INSTANTIATE_TEST_SUITE_P(TypeTests, SeqTest,
-                         testing::ValuesIn(getTypeTests({"parser/expressions.seq",
-                                                         "parser/statements.seq",
-                                                         "parser/types.seq"})),
-                         getTypeTestNameFromParam);
 
 // clang-format off
+INSTANTIATE_TEST_SUITE_P(
+    TypeTests, SeqTest,
+    testing::ValuesIn(getTypeTests({"parser/simplify.seq", "parser/expressions.seq",
+                                    "parser/statements.seq", "parser/types.seq"})),
+    getTypeTestNameFromParam);
+
 INSTANTIATE_TEST_SUITE_P(
     CoreTests, SeqTest,
     testing::Combine(
       testing::Values(
         "core/helloworld.seq",
-        "core/llvmops.seq",
+        // "core/llvmops.seq",
         "core/arithmetic.seq",
         "core/parser.seq",
         "core/generics.seq",
@@ -237,7 +247,8 @@ INSTANTIATE_TEST_SUITE_P(
       testing::Values(true),
       testing::Values(""),
       testing::Values(""),
-      testing::Values(0)
+      testing::Values(0),
+      testing::Values(false)
     ),
     getTestNameFromParam);
 
@@ -269,7 +280,8 @@ INSTANTIATE_TEST_SUITE_P(
       testing::Values(true),
       testing::Values(""),
       testing::Values(""),
-      testing::Values(0)
+      testing::Values(0),
+      testing::Values(false)
     ),
     getTestNameFromParam);
 // clang-format on

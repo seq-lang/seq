@@ -1,4 +1,0 @@
-def unwrap[T](opt: Optional[T]) -> T:
-    if not opt:
-        raise ValueError('optional is None')
-    return ~opt

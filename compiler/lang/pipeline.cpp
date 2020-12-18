@@ -22,7 +22,7 @@ void PipeExpr::setIntermediateTypes(std::vector<types::Type *> types) {
   intermediateTypes = std::move(types);
 }
 
-// Some useful info for codegen'ing the "drain" step after prefetch transform.
+// Some useful info for codegen'ing the "drain" step after prefetch simplify.
 struct DrainState {
   Value *states; // coroutine states buffer
   Value *filled; // how many coroutines have been added (alloca'd)

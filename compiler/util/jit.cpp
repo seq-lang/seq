@@ -3,11 +3,11 @@
 #include <vector>
 
 #include "lang/seq.h"
-// #include "parser/ast/codegen/codegen.h"
-#include "parser/ast/format/format.h"
-#include "parser/ast/transform/transform.h"
-#include "parser/ocaml.h"
+// #include "parser/tmp/codegen/codegen.h"
+#include "parser/ocaml/ocaml.h"
 #include "parser/parser.h"
+#include "parser/visitors/format/format.h"
+#include "parser/visitors/simplify/simplify.h"
 #include "util/jit.h"
 
 using fmt::format;
@@ -27,7 +27,7 @@ FOREIGN JitInstance *jit_init() {
   //   seq::SeqJIT::init();
   //   auto jit = new JitInstance{
   //       0,
-  //       make_shared<seq::ast::Context>(make_shared<seq::ast::ImportCache>(),
+  //       make_shared<seq::tmp::Context>(make_shared<seq::tmp::ImportCache>(),
   //                                         nullptr, nullptr, nullptr, "")};
   //   jit->context->initJIT();
   //   return jit;
@@ -41,9 +41,9 @@ FOREIGN JitInstance *jit_init() {
 FOREIGN void jit_execute(JitInstance *jit, const char *code) {
   try {
     seq::compilationError("not implemented");
-    // auto tv = seq::ast::TransformStmtVisitor().transform(
-    //     seq::ast::parse_code("jit", code));
-    // seq::ast::CodegenStmtVisitor(*jit->context).transform(tv);
+    // auto tv = seq::tmp::TransformStmtVisitor().simplify(
+    //     seq::tmp::parse_code("jit", code));
+    // seq::tmp::CodegenStmtVisitor(*jit->context).simplify(tv);
     // jit->context->execJIT();
   } catch (seq::exc::SeqException &e) {
     fmt::print(stderr, "error ({}:{}): {}", e.getSrcInfo().line, e.getSrcInfo().col,

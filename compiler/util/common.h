@@ -3,9 +3,11 @@
 #include "runtime/lib.h"
 #include "util/llvm.h"
 #include <cstdint>
+#include <libgen.h>
 #include <memory>
 #include <ostream>
 #include <stdexcept>
+#include <sys/stat.h>
 
 namespace seq {
 struct SrcInfo {
@@ -19,7 +21,13 @@ struct SrcInfo {
     id = _id++;
   };
   SrcInfo() : SrcInfo("<internal>", 0, 0, 0, 0){};
-  friend std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c);
+  friend std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c) {
+    char buf[PATH_MAX + 1];
+    strncpy(buf, c.file.c_str(), PATH_MAX);
+    auto f = basename(buf);
+    out << f << ":" << c.line << ":" << c.col;
+    return out;
+  }
   bool operator==(const SrcInfo &src) const {
     return /*(file == src.file) && (line == src.line) && (col == src.col) &&*/ (id ==
                                                                                 src.id);

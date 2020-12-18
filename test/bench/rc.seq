@@ -3,15 +3,16 @@
 ################################
 from sys import argv
 from time import timing
+from internal.gc as import alloc_atomic, free
 
 def test_slow(s: seq):
     n = len(s)
-    p = _gc.alloc_atomic(n)
+    p = alloc_atomic(n)
     for i in range(n):
         p[n - i - 1] = s[i].ptr[0].comp()
     r = seq(p, n)
     b = s > r
-    _gc.free(p)
+    free(p)
     return b
 
 def test_fast(s: seq):

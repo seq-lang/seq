@@ -36,8 +36,7 @@ SEQ_FUNC void seq_register_finalizer(void *p, void (*f)(void *obj, void *data));
 
 SEQ_FUNC void *seq_alloc_exc(int type, void *obj);
 SEQ_FUNC void seq_throw(void *exc);
-SEQ_FUNC _Unwind_Reason_Code seq_personality(int version,
-                                             _Unwind_Action actions,
+SEQ_FUNC _Unwind_Reason_Code seq_personality(int version, _Unwind_Action actions,
                                              uint64_t exceptionClass,
                                              _Unwind_Exception *exceptionObject,
                                              _Unwind_Context *context);
@@ -45,6 +44,7 @@ SEQ_FUNC int64_t seq_exc_offset();
 SEQ_FUNC uint64_t seq_exc_class();
 
 SEQ_FUNC seq_str_t seq_str_int(seq_int_t n);
+SEQ_FUNC seq_str_t seq_str_uint(seq_int_t n);
 SEQ_FUNC seq_str_t seq_str_float(double f);
 SEQ_FUNC seq_str_t seq_str_bool(bool b);
 SEQ_FUNC seq_str_t seq_str_byte(char c);

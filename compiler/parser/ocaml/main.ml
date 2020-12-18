@@ -107,6 +107,7 @@ let print_token t =
   | AND s -> sprintf "AND(%s)" s
   | ADD s -> sprintf "ADD(%s)" s
   | EXTERN s -> sprintf "EXTERN(\n%s)" s
+  (* | ARROW -> "=>" *)
 
 
 module I = Seqgrammar.MenhirInterpreter
@@ -122,13 +123,14 @@ let rec loop lexbuf state cache checkpoint =
   match checkpoint with
   | I.Accepted v -> Some v
   | I.InputNeeded _env ->
-    ( match cache with 
+    ( match cache with
       | [] ->
         loop lexbuf state (Lexer.token state lexbuf) checkpoint
       | t :: ts ->
         let ch = I.offer checkpoint (t, lexbuf.lex_start_p, lexbuf.lex_curr_p) in
         loop lexbuf state ts ch )
   | I.HandlingError _env ->
+    (*
     let state = I.current_state_number _env in
     let msg =
       try
@@ -137,7 +139,7 @@ let rec loop lexbuf state cache checkpoint =
         then sprintf ": %s ('%s')" (String.sub msg 1 (String.length msg - 1)) (Lexing.lexeme lexbuf)
         else sprintf ": %s" msg
       with Not_found -> ""
-    in
+    in *)
     let msg = sprintf ": '%s'" (Lexing.lexeme lexbuf) in
     let msg, pos =  (sprintf "parsing error%s" msg), lexbuf.lex_start_p in
     raise_exception msg pos.pos_fname (pos.pos_lnum + 1) (pos.pos_cnum - pos.pos_bol + 1);

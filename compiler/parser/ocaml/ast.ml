@@ -28,7 +28,7 @@ type texpr =
   | DictGenerator of ((texpr ann * texpr ann) * tcomprehension ann)
   | IfExpr of (texpr ann * texpr ann * texpr ann)
   | Unary of (string * texpr ann)
-  | Binary of (texpr ann * string * texpr ann)
+  | Binary of (texpr ann * string * texpr ann * bool)
   | Pipe of (string * texpr ann) list
   | Index of (texpr ann * texpr ann)
   | Call of (texpr ann * (string option * texpr ann) list)
@@ -73,7 +73,6 @@ type tstmt =
   | Throw of texpr ann
   | Function of fn_t
   | Class of class_t
-  | AssignEq of (texpr ann * texpr ann * string)
   | YieldFrom of texpr ann
   | With of ((texpr ann * string option) list * tstmt ann list)
 
@@ -139,8 +138,8 @@ let rec flat_cond x =
   let expr =
     match snd x with
     | CondBinary (lhs, op, ((_, CondBinary (next_lhs, _, _)) as rhs)) ->
-      Binary ((fst lhs, Binary (lhs, op, next_lhs)), "&&", flat_cond rhs)
-    | CondBinary (lhs, op, (pos, Cond rhs)) -> Binary (lhs, op, (pos, rhs))
+      Binary ((fst lhs, Binary (lhs, op, next_lhs, false)), "&&", flat_cond rhs, false)
+    | CondBinary (lhs, op, (pos, Cond rhs)) -> Binary (lhs, op, (pos, rhs), false)
     | Cond n -> n
   in
   fst x, expr

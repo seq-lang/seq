@@ -1,0 +1,78 @@
+import internal.gc as gc
+
+@builtin
+def _raw_type_str(p: Ptr[byte], name: str) -> str:
+    pstr = p.__str__()
+    # '<[name] at [pstr]>'
+    total = 1 + name.len + 4 + pstr.len + 1
+    buf = Ptr[byte](total)
+    where = 0
+
+    buf[where] = byte(60)   # '<'
+    where += 1
+    str.memcpy(buf + where, name.ptr, name.len)
+    where += name.len
+    buf[where] = byte(32)   # ' '
+    where += 1
+    buf[where] = byte(97)   # 'a'
+    where += 1
+    buf[where] = byte(116)  # 't'
+    where += 1
+    buf[where] = byte(32)   # ' '
+    where += 1
+    str.memcpy(buf + where, pstr.ptr, pstr.len)
+    where += pstr.len
+    buf[where] = byte(62)  # '>'
+    gc.free(pstr.ptr)
+    return str(buf, total)
+
+@extend
+class Generator[T]:  # class
+    def __iter__(self) -> Generator[T]:
+        return self
+
+    @internal
+    def done(self) -> bool: pass
+    @internal
+    def next(self) -> T: pass
+
+    @llvm
+    def __raw__(self) -> Ptr[byte]:
+        ret i8* %self
+    @llvm
+    def __done__(self) -> bool:
+        declare i1 @llvm.coro.done(i8* nocapture readonly)
+        %0 = call i1 @llvm.coro.done(i8* %self)
+        %1 = zext i1 %0 to i8
+        ret i8 %1
+    @llvm
+    def __promise__(self) -> Ptr[T]:
+        declare i8* @llvm.coro.promise(i8* nocapture, i32, i1)
+        %0 = call i8* @llvm.coro.promise(i8* %self, i32 8, i1 false)
+        %1 = bitcast i8* %0 to {=T}*
+        ret {=T}* %1
+    @llvm
+    def __resume__(self) -> void:
+        declare void @llvm.coro.resume(i8*)
+        call void @llvm.coro.resume(i8* %self)
+        ret void
+    def __str__(self) -> str:
+        return _raw_type_str(self.__raw__(), "generator")
+    @llvm
+    def send(self, what: T) -> T:
+        declare i8* @llvm.coro.promise(i8* nocapture, i32, i1)
+        declare void @llvm.coro.resume(i8*)
+        %0 = call i8* @llvm.coro.promise(i8* %self, i32 8, i1 false)
+        %1 = bitcast i8* %0 to {=T}*
+        store {=T} %what, {=T}* %1
+        call void @llvm.coro.resume(i8* %self)
+        %2 = call i8* @llvm.coro.promise(i8* %self, i32 8, i1 false)
+        %3 = bitcast i8* %2 to {=T}*
+        %4 = load {=T}, {=T}* %3
+        ret {=T} %4
+    @llvm
+    def destroy(self) -> void:
+        declare void @llvm.coro.destroy(i8*)
+        call void @llvm.coro.destroy(i8* %self)
+        ret void
+generator = Generator

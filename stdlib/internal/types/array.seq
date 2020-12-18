@@ -1,0 +1,28 @@
+@internal
+@tuple
+class Array[T]:
+    len: int
+    ptr: Ptr[T]
+
+    @internal
+    def __new__(sz: int) -> Array[T]:
+        pass
+    @internal
+    def __new__(data: Ptr[T], sz: int) -> Array[T]:
+        pass
+
+    def __copy__(self) -> Array[T]:
+        p = Ptr[byte](self.len * Ptr[T].__elemsize__())
+        str.memcpy(p.as_byte(), self.ptr.as_byte(), self.len * Ptr[T].__elemsize__())
+        return Array[T](Ptr[T](p), self.len)
+    def __len__(self) -> int:
+        return self.len
+    def __bool__(self) -> bool:
+        return bool(self.len)
+    def __getitem__(self, index: int) -> T:
+        return self.ptr[index]
+    def __setitem__(self, index: int, what: T):
+        self.ptr[index] = what
+    def slice(self, s: int, e: int):
+        return Array[T](self.ptr + s, e - s)
+array = Array

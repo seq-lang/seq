@@ -404,4 +404,32 @@ public:
   llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
 };
 
+class SpecialExpr : public Expr {
+private:
+  enum Kind {
+    PTR,
+    ARRAY,
+    ELEMSIZE,
+    ATOMIC,
+  };
+
+  Kind kind;
+  union {
+    Var *ptrArgs;
+    seq_int_t arrayArgs;
+    types::Type *elemSizeArgs;
+    types::Type *atomicArgs;
+  } args;
+
+  SpecialExpr(Kind kind);
+
+public:
+  llvm::Value *codegen0(BaseFunc *base, llvm::BasicBlock *&block) override;
+
+  static SpecialExpr *ptr(Var *var);
+  static SpecialExpr *array(seq_int_t len);
+  static SpecialExpr *elemSize(types::Type *type);
+  static SpecialExpr *atomic(types::Type *type);
+};
+
 } // namespace seq

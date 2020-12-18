@@ -66,7 +66,7 @@ except IndexError:
     print "assign failed"  #: assign failed
 
 #%% assign_err_3
-a, *b, c, *d = 1,2,3,4,5  #! ERROR: multiple unpack expressions found
+a, *b, c, *d = 1,2,3,4,5  #! ERROR: multiple unpack expressions
 
 #%% assign_shadow
 a = 5
@@ -231,7 +231,7 @@ foo()  #! ERROR: variable 'a' is not global
 
 #%% global_err
 a = 1
-global a  #! ERROR: 'global' is only applicable within function blocks
+global a  #! ERROR: global outside of a function
 
 #%% global_ref
 a = [1]

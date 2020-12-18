@@ -9,9 +9,8 @@
 #endif
 
 int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen,
-                const uint8_t *target, int8_t m, const int8_t *mat, int8_t q,
-                int8_t e, int w, int *m_cigar_, int *n_cigar_,
-                uint32_t **cigar_) {
+                const uint8_t *target, int8_t m, const int8_t *mat, int8_t q, int8_t e,
+                int w, int *m_cigar_, int *n_cigar_, uint32_t **cigar_) {
   int r, t, n_col, n_col_, *off, tlen_, last_st, last_en, H0 = 0, last_H0_t = 0;
   uint8_t *qr, *mem, *mem2;
   __m128i *u, *v, *x, *y, *s, *p;
@@ -27,8 +26,7 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen,
 
   if (w < 0)
     w = tlen > qlen ? tlen : qlen;
-  n_col =
-      w + 1 < tlen ? w + 1 : tlen; // number of columns in the backtrack matrix
+  n_col = w + 1 < tlen ? w + 1 : tlen; // number of columns in the backtrack matrix
   tlen_ = (tlen + 15) / 16;
   n_col_ = (n_col + 15) / 16 + 1;
   n_col = n_col_ * 16;
@@ -111,24 +109,20 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen,
 #else // we need to emulate SSE4.1 intrinsics _mm_max_epi8() and
       // _mm_blendv_epi8()
       z = _mm_and_si128(z, _mm_cmpgt_epi8(z, zero_)); // z = z > 0? z : 0;
-      z = _mm_max_epu8(
-          z,
-          a); // z = max(z, a); this works because both are non-negative
+      z = _mm_max_epu8(z,
+                       a); // z = max(z, a); this works because both are non-negative
       tmp = _mm_cmpgt_epi8(b, z);
-      d = _mm_or_si128(
-          _mm_andnot_si128(tmp, d),
-          _mm_and_si128(tmp,
-                        flag2_)); // d = b > z? 2 : d; emulating blendv
+      d = _mm_or_si128(_mm_andnot_si128(tmp, d),
+                       _mm_and_si128(tmp,
+                                     flag2_)); // d = b > z? 2 : d; emulating blendv
 #endif
-      z = _mm_max_epu8(
-          z,
-          b); // z = max(z, b); this works because both are non-negative
-      _mm_store_si128(
-          &u[t], _mm_sub_epi8(z,
-                              vt1)); // u[r][t..t+15] <- z - v[r-1][t-1..t+14]
-      _mm_store_si128(&v[t],
+      z = _mm_max_epu8(z,
+                       b); // z = max(z, b); this works because both are non-negative
+      _mm_store_si128(&u[t],
                       _mm_sub_epi8(z,
-                                   ut)); // v[r][t..t+15] <- z - u[r-1][t..t+15]
+                                   vt1)); // u[r][t..t+15] <- z - v[r-1][t-1..t+14]
+      _mm_store_si128(&v[t], _mm_sub_epi8(z,
+                                          ut)); // v[r][t..t+15] <- z - u[r-1][t..t+15]
 
       z = _mm_sub_epi8(z, q_);
       a = _mm_sub_epi8(a, z);
@@ -152,8 +146,8 @@ int ksw_gg2_sse(void *km, int qlen, const uint8_t *query, int tlen,
   }
   kfree(km, mem);
   kfree(km, qr);
-  ksw_backtrack(km, 1, 0, 0, (uint8_t *)p, off, 0, n_col, tlen - 1, qlen - 1,
-                m_cigar_, n_cigar_, cigar_);
+  ksw_backtrack(km, 1, 0, 0, (uint8_t *)p, off, 0, n_col, tlen - 1, qlen - 1, m_cigar_,
+                n_cigar_, cigar_);
   kfree(km, mem2);
   kfree(km, off);
   return H0;
