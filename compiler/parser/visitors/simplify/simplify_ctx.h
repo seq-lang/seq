@@ -91,6 +91,8 @@ struct SimplifyContext : public Context<SimplifyItem> {
   /// generators and lambda functions. A stack is needed because there might be nested
   /// generator or lambda constructs.
   vector<set<string>> captures;
+  /// True if standard library is being loaded.
+  bool isStdlibLoading;
 
 public:
   SimplifyContext(string filename, shared_ptr<Cache> cache);

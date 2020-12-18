@@ -71,6 +71,8 @@ struct Cache {
     string filename;
     /// Import simplify context.
     shared_ptr<Context<SimplifyItem>> ctx;
+    /// Unique import variable for checking already loaded imports.
+    string importVar;
   };
 
   /// Absolute path of seqc executable (if available).

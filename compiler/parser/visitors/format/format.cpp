@@ -378,10 +378,12 @@ void FormatVisitor::visit(const FunctionStmt *fstmt) {
   if (cache &&
       cache->realizationAsts.find(fstmt->name) != cache->realizationAsts.end()) {
     fstmt = (const FunctionStmt *)(cache->realizationAsts[fstmt->name].get());
-  } else if (cache) {
+  } else if (cache && cache->realizations[fstmt->name].size()) {
     for (auto &real : cache->realizations[fstmt->name])
       result += transform(cache->realizationAsts[real.first]);
     return;
+  } else if (cache) {
+    fstmt = (const FunctionStmt *)(cache->asts[fstmt->name].get());
   }
 
   vector<string> attrs;

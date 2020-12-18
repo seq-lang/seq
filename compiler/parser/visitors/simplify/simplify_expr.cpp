@@ -32,7 +32,7 @@ ExprPtr SimplifyVisitor::transform(const ExprPtr &expr) {
 ExprPtr SimplifyVisitor::transform(const Expr *expr, bool allowTypes) {
   if (!expr)
     return nullptr;
-  SimplifyVisitor v(ctx, prependStmts);
+  SimplifyVisitor v(ctx, preambleStmts, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
   expr->accept(v);
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
@@ -575,7 +575,7 @@ string SimplifyVisitor::generateTupleStub(int len) {
                                             nullptr, vector<string>{ATTR_TUPLE});
       stmt->setSrcInfo(ctx->generateSrcInfo());
       // Make sure to generate this in a clean context.
-      SimplifyVisitor(make_shared<SimplifyContext>("<generated>", ctx->cache))
+      SimplifyVisitor(make_shared<SimplifyContext>("<generated>", ctx->cache), nullptr)
           .transform(stmt);
     }
   }

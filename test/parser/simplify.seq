@@ -441,7 +441,7 @@ from C import "".seq_print(str) as sp
 sp("hi!") #! ERROR: parsing error: '"'
 
 #%% import,barebones
-import a
+import a  #: a
 a.foo() #: a.foo
 
 from a import foo, bar as b
@@ -456,6 +456,19 @@ from a.b import *
 har() #: a.b.har
 a.b.har() #: a.b.har
 fx() #: a.foo
+
+#%% import_order,barebones
+def foo():
+    import a
+    a.foo()
+def bar():
+    import a
+    a.bar()
+
+bar() #: a
+#: a.bar
+foo() #: a.foo
+
 
 #%% import_rec,barebones
 from a.b.rec1 import bar
@@ -722,6 +735,8 @@ print np.transpose(a)
 #: [[0 3 6]
 #:  [1 4 7]
 #:  [2 5 8]]
+n = np.array([[1, 2], [3, 4]])
+print n[0], n[0][0] + 1 #: [1 2] 2
 
 #%% python_import_fn
 from python import re.split(str, str) -> List[str] as rs

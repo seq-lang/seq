@@ -213,10 +213,9 @@ class int:
         ret i8 %2
     @llvm
     def __lt__(a: int, b: int) -> bool:
-        entry:
-            %tmp = icmp slt i64 %a, %b
-            %res = zext i1 %tmp to i8
-            ret i8 %res
+        %tmp = icmp slt i64 %a, %b
+        %res = zext i1 %tmp to i8
+        ret i8 %res
     @llvm
     def __lt__(self, b: float) -> bool:
         %0 = sitofp i64 %self to double
@@ -225,10 +224,9 @@ class int:
         ret i8 %2
     @llvm
     def __gt__(a: int, b: int) -> bool:
-        entry:
-            %tmp = icmp sgt i64 %a, %b
-            %res = zext i1 %tmp to i8
-            ret i8 %res
+        %tmp = icmp sgt i64 %a, %b
+        %res = zext i1 %tmp to i8
+        ret i8 %res
     @llvm
     def __gt__(self, b: float) -> bool:
         %0 = sitofp i64 %self to double
@@ -237,10 +235,9 @@ class int:
         ret i8 %2
     @llvm
     def __le__(a: int, b: int) -> bool:
-        entry:
-            %tmp = icmp sle i64 %a, %b
-            %res = zext i1 %tmp to i8
-            ret i8 %res
+        %tmp = icmp sle i64 %a, %b
+        %res = zext i1 %tmp to i8
+        ret i8 %res
     @llvm
     def __le__(self, b: float) -> bool:
         %0 = sitofp i64 %self to double
@@ -249,10 +246,9 @@ class int:
         ret i8 %2
     @llvm
     def __ge__(a: int, b: int) -> bool:
-        entry:
-            %tmp = icmp sge i64 %a, %b
-            %res = zext i1 %tmp to i8
-            ret i8 %res
+        %tmp = icmp sge i64 %a, %b
+        %res = zext i1 %tmp to i8
+        ret i8 %res
     @llvm
     def __ge__(self, b: float) -> bool:
         %0 = sitofp i64 %self to double
@@ -277,3 +273,39 @@ class int:
         return float(self) ** exp
     def popcnt(self):
         return Int[64](self).popcnt()
+    @llvm
+    def __atomic_xchg__(self: Ptr[int], b: int) -> void:
+        %tmp = atomicrmw xchg i64* %self, i64 %b seq_cst
+        ret void
+    @llvm
+    def __atomic_add__(self: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw add i64* %self, i64 %b seq_cst
+        ret i64 %tmp
+    @llvm
+    def __atomic_sub__(self: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw sub i64* %self, i64 %b seq_cst
+        ret i64 %tmp
+    @llvm
+    def __atomic_and__(self: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw and i64* %self, i64 %b seq_cst
+        ret i64 %tmp
+    @llvm
+    def __atomic_nand__(self: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw nand i64* %self, i64 %b seq_cst
+        ret i64 %tmp
+    @llvm
+    def __atomic_or__(self: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw or i64* %self, i64 %b seq_cst
+        ret i64 %tmp
+    @llvm
+    def __atomic_xor__(self: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw xor i64* %self, i64 %b seq_cst
+        ret i64 %tmp
+    @llvm
+    def __atomic_min__(self: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw min i64* %self, i64 %b seq_cst
+        ret i64 %tmp
+    @llvm
+    def __atomic_max__(self: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw min i64* %self, i64 %b seq_cst
+        ret i64 %tmp

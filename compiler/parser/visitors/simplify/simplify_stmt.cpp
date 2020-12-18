@@ -25,7 +25,7 @@ StmtPtr SimplifyVisitor::transform(const Stmt *stmt) {
   if (!stmt)
     return nullptr;
 
-  SimplifyVisitor v(ctx);
+  SimplifyVisitor v(ctx, preambleStmts);
   v.setSrcInfo(stmt->getSrcInfo());
   stmt->accept(v);
   if (!v.prependStmts->empty()) {
@@ -47,9 +47,8 @@ void SimplifyVisitor::visit(const SuiteStmt *stmt) {
   // Make sure to add context blocks if this suite requires it...
   if (stmt->ownBlock)
     ctx->addBlock();
-  for (auto &s : stmt->stmts)
-    if (auto t = transform(s))
-      r.push_back(move(t));
+  for (const auto &s : stmt->stmts)
+    SuiteStmt::flatten(transform(s), r);
   // ... and to remove it later.
   if (stmt->ownBlock)
     ctx->popBlock();
@@ -370,15 +369,68 @@ void SimplifyVisitor::visit(const ImportStmt *stmt) {
   auto import = ctx->cache->imports.find(file);
   // If the imported file has not been seen before, load it and cache it
   if (import == ctx->cache->imports.end()) {
-    // Use clean context for the new file
+    // Use a clean context for the new file.
     auto ictx = make_shared<SimplifyContext>(file, ctx->cache);
+    ictx->isStdlibLoading = ctx->isStdlibLoading;
     import = ctx->cache->imports.insert({file, {file, ictx}}).first;
-    StmtPtr s = parseFile(file);
-    auto sn = SimplifyVisitor(ictx).transform(s);
-    // Execute all statements here!
-    // TODO: This is problematic if an import is invoked in a function context.
-    //       Right now, we resolve this issue by marking all imported stuff as global.
-    resultStmt = N<SuiteStmt>(move(sn), true);
+    StmtPtr sf = parseFile(file);
+    auto sn = SimplifyVisitor(ictx, preambleStmts).transform(sf);
+    if (ctx->isStdlibLoading) {
+      resultStmt = N<SuiteStmt>(move(sn), true);
+    } else {
+      // LOG("importing {}", file);
+      seqassert(preambleStmts, "preamble not set");
+      import->second.importVar = ctx->cache->getTemporaryVar("import", '.');
+      // imported = False
+      preambleStmts->emplace_back(N<AssignStmt>(
+          N<IdExpr>(import->second.importVar + "_loaded"), N<BoolExpr>(false)));
+      vector<StmtPtr> stmts;
+      vector<string> globalVars;
+      auto processStmt = [&](StmtPtr &s) {
+        if (s->getFunction() || s->getClass()) {
+          preambleStmts->emplace_back(move(s));
+        } else if (s->getAssign() && s->getAssign()->lhs->getId()) {
+          auto a = const_cast<AssignStmt *>(s->getAssign());
+          auto val = ictx->find(a->lhs->getId()->value);
+          seqassert(val, "cannot locate '{}' in imported file {}",
+                    s->getAssign()->lhs->getId()->value, file);
+          if (val->kind == SimplifyItem::Var && val->global && val->base.empty()) {
+            globalVars.emplace_back(val->canonicalName);
+            preambleStmts->emplace_back(
+                N<AssignStmt>(N<IdExpr>(val->canonicalName), clone(a->type)));
+            stmts.push_back(N<UpdateStmt>(move(a->lhs), move(a->rhs)));
+          } else {
+            stmts.push_back(move(s));
+          }
+        } else {
+          stmts.push_back(move(s));
+        }
+      };
+      if (auto st = const_cast<SuiteStmt *>(sn->getSuite()))
+        for (auto &ss : st->stmts)
+          processStmt(ss);
+      else
+        processStmt(sn);
+      // Add it to the toplevel manually and set ATTR_BUILTIN to realize them ASAP.
+      ctx->cache->asts[import->second.importVar] = N<FunctionStmt>(
+          import->second.importVar, nullptr, vector<Param>{}, vector<Param>{},
+          N<SuiteStmt>(move(stmts)), vector<string>{ATTR_BUILTIN});
+      preambleStmts->emplace_back(
+          N<FunctionStmt>(import->second.importVar, nullptr, vector<Param>{},
+                          vector<Param>{}, nullptr, vector<string>{ATTR_BUILTIN}));
+    }
+  }
+  // Import variable is empty if it has already been loaded during the standard library
+  // initialization.
+  if (!ctx->isStdlibLoading && !import->second.importVar.empty()) {
+    vector<StmtPtr> ifSuite;
+    ifSuite.emplace_back(N<ExprStmt>(N<CallExpr>(N<IdExpr>(import->second.importVar))));
+    ifSuite.emplace_back(N<UpdateStmt>(N<IdExpr>(import->second.importVar + "_loaded"),
+                                       N<BoolExpr>(true)));
+    resultStmt =
+        N<IfStmt>(N<CallExpr>(N<DotExpr>(
+                      N<IdExpr>(import->second.importVar + "_loaded"), "__invert__")),
+                  N<SuiteStmt>(move(ifSuite)));
   }
 
   if (!stmt->what) {
@@ -460,7 +512,7 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
     if (in(stmt->attributes, ATTR_EXTERN_LLVM))
       suite = parseLLVMDefinition(stmt->suite->firstInBlock());
     else
-      suite = SimplifyVisitor(ctx).transform(stmt->suite);
+      suite = SimplifyVisitor(ctx, preambleStmts).transform(stmt->suite);
     ctx->popBlock();
   }
 
@@ -497,10 +549,15 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
         canonicalName == ".Ptr.__elemsize__" || canonicalName == ".Ptr.__atomic__")
       attributes[ATTR_NOT_STATIC] = "";
   }
-  resultStmt = N<FunctionStmt>(canonicalName, move(ret), move(newGenerics), move(args),
-                               move(suite), move(attributes));
+  auto f = N<FunctionStmt>(canonicalName, move(ret), move(newGenerics), move(args),
+                           move(suite), move(attributes));
+  // Do not clone suite in the resultStmt: the suite will be accessed later trough the
+  // cache.
+  resultStmt =
+      N<FunctionStmt>(canonicalName, clone(f->ret), clone_nop(f->generics),
+                      clone_nop(f->args), nullptr, map<string, string>(f->attributes));
   // Make sure to cache this (generic) AST for later realization.
-  ctx->cache->asts[canonicalName] = clone(resultStmt);
+  ctx->cache->asts[canonicalName] = move(f);
 }
 
 /// Transforms type definitions and extensions.
@@ -995,7 +1052,7 @@ string SimplifyVisitor::generateFunctionStub(int n) {
         vector<string>{ATTR_INTERNAL, ATTR_TRAIT, ATTR_TUPLE});
     stmt->setSrcInfo(ctx->generateSrcInfo());
     // Parse this function in a clean context.
-    SimplifyVisitor(make_shared<SimplifyContext>("<generated>", ctx->cache))
+    SimplifyVisitor(make_shared<SimplifyContext>("<generated>", ctx->cache), nullptr)
         .transform(stmt);
   }
   return "." + typeName;

@@ -16,7 +16,7 @@ namespace ast {
 PatternPtr SimplifyVisitor::transform(const PatternPtr &pat) {
   if (!pat)
     return nullptr;
-  SimplifyVisitor v(ctx, prependStmts);
+  SimplifyVisitor v(ctx, preambleStmts, prependStmts);
   v.setSrcInfo(pat->getSrcInfo());
   pat->accept(v);
   return move(v.resultPattern);

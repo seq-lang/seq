@@ -29,7 +29,8 @@ SimplifyItem::SimplifyItem(Kind k, string base, string canonicalName, bool globa
       staticType(stat) {}
 
 SimplifyContext::SimplifyContext(string filename, shared_ptr<Cache> cache)
-    : Context<SimplifyItem>(move(filename)), cache(move(cache)) {}
+    : Context<SimplifyItem>(move(filename)), cache(move(cache)),
+      isStdlibLoading(false) {}
 
 shared_ptr<SimplifyItem> SimplifyContext::add(SimplifyItem::Kind kind,
                                               const string &name,
@@ -37,6 +38,8 @@ shared_ptr<SimplifyItem> SimplifyContext::add(SimplifyItem::Kind kind,
                                               bool stat) {
   auto t = make_shared<SimplifyItem>(kind, getBase(), canonicalName, global, stat);
   Context<SimplifyItem>::add(name, t);
+  if (!canonicalName.empty())
+    Context<SimplifyItem>::add(canonicalName, t);
   return t;
 }
 

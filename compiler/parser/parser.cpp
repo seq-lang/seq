@@ -63,7 +63,7 @@ seq::SeqModule *parse(const string &argv0, const string &file, const string &cod
                    1000.0);
       if (_dbg_level) {
         auto fo = fopen("_dump_transform.seq", "w");
-        fmt::print(fo, "{}", ast::FormatVisitor::apply(transformed));
+        fmt::print(fo, "{}", ast::FormatVisitor::apply(transformed, cache));
         fclose(fo);
       }
     }

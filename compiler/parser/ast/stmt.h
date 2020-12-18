@@ -24,6 +24,7 @@ namespace ast {
 
 // Forward declarations
 struct ASTVisitor;
+struct AssignStmt;
 struct ClassStmt;
 struct ExprStmt;
 struct SuiteStmt;
@@ -52,6 +53,7 @@ struct Stmt : public seq::SrcObject {
   }
 
   /// Convenience virtual functions to avoid unnecessary dynamic_cast calls.
+  virtual const AssignStmt *getAssign() const { return nullptr; }
   virtual const ClassStmt *getClass() const { return nullptr; }
   virtual const ExprStmt *getExpr() const { return nullptr; }
   virtual const SuiteStmt *getSuite() const { return nullptr; }
@@ -72,6 +74,7 @@ struct SuiteStmt : public Stmt {
   /// True if a suite defines new variable-scoping block.
   bool ownBlock;
 
+  /// These constructors flattens the provided statement vector (see flatten() below).
   explicit SuiteStmt(vector<StmtPtr> &&stmts, bool ownBlock = false);
   /// Single-statement suite constructor.
   explicit SuiteStmt(StmtPtr stmt, bool ownBlock = false);
@@ -89,6 +92,10 @@ struct SuiteStmt : public Stmt {
   const Stmt *firstInBlock() const override {
     return stmts.empty() ? nullptr : stmts[0].get();
   }
+
+  /// Flatten all nested SuiteStmts that do not own a block in the statement vector.
+  /// This is shallow flattening.
+  static void flatten(StmtPtr s, vector<StmtPtr> &stmts);
 };
 
 /// Pass statement.
@@ -152,6 +159,8 @@ struct AssignStmt : public Stmt {
   string toString() const override;
   StmtPtr clone() const override;
   void accept(ASTVisitor &visitor) const override;
+
+  const AssignStmt *getAssign() const override { return this; }
 };
 
 /// Deletion statement (del expr).
@@ -323,7 +332,7 @@ struct MatchStmt : public Stmt {
 /// @example from ...b import a as ai
 /// @example from c import foo(int) -> int as bar
 /// @example from python.numpy import ndarray
-/// @example from python import numpy.ndarray as nd
+/// @example from python import numpy.ndarray(int) -> int as nd
 struct ImportStmt : public Stmt {
   ExprPtr from, what;
   string as;

@@ -293,8 +293,17 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
   assert(i);
   auto var = i->value;
   if (!stmt->rhs) {
-    assert(var == ".__argv__");
-    ctx->addVar(var, ctx->getModule()->getArgVar());
+    if (var == ".__argv__")
+      ctx->addVar(var, ctx->getModule()->getArgVar());
+    else {
+      //      LOG("{} . {}", var, stmt->lhs->getType()->getClass()->toString());
+      auto varStmt = new seq::VarStmt(
+          nullptr, realizeType(stmt->lhs->getType()->getClass().get()));
+      varStmt->getVar()->setGlobal();
+      varStmt->getVar()->setType(realizeType(stmt->lhs->getType()->getClass().get()));
+      ctx->addVar(var, varStmt->getVar());
+      resultStmt = varStmt;
+    }
   } else if (stmt->rhs->isType()) {
     // ctx->addType(var, realizeType(stmt->rhs->getType()->getClass()));
   } else {

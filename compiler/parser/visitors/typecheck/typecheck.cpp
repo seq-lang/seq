@@ -321,10 +321,9 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
         assert(val && val->isStatic());
         auto t = val->getType()->follow();
         m[g] = {g, t,
-                t->getLink()
-                    ? t->getLink()->id
-                    : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
-                                                       : 0};
+                t->getLink()                       ? t->getLink()->id
+                : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
+                                                   : 0};
       }
       auto sv = StaticVisitor(m);
       sv.transform(s->expr);
@@ -954,9 +953,9 @@ void TypecheckVisitor::visit(const AssignStmt *stmt) {
   types::TypePtr t;
   TypecheckItem::Kind k;
   if (!rhs) { // declarations
-    assert(typExpr);
-    ctx->add(k = TypecheckItem::Var, l->value, t = typExpr->getType(),
-             l->value[0] == '.');
+    t = typExpr ? typExpr->getType()
+                : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
+    ctx->add(k = TypecheckItem::Var, l->value, t, l->value[0] == '.');
   } else {
     if (typExpr && typExpr->getType()->getClass()) {
       auto typ = ctx->instantiate(getSrcInfo(), typExpr->getType());
@@ -975,7 +974,9 @@ void TypecheckVisitor::visit(const AssignStmt *stmt) {
   }
   if (l->value[0] == '.')
     ctx->bases.back().visitedAsts[l->value] = {k, t};
-  resultStmt = N<AssignStmt>(clone(stmt->lhs), move(rhs), move(typExpr));
+  auto lhs = clone(stmt->lhs);
+  lhs->setType(forceUnify(lhs, t));
+  resultStmt = N<AssignStmt>(move(lhs), move(rhs), move(typExpr));
 }
 
 void TypecheckVisitor::visit(const UpdateStmt *stmt) {
@@ -986,7 +987,7 @@ void TypecheckVisitor::visit(const UpdateStmt *stmt) {
   auto rc = r->getType()->getClass();
   if (lc && lc->name == ".Optional" && rc && rc->name != lc->name)
     r = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(r)));
-  forceUnify(r.get(), l->getType());
+  l->setType(forceUnify(r.get(), l->getType()));
   resultStmt = N<UpdateStmt>(move(l), move(r));
 }
 
@@ -1939,7 +1940,7 @@ string TypecheckVisitor::generatePartialStub(const string &mask,
                        "no_python"});
 
     auto tctx = static_pointer_cast<SimplifyContext>(ctx->cache->imports[""].ctx);
-    stmt = SimplifyVisitor(tctx).transform(stmt);
+    stmt = SimplifyVisitor(tctx, nullptr).transform(stmt);
     stmt = TypecheckVisitor(ctx).transform(stmt);
     prependStmts->push_back(move(stmt));
   }
@@ -1971,7 +1972,7 @@ string TypecheckVisitor::generatePartialStub(const string &mask,
         N<SuiteStmt>(N<ReturnStmt>(N<CallExpr>(move(callee), move(newArgs)))),
         vector<string>{});
     auto tctx = static_pointer_cast<SimplifyContext>(ctx->cache->imports[""].ctx);
-    stmt = SimplifyVisitor(tctx).transform(stmt);
+    stmt = SimplifyVisitor(tctx, nullptr).transform(stmt);
     stmt = TypecheckVisitor(ctx).transform(stmt);
     prependStmts->push_back(move(stmt));
   }

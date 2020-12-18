@@ -208,7 +208,8 @@ string getImportFile(const string &argv0, const string &what, const string &rela
   for (auto &p : paths) {
     struct stat buffer;
     if (!stat(p.c_str(), &buffer)) {
-      return p;
+      realpath(p.c_str(), abs);
+      return string(abs);
     }
   }
   return "";

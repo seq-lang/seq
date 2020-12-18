@@ -41,6 +41,8 @@ class SimplifyVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr> 
   /// child expression node. Pointer is needed as visitors can be spawned recursively.
   shared_ptr<vector<StmtPtr>> prependStmts;
 
+  shared_ptr<vector<StmtPtr>> preambleStmts;
+
   /// Each new expression is stored here (as visit() does not return anything) and
   /// later returned by a transform() call.
   ExprPtr resultExpr;
@@ -61,7 +63,8 @@ public:
 
 public:
   explicit SimplifyVisitor(shared_ptr<SimplifyContext> ctx,
-                           shared_ptr<vector<StmtPtr>> stmts = nullptr);
+                           shared_ptr<vector<StmtPtr>> preamble,
+                           shared_ptr<vector<StmtPtr>> prepend = nullptr);
 
   /// Transform an AST expression node.
   /// @raise ParserException if a node describes a type (use transformType instead).

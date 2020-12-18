@@ -22,26 +22,39 @@ namespace ast {
 
 Stmt::Stmt(const seq::SrcInfo &s) { setSrcInfo(s); }
 
-SuiteStmt::SuiteStmt(vector<StmtPtr> &&stmts, bool ownBlock)
-    : stmts(move(stmts)), ownBlock(ownBlock) {}
+SuiteStmt::SuiteStmt(vector<StmtPtr> &&stmts, bool ownBlock) : ownBlock(ownBlock) {
+  for (auto &s : stmts)
+    flatten(move(s), this->stmts);
+}
 SuiteStmt::SuiteStmt(StmtPtr stmt, bool ownBlock) : ownBlock(ownBlock) {
-  stmts.push_back(move(stmt));
+  flatten(move(stmt), this->stmts);
 }
 SuiteStmt::SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, bool ownBlock) : ownBlock(ownBlock) {
-  stmts.push_back(move(stmt1));
-  stmts.push_back(move(stmt2));
+  flatten(move(stmt1), this->stmts);
+  flatten(move(stmt2), this->stmts);
 }
 SuiteStmt::SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, StmtPtr stmt3, bool o)
     : ownBlock(o) {
-  stmts.push_back(move(stmt1));
-  stmts.push_back(move(stmt2));
-  stmts.push_back(move(stmt3));
+  flatten(move(stmt1), this->stmts);
+  flatten(move(stmt2), this->stmts);
+  flatten(move(stmt3), this->stmts);
 }
 SuiteStmt::SuiteStmt(const SuiteStmt &stmt)
     : Stmt(stmt), stmts(ast::clone(stmt.stmts)), ownBlock(stmt.ownBlock) {}
 string SuiteStmt::toString() const { return format("({})", combine(stmts, "\n  ")); }
 StmtPtr SuiteStmt::clone() const { return make_unique<SuiteStmt>(*this); }
 void SuiteStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+void SuiteStmt::flatten(StmtPtr s, vector<StmtPtr> &stmts) {
+  if (!s)
+    return;
+  auto suite = const_cast<SuiteStmt *>(s->getSuite());
+  if (!suite || suite->ownBlock)
+    stmts.push_back(move(s));
+  else {
+    for (auto &ss : suite->stmts)
+      stmts.push_back(move(ss));
+  }
+}
 
 string PassStmt::toString() const { return "[PASS]"; }
 StmtPtr PassStmt::clone() const { return make_unique<PassStmt>(*this); }
@@ -111,9 +124,8 @@ void AssertStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
 WhileStmt::WhileStmt(ExprPtr cond, StmtPtr suite, StmtPtr elseSuite)
     : cond(move(cond)), suite(move(suite)), elseSuite(move(elseSuite)) {
-  if (auto s = CAST(elseSuite, SuiteStmt))
-    if (s->stmts.empty())
-      this->elseSuite = nullptr;
+  if (elseSuite && elseSuite->getSuite() && elseSuite->getSuite()->stmts.empty())
+    this->elseSuite = nullptr;
 }
 WhileStmt::WhileStmt(const WhileStmt &stmt)
     : Stmt(stmt), cond(ast::clone(stmt.cond)), suite(ast::clone(stmt.suite)),
@@ -127,9 +139,8 @@ void WhileStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
 ForStmt::ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite)
     : var(move(var)), iter(move(iter)), suite(move(suite)), elseSuite(move(elseSuite)) {
-  if (auto s = CAST(elseSuite, SuiteStmt))
-    if (s->stmts.empty())
-      this->elseSuite = nullptr;
+  if (elseSuite && elseSuite->getSuite() && elseSuite->getSuite()->stmts.empty())
+    this->elseSuite = nullptr;
 }
 ForStmt::ForStmt(const ForStmt &stmt)
     : Stmt(stmt), var(ast::clone(stmt.var)), iter(ast::clone(stmt.iter)),
