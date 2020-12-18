@@ -194,7 +194,7 @@ public:
   /// @param trueBranch the true branch
   /// @param falseBranch the false branch
   /// @param name the flow's name
-  IfFlow(ValuePtr cond, ValuePtr trueBranch, ValuePtr falseBranch,
+  IfFlow(ValuePtr cond, ValuePtr trueBranch, ValuePtr falseBranch = nullptr,
          std::string name = "")
       : FlowBase(std::move(name)), cond(std::move(cond)),
         trueBranch(std::move(trueBranch)), falseBranch(std::move(falseBranch)) {}

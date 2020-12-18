@@ -124,69 +124,56 @@ seq::ir::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
 
   seq::ir::types::Type *handle = nullptr;
   vector<seq::ir::types::Type *> types;
-  vector<types::ClassTypePtr> unrealizedTypes;
   vector<int> statics;
   for (auto &m : t->explicits)
     if (auto s = m.type->getStatic())
       statics.push_back(s->getValue());
     else {
       types.push_back(realizeType(m.type->getClass()));
-      unrealizedTypes.push_back(m.type->getClass());
     }
   auto name = t->name;
+  auto *module = getModule();
+
   if (name == ".void") {
-    handle = new seq::ir::types::Type(name);
+    handle = module->getVoidType();
   } else if (name == ".bool") {
-    handle = new seq::ir::types::Type(name);
+    handle = module->getBoolType();
   } else if (name == ".byte") {
-    handle = new seq::ir::types::Type(name);
+    handle = module->getByteType();
   } else if (name == ".int") {
-    handle = new seq::ir::types::Type(name);
+    handle = module->getIntType();
   } else if (name == ".float") {
-    handle = new seq::ir::types::Type(name);
+    handle = module->getFloatType();
   } else if (name == ".str") {
-    auto *bytePtrType = getPointer(make_shared<types::ClassType>(".byte"));
-    auto *intType = realizeType(make_shared<types::ClassType>(".int"));
-    handle =
-        new seq::ir::types::RecordType(name, {intType, bytePtrType}, {"len", "ptr"});
+    handle = module->getStringType();
   } else if (name == ".Int" || name == ".UInt") {
     assert(statics.size() == 1 && types.size() == 0);
     assert(statics[0] >= 1 && statics[0] <= 2048);
-    handle = new seq::ir::types::IntNType(statics[0], name == ".Int");
+    handle = module->getIntNType(statics[0], name == ".Int");
   } else if (name == ".Array") {
     assert(types.size() == 1 && statics.size() == 0);
-    handle = new seq::ir::types::ArrayType(
-        getPointer(unrealizedTypes[0]),
-        realizeType(std::make_shared<types::ClassType>(".bool")));
+    handle = module->getArrayType(types[0]);
   } else if (name == ".Ptr") {
     assert(types.size() == 1 && statics.size() == 0);
-    handle = new seq::ir::types::PointerType(types[0]);
+    handle = module->getPointerType(types[0]);
   } else if (name == ".Generator") {
     assert(types.size() == 1 && statics.size() == 0);
-    handle = new seq::ir::types::GeneratorType(types[0]);
+    handle = module->getGeneratorType(types[0]);
   } else if (name == ".Optional") {
     assert(types.size() == 1 && statics.size() == 0);
-    handle = new seq::ir::types::OptionalType(
-        getPointer(unrealizedTypes[0]),
-        realizeType(std::make_shared<types::ClassType>(".bool")));
+    handle = module->getOptionalType(types[0]);
   } else if (startswith(name, ".Function.")) {
     types.clear();
     for (auto &m : t->args)
       types.push_back(realizeType(m->getClass()));
     auto ret = types[0];
     types.erase(types.begin());
-    handle = new seq::ir::types::FuncType(name, ret, types);
+    handle = module->getFuncType(ret, types);
   } else {
     vector<string> names;
     vector<seq::ir::types::Type *> types;
-    seq::ir::types::RecordType *record;
-    if (t->isRecord()) {
-      handle = record = new seq::ir::types::RecordType(name);
-    } else {
-      auto contents = std::make_unique<seq::ir::types::RecordType>(name + ".contents");
-      record = contents.get();
-      handle = new seq::ir::types::RefType(name, std::move(contents));
-    }
+
+    handle = module->getMemberedType(t->realizeString(), !t->isRecord());
     this->types[t->realizeString()] = handle;
 
     // Must do this afterwards to avoid infinite loop with recursive types
@@ -194,38 +181,10 @@ seq::ir::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
       names.push_back(m.first);
       types.push_back(realizeType(m.second->getClass()));
     }
-    record->realize(types, names);
+
+    dynamic_cast<ir::types::MemberedType *>(handle)->realize(types, names);
   }
-  getModule()->types.push_back(std::unique_ptr<seq::ir::types::Type>(handle));
   return this->types[t->realizeString()] = handle;
-}
-
-seq::ir::types::ArrayType *CodegenContext::getArgvType() {
-  auto *strPointerType = getPointer(make_shared<types::ClassType>(".str"));
-  auto *intType = realizeType(make_shared<types::ClassType>(".int"));
-  auto arrayName = ".Array[.str]";
-
-  auto it = types.find(arrayName);
-  if (it != types.end())
-    return dynamic_cast<seq::ir::types::ArrayType *>(it->second);
-
-  auto array = std::make_unique<seq::ir::types::ArrayType>(strPointerType, intType);
-  this->types[arrayName] = array.get();
-  getModule()->types.push_back(std::move(array));
-  return (seq::ir::types::ArrayType *)this->types[arrayName];
-}
-
-seq::ir::types::PointerType *CodegenContext::getPointer(types::ClassTypePtr t) {
-  t = t->getClass();
-  auto pointerName = fmt::format(FMT_STRING(".Ptr[{}]"), t->realizeString());
-  auto it = types.find(pointerName);
-  if (it != types.end())
-    return dynamic_cast<seq::ir::types::PointerType *>(it->second);
-
-  auto pointer = std::make_unique<seq::ir::types::PointerType>(realizeType(t));
-  this->types[pointerName] = pointer.get();
-  getModule()->types.push_back(std::move(pointer));
-  return (seq::ir::types::PointerType *)this->types[pointerName];
 }
 
 } // namespace ast

@@ -226,7 +226,7 @@ public:
     if (!rVal) {
       rVal = new types::RecordType(
           STRING_NAME, {getIntType(), getPointerType(getByteType())}, {"len", "ptr"});
-      types[FLOAT_NAME] = types::TypePtr(rVal);
+      types[STRING_NAME] = types::TypePtr(rVal);
     }
     return rVal;
   }

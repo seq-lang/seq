@@ -23,34 +23,10 @@
 namespace seq {
 namespace ast {
 
-struct CodegenResult {
-  enum { OP, RVALUE, LVALUE, TYPE, NONE } tag;
-  seq::ir::OperandPtr operandResult;
-  seq::ir::RvaluePtr rvalueResult;
-  seq::ir::LvaluePtr lvalueResult;
-  seq::ir::types::Type *typeResult = nullptr;
-
-  seq::ir::types::Type *typeOverride = nullptr;
-
-  CodegenResult() : tag(NONE) {}
-  explicit CodegenResult(seq::ir::OperandPtr op)
-      : tag(OP), operandResult(std::move(op)) {}
-  explicit CodegenResult(seq::ir::RvaluePtr rval)
-      : tag(RVALUE), rvalueResult(std::move(rval)) {}
-  explicit CodegenResult(seq::ir::LvaluePtr lval)
-      : tag(LVALUE), lvalueResult(std::move(lval)) {}
-  explicit CodegenResult(seq::ir::types::Type *type) : tag(TYPE), typeResult(type) {}
-
-  CodegenResult(CodegenResult &&other) = default;
-  CodegenResult &operator=(CodegenResult &&other) = default;
-
-  ~CodegenResult() noexcept;
-};
-
-class CodegenVisitor
-    : public CallbackASTVisitor<CodegenResult, CodegenResult, CodegenResult> {
+class CodegenVisitor : public CallbackASTVisitor<seq::ir::ValuePtr, seq::ir::ValuePtr,
+                                                 seq::ir::ValuePtr> {
   shared_ptr<CodegenContext> ctx;
-  CodegenResult result;
+  seq::ir::ValuePtr result;
 
   void defaultVisit(const Expr *expr) override;
   void defaultVisit(const Stmt *expr) override;
@@ -58,11 +34,11 @@ class CodegenVisitor
 
 public:
   explicit CodegenVisitor(shared_ptr<CodegenContext> ctx);
-  static seq::ir::SIRModulePtr apply(shared_ptr<Cache> cache, StmtPtr stmts);
+  static seq::ir::IRModulePtr apply(shared_ptr<Cache> cache, StmtPtr stmts);
 
-  CodegenResult transform(const ExprPtr &expr) override;
-  CodegenResult transform(const StmtPtr &stmt) override;
-  CodegenResult transform(const PatternPtr &pat) override { assert(false); }
+  seq::ir::ValuePtr transform(const ExprPtr &expr) override;
+  seq::ir::ValuePtr transform(const StmtPtr &stmt) override;
+  seq::ir::ValuePtr transform(const PatternPtr &pat) override { assert(false); }
 
   seq::ir::types::Type *realizeType(types::ClassTypePtr t);
 
@@ -101,25 +77,7 @@ public:
   void visit(const ClassStmt *stmt) override;
 
 private:
-  seq::ir::OperandPtr toOperand(CodegenResult r);
-  seq::ir::RvaluePtr toRvalue(CodegenResult r);
-
   std::unique_ptr<ir::SeriesFlow> newScope(const seq::SrcObject *s, std::string name);
-
-  seq::ir::Flow *nearestLoop();
-
-  template <typename Tn, typename... Ts>
-  auto Nr(const seq::SrcObject *s, Ts &&... args) {
-    auto t = new Tn(std::forward<Ts>(args)...);
-    t->setSrcInfo(s->getSrcInfo());
-    return t;
-  }
-
-  template <typename Tn, typename... Ts> auto Nr(const seq::SrcInfo s, Ts &&... args) {
-    auto t = new Tn(std::forward<Ts>(args)...);
-    t->setSrcInfo(s);
-    return t;
-  }
 
   template <typename T> auto wrap(T *obj) { return std::unique_ptr<T>(obj); }
 };

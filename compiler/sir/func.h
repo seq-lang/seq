@@ -162,6 +162,15 @@ public:
 
   /// @return true if the function is external
   bool isExternal() const { return external; }
+  /// Makes the function external.
+  /// @param n the function's unmangled name
+  void setExternal(std::string n) {
+    external = true;
+    unmangledName = std::move(n);
+  }
+
+  /// @return true if the function is builtin
+  bool isBuiltin() const { return builtin; }
   /// Makes the function builtin.
   /// @param n the function's unmangled name
   void setBuiltin(std::string n) {

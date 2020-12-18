@@ -42,5 +42,23 @@ using FloatConstant = TemplatedConstant<float>;
 using BoolConstant = TemplatedConstant<bool>;
 using StringConstant = TemplatedConstant<std::string>;
 
+template <> class TemplatedConstant<std::string> : public Constant {
+private:
+  std::string val;
+
+public:
+  TemplatedConstant(std::string v, types::Type *type, std::string name = "")
+      : Constant(type, std::move(name)), val(std::move(v)) {}
+
+  void accept(util::SIRVisitor &v) override { v.visit(this); }
+
+  /// @return the internal value.
+  std::string getVal() { return val; }
+
+  std::ostream &doFormat(std::ostream &os) const override {
+    return os << '"' << val << '"';
+  }
+};
+
 } // namespace ir
 } // namespace seq

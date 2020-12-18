@@ -48,6 +48,7 @@ public:
 class CodegenContext : public Context<CodegenItem> {
   vector<seq::ir::Func *> bases;
   vector<seq::ir::SeriesFlow *> series;
+  vector<seq::ir::Value *> loops;
   int topBlockIndex, topBaseIndex;
 
 public:
@@ -75,6 +76,10 @@ public:
   void addScope() { Context<CodegenItem>::addBlock(); }
   void popScope() { Context<CodegenItem>::popBlock(); }
 
+  void addLoop(seq::ir::Value *v) { loops.push_back(v); }
+  void popLoop() { loops.pop_back(); }
+  seq::ir::Value *getLoop() const { return loops.back(); }
+
   //  void initJIT();
   //  void execJIT(string varName = "", seq::Expr *varExpr = nullptr);
 
@@ -83,12 +88,8 @@ public:
 public:
   seq::ir::Func *getBase() const { return bases[topBaseIndex]; }
   seq::ir::SeriesFlow *getSeries() const { return series[topBlockIndex]; }
-  seq::ir::BlockFlow *getInsertPoint() const {
-    return dynamic_cast<seq::ir::BlockFlow *>(
-        series[topBlockIndex]->series.back().get());
-  }
-  seq::ir::SIRModule *getModule() const {
-    return dynamic_cast<seq::ir::SIRModule *>(bases[0]->parent);
+  seq::ir::IRModule *getModule() const {
+    return dynamic_cast<seq::ir::IRModule *>(bases[0]->getModule());
   }
   bool isToplevel() const { return bases.size() == 1; }
   //  seq::SeqJIT *getJIT() { return jit; }
@@ -99,10 +100,6 @@ public:
       return val->getType();
     return nullptr;
   }
-  seq::ir::types::ArrayType *getArgvType();
-
-private:
-  seq::ir::types::PointerType *getPointer(types::ClassTypePtr t);
 };
 
 } // namespace ast

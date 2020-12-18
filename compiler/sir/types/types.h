@@ -97,7 +97,7 @@ public:
   /// Changes the body of the membered type.
   /// @param mTypes the new body
   /// @param mNames the new names
-  virtual void realize(std::vector<Type *> mTypes, std::vector<std::string> mNames);
+  virtual void realize(std::vector<Type *> mTypes, std::vector<std::string> mNames) = 0;
 };
 
 /// Membered type equivalent to C structs/C++ PODs

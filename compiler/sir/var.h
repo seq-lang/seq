@@ -27,7 +27,7 @@ public:
 
   void accept(util::SIRVisitor &v) override { v.visit(this); };
 
-  types::Type *getType() const override { return type; }
+  types::Type *getType() const override;
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;

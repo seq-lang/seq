@@ -48,8 +48,8 @@ std::ostream &Func::doFormat(std::ostream &os) const {
     argNames.push_back(arg.name);
 
   fmt::print(os, FMT_STRING("def {}({}) -> {} [\n{}\n] {{\n"), referenceString(),
-             dynamic_cast<types::FuncType *>(type)->getReturnType()->referenceString(),
              fmt::join(argNames, ", "),
+             dynamic_cast<types::FuncType *>(type)->getReturnType()->referenceString(),
              fmt::join(util::dereference_adaptor(symbols.begin()),
                        util::dereference_adaptor(symbols.end()), "\n"));
 
