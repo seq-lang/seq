@@ -321,9 +321,10 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
         assert(val && val->isStatic());
         auto t = val->getType()->follow();
         m[g] = {g, t,
-                t->getLink()                       ? t->getLink()->id
-                : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
-                                                   : 0};
+                t->getLink()
+                    ? t->getLink()->id
+                    : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
+                                                       : 0};
       }
       auto sv = StaticVisitor(m);
       sv.transform(s->expr);
@@ -1100,7 +1101,10 @@ void TypecheckVisitor::visit(const ForStmt *stmt) {
   assert(i);
   string varName = i->value;
   ctx->add(TypecheckItem::Var, varName, varType);
-  resultStmt = N<ForStmt>(transform(stmt->var), move(iter), transform(stmt->suite));
+  auto result = N<ForStmt>(transform(stmt->var), move(iter), transform(stmt->suite));
+  result->done = transform(stmt->done);
+  result->next = transform(stmt->next);
+  resultStmt = move(result);
   ctx->popBlock();
 }
 

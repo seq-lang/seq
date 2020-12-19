@@ -184,9 +184,14 @@ void SimplifyVisitor::visit(const WhileStmt *stmt) {
 ///   for i in it.__iter__(): ...
 ///   if no_break.__bool__(): ...
 void SimplifyVisitor::visit(const ForStmt *stmt) {
-  ExprPtr iter = N<CallExpr>(N<DotExpr>(clone(stmt->iter), "__iter__"));
+  auto gen = ctx->cache->getTemporaryVar();
+  prependStmts->push_back(transform(N<AssignStmt>(
+      N<IdExpr>(gen), N<CallExpr>(N<DotExpr>(clone(stmt->iter), "__iter__")))));
+  ExprPtr iter = N<IdExpr>(gen);
+
   string breakVar;
-  StmtPtr assign = nullptr, forStmt = nullptr;
+  StmtPtr assign = nullptr;
+  std::unique_ptr<ForStmt> forStmt = nullptr;
   if (stmt->elseSuite) {
     breakVar = ctx->cache->getTemporaryVar("no_break");
     assign = transform(N<AssignStmt>(N<IdExpr>(breakVar), N<BoolExpr>(true)));
@@ -207,6 +212,9 @@ void SimplifyVisitor::visit(const ForStmt *stmt) {
     forStmt =
         N<ForStmt>(clone(var), transform(iter), transform(N<SuiteStmt>(move(stmts))));
   }
+  forStmt->next = transform(N<CallExpr>(N<DotExpr>(N<IdExpr>(gen), "next")));
+  forStmt->done = transform(N<CallExpr>(N<DotExpr>(N<IdExpr>(gen), "done")));
+
   ctx->popBlock();
   ctx->loops.pop_back();
 
@@ -222,12 +230,30 @@ void SimplifyVisitor::visit(const ForStmt *stmt) {
 
 /// Transforms all if conditions to condition.__bool__()
 void SimplifyVisitor::visit(const IfStmt *stmt) {
-  vector<IfStmt::If> ifs;
-  for (auto &i : stmt->ifs)
-    ifs.push_back({transform(i.cond ? N<CallExpr>(N<DotExpr>(clone(i.cond), "__bool__"))
-                                    : nullptr),
-                   transform(i.suite)});
-  resultStmt = N<IfStmt>(move(ifs));
+  if (stmt->ifs.size() == 1 && !stmt->ifs[0].cond) {
+    resultStmt = transform(stmt->ifs[0].suite);
+    return;
+  }
+
+  vector<IfStmt::If> topIf;
+  vector<IfStmt::If> subIf;
+
+  for (auto i = 0; i < stmt->ifs.size(); ++i) {
+    if (i == 0) {
+      topIf.push_back(
+          {transform(N<CallExpr>(N<DotExpr>(clone(stmt->ifs[i].cond), "__bool__"))),
+           transform(stmt->ifs[i].suite)});
+    } else {
+      subIf.push_back({clone(stmt->ifs[i].cond), clone(stmt->ifs[i].suite)});
+    }
+  }
+
+  if (subIf.empty()) {
+    resultStmt = N<IfStmt>(move(topIf));
+  } else {
+    topIf.push_back({nullptr, transform(N<IfStmt>(move(subIf)))});
+    resultStmt = N<IfStmt>(move(topIf));
+  }
 }
 
 void SimplifyVisitor::visit(const MatchStmt *stmt) {

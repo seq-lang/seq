@@ -41,18 +41,16 @@ class str:
         v.append("'")
         for c in self:
             d = c
-            match c:
-                case '\a': d = "\\a"
-                case '\b': d = "\\b"
-                case '\f': d = "\\f"
-                case '\n': d = "\\n"
-                case '\r': d = "\\r"
-                case '\t': d = "\\t"
-                case '\v': d = "\\v"
-                case '\\': d = "\\\\"
-                case '\'': d = "\\'"
-                case '\?': d = "\\\?"
-                case _: pass
+            if c == '\a': d = "\\a"
+            elif c == '\b': d = "\\b"
+            elif c == '\f': d = "\\f"
+            elif c == '\n': d = "\\n"
+            elif c == '\r': d = "\\r"
+            elif c == '\t': d = "\\t"
+            elif c == '\v': d = "\\v"
+            elif c == '\\': d = "\\\\"
+            elif c == '\'': d = "\\'"
+            elif c == '\?': d = "\\\?"
             v.append(d)
         v.append("'")
         return str.cat(v)

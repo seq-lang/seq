@@ -263,6 +263,9 @@ struct ForStmt : public Stmt {
   StmtPtr suite;
   StmtPtr elseSuite;
 
+  ExprPtr done;
+  ExprPtr next;
+
   ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite = nullptr);
   ForStmt(const ForStmt &stmt);
 

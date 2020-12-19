@@ -20,6 +20,7 @@
 #include "parser/visitors/format/format.h"
 #include "parser/visitors/simplify/simplify.h"
 #include "parser/visitors/typecheck/typecheck.h"
+#include "sir/sir.h"
 #include "util/fmt/format.h"
 
 int _ocaml_time = 0;
@@ -83,12 +84,14 @@ seq::SeqModule *parse(const string &argv0, const string &file, const string &cod
 
     t = high_resolution_clock::now();
     auto module = ast::CodegenVisitor::apply(cache, move(typechecked));
+    std::cout << *module;
+
     if (!isTest)
       LOG_TIME("[T] codegen   = {:.1f}",
                duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
                    1000.0);
     _isTest = isTest;
-    return module;
+    return nullptr;
   } catch (seq::exc::SeqException &e) {
     if (isTest) {
       LOG("ERROR: {}", e.what());

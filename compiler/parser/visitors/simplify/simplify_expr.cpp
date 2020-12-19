@@ -292,9 +292,15 @@ void SimplifyVisitor::visit(const UnaryExpr *expr) {
 /// Other cases are handled during the type-checking stage.
 void SimplifyVisitor::visit(const BinaryExpr *expr) {
   if (expr->op == "&&" || expr->op == "||") {
-    resultExpr = N<BinaryExpr>(
-        transform(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__"))), expr->op,
-        transform(N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
+    if (expr->op == "&&") {
+      resultExpr = transform(N<IfExpr>(
+          clone(expr->lexpr), N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__")),
+          N<BoolExpr>(false)));
+    } else {
+      resultExpr =
+          transform(N<IfExpr>(clone(expr->lexpr), N<BoolExpr>(true),
+                              N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
+    }
   } else if (expr->op == "is not") {
     resultExpr = transform(N<CallExpr>(N<DotExpr>(
         N<BinaryExpr>(clone(expr->lexpr), "is", clone(expr->rexpr)), "__invert__")));

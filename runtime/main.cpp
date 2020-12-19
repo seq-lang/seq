@@ -43,7 +43,8 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
   }
 
-  SeqModule *s = parse(argv[0], input.c_str(), "", false, false);
+  auto *s = parse(argv[0], input.c_str(), "", false, false);
+
   if (!s)
     exit(EXIT_FAILURE);
   if (output.getValue().empty()) {

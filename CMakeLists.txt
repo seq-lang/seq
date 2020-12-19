@@ -112,6 +112,7 @@ set_property(SOURCE ${LIB_SEQPARSE} PROPERTY GENERATED 1)
 # Seq compiler library
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
+
 set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/lang/func.h
         compiler/lang/lang.h
@@ -166,7 +167,21 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/util/fmt/ranges.h
         compiler/util/jit.h
         compiler/util/llvm.h
-        compiler/util/tapir.h)
+        compiler/util/tapir.h
+        compiler/sir/types/types.h
+        compiler/sir/util/context.h
+        compiler/sir/util/iterators.h
+        compiler/sir/util/visitor.h
+        compiler/sir/attribute.h
+        compiler/sir/base.h
+        compiler/sir/constant.h
+        compiler/sir/flow.h
+        compiler/sir/func.h
+        compiler/sir/instr.h
+        compiler/sir/module.h
+        compiler/sir/sir.h
+        compiler/sir/value.h
+        compiler/sir/var.h)
 set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/lang/func.cpp
         compiler/lang/lang.cpp
@@ -207,7 +222,17 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/types/void.cpp
         compiler/util/fmt/format.cpp
         compiler/util/jit.cpp
-        compiler/parser/visitors/simplify/simplify_expr.cpp compiler/parser/visitors/simplify/simplify_stmt.cpp compiler/parser/visitors/simplify/simplify_pattern.cpp)
+        compiler/parser/visitors/simplify/simplify_expr.cpp
+        compiler/parser/visitors/simplify/simplify_stmt.cpp
+        compiler/parser/visitors/simplify/simplify_pattern.cpp
+        compiler/sir/types/types.cpp
+        compiler/sir/attribute.cpp
+        compiler/sir/base.cpp
+        compiler/sir/flow.cpp
+        compiler/sir/func.cpp
+        compiler/sir/instr.cpp
+        compiler/sir/module.cpp
+        compiler/sir/var.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})
