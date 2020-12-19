@@ -375,16 +375,19 @@ void FormatVisitor::visit(const ThrowStmt *stmt) {
 }
 
 void FormatVisitor::visit(const FunctionStmt *fstmt) {
-  if (cache &&
-      cache->realizationAsts.find(fstmt->name) != cache->realizationAsts.end()) {
-    fstmt = (const FunctionStmt *)(cache->realizationAsts[fstmt->name].get());
-  } else if (cache && cache->realizations[fstmt->name].size()) {
-    for (auto &real : cache->realizations[fstmt->name])
-      result += transform(cache->realizationAsts[real.first]);
-    return;
-  } else if (cache) {
-    fstmt = (const FunctionStmt *)(cache->asts[fstmt->name].get());
+  if (cache) {
+    if (in(cache->functions, fstmt->name))
+      fstmt = cache->functions[fstmt->name].ast.get();
   }
+  //  if (cache && cache->functions.find(fstmt->name) != cache->realizationAsts.end()) {
+  //    fstmt = (const FunctionStmt *)(cache->realizationAsts[fstmt->name].get());
+  //  } else if (cache && cache->functions[fstmt->name].realizations.size()) {
+  //    for (auto &real : cache->functions[fstmt->name].realizations)
+  //      result += transform(real.second.ast);
+  //    return;
+  //  } else if (cache) {
+  //    fstmt = cache->functions[fstmt->name].ast.get();
+  //  }
 
   vector<string> attrs;
   for (auto &a : fstmt->attributes)

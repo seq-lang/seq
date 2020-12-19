@@ -61,10 +61,10 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       auto canonical = stdlib->generateCanonicalName(name);
       stdlib->add(SimplifyItem::Type, name, canonical, true);
       // Generate an AST for each POD type. All of them are tuples.
-      cache->asts[canonical] =
+      cache->classes[canonical].ast =
           make_unique<ClassStmt>(canonical, vector<Param>(), vector<Param>(), nullptr,
                                  vector<string>{ATTR_INTERNAL, ATTR_TUPLE});
-      preamble->stmts.emplace_back(clone(cache->asts[canonical]));
+      preamble->stmts.emplace_back(clone(cache->classes[canonical].ast));
     }
     // Add generic POD types to the preamble
     for (auto &name : vector<string>{"Ptr", "Generator", "Optional", "Int", "UInt"}) {
@@ -82,7 +82,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       if (name == "Generator")
         c->attributes[ATTR_TRAIT] = "";
       preamble->stmts.emplace_back(clone(c));
-      cache->asts[canonical] = move(c);
+      cache->classes[canonical].ast = move(c);
     }
 
     StmtPtr stmts = nullptr;
@@ -114,10 +114,10 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
 
   // Move all auto-generated variardic types to the preamble.
   // Ensure that Function.1 is the first (as all others depend on it!)
-  preamble->stmts.emplace_back(clone(cache->asts[".Function.1"]));
+  preamble->stmts.emplace_back(clone(cache->classes[".Function.1"].ast));
   for (auto &v : cache->variardics)
     if (v != ".Function.1")
-      preamble->stmts.emplace_back(clone(cache->asts["." + v]));
+      preamble->stmts.emplace_back(clone(cache->classes["." + v].ast));
   for (auto &s : *preambleStmts)
     suite->stmts.emplace_back(move(s));
   // Move the transformed node to the end

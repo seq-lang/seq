@@ -664,7 +664,7 @@ ExprPtr SimplifyVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
     args.emplace_back(CallExpr::Arg{"", N<IdExpr>(c)});
   }
   // Update the function AST that was cached during the previous transformation.
-  ((FunctionStmt *)(ctx->cache->asts[f->name].get()))->args = clone_nop(f->args);
+  ctx->cache->functions[f->name].ast->args = clone_nop(f->args);
   ctx->captures.pop_back();
 
   prependStmts->push_back(move(fs));

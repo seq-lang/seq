@@ -29,8 +29,8 @@ SimplifyItem::SimplifyItem(Kind k, string base, string canonicalName, bool globa
       staticType(stat) {}
 
 SimplifyContext::SimplifyContext(string filename, shared_ptr<Cache> cache)
-    : Context<SimplifyItem>(move(filename)), cache(move(cache)),
-      isStdlibLoading(false) {}
+    : Context<SimplifyItem>(move(filename)), cache(move(cache)), isStdlibLoading(false),
+      extendCount(0) {}
 
 shared_ptr<SimplifyItem> SimplifyContext::add(SimplifyItem::Kind kind,
                                               const string &name,
@@ -59,15 +59,12 @@ shared_ptr<SimplifyItem> SimplifyContext::find(const string &name) const {
   // Item is not in the standard library as well. Maybe it is a global function or a
   // class, so also check there.
   if (!name.empty() && name[0] == '.') {
-    auto ast = cache->asts.find(name);
-    if (ast == cache->asts.end())
-      return nullptr;
-    else if (ast->second->getClass())
+    auto cast = cache->classes.find(name);
+    if (cast != cache->classes.end())
       return make_shared<SimplifyItem>(SimplifyItem::Type, "", name, true);
-    else if (ast->second->getFunction())
+    auto fast = cache->functions.find(name);
+    if (fast != cache->functions.end())
       return make_shared<SimplifyItem>(SimplifyItem::Func, "", name, true);
-    else
-      seqassert(false, "invalid cached AST");
   }
   return nullptr;
 }

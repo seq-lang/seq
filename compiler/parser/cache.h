@@ -83,26 +83,75 @@ struct Cache {
 
   /// Previously generated variardic types (Function and Tuple).
   set<string> variardics;
-  /// Table of generic AST nodes that maps a unique function or class identifier to a
-  /// generic AST for later realization.
-  unordered_map<string, StmtPtr> asts;
 
-  /// Table of class methods that maps a unique class identifier to a map of method
-  /// names. Each method name points to a list of FuncType instances with that name (a
-  /// list because methods can be overloaded).
-  unordered_map<string, unordered_map<string, vector<types::FuncTypePtr>>> classMethods;
-  /// Table of class fields (object variables) that maps a unique class identifier to a
-  /// list of field names and their types. List is used here instead of map because
-  /// field order matters.
-  unordered_map<string, vector<std::pair<string, types::TypePtr>>> classFields;
-  /// Table of realizations that maps a unique generic function or class identifier to a
-  /// map of their realization names and realized types.
-  unordered_map<string, unordered_map<string, types::TypePtr>> realizations;
-  /// Table of field realizations that maps a realized class identifier to a
-  /// list of realized field names and their realized types.
-  unordered_map<string, vector<std::pair<string, types::TypePtr>>> fieldRealizations;
-  /// Table that maps realized name to its realized ASTs for code generation stage.
-  unordered_map<string, StmtPtr> realizationAsts;
+  /// Stores class data for each class (type) in the source code.
+  struct Class {
+    /// Generic (unrealized) class template AST.
+    unique_ptr<ClassStmt> ast;
+
+    /// A class function method.
+    struct ClassMethod {
+      /// Canonical name of a method (e.g. __init__.1).
+      string name;
+      /// A corresponding generic function type.
+      types::FuncTypePtr type;
+      /// Method age (how many class extension were seen before a method definition).
+      /// Used to prevent the usage of a method before it was defined in the code.
+      int age;
+    };
+    /// Class method lookup table. Each name points to a list of ClassMethod instances
+    /// that share the same method name (a list because methods can be overloaded).
+    unordered_map<string, vector<ClassMethod>> methods;
+
+    /// A class field (member).
+    struct ClassField {
+      /// Field name.
+      string name;
+      /// A corresponding generic field type.
+      types::TypePtr type;
+    };
+    /// A list of class' ClassField instances. List is needed (instead of map) because
+    /// the order of the fields matters.
+    vector<ClassField> fields;
+
+    /// A class realization.
+    struct ClassRealization {
+      /// Realized class type.
+      types::ClassTypePtr type;
+      /// A list of field names and realization's realized field types.
+      vector<std::pair<string, types::TypePtr>> fields;
+    };
+    /// Realization lookup table that maps a realized class name to the corresponding
+    /// ClassRealization instance.
+    unordered_map<string, ClassRealization> realizations;
+
+    Class() : ast(nullptr) {}
+  };
+  /// Class lookup table that maps a canonical class identifier to the corresponding
+  /// Class instance.
+  unordered_map<string, Class> classes;
+
+  struct Function {
+    /// Generic (unrealized) function template AST.
+    unique_ptr<FunctionStmt> ast;
+
+    /// A function realization.
+    struct FunctionRealization {
+      /// Realized function type.
+      types::FuncTypePtr type;
+      /// Realized function AST (stored here for later realization in code generations
+      /// stage).
+      unique_ptr<FunctionStmt> ast;
+    };
+    /// Realization lookup table that maps a realized function name to the corresponding
+    /// FunctionRealization instance.
+    unordered_map<string, FunctionRealization> realizations;
+
+    Function() : ast(nullptr) {}
+  };
+  /// Function lookup table that maps a canonical function identifier to the
+  /// corresponding Function instance.
+  unordered_map<string, Function> functions;
 
 public:
   explicit Cache(string argv0 = "")

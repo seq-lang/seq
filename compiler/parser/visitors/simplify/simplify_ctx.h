@@ -93,6 +93,9 @@ struct SimplifyContext : public Context<SimplifyItem> {
   vector<set<string>> captures;
   /// True if standard library is being loaded.
   bool isStdlibLoading;
+  /// Stores the count of observed extend statements. Used to track class method ages
+  /// and prevent the usage of an extended method before it was seen.
+  int extendCount;
 
 public:
   SimplifyContext(string filename, shared_ptr<Cache> cache);

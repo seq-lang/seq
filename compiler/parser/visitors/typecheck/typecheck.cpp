@@ -389,8 +389,8 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
       return nullptr;
       // TODO : be smarter! there might be a compatible getitem?
     }
-    auto mm = ctx->cache->classFields.find(tuple->name);
-    assert(mm != ctx->cache->classFields.end());
+    auto mm = ctx->cache->classes.find(tuple->name);
+    assert(mm != ctx->cache->classes.end());
     auto getInt = [](seq_int_t *o, const ExprPtr &e) {
       if (!e)
         return true;
@@ -405,7 +405,7 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
       int i = translateIndex(ex->intValue, e);
       if (i < 0 || i >= e)
         error("tuple index out of range (expected 0..{}, got {})", e, i);
-      return transform(N<DotExpr>(clone(expr), mm->second[i].first));
+      return transform(N<DotExpr>(clone(expr), mm->second.fields[i].name));
     } else if (auto sx = CAST(index, StaticExpr)) {
       map<string, types::Generic> m;
       auto sv = StaticVisitor(m);
@@ -414,7 +414,7 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
       int i = translateIndex(r.second, e);
       if (i < 0 || i >= e)
         error("tuple index out of range (expected 0..{}, got {})", e, i);
-      return transform(N<DotExpr>(clone(expr), mm->second[i].first));
+      return transform(N<DotExpr>(clone(expr), mm->second.fields[i].name));
     } else if (auto i = CAST(index, SliceExpr)) {
       if (!getInt(&s, i->start) || !getInt(&e, i->stop) || !getInt(&st, i->step))
         return nullptr;
@@ -428,7 +428,7 @@ void TypecheckVisitor::visit(const IndexExpr *expr) {
         if (i < 0 || i >= tuple->args.size())
           error("tuple index out of range (expected 0..{}, got {})", tuple->args.size(),
                 i);
-        te.push_back(N<DotExpr>(clone(expr), mm->second[i].first));
+        te.push_back(N<DotExpr>(clone(expr), mm->second.fields[i].name));
       }
       return transform(N<CallExpr>(
           N<DotExpr>(N<IdExpr>(format(".Tuple.{}", te.size())), "__new__"), move(te)));
@@ -471,7 +471,7 @@ void TypecheckVisitor::visit(const StackAllocExpr *expr) {
 
 ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *args) {
   auto isMethod = [&](FuncTypePtr f) {
-    auto ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
+    auto ast = ctx->cache->functions[f->name].ast.get();
     return in(ast->attributes, ATTR_NOT_STATIC);
   };
   auto deactivateUnbounds = [&](Type *t) {
@@ -485,7 +485,8 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
   if (lhs->getType()->getUnbound()) {
     typ = ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
   } else if (auto c = lhs->getType()->getClass()) {
-    if (auto m = ctx->findMethod(c->name, expr->member)) {
+    auto m = ctx->findMethod(c->name, expr->member);
+    if (!m.empty()) {
       if (args) {
         vector<pair<string, TypePtr>> targs;
         if (!lhs->isType())
@@ -510,7 +511,7 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
       }
 
       FuncTypePtr bestCall = nullptr;
-      if (m->size() > 1) {
+      if (m.size() > 1) {
         // need to check is this a callable that we can use to instantiate the type
         if (expr->getType() && expr->getType()->getClass()) {
           auto dc = expr->getType()->getClass();
@@ -532,11 +533,11 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
           }
         }
       } else {
-        bestCall = (*m)[0];
+        bestCall = m[0];
       }
       if (!bestCall) {
         // TODO: fix this and have better method for handling these cases
-        bestCall = (*m)[0];
+        bestCall = m[0];
       }
       if (lhs->isType()) {
         auto name = bestCall->name;
@@ -557,7 +558,7 @@ ExprPtr TypecheckVisitor::visitDot(const DotExpr *expr, vector<CallExpr::Arg> *a
         args.push_back(move(lhs));
         for (int i = 0; i < std::max(1, (int)f->args.size() - 2); i++)
           args.push_back(N<EllipsisExpr>());
-        auto ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
+        auto ast = ctx->cache->functions[f->name].ast.get();
         if (in(ast->attributes, "property"))
           args.pop_back();
         return transform(N<CallExpr>(N<IdExpr>(bestCall->name), move(args)));
@@ -656,7 +657,7 @@ ExprPtr TypecheckVisitor::parseCall(const CallExpr *expr, types::TypePtr inType,
 
   FunctionStmt *ast = nullptr;
   if (auto ff = calleeType->getFunc()) {
-    ast = (FunctionStmt *)(ctx->cache->asts[ff->name].get());
+    ast = ctx->cache->functions[ff->name].ast.get();
   }
 
   // Handle named and default arguments
@@ -1246,6 +1247,8 @@ void TypecheckVisitor::visit(const ClassStmt *stmt) {
                               N<SuiteStmt>(), map<string, string>(stmt->attributes));
   else
     resultStmt = N<SuiteStmt>(parseClass(stmt));
+  if (in(stmt->attributes, "extend"))
+    ctx->extendEtape++;
 }
 
 vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
@@ -1276,7 +1279,7 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
     ctx->typecheckLevel++;
     for (auto &a : stmt->args) {
       auto t = transformType(a.type)->getType()->generalize(ctx->typecheckLevel - 1);
-      ctx->cache->classFields[stmt->name].push_back({a.name, t});
+      ctx->cache->classes[stmt->name].fields.push_back({a.name, t});
       if (stmt->isRecord())
         ct->args.push_back(t);
     }
@@ -1303,20 +1306,17 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
       auto f = CAST(t, FunctionStmt)->name;
       auto ss = CAST(s, FunctionStmt)->signature();
       auto fp = ctx->findInVisited(f).second->getFunc();
-      auto &v =
-          ctx->cache->classMethods[stmt->name][ctx->cache->reverseIdentifierLookup[f]];
+      auto &v = ctx->cache->classes[stmt->name]
+                    .methods[ctx->cache->reverseIdentifierLookup[f]];
       bool found = false;
       for (auto &i : v) {
-        auto ast = (FunctionStmt *)(ctx->cache->asts[i->name].get());
-        assert(ast);
-        if (ast->signature() == ss) {
-          i = fp;
+        if (i.name == f) {
+          i.type = fp;
           found = true;
           break;
         }
       }
-      if (!found)
-        v.push_back(fp);
+      seqassert(found, "cannot find matching method for {}", f);
       stmts.push_back(move(t));
     }
   ctx->typecheckLevel--;
@@ -1332,15 +1332,11 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
   }
 
   LOG_REALIZE("[class] {} (parent={})", ct->toString(), printParents(ct->parent));
-  for (auto &m : ctx->cache->classFields[stmt->name])
-    LOG_REALIZE("       - member: {}: {}", m.first, m.second->toString());
-  for (auto &m : ctx->cache->classMethods[stmt->name])
-    for (auto &f : m.second) {
-      // auto tmp = (FunctionStmt *)(ctx->cache->asts[f->name].get());
-      // if (f->canRealize() && !in(tmp->attributes, "delay"))
-      // realizeFunc(ctx->instantiate(getSrcInfo(), f)->getFunc());
-      LOG_REALIZE("       - method: {}: {}", m.first, f->toString());
-    }
+  for (auto &m : ctx->cache->classes[stmt->name].fields)
+    LOG_REALIZE("       - member: {}: {}", m.name, m.type->toString());
+  for (auto &m : ctx->cache->classes[stmt->name].methods)
+    for (auto &f : m.second)
+      LOG_REALIZE("       - method: {}: {}", f.name, f.type->toString());
   return stmts;
 }
 
@@ -1536,19 +1532,19 @@ TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
                                const vector<pair<string, types::TypePtr>> &args,
                                bool failOnMultiple, types::TypePtr retType) {
   auto m = ctx->findMethod(c->name, member);
-  if (!m)
+  if (m.empty())
     return nullptr;
-  if (m->size() == 1) // works
-    return (*m)[0];
+  if (m.size() == 1) // works
+    return m[0];
 
   // TODO: For now, overloaded functions are only possible in magic methods
   if (member.substr(0, 2) != "__" || member.substr(member.size() - 2) != "__")
     error("overloaded non-magic method {} in {}", member, c->toString());
 
   vector<pair<int, int>> scores;
-  for (int i = 0; i < m->size(); i++) {
+  for (int i = 0; i < m.size(); i++) {
     auto mt = dynamic_pointer_cast<FuncType>(
-        ctx->instantiate(getSrcInfo(), (*m)[i], c.get(), false));
+        ctx->instantiate(getSrcInfo(), m[i], c.get(), false));
 
     vector<pair<string, TypePtr>> reorderedArgs;
     int s;
@@ -1613,7 +1609,7 @@ TypecheckVisitor::findBestCall(ClassTypePtr c, const string &member,
     //   else
     //     break;
   }
-  return (*m)[scores[0].second];
+  return m[scores[0].second];
 }
 
 vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &generics,
@@ -1664,10 +1660,10 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
   auto t = tt->getFunc();
   assert(t && t->canRealize());
   try {
-    auto it = ctx->cache->realizations[t->name].find(t->realizeString());
-    if (it != ctx->cache->realizations[t->name].end()) {
-      forceUnify(t, it->second);
-      return it->second;
+    auto it = ctx->cache->functions[t->name].realizations.find(t->realizeString());
+    if (it != ctx->cache->functions[t->name].realizations.end()) {
+      forceUnify(t, it->second.type);
+      return it->second.type;
     }
 
     int depth = 1;
@@ -1701,7 +1697,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     ctx->addBlock();
     ctx->typecheckLevel++;
     ctx->bases.push_back({t->name, t, t->args[0]});
-    auto *ast = (FunctionStmt *)(ctx->cache->asts[t->name].get());
+    auto *ast = ctx->cache->functions[t->name].ast.get();
     addFunctionGenerics(t);
     // There is no AST linked to internal functions, so just ignore them
     bool isInternal = in(ast->attributes, ATTR_INTERNAL);
@@ -1715,7 +1711,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
 
     // Need to populate funcRealization in advance to make recursive functions
     // viable
-    ctx->cache->realizations[t->name][t->realizeString()] = t;
+    ctx->cache->functions[t->name].realizations[t->realizeString()] = {t, nullptr};
     ctx->bases[0].visitedAsts[t->realizeString()] = {TypecheckItem::Func,
                                                      t}; // realizations go to the top
     // ctx->getRealizations()->realizationLookup[t->realizeString()] = name;
@@ -1743,7 +1739,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
       args.emplace_back(Param{i.name, nullptr, nullptr});
 
     LOG_REALIZE("done with {}", t->realizeString());
-    ctx->cache->realizationAsts[t->realizeString()] =
+    ctx->cache->functions[t->name].realizations[t->realizeString()].ast =
         Nx<FunctionStmt>(ast, t->realizeString(), nullptr, vector<Param>(), move(args),
                          move(realized), map<string, string>(ast->attributes));
     ctx->bases.pop_back();
@@ -1764,21 +1760,20 @@ types::TypePtr TypecheckVisitor::realizeType(types::TypePtr tt) {
   auto t = tt->getClass();
   assert(t && t->canRealize());
   try {
-    auto it = ctx->cache->realizations[t->name].find(t->realizeString());
-    if (it != ctx->cache->realizations[t->name].end())
-      return it->second;
+    auto it = ctx->cache->classes[t->name].realizations.find(t->realizeString());
+    if (it != ctx->cache->classes[t->name].realizations.end())
+      return it->second.type;
 
     LOG_REALIZE("[realize] ty {} -> {}", t->name, t->realizeString());
     ctx->bases[0].visitedAsts[t->realizeString()] = {TypecheckItem::Type,
                                                      t}; // realizations go to the top
-    ctx->cache->realizations[t->name][t->realizeString()] = t;
-    for (auto &m : ctx->cache->classFields[t->name]) {
-      auto mt = ctx->instantiate(t->getSrcInfo(), m.second, t.get());
-      LOG_REALIZE("- member: {} -> {}: {}", m.first, m.second->toString(),
-                  mt->toString());
+    ctx->cache->classes[t->name].realizations[t->realizeString()] = {t, {}};
+    for (auto &m : ctx->cache->classes[t->name].fields) {
+      auto mt = ctx->instantiate(t->getSrcInfo(), m.type, t.get());
+      LOG_REALIZE("- member: {} -> {}: {}", m.name, m.type->toString(), mt->toString());
       assert(mt->getClass() && mt->getClass()->canRealize());
-      ctx->cache->fieldRealizations[t->realizeString()].push_back(
-          {m.first, realizeType(mt->getClass())});
+      ctx->cache->classes[t->name].realizations[t->realizeString()].fields.push_back(
+          {m.name, realizeType(mt->getClass())});
     }
     return t;
     // ctx->getRealizations()->realizationLookup[rs] = t->name;
@@ -1800,6 +1795,8 @@ StmtPtr TypecheckVisitor::realizeBlock(const StmtPtr &stmt, bool keepLast) {
   int minUnbound = ctx->cache->unboundCount;
   for (int iter = 0, prevSize = INT_MAX;; iter++, ctx->iteration++) {
     ctx->addBlock();
+    if (keepLast) // reset extendCount in whole code loop
+      ctx->extendEtape = 0;
     result = TypecheckVisitor(ctx).transform(result ? result : stmt);
 
     int newUnbounds = 0;
@@ -1879,7 +1876,7 @@ int TypecheckVisitor::reorder(const vector<pair<string, TypePtr>> &args,
 
   int score = reorderedArgs.size() * 2;
 
-  FunctionStmt *ast = (FunctionStmt *)(ctx->cache->asts[f->name].get());
+  FunctionStmt *ast = ctx->cache->functions[f->name].ast.get();
   seqassert(ast, "AST not accessible for {}", f->name);
   for (int i = 0, ra = reorderedArgs.size(); i < argIndex.size(); i++) {
     if (i >= ra) {

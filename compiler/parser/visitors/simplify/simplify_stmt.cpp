@@ -412,7 +412,7 @@ void SimplifyVisitor::visit(const ImportStmt *stmt) {
       else
         processStmt(sn);
       // Add it to the toplevel manually and set ATTR_BUILTIN to realize them ASAP.
-      ctx->cache->asts[import->second.importVar] = N<FunctionStmt>(
+      ctx->cache->functions[import->second.importVar].ast = N<FunctionStmt>(
           import->second.importVar, nullptr, vector<Param>{}, vector<Param>{},
           N<SuiteStmt>(move(stmts)), vector<string>{ATTR_BUILTIN});
       preambleStmts->emplace_back(
@@ -557,7 +557,7 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
       N<FunctionStmt>(canonicalName, clone(f->ret), clone_nop(f->generics),
                       clone_nop(f->args), nullptr, map<string, string>(f->attributes));
   // Make sure to cache this (generic) AST for later realization.
-  ctx->cache->asts[canonicalName] = move(f);
+  ctx->cache->functions[canonicalName].ast = move(f);
 }
 
 /// Transforms type definitions and extensions.
@@ -588,16 +588,16 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
       ctx->add(SimplifyItem::Type, stmt->name, canonicalName, ctx->isToplevel());
     originalAST = stmt;
   } else {
+    ctx->extendCount += 1;
     // Find the canonical name of a class that is to be extended
     auto val = ctx->find(stmt->name);
     if (!val || val->kind != SimplifyItem::Type)
       error("cannot find type '{}' to extend", stmt->name);
     canonicalName = val->canonicalName;
-    const auto &astIter = ctx->cache->asts.find(canonicalName);
-    seqassert(astIter != ctx->cache->asts.end(), "cannot find AST for {}",
+    const auto &astIter = ctx->cache->classes.find(canonicalName);
+    seqassert(astIter != ctx->cache->classes.end(), "cannot find AST for {}",
               canonicalName);
-    originalAST = astIter->second->getClass();
-    seqassert(originalAST, "AST for {} is not a class", canonicalName);
+    originalAST = astIter->second.ast.get();
     if (originalAST->generics.size() != stmt->generics.size())
       error("generics do not match");
     for (int i = 0; i < originalAST->generics.size(); i++)
@@ -654,7 +654,7 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
     }
 
     // Create a cached AST.
-    ctx->cache->asts[canonicalName] = N<ClassStmt>(
+    ctx->cache->classes[canonicalName].ast = N<ClassStmt>(
         canonicalName, move(newGenerics), move(args), N<SuiteStmt>(vector<StmtPtr>()),
         map<string, string>(stmt->attributes));
 
@@ -699,10 +699,15 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
     for (auto sp : getClassMethods(stmt->suite.get()))
       suite->stmts.push_back(transform(sp));
   }
+  for (auto &m : suite->stmts)
+    if (auto f = m->getFunction())
+      ctx->cache->classes[canonicalName]
+          .methods[ctx->cache->reverseIdentifierLookup[f->name]]
+          .push_back({f->name, nullptr, ctx->extendCount});
   ctx->bases.pop_back();
   ctx->popBlock();
 
-  auto c = const_cast<ClassStmt *>(ctx->cache->asts[canonicalName]->getClass());
+  auto c = ctx->cache->classes[canonicalName].ast.get();
   if (!extension) {
     // Update the cached AST.
     seqassert(c, "not a class AST for {}", canonicalName);
@@ -715,7 +720,7 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
         break;
       }
     c->attributes[ATTR_PARENT_FUNCTION] = parentFunc;
-    resultStmt = clone(ctx->cache->asts[canonicalName]);
+    resultStmt = clone(ctx->cache->classes[canonicalName].ast);
   } else {
     resultStmt = N<ClassStmt>(canonicalName, clone_nop(c->generics), vector<Param>{},
                               move(suite), map<string, string>(stmt->attributes));
@@ -852,11 +857,11 @@ StmtPtr SimplifyVisitor::parseCImport(const string &name, const vector<Param> &a
   }
   ctx->add(SimplifyItem::Func, altName.empty() ? name : altName, canonicalName,
            ctx->isToplevel());
-  auto f = N<FunctionStmt>(
-      canonicalName, ret ? transformType(ret) : transformType(N<IdExpr>("void").get()),
-      vector<Param>(), move(fnArgs), nullptr, vector<string>{ATTR_EXTERN_C});
-  ctx->cache->asts[canonicalName] = clone(f);
-  return f;
+  return clone(ctx->cache->functions[canonicalName].ast = N<FunctionStmt>(
+                   canonicalName,
+                   ret ? transformType(ret) : transformType(N<IdExpr>("void").get()),
+                   vector<Param>(), move(fnArgs), nullptr,
+                   vector<string>{ATTR_EXTERN_C}));
 }
 
 StmtPtr SimplifyVisitor::parseCDylibImport(const Expr *dylib, const string &name,

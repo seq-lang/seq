@@ -95,55 +95,56 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
       make_shared<CodegenContext>(cache, block, (seq::BaseFunc *)module, nullptr);
 
   // Now add all realization stubs
-  for (auto &ff : cache->realizations)
-    for (auto &f : ff.second) {
-      auto t = ctx->realizeType(f.second->getClass().get());
+  for (auto &ff : cache->classes)
+    for (auto &f : ff.second.realizations) {
+      auto t = ctx->realizeType(f.second.type.get());
       ctx->addType(f.first, t);
     }
-  for (auto &ff : cache->realizations)
-    for (auto &f : ff.second)
-      if (auto t = f.second->getFunc()) {
-        auto ast = (FunctionStmt *)(cache->asts[ff.first].get());
-        if (in(ast->attributes, ATTR_INTERNAL)) {
-          vector<seq::types::Type *> types;
-          auto p = t->parent;
-          assert(in(ast->attributes, ATTR_PARENT_CLASS));
-          if (!in(ast->attributes, ATTR_NOT_STATIC)) { // hack for non-generic types
-            for (auto &x :
-                 ctx->cache->realizations[ast->attributes[ATTR_PARENT_CLASS]]) {
-              if (startswith(t->realizeString(), x.first)) {
-                p = x.second;
-                break;
-              }
+  for (auto &ff : cache->functions)
+    for (auto &f : ff.second.realizations) {
+      auto t = f.second.type;
+      assert(t);
+      auto ast = cache->functions[ff.first].ast.get();
+      if (in(ast->attributes, ATTR_INTERNAL)) {
+        vector<seq::types::Type *> types;
+        auto p = t->parent;
+        assert(in(ast->attributes, ATTR_PARENT_CLASS));
+        if (!in(ast->attributes, ATTR_NOT_STATIC)) { // hack for non-generic types
+          for (auto &x :
+               ctx->cache->classes[ast->attributes[ATTR_PARENT_CLASS]].realizations) {
+            if (startswith(t->realizeString(), x.first)) {
+              p = x.second.type;
+              break;
             }
           }
-          seqassert(p && p->getClass(), "parent must be set ({}) for {}; parent={}",
-                    p ? p->toString() : "-", t->toString(),
-                    ast->attributes[ATTR_PARENT_CLASS]);
-          seq::types::Type *typ = ctx->realizeType(p->getClass().get());
-          int startI = 1;
-          if (!ast->args.empty() && ast->args[0].name == "self")
-            startI = 2;
-          for (int i = startI; i < t->args.size(); i++)
-            types.push_back(ctx->realizeType(t->args[i]->getClass().get()));
-
-          auto names = split(ast->name, '.');
-          auto name = names.back();
-          if (std::isdigit(name[0])) // TODO: get rid of this hack
-            name = names[names.size() - 2];
-          LOG_REALIZE("[codegen] generating internal fn {} -> {}", ast->name, name);
-          ctx->functions[f.first] = {typ->findMagic(name, types), true};
-        } else if (in(ast->attributes, "llvm")) {
-          auto fn = new seq::LLVMFunc();
-          fn->setName(f.first);
-          ctx->functions[f.first] = {fn, false};
-        } else {
-          auto fn = new seq::Func();
-          fn->setName(f.first);
-          ctx->functions[f.first] = {fn, false};
         }
-        ctx->addFunc(f.first, ctx->functions[f.first].first);
+        seqassert(p && p->getClass(), "parent must be set ({}) for {}; parent={}",
+                  p ? p->toString() : "-", t->toString(),
+                  ast->attributes[ATTR_PARENT_CLASS]);
+        seq::types::Type *typ = ctx->realizeType(p->getClass().get());
+        int startI = 1;
+        if (!ast->args.empty() && ast->args[0].name == "self")
+          startI = 2;
+        for (int i = startI; i < t->args.size(); i++)
+          types.push_back(ctx->realizeType(t->args[i]->getClass().get()));
+
+        auto names = split(ast->name, '.');
+        auto name = names.back();
+        if (std::isdigit(name[0])) // TODO: get rid of this hack
+          name = names[names.size() - 2];
+        LOG_REALIZE("[codegen] generating internal fn {} -> {}", ast->name, name);
+        ctx->functions[f.first] = {typ->findMagic(name, types), true};
+      } else if (in(ast->attributes, "llvm")) {
+        auto fn = new seq::LLVMFunc();
+        fn->setName(f.first);
+        ctx->functions[f.first] = {fn, false};
+      } else {
+        auto fn = new seq::Func();
+        fn->setName(f.first);
+        ctx->functions[f.first] = {fn, false};
       }
+      ctx->addFunc(f.first, ctx->functions[f.first].first);
+    }
   CodegenVisitor(ctx).transform(stmts);
   return module;
 }
@@ -448,20 +449,20 @@ void CodegenVisitor::visit(const ThrowStmt *stmt) {
 }
 
 void CodegenVisitor::visit(const FunctionStmt *stmt) {
-  for (auto &real : ctx->cache->realizations[stmt->name]) {
+  for (auto &real : ctx->cache->functions[stmt->name].realizations) {
     auto &fp = ctx->functions[real.first];
     if (fp.second)
       continue;
     fp.second = true;
 
-    auto ast = (FunctionStmt *)(ctx->cache->realizationAsts[real.first].get());
+    const auto &ast = real.second.ast;
     assert(ast);
     if (in(ast->attributes, ATTR_INTERNAL))
       continue;
 
     vector<string> names;
     vector<seq::types::Type *> types;
-    auto t = real.second->getFunc();
+    auto t = real.second.type;
     for (int i = 1; i < t->args.size(); i++) {
       types.push_back(realizeType(t->args[i]->getClass().get()));
       names.push_back(ast->args[i - 1].name);
