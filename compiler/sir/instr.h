@@ -146,6 +146,9 @@ public:
 
   types::Type *getType() const override;
 
+  /// @return the func
+  const ValuePtr &getFunc() const { return func; }
+
   /// @return an iterator to the first argument
   iterator begin() { return args.begin(); }
   /// @return an iterator beyond the last argument
