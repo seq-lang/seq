@@ -38,7 +38,7 @@ public:
 };
 
 using IntConstant = TemplatedConstant<seq_int_t>;
-using FloatConstant = TemplatedConstant<float>;
+using FloatConstant = TemplatedConstant<double>;
 using BoolConstant = TemplatedConstant<bool>;
 using StringConstant = TemplatedConstant<std::string>;
 

@@ -79,7 +79,7 @@ public:
 
   DEFAULT_VISIT(Constant);
   DEFAULT_VISIT(TemplatedConstant<seq_int_t>);
-  DEFAULT_VISIT(TemplatedConstant<float>);
+  DEFAULT_VISIT(TemplatedConstant<double>);
   DEFAULT_VISIT(TemplatedConstant<bool>);
   DEFAULT_VISIT(TemplatedConstant<std::string>);
 
