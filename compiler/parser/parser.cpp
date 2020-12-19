@@ -20,8 +20,8 @@
 #include "parser/visitors/format/format.h"
 #include "parser/visitors/simplify/simplify.h"
 #include "parser/visitors/typecheck/typecheck.h"
-#include "util/fmt/format.h"
 #include "sir/sir.h"
+#include "util/fmt/format.h"
 
 int _ocaml_time = 0;
 int _ll_time = 0;

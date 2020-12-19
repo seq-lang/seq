@@ -75,7 +75,7 @@ void CodegenContext::popSeries() {
     topBlockIndex--;
 }
 
-//void CodegenContext::initJIT() {
+// void CodegenContext::initJIT() {
 //  jit = new seq::SeqJIT();
 //  auto fn = new seq::Func();
 //  fn->setName(".jit_0");
@@ -86,7 +86,7 @@ void CodegenContext::popSeries() {
 //  execJIT();
 //}
 //
-//void CodegenContext::execJIT(string varName, seq::Expr *varExpr) {
+// void CodegenContext::execJIT(string varName, seq::Expr *varExpr) {
 //  // static int counter = 0;
 //
 //  // assert(jit != nullptr);

@@ -145,8 +145,8 @@ void CodegenVisitor::visit(const BoolExpr *expr) {
 }
 
 void CodegenVisitor::visit(const IntExpr *expr) {
-    result = ctx->getModule()->Nxs<IntConstant>(expr, expr->intValue,
-                                      realizeType(expr->getType()->getClass()));
+  result = ctx->getModule()->Nxs<IntConstant>(expr, expr->intValue,
+                                              realizeType(expr->getType()->getClass()));
 }
 
 void CodegenVisitor::visit(const FloatExpr *expr) {
@@ -517,25 +517,27 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       auto sp = CAST(e->expr, StringExpr);
       assert(sp);
 
-// TODO: move LLVM type logic to backend
+      // TODO: move LLVM type logic to backend
 
-//      fmt::dynamic_format_arg_store<fmt::format_context> store;
-//      //        LOG("{}", real.first);
-//      //        LOG("--> {}", sp->value);
-//      auto &ss = ast->suite->getSuite()->stmts;
-//      for (int i = 1; i < ss.size(); i++) {
-//        auto &ex = ss[i]->getExpr()->expr;
-//        if (auto ei = ex->getInt()) { // static expr
-//          store.push_back(ei->intValue);
-//        } else {
-//          seqassert(ex->isType() && ex->getType(), "invalid LLVM type argument {}",
-//                    ex->toString());
-//          store.push_back(
-//              realizeType(ex->getType()->getClass())->getLLVMTypeStr());
-//        }
-//        //        LOG("--> {}", ex->getType() ? ex->getType()->toString() : "-");
-//      }
-//      string res = fmt::vformat(sp->value, store);
+      //      fmt::dynamic_format_arg_store<fmt::format_context> store;
+      //      //        LOG("{}", real.first);
+      //      //        LOG("--> {}", sp->value);
+      //      auto &ss = ast->suite->getSuite()->stmts;
+      //      for (int i = 1; i < ss.size(); i++) {
+      //        auto &ex = ss[i]->getExpr()->expr;
+      //        if (auto ei = ex->getInt()) { // static expr
+      //          store.push_back(ei->intValue);
+      //        } else {
+      //          seqassert(ex->isType() && ex->getType(), "invalid LLVM type argument
+      //          {}",
+      //                    ex->toString());
+      //          store.push_back(
+      //              realizeType(ex->getType()->getClass())->getLLVMTypeStr());
+      //        }
+      //        //        LOG("--> {}", ex->getType() ? ex->getType()->toString() :
+      //        "-");
+      //      }
+      //      string res = fmt::vformat(sp->value, store);
       // if (ss.size() > 1)
       // LOG("[FINAL] {} -->\n {}", real.first, res);
 
@@ -560,7 +562,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
         else
           lines.push_back(l);
       }
-      f->setLLVM(move(declare), move(code));
+      f->setLLVM(move(declare), join(lines, "\n"));
     } else {
       auto f = dynamic_cast<seq::ir::Func *>(fp.first);
       assert(f);

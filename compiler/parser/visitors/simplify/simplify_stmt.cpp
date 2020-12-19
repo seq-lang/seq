@@ -230,12 +230,30 @@ void SimplifyVisitor::visit(const ForStmt *stmt) {
 
 /// Transforms all if conditions to condition.__bool__()
 void SimplifyVisitor::visit(const IfStmt *stmt) {
-  vector<IfStmt::If> ifs;
-  for (auto &i : stmt->ifs)
-    ifs.push_back({transform(i.cond ? N<CallExpr>(N<DotExpr>(clone(i.cond), "__bool__"))
-                                    : nullptr),
-                   transform(i.suite)});
-  resultStmt = N<IfStmt>(move(ifs));
+  if (stmt->ifs.size() == 1 && !stmt->ifs[0].cond) {
+    resultStmt = transform(stmt->ifs[0].suite);
+    return;
+  }
+
+  vector<IfStmt::If> topIf;
+  vector<IfStmt::If> subIf;
+
+  for (auto i = 0; i < stmt->ifs.size(); ++i) {
+    if (i == 0) {
+      topIf.push_back(
+          {transform(N<CallExpr>(N<DotExpr>(clone(stmt->ifs[i].cond), "__bool__"))),
+           transform(stmt->ifs[i].suite)});
+    } else {
+      subIf.push_back({clone(stmt->ifs[i].cond), clone(stmt->ifs[i].suite)});
+    }
+  }
+
+  if (subIf.empty()) {
+    resultStmt = N<IfStmt>(move(topIf));
+  } else {
+    topIf.push_back({nullptr, transform(N<IfStmt>(move(subIf)))});
+    resultStmt = N<IfStmt>(move(topIf));
+  }
 }
 
 void SimplifyVisitor::visit(const MatchStmt *stmt) {

@@ -12,8 +12,8 @@
 #include "parser/common.h"
 #include "parser/ctx.h"
 
-#include "sir/types/types.h"
 #include "sir/sir.h"
+#include "sir/types/types.h"
 
 namespace seq {
 namespace ast {

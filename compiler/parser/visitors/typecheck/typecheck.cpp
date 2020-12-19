@@ -321,9 +321,10 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
         assert(val && val->isStatic());
         auto t = val->getType()->follow();
         m[g] = {g, t,
-                t->getLink()                       ? t->getLink()->id
-                : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
-                                                   : 0};
+                t->getLink()
+                    ? t->getLink()->id
+                    : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
+                                                       : 0};
       }
       auto sv = StaticVisitor(m);
       sv.transform(s->expr);

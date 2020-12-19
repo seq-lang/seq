@@ -59,7 +59,7 @@ std::ostream &Func::doFormat(std::ostream &os) const {
   } else if (external) {
     fmt::print(os, FMT_STRING("external\n"));
   } else if (llvm) {
-    fmt::print(os, FMT_STRING("llvm:\n{}"), llvmBody);
+    fmt::print(os, FMT_STRING("llvm:\n{}\n"), llvmBody);
   } else {
     fmt::print(os, FMT_STRING("{}\n"), *body);
   }

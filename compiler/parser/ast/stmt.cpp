@@ -144,8 +144,8 @@ ForStmt::ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite)
 }
 ForStmt::ForStmt(const ForStmt &stmt)
     : Stmt(stmt), var(ast::clone(stmt.var)), iter(ast::clone(stmt.iter)),
-      suite(ast::clone(stmt.suite)), elseSuite(ast::clone(stmt.elseSuite)), done(ast::clone(stmt.done)),
-      next(ast::clone(stmt.next)) {}
+      suite(ast::clone(stmt.suite)), elseSuite(ast::clone(stmt.elseSuite)),
+      done(ast::clone(stmt.done)), next(ast::clone(stmt.next)) {}
 
 string ForStmt::toString() const {
   return format("[FOR {} {} {}{}]", var->toString(), iter->toString(),
