@@ -82,6 +82,8 @@ struct SuiteStmt : public Stmt {
   SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, bool ownBlock = false);
   /// Three-statement suite constructor.
   SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, StmtPtr stmt3, bool o = false);
+  /// Empty suite constructor;
+  SuiteStmt();
   SuiteStmt(const SuiteStmt &stmt);
 
   string toString() const override;
@@ -90,11 +92,11 @@ struct SuiteStmt : public Stmt {
 
   const SuiteStmt *getSuite() const override { return this; }
   const Stmt *firstInBlock() const override {
-    return stmts.empty() ? nullptr : stmts[0].get();
+    return stmts.empty() ? nullptr : stmts[0]->firstInBlock();
   }
 
-  /// Flatten all nested SuiteStmts that do not own a block in the statement vector.
-  /// This is shallow flattening.
+  /// Flatten all nested SuiteStmt objects that do not own a block in the statement
+  /// vector. This is shallow flattening.
   static void flatten(StmtPtr s, vector<StmtPtr> &stmts);
 };
 

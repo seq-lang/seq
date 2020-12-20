@@ -196,6 +196,26 @@ print a[0], a[1] #: 5 5
 #%% call_array_error,barebones
 a = __array__[int](2, 3) #! ERROR: __array__ only accepts a single argument (size)
 
+#%% lambda
+l = lambda a, b: a + b
+print l(1, 2) #: 3
+
+e = 5
+lp = lambda x: x + e
+print lp(1) #: 6
+
+e = 7
+print lp(2) #: 9
+
+def foo[T](a: T, l: Function[T, T]):
+    return l(a)
+print foo(4, lp) #: 11
+
+#%% nested_lambda,barebones
+def foo():
+    print list(a*a for a in range(3))
+foo()  #: [0, 1, 4]
+
 #%% continue_error,barebones
 continue #! ERROR: continue outside of a loop
 
@@ -411,7 +431,7 @@ def foo():
 def foo():
     b = 1
     def bar():
-        global b #! ERROR: not a global variable
+        global b #! ERROR: not a top-level variable
 
 #%% global_ref,barebones
 a = [1]
@@ -513,6 +533,11 @@ def foo():
     @builtin
     def bar(): pass #! ERROR: builtins must be defined at the toplevel
 
+#%% function_err_2,barebones
+def f[T: str]():
+    pass
+#! ERROR: only integer static generics are supported
+
 #%% function_llvm_err_1,barebones
 @llvm
 def foo():
@@ -587,14 +612,6 @@ class Foo[T]:
 #! ERROR: generics do not match
 
 #%% class_err_6,barebones
-class Foo[T, U]:
-    pass
-@extend
-class Foo[T, V]:
-    pass
-#! ERROR: generics do not match
-
-#%% class_err_6,barebones
 class Foo[U = int]:
     pass
 #! ERROR: default generics not supported in classes
@@ -615,6 +632,50 @@ class Foo:
 class Foo:
     while True: pass
 #! ERROR: parsing error: 'while'
+
+#%% class_err_9,barebones
+class F[T: str]:
+    pass
+#! ERROR: only integer static generics are supported
+
+#%% class_err_10,barebones
+def foo[T]():
+    class A:
+        x: T
+#! ERROR: identifier 'T' not found (classes cannot access outer function identifiers)
+
+#%% class_err_11,barebones
+def foo(x):
+    class A:
+        def bar():
+            print x
+#! ERROR: cannot access non-global variable 'x'
+
+#%% class_err_12,barebones
+def foo(x):
+    T = typeof(x)
+    class A:
+        def bar():
+            print T()
+#! ERROR: identifier 'T' not found (classes cannot access outer function identifiers)
+
+#%% recursive_class,barebones
+class Node[T]:
+    data: T
+    children: List[Node[T]]
+    def __init__(self, data: T):
+        self.data = data
+        self.children = List[Node[T]]()
+print Node(2).data #: 2
+
+class Node2:
+    data: int
+    children: List[Node2]
+    def __init__(self, data: int):
+        self.data = data
+        self.children = List[Node2]()
+print Node2(3).data #: 3
+
 
 #%% magic,barebones
 @tuple

@@ -794,3 +794,43 @@ Value *SpecialExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   assert(0);
   return nullptr;
 }
+//
+// BaseFunc *getSpecial(const string &name, vector<types::Type * t>) {
+//  std::vector<types::Type *> argsFull(args);
+//  if (!isStatic)
+//    argsFull.insert(argsFull.begin(), type);
+//
+//  return new BaseFuncLite(argsFull, out, [this, argsFull](Module *module) {
+//    LLVMContext &context = module->getContext();
+//    std::vector<Type *> types;
+//    for (auto *arg : argsFull)
+//      types.push_back(arg->getLLVMType(context));
+//
+//    static int idx = 1;
+//    auto *func = cast<Function>(module->getOrInsertFunction(
+//        "seq.magic." + name + "." + std::to_string(idx++),
+//        FunctionType::get(out->getLLVMType(context), types, false)));
+//    func->setLinkage(GlobalValue::PrivateLinkage);
+//
+//    BasicBlock *entry = BasicBlock::Create(context, "entry", func);
+//
+//    std::vector<Value *> args;
+//    for (auto &arg : func->args())
+//      args.push_back(&arg);
+//
+//    Value *self = nullptr;
+//    if (!isStatic && !args.empty()) {
+//      self = args[0];
+//      args.erase(args.begin());
+//    }
+//
+//    IRBuilder<> builder(entry);
+//    Value *result = codegen(self, args, builder);
+//    if (result)
+//      builder.CreateRet(result);
+//    else
+//      builder.CreateRetVoid();
+//
+//    return func;
+//  });
+//}

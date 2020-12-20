@@ -67,3 +67,4 @@ dox
 scratch.seq
 tmp
 _*
+gtest_parallel.py

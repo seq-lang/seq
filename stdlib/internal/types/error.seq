@@ -230,6 +230,3 @@ def check_errno(prefix: str):
 def _make_assert_error(msg: str) -> AssertionError:
     return AssertionError(msg)
 
-@builtin
-def _handle_exit(e: SystemExit):
-    exit(e.status)

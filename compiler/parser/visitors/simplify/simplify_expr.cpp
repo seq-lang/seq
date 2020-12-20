@@ -32,7 +32,7 @@ ExprPtr SimplifyVisitor::transform(const ExprPtr &expr) {
 ExprPtr SimplifyVisitor::transform(const Expr *expr, bool allowTypes) {
   if (!expr)
     return nullptr;
-  SimplifyVisitor v(ctx, preambleStmts, prependStmts);
+  SimplifyVisitor v(ctx, preamble, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
   expr->accept(v);
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
@@ -88,24 +88,28 @@ void SimplifyVisitor::visit(const IdExpr *expr) {
 
   // If we are accessing an outer non-global variable, raise an error unless
   // we are capturing variables (in that case capture it).
+  bool captured = false;
   if (val->isVar()) {
     if (ctx->getBase() != val->getBase() && !val->isGlobal()) {
-      if (!ctx->captures.empty())
+      if (!ctx->captures.empty()) {
+        captured = true;
         ctx->captures.back().insert(expr->value);
-      else
+      } else {
         error("cannot access non-global variable '{}'", expr->value);
+      }
     }
   }
 
-  // Replace the variable with its canonical name.
-  resultExpr = N<IdExpr>(val->canonicalName.empty() ? expr->value : val->canonicalName);
+  // Replace the variable with its canonical name. Do not canonize captured
+  // variables (they will be later passed as argument names).
+  resultExpr = N<IdExpr>(captured ? expr->value : val->canonicalName);
   // Flag the expression as a type expression if it points to a class name or a generic.
   if (val->isType() && !val->isStatic())
     resultExpr->markType();
 
   // Check if this variable is coming from an enclosing base; if so, ensure that the
   // current base and all bases between the enclosing base point to the enclosing base.
-  for (int i = int(ctx->bases.size()) - 1; i >= 0; i--)
+  for (int i = int(ctx->bases.size()) - 1; i >= 0; i--) {
     if (ctx->bases[i].name == val->getBase()) {
       for (int j = i + 1; j < ctx->bases.size(); j++) {
         ctx->bases[j].parent = std::max(i, ctx->bases[j].parent);
@@ -113,14 +117,19 @@ void SimplifyVisitor::visit(const IdExpr *expr) {
       }
       return;
     }
-  seqassert(val->getBase().empty(), "variable '{}' has invalid base {}", expr->value,
-            val->getBase());
+  }
+  // If that is not the case, we are probably having a class accessing its enclosing
+  // function variable (generic or other identifier). We do not like that!
+  if (!val->getBase().empty())
+    error(
+        "identifier '{}' not found (classes cannot access outer function identifiers)",
+        expr->value);
 }
 
 /// Transform a star-expression *args to:
 ///   List(args.__iter__()).
-/// This function is called only if other nodes (CallExpr, AssignStmt, ListExpr) do not
-/// handle their star-expression cases.
+/// This function is called only if other nodes (CallExpr, AssignStmt, ListExpr) do
+/// not handle their star-expression cases.
 void SimplifyVisitor::visit(const StarExpr *expr) {
   resultExpr = transform(N<CallExpr>(
       N<IdExpr>(".List"), N<CallExpr>(N<DotExpr>(clone(expr->what), "__iter__"))));
@@ -383,8 +392,8 @@ void SimplifyVisitor::visit(const IndexExpr *expr) {
     resultExpr = N<InstantiateExpr>(move(e), move(it));
   } else {
     // For some expressions (e.g. self.foo[N]) we are not yet sure if it is an
-    // instantiation or an element access (the expression might be a function and we do
-    // not know it yet, and all indices are StaticExpr).
+    // instantiation or an element access (the expression might be a function and we
+    // do not know it yet, and all indices are StaticExpr).
     resultExpr =
         N<IndexExpr>(move(e), it.size() == 1 ? move(it[0]) : N<TupleExpr>(move(it)));
   }
@@ -562,7 +571,7 @@ string SimplifyVisitor::generateTupleStub(int len) {
   // Generate all tuples Tuple.(0...len) (to ensure that any slice results in a valid
   // type).
   for (int len_i = 0; len_i <= len; len_i++) {
-    auto typeName = fmt::format("Tuple.{}", len_i);
+    auto typeName = format("Tuple.{}", len_i);
     if (ctx->cache->variardics.find(typeName) == ctx->cache->variardics.end()) {
       ctx->cache->variardics.insert(typeName);
       vector<Param> generics, args;
@@ -575,8 +584,12 @@ string SimplifyVisitor::generateTupleStub(int len) {
                                             nullptr, vector<string>{ATTR_TUPLE});
       stmt->setSrcInfo(ctx->generateSrcInfo());
       // Make sure to generate this in a clean context.
-      SimplifyVisitor(make_shared<SimplifyContext>("<generated>", ctx->cache), nullptr)
-          .transform(stmt);
+      auto nctx = make_shared<SimplifyContext>(FILE_GENERATED, ctx->cache);
+      SimplifyVisitor(nctx, preamble).transform(stmt);
+      auto nval = nctx->find(typeName);
+      seqassert(nval, "cannot find '{}'", typeName);
+      ctx->cache->imports[STDLIB_IMPORT].ctx->addToplevel(typeName, nval);
+      ctx->cache->imports[STDLIB_IMPORT].ctx->addToplevel(nval->canonicalName, nval);
     }
   }
   return format(".Tuple.{}", len);
@@ -655,19 +668,20 @@ ExprPtr SimplifyVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
   ctx->captures.emplace_back(set<string>{});
   for (auto &s : argNames)
     params.emplace_back(Param{s, nullptr, nullptr});
-  auto fs =
-      transform(N<FunctionStmt>(name, nullptr, vector<Param>{}, move(params),
-                                N<SuiteStmt>(move(stmts)), vector<string>{".inline"}));
-  auto f = const_cast<FunctionStmt *>(fs->getFunction());
+  auto fs = transform(N<FunctionStmt>(name, nullptr, vector<Param>{}, move(params),
+                                      N<SuiteStmt>(move(stmts)), vector<string>{}));
+  auto f = ctx->cache->functions[name].ast.get(); // name is already canonical!
   for (auto &c : ctx->captures.back()) {
     f->args.emplace_back(Param{c, nullptr, nullptr});
     args.emplace_back(CallExpr::Arg{"", N<IdExpr>(c)});
   }
-  // Update the function AST that was cached during the previous transformation.
-  ctx->cache->functions[f->name].ast->args = clone_nop(f->args);
+  if (fs) {
+    auto fp = const_cast<FunctionStmt *>(fs->getFunction());
+    seqassert(fp, "not a function");
+    fp->args = clone_nop(f->args);
+    prependStmts->push_back(move(fs));
+  }
   ctx->captures.pop_back();
-
-  prependStmts->push_back(move(fs));
   return N<CallExpr>(N<IdExpr>(name), move(args));
 }
 

@@ -110,6 +110,11 @@ template <typename T, typename U> bool in(const vector<T> &vec, const U &item) {
   auto f = std::find(vec.begin(), vec.end(), item);
   return f != vec.end();
 }
+/// @return True if an item is found in a set s.
+template <typename T, typename U> bool in(const set<T> &s, const U &item) {
+  auto f = s.find(item);
+  return f != s.end();
+}
 /// @return True if an item is found in a map m.
 template <typename K, typename V, typename U>
 bool in(const map<K, V> &m, const U &item) {

@@ -16,7 +16,7 @@ namespace ast {
 PatternPtr SimplifyVisitor::transform(const PatternPtr &pat) {
   if (!pat)
     return nullptr;
-  SimplifyVisitor v(ctx, preambleStmts, prependStmts);
+  SimplifyVisitor v(ctx, preamble, prependStmts);
   v.setSrcInfo(pat->getSrcInfo());
   pat->accept(v);
   return move(v.resultPattern);
@@ -37,9 +37,12 @@ void SimplifyVisitor::visit(const OrPattern *pat) {
 }
 
 void SimplifyVisitor::visit(const WildcardPattern *pat) {
-  resultPattern = N<WildcardPattern>(pat->var);
-  if (!pat->var.empty())
-    ctx->add(SimplifyItem::Var, pat->var);
+  string varName;
+  if (!pat->var.empty()) {
+    ctx->add(SimplifyItem::Var, pat->var,
+             varName = ctx->generateCanonicalName(pat->var));
+  }
+  resultPattern = N<WildcardPattern>(varName);
 }
 
 /// Transform case pattern if cond to:
@@ -51,8 +54,9 @@ void SimplifyVisitor::visit(const GuardedPattern *pat) {
 }
 
 void SimplifyVisitor::visit(const BoundPattern *pat) {
-  resultPattern = N<BoundPattern>(pat->var, transform(pat->pattern));
-  ctx->add(SimplifyItem::Var, pat->var);
+  string varName = ctx->generateCanonicalName(pat->var);
+  ctx->add(SimplifyItem::Var, pat->var, varName);
+  resultPattern = N<BoundPattern>(varName, transform(pat->pattern));
 }
 
 } // namespace ast

@@ -18,6 +18,8 @@
 #include "parser/common.h"
 #include "parser/ctx.h"
 
+#define FILE_GENERATED "<generated>"
+#define MODULE_MAIN "__main__"
 #define STDLIB_IMPORT ""
 #define STDLIB_INTERNAL_MODULE "internal"
 #define ATTR_INTERNAL "internal"
@@ -30,6 +32,7 @@
 #define ATTR_PARENT_FUNCTION ".parentFunc"
 #define ATTR_PARENT_CLASS ".parentClass"
 #define ATTR_NOT_STATIC ".notStatic"
+#define ATTR_GENERIC ".generic"
 #define ATTR_TOTAL_ORDERING "total_ordering"
 #define ATTR_CONTAINER "container"
 #define ATTR_PYTHON "python"
@@ -40,7 +43,7 @@ namespace seq {
 namespace ast {
 
 /// Forward declarations
-struct SimplifyItem;
+struct SimplifyContext;
 
 /**
  * Cache encapsulation that holds data structures shared across various transformation
@@ -70,7 +73,7 @@ struct Cache {
     /// Absolute filename of an import.
     string filename;
     /// Import simplify context.
-    shared_ptr<Context<SimplifyItem>> ctx;
+    shared_ptr<SimplifyContext> ctx;
     /// Unique import variable for checking already loaded imports.
     string importVar;
   };
@@ -83,6 +86,10 @@ struct Cache {
 
   /// Previously generated variardic types (Function and Tuple).
   set<string> variardics;
+
+  /// Set of unique (canonical) global identifiers for marking such variables as global
+  /// in code-generation step.
+  set<string> globals;
 
   /// Stores class data for each class (type) in the source code.
   struct Class {
@@ -158,7 +165,7 @@ public:
       : generatedSrcInfoCount(0), unboundCount(0), varCount(0), argv0(move(argv0)) {}
 
   /// Return a uniquely named temporary variable of a format
-  /// "{sigil}_{prefix}{counter}". A sigil should be an unlexable symbol.
+  /// "{sigil}_{prefix}{counter}". A sigil should be a non-lexable symbol.
   string getTemporaryVar(const string &prefix = "", char sigil = '$') {
     return fmt::format("{}{}_{}", sigil ? fmt::format("{}_", sigil) : "", prefix,
                        ++varCount);

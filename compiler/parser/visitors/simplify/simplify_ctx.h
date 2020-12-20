@@ -96,6 +96,8 @@ struct SimplifyContext : public Context<SimplifyItem> {
   /// Stores the count of observed extend statements. Used to track class method ages
   /// and prevent the usage of an extended method before it was seen.
   int extendCount;
+  /// Current module name (Python's __name__). The default module is __main__.
+  string moduleName;
 
 public:
   SimplifyContext(string filename, shared_ptr<Cache> cache);

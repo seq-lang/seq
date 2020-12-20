@@ -300,7 +300,8 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
       //      LOG("{} . {}", var, stmt->lhs->getType()->getClass()->toString());
       auto varStmt = new seq::VarStmt(
           nullptr, realizeType(stmt->lhs->getType()->getClass().get()));
-      varStmt->getVar()->setGlobal();
+      if (in(ctx->cache->globals, var))
+        varStmt->getVar()->setGlobal();
       varStmt->getVar()->setType(realizeType(stmt->lhs->getType()->getClass().get()));
       ctx->addVar(var, varStmt->getVar());
       resultStmt = varStmt;
@@ -309,7 +310,7 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
     // ctx->addType(var, realizeType(stmt->rhs->getType()->getClass()));
   } else {
     auto varStmt = new seq::VarStmt(transform(stmt->rhs), nullptr);
-    if (var[0] == '.')
+    if (in(ctx->cache->globals, var))
       varStmt->getVar()->setGlobal();
     varStmt->getVar()->setType(realizeType(stmt->rhs->getType()->getClass().get()));
     ctx->addVar(var, varStmt->getVar());

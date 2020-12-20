@@ -35,14 +35,10 @@ using namespace types;
 
 StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
                                const string &file, bool barebones) {
-  // A transformed AST node
-  auto suite = make_unique<SuiteStmt>();
-  suite->stmts.emplace_back(make_unique<SuiteStmt>());
-  // Preamble is a list of nodes that must be evaluated by the subsequent stages prior
-  // to anything else
-  auto *preamble = (SuiteStmt *)(suite->stmts[0].get());
+  vector<StmtPtr> stmts;
+  auto preamble = make_shared<Preamble>();
 
-  // Load standard library if it has not been already loaded
+  // Load standard library if it has not been loaded.
   if (!in(cache->imports, STDLIB_IMPORT)) {
     // Load the internal module
     auto stdlib = make_shared<SimplifyContext>(STDLIB_IMPORT, cache);
@@ -64,71 +60,93 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       cache->classes[canonical].ast =
           make_unique<ClassStmt>(canonical, vector<Param>(), vector<Param>(), nullptr,
                                  vector<string>{ATTR_INTERNAL, ATTR_TUPLE});
-      preamble->stmts.emplace_back(clone(cache->classes[canonical].ast));
+      preamble->types.emplace_back(clone(cache->classes[canonical].ast));
     }
     // Add generic POD types to the preamble
     for (auto &name : vector<string>{"Ptr", "Generator", "Optional", "Int", "UInt"}) {
       auto canonical = stdlib->generateCanonicalName(name);
       stdlib->add(SimplifyItem::Type, name, canonical, true);
       vector<Param> generics;
-      // Int and UInt have generic N: int; other have generic T
+      auto genName = stdlib->generateCanonicalName("T");
+      preamble->types.push_back(make_unique<ClassStmt>(genName, vector<Param>{},
+                                                       vector<Param>{}, nullptr,
+                                                       vector<string>{ATTR_GENERIC}));
       if (string(name) == "Int" || string(name) == "UInt")
-        generics.emplace_back(Param{"N", make_unique<IdExpr>(".int"), nullptr});
+        generics.emplace_back(Param{genName, make_unique<IdExpr>(".int"), nullptr});
       else
-        generics.emplace_back(Param{"T", nullptr, nullptr});
+        generics.emplace_back(Param{genName, nullptr, nullptr});
       auto c =
           make_unique<ClassStmt>(canonical, move(generics), vector<Param>(), nullptr,
                                  vector<string>{ATTR_INTERNAL, ATTR_TUPLE});
       if (name == "Generator")
         c->attributes[ATTR_TRAIT] = "";
-      preamble->stmts.emplace_back(clone(c));
+      preamble->types.emplace_back(clone(c));
       cache->classes[canonical].ast = move(c);
     }
 
-    StmtPtr stmts = nullptr;
     // This code must be placed in a preamble (these are not POD types but are
     // referenced by the various preamble Function.N and Tuple.N stubs)
-    auto code = "@internal\n@tuple\nclass pyobj:\n  p: Ptr[byte]\n"
-                "@internal\n@tuple\nclass str:\n  len: int\n  ptr: Ptr[byte]\n";
     stdlib->isStdlibLoading = true;
-    preamble->stmts.emplace_back(
-        SimplifyVisitor(stdlib, nullptr).transform(parseCode(stdlibPath, code)));
+    stdlib->moduleName = "__internal__";
+    auto baseTypeCode = "@internal\n@tuple\nclass pyobj:\n  p: Ptr[byte]\n"
+                        "@internal\n@tuple\nclass str:\n  len: int\n  ptr: Ptr[byte]\n";
+    SimplifyVisitor(stdlib, preamble).transform(parseCode(stdlibPath, baseTypeCode));
     // Load the standard library
     stdlib->setFilename(stdlibPath);
-    stmts = parseFile(stdlibPath);
-    suite->stmts.emplace_back(SimplifyVisitor(stdlib, nullptr).transform(stmts));
+    stmts.push_back(SimplifyVisitor(stdlib, preamble).transform(parseFile(stdlibPath)));
     // Add __argv__ variable as __argv__: Array[str]
-    stmts =
-        make_unique<AssignStmt>(make_unique<IdExpr>("__argv__"), nullptr,
-                                make_unique<IndexExpr>(make_unique<IdExpr>(".Array"),
-                                                       make_unique<IdExpr>(".str")));
-    suite->stmts.emplace_back(SimplifyVisitor(stdlib, nullptr).transform(stmts));
+    preamble->globals.push_back(
+        SimplifyVisitor(stdlib, preamble)
+            .transform(make_unique<AssignStmt>(
+                make_unique<IdExpr>("__argv__"), nullptr,
+                make_unique<IndexExpr>(make_unique<IdExpr>(".Array"),
+                                       make_unique<IdExpr>(".str")))));
     stdlib->isStdlibLoading = false;
   }
 
+  // Reuse standard library context as it contains all standard library symbols.
   auto ctx = static_pointer_cast<SimplifyContext>(cache->imports[STDLIB_IMPORT].ctx);
-  // Transform a given node
+  // Transform the input node.
   ctx->setFilename(file);
-  auto preambleStmts = make_shared<vector<StmtPtr>>();
-  auto stmts = SimplifyVisitor(ctx, preambleStmts).transform(node);
+  ctx->moduleName = MODULE_MAIN;
+  // Prepend __name__ = "__main__".
+  stmts.push_back(make_unique<AssignStmt>(make_unique<IdExpr>("__name__"),
+                                          make_unique<StringExpr>(MODULE_MAIN)));
+  stmts.emplace_back(SimplifyVisitor(ctx, preamble).transform(node));
 
-  // Move all auto-generated variardic types to the preamble.
-  // Ensure that Function.1 is the first (as all others depend on it!)
-  preamble->stmts.emplace_back(clone(cache->classes[".Function.1"].ast));
-  for (auto &v : cache->variardics)
-    if (v != ".Function.1")
-      preamble->stmts.emplace_back(clone(cache->classes["." + v].ast));
-  for (auto &s : *preambleStmts)
-    suite->stmts.emplace_back(move(s));
-  // Move the transformed node to the end
-  suite->stmts.emplace_back(move(stmts));
+  auto suite = make_unique<SuiteStmt>();
+  for (auto &s : preamble->types)
+    suite->stmts.push_back(move(s));
+  for (auto &s : preamble->globals)
+    suite->stmts.push_back(move(s));
+  for (auto &s : preamble->functions)
+    suite->stmts.push_back(move(s));
+  for (auto &s : stmts)
+    suite->stmts.push_back(move(s));
+  return move(suite);
+}
+
+StmtPtr SimplifyVisitor::apply(shared_ptr<SimplifyContext> ctx, const StmtPtr &node,
+                               const string &file) {
+  vector<StmtPtr> stmts;
+  auto preamble = make_shared<Preamble>();
+  stmts.emplace_back(SimplifyVisitor(move(ctx), preamble).transform(node));
+  auto suite = make_unique<SuiteStmt>();
+  for (auto &s : preamble->types)
+    suite->stmts.push_back(move(s));
+  for (auto &s : preamble->globals)
+    suite->stmts.push_back(move(s));
+  for (auto &s : preamble->functions)
+    suite->stmts.push_back(move(s));
+  for (auto &s : stmts)
+    suite->stmts.push_back(move(s));
   return move(suite);
 }
 
 SimplifyVisitor::SimplifyVisitor(shared_ptr<SimplifyContext> ctx,
-                                 shared_ptr<vector<StmtPtr>> preamble,
+                                 shared_ptr<Preamble> preamble,
                                  shared_ptr<vector<StmtPtr>> prepend)
-    : ctx(move(ctx)), preambleStmts(preamble) {
+    : ctx(move(ctx)), preamble(move(preamble)) {
   prependStmts = prepend ? move(prepend) : make_shared<vector<StmtPtr>>();
 }
 
