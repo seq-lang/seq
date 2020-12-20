@@ -13,6 +13,12 @@ namespace ir {
 
 namespace types {
 class Type;
+class PrimitiveType;
+class IntType;
+class FloatType;
+class BoolType;
+class ByteType;
+class VoidType;
 class RecordType;
 class RefType;
 class FuncType;
@@ -99,6 +105,12 @@ public:
   DEFAULT_VISIT(FlowInstr);
 
   DEFAULT_VISIT(types::Type);
+  DEFAULT_VISIT(types::PrimitiveType);
+  DEFAULT_VISIT(types::IntType);
+  DEFAULT_VISIT(types::FloatType);
+  DEFAULT_VISIT(types::BoolType);
+  DEFAULT_VISIT(types::ByteType);
+  DEFAULT_VISIT(types::VoidType);
   DEFAULT_VISIT(types::RecordType);
   DEFAULT_VISIT(types::RefType);
   DEFAULT_VISIT(types::FuncType);
