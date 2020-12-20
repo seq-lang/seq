@@ -529,8 +529,10 @@ struct AssignMemberStmt : public Stmt {
 /// @example: lhs = rhs
 struct UpdateStmt : public Stmt {
   ExprPtr lhs, rhs;
+  /// True if this is an atomic update.
+  bool isAtomic;
 
-  UpdateStmt(ExprPtr lhs, ExprPtr rhs);
+  UpdateStmt(ExprPtr lhs, ExprPtr rhs, bool isAtomic = false);
   UpdateStmt(const UpdateStmt &stmt);
 
   string toString() const override;

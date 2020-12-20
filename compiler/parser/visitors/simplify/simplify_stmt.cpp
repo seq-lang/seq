@@ -441,6 +441,9 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
 
   ctx->bases.emplace_back(SimplifyContext::Base{canonicalName}); // Add new base...
   ctx->addBlock();                                               // ... and a block!
+  // Set atomic flag if @atomic attribute is present.
+  if (in(stmt->attributes, ATTR_ATOMIC))
+    ctx->bases.back().isAtomic = true;
   // Add generic identifiers to the context
   vector<Param> newGenerics;
   for (auto &g : stmt->generics) {
@@ -715,7 +718,8 @@ StmtPtr SimplifyVisitor::parseAssignment(const Expr *lhs, const Expr *rhs,
       auto val = ctx->find(e->value);
       if (val && val->isVar()) {
         if (val->getBase() == ctx->getBase())
-          return N<UpdateStmt>(transform(lhs, false), transform(rhs, true));
+          return N<UpdateStmt>(transform(lhs, false), transform(rhs, true),
+                               !ctx->bases.empty() && ctx->bases.back().isAtomic);
         else if (mustExist)
           error("variable '{}' is not global", e->value);
       }
@@ -752,7 +756,9 @@ StmtPtr SimplifyVisitor::parseAssignment(const Expr *lhs, const Expr *rhs,
       } else {
         preamble->globals.push_back(
             N<AssignStmt>(N<IdExpr>(canonical), nullptr, move(t)));
-        return r ? N<UpdateStmt>(move(l), move(r)) : nullptr;
+        return r ? N<UpdateStmt>(move(l), move(r),
+                                 !ctx->bases.empty() && ctx->bases.back().isAtomic)
+                 : nullptr;
       }
     }
     return N<AssignStmt>(move(l), move(r), move(t));

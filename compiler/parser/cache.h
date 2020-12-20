@@ -25,6 +25,7 @@
 #define ATTR_INTERNAL "internal"
 #define ATTR_TUPLE "tuple"
 #define ATTR_TRAIT "trait"
+#define ATTR_ATOMIC "atomic"
 #define ATTR_EXTERN_C ".c"
 #define ATTR_EXTERN_LLVM "llvm"
 #define ATTR_EXTERN_PYTHON "python"

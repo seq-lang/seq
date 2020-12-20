@@ -48,6 +48,9 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
               vector<std::pair<string, types::TypePtr>> &reorderedArgs,
               types::FuncTypePtr f);
   void addFunctionGenerics(types::FuncTypePtr t);
+  ExprPtr transformBinary(const ExprPtr &lexpr, const ExprPtr &rexpr, const string &op,
+                          bool inPlace = false, bool isAtomic = false,
+                          bool *noReturn = nullptr);
 
   void defaultVisit(const Expr *e) override;
   void defaultVisit(const Stmt *s) override;

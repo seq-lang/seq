@@ -508,6 +508,8 @@ void SimplifyVisitor::visit(const LambdaExpr *expr) {
 
 /// Transform var := expr to a statement expression:
 ///   var = expr; var
+/// Disallowed in dependent parts of short-circuiting expressions
+/// (i.e. b and b2 in "a and b", "a or b" or "b if cond else b2").
 void SimplifyVisitor::visit(const AssignExpr *expr) {
   seqassert(expr->var->getId(), "only simple assignment expression are supported");
   if (!ctx->canAssign)

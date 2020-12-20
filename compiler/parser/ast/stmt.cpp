@@ -360,9 +360,11 @@ string AssignMemberStmt::toString() const {
 StmtPtr AssignMemberStmt::clone() const { return make_unique<AssignMemberStmt>(*this); }
 void AssignMemberStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-UpdateStmt::UpdateStmt(ExprPtr lhs, ExprPtr rhs) : lhs(move(lhs)), rhs(move(rhs)) {}
+UpdateStmt::UpdateStmt(ExprPtr lhs, ExprPtr rhs, bool isAtomic)
+    : lhs(move(lhs)), rhs(move(rhs)), isAtomic(isAtomic) {}
 UpdateStmt::UpdateStmt(const UpdateStmt &stmt)
-    : Stmt(stmt), lhs(ast::clone(stmt.lhs)), rhs(ast::clone(stmt.rhs)) {}
+    : Stmt(stmt), lhs(ast::clone(stmt.lhs)), rhs(ast::clone(stmt.rhs)),
+      isAtomic(stmt.isAtomic) {}
 string UpdateStmt::toString() const {
   return format("[UPDATE {} {}]", lhs->toString(), rhs->toString());
 }

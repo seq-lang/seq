@@ -173,64 +173,79 @@ void TypecheckVisitor::visit(const IfExpr *expr) {
 }
 
 void TypecheckVisitor::visit(const BinaryExpr *expr) {
+  auto e = transformBinary(expr->lexpr, expr->rexpr, expr->op, expr->inPlace);
+  e->setType(forceUnify(expr, e->getType()));
+  resultExpr = move(e);
+}
+
+ExprPtr TypecheckVisitor::transformBinary(const ExprPtr &lexpr, const ExprPtr &rexpr,
+                                          const string &op, bool inPlace, bool isAtomic,
+                                          bool *noReturn) {
   auto magics = unordered_map<string, string>{
       {"+", "add"},     {"-", "sub"},    {"*", "mul"}, {"**", "pow"}, {"/", "truediv"},
       {"//", "div"},    {"@", "matmul"}, {"%", "mod"}, {"<", "lt"},   {"<=", "le"},
       {">", "gt"},      {">=", "ge"},    {"==", "eq"}, {"!=", "ne"},  {"<<", "lshift"},
-      {">>", "rshift"}, {"&", "and"},    {"|", "or"},  {"^", "xor"}};
-  auto le = transform(expr->lexpr);
-  auto re = CAST(expr->rexpr, NoneExpr) ? clone(expr->rexpr) : transform(expr->rexpr);
-  if (le->getType()->getUnbound() ||
-      (expr->op != "is" && re->getType()->getUnbound())) {
-    resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
-    resultExpr->setType(
-        forceUnify(expr, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
-  } else if (expr->op == "&&" || expr->op == "||") {
-    resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
-    resultExpr->setType(forceUnify(expr, ctx->findInternal(".bool")));
-  } else if (expr->op == "is") {
-    if (CAST(expr->rexpr, NoneExpr)) {
-      if (le->getType()->getClass()->name != ".Optional") {
-        resultExpr = transform(N<BoolExpr>(false));
-        // error("only optionals can be compared to None");
-      } else {
-        resultExpr = transform(N<CallExpr>(
+      {">>", "rshift"}, {"&", "and"},    {"|", "or"},  {"^", "xor"},  {"min", "min"},
+      {"max", "max"}};
+  if (noReturn)
+    *noReturn = false;
+  auto le = transform(lexpr);
+  auto re = CAST(rexpr, NoneExpr) ? clone(rexpr) : transform(rexpr);
+  if (le->getType()->getUnbound() || (op != "is" && re->getType()->getUnbound())) {
+    auto e = N<BinaryExpr>(move(le), op, move(re));
+    e->setType(ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
+    return e;
+  } else if (op == "&&" || op == "||") {
+    auto e = N<BinaryExpr>(move(le), op, move(re));
+    e->setType(ctx->findInternal(".bool"));
+    return e;
+  } else if (op == "is") {
+    if (CAST(rexpr, NoneExpr)) {
+      if (le->getType()->getClass()->name != ".Optional")
+        return transform(N<BoolExpr>(false));
+      else
+        return transform(N<CallExpr>(
             N<DotExpr>(N<CallExpr>(N<DotExpr>(move(le), "__bool__")), "__invert__")));
-      }
-      forceUnify(expr, resultExpr->getType());
-      return;
     }
+    ExprPtr e;
     if (!le->getType()->canRealize() || !re->getType()->canRealize()) {
-      resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
+      e = N<BinaryExpr>(move(le), op, move(re));
     } else {
       auto lc = realizeType(le->getType()->getClass());
       auto rc = realizeType(re->getType()->getClass());
       if (!lc || !rc)
         error("both sides of 'is' expression must be of same reference type");
-      resultExpr =
-          transform(N<BinaryExpr>(N<CallExpr>(N<DotExpr>(move(le), "__raw__")),
+      e = transform(N<BinaryExpr>(N<CallExpr>(N<DotExpr>(move(le), "__raw__")),
                                   "==", N<CallExpr>(N<DotExpr>(move(re), "__raw__"))));
     }
-    resultExpr->setType(forceUnify(expr, ctx->findInternal(".bool")));
+    e->setType(ctx->findInternal(".bool"));
+    return e;
   } else {
-    auto mi = magics.find(expr->op);
+    auto mi = magics.find(op);
     if (mi == magics.end())
-      error("invalid binary operator '{}'", expr->op);
+      error("invalid binary operator '{}'", op);
     auto magic = mi->second;
     auto lc = le->getType()->getClass(), rc = re->getType()->getClass();
     assert(lc && rc);
-    if (findBestCall(lc, format("__{}__", magic), {{"", lc}, {"", rc}})) {
-      if (expr->inPlace &&
-          findBestCall(lc, format("__i{}__", magic), {{"", lc}, {"", rc}}))
-        magic = "i" + magic;
-    } else if (findBestCall(rc, format("__r{}__", magic), {{"", rc}, {"", lc}})) {
-      magic = "r" + magic;
+    auto plc = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(".Ptr"), {lc});
+    FuncTypePtr f;
+    if (isAtomic &&
+        (f = findBestCall(lc, format("__atomic_{}__", magic), {{"", plc}, {"", rc}}))) {
+      le = N<PtrExpr>(move(le));
+      if (noReturn)
+        *noReturn = true;
+    } else if (inPlace &&
+               (f = findBestCall(lc, format("__i{}__", magic), {{"", lc}, {"", rc}}))) {
+      if (noReturn)
+        *noReturn = true;
+    } else if ((f = findBestCall(lc, format("__{}__", magic), {{"", lc}, {"", rc}}))) {
+      ;
+    } else if ((f = findBestCall(rc, format("__r{}__", magic), {{"", rc}, {"", lc}}))) {
+      ;
     } else {
       error("cannot find magic '{}' for {}", magic, lc->toString());
     }
-    magic = format("__{}__", magic);
-    resultExpr = transform(N<CallExpr>(N<DotExpr>(move(le), magic), move(re)));
-    forceUnify(expr, resultExpr->getType());
+    return transform(N<CallExpr>(N<IdExpr>(f->name), move(le), move(re)));
   }
 }
 
@@ -320,9 +335,10 @@ void TypecheckVisitor::visit(const InstantiateExpr *expr) {
         assert(val && val->isStatic());
         auto t = val->getType()->follow();
         m[g] = {g, t,
-                t->getLink()                       ? t->getLink()->id
-                : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
-                                                   : 0};
+                t->getLink()
+                    ? t->getLink()->id
+                    : t->getStatic()->explicits.size() ? t->getStatic()->explicits[0].id
+                                                       : 0};
       }
       auto sv = StaticVisitor(m);
       sv.transform(s->expr);
@@ -983,15 +999,63 @@ void TypecheckVisitor::visit(const AssignStmt *stmt) {
 
 void TypecheckVisitor::visit(const UpdateStmt *stmt) {
   auto l = transform(stmt->lhs);
-  auto r = transform(stmt->rhs);
-
   auto lc = l->getType()->getClass();
+  ExprPtr r = nullptr;
+
+  auto b = CAST(stmt->rhs, BinaryExpr);
+  if (b && b->inPlace) {
+    bool noReturn = false;
+    auto e =
+        transformBinary(b->lexpr, b->rexpr, b->op, true, stmt->isAtomic, &noReturn);
+    e->setType(forceUnify(stmt->rhs, e->getType()));
+    if (CAST(e, BinaryExpr)) { // decide later...
+      l->setType(forceUnify(e.get(), l->getType()));
+      resultStmt = N<UpdateStmt>(move(l), move(e), stmt->isAtomic);
+      return;
+    } else if (noReturn) { // Remove assignment, just use update stuff
+      resultStmt = N<ExprStmt>(move(e));
+      return;
+    } else {
+      r = move(e);
+    }
+  }
+  // detect min/max: a = min(a, ...) (not vice-versa...)
+
+  bool atomic = stmt->isAtomic;
+  const CallExpr *c;
+  if (atomic && l->getId() && (c = stmt->rhs->getCall()) &&
+      (c->expr->isId(".min") || c->expr->isId(".max")) && c->args.size() == 2 &&
+      c->args[0].value->isId(string(l->getId()->value))) {
+    auto pt = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(".Ptr"), {lc});
+    auto rsh = transform(c->args[1].value);
+    auto rc = rsh->getType()->getClass();
+    if (auto m =
+            findBestCall(lc, format("__atomic_{}__", chop(c->expr->getId()->value)),
+                         {{"", pt}, {"", rc}})) {
+      resultStmt = transform(
+          N<ExprStmt>(N<CallExpr>(N<IdExpr>(m->name), N<PtrExpr>(move(l)), move(rsh))));
+      return;
+    }
+  }
+
+  if (!r)
+    r = transform(stmt->rhs);
   auto rc = r->getType()->getClass();
-  if (lc && lc->name == ".Optional" && rc && rc->name != lc->name)
+  if (atomic && lc && rc) { // maybe an atomic = ?
+    auto pt = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(".Ptr"), {lc});
+    if (auto m = findBestCall(lc, "__atomic_xchg__", {{"", pt}, {"", rc}})) {
+      resultStmt = transform(
+          N<ExprStmt>(N<CallExpr>(N<IdExpr>(m->name), N<PtrExpr>(move(l)), move(r))));
+      return;
+    } else {
+      atomic = false;
+    }
+  } else if (lc && lc->name == ".Optional" && rc && rc->name != lc->name) {
     r = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(r)));
+  }
   l->setType(forceUnify(r.get(), l->getType()));
-  resultStmt = N<UpdateStmt>(move(l), move(r));
-}
+  resultStmt = N<UpdateStmt>(move(l), move(r), atomic);
+} // namespace ast
 
 void TypecheckVisitor::visit(const AssignMemberStmt *stmt) {
   auto lh = transform(stmt->lhs);
@@ -1268,7 +1332,8 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
 void TypecheckVisitor::visit(const ClassStmt *stmt) {
   if (in(stmt->attributes, ATTR_GENERIC)) {
     // bool isStatic = !stmt->attributes[ATTR_GENERIC].empty();
-    // auto tp = make_shared<LinkType>(LinkType::Generic, ctx->cache->unboundCount++, 0,
+    // auto tp = make_shared<LinkType>(LinkType::Generic, ctx->cache->unboundCount++,
+    // 0,
     //                                 nullptr, isStatic);
     // ctx->add(TypecheckItem::Type, stmt->name, tp, true, true, isStatic);
     return;
@@ -1624,9 +1689,8 @@ vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &gene
         types::Generic{g.name, tg, tg->getLink()->id, clone(g.deflt)});
     //    LOG_REALIZE("[generic] {} -> {} {}", g.name, tg->toString(), bool(g.type));
     ctx->add(TypecheckItem::Type, g.name,
-             make_shared<LinkType>(LinkType::Unbound, tg->getLink()->id, level, nullptr,
-                                   tg->getLink()->isStatic),
-             false, true, tg->getLink()->isStatic);*/
+             make_shared<LinkType>(LinkType::Unbound, tg->getLink()->id, level,
+    nullptr, tg->getLink()->isStatic), false, true, tg->getLink()->isStatic);*/
   }
   return genericTypes;
 }

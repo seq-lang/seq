@@ -73,9 +73,11 @@ struct SimplifyContext : public Context<SimplifyItem> {
     /// default. Used to infer a relationship between a function and its base class
     /// (e.g. is it a class function or a method).
     int parent;
+    /// True if the function is marked with @atomic flag.
+    bool isAtomic;
 
-    explicit Base(string name, ExprPtr ast = nullptr, int parent = -1)
-        : name(move(name)), ast(move(ast)), parent(parent) {}
+    explicit Base(string name, ExprPtr ast = nullptr, int parent = -1,
+                  bool isAtomic = false);
     bool isType() const { return ast != nullptr; }
   };
   /// A stack of bases enclosing the current statement (the topmost base is the last
@@ -98,7 +100,8 @@ struct SimplifyContext : public Context<SimplifyItem> {
   int extendCount;
   /// Current module name (Python's __name__). The default module is __main__.
   string moduleName;
-
+  /// Tracks if we are in a dependent part of a short-circuiting expression (e.g. b in a
+  /// and b) to disallow assignment expressions there.
   bool canAssign;
 
 public:
