@@ -179,7 +179,7 @@ public:
   types::Type *getVoidType() {
     auto *rVal = getType(VOID_NAME);
     if (!rVal) {
-      rVal = Nr<types::Type>(VOID_NAME);
+      rVal = Nr<types::VoidType>();
       types[VOID_NAME] = types::TypePtr(rVal);
     }
     return rVal;
@@ -188,7 +188,7 @@ public:
   types::Type *getBoolType() {
     auto *rVal = getType(BOOL_NAME);
     if (!rVal) {
-      rVal = Nr<types::Type>(BOOL_NAME);
+      rVal = Nr<types::BoolType>();
       types[BOOL_NAME] = types::TypePtr(rVal);
     }
     return rVal;
@@ -197,7 +197,7 @@ public:
   types::Type *getByteType() {
     auto *rVal = getType(BYTE_NAME);
     if (!rVal) {
-      rVal = Nr<types::Type>(BYTE_NAME);
+      rVal = Nr<types::ByteType>();
       types[BYTE_NAME] = types::TypePtr(rVal);
     }
     return rVal;
@@ -206,7 +206,7 @@ public:
   types::Type *getIntType() {
     auto *rVal = getType(INT_NAME);
     if (!rVal) {
-      rVal = Nr<types::Type>(INT_NAME);
+      rVal = Nr<types::IntType>();
       types[INT_NAME] = types::TypePtr(rVal);
     }
     return rVal;
@@ -215,7 +215,7 @@ public:
   types::Type *getFloatType() {
     auto *rVal = getType(FLOAT_NAME);
     if (!rVal) {
-      rVal = Nr<types::Type>(FLOAT_NAME);
+      rVal = Nr<types::FloatType>();
       types[FLOAT_NAME] = types::TypePtr(rVal);
     }
     return rVal;

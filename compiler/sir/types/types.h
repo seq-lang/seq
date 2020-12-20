@@ -22,23 +22,21 @@ using TypePtr = std::unique_ptr<Type>;
 
 /// Type from which other SIR types derive. Generally types are immutable.
 class Type : public IRNode {
-private:
-  /// true if atomic
-  bool atomic;
-
 public:
   /// Constructs a type.
   /// @param name the type's name
   /// @param atomic atomicity of the type
-  explicit Type(std::string name, bool atomic = false)
-      : IRNode(std::move(name)), atomic(atomic) {}
+  explicit Type(std::string name) : IRNode(std::move(name)) {}
 
   virtual ~Type() noexcept = default;
 
   void accept(util::SIRVisitor &v) override { v.visit(this); }
 
+  /// A type is "atomic" iff it contains no pointers to dynamically
+  /// allocated memory. Atomic types do not need to be scanned during
+  /// garbage collection.
   /// @return true if the type is atomic
-  bool isAtomic() const { return atomic; }
+  virtual bool isAtomic() const = 0;
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -53,6 +51,48 @@ public:
   virtual ~TypeBase() = default;
 
   void accept(util::SIRVisitor &v) override { v.visit(static_cast<Derived *>(this)); }
+};
+
+/// Type from which primitive atomic types derive.
+class PrimitiveType : public Type {
+public:
+  explicit PrimitiveType(std::string name) : Type(std::move(name)) {}
+  bool isAtomic() const override { return true; }
+};
+
+/// Int type (64-bit signed integer)
+class IntType : public TypeBase<IntType, PrimitiveType> {
+public:
+  IntType() : TypeBase("int") {}
+  virtual ~IntType() = default;
+};
+
+/// Float type (64-bit double)
+class FloatType : public TypeBase<FloatType, PrimitiveType> {
+public:
+  FloatType() : TypeBase("float") {}
+  virtual ~FloatType() = default;
+};
+
+/// Bool type (8-bit unsigned integer; either 0 or 1)
+class BoolType : public TypeBase<BoolType, PrimitiveType> {
+public:
+  BoolType() : TypeBase("bool") {}
+  virtual ~BoolType() = default;
+};
+
+/// Byte type (8-bit unsigned integer)
+class ByteType : public TypeBase<ByteType, PrimitiveType> {
+public:
+  ByteType() : TypeBase("byte") {}
+  virtual ~ByteType() = default;
+};
+
+/// Void type
+class VoidType : public TypeBase<VoidType, PrimitiveType> {
+public:
+  VoidType() : TypeBase("void") {}
+  virtual ~VoidType() = default;
 };
 
 /// Type from which membered types derive.
@@ -124,6 +164,14 @@ public:
 
   virtual ~RecordType() = default;
 
+  bool isAtomic() const override {
+    for (const Field &field : fields) {
+      if (!field.type->isAtomic())
+        return false;
+    }
+    return true;
+  }
+
   Type *getMemberType(const std::string &n) override;
 
   const_iterator begin() const override { return fields.begin(); }
@@ -149,6 +197,8 @@ public:
   /// @param contents the type's contents
   RefType(std::string name, RecordType *contents)
       : TypeBase(std::move(name)), contents(contents) {}
+
+  bool isAtomic() const override { return false; }
 
   Type *getMemberType(const std::string &n) override {
     return contents->getMemberType(n);
@@ -190,6 +240,8 @@ public:
       : TypeBase(getName(rType, argTypes)), rType(rType),
         argTypes(std::move(argTypes)) {}
 
+  bool isAtomic() const override { return false; }
+
   /// @return the function's return type
   Type *getReturnType() const { return rType; }
 
@@ -222,6 +274,8 @@ public:
   explicit DerivedType(std::string name, Type *base)
       : Type(std::move(name)), base(base) {}
 
+  bool isAtomic() const override { return base->isAtomic(); }
+
   /// @return the type's base
   Type *getBase() const { return base; }
 };
@@ -232,6 +286,8 @@ public:
   /// Constructs a pointer type.
   /// @param base the type's base
   explicit PointerType(Type *base) : TypeBase(getName(base), base) {}
+
+  bool isAtomic() const override { return false; }
 
   static std::string getName(Type *base);
 };
@@ -247,6 +303,8 @@ public:
   /// @param pointerType the base's pointer type
   /// @param flagType type of the flag indicating if an object is present
   explicit OptionalType(Type *pointerType, Type *flagType);
+
+  bool isAtomic() const override { return base->isAtomic(); }
 
   /// @return the type's base
   Type *getBase() const { return base; }
@@ -268,6 +326,8 @@ public:
   /// @param countType the type of the array's count
   explicit ArrayType(Type *pointerType, Type *countType);
 
+  bool isAtomic() const override { return false; }
+
   /// @return the type's base
   Type *getBase() const { return base; }
 
@@ -282,6 +342,8 @@ public:
   /// Constructs a generator type.
   /// @param base the type's base
   explicit GeneratorType(Type *base) : TypeBase(getName(base), base) {}
+
+  bool isAtomic() const override { return false; }
 
   static std::string getName(Type *base);
 };
@@ -302,6 +364,8 @@ public:
   /// @param sign true if signed, false otherwise
   IntNType(unsigned len, bool sign)
       : TypeBase(getName(len, sign)), len(len), sign(sign) {}
+
+  bool isAtomic() const override { return true; }
 
   /// @return the length of the integer
   unsigned getLen() const { return len; }
