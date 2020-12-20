@@ -6,30 +6,32 @@ namespace seq {
 namespace ir {
 
 /// SIR constant base. Once created, constants are immutable.
-class Constant : public Value {
+class Constant : public AcceptorExtend<Constant, Value> {
 private:
   /// the type
   types::Type *type;
 
 public:
+  static const char NodeId;
+
   /// Constructs a constant.
   /// @param type the type
   /// @param name the name
   explicit Constant(types::Type *type, std::string name = "")
-      : Value(std::move(name)), type(type) {}
+      : AcceptorExtend(std::move(name)), type(type) {}
 
   types::Type *getType() const override { return type; }
 };
 
-template <typename ValueType> class TemplatedConstant : public Constant {
+template <typename ValueType> class TemplatedConstant : public AcceptorExtend<TemplatedConstant<ValueType>, Constant> {
 private:
   ValueType val;
 
 public:
-  TemplatedConstant(ValueType v, types::Type *type, std::string name = "")
-      : Constant(type, std::move(name)), val(v) {}
+  static const char NodeId;
 
-  void accept(util::SIRVisitor &v) override { v.visit(this); }
+  TemplatedConstant(ValueType v, types::Type *type, std::string name = "")
+      : AcceptorExtend<TemplatedConstant<ValueType>, Constant>(type, std::move(name)), val(v) {}
 
   /// @return the internal value.
   ValueType getVal() { return val; }
@@ -42,15 +44,17 @@ using FloatConstant = TemplatedConstant<double>;
 using BoolConstant = TemplatedConstant<bool>;
 using StringConstant = TemplatedConstant<std::string>;
 
-template <> class TemplatedConstant<std::string> : public Constant {
+template <typename T> const char TemplatedConstant<T>::NodeId = 0;
+
+template <> class TemplatedConstant<std::string> : public AcceptorExtend<TemplatedConstant<std::string>, Constant> {
 private:
   std::string val;
 
 public:
-  TemplatedConstant(std::string v, types::Type *type, std::string name = "")
-      : Constant(type, std::move(name)), val(std::move(v)) {}
+  static const char NodeId;
 
-  void accept(util::SIRVisitor &v) override { v.visit(this); }
+  TemplatedConstant(std::string v, types::Type *type, std::string name = "")
+      : AcceptorExtend(type, std::move(name)), val(std::move(v)) {}
 
   /// @return the internal value.
   std::string getVal() { return val; }

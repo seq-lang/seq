@@ -8,11 +8,13 @@
 namespace seq {
 namespace ir {
 
-class Value : public IRNode, public IdMixin {
+class Value : public AcceptorExtend<Value, IRNode>, public IdMixin {
 public:
+  static const char NodeId;
+
   /// Constructs a value.
   /// @param the value's name
-  explicit Value(std::string name = "") : IRNode(std::move(name)) {}
+  explicit Value(std::string name = "") : AcceptorExtend(std::move(name)) {}
 
   virtual ~Value() noexcept = default;
 
@@ -27,19 +29,19 @@ public:
 using ValuePtr = std::unique_ptr<Value>;
 
 /// Value that contains an unowned value reference.
-class ValueProxy : public Value {
+class ValueProxy : public AcceptorExtend<ValueProxy, Value> {
 private:
   /// the referenced value
   Value *val;
 
 public:
+  static const char NodeId;
+
   /// Constructs a value proxy.
   /// @param val the referenced value
   /// @param name the name
   explicit ValueProxy(Value *val, std::string name = "")
-      : Value(std::move(name)), val(val) {}
-
-  void accept(util::SIRVisitor &v) override { v.visit(this); }
+      : AcceptorExtend(std::move(name)), val(val) {}
 
   types::Type *getType() const override { return val->getType(); }
 

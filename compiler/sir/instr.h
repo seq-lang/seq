@@ -10,55 +10,37 @@
 namespace seq {
 namespace ir {
 
-namespace util {
-class SIRVisitor;
-}
-
 /// SIR object representing an "instruction," or discrete operation in the context of a
 /// block.
-class Instr : public Value {
+class Instr : public AcceptorExtend<Instr, Value> {
 public:
-  /// Constructs an instruction.
-  /// @param name the name
-  explicit Instr(std::string name) : Value(std::move(name)) {}
+  static const char NodeId;
 
+  using AcceptorExtend::AcceptorExtend;
+  
   virtual ~Instr() = default;
 
   types::Type *getType() const override { return nullptr; }
 };
 
-/// CRTP base for instructions that provides visitor functionality.
-template <typename Derived, typename Base = Instr> class InstrBase : public Base {
-public:
-  /// Constructs an instruction.
-  /// @tparam Args the arguments
-  template <typename... Args>
-  explicit InstrBase(Args... args) : Base(std::forward<Args>(args)...) {}
-
-  virtual ~InstrBase() = default;
-
-  void accept(util::SIRVisitor &v) override { v.visit(static_cast<Derived *>(this)); }
-};
-
 /// Instr representing setting a memory location.
-class AssignInstr : public InstrBase<AssignInstr> {
+class AssignInstr : public AcceptorExtend<AssignInstr, Instr> {
 private:
   /// the left-hand side
   ValuePtr lhs;
   /// the right-hand side
   ValuePtr rhs;
-  /// the optional field
-  std::string field;
 
 public:
+  static const char NodeId;
+
   /// Constructs an assign instruction.
   /// @param lhs the left-hand side
   /// @param rhs the right-hand side
   /// @param field the field being set, may be empty
   /// @param name the instruction's name
-  AssignInstr(ValuePtr lhs, ValuePtr rhs, std::string field = "", std::string name = "")
-      : InstrBase(std::move(name)), lhs(std::move(lhs)), rhs(std::move(rhs)),
-        field(std::move(field)) {}
+  AssignInstr(ValuePtr lhs, ValuePtr rhs, std::string name = "")
+      : AcceptorExtend(std::move(name)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
   /// @return the left-hand side
   const ValuePtr &getLhs() const { return lhs; }
@@ -72,31 +54,54 @@ public:
   /// @param l the new value
   void setRhs(ValuePtr v) { rhs = std::move(v); }
 
-  /// @return the field
-  const std::string &getField() const { return field; }
-  /// Sets the field.
-  /// @param f the new value
-  void setField(std::string f) { field = std::move(f); }
-
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing loading a memory location.
-class LoadInstr : public InstrBase<LoadInstr> {
+class LoadInstr : public AcceptorExtend<LoadInstr, Instr> {
 private:
   /// the location
+  ValuePtr ptr;
+
+public:
+  static const char NodeId;
+
+  /// Constructs a load instruction.
+  /// @param ptr the location
+  /// @param name the instruction's name
+  explicit LoadInstr(ValuePtr ptr, std::string name = "")
+      : AcceptorExtend(std::move(name)), ptr(std::move(ptr)) {}
+
+  types::Type *getType() const override;
+
+  /// @return the location
+  const ValuePtr &getPtr() const { return ptr; }
+  /// Sets the location.
+  /// @param p the new value
+  void setPtr(ValuePtr p) { ptr = std::move(p); }
+  ValuePtr extractPtr() { return move(ptr); }
+
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
+};
+
+class GetFieldPtrInstr : public AcceptorExtend<GetFieldPtrInstr, Instr> {
+private:
+  /// the original location
   ValuePtr ptr;
   /// the field
   std::string field;
 
 public:
+  static const char NodeId;
+
   /// Constructs a load instruction.
   /// @param ptr the location
   /// @param field the field being set, may be empty
   /// @param name the instruction's name
-  explicit LoadInstr(ValuePtr ptr, std::string field = "", std::string name = "")
-      : InstrBase(std::move(name)), ptr(std::move(ptr)), field(std::move(field)) {}
+  explicit GetFieldPtrInstr(ValuePtr ptr, std::string field, std::string name = "")
+    : AcceptorExtend(std::move(name)), ptr(std::move(ptr)), field(std::move(field)) {}
 
   types::Type *getType() const override;
 
@@ -114,10 +119,11 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
 };
 
 /// Instr representing calling a function.
-class CallInstr : public InstrBase<CallInstr> {
+class CallInstr : public AcceptorExtend<CallInstr, Instr> {
 public:
   using iterator = std::vector<ValuePtr>::iterator;
   using const_iterator = std::vector<ValuePtr>::const_iterator;
@@ -131,12 +137,14 @@ private:
   std::vector<ValuePtr> args;
 
 public:
+  static const char NodeId;
+
   /// Constructs a call instruction.
   /// @param func the function
   /// @param args the arguments
   /// @param name the instruction's name
   CallInstr(ValuePtr func, std::vector<ValuePtr> args, std::string name = "")
-      : InstrBase(std::move(name)), func(std::move(func)), args(std::move(args)) {}
+      : AcceptorExtend(std::move(name)), func(std::move(func)), args(std::move(args)) {}
 
   /// Constructs a call instruction with no arguments.
   /// @param func the function
@@ -192,7 +200,7 @@ private:
 };
 
 /// Instr representing allocating an array on the stack.
-class StackAllocInstr : public InstrBase<StackAllocInstr> {
+class StackAllocInstr : public AcceptorExtend<StackAllocInstr, Instr> {
 private:
   /// the array type
   types::Type *arrayType;
@@ -200,11 +208,13 @@ private:
   ValuePtr count;
 
 public:
+  static const char NodeId;
+
   /// Constructs a stack allocation instruction.
   /// @param arrayType the type of the array
   /// @param count the number of elements
   StackAllocInstr(types::Type *arrayType, ValuePtr count, std::string name = "")
-      : InstrBase(std::move(name)), arrayType(arrayType), count(std::move(count)) {}
+      : AcceptorExtend(std::move(name)), arrayType(arrayType), count(std::move(count)) {}
 
   types::Type *getType() const override { return arrayType; }
 
@@ -219,17 +229,19 @@ private:
 };
 
 /// Instr representing a Python yield expression.
-class YieldInInstr : public InstrBase<YieldInInstr> {
+class YieldInInstr : public AcceptorExtend<YieldInInstr, Instr> {
 private:
   /// @param the type of the value being yielded in.
   types::Type *type;
 
 public:
+  static const char NodeId;
+
   /// Constructs a yield in instruction.
   /// @param type the type of the value being yielded in
   /// @param name the instruction's name
   explicit YieldInInstr(types::Type *type, std::string name = "")
-      : InstrBase(std::move(name)), type(type) {}
+      : AcceptorExtend(std::move(name)), type(type) {}
 
   types::Type *getType() const override { return type; }
 
@@ -238,7 +250,7 @@ private:
 };
 
 /// Instr representing a ternary operator.
-class TernaryInstr : public InstrBase<TernaryInstr> {
+class TernaryInstr : public AcceptorExtend<TernaryInstr, Instr> {
 private:
   /// the condition
   ValuePtr cond;
@@ -248,6 +260,8 @@ private:
   ValuePtr falseValue;
 
 public:
+  static const char NodeId;
+
   /// Constructs a ternary instruction.
   /// @param cond the condition
   /// @param trueValue the true value
@@ -255,7 +269,7 @@ public:
   /// @param name the instruction's name
   TernaryInstr(ValuePtr cond, ValuePtr trueValue, ValuePtr falseValue,
                std::string name = "")
-      : InstrBase(std::move(name)), cond(std::move(cond)),
+      : AcceptorExtend(std::move(name)), cond(std::move(cond)),
         trueValue(std::move(trueValue)), falseValue(std::move(falseValue)) {}
 
   types::Type *getType() const override { return trueValue->getType(); }
@@ -283,16 +297,18 @@ private:
 };
 
 /// Base for control flow instructions
-class ControlFlowInstr : public Instr {
+class ControlFlowInstr : public AcceptorExtend<ControlFlowInstr, Instr> {
 private:
   /// the target
   ValuePtr target;
 
 public:
+  static const char NodeId;
+
   /// Constructs a control flow instruction.
   /// @param target the flow being targeted
   explicit ControlFlowInstr(ValuePtr target, std::string name = "")
-      : Instr(std::move(name)), target(std::move(target)) {}
+      : AcceptorExtend(std::move(name)), target(std::move(target)) {}
 
   /// @return the target
   const ValuePtr &getTarget() const { return target; }
@@ -302,40 +318,38 @@ public:
 };
 
 /// Instr representing a break statement.
-class BreakInstr : public InstrBase<BreakInstr, ControlFlowInstr> {
+class BreakInstr : public AcceptorExtend<BreakInstr, ControlFlowInstr> {
 public:
-  /// Constructs a break instruction.
-  /// @param target the flow being broken out of
-  /// @param name the instruction's name
-  explicit BreakInstr(ValuePtr target, std::string name = "")
-      : InstrBase(std::move(target), std::move(name)) {}
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing a continue statement.
-class ContinueInstr : public InstrBase<ContinueInstr, ControlFlowInstr> {
+class ContinueInstr : public AcceptorExtend<ContinueInstr, ControlFlowInstr> {
 public:
-  /// Constructs a continue instruction.
-  /// @param target the flow being broken out of
-  /// @param name the instruction's name
-  explicit ContinueInstr(ValuePtr target, std::string name = "")
-      : InstrBase(std::move(target), std::move(name)) {}
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing a return statement.
-class ReturnInstr : public InstrBase<ReturnInstr, ControlFlowInstr> {
+class ReturnInstr : public AcceptorExtend<ReturnInstr, ControlFlowInstr> {
 private:
   /// the value
   ValuePtr value;
 
 public:
+  static const char NodeId;
+
   explicit ReturnInstr(ValuePtr value = nullptr, std::string name = "")
-      : InstrBase(nullptr, std::move(name)), value(std::move(value)) {}
+      : AcceptorExtend(nullptr, std::move(name)), value(std::move(value)) {}
 
   /// @return the value
   const ValuePtr &getValue() const { return value; }
@@ -347,14 +361,16 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
-class YieldInstr : public InstrBase<YieldInstr> {
+class YieldInstr : public AcceptorExtend<YieldInstr, Instr> {
 private:
   /// the value
   ValuePtr value;
 
 public:
+  static const char NodeId;
+
   explicit YieldInstr(ValuePtr value = nullptr, std::string name = "")
-      : InstrBase(std::move(name)), value(std::move(value)) {}
+      : AcceptorExtend(std::move(name)), value(std::move(value)) {}
 
   /// @return the value
   const ValuePtr &getValue() const { return value; }
@@ -366,14 +382,16 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
-class ThrowInstr : public InstrBase<ThrowInstr> {
+class ThrowInstr : public AcceptorExtend<ThrowInstr, Instr> {
 private:
   /// the value
   ValuePtr value;
 
 public:
+  static const char NodeId;
+
   explicit ThrowInstr(ValuePtr value = nullptr, std::string name = "")
-      : InstrBase(std::move(name)), value(std::move(value)) {}
+      : AcceptorExtend(std::move(name)), value(std::move(value)) {}
 
   /// @return the value
   const ValuePtr &getValue() const { return value; }
@@ -385,7 +403,7 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
-class AssertInstr : public InstrBase<AssertInstr> {
+class AssertInstr : public AcceptorExtend<AssertInstr, Instr> {
 private:
   /// the value
   ValuePtr value;
@@ -393,9 +411,11 @@ private:
   std::string msg;
 
 public:
+  static const char NodeId;
+
   explicit AssertInstr(ValuePtr value = nullptr, std::string msg = "",
                        std::string name = "")
-      : InstrBase(std::move(name)), value(std::move(value)), msg(std::move(msg)) {}
+      : AcceptorExtend(std::move(name)), value(std::move(value)), msg(std::move(msg)) {}
 
   /// @return the value
   const ValuePtr &getValue() const { return value; }
@@ -414,7 +434,7 @@ private:
 };
 
 /// Instr that contains a flow and value.
-class FlowInstr : public InstrBase<FlowInstr> {
+class FlowInstr : public AcceptorExtend<FlowInstr, Instr> {
 private:
   /// the flow
   ValuePtr flow;
@@ -422,14 +442,14 @@ private:
   ValuePtr val;
 
 public:
+  static const char NodeId;
+
   /// Constructs a flow value.
   /// @param flow the flow
   /// @param val the output value
   /// @param name the name
   explicit FlowInstr(ValuePtr flow, ValuePtr val, std::string name = "")
-      : InstrBase(std::move(name)), flow(std::move(flow)), val(std::move(val)) {}
-
-  void accept(util::SIRVisitor &v) override { v.visit(this); }
+      : AcceptorExtend(std::move(name)), flow(std::move(flow)), val(std::move(val)) {}
 
   types::Type *getType() const override { return val->getType(); }
 

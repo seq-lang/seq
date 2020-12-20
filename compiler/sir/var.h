@@ -13,19 +13,19 @@ namespace seq {
 namespace ir {
 
 /// SIR object representing a variable.
-class Var : public Value {
+class Var : public AcceptorExtend<Var, Value> {
 private:
   /// the variable's type
   types::Type *type;
 
 public:
+  static const char NodeId;
+
   /// Constructs a variable.
   /// @param name the variable's name
   /// @param type the variable's type
   explicit Var(types::Type *type, std::string name = "")
-      : Value(std::move(name)), type(type) {}
-
-  void accept(util::SIRVisitor &v) override { v.visit(this); };
+      : AcceptorExtend(std::move(name)), type(type) {}
 
   types::Type *getType() const override;
 

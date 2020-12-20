@@ -47,11 +47,29 @@ private:
   IRModule *module = nullptr;
 
 public:
+  // RTTI is implemented using a port of LLVM's Extensible RTTI
+  // For more details, see https://llvm.org/docs/HowToSetUpLLVMStyleRTTI.html#rtti-for-open-class-hierarchies
+  static const char NodeId;
+
   /// Constructs a node.
   /// @param name the node's name
   explicit IRNode(std::string name = "") : name(std::move(name)) {}
 
   virtual ~IRNode() = default;
+
+  /// See LLVM documentation.
+  static const void *nodeId() { return &NodeId; }
+  /// See LLVM documentation.
+  virtual bool isConvertible(const void *other) const { return other == nodeId(); }
+  /// See LLVM documentation.
+  template<typename Target>
+  bool is() const { return is(Target::nodeId()); }
+  /// See LLVM documentation.
+  template<typename Target>
+  Target *as() { return isConvertible(Target::nodeId()) ? static_cast<Target *>(this) : nullptr; }
+  /// See LLVM documentation.
+  template<typename Target>
+  Target *as() const { return isConvertible(Target::nodeId()) ? static_cast<const Target *>(this) : nullptr; }
 
   /// @return the node's name
   const std::string &getName() const { return name; }
@@ -106,6 +124,21 @@ public:
 
 private:
   virtual std::ostream &doFormat(std::ostream &os) const = 0;
+};
+
+template <typename Derived, typename Parent>
+class AcceptorExtend : public Parent {
+public:
+  using Parent::Parent;
+
+  virtual ~AcceptorExtend() = default;
+
+  /// See LLVM documentation.
+  static const void *nodeId() { return &Derived::NodeId; }
+  /// See LLVM documentation.
+  virtual bool isConvertible(const void *other) const { return other == nodeId() || Parent::isConvertible(other); }
+
+  void accept(util::SIRVisitor &v) { v.visit(static_cast<Derived *>(this)); }
 };
 
 } // namespace ir

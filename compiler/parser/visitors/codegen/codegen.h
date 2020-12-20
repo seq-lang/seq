@@ -84,6 +84,22 @@ public:
 private:
   std::unique_ptr<ir::SeriesFlow> newScope(const seq::SrcObject *s, std::string name);
 
+  template <typename T> T *cast(seq::ir::IRNode *obj) {
+    if (obj)
+      return obj->as<T>();
+    else
+      return nullptr;
+  }
+
+  template <typename T, typename V> T *cast(const std::unique_ptr<V> &obj) {
+    if (obj)
+      return obj->template as<T>();
+    else
+      return nullptr;
+  }
+
+  ir::ValuePtr stripLoad(ir::ValuePtr outer);
+
   template <typename T> auto wrap(T *obj) { return std::unique_ptr<T>(obj); }
 };
 

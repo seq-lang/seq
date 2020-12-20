@@ -7,7 +7,7 @@ namespace seq {
 namespace ir {
 
 /// SIR function
-class Func : public Value {
+class Func : public AcceptorExtend<Func, Value> {
 public:
   struct Arg {
     std::string name;
@@ -58,6 +58,8 @@ private:
   std::string unmangledName;
 
 public:
+  static const char NodeId;
+
   /// Constructs an SIR function.
   /// @param type the function's type
   /// @param argNames the function's argument names
@@ -67,9 +69,7 @@ public:
   /// Constructs an SIR function.
   /// @param type the function's type
   /// @param name the function's name
-  Func(types::Type *type, std::string name = "") : Func(type, {}, std::move(name)) {}
-
-  void accept(util::SIRVisitor &v) override { v.visit(this); }
+  explicit Func(types::Type *type, std::string name = "") : Func(type, {}, std::move(name)) {}
 
   types::Type *getType() const override { return type; }
 

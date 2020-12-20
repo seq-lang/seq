@@ -10,28 +10,20 @@
 
 namespace seq {
 namespace ir {
-
-namespace util {
-class SIRVisitor;
-}
-
 namespace types {
 
 class Type;
 using TypePtr = std::unique_ptr<Type>;
 
 /// Type from which other SIR types derive. Generally types are immutable.
-class Type : public IRNode {
+class Type : public AcceptorExtend<Type, IRNode> {
 public:
-  /// Constructs a type.
-  /// @param name the type's name
-  /// @param atomic atomicity of the type
-  explicit Type(std::string name) : IRNode(std::move(name)) {}
+  static const char NodeId;
 
+  using AcceptorExtend::AcceptorExtend;
+  
   virtual ~Type() noexcept = default;
-
-  void accept(util::SIRVisitor &v) override { v.visit(this); }
-
+  
   /// A type is "atomic" iff it contains no pointers to dynamically
   /// allocated memory. Atomic types do not need to be scanned during
   /// garbage collection.
@@ -42,62 +34,66 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
-/// CRTP that implements visitor functions.
-template <typename Derived, typename Ancestor = Type> class TypeBase : public Ancestor {
-public:
-  template <typename... Args>
-  explicit TypeBase(Args... args) : Ancestor(std::forward<Args>(args)...) {}
-
-  virtual ~TypeBase() = default;
-
-  void accept(util::SIRVisitor &v) override { v.visit(static_cast<Derived *>(this)); }
-};
-
 /// Type from which primitive atomic types derive.
-class PrimitiveType : public Type {
+class PrimitiveType : public AcceptorExtend<PrimitiveType, Type> {
 public:
-  explicit PrimitiveType(std::string name) : Type(std::move(name)) {}
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
+
   bool isAtomic() const override { return true; }
 };
 
 /// Int type (64-bit signed integer)
-class IntType : public TypeBase<IntType, PrimitiveType> {
+class IntType : public AcceptorExtend<IntType, PrimitiveType> {
 public:
-  IntType() : TypeBase("int") {}
-  virtual ~IntType() = default;
+  static const char NodeId;
+
+  /// Constructs an int type.
+  IntType() : AcceptorExtend(".int") {}
 };
 
 /// Float type (64-bit double)
-class FloatType : public TypeBase<FloatType, PrimitiveType> {
+class FloatType : public AcceptorExtend<FloatType, PrimitiveType> {
 public:
-  FloatType() : TypeBase("float") {}
-  virtual ~FloatType() = default;
+  static const char NodeId;
+
+  /// Constructs a float type.
+  FloatType() : AcceptorExtend(".float") {}
 };
 
 /// Bool type (8-bit unsigned integer; either 0 or 1)
-class BoolType : public TypeBase<BoolType, PrimitiveType> {
+class BoolType : public AcceptorExtend<BoolType, PrimitiveType> {
 public:
-  BoolType() : TypeBase("bool") {}
-  virtual ~BoolType() = default;
+  static const char NodeId;
+
+  /// Constructs a bool type.
+  BoolType() : AcceptorExtend(".bool") {}
 };
 
 /// Byte type (8-bit unsigned integer)
-class ByteType : public TypeBase<ByteType, PrimitiveType> {
+class ByteType : public AcceptorExtend<ByteType, PrimitiveType> {
 public:
-  ByteType() : TypeBase("byte") {}
-  virtual ~ByteType() = default;
+  static const char NodeId;
+
+  /// Constructs a byte type.
+  ByteType() : AcceptorExtend(".byte") {}
 };
 
 /// Void type
-class VoidType : public TypeBase<VoidType, PrimitiveType> {
+class VoidType : public AcceptorExtend<VoidType, PrimitiveType> {
 public:
-  VoidType() : TypeBase("void") {}
-  virtual ~VoidType() = default;
+  static const char NodeId;
+
+  /// Constructs a void type.
+  VoidType() : AcceptorExtend(".void") {}
 };
 
 /// Type from which membered types derive.
-class MemberedType : public Type {
+class MemberedType : public AcceptorExtend<MemberedType, Type> {
 public:
+  static const char NodeId;
+
   /// Object that represents a field in a membered type.
   struct Field {
     /// the field's name
@@ -116,7 +112,7 @@ public:
 
   /// Constructs a membered type.
   /// @param name the type's name
-  explicit MemberedType(std::string name) : Type(std::move(name)) {}
+  explicit MemberedType(std::string name) : AcceptorExtend(std::move(name)) {}
 
   virtual ~MemberedType() = default;
 
@@ -141,11 +137,13 @@ public:
 };
 
 /// Membered type equivalent to C structs/C++ PODs
-class RecordType : public TypeBase<RecordType, MemberedType> {
+class RecordType : public AcceptorExtend<RecordType, MemberedType> {
 private:
   std::vector<Field> fields;
 
 public:
+  static const char NodeId;
+
   /// Constructs a record type.
   /// @param name the type's name
   /// @param fieldTypes the member types
@@ -160,12 +158,12 @@ public:
 
   /// Constructs an empty record type.
   /// @param name the name
-  explicit RecordType(std::string name) : TypeBase(std::move(name)) {}
+  explicit RecordType(std::string name) : AcceptorExtend(std::move(name)) {}
 
   virtual ~RecordType() = default;
 
   bool isAtomic() const override {
-    for (const Field &field : fields) {
+    for (const auto &field : fields) {
       if (!field.type->isAtomic())
         return false;
     }
@@ -186,17 +184,19 @@ private:
 };
 
 /// Membered type that is passed by reference. Similar to Python classes.
-class RefType : public TypeBase<RecordType, MemberedType> {
+class RefType : public AcceptorExtend<RecordType, MemberedType> {
 private:
   /// the internal contents of the type
   RecordType *contents;
 
 public:
+  static const char NodeId;
+
   /// Constructs a reference type.
   /// @param name the type's name
   /// @param contents the type's contents
   RefType(std::string name, RecordType *contents)
-      : TypeBase(std::move(name)), contents(contents) {}
+      : AcceptorExtend(std::move(name)), contents(contents) {}
 
   bool isAtomic() const override { return false; }
 
@@ -206,7 +206,7 @@ public:
 
   const_iterator begin() const override { return contents->begin(); }
   const_iterator end() const override { return contents->end(); }
-  virtual const_reference front() const override { return contents->front(); }
+  const_reference front() const override { return contents->front(); }
   virtual const_reference back() const override { return contents->back(); }
 
   /// @return the reference type's contents
@@ -221,7 +221,7 @@ private:
 };
 
 /// Type associated with a SIR function.
-class FuncType : public TypeBase<FuncType> {
+class FuncType : public AcceptorExtend<FuncType, Type> {
 public:
   using const_iterator = std::vector<Type *>::const_iterator;
   using const_reference = std::vector<Type *>::const_reference;
@@ -233,11 +233,13 @@ private:
   std::vector<Type *> argTypes;
 
 public:
+  static const char NodeId;
+
   /// Constructs a function type.
   /// @param rType the function's return type
   /// @param argTypes the function's arg types
   FuncType(Type *rType, std::vector<Type *> argTypes)
-      : TypeBase(getName(rType, argTypes)), rType(rType),
+      : AcceptorExtend(getName(rType, argTypes)), rType(rType),
         argTypes(std::move(argTypes)) {}
 
   bool isAtomic() const override { return false; }
@@ -262,17 +264,19 @@ private:
 };
 
 /// Base for simple derived types.
-class DerivedType : public Type {
+class DerivedType : public AcceptorExtend<DerivedType, Type> {
 private:
   /// the base type
   Type *base;
 
 public:
+  static const char NodeId;
+
   /// Constructs a derived type.
   /// @param name the type's name
   /// @param base the type's base
   explicit DerivedType(std::string name, Type *base)
-      : Type(std::move(name)), base(base) {}
+      : AcceptorExtend(std::move(name)), base(base) {}
 
   bool isAtomic() const override { return base->isAtomic(); }
 
@@ -281,11 +285,14 @@ public:
 };
 
 /// Type of a pointer to another SIR type
-class PointerType : public TypeBase<PointerType, DerivedType> {
+class PointerType : public AcceptorExtend<PointerType, DerivedType> {
 public:
+  static const char NodeId;
+
   /// Constructs a pointer type.
   /// @param base the type's base
-  explicit PointerType(Type *base) : TypeBase(getName(base), base) {}
+  explicit PointerType(Type *base)
+      : AcceptorExtend(getName(base), base) {}
 
   bool isAtomic() const override { return false; }
 
@@ -293,12 +300,14 @@ public:
 };
 
 /// Type of an optional containing another SIR type
-class OptionalType : public TypeBase<OptionalType, RecordType> {
+class OptionalType : public AcceptorExtend<OptionalType, RecordType> {
 private:
   /// type's base type
   Type *base;
 
 public:
+  static const char NodeId;
+
   /// Constructs an optional type.
   /// @param pointerType the base's pointer type
   /// @param flagType type of the flag indicating if an object is present
@@ -315,12 +324,14 @@ public:
 };
 
 /// Type of an array containing another SIR type
-class ArrayType : public TypeBase<ArrayType, RecordType> {
+class ArrayType : public AcceptorExtend<ArrayType, RecordType> {
 private:
   /// type's base type
   Type *base;
 
 public:
+  static const char NodeId;
+
   /// Constructs an array type.
   /// @param pointerType the base's pointer type
   /// @param countType the type of the array's count
@@ -337,11 +348,14 @@ public:
 };
 
 /// Type of a generator yielding another SIR type
-class GeneratorType : public TypeBase<GeneratorType, DerivedType> {
+class GeneratorType : public AcceptorExtend<GeneratorType, DerivedType> {
 public:
+  static const char NodeId;
+
   /// Constructs a generator type.
   /// @param base the type's base
-  explicit GeneratorType(Type *base) : TypeBase(getName(base), base) {}
+  explicit GeneratorType(Type *base)
+  : AcceptorExtend(getName(base), base) {}
 
   bool isAtomic() const override { return false; }
 
@@ -349,7 +363,7 @@ public:
 };
 
 /// Type of a variably sized integer
-class IntNType : public TypeBase<IntNType> {
+class IntNType : public AcceptorExtend<IntNType, Type> {
 private:
   /// length of the integer
   unsigned len;
@@ -357,13 +371,15 @@ private:
   bool sign;
 
 public:
+  static const char NodeId;
+
   static const unsigned MAX_LEN = 2048;
 
   /// Constructs a variably sized integer type.
   /// @param len the length of the integer
   /// @param sign true if signed, false otherwise
   IntNType(unsigned len, bool sign)
-      : TypeBase(getName(len, sign)), len(len), sign(sign) {}
+      : AcceptorExtend(getName(len, sign)), len(len), sign(sign) {}
 
   bool isAtomic() const override { return true; }
 

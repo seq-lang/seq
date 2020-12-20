@@ -202,7 +202,8 @@ void CodegenVisitor::visit(const StackAllocExpr *expr) {
 }
 
 void CodegenVisitor::visit(const DotExpr *expr) {
-  result = ctx->getModule()->Nxs<LoadInstr>(expr, transform(expr->expr), expr->member);
+  auto *module = ctx->getModule();
+  result = module->Nxs<LoadInstr>(expr, module->Nxs<GetFieldPtrInstr>(expr, stripLoad(transform(expr->expr)), expr->member));
 }
 
 void CodegenVisitor::visit(const PtrExpr *expr) {
@@ -289,28 +290,16 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
 }
 
 void CodegenVisitor::visit(const AssignMemberStmt *stmt) {
-  auto i = CAST(stmt->lhs, IdExpr);
-  assert(i);
-  auto var = i->value;
-  auto val = ctx->find(var, true);
-  assert(val && val->getVar());
-
   auto *module = ctx->getModule();
   ctx->getSeries()->push_back(
-      module->Nxs<AssignInstr>(stmt, module->Nxs<ValueProxy>(stmt, val->getVar()),
-                               transform(stmt->rhs), stmt->member));
+      module->Nxs<AssignInstr>(stmt, module->Nxs<GetFieldPtrInstr>(stmt, stripLoad(transform(stmt->lhs)), stmt->member),
+                               transform(stmt->rhs)));
 }
 
 void CodegenVisitor::visit(const UpdateStmt *stmt) {
-  auto i = CAST(stmt->lhs, IdExpr);
-  assert(i);
-  auto var = i->value;
-  auto val = ctx->find(var, true);
-  assert(val && val->getVar());
-
   auto *module = ctx->getModule();
   ctx->getSeries()->push_back(module->Nxs<AssignInstr>(
-      stmt, module->Nxs<ValueProxy>(stmt, val->getVar()), transform(stmt->rhs)));
+      stmt, stripLoad(transform(stmt->lhs)), transform(stmt->rhs)));
 }
 
 void CodegenVisitor::visit(const DelStmt *stmt) {
@@ -351,7 +340,7 @@ void CodegenVisitor::visit(const WhileStmt *stmt) {
 
   ctx->addLoop(loop.get());
   ctx->addScope();
-  ctx->addSeries(dynamic_cast<SeriesFlow *>(loop->getBody().get()));
+  ctx->addSeries(cast<SeriesFlow>(loop->getBody()));
   transform(stmt->suite);
   ctx->popSeries();
   ctx->popScope();
@@ -402,7 +391,7 @@ void CodegenVisitor::visit(const ForStmt *stmt) {
   ctx->addScope();
   ctx->addVar(varId->value, resVar);
 
-  ctx->addSeries(dynamic_cast<SeriesFlow *>(loop->getBody().get()));
+  ctx->addSeries(cast<SeriesFlow>(loop->getBody()));
   transform(stmt->suite);
   ctx->popSeries();
   ctx->popScope();
@@ -503,9 +492,9 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
 
     LOG_REALIZE("[codegen] generating fn {}", real.first);
     if (in(stmt->attributes, "llvm")) {
-      auto f = dynamic_cast<seq::ir::Func *>(fp.first);
+      auto *f = cast<ir::Func>(fp.first);
       assert(f);
-      f->realize(dynamic_cast<ir::types::FuncType *>(realizeType(t->getClass())),
+      f->realize(cast<ir::types::FuncType>(realizeType(t->getClass())),
                  names);
 
       // auto s = CAST(tmp->suite, SuiteStmt);
@@ -564,14 +553,14 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       }
       f->setLLVM(move(declare), join(lines, "\n"));
     } else {
-      auto f = dynamic_cast<seq::ir::Func *>(fp.first);
+      auto *f = cast<ir::Func>(fp.first);
       assert(f);
       f->setSrcInfo(getSrcInfo());
       //      if (!ctx->isToplevel())
       //        f->p
       ctx->addScope();
 
-      f->realize(dynamic_cast<ir::types::FuncType *>(realizeType(t->getClass())),
+      f->realize(cast<ir::types::FuncType>(realizeType(t->getClass())),
                  names);
       f->setAttribute(kFuncAttribute, make_unique<FuncAttribute>(ast->attributes));
       for (auto &a : ast->attributes) {
@@ -582,7 +571,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
         f->setExternal(ctx->cache->reverseIdentifierLookup[stmt->name]);
       } else if (!in(ast->attributes, "internal")) {
         for (auto &arg : names) {
-          auto var = dynamic_cast<ir::Var *>(f->getArgVar(arg));
+          auto var = cast<ir::Var>(f->getArgVar(arg));
           assert(var);
           ctx->addVar(arg, var);
         }
@@ -600,6 +589,14 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
 
 void CodegenVisitor::visit(const ClassStmt *stmt) {
   // visitMethods(ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo()));
+}
+
+ValuePtr CodegenVisitor::stripLoad(ValuePtr other) {
+  auto *load = cast<LoadInstr>(other);
+  if (load) {
+    return load->extractPtr();
+  }
+  return other;
 }
 
 std::unique_ptr<ir::SeriesFlow> CodegenVisitor::newScope(const seq::SrcObject *s,

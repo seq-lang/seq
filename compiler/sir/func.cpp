@@ -9,9 +9,11 @@
 namespace seq {
 namespace ir {
 
+const char Func::NodeId = 0;
+
 Func::Func(types::Type *type, std::vector<std::string> argNames, std::string name)
-    : Value(std::move(name)), type(type) {
-  auto *funcType = dynamic_cast<types::FuncType *>(type);
+    : AcceptorExtend(std::move(name)), type(type) {
+  auto *funcType = type->as<types::FuncType>();
   assert(funcType);
 
   auto i = 0;
@@ -49,7 +51,7 @@ std::ostream &Func::doFormat(std::ostream &os) const {
 
   fmt::print(os, FMT_STRING("def {}({}) -> {} [\n{}\n] {{\n"), referenceString(),
              fmt::join(argNames, ", "),
-             dynamic_cast<types::FuncType *>(type)->getReturnType()->referenceString(),
+             type->as<types::FuncType>()->getReturnType()->referenceString(),
              fmt::join(util::dereference_adaptor(symbols.begin()),
                        util::dereference_adaptor(symbols.end()), "\n"));
 

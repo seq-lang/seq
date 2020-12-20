@@ -12,7 +12,7 @@ namespace seq {
 namespace ir {
 
 /// SIR object representing a program.
-class IRModule : public IRNode {
+class IRModule : public AcceptorExtend<IRModule, IRNode> {
 public:
   using iterator = std::list<ValuePtr>::iterator;
   using const_iterator = std::list<ValuePtr>::const_iterator;
@@ -37,11 +37,11 @@ private:
   std::unordered_map<std::string, types::TypePtr> types;
 
 public:
+  static const char NodeId;
+
   /// Constructs an SIR module.
   /// @param name the module name
-  explicit IRModule(std::string name) : IRNode(std::move(name)) {}
-
-  void accept(util::SIRVisitor &v) override { v.visit(this); }
+  explicit IRModule(std::string name) : AcceptorExtend(std::move(name)) {}
 
   /// @return the main function
   const FuncPtr &getMainFunc() const { return mainFunc; }
@@ -249,12 +249,12 @@ public:
     if (!rVal) {
       if (ref) {
         auto contentName = name + ".contents";
-        auto *record = dynamic_cast<types::RecordType *>(getType(contentName));
+        auto *record = getType(contentName);
         if (!record) {
           record = Nr<types::RecordType>(contentName);
           types[contentName] = types::TypePtr(record);
         }
-        rVal = Nr<types::RefType>(name, record);
+        rVal = Nr<types::RefType>(name, record->as<types::RecordType>());
       } else {
         rVal = Nr<types::RecordType>(name);
       }

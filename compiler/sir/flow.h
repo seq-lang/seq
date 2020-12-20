@@ -10,29 +10,19 @@ namespace seq {
 namespace ir {
 
 /// Base fors, which represent control.
-class Flow : public Value {
+class Flow : public AcceptorExtend<Flow, Value> {
 public:
-  /// Constructs a flow.
-  /// @param name the name
-  explicit Flow(std::string name = "") : Value(std::move(name)) {}
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
 
   types::Type *getType() const override { return nullptr; }
 
   virtual ~Flow() noexcept = default;
 };
 
-/// CRTP base fors that provides visitor functionality.
-template <typename FlowType> class FlowBase : public Flow {
-public:
-  /// Constructs a flow.
-  /// @param name the name
-  explicit FlowBase(std::string name = "") : Flow(std::move(name)) {}
-
-  void accept(util::SIRVisitor &v) override { v.visit(static_cast<FlowType *>(this)); }
-};
-
 /// Flow that contains a series of flows or instructions.
-class SeriesFlow : public FlowBase<SeriesFlow> {
+class SeriesFlow : public AcceptorExtend<SeriesFlow, Flow> {
 public:
   using iterator = std::list<ValuePtr>::iterator;
   using const_iterator = std::list<ValuePtr>::const_iterator;
@@ -43,9 +33,9 @@ private:
   std::list<ValuePtr> series;
 
 public:
-  /// Constructs a series flow.
-  /// @param name the flow's name
-  explicit SeriesFlow(std::string name = "") : FlowBase(std::move(name)) {}
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
 
   /// @return an iterator to the first
   iterator begin() { return series.begin(); }
@@ -95,7 +85,7 @@ private:
 };
 
 /// Flow representing a while loop.
-class WhileFlow : public FlowBase<WhileFlow> {
+class WhileFlow : public AcceptorExtend<WhileFlow, Flow> {
 private:
   /// the condition
   ValuePtr cond;
@@ -103,12 +93,14 @@ private:
   ValuePtr body;
 
 public:
+  static const char NodeId;
+
   /// Constructs a while loop.
   /// @param cond the condition
   /// @param body the body
   /// @param name the flow's name
   WhileFlow(ValuePtr cond, ValuePtr body, std::string name = "")
-      : FlowBase(std::move(name)), cond(std::move(cond)), body(std::move(body)) {}
+      : AcceptorExtend(std::move(name)), cond(std::move(cond)), body(std::move(body)) {}
 
   /// @return the condition
   const ValuePtr &getCond() const { return cond; }
@@ -127,7 +119,7 @@ private:
 };
 
 /// Flow representing a for loop.
-class ForFlow : public FlowBase<ForFlow> {
+class ForFlow : public AcceptorExtend<ForFlow, Flow> {
 private:
   /// the setup
   ValuePtr setup;
@@ -139,6 +131,8 @@ private:
   ValuePtr update;
 
 public:
+  static const char NodeId;
+
   /// Constructs a for loop.
   /// @param name the flow's name
   /// @param setup the setup
@@ -147,7 +141,7 @@ public:
   /// @param update the update
   ForFlow(ValuePtr setup, ValuePtr cond, ValuePtr body, ValuePtr update,
           std::string name = "")
-      : FlowBase(std::move(name)), setup(std::move(setup)), cond(std::move(cond)),
+      : AcceptorExtend(std::move(name)), setup(std::move(setup)), cond(std::move(cond)),
         body(std::move(body)), update(std::move(update)) {}
 
   /// @return the setup
@@ -179,7 +173,7 @@ private:
 };
 
 /// Flow representing an if statement.
-class IfFlow : public FlowBase<IfFlow> {
+class IfFlow : public AcceptorExtend<IfFlow, Flow> {
 private:
   /// the condition
   ValuePtr cond;
@@ -189,6 +183,8 @@ private:
   ValuePtr falseBranch;
 
 public:
+  static const char NodeId;
+
   /// Constructs an if.
   /// @param cond the condition
   /// @param trueBranch the true branch
@@ -196,7 +192,7 @@ public:
   /// @param name the flow's name
   IfFlow(ValuePtr cond, ValuePtr trueBranch, ValuePtr falseBranch = nullptr,
          std::string name = "")
-      : FlowBase(std::move(name)), cond(std::move(cond)),
+      : AcceptorExtend(std::move(name)), cond(std::move(cond)),
         trueBranch(std::move(trueBranch)), falseBranch(std::move(falseBranch)) {}
 
   /// @return the true branch
@@ -222,7 +218,7 @@ private:
 };
 
 /// Flow representing a try-catch statement.
-class TryCatchFlow : public FlowBase<TryCatchFlow> {
+class TryCatchFlow : public AcceptorExtend<TryCatchFlow, Flow> {
 public:
   /// Struct representing a catch clause.
   struct Catch {
@@ -253,13 +249,15 @@ private:
   ValuePtr finally;
 
 public:
+  static const char NodeId;
+
   /// Constructs an try-catch.
   /// @param name the's name
   /// @param body the body
   /// @param finally the finally
   explicit TryCatchFlow(ValuePtr body, ValuePtr finally = nullptr,
                         std::string name = "")
-      : FlowBase(std::move(name)), body(std::move(body)), finally(std::move(finally)) {}
+      : AcceptorExtend(std::move(name)), body(std::move(body)), finally(std::move(finally)) {}
 
   /// @return the body
   const ValuePtr &getBody() const { return body; }
