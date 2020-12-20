@@ -99,6 +99,8 @@ struct SimplifyContext : public Context<SimplifyItem> {
   /// Current module name (Python's __name__). The default module is __main__.
   string moduleName;
 
+  bool canAssign;
+
 public:
   SimplifyContext(string filename, shared_ptr<Cache> cache);
 

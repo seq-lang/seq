@@ -30,7 +30,7 @@ SimplifyItem::SimplifyItem(Kind k, string base, string canonicalName, bool globa
 
 SimplifyContext::SimplifyContext(string filename, shared_ptr<Cache> cache)
     : Context<SimplifyItem>(move(filename)), cache(move(cache)), isStdlibLoading(false),
-      extendCount(0) {}
+      extendCount(0), canAssign(true) {}
 
 shared_ptr<SimplifyItem> SimplifyContext::add(SimplifyItem::Kind kind,
                                               const string &name,

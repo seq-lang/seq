@@ -38,6 +38,7 @@ type texpr =
   | TypeOf of texpr ann
   | Lambda of (string list * texpr ann)
   | YieldTo of unit
+  | AssignExpr of (texpr ann * texpr ann)
 
 and tcomprehension =
   { var : texpr ann

@@ -233,10 +233,11 @@ and read state = parse
   | "||>" as op { [P.PPIPE op] }
   | ">|"  as op { [P.SPIPE op] }
   | "|>"  as op { [P.PIPE  op] }
-  | "|"   as op { [P.B_OR  (char_to_string op)] }
-  | "="   as op { [P.EQ        (char_to_string op)] }
-  | "..." as op { [P.ELLIPSIS  op] }
-  | "@"   as op { [P.AT        (char_to_string op)] }
+  | "|"   as op { [P.B_OR (char_to_string op)] }
+  | "="   as op { [P.EQ (char_to_string op)] }
+  | "..." as op { [P.ELLIPSIS op] }
+  | "@"   as op { [P.AT (char_to_string op)] }
+  | ":="  as op { [P.WALRUS op] }
   (* | "=>"  { [P.ARROW] } *)
   | "->"  { [P.OF] }
   | ":"   { [P.COLON] }

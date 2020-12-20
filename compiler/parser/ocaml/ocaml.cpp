@@ -179,6 +179,8 @@ ExprPtr parse_expr(value val) {
     Return(Lambda, parse_list(Field(t, 0), parse_string), parse_expr(Field(t, 1)));
   case 26:
     Return(Yield, );
+  case 27:
+    Return(Assign, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)));
   default:
     seq::compilationError("[internal] tag variant mismatch ...");
     return nullptr;

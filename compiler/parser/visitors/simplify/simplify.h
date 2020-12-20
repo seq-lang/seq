@@ -134,6 +134,7 @@ public:
   void visit(const SliceExpr *) override;
   void visit(const TypeOfExpr *) override;
   void visit(const LambdaExpr *) override;
+  void visit(const AssignExpr *) override;
 
   void visit(const SuiteStmt *) override;
   void visit(const ContinueStmt *) override;

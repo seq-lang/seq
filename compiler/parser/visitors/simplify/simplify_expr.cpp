@@ -262,9 +262,11 @@ void SimplifyVisitor::visit(const DictGeneratorExpr *expr) {
 /// Transform a if-expression a if cond else b to:
 ///   a if cond.__bool__() else b
 void SimplifyVisitor::visit(const IfExpr *expr) {
-  resultExpr =
-      N<IfExpr>(transform(N<CallExpr>(N<DotExpr>(clone(expr->cond), "__bool__"))),
-                transform(expr->ifexpr), transform(expr->elsexpr));
+  auto cond = transform(N<CallExpr>(N<DotExpr>(clone(expr->cond), "__bool__")));
+  auto oldAssign = ctx->canAssign;
+  ctx->canAssign = false;
+  resultExpr = N<IfExpr>(move(cond), transform(expr->ifexpr), transform(expr->elsexpr));
+  ctx->canAssign = oldAssign;
 }
 
 /// Transform a unary expression to the corresponding magic call
@@ -301,9 +303,13 @@ void SimplifyVisitor::visit(const UnaryExpr *expr) {
 /// Other cases are handled during the type-checking stage.
 void SimplifyVisitor::visit(const BinaryExpr *expr) {
   if (expr->op == "&&" || expr->op == "||") {
+    auto l = transform(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__")));
+    auto oldAssign = ctx->canAssign;
+    ctx->canAssign = false;
     resultExpr = N<BinaryExpr>(
-        transform(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__"))), expr->op,
+        move(l), expr->op,
         transform(N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
+    ctx->canAssign = oldAssign;
   } else if (expr->op == "is not") {
     resultExpr = transform(N<CallExpr>(N<DotExpr>(
         N<BinaryExpr>(clone(expr->lexpr), "is", clone(expr->rexpr)), "__invert__")));
@@ -498,6 +504,18 @@ void SimplifyVisitor::visit(const LambdaExpr *expr) {
   } else {
     resultExpr = move(call->expr);
   }
+}
+
+/// Transform var := expr to a statement expression:
+///   var = expr; var
+void SimplifyVisitor::visit(const AssignExpr *expr) {
+  seqassert(expr->var->getId(), "only simple assignment expression are supported");
+  if (!ctx->canAssign)
+    error("assignment expression in a short-circuiting subexpression");
+  vector<StmtPtr> s;
+  s.push_back(transform(N<AssignStmt>(clone(expr->var), clone(expr->expr))));
+  resultExpr =
+      transform(N<StmtExpr>(move(s), transform(N<IdExpr>(expr->var->getId()->value))));
 }
 
 ExprPtr SimplifyVisitor::transformInt(const string &value, const string &suffix) {
