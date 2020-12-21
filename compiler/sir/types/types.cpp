@@ -112,8 +112,8 @@ const char OptionalType::NodeId = 0;
 
 OptionalType::OptionalType(Type *pointerType, Type *flagType)
     : AcceptorExtend(getName(dynamic_cast<PointerType *>(pointerType)->getBase()),
-               std::vector<Type *>{flagType, pointerType},
-               std::vector<std::string>{"has", "val"}),
+                     std::vector<Type *>{flagType, pointerType},
+                     std::vector<std::string>{"has", "val"}),
       base(dynamic_cast<PointerType *>(pointerType)->getBase()) {}
 
 std::string OptionalType::getName(Type *base) {
@@ -124,8 +124,8 @@ const char ArrayType::NodeId = 0;
 
 ArrayType::ArrayType(Type *pointerType, Type *countType)
     : AcceptorExtend(getName(dynamic_cast<PointerType *>(pointerType)->getBase()),
-               std::vector<Type *>{countType, pointerType},
-               std::vector<std::string>{"len", "ptr"}),
+                     std::vector<Type *>{countType, pointerType},
+                     std::vector<std::string>{"len", "ptr"}),
       base(dynamic_cast<PointerType *>(pointerType)->getBase()) {}
 
 std::string ArrayType::getName(Type *base) {

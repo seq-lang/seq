@@ -284,16 +284,15 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
       ctx->getBase()->push_back(wrap(newVar));
     }
     ctx->addVar(var, newVar, var[0] == '.');
-    ctx->getSeries()->push_back(module->Nxs<AssignInstr>(
-        stmt, newVar, transform(stmt->rhs)));
+    ctx->getSeries()->push_back(
+        module->Nxs<AssignInstr>(stmt, newVar, transform(stmt->rhs)));
   }
 }
 
 void CodegenVisitor::visit(const AssignMemberStmt *stmt) {
   auto *module = ctx->getModule();
-  ctx->getSeries()->push_back(
-      module->Nxs<InsertInstr>(stmt, transform(stmt->lhs), stmt->member,
-                               transform(stmt->rhs)));
+  ctx->getSeries()->push_back(module->Nxs<InsertInstr>(
+      stmt, transform(stmt->lhs), stmt->member, transform(stmt->rhs)));
 }
 
 void CodegenVisitor::visit(const UpdateStmt *stmt) {
@@ -304,8 +303,8 @@ void CodegenVisitor::visit(const UpdateStmt *stmt) {
   assert(val && val->getVar());
 
   auto *module = ctx->getModule();
-  ctx->getSeries()->push_back(module->Nxs<AssignInstr>(
-      stmt, val->getVar(), transform(stmt->rhs)));
+  ctx->getSeries()->push_back(
+      module->Nxs<AssignInstr>(stmt, val->getVar(), transform(stmt->rhs)));
 }
 
 void CodegenVisitor::visit(const DelStmt *stmt) {
@@ -357,42 +356,15 @@ void CodegenVisitor::visit(const WhileStmt *stmt) {
 
 void CodegenVisitor::visit(const ForStmt *stmt) {
   auto *module = ctx->getModule();
-  auto *doneVar = module->Nrs<ir::Var>(
-      stmt, realizeType(stmt->done->getType()->getClass()), "isDone");
-  ctx->getBase()->push_back(wrap(doneVar));
 
   auto varId = CAST(stmt->var, IdExpr);
   auto *resVar = module->Nrs<ir::Var>(stmt, realizeType(varId->getType()->getClass()),
                                       varId->value);
   ctx->getBase()->push_back(wrap(resVar));
 
-  auto setupSeries = newScope(stmt, "setup");
-  ctx->addSeries(setupSeries.get());
-
-  ctx->getSeries()->push_back(module->Nxs<AssignInstr>(
-      stmt, doneVar, transform(clone(stmt->done))));
-  ctx->getSeries()->push_back(module->Nxs<IfFlow>(
-      stmt, module->Nxs<VarValue>(stmt, doneVar),
-      module->Nxs<AssignInstr>(stmt, resVar,
-                               transform(clone(stmt->next)))));
-  ctx->popSeries();
-
-  auto updateSeries = newScope(stmt, "update");
-  ctx->addSeries(updateSeries.get());
-
-  ctx->getSeries()->push_back(module->Nxs<AssignInstr>(
-      stmt, doneVar, transform(clone(stmt->done))));
-  ctx->getSeries()->push_back(module->Nxs<IfFlow>(
-      stmt, module->Nxs<VarValue>(stmt, doneVar),
-      module->Nxs<AssignInstr>(stmt, resVar,
-                               transform(clone(stmt->next)))));
-  ctx->popSeries();
-
   auto bodySeries = newScope(stmt, "body");
-  auto loop = ctx->getModule()->Nxs<ForFlow>(
-      stmt, move(setupSeries),
-      module->Nxs<VarValue>(stmt, doneVar),
-      move(bodySeries), move(updateSeries));
+  auto loop = ctx->getModule()->Nxs<ForFlow>(stmt, transform(stmt->iter),
+                                             move(bodySeries), resVar);
   ctx->addLoop(loop.get());
   ctx->addScope();
   ctx->addVar(varId->value, resVar);
@@ -467,8 +439,7 @@ void CodegenVisitor::visit(const TryStmt *stmt) {
 
     ctx->popScope();
 
-    newTc->push_back(TryCatchFlow::Catch(
-        move(catchBody), excType, catchVar));
+    newTc->push_back(TryCatchFlow::Catch(move(catchBody), excType, catchVar));
   }
 
   ctx->getSeries()->push_back(move(newTc));
@@ -500,8 +471,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
     if (in(stmt->attributes, "llvm")) {
       auto *f = cast<ir::Func>(fp.first);
       assert(f);
-      f->realize(cast<ir::types::FuncType>(realizeType(t->getClass())),
-                 names);
+      f->realize(cast<ir::types::FuncType>(realizeType(t->getClass())), names);
 
       // auto s = CAST(tmp->suite, SuiteStmt);
       // assert(s && s->stmts.size() == 1)
@@ -566,8 +536,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       //        f->p
       ctx->addScope();
 
-      f->realize(cast<ir::types::FuncType>(realizeType(t->getClass())),
-                 names);
+      f->realize(cast<ir::types::FuncType>(realizeType(t->getClass())), names);
       f->setAttribute(kFuncAttribute, make_unique<FuncAttribute>(ast->attributes));
       for (auto &a : ast->attributes) {
         if (a.first == "atomic")

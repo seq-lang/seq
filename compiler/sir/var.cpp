@@ -16,7 +16,9 @@ const char VarValue::NodeId = 0;
 
 const char PointerValue::NodeId = 0;
 
-types::Type *PointerValue::getType() const { return getModule()->getPointerType(val->getType()); }
+types::Type *PointerValue::getType() const {
+  return getModule()->getPointerType(val->getType());
+}
 
 } // namespace ir
 } // namespace seq
