@@ -5,6 +5,7 @@
 
 #include "base.h"
 #include "value.h"
+#include "var.h"
 
 namespace seq {
 namespace ir {
@@ -227,11 +228,11 @@ public:
     /// the catch type, may be nullptr
     types::Type *type;
     /// the catch variable, may be nullptr
-    ValuePtr catchVar;
+    Var *catchVar;
 
     explicit Catch(ValuePtr handler, types::Type *type = nullptr,
-                   ValuePtr catchVar = nullptr)
-        : handler(std::move(handler)), type(type), catchVar(std::move(catchVar)) {}
+                   Var *catchVar = nullptr)
+        : handler(std::move(handler)), type(type), catchVar(catchVar) {}
   };
 
   using iterator = std::list<Catch>::iterator;

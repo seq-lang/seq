@@ -98,8 +98,6 @@ private:
       return nullptr;
   }
 
-  ir::ValuePtr stripLoad(ir::ValuePtr outer);
-
   template <typename T> auto wrap(T *obj) { return std::unique_ptr<T>(obj); }
 };
 

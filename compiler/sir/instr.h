@@ -6,6 +6,7 @@
 #include "flow.h"
 #include "types/types.h"
 #include "value.h"
+#include "var.h"
 
 namespace seq {
 namespace ir {
@@ -27,7 +28,7 @@ public:
 class AssignInstr : public AcceptorExtend<AssignInstr, Instr> {
 private:
   /// the left-hand side
-  ValuePtr lhs;
+  Var *lhs;
   /// the right-hand side
   ValuePtr rhs;
 
@@ -39,14 +40,14 @@ public:
   /// @param rhs the right-hand side
   /// @param field the field being set, may be empty
   /// @param name the instruction's name
-  AssignInstr(ValuePtr lhs, ValuePtr rhs, std::string name = "")
-      : AcceptorExtend(std::move(name)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+  AssignInstr(Var *lhs, ValuePtr rhs, std::string name = "")
+      : AcceptorExtend(std::move(name)), lhs(lhs), rhs(std::move(rhs)) {}
 
   /// @return the left-hand side
-  const ValuePtr &getLhs() const { return lhs; }
+  const Var *getLhs() const { return lhs; }
   /// Sets the left-hand side
   /// @param l the new value
-  void setLhs(ValuePtr v) { lhs = std::move(v); }
+  void setLhs(Var *v) { lhs = v; }
 
   /// @return the right-hand side
   const ValuePtr &getRhs() const { return rhs; }
@@ -58,69 +59,85 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
-/// Instr representing loading a memory location.
-class LoadInstr : public AcceptorExtend<LoadInstr, Instr> {
+/// Instr representing loading the field of a value.
+class ExtractInstr : public AcceptorExtend<ExtractInstr, Instr> {
 private:
-  /// the location
-  ValuePtr ptr;
-
-public:
-  static const char NodeId;
-
-  /// Constructs a load instruction.
-  /// @param ptr the location
-  /// @param name the instruction's name
-  explicit LoadInstr(ValuePtr ptr, std::string name = "")
-      : AcceptorExtend(std::move(name)), ptr(std::move(ptr)) {}
-
-  types::Type *getType() const override;
-
-  /// @return the location
-  const ValuePtr &getPtr() const { return ptr; }
-  /// Sets the location.
-  /// @param p the new value
-  void setPtr(ValuePtr p) { ptr = std::move(p); }
-  ValuePtr extractPtr() { return move(ptr); }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-};
-
-/// Instr representing indexing into a compound type.
-class GetFieldPtrInstr : public AcceptorExtend<GetFieldPtrInstr, Instr> {
-private:
-  /// the original location
-  ValuePtr ptr;
+  /// the value being manipulated
+  ValuePtr val;
   /// the field
   std::string field;
 
 public:
   static const char NodeId;
 
-  /// Constructs a get field pointer instruction.
-  /// @param ptr the location
-  /// @param field the field being set, may be empty
+  /// Constructs a load instruction.
+  /// @param val the value being manipulated
+  /// @param field the field
   /// @param name the instruction's name
-  explicit GetFieldPtrInstr(ValuePtr ptr, std::string field, std::string name = "")
-    : AcceptorExtend(std::move(name)), ptr(std::move(ptr)), field(std::move(field)) {}
+  explicit ExtractInstr(ValuePtr val, std::string field, std::string name = "")
+      : AcceptorExtend(std::move(name)), val(std::move(val)), field(std::move(field)) {}
 
   types::Type *getType() const override;
 
   /// @return the location
-  const ValuePtr &getPtr() const { return ptr; }
+  const ValuePtr &getVal() const { return val; }
   /// Sets the location.
   /// @param p the new value
-  void setPtr(ValuePtr p) { ptr = std::move(p); }
+  void setVal(ValuePtr p) { val = std::move(p); }
 
   /// @return the field
-  const std::string &getField() const { return field; }
+  const std::string &getField() { return field; }
   /// Sets the field.
-  /// @param p the new value
+  /// @param f the new field
   void setField(std::string f) { field = std::move(f); }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+};
 
+/// Instr representing setting the field of a value.
+class InsertInstr : public AcceptorExtend<ExtractInstr, Instr> {
+private:
+  /// the value being manipulated
+  ValuePtr lhs;
+  /// the field
+  std::string field;
+  /// the value being inserted
+  ValuePtr rhs;
+
+public:
+  static const char NodeId;
+
+  /// Constructs a load instruction.
+  /// @param lhs the value being manipulated
+  /// @param field the field
+  /// @param rhs the new value
+  /// @param name the instruction's name
+  explicit InsertInstr(ValuePtr lhs, std::string field, ValuePtr rhs, std::string name = "")
+      : AcceptorExtend(std::move(name)), lhs(std::move(lhs)), field(std::move(field)), rhs(std::move(rhs)) {}
+
+  types::Type *getType() const override { return lhs->getType(); }
+
+  /// @return the left-hand side
+  const ValuePtr &getLhs() const { return lhs; }
+  /// Sets the left-hand side.
+  /// @param p the new value
+  void setLhs(ValuePtr p) { lhs = std::move(p); }
+
+  /// @return the right-hand side
+  const ValuePtr &getRhs() const { return rhs; }
+  /// Sets the right-hand side.
+  /// @param p the new value
+  void setRhs(ValuePtr p) { rhs = std::move(p); }
+
+  /// @return the field
+  const std::string &getField() { return field; }
+  /// Sets the field.
+  /// @param f the new field
+  void setField(std::string f) { field = std::move(f); }
+
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing calling a function.

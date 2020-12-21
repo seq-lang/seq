@@ -1,28 +1,28 @@
 #pragma once
 
 #include "flow.h"
-#include "value.h"
+#include "var.h"
 
 namespace seq {
 namespace ir {
 
 /// SIR function
-class Func : public AcceptorExtend<Func, Value> {
+class Func : public AcceptorExtend<Func, Var> {
 public:
   struct Arg {
     std::string name;
-    Value *var;
+    Var *var;
 
-    Arg(std::string name, Value *var) : name(std::move(name)), var(var) {}
+    Arg(std::string name, Var *var) : name(std::move(name)), var(var) {}
   };
 
   using arg_const_iterator = std::list<Arg>::const_iterator;
   using arg_const_reference = std::list<Arg>::const_reference;
 
-  using symbol_iterator = std::list<ValuePtr>::iterator;
-  using symbol_const_iterator = std::list<ValuePtr>::const_iterator;
-  using symbol_reference = std::list<ValuePtr>::reference;
-  using symbol_const_reference = std::list<ValuePtr>::const_reference;
+  using symbol_iterator = std::list<VarPtr>::iterator;
+  using symbol_const_iterator = std::list<VarPtr>::const_iterator;
+  using symbol_reference = std::list<VarPtr>::reference;
+  using symbol_const_reference = std::list<VarPtr>::const_reference;
 
 private:
   /// the function type
@@ -32,7 +32,7 @@ private:
   std::list<Arg> args;
 
   /// list of variables defined and used within the function
-  std::list<ValuePtr> symbols;
+  std::list<VarPtr> symbols;
 
   /// function body
   ValuePtr body;
@@ -70,8 +70,6 @@ public:
   /// @param type the function's type
   /// @param name the function's name
   explicit Func(types::Type *type, std::string name = "") : Func(type, {}, std::move(name)) {}
-
-  types::Type *getType() const override { return type; }
 
   /// Re-initializes the function with a new type and names.
   /// @param newType the function's new type
@@ -116,19 +114,19 @@ public:
   /// @param pos the position
   /// @param v the symbol
   /// @return an iterator to the newly added symbol
-  symbol_iterator insert(symbol_iterator pos, ValuePtr v) {
+  symbol_iterator insert(symbol_iterator pos, VarPtr v) {
     return symbols.insert(pos, std::move(v));
   }
   /// Inserts an symbol at the given position.
   /// @param pos the position
   /// @param v the symbol
   /// @return an symbol_iterator to the newly added symbol
-  symbol_iterator insert(symbol_const_iterator pos, ValuePtr v) {
+  symbol_iterator insert(symbol_const_iterator pos, VarPtr v) {
     return symbols.insert(pos, std::move(v));
   }
   /// Appends an symbol.
   /// @param v the new symbol
-  void push_back(ValuePtr v) { symbols.push_back(std::move(v)); }
+  void push_back(VarPtr v) { symbols.push_back(std::move(v)); }
 
   /// Erases the symbol at the given position.
   /// @param pos the position
@@ -193,7 +191,7 @@ public:
     llvmBody = std::move(b);
   }
 
-  Value *getArgVar(const std::string &n);
+  Var *getArgVar(const std::string &n);
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;

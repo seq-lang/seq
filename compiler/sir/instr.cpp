@@ -15,33 +15,23 @@ std::ostream &AssignInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-const char LoadInstr::NodeId = 0;
+const char ExtractInstr::NodeId = 0;
 
-types::Type *LoadInstr::getType() const {
-  auto *ptrType = ptr->getType()->as<types::PointerType>();
-  assert(ptrType);
-  return ptrType->getBase();
+types::Type *ExtractInstr::getType() const {
+  auto *memberedType = val->getType()->as<types::MemberedType>();
+  assert(memberedType);
+  return memberedType->getMemberType(field);
 }
 
-std::ostream &LoadInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("load({})"), *ptr);
+std::ostream &ExtractInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("extract({}, \"{}\")"), *val, field);
   return os;
 }
 
-const char GetFieldPtrInstr::NodeId = 0;
+const char InsertInstr::NodeId = 0;
 
-types::Type *GetFieldPtrInstr::getType() const {
-  auto *ptrType = ptr->getType()->as<types::PointerType>();
-  assert(ptrType);
-  auto *base = ptrType->getBase()->as<types::MemberedType>();
-  assert(base);
-  auto *member = base->getMemberType(field);
-  assert(member);
-  return getModule()->getPointerType(member);
-}
-
-std::ostream &GetFieldPtrInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("gfp({}, {})"), *ptr, field);
+std::ostream &InsertInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("insert({}, \"{}\", {})"), *lhs, field, *rhs);
   return os;
 }
 
