@@ -85,7 +85,6 @@ private:
   }
 };
 
-
 } // namespace ir
 } // namespace seq
 

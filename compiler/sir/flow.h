@@ -122,34 +122,32 @@ private:
 /// Flow representing a for loop.
 class ForFlow : public AcceptorExtend<ForFlow, Flow> {
 private:
-  /// the setup
-  ValuePtr setup;
-  /// the condition
-  ValuePtr cond;
+  /// the iterator
+  ValuePtr iter;
   /// the body
   ValuePtr body;
-  /// the update
-  ValuePtr update;
+
+  /// the variable
+  Var *var;
 
 public:
   static const char NodeId;
 
   /// Constructs a for loop.
-  /// @param name the flow's name
   /// @param setup the setup
-  /// @param cond the condition
+  /// @param iter the iterator
   /// @param body the body
   /// @param update the update
-  ForFlow(ValuePtr setup, ValuePtr cond, ValuePtr body, ValuePtr update,
-          std::string name = "")
-      : AcceptorExtend(std::move(name)), setup(std::move(setup)), cond(std::move(cond)),
-        body(std::move(body)), update(std::move(update)) {}
+  /// @param name the flow's name
+  ForFlow(ValuePtr iter, ValuePtr body, Var *var, std::string name = "")
+      : AcceptorExtend(std::move(name)), iter(std::move(iter)), body(std::move(body)),
+        var(var) {}
 
-  /// @return the setup
-  const ValuePtr &getSetup() const { return setup; }
-  /// Sets the setup.
-  /// @param f the new setup
-  void setSetup(ValuePtr f) { setup = std::move(f); }
+  /// @return the iter
+  const ValuePtr &getIter() const { return iter; }
+  /// Sets the iter.
+  /// @param f the new iter
+  void setIter(ValuePtr f) { iter = std::move(f); }
 
   /// @return the body
   const ValuePtr &getBody() const { return body; }
@@ -157,17 +155,11 @@ public:
   /// @param f the new body
   void setBody(ValuePtr f) { body = std::move(f); }
 
-  /// @return the update
-  const ValuePtr &getUpdate() const { return update; }
-  /// Sets the update.
-  /// @param f the new update
-  void setUpdate(ValuePtr f) { update = std::move(f); }
-
-  /// @return the condition
-  const ValuePtr &getCond() const { return cond; }
-  /// Sets the condition.
-  /// @param c the new condition
-  void setCond(ValuePtr c) { cond = std::move(c); }
+  /// @return the var
+  Var *getVar() const { return var; }
+  /// Sets the var.
+  /// @param c the new var
+  void setVar(Var *c) { var = c; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -258,7 +250,8 @@ public:
   /// @param finally the finally
   explicit TryCatchFlow(ValuePtr body, ValuePtr finally = nullptr,
                         std::string name = "")
-      : AcceptorExtend(std::move(name)), body(std::move(body)), finally(std::move(finally)) {}
+      : AcceptorExtend(std::move(name)), body(std::move(body)),
+        finally(std::move(finally)) {}
 
   /// @return the body
   const ValuePtr &getBody() const { return body; }

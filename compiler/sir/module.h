@@ -77,9 +77,7 @@ public:
   /// @param pos the position
   /// @param v the symbol
   /// @return an iterator to the newly added symbol
-  iterator insert(iterator pos, VarPtr v) {
-    return symbols.insert(pos, std::move(v));
-  }
+  iterator insert(iterator pos, VarPtr v) { return symbols.insert(pos, std::move(v)); }
   /// Inserts an symbol at the given position.
   /// @param pos the position
   /// @param v the symbol

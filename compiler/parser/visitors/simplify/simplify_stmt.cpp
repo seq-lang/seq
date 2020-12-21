@@ -184,10 +184,7 @@ void SimplifyVisitor::visit(const WhileStmt *stmt) {
 ///   for i in it.__iter__(): ...
 ///   if no_break.__bool__(): ...
 void SimplifyVisitor::visit(const ForStmt *stmt) {
-  auto gen = ctx->cache->getTemporaryVar();
-  prependStmts->push_back(transform(N<AssignStmt>(
-      N<IdExpr>(gen), N<CallExpr>(N<DotExpr>(clone(stmt->iter), "__iter__")))));
-  ExprPtr iter = N<IdExpr>(gen);
+  ExprPtr iter = N<CallExpr>(N<DotExpr>(clone(stmt->iter), "__iter__"));
 
   string breakVar;
   StmtPtr assign = nullptr;
@@ -212,8 +209,6 @@ void SimplifyVisitor::visit(const ForStmt *stmt) {
     forStmt =
         N<ForStmt>(clone(var), transform(iter), transform(N<SuiteStmt>(move(stmts))));
   }
-  forStmt->next = transform(N<CallExpr>(N<DotExpr>(N<IdExpr>(gen), "next")));
-  forStmt->done = transform(N<CallExpr>(N<DotExpr>(N<IdExpr>(gen), "done")));
 
   ctx->popBlock();
   ctx->loops.pop_back();

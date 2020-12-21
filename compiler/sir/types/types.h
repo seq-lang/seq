@@ -21,9 +21,9 @@ public:
   static const char NodeId;
 
   using AcceptorExtend::AcceptorExtend;
-  
+
   virtual ~Type() noexcept = default;
-  
+
   /// A type is "atomic" iff it contains no pointers to dynamically
   /// allocated memory. Atomic types do not need to be scanned during
   /// garbage collection.
@@ -291,8 +291,7 @@ public:
 
   /// Constructs a pointer type.
   /// @param base the type's base
-  explicit PointerType(Type *base)
-      : AcceptorExtend(getName(base), base) {}
+  explicit PointerType(Type *base) : AcceptorExtend(getName(base), base) {}
 
   bool isAtomic() const override { return false; }
 
@@ -354,8 +353,7 @@ public:
 
   /// Constructs a generator type.
   /// @param base the type's base
-  explicit GeneratorType(Type *base)
-  : AcceptorExtend(getName(base), base) {}
+  explicit GeneratorType(Type *base) : AcceptorExtend(getName(base), base) {}
 
   bool isAtomic() const override { return false; }
 

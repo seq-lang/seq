@@ -18,7 +18,7 @@ public:
   static const char NodeId;
 
   using AcceptorExtend::AcceptorExtend;
-  
+
   virtual ~Instr() = default;
 
   types::Type *getType() const override { return nullptr; }
@@ -113,8 +113,10 @@ public:
   /// @param field the field
   /// @param rhs the new value
   /// @param name the instruction's name
-  explicit InsertInstr(ValuePtr lhs, std::string field, ValuePtr rhs, std::string name = "")
-      : AcceptorExtend(std::move(name)), lhs(std::move(lhs)), field(std::move(field)), rhs(std::move(rhs)) {}
+  explicit InsertInstr(ValuePtr lhs, std::string field, ValuePtr rhs,
+                       std::string name = "")
+      : AcceptorExtend(std::move(name)), lhs(std::move(lhs)), field(std::move(field)),
+        rhs(std::move(rhs)) {}
 
   types::Type *getType() const override { return lhs->getType(); }
 
@@ -232,7 +234,8 @@ public:
   /// @param arrayType the type of the array
   /// @param count the number of elements
   StackAllocInstr(types::Type *arrayType, ValuePtr count, std::string name = "")
-      : AcceptorExtend(std::move(name)), arrayType(arrayType), count(std::move(count)) {}
+      : AcceptorExtend(std::move(name)), arrayType(arrayType), count(std::move(count)) {
+  }
 
   types::Type *getType() const override { return arrayType; }
 

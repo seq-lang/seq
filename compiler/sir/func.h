@@ -69,7 +69,8 @@ public:
   /// Constructs an SIR function.
   /// @param type the function's type
   /// @param name the function's name
-  explicit Func(types::Type *type, std::string name = "") : Func(type, {}, std::move(name)) {}
+  explicit Func(types::Type *type, std::string name = "")
+      : Func(type, {}, std::move(name)) {}
 
   /// Re-initializes the function with a new type and names.
   /// @param newType the function's new type

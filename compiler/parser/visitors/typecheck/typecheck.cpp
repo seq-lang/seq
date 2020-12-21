@@ -1101,10 +1101,7 @@ void TypecheckVisitor::visit(const ForStmt *stmt) {
   assert(i);
   string varName = i->value;
   ctx->add(TypecheckItem::Var, varName, varType);
-  auto result = N<ForStmt>(transform(stmt->var), move(iter), transform(stmt->suite));
-  result->done = transform(stmt->done);
-  result->next = transform(stmt->next);
-  resultStmt = move(result);
+  resultStmt = N<ForStmt>(transform(stmt->var), move(iter), transform(stmt->suite));
   ctx->popBlock();
 }
 

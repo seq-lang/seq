@@ -28,16 +28,8 @@ std::ostream &WhileFlow::doFormat(std::ostream &os) const {
 const char ForFlow::NodeId = 0;
 
 std::ostream &ForFlow::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: for ("), referenceString());
-  if (setup)
-    fmt::print(os, FMT_STRING("{} "), *setup);
-  os << "; ";
-  fmt::print(os, FMT_STRING("{}; "), *cond);
-
-  if (update)
-    fmt::print(os, FMT_STRING("{}"), *update);
-
-  fmt::print(os, FMT_STRING(") {{\n{}\n}}"), *body);
+  fmt::print(os, FMT_STRING("{}: for ({} : {}){{\n{}}}"), referenceString(),
+             var->referenceString(), *iter, *body);
   return os;
 }
 
