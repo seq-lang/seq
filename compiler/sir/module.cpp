@@ -10,6 +10,8 @@ const std::string IRModule::INT_NAME = ".int";
 const std::string IRModule::FLOAT_NAME = ".float";
 const std::string IRModule::STRING_NAME = ".str";
 
+const char IRModule::NodeId = 0;
+
 std::ostream &IRModule::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("module {}{{\n"), referenceString());
   fmt::print(os, "{}\n", *mainFunc);

@@ -114,13 +114,13 @@ IRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
               module->Nr<seq::ir::Func>(module->getVoidRetAndArgFuncType(), ast->name);
           fn->setInternal(typ, name);
           ctx->functions[f.first] = {fn, false};
-          module->push_back(ValuePtr(fn));
+          module->push_back(VarPtr(fn));
         } else if (in(ast->attributes, "llvm")) {
           auto fn =
               module->Nr<seq::ir::Func>(module->getVoidRetAndArgFuncType(), ast->name);
           fn->setLLVM();
           ctx->functions[f.first] = {fn, false};
-          module->push_back(ValuePtr(fn));
+          module->push_back(VarPtr(fn));
         } else {
           auto fn =
               module->Nr<seq::ir::Func>(module->getVoidRetAndArgFuncType(), ast->name);
@@ -131,7 +131,7 @@ IRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
             fn->setBuiltin(names.back());
           }
 
-          module->push_back(ValuePtr(fn));
+          module->push_back(VarPtr(fn));
         }
         ctx->addFunc(f.first, ctx->functions[f.first].first);
       }
@@ -170,9 +170,9 @@ void CodegenVisitor::visit(const IdExpr *expr) {
   //   dynamic_cast<seq::VarExpr *>(i->getExpr())->setAtomic();
 
   if (auto *v = val->getVar())
-    result = module->Nxs<LoadInstr>(expr, module->Nxs<ValueProxy>(expr, v));
+    result = module->Nxs<VarValue>(expr, v);
   else if (auto *f = val->getFunc())
-    result = module->Nxs<ValueProxy>(expr, f);
+    result = module->Nxs<VarValue>(expr, f);
   else
     assert(false);
 }
@@ -202,7 +202,8 @@ void CodegenVisitor::visit(const StackAllocExpr *expr) {
 }
 
 void CodegenVisitor::visit(const DotExpr *expr) {
-  result = ctx->getModule()->Nxs<LoadInstr>(expr, transform(expr->expr), expr->member);
+  auto *module = ctx->getModule();
+  result = module->Nxs<ExtractInstr>(expr, transform(expr->expr), expr->member);
 }
 
 void CodegenVisitor::visit(const PtrExpr *expr) {
@@ -212,7 +213,7 @@ void CodegenVisitor::visit(const PtrExpr *expr) {
   auto val = ctx->find(var, true);
   assert(val && val->getVar());
 
-  result = ctx->getModule()->Nxs<ValueProxy>(expr, val->getVar());
+  result = ctx->getModule()->Nxs<PointerValue>(expr, val->getVar());
 }
 
 void CodegenVisitor::visit(const YieldExpr *expr) {
@@ -284,21 +285,15 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
     }
     ctx->addVar(var, newVar, var[0] == '.');
     ctx->getSeries()->push_back(module->Nxs<AssignInstr>(
-        stmt, module->Nxs<ValueProxy>(stmt, newVar), transform(stmt->rhs)));
+        stmt, newVar, transform(stmt->rhs)));
   }
 }
 
 void CodegenVisitor::visit(const AssignMemberStmt *stmt) {
-  auto i = CAST(stmt->lhs, IdExpr);
-  assert(i);
-  auto var = i->value;
-  auto val = ctx->find(var, true);
-  assert(val && val->getVar());
-
   auto *module = ctx->getModule();
   ctx->getSeries()->push_back(
-      module->Nxs<AssignInstr>(stmt, module->Nxs<ValueProxy>(stmt, val->getVar()),
-                               transform(stmt->rhs), stmt->member));
+      module->Nxs<InsertInstr>(stmt, transform(stmt->lhs), stmt->member,
+                               transform(stmt->rhs)));
 }
 
 void CodegenVisitor::visit(const UpdateStmt *stmt) {
@@ -310,7 +305,7 @@ void CodegenVisitor::visit(const UpdateStmt *stmt) {
 
   auto *module = ctx->getModule();
   ctx->getSeries()->push_back(module->Nxs<AssignInstr>(
-      stmt, module->Nxs<ValueProxy>(stmt, val->getVar()), transform(stmt->rhs)));
+      stmt, val->getVar(), transform(stmt->rhs)));
 }
 
 void CodegenVisitor::visit(const DelStmt *stmt) {
@@ -351,7 +346,7 @@ void CodegenVisitor::visit(const WhileStmt *stmt) {
 
   ctx->addLoop(loop.get());
   ctx->addScope();
-  ctx->addSeries(dynamic_cast<SeriesFlow *>(loop->getBody().get()));
+  ctx->addSeries(cast<SeriesFlow>(loop->getBody()));
   transform(stmt->suite);
   ctx->popSeries();
   ctx->popScope();
@@ -375,10 +370,10 @@ void CodegenVisitor::visit(const ForStmt *stmt) {
   ctx->addSeries(setupSeries.get());
 
   ctx->getSeries()->push_back(module->Nxs<AssignInstr>(
-      stmt, module->Nxs<ValueProxy>(stmt, doneVar), transform(clone(stmt->done))));
+      stmt, doneVar, transform(clone(stmt->done))));
   ctx->getSeries()->push_back(module->Nxs<IfFlow>(
-      stmt, module->Nxs<LoadInstr>(stmt, module->Nxs<ValueProxy>(stmt, doneVar)),
-      module->Nxs<AssignInstr>(stmt, module->Nxs<ValueProxy>(stmt, resVar),
+      stmt, module->Nxs<VarValue>(stmt, doneVar),
+      module->Nxs<AssignInstr>(stmt, resVar,
                                transform(clone(stmt->next)))));
   ctx->popSeries();
 
@@ -386,23 +381,23 @@ void CodegenVisitor::visit(const ForStmt *stmt) {
   ctx->addSeries(updateSeries.get());
 
   ctx->getSeries()->push_back(module->Nxs<AssignInstr>(
-      stmt, module->Nxs<ValueProxy>(stmt, doneVar), transform(clone(stmt->done))));
+      stmt, doneVar, transform(clone(stmt->done))));
   ctx->getSeries()->push_back(module->Nxs<IfFlow>(
-      stmt, module->Nxs<LoadInstr>(stmt, module->Nxs<ValueProxy>(stmt, doneVar)),
-      module->Nxs<AssignInstr>(stmt, module->Nxs<ValueProxy>(stmt, resVar),
+      stmt, module->Nxs<VarValue>(stmt, doneVar),
+      module->Nxs<AssignInstr>(stmt, resVar,
                                transform(clone(stmt->next)))));
   ctx->popSeries();
 
   auto bodySeries = newScope(stmt, "body");
   auto loop = ctx->getModule()->Nxs<ForFlow>(
       stmt, move(setupSeries),
-      module->Nxs<LoadInstr>(stmt, module->Nxs<ValueProxy>(stmt, doneVar)),
+      module->Nxs<VarValue>(stmt, doneVar),
       move(bodySeries), move(updateSeries));
   ctx->addLoop(loop.get());
   ctx->addScope();
   ctx->addVar(varId->value, resVar);
 
-  ctx->addSeries(dynamic_cast<SeriesFlow *>(loop->getBody().get()));
+  ctx->addSeries(cast<SeriesFlow>(loop->getBody()));
   transform(stmt->suite);
   ctx->popSeries();
   ctx->popScope();
@@ -473,7 +468,7 @@ void CodegenVisitor::visit(const TryStmt *stmt) {
     ctx->popScope();
 
     newTc->push_back(TryCatchFlow::Catch(
-        move(catchBody), excType, ctx->getModule()->Nxs<ValueProxy>(stmt, catchVar)));
+        move(catchBody), excType, catchVar));
   }
 
   ctx->getSeries()->push_back(move(newTc));
@@ -503,9 +498,9 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
 
     LOG_REALIZE("[codegen] generating fn {}", real.first);
     if (in(stmt->attributes, "llvm")) {
-      auto f = dynamic_cast<seq::ir::Func *>(fp.first);
+      auto *f = cast<ir::Func>(fp.first);
       assert(f);
-      f->realize(dynamic_cast<ir::types::FuncType *>(realizeType(t->getClass())),
+      f->realize(cast<ir::types::FuncType>(realizeType(t->getClass())),
                  names);
 
       // auto s = CAST(tmp->suite, SuiteStmt);
@@ -564,14 +559,14 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       }
       f->setLLVM(move(declare), join(lines, "\n"));
     } else {
-      auto f = dynamic_cast<seq::ir::Func *>(fp.first);
+      auto *f = cast<ir::Func>(fp.first);
       assert(f);
       f->setSrcInfo(getSrcInfo());
       //      if (!ctx->isToplevel())
       //        f->p
       ctx->addScope();
 
-      f->realize(dynamic_cast<ir::types::FuncType *>(realizeType(t->getClass())),
+      f->realize(cast<ir::types::FuncType>(realizeType(t->getClass())),
                  names);
       f->setAttribute(kFuncAttribute, make_unique<FuncAttribute>(ast->attributes));
       for (auto &a : ast->attributes) {
@@ -582,7 +577,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
         f->setExternal(ctx->cache->reverseIdentifierLookup[stmt->name]);
       } else if (!in(ast->attributes, "internal")) {
         for (auto &arg : names) {
-          auto var = dynamic_cast<ir::Var *>(f->getArgVar(arg));
+          auto var = cast<ir::Var>(f->getArgVar(arg));
           assert(var);
           ctx->addVar(arg, var);
         }

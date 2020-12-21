@@ -7,6 +7,10 @@
 namespace seq {
 namespace ir {
 
+const char Flow::NodeId = 0;
+
+const char SeriesFlow::NodeId = 0;
+
 std::ostream &SeriesFlow::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: {{\n{}\n}}"), referenceString(),
              fmt::join(util::dereference_adaptor(series.begin()),
@@ -14,10 +18,14 @@ std::ostream &SeriesFlow::doFormat(std::ostream &os) const {
   return os;
 }
 
+const char WhileFlow::NodeId = 0;
+
 std::ostream &WhileFlow::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: while ({}){{\n{}}}"), referenceString(), *cond, *body);
   return os;
 }
+
+const char ForFlow::NodeId = 0;
 
 std::ostream &ForFlow::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: for ("), referenceString());
@@ -33,6 +41,8 @@ std::ostream &ForFlow::doFormat(std::ostream &os) const {
   return os;
 }
 
+const char IfFlow::NodeId = 0;
+
 std::ostream &IfFlow::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: if ("), referenceString());
   fmt::print(os, FMT_STRING("{}) {{\n{}\n}}"), *cond, *trueBranch);
@@ -40,6 +50,8 @@ std::ostream &IfFlow::doFormat(std::ostream &os) const {
     fmt::print(os, FMT_STRING(" else {{\n{}\n}}"), *falseBranch);
   return os;
 }
+
+const char TryCatchFlow::NodeId = 0;
 
 std::ostream &TryCatchFlow::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: try {{\n{}\n}}"), referenceString(), *body);

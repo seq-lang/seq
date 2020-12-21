@@ -12,12 +12,12 @@ namespace seq {
 namespace ir {
 
 /// SIR object representing a program.
-class IRModule : public IRNode {
+class IRModule : public AcceptorExtend<IRModule, IRNode> {
 public:
-  using iterator = std::list<ValuePtr>::iterator;
-  using const_iterator = std::list<ValuePtr>::const_iterator;
-  using reference = std::list<ValuePtr>::reference;
-  using const_reference = std::list<ValuePtr>::const_reference;
+  using iterator = std::list<VarPtr>::iterator;
+  using const_iterator = std::list<VarPtr>::const_iterator;
+  using reference = std::list<VarPtr>::reference;
+  using const_reference = std::list<VarPtr>::const_reference;
 
   static const std::string VOID_NAME;
   static const std::string BOOL_NAME;
@@ -32,16 +32,16 @@ private:
   /// the module's argv variable
   VarPtr argVar;
   /// the global symbols table
-  std::list<ValuePtr> symbols;
+  std::list<VarPtr> symbols;
   /// the global types table
   std::unordered_map<std::string, types::TypePtr> types;
 
 public:
+  static const char NodeId;
+
   /// Constructs an SIR module.
   /// @param name the module name
-  explicit IRModule(std::string name) : IRNode(std::move(name)) {}
-
-  void accept(util::SIRVisitor &v) override { v.visit(this); }
+  explicit IRModule(std::string name) : AcceptorExtend(std::move(name)) {}
 
   /// @return the main function
   const FuncPtr &getMainFunc() const { return mainFunc; }
@@ -77,19 +77,19 @@ public:
   /// @param pos the position
   /// @param v the symbol
   /// @return an iterator to the newly added symbol
-  iterator insert(iterator pos, ValuePtr v) {
+  iterator insert(iterator pos, VarPtr v) {
     return symbols.insert(pos, std::move(v));
   }
   /// Inserts an symbol at the given position.
   /// @param pos the position
   /// @param v the symbol
   /// @return an iterator to the newly added symbol
-  iterator insert(const_iterator pos, ValuePtr v) {
+  iterator insert(const_iterator pos, VarPtr v) {
     return symbols.insert(pos, std::move(v));
   }
   /// Appends an symbol.
   /// @param v the new symbol
-  void push_back(ValuePtr v) { symbols.push_back(std::move(v)); }
+  void push_back(VarPtr v) { symbols.push_back(std::move(v)); }
 
   /// Erases the symbol at the given position.
   /// @param pos the position
@@ -249,12 +249,12 @@ public:
     if (!rVal) {
       if (ref) {
         auto contentName = name + ".contents";
-        auto *record = dynamic_cast<types::RecordType *>(getType(contentName));
+        auto *record = getType(contentName);
         if (!record) {
           record = Nr<types::RecordType>(contentName);
           types[contentName] = types::TypePtr(record);
         }
-        rVal = Nr<types::RefType>(name, record);
+        rVal = Nr<types::RefType>(name, record->as<types::RecordType>());
       } else {
         rVal = Nr<types::RecordType>(name);
       }

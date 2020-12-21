@@ -1,34 +1,44 @@
 #include "instr.h"
 
+#include "module.h"
 #include "util/iterators.h"
 
 namespace seq {
 namespace ir {
 
+const char Instr::NodeId = 0;
+
+const char AssignInstr::NodeId = 0;
+
 std::ostream &AssignInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("store({}{}{}, {})"), *lhs, field.empty() ? "" : ".", field,
-             *rhs);
+  fmt::print(os, FMT_STRING("store({}, {})"), *lhs, *rhs);
   return os;
 }
 
-types::Type *LoadInstr::getType() const {
-  auto *ptrType = dynamic_cast<types::PointerType *>(ptr->getType());
-  assert(ptrType);
-  if (!field.empty()) {
-    auto *memberedBase = dynamic_cast<types::MemberedType *>(ptrType->getBase());
-    assert(memberedBase);
-    return memberedBase->getMemberType(field);
-  }
-  return ptrType->getBase();
+const char ExtractInstr::NodeId = 0;
+
+types::Type *ExtractInstr::getType() const {
+  auto *memberedType = val->getType()->as<types::MemberedType>();
+  assert(memberedType);
+  return memberedType->getMemberType(field);
 }
 
-std::ostream &LoadInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("load({}{}{})"), *ptr, field.empty() ? "" : ".", field);
+std::ostream &ExtractInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("extract({}, \"{}\")"), *val, field);
   return os;
 }
+
+const char InsertInstr::NodeId = 0;
+
+std::ostream &InsertInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("insert({}, \"{}\", {})"), *lhs, field, *rhs);
+  return os;
+}
+
+const char CallInstr::NodeId = 0;
 
 types::Type *CallInstr::getType() const {
-  auto *funcType = dynamic_cast<types::FuncType *>(func->getType());
+  auto *funcType = func->getType()->as<types::FuncType>();
   assert(funcType);
   return funcType->getReturnType();
 }
@@ -40,29 +50,43 @@ std::ostream &CallInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
+const char StackAllocInstr::NodeId = 0;
+
 std::ostream &StackAllocInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("stack_alloc({})"), *arrayType, *count);
   return os;
 }
 
+const char YieldInInstr::NodeId = 0;
+
 std::ostream &YieldInInstr::doFormat(std::ostream &os) const {
   return os << "yield_in()";
 }
+
+const char TernaryInstr::NodeId = 0;
 
 std::ostream &TernaryInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("ternary({}, {}, {})"), *cond, trueValue, *falseValue);
   return os;
 }
 
+const char ControlFlowInstr::NodeId = 0;
+
+const char BreakInstr::NodeId = 0;
+
 std::ostream &BreakInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("break({})"), *getTarget());
   return os;
 }
 
+const char ContinueInstr::NodeId = 0;
+
 std::ostream &ContinueInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("continue({})"), *getTarget());
   return os;
 }
+
+const char ReturnInstr::NodeId = 0;
 
 std::ostream &ReturnInstr::doFormat(std::ostream &os) const {
   if (value) {
@@ -73,6 +97,8 @@ std::ostream &ReturnInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
+const char YieldInstr::NodeId = 0;
+
 std::ostream &YieldInstr::doFormat(std::ostream &os) const {
   if (value) {
     fmt::print(os, FMT_STRING("yield({})"), *value);
@@ -81,6 +107,8 @@ std::ostream &YieldInstr::doFormat(std::ostream &os) const {
   }
   return os;
 }
+
+const char ThrowInstr::NodeId = 0;
 
 std::ostream &ThrowInstr::doFormat(std::ostream &os) const {
   if (value) {
@@ -91,10 +119,14 @@ std::ostream &ThrowInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
+const char AssertInstr::NodeId = 0;
+
 std::ostream &AssertInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("assert({}, \"{}\")"), *value, msg);
   return os;
 }
+
+const char FlowInstr::NodeId = 0;
 
 std::ostream &FlowInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("inline_flow({}, {})"), *flow, *val);

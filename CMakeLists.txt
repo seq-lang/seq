@@ -228,10 +228,12 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/sir/types/types.cpp
         compiler/sir/attribute.cpp
         compiler/sir/base.cpp
+        compiler/sir/constant.cpp
         compiler/sir/flow.cpp
         compiler/sir/func.cpp
         compiler/sir/instr.cpp
         compiler/sir/module.cpp
+        compiler/sir/value.cpp
         compiler/sir/var.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
