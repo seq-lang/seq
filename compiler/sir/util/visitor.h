@@ -35,11 +35,13 @@ class Func;
 class Var;
 
 class Value;
+class VarValue;
+class PointerValue;
 class ValueProxy;
 
 class Flow;
-class BlockFlow;
 class SeriesFlow;
+class IfFlow;
 class WhileFlow;
 class ForFlow;
 class TryCatchFlow;
@@ -50,7 +52,8 @@ template <typename ValueType> class TemplatedConstant;
 
 class Instr;
 class AssignInstr;
-class LoadInstr;
+class ExtractInstr;
+class InsertInstr;
 class CallInstr;
 class StackAllocInstr;
 class YieldInInstr;
@@ -74,11 +77,13 @@ public:
   DEFAULT_VISIT(Var);
 
   DEFAULT_VISIT(Value);
+  DEFAULT_VISIT(VarValue);
+  DEFAULT_VISIT(PointerValue);
   DEFAULT_VISIT(ValueProxy);
 
   DEFAULT_VISIT(Flow);
-  DEFAULT_VISIT(BlockFlow);
   DEFAULT_VISIT(SeriesFlow);
+  DEFAULT_VISIT(IfFlow);
   DEFAULT_VISIT(WhileFlow);
   DEFAULT_VISIT(ForFlow);
   DEFAULT_VISIT(TryCatchFlow);
@@ -91,7 +96,8 @@ public:
 
   DEFAULT_VISIT(Instr);
   DEFAULT_VISIT(AssignInstr);
-  DEFAULT_VISIT(LoadInstr);
+  DEFAULT_VISIT(ExtractInstr);
+  DEFAULT_VISIT(InsertInstr);
   DEFAULT_VISIT(CallInstr);
   DEFAULT_VISIT(StackAllocInstr);
   DEFAULT_VISIT(YieldInInstr);
