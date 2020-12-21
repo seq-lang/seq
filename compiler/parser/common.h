@@ -90,10 +90,13 @@ void rtrim(string &str);
 /// True if a string only contains digits.
 bool isdigit(const string &str);
 /// Combine items separated by a delimiter into a string.
-template <typename T> string join(const T &items, const string &delim = " ") {
+template <typename T>
+string join(const T &items, const string &delim = " ", int start = 0, int end = -1) {
   string s;
-  for (int i = 0; i < items.size(); i++)
-    s += (i ? delim : "") + items[i];
+  if (end == -1)
+    end = items.size();
+  for (int i = start; i < end; i++)
+    s += (i > start ? delim : "") + items[i];
   return s;
 }
 /// Combine items separated by a delimiter into a string.

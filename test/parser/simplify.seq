@@ -89,7 +89,7 @@ def foo():
     a = 5
     def bar():
         print a
-foo() #! ERROR: cannot access non-global variable 'a'
+foo() #! ERROR: cannot access non-global variable '.foo.a'
 
 #%% star,barebones
 a = (1, 2, 3)
@@ -621,6 +621,9 @@ import a.b
 print a.b.c #: a.b.c
 a.b.har() #: a.b.har
 
+print a.b.A.B.b_foo().__add__(1) #: a.b.A.B.b_foo()
+#: 2
+
 from a.b import *
 har() #: a.b.har
 a.b.har() #: a.b.har
@@ -740,11 +743,24 @@ def foo():
         pass
 #! ERROR: extend is only allowed at the toplevel
 
-#%% class_err_3,barebones
+#%% class_nested,barebones
+class Foo:
+    foo: int
+    class Bar:
+        bar: int
+        b: Optional[Foo.Bar]
+        c: Optional[Foo]
+y = Foo(1)
+z = Foo.Bar(2, None, y)
+print y.foo #: 1
+print z.bar, z.b.__bool__(), z.c.foo  #: 2 False 1
+
+#%% class_nested,barebones
 class Foo:
     class Bar:
-        pass
-#! ERROR: parsing error: 'class'
+        b: Ptr[Bar]
+#! ERROR: identifier 'Bar' not found
+
 
 #%% class_err_4,barebones
 @extend
@@ -824,7 +840,6 @@ class Node2:
         self.data = data
         self.children = List[Node2]()
 print Node2(3).data #: 3
-
 
 #%% magic,barebones
 @tuple

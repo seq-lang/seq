@@ -442,7 +442,7 @@ void SimplifyVisitor::visit(const CallExpr *expr) {
 /// Other cases are handled during the type-checking stage.
 void SimplifyVisitor::visit(const DotExpr *expr) {
   /// First flatten the imports.
-  const Expr *e = expr->expr.get();
+  const Expr *e = expr;
   deque<string> chain;
   while (auto d = e->getDot()) {
     chain.push_front(d->member);
@@ -450,26 +450,51 @@ void SimplifyVisitor::visit(const DotExpr *expr) {
   }
   if (auto d = e->getId()) {
     chain.push_front(d->value);
-    /// N.B. every import a.b.c. is stored as a/b/c.
-    auto s = join(chain, "/");
-    if (s.empty() || s[0] != '/') {
-      auto val = ctx->find(s);
-      s = val && val->isImport() ? val->canonicalName : "";
+
+    /// Check if this is a import or a class access:
+    /// (import1.import2...).(class1.class2...)?.method?
+    int importEnd = 0, itemEnd = 0;
+    string importName, itemName;
+    shared_ptr<SimplifyItem> val = nullptr;
+    for (int i = int(chain.size()) - 1; i >= 0; i--) {
+      auto s = join(chain, "/", 0, i + 1);
+      val = ctx->find(s);
+      if (val && val->isImport()) {
+        importName = val->canonicalName;
+        importEnd = i + 1;
+        break;
+      }
     }
-    if (!s.empty()) {
-      auto ictx = ctx->cache->imports[s].ctx;
-      auto ival = ictx->find(expr->member);
-      if (!ival || !ival->isGlobal())
-        error("identifier '{}' not found in {}", expr->member, s);
-      seqassert(!ival->canonicalName.empty(),
-                "'{}' in {} does not have a canonical name", expr->member, s);
-      resultExpr = N<IdExpr>(ival->canonicalName);
-      if (ival->isType())
-        resultExpr->markType();
+    // a.b.c is completely import name
+    if (importEnd == chain.size()) {
+      resultExpr = N<IdExpr>(importName);
       return;
     }
+    auto fctx = importName.empty() ? ctx : ctx->cache->imports[importName].ctx;
+    for (int i = int(chain.size()) - 1; i >= importEnd; i--) {
+      auto s = join(chain, ".", importEnd, i + 1);
+      val = fctx->find(s);
+      // Make sure that we access only global imported variables.
+      if (val && (importName.empty() || val->isGlobal())) {
+        itemName = val->canonicalName;
+        itemEnd = i + 1;
+        break;
+      }
+    }
+    if (itemName.empty() && importName.empty())
+      error("identifier '{}' not found", chain[importEnd]);
+    if (itemName.empty())
+      error("identifier '{}' not found in {}", chain[importEnd], importName);
+    resultExpr = N<IdExpr>(itemName);
+    if (importName.empty())
+      resultExpr = transform(resultExpr.get(), true);
+    if (val->isType())
+      resultExpr->markType();
+    for (int i = itemEnd; i < chain.size(); i++)
+      resultExpr = N<DotExpr>(move(resultExpr), chain[i]);
+  } else {
+    resultExpr = N<DotExpr>(transform(expr->expr.get(), true), expr->member);
   }
-  resultExpr = N<DotExpr>(transform(expr->expr.get(), true), expr->member);
 }
 
 // This expression is transformed during the type-checking stage

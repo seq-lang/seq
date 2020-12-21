@@ -1562,11 +1562,15 @@ void StaticVisitor::visit(const BinaryExpr *expr) {
     value = value - value2;
   else if (expr->op == "*")
     value = value * value2;
-  else if (expr->op == "//")
+  else if (expr->op == "//") {
+    if (!value2)
+      error("division by zero");
     value = value / value2;
-  else if (expr->op == "%")
+  } else if (expr->op == "%") {
+    if (!value2)
+      error("division by zero");
     value = value % value2;
-  else
+  } else
     error(expr->getSrcInfo(), "not a static binary expression");
 }
 

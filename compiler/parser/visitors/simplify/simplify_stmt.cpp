@@ -416,8 +416,10 @@ void SimplifyVisitor::visit(const ImportStmt *stmt) {
     seqassert(stmt->as.empty(), "renamed star-import");
     // Just copy all symbols from import's context here.
     for (auto &i : *(import.ctx))
-      if (i.second.front().second->isGlobal())
+      if (i.second.front().second->isGlobal()) {
         ctx->add(i.first, i.second.front().second);
+        ctx->add(i.second.front().second->canonicalName, i.second.front().second);
+      }
   } else {
     // Case 3: from foo import bar
     auto i = stmt->what->getId();
@@ -427,6 +429,7 @@ void SimplifyVisitor::visit(const ImportStmt *stmt) {
     if (!c || !c->isGlobal())
       error("symbol '{}' not found in {}", i->value, file);
     ctx->add(stmt->as.empty() ? i->value : stmt->as, c);
+    ctx->add(c->canonicalName, c);
   }
 }
 
@@ -567,7 +570,16 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
   if (extension && !ctx->bases.empty())
     error("extend is only allowed at the toplevel");
 
-  bool isRecord = stmt->isRecord(); // does it have @tuple
+  bool isRecord = stmt->isRecord(); // does it have @tuple attribute
+
+  // Special name handling is needed becuase of nested classes.
+  string name = stmt->name;
+  if (!ctx->bases.empty() && ctx->bases.back().isType()) {
+    const auto &a = ctx->bases.back().ast;
+    string parentName =
+        a->getId() ? a->getId()->value : a->getIndex()->expr->getId()->value;
+    name = parentName + "." + name;
+  }
 
   // Generate/find class' canonical name (unique ID) and AST
   string canonicalName;
@@ -575,22 +587,20 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
   auto classItem =
       make_shared<SimplifyItem>(SimplifyItem::Type, "", "", ctx->isToplevel(), false);
   if (!extension) {
-    classItem->canonicalName = canonicalName = ctx->generateCanonicalName(stmt->name);
-    seqassert(ctx->bases.empty() || !ctx->bases.back().isType(),
-              "nested classes not yet supported");
+    classItem->canonicalName = canonicalName = ctx->generateCanonicalName(name);
     // Reference types are added to the context at this stage.
     // Record types (tuples) are added after parsing class arguments to prevent
     // recursive record types (that are allowed for reference types).
     if (!isRecord) {
-      ctx->add(stmt->name, classItem);
+      ctx->add(name, classItem);
       ctx->add(canonicalName, classItem);
     }
     originalAST = stmt;
   } else {
     // Find the canonical name of a class that is to be extended
-    auto val = ctx->find(stmt->name);
+    auto val = ctx->find(name);
     if (!val || val->kind != SimplifyItem::Type)
-      error("cannot find type '{}' to extend", stmt->name);
+      error("cannot find type '{}' to extend", name);
     canonicalName = val->canonicalName;
     const auto &astIter = ctx->cache->classes.find(canonicalName);
     seqassert(astIter != ctx->cache->classes.end(), "cannot find AST for {}",
@@ -604,7 +614,7 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
   auto oldBases = move(ctx->bases);
   ctx->bases = vector<SimplifyContext::Base>();
   ctx->bases.emplace_back(SimplifyContext::Base(canonicalName));
-  ctx->bases.back().ast = N<IdExpr>(stmt->name);
+  ctx->bases.back().ast = N<IdExpr>(name);
 
   // Add generics, if any, to the context.
   ctx->addBlock();
@@ -631,8 +641,7 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
     newGenerics.emplace_back(
         Param{genName, transformType(originalAST->generics[gi].type.get()), nullptr});
   }
-  ctx->bases.back().ast =
-      N<IndexExpr>(N<IdExpr>(stmt->name), N<TupleExpr>(move(genAst)));
+  ctx->bases.back().ast = N<IndexExpr>(N<IdExpr>(name), N<TupleExpr>(move(genAst)));
 
   // Parse class members (arguments) and methods.
   vector<Param> args;
@@ -652,7 +661,7 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
     // However, we need to unroll a block/base, add it, and add the unrolled
     // block/base back.
     if (isRecord) {
-      ctx->addPrevBlock(stmt->name, classItem);
+      ctx->addPrevBlock(name, classItem);
       ctx->addPrevBlock(canonicalName, classItem);
     }
     // Create a cached AST.
@@ -692,16 +701,12 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
     }
     // Codegen default magic methods and add them to the final AST.
     for (auto &m : magics)
-      fns.push_back(transform(
+      suite->stmts.push_back(transform(
           codegenMagic(m, ctx->bases.back().ast.get(), stmt->args, isRecord)));
-    fns.push_back(clone(stmt->suite));
-    for (const auto &s : fns)
-      for (auto sp : getClassMethods(s.get()))
-        suite->stmts.push_back(transform(sp));
-  } else {
-    for (auto sp : getClassMethods(stmt->suite.get()))
-      suite->stmts.push_back(transform(sp));
   }
+  for (auto sp : getClassMethods(stmt->suite.get()))
+    if (sp && !sp->getClass())
+      suite->stmts.push_back(transform(sp));
   ctx->bases.pop_back();
   ctx->bases = move(oldBases);
   ctx->popBlock();
@@ -713,6 +718,15 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
     preamble->types.push_back(clone(ctx->cache->classes[canonicalName].ast));
     c->suite = clone(suite);
   }
+  // Parse nested classes
+  for (auto sp : getClassMethods(stmt->suite.get()))
+    if (sp && sp->getClass()) {
+      // Add dummy base to fix nested class' name.
+      ctx->bases.emplace_back(SimplifyContext::Base(canonicalName));
+      ctx->bases.back().ast = N<IdExpr>(name);
+      prependStmts->push_back(transform(sp));
+      ctx->bases.pop_back();
+    }
   resultStmt = N<ClassStmt>(canonicalName, clone_nop(c->generics), vector<Param>{},
                             move(suite), vector<string>{"extend"});
   ctx->extendCount += 1;
@@ -1394,8 +1408,8 @@ vector<const Stmt *> SimplifyVisitor::getClassMethods(const Stmt *s) {
         v.push_back(u);
   } else if (s->getExpr() && s->getExpr()->expr->getString()) {
     /// Those are doc-strings, ignore them.
-  } else if (!s->getFunction()) {
-    seqassert(false, "only functions definitions are allowed within classes");
+  } else if (!s->getFunction() && !s->getClass()) {
+    seqassert(false, "only function and class definitions are allowed within classes");
   } else {
     v.push_back(s);
   }

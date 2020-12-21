@@ -322,6 +322,7 @@ dataclass_member:
     { Some ($loc, Assign (($loc, Id $1), Some $5, Some $3)) }
   | string NL { Some ($loc, Expr ($loc, String $1)) }
   | func_statement { Some (List.hd $1) }
+  | class_statement { Some $1 }
 
 /* typ:
   | type_head NL { $loc, Type (snd $1) }
