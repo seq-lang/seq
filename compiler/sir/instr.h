@@ -86,6 +86,7 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
+/// Instr representing indexing into a compound type.
 class GetFieldPtrInstr : public AcceptorExtend<GetFieldPtrInstr, Instr> {
 private:
   /// the original location
@@ -96,7 +97,7 @@ private:
 public:
   static const char NodeId;
 
-  /// Constructs a load instruction.
+  /// Constructs a get field pointer instruction.
   /// @param ptr the location
   /// @param field the field being set, may be empty
   /// @param name the instruction's name

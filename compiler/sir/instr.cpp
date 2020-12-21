@@ -23,6 +23,11 @@ types::Type *LoadInstr::getType() const {
   return ptrType->getBase();
 }
 
+std::ostream &LoadInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("load({})"), *ptr);
+  return os;
+}
+
 const char GetFieldPtrInstr::NodeId = 0;
 
 types::Type *GetFieldPtrInstr::getType() const {
@@ -37,11 +42,6 @@ types::Type *GetFieldPtrInstr::getType() const {
 
 std::ostream &GetFieldPtrInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("gfp({}, {})"), *ptr, field);
-  return os;
-}
-
-std::ostream &LoadInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("load({})"), *ptr);
   return os;
 }
 
