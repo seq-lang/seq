@@ -13,7 +13,7 @@ namespace seq {
 namespace ir {
 
 /// SIR object representing a variable.
-class Var : public AcceptorExtend<Var, IRNode>, IdMixin {
+class Var : public AcceptorExtend<Var, IRNode>, public IdMixin {
 private:
   /// the variable's type
   types::Type *type;
@@ -54,6 +54,8 @@ public:
   explicit VarValue(Var *val, std::string name = "")
       : AcceptorExtend(std::move(name)), val(val) {}
 
+  Var *getVar() const { return val; }
+
   types::Type *getType() const override { return val->getType(); }
 
 private:
@@ -76,6 +78,8 @@ public:
   /// @param name the name
   explicit PointerValue(Var *val, std::string name = "")
       : AcceptorExtend(std::move(name)), val(val) {}
+
+  Var *getVar() const { return val; }
 
   types::Type *getType() const override;
 
