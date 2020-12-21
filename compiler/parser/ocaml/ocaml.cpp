@@ -293,7 +293,7 @@ StmtPtr parse_stmt(value val) {
   case 8:
     Return(Yield, parse_optional(t, parse_expr));
   case 9:
-    Return(Assert, parse_expr(t));
+    Return(Assert, parse_expr(Field(t, 0)), parse_optional(Field(t, 1), parse_expr));
   case 10:
     Return(While, parse_expr(Field(t, 0)), parse_stmt_list(Field(t, 1)),
            parse_stmt_list(Field(t, 2)));

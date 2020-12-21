@@ -173,7 +173,8 @@ small_statement:
   | expr_list { List.map (fun expr -> fst expr, Expr expr) $1 }
   | small_single_statement { [$1] }
   | DEL FLNE(COMMA, expr) { List.map (fun e -> fst e, Del e) $2 }
-  | ASSERT FLNE(COMMA, expr) { List.map (fun e -> fst e, Assert e) $2 }
+  | ASSERT expr { [$loc, Assert ($2, None)] }
+  | ASSERT expr COMMA STRING { [$loc, Assert ($2, Some ($loc($4), String $4))] }
   | GLOBAL FLNE(COMMA, ID) { List.map (fun e -> $loc, Global e) $2 }
   | print_statement { $1 }
   | import_statement { $1 }

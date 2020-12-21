@@ -26,6 +26,7 @@
 #define ATTR_TUPLE "tuple"
 #define ATTR_TRAIT "trait"
 #define ATTR_ATOMIC "atomic"
+#define ATTR_TEST "test"
 #define ATTR_EXTERN_C ".c"
 #define ATTR_EXTERN_LLVM "llvm"
 #define ATTR_EXTERN_PYTHON "python"
@@ -68,6 +69,8 @@ struct Cache {
   /// Number of auto-generated variables so far. Used to generate the next unique
   /// variable name in getTemporaryVar() below.
   int varCount;
+  /// Test flags for seqtest test cases. Zero if seqtest is not parsing the code.
+  int testFlags;
 
   /// Holds module import data.
   struct Import {
@@ -163,7 +166,8 @@ struct Cache {
 
 public:
   explicit Cache(string argv0 = "")
-      : generatedSrcInfoCount(0), unboundCount(0), varCount(0), argv0(move(argv0)) {}
+      : generatedSrcInfoCount(0), unboundCount(0), varCount(0), testFlags(0),
+        argv0(move(argv0)) {}
 
   /// Return a uniquely named temporary variable of a format
   /// "{sigil}_{prefix}{counter}". A sigil should be a non-lexable symbol.

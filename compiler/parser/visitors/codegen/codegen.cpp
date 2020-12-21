@@ -356,10 +356,6 @@ void CodegenVisitor::visit(const YieldStmt *stmt) {
   resultStmt = ret;
 }
 
-void CodegenVisitor::visit(const AssertStmt *stmt) {
-  resultStmt = new seq::Assert(transform(stmt->expr));
-}
-
 void CodegenVisitor::visit(const WhileStmt *stmt) {
   auto r = new seq::While(transform(stmt->cond));
   ctx->addBlock(r->getBlock());

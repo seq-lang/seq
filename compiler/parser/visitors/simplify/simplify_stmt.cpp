@@ -142,7 +142,24 @@ void SimplifyVisitor::visit(const YieldFromStmt *stmt) {
 }
 
 void SimplifyVisitor::visit(const AssertStmt *stmt) {
-  resultStmt = N<AssertStmt>(transform(stmt->expr));
+  seqassert(!stmt->message || stmt->message->getString(),
+            "assert message not a string");
+
+  if (ctx->cache->testFlags && ctx->getLevel() &&
+      ctx->bases.back().attributes & FLAG_TEST)
+    resultStmt = transform(N<IfStmt>(
+        N<UnaryExpr>("!", clone(stmt->expr)),
+        N<ExprStmt>(N<CallExpr>(
+            N<IdExpr>(".seq_assert_test"), N<StringExpr>(stmt->getSrcInfo().file),
+            N<IntExpr>(stmt->getSrcInfo().line),
+            stmt->message ? clone(stmt->message) : N<StringExpr>("")))));
+  else
+    resultStmt = transform(
+        N<IfStmt>(N<UnaryExpr>("!", clone(stmt->expr)),
+                  N<ThrowStmt>(N<CallExpr>(
+                      N<IdExpr>(".seq_assert"), N<StringExpr>(stmt->getSrcInfo().file),
+                      N<IntExpr>(stmt->getSrcInfo().line),
+                      stmt->message ? clone(stmt->message) : N<StringExpr>("")))));
 }
 
 /// Transform while cond to:
@@ -443,7 +460,9 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
   ctx->addBlock();                                               // ... and a block!
   // Set atomic flag if @atomic attribute is present.
   if (in(stmt->attributes, ATTR_ATOMIC))
-    ctx->bases.back().isAtomic = true;
+    ctx->bases.back().attributes |= FLAG_ATOMIC;
+  if (in(stmt->attributes, ATTR_TEST))
+    ctx->bases.back().attributes |= FLAG_TEST;
   // Add generic identifiers to the context
   vector<Param> newGenerics;
   for (auto &g : stmt->generics) {
@@ -719,7 +738,8 @@ StmtPtr SimplifyVisitor::parseAssignment(const Expr *lhs, const Expr *rhs,
       if (val && val->isVar()) {
         if (val->getBase() == ctx->getBase())
           return N<UpdateStmt>(transform(lhs, false), transform(rhs, true),
-                               !ctx->bases.empty() && ctx->bases.back().isAtomic);
+                               !ctx->bases.empty() &&
+                                   ctx->bases.back().attributes & FLAG_ATOMIC);
         else if (mustExist)
           error("variable '{}' is not global", e->value);
       }
@@ -756,9 +776,7 @@ StmtPtr SimplifyVisitor::parseAssignment(const Expr *lhs, const Expr *rhs,
       } else {
         preamble->globals.push_back(
             N<AssignStmt>(N<IdExpr>(canonical), nullptr, move(t)));
-        return r ? N<UpdateStmt>(move(l), move(r),
-                                 !ctx->bases.empty() && ctx->bases.back().isAtomic)
-                 : nullptr;
+        return r ? N<UpdateStmt>(move(l), move(r)) : nullptr;
       }
     }
     return N<AssignStmt>(move(l), move(r), move(t));

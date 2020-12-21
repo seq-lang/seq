@@ -1139,10 +1139,6 @@ void TypecheckVisitor::visit(const YieldStmt *stmt) {
     base.returnType = t;
 }
 
-void TypecheckVisitor::visit(const AssertStmt *stmt) {
-  resultStmt = N<AssertStmt>(transform(stmt->expr));
-}
-
 void TypecheckVisitor::visit(const DelStmt *stmt) {
   auto expr = CAST(stmt->expr, IdExpr);
   ctx->remove(expr->value);

@@ -99,7 +99,6 @@ public:
   void visit(const UpdateStmt *) override;
   void visit(const ReturnStmt *) override;
   void visit(const YieldStmt *) override;
-  void visit(const AssertStmt *) override;
   void visit(const DelStmt *) override;
   void visit(const AssignMemberStmt *) override;
   void visit(const WhileStmt *) override;

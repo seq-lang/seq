@@ -32,8 +32,8 @@ SimplifyContext::SimplifyContext(string filename, shared_ptr<Cache> cache)
     : Context<SimplifyItem>(move(filename)), cache(move(cache)), isStdlibLoading(false),
       extendCount(0), canAssign(true) {}
 
-SimplifyContext::Base::Base(string name, ExprPtr ast, int parent, bool isAtomic)
-    : name(move(name)), ast(move(ast)), parent(parent), isAtomic(false) {}
+SimplifyContext::Base::Base(string name, ExprPtr ast, int parent, int attributes)
+    : name(move(name)), ast(move(ast)), parent(parent), attributes(attributes) {}
 
 shared_ptr<SimplifyItem> SimplifyContext::add(SimplifyItem::Kind kind,
                                               const string &name,

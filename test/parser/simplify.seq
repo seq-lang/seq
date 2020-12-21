@@ -506,6 +506,20 @@ print y #: [2]
 a = [1]
 del a.ptr #! ERROR: invalid del statement
 
+#%% assert,barebones
+assert True
+assert True, "blah"
+
+try:
+    assert False
+except AssertionError as e:
+    print e.message[:15], e.message[-17:] #: Assert failed ( simplify.seq:514)
+
+try:
+    assert False, f"hehe {1}"
+except AssertionError as e:
+    print e.message[:23], e.message[-17:] #: Assert failed: hehe 1 ( simplify.seq:519)
+
 #%% return_fail,barebones
 return #! ERROR: expected function body
 

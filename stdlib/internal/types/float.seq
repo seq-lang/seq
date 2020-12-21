@@ -205,6 +205,19 @@ class float:
         declare double @llvm.fma.f64(double %a, double %b, double %c)
         %tmp = call double @llvm.fma.f64(double %a, double %b, double %c)
         ret double %tmp
+    # Needs LLVM 9+
+    # @llvm
+    # def __atomic_xchg__(d: Ptr[float], b: float) -> void:
+    #     %tmp = atomicrmw xchg double* %d, double %b seq_cst
+    #     ret void
+    # @llvm
+    # def __atomic_add__(d: Ptr[float], b: float) -> float:
+    #     %tmp = atomicrmw fadd double* %d, double %b seq_cst
+    #     ret double %tmp
+    # @llvm
+    # def __atomic_sub__(d: Ptr[float], b: float) -> float:
+    #     %tmp = atomicrmw fsub double* %d, double %b seq_cst
+    #     ret double %tmp
     def __hash__(self):
         from C import frexp(float, Ptr[Int[32]]) -> float
 

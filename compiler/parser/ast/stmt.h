@@ -225,11 +225,13 @@ struct YieldStmt : public Stmt {
 
 /// Assert statement (assert expr).
 /// @example assert a
-/// @note OCaml transforms assert a, b into a SuiteStmt of AssertStmt statements
+/// @example assert a, "Message"
 struct AssertStmt : public Stmt {
   ExprPtr expr;
+  /// nullptr if there is no message.
+  ExprPtr message;
 
-  explicit AssertStmt(ExprPtr expr);
+  explicit AssertStmt(ExprPtr expr, ExprPtr message = nullptr);
   AssertStmt(const AssertStmt &stmt);
 
   string toString() const override;

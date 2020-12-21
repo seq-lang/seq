@@ -20,6 +20,9 @@
 #include "parser/common.h"
 #include "parser/ctx.h"
 
+#define FLAG_ATOMIC 1
+#define FLAG_TEST 2
+
 namespace seq {
 namespace ast {
 
@@ -73,11 +76,11 @@ struct SimplifyContext : public Context<SimplifyItem> {
     /// default. Used to infer a relationship between a function and its base class
     /// (e.g. is it a class function or a method).
     int parent;
-    /// True if the function is marked with @atomic flag.
-    bool isAtomic;
+    /// Tracks function attributes (e.g. if it has @atomic or @test attributes).
+    int attributes;
 
     explicit Base(string name, ExprPtr ast = nullptr, int parent = -1,
-                  bool isAtomic = false);
+                  int attributes = 0);
     bool isType() const { return ast != nullptr; }
   };
   /// A stack of bases enclosing the current statement (the topmost base is the last

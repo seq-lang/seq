@@ -116,10 +116,14 @@ string YieldStmt::toString() const {
 StmtPtr YieldStmt::clone() const { return make_unique<YieldStmt>(*this); }
 void YieldStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-AssertStmt::AssertStmt(ExprPtr expr) : expr(move(expr)) {}
+AssertStmt::AssertStmt(ExprPtr expr, ExprPtr message)
+    : expr(move(expr)), message(move(message)) {}
 AssertStmt::AssertStmt(const AssertStmt &stmt)
-    : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
-string AssertStmt::toString() const { return format("[ASSERT {}]", expr->toString()); }
+    : Stmt(stmt), expr(ast::clone(stmt.expr)), message(ast::clone(stmt.message)) {}
+string AssertStmt::toString() const {
+  return format("[ASSERT {}{}]", expr->toString(),
+                message ? " " + message->toString() : "");
+}
 StmtPtr AssertStmt::clone() const { return make_unique<AssertStmt>(*this); }
 void AssertStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
