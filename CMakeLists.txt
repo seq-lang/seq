@@ -234,7 +234,8 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/sir/instr.cpp
         compiler/sir/module.cpp
         compiler/sir/value.cpp
-        compiler/sir/var.cpp)
+        compiler/sir/var.cpp
+        compiler/sir/llvm/llvisitor.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})
