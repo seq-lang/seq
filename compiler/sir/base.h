@@ -63,7 +63,7 @@ public:
   /// See LLVM documentation.
   virtual bool isConvertible(const void *other) const { return other == nodeId(); }
   /// See LLVM documentation.
-  template <typename Target> bool is() const { return is(Target::nodeId()); }
+  template <typename Target> bool is() const { return isConvertible(Target::nodeId()); }
   /// See LLVM documentation.
   template <typename Target> Target *as() {
     return isConvertible(Target::nodeId()) ? static_cast<Target *>(this) : nullptr;
