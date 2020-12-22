@@ -53,6 +53,13 @@ Type *RecordType::getMemberType(const std::string &n) {
   return it->type;
 }
 
+int RecordType::getMemberIndex(const std::string &n) {
+  auto it =
+      std::find_if(fields.begin(), fields.end(), [n](auto &x) { return x.name == n; });
+  size_t index = std::distance(fields.begin(), it);
+  return (index < fields.size()) ? index : -1;
+}
+
 void RecordType::realize(std::vector<Type *> mTypes, std::vector<std::string> mNames) {
   fields.clear();
   for (auto i = 0; i < mTypes.size(); ++i) {

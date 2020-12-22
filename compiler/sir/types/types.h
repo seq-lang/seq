@@ -121,6 +121,11 @@ public:
   /// @return the type if it exists
   virtual Type *getMemberType(const std::string &name) = 0;
 
+  /// Gets the index of a field by name.
+  /// @param name the field's name
+  /// @return 0-based field index, or -1 if not found
+  virtual int getMemberIndex(const std::string &name) = 0;
+
   /// @return iterator to the first field
   virtual const_iterator begin() const = 0;
   /// @return iterator beyond the last field
@@ -171,6 +176,7 @@ public:
   }
 
   Type *getMemberType(const std::string &n) override;
+  int getMemberIndex(const std::string &n) override;
 
   const_iterator begin() const override { return fields.begin(); }
   const_iterator end() const override { return fields.end(); }
@@ -202,6 +208,10 @@ public:
 
   Type *getMemberType(const std::string &n) override {
     return contents->getMemberType(n);
+  }
+
+  int getMemberIndex(const std::string &n) override {
+    return contents->getMemberIndex(n);
   }
 
   const_iterator begin() const override { return contents->begin(); }
