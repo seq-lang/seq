@@ -9,15 +9,8 @@ namespace ir {
 /// SIR function
 class Func : public AcceptorExtend<Func, Var> {
 public:
-  struct Arg {
-    std::string name;
-    Var *var;
-
-    Arg(std::string name, Var *var) : name(std::move(name)), var(var) {}
-  };
-
-  using arg_const_iterator = std::list<Arg>::const_iterator;
-  using arg_const_reference = std::list<Arg>::const_reference;
+  using arg_const_iterator = std::list<VarPtr>::const_iterator;
+  using arg_const_reference = std::list<VarPtr>::const_reference;
 
   using symbol_iterator = std::list<VarPtr>::iterator;
   using symbol_const_iterator = std::list<VarPtr>::const_iterator;
@@ -29,7 +22,7 @@ private:
   types::Type *type;
 
   /// list of arguments
-  std::list<Arg> args;
+  std::list<VarPtr> args;
 
   /// list of variables defined and used within the function
   std::list<VarPtr> symbols;

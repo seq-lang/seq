@@ -18,9 +18,7 @@ Func::Func(types::Type *type, std::vector<std::string> argNames, std::string nam
 
   auto i = 0;
   for (auto *t : *funcType) {
-    auto *newVar = new Var(t, argNames[i]);
-    args.emplace_back(argNames[i], newVar);
-    symbols.push_back(VarPtr(newVar));
+    args.push_back(std::make_unique<Var>(t, argNames[i]));
     ++i;
   }
 }
@@ -31,23 +29,21 @@ void Func::realize(types::FuncType *newType, const std::vector<std::string> &nam
 
   auto i = 0;
   for (auto *t : *newType) {
-    auto *newVar = new Var(t, names[i]);
-    args.emplace_back(names[i], newVar);
-    symbols.push_back(VarPtr(newVar));
+    args.push_back(std::make_unique<Var>(t, names[i]));
     ++i;
   }
 }
 
 Var *Func::getArgVar(const std::string &n) {
-  return std::find_if(args.begin(), args.end(),
-                      [n](Arg &other) { return other.name == n; })
-      ->var;
+  auto it = std::find_if(args.begin(), args.end(),
+                         [n](const VarPtr &other) { return other->getName() == n; });
+  return (it != args.end()) ? it->get() : nullptr;
 }
 
 std::ostream &Func::doFormat(std::ostream &os) const {
   std::vector<std::string> argNames;
   for (auto &arg : args)
-    argNames.push_back(arg.name);
+    argNames.push_back(arg->getName());
 
   fmt::print(os, FMT_STRING("def {}({}) -> {} [\n{}\n] {{\n"), referenceString(),
              fmt::join(argNames, ", "),
