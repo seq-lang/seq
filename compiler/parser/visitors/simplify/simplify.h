@@ -112,52 +112,213 @@ private:
   void defaultVisit(const Pattern *p) override;
 
 public:
-  /// The following visitors are documented in a corresponding implementation file.
+  /// Transform None to:
+  ///   Optional().
   void visit(const NoneExpr *) override;
+  /// See transformInt for details of integer transformation.
   void visit(const IntExpr *) override;
+  /// String is transformed if it is an F-string or a custom-prefix string.
+  /// Custom prefix strings are transformed to:
+  ///   pfx'foo' -> str.__prefix_pfx__[len(foo)]('foo').
+  /// For F-strings: see parseFString.
   void visit(const StringExpr *) override;
+  /// Each identifier is replaced with its canonical identifier.
   void visit(const IdExpr *) override;
+  /// Transform a star-expression *args to:
+  ///   List(args.__iter__()).
+  /// This function is called only if other nodes (CallExpr, AssignStmt, ListExpr) do
+  /// not handle their star-expression cases.
   void visit(const StarExpr *) override;
+  /// Transform a tuple (a1, ..., aN) to:
+  ///   Tuple.N.__new__(a1, ..., aN).
+  /// If Tuple.N has not been seen before, generate a stub class for it.
   void visit(const TupleExpr *) override;
+  /// Transform a list [a1, ..., aN] to a statement expression:
+  ///   list = List(N); (list.append(a1))...; list.
+  /// Any star-expression is automatically unrolled:
+  ///   [a, *b] becomes list.append(a); for it in b: list.append(it).
   void visit(const ListExpr *) override;
+  /// Transform a set {a1, ..., aN} to a statement expression:
+  ///   set = Set(); (set.add(a1))...; set.
+  /// Any star-expression is automatically unrolled:
+  ///   {a, *b} becomes set.add(a); for it in b: set.add(it).
   void visit(const SetExpr *) override;
+  /// Transform a dictionary {k1: v1, ..., kN: vN} to a statement expression
+  ///   dict = Dict(); (dict.__setitem__(k1, v1))...; dict.
+  /// TODO: allow dictionary unpacking (**dict) (needs parser support).
   void visit(const DictExpr *) override;
+  /// Transform a list comprehension [i+a for i in j if a] to a statement expression:
+  ///    gen = List()
+  ///    for i in j: if a: gen.append(i+a)
+  /// Analogous for sets and other comprehension cases.
+  /// Also transform a generator (i+a for i in j if a) to a lambda call:
+  ///    def _lambda(j, a): for i in j: yield i+a
+  ///    _lambda(j, a).__iter__()
+  ///
+  /// TODO: add list.__len__() optimization.
   void visit(const GeneratorExpr *) override;
+  /// Transform a dictionary comprehension [i: a for i in j] to a statement expression:
+  ///    gen = Dict()
+  ///    for i in j: gen.__setitem__(i, a)
   void visit(const DictGeneratorExpr *) override;
+  /// Transform a if-expression a if cond else b to:
+  ///   a if cond.__bool__() else b
   void visit(const IfExpr *) override;
+  /// Transform a unary expression to the corresponding magic call
+  /// (__invert__, __pos__ or __neg__).
+  /// Special case: not a is transformed to
+  ///   a.__bool__().__invert__()
   void visit(const UnaryExpr *) override;
+  /// Transform the following binary expressions:
+  ///   a and.or b -> a.__bool__() and/or b.__bool__()
+  ///   a is not b -> (a is b).__invert__()
+  ///   a not in b -> not (a in b)
+  ///   a in b -> a.__contains__(b)
+  ///   None is None -> True
+  ///   None is b -> b is None.
+  /// Other cases are handled during the type-checking stage.
   void visit(const BinaryExpr *) override;
+  /// Pipes will be handled during the type-checking stage.
   void visit(const PipeExpr *) override;
+  /// Perform the following transformations:
+  ///   tuple[T1, ... TN],
+  ///   Tuple[T1, ... TN] -> Tuple.N(T1, ..., TN)
+  ///     (and generate class Tuple.N)
+  ///   function[R, T1, ... TN],
+  ///   Function[R, T1, ... TN] -> Function.N(R, T1, ..., TN)
+  ///     (and generate class Function.N)
+  /// Otherwise, if the index expression is a type instantiation, convert it to an
+  /// InstantiateExpr. All other cases are handled during the type-checking stage.
   void visit(const IndexExpr *) override;
+  /// Perform the following transformations:
+  ///   __ptr__(v) -> PtrExpr(v)
+  ///   __array__[T](sz) -> StackAllocExpr(T, sz)
+  /// All other cases are handled during the type-checking stage.
+  ///
+  /// Also generate Tuple.N (if a call has N arguments) to allow passing arguments as a
+  /// tuple to Python methods later on.
   void visit(const CallExpr *) override;
+  /// Perform the import flattening transformation:
+  ///   a.b.c becomes canonical name of c in a.b if a.b is an import
+  ///   a.B.c becomes canonical name of c in class a.B
+  /// Other cases are handled during the type-checking stage.
   void visit(const DotExpr *) override;
+  // This expression is transformed during the type-checking stage
+  // because we need raw SliceExpr to handle static tuple slicing.
   void visit(const SliceExpr *) override;
+  /// TypeOf expressions will be handled during the type-checking stage.
   void visit(const TypeOfExpr *) override;
+  /// Transform lambda a, b: a+b+c to:
+  ///   def _lambda(a, b, c): return a+b+c
+  ///   _lambda(..., ..., c)
   void visit(const LambdaExpr *) override;
+  /// Transform var := expr to a statement expression:
+  ///   var = expr; var
+  /// Disallowed in dependent parts of short-circuiting expressions
+  /// (i.e. b and b2 in "a and b", "a or b" or "b if cond else b2").
   void visit(const AssignExpr *) override;
 
+  /// Transform all statements in a suite and flatten them (unless a suite is a variable
+  /// scope).
   void visit(const SuiteStmt *) override;
+  /// Ensure that a continue is in a loop.
   void visit(const ContinueStmt *) override;
+  /// Ensure that a break is in a loop.
+  /// If a loop break variable is available (loop-else block), transform a break to:
+  ///   loop_var = false; break
   void visit(const BreakStmt *) override;
   void visit(const ExprStmt *) override;
+  /// Performs assignment and unpacking transformations.
+  /// See parseAssignment() and unpackAssignments() for more details.
   void visit(const AssignStmt *) override;
+  /// Transform del a[x] to:
+  ///   del a -> a = typeof(a)() (and removes a from the context)
+  ///   del a[x] -> a.__delitem__(x)
   void visit(const DelStmt *) override;
+  /// Transform print a to:
+  ///   seq_print(a.__str__())
   void visit(const PrintStmt *) override;
+  /// Ensure that a return is in a function.
   void visit(const ReturnStmt *) override;
+  /// Ensure that a yield is in a function.
   void visit(const YieldStmt *) override;
+  /// Transform yield from a to:
+  ///   for var in a: yield var
+  void visit(const YieldFromStmt *) override;
+  /// Transform assert foo(), "message" to:
+  ///   if not foo(): seq_assert(<file>, <line>, "message")
+  /// Transform assert foo() to:
+  ///   if not foo(): seq_assert(<file>, <line>, "")
+  /// If simplification stage is invoked during unit testing, call seq_assert_test()
+  /// instead.
   void visit(const AssertStmt *) override;
+  /// Transform while cond to:
+  ///   while cond.__bool__()
+  /// Transform while cond: ... else: ... to:
+  ///   no_break = True
+  ///   while cond.__bool__(): ...
+  ///   if no_break.__bool__(): ...
   void visit(const WhileStmt *) override;
+  /// Transform for i in it: ... to:
+  ///   for i in it.__iter__(): ...
+  /// Transform for i, j in it: ... to:
+  ///   for tmp in it.__iter__():
+  ///      i, j = tmp; ...
+  /// This transformation uses AssignStmt and supports all unpack operations that are
+  /// handled there.
+  /// Transform for i in it: ... else: ... to:
+  ///   no_break = True
+  ///   for i in it.__iter__(): ...
+  ///   if no_break.__bool__(): ...
   void visit(const ForStmt *) override;
+  /// Transforms all if conditions to condition.__bool__().
   void visit(const IfStmt *) override;
   void visit(const MatchStmt *) override;
-  void visit(const ImportStmt *) override;
   void visit(const TryStmt *) override;
-  void visit(const GlobalStmt *) override;
   void visit(const ThrowStmt *) override;
-  void visit(const FunctionStmt *) override;
-  void visit(const ClassStmt *) override;
-  void visit(const YieldFromStmt *) override;
+  /// Transform with foo(), bar() as a: ... to:
+  ///   block:
+  ///     tmp = foo()
+  ///     tmp.__enter__()
+  ///     try:
+  ///       a = bar()
+  ///       a.__enter__()
+  ///       try:
+  ///         ...
+  ///       finally:
+  ///         a.__exit__()
+  ///     finally:
+  ///       tmp.__exit__()
   void visit(const WithStmt *) override;
+  /// Perform the global checks and remove the statement from the consideration.
+  void visit(const GlobalStmt *) override;
+  /// Import a module into its own context.
+  /// Unless we are loading the standard library, each import statement is replaced
+  /// with:
+  ///   if not _import_N_done:
+  ///     _import_N()
+  ///     _import_N_done = True
+  /// to make sure that the first _executed_ import statement executes its statements
+  /// (like Python). See parseNewImport() and below for details.
+  ///
+  /// This function also handles FFI imports (C, Python etc). For the details, see
+  /// parseCImport(), parseCDylibImport() and parsePythonImport().
+  ///
+  /// ⚠️ Warning: This behavior is slightly different than Python's
+  /// behavior that executes imports when they are _executed_ first.
+  void visit(const ImportStmt *) override;
+  /// Transforms function definitions.
+  ///
+  /// At this stage, the only meaningful transformation happens for "self" arguments in
+  /// a class method that have no type annotation (they will get one automatically).
+  ///
+  /// For Python and LLVM definition transformations, see parsePythonDefinition() and
+  /// parseLLVMDefinition().
+  void visit(const FunctionStmt *) override;
+  /// Transforms type definitions and extensions.
+  /// This currently consists of adding default magic methods (described in
+  /// codegenMagic() method below).
+  void visit(const ClassStmt *) override;
 
   void visit(const TuplePattern *) override;
   void visit(const ListPattern *) override;

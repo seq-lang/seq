@@ -61,8 +61,6 @@ void SimplifyVisitor::visit(const ContinueStmt *stmt) {
   resultStmt = stmt->clone();
 }
 
-/// If a loop break variable is available (loop-else block), transform a break to:
-///   loop_var = false; break
 void SimplifyVisitor::visit(const BreakStmt *stmt) {
   if (ctx->loops.empty())
     error("break outside of a loop");
@@ -79,8 +77,6 @@ void SimplifyVisitor::visit(const ExprStmt *stmt) {
   resultStmt = N<ExprStmt>(transform(stmt->expr));
 }
 
-/// Performs assignment and unpacking transformations.
-/// See parseAssignment() and unpackAssignments() for more details.
 void SimplifyVisitor::visit(const AssignStmt *stmt) {
   vector<StmtPtr> stmts;
   if (stmt->rhs && stmt->rhs->getBinary() && stmt->rhs->getBinary()->inPlace) {
@@ -98,9 +94,6 @@ void SimplifyVisitor::visit(const AssignStmt *stmt) {
   resultStmt = stmts.size() == 1 ? move(stmts[0]) : N<SuiteStmt>(move(stmts));
 }
 
-/// Transform del a[x] to:
-///   del a -> a = typeof(a)() (and removes a from the context)
-///   del a[x] -> a.__delitem__(x)
 void SimplifyVisitor::visit(const DelStmt *stmt) {
   if (auto eix = stmt->expr->getIndex()) {
     resultStmt = N<ExprStmt>(transform(
@@ -114,8 +107,6 @@ void SimplifyVisitor::visit(const DelStmt *stmt) {
   }
 }
 
-/// Transform print a to:
-///   seq_print(a.__str__())
 void SimplifyVisitor::visit(const PrintStmt *stmt) {
   resultStmt = N<ExprStmt>(transform(N<CallExpr>(
       N<IdExpr>(".seq_print"), N<CallExpr>(N<DotExpr>(clone(stmt->expr), "__str__")))));
@@ -133,8 +124,6 @@ void SimplifyVisitor::visit(const YieldStmt *stmt) {
   resultStmt = N<YieldStmt>(transform(stmt->expr));
 }
 
-/// Transform yield from a to:
-///   for var in a: yield var
 void SimplifyVisitor::visit(const YieldFromStmt *stmt) {
   auto var = ctx->cache->getTemporaryVar("yield");
   resultStmt = transform(
@@ -162,12 +151,6 @@ void SimplifyVisitor::visit(const AssertStmt *stmt) {
                       stmt->message ? clone(stmt->message) : N<StringExpr>("")))));
 }
 
-/// Transform while cond to:
-///   while cond.__bool__()
-/// Transform while cond: ... else: ... to:
-///   no_break = True
-///   while cond.__bool__(): ...
-///   if no_break.__bool__(): ...
 void SimplifyVisitor::visit(const WhileStmt *stmt) {
   ExprPtr cond = N<CallExpr>(N<DotExpr>(clone(stmt->cond), "__bool__"));
   string breakVar;
@@ -189,17 +172,6 @@ void SimplifyVisitor::visit(const WhileStmt *stmt) {
   }
 }
 
-/// Transform for i in it: ... to:
-///   for i in it.__iter__(): ...
-/// Transform for i, j in it: ... to:
-///   for tmp in it.__iter__():
-///      i, j = tmp; ...
-/// This transformation uses AssignStmt and supports all unpack operations that are
-/// handled there.
-/// Transform for i in it: ... else: ... to:
-///   no_break = True
-///   for i in it.__iter__(): ...
-///   if no_break.__bool__(): ...
 void SimplifyVisitor::visit(const ForStmt *stmt) {
   ExprPtr iter = transform(N<CallExpr>(N<DotExpr>(clone(stmt->iter), "__iter__")));
   string breakVar;
@@ -235,7 +207,6 @@ void SimplifyVisitor::visit(const ForStmt *stmt) {
   }
 }
 
-/// Transforms all if conditions to condition.__bool__()
 void SimplifyVisitor::visit(const IfStmt *stmt) {
   vector<IfStmt::If> ifs;
   for (auto &i : stmt->ifs)
@@ -284,19 +255,6 @@ void SimplifyVisitor::visit(const ThrowStmt *stmt) {
   resultStmt = N<ThrowStmt>(transform(stmt->expr));
 }
 
-/// Transform with foo(), bar() as a: ... to:
-///   block:
-///     tmp = foo()
-///     tmp.__enter__()
-///     try:
-///       a = bar()
-///       a.__enter__()
-///       try:
-///         ...
-///       finally:
-///         a.__exit__()
-///     finally:
-///       tmp.__exit__()
 void SimplifyVisitor::visit(const WithStmt *stmt) {
   assert(stmt->items.size());
   vector<StmtPtr> content;
@@ -318,7 +276,6 @@ void SimplifyVisitor::visit(const WithStmt *stmt) {
   resultStmt = transform(N<SuiteStmt>(move(content), true));
 }
 
-/// Perform the global checks and remove the statement from the consideration.
 void SimplifyVisitor::visit(const GlobalStmt *stmt) {
   if (ctx->bases.empty() || ctx->bases.back().isType())
     error("global outside of a function");
@@ -334,19 +291,6 @@ void SimplifyVisitor::visit(const GlobalStmt *stmt) {
   ctx->add(SimplifyItem::Var, stmt->var, val->canonicalName, true);
 }
 
-/// Import a module into its own context.
-/// Unless we are loading the standard library, each import statement is replaced with:
-///   if not _import_N_done:
-///     _import_N()
-///     _import_N_done = True
-/// to make sure that the first _executed_ import statement executes its statements
-/// (like Python). See parseNewImport() and below for details.
-///
-/// This function also handles FFI imports (C, Python etc). For the details, see
-/// parseCImport(), parseCDylibImport() and parsePythonImport().
-///
-/// ⚠️ Warning: This behavior is slightly different than Python's
-/// behavior that executes imports when they are _executed_ first.
 void SimplifyVisitor::visit(const ImportStmt *stmt) {
   seqassert(!ctx->getLevel() || !ctx->bases.back().isType(), "imports within a class");
   if (stmt->from->isId("C")) {
@@ -433,13 +377,6 @@ void SimplifyVisitor::visit(const ImportStmt *stmt) {
   }
 }
 
-/// Transforms function definitions.
-///
-/// At this stage, the only meaningful transformation happens for "self" arguments in a
-/// class method that have no type annotation (they will get one automatically).
-///
-/// For Python and LLVM definition transformations, see parsePythonDefinition() and
-/// parseLLVMDefinition().
 void SimplifyVisitor::visit(const FunctionStmt *stmt) {
   if (in(stmt->attributes, ATTR_EXTERN_PYTHON)) {
     // Handle Python code separately
@@ -558,9 +495,6 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
   ctx->cache->functions[canonicalName].ast = move(f);
 }
 
-/// Transforms type definitions and extensions.
-/// This currently consists of adding default magic methods (described in
-/// codegenMagic() method below).
 void SimplifyVisitor::visit(const ClassStmt *stmt) {
   // Extensions (@extend) cases are handled bit differently
   // (no auto method-generation, no arguments etc.)
@@ -572,7 +506,7 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
 
   bool isRecord = stmt->isRecord(); // does it have @tuple attribute
 
-  // Special name handling is needed becuase of nested classes.
+  // Special name handling is needed because of nested classes.
   string name = stmt->name;
   if (!ctx->bases.empty() && ctx->bases.back().isType()) {
     const auto &a = ctx->bases.back().ast;

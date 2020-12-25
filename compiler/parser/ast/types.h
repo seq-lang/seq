@@ -38,7 +38,7 @@ struct StaticType;
  * Type instances are widely mutated during the type inference and each type is intended
  * to be instantiated and manipulated as a shared_ptr.
  */
-struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
+struct Type : public seq::SrcObject, public std::refucotri<Type> {
   /// A structure that keeps the list of unification steps that can be undone later.
   /// Needed because the unify() is destructive.
   struct Unification {

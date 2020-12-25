@@ -214,7 +214,7 @@ auto getTypeTests(const vector<string> &files) {
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(
     TypeTests, SeqTest,
-    testing::ValuesIn(getTypeTests({"parser/simplify.seq", "parser/expressions.seq",
+    testing::ValuesIn(getTypeTests({"parser/simplify.seq", "parser/typecheck.seq", "parser/expressions.seq",
                                     "parser/statements.seq", "parser/types.seq"})),
     getTypeTestNameFromParam);
 

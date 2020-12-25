@@ -166,7 +166,7 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/util/fmt/ranges.h
         compiler/util/jit.h
         compiler/util/llvm.h
-        compiler/util/tapir.h)
+        compiler/util/tapir.h compiler/parser/visitors/typecheck/typecheck_stmt.cpp compiler/parser/visitors/typecheck/typecheck_expr.cpp compiler/parser/visitors/typecheck/typecheck_infer.cpp)
 set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/lang/func.cpp
         compiler/lang/lang.cpp
@@ -248,7 +248,7 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
         ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
         EXCLUDE_FROM_ALL)
 
-add_executable(seqtest test/main.cpp)
+add_executable(seqtest test/main.cpp test/types.cpp)
 target_include_directories(seqtest PRIVATE ${SEQ_DEP}/include)
 target_link_libraries(seqtest seq gtest_main)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")

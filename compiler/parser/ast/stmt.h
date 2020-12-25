@@ -335,8 +335,8 @@ struct MatchStmt : public Stmt {
 /// @example from b import a
 /// @example from ...b import a as ai
 /// @example from c import foo(int) -> int as bar
-/// @example from python.numpy import ndarray
-/// @example from python import numpy.ndarray(int) -> int as nd
+/// @example from python.numpy import array
+/// @example from python import numpy.array(int) -> int as na
 struct ImportStmt : public Stmt {
   ExprPtr from, what;
   string as;

@@ -1,10 +1,10 @@
-/**
- * simplify.h
- * Type checking AST walker.
+/*
+ * typecheck.h --- Type inference and type-dependent AST transformations.
  *
- * Simplifies a given AST and generates types for each expression node.
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
  */
-
 #pragma once
 
 #include <map>
@@ -32,32 +32,10 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>
   StmtPtr resultStmt;
   PatternPtr resultPattern;
 
-  vector<types::Generic> parseGenerics(const vector<Param> &generics, int level);
-  string patchIfRealizable(types::TypePtr typ, bool isClass);
-
-  types::FuncTypePtr findBestCall(types::ClassTypePtr c, const string &member,
-                                  const vector<std::pair<string, types::TypePtr>> &args,
-                                  bool failOnMultiple = false,
-                                  types::TypePtr retType = nullptr);
-  ExprPtr visitDot(const DotExpr *expr, vector<CallExpr::Arg> *args = nullptr);
-  string generatePartialStub(const string &mask, const string &oldMask);
-  vector<StmtPtr> parseClass(const ClassStmt *stmt);
-  ExprPtr parseCall(const CallExpr *expr, types::TypePtr inType = nullptr,
-                    ExprPtr *extraStage = nullptr);
-  int reorder(const vector<std::pair<string, types::TypePtr>> &args,
-              vector<std::pair<string, types::TypePtr>> &reorderedArgs,
-              types::FuncTypePtr f);
-  void addFunctionGenerics(types::FuncTypePtr t);
-  ExprPtr transformBinary(const ExprPtr &lexpr, const ExprPtr &rexpr, const string &op,
-                          bool inPlace = false, bool isAtomic = false,
-                          bool *noReturn = nullptr);
-
-  void defaultVisit(const Expr *e) override;
-  void defaultVisit(const Stmt *s) override;
-  void defaultVisit(const Pattern *p) override;
-
 public:
   static StmtPtr apply(shared_ptr<Cache> cache, StmtPtr stmts);
+
+public:
   TypecheckVisitor(shared_ptr<TypeContext> ctx,
                    shared_ptr<vector<StmtPtr>> stmts = nullptr);
 
@@ -67,9 +45,10 @@ public:
   ExprPtr transform(const ExprPtr &e, bool allowTypes);
   ExprPtr transformType(const ExprPtr &expr);
 
-  types::TypePtr realizeFunc(types::TypePtr type);
-  types::TypePtr realizeType(types::TypePtr type);
-  StmtPtr realizeBlock(const StmtPtr &stmt, bool keepLast = false);
+private:
+  void defaultVisit(const Expr *e) override;
+  void defaultVisit(const Stmt *s) override;
+  void defaultVisit(const Pattern *p) override;
 
 public:
   void visit(const BoolExpr *) override;
@@ -123,6 +102,30 @@ public:
   void visit(const BoundPattern *) override;
 
   using CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>::transform;
+
+private:
+  vector<types::Generic> parseGenerics(const vector<Param> &generics, int level);
+  string patchIfRealizable(types::TypePtr typ, bool isClass);
+
+  types::FuncTypePtr findBestCall(types::ClassTypePtr c, const string &member,
+                                  const vector<std::pair<string, types::TypePtr>> &args,
+                                  bool failOnMultiple = false,
+                                  types::TypePtr retType = nullptr);
+  ExprPtr visitDot(const DotExpr *expr, vector<CallExpr::Arg> *args = nullptr);
+  string generatePartialStub(const string &mask, const string &oldMask);
+  vector<StmtPtr> parseClass(const ClassStmt *stmt);
+  ExprPtr parseCall(const CallExpr *expr, types::TypePtr inType = nullptr,
+                    ExprPtr *extraStage = nullptr);
+  int reorder(const vector<std::pair<string, types::TypePtr>> &args,
+              vector<std::pair<string, types::TypePtr>> &reorderedArgs,
+              types::FuncTypePtr f);
+  void addFunctionGenerics(types::FuncTypePtr t);
+  ExprPtr transformBinary(const ExprPtr &lexpr, const ExprPtr &rexpr, const string &op,
+                          bool inPlace = false, bool isAtomic = false,
+                          bool *noReturn = nullptr);
+  types::TypePtr realizeFunc(types::TypePtr type);
+  types::TypePtr realizeType(types::TypePtr type);
+  StmtPtr realizeBlock(const StmtPtr &stmt, bool keepLast = false);
 
 public:
   template <typename T> types::TypePtr forceUnify(const T *expr, types::TypePtr t) {
