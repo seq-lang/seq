@@ -26,24 +26,24 @@ void Expr::setType(types::TypePtr t) { this->type = move(t); }
 bool Expr::isType() const { return isTypeExpr; }
 void Expr::markType() { isTypeExpr = true; }
 string Expr::wrapType(const string &sexpr) const {
-  return format("({}{})", sexpr, type ? format(" TYPE={}", type->toString()) : "");
+  return format("({}{})", sexpr, type ? format(" #:type {}", type->toString()) : "");
 }
 
 Param::Param(string name, ExprPtr type, ExprPtr deflt)
     : name(move(name)), type(move(type)), deflt(move(deflt)) {}
 string Param::toString() const {
-  return format("({}{}{})", name, type ? " TYPE=" + type->toString() : "",
-                deflt ? " DEFAULT=" + deflt->toString() : "");
+  return format("({}{}{})", name, type ? " #:type " + type->toString() : "",
+                deflt ? " #:default " + deflt->toString() : "");
 }
 Param Param::clone() const { return Param(name, ast::clone(type), ast::clone(deflt)); }
 
 NoneExpr::NoneExpr() : Expr() {}
-string NoneExpr::toString() const { return wrapType("NONE"); }
+string NoneExpr::toString() const { return wrapType("none"); }
 ExprPtr NoneExpr::clone() const { return make_unique<NoneExpr>(*this); }
 void NoneExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
 BoolExpr::BoolExpr(bool value) : Expr(), value(value) {}
-string BoolExpr::toString() const { return wrapType(format("BOOL {}", int(value))); }
+string BoolExpr::toString() const { return wrapType(format("bool {}", int(value))); }
 ExprPtr BoolExpr::clone() const { return make_unique<BoolExpr>(*this); }
 void BoolExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
@@ -56,8 +56,8 @@ IntExpr::IntExpr(const string &value, string suffix)
       this->value += c;
 }
 string IntExpr::toString() const {
-  return wrapType(
-      format("INT {}{}", value, suffix.empty() ? "" : format(" SUFFIX={}", suffix)));
+  return wrapType(format("int {}{}", value,
+                         suffix.empty() ? "" : format(" #:suffix \"{}\"", suffix)));
 }
 ExprPtr IntExpr::clone() const { return make_unique<IntExpr>(*this); }
 void IntExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -65,8 +65,8 @@ void IntExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 FloatExpr::FloatExpr(double value, string suffix)
     : Expr(), value(value), suffix(move(suffix)) {}
 string FloatExpr::toString() const {
-  return wrapType(
-      format("FLOAT {}{}", value, suffix.empty() ? "" : format(" SUFFIX={}", suffix)));
+  return wrapType(format("float {}{}", value,
+                         suffix.empty() ? "" : format(" #:suffix \"{}\"", suffix)));
 }
 ExprPtr FloatExpr::clone() const { return make_unique<FloatExpr>(*this); }
 void FloatExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -74,21 +74,21 @@ void FloatExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 StringExpr::StringExpr(string value, string prefix)
     : Expr(), value(move(value)), prefix(move(prefix)) {}
 string StringExpr::toString() const {
-  return wrapType(format("STR '{}'{}", escape(value),
-                         prefix.empty() ? "" : format(" PREFIX={}", prefix)));
+  return wrapType(format("string \"{}\"{}", escape(value),
+                         prefix.empty() ? "" : format(" #:prefix \"{}\"", prefix)));
 }
 ExprPtr StringExpr::clone() const { return make_unique<StringExpr>(*this); }
 void StringExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
 IdExpr::IdExpr(string value) : Expr(), value(move(value)) {}
-string IdExpr::toString() const { return wrapType(format("ID {}", value)); }
+string IdExpr::toString() const { return wrapType(format("id '{}", value)); }
 ExprPtr IdExpr::clone() const { return make_unique<IdExpr>(*this); }
 void IdExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
 StarExpr::StarExpr(ExprPtr what) : Expr(), what(move(what)) {}
 StarExpr::StarExpr(const StarExpr &expr) : Expr(expr), what(ast::clone(expr.what)) {}
 string StarExpr::toString() const {
-  return wrapType(format("STAR {}", what->toString()));
+  return wrapType(format("star {}", what->toString()));
 }
 ExprPtr StarExpr::clone() const { return make_unique<StarExpr>(*this); }
 void StarExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -97,7 +97,7 @@ TupleExpr::TupleExpr(vector<ExprPtr> &&items) : Expr(), items(move(items)) {}
 TupleExpr::TupleExpr(const TupleExpr &expr)
     : Expr(expr), items(ast::clone(expr.items)) {}
 string TupleExpr::toString() const {
-  return wrapType(format("TUPLE {}", combine(items)));
+  return wrapType(format("tuple {}", combine(items)));
 }
 ExprPtr TupleExpr::clone() const { return make_unique<TupleExpr>(*this); }
 void TupleExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -105,7 +105,7 @@ void TupleExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 ListExpr::ListExpr(vector<ExprPtr> &&items) : Expr(), items(move(items)) {}
 ListExpr::ListExpr(const ListExpr &expr) : Expr(expr), items(ast::clone(expr.items)) {}
 string ListExpr::toString() const {
-  return wrapType(!items.empty() ? format("LIST {}", combine(items)) : "LIST");
+  return wrapType(!items.empty() ? format("list {}", combine(items)) : "list");
 }
 ExprPtr ListExpr::clone() const { return make_unique<ListExpr>(*this); }
 void ListExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -113,7 +113,7 @@ void ListExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 SetExpr::SetExpr(vector<ExprPtr> &&items) : Expr(), items(move(items)) {}
 SetExpr::SetExpr(const SetExpr &expr) : Expr(expr), items(ast::clone(expr.items)) {}
 string SetExpr::toString() const {
-  return wrapType(!items.empty() ? format("SET {}", combine(items)) : "SET");
+  return wrapType(!items.empty() ? format("set {}", combine(items)) : "set");
 }
 ExprPtr SetExpr::clone() const { return make_unique<SetExpr>(*this); }
 void SetExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -128,8 +128,8 @@ DictExpr::DictExpr(const DictExpr &expr)
 string DictExpr::toString() const {
   vector<string> s;
   for (auto &i : items)
-    s.push_back(format("{} {}", i.key->toString(), i.value->toString()));
-  return wrapType(!s.empty() ? format("DICT {}", join(s, " ")) : "DICT");
+    s.push_back(format("({} {})", i.key->toString(), i.value->toString()));
+  return wrapType(!s.empty() ? format("dict {}", join(s, " ")) : "dict");
 }
 ExprPtr DictExpr::clone() const { return make_unique<DictExpr>(*this); }
 void DictExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -147,17 +147,17 @@ GeneratorExpr::GeneratorExpr(const GeneratorExpr &expr)
 string GeneratorExpr::toString() const {
   string prefix;
   if (kind == GeneratorKind::ListGenerator)
-    prefix = "LIST_";
+    prefix = "list-";
   if (kind == GeneratorKind::SetGenerator)
-    prefix = "SET_";
+    prefix = "set-";
   string s;
   for (auto &i : loops) {
     string q;
     for (auto &k : i.conds)
-      q += format(" IF {}", k->toString());
-    s += format("FOR {} {}{}", i.vars->toString(), i.gen->toString(), q);
+      q += format(" (if {})", k->toString());
+    s += format(" (for {} {}{})", i.vars->toString(), i.gen->toString(), q);
   }
-  return wrapType(format("{}GENERATOR {}{}", prefix, expr->toString(), s));
+  return wrapType(format("{}gen {}{}", prefix, expr->toString(), s));
 }
 ExprPtr GeneratorExpr::clone() const { return make_unique<GeneratorExpr>(*this); }
 void GeneratorExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -173,10 +173,10 @@ string DictGeneratorExpr::toString() const {
   for (auto &i : loops) {
     string q;
     for (auto &k : i.conds)
-      q += format(" IF {}", k->toString());
-    s += format("FOR ({}) {}{}", i.vars->toString(), i.gen->toString(), q);
+      q += format("( if {})", k->toString());
+    s += format(" (for {} {}{})", i.vars->toString(), i.gen->toString(), q);
   }
-  return wrapType(format("DICT_GEN {} {}{}", key->toString(), expr->toString(), s));
+  return wrapType(format("dict-gen {} {}{}", key->toString(), expr->toString(), s));
 }
 ExprPtr DictGeneratorExpr::clone() const {
   return make_unique<DictGeneratorExpr>(*this);
@@ -189,8 +189,8 @@ IfExpr::IfExpr(const IfExpr &expr)
     : Expr(expr), cond(ast::clone(expr.cond)), ifexpr(ast::clone(expr.ifexpr)),
       elsexpr(ast::clone(expr.elsexpr)) {}
 string IfExpr::toString() const {
-  return wrapType(
-      format("IF {} {} {}", cond->toString(), ifexpr->toString(), elsexpr->toString()));
+  return wrapType(format("if-expr {} {} {}", cond->toString(), ifexpr->toString(),
+                         elsexpr->toString()));
 }
 ExprPtr IfExpr::clone() const { return make_unique<IfExpr>(*this); }
 void IfExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -200,7 +200,7 @@ UnaryExpr::UnaryExpr(string op, ExprPtr expr)
 UnaryExpr::UnaryExpr(const UnaryExpr &expr)
     : Expr(expr), op(expr.op), expr(ast::clone(expr.expr)) {}
 string UnaryExpr::toString() const {
-  return wrapType(format("UNARY '{}' {}", op, expr->toString()));
+  return wrapType(format("unary \"{}\" {}", op, expr->toString()));
 }
 ExprPtr UnaryExpr::clone() const { return make_unique<UnaryExpr>(*this); }
 void UnaryExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -211,8 +211,8 @@ BinaryExpr::BinaryExpr(const BinaryExpr &expr)
     : Expr(expr), op(expr.op), lexpr(ast::clone(expr.lexpr)),
       rexpr(ast::clone(expr.rexpr)), inPlace(expr.inPlace) {}
 string BinaryExpr::toString() const {
-  return wrapType(format("BINARY {} '{}' {}{}", lexpr->toString(), op,
-                         rexpr->toString(), inPlace ? " INPLACE" : ""));
+  return wrapType(format("binary \"{}\" {} {}{}", op, lexpr->toString(),
+                         rexpr->toString(), inPlace ? " #:in-place" : ""));
 }
 ExprPtr BinaryExpr::clone() const { return make_unique<BinaryExpr>(*this); }
 void BinaryExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -225,8 +225,8 @@ PipeExpr::PipeExpr(const PipeExpr &expr)
 string PipeExpr::toString() const {
   vector<string> s;
   for (auto &i : items)
-    s.push_back(format("({}{})", i.expr->toString(), i.op == "||>" ? " PARALLEL" : ""));
-  return wrapType(format("PIPE {}", join(s, " ")));
+    s.push_back(format("({} \"{}\")", i.expr->toString(), i.op));
+  return wrapType(format("pipe {}", join(s, " ")));
 }
 ExprPtr PipeExpr::clone() const { return make_unique<PipeExpr>(*this); }
 void PipeExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -236,7 +236,7 @@ IndexExpr::IndexExpr(ExprPtr expr, ExprPtr index)
 IndexExpr::IndexExpr(const IndexExpr &expr)
     : Expr(expr), expr(ast::clone(expr.expr)), index(ast::clone(expr.index)) {}
 string IndexExpr::toString() const {
-  return wrapType(format("INDEX {} {}", expr->toString(), index->toString()));
+  return wrapType(format("index {} {}", expr->toString(), index->toString()));
 }
 ExprPtr IndexExpr::clone() const { return make_unique<IndexExpr>(*this); }
 void IndexExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -268,8 +268,9 @@ string CallExpr::toString() const {
     if (i.name.empty())
       s += " " + i.value->toString();
     else
-      s += format(" ({} NAME={})", i.value->toString(), i.name);
-  return wrapType(format("CALL {}{}", expr->toString(), s));
+      s += format("({}{})", i.value->toString(),
+                  i.name.empty() ? "" : format(" #:name '{}", i.name));
+  return wrapType(format("call {}{}", expr->toString(), s));
 }
 ExprPtr CallExpr::clone() const { return make_unique<CallExpr>(*this); }
 void CallExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -279,7 +280,7 @@ DotExpr::DotExpr(ExprPtr expr, string member)
 DotExpr::DotExpr(const DotExpr &expr)
     : Expr(expr), expr(ast::clone(expr.expr)), member(expr.member) {}
 string DotExpr::toString() const {
-  return wrapType(format("DOT {} {}", expr->toString(), member));
+  return wrapType(format("dot {} '{}", expr->toString(), member));
 }
 ExprPtr DotExpr::clone() const { return make_unique<DotExpr>(*this); }
 void DotExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -290,23 +291,23 @@ SliceExpr::SliceExpr(const SliceExpr &expr)
     : Expr(expr), start(ast::clone(expr.start)), stop(ast::clone(expr.stop)),
       step(ast::clone(expr.step)) {}
 string SliceExpr::toString() const {
-  return wrapType(format("SLICE{}{}{}",
-                         start ? format(" START={}", start->toString()) : "",
-                         stop ? format(" END={}", stop->toString()) : "",
-                         step ? format(" STEP={}", step->toString()) : ""));
+  return wrapType(format("slice{}{}{}",
+                         start ? format(" #:start {}", start->toString()) : "",
+                         stop ? format(" #:end {}", stop->toString()) : "",
+                         step ? format(" #:step {}", step->toString()) : ""));
 }
 ExprPtr SliceExpr::clone() const { return make_unique<SliceExpr>(*this); }
 void SliceExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
 EllipsisExpr::EllipsisExpr(bool isPipeArg) : Expr(), isPipeArg(isPipeArg) {}
-string EllipsisExpr::toString() const { return wrapType("ELLIPSIS"); }
+string EllipsisExpr::toString() const { return wrapType("ellipsis"); }
 ExprPtr EllipsisExpr::clone() const { return make_unique<EllipsisExpr>(*this); }
 void EllipsisExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
 TypeOfExpr::TypeOfExpr(ExprPtr expr) : Expr(), expr(move(expr)) {}
 TypeOfExpr::TypeOfExpr(const TypeOfExpr &e) : Expr(e), expr(ast::clone(e.expr)) {}
 string TypeOfExpr::toString() const {
-  return wrapType(format("TYPEOF {}", expr->toString()));
+  return wrapType(format("typeof {}", expr->toString()));
 }
 ExprPtr TypeOfExpr::clone() const { return make_unique<TypeOfExpr>(*this); }
 void TypeOfExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -316,13 +317,13 @@ LambdaExpr::LambdaExpr(vector<string> &&vars, ExprPtr expr)
 LambdaExpr::LambdaExpr(const LambdaExpr &expr)
     : Expr(expr), vars(expr.vars), expr(ast::clone(expr.expr)) {}
 string LambdaExpr::toString() const {
-  return wrapType(format("LAMBDA {} {}", join(vars, " "), expr->toString()));
+  return wrapType(format("lambda ({}) {}", join(vars, " "), expr->toString()));
 }
 ExprPtr LambdaExpr::clone() const { return make_unique<LambdaExpr>(*this); }
 void LambdaExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
 YieldExpr::YieldExpr() : Expr() {}
-string YieldExpr::toString() const { return "YIELD"; }
+string YieldExpr::toString() const { return "yield-expr"; }
 ExprPtr YieldExpr::clone() const { return make_unique<YieldExpr>(*this); }
 void YieldExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
@@ -331,7 +332,7 @@ AssignExpr::AssignExpr(ExprPtr var, ExprPtr expr)
 AssignExpr::AssignExpr(const AssignExpr &expr)
     : Expr(expr), var(ast::clone(expr.var)), expr(ast::clone(expr.expr)) {}
 string AssignExpr::toString() const {
-  return wrapType(format("WALRUS {} {}", var->toString(), expr->toString()));
+  return wrapType(format("assign-expr '{} {}", var->toString(), expr->toString()));
 }
 ExprPtr AssignExpr::clone() const { return make_unique<AssignExpr>(*this); }
 void AssignExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -341,7 +342,7 @@ StmtExpr::StmtExpr(vector<unique_ptr<Stmt>> &&stmts, ExprPtr expr)
 StmtExpr::StmtExpr(const StmtExpr &expr)
     : Expr(expr), stmts(ast::clone(expr.stmts)), expr(ast::clone(expr.expr)) {}
 string StmtExpr::toString() const {
-  return wrapType(format("STMT ({}) {}", combine(stmts, " "), expr->toString()));
+  return wrapType(format("stmt-expr ({}) {}", combine(stmts, " "), expr->toString()));
 }
 ExprPtr StmtExpr::clone() const { return make_unique<StmtExpr>(*this); }
 void StmtExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -349,7 +350,7 @@ void StmtExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 PtrExpr::PtrExpr(ExprPtr expr) : Expr(), expr(move(expr)) {}
 PtrExpr::PtrExpr(const PtrExpr &expr) : Expr(expr), expr(ast::clone(expr.expr)) {}
 string PtrExpr::toString() const {
-  return wrapType(format("PTR {}", expr->toString()));
+  return wrapType(format("ptr {}", expr->toString()));
 }
 ExprPtr PtrExpr::clone() const { return make_unique<PtrExpr>(*this); }
 void PtrExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -359,7 +360,7 @@ TupleIndexExpr::TupleIndexExpr(ExprPtr expr, int index)
 TupleIndexExpr::TupleIndexExpr(const TupleIndexExpr &expr)
     : Expr(expr), expr(ast::clone(expr.expr)), index(expr.index) {}
 string TupleIndexExpr::toString() const {
-  return wrapType(format("TUPLE_INDEX {} {}", expr->toString(), index));
+  return wrapType(format("tuple-idx {} {}", expr->toString(), index));
 }
 ExprPtr TupleIndexExpr::clone() const { return make_unique<TupleIndexExpr>(*this); }
 void TupleIndexExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -375,7 +376,7 @@ InstantiateExpr::InstantiateExpr(const InstantiateExpr &expr)
       typeParams(ast::clone(expr.typeParams)) {}
 string InstantiateExpr::toString() const {
   return wrapType(
-      format("INSTANTIATE {} {}", typeExpr->toString(), combine(typeParams)));
+      format("instantiate {} {}", typeExpr->toString(), combine(typeParams)));
 }
 ExprPtr InstantiateExpr::clone() const { return make_unique<InstantiateExpr>(*this); }
 void InstantiateExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -385,7 +386,7 @@ StackAllocExpr::StackAllocExpr(ExprPtr typeExpr, ExprPtr expr)
 StackAllocExpr::StackAllocExpr(const StackAllocExpr &expr)
     : Expr(expr), typeExpr(ast::clone(expr.typeExpr)), expr(ast::clone(expr.expr)) {}
 string StackAllocExpr::toString() const {
-  return wrapType(format("STACK_ALLOC {} {}", typeExpr->toString(), expr->toString()));
+  return wrapType(format("stack-alloc {} {}", typeExpr->toString(), expr->toString()));
 }
 ExprPtr StackAllocExpr::clone() const { return make_unique<StackAllocExpr>(*this); }
 void StackAllocExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
@@ -395,7 +396,7 @@ StaticExpr::StaticExpr(ExprPtr expr, set<string> &&c)
 StaticExpr::StaticExpr(const StaticExpr &expr)
     : Expr(expr), expr(ast::clone(expr.expr)), captures(expr.captures) {}
 string StaticExpr::toString() const {
-  return wrapType(format("STATIC {}", expr->toString()));
+  return wrapType(format("static-expr {}", expr->toString()));
 }
 ExprPtr StaticExpr::clone() const { return make_unique<StaticExpr>(*this); }
 void StaticExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
