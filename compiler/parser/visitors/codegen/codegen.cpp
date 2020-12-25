@@ -123,7 +123,8 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
                   ast->attributes[ATTR_PARENT_CLASS]);
         seq::types::Type *typ = ctx->realizeType(p->getClass().get());
         int startI = 1;
-        if (!ast->args.empty() && ast->args[0].name == "self")
+        if (!ast->args.empty() &&
+            ctx->cache->reverseIdentifierLookup[ast->args[0].name] == "self")
           startI = 2;
         for (int i = startI; i < t->args.size(); i++)
           types.push_back(ctx->realizeType(t->args[i]->getClass().get()));
@@ -294,7 +295,7 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
   assert(i);
   auto var = i->value;
   if (!stmt->rhs) {
-    if (var == ".__argv__")
+    if (var == "__argv__")
       ctx->addVar(var, ctx->getModule()->getArgVar());
     else {
       //      LOG("{} . {}", var, stmt->lhs->getType()->getClass()->toString());
@@ -462,7 +463,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
     auto t = real.second.type;
     for (int i = 1; i < t->args.size(); i++) {
       types.push_back(realizeType(t->args[i]->getClass().get()));
-      names.push_back(ast->args[i - 1].name);
+      names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i - 1].name]);
     }
 
     LOG_REALIZE("[codegen] generating fn {}", real.first);
@@ -542,16 +543,15 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
         if (a.first == "atomic")
           ctx->setFlag("atomic");
       }
-      if (in(ast->attributes, ".c")) {
+      if (in(ast->attributes, ATTR_EXTERN_C)) {
         auto newName = ctx->cache->reverseIdentifierLookup[stmt->name];
         f->setName(newName);
         f->setExternal();
       } else {
         auto oldTryCatch = ctx->tryCatch;
         ctx->tryCatch = nullptr;
-        for (auto &arg : names)
-          ctx->addVar(arg, f->getArgVar(arg));
-
+        for (int i = 0; i < names.size(); i++)
+          ctx->addVar(ast->args[i].name, f->getArgVar(names[i]));
         transform(ast->suite);
         ctx->tryCatch = oldTryCatch;
       }

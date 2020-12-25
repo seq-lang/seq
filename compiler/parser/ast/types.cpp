@@ -277,13 +277,13 @@ int StaticType::getValue() const {
   return t.second;
 }
 
-bool isTuple(const string &name) { return startswith(name, ".Tuple."); }
+bool isTuple(const string &name) { return startswith(name, "Tuple.N"); }
 
 bool isCallable(const string &name) {
-  return startswith(name, ".Function.") || startswith(name, ".Partial.");
+  return startswith(name, "Function.N") || startswith(name, "Partial.N");
 }
 
-bool isFunc(const string &name) { return startswith(name, ".Function."); }
+bool isFunc(const string &name) { return startswith(name, "Function.N"); }
 
 ClassType::ClassType(const string &name, bool isRecord, const vector<TypePtr> &args,
                      const vector<Generic> &explicits, TypePtr parent)
@@ -317,14 +317,13 @@ int ClassType::unify(TypePtr &typ, Unification &us) {
       return -1;
 
     TypePtr ti64 = make_shared<StaticType>(64);
-    if (name == ".int" && t->name == ".Int")
+    if (name == "int" && t->name == "Int")
       return t->explicits[0].type->unify(ti64, us);
-    if (t->name == ".int" && name == ".Int")
+    if (t->name == "int" && name == "Int")
       return explicits[0].type->unify(ti64, us);
 
     if (us.isMatch) {
-      if ((t->name == ".Kmer" && name == ".seq") ||
-          (name == ".Kmer" && t->name == ".seq"))
+      if ((t->name == "Kmer" && name == "seq") || (name == "Kmer" && t->name == "seq"))
         return 0;
     }
 
@@ -436,7 +435,7 @@ bool ClassType::canRealize() const {
 }
 
 TypePtr ClassType::getCallable() {
-  if (startswith(name, ".Partial."))
+  if (startswith(name, "Partial.N"))
     return explicits[0].type;
   if (isCallable(name))
     return shared_from_this();

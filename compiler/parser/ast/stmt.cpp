@@ -313,7 +313,7 @@ string ClassStmt::toString() const {
       !generics.empty() ? format(" GEN={}", gs) : "",
       !args.empty() ? " ARGS=" + as : "",
       // attributes.size() ? format(" :attrs ({})", fmt::join(attributes, " ")) : "",
-      suite->toString());
+      suite ? suite->toString() : "");
 }
 StmtPtr ClassStmt::clone() const { return make_unique<ClassStmt>(*this); }
 void ClassStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }

@@ -80,7 +80,7 @@ void CodegenContext::popBlock() {
 void CodegenContext::initJIT() {
   jit = new seq::SeqJIT();
   auto fn = new seq::Func();
-  fn->setName(".jit_0");
+  fn->setName("jit_0");
 
   addBlock(fn->getBlock(), fn);
   assert(topBaseIndex == topBlockIndex && topBlockIndex == 0);
@@ -133,35 +133,35 @@ seq::types::Type *CodegenContext::realizeType(types::ClassType *t) {
     else
       types.push_back(realizeType(m.type->getClass().get()));
   auto name = t->name;
-  if (name == ".void") {
+  if (name == "void") {
     handle = seq::types::Void;
-  } else if (name == ".bool") {
+  } else if (name == "bool") {
     handle = seq::types::Bool;
-  } else if (name == ".byte") {
+  } else if (name == "byte") {
     handle = seq::types::Byte;
-  } else if (name == ".int") {
+  } else if (name == "int") {
     handle = seq::types::Int;
-  } else if (name == ".float") {
+  } else if (name == "float") {
     handle = seq::types::Float;
-  } else if (name == ".str") {
+  } else if (name == "str") {
     handle = seq::types::Str;
-  } else if (name == ".Int" || name == ".UInt") {
+  } else if (name == "Int" || name == "UInt") {
     assert(statics.size() == 1 && types.size() == 0);
     assert(statics[0] >= 1 && statics[0] <= 2048);
-    handle = seq::types::IntNType::get(statics[0], name == ".Int");
-  } else if (name == ".Array") {
+    handle = seq::types::IntNType::get(statics[0], name == "Int");
+  } else if (name == "Array") {
     assert(types.size() == 1 && statics.size() == 0);
     handle = seq::types::ArrayType::get(types[0]);
-  } else if (name == ".Ptr") {
+  } else if (name == "Ptr") {
     assert(types.size() == 1 && statics.size() == 0);
     handle = seq::types::PtrType::get(types[0]);
-  } else if (name == ".Generator") {
+  } else if (name == "Generator") {
     assert(types.size() == 1 && statics.size() == 0);
     handle = seq::types::GenType::get(types[0]);
-  } else if (name == ".Optional") {
+  } else if (name == "Optional") {
     assert(types.size() == 1 && statics.size() == 0);
     handle = seq::types::OptionalType::get(types[0]);
-  } else if (startswith(name, ".Function.")) {
+  } else if (startswith(name, "Function.N")) {
     types.clear();
     for (auto &m : t->args)
       types.push_back(realizeType(m->getClass().get()));
@@ -173,7 +173,7 @@ seq::types::Type *CodegenContext::realizeType(types::ClassType *t) {
     vector<seq::types::Type *> types;
     seq::types::RecordType *record;
     if (t->isRecord()) {
-      handle = record = seq::types::RecordType::get(types, names, chop(name));
+      handle = record = seq::types::RecordType::get(types, names, name);
     } else {
       auto cls = seq::types::RefType::get(name);
       cls->setContents(record = seq::types::RecordType::get(types, names, ""));

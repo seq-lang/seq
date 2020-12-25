@@ -109,7 +109,7 @@ void SimplifyVisitor::visit(const DelStmt *stmt) {
 
 void SimplifyVisitor::visit(const PrintStmt *stmt) {
   resultStmt = N<ExprStmt>(transform(N<CallExpr>(
-      N<IdExpr>(".seq_print"), N<CallExpr>(N<DotExpr>(clone(stmt->expr), "__str__")))));
+      N<IdExpr>("seq_print"), N<CallExpr>(N<DotExpr>(clone(stmt->expr), "__str__")))));
 }
 
 void SimplifyVisitor::visit(const ReturnStmt *stmt) {
@@ -139,14 +139,14 @@ void SimplifyVisitor::visit(const AssertStmt *stmt) {
     resultStmt = transform(N<IfStmt>(
         N<UnaryExpr>("!", clone(stmt->expr)),
         N<ExprStmt>(N<CallExpr>(
-            N<IdExpr>(".seq_assert_test"), N<StringExpr>(stmt->getSrcInfo().file),
+            N<IdExpr>("seq_assert_test"), N<StringExpr>(stmt->getSrcInfo().file),
             N<IntExpr>(stmt->getSrcInfo().line),
             stmt->message ? clone(stmt->message) : N<StringExpr>("")))));
   else
     resultStmt = transform(
         N<IfStmt>(N<UnaryExpr>("!", clone(stmt->expr)),
                   N<ThrowStmt>(N<CallExpr>(
-                      N<IdExpr>(".seq_assert"), N<StringExpr>(stmt->getSrcInfo().file),
+                      N<IdExpr>("seq_assert"), N<StringExpr>(stmt->getSrcInfo().file),
                       N<IntExpr>(stmt->getSrcInfo().line),
                       stmt->message ? clone(stmt->message) : N<StringExpr>("")))));
 }
@@ -385,7 +385,7 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
     return;
   }
 
-  auto canonicalName = ctx->generateCanonicalName(stmt->name);
+  auto canonicalName = ctx->generateCanonicalName(stmt->name, ctx->getBase());
   bool isClassMember = ctx->getLevel() && ctx->bases.back().isType();
 
   if (in(stmt->attributes, ATTR_BUILTIN) && (ctx->getLevel() || isClassMember))
@@ -410,9 +410,6 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
     ctx->add(SimplifyItem::Type, g.name, genName, false, g.type != nullptr);
     if (g.type && !g.type->isId("int"))
       error("only integer static generics are supported");
-    preamble->types.push_back(
-        N<ClassStmt>(genName, vector<Param>{}, vector<Param>{}, nullptr,
-                     map<string, string>{{ATTR_GENERIC, g.type ? "int" : ""}}));
     newGenerics.emplace_back(
         Param{genName, transformType(g.type.get()), transform(g.deflt.get(), true)});
   }
@@ -424,9 +421,9 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
     // If the first argument of a class method is self and if it has no type, add it.
     if (!typeAst && isClassMember && ia == 0 && a.name == "self")
       typeAst = transformType(ctx->bases[ctx->bases.size() - 2].ast.get());
-    args.emplace_back(Param{a.name, move(typeAst), transform(a.deflt)});
-    // Warning: parameter names are not canonized.
-    ctx->add(SimplifyItem::Var, a.name, a.name);
+    auto name = ctx->generateCanonicalName(a.name);
+    args.emplace_back(Param{name, move(typeAst), transform(a.deflt)});
+    ctx->add(SimplifyItem::Var, a.name, name);
   }
   // Parse the return type.
   if (!stmt->ret && in(stmt->attributes, ATTR_EXTERN_LLVM))
@@ -462,7 +459,8 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
       parentFunc = ctx->bases[i].name;
       break;
     }
-  attributes[ATTR_PARENT_FUNCTION] = parentFunc;
+  if (!parentFunc.empty())
+    attributes[ATTR_PARENT_FUNCTION] = parentFunc;
 
   if (isClassMember) { // If this is a method...
     // ... set the enclosing class name...
@@ -476,7 +474,7 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
     // even if T is unknown. However, def bar(): return T() cannot because it needs T
     // (and is thus accordingly marked with ATTR_NOT_STATIC).
     if ((!ctx->bases.empty() && refParent == ctx->bases.back().name) ||
-        canonicalName == ".Ptr.__elemsize__" || canonicalName == ".Ptr.__atomic__")
+        canonicalName == "Ptr.__elemsize__" || canonicalName == "Ptr.__atomic__")
       attributes[ATTR_NOT_STATIC] = "";
   }
   auto f = N<FunctionStmt>(canonicalName, move(ret), move(newGenerics), move(args),
@@ -521,7 +519,8 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
   auto classItem =
       make_shared<SimplifyItem>(SimplifyItem::Type, "", "", ctx->isToplevel(), false);
   if (!extension) {
-    classItem->canonicalName = canonicalName = ctx->generateCanonicalName(name);
+    classItem->canonicalName = canonicalName =
+        ctx->generateCanonicalName(name, ctx->getBase());
     // Reference types are added to the context at this stage.
     // Record types (tuples) are added after parsing class arguments to prevent
     // recursive record types (that are allowed for reference types).
@@ -568,10 +567,6 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
     // original AST.
     ctx->add(SimplifyItem::Type, stmt->generics[gi].name, genName, false,
              originalAST->generics[gi].type != nullptr);
-    preamble->types.push_back(
-        N<ClassStmt>(genName, vector<Param>{}, vector<Param>{}, nullptr,
-                     map<string, string>{
-                         {ATTR_GENERIC, originalAST->generics[gi].type ? "int" : ""}}));
     newGenerics.emplace_back(
         Param{genName, transformType(originalAST->generics[gi].type.get()), nullptr});
   }
@@ -797,16 +792,15 @@ void SimplifyVisitor::unpackAssignments(const Expr *lhs, const Expr *rhs,
 
 StmtPtr SimplifyVisitor::parseCImport(const string &name, const vector<Param> &args,
                                       const Expr *ret, const string &altName) {
-  auto canonicalName = ctx->generateCanonicalName(name);
+  auto canonicalName = ctx->generateCanonicalName(name, ctx->getBase());
   vector<Param> fnArgs;
   generateFunctionStub(args.size());
   for (int ai = 0; ai < args.size(); ai++) {
     seqassert(args[ai].name.empty(), "unexpected argument name");
     seqassert(!args[ai].deflt, "unexpected default argument");
     seqassert(args[ai].type, "missing type");
-    fnArgs.emplace_back(
-        Param{args[ai].name.empty() ? format(".a{}", ai) : args[ai].name,
-              transformType(args[ai].type.get()), nullptr});
+    fnArgs.emplace_back(Param{args[ai].name.empty() ? format("a{}", ai) : args[ai].name,
+                              transformType(args[ai].type.get()), nullptr});
   }
   ctx->add(SimplifyItem::Func, altName.empty() ? name : altName, canonicalName,
            ctx->isToplevel());
@@ -845,7 +839,7 @@ StmtPtr SimplifyVisitor::parseCDylibImport(const Expr *dylib, const string &name
   bool isVoid = !ret || (ret->getId() && ret->getId()->value == "void");
   fnArgs.clear();
   for (int i = 0; i < args.size(); i++)
-    fnArgs.emplace_back(N<IdExpr>(format(".a{}", i)));
+    fnArgs.emplace_back(N<IdExpr>(format("a{}", i)));
   // f(args...)
   auto call = N<CallExpr>(N<IdExpr>("f"), move(fnArgs));
   if (!isVoid)
@@ -855,7 +849,7 @@ StmtPtr SimplifyVisitor::parseCDylibImport(const Expr *dylib, const string &name
   vector<Param> params;
   // Prepare final FunctionStmt and transform it
   for (int i = 0; i < args.size(); i++)
-    params.emplace_back(Param{format(".a{}", i), clone(args[i].type)});
+    params.emplace_back(Param{format("a{}", i), clone(args[i].type)});
   return transform(N<FunctionStmt>(
       altName.empty() ? name : altName, ret ? ret->clone() : nullptr, vector<Param>(),
       move(params), N<SuiteStmt>(move(stmts)), vector<string>()));
@@ -1042,7 +1036,7 @@ StmtPtr SimplifyVisitor::parseLLVMDefinition(const Stmt *codeStmt) {
 
 string SimplifyVisitor::generateFunctionStub(int n) {
   seqassert(n >= 0, "invalid n");
-  auto typeName = format("Function.{}", n);
+  auto typeName = format("Function.N{}", n);
   if (ctx->cache->variardics.find(typeName) == ctx->cache->variardics.end()) {
     ctx->cache->variardics.insert(typeName);
 
@@ -1052,11 +1046,11 @@ string SimplifyVisitor::generateFunctionStub(int n) {
     genericNames.emplace_back(N<IdExpr>("TR"));
     // TODO: remove this args hack
     vector<Param> args;
-    args.emplace_back(Param{".ret", N<IdExpr>("TR"), nullptr});
+    args.emplace_back(Param{"ret", N<IdExpr>("TR"), nullptr});
     for (int i = 1; i <= n; i++) {
       genericNames.emplace_back(N<IdExpr>(format("T{}", i)));
       generics.emplace_back(Param{format("T{}", i), nullptr, nullptr});
-      args.emplace_back(Param{format(".a{}", i), N<IdExpr>(format("T{}", i)), nullptr});
+      args.emplace_back(Param{format("a{}", i), N<IdExpr>(format("T{}", i)), nullptr});
     }
     ExprPtr type = N<IndexExpr>(N<IdExpr>(typeName), N<TupleExpr>(move(genericNames)));
 
@@ -1087,7 +1081,7 @@ string SimplifyVisitor::generateFunctionStub(int n) {
     ctx->cache->imports[STDLIB_IMPORT].ctx->addToplevel(typeName, nval);
     ctx->cache->imports[STDLIB_IMPORT].ctx->addToplevel(nval->canonicalName, nval);
   }
-  return "." + typeName;
+  return typeName;
 }
 
 StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,

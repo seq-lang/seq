@@ -47,7 +47,7 @@ ExprPtr SimplifyVisitor::transformType(const Expr *expr) {
 void SimplifyVisitor::defaultVisit(const Expr *e) { resultExpr = e->clone(); }
 
 void SimplifyVisitor::visit(const NoneExpr *expr) {
-  resultExpr = transform(N<CallExpr>(N<IdExpr>(".Optional")));
+  resultExpr = transform(N<CallExpr>(N<IdExpr>("Optional")));
 }
 
 void SimplifyVisitor::visit(const IntExpr *expr) {
@@ -61,7 +61,7 @@ void SimplifyVisitor::visit(const StringExpr *expr) {
   } else if (!expr->prefix.empty()) {
     /// Custom-prefix strings
     resultExpr = transform(
-        N<CallExpr>(N<IndexExpr>(N<DotExpr>(N<IdExpr>(".str"),
+        N<CallExpr>(N<IndexExpr>(N<DotExpr>(N<IdExpr>("str"),
                                             format("__prefix_{}__", expr->prefix)),
                                  N<IntExpr>(expr->value.size())),
                     N<StringExpr>(expr->value)));
@@ -84,7 +84,8 @@ void SimplifyVisitor::visit(const IdExpr *expr) {
         captured = true;
         ctx->captures.back().insert(expr->value);
       } else {
-        error("cannot access non-global variable '{}'", expr->value);
+        error("cannot access non-global variable '{}'",
+              ctx->cache->reverseIdentifierLookup[expr->value]);
       }
     }
   }
@@ -117,7 +118,7 @@ void SimplifyVisitor::visit(const IdExpr *expr) {
 
 void SimplifyVisitor::visit(const StarExpr *expr) {
   resultExpr = transform(N<CallExpr>(
-      N<IdExpr>(".List"), N<CallExpr>(N<DotExpr>(clone(expr->what), "__iter__"))));
+      N<IdExpr>("List"), N<CallExpr>(N<DotExpr>(clone(expr->what), "__iter__"))));
 }
 
 void SimplifyVisitor::visit(const TupleExpr *expr) {
@@ -131,7 +132,7 @@ void SimplifyVisitor::visit(const ListExpr *expr) {
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("list"));
   stmts.push_back(transform(N<AssignStmt>(
       clone(var),
-      N<CallExpr>(N<IdExpr>(".List"),
+      N<CallExpr>(N<IdExpr>("List"),
                   !expr->items.empty() ? N<IntExpr>(expr->items.size()) : nullptr))));
   for (const auto &it : expr->items) {
     if (auto star = it->getStar()) {
@@ -150,7 +151,7 @@ void SimplifyVisitor::visit(const ListExpr *expr) {
 void SimplifyVisitor::visit(const SetExpr *expr) {
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("set"));
-  stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Set")))));
+  stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Set")))));
   for (auto &it : expr->items)
     if (auto star = it->getStar()) {
       ExprPtr forVar = N<IdExpr>(ctx->cache->getTemporaryVar("it"));
@@ -167,8 +168,7 @@ void SimplifyVisitor::visit(const SetExpr *expr) {
 void SimplifyVisitor::visit(const DictExpr *expr) {
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("dict"));
-  stmts.push_back(
-      transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Dict")))));
+  stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Dict")))));
   for (auto &it : expr->items)
     stmts.push_back(transform(N<ExprStmt>(N<CallExpr>(
         N<DotExpr>(clone(var), "__setitem__"), clone(it.key), clone(it.value)))));
@@ -183,14 +183,14 @@ void SimplifyVisitor::visit(const GeneratorExpr *expr) {
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("gen"));
   if (expr->kind == GeneratorExpr::ListGenerator) {
     stmts.push_back(
-        transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".List")))));
+        transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("List")))));
     prev->stmts.push_back(
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "append"), clone(expr->expr))));
     stmts.push_back(transform(suite));
     resultExpr = N<StmtExpr>(move(stmts), transform(var));
   } else if (expr->kind == GeneratorExpr::SetGenerator) {
     stmts.push_back(
-        transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Set")))));
+        transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Set")))));
     prev->stmts.push_back(
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "add"), clone(expr->expr))));
     stmts.push_back(transform(suite));
@@ -209,8 +209,7 @@ void SimplifyVisitor::visit(const DictGeneratorExpr *expr) {
 
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("gen"));
-  stmts.push_back(
-      transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>(".Dict")))));
+  stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Dict")))));
   prev->stmts.push_back(N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__setitem__"),
                                                 clone(expr->key), clone(expr->expr))));
   stmts.push_back(transform(suite));
@@ -471,18 +470,18 @@ ExprPtr SimplifyVisitor::transformInt(const string &value, const string &suffix)
       return N<IntExpr>(to_int(value));
     /// Unsigned numbers: use UInt[64] for that
     if (suffix == "u")
-      return transform(N<CallExpr>(N<IndexExpr>(N<IdExpr>(".UInt"), N<IntExpr>(64)),
+      return transform(N<CallExpr>(N<IndexExpr>(N<IdExpr>("UInt"), N<IntExpr>(64)),
                                    N<IntExpr>(to_int(value))));
     /// Fixed-precision numbers (uXXX and iXXX)
     /// NOTE: you cannot use binary (0bXXX) format with those numbers.
     /// TODO: implement non-string constructor for these cases.
     if (suffix[0] == 'u' && isdigit(suffix.substr(1)))
       return transform(N<CallExpr>(
-          N<IndexExpr>(N<IdExpr>(".UInt"), N<IntExpr>(std::stoi(suffix.substr(1)))),
+          N<IndexExpr>(N<IdExpr>("UInt"), N<IntExpr>(std::stoi(suffix.substr(1)))),
           N<StringExpr>(value)));
     if (suffix[0] == 'i' && isdigit(suffix.substr(1)))
       return transform(N<CallExpr>(
-          N<IndexExpr>(N<IdExpr>(".Int"), N<IntExpr>(std::stoi(suffix.substr(1)))),
+          N<IndexExpr>(N<IdExpr>("Int"), N<IntExpr>(std::stoi(suffix.substr(1)))),
           N<StringExpr>(value)));
   } catch (std::out_of_range &) {
     error("integer {} out of range", value);
@@ -490,7 +489,7 @@ ExprPtr SimplifyVisitor::transformInt(const string &value, const string &suffix)
   /// Custom suffix sfx: use int.__suffix_sfx__(str) call.
   /// NOTE: you cannot neither use binary (0bXXX) format here.
   return transform(
-      N<CallExpr>(N<DotExpr>(N<IdExpr>(".int"), format("__suffix_{}__", suffix)),
+      N<CallExpr>(N<DotExpr>(N<IdExpr>("int"), format("__suffix_{}__", suffix)),
                   N<StringExpr>(value)));
 }
 
@@ -531,7 +530,7 @@ string SimplifyVisitor::generateTupleStub(int len) {
   // Generate all tuples Tuple.(0...len) (to ensure that any slice results in a valid
   // type).
   for (int len_i = 0; len_i <= len; len_i++) {
-    auto typeName = format("Tuple.{}", len_i);
+    auto typeName = format("Tuple.N{}", len_i);
     if (ctx->cache->variardics.find(typeName) == ctx->cache->variardics.end()) {
       ctx->cache->variardics.insert(typeName);
       vector<Param> generics, args;
@@ -552,7 +551,7 @@ string SimplifyVisitor::generateTupleStub(int len) {
       ctx->cache->imports[STDLIB_IMPORT].ctx->addToplevel(nval->canonicalName, nval);
     }
   }
-  return format(".Tuple.{}", len);
+  return format("Tuple.N{}", len);
 }
 
 StmtPtr SimplifyVisitor::getGeneratorBlock(const vector<GeneratorBody> &loops,
@@ -624,22 +623,26 @@ ExprPtr SimplifyVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
   vector<Param> params;
   vector<CallExpr::Arg> args;
 
-  string name = ctx->cache->getTemporaryVar("lambda", '.');
+  string name = ctx->cache->getTemporaryVar("lambda");
   ctx->captures.emplace_back(set<string>{});
   for (auto &s : argNames)
     params.emplace_back(Param{s, nullptr, nullptr});
   auto fs = transform(N<FunctionStmt>(name, nullptr, vector<Param>{}, move(params),
                                       N<SuiteStmt>(move(stmts)), vector<string>{}));
-  auto f = ctx->cache->functions[name].ast.get(); // name is already canonical!
+  if (fs) {
+    if (auto fp = const_cast<FunctionStmt *>(fs->getFunction())) {
+      for (auto &c : ctx->captures.back())
+        fp->args.emplace_back(Param{c, nullptr, nullptr});
+      prependStmts->push_back(move(fs));
+      name = fp->name;
+    } else {
+      seqassert(false, "expected a FunctionStmt");
+    }
+  }
+  auto f = ctx->cache->functions[name].ast.get();
   for (auto &c : ctx->captures.back()) {
     f->args.emplace_back(Param{c, nullptr, nullptr});
     args.emplace_back(CallExpr::Arg{"", N<IdExpr>(c)});
-  }
-  if (fs) {
-    auto fp = const_cast<FunctionStmt *>(fs->getFunction());
-    seqassert(fp, "not a function");
-    fp->args = clone_nop(f->args);
-    prependStmts->push_back(move(fs));
   }
   ctx->captures.pop_back();
   return N<CallExpr>(N<IdExpr>(name), move(args));

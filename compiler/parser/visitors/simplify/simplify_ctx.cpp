@@ -66,13 +66,11 @@ string SimplifyContext::getBase() const {
   return bases.back().name;
 }
 
-string SimplifyContext::generateCanonicalName(const string &name) const {
-  if (!name.empty() && name[0] == '.')
-    return name;
-  string newName = format("{}.{}", getBase(), name);
+string SimplifyContext::generateCanonicalName(const string &name,
+                                              const string &base) const {
+  string newName = format("{}{}", base.empty() ? "" : base + ".", name);
   auto num = cache->identifierCount[newName]++;
   newName = num ? format("{}.{}", newName, num) : newName;
-  newName = newName[0] == '.' ? newName : "." + newName;
   cache->reverseIdentifierLookup[newName] = name;
   return newName;
 }

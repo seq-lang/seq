@@ -67,6 +67,9 @@ seq::SeqModule *parse(const string &argv0, const string &file, const string &cod
         auto fo = fopen("_dump_simplify.seq", "w");
         fmt::print(fo, "{}", ast::FormatVisitor::apply(transformed, cache));
         fclose(fo);
+        fo = fopen("_dump_simplify.sexp", "w");
+        fmt::print(fo, "{}\n", transformed->toString());
+        fclose(fo);
       }
     }
 

@@ -25,7 +25,7 @@ bool types::RecordType::empty() const { return types.empty(); }
 std::vector<types::Type *> types::RecordType::getTypes() { return types; }
 
 std::string types::RecordType::getName() const {
-  if (named() && !ast::startswith(name, "Tuple."))
+  if (named() && !ast::startswith(name, "Tuple.N"))
     return name;
 
   std::string name = "Tuple[";
@@ -64,13 +64,10 @@ bool types::RecordType::isAtomic() const {
 bool types::RecordType::is(types::Type *type) const {
   unsigned b = numBaseTypes();
 
-  if (ast::startswith(name, "Tuple.") && type->getName() == "seq")
-    assert(1);
-
   if (!isGeneric(type) || b != type->numBaseTypes())
     return false;
 
-  if (named() && !ast::startswith(name, "Tuple.")) {
+  if (named() && !ast::startswith(name, "Tuple.N")) {
     auto *rec = dynamic_cast<types::RecordType *>(type);
     assert(rec);
     if (name != rec->name)

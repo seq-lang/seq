@@ -171,7 +171,7 @@ public:
 
   /// Return a uniquely named temporary variable of a format
   /// "{sigil}_{prefix}{counter}". A sigil should be a non-lexable symbol.
-  string getTemporaryVar(const string &prefix = "", char sigil = '$') {
+  string getTemporaryVar(const string &prefix = "", char sigil = '.') {
     return fmt::format("{}{}_{}", sigil ? fmt::format("{}_", sigil) : "", prefix,
                        ++varCount);
   }

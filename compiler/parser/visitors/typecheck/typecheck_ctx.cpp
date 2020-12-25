@@ -16,7 +16,7 @@ namespace ast {
 
 TypeContext::TypeContext(shared_ptr<Cache> cache)
     : Context<TypecheckItem>(""), cache(move(cache)), typecheckLevel(0), iteration(0),
-      extendEtape(0) {
+      extendEtape(0), needsAnotherIteration(false) {
   stack.push_front(vector<string>());
   bases.push_back({"", nullptr, nullptr});
 }
@@ -35,11 +35,9 @@ TypeContext::findInVisited(const string &name) const {
 shared_ptr<TypecheckItem> TypeContext::find(const string &name) const {
   if (auto t = Context<TypecheckItem>::find(name))
     return t;
-  if (!name.empty() && name[0] == '.') {
-    auto tt = findInVisited(name);
-    if (tt.second)
-      return make_shared<TypecheckItem>(tt.first, tt.second, "");
-  }
+  auto tt = findInVisited(name);
+  if (tt.second)
+    return make_shared<TypecheckItem>(tt.first, tt.second);
   // ((SimplifyContext *)this)->dump();
   return nullptr;
 }
@@ -47,16 +45,12 @@ shared_ptr<TypecheckItem> TypeContext::find(const string &name) const {
 types::TypePtr TypeContext::findInternal(const string &name) const {
   auto t = find(name);
   seqassert(t, "cannot find '{}'", name);
-  return t->getType();
+  return t->type;
 }
 
 shared_ptr<TypecheckItem> TypeContext::add(TypecheckItem::Kind kind, const string &name,
-                                           types::TypePtr type, bool generic,
-                                           bool stat) {
-  auto t = make_shared<TypecheckItem>(kind, type, getBase(), generic, stat);
-  //  if (name[0] == '.')
-  //    addToplevel(name, t);
-  //  else
+                                           types::TypePtr type, bool stat) {
+  auto t = make_shared<TypecheckItem>(kind, type, stat);
   add(name, t);
   return t;
 }
@@ -138,8 +132,7 @@ void TypeContext::dump(int pad) {
   for (auto &i : ordered) {
     string s;
     auto t = i.second.front().second;
-    LOG("{}{:.<25} {} {}", string(pad * 2, ' '), i.first, t->getType()->toString(),
-        t->getBase());
+    LOG("{}{:.<25} {}", string(pad * 2, ' '), i.first, t->type->toString());
   }
 }
 

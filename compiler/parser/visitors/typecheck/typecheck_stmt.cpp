@@ -92,8 +92,8 @@ void TypecheckVisitor::visit(const AssignStmt *stmt) {
 
       auto lc = typ->getClass();
       auto rc = rhs->getType()->getClass();
-      if (lc && lc->name == ".Optional" && rc && rc->name != lc->name)
-        rhs = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(rhs)));
+      if (lc && lc->name == "Optional" && rc && rc->name != lc->name)
+        rhs = transform(N<CallExpr>(N<IdExpr>("Optional"), move(rhs)));
 
       forceUnify(typ, rhs->getType());
     }
@@ -102,8 +102,8 @@ void TypecheckVisitor::visit(const AssignStmt *stmt) {
             : (rhs->getType()->getFunc() ? TypecheckItem::Func : TypecheckItem::Var);
     ctx->add(k, l->value, t = rhs->getType());
   }
-  if (l->value[0] == '.')
-    ctx->bases.back().visitedAsts[l->value] = {k, t};
+  //  if (l->value[0] == '.')
+  ctx->bases.back().visitedAsts[l->value] = {k, t};
   auto lhs = clone(stmt->lhs);
   lhs->setType(forceUnify(lhs, t));
   resultStmt = N<AssignStmt>(move(lhs), move(rhs), move(typExpr));
@@ -136,9 +136,9 @@ void TypecheckVisitor::visit(const UpdateStmt *stmt) {
   bool atomic = stmt->isAtomic;
   const CallExpr *c;
   if (atomic && l->getId() && (c = stmt->rhs->getCall()) &&
-      (c->expr->isId(".min") || c->expr->isId(".max")) && c->args.size() == 2 &&
+      (c->expr->isId("min") || c->expr->isId("max")) && c->args.size() == 2 &&
       c->args[0].value->isId(string(l->getId()->value))) {
-    auto pt = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(".Ptr"), {lc});
+    auto pt = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("Ptr"), {lc});
     auto rsh = transform(c->args[1].value);
     auto rc = rsh->getType()->getClass();
     if (auto m =
@@ -154,7 +154,7 @@ void TypecheckVisitor::visit(const UpdateStmt *stmt) {
     r = transform(stmt->rhs);
   auto rc = r->getType()->getClass();
   if (atomic && lc && rc) { // maybe an atomic = ?
-    auto pt = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(".Ptr"), {lc});
+    auto pt = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("Ptr"), {lc});
     if (auto m = findBestCall(lc, "__atomic_xchg__", {{"", pt}, {"", rc}})) {
       resultStmt = transform(
           N<ExprStmt>(N<CallExpr>(N<IdExpr>(m->name), N<PtrExpr>(move(l)), move(r))));
@@ -162,8 +162,8 @@ void TypecheckVisitor::visit(const UpdateStmt *stmt) {
     } else {
       atomic = false;
     }
-  } else if (lc && lc->name == ".Optional" && rc && rc->name != lc->name) {
-    r = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(r)));
+  } else if (lc && lc->name == "Optional" && rc && rc->name != lc->name) {
+    r = transform(N<CallExpr>(N<IdExpr>("Optional"), move(r)));
   }
   l->setType(forceUnify(r.get(), l->getType()));
   resultStmt = N<UpdateStmt>(move(l), move(r), atomic);
@@ -177,9 +177,9 @@ void TypecheckVisitor::visit(const AssignMemberStmt *stmt) {
 
   if (lc) {
     auto mm = ctx->findMember(lc->name, stmt->member);
-    if (!mm && lc->name == ".Optional") {
+    if (!mm && lc->name == "Optional") {
       resultStmt = transform(N<AssignMemberStmt>(
-          N<CallExpr>(N<IdExpr>(".unwrap"), clone(stmt->lhs)), stmt->member, move(rh)));
+          N<CallExpr>(N<IdExpr>("unwrap"), clone(stmt->lhs)), stmt->member, move(rh)));
       return;
     }
     if (!mm)
@@ -190,8 +190,8 @@ void TypecheckVisitor::visit(const AssignMemberStmt *stmt) {
 
     auto t = ctx->instantiate(getSrcInfo(), mm, lc.get());
     lc = t->getClass();
-    if (lc && lc->name == ".Optional" && rc && rc->name != lc->name)
-      rh = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(rh)));
+    if (lc && lc->name == "Optional" && rc && rc->name != lc->name)
+      rh = transform(N<CallExpr>(N<IdExpr>("Optional"), move(rh)));
     forceUnify(t, rh->getType());
   }
 
@@ -208,8 +208,8 @@ void TypecheckVisitor::visit(const ReturnStmt *stmt) {
       auto l = base.returnType->getClass();
       auto r = e->getType()->getClass();
       if (l && r && r->name != l->name) {
-        if (l->name == ".Optional") {
-          e = transform(N<CallExpr>(N<IdExpr>(".Optional"), move(e)));
+        if (l->name == "Optional") {
+          e = transform(N<CallExpr>(N<IdExpr>("Optional"), move(e)));
         }
         // For now this only works if we already know that returnType is optional
       }
@@ -219,9 +219,9 @@ void TypecheckVisitor::visit(const ReturnStmt *stmt) {
     }
 
     // HACK for return void in Partial.__call__
-    if (startswith(base.name, ".Partial.") && endswith(base.name, ".__call__")) {
+    if (startswith(base.name, "Partial.N") && endswith(base.name, ".__call__")) {
       auto c = e->getType()->getClass();
-      if (c && c->name == ".void") {
+      if (c && c->name == "void") {
         resultStmt = N<ExprStmt>(move(e));
         return;
       }
@@ -236,12 +236,12 @@ void TypecheckVisitor::visit(const YieldStmt *stmt) {
   types::TypePtr t = nullptr;
   if (stmt->expr) {
     auto e = transform(stmt->expr);
-    t = ctx->instantiateGeneric(e->getSrcInfo(), ctx->findInternal(".Generator"),
+    t = ctx->instantiateGeneric(e->getSrcInfo(), ctx->findInternal("Generator"),
                                 {e->getType()});
     resultStmt = N<YieldStmt>(move(e));
   } else {
-    t = ctx->instantiateGeneric(stmt->getSrcInfo(), ctx->findInternal(".Generator"),
-                                {ctx->findInternal(".void")});
+    t = ctx->instantiateGeneric(stmt->getSrcInfo(), ctx->findInternal("Generator"),
+                                {ctx->findInternal("void")});
     resultStmt = N<YieldStmt>(nullptr);
   }
   auto &base = ctx->bases.back();
@@ -265,7 +265,7 @@ void TypecheckVisitor::visit(const ForStmt *stmt) {
   TypePtr varType = ctx->addUnbound(stmt->var->getSrcInfo(), ctx->typecheckLevel);
   if (!iter->getType()->getUnbound()) {
     auto iterType = iter->getType()->getClass();
-    if (!iterType || iterType->name != ".Generator")
+    if (!iterType || iterType->name != "Generator")
       error(iter, "expected a generator");
     forceUnify(varType, iterType->explicits[0].type);
   }
@@ -372,11 +372,11 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
       auto gt = make_shared<LinkType>(LinkType::Unbound, ct->explicits[i].id,
                                       ctx->typecheckLevel - 1, nullptr, l->isStatic);
       generics.push_back(gt);
-      ctx->add(TypecheckItem::Type, c->generics[i].name, gt, true, l->isStatic);
+      ctx->add(TypecheckItem::Type, c->generics[i].name, gt, l->isStatic);
     }
   }
   for (auto &i : stmt->generics)
-    generics.push_back(ctx->find(i.name)->getType());
+    generics.push_back(ctx->find(i.name)->type);
 
   ctx->typecheckLevel++;
   vector<TypePtr> args;
@@ -403,14 +403,14 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
 
   auto t = make_shared<FuncType>(
       stmt->name,
-      ctx->findInternal(format(".Function.{}", stmt->args.size()))->getClass().get(),
+      ctx->findInternal(format("Function.N{}", stmt->args.size()))->getClass().get(),
       args, explicits);
 
   if (isClassMember && in(attributes, ATTR_NOT_STATIC)) {
     auto val = ctx->find(attributes[ATTR_PARENT_CLASS]);
-    assert(val && val->getType());
-    t->parent = val->getType();
-  } else {
+    assert(val && val->type);
+    t->parent = val->type;
+  } else if (in(attributes, ATTR_PARENT_FUNCTION)) {
     t->parent = ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])].type;
   }
   if (isClassMember) {
@@ -434,19 +434,10 @@ void TypecheckVisitor::visit(const FunctionStmt *stmt) {
 
   ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])]
       .visitedAsts[stmt->name] = {TypecheckItem::Func, t};
-  ctx->add(TypecheckItem::Func, stmt->name, t, false, false);
+  ctx->add(TypecheckItem::Func, stmt->name, t);
 }
 
 void TypecheckVisitor::visit(const ClassStmt *stmt) {
-  if (in(stmt->attributes, ATTR_GENERIC)) {
-    // bool isStatic = !stmt->attributes[ATTR_GENERIC].empty();
-    // auto tp = make_shared<LinkType>(LinkType::Generic, ctx->cache->unboundCount++,
-    // 0,
-    //                                 nullptr, isStatic);
-    // ctx->add(TypecheckItem::Type, stmt->name, tp, true, true, isStatic);
-    return;
-  }
-
   if (ctx->findInVisited(stmt->name).second && !in(stmt->attributes, "extend"))
     resultStmt = N<ClassStmt>(stmt->name, vector<Param>(), vector<Param>(),
                               N<SuiteStmt>(), map<string, string>(stmt->attributes));
@@ -472,8 +463,7 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
     if (in(stmt->attributes, "trait"))
       ct->isTrait = true;
     ct->setSrcInfo(stmt->getSrcInfo());
-    auto ctxi =
-        make_shared<TypecheckItem>(TypecheckItem::Type, ct, ctx->getBase(), true);
+    auto ctxi = make_shared<TypecheckItem>(TypecheckItem::Type, ct);
     ctx->add(stmt->name, ctxi);
     ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])]
         .visitedAsts[stmt->name] = {TypecheckItem::Type, ct};
@@ -493,7 +483,7 @@ vector<StmtPtr> TypecheckVisitor::parseClass(const ClassStmt *stmt) {
 
     for (auto &g : stmt->generics) {
       auto val = ctx->find(g.name);
-      if (auto g = val->getType()) {
+      if (auto g = val->type) {
         assert(g && g->getLink() && g->getLink()->kind != types::LinkType::Link);
         if (g->getLink()->kind == LinkType::Unbound)
           g->getLink()->kind = LinkType::Generic;
@@ -518,7 +508,7 @@ vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &gene
     genericTypes.push_back(
         {g.name, tp->generalize(level), ctx->cache->unboundCount - 1, clone(g.deflt)});
     LOG_REALIZE("[generic] {} -> {} {}", g.name, tp->toString(), bool(g.type));
-    ctx->add(TypecheckItem::Type, g.name, tp, true, bool(g.type));
+    ctx->add(TypecheckItem::Type, g.name, tp, bool(g.type));
     /*auto tg = ctx->find(g.name)->type;
     assert(tg->getLink() && tg->getLink()->kind == LinkType::Generic);
     genericTypes.emplace_back(
@@ -537,7 +527,7 @@ void TypecheckVisitor::addFunctionGenerics(FuncTypePtr t) {
     if (auto y = p->getFunc()) {
       for (auto &g : y->explicits)
         if (auto s = g.type->getStatic())
-          ctx->add(TypecheckItem::Type, g.name, s, false, true);
+          ctx->add(TypecheckItem::Type, g.name, s, true);
         else if (!g.name.empty())
           ctx->add(TypecheckItem::Type, g.name, g.type);
       p = y->parent;
@@ -546,7 +536,7 @@ void TypecheckVisitor::addFunctionGenerics(FuncTypePtr t) {
       assert(c);
       for (auto &g : c->explicits)
         if (auto s = g.type->getStatic())
-          ctx->add(TypecheckItem::Type, g.name, s, false, true);
+          ctx->add(TypecheckItem::Type, g.name, s, true);
         else if (!g.name.empty())
           ctx->add(TypecheckItem::Type, g.name, g.type);
       p = c->parent;
@@ -554,7 +544,7 @@ void TypecheckVisitor::addFunctionGenerics(FuncTypePtr t) {
   }
   for (auto &g : t->explicits)
     if (auto s = g.type->getStatic())
-      ctx->add(TypecheckItem::Type, g.name, s, false, true);
+      ctx->add(TypecheckItem::Type, g.name, s, true);
     else if (!g.name.empty())
       ctx->add(TypecheckItem::Type, g.name, g.type);
 }

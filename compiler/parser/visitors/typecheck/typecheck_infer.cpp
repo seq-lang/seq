@@ -56,7 +56,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
     while (ctx->bases.size() > depth)
       ctx->bases.pop_back();
 
-    if (startswith(t->name, ".Tuple.") &&
+    if (startswith(t->name, "Tuple.N") &&
         (endswith(t->name, ".__iter__") || endswith(t->name, ".__getitem__"))) {
       auto u = t->args[1]->getClass();
       string s;
@@ -102,7 +102,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::TypePtr tt) {
       ctx->typecheckLevel--;
 
       if (!ast->ret && t->args[0]->getUnbound())
-        forceUnify(t->args[0], ctx->findInternal(".void"));
+        forceUnify(t->args[0], ctx->findInternal("void"));
       // if (stmt->)
       // forceUnify(t->args[0], ctx->bases.back().returnType ?
       // ctx->bases.back().returnType : ctx->findInternal(".void"));

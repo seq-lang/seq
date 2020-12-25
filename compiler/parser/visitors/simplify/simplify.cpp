@@ -68,11 +68,8 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       stdlib->add(SimplifyItem::Type, name, canonical, true);
       vector<Param> generics;
       auto genName = stdlib->generateCanonicalName("T");
-      preamble->types.push_back(make_unique<ClassStmt>(genName, vector<Param>{},
-                                                       vector<Param>{}, nullptr,
-                                                       vector<string>{ATTR_GENERIC}));
       if (string(name) == "Int" || string(name) == "UInt")
-        generics.emplace_back(Param{genName, make_unique<IdExpr>(".int"), nullptr});
+        generics.emplace_back(Param{genName, make_unique<IdExpr>("int"), nullptr});
       else
         generics.emplace_back(Param{genName, nullptr, nullptr});
       auto c =
@@ -99,8 +96,8 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
         SimplifyVisitor(stdlib, preamble)
             .transform(make_unique<AssignStmt>(
                 make_unique<IdExpr>("__argv__"), nullptr,
-                make_unique<IndexExpr>(make_unique<IdExpr>(".Array"),
-                                       make_unique<IdExpr>(".str")))));
+                make_unique<IndexExpr>(make_unique<IdExpr>("Array"),
+                                       make_unique<IdExpr>("str")))));
     stdlib->isStdlibLoading = false;
   }
 

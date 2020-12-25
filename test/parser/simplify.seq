@@ -89,7 +89,7 @@ def foo():
     a = 5
     def bar():
         print a
-foo() #! ERROR: cannot access non-global variable '.foo.a'
+foo() #! ERROR: cannot access non-global variable 'a'
 
 #%% star,barebones
 a = (1, 2, 3)
@@ -727,7 +727,7 @@ print f.foo() #: F
 class Foo:
     def foo(self):
         return 'F'
-Foo.foo(1) #! ERROR: cannot unify .int and .Foo
+Foo.foo(1) #! ERROR: cannot unify int and Foo
 
 #%% class_err_1,barebones
 @extend
@@ -895,13 +895,13 @@ print a >= a, a >= b, b >= a #: True True True
 @tuple
 class Foo:
     pass
-print Foo().__contains__(1)  #! ERROR: cannot unify .int and .void
+print Foo().__contains__(1)  #! ERROR: cannot unify int and void
 
 #%% magic_err_2,barebones
 @tuple
 class Foo:
     pass
-print Foo().__getitem__(1)  #! ERROR: cannot find '__str__' in .void
+print Foo().__getitem__(1)  #! ERROR: cannot find '__str__' in void
 
 #%% magic_err_3,barebones
 @tuple
@@ -915,7 +915,7 @@ print Foo().__iter__()  #: <generator at 0x0>
 @no_total_ordering
 class Foo:
     x: int
-Foo(1).__eq__(Foo(1)) #! ERROR: cannot find '__eq__' in .Foo
+Foo(1).__eq__(Foo(1)) #! ERROR: cannot find '__eq__' in Foo
 
 #%% magic_err_5,barebones
 @tuple
@@ -923,14 +923,14 @@ Foo(1).__eq__(Foo(1)) #! ERROR: cannot find '__eq__' in .Foo
 class Foo:
     x: int
 p = Ptr[byte]()
-Foo(1).__pickle__(p) #! ERROR: cannot find '__pickle__' in .Foo
+Foo(1).__pickle__(p) #! ERROR: cannot find '__pickle__' in Foo
 
 #%% magic_err_6,barebones
 @tuple
 @no_container
 class Foo:
     x: int
-Foo(1).__getitem__(0) #! ERROR: cannot find '__getitem__' in .Foo
+Foo(1).__getitem__(0) #! ERROR: cannot find '__getitem__' in Foo
 
 #%% magic_err_7,barebones
 @tuple
@@ -938,7 +938,7 @@ Foo(1).__getitem__(0) #! ERROR: cannot find '__getitem__' in .Foo
 class Foo:
     x: int
 p = Ptr[byte]()
-Foo(1).__to_py__(p) #! ERROR: cannot find '__to_py__' in .Foo
+Foo(1).__to_py__(p) #! ERROR: cannot find '__to_py__' in Foo
 
 #%% python
 from python import os

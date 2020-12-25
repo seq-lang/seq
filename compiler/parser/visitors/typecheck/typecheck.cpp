@@ -62,25 +62,25 @@ void TypecheckVisitor::visit(const StarPattern *pat) {
 
 void TypecheckVisitor::visit(const IntPattern *pat) {
   resultPattern = N<IntPattern>(pat->value);
-  resultPattern->setType(forceUnify(pat, ctx->findInternal(".int")));
+  resultPattern->setType(forceUnify(pat, ctx->findInternal("int")));
 }
 
 void TypecheckVisitor::visit(const BoolPattern *pat) {
   resultPattern = N<BoolPattern>(pat->value);
-  resultPattern->setType(forceUnify(pat, ctx->findInternal(".bool")));
+  resultPattern->setType(forceUnify(pat, ctx->findInternal("bool")));
 }
 
 void TypecheckVisitor::visit(const StrPattern *pat) {
   resultPattern = N<StrPattern>(pat->value, pat->prefix);
   if (pat->prefix == "s")
-    resultPattern->setType(forceUnify(pat, ctx->findInternal(".seq")));
+    resultPattern->setType(forceUnify(pat, ctx->findInternal("seq")));
   else
-    resultPattern->setType(forceUnify(pat, ctx->findInternal(".str")));
+    resultPattern->setType(forceUnify(pat, ctx->findInternal("str")));
 }
 
 void TypecheckVisitor::visit(const RangePattern *pat) {
   resultPattern = N<RangePattern>(pat->start, pat->stop);
-  resultPattern->setType(forceUnify(pat, ctx->findInternal(".int")));
+  resultPattern->setType(forceUnify(pat, ctx->findInternal("int")));
 }
 
 void TypecheckVisitor::visit(const TuplePattern *pat) {
@@ -89,7 +89,7 @@ void TypecheckVisitor::visit(const TuplePattern *pat) {
   for (auto &pp : p->patterns)
     types.push_back(pp->getType());
   auto t = ctx->instantiateGeneric(
-      getSrcInfo(), ctx->findInternal(format(".Tuple.{}", types.size())), {types});
+      getSrcInfo(), ctx->findInternal(format("Tuple.N{}", types.size())), {types});
   resultPattern = move(p);
   resultPattern->setType(forceUnify(pat, t));
 }
@@ -99,7 +99,7 @@ void TypecheckVisitor::visit(const ListPattern *pat) {
   TypePtr t = ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
   for (auto &pp : p->patterns)
     forceUnify(t, pp->getType());
-  t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal(".List"), {t});
+  t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("List"), {t});
   resultPattern = move(p);
   resultPattern->setType(forceUnify(pat, t));
 }
