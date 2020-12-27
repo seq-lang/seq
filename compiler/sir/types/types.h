@@ -190,7 +190,7 @@ private:
 };
 
 /// Membered type that is passed by reference. Similar to Python classes.
-class RefType : public AcceptorExtend<RecordType, MemberedType> {
+class RefType : public AcceptorExtend<RefType, MemberedType> {
 private:
   /// the internal contents of the type
   RecordType *contents;
