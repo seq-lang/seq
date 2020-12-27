@@ -162,7 +162,7 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
-class InternalFunc : public AcceptorExtend<ExternalFunc, Func> {
+class InternalFunc : public AcceptorExtend<InternalFunc, Func> {
 private:
   /// parent type of the function if it is magic
   types::Type *parentType = nullptr;
@@ -184,7 +184,7 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
-class LLVMFunc : public AcceptorExtend<ExternalFunc, Func> {
+class LLVMFunc : public AcceptorExtend<LLVMFunc, Func> {
 public:
   struct LLVMLiteral {
     union {
