@@ -63,11 +63,11 @@ ValuePtr CodegenVisitor::transform(const StmtPtr &stmt) {
 
 IRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto *module = new IRModule("module");
-  auto *main = module->Nr<ir::Func>(module->getVoidRetAndArgFuncType(), "main");
+  auto *main = module->Nr<ir::BodiedFunc>(module->getVoidRetAndArgFuncType(), "main");
   module->setMainFunc(FuncPtr(main));
 
   auto *block = module->Nr<SeriesFlow>("body");
-  main->setBody(ValuePtr(block));
+  main->setBody(FlowPtr(block));
 
   auto ctx = make_shared<CodegenContext>(cache, block, main);
 
@@ -111,24 +111,27 @@ IRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
           LOG_REALIZE("[codegen] generating internal fn {} -> {}", ast->name, name);
 
           auto fn =
-              module->Nr<seq::ir::Func>(module->getVoidRetAndArgFuncType(), ast->name);
-          fn->setInternal(typ, name);
+              module->Nr<seq::ir::InternalFunc>(module->getVoidRetAndArgFuncType(), ast->name);
+          fn->setParentType(typ);
           ctx->functions[f.first] = {fn, false};
           module->push_back(VarPtr(fn));
         } else if (in(ast->attributes, "llvm")) {
           auto fn =
-              module->Nr<seq::ir::Func>(module->getVoidRetAndArgFuncType(), ast->name);
-          fn->setLLVM();
+              module->Nr<seq::ir::LLVMFunc>(module->getVoidRetAndArgFuncType(), ast->name);
+          ctx->functions[f.first] = {fn, false};
+          module->push_back(VarPtr(fn));
+        } else if (in(ast->attributes, ".c")) {
+          auto fn =
+              module->Nr<seq::ir::ExternalFunc>(module->getVoidRetAndArgFuncType(), ast->name);
           ctx->functions[f.first] = {fn, false};
           module->push_back(VarPtr(fn));
         } else {
           auto fn =
-              module->Nr<seq::ir::Func>(module->getVoidRetAndArgFuncType(), ast->name);
+              module->Nr<seq::ir::BodiedFunc>(module->getVoidRetAndArgFuncType(), ast->name);
           ctx->functions[f.first] = {fn, false};
 
           if (in(ast->attributes, "builtin")) {
-            auto names = split(ast->name, '.');
-            fn->setBuiltin(names.back());
+            fn->setBuiltin();
           }
 
           module->push_back(VarPtr(fn));
@@ -246,13 +249,13 @@ void CodegenVisitor::visit(const PassStmt *stmt) {}
 void CodegenVisitor::visit(const BreakStmt *stmt) {
   auto *module = ctx->getModule();
   ctx->getSeries()->push_back(
-      module->Nxs<BreakInstr>(stmt, module->Nxs<ValueProxy>(stmt, ctx->getLoop())));
+      module->Nxs<BreakInstr>(stmt, ctx->getLoop()));
 }
 
 void CodegenVisitor::visit(const ContinueStmt *stmt) {
   auto *module = ctx->getModule();
   ctx->getSeries()->push_back(
-      module->Nxs<ContinueInstr>(stmt, module->Nxs<ValueProxy>(stmt, ctx->getLoop())));
+      module->Nxs<ContinueInstr>(stmt, ctx->getLoop()));
 }
 
 void CodegenVisitor::visit(const ExprStmt *stmt) {
@@ -331,7 +334,6 @@ void CodegenVisitor::visit(const YieldStmt *stmt) {
     value = transform(stmt->expr);
 
   ctx->getSeries()->push_back(module->Nxs<YieldInstr>(stmt, move(value)));
-  ctx->getBase()->setIsGenerator(true);
 }
 
 void CodegenVisitor::visit(const AssertStmt *stmt) {
@@ -469,7 +471,7 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
 
     LOG_REALIZE("[codegen] generating fn {}", real.first);
     if (in(stmt->attributes, "llvm")) {
-      auto *f = cast<ir::Func>(fp.first);
+      auto *f = cast<ir::LLVMFunc>(fp.first);
       assert(f);
       f->realize(cast<ir::types::FuncType>(realizeType(t->getClass())), names);
 
@@ -482,29 +484,19 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
       auto sp = CAST(e->expr, StringExpr);
       assert(sp);
 
-      // TODO: move LLVM type logic to backend
 
-      //      fmt::dynamic_format_arg_store<fmt::format_context> store;
-      //      //        LOG("{}", real.first);
-      //      //        LOG("--> {}", sp->value);
-      //      auto &ss = ast->suite->getSuite()->stmts;
-      //      for (int i = 1; i < ss.size(); i++) {
-      //        auto &ex = ss[i]->getExpr()->expr;
-      //        if (auto ei = ex->getInt()) { // static expr
-      //          store.push_back(ei->intValue);
-      //        } else {
-      //          seqassert(ex->isType() && ex->getType(), "invalid LLVM type argument
-      //          {}",
-      //                    ex->toString());
-      //          store.push_back(
-      //              realizeType(ex->getType()->getClass())->getLLVMTypeStr());
-      //        }
-      //        //        LOG("--> {}", ex->getType() ? ex->getType()->toString() :
-      //        "-");
-      //      }
-      //      string res = fmt::vformat(sp->value, store);
-      // if (ss.size() > 1)
-      // LOG("[FINAL] {} -->\n {}", real.first, res);
+      std::vector<ir::LLVMFunc::LLVMLiteral> literals;
+
+      auto &ss = ast->suite->getSuite()->stmts;
+      for (int i = 1; i < ss.size(); i++) {
+        auto &ex = ss[i]->getExpr()->expr;
+        if (auto ei = ex->getInt()) { // static expr
+          literals.emplace_back(ei->intValue);
+        } else {
+          seqassert(ex->isType() && ex->getType(), "invalid LLVM type argument");
+          literals.emplace_back(realizeType(ex->getType()->getClass()));
+        }
+      }
 
       std::istringstream sin(sp->value);
       string l, declare, code;
@@ -527,7 +519,9 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
         else
           lines.push_back(l);
       }
-      f->setLLVM(move(declare), join(lines, "\n"));
+      f->setLLVMBody(join(lines, "\n"));
+      f->setLLVMDeclarations(move(declare));
+      f->setLLVMLiterals(move(literals));
     } else {
       auto *f = cast<ir::Func>(fp.first);
       assert(f);
@@ -543,7 +537,9 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
           ctx->setFlag("atomic");
       }
       if (in(ast->attributes, ".c")) {
-        f->setExternal(ctx->cache->reverseIdentifierLookup[stmt->name]);
+        auto *external = cast<ir::ExternalFunc>(f);
+        assert(external);
+        external->setUnmangledName(ctx->cache->reverseIdentifierLookup[stmt->name]);
       } else if (!in(ast->attributes, "internal")) {
         for (auto &arg : names) {
           auto var = cast<ir::Var>(f->getArgVar(arg));
@@ -555,7 +551,10 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
         transform(ast->suite);
         ctx->popSeries();
 
-        f->setBody(move(body));
+        auto *bodied = cast<ir::BodiedFunc>(f);
+        assert(bodied);
+
+        bodied->setBody(move(body));
       }
       ctx->popScope();
     }

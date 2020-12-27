@@ -47,7 +47,7 @@ public:
 class CodegenContext : public Context<CodegenItem> {
   vector<seq::ir::Func *> bases;
   vector<seq::ir::SeriesFlow *> series;
-  vector<seq::ir::Value *> loops;
+  vector<seq::ir::Flow *> loops;
   int topBlockIndex, topBaseIndex;
 
 public:
@@ -78,9 +78,9 @@ public:
   void addScope() { Context<CodegenItem>::addBlock(); }
   void popScope() { Context<CodegenItem>::popBlock(); }
 
-  void addLoop(seq::ir::Value *v) { loops.push_back(v); }
+  void addLoop(seq::ir::Flow *v) { loops.push_back(v); }
   void popLoop() { loops.pop_back(); }
-  seq::ir::Value *getLoop() const { return loops.back(); }
+  seq::ir::Flow *getLoop() const { return loops.back(); }
 
   //  void initJIT();
   //  void execJIT(string varName = "", seq::Expr *varExpr = nullptr);

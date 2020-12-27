@@ -20,7 +20,13 @@ public:
   types::Type *getType() const override { return nullptr; }
 
   virtual ~Flow() noexcept = default;
+
+  /// @return a clone of the value
+  std::unique_ptr<Flow> clone() const { return std::unique_ptr<Flow>(static_cast<Flow *>(doClone())); }
+
 };
+
+using FlowPtr = std::unique_ptr<Flow>;
 
 /// Flow that contains a series of flows or instructions.
 class SeriesFlow : public AcceptorExtend<SeriesFlow, Flow> {
@@ -38,51 +44,56 @@ public:
 
   using AcceptorExtend::AcceptorExtend;
 
-  /// @return an iterator to the first
+  /// @return an iterator to the first instruction/flow
   iterator begin() { return series.begin(); }
-  /// @return an iterator beyond the last
+  /// @return an iterator beyond the last instruction/flow
   iterator end() { return series.end(); }
-  /// @return an iterator to the first
+  /// @return an iterator to the first instruction/flow
   const_iterator begin() const { return series.begin(); }
-  /// @return an iterator beyond the last
+  /// @return an iterator beyond the last instruction/flow
   const_iterator end() const { return series.end(); }
 
-  /// @return a reference to the first
+  /// @return a reference to the first instruction/flow
   reference front() { return series.front(); }
-  /// @return a reference to the last
+  /// @return a reference to the last instruction/flow
   reference back() { return series.back(); }
-  /// @return a reference to the first
+  /// @return a reference to the first instruction/flow
   const_reference front() const { return series.front(); }
-  /// @return a reference to the last
+  /// @return a reference to the last instruction/flow
   const_reference back() const { return series.back(); }
 
-  /// Inserts a at the given position.
+  /// Inserts an instruction/flow at the given position.
   /// @param pos the position
-  /// @param v the or instruction
-  /// @return an iterator to the newly added
+  /// @param v the flow or instruction
+  /// @return an iterator to the newly added instruction/flow
   iterator insert(iterator pos, ValuePtr v) { return series.insert(pos, std::move(v)); }
-  /// Inserts a at the given position.
+  /// Inserts an instruction/flow at the given position.
   /// @param pos the position
-  /// @param v the or instruction
-  /// @return an iterator to the newly added
+  /// @param v the flow or instruction
+  /// @return an iterator to the newly added instruction/flow
   iterator insert(const_iterator pos, ValuePtr v) {
     return series.insert(pos, std::move(v));
   }
-  /// Appends a.
-  /// @param f the or instruction
+  /// Appends an instruction/flow.
+  /// @param f the flow or instruction
   void push_back(ValuePtr f) { series.push_back(std::move(f)); }
 
-  /// Erases the at the supplied position.
+  /// Erases the item at the supplied position.
   /// @param pos the position
-  /// @return the iterator beyond the removed or instruction
+  /// @return the iterator beyond the removed flow or instruction
   iterator erase(iterator pos) { return series.erase(pos); }
-  /// Erases the at the supplied position.
+  /// Erases the item at the supplied position.
   /// @param pos the position
-  /// @return the iterator beyond the removed or instruction
+  /// @return the iterator beyond the removed flow or instruction
   iterator erase(const_iterator pos) { return series.erase(pos); }
+
+  /// @return true if the series contains other flows.
+  bool containsFlows() const;
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Flow representing a while loop.
@@ -91,7 +102,7 @@ private:
   /// the condition
   ValuePtr cond;
   /// the body
-  ValuePtr body;
+  FlowPtr body;
 
 public:
   static const char NodeId;
@@ -100,7 +111,7 @@ public:
   /// @param cond the condition
   /// @param body the body
   /// @param name the flow's name
-  WhileFlow(ValuePtr cond, ValuePtr body, std::string name = "")
+  WhileFlow(ValuePtr cond, FlowPtr body, std::string name = "")
       : AcceptorExtend(std::move(name)), cond(std::move(cond)), body(std::move(body)) {}
 
   /// @return the condition
@@ -110,13 +121,15 @@ public:
   void setCond(ValuePtr c) { cond = std::move(c); }
 
   /// @return the body
-  const ValuePtr &getBody() const { return body; }
+  const FlowPtr &getBody() const { return body; }
   /// Sets the body.
   /// @param f the new value
-  void setBody(ValuePtr f) { body = std::move(f); }
+  void setBody(FlowPtr f) { body = std::move(f); }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Flow representing a for loop.
@@ -125,7 +138,7 @@ private:
   /// the iterator
   ValuePtr iter;
   /// the body
-  ValuePtr body;
+  FlowPtr body;
 
   /// the variable
   Var *var;
@@ -139,7 +152,7 @@ public:
   /// @param body the body
   /// @param update the update
   /// @param name the flow's name
-  ForFlow(ValuePtr iter, ValuePtr body, Var *var, std::string name = "")
+  ForFlow(ValuePtr iter, FlowPtr body, Var *var, std::string name = "")
       : AcceptorExtend(std::move(name)), iter(std::move(iter)), body(std::move(body)),
         var(var) {}
 
@@ -150,10 +163,10 @@ public:
   void setIter(ValuePtr f) { iter = std::move(f); }
 
   /// @return the body
-  const ValuePtr &getBody() const { return body; }
+  const FlowPtr &getBody() const { return body; }
   /// Sets the body.
   /// @param f the new body
-  void setBody(ValuePtr f) { body = std::move(f); }
+  void setBody(FlowPtr f) { body = std::move(f); }
 
   /// @return the var
   Var *getVar() const { return var; }
@@ -163,6 +176,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Flow representing an if statement.
@@ -170,10 +185,10 @@ class IfFlow : public AcceptorExtend<IfFlow, Flow> {
 private:
   /// the condition
   ValuePtr cond;
-  /// the true
-  ValuePtr trueBranch;
-  /// the false
-  ValuePtr falseBranch;
+  /// the true branch
+  FlowPtr trueBranch;
+  /// the false branch
+  FlowPtr falseBranch;
 
 public:
   static const char NodeId;
@@ -183,22 +198,22 @@ public:
   /// @param trueBranch the true branch
   /// @param falseBranch the false branch
   /// @param name the flow's name
-  IfFlow(ValuePtr cond, ValuePtr trueBranch, ValuePtr falseBranch = nullptr,
+  IfFlow(ValuePtr cond, FlowPtr trueBranch, FlowPtr falseBranch = nullptr,
          std::string name = "")
       : AcceptorExtend(std::move(name)), cond(std::move(cond)),
         trueBranch(std::move(trueBranch)), falseBranch(std::move(falseBranch)) {}
 
   /// @return the true branch
-  const ValuePtr &getTrueBranch() const { return trueBranch; }
+  const FlowPtr &getTrueBranch() const { return trueBranch; }
   /// Sets the true branch.
   /// @param f the new true branch
-  void setTrueBranch(ValuePtr f) { trueBranch = std::move(f); }
+  void setTrueBranch(FlowPtr f) { trueBranch = std::move(f); }
 
   /// @return the false branch
-  const ValuePtr &getFalseBranch() const { return falseBranch; }
+  const FlowPtr &getFalseBranch() const { return falseBranch; }
   /// Sets the false.
   /// @param f the new false
-  void setFalseBranch(ValuePtr f) { falseBranch = std::move(f); }
+  void setFalseBranch(FlowPtr f) { falseBranch = std::move(f); }
 
   /// @return the condition
   const ValuePtr &getCond() const { return cond; }
@@ -208,6 +223,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Flow representing a try-catch statement.
@@ -216,13 +233,13 @@ public:
   /// Struct representing a catch clause.
   struct Catch {
     /// the handler
-    ValuePtr handler;
+    FlowPtr handler;
     /// the catch type, may be nullptr
     types::Type *type;
     /// the catch variable, may be nullptr
     Var *catchVar;
 
-    explicit Catch(ValuePtr handler, types::Type *type = nullptr,
+    explicit Catch(FlowPtr handler, types::Type *type = nullptr,
                    Var *catchVar = nullptr)
         : handler(std::move(handler)), type(type), catchVar(catchVar) {}
   };
@@ -237,9 +254,9 @@ private:
   std::list<Catch> catches;
 
   /// the body
-  ValuePtr body;
+  FlowPtr body;
   /// the finally, may be nullptr
-  ValuePtr finally;
+  FlowPtr finally;
 
 public:
   static const char NodeId;
@@ -248,22 +265,22 @@ public:
   /// @param name the's name
   /// @param body the body
   /// @param finally the finally
-  explicit TryCatchFlow(ValuePtr body, ValuePtr finally = nullptr,
+  explicit TryCatchFlow(FlowPtr body, FlowPtr finally = nullptr,
                         std::string name = "")
       : AcceptorExtend(std::move(name)), body(std::move(body)),
         finally(std::move(finally)) {}
 
   /// @return the body
-  const ValuePtr &getBody() const { return body; }
+  const FlowPtr &getBody() const { return body; }
   /// Sets the body.
   /// @param f the new
-  void setBody(ValuePtr f) { body = std::move(f); }
+  void setBody(FlowPtr f) { body = std::move(f); }
 
   /// @return the finally
-  const ValuePtr &getFinally() const { return finally; }
+  const FlowPtr &getFinally() const { return finally; }
   /// Sets the finally.
   /// @param f the new
-  void setFinally(ValuePtr f) { finally = std::move(f); }
+  void setFinally(FlowPtr f) { finally = std::move(f); }
 
   /// @return an iterator to the first catch
   iterator begin() { return catches.begin(); }
@@ -301,8 +318,8 @@ public:
 
   /// Emplaces a catch.
   /// @tparam Args the catch constructor args
-  template <typename... Args> void emplace_back(Args... args) {
-    catches.emplace_back(args...);
+  template <typename... Args> void emplace_back(Args&&... args) {
+    catches.emplace_back(std::forward<Args>(args)...);
   }
 
   /// Erases a catch at the given position.
@@ -316,6 +333,73 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
+};
+
+/// Flow that contains an unordered list of flows. Execution starts at the first flow.
+class UnorderedFlow : public AcceptorExtend<SeriesFlow, Flow> {
+public:
+  using iterator = std::list<FlowPtr>::iterator;
+  using const_iterator = std::list<FlowPtr>::const_iterator;
+  using reference = std::list<FlowPtr>::reference;
+  using const_reference = std::list<FlowPtr>::const_reference;
+
+private:
+  std::list<FlowPtr> series;
+
+public:
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
+
+  /// @return an iterator to the first flow
+  iterator begin() { return series.begin(); }
+  /// @return an iterator beyond the last flow
+  iterator end() { return series.end(); }
+  /// @return an iterator to the first flow
+  const_iterator begin() const { return series.begin(); }
+  /// @return an iterator beyond the last flow
+  const_iterator end() const { return series.end(); }
+
+  /// @return a reference to the first flow
+  reference front() { return series.front(); }
+  /// @return a reference to the last flow
+  reference back() { return series.back(); }
+  /// @return a reference to the first flow
+  const_reference front() const { return series.front(); }
+  /// @return a reference to the last flow
+  const_reference back() const { return series.back(); }
+
+  /// Inserts a flow at the given position.
+  /// @param pos the position
+  /// @param v the flow
+  /// @return an iterator to the newly added
+  iterator insert(iterator pos, FlowPtr v) { return series.insert(pos, std::move(v)); }
+  /// Inserts a flow at the given position.
+  /// @param pos the position
+  /// @param v the flow
+  /// @return an iterator to the newly added
+  iterator insert(const_iterator pos, FlowPtr v) {
+    return series.insert(pos, std::move(v));
+  }
+  /// Appends a flow.
+  /// @param f the flow
+  void push_back(FlowPtr f) { series.push_back(std::move(f)); }
+
+  /// Erases the flow at the supplied position.
+  /// @param pos the position
+  /// @return the iterator beyond the removed flow
+  iterator erase(iterator pos) { return series.erase(pos); }
+  /// Erases the flow at the supplied position.
+  /// @param pos the position
+  /// @return the iterator beyond the removed flow
+  iterator erase(const_iterator pos) { return series.erase(pos); }
+
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 } // namespace ir
