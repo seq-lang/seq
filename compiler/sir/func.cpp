@@ -35,9 +35,6 @@ void Func::realize(types::FuncType *newType, const std::vector<std::string> &nam
     args.push_back(std::make_unique<Var>(t, names[i]));
     ++i;
   }
-
-  if (isA<LLVMFunc>(this) && referenceString() == ".Int.__add__")
-    printf("foo");
 }
 
 Var *Func::getArgVar(const std::string &n) {
