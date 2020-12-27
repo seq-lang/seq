@@ -18,37 +18,11 @@ public:
   using symbol_const_reference = std::list<VarPtr>::const_reference;
 
 private:
-  /// the function type
-  types::Type *type;
-
   /// list of arguments
   std::list<VarPtr> args;
 
   /// list of variables defined and used within the function
   std::list<VarPtr> symbols;
-
-  /// function body
-  ValuePtr body;
-
-  /// true if external, false otherwise
-  bool external = false;
-  /// true if the function is a generator, false otherwise
-  bool generator = false;
-
-  /// true if the function is internal, false otherwise
-  bool internal = false;
-  /// true if the function is builtin, false otherwise
-  bool builtin = false;
-  /// true if the function is LLVM based
-  bool llvm = false;
-  /// declares for llvm-only function
-  std::string llvmDeclares;
-  /// body of llvm-only function
-  std::string llvmBody;
-  /// parent type of the function if it is magic
-  types::Type *parentType = nullptr;
-  /// unmangled name of the function
-  std::string unmangledName;
 
 public:
   static const char NodeId;
@@ -65,16 +39,12 @@ public:
   explicit Func(types::Type *type, std::string name = "")
       : Func(type, {}, std::move(name)) {}
 
+  virtual ~Func() = default;
+
   /// Re-initializes the function with a new type and names.
   /// @param newType the function's new type
   /// @param names the function's new argument names
   void realize(types::FuncType *newType, const std::vector<std::string> &names);
-
-  /// @return the function body
-  const ValuePtr &getBody() const { return body; }
-  /// Sets the function's body.
-  /// @param b the new body
-  void setBody(ValuePtr b) { body = std::move(b); }
 
   /// @return iterator to the first arg
   arg_const_iterator arg_begin() const { return args.begin(); }
@@ -132,66 +102,147 @@ public:
   symbol_iterator erase(symbol_const_iterator pos) { return symbols.erase(pos); }
 
   /// @return true if the function is a generator
-  bool isGenerator() const { return generator; }
-  /// Sets whether the function is a generator.
-  /// @param g true or false
-  void setIsGenerator(bool g) { generator = g; }
+  bool isGenerator() const;
 
-  /// @return true if the function is internal
-  bool isInternal() const { return internal; }
-  /// @return the unmangled name
-  const std::string &getUnmangledName() const { return unmangledName; }
-  /// @return the parent type
-  types::Type *getParentType() const { return parentType; }
-  /// Makes the function internal.
-  /// @param p the function's parent type
-  /// @param n the function's unmangled name
-  void setInternal(types::Type *p, std::string n) {
-    internal = true;
-    parentType = p;
-    unmangledName = std::move(n);
-  }
+  Var *getArgVar(const std::string &n);
 
-  /// @return true if the function is external
-  bool isExternal() const { return external; }
-  /// Makes the function external.
-  /// @param n the function's unmangled name
-  void setExternal(std::string n) {
-    external = true;
-    unmangledName = std::move(n);
-  }
+  /// @return the unmangled function name
+  virtual std::string getUnmangledName() const = 0;
+};
+
+using FuncPtr = std::unique_ptr<Func>;
+
+class BodiedFunc : public AcceptorExtend<BodiedFunc, Func> {
+private:
+  /// the function body
+  FlowPtr body;
+  /// whether the function is builtin
+  bool builtin;
+
+public:
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
+
+  std::string getUnmangledName() const override;
+
+  /// @return the function body
+  const FlowPtr &getBody() const { return body; }
+  /// Sets the function's body.
+  /// @param b the new body
+  void setBody(FlowPtr b) { body = std::move(b); }
 
   /// @return true if the function is builtin
   bool isBuiltin() const { return builtin; }
-  /// Makes the function builtin.
-  /// @param n the function's unmangled name
-  void setBuiltin(std::string n) {
-    builtin = true;
-    unmangledName = std::move(n);
+  /// Changes the function's builtin status.
+  /// @param v true if builtin, false otherwise
+  void setBuiltin(bool v = true) {
+    builtin = v;
   }
-
-  /// @return true if the function is LLVM-implemented
-  bool isLLVM() const { return llvm; }
-  /// @return the LLVM declarations
-  const std::string &getLLVMDeclarations() const { return llvmDeclares; }
-  /// @return the LLVM body
-  const std::string &getLLVMBody() const { return llvmBody; }
-  /// Makes the function LLVM implemented.
-  /// @param decl LLVM declarations
-  /// @param b LLVM body
-  void setLLVM(std::string decl = "", std::string b = "") {
-    llvm = true;
-    llvmDeclares = std::move(decl);
-    llvmBody = std::move(b);
-  }
-
-  Var *getArgVar(const std::string &n);
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
-using FuncPtr = std::unique_ptr<Func>;
+class ExternalFunc : public AcceptorExtend<ExternalFunc, Func> {
+private:
+  std::string unmangledName;
+
+public:
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
+
+  std::string getUnmangledName() const override { return unmangledName; }
+  /// Sets the unmangled name.
+  /// @param v the new value
+  void setUnmangledName(std::string v) { unmangledName = std::move(v); }
+
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
+};
+
+class InternalFunc : public AcceptorExtend<ExternalFunc, Func> {
+private:
+  /// parent type of the function if it is magic
+  types::Type *parentType = nullptr;
+
+public:
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
+
+  std::string getUnmangledName() const override;
+
+  /// @return the parent type
+  types::Type *getParentType() const { return parentType; }
+  /// Sets the parent type.
+  /// @param p the new parent
+  void setParentType(types::Type *p) { parentType = p; }
+
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
+};
+
+class LLVMFunc : public AcceptorExtend<ExternalFunc, Func> {
+public:
+  struct LLVMLiteral {
+    union {
+      int64_t staticVal;
+      types::Type *type;
+    } val;
+    enum {STATIC, TYPE} tag;
+
+    explicit LLVMLiteral(int64_t v) : val{v}, tag(STATIC) {}
+    explicit LLVMLiteral(types::Type *t) : val{}, tag(TYPE) { val.type = t; }
+  };
+
+  using literal_const_iterator = std::vector<LLVMLiteral>::const_iterator;
+  using literal_const_reference = std::vector<LLVMLiteral>::const_reference;
+
+private:
+  /// literals that must be formatted into the body
+  std::vector<LLVMLiteral> llvmLiterals;
+  /// declares for llvm-only function
+  std::string llvmDeclares;
+  /// body of llvm-only function
+  std::string llvmBody;
+
+public:
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
+
+  std::string getUnmangledName() const override;
+
+  /// Sets the LLVM literals.
+  /// @param v the new values.
+  void setLLVMLiterals(std::vector<LLVMLiteral> v) { llvmLiterals = std::move(v); }
+
+  /// @return iterator to the first literal
+  literal_const_iterator literal_begin() const { return llvmLiterals.begin(); }
+  /// @return iterator beyond the last literal
+  literal_const_iterator literal_end() const { return llvmLiterals.end(); }
+
+  /// @return a reference to the first literal
+  literal_const_reference literal_front() const { return llvmLiterals.front(); }
+  /// @return a reference to the last literal
+  literal_const_reference literal_back() const { return llvmLiterals.back(); }
+
+  /// @return the LLVM declarations
+  const std::string &getLLVMDeclarations() const { return llvmDeclares; }
+  /// Sets the LLVM declarations.
+  /// @param v the new value
+  void setLLVMDeclarations(std::string v) { llvmDeclares = std::move(v); }
+  /// @return the LLVM body
+  const std::string &getLLVMBody() const { return llvmBody; }
+  /// Sets the LLVM body.
+  /// @param v the new value
+  void setLLVMBody(std::string v) { llvmBody = std::move(v); }
+
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
+};
 
 } // namespace ir
 } // namespace seq

@@ -226,6 +226,7 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/parser/visitors/simplify/simplify_stmt.cpp
         compiler/parser/visitors/simplify/simplify_pattern.cpp
         compiler/sir/types/types.cpp
+        compiler/sir/util/visitor.cpp
         compiler/sir/attribute.cpp
         compiler/sir/base.cpp
         compiler/sir/constant.cpp

@@ -14,11 +14,15 @@ std::ostream &Var::doFormat(std::ostream &os) const {
 
 const char VarValue::NodeId = 0;
 
+Value *VarValue::doClone() const { return getModule()->Nrs<VarValue>(getSrcInfo(), val); }
+
 const char PointerValue::NodeId = 0;
 
 types::Type *PointerValue::getType() const {
   return getModule()->getPointerType(val->getType());
 }
+
+Value *PointerValue::doClone() const { return getModule()->Nrs<PointerValue>(getSrcInfo(), val); }
 
 } // namespace ir
 } // namespace seq

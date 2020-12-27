@@ -57,6 +57,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Instr representing loading the field of a value.
@@ -93,6 +95,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Instr representing setting the field of a value.
@@ -140,6 +144,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Instr representing calling a function.
@@ -217,6 +223,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Instr representing allocating an array on the stack.
@@ -247,6 +255,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Instr representing a Python yield expression.
@@ -268,6 +278,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Instr representing a ternary operator.
@@ -315,27 +327,29 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Base for control flow instructions
 class ControlFlowInstr : public AcceptorExtend<ControlFlowInstr, Instr> {
 private:
   /// the target
-  ValuePtr target;
+  Flow *target;
 
 public:
   static const char NodeId;
 
   /// Constructs a control flow instruction.
   /// @param target the flow being targeted
-  explicit ControlFlowInstr(ValuePtr target, std::string name = "")
-      : AcceptorExtend(std::move(name)), target(std::move(target)) {}
+  explicit ControlFlowInstr(Flow *target, std::string name = "")
+      : AcceptorExtend(std::move(name)), target(target) {}
 
   /// @return the target
-  const ValuePtr &getTarget() const { return target; }
+  Flow *getTarget() const { return target; }
   /// Sets the count.
   /// @param f the new value
-  void setTarget(ValuePtr f) { target = std::move(f); }
+  void setTarget(Flow *f) { target = f; }
 };
 
 /// Instr representing a break statement.
@@ -347,6 +361,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Instr representing a continue statement.
@@ -358,6 +374,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Instr representing a return statement.
@@ -380,6 +398,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 class YieldInstr : public AcceptorExtend<YieldInstr, Instr> {
@@ -401,6 +421,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 class ThrowInstr : public AcceptorExtend<ThrowInstr, Instr> {
@@ -422,6 +444,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 class AssertInstr : public AcceptorExtend<AssertInstr, Instr> {
@@ -452,13 +476,15 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 /// Instr that contains a flow and value.
 class FlowInstr : public AcceptorExtend<FlowInstr, Instr> {
 private:
   /// the flow
-  ValuePtr flow;
+  FlowPtr flow;
   /// the output value
   ValuePtr val;
 
@@ -469,16 +495,16 @@ public:
   /// @param flow the flow
   /// @param val the output value
   /// @param name the name
-  explicit FlowInstr(ValuePtr flow, ValuePtr val, std::string name = "")
+  explicit FlowInstr(FlowPtr flow, ValuePtr val, std::string name = "")
       : AcceptorExtend(std::move(name)), flow(std::move(flow)), val(std::move(val)) {}
 
   types::Type *getType() const override { return val->getType(); }
 
   /// @return the flow
-  const ValuePtr &getFlow() const { return flow; }
+  const FlowPtr &getFlow() const { return flow; }
   /// Sets the flow.
   /// @param f the new flow
-  void setFlow(ValuePtr f) { flow = std::move(f); }
+  void setFlow(FlowPtr f) { flow = std::move(f); }
 
   /// @return the value
   const ValuePtr &getValue() const { return val; }
@@ -488,6 +514,8 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
 };
 
 } // namespace ir

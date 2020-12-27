@@ -27,7 +27,11 @@ public:
   explicit Var(types::Type *type, std::string name = "")
       : AcceptorExtend(std::move(name)), type(type) {}
 
+  /// @return the type
   types::Type *getType() const { return type; }
+  /// Sets the type.
+  /// @param t the new type
+  void setType(types::Type *t) { type = t; }
 
   std::string referenceString() const override {
     return fmt::format(FMT_STRING("{}.{}"), getName(), getId());
@@ -62,6 +66,8 @@ private:
   std::ostream &doFormat(std::ostream &os) const override {
     return os << val->referenceString();
   }
+
+  Value *doClone() const override;
 };
 
 /// Value that represents a pointer.
@@ -87,6 +93,8 @@ private:
   std::ostream &doFormat(std::ostream &os) const override {
     return os << '&' << val->referenceString();
   }
+
+  Value *doClone() const override;
 };
 
 } // namespace ir

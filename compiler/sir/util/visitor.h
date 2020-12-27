@@ -6,7 +6,11 @@
 #include "runtime/lib.h"
 
 #define DEFAULT_VISIT(x)                                                               \
-  virtual void visit(seq::ir::x *) { throw std::runtime_error("cannot visit node"); }
+  virtual void defaultVisit(seq::ir::x *) { throw std::runtime_error("cannot visit node"); } \
+  virtual void visit(seq::ir::x *v) { defaultVisit(v); }
+#define VISIT(x)                                                               \
+  virtual void visit(seq::ir::x *v)
+
 
 namespace seq {
 namespace ir {
@@ -31,8 +35,13 @@ class IntNType;
 
 class IRModule;
 
-class Func;
 class Var;
+
+class Func;
+class BodiedFunc;
+class ExternalFunc;
+class InternalFunc;
+class LLVMFunc;
 
 class Value;
 class VarValue;
@@ -45,6 +54,7 @@ class IfFlow;
 class WhileFlow;
 class ForFlow;
 class TryCatchFlow;
+class UnorderedFlow;
 
 class Constant;
 
@@ -73,58 +83,64 @@ class SIRVisitor {
 public:
   DEFAULT_VISIT(IRModule);
 
-  DEFAULT_VISIT(Func);
   DEFAULT_VISIT(Var);
 
+  DEFAULT_VISIT(Func);
+  VISIT(BodiedFunc);
+  VISIT(ExternalFunc);
+  VISIT(InternalFunc);
+  VISIT(LLVMFunc);
+
   DEFAULT_VISIT(Value);
-  DEFAULT_VISIT(VarValue);
-  DEFAULT_VISIT(PointerValue);
-  DEFAULT_VISIT(ValueProxy);
+  VISIT(VarValue);
+  VISIT(PointerValue);
+  VISIT(ValueProxy);
 
   DEFAULT_VISIT(Flow);
-  DEFAULT_VISIT(SeriesFlow);
-  DEFAULT_VISIT(IfFlow);
-  DEFAULT_VISIT(WhileFlow);
-  DEFAULT_VISIT(ForFlow);
-  DEFAULT_VISIT(TryCatchFlow);
+  VISIT(SeriesFlow);
+  VISIT(IfFlow);
+  VISIT(WhileFlow);
+  VISIT(ForFlow);
+  VISIT(TryCatchFlow);
+  VISIT(UnorderedFlow);
 
   DEFAULT_VISIT(Constant);
-  DEFAULT_VISIT(TemplatedConstant<seq_int_t>);
-  DEFAULT_VISIT(TemplatedConstant<double>);
-  DEFAULT_VISIT(TemplatedConstant<bool>);
-  DEFAULT_VISIT(TemplatedConstant<std::string>);
+  VISIT(TemplatedConstant<seq_int_t>);
+  VISIT(TemplatedConstant<double>);
+  VISIT(TemplatedConstant<bool>);
+  VISIT(TemplatedConstant<std::string>);
 
   DEFAULT_VISIT(Instr);
-  DEFAULT_VISIT(AssignInstr);
-  DEFAULT_VISIT(ExtractInstr);
-  DEFAULT_VISIT(InsertInstr);
-  DEFAULT_VISIT(CallInstr);
-  DEFAULT_VISIT(StackAllocInstr);
-  DEFAULT_VISIT(YieldInInstr);
-  DEFAULT_VISIT(TernaryInstr);
-  DEFAULT_VISIT(BreakInstr);
-  DEFAULT_VISIT(ContinueInstr);
-  DEFAULT_VISIT(ReturnInstr);
-  DEFAULT_VISIT(YieldInstr);
-  DEFAULT_VISIT(ThrowInstr);
-  DEFAULT_VISIT(AssertInstr);
-  DEFAULT_VISIT(FlowInstr);
+  VISIT(AssignInstr);
+  VISIT(ExtractInstr);
+  VISIT(InsertInstr);
+  VISIT(CallInstr);
+  VISIT(StackAllocInstr);
+  VISIT(YieldInInstr);
+  VISIT(TernaryInstr);
+  VISIT(BreakInstr);
+  VISIT(ContinueInstr);
+  VISIT(ReturnInstr);
+  VISIT(YieldInstr);
+  VISIT(ThrowInstr);
+  VISIT(AssertInstr);
+  VISIT(FlowInstr);
 
   DEFAULT_VISIT(types::Type);
-  DEFAULT_VISIT(types::PrimitiveType);
-  DEFAULT_VISIT(types::IntType);
-  DEFAULT_VISIT(types::FloatType);
-  DEFAULT_VISIT(types::BoolType);
-  DEFAULT_VISIT(types::ByteType);
-  DEFAULT_VISIT(types::VoidType);
-  DEFAULT_VISIT(types::RecordType);
-  DEFAULT_VISIT(types::RefType);
-  DEFAULT_VISIT(types::FuncType);
-  DEFAULT_VISIT(types::OptionalType);
-  DEFAULT_VISIT(types::ArrayType);
-  DEFAULT_VISIT(types::PointerType);
-  DEFAULT_VISIT(types::GeneratorType);
-  DEFAULT_VISIT(types::IntNType);
+  VISIT(types::PrimitiveType);
+  VISIT(types::IntType);
+  VISIT(types::FloatType);
+  VISIT(types::BoolType);
+  VISIT(types::ByteType);
+  VISIT(types::VoidType);
+  VISIT(types::RecordType);
+  VISIT(types::RefType);
+  VISIT(types::FuncType);
+  VISIT(types::OptionalType);
+  VISIT(types::ArrayType);
+  VISIT(types::PointerType);
+  VISIT(types::GeneratorType);
+  VISIT(types::IntNType);
 };
 
 } // namespace util
