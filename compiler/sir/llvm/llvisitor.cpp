@@ -965,7 +965,21 @@ void LLVMVisitor::visit(CallInstr *x) {
 }
 
 void LLVMVisitor::visit(YieldInInstr *x) {
-  // TODO
+  llvm::IRBuilder<> builder(block);
+  if (x->isSuspending()) {
+    llvm::Function *coroSuspend =
+        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_suspend);
+    llvm::Value *tok = llvm::ConstantTokenNone::get(context);
+    llvm::Value *final = builder.getFalse();
+    llvm::Value *susp = builder.CreateCall(coroSuspend, {tok, final});
+
+    block = llvm::BasicBlock::Create(context, "yieldin.new", func);
+    llvm::SwitchInst *inst = builder.CreateSwitch(susp, coro.suspend, 2);
+    inst->addCase(builder.getInt8(0), block);
+    inst->addCase(builder.getInt8(1), coro.cleanup);
+    builder.SetInsertPoint(block);
+  }
+  value = builder.CreateLoad(coro.promise);
 }
 
 void LLVMVisitor::visit(StackAllocInstr *x) {

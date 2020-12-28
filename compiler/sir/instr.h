@@ -274,7 +274,7 @@ public:
   /// @param type the type of the value being yielded in
   /// @param supsend whether to suspend
   /// @param name the instruction's name
-  explicit YieldInInstr(types::Type *type, bool suspend = false, std::string name = "")
+  explicit YieldInInstr(types::Type *type, bool suspend = true, std::string name = "")
       : AcceptorExtend(std::move(name)), type(type), suspend(suspend) {}
 
   types::Type *getType() const override { return type; }
