@@ -454,38 +454,6 @@ private:
   Value *doClone() const override;
 };
 
-class AssertInstr : public AcceptorExtend<AssertInstr, Instr> {
-private:
-  /// the value
-  ValuePtr value;
-  /// the message
-  std::string msg;
-
-public:
-  static const char NodeId;
-
-  explicit AssertInstr(ValuePtr value = nullptr, std::string msg = "",
-                       std::string name = "")
-      : AcceptorExtend(std::move(name)), value(std::move(value)), msg(std::move(msg)) {}
-
-  /// @return the value
-  const ValuePtr &getValue() const { return value; }
-  /// Sets the value.
-  /// @param v the new value
-  void setValue(ValuePtr v) { value = std::move(v); }
-
-  /// @return the message
-  const std::string &getMsg() const { return msg; }
-  /// Sets the message
-  /// @param m the new message
-  void setMessage(std::string m) { msg = std::move(m); }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
-  Value *doClone() const override;
-};
-
 /// Instr that contains a flow and value.
 class FlowInstr : public AcceptorExtend<FlowInstr, Instr> {
 private:

@@ -173,17 +173,6 @@ Value *ThrowInstr::doClone() const {
   return getModule()->Nrs<ThrowInstr>(getSrcInfo(), value->clone(), getName());
 }
 
-const char AssertInstr::NodeId = 0;
-
-std::ostream &AssertInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("assert({}, \"{}\")"), *value, msg);
-  return os;
-}
-
-Value *AssertInstr::doClone() const {
-  return getModule()->Nrs<AssertInstr>(getSrcInfo(), value->clone(), msg, getName());
-}
-
 const char FlowInstr::NodeId = 0;
 
 std::ostream &FlowInstr::doFormat(std::ostream &os) const {
