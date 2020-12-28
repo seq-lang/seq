@@ -57,11 +57,12 @@ std::string BodiedFunc::getUnmangledName() const {
 
 std::ostream &BodiedFunc::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{} {}({}) -> {} [\n{}\n] {{\n{}\n}}"),
-             builtin ? "builtin_def" : "def",
-             referenceString(),
-             fmt::join(util::dereference_adaptor(arg_begin()), util::dereference_adaptor(arg_end()), ", "),
+             builtin ? "builtin_def" : "def", referenceString(),
+             fmt::join(util::dereference_adaptor(arg_begin()),
+                       util::dereference_adaptor(arg_end()), ", "),
              cast<types::FuncType>(getType())->getReturnType()->referenceString(),
-             fmt::join(util::dereference_adaptor(begin()), util::dereference_adaptor(end()), "\n"),
+             fmt::join(util::dereference_adaptor(begin()),
+                       util::dereference_adaptor(end()), "\n"),
              *body);
   return os;
 }
@@ -69,10 +70,10 @@ std::ostream &BodiedFunc::doFormat(std::ostream &os) const {
 const char ExternalFunc::NodeId = 0;
 
 std::ostream &ExternalFunc::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("external_def {} ~ {}({}) -> {}"),
-             getUnmangledName(),
+  fmt::print(os, FMT_STRING("external_def {} ~ {}({}) -> {}"), getUnmangledName(),
              referenceString(),
-             fmt::join(util::dereference_adaptor(arg_begin()), util::dereference_adaptor(arg_end()), ", "),
+             fmt::join(util::dereference_adaptor(arg_begin()),
+                       util::dereference_adaptor(arg_end()), ", "),
              cast<types::FuncType>(getType())->getReturnType()->referenceString());
   return os;
 }
@@ -89,10 +90,9 @@ std::string InternalFunc::getUnmangledName() const {
 
 std::ostream &InternalFunc::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("internal_def {}.{} ~ {}({}) -> {}"),
-             parentType->referenceString(),
-             getUnmangledName(),
-             referenceString(),
-             fmt::join(util::dereference_adaptor(arg_begin()), util::dereference_adaptor(arg_end()), ", "),
+             parentType->referenceString(), getUnmangledName(), referenceString(),
+             fmt::join(util::dereference_adaptor(arg_begin()),
+                       util::dereference_adaptor(arg_end()), ", "),
              cast<types::FuncType>(getType())->getReturnType()->referenceString());
   return os;
 }
@@ -113,14 +113,15 @@ std::ostream &LLVMFunc::doFormat(std::ostream &os) const {
     if (l.tag == LLVMLiteral::STATIC)
       store.push_back(l.val.staticVal);
     else
-      store.push_back(fmt::format(FMT_STRING("(type_of {})"), l.val.type->referenceString()));
+      store.push_back(
+          fmt::format(FMT_STRING("(type_of {})"), l.val.type->referenceString()));
   }
 
   auto body = fmt::vformat(llvmDeclares + llvmBody, store);
 
-  fmt::print(os, FMT_STRING("llvm_def {}({}) -> {} {{\n{}\n}}"),
-             getName(),
-             fmt::join(util::dereference_adaptor(arg_begin()), util::dereference_adaptor(arg_end()), ", "),
+  fmt::print(os, FMT_STRING("llvm_def {}({}) -> {} {{\n{}\n}}"), getName(),
+             fmt::join(util::dereference_adaptor(arg_begin()),
+                       util::dereference_adaptor(arg_end()), ", "),
              cast<types::FuncType>(getType())->getReturnType()->referenceString(),
              body);
   return os;

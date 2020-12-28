@@ -22,8 +22,9 @@ public:
   virtual ~Flow() noexcept = default;
 
   /// @return a clone of the value
-  std::unique_ptr<Flow> clone() const { return std::unique_ptr<Flow>(static_cast<Flow *>(doClone())); }
-
+  std::unique_ptr<Flow> clone() const {
+    return std::unique_ptr<Flow>(static_cast<Flow *>(doClone()));
+  }
 };
 
 using FlowPtr = std::unique_ptr<Flow>;
@@ -265,8 +266,7 @@ public:
   /// @param name the's name
   /// @param body the body
   /// @param finally the finally
-  explicit TryCatchFlow(FlowPtr body, FlowPtr finally = nullptr,
-                        std::string name = "")
+  explicit TryCatchFlow(FlowPtr body, FlowPtr finally = nullptr, std::string name = "")
       : AcceptorExtend(std::move(name)), body(std::move(body)),
         finally(std::move(finally)) {}
 
@@ -318,7 +318,7 @@ public:
 
   /// Emplaces a catch.
   /// @tparam Args the catch constructor args
-  template <typename... Args> void emplace_back(Args&&... args) {
+  template <typename... Args> void emplace_back(Args &&... args) {
     catches.emplace_back(std::forward<Args>(args)...);
   }
 

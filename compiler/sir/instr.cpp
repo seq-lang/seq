@@ -15,7 +15,9 @@ std::ostream &AssignInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *AssignInstr::doClone() const { return getModule()->Nrs<AssignInstr>(getSrcInfo(), lhs, rhs->clone(), getName()); }
+Value *AssignInstr::doClone() const {
+  return getModule()->Nrs<AssignInstr>(getSrcInfo(), lhs, rhs->clone(), getName());
+}
 
 const char ExtractInstr::NodeId = 0;
 
@@ -25,7 +27,9 @@ types::Type *ExtractInstr::getType() const {
   return memberedType->getMemberType(field);
 }
 
-Value *ExtractInstr::doClone() const { return getModule()->Nrs<ExtractInstr>(getSrcInfo(), val->clone(), field, getName()); }
+Value *ExtractInstr::doClone() const {
+  return getModule()->Nrs<ExtractInstr>(getSrcInfo(), val->clone(), field, getName());
+}
 
 std::ostream &ExtractInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("extract({}, \"{}\")"), *val, field);
@@ -39,7 +43,10 @@ std::ostream &InsertInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *InsertInstr::doClone() const { return getModule()->Nrs<InsertInstr>(getSrcInfo(), lhs->clone(), field, rhs->clone(), getName()); }
+Value *InsertInstr::doClone() const {
+  return getModule()->Nrs<InsertInstr>(getSrcInfo(), lhs->clone(), field, rhs->clone(),
+                                       getName());
+}
 
 const char CallInstr::NodeId = 0;
 
@@ -60,18 +67,21 @@ Value *CallInstr::doClone() const {
   std::vector<ValuePtr> clonedArgs;
   for (const auto &arg : *this)
     clonedArgs.push_back(arg->clone());
-  return getModule()->Nrs<CallInstr>(getSrcInfo(), func->clone(), std::move(clonedArgs), getName());
+  return getModule()->Nrs<CallInstr>(getSrcInfo(), func->clone(), std::move(clonedArgs),
+                                     getName());
 }
 
 const char StackAllocInstr::NodeId = 0;
 
 std::ostream &StackAllocInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("stack_alloc({}, {})"), arrayType->referenceString(), *count);
+  fmt::print(os, FMT_STRING("stack_alloc({}, {})"), arrayType->referenceString(),
+             *count);
   return os;
 }
 
 Value *StackAllocInstr::doClone() const {
-  return getModule()->Nrs<StackAllocInstr>(getSrcInfo(), arrayType, count->clone(), getName());
+  return getModule()->Nrs<StackAllocInstr>(getSrcInfo(), arrayType, count->clone(),
+                                           getName());
 }
 
 const char YieldInInstr::NodeId = 0;
@@ -80,7 +90,9 @@ std::ostream &YieldInInstr::doFormat(std::ostream &os) const {
   return os << "yield_in()";
 }
 
-Value *YieldInInstr::doClone() const { return getModule()->Nrs<YieldInInstr>(getSrcInfo(), type, getName()); }
+Value *YieldInInstr::doClone() const {
+  return getModule()->Nrs<YieldInInstr>(getSrcInfo(), type, getName());
+}
 
 const char TernaryInstr::NodeId = 0;
 
@@ -89,7 +101,10 @@ std::ostream &TernaryInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *TernaryInstr::doClone() const { return getModule()->Nrs<TernaryInstr>(getSrcInfo(), cond->clone(), trueValue->clone(), falseValue->clone(), getName()); }
+Value *TernaryInstr::doClone() const {
+  return getModule()->Nrs<TernaryInstr>(getSrcInfo(), cond->clone(), trueValue->clone(),
+                                        falseValue->clone(), getName());
+}
 
 const char ControlFlowInstr::NodeId = 0;
 
@@ -100,7 +115,9 @@ std::ostream &BreakInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *BreakInstr::doClone() const { return getModule()->Nrs<BreakInstr>(getSrcInfo(), getTarget(), getName()); }
+Value *BreakInstr::doClone() const {
+  return getModule()->Nrs<BreakInstr>(getSrcInfo(), getTarget(), getName());
+}
 
 const char ContinueInstr::NodeId = 0;
 
@@ -109,7 +126,9 @@ std::ostream &ContinueInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *ContinueInstr::doClone() const { return getModule()->Nrs<ContinueInstr>(getSrcInfo(), getTarget(), getName()); }
+Value *ContinueInstr::doClone() const {
+  return getModule()->Nrs<ContinueInstr>(getSrcInfo(), getTarget(), getName());
+}
 
 const char ReturnInstr::NodeId = 0;
 
@@ -122,7 +141,10 @@ std::ostream &ReturnInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *ReturnInstr::doClone() const { return getModule()->Nrs<ReturnInstr>(getSrcInfo(), value ? value->clone() : nullptr, getName()); }
+Value *ReturnInstr::doClone() const {
+  return getModule()->Nrs<ReturnInstr>(getSrcInfo(), value ? value->clone() : nullptr,
+                                       getName());
+}
 
 const char YieldInstr::NodeId = 0;
 
@@ -135,7 +157,10 @@ std::ostream &YieldInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *YieldInstr::doClone() const { return getModule()->Nrs<YieldInstr>(getSrcInfo(), value ? value->clone() : nullptr, getName()); }
+Value *YieldInstr::doClone() const {
+  return getModule()->Nrs<YieldInstr>(getSrcInfo(), value ? value->clone() : nullptr,
+                                      getName());
+}
 
 const char ThrowInstr::NodeId = 0;
 
@@ -144,7 +169,9 @@ std::ostream &ThrowInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *ThrowInstr::doClone() const { return getModule()->Nrs<ThrowInstr>(getSrcInfo(), value->clone(), getName()); }
+Value *ThrowInstr::doClone() const {
+  return getModule()->Nrs<ThrowInstr>(getSrcInfo(), value->clone(), getName());
+}
 
 const char AssertInstr::NodeId = 0;
 
@@ -153,7 +180,9 @@ std::ostream &AssertInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *AssertInstr::doClone() const { return getModule()->Nrs<AssertInstr>(getSrcInfo(), value->clone(), msg, getName()); }
+Value *AssertInstr::doClone() const {
+  return getModule()->Nrs<AssertInstr>(getSrcInfo(), value->clone(), msg, getName());
+}
 
 const char FlowInstr::NodeId = 0;
 
@@ -162,7 +191,10 @@ std::ostream &FlowInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *FlowInstr::doClone() const { return getModule()->Nrs<FlowInstr>(getSrcInfo(), flow->clone(), val->clone(), getName()); }
+Value *FlowInstr::doClone() const {
+  return getModule()->Nrs<FlowInstr>(getSrcInfo(), flow->clone(), val->clone(),
+                                     getName());
+}
 
 } // namespace ir
 } // namespace seq

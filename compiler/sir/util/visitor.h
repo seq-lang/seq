@@ -6,11 +6,11 @@
 #include "runtime/lib.h"
 
 #define DEFAULT_VISIT(x)                                                               \
-  virtual void defaultVisit(seq::ir::x *) { throw std::runtime_error("cannot visit node"); } \
+  virtual void defaultVisit(seq::ir::x *) {                                            \
+    throw std::runtime_error("cannot visit node");                                     \
+  }                                                                                    \
   virtual void visit(seq::ir::x *v) { defaultVisit(v); }
-#define VISIT(x)                                                               \
-  virtual void visit(seq::ir::x *v)
-
+#define VISIT(x) virtual void visit(seq::ir::x *v)
 
 namespace seq {
 namespace ir {

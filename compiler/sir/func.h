@@ -136,9 +136,7 @@ public:
   bool isBuiltin() const { return builtin; }
   /// Changes the function's builtin status.
   /// @param v true if builtin, false otherwise
-  void setBuiltin(bool v = true) {
-    builtin = v;
-  }
+  void setBuiltin(bool v = true) { builtin = v; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -191,7 +189,7 @@ public:
       int64_t staticVal;
       types::Type *type;
     } val;
-    enum {STATIC, TYPE} tag;
+    enum { STATIC, TYPE } tag;
 
     explicit LLVMLiteral(int64_t v) : val{v}, tag(STATIC) {}
     explicit LLVMLiteral(types::Type *t) : val{}, tag(TYPE) { val.type = t; }

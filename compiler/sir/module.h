@@ -106,7 +106,7 @@ public:
   }
 
   template <typename DesiredType, typename... Args>
-  DesiredType *Nrs(const seq::SrcObject *s, Args&&... args) {
+  DesiredType *Nrs(const seq::SrcObject *s, Args &&... args) {
     auto *ret = new DesiredType(std::forward<Args>(args)...);
     ret->setModule(this);
     ret->setSrcInfo(s->getSrcInfo());
@@ -114,22 +114,21 @@ public:
   }
 
   template <typename DesiredType, typename... Args>
-  DesiredType *Nrs(seq::SrcInfo s, Args&&... args) {
+  DesiredType *Nrs(seq::SrcInfo s, Args &&... args) {
     auto *ret = new DesiredType(std::forward<Args>(args)...);
     ret->setModule(this);
     ret->setSrcInfo(s);
     return ret;
   }
 
-
-  template <typename DesiredType, typename... Args> DesiredType *Nr(Args&&... args) {
+  template <typename DesiredType, typename... Args> DesiredType *Nr(Args &&... args) {
     auto *ret = new DesiredType(std::forward<Args>(args)...);
     ret->setModule(this);
     return ret;
   }
 
   template <typename DesiredType, typename... Args>
-  std::unique_ptr<DesiredType> Nxs(const seq::SrcObject *s, Args&&... args) {
+  std::unique_ptr<DesiredType> Nxs(const seq::SrcObject *s, Args &&... args) {
     auto ret = std::make_unique<DesiredType>(std::forward<Args>(args)...);
     ret->setModule(this);
     ret->setSrcInfo(s->getSrcInfo());
@@ -137,7 +136,7 @@ public:
   }
 
   template <typename DesiredType, typename... Args>
-  std::unique_ptr<DesiredType> Nx(Args&&... args) {
+  std::unique_ptr<DesiredType> Nx(Args &&... args) {
     auto ret = std::make_unique<DesiredType>(std::forward<Args>(args)...);
     ret->setModule(this);
     return std::move(ret);

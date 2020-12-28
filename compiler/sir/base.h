@@ -113,8 +113,9 @@ public:
   }
   /// @return the src info
   seq::SrcInfo getSrcInfo() const {
-    return getAttribute<SrcInfoAttribute>(kSrcInfoAttribute) ? getAttribute<SrcInfoAttribute>(kSrcInfoAttribute)->info
-    : seq::SrcInfo();
+    return getAttribute<SrcInfoAttribute>(kSrcInfoAttribute)
+               ? getAttribute<SrcInfoAttribute>(kSrcInfoAttribute)->info
+               : seq::SrcInfo();
   }
 
   /// @return a text representation of a reference to the object
@@ -150,11 +151,13 @@ public:
   void accept(util::SIRVisitor &v) { v.visit(static_cast<Derived *>(this)); }
 };
 
-template <typename Desired>
-Desired *cast(IRNode *other) { return other != nullptr ? other->as<Desired>() : nullptr; }
+template <typename Desired> Desired *cast(IRNode *other) {
+  return other != nullptr ? other->as<Desired>() : nullptr;
+}
 
-template <typename Desired>
-bool isA(IRNode *other) { return other && other->is<Desired>(); }
+template <typename Desired> bool isA(IRNode *other) {
+  return other && other->is<Desired>();
+}
 
 } // namespace ir
 } // namespace seq

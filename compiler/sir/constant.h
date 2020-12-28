@@ -37,7 +37,6 @@ public:
   using AcceptorExtend<TemplatedConstant<ValueType>, Constant>::getSrcInfo;
   using AcceptorExtend<TemplatedConstant<ValueType>, Constant>::getType;
 
-
   TemplatedConstant(ValueType v, types::Type *type, std::string name = "")
       : AcceptorExtend<TemplatedConstant<ValueType>, Constant>(type, std::move(name)),
         val(v) {}
@@ -52,7 +51,8 @@ private:
   }
 
   Value *doClone() const override {
-    return getModule()->template Nrs<TemplatedConstant<ValueType>>(getSrcInfo(), val, getType());
+    return getModule()->template Nrs<TemplatedConstant<ValueType>>(getSrcInfo(), val,
+                                                                   getType());
   }
 };
 
@@ -85,9 +85,9 @@ private:
   }
 
   Value *doClone() const override {
-    return getModule()->Nrs<TemplatedConstant<std::string>>(getSrcInfo(), val, getType());
+    return getModule()->Nrs<TemplatedConstant<std::string>>(getSrcInfo(), val,
+                                                            getType());
   }
-
 };
 
 } // namespace ir

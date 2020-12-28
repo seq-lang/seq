@@ -16,9 +16,8 @@ const char Flow::NodeId = 0;
 const char SeriesFlow::NodeId = 0;
 
 bool SeriesFlow::containsFlows() const {
-  return std::any_of(begin(), end(), [](const ValuePtr &child) {
-      return child->is<Flow>();
-    });
+  return std::any_of(begin(), end(),
+                     [](const ValuePtr &child) { return child->is<Flow>(); });
 }
 
 std::ostream &SeriesFlow::doFormat(std::ostream &os) const {
@@ -43,7 +42,8 @@ std::ostream &WhileFlow::doFormat(std::ostream &os) const {
 }
 
 Value *WhileFlow::doClone() const {
-  return getModule()->Nrs<WhileFlow>(getSrcInfo(), cond->clone(), body->clone(), getName());
+  return getModule()->Nrs<WhileFlow>(getSrcInfo(), cond->clone(), body->clone(),
+                                     getName());
 }
 
 const char ForFlow::NodeId = 0;
@@ -55,7 +55,8 @@ std::ostream &ForFlow::doFormat(std::ostream &os) const {
 }
 
 Value *ForFlow::doClone() const {
-  return getModule()->Nrs<ForFlow>(getSrcInfo(), iter->clone(), body->clone(), var, getName());
+  return getModule()->Nrs<ForFlow>(getSrcInfo(), iter->clone(), body->clone(), var,
+                                   getName());
 }
 
 const char IfFlow::NodeId = 0;
@@ -69,9 +70,9 @@ std::ostream &IfFlow::doFormat(std::ostream &os) const {
 }
 
 Value *IfFlow::doClone() const {
-  return getModule()->Nrs<IfFlow>(getSrcInfo(), cond->clone(),
-                                  trueBranch->clone(),
-                                  falseBranch ? falseBranch->clone() : nullptr, getName());
+  return getModule()->Nrs<IfFlow>(getSrcInfo(), cond->clone(), trueBranch->clone(),
+                                  falseBranch ? falseBranch->clone() : nullptr,
+                                  getName());
 }
 
 const char TryCatchFlow::NodeId = 0;
@@ -89,7 +90,8 @@ std::ostream &TryCatchFlow::doFormat(std::ostream &os) const {
 }
 
 Value *TryCatchFlow::doClone() const {
-  auto *newFlow = getModule()->Nrs<TryCatchFlow>(getSrcInfo(), body->clone(), finally ? finally->clone() : nullptr, getName());
+  auto *newFlow = getModule()->Nrs<TryCatchFlow>(
+      getSrcInfo(), body->clone(), finally ? finally->clone() : nullptr, getName());
   for (auto &child : *this)
     newFlow->emplace_back(child.handler->clone(), child.type, child.catchVar);
   return newFlow;
