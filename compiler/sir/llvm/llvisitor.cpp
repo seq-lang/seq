@@ -1134,10 +1134,6 @@ void LLVMVisitor::visit(ThrowInstr *x) {
   */
 }
 
-void LLVMVisitor::visit(AssertInstr *x) {
-  // TODO
-}
-
 void LLVMVisitor::visit(FlowInstr *x) {
   process(x->getFlow());
   process(x->getValue());

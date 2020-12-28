@@ -73,7 +73,6 @@ class ContinueInstr;
 class ReturnInstr;
 class YieldInstr;
 class ThrowInstr;
-class AssertInstr;
 class FlowInstr;
 
 namespace util {
@@ -123,7 +122,6 @@ public:
   VISIT(ReturnInstr);
   VISIT(YieldInstr);
   VISIT(ThrowInstr);
-  VISIT(AssertInstr);
   VISIT(FlowInstr);
 
   DEFAULT_VISIT(types::Type);

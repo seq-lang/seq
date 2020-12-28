@@ -138,7 +138,6 @@ public:
   void visit(ReturnInstr *) override;
   void visit(YieldInstr *) override;
   void visit(ThrowInstr *) override;
-  void visit(AssertInstr *) override;
   void visit(FlowInstr *) override;
 };
 

@@ -39,7 +39,6 @@ void SIRVisitor::visit(ContinueInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(ReturnInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(YieldInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(ThrowInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(AssertInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(FlowInstr *x) { defaultVisit(x); }
 
 void SIRVisitor::visit(types::PrimitiveType *x) { defaultVisit(x); }
