@@ -56,7 +56,7 @@ public:
   string transform(const ExprPtr &e) override;
   string transform(const StmtPtr &stmt) override;
   string transform(const PatternPtr &ptr) override;
-  string transform(const StmtPtr &stmt, int indent);
+  string transform(const Stmt *stmt, int indent);
 
   template <typename T>
   static string apply(const T &stmt, shared_ptr<Cache> cache = nullptr,

@@ -52,6 +52,8 @@ seq::SeqModule *parse(const string &argv0, const string &file, const string &cod
     using namespace std::chrono;
 
     auto cache = make_shared<ast::Cache>(argv0);
+    if (isTest)
+      cache->testFlags = isTest;
 
     auto t = high_resolution_clock::now();
     auto transformed = ast::SimplifyVisitor::apply(cache, move(codeStmt), abs,
@@ -63,7 +65,7 @@ seq::SeqModule *parse(const string &argv0, const string &file, const string &cod
                 _ocaml_time) /
                    1000.0);
       if (_dbg_level) {
-        auto fo = fopen("_dump_transform.seq", "w");
+        auto fo = fopen("_dump_simplify.seq", "w");
         fmt::print(fo, "{}", ast::FormatVisitor::apply(transformed, cache));
         fclose(fo);
       }

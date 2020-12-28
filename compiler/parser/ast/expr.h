@@ -537,6 +537,19 @@ struct YieldExpr : public Expr {
   void accept(ASTVisitor &visitor) const override;
 };
 
+/// Assignment (walrus) expression (var := expr).
+/// @example a := 5 + 3
+struct AssignExpr : public Expr {
+  ExprPtr var, expr;
+
+  AssignExpr(ExprPtr var, ExprPtr expr);
+  AssignExpr(const AssignExpr &);
+
+  string toString() const override;
+  ExprPtr clone() const override;
+  void accept(ASTVisitor &visitor) const override;
+};
+
 /// The following nodes are created after the simplify stage.
 
 /// Statement expression (stmts...; expr).

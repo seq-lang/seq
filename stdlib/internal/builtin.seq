@@ -103,7 +103,6 @@ def hash(x):
     """
     return x.__hash__()
 
-@builtin
 def ord(s: str):
     """
     Return an integer representing the Unicode code point of s
@@ -112,7 +111,6 @@ def ord(s: str):
         raise TypeError("ord() expected a character, but string of length " + str(len(s)) + " found")
     return int(s.ptr[0])
 
-@builtin
 def chr(i: int):
     """
     Return a string representing a character whose Unicode

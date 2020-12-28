@@ -60,6 +60,20 @@ public:
     map[name].push_front({stack.size(), move(var)});
     stack.front().push_back(name);
   }
+  /// Add an object to the top of the previous block.
+  void addPrevBlock(const string &name, shared_ptr<T> var) {
+    seqassert(!name.empty(), "adding an empty identifier");
+    seqassert(stack.size() > 1, "adding an empty identifier");
+    auto &m = map[name];
+    int pos = 0;
+    /// Make sure to add it to the appropriate place in the Map
+    /// (because each stack is not stacked itself, we have to use pos to find top-level
+    /// position).
+    while (pos < m.size() && m[pos].first == stack.size())
+      pos++;
+    m.insert(m.begin() + pos, {stack.size() - 1, move(var)});
+    stack[1].push_back(name);
+  }
   /// Add an object to the top-level (bottom of the stack).
   void addToplevel(const string &name, shared_ptr<T> var) {
     seqassert(!name.empty(), "adding an empty identifier");

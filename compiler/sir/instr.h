@@ -262,19 +262,25 @@ private:
 /// Instr representing a Python yield expression.
 class YieldInInstr : public AcceptorExtend<YieldInInstr, Instr> {
 private:
-  /// @param the type of the value being yielded in.
+  /// the type of the value being yielded in.
   types::Type *type;
+  /// whether or not to suspend
+  bool suspend;
 
 public:
   static const char NodeId;
 
   /// Constructs a yield in instruction.
   /// @param type the type of the value being yielded in
+  /// @param supsend whether to suspend
   /// @param name the instruction's name
-  explicit YieldInInstr(types::Type *type, std::string name = "")
-      : AcceptorExtend(std::move(name)), type(type) {}
+  explicit YieldInInstr(types::Type *type, bool suspend = false, std::string name = "")
+      : AcceptorExtend(std::move(name)), type(type), suspend(suspend) {}
 
   types::Type *getType() const override { return type; }
+
+  /// @return true if the instruction suspends
+  bool isSuspending() const { return suspend; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -441,38 +447,6 @@ public:
   /// Sets the value.
   /// @param v the new value
   void setValue(ValuePtr v) { value = std::move(v); }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
-  Value *doClone() const override;
-};
-
-class AssertInstr : public AcceptorExtend<AssertInstr, Instr> {
-private:
-  /// the value
-  ValuePtr value;
-  /// the message
-  std::string msg;
-
-public:
-  static const char NodeId;
-
-  explicit AssertInstr(ValuePtr value = nullptr, std::string msg = "",
-                       std::string name = "")
-      : AcceptorExtend(std::move(name)), value(std::move(value)), msg(std::move(msg)) {}
-
-  /// @return the value
-  const ValuePtr &getValue() const { return value; }
-  /// Sets the value.
-  /// @param v the new value
-  void setValue(ValuePtr v) { value = std::move(v); }
-
-  /// @return the message
-  const std::string &getMsg() const { return msg; }
-  /// Sets the message
-  /// @param m the new message
-  void setMessage(std::string m) { msg = std::move(m); }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;

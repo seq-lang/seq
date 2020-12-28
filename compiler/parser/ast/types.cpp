@@ -72,6 +72,8 @@ int LinkType::unify(TypePtr &typ, Unification &undo) {
 
     // ⚠️ Unification: destructive part.
     seqassert(!type, "type has been already unified or is in inconsistent state");
+    if (id == 10382)
+      assert(1);
     LOG_TYPECHECK("[unify] {} <- {}", id, typ->toString());
     // Link current type to typ and ensure that this modification is recorded in undo.
     undo.linked.push_back(this);

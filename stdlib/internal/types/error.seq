@@ -214,8 +214,13 @@ def _ensure_not_none(p: Ptr[byte], memb: str):
     if not p:
         raise AttributeError("'NoneType' object has no attribute '" + memb + "'")
 
-@builtin
-def _test_failed(file: str, line: int, msg: str):
+def seq_assert(file: str, line: int, msg: str) -> AssertionError:
+    s = 'Assert failed'
+    if msg: s += ': ' + msg
+    s += ' (' + file + ':' + line.__str__() + ')'
+    return AssertionError(s)
+
+def seq_assert_test(file: str, line: int, msg: str) -> AssertionError:
     s = "\033[1;31mTEST FAILED:\033[0m " + file + " (line " + str(line) + ")"
     if msg:
         s += ": " + msg
@@ -226,10 +231,4 @@ def check_errno(prefix: str):
     if msg:
         raise OSError(prefix + msg)
 
-@builtin
-def _make_assert_error(msg: str) -> AssertionError:
-    return AssertionError(msg)
 
-@builtin
-def _handle_exit(e: SystemExit):
-    exit(e.status)

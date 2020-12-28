@@ -107,6 +107,7 @@ let print_token t =
   | AND s -> sprintf "AND(%s)" s
   | ADD s -> sprintf "ADD(%s)" s
   | EXTERN s -> sprintf "EXTERN(\n%s)" s
+  | WALRUS s -> ":="
   (* | ARROW -> "=>" *)
 
 

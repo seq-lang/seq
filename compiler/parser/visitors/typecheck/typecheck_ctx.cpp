@@ -15,7 +15,8 @@ namespace seq {
 namespace ast {
 
 TypeContext::TypeContext(shared_ptr<Cache> cache)
-    : Context<TypecheckItem>(""), cache(move(cache)), typecheckLevel(0), iteration(0) {
+    : Context<TypecheckItem>(""), cache(move(cache)), typecheckLevel(0), iteration(0),
+      extendEtape(0) {
   stack.push_front(vector<string>());
   bases.push_back({"", nullptr, nullptr});
 }
@@ -50,13 +51,13 @@ types::TypePtr TypeContext::findInternal(const string &name) const {
 }
 
 shared_ptr<TypecheckItem> TypeContext::add(TypecheckItem::Kind kind, const string &name,
-                                           types::TypePtr type, bool global,
-                                           bool generic, bool stat) {
-  auto t = make_shared<TypecheckItem>(kind, type, getBase(), global, generic, stat);
-  if (name[0] == '.')
-    addToplevel(name, t);
-  else
-    add(name, t);
+                                           types::TypePtr type, bool generic,
+                                           bool stat) {
+  auto t = make_shared<TypecheckItem>(kind, type, getBase(), generic, stat);
+  //  if (name[0] == '.')
+  //    addToplevel(name, t);
+  //  else
+  add(name, t);
   return t;
 }
 

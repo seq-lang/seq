@@ -91,7 +91,7 @@ std::ostream &YieldInInstr::doFormat(std::ostream &os) const {
 }
 
 Value *YieldInInstr::doClone() const {
-  return getModule()->Nrs<YieldInInstr>(getSrcInfo(), type, getName());
+  return getModule()->Nrs<YieldInInstr>(getSrcInfo(), type, suspend, getName());
 }
 
 const char TernaryInstr::NodeId = 0;
@@ -171,17 +171,6 @@ std::ostream &ThrowInstr::doFormat(std::ostream &os) const {
 
 Value *ThrowInstr::doClone() const {
   return getModule()->Nrs<ThrowInstr>(getSrcInfo(), value->clone(), getName());
-}
-
-const char AssertInstr::NodeId = 0;
-
-std::ostream &AssertInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("assert({}, \"{}\")"), *value, msg);
-  return os;
-}
-
-Value *AssertInstr::doClone() const {
-  return getModule()->Nrs<AssertInstr>(getSrcInfo(), value->clone(), msg, getName());
 }
 
 const char FlowInstr::NodeId = 0;

@@ -41,14 +41,16 @@ string FormatVisitor::transform(const ExprPtr &expr) {
   return v.result;
 }
 
-string FormatVisitor::transform(const StmtPtr &stmt) { return transform(stmt, 0); }
+string FormatVisitor::transform(const StmtPtr &stmt) {
+  return transform(stmt.get(), 0);
+}
 
-string FormatVisitor::transform(const StmtPtr &stmt, int indent) {
+string FormatVisitor::transform(const Stmt *stmt, int indent) {
   FormatVisitor v(renderHTML, cache);
   v.indent = this->indent + indent;
   if (stmt)
     stmt->accept(v);
-  return (CAST(stmt, SuiteStmt) ? "" : pad(indent)) + v.result + newline();
+  return (stmt && stmt->getSuite() ? "" : pad(indent)) + v.result + newline();
 }
 
 string FormatVisitor::transform(const PatternPtr &ptr) {
@@ -242,7 +244,7 @@ void FormatVisitor::visit(const StaticExpr *expr) {
 void FormatVisitor::visit(const StmtExpr *expr) {
   string s;
   for (int i = 0; i < expr->stmts.size(); i++)
-    s += format("{}{}", pad(2), transform(expr->stmts[i], 2));
+    s += format("{}{}", pad(2), transform(expr->stmts[i].get(), 2));
   result = renderExpr(expr, "({}{}{}{}{})", newline(), s, newline(), pad(2),
                       transform(expr->expr));
 }
@@ -305,13 +307,13 @@ void FormatVisitor::visit(const AssertStmt *stmt) {
 
 void FormatVisitor::visit(const WhileStmt *stmt) {
   result = fmt::format("{} {}:{}{}", keyword("while"), transform(stmt->cond), newline(),
-                       transform(stmt->suite, 1));
+                       transform(stmt->suite.get(), 1));
 }
 
 void FormatVisitor::visit(const ForStmt *stmt) {
   result = fmt::format("{} {} {} {}:{}{}", keyword("for"), transform(stmt->var),
                        keyword("in"), transform(stmt->iter), newline(),
-                       transform(stmt->suite, 1));
+                       transform(stmt->suite.get(), 1));
 }
 
 void FormatVisitor::visit(const IfStmt *stmt) {
@@ -321,10 +323,10 @@ void FormatVisitor::visit(const IfStmt *stmt) {
     if (stmt->ifs[i].cond)
       ifs += fmt::format("{}{} {}:{}{}", i ? pad() : "", keyword(prefix + "if"),
                          transform(stmt->ifs[i].cond), newline(),
-                         transform(stmt->ifs[i].suite, 1));
+                         transform(stmt->ifs[i].suite.get(), 1));
     else
       ifs += fmt::format("{}{}:{}{}", pad(), keyword("else"), newline(),
-                         transform(stmt->ifs[i].suite, 1));
+                         transform(stmt->ifs[i].suite.get(), 1));
     prefix = "el";
   }
   result = ifs;
@@ -335,7 +337,7 @@ void FormatVisitor::visit(const MatchStmt *stmt) {
   for (int ci = 0; ci < stmt->cases.size(); ci++)
     s += fmt::format("{}{}{}:{}{}{}", pad(1), keyword("case"),
                      transform(stmt->patterns[ci]), newline(),
-                     transform(stmt->cases[ci], 2),
+                     transform(stmt->cases[ci].get(), 2),
                      ci == stmt->cases.size() - 1 ? "" : newline());
   result =
       fmt::format("{} {}:{}{}", keyword("match"), transform(stmt->what), newline(), s);
@@ -356,13 +358,13 @@ void FormatVisitor::visit(const TryStmt *stmt) {
     catches.push_back(
         fmt::format("{} {}{}:{}{}", keyword("catch"), transform(c.exc),
                     c.var == "" ? "" : fmt::format("{} {}", keyword("as"), c.var),
-                    newline(), transform(c.suite, 1)));
+                    newline(), transform(c.suite.get(), 1)));
   }
   result =
-      fmt::format("{}:{}{}{}{}", keyword("try"), newline(), transform(stmt->suite, 1),
-                  fmt::join(catches, ""),
+      fmt::format("{}:{}{}{}{}", keyword("try"), newline(),
+                  transform(stmt->suite.get(), 1), fmt::join(catches, ""),
                   stmt->finally ? fmt::format("{}:{}{}", keyword("finally"), newline(),
-                                              transform(stmt->finally, 1))
+                                              transform(stmt->finally.get(), 1))
                                 : "");
 }
 
@@ -375,16 +377,29 @@ void FormatVisitor::visit(const ThrowStmt *stmt) {
 }
 
 void FormatVisitor::visit(const FunctionStmt *fstmt) {
-  if (cache &&
-      cache->realizationAsts.find(fstmt->name) != cache->realizationAsts.end()) {
-    fstmt = (const FunctionStmt *)(cache->realizationAsts[fstmt->name].get());
-  } else if (cache && cache->realizations[fstmt->name].size()) {
-    for (auto &real : cache->realizations[fstmt->name])
-      result += transform(cache->realizationAsts[real.first]);
-    return;
-  } else if (cache) {
-    fstmt = (const FunctionStmt *)(cache->asts[fstmt->name].get());
+  if (cache) {
+    if (in(cache->functions, fstmt->name)) {
+      if (!cache->functions[fstmt->name].realizations.empty()) {
+        for (auto &real : cache->functions[fstmt->name].realizations) {
+          if (real.first != fstmt->name) {
+            result += transform(real.second.ast.get(), 0);
+          }
+        }
+        return;
+      }
+      fstmt = cache->functions[fstmt->name].ast.get();
+    }
   }
+  //  if (cache && cache->functions.find(fstmt->name) != cache->realizationAsts.end())
+  //  {
+  //    fstmt = (const FunctionStmt *)(cache->realizationAsts[fstmt->name].get());
+  //  } else if (cache && cache->functions[fstmt->name].realizations.size()) {
+  //    for (auto &real : cache->functions[fstmt->name].realizations)
+  //      result += transform(real.second.ast);
+  //    return;
+  //  } else if (cache) {
+  //    fstmt = cache->functions[fstmt->name].ast.get();
+  //  }
 
   vector<string> attrs;
   for (auto &a : fstmt->attributes)
@@ -400,7 +415,7 @@ void FormatVisitor::visit(const FunctionStmt *fstmt) {
     generics.push_back(fmt::format(
         "{}{}{}", a.name, a.type ? fmt::format(": {}", transform(a.type)) : "",
         a.deflt ? fmt::format(" = {}", transform(a.deflt)) : ""));
-  auto body = transform(fstmt->suite, 1);
+  auto body = transform(fstmt->suite.get(), 1);
   auto name = fmt::format("{}{}{}", typeStart, fstmt->name, typeEnd);
   name = fmt::format("{}{}{}", exprStart, name, exprEnd);
   result += fmt::format(
@@ -437,7 +452,7 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
                                     : "",
                        keyword(key), stmt->name, fmt::join(args, ", "));
   if (stmt->suite)
-    result += fmt::format(":{}{}", newline(), transform(stmt->suite, 1));
+    result += fmt::format(":{}{}", newline(), transform(stmt->suite.get(), 1));
 }
 
 void FormatVisitor::visit(const YieldFromStmt *stmt) {

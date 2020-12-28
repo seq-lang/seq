@@ -29,17 +29,20 @@ SimplifyItem::SimplifyItem(Kind k, string base, string canonicalName, bool globa
       staticType(stat) {}
 
 SimplifyContext::SimplifyContext(string filename, shared_ptr<Cache> cache)
-    : Context<SimplifyItem>(move(filename)), cache(move(cache)),
-      isStdlibLoading(false) {}
+    : Context<SimplifyItem>(move(filename)), cache(move(cache)), isStdlibLoading(false),
+      extendCount(0), canAssign(true) {}
+
+SimplifyContext::Base::Base(string name, ExprPtr ast, int parent, int attributes)
+    : name(move(name)), ast(move(ast)), parent(parent), attributes(attributes) {}
 
 shared_ptr<SimplifyItem> SimplifyContext::add(SimplifyItem::Kind kind,
                                               const string &name,
                                               const string &canonicalName, bool global,
-                                              bool stat) {
-  auto t = make_shared<SimplifyItem>(kind, getBase(), canonicalName, global, stat);
+                                              bool isStatic) {
+  seqassert(!canonicalName.empty(), "empty canonical name for '{}'", name);
+  auto t = make_shared<SimplifyItem>(kind, getBase(), canonicalName, global, isStatic);
   Context<SimplifyItem>::add(name, t);
-  if (!canonicalName.empty())
-    Context<SimplifyItem>::add(canonicalName, t);
+  Context<SimplifyItem>::add(canonicalName, t);
   return t;
 }
 
@@ -47,27 +50,12 @@ shared_ptr<SimplifyItem> SimplifyContext::find(const string &name) const {
   auto t = Context<SimplifyItem>::find(name);
   if (t)
     return t;
-
   // Item is not found in the current module. Time to look in the standard library!
   auto stdlib = cache->imports[STDLIB_IMPORT].ctx;
   if (stdlib.get() != this) {
     t = stdlib->find(name);
     if (t)
       return t;
-  }
-
-  // Item is not in the standard library as well. Maybe it is a global function or a
-  // class, so also check there.
-  if (!name.empty() && name[0] == '.') {
-    auto ast = cache->asts.find(name);
-    if (ast == cache->asts.end())
-      return nullptr;
-    else if (ast->second->getClass())
-      return make_shared<SimplifyItem>(SimplifyItem::Type, "", name, true);
-    else if (ast->second->getFunction())
-      return make_shared<SimplifyItem>(SimplifyItem::Func, "", name, true);
-    else
-      seqassert(false, "invalid cached AST");
   }
   return nullptr;
 }
@@ -90,7 +78,7 @@ string SimplifyContext::generateCanonicalName(const string &name) const {
 }
 
 SrcInfo SimplifyContext::generateSrcInfo() const {
-  return {"<generated>", cache->generatedSrcInfoCount, cache->generatedSrcInfoCount++,
+  return {FILE_GENERATED, cache->generatedSrcInfoCount, cache->generatedSrcInfoCount++,
           0, 0};
 }
 

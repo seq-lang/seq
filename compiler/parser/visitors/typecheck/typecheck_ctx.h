@@ -19,18 +19,17 @@ struct TypecheckItem {
   enum Kind { Func, Type, Var } kind;
   types::TypePtr type;
   string base;
-  bool global;
+  //  bool global;
   bool genericType;
   bool staticType;
   unordered_set<string> attributes;
 
-  TypecheckItem(Kind k, types::TypePtr type, const string &base, bool global = false,
-                bool generic = false, bool stat = false)
-      : kind(k), type(type), base(base), global(global), genericType(generic),
-        staticType(stat) {}
+  TypecheckItem(Kind k, types::TypePtr type, const string &base, bool generic = false,
+                bool stat = false)
+      : kind(k), type(type), base(base), genericType(generic), staticType(stat) {}
 
   string getBase() const { return base; }
-  bool isGlobal() const { return global; }
+  //  bool isGlobal() const { return global; }
   bool isVar() const { return kind == Var; }
   bool isFunc() const { return kind == Func; }
   bool isType() const { return kind == Type; }
@@ -59,6 +58,7 @@ public:
   int iteration;
 
   std::stack<bool> partializeMethod;
+  int extendEtape;
 
 public:
   TypeContext(shared_ptr<Cache> cache);
@@ -76,8 +76,8 @@ public:
 
   using Context<TypecheckItem>::add;
   shared_ptr<TypecheckItem> add(TypecheckItem::Kind kind, const string &name,
-                                types::TypePtr type = nullptr, bool global = false,
-                                bool generic = false, bool stat = false);
+                                types::TypePtr type = nullptr, bool generic = false,
+                                bool stat = false);
   void dump() override { dump(0); }
 
 protected:
@@ -102,23 +102,39 @@ public:
   types::TypePtr instantiateGeneric(const SrcInfo &srcInfo, types::TypePtr root,
                                     const vector<types::TypePtr> &generics);
 
-  const vector<types::FuncTypePtr> *findMethod(const string &typeName,
-                                               const string &method) const {
-    auto m = cache->classMethods.find(typeName);
-    if (m != cache->classMethods.end()) {
-      auto t = m->second.find(method);
-      if (t != m->second.end())
-        return &t->second;
+  const vector<types::FuncTypePtr> findMethod(const string &typeName,
+                                              const string &method) const {
+    auto m = cache->classes.find(typeName);
+    if (m != cache->classes.end()) {
+      auto t = m->second.methods.find(method);
+      if (t != m->second.methods.end()) {
+        unordered_map<string, int> signatureLoci;
+        vector<types::FuncTypePtr> vv;
+        if (typeName == ".AttributeError" && method == "__new__")
+          assert(1);
+        for (auto &mt : t->second)
+          if (mt.age <= extendEtape) {
+            auto sig = cache->functions[mt.name].ast->signature();
+            auto it = signatureLoci.find(sig);
+            if (it != signatureLoci.end())
+              vv[it->second] = mt.type;
+            else {
+              signatureLoci[sig] = vv.size();
+              vv.emplace_back(mt.type);
+            }
+          }
+        return vv;
+      }
     }
-    return nullptr;
+    return {};
   }
 
   types::TypePtr findMember(const string &typeName, const string &member) const {
-    auto m = cache->classFields.find(typeName);
-    if (m != cache->classFields.end()) {
-      for (auto &mm : m->second)
-        if (mm.first == member)
-          return mm.second;
+    auto m = cache->classes.find(typeName);
+    if (m != cache->classes.end()) {
+      for (auto &mm : m->second.fields)
+        if (mm.name == member)
+          return mm.type;
     }
     return nullptr;
   }
