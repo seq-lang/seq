@@ -376,10 +376,18 @@ void LLVMVisitor::makeLLVMFunction(Func *x) {
     return;
   }
 
-  auto *funcType = llvm::cast<llvm::FunctionType>(getLLVMType(x->getType()));
+  auto *funcType = x->getType()->as<types::FuncType>();
+  llvm::Type *returnType = getLLVMType(funcType->getReturnType());
+  std::vector<llvm::Type *> argTypes;
+  for (const auto &argType : *funcType) {
+    argTypes.push_back(getLLVMType(argType));
+  }
+
+  auto *llvmFuncType =
+      llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false);
   assert(!module->getFunction(x->referenceString()));
   func = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction(x->referenceString(), funcType));
+      module->getOrInsertFunction(x->referenceString(), llvmFuncType));
 }
 
 void LLVMVisitor::makeYield(llvm::Value *value, bool finalYield) {
@@ -403,12 +411,14 @@ void LLVMVisitor::makeYield(llvm::Value *value, bool finalYield) {
 
 void LLVMVisitor::visit(ExternalFunc *x) {
   func = module->getFunction(x->referenceString()); // inserted during module visit
+  coro = {};
   assert(func);
   func->setDoesNotThrow();
 }
 
 void LLVMVisitor::visit(InternalFunc *x) {
   func = module->getFunction(x->referenceString()); // inserted during module visit
+  coro = {};
   assert(func);
   func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
   block = llvm::BasicBlock::Create(context, "entry", func);
@@ -441,6 +451,7 @@ void LLVMVisitor::visit(InternalFunc *x) {
 
 void LLVMVisitor::visit(LLVMFunc *x) {
   func = module->getFunction(x->referenceString());
+  coro = {};
   if (func)
     return;
   auto *funcType = x->getType()->as<types::FuncType>();
@@ -515,6 +526,7 @@ void LLVMVisitor::visit(LLVMFunc *x) {
 
 void LLVMVisitor::visit(BodiedFunc *x) {
   func = module->getFunction(x->referenceString()); // inserted during module visit
+  coro = {};
   assert(func);
 
   if (x->hasAttribute("export")) {
@@ -535,7 +547,6 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   assert(funcType);
   auto *entryBlock = llvm::BasicBlock::Create(context, "entry", func);
   llvm::IRBuilder<> builder(entryBlock);
-  coro = {};
 
   // set up arguments and other symbols
   assert(std::distance(func->arg_begin(), func->arg_end()) ==
@@ -708,7 +719,8 @@ void LLVMVisitor::visit(types::FuncType *x) {
   for (const auto &argType : *x) {
     argTypes.push_back(getLLVMType(argType));
   }
-  type = llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false);
+  type =
+      llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false)->getPointerTo();
 }
 
 void LLVMVisitor::visit(types::OptionalType *x) {
@@ -952,7 +964,7 @@ void LLVMVisitor::visit(InsertInstr *x) {
 void LLVMVisitor::visit(CallInstr *x) {
   llvm::IRBuilder<> builder(block);
   process(x->getFunc());
-  llvm::Value *func = value;
+  llvm::Value *f = value;
 
   std::vector<llvm::Value *> args;
   for (const ValuePtr &arg : *x) {
@@ -961,7 +973,7 @@ void LLVMVisitor::visit(CallInstr *x) {
     args.push_back(value);
   }
 
-  value = call(func, args);
+  value = call(f, args);
 }
 
 void LLVMVisitor::visit(YieldInInstr *x) {
@@ -1065,7 +1077,9 @@ void LLVMVisitor::visit(ReturnInstr *x) {
     process(x->getValue());
   }
   llvm::IRBuilder<> builder(block);
-  if (!voidReturn) {
+  if (coro.exit) {
+    builder.CreateBr(coro.exit);
+  } else if (!voidReturn) {
     builder.CreateRet(value);
   } else {
     builder.CreateRetVoid();
