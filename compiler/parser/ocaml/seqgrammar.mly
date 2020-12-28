@@ -22,7 +22,7 @@
 %token IMPORT FROM GLOBAL PRINT PASS ASSERT DEL TRUE FALSE NONE
 /* %token ARROW */
 /* operators */
-%token<string> EQ ELLIPSIS ADD SUB MUL DIV FDIV POW MOD
+%token<string> EQ WALRUS ELLIPSIS ADD SUB MUL DIV FDIV POW MOD
 %token<string> PLUSEQ MINEQ MULEQ DIVEQ FDIVEQ POWEQ MODEQ AT GEQ
 %token<string> AND OR NOT IS ISNOT IN NOTIN EEQ NEQ LESS LEQ GREAT
 %token<string> PIPE PPIPE SPIPE B_AND B_OR B_XOR B_NOT B_LSH B_RSH
@@ -94,6 +94,7 @@ expr:
   | pipe_expr IF pipe_expr ELSE expr { $loc, IfExpr (flat_pipe $3, flat_pipe $1, $5) }
   | TYPEOF LP expr RP { $loc, TypeOf $3 }
   | LAMBDA separated_list(COMMA, ID) COLON expr { $loc, Lambda ($2, $4) }
+  | walrus { $1 }
   /* | LP separated_list(COMMA, ID) ARROW pipe_expr RP { $loc, Lambda ($2, $4) } */
 expr_list: separated_nonempty_list(COMMA, expr) { $1 }
 
@@ -158,6 +159,11 @@ index_term:
   | expr? COLON expr? { $loc, Slice ($1, $3, None) }
   | expr? COLON expr? COLON expr? { $loc, Slice ($1, $3, $5) }
 
+
+walrus:
+  | ID WALRUS expr { $loc, AssignExpr (($loc($1), Id $1), $3) }
+  /* | LP FL(COMMA, ID) RP WALRUS expr { $loc, AssignExpr ($loc($1), Id $1) $3 } */
+
 /* 3. Statements */
 statement:
   | FLNE(SEMICOLON, small_statement) NL { List.concat $1 }
@@ -167,7 +173,8 @@ small_statement:
   | expr_list { List.map (fun expr -> fst expr, Expr expr) $1 }
   | small_single_statement { [$1] }
   | DEL FLNE(COMMA, expr) { List.map (fun e -> fst e, Del e) $2 }
-  | ASSERT FLNE(COMMA, expr) { List.map (fun e -> fst e, Assert e) $2 }
+  | ASSERT expr { [$loc, Assert ($2, None)] }
+  | ASSERT expr COMMA STRING { [$loc, Assert ($2, Some ($loc($4), String $4))] }
   | GLOBAL FLNE(COMMA, ID) { List.map (fun e -> $loc, Global e) $2 }
   | print_statement { $1 }
   | import_statement { $1 }
@@ -315,6 +322,7 @@ dataclass_member:
     { Some ($loc, Assign (($loc, Id $1), Some $5, Some $3)) }
   | string NL { Some ($loc, Expr ($loc, String $1)) }
   | func_statement { Some (List.hd $1) }
+  | class_statement { Some $1 }
 
 /* typ:
   | type_head NL { $loc, Type (snd $1) }

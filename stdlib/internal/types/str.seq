@@ -42,7 +42,6 @@ class str:
         return str(p, len3)
     def c_str(self):
         n = self.__len__()
-        assert n >= 0
         p = cobj(n + 1)
         str.memcpy(p, self.ptr, n)
         p[n] = byte(0)

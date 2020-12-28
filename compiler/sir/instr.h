@@ -262,19 +262,25 @@ private:
 /// Instr representing a Python yield expression.
 class YieldInInstr : public AcceptorExtend<YieldInInstr, Instr> {
 private:
-  /// @param the type of the value being yielded in.
+  /// the type of the value being yielded in.
   types::Type *type;
+  /// whether or not to suspend
+  bool suspend;
 
 public:
   static const char NodeId;
 
   /// Constructs a yield in instruction.
   /// @param type the type of the value being yielded in
+  /// @param supsend whether to suspend
   /// @param name the instruction's name
-  explicit YieldInInstr(types::Type *type, std::string name = "")
-      : AcceptorExtend(std::move(name)), type(type) {}
+  explicit YieldInInstr(types::Type *type, bool suspend = false, std::string name = "")
+      : AcceptorExtend(std::move(name)), type(type), suspend(suspend) {}
 
   types::Type *getType() const override { return type; }
+
+  /// @return true if the instruction suspends
+  bool isSuspending() const { return suspend; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;

@@ -39,6 +39,7 @@ SuiteStmt::SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, StmtPtr stmt3, bool o)
   flatten(move(stmt2), this->stmts);
   flatten(move(stmt3), this->stmts);
 }
+SuiteStmt::SuiteStmt() : ownBlock(false) {}
 SuiteStmt::SuiteStmt(const SuiteStmt &stmt)
     : Stmt(stmt), stmts(ast::clone(stmt.stmts)), ownBlock(stmt.ownBlock) {}
 string SuiteStmt::toString() const { return format("({})", combine(stmts, "\n  ")); }
@@ -80,7 +81,7 @@ AssignStmt::AssignStmt(const AssignStmt &stmt)
     : Stmt(stmt), lhs(ast::clone(stmt.lhs)), rhs(ast::clone(stmt.rhs)),
       type(ast::clone(stmt.type)) {}
 string AssignStmt::toString() const {
-  return format("[ASSIGN {} {}{}]", lhs->toString(), rhs->toString(),
+  return format("[ASSIGN {} {}{}]", lhs->toString(), rhs ? rhs->toString() : "-",
                 type ? format(" TYPE={}", type->toString()) : "");
 }
 StmtPtr AssignStmt::clone() const { return make_unique<AssignStmt>(*this); }
@@ -115,18 +116,19 @@ string YieldStmt::toString() const {
 StmtPtr YieldStmt::clone() const { return make_unique<YieldStmt>(*this); }
 void YieldStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-AssertStmt::AssertStmt(ExprPtr expr) : expr(move(expr)) {}
+AssertStmt::AssertStmt(ExprPtr expr, ExprPtr message)
+    : expr(move(expr)), message(move(message)) {}
 AssertStmt::AssertStmt(const AssertStmt &stmt)
-    : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
-string AssertStmt::toString() const { return format("[ASSERT {}]", expr->toString()); }
+    : Stmt(stmt), expr(ast::clone(stmt.expr)), message(ast::clone(stmt.message)) {}
+string AssertStmt::toString() const {
+  return format("[ASSERT {}{}]", expr->toString(),
+                message ? " " + message->toString() : "");
+}
 StmtPtr AssertStmt::clone() const { return make_unique<AssertStmt>(*this); }
 void AssertStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
 WhileStmt::WhileStmt(ExprPtr cond, StmtPtr suite, StmtPtr elseSuite)
-    : cond(move(cond)), suite(move(suite)), elseSuite(move(elseSuite)) {
-  if (elseSuite && elseSuite->getSuite() && elseSuite->getSuite()->stmts.empty())
-    this->elseSuite = nullptr;
-}
+    : cond(move(cond)), suite(move(suite)), elseSuite(move(elseSuite)) {}
 WhileStmt::WhileStmt(const WhileStmt &stmt)
     : Stmt(stmt), cond(ast::clone(stmt.cond)), suite(ast::clone(stmt.suite)),
       elseSuite(ast::clone(stmt.elseSuite)) {}
@@ -139,8 +141,6 @@ void WhileStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
 ForStmt::ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite)
     : var(move(var)), iter(move(iter)), suite(move(suite)), elseSuite(move(elseSuite)) {
-  if (elseSuite && elseSuite->getSuite() && elseSuite->getSuite()->stmts.empty())
-    this->elseSuite = nullptr;
 }
 ForStmt::ForStmt(const ForStmt &stmt)
     : Stmt(stmt), var(ast::clone(stmt.var)), iter(ast::clone(stmt.iter)),
@@ -365,9 +365,11 @@ string AssignMemberStmt::toString() const {
 StmtPtr AssignMemberStmt::clone() const { return make_unique<AssignMemberStmt>(*this); }
 void AssignMemberStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
-UpdateStmt::UpdateStmt(ExprPtr lhs, ExprPtr rhs) : lhs(move(lhs)), rhs(move(rhs)) {}
+UpdateStmt::UpdateStmt(ExprPtr lhs, ExprPtr rhs, bool isAtomic)
+    : lhs(move(lhs)), rhs(move(rhs)), isAtomic(isAtomic) {}
 UpdateStmt::UpdateStmt(const UpdateStmt &stmt)
-    : Stmt(stmt), lhs(ast::clone(stmt.lhs)), rhs(ast::clone(stmt.rhs)) {}
+    : Stmt(stmt), lhs(ast::clone(stmt.lhs)), rhs(ast::clone(stmt.rhs)),
+      isAtomic(stmt.isAtomic) {}
 string UpdateStmt::toString() const {
   return format("[UPDATE {} {}]", lhs->toString(), rhs->toString());
 }

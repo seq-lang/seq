@@ -37,11 +37,31 @@ class SimplifyVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr> 
   /// Shared simplification context.
   shared_ptr<SimplifyContext> ctx;
   /// A pointer to a vector of statements that are to be prepended before the current
-  /// statement. Useful for prepending a function definitions that are induced by a
+  /// statement. Useful for prepending lambda function definition that are induced by a
   /// child expression node. Pointer is needed as visitors can be spawned recursively.
   shared_ptr<vector<StmtPtr>> prependStmts;
 
-  shared_ptr<vector<StmtPtr>> preambleStmts;
+  /// Simplification step will divide the input AST into four sub-ASTs that are stored
+  /// here:
+  ///   - Type (class) signatures
+  ///   - Global variable signatures (w/o rhs)
+  ///   - Function signatures
+  ///   - Top-level statements.
+  /// Each of these divisions will be populated via first-come first-serve method.
+  /// This way, type and global signatures will be exposed to all executable statements,
+  /// and we can assume that there won't be any back-references (any signatures depends
+  /// only on the previously seen signatures). We also won't have to maintain complex
+  /// structures to access global variables, or worry about recursive imports.
+  /// This approach also allows us to generate global types without having to
+  /// worry about initialization order.
+  struct Preamble {
+    vector<StmtPtr> types;
+    vector<StmtPtr> globals;
+    vector<StmtPtr> functions;
+  };
+  /// Preamble contains shared definition statements and is shared across all visitors
+  /// (in all modules). See Preamble (type) for more details.
+  shared_ptr<Preamble> preamble;
 
   /// Each new expression is stored here (as visit() does not return anything) and
   /// later returned by a transform() call.
@@ -57,13 +77,17 @@ public:
   /// Static method that applies SimplifyStage on a given AST node.
   /// @param cache Pointer to the shared transformation cache.
   /// @param file Filename of a AST node.
-  /// @param barebones Set if barebones standard library is used during testing.
+  /// @param barebones Set if a bare-bones standard library is used during testing.
   static StmtPtr apply(shared_ptr<Cache> cache, const StmtPtr &node, const string &file,
                        bool barebones = false);
 
+  /// TODO
+  static StmtPtr apply(shared_ptr<SimplifyContext> cache, const StmtPtr &node,
+                       const string &file);
+
 public:
   explicit SimplifyVisitor(shared_ptr<SimplifyContext> ctx,
-                           shared_ptr<vector<StmtPtr>> preamble,
+                           shared_ptr<Preamble> preamble,
                            shared_ptr<vector<StmtPtr>> prepend = nullptr);
 
   /// Transform an AST expression node.
@@ -73,8 +97,6 @@ public:
   StmtPtr transform(const StmtPtr &stmt) override;
   /// Transform an AST pattern node.
   PatternPtr transform(const PatternPtr &pattern) override;
-  /// Transform an AST expression node (pointer convenience method).
-  ExprPtr transform(const Expr *expr);
   /// Transform an AST statement node (pointer convenience method).
   StmtPtr transform(const Stmt *stmt);
   /// Transform an AST expression node.
@@ -112,6 +134,7 @@ public:
   void visit(const SliceExpr *) override;
   void visit(const TypeOfExpr *) override;
   void visit(const LambdaExpr *) override;
+  void visit(const AssignExpr *) override;
 
   void visit(const SuiteStmt *) override;
   void visit(const ContinueStmt *) override;
@@ -237,7 +260,16 @@ private:
   /// If a return type is nullptr, the function just returns f (raw pyobj).
   StmtPtr parsePythonImport(const Expr *what, const vector<Param> &args,
                             const Expr *ret, const string &altName);
-  /// Transform a Python codeblock @python def foo(x: int, y) -> int: <python code> to:
+  /// Import a new file (with a given module name) into its own context and wrap its
+  /// top-level statements into a function to support Python-style runtime import
+  /// loading. Once import is done, generate:
+  ///   _import_N_done = False
+  ///   def _import_N():
+  ///     global <imported global variables>...
+  ///     __name__ = moduleName
+  ///     <imported top-level statements>.
+  void parseNewImport(const string &file, const string &moduleName);
+  /// Transform a Python code-block @python def foo(x: int, y) -> int: <python code> to:
   ///   pyobj._exec("def foo(x, y): <python code>")
   ///   from python import __main__.foo(int, _) -> int
   StmtPtr parsePythonDefinition(const string &name, const vector<Param> &args,

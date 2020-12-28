@@ -274,38 +274,40 @@ class int:
     def popcnt(self):
         return Int[64](self).popcnt()
     @llvm
-    def __atomic_xchg__(self: Ptr[int], b: int) -> void:
-        %tmp = atomicrmw xchg i64* %self, i64 %b seq_cst
+    def __atomic_xchg__(d: Ptr[int], b: int) -> void:
+        %tmp = atomicrmw xchg i64* %d, i64 %b seq_cst
         ret void
     @llvm
-    def __atomic_add__(self: Ptr[int], b: int) -> int:
-        %tmp = atomicrmw add i64* %self, i64 %b seq_cst
+    def __atomic_add__(d: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw add i64* %d, i64 %b seq_cst
         ret i64 %tmp
     @llvm
-    def __atomic_sub__(self: Ptr[int], b: int) -> int:
-        %tmp = atomicrmw sub i64* %self, i64 %b seq_cst
+    def __atomic_sub__(d: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw sub i64* %d, i64 %b seq_cst
         ret i64 %tmp
     @llvm
-    def __atomic_and__(self: Ptr[int], b: int) -> int:
-        %tmp = atomicrmw and i64* %self, i64 %b seq_cst
+    def __atomic_and__(d: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw and i64* %d, i64 %b seq_cst
         ret i64 %tmp
     @llvm
-    def __atomic_nand__(self: Ptr[int], b: int) -> int:
-        %tmp = atomicrmw nand i64* %self, i64 %b seq_cst
+    def __atomic_nand__(d: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw nand i64* %d, i64 %b seq_cst
         ret i64 %tmp
     @llvm
-    def __atomic_or__(self: Ptr[int], b: int) -> int:
-        %tmp = atomicrmw or i64* %self, i64 %b seq_cst
+    def _atomic_or(_d__: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw or i64* %d, i64 %b seq_cst
         ret i64 %tmp
     @llvm
-    def __atomic_xor__(self: Ptr[int], b: int) -> int:
-        %tmp = atomicrmw xor i64* %self, i64 %b seq_cst
+    def _atomic_xor(d: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw xor i64* %d, i64 %b seq_cst
+        ret i64 %tmp
+    def __atomic_xor__(self, b: int) -> int:
+        return int._atomic_xor(__ptr__(self), b)
+    @llvm
+    def __atomic_min__(d: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw min i64* %d, i64 %b seq_cst
         ret i64 %tmp
     @llvm
-    def __atomic_min__(self: Ptr[int], b: int) -> int:
-        %tmp = atomicrmw min i64* %self, i64 %b seq_cst
-        ret i64 %tmp
-    @llvm
-    def __atomic_max__(self: Ptr[int], b: int) -> int:
-        %tmp = atomicrmw min i64* %self, i64 %b seq_cst
+    def __atomic_max__(d: Ptr[int], b: int) -> int:
+        %tmp = atomicrmw max i64* %d, i64 %b seq_cst
         ret i64 %tmp

@@ -91,7 +91,7 @@ std::ostream &YieldInInstr::doFormat(std::ostream &os) const {
 }
 
 Value *YieldInInstr::doClone() const {
-  return getModule()->Nrs<YieldInInstr>(getSrcInfo(), type, getName());
+  return getModule()->Nrs<YieldInInstr>(getSrcInfo(), type, suspend, getName());
 }
 
 const char TernaryInstr::NodeId = 0;

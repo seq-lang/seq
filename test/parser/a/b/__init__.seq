@@ -3,3 +3,9 @@ def har():
     print 'a.b.har'
 
 from .. import foo as fx
+
+class A:
+    class B:
+        def b_foo():
+            print 'a.b.A.B.b_foo()'
+            return 1

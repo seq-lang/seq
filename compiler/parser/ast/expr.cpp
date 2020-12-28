@@ -326,6 +326,16 @@ string YieldExpr::toString() const { return "YIELD"; }
 ExprPtr YieldExpr::clone() const { return make_unique<YieldExpr>(*this); }
 void YieldExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
 
+AssignExpr::AssignExpr(ExprPtr var, ExprPtr expr)
+    : Expr(), var(move(var)), expr(move(expr)) {}
+AssignExpr::AssignExpr(const AssignExpr &expr)
+    : Expr(expr), var(ast::clone(expr.var)), expr(ast::clone(expr.expr)) {}
+string AssignExpr::toString() const {
+  return wrapType(format("WALRUS {} {}", var->toString(), expr->toString()));
+}
+ExprPtr AssignExpr::clone() const { return make_unique<AssignExpr>(*this); }
+void AssignExpr::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+
 StmtExpr::StmtExpr(vector<unique_ptr<Stmt>> &&stmts, ExprPtr expr)
     : Expr(), stmts(move(stmts)), expr(move(expr)) {}
 StmtExpr::StmtExpr(const StmtExpr &expr)

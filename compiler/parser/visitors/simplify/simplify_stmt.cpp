@@ -25,7 +25,7 @@ StmtPtr SimplifyVisitor::transform(const Stmt *stmt) {
   if (!stmt)
     return nullptr;
 
-  SimplifyVisitor v(ctx, preambleStmts);
+  SimplifyVisitor v(ctx, preamble);
   v.setSrcInfo(stmt->getSrcInfo());
   stmt->accept(v);
   if (!v.prependStmts->empty()) {
@@ -142,7 +142,24 @@ void SimplifyVisitor::visit(const YieldFromStmt *stmt) {
 }
 
 void SimplifyVisitor::visit(const AssertStmt *stmt) {
-  resultStmt = N<AssertStmt>(transform(stmt->expr));
+  seqassert(!stmt->message || stmt->message->getString(),
+            "assert message not a string");
+
+  if (ctx->cache->testFlags && ctx->getLevel() &&
+      ctx->bases.back().attributes & FLAG_TEST)
+    resultStmt = transform(N<IfStmt>(
+        N<UnaryExpr>("!", clone(stmt->expr)),
+        N<ExprStmt>(N<CallExpr>(
+            N<IdExpr>(".seq_assert_test"), N<StringExpr>(stmt->getSrcInfo().file),
+            N<IntExpr>(stmt->getSrcInfo().line),
+            stmt->message ? clone(stmt->message) : N<StringExpr>("")))));
+  else
+    resultStmt = transform(
+        N<IfStmt>(N<UnaryExpr>("!", clone(stmt->expr)),
+                  N<ThrowStmt>(N<CallExpr>(
+                      N<IdExpr>(".seq_assert"), N<StringExpr>(stmt->getSrcInfo().file),
+                      N<IntExpr>(stmt->getSrcInfo().line),
+                      stmt->message ? clone(stmt->message) : N<StringExpr>("")))));
 }
 
 /// Transform while cond to:
@@ -155,14 +172,14 @@ void SimplifyVisitor::visit(const WhileStmt *stmt) {
   ExprPtr cond = N<CallExpr>(N<DotExpr>(clone(stmt->cond), "__bool__"));
   string breakVar;
   StmtPtr assign = nullptr;
-  if (stmt->elseSuite) {
+  if (stmt->elseSuite && stmt->elseSuite->firstInBlock()) {
     breakVar = ctx->cache->getTemporaryVar("no_break");
     assign = transform(N<AssignStmt>(N<IdExpr>(breakVar), N<BoolExpr>(true)));
   }
   ctx->loops.push_back(breakVar); // needed for transforming break in loop..else blocks
   StmtPtr whileStmt = N<WhileStmt>(transform(cond), transform(stmt->suite));
   ctx->loops.pop_back();
-  if (stmt->elseSuite) {
+  if (stmt->elseSuite && stmt->elseSuite->firstInBlock()) {
     resultStmt = N<SuiteStmt>(
         move(assign), move(whileStmt),
         N<IfStmt>(transform(N<CallExpr>(N<DotExpr>(N<IdExpr>(breakVar), "__bool__"))),
@@ -184,36 +201,32 @@ void SimplifyVisitor::visit(const WhileStmt *stmt) {
 ///   for i in it.__iter__(): ...
 ///   if no_break.__bool__(): ...
 void SimplifyVisitor::visit(const ForStmt *stmt) {
-  ExprPtr iter = N<CallExpr>(N<DotExpr>(clone(stmt->iter), "__iter__"));
-
+  ExprPtr iter = transform(N<CallExpr>(N<DotExpr>(clone(stmt->iter), "__iter__")));
   string breakVar;
-  StmtPtr assign = nullptr;
-  std::unique_ptr<ForStmt> forStmt = nullptr;
-  if (stmt->elseSuite) {
+  StmtPtr assign = nullptr, forStmt = nullptr;
+  if (stmt->elseSuite && stmt->elseSuite->firstInBlock()) {
     breakVar = ctx->cache->getTemporaryVar("no_break");
     assign = transform(N<AssignStmt>(N<IdExpr>(breakVar), N<BoolExpr>(true)));
   }
   ctx->loops.push_back(breakVar); // needed for transforming break in loop..else blocks
   ctx->addBlock();
   if (auto i = stmt->var->getId()) {
-    string varName = i->value;
-    ctx->add(SimplifyItem::Var, varName);
-    forStmt = N<ForStmt>(transform(stmt->var), transform(iter), transform(stmt->suite));
+    ctx->add(SimplifyItem::Var, i->value, ctx->generateCanonicalName(i->value));
+    forStmt = N<ForStmt>(transform(stmt->var), move(iter), transform(stmt->suite));
   } else {
     string varName = ctx->cache->getTemporaryVar("for");
-    ctx->add(SimplifyItem::Var, varName);
+    ctx->add(SimplifyItem::Var, varName, varName);
     auto var = N<IdExpr>(varName);
     vector<StmtPtr> stmts;
     stmts.push_back(N<AssignStmt>(clone(stmt->var), clone(var)));
     stmts.push_back(clone(stmt->suite));
-    forStmt =
-        N<ForStmt>(clone(var), transform(iter), transform(N<SuiteStmt>(move(stmts))));
+    forStmt = N<ForStmt>(clone(var), move(iter), transform(N<SuiteStmt>(move(stmts))));
   }
 
   ctx->popBlock();
   ctx->loops.pop_back();
 
-  if (stmt->elseSuite) {
+  if (stmt->elseSuite && stmt->elseSuite->firstInBlock()) {
     resultStmt = N<SuiteStmt>(
         move(assign), move(forStmt),
         N<IfStmt>(transform(N<CallExpr>(N<DotExpr>(N<IdExpr>(breakVar), "__bool__"))),
@@ -258,7 +271,7 @@ void SimplifyVisitor::visit(const MatchStmt *stmt) {
   for (auto ci = 0; ci < stmt->cases.size(); ci++) {
     ctx->addBlock();
     if (auto p = CAST(stmt->patterns[ci], BoundPattern)) {
-      ctx->add(SimplifyItem::Var, p->var);
+      ctx->add(SimplifyItem::Var, p->var, ctx->generateCanonicalName(p->var));
       patterns.push_back(transform(p->pattern));
       cases.push_back(transform(stmt->cases[ci]));
     } else {
@@ -275,9 +288,12 @@ void SimplifyVisitor::visit(const TryStmt *stmt) {
   auto suite = transform(stmt->suite);
   for (auto &ctch : stmt->catches) {
     ctx->addBlock();
-    if (!ctch.var.empty())
-      ctx->add(SimplifyItem::Var, ctch.var);
-    catches.push_back({ctch.var, transformType(ctch.exc.get()), transform(ctch.suite)});
+    auto var = ctch.var;
+    if (!ctch.var.empty()) {
+      var = ctx->generateCanonicalName(ctch.var);
+      ctx->add(SimplifyItem::Var, ctch.var, var);
+    }
+    catches.push_back({var, transformType(ctch.exc.get()), transform(ctch.suite)});
     ctx->popBlock();
   }
   resultStmt = N<TryStmt>(move(suite), move(catches), transform(stmt->finally));
@@ -329,15 +345,21 @@ void SimplifyVisitor::visit(const GlobalStmt *stmt) {
   if (!val || !val->isVar())
     error("identifier '{}' not found", stmt->var);
   if (!val->getBase().empty())
-    error("not a global variable");
-  val->global = true;
+    error("not a top-level variable");
   seqassert(!val->canonicalName.empty(), "'{}' does not have a canonical name",
             stmt->var);
-  ctx->add(SimplifyItem::Var, stmt->var, val->canonicalName);
+  ctx->cache->globals.insert(val->canonicalName);
+  val->global = true;
+  ctx->add(SimplifyItem::Var, stmt->var, val->canonicalName, true);
 }
 
-/// Import a module into its own context. If a module has not been imported before,
-/// execute its executable statements at the current location. See below for details.
+/// Import a module into its own context.
+/// Unless we are loading the standard library, each import statement is replaced with:
+///   if not _import_N_done:
+///     _import_N()
+///     _import_N_done = True
+/// to make sure that the first _executed_ import statement executes its statements
+/// (like Python). See parseNewImport() and below for details.
 ///
 /// This function also handles FFI imports (C, Python etc). For the details, see
 /// parseCImport(), parseCDylibImport() and parsePythonImport().
@@ -387,70 +409,21 @@ void SimplifyVisitor::visit(const ImportStmt *stmt) {
   if (file.empty())
     error("cannot locate import '{}'", join(dirs, "."));
 
-  auto import = ctx->cache->imports.find(file);
-  // If the imported file has not been seen before, load it and cache it
-  if (import == ctx->cache->imports.end()) {
-    // Use a clean context for the new file.
-    auto ictx = make_shared<SimplifyContext>(file, ctx->cache);
-    ictx->isStdlibLoading = ctx->isStdlibLoading;
-    import = ctx->cache->imports.insert({file, {file, ictx}}).first;
-    StmtPtr sf = parseFile(file);
-    auto sn = SimplifyVisitor(ictx, preambleStmts).transform(sf);
-    if (ctx->isStdlibLoading) {
-      resultStmt = N<SuiteStmt>(move(sn), true);
-    } else {
-      // LOG("importing {}", file);
-      seqassert(preambleStmts, "preamble not set");
-      import->second.importVar = ctx->cache->getTemporaryVar("import", '.');
-      // imported = False
-      preambleStmts->emplace_back(N<AssignStmt>(
-          N<IdExpr>(import->second.importVar + "_loaded"), N<BoolExpr>(false)));
-      vector<StmtPtr> stmts;
-      vector<string> globalVars;
-      auto processStmt = [&](StmtPtr &s) {
-        if (s->getFunction() || s->getClass()) {
-          preambleStmts->emplace_back(move(s));
-        } else if (s->getAssign() && s->getAssign()->lhs->getId()) {
-          auto a = const_cast<AssignStmt *>(s->getAssign());
-          auto val = ictx->find(a->lhs->getId()->value);
-          seqassert(val, "cannot locate '{}' in imported file {}",
-                    s->getAssign()->lhs->getId()->value, file);
-          if (val->kind == SimplifyItem::Var && val->global && val->base.empty()) {
-            globalVars.emplace_back(val->canonicalName);
-            preambleStmts->emplace_back(
-                N<AssignStmt>(N<IdExpr>(val->canonicalName), clone(a->type)));
-            stmts.push_back(N<UpdateStmt>(move(a->lhs), move(a->rhs)));
-          } else {
-            stmts.push_back(move(s));
-          }
-        } else {
-          stmts.push_back(move(s));
-        }
-      };
-      if (auto st = const_cast<SuiteStmt *>(sn->getSuite()))
-        for (auto &ss : st->stmts)
-          processStmt(ss);
-      else
-        processStmt(sn);
-      // Add it to the toplevel manually and set ATTR_BUILTIN to realize them ASAP.
-      ctx->cache->asts[import->second.importVar] = N<FunctionStmt>(
-          import->second.importVar, nullptr, vector<Param>{}, vector<Param>{},
-          N<SuiteStmt>(move(stmts)), vector<string>{ATTR_BUILTIN});
-      preambleStmts->emplace_back(
-          N<FunctionStmt>(import->second.importVar, nullptr, vector<Param>{},
-                          vector<Param>{}, nullptr, vector<string>{ATTR_BUILTIN}));
-    }
-  }
+  // If the imported file has not been seen before, load it.
+  if (ctx->cache->imports.find(file) == ctx->cache->imports.end())
+    parseNewImport(file, dirs[0]);
+  const auto &import = ctx->cache->imports[file];
+  string importVar = import.importVar;
+  string importDoneVar = importVar + "_done";
+
   // Import variable is empty if it has already been loaded during the standard library
   // initialization.
-  if (!ctx->isStdlibLoading && !import->second.importVar.empty()) {
+  if (!ctx->isStdlibLoading && !importVar.empty()) {
     vector<StmtPtr> ifSuite;
-    ifSuite.emplace_back(N<ExprStmt>(N<CallExpr>(N<IdExpr>(import->second.importVar))));
-    ifSuite.emplace_back(N<UpdateStmt>(N<IdExpr>(import->second.importVar + "_loaded"),
-                                       N<BoolExpr>(true)));
+    ifSuite.emplace_back(N<ExprStmt>(N<CallExpr>(N<IdExpr>(importVar))));
+    ifSuite.emplace_back(N<UpdateStmt>(N<IdExpr>(importDoneVar), N<BoolExpr>(true)));
     resultStmt =
-        N<IfStmt>(N<CallExpr>(N<DotExpr>(
-                      N<IdExpr>(import->second.importVar + "_loaded"), "__invert__")),
+        N<IfStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>(importDoneVar), "__invert__")),
                   N<SuiteStmt>(move(ifSuite)));
   }
 
@@ -461,18 +434,21 @@ void SimplifyVisitor::visit(const ImportStmt *stmt) {
     // Case 2: from foo import *
     seqassert(stmt->as.empty(), "renamed star-import");
     // Just copy all symbols from import's context here.
-    for (auto &i : *(import->second.ctx))
-      if (i.second.front().second->isGlobal())
+    for (auto &i : *(import.ctx))
+      if (i.second.front().second->isGlobal()) {
         ctx->add(i.first, i.second.front().second);
+        ctx->add(i.second.front().second->canonicalName, i.second.front().second);
+      }
   } else {
     // Case 3: from foo import bar
     auto i = stmt->what->getId();
     seqassert(i, "not a valid import what expression");
-    auto c = import->second.ctx->find(i->value);
+    auto c = import.ctx->find(i->value);
     // Make sure that we are importing an existing global symbol
     if (!c || !c->isGlobal())
       error("symbol '{}' not found in {}", i->value, file);
     ctx->add(stmt->as.empty() ? i->value : stmt->as, c);
+    ctx->add(c->canonicalName, c);
   }
 }
 
@@ -504,12 +480,23 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
 
   ctx->bases.emplace_back(SimplifyContext::Base{canonicalName}); // Add new base...
   ctx->addBlock();                                               // ... and a block!
+  // Set atomic flag if @atomic attribute is present.
+  if (in(stmt->attributes, ATTR_ATOMIC))
+    ctx->bases.back().attributes |= FLAG_ATOMIC;
+  if (in(stmt->attributes, ATTR_TEST))
+    ctx->bases.back().attributes |= FLAG_TEST;
   // Add generic identifiers to the context
   vector<Param> newGenerics;
   for (auto &g : stmt->generics) {
-    ctx->add(SimplifyItem::Type, g.name, "", false, g.type != nullptr);
+    auto genName = ctx->generateCanonicalName(g.name);
+    ctx->add(SimplifyItem::Type, g.name, genName, false, g.type != nullptr);
+    if (g.type && !g.type->isId("int"))
+      error("only integer static generics are supported");
+    preamble->types.push_back(
+        N<ClassStmt>(genName, vector<Param>{}, vector<Param>{}, nullptr,
+                     map<string, string>{{ATTR_GENERIC, g.type ? "int" : ""}}));
     newGenerics.emplace_back(
-        Param{g.name, transformType(g.type.get()), transform(g.deflt.get(), true)});
+        Param{genName, transformType(g.type.get()), transform(g.deflt.get(), true)});
   }
   // Parse function arguments and add them to the context.
   vector<Param> args;
@@ -520,7 +507,8 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
     if (!typeAst && isClassMember && ia == 0 && a.name == "self")
       typeAst = transformType(ctx->bases[ctx->bases.size() - 2].ast.get());
     args.emplace_back(Param{a.name, move(typeAst), transform(a.deflt)});
-    ctx->add(SimplifyItem::Var, a.name);
+    // Warning: parameter names are not canonized.
+    ctx->add(SimplifyItem::Var, a.name, a.name);
   }
   // Parse the return type.
   if (!stmt->ret && in(stmt->attributes, ATTR_EXTERN_LLVM))
@@ -533,7 +521,7 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
     if (in(stmt->attributes, ATTR_EXTERN_LLVM))
       suite = parseLLVMDefinition(stmt->suite->firstInBlock());
     else
-      suite = SimplifyVisitor(ctx, preambleStmts).transform(stmt->suite);
+      suite = SimplifyVisitor(ctx, preamble).transform(stmt->suite);
     ctx->popBlock();
   }
 
@@ -561,6 +549,9 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
   if (isClassMember) { // If this is a method...
     // ... set the enclosing class name...
     attributes[ATTR_PARENT_CLASS] = ctx->bases.back().name;
+    // ... add the method to class' method list ...
+    ctx->cache->classes[ctx->bases.back().name].methods[stmt->name].push_back(
+        {canonicalName, nullptr, ctx->extendCount});
     // ... and if the function references outer class variable (by definition a
     // generic), mark it as not static as it needs fully instantiated class to be
     // realized. For example, in class A[T]: def foo(): pass, A.foo() can be realized
@@ -574,11 +565,16 @@ void SimplifyVisitor::visit(const FunctionStmt *stmt) {
                            move(suite), move(attributes));
   // Do not clone suite in the resultStmt: the suite will be accessed later trough the
   // cache.
-  resultStmt =
+  auto fl =
       N<FunctionStmt>(canonicalName, clone(f->ret), clone_nop(f->generics),
                       clone_nop(f->args), nullptr, map<string, string>(f->attributes));
+  if (!parentFunc.empty() || in(f->attributes, ATTR_BUILTIN) ||
+      in(f->attributes, ATTR_EXTERN_C))
+    resultStmt = clone(fl);
+  if (parentFunc.empty())
+    preamble->functions.push_back(move(fl));
   // Make sure to cache this (generic) AST for later realization.
-  ctx->cache->asts[canonicalName] = move(f);
+  ctx->cache->functions[canonicalName].ast = move(f);
 }
 
 /// Transforms type definitions and extensions.
@@ -593,56 +589,78 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
   if (extension && !ctx->bases.empty())
     error("extend is only allowed at the toplevel");
 
-  bool isRecord = stmt->isRecord(); // does it have @tuple
+  bool isRecord = stmt->isRecord(); // does it have @tuple attribute
+
+  // Special name handling is needed becuase of nested classes.
+  string name = stmt->name;
+  if (!ctx->bases.empty() && ctx->bases.back().isType()) {
+    const auto &a = ctx->bases.back().ast;
+    string parentName =
+        a->getId() ? a->getId()->value : a->getIndex()->expr->getId()->value;
+    name = parentName + "." + name;
+  }
 
   // Generate/find class' canonical name (unique ID) and AST
   string canonicalName;
   const ClassStmt *originalAST = nullptr;
+  auto classItem =
+      make_shared<SimplifyItem>(SimplifyItem::Type, "", "", ctx->isToplevel(), false);
   if (!extension) {
-    canonicalName = ctx->generateCanonicalName(stmt->name);
-    seqassert(ctx->bases.empty() || !ctx->bases.back().isType(),
-              "nested classes not yet supported");
+    classItem->canonicalName = canonicalName = ctx->generateCanonicalName(name);
     // Reference types are added to the context at this stage.
     // Record types (tuples) are added after parsing class arguments to prevent
     // recursive record types (that are allowed for reference types).
-    if (!isRecord)
-      ctx->add(SimplifyItem::Type, stmt->name, canonicalName, ctx->isToplevel());
+    if (!isRecord) {
+      ctx->add(name, classItem);
+      ctx->add(canonicalName, classItem);
+    }
     originalAST = stmt;
   } else {
     // Find the canonical name of a class that is to be extended
-    auto val = ctx->find(stmt->name);
+    auto val = ctx->find(name);
     if (!val || val->kind != SimplifyItem::Type)
-      error("cannot find type '{}' to extend", stmt->name);
+      error("cannot find type '{}' to extend", name);
     canonicalName = val->canonicalName;
-    const auto &astIter = ctx->cache->asts.find(canonicalName);
-    seqassert(astIter != ctx->cache->asts.end(), "cannot find AST for {}",
+    const auto &astIter = ctx->cache->classes.find(canonicalName);
+    seqassert(astIter != ctx->cache->classes.end(), "cannot find AST for {}",
               canonicalName);
-    originalAST = astIter->second->getClass();
-    seqassert(originalAST, "AST for {} is not a class", canonicalName);
+    originalAST = astIter->second.ast.get();
     if (originalAST->generics.size() != stmt->generics.size())
       error("generics do not match");
-    for (int i = 0; i < originalAST->generics.size(); i++)
-      if (originalAST->generics[i].name != stmt->generics[i].name)
-        error("generics do not match");
   }
 
   // Add the class base.
+  auto oldBases = move(ctx->bases);
+  ctx->bases = vector<SimplifyContext::Base>();
   ctx->bases.emplace_back(SimplifyContext::Base(canonicalName));
-  ctx->bases.back().ast = N<IdExpr>(stmt->name);
+  ctx->bases.back().ast = N<IdExpr>(name);
 
   // Add generics, if any, to the context.
   ctx->addBlock();
   vector<ExprPtr> genAst;
   vector<Param> newGenerics;
-  for (const auto &g : originalAST->generics) {
-    if (g.deflt)
+  for (int gi = 0; gi < stmt->generics.size(); gi++) {
+    if (stmt->generics[gi].deflt)
       error("default generics not supported in classes");
-    genAst.push_back(N<IdExpr>(g.name));
-    ctx->add(SimplifyItem::Type, g.name, "", false, g.type != nullptr);
-    newGenerics.emplace_back(Param{g.name, transformType(g.type.get()), nullptr});
+    if (stmt->generics[gi].type && !stmt->generics[gi].type->isId("int"))
+      error("only integer static generics are supported");
+    // Extension generic names might not match the original class generic names.
+    // Make sure to use canonical names.
+    auto genName = extension ? originalAST->generics[gi].name
+                             : ctx->generateCanonicalName(stmt->generics[gi].name);
+    genAst.push_back(N<IdExpr>(genName));
+    // Extension generic might not have static type annotation: lift it up from the
+    // original AST.
+    ctx->add(SimplifyItem::Type, stmt->generics[gi].name, genName, false,
+             originalAST->generics[gi].type != nullptr);
+    preamble->types.push_back(
+        N<ClassStmt>(genName, vector<Param>{}, vector<Param>{}, nullptr,
+                     map<string, string>{
+                         {ATTR_GENERIC, originalAST->generics[gi].type ? "int" : ""}}));
+    newGenerics.emplace_back(
+        Param{genName, transformType(originalAST->generics[gi].type.get()), nullptr});
   }
-  ctx->bases.back().ast =
-      N<IndexExpr>(N<IdExpr>(stmt->name), N<TupleExpr>(move(genAst)));
+  ctx->bases.back().ast = N<IndexExpr>(N<IdExpr>(name), N<TupleExpr>(move(genAst)));
 
   // Parse class members (arguments) and methods.
   vector<Param> args;
@@ -656,26 +674,17 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
         error(a.type, "'{}' declared twice", a.name);
       seenMembers.insert(a.name);
       args.emplace_back(Param{a.name, transformType(a.type.get()), nullptr});
+      ctx->cache->classes[canonicalName].fields.push_back({a.name, nullptr});
     }
+    // Now that we are done with arguments, add record type to the context.
+    // However, we need to unroll a block/base, add it, and add the unrolled
+    // block/base back.
     if (isRecord) {
-      // Now that we are done with arguments, add record type to the context.
-      // However, we need to unroll a block/base, add it, and add the unrolled
-      // block/base back.
-      ctx->popBlock();
-      auto old =
-          SimplifyContext::Base{ctx->bases.back().name, clone(ctx->bases.back().ast),
-                                ctx->bases.back().parent};
-      ctx->bases.pop_back();
-      ctx->add(SimplifyItem::Type, stmt->name, canonicalName, ctx->isToplevel());
-      ctx->bases.emplace_back(
-          SimplifyContext::Base{old.name, move(old.ast), old.parent});
-      ctx->addBlock();
-      for (const auto &g : originalAST->generics)
-        ctx->add(SimplifyItem::Type, g.name, "", false, g.type != nullptr);
+      ctx->addPrevBlock(name, classItem);
+      ctx->addPrevBlock(canonicalName, classItem);
     }
-
     // Create a cached AST.
-    ctx->cache->asts[canonicalName] = N<ClassStmt>(
+    ctx->cache->classes[canonicalName].ast = N<ClassStmt>(
         canonicalName, move(newGenerics), move(args), N<SuiteStmt>(vector<StmtPtr>()),
         map<string, string>(stmt->attributes));
 
@@ -711,36 +720,35 @@ void SimplifyVisitor::visit(const ClassStmt *stmt) {
     }
     // Codegen default magic methods and add them to the final AST.
     for (auto &m : magics)
-      fns.push_back(codegenMagic(m, ctx->bases.back().ast.get(), stmt->args, isRecord));
-    fns.push_back(clone(stmt->suite));
-    for (const auto &s : fns)
-      for (auto sp : getClassMethods(s.get()))
-        suite->stmts.push_back(transform(sp));
-  } else {
-    for (auto sp : getClassMethods(stmt->suite.get()))
-      suite->stmts.push_back(transform(sp));
+      suite->stmts.push_back(transform(
+          codegenMagic(m, ctx->bases.back().ast.get(), stmt->args, isRecord)));
   }
+  for (auto sp : getClassMethods(stmt->suite.get()))
+    if (sp && !sp->getClass())
+      suite->stmts.push_back(transform(sp));
   ctx->bases.pop_back();
+  ctx->bases = move(oldBases);
   ctx->popBlock();
 
-  auto c = const_cast<ClassStmt *>(ctx->cache->asts[canonicalName]->getClass());
+  auto c = ctx->cache->classes[canonicalName].ast.get();
   if (!extension) {
     // Update the cached AST.
     seqassert(c, "not a class AST for {}", canonicalName);
-    c->suite = move(suite);
-    // Add parent function attribute (see visit(FunctionStmt*) for details).
-    string parentFunc;
-    for (int i = int(ctx->bases.size()) - 1; i >= 0; i--)
-      if (!ctx->bases[i].isType()) {
-        parentFunc = ctx->bases[i].name;
-        break;
-      }
-    c->attributes[ATTR_PARENT_FUNCTION] = parentFunc;
-    resultStmt = clone(ctx->cache->asts[canonicalName]);
-  } else {
-    resultStmt = N<ClassStmt>(canonicalName, clone_nop(c->generics), vector<Param>{},
-                              move(suite), map<string, string>(stmt->attributes));
+    preamble->types.push_back(clone(ctx->cache->classes[canonicalName].ast));
+    c->suite = clone(suite);
   }
+  // Parse nested classes
+  for (auto sp : getClassMethods(stmt->suite.get()))
+    if (sp && sp->getClass()) {
+      // Add dummy base to fix nested class' name.
+      ctx->bases.emplace_back(SimplifyContext::Base(canonicalName));
+      ctx->bases.back().ast = N<IdExpr>(name);
+      prependStmts->push_back(transform(sp));
+      ctx->bases.pop_back();
+    }
+  resultStmt = N<ClassStmt>(canonicalName, clone_nop(c->generics), vector<Param>{},
+                            move(suite), vector<string>{"extend"});
+  ctx->extendCount += 1;
 }
 
 StmtPtr SimplifyVisitor::parseAssignment(const Expr *lhs, const Expr *rhs,
@@ -762,7 +770,9 @@ StmtPtr SimplifyVisitor::parseAssignment(const Expr *lhs, const Expr *rhs,
       auto val = ctx->find(e->value);
       if (val && val->isVar()) {
         if (val->getBase() == ctx->getBase())
-          return N<UpdateStmt>(transform(lhs, false), transform(rhs, true));
+          return N<UpdateStmt>(transform(lhs, false), transform(rhs, true),
+                               !ctx->bases.empty() &&
+                                   ctx->bases.back().attributes & FLAG_ATOMIC);
         else if (mustExist)
           error("variable '{}' is not global", e->value);
       }
@@ -781,15 +791,27 @@ StmtPtr SimplifyVisitor::parseAssignment(const Expr *lhs, const Expr *rhs,
     }
     // This assignment is a new variable assignment (not a rename or an update).
     // Generate new canonical variable name for this assignment and use it afterwards.
-    // TODO: fix this
-    auto canonical = ctx->isToplevel() ? ctx->generateCanonicalName(e->value) : "";
-    auto l = N<IdExpr>(canonical.empty() ? e->value : canonical);
+    auto canonical = ctx->generateCanonicalName(e->value);
+    auto l = N<IdExpr>(canonical);
     auto r = transform(rhs, true);
-    if (r && r->isType())
-      ctx->add(SimplifyItem::Type, e->value, canonical, ctx->isToplevel());
-    else
-      /// TODO: all top-level variables are global now!
-      ctx->add(SimplifyItem::Var, e->value, canonical, ctx->isToplevel());
+    bool global = ctx->isToplevel();
+    // ctx->moduleName != MODULE_MAIN;
+    // ⚠️ TODO: should we make __main__ top-level variables NOT global by default?
+    // Problem: a = [1]; def foo(): a.append(2) won't work anymore as in Python.
+    if (global)
+      ctx->cache->globals.insert(canonical);
+    // Handle type aliases as well!
+    ctx->add(r && r->isType() ? SimplifyItem::Type : SimplifyItem::Var, e->value,
+             canonical, global);
+    if (ctx->isToplevel()) {
+      if (r && r->isType()) {
+        preamble->types.push_back(N<AssignStmt>(N<IdExpr>(canonical), clone(r)));
+      } else {
+        preamble->globals.push_back(
+            N<AssignStmt>(N<IdExpr>(canonical), nullptr, move(t)));
+        return r ? N<UpdateStmt>(move(l), move(r)) : nullptr;
+      }
+    }
     return N<AssignStmt>(move(l), move(r), move(t));
   } else {
     error("invalid assignment");
@@ -873,11 +895,13 @@ StmtPtr SimplifyVisitor::parseCImport(const string &name, const vector<Param> &a
   }
   ctx->add(SimplifyItem::Func, altName.empty() ? name : altName, canonicalName,
            ctx->isToplevel());
-  auto f = N<FunctionStmt>(
-      canonicalName, ret ? transformType(ret) : transformType(N<IdExpr>("void").get()),
-      vector<Param>(), move(fnArgs), nullptr, vector<string>{ATTR_EXTERN_C});
-  ctx->cache->asts[canonicalName] = clone(f);
-  return f;
+  auto f =
+      clone(ctx->cache->functions[canonicalName].ast = N<FunctionStmt>(
+                canonicalName,
+                ret ? transformType(ret) : transformType(N<IdExpr>("void").get()),
+                vector<Param>(), move(fnArgs), nullptr, vector<string>{ATTR_EXTERN_C}));
+  preamble->functions.push_back(clone(f));
+  return f; // Already in the preamble
 }
 
 StmtPtr SimplifyVisitor::parseCDylibImport(const Expr *dylib, const string &name,
@@ -973,6 +997,74 @@ StmtPtr SimplifyVisitor::parsePythonImport(const Expr *what, const vector<Param>
   return transform(N<FunctionStmt>(
       altName.empty() ? name : altName, ret ? ret->clone() : nullptr, vector<Param>(),
       move(params), N<SuiteStmt>(move(call), move(retStmt)), vector<string>()));
+}
+
+void SimplifyVisitor::parseNewImport(const string &file, const string &moduleName) {
+  // Use a clean context to parse a new file.
+  auto ictx = make_shared<SimplifyContext>(file, ctx->cache);
+  ictx->isStdlibLoading = ctx->isStdlibLoading;
+  ictx->moduleName = moduleName;
+  auto import = ctx->cache->imports.insert({file, {file, ictx}}).first;
+  StmtPtr sf = parseFile(file);
+  auto sn = SimplifyVisitor(ictx, preamble).transform(sf);
+
+  // If we are loading standard library, we won't wrap imports in functions as we assume
+  // that standard library has no recursive imports. We will just append the top-level
+  // statements as-is.
+  if (ctx->isStdlibLoading) {
+    resultStmt = N<SuiteStmt>(move(sn), true);
+  } else {
+    // Generate import function identifier.
+    string importVar = import->second.importVar =
+               ctx->cache->getTemporaryVar("import", '.'),
+           importDoneVar;
+    // import_done = False (global variable that indicates if an import has been loaded)
+    preamble->globals.push_back(N<AssignStmt>(
+        N<IdExpr>(importDoneVar = importVar + "_done"), N<BoolExpr>(false)));
+    ctx->cache->globals.insert(importDoneVar);
+    vector<StmtPtr> stmts;
+    stmts.push_back(nullptr);
+    // __name__ = <import name> (set the Python's __name__ variable)
+    stmts.push_back(
+        N<AssignStmt>(N<IdExpr>("__name__"), N<StringExpr>(ictx->moduleName)));
+    vector<string> globalVars;
+    // We need to wrap all imported top-level statements (not signatures! they have
+    // already been handled and are in the preamble) into a function. We also take the
+    // list of global variables so that we can access them via "global" statement.
+    auto processStmt = [&](StmtPtr &s) {
+      if (s->getAssign() && s->getAssign()->lhs->getId()) { // a = ... globals
+        auto a = const_cast<AssignStmt *>(s->getAssign());
+        auto val = ictx->find(a->lhs->getId()->value);
+        seqassert(val, "cannot locate '{}' in imported file {}",
+                  s->getAssign()->lhs->getId()->value, file);
+        if (val->kind == SimplifyItem::Var && val->global && val->base.empty()) {
+          globalVars.emplace_back(val->canonicalName);
+          stmts.push_back(N<UpdateStmt>(move(a->lhs), move(a->rhs)));
+        } else {
+          stmts.push_back(move(s));
+        }
+      } else if (!s->getFunction() && !s->getClass()) {
+        stmts.push_back(move(s));
+      }
+    };
+    if (auto st = const_cast<SuiteStmt *>(sn->getSuite()))
+      for (auto &ss : st->stmts)
+        processStmt(ss);
+    else
+      processStmt(sn);
+    stmts[0] = N<SuiteStmt>();
+    for (auto &g : globalVars)
+      const_cast<SuiteStmt *>(stmts[0]->getSuite())->stmts.push_back(N<GlobalStmt>(g));
+    // Add a def import(): ... manually to the cache and to the preamble (it won't be
+    // transformed here!) and set ATTR_BUILTIN to realize it during the type-checking
+    // even if it is not called.
+    ctx->cache->functions[importVar].ast =
+        N<FunctionStmt>(importVar, nullptr, vector<Param>{}, vector<Param>{},
+                        N<SuiteStmt>(move(stmts)), vector<string>{ATTR_BUILTIN});
+    preamble->functions.push_back(N<FunctionStmt>(importVar, nullptr, vector<Param>{},
+                                                  vector<Param>{}, nullptr,
+                                                  vector<string>{ATTR_BUILTIN}));
+  }
 }
 
 StmtPtr SimplifyVisitor::parsePythonDefinition(const string &name,
@@ -1073,8 +1165,12 @@ string SimplifyVisitor::generateFunctionStub(int n) {
         vector<string>{ATTR_INTERNAL, ATTR_TRAIT, ATTR_TUPLE});
     stmt->setSrcInfo(ctx->generateSrcInfo());
     // Parse this function in a clean context.
-    SimplifyVisitor(make_shared<SimplifyContext>("<generated>", ctx->cache), nullptr)
-        .transform(stmt);
+    auto nctx = make_shared<SimplifyContext>(FILE_GENERATED, ctx->cache);
+    SimplifyVisitor(nctx, preamble).transform(stmt);
+    auto nval = nctx->find(typeName);
+    seqassert(nval, "cannot find '{}'", typeName);
+    ctx->cache->imports[STDLIB_IMPORT].ctx->addToplevel(typeName, nval);
+    ctx->cache->imports[STDLIB_IMPORT].ctx->addToplevel(nval->canonicalName, nval);
   }
   return "." + typeName;
 }
@@ -1102,7 +1198,7 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
     ret = I("void");
     fargs.emplace_back(Param{"self", typExpr->clone()});
     for (auto &a : args) {
-      stmts.push_back(N<AssignMemberStmt>(I("self"), a.name, I(a.name)));
+      stmts.push_back(N<AssignStmt>(N<DotExpr>(I("self"), a.name), I(a.name)));
       fargs.emplace_back(Param{a.name, clone(a.type),
                                a.deflt ? clone(a.deflt) : N<CallExpr>(clone(a.type))});
     }
@@ -1217,7 +1313,7 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
     ret = I("int");
     stmts.emplace_back(N<AssignStmt>(I("seed"), N<IntExpr>(0)));
     for (auto &a : args)
-      stmts.push_back(N<UpdateStmt>(
+      stmts.push_back(N<AssignStmt>(
           I("seed"),
           N<BinaryExpr>(
               I("seed"), "^",
@@ -1331,8 +1427,8 @@ vector<const Stmt *> SimplifyVisitor::getClassMethods(const Stmt *s) {
         v.push_back(u);
   } else if (s->getExpr() && s->getExpr()->expr->getString()) {
     /// Those are doc-strings, ignore them.
-  } else if (!s->getFunction()) {
-    seqassert(false, "only functions definitions are allowed within classes");
+  } else if (!s->getFunction() && !s->getClass()) {
+    seqassert(false, "only function and class definitions are allowed within classes");
   } else {
     v.push_back(s);
   }

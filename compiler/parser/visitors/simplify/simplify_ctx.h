@@ -20,6 +20,9 @@
 #include "parser/common.h"
 #include "parser/ctx.h"
 
+#define FLAG_ATOMIC 1
+#define FLAG_TEST 2
+
 namespace seq {
 namespace ast {
 
@@ -73,9 +76,11 @@ struct SimplifyContext : public Context<SimplifyItem> {
     /// default. Used to infer a relationship between a function and its base class
     /// (e.g. is it a class function or a method).
     int parent;
+    /// Tracks function attributes (e.g. if it has @atomic or @test attributes).
+    int attributes;
 
-    explicit Base(string name, ExprPtr ast = nullptr, int parent = -1)
-        : name(move(name)), ast(move(ast)), parent(parent) {}
+    explicit Base(string name, ExprPtr ast = nullptr, int parent = -1,
+                  int attributes = 0);
     bool isType() const { return ast != nullptr; }
   };
   /// A stack of bases enclosing the current statement (the topmost base is the last
@@ -93,6 +98,14 @@ struct SimplifyContext : public Context<SimplifyItem> {
   vector<set<string>> captures;
   /// True if standard library is being loaded.
   bool isStdlibLoading;
+  /// Stores the count of observed extend statements. Used to track class method ages
+  /// and prevent the usage of an extended method before it was seen.
+  int extendCount;
+  /// Current module name (Python's __name__). The default module is __main__.
+  string moduleName;
+  /// Tracks if we are in a dependent part of a short-circuiting expression (e.g. b in a
+  /// and b) to disallow assignment expressions there.
+  bool canAssign;
 
 public:
   SimplifyContext(string filename, shared_ptr<Cache> cache);

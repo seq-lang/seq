@@ -56,6 +56,7 @@ public:
   virtual void visit(const TypeOfExpr *);
   virtual void visit(const LambdaExpr *);
   virtual void visit(const YieldExpr *);
+  virtual void visit(const AssignExpr *);
   virtual void visit(const PtrExpr *);
   virtual void visit(const TupleIndexExpr *);
   virtual void visit(const StackAllocExpr *);

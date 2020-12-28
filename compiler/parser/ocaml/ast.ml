@@ -38,6 +38,7 @@ type texpr =
   | TypeOf of texpr ann
   | Lambda of (string list * texpr ann)
   | YieldTo of unit
+  | AssignExpr of (texpr ann * texpr ann)
 
 and tcomprehension =
   { var : texpr ann
@@ -62,7 +63,7 @@ type tstmt =
   | Print of texpr ann
   | Return of texpr ann option
   | Yield of texpr ann option
-  | Assert of texpr ann
+  | Assert of (texpr ann * texpr ann option)
   | While of (texpr ann * tstmt ann list * tstmt ann list)
   | For of (texpr ann * texpr ann * tstmt ann list * tstmt ann list)
   | If of (texpr ann option * tstmt ann list) list

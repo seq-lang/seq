@@ -71,7 +71,6 @@ public:
   void visit(const DelStmt *) override;
   void visit(const ReturnStmt *) override;
   void visit(const YieldStmt *) override;
-  void visit(const AssertStmt *) override;
   void visit(const WhileStmt *) override;
   void visit(const ForStmt *) override;
   void visit(const IfStmt *) override;
