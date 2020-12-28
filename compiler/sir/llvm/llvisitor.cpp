@@ -1,11 +1,19 @@
-#include "sir/sir.h"
-#include "util/llvm.h"
-#include <stack>
-#include <unordered_map>
+#include "sir/llvm/llvisitor.h"
+
+extern llvm::StructType *IdentTy;
+extern llvm::FunctionType *Kmpc_MicroTy;
+extern llvm::Constant *DefaultOpenMPPSource;
+extern llvm::Constant *DefaultOpenMPLocation;
+extern llvm::PointerType *KmpRoutineEntryPtrTy;
+extern llvm::Type *getOrCreateIdentTy(llvm::Module *module);
+extern llvm::Value *getOrCreateDefaultLocation(llvm::Module *module);
+extern llvm::PointerType *getIdentTyPointerTy();
+extern llvm::FunctionType *getOrCreateKmpc_MicroTy(llvm::LLVMContext &context);
+extern llvm::PointerType *getKmpc_MicroPointerTy(llvm::LLVMContext &context);
+extern llvm::cl::opt<bool> fastOpenMP;
 
 namespace seq {
 namespace ir {
-
 namespace {
 // Our custom GC allocators
 llvm::Function *makeAllocFunc(llvm::Module *module, bool atomic) {
@@ -57,128 +65,99 @@ llvm::Function *makeTerminateFunc(llvm::Module *module) {
   f->setDoesNotReturn();
   return f;
 }
+
+void resetOMPABI() {
+  IdentTy = nullptr;
+  Kmpc_MicroTy = nullptr;
+  DefaultOpenMPPSource = nullptr;
+  DefaultOpenMPLocation = nullptr;
+  KmpRoutineEntryPtrTy = nullptr;
+}
 } // namespace
-
-template <typename V> using CacheBase = std::unordered_map<int, V *>;
-template <typename K, typename V> class Cache : public CacheBase<V> {
-public:
-  using CacheBase<V>::CacheBase;
-
-  V *operator[](const K *key) {
-    auto it = CacheBase<V>::find(key->getId());
-    return (it != CacheBase<V>::end()) ? it->second : nullptr;
-  }
-
-  void insert(const K *key, V *value) { CacheBase<V>::emplace(key->getId(), value); }
-};
-
-struct CoroData {
-  // coroutine-specific data
-  llvm::Value *promise;
-  llvm::Value *handle;
-  llvm::BasicBlock *cleanup;
-  llvm::BasicBlock *suspend;
-  llvm::BasicBlock *exit;
-};
-
-struct LoopData {
-  llvm::BasicBlock *breakBlock;
-  llvm::BasicBlock *continueBlock;
-};
-
-class LLVMVisitor : public util::SIRVisitor {
-private:
-  /// LLVM context used for compilation
-  llvm::LLVMContext context;
-  /// Module we are compiling
-  std::unique_ptr<llvm::Module> module;
-  /// Current function we are compiling
-  llvm::Function *func;
-  /// Current basic block we are compiling
-  llvm::BasicBlock *block;
-  /// Last compiled value
-  llvm::Value *value;
-  /// LLVM type that was just translated from the IR type
-  llvm::Type *type;
-  /// LLVM values corresponding to IR variables
-  Cache<Var, llvm::Value> vars;
-  /// LLVM functions corresponding to IR functions
-  Cache<Func, llvm::Function> funcs;
-  /// Coroutine data, if current function is a coroutine
-  CoroData coro;
-  /// Loop data stack, containing break/continue blocks
-  std::stack<LoopData> loops;
-  /// Whether we are compiling in debug mode
-  bool debug;
-
-  template <typename T> void process(const T &x) { x->accept(*this); }
-  llvm::Type *getLLVMType(types::Type *x);
-  llvm::Value *call(llvm::Value *callee, llvm::ArrayRef<llvm::Value *> args);
-  void processLLVMFunc(Func *);
-  void makeLLVMFunction(Func *);
-  void makeYield(llvm::Value *value = nullptr, bool finalYield = false);
-  void enterLoop(llvm::BasicBlock *breakBlock, llvm::BasicBlock *continueBlock);
-  void exitLoop();
-
-public:
-  LLVMVisitor(bool debug = false);
-
-  // void visit(IRModule *) override;
-  void visit(Func *) override;
-  // void visit(Var *) override;
-  void visit(VarValue *) override;
-  void visit(PointerValue *) override;
-  // void visit(ValueProxy *) override;
-
-  void visit(types::IntType *) override;
-  void visit(types::FloatType *) override;
-  void visit(types::BoolType *) override;
-  void visit(types::ByteType *) override;
-  void visit(types::VoidType *) override;
-  void visit(types::RecordType *) override;
-  void visit(types::RefType *) override;
-  void visit(types::FuncType *) override;
-  void visit(types::OptionalType *) override;
-  void visit(types::ArrayType *) override;
-  void visit(types::PointerType *) override;
-  void visit(types::GeneratorType *) override;
-  void visit(types::IntNType *) override;
-
-  void visit(IntConstant *) override;
-  void visit(FloatConstant *) override;
-  void visit(BoolConstant *) override;
-  void visit(StringConstant *) override;
-
-  void visit(SeriesFlow *) override;
-  void visit(IfFlow *) override;
-  void visit(WhileFlow *) override;
-  void visit(ForFlow *) override;
-  void visit(TryCatchFlow *) override;
-
-  void visit(AssignInstr *) override;
-  void visit(ExtractInstr *) override;
-  void visit(InsertInstr *) override;
-  void visit(CallInstr *) override;
-  void visit(StackAllocInstr *) override;
-  void visit(YieldInInstr *) override;
-  void visit(TernaryInstr *) override;
-  void visit(BreakInstr *) override;
-  void visit(ContinueInstr *) override;
-  void visit(ReturnInstr *) override;
-  void visit(YieldInstr *) override;
-  void visit(ThrowInstr *) override;
-  void visit(FlowInstr *) override;
-};
 
 LLVMVisitor::LLVMVisitor(bool debug)
     : util::SIRVisitor(), context(), module(), func(nullptr), block(nullptr),
-      value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(), debug(debug) {
-  (void)(this->debug);
+      value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(), internalFuncs(),
+      debug(debug) {
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+  resetOMPABI();
+  initInternalFuncs();
+}
+
+void LLVMVisitor::validate() {
+  auto fo = fopen("_dump.ll", "w");
+  llvm::raw_fd_ostream fout(fileno(fo), true);
+  fout << *module.get();
+  fout.close();
+  const bool broken = llvm::verifyModule(*module.get(), &llvm::errs());
+  assert(!broken);
+}
+
+void LLVMVisitor::initInternalFuncs() {
+  internalFuncs = {
+      {"__elemsize__",
+       [this](types::Type *parentType, std::vector<llvm::Value *> args) {
+         assert(parentType->is<types::PointerType>());
+         llvm::IRBuilder<> builder(block);
+         return builder.getInt64(
+             module->getDataLayout().getTypeAllocSize(getLLVMType(parentType)));
+       }},
+
+      {"__atomic__",
+       [this](types::Type *parentType, std::vector<llvm::Value *> args) {
+         assert(parentType->is<types::PointerType>());
+         llvm::IRBuilder<> builder(block);
+         return builder.getInt8(parentType->isAtomic() ? 1 : 0);
+       }},
+
+      {"__new__",
+       [this](types::Type *parentType, std::vector<llvm::Value *> args) {
+         assert(parentType->is<types::RefType>());
+         llvm::IRBuilder<> builder(block);
+         auto *allocFunc = makeAllocFunc(module.get(), parentType->isAtomic());
+         llvm::Value *size = builder.getInt64(
+             module->getDataLayout().getTypeAllocSize(getLLVMType(parentType)));
+         return builder.CreateCall(allocFunc, size);
+       }},
+  };
 }
 
 llvm::Type *LLVMVisitor::getLLVMType(types::Type *x) {
   process(x);
   return type;
+}
+
+llvm::StructType *LLVMVisitor::getTypeInfoType() {
+  return llvm::StructType::get(llvm::Type::getInt32Ty(context));
+}
+
+llvm::StructType *LLVMVisitor::getPadType() {
+  return llvm::StructType::get(llvm::Type::getInt8PtrTy(context),
+                               llvm::Type::getInt32Ty(context));
+}
+
+llvm::StructType *LLVMVisitor::getExceptionType() {
+  return llvm::StructType::get(getTypeInfoType(), llvm::Type::getInt8PtrTy(context));
+}
+
+llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(const std::string &name) {
+  auto *typeInfoType = getTypeInfoType();
+  const std::string typeVarName = "seq.typeidx." + (name.empty() ? "<all>" : name);
+  llvm::GlobalVariable *tidx = module->getGlobalVariable(typeVarName);
+  int idx = 0; // types::Type::getID(name); // TODO
+  if (!tidx)
+    tidx = new llvm::GlobalVariable(
+        *module.get(), typeInfoType, true, llvm::GlobalValue::PrivateLinkage,
+        llvm::ConstantStruct::get(
+            typeInfoType, llvm::ConstantInt::get(llvm::Type::getInt32Ty(context),
+                                                 (uint64_t)idx, false)),
+        typeVarName);
+  return tidx;
+}
+
+llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(types::Type *catchType) {
+  return getTypeIdxVar(catchType ? catchType->getName() : "");
 }
 
 llvm::Value *LLVMVisitor::call(llvm::Value *callee,
@@ -199,45 +178,317 @@ void LLVMVisitor::exitLoop() {
 }
 
 /*
- * General values, functions, vars
+ * General values, module, functions, vars
  */
 
-void LLVMVisitor::processLLVMFunc(Func *x) {
-  assert(x->isLLVM());
+void LLVMVisitor::visit(IRModule *x) {
+  module = std::make_unique<llvm::Module>("seq", context);
+  module->setTargetTriple(
+      llvm::EngineBuilder().selectTarget()->getTargetTriple().str());
+  module->setDataLayout(llvm::EngineBuilder().selectTarget()->createDataLayout());
 
-  auto *funcType = x->getType()->as<types::FuncType>();
-  assert(funcType);
-  llvm::Type *returnType = getLLVMType(funcType->getReturnType());
+  // args variable
+  Var *argVar = x->getArgVar().get();
+  llvm::Type *argVarType = getLLVMType(argVar->getType());
+  auto *argStorage = new llvm::GlobalVariable(
+      *module.get(), argVarType, false, llvm::GlobalValue::PrivateLinkage,
+      llvm::Constant::getNullValue(argVarType), argVar->getName());
+  vars.insert(argVar, argStorage);
 
-  std::vector<llvm::Type *> argTypes;
-  for (auto *argType : *funcType) {
-    argTypes.push_back(getLLVMType(argType));
+  // set up global variables and initialize functions
+  for (auto &var : *x) {
+    if (auto *f = var->as<Func>()) {
+      makeLLVMFunction(f);
+      funcs.insert(f, func);
+    } else {
+      llvm::Type *llvmType = getLLVMType(var->getType());
+      auto *storage = new llvm::GlobalVariable(
+          *module.get(), llvmType, false, llvm::GlobalValue::PrivateLinkage,
+          llvm::Constant::getNullValue(llvmType), var->getName());
+      vars.insert(var.get(), storage);
+    }
   }
 
+  // process functions
+  for (auto &var : *x) {
+    if (auto *f = var->as<Func>()) {
+      process(f);
+    }
+  }
+
+  Func *main = x->getMainFunc().get();
+  makeLLVMFunction(main);
+  llvm::Function *realMain = func;
+  process(main);
+
+  // build canonical main function
+  llvm::IRBuilder<> builder(context);
+  auto *strType =
+      llvm::StructType::get(context, {builder.getInt64Ty(), builder.getInt8PtrTy()});
+  auto *arrType =
+      llvm::StructType::get(context, {builder.getInt64Ty(), strType->getPointerTo()});
+
+  auto *initFunc = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("seq_init", builder.getVoidTy()));
+  auto *strlenFunc = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      "strlen", builder.getInt64Ty(), builder.getInt8PtrTy()));
+
+  auto *canonicalMainFunc = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("main", builder.getInt32Ty(), builder.getInt32Ty(),
+                                  builder.getInt8PtrTy()->getPointerTo()));
+
+  canonicalMainFunc->setPersonalityFn(makePersonalityFunc(module.get()));
+  auto argiter = canonicalMainFunc->arg_begin();
+  llvm::Value *argc = argiter++;
+  llvm::Value *argv = argiter;
+  argc->setName("argc");
+  argv->setName("argv");
+
+  // The following generates code to put program arguments in an array, i.e.:
+  //    for (int i = 0; i < argc; i++)
+  //      array[i] = {strlen(argv[i]), argv[i]}
+  auto *entryBlock = llvm::BasicBlock::Create(context, "entry", canonicalMainFunc);
+  auto *loopBlock = llvm::BasicBlock::Create(context, "loop", canonicalMainFunc);
+  auto *bodyBlock = llvm::BasicBlock::Create(context, "body", canonicalMainFunc);
+  auto *exitBlock = llvm::BasicBlock::Create(context, "exit", canonicalMainFunc);
+
+  builder.SetInsertPoint(entryBlock);
+  auto *allocFunc = makeAllocFunc(module.get(), /*atomic=*/false);
+  llvm::Value *len = builder.CreateZExt(argc, builder.getInt64Ty());
+  llvm::Value *elemSize =
+      builder.getInt64(module->getDataLayout().getTypeAllocSize(strType));
+  llvm::Value *allocSize = builder.CreateMul(len, elemSize);
+  llvm::Value *ptr = builder.CreateCall(allocFunc, allocSize);
+  ptr = builder.CreateBitCast(ptr, strType->getPointerTo());
+  llvm::Value *arr = llvm::UndefValue::get(arrType);
+  arr = builder.CreateInsertValue(arr, len, 0);
+  arr = builder.CreateInsertValue(arr, ptr, 1);
+  builder.CreateBr(loopBlock);
+
+  builder.SetInsertPoint(loopBlock);
+  llvm::PHINode *control = builder.CreatePHI(builder.getInt32Ty(), 2, "i");
+  llvm::Value *next = builder.CreateAdd(control, builder.getInt32(1), "next");
+  llvm::Value *cond = builder.CreateICmpSLT(control, argc);
+  control->addIncoming(builder.getInt32(0), entryBlock);
+  control->addIncoming(next, bodyBlock);
+  builder.CreateCondBr(cond, bodyBlock, exitBlock);
+
+  builder.SetInsertPoint(bodyBlock);
+  llvm::Value *arg = builder.CreateLoad(builder.CreateGEP(argv, control));
+  llvm::Value *argLen = builder.CreateZExtOrTrunc(builder.CreateCall(strlenFunc, arg),
+                                                  builder.getInt64Ty());
+  llvm::Value *str = llvm::UndefValue::get(strType);
+  str = builder.CreateInsertValue(str, argLen, 0);
+  str = builder.CreateInsertValue(str, arg, 1);
+  builder.CreateStore(str, builder.CreateGEP(ptr, control));
+  builder.CreateBr(loopBlock);
+
+  builder.SetInsertPoint(exitBlock);
+  builder.CreateStore(arr, argStorage);
+  builder.CreateCall(initFunc);
+
+  // Put the entire program in a parallel+single region
+  {
+    getOrCreateKmpc_MicroTy(context);
+    getOrCreateIdentTy(module.get());
+    getOrCreateDefaultLocation(module.get());
+
+    auto *IdentTyPtrTy = getIdentTyPointerTy();
+
+    llvm::Type *forkParams[] = {IdentTyPtrTy, builder.getInt32Ty(),
+                                getKmpc_MicroPointerTy(context)};
+    auto *forkFnTy = llvm::FunctionType::get(builder.getVoidTy(), forkParams, true);
+    auto *forkFunc = llvm::cast<llvm::Function>(
+        module->getOrInsertFunction("__kmpc_fork_call", forkFnTy));
+
+    llvm::Type *singleParams[] = {IdentTyPtrTy, builder.getInt32Ty()};
+    auto *singleFnTy =
+        llvm::FunctionType::get(builder.getInt32Ty(), singleParams, false);
+    auto *singleFunc = llvm::cast<llvm::Function>(
+        module->getOrInsertFunction("__kmpc_single", singleFnTy));
+
+    llvm::Type *singleEndParams[] = {IdentTyPtrTy, builder.getInt32Ty()};
+    auto *singleEndFnTy =
+        llvm::FunctionType::get(builder.getVoidTy(), singleEndParams, false);
+    auto *singleEndFunc = llvm::cast<llvm::Function>(
+        module->getOrInsertFunction("__kmpc_end_single", singleEndFnTy));
+
+    // make the proxy main function that will be called by __kmpc_fork_call
+    std::vector<llvm::Type *> proxyArgs = {builder.getInt32Ty()->getPointerTo(),
+                                           builder.getInt32Ty()->getPointerTo()};
+    auto *proxyMainTy = llvm::FunctionType::get(builder.getVoidTy(), proxyArgs, false);
+    auto *proxyMain = llvm::cast<llvm::Function>(
+        module->getOrInsertFunction("seq.proxy_main", proxyMainTy));
+    proxyMain->setLinkage(llvm::GlobalValue::PrivateLinkage);
+    proxyMain->setPersonalityFn(makePersonalityFunc(module.get()));
+    auto *proxyBlockEntry = llvm::BasicBlock::Create(context, "entry", proxyMain);
+    auto *proxyBlockMain = llvm::BasicBlock::Create(context, "main", proxyMain);
+    auto *proxyBlockExit = llvm::BasicBlock::Create(context, "exit", proxyMain);
+    builder.SetInsertPoint(proxyBlockEntry);
+
+    llvm::Value *tid = proxyMain->arg_begin();
+    tid = builder.CreateLoad(tid);
+    llvm::Value *singleCall =
+        builder.CreateCall(singleFunc, {DefaultOpenMPLocation, tid});
+    llvm::Value *shouldExit = builder.CreateICmpEQ(singleCall, builder.getInt32(0));
+    builder.CreateCondBr(shouldExit, proxyBlockExit, proxyBlockMain);
+
+    builder.SetInsertPoint(proxyBlockExit);
+    builder.CreateRetVoid();
+
+    // invoke real main
+    auto *normal = llvm::BasicBlock::Create(context, "normal", proxyMain);
+    auto *unwind = llvm::BasicBlock::Create(context, "unwind", proxyMain);
+    builder.SetInsertPoint(proxyBlockMain);
+    builder.CreateInvoke(realMain, normal, unwind);
+
+    builder.SetInsertPoint(unwind);
+    llvm::LandingPadInst *caughtResult = builder.CreateLandingPad(getPadType(), 1);
+    caughtResult->setCleanup(true);
+    caughtResult->addClause(getTypeIdxVar(nullptr));
+    llvm::Value *unwindException = builder.CreateExtractValue(caughtResult, 0);
+    builder.CreateCall(makeTerminateFunc(module.get()), unwindException);
+    builder.CreateUnreachable();
+
+    builder.SetInsertPoint(normal);
+    builder.CreateCall(singleEndFunc, {DefaultOpenMPLocation, tid});
+    builder.CreateRetVoid();
+
+    // actually make the fork call
+    std::vector<llvm::Value *> forkArgs = {
+        DefaultOpenMPLocation, builder.getInt32(0),
+        builder.CreateBitCast(proxyMain, getKmpc_MicroPointerTy(context))};
+    builder.SetInsertPoint(exitBlock);
+    builder.CreateCall(forkFunc, forkArgs);
+
+    // tell Tapir to NOT create its own parallel regions
+    fastOpenMP.setValue(true);
+  }
+
+  builder.SetInsertPoint(exitBlock);
+  builder.CreateRet(builder.getInt32(0));
+}
+
+void LLVMVisitor::makeLLVMFunction(Func *x) {
+  // process LLVM functions in full immediately
+  if (auto *llvmFunc = x->as<LLVMFunc>()) {
+    process(llvmFunc);
+    return;
+  }
+
+  auto *funcType = llvm::cast<llvm::FunctionType>(getLLVMType(x->getType()));
+  assert(!module->getFunction(x->referenceString()));
+  func = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction(x->referenceString(), funcType));
+}
+
+void LLVMVisitor::makeYield(llvm::Value *value, bool finalYield) {
+  llvm::IRBuilder<> builder(block);
+  if (value) {
+    assert(coro.promise);
+    builder.CreateStore(value, coro.promise);
+  }
+  llvm::Function *coroSuspend =
+      llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_suspend);
+  llvm::Value *suspendResult =
+      builder.CreateCall(coroSuspend, {llvm::ConstantTokenNone::get(context),
+                                       builder.getInt1(finalYield)});
+
+  block = llvm::BasicBlock::Create(context, "yield.new", func);
+
+  llvm::SwitchInst *inst = builder.CreateSwitch(suspendResult, coro.suspend, 2);
+  inst->addCase(builder.getInt8(0), block);
+  inst->addCase(builder.getInt8(1), coro.cleanup);
+}
+
+void LLVMVisitor::visit(ExternalFunc *x) {
+  func = module->getFunction(x->referenceString()); // inserted during module visit
+  assert(func);
+  func->setDoesNotThrow();
+}
+
+void LLVMVisitor::visit(InternalFunc *x) {
+  func = module->getFunction(x->referenceString()); // inserted during module visit
+  assert(func);
+  func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+  block = llvm::BasicBlock::Create(context, "entry", func);
+  llvm::IRBuilder<> builder(block);
+  builder.CreateUnreachable();
+  // TODO
+  /*
+  for (auto &internalFunc : internalFuncs) {
+    if (internalFunc.name == x->getName()) {
+      block = llvm::BasicBlock::Create(context, "entry", func);
+
+      std::vector<llvm::Value *> args;
+      for (auto it = func->arg_begin(); it != func->arg_end(); ++it) {
+        args.push_back(it);
+      }
+      llvm::Value *result = internalFunc.codegen(x->getParentType(), args);
+
+      llvm::IRBuilder<> builder(block);
+      if (result) {
+        builder.CreateRet(result);
+      } else {
+        builder.CreateRetVoid();
+      }
+      return;
+    }
+  }
+  assert(0 && "internal function not found");
+  */
+}
+
+void LLVMVisitor::visit(LLVMFunc *x) {
+  func = module->getFunction(x->referenceString());
+  if (func)
+    return;
+  auto *funcType = x->getType()->as<types::FuncType>();
+  assert(funcType);
+
+  // format body
+  fmt::dynamic_format_arg_store<fmt::format_context> store;
+  for (auto it = x->literal_begin(); it != x->literal_end(); ++it) {
+    switch (it->tag) {
+    case LLVMFunc::LLVMLiteral::STATIC: {
+      store.push_back(it->val.staticVal);
+      break;
+    }
+    case LLVMFunc::LLVMLiteral::TYPE: {
+      llvm::Type *llvmType = getLLVMType(it->val.type);
+      std::string bufStr;
+      llvm::raw_string_ostream buf(bufStr);
+      llvmType->print(buf);
+      store.push_back(buf.str());
+      break;
+    }
+    default:
+      assert(0);
+    }
+  }
+  std::string body = fmt::vformat(x->getLLVMBody(), store);
+
+  // build code
   std::string code;
   {
     std::string bufStr;
     llvm::raw_string_ostream buf(bufStr);
 
     buf << x->getLLVMDeclarations() << "\ndefine ";
-    returnType->print(buf);
-    buf << " @\"" << x->getName() << "\"(";
+    getLLVMType(funcType->getReturnType())->print(buf);
+    buf << " @\"" << x->referenceString() << "\"(";
 
-    assert(std::distance(x->arg_begin(), x->arg_end()) == argTypes.size());
-
-    auto argTypeIter = argTypes.begin();
-    auto argVarIter = x->arg_begin();
-
-    while (argTypeIter != argTypes.end()) {
-      (*argTypeIter)->print(buf);
-      buf << " %" << (*argVarIter)->getName();
-      if (argTypeIter < argTypes.end() - 1)
+    const int numArgs = std::distance(x->arg_begin(), x->arg_end());
+    int argIndex = 0;
+    for (auto it = x->arg_begin(); it != x->arg_end(); ++it) {
+      getLLVMType((*it)->getType())->print(buf);
+      buf << " %" << (*it)->getName();
+      if (argIndex < numArgs - 1)
         buf << ", ";
-      ++argTypeIter;
-      ++argVarIter;
+      ++argIndex;
     }
 
-    buf << ") {\n" << x->getLLVMBody() << "\n}";
+    buf << ") {\n" << body << "\n}";
     code = buf.str();
   }
 
@@ -257,77 +508,27 @@ void LLVMVisitor::processLLVMFunc(Func *x) {
   llvm::Linker L(*module);
   const bool fail = L.linkInModule(std::move(sub));
   assert(!fail);
-  func = module->getFunction(x->getName());
+  func = module->getFunction(x->referenceString());
   assert(func);
   func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
-  funcs.insert(x, func);
 }
 
-void LLVMVisitor::makeLLVMFunction(Func *x) {
-  auto *funcType = llvm::cast<llvm::FunctionType>(getLLVMType(x->getType()));
-  func =
-      llvm::cast<llvm::Function>(module->getOrInsertFunction(x->getName(), funcType));
+void LLVMVisitor::visit(BodiedFunc *x) {
+  func = module->getFunction(x->referenceString()); // inserted during module visit
+  assert(func);
 
-  if (x->isExternal()) {
-    func->setDoesNotThrow();
+  if (x->hasAttribute("export")) {
+    func->setLinkage(llvm::GlobalValue::ExternalLinkage);
   } else {
-    if (x->hasAttribute("export")) {
-      func->setLinkage(llvm::GlobalValue::ExternalLinkage);
-    } else {
-      func->setLinkage(llvm::GlobalValue::PrivateLinkage);
-    }
-    if (x->hasAttribute("inline")) {
-      func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
-    }
-    if (x->hasAttribute("noinline")) {
-      func->addFnAttr(llvm::Attribute::AttrKind::NoInline);
-    }
-    func->setPersonalityFn(makePersonalityFunc(module.get()));
+    func->setLinkage(llvm::GlobalValue::PrivateLinkage);
   }
-}
-
-void LLVMVisitor::makeYield(llvm::Value *value, bool finalYield) {
-  llvm::IRBuilder<> builder(block);
-  if (value) {
-    assert(coro.promise);
-    builder.CreateStore(value, coro.promise);
+  if (x->hasAttribute("inline")) {
+    func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
   }
-  llvm::Function *coroSuspend =
-      llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_suspend);
-  llvm::Value *suspendResult =
-      builder.CreateCall(coroSuspend, {llvm::ConstantTokenNone::get(context),
-                                       builder.getInt1(finalYield)});
-
-  block = llvm::BasicBlock::Create(context, "coro.continue", func);
-
-  llvm::SwitchInst *inst = builder.CreateSwitch(suspendResult, coro.suspend, 2);
-  inst->addCase(builder.getInt8(0), block);
-  inst->addCase(builder.getInt8(1), coro.cleanup);
-}
-
-void LLVMVisitor::visit(Func *x) {
-  if (auto *cached = module->getFunction(x->getName())) {
-    assert(funcs[x]);
-    func = llvm::cast<llvm::Function>(cached);
-    return;
+  if (x->hasAttribute("noinline")) {
+    func->addFnAttr(llvm::Attribute::AttrKind::NoInline);
   }
-
-  if (x->isLLVM()) {
-    processLLVMFunc(x);
-    return;
-  }
-
-  makeLLVMFunction(x);
-  funcs.insert(x, func);
-
-  if (x->isExternal()) {
-    return;
-  }
-
-  if (x->isInternal()) {
-    // TODO
-    return;
-  }
+  func->setPersonalityFn(makePersonalityFunc(module.get()));
 
   auto *funcType = x->getType()->as<types::FuncType>();
   auto *returnType = funcType->getReturnType();
@@ -337,6 +538,8 @@ void LLVMVisitor::visit(Func *x) {
   coro = {};
 
   // set up arguments and other symbols
+  assert(std::distance(func->arg_begin(), func->arg_end()) ==
+         std::distance(x->arg_begin(), x->arg_end()));
   auto argIter = func->arg_begin();
   for (auto varIter = x->arg_begin(); varIter != x->arg_end(); ++varIter) {
     Var *var = varIter->get();
@@ -351,9 +554,12 @@ void LLVMVisitor::visit(Func *x) {
     vars.insert(symbol.get(), storage);
   }
 
-  auto *start = llvm::BasicBlock::Create(context, "start", func);
+  auto *startBlock = llvm::BasicBlock::Create(context, "start", func);
 
   if (x->isGenerator()) {
+    auto *generatorType = returnType->as<types::GeneratorType>();
+    assert(generatorType);
+
     llvm::Function *coroId =
         llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_id);
     llvm::Function *coroBegin =
@@ -376,8 +582,8 @@ void LLVMVisitor::visit(Func *x) {
     // coro ID and promise
     llvm::Value *id = nullptr;
     llvm::Value *nullPtr = llvm::ConstantPointerNull::get(builder.getInt8PtrTy());
-    if (!returnType->is<types::VoidType>()) {
-      coro.promise = makeAlloca(getLLVMType(returnType), entryBlock);
+    if (!generatorType->getBase()->is<types::VoidType>()) {
+      coro.promise = makeAlloca(getLLVMType(generatorType->getBase()), entryBlock);
       coro.promise->setName("coro.promise");
       llvm::Value *promiseRaw =
           builder.CreateBitCast(coro.promise, builder.getInt8PtrTy());
@@ -388,14 +594,22 @@ void LLVMVisitor::visit(Func *x) {
     }
     id->setName("coro.id");
     llvm::Value *needAlloc = builder.CreateCall(coroAlloc, id);
-    builder.CreateCondBr(needAlloc, allocBlock, start);
+    builder.CreateCondBr(needAlloc, allocBlock, startBlock);
 
     // coro alloc
     builder.SetInsertPoint(allocBlock);
     llvm::Value *size = builder.CreateCall(coroSize);
     auto *allocFunc = makeAllocFunc(module.get(), /*atomic=*/false);
     llvm::Value *alloc = builder.CreateCall(allocFunc, size);
-    builder.CreateBr(start);
+    builder.CreateBr(startBlock);
+
+    // coro start
+    builder.SetInsertPoint(startBlock);
+    llvm::PHINode *phi = builder.CreatePHI(builder.getInt8PtrTy(), 2);
+    phi->addIncoming(nullPtr, entryBlock);
+    phi->addIncoming(alloc, allocBlock);
+    coro.handle = builder.CreateCall(coroBegin, {id, phi});
+    coro.handle->setName("coro.handle");
 
     // coro cleanup
     builder.SetInsertPoint(coro.cleanup);
@@ -418,18 +632,12 @@ void LLVMVisitor::visit(Func *x) {
     builder.SetInsertPoint(block);
     builder.CreateUnreachable();
 
-    // coro start
-    builder.SetInsertPoint(start);
-    llvm::PHINode *phi = builder.CreatePHI(builder.getInt8PtrTy(), 2);
-    phi->addIncoming(nullPtr, entryBlock);
-    phi->addIncoming(alloc, allocBlock);
-    coro.handle = builder.CreateCall(coroBegin, {id, phi});
-    coro.handle->setName("coro.handle");
-    block = start;
+    // initial yield
+    block = startBlock;
     makeYield(); // coroutine will be initially suspended
   } else {
-    builder.CreateBr(start);
-    block = start;
+    builder.CreateBr(startBlock);
+    block = startBlock;
   }
 
   process(x->getBody());
@@ -446,11 +654,18 @@ void LLVMVisitor::visit(Func *x) {
   }
 }
 
+void LLVMVisitor::visit(Var *x) { assert(0); }
+
 void LLVMVisitor::visit(VarValue *x) {
-  llvm::Value *var = vars[x->getVar()];
-  assert(var);
-  llvm::IRBuilder<> builder(block);
-  value = builder.CreateLoad(var);
+  if (auto *f = x->getVar()->as<Func>()) {
+    value = funcs[f];
+    assert(value);
+  } else {
+    llvm::Value *varPtr = vars[x->getVar()];
+    assert(varPtr);
+    llvm::IRBuilder<> builder(block);
+    value = builder.CreateLoad(varPtr);
+  }
 }
 
 void LLVMVisitor::visit(PointerValue *x) {
@@ -458,6 +673,8 @@ void LLVMVisitor::visit(PointerValue *x) {
   assert(var);
   value = var; // note: we don't load the pointer
 }
+
+void LLVMVisitor::visit(ValueProxy *x) { assert(0); }
 
 /*
  * Types
@@ -494,7 +711,14 @@ void LLVMVisitor::visit(types::FuncType *x) {
   type = llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false);
 }
 
-void LLVMVisitor::visit(types::OptionalType *x) {}
+void LLVMVisitor::visit(types::OptionalType *x) {
+  if (x->getBase()->is<types::RefType>()) {
+    type = llvm::Type::getInt8PtrTy(context);
+  } else {
+    type = llvm::StructType::get(llvm::Type::getInt1Ty(context),
+                                 getLLVMType(x->getBase()));
+  }
+}
 
 void LLVMVisitor::visit(types::ArrayType *x) {
   type = llvm::StructType::get(llvm::Type::getInt64Ty(context),
@@ -543,8 +767,8 @@ void LLVMVisitor::visit(StringConstant *x) {
   llvm::Value *ptr = builder.CreateBitCast(strVar, builder.getInt8PtrTy());
   llvm::Value *len = builder.getInt64(s.length());
   llvm::Value *str = llvm::UndefValue::get(strType);
-  str = builder.CreateInsertValue(str, ptr, 0);
-  str = builder.CreateInsertValue(str, len, 1);
+  str = builder.CreateInsertValue(str, len, 0);
+  str = builder.CreateInsertValue(str, ptr, 1);
   value = str;
 }
 
@@ -570,12 +794,16 @@ void LLVMVisitor::visit(IfFlow *x) {
   builder.CreateCondBr(cond, trueBlock, falseBlock);
 
   block = trueBlock;
-  process(x->getTrueBranch());
+  if (x->getTrueBranch()) {
+    process(x->getTrueBranch());
+  }
   builder.SetInsertPoint(block);
   builder.CreateBr(exitBlock);
 
   block = falseBlock;
-  process(x->getFalseBranch());
+  if (x->getFalseBranch()) {
+    process(x->getFalseBranch());
+  }
   builder.SetInsertPoint(block);
   builder.CreateBr(exitBlock);
 
@@ -670,6 +898,12 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
   process(x->getFinally());
 }
 
+void LLVMVisitor::visit(UnorderedFlow *x) {
+  for (auto &flow : *x) {
+    process(flow);
+  }
+}
+
 /*
  * Instructions
  */
@@ -690,7 +924,9 @@ void LLVMVisitor::visit(ExtractInstr *x) {
 
   process(x->getVal());
   llvm::IRBuilder<> builder(block);
-  if (memberedType->is<types::RefType>()) {
+  if (auto *refType = memberedType->as<types::RefType>()) {
+    value = builder.CreateBitCast(value,
+                                  getLLVMType(refType->getContents())->getPointerTo());
     value = builder.CreateLoad(value);
   }
   value = builder.CreateExtractValue(value, index);
@@ -747,13 +983,13 @@ void LLVMVisitor::visit(StackAllocInstr *x) {
     assert(0 && "StackAllocInstr size is not constant");
   }
 
-  llvm::IRBuilder<> builder(&func->getEntryBlock());
+  llvm::IRBuilder<> builder(func->getEntryBlock().getTerminator());
   auto *arrType = llvm::StructType::get(builder.getInt64Ty(), baseType->getPointerTo());
   llvm::Value *len = builder.getInt64(size);
   llvm::Value *ptr = builder.CreateAlloca(baseType, len);
   llvm::Value *arr = llvm::UndefValue::get(arrType);
-  arr = builder.CreateInsertValue(arr, ptr, 0);
-  arr = builder.CreateInsertValue(arr, len, 1);
+  arr = builder.CreateInsertValue(arr, len, 0);
+  arr = builder.CreateInsertValue(arr, ptr, 1);
   value = arr;
 }
 
@@ -773,13 +1009,15 @@ void LLVMVisitor::visit(TernaryInstr *x) {
   block = trueBlock;
   process(x->getTrueValue());
   llvm::Value *trueValue = value;
-  builder.SetInsertPoint(block);
+  trueBlock = block;
+  builder.SetInsertPoint(trueBlock);
   builder.CreateBr(exitBlock);
 
   block = falseBlock;
   process(x->getFalseValue());
   llvm::Value *falseValue = value;
-  builder.SetInsertPoint(block);
+  falseBlock = block;
+  builder.SetInsertPoint(falseBlock);
   builder.CreateBr(exitBlock);
 
   builder.SetInsertPoint(exitBlock);
@@ -808,7 +1046,7 @@ void LLVMVisitor::visit(ContinueInstr *x) {
 
 void LLVMVisitor::visit(ReturnInstr *x) {
   // TODO: check for finally block
-  const bool voidReturn = bool(x->getValue());
+  const bool voidReturn = !bool(x->getValue());
   if (!voidReturn) {
     process(x->getValue());
   }
@@ -827,7 +1065,7 @@ void LLVMVisitor::visit(YieldInstr *x) {
 }
 
 void LLVMVisitor::visit(ThrowInstr *x) {
-  /*
+  /* TODO
     LLVMContext &context = block->getContext();
     Module *module = block->getModule();
     Function *excAllocFunc = makeExcAllocFunc(module);
@@ -880,6 +1118,10 @@ void LLVMVisitor::visit(ThrowInstr *x) {
       builder.CreateCall(throwFunc, exc);
     }
   */
+}
+
+void LLVMVisitor::visit(AssertInstr *x) {
+  // TODO
 }
 
 void LLVMVisitor::visit(FlowInstr *x) {

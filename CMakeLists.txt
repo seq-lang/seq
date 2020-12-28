@@ -181,7 +181,8 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/sir/module.h
         compiler/sir/sir.h
         compiler/sir/value.h
-        compiler/sir/var.h)
+        compiler/sir/var.h
+        compiler/sir/llvm/llvisitor.h)
 set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/lang/func.cpp
         compiler/lang/lang.cpp
