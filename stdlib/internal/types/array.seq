@@ -4,12 +4,10 @@ class Array[T]:
     len: int
     ptr: Ptr[T]
 
-    @internal
     def __new__(sz: int) -> Array[T]:
-        pass
-    @internal
+        return (sz, Ptr[T](sz))
     def __new__(data: Ptr[T], sz: int) -> Array[T]:
-        pass
+        return (sz, data)
 
     def __copy__(self) -> Array[T]:
         p = Ptr[byte](self.len * Ptr[T].__elemsize__())
