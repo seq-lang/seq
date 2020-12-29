@@ -83,6 +83,7 @@ private:
   void makeYield(llvm::Value *value = nullptr, bool finalYield = false);
   void enterLoop(llvm::BasicBlock *breakBlock, llvm::BasicBlock *continueBlock);
   void exitLoop();
+  std::string buildLLVMCodeString(LLVMFunc *);
 
 public:
   LLVMVisitor(bool debug = false);

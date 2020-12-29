@@ -449,15 +449,58 @@ void LLVMVisitor::visit(InternalFunc *x) {
   */
 }
 
+std::string LLVMVisitor::buildLLVMCodeString(LLVMFunc *x) {
+  auto *funcType = x->getType()->as<types::FuncType>();
+  assert(funcType);
+  std::string bufStr;
+  llvm::raw_string_ostream buf(bufStr);
+
+  // build function signature
+  buf << "define ";
+  getLLVMType(funcType->getReturnType())->print(buf);
+  buf << " @\"" << x->referenceString() << "\"(";
+  const int numArgs = std::distance(x->arg_begin(), x->arg_end());
+  int argIndex = 0;
+  for (auto it = x->arg_begin(); it != x->arg_end(); ++it) {
+    getLLVMType((*it)->getType())->print(buf);
+    buf << " %" << (*it)->getName();
+    if (argIndex < numArgs - 1)
+      buf << ", ";
+    ++argIndex;
+  }
+  buf << ")";
+  std::string signature = buf.str();
+  bufStr.clear();
+
+  // replace literal '{' and '}'
+  std::string::size_type n = 0;
+  while ((n = signature.find("{", n)) != std::string::npos) {
+    signature.replace(n, 1, "{{");
+    n += 2;
+  }
+  n = 0;
+  while ((n = signature.find("}", n)) != std::string::npos) {
+    signature.replace(n, 1, "}}");
+    n += 2;
+  }
+
+  // build remaining code
+  buf << x->getLLVMDeclarations() << "\n"
+      << signature << " {{\n"
+      << x->getLLVMBody() << "\n}}";
+  return buf.str();
+}
+
 void LLVMVisitor::visit(LLVMFunc *x) {
   func = module->getFunction(x->referenceString());
   coro = {};
   if (func)
     return;
-  auto *funcType = x->getType()->as<types::FuncType>();
-  assert(funcType);
 
-  // format body
+  // build code
+  std::string code = buildLLVMCodeString(x);
+
+  // format code
   fmt::dynamic_format_arg_store<fmt::format_context> store;
   for (auto it = x->literal_begin(); it != x->literal_end(); ++it) {
     switch (it->tag) {
@@ -477,31 +520,7 @@ void LLVMVisitor::visit(LLVMFunc *x) {
       assert(0);
     }
   }
-  std::string body = fmt::vformat(x->getLLVMBody(), store);
-
-  // build code
-  std::string code;
-  {
-    std::string bufStr;
-    llvm::raw_string_ostream buf(bufStr);
-
-    buf << x->getLLVMDeclarations() << "\ndefine ";
-    getLLVMType(funcType->getReturnType())->print(buf);
-    buf << " @\"" << x->referenceString() << "\"(";
-
-    const int numArgs = std::distance(x->arg_begin(), x->arg_end());
-    int argIndex = 0;
-    for (auto it = x->arg_begin(); it != x->arg_end(); ++it) {
-      getLLVMType((*it)->getType())->print(buf);
-      buf << " %" << (*it)->getName();
-      if (argIndex < numArgs - 1)
-        buf << ", ";
-      ++argIndex;
-    }
-
-    buf << ") {\n" << body << "\n}";
-    code = buf.str();
-  }
+  code = fmt::vformat(code, store);
 
   llvm::SMDiagnostic err;
   std::unique_ptr<llvm::MemoryBuffer> buf = llvm::MemoryBuffer::getMemBuffer(code);
