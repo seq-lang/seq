@@ -35,13 +35,6 @@ struct LoopData {
   llvm::BasicBlock *continueBlock;
 };
 
-struct InternalFuncData {
-  using CodegenFunc =
-      std::function<llvm::Value *(types::Type *, std::vector<llvm::Value *>)>;
-  std::string name;
-  CodegenFunc codegen;
-};
-
 class LLVMVisitor : public util::SIRVisitor {
 private:
   /// LLVM context used for compilation
@@ -64,8 +57,6 @@ private:
   CoroData coro;
   /// Loop data stack, containing break/continue blocks
   std::stack<LoopData> loops;
-  /// Internal functions
-  std::vector<InternalFuncData> internalFuncs;
   /// Whether we are compiling in debug mode
   bool debug;
 
@@ -78,7 +69,6 @@ private:
   llvm::GlobalVariable *getTypeIdxVar(types::Type *catchType);
 
   llvm::Value *call(llvm::Value *callee, llvm::ArrayRef<llvm::Value *> args);
-  void initInternalFuncs();
   void makeLLVMFunction(Func *);
   void makeYield(llvm::Value *value = nullptr, bool finalYield = false);
   void enterLoop(llvm::BasicBlock *breakBlock, llvm::BasicBlock *continueBlock);

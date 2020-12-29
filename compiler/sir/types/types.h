@@ -309,23 +309,15 @@ public:
 };
 
 /// Type of an optional containing another SIR type
-class OptionalType : public AcceptorExtend<OptionalType, RecordType> {
-private:
-  /// type's base type
-  Type *base;
-
+class OptionalType : public AcceptorExtend<OptionalType, DerivedType> {
 public:
   static const char NodeId;
 
   /// Constructs an optional type.
-  /// @param pointerType the base's pointer type
-  /// @param flagType type of the flag indicating if an object is present
-  explicit OptionalType(Type *pointerType, Type *flagType);
+  /// @param base the type's base
+  explicit OptionalType(Type *base) : AcceptorExtend(getName(base), base) {}
 
-  bool isAtomic() const override { return base->isAtomic(); }
-
-  /// @return the type's base
-  Type *getBase() const { return base; }
+  bool isAtomic() const override { return getBase()->isAtomic(); }
 
   void accept(util::SIRVisitor &v) override { v.visit(this); }
 

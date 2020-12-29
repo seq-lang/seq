@@ -176,7 +176,7 @@ public:
     auto name = types::OptionalType::getName(base);
     auto *rVal = getType(name);
     if (!rVal) {
-      rVal = Nr<types::OptionalType>(getPointerType(base), getBoolType());
+      rVal = Nr<types::OptionalType>(base);
       types[name] = types::TypePtr(rVal);
     }
     return rVal;

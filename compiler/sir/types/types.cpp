@@ -117,12 +117,6 @@ std::string PointerType::getName(Type *base) {
 
 const char OptionalType::NodeId = 0;
 
-OptionalType::OptionalType(Type *pointerType, Type *flagType)
-    : AcceptorExtend(getName(dynamic_cast<PointerType *>(pointerType)->getBase()),
-                     std::vector<Type *>{flagType, pointerType},
-                     std::vector<std::string>{"has", "val"}),
-      base(dynamic_cast<PointerType *>(pointerType)->getBase()) {}
-
 std::string OptionalType::getName(Type *base) {
   return fmt::format(FMT_STRING(".Optional[{}]"), base->referenceString());
 }

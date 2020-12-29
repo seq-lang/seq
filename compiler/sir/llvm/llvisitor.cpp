@@ -1,4 +1,6 @@
 #include "sir/llvm/llvisitor.h"
+#include <algorithm>
+#include <utility>
 
 extern llvm::StructType *IdentTy;
 extern llvm::FunctionType *Kmpc_MicroTy;
@@ -77,12 +79,11 @@ void resetOMPABI() {
 
 LLVMVisitor::LLVMVisitor(bool debug)
     : util::SIRVisitor(), context(), module(), func(nullptr), block(nullptr),
-      value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(), internalFuncs(),
+      value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(),
       debug(debug) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   resetOMPABI();
-  initInternalFuncs();
 }
 
 void LLVMVisitor::validate() {
@@ -92,35 +93,6 @@ void LLVMVisitor::validate() {
   fout.close();
   const bool broken = llvm::verifyModule(*module.get(), &llvm::errs());
   assert(!broken);
-}
-
-void LLVMVisitor::initInternalFuncs() {
-  internalFuncs = {
-      {"__elemsize__",
-       [this](types::Type *parentType, std::vector<llvm::Value *> args) {
-         assert(parentType->is<types::PointerType>());
-         llvm::IRBuilder<> builder(block);
-         return builder.getInt64(
-             module->getDataLayout().getTypeAllocSize(getLLVMType(parentType)));
-       }},
-
-      {"__atomic__",
-       [this](types::Type *parentType, std::vector<llvm::Value *> args) {
-         assert(parentType->is<types::PointerType>());
-         llvm::IRBuilder<> builder(block);
-         return builder.getInt8(parentType->isAtomic() ? 1 : 0);
-       }},
-
-      {"__new__",
-       [this](types::Type *parentType, std::vector<llvm::Value *> args) {
-         assert(parentType->is<types::RefType>());
-         llvm::IRBuilder<> builder(block);
-         auto *allocFunc = makeAllocFunc(module.get(), parentType->isAtomic());
-         llvm::Value *size = builder.getInt64(
-             module->getDataLayout().getTypeAllocSize(getLLVMType(parentType)));
-         return builder.CreateCall(allocFunc, size);
-       }},
-  };
 }
 
 llvm::Type *LLVMVisitor::getLLVMType(types::Type *x) {
@@ -416,37 +388,174 @@ void LLVMVisitor::visit(ExternalFunc *x) {
   func->setDoesNotThrow();
 }
 
+namespace {
+template <typename ParentType>
+bool internalFuncMatchesIgnoreArgs(const std::string &name, InternalFunc *x) {
+  return name == x->getUnmangledName() && cast<ParentType>(x->getParentType());
+}
+
+template <typename ParentType, typename... ArgTypes, std::size_t... Index>
+bool internalFuncMatches(const std::string &name, InternalFunc *x,
+                         std::index_sequence<Index...>) {
+  auto *funcType = cast<types::FuncType>(x->getType());
+  if (name != x->getUnmangledName() ||
+      std::distance(funcType->begin(), funcType->end()) != sizeof...(ArgTypes))
+    return false;
+  std::vector<types::Type *> argTypes(funcType->begin(), funcType->end());
+  std::vector<bool> m = {cast<ParentType>(x->getParentType()),
+                         cast<ArgTypes>(argTypes[Index])...};
+  const bool match = std::all_of(m.begin(), m.end(), [](bool b) { return b; });
+  return match;
+}
+
+template <typename ParentType, typename... ArgTypes>
+bool internalFuncMatches(const std::string &name, InternalFunc *x) {
+  return internalFuncMatches<ParentType, ArgTypes...>(
+      name, x, std::make_index_sequence<sizeof...(ArgTypes)>());
+}
+} // namespace
+
 void LLVMVisitor::visit(InternalFunc *x) {
+  using namespace types;
   func = module->getFunction(x->referenceString()); // inserted during module visit
   coro = {};
+
+  Type *parentType = x->getParentType();
+  auto *funcType = cast<FuncType>(x->getType());
+  std::vector<Type *> argTypes(funcType->begin(), funcType->end());
+
   assert(func);
+  func->setLinkage(llvm::GlobalValue::PrivateLinkage);
   func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+  std::vector<llvm::Value *> args;
+  for (auto it = func->arg_begin(); it != func->arg_end(); ++it) {
+    args.push_back(it);
+  }
   block = llvm::BasicBlock::Create(context, "entry", func);
   llvm::IRBuilder<> builder(block);
-  builder.CreateUnreachable();
-  // TODO
-  /*
-  for (auto &internalFunc : internalFuncs) {
-    if (internalFunc.name == x->getName()) {
-      block = llvm::BasicBlock::Create(context, "entry", func);
+  llvm::Value *result = nullptr;
 
-      std::vector<llvm::Value *> args;
-      for (auto it = func->arg_begin(); it != func->arg_end(); ++it) {
-        args.push_back(it);
-      }
-      llvm::Value *result = internalFunc.codegen(x->getParentType(), args);
+  if (internalFuncMatches<PointerType>("__elemsize__", x)) {
+    auto *pointerType = cast<PointerType>(parentType);
+    result = builder.getInt64(
+        module->getDataLayout().getTypeAllocSize(getLLVMType(pointerType->getBase())));
+  }
 
-      llvm::IRBuilder<> builder(block);
-      if (result) {
-        builder.CreateRet(result);
-      } else {
-        builder.CreateRetVoid();
-      }
-      return;
+  if (internalFuncMatches<PointerType>("__atomic__", x)) {
+    result = builder.getInt8(parentType->isAtomic() ? 1 : 0);
+  }
+
+  if (internalFuncMatches<PointerType, IntType>("__new__", x)) {
+    auto *pointerType = cast<PointerType>(parentType);
+    Type *baseType = pointerType->getBase();
+    llvm::Type *llvmBaseType = getLLVMType(baseType);
+    llvm::Function *allocFunc = makeAllocFunc(module.get(), baseType->isAtomic());
+    llvm::Value *elemSize =
+        builder.getInt64(module->getDataLayout().getTypeAllocSize(llvmBaseType));
+    llvm::Value *allocSize = builder.CreateMul(elemSize, args[0]);
+    result = builder.CreateCall(allocFunc, allocSize);
+    result = builder.CreateBitCast(result, llvmBaseType->getPointerTo());
+  }
+
+  else if (internalFuncMatches<IntType, IntNType>("__new__", x)) {
+    result = builder.CreateZExtOrTrunc(args[0], builder.getInt64Ty());
+  }
+
+  else if (internalFuncMatches<IntNType, IntType>("__new__", x)) {
+    result = builder.CreateZExtOrTrunc(args[0], getLLVMType(parentType));
+  }
+
+  else if (internalFuncMatches<RefType>("__new__", x)) {
+    auto *refType = cast<RefType>(parentType);
+    llvm::Function *allocFunc = makeAllocFunc(module.get(), parentType->isAtomic());
+    llvm::Value *size = builder.getInt64(
+        module->getDataLayout().getTypeAllocSize(getLLVMType(refType->getContents())));
+    result = builder.CreateCall(allocFunc, size);
+  }
+
+  else if (internalFuncMatches<RefType, RefType>("__raw__", x)) {
+    result = args[0];
+  }
+
+  else if (internalFuncMatches<GeneratorType, GeneratorType>("done", x)) {
+    llvm::Function *coroResume =
+        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_resume);
+    llvm::Function *coroDone =
+        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_done);
+    builder.CreateCall(coroResume, args[0]);
+    result =
+        builder.CreateZExt(builder.CreateCall(coroDone, args[0]), builder.getInt8Ty());
+  }
+
+  else if (internalFuncMatches<GeneratorType, GeneratorType>("next", x)) {
+    auto *generatorType = cast<GeneratorType>(parentType);
+    llvm::Type *baseType = getLLVMType(generatorType->getBase());
+    llvm::Function *coroPromise =
+        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_promise);
+    llvm::Value *aln =
+        builder.getInt32(module->getDataLayout().getPrefTypeAlignment(baseType));
+    llvm::Value *from = builder.getFalse();
+    llvm::Value *ptr = builder.CreateCall(coroPromise, {args[0], aln, from});
+    ptr = builder.CreateBitCast(ptr, baseType->getPointerTo());
+    result = builder.CreateLoad(ptr);
+  }
+
+  else if (internalFuncMatches<OptionalType>("__new__", x)) {
+    auto *optionalType = cast<OptionalType>(parentType);
+    if (cast<RefType>(optionalType->getBase())) {
+      result = llvm::ConstantPointerNull::get(builder.getInt8PtrTy());
+    } else {
+      result = llvm::UndefValue::get(getLLVMType(optionalType));
+      result = builder.CreateInsertValue(result, builder.getFalse(), 0);
+    }
+  } else if (internalFuncMatchesIgnoreArgs<OptionalType>("__new__", x)) {
+    assert(args.size() == 1);
+    auto *optionalType = cast<OptionalType>(parentType);
+    if (cast<RefType>(optionalType->getBase())) {
+      result = args[0];
+    } else {
+      result = llvm::UndefValue::get(getLLVMType(optionalType));
+      result = builder.CreateInsertValue(result, builder.getTrue(), 0);
+      result = builder.CreateInsertValue(result, args[0], 1);
     }
   }
-  assert(0 && "internal function not found");
-  */
+
+  else if (internalFuncMatches<OptionalType, OptionalType>("__bool__", x)) {
+    auto *optionalType = cast<OptionalType>(parentType);
+    if (cast<RefType>(optionalType->getBase())) {
+      result = builder.CreateIsNotNull(args[0]);
+    } else {
+      result = builder.CreateExtractValue(args[0], 0);
+    }
+    result = builder.CreateZExt(result, builder.getInt8Ty());
+  }
+
+  else if (internalFuncMatches<OptionalType, OptionalType>("__invert__", x)) {
+    auto *optionalType = cast<OptionalType>(parentType);
+    if (cast<RefType>(optionalType->getBase())) {
+      result = args[0];
+    } else {
+      result = builder.CreateExtractValue(args[0], 1);
+    }
+  }
+
+  else if (internalFuncMatchesIgnoreArgs<RecordType>("__new__", x)) {
+    auto *recordType = cast<RecordType>(parentType);
+    assert(args.size() == std::distance(recordType->begin(), recordType->end()));
+    result = llvm::UndefValue::get(getLLVMType(recordType));
+    for (auto i = 0; i < args.size(); i++) {
+      result = builder.CreateInsertValue(result, args[i], i);
+    }
+  }
+
+  else if (internalFuncMatches<RecordType, RecordType, IntType>("__getitem__", x)) {
+    // TODO
+    builder.CreateUnreachable();
+    return;
+  }
+
+  assert(result && "internal function not found");
+  builder.CreateRet(result);
 }
 
 std::string LLVMVisitor::buildLLVMCodeString(LLVMFunc *x) {
