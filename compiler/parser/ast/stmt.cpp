@@ -14,13 +14,17 @@
 #include "parser/cache.h"
 #include "parser/visitors/visitor.h"
 
+#define ACCEPT_IMPL(T, X)                                                              \
+  StmtPtr T::clone() const { return make_unique<T>(*this); }                           \
+  void T::accept(X &visitor) { visitor.visit(this); }
+
 using fmt::format;
 using std::move;
 
 namespace seq {
 namespace ast {
 
-Stmt::Stmt(const seq::SrcInfo &s) { setSrcInfo(s); }
+Stmt::Stmt(const seq::SrcInfo &s) : done(false) { setSrcInfo(s); }
 
 SuiteStmt::SuiteStmt(vector<StmtPtr> &&stmts, bool ownBlock) : ownBlock(ownBlock) {
   for (auto &s : stmts)
@@ -45,8 +49,7 @@ SuiteStmt::SuiteStmt(const SuiteStmt &stmt)
 string SuiteStmt::toString() const {
   return format("(suite {}{})", ownBlock ? "#:own " : "", combine(stmts, " "));
 }
-StmtPtr SuiteStmt::clone() const { return make_unique<SuiteStmt>(*this); }
-void SuiteStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(SuiteStmt, ASTVisitor);
 void SuiteStmt::flatten(StmtPtr s, vector<StmtPtr> &stmts) {
   if (!s)
     return;
@@ -60,22 +63,18 @@ void SuiteStmt::flatten(StmtPtr s, vector<StmtPtr> &stmts) {
 }
 
 string PassStmt::toString() const { return "(pass)"; }
-StmtPtr PassStmt::clone() const { return make_unique<PassStmt>(*this); }
-void PassStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(PassStmt, ASTVisitor);
 
 string BreakStmt::toString() const { return "(break)"; }
-StmtPtr BreakStmt::clone() const { return make_unique<BreakStmt>(*this); }
-void BreakStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(BreakStmt, ASTVisitor);
 
 string ContinueStmt::toString() const { return "(continue)"; }
-StmtPtr ContinueStmt::clone() const { return make_unique<ContinueStmt>(*this); }
-void ContinueStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(ContinueStmt, ASTVisitor);
 
 ExprStmt::ExprStmt(ExprPtr expr) : expr(move(expr)) {}
 ExprStmt::ExprStmt(const ExprStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
 string ExprStmt::toString() const { return format("(expr {})", expr->toString()); }
-StmtPtr ExprStmt::clone() const { return make_unique<ExprStmt>(*this); }
-void ExprStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(ExprStmt, ASTVisitor);
 
 AssignStmt::AssignStmt(ExprPtr lhs, ExprPtr rhs, ExprPtr type)
     : lhs(move(lhs)), rhs(move(rhs)), type(move(type)) {}
@@ -86,20 +85,17 @@ string AssignStmt::toString() const {
   return format("(assign {}{}{})", lhs->toString(), rhs ? " " + rhs->toString() : "",
                 type ? format(" #:type {}", type->toString()) : "");
 }
-StmtPtr AssignStmt::clone() const { return make_unique<AssignStmt>(*this); }
-void AssignStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(AssignStmt, ASTVisitor);
 
 DelStmt::DelStmt(ExprPtr expr) : expr(move(expr)) {}
 DelStmt::DelStmt(const DelStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
 string DelStmt::toString() const { return format("(del {})", expr->toString()); }
-StmtPtr DelStmt::clone() const { return make_unique<DelStmt>(*this); }
-void DelStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(DelStmt, ASTVisitor);
 
 PrintStmt::PrintStmt(ExprPtr expr) : expr(move(expr)) {}
 PrintStmt::PrintStmt(const PrintStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
 string PrintStmt::toString() const { return format("(print {})", expr->toString()); }
-StmtPtr PrintStmt::clone() const { return make_unique<PrintStmt>(*this); }
-void PrintStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(PrintStmt, ASTVisitor);
 
 ReturnStmt::ReturnStmt(ExprPtr expr) : expr(move(expr)) {}
 ReturnStmt::ReturnStmt(const ReturnStmt &stmt)
@@ -107,16 +103,14 @@ ReturnStmt::ReturnStmt(const ReturnStmt &stmt)
 string ReturnStmt::toString() const {
   return expr ? format("(return {})", expr->toString()) : "(return)";
 }
-StmtPtr ReturnStmt::clone() const { return make_unique<ReturnStmt>(*this); }
-void ReturnStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(ReturnStmt, ASTVisitor);
 
 YieldStmt::YieldStmt(ExprPtr expr) : expr(move(expr)) {}
 YieldStmt::YieldStmt(const YieldStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
 string YieldStmt::toString() const {
   return expr ? format("(yield {})", expr->toString()) : "(yield)";
 }
-StmtPtr YieldStmt::clone() const { return make_unique<YieldStmt>(*this); }
-void YieldStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(YieldStmt, ASTVisitor);
 
 AssertStmt::AssertStmt(ExprPtr expr, ExprPtr message)
     : expr(move(expr)), message(move(message)) {}
@@ -126,8 +120,7 @@ string AssertStmt::toString() const {
   return format("(assert {}{})", expr->toString(),
                 message ? " #:msg \"" + message->toString() : "\"");
 }
-StmtPtr AssertStmt::clone() const { return make_unique<AssertStmt>(*this); }
-void AssertStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(AssertStmt, ASTVisitor);
 
 WhileStmt::WhileStmt(ExprPtr cond, StmtPtr suite, StmtPtr elseSuite)
     : cond(move(cond)), suite(move(suite)), elseSuite(move(elseSuite)) {}
@@ -141,8 +134,7 @@ string WhileStmt::toString() const {
   else
     return format("(while {} {}})", cond->toString(), suite->toString());
 }
-StmtPtr WhileStmt::clone() const { return make_unique<WhileStmt>(*this); }
-void WhileStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(WhileStmt, ASTVisitor);
 
 ForStmt::ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite)
     : var(move(var)), iter(move(iter)), suite(move(suite)), elseSuite(move(elseSuite)) {
@@ -158,8 +150,7 @@ string ForStmt::toString() const {
     return format("(for {} {} {})", var->toString(), iter->toString(),
                   suite->toString());
 }
-StmtPtr ForStmt::clone() const { return make_unique<ForStmt>(*this); }
-void ForStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(ForStmt, ASTVisitor);
 
 IfStmt::If IfStmt::If::clone() const { return {ast::clone(cond), ast::clone(suite)}; }
 
@@ -179,8 +170,7 @@ string IfStmt::toString() const {
                 i.suite->toString());
   return format("(if {})", s);
 }
-StmtPtr IfStmt::clone() const { return make_unique<IfStmt>(*this); }
-void IfStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(IfStmt, ASTVisitor);
 
 MatchStmt::MatchStmt(ExprPtr what, vector<PatternPtr> &&patterns,
                      vector<StmtPtr> &&cases)
@@ -203,8 +193,7 @@ string MatchStmt::toString() const {
     s += format(" (case {} {})", patterns[i]->toString(), cases[i]->toString());
   return format("(match{})", s);
 }
-StmtPtr MatchStmt::clone() const { return make_unique<MatchStmt>(*this); }
-void MatchStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(MatchStmt, ASTVisitor);
 
 ImportStmt::ImportStmt(ExprPtr from, ExprPtr what, vector<Param> &&args, ExprPtr ret,
                        string as, int dots)
@@ -220,8 +209,7 @@ string ImportStmt::toString() const {
                 dots ? format(" #:dots {}", dots) : "",
                 ret ? format(" #:ret {}", ret->toString()) : "");
 }
-StmtPtr ImportStmt::clone() const { return make_unique<ImportStmt>(*this); }
-void ImportStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(ImportStmt, ASTVisitor);
 
 TryStmt::Catch TryStmt::Catch::clone() const {
   return {var, ast::clone(exc), ast::clone(suite)};
@@ -242,19 +230,16 @@ string TryStmt::toString() const {
   return format("(try {}{}{})", suite->toString(), s,
                 !f.empty() ? format(" (finally {})", f) : "");
 }
-StmtPtr TryStmt::clone() const { return make_unique<TryStmt>(*this); }
-void TryStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(TryStmt, ASTVisitor);
 
 ThrowStmt::ThrowStmt(ExprPtr expr) : expr(move(expr)) {}
 ThrowStmt::ThrowStmt(const ThrowStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
 string ThrowStmt::toString() const { return format("(throw {})", expr->toString()); }
-StmtPtr ThrowStmt::clone() const { return make_unique<ThrowStmt>(*this); }
-void ThrowStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(ThrowStmt, ASTVisitor);
 
 GlobalStmt::GlobalStmt(string var) : var(move(var)) {}
 string GlobalStmt::toString() const { return format("(global '{})", var); }
-StmtPtr GlobalStmt::clone() const { return make_unique<GlobalStmt>(*this); }
-void GlobalStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(GlobalStmt, ASTVisitor);
 
 FunctionStmt::FunctionStmt(string name, ExprPtr ret, vector<Param> &&generics,
                            vector<Param> &&args, StmtPtr suite,
@@ -289,8 +274,7 @@ string FunctionStmt::toString() const {
                 !generics.empty() ? format(" #:generics ({})", gs) : "",
                 join(attr, " "), suite ? suite->toString() : "(pass)");
 }
-StmtPtr FunctionStmt::clone() const { return make_unique<FunctionStmt>(*this); }
-void FunctionStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(FunctionStmt, ASTVisitor);
 string FunctionStmt::signature() const {
   vector<string> s;
   for (auto &a : generics)
@@ -328,8 +312,7 @@ string ClassStmt::toString() const {
                 !generics.empty() ? format(" #:generics ({})", gs) : "",
                 join(attr, " "), suite ? suite->toString() : "(pass)");
 }
-StmtPtr ClassStmt::clone() const { return make_unique<ClassStmt>(*this); }
-void ClassStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(ClassStmt, ASTVisitor);
 bool ClassStmt::isRecord() const { return in(attributes, ATTR_TUPLE); }
 
 YieldFromStmt::YieldFromStmt(ExprPtr expr) : expr(move(expr)) {}
@@ -338,8 +321,7 @@ YieldFromStmt::YieldFromStmt(const YieldFromStmt &stmt)
 string YieldFromStmt::toString() const {
   return format("(yield-from {})", expr->toString());
 }
-StmtPtr YieldFromStmt::clone() const { return make_unique<YieldFromStmt>(*this); }
-void YieldFromStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(YieldFromStmt, ASTVisitor);
 
 WithStmt::WithStmt(vector<ExprPtr> &&items, vector<string> &&vars, StmtPtr suite)
     : items(move(items)), vars(vars), suite(move(suite)) {
@@ -364,8 +346,7 @@ string WithStmt::toString() const {
   }
   return format("(with ({}) {})", join(as, " "), suite->toString());
 }
-StmtPtr WithStmt::clone() const { return make_unique<WithStmt>(*this); }
-void WithStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(WithStmt, ASTVisitor);
 
 AssignMemberStmt::AssignMemberStmt(ExprPtr lhs, string member, ExprPtr rhs)
     : lhs(move(lhs)), member(move(member)), rhs(move(rhs)) {}
@@ -375,8 +356,7 @@ AssignMemberStmt::AssignMemberStmt(const AssignMemberStmt &stmt)
 string AssignMemberStmt::toString() const {
   return format("(assign-member {} {} {})", lhs->toString(), member, rhs->toString());
 }
-StmtPtr AssignMemberStmt::clone() const { return make_unique<AssignMemberStmt>(*this); }
-void AssignMemberStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(AssignMemberStmt, ASTVisitor);
 
 UpdateStmt::UpdateStmt(ExprPtr lhs, ExprPtr rhs, bool isAtomic)
     : lhs(move(lhs)), rhs(move(rhs)), isAtomic(isAtomic) {}
@@ -386,8 +366,7 @@ UpdateStmt::UpdateStmt(const UpdateStmt &stmt)
 string UpdateStmt::toString() const {
   return format("(update {} {})", lhs->toString(), rhs->toString());
 }
-StmtPtr UpdateStmt::clone() const { return make_unique<UpdateStmt>(*this); }
-void UpdateStmt::accept(ASTVisitor &visitor) const { visitor.visit(this); }
+ACCEPT_IMPL(UpdateStmt, ASTVisitor);
 
 } // namespace ast
 } // namespace seq

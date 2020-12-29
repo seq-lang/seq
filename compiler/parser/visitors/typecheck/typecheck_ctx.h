@@ -44,7 +44,7 @@ public:
   /// If type checking is successful, all of them should be resolved.
   set<types::TypePtr> activeUnbounds;
   int iteration;
-  int extendEtape;
+  int extendCount;
   bool needsAnotherIteration;
 
 public:
@@ -99,7 +99,7 @@ public:
         if (typeName == "AttributeError" && method == "__new__")
           assert(1);
         for (auto &mt : t->second)
-          if (mt.age <= extendEtape) {
+          if (mt.age <= extendCount) {
             auto sig = cache->functions[mt.name].ast->signature();
             auto it = signatureLoci.find(sig);
             if (it != signatureLoci.end())

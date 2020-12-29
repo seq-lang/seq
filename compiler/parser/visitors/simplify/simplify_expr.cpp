@@ -31,7 +31,7 @@ ExprPtr SimplifyVisitor::transform(const Expr *expr, bool allowTypes) {
     return nullptr;
   SimplifyVisitor v(ctx, preamble, prependStmts);
   v.setSrcInfo(expr->getSrcInfo());
-  expr->accept(v);
+  const_cast<Expr *>(expr)->accept(v);
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
     error("unexpected type expression");
   return move(v.resultExpr);
@@ -44,20 +44,22 @@ ExprPtr SimplifyVisitor::transformType(const Expr *expr) {
   return e;
 }
 
-void SimplifyVisitor::defaultVisit(const Expr *e) { resultExpr = e->clone(); }
+void SimplifyVisitor::defaultVisit(Expr *e) { resultExpr = e->clone(); }
 
-void SimplifyVisitor::visit(const NoneExpr *expr) {
+/**************************************************************************************/
+
+void SimplifyVisitor::visit(NoneExpr *expr) {
   resultExpr = transform(N<CallExpr>(N<IdExpr>("Optional")));
 }
 
-void SimplifyVisitor::visit(const IntExpr *expr) {
+void SimplifyVisitor::visit(IntExpr *expr) {
   resultExpr = transformInt(expr->value, expr->suffix);
 }
 
-void SimplifyVisitor::visit(const StringExpr *expr) {
+void SimplifyVisitor::visit(StringExpr *expr) {
   if (expr->prefix == "f") {
     /// F-strings
-    resultExpr = parseFString(expr->value);
+    resultExpr = transformFString(expr->value);
   } else if (!expr->prefix.empty()) {
     /// Custom-prefix strings
     resultExpr = transform(
@@ -70,7 +72,7 @@ void SimplifyVisitor::visit(const StringExpr *expr) {
   }
 }
 
-void SimplifyVisitor::visit(const IdExpr *expr) {
+void SimplifyVisitor::visit(IdExpr *expr) {
   auto val = ctx->find(expr->value);
   if (!val)
     error("identifier '{}' not found", expr->value);
@@ -116,18 +118,18 @@ void SimplifyVisitor::visit(const IdExpr *expr) {
         expr->value);
 }
 
-void SimplifyVisitor::visit(const StarExpr *expr) {
+void SimplifyVisitor::visit(StarExpr *expr) {
   resultExpr = transform(N<CallExpr>(
       N<IdExpr>("List"), N<CallExpr>(N<DotExpr>(clone(expr->what), "__iter__"))));
 }
 
-void SimplifyVisitor::visit(const TupleExpr *expr) {
+void SimplifyVisitor::visit(TupleExpr *expr) {
   auto name = generateTupleStub(expr->items.size());
   resultExpr = transform(
       N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"), clone(expr->items)));
 }
 
-void SimplifyVisitor::visit(const ListExpr *expr) {
+void SimplifyVisitor::visit(ListExpr *expr) {
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("list"));
   stmts.push_back(transform(N<AssignStmt>(
@@ -148,7 +150,7 @@ void SimplifyVisitor::visit(const ListExpr *expr) {
   resultExpr = N<StmtExpr>(move(stmts), transform(var));
 }
 
-void SimplifyVisitor::visit(const SetExpr *expr) {
+void SimplifyVisitor::visit(SetExpr *expr) {
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("set"));
   stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Set")))));
@@ -165,7 +167,7 @@ void SimplifyVisitor::visit(const SetExpr *expr) {
   resultExpr = N<StmtExpr>(move(stmts), transform(var));
 }
 
-void SimplifyVisitor::visit(const DictExpr *expr) {
+void SimplifyVisitor::visit(DictExpr *expr) {
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("dict"));
   stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Dict")))));
@@ -175,9 +177,9 @@ void SimplifyVisitor::visit(const DictExpr *expr) {
   resultExpr = N<StmtExpr>(move(stmts), transform(var));
 }
 
-void SimplifyVisitor::visit(const GeneratorExpr *expr) {
+void SimplifyVisitor::visit(GeneratorExpr *expr) {
   SuiteStmt *prev;
-  auto suite = getGeneratorBlock(expr->loops, prev);
+  auto suite = transformGeneratorBody(expr->loops, prev);
 
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("gen"));
@@ -203,9 +205,9 @@ void SimplifyVisitor::visit(const GeneratorExpr *expr) {
   }
 }
 
-void SimplifyVisitor::visit(const DictGeneratorExpr *expr) {
+void SimplifyVisitor::visit(DictGeneratorExpr *expr) {
   SuiteStmt *prev;
-  auto suite = getGeneratorBlock(expr->loops, prev);
+  auto suite = transformGeneratorBody(expr->loops, prev);
 
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("gen"));
@@ -218,7 +220,7 @@ void SimplifyVisitor::visit(const DictGeneratorExpr *expr) {
 
 /// Transform a if-expression a if cond else b to:
 ///   a if cond.__bool__() else b
-void SimplifyVisitor::visit(const IfExpr *expr) {
+void SimplifyVisitor::visit(IfExpr *expr) {
   auto cond = transform(N<CallExpr>(N<DotExpr>(clone(expr->cond), "__bool__")));
   auto oldAssign = ctx->canAssign;
   ctx->canAssign = false;
@@ -226,7 +228,7 @@ void SimplifyVisitor::visit(const IfExpr *expr) {
   ctx->canAssign = oldAssign;
 }
 
-void SimplifyVisitor::visit(const UnaryExpr *expr) {
+void SimplifyVisitor::visit(UnaryExpr *expr) {
   if (expr->op == "!") {
     resultExpr = transform(N<CallExpr>(N<DotExpr>(
         N<CallExpr>(N<DotExpr>(clone(expr->expr), "__bool__")), "__invert__")));
@@ -245,7 +247,7 @@ void SimplifyVisitor::visit(const UnaryExpr *expr) {
   }
 }
 
-void SimplifyVisitor::visit(const BinaryExpr *expr) {
+void SimplifyVisitor::visit(BinaryExpr *expr) {
   if (expr->op == "&&" || expr->op == "||") {
     auto l = transform(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__")));
     auto oldAssign = ctx->canAssign;
@@ -279,14 +281,22 @@ void SimplifyVisitor::visit(const BinaryExpr *expr) {
   }
 }
 
-void SimplifyVisitor::visit(const PipeExpr *expr) {
+void SimplifyVisitor::visit(PipeExpr *expr) {
   vector<PipeExpr::Pipe> p;
-  for (auto &i : expr->items)
+  for (auto &i : expr->items) {
     p.push_back({i.op, transform(i.expr)});
+    bool foundEllipsis = false;
+    if (auto ec = p.back().expr->getCall())
+      for (auto &a : ec->args) {
+        if (a.value->getEllipsis() && foundEllipsis)
+          error("unexpected partial argument");
+        foundEllipsis |= bool(a.value->getEllipsis());
+      }
+  }
   resultExpr = N<PipeExpr>(move(p));
 }
 
-void SimplifyVisitor::visit(const IndexExpr *expr) {
+void SimplifyVisitor::visit(IndexExpr *expr) {
   ExprPtr e = nullptr;
   // First handle the tuple[] and function[] cases.
   if (expr->expr->isId("tuple") || expr->expr->isId("Tuple")) {
@@ -339,7 +349,7 @@ void SimplifyVisitor::visit(const IndexExpr *expr) {
   }
 }
 
-void SimplifyVisitor::visit(const CallExpr *expr) {
+void SimplifyVisitor::visit(CallExpr *expr) {
   if (expr->expr->isId("__ptr__")) {
     if (expr->args.size() == 1 && expr->args[0].value->getId()) {
       auto v = ctx->find(expr->args[0].value->getId()->value);
@@ -359,12 +369,23 @@ void SimplifyVisitor::visit(const CallExpr *expr) {
   }
   generateTupleStub(expr->args.size());
   vector<CallExpr::Arg> args;
-  for (auto &i : expr->args)
+  bool namesStarted = false;
+  set<string> seenNames;
+  for (auto &i : expr->args) {
+    if (i.name.empty() && namesStarted)
+      error("unnamed argument after a named argument");
+    namesStarted |= !i.name.empty();
+    if (!i.name.empty()) {
+      if (in(seenNames, i.name))
+        error("repeated named argument '{}'", i.name);
+      seenNames.insert(i.name);
+    }
     args.push_back({i.name, transform(i.value)});
+  }
   resultExpr = N<CallExpr>(transform(expr->expr.get(), true), move(args));
 }
 
-void SimplifyVisitor::visit(const DotExpr *expr) {
+void SimplifyVisitor::visit(DotExpr *expr) {
   /// First flatten the imports.
   const Expr *e = expr;
   std::deque<string> chain;
@@ -421,17 +442,23 @@ void SimplifyVisitor::visit(const DotExpr *expr) {
   }
 }
 
-void SimplifyVisitor::visit(const SliceExpr *expr) {
+void SimplifyVisitor::visit(SliceExpr *expr) {
   resultExpr = N<SliceExpr>(transform(expr->start), transform(expr->stop),
                             transform(expr->step));
 }
 
-void SimplifyVisitor::visit(const TypeOfExpr *expr) {
+void SimplifyVisitor::visit(TypeOfExpr *expr) {
   resultExpr = N<TypeOfExpr>(transform(expr->expr.get(), true));
   resultExpr->markType();
 }
 
-void SimplifyVisitor::visit(const LambdaExpr *expr) {
+void SimplifyVisitor::visit(YieldExpr *expr) {
+  if (!ctx->getLevel() || ctx->bases.back().isType())
+    error("expected function body");
+  defaultVisit(expr);
+}
+
+void SimplifyVisitor::visit(LambdaExpr *expr) {
   vector<StmtPtr> stmts;
   stmts.push_back(N<ReturnStmt>(clone(expr->expr)));
   auto call_raw = makeAnonFn(move(stmts), expr->vars);
@@ -449,7 +476,7 @@ void SimplifyVisitor::visit(const LambdaExpr *expr) {
   }
 }
 
-void SimplifyVisitor::visit(const AssignExpr *expr) {
+void SimplifyVisitor::visit(AssignExpr *expr) {
   seqassert(expr->var->getId(), "only simple assignment expression are supported");
   if (!ctx->canAssign)
     error("assignment expression in a short-circuiting subexpression");
@@ -458,6 +485,8 @@ void SimplifyVisitor::visit(const AssignExpr *expr) {
   resultExpr =
       transform(N<StmtExpr>(move(s), transform(N<IdExpr>(expr->var->getId()->value))));
 }
+
+/**************************************************************************************/
 
 ExprPtr SimplifyVisitor::transformInt(const string &value, const string &suffix) {
   auto to_int = [](const string &s) {
@@ -493,7 +522,7 @@ ExprPtr SimplifyVisitor::transformInt(const string &value, const string &suffix)
                   N<StringExpr>(value)));
 }
 
-ExprPtr SimplifyVisitor::parseFString(string value) {
+ExprPtr SimplifyVisitor::transformFString(string value) {
   vector<ExprPtr> items;
   int braceCount = 0, braceStart = 0;
   for (int i = 0; i < value.size(); i++) {
@@ -531,8 +560,7 @@ string SimplifyVisitor::generateTupleStub(int len) {
   // type).
   for (int len_i = 0; len_i <= len; len_i++) {
     auto typeName = format("Tuple.N{}", len_i);
-    if (ctx->cache->variardics.find(typeName) == ctx->cache->variardics.end()) {
-      ctx->cache->variardics.insert(typeName);
+    if (!ctx->find(typeName)) {
       vector<Param> generics, args;
       for (int i = 1; i <= len_i; i++) {
         generics.emplace_back(Param{format("T{}", i), nullptr, nullptr});
@@ -547,15 +575,13 @@ string SimplifyVisitor::generateTupleStub(int len) {
       SimplifyVisitor(nctx, preamble).transform(stmt);
       auto nval = nctx->find(typeName);
       seqassert(nval, "cannot find '{}'", typeName);
-      ctx->cache->imports[STDLIB_IMPORT].ctx->addToplevel(typeName, nval);
-      ctx->cache->imports[STDLIB_IMPORT].ctx->addToplevel(nval->canonicalName, nval);
     }
   }
   return format("Tuple.N{}", len);
 }
 
-StmtPtr SimplifyVisitor::getGeneratorBlock(const vector<GeneratorBody> &loops,
-                                           SuiteStmt *&prev) {
+StmtPtr SimplifyVisitor::transformGeneratorBody(const vector<GeneratorBody> &loops,
+                                                SuiteStmt *&prev) {
   StmtPtr suite = N<SuiteStmt>(), newSuite = nullptr;
   prev = (SuiteStmt *)suite.get();
   for (auto &l : loops) {

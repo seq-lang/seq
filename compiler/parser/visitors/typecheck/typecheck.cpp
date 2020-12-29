@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "parser/ast.h"
@@ -30,114 +31,105 @@ namespace ast {
 using namespace types;
 
 TypecheckVisitor::TypecheckVisitor(shared_ptr<TypeContext> ctx,
-                                   shared_ptr<vector<StmtPtr>> stmts)
-    : ctx(ctx) {
+                                   const shared_ptr<vector<StmtPtr>> &stmts)
+    : ctx(move(ctx)) {
   prependStmts = stmts ? stmts : make_shared<vector<StmtPtr>>();
-}
-
-PatternPtr TypecheckVisitor::transform(const PatternPtr &pat) {
-  if (!pat)
-    return nullptr;
-  TypecheckVisitor v(ctx, prependStmts);
-  v.setSrcInfo(pat->getSrcInfo());
-  pat->accept(v);
-  return move(v.resultPattern);
 }
 
 StmtPtr TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto ctx = make_shared<TypeContext>(cache);
   TypecheckVisitor v(ctx);
-  return v.realizeBlock(stmts, true);
+  auto infer = v.inferTypes(stmts->clone(), true);
+  LOG("type inference done in {} iterations", infer.first);
+  return move(infer.second);
 }
 
-void TypecheckVisitor::defaultVisit(const Pattern *p) { resultPattern = p->clone(); }
+/**************************************************************************************/
+// TODO: remove once MatchStmt is handled in SimplifyVisitor
 
-/*************************************************************************************/
-
-void TypecheckVisitor::visit(const StarPattern *pat) {
-  resultPattern = N<StarPattern>();
-  resultPattern->setType(
-      forceUnify(pat, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)));
+PatternPtr TypecheckVisitor::transform(const PatternPtr &pat_) {
+  if (!pat_)
+    return nullptr;
+  auto &pat = const_cast<PatternPtr &>(pat_);
+  TypecheckVisitor v(ctx, prependStmts);
+  v.setSrcInfo(pat->getSrcInfo());
+  pat->accept(v);
+  return move(pat);
 }
-
-void TypecheckVisitor::visit(const IntPattern *pat) {
-  resultPattern = N<IntPattern>(pat->value);
-  resultPattern->setType(forceUnify(pat, ctx->findInternal("int")));
+void TypecheckVisitor::defaultVisit(Pattern *e) {
+  seqassert(false, "unexpected AST node {}", e->toString());
 }
-
-void TypecheckVisitor::visit(const BoolPattern *pat) {
-  resultPattern = N<BoolPattern>(pat->value);
-  resultPattern->setType(forceUnify(pat, ctx->findInternal("bool")));
+void TypecheckVisitor::visit(StarPattern *pat) {
+  pat->type |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
+  pat->done = pat->type->canRealize();
 }
-
-void TypecheckVisitor::visit(const StrPattern *pat) {
-  resultPattern = N<StrPattern>(pat->value, pat->prefix);
-  if (pat->prefix == "s")
-    resultPattern->setType(forceUnify(pat, ctx->findInternal("seq")));
-  else
-    resultPattern->setType(forceUnify(pat, ctx->findInternal("str")));
+void TypecheckVisitor::visit(IntPattern *pat) {
+  pat->type |= ctx->findInternal("int");
+  pat->done = true;
 }
-
-void TypecheckVisitor::visit(const RangePattern *pat) {
-  resultPattern = N<RangePattern>(pat->start, pat->stop);
-  resultPattern->setType(forceUnify(pat, ctx->findInternal("int")));
+void TypecheckVisitor::visit(BoolPattern *pat) {
+  pat->type |= ctx->findInternal("bool");
+  pat->done = true;
 }
-
-void TypecheckVisitor::visit(const TuplePattern *pat) {
-  auto p = N<TuplePattern>(transform(pat->patterns));
+void TypecheckVisitor::visit(StrPattern *pat) {
+  pat->type |= ctx->findInternal(pat->prefix == "s" ? "seq" : "str");
+  pat->done = true;
+}
+void TypecheckVisitor::visit(RangePattern *pat) {
+  pat->type |= ctx->findInternal("int");
+  pat->done = true;
+}
+void TypecheckVisitor::visit(TuplePattern *pat) {
+  pat->patterns = transform(pat->patterns);
+  pat->done = true;
   vector<TypePtr> types;
-  for (auto &pp : p->patterns)
-    types.push_back(pp->getType());
-  auto t = ctx->instantiateGeneric(
+  for (const auto &p : pat->patterns) {
+    types.push_back(p->getType());
+    pat->done &= p->done;
+  }
+  pat->type |= ctx->instantiateGeneric(
       getSrcInfo(), ctx->findInternal(format("Tuple.N{}", types.size())), {types});
-  resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, t));
+}
+void TypecheckVisitor::visit(ListPattern *pat) {
+  pat->patterns = transform(pat->patterns);
+  pat->done = true;
+  TypePtr typ = ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
+  for (const auto &p : pat->patterns) {
+    typ |= p->type;
+    pat->done &= p->done;
+  }
+  pat->type |= ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("List"), {typ});
+}
+void TypecheckVisitor::visit(OrPattern *pat) {
+  pat->patterns = transform(pat->patterns);
+  pat->done = true;
+  TypePtr typ = ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
+  for (const auto &p : pat->patterns) {
+    typ |= p->type;
+    pat->done &= p->done;
+  }
+  pat->type |= typ;
+}
+void TypecheckVisitor::visit(WildcardPattern *pat) {
+  pat->type |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
+  if (!pat->var.empty())
+    ctx->add(TypecheckItem::Var, pat->var, pat->type);
+  pat->done = pat->type->canRealize();
+}
+void TypecheckVisitor::visit(GuardedPattern *pat) {
+  pat->pattern = transform(pat->pattern);
+  pat->cond = transform(pat->cond);
+  pat->type |= pat->pattern->type;
+  pat->done = pat->pattern->done && pat->cond->done;
+}
+void TypecheckVisitor::visit(BoundPattern *pat) {
+  pat->pattern = transform(pat->pattern);
+  pat->type |= pat->pattern->type;
+  pat->done = pat->pattern->done;
+  ctx->add(TypecheckItem::Var, pat->var, pat->type);
 }
 
-void TypecheckVisitor::visit(const ListPattern *pat) {
-  auto p = N<ListPattern>(transform(pat->patterns));
-  TypePtr t = ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
-  for (auto &pp : p->patterns)
-    forceUnify(t, pp->getType());
-  t = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("List"), {t});
-  resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, t));
-}
-
-void TypecheckVisitor::visit(const OrPattern *pat) {
-  auto p = N<OrPattern>(transform(pat->patterns));
-  assert(p->patterns.size());
-  TypePtr t = p->patterns[0]->getType();
-  for (auto &pp : p->patterns)
-    forceUnify(t, pp->getType());
-  resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, t));
-}
-
-void TypecheckVisitor::visit(const WildcardPattern *pat) {
-  resultPattern = N<WildcardPattern>(pat->var);
-  auto t = forceUnify(pat, ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
-  if (pat->var != "")
-    ctx->add(TypecheckItem::Var, pat->var, t);
-  resultPattern->setType(t);
-}
-
-void TypecheckVisitor::visit(const GuardedPattern *pat) {
-  auto p = N<GuardedPattern>(transform(pat->pattern), transform(pat->cond));
-  auto t = p->pattern->getType();
-  resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, t));
-}
-
-void TypecheckVisitor::visit(const BoundPattern *pat) {
-  auto p = N<BoundPattern>(pat->var, transform(pat->pattern));
-  auto t = p->pattern->getType();
-  ctx->add(TypecheckItem::Var, p->var, t);
-  resultPattern = move(p);
-  resultPattern->setType(forceUnify(pat, t));
-}
-
-/*******************************/
+/**************************************************************************************/
 
 StaticVisitor::StaticVisitor(map<string, types::Generic> &m)
     : generics(m), evaluated(false), value(0) {}
@@ -148,7 +140,7 @@ pair<bool, int> StaticVisitor::transform(const ExprPtr &e) {
   return {v.evaluated, v.evaluated ? v.value : -1};
 }
 
-void StaticVisitor::visit(const IdExpr *expr) {
+void StaticVisitor::visit(IdExpr *expr) {
   auto val = generics.find(expr->value);
   auto t = val->second.type->follow();
   if (t->getLink()) {
@@ -161,12 +153,12 @@ void StaticVisitor::visit(const IdExpr *expr) {
   }
 }
 
-void StaticVisitor::visit(const IntExpr *expr) {
+void StaticVisitor::visit(IntExpr *expr) {
   evaluated = true;
-  value = std::stoull(expr->value, nullptr, 0);
+  value = int(std::stoull(expr->value, nullptr, 0));
 }
 
-void StaticVisitor::visit(const UnaryExpr *expr) {
+void StaticVisitor::visit(UnaryExpr *expr) {
   std::tie(evaluated, value) = transform(expr->expr);
   if (evaluated) {
     if (expr->op == "-")
@@ -178,7 +170,7 @@ void StaticVisitor::visit(const UnaryExpr *expr) {
   }
 }
 
-void StaticVisitor::visit(const IfExpr *expr) {
+void StaticVisitor::visit(IfExpr *expr) {
   std::tie(evaluated, value) = transform(expr->cond);
   // Note: both expressions must be evaluated at this time in order to capture
   // all
@@ -189,7 +181,7 @@ void StaticVisitor::visit(const IfExpr *expr) {
     std::tie(evaluated, value) = value ? i : e;
 }
 
-void StaticVisitor::visit(const BinaryExpr *expr) {
+void StaticVisitor::visit(BinaryExpr *expr) {
   std::tie(evaluated, value) = transform(expr->lexpr);
   bool evaluated2;
   int value2;

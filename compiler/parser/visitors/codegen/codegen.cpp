@@ -22,15 +22,15 @@ using std::stack;
 namespace seq {
 namespace ast {
 
-void CodegenVisitor::defaultVisit(const Expr *n) {
+void CodegenVisitor::defaultVisit(Expr *n) {
   seqassert(false, "invalid node {}", n->toString());
 }
 
-void CodegenVisitor::defaultVisit(const Stmt *n) {
+void CodegenVisitor::defaultVisit(Stmt *n) {
   seqassert(false, "invalid node {}", n->toString());
 }
 
-void CodegenVisitor::defaultVisit(const Pattern *n) {
+void CodegenVisitor::defaultVisit(Pattern *n) {
   seqassert(false, "invalid node {}", n->toString());
 }
 
@@ -150,23 +150,23 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   return module;
 }
 
-void CodegenVisitor::visit(const BoolExpr *expr) {
+void CodegenVisitor::visit(BoolExpr *expr) {
   resultExpr = new seq::BoolExpr(expr->value);
 }
 
-void CodegenVisitor::visit(const IntExpr *expr) {
+void CodegenVisitor::visit(IntExpr *expr) {
   resultExpr = new seq::IntExpr(expr->intValue);
 }
 
-void CodegenVisitor::visit(const FloatExpr *expr) {
+void CodegenVisitor::visit(FloatExpr *expr) {
   resultExpr = new seq::FloatExpr(expr->value);
 }
 
-void CodegenVisitor::visit(const StringExpr *expr) {
+void CodegenVisitor::visit(StringExpr *expr) {
   resultExpr = new seq::StrExpr(expr->value);
 }
 
-void CodegenVisitor::visit(const IdExpr *expr) {
+void CodegenVisitor::visit(IdExpr *expr) {
   auto val = ctx->find(expr->value);
   seqassert(val, "cannot find '{}'", expr->value);
   // TODO: this makes no sense: why setAtomic on temporary expr?
@@ -181,19 +181,19 @@ void CodegenVisitor::visit(const IdExpr *expr) {
     resultExpr = new seq::TypeExpr(val->getType());
 }
 
-void CodegenVisitor::visit(const BinaryExpr *expr) {
+void CodegenVisitor::visit(BinaryExpr *expr) {
   assert(expr->op == "&&" || expr->op == "||");
   auto op = expr->op == "&&" ? ShortCircuitExpr::AND : ShortCircuitExpr::OR;
   resultExpr =
       new seq::ShortCircuitExpr(op, transform(expr->lexpr), transform(expr->rexpr));
 }
 
-void CodegenVisitor::visit(const IfExpr *expr) {
+void CodegenVisitor::visit(IfExpr *expr) {
   resultExpr = new seq::CondExpr(transform(expr->cond), transform(expr->ifexpr),
                                  transform(expr->elsexpr));
 }
 
-void CodegenVisitor::visit(const PipeExpr *expr) {
+void CodegenVisitor::visit(PipeExpr *expr) {
   vector<seq::Expr *> exprs{transform(expr->items[0].expr)};
   vector<seq::types::Type *> inTypes{realizeType(expr->inTypes[0]->getClass().get())};
   for (int i = 1; i < expr->items.size(); i++) {
@@ -223,7 +223,7 @@ void CodegenVisitor::visit(const PipeExpr *expr) {
   resultExpr = p;
 }
 
-void CodegenVisitor::visit(const CallExpr *expr) {
+void CodegenVisitor::visit(CallExpr *expr) {
   auto lhs = transform(expr->expr);
   vector<seq::Expr *> items;
   vector<string> names;
@@ -237,16 +237,16 @@ void CodegenVisitor::visit(const CallExpr *expr) {
   resultExpr = new seq::CallExpr(lhs, items, names);
 }
 
-void CodegenVisitor::visit(const StackAllocExpr *expr) {
+void CodegenVisitor::visit(StackAllocExpr *expr) {
   auto c = expr->typeExpr->getType()->getClass();
   assert(c);
   resultExpr = new seq::ArrayExpr(realizeType(c.get()), transform(expr->expr), true);
 }
-void CodegenVisitor::visit(const DotExpr *expr) {
+void CodegenVisitor::visit(DotExpr *expr) {
   resultExpr = new seq::GetElemExpr(transform(expr->expr), expr->member);
 }
 
-void CodegenVisitor::visit(const PtrExpr *expr) {
+void CodegenVisitor::visit(PtrExpr *expr) {
   auto e = CAST(expr->expr, IdExpr);
   assert(e);
   auto v = ctx->find(e->value, true)->getVar();
@@ -254,11 +254,11 @@ void CodegenVisitor::visit(const PtrExpr *expr) {
   resultExpr = new seq::VarPtrExpr(v);
 }
 
-void CodegenVisitor::visit(const YieldExpr *expr) {
+void CodegenVisitor::visit(YieldExpr *expr) {
   resultExpr = new seq::YieldExpr(ctx->getBase());
 }
 
-void CodegenVisitor::visit(const StmtExpr *expr) {
+void CodegenVisitor::visit(StmtExpr *expr) {
   vector<seq::Stmt *> stmts;
   function<void(const vector<StmtPtr> &)> traverse = [&](const vector<StmtPtr> &vss) {
     for (auto &s : vss) {
@@ -272,24 +272,22 @@ void CodegenVisitor::visit(const StmtExpr *expr) {
   resultExpr = new seq::StmtExpr(stmts, transform(expr->expr));
 }
 
-void CodegenVisitor::visit(const SuiteStmt *stmt) {
+void CodegenVisitor::visit(SuiteStmt *stmt) {
   for (auto &s : stmt->stmts)
     transform(s);
 }
 
-void CodegenVisitor::visit(const PassStmt *stmt) {}
+void CodegenVisitor::visit(PassStmt *stmt) {}
 
-void CodegenVisitor::visit(const BreakStmt *stmt) { resultStmt = new seq::Break(); }
+void CodegenVisitor::visit(BreakStmt *stmt) { resultStmt = new seq::Break(); }
 
-void CodegenVisitor::visit(const ContinueStmt *stmt) {
-  resultStmt = new seq::Continue();
-}
+void CodegenVisitor::visit(ContinueStmt *stmt) { resultStmt = new seq::Continue(); }
 
-void CodegenVisitor::visit(const ExprStmt *stmt) {
+void CodegenVisitor::visit(ExprStmt *stmt) {
   resultStmt = new seq::ExprStmt(transform(stmt->expr));
 }
 
-void CodegenVisitor::visit(const AssignStmt *stmt) {
+void CodegenVisitor::visit(AssignStmt *stmt) {
   /// TODO: atomic operations & JIT
   auto i = CAST(stmt->lhs, IdExpr);
   assert(i);
@@ -319,12 +317,12 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
   }
 }
 
-void CodegenVisitor::visit(const AssignMemberStmt *stmt) {
+void CodegenVisitor::visit(AssignMemberStmt *stmt) {
   resultStmt =
       new seq::AssignMember(transform(stmt->lhs), stmt->member, transform(stmt->rhs));
 }
 
-void CodegenVisitor::visit(const UpdateStmt *stmt) {
+void CodegenVisitor::visit(UpdateStmt *stmt) {
   auto i = CAST(stmt->lhs, IdExpr);
   assert(i);
   auto var = i->value;
@@ -333,7 +331,7 @@ void CodegenVisitor::visit(const UpdateStmt *stmt) {
   resultStmt = new seq::Assign(val->getVar(), transform(stmt->rhs));
 }
 
-void CodegenVisitor::visit(const DelStmt *stmt) {
+void CodegenVisitor::visit(DelStmt *stmt) {
   auto expr = CAST(stmt->expr, IdExpr);
   assert(expr);
   auto v = ctx->find(expr->value, true)->getVar();
@@ -342,7 +340,7 @@ void CodegenVisitor::visit(const DelStmt *stmt) {
   resultStmt = new seq::Del(v);
 }
 
-void CodegenVisitor::visit(const ReturnStmt *stmt) {
+void CodegenVisitor::visit(ReturnStmt *stmt) {
   if (!stmt->expr) {
     resultStmt = new seq::Return(nullptr);
   } else {
@@ -351,13 +349,13 @@ void CodegenVisitor::visit(const ReturnStmt *stmt) {
   }
 }
 
-void CodegenVisitor::visit(const YieldStmt *stmt) {
+void CodegenVisitor::visit(YieldStmt *stmt) {
   auto ret = new seq::Yield(stmt->expr ? transform(stmt->expr) : nullptr);
   ctx->getBase()->setGenerator();
   resultStmt = ret;
 }
 
-void CodegenVisitor::visit(const WhileStmt *stmt) {
+void CodegenVisitor::visit(WhileStmt *stmt) {
   auto r = new seq::While(transform(stmt->cond));
   ctx->addBlock(r->getBlock());
   transform(stmt->suite);
@@ -365,7 +363,7 @@ void CodegenVisitor::visit(const WhileStmt *stmt) {
   resultStmt = r;
 }
 
-void CodegenVisitor::visit(const ForStmt *stmt) {
+void CodegenVisitor::visit(ForStmt *stmt) {
   auto r = new seq::For(transform(stmt->iter));
   string forVar;
   ctx->addBlock(r->getBlock());
@@ -378,7 +376,7 @@ void CodegenVisitor::visit(const ForStmt *stmt) {
   resultStmt = r;
 }
 
-void CodegenVisitor::visit(const IfStmt *stmt) {
+void CodegenVisitor::visit(IfStmt *stmt) {
   auto r = new seq::If();
   for (auto &i : stmt->ifs) {
     ctx->addBlock(i.cond ? r->addCond(transform(i.cond)) : r->addElse());
@@ -388,7 +386,7 @@ void CodegenVisitor::visit(const IfStmt *stmt) {
   resultStmt = r;
 }
 
-void CodegenVisitor::visit(const MatchStmt *stmt) {
+void CodegenVisitor::visit(MatchStmt *stmt) {
   auto m = new seq::Match();
   m->setValue(transform(stmt->what));
   for (auto ci = 0; ci < stmt->cases.size(); ci++) {
@@ -416,7 +414,7 @@ void CodegenVisitor::visit(const MatchStmt *stmt) {
   resultStmt = m;
 }
 
-void CodegenVisitor::visit(const TryStmt *stmt) {
+void CodegenVisitor::visit(TryStmt *stmt) {
   auto r = new seq::TryCatch();
   auto oldTryCatch = ctx->tryCatch;
   ctx->tryCatch = r;
@@ -442,11 +440,11 @@ void CodegenVisitor::visit(const TryStmt *stmt) {
   resultStmt = r;
 }
 
-void CodegenVisitor::visit(const ThrowStmt *stmt) {
+void CodegenVisitor::visit(ThrowStmt *stmt) {
   resultStmt = new seq::Throw(transform(stmt->expr));
 }
 
-void CodegenVisitor::visit(const FunctionStmt *stmt) {
+void CodegenVisitor::visit(FunctionStmt *stmt) {
   for (auto &real : ctx->cache->functions[stmt->name].realizations) {
     auto &fp = ctx->functions[real.first];
     if (fp.second)
@@ -560,55 +558,53 @@ void CodegenVisitor::visit(const FunctionStmt *stmt) {
   }
 } // namespace tmp
 
-void CodegenVisitor::visit(const ClassStmt *stmt) {
+void CodegenVisitor::visit(ClassStmt *stmt) {
   // visitMethods(ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo()));
 }
 
-void CodegenVisitor::visit(const StarPattern *pat) {
-  resultPattern = new seq::StarPattern();
-}
+void CodegenVisitor::visit(StarPattern *pat) { resultPattern = new seq::StarPattern(); }
 
-void CodegenVisitor::visit(const IntPattern *pat) {
+void CodegenVisitor::visit(IntPattern *pat) {
   resultPattern = new seq::IntPattern(pat->value);
 }
 
-void CodegenVisitor::visit(const BoolPattern *pat) {
+void CodegenVisitor::visit(BoolPattern *pat) {
   resultPattern = new seq::BoolPattern(pat->value);
 }
 
-void CodegenVisitor::visit(const StrPattern *pat) {
+void CodegenVisitor::visit(StrPattern *pat) {
   if (pat->prefix == "s")
     resultPattern = new seq::SeqPattern(pat->value);
   else
     resultPattern = new seq::StrPattern(pat->value);
 }
 
-void CodegenVisitor::visit(const RangePattern *pat) {
+void CodegenVisitor::visit(RangePattern *pat) {
   resultPattern = new seq::RangePattern(pat->start, pat->stop);
 }
 
-void CodegenVisitor::visit(const TuplePattern *pat) {
+void CodegenVisitor::visit(TuplePattern *pat) {
   vector<seq::Pattern *> pp;
   for (auto &p : pat->patterns)
     pp.push_back(transform(p));
   resultPattern = new seq::RecordPattern(move(pp));
 }
 
-void CodegenVisitor::visit(const ListPattern *pat) {
+void CodegenVisitor::visit(ListPattern *pat) {
   vector<seq::Pattern *> pp;
   for (auto &p : pat->patterns)
     pp.push_back(transform(p));
   resultPattern = new seq::ArrayPattern(move(pp));
 }
 
-void CodegenVisitor::visit(const OrPattern *pat) {
+void CodegenVisitor::visit(OrPattern *pat) {
   vector<seq::Pattern *> pp;
   for (auto &p : pat->patterns)
     pp.push_back(transform(p));
   resultPattern = new seq::OrPattern(move(pp));
 }
 
-void CodegenVisitor::visit(const WildcardPattern *pat) {
+void CodegenVisitor::visit(WildcardPattern *pat) {
   auto p = new seq::Wildcard();
   if (!pat->var.empty())
     ctx->addVar(pat->var, p->getVar());
@@ -616,7 +612,7 @@ void CodegenVisitor::visit(const WildcardPattern *pat) {
   resultPattern = p;
 }
 
-void CodegenVisitor::visit(const GuardedPattern *pat) {
+void CodegenVisitor::visit(GuardedPattern *pat) {
   resultPattern =
       new seq::GuardedPattern(transform(pat->pattern), transform(pat->cond));
 }

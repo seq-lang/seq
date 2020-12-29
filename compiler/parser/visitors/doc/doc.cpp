@@ -124,7 +124,7 @@ void DocVisitor::transformModule(StmtPtr stmt) {
     ctx->shared->j[to_string(id)]["doc"] = docstr;
 }
 
-void DocVisitor::visit(const IdExpr *expr) {
+void DocVisitor::visit(IdExpr *expr) {
   auto i = ctx->find(expr->value);
   if (!i)
     error("unknown identifier {}", expr->value);
@@ -134,7 +134,7 @@ void DocVisitor::visit(const IdExpr *expr) {
     resultExpr = to_string(*i);
 }
 
-void DocVisitor::visit(const IndexExpr *expr) {
+void DocVisitor::visit(IndexExpr *expr) {
   vector<json> v;
   v.push_back(transform(expr->expr));
   if (auto tp = CAST(expr->index, TupleExpr)) {
@@ -154,7 +154,7 @@ bool isValidName(const string &s) {
   return s[0] != '_';
 }
 
-void DocVisitor::visit(const FunctionStmt *stmt) {
+void DocVisitor::visit(FunctionStmt *stmt) {
   int id = ctx->shared->itemID++;
   ctx->add(stmt->name, make_shared<int>(id));
   json j{
@@ -194,7 +194,7 @@ void DocVisitor::visit(const FunctionStmt *stmt) {
   // j["dylib"] = bool(stmt->from);
 }
 
-void DocVisitor::visit(const ClassStmt *stmt) {
+void DocVisitor::visit(ClassStmt *stmt) {
   int id = ctx->shared->itemID++;
   ctx->add(stmt->name, make_shared<int>(id));
   json j{{"name", stmt->name},
@@ -248,7 +248,7 @@ json DocVisitor::jsonify(const seq::SrcInfo &s) {
   return j;
 }
 
-void DocVisitor::visit(const ImportStmt *stmt) {
+void DocVisitor::visit(ImportStmt *stmt) {
   // auto file = getImportFile(ctx->shared->argv0, stmt->from.first, ctx->file, false);
   // if (file == "")
   //   error(stmt, "cannot locate import '{}'", stmt->from.first);
@@ -281,7 +281,7 @@ void DocVisitor::visit(const ImportStmt *stmt) {
   //   }
 }
 
-void DocVisitor::visit(const AssignStmt *stmt) {
+void DocVisitor::visit(AssignStmt *stmt) {
   auto e = CAST(stmt->lhs, IdExpr);
   if (!e)
     return;

@@ -18,6 +18,7 @@
 #include "parser/common.h"
 #include "parser/ctx.h"
 
+#define TYPECHECK_MAX_ITERATIONS 100
 #define FILE_GENERATED "<generated>"
 #define MODULE_MAIN "__main__"
 #define STDLIB_IMPORT ""
@@ -87,9 +88,6 @@ struct Cache {
   /// Table of imported files that maps an absolute filename to a Import structure.
   /// By convention, the key of Seq standard library is "".
   unordered_map<string, Import> imports;
-
-  /// Previously generated variardic types (Function and Tuple).
-  set<string> variardics;
 
   /// Set of unique (canonical) global identifiers for marking such variables as global
   /// in code-generation step.

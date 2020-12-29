@@ -9,23 +9,23 @@ namespace seq {
 namespace ast {
 
 struct WalkVisitor : public ASTVisitor {
-  virtual void visit(const StarExpr *) override;
-  virtual void visit(const TupleExpr *) override;
-  virtual void visit(const ListExpr *) override;
-  virtual void visit(const SetExpr *) override;
-  virtual void visit(const DictExpr *) override;
-  virtual void visit(const GeneratorExpr *) override;
-  virtual void visit(const DictGeneratorExpr *) override;
-  virtual void visit(const IfExpr *) override;
-  virtual void visit(const UnaryExpr *) override;
-  virtual void visit(const BinaryExpr *) override;
-  virtual void visit(const PipeExpr *) override;
-  virtual void visit(const IndexExpr *) override;
-  virtual void visit(const CallExpr *) override;
-  virtual void visit(const DotExpr *) override;
-  virtual void visit(const SliceExpr *) override;
-  virtual void visit(const TypeOfExpr *) override;
-  virtual void visit(const PtrExpr *) override;
+  virtual void visit(StarExpr *) override;
+  virtual void visit(TupleExpr *) override;
+  virtual void visit(ListExpr *) override;
+  virtual void visit(SetExpr *) override;
+  virtual void visit(DictExpr *) override;
+  virtual void visit(GeneratorExpr *) override;
+  virtual void visit(DictGeneratorExpr *) override;
+  virtual void visit(IfExpr *) override;
+  virtual void visit(UnaryExpr *) override;
+  virtual void visit(BinaryExpr *) override;
+  virtual void visit(PipeExpr *) override;
+  virtual void visit(IndexExpr *) override;
+  virtual void visit(CallExpr *) override;
+  virtual void visit(DotExpr *) override;
+  virtual void visit(SliceExpr *) override;
+  virtual void visit(TypeOfExpr *) override;
+  virtual void visit(PtrExpr *) override;
 };
 
 } // namespace ast

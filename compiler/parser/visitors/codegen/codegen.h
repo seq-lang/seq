@@ -30,9 +30,9 @@ class CodegenVisitor
   seq::Stmt *resultStmt;
   seq::Pattern *resultPattern;
 
-  void defaultVisit(const Expr *expr) override;
-  void defaultVisit(const Stmt *expr) override;
-  void defaultVisit(const Pattern *expr) override;
+  void defaultVisit(Expr *expr) override;
+  void defaultVisit(Stmt *expr) override;
+  void defaultVisit(Pattern *expr) override;
 
   seq::types::Type *realizeType(types::ClassType *t);
   seq::BaseFunc *realizeFunc(const string &name);
@@ -51,51 +51,51 @@ public:
   void visitMethods(const string &name);
 
 public:
-  void visit(const BoolExpr *) override;
-  void visit(const IntExpr *) override;
-  void visit(const FloatExpr *) override;
-  void visit(const StringExpr *) override;
-  void visit(const IdExpr *) override;
-  void visit(const IfExpr *) override;
-  void visit(const BinaryExpr *) override;
-  void visit(const PipeExpr *) override;
-  void visit(const CallExpr *) override;
-  void visit(const StackAllocExpr *) override;
-  void visit(const DotExpr *) override;
-  void visit(const PtrExpr *) override;
-  void visit(const YieldExpr *) override;
-  void visit(const StmtExpr *) override;
+  void visit(BoolExpr *) override;
+  void visit(IntExpr *) override;
+  void visit(FloatExpr *) override;
+  void visit(StringExpr *) override;
+  void visit(IdExpr *) override;
+  void visit(IfExpr *) override;
+  void visit(BinaryExpr *) override;
+  void visit(PipeExpr *) override;
+  void visit(CallExpr *) override;
+  void visit(StackAllocExpr *) override;
+  void visit(DotExpr *) override;
+  void visit(PtrExpr *) override;
+  void visit(YieldExpr *) override;
+  void visit(StmtExpr *) override;
 
-  void visit(const SuiteStmt *) override;
-  void visit(const PassStmt *) override;
-  void visit(const BreakStmt *) override;
-  void visit(const ContinueStmt *) override;
-  void visit(const ExprStmt *) override;
-  void visit(const AssignStmt *) override;
-  void visit(const AssignMemberStmt *) override;
-  void visit(const DelStmt *) override;
-  void visit(const ReturnStmt *) override;
-  void visit(const YieldStmt *) override;
-  void visit(const WhileStmt *) override;
-  void visit(const ForStmt *) override;
-  void visit(const IfStmt *) override;
-  void visit(const MatchStmt *) override;
-  void visit(const UpdateStmt *) override;
-  void visit(const TryStmt *) override;
-  void visit(const ThrowStmt *) override;
-  void visit(const FunctionStmt *) override;
-  void visit(const ClassStmt *stmt) override;
+  void visit(SuiteStmt *) override;
+  void visit(PassStmt *) override;
+  void visit(BreakStmt *) override;
+  void visit(ContinueStmt *) override;
+  void visit(ExprStmt *) override;
+  void visit(AssignStmt *) override;
+  void visit(AssignMemberStmt *) override;
+  void visit(DelStmt *) override;
+  void visit(ReturnStmt *) override;
+  void visit(YieldStmt *) override;
+  void visit(WhileStmt *) override;
+  void visit(ForStmt *) override;
+  void visit(IfStmt *) override;
+  void visit(MatchStmt *) override;
+  void visit(UpdateStmt *) override;
+  void visit(TryStmt *) override;
+  void visit(ThrowStmt *) override;
+  void visit(FunctionStmt *) override;
+  void visit(ClassStmt *stmt) override;
 
-  void visit(const StarPattern *) override;
-  void visit(const IntPattern *) override;
-  void visit(const BoolPattern *) override;
-  void visit(const StrPattern *) override;
-  void visit(const RangePattern *) override;
-  void visit(const TuplePattern *) override;
-  void visit(const ListPattern *) override;
-  void visit(const OrPattern *) override;
-  void visit(const WildcardPattern *) override;
-  void visit(const GuardedPattern *) override;
+  void visit(StarPattern *) override;
+  void visit(IntPattern *) override;
+  void visit(BoolPattern *) override;
+  void visit(StrPattern *) override;
+  void visit(RangePattern *) override;
+  void visit(TuplePattern *) override;
+  void visit(ListPattern *) override;
+  void visit(OrPattern *) override;
+  void visit(WildcardPattern *) override;
+  void visit(GuardedPattern *) override;
 };
 
 } // namespace ast

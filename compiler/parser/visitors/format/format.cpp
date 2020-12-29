@@ -1,4 +1,3 @@
-#include <ostream>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -45,7 +44,7 @@ string FormatVisitor::transform(const StmtPtr &stmt) {
   return transform(stmt.get(), 0);
 }
 
-string FormatVisitor::transform(const Stmt *stmt, int indent) {
+string FormatVisitor::transform(Stmt *stmt, int indent) {
   FormatVisitor v(renderHTML, cache);
   v.indent = this->indent + indent;
   if (stmt)
@@ -75,62 +74,62 @@ string FormatVisitor::keyword(const string &s) const {
 
 /*************************************************************************************/
 
-void FormatVisitor::visit(const NoneExpr *expr) { result = renderExpr(expr, "None"); }
+void FormatVisitor::visit(NoneExpr *expr) { result = renderExpr(expr, "None"); }
 
-void FormatVisitor::visit(const BoolExpr *expr) {
+void FormatVisitor::visit(BoolExpr *expr) {
   result = renderExpr(expr, "{}", expr->value ? "True" : "False");
 }
 
-void FormatVisitor::visit(const IntExpr *expr) {
+void FormatVisitor::visit(IntExpr *expr) {
   result = renderExpr(expr, "{}{}", expr->value, expr->suffix);
 }
 
-void FormatVisitor::visit(const FloatExpr *expr) {
+void FormatVisitor::visit(FloatExpr *expr) {
   result = renderExpr(expr, "{}{}", expr->value, expr->suffix);
 }
 
-void FormatVisitor::visit(const StringExpr *expr) {
+void FormatVisitor::visit(StringExpr *expr) {
   result = renderExpr(expr, "\"{}\"", escape(expr->value));
 }
 
-void FormatVisitor::visit(const IdExpr *expr) {
+void FormatVisitor::visit(IdExpr *expr) {
   result = renderExpr(expr, "{}", expr->value);
 }
 
-void FormatVisitor::visit(const StarExpr *expr) {
+void FormatVisitor::visit(StarExpr *expr) {
   result = renderExpr(expr, "*{}", transform(expr->what));
 }
 
-void FormatVisitor::visit(const TupleExpr *expr) {
+void FormatVisitor::visit(TupleExpr *expr) {
   result = renderExpr(expr, "({})", transform(expr->items));
 }
 
-void FormatVisitor::visit(const ListExpr *expr) {
+void FormatVisitor::visit(ListExpr *expr) {
   result = renderExpr(expr, "[{}]", transform(expr->items));
 }
 
-void FormatVisitor::visit(const InstantiateExpr *expr) {
+void FormatVisitor::visit(InstantiateExpr *expr) {
   result = renderExpr(expr, "{}[{}]", transform(expr->typeExpr),
                       transform(expr->typeParams));
 }
 
-void FormatVisitor::visit(const StackAllocExpr *expr) {
+void FormatVisitor::visit(StackAllocExpr *expr) {
   result = renderExpr(expr, "__array__[{}]({})", transform(expr->typeExpr),
                       transform(expr->expr));
 }
 
-void FormatVisitor::visit(const SetExpr *expr) {
+void FormatVisitor::visit(SetExpr *expr) {
   result = renderExpr(expr, "{{{}}}", transform(expr->items));
 }
 
-void FormatVisitor::visit(const DictExpr *expr) {
+void FormatVisitor::visit(DictExpr *expr) {
   vector<string> s;
   for (auto &i : expr->items)
     s.push_back(fmt::format("{}: {}", transform(i.key), transform(i.value)));
   result = renderExpr(expr, "{{{}}}", join(s, ", "));
 }
 
-void FormatVisitor::visit(const GeneratorExpr *expr) {
+void FormatVisitor::visit(GeneratorExpr *expr) {
   string s;
   for (auto &i : expr->loops) {
     string cond;
@@ -146,7 +145,7 @@ void FormatVisitor::visit(const GeneratorExpr *expr) {
     result = renderExpr(expr, "({} {})", transform(expr->expr), s);
 }
 
-void FormatVisitor::visit(const DictGeneratorExpr *expr) {
+void FormatVisitor::visit(DictGeneratorExpr *expr) {
   string s;
   for (auto &i : expr->loops) {
     string cond;
@@ -159,21 +158,21 @@ void FormatVisitor::visit(const DictGeneratorExpr *expr) {
       renderExpr(expr, "{{{}: {} {}}}", transform(expr->key), transform(expr->expr), s);
 }
 
-void FormatVisitor::visit(const IfExpr *expr) {
+void FormatVisitor::visit(IfExpr *expr) {
   result = renderExpr(expr, "{} if {} else {}", transform(expr->ifexpr),
                       transform(expr->cond), transform(expr->elsexpr));
 }
 
-void FormatVisitor::visit(const UnaryExpr *expr) {
+void FormatVisitor::visit(UnaryExpr *expr) {
   result = renderExpr(expr, "{}{}", expr->op, transform(expr->expr));
 }
 
-void FormatVisitor::visit(const BinaryExpr *expr) {
+void FormatVisitor::visit(BinaryExpr *expr) {
   result = renderExpr(expr, "({} {} {})", transform(expr->lexpr), expr->op,
                       transform(expr->rexpr));
 }
 
-void FormatVisitor::visit(const PipeExpr *expr) {
+void FormatVisitor::visit(PipeExpr *expr) {
   vector<string> items;
   for (auto &l : expr->items) {
     if (!items.size())
@@ -184,11 +183,11 @@ void FormatVisitor::visit(const PipeExpr *expr) {
   result = renderExpr(expr, "({})", join(items, " "));
 }
 
-void FormatVisitor::visit(const IndexExpr *expr) {
+void FormatVisitor::visit(IndexExpr *expr) {
   result = renderExpr(expr, "{}[{}]", transform(expr->expr), transform(expr->index));
 }
 
-void FormatVisitor::visit(const CallExpr *expr) {
+void FormatVisitor::visit(CallExpr *expr) {
   vector<string> args;
   for (auto &i : expr->args) {
     if (i.name == "")
@@ -199,11 +198,11 @@ void FormatVisitor::visit(const CallExpr *expr) {
   result = renderExpr(expr, "{}({})", transform(expr->expr), join(args, ", "));
 }
 
-void FormatVisitor::visit(const DotExpr *expr) {
+void FormatVisitor::visit(DotExpr *expr) {
   result = renderExpr(expr, "{} . {}", transform(expr->expr), expr->member);
 }
 
-void FormatVisitor::visit(const SliceExpr *expr) {
+void FormatVisitor::visit(SliceExpr *expr) {
   string s;
   if (expr->start)
     s += transform(expr->start);
@@ -216,32 +215,28 @@ void FormatVisitor::visit(const SliceExpr *expr) {
   result = renderExpr(expr, "{}", s);
 }
 
-void FormatVisitor::visit(const EllipsisExpr *expr) {
-  result = renderExpr(expr, "...");
-}
+void FormatVisitor::visit(EllipsisExpr *expr) { result = renderExpr(expr, "..."); }
 
-void FormatVisitor::visit(const TypeOfExpr *expr) {
+void FormatVisitor::visit(TypeOfExpr *expr) {
   result = renderExpr(expr, "{}({})", keyword("typeof"), transform(expr->expr));
 }
 
-void FormatVisitor::visit(const PtrExpr *expr) {
+void FormatVisitor::visit(PtrExpr *expr) {
   result = renderExpr(expr, "__ptr__({})", transform(expr->expr));
 }
 
-void FormatVisitor::visit(const LambdaExpr *expr) {
+void FormatVisitor::visit(LambdaExpr *expr) {
   result = renderExpr(expr, "{} {}: {}", keyword("lambda"), join(expr->vars, ", "),
                       transform(expr->expr));
 }
 
-void FormatVisitor::visit(const YieldExpr *expr) {
-  result = renderExpr(expr, "(yield)");
-}
+void FormatVisitor::visit(YieldExpr *expr) { result = renderExpr(expr, "(yield)"); }
 
-void FormatVisitor::visit(const StaticExpr *expr) {
+void FormatVisitor::visit(StaticExpr *expr) {
   result = renderExpr(expr, "{}", transform(expr->expr));
 }
 
-void FormatVisitor::visit(const StmtExpr *expr) {
+void FormatVisitor::visit(StmtExpr *expr) {
   string s;
   for (int i = 0; i < expr->stmts.size(); i++)
     s += format("{}{}", pad(2), transform(expr->stmts[i].get(), 2));
@@ -249,7 +244,7 @@ void FormatVisitor::visit(const StmtExpr *expr) {
                       transform(expr->expr));
 }
 
-void FormatVisitor::visit(const SuiteStmt *stmt) {
+void FormatVisitor::visit(SuiteStmt *stmt) {
   for (int i = 0; i < stmt->stmts.size(); i++)
     result += transform(stmt->stmts[i]);
   if (stmt->ownBlock)
@@ -257,15 +252,15 @@ void FormatVisitor::visit(const SuiteStmt *stmt) {
                          pad());
 }
 
-void FormatVisitor::visit(const PassStmt *stmt) { result = keyword("pass"); }
+void FormatVisitor::visit(PassStmt *stmt) { result = keyword("pass"); }
 
-void FormatVisitor::visit(const BreakStmt *stmt) { result = keyword("break"); }
+void FormatVisitor::visit(BreakStmt *stmt) { result = keyword("break"); }
 
-void FormatVisitor::visit(const ContinueStmt *stmt) { result = keyword("continue"); }
+void FormatVisitor::visit(ContinueStmt *stmt) { result = keyword("continue"); }
 
-void FormatVisitor::visit(const ExprStmt *stmt) { result = transform(stmt->expr); }
+void FormatVisitor::visit(ExprStmt *stmt) { result = transform(stmt->expr); }
 
-void FormatVisitor::visit(const AssignStmt *stmt) {
+void FormatVisitor::visit(AssignStmt *stmt) {
   if (stmt->type) {
     result = fmt::format("{}: {} = {}", transform(stmt->lhs), transform(stmt->type),
                          transform(stmt->rhs));
@@ -274,49 +269,49 @@ void FormatVisitor::visit(const AssignStmt *stmt) {
   }
 }
 
-void FormatVisitor::visit(const AssignMemberStmt *stmt) {
+void FormatVisitor::visit(AssignMemberStmt *stmt) {
   result = fmt::format("{}.{} = {}", transform(stmt->lhs), stmt->member,
                        transform(stmt->rhs));
 }
 
-void FormatVisitor::visit(const UpdateStmt *stmt) {
+void FormatVisitor::visit(UpdateStmt *stmt) {
   result = fmt::format("{} = {}  # update", transform(stmt->lhs), transform(stmt->rhs));
 }
 
-void FormatVisitor::visit(const DelStmt *stmt) {
+void FormatVisitor::visit(DelStmt *stmt) {
   result = fmt::format("{} {}", keyword("del"), transform(stmt->expr));
 }
 
-void FormatVisitor::visit(const PrintStmt *stmt) {
+void FormatVisitor::visit(PrintStmt *stmt) {
   result = fmt::format("{} {}", keyword("print"), transform(stmt->expr));
 }
 
-void FormatVisitor::visit(const ReturnStmt *stmt) {
+void FormatVisitor::visit(ReturnStmt *stmt) {
   result = fmt::format("{}{}", keyword("return"),
                        stmt->expr ? " " + transform(stmt->expr) : "");
 }
 
-void FormatVisitor::visit(const YieldStmt *stmt) {
+void FormatVisitor::visit(YieldStmt *stmt) {
   result = fmt::format("{}{}", keyword("yield"),
                        stmt->expr ? " " + transform(stmt->expr) : "");
 }
 
-void FormatVisitor::visit(const AssertStmt *stmt) {
+void FormatVisitor::visit(AssertStmt *stmt) {
   result = fmt::format("{} {}", keyword("assert"), transform(stmt->expr));
 }
 
-void FormatVisitor::visit(const WhileStmt *stmt) {
+void FormatVisitor::visit(WhileStmt *stmt) {
   result = fmt::format("{} {}:{}{}", keyword("while"), transform(stmt->cond), newline(),
                        transform(stmt->suite.get(), 1));
 }
 
-void FormatVisitor::visit(const ForStmt *stmt) {
+void FormatVisitor::visit(ForStmt *stmt) {
   result = fmt::format("{} {} {} {}:{}{}", keyword("for"), transform(stmt->var),
                        keyword("in"), transform(stmt->iter), newline(),
                        transform(stmt->suite.get(), 1));
 }
 
-void FormatVisitor::visit(const IfStmt *stmt) {
+void FormatVisitor::visit(IfStmt *stmt) {
   string ifs;
   string prefix = "";
   for (int i = 0; i < stmt->ifs.size(); i++) {
@@ -332,7 +327,7 @@ void FormatVisitor::visit(const IfStmt *stmt) {
   result = ifs;
 }
 
-void FormatVisitor::visit(const MatchStmt *stmt) {
+void FormatVisitor::visit(MatchStmt *stmt) {
   string s;
   for (int ci = 0; ci < stmt->cases.size(); ci++)
     s += fmt::format("{}{}{}:{}{}{}", pad(1), keyword("case"),
@@ -343,7 +338,7 @@ void FormatVisitor::visit(const MatchStmt *stmt) {
       fmt::format("{} {}:{}{}", keyword("match"), transform(stmt->what), newline(), s);
 }
 
-void FormatVisitor::visit(const ImportStmt *stmt) {
+void FormatVisitor::visit(ImportStmt *stmt) {
   auto as = stmt->as.empty() ? "" : fmt::format(" {} {} ", keyword("as"), stmt->as);
   if (!stmt->what)
     result += fmt::format("{} {}{}", keyword("import"), transform(stmt->from), as);
@@ -352,7 +347,7 @@ void FormatVisitor::visit(const ImportStmt *stmt) {
                           keyword("import"), transform(stmt->what), as);
 }
 
-void FormatVisitor::visit(const TryStmt *stmt) {
+void FormatVisitor::visit(TryStmt *stmt) {
   vector<string> catches;
   for (auto &c : stmt->catches) {
     catches.push_back(
@@ -368,15 +363,15 @@ void FormatVisitor::visit(const TryStmt *stmt) {
                                 : "");
 }
 
-void FormatVisitor::visit(const GlobalStmt *stmt) {
+void FormatVisitor::visit(GlobalStmt *stmt) {
   result = fmt::format("{} {}", keyword("global"), stmt->var);
 }
 
-void FormatVisitor::visit(const ThrowStmt *stmt) {
+void FormatVisitor::visit(ThrowStmt *stmt) {
   result = fmt::format("{} {}", keyword("raise"), transform(stmt->expr));
 }
 
-void FormatVisitor::visit(const FunctionStmt *fstmt) {
+void FormatVisitor::visit(FunctionStmt *fstmt) {
   if (cache) {
     if (in(cache->functions, fstmt->name)) {
       if (!cache->functions[fstmt->name].realizations.empty()) {
@@ -428,7 +423,7 @@ void FormatVisitor::visit(const FunctionStmt *fstmt) {
       body.empty() ? fmt::format("{}", keyword("pass")) : body);
 }
 
-void FormatVisitor::visit(const ClassStmt *stmt) {
+void FormatVisitor::visit(ClassStmt *stmt) {
   // if (cache &&
   //     cache->realizationAsts.find(fstmt->name) != cache->realizationAsts.end()) {
   //   fstmt = (const FunctionStmt *)(cache->realizationAsts[fstmt->name].get());
@@ -455,58 +450,56 @@ void FormatVisitor::visit(const ClassStmt *stmt) {
     result += fmt::format(":{}{}", newline(), transform(stmt->suite.get(), 1));
 }
 
-void FormatVisitor::visit(const YieldFromStmt *stmt) {
+void FormatVisitor::visit(YieldFromStmt *stmt) {
   result = fmt::format("{} {}", keyword("yield from"), transform(stmt->expr));
 }
 
-void FormatVisitor::visit(const WithStmt *stmt) {}
+void FormatVisitor::visit(WithStmt *stmt) {}
 
-void FormatVisitor::visit(const StarPattern *pat) { this->result = "..."; }
+void FormatVisitor::visit(StarPattern *pat) { this->result = "..."; }
 
-void FormatVisitor::visit(const IntPattern *pat) {
-  result = fmt::format("{}", pat->value);
-}
+void FormatVisitor::visit(IntPattern *pat) { result = fmt::format("{}", pat->value); }
 
-void FormatVisitor::visit(const BoolPattern *pat) {
+void FormatVisitor::visit(BoolPattern *pat) {
   result = fmt::format("{}", pat->value ? "True" : "False");
 }
 
-void FormatVisitor::visit(const StrPattern *pat) {
+void FormatVisitor::visit(StrPattern *pat) {
   result = fmt::format("\"{}\"", escape(pat->value));
 }
 
-void FormatVisitor::visit(const RangePattern *pat) {
+void FormatVisitor::visit(RangePattern *pat) {
   result = fmt::format("{} ... {}", pat->start, pat->stop);
 }
 
-void FormatVisitor::visit(const TuplePattern *pat) {
+void FormatVisitor::visit(TuplePattern *pat) {
   string r;
   for (auto &e : pat->patterns)
     r += transform(e) + ", ";
   result = fmt::format("({})", r);
 }
 
-void FormatVisitor::visit(const ListPattern *pat) {
+void FormatVisitor::visit(ListPattern *pat) {
   string r;
   for (auto &e : pat->patterns)
     r += transform(e) + ", ";
   result = fmt::format("[{}]", r);
 }
 
-void FormatVisitor::visit(const OrPattern *pat) {
+void FormatVisitor::visit(OrPattern *pat) {
   vector<string> r;
   for (auto &e : pat->patterns)
     r.push_back(fmt::format("({})", transform(e)));
   result = fmt::format("{}", fmt::join(r, keyword(" or ")));
 }
 
-void FormatVisitor::visit(const WildcardPattern *pat) {
+void FormatVisitor::visit(WildcardPattern *pat) {
   result = fmt::format("{}", pat->var == "" ? "_" : pat->var);
 }
 
-void FormatVisitor::visit(const GuardedPattern *pat) {}
+void FormatVisitor::visit(GuardedPattern *pat) {}
 
-void FormatVisitor::visit(const BoundPattern *pat) {
+void FormatVisitor::visit(BoundPattern *pat) {
   result = fmt::format("({}) {} {}", transform(pat->pattern), keyword("as"), pat->var);
 }
 

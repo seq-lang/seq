@@ -80,6 +80,9 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       preamble->types.emplace_back(clone(c));
       cache->classes[canonical].ast = move(c);
     }
+    // Reserve the following static identifiers.
+    for (auto name : {"static_len", "compile_error", "isinstance"})
+      stdlib->generateCanonicalName(name);
 
     // This code must be placed in a preamble (these are not POD types but are
     // referenced by the various preamble Function.N and Tuple.N stubs)

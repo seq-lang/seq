@@ -34,6 +34,7 @@ print 1844674407_3709551999 #! ERROR: integer 18446744073709551999 out of range
 
 #%% float,barebones
 print 5.15 #: 5.15
+print 2e2 #: 20
 
 #%% float_error,barebones
 print 5.__str__() #! ERROR: parsing error: '__str__'
@@ -56,7 +57,6 @@ print f"str {a+b=}" #: str a+b=3
 c = f'and this is {a} followed by {b}'
 print c, f'{b}{a}', f'. {1+a=} .. {b} ...' #: and this is 1 followed by 2 21 . 1+a=2 .. 2 ...
 
-
 #%% fstring_error,barebones
 f"a{b + 3}}" #! ERROR: f-string braces are not balanced
 
@@ -75,6 +75,10 @@ class str:
     def __prefix_pxf__[N: int](s: str):
         return 'PXF ' + s + " " + str(N)
 print pxf'HELLO' #: PXF HELLO 5
+
+#%% seq
+a = s'ACGT'
+print a #: ACGT
 
 #%% raw_str,barebones
 print 'a\\b' #: a\b
@@ -123,11 +127,21 @@ l = [(i, j, f'i{i}/{j}')
      for j in range(2) if j == 1]
 print l #: [(0, 1, i0/1), (6, 1, i6/1), (12, 1, i12/1), (18, 1, i18/1), (24, 1, i24/1), (30, 1, i30/1), (36, 1, i36/1), (42, 1, i42/1), (48, 1, i48/1)]
 
+s = {i%3 for i in range(20)}
+print s #: {0, 1, 2}
+
+d = {i: j for i in range(10) if i < 1 for j in range(10)}
+print d  #: {0: 9}
+
 #%% generator,barebones
 z = 3
 g = (e for e in range(20) if e % z == 1)
 print str(g)[:13] #: <generator at
 print list(g) #: [1, 4, 7, 10, 13, 16, 19]
+
+#%% cond,barebones
+a = 5
+print (1 <= a <= 10), (1 >= a >= -5) #: True False
 
 #%% if,barebones
 c = 5
@@ -149,6 +163,9 @@ print c is c, c is not c #: True False
 
 z: Optional[int] = None
 print z is None, None is z, None is not z, None is None #: True True False True
+
+#%% pipe_error
+a |> b(a, ..., c, ...)  #! ERROR: unexpected partial argument
 
 #%% index_normal,barebones
 t: tuple[int, int] = (1, 2)
@@ -195,6 +212,12 @@ print a[0], a[1] #: 5 5
 
 #%% call_array_error,barebones
 a = __array__[int](2, 3) #! ERROR: __array__ only accepts a single argument (size)
+
+#%% call_err_1,barebones
+seq_print(1, name="56", 2) #! ERROR: unnamed argument after a named argument
+
+#%% call_err_2,barebones
+seq_print(1, name="56", name=2) #! ERROR: repeated named argument 'name'
 
 #%% lambda
 l = lambda a, b: a + b
@@ -526,6 +549,9 @@ return #! ERROR: expected function body
 #%% yield_fail,barebones
 yield 5 #! ERROR: expected function body
 
+#%% yield_fail_2,barebones
+(yield) #! ERROR: expected function body
+
 #%% while_else,barebones
 a = 1
 while a:
@@ -679,6 +705,14 @@ print a.b.x #! ERROR: identifier 'x' not found in
 
 #%% import_err_6,barebones
 from a.b import whatever #! ERROR: symbol 'whatever' not found in
+
+#%% function_err_0,barebones
+def foo(a, b, a):
+    pass #! ERROR: 'a' declared twice
+
+#%% function_err_0b,barebones
+def foo(a, b=1, c):
+    pass #! ERROR: non-default argument 'c' after a default argument
 
 #%% function_err_1,barebones
 def foo():

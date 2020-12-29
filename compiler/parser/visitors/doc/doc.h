@@ -60,12 +60,12 @@ public:
   vector<StmtPtr> flatten(StmtPtr stmt, string *docstr = nullptr, bool deep = true);
 
 public:
-  virtual void visit(const IdExpr *) override;
-  virtual void visit(const IndexExpr *) override;
-  virtual void visit(const FunctionStmt *) override;
-  virtual void visit(const ClassStmt *) override;
-  virtual void visit(const AssignStmt *) override;
-  virtual void visit(const ImportStmt *) override;
+  virtual void visit(IdExpr *) override;
+  virtual void visit(IndexExpr *) override;
+  virtual void visit(FunctionStmt *) override;
+  virtual void visit(ClassStmt *) override;
+  virtual void visit(AssignStmt *) override;
+  virtual void visit(ImportStmt *) override;
 };
 
 } // namespace ast
