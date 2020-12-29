@@ -79,8 +79,7 @@ void resetOMPABI() {
 
 LLVMVisitor::LLVMVisitor(bool debug)
     : util::SIRVisitor(), context(), module(), func(nullptr), block(nullptr),
-      value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(),
-      debug(debug) {
+      value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(), debug(debug) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   resetOMPABI();
