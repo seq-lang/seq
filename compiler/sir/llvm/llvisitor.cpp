@@ -648,6 +648,7 @@ void LLVMVisitor::visit(LLVMFunc *x) {
   assert(!fail);
   func = module->getFunction(x->referenceString());
   assert(func);
+  func->setLinkage(llvm::GlobalValue::PrivateLinkage);
   func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
 }
 
