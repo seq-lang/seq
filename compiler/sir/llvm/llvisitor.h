@@ -2,8 +2,8 @@
 
 #include "sir/sir.h"
 #include "util/llvm.h"
-#include <stack>
 #include <unordered_map>
+#include <vector>
 
 namespace seq {
 namespace ir {
@@ -30,9 +30,46 @@ struct CoroData {
   llvm::BasicBlock *exit;
 };
 
-struct LoopData {
+struct NestableData {
+  int sequenceNumber;
+
+  NestableData() : sequenceNumber(-1){};
+};
+
+struct LoopData : NestableData {
   llvm::BasicBlock *breakBlock;
   llvm::BasicBlock *continueBlock;
+
+  LoopData(llvm::BasicBlock *breakBlock, llvm::BasicBlock *continueBlock)
+      : NestableData(), breakBlock(breakBlock), continueBlock(continueBlock){};
+};
+
+struct TryCatchData : NestableData {
+  /// Possible try-catch states when reaching finally block
+  enum State { NOT_THROWN = 0, THROWN, CAUGHT, RETURN, BREAK, CONTINUE };
+  /// Exception block
+  llvm::BasicBlock *exc;
+  /// Exception route block
+  llvm::BasicBlock *excRoute;
+  /// Finally start block
+  llvm::BasicBlock *finally;
+  /// Try-catch catch types
+  std::vector<types::Type *> catchTypes;
+  /// Try-catch handlers, corresponding to catch types
+  std::vector<llvm::BasicBlock *> handlers;
+  /// Exception state flag (see "State")
+  llvm::Value *excFlag;
+  /// Storage for caught exception
+  llvm::Value *catchStore;
+  /// How far to delegate up the finally chain
+  llvm::Value *delegateDepth;
+  /// Storage for postponed return
+  llvm::Value *retStore;
+
+  TryCatchData()
+      : NestableData(), exc(nullptr), excRoute(nullptr), finally(nullptr), catchTypes(),
+        handlers(), excFlag(nullptr), catchStore(nullptr), delegateDepth(nullptr),
+        retStore(nullptr){};
 };
 
 class LLVMVisitor : public util::SIRVisitor {
@@ -56,29 +93,58 @@ private:
   /// Coroutine data, if current function is a coroutine
   CoroData coro;
   /// Loop data stack, containing break/continue blocks
-  std::stack<LoopData> loops;
+  std::vector<LoopData> loops;
+  /// Try-catch data stack
+  std::vector<TryCatchData> trycatch;
   /// Whether we are compiling in debug mode
   bool debug;
 
   template <typename T> void process(const T &x) { x->accept(*this); }
 
+  /// GC allocation functions
+  llvm::Function *makeAllocFunc(bool atomic);
+  /// Personality function for exception handling
+  llvm::Function *makePersonalityFunc();
+  /// Exception allocation function
+  llvm::Function *makeExcAllocFunc();
+  /// Exception throw function
+  llvm::Function *makeThrowFunc();
+  /// Program termination function
+  llvm::Function *makeTerminateFunc();
+
+  // Try-catch types and utilities
   llvm::StructType *getTypeInfoType();
   llvm::StructType *getPadType();
   llvm::StructType *getExceptionType();
   llvm::GlobalVariable *getTypeIdxVar(const std::string &name);
   llvm::GlobalVariable *getTypeIdxVar(types::Type *catchType);
+  int getTypeIdx(types::Type *catchType = nullptr);
 
+  // General function helpers
   llvm::Value *call(llvm::Value *callee, llvm::ArrayRef<llvm::Value *> args);
   void makeLLVMFunction(Func *);
   void makeYield(llvm::Value *value = nullptr, bool finalYield = false);
-  void enterLoop(llvm::BasicBlock *breakBlock, llvm::BasicBlock *continueBlock);
-  void exitLoop();
   std::string buildLLVMCodeString(LLVMFunc *);
+
+  // Loop and try-catch state
+  void enterLoop(LoopData data);
+  void exitLoop();
+  void enterTryCatch(TryCatchData data);
+  void exitTryCatch();
+  TryCatchData *getInnermostTryCatchBeforeLoop();
+
+  // LLVM passes
+  void applyDebugTransformations();
+  void applyGCTransformations();
+  void runLLVMOptimizationPasses();
 
 public:
   LLVMVisitor(bool debug = false);
 
   void validate();
+  void run(const std::vector<std::string> &args = {},
+           const std::vector<std::string> &libs = {},
+           const char *const *envp = nullptr);
   llvm::Type *getLLVMType(types::Type *x);
 
   void visit(IRModule *) override;

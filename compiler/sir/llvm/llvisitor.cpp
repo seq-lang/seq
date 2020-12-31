@@ -1,4 +1,5 @@
 #include "sir/llvm/llvisitor.h"
+#include "llvm/CodeGen/CommandFlags.def"
 #include <algorithm>
 #include <utility>
 
@@ -14,60 +15,13 @@ extern llvm::FunctionType *getOrCreateKmpc_MicroTy(llvm::LLVMContext &context);
 extern llvm::PointerType *getKmpc_MicroPointerTy(llvm::LLVMContext &context);
 extern llvm::cl::opt<bool> fastOpenMP;
 
+extern "C" void seq_gc_add_roots(void *start, void *end);
+extern "C" void seq_gc_remove_roots(void *start, void *end);
+extern "C" void seq_add_symbol(void *addr, const std::string &symbol);
+
 namespace seq {
 namespace ir {
 namespace {
-// Our custom GC allocators
-llvm::Function *makeAllocFunc(llvm::Module *module, bool atomic) {
-  llvm::LLVMContext &context = module->getContext();
-  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      atomic ? "seq_alloc_atomic" : "seq_alloc", llvm::Type::getInt8PtrTy(context),
-      llvm::Type::getInt64Ty(context)));
-  f->setDoesNotThrow();
-  f->setReturnDoesNotAlias();
-  f->setOnlyAccessesInaccessibleMemory();
-  return f;
-}
-
-// Seq personality function for exception handling
-llvm::Function *makePersonalityFunc(llvm::Module *module) {
-  llvm::LLVMContext &context = module->getContext();
-  return llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_personality", llvm::Type::getInt32Ty(context),
-      llvm::Type::getInt32Ty(context), llvm::Type::getInt32Ty(context),
-      llvm::Type::getInt64Ty(context), llvm::Type::getInt8PtrTy(context),
-      llvm::Type::getInt8PtrTy(context)));
-}
-
-// Seq exception allocation function
-llvm::Function *makeExcAllocFunc(llvm::Module *module) {
-  llvm::LLVMContext &context = module->getContext();
-  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_alloc_exc", llvm::Type::getInt8PtrTy(context),
-      llvm::Type::getInt32Ty(context), llvm::Type::getInt8PtrTy(context)));
-  f->setDoesNotThrow();
-  return f;
-}
-
-// Seq exception throw function
-llvm::Function *makeThrowFunc(llvm::Module *module) {
-  llvm::LLVMContext &context = module->getContext();
-  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_throw", llvm::Type::getVoidTy(context), llvm::Type::getInt8PtrTy(context)));
-  f->setDoesNotReturn();
-  return f;
-}
-
-// Seq program termination function
-llvm::Function *makeTerminateFunc(llvm::Module *module) {
-  llvm::LLVMContext &context = module->getContext();
-  auto *f = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("seq_terminate", llvm::Type::getVoidTy(context),
-                                  llvm::Type::getInt8PtrTy(context)));
-  f->setDoesNotReturn();
-  return f;
-}
-
 void resetOMPABI() {
   IdentTy = nullptr;
   Kmpc_MicroTy = nullptr;
@@ -75,14 +29,69 @@ void resetOMPABI() {
   DefaultOpenMPLocation = nullptr;
   KmpRoutineEntryPtrTy = nullptr;
 }
+
+std::string getNameForFunction(Func *x) {
+  if (auto *externalFunc = cast<ExternalFunc>(x)) {
+    return x->getUnmangledName();
+  } else {
+    return x->referenceString();
+  }
+}
+
+llvm::TargetMachine *getTargetMachine(llvm::Triple triple, llvm::StringRef cpuStr,
+                                      llvm::StringRef featuresStr,
+                                      const llvm::TargetOptions &options) {
+  std::string err;
+  const llvm::Target *target = llvm::TargetRegistry::lookupTarget(MArch, triple, err);
+
+  if (!target)
+    return nullptr;
+
+  return target->createTargetMachine(triple.getTriple(), cpuStr, featuresStr, options,
+                                     getRelocModel(), getCodeModel(),
+                                     llvm::CodeGenOpt::Aggressive);
+}
+
+/**
+ * Simple extension of LLVM's SectionMemoryManager which catches data section
+ * allocations and registers them with the GC. This allows the GC to know not
+ * to collect globals even in JIT mode.
+ */
+class BoehmGCMemoryManager : public llvm::SectionMemoryManager {
+private:
+  /// Vector of (start, end) address pairs registered with GC.
+  std::vector<std::pair<void *, void *>> roots;
+
+  uint8_t *allocateDataSection(uintptr_t size, unsigned alignment, unsigned sectionID,
+                               llvm::StringRef sectionName, bool isReadOnly) override {
+    uint8_t *result = SectionMemoryManager::allocateDataSection(
+        size, alignment, sectionID, sectionName, isReadOnly);
+    void *start = result;
+    void *end = result + size;
+    seq_gc_add_roots(start, end);
+    roots.emplace_back(start, end);
+    return result;
+  }
+
+public:
+  BoehmGCMemoryManager() : SectionMemoryManager(), roots() {}
+
+  ~BoehmGCMemoryManager() override {
+    for (const auto &root : roots) {
+      seq_gc_remove_roots(root.first, root.second);
+    }
+  }
+};
 } // namespace
 
 LLVMVisitor::LLVMVisitor(bool debug)
     : util::SIRVisitor(), context(), module(), func(nullptr), block(nullptr),
-      value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(), debug(debug) {
+      value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(), trycatch(),
+      debug(debug) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   resetOMPABI();
+  (void)(this->debug);
 }
 
 void LLVMVisitor::validate() {
@@ -94,9 +103,206 @@ void LLVMVisitor::validate() {
   assert(!broken);
 }
 
+void LLVMVisitor::applyDebugTransformations() {
+  if (!debug)
+    return;
+  // remove tail calls and fix linkage for stack traces
+  for (auto &f : *module) {
+    f.setLinkage(llvm::GlobalValue::ExternalLinkage);
+    if (f.hasFnAttribute(llvm::Attribute::AttrKind::AlwaysInline))
+      f.removeFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+    f.addFnAttr(llvm::Attribute::AttrKind::NoInline);
+    f.setHasUWTable();
+    f.addFnAttr("no-frame-pointer-elim", "true");
+    f.addFnAttr("no-frame-pointer-elim-non-leaf");
+    f.addFnAttr("no-jump-tables", "false");
+
+    for (auto &block : f.getBasicBlockList()) {
+      for (auto &inst : block) {
+        if (auto *call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
+          call->setTailCall(false);
+        }
+      }
+    }
+  }
+}
+
+void LLVMVisitor::applyGCTransformations() {
+  auto *addRoots = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      "seq_gc_add_roots", llvm::Type::getVoidTy(context),
+      llvm::Type::getInt8PtrTy(context), llvm::Type::getInt8PtrTy(context)));
+  addRoots->setDoesNotThrow();
+
+  // insert add_roots calls where needed
+  for (auto &f : *module) {
+    for (auto &block : f.getBasicBlockList()) {
+      for (auto &inst : block) {
+        if (auto *call = dyn_cast<CallInst>(&inst)) {
+          if (auto *g = call->getCalledFunction()) {
+            // tell GC about OpenMP's allocation
+            if (g->getName() == "__kmpc_omp_task_alloc") {
+              llvm::Value *taskSize = call->getArgOperand(3);
+              llvm::Value *sharedSize = call->getArgOperand(4);
+              llvm::IRBuilder<> builder(call->getNextNode());
+              llvm::Value *baseOffset = builder.CreateSub(taskSize, sharedSize);
+              llvm::Value *ptr = builder.CreateBitCast(call, builder.getInt8PtrTy());
+              llvm::Value *lo = builder.CreateGEP(ptr, baseOffset);
+              llvm::Value *hi = builder.CreateGEP(ptr, taskSize);
+              builder.CreateCall(addRoots, {lo, hi});
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+void LLVMVisitor::runLLVMOptimizationPasses() {
+  using namespace llvm::orc;
+  applyDebugTransformations();
+  std::unique_ptr<llvm::legacy::PassManager> pm(new llvm::legacy::PassManager());
+  std::unique_ptr<llvm::legacy::FunctionPassManager> fpm(
+      new llvm::legacy::FunctionPassManager(module.get()));
+
+  llvm::Triple moduleTriple(module->getTargetTriple());
+  std::string cpuStr, featuresStr;
+  llvm::TargetMachine *machine = nullptr;
+  const llvm::TargetOptions options = InitTargetOptionsFromCodeGenFlags();
+  llvm::TargetLibraryInfoImpl tlii(moduleTriple);
+  pm->add(new llvm::TargetLibraryInfoWrapperPass(tlii));
+
+  if (moduleTriple.getArch()) {
+    cpuStr = getCPUStr();
+    featuresStr = getFeaturesStr();
+    machine = getTargetMachine(moduleTriple, cpuStr, featuresStr, options);
+  }
+
+  std::unique_ptr<llvm::TargetMachine> tm(machine);
+  setFunctionAttributes(cpuStr, featuresStr, *module);
+  pm->add(llvm::createTargetTransformInfoWrapperPass(tm ? tm->getTargetIRAnalysis()
+                                                        : llvm::TargetIRAnalysis()));
+  fpm->add(llvm::createTargetTransformInfoWrapperPass(tm ? tm->getTargetIRAnalysis()
+                                                         : llvm::TargetIRAnalysis()));
+
+  if (tm) {
+    auto &ltm = dynamic_cast<llvm::LLVMTargetMachine &>(*tm);
+    llvm::Pass *tpc = ltm.createPassConfig(*pm);
+    pm->add(tpc);
+  }
+
+  unsigned optLevel = 3;
+  unsigned sizeLevel = 0;
+  llvm::PassManagerBuilder builder;
+  static llvm::OpenMPABI omp;
+  builder.tapirTarget = &omp;
+
+  if (!debug) {
+    builder.OptLevel = optLevel;
+    builder.SizeLevel = sizeLevel;
+    builder.Inliner = llvm::createFunctionInliningPass(optLevel, sizeLevel, false);
+    builder.DisableUnitAtATime = false;
+    builder.DisableUnrollLoops = false;
+    builder.LoopVectorize = true;
+    builder.SLPVectorize = true;
+  }
+
+  if (tm)
+    tm->adjustPassManager(builder);
+
+  llvm::addCoroutinePassesToExtensionPoints(builder);
+  builder.populateModulePassManager(*pm);
+  builder.populateFunctionPassManager(*fpm);
+
+  fpm->doInitialization();
+  for (llvm::Function &f : *module)
+    fpm->run(f);
+  fpm->doFinalization();
+  pm->run(*module);
+  applyDebugTransformations();
+}
+
+void LLVMVisitor::run(const std::vector<std::string> &args,
+                      const std::vector<std::string> &libs, const char *const *envp) {
+  runLLVMOptimizationPasses();
+  applyGCTransformations();
+  runLLVMOptimizationPasses();
+
+  std::vector<std::string> functionNames;
+  if (debug) {
+    for (auto &f : *module) {
+      functionNames.push_back(f.getName());
+    }
+  }
+
+  llvm::Function *main = module->getFunction("main");
+  llvm::EngineBuilder EB(std::move(module));
+  EB.setMCJITMemoryManager(llvm::make_unique<BoehmGCMemoryManager>());
+  EB.setUseOrcMCJITReplacement(true);
+  llvm::ExecutionEngine *eng = EB.create();
+
+  std::string err;
+  for (auto &lib : libs) {
+    if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(lib.c_str(), &err)) {
+      throw std::runtime_error(err);
+    }
+  }
+
+  if (debug) {
+    for (auto &name : functionNames) {
+      void *addr = eng->getPointerToNamedFunction(name, /*AbortOnFailure=*/false);
+      if (addr)
+        seq_add_symbol(addr, name);
+    }
+  }
+
+  eng->runFunctionAsMain(main, args, envp);
+  delete eng;
+}
+
 llvm::Type *LLVMVisitor::getLLVMType(types::Type *x) {
   process(x);
   return type;
+}
+
+llvm::Function *LLVMVisitor::makeAllocFunc(bool atomic) {
+  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      atomic ? "seq_alloc_atomic" : "seq_alloc", llvm::Type::getInt8PtrTy(context),
+      llvm::Type::getInt64Ty(context)));
+  f->setDoesNotThrow();
+  f->setReturnDoesNotAlias();
+  f->setOnlyAccessesInaccessibleMemory();
+  return f;
+}
+
+llvm::Function *LLVMVisitor::makePersonalityFunc() {
+  return llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      "seq_personality", llvm::Type::getInt32Ty(context),
+      llvm::Type::getInt32Ty(context), llvm::Type::getInt32Ty(context),
+      llvm::Type::getInt64Ty(context), llvm::Type::getInt8PtrTy(context),
+      llvm::Type::getInt8PtrTy(context)));
+}
+
+llvm::Function *LLVMVisitor::makeExcAllocFunc() {
+  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      "seq_alloc_exc", llvm::Type::getInt8PtrTy(context),
+      llvm::Type::getInt32Ty(context), llvm::Type::getInt8PtrTy(context)));
+  f->setDoesNotThrow();
+  return f;
+}
+
+llvm::Function *LLVMVisitor::makeThrowFunc() {
+  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      "seq_throw", llvm::Type::getVoidTy(context), llvm::Type::getInt8PtrTy(context)));
+  f->setDoesNotReturn();
+  return f;
+}
+
+llvm::Function *LLVMVisitor::makeTerminateFunc() {
+  auto *f = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("seq_terminate", llvm::Type::getVoidTy(context),
+                                  llvm::Type::getInt8PtrTy(context)));
+  f->setDoesNotReturn();
+  return f;
 }
 
 llvm::StructType *LLVMVisitor::getTypeInfoType() {
@@ -112,11 +318,28 @@ llvm::StructType *LLVMVisitor::getExceptionType() {
   return llvm::StructType::get(getTypeInfoType(), llvm::Type::getInt8PtrTy(context));
 }
 
+namespace {
+int typeIdxLookup(const std::string &name) {
+  static std::unordered_map<std::string, int> cache;
+  static int next = 1000;
+  if (name.empty())
+    return 0;
+  auto it = cache.find(name);
+  if (it != cache.end()) {
+    return it->second;
+  } else {
+    const int myID = next++;
+    cache[name] = myID;
+    return myID;
+  }
+}
+} // namespace
+
 llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(const std::string &name) {
   auto *typeInfoType = getTypeInfoType();
   const std::string typeVarName = "seq.typeidx." + (name.empty() ? "<all>" : name);
   llvm::GlobalVariable *tidx = module->getGlobalVariable(typeVarName);
-  int idx = 0; // types::Type::getID(name); // TODO
+  int idx = typeIdxLookup(name);
   if (!tidx)
     tidx = new llvm::GlobalVariable(
         *module.get(), typeInfoType, true, llvm::GlobalValue::PrivateLinkage,
@@ -131,21 +354,51 @@ llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(types::Type *catchType) {
   return getTypeIdxVar(catchType ? catchType->getName() : "");
 }
 
-llvm::Value *LLVMVisitor::call(llvm::Value *callee,
-                               llvm::ArrayRef<llvm::Value *> args) {
-  // TODO: check for invoke
-  llvm::IRBuilder<> builder(block);
-  return builder.CreateCall(callee, args);
+int LLVMVisitor::getTypeIdx(types::Type *catchType) {
+  return typeIdxLookup(catchType ? catchType->getName() : "");
 }
 
-void LLVMVisitor::enterLoop(llvm::BasicBlock *breakBlock,
-                            llvm::BasicBlock *continueBlock) {
-  loops.push({breakBlock, continueBlock});
+llvm::Value *LLVMVisitor::call(llvm::Value *callee,
+                               llvm::ArrayRef<llvm::Value *> args) {
+  llvm::IRBuilder<> builder(block);
+  if (trycatch.empty()) {
+    return builder.CreateCall(callee, args);
+  } else {
+    auto *normalBlock = llvm::BasicBlock::Create(context, "invoke.normal", func);
+    auto *unwindBlock = trycatch.back().exc;
+    auto *result = builder.CreateInvoke(callee, normalBlock, unwindBlock, args);
+    block = normalBlock;
+    return result;
+  }
+}
+
+static int nextSequenceNumber = 0;
+
+void LLVMVisitor::enterLoop(LoopData data) {
+  loops.push_back(std::move(data));
+  loops.back().sequenceNumber = nextSequenceNumber++;
 }
 
 void LLVMVisitor::exitLoop() {
   assert(!loops.empty());
-  loops.pop();
+  loops.pop_back();
+}
+
+void LLVMVisitor::enterTryCatch(TryCatchData data) {
+  trycatch.push_back(std::move(data));
+  trycatch.back().sequenceNumber = nextSequenceNumber++;
+}
+
+void LLVMVisitor::exitTryCatch() {
+  assert(!trycatch.empty());
+  trycatch.pop_back();
+}
+
+TryCatchData *LLVMVisitor::getInnermostTryCatchBeforeLoop() {
+  if (!trycatch.empty() &&
+      (loops.empty() || trycatch.back().sequenceNumber > loops.back().sequenceNumber))
+    return &trycatch.back();
+  return nullptr;
 }
 
 /*
@@ -208,7 +461,7 @@ void LLVMVisitor::visit(IRModule *x) {
       module->getOrInsertFunction("main", builder.getInt32Ty(), builder.getInt32Ty(),
                                   builder.getInt8PtrTy()->getPointerTo()));
 
-  canonicalMainFunc->setPersonalityFn(makePersonalityFunc(module.get()));
+  canonicalMainFunc->setPersonalityFn(makePersonalityFunc());
   auto argiter = canonicalMainFunc->arg_begin();
   llvm::Value *argc = argiter++;
   llvm::Value *argv = argiter;
@@ -224,7 +477,7 @@ void LLVMVisitor::visit(IRModule *x) {
   auto *exitBlock = llvm::BasicBlock::Create(context, "exit", canonicalMainFunc);
 
   builder.SetInsertPoint(entryBlock);
-  auto *allocFunc = makeAllocFunc(module.get(), /*atomic=*/false);
+  auto *allocFunc = makeAllocFunc(/*atomic=*/false);
   llvm::Value *len = builder.CreateZExt(argc, builder.getInt64Ty());
   llvm::Value *elemSize =
       builder.getInt64(module->getDataLayout().getTypeAllocSize(strType));
@@ -291,7 +544,7 @@ void LLVMVisitor::visit(IRModule *x) {
     auto *proxyMain = llvm::cast<llvm::Function>(
         module->getOrInsertFunction("seq.proxy_main", proxyMainTy));
     proxyMain->setLinkage(llvm::GlobalValue::PrivateLinkage);
-    proxyMain->setPersonalityFn(makePersonalityFunc(module.get()));
+    proxyMain->setPersonalityFn(makePersonalityFunc());
     auto *proxyBlockEntry = llvm::BasicBlock::Create(context, "entry", proxyMain);
     auto *proxyBlockMain = llvm::BasicBlock::Create(context, "main", proxyMain);
     auto *proxyBlockExit = llvm::BasicBlock::Create(context, "exit", proxyMain);
@@ -318,7 +571,7 @@ void LLVMVisitor::visit(IRModule *x) {
     caughtResult->setCleanup(true);
     caughtResult->addClause(getTypeIdxVar(nullptr));
     llvm::Value *unwindException = builder.CreateExtractValue(caughtResult, 0);
-    builder.CreateCall(makeTerminateFunc(module.get()), unwindException);
+    builder.CreateCall(makeTerminateFunc(), unwindException);
     builder.CreateUnreachable();
 
     builder.SetInsertPoint(normal);
@@ -356,9 +609,9 @@ void LLVMVisitor::makeLLVMFunction(Func *x) {
 
   auto *llvmFuncType =
       llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false);
-  assert(!module->getFunction(x->referenceString()));
+  const std::string functionName = getNameForFunction(x);
   func = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction(x->referenceString(), llvmFuncType));
+      module->getOrInsertFunction(functionName, llvmFuncType));
 }
 
 void LLVMVisitor::makeYield(llvm::Value *value, bool finalYield) {
@@ -381,7 +634,7 @@ void LLVMVisitor::makeYield(llvm::Value *value, bool finalYield) {
 }
 
 void LLVMVisitor::visit(ExternalFunc *x) {
-  func = module->getFunction(x->referenceString()); // inserted during module visit
+  func = module->getFunction(getNameForFunction(x)); // inserted during module visit
   coro = {};
   assert(func);
   func->setDoesNotThrow();
@@ -416,7 +669,7 @@ bool internalFuncMatches(const std::string &name, InternalFunc *x) {
 
 void LLVMVisitor::visit(InternalFunc *x) {
   using namespace types;
-  func = module->getFunction(x->referenceString()); // inserted during module visit
+  func = module->getFunction(getNameForFunction(x)); // inserted during module visit
   coro = {};
 
   Type *parentType = x->getParentType();
@@ -448,7 +701,7 @@ void LLVMVisitor::visit(InternalFunc *x) {
     auto *pointerType = cast<PointerType>(parentType);
     Type *baseType = pointerType->getBase();
     llvm::Type *llvmBaseType = getLLVMType(baseType);
-    llvm::Function *allocFunc = makeAllocFunc(module.get(), baseType->isAtomic());
+    llvm::Function *allocFunc = makeAllocFunc(baseType->isAtomic());
     llvm::Value *elemSize =
         builder.getInt64(module->getDataLayout().getTypeAllocSize(llvmBaseType));
     llvm::Value *allocSize = builder.CreateMul(elemSize, args[0]);
@@ -466,7 +719,7 @@ void LLVMVisitor::visit(InternalFunc *x) {
 
   else if (internalFuncMatches<RefType>("__new__", x)) {
     auto *refType = cast<RefType>(parentType);
-    llvm::Function *allocFunc = makeAllocFunc(module.get(), parentType->isAtomic());
+    llvm::Function *allocFunc = makeAllocFunc(parentType->isAtomic());
     llvm::Value *size = builder.getInt64(
         module->getDataLayout().getTypeAllocSize(getLLVMType(refType->getContents())));
     result = builder.CreateCall(allocFunc, size);
@@ -566,7 +819,7 @@ std::string LLVMVisitor::buildLLVMCodeString(LLVMFunc *x) {
   // build function signature
   buf << "define ";
   getLLVMType(funcType->getReturnType())->print(buf);
-  buf << " @\"" << x->referenceString() << "\"(";
+  buf << " @\"" << getNameForFunction(x) << "\"(";
   const int numArgs = std::distance(x->arg_begin(), x->arg_end());
   int argIndex = 0;
   for (auto it = x->arg_begin(); it != x->arg_end(); ++it) {
@@ -600,7 +853,7 @@ std::string LLVMVisitor::buildLLVMCodeString(LLVMFunc *x) {
 }
 
 void LLVMVisitor::visit(LLVMFunc *x) {
-  func = module->getFunction(x->referenceString());
+  func = module->getFunction(getNameForFunction(x));
   coro = {};
   if (func)
     return;
@@ -646,14 +899,14 @@ void LLVMVisitor::visit(LLVMFunc *x) {
   llvm::Linker L(*module);
   const bool fail = L.linkInModule(std::move(sub));
   assert(!fail);
-  func = module->getFunction(x->referenceString());
+  func = module->getFunction(getNameForFunction(x));
   assert(func);
   func->setLinkage(llvm::GlobalValue::PrivateLinkage);
   func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
 }
 
 void LLVMVisitor::visit(BodiedFunc *x) {
-  func = module->getFunction(x->referenceString()); // inserted during module visit
+  func = module->getFunction(getNameForFunction(x)); // inserted during module visit
   coro = {};
   assert(func);
 
@@ -668,7 +921,7 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   if (x->hasAttribute("noinline")) {
     func->addFnAttr(llvm::Attribute::AttrKind::NoInline);
   }
-  func->setPersonalityFn(makePersonalityFunc(module.get()));
+  func->setPersonalityFn(makePersonalityFunc());
 
   auto *funcType = x->getType()->as<types::FuncType>();
   auto *returnType = funcType->getReturnType();
@@ -738,7 +991,7 @@ void LLVMVisitor::visit(BodiedFunc *x) {
     // coro alloc
     builder.SetInsertPoint(allocBlock);
     llvm::Value *size = builder.CreateCall(coroSize);
-    auto *allocFunc = makeAllocFunc(module.get(), /*atomic=*/false);
+    auto *allocFunc = makeAllocFunc(/*atomic=*/false);
     llvm::Value *alloc = builder.CreateCall(allocFunc, size);
     builder.CreateBr(startBlock);
 
@@ -966,7 +1219,7 @@ void LLVMVisitor::visit(WhileFlow *x) {
   builder.CreateCondBr(cond, bodyBlock, exitBlock);
 
   block = bodyBlock;
-  enterLoop(/*breakBlock=*/exitBlock, /*continueBlock=*/condBlock);
+  enterLoop({/*breakBlock=*/exitBlock, /*continueBlock=*/condBlock});
   process(x->getBody());
   exitLoop();
   builder.SetInsertPoint(block);
@@ -1019,7 +1272,7 @@ void LLVMVisitor::visit(ForFlow *x) {
   }
 
   block = bodyBlock;
-  enterLoop(/*breakBlock=*/exitBlock, /*continueBlock=*/condBlock);
+  enterLoop({/*breakBlock=*/exitBlock, /*continueBlock=*/condBlock});
   process(x->getBody());
   exitLoop();
   builder.SetInsertPoint(block);
@@ -1032,10 +1285,302 @@ void LLVMVisitor::visit(ForFlow *x) {
   block = exitBlock;
 }
 
+namespace {
+bool anyMatch(types::Type *type, std::vector<types::Type *> types) {
+  if (type) {
+    for (auto *t : types) {
+      if (t && t->getName() == type->getName())
+        return true;
+    }
+  } else {
+    for (auto *t : types) {
+      if (!t)
+        return true;
+    }
+  }
+  return false;
+}
+} // namespace
+
 void LLVMVisitor::visit(TryCatchFlow *x) {
   // TODO
-  process(x->getBody());
+  const bool isRoot = trycatch.empty();
+  const bool supportBreakAndContinue = !loops.empty();
+  llvm::IRBuilder<> builder(block);
+  auto *entryBlock = llvm::BasicBlock::Create(context, "trycatch.entry", func);
+  builder.CreateBr(entryBlock);
+
+  TryCatchData tc;
+  tc.exc = llvm::BasicBlock::Create(context, "trycatch.exception", func);
+  tc.excRoute = llvm::BasicBlock::Create(context, "trycatch.exception_route", func);
+  tc.finally = llvm::BasicBlock::Create(context, "trycatch.finally", func);
+
+  auto *externalExcBlock =
+      llvm::BasicBlock::Create(context, "trycatch.exception_external", func);
+  auto *unwindResumeBlock =
+      llvm::BasicBlock::Create(context, "trycatch.unwind_resume", func);
+  auto *endBlock = llvm::BasicBlock::Create(context, "trycatch.end", func);
+
+  builder.SetInsertPoint(func->getEntryBlock().getTerminator());
+  auto *excStateNotThrown = builder.getInt8(TryCatchData::State::NOT_THROWN);
+  auto *excStateThrown = builder.getInt8(TryCatchData::State::THROWN);
+  auto *excStateCaught = builder.getInt8(TryCatchData::State::CAUGHT);
+  auto *excStateReturn = builder.getInt8(TryCatchData::State::RETURN);
+  auto *excStateBreak = builder.getInt8(TryCatchData::State::BREAK);
+  auto *excStateContinue = builder.getInt8(TryCatchData::State::CONTINUE);
+
+  llvm::StructType *padType = getPadType();
+  llvm::StructType *unwindType =
+      llvm::StructType::get(builder.getInt64Ty()); // header only
+  llvm::StructType *excType =
+      llvm::StructType::get(getTypeInfoType(), builder.getInt8PtrTy());
+
+  if (isRoot) {
+    tc.excFlag = builder.CreateAlloca(builder.getInt8Ty());
+    tc.catchStore = builder.CreateAlloca(padType);
+    tc.delegateDepth = builder.CreateAlloca(builder.getInt64Ty());
+    tc.retStore = func->getReturnType()->isVoidTy()
+                      ? nullptr
+                      : builder.CreateAlloca(func->getReturnType());
+
+    builder.CreateStore(excStateNotThrown, tc.excFlag);
+    builder.CreateStore(llvm::ConstantAggregateZero::get(padType), tc.catchStore);
+    builder.CreateStore(builder.getInt64(0), tc.delegateDepth);
+  } else {
+    tc.excFlag = trycatch[0].excFlag;
+    tc.catchStore = trycatch[0].catchStore;
+    tc.delegateDepth = trycatch[0].delegateDepth;
+    tc.retStore = trycatch[0].retStore;
+  }
+
+  // codegen finally
+  block = tc.finally;
   process(x->getFinally());
+  auto *finallyBlock = block;
+  builder.SetInsertPoint(finallyBlock);
+  llvm::Value *excFlagRead = builder.CreateLoad(tc.excFlag);
+
+  if (!isRoot) {
+    llvm::Value *depthRead = builder.CreateLoad(tc.delegateDepth);
+    llvm::Value *delegate = builder.CreateICmpSGT(depthRead, builder.getInt64(0));
+    auto *finallyNormal =
+        llvm::BasicBlock::Create(context, "trycatch.finally.normal", func);
+    auto *finallyDelegate =
+        llvm::BasicBlock::Create(context, "trycatch.finally.delegate", func);
+    builder.CreateCondBr(delegate, finallyDelegate, finallyNormal);
+
+    builder.SetInsertPoint(finallyDelegate);
+    llvm::Value *depthNew = builder.CreateSub(depthRead, builder.getInt64(1));
+    llvm::Value *delegateNew = builder.CreateICmpSGT(depthNew, builder.getInt64(0));
+    builder.CreateStore(depthNew, tc.delegateDepth);
+    builder.CreateCondBr(delegateNew, trycatch.back().finally,
+                         trycatch.back().excRoute);
+
+    finallyBlock = finallyNormal;
+    builder.SetInsertPoint(finallyNormal);
+  }
+
+  builder.SetInsertPoint(finallyBlock);
+  llvm::SwitchInst *theSwitch =
+      builder.CreateSwitch(excFlagRead, endBlock, supportBreakAndContinue ? 5 : 3);
+  theSwitch->addCase(excStateCaught, endBlock);
+  theSwitch->addCase(excStateThrown, unwindResumeBlock);
+
+  if (isRoot) {
+    auto *finallyReturn =
+        llvm::BasicBlock::Create(context, "trycatch.finally.return", func);
+    theSwitch->addCase(excStateReturn, finallyReturn);
+    builder.SetInsertPoint(finallyReturn);
+    if (tc.retStore) {
+      llvm::Value *retVal = builder.CreateLoad(tc.retStore);
+      builder.CreateRet(retVal);
+    } else {
+      builder.CreateRetVoid();
+    }
+  } else {
+    theSwitch->addCase(excStateReturn, trycatch.back().finally);
+  }
+
+  if (supportBreakAndContinue) {
+    const bool outer = (getInnermostTryCatchBeforeLoop() == nullptr);
+    if (outer) {
+      auto *finallyBreak =
+          llvm::BasicBlock::Create(context, "trycatch.finally.break", func);
+      auto *finallyContinue =
+          llvm::BasicBlock::Create(context, "trycatch.finally.continue", func);
+      theSwitch->addCase(excStateBreak, finallyBreak);
+      theSwitch->addCase(excStateContinue, finallyContinue);
+
+      builder.SetInsertPoint(finallyBreak);
+      builder.CreateStore(excStateNotThrown, tc.excFlag);
+      builder.CreateBr(loops.back().breakBlock);
+
+      builder.SetInsertPoint(finallyContinue);
+      builder.CreateStore(excStateNotThrown, tc.excFlag);
+      builder.CreateBr(loops.back().continueBlock);
+    } else {
+      assert(!isRoot);
+      theSwitch->addCase(excStateBreak, trycatch.back().finally);
+      theSwitch->addCase(excStateContinue, trycatch.back().finally);
+    }
+  }
+
+  // try and catch codegen
+  std::vector<TryCatchFlow::Catch *> catches;
+  for (auto &c : *x) {
+    catches.push_back(&c);
+  }
+  llvm::BasicBlock *catchAll = nullptr;
+
+  for (auto *c : catches) {
+    auto *catchBlock = llvm::BasicBlock::Create(context, "trycatch.catch", func);
+    tc.catchTypes.push_back(c->type);
+    tc.handlers.push_back(catchBlock);
+
+    if (!c->type) {
+      assert(!catchAll);
+      catchAll = catchBlock;
+    }
+  }
+
+  // codegen try
+  block = entryBlock;
+  enterTryCatch(tc);
+  process(x->getBody());
+  exitTryCatch();
+
+  // make sure we always get to finally block
+  builder.SetInsertPoint(block);
+  builder.CreateBr(tc.finally);
+
+  // rethrow if uncaught
+  builder.SetInsertPoint(unwindResumeBlock);
+  builder.CreateResume(builder.CreateLoad(tc.catchStore));
+
+  // make sure we delegate to parent try-catch if necessary
+  std::vector<types::Type *> catchTypesFull(tc.catchTypes);
+  std::vector<llvm::BasicBlock *> handlersFull(tc.handlers);
+  std::vector<unsigned> depths(tc.catchTypes.size(), 0);
+  unsigned depth = 1;
+
+  unsigned catchAllDepth = 0;
+  for (auto it = trycatch.rbegin(); it != trycatch.rend(); ++it) {
+    if (catchAll) // can't ever delegate past catch-all
+      break;
+
+    assert(it->catchTypes.size() == it->handlers.size());
+    for (unsigned i = 0; i < it->catchTypes.size(); i++) {
+      if (!anyMatch(it->catchTypes[i], catchTypesFull)) {
+        catchTypesFull.push_back(it->catchTypes[i]);
+        depths.push_back(depth);
+
+        if (!it->catchTypes[i] && !catchAll) {
+          // catch-all is in parent; set finally depth
+          catchAll =
+              llvm::BasicBlock::Create(context, "trycatch.fdepth_catchall", func);
+          builder.SetInsertPoint(catchAll);
+          builder.CreateStore(builder.getInt64(depth), tc.delegateDepth);
+          builder.CreateBr(it->handlers[i]);
+          handlersFull.push_back(catchAll);
+          catchAllDepth = depth;
+        } else {
+          handlersFull.push_back(it->handlers[i]);
+        }
+      }
+    }
+    ++depth;
+  }
+
+  // exception handling
+  builder.SetInsertPoint(tc.exc);
+  llvm::LandingPadInst *caughtResult =
+      builder.CreateLandingPad(padType, catches.size());
+  caughtResult->setCleanup(true);
+  std::vector<llvm::Value *> typeIndices;
+
+  for (auto *catchType : catchTypesFull) {
+    assert(!catchType || cast<types::RefType>(catchType));
+    const std::string typeVarName =
+        "seq.typeidx." + (catchType ? catchType->getName() : "<all>");
+    llvm::GlobalVariable *tidx = getTypeIdxVar(catchType);
+    typeIndices.push_back(tidx);
+    caughtResult->addClause(tidx);
+  }
+
+  llvm::Value *unwindException = builder.CreateExtractValue(caughtResult, 0);
+  builder.CreateStore(caughtResult, tc.catchStore);
+  builder.CreateStore(excStateThrown, tc.excFlag);
+  llvm::Value *depthMax = builder.getInt64(trycatch.size());
+  builder.CreateStore(depthMax, tc.delegateDepth);
+
+  llvm::Value *unwindExceptionClass = builder.CreateLoad(builder.CreateStructGEP(
+      unwindType,
+      builder.CreatePointerCast(unwindException, unwindType->getPointerTo()), 0));
+
+  // check for foreign exceptions
+  builder.CreateCondBr(
+      builder.CreateICmpEQ(unwindExceptionClass, builder.getInt64(seq_exc_class())),
+      tc.excRoute, externalExcBlock);
+
+  // external exception (currently assumed to be unreachable)
+  builder.SetInsertPoint(externalExcBlock);
+  builder.CreateUnreachable();
+
+  // reroute Seq exceptions
+  builder.SetInsertPoint(tc.excRoute);
+  unwindException = builder.CreateExtractValue(builder.CreateLoad(tc.catchStore), 0);
+  llvm::Value *excVal = builder.CreatePointerCast(
+      builder.CreateConstGEP1_64(unwindException, (uint64_t)seq_exc_offset()),
+      excType->getPointerTo());
+
+  llvm::Value *loadedExc = builder.CreateLoad(excVal);
+  llvm::Value *objType = builder.CreateExtractValue(loadedExc, 0);
+  objType = builder.CreateExtractValue(objType, 0);
+  llvm::Value *objPtr = builder.CreateExtractValue(loadedExc, 1);
+
+  // set depth when catch-all entered
+  auto *defaultRouteBlock = llvm::BasicBlock::Create(context, "trycatch.fdepth", func);
+  builder.SetInsertPoint(defaultRouteBlock);
+  if (catchAll)
+    builder.CreateStore(builder.getInt64(catchAllDepth), tc.delegateDepth);
+  builder.CreateBr(catchAll ? (catchAllDepth > 0 ? tc.finally : catchAll) : tc.finally);
+
+  builder.SetInsertPoint(tc.excRoute);
+  llvm::SwitchInst *switchToCatchBlock =
+      builder.CreateSwitch(objType, defaultRouteBlock, (unsigned)handlersFull.size());
+  for (unsigned i = 0; i < handlersFull.size(); i++) {
+    // set finally depth
+    auto *depthSet = llvm::BasicBlock::Create(context, "trycatch.fdepth", func);
+    builder.SetInsertPoint(depthSet);
+    builder.CreateStore(builder.getInt64(depths[i]), tc.delegateDepth);
+    builder.CreateBr((i < tc.handlers.size()) ? handlersFull[i] : tc.finally);
+
+    if (catchTypesFull[i]) {
+      switchToCatchBlock->addCase(
+          builder.getInt32((uint64_t)getTypeIdx(catchTypesFull[i])), depthSet);
+    }
+
+    // codegen catch body if this block is ours (vs. a parent's)
+    if (i < catches.size()) {
+      block = handlersFull[i];
+      builder.SetInsertPoint(block);
+      Var *var = catches[i]->catchVar;
+
+      if (var) {
+        llvm::Value *obj = builder.CreateBitCast(objPtr, getLLVMType(catches[i]->type));
+        llvm::Value *varPtr = vars[var];
+        assert(varPtr);
+        builder.CreateStore(obj, varPtr);
+      }
+
+      builder.CreateStore(excStateCaught, tc.excFlag);
+      process(catches[i]->handler);
+      builder.SetInsertPoint(block);
+      builder.CreateBr(tc.finally);
+    }
+  }
+
+  block = endBlock;
 }
 
 void LLVMVisitor::visit(UnorderedFlow *x) {
@@ -1084,6 +1629,7 @@ void LLVMVisitor::visit(InsertInstr *x) {
   llvm::Value *rhs = value;
 
   llvm::IRBuilder<> builder(block);
+  lhs = builder.CreateBitCast(lhs, getLLVMType(refType->getContents())->getPointerTo());
   llvm::Value *load = builder.CreateLoad(lhs);
   load = builder.CreateInsertValue(load, rhs, index);
   builder.CreateStore(load, lhs);
@@ -1183,23 +1729,32 @@ void LLVMVisitor::visit(TernaryInstr *x) {
 }
 
 void LLVMVisitor::visit(BreakInstr *x) {
-  // TODO: check for finally block
   assert(!loops.empty());
   llvm::IRBuilder<> builder(block);
-  builder.CreateBr(loops.top().breakBlock);
+  if (auto *tc = getInnermostTryCatchBeforeLoop()) {
+    auto *excStateBreak = builder.getInt8(TryCatchData::State::BREAK);
+    builder.CreateStore(excStateBreak, tc->excFlag);
+    builder.CreateBr(tc->finally);
+  } else {
+    builder.CreateBr(loops.back().breakBlock);
+  }
   block = llvm::BasicBlock::Create(context, "break.new", func);
 }
 
 void LLVMVisitor::visit(ContinueInstr *x) {
-  // TODO: check for finally block
   assert(!loops.empty());
   llvm::IRBuilder<> builder(block);
-  builder.CreateBr(loops.top().continueBlock);
+  if (auto *tc = getInnermostTryCatchBeforeLoop()) {
+    auto *excStateContinue = builder.getInt8(TryCatchData::State::CONTINUE);
+    builder.CreateStore(excStateContinue, tc->excFlag);
+    builder.CreateBr(tc->finally);
+  } else {
+    builder.CreateBr(loops.back().continueBlock);
+  }
   block = llvm::BasicBlock::Create(context, "continue.new", func);
 }
 
 void LLVMVisitor::visit(ReturnInstr *x) {
-  // TODO: check for finally block
   const bool voidReturn = !bool(x->getValue());
   if (!voidReturn) {
     process(x->getValue());
@@ -1207,10 +1762,22 @@ void LLVMVisitor::visit(ReturnInstr *x) {
   llvm::IRBuilder<> builder(block);
   if (coro.exit) {
     builder.CreateBr(coro.exit);
-  } else if (!voidReturn) {
-    builder.CreateRet(value);
   } else {
-    builder.CreateRetVoid();
+    if (auto *tc = getInnermostTryCatchBeforeLoop()) {
+      auto *excStateReturn = builder.getInt8(TryCatchData::State::RETURN);
+      builder.CreateStore(excStateReturn, tc->excFlag);
+      if (tc->retStore) {
+        assert(value);
+        builder.CreateStore(value, tc->retStore);
+      }
+      builder.CreateBr(tc->finally);
+    } else {
+      if (!voidReturn) {
+        builder.CreateRet(value);
+      } else {
+        builder.CreateRetVoid();
+      }
+    }
   }
   block = llvm::BasicBlock::Create(context, "return.new", func);
 }
@@ -1221,59 +1788,14 @@ void LLVMVisitor::visit(YieldInstr *x) {
 }
 
 void LLVMVisitor::visit(ThrowInstr *x) {
-  /* TODO
-    LLVMContext &context = block->getContext();
-    Module *module = block->getModule();
-    Function *excAllocFunc = makeExcAllocFunc(module);
-    Function *throwFunc = makeThrowFunc(module);
-
-    Value *obj = expr->codegen(getBase(), block);
-    IRBuilder<> builder(block);
-
-    // add meta-info like func/file/line/col
-    Type *hdrType = excHeader->getLLVMType(context);
-    Value *hdrPtr = builder.CreateBitCast(obj, hdrType->getPointerTo());
-    Value *hdr = builder.CreateLoad(hdrPtr);
-
-    std::string funcNameStr = "<main>";
-    if (auto *func = dynamic_cast<Func *>(getBase())) {
-      funcNameStr = func->genericName();
-    }
-    std::string fileNameStr = getSrcInfo().file;
-    seq_int_t fileLine = getSrcInfo().line;
-    seq_int_t fileCol = getSrcInfo().col;
-
-    StrExpr funcNameExpr(funcNameStr);
-    Value *funcNameVal = funcNameExpr.codegen(getBase(), block);
-
-    StrExpr fileNameExpr(fileNameStr);
-    Value *fileNameVal = fileNameExpr.codegen(getBase(), block);
-
-    Value *fileLineVal = ConstantInt::get(seqIntLLVM(context), fileLine, true);
-    Value *fileColVal = ConstantInt::get(seqIntLLVM(context), fileCol, true);
-
-    hdr = excHeader->setMemb(hdr, "3", funcNameVal, block);
-    hdr = excHeader->setMemb(hdr, "4", fileNameVal, block);
-    hdr = excHeader->setMemb(hdr, "5", fileLineVal, block);
-    hdr = excHeader->setMemb(hdr, "6", fileColVal, block);
-    builder.SetInsertPoint(block);
-    builder.CreateStore(hdr, hdrPtr);
-
-    Value *exc = builder.CreateCall(excAllocFunc,
-                                    {ConstantInt::get(Type::getInt32Ty(context),
-                                                      (uint64_t)type->getID(), true),
-                                     obj});
-
-    if (getTryCatch()) {
-      Function *parent = block->getParent();
-      BasicBlock *unwind = getTryCatch()->getExceptionBlock();
-      BasicBlock *normal = BasicBlock::Create(context, "normal", parent);
-      builder.CreateInvoke(throwFunc, normal, unwind, exc);
-      block = normal;
-    } else {
-      builder.CreateCall(throwFunc, exc);
-    }
-  */
+  // note: exception header should be set in the frontend
+  llvm::Function *excAllocFunc = makeExcAllocFunc();
+  llvm::Function *throwFunc = makeThrowFunc();
+  process(x->getValue());
+  llvm::IRBuilder<> builder(block);
+  llvm::Value *exc = builder.CreateCall(
+      excAllocFunc, {builder.getInt32(getTypeIdx(x->getValue()->getType())), value});
+  call(throwFunc, exc);
 }
 
 void LLVMVisitor::visit(FlowInstr *x) {
