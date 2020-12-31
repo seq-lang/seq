@@ -137,6 +137,7 @@ private:
   void applyDebugTransformations();
   void applyGCTransformations();
   void runLLVMOptimizationPasses();
+  void runLLVMPipeline();
 
 public:
   LLVMVisitor(bool debug = false);

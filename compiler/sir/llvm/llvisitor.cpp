@@ -162,9 +162,8 @@ void LLVMVisitor::applyGCTransformations() {
 void LLVMVisitor::runLLVMOptimizationPasses() {
   using namespace llvm::orc;
   applyDebugTransformations();
-  std::unique_ptr<llvm::legacy::PassManager> pm(new llvm::legacy::PassManager());
-  std::unique_ptr<llvm::legacy::FunctionPassManager> fpm(
-      new llvm::legacy::FunctionPassManager(module.get()));
+  auto pm = std::make_unique<llvm::legacy::PassManager>();
+  auto fpm = std::make_unique<llvm::legacy::FunctionPassManager>(module.get());
 
   llvm::Triple moduleTriple(module->getTargetTriple());
   std::string cpuStr, featuresStr;
@@ -223,13 +222,19 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
   applyDebugTransformations();
 }
 
-void LLVMVisitor::run(const std::vector<std::string> &args,
-                      const std::vector<std::string> &libs, const char *const *envp) {
+void LLVMVisitor::runLLVMPipeline() {
   verify();
   runLLVMOptimizationPasses();
   applyGCTransformations();
-  runLLVMOptimizationPasses();
+  if (!debug) {
+    runLLVMOptimizationPasses();
+  }
   verify();
+}
+
+void LLVMVisitor::run(const std::vector<std::string> &args,
+                      const std::vector<std::string> &libs, const char *const *envp) {
+  runLLVMPipeline();
 
   std::vector<std::string> functionNames;
   if (debug) {
@@ -240,7 +245,7 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
 
   llvm::Function *main = module->getFunction("main");
   llvm::EngineBuilder EB(std::move(module));
-  EB.setMCJITMemoryManager(llvm::make_unique<BoehmGCMemoryManager>());
+  EB.setMCJITMemoryManager(std::make_unique<BoehmGCMemoryManager>());
   EB.setUseOrcMCJITReplacement(true);
   llvm::ExecutionEngine *eng = EB.create();
 
@@ -425,7 +430,7 @@ void LLVMVisitor::visit(IRModule *x) {
 
   // set up global variables and initialize functions
   for (auto &var : *x) {
-    if (auto *f = var->as<Func>()) {
+    if (auto *f = cast<Func>(var.get())) {
       makeLLVMFunction(f);
       funcs.insert(f, func);
     } else {
@@ -439,7 +444,7 @@ void LLVMVisitor::visit(IRModule *x) {
 
   // process functions
   for (auto &var : *x) {
-    if (auto *f = var->as<Func>()) {
+    if (auto *f = cast<Func>(var.get())) {
       process(f);
     }
   }
@@ -599,12 +604,12 @@ void LLVMVisitor::visit(IRModule *x) {
 
 void LLVMVisitor::makeLLVMFunction(Func *x) {
   // process LLVM functions in full immediately
-  if (auto *llvmFunc = x->as<LLVMFunc>()) {
+  if (auto *llvmFunc = cast<LLVMFunc>(x)) {
     process(llvmFunc);
     return;
   }
 
-  auto *funcType = x->getType()->as<types::FuncType>();
+  auto *funcType = cast<types::FuncType>(x->getType());
   llvm::Type *returnType = getLLVMType(funcType->getReturnType());
   std::vector<llvm::Type *> argTypes;
   for (const auto &argType : *funcType) {
@@ -815,7 +820,7 @@ void LLVMVisitor::visit(InternalFunc *x) {
 }
 
 std::string LLVMVisitor::buildLLVMCodeString(LLVMFunc *x) {
-  auto *funcType = x->getType()->as<types::FuncType>();
+  auto *funcType = cast<types::FuncType>(x->getType());
   assert(funcType);
   std::string bufStr;
   llvm::raw_string_ostream buf(bufStr);
@@ -927,7 +932,7 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   }
   func->setPersonalityFn(makePersonalityFunc());
 
-  auto *funcType = x->getType()->as<types::FuncType>();
+  auto *funcType = cast<types::FuncType>(x->getType());
   auto *returnType = funcType->getReturnType();
   assert(funcType);
   auto *entryBlock = llvm::BasicBlock::Create(context, "entry", func);
@@ -953,7 +958,7 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   auto *startBlock = llvm::BasicBlock::Create(context, "start", func);
 
   if (x->isGenerator()) {
-    auto *generatorType = returnType->as<types::GeneratorType>();
+    auto *generatorType = cast<types::GeneratorType>(returnType);
     assert(generatorType);
 
     llvm::Function *coroId =
@@ -978,7 +983,7 @@ void LLVMVisitor::visit(BodiedFunc *x) {
     // coro ID and promise
     llvm::Value *id = nullptr;
     llvm::Value *nullPtr = llvm::ConstantPointerNull::get(builder.getInt8PtrTy());
-    if (!generatorType->getBase()->is<types::VoidType>()) {
+    if (!cast<types::VoidType>(generatorType->getBase())) {
       coro.promise = makeAlloca(getLLVMType(generatorType->getBase()), entryBlock);
       coro.promise->setName("coro.promise");
       llvm::Value *promiseRaw =
@@ -1042,7 +1047,7 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   if (x->isGenerator()) {
     builder.CreateBr(coro.exit);
   } else {
-    if (returnType->is<types::VoidType>()) {
+    if (cast<types::VoidType>(returnType)) {
       builder.CreateRetVoid();
     } else {
       builder.CreateRet(llvm::Constant::getNullValue(getLLVMType(returnType)));
@@ -1053,7 +1058,7 @@ void LLVMVisitor::visit(BodiedFunc *x) {
 void LLVMVisitor::visit(Var *x) { assert(0); }
 
 void LLVMVisitor::visit(VarValue *x) {
-  if (auto *f = x->getVar()->as<Func>()) {
+  if (auto *f = cast<Func>(x->getVar())) {
     value = funcs[f];
     assert(value);
   } else {
@@ -1109,7 +1114,7 @@ void LLVMVisitor::visit(types::FuncType *x) {
 }
 
 void LLVMVisitor::visit(types::OptionalType *x) {
-  if (x->getBase()->is<types::RefType>()) {
+  if (cast<types::RefType>(x->getBase())) {
     type = llvm::Type::getInt8PtrTy(context);
   } else {
     type = llvm::StructType::get(llvm::Type::getInt1Ty(context),
@@ -1607,14 +1612,14 @@ void LLVMVisitor::visit(AssignInstr *x) {
 }
 
 void LLVMVisitor::visit(ExtractInstr *x) {
-  auto *memberedType = x->getVal()->getType()->as<types::MemberedType>();
+  auto *memberedType = cast<types::MemberedType>(x->getVal()->getType());
   assert(memberedType);
   const int index = memberedType->getMemberIndex(x->getField());
   assert(index >= 0);
 
   process(x->getVal());
   llvm::IRBuilder<> builder(block);
-  if (auto *refType = memberedType->as<types::RefType>()) {
+  if (auto *refType = cast<types::RefType>(memberedType)) {
     value = builder.CreateBitCast(value,
                                   getLLVMType(refType->getContents())->getPointerTo());
     value = builder.CreateLoad(value);
@@ -1623,7 +1628,7 @@ void LLVMVisitor::visit(ExtractInstr *x) {
 }
 
 void LLVMVisitor::visit(InsertInstr *x) {
-  auto *refType = x->getLhs()->getType()->as<types::RefType>();
+  auto *refType = cast<types::RefType>(x->getLhs()->getType());
   assert(refType);
   const int index = refType->getMemberIndex(x->getField());
   assert(index >= 0);
@@ -1675,14 +1680,14 @@ void LLVMVisitor::visit(YieldInInstr *x) {
 
 void LLVMVisitor::visit(StackAllocInstr *x) {
   llvm::Type *baseType = nullptr;
-  if (auto *arrayType = x->getType()->as<types::ArrayType>()) {
+  if (auto *arrayType = cast<types::ArrayType>(x->getType())) {
     baseType = getLLVMType(arrayType->getBase());
   } else {
     assert(0 && "StackAllocInstr type is not an array type");
   }
 
   seq_int_t size = 0;
-  if (auto *constSize = x->getCount()->as<IntConstant>()) {
+  if (auto *constSize = cast<IntConstant>(x->getCount().get())) {
     size = constSize->getVal();
   } else {
     assert(0 && "StackAllocInstr size is not constant");
