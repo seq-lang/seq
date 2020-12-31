@@ -369,7 +369,7 @@ llvm::Value *LLVMVisitor::call(llvm::Value *callee,
     return builder.CreateCall(callee, args);
   } else {
     auto *normalBlock = llvm::BasicBlock::Create(context, "invoke.normal", func);
-    auto *unwindBlock = trycatch.back().exc;
+    auto *unwindBlock = trycatch.back().exceptionBlock;
     auto *result = builder.CreateInvoke(callee, normalBlock, unwindBlock, args);
     block = normalBlock;
     return result;
@@ -1314,9 +1314,10 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
   builder.CreateBr(entryBlock);
 
   TryCatchData tc;
-  tc.exc = llvm::BasicBlock::Create(context, "trycatch.exception", func);
-  tc.excRoute = llvm::BasicBlock::Create(context, "trycatch.exception_route", func);
-  tc.finally = llvm::BasicBlock::Create(context, "trycatch.finally", func);
+  tc.exceptionBlock = llvm::BasicBlock::Create(context, "trycatch.exception", func);
+  tc.exceptionRouteBlock =
+      llvm::BasicBlock::Create(context, "trycatch.exception_route", func);
+  tc.finallyBlock = llvm::BasicBlock::Create(context, "trycatch.finally", func);
 
   auto *externalExcBlock =
       llvm::BasicBlock::Create(context, "trycatch.exception_external", func);
@@ -1357,7 +1358,7 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
   }
 
   // codegen finally
-  block = tc.finally;
+  block = tc.finallyBlock;
   process(x->getFinally());
   auto *finallyBlock = block;
   builder.SetInsertPoint(finallyBlock);
@@ -1376,8 +1377,8 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
     llvm::Value *depthNew = builder.CreateSub(depthRead, builder.getInt64(1));
     llvm::Value *delegateNew = builder.CreateICmpSGT(depthNew, builder.getInt64(0));
     builder.CreateStore(depthNew, tc.delegateDepth);
-    builder.CreateCondBr(delegateNew, trycatch.back().finally,
-                         trycatch.back().excRoute);
+    builder.CreateCondBr(delegateNew, trycatch.back().finallyBlock,
+                         trycatch.back().exceptionRouteBlock);
 
     finallyBlock = finallyNormal;
     builder.SetInsertPoint(finallyNormal);
@@ -1401,7 +1402,7 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
       builder.CreateRetVoid();
     }
   } else {
-    theSwitch->addCase(excStateReturn, trycatch.back().finally);
+    theSwitch->addCase(excStateReturn, trycatch.back().finallyBlock);
   }
 
   if (supportBreakAndContinue) {
@@ -1423,8 +1424,8 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
       builder.CreateBr(loops.back().continueBlock);
     } else {
       assert(!isRoot);
-      theSwitch->addCase(excStateBreak, trycatch.back().finally);
-      theSwitch->addCase(excStateContinue, trycatch.back().finally);
+      theSwitch->addCase(excStateBreak, trycatch.back().finallyBlock);
+      theSwitch->addCase(excStateContinue, trycatch.back().finallyBlock);
     }
   }
 
@@ -1454,7 +1455,7 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
 
   // make sure we always get to finally block
   builder.SetInsertPoint(block);
-  builder.CreateBr(tc.finally);
+  builder.CreateBr(tc.finallyBlock);
 
   // rethrow if uncaught
   builder.SetInsertPoint(unwindResumeBlock);
@@ -1495,7 +1496,7 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
   }
 
   // exception handling
-  builder.SetInsertPoint(tc.exc);
+  builder.SetInsertPoint(tc.exceptionBlock);
   llvm::LandingPadInst *caughtResult =
       builder.CreateLandingPad(padType, catches.size());
   caughtResult->setCleanup(true);
@@ -1523,14 +1524,14 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
   // check for foreign exceptions
   builder.CreateCondBr(
       builder.CreateICmpEQ(unwindExceptionClass, builder.getInt64(seq_exc_class())),
-      tc.excRoute, externalExcBlock);
+      tc.exceptionRouteBlock, externalExcBlock);
 
   // external exception (currently assumed to be unreachable)
   builder.SetInsertPoint(externalExcBlock);
   builder.CreateUnreachable();
 
   // reroute Seq exceptions
-  builder.SetInsertPoint(tc.excRoute);
+  builder.SetInsertPoint(tc.exceptionRouteBlock);
   unwindException = builder.CreateExtractValue(builder.CreateLoad(tc.catchStore), 0);
   llvm::Value *excVal = builder.CreatePointerCast(
       builder.CreateConstGEP1_64(unwindException, (uint64_t)seq_exc_offset()),
@@ -1546,9 +1547,10 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
   builder.SetInsertPoint(defaultRouteBlock);
   if (catchAll)
     builder.CreateStore(builder.getInt64(catchAllDepth), tc.delegateDepth);
-  builder.CreateBr(catchAll ? (catchAllDepth > 0 ? tc.finally : catchAll) : tc.finally);
+  builder.CreateBr(catchAll ? (catchAllDepth > 0 ? tc.finallyBlock : catchAll)
+                            : tc.finallyBlock);
 
-  builder.SetInsertPoint(tc.excRoute);
+  builder.SetInsertPoint(tc.exceptionRouteBlock);
   llvm::SwitchInst *switchToCatchBlock =
       builder.CreateSwitch(objType, defaultRouteBlock, (unsigned)handlersFull.size());
   for (unsigned i = 0; i < handlersFull.size(); i++) {
@@ -1556,7 +1558,7 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
     auto *depthSet = llvm::BasicBlock::Create(context, "trycatch.fdepth", func);
     builder.SetInsertPoint(depthSet);
     builder.CreateStore(builder.getInt64(depths[i]), tc.delegateDepth);
-    builder.CreateBr((i < tc.handlers.size()) ? handlersFull[i] : tc.finally);
+    builder.CreateBr((i < tc.handlers.size()) ? handlersFull[i] : tc.finallyBlock);
 
     if (catchTypesFull[i]) {
       switchToCatchBlock->addCase(
@@ -1579,7 +1581,7 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
       builder.CreateStore(excStateCaught, tc.excFlag);
       process(catches[i]->handler);
       builder.SetInsertPoint(block);
-      builder.CreateBr(tc.finally);
+      builder.CreateBr(tc.finallyBlock);
     }
   }
 
@@ -1737,7 +1739,7 @@ void LLVMVisitor::visit(BreakInstr *x) {
   if (auto *tc = getInnermostTryCatchBeforeLoop()) {
     auto *excStateBreak = builder.getInt8(TryCatchData::State::BREAK);
     builder.CreateStore(excStateBreak, tc->excFlag);
-    builder.CreateBr(tc->finally);
+    builder.CreateBr(tc->finallyBlock);
   } else {
     builder.CreateBr(loops.back().breakBlock);
   }
@@ -1750,7 +1752,7 @@ void LLVMVisitor::visit(ContinueInstr *x) {
   if (auto *tc = getInnermostTryCatchBeforeLoop()) {
     auto *excStateContinue = builder.getInt8(TryCatchData::State::CONTINUE);
     builder.CreateStore(excStateContinue, tc->excFlag);
-    builder.CreateBr(tc->finally);
+    builder.CreateBr(tc->finallyBlock);
   } else {
     builder.CreateBr(loops.back().continueBlock);
   }
@@ -1773,7 +1775,7 @@ void LLVMVisitor::visit(ReturnInstr *x) {
         assert(value);
         builder.CreateStore(value, tc->retStore);
       }
-      builder.CreateBr(tc->finally);
+      builder.CreateBr(tc->finallyBlock);
     } else {
       if (!voidReturn) {
         builder.CreateRet(value);

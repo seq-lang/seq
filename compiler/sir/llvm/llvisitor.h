@@ -50,11 +50,11 @@ private:
     /// Possible try-catch states when reaching finally block
     enum State { NOT_THROWN = 0, THROWN, CAUGHT, RETURN, BREAK, CONTINUE };
     /// Exception block
-    llvm::BasicBlock *exc;
+    llvm::BasicBlock *exceptionBlock;
     /// Exception route block
-    llvm::BasicBlock *excRoute;
+    llvm::BasicBlock *exceptionRouteBlock;
     /// Finally start block
-    llvm::BasicBlock *finally;
+    llvm::BasicBlock *finallyBlock;
     /// Try-catch catch types
     std::vector<types::Type *> catchTypes;
     /// Try-catch handlers, corresponding to catch types
@@ -69,9 +69,9 @@ private:
     llvm::Value *retStore;
 
     TryCatchData()
-        : NestableData(), exc(nullptr), excRoute(nullptr), finally(nullptr),
-          catchTypes(), handlers(), excFlag(nullptr), catchStore(nullptr),
-          delegateDepth(nullptr), retStore(nullptr){};
+        : NestableData(), exceptionBlock(nullptr), exceptionRouteBlock(nullptr),
+          finallyBlock(nullptr), catchTypes(), handlers(), excFlag(nullptr),
+          catchStore(nullptr), delegateDepth(nullptr), retStore(nullptr){};
   };
 
   /// LLVM context used for compilation
