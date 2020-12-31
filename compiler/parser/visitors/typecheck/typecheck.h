@@ -204,6 +204,8 @@ private:
   ///   (TODO: improve this).
   /// Return nullptr if no transformation was made.
   ExprPtr transformDot(DotExpr *expr, vector<CallExpr::Arg> *args = nullptr);
+  /// Deactivate any unbound that was activated during the instantiation of type t.
+  void deactivateUnbounds(types::Type *t);
   /// Picks the best method named member in a given type that matches the given argument
   /// types. Prefers methods whose signatures are closer to the given arguments (e.g.
   /// a foo(int) will match (int) better that a generic foo(T)). Also takes care of the
@@ -251,6 +253,7 @@ private:
   /// Note: This is the most evil method in the whole parser suite. 🤦🏻‍
   ExprPtr transformCall(CallExpr *expr, const types::TypePtr &inType = nullptr,
                         ExprPtr *extraStage = nullptr);
+  pair<bool, ExprPtr> transformSpecialCall(CallExpr *expr);
   /// Find all generics on which a given function depends and add them to the context.
   void addFunctionGenerics(const types::FuncType *t);
   /// Generate a partial function type Partial.N01...01 (where 01...01 is a given mask

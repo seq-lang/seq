@@ -351,7 +351,7 @@ void SimplifyVisitor::visit(IndexExpr *expr) {
 
 void SimplifyVisitor::visit(CallExpr *expr) {
   // Special calls
-  // 1. __ptr__
+  // 1. __ptr__(v)
   if (expr->expr->isId("__ptr__")) {
     if (expr->args.size() == 1 && expr->args[0].value->getId()) {
       auto v = ctx->find(expr->args[0].value->getId()->value);
@@ -362,11 +362,55 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     }
     error("__ptr__ only accepts a single argument (variable identifier)");
   }
+  // 2. __array__[T](n)
   if (expr->expr->getIndex() && expr->expr->getIndex()->expr->isId("__array__")) {
     if (expr->args.size() != 1)
       error("__array__ only accepts a single argument (size)");
     resultExpr = N<StackAllocExpr>(transformType(expr->expr->getIndex()->index.get()),
                                    transform(expr->args[0].value));
+    return;
+  }
+  // 3. isinstance(v, T)
+  if (expr->expr->isId("isinstance")) {
+    if (expr->args.size() != 2 || !expr->args[0].name.empty() ||
+        !expr->args[1].name.empty())
+      error("isinstance only accepts two arguments");
+    ExprPtr type;
+    if (expr->args[1].value->isId("Tuple") || expr->args[1].value->isId("tuple"))
+      type = expr->args[1].value->clone();
+    else
+      type = transformType(expr->args[1].value.get());
+    resultExpr =
+        N<CallExpr>(clone(expr->expr), transform(expr->args[0].value), move(type));
+    return;
+  }
+  // 4. staticlen(v)
+  if (expr->expr->isId("staticlen")) {
+    if (expr->args.size() != 1)
+      error("staticlen only accepts a single arguments");
+    resultExpr = N<CallExpr>(clone(expr->expr), transform(expr->args[0].value));
+    return;
+  }
+  // 5. hasattr(v, "id")
+  if (expr->expr->isId("hasattr")) {
+    if (expr->args.size() != 2 || !expr->args[0].name.empty() ||
+        !expr->args[1].name.empty())
+      error("hasattr accepts two arguments");
+    auto s = transform(expr->args[1].value);
+    if (!s->getString())
+      error("hasattr requires the second string to be a compile-time string");
+    resultExpr = N<CallExpr>(clone(expr->expr),
+                             transformType(expr->args[0].value.get()), move(s));
+    return;
+  }
+  // 6. compile_error("msg")
+  if (expr->expr->isId("compile_error")) {
+    if (expr->args.size() != 1)
+      error("compile_error accepts a single argument");
+    auto s = transform(expr->args[0].value);
+    if (!s->getString())
+      error("compile_error requires the second string to be a compile-time string");
+    resultExpr = N<CallExpr>(clone(expr->expr), move(s));
     return;
   }
   generateTupleStub(expr->args.size());

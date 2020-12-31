@@ -81,7 +81,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       cache->classes[canonical].ast = move(c);
     }
     // Reserve the following static identifiers.
-    for (auto name : {"static_len", "compile_error", "isinstance"})
+    for (auto name : {"staticlen", "compile_error", "isinstance", "hasattr"})
       stdlib->generateCanonicalName(name);
 
     // This code must be placed in a preamble (these are not POD types but are

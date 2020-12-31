@@ -321,7 +321,7 @@ int ClassType::unify(Type *typ, Unification *us) {
     if (t->name == "int" && name == "Int")
       return explicits[0].type->unify(ti64.get(), us);
 
-    if (us->isMatch) {
+    if (us && us->isMatch) {
       if ((t->name == "Kmer" && name == "seq") || (name == "Kmer" && t->name == "seq"))
         return 0;
     }

@@ -228,9 +228,9 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
         auto genTyp = val->type->follow();
         m[g] = {g, genTyp,
                 genTyp->getLink() ? genTyp->getLink()->id
-                                  : genTyp->getStatic()->explicits.empty()
-                                        ? 0
-                                        : genTyp->getStatic()->explicits[0].id};
+                : genTyp->getStatic()->explicits.empty()
+                    ? 0
+                    : genTyp->getStatic()->explicits[0].id};
       }
       auto sv = StaticVisitor(m);
       sv.transform(es->expr);
@@ -575,11 +575,6 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     auto ast = ctx->cache->functions[f->name].ast.get();
     return in(ast->attributes, ATTR_NOT_STATIC);
   };
-  auto deactivateUnbounds = [&](Type *t) {
-    auto ub = t->getUnbounds();
-    for (auto &u : ub)
-      ctx->activeUnbounds.erase(u);
-  };
 
   expr->expr = transform(expr->expr, true);
   // Case 1: type not yet known, so just assign an unbound type and wait until the
@@ -714,6 +709,12 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   }
 }
 
+void TypecheckVisitor::deactivateUnbounds(Type *t) {
+  auto ub = t->getUnbounds();
+  for (auto &u : ub)
+    ctx->activeUnbounds.erase(u);
+}
+
 FuncTypePtr
 TypecheckVisitor::findBestMethod(ClassType *typ, const string &member,
                                  const vector<pair<string, types::TypePtr>> &args) {
@@ -838,6 +839,10 @@ TypecheckVisitor::reorderNamedArgs(const FuncType *func,
 
 ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &inType,
                                         ExprPtr *extraStage) {
+  auto special = transformSpecialCall(expr);
+  if (special.first)
+    return move(special.second);
+
   ExprPtr oldExpr = nullptr;
   if (extraStage)
     oldExpr = expr->clone(); // keep the old expression if we end up with an extra stage
@@ -1109,6 +1114,52 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     expr->type |= calleeClass->args[0]; // function return type
     return nullptr;
   }
+}
+
+pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
+  if (!expr->expr->getId())
+    return {false, nullptr};
+  auto val = expr->expr->getId()->value;
+  if (val == "isinstance") {
+    expr->args[0].value = transform(expr->args[0].value);
+    auto typ =
+        (expr->args[0].value->type |= realizeType(expr->args[0].value->getType()));
+    if (!typ) {
+      return {true, nullptr};
+    } else {
+      expr->args[0].value = transform(expr->args[0].value);
+      if (expr->args[1].value->isId("Tuple") || expr->args[1].value->isId("tuple")) {
+        return {true, transform(N<BoolExpr>(typ->getClass()->isRecord()))};
+      } else {
+        auto t = transformType(expr->args[1].value)->type;
+        deactivateUnbounds(t.get());
+        return {true, transform(N<BoolExpr>(typ->unify(t.get(), nullptr) >= 0))};
+      }
+    }
+  } else if (val == "staticlen") {
+    expr->args[0].value = transform(expr->args[0].value);
+    auto typ = expr->args[0].value->getType()->getClass();
+    if (!typ->getClass())
+      return {true, nullptr};
+    else if (!typ->isRecord())
+      error("{} is not a tuple type", typ->toString());
+    else
+      return {true, transform(N<IntExpr>(typ->args.size()))};
+  } else if (val == "hasattr") {
+    auto member = expr->args[1].value->getString()->value;
+    expr->args[0].value = transformType(expr->args[0].value);
+    auto typ = expr->args[0].value->getType()->getClass();
+    deactivateUnbounds(typ.get());
+    if (!typ)
+      return {true, nullptr};
+    else
+      return {true, transform(N<BoolExpr>(
+                        !ctx->findMethod(typ->getClass()->name, member).empty() ||
+                        ctx->findMember(typ->getClass()->name, member)))};
+  } else if (val == "compile_error") {
+    error("custom error: {}", expr->args[0].value->getString()->value);
+  }
+  return {false, nullptr};
 }
 
 void TypecheckVisitor::addFunctionGenerics(const FuncType *t) {
