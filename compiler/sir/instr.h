@@ -100,7 +100,7 @@ private:
 };
 
 /// Instr representing setting the field of a value.
-class InsertInstr : public AcceptorExtend<ExtractInstr, Instr> {
+class InsertInstr : public AcceptorExtend<InsertInstr, Instr> {
 private:
   /// the value being manipulated
   ValuePtr lhs;
