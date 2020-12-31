@@ -1,0 +1,724 @@
+#%% continue_error,barebones
+continue #! ERROR: continue outside of a loop
+
+#%% break_error,barebones
+break #! ERROR: break outside of a loop
+
+#%% assign,barebones
+a = 1
+print a #: 1
+a = 2
+print a #: 2
+
+x, y = 1, 2
+print x, y #: 1 2
+(x, y) = (3, 4)
+print x, y #: 3 4
+x, y = (1, 2)
+print x, y #: 1 2
+(x, y) = 3, 4
+print x, y #: 3 4
+(x, y) = [3, 4]
+print x, y #: 3 4
+[x, y] = [1, 2]
+print x, y #: 1 2
+[x, y] = (4, 3)
+print x, y #: 4 3
+
+l = list(iter(range(10)))
+[a, b, *lx, c, d] = l
+print a, b, lx, c, d #: 0 1 [2, 3, 4, 5, 6, 7] 8 9
+a, b, *lx = l
+print a, b, lx #: 0 1 [2, 3, 4, 5, 6, 7, 8, 9]
+*lx, a, b = l
+print lx, a, b #: [0, 1, 2, 3, 4, 5, 6, 7] 8 9
+*xz, a, b = (1, 2, 3, 4, 5)
+print xz, a, b #: (1, 2, 3) 4 5
+(*ex,) = [1, 2, 3]
+print ex #: [1, 2, 3]
+
+#%% assign_str,barebones
+sa, sb = 'XY'
+print sa, sb #: X Y
+(sa, sb), sc = 'XY', 'Z'
+print sa, sb, sc #: X Y Z
+sa, *la = 'X'
+print sa, la, 1 #: X  1
+sa, *la = 'XYZ'
+print sa, la #: X YZ
+(xa,xb), *xc, xd = [1,2],'this'
+print xa, xb, xc, xd #: 1 2 () this
+(a, b), (sc, *sl) = [1,2], 'this'
+print a, b, sc, sl #: 1 2 t his
+
+#%% assign_index_dot,barebones
+class Foo:
+    a: int
+    def __setitem__(self, i: int, t: int):
+        self.a += i * t
+f = Foo()
+f.a = 5
+print f.a #: 5
+f[3] = 5
+print f.a #: 20
+f[1] = -8
+print f.a #: 12
+
+#%% assign_err_1,barebones
+a, *b, c, *d = 1,2,3,4,5 #! ERROR: multiple unpack expressions
+
+#%% assign_err_2,barebones
+a = [1, 2, 3]
+a[1]: int = 3 #! ERROR: parsing error: ':'
+
+#%% assign_err_3,barebones
+a = 5
+a.x: int = 3 #! ERROR: parsing error: ':'
+
+#%% assign_err_4,barebones
+*x = range(5) #! ERROR: invalid assignment
+
+#%% assign_err_5,barebones
+try:
+    (sa, sb), sc = 'XYZ'
+except IndexError:
+    print "assign failed" #: assign failed
+
+#%% assign_comprehension,barebones
+g = ((b, a, c) for a, *b, c in ['ABC','DEEEEF','FHGIJ'])
+x, *q, y = list(g) # TODO: auto-unroll as in Python
+print x, y, q #: (B, A, C) (HGI, F, J) [(EEEE, D, F)]
+
+#%% assign_shadow,barebones
+a = 5
+print a #: 5
+a : str = 's'
+print a #: s
+
+#%% assign_err_must_exist,barebones
+a = 1
+def foo():
+    a += 2 #! ERROR: variable 'a' is not global
+
+#%% assign_rename,barebones
+y = int
+z = y(5)
+print z #: 5
+
+def foo(x): return x + 1
+x = foo
+print x(1) #: 2
+
+#%% assign_err_6,barebones
+x = bar #! ERROR: cannot find 'bar'
+
+#%% assign_err_7,barebones
+foo() += bar #! ERROR: invalid assignment
+
+#%% assign_update_eq,barebones
+a = 5
+a += 3
+print a #: 8
+a -= 1
+print a #: 7
+
+class Foo:
+    a: int
+    def __add__(self, i: int):
+        print 'add!'
+        return Foo(self.a + i)
+    def __iadd__(self, i: int):
+        print 'iadd!'
+        self.a += i
+        return self
+    def __str__(self):
+        return str(self.a)
+f = Foo(3)
+print f + 2 #: add!
+#: 5
+f += 6 #: iadd!
+print f #: 9
+
+#%% assign_atomic,barebones
+i = 1
+f = 1.1
+
+@llvm
+def xchg(d: Ptr[int], b: int) -> void:
+    %tmp = atomicrmw xchg i64* %d, i64 %b seq_cst
+    ret void
+@llvm
+def aadd(d: Ptr[int], b: int) -> int:
+    %tmp = atomicrmw add i64* %d, i64 %b seq_cst
+    ret i64 %tmp
+@llvm
+def amin(d: Ptr[int], b: int) -> int:
+    %tmp = atomicrmw min i64* %d, i64 %b seq_cst
+    ret i64 %tmp
+@llvm
+def amax(d: Ptr[int], b: int) -> int:
+    %tmp = atomicrmw max i64* %d, i64 %b seq_cst
+    ret i64 %tmp
+def min(a, b): return a if a < b else b
+def max(a, b): return a if a > b else b
+
+@extend
+class int:
+    def __atomic_xchg__(self: Ptr[int], i: int):
+        print 'atomic:', self[0], '<-', i
+        xchg(self, i)
+    def __atomic_add__(self: Ptr[int], i: int):
+        print 'atomic:', self[0], '+=', i
+        return aadd(self, i)
+    def __atomic_min__(self: Ptr[int], b: int):
+        print 'atomic:', self[0], '<?=', b
+        return amin(self, b)
+    def __atomic_max__(self: Ptr[int], b: int):
+        print 'atomic:', self[0], '>?=', b
+        return amax(self, b)
+
+@atomic
+def foo(x):
+    global i, f
+
+    i += 1 #: atomic: 1 += 1
+    print i #: 2
+    i //= 2 #: atomic: 2 <- 1
+    print i #: 1
+    i = 3 #: atomic: 1 <- 3
+    print i #: 3
+    i = min(i, 10) #: atomic: 3 <?= 10
+    print i #: 3
+    i = max(i, 10) #: atomic: 3 >?= 10
+    print i #: 10
+    i = max(20, i) #: atomic: 10 <- 20
+    print i #: 20
+
+    f += 1.1
+    f = 3.3
+    f = max(f, 5.5)
+foo(1)
+print i, f #: 20 5.5
+
+#%% assign_atomic_real
+i = 1
+f = 1.1
+@atomic
+def foo(x):
+    global i, f
+
+    i += 1
+    print i #: 2
+    i //= 2
+    print i #: 1
+    i = 3
+    print i #: 3
+    i = min(i, 10)
+    print i #: 3
+    i = max(i, 10)
+    print i #: 10
+
+    f += 1.1
+    f = 3.3
+    f = max(f, 5.5)
+foo(1)
+print i, f #: 10 5.5
+
+
+#%% del,barebones
+a = 5
+del a
+print a #! ERROR: identifier 'a' not found
+
+#%% del_index,barebones
+y = [1, 2]
+del y[0]
+print y #: [2]
+
+#%% del_error,barebones
+a = [1]
+del a.ptr #! ERROR: invalid del statement
+
+#%% assert,barebones
+assert True
+assert True, "blah"
+
+try:
+    assert False
+except AssertionError as e:
+    print e.message[:15], e.message[-22:] #: Assert failed ( simplify_stmt.seq:247)
+
+try:
+    assert False, f"hehe {1}"
+except AssertionError as e:
+    print e.message[:23], e.message[-22:] #: Assert failed: hehe 1 ( simplify_stmt.seq:252)
+
+#%% return_fail,barebones
+return #! ERROR: expected function body
+
+#%% yield_fail,barebones
+yield 5 #! ERROR: expected function body
+
+#%% yield_fail_2,barebones
+(yield) #! ERROR: expected function body
+
+#%% while_else,barebones
+a = 1
+while a:
+    print a #: 1
+    a -= 1
+else:
+    print 'else' #: else
+a = 1
+while a:
+    print a #: 1
+    a -= 1
+else not break:
+    print 'else' #: else
+while True:
+    print 'infinite' #: infinite
+    break
+else:
+    print 'nope'
+
+#%% for_assignment,barebones
+l = [[1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11]]
+for a, *m, b in l:
+    print a + b, len(m)
+#: 5 2
+#: 14 3
+#: 21 0
+
+#%% for_else,barebones
+for i in [1]:
+    print i #: 1
+else:
+    print 'else' #: else
+for i in [1]:
+    print i #: 1
+else not break:
+    print 'else' #: else
+for i in [1]:
+    print i #: 1
+    break
+else:
+    print 'nope'
+
+#%% global_err,barebones
+a = 1
+global a #! ERROR: global outside of a function
+
+#%% global_err_2,barebones
+def foo():
+    global b #! ERROR: identifier 'b' not found
+
+#%% global_err_3,barebones
+def foo():
+    b = 1
+    def bar():
+        global b #! ERROR: not a top-level variable
+
+#%% global_ref,barebones
+a = [1]
+def foo():
+    a.append(2)
+foo()
+print a #: [1, 2]
+
+#%% import_c,barebones
+from C import sqrt(float) -> float
+print sqrt(4.0) #: 2
+
+from C import puts(cobj)
+puts("hello".ptr) #: hello
+
+from C import atoi(cobj) -> int as s2i
+print s2i("11".ptr) #: 11
+
+#%% import_c_dylib,barebones
+from internal.dlopen import dlext
+RT = "./libseqrt." + dlext()
+from C import RT.seq_str_int(int) -> str as sp
+print sp(65)  #: 65
+
+#%% import_c_dylib_error,barebones
+from C import "".seq_print(str) as sp
+sp("hi!") #! ERROR: parsing error: '"'
+
+#%% import,barebones
+import a  #: a
+a.foo() #: a.foo
+
+from a import foo, bar as b
+foo() #: a.foo
+b() #: a.bar
+
+import a.b
+print a.b.c #: a.b.c
+a.b.har() #: a.b.har
+
+print a.b.A.B.b_foo().__add__(1) #: a.b.A.B.b_foo()
+#: 2
+
+from a.b import *
+har() #: a.b.har
+a.b.har() #: a.b.har
+fx() #: a.foo
+
+#%% import_order,barebones
+def foo():
+    import a
+    a.foo()
+def bar():
+    import a
+    a.bar()
+
+bar() #: a
+#: a.bar
+foo() #: a.foo
+
+
+#%% import_rec,barebones
+from a.b.rec1 import bar
+#: import rec1
+#: import rec2
+#: done rec2
+#: rec2.x
+#: done rec1
+bar()
+#: rec1.bar
+
+#%% import_rec_err,barebones
+from a.b.rec1_err import bar
+#! ERROR: symbol 'bar' not found in
+
+#%% import_err_1,barebones
+class Foo:
+    import bar #! ERROR: parsing error: 'import'
+
+#%% import_err_2,barebones
+import "".a.b.c #! ERROR: parsing error: '"'
+
+#%% import_err_3,barebones
+# TODO: this currently works. Needs parser changes...
+# from a.b import foo() # ERROR: invalid import statement
+
+#%% import_err_4,barebones
+from a.b.c import hai.hey #! ERROR: invalid import statement
+
+#%% import_err_4_x,barebones
+import whatever #! ERROR: cannot locate import 'whatever'
+
+#%% import_err_5,barebones
+import a.b
+print a.b.x #! ERROR: identifier 'x' not found in
+
+#%% import_err_6,barebones
+from a.b import whatever #! ERROR: symbol 'whatever' not found in
+
+#%% function_err_0,barebones
+def foo(a, b, a):
+    pass #! ERROR: 'a' declared twice
+
+#%% function_err_0b,barebones
+def foo(a, b=1, c):
+    pass #! ERROR: non-default argument 'c' after a default argument
+
+#%% function_err_1,barebones
+def foo():
+    @builtin
+    def bar(): pass #! ERROR: builtins must be defined at the toplevel
+
+#%% function_err_2,barebones
+def f[T: str]():
+    pass
+#! ERROR: only integer static generics are supported
+
+#%% function_llvm_err_1,barebones
+@llvm
+def foo():
+    blah
+#! ERROR: LLVM functions must have a return type
+
+#%% function_llvm_err_2,barebones
+@llvm
+def foo() -> int:
+    a{={=}}
+#! ERROR: invalid LLVM substitution
+
+#%% function_llvm_err_3,barebones
+a = 5
+@llvm
+def foo() -> int:
+    a{=a}
+#! ERROR: not a type or static expression
+
+#%% function_llvm_err_4,barebones
+a = 5
+@llvm
+def foo() -> int:
+    a{=a
+#! ERROR: invalid LLVM substitution
+
+#%% function_self,barebones
+class Foo:
+    def foo(self):
+        return 'F'
+f = Foo()
+print f.foo() #: F
+
+#%% function_self_err,barebones
+class Foo:
+    def foo(self):
+        return 'F'
+Foo.foo(1) #! ERROR: cannot unify int and Foo
+
+#%% class_err_1,barebones
+@extend
+@foo
+class Foo:
+    pass
+#! ERROR: extend cannot be combined with other attributes
+
+#%% class_err_2,barebones
+def foo():
+    @extend
+    class Foo:
+        pass
+#! ERROR: extend is only allowed at the toplevel
+
+#%% class_nested,barebones
+class Foo:
+    foo: int
+    class Bar:
+        bar: int
+        b: Optional[Foo.Bar]
+        c: Optional[Foo]
+        class Moo:
+            x: Foo.Bar
+y = Foo(1)
+z = Foo.Bar(2, None, y)
+m = Foo.Bar.Moo(z)
+print y.foo #: 1
+print z.bar, z.b.__bool__(), z.c.foo, m.x.bar  #: 2 False 1 2
+
+#%% class_nested_err,barebones
+class Foo:
+    class Bar:
+        b: Ptr[Bar]
+#! ERROR: identifier 'Bar' not found
+
+#%% class_err_4,barebones
+@extend
+class Foo:
+    pass
+#! ERROR: cannot find type 'Foo' to extend
+
+#%% class_err_5,barebones
+class Foo[T, U]:
+    pass
+@extend
+class Foo[T]:
+    pass
+#! ERROR: generics do not match
+
+#%% class_err_6,barebones
+class Foo[U = int]:
+    pass
+#! ERROR: default generics not supported in classes
+
+#%% class_err_7,barebones
+class Foo:
+    a: int
+    a: int
+#! ERROR: 'a' declared twice
+
+#%% class_err_tuple_no_recursive,barebones
+@tuple
+class Foo:
+    a: Foo
+#! ERROR: identifier 'Foo' not found
+
+#%% class_err_8,barebones
+class Foo:
+    while True: pass
+#! ERROR: parsing error: 'while'
+
+#%% class_err_9,barebones
+class F[T: str]:
+    pass
+#! ERROR: only integer static generics are supported
+
+#%% class_err_10,barebones
+def foo[T]():
+    class A:
+        x: T
+#! ERROR: identifier 'T' not found (classes cannot access outer function identifiers)
+
+#%% class_err_11,barebones
+def foo(x):
+    class A:
+        def bar():
+            print x
+#! ERROR: cannot access non-global variable 'x'
+
+#%% class_err_12,barebones
+def foo(x):
+    T = typeof(x)
+    class A:
+        def bar():
+            print T()
+#! ERROR: identifier 'T' not found (classes cannot access outer function identifiers)
+
+#%% recursive_class,barebones
+class Node[T]:
+    data: T
+    children: List[Node[T]]
+    def __init__(self, data: T):
+        self.data = data
+        self.children = List[Node[T]]()
+print Node(2).data #: 2
+
+class Node2:
+    data: int
+    children: List[Node2]
+    def __init__(self, data: int):
+        self.data = data
+        self.children = List[Node2]()
+print Node2(3).data #: 3
+
+#%% magic,barebones
+@tuple
+class Foo:
+    x: int
+    y: int
+a, b = Foo(1, 2), Foo(1, 3)
+print a, b #: (1, 2) (1, 3)
+print a.__len__() #: 2
+print a.__hash__(), b.__hash__() #: 175247769363 175247769360
+print a == a, a == b #: True False
+print a != a, a != b #: False True
+print a < a, a < b, b < a #: False True False
+print a <= a, a <= b, b <= a #: True True False
+print a > a, a > b, b > a #: False False True
+print a >= a, a >= b, b >= a #: True False True
+print a.__contains__(1), a.__getitem__(1)  #: True 2
+print list(a.__iter__()) #: [1, 2]
+
+#%% magic_class,barebones
+@total_ordering
+class Foo:
+    x: int
+    y: int
+    def __str__(self): return f'{self.x}_{self.y}'
+a, b = Foo(1, 2), Foo(1, 3)
+print a, b #: 1_2 1_3
+print a == a, a == b #: True False
+print a != a, a != b #: False True
+print a < a, a < b, b < a #: False True False
+print a <= a, a <= b, b <= a #: True True False
+print a > a, a > b, b > a #: False False True
+print a >= a, a >= b, b >= a #: True False True
+
+#%% magic_2,barebones
+@tuple
+class Foo:
+    pass
+a, b = Foo(), Foo()
+print a, b #: () ()
+print a.__len__() #: 0
+print a.__hash__(), b.__hash__() #: 0 0
+print a == a, a == b #: True True
+print a != a, a != b #: False False
+print a < a, a < b, b < a #: False False False
+print a <= a, a <= b, b <= a #: True True True
+print a > a, a > b, b > a #: False False False
+print a >= a, a >= b, b >= a #: True True True
+
+# TODO: pickle / to_py / from_py
+
+#%% magic_err_1,barebones
+@tuple
+class Foo:
+    pass
+print Foo().__contains__(1)  #! ERROR: cannot unify int and void
+
+#%% magic_err_2,barebones
+@tuple
+class Foo:
+    pass
+print Foo().__getitem__(1)  #! ERROR: cannot find '__str__' in void
+
+#%% magic_err_3,barebones
+@tuple
+class Foo:
+    pass
+print Foo().__iter__()  #: <generator at 0x0>
+# TODO: disallow this case
+
+#%% magic_err_4,barebones
+@tuple
+@no_total_ordering
+class Foo:
+    x: int
+Foo(1).__eq__(Foo(1)) #! ERROR: cannot find '__eq__' in Foo
+
+#%% magic_err_5,barebones
+@tuple
+@no_pickle
+class Foo:
+    x: int
+p = Ptr[byte]()
+Foo(1).__pickle__(p) #! ERROR: cannot find '__pickle__' in Foo
+
+#%% magic_err_6,barebones
+@tuple
+@no_container
+class Foo:
+    x: int
+Foo(1).__getitem__(0) #! ERROR: cannot find '__getitem__' in Foo
+
+#%% magic_err_7,barebones
+@tuple
+@no_python
+class Foo:
+    x: int
+p = Ptr[byte]()
+Foo(1).__to_py__(p) #! ERROR: cannot find '__to_py__' in Foo
+
+#%% python
+from python import os
+print os.name  #: posix
+
+from python import datetime
+z = datetime.datetime.utcfromtimestamp(0)
+print z  #: 1970-01-01 00:00:00
+
+#%% python_numpy
+from python import numpy as np
+a = np.arange(9).reshape(3, 3)
+print a
+#: [[0 1 2]
+#:  [3 4 5]
+#:  [6 7 8]]
+print a.dtype.name  #: int64
+print np.transpose(a)
+#: [[0 3 6]
+#:  [1 4 7]
+#:  [2 5 8]]
+n = np.array([[1, 2], [3, 4]])
+print n[0], n[0][0] + 1 #: [1 2] 2
+
+#%% python_import_fn
+from python import re.split(str, str) -> List[str] as rs
+print rs(r'\W+', 'Words, words, words.')  #: [Words, words, words, ]
+
+#%% python_import_void
+from python import os.system(str) -> void
+system("echo 'hello!'")  #: hello!
+
+#%% python_pydef
+@python
+def test_pydef(n) -> str:
+    return ''.join(map(str,range(n)))
+print test_pydef(5)  #: 01234

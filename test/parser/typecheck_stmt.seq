@@ -1,0 +1,9 @@
+#%% none
+a = None
+print a  #: None
+a = 5
+print a  #: 5
+
+
+
+    # 4415 ms: build/seqtest CoreTests/SeqTest.Run/core_bwtsa_seq_debug
