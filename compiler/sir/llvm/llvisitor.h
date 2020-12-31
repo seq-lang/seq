@@ -8,72 +8,72 @@
 namespace seq {
 namespace ir {
 
-template <typename V> using CacheBase = std::unordered_map<int, V *>;
-template <typename K, typename V> class Cache : public CacheBase<V> {
-public:
-  using CacheBase<V>::CacheBase;
-
-  V *operator[](const K *key) {
-    auto it = CacheBase<V>::find(key->getId());
-    return (it != CacheBase<V>::end()) ? it->second : nullptr;
-  }
-
-  void insert(const K *key, V *value) { CacheBase<V>::emplace(key->getId(), value); }
-};
-
-struct CoroData {
-  // coroutine-specific data
-  llvm::Value *promise;
-  llvm::Value *handle;
-  llvm::BasicBlock *cleanup;
-  llvm::BasicBlock *suspend;
-  llvm::BasicBlock *exit;
-};
-
-struct NestableData {
-  int sequenceNumber;
-
-  NestableData() : sequenceNumber(-1){};
-};
-
-struct LoopData : NestableData {
-  llvm::BasicBlock *breakBlock;
-  llvm::BasicBlock *continueBlock;
-
-  LoopData(llvm::BasicBlock *breakBlock, llvm::BasicBlock *continueBlock)
-      : NestableData(), breakBlock(breakBlock), continueBlock(continueBlock){};
-};
-
-struct TryCatchData : NestableData {
-  /// Possible try-catch states when reaching finally block
-  enum State { NOT_THROWN = 0, THROWN, CAUGHT, RETURN, BREAK, CONTINUE };
-  /// Exception block
-  llvm::BasicBlock *exc;
-  /// Exception route block
-  llvm::BasicBlock *excRoute;
-  /// Finally start block
-  llvm::BasicBlock *finally;
-  /// Try-catch catch types
-  std::vector<types::Type *> catchTypes;
-  /// Try-catch handlers, corresponding to catch types
-  std::vector<llvm::BasicBlock *> handlers;
-  /// Exception state flag (see "State")
-  llvm::Value *excFlag;
-  /// Storage for caught exception
-  llvm::Value *catchStore;
-  /// How far to delegate up the finally chain
-  llvm::Value *delegateDepth;
-  /// Storage for postponed return
-  llvm::Value *retStore;
-
-  TryCatchData()
-      : NestableData(), exc(nullptr), excRoute(nullptr), finally(nullptr), catchTypes(),
-        handlers(), excFlag(nullptr), catchStore(nullptr), delegateDepth(nullptr),
-        retStore(nullptr){};
-};
-
 class LLVMVisitor : public util::SIRVisitor {
 private:
+  template <typename V> using CacheBase = std::unordered_map<int, V *>;
+  template <typename K, typename V> class Cache : public CacheBase<V> {
+  public:
+    using CacheBase<V>::CacheBase;
+
+    V *operator[](const K *key) {
+      auto it = CacheBase<V>::find(key->getId());
+      return (it != CacheBase<V>::end()) ? it->second : nullptr;
+    }
+
+    void insert(const K *key, V *value) { CacheBase<V>::emplace(key->getId(), value); }
+  };
+
+  struct CoroData {
+    // coroutine-specific data
+    llvm::Value *promise;
+    llvm::Value *handle;
+    llvm::BasicBlock *cleanup;
+    llvm::BasicBlock *suspend;
+    llvm::BasicBlock *exit;
+  };
+
+  struct NestableData {
+    int sequenceNumber;
+
+    NestableData() : sequenceNumber(-1){};
+  };
+
+  struct LoopData : NestableData {
+    llvm::BasicBlock *breakBlock;
+    llvm::BasicBlock *continueBlock;
+
+    LoopData(llvm::BasicBlock *breakBlock, llvm::BasicBlock *continueBlock)
+        : NestableData(), breakBlock(breakBlock), continueBlock(continueBlock){};
+  };
+
+  struct TryCatchData : NestableData {
+    /// Possible try-catch states when reaching finally block
+    enum State { NOT_THROWN = 0, THROWN, CAUGHT, RETURN, BREAK, CONTINUE };
+    /// Exception block
+    llvm::BasicBlock *exc;
+    /// Exception route block
+    llvm::BasicBlock *excRoute;
+    /// Finally start block
+    llvm::BasicBlock *finally;
+    /// Try-catch catch types
+    std::vector<types::Type *> catchTypes;
+    /// Try-catch handlers, corresponding to catch types
+    std::vector<llvm::BasicBlock *> handlers;
+    /// Exception state flag (see "State")
+    llvm::Value *excFlag;
+    /// Storage for caught exception
+    llvm::Value *catchStore;
+    /// How far to delegate up the finally chain
+    llvm::Value *delegateDepth;
+    /// Storage for postponed return
+    llvm::Value *retStore;
+
+    TryCatchData()
+        : NestableData(), exc(nullptr), excRoute(nullptr), finally(nullptr),
+          catchTypes(), handlers(), excFlag(nullptr), catchStore(nullptr),
+          delegateDepth(nullptr), retStore(nullptr){};
+  };
+
   /// LLVM context used for compilation
   llvm::LLVMContext context;
   /// Module we are compiling
@@ -141,7 +141,8 @@ private:
 public:
   LLVMVisitor(bool debug = false);
 
-  void validate();
+  void verify();
+  void dump(const std::string &filename = "_dump.ll");
   void run(const std::vector<std::string> &args = {},
            const std::vector<std::string> &libs = {},
            const char *const *envp = nullptr);

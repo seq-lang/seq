@@ -91,16 +91,18 @@ LLVMVisitor::LLVMVisitor(bool debug)
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   resetOMPABI();
-  (void)(this->debug);
 }
 
-void LLVMVisitor::validate() {
-  auto fo = fopen("_dump.ll", "w");
+void LLVMVisitor::verify() {
+  const bool broken = llvm::verifyModule(*module.get(), &llvm::errs());
+  assert(!broken);
+}
+
+void LLVMVisitor::dump(const std::string &filename) {
+  auto fo = fopen(filename.c_str(), "w");
   llvm::raw_fd_ostream fout(fileno(fo), true);
   fout << *module.get();
   fout.close();
-  const bool broken = llvm::verifyModule(*module.get(), &llvm::errs());
-  assert(!broken);
 }
 
 void LLVMVisitor::applyDebugTransformations() {
@@ -223,9 +225,11 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
 
 void LLVMVisitor::run(const std::vector<std::string> &args,
                       const std::vector<std::string> &libs, const char *const *envp) {
+  verify();
   runLLVMOptimizationPasses();
   applyGCTransformations();
   runLLVMOptimizationPasses();
+  verify();
 
   std::vector<std::string> functionNames;
   if (debug) {
@@ -394,7 +398,7 @@ void LLVMVisitor::exitTryCatch() {
   trycatch.pop_back();
 }
 
-TryCatchData *LLVMVisitor::getInnermostTryCatchBeforeLoop() {
+LLVMVisitor::TryCatchData *LLVMVisitor::getInnermostTryCatchBeforeLoop() {
   if (!trycatch.empty() &&
       (loops.empty() || trycatch.back().sequenceNumber > loops.back().sequenceNumber))
     return &trycatch.back();
@@ -1303,7 +1307,6 @@ bool anyMatch(types::Type *type, std::vector<types::Type *> types) {
 } // namespace
 
 void LLVMVisitor::visit(TryCatchFlow *x) {
-  // TODO
   const bool isRoot = trycatch.empty();
   const bool supportBreakAndContinue = !loops.empty();
   llvm::IRBuilder<> builder(block);
