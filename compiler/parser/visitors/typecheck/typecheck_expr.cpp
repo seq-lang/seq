@@ -60,7 +60,9 @@ ExprPtr TypecheckVisitor::transformType(ExprPtr &expr) {
   if (expr) {
     if (!expr->isType())
       error("expected type expression");
-    expr->setType(ctx->instantiate(expr->getSrcInfo(), expr->getType()));
+    auto t = ctx->instantiate(expr->getSrcInfo(), expr->getType());
+    LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
+    expr->setType(t);
   }
   return move(expr);
 }
@@ -104,7 +106,9 @@ void TypecheckVisitor::visit(IdExpr *expr) {
 
   if (val->isType())
     expr->markType();
-  expr->type |= ctx->instantiate(getSrcInfo(), val->type);
+  auto t = ctx->instantiate(getSrcInfo(), val->type);
+  LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
+  expr->type |= t;
 
   /// Check if we can realize the type.
   if (getRealizedType(expr->type) &&
@@ -125,7 +129,7 @@ void TypecheckVisitor::visit(IfExpr *expr) {
   expr->ifexpr = transform(expr->ifexpr);
   expr->elsexpr = transform(expr->elsexpr);
 
-  expr->done = expr->cond && expr->ifexpr && expr->elsexpr;
+  expr->done = expr->cond->done && expr->ifexpr->done && expr->elsexpr->done;
 }
 
 void TypecheckVisitor::visit(BinaryExpr *expr) { resultExpr = transformBinary(expr); }
@@ -182,14 +186,11 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
       inTypePos = 0;
     }
 
-    if (expr->items[i].expr->toString() ==
-        "(call (id 'foo2[int] #:type foo2[int,int]) (ellipsis #:type int) #:type int)")
-      assert(1);
     if (auto nn = transformCall((CallExpr *)(ec->get()), inType, &prepend))
       *ec = move(nn);
     if (prepend) { // Prepend the stage and rewind the loop (yes, the current
                    // expression will get parsed twice).
-      expr->items.insert(expr->items.begin() + inTypePos + 1, {"|>", move(prepend)});
+      expr->items.insert(expr->items.begin() + i, {"|>", move(prepend)});
       i--;
       continue;
     }
@@ -209,6 +210,7 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
 void TypecheckVisitor::visit(InstantiateExpr *expr) {
   expr->typeExpr = transform(expr->typeExpr, true);
   auto typ = ctx->instantiate(expr->typeExpr->getSrcInfo(), expr->typeExpr->getType());
+  LOG_TYPECHECK("[inst] {} -> {}", expr->typeExpr->toString(), typ->toString());
   seqassert(typ->getFunc() || typ->getClass(), "unknown type");
   auto &generics =
       typ->getFunc() ? typ->getFunc()->explicits : typ->getClass()->explicits;
@@ -226,15 +228,18 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
         auto genTyp = val->type->follow();
         m[g] = {g, genTyp,
                 genTyp->getLink() ? genTyp->getLink()->id
-                : genTyp->getStatic()->explicits.empty()
-                    ? 0
-                    : genTyp->getStatic()->explicits[0].id};
+                                  : genTyp->getStatic()->explicits.empty()
+                                        ? 0
+                                        : genTyp->getStatic()->explicits[0].id};
       }
       auto sv = StaticVisitor(m);
       sv.transform(es->expr);
       if (auto ei = es->expr->getId()) { /// Generic static (e.g. N in a [N:int] scope).
         assert(m.size() == 1);
-        generics[i].type |= ctx->instantiate(getSrcInfo(), m.begin()->second.type);
+        auto t = ctx->instantiate(getSrcInfo(), m.begin()->second.type);
+        LOG_TYPECHECK("[inst] {} -> {}", expr->typeParams[i]->toString(),
+                      t->toString());
+        generics[i].type |= t;
       } else { /// Static expression (e.g. 32 or N+5)
         vector<Generic> v;
         for (const auto &mi : m)
@@ -245,8 +250,9 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
       seqassert(expr->typeParams[i]->isType(), "not a type: {}",
                 expr->typeParams[i]->toString());
       expr->typeParams[i] = transformType(expr->typeParams[i]);
-      generics[i].type |=
-          ctx->instantiate(getSrcInfo(), expr->typeParams[i]->getType());
+      auto t = ctx->instantiate(getSrcInfo(), expr->typeParams[i]->getType());
+      LOG_TYPECHECK("[inst] {} -> {}", expr->typeParams[i]->toString(), t->toString());
+      generics[i].type |= t;
     }
   }
   expr->type |= typ;
@@ -305,8 +311,10 @@ void TypecheckVisitor::visit(CallExpr *expr) { resultExpr = transformCall(expr);
 void TypecheckVisitor::visit(StackAllocExpr *expr) {
   expr->typeExpr = transformType(expr->typeExpr);
   expr->expr = transform(expr->expr);
-  expr->type |= ctx->instantiateGeneric(expr->getSrcInfo(), ctx->findInternal("Array"),
-                                        {expr->typeExpr->type});
+  auto t = ctx->instantiateGeneric(expr->getSrcInfo(), ctx->findInternal("Array"),
+                                   {expr->typeExpr->type});
+  LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
+  expr->type |= t;
   // Realize the Array[T] type of possible.
   if (getRealizedType(expr->type))
     expr->done = expr->expr->done;
@@ -330,8 +338,10 @@ void TypecheckVisitor::visit(TypeOfExpr *expr) {
 
 void TypecheckVisitor::visit(PtrExpr *expr) {
   expr->expr = transform(expr->expr);
-  expr->type |= ctx->instantiateGeneric(expr->getSrcInfo(), ctx->findInternal("Ptr"),
-                                        {expr->expr->type});
+  auto t = ctx->instantiateGeneric(expr->getSrcInfo(), ctx->findInternal("Ptr"),
+                                   {expr->expr->type});
+  LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
+  expr->type |= t;
   expr->done = expr->expr->done;
 }
 
@@ -340,6 +350,7 @@ void TypecheckVisitor::visit(YieldExpr *expr) {
   auto typ =
       ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("Generator"),
                               {ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)});
+  LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), typ->toString());
   ctx->bases.back().returnType |= typ;
   expr->type |= typ->getClass()->explicits[0].type;
   expr->done = realizeType(expr->type) != nullptr;
@@ -427,6 +438,7 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
   }
 
   // Check the type equality (operand types and __raw__ pointers must match).
+  // TODO: more special cases needed (Optional[T] == Optonal[U] if both are None)
   if (expr->op == "is") {
     auto lc = realizeType(expr->lexpr->getType());
     auto rc = realizeType(expr->rexpr->getType());
@@ -434,14 +446,20 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
       // We still do not know the exact types...
       expr->type |= ctx->findInternal("bool");
       return nullptr;
-    } else if (lc->realizeString() != rc->realizeString()) {
-      return transform(N<BoolExpr>(false));
-    } else if (lc->getClass()->isRecord()) {
-      return transform(N<BinaryExpr>(move(expr->lexpr), "==", move(expr->rexpr)));
-    } else {
+    } else if (!lc->getClass()->isRecord() && !rc->getClass()->isRecord()) {
       return transform(
           N<BinaryExpr>(N<CallExpr>(N<DotExpr>(move(expr->lexpr), "__raw__")),
                         "==", N<CallExpr>(N<DotExpr>(move(expr->rexpr), "__raw__"))));
+    } else if (lc->getClass()->name == "Optional") {
+      return transform(N<CallExpr>(N<DotExpr>(move(expr->lexpr), "__is_optional__"),
+                                   move(expr->rexpr)));
+    } else if (rc->getClass()->name == "Optional") {
+      return transform(N<CallExpr>(N<DotExpr>(move(expr->rexpr), "__is_optional__"),
+                                   move(expr->lexpr)));
+    } else if (lc->realizeString() != rc->realizeString()) {
+      return transform(N<BoolExpr>(false));
+    } else {
+      return transform(N<BinaryExpr>(move(expr->lexpr), "==", move(expr->rexpr)));
     }
   }
 
@@ -459,6 +477,7 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
   // Check if lt.__atomic_op__(Ptr[lt], rt) exists.
   if (isAtomic) {
     auto ptrlt = ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("Ptr"), {lt});
+    LOG_TYPECHECK("[inst] {} -> {}", expr->lexpr->toString(), ptrlt->toString());
     method = findBestMethod(lt.get(), format("__atomic_{}__", magic),
                             {{"", ptrlt}, {"", rt}});
     if (method) {
@@ -563,8 +582,8 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   };
 
   expr->expr = transform(expr->expr, true);
-  // Case 1: type not yet known, so just assign an unbound type and wait until the next
-  // iteration.
+  // Case 1: type not yet known, so just assign an unbound type and wait until the
+  // next iteration.
   if (expr->expr->getType()->getUnbound()) {
     expr->type |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
     return nullptr;
@@ -583,7 +602,9 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   if (methods.empty()) {
     if (auto member = ctx->findMember(typ->name, expr->member)) {
       // Case 2: Object member access.
-      expr->type |= ctx->instantiate(getSrcInfo(), member, typ.get());
+      auto t = ctx->instantiate(getSrcInfo(), member, typ.get());
+      LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
+      expr->type |= t;
       expr->done = expr->expr->done && realizeType(expr->type) != nullptr;
       return nullptr;
     } else if (typ->name == "Optional") {
@@ -612,14 +633,14 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
       argTypes.emplace_back(make_pair("", typ)); // self variable
     for (const auto &a : *args)
       argTypes.emplace_back(make_pair(a.name, a.value->getType()));
-    if (expr->member == "bar")
-      assert(1);
     if (auto bestMethod = findBestMethod(typ.get(), expr->member, argTypes)) {
+      auto e = N<IdExpr>(bestMethod->name);
+      auto t = ctx->instantiate(getSrcInfo(), bestMethod, typ.get());
+      LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
+      e->type |= t;
+      expr->type |= e->type;
       if (!isType)
         args->insert(args->begin(), {"", move(expr->expr)}); // self variable
-      auto e = N<IdExpr>(bestMethod->name);
-      e->type |= ctx->instantiate(getSrcInfo(), bestMethod, typ.get());
-      expr->type |= e->type;
       visit(e.get()); // Visit IdExpr and realize it if necessary.
       // Remove lingering unbound variables from expr->expr (typ) instantiation
       // if we accessed a method that does not reference any generic in typ.
@@ -639,7 +660,8 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   FuncTypePtr bestMethod = nullptr;
   auto oldType = expr->getType() ? expr->getType()->getClass() : nullptr;
   if (methods.size() > 1 && oldType && startswith(oldType->name, "Function.N")) {
-    // If old type is already a function, use its argument types to pick the best call.
+    // If old type is already a function, use its argument types to pick the best
+    // call.
     vector<pair<string, TypePtr>> methodArgs;
     if (!expr->expr->isType()) // self argument
       methodArgs.emplace_back(make_pair("", typ));
@@ -668,7 +690,9 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     auto val = ctx->find(name);
     seqassert(val, "cannot find method '{}'", name);
     auto e = N<IdExpr>(name);
-    e->type |= ctx->instantiate(getSrcInfo(), bestMethod, typ.get());
+    auto t = ctx->instantiate(getSrcInfo(), bestMethod, typ.get());
+    LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
+    e->type |= t;
     expr->type |= e->type;
     visit(e.get()); // Visit IdExpr and realize it if necessary.
     // Remove lingering unbound variables from expr->expr (typ) instantiation
@@ -698,6 +722,9 @@ TypecheckVisitor::findBestMethod(ClassType *typ, const string &member,
     return nullptr;
   if (methods.size() == 1) // methods is not overloaded
     return methods[0];
+
+  if (typ->name == "B.13" && member == "__init__")
+    assert(1);
 
   // Calculate the unification score for each available methods and pick the one with
   // highest score.
@@ -804,6 +831,8 @@ TypecheckVisitor::reorderNamedArgs(const FuncType *func,
       return {-1, {}};
     }
   }
+  if (!namedArgs.empty())
+    return {-1, {}};
   return make_pair(score, reorderedArgs);
 }
 
@@ -816,8 +845,8 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   // First transform the arguments.
   for (auto &a : expr->args) {
     a.value = transform(a.value);
-    // Unbound inType might become a generator that will need to be extracted, so don't
-    // unify it yet.
+    // Unbound inType might become a generator that will need to be extracted, so
+    // don't unify it yet.
     if (inType && !inType->getUnbound() && a.value->getEllipsis() &&
         a.value->getEllipsis()->isPipeArg)
       a.value->type |= inType;
@@ -861,8 +890,8 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__init__"), move(expr->args))));
     return transform(N<StmtExpr>(move(stmts), clone(var)));
   } else if (!calleeClass->getCallable()) {
-    // Case 4: callee is not a function nor a partial type. Route it through a __call__
-    // method.
+    // Case 4: callee is not a function nor a partial type. Route it through a
+    // __call__ method.
     if (calleeClass->name == "pyobj" &&
         (expr->args.size() != 1 ||
          !(expr->args[0].value->getType()->getClass() &&
@@ -890,9 +919,9 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   FunctionStmt *ast = nullptr; // might be nullptr if calling a function pointer.
   if (auto fn = calleeType->getFunc())
     ast = ctx->cache->functions[fn->name].ast.get();
-  string knownTypes; // A string that contains 0 if an argument is already "known" (i.e.
-                     // if we are handling a partial function with stored arguments) or
-                     // 0 if it is available.
+  string knownTypes; // A string that contains 0 if an argument is already "known"
+                     // (i.e. if we are handling a partial function with stored
+                     // arguments) or 0 if it is available.
   if (startswith(calleeClass->name, "Partial.N")) {
     knownTypes = calleeClass->name.substr(9);
     calleeType = calleeClass->args[0]; // This is Function[...] type.

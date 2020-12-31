@@ -96,7 +96,9 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
     stmt->done = realizeType(stmt->lhs->type) != nullptr;
   } else { // Case 2: Normal assignment
     if (stmt->type && stmt->type->getType()->getClass()) {
-      stmt->lhs->type |= ctx->instantiate(getSrcInfo(), stmt->type->getType());
+      auto t = ctx->instantiate(getSrcInfo(), stmt->type->getType());
+      LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), t->toString());
+      stmt->lhs->type |= t;
       wrapOptionalIfNeeded(stmt->lhs->getType(), stmt->rhs);
       stmt->lhs->type |= stmt->rhs->type;
     }
@@ -143,6 +145,7 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
       c->args[0].value->isId(string(stmt->lhs->getId()->value))) {
     auto ptrTyp =
         ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("Ptr"), {lhsClass});
+    LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), ptrTyp->toString());
     c->args[1].value = transform(c->args[1].value);
     auto rhsTyp = c->args[1].value->getType()->getClass();
     if (auto method = findBestMethod(lhsClass.get(),
@@ -161,6 +164,7 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
   if (stmt->isAtomic && lhsClass && rhsClass) {
     auto ptrType =
         ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("Ptr"), {lhsClass});
+    LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), ptrType->toString());
     if (auto m = findBestMethod(lhsClass.get(), "__atomic_xchg__",
                                 {{"", ptrType}, {"", rhsClass}})) {
       resultStmt = transform(N<ExprStmt>(N<CallExpr>(
@@ -194,6 +198,7 @@ void TypecheckVisitor::visit(AssignMemberStmt *stmt) {
     if (lhsClass->isRecord())
       error("tuple element {} is read-only", stmt->member);
     auto typ = ctx->instantiate(getSrcInfo(), member, lhsClass.get());
+    LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), typ->toString());
     wrapOptionalIfNeeded(typ, stmt->rhs);
     stmt->rhs->type |= typ;
     stmt->done = stmt->rhs->done;
@@ -223,8 +228,10 @@ void TypecheckVisitor::visit(YieldStmt *stmt) {
   if (stmt->expr)
     stmt->expr = transform(stmt->expr);
   auto baseTyp = stmt->expr ? stmt->expr->getType() : ctx->findInternal("void");
-  ctx->bases.back().returnType |= ctx->instantiateGeneric(
-      stmt->getSrcInfo(), ctx->findInternal("Generator"), {baseTyp});
+  auto t = ctx->instantiateGeneric(stmt->getSrcInfo(), ctx->findInternal("Generator"),
+                                   {baseTyp});
+  LOG_TYPECHECK("[inst] {} -> {}", stmt->toString(), t->toString());
+  ctx->bases.back().returnType |= t;
   stmt->done = stmt->expr ? stmt->expr->done : true;
 }
 
@@ -326,6 +333,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
       if (!t->canRealize())
         error("builtins and external functions must be realizable");
       auto typ = ctx->instantiate(getSrcInfo(), t);
+      LOG_TYPECHECK("[inst] fn {} -> {}", stmt->name, typ->toString());
       typ |= realizeFunc(typ->getFunc());
     }
     stmt->done = true;
@@ -370,7 +378,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
       } else {
         args.push_back(transformType(a.type)->getType());
       }
-      ctx->add(TypecheckItem::Var, a.name, args.back());
+      //      ctx->add(TypecheckItem::Var, a.name, args.back());
     }
     ctx->typecheckLevel--;
   }

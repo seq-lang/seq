@@ -57,7 +57,7 @@ print a  #: []
 
 #%% assign_types_err
 a = 5
-a = 3.3  #! ERROR: cannot unify float and int
+a = 3.3  #! ERROR: cannot unify int and float
 
 #%% assign_err_2
 try:

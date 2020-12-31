@@ -166,6 +166,7 @@ and read state = parse
   | "is" white+ "not" white+ { [P.ISNOT "is not"] }
   | "not" white+ "in" white+ { [P.NOTIN "not in"] }
   | "@" (("python" | "llvm") as l) white* newline { is_extern := 1; [P.AT("@"); P.ID(l); P.NL] }
+  | "print(" { [P.PRINTLP] }
   | ident as id
     { match id with
       | "True"     -> [P.TRUE]
@@ -270,7 +271,7 @@ and read state = parse
     (* Handle exponents (1e2) *)
     match k.[0], float_of_string_opt (i ^ k) with
     | 'e', Some fp -> [P.FLOAT (fp, "")]
-    | _, None -> [P.INT (i, String.lowercase_ascii k)]
+    | _ -> [P.INT (i, String.lowercase_ascii k)]
   }
   | danglingfloat as f { [P.FLOAT (float_of_string f, "")] }
   | float as f { [P.FLOAT (float_of_string f, "")] }

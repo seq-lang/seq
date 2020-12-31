@@ -72,7 +72,7 @@ int LinkType::unify(Type *typ, Unification *undo) {
     // ⚠️ Unification: destructive part.
     seqassert(!type, "type has been already unified or is in inconsistent state");
     if (undo) {
-      LOG_TYPECHECK("[unify] {} <- {}", id, typ->toString());
+      LOG_TYPECHECK("[unify] {} := {}", id, typ->toString());
       if (id == 11677 || id == 11722)
         assert(1);
       // Link current type to typ and ensure that this modification is recorded in undo.
@@ -104,7 +104,7 @@ TypePtr LinkType::instantiate(int level, int &unboundCount,
   if (kind == Generic) {
     if (cache.find(id) != cache.end())
       return cache[id];
-    LOG_TYPECHECK("[inst] #{} -> ?{}", id, unboundCount);
+    // LOG_TYPECHECK("[inst] #{} -> ?{}", id, unboundCount);
     return cache[id] =
                make_shared<LinkType>(Unbound, unboundCount++, level, nullptr, isStatic);
   } else if (kind == Unbound) {

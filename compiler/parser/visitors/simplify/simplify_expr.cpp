@@ -350,6 +350,8 @@ void SimplifyVisitor::visit(IndexExpr *expr) {
 }
 
 void SimplifyVisitor::visit(CallExpr *expr) {
+  // Special calls
+  // 1. __ptr__
   if (expr->expr->isId("__ptr__")) {
     if (expr->args.size() == 1 && expr->args[0].value->getId()) {
       auto v = ctx->find(expr->args[0].value->getId()->value);
