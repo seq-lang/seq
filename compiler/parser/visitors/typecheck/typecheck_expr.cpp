@@ -32,22 +32,6 @@ namespace ast {
 
 using namespace types;
 
-TypePtr operator|=(TypePtr &a, const TypePtr &b) {
-  if (!a)
-    return a = b;
-  seqassert(b, "rhs is nullptr");
-  types::Type::Unification undo;
-  if (a->unify(b.get(), &undo) >= 0)
-    return a;
-  undo.undo();
-  ast::error(
-      a->getSrcInfo(),
-      fmt::format("cannot unify {} and {}", a->toString(), b->toString()).c_str());
-  return nullptr;
-}
-
-/**************************************************************************************/
-
 ExprPtr TypecheckVisitor::transform(const ExprPtr &expr_) {
   auto &expr = const_cast<ExprPtr &>(expr_);
   expr = transform(expr, false);
@@ -55,19 +39,19 @@ ExprPtr TypecheckVisitor::transform(const ExprPtr &expr_) {
 }
 
 ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes) {
-  if (!expr || expr->done)
-    return move(expr);
-
+  if (!expr)
+    return nullptr;
   auto typ = expr->type;
-  TypecheckVisitor v(ctx, prependStmts);
-  v.setSrcInfo(expr->getSrcInfo());
-  expr->accept(v);
-  if (v.resultExpr)
-    expr = move(v.resultExpr);
-  seqassert(expr->type, "type not set for {}", expr->toString());
-  typ |= expr->type;
-  if (typ->getClass() && typ->canRealize())
-    realizeType(typ->getClass());
+  if (!expr->done) {
+    TypecheckVisitor v(ctx, prependStmts);
+    v.setSrcInfo(expr->getSrcInfo());
+    expr->accept(v);
+    if (v.resultExpr)
+      expr = move(v.resultExpr);
+    seqassert(expr->type, "type not set for {}", expr->toString());
+    typ |= expr->type;
+  }
+  realizeType(typ->getClass());
   return move(expr);
 }
 
@@ -126,18 +110,21 @@ void TypecheckVisitor::visit(IdExpr *expr) {
   if (getRealizedType(expr->type) &&
       (val->kind == TypecheckItem::Type || val->kind == TypecheckItem::Func))
     expr->value = expr->type->realizeString();
-  expr->done = expr->type->canRealize();
+  expr->done = realizeType(expr->type) != nullptr;
 }
 
 void TypecheckVisitor::visit(IfExpr *expr) {
   expr->cond = transform(expr->cond);
   expr->ifexpr = transform(expr->ifexpr);
-  expr->elsexpr = transform(expr->ifexpr);
+  expr->elsexpr = transform(expr->elsexpr);
 
   wrapOptionalIfNeeded(expr->ifexpr->getType(), expr->elsexpr);
   wrapOptionalIfNeeded(expr->elsexpr->getType(), expr->ifexpr);
   expr->type |= expr->ifexpr->getType();
   expr->type |= expr->elsexpr->getType();
+  expr->ifexpr = transform(expr->ifexpr);
+  expr->elsexpr = transform(expr->elsexpr);
+
   expr->done = expr->cond && expr->ifexpr && expr->elsexpr;
 }
 
@@ -164,17 +151,16 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
     ExprPtr prepend = nullptr; // An optional preceding stage
                                // (e.g. prepend  (|> unwrap |>) if an optional argument
                                //  needs unpacking).
-    CallExpr *ec = nullptr;
     int inTypePos = -1;
 
     // Get the stage expression (take heed of StmtExpr!):
-    auto e = expr->items[i].expr.get();
-    while (e->getStmtExpr())
-      e = e->getStmtExpr()->expr.get();
-    if ((ec = const_cast<CallExpr *>(e->getCall()))) {
+    auto ec = &expr->items[i].expr; // This is a pointer to a CallExprPtr
+    while ((*ec)->getStmtExpr())
+      ec = &const_cast<StmtExpr *>((*ec)->getStmtExpr())->expr;
+    if (auto ecc = const_cast<CallExpr *>((*ec)->getCall())) {
       // Find the input argument position (a position of ... in the argument list):
-      for (int ia = 0; ia < ec->args.size(); ia++)
-        if (auto ee = ec->args[ia].value->getEllipsis()) {
+      for (int ia = 0; ia < ecc->args.size(); ia++)
+        if (auto ee = ecc->args[ia].value->getEllipsis()) {
           if (inTypePos == -1) {
             const_cast<EllipsisExpr *>(ee)->isPipeArg = true;
             inTypePos = ia;
@@ -184,7 +170,7 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
       // If there is no ... in the argument list, use the first argument as the input
       // argument and add an ellipsis there
       if (inTypePos == -1) {
-        ec->args.insert(ec->args.begin(), {"", N<EllipsisExpr>(true)});
+        ecc->args.insert(ecc->args.begin(), {"", N<EllipsisExpr>(true)});
         inTypePos = 0;
       }
     } else {
@@ -192,22 +178,24 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
       // argument:
       expr->items[i].expr =
           N<CallExpr>(move(expr->items[i].expr), N<EllipsisExpr>(true));
-      ec = dynamic_cast<CallExpr *>(expr->items[i].expr.get());
+      ec = &expr->items[i].expr;
       inTypePos = 0;
     }
 
-    auto n = ec->clone(); // TODO: this is a hack around ownership issues.
-    if (auto nn = transformCall(ec, inType, &prepend))
-      n = move(nn);
+    if (expr->items[i].expr->toString() ==
+        "(call (id 'foo2[int] #:type foo2[int,int]) (ellipsis #:type int) #:type int)")
+      assert(1);
+    if (auto nn = transformCall((CallExpr *)(ec->get()), inType, &prepend))
+      *ec = move(nn);
     if (prepend) { // Prepend the stage and rewind the loop (yes, the current
-                   // expression
-                   // will get parsed twice).
-      expr->items.insert(expr->items.begin() + 3, {"|>", move(prepend)});
+                   // expression will get parsed twice).
+      expr->items.insert(expr->items.begin() + inTypePos + 1, {"|>", move(prepend)});
       i--;
       continue;
     }
-    expr->items[i].expr->type |= n->type;
-    expr->items[i].expr = move(n);
+    if ((*ec)->type)
+      expr->items[i].expr->type |= (*ec)->type;
+    expr->items[i].expr = move(*ec);
     inType = expr->items[i].expr->getType();
     expr->inTypes.push_back(inType);
     // Do not extract the generator type in the last stage of a pipeline.
@@ -348,22 +336,24 @@ void TypecheckVisitor::visit(PtrExpr *expr) {
 }
 
 void TypecheckVisitor::visit(YieldExpr *expr) {
+  seqassert(!ctx->bases.empty(), "yield outside of a function");
   auto typ =
       ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("Generator"),
                               {ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)});
-  seqassert(!ctx->bases.empty(), "yield outside of a function");
   ctx->bases.back().returnType |= typ;
   expr->type |= typ->getClass()->explicits[0].type;
-  if (expr->type->canRealize())
-    expr->done = true;
+  expr->done = realizeType(expr->type) != nullptr;
 }
 
 void TypecheckVisitor::visit(StmtExpr *expr) {
-  for (auto &s : expr->stmts)
+  expr->done = true;
+  for (auto &s : expr->stmts) {
     s = transform(s);
+    expr->done &= s->done;
+  }
   expr->expr = transform(expr->expr);
   expr->type |= expr->expr->type;
-  expr->done = expr->expr->done;
+  expr->done &= expr->expr->done;
 }
 
 void TypecheckVisitor::visit(StaticExpr *expr) {
@@ -374,11 +364,12 @@ void TypecheckVisitor::visit(StaticExpr *expr) {
 /**************************************************************************************/
 
 TypePtr TypecheckVisitor::getRealizedType(TypePtr &typ) {
-  if (typ->canRealize()) {
-    if (typ->getFunc())
-      return typ |= realizeFunc(typ->getFunc());
-    else
-      return typ |= realizeType(typ->getClass());
+  if (typ->getFunc()) {
+    if (auto tf = realizeFunc(typ->getFunc()))
+      return typ |= tf;
+  } else {
+    if (auto tt = realizeType(typ->getClass()))
+      return typ |= tt;
   }
   return nullptr;
 }
@@ -437,16 +428,17 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
 
   // Check the type equality (operand types and __raw__ pointers must match).
   if (expr->op == "is") {
-    if (!expr->lexpr->getType()->canRealize() ||
-        !expr->rexpr->getType()->canRealize()) {
-      // Case 1a. We still do not know the exact types...
+    auto lc = realizeType(expr->lexpr->getType());
+    auto rc = realizeType(expr->rexpr->getType());
+    if (!lc || !rc) {
+      // We still do not know the exact types...
       expr->type |= ctx->findInternal("bool");
       return nullptr;
+    } else if (lc->realizeString() != rc->realizeString()) {
+      return transform(N<BoolExpr>(false));
+    } else if (lc->getClass()->isRecord()) {
+      return transform(N<BinaryExpr>(move(expr->lexpr), "==", move(expr->rexpr)));
     } else {
-      auto lc = realizeType(expr->lexpr->getType()->getClass());
-      auto rc = realizeType(expr->rexpr->getType()->getClass());
-      if (!lc || !rc || lc->realizeString() != rc->realizeString())
-        return transform(N<BinaryExpr>(move(expr->lexpr), "==", move(expr->rexpr)));
       return transform(
           N<BinaryExpr>(N<CallExpr>(N<DotExpr>(move(expr->lexpr), "__raw__")),
                         "==", N<CallExpr>(N<DotExpr>(move(expr->rexpr), "__raw__"))));
@@ -488,7 +480,11 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
   if (!method)
     method = findBestMethod(rt.get(), format("__r{}__", magic), {{"", rt}, {"", lt}});
   if (!method)
-    error("cannot find magic '{}' in {}", magic, lt->toString());
+    method = findBestMethod(lt.get(), format("__{}__", magic), {{"", lt}, {"", rt}});
+  if (!method && lt->name == "Optional")
+    if (!method)
+      error("cannot find magic '{}' in {}", magic, lt->toString());
+
   return transform(
       N<CallExpr>(N<IdExpr>(method->name), move(expr->lexpr), move(expr->rexpr)));
 }
@@ -547,7 +543,7 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
       if (i < 0 || i >= tuple->args.size())
         error("tuple index out of range (expected 0..{}, got {})", tuple->args.size(),
               i);
-      te.push_back(N<DotExpr>(move(expr), classItem->second.fields[i].name));
+      te.push_back(N<DotExpr>(clone(expr), classItem->second.fields[i].name));
     }
     return transform(N<CallExpr>(
         N<DotExpr>(N<IdExpr>(format("Tuple.N{}", te.size())), "__new__"), move(te)));
@@ -574,29 +570,36 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     return nullptr;
   }
 
+  if (expr->member == "__class__") {
+    expr->type |= ctx->findInternal("str");
+    if (auto t = realizeType(expr->expr->type))
+      return transform(N<StringExpr>(t->realizeString()));
+    return nullptr;
+  }
+
   auto typ = expr->expr->getType()->getClass();
   seqassert(typ, "expected formed type: {}", typ->toString());
   auto methods = ctx->findMethod(typ->name, expr->member);
-
-  // Case 2: Transform optional.member to unwrap(optional).member.
-  if (methods.empty() && typ->name == "Optional") {
-    auto d = N<DotExpr>(transform(N<CallExpr>(N<IdExpr>("unwrap"), move(expr->expr))),
-                        expr->member);
-    return transformDot(d.get(), args);
-  }
-  // Case 3: Transform pyobj.member to pyobj._getattr("member").
-  if (methods.empty() && typ->name == "pyobj") {
-    return transform(N<CallExpr>(N<DotExpr>(move(expr->expr), "_getattr"),
-                                 N<StringExpr>(expr->member)));
-  }
-  // Case 4: Object member access.
   if (methods.empty()) {
     if (auto member = ctx->findMember(typ->name, expr->member)) {
+      // Case 2: Object member access.
       expr->type |= ctx->instantiate(getSrcInfo(), member, typ.get());
-      expr->done = expr->type->canRealize();
+      expr->done = expr->expr->done && realizeType(expr->type) != nullptr;
       return nullptr;
+    } else if (typ->name == "Optional") {
+      // Case 3: Transform optional.member to unwrap(optional).member.
+      auto d = N<DotExpr>(transform(N<CallExpr>(N<IdExpr>("unwrap"), move(expr->expr))),
+                          expr->member);
+      if (auto dd = transformDot(d.get(), args))
+        return dd;
+      return d;
+    } else if (typ->name == "pyobj") {
+      // Case 4: Transform pyobj.member to pyobj._getattr("member").
+      return transform(N<CallExpr>(N<DotExpr>(move(expr->expr), "_getattr"),
+                                   N<StringExpr>(expr->member)));
+    } else {
+      error("cannot find '{}' in {}", expr->member, typ->toString());
     }
-    error("cannot find '{}' in {}", expr->member, expr->expr->getType()->toString());
   }
 
   // Case 5: look for a method that best matches the given arguments.
@@ -609,11 +612,14 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
       argTypes.emplace_back(make_pair("", typ)); // self variable
     for (const auto &a : *args)
       argTypes.emplace_back(make_pair(a.name, a.value->getType()));
+    if (expr->member == "bar")
+      assert(1);
     if (auto bestMethod = findBestMethod(typ.get(), expr->member, argTypes)) {
       if (!isType)
         args->insert(args->begin(), {"", move(expr->expr)}); // self variable
       auto e = N<IdExpr>(bestMethod->name);
       e->type |= ctx->instantiate(getSrcInfo(), bestMethod, typ.get());
+      expr->type |= e->type;
       visit(e.get()); // Visit IdExpr and realize it if necessary.
       // Remove lingering unbound variables from expr->expr (typ) instantiation
       // if we accessed a method that does not reference any generic in typ.
@@ -663,6 +669,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     seqassert(val, "cannot find method '{}'", name);
     auto e = N<IdExpr>(name);
     e->type |= ctx->instantiate(getSrcInfo(), bestMethod, typ.get());
+    expr->type |= e->type;
     visit(e.get()); // Visit IdExpr and realize it if necessary.
     // Remove lingering unbound variables from expr->expr (typ) instantiation
     // if we accessed a method that does not reference any generic in typ.
@@ -696,10 +703,10 @@ TypecheckVisitor::findBestMethod(ClassType *typ, const string &member,
   // highest score.
   vector<pair<int, int>> scores;
   for (int mi = 0; mi < methods.size(); mi++) {
-    auto method = dynamic_cast<FuncType *>(
-        ctx->instantiate(getSrcInfo(), methods[mi], typ, false).get());
+    auto method = dynamic_pointer_cast<FuncType>(
+        ctx->instantiate(getSrcInfo(), methods[mi], typ, false));
 
-    auto reordered = reorderNamedArgs(method, args);
+    auto reordered = reorderNamedArgs(method.get(), args);
     if (reordered.first == -1)
       continue;
     // Scoring system for each argument:
@@ -709,12 +716,12 @@ TypecheckVisitor::findBestMethod(ClassType *typ, const string &member,
     //   Successful unification gets the score of 3 (highest priority).
     int score = reordered.first;
     for (int ai = 0; ai < reordered.second.size(); ai++) {
-      auto expectedType = method->args[ai + 1]->getClass();
+      auto expectedType = method->args[ai + 1];
       auto expectedClass = expectedType->getClass();
       auto argType = reordered.second[ai].second;
       auto argClass = argType->getClass();
       // Ignore traits and default arguments.
-      if ((expectedClass && expectedClass->isTrait) || (reordered.second[ai].second))
+      if ((expectedClass && expectedClass->isTrait) || !reordered.second[ai].second)
         continue;
 
       Type::Unification undo;
@@ -856,9 +863,13 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   } else if (!calleeClass->getCallable()) {
     // Case 4: callee is not a function nor a partial type. Route it through a __call__
     // method.
-    if (calleeClass->name == "pyobj" && expr->args.size() != 1) {
+    if (calleeClass->name == "pyobj" &&
+        (expr->args.size() != 1 ||
+         !(expr->args[0].value->getType()->getClass() &&
+           startswith(expr->args[0].value->getType()->getClass()->name, "Tuple.N")))) {
       // HACK: Wrap pyobj arguments in a tuple.
-      // TODO: remove this once *args support lands.
+      // TODO: remove this once *args support lands (might be some issues with passing
+      // a tuple itself!).
       vector<ExprPtr> e;
       for (auto &a : expr->args) {
         if (!a.name.empty())
@@ -955,8 +966,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   for (int ri = 0; ri < reorderedArgs.size(); ri++) {
     auto expectedTyp = calleeClass->args[argIndex[ri] + 1];
     auto expectedClass = expectedTyp->getClass();
-    auto argTyp = reorderedArgs[ri].value->getType();
-    auto argClass = argTyp->getClass();
+    auto argClass = reorderedArgs[ri].value->getType()->getClass();
 
     if (expectedClass &&
         (expectedClass->isTrait || expectedClass->name == "Optional")) {
@@ -999,11 +1009,11 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
             argClass->explicits[j + 1].type |= expectedClass->explicits[j].type;
           expr->expr->getType()->getFunc()->args[ri + 1] = argClass;
         } else {
-          reorderedArgs[ri].value->type |= argTyp;
+          reorderedArgs[ri].value->type |= expectedTyp;
         }
       } else {
         // Case 4: normal unification.
-        reorderedArgs[ri].value->type |= argTyp;
+        reorderedArgs[ri].value->type |= expectedTyp;
       }
     } else if (expectedClass && argClass && argClass->name == "Optional" &&
                argClass->name != expectedClass->name) { // unwrap optional
@@ -1014,10 +1024,10 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       }
       reorderedArgs[ri].value =
           transform(N<CallExpr>(N<IdExpr>("unwrap"), move(reorderedArgs[ri].value)));
-      reorderedArgs[ri].value->type |= argClass;
+      reorderedArgs[ri].value->type |= expectedTyp;
     } else {
       // Case 6: normal unification.
-      reorderedArgs[ri].value->type |= argTyp;
+      reorderedArgs[ri].value->type |= expectedTyp;
     }
   }
   if (ast)
@@ -1026,7 +1036,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   // Realize arguments.
   expr->done = true;
   for (auto &ra : reorderedArgs) {
-    if (ra.value->getType()->canRealize())
+    if (realizeType(ra.value->type))
       ra.value = transform(ra.value);
     expr->done &= ra.value->done;
   }
@@ -1039,7 +1049,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
           auto deflt = clone(ast->generics[i].deflt);
           f->explicits[i].type |= transformType(deflt)->getType();
         }
-    if (f->canRealize())
+    if (realizeFunc(f))
       expr->expr = transform(expr->expr);
     expr->done &= expr->expr->done;
   }

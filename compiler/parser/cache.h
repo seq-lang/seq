@@ -35,7 +35,6 @@
 #define ATTR_PARENT_FUNCTION ".parentFunc"
 #define ATTR_PARENT_CLASS ".parentClass"
 #define ATTR_NOT_STATIC ".notStatic"
-#define ATTR_GENERIC ".generic"
 #define ATTR_TOTAL_ORDERING "total_ordering"
 #define ATTR_CONTAINER "container"
 #define ATTR_PYTHON "python"
@@ -129,6 +128,8 @@ struct Cache {
       types::ClassTypePtr type;
       /// A list of field names and realization's realized field types.
       vector<std::pair<string, types::TypePtr>> fields;
+      /// LLVM type pointer.
+      seq::types::Type *llvm;
     };
     /// Realization lookup table that maps a realized class name to the corresponding
     /// ClassRealization instance.

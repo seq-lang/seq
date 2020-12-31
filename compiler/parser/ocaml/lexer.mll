@@ -266,10 +266,20 @@ and read state = parse
   | "%"   as op { [P.MOD (char_to_string op)] }
 
   | (int | binint | hexint) as i { [P.INT (i, "")] }
-  | ((int | binint | hexint) as i) (intsuffix as k) { [P.INT (i, String.lowercase_ascii k)] }
+  | ((int | binint | hexint) as i) (intsuffix as k) {
+    (* Handle exponents (1e2) *)
+    match k.[0], float_of_string_opt (i ^ k) with
+    | 'e', Some fp -> [P.FLOAT (fp, "")]
+    | _, None -> [P.INT (i, String.lowercase_ascii k)]
+  }
   | danglingfloat as f { [P.FLOAT (float_of_string f, "")] }
   | float as f { [P.FLOAT (float_of_string f, "")] }
-  | (float as f) (intsuffix as k) { [P.FLOAT (float_of_string f, String.lowercase_ascii k)] }
+  | (float as f) (intsuffix as k) {
+    (* Handle exponents (1e2) *)
+    match float_of_string_opt (f ^ k) with
+    | Some fp -> [P.FLOAT (fp, "")]
+    | None -> [P.FLOAT (float_of_string f, String.lowercase_ascii k)]
+  }
   | eof { [P.EOF] }
   | _ { raise (Ast.SyntaxError (Format.sprintf "Unknown token '%s'" (L.lexeme lexbuf), lexbuf.lex_start_p)) }
 

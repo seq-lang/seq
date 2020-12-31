@@ -78,8 +78,6 @@ vector<string> split(const string &str, char delim);
 string escape(const string &str);
 /// Escape an F-string braces (replace { and } with {{ and }}).
 string escapeFStringBraces(const string &str, int start, int len);
-/// Remove leading dot from a string.
-string chop(const string &str);
 /// True if a string str starts with a prefix.
 bool startswith(const string &str, const string &prefix);
 /// True if a string str ends with a suffix.
@@ -116,6 +114,11 @@ template <typename T, typename U> bool in(const vector<T> &vec, const U &item) {
 }
 /// @return True if an item is found in a set s.
 template <typename T, typename U> bool in(const set<T> &s, const U &item) {
+  auto f = s.find(item);
+  return f != s.end();
+}
+/// @return True if an item is found in an unordered_set s.
+template <typename T, typename U> bool in(const unordered_set<T> &s, const U &item) {
   auto f = s.find(item);
   return f != s.end();
 }

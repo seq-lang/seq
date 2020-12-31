@@ -56,7 +56,7 @@ shared_ptr<TypecheckItem> TypeContext::add(TypecheckItem::Kind kind, const strin
 }
 
 string TypeContext::getBase() const {
-  if (!bases.size())
+  if (bases.empty())
     return "";
   vector<string> s;
   for (auto &b : bases)
@@ -71,7 +71,7 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int 
                                         level, nullptr, isStatic);
   t->setSrcInfo(srcInfo);
   LOG_TYPECHECK("[ub] new {}: {} ({})", t->toString(), srcInfo, setActive);
-  if (cache->unboundCount - 1 == 10245)
+  if (t->toString() == "?11402.3")
     assert(1);
   if (setActive)
     activeUnbounds.insert(t);
@@ -79,7 +79,7 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int 
 }
 
 types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr type) {
-  return instantiate(srcInfo, type, nullptr);
+  return instantiate(srcInfo, move(type), nullptr);
 }
 
 types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr type,
@@ -101,7 +101,7 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
       if (activeUnbounds.find(i.second) == activeUnbounds.end()) {
         LOG_TYPECHECK("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
                       i.second->toString(), type->toString(), srcInfo, activate);
-        if (i.second->toString() == "?10245.0")
+        if (i.second->toString() == "?11647.1")
           assert(1);
         if (activate)
           activeUnbounds.insert(i.second);

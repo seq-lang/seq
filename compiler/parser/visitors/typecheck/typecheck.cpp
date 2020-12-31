@@ -40,8 +40,22 @@ StmtPtr TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto ctx = make_shared<TypeContext>(cache);
   TypecheckVisitor v(ctx);
   auto infer = v.inferTypes(stmts->clone(), true);
-  LOG("type inference done in {} iterations", infer.first);
+  LOG_TYPECHECK("toplevel type inference done in {} iterations", infer.first);
   return move(infer.second);
+}
+
+TypePtr operator|=(TypePtr &a, const TypePtr &b) {
+  if (!a)
+    return a = b;
+  seqassert(b, "rhs is nullptr");
+  types::Type::Unification undo;
+  if (a->unify(b.get(), &undo) >= 0)
+    return a;
+  undo.undo();
+  ast::error(
+      a->getSrcInfo(),
+      fmt::format("cannot unify {} and {}", a->toString(), b->toString()).c_str());
+  return nullptr;
 }
 
 /**************************************************************************************/
@@ -61,7 +75,7 @@ void TypecheckVisitor::defaultVisit(Pattern *e) {
 }
 void TypecheckVisitor::visit(StarPattern *pat) {
   pat->type |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
-  pat->done = pat->type->canRealize();
+  pat->done = realizeType(pat->type) != nullptr;
 }
 void TypecheckVisitor::visit(IntPattern *pat) {
   pat->type |= ctx->findInternal("int");
@@ -114,7 +128,7 @@ void TypecheckVisitor::visit(WildcardPattern *pat) {
   pat->type |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
   if (!pat->var.empty())
     ctx->add(TypecheckItem::Var, pat->var, pat->type);
-  pat->done = pat->type->canRealize();
+  pat->done = realizeType(pat->type) != nullptr;
 }
 void TypecheckVisitor::visit(GuardedPattern *pat) {
   pat->pattern = transform(pat->pattern);

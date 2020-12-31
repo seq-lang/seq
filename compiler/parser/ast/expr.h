@@ -483,6 +483,8 @@ struct EllipsisExpr : public Expr {
 
   string toString() const override;
   ACCEPT(ASTVisitor);
+
+  const EllipsisExpr *getEllipsis() const override { return this; }
 };
 
 /// Type-of expression (typeof expr).

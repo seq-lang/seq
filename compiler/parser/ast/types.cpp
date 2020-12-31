@@ -73,6 +73,8 @@ int LinkType::unify(Type *typ, Unification *undo) {
     seqassert(!type, "type has been already unified or is in inconsistent state");
     if (undo) {
       LOG_TYPECHECK("[unify] {} <- {}", id, typ->toString());
+      if (id == 11677 || id == 11722)
+        assert(1);
       // Link current type to typ and ensure that this modification is recorded in undo.
       undo->linked.push_back(this);
       kind = Link;
@@ -212,7 +214,7 @@ string StaticType::realizeString() const {
 int StaticType::unify(Type *typ, Unification *us) {
   if (auto t = typ->getStatic()) {
     // A + 5 + 3; 3 + A + 5
-    int s1 = 0;
+    int s1 = 2;
     if (expr->toString() == t->expr->toString()) {
       int s = 0;
       for (int i = 0; i < explicits.size(); i++) {
@@ -313,11 +315,11 @@ int ClassType::unify(Type *typ, Unification *us) {
     if (isRecord() != t->isRecord())
       return -1;
 
-    auto ti64 = make_shared<StaticType>(64).get();
+    auto ti64 = make_shared<StaticType>(64);
     if (name == "int" && t->name == "Int")
-      return t->explicits[0].type->unify(ti64, us);
+      return t->explicits[0].type->unify(ti64.get(), us);
     if (t->name == "int" && name == "Int")
-      return explicits[0].type->unify(ti64, us);
+      return explicits[0].type->unify(ti64.get(), us);
 
     if (us->isMatch) {
       if ((t->name == "Kmer" && name == "seq") || (name == "Kmer" && t->name == "seq"))
@@ -326,7 +328,7 @@ int ClassType::unify(Type *typ, Unification *us) {
 
     if (args.size() != t->args.size())
       return -1;
-    int s1 = 0, s;
+    int s1 = 2, s;
     for (int i = 0; i < args.size(); i++) {
       if ((s = args[i]->unify(t->args[i].get(), us)) != -1)
         s1 += s;
@@ -449,7 +451,7 @@ FuncType::FuncType(const string &name, ClassType *funcClass,
 }
 
 int FuncType::unify(Type *typ, Unification *us) {
-  int s1 = 0, s = 0;
+  int s1 = 2, s = 0;
   if (auto t = typ->getFunc()) {
     if (explicits.size() != t->explicits.size())
       return -1;
@@ -458,7 +460,13 @@ int FuncType::unify(Type *typ, Unification *us) {
         return -1;
       s1 += s;
     }
-    // TODO : parent?
+    if (bool(parent) ^ bool(t->parent))
+      return -1;
+    if (parent) {
+      if ((s = parent->unify(t->parent.get(), us)) == -1)
+        return -1;
+      s1 += s;
+    }
   }
   return s1 + getClass()->unify(typ, us);
 }

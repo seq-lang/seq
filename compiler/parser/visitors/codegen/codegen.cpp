@@ -94,12 +94,14 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto ctx =
       make_shared<CodegenContext>(cache, block, (seq::BaseFunc *)module, nullptr);
 
-  // Now add all realization stubs
   for (auto &ff : cache->classes)
     for (auto &f : ff.second.realizations) {
-      auto t = ctx->realizeType(f.second.type.get());
-      ctx->addType(f.first, t);
+      //      LOG("[codegen] add {} -> {} | {}", f.first,
+      //      f.second.type->realizeString(),
+      //          f.second.llvm->getName());
+      ctx->addType(f.first, f.second.llvm);
     }
+  // Now add all realization stubs
   for (auto &ff : cache->functions)
     for (auto &f : ff.second.realizations) {
       auto t = f.second.type;
@@ -121,13 +123,13 @@ seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
         seqassert(p && p->getClass(), "parent must be set ({}) for {}; parent={}",
                   p ? p->toString() : "-", t->toString(),
                   ast->attributes[ATTR_PARENT_CLASS]);
-        seq::types::Type *typ = ctx->realizeType(p->getClass().get());
+        seq::types::Type *typ = ctx->find(p->getClass()->realizeString())->getType();
         int startI = 1;
         if (!ast->args.empty() &&
             ctx->cache->reverseIdentifierLookup[ast->args[0].name] == "self")
           startI = 2;
         for (int i = startI; i < t->args.size(); i++)
-          types.push_back(ctx->realizeType(t->args[i]->getClass().get()));
+          types.push_back(ctx->find(t->args[i]->realizeString())->getType());
 
         auto names = split(ast->name, '.');
         auto name = names.back();
@@ -169,10 +171,6 @@ void CodegenVisitor::visit(StringExpr *expr) {
 void CodegenVisitor::visit(IdExpr *expr) {
   auto val = ctx->find(expr->value);
   seqassert(val, "cannot find '{}'", expr->value);
-  // TODO: this makes no sense: why setAtomic on temporary expr?
-  // if (var->isGlobal() && var->getBase() == ctx->getBase() &&
-  //     ctx->hasFlag("atomic"))
-  //   dynamic_cast<seq::VarExpr *>(i->getExpr())->setAtomic();
   if (auto v = val->getVar())
     resultExpr = new seq::VarExpr(v);
   else if (auto f = val->getFunc())
@@ -618,9 +616,9 @@ void CodegenVisitor::visit(GuardedPattern *pat) {
 }
 
 seq::types::Type *CodegenVisitor::realizeType(types::ClassType *t) {
-  auto i = ctx->types.find(t->getClass()->realizeString());
-  assert(i != ctx->types.end());
-  return i->second;
+  auto i = ctx->find(t->getClass()->realizeString());
+  seqassert(i, "type {} not realized", t->toString());
+  return i->getType();
 }
 
 } // namespace ast

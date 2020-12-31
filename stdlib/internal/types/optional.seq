@@ -22,6 +22,14 @@ class Optional[T]:
         # ret {=T} %0
     def __str__(self) -> str:
         return 'None' if not self else str(~self)
+
+    # TODO
+    def __eq__(self, other: Optional[T]):
+        if not self or not other:
+            return not self and not other
+        return self.__invert__().__raw__() == other.__invert__().__raw__()
+    def __ne__(self, other: Optional[T]):
+        return not self.__eq__(other)
 optional = Optional
 
 def unwrap[T](opt: Optional[T]) -> T:

@@ -92,7 +92,6 @@ comprehension_if: IF pipe_expr { $loc, snd (flat_pipe $2) }
 expr:
   | pipe_expr { flat_pipe $1 }
   | pipe_expr IF pipe_expr ELSE expr { $loc, IfExpr (flat_pipe $3, flat_pipe $1, $5) }
-  | TYPEOF LP expr RP { $loc, TypeOf $3 }
   | LAMBDA separated_list(COMMA, ID) COLON expr { $loc, Lambda ($2, $4) }
   | walrus { $1 }
   /* | LP separated_list(COMMA, ID) ARROW pipe_expr RP { $loc, Lambda ($2, $4) } */
@@ -148,6 +147,7 @@ arith_term:
   | arith_term LS index_term COMMA FLNE(COMMA, index_term) RS
     { $loc, Index ($1, (($startpos($3), $endpos($5)), Tuple ($3 :: $5))) }
   | arith_term DOT ID { $loc, Dot ($1, $3) }
+  | TYPEOF LP expr RP { $loc, TypeOf $3 }
   | LP YIELD RP { $loc, YieldTo () }
 call_term:
   | ELLIPSIS { None, ($loc, Ellipsis ()) }

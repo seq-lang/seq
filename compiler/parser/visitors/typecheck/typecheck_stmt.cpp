@@ -69,6 +69,12 @@ void TypecheckVisitor::visit(SuiteStmt *stmt) {
   stmt->stmts = move(stmts);
 }
 
+void TypecheckVisitor::visit(PassStmt *stmt) { stmt->done = true; }
+
+void TypecheckVisitor::visit(BreakStmt *stmt) { stmt->done = true; }
+
+void TypecheckVisitor::visit(ContinueStmt *stmt) { stmt->done = true; }
+
 void TypecheckVisitor::visit(ExprStmt *stmt) {
   stmt->expr = transform(stmt->expr);
   stmt->done = stmt->expr->done;
@@ -87,16 +93,18 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
     stmt->lhs->type |= stmt->type ? stmt->type->getType()
                                   : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
     ctx->add(kind = TypecheckItem::Var, lhs, stmt->lhs->type);
+    stmt->done = realizeType(stmt->lhs->type) != nullptr;
   } else { // Case 2: Normal assignment
     if (stmt->type && stmt->type->getType()->getClass()) {
       stmt->lhs->type |= ctx->instantiate(getSrcInfo(), stmt->type->getType());
       wrapOptionalIfNeeded(stmt->lhs->getType(), stmt->rhs);
+      stmt->lhs->type |= stmt->rhs->type;
     }
     kind = stmt->rhs->isType() ? TypecheckItem::Type
                                : (stmt->rhs->getType()->getFunc() ? TypecheckItem::Func
                                                                   : TypecheckItem::Var);
     ctx->add(kind, lhs, stmt->rhs->getType());
-    stmt->lhs->type |= stmt->rhs->type;
+    stmt->done = stmt->rhs->done;
   }
   // Save the variable to the local realization context
   ctx->bases.back().visitedAsts[lhs] = {kind, stmt->lhs->type};
@@ -185,9 +193,9 @@ void TypecheckVisitor::visit(AssignMemberStmt *stmt) {
       error("cannot find '{}' in {}", stmt->member, lhsClass->name);
     if (lhsClass->isRecord())
       error("tuple element {} is read-only", stmt->member);
-    stmt->lhs->type |= ctx->instantiate(getSrcInfo(), member, lhsClass.get());
-    wrapOptionalIfNeeded(stmt->lhs->getType(), stmt->rhs);
-    stmt->rhs->type |= stmt->lhs->type;
+    auto typ = ctx->instantiate(getSrcInfo(), member, lhsClass.get());
+    wrapOptionalIfNeeded(typ, stmt->rhs);
+    stmt->rhs->type |= typ;
     stmt->done = stmt->rhs->done;
   }
 }
@@ -240,6 +248,7 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
   if (auto e = stmt->var->getId())
     varName = e->value;
   seqassert(!varName.empty(), "invalid for variable {}", stmt->var->toString());
+  stmt->var->type |= varType;
   ctx->add(TypecheckItem::Var, varName, varType);
   stmt->suite = transform(stmt->suite);
   stmt->done = stmt->iter->done && stmt->suite->done;
@@ -298,7 +307,7 @@ void TypecheckVisitor::visit(TryStmt *stmt) {
     if (!c.var.empty())
       ctx->add(TypecheckItem::Var, c.var, c.exc->getType());
     c.suite = transform(c.suite);
-    stmt->done &= c.exc->done && c.suite->done;
+    stmt->done &= (c.exc ? c.exc->done : true) && c.suite->done;
   }
   stmt->finally = transform(stmt->finally);
   stmt->done &= stmt->finally->done;
@@ -316,14 +325,14 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
     if (in(stmt->attributes, ATTR_BUILTIN) || in(stmt->attributes, ATTR_EXTERN_C)) {
       if (!t->canRealize())
         error("builtins and external functions must be realizable");
-      realizeFunc(ctx->instantiate(getSrcInfo(), t)->getFunc());
+      auto typ = ctx->instantiate(getSrcInfo(), t);
+      typ |= realizeFunc(typ->getFunc());
     }
     stmt->done = true;
     return;
   }
 
   // Parse preamble.
-  LOG("[fn] {}", stmt->name);
   auto &attributes = const_cast<FunctionStmt *>(stmt)->attributes;
   bool isClassMember = in(stmt->attributes, ATTR_PARENT_CLASS);
   auto explicits = parseGenerics(stmt->generics, ctx->typecheckLevel); // level down
@@ -355,10 +364,12 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
       generics.push_back(args.back());
     }
     for (auto &a : stmt->args) {
-      args.push_back(a.type ? transformType(a.type)->getType()
-                            : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
-      if (!a.type)
+      if (!a.type) {
+        args.push_back(ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
         generics.push_back(args.back());
+      } else {
+        args.push_back(transformType(a.type)->getType());
+      }
       ctx->add(TypecheckItem::Var, a.name, args.back());
     }
     ctx->typecheckLevel--;
@@ -375,6 +386,8 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
       stmt->name,
       ctx->findInternal(format("Function.N{}", stmt->args.size()))->getClass().get(),
       args, explicits);
+  if (stmt->name == "_validate_str_as_seq.ensure_valid")
+    assert(1);
   if (isClassMember && in(attributes, ATTR_NOT_STATIC))
     typ->parent = ctx->find(attributes[ATTR_PARENT_CLASS])->type;
   else if (in(attributes, ATTR_PARENT_FUNCTION))
@@ -446,15 +459,14 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
       ctx->remove(g.name);
     }
 
-    //    LOG_REALIZE
-    LOG("[class] {} -> {}", stmt->name, typ->toString());
+    LOG_REALIZE("[class] {} -> {}", stmt->name, typ->toString());
     for (auto &m : ctx->cache->classes[stmt->name].fields)
       LOG_REALIZE("       - member: {}: {}", m.name, m.type->toString());
   } else {
     // Increase the current extension count.
     ctx->extendCount++;
   }
-  stmt->done = true;
+  //  stmt->done = true;
 }
 
 /**************************************************************************************/

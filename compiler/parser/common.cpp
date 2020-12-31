@@ -79,10 +79,6 @@ string escapeFStringBraces(const string &str, int start, int len) {
     else
       t += str[i];
   return t;
-};
-
-string chop(const string &str) {
-  return !str.empty() && str[0] == '.' ? str.substr(1) : str;
 }
 bool startswith(const string &str, const string &prefix) {
   return str.size() >= prefix.size() && str.substr(0, prefix.size()) == prefix;
@@ -104,10 +100,7 @@ void rtrim(string &str) {
             str.end());
 }
 bool isdigit(const string &str) {
-  for (const auto c : str)
-    if (!std::isdigit(c))
-      return false;
-  return true;
+  return std::all_of(str.begin(), str.end(), ::isdigit);
 }
 
 /// AST utilities

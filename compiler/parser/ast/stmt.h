@@ -43,7 +43,7 @@ struct Stmt : public seq::SrcObject {
   bool done;
 
 public:
-  Stmt() = default;
+  Stmt();
   Stmt(const Stmt &s) = default;
   explicit Stmt(const seq::SrcInfo &s);
 

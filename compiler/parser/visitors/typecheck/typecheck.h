@@ -116,6 +116,9 @@ public:
   void visit(StaticExpr *) override;
 
   void visit(SuiteStmt *) override;
+  void visit(PassStmt *) override;
+  void visit(BreakStmt *) override;
+  void visit(ContinueStmt *) override;
   void visit(ExprStmt *) override;
   void visit(AssignStmt *) override;
   /// Transform an atomic or an in-place statement a += b to:
@@ -269,6 +272,7 @@ private:
   types::TypePtr realizeType(const types::TypePtr &typ);
   types::TypePtr realizeFunc(const types::TypePtr &typ);
   std::pair<int, StmtPtr> inferTypes(StmtPtr &&stmt, bool keepLast = false);
+  seq::types::Type *getLLVMType(const types::ClassType *t);
 };
 
 class StaticVisitor : public WalkVisitor {

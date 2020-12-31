@@ -75,8 +75,6 @@ public:
   void initJIT();
   void execJIT(string varName = "", seq::Expr *varExpr = nullptr);
 
-  seq::types::Type *realizeType(types::ClassType *t);
-
 public:
   void dump() override {}
   seq::BaseFunc *getBase() const { return bases[topBaseIndex]; }

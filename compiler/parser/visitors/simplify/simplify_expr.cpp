@@ -284,14 +284,14 @@ void SimplifyVisitor::visit(BinaryExpr *expr) {
 void SimplifyVisitor::visit(PipeExpr *expr) {
   vector<PipeExpr::Pipe> p;
   for (auto &i : expr->items) {
-    p.push_back({i.op, transform(i.expr)});
     bool foundEllipsis = false;
-    if (auto ec = p.back().expr->getCall())
-      for (auto &a : ec->args) {
+    if (auto ec = i.expr->getCall())
+      for (const auto &a : ec->args) {
         if (a.value->getEllipsis() && foundEllipsis)
           error("unexpected partial argument");
         foundEllipsis |= bool(a.value->getEllipsis());
       }
+    p.push_back({i.op, transform(i.expr)});
   }
   resultExpr = N<PipeExpr>(move(p));
 }

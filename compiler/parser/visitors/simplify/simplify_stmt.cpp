@@ -421,11 +421,11 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   bool defaultsStarted = false;
   for (int ia = 0; ia < stmt->args.size(); ia++) {
     auto &a = stmt->args[ia];
-    if (seenArgs.find(a.name) != seenArgs.end())
-      error(a.type, "'{}' declared twice", a.name);
+    if (in(seenArgs, a.name))
+      error("'{}' declared twice", a.name);
     seenArgs.insert(a.name);
     if (!a.deflt && defaultsStarted)
-      error(a.type, "non-default argument '{}' after a default argument", a.name);
+      error("non-default argument '{}' after a default argument", a.name);
     defaultsStarted |= bool(a.deflt);
     auto typeAst = transformType(a.type.get());
     // If the first argument of a class method is self and if it has no type, add it.

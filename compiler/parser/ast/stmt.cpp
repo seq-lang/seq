@@ -24,26 +24,29 @@ using std::move;
 namespace seq {
 namespace ast {
 
+Stmt::Stmt() : done(false) {}
 Stmt::Stmt(const seq::SrcInfo &s) : done(false) { setSrcInfo(s); }
 
-SuiteStmt::SuiteStmt(vector<StmtPtr> &&stmts, bool ownBlock) : ownBlock(ownBlock) {
+SuiteStmt::SuiteStmt(vector<StmtPtr> &&stmts, bool ownBlock)
+    : Stmt(), ownBlock(ownBlock) {
   for (auto &s : stmts)
     flatten(move(s), this->stmts);
 }
-SuiteStmt::SuiteStmt(StmtPtr stmt, bool ownBlock) : ownBlock(ownBlock) {
+SuiteStmt::SuiteStmt(StmtPtr stmt, bool ownBlock) : Stmt(), ownBlock(ownBlock) {
   flatten(move(stmt), this->stmts);
 }
-SuiteStmt::SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, bool ownBlock) : ownBlock(ownBlock) {
+SuiteStmt::SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, bool ownBlock)
+    : Stmt(), ownBlock(ownBlock) {
   flatten(move(stmt1), this->stmts);
   flatten(move(stmt2), this->stmts);
 }
 SuiteStmt::SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, StmtPtr stmt3, bool o)
-    : ownBlock(o) {
+    : Stmt(), ownBlock(o) {
   flatten(move(stmt1), this->stmts);
   flatten(move(stmt2), this->stmts);
   flatten(move(stmt3), this->stmts);
 }
-SuiteStmt::SuiteStmt() : ownBlock(false) {}
+SuiteStmt::SuiteStmt() : Stmt(), ownBlock(false) {}
 SuiteStmt::SuiteStmt(const SuiteStmt &stmt)
     : Stmt(stmt), stmts(ast::clone(stmt.stmts)), ownBlock(stmt.ownBlock) {}
 string SuiteStmt::toString() const {
@@ -71,13 +74,13 @@ ACCEPT_IMPL(BreakStmt, ASTVisitor);
 string ContinueStmt::toString() const { return "(continue)"; }
 ACCEPT_IMPL(ContinueStmt, ASTVisitor);
 
-ExprStmt::ExprStmt(ExprPtr expr) : expr(move(expr)) {}
+ExprStmt::ExprStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}
 ExprStmt::ExprStmt(const ExprStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
 string ExprStmt::toString() const { return format("(expr {})", expr->toString()); }
 ACCEPT_IMPL(ExprStmt, ASTVisitor);
 
 AssignStmt::AssignStmt(ExprPtr lhs, ExprPtr rhs, ExprPtr type)
-    : lhs(move(lhs)), rhs(move(rhs)), type(move(type)) {}
+    : Stmt(), lhs(move(lhs)), rhs(move(rhs)), type(move(type)) {}
 AssignStmt::AssignStmt(const AssignStmt &stmt)
     : Stmt(stmt), lhs(ast::clone(stmt.lhs)), rhs(ast::clone(stmt.rhs)),
       type(ast::clone(stmt.type)) {}
@@ -87,17 +90,17 @@ string AssignStmt::toString() const {
 }
 ACCEPT_IMPL(AssignStmt, ASTVisitor);
 
-DelStmt::DelStmt(ExprPtr expr) : expr(move(expr)) {}
+DelStmt::DelStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}
 DelStmt::DelStmt(const DelStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
 string DelStmt::toString() const { return format("(del {})", expr->toString()); }
 ACCEPT_IMPL(DelStmt, ASTVisitor);
 
-PrintStmt::PrintStmt(ExprPtr expr) : expr(move(expr)) {}
+PrintStmt::PrintStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}
 PrintStmt::PrintStmt(const PrintStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
 string PrintStmt::toString() const { return format("(print {})", expr->toString()); }
 ACCEPT_IMPL(PrintStmt, ASTVisitor);
 
-ReturnStmt::ReturnStmt(ExprPtr expr) : expr(move(expr)) {}
+ReturnStmt::ReturnStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}
 ReturnStmt::ReturnStmt(const ReturnStmt &stmt)
     : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
 string ReturnStmt::toString() const {
@@ -105,7 +108,7 @@ string ReturnStmt::toString() const {
 }
 ACCEPT_IMPL(ReturnStmt, ASTVisitor);
 
-YieldStmt::YieldStmt(ExprPtr expr) : expr(move(expr)) {}
+YieldStmt::YieldStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}
 YieldStmt::YieldStmt(const YieldStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
 string YieldStmt::toString() const {
   return expr ? format("(yield {})", expr->toString()) : "(yield)";
@@ -113,7 +116,7 @@ string YieldStmt::toString() const {
 ACCEPT_IMPL(YieldStmt, ASTVisitor);
 
 AssertStmt::AssertStmt(ExprPtr expr, ExprPtr message)
-    : expr(move(expr)), message(move(message)) {}
+    : Stmt(), expr(move(expr)), message(move(message)) {}
 AssertStmt::AssertStmt(const AssertStmt &stmt)
     : Stmt(stmt), expr(ast::clone(stmt.expr)), message(ast::clone(stmt.message)) {}
 string AssertStmt::toString() const {
@@ -123,7 +126,7 @@ string AssertStmt::toString() const {
 ACCEPT_IMPL(AssertStmt, ASTVisitor);
 
 WhileStmt::WhileStmt(ExprPtr cond, StmtPtr suite, StmtPtr elseSuite)
-    : cond(move(cond)), suite(move(suite)), elseSuite(move(elseSuite)) {}
+    : Stmt(), cond(move(cond)), suite(move(suite)), elseSuite(move(elseSuite)) {}
 WhileStmt::WhileStmt(const WhileStmt &stmt)
     : Stmt(stmt), cond(ast::clone(stmt.cond)), suite(ast::clone(stmt.suite)),
       elseSuite(ast::clone(stmt.elseSuite)) {}
@@ -137,8 +140,8 @@ string WhileStmt::toString() const {
 ACCEPT_IMPL(WhileStmt, ASTVisitor);
 
 ForStmt::ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite)
-    : var(move(var)), iter(move(iter)), suite(move(suite)), elseSuite(move(elseSuite)) {
-}
+    : Stmt(), var(move(var)), iter(move(iter)), suite(move(suite)),
+      elseSuite(move(elseSuite)) {}
 ForStmt::ForStmt(const ForStmt &stmt)
     : Stmt(stmt), var(ast::clone(stmt.var)), iter(ast::clone(stmt.iter)),
       suite(ast::clone(stmt.suite)), elseSuite(ast::clone(stmt.elseSuite)) {}
@@ -154,11 +157,12 @@ ACCEPT_IMPL(ForStmt, ASTVisitor);
 
 IfStmt::If IfStmt::If::clone() const { return {ast::clone(cond), ast::clone(suite)}; }
 
-IfStmt::IfStmt(vector<IfStmt::If> &&ifs) : ifs(move(ifs)) {}
-IfStmt::IfStmt(ExprPtr cond, StmtPtr suite) {
+IfStmt::IfStmt(vector<IfStmt::If> &&ifs) : Stmt(), ifs(move(ifs)) {}
+IfStmt::IfStmt(ExprPtr cond, StmtPtr suite) : Stmt() {
   ifs.push_back(If{move(cond), move(suite)});
 }
-IfStmt::IfStmt(ExprPtr cond, StmtPtr suite, ExprPtr elseCond, StmtPtr elseSuite) {
+IfStmt::IfStmt(ExprPtr cond, StmtPtr suite, ExprPtr elseCond, StmtPtr elseSuite)
+    : Stmt() {
   ifs.push_back(If{move(cond), move(suite)});
   ifs.push_back(If{move(elseCond), move(elseSuite)});
 }
@@ -174,11 +178,11 @@ ACCEPT_IMPL(IfStmt, ASTVisitor);
 
 MatchStmt::MatchStmt(ExprPtr what, vector<PatternPtr> &&patterns,
                      vector<StmtPtr> &&cases)
-    : what(move(what)), patterns(move(patterns)), cases(move(cases)) {
+    : Stmt(), what(move(what)), patterns(move(patterns)), cases(move(cases)) {
   assert(patterns.size() == cases.size());
 }
 MatchStmt::MatchStmt(ExprPtr what, vector<pair<PatternPtr, StmtPtr>> &&patternCasePairs)
-    : what(move(what)) {
+    : Stmt(), what(move(what)) {
   for (auto &i : patternCasePairs) {
     patterns.push_back(move(i.first));
     cases.push_back(move(i.second));
@@ -197,8 +201,8 @@ ACCEPT_IMPL(MatchStmt, ASTVisitor);
 
 ImportStmt::ImportStmt(ExprPtr from, ExprPtr what, vector<Param> &&args, ExprPtr ret,
                        string as, int dots)
-    : from(move(from)), what(move(what)), as(move(as)), dots(dots), args(move(args)),
-      ret(move(ret)) {}
+    : Stmt(), from(move(from)), what(move(what)), as(move(as)), dots(dots),
+      args(move(args)), ret(move(ret)) {}
 ImportStmt::ImportStmt(const ImportStmt &stmt)
     : Stmt(stmt), from(ast::clone(stmt.from)), what(ast::clone(stmt.what)), as(stmt.as),
       dots(stmt.dots), args(ast::clone_nop(stmt.args)), ret(ast::clone(stmt.ret)) {}
@@ -216,7 +220,7 @@ TryStmt::Catch TryStmt::Catch::clone() const {
 }
 
 TryStmt::TryStmt(StmtPtr suite, vector<Catch> &&catches, StmtPtr finally)
-    : suite(move(suite)), catches(move(catches)), finally(move(finally)) {}
+    : Stmt(), suite(move(suite)), catches(move(catches)), finally(move(finally)) {}
 TryStmt::TryStmt(const TryStmt &stmt)
     : Stmt(stmt), suite(ast::clone(stmt.suite)), catches(ast::clone_nop(stmt.catches)),
       finally(ast::clone(stmt.finally)) {}
@@ -232,28 +236,28 @@ string TryStmt::toString() const {
 }
 ACCEPT_IMPL(TryStmt, ASTVisitor);
 
-ThrowStmt::ThrowStmt(ExprPtr expr) : expr(move(expr)) {}
+ThrowStmt::ThrowStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}
 ThrowStmt::ThrowStmt(const ThrowStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
 string ThrowStmt::toString() const { return format("(throw {})", expr->toString()); }
 ACCEPT_IMPL(ThrowStmt, ASTVisitor);
 
-GlobalStmt::GlobalStmt(string var) : var(move(var)) {}
+GlobalStmt::GlobalStmt(string var) : Stmt(), var(move(var)) {}
 string GlobalStmt::toString() const { return format("(global '{})", var); }
 ACCEPT_IMPL(GlobalStmt, ASTVisitor);
 
 FunctionStmt::FunctionStmt(string name, ExprPtr ret, vector<Param> &&generics,
                            vector<Param> &&args, StmtPtr suite,
                            vector<string> &&attributes)
-    : name(move(name)), ret(move(ret)), generics(move(generics)), args(move(args)),
-      suite(move(suite)) {
+    : Stmt(), name(move(name)), ret(move(ret)), generics(move(generics)),
+      args(move(args)), suite(move(suite)) {
   for (auto &a : attributes)
     this->attributes[a] = "";
 }
 FunctionStmt::FunctionStmt(string name, ExprPtr ret, vector<Param> &&generics,
                            vector<Param> &&args, StmtPtr suite,
                            map<string, string> &&attributes)
-    : name(move(name)), ret(move(ret)), generics(move(generics)), args(move(args)),
-      suite(move(suite)), attributes(attributes) {}
+    : Stmt(), name(move(name)), ret(move(ret)), generics(move(generics)),
+      args(move(args)), suite(move(suite)), attributes(attributes) {}
 FunctionStmt::FunctionStmt(const FunctionStmt &stmt)
     : Stmt(stmt), name(stmt.name), ret(ast::clone(stmt.ret)),
       generics(ast::clone_nop(stmt.generics)), args(ast::clone_nop(stmt.args)),
@@ -286,11 +290,12 @@ string FunctionStmt::signature() const {
 
 ClassStmt::ClassStmt(string name, vector<Param> &&g, vector<Param> &&a, StmtPtr s,
                      map<string, string> &&at)
-    : name(move(name)), generics(move(g)), args(move(a)), suite(move(s)),
+    : Stmt(), name(move(name)), generics(move(g)), args(move(a)), suite(move(s)),
       attributes(at) {}
 ClassStmt::ClassStmt(string name, vector<Param> &&generics, vector<Param> &&args,
                      StmtPtr suite, vector<string> &&attributes)
-    : name(move(name)), generics(move(generics)), args(move(args)), suite(move(suite)) {
+    : Stmt(), name(move(name)), generics(move(generics)), args(move(args)),
+      suite(move(suite)) {
   for (auto &a : attributes)
     this->attributes[a] = "";
 }
@@ -315,7 +320,7 @@ string ClassStmt::toString() const {
 ACCEPT_IMPL(ClassStmt, ASTVisitor);
 bool ClassStmt::isRecord() const { return in(attributes, ATTR_TUPLE); }
 
-YieldFromStmt::YieldFromStmt(ExprPtr expr) : expr(move(expr)) {}
+YieldFromStmt::YieldFromStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}
 YieldFromStmt::YieldFromStmt(const YieldFromStmt &stmt)
     : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
 string YieldFromStmt::toString() const {
@@ -324,11 +329,11 @@ string YieldFromStmt::toString() const {
 ACCEPT_IMPL(YieldFromStmt, ASTVisitor);
 
 WithStmt::WithStmt(vector<ExprPtr> &&items, vector<string> &&vars, StmtPtr suite)
-    : items(move(items)), vars(vars), suite(move(suite)) {
+    : Stmt(), items(move(items)), vars(vars), suite(move(suite)) {
   assert(items.size() == vars.size());
 }
 WithStmt::WithStmt(vector<pair<ExprPtr, string>> &&itemVarPairs, StmtPtr suite)
-    : suite(move(suite)) {
+    : Stmt(), suite(move(suite)) {
   for (auto &i : itemVarPairs) {
     items.push_back(move(i.first));
     vars.push_back(i.second);
@@ -349,7 +354,7 @@ string WithStmt::toString() const {
 ACCEPT_IMPL(WithStmt, ASTVisitor);
 
 AssignMemberStmt::AssignMemberStmt(ExprPtr lhs, string member, ExprPtr rhs)
-    : lhs(move(lhs)), member(move(member)), rhs(move(rhs)) {}
+    : Stmt(), lhs(move(lhs)), member(move(member)), rhs(move(rhs)) {}
 AssignMemberStmt::AssignMemberStmt(const AssignMemberStmt &stmt)
     : Stmt(stmt), lhs(ast::clone(stmt.lhs)), member(stmt.member),
       rhs(ast::clone(stmt.rhs)) {}
@@ -359,7 +364,7 @@ string AssignMemberStmt::toString() const {
 ACCEPT_IMPL(AssignMemberStmt, ASTVisitor);
 
 UpdateStmt::UpdateStmt(ExprPtr lhs, ExprPtr rhs, bool isAtomic)
-    : lhs(move(lhs)), rhs(move(rhs)), isAtomic(isAtomic) {}
+    : Stmt(), lhs(move(lhs)), rhs(move(rhs)), isAtomic(isAtomic) {}
 UpdateStmt::UpdateStmt(const UpdateStmt &stmt)
     : Stmt(stmt), lhs(ast::clone(stmt.lhs)), rhs(ast::clone(stmt.rhs)),
       isAtomic(stmt.isAtomic) {}
