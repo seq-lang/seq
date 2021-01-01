@@ -144,12 +144,12 @@ class Kmer[K: int]:
         return str(s) in str(self)
 
     def __str__(self):
-        ACGT = (byte(65), byte(67), byte(71), byte(84))
+        ACGT = 'ACGT'
         p = Ptr[byte](K)
         x = self.x
         i = K - 1
         while i >= 0:
-            p[i] = ACGT[int(x & UInt[2*K](3))]
+            p[i] = ACGT.ptr[int(x & UInt[2*K](3))]
             x >>= UInt[2*K](2)
             i -= 1
         return str(p, K)
