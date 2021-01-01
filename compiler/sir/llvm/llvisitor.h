@@ -144,6 +144,7 @@ public:
 
   void verify();
   void dump(const std::string &filename = "_dump.ll");
+  void compile(const std::string &outname);
   void run(const std::vector<std::string> &args = {},
            const std::vector<std::string> &libs = {},
            const char *const *envp = nullptr);

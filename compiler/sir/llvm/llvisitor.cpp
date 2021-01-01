@@ -232,6 +232,16 @@ void LLVMVisitor::runLLVMPipeline() {
   verify();
 }
 
+void LLVMVisitor::compile(const std::string &outname) {
+  runLLVMPipeline();
+  std::error_code err;
+  llvm::raw_fd_ostream stream(outname, err, llvm::sys::fs::F_None);
+  llvm::WriteBitcodeToFile(module.get(), stream);
+  if (err) {
+    throw std::runtime_error(err.message());
+  }
+}
+
 void LLVMVisitor::run(const std::vector<std::string> &args,
                       const std::vector<std::string> &libs, const char *const *envp) {
   runLLVMPipeline();
