@@ -54,11 +54,12 @@ int main(int argc, char **argv) {
   }
 
   auto module = parse(argv[0], input.c_str(), "", false, false);
+  if (!module)
+    return EXIT_FAILURE;
+
   seq::ir::LLVMVisitor visitor(debug.getValue());
   visitor.visit(module.get());
 
-  if (!module)
-    return EXIT_FAILURE;
   if (output.getValue().empty()) {
     argsVec.insert(argsVec.begin(), input);
     visitor.run(argsVec, libsVec);
