@@ -15,11 +15,6 @@ const char Flow::NodeId = 0;
 
 const char SeriesFlow::NodeId = 0;
 
-bool SeriesFlow::containsFlows() const {
-  return std::any_of(begin(), end(),
-                     [](const ValuePtr &child) { return child->is<Flow>(); });
-}
-
 std::ostream &SeriesFlow::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: [\n{}\n]"), referenceString(),
              fmt::join(util::dereference_adaptor(series.begin()),
@@ -29,7 +24,7 @@ std::ostream &SeriesFlow::doFormat(std::ostream &os) const {
 
 Value *SeriesFlow::doClone() const {
   auto *newFlow = getModule()->Nrs<SeriesFlow>(getSrcInfo(), getName());
-  for (auto &child : *this)
+  for (auto *child : *this)
     newFlow->push_back(child->clone());
   return newFlow;
 }
@@ -80,9 +75,10 @@ const char TryCatchFlow::NodeId = 0;
 std::ostream &TryCatchFlow::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: try {{\n{}\n}}"), referenceString(), *body);
   for (auto &c : catches) {
-    fmt::print(os, FMT_STRING("catch ({}{}{}) {{\n{}\n}} "), *c.type,
-               c.catchVar ? " -> " : "",
-               c.catchVar ? c.catchVar->referenceString() : "", *c.handler);
+    fmt::print(os, FMT_STRING("catch ({}{}{}) {{\n{}\n}} "),
+               c.getType() ? c.getType()->referenceString() : "all",
+               c.getVar() ? " -> " : "",
+               c.getVar() ? c.getVar()->referenceString() : "", *c.getHandler());
   }
   if (finally)
     fmt::print(os, FMT_STRING("finally {{\n{}\n}}"), *finally);
@@ -93,7 +89,8 @@ Value *TryCatchFlow::doClone() const {
   auto *newFlow = getModule()->Nrs<TryCatchFlow>(
       getSrcInfo(), body->clone(), finally ? finally->clone() : nullptr, getName());
   for (auto &child : *this)
-    newFlow->emplace_back(child.handler->clone(), child.type, child.catchVar);
+    newFlow->emplace_back(child.getHandler()->clone(), child.getType(),
+                          const_cast<Var *>(child.getVar()));
   return newFlow;
 }
 
@@ -108,7 +105,7 @@ std::ostream &UnorderedFlow::doFormat(std::ostream &os) const {
 
 Value *UnorderedFlow::doClone() const {
   auto *newFlow = getModule()->Nrs<UnorderedFlow>(getSrcInfo(), getName());
-  for (auto &child : *this)
+  for (auto *child : *this)
     newFlow->push_back(child->clone());
   return newFlow;
 }

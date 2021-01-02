@@ -69,7 +69,7 @@ public:
     return isConvertible(Target::nodeId()) ? static_cast<Target *>(this) : nullptr;
   }
   /// See LLVM documentation.
-  template <typename Target> Target *as() const {
+  template <typename Target> const Target *as() const {
     return isConvertible(Target::nodeId()) ? static_cast<const Target *>(this)
                                            : nullptr;
   }
@@ -83,6 +83,9 @@ public:
   /// Accepts visitors.
   /// @param v the visitor
   virtual void accept(util::SIRVisitor &v) = 0;
+  /// Accepts visitors.
+  /// @param v the visitor
+  virtual void accept(util::SIRVisitor &v) const = 0;
 
   /// Sets an attribute
   /// @param key the attribute's key
@@ -149,9 +152,16 @@ public:
   }
 
   void accept(util::SIRVisitor &v) { v.visit(static_cast<Derived *>(this)); }
+  void accept(util::SIRVisitor &v) const {
+    v.visit(static_cast<const Derived *>(this));
+  }
 };
 
 template <typename Desired> Desired *cast(IRNode *other) {
+  return other != nullptr ? other->as<Desired>() : nullptr;
+}
+
+template <typename Desired> const Desired *cast(const IRNode *other) {
   return other != nullptr ? other->as<Desired>() : nullptr;
 }
 

@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include "func.h"
+#include "util/iterators.h"
 #include "value.h"
 #include "var.h"
 
@@ -14,11 +15,6 @@ namespace ir {
 /// SIR object representing a program.
 class IRModule : public AcceptorExtend<IRModule, IRNode> {
 public:
-  using iterator = std::list<VarPtr>::iterator;
-  using const_iterator = std::list<VarPtr>::const_iterator;
-  using reference = std::list<VarPtr>::reference;
-  using const_reference = std::list<VarPtr>::const_reference;
-
   static const std::string VOID_NAME;
   static const std::string BOOL_NAME;
   static const std::string BYTE_NAME;
@@ -44,46 +40,45 @@ public:
   explicit IRModule(std::string name) : AcceptorExtend(std::move(name)) {}
 
   /// @return the main function
-  const FuncPtr &getMainFunc() const { return mainFunc; }
+  Func *getMainFunc() { return mainFunc.get(); }
+  /// @return the main function
+  const Func *getMainFunc() const { return mainFunc.get(); }
   /// Sets the main function.
   /// @param f the new funciton
   void setMainFunc(FuncPtr f) { mainFunc = std::move(f); }
 
   /// @return the arg var
-  const VarPtr &getArgVar() const { return argVar; }
+  Var *getArgVar() { return argVar.get(); }
+  /// @return the arg var
+  const Var *getArgVar() const { return argVar.get(); }
   /// Sets the arg var.
   /// @param f the new function
   void setArgVar(VarPtr f) { argVar = std::move(f); }
 
   /// @return iterator to the first symbol
-  iterator begin() { return symbols.begin(); }
+  auto begin() { return util::raw_ptr_adaptor(symbols.begin()); }
   /// @return iterator beyond the last symbol
-  iterator end() { return symbols.end(); }
+  auto end() { return util::raw_ptr_adaptor(symbols.end()); }
   /// @return iterator to the first symbol
-  const_iterator begin() const { return symbols.begin(); }
+  auto begin() const { return util::const_raw_ptr_adaptor(symbols.begin()); }
   /// @return iterator beyond the last symbol
-  const_iterator end() const { return symbols.end(); }
+  auto end() const { return util::const_raw_ptr_adaptor(symbols.end()); }
 
-  /// @return a reference to the first symbol
-  reference front() { return symbols.front(); }
-  /// @return a reference to the last symbol
-  reference back() { return symbols.back(); }
-  /// @return a reference to the first symbol
-  const_reference front() const { return symbols.front(); }
-  /// @return a reference to the last symbol
-  const_reference back() const { return symbols.back(); }
+  /// @return a pointer to the first symbol
+  Var *front() { return symbols.front().get(); }
+  /// @return a pointer to the last symbol
+  Var *back() { return symbols.back().get(); }
+  /// @return a pointer to the first symbol
+  const Var *front() const { return symbols.front().get(); }
+  /// @return a pointer to the last symbol
+  const Var *back() const { return symbols.back().get(); }
 
   /// Inserts an symbol at the given position.
   /// @param pos the position
   /// @param v the symbol
   /// @return an iterator to the newly added symbol
-  iterator insert(iterator pos, VarPtr v) { return symbols.insert(pos, std::move(v)); }
-  /// Inserts an symbol at the given position.
-  /// @param pos the position
-  /// @param v the symbol
-  /// @return an iterator to the newly added symbol
-  iterator insert(const_iterator pos, VarPtr v) {
-    return symbols.insert(pos, std::move(v));
+  template <typename It> auto insert(It pos, VarPtr v) {
+    return util::raw_ptr_adaptor(symbols.insert(pos.internal, std::move(v)));
   }
   /// Appends an symbol.
   /// @param v the new symbol
@@ -92,11 +87,9 @@ public:
   /// Erases the symbol at the given position.
   /// @param pos the position
   /// @return iterator following the removed symbol.
-  iterator erase(iterator pos) { return symbols.erase(pos); }
-  /// Erases the symbol at the given position.
-  /// @param pos the position
-  /// @return iterator following the removed symbol.
-  iterator erase(const_iterator pos) { return symbols.erase(pos); }
+  template <typename It> auto erase(It pos) {
+    return util::raw_ptr_adaptor(symbols.erase(pos.internal));
+  }
 
   /// @param name the type's name
   /// @return the type with the given name
@@ -142,7 +135,7 @@ public:
     return std::move(ret);
   }
 
-  types::Type *getPointerType(types::Type *base) {
+  types::Type *getPointerType(const types::Type *base) {
     auto name = types::PointerType::getName(base);
     auto *rVal = getType(name);
     if (!rVal) {
@@ -152,7 +145,7 @@ public:
     return rVal;
   }
 
-  types::Type *getArrayType(types::Type *base) {
+  types::Type *getArrayType(const types::Type *base) {
     auto name = types::ArrayType::getName(base);
     auto *rVal = getType(name);
     if (!rVal) {
@@ -162,7 +155,7 @@ public:
     return rVal;
   }
 
-  types::Type *getGeneratorType(types::Type *base) {
+  types::Type *getGeneratorType(const types::Type *base) {
     auto name = types::GeneratorType::getName(base);
     auto *rVal = getType(name);
     if (!rVal) {
@@ -172,7 +165,7 @@ public:
     return rVal;
   }
 
-  types::Type *getOptionalType(types::Type *base) {
+  types::Type *getOptionalType(const types::Type *base) {
     auto name = types::OptionalType::getName(base);
     auto *rVal = getType(name);
     if (!rVal) {
@@ -237,7 +230,8 @@ public:
     return rVal;
   }
 
-  types::Type *getFuncType(types::Type *rType, std::vector<types::Type *> argTypes) {
+  types::Type *getFuncType(const types::Type *rType,
+                           std::vector<const types::Type *> argTypes) {
     auto name = types::FuncType::getName(rType, argTypes);
     auto *rVal = getType(name);
     if (!rVal) {

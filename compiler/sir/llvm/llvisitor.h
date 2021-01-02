@@ -56,7 +56,7 @@ private:
     /// Finally start block
     llvm::BasicBlock *finallyBlock;
     /// Try-catch catch types
-    std::vector<types::Type *> catchTypes;
+    std::vector<const types::Type *> catchTypes;
     /// Try-catch handlers, corresponding to catch types
     std::vector<llvm::BasicBlock *> handlers;
     /// Exception state flag (see "State")
@@ -99,7 +99,7 @@ private:
   /// Whether we are compiling in debug mode
   bool debug;
 
-  template <typename T> void process(const T &x) { x->accept(*this); }
+  template <typename T> void process(T *x) { x->accept(*this); }
 
   /// GC allocation functions
   llvm::Function *makeAllocFunc(bool atomic);
@@ -117,8 +117,8 @@ private:
   llvm::StructType *getPadType();
   llvm::StructType *getExceptionType();
   llvm::GlobalVariable *getTypeIdxVar(const std::string &name);
-  llvm::GlobalVariable *getTypeIdxVar(types::Type *catchType);
-  int getTypeIdx(types::Type *catchType = nullptr);
+  llvm::GlobalVariable *getTypeIdxVar(const types::Type *catchType);
+  int getTypeIdx(const types::Type *catchType = nullptr);
 
   // General function helpers
   llvm::Value *call(llvm::Value *callee, llvm::ArrayRef<llvm::Value *> args);
@@ -148,7 +148,7 @@ public:
   void run(const std::vector<std::string> &args = {},
            const std::vector<std::string> &libs = {},
            const char *const *envp = nullptr);
-  llvm::Type *getLLVMType(types::Type *x);
+  llvm::Type *getLLVMType(const types::Type *x);
 
   void visit(IRModule *) override;
   void visit(BodiedFunc *) override;
@@ -160,19 +160,19 @@ public:
   void visit(PointerValue *) override;
   void visit(ValueProxy *) override;
 
-  void visit(types::IntType *) override;
-  void visit(types::FloatType *) override;
-  void visit(types::BoolType *) override;
-  void visit(types::ByteType *) override;
-  void visit(types::VoidType *) override;
-  void visit(types::RecordType *) override;
-  void visit(types::RefType *) override;
-  void visit(types::FuncType *) override;
-  void visit(types::OptionalType *) override;
-  void visit(types::ArrayType *) override;
-  void visit(types::PointerType *) override;
-  void visit(types::GeneratorType *) override;
-  void visit(types::IntNType *) override;
+  void visit(const types::IntType *) override;
+  void visit(const types::FloatType *) override;
+  void visit(const types::BoolType *) override;
+  void visit(const types::ByteType *) override;
+  void visit(const types::VoidType *) override;
+  void visit(const types::RecordType *) override;
+  void visit(const types::RefType *) override;
+  void visit(const types::FuncType *) override;
+  void visit(const types::OptionalType *) override;
+  void visit(const types::ArrayType *) override;
+  void visit(const types::PointerType *) override;
+  void visit(const types::GeneratorType *) override;
+  void visit(const types::IntNType *) override;
 
   void visit(IntConstant *) override;
   void visit(FloatConstant *) override;

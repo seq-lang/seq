@@ -275,7 +275,7 @@ void CodegenVisitor::visit(const AssignStmt *stmt) {
       if (!module->getArgVar())
         module->setArgVar(
             module->Nx<ir::Var>(module->getArrayType(module->getStringType()), "argv"));
-      ctx->addVar(var, module->getArgVar().get());
+      ctx->addVar(var, module->getArgVar());
     } else {
       auto *newVar = module->Nrs<ir::Var>(
           stmt, ctx->realizeType(stmt->lhs->getType()->getClass()), var);
@@ -344,6 +344,8 @@ void CodegenVisitor::visit(const YieldStmt *stmt) {
     value = transform(stmt->expr);
 
   ctx->getSeries()->push_back(module->Nxs<YieldInstr>(stmt, move(value)));
+
+  ctx->getBase()->setGenerator();
 }
 
 void CodegenVisitor::visit(const WhileStmt *stmt) {

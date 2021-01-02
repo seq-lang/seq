@@ -5,6 +5,7 @@
 
 #include "flow.h"
 #include "types/types.h"
+#include "util/iterators.h"
 #include "value.h"
 #include "var.h"
 
@@ -21,7 +22,7 @@ public:
 
   virtual ~Instr() = default;
 
-  types::Type *getType() const override { return nullptr; }
+  const types::Type *getType() const override { return nullptr; }
 };
 
 /// Instr representing setting a memory location.
@@ -44,13 +45,17 @@ public:
       : AcceptorExtend(std::move(name)), lhs(lhs), rhs(std::move(rhs)) {}
 
   /// @return the left-hand side
+  Var *getLhs() { return lhs; }
+  /// @return the left-hand side
   const Var *getLhs() const { return lhs; }
   /// Sets the left-hand side
   /// @param l the new value
   void setLhs(Var *v) { lhs = v; }
 
   /// @return the right-hand side
-  const ValuePtr &getRhs() const { return rhs; }
+  Value *getRhs() { return rhs.get(); }
+  /// @return the right-hand side
+  const Value *getRhs() const { return rhs.get(); }
   /// Sets the right-hand side
   /// @param l the new value
   void setRhs(ValuePtr v) { rhs = std::move(v); }
@@ -79,10 +84,12 @@ public:
   explicit ExtractInstr(ValuePtr val, std::string field, std::string name = "")
       : AcceptorExtend(std::move(name)), val(std::move(val)), field(std::move(field)) {}
 
-  types::Type *getType() const override;
+  const types::Type *getType() const override;
 
   /// @return the location
-  const ValuePtr &getVal() const { return val; }
+  Value *getVal() { return val.get(); }
+  /// @return the location
+  const Value *getVal() const { return val.get(); }
   /// Sets the location.
   /// @param p the new value
   void setVal(ValuePtr p) { val = std::move(p); }
@@ -122,16 +129,20 @@ public:
       : AcceptorExtend(std::move(name)), lhs(std::move(lhs)), field(std::move(field)),
         rhs(std::move(rhs)) {}
 
-  types::Type *getType() const override { return lhs->getType(); }
+  const types::Type *getType() const override { return lhs->getType(); }
 
   /// @return the left-hand side
-  const ValuePtr &getLhs() const { return lhs; }
+  Value *getLhs() { return lhs.get(); }
+  /// @return the left-hand side
+  const Value *getLhs() const { return lhs.get(); }
   /// Sets the left-hand side.
   /// @param p the new value
   void setLhs(ValuePtr p) { lhs = std::move(p); }
 
   /// @return the right-hand side
-  const ValuePtr &getRhs() const { return rhs; }
+  Value *getRhs() { return rhs.get(); }
+  /// @return the right-hand side
+  const Value *getRhs() const { return rhs.get(); }
   /// Sets the right-hand side.
   /// @param p the new value
   void setRhs(ValuePtr p) { rhs = std::move(p); }
@@ -150,12 +161,6 @@ private:
 
 /// Instr representing calling a function.
 class CallInstr : public AcceptorExtend<CallInstr, Instr> {
-public:
-  using iterator = std::vector<ValuePtr>::iterator;
-  using const_iterator = std::vector<ValuePtr>::const_iterator;
-  using reference = std::vector<ValuePtr>::reference;
-  using const_reference = std::vector<ValuePtr>::const_reference;
-
 private:
   /// the function
   ValuePtr func;
@@ -178,40 +183,40 @@ public:
   explicit CallInstr(ValuePtr func, std::string name = "")
       : CallInstr(std::move(func), {}, std::move(name)) {}
 
-  types::Type *getType() const override;
+  const types::Type *getType() const override;
 
   /// @return the func
-  const ValuePtr &getFunc() const { return func; }
+  Value *getFunc() { return func.get(); }
+  /// @return the func
+  const Value *getFunc() const { return func.get(); }
+  /// Sets the func.
+  /// @param f the new value
+  void setFunc(ValuePtr f) { func = std::move(f); }
 
   /// @return an iterator to the first argument
-  iterator begin() { return args.begin(); }
+  auto begin() { return util::raw_ptr_adaptor(args.begin()); }
   /// @return an iterator beyond the last argument
-  iterator end() { return args.end(); }
+  auto end() { return util::raw_ptr_adaptor(args.end()); }
   /// @return an iterator to the first argument
-  const_iterator begin() const { return args.begin(); }
+  auto begin() const { return util::const_raw_ptr_adaptor(args.begin()); }
   /// @return an iterator beyond the last argument
-  const_iterator end() const { return args.end(); }
+  auto end() const { return util::const_raw_ptr_adaptor(args.end()); }
 
-  /// @return a reference to the first argument
-  reference front() { return args.front(); }
-  /// @return a reference to the last argument
-  reference back() { return args.back(); }
-  /// @return a reference to the first argument
-  const_reference front() const { return args.front(); }
-  /// @return a reference to the last argument
-  const_reference back() const { return args.back(); }
+  /// @return a pointer to the first argument
+  Value *front() { return args.front().get(); }
+  /// @return a pointer to the last argument
+  Value *back() { return args.back().get(); }
+  /// @return a pointer to the first argument
+  const Value *front() const { return args.front().get(); }
+  /// @return a pointer to the last argument
+  const Value *back() const { return args.back().get(); }
 
   /// Inserts an argument at the given position.
   /// @param pos the position
   /// @param v the argument
   /// @return an iterator to the newly added argument
-  iterator insert(iterator pos, ValuePtr v) { return args.insert(pos, std::move(v)); }
-  /// Inserts an argument at the given position.
-  /// @param pos the position
-  /// @param v the argument
-  /// @return an iterator to the newly added argument
-  iterator insert(const_iterator pos, ValuePtr v) {
-    return args.insert(pos, std::move(v));
+  template <typename It> auto insert(It pos, ValuePtr v) {
+    return util::raw_ptr_adaptor(args.insert(pos.internal, std::move(v)));
   }
   /// Appends an argument.
   /// @param v the argument
@@ -231,7 +236,7 @@ private:
 class StackAllocInstr : public AcceptorExtend<StackAllocInstr, Instr> {
 private:
   /// the array type
-  types::Type *arrayType;
+  const types::Type *arrayType;
   /// number of elements to allocate
   ValuePtr count;
 
@@ -241,14 +246,16 @@ public:
   /// Constructs a stack allocation instruction.
   /// @param arrayType the type of the array
   /// @param count the number of elements
-  StackAllocInstr(types::Type *arrayType, ValuePtr count, std::string name = "")
+  StackAllocInstr(const types::Type *arrayType, ValuePtr count, std::string name = "")
       : AcceptorExtend(std::move(name)), arrayType(arrayType), count(std::move(count)) {
   }
 
-  types::Type *getType() const override { return arrayType; }
+  const types::Type *getType() const override { return arrayType; }
 
   /// @return the count
-  const ValuePtr &getCount() const { return count; }
+  Value *getCount() { return count.get(); }
+  /// @return the count
+  const Value *getCount() const { return count.get(); }
   /// Sets the count.
   /// @param c the new value
   void setCount(ValuePtr c) { count = std::move(c); }
@@ -263,7 +270,7 @@ private:
 class YieldInInstr : public AcceptorExtend<YieldInInstr, Instr> {
 private:
   /// the type of the value being yielded in.
-  types::Type *type;
+  const types::Type *type;
   /// whether or not to suspend
   bool suspend;
 
@@ -274,13 +281,17 @@ public:
   /// @param type the type of the value being yielded in
   /// @param supsend whether to suspend
   /// @param name the instruction's name
-  explicit YieldInInstr(types::Type *type, bool suspend = true, std::string name = "")
+  explicit YieldInInstr(const types::Type *type, bool suspend = true,
+                        std::string name = "")
       : AcceptorExtend(std::move(name)), type(type), suspend(suspend) {}
 
-  types::Type *getType() const override { return type; }
+  const types::Type *getType() const override { return type; }
 
   /// @return true if the instruction suspends
   bool isSuspending() const { return suspend; }
+  /// Sets the instruction suspending flag.
+  /// @param v the new value
+  void setSuspending(bool v = true) { suspend = v; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -311,22 +322,28 @@ public:
       : AcceptorExtend(std::move(name)), cond(std::move(cond)),
         trueValue(std::move(trueValue)), falseValue(std::move(falseValue)) {}
 
-  types::Type *getType() const override { return trueValue->getType(); }
+  const types::Type *getType() const override { return trueValue->getType(); }
 
   /// @return the condition
-  const ValuePtr &getCond() const { return cond; }
+  Value *getCond() { return cond.get(); }
+  /// @return the condition
+  const Value *getCond() const { return cond.get(); }
   /// Sets the condition.
   /// @param v the new value
   void setCond(ValuePtr v) { cond = std::move(v); }
 
   /// @return the condition
-  const ValuePtr &getTrueValue() const { return trueValue; }
+  Value *getTrueValue() { return trueValue.get(); }
+  /// @return the condition
+  const Value *getTrueValue() const { return trueValue.get(); }
   /// Sets the true value.
   /// @param v the new value
   void setTrueValue(ValuePtr v) { trueValue = std::move(v); }
 
   /// @return the false value
-  const ValuePtr &getFalseValue() const { return falseValue; }
+  Value *getFalseValue() { return falseValue.get(); }
+  /// @return the false value
+  const Value *getFalseValue() const { return falseValue.get(); }
   /// Sets the value.
   /// @param v the new value
   void setFalseValue(ValuePtr v) { falseValue = std::move(v); }
@@ -339,7 +356,8 @@ private:
 
 /// Base for control flow instructions
 class ControlFlowInstr : public AcceptorExtend<ControlFlowInstr, Instr> {
-private:
+
+protected:
   /// the target
   Flow *target;
 
@@ -352,7 +370,9 @@ public:
       : AcceptorExtend(std::move(name)), target(target) {}
 
   /// @return the target
-  Flow *getTarget() const { return target; }
+  Flow *getTarget() { return target; }
+  /// @return the target
+  const Flow *getTarget() const { return target; }
   /// Sets the count.
   /// @param f the new value
   void setTarget(Flow *f) { target = f; }
@@ -397,7 +417,9 @@ public:
       : AcceptorExtend(nullptr, std::move(name)), value(std::move(value)) {}
 
   /// @return the value
-  const ValuePtr &getValue() const { return value; }
+  Value *getValue() { return value.get(); }
+  /// @return the value
+  const Value *getValue() const { return value.get(); }
   /// Sets the value.
   /// @param v the new value
   void setValue(ValuePtr v) { value = std::move(v); }
@@ -420,7 +442,9 @@ public:
       : AcceptorExtend(std::move(name)), value(std::move(value)) {}
 
   /// @return the value
-  const ValuePtr &getValue() const { return value; }
+  Value *getValue() { return value.get(); }
+  /// @return the value
+  const Value *getValue() const { return value.get(); }
   /// Sets the value.
   /// @param v the new value
   void setValue(ValuePtr v) { value = std::move(v); }
@@ -443,7 +467,9 @@ public:
       : AcceptorExtend(std::move(name)), value(std::move(value)) {}
 
   /// @return the value
-  const ValuePtr &getValue() const { return value; }
+  Value *getValue() { return value.get(); }
+  /// @return the value
+  const Value *getValue() const { return value.get(); }
   /// Sets the value.
   /// @param v the new value
   void setValue(ValuePtr v) { value = std::move(v); }
@@ -472,16 +498,20 @@ public:
   explicit FlowInstr(FlowPtr flow, ValuePtr val, std::string name = "")
       : AcceptorExtend(std::move(name)), flow(std::move(flow)), val(std::move(val)) {}
 
-  types::Type *getType() const override { return val->getType(); }
+  const types::Type *getType() const override { return val->getType(); }
 
   /// @return the flow
-  const FlowPtr &getFlow() const { return flow; }
+  Flow *getFlow() { return flow.get(); }
+  /// @return the flow
+  const Flow *getFlow() const { return flow.get(); }
   /// Sets the flow.
   /// @param f the new flow
   void setFlow(FlowPtr f) { flow = std::move(f); }
 
   /// @return the value
-  const ValuePtr &getValue() const { return val; }
+  Value *getValue() { return val.get(); }
+  /// @return the value
+  const Value *getValue() const { return val.get(); }
   /// Sets the value.
   /// @param v the new value
   void setValue(ValuePtr v) { val = std::move(v); }

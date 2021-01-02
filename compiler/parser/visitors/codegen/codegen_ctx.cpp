@@ -123,7 +123,7 @@ seq::ir::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
     return it->second;
 
   seq::ir::types::Type *handle = nullptr;
-  vector<seq::ir::types::Type *> types;
+  vector<const seq::ir::types::Type *> types;
   vector<int> statics;
   for (auto &m : t->explicits) {
     if (auto s = m.type->getStatic())
@@ -172,7 +172,7 @@ seq::ir::types::Type *CodegenContext::realizeType(types::ClassTypePtr t) {
     handle = module->getFuncType(ret, types);
   } else {
     vector<string> names;
-    vector<seq::ir::types::Type *> types;
+    vector<const seq::ir::types::Type *> types;
 
     handle = module->getMemberedType(t->realizeString(), !t->isRecord());
     this->types[t->realizeString()] = handle;

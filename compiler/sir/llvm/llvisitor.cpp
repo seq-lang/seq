@@ -278,7 +278,7 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
   delete eng;
 }
 
-llvm::Type *LLVMVisitor::getLLVMType(types::Type *x) {
+llvm::Type *LLVMVisitor::getLLVMType(const types::Type *x) {
   process(x);
   return type;
 }
@@ -369,11 +369,11 @@ llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(const std::string &name) {
   return tidx;
 }
 
-llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(types::Type *catchType) {
+llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(const types::Type *catchType) {
   return getTypeIdxVar(catchType ? catchType->getName() : "");
 }
 
-int LLVMVisitor::getTypeIdx(types::Type *catchType) {
+int LLVMVisitor::getTypeIdx(const types::Type *catchType) {
   return typeIdxLookup(catchType ? catchType->getName() : "");
 }
 
@@ -431,7 +431,7 @@ void LLVMVisitor::visit(IRModule *x) {
   module->setDataLayout(llvm::EngineBuilder().selectTarget()->createDataLayout());
 
   // args variable
-  Var *argVar = x->getArgVar().get();
+  Var *argVar = x->getArgVar();
   llvm::Type *argVarType = getLLVMType(argVar->getType());
   auto *argStorage = new llvm::GlobalVariable(
       *module.get(), argVarType, false, llvm::GlobalValue::PrivateLinkage,
@@ -439,8 +439,8 @@ void LLVMVisitor::visit(IRModule *x) {
   vars.insert(argVar, argStorage);
 
   // set up global variables and initialize functions
-  for (auto &var : *x) {
-    if (auto *f = cast<Func>(var.get())) {
+  for (auto *var : *x) {
+    if (auto *f = cast<Func>(var)) {
       makeLLVMFunction(f);
       funcs.insert(f, func);
     } else {
@@ -448,18 +448,18 @@ void LLVMVisitor::visit(IRModule *x) {
       auto *storage = new llvm::GlobalVariable(
           *module.get(), llvmType, false, llvm::GlobalValue::PrivateLinkage,
           llvm::Constant::getNullValue(llvmType), var->getName());
-      vars.insert(var.get(), storage);
+      vars.insert(var, storage);
     }
   }
 
   // process functions
-  for (auto &var : *x) {
-    if (auto *f = cast<Func>(var.get())) {
+  for (auto *var : *x) {
+    if (auto *f = cast<Func>(var)) {
       process(f);
     }
   }
 
-  Func *main = x->getMainFunc().get();
+  Func *main = x->getMainFunc();
   makeLLVMFunction(main);
   llvm::Function *realMain = func;
   process(main);
@@ -673,9 +673,9 @@ bool internalFuncMatches(const std::string &name, InternalFunc *x,
   if (name != x->getUnmangledName() ||
       std::distance(funcType->begin(), funcType->end()) != sizeof...(ArgTypes))
     return false;
-  std::vector<types::Type *> argTypes(funcType->begin(), funcType->end());
-  std::vector<bool> m = {cast<ParentType>(x->getParentType()),
-                         cast<ArgTypes>(argTypes[Index])...};
+  std::vector<const types::Type *> argTypes(funcType->begin(), funcType->end());
+  std::vector<bool> m = {bool(cast<ParentType>(x->getParentType())),
+                         bool(cast<ArgTypes>(argTypes[Index]))...};
   const bool match = std::all_of(m.begin(), m.end(), [](bool b) { return b; });
   return match;
 }
@@ -861,9 +861,9 @@ void LLVMVisitor::visit(InternalFunc *x) {
   func = module->getFunction(getNameForFunction(x)); // inserted during module visit
   coro = {};
 
-  Type *parentType = x->getParentType();
+  const Type *parentType = x->getParentType();
   auto *funcType = cast<FuncType>(x->getType());
-  std::vector<Type *> argTypes(funcType->begin(), funcType->end());
+  std::vector<const Type *> argTypes(funcType->begin(), funcType->end());
 
   assert(func);
   func->setLinkage(llvm::GlobalValue::PrivateLinkage);
@@ -888,7 +888,7 @@ void LLVMVisitor::visit(InternalFunc *x) {
 
   if (internalFuncMatches<PointerType, IntType>("__new__", x)) {
     auto *pointerType = cast<PointerType>(parentType);
-    Type *baseType = pointerType->getBase();
+    const Type *baseType = pointerType->getBase();
     llvm::Type *llvmBaseType = getLLVMType(baseType);
     llvm::Function *allocFunc = makeAllocFunc(baseType->isAtomic());
     llvm::Value *elemSize =
@@ -1139,16 +1139,16 @@ void LLVMVisitor::visit(BodiedFunc *x) {
          std::distance(x->arg_begin(), x->arg_end()));
   auto argIter = func->arg_begin();
   for (auto varIter = x->arg_begin(); varIter != x->arg_end(); ++varIter) {
-    Var *var = varIter->get();
+    Var *var = *varIter;
     llvm::Value *storage = builder.CreateAlloca(getLLVMType(var->getType()));
     builder.CreateStore(argIter, storage);
     vars.insert(var, storage);
     ++argIter;
   }
 
-  for (auto &symbol : *x) {
+  for (auto *symbol : *x) {
     llvm::Value *storage = builder.CreateAlloca(getLLVMType(symbol->getType()));
-    vars.insert(symbol.get(), storage);
+    vars.insert(symbol, storage);
   }
 
   auto *startBlock = llvm::BasicBlock::Create(context, "start", func);
@@ -1277,19 +1277,27 @@ void LLVMVisitor::visit(ValueProxy *x) { assert(0); }
  * Types
  */
 
-void LLVMVisitor::visit(types::IntType *x) { type = llvm::Type::getInt64Ty(context); }
+void LLVMVisitor::visit(const types::IntType *x) {
+  type = llvm::Type::getInt64Ty(context);
+}
 
-void LLVMVisitor::visit(types::FloatType *x) {
+void LLVMVisitor::visit(const types::FloatType *x) {
   type = llvm::Type::getDoubleTy(context);
 }
 
-void LLVMVisitor::visit(types::BoolType *x) { type = llvm::Type::getInt8Ty(context); }
+void LLVMVisitor::visit(const types::BoolType *x) {
+  type = llvm::Type::getInt8Ty(context);
+}
 
-void LLVMVisitor::visit(types::ByteType *x) { type = llvm::Type::getInt8Ty(context); }
+void LLVMVisitor::visit(const types::ByteType *x) {
+  type = llvm::Type::getInt8Ty(context);
+}
 
-void LLVMVisitor::visit(types::VoidType *x) { type = llvm::Type::getVoidTy(context); }
+void LLVMVisitor::visit(const types::VoidType *x) {
+  type = llvm::Type::getVoidTy(context);
+}
 
-void LLVMVisitor::visit(types::RecordType *x) {
+void LLVMVisitor::visit(const types::RecordType *x) {
   std::vector<llvm::Type *> body;
   for (const auto &field : *x) {
     body.push_back(getLLVMType(field.type));
@@ -1297,9 +1305,11 @@ void LLVMVisitor::visit(types::RecordType *x) {
   type = llvm::StructType::get(context, body);
 }
 
-void LLVMVisitor::visit(types::RefType *x) { type = llvm::Type::getInt8PtrTy(context); }
+void LLVMVisitor::visit(const types::RefType *x) {
+  type = llvm::Type::getInt8PtrTy(context);
+}
 
-void LLVMVisitor::visit(types::FuncType *x) {
+void LLVMVisitor::visit(const types::FuncType *x) {
   llvm::Type *returnType = getLLVMType(x->getReturnType());
   std::vector<llvm::Type *> argTypes;
   for (const auto &argType : *x) {
@@ -1309,7 +1319,7 @@ void LLVMVisitor::visit(types::FuncType *x) {
       llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false)->getPointerTo();
 }
 
-void LLVMVisitor::visit(types::OptionalType *x) {
+void LLVMVisitor::visit(const types::OptionalType *x) {
   if (cast<types::RefType>(x->getBase())) {
     type = llvm::Type::getInt8PtrTy(context);
   } else {
@@ -1318,20 +1328,20 @@ void LLVMVisitor::visit(types::OptionalType *x) {
   }
 }
 
-void LLVMVisitor::visit(types::ArrayType *x) {
+void LLVMVisitor::visit(const types::ArrayType *x) {
   type = llvm::StructType::get(llvm::Type::getInt64Ty(context),
                                getLLVMType(x->getBase())->getPointerTo());
 }
 
-void LLVMVisitor::visit(types::PointerType *x) {
+void LLVMVisitor::visit(const types::PointerType *x) {
   type = getLLVMType(x->getBase())->getPointerTo();
 }
 
-void LLVMVisitor::visit(types::GeneratorType *x) {
+void LLVMVisitor::visit(const types::GeneratorType *x) {
   type = llvm::Type::getInt8PtrTy(context);
 }
 
-void LLVMVisitor::visit(types::IntNType *x) {
+void LLVMVisitor::visit(const types::IntNType *x) {
   type = llvm::Type::getIntNTy(context, x->getLen());
 }
 
@@ -1491,7 +1501,7 @@ void LLVMVisitor::visit(ForFlow *x) {
 }
 
 namespace {
-bool anyMatch(types::Type *type, std::vector<types::Type *> types) {
+bool anyMatch(const types::Type *type, std::vector<const types::Type *> types) {
   if (type) {
     for (auto *t : types) {
       if (t && t->getName() == type->getName())
@@ -1639,10 +1649,10 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
 
   for (auto *c : catches) {
     auto *catchBlock = llvm::BasicBlock::Create(context, "trycatch.catch", func);
-    tc.catchTypes.push_back(c->type);
+    tc.catchTypes.push_back(c->getType());
     tc.handlers.push_back(catchBlock);
 
-    if (!c->type) {
+    if (!c->getType()) {
       assert(!catchAll);
       catchAll = catchBlock;
     }
@@ -1663,7 +1673,7 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
   builder.CreateResume(builder.CreateLoad(tc.catchStore));
 
   // make sure we delegate to parent try-catch if necessary
-  std::vector<types::Type *> catchTypesFull(tc.catchTypes);
+  std::vector<const types::Type *> catchTypesFull(tc.catchTypes);
   std::vector<llvm::BasicBlock *> handlersFull(tc.handlers);
   std::vector<unsigned> depths(tc.catchTypes.size(), 0);
   unsigned depth = 1;
@@ -1770,17 +1780,18 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
     if (i < catches.size()) {
       block = handlersFull[i];
       builder.SetInsertPoint(block);
-      Var *var = catches[i]->catchVar;
+      Var *var = catches[i]->getVar();
 
       if (var) {
-        llvm::Value *obj = builder.CreateBitCast(objPtr, getLLVMType(catches[i]->type));
+        llvm::Value *obj =
+            builder.CreateBitCast(objPtr, getLLVMType(catches[i]->getType()));
         llvm::Value *varPtr = vars[var];
         assert(varPtr);
         builder.CreateStore(obj, varPtr);
       }
 
       builder.CreateStore(excStateCaught, tc.excFlag);
-      process(catches[i]->handler);
+      process(catches[i]->getHandler());
       builder.SetInsertPoint(block);
       builder.CreateBr(tc.finallyBlock);
     }
@@ -1790,7 +1801,7 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
 }
 
 void LLVMVisitor::visit(UnorderedFlow *x) {
-  for (auto &flow : *x) {
+  for (auto *flow : *x) {
     process(flow);
   }
 }
@@ -1847,7 +1858,7 @@ void LLVMVisitor::visit(CallInstr *x) {
   llvm::Value *f = value;
 
   std::vector<llvm::Value *> args;
-  for (const ValuePtr &arg : *x) {
+  for (auto *arg : *x) {
     builder.SetInsertPoint(block);
     process(arg);
     args.push_back(value);
@@ -1883,7 +1894,7 @@ void LLVMVisitor::visit(StackAllocInstr *x) {
   }
 
   seq_int_t size = 0;
-  if (auto *constSize = cast<IntConstant>(x->getCount().get())) {
+  if (auto *constSize = cast<IntConstant>(x->getCount())) {
     size = constSize->getVal();
   } else {
     assert(0 && "StackAllocInstr size is not constant");
