@@ -264,12 +264,41 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
 void TypecheckVisitor::visit(IfStmt *stmt) {
   vector<IfStmt::If> ifs;
   stmt->done = true;
+  bool sawStatic = false;
+  bool resolvedAllStatics = true;
   for (auto &i : stmt->ifs) {
     if ((i.cond = transform(i.cond)))
       stmt->done &= i.cond->done;
+    if (i.cond && i.cond->isStaticExpr) {
+      sawStatic = true;
+      if (i.cond->staticEvaluation.first && !i.cond->staticEvaluation.second) {
+        continue; // do not include this suite
+      } else if (!i.cond->staticEvaluation.first) {
+        stmt->done = false; // do not typecheck this suite yet
+        resolvedAllStatics = false;
+      } else {
+        if ((i.suite = transform(i.suite))) {
+          stmt->done &= i.suite->done;
+          ifs.emplace_back(IfStmt::If{move(i.cond), move(i.suite)});
+        }
+        break; // done, all further conditions are not needed anymore.
+      }
+    } else if (i.cond && i.cond->type->getClass() &&
+               i.cond->type->getClass()->name != "bool") {
+      i.cond = transform(N<CallExpr>(N<DotExpr>(move(i.cond), "__bool__")));
+      stmt->done &= i.cond->done;
+    }
+    if (sawStatic && !resolvedAllStatics)
+      continue; // we can continue type-checking other branches only if we are sure
+                // that all previous branches cannot be resolved at the compile-time
     if ((i.suite = transform(i.suite)))
       stmt->done &= i.suite->done;
+    ifs.emplace_back(IfStmt::If{move(i.cond), move(i.suite)});
   }
+  if (ifs.size())
+    stmt->ifs = move(ifs);
+  else
+    resultStmt = transform(N<PassStmt>());
 }
 
 void TypecheckVisitor::visit(MatchStmt *stmt) {

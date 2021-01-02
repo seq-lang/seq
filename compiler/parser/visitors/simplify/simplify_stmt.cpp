@@ -212,9 +212,7 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
 void SimplifyVisitor::visit(IfStmt *stmt) {
   vector<IfStmt::If> ifs;
   for (auto &i : stmt->ifs)
-    ifs.push_back({transform(i.cond ? N<CallExpr>(N<DotExpr>(clone(i.cond), "__bool__"))
-                                    : nullptr),
-                   transform(i.suite)});
+    ifs.push_back({transform(i.cond), transform(i.suite)});
   resultStmt = N<IfStmt>(move(ifs));
 }
 
