@@ -439,10 +439,9 @@ private:
   /// Generate a function type Function.N[TR, T1, ..., TN] as follows:
   ///   @internal @tuple @trait
   ///   class Function.N[TR, T1, ..., TN]:
-  ///     @internal
-  ///     def __new__(what: Ptr[byte]) -> Function.N[TR, T1, ..., TN]: pass
-  ///     @internal
-  ///     def __str__(self: Function.N[TR, T1, ..., TN]) -> str: pass
+  ///     def __new__(what: Ptr[byte]) -> Function.N[TR, T1, ..., TN]
+  ///     def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]
+  ///     def __str__(self: Function.N[TR, T1, ..., TN]) -> str
   /// Return the canonical name of Function.N.
   string generateFunctionStub(int n);
   /// Generate a magic method __op__ for a type described by typExpr and type arguments

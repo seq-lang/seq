@@ -311,12 +311,12 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               auto val = ctx->find(ei->value);
               seqassert(val && val->isStatic(), "invalid static expression");
               auto genTyp = val->type->follow();
-              staticGenerics.emplace_back(
-                  Generic{ei->value, genTyp,
-                          genTyp->getLink() ? genTyp->getLink()->id
-                          : genTyp->getStatic()->explicits.empty()
-                              ? 0
-                              : genTyp->getStatic()->explicits[0].id});
+              staticGenerics.emplace_back(Generic{
+                  ei->value, genTyp,
+                  genTyp->getLink() ? genTyp->getLink()->id
+                                    : genTyp->getStatic()->explicits.empty()
+                                          ? 0
+                                          : genTyp->getStatic()->explicits[0].id});
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -678,6 +678,30 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     expr->type |= ctx->findInternal("str");
     if (auto t = realizeType(expr->expr->type))
       return transform(N<StringExpr>(t->realizeString()));
+    return nullptr;
+  } else if (expr->member == "__atomic__") {
+    expr->type |= ctx->findInternal("bool");
+    if (auto t = realizeType(expr->expr->type)) {
+      LOG("ATOMIC: {} -> {}", t->realizeString(),
+          ctx->cache->classes[t->getClass()->name]
+              .realizations[t->realizeString()]
+              .llvm->isAtomic());
+      return transform(N<BoolExpr>(ctx->cache->classes[t->getClass()->name]
+                                       .realizations[t->realizeString()]
+                                       .llvm->isAtomic()));
+    }
+    return nullptr;
+  } else if (expr->member == "__elemsize__") {
+    expr->type |= ctx->findInternal("int");
+    if (auto t = realizeType(expr->expr->type)) {
+      LOG("ELEMSIZE: {} -> {}", t->realizeString(),
+          ctx->cache->classes[t->getClass()->name]
+              .realizations[t->realizeString()]
+              .llvm->size(ctx->cache->module->getModule()));
+      return transform(N<IntExpr>(ctx->cache->classes[t->getClass()->name]
+                                      .realizations[t->realizeString()]
+                                      .llvm->size(ctx->cache->module->getModule())));
+    }
     return nullptr;
   }
 

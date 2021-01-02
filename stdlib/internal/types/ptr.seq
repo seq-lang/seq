@@ -2,12 +2,6 @@ from C import seq_str_ptr(Ptr[byte]) -> str
 
 @extend
 class Ptr[T]:
-    @internal
-    def __elemsize__() -> int:
-        pass
-    @internal
-    def __atomic__() -> bool:
-        pass
     @llvm
     def __new__() -> Ptr[T]:
         ret {=T}* null

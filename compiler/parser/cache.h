@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 
+#include "lang/seq.h"
 #include "parser/ast.h"
 #include "parser/common.h"
 #include "parser/ctx.h"
@@ -84,6 +85,9 @@ struct Cache {
 
   /// Absolute path of seqc executable (if available).
   string argv0;
+  /// LLVM module.
+  seq::SeqModule *module;
+
   /// Table of imported files that maps an absolute filename to a Import structure.
   /// By convention, the key of Seq standard library is "".
   unordered_map<string, Import> imports;
@@ -166,7 +170,7 @@ struct Cache {
 public:
   explicit Cache(string argv0 = "")
       : generatedSrcInfoCount(0), unboundCount(0), varCount(0), testFlags(0),
-        argv0(move(argv0)) {}
+        argv0(move(argv0)), module(nullptr) {}
 
   /// Return a uniquely named temporary variable of a format
   /// "{sigil}_{prefix}{counter}". A sigil should be a non-lexable symbol.

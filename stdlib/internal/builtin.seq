@@ -252,10 +252,97 @@ class int:
 
         return result
 
-@builtin
-def _tuple_fix_index(idx: int, len: int) -> int:
-    if idx < 0:
-        idx += len
-    if idx < 0 or idx >= len:
-        raise IndexError("tuple index out of range")
-    return idx
+@inline
+def _preprocess_seq_pattern(pattern: str):
+    VALID = ('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x01\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+             '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+    STAR = byte(42)
+    p = pattern.ptr
+    n = pattern.len
+    star = -1
+    i = 0
+    while i < n:
+        c = p[i]
+        if not VALID[int(c)]:
+            raise ValueError(f"invalid character '{c}' in seq pattern")
+        if c == STAR:
+            if star >= 0:
+                raise ValueError("seq pattern can contain at most one '*'")
+            star = i
+        i += 1
+    return star
+
+# def kmer_match[N: int](self: Kmer[N], pattern: str):
+#     WILD = byte(95)
+#     p = pattern.ptr
+#     n = pattern.len
+#     star = _preprocess_seq_pattern(pattern)
+#     nt4 = seq._nt4_table()
+#     if star >= 0:
+#         m = N
+#         if m < n - 1:
+#             return False
+#         i = 0
+#         while i < star:
+#             if p[i] != WILD and int(nt4[int(p[i])]) != int(self[i]):
+#                 return False
+#             i += 1
+#         i = star + 1
+#         while i < n:
+#             if p[i] != WILD and int(nt4[int(p[i])]) != int(self[i + m - n]):
+#                 return False
+#             i += 1
+#         return True
+#     else:
+#         if N != n:
+#             return False
+#         i = 0
+#         while i < n:
+#             if p[i] != WILD and int(nt4[int(p[i])]) != int(self[i]):
+#                 return False
+#             i += 1
+#         return True
+
+# def seq_match(self: seq, pattern: str):
+#     WILD = byte(95)
+#     p = pattern.ptr
+#     n = pattern.len
+#     star = _preprocess_seq_pattern(pattern)
+#     if star >= 0:
+#         m = len(self)
+#         if m < n - 1:
+#             return False
+#         i = 0
+#         while i < star:
+#             if p[i] != WILD and p[i] != self._at(i):
+#                 return False
+#             i += 1
+#         i = star + 1
+#         while i < n:
+#             if p[i] != WILD and p[i] != self._at(i + m - n):
+#                 return False
+#             i += 1
+#         return True
+#     else:
+#         if len(self) != n:
+#             return False
+#         i = 0
+#         while i < n:
+#             if p[i] != WILD and p[i] != self._at(i):
+#                 return False
+#             i += 1
+#         return True

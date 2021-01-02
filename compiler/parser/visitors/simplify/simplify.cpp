@@ -38,6 +38,9 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   vector<StmtPtr> stmts;
   auto preamble = make_shared<Preamble>();
 
+  if (!cache->module)
+    cache->module = new seq::SeqModule();
+
   // Load standard library if it has not been loaded.
   if (!in(cache->imports, STDLIB_IMPORT)) {
     // Load the internal module
@@ -46,13 +49,25 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     if (stdlibPath.empty() ||
         stdlibPath.substr(stdlibPath.size() - 12) != "__init__.seq")
       ast::error("cannot load standard library");
-    if (barebones)
+    if (barebones || true)
       stdlibPath = stdlibPath.substr(0, stdlibPath.size() - 5) + "test__.seq";
     stdlib->setFilename(stdlibPath);
     cache->imports[STDLIB_IMPORT] = {stdlibPath, stdlib};
 
-    // Add simple POD types to the preamble
-    // (these types are defined in LLVM and we cannot properly define them in Seq)
+    // Add __internal class that will store functions needed by other internal classes.
+    // We will call them as __internal.fn because directly calling fn will result in a
+    // unresolved dependency cycle.
+    {
+      auto name = "__internal__";
+      auto canonical = stdlib->generateCanonicalName(name);
+      stdlib->add(SimplifyItem::Type, name, canonical, true);
+      // Generate an AST for each POD type. All of them are tuples.
+      cache->classes[canonical].ast = make_unique<ClassStmt>(
+          canonical, vector<Param>(), vector<Param>(), nullptr, vector<string>{});
+      preamble->types.emplace_back(clone(cache->classes[canonical].ast));
+    }
+    // Add simple POD types to the preamble (these types are defined in LLVM and we
+    // cannot properly define them in Seq)
     for (auto &name : {"void", "bool", "byte", "int", "float"}) {
       auto canonical = stdlib->generateCanonicalName(name);
       stdlib->add(SimplifyItem::Type, name, canonical, true);
@@ -89,7 +104,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     stdlib->isStdlibLoading = true;
     stdlib->moduleName = "__internal__";
     auto baseTypeCode = "@internal\n@tuple\nclass pyobj:\n  p: Ptr[byte]\n"
-                        "@internal\n@tuple\nclass str:\n  len: int\n  ptr: Ptr[byte]\n";
+                        "@internal\n@tuple\nclass str:\n  ptr: Ptr[byte]\n  len: int\n";
     SimplifyVisitor(stdlib, preamble).transform(parseCode(stdlibPath, baseTypeCode));
     // Load the standard library
     stdlib->setFilename(stdlibPath);

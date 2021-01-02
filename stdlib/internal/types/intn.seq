@@ -5,14 +5,13 @@ class Int[N]:
         ret i{=N} 0
     def __new__(what: Int[N]) -> Int[N]:
         return what
-    @internal
     def __new__(what: int) -> Int[N]:
-        pass
-    # @llvm
-    # def __new__(what: int) -> Int[N]:
-    #     # TODO: ext
-    #     %0 = trunc i64 %what to i{=N}
-    #     ret i{=N} %0
+        if N < 64:
+            return __internal__.int_trunc[64,N](what)
+        elif N == 64:
+            return what
+        else:
+            return __internal__.int_sext[64,N](what)
     @llvm
     def __new__(what: UInt[N]) -> Int[N]:
         ret i{=N} %what
@@ -154,19 +153,21 @@ class Int[N]:
 
 @extend
 class UInt[N]:
+    @internal
+    def __revcomp__(self) -> UInt[N]: pass
+
     @llvm
     def __new__() -> UInt[N]:
         ret i{=N} 0
     def __new__(what: UInt[N]) -> UInt[N]:
         return what
-    @internal
     def __new__(what: int) -> UInt[N]:
-        pass
-    # @llvm
-    # def __new__(what: int) -> UInt[N]:
-    #     # TODO: ext
-    #     %0 = trunc i64 %what to i{=N}
-    #     ret i{=N} %0
+        if N < 64:
+            return UInt[N](__internal__.int_trunc[64,N](what))
+        elif N == 64:
+            return what
+        else:
+            return UInt[N](__internal__.int_zext[64,N](what))
     @llvm
     def __new__(what: Int[N]) -> UInt[N]:
         ret i{=N} %what
@@ -291,30 +292,6 @@ class UInt[N]:
         return seq_str_uint(int(self))
     def popcnt(self):
         return int(Int[N](self)._popcnt())
-    @internal
-    def __revcomp__(self) -> UInt[N]:
-        pass
-    # TODO needs static import
-    # @llvm
-    # def __revcomp__(self) -> UInt[N]:
-    #     @seq.revcomp_table = private constant [256 x i8] c"\FF\BF\7F?\EF\AFo/\DF\9F_\1F\CF\8FO\0F\FB\BB\7B;\EB\ABk+\DB\9B[\1B\CB\8BK\0B\F7\B7w7\E7\A7g'\D7\97W\17\C7\87G\07\F3\B3s3\E3\A3c#\D3\93S\13\C3\83C\03\FE\BE~>\EE\AEn.\DE\9E^\1E\CE\8EN\0E\FA\BAz:\EA\AAj*\DA\9AZ\1A\CA\8AJ\0A\F6\B6v6\E6\A6f&\D6\96V\16\C6\86F\06\F2\B2r2\E2\A2b\22\D2\92R\12\C2\82B\02\FD\BD\7D=\ED\ADm-\DD\9D]\1D\CD\8DM\0D\F9\B9y9\E9\A9i)\D9\99Y\19\C9\89I\09\F5\B5u5\E5\A5e%\D5\95U\15\C5\85E\05\F1\B1q1\E1\A1a!\D1\91Q\11\C1\81A\01\FC\BC|<\EC\ACl,\DC\9C\5C\1C\CC\8CL\0C\F8\B8x8\E8\A8h(\D8\98X\18\C8\88H\08\F4\B4t4\E4\A4d$\D4\94T\14\C4\84D\04\F0\B0p0\E0\A0` \D0\90P\10\C0\80@\00"
-    #     %0 = and i{=N} %self, 255
-    #     %1 = lshr i{=N} %0, 0
-    #     %2 = zext i{=N} %1 to i64
-    #     %3 = getelementptr inbounds [256 x i8], [256 x i8]* @seq.revcomp_table, i64 0, i64 %2
-    #     %4 = load i8, i8* %3
-    #     %5 = zext i8 %4 to i{=N}
-    #     %6 = shl i{=N} %5, 8
-    #     %7 = or i{=N} 0, %6
-    #     %8 = and i{=N} %self, -256
-    #     %9 = lshr i{=N} %8, 8
-    #     %10 = zext i{=N} %9 to i64
-    #     %11 = getelementptr inbounds [256 x i8], [256 x i8]* @seq.revcomp_table, i64 0, i64 %10
-    #     %12 = load i8, i8* %11
-    #     %13 = zext i8 %12 to i{=N}
-    #     %14 = shl i{=N} %13, 0
-    #     %15 = or i{=N} %7, %14
-    #     ret i{=N} %15
     def len() -> int:
         return N
 

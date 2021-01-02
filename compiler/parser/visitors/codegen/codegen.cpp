@@ -88,7 +88,7 @@ seq::Pattern *CodegenVisitor::transform(const PatternPtr &ptr) {
 }
 
 seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
-  auto module = new seq::SeqModule();
+  auto module = cache->module;
   module->setFileName("");
   auto block = module->getBlock();
   auto ctx =

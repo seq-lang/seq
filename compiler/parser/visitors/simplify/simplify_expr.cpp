@@ -399,8 +399,8 @@ void SimplifyVisitor::visit(CallExpr *expr) {
       type = expr->args[1].value->clone();
     else
       type = transformType(expr->args[1].value.get());
-    resultExpr =
-        N<CallExpr>(clone(expr->expr), transform(expr->args[0].value), move(type));
+    resultExpr = N<CallExpr>(clone(expr->expr),
+                             transform(expr->args[0].value.get(), true), move(type));
     resultExpr->isStaticExpr = true;
     return;
   }

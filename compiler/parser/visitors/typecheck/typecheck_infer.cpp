@@ -118,9 +118,10 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
     while (ctx->bases.size() > depth)
       ctx->bases.pop_back();
 
-    // Special cases: Tuple.__iter__ and Tuple.__getitem__.
+    // Special cases: Tuple.(__iter__, __getitem__, __contains__).
     if (startswith(type->name, "Tuple.N") &&
-        (endswith(type->name, ".__iter__") || endswith(type->name, ".__getitem__"))) {
+        (endswith(type->name, ".__iter__") || endswith(type->name, ".__getitem__") ||
+         endswith(type->name, ".__contains__"))) {
       auto u = type->args[1]->getClass();
       string s;
       for (auto &a : u->args) {
@@ -372,9 +373,6 @@ seq::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   } else if (name == "Int" || name == "UInt") {
     assert(statics.size() == 1 && types.empty());
     handle = seq::types::IntNType::get(statics[0], name == "Int");
-  } else if (name == "Array") {
-    assert(types.size() == 1 && statics.empty());
-    handle = seq::types::ArrayType::get(types[0]);
   } else if (name == "Ptr") {
     assert(types.size() == 1 && statics.empty());
     handle = seq::types::PtrType::get(types[0]);

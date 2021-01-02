@@ -302,57 +302,6 @@ void types::RecordType::initOps() {
        },
        false},
 
-      {"__getitem__",
-       {types::Int},
-       empty() ? Void : types[0],
-       [this](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         if (empty()) {
-           throw exc::SeqException("cannot index empty tuple");
-         }
-
-         for (auto *type : types) {
-           if (!types::is(type, types[0])) {
-             throw exc::SeqException("cannot index heterogeneous tuple");
-           }
-         }
-
-         LLVMContext &context = b.getContext();
-         BasicBlock *block = b.GetInsertBlock();
-         Module *module = block->getModule();
-         const std::string getitemName = "seq." + getName() + ".__getitem__";
-         Function *getitem = module->getFunction(getitemName);
-         llvm::Type *type = getLLVMType(context);
-         llvm::Type *baseType = types[0]->getLLVMType(context);
-
-         if (!getitem) {
-           getitem = cast<Function>(module->getOrInsertFunction(
-               getitemName, baseType, type, seqIntLLVM(context)));
-           getitem->setLinkage(GlobalValue::PrivateLinkage);
-
-           auto iter = getitem->arg_begin();
-           Value *self = iter++;
-           Value *idx = iter;
-           BasicBlock *entry = BasicBlock::Create(context, "entry", getitem);
-           b.SetInsertPoint(entry);
-           Value *ptr = b.CreateAlloca(type);
-           b.CreateStore(self, ptr);
-           ptr = b.CreateBitCast(ptr, baseType->getPointerTo());
-           ptr = b.CreateGEP(ptr, idx);
-           b.CreateRet(b.CreateLoad(ptr));
-         }
-
-         Func *fixIndex = Func::getBuiltin("_tuple_fix_index");
-         FuncExpr fixIndexExpr(fixIndex);
-         ValueExpr idx(types::Int, args[0]);
-         ValueExpr len(types::Int, ConstantInt::get(seqIntLLVM(context), types.size()));
-         CallExpr fixIndexCall(&fixIndexExpr, {&idx, &len});
-         Value *idxFixed = fixIndexCall.codegen(nullptr, block);
-
-         b.SetInsertPoint(block);
-         return b.CreateCall(getitem, {self, idxFixed});
-       },
-       false},
-
       {"__iter__",
        {},
        GenType::get(empty() ? Void : types[0]),

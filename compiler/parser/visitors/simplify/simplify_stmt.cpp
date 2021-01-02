@@ -141,16 +141,16 @@ void SimplifyVisitor::visit(AssertStmt *stmt) {
     resultStmt = transform(N<IfStmt>(
         N<UnaryExpr>("!", clone(stmt->expr)),
         N<ExprStmt>(N<CallExpr>(
-            N<IdExpr>("seq_assert_test"), N<StringExpr>(stmt->getSrcInfo().file),
-            N<IntExpr>(stmt->getSrcInfo().line),
+            N<DotExpr>(N<IdExpr>("__internal__"), "seq_assert_test"),
+            N<StringExpr>(stmt->getSrcInfo().file), N<IntExpr>(stmt->getSrcInfo().line),
             stmt->message ? clone(stmt->message) : N<StringExpr>("")))));
   else
-    resultStmt = transform(
-        N<IfStmt>(N<UnaryExpr>("!", clone(stmt->expr)),
-                  N<ThrowStmt>(N<CallExpr>(
-                      N<IdExpr>("seq_assert"), N<StringExpr>(stmt->getSrcInfo().file),
-                      N<IntExpr>(stmt->getSrcInfo().line),
-                      stmt->message ? clone(stmt->message) : N<StringExpr>("")))));
+    resultStmt = transform(N<IfStmt>(
+        N<UnaryExpr>("!", clone(stmt->expr)),
+        N<ThrowStmt>(N<CallExpr>(
+            N<DotExpr>(N<IdExpr>("__internal__"), "seq_assert"),
+            N<StringExpr>(stmt->getSrcInfo().file), N<IntExpr>(stmt->getSrcInfo().line),
+            stmt->message ? clone(stmt->message) : N<StringExpr>("")))));
 }
 
 void SimplifyVisitor::visit(WhileStmt *stmt) {
@@ -481,8 +481,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     // realized. For example, in class A[T]: def foo(): pass, A.foo() can be realized
     // even if T is unknown. However, def bar(): return T() cannot because it needs T
     // (and is thus accordingly marked with ATTR_NOT_STATIC).
-    if ((!ctx->bases.empty() && refParent == ctx->bases.back().name) ||
-        canonicalName == "Ptr.__elemsize__" || canonicalName == "Ptr.__atomic__")
+    if (!ctx->bases.empty() && refParent == ctx->bases.back().name)
       attributes[ATTR_NOT_STATIC] = "";
   }
   auto f = N<FunctionStmt>(canonicalName, move(ret), move(newGenerics), move(args),
@@ -1066,18 +1065,39 @@ string SimplifyVisitor::generateFunctionStub(int n) {
 
     vector<StmtPtr> fns;
     vector<Param> params;
-    // def __new__(what: Ptr[byte]) -> Function.N[TR, T1, ..., TN]: pass
+    vector<StmtPtr> stmts;
+    // def __new__(what: Ptr[byte]) -> Function.N[TR, T1, ..., TN]:
+    //   return __internal__.fn_new[Function.N[TR, ...]](what)
     params.emplace_back(
         Param{"what", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte"))});
+    stmts.push_back(N<ReturnStmt>(N<CallExpr>(
+        N<IndexExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "fn_new"), clone(type)),
+        N<IdExpr>("what"))));
     fns.emplace_back(make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{},
-                                               move(params), nullptr,
-                                               vector<string>{ATTR_INTERNAL}));
+                                               move(params), N<SuiteStmt>(move(stmts)),
+                                               vector<string>{}));
     params.clear();
-    // def __str__(self: Function.N[TR, T1, ..., TN]) -> str: pass
+    stmts.clear();
+    // def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]:
+    //   return __internal__.fn_raw(self)
     params.emplace_back(Param{"self", clone(type)});
-    fns.emplace_back(make_unique<FunctionStmt>("__str__", N<IdExpr>("str"),
-                                               vector<Param>{}, move(params), nullptr,
-                                               vector<string>{ATTR_INTERNAL}));
+    stmts.push_back(N<ReturnStmt>(N<CallExpr>(
+        N<DotExpr>(N<IdExpr>("__internal__"), "fn_raw"), N<IdExpr>("self"))));
+    fns.emplace_back(make_unique<FunctionStmt>(
+        "__raw__", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte")), vector<Param>{},
+        move(params), N<SuiteStmt>(move(stmts)), vector<string>{}));
+    params.clear();
+    stmts.clear();
+    // def __str__(self: Function.N[TR, T1, ..., TN]) -> str:
+    //   return __internal__.raw_type_str(self.__raw__(), "function")
+    params.emplace_back(Param{"self", clone(type)});
+    stmts.push_back(
+        N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "raw_type_str"),
+                                  N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__raw__")),
+                                  N<StringExpr>("function"))));
+    fns.emplace_back(make_unique<FunctionStmt>(
+        "__str__", N<IdExpr>("str"), vector<Param>{}, move(params),
+        N<SuiteStmt>(move(stmts)), vector<string>{}));
     // class Function.N[TR, T1, ..., TN]
     StmtPtr stmt = make_unique<ClassStmt>(
         typeName, move(generics), move(args), N<SuiteStmt>(move(fns)),
@@ -1113,7 +1133,8 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
                   a.deflt ? clone(a.deflt) : N<CallExpr>(clone(a.type))});
     attrs.emplace_back(ATTR_INTERNAL);
   } else if (op == "init") {
-    // Classes: def __init__(self: T, a1: T1, ..., aN: TN) -> void
+    // Classes: def __init__(self: T, a1: T1, ..., aN: TN) -> void:
+    //            self.aI = aI ...
     ret = I("void");
     fargs.emplace_back(Param{"self", typExpr->clone()});
     for (auto &a : args) {
@@ -1122,24 +1143,48 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
                                a.deflt ? clone(a.deflt) : N<CallExpr>(clone(a.type))});
     }
   } else if (op == "raw") {
-    // Classes: @internal def __raw__(self: T) -> Ptr[byte]
+    // Classes: def __raw__(self: T) -> Ptr[byte]:
+    //            return __internal__.class_raw(self)
     fargs.emplace_back(Param{"self", typExpr->clone()});
     ret = N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte"));
-    attrs.emplace_back(ATTR_INTERNAL);
+    stmts.emplace_back(N<ReturnStmt>(
+        N<CallExpr>(N<DotExpr>(I("__internal__"), "class_raw"), I("self"))));
   } else if (op == "getitem") {
-    // Tuples: @internal def __getitem__(self: T, index: int) -> T
-    //         (not a real internal; code generated during a realizeFunc() method)
+    // Tuples: def __getitem__(self: T, index: int) -> T1:
+    //           return __internal__.tuple_getitem[T, T1](self, index)
+    //         (error during a realizeFunc() method if T is a heterogenous tuple)
     fargs.emplace_back(Param{"self", typExpr->clone()});
     fargs.emplace_back(Param{"index", I("int")});
     ret = !args.empty() ? clone(args[0].type) : I("void");
-    attrs.emplace_back(ATTR_INTERNAL);
+    vector<ExprPtr> idxArgs;
+    idxArgs.emplace_back(typExpr->clone());
+    idxArgs.emplace_back(ret->clone());
+    stmts.emplace_back(N<ReturnStmt>(
+        N<CallExpr>(N<IndexExpr>(N<DotExpr>(I("__internal__"), "tuple_getitem"),
+                                 N<TupleExpr>(move(idxArgs))),
+                    I("self"), I("index"))));
   } else if (op == "iter") {
-    // Tuples: @internal def __iter__(self: T) -> Generator[T]
-    //         (not a real internal; code generated during a realizeFunc() method)
+    // Tuples: def __iter__(self: T) -> Generator[T]:
+    //           yield self.aI ...
+    //         (error during a realizeFunc() method if T is a heterogenous tuple)
     fargs.emplace_back(Param{"self", typExpr->clone()});
     ret = N<IndexExpr>(I("Generator"), !args.empty() ? clone(args[0].type) : I("void"));
     for (auto &a : args)
       stmts.emplace_back(N<YieldStmt>(N<DotExpr>(N<IdExpr>("self"), a.name)));
+  } else if (op == "contains") {
+    // Tuples: @internal def __contains__(self: T, what: T1) -> bool:
+    //            if what == self.a1: return True ...
+    //            return False
+    //         (error during a realizeFunc() method if T is a heterogenous tuple)
+    // TODO: make it work with heterogenous tuples.
+    fargs.emplace_back(Param{"self", typExpr->clone()});
+    fargs.emplace_back(Param{"what", !args.empty() ? clone(args[0].type) : I("void")});
+    ret = I("bool");
+    for (auto &a : args)
+      stmts.push_back(N<IfStmt>(
+          N<CallExpr>(N<DotExpr>(I("what"), "__eq__"), N<DotExpr>(I("self"), a.name)),
+          N<ReturnStmt>(N<BoolExpr>(true))));
+    stmts.emplace_back(N<ReturnStmt>(N<BoolExpr>(false)));
   } else if (op == "eq") {
     // def __eq__(self: T, other: T) -> bool:
     //   if not self.arg1.__eq__(other.arg1): return False ...
@@ -1270,13 +1315,6 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
     fargs.emplace_back(Param{"self", typExpr->clone()});
     ret = I("int");
     stmts.emplace_back(N<ReturnStmt>(N<IntExpr>(args.size())));
-  } else if (op == "contains") {
-    // Tuples: @internal def __contains__(self: T, what: T1) -> bool
-    //         (not a real internal; code generated during a realizeFunc() method)
-    fargs.emplace_back(Param{"self", typExpr->clone()});
-    fargs.emplace_back(Param{"what", !args.empty() ? clone(args[0].type) : I("void")});
-    ret = I("bool");
-    attrs.emplace_back(ATTR_INTERNAL);
   } else if (op == "to_py") {
     // def __to_py__(self: T) -> pyobj:
     //   o = pyobj._tuple_new(N)  (number of args)
@@ -1308,7 +1346,7 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
     // def __str__(self: T) -> str:
     //   a = __array__[str](N)  (number of args)
     //   a.__setitem__(0, self.arg1.__str__()) ...
-    //   return _tuple_str(a.ptr, N)
+    //   return __internal__.tuple_str(a.ptr, N)
     fargs.emplace_back(Param{"self", typExpr->clone()});
     ret = I("str");
     if (!args.empty()) {
@@ -1319,9 +1357,9 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
         stmts.push_back(N<ExprStmt>(N<CallExpr>(
             N<DotExpr>(I("a"), "__setitem__"), N<IntExpr>(i),
             N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), args[i].name), "__str__")))));
-      stmts.emplace_back(N<ReturnStmt>(N<CallExpr>(N<DotExpr>(I("str"), "_tuple_str"),
-                                                   N<DotExpr>(I("a"), "ptr"),
-                                                   N<IntExpr>(args.size()))));
+      stmts.emplace_back(N<ReturnStmt>(
+          N<CallExpr>(N<DotExpr>(I("__internal__"), "tuple_str"),
+                      N<DotExpr>(I("a"), "ptr"), N<IntExpr>(args.size()))));
     } else {
       stmts.emplace_back(N<ReturnStmt>(N<StringExpr>("()")));
     }

@@ -10,10 +10,10 @@ from C import seq_gc_clear_roots()
 from C import seq_gc_exclude_static_roots(cobj, cobj)
 
 def sizeof[T]():
-    return Ptr[T].__elemsize__()
+    return T.__elemsize__
 
 def atomic[T]():
-    return Ptr[T].__atomic__()
+    return T.__atomic__
 
 def alloc(sz: int):
     return seq_alloc(sz)

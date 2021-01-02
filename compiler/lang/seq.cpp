@@ -34,9 +34,9 @@ config::Config &seq::config::config() {
 }
 
 SeqModule::SeqModule()
-    : BaseFunc(), scope(new Block()),
-      argVar(new Var(types::ArrayType::get(types::Str))), initFunc(nullptr),
-      strlenFunc(nullptr) {
+    : BaseFunc(), scope(new Block()), initFunc(nullptr), strlenFunc(nullptr) {
+  argVar = new Var(types::RecordType::get({types::PtrType::get(types::Str), types::Int},
+                                          {"ptr", "len"}));
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
 
@@ -79,7 +79,8 @@ Function *SeqModule::makeCanonicalMainFunc(Function *realMain) {
   LLVMContext &context = realMain->getContext();
   Module *module = realMain->getParent();
 
-  types::ArrayType *arrType = types::ArrayType::get(types::Str);
+  auto *arrType = types::RecordType::get({types::PtrType::get(types::Str), types::Int},
+                                         {"ptr", "len"});
 
   auto *func = cast<Function>(module->getOrInsertFunction(
       "main", LLVM_I32(), LLVM_I32(),
@@ -98,7 +99,9 @@ Function *SeqModule::makeCanonicalMainFunc(Function *realMain) {
   IRBuilder<> builder(entry);
   Value *len = builder.CreateZExt(argc, seqIntLLVM(context));
   Value *ptr = types::Str->alloc(len, entry);
-  Value *arr = arrType->make(ptr, len, entry);
+  Value *arr = UndefValue::get(arrType->getLLVMType(context));
+  arr = arrType->setMemb(arr, "len", len, entry);
+  arr = arrType->setMemb(arr, "ptr", ptr, entry);
   builder.CreateBr(loop);
 
   builder.SetInsertPoint(loop);
@@ -116,8 +119,15 @@ Function *SeqModule::makeCanonicalMainFunc(Function *realMain) {
                                             seqIntLLVM(context));
   Value *str = types::Str->make(arg, argLen, body);
   Value *idx = builder.CreateZExt(control, types::Int->getLLVMType(context));
-  arrType->callMagic("__setitem__", {types::Int, types::Str}, arr, {idx, str}, body,
-                     nullptr);
+  // arrType->callMagic("__setitem__", {types::Int, types::Str}, arr, {idx, str}, body,
+  //  nullptr);
+  {
+    IRBuilder<> builder(body);
+    Value *ptr = arrType->memb(arr, "ptr", builder.GetInsertBlock());
+    ptr = builder.CreateGEP(ptr, idx);
+    builder.CreateStore(str, ptr);
+  }
+
   builder.CreateBr(loop);
 
   control->addIncoming(ConstantInt::get(LLVM_I32(), 0), entry);
