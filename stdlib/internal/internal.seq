@@ -25,10 +25,10 @@ class __internal__:
         if idx < 0:
             idx += len
         if idx < 0 or idx >= len:
-            raise IndexError("tuple index out of range")
+            raise IndexError("tuple index " + str(idx) + ' out of range 0..' + str(len))
         return idx
     def tuple_getitem[T, E](t: T, idx: int) -> E:
-        return __internal__._tuple_getitem_llvm[T, E](t, __internal__.tuple_fix_index(idx, t.__len__()))
+        return __internal__._tuple_getitem_llvm[T, E](t, __internal__.tuple_fix_index(idx, staticlen(t)))
     @llvm
     def fn_new[T](ptr: Ptr[byte]) -> T:
         %0 = bitcast i8* %ptr to {=T}
@@ -54,7 +54,7 @@ class __internal__:
         if msg: s += ': ' + msg
         s += ' (' + file + ':' + line.__str__() + ')'
         return AssertionError(s)
-    def seq_assert_test(file: str, line: int, msg: str) -> AssertionError:
+    def seq_assert_test(file: str, line: int, msg: str):
         s = "\033[1;31mTEST FAILED:\033[0m " + file + " (line " + str(line) + ")"
         if msg:
             s += ": " + msg

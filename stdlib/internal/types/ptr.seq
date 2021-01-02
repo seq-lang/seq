@@ -2,6 +2,9 @@ from C import seq_str_ptr(Ptr[byte]) -> str
 
 @extend
 class Ptr[T]:
+    @internal
+    def __new__(sz: int) -> Ptr[T]:
+        pass
     @llvm
     def __new__() -> Ptr[T]:
         ret {=T}* null
@@ -9,13 +12,6 @@ class Ptr[T]:
     def __new__(other: Ptr[byte]) -> Ptr[T]:
         %0 = bitcast i8* %other to {=T}*
         ret {=T}* %0
-    @llvm
-    def __new__(sz: int) -> Ptr[T]:
-        declare noalias i8* @seq_alloc_atomic(i64)
-        %0 = mul i64 %sz, 8
-        %1 = call i8* @seq_alloc_atomic(i64 %0)
-        %2 = bitcast i8* %1 to {=T}*
-        ret {=T}* %2
     @llvm
     def __new__(other: Ptr[T]) -> Ptr[T]:
         ret {=T}* %other

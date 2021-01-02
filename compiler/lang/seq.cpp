@@ -35,8 +35,8 @@ config::Config &seq::config::config() {
 
 SeqModule::SeqModule()
     : BaseFunc(), scope(new Block()), initFunc(nullptr), strlenFunc(nullptr) {
-  argVar = new Var(types::RecordType::get({types::PtrType::get(types::Str), types::Int},
-                                          {"ptr", "len"}));
+  argVar = new Var(types::RecordType::get({types::Int, types::PtrType::get(types::Str)},
+                                          {"len", "ptr"}));
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
 
@@ -79,8 +79,8 @@ Function *SeqModule::makeCanonicalMainFunc(Function *realMain) {
   LLVMContext &context = realMain->getContext();
   Module *module = realMain->getParent();
 
-  auto *arrType = types::RecordType::get({types::PtrType::get(types::Str), types::Int},
-                                         {"ptr", "len"});
+  auto *arrType = types::RecordType::get({types::Int, types::PtrType::get(types::Str)},
+                                         {"len", "ptr"});
 
   auto *func = cast<Function>(module->getOrInsertFunction(
       "main", LLVM_I32(), LLVM_I32(),

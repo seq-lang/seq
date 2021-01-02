@@ -181,7 +181,7 @@ Value *ArrayExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
   if (dynamic_cast<types::ArrayType *>(getType()))
     ptrType = type->getBaseType(0);
   else
-    ptrType = type->getBaseType(0)->getBaseType(0);
+    ptrType = type->getBaseType(1)->getBaseType(0);
   assert(type != nullptr);
   count->ensure(types::Int);
 
