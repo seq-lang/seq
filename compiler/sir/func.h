@@ -1,6 +1,7 @@
 #pragma once
 
 #include "flow.h"
+#include "util/iterators.h"
 #include "var.h"
 
 namespace seq {
@@ -8,19 +9,13 @@ namespace ir {
 
 /// SIR function
 class Func : public AcceptorExtend<Func, Var> {
-public:
-  using arg_const_iterator = std::list<VarPtr>::const_iterator;
-  using arg_const_reference = std::list<VarPtr>::const_reference;
-
-  using symbol_iterator = std::list<VarPtr>::iterator;
-  using symbol_const_iterator = std::list<VarPtr>::const_iterator;
-  using symbol_reference = std::list<VarPtr>::reference;
-  using symbol_const_reference = std::list<VarPtr>::const_reference;
-
 private:
+  /// whether the function is a generator
+  bool generator;
+
+protected:
   /// list of arguments
   std::list<VarPtr> args;
-
   /// list of variables defined and used within the function
   std::list<VarPtr> symbols;
 
@@ -31,12 +26,13 @@ public:
   /// @param type the function's type
   /// @param argNames the function's argument names
   /// @param name the function's name
-  Func(types::Type *type, std::vector<std::string> argNames, std::string name = "");
+  Func(const types::Type *type, std::vector<std::string> argNames,
+       std::string name = "");
 
   /// Constructs an SIR function.
   /// @param type the function's type
   /// @param name the function's name
-  explicit Func(types::Type *type, std::string name = "")
+  explicit Func(const types::Type *type, std::string name = "")
       : Func(type, {}, std::move(name)) {}
 
   virtual ~Func() = default;
@@ -47,46 +43,47 @@ public:
   void realize(types::FuncType *newType, const std::vector<std::string> &names);
 
   /// @return iterator to the first arg
-  arg_const_iterator arg_begin() const { return args.begin(); }
+  auto arg_begin() { return util::raw_ptr_adaptor(args.begin()); }
   /// @return iterator beyond the last arg
-  arg_const_iterator arg_end() const { return args.end(); }
+  auto arg_end() { return util::raw_ptr_adaptor(args.end()); }
+  /// @return iterator to the first arg
+  auto arg_begin() const { return util::const_raw_ptr_adaptor(args.begin()); }
+  /// @return iterator beyond the last arg
+  auto arg_end() const { return util::const_raw_ptr_adaptor(args.end()); }
 
-  /// @return a reference to the first arg
-  arg_const_reference arg_front() const { return args.front(); }
-  /// @return a reference to the last arg
-  arg_const_reference arg_back() const { return args.back(); }
+  /// @return a pointer to the last arg
+  Var *arg_front() { return args.front().get(); }
+  /// @return a pointer to the last arg
+  Var *arg_back() { return args.back().get(); }
+  /// @return a pointer to the last arg
+  const Var *arg_back() const { return args.back().get(); }
+  /// @return a pointer to the first arg
+  const Var *arg_front() const { return args.front().get(); }
 
   /// @return iterator to the first symbol
-  symbol_iterator begin() { return symbols.begin(); }
+  auto begin() { return util::raw_ptr_adaptor(symbols.begin()); }
   /// @return iterator beyond the last symbol
-  symbol_iterator end() { return symbols.end(); }
+  auto end() { return util::raw_ptr_adaptor(symbols.end()); }
   /// @return iterator to the first symbol
-  symbol_const_iterator begin() const { return symbols.begin(); }
+  auto begin() const { return util::const_raw_ptr_adaptor(symbols.begin()); }
   /// @return iterator beyond the last symbol
-  symbol_const_iterator end() const { return symbols.end(); }
+  auto end() const { return util::const_raw_ptr_adaptor(symbols.end()); }
 
-  /// @return a reference to the first symbol
-  symbol_reference front() { return symbols.front(); }
-  /// @return a reference to the last symbol
-  symbol_reference back() { return symbols.back(); }
-  /// @return a reference to the first symbol
-  symbol_const_reference front() const { return symbols.front(); }
-  /// @return a reference to the last symbol
-  symbol_const_reference back() const { return symbols.back(); }
+  /// @return a pointer to the first symbol
+  Var *front() { return symbols.front().get(); }
+  /// @return a pointer to the last symbol
+  Var *back() { return symbols.back().get(); }
+  /// @return a pointer to the first symbol
+  const Var *front() const { return symbols.front().get(); }
+  /// @return a pointer to the last symbol
+  const Var *back() const { return symbols.back().get(); }
 
   /// Inserts an symbol at the given position.
   /// @param pos the position
   /// @param v the symbol
   /// @return an iterator to the newly added symbol
-  symbol_iterator insert(symbol_iterator pos, VarPtr v) {
-    return symbols.insert(pos, std::move(v));
-  }
-  /// Inserts an symbol at the given position.
-  /// @param pos the position
-  /// @param v the symbol
-  /// @return an symbol_iterator to the newly added symbol
-  symbol_iterator insert(symbol_const_iterator pos, VarPtr v) {
-    return symbols.insert(pos, std::move(v));
+  template <typename It> auto insert(It pos, VarPtr v) {
+    return util::raw_ptr_adaptor(symbols.insert(pos.internal, std::move(v)));
   }
   /// Appends an symbol.
   /// @param v the new symbol
@@ -95,14 +92,15 @@ public:
   /// Erases the symbol at the given position.
   /// @param pos the position
   /// @return symbol_iterator following the removed symbol.
-  symbol_iterator erase(symbol_iterator pos) { return symbols.erase(pos); }
-  /// Erases the symbol at the given position.
-  /// @param pos the position
-  /// @return symbol_iterator following the removed symbol.
-  symbol_iterator erase(symbol_const_iterator pos) { return symbols.erase(pos); }
+  template <typename It> auto erase(It pos) {
+    return util::raw_ptr_adaptor(symbols.erase(pos.internal));
+  }
 
   /// @return true if the function is a generator
-  bool isGenerator() const;
+  bool isGenerator() const { return generator; }
+  /// Sets the function's generator flag.
+  /// @param v the new value
+  void setGenerator(bool v = true) { generator = v; }
 
   Var *getArgVar(const std::string &n);
 
@@ -127,7 +125,9 @@ public:
   std::string getUnmangledName() const override;
 
   /// @return the function body
-  const FlowPtr &getBody() const { return body; }
+  Flow *getBody() { return body.get(); }
+  /// @return the function body
+  const Flow *getBody() const { return body.get(); }
   /// Sets the function's body.
   /// @param b the new body
   void setBody(FlowPtr b) { body = std::move(b); }
@@ -163,7 +163,7 @@ private:
 class InternalFunc : public AcceptorExtend<InternalFunc, Func> {
 private:
   /// parent type of the function if it is magic
-  types::Type *parentType = nullptr;
+  const types::Type *parentType = nullptr;
 
 public:
   static const char NodeId;
@@ -173,10 +173,10 @@ public:
   std::string getUnmangledName() const override;
 
   /// @return the parent type
-  types::Type *getParentType() const { return parentType; }
+  const types::Type *getParentType() const { return parentType; }
   /// Sets the parent type.
   /// @param p the new parent
-  void setParentType(types::Type *p) { parentType = p; }
+  void setParentType(const types::Type *p) { parentType = p; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -187,16 +187,13 @@ public:
   struct LLVMLiteral {
     union {
       int64_t staticVal;
-      types::Type *type;
+      const types::Type *type;
     } val;
     enum { STATIC, TYPE } tag;
 
     explicit LLVMLiteral(int64_t v) : val{v}, tag(STATIC) {}
-    explicit LLVMLiteral(types::Type *t) : val{}, tag(TYPE) { val.type = t; }
+    explicit LLVMLiteral(const types::Type *t) : val{}, tag(TYPE) { val.type = t; }
   };
-
-  using literal_const_iterator = std::vector<LLVMLiteral>::const_iterator;
-  using literal_const_reference = std::vector<LLVMLiteral>::const_reference;
 
 private:
   /// literals that must be formatted into the body
@@ -218,14 +215,22 @@ public:
   void setLLVMLiterals(std::vector<LLVMLiteral> v) { llvmLiterals = std::move(v); }
 
   /// @return iterator to the first literal
-  literal_const_iterator literal_begin() const { return llvmLiterals.begin(); }
+  auto literal_begin() { return llvmLiterals.begin(); }
   /// @return iterator beyond the last literal
-  literal_const_iterator literal_end() const { return llvmLiterals.end(); }
+  auto literal_end() { return llvmLiterals.end(); }
+  /// @return iterator to the first literal
+  auto literal_begin() const { return llvmLiterals.begin(); }
+  /// @return iterator beyond the last literal
+  auto literal_end() const { return llvmLiterals.end(); }
 
   /// @return a reference to the first literal
-  literal_const_reference literal_front() const { return llvmLiterals.front(); }
+  auto &literal_front() { return llvmLiterals.front(); }
   /// @return a reference to the last literal
-  literal_const_reference literal_back() const { return llvmLiterals.back(); }
+  auto &literal_back() { return llvmLiterals.back(); }
+  /// @return a reference to the first literal
+  auto &literal_front() const { return llvmLiterals.front(); }
+  /// @return a reference to the last literal
+  auto &literal_back() const { return llvmLiterals.back(); }
 
   /// @return the LLVM declarations
   const std::string &getLLVMDeclarations() const { return llvmDeclares; }

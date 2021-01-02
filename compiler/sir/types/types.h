@@ -99,12 +99,12 @@ public:
     /// the field's name
     std::string name;
     /// the field's type
-    Type *type;
+    const Type *type;
 
     /// Constructs a field.
     /// @param name the field's name
     /// @param type the field's type
-    Field(std::string name, Type *type) : name(std::move(name)), type(type) {}
+    Field(std::string name, const Type *type) : name(std::move(name)), type(type) {}
   };
 
   using const_iterator = std::vector<Field>::const_iterator;
@@ -119,12 +119,12 @@ public:
   /// Gets a field type by name.
   /// @param name the field's name
   /// @return the type if it exists
-  virtual Type *getMemberType(const std::string &name) = 0;
+  virtual const Type *getMemberType(const std::string &name) const = 0;
 
   /// Gets the index of a field by name.
   /// @param name the field's name
   /// @return 0-based field index, or -1 if not found
-  virtual int getMemberIndex(const std::string &name) = 0;
+  virtual int getMemberIndex(const std::string &name) const = 0;
 
   /// @return iterator to the first field
   virtual const_iterator begin() const = 0;
@@ -138,7 +138,8 @@ public:
   /// Changes the body of the membered type.
   /// @param mTypes the new body
   /// @param mNames the new names
-  virtual void realize(std::vector<Type *> mTypes, std::vector<std::string> mNames) = 0;
+  virtual void realize(std::vector<const Type *> mTypes,
+                       std::vector<std::string> mNames) = 0;
 };
 
 /// Membered type equivalent to C structs/C++ PODs
@@ -153,13 +154,13 @@ public:
   /// @param name the type's name
   /// @param fieldTypes the member types
   /// @param fieldNames the member names
-  RecordType(std::string name, std::vector<Type *> fieldTypes,
+  RecordType(std::string name, std::vector<const Type *> fieldTypes,
              std::vector<std::string> fieldNames);
 
   /// Constructs a record type. The field's names are "1", "2"...
   /// @param name the type's name
   /// @param mTypes a vector of member types
-  RecordType(std::string name, std::vector<Type *> mTypes);
+  RecordType(std::string name, std::vector<const Type *> mTypes);
 
   /// Constructs an empty record type.
   /// @param name the name
@@ -175,15 +176,17 @@ public:
     return true;
   }
 
-  Type *getMemberType(const std::string &n) override;
-  int getMemberIndex(const std::string &n) override;
+  const Type *getMemberType(const std::string &n) const override;
+
+  int getMemberIndex(const std::string &n) const override;
 
   const_iterator begin() const override { return fields.begin(); }
   const_iterator end() const override { return fields.end(); }
-  virtual const_reference front() const override { return fields.front(); }
-  virtual const_reference back() const override { return fields.back(); }
+  const_reference front() const override { return fields.front(); }
+  const_reference back() const override { return fields.back(); }
 
-  void realize(std::vector<Type *> mTypes, std::vector<std::string> mNames) override;
+  void realize(std::vector<const Type *> mTypes,
+               std::vector<std::string> mNames) override;
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -206,23 +209,26 @@ public:
 
   bool isAtomic() const override { return false; }
 
-  Type *getMemberType(const std::string &n) override {
+  const Type *getMemberType(const std::string &n) const override {
     return contents->getMemberType(n);
   }
 
-  int getMemberIndex(const std::string &n) override {
+  int getMemberIndex(const std::string &n) const override {
     return contents->getMemberIndex(n);
   }
 
   const_iterator begin() const override { return contents->begin(); }
   const_iterator end() const override { return contents->end(); }
   const_reference front() const override { return contents->front(); }
-  virtual const_reference back() const override { return contents->back(); }
+  const_reference back() const override { return contents->back(); }
 
   /// @return the reference type's contents
-  RecordType *getContents() const { return contents; }
+  RecordType *getContents() { return contents; }
+  /// @return the reference type's contents
+  const RecordType *getContents() const { return contents; }
 
-  void realize(std::vector<Type *> mTypes, std::vector<std::string> mNames) override {
+  void realize(std::vector<const Type *> mTypes,
+               std::vector<std::string> mNames) override {
     contents->realize(std::move(mTypes), std::move(mNames));
   }
 
@@ -233,14 +239,14 @@ private:
 /// Type associated with a SIR function.
 class FuncType : public AcceptorExtend<FuncType, Type> {
 public:
-  using const_iterator = std::vector<Type *>::const_iterator;
-  using const_reference = std::vector<Type *>::const_reference;
+  using const_iterator = std::vector<const Type *>::const_iterator;
+  using const_reference = std::vector<const Type *>::const_reference;
 
 private:
   /// return type
-  Type *rType;
+  const Type *rType;
   /// argument types
-  std::vector<Type *> argTypes;
+  std::vector<const Type *> argTypes;
 
 public:
   static const char NodeId;
@@ -248,14 +254,14 @@ public:
   /// Constructs a function type.
   /// @param rType the function's return type
   /// @param argTypes the function's arg types
-  FuncType(Type *rType, std::vector<Type *> argTypes)
+  FuncType(const Type *rType, std::vector<const Type *> argTypes)
       : AcceptorExtend(getName(rType, argTypes)), rType(rType),
         argTypes(std::move(argTypes)) {}
 
   bool isAtomic() const override { return false; }
 
   /// @return the function's return type
-  Type *getReturnType() const { return rType; }
+  const Type *getReturnType() const { return rType; }
 
   /// @return iterator to the first argument
   const_iterator begin() const { return argTypes.begin(); }
@@ -267,7 +273,8 @@ public:
   /// @return a reference to the last argument
   const_reference back() const { return argTypes.back(); }
 
-  static std::string getName(Type *rType, const std::vector<Type *> &argTypes);
+  static std::string getName(const Type *rType,
+                             const std::vector<const Type *> &argTypes);
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -277,7 +284,7 @@ private:
 class DerivedType : public AcceptorExtend<DerivedType, Type> {
 private:
   /// the base type
-  Type *base;
+  const Type *base;
 
 public:
   static const char NodeId;
@@ -285,13 +292,13 @@ public:
   /// Constructs a derived type.
   /// @param name the type's name
   /// @param base the type's base
-  explicit DerivedType(std::string name, Type *base)
+  explicit DerivedType(std::string name, const Type *base)
       : AcceptorExtend(std::move(name)), base(base) {}
 
   bool isAtomic() const override { return base->isAtomic(); }
 
   /// @return the type's base
-  Type *getBase() const { return base; }
+  const Type *getBase() const { return base; }
 };
 
 /// Type of a pointer to another SIR type
@@ -301,11 +308,11 @@ public:
 
   /// Constructs a pointer type.
   /// @param base the type's base
-  explicit PointerType(Type *base) : AcceptorExtend(getName(base), base) {}
+  explicit PointerType(const Type *base) : AcceptorExtend(getName(base), base) {}
 
   bool isAtomic() const override { return false; }
 
-  static std::string getName(Type *base);
+  static std::string getName(const Type *base);
 };
 
 /// Type of an optional containing another SIR type
@@ -315,20 +322,20 @@ public:
 
   /// Constructs an optional type.
   /// @param base the type's base
-  explicit OptionalType(Type *base) : AcceptorExtend(getName(base), base) {}
+  explicit OptionalType(const Type *base) : AcceptorExtend(getName(base), base) {}
 
   bool isAtomic() const override { return getBase()->isAtomic(); }
 
   void accept(util::SIRVisitor &v) override { v.visit(this); }
 
-  static std::string getName(Type *base);
+  static std::string getName(const Type *base);
 };
 
 /// Type of an array containing another SIR type
 class ArrayType : public AcceptorExtend<ArrayType, RecordType> {
 private:
   /// type's base type
-  Type *base;
+  const Type *base;
 
 public:
   static const char NodeId;
@@ -336,16 +343,16 @@ public:
   /// Constructs an array type.
   /// @param pointerType the base's pointer type
   /// @param countType the type of the array's count
-  explicit ArrayType(Type *pointerType, Type *countType);
+  explicit ArrayType(const Type *pointerType, const Type *countType);
 
   bool isAtomic() const override { return false; }
 
   /// @return the type's base
-  Type *getBase() const { return base; }
+  const Type *getBase() const { return base; }
 
   void accept(util::SIRVisitor &v) override { v.visit(this); }
 
-  static std::string getName(Type *base);
+  static std::string getName(const Type *base);
 };
 
 /// Type of a generator yielding another SIR type
@@ -355,11 +362,11 @@ public:
 
   /// Constructs a generator type.
   /// @param base the type's base
-  explicit GeneratorType(Type *base) : AcceptorExtend(getName(base), base) {}
+  explicit GeneratorType(const Type *base) : AcceptorExtend(getName(base), base) {}
 
   bool isAtomic() const override { return false; }
 
-  static std::string getName(Type *base);
+  static std::string getName(const Type *base);
 };
 
 /// Type of a variably sized integer

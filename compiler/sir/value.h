@@ -23,7 +23,7 @@ public:
   }
 
   /// @return the value's type
-  virtual types::Type *getType() const = 0;
+  virtual const types::Type *getType() const = 0;
 
   /// @return a clone of the value
   std::unique_ptr<Value> clone() const { return std::unique_ptr<Value>(doClone()); }
@@ -49,7 +49,15 @@ public:
   explicit ValueProxy(Value *val, std::string name = "")
       : AcceptorExtend(std::move(name)), val(val) {}
 
-  types::Type *getType() const override { return val->getType(); }
+  const types::Type *getType() const override { return val->getType(); }
+
+  /// @return the value
+  Value *getValue() { return val; }
+  /// @return the value
+  const Value *getValue() const { return val; }
+  /// Sets the value.
+  /// @param v the new value
+  void setValue(Value *v) { val = v; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override {

@@ -21,7 +21,7 @@ Value *AssignInstr::doClone() const {
 
 const char ExtractInstr::NodeId = 0;
 
-types::Type *ExtractInstr::getType() const {
+const types::Type *ExtractInstr::getType() const {
   auto *memberedType = val->getType()->as<types::MemberedType>();
   assert(memberedType);
   return memberedType->getMemberType(field);
@@ -50,7 +50,7 @@ Value *InsertInstr::doClone() const {
 
 const char CallInstr::NodeId = 0;
 
-types::Type *CallInstr::getType() const {
+const types::Type *CallInstr::getType() const {
   auto *funcType = func->getType()->as<types::FuncType>();
   assert(funcType);
   return funcType->getReturnType();
@@ -111,23 +111,23 @@ const char ControlFlowInstr::NodeId = 0;
 const char BreakInstr::NodeId = 0;
 
 std::ostream &BreakInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("break({})"), getTarget()->referenceString());
+  fmt::print(os, FMT_STRING("break({})"), target->referenceString());
   return os;
 }
 
 Value *BreakInstr::doClone() const {
-  return getModule()->Nrs<BreakInstr>(getSrcInfo(), getTarget(), getName());
+  return getModule()->Nrs<BreakInstr>(getSrcInfo(), target, getName());
 }
 
 const char ContinueInstr::NodeId = 0;
 
 std::ostream &ContinueInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("continue({})"), getTarget()->referenceString());
+  fmt::print(os, FMT_STRING("continue({})"), target->referenceString());
   return os;
 }
 
 Value *ContinueInstr::doClone() const {
-  return getModule()->Nrs<ContinueInstr>(getSrcInfo(), getTarget(), getName());
+  return getModule()->Nrs<ContinueInstr>(getSrcInfo(), target, getName());
 }
 
 const char ReturnInstr::NodeId = 0;

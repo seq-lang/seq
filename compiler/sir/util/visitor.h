@@ -9,9 +9,15 @@
   virtual void defaultVisit(seq::ir::x *) {                                            \
     throw std::runtime_error("cannot visit node");                                     \
   }                                                                                    \
-  virtual void visit(seq::ir::x *v) { defaultVisit(v); }
-#define VISIT(x) virtual void visit(seq::ir::x *v)
+  virtual void visit(seq::ir::x *v) { defaultVisit(v); }                               \
+  virtual void defaultVisit(const seq::ir::x *) {                                      \
+    throw std::runtime_error("cannot visit const node");                               \
+  }                                                                                    \
+  virtual void visit(const seq::ir::x *v) { defaultVisit(v); }
 
+#define VISIT(x)                                                                       \
+  virtual void visit(seq::ir::x *v);                                                   \
+  virtual void visit(const seq::ir::x *v)
 namespace seq {
 namespace ir {
 

@@ -16,7 +16,7 @@ namespace ir {
 class Var : public AcceptorExtend<Var, IRNode>, public IdMixin {
 private:
   /// the variable's type
-  types::Type *type;
+  const types::Type *type;
 
 public:
   static const char NodeId;
@@ -24,14 +24,14 @@ public:
   /// Constructs a variable.
   /// @param name the variable's name
   /// @param type the variable's type
-  explicit Var(types::Type *type, std::string name = "")
+  explicit Var(const types::Type *type, std::string name = "")
       : AcceptorExtend(std::move(name)), type(type) {}
 
   /// @return the type
-  types::Type *getType() const { return type; }
+  const types::Type *getType() const { return type; }
   /// Sets the type.
   /// @param t the new type
-  void setType(types::Type *t) { type = t; }
+  void setType(const types::Type *t) { type = t; }
 
   std::string referenceString() const override {
     return fmt::format(FMT_STRING("{}.{}"), getName(), getId());
@@ -58,9 +58,15 @@ public:
   explicit VarValue(Var *val, std::string name = "")
       : AcceptorExtend(std::move(name)), val(val) {}
 
-  Var *getVar() const { return val; }
+  const types::Type *getType() const override { return val->getType(); }
 
-  types::Type *getType() const override { return val->getType(); }
+  /// @return the variable
+  Var *getVar() { return val; }
+  /// @return the variable
+  const Var *getVar() const { return val; }
+  /// Sets the variable.
+  /// @param v the new variable
+  void setVar(Var *v) { val = v; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override {
@@ -85,9 +91,15 @@ public:
   explicit PointerValue(Var *val, std::string name = "")
       : AcceptorExtend(std::move(name)), val(val) {}
 
-  Var *getVar() const { return val; }
-
   types::Type *getType() const override;
+
+  /// @return the variable
+  Var *getVar() { return val; }
+  /// @return the variable
+  const Var *getVar() const { return val; }
+  /// Sets the variable.
+  /// @param v the new variable
+  void setVar(Var *v) { val = v; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override {
