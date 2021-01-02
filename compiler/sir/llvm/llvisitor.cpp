@@ -899,11 +899,21 @@ void LLVMVisitor::visit(InternalFunc *x) {
   }
 
   else if (internalFuncMatches<IntType, IntNType>("__new__", x)) {
-    result = builder.CreateZExtOrTrunc(args[0], builder.getInt64Ty());
+    auto *intNType = cast<IntNType>(argTypes[0]);
+    if (intNType->isSigned()) {
+      result = builder.CreateSExtOrTrunc(args[0], builder.getInt64Ty());
+    } else {
+      result = builder.CreateZExtOrTrunc(args[0], builder.getInt64Ty());
+    }
   }
 
   else if (internalFuncMatches<IntNType, IntType>("__new__", x)) {
-    result = builder.CreateZExtOrTrunc(args[0], getLLVMType(parentType));
+    auto *intNType = cast<IntNType>(parentType);
+    if (intNType->isSigned()) {
+      result = builder.CreateSExtOrTrunc(args[0], getLLVMType(intNType));
+    } else {
+      result = builder.CreateZExtOrTrunc(args[0], getLLVMType(intNType));
+    }
   }
 
   else if (internalFuncMatches<RefType>("__new__", x)) {
@@ -990,9 +1000,14 @@ void LLVMVisitor::visit(InternalFunc *x) {
   }
 
   else if (internalFuncMatches<RecordType, RecordType, IntType>("__getitem__", x)) {
-    // TODO
-    builder.CreateUnreachable();
-    return;
+    // TODO: move to Seq (does not perform bounds check or index correction)
+    auto *recordType = cast<RecordType>(parentType);
+    llvm::Value *storage = builder.CreateAlloca(getLLVMType(recordType));
+    builder.CreateStore(args[0], storage);
+    llvm::Value *ptr = builder.CreateBitCast(
+        storage, getLLVMType(recordType->front().type)->getPointerTo());
+    ptr = builder.CreateGEP(ptr, args[1]);
+    result = builder.CreateLoad(ptr);
   }
 
   else if (internalFuncMatches<IntNType, IntNType>("__revcomp__", x)) {
@@ -1385,7 +1400,7 @@ void LLVMVisitor::visit(StringConstant *x) {
  */
 
 void LLVMVisitor::visit(SeriesFlow *x) {
-  for (const auto &value : *x) {
+  for (auto *value : *x) {
     process(value);
   }
 }

@@ -65,7 +65,7 @@ std::ostream &CallInstr::doFormat(std::ostream &os) const {
 
 Value *CallInstr::doClone() const {
   std::vector<ValuePtr> clonedArgs;
-  for (const auto &arg : *this)
+  for (const auto *arg : *this)
     clonedArgs.push_back(arg->clone());
   return getModule()->Nrs<CallInstr>(getSrcInfo(), func->clone(), std::move(clonedArgs),
                                      getName());
