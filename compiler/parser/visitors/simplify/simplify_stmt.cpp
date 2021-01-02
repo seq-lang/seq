@@ -1033,8 +1033,8 @@ StmtPtr SimplifyVisitor::transformLLVMDefinition(const Stmt *codeStmt) {
       string exprCode = code.substr(braceStart, i - braceStart);
       auto offset = getSrcInfo();
       offset.col += i;
-      auto expr = transformIndexExpr(parseExpr(exprCode, offset));
-      if (!expr->isType() && !expr->getStatic())
+      auto expr = transform(parseExpr(exprCode, offset).get(), true);
+      if (!expr->isType() && !expr->isStaticExpr)
         error(expr, "not a type or static expression", expr->toString());
       items.push_back(N<ExprStmt>(move(expr)));
       braceStart = i + 1;

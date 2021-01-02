@@ -98,6 +98,8 @@ void SimplifyVisitor::visit(IdExpr *expr) {
   // Flag the expression as a type expression if it points to a class name or a generic.
   if (val->isType() && !val->isStatic())
     resultExpr->markType();
+  if (val->isStatic())
+    resultExpr->isStaticExpr = true;
 
   // Check if this variable is coming from an enclosing base; if so, ensure that the
   // current base and all bases between the enclosing base point to the enclosing base.
@@ -224,12 +226,21 @@ void SimplifyVisitor::visit(IfExpr *expr) {
   auto cond = transform(N<CallExpr>(N<DotExpr>(clone(expr->cond), "__bool__")));
   auto oldAssign = ctx->canAssign;
   ctx->canAssign = false;
-  resultExpr = N<IfExpr>(move(cond), transform(expr->ifexpr), transform(expr->elsexpr));
+  auto newExpr =
+      N<IfExpr>(move(cond), transform(expr->ifexpr), transform(expr->elsexpr));
   ctx->canAssign = oldAssign;
+  newExpr->isStaticExpr = newExpr->cond->isStaticExpr &&
+                          newExpr->ifexpr->isStaticExpr &&
+                          newExpr->elsexpr->isStaticExpr;
+  resultExpr = move(newExpr);
 }
 
 void SimplifyVisitor::visit(UnaryExpr *expr) {
-  if (expr->op == "!") {
+  auto newExpr = transform(expr->expr);
+  if (newExpr->isStaticExpr && (expr->op == "!" || expr->op == "-")) {
+    resultExpr = N<UnaryExpr>(expr->op, move(newExpr));
+    resultExpr->isStaticExpr = true;
+  } else if (expr->op == "!") {
     resultExpr = transform(N<CallExpr>(N<DotExpr>(
         N<CallExpr>(N<DotExpr>(clone(expr->expr), "__bool__")), "__invert__")));
   } else {
@@ -248,7 +259,15 @@ void SimplifyVisitor::visit(UnaryExpr *expr) {
 }
 
 void SimplifyVisitor::visit(BinaryExpr *expr) {
-  if (expr->op == "&&" || expr->op == "||") {
+  static unordered_set<string> supportedStaticOp{
+      "<", "<=", ">", ">=", "==", "!=", "&&", "||", "+", "-", "*", "//", "%"};
+  auto lhs = transform(expr->lexpr);
+  auto rhs = transform(expr->rexpr);
+  if (lhs->isStaticExpr && rhs->isStaticExpr && in(supportedStaticOp, expr->op) &&
+      !expr->inPlace) {
+    resultExpr = N<BinaryExpr>(move(lhs), expr->op, move(rhs));
+    resultExpr->isStaticExpr = true;
+  } else if (expr->op == "&&" || expr->op == "||") {
     auto l = transform(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__")));
     auto oldAssign = ctx->canAssign;
     ctx->canAssign = false;
@@ -317,15 +336,15 @@ void SimplifyVisitor::visit(IndexExpr *expr) {
   vector<ExprPtr> it;
   if (auto t = expr->index->getTuple())
     for (auto &i : t->items)
-      it.push_back(transformIndexExpr(i));
+      it.push_back(transform(i.get(), true));
   else
-    it.push_back(transformIndexExpr(expr->index));
+    it.push_back(transform(expr->index.get(), true));
 
   // Below we check if this is a proper instantiation expression.
   bool allTypes = true;
   bool hasRealTypes = false; // real types are non-static type expressions
   for (auto &i : it) {
-    bool isType = i->isType() || i->getStatic();
+    bool isType = i->isType() || i->isStaticExpr;
     if (i->isType())
       hasRealTypes = true;
     if (!isType)
@@ -382,6 +401,7 @@ void SimplifyVisitor::visit(CallExpr *expr) {
       type = transformType(expr->args[1].value.get());
     resultExpr =
         N<CallExpr>(clone(expr->expr), transform(expr->args[0].value), move(type));
+    resultExpr->isStaticExpr = true;
     return;
   }
   // 4. staticlen(v)
@@ -389,6 +409,7 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     if (expr->args.size() != 1)
       error("staticlen only accepts a single arguments");
     resultExpr = N<CallExpr>(clone(expr->expr), transform(expr->args[0].value));
+    resultExpr->isStaticExpr = true;
     return;
   }
   // 5. hasattr(v, "id")
@@ -401,6 +422,7 @@ void SimplifyVisitor::visit(CallExpr *expr) {
       error("hasattr requires the second string to be a compile-time string");
     resultExpr = N<CallExpr>(clone(expr->expr),
                              transformType(expr->args[0].value.get()), move(s));
+    resultExpr->isStaticExpr = true;
     return;
   }
   // 6. compile_error("msg")
@@ -479,7 +501,7 @@ void SimplifyVisitor::visit(DotExpr *expr) {
     resultExpr = N<IdExpr>(itemName);
     if (importName.empty())
       resultExpr = transform(resultExpr.get(), true);
-    if (val->isType())
+    if (val->isType() && itemEnd == chain.size())
       resultExpr->markType();
     for (int i = itemEnd; i < chain.size(); i++)
       resultExpr = N<DotExpr>(move(resultExpr), chain[i]);
@@ -541,8 +563,11 @@ ExprPtr SimplifyVisitor::transformInt(const string &value, const string &suffix)
     return std::stoull(s, nullptr, 0);
   };
   try {
-    if (suffix.empty())
-      return N<IntExpr>(to_int(value));
+    if (suffix.empty()) {
+      auto expr = N<IntExpr>(to_int(value));
+      expr->isStaticExpr = true;
+      return expr;
+    }
     /// Unsigned numbers: use UInt[64] for that
     if (suffix == "u")
       return transform(N<CallExpr>(N<IndexExpr>(N<IdExpr>("UInt"), N<IntExpr>(64)),
@@ -644,50 +669,6 @@ StmtPtr SimplifyVisitor::transformGeneratorBody(const vector<GeneratorBody> &loo
     }
   }
   return suite;
-}
-
-ExprPtr SimplifyVisitor::transformIndexExpr(const ExprPtr &expr) {
-  auto t = transform(expr.get(), true);
-  set<string> captures;
-  if (isStaticExpr(t.get(), captures))
-    return N<StaticExpr>(clone(t), move(captures));
-  else
-    return t;
-}
-
-bool SimplifyVisitor::isStaticExpr(const Expr *expr, set<string> &captures) {
-  static unordered_set<string> supported{"<",  "<=", ">", ">=", "==", "!=", "&&",
-                                         "||", "+",  "-", "*",  "//", "%"};
-  if (auto ei = expr->getId()) {
-    auto val = ctx->find(ei->value);
-    if (val && val->isStatic()) {
-      captures.insert(ei->value);
-      return true;
-    }
-    return false;
-  } else if (auto eb = expr->getBinary()) {
-    return (supported.find(eb->op) != supported.end()) &&
-           isStaticExpr(eb->lexpr.get(), captures) &&
-           isStaticExpr(eb->rexpr.get(), captures);
-  } else if (auto eu = expr->getUnary()) {
-    return ((eu->op == "-") || (eu->op == "!")) &&
-           isStaticExpr(eu->expr.get(), captures);
-  } else if (auto ef = expr->getIf()) {
-    return isStaticExpr(ef->cond.get(), captures) &&
-           isStaticExpr(ef->ifexpr.get(), captures) &&
-           isStaticExpr(ef->elsexpr.get(), captures);
-  } else if (auto eit = expr->getInt()) {
-    if (!eit->suffix.empty())
-      return false;
-    try {
-      std::stoull(eit->value, nullptr, 0);
-    } catch (std::out_of_range &) {
-      return false;
-    }
-    return true;
-  } else {
-    return false;
-  }
 }
 
 ExprPtr SimplifyVisitor::makeAnonFn(vector<StmtPtr> &&stmts,

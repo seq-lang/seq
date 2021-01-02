@@ -61,7 +61,6 @@ public:
   virtual void visit(TupleIndexExpr *);
   virtual void visit(StackAllocExpr *);
   virtual void visit(InstantiateExpr *);
-  virtual void visit(StaticExpr *);
   virtual void visit(StmtExpr *);
 
   virtual void visit(AssignMemberStmt *);

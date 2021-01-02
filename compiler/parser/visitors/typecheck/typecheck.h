@@ -20,7 +20,6 @@
 #include "parser/visitors/format/format.h"
 #include "parser/visitors/typecheck/typecheck_ctx.h"
 #include "parser/visitors/visitor.h"
-#include "parser/visitors/walkexpr/walk.h"
 
 namespace seq {
 namespace ast {
@@ -71,6 +70,8 @@ public:
   /// Set type to the unification of both sides.
   /// Wrap a side with Optional.__new__() if other side is optional.
   void visit(IfExpr *) override;
+  /// Evaluate static unary expressions.
+  void visit(UnaryExpr *) override;
   /// See transformBinary() below.
   void visit(BinaryExpr *) override;
   /// Type-checks a pipe expression.
@@ -112,8 +113,6 @@ public:
   void visit(YieldExpr *) override;
   /// Use type of an inner expression.
   void visit(StmtExpr *) override;
-  /// TODO get rid of
-  void visit(StaticExpr *) override;
 
   void visit(SuiteStmt *) override;
   void visit(PassStmt *) override;
@@ -276,23 +275,6 @@ private:
   types::TypePtr realizeFunc(const types::TypePtr &typ);
   std::pair<int, StmtPtr> inferTypes(StmtPtr &&stmt, bool keepLast = false);
   seq::types::Type *getLLVMType(const types::ClassType *t);
-};
-
-class StaticVisitor : public WalkVisitor {
-  map<string, types::Generic> &generics;
-
-public:
-  bool evaluated;
-  int value;
-
-  using WalkVisitor::visit;
-  explicit StaticVisitor(map<string, types::Generic> &m);
-  std::pair<bool, int> transform(const ExprPtr &e);
-  void visit(IdExpr *) override;
-  void visit(IntExpr *) override;
-  void visit(IfExpr *) override;
-  void visit(UnaryExpr *) override;
-  void visit(BinaryExpr *) override;
 };
 
 } // namespace ast

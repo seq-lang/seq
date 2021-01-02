@@ -24,7 +24,9 @@ using std::move;
 namespace seq {
 namespace ast {
 
-Expr::Expr() : type(nullptr), isTypeExpr(false), done(false) {}
+Expr::Expr()
+    : type(nullptr), isTypeExpr(false), isStaticExpr(false), staticEvaluation{false, 0},
+      done(false) {}
 types::TypePtr Expr::getType() const { return type; }
 void Expr::setType(types::TypePtr t) { this->type = move(t); }
 bool Expr::isType() const { return isTypeExpr; }
@@ -45,12 +47,19 @@ NoneExpr::NoneExpr() : Expr() {}
 string NoneExpr::toString() const { return wrapType("none"); }
 ACCEPT_IMPL(NoneExpr, ASTVisitor);
 
-BoolExpr::BoolExpr(bool value) : Expr(), value(value) {}
+BoolExpr::BoolExpr(bool value) : Expr(), value(value) {
+  // TODO: handle static bools
+  //  isStaticExpr = true;
+  //  staticEvaluation = {true, int(value)};
+}
 string BoolExpr::toString() const { return wrapType(format("bool {}", int(value))); }
 ACCEPT_IMPL(BoolExpr, ASTVisitor);
 
 IntExpr::IntExpr(long long intValue)
-    : Expr(), value(std::to_string(intValue)), intValue(intValue) {}
+    : Expr(), value(std::to_string(intValue)), intValue(intValue) {
+  isStaticExpr = true;
+  staticEvaluation = {true, intValue};
+}
 IntExpr::IntExpr(const string &value, string suffix)
     : Expr(), value(), suffix(move(suffix)), intValue(0) {
   for (auto c : value)
@@ -361,15 +370,6 @@ string StackAllocExpr::toString() const {
   return wrapType(format("stack-alloc {} {}", typeExpr->toString(), expr->toString()));
 }
 ACCEPT_IMPL(StackAllocExpr, ASTVisitor);
-
-StaticExpr::StaticExpr(ExprPtr expr, set<string> &&c)
-    : Expr(), expr(move(expr)), captures(c) {}
-StaticExpr::StaticExpr(const StaticExpr &expr)
-    : Expr(expr), expr(ast::clone(expr.expr)), captures(expr.captures) {}
-string StaticExpr::toString() const {
-  return wrapType(format("static-expr {}", expr->toString()));
-}
-ACCEPT_IMPL(StaticExpr, ASTVisitor);
 
 } // namespace ast
 } // namespace seq

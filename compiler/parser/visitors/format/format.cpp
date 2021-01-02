@@ -232,10 +232,6 @@ void FormatVisitor::visit(LambdaExpr *expr) {
 
 void FormatVisitor::visit(YieldExpr *expr) { result = renderExpr(expr, "(yield)"); }
 
-void FormatVisitor::visit(StaticExpr *expr) {
-  result = renderExpr(expr, "{}", transform(expr->expr));
-}
-
 void FormatVisitor::visit(StmtExpr *expr) {
   string s;
   for (int i = 0; i < expr->stmts.size(); i++)

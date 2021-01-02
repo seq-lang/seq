@@ -46,7 +46,6 @@ void ASTVisitor::visit(LambdaExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(YieldExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(AssignExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(InstantiateExpr *expr) { defaultVisit(expr); }
-void ASTVisitor::visit(StaticExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(StmtExpr *expr) { defaultVisit(expr); }
 
 void ASTVisitor::visit(SuiteStmt *stmt) { defaultVisit(stmt); }

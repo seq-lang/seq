@@ -353,7 +353,7 @@ seq::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   vector<int> statics;
   for (auto &m : t->explicits)
     if (auto s = m.type->getStatic())
-      statics.push_back(s->getValue());
+      statics.push_back(s->evaluate(s.get()));
     else
       types.push_back(getLLVM(m.type));
   auto name = t->name;

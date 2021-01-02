@@ -37,7 +37,6 @@ struct IntExpr;
 struct ListExpr;
 struct NoneExpr;
 struct StarExpr;
-struct StaticExpr;
 struct StmtExpr;
 struct StringExpr;
 struct TupleExpr;
@@ -53,11 +52,23 @@ struct Expr : public seq::SrcObject {
   // private:
   /// Type of the expression. nullptr by default.
   types::TypePtr type;
-
   /// Flag that indicates if an expression describes a type (e.g. int or list[T]).
   /// Used by transformation and type-checking stages.
   bool isTypeExpr;
-
+  /// Flag that indicates if an expression is a compile-time static expression.
+  /// Such expression is of a form:
+  ///   an integer (IntExpr) without any suffix that is within i64 range
+  ///   a static generic
+  ///   [-,not] a
+  ///   a [+,-,*,//,%,and,or,==,!=,<,<=,>,>=] b
+  ///     (note: and/or will NOT short-circuit)
+  ///   a if cond else b
+  ///     (note: cond is static, and is true if non-zero, false otherwise).
+  ///     (note: both branches will be evaluated).
+  bool isStaticExpr;
+  pair<bool, int> staticEvaluation;
+  /// Flag that indicates if all types in an expression are inferred (i.e. if a
+  /// type-checking procedure was successful).
   bool done;
 
 public:
@@ -99,7 +110,6 @@ public:
   virtual const ListExpr *getList() const { return nullptr; }
   virtual const NoneExpr *getNone() const { return nullptr; }
   virtual const StarExpr *getStar() const { return nullptr; }
-  virtual const StaticExpr *getStatic() const { return nullptr; }
   virtual const StmtExpr *getStmtExpr() const { return nullptr; }
   virtual const StringExpr *getString() const { return nullptr; }
   virtual const TupleExpr *getTuple() const { return nullptr; }
@@ -603,24 +613,6 @@ struct StackAllocExpr : Expr {
 
   string toString() const override;
   ACCEPT(ASTVisitor);
-};
-
-/// Static expression (expr). Must evaluate to an integer at the compile-time.
-/// @example 5 + 3
-/// @example 3 if N > 5 else 2
-/// @example len((1, 2))
-struct StaticExpr : public Expr {
-  ExprPtr expr;
-  /// List of static variables within expr (e.g. N if expr is 3 + N).
-  set<string> captures;
-
-  StaticExpr(ExprPtr expr, set<string> &&captures);
-  StaticExpr(const StaticExpr &expr);
-
-  string toString() const override;
-  ACCEPT(ASTVisitor);
-
-  const StaticExpr *getStatic() const override { return this; }
 };
 
 #undef ACCEPT

@@ -356,18 +356,6 @@ private:
   /// Transform an index expression: allow for type expressions, and check if an
   /// expression is a static expression. If so, return StaticExpr.
   ExprPtr transformIndexExpr(const ExprPtr &expr);
-  /// Returns true if an expression is compile-time static expression.
-  /// Such expression is of a form:
-  ///   an integer (IntExpr) without any suffix that is within i64 range
-  ///   a static generic
-  ///   [-,not] a
-  ///   a [+,-,*,//,%,and,or,==,!=,<,<=,>,>=] b
-  ///     (note: and/or will NOT short-circuit)
-  ///   a if cond else b
-  ///     (note: cond is static, and is true if non-zero, false otherwise).
-  ///     (note: both branches will be evaluated).
-  /// All static generics will be captured and stored in captures out-parameter.
-  bool isStaticExpr(const Expr *expr, set<string> &captures);
   /// Make an anonymous function _lambda_XX with provided statements and argument names.
   /// Function definition is prepended to the current statement.
   /// If the statements refer to outer variables, those variables will be captured and

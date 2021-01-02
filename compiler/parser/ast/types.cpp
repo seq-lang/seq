@@ -191,10 +191,13 @@ bool LinkType::occurs(Type *typ, Type::Unification *undo) {
 
 /////
 
-StaticType::StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&e)
-    : explicits(ex), expr(move(e)) {}
+StaticType::StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&e, EvalFn f)
+    : explicits(ex), expr(move(e)), evaluate(f) {}
 
-StaticType::StaticType(int i) { expr = std::make_unique<IntExpr>(i); }
+StaticType::StaticType(int i) {
+  expr = std::make_unique<IntExpr>(i);
+  evaluate = [&](const StaticType *t) { return i; };
+}
 
 string StaticType::toString() const {
   vector<string> s;
@@ -208,7 +211,7 @@ string StaticType::realizeString() const {
   vector<string> deps;
   for (auto &e : explicits)
     deps.push_back(e.type->realizeString());
-  return fmt::format("{}{}", deps.size() ? join(deps, ";") : "", getValue());
+  return fmt::format("{}{}", deps.size() ? join(deps, ";") : "", evaluate(this));
 }
 
 int StaticType::unify(Type *typ, Unification *us) {
@@ -235,7 +238,7 @@ TypePtr StaticType::generalize(int level) {
   auto e = explicits;
   for (auto &t : e)
     t.type = t.type ? t.type->generalize(level) : nullptr;
-  auto c = make_shared<StaticType>(e, expr->clone());
+  auto c = make_shared<StaticType>(e, expr->clone(), evaluate);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -245,7 +248,7 @@ TypePtr StaticType::instantiate(int level, int &unboundCount,
   auto e = explicits;
   for (auto &t : e)
     t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
-  auto c = make_shared<StaticType>(e, expr->clone());
+  auto c = make_shared<StaticType>(e, expr->clone(), evaluate);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -265,15 +268,6 @@ bool StaticType::canRealize() const {
     if (t.type && !t.type->canRealize())
       return false;
   return true;
-}
-
-int StaticType::getValue() const {
-  map<string, Generic> m;
-  for (auto &e : explicits)
-    m[e.name] = e;
-  auto t = StaticVisitor(m).transform(expr);
-  assert(t.first);
-  return t.second;
 }
 
 bool isTuple(const string &name) { return startswith(name, "Tuple.N"); }

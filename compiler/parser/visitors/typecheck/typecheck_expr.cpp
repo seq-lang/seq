@@ -76,11 +76,13 @@ void TypecheckVisitor::defaultVisit(Expr *e) {
 void TypecheckVisitor::visit(BoolExpr *expr) {
   expr->type |= ctx->findInternal("bool");
   expr->done = true;
+  expr->staticEvaluation = {true, int(expr->value)};
 }
 
 void TypecheckVisitor::visit(IntExpr *expr) {
   expr->type |= ctx->findInternal("int");
   expr->done = true;
+  expr->staticEvaluation = {true, expr->intValue};
 }
 
 void TypecheckVisitor::visit(FloatExpr *expr) {
@@ -97,13 +99,13 @@ void TypecheckVisitor::visit(IdExpr *expr) {
   auto val = ctx->find(expr->value);
   seqassert(val, "cannot find IdExpr '{}'", expr->value);
   if (val->isStatic()) {
-    // Evaluate static expression and replace Id with an Int node.
-    auto s = val->type->getStatic();
-    seqassert(s, "cannot evaluate static expression");
-    resultExpr = transform(N<IntExpr>(s->getValue()));
+    // Evaluate the static expression.
+    seqassert(val->type->getStatic(), "{} does not have static type", expr->value);
+    expr->staticEvaluation = {
+        true, val->type->getStatic()->evaluate(val->type->getStatic().get())};
+    resultExpr = transform(N<IntExpr>(expr->staticEvaluation.second));
     return;
   }
-
   if (val->isType())
     expr->markType();
   auto t = ctx->instantiate(getSrcInfo(), val->type);
@@ -122,17 +124,88 @@ void TypecheckVisitor::visit(IfExpr *expr) {
   expr->ifexpr = transform(expr->ifexpr);
   expr->elsexpr = transform(expr->elsexpr);
 
-  wrapOptionalIfNeeded(expr->ifexpr->getType(), expr->elsexpr);
-  wrapOptionalIfNeeded(expr->elsexpr->getType(), expr->ifexpr);
-  expr->type |= expr->ifexpr->getType();
-  expr->type |= expr->elsexpr->getType();
-  expr->ifexpr = transform(expr->ifexpr);
-  expr->elsexpr = transform(expr->elsexpr);
-
-  expr->done = expr->cond->done && expr->ifexpr->done && expr->elsexpr->done;
+  if (expr->isStaticExpr) {
+    if (expr->cond->staticEvaluation.first && expr->ifexpr->staticEvaluation.first &&
+        expr->elsexpr->staticEvaluation.first) {
+      resultExpr = transform(N<IntExpr>(expr->cond->staticEvaluation.second
+                                            ? expr->ifexpr->staticEvaluation.second
+                                            : expr->elsexpr->staticEvaluation.second));
+    }
+  } else {
+    wrapOptionalIfNeeded(expr->ifexpr->getType(), expr->elsexpr);
+    wrapOptionalIfNeeded(expr->elsexpr->getType(), expr->ifexpr);
+    expr->type |= expr->ifexpr->getType();
+    expr->type |= expr->elsexpr->getType();
+    expr->ifexpr = transform(expr->ifexpr);
+    expr->elsexpr = transform(expr->elsexpr);
+    expr->done = expr->cond->done && expr->ifexpr->done && expr->elsexpr->done;
+  }
 }
 
-void TypecheckVisitor::visit(BinaryExpr *expr) { resultExpr = transformBinary(expr); }
+void TypecheckVisitor::visit(UnaryExpr *expr) {
+  seqassert(expr->isStaticExpr && (expr->op == "-" || expr->op == "!"),
+            "non-static unary expression");
+  // Evaluate a static expression.
+  expr->expr = transform(expr->expr);
+  expr->type |= ctx->findInternal("int");
+  if (expr->expr->staticEvaluation.first) {
+    int value = expr->expr->staticEvaluation.second;
+    if (expr->op == "-")
+      value = -value;
+    else // if (expr->op == "!")
+      value = !bool(value);
+    resultExpr = transform(N<IntExpr>(value));
+  }
+}
+
+void TypecheckVisitor::visit(BinaryExpr *expr) {
+  if (expr->isStaticExpr) {
+    // Evaluate a static expression.
+    expr->lexpr = transform(expr->lexpr);
+    expr->rexpr = transform(expr->rexpr);
+    expr->type |= ctx->findInternal("int");
+    if (expr->lexpr->staticEvaluation.first && expr->rexpr->staticEvaluation.first) {
+      int lvalue = expr->lexpr->staticEvaluation.second;
+      int rvalue = expr->rexpr->staticEvaluation.second;
+      if (expr->op == "<")
+        lvalue = lvalue < rvalue;
+      else if (expr->op == "<=")
+        lvalue = lvalue <= rvalue;
+      else if (expr->op == ">")
+        lvalue = lvalue > rvalue;
+      else if (expr->op == ">=")
+        lvalue = lvalue >= rvalue;
+      else if (expr->op == "==")
+        lvalue = lvalue == rvalue;
+      else if (expr->op == "!=")
+        lvalue = lvalue != rvalue;
+      else if (expr->op == "&&")
+        lvalue = lvalue && rvalue;
+      else if (expr->op == "||")
+        lvalue = lvalue || rvalue;
+      else if (expr->op == "+")
+        lvalue = lvalue + rvalue;
+      else if (expr->op == "-")
+        lvalue = lvalue - rvalue;
+      else if (expr->op == "*")
+        lvalue = lvalue * rvalue;
+      else if (expr->op == "//") {
+        if (!rvalue)
+          error("static division by zero");
+        lvalue = lvalue / rvalue;
+      } else if (expr->op == "%") {
+        if (!rvalue)
+          error("static division by zero");
+        lvalue = lvalue % rvalue;
+      } else {
+        seqassert(false, "unknown static operator {}", expr->op);
+      }
+      resultExpr = transform(N<IntExpr>(lvalue));
+    }
+  } else {
+    resultExpr = transformBinary(expr);
+  }
+}
 
 void TypecheckVisitor::visit(PipeExpr *expr) {
   // Returns T if t is of type Generator[T].
@@ -218,38 +291,63 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
     error("expected {} generics", generics.size());
 
   for (int i = 0; i < expr->typeParams.size(); i++) {
-    if (auto es = expr->typeParams[i]->getStatic()) {
-      // If this is a static expression, get the dependent types and create the
-      // underlying StaticType.
-      map<string, Generic> m;
-      for (const auto &g : es->captures) {
-        auto val = ctx->find(g);
+    if (expr->typeParams[i]->isStaticExpr) {
+      if (auto ei = expr->typeParams[i]->getId()) {
+        // Case 1: Generic static (e.g. N in a [N:int] scope).
+        auto val = ctx->find(ei->value);
         seqassert(val && val->isStatic(), "invalid static expression");
-        auto genTyp = val->type->follow();
-        m[g] = {g, genTyp,
-                genTyp->getLink() ? genTyp->getLink()->id
-                : genTyp->getStatic()->explicits.empty()
-                    ? 0
-                    : genTyp->getStatic()->explicits[0].id};
-      }
-      auto sv = StaticVisitor(m);
-      sv.transform(es->expr);
-      if (auto ei = es->expr->getId()) { /// Generic static (e.g. N in a [N:int] scope).
-        assert(m.size() == 1);
-        auto t = ctx->instantiate(getSrcInfo(), m.begin()->second.type);
+        auto t = ctx->instantiate(getSrcInfo(), val->type);
         LOG_TYPECHECK("[inst] {} -> {}", expr->typeParams[i]->toString(),
                       t->toString());
         generics[i].type |= t;
-      } else { /// Static expression (e.g. 32 or N+5)
-        vector<Generic> v;
-        for (const auto &mi : m)
-          v.push_back(mi.second);
-        generics[i].type |= make_shared<StaticType>(v, clone(es->expr));
+      } else {
+        // Case 2: Static expression (e.g. 32 or N+5).
+        // Get the dependent types and create the underlying StaticType.
+        unordered_set<string> seen;
+        vector<Generic> staticGenerics;
+        std::function<void(Expr *)> findGenerics = [&](Expr *e) -> void {
+          if (auto ei = e->getId()) {
+            if (!in(seen, ei->value)) {
+              auto val = ctx->find(ei->value);
+              seqassert(val && val->isStatic(), "invalid static expression");
+              auto genTyp = val->type->follow();
+              staticGenerics.emplace_back(
+                  Generic{ei->value, genTyp,
+                          genTyp->getLink() ? genTyp->getLink()->id
+                          : genTyp->getStatic()->explicits.empty()
+                              ? 0
+                              : genTyp->getStatic()->explicits[0].id});
+              seen.insert(ei->value);
+            }
+          } else if (auto eu = e->getUnary()) {
+            findGenerics(eu->expr.get());
+          } else if (auto eb = e->getBinary()) {
+            findGenerics(eb->lexpr.get());
+            findGenerics(eb->rexpr.get());
+          } else if (auto ef = e->getIf()) {
+            findGenerics(ef->cond.get());
+            findGenerics(ef->ifexpr.get());
+            findGenerics(ef->elsexpr.get());
+          }
+        };
+        findGenerics(expr->typeParams[i].get());
+        auto nctx = ctx; // To capture ctx without capturing this...
+        generics[i].type |= make_shared<StaticType>(
+            staticGenerics, expr->typeParams[i]->clone(), [nctx](const StaticType *t) {
+              nctx->addBlock();
+              for (auto &g : t->explicits)
+                nctx->add(TypecheckItem::Type, g.name, g.type, true);
+              auto en = TypecheckVisitor(nctx).transform(t->expr->clone());
+              seqassert(en->isStaticExpr && en->staticEvaluation.first,
+                        "{} cannot be evaluated", en->toString());
+              nctx->popBlock();
+              return en->staticEvaluation.second;
+            });
       }
     } else {
       seqassert(expr->typeParams[i]->isType(), "not a type: {}",
                 expr->typeParams[i]->toString());
-      expr->typeParams[i] = transformType(expr->typeParams[i]);
+      expr->typeParams[i] = transform(expr->typeParams[i], true);
       auto t = ctx->instantiate(getSrcInfo(), expr->typeParams[i]->getType());
       LOG_TYPECHECK("[inst] {} -> {}", expr->typeParams[i]->toString(), t->toString());
       generics[i].type |= t;
@@ -365,11 +463,6 @@ void TypecheckVisitor::visit(StmtExpr *expr) {
   expr->expr = transform(expr->expr);
   expr->type |= expr->expr->type;
   expr->done &= expr->expr->done;
-}
-
-void TypecheckVisitor::visit(StaticExpr *expr) {
-  // when visited "normally" just treat it as normal expression
-  resultExpr = transform(expr->expr);
 }
 
 /**************************************************************************************/
@@ -522,12 +615,9 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
   auto getInt = [](seq_int_t *o, const ExprPtr &e) {
     if (!e)
       return true;
-    if (auto es = e->getStatic()) {
-      map<string, types::Generic> m;
-      auto sv = StaticVisitor(m);
-      auto r = sv.transform(es->expr);
-      seqassert(r.first, "cannot evaluate static expression");
-      *o = r.second;
+    if (e->isStaticExpr) {
+      seqassert(e->staticEvaluation.first, "{} not evaluated", e->toString());
+      *o = e->staticEvaluation.second;
       return true;
     }
     if (auto ei = e->getInt()) {
@@ -1129,11 +1219,11 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
     } else {
       expr->args[0].value = transform(expr->args[0].value);
       if (expr->args[1].value->isId("Tuple") || expr->args[1].value->isId("tuple")) {
-        return {true, transform(N<BoolExpr>(typ->getClass()->isRecord()))};
+        return {true, transform(N<IntExpr>(typ->getClass()->isRecord()))};
       } else {
         auto t = transformType(expr->args[1].value)->type;
         deactivateUnbounds(t.get());
-        return {true, transform(N<BoolExpr>(typ->unify(t.get(), nullptr) >= 0))};
+        return {true, transform(N<IntExpr>(typ->unify(t.get(), nullptr) >= 0))};
       }
     }
   } else if (val == "staticlen") {
@@ -1153,7 +1243,7 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
     if (!typ)
       return {true, nullptr};
     else
-      return {true, transform(N<BoolExpr>(
+      return {true, transform(N<IntExpr>(
                         !ctx->findMethod(typ->getClass()->name, member).empty() ||
                         ctx->findMember(typ->getClass()->name, member)))};
   } else if (val == "compile_error") {

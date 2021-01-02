@@ -133,7 +133,6 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/parser/visitors/codegen/codegen.h
         compiler/parser/visitors/codegen/codegen_ctx.h
         compiler/parser/visitors/doc/doc.h
-        compiler/parser/visitors/walkexpr/walk.h
         compiler/parser/visitors/format/format.h
         compiler/parser/visitors/simplify/simplify.h
         compiler/parser/visitors/simplify/simplify_ctx.h
@@ -188,7 +187,6 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/parser/visitors/typecheck/typecheck.cpp
         compiler/parser/visitors/typecheck/typecheck_ctx.cpp
         compiler/parser/ast/types.cpp
-        compiler/parser/visitors/walkexpr/walk.cpp
         compiler/parser/common.cpp
         compiler/parser/ocaml/ocaml.cpp
         compiler/parser/parser.cpp

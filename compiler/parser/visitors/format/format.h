@@ -98,7 +98,6 @@ public:
   void visit(PtrExpr *) override;
   void visit(LambdaExpr *) override;
   void visit(YieldExpr *) override;
-  void visit(StaticExpr *) override;
   void visit(StmtExpr *expr) override;
 
   void visit(SuiteStmt *) override;

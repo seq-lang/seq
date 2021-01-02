@@ -270,9 +270,11 @@ public:
 };
 
 struct StaticType : public Type {
+  typedef std::function<int(const StaticType *)> EvalFn;
   vector<Generic> explicits;
   unique_ptr<Expr> expr;
-  StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&expr);
+  EvalFn evaluate;
+  StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&expr, EvalFn f);
   StaticType(int i);
 
 public:
@@ -286,7 +288,6 @@ public:
   bool canRealize() const override;
   string toString() const override;
   string realizeString() const override;
-  int getValue() const;
   shared_ptr<StaticType> getStatic() override {
     return std::static_pointer_cast<StaticType>(shared_from_this());
   }
