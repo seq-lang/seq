@@ -30,13 +30,8 @@ void CodegenVisitor::defaultVisit(Stmt *n) {
   seqassert(false, "invalid node {}", n->toString());
 }
 
-void CodegenVisitor::defaultVisit(Pattern *n) {
-  seqassert(false, "invalid node {}", n->toString());
-}
-
 CodegenVisitor::CodegenVisitor(shared_ptr<CodegenContext> ctx)
-    : ctx(move(ctx)), resultExpr(nullptr), resultStmt(nullptr), resultPattern(nullptr) {
-}
+    : ctx(move(ctx)), resultExpr(nullptr), resultStmt(nullptr) {}
 
 seq::Expr *CodegenVisitor::transform(const ExprPtr &expr) {
   if (!expr)
@@ -70,21 +65,6 @@ seq::Stmt *CodegenVisitor::transform(const StmtPtr &stmt, bool addToBlock) {
       ctx->getBlock()->add(v.resultStmt);
   }
   return v.resultStmt;
-}
-
-seq::Pattern *CodegenVisitor::transform(const PatternPtr &ptr) {
-  CodegenVisitor v(ctx);
-  v.setSrcInfo(ptr->getSrcInfo());
-  ptr->accept(v);
-  if (v.resultPattern) {
-    v.resultPattern->setSrcInfo(ptr->getSrcInfo());
-    if (ctx->tryCatch)
-      v.resultPattern->setTryCatch(ctx->tryCatch);
-    auto t = ptr->getType()->getClass();
-    assert(t);
-    v.resultPattern->setType(realizeType(t.get()));
-  }
-  return v.resultPattern;
 }
 
 seq::SeqModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
@@ -384,34 +364,6 @@ void CodegenVisitor::visit(IfStmt *stmt) {
   resultStmt = r;
 }
 
-void CodegenVisitor::visit(MatchStmt *stmt) {
-  auto m = new seq::Match();
-  m->setValue(transform(stmt->what));
-  for (auto ci = 0; ci < stmt->cases.size(); ci++) {
-    string varName;
-    seq::Var *var = nullptr;
-    seq::Pattern *pat;
-    if (auto p = CAST(stmt->patterns[ci], BoundPattern)) {
-      ctx->addBlock();
-      auto boundPat = new seq::BoundPattern(transform(p->pattern));
-      var = boundPat->getVar();
-      varName = p->var;
-      pat = boundPat;
-      ctx->popBlock();
-    } else {
-      ctx->addBlock();
-      pat = transform(stmt->patterns[ci]);
-      ctx->popBlock();
-    }
-    ctx->addBlock(m->addCase(pat));
-    transform(stmt->cases[ci]);
-    if (var)
-      ctx->addVar(varName, var);
-    ctx->popBlock();
-  }
-  resultStmt = m;
-}
-
 void CodegenVisitor::visit(TryStmt *stmt) {
   auto r = new seq::TryCatch();
   auto oldTryCatch = ctx->tryCatch;
@@ -554,66 +506,9 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
       ctx->popBlock();
     }
   }
-} // namespace tmp
-
-void CodegenVisitor::visit(ClassStmt *stmt) {
-  // visitMethods(ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo()));
 }
 
-void CodegenVisitor::visit(StarPattern *pat) { resultPattern = new seq::StarPattern(); }
-
-void CodegenVisitor::visit(IntPattern *pat) {
-  resultPattern = new seq::IntPattern(pat->value);
-}
-
-void CodegenVisitor::visit(BoolPattern *pat) {
-  resultPattern = new seq::BoolPattern(pat->value);
-}
-
-void CodegenVisitor::visit(StrPattern *pat) {
-  if (pat->prefix == "s")
-    resultPattern = new seq::SeqPattern(pat->value);
-  else
-    resultPattern = new seq::StrPattern(pat->value);
-}
-
-void CodegenVisitor::visit(RangePattern *pat) {
-  resultPattern = new seq::RangePattern(pat->start, pat->stop);
-}
-
-void CodegenVisitor::visit(TuplePattern *pat) {
-  vector<seq::Pattern *> pp;
-  for (auto &p : pat->patterns)
-    pp.push_back(transform(p));
-  resultPattern = new seq::RecordPattern(move(pp));
-}
-
-void CodegenVisitor::visit(ListPattern *pat) {
-  vector<seq::Pattern *> pp;
-  for (auto &p : pat->patterns)
-    pp.push_back(transform(p));
-  resultPattern = new seq::ArrayPattern(move(pp));
-}
-
-void CodegenVisitor::visit(OrPattern *pat) {
-  vector<seq::Pattern *> pp;
-  for (auto &p : pat->patterns)
-    pp.push_back(transform(p));
-  resultPattern = new seq::OrPattern(move(pp));
-}
-
-void CodegenVisitor::visit(WildcardPattern *pat) {
-  auto p = new seq::Wildcard();
-  if (!pat->var.empty())
-    ctx->addVar(pat->var, p->getVar());
-  p->getVar()->setType(realizeType(pat->getType()->getClass().get()));
-  resultPattern = p;
-}
-
-void CodegenVisitor::visit(GuardedPattern *pat) {
-  resultPattern =
-      new seq::GuardedPattern(transform(pat->pattern), transform(pat->cond));
-}
+void CodegenVisitor::visit(ClassStmt *stmt) {}
 
 seq::types::Type *CodegenVisitor::realizeType(types::ClassType *t) {
   auto i = ctx->find(t->getClass()->realizeString());

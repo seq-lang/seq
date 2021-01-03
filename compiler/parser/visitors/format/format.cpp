@@ -52,13 +52,6 @@ string FormatVisitor::transform(Stmt *stmt, int indent) {
   return (stmt && stmt->getSuite() ? "" : pad(indent)) + v.result + newline();
 }
 
-string FormatVisitor::transform(const PatternPtr &ptr) {
-  FormatVisitor v(renderHTML, cache);
-  if (ptr)
-    ptr->accept(v);
-  return v.result;
-}
-
 string FormatVisitor::pad(int indent) const {
   string s;
   for (int i = 0; i < (this->indent + indent) * 2; i++)
@@ -325,11 +318,10 @@ void FormatVisitor::visit(IfStmt *stmt) {
 
 void FormatVisitor::visit(MatchStmt *stmt) {
   string s;
-  for (int ci = 0; ci < stmt->cases.size(); ci++)
-    s += fmt::format("{}{}{}:{}{}{}", pad(1), keyword("case"),
-                     transform(stmt->patterns[ci]), newline(),
-                     transform(stmt->cases[ci].get(), 2),
-                     ci == stmt->cases.size() - 1 ? "" : newline());
+  for (auto &c : stmt->cases)
+    s += fmt::format("{}{}{}{}:{}{}", pad(1), keyword("case"), transform(c.pattern),
+                     c.guard ? " " + (keyword("case") + " " + transform(c.guard)) : "",
+                     newline(), transform(c.suite.get(), 2));
   result =
       fmt::format("{} {}:{}{}", keyword("match"), transform(stmt->what), newline(), s);
 }
@@ -451,53 +443,6 @@ void FormatVisitor::visit(YieldFromStmt *stmt) {
 }
 
 void FormatVisitor::visit(WithStmt *stmt) {}
-
-void FormatVisitor::visit(StarPattern *pat) { this->result = "..."; }
-
-void FormatVisitor::visit(IntPattern *pat) { result = fmt::format("{}", pat->value); }
-
-void FormatVisitor::visit(BoolPattern *pat) {
-  result = fmt::format("{}", pat->value ? "True" : "False");
-}
-
-void FormatVisitor::visit(StrPattern *pat) {
-  result = fmt::format("\"{}\"", escape(pat->value));
-}
-
-void FormatVisitor::visit(RangePattern *pat) {
-  result = fmt::format("{} ... {}", pat->start, pat->stop);
-}
-
-void FormatVisitor::visit(TuplePattern *pat) {
-  string r;
-  for (auto &e : pat->patterns)
-    r += transform(e) + ", ";
-  result = fmt::format("({})", r);
-}
-
-void FormatVisitor::visit(ListPattern *pat) {
-  string r;
-  for (auto &e : pat->patterns)
-    r += transform(e) + ", ";
-  result = fmt::format("[{}]", r);
-}
-
-void FormatVisitor::visit(OrPattern *pat) {
-  vector<string> r;
-  for (auto &e : pat->patterns)
-    r.push_back(fmt::format("({})", transform(e)));
-  result = fmt::format("{}", fmt::join(r, keyword(" or ")));
-}
-
-void FormatVisitor::visit(WildcardPattern *pat) {
-  result = fmt::format("{}", pat->var == "" ? "_" : pat->var);
-}
-
-void FormatVisitor::visit(GuardedPattern *pat) {}
-
-void FormatVisitor::visit(BoundPattern *pat) {
-  result = fmt::format("({}) {} {}", transform(pat->pattern), keyword("as"), pat->var);
-}
 
 } // namespace ast
 } // namespace seq

@@ -23,16 +23,13 @@
 namespace seq {
 namespace ast {
 
-class CodegenVisitor
-    : public CallbackASTVisitor<seq::Expr *, seq::Stmt *, seq::Pattern *> {
+class CodegenVisitor : public CallbackASTVisitor<seq::Expr *, seq::Stmt *> {
   shared_ptr<CodegenContext> ctx;
   seq::Expr *resultExpr;
   seq::Stmt *resultStmt;
-  seq::Pattern *resultPattern;
 
   void defaultVisit(Expr *expr) override;
   void defaultVisit(Stmt *expr) override;
-  void defaultVisit(Pattern *expr) override;
 
   seq::types::Type *realizeType(types::ClassType *t);
   seq::BaseFunc *realizeFunc(const string &name);
@@ -45,7 +42,6 @@ public:
 
   seq::Expr *transform(const ExprPtr &expr) override;
   seq::Stmt *transform(const StmtPtr &stmt) override;
-  seq::Pattern *transform(const PatternPtr &pat) override;
   seq::Stmt *transform(const StmtPtr &stmt, bool addToBlock);
 
   void visitMethods(const string &name);
@@ -79,23 +75,11 @@ public:
   void visit(WhileStmt *) override;
   void visit(ForStmt *) override;
   void visit(IfStmt *) override;
-  void visit(MatchStmt *) override;
   void visit(UpdateStmt *) override;
   void visit(TryStmt *) override;
   void visit(ThrowStmt *) override;
   void visit(FunctionStmt *) override;
   void visit(ClassStmt *stmt) override;
-
-  void visit(StarPattern *) override;
-  void visit(IntPattern *) override;
-  void visit(BoolPattern *) override;
-  void visit(StrPattern *) override;
-  void visit(RangePattern *) override;
-  void visit(TuplePattern *) override;
-  void visit(ListPattern *) override;
-  void visit(OrPattern *) override;
-  void visit(WildcardPattern *) override;
-  void visit(GuardedPattern *) override;
 };
 
 } // namespace ast

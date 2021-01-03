@@ -1,3 +1,5 @@
+import internal.gc as gc
+
 @tuple
 class Array[T]:
     len: int
@@ -8,8 +10,8 @@ class Array[T]:
     def __new__(sz: int) -> Array[T]:
         return (sz, Ptr[T](sz))
     def __copy__(self) -> Array[T]:
-        p = Ptr[byte](self.len * T.__elemsize__)
-        str.memcpy(p.as_byte(), self.ptr.as_byte(), self.len * T.__elemsize__)
+        p = Ptr[byte](self.len * gc.sizeof[T]())
+        str.memcpy(p.as_byte(), self.ptr.as_byte(), self.len * gc.sizeof[T]())
         return (self.len, Ptr[T](p))
     def __len__(self) -> int:
         return self.len

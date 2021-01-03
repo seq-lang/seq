@@ -27,8 +27,6 @@ protected:
   virtual void defaultVisit(Expr *expr);
   /// Default statement node visitor if a particular visitor is not overloaded.
   virtual void defaultVisit(Stmt *stmt);
-  /// Default pattern node visitor if a particular visitor is not overloaded.
-  virtual void defaultVisit(Pattern *pattern);
 
 public:
   virtual void visit(NoneExpr *);
@@ -57,6 +55,7 @@ public:
   virtual void visit(LambdaExpr *);
   virtual void visit(YieldExpr *);
   virtual void visit(AssignExpr *);
+  virtual void visit(RangeExpr *);
   virtual void visit(PtrExpr *);
   virtual void visit(TupleIndexExpr *);
   virtual void visit(StackAllocExpr *);
@@ -88,32 +87,19 @@ public:
   virtual void visit(ClassStmt *);
   virtual void visit(YieldFromStmt *);
   virtual void visit(WithStmt *);
-
-  virtual void visit(StarPattern *);
-  virtual void visit(IntPattern *);
-  virtual void visit(BoolPattern *);
-  virtual void visit(StrPattern *);
-  virtual void visit(RangePattern *);
-  virtual void visit(TuplePattern *);
-  virtual void visit(ListPattern *);
-  virtual void visit(OrPattern *);
-  virtual void visit(WildcardPattern *);
-  virtual void visit(GuardedPattern *);
-  virtual void visit(BoundPattern *);
 };
 
-template <typename TE, typename TS, typename TP>
+template <typename TE, typename TS>
 /**
  * Callback AST visitor.
  * This visitor extends base ASTVisitor and stores node's source location (SrcObject).
  * Function simplify() will visit a node and return the appropriate transformation. As
- * each node type (expression, statement, or a pattern) might return a different type,
+ * each node type (expression or statement) might return a different type,
  * this visitor is generic for each different return type.
  */
 struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
   virtual TE transform(const unique_ptr<Expr> &expr) = 0;
   virtual TS transform(const unique_ptr<Stmt> &stmt) = 0;
-  virtual TP transform(const unique_ptr<Pattern> &pattern) = 0;
 
   /// Convenience method that transforms a vector of nodes.
   template <typename T> auto transform(const vector<T> &ts) {

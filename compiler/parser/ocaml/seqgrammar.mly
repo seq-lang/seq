@@ -150,17 +150,17 @@ arith_term:
   | arith_term DOT ID { $loc, Dot ($1, $3) }
   | TYPEOF LP expr RP { $loc, TypeOf $3 }
   | LP YIELD RP { $loc, YieldTo () }
+  | ELLIPSIS { $loc, Ellipsis () }
+  | INT ELLIPSIS INT { $loc, Range (($loc($1), Int $1), ($loc($3), Int $3)) }
 call_term:
-  | ELLIPSIS { None, ($loc, Ellipsis ()) }
+  /* | ELLIPSIS { None, ($loc, Ellipsis ()) } */
   | expr { None, $1 }
   | ID EQ expr { Some $1, $3 }
-  | ID EQ ELLIPSIS { Some $1, ($loc($3), Ellipsis ()) }
+  /* | ID EQ ELLIPSIS { Some $1, ($loc($3), Ellipsis ()) } */
 index_term:
   | expr { $1 }
   | expr? COLON expr? { $loc, Slice ($1, $3, None) }
   | expr? COLON expr? COLON expr? { $loc, Slice ($1, $3, $5) }
-
-
 walrus:
   | ID WALRUS expr { $loc, AssignExpr (($loc($1), Id $1), $3) }
   /* | LP FL(COMMA, ID) RP WALRUS expr { $loc, AssignExpr ($loc($1), Id $1) $3 } */
@@ -208,7 +208,7 @@ single_statement:
   | FOR lassign IN expr COLON suite ELSE NOT BREAK COLON suite { $loc, For ($2, $4, $6, $11) }
   | IF expr COLON suite { $loc, If [Some $2, $4] }
   | IF expr COLON suite elif_suite { $loc, If ((Some $2, $4) :: $5) }
-  | MATCH expr COLON NL INDENT case_suite DEDENT { $loc, Match ($2, $6) }
+  | MATCH expr COLON NL INDENT case+ DEDENT { $loc, Match ($2, $6) }
   | try_statement | with_statement | class_statement { $1 }
 suite:
   | FLNE(SEMICOLON, small_statement) NL { List.concat $1 }
@@ -217,25 +217,10 @@ elif_suite:
   | ELIF expr COLON suite { [Some $2, $4] }
   | ELSE COLON suite { [None, $3] }
   | ELIF expr COLON suite elif_suite { (Some $2, $4) :: $5 }
-case_suite: case { [$1] } | case case_suite { $1 :: $2 }
 case:
-  | CASE case_or COLON suite { $2, $4 }
-  | CASE case_or IF bool_expr COLON suite { ($loc, GuardedPattern ($2, $4)), $6 }
-  | CASE case_or AS ID COLON suite { ($loc, BoundPattern ($4, $2)), $6 }
-case_or: separated_nonempty_list(OR, case_type) { match $1 with [p] -> p | l -> $loc, OrPattern l }
-case_type:
-  | ELLIPSIS { $loc, StarPattern () }
-  | ID { $loc, WildcardPattern (match $1 with "_" -> None | s -> Some s) }
-  | case_int { $loc, IntPattern $1 }
-  | bool { $loc, BoolPattern $1 }
-  | string { $loc, StrPattern $1 }
-  | LP separated_nonempty_list(COMMA, case_or) RP { $loc, TuplePattern $2 }
-  | LS FL(COMMA, case_or) RS { $loc, ListPattern $2 }
-  | case_int ELLIPSIS case_int { $loc, RangePattern($1, $3) }
-case_int:
-  | INT { Int64.of_string (fst $1) }
-  | ADD INT { Int64.of_string (fst $2) }
-  | SUB INT { Int64.neg (Int64.of_string (fst $2)) }
+  | CASE pipe_expr COLON suite { { pattern = flat_pipe $2; guard = None; pat_stmts = $4 } }
+  | CASE pipe_expr IF bool_expr COLON suite { { pattern = flat_pipe $2; guard = Some $4; pat_stmts = $6 } }
+  /* | CASE case_or AS ID COLON suite { ($loc, BoundPattern ($4, $2)), $6 } */
 
 import_statement:
   | IMPORT FLNE(COMMA, import_term)

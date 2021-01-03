@@ -322,6 +322,15 @@ string AssignExpr::toString() const {
 }
 ACCEPT_IMPL(AssignExpr, ASTVisitor);
 
+RangeExpr::RangeExpr(ExprPtr start, ExprPtr stop)
+    : Expr(), start(move(start)), stop(move(stop)) {}
+RangeExpr::RangeExpr(const RangeExpr &expr)
+    : Expr(expr), start(ast::clone(expr.start)), stop(ast::clone(expr.stop)) {}
+string RangeExpr::toString() const {
+  return wrapType(format("range {} {}", start->toString(), stop->toString()));
+}
+ACCEPT_IMPL(RangeExpr, ASTVisitor);
+
 StmtExpr::StmtExpr(vector<unique_ptr<Stmt>> &&stmts, ExprPtr expr)
     : Expr(), stmts(move(stmts)), expr(move(expr)) {}
 StmtExpr::StmtExpr(const StmtExpr &expr)

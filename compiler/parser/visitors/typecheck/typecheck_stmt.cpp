@@ -301,39 +301,6 @@ void TypecheckVisitor::visit(IfStmt *stmt) {
     resultStmt = transform(N<PassStmt>());
 }
 
-void TypecheckVisitor::visit(MatchStmt *stmt) {
-  stmt->what = transform(stmt->what);
-  auto matchType = stmt->what->getType();
-  auto matchTypeClass = matchType->getClass();
-
-  // TODO: hack for seq/K-mer unification
-  auto unifyMatchType = [&](const TypePtr &t) {
-    seqassert(t && matchType, "invalid match type");
-    types::Type::Unification undo;
-    undo.isMatch = true;
-    if (t->unify(matchType.get(), &undo) < 0) {
-      undo.undo();
-      error("cannot unify {} and {}", t->toString(), matchType->toString());
-    }
-  };
-
-  stmt->done = true;
-  for (auto ci = 0; ci < stmt->cases.size(); ci++) {
-    if (auto p = CAST(stmt->patterns[ci], BoundPattern)) {
-      p->pattern = transform(p->pattern);
-      ctx->add(TypecheckItem::Var, p->var, p->pattern->getType());
-      unifyMatchType(p->pattern->getType());
-      stmt->done &= p->pattern->done;
-    } else {
-      stmt->patterns[ci] = transform(stmt->patterns[ci]);
-      unifyMatchType(stmt->patterns[ci]->getType());
-      stmt->done &= stmt->patterns[ci]->done;
-    }
-    stmt->cases[ci] = transform(stmt->cases[ci]);
-    stmt->done &= stmt->cases[ci]->done;
-  }
-}
-
 void TypecheckVisitor::visit(TryStmt *stmt) {
   vector<TryStmt::Catch> catches;
   stmt->suite = transform(stmt->suite);

@@ -181,55 +181,8 @@ ExprPtr parse_expr(value val) {
     Return(Yield, );
   case 27:
     Return(Assign, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)));
-  default:
-    seq::compilationError("[internal] tag variant mismatch ...");
-    return nullptr;
-  }
-#undef Return
-}
-
-/// Convert a OCaml AST pattern to a PatternPtr.
-PatternPtr parse_pattern(value val) {
-#define Return(x, ...)                                                                 \
-  do {                                                                                 \
-    auto _ret = make_unique<x##Pattern>(__VA_ARGS__);                                  \
-    _ret->setSrcInfo(pos);                                                             \
-    OcamlReturn(move(_ret));                                                           \
-  } while (0)
-
-  CAMLparam1(val);
-  CAMLlocal3(p, v, t);
-  CAMLlocal3(f0, f1, f2);
-
-  auto pos = parse_pos(Field(val, 0));
-  v = Field(val, 1);
-  if (Is_long(v))
-    seq::compilationError("[internal] long variant mismatch ...");
-  int tv = Tag_val(v);
-  t = Field(v, 0);
-  switch (tv) {
-  case 0:
-    Return(Star, );
-  case 1:
-    Return(Int, Int64_val(t));
-  case 2:
-    Return(Bool, Bool_val(t));
-  case 3:
-    Return(Str, parse_string(Field(t, 1)), parse_string(Field(t, 0)));
-  case 4:
-    Return(Range, Int64_val(Field(t, 0)), Int64_val(Field(t, 1)));
-  case 5:
-    Return(Tuple, parse_list(t, parse_pattern));
-  case 6:
-    Return(List, parse_list(t, parse_pattern));
-  case 7:
-    Return(Or, parse_list(t, parse_pattern));
-  case 8:
-    Return(Wildcard, parse_optional(t, parse_string));
-  case 9:
-    Return(Guarded, parse_pattern(Field(t, 0)), parse_expr(Field(t, 1)));
-  case 10:
-    Return(Bound, parse_string(Field(t, 0)), parse_pattern(Field(t, 1)));
+  case 28:
+    Return(Range, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)));
   default:
     seq::compilationError("[internal] tag variant mismatch ...");
     return nullptr;
@@ -307,7 +260,9 @@ StmtPtr parse_stmt(value val) {
            }));
   case 13:
     Return(Match, parse_expr(Field(t, 0)), parse_list(Field(t, 1), [](value i) {
-             return make_pair(parse_pattern(Field(i, 0)), parse_stmt_list(Field(i, 1)));
+             return MatchStmt::MatchCase{parse_expr(Field(i, 0)),
+                                         parse_optional(Field(i, 1), parse_expr),
+                                         parse_stmt_list(Field(i, 2))};
            }));
   case 14:
     Return(Import, parse_expr(Field(t, 0)), parse_optional(Field(t, 1), parse_expr),

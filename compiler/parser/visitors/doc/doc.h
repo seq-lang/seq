@@ -44,7 +44,7 @@ struct DocContext : public Context<int> {
   shared_ptr<int> find(const string &s) const override;
 };
 
-struct DocVisitor : public CallbackASTVisitor<json, string, string> {
+struct DocVisitor : public CallbackASTVisitor<json, string> {
   shared_ptr<DocContext> ctx;
   json resultExpr;
   string resultStmt;
@@ -53,7 +53,6 @@ public:
   DocVisitor(shared_ptr<DocContext> ctx) : ctx(ctx) {}
   json transform(const ExprPtr &e) override;
   string transform(const StmtPtr &e) override;
-  string transform(const PatternPtr &e) override { return ""; }
   static json apply(const string &argv0, const vector<string> &files);
   void transformModule(StmtPtr stmt);
   json jsonify(const seq::SrcInfo &s);

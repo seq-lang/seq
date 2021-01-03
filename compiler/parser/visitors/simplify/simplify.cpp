@@ -165,7 +165,5 @@ SimplifyVisitor::SimplifyVisitor(shared_ptr<SimplifyContext> ctx,
   prependStmts = prepend ? move(prepend) : make_shared<vector<StmtPtr>>();
 }
 
-// void handlePattern() { auto handleCase = [](ExprPtr && var, ) }
-
 } // namespace ast
 } // namespace seq

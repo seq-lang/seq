@@ -46,12 +46,8 @@ struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
     vector<LinkType *> linked;
     /// List of unbound types whose level has been changed.
     vector<pair<LinkType *, int>> leveled;
-    /// HACK: True if this unification is part of match statement.
-    /// Used only for force-matching Kmer and seq types in a match statement.
-    bool isMatch;
 
   public:
-    Unification() : isMatch(false) {}
     /// Undo the unification step.
     void undo();
   };

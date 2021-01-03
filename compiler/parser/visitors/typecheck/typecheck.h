@@ -26,13 +26,12 @@ namespace ast {
 
 types::TypePtr operator|=(types::TypePtr &a, const types::TypePtr &b);
 
-class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr> {
+class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
   shared_ptr<TypeContext> ctx;
   shared_ptr<vector<StmtPtr>> prependStmts;
 
   ExprPtr resultExpr;
   StmtPtr resultStmt;
-  PatternPtr resultPattern;
 
 public:
   static StmtPtr apply(shared_ptr<Cache> cache, StmtPtr stmts);
@@ -44,14 +43,12 @@ public:
   /// All of these are non-const in TypeCheck visitor.
   ExprPtr transform(const ExprPtr &e) override;
   StmtPtr transform(const StmtPtr &s) override;
-  PatternPtr transform(const PatternPtr &p) override;
   ExprPtr transform(ExprPtr &e, bool allowTypes);
   ExprPtr transformType(ExprPtr &expr);
 
 private:
   void defaultVisit(Expr *e) override;
   void defaultVisit(Stmt *s) override;
-  void defaultVisit(Pattern *p) override;
 
 public:
   /// Set type to bool.
@@ -138,7 +135,6 @@ public:
   void visit(WhileStmt *) override;
   void visit(ForStmt *) override;
   void visit(IfStmt *) override;
-  void visit(MatchStmt *) override;
   void visit(TryStmt *) override;
   void visit(ThrowStmt *) override;
   /// Parse a function stub and create a corresponding generic function type.
@@ -147,19 +143,7 @@ public:
   /// Parse a type stub and create a corresponding generic type.
   void visit(ClassStmt *) override;
 
-  void visit(StarPattern *) override;
-  void visit(IntPattern *) override;
-  void visit(BoolPattern *) override;
-  void visit(StrPattern *) override;
-  void visit(RangePattern *) override;
-  void visit(TuplePattern *) override;
-  void visit(ListPattern *) override;
-  void visit(OrPattern *) override;
-  void visit(WildcardPattern *) override;
-  void visit(GuardedPattern *) override;
-  void visit(BoundPattern *) override;
-
-  using CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>::transform;
+  using CallbackASTVisitor<ExprPtr, StmtPtr>::transform;
 
 private:
   /// Attempts to realize a given type and returns a realization or a nullptr if type is
@@ -262,7 +246,7 @@ private:
   ///     ptr: Function[T0, T1,...,TN]
   ///     aI: TI ... # (if mask[I-1] is zero for I >= 1)
   ///     def __call__(self, aI: TI...) -> T0: # (if mask[I-1] is one for I >= 1)
-  ///       return self.ptr(self.a1, a2, self.a3...) # (depending on mask pattern)
+  ///       return self.ptr(self.a1, a2, self.a3...) # (depending on a mask pattern)
   /// The following partial constructor is added if an oldMask is set:
   ///     def __new_<old_mask>_<mask>(p, aI: TI...) # (if oldMask[I-1] != mask[I-1]):
   ///       return Partial.N<mask>.__new__(self.ptr, self.a1, a2, ...) # (see above)

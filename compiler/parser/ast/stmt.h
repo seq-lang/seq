@@ -15,7 +15,6 @@
 
 #include "lang/seq.h"
 #include "parser/ast/expr.h"
-#include "parser/ast/pattern.h"
 #include "parser/ast/types.h"
 #include "parser/common.h"
 
@@ -304,13 +303,17 @@ struct IfStmt : public Stmt {
 ///          case 1: print
 ///          case _: pass
 struct MatchStmt : public Stmt {
-  ExprPtr what;
-  vector<PatternPtr> patterns;
-  vector<StmtPtr> cases;
+  struct MatchCase {
+    ExprPtr pattern;
+    ExprPtr guard;
+    StmtPtr suite;
 
-  MatchStmt(ExprPtr what, vector<PatternPtr> &&patterns, vector<StmtPtr> &&cases);
-  /// Convenience constructor for parsing OCaml objects.
-  MatchStmt(ExprPtr what, vector<pair<PatternPtr, StmtPtr>> &&patternCasePairs);
+    MatchCase clone() const;
+  };
+  ExprPtr what;
+  vector<MatchCase> cases;
+
+  MatchStmt(ExprPtr what, vector<MatchCase> &&cases);
   MatchStmt(const MatchStmt &stmt);
 
   string toString() const override;

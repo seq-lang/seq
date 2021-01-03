@@ -20,7 +20,7 @@
 namespace seq {
 namespace ast {
 
-class FormatVisitor : public CallbackASTVisitor<string, string, string> {
+class FormatVisitor : public CallbackASTVisitor<string, string> {
   string result;
   string space;
   bool renderType, renderHTML;
@@ -55,7 +55,6 @@ public:
   FormatVisitor(bool html, shared_ptr<Cache> cache = nullptr);
   string transform(const ExprPtr &e) override;
   string transform(const StmtPtr &stmt) override;
-  string transform(const PatternPtr &ptr) override;
   string transform(Stmt *stmt, int indent);
 
   template <typename T>
@@ -67,7 +66,6 @@ public:
 
   void defaultVisit(Expr *e) override { error("cannot format {}", *e); }
   void defaultVisit(Stmt *e) override { error("cannot format {}", *e); }
-  void defaultVisit(Pattern *e) override { error("cannot format {}", *e); }
 
 public:
   void visit(NoneExpr *) override;
@@ -126,24 +124,12 @@ public:
   void visit(YieldFromStmt *) override;
   void visit(WithStmt *) override;
 
-  void visit(StarPattern *) override;
-  void visit(IntPattern *) override;
-  void visit(BoolPattern *) override;
-  void visit(StrPattern *) override;
-  void visit(RangePattern *) override;
-  void visit(TuplePattern *) override;
-  void visit(ListPattern *) override;
-  void visit(OrPattern *) override;
-  void visit(WildcardPattern *) override;
-  void visit(GuardedPattern *) override;
-  void visit(BoundPattern *) override;
-
 public:
   friend std::ostream &operator<<(std::ostream &out, const FormatVisitor &c) {
     return out << c.result;
   }
 
-  using CallbackASTVisitor<string, string, string>::transform;
+  using CallbackASTVisitor<string, string>::transform;
   template <typename T> string transform(const vector<T> &ts) {
     vector<string> r;
     for (auto &e : ts)

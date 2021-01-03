@@ -33,7 +33,7 @@ namespace ast {
  *
  * ➡️ Note: This visitor *copies* the incoming AST and does not modify it.
  */
-class SimplifyVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr> {
+class SimplifyVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
   /// Shared simplification context.
   shared_ptr<SimplifyContext> ctx;
   /// A pointer to a vector of statements that are to be prepended before the current
@@ -69,9 +69,6 @@ class SimplifyVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr> 
   /// Each new statement is stored here (as visit() does not return anything) and
   /// later returned by a transform() call.
   StmtPtr resultStmt;
-  /// Each new pattern is stored here (as visit() does not return anything) and
-  /// later returned by a transform() call.
-  PatternPtr resultPattern;
 
 public:
   /// Static method that applies SimplifyStage on a given AST node.
@@ -95,8 +92,6 @@ public:
   ExprPtr transform(const ExprPtr &expr) override;
   /// Transform an AST statement node.
   StmtPtr transform(const StmtPtr &stmt) override;
-  /// Transform an AST pattern node.
-  PatternPtr transform(const PatternPtr &pattern) override;
   /// Transform an AST statement node (pointer convenience method).
   StmtPtr transform(const Stmt *stmt);
   /// Transform an AST expression node.
@@ -109,7 +104,6 @@ private:
   /// These functions just clone a given node (nothing to be simplified).
   void defaultVisit(Expr *e) override;
   void defaultVisit(Stmt *s) override;
-  void defaultVisit(Pattern *p) override;
 
 public:
   /// Transform None to:
@@ -219,6 +213,8 @@ public:
   /// Disallowed in dependent parts of short-circuiting expressions
   /// (i.e. b and b2 in "a and b", "a or b" or "b if cond else b2").
   void visit(AssignExpr *) override;
+  /// Disallow ranges except in match statements.
+  void visit(RangeExpr *) override;
 
   /// Transform all statements in a suite and flatten them (unless a suite is a variable
   /// scope).
@@ -322,14 +318,7 @@ public:
   /// codegenMagic() method below).
   void visit(ClassStmt *) override;
 
-  void visit(TuplePattern *) override;
-  void visit(ListPattern *) override;
-  void visit(OrPattern *) override;
-  void visit(WildcardPattern *) override;
-  void visit(GuardedPattern *) override;
-  void visit(BoundPattern *) override;
-
-  using CallbackASTVisitor<ExprPtr, StmtPtr, PatternPtr>::transform;
+  using CallbackASTVisitor<ExprPtr, StmtPtr>::transform;
 
 private:
   /// Converts binary integers (0bXXX), unsigned integers (XXXu), fixed-width integers
@@ -387,6 +376,7 @@ private:
   ///   a, (b, c) = d
   void unpackAssignments(const Expr *lhs, const Expr *rhs, vector<StmtPtr> &stmts,
                          bool shadow, bool mustExist);
+  StmtPtr transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr suite);
   /// Transform a C import (from C import foo(int) -> float as f) to:
   ///   @.c
   ///   def foo(a1: int) -> float: pass

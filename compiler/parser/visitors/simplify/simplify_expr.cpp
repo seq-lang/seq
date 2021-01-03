@@ -572,6 +572,8 @@ void SimplifyVisitor::visit(AssignExpr *expr) {
       transform(N<StmtExpr>(move(s), transform(N<IdExpr>(expr->var->getId()->value))));
 }
 
+void SimplifyVisitor::visit(RangeExpr *expr) { error("invalid range expression"); }
+
 /**************************************************************************************/
 
 ExprPtr SimplifyVisitor::transformInt(const string &value, const string &suffix) {

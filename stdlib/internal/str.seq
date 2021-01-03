@@ -21,6 +21,9 @@ class str:
             i += 1
         return True
 
+    def __match__(self, other: str):
+        return self.__eq__(other)
+
     def __ne__(self, other: str):
         return not (self == other)
 

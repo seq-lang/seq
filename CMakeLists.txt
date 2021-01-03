@@ -122,7 +122,6 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/lang/var.h
         compiler/parser/ast.h
         compiler/parser/ast/expr.h
-        compiler/parser/ast/pattern.h
         compiler/parser/ast/stmt.h
         compiler/parser/ast/types.h
         compiler/parser/visitors/visitor.h
@@ -176,7 +175,6 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/lang/var.cpp
         compiler/parser/ast/expr.cpp
         compiler/parser/ast/stmt.cpp
-        compiler/parser/ast/pattern.cpp
         compiler/parser/visitors/visitor.cpp
         compiler/parser/visitors/codegen/codegen.cpp
         compiler/parser/visitors/codegen/codegen_ctx.cpp
@@ -205,7 +203,7 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/types/void.cpp
         compiler/util/fmt/format.cpp
         compiler/util/jit.cpp
-        compiler/parser/visitors/simplify/simplify_expr.cpp compiler/parser/visitors/simplify/simplify_stmt.cpp compiler/parser/visitors/simplify/simplify_pattern.cpp)
+        compiler/parser/visitors/simplify/simplify_expr.cpp compiler/parser/visitors/simplify/simplify_stmt.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})
