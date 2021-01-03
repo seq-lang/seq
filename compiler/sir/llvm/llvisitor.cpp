@@ -38,6 +38,10 @@ std::string getNameForFunction(Func *x) {
   }
 }
 
+llvm::Value *getDummyVoidValue(LLVMContext &context) {
+  return llvm::ConstantTokenNone::get(context);
+}
+
 llvm::TargetMachine *getTargetMachine(llvm::Triple triple, llvm::StringRef cpuStr,
                                       llvm::StringRef featuresStr,
                                       const llvm::TargetOptions &options) {
@@ -445,10 +449,14 @@ void LLVMVisitor::visit(IRModule *x) {
       funcs.insert(f, func);
     } else {
       llvm::Type *llvmType = getLLVMType(var->getType());
-      auto *storage = new llvm::GlobalVariable(
-          *module.get(), llvmType, false, llvm::GlobalValue::PrivateLinkage,
-          llvm::Constant::getNullValue(llvmType), var->getName());
-      vars.insert(var, storage);
+      if (llvmType->isVoidTy()) {
+        vars.insert(var, getDummyVoidValue(context));
+      } else {
+        auto *storage = new llvm::GlobalVariable(
+            *module.get(), llvmType, false, llvm::GlobalValue::PrivateLinkage,
+            llvm::Constant::getNullValue(llvmType), var->getName());
+        vars.insert(var, storage);
+      }
     }
   }
 
@@ -1162,8 +1170,13 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   }
 
   for (auto *symbol : *x) {
-    llvm::Value *storage = builder.CreateAlloca(getLLVMType(symbol->getType()));
-    vars.insert(symbol, storage);
+    llvm::Type *llvmType = getLLVMType(symbol->getType());
+    if (llvmType->isVoidTy()) {
+      vars.insert(symbol, getDummyVoidValue(context));
+    } else {
+      llvm::Value *storage = builder.CreateAlloca(llvmType);
+      vars.insert(symbol, storage);
+    }
   }
 
   auto *startBlock = llvm::BasicBlock::Create(context, "start", func);
@@ -1829,8 +1842,10 @@ void LLVMVisitor::visit(AssignInstr *x) {
   llvm::Value *var = vars[x->getLhs()];
   assert(var);
   process(x->getRhs());
-  llvm::IRBuilder<> builder(block);
-  builder.CreateStore(value, var);
+  if (var != getDummyVoidValue(context)) {
+    llvm::IRBuilder<> builder(block);
+    builder.CreateStore(value, var);
+  }
 }
 
 void LLVMVisitor::visit(ExtractInstr *x) {
@@ -2015,8 +2030,12 @@ void LLVMVisitor::visit(ReturnInstr *x) {
 }
 
 void LLVMVisitor::visit(YieldInstr *x) {
-  process(x->getValue());
-  makeYield(value);
+  if (x->getValue()) {
+    process(x->getValue());
+    makeYield(value);
+  } else {
+    makeYield(nullptr);
+  }
 }
 
 void LLVMVisitor::visit(ThrowInstr *x) {
