@@ -351,7 +351,33 @@ void TypecheckVisitor::visit(TryStmt *stmt) {
 
 void TypecheckVisitor::visit(ThrowStmt *stmt) {
   stmt->expr = transform(stmt->expr);
-  stmt->done &= stmt->expr->done;
+  auto tc = stmt->expr->type->getClass();
+  if (!stmt->transformed && tc) {
+    auto &f = ctx->cache->classes[tc->name].fields;
+    if (f.empty() || !f[0].type->getClass() ||
+        f[0].type->getClass()->name != "ExcHeader")
+      error("cannot throw non-exception (first object member must be of type "
+            "ExcHeader)");
+    auto var = ctx->cache->getTemporaryVar("exc");
+    vector<CallExpr::Arg> args;
+    args.emplace_back(CallExpr::Arg{"", N<StringExpr>(tc->name)});
+    args.emplace_back(CallExpr::Arg{
+        "", N<DotExpr>(N<DotExpr>(N<IdExpr>(var),
+                                  ctx->cache->classes[tc->name].fields[0].name),
+                       "msg")});
+    args.emplace_back(CallExpr::Arg{"", N<StringExpr>(ctx->bases.back().name)});
+    args.emplace_back(CallExpr::Arg{"", N<StringExpr>(stmt->getSrcInfo().file)});
+    args.emplace_back(CallExpr::Arg{"", N<IntExpr>(stmt->getSrcInfo().line)});
+    args.emplace_back(CallExpr::Arg{"", N<IntExpr>(stmt->getSrcInfo().col)});
+    resultStmt = transform(N<SuiteStmt>(
+        N<AssignStmt>(N<IdExpr>(var), move(stmt->expr)),
+        N<AssignMemberStmt>(N<IdExpr>(var),
+                            ctx->cache->classes[tc->name].fields[0].name,
+                            N<CallExpr>(N<IdExpr>("ExcHeader"), move(args))),
+        N<ThrowStmt>(N<IdExpr>(var), true)));
+  } else {
+    stmt->done = false;
+  }
 }
 
 void TypecheckVisitor::visit(FunctionStmt *stmt) {

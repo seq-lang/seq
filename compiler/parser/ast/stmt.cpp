@@ -236,8 +236,10 @@ string TryStmt::toString() const {
 }
 ACCEPT_IMPL(TryStmt, ASTVisitor);
 
-ThrowStmt::ThrowStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}
-ThrowStmt::ThrowStmt(const ThrowStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
+ThrowStmt::ThrowStmt(ExprPtr expr, bool transformed)
+    : Stmt(), expr(move(expr)), transformed(transformed) {}
+ThrowStmt::ThrowStmt(const ThrowStmt &stmt)
+    : Stmt(stmt), expr(ast::clone(stmt.expr)), transformed(stmt.transformed) {}
 string ThrowStmt::toString() const { return format("(throw {})", expr->toString()); }
 ACCEPT_IMPL(ThrowStmt, ASTVisitor);
 

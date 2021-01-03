@@ -380,8 +380,11 @@ struct TryStmt : public Stmt {
 /// @example: raise a
 struct ThrowStmt : public Stmt {
   ExprPtr expr;
+  // True if a statement was transformed during type-checking stage
+  // (to avoid setting up ExcHeader multuple times).
+  bool transformed;
 
-  explicit ThrowStmt(ExprPtr expr);
+  explicit ThrowStmt(ExprPtr expr, bool transformed = false);
   ThrowStmt(const ThrowStmt &stmt);
 
   string toString() const override;
