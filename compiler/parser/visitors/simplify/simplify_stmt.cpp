@@ -136,8 +136,7 @@ void SimplifyVisitor::visit(AssertStmt *stmt) {
   seqassert(!stmt->message || stmt->message->getString(),
             "assert message not a string");
 
-  if (ctx->cache->testFlags && ctx->getLevel() &&
-      ctx->bases.back().attributes & FLAG_TEST)
+  if (ctx->getLevel() && ctx->bases.back().attributes & FLAG_TEST)
     resultStmt = transform(N<IfStmt>(
         N<UnaryExpr>("!", clone(stmt->expr)),
         N<ExprStmt>(N<CallExpr>(

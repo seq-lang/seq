@@ -134,6 +134,26 @@ print s #: {0, 1, 2}
 d = {i: j for i in range(10) if i < 1 for j in range(10)}
 print d  #: {0: 9}
 
+#%% comprehension_opt,barebones
+@extend
+class List[T]:
+    def __init__(self, dummy: bool, other):
+        if hasattr(typeof(other), '__len__'):
+            print 'optimize', other.__len__()
+            self.__init__(other.__len__())
+        else:
+            self.__init__()
+def foo():
+    yield 0
+    yield 1
+    yield 2
+print [i for i in range(3)] #: optimize 3
+#: [0, 1, 2]
+print [i for i in foo()] #: [0, 1, 2]
+print [i for i in range(3) if i%2 == 0] #: [0, 2]
+print [i + j for i in range(1) for j in range(1)] #: [0]
+print {i for i in range(3)} #: {0, 1, 2}
+
 #%% generator,barebones
 z = 3
 g = (e for e in range(20) if e % z == 1)

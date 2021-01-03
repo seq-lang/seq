@@ -58,7 +58,7 @@ class __internal__:
         s = "\033[1;31mTEST FAILED:\033[0m " + file + " (line " + str(line) + ")"
         if msg:
             s += ": " + msg
-        seq_print(s)
+        seq_print(s + "\n")
     def check_errno(prefix: str):
         msg = seq_check_errno()
         if msg:
