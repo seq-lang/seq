@@ -29,6 +29,7 @@ types::TypePtr operator|=(types::TypePtr &a, const types::TypePtr &b);
 class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
   shared_ptr<TypeContext> ctx;
   shared_ptr<vector<StmtPtr>> prependStmts;
+  bool allowVoidExpr;
 
   ExprPtr resultExpr;
   StmtPtr resultStmt;
@@ -43,7 +44,7 @@ public:
   /// All of these are non-const in TypeCheck visitor.
   ExprPtr transform(const ExprPtr &e) override;
   StmtPtr transform(const StmtPtr &s) override;
-  ExprPtr transform(ExprPtr &e, bool allowTypes);
+  ExprPtr transform(ExprPtr &e, bool allowTypes, bool allowVoid = false);
   ExprPtr transformType(ExprPtr &expr);
 
 private:

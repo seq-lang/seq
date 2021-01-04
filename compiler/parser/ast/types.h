@@ -100,7 +100,7 @@ public:
   virtual shared_ptr<LinkType> getUnbound() { return nullptr; }
   virtual shared_ptr<StaticType> getStatic() { return nullptr; }
 
-  friend Type &operator|=(Type &a, shared_ptr<Type> b);
+  virtual bool is(const string &s);
 };
 typedef shared_ptr<Type> TypePtr;
 

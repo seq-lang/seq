@@ -76,7 +76,8 @@ void TypecheckVisitor::visit(BreakStmt *stmt) { stmt->done = true; }
 void TypecheckVisitor::visit(ContinueStmt *stmt) { stmt->done = true; }
 
 void TypecheckVisitor::visit(ExprStmt *stmt) {
-  stmt->expr = transform(stmt->expr);
+  // Make sure to allow expressions with void type.
+  stmt->expr = transform(stmt->expr, false, true);
   stmt->done = stmt->expr->done;
 }
 
@@ -211,13 +212,7 @@ void TypecheckVisitor::visit(ReturnStmt *stmt) {
     auto &base = ctx->bases.back();
     wrapOptionalIfNeeded(base.returnType, stmt->expr);
     base.returnType |= stmt->expr->type;
-    // HACK TODO: elide "return void" in Partial.__call__
     auto retTyp = stmt->expr->getType()->getClass();
-    if (startswith(base.name, "Partial.N") && endswith(base.name, ".__call__") &&
-        retTyp && retTyp->name == "void") {
-      resultStmt = transform(N<ExprStmt>(move(stmt->expr)));
-      return;
-    }
     stmt->done = stmt->expr->done;
   } else {
     stmt->done = true;
@@ -254,7 +249,7 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
   string varName;
   if (auto e = stmt->var->getId())
     varName = e->value;
-  seqassert(!varName.empty(), "invalid for variable {}", stmt->var->toString());
+  seqassert(!varName.empty(), "empty for variable {}", stmt->var->toString());
   stmt->var->type |= varType;
   ctx->add(TypecheckItem::Var, varName, varType);
   stmt->suite = transform(stmt->suite);

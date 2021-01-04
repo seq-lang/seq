@@ -820,11 +820,6 @@ StmtPtr SimplifyVisitor::transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr 
         N<IfStmt>(N<BinaryExpr>(var->clone(), ">=", clone(er->start)),
                   N<IfStmt>(N<BinaryExpr>(var->clone(), "<=", clone(er->stop)),
                             move(suite))));
-  } else if (auto ei = pattern->getId()) {
-    if (ei->value != "_")
-      return N<SuiteStmt>(N<AssignStmt>(clone(pattern), clone(var)), move(suite), true);
-    else
-      return suite;
   } else if (auto et = pattern->getTuple()) {
     for (int it = int(et->items.size()) - 1; it >= 0; it--)
       suite = transformPattern(N<IndexExpr>(var->clone(), N<IntExpr>(it)),
@@ -862,6 +857,11 @@ StmtPtr SimplifyVisitor::transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr 
     return N<SuiteStmt>(N<AssignStmt>(clone(ea->var), clone(var)),
                         transformPattern(clone(var), clone(ea->expr), clone(suite)),
                         true);
+  } else if (auto ei = pattern->getId()) {
+    if (ei->value != "_")
+      return N<SuiteStmt>(N<AssignStmt>(clone(pattern), clone(var)), move(suite), true);
+    else
+      return suite;
   }
   return N<IfStmt>(
       N<CallExpr>(N<IdExpr>("hasattr"), N<TypeOfExpr>(var->clone()),

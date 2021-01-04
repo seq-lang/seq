@@ -51,3 +51,16 @@ class str:
         p = Ptr[byte](n)
         str.memcpy(p, t, n)
         return str(p, n)
+    def __eq__(self, other: str):
+        if self.len != other.len:
+            return False
+        i = 0
+        while i < self.len:
+            if self.ptr[i] != other.ptr[i]:
+                return False
+            i += 1
+        return True
+    def __match__(self, other: str):
+        return self.__eq__(other)
+    def __ne__(self, other: str):
+        return not self.__eq__(other)

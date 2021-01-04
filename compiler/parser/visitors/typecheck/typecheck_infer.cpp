@@ -119,6 +119,12 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
       ctx->bases.pop_back();
 
     // Special cases: Tuple.(__iter__, __getitem__, __contains__).
+    if (endswith(type->name, ".__iter__")) {
+      // __iter__ in an empty tuple.
+      auto s = ctx->cache->functions[type->name].ast->suite->getSuite();
+      if (s && s->stmts.empty())
+        error("cannot iterate empty tuple");
+    }
     if (startswith(type->name, "Tuple.N") &&
         (endswith(type->name, ".__iter__") || endswith(type->name, ".__getitem__") ||
          endswith(type->name, ".__contains__"))) {

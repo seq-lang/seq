@@ -11,22 +11,6 @@ class str:
             i += 1
         return h
 
-    def __eq__(self, other: str):
-        if len(self) != len(other):
-            return False
-        i = 0
-        while i < len(self):
-            if self.ptr[i] != other.ptr[i]:
-                return False
-            i += 1
-        return True
-
-    def __match__(self, other: str):
-        return self.__eq__(other)
-
-    def __ne__(self, other: str):
-        return not (self == other)
-
     def __lt__(self, other: str):
         return self._cmp(other) < 0
 

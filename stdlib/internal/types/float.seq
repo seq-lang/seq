@@ -14,7 +14,8 @@ class float:
         %tmp = sitofp i64 %i to double
         ret double %tmp
     def __str__(self) -> str:
-        return seq_str_float(self)
+        s = seq_str_float(self)
+        return s if s != "-nan" else "nan"
     def __copy__(self) -> float:
         return self
     @llvm

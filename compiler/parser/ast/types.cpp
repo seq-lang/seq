@@ -24,6 +24,7 @@ void Type::Unification::undo() {
   }
 }
 TypePtr Type::follow() { return shared_from_this(); }
+bool Type::is(const string &s) { return getClass() && getClass()->name == s; }
 
 LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic)
     : kind(kind), id(id), level(level), type(move(type)), isStatic(isStatic) {
