@@ -695,7 +695,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   } else if (expr->member == "__elemsize__") {
     expr->type |= ctx->findInternal("int");
     if (auto t = realizeType(expr->expr->type)) {
-      return transform(N<IntExpr>(0));
+      return transform(N<IntExpr>(1));
     }
     return nullptr;
   }
