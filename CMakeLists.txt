@@ -128,13 +128,13 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/parser/ast/types.h
         compiler/parser/visitors/visitor.h
         compiler/parser/common.h
+        compiler/parser/cache.h
         compiler/parser/ctx.h
         compiler/parser/ocaml/ocaml.h
         compiler/parser/parser.h
         compiler/parser/visitors/codegen/codegen.h
         compiler/parser/visitors/codegen/codegen_ctx.h
         compiler/parser/visitors/doc/doc.h
-        compiler/parser/visitors/walkexpr/walk.h
         compiler/parser/visitors/format/format.h
         compiler/parser/visitors/simplify/simplify.h
         compiler/parser/visitors/simplify/simplify_ctx.h
@@ -203,8 +203,10 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/parser/visitors/simplify/simplify_ctx.cpp
         compiler/parser/visitors/typecheck/typecheck.cpp
         compiler/parser/visitors/typecheck/typecheck_ctx.cpp
+        compiler/parser/visitors/typecheck/typecheck_expr.cpp
+        compiler/parser/visitors/typecheck/typecheck_infer.cpp
+        compiler/parser/visitors/typecheck/typecheck_stmt.cpp
         compiler/parser/ast/types.cpp
-        compiler/parser/visitors/walkexpr/walk.cpp
         compiler/parser/common.cpp
         compiler/parser/ocaml/ocaml.cpp
         compiler/parser/parser.cpp

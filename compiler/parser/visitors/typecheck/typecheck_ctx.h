@@ -18,25 +18,13 @@ namespace ast {
 struct TypecheckItem {
   enum Kind { Func, Type, Var } kind;
   types::TypePtr type;
-  string base;
-  //  bool global;
-  bool genericType;
   bool staticType;
-  unordered_set<string> attributes;
 
-  TypecheckItem(Kind k, types::TypePtr type, const string &base, bool generic = false,
-                bool stat = false)
-      : kind(k), type(type), base(base), genericType(generic), staticType(stat) {}
+  TypecheckItem(Kind k, types::TypePtr type, bool stat = false)
+      : kind(k), type(move(type)), staticType(stat) {}
 
-  string getBase() const { return base; }
-  //  bool isGlobal() const { return global; }
-  bool isVar() const { return kind == Var; }
-  bool isFunc() const { return kind == Func; }
   bool isType() const { return kind == Type; }
-  bool isGeneric() const { return isType() && genericType; }
   bool isStatic() const { return isType() && staticType; }
-  types::TypePtr getType() const { return type; }
-  bool hasAttr(const string &s) const { return attributes.find(s) != attributes.end(); }
 };
 
 class TypeContext : public Context<TypecheckItem> {
@@ -56,12 +44,11 @@ public:
   /// If type checking is successful, all of them should be resolved.
   set<types::TypePtr> activeUnbounds;
   int iteration;
-
-  std::stack<bool> partializeMethod;
-  int extendEtape;
+  int extendCount;
+  bool needsAnotherIteration;
 
 public:
-  TypeContext(shared_ptr<Cache> cache);
+  explicit TypeContext(shared_ptr<Cache> cache);
 
   int findBase(const string &b) {
     for (int i = int(bases.size()) - 1; i >= 0; i--)
@@ -76,8 +63,7 @@ public:
 
   using Context<TypecheckItem>::add;
   shared_ptr<TypecheckItem> add(TypecheckItem::Kind kind, const string &name,
-                                types::TypePtr type = nullptr, bool generic = false,
-                                bool stat = false);
+                                types::TypePtr type = nullptr, bool stat = false);
   void dump() override { dump(0); }
 
 protected:
@@ -102,18 +88,18 @@ public:
   types::TypePtr instantiateGeneric(const SrcInfo &srcInfo, types::TypePtr root,
                                     const vector<types::TypePtr> &generics);
 
-  const vector<types::FuncTypePtr> findMethod(const string &typeName,
-                                              const string &method) const {
+  vector<types::FuncTypePtr> findMethod(const string &typeName,
+                                        const string &method) const {
     auto m = cache->classes.find(typeName);
     if (m != cache->classes.end()) {
       auto t = m->second.methods.find(method);
       if (t != m->second.methods.end()) {
         unordered_map<string, int> signatureLoci;
         vector<types::FuncTypePtr> vv;
-        if (typeName == ".AttributeError" && method == "__new__")
+        if (typeName == "AttributeError" && method == "__new__")
           assert(1);
         for (auto &mt : t->second)
-          if (mt.age <= extendEtape) {
+          if (mt.age <= extendCount) {
             auto sig = cache->functions[mt.name].ast->signature();
             auto it = signatureLoci.find(sig);
             if (it != signatureLoci.end())

@@ -35,7 +35,7 @@ LinkType::LinkType(TypePtr type)
     : kind(Link), id(0), level(0), type(move(type)), isStatic(false) {
   seqassert(this->type, "link to nullptr");
 }
-int LinkType::unify(TypePtr &typ, Unification &undo) {
+int LinkType::unify(Type *typ, Unification *undo) {
   if (kind == Link) {
     // Case 1: Just follow the link
     return type->unify(typ, undo);
@@ -47,11 +47,10 @@ int LinkType::unify(TypePtr &typ, Unification &undo) {
       return 1;
     return -1;
   } else {
-    auto thisptr = shared_from_this();
     // Case 3: Unbound unification
     if (auto t = typ->getLink()) {
       if (t->kind == Link)
-        return t->type->unify(thisptr, undo);
+        return t->type->unify(this, undo);
       else if (t->kind == Generic)
         return -1;
       else {
@@ -63,28 +62,29 @@ int LinkType::unify(TypePtr &typ, Unification &undo) {
         else if (id < t->id)
           // Always merge a newer type into the older type (e.g. keep the types with
           // lower IDs around).
-          return t->unify(thisptr, undo);
+          return t->unify(this, undo);
       }
     }
     // Ensure that we do not have recursive unification! (e.g. unify ?1 with list[?1])
-    if (occurs(typ.get(), undo))
+    if (occurs(typ, undo))
       return -1;
 
     // ⚠️ Unification: destructive part.
     seqassert(!type, "type has been already unified or is in inconsistent state");
-    if (id == 10382)
-      assert(1);
-    LOG_TYPECHECK("[unify] {} <- {}", id, typ->toString());
-    // Link current type to typ and ensure that this modification is recorded in undo.
-    undo.linked.push_back(this);
-    kind = Link;
-    seqassert(!typ->getLink() || typ->getLink()->kind != Unbound ||
-                  typ->getLink()->id <= id,
-              "type unification is not consistent");
-    type = typ->follow();
+    if (undo) {
+      LOG_TYPECHECK("[unify] {} := {}", id, typ->toString());
+      if (id == 11677 || id == 11722)
+        assert(1);
+      // Link current type to typ and ensure that this modification is recorded in undo.
+      undo->linked.push_back(this);
+      kind = Link;
+      seqassert(!typ->getLink() || typ->getLink()->kind != Unbound ||
+                    typ->getLink()->id <= id,
+                "type unification is not consistent");
+      type = typ->follow();
+    }
     return 0;
   }
-  return -1;
 }
 TypePtr LinkType::generalize(int level) {
   if (kind == Generic) {
@@ -104,7 +104,7 @@ TypePtr LinkType::instantiate(int level, int &unboundCount,
   if (kind == Generic) {
     if (cache.find(id) != cache.end())
       return cache[id];
-    LOG_TYPECHECK("[inst] #{} -> ?{}", id, unboundCount);
+    // LOG_TYPECHECK("[inst] #{} -> ?{}", id, unboundCount);
     return cache[id] =
                make_shared<LinkType>(Unbound, unboundCount++, level, nullptr, isStatic);
   } else if (kind == Unbound) {
@@ -154,13 +154,13 @@ shared_ptr<LinkType> LinkType::getUnbound() {
     return type->getUnbound();
   return nullptr;
 }
-bool LinkType::occurs(Type *typ, Type::Unification &undo) {
+bool LinkType::occurs(Type *typ, Type::Unification *undo) {
   if (auto t = typ->getLink()) {
     if (t->kind == Unbound) {
       if (t->id == id)
         return true;
-      if (t->level > level) {
-        undo.leveled.push_back({t.get(), t->level});
+      if (undo && t->level > level) {
+        undo->leveled.push_back({t.get(), t->level});
         t->level = level;
       }
       return false;
@@ -191,10 +191,13 @@ bool LinkType::occurs(Type *typ, Type::Unification &undo) {
 
 /////
 
-StaticType::StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&e)
-    : explicits(ex), expr(move(e)) {}
+StaticType::StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&e, EvalFn f)
+    : explicits(ex), expr(move(e)), evaluate(f) {}
 
-StaticType::StaticType(int i) { expr = std::make_unique<IntExpr>(i); }
+StaticType::StaticType(int i) {
+  expr = std::make_unique<IntExpr>(i);
+  evaluate = [&](const StaticType *t) { return i; };
+}
 
 string StaticType::toString() const {
   vector<string> s;
@@ -208,17 +211,17 @@ string StaticType::realizeString() const {
   vector<string> deps;
   for (auto &e : explicits)
     deps.push_back(e.type->realizeString());
-  return fmt::format("{}{}", deps.size() ? join(deps, ";") : "", getValue());
+  return fmt::format("{}{}", deps.size() ? join(deps, ";") : "", evaluate(this));
 }
 
-int StaticType::unify(TypePtr &typ, Unification &us) {
+int StaticType::unify(Type *typ, Unification *us) {
   if (auto t = typ->getStatic()) {
     // A + 5 + 3; 3 + A + 5
-    int s1 = 0;
+    int s1 = 2;
     if (expr->toString() == t->expr->toString()) {
       int s = 0;
       for (int i = 0; i < explicits.size(); i++) {
-        if ((s = explicits[i].type->unify(t->explicits[i].type, us)) == -1)
+        if ((s = explicits[i].type->unify(t->explicits[i].type.get(), us)) == -1)
           return -1;
         s1 += s;
       }
@@ -226,8 +229,7 @@ int StaticType::unify(TypePtr &typ, Unification &us) {
     }
     return -1;
   } else if (auto t = typ->getLink()) {
-    auto thisptr = shared_from_this();
-    return t->unify(thisptr, us);
+    return t->unify(this, us);
   }
   return -1;
 }
@@ -236,7 +238,7 @@ TypePtr StaticType::generalize(int level) {
   auto e = explicits;
   for (auto &t : e)
     t.type = t.type ? t.type->generalize(level) : nullptr;
-  auto c = make_shared<StaticType>(e, expr->clone());
+  auto c = make_shared<StaticType>(e, expr->clone(), evaluate);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -246,7 +248,7 @@ TypePtr StaticType::instantiate(int level, int &unboundCount,
   auto e = explicits;
   for (auto &t : e)
     t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
-  auto c = make_shared<StaticType>(e, expr->clone());
+  auto c = make_shared<StaticType>(e, expr->clone(), evaluate);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -268,22 +270,13 @@ bool StaticType::canRealize() const {
   return true;
 }
 
-int StaticType::getValue() const {
-  map<string, Generic> m;
-  for (auto &e : explicits)
-    m[e.name] = e;
-  auto t = StaticVisitor(m).transform(expr);
-  assert(t.first);
-  return t.second;
-}
-
-bool isTuple(const string &name) { return startswith(name, ".Tuple."); }
+bool isTuple(const string &name) { return startswith(name, "Tuple.N"); }
 
 bool isCallable(const string &name) {
-  return startswith(name, ".Function.") || startswith(name, ".Partial.");
+  return startswith(name, "Function.N") || startswith(name, "Partial.N");
 }
 
-bool isFunc(const string &name) { return startswith(name, ".Function."); }
+bool isFunc(const string &name) { return startswith(name, "Function.N"); }
 
 ClassType::ClassType(const string &name, bool isRecord, const vector<TypePtr> &args,
                      const vector<Generic> &explicits, TypePtr parent)
@@ -311,28 +304,27 @@ string ClassType::realizeString() const {
                      s.empty() ? "" : fmt::format("[{}]", s));
 }
 
-int ClassType::unify(TypePtr &typ, Unification &us) {
+int ClassType::unify(Type *typ, Unification *us) {
   if (auto t = typ->getClass()) {
     if (isRecord() != t->isRecord())
       return -1;
 
-    TypePtr ti64 = make_shared<StaticType>(64);
-    if (name == ".int" && t->name == ".Int")
-      return t->explicits[0].type->unify(ti64, us);
-    if (t->name == ".int" && name == ".Int")
-      return explicits[0].type->unify(ti64, us);
+    auto ti64 = make_shared<StaticType>(64);
+    if (name == "int" && t->name == "Int")
+      return t->explicits[0].type->unify(ti64.get(), us);
+    if (t->name == "int" && name == "Int")
+      return explicits[0].type->unify(ti64.get(), us);
 
-    if (us.isMatch) {
-      if ((t->name == ".Kmer" && name == ".seq") ||
-          (name == ".Kmer" && t->name == ".seq"))
+    if (us && us->isMatch) {
+      if ((t->name == "Kmer" && name == "seq") || (name == "Kmer" && t->name == "seq"))
         return 0;
     }
 
     if (args.size() != t->args.size())
       return -1;
-    int s1 = 0, s;
+    int s1 = 2, s;
     for (int i = 0; i < args.size(); i++) {
-      if ((s = args[i]->unify(t->args[i], us)) != -1)
+      if ((s = args[i]->unify(t->args[i].get(), us)) != -1)
         s1 += s;
       else
         return -1;
@@ -354,20 +346,19 @@ int ClassType::unify(TypePtr &typ, Unification &us) {
     if (explicits.size() != t->explicits.size())
       return -1;
     for (int i = 0; i < explicits.size(); i++) {
-      if ((s = explicits[i].type->unify(t->explicits[i].type, us)) == -1)
+      if ((s = explicits[i].type->unify(t->explicits[i].type.get(), us)) == -1)
         return -1;
       s1 += s;
     }
     if (parent) {
-      if ((s = parent->unify(t->parent, us)) == -1) {
+      if ((s = parent->unify(t->parent.get(), us)) == -1) {
         return -1;
       }
       s1 += s;
     }
     return s1;
   } else if (auto t = typ->getLink()) {
-    auto thisptr = shared_from_this();
-    return t->unify(thisptr, us);
+    return t->unify(this, us);
   }
   return -1;
 }
@@ -436,7 +427,7 @@ bool ClassType::canRealize() const {
 }
 
 TypePtr ClassType::getCallable() {
-  if (startswith(name, ".Partial."))
+  if (startswith(name, "Partial.N"))
     return explicits[0].type;
   if (isCallable(name))
     return shared_from_this();
@@ -453,17 +444,23 @@ FuncType::FuncType(const string &name, ClassType *funcClass,
   this->funcClass = make_shared<ClassType>(funcClass->name, true, args, exp, nullptr);
 }
 
-int FuncType::unify(TypePtr &typ, Unification &us) {
-  int s1 = 0, s = 0;
+int FuncType::unify(Type *typ, Unification *us) {
+  int s1 = 2, s = 0;
   if (auto t = typ->getFunc()) {
     if (explicits.size() != t->explicits.size())
       return -1;
     for (int i = 0; i < explicits.size(); i++) {
-      if ((s = explicits[i].type->unify(t->explicits[i].type, us)) == -1)
+      if ((s = explicits[i].type->unify(t->explicits[i].type.get(), us)) == -1)
         return -1;
       s1 += s;
     }
-    // TODO : parent?
+    if (bool(parent) ^ bool(t->parent))
+      return -1;
+    if (parent) {
+      if ((s = parent->unify(t->parent.get(), us)) == -1)
+        return -1;
+      s1 += s;
+    }
   }
   return s1 + getClass()->unify(typ, us);
 }

@@ -13,6 +13,8 @@ void types::RefType::setContents(types::RecordType *contents) {
 
 std::string types::RefType::getName() const { return name; }
 
+types::RecordType *types::RefType::getContents() { return contents; }
+
 std::string types::RefType::genericName() { return getName(); }
 
 static void codegenNotNoneCheck(Value *self, const std::string &name,

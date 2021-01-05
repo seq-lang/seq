@@ -21,6 +21,10 @@
 namespace seq {
 namespace ast {
 
+#define ACCEPT(X)                                                                      \
+  PatternPtr clone() const override;                                                   \
+  void accept(X &visitor) override
+
 // Forward declarations
 struct ASTVisitor;
 
@@ -32,6 +36,7 @@ struct ASTVisitor;
 struct Pattern : public seq::SrcObject {
   /// Type of the expression. nullptr by default.
   types::TypePtr type;
+  bool done;
 
   Pattern();
   Pattern(const Pattern &e) = default;
@@ -41,7 +46,7 @@ struct Pattern : public seq::SrcObject {
   /// Deep copy a node.
   virtual unique_ptr<Pattern> clone() const = 0;
   /// Accept an AST visitor.
-  virtual void accept(ASTVisitor &visitor) const = 0;
+  virtual void accept(ASTVisitor &visitor) = 0;
 
   /// Get a node type.
   /// @return Type pointer or a nullptr if a type is not set.
@@ -63,8 +68,7 @@ struct StarPattern : public Pattern {
   StarPattern(const StarPattern &pattern) = default;
 
   string toString() const override;
-  PatternPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Int pattern (value).
@@ -77,8 +81,7 @@ struct IntPattern : public Pattern {
   IntPattern(const IntPattern &pattern) = default;
 
   string toString() const override;
-  PatternPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Bool pattern (value).
@@ -90,8 +93,7 @@ struct BoolPattern : public Pattern {
   BoolPattern(const BoolPattern &pattern) = default;
 
   string toString() const override;
-  PatternPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// String pattern (prefix"value").
@@ -105,8 +107,7 @@ struct StrPattern : public Pattern {
   StrPattern(const StrPattern &pattern) = default;
 
   string toString() const override;
-  PatternPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Range pattern (start...stop).
@@ -118,8 +119,7 @@ struct RangePattern : public Pattern {
   RangePattern(const RangePattern &pattern) = default;
 
   string toString() const override;
-  PatternPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Tuple pattern ((patterns...)).
@@ -131,8 +131,7 @@ struct TuplePattern : public Pattern {
   TuplePattern(const TuplePattern &pattern);
 
   string toString() const override;
-  PatternPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// List pattern ([patterns...]).
@@ -144,8 +143,7 @@ struct ListPattern : public Pattern {
   ListPattern(const ListPattern &pattern);
 
   string toString() const override;
-  PatternPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Or pattern (pattern or pattern or ...).
@@ -157,8 +155,7 @@ struct OrPattern : public Pattern {
   OrPattern(const OrPattern &pattern);
 
   string toString() const override;
-  PatternPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Wildcard pattern (var).
@@ -171,8 +168,7 @@ struct WildcardPattern : public Pattern {
   WildcardPattern(const WildcardPattern &pattern) = default;
 
   string toString() const override;
-  PatternPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Conditional-guarded (conditional) pattern (pattern if cond).
@@ -185,8 +181,7 @@ struct GuardedPattern : public Pattern {
   GuardedPattern(const GuardedPattern &pattern);
 
   string toString() const override;
-  PatternPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Variable-bound pattern (pattern as var).
@@ -199,9 +194,10 @@ struct BoundPattern : public Pattern {
   BoundPattern(const BoundPattern &pattern);
 
   string toString() const override;
-  PatternPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
+
+#undef ACCEPT
 
 } // namespace ast
 } // namespace seq

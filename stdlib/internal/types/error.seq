@@ -1,7 +1,3 @@
-from C import seq_check_errno() -> str
-from C import seq_print(str)
-from C import exit(int)
-
 # Warning(!): This type must be consistent with the exception
 # header type defined in runtime/exc.cpp.
 @tuple
@@ -208,27 +204,3 @@ class SystemExit:
     @property
     def status(self):
         return self._status
-
-@builtin
-def _ensure_not_none(p: Ptr[byte], memb: str):
-    if not p:
-        raise AttributeError("'NoneType' object has no attribute '" + memb + "'")
-
-def seq_assert(file: str, line: int, msg: str) -> AssertionError:
-    s = 'Assert failed'
-    if msg: s += ': ' + msg
-    s += ' (' + file + ':' + line.__str__() + ')'
-    return AssertionError(s)
-
-def seq_assert_test(file: str, line: int, msg: str) -> AssertionError:
-    s = "\033[1;31mTEST FAILED:\033[0m " + file + " (line " + str(line) + ")"
-    if msg:
-        s += ": " + msg
-    seq_print(s)
-
-def check_errno(prefix: str):
-    msg = seq_check_errno()
-    if msg:
-        raise OSError(prefix + msg)
-
-

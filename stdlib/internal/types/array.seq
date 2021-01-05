@@ -1,18 +1,16 @@
-@internal
 @tuple
 class Array[T]:
     len: int
     ptr: Ptr[T]
 
+    def __new__(ptr: Ptr[T], sz: int) -> Array[T]:
+        return (sz, ptr)
     def __new__(sz: int) -> Array[T]:
         return (sz, Ptr[T](sz))
-    def __new__(data: Ptr[T], sz: int) -> Array[T]:
-        return (sz, data)
-
     def __copy__(self) -> Array[T]:
-        p = Ptr[byte](self.len * Ptr[T].__elemsize__())
-        str.memcpy(p.as_byte(), self.ptr.as_byte(), self.len * Ptr[T].__elemsize__())
-        return Array[T](Ptr[T](p), self.len)
+        p = Ptr[byte](self.len * T.__elemsize__)
+        str.memcpy(p.as_byte(), self.ptr.as_byte(), self.len * T.__elemsize__)
+        return (self.len, Ptr[T](p))
     def __len__(self) -> int:
         return self.len
     def __bool__(self) -> bool:
@@ -21,6 +19,6 @@ class Array[T]:
         return self.ptr[index]
     def __setitem__(self, index: int, what: T):
         self.ptr[index] = what
-    def slice(self, s: int, e: int):
-        return Array[T](self.ptr + s, e - s)
+    def slice(self, s: int, e: int) -> Array[T]:
+        return (e - s, self.ptr + s)
 array = Array

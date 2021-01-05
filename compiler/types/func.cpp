@@ -61,14 +61,6 @@ void types::FuncType::initOps() {
        },
        true},
 
-      {"__str__",
-       {},
-       Str,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return codegenStr(self, "function", b.GetInsertBlock());
-       },
-       false},
-
       {"__call__", inTypes, outType,
        [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
          return b.CreateCall(self, args);
@@ -266,16 +258,7 @@ void types::GenType::initOps() {
          resume(self, b.GetInsertBlock(), nullptr, nullptr);
          return (Value *)nullptr;
        },
-       false},
-
-      {"__str__",
-       {},
-       Str,
-       [](Value *self, std::vector<Value *> args, IRBuilder<> &b) {
-         return codegenStr(self, "generator", b.GetInsertBlock());
-       },
-       false},
-  };
+       false}};
 
   addMethod("next",
             new BaseFuncLite(

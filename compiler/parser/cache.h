@@ -14,10 +14,14 @@
 #include <string>
 #include <vector>
 
+#include "lang/seq.h"
 #include "parser/ast.h"
 #include "parser/common.h"
 #include "parser/ctx.h"
 
+#include "sir/sir.h"
+
+#define TYPECHECK_MAX_ITERATIONS 100
 #define FILE_GENERATED "<generated>"
 #define MODULE_MAIN "__main__"
 #define STDLIB_IMPORT ""
@@ -34,7 +38,6 @@
 #define ATTR_PARENT_FUNCTION ".parentFunc"
 #define ATTR_PARENT_CLASS ".parentClass"
 #define ATTR_NOT_STATIC ".notStatic"
-#define ATTR_GENERIC ".generic"
 #define ATTR_TOTAL_ORDERING "total_ordering"
 #define ATTR_CONTAINER "container"
 #define ATTR_PYTHON "python"
@@ -84,12 +87,12 @@ struct Cache {
 
   /// Absolute path of seqc executable (if available).
   string argv0;
+  /// LLVM module.
+  seq::ir::IRModulePtr module;
+
   /// Table of imported files that maps an absolute filename to a Import structure.
   /// By convention, the key of Seq standard library is "".
   unordered_map<string, Import> imports;
-
-  /// Previously generated variardic types (Function and Tuple).
-  set<string> variardics;
 
   /// Set of unique (canonical) global identifiers for marking such variables as global
   /// in code-generation step.
@@ -131,6 +134,8 @@ struct Cache {
       types::ClassTypePtr type;
       /// A list of field names and realization's realized field types.
       vector<std::pair<string, types::TypePtr>> fields;
+      /// LLVM type pointer.
+      seq::ir::types::Type *llvm;
     };
     /// Realization lookup table that maps a realized class name to the corresponding
     /// ClassRealization instance.
@@ -167,11 +172,11 @@ struct Cache {
 public:
   explicit Cache(string argv0 = "")
       : generatedSrcInfoCount(0), unboundCount(0), varCount(0), testFlags(0),
-        argv0(move(argv0)) {}
+        argv0(move(argv0)), module(nullptr) {}
 
   /// Return a uniquely named temporary variable of a format
   /// "{sigil}_{prefix}{counter}". A sigil should be a non-lexable symbol.
-  string getTemporaryVar(const string &prefix = "", char sigil = '$') {
+  string getTemporaryVar(const string &prefix = "", char sigil = '.') {
     return fmt::format("{}{}_{}", sigil ? fmt::format("{}_", sigil) : "", prefix,
                        ++varCount);
   }

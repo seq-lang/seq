@@ -24,83 +24,82 @@ namespace ast {
 struct ASTVisitor {
 protected:
   /// Default expression node visitor if a particular visitor is not overloaded.
-  virtual void defaultVisit(const Expr *expr);
+  virtual void defaultVisit(Expr *expr);
   /// Default statement node visitor if a particular visitor is not overloaded.
-  virtual void defaultVisit(const Stmt *stmt);
+  virtual void defaultVisit(Stmt *stmt);
   /// Default pattern node visitor if a particular visitor is not overloaded.
-  virtual void defaultVisit(const Pattern *pattern);
+  virtual void defaultVisit(Pattern *pattern);
 
 public:
-  virtual void visit(const NoneExpr *);
-  virtual void visit(const BoolExpr *);
-  virtual void visit(const IntExpr *);
-  virtual void visit(const FloatExpr *);
-  virtual void visit(const StringExpr *);
-  virtual void visit(const IdExpr *);
-  virtual void visit(const StarExpr *);
-  virtual void visit(const TupleExpr *);
-  virtual void visit(const ListExpr *);
-  virtual void visit(const SetExpr *);
-  virtual void visit(const DictExpr *);
-  virtual void visit(const GeneratorExpr *);
-  virtual void visit(const DictGeneratorExpr *);
-  virtual void visit(const IfExpr *);
-  virtual void visit(const UnaryExpr *);
-  virtual void visit(const BinaryExpr *);
-  virtual void visit(const PipeExpr *);
-  virtual void visit(const IndexExpr *);
-  virtual void visit(const CallExpr *);
-  virtual void visit(const DotExpr *);
-  virtual void visit(const SliceExpr *);
-  virtual void visit(const EllipsisExpr *);
-  virtual void visit(const TypeOfExpr *);
-  virtual void visit(const LambdaExpr *);
-  virtual void visit(const YieldExpr *);
-  virtual void visit(const AssignExpr *);
-  virtual void visit(const PtrExpr *);
-  virtual void visit(const TupleIndexExpr *);
-  virtual void visit(const StackAllocExpr *);
-  virtual void visit(const InstantiateExpr *);
-  virtual void visit(const StaticExpr *);
-  virtual void visit(const StmtExpr *);
+  virtual void visit(NoneExpr *);
+  virtual void visit(BoolExpr *);
+  virtual void visit(IntExpr *);
+  virtual void visit(FloatExpr *);
+  virtual void visit(StringExpr *);
+  virtual void visit(IdExpr *);
+  virtual void visit(StarExpr *);
+  virtual void visit(TupleExpr *);
+  virtual void visit(ListExpr *);
+  virtual void visit(SetExpr *);
+  virtual void visit(DictExpr *);
+  virtual void visit(GeneratorExpr *);
+  virtual void visit(DictGeneratorExpr *);
+  virtual void visit(IfExpr *);
+  virtual void visit(UnaryExpr *);
+  virtual void visit(BinaryExpr *);
+  virtual void visit(PipeExpr *);
+  virtual void visit(IndexExpr *);
+  virtual void visit(CallExpr *);
+  virtual void visit(DotExpr *);
+  virtual void visit(SliceExpr *);
+  virtual void visit(EllipsisExpr *);
+  virtual void visit(TypeOfExpr *);
+  virtual void visit(LambdaExpr *);
+  virtual void visit(YieldExpr *);
+  virtual void visit(AssignExpr *);
+  virtual void visit(PtrExpr *);
+  virtual void visit(TupleIndexExpr *);
+  virtual void visit(StackAllocExpr *);
+  virtual void visit(InstantiateExpr *);
+  virtual void visit(StmtExpr *);
 
-  virtual void visit(const AssignMemberStmt *);
-  virtual void visit(const UpdateStmt *);
-  virtual void visit(const SuiteStmt *);
-  virtual void visit(const PassStmt *);
-  virtual void visit(const BreakStmt *);
-  virtual void visit(const ContinueStmt *);
-  virtual void visit(const ExprStmt *);
-  virtual void visit(const AssignStmt *);
-  virtual void visit(const DelStmt *);
-  virtual void visit(const PrintStmt *);
-  virtual void visit(const ReturnStmt *);
-  virtual void visit(const YieldStmt *);
-  virtual void visit(const AssertStmt *);
-  virtual void visit(const WhileStmt *);
-  virtual void visit(const ForStmt *);
-  virtual void visit(const IfStmt *);
-  virtual void visit(const MatchStmt *);
-  virtual void visit(const ImportStmt *);
-  virtual void visit(const TryStmt *);
-  virtual void visit(const GlobalStmt *);
-  virtual void visit(const ThrowStmt *);
-  virtual void visit(const FunctionStmt *);
-  virtual void visit(const ClassStmt *);
-  virtual void visit(const YieldFromStmt *);
-  virtual void visit(const WithStmt *);
+  virtual void visit(AssignMemberStmt *);
+  virtual void visit(UpdateStmt *);
+  virtual void visit(SuiteStmt *);
+  virtual void visit(PassStmt *);
+  virtual void visit(BreakStmt *);
+  virtual void visit(ContinueStmt *);
+  virtual void visit(ExprStmt *);
+  virtual void visit(AssignStmt *);
+  virtual void visit(DelStmt *);
+  virtual void visit(PrintStmt *);
+  virtual void visit(ReturnStmt *);
+  virtual void visit(YieldStmt *);
+  virtual void visit(AssertStmt *);
+  virtual void visit(WhileStmt *);
+  virtual void visit(ForStmt *);
+  virtual void visit(IfStmt *);
+  virtual void visit(MatchStmt *);
+  virtual void visit(ImportStmt *);
+  virtual void visit(TryStmt *);
+  virtual void visit(GlobalStmt *);
+  virtual void visit(ThrowStmt *);
+  virtual void visit(FunctionStmt *);
+  virtual void visit(ClassStmt *);
+  virtual void visit(YieldFromStmt *);
+  virtual void visit(WithStmt *);
 
-  virtual void visit(const StarPattern *);
-  virtual void visit(const IntPattern *);
-  virtual void visit(const BoolPattern *);
-  virtual void visit(const StrPattern *);
-  virtual void visit(const RangePattern *);
-  virtual void visit(const TuplePattern *);
-  virtual void visit(const ListPattern *);
-  virtual void visit(const OrPattern *);
-  virtual void visit(const WildcardPattern *);
-  virtual void visit(const GuardedPattern *);
-  virtual void visit(const BoundPattern *);
+  virtual void visit(StarPattern *);
+  virtual void visit(IntPattern *);
+  virtual void visit(BoolPattern *);
+  virtual void visit(StrPattern *);
+  virtual void visit(RangePattern *);
+  virtual void visit(TuplePattern *);
+  virtual void visit(ListPattern *);
+  virtual void visit(OrPattern *);
+  virtual void visit(WildcardPattern *);
+  virtual void visit(GuardedPattern *);
+  virtual void visit(BoundPattern *);
 };
 
 template <typename TE, typename TS, typename TP>
@@ -125,7 +124,7 @@ struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
   }
 
   /// Convenience method that constructs a node with the visitor's source location.
-  template <typename Tn, typename... Ts> auto N(Ts &&... args) {
+  template <typename Tn, typename... Ts> auto N(Ts &&...args) {
     auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
     t->setSrcInfo(getSrcInfo());
     return t;
@@ -134,26 +133,26 @@ struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
   /// Convenience method that constructs a node.
   /// @param s source location.
   template <typename Tn, typename... Ts>
-  auto Nx(const seq::SrcObject *s, Ts &&... args) {
+  auto Nx(const seq::SrcObject *s, Ts &&...args) {
     auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
     t->setSrcInfo(s->getSrcInfo());
     return t;
   }
 
   /// Convenience method that raises an error at the current source location.
-  template <typename... TArgs> void error(const char *format, TArgs &&... args) {
+  template <typename... TArgs> void error(const char *format, TArgs &&...args) {
     ast::error(getSrcInfo(), fmt::format(format, args...).c_str());
   }
 
   /// Convenience method that raises an error at the source location of p.
   template <typename T, typename... TArgs>
-  void error(const T &p, const char *format, TArgs &&... args) {
+  void error(const T &p, const char *format, TArgs &&...args) {
     ast::error(p->getSrcInfo(), fmt::format(format, args...).c_str());
   }
 
   /// Convenience method that raises an internal error.
   template <typename T, typename... TArgs>
-  void internalError(const char *format, TArgs &&... args) {
+  void internalError(const char *format, TArgs &&...args) {
     throw exc::ParserException(
         fmt::format("INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
   }

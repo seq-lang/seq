@@ -22,21 +22,23 @@ PatternPtr SimplifyVisitor::transform(const PatternPtr &pat) {
   return move(v.resultPattern);
 }
 
-void SimplifyVisitor::defaultVisit(const Pattern *p) { resultPattern = p->clone(); }
+void SimplifyVisitor::defaultVisit(Pattern *p) { resultPattern = p->clone(); }
 
-void SimplifyVisitor::visit(const TuplePattern *pat) {
+/**************************************************************************************/
+
+void SimplifyVisitor::visit(TuplePattern *pat) {
   resultPattern = N<TuplePattern>(transform(pat->patterns));
 }
 
-void SimplifyVisitor::visit(const ListPattern *pat) {
+void SimplifyVisitor::visit(ListPattern *pat) {
   resultPattern = N<ListPattern>(transform(pat->patterns));
 }
 
-void SimplifyVisitor::visit(const OrPattern *pat) {
+void SimplifyVisitor::visit(OrPattern *pat) {
   resultPattern = N<OrPattern>(transform(pat->patterns));
 }
 
-void SimplifyVisitor::visit(const WildcardPattern *pat) {
+void SimplifyVisitor::visit(WildcardPattern *pat) {
   string varName;
   if (!pat->var.empty()) {
     ctx->add(SimplifyItem::Var, pat->var,
@@ -47,13 +49,13 @@ void SimplifyVisitor::visit(const WildcardPattern *pat) {
 
 /// Transform case pattern if cond to:
 ///   case pattern if cond.__bool__()
-void SimplifyVisitor::visit(const GuardedPattern *pat) {
+void SimplifyVisitor::visit(GuardedPattern *pat) {
   resultPattern = N<GuardedPattern>(
       transform(pat->pattern),
       transform(N<CallExpr>(N<DotExpr>(clone(pat->cond), "__bool__"))));
 }
 
-void SimplifyVisitor::visit(const BoundPattern *pat) {
+void SimplifyVisitor::visit(BoundPattern *pat) {
   string varName = ctx->generateCanonicalName(pat->var);
   ctx->add(SimplifyItem::Var, pat->var, varName);
   resultPattern = N<BoundPattern>(varName, transform(pat->pattern));

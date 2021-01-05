@@ -64,7 +64,7 @@ public:
   ///             and allow later undoing of the unification procedure.
   /// @return Unification score: -1 for failure, anything >= 0 for success.
   ///         Higher scores indicate "better" unifications.
-  virtual int unify(shared_ptr<Type> &typ, Unification &undo) = 0;
+  virtual int unify(Type *typ, Unification *undo) = 0;
   /// Generalize all unbound types whose level is below the provided level.
   /// This method replaces all unbound types with a generic types (e.g. ?1 -> T1).
   /// Note that the generalized type keeps the unbound type's ID.
@@ -103,6 +103,8 @@ public:
   virtual shared_ptr<LinkType> getLink() { return nullptr; }
   virtual shared_ptr<LinkType> getUnbound() { return nullptr; }
   virtual shared_ptr<StaticType> getStatic() { return nullptr; }
+
+  friend Type &operator|=(Type &a, shared_ptr<Type> b);
 };
 typedef shared_ptr<Type> TypePtr;
 
@@ -139,7 +141,7 @@ public:
   explicit LinkType(TypePtr type);
 
 public:
-  int unify(TypePtr &typ, Unification &undo) override;
+  int unify(Type *typ, Unification *undodo) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       unordered_map<int, TypePtr> &cache) override;
@@ -168,7 +170,7 @@ public:
 private:
   /// Checks if a current (unbound) type ocurrs within a given type.
   /// Needed to prevent recursive unifications (e.g. ?1 with list[?1]).
-  bool occurs(Type *typ, Type::Unification &undo);
+  bool occurs(Type *typ, Type::Unification *undo);
 };
 
 /// Done till here
@@ -217,7 +219,7 @@ public:
             TypePtr parent = nullptr);
 
 public:
-  virtual int unify(TypePtr &typ, Unification &us) override;
+  virtual int unify(Type *typ, Unification *undo) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       unordered_map<int, TypePtr> &cache) override;
@@ -253,7 +255,7 @@ public:
            TypePtr parent = nullptr);
 
 public:
-  virtual int unify(TypePtr &typ, Unification &us) override;
+  virtual int unify(Type *typ, Unification *undo) override;
   vector<TypePtr> getUnbounds() const override;
   bool canRealize() const override;
   string realizeString() const override;
@@ -268,13 +270,15 @@ public:
 };
 
 struct StaticType : public Type {
+  typedef std::function<int(const StaticType *)> EvalFn;
   vector<Generic> explicits;
   unique_ptr<Expr> expr;
-  StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&expr);
+  EvalFn evaluate;
+  StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&expr, EvalFn f);
   StaticType(int i);
 
 public:
-  virtual int unify(TypePtr &typ, Unification &us) override;
+  virtual int unify(Type *typ, Unification *undo) override;
   TypePtr generalize(int level) override;
   TypePtr instantiate(int level, int &unboundCount,
                       unordered_map<int, TypePtr> &cache) override;
@@ -284,7 +288,6 @@ public:
   bool canRealize() const override;
   string toString() const override;
   string realizeString() const override;
-  int getValue() const;
   shared_ptr<StaticType> getStatic() override {
     return std::static_pointer_cast<StaticType>(shared_from_this());
   }
@@ -297,8 +300,8 @@ struct ImportType : public Type {
 public:
   ImportType(string name) : name(move(name)) {}
 
-  int unify(TypePtr &typ, Unification &us) override {
-    if (auto t = CAST(typ, ImportType))
+  int unify(Type *typ, Unification *undo) override {
+    if (auto t = dynamic_cast<ImportType *>(typ))
       return name == t->name ? 0 : -1;
     return -1;
   }

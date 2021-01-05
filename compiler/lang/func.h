@@ -42,6 +42,7 @@ public:
   virtual llvm::Function *getFunc(llvm::Module *module);
   virtual void setEnclosingClass(types::Type *parentType);
   virtual void setGenerator() {}
+  virtual llvm::Module *getModule() { return module; }
 };
 
 /**

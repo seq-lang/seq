@@ -3,10 +3,7 @@ from C import seq_str_ptr(Ptr[byte]) -> str
 @extend
 class Ptr[T]:
     @internal
-    def __elemsize__() -> int:
-        pass
-    @internal
-    def __atomic__() -> bool:
+    def __new__(sz: int) -> Ptr[T]:
         pass
     @internal
     def __new__(sz: int) -> Ptr[T]:

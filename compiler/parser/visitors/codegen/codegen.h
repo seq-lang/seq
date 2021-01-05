@@ -29,9 +29,9 @@ class CodegenVisitor : public CallbackASTVisitor<seq::ir::ValuePtr, seq::ir::Val
   shared_ptr<CodegenContext> ctx;
   seq::ir::ValuePtr result;
 
-  void defaultVisit(const Expr *expr) override;
-  void defaultVisit(const Stmt *expr) override;
-  void defaultVisit(const Pattern *expr) override;
+  void defaultVisit(Expr *expr) override;
+  void defaultVisit(Stmt *expr) override;
+  void defaultVisit(Pattern *expr) override;
 
   seq::ir::Func *realizeFunc(const string &name);
   shared_ptr<CodegenItem> processIdentifier(shared_ptr<CodegenContext> tctx,
@@ -48,37 +48,40 @@ public:
   seq::ir::types::Type *realizeType(types::ClassTypePtr t);
 
 public:
-  void visit(const BoolExpr *) override;
-  void visit(const IntExpr *) override;
-  void visit(const FloatExpr *) override;
-  void visit(const StringExpr *) override;
-  void visit(const IdExpr *) override;
-  void visit(const IfExpr *) override;
-  void visit(const CallExpr *) override;
-  void visit(const StackAllocExpr *) override;
-  void visit(const DotExpr *) override;
-  void visit(const PtrExpr *) override;
-  void visit(const YieldExpr *) override;
-  void visit(const StmtExpr *) override;
+  void visit(BoolExpr *) override;
+  void visit(IntExpr *) override;
+  void visit(FloatExpr *) override;
+  void visit(StringExpr *) override;
+  void visit(IdExpr *) override;
+  void visit(IfExpr *) override;
+  void visit(BinaryExpr *) override;
+  void visit(PipeExpr *) override;
+  void visit(CallExpr *) override;
+  void visit(StackAllocExpr *) override;
+  void visit(DotExpr *) override;
+  void visit(PtrExpr *) override;
+  void visit(YieldExpr *) override;
+  void visit(StmtExpr *) override;
 
-  void visit(const SuiteStmt *) override;
-  void visit(const PassStmt *) override;
-  void visit(const BreakStmt *) override;
-  void visit(const ContinueStmt *) override;
-  void visit(const ExprStmt *) override;
-  void visit(const AssignStmt *) override;
-  void visit(const AssignMemberStmt *) override;
-  void visit(const DelStmt *) override;
-  void visit(const ReturnStmt *) override;
-  void visit(const YieldStmt *) override;
-  void visit(const WhileStmt *) override;
-  void visit(const ForStmt *) override;
-  void visit(const IfStmt *) override;
-  void visit(const UpdateStmt *) override;
-  void visit(const TryStmt *) override;
-  void visit(const ThrowStmt *) override;
-  void visit(const FunctionStmt *) override;
-  void visit(const ClassStmt *stmt) override;
+  void visit(SuiteStmt *) override;
+  void visit(PassStmt *) override;
+  void visit(BreakStmt *) override;
+  void visit(ContinueStmt *) override;
+  void visit(ExprStmt *) override;
+  void visit(AssignStmt *) override;
+  void visit(AssignMemberStmt *) override;
+  void visit(DelStmt *) override;
+  void visit(ReturnStmt *) override;
+  void visit(YieldStmt *) override;
+  void visit(WhileStmt *) override;
+  void visit(ForStmt *) override;
+  void visit(IfStmt *) override;
+  void visit(MatchStmt *) override;
+  void visit(UpdateStmt *) override;
+  void visit(TryStmt *) override;
+  void visit(ThrowStmt *) override;
+  void visit(FunctionStmt *) override;
+  void visit(ClassStmt *stmt) override;
 
 private:
   std::unique_ptr<ir::SeriesFlow> newScope(const seq::SrcObject *s, std::string name);
@@ -98,6 +101,7 @@ private:
   }
 
   template <typename T> auto wrap(T *obj) { return std::unique_ptr<T>(obj); }
+
 };
 
 } // namespace ast

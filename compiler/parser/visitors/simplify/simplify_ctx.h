@@ -126,7 +126,7 @@ public:
   void dump() override { dump(0); }
 
   /// Generate a unique identifier (name) for a given string.
-  string generateCanonicalName(const string &name) const;
+  string generateCanonicalName(const string &name, const string &base = "") const;
   /// Generate a unique SrcInfo for internally generated AST nodes.
   SrcInfo generateSrcInfo() const;
 
