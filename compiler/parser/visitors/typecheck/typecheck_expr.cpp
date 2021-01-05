@@ -79,6 +79,7 @@ void TypecheckVisitor::defaultVisit(Expr *e) {
 void TypecheckVisitor::visit(BoolExpr *expr) {
   expr->type |= ctx->findInternal("bool");
   expr->done = true;
+  expr->isStaticExpr = true;
   expr->staticEvaluation = {true, int(expr->value)};
 }
 
@@ -157,7 +158,10 @@ void TypecheckVisitor::visit(UnaryExpr *expr) {
       value = -value;
     else // if (expr->op == "!")
       value = !bool(value);
-    resultExpr = transform(N<IntExpr>(value));
+    if (expr->op == "!")
+      resultExpr = transform(N<BoolExpr>(value));
+    else
+      resultExpr = transform(N<IntExpr>(value));
   }
 }
 
@@ -203,7 +207,10 @@ void TypecheckVisitor::visit(BinaryExpr *expr) {
       } else {
         seqassert(false, "unknown static operator {}", expr->op);
       }
-      resultExpr = transform(N<IntExpr>(lvalue));
+      if (in(set<string>{"==", "!=", "<", "<=", ">", ">=", "&&", "||"}, expr->op))
+        resultExpr = transform(N<BoolExpr>(bool(lvalue)));
+      else
+        resultExpr = transform(N<IntExpr>(lvalue));
     }
   } else {
     resultExpr = transformBinary(expr);
@@ -314,12 +321,12 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               auto val = ctx->find(ei->value);
               seqassert(val && val->isStatic(), "invalid static expression");
               auto genTyp = val->type->follow();
-              staticGenerics.emplace_back(
-                  Generic{ei->value, genTyp,
-                          genTyp->getLink() ? genTyp->getLink()->id
-                          : genTyp->getStatic()->explicits.empty()
-                              ? 0
-                              : genTyp->getStatic()->explicits[0].id});
+              staticGenerics.emplace_back(Generic{
+                  ei->value, genTyp,
+                  genTyp->getLink() ? genTyp->getLink()->id
+                                    : genTyp->getStatic()->explicits.empty()
+                                          ? 0
+                                          : genTyp->getStatic()->explicits[0].id});
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -1234,19 +1241,26 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
     return {false, nullptr};
   auto val = expr->expr->getId()->value;
   if (val == "isinstance") {
+    // Make sure not to activate new unbound here, as we just need to check type
+    // equality.
+    auto oldActivation = ctx->allowActivation;
+    ctx->allowActivation = false;
     expr->args[0].value = transform(expr->args[0].value);
-    auto typ =
-        (expr->args[0].value->type |= realizeType(expr->args[0].value->getType()));
+    ctx->allowActivation = oldActivation;
+    if (auto t = realizeType(expr->args[0].value->getType()))
+      expr->args[0].value->type |= t;
+    auto typ = expr->args[0].value->type;
     if (!typ) {
       return {true, nullptr};
     } else {
-      expr->args[0].value = transform(expr->args[0].value);
       if (expr->args[1].value->isId("Tuple") || expr->args[1].value->isId("tuple")) {
-        return {true, transform(N<IntExpr>(typ->getClass()->isRecord()))};
+        return {true, transform(N<BoolExpr>(typ->getClass()->isRecord()))};
       } else {
-        auto t = transformType(expr->args[1].value)->type;
-        deactivateUnbounds(t.get());
-        return {true, transform(N<IntExpr>(typ->unify(t.get(), nullptr) >= 0))};
+        ctx->allowActivation = false;
+        expr->args[1].value = transformType(expr->args[1].value);
+        ctx->allowActivation = oldActivation;
+        auto t = expr->args[1].value->type;
+        return {true, transform(N<BoolExpr>(typ->unify(t.get(), nullptr) >= 0))};
       }
     }
   } else if (val == "staticlen") {
@@ -1260,13 +1274,15 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
       return {true, transform(N<IntExpr>(typ->args.size()))};
   } else if (val == "hasattr") {
     auto member = expr->args[1].value->getString()->value;
+    auto oldActivation = ctx->allowActivation;
+    ctx->allowActivation = false;
     expr->args[0].value = transformType(expr->args[0].value);
     auto typ = expr->args[0].value->getType()->getClass();
-    deactivateUnbounds(typ.get());
+    ctx->allowActivation = oldActivation;
     if (!typ)
       return {true, nullptr};
     else
-      return {true, transform(N<IntExpr>(
+      return {true, transform(N<BoolExpr>(
                         !ctx->findMethod(typ->getClass()->name, member).empty() ||
                         ctx->findMember(typ->getClass()->name, member)))};
   } else if (val == "compile_error") {

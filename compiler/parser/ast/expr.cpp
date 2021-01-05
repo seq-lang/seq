@@ -47,11 +47,7 @@ NoneExpr::NoneExpr() : Expr() {}
 string NoneExpr::toString() const { return wrapType("none"); }
 ACCEPT_IMPL(NoneExpr, ASTVisitor);
 
-BoolExpr::BoolExpr(bool value) : Expr(), value(value) {
-  // TODO: handle static bools
-  //  isStaticExpr = true;
-  //  staticEvaluation = {true, int(value)};
-}
+BoolExpr::BoolExpr(bool value) : Expr(), value(value) {}
 string BoolExpr::toString() const { return wrapType(format("bool {}", int(value))); }
 ACCEPT_IMPL(BoolExpr, ASTVisitor);
 

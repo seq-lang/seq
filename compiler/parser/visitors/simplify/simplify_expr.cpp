@@ -466,7 +466,10 @@ void SimplifyVisitor::visit(CallExpr *expr) {
         error("repeated named argument '{}'", i.name);
       seenNames.insert(i.name);
     }
-    args.push_back({i.name, transform(i.value)});
+    if (i.value->getEllipsis())
+      args.push_back({i.name, clone(i.value)});
+    else
+      args.push_back({i.name, transform(i.value)});
   }
   resultExpr = N<CallExpr>(transform(expr->expr.get(), true), move(args));
 }
@@ -533,6 +536,10 @@ void SimplifyVisitor::visit(SliceExpr *expr) {
                             transform(expr->step));
 }
 
+void SimplifyVisitor::visit(EllipsisExpr *expr) {
+  error("unexpected ellipsis expression");
+}
+
 void SimplifyVisitor::visit(TypeOfExpr *expr) {
   resultExpr = N<TypeOfExpr>(transform(expr->expr.get(), true));
   resultExpr->markType();
@@ -572,7 +579,9 @@ void SimplifyVisitor::visit(AssignExpr *expr) {
       transform(N<StmtExpr>(move(s), transform(N<IdExpr>(expr->var->getId()->value))));
 }
 
-void SimplifyVisitor::visit(RangeExpr *expr) { error("invalid range expression"); }
+void SimplifyVisitor::visit(RangeExpr *expr) {
+  error("unexpected pattern range expression");
+}
 
 /**************************************************************************************/
 

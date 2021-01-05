@@ -29,6 +29,7 @@ types::TypePtr operator|=(types::TypePtr &a, const types::TypePtr &b);
 class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
   shared_ptr<TypeContext> ctx;
   shared_ptr<vector<StmtPtr>> prependStmts;
+
   bool allowVoidExpr;
 
   ExprPtr resultExpr;
@@ -67,10 +68,12 @@ public:
   void visit(IdExpr *) override;
   /// Set type to the unification of both sides.
   /// Wrap a side with Optional.__new__() if other side is optional.
+  /// Also evaluates static if expressions.
   void visit(IfExpr *) override;
   /// Evaluate static unary expressions.
   void visit(UnaryExpr *) override;
   /// See transformBinary() below.
+  /// Also evaluates static binary expressions.
   void visit(BinaryExpr *) override;
   /// Type-checks a pipe expression.
   /// Transform a stage CallExpr foo(x) without an ellipsis into:
@@ -176,6 +179,7 @@ private:
   ExprPtr transformStaticTupleIndex(types::ClassType *tuple, ExprPtr &expr,
                                     ExprPtr &index);
   /// Transforms a DotExpr expr.member to:
+  ///   string(realized type of expr) if member is __class__.
   ///   unwrap(expr).member if expr is of type Optional,
   ///   expr._getattr("member") if expr is of type pyobj,
   ///   DotExpr(expr, member) if a member is a class field,
@@ -233,6 +237,12 @@ private:
   /// Pipe notes: if inType and extraStage are set, this method will use inType as a
   /// pipe ellipsis type. extraStage will be set if an Optional conversion/unwrapping
   /// stage needs to be inserted before the current pipeline stage.
+  ///
+  /// Static call expressions: the following static expressions are supported:
+  ///   isinstance(var, type) -> evaluates to bool
+  ///   hasattr(type, string) -> evaluates to bool
+  ///   staticlen(var) -> evaluates to int
+  ///   compile_error(string) -> raises a compiler error
   ///
   /// Note: This is the most evil method in the whole parser suite. 🤦🏻‍
   ExprPtr transformCall(CallExpr *expr, const types::TypePtr &inType = nullptr,

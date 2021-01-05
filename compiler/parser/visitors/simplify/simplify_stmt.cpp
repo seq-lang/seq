@@ -228,6 +228,7 @@ void SimplifyVisitor::visit(MatchStmt *stmt) {
         transformPattern(N<IdExpr>(var), clone(c.pattern), move(suite)));
     ctx->popBlock();
   }
+  result->stmts.push_back(N<BreakStmt>()); // break even if there is no case _.
   resultStmt = transform(N<WhileStmt>(N<BoolExpr>(true), move(result)));
 }
 
@@ -853,7 +854,7 @@ StmtPtr SimplifyVisitor::transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr 
                           transformPattern(clone(var), clone(eb->rexpr), move(suite)));
     }
   } else if (auto ea = CAST(pattern, AssignExpr)) {
-    seqassert(ea->var->getId(), "only simple assignment expression are supported");
+    seqassert(ea->var->getId(), "only simple assignment expressions are supported");
     return N<SuiteStmt>(N<AssignStmt>(clone(ea->var), clone(var)),
                         transformPattern(clone(var), clone(ea->expr), clone(suite)),
                         true);
@@ -863,6 +864,7 @@ StmtPtr SimplifyVisitor::transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr 
     else
       return suite;
   }
+  pattern = transform(pattern); // basically check for errors
   return N<IfStmt>(
       N<CallExpr>(N<IdExpr>("hasattr"), N<TypeOfExpr>(var->clone()),
                   N<StringExpr>("__match__")),
