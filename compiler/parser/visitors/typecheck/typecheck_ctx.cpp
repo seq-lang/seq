@@ -16,7 +16,7 @@ namespace ast {
 
 TypeContext::TypeContext(shared_ptr<Cache> cache)
     : Context<TypecheckItem>(""), cache(move(cache)), typecheckLevel(0), iteration(0),
-      extendCount(0), needsAnotherIteration(false) {
+      extendCount(0), needsAnotherIteration(false), allowActivation(true) {
   stack.push_front(vector<string>());
   bases.push_back({"", nullptr, nullptr});
 }
@@ -73,7 +73,7 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int 
   LOG_TYPECHECK("[ub] new {}: {} ({})", t->toString(), srcInfo, setActive);
   if (t->toString() == "?11515.2")
     assert(1);
-  if (setActive)
+  if (setActive && allowActivation)
     activeUnbounds.insert(t);
   return t;
 }
@@ -103,7 +103,7 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
         //               i.second->toString(), type->toString(), srcInfo, activate);
         if (i.second->toString() == "?11515.2")
           assert(1);
-        if (activate)
+        if (activate && allowActivation)
           activeUnbounds.insert(i.second);
       }
     }

@@ -197,7 +197,7 @@ void TypecheckVisitor::visit(AssignMemberStmt *stmt) {
     if (!member)
       error("cannot find '{}' in {}", stmt->member, lhsClass->name);
     if (lhsClass->isRecord())
-      error("tuple element {} is read-only", stmt->member);
+      error("tuple element '{}' is read-only", stmt->member);
     auto typ = ctx->instantiate(getSrcInfo(), member, lhsClass.get());
     LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), typ->toString());
     wrapOptionalIfNeeded(typ, stmt->rhs);
@@ -245,6 +245,8 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
     if (!iterType || iterType->name != "Generator")
       error(stmt->iter, "for loop expected a generator");
     varType |= iterType->explicits[0].type;
+    if (varType->is("void"))
+      error("expression with void type");
   }
   string varName;
   if (auto e = stmt->var->getId())
@@ -395,7 +397,6 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
       } else {
         args.push_back(transformType(a.type)->getType());
       }
-      //      ctx->add(TypecheckItem::Var, a.name, args.back());
     }
     ctx->typecheckLevel--;
   }
@@ -411,8 +412,6 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
       stmt->name,
       ctx->findInternal(format("Function.N{}", stmt->args.size()))->getClass().get(),
       args, explicits);
-  if (stmt->name == "_validate_str_as_seq.ensure_valid")
-    assert(1);
   if (isClassMember && in(attributes, ATTR_NOT_STATIC))
     typ->parent = ctx->find(attributes[ATTR_PARENT_CLASS])->type;
   else if (in(attributes, ATTR_PARENT_FUNCTION))
@@ -424,20 +423,18 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
     auto &methods = ctx->cache->classes[attributes[ATTR_PARENT_CLASS]]
                         .methods[ctx->cache->reverseIdentifierLookup[stmt->name]];
     bool found = false;
-    for (auto &i : methods) {
+    for (auto &i : methods)
       if (i.name == stmt->name) {
         i.type = typ;
         found = true;
         break;
       }
-    }
     seqassert(found, "cannot find matching class method for {}", stmt->name);
   }
   // Update visited table.
   ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])]
       .visitedAsts[stmt->name] = {TypecheckItem::Func, typ};
   ctx->add(TypecheckItem::Func, stmt->name, typ);
-
   LOG_REALIZE("[stmt] added func {}: {} (base={})", stmt->name, typ->toString(),
               ctx->getBase());
 }
@@ -488,8 +485,7 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
     for (auto &m : ctx->cache->classes[stmt->name].fields)
       LOG_REALIZE("       - member: {}: {}", m.name, m.type->toString());
   } else {
-    // Increase the current extension count.
-    ctx->extendCount++;
+    ctx->extendCount++; // Increase the current extension count.
   }
   //  stmt->done = true;
 }

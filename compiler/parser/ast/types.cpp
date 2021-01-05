@@ -332,9 +332,9 @@ int ClassType::unify(Type *typ, Unification *us) {
         return s1;
       if (isFunc(name) && isFunc(t->name))
         return s1;
-      if (name != t->name)
-        return -1;
     }
+    if (name != t->name)
+      return -1;
     if (bool(parent) ^ bool(t->parent))
       return -1;
 

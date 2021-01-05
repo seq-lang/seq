@@ -385,6 +385,38 @@ foo(b=l, d=Optional(5), c=l[0], a=adder(..., 4))
 #: 1 Optional[int]
 #: 5 int
 
+#%% call_static,barebones
+print isinstance(1, int), isinstance(2.2, float), isinstance(3, bool)
+#: True True False
+print isinstance((1, 2), Tuple), isinstance((1, 2), Tuple[int, int]), isinstance((1, 2), Tuple[float, int])
+#: True True False
+print isinstance([1, 2], List), isinstance([1, 2], List[int]), isinstance([1, 2], List[float])
+#: True True False
+print isinstance({1, 2}, List), isinstance({1, 2}, Set[float])
+#: False False
+print isinstance(Optional(5), Optional[int]), isinstance(Optional(), Optional)
+#: True True
+print isinstance(Optional(), Optional[int]), isinstance(Optional('s'), Optional[int])
+#: True False
+print isinstance(None, Optional), isinstance(None, Optional[int])
+#: True True
+print isinstance({1, 2}, List)
+#: False
+
+print staticlen((1, 2, 3)), staticlen((1, )), staticlen('hehe')
+#: 3 1 2
+
+print hasattr(typeof([1, 2]), "__getitem__")
+#: True
+print hasattr(int, "__getitem__")
+#: False
+
+#%% staticlen_err,barebones
+print staticlen([1, 2]) #! ERROR: List[int] is not a tuple type
+
+#%% compile_error,barebones
+compile_error("woo-hoo") #! ERROR: custom error: woo-hoo
+
 #%% stack_alloc,barebones
 a = __array__[int](2)
 print a.__class__ #: Array[int]

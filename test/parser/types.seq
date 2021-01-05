@@ -193,3 +193,13 @@ except ValueError:
     print 'unwrap failed'  #: unwrap failed
 
 
+
+#%% global_none,barebones
+a, b = None, None
+def foo():
+    global a, b
+    a = [1, 2]
+    b = 3
+print a, b,
+foo()
+print a, b #: None None [1, 2] 3

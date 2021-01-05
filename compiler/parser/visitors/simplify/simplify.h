@@ -200,6 +200,8 @@ public:
   // This expression is transformed during the type-checking stage
   // because we need raw SliceExpr to handle static tuple slicing.
   void visit(SliceExpr *) override;
+  /// Disallow ellipsis except in a call expression.
+  void visit(EllipsisExpr *) override;
   /// TypeOf expressions will be handled during the type-checking stage.
   void visit(TypeOfExpr *) override;
   /// Ensure that a yield is in a function.
@@ -269,8 +271,19 @@ public:
   ///   for i in it.__iter__(): ...
   ///   if no_break.__bool__(): ...
   void visit(ForStmt *) override;
-  /// Transforms all if conditions to condition.__bool__().
   void visit(IfStmt *) override;
+  /// Transforms the match e: case P1: ... case P2 if guard: ... statement to:
+  ///   tmp = e
+  ///   while True:
+  ///     <P1 transformation>: ...; break
+  ///     <P2 transformation>: if guard: ...; break
+  ///     ...
+  ///     break
+  /// Seq will halt (via break statement) on the first pattern that matches the given
+  /// expression. Pattern transformations extensively use hasattr and isinstance, and
+  /// will not raise a type error unless really needed (e.g. bound pattern type mismatch
+  /// in an or pattern).
+  /// See transformPattern() below for pattern transformation details.
   void visit(MatchStmt *) override;
   void visit(TryStmt *) override;
   void visit(ThrowStmt *) override;
@@ -376,6 +389,37 @@ private:
   ///   a, (b, c) = d
   void unpackAssignments(const Expr *lhs, const Expr *rhs, vector<StmtPtr> &stmts,
                          bool shadow, bool mustExist);
+  /// Transform a match...case pattern to a series of if statements as follows:
+  ///   - Int pattern
+  ///     case 1: ... ->
+  ///     if isinsance(var, "int"): if var == 1: ...
+  ///   - Bool pattern
+  ///     case True: ... ->
+  ///     if isinsance(var, "int"): if var == True: ...
+  ///   - Range pattern
+  ///     case 1 ... 3: ... ->
+  ///     if isinsance(var, "int"): if var >= 1: if var <= 3: ...
+  ///   - Tuple pattern
+  ///     case (1, pat1, pat2) ->
+  ///     if isinstance(var, "Tuple"): if staticlen(var) == 3:
+  ///       match(var[0], 1); match(var[1], pat1); match(var[2], pat2)...
+  ///   - List pattern
+  ///     case [1, pat1, ..., pat2] ->
+  ///     if isinstance(var, "List"): if len(var) >= 3:
+  ///       match(var[0], 1); match(var[1], pat1); match(var[-1], pat2)...
+  ///   - Or pattern (note: pattern suite is cloned for each or condition).
+  ///     case 1 or pat1 or pat2 ->
+  ///     match(var, 1); match(var, pat1); match(var, pat2)...
+  ///   - Bound pattern
+  ///     case (x := pat) ->
+  ///       block:
+  ///         x = var; match(var, pat)
+  ///   - Wildcard pattern
+  ///     case x: -> (only when x is not an underscore '_')
+  ///       block: x := var
+  ///   - Any other expression (e.g. string, seq, call etc.)
+  ///     case foo(): ->
+  ///       if hasattr(typeof(var), "__match__"): var.__match__(foo())
   StmtPtr transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr suite);
   /// Transform a C import (from C import foo(int) -> float as f) to:
   ///   @.c

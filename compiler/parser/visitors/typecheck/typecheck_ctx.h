@@ -46,6 +46,7 @@ public:
   int iteration;
   int extendCount;
   bool needsAnotherIteration;
+  bool allowActivation;
 
 public:
   explicit TypeContext(shared_ptr<Cache> cache);
