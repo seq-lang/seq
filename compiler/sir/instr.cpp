@@ -84,6 +84,19 @@ Value *StackAllocInstr::doClone() const {
                                            getName());
 }
 
+const char TypePropertyInstr::NodeId = 0;
+
+const types::Type *TypePropertyInstr::getType() const { return property == Property::IS_ATOMIC ? getModule()->getBoolType() : getModule()->getIntType(); }
+
+std::ostream &TypePropertyInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("type_property({}, {})"), property == Property::IS_ATOMIC ? "atomic" : "sizeof", type->referenceString());
+  return os;
+}
+
+Value *TypePropertyInstr::doClone() const {
+  return getModule()->Nrs<TypePropertyInstr>(getSrcInfo(), type, property, getName());
+}
+
 const char YieldInInstr::NodeId = 0;
 
 std::ostream &YieldInInstr::doFormat(std::ostream &os) const {

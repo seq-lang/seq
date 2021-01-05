@@ -28,6 +28,7 @@ class CodegenVisitor : public CallbackASTVisitor<seq::ir::ValuePtr, seq::ir::Val
                                                  seq::ir::ValuePtr> {
   shared_ptr<CodegenContext> ctx;
   seq::ir::ValuePtr result;
+  const seq::ir::types::Type *typeResult = nullptr;
 
   void defaultVisit(Expr *expr) override;
   void defaultVisit(Stmt *expr) override;
@@ -54,8 +55,6 @@ public:
   void visit(StringExpr *) override;
   void visit(IdExpr *) override;
   void visit(IfExpr *) override;
-  void visit(BinaryExpr *) override;
-  void visit(PipeExpr *) override;
   void visit(CallExpr *) override;
   void visit(StackAllocExpr *) override;
   void visit(DotExpr *) override;
@@ -76,7 +75,6 @@ public:
   void visit(WhileStmt *) override;
   void visit(ForStmt *) override;
   void visit(IfStmt *) override;
-  void visit(MatchStmt *) override;
   void visit(UpdateStmt *) override;
   void visit(TryStmt *) override;
   void visit(ThrowStmt *) override;

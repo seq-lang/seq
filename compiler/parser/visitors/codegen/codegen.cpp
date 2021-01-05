@@ -184,7 +184,7 @@ void CodegenVisitor::visit(IdExpr *expr) {
   else if (auto *f = val->getFunc())
     result = module->Nxs<VarValue>(expr, f);
   else
-    assert(false);
+    typeResult = val->getType();
 }
 
 void CodegenVisitor::visit(IfExpr *expr) {
@@ -212,6 +212,9 @@ void CodegenVisitor::visit(StackAllocExpr *expr) {
 }
 
 void CodegenVisitor::visit(DotExpr *expr) {
+  if (expr->member == "__atomic__" || expr->member == "__elemsize__")
+    assert(false);
+
   auto *module = ctx->getModule();
   result = module->Nxs<ExtractInstr>(expr, transform(expr->expr), expr->member);
 }
