@@ -166,6 +166,37 @@ class Kmer[K: int]:
     def as_int(self):
         return self.x
 
+    def __match__[N: int](self: Kmer[N], pattern: str):
+        WILD = byte(95)
+        p = pattern.ptr
+        n = pattern.len
+        star = __internal__.preprocess_seq_pattern(pattern)
+        nt4 = seq._nt4_table()
+        if star >= 0:
+            m = N
+            if m < n - 1:
+                return False
+            i = 0
+            while i < star:
+                if p[i] != WILD and int(nt4[int(p[i])]) != int(self[i]):
+                    return False
+                i += 1
+            i = star + 1
+            while i < n:
+                if p[i] != WILD and int(nt4[int(p[i])]) != int(self[i + m - n]):
+                    return False
+                i += 1
+            return True
+        else:
+            if N != n:
+                return False
+            i = 0
+            while i < n:
+                if p[i] != WILD and int(nt4[int(p[i])]) != int(self[i]):
+                    return False
+                i += 1
+            return True
+
 @extend
 class str:
     def __prefix_k__[N: int](s: str) -> Kmer[N]:

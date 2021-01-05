@@ -24,6 +24,7 @@ void Type::Unification::undo() {
   }
 }
 TypePtr Type::follow() { return shared_from_this(); }
+bool Type::is(const string &s) { return getClass() && getClass()->name == s; }
 
 LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic)
     : kind(kind), id(id), level(level), type(move(type)), isStatic(isStatic) {
@@ -314,11 +315,6 @@ int ClassType::unify(Type *typ, Unification *us) {
       return t->explicits[0].type->unify(ti64.get(), us);
     if (t->name == "int" && name == "Int")
       return explicits[0].type->unify(ti64.get(), us);
-
-    if (us && us->isMatch) {
-      if ((t->name == "Kmer" && name == "seq") || (name == "Kmer" && t->name == "seq"))
-        return 0;
-    }
 
     if (args.size() != t->args.size())
       return -1;

@@ -123,7 +123,6 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/lang/var.h
         compiler/parser/ast.h
         compiler/parser/ast/expr.h
-        compiler/parser/ast/pattern.h
         compiler/parser/ast/stmt.h
         compiler/parser/ast/types.h
         compiler/parser/visitors/visitor.h
@@ -193,7 +192,6 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/lang/var.cpp
         compiler/parser/ast/expr.cpp
         compiler/parser/ast/stmt.cpp
-        compiler/parser/ast/pattern.cpp
         compiler/parser/visitors/visitor.cpp
         compiler/parser/visitors/codegen/codegen.cpp
         compiler/parser/visitors/codegen/codegen_ctx.cpp
@@ -227,7 +225,6 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/util/jit.cpp
         compiler/parser/visitors/simplify/simplify_expr.cpp
         compiler/parser/visitors/simplify/simplify_stmt.cpp
-        compiler/parser/visitors/simplify/simplify_pattern.cpp
         compiler/sir/types/types.cpp
         compiler/sir/util/visitor.cpp
         compiler/sir/attribute.cpp

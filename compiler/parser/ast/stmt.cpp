@@ -176,25 +176,19 @@ string IfStmt::toString() const {
 }
 ACCEPT_IMPL(IfStmt, ASTVisitor);
 
-MatchStmt::MatchStmt(ExprPtr what, vector<PatternPtr> &&patterns,
-                     vector<StmtPtr> &&cases)
-    : Stmt(), what(move(what)), patterns(move(patterns)), cases(move(cases)) {
-  assert(patterns.size() == cases.size());
+MatchStmt::MatchCase MatchStmt::MatchCase::clone() const {
+  return {ast::clone(pattern), ast::clone(guard), ast::clone(suite)};
 }
-MatchStmt::MatchStmt(ExprPtr what, vector<pair<PatternPtr, StmtPtr>> &&patternCasePairs)
-    : Stmt(), what(move(what)) {
-  for (auto &i : patternCasePairs) {
-    patterns.push_back(move(i.first));
-    cases.push_back(move(i.second));
-  }
-}
+
+MatchStmt::MatchStmt(ExprPtr what, vector<MatchStmt::MatchCase> &&cases)
+    : Stmt(), what(move(what)), cases(move(cases)) {}
 MatchStmt::MatchStmt(const MatchStmt &stmt)
-    : Stmt(stmt), what(ast::clone(stmt.what)), patterns(ast::clone(stmt.patterns)),
-      cases(ast::clone(stmt.cases)) {}
+    : Stmt(stmt), what(ast::clone(stmt.what)), cases(ast::clone_nop(stmt.cases)) {}
 string MatchStmt::toString() const {
   string s;
-  for (int i = 0; i < patterns.size(); i++)
-    s += format(" (case {} {})", patterns[i]->toString(), cases[i]->toString());
+  for (auto &c : cases)
+    s += format(" (case {}{} {})", c.pattern->toString(),
+                c.guard ? " if " + c.guard->toString() : "", c.suite->toString());
   return format("(match{})", s);
 }
 ACCEPT_IMPL(MatchStmt, ASTVisitor);
@@ -236,8 +230,10 @@ string TryStmt::toString() const {
 }
 ACCEPT_IMPL(TryStmt, ASTVisitor);
 
-ThrowStmt::ThrowStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}
-ThrowStmt::ThrowStmt(const ThrowStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
+ThrowStmt::ThrowStmt(ExprPtr expr, bool transformed)
+    : Stmt(), expr(move(expr)), transformed(transformed) {}
+ThrowStmt::ThrowStmt(const ThrowStmt &stmt)
+    : Stmt(stmt), expr(ast::clone(stmt.expr)), transformed(stmt.transformed) {}
 string ThrowStmt::toString() const { return format("(throw {})", expr->toString()); }
 ACCEPT_IMPL(ThrowStmt, ASTVisitor);
 

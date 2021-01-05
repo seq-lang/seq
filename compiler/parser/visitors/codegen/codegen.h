@@ -24,15 +24,13 @@
 namespace seq {
 namespace ast {
 
-class CodegenVisitor : public CallbackASTVisitor<seq::ir::ValuePtr, seq::ir::ValuePtr,
-                                                 seq::ir::ValuePtr> {
+class CodegenVisitor : public CallbackASTVisitor<seq::ir::ValuePtr, seq::ir::ValuePtr> {
   shared_ptr<CodegenContext> ctx;
   seq::ir::ValuePtr result;
   const seq::ir::types::Type *typeResult = nullptr;
 
   void defaultVisit(Expr *expr) override;
   void defaultVisit(Stmt *expr) override;
-  void defaultVisit(Pattern *expr) override;
 
   seq::ir::Func *realizeFunc(const string &name);
   shared_ptr<CodegenItem> processIdentifier(shared_ptr<CodegenContext> tctx,
@@ -44,7 +42,6 @@ public:
 
   seq::ir::ValuePtr transform(const ExprPtr &expr) override;
   seq::ir::ValuePtr transform(const StmtPtr &stmt) override;
-  seq::ir::ValuePtr transform(const PatternPtr &pat) override { assert(false); }
 
   seq::ir::types::Type *realizeType(types::ClassTypePtr t);
 

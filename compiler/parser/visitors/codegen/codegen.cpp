@@ -34,10 +34,6 @@ void CodegenVisitor::defaultVisit(Stmt *n) {
   seqassert(false, "invalid node {}", n->toString());
 }
 
-void CodegenVisitor::defaultVisit(Pattern *n) {
-  seqassert(false, "invalid node {}", n->toString());
-}
-
 CodegenVisitor::CodegenVisitor(shared_ptr<CodegenContext> ctx)
     : ctx(move(ctx)), result() {}
 
@@ -572,15 +568,15 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
       ctx->popScope();
     }
   }
-} // namespace tmp
-
-void CodegenVisitor::visit(ClassStmt *stmt) {
-  // visitMethods(ctx->getRealizations()->getCanonicalName(stmt->getSrcInfo()));
 }
 
 std::unique_ptr<ir::SeriesFlow> CodegenVisitor::newScope(const seq::SrcObject *s,
                                                          std::string name) {
   return ctx->getModule()->Nxs<SeriesFlow>(s, std::move(name));
+}
+
+void CodegenVisitor::visit(ClassStmt *stmt) {}
+
 }
 
 } // namespace ast

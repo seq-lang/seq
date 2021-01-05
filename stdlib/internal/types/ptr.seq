@@ -134,6 +134,9 @@ class Ptr[T]:
         %0 = bitcast {=T}* %self to i8*
         ret i8* %0
     def __str__(self) -> str:
+        # from C import seq_print(str)->void
+        # if not self:
+            # return '0x0'
         return seq_str_ptr(self.as_byte())
 ptr = Ptr
 Jar = Ptr[byte]

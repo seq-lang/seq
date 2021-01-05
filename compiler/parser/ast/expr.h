@@ -544,6 +544,19 @@ struct AssignExpr : public Expr {
   ACCEPT(ASTVisitor);
 };
 
+/// Range expression (start ... end).
+/// Used only in match-case statements.
+/// @example 1 ... 2
+struct RangeExpr : public Expr {
+  ExprPtr start, stop;
+
+  RangeExpr(ExprPtr start, ExprPtr stop);
+  RangeExpr(const RangeExpr &);
+
+  string toString() const override;
+  ACCEPT(ASTVisitor);
+};
+
 /// The following nodes are created after the simplify stage.
 
 /// Statement expression (stmts...; expr).

@@ -38,12 +38,13 @@ ExprPtr TypecheckVisitor::transform(const ExprPtr &expr_) {
   return move(expr);
 }
 
-ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes) {
+ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes, bool allowVoid) {
   if (!expr)
     return nullptr;
   auto typ = expr->type;
   if (!expr->done) {
     TypecheckVisitor v(ctx, prependStmts);
+    v.allowVoidExpr = allowVoid;
     v.setSrcInfo(expr->getSrcInfo());
     expr->accept(v);
     if (v.resultExpr)
@@ -52,6 +53,8 @@ ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes) {
     typ |= expr->type;
   }
   realizeType(typ->getClass());
+  if (!expr->isType() && !allowVoid && expr->type->is("void"))
+    error("expression with void type");
   return move(expr);
 }
 
@@ -121,8 +124,8 @@ void TypecheckVisitor::visit(IdExpr *expr) {
 
 void TypecheckVisitor::visit(IfExpr *expr) {
   expr->cond = transform(expr->cond);
-  expr->ifexpr = transform(expr->ifexpr);
-  expr->elsexpr = transform(expr->elsexpr);
+  expr->ifexpr = transform(expr->ifexpr, false, allowVoidExpr);
+  expr->elsexpr = transform(expr->elsexpr, false, allowVoidExpr);
 
   if (expr->isStaticExpr) {
     if (expr->cond->staticEvaluation.first && expr->ifexpr->staticEvaluation.first &&
@@ -210,7 +213,7 @@ void TypecheckVisitor::visit(BinaryExpr *expr) {
 void TypecheckVisitor::visit(PipeExpr *expr) {
   // Returns T if t is of type Generator[T].
   auto getIterableType = [&](TypePtr t) {
-    if (t->getClass() && t->getClass()->name == "Generator")
+    if (t->is("Generator"))
       return t->getClass()->explicits[0].type;
     return t;
   };
@@ -311,12 +314,12 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               auto val = ctx->find(ei->value);
               seqassert(val && val->isStatic(), "invalid static expression");
               auto genTyp = val->type->follow();
-              staticGenerics.emplace_back(Generic{
-                  ei->value, genTyp,
-                  genTyp->getLink() ? genTyp->getLink()->id
-                                    : genTyp->getStatic()->explicits.empty()
-                                          ? 0
-                                          : genTyp->getStatic()->explicits[0].id});
+              staticGenerics.emplace_back(
+                  Generic{ei->value, genTyp,
+                          genTyp->getLink() ? genTyp->getLink()->id
+                          : genTyp->getStatic()->explicits.empty()
+                              ? 0
+                              : genTyp->getStatic()->explicits[0].id});
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -460,7 +463,7 @@ void TypecheckVisitor::visit(StmtExpr *expr) {
     s = transform(s);
     expr->done &= s->done;
   }
-  expr->expr = transform(expr->expr);
+  expr->expr = transform(expr->expr, false, allowVoidExpr);
   expr->type |= expr->expr->type;
   expr->done &= expr->expr->done;
 }
@@ -593,9 +596,8 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
     method = findBestMethod(rt.get(), format("__r{}__", magic), {{"", rt}, {"", lt}});
   if (!method)
     method = findBestMethod(lt.get(), format("__{}__", magic), {{"", lt}, {"", rt}});
-  if (!method && lt->name == "Optional")
-    if (!method)
-      error("cannot find magic '{}' in {}", magic, lt->toString());
+  if (!method)
+    error("cannot find magic '{}' in {}", magic, lt->toString());
 
   return transform(
       N<CallExpr>(N<IdExpr>(method->name), move(expr->lexpr), move(expr->rexpr)));
@@ -666,20 +668,16 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     return in(ast->attributes, ATTR_NOT_STATIC);
   };
 
-  expr->expr = transform(expr->expr, true);
-  // Case 1: type not yet known, so just assign an unbound type and wait until the
-  // next iteration.
-  if (expr->expr->getType()->getUnbound()) {
-    expr->type |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
-    return nullptr;
-  }
-
   if (expr->member == "__class__") {
+    expr->expr = transform(expr->expr, true, true);
     expr->type |= ctx->findInternal("str");
     if (auto t = realizeType(expr->expr->type))
       return transform(N<StringExpr>(t->realizeString()));
     return nullptr;
-  } else if (expr->member == "__atomic__") {
+  }
+
+  expr->expr = transform(expr->expr, true);
+  if (expr->member == "__atomic__") {
     expr->type |= ctx->findInternal("bool");
     if (auto t = realizeType(expr->expr->type)) {
       expr->done = true;
@@ -690,6 +688,13 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     if (auto t = realizeType(expr->expr->type)) {
       expr->done = true;
     }
+    return nullptr;
+  }
+
+  // Case 1: type not yet known, so just assign an unbound type and wait until the
+  // next iteration.
+  if (expr->expr->getType()->getUnbound()) {
+    expr->type |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
     return nullptr;
   }
 
@@ -731,14 +736,14 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     for (const auto &a : *args)
       argTypes.emplace_back(make_pair(a.name, a.value->getType()));
     if (auto bestMethod = findBestMethod(typ.get(), expr->member, argTypes)) {
-      auto e = N<IdExpr>(bestMethod->name);
+      ExprPtr e = N<IdExpr>(bestMethod->name);
       auto t = ctx->instantiate(getSrcInfo(), bestMethod, typ.get());
       LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
       e->type |= t;
       expr->type |= e->type;
       if (!isType)
         args->insert(args->begin(), {"", move(expr->expr)}); // self variable
-      visit(e.get()); // Visit IdExpr and realize it if necessary.
+      e = transform(e); // Visit IdExpr and realize it if necessary.
       // Remove lingering unbound variables from expr->expr (typ) instantiation
       // if we accessed a method that does not reference any generic in typ.
       if (isType && !isMethod(bestMethod.get()))
@@ -786,12 +791,12 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     auto name = bestMethod->name;
     auto val = ctx->find(name);
     seqassert(val, "cannot find method '{}'", name);
-    auto e = N<IdExpr>(name);
+    ExprPtr e = N<IdExpr>(name);
     auto t = ctx->instantiate(getSrcInfo(), bestMethod, typ.get());
     LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
     e->type |= t;
     expr->type |= e->type;
-    visit(e.get()); // Visit IdExpr and realize it if necessary.
+    e = transform(e); // Visit IdExpr and realize it if necessary.
     // Remove lingering unbound variables from expr->expr (typ) instantiation
     // if we accessed a method that does not reference any generic in typ.
     if (!isMethod(bestMethod.get()))
@@ -807,7 +812,8 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     // Handle @property methods.
     if (in(ctx->cache->functions[bestMethod->name].ast->attributes, "property"))
       methodArgs.pop_back();
-    return transform(N<CallExpr>(N<IdExpr>(bestMethod->name), move(methodArgs)));
+    ExprPtr e = N<CallExpr>(N<IdExpr>(bestMethod->name), move(methodArgs));
+    return transform(e, false, allowVoidExpr);
   }
 }
 
@@ -1208,8 +1214,9 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   } else if (!knownTypes.empty()) {
     // Case 2: fulfilled partial call.
     // Transform p(args...) to p.__call__(args...).
-    return transform(
-        N<CallExpr>(N<DotExpr>(move(expr->expr), "__call__"), move(reorderedArgs)));
+    ExprPtr e =
+        N<CallExpr>(N<DotExpr>(move(expr->expr), "__call__"), move(reorderedArgs));
+    return transform(e, false, allowVoidExpr);
   } else {
     // Case 3. Normal function call.
     expr->args = move(reorderedArgs);
@@ -1314,11 +1321,13 @@ string TypecheckVisitor::generatePartialStub(const string &mask,
     }
     args[0].type = N<IndexExpr>(N<IdExpr>(format("Function", mask.size())),
                                 N<TupleExpr>(move(genericNames)));
-    StmtPtr func =
-        N<FunctionStmt>("__call__", N<IdExpr>("T0"), vector<Param>{}, move(missingArgs),
-                        N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "ptr"),
-                                                  move(callArgs))),
-                        vector<string>{});
+    auto call = N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "ptr"), move(callArgs));
+    StmtPtr func = N<FunctionStmt>(
+        "__call__", N<IdExpr>("T0"), vector<Param>{}, move(missingArgs),
+        N<IfStmt>(
+            N<CallExpr>(N<IdExpr>("isinstance"), N<IdExpr>("T0"), N<IdExpr>("void")),
+            N<ExprStmt>(clone(call)), nullptr, N<ReturnStmt>(clone(call))),
+        vector<string>{});
     StmtPtr stmt = make_unique<ClassStmt>(
         typeName, move(generics), move(args), move(func),
         vector<string>{ATTR_TUPLE, ATTR_NO(ATTR_TOTAL_ORDERING), ATTR_NO(ATTR_PICKLE),

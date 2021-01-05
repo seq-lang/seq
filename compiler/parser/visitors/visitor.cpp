@@ -14,7 +14,6 @@ namespace ast {
 
 void ASTVisitor::defaultVisit(Expr *expr) {}
 void ASTVisitor::defaultVisit(Stmt *stmt) {}
-void ASTVisitor::defaultVisit(Pattern *pattern) {}
 
 void ASTVisitor::visit(NoneExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(BoolExpr *expr) { defaultVisit(expr); }
@@ -45,6 +44,7 @@ void ASTVisitor::visit(PtrExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(LambdaExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(YieldExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(AssignExpr *expr) { defaultVisit(expr); }
+void ASTVisitor::visit(RangeExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(InstantiateExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(StmtExpr *expr) { defaultVisit(expr); }
 
@@ -73,18 +73,6 @@ void ASTVisitor::visit(FunctionStmt *stmt) { defaultVisit(stmt); }
 void ASTVisitor::visit(ClassStmt *stmt) { defaultVisit(stmt); }
 void ASTVisitor::visit(YieldFromStmt *stmt) { defaultVisit(stmt); }
 void ASTVisitor::visit(WithStmt *stmt) { defaultVisit(stmt); }
-
-void ASTVisitor::visit(StarPattern *pattern) { defaultVisit(pattern); }
-void ASTVisitor::visit(IntPattern *pattern) { defaultVisit(pattern); }
-void ASTVisitor::visit(BoolPattern *pattern) { defaultVisit(pattern); }
-void ASTVisitor::visit(StrPattern *pattern) { defaultVisit(pattern); }
-void ASTVisitor::visit(RangePattern *pattern) { defaultVisit(pattern); }
-void ASTVisitor::visit(TuplePattern *pattern) { defaultVisit(pattern); }
-void ASTVisitor::visit(ListPattern *pattern) { defaultVisit(pattern); }
-void ASTVisitor::visit(OrPattern *pattern) { defaultVisit(pattern); }
-void ASTVisitor::visit(WildcardPattern *pattern) { defaultVisit(pattern); }
-void ASTVisitor::visit(GuardedPattern *pattern) { defaultVisit(pattern); }
-void ASTVisitor::visit(BoundPattern *pattern) { defaultVisit(pattern); }
 
 } // namespace ast
 } // namespace seq

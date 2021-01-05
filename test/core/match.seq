@@ -1,126 +1,126 @@
 def f(k):
     match k:
-        case s'':
+        case '':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'GCGT':
+        case 'GCGT':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'GCGTC':
+        case 'GCGTC':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'GCATC':
+        case 'GCATC':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'G_GT_':
+        case 'G_GT_':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'_TG__':
+        case '_TG__':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'GC...ATC':
+        case 'GC*ATC':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'GC...TC':
+        case 'GC*TC':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'GC...A':
+        case 'GC*A':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'GCG...':
+        case 'GCG*':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'GGG...':
+        case 'GGG*':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'...TC':
+        case '*TC':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'...T':
+        case '*T':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'...':
+        case '*':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'_C...G_C':
+        case '_C*G_C':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'...G_C':
+        case '*G_C':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'_C...':
+        case '_C*':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'A_...G_C':
+        case 'A_*G_C':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'...C_C':
+        case '*C_C':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'_T...':
+        case '_T*':
             yield 1
         case _:
             yield 0
 
     match k:
-        case s'__...__':
+        case '__*__':
             yield 1
         case _:
             yield 0

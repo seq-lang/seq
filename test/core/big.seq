@@ -62,7 +62,7 @@ class X[T]:
 
             print v[0]
             match v[0]:
-                case s'A...':
+                case 'A*':
                     print 'caught'
                 case _:
                     print 'default'

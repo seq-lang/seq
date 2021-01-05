@@ -181,13 +181,31 @@ void SimplifyVisitor::visit(DictExpr *expr) {
 
 void SimplifyVisitor::visit(GeneratorExpr *expr) {
   SuiteStmt *prev;
-  auto suite = transformGeneratorBody(expr->loops, prev);
-
   vector<StmtPtr> stmts;
+
+  auto loops = clone_nop(expr->loops);
+  // List comprehension optimization: pass iter.__len__() if we only have a single for
+  // loop without any conditions.
+  string optimizeVar;
+  if (expr->kind == GeneratorExpr::ListGenerator && loops.size() == 1 &&
+      loops[0].conds.empty()) {
+    optimizeVar = ctx->cache->getTemporaryVar("iter");
+    stmts.push_back(
+        transform(N<AssignStmt>(N<IdExpr>(optimizeVar), move(loops[0].gen))));
+    loops[0].gen = N<IdExpr>(optimizeVar);
+  }
+
+  auto suite = transformGeneratorBody(loops, prev);
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("gen"));
   if (expr->kind == GeneratorExpr::ListGenerator) {
-    stmts.push_back(
-        transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("List")))));
+    vector<CallExpr::Arg> args;
+    if (!optimizeVar.empty()) {
+      // Use special List.__init__(bool, T) constructor.
+      args.emplace_back(CallExpr::Arg{"", N<BoolExpr>(true)});
+      args.emplace_back(CallExpr::Arg{"", N<IdExpr>(optimizeVar)});
+    }
+    stmts.push_back(transform(
+        N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("List"), move(args)))));
     prev->stmts.push_back(
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "append"), clone(expr->expr))));
     stmts.push_back(transform(suite));
@@ -559,6 +577,8 @@ void SimplifyVisitor::visit(AssignExpr *expr) {
   resultExpr =
       transform(N<StmtExpr>(move(s), transform(N<IdExpr>(expr->var->getId()->value))));
 }
+
+void SimplifyVisitor::visit(RangeExpr *expr) { error("invalid range expression"); }
 
 /**************************************************************************************/
 

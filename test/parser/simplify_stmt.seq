@@ -647,14 +647,18 @@ print Foo().__contains__(1)  #! ERROR: cannot unify int and void
 @tuple
 class Foo:
     pass
-print Foo().__getitem__(1)  #! ERROR: cannot find '__str__' in void
+print Foo().__getitem__(1)
+#!     ERROR: expression with void type
+#!     ERROR: while realizing __internal__.tuple_getitem
+#!     ERROR: while realizing Foo.__getitem__
 
 #%% magic_err_3,barebones
 @tuple
 class Foo:
     pass
-print Foo().__iter__()  #: <generator at 0x0>
-# TODO: disallow this case
+print Foo().__iter__()
+#! ERROR: cannot iterate empty tuple
+#! ERROR: while realizing Foo.__iter__
 
 #%% magic_err_4,barebones
 @tuple

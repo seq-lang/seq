@@ -76,7 +76,8 @@ void TypecheckVisitor::visit(BreakStmt *stmt) { stmt->done = true; }
 void TypecheckVisitor::visit(ContinueStmt *stmt) { stmt->done = true; }
 
 void TypecheckVisitor::visit(ExprStmt *stmt) {
-  stmt->expr = transform(stmt->expr);
+  // Make sure to allow expressions with void type.
+  stmt->expr = transform(stmt->expr, false, true);
   stmt->done = stmt->expr->done;
 }
 
@@ -211,13 +212,7 @@ void TypecheckVisitor::visit(ReturnStmt *stmt) {
     auto &base = ctx->bases.back();
     wrapOptionalIfNeeded(base.returnType, stmt->expr);
     base.returnType |= stmt->expr->type;
-    // HACK TODO: elide "return void" in Partial.__call__
     auto retTyp = stmt->expr->getType()->getClass();
-    if (startswith(base.name, "Partial.N") && endswith(base.name, ".__call__") &&
-        retTyp && retTyp->name == "void") {
-      resultStmt = transform(N<ExprStmt>(move(stmt->expr)));
-      return;
-    }
     stmt->done = stmt->expr->done;
   } else {
     stmt->done = true;
@@ -254,7 +249,7 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
   string varName;
   if (auto e = stmt->var->getId())
     varName = e->value;
-  seqassert(!varName.empty(), "invalid for variable {}", stmt->var->toString());
+  seqassert(!varName.empty(), "empty for variable {}", stmt->var->toString());
   stmt->var->type |= varType;
   ctx->add(TypecheckItem::Var, varName, varType);
   stmt->suite = transform(stmt->suite);
@@ -301,39 +296,6 @@ void TypecheckVisitor::visit(IfStmt *stmt) {
     resultStmt = transform(N<PassStmt>());
 }
 
-void TypecheckVisitor::visit(MatchStmt *stmt) {
-  stmt->what = transform(stmt->what);
-  auto matchType = stmt->what->getType();
-  auto matchTypeClass = matchType->getClass();
-
-  // TODO: hack for seq/K-mer unification
-  auto unifyMatchType = [&](const TypePtr &t) {
-    seqassert(t && matchType, "invalid match type");
-    types::Type::Unification undo;
-    undo.isMatch = true;
-    if (t->unify(matchType.get(), &undo) < 0) {
-      undo.undo();
-      error("cannot unify {} and {}", t->toString(), matchType->toString());
-    }
-  };
-
-  stmt->done = true;
-  for (auto ci = 0; ci < stmt->cases.size(); ci++) {
-    if (auto p = CAST(stmt->patterns[ci], BoundPattern)) {
-      p->pattern = transform(p->pattern);
-      ctx->add(TypecheckItem::Var, p->var, p->pattern->getType());
-      unifyMatchType(p->pattern->getType());
-      stmt->done &= p->pattern->done;
-    } else {
-      stmt->patterns[ci] = transform(stmt->patterns[ci]);
-      unifyMatchType(stmt->patterns[ci]->getType());
-      stmt->done &= stmt->patterns[ci]->done;
-    }
-    stmt->cases[ci] = transform(stmt->cases[ci]);
-    stmt->done &= stmt->cases[ci]->done;
-  }
-}
-
 void TypecheckVisitor::visit(TryStmt *stmt) {
   vector<TryStmt::Catch> catches;
   stmt->suite = transform(stmt->suite);
@@ -351,7 +313,33 @@ void TypecheckVisitor::visit(TryStmt *stmt) {
 
 void TypecheckVisitor::visit(ThrowStmt *stmt) {
   stmt->expr = transform(stmt->expr);
-  stmt->done &= stmt->expr->done;
+  auto tc = stmt->expr->type->getClass();
+  if (!stmt->transformed && tc) {
+    auto &f = ctx->cache->classes[tc->name].fields;
+    if (f.empty() || !f[0].type->getClass() ||
+        f[0].type->getClass()->name != "ExcHeader")
+      error("cannot throw non-exception (first object member must be of type "
+            "ExcHeader)");
+    auto var = ctx->cache->getTemporaryVar("exc");
+    vector<CallExpr::Arg> args;
+    args.emplace_back(CallExpr::Arg{"", N<StringExpr>(tc->name)});
+    args.emplace_back(CallExpr::Arg{
+        "", N<DotExpr>(N<DotExpr>(N<IdExpr>(var),
+                                  ctx->cache->classes[tc->name].fields[0].name),
+                       "msg")});
+    args.emplace_back(CallExpr::Arg{"", N<StringExpr>(ctx->bases.back().name)});
+    args.emplace_back(CallExpr::Arg{"", N<StringExpr>(stmt->getSrcInfo().file)});
+    args.emplace_back(CallExpr::Arg{"", N<IntExpr>(stmt->getSrcInfo().line)});
+    args.emplace_back(CallExpr::Arg{"", N<IntExpr>(stmt->getSrcInfo().col)});
+    resultStmt = transform(N<SuiteStmt>(
+        N<AssignStmt>(N<IdExpr>(var), move(stmt->expr)),
+        N<AssignMemberStmt>(N<IdExpr>(var),
+                            ctx->cache->classes[tc->name].fields[0].name,
+                            N<CallExpr>(N<IdExpr>("ExcHeader"), move(args))),
+        N<ThrowStmt>(N<IdExpr>(var), true)));
+  } else {
+    stmt->done = false;
+  }
 }
 
 void TypecheckVisitor::visit(FunctionStmt *stmt) {
