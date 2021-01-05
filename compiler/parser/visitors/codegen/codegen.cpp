@@ -577,7 +577,5 @@ std::unique_ptr<ir::SeriesFlow> CodegenVisitor::newScope(const seq::SrcObject *s
 
 void CodegenVisitor::visit(ClassStmt *stmt) {}
 
-}
-
 } // namespace ast
 } // namespace seq
