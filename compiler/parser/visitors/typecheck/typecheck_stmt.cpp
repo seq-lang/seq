@@ -37,7 +37,10 @@ StmtPtr TypecheckVisitor::transform(const StmtPtr &stmt_) {
     return move(stmt);
   TypecheckVisitor v(ctx);
   v.setSrcInfo(stmt->getSrcInfo());
+  auto oldAge = ctx->age;
+  stmt->age = ctx->age = std::max(stmt->age, oldAge);
   stmt->accept(v);
+  ctx->age = oldAge;
   if (v.resultStmt)
     stmt = move(v.resultStmt);
   if (!v.prependStmts->empty()) {
@@ -259,38 +262,37 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
 }
 
 void TypecheckVisitor::visit(IfStmt *stmt) {
-  vector<IfStmt::If> ifs;
+  seqassert(stmt->ifs.size() == 1 || (stmt->ifs.size() == 2 && !stmt->ifs[1].cond),
+            "if not simplified");
+
   stmt->done = true;
-  bool sawStatic = false;
-  bool resolvedAllStatics = true;
-  for (auto &i : stmt->ifs) {
-    if ((i.cond = transform(i.cond)))
-      stmt->done &= i.cond->done;
-    if (i.cond && i.cond->isStaticExpr) {
-      sawStatic = true;
-      if (i.cond->staticEvaluation.first && !i.cond->staticEvaluation.second) {
-        continue; // do not include this suite
-      } else if (!i.cond->staticEvaluation.first) {
-        stmt->done = false; // do not typecheck this suite yet
-        resolvedAllStatics = false;
-      } else {
-        if ((i.suite = transform(i.suite))) {
-          stmt->done &= i.suite->done;
-          ifs.emplace_back(IfStmt::If{move(i.cond), move(i.suite)});
-        }
-        break; // done, all further conditions are not needed anymore.
+  vector<IfStmt::If> ifs;
+  bool includeElse = true, transformElse = true;
+  auto cond = transform(stmt->ifs[0].cond);
+  if (cond->isStaticExpr) {
+    if (cond->staticEvaluation.first && !cond->staticEvaluation.second) {
+      ; // do not include this suite
+    } else if (!cond->staticEvaluation.first) {
+      stmt->done = false; // do not typecheck this suite yet
+      transformElse = false;
+      ifs.emplace_back(IfStmt::If{move(cond), move(stmt->ifs[0].suite)});
+    } else {
+      if ((stmt->ifs[0].suite = transform(stmt->ifs[0].suite))) {
+        ifs.emplace_back(IfStmt::If{move(cond), move(stmt->ifs[0].suite)});
       }
-    } else if (i.cond && i.cond->type->getClass() &&
-               i.cond->type->getClass()->name != "bool") {
-      i.cond = transform(N<CallExpr>(N<DotExpr>(move(i.cond), "__bool__")));
-      stmt->done &= i.cond->done;
+      includeElse = false;
     }
-    if (sawStatic && !resolvedAllStatics)
-      continue; // we can continue type-checking other branches only if we are sure
-                // that all previous branches cannot be resolved at the compile-time
-    if ((i.suite = transform(i.suite)))
-      stmt->done &= i.suite->done;
-    ifs.emplace_back(IfStmt::If{move(i.cond), move(i.suite)});
+  } else {
+    if (cond->type->getClass() && !cond->type->is("bool"))
+      cond = transform(N<CallExpr>(N<DotExpr>(move(cond), "__bool__")));
+    ifs.emplace_back(IfStmt::If{move(cond), transform(stmt->ifs[0].suite)});
+  }
+  if (!ifs.empty())
+    stmt->done &= ifs.back().cond->done && ifs.back().suite->done;
+  if (stmt->ifs.size() == 2 && includeElse) {
+    ifs.emplace_back(IfStmt::If{nullptr, transformElse ? transform(stmt->ifs[1].suite)
+                                                       : move(stmt->ifs[1].suite)});
+    stmt->done &= ifs.back().suite->done;
   }
   if (ifs.size())
     stmt->ifs = move(ifs);
@@ -484,10 +486,8 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
     LOG_REALIZE("[class] {} -> {}", stmt->name, typ->toString());
     for (auto &m : ctx->cache->classes[stmt->name].fields)
       LOG_REALIZE("       - member: {}: {}", m.name, m.type->toString());
-  } else {
-    ctx->extendCount++; // Increase the current extension count.
   }
-  //  stmt->done = true;
+  stmt->done = true;
 }
 
 /**************************************************************************************/

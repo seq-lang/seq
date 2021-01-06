@@ -119,6 +119,8 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     stdlib->isStdlibLoading = false;
   }
 
+  // The whole standard library has the age of zero to allow back-references.
+  cache->age++;
   // Reuse standard library context as it contains all standard library symbols.
   auto ctx = static_pointer_cast<SimplifyContext>(cache->imports[STDLIB_IMPORT].ctx);
   // Transform the input node.

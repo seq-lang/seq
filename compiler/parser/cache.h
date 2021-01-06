@@ -70,6 +70,9 @@ struct Cache {
   /// Number of auto-generated variables so far. Used to generate the next unique
   /// variable name in getTemporaryVar() below.
   int varCount;
+  /// Stores the count of imported files. Used to track class method ages
+  /// and to prevent using extended methods before they were seen.
+  int age;
   /// Test flags for seqtest test cases. Zero if seqtest is not parsing the code.
   int testFlags;
 
@@ -169,8 +172,8 @@ struct Cache {
 
 public:
   explicit Cache(string argv0 = "")
-      : generatedSrcInfoCount(0), unboundCount(0), varCount(0), testFlags(0),
-        argv0(move(argv0)), module(nullptr) {}
+      : generatedSrcInfoCount(0), unboundCount(0), varCount(0), age(0),
+        testFlags(0), argv0(move(argv0)), module(nullptr) {}
 
   /// Return a uniquely named temporary variable of a format
   /// "{sigil}_{prefix}{counter}". A sigil should be a non-lexable symbol.

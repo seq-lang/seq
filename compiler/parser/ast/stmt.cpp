@@ -24,7 +24,7 @@ using std::move;
 namespace seq {
 namespace ast {
 
-Stmt::Stmt() : done(false) {}
+Stmt::Stmt() : done(false), age(-1) {}
 Stmt::Stmt(const seq::SrcInfo &s) : done(false) { setSrcInfo(s); }
 
 SuiteStmt::SuiteStmt(vector<StmtPtr> &&stmts, bool ownBlock)

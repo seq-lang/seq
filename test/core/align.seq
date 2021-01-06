@@ -1,3 +1,4 @@
+from bio import *
 Q,T = ['test/data/' + a for a in ('MT-orang.fa','MT-human.fa')]
 
 @test

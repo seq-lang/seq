@@ -164,7 +164,8 @@ public:
   ///   a.__bool__().__invert__()
   void visit(UnaryExpr *) override;
   /// Transform the following binary expressions:
-  ///   a and.or b -> a.__bool__() and/or b.__bool__()
+  ///   a and b -> b.__bool__() if a.__bool__() else False
+  ///   a or b -> True if a.__bool__() else b.__bool__()
   ///   a is not b -> (a is b).__invert__()
   ///   a not in b -> not (a in b)
   ///   a in b -> a.__contains__(b)
@@ -271,6 +272,11 @@ public:
   ///   for i in it.__iter__(): ...
   ///   if no_break.__bool__(): ...
   void visit(ForStmt *) override;
+  /// Transform if cond: ... elif cond2: ... else: ... to:
+  ///   if cond: ...
+  ///   else:
+  ///     if cond2: ...
+  ///     else: ...
   void visit(IfStmt *) override;
   /// Transforms the match e: case P1: ... case P2 if guard: ... statement to:
   ///   tmp = e

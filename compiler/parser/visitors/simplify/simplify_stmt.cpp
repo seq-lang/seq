@@ -33,6 +33,8 @@ StmtPtr SimplifyVisitor::transform(const Stmt *stmt) {
       v.prependStmts->push_back(move(v.resultStmt));
     v.resultStmt = N<SuiteStmt>(move(*v.prependStmts));
   }
+  if (v.resultStmt)
+    v.resultStmt->age = ctx->cache->age;
   return move(v.resultStmt);
 }
 
@@ -209,10 +211,24 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
 }
 
 void SimplifyVisitor::visit(IfStmt *stmt) {
-  vector<IfStmt::If> ifs;
-  for (auto &i : stmt->ifs)
-    ifs.push_back({transform(i.cond), transform(i.suite)});
-  resultStmt = N<IfStmt>(move(ifs));
+  seqassert(!stmt->ifs.empty() && stmt->ifs[0].cond, "invalid if statement");
+
+  vector<IfStmt::If> topIf;
+  topIf.emplace_back(
+      IfStmt::If{transform(clone(stmt->ifs[0].cond)), transform(stmt->ifs[0].suite)});
+  vector<IfStmt::If> subIf;
+  for (auto i = 1; i < stmt->ifs.size(); i++) {
+    seqassert(stmt->ifs[i].cond || i == int(stmt->ifs.size() - 1),
+              "else that is not last condition");
+    subIf.push_back({clone(stmt->ifs[i].cond), clone(stmt->ifs[i].suite)});
+  }
+  if (!subIf.empty()) {
+    if (!subIf[0].cond)
+      topIf.emplace_back(IfStmt::If{nullptr, transform(move(subIf[0].suite))});
+    else
+      topIf.emplace_back(IfStmt::If{nullptr, transform(N<IfStmt>(move(subIf)))});
+  }
+  resultStmt = N<IfStmt>(move(topIf));
 }
 
 void SimplifyVisitor::visit(MatchStmt *stmt) {
@@ -472,7 +488,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     attributes[ATTR_PARENT_CLASS] = ctx->bases.back().name;
     // ... add the method to class' method list ...
     ctx->cache->classes[ctx->bases.back().name].methods[stmt->name].push_back(
-        {canonicalName, nullptr, ctx->extendCount});
+        {canonicalName, nullptr, ctx->cache->age});
     // ... and if the function references outer class variable (by definition a
     // generic), mark it as not static as it needs fully instantiated class to be
     // realized. For example, in class A[T]: def foo(): pass, A.foo() can be realized
@@ -662,7 +678,6 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
     }
   resultStmt = N<ClassStmt>(canonicalName, clone_nop(c->generics), vector<Param>{},
                             move(suite), vector<string>{"extend"});
-  ctx->extendCount += 1;
 }
 
 /**************************************************************************************/
@@ -993,6 +1008,8 @@ StmtPtr SimplifyVisitor::transformPythonImport(const Expr *what,
 
 void SimplifyVisitor::transformNewImport(const string &file, const string &moduleName) {
   // Use a clean context to parse a new file.
+  if (ctx->cache->age)
+    ctx->cache->age++;
   auto ictx = make_shared<SimplifyContext>(file, ctx->cache);
   ictx->isStdlibLoading = ctx->isStdlibLoading;
   ictx->moduleName = moduleName;

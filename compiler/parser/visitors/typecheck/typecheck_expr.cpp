@@ -321,12 +321,12 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               auto val = ctx->find(ei->value);
               seqassert(val && val->isStatic(), "invalid static expression");
               auto genTyp = val->type->follow();
-              staticGenerics.emplace_back(Generic{
-                  ei->value, genTyp,
-                  genTyp->getLink() ? genTyp->getLink()->id
-                                    : genTyp->getStatic()->explicits.empty()
-                                          ? 0
-                                          : genTyp->getStatic()->explicits[0].id});
+              staticGenerics.emplace_back(
+                  Generic{ei->value, genTyp,
+                          genTyp->getLink() ? genTyp->getLink()->id
+                          : genTyp->getStatic()->explicits.empty()
+                              ? 0
+                              : genTyp->getStatic()->explicits[0].id});
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -517,13 +517,6 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
     // Case 1: If operand types are unknown, continue later (no transformation).
     // Mark the type as unbound.
     expr->type |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
-    return nullptr;
-  }
-
-  if (expr->op == "&&" || expr->op == "||") {
-    // Case 2: Short-circuiting operators (preserve BinaryExpr).
-    expr->type |= ctx->findInternal("bool");
-    expr->done = expr->lexpr->done && expr->rexpr->done;
     return nullptr;
   }
 
@@ -842,9 +835,6 @@ TypecheckVisitor::findBestMethod(ClassType *typ, const string &member,
     return nullptr;
   if (methods.size() == 1) // methods is not overloaded
     return methods[0];
-
-  if (typ->name == "B.13" && member == "__init__")
-    assert(1);
 
   // Calculate the unification score for each available methods and pick the one with
   // highest score.

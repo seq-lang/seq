@@ -44,9 +44,9 @@ public:
   /// If type checking is successful, all of them should be resolved.
   set<types::TypePtr> activeUnbounds;
   int iteration;
-  int extendCount;
   bool needsAnotherIteration;
   bool allowActivation;
+  int age;
 
 public:
   explicit TypeContext(shared_ptr<Cache> cache);
@@ -90,41 +90,8 @@ public:
                                     const vector<types::TypePtr> &generics);
 
   vector<types::FuncTypePtr> findMethod(const string &typeName,
-                                        const string &method) const {
-    auto m = cache->classes.find(typeName);
-    if (m != cache->classes.end()) {
-      auto t = m->second.methods.find(method);
-      if (t != m->second.methods.end()) {
-        unordered_map<string, int> signatureLoci;
-        vector<types::FuncTypePtr> vv;
-        if (typeName == "AttributeError" && method == "__new__")
-          assert(1);
-        for (auto &mt : t->second)
-          if (mt.age <= extendCount) {
-            auto sig = cache->functions[mt.name].ast->signature();
-            auto it = signatureLoci.find(sig);
-            if (it != signatureLoci.end())
-              vv[it->second] = mt.type;
-            else {
-              signatureLoci[sig] = vv.size();
-              vv.emplace_back(mt.type);
-            }
-          }
-        return vv;
-      }
-    }
-    return {};
-  }
-
-  types::TypePtr findMember(const string &typeName, const string &member) const {
-    auto m = cache->classes.find(typeName);
-    if (m != cache->classes.end()) {
-      for (auto &mm : m->second.fields)
-        if (mm.name == member)
-          return mm.type;
-    }
-    return nullptr;
-  }
+                                        const string &method) const;
+  types::TypePtr findMember(const string &typeName, const string &member) const;
 };
 
 } // namespace ast

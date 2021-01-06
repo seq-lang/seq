@@ -1,3 +1,4 @@
+from bio import *
 from bio.fmindex import FMIndex, FMDIndex
 import gzip
 import pickle
