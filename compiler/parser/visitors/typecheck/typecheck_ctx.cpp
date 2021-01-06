@@ -16,7 +16,7 @@ namespace ast {
 
 TypeContext::TypeContext(shared_ptr<Cache> cache)
     : Context<TypecheckItem>(""), cache(move(cache)), typecheckLevel(0), iteration(0),
-      extendCount(0), needsAnotherIteration(false), allowActivation(true) {
+      needsAnotherIteration(false), allowActivation(true), age(0) {
   stack.push_front(vector<string>());
   bases.push_back({"", nullptr, nullptr});
 }
@@ -134,6 +134,44 @@ void TypeContext::dump(int pad) {
     auto t = i.second.front().second;
     LOG("{}{:.<25} {}", string(pad * 2, ' '), i.first, t->type->toString());
   }
+}
+
+vector<types::FuncTypePtr> TypeContext::findMethod(const string &typeName,
+                                                   const string &method) const {
+  auto m = cache->classes.find(typeName);
+  if (m != cache->classes.end()) {
+    auto t = m->second.methods.find(method);
+    if (t != m->second.methods.end()) {
+      unordered_map<string, int> signatureLoci;
+      vector<types::FuncTypePtr> vv;
+      for (auto &mt : t->second) {
+        // LOG("{}::{} @ {} vs. {}", typeName, method, age, mt.age);
+        if (mt.age <= age) {
+          auto sig = cache->functions[mt.name].ast->signature();
+          auto it = signatureLoci.find(sig);
+          if (it != signatureLoci.end())
+            vv[it->second] = mt.type;
+          else {
+            signatureLoci[sig] = vv.size();
+            vv.emplace_back(mt.type);
+          }
+        }
+      }
+      return vv;
+    }
+  }
+  return {};
+}
+
+types::TypePtr TypeContext::findMember(const string &typeName,
+                                       const string &member) const {
+  auto m = cache->classes.find(typeName);
+  if (m != cache->classes.end()) {
+    for (auto &mm : m->second.fields)
+      if (mm.name == member)
+        return mm.type;
+  }
+  return nullptr;
 }
 
 } // namespace ast

@@ -39,7 +39,11 @@ struct FunctionStmt;
  * unique_ptr.
  */
 struct Stmt : public seq::SrcObject {
+  /// Flag that indicates if all types in a statement are inferred (i.e. if a
+  /// type-checking procedure was successful).
   bool done;
+  /// Statement age.
+  int age;
 
 public:
   Stmt();

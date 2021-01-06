@@ -2,8 +2,8 @@
 
 from internal.types.ptr import *
 from internal.types.str import *
-from internal.types.bool import *
 from internal.types.int import *
+from internal.types.bool import *
 from internal.types.error import *
 from internal.types.intn import *
 from internal.types.float import *
@@ -31,10 +31,8 @@ from internal.sort import sorted
 from internal.file import File, gzFile, open, gzopen
 from pickle import pickle, unpickle
 from internal.dlopen import dlsym as _dlsym
-import internal.python # import init as _py_init, imp as _py_import, exec as _py_exec
+import internal.python
 
 from bio.seq import *
 from bio.kmer import *
 from bio.pseq import *
-from bio import *
-

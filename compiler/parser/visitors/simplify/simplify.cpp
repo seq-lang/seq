@@ -39,7 +39,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   auto preamble = make_shared<Preamble>();
 
   if (!cache->module)
-    cache->module = std::make_unique<seq::ir::IRModule>("");
+    cache->module = new seq::SeqModule();
 
   // Load standard library if it has not been loaded.
   if (!in(cache->imports, STDLIB_IMPORT)) {
@@ -119,6 +119,8 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     stdlib->isStdlibLoading = false;
   }
 
+  // The whole standard library has the age of zero to allow back-references.
+  cache->age++;
   // Reuse standard library context as it contains all standard library symbols.
   auto ctx = static_pointer_cast<SimplifyContext>(cache->imports[STDLIB_IMPORT].ctx);
   // Transform the input node.

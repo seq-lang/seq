@@ -1,3 +1,5 @@
+from bio import *
+
 table = {s'ATA': p'I', s'ATC': p'I', s'ATT': p'I', s'ATG': p'M',
          s'ACA': p'T', s'ACC': p'T', s'ACG': p'T', s'ACT': p'T',
          s'AAC': p'N', s'AAT': p'N', s'AAA': p'K', s'AAG': p'K',

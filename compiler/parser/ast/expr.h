@@ -66,6 +66,8 @@ struct Expr : public seq::SrcObject {
   ///     (note: cond is static, and is true if non-zero, false otherwise).
   ///     (note: both branches will be evaluated).
   bool isStaticExpr;
+  /// Static evaluation state: first pair member indicates if an expression is already
+  /// evaluated. If so, second pair member stores the evaluation value.s
   pair<bool, int> staticEvaluation;
   /// Flag that indicates if all types in an expression are inferred (i.e. if a
   /// type-checking procedure was successful).

@@ -222,8 +222,6 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
   ctx->addBlock();
   for (int prevSize = INT_MAX;; iter++, ctx->iteration++) {
     LOG_TYPECHECK("== iter {} ==========================================", iter);
-    if (keepLast) // reset extendCount in whole code loop
-      ctx->extendCount = 0;
     ctx->typecheckLevel++;
     result = TypecheckVisitor(ctx).transform(result);
     ctx->typecheckLevel--;
@@ -293,8 +291,6 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
 //  int prevSize = INT_MAX;
 //  while (ctx->iteration < TYPECHECK_MAX_ITERATIONS) {
 //    ctx->addBlock();
-//    if (keepLast) // reset extendCount in a whole code loop
-//      ctx->extendCount = 0;
 //    result = TypecheckVisitor(ctx).transform(result);
 //
 //    // Clean up unified unbound variables and check if there are new unbound

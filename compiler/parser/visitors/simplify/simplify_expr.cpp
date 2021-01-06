@@ -238,8 +238,6 @@ void SimplifyVisitor::visit(DictGeneratorExpr *expr) {
   resultExpr = N<StmtExpr>(move(stmts), transform(var));
 }
 
-/// Transform a if-expression a if cond else b to:
-///   a if cond.__bool__() else b
 void SimplifyVisitor::visit(IfExpr *expr) {
   auto cond = transform(N<CallExpr>(N<DotExpr>(clone(expr->cond), "__bool__")));
   auto oldAssign = ctx->canAssign;
@@ -285,20 +283,14 @@ void SimplifyVisitor::visit(BinaryExpr *expr) {
       !expr->inPlace) {
     resultExpr = N<BinaryExpr>(move(lhs), expr->op, move(rhs));
     resultExpr->isStaticExpr = true;
-  } else if (expr->op == "&&" || expr->op == "||") {
-    auto l = transform(N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__")));
-    auto oldAssign = ctx->canAssign;
-    ctx->canAssign = false;
-    if (expr->op == "&&") {
-      resultExpr = N<IfExpr>(
-          move(l), transform(N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))),
-          N<BoolExpr>(false));
-    } else {
-      resultExpr =
-          N<IfExpr>(move(l), N<BoolExpr>(true),
-                              transform(N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
-    }
-    ctx->canAssign = oldAssign;
+  } else if (expr->op == "&&") {
+    resultExpr = transform(N<IfExpr>(
+        N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__")),
+        N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__")), N<BoolExpr>(false)));
+  } else if (expr->op == "||") {
+    resultExpr = transform(N<IfExpr>(
+        N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__")), N<BoolExpr>(true),
+        N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
   } else if (expr->op == "is not") {
     resultExpr = transform(N<CallExpr>(N<DotExpr>(
         N<BinaryExpr>(clone(expr->lexpr), "is", clone(expr->rexpr)), "__invert__")));
