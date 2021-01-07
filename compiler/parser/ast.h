@@ -9,6 +9,5 @@
 #pragma once
 
 #include "parser/ast/expr.h"
-#include "parser/ast/pattern.h"
 #include "parser/ast/stmt.h"
 #include "parser/ast/types.h"

@@ -1,3 +1,5 @@
+from bio import *
+
 K = Kmer[5]
 
 s = s'ACGTAACGTA'

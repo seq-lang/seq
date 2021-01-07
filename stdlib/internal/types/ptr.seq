@@ -3,10 +3,7 @@ from C import seq_str_ptr(Ptr[byte]) -> str
 @extend
 class Ptr[T]:
     @internal
-    def __elemsize__() -> int:
-        pass
-    @internal
-    def __atomic__() -> bool:
+    def __new__(sz: int) -> Ptr[T]:
         pass
     @internal
     def __new__(sz: int) -> Ptr[T]:
@@ -137,6 +134,9 @@ class Ptr[T]:
         %0 = bitcast {=T}* %self to i8*
         ret i8* %0
     def __str__(self) -> str:
+        # from C import seq_print(str)->void
+        # if not self:
+            # return '0x0'
         return seq_str_ptr(self.as_byte())
 ptr = Ptr
 Jar = Ptr[byte]

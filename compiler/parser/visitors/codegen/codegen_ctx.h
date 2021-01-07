@@ -82,11 +82,6 @@ public:
   void popLoop() { loops.pop_back(); }
   seq::ir::Flow *getLoop() const { return loops.back(); }
 
-  //  void initJIT();
-  //  void execJIT(string varName = "", seq::Expr *varExpr = nullptr);
-
-  seq::ir::types::Type *realizeType(types::ClassTypePtr t);
-
 public:
   seq::ir::Func *getBase() const { return bases[topBaseIndex]; }
   seq::ir::SeriesFlow *getSeries() const { return series[topBlockIndex]; }

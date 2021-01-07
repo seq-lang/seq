@@ -15,12 +15,15 @@
 
 #include "lang/seq.h"
 #include "parser/ast/expr.h"
-#include "parser/ast/pattern.h"
 #include "parser/ast/types.h"
 #include "parser/common.h"
 
 namespace seq {
 namespace ast {
+
+#define ACCEPT(X)                                                                      \
+  StmtPtr clone() const override;                                                      \
+  void accept(X &visitor) override
 
 // Forward declarations
 struct ASTVisitor;
@@ -36,7 +39,14 @@ struct FunctionStmt;
  * unique_ptr.
  */
 struct Stmt : public seq::SrcObject {
-  Stmt() = default;
+  /// Flag that indicates if all types in a statement are inferred (i.e. if a
+  /// type-checking procedure was successful).
+  bool done;
+  /// Statement age.
+  int age;
+
+public:
+  Stmt();
   Stmt(const Stmt &s) = default;
   explicit Stmt(const seq::SrcInfo &s);
 
@@ -45,7 +55,7 @@ struct Stmt : public seq::SrcObject {
   /// Deep copy a node.
   virtual unique_ptr<Stmt> clone() const = 0;
   /// Accept an AST visitor.
-  virtual void accept(ASTVisitor &) const = 0;
+  virtual void accept(ASTVisitor &) = 0;
 
   /// Allow pretty-printing to C++ streams.
   friend std::ostream &operator<<(std::ostream &out, const Stmt &stmt) {
@@ -65,7 +75,7 @@ struct Stmt : public seq::SrcObject {
 };
 using StmtPtr = unique_ptr<Stmt>;
 
-/// Suite (block of statements) statement (stmts...).
+/// Suite (block of statements) statement (stmt...).
 /// @example a = 5; foo(1)
 struct SuiteStmt : public Stmt {
   using Stmt::Stmt;
@@ -87,8 +97,7 @@ struct SuiteStmt : public Stmt {
   SuiteStmt(const SuiteStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const SuiteStmt *getSuite() const override { return this; }
   const Stmt *firstInBlock() const override {
@@ -107,8 +116,7 @@ struct PassStmt : public Stmt {
   PassStmt(const PassStmt &stmt) = default;
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Break statement.
@@ -118,8 +126,7 @@ struct BreakStmt : public Stmt {
   BreakStmt(const BreakStmt &stmt) = default;
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Continue statement.
@@ -129,8 +136,7 @@ struct ContinueStmt : public Stmt {
   ContinueStmt(const ContinueStmt &stmt) = default;
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Expression statement (expr).
@@ -142,8 +148,7 @@ struct ExprStmt : public Stmt {
   ExprStmt(const ExprStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const ExprStmt *getExpr() const override { return this; }
 };
@@ -159,8 +164,7 @@ struct AssignStmt : public Stmt {
   AssignStmt(const AssignStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const AssignStmt *getAssign() const override { return this; }
 };
@@ -175,8 +179,7 @@ struct DelStmt : public Stmt {
   DelStmt(const DelStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Print statement (print expr).
@@ -189,8 +192,7 @@ struct PrintStmt : public Stmt {
   PrintStmt(const PrintStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Return statement (return expr).
@@ -204,8 +206,7 @@ struct ReturnStmt : public Stmt {
   ReturnStmt(const ReturnStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Yield statement (yield expr).
@@ -219,8 +220,7 @@ struct YieldStmt : public Stmt {
   YieldStmt(const YieldStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Assert statement (assert expr).
@@ -235,8 +235,7 @@ struct AssertStmt : public Stmt {
   AssertStmt(const AssertStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// While loop statement (while cond: suite; else: elseSuite).
@@ -253,8 +252,7 @@ struct WhileStmt : public Stmt {
   WhileStmt(const WhileStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// For loop statement (for var in iter: suite; else elseSuite).
@@ -271,8 +269,7 @@ struct ForStmt : public Stmt {
   ForStmt(const ForStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// If block statement (if cond: suite; (elif cond: suite)...).
@@ -302,8 +299,7 @@ struct IfStmt : public Stmt {
   IfStmt(const IfStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Match statement (match what: (case pattern: case)...).
@@ -311,18 +307,21 @@ struct IfStmt : public Stmt {
 ///          case 1: print
 ///          case _: pass
 struct MatchStmt : public Stmt {
-  ExprPtr what;
-  vector<PatternPtr> patterns;
-  vector<StmtPtr> cases;
+  struct MatchCase {
+    ExprPtr pattern;
+    ExprPtr guard;
+    StmtPtr suite;
 
-  MatchStmt(ExprPtr what, vector<PatternPtr> &&patterns, vector<StmtPtr> &&cases);
-  /// Convenience constructor for parsing OCaml objects.
-  MatchStmt(ExprPtr what, vector<pair<PatternPtr, StmtPtr>> &&patternCasePairs);
+    MatchCase clone() const;
+  };
+  ExprPtr what;
+  vector<MatchCase> cases;
+
+  MatchStmt(ExprPtr what, vector<MatchCase> &&cases);
   MatchStmt(const MatchStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Import statement.
@@ -335,8 +334,8 @@ struct MatchStmt : public Stmt {
 /// @example from b import a
 /// @example from ...b import a as ai
 /// @example from c import foo(int) -> int as bar
-/// @example from python.numpy import ndarray
-/// @example from python import numpy.ndarray(int) -> int as nd
+/// @example from python.numpy import array
+/// @example from python import numpy.array(int) -> int as na
 struct ImportStmt : public Stmt {
   ExprPtr from, what;
   string as;
@@ -352,8 +351,7 @@ struct ImportStmt : public Stmt {
   ImportStmt(const ImportStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Try-catch statement (try: suite; (catch var (as exc): suite)...; finally: finally).
@@ -382,21 +380,22 @@ struct TryStmt : public Stmt {
   TryStmt(const TryStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Throw statement (raise expr).
 /// @example: raise a
 struct ThrowStmt : public Stmt {
   ExprPtr expr;
+  // True if a statement was transformed during type-checking stage
+  // (to avoid setting up ExcHeader multuple times).
+  bool transformed;
 
-  explicit ThrowStmt(ExprPtr expr);
+  explicit ThrowStmt(ExprPtr expr, bool transformed = false);
   ThrowStmt(const ThrowStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Global variable statement (global var).
@@ -408,8 +407,7 @@ struct GlobalStmt : public Stmt {
   GlobalStmt(const GlobalStmt &stmt) = default;
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Function statement (@(attributes...) def name[generics...](args...) -> ret: suite).
@@ -435,8 +433,7 @@ struct FunctionStmt : public Stmt {
   FunctionStmt(const FunctionStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   /// @return a function signature that consists of generics and arguments in a
   /// S-expression form.
@@ -469,8 +466,7 @@ struct ClassStmt : public Stmt {
   ClassStmt(const ClassStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   /// @return true if a class is a tuple-like record (e.g. has a "@tuple" attribute)
   bool isRecord() const;
@@ -487,8 +483,7 @@ struct YieldFromStmt : public Stmt {
   YieldFromStmt(const YieldFromStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// With statement (with (item as var)...: suite).
@@ -505,8 +500,7 @@ struct WithStmt : public Stmt {
   WithStmt(const WithStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// The following nodes are created after the simplify stage.
@@ -522,8 +516,7 @@ struct AssignMemberStmt : public Stmt {
   AssignMemberStmt(const AssignMemberStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Update assignment statement (lhs = rhs).
@@ -538,9 +531,10 @@ struct UpdateStmt : public Stmt {
   UpdateStmt(const UpdateStmt &stmt);
 
   string toString() const override;
-  StmtPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
+
+#undef ACCEPT
 
 } // namespace ast
 } // namespace seq

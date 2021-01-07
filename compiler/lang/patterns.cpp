@@ -80,7 +80,7 @@ Value *StrPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
   // Value *b = types::Str->callMagic("__eq__", {type}, pat, {val}, block, nullptr);
 
   // Func *eqFn = Func::getBuiltin(".str.__eq__[.str,.str]");
-  Function *eqFn = block->getModule()->getFunction(".str.__eq__[.str,.str]");
+  Function *eqFn = block->getModule()->getFunction("str.__eq__[str,str]");
   // FuncExpr eqFnExpr(eqFn);
   // ValueExpr slf(types::Str, pat);
   // ValueExpr oth(types::Str, val);
@@ -594,7 +594,7 @@ Value *SeqPattern::codegen(BaseFunc *base, types::Type *type, Value *val,
     ++i;
   }
 
-  if (type->getName() == ".seq" || type->getName() == "seq") {
+  if (type->getName() == "seq") {
     return codegenSeqMatchForSeq(patterns, base, type, val, block);
   } else {
     auto t = dynamic_cast<types::RecordType *>(type);

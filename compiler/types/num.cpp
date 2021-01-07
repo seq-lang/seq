@@ -1799,6 +1799,9 @@ types::ByteType *types::ByteType::get() noexcept {
 }
 
 bool types::IntNType::is(types::Type *type) const {
+  auto *i = dynamic_cast<types::IntType *>(type);
+  if (i && len == 64 && sign)
+    return true;
   auto *iN = dynamic_cast<types::IntNType *>(type);
   return iN && (len == iN->len && sign == iN->sign);
 }

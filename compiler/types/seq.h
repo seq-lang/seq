@@ -39,6 +39,7 @@ public:
   llvm::Value *make(llvm::Value *ptr, llvm::Value *len,
                     llvm::BasicBlock *block) override;
   static SeqType *get() noexcept;
+  // bool is(Type *type) const override;
 };
 
 class StrType : public BaseSeqType {
@@ -56,6 +57,7 @@ public:
   llvm::Value *make(llvm::Value *ptr, llvm::Value *len,
                     llvm::BasicBlock *block) override;
   static StrType *get() noexcept;
+  // bool is(Type *type) const override;
 };
 
 class KMer : public Type {

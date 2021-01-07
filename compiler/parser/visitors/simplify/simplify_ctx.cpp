@@ -30,7 +30,7 @@ SimplifyItem::SimplifyItem(Kind k, string base, string canonicalName, bool globa
 
 SimplifyContext::SimplifyContext(string filename, shared_ptr<Cache> cache)
     : Context<SimplifyItem>(move(filename)), cache(move(cache)), isStdlibLoading(false),
-      extendCount(0), canAssign(true) {}
+      canAssign(true) {}
 
 SimplifyContext::Base::Base(string name, ExprPtr ast, int parent, int attributes)
     : name(move(name)), ast(move(ast)), parent(parent), attributes(attributes) {}
@@ -66,13 +66,11 @@ string SimplifyContext::getBase() const {
   return bases.back().name;
 }
 
-string SimplifyContext::generateCanonicalName(const string &name) const {
-  if (!name.empty() && name[0] == '.')
-    return name;
-  string newName = format("{}.{}", getBase(), name);
+string SimplifyContext::generateCanonicalName(const string &name,
+                                              const string &base) const {
+  string newName = format("{}{}", base.empty() ? "" : base + ".", name);
   auto num = cache->identifierCount[newName]++;
   newName = num ? format("{}.{}", newName, num) : newName;
-  newName = newName[0] == '.' ? newName : "." + newName;
   cache->reverseIdentifierLookup[newName] = name;
   return newName;
 }

@@ -1,269 +1,5 @@
-#%% none,barebones
-@extend
-class Optional[T]:
-    def __str__(self):
-        return 'OPTIONAL: ' + ('-' if not self else self.__invert__().__str__())
-
-a = None
-print a #: OPTIONAL: -
-a = 5
-print a #: OPTIONAL: 5
-
-#%% bool,barebones
-print True, False #: True False
-
-#%% int,barebones
-print 0b0000_1111 #: 15
-print 0B101 #: 5
-print 3 #: 3
-print 18_446_744_073_709_551_000 #: -616
-print 0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111 #: -1
-print 0b11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111u #: 18446744073709551615
-print 18_446_744_073_709_551_000u #: 18446744073709551000
-print 65i7 #: -63
-print -1u7 #: 127
-
-@extend
-class int:
-    def __suffix_test__(s: str):
-        return 'TEST: ' + s
-print 123_456test #: TEST: 123456
-
-#%% int_error,barebones
-print 1844674407_3709551999 #! ERROR: integer 18446744073709551999 out of range
-
-#%% float,barebones
-print 5.15 #: 5.15
-
-#%% float_error,barebones
-print 5.__str__() #! ERROR: parsing error: '__str__'
-
-#%% string,barebones
-print 'kthxbai', "kthxbai" #: kthxbai kthxbai
-print """hi
-hello""", '''hai
-hallo'''
-#: hi
-#: hello hai
-#: hallo
-
-#%% fstring,barebones
-a, b = 1, 2
-print f"string {a}" #: string 1
-print F"{b} string" #: 2 string
-print f"str {a+b} end" #: str 3 end
-print f"str {a+b=}" #: str a+b=3
-c = f'and this is {a} followed by {b}'
-print c, f'{b}{a}', f'. {1+a=} .. {b} ...' #: and this is 1 followed by 2 21 . 1+a=2 .. 2 ...
-
-
-#%% fstring_error,barebones
-f"a{b + 3}}" #! ERROR: f-string braces are not balanced
-
-#%% fstring_error_2,barebones
-f"a{{b + 3}" #! ERROR: f-string braces are not balanced
-
-#%% prefix_str,barebones
-@extend
-class str:
-    def __prefix_pfx__[N: int](s: str):
-        return 'PFX ' + s
-print pfx'HELLO' #: PFX HELLO
-
-@extend
-class str:
-    def __prefix_pxf__[N: int](s: str):
-        return 'PXF ' + s + " " + str(N)
-print pxf'HELLO' #: PXF HELLO 5
-
-#%% raw_str,barebones
-print 'a\\b' #: a\b
-print r'a\tb' #: a\tb
-print R'\n\r\t\\' #: \n\r\t\\
-
-#%% id_fstring_error,barebones
-f"a{b + 3}" #! ERROR: identifier 'b' not found
-
-#%% id_access_error,barebones
-def foo():
-    a = 5
-    def bar():
-        print a
-foo() #! ERROR: cannot access non-global variable '.foo.a'
-
-#%% star,barebones
-a = (1, 2, 3)
-print *a #: [1, 2, 3]
-
-#%% list,barebones
-a = [4, 5, 6]
-print a #: [4, 5, 6]
-b = [1, 2, 3, *a]
-print b #: [1, 2, 3, 4, 5, 6]
-
-#%% set,barebones
-gs = {1.12}
-print gs #: {1.12}
-fs = {1, 2, 3, 1, 2, 3}
-gs.add(1.12)
-gs.add(1.13)
-print fs, gs #: {1, 2, 3} {1.12, 1.13}
-print {*fs, 5, *fs} #: {1, 2, 3, 5}
-
-#%% dict,barebones
-gd = {1: 'jedan', 2: 'dva', 2: 'two', 3: 'tri'}
-fd = {}
-fd['jedan'] = 1
-fd['dva'] = 2
-print gd, fd #: {1: jedan, 2: two, 3: tri} {jedan: 1, dva: 2}
-
-#%% comprehension,barebones
-l = [(i, j, f'i{i}/{j}')
-     for i in range(50) if i % 2 == 0 if i % 3 == 0
-     for j in range(2) if j == 1]
-print l #: [(0, 1, i0/1), (6, 1, i6/1), (12, 1, i12/1), (18, 1, i18/1), (24, 1, i24/1), (30, 1, i30/1), (36, 1, i36/1), (42, 1, i42/1), (48, 1, i48/1)]
-
-#%% generator,barebones
-z = 3
-g = (e for e in range(20) if e % z == 1)
-print str(g)[:13] #: <generator at
-print list(g) #: [1, 4, 7, 10, 13, 16, 19]
-
-#%% if,barebones
-c = 5
-a = 1 if c < 5 else 2
-b = -(1 if c else 2)
-print a, b #: 2 -1
-
-#%% unary,barebones
-a, b = False, 1
-print not a, not b, ~b, +b, -b, -(+(-b)) #: True False -2 1 -1 1
-
-#%% binary,barebones
-x, y = 1, 0
-c = [1, 2, 3]
-
-print x and y, x or y #: False True
-print x in c, x not in c #: True False
-print c is c, c is not c #: True False
-
-z: Optional[int] = None
-print z is None, None is z, None is not z, None is None #: True True False True
-
-#%% index_normal,barebones
-t: tuple[int, int] = (1, 2)
-print t #: (1, 2)
-
-tt: Tuple[int] = (1, )
-print tt #: (1)
-
-def foo(i: int) -> int:
-    return i + 1
-f: function[int, int] = foo
-print f(1) #: 2
-fx: Function[int, int] = foo
-print fx(2) #: 3
-
-#%% index_error,barebones
-Ptr['s'] #! ERROR: expected type parameters
-
-#%% index_error_2,barebones
-Ptr[int, 's'] #! ERROR: expected type parameters
-
-#%% index_error_3,barebones
-Ptr[1, 's'] #! ERROR: expected type parameters
-
-#%% call_ptr,barebones
-v = 5
-p = __ptr__(v)
-print p[0] #: 5
-
-#%% call_ptr_error,barebones
-__ptr__(1) #! ERROR: __ptr__ only accepts a single argument (variable identifier)
-
-#%% call_ptr_error_2,barebones
-__ptr__(v) #! ERROR: __ptr__ only accepts a single argument (variable identifier)
-
-#%% call_ptr_error_3,barebones
-v = 1
-__ptr__(v, 1) #! ERROR: __ptr__ only accepts a single argument (variable identifier)
-
-#%% call_array,barebones
-a = __array__[int](2)
-a[0] = a[1] = 5
-print a[0], a[1] #: 5 5
-
-#%% call_array_error,barebones
-a = __array__[int](2, 3) #! ERROR: __array__ only accepts a single argument (size)
-
-#%% lambda
-l = lambda a, b: a + b
-print l(1, 2) #: 3
-
-e = 5
-lp = lambda x: x + e
-print lp(1) #: 6
-
-e = 7
-print lp(2) #: 9
-
-def foo[T](a: T, l: Function[T, T]):
-    return l(a)
-print foo(4, lp) #: 11
-
-#%% nested_lambda,barebones
-def foo():
-    print list(a*a for a in range(3))
-foo()  #: [0, 1, 4]
-
-#%% walrus,barebones
-def foo(x):
-    return x * x
-if x := foo(4):
-    pass
-if (x := foo(4)) and False:
-    print 'Nope'
-print x #: 16
-
-a = [y := foo(1), y+1, y+2]
-print a, y #: [1, 2, 3] 1
-
-print {y: b for y in [1,2,3] if (b := (y - 1))} #: {2: 1, 3: 2}
-print list(b for y in [1,2,3] if (b := (y // 3))) #: [1]
-
-#%% walrus_update,barebones
-def foo(x):
-    return x * x
-x = 5
-if x := foo(4):
-    pass
-print x #: 16
-
-#%% walrus_err_1,barebones
-def foo(x):
-    return x * x
-if False or (x := foo(4)):
-    pass
-#! ERROR: assignment expression in a short-circuiting subexpression
-
-#%% walrus_err_1b,barebones
-def foo(x):
-    return x * x
-if False and (x := foo(4)):
-    pass
-#! ERROR: assignment expression in a short-circuiting subexpression
-
-#%% walrus_err_2,barebones
-def foo(x):
-    return x * x
-y = (x := foo(4)) if True else 0
-#! ERROR: assignment expression in a short-circuiting subexpression
-
-#%% walrus_err_2b,barebones
-def foo(x):
-    return x * x
-y = 0 if True else (x := foo(4))
-#! ERROR: assignment expression in a short-circuiting subexpression
+#%% pass,barebones
+pass
 
 #%% continue_error,barebones
 continue #! ERROR: continue outside of a loop
@@ -406,92 +142,6 @@ print f + 2 #: add!
 f += 6 #: iadd!
 print f #: 9
 
-#%% assign_atomic,barebones
-i = 1
-f = 1.1
-
-@llvm
-def xchg(d: Ptr[int], b: int) -> void:
-    %tmp = atomicrmw xchg i64* %d, i64 %b seq_cst
-    ret void
-@llvm
-def aadd(d: Ptr[int], b: int) -> int:
-    %tmp = atomicrmw add i64* %d, i64 %b seq_cst
-    ret i64 %tmp
-@llvm
-def amin(d: Ptr[int], b: int) -> int:
-    %tmp = atomicrmw min i64* %d, i64 %b seq_cst
-    ret i64 %tmp
-@llvm
-def amax(d: Ptr[int], b: int) -> int:
-    %tmp = atomicrmw max i64* %d, i64 %b seq_cst
-    ret i64 %tmp
-def min(a, b): return a if a < b else b
-def max(a, b): return a if a > b else b
-
-@extend
-class int:
-    def __atomic_xchg__(self: Ptr[int], i: int):
-        print 'atomic:', self[0], '<-', i
-        xchg(self, i)
-    def __atomic_add__(self: Ptr[int], i: int):
-        print 'atomic:', self[0], '+=', i
-        return aadd(self, i)
-    def __atomic_min__(self: Ptr[int], b: int):
-        print 'atomic:', self[0], '<?=', b
-        return amin(self, b)
-    def __atomic_max__(self: Ptr[int], b: int):
-        print 'atomic:', self[0], '>?=', b
-        return amax(self, b)
-
-@atomic
-def foo(x):
-    global i, f
-
-    i += 1 #: atomic: 1 += 1
-    print i #: 2
-    i //= 2 #: atomic: 2 <- 1
-    print i #: 1
-    i = 3 #: atomic: 1 <- 3
-    print i #: 3
-    i = min(i, 10) #: atomic: 3 <?= 10
-    print i #: 3
-    i = max(i, 10) #: atomic: 3 >?= 10
-    print i #: 10
-    i = max(20, i) #: atomic: 10 <- 20
-    print i #: 20
-
-    f += 1.1
-    f = 3.3
-    f = max(f, 5.5)
-foo(1)
-print i, f #: 20 5.5
-
-#%% assign_atomic_real
-i = 1
-f = 1.1
-@atomic
-def foo(x):
-    global i, f
-
-    i += 1
-    print i #: 2
-    i //= 2
-    print i #: 1
-    i = 3
-    print i #: 3
-    i = min(i, 10)
-    print i #: 3
-    i = max(i, 10)
-    print i #: 10
-
-    f += 1.1
-    f = 3.3
-    f = max(f, 5.5)
-foo(1)
-print i, f #: 10 5.5
-
-
 #%% del,barebones
 a = 5
 del a
@@ -513,18 +163,25 @@ assert True, "blah"
 try:
     assert False
 except AssertionError as e:
-    print e.message[:15], e.message[-17:] #: Assert failed ( simplify.seq:514)
+    print e.message[:15], e.message[-22:] #: Assert failed ( simplify_stmt.seq:164)
 
 try:
     assert False, f"hehe {1}"
 except AssertionError as e:
-    print e.message[:23], e.message[-17:] #: Assert failed: hehe 1 ( simplify.seq:519)
+    print e.message[:23], e.message[-22:] #: Assert failed: hehe 1 ( simplify_stmt.seq:169)
+
+#%% print,barebones
+print 1,
+print 1, 2  #: 1 1 2
 
 #%% return_fail,barebones
 return #! ERROR: expected function body
 
 #%% yield_fail,barebones
 yield 5 #! ERROR: expected function body
+
+#%% yield_fail_2,barebones
+(yield) #! ERROR: expected function body
 
 #%% while_else,barebones
 a = 1
@@ -568,6 +225,68 @@ for i in [1]:
 else:
     print 'nope'
 
+#%% match
+def foo(x):
+    match x:
+        case 1:
+            print 'int'
+        case 2 ... 10:
+            print 'range'
+        case 'AC_T':
+            print 'seq'
+        case 'ACGT':
+            print 'string'
+        case (a, 1):
+            print 'tuple_wild', a
+        case []:
+            print 'list'
+        case [[]]:
+            print 'list list'
+        case [1, 2]:
+            print 'list 2'
+        case [1, z, ...] if z < 5:
+            print 'list 3', z
+        case [1, _, ..., zz] or (1, zz):
+            print 'list 4', zz
+        case (1 ... 10, s := ('AC_T', 1 ... 4)):
+            print 'complex', s
+        case _:
+            print 'else'
+foo(1) #: int
+foo(5) #: range
+foo('ACGT') #: string
+foo(s'ACGT') #: seq
+foo(k'ACGT') #: seq
+foo((9, 1)) #: tuple_wild 9
+foo(List[int]()) #: list
+foo([List[int]()]) #: list list
+foo([1, 2]) #: list 2
+foo([1, 3]) #: list 3 3
+foo([1, 5]) #: else
+foo([1, 5, 10]) #: list 4 10
+foo((1, 33)) #: list 4 33
+foo((9, (k'ACGT', 3))) #: complex (ACGT, 3)
+foo(range(10)) #: else
+
+#%% match_err_1,barebones
+match [1, 2]:
+    case [1, ..., 2, ..., 3]: pass
+#! ERROR: cannot have multiple ranges in a pattern
+
+#%% match_err_2,barebones
+match [1, 2]:
+    case 1 or ...: pass
+#! ERROR: unexpected ellipsis expression
+
+#%% global,barebones
+a = 1
+def foo():
+    global a
+    a += 1
+print a,
+foo()
+print a  #: 1 2
+
 #%% global_err,barebones
 a = 1
 global a #! ERROR: global outside of a function
@@ -582,12 +301,61 @@ def foo():
     def bar():
         global b #! ERROR: not a top-level variable
 
+#%% global_err_4,barebones
+a = 1
+def foo():
+    a += 1
+foo()  #! ERROR: variable 'a' is not global
+
 #%% global_ref,barebones
 a = [1]
 def foo():
     a.append(2)
 foo()
 print a #: [1, 2]
+
+#%% yield_from,barebones
+def foo():
+    yield from range(3)
+    yield from range(10, 13)
+    yield -1
+print list(foo())  #: [0, 1, 2, 10, 11, 12, -1]
+
+#%% with,barebones
+class Foo:
+    i: int
+    def __enter__(self: Foo):
+        print '> foo! ' + str(self.i)
+    def __exit__(self: Foo):
+        print '< foo! ' + str(self.i)
+    def foo(self: Foo):
+        print 'woof'
+class Bar:
+    s: str
+    def __enter__(self: Bar):
+        print '> bar! ' + self.s
+    def __exit__(self: Bar):
+        print '< bar! ' + self.s
+    def bar(self: Bar):
+        print 'meow'
+with Foo(0) as f:
+#: > foo! 0
+    f.foo()  #: woof
+#: < foo! 0
+with Foo(1) as f, Bar('s') as b:
+#: > foo! 1
+#: > bar! s
+    f.foo()  #: woof
+    b.bar()  #: meow
+#: < bar! s
+#: < foo! 1
+with Foo(2), Bar('t') as q:
+#: > foo! 2
+#: > bar! t
+    print 'eeh'  #: eeh
+    q.bar()  #: meow
+#: < bar! t
+#: < foo! 2
 
 #%% import_c,barebones
 from C import sqrt(float) -> float
@@ -680,6 +448,14 @@ print a.b.x #! ERROR: identifier 'x' not found in
 #%% import_err_6,barebones
 from a.b import whatever #! ERROR: symbol 'whatever' not found in
 
+#%% function_err_0,barebones
+def foo(a, b, a):
+    pass #! ERROR: 'a' declared twice
+
+#%% function_err_0b,barebones
+def foo(a, b=1, c):
+    pass #! ERROR: non-default argument 'c' after a default argument
+
 #%% function_err_1,barebones
 def foo():
     @builtin
@@ -727,7 +503,7 @@ print f.foo() #: F
 class Foo:
     def foo(self):
         return 'F'
-Foo.foo(1) #! ERROR: cannot unify .int and .Foo
+Foo.foo(1) #! ERROR: cannot unify int and Foo
 
 #%% class_err_1,barebones
 @extend
@@ -750,17 +526,19 @@ class Foo:
         bar: int
         b: Optional[Foo.Bar]
         c: Optional[Foo]
+        class Moo:
+            x: Foo.Bar
 y = Foo(1)
 z = Foo.Bar(2, None, y)
+m = Foo.Bar.Moo(z)
 print y.foo #: 1
-print z.bar, z.b.__bool__(), z.c.foo  #: 2 False 1
+print z.bar, z.b.__bool__(), z.c.foo, m.x.bar  #: 2 False 1 2
 
-#%% class_nested,barebones
+#%% class_nested_err,barebones
 class Foo:
     class Bar:
         b: Ptr[Bar]
 #! ERROR: identifier 'Bar' not found
-
 
 #%% class_err_4,barebones
 @extend
@@ -841,6 +619,19 @@ class Node2:
         self.children = List[Node2]()
 print Node2(3).data #: 3
 
+#%% class_auto_init,barebones
+class X[T]:
+    a: int = 4
+    b: int
+    c: T
+    d: str = 'oops'
+    def __str__(self):
+        return f'X({self.a},{self.b},{self.c},{self.d})'
+x = X[float]()
+print x #: X(4,0,0,oops)
+y = X(c='darius',a=5)
+print y #: X(5,0,darius,oops)
+
 #%% magic,barebones
 @tuple
 class Foo:
@@ -895,27 +686,31 @@ print a >= a, a >= b, b >= a #: True True True
 @tuple
 class Foo:
     pass
-print Foo().__contains__(1)  #! ERROR: cannot unify .int and .void
+print Foo().__contains__(1)  #! ERROR: cannot unify int and void
 
 #%% magic_err_2,barebones
 @tuple
 class Foo:
     pass
-print Foo().__getitem__(1)  #! ERROR: cannot find '__str__' in .void
+print Foo().__getitem__(1)
+#!     ERROR: expression with void type
+#!     ERROR: while realizing __internal__.tuple_getitem
+#!     ERROR: while realizing Foo.__getitem__
 
 #%% magic_err_3,barebones
 @tuple
 class Foo:
     pass
-print Foo().__iter__()  #: <generator at 0x0>
-# TODO: disallow this case
+print Foo().__iter__()
+#! ERROR: cannot iterate empty tuple
+#! ERROR: while realizing Foo.__iter__
 
 #%% magic_err_4,barebones
 @tuple
 @no_total_ordering
 class Foo:
     x: int
-Foo(1).__eq__(Foo(1)) #! ERROR: cannot find '__eq__' in .Foo
+Foo(1).__eq__(Foo(1)) #! ERROR: cannot find '__eq__' in Foo
 
 #%% magic_err_5,barebones
 @tuple
@@ -923,14 +718,14 @@ Foo(1).__eq__(Foo(1)) #! ERROR: cannot find '__eq__' in .Foo
 class Foo:
     x: int
 p = Ptr[byte]()
-Foo(1).__pickle__(p) #! ERROR: cannot find '__pickle__' in .Foo
+Foo(1).__pickle__(p) #! ERROR: cannot find '__pickle__' in Foo
 
 #%% magic_err_6,barebones
 @tuple
 @no_container
 class Foo:
     x: int
-Foo(1).__getitem__(0) #! ERROR: cannot find '__getitem__' in .Foo
+Foo(1).__getitem__(0) #! ERROR: cannot find '__getitem__' in Foo
 
 #%% magic_err_7,barebones
 @tuple
@@ -938,7 +733,7 @@ Foo(1).__getitem__(0) #! ERROR: cannot find '__getitem__' in .Foo
 class Foo:
     x: int
 p = Ptr[byte]()
-Foo(1).__to_py__(p) #! ERROR: cannot find '__to_py__' in .Foo
+Foo(1).__to_py__(p) #! ERROR: cannot find '__to_py__' in Foo
 
 #%% python
 from python import os

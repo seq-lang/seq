@@ -53,29 +53,16 @@ class str:
         p = Ptr[byte](n)
         str.memcpy(p, t, n)
         return str(p, n)
-    def _tuple_str(strs: Ptr[str], n: int) -> str:
-        total = 2  # one for each of '(' and ')'
+    def __eq__(self, other: str):
+        if self.len != other.len:
+            return False
         i = 0
-        while i < n:
-            total += strs[i].len
-            if i < n - 1:
-                total += 2  # ", "
+        while i < self.len:
+            if self.ptr[i] != other.ptr[i]:
+                return False
             i += 1
-        buf = Ptr[byte](total)
-        where = 0
-        buf[where] = byte(40)  # '('
-        where += 1
-        i = 0
-        while i < n:
-            s = strs[i]
-            l = s.len
-            str.memcpy(buf + where, s.ptr, l)
-            where += l
-            if i < n - 1:
-                buf[where] = byte(44)  # ','
-                where += 1
-                buf[where] = byte(32)  # ' '
-                where += 1
-            i += 1
-        buf[where] = byte(41)  # ')'
-        return str(buf, total)
+        return True
+    def __match__(self, other: str):
+        return self.__eq__(other)
+    def __ne__(self, other: str):
+        return not self.__eq__(other)

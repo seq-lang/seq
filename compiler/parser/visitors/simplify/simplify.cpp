@@ -38,6 +38,9 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   vector<StmtPtr> stmts;
   auto preamble = make_shared<Preamble>();
 
+  if (!cache->module)
+    cache->module = std::make_unique<seq::ir::IRModule>("");
+
   // Load standard library if it has not been loaded.
   if (!in(cache->imports, STDLIB_IMPORT)) {
     // Load the internal module
@@ -51,8 +54,20 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     stdlib->setFilename(stdlibPath);
     cache->imports[STDLIB_IMPORT] = {stdlibPath, stdlib};
 
-    // Add simple POD types to the preamble
-    // (these types are defined in LLVM and we cannot properly define them in Seq)
+    // Add __internal class that will store functions needed by other internal classes.
+    // We will call them as __internal.fn because directly calling fn will result in a
+    // unresolved dependency cycle.
+    {
+      auto name = "__internal__";
+      auto canonical = stdlib->generateCanonicalName(name);
+      stdlib->add(SimplifyItem::Type, name, canonical, true);
+      // Generate an AST for each POD type. All of them are tuples.
+      cache->classes[canonical].ast = make_unique<ClassStmt>(
+          canonical, vector<Param>(), vector<Param>(), nullptr, vector<string>{});
+      preamble->types.emplace_back(clone(cache->classes[canonical].ast));
+    }
+    // Add simple POD types to the preamble (these types are defined in LLVM and we
+    // cannot properly define them in Seq)
     for (auto &name : {"void", "bool", "byte", "int", "float"}) {
       auto canonical = stdlib->generateCanonicalName(name);
       stdlib->add(SimplifyItem::Type, name, canonical, true);
@@ -68,11 +83,8 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       stdlib->add(SimplifyItem::Type, name, canonical, true);
       vector<Param> generics;
       auto genName = stdlib->generateCanonicalName("T");
-      preamble->types.push_back(make_unique<ClassStmt>(genName, vector<Param>{},
-                                                       vector<Param>{}, nullptr,
-                                                       vector<string>{ATTR_GENERIC}));
       if (string(name) == "Int" || string(name) == "UInt")
-        generics.emplace_back(Param{genName, make_unique<IdExpr>(".int"), nullptr});
+        generics.emplace_back(Param{genName, make_unique<IdExpr>("int"), nullptr});
       else
         generics.emplace_back(Param{genName, nullptr, nullptr});
       auto c =
@@ -83,13 +95,16 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       preamble->types.emplace_back(clone(c));
       cache->classes[canonical].ast = move(c);
     }
+    // Reserve the following static identifiers.
+    for (auto name : {"staticlen", "compile_error", "isinstance", "hasattr"})
+      stdlib->generateCanonicalName(name);
 
     // This code must be placed in a preamble (these are not POD types but are
     // referenced by the various preamble Function.N and Tuple.N stubs)
     stdlib->isStdlibLoading = true;
     stdlib->moduleName = "__internal__";
     auto baseTypeCode = "@internal\n@tuple\nclass pyobj:\n  p: Ptr[byte]\n"
-                        "@internal\n@tuple\nclass str:\n  len: int\n  ptr: Ptr[byte]\n";
+                        "@internal\n@tuple\nclass str:\n  ptr: Ptr[byte]\n  len: int\n";
     SimplifyVisitor(stdlib, preamble).transform(parseCode(stdlibPath, baseTypeCode));
     // Load the standard library
     stdlib->setFilename(stdlibPath);
@@ -99,11 +114,13 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
         SimplifyVisitor(stdlib, preamble)
             .transform(make_unique<AssignStmt>(
                 make_unique<IdExpr>("__argv__"), nullptr,
-                make_unique<IndexExpr>(make_unique<IdExpr>(".Array"),
-                                       make_unique<IdExpr>(".str")))));
+                make_unique<IndexExpr>(make_unique<IdExpr>("Array"),
+                                       make_unique<IdExpr>("str")))));
     stdlib->isStdlibLoading = false;
   }
 
+  // The whole standard library has the age of zero to allow back-references.
+  cache->age++;
   // Reuse standard library context as it contains all standard library symbols.
   auto ctx = static_pointer_cast<SimplifyContext>(cache->imports[STDLIB_IMPORT].ctx);
   // Transform the input node.

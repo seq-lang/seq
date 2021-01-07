@@ -87,6 +87,10 @@ types::SeqType *types::SeqType::get() noexcept {
   return &instance;
 }
 
+// bool types::SeqType::is(seq::types::Type *type) const {
+//   return type->getName() == "seq" || this->Type::is(type);
+// }
+
 /* derived Str type */
 types::StrType::StrType() : BaseSeqType("str") {}
 
@@ -216,6 +220,10 @@ types::StrType *types::StrType::get() noexcept {
   static types::StrType instance;
   return &instance;
 }
+
+// bool types::StrType::is(seq::types::Type *type) const {
+//   return type->getName() == "str" || this->Type::is(type);
+// }
 
 /*
  * k-mer types (fixed-length short sequences)

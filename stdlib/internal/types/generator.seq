@@ -1,41 +1,14 @@
 import internal.gc as gc
 
-@builtin
-def _raw_type_str(p: Ptr[byte], name: str) -> str:
-    pstr = p.__str__()
-    # '<[name] at [pstr]>'
-    total = 1 + name.len + 4 + pstr.len + 1
-    buf = Ptr[byte](total)
-    where = 0
-
-    buf[where] = byte(60)   # '<'
-    where += 1
-    str.memcpy(buf + where, name.ptr, name.len)
-    where += name.len
-    buf[where] = byte(32)   # ' '
-    where += 1
-    buf[where] = byte(97)   # 'a'
-    where += 1
-    buf[where] = byte(116)  # 't'
-    where += 1
-    buf[where] = byte(32)   # ' '
-    where += 1
-    str.memcpy(buf + where, pstr.ptr, pstr.len)
-    where += pstr.len
-    buf[where] = byte(62)  # '>'
-    gc.free(pstr.ptr)
-    return str(buf, total)
-
 @extend
-class Generator[T]:  # class
-    def __iter__(self) -> Generator[T]:
-        return self
-
+class Generator[T]:
     @internal
     def done(self) -> bool: pass
     @internal
     def next(self) -> T: pass
 
+    def __iter__(self) -> Generator[T]:
+        return self
     @llvm
     def __raw__(self) -> Ptr[byte]:
         ret i8* %self
@@ -57,7 +30,7 @@ class Generator[T]:  # class
         call void @llvm.coro.resume(i8* %self)
         ret void
     def __str__(self) -> str:
-        return _raw_type_str(self.__raw__(), "generator")
+        return __internal__.raw_type_str(self.__raw__(), "generator")
     @llvm
     def send(self, what: T) -> T:
         declare i8* @llvm.coro.promise(i8* nocapture, i32, i1)

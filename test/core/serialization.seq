@@ -1,3 +1,4 @@
+from bio import *
 import pickle
 
 @tuple

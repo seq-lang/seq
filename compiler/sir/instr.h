@@ -246,6 +246,7 @@ public:
   /// Constructs a stack allocation instruction.
   /// @param arrayType the type of the array
   /// @param count the number of elements
+  /// @param name the name
   StackAllocInstr(const types::Type *arrayType, ValuePtr count, std::string name = "")
       : AcceptorExtend(std::move(name)), arrayType(arrayType), count(std::move(count)) {
   }
@@ -259,6 +260,42 @@ public:
   /// Sets the count.
   /// @param c the new value
   void setCount(ValuePtr c) { count = std::move(c); }
+
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
+};
+
+/// Instr representing getting information about a type.
+class TypePropertyInstr : public AcceptorExtend<TypePropertyInstr, Instr> {
+public:
+  enum Property { IS_ATOMIC, SIZEOF };
+
+private:
+  /// the type being inspected
+  const types::Type *type;
+  /// the property being checked
+  Property property;
+
+public:
+  static const char NodeId;
+
+  /// Constructs a type property instruction.
+  /// @param type the type being inspected
+  /// @param name the name
+  explicit TypePropertyInstr(const types::Type *type,
+                             Property property = Property::IS_ATOMIC,
+                             std::string name = "")
+      : AcceptorExtend(std::move(name)), type(type), property(property) {}
+
+  const types::Type *getType() const override;
+
+  /// @return the property being inspected
+  Property getProperty() const { return property; }
+  /// Sets the property.
+  /// @param p the new value
+  void setProperty(Property p) { property = p; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;

@@ -69,7 +69,7 @@ void Func::addAttribute(std::string attr) {
     auto name = genericName();
     auto i = name.find('['); // chop off realization part
     if (i != std::string::npos)
-      name = name.substr(1, i - 1);
+      name = name.substr(0, i);
     builtins[name] = this;
   } else if (attr == "prefetch") {
     if (prefetch)
@@ -167,8 +167,6 @@ void Func::codegen(Module *module) {
     return;
   }
 
-  if (mangledName == ".void")
-    assert(true);
   FunctionType *funcTypeLLVM =
       FunctionType::get(outType->getLLVMType(context), types, false);
   func = cast<Function>(module->getOrInsertFunction(mangledName, funcTypeLLVM));

@@ -251,11 +251,3 @@ class int:
             raise ValueError("invalid literal for int() with base " + str(base) + ": " + s)
 
         return result
-
-@builtin
-def _tuple_fix_index(idx: int, len: int) -> int:
-    if idx < 0:
-        idx += len
-    if idx < 0 or idx >= len:
-        raise IndexError("tuple index out of range")
-    return idx

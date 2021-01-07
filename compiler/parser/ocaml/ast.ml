@@ -39,6 +39,7 @@ type texpr =
   | Lambda of (string list * texpr ann)
   | YieldTo of unit
   | AssignExpr of (texpr ann * texpr ann)
+  | Range of (texpr ann * texpr ann)
 
 and tcomprehension =
   { var : texpr ann
@@ -67,7 +68,7 @@ type tstmt =
   | While of (texpr ann * tstmt ann list * tstmt ann list)
   | For of (texpr ann * texpr ann * tstmt ann list * tstmt ann list)
   | If of (texpr ann option * tstmt ann list) list
-  | Match of (texpr ann * (pattern ann * tstmt ann list) list)
+  | Match of (texpr ann * pattern_t list)
   | Import of import
   | Try of (tstmt ann list * catch ann list * tstmt ann list)
   | Global of string
@@ -109,18 +110,11 @@ and class_t =
   ; attrs : string ann list
   }
 
-and pattern =
-  | StarPattern of unit
-  | IntPattern of int64
-  | BoolPattern of bool
-  | StrPattern of (string * string)
-  | RangePattern of (int64 * int64)
-  | TuplePattern of pattern ann list
-  | ListPattern of pattern ann list
-  | OrPattern of pattern ann list
-  | WildcardPattern of string option
-  | GuardedPattern of (pattern ann * texpr ann)
-  | BoundPattern of (string * pattern ann)
+and pattern_t =
+  { pattern: texpr ann
+  ; guard: texpr ann option
+  ; pat_stmts: tstmt ann list
+  }
 
 let flat_pipe x =
   match x with

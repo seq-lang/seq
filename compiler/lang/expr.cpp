@@ -176,7 +176,12 @@ ArrayExpr::ArrayExpr(types::Type *type, Expr *count, bool doAlloca)
     : Expr(types::ArrayType::get(type)), count(count), doAlloca(doAlloca) {}
 
 Value *ArrayExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
-  auto *type = dynamic_cast<types::ArrayType *>(getType());
+  types::Type *ptrType = nullptr;
+  auto *type = getType();
+  if (dynamic_cast<types::ArrayType *>(getType()))
+    ptrType = type->getBaseType(0);
+  else
+    ptrType = type->getBaseType(1)->getBaseType(0);
   assert(type != nullptr);
   count->ensure(types::Int);
 
@@ -195,13 +200,15 @@ Value *ArrayExpr::codegen0(BaseFunc *base, BasicBlock *&block) {
     BasicBlock *preambleBlock = base->getPreamble();
     IRBuilder<> builder(preambleBlock);
     len = ConstantInt::get(seqIntLLVM(context), lenLit);
-    ptr = builder.CreateAlloca(type->getBaseType(0)->getLLVMType(context), len);
+    ptr = builder.CreateAlloca(ptrType->getLLVMType(context), len);
   } else {
     len = count->codegen(base, block);
-    ptr = type->getBaseType(0)->alloc(len, block);
+    ptr = ptrType->alloc(len, block);
   }
 
-  Value *arr = type->make(ptr, len, block);
+  Value *arr = UndefValue::get(type->getLLVMType(context));
+  arr = type->setMemb(arr, "len", len, block);
+  arr = type->setMemb(arr, "ptr", ptr, block);
   return arr;
 }
 

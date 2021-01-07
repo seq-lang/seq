@@ -16,7 +16,7 @@ namespace ast {
 
 TypeContext::TypeContext(shared_ptr<Cache> cache)
     : Context<TypecheckItem>(""), cache(move(cache)), typecheckLevel(0), iteration(0),
-      extendEtape(0) {
+      needsAnotherIteration(false), allowActivation(true), age(0) {
   stack.push_front(vector<string>());
   bases.push_back({"", nullptr, nullptr});
 }
@@ -35,11 +35,9 @@ TypeContext::findInVisited(const string &name) const {
 shared_ptr<TypecheckItem> TypeContext::find(const string &name) const {
   if (auto t = Context<TypecheckItem>::find(name))
     return t;
-  if (!name.empty() && name[0] == '.') {
-    auto tt = findInVisited(name);
-    if (tt.second)
-      return make_shared<TypecheckItem>(tt.first, tt.second, "");
-  }
+  auto tt = findInVisited(name);
+  if (tt.second)
+    return make_shared<TypecheckItem>(tt.first, tt.second);
   // ((SimplifyContext *)this)->dump();
   return nullptr;
 }
@@ -47,22 +45,18 @@ shared_ptr<TypecheckItem> TypeContext::find(const string &name) const {
 types::TypePtr TypeContext::findInternal(const string &name) const {
   auto t = find(name);
   seqassert(t, "cannot find '{}'", name);
-  return t->getType();
+  return t->type;
 }
 
 shared_ptr<TypecheckItem> TypeContext::add(TypecheckItem::Kind kind, const string &name,
-                                           types::TypePtr type, bool generic,
-                                           bool stat) {
-  auto t = make_shared<TypecheckItem>(kind, type, getBase(), generic, stat);
-  //  if (name[0] == '.')
-  //    addToplevel(name, t);
-  //  else
+                                           types::TypePtr type, bool stat) {
+  auto t = make_shared<TypecheckItem>(kind, type, stat);
   add(name, t);
   return t;
 }
 
 string TypeContext::getBase() const {
-  if (!bases.size())
+  if (bases.empty())
     return "";
   vector<string> s;
   for (auto &b : bases)
@@ -77,15 +71,15 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int 
                                         level, nullptr, isStatic);
   t->setSrcInfo(srcInfo);
   LOG_TYPECHECK("[ub] new {}: {} ({})", t->toString(), srcInfo, setActive);
-  if (cache->unboundCount - 1 == 10245)
+  if (t->toString() == "?11515.2")
     assert(1);
-  if (setActive)
+  if (setActive && allowActivation)
     activeUnbounds.insert(t);
   return t;
 }
 
 types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr type) {
-  return instantiate(srcInfo, type, nullptr);
+  return instantiate(srcInfo, move(type), nullptr);
 }
 
 types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr type,
@@ -105,11 +99,11 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
         continue;
       i.second->setSrcInfo(srcInfo);
       if (activeUnbounds.find(i.second) == activeUnbounds.end()) {
-        LOG_TYPECHECK("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
-                      i.second->toString(), type->toString(), srcInfo, activate);
-        if (i.second->toString() == "?10245.0")
+        // LOG_TYPECHECK("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
+        //               i.second->toString(), type->toString(), srcInfo, activate);
+        if (i.second->toString() == "?11515.2")
           assert(1);
-        if (activate)
+        if (activate && allowActivation)
           activeUnbounds.insert(i.second);
       }
     }
@@ -138,9 +132,46 @@ void TypeContext::dump(int pad) {
   for (auto &i : ordered) {
     string s;
     auto t = i.second.front().second;
-    LOG("{}{:.<25} {} {}", string(pad * 2, ' '), i.first, t->getType()->toString(),
-        t->getBase());
+    LOG("{}{:.<25} {}", string(pad * 2, ' '), i.first, t->type->toString());
   }
+}
+
+vector<types::FuncTypePtr> TypeContext::findMethod(const string &typeName,
+                                                   const string &method) const {
+  auto m = cache->classes.find(typeName);
+  if (m != cache->classes.end()) {
+    auto t = m->second.methods.find(method);
+    if (t != m->second.methods.end()) {
+      unordered_map<string, int> signatureLoci;
+      vector<types::FuncTypePtr> vv;
+      for (auto &mt : t->second) {
+        // LOG("{}::{} @ {} vs. {}", typeName, method, age, mt.age);
+        if (mt.age <= age) {
+          auto sig = cache->functions[mt.name].ast->signature();
+          auto it = signatureLoci.find(sig);
+          if (it != signatureLoci.end())
+            vv[it->second] = mt.type;
+          else {
+            signatureLoci[sig] = vv.size();
+            vv.emplace_back(mt.type);
+          }
+        }
+      }
+      return vv;
+    }
+  }
+  return {};
+}
+
+types::TypePtr TypeContext::findMember(const string &typeName,
+                                       const string &member) const {
+  auto m = cache->classes.find(typeName);
+  if (m != cache->classes.end()) {
+    for (auto &mm : m->second.fields)
+      if (mm.name == member)
+        return mm.type;
+  }
+  return nullptr;
 }
 
 } // namespace ast

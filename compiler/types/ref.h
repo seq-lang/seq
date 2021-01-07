@@ -28,6 +28,7 @@ public:
   void addMember(std::string name, Expr *expr);
   std::string getName() const override;
   std::string genericName();
+  RecordType *getContents();
 
   llvm::Value *memb(llvm::Value *self, const std::string &name,
                     llvm::BasicBlock *block) override;

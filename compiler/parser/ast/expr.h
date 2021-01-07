@@ -20,6 +20,10 @@
 namespace seq {
 namespace ast {
 
+#define ACCEPT(X)                                                                      \
+  ExprPtr clone() const override;                                                      \
+  void accept(X &visitor) override
+
 // Forward declarations
 struct ASTVisitor;
 struct BinaryExpr;
@@ -33,7 +37,7 @@ struct IntExpr;
 struct ListExpr;
 struct NoneExpr;
 struct StarExpr;
-struct StaticExpr;
+struct StmtExpr;
 struct StringExpr;
 struct TupleExpr;
 struct UnaryExpr;
@@ -45,13 +49,29 @@ struct Stmt;
  * unique_ptr.
  */
 struct Expr : public seq::SrcObject {
-private:
+  // private:
   /// Type of the expression. nullptr by default.
   types::TypePtr type;
-
   /// Flag that indicates if an expression describes a type (e.g. int or list[T]).
   /// Used by transformation and type-checking stages.
   bool isTypeExpr;
+  /// Flag that indicates if an expression is a compile-time static expression.
+  /// Such expression is of a form:
+  ///   an integer (IntExpr) without any suffix that is within i64 range
+  ///   a static generic
+  ///   [-,not] a
+  ///   a [+,-,*,//,%,and,or,==,!=,<,<=,>,>=] b
+  ///     (note: and/or will NOT short-circuit)
+  ///   a if cond else b
+  ///     (note: cond is static, and is true if non-zero, false otherwise).
+  ///     (note: both branches will be evaluated).
+  bool isStaticExpr;
+  /// Static evaluation state: first pair member indicates if an expression is already
+  /// evaluated. If so, second pair member stores the evaluation value.s
+  pair<bool, int> staticEvaluation;
+  /// Flag that indicates if all types in an expression are inferred (i.e. if a
+  /// type-checking procedure was successful).
+  bool done;
 
 public:
   Expr();
@@ -62,7 +82,7 @@ public:
   /// Deep copy a node.
   virtual unique_ptr<Expr> clone() const = 0;
   /// Accept an AST visitor.
-  virtual void accept(ASTVisitor &visitor) const = 0;
+  virtual void accept(ASTVisitor &visitor) = 0;
 
   /// Get a node type.
   /// @return Type pointer or a nullptr if a type is not set.
@@ -92,7 +112,7 @@ public:
   virtual const ListExpr *getList() const { return nullptr; }
   virtual const NoneExpr *getNone() const { return nullptr; }
   virtual const StarExpr *getStar() const { return nullptr; }
-  virtual const StaticExpr *getStatic() const { return nullptr; }
+  virtual const StmtExpr *getStmtExpr() const { return nullptr; }
   virtual const StringExpr *getString() const { return nullptr; }
   virtual const TupleExpr *getTuple() const { return nullptr; }
   virtual const UnaryExpr *getUnary() const { return nullptr; }
@@ -122,8 +142,7 @@ struct NoneExpr : public Expr {
   NoneExpr(const NoneExpr &expr) = default;
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const NoneExpr *getNone() const override { return this; }
 };
@@ -137,8 +156,7 @@ struct BoolExpr : public Expr {
   BoolExpr(const BoolExpr &expr) = default;
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Int expression (value.suffix).
@@ -159,8 +177,7 @@ struct IntExpr : public Expr {
   IntExpr(const IntExpr &expr) = default;
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const IntExpr *getInt() const override { return this; }
 };
@@ -178,8 +195,7 @@ struct FloatExpr : public Expr {
   FloatExpr(const FloatExpr &expr) = default;
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// String expression (prefix"value").
@@ -193,8 +209,7 @@ struct StringExpr : public Expr {
   StringExpr(const StringExpr &expr) = default;
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const StringExpr *getString() const override { return this; }
 };
@@ -207,8 +222,7 @@ struct IdExpr : public Expr {
   IdExpr(const IdExpr &expr) = default;
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   bool isId(string &&val) const override { return this->value == val; }
   const IdExpr *getId() const override { return this; }
@@ -223,8 +237,7 @@ struct StarExpr : public Expr {
   StarExpr(const StarExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const StarExpr *getStar() const override { return this; }
 };
@@ -238,8 +251,7 @@ struct TupleExpr : public Expr {
   TupleExpr(const TupleExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const TupleExpr *getTuple() const override { return this; }
 };
@@ -253,8 +265,7 @@ struct ListExpr : public Expr {
   ListExpr(const ListExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const ListExpr *getList() const override { return this; }
 };
@@ -268,8 +279,7 @@ struct SetExpr : public Expr {
   SetExpr(const SetExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Dictionary expression ({(key: value)...}).
@@ -286,8 +296,7 @@ struct DictExpr : public Expr {
   DictExpr(const DictExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Generator body node helper [for vars in gen (if conds)...].
@@ -315,8 +324,7 @@ struct GeneratorExpr : public Expr {
   GeneratorExpr(const GeneratorExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Dictionary comprehension expression [{key: expr (loops...)}].
@@ -329,8 +337,7 @@ struct DictGeneratorExpr : public Expr {
   DictGeneratorExpr(const DictGeneratorExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Conditional expression [cond if ifexpr else elsexpr].
@@ -342,8 +349,7 @@ struct IfExpr : public Expr {
   IfExpr(const IfExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const IfExpr *getIf() const override { return this; }
 };
@@ -358,8 +364,7 @@ struct UnaryExpr : public Expr {
   UnaryExpr(const UnaryExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const UnaryExpr *getUnary() const override { return this; }
 };
@@ -378,8 +383,7 @@ struct BinaryExpr : public Expr {
   BinaryExpr(const BinaryExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const BinaryExpr *getBinary() const override { return this; }
 };
@@ -404,8 +408,7 @@ struct PipeExpr : public Expr {
   PipeExpr(const PipeExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Index expression (expr[index]).
@@ -417,8 +420,7 @@ struct IndexExpr : public Expr {
   IndexExpr(const IndexExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const IndexExpr *getIndex() const override { return this; }
 };
@@ -446,8 +448,7 @@ struct CallExpr : public Expr {
   CallExpr(const CallExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const CallExpr *getCall() const override { return this; }
 };
@@ -462,8 +463,7 @@ struct DotExpr : public Expr {
   DotExpr(const DotExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 
   const DotExpr *getDot() const override { return this; }
 };
@@ -480,8 +480,7 @@ struct SliceExpr : public Expr {
   SliceExpr(const SliceExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Ellipsis expression.
@@ -495,8 +494,9 @@ struct EllipsisExpr : public Expr {
   EllipsisExpr(const EllipsisExpr &expr) = default;
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
+
+  const EllipsisExpr *getEllipsis() const override { return this; }
 };
 
 /// Type-of expression (typeof expr).
@@ -508,8 +508,7 @@ struct TypeOfExpr : public Expr {
   TypeOfExpr(const TypeOfExpr &n);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Lambda expression (lambda (vars)...: expr).
@@ -522,8 +521,7 @@ struct LambdaExpr : public Expr {
   LambdaExpr(const LambdaExpr &);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Yield (send to generator) expression.
@@ -533,8 +531,7 @@ struct YieldExpr : public Expr {
   YieldExpr(const YieldExpr &expr) = default;
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Assignment (walrus) expression (var := expr).
@@ -546,8 +543,20 @@ struct AssignExpr : public Expr {
   AssignExpr(const AssignExpr &);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
+};
+
+/// Range expression (start ... end).
+/// Used only in match-case statements.
+/// @example 1 ... 2
+struct RangeExpr : public Expr {
+  ExprPtr start, stop;
+
+  RangeExpr(ExprPtr start, ExprPtr stop);
+  RangeExpr(const RangeExpr &);
+
+  string toString() const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// The following nodes are created after the simplify stage.
@@ -564,8 +573,9 @@ struct StmtExpr : public Expr {
   StmtExpr(const StmtExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
+
+  const StmtExpr *getStmtExpr() const override { return this; }
 };
 
 /// Pointer expression (__ptr__(expr)).
@@ -577,8 +587,7 @@ struct PtrExpr : public Expr {
   PtrExpr(const PtrExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Static tuple indexing expression (expr[index]).
@@ -591,8 +600,7 @@ struct TupleIndexExpr : Expr {
   TupleIndexExpr(const TupleIndexExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Static tuple indexing expression (expr[index]).
@@ -607,8 +615,7 @@ struct InstantiateExpr : Expr {
   InstantiateExpr(const InstantiateExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
 /// Stack allocation expression (__array__[type](expr)).
@@ -620,28 +627,10 @@ struct StackAllocExpr : Expr {
   StackAllocExpr(const StackAllocExpr &expr);
 
   string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
+  ACCEPT(ASTVisitor);
 };
 
-/// Static expression (expr). Must evaluate to an integer at the compile-time.
-/// @example 5 + 3
-/// @example 3 if N > 5 else 2
-/// @example len((1, 2))
-struct StaticExpr : public Expr {
-  ExprPtr expr;
-  /// List of static variables within expr (e.g. N if expr is 3 + N).
-  set<string> captures;
-
-  StaticExpr(ExprPtr expr, set<string> &&captures);
-  StaticExpr(const StaticExpr &expr);
-
-  string toString() const override;
-  ExprPtr clone() const override;
-  void accept(ASTVisitor &visitor) const override;
-
-  const StaticExpr *getStatic() const override { return this; }
-};
+#undef ACCEPT
 
 } // namespace ast
 } // namespace seq

@@ -3,7 +3,7 @@ project(Seq)
 include(ExternalProject)
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -pedantic -Wall -Wno-return-type-c-linkage")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -pedantic -Wall -Wno-return-type-c-linkage -fsanitize=address")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 include_directories(.)
@@ -123,18 +123,17 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/lang/var.h
         compiler/parser/ast.h
         compiler/parser/ast/expr.h
-        compiler/parser/ast/pattern.h
         compiler/parser/ast/stmt.h
         compiler/parser/ast/types.h
         compiler/parser/visitors/visitor.h
         compiler/parser/common.h
+        compiler/parser/cache.h
         compiler/parser/ctx.h
         compiler/parser/ocaml/ocaml.h
         compiler/parser/parser.h
         compiler/parser/visitors/codegen/codegen.h
         compiler/parser/visitors/codegen/codegen_ctx.h
         compiler/parser/visitors/doc/doc.h
-        compiler/parser/visitors/walkexpr/walk.h
         compiler/parser/visitors/format/format.h
         compiler/parser/visitors/simplify/simplify.h
         compiler/parser/visitors/simplify/simplify_ctx.h
@@ -193,7 +192,6 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/lang/var.cpp
         compiler/parser/ast/expr.cpp
         compiler/parser/ast/stmt.cpp
-        compiler/parser/ast/pattern.cpp
         compiler/parser/visitors/visitor.cpp
         compiler/parser/visitors/codegen/codegen.cpp
         compiler/parser/visitors/codegen/codegen_ctx.cpp
@@ -203,8 +201,10 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/parser/visitors/simplify/simplify_ctx.cpp
         compiler/parser/visitors/typecheck/typecheck.cpp
         compiler/parser/visitors/typecheck/typecheck_ctx.cpp
+        compiler/parser/visitors/typecheck/typecheck_expr.cpp
+        compiler/parser/visitors/typecheck/typecheck_infer.cpp
+        compiler/parser/visitors/typecheck/typecheck_stmt.cpp
         compiler/parser/ast/types.cpp
-        compiler/parser/visitors/walkexpr/walk.cpp
         compiler/parser/common.cpp
         compiler/parser/ocaml/ocaml.cpp
         compiler/parser/parser.cpp
@@ -225,7 +225,6 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/util/jit.cpp
         compiler/parser/visitors/simplify/simplify_expr.cpp
         compiler/parser/visitors/simplify/simplify_stmt.cpp
-        compiler/parser/visitors/simplify/simplify_pattern.cpp
         compiler/sir/types/types.cpp
         compiler/sir/util/visitor.cpp
         compiler/sir/attribute.cpp
