@@ -1900,15 +1900,15 @@ void LLVMVisitor::visit(CallInstr *x) {
 void LLVMVisitor::visit(TypePropertyInstr *x) {
   llvm::IRBuilder<> builder(block);
   switch (x->getProperty()) {
-    case TypePropertyInstr::Property::SIZEOF:
-      value = builder.getInt64(
+  case TypePropertyInstr::Property::SIZEOF:
+    value = builder.getInt64(
         module->getDataLayout().getTypeAllocSize(getLLVMType(x->getInspectType())));
-      break;
-    case TypePropertyInstr::Property::IS_ATOMIC:
-      value = builder.getInt8(x->getInspectType()->isAtomic() ? 1 : 0);
-      break;
-    default:
-      assert(0);
+    break;
+  case TypePropertyInstr::Property::IS_ATOMIC:
+    value = builder.getInt8(x->getInspectType()->isAtomic() ? 1 : 0);
+    break;
+  default:
+    assert(0);
   }
 }
 

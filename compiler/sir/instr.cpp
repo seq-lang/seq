@@ -88,12 +88,12 @@ const char TypePropertyInstr::NodeId = 0;
 
 const types::Type *TypePropertyInstr::getType() const {
   switch (property) {
-    case Property::IS_ATOMIC:
-      return getModule()->getBoolType();
-    case Property::SIZEOF:
-      return getModule()->getIntType();
-    default:
-      return nullptr;
+  case Property::IS_ATOMIC:
+    return getModule()->getBoolType();
+  case Property::SIZEOF:
+    return getModule()->getIntType();
+  default:
+    return nullptr;
   }
 }
 
@@ -105,7 +105,8 @@ std::ostream &TypePropertyInstr::doFormat(std::ostream &os) const {
 }
 
 Value *TypePropertyInstr::doClone() const {
-  return getModule()->Nrs<TypePropertyInstr>(getSrcInfo(), inspectType, property, getName());
+  return getModule()->Nrs<TypePropertyInstr>(getSrcInfo(), inspectType, property,
+                                             getName());
 }
 
 const char YieldInInstr::NodeId = 0;

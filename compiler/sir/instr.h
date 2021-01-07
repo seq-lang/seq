@@ -284,8 +284,7 @@ public:
   /// Constructs a type property instruction.
   /// @param type the type being inspected
   /// @param name the name
-  explicit TypePropertyInstr(const types::Type *type,
-                             Property property,
+  explicit TypePropertyInstr(const types::Type *type, Property property,
                              std::string name = "")
       : AcceptorExtend(std::move(name)), inspectType(type), property(property) {}
 
