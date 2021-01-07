@@ -5,9 +5,6 @@ class Ptr[T]:
     @internal
     def __new__(sz: int) -> Ptr[T]:
         pass
-    @internal
-    def __new__(sz: int) -> Ptr[T]:
-        pass
     @llvm
     def __new__() -> Ptr[T]:
         ret {=T}* null
