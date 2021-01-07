@@ -274,7 +274,7 @@ public:
 
 private:
   /// the type being inspected
-  const types::Type *type;
+  const types::Type *inspectType;
   /// the property being checked
   Property property;
 
@@ -285,11 +285,14 @@ public:
   /// @param type the type being inspected
   /// @param name the name
   explicit TypePropertyInstr(const types::Type *type,
-                             Property property = Property::IS_ATOMIC,
+                             Property property,
                              std::string name = "")
-      : AcceptorExtend(std::move(name)), type(type), property(property) {}
+      : AcceptorExtend(std::move(name)), inspectType(type), property(property) {}
 
   const types::Type *getType() const override;
+
+  /// @return the type being inspected
+  const types::Type *getInspectType() { return inspectType; }
 
   /// @return the property being inspected
   Property getProperty() const { return property; }
