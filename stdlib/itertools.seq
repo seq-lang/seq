@@ -127,16 +127,16 @@ def cycle[T](iterable: Generator[T]):
         for element in saved:
               yield element
 
-def compress(data, selectors):
+def compress[S,T](data: Generator[S], selectors: Generator[T]):
     """
     Return data elements corresponding to true selector elements.
 
     Forms a shorter iterator from selected data elements using the selectors to
     choose the data elements.
     """
-    return [d for d, s in zip(data, selectors) if s]
+    return (d for d, s in zip(data, selectors) if s)
 
-def dropwhile(predicate, iterable):
+def dropwhile[T](predicate: Function[bool,T], iterable: Generator[T]):
     """
     Drop items from the iterable while predicate(item) is true.
 
@@ -150,7 +150,7 @@ def dropwhile(predicate, iterable):
     for x in it:
         yield x
 
-def takewhile(predicate, iterable):
+def takewhile[T](predicate: Function[bool,T], iterable: Generator[T]):
     """
     Return successive entries from an iterable as long as the predicate evaluates to true for each entry.
     """
@@ -160,7 +160,7 @@ def takewhile(predicate, iterable):
         else:
             break
 
-def filterfalse(predicate, iterable):
+def filterfalse[T](predicate: Function[bool,T], iterable: Generator[T]):
     """
     Return those items of iterable for which function(item) is false.
 
@@ -315,12 +315,6 @@ def product(a, b, equals_ok: bool = True):
 
 
 '''
-def product[T](iterables: Generator[T], repeat: int):
-    """
-    Needs implementing.
-    """
-    pass
-
 def tee(iterable, n):
     """
     Needs implementing.
