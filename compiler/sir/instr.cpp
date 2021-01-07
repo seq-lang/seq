@@ -122,7 +122,7 @@ Value *YieldInInstr::doClone() const {
 const char TernaryInstr::NodeId = 0;
 
 std::ostream &TernaryInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("ternary({}, {}, {})"), *cond, trueValue, *falseValue);
+  fmt::print(os, FMT_STRING("ternary({}, {}, {})"), *cond, *trueValue, *falseValue);
   return os;
 }
 
