@@ -15,6 +15,7 @@
 #include "lang/seq.h"
 #include "parser/common.h"
 #include "parser/parser.h"
+#include "sir/llvm/llvisitor.h"
 #include "gtest/gtest.h"
 
 using namespace seq;
@@ -104,11 +105,15 @@ public:
       auto file = getFilename(get<0>(GetParam()));
       auto code = get<3>(GetParam());
       auto startLine = get<4>(GetParam());
-      SeqModule *module = parse(argv0, file, code, !code.empty(),
-                                /* isTest */ 1 + get<5>(GetParam()), startLine);
+      auto module = parse(argv0, file, code, !code.empty(),
+                          /* isTest */ 1 + get<5>(GetParam()), startLine);
       if (!module)
         exit(EXIT_FAILURE);
-      execute(module, {file}, {}, get<1>(GetParam()));
+
+      seq::ir::LLVMVisitor visitor(/*debug=*/get<1>(GetParam()));
+      visitor.visit(module.get());
+      visitor.run({file});
+
       fflush(stdout);
       exit(EXIT_SUCCESS);
     } else {

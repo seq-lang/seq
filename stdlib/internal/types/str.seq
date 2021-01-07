@@ -3,8 +3,10 @@ from C import strlen(cobj) -> int
 @extend
 class str:
     @internal
-    def __new__(p: Ptr[byte], l: int) -> str:
+    def __new__(l: int, p: Ptr[byte]) -> str:
         pass
+    def __new__(p: Ptr[byte], l: int) -> str:
+        return str(l, p)
     def __new__() -> str:
         return str(Ptr[byte](), 0)
     def __new__[T](what: T) -> str: # lowest priority!

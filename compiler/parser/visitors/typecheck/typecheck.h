@@ -269,7 +269,7 @@ private:
   types::TypePtr realizeType(const types::TypePtr &typ);
   types::TypePtr realizeFunc(const types::TypePtr &typ);
   std::pair<int, StmtPtr> inferTypes(StmtPtr &&stmt, bool keepLast = false);
-  seq::types::Type *getLLVMType(const types::ClassType *t);
+  seq::ir::types::Type *getLLVMType(const types::ClassType *t);
 };
 
 } // namespace ast

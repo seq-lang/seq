@@ -77,13 +77,12 @@ class FAIReader:
             col_name = FAI_COL_NAMES[i]
             val_ptr = val_ptrs[i]
             val_str = col_strs[i]
-            match col_name:
-                case "name":
-                    val_str_ptr = Ptr[str](val_ptr)
-                    val_str_ptr[0] = val_str
-                case _:
-                    val_num_ptr = Ptr[int](val_ptr)
-                    val_num_ptr[0] = self._get_int_from_fai(val_str, col_name, lnum)
+            if col_name == "name":
+                val_str_ptr = Ptr[str](val_ptr)
+                val_str_ptr[0] = val_str
+            else:
+                val_num_ptr = Ptr[int](val_ptr)
+                val_num_ptr[0] = self._get_int_from_fai(val_str, col_name, lnum)
 
         return FAIRecord(name, length, offset, line_bases, line_width, qual_offset)
 

@@ -3,7 +3,7 @@ project(Seq)
 include(ExternalProject)
 
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -pedantic -Wall -Wno-return-type-c-linkage")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -pedantic -Wall -Wno-return-type-c-linkage -fsanitize=address")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 include_directories(.)
@@ -112,6 +112,7 @@ set_property(SOURCE ${LIB_SEQPARSE} PROPERTY GENERATED 1)
 # Seq compiler library
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
+
 set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/lang/func.h
         compiler/lang/lang.h
@@ -126,6 +127,7 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/parser/ast/types.h
         compiler/parser/visitors/visitor.h
         compiler/parser/common.h
+        compiler/parser/cache.h
         compiler/parser/ctx.h
         compiler/parser/ocaml/ocaml.h
         compiler/parser/parser.h
@@ -164,7 +166,22 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/util/fmt/ranges.h
         compiler/util/jit.h
         compiler/util/llvm.h
-        compiler/util/tapir.h compiler/parser/visitors/typecheck/typecheck_stmt.cpp compiler/parser/visitors/typecheck/typecheck_expr.cpp compiler/parser/visitors/typecheck/typecheck_infer.cpp)
+        compiler/util/tapir.h
+        compiler/sir/types/types.h
+        compiler/sir/util/context.h
+        compiler/sir/util/iterators.h
+        compiler/sir/util/visitor.h
+        compiler/sir/attribute.h
+        compiler/sir/base.h
+        compiler/sir/constant.h
+        compiler/sir/flow.h
+        compiler/sir/func.h
+        compiler/sir/instr.h
+        compiler/sir/module.h
+        compiler/sir/sir.h
+        compiler/sir/value.h
+        compiler/sir/var.h
+        compiler/sir/llvm/llvisitor.h)
 set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/lang/func.cpp
         compiler/lang/lang.cpp
@@ -184,6 +201,9 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/parser/visitors/simplify/simplify_ctx.cpp
         compiler/parser/visitors/typecheck/typecheck.cpp
         compiler/parser/visitors/typecheck/typecheck_ctx.cpp
+        compiler/parser/visitors/typecheck/typecheck_expr.cpp
+        compiler/parser/visitors/typecheck/typecheck_infer.cpp
+        compiler/parser/visitors/typecheck/typecheck_stmt.cpp
         compiler/parser/ast/types.cpp
         compiler/parser/common.cpp
         compiler/parser/ocaml/ocaml.cpp
@@ -203,7 +223,20 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/types/void.cpp
         compiler/util/fmt/format.cpp
         compiler/util/jit.cpp
-        compiler/parser/visitors/simplify/simplify_expr.cpp compiler/parser/visitors/simplify/simplify_stmt.cpp)
+        compiler/parser/visitors/simplify/simplify_expr.cpp
+        compiler/parser/visitors/simplify/simplify_stmt.cpp
+        compiler/sir/types/types.cpp
+        compiler/sir/util/visitor.cpp
+        compiler/sir/attribute.cpp
+        compiler/sir/base.cpp
+        compiler/sir/constant.cpp
+        compiler/sir/flow.cpp
+        compiler/sir/func.cpp
+        compiler/sir/instr.cpp
+        compiler/sir/module.cpp
+        compiler/sir/value.cpp
+        compiler/sir/var.cpp
+        compiler/sir/llvm/llvisitor.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})

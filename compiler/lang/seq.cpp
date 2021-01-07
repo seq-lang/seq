@@ -8,14 +8,14 @@
 
 using namespace seq;
 using namespace llvm;
-
+/*
 #if LLVM_VERSION_MAJOR >= 7
 #include "llvm/CodeGen/CommandFlags.inc"
 #else
 using namespace llvm::orc;
 #include "llvm/CodeGen/CommandFlags.def"
 #endif
-
+*/
 extern int _ll_time;
 
 void _seqassert(const char *expr_str, const char *file, int line,
@@ -276,15 +276,7 @@ void SeqModule::verify() { verifyModuleFailFast(*module); }
 static TargetMachine *getTargetMachine(Triple triple, StringRef cpuStr,
                                        StringRef featuresStr,
                                        const TargetOptions &options) {
-  std::string err;
-  const Target *target = TargetRegistry::lookupTarget(MArch, triple, err);
-
-  if (!target)
-    return nullptr;
-
-  return target->createTargetMachine(triple.getTriple(), cpuStr, featuresStr, options,
-                                     getRelocModel(), getCodeModel(),
-                                     CodeGenOpt::Aggressive);
+  return nullptr;
 }
 
 static void applyDebugTransformations(Module *module) {
@@ -343,6 +335,7 @@ static void applyGCTransformations(Module *module) {
 }
 
 static void optimizeModule(Module *module) {
+  /*
   const bool debug = config::config().debug;
   applyDebugTransformations(module);
   std::unique_ptr<legacy::PassManager> pm(new legacy::PassManager());
@@ -407,6 +400,7 @@ static void optimizeModule(Module *module) {
   fpm->doFinalization();
   pm->run(*module);
   applyDebugTransformations(module);
+  */
 }
 
 void SeqModule::optimize() { optimizeModule(module); }
@@ -605,7 +599,7 @@ static std::shared_ptr<Module> optimizeModule(std::shared_ptr<Module> module) {
 SeqJIT::SeqJIT()
     : target(EngineBuilder().selectTarget()), layout(target->createDataLayout()),
       objLayer([]() { return std::make_shared<BoehmGCMemoryManager>(); }),
-      comLayer(objLayer, SimpleCompiler(*target)),
+      comLayer(objLayer, llvm::orc::SimpleCompiler(*target)),
       optLayer(comLayer,
                [](std::shared_ptr<Module> M) { return optimizeModule(std::move(M)); }),
       globals(), inputNum(0) {
@@ -626,7 +620,7 @@ std::unique_ptr<Module> SeqJIT::makeModule() {
 }
 
 SeqJIT::ModuleHandle SeqJIT::addModule(std::unique_ptr<Module> module) {
-  auto resolver = createLambdaResolver(
+  auto resolver = llvm::orc::createLambdaResolver(
       [&](const std::string &name) {
         if (auto sym = optLayer.findSymbol(name, false))
           return sym;

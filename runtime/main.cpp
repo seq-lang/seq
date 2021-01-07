@@ -1,5 +1,6 @@
 #include "lang/seq.h"
 #include "parser/parser.h"
+#include "sir/llvm/llvisitor.h"
 #include "util/jit.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdio>
@@ -15,15 +16,27 @@ using namespace seq;
 using namespace llvm;
 using namespace llvm::cl;
 
-static void versMsg(raw_ostream &out) {
+namespace {
+void versMsg(raw_ostream &out) {
   out << "Seq " << SEQ_VERSION_MAJOR << "." << SEQ_VERSION_MINOR << "."
       << SEQ_VERSION_PATCH << "\n";
 }
 
+bool endsWith(std::string const &query, std::string const &ending) {
+  if (query.length() >= ending.length()) {
+    return (query.compare(query.length() - ending.length(), ending.length(), ending) ==
+            0);
+  } else {
+    return false;
+  }
+}
+
+bool isLLVMFilename(const std::string &filename) { return endsWith(filename, ".ll"); }
+} // namespace
+
 int main(int argc, char **argv) {
   opt<string> input(Positional, desc("<input file>"), init("-"));
   opt<bool> debug("d", desc("Compile in debug mode"));
-  opt<bool> profile("prof", desc("Profile LLVM IR using XRay"));
   opt<bool> docstr("docstr", desc("Generate docstrings"));
   opt<string> output(
       "o", desc("Write LLVM bitcode to specified file instead of running with JIT"));
@@ -35,20 +48,21 @@ int main(int argc, char **argv) {
   vector<string> libsVec(libs);
   vector<string> argsVec(args);
 
-  config::config().debug = debug.getValue();
-  config::config().profile = profile.getValue();
-
   if (docstr.getValue()) {
     generateDocstr(argv[0]);
     return EXIT_SUCCESS;
   }
 
-  SeqModule *s = parse(argv[0], input.c_str(), "", false, false);
-  if (!s)
-    exit(EXIT_FAILURE);
+  auto module = parse(argv[0], input.c_str(), "", false, false);
+  if (!module)
+    return EXIT_FAILURE;
+
+  seq::ir::LLVMVisitor visitor(debug.getValue());
+  visitor.visit(module.get());
+
   if (output.getValue().empty()) {
     argsVec.insert(argsVec.begin(), input);
-    execute(s, argsVec, libsVec, debug.getValue());
+    visitor.run(argsVec, libsVec);
   } else {
     if (!libsVec.empty())
       compilationWarning("ignoring libraries during compilation");
@@ -56,7 +70,12 @@ int main(int argc, char **argv) {
     if (!argsVec.empty())
       compilationWarning("ignoring arguments during compilation");
 
-    compile(s, output.getValue(), debug.getValue());
+    const std::string filename = output.getValue();
+    if (isLLVMFilename(filename)) {
+      visitor.dump(filename);
+    } else {
+      visitor.compile(filename);
+    }
   }
 
   return EXIT_SUCCESS;
