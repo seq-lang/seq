@@ -44,10 +44,10 @@ ValuePtr CodegenVisitor::transform(const ExprPtr &expr) {
   return move(v.result);
 }
 
-seq::ir::types::Type *CodegenVisitor::realizeType(types::ClassTypePtr t) {
-  auto i = ctx->types.find(t->getClass()->realizeString());
-  assert(i != ctx->types.end());
-  return i->second;
+seq::ir::types::Type *CodegenVisitor::realizeType(types::ClassType *t) {
+  auto i = ctx->find(t->getClass()->realizeString());
+  seqassert(i, "type {} not realized", t->toString());
+  return i->getType();
 }
 
 ValuePtr CodegenVisitor::transform(const StmtPtr &stmt) {
@@ -65,6 +65,9 @@ IRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto *block = module->Nr<SeriesFlow>("body");
   main->setBody(FlowPtr(block));
 
+  module->setArgVar(
+      module->Nx<ir::Var>(module->getArrayType(module->getStringType()), "argv"));
+
   auto ctx = make_shared<CodegenContext>(cache, block, main);
 
   for (auto &ff : cache->classes)
@@ -74,7 +77,7 @@ IRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
       //          f.second.llvm->getName());
       ctx->addType(f.first, f.second.llvm);
     }
-    
+
   // Now add all realization stubs
   for (auto &ff : cache->functions)
     for (auto &f : ff.second.realizations) {
@@ -97,8 +100,9 @@ IRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
         seqassert(p && p->getClass(), "parent must be set ({}) for {}; parent={}",
                   p ? p->toString() : "-", t->toString(),
                   ast->attributes[ATTR_PARENT_CLASS]);
-        
-        seq::ir::types::Type *typ = ctx->find(p->getClass()->realizeString())->getType();
+
+        seq::ir::types::Type *typ =
+            ctx->find(p->getClass()->realizeString())->getType();
         int startI = 1;
         if (!ast->args.empty() &&
             ctx->cache->reverseIdentifierLookup[ast->args[0].name] == "self")
@@ -147,22 +151,22 @@ IRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
 
 void CodegenVisitor::visit(BoolExpr *expr) {
   result = ctx->getModule()->Nxs<BoolConstant>(
-      expr, expr->value, realizeType(expr->getType()->getClass()));
+      expr, expr->value, realizeType(expr->getType()->getClass().get()));
 }
 
 void CodegenVisitor::visit(IntExpr *expr) {
   result = ctx->getModule()->Nxs<IntConstant>(
-      expr, expr->intValue, realizeType(expr->getType()->getClass()));
+      expr, expr->intValue, realizeType(expr->getType()->getClass().get()));
 }
 
 void CodegenVisitor::visit(FloatExpr *expr) {
   result = ctx->getModule()->Nxs<FloatConstant>(
-      expr, expr->value, realizeType(expr->getType()->getClass()));
+      expr, expr->value, realizeType(expr->getType()->getClass().get()));
 }
 
 void CodegenVisitor::visit(StringExpr *expr) {
   result = ctx->getModule()->Nxs<StringConstant>(
-      expr, expr->value, realizeType(expr->getType()->getClass()));
+      expr, expr->value, realizeType(expr->getType()->getClass().get()));
 }
 
 void CodegenVisitor::visit(IdExpr *expr) {
@@ -204,14 +208,25 @@ void CodegenVisitor::visit(StackAllocExpr *expr) {
   auto c = expr->typeExpr->getType()->getClass();
   assert(c);
   result = ctx->getModule()->Nxs<StackAllocInstr>(
-      expr, realizeType(expr->getType()->getClass()), transform(expr->expr));
+      expr, ctx->getModule()->getArrayType(realizeType(c.get())),
+      transform(expr->expr));
 }
 
 void CodegenVisitor::visit(DotExpr *expr) {
-  if (expr->member == "__atomic__" || expr->member == "__elemsize__")
-    assert(false);
-
   auto *module = ctx->getModule();
+
+  if (expr->member == "__atomic__" || expr->member == "__elemsize__") {
+    auto *idExpr = dynamic_cast<IdExpr *>(expr->expr.get());
+    assert(idExpr);
+    auto *type = ctx->find(idExpr->value)->getType();
+    assert(type);
+    result = module->Nxs<TypePropertyInstr>(expr, type,
+                                            expr->member == "__atomic__"
+                                                ? TypePropertyInstr::Property::IS_ATOMIC
+                                                : TypePropertyInstr::Property::SIZEOF);
+    return;
+  }
+
   result = module->Nxs<ExtractInstr>(expr, transform(expr->expr), expr->member);
 }
 
@@ -227,7 +242,7 @@ void CodegenVisitor::visit(PtrExpr *expr) {
 
 void CodegenVisitor::visit(YieldExpr *expr) {
   result = ctx->getModule()->Nxs<YieldInInstr>(
-      expr, realizeType(expr->getType()->getClass()));
+      expr, realizeType(expr->getType()->getClass().get()));
 }
 
 void CodegenVisitor::visit(StmtExpr *expr) {
@@ -276,13 +291,10 @@ void CodegenVisitor::visit(AssignStmt *stmt) {
 
   if (!stmt->rhs) {
     if (var == ".__argv__") {
-      if (!module->getArgVar())
-        module->setArgVar(
-            module->Nx<ir::Var>(module->getArrayType(module->getStringType()), "argv"));
       ctx->addVar(var, module->getArgVar());
     } else {
       auto *newVar = module->Nrs<ir::Var>(
-          stmt, realizeType(stmt->lhs->getType()->getClass()), var);
+          stmt, realizeType(stmt->lhs->getType()->getClass().get()), var);
       if (in(ctx->cache->globals, var)) {
         ctx->getModule()->push_back(wrap(newVar));
       } else {
@@ -294,7 +306,7 @@ void CodegenVisitor::visit(AssignStmt *stmt) {
     // ctx->addType(var, realizeType(stmt->rhs->getType()->getClass()));
   } else {
     auto *newVar = module->Nrs<ir::Var>(
-        stmt, realizeType(stmt->rhs->getType()->getClass()), var);
+        stmt, realizeType(stmt->rhs->getType()->getClass().get()), var);
     if (in(ctx->cache->globals, var)) {
       ctx->getModule()->push_back(wrap(newVar));
     } else {
@@ -372,7 +384,7 @@ void CodegenVisitor::visit(ForStmt *stmt) {
 
   auto varId = CAST(stmt->var, IdExpr);
   auto *resVar = module->Nrs<ir::Var>(
-      stmt, realizeType(varId->getType()->getClass()), varId->value);
+      stmt, realizeType(varId->getType()->getClass().get()), varId->value);
   ctx->getBase()->push_back(wrap(resVar));
 
   auto bodySeries = newScope(stmt, "body");
@@ -392,6 +404,13 @@ void CodegenVisitor::visit(ForStmt *stmt) {
 }
 
 void CodegenVisitor::visit(IfStmt *stmt) {
+  if (!stmt->ifs[0].cond) {
+    ctx->addScope();
+    transform(stmt->ifs[0].suite);
+    ctx->popScope();
+    return;
+  }
+
   auto trueSeries = newScope(stmt, "ifstmt_true");
   ctx->addScope();
   ctx->addSeries(trueSeries.get());
@@ -435,7 +454,7 @@ void CodegenVisitor::visit(TryStmt *stmt) {
 
   for (auto &c : stmt->catches) {
     auto catchBody = newScope(stmt, "catch");
-    auto *excType = c.exc ? realizeType(c.exc->getType()->getClass()) : nullptr;
+    auto *excType = c.exc ? realizeType(c.exc->getType()->getClass().get()) : nullptr;
 
     ctx->addScope();
 
@@ -476,15 +495,18 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
     vector<const seq::ir::types::Type *> types;
     auto t = real.second.type;
     for (int i = 1; i < t->args.size(); i++) {
-      types.push_back(realizeType(t->args[i]->getClass()));
-      names.push_back(ast->args[i - 1].name);
+      types.push_back(realizeType(t->args[i]->getClass().get()));
+      names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i - 1].name]);
     }
+
+    auto *funcType =
+        ctx->getModule()->getFuncType(realizeType(t->args[0]->getClass().get()), types);
 
     LOG_REALIZE("[codegen] generating fn {}", real.first);
     if (in(stmt->attributes, "llvm")) {
       auto *f = cast<ir::LLVMFunc>(fp.first);
       assert(f);
-      f->realize(cast<ir::types::FuncType>(realizeType(t->getClass())), names);
+      f->realize(cast<ir::types::FuncType>(funcType), names);
 
       // auto s = CAST(tmp->suite, SuiteStmt);
       // assert(s && s->stmts.size() == 1)
@@ -503,7 +525,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
           literals.emplace_back(ei->intValue);
         } else {
           seqassert(ex->isType() && ex->getType(), "invalid LLVM type argument");
-          literals.emplace_back(realizeType(ex->getType()->getClass()));
+          literals.emplace_back(realizeType(ex->getType()->getClass().get()));
         }
       }
 
@@ -539,7 +561,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
       //        f->p
       ctx->addScope();
 
-      f->realize(cast<ir::types::FuncType>(realizeType(t->getClass())), names);
+      f->realize(cast<ir::types::FuncType>(funcType), names);
       f->setAttribute(kFuncAttribute, make_unique<FuncAttribute>(ast->attributes));
       for (auto &a : ast->attributes) {
         if (a.first == "atomic")
@@ -550,10 +572,10 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
         assert(external);
         external->setUnmangledName(ctx->cache->reverseIdentifierLookup[stmt->name]);
       } else if (!in(ast->attributes, "internal")) {
-        for (auto &arg : names) {
-          auto var = cast<ir::Var>(f->getArgVar(arg));
+        for (auto i = 0; i < names.size(); ++i) {
+          auto var = cast<ir::Var>(f->getArgVar(names[i]));
           assert(var);
-          ctx->addVar(arg, var);
+          ctx->addVar(ast->args[i].name, var);
         }
         auto body = newScope(stmt, "body");
         ctx->addSeries(body.get(), f);

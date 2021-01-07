@@ -64,6 +64,8 @@ void SIRVisitor::visit(ContinueInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(const ContinueInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(ReturnInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(const ReturnInstr *x) { defaultVisit(x); }
+void SIRVisitor::visit(TypePropertyInstr *x) { defaultVisit(x); }
+void SIRVisitor::visit(const TypePropertyInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(YieldInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(const YieldInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(ThrowInstr *x) { defaultVisit(x); }

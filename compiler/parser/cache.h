@@ -174,8 +174,8 @@ struct Cache {
 
 public:
   explicit Cache(string argv0 = "")
-      : generatedSrcInfoCount(0), unboundCount(0), varCount(0), age(0),
-        testFlags(0), argv0(move(argv0)), module(nullptr) {}
+      : generatedSrcInfoCount(0), unboundCount(0), varCount(0), age(0), testFlags(0),
+        argv0(move(argv0)), module(nullptr) {}
 
   /// Return a uniquely named temporary variable of a format
   /// "{sigil}_{prefix}{counter}". A sigil should be a non-lexable symbol.

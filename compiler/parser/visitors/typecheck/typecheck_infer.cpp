@@ -400,7 +400,8 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
       names.emplace_back(ctx->cache->classes[t->name].fields[ai].name);
       typeArgs.emplace_back(getLLVM(t->args[ai]));
     }
-    auto record = seq::ir::cast<seq::ir::types::RecordType>(ctx->cache->module->getMemberedType(t->realizeString()));
+    auto record = seq::ir::cast<seq::ir::types::RecordType>(
+        ctx->cache->module->getMemberedType(t->realizeString()));
     record->realize(typeArgs, names);
     handle = record;
   } else {

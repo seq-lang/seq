@@ -284,9 +284,10 @@ public:
   /// Constructs a type property instruction.
   /// @param type the type being inspected
   /// @param name the name
-  explicit TypePropertyInstr(const types::Type *type, Property property = Property::IS_ATOMIC, std::string name = "")
-      : AcceptorExtend(std::move(name)), type(type), property(property) {
-  }
+  explicit TypePropertyInstr(const types::Type *type,
+                             Property property = Property::IS_ATOMIC,
+                             std::string name = "")
+      : AcceptorExtend(std::move(name)), type(type), property(property) {}
 
   const types::Type *getType() const override;
 
@@ -301,7 +302,6 @@ private:
 
   Value *doClone() const override;
 };
-
 
 /// Instr representing a Python yield expression.
 class YieldInInstr : public AcceptorExtend<YieldInInstr, Instr> {

@@ -43,7 +43,7 @@ public:
   seq::ir::ValuePtr transform(const ExprPtr &expr) override;
   seq::ir::ValuePtr transform(const StmtPtr &stmt) override;
 
-  seq::ir::types::Type *realizeType(types::ClassTypePtr t);
+  seq::ir::types::Type *realizeType(types::ClassType *t);
 
 public:
   void visit(BoolExpr *) override;
@@ -96,7 +96,6 @@ private:
   }
 
   template <typename T> auto wrap(T *obj) { return std::unique_ptr<T>(obj); }
-
 };
 
 } // namespace ast

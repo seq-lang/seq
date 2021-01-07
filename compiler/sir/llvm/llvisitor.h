@@ -191,6 +191,7 @@ public:
   void visit(InsertInstr *) override;
   void visit(CallInstr *) override;
   void visit(StackAllocInstr *) override;
+  void visit(TypePropertyInstr *) override;
   void visit(YieldInInstr *) override;
   void visit(TernaryInstr *) override;
   void visit(BreakInstr *) override;
