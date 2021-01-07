@@ -5,7 +5,8 @@ on:
     branches:
       - master
       - develop
-      - gh-actions
+    tags:
+      - '*'
   pull_request:
     branches:
       - develop
@@ -16,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check
-        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        if: contains(github.ref, 'tags/v')
         id: check
         run: echo "::set-output name=MAKE_RELEASE::true"
 
@@ -60,9 +61,15 @@ jobs:
       - name: Main
         uses: ./.github/actions/build-precise
 
+      - name: Load Release URL File
+        if: contains(github.ref, 'tags/v')
+        uses: actions/download-artifact@v1
+        with:
+          name: release_url
+
       - name: Get Release URL
         id: get_release_url
-        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        if: contains(github.ref, 'tags/v')
         run: |
           echo ::set-output name=file_name::${REPOSITORY_NAME##*/}-${TAG_REF_NAME##*/v} # RepositoryName-v1.0.0
           value=`cat release_url/release_url.txt`
@@ -72,14 +79,14 @@ jobs:
           REPOSITORY_NAME: ${{ github.repository }}
 
       - name: Upload Release Asset
-        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        if: contains(github.ref, 'tags/v')
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_release_url.outputs.upload_url }}
-          asset_path: ./seq-darwin-x86_64.tar.gz
-          asset_name: seq-darwin-x86_64.tar.gz
+          asset_path: ./seq-linux-x86_64.tar.gz
+          asset_name: seq-linux-x86_64.tar.gz
           asset_content_type: application/gzip
 
   main:
@@ -188,9 +195,15 @@ jobs:
           du -sh deps
           ls -lah ${SEQ_DEP_ARCHIVE}
 
+      - name: Load Release URL File
+        if: contains(github.ref, 'tags/v')
+        uses: actions/download-artifact@v1
+        with:
+          name: release_url
+
       - name: Get Release URL
         id: get_release_url
-        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v')
+        if: contains(github.ref, 'tags/v')
         run: |
           echo ::set-output name=file_name::${REPOSITORY_NAME##*/}-${TAG_REF_NAME##*/v} # RepositoryName-v1.0.0
           value=`cat release_url/release_url.txt`
@@ -200,7 +213,7 @@ jobs:
           REPOSITORY_NAME: ${{ github.repository }}
 
       - name: Upload Release Asset
-        if: github.ref == 'refs/heads/master' && contains(github.ref, 'tags/v') && startsWith(matrix.os, 'macos')
+        if: contains(github.ref, 'tags/v') && startsWith(matrix.os, 'macos')
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
