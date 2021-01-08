@@ -294,7 +294,9 @@ void TypecheckVisitor::visit(IfStmt *stmt) {
                                                        : move(stmt->ifs[1].suite)});
     stmt->done &= ifs.back().suite->done;
   }
-  if (ifs.size())
+  if (!ifs.empty() && !ifs[0].cond)
+    resultStmt = move(ifs[0].suite);
+  else if (!ifs.empty())
     stmt->ifs = move(ifs);
   else
     resultStmt = transform(N<PassStmt>());

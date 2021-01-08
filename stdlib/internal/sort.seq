@@ -4,7 +4,7 @@ from algorithms.insertionsort import insertion_sort_inplace
 from algorithms.heapsort import heap_sort_inplace
 from algorithms.qsort import qsort_inplace
 
-def sorted[T,S=int](
+def sorted[T,S=None](
     v: Generator[T],
     key: Optional[Function[S,T]] = None,
     algorithm: Optional[str] = None,
@@ -14,7 +14,7 @@ def sorted[T,S=int](
     Return a sorted list of the elements in v
     """
     newlist = [a for a in v]
-    if key:
+    if not isinstance(S, None):
         if algorithm:
             newlist.sort(~key, ~algorithm, reverse)
         else:
@@ -42,19 +42,18 @@ def _sort_list[T,S](self, key: Function[S,T], algorithm: str):
 
 @extend
 class List[T]:
-    def sort[S=int](
+    def sort[S=None](
         self,
         key: Optional[Function[S,T]] = None,
         algorithm: Optional[str] = None,
         reverse: bool = False
     ):
-        def ident[T](x: T):
-            return x
-
         alg = ~algorithm if algorithm else 'pdq'
-        if key:
-            _sort_list(self, ~key, alg)
+        if isinstance(S, None):
+            def id(x: T) -> T: return x
+            _sort_list(self, id, alg)
         else:
-            _sort_list(self, ident[T], alg)
+            assert key
+            _sort_list(self, ~key, alg)
         if reverse:
             self.reverse()

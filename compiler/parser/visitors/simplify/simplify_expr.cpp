@@ -410,13 +410,14 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     if (expr->args.size() != 2 || !expr->args[0].name.empty() ||
         !expr->args[1].name.empty())
       error("isinstance only accepts two arguments");
+    auto lhs = transform(expr->args[0].value.get(), true);
     ExprPtr type;
-    if (expr->args[1].value->isId("Tuple") || expr->args[1].value->isId("tuple"))
+    if (expr->args[1].value->isId("Tuple") || expr->args[1].value->isId("tuple") ||
+        (lhs->isType() && expr->args[1].value->getNone()))
       type = expr->args[1].value->clone();
     else
       type = transformType(expr->args[1].value.get());
-    resultExpr = N<CallExpr>(clone(expr->expr),
-                             transform(expr->args[0].value.get(), true), move(type));
+    resultExpr = N<CallExpr>(clone(expr->expr), move(lhs), move(type));
     resultExpr->isStaticExpr = true;
     return;
   }

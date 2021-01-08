@@ -281,7 +281,10 @@ func_statement:
 func_def:
   | decorator(DEF) ID generic_list? LP FL(COMMA, typed_param) RP func_ret_type?
     { { fn_name = $2; fn_rettyp = $7; fn_generics = opt_val $3 []; fn_args = $5; fn_stmts = []; fn_attrs = $1 } }
-typed_param: ID param_type? default_val? { $loc, { name = $1; typ = $2; default = $3 } }
+typed_param:
+  | MUL? ID param_type? default_val?
+    { let name = match $1 with Some _ -> "*" ^ $2 | None -> $2 in
+      $loc, { name; typ = $3; default = $4 } }
 generic_list: LS FLNE(COMMA, typed_param) RS { $2 }
 default_val: EQ expr { $2 }
 param_type: COLON expr { $2 }

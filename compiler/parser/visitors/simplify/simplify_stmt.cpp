@@ -423,8 +423,10 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     ctx->add(SimplifyItem::Type, g.name, genName, false, g.type != nullptr);
     if (g.type && !g.type->isId("int"))
       error("only integer static generics are supported");
-    newGenerics.emplace_back(
-        Param{genName, transformType(g.type.get()), transform(g.deflt.get(), true)});
+    newGenerics.emplace_back(Param{genName, transformType(g.type.get()),
+                                   g.deflt && g.deflt->getNone()
+                                       ? clone(g.deflt)
+                                       : transform(g.deflt.get(), true)});
   }
   // Parse function arguments and add them to the context.
   vector<Param> args;

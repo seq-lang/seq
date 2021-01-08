@@ -53,7 +53,8 @@ ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes, bool allowVo
     typ |= expr->type;
   }
   realizeType(typ->getClass());
-  if (!expr->isType() && !allowVoid && expr->type->is("void"))
+  if (!expr->isType() && !allowVoid &&
+      (expr->type->is("void") || expr->type->is("T.None")))
     error("expression with void type");
   return move(expr);
 }
@@ -321,12 +322,12 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               auto val = ctx->find(ei->value);
               seqassert(val && val->isStatic(), "invalid static expression");
               auto genTyp = val->type->follow();
-              staticGenerics.emplace_back(
-                  Generic{ei->value, genTyp,
-                          genTyp->getLink() ? genTyp->getLink()->id
-                          : genTyp->getStatic()->explicits.empty()
-                              ? 0
-                              : genTyp->getStatic()->explicits[0].id});
+              staticGenerics.emplace_back(Generic{
+                  ei->value, genTyp,
+                  genTyp->getLink() ? genTyp->getLink()->id
+                                    : genTyp->getStatic()->explicits.empty()
+                                          ? 0
+                                          : genTyp->getStatic()->explicits[0].id});
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -1189,8 +1190,18 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     if (unificationsDone)
       for (int i = 0; i < f->explicits.size(); i++)
         if (ast->generics[i].deflt && f->explicits[i].type->getUnbound()) {
+          LOG("- def: {}", calleeType->toString());
+          for (auto &r : reorderedArgs)
+            LOG("  - {}", r.value->type->toString());
+
           auto deflt = clone(ast->generics[i].deflt);
-          f->explicits[i].type |= transformType(deflt)->getType();
+          if (deflt->getNone())
+            f->explicits[i].type |=
+                ctx->instantiate(getSrcInfo(), ctx->findInternal("T.None"));
+          else
+            f->explicits[i].type |= transformType(deflt)->getType();
+
+          LOG("- def: {} => {}", deflt->toString(), calleeType->toString());
         }
     if (realizeFunc(f))
       expr->expr = transform(expr->expr);
@@ -1235,7 +1246,7 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
     // equality.
     auto oldActivation = ctx->allowActivation;
     ctx->allowActivation = false;
-    expr->args[0].value = transform(expr->args[0].value);
+    expr->args[0].value = transform(expr->args[0].value, true);
     ctx->allowActivation = oldActivation;
     if (auto t = realizeType(expr->args[0].value->getType()))
       expr->args[0].value->type |= t;
@@ -1245,6 +1256,8 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
     } else {
       if (expr->args[1].value->isId("Tuple") || expr->args[1].value->isId("tuple")) {
         return {true, transform(N<BoolExpr>(typ->getClass()->isRecord()))};
+      } else if (expr->args[1].value->getNone() && expr->args[0].value->isType()) {
+        return {true, transform(N<BoolExpr>(typ->is("T.None")))};
       } else {
         ctx->allowActivation = false;
         expr->args[1].value = transformType(expr->args[1].value);
