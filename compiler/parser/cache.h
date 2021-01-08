@@ -19,6 +19,8 @@
 #include "parser/common.h"
 #include "parser/ctx.h"
 
+#include "sir/sir.h"
+
 #define TYPECHECK_MAX_ITERATIONS 100
 #define FILE_GENERATED "<generated>"
 #define MODULE_MAIN "__main__"
@@ -89,7 +91,7 @@ struct Cache {
   /// Absolute path of seqc executable (if available).
   string argv0;
   /// LLVM module.
-  seq::SeqModule *module;
+  seq::ir::IRModulePtr module;
 
   /// Table of imported files that maps an absolute filename to a Import structure.
   /// By convention, the key of Seq standard library is "".
@@ -136,7 +138,7 @@ struct Cache {
       /// A list of field names and realization's realized field types.
       vector<std::pair<string, types::TypePtr>> fields;
       /// LLVM type pointer.
-      seq::types::Type *llvm;
+      seq::ir::types::Type *llvm;
     };
     /// Realization lookup table that maps a realized class name to the corresponding
     /// ClassRealization instance.
@@ -172,8 +174,8 @@ struct Cache {
 
 public:
   explicit Cache(string argv0 = "")
-      : generatedSrcInfoCount(0), unboundCount(0), varCount(0), age(0),
-        testFlags(0), argv0(move(argv0)), module(nullptr) {}
+      : generatedSrcInfoCount(0), unboundCount(0), varCount(0), age(0), testFlags(0),
+        argv0(move(argv0)), module(nullptr) {}
 
   /// Return a uniquely named temporary variable of a format
   /// "{sigil}_{prefix}{counter}". A sigil should be a non-lexable symbol.

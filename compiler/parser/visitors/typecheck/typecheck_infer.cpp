@@ -18,6 +18,8 @@
 #include "parser/visitors/simplify/simplify.h"
 #include "parser/visitors/typecheck/typecheck.h"
 
+#include "sir/types/types.h"
+
 using fmt::format;
 using std::deque;
 using std::dynamic_pointer_cast;
@@ -65,7 +67,7 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
         realizeType(a);
       auto lt = getLLVMType(realizedType.get());
       // Realize fields.
-      vector<seq::types::Type *> typeArgs;
+      vector<const seq::ir::types::Type *> typeArgs;
       vector<string> names;
       for (auto &m : ctx->cache->classes[realizedType->name].fields) {
         auto mt =
@@ -80,9 +82,9 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
         names.emplace_back(m.name);
         typeArgs.emplace_back(getLLVMType(tf->getClass().get()));
       }
-      if (auto cls = dynamic_cast<seq::types::RefType *>(lt))
+      if (auto cls = seq::ir::cast<seq::ir::types::RefType>(lt))
         if (!names.empty())
-          cls->getContents()->setContents(typeArgs, names);
+          cls->getContents()->realize(typeArgs, names);
     }
     return realizedType;
   } catch (exc::ParserException &e) {
@@ -339,7 +341,7 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
 //  return make_pair(oldIter, move(result));
 //}
 
-seq::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
+seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   if (auto l = ctx->cache->classes[t->name].realizations[t->realizeString()].llvm)
     return l;
   auto getLLVM = [&](const TypePtr &tt) {
@@ -351,8 +353,8 @@ seq::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
     return l;
   };
 
-  seq::types::Type *handle = nullptr;
-  vector<seq::types::Type *> types;
+  seq::ir::types::Type *handle = nullptr;
+  vector<const seq::ir::types::Type *> types;
   vector<int> statics;
   for (auto &m : t->explicits)
     if (auto s = m.type->getStatic())
@@ -361,50 +363,51 @@ seq::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
       types.push_back(getLLVM(m.type));
   auto name = t->name;
   if (name == "void") {
-    handle = seq::types::Void;
+    handle = ctx->cache->module->getVoidType();
   } else if (name == "bool") {
-    handle = seq::types::Bool;
+    handle = ctx->cache->module->getBoolType();
   } else if (name == "byte") {
-    handle = seq::types::Byte;
+    handle = ctx->cache->module->getByteType();
   } else if (name == "int") {
-    handle = seq::types::Int;
+    handle = ctx->cache->module->getIntType();
   } else if (name == "float") {
-    handle = seq::types::Float;
+    handle = ctx->cache->module->getFloatType();
   } else if (name == "str") {
-    handle = seq::types::Str;
+    handle = ctx->cache->module->getStringType();
   } else if (name == "Int" || name == "UInt") {
     assert(statics.size() == 1 && types.empty());
-    handle = seq::types::IntNType::get(statics[0], name == "Int");
+    handle = ctx->cache->module->getIntNType(statics[0], name == "Int");
   } else if (name == "Ptr") {
     assert(types.size() == 1 && statics.empty());
-    handle = seq::types::PtrType::get(types[0]);
+    handle = ctx->cache->module->getPointerType(types[0]);
   } else if (name == "Generator") {
     assert(types.size() == 1 && statics.empty());
-    handle = seq::types::GenType::get(types[0]);
+    handle = ctx->cache->module->getGeneratorType(types[0]);
   } else if (name == "Optional") {
     assert(types.size() == 1 && statics.empty());
-    handle = seq::types::OptionalType::get(types[0]);
+    handle = ctx->cache->module->getOptionalType(types[0]);
   } else if (startswith(name, "Function.N")) {
     types.clear();
     for (auto &m : t->args)
       types.push_back(getLLVM(m));
     auto ret = types[0];
     types.erase(types.begin());
-    handle = seq::types::FuncType::get(types, ret);
+    handle = ctx->cache->module->getFuncType(ret, types);
   } else if (t->isRecord()) {
-    vector<seq::types::Type *> typeArgs;
+    vector<const seq::ir::types::Type *> typeArgs;
     vector<string> names;
     for (int ai = 0; ai < t->args.size(); ai++) {
       names.emplace_back(ctx->cache->classes[t->name].fields[ai].name);
       typeArgs.emplace_back(getLLVM(t->args[ai]));
     }
-    handle = seq::types::RecordType::get(typeArgs, names, name);
+    auto record = seq::ir::cast<seq::ir::types::RecordType>(
+        ctx->cache->module->getMemberedType(t->realizeString()));
+    record->realize(typeArgs, names);
+    handle = record;
   } else {
     // Type arguments will be populated afterwards to avoid infinite loop with recursive
     // reference types.
-    auto cls = seq::types::RefType::get(name);
-    cls->setContents(seq::types::RecordType::get({}, {}, ""));
-    handle = cls;
+    handle = ctx->cache->module->getMemberedType(t->realizeString(), true);
   }
   return ctx->cache->classes[t->name].realizations[t->realizeString()].llvm = handle;
 }

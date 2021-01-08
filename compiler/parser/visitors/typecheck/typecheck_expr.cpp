@@ -681,17 +681,13 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   if (expr->member == "__atomic__") {
     expr->type |= ctx->findInternal("bool");
     if (auto t = realizeType(expr->expr->type)) {
-      return transform(N<BoolExpr>(ctx->cache->classes[t->getClass()->name]
-                                       .realizations[t->realizeString()]
-                                       .llvm->isAtomic()));
+      expr->done = true;
     }
     return nullptr;
   } else if (expr->member == "__elemsize__") {
     expr->type |= ctx->findInternal("int");
     if (auto t = realizeType(expr->expr->type)) {
-      return transform(N<IntExpr>(ctx->cache->classes[t->getClass()->name]
-                                      .realizations[t->realizeString()]
-                                      .llvm->size(ctx->cache->module->getModule())));
+      expr->done = true;
     }
     return nullptr;
   }

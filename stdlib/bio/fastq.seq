@@ -75,27 +75,27 @@ class FASTQReader:
         line = 0
         name, read, qual = "", s"", ""
         for a in file._iter():
-            match line % 4:
-                case 0:
-                    if self.validate and a[0] != "@":
-                        raise ValueError(f"sequence name on line {line + 1} of FASTQ does not begin with '@'")
-                    name = copy(a[1:]) if self.copy else a[1:]
-                case 1:
-                    read = self._preprocess_read(a)
-                    if seqs:
-                        yield ("", read, "")
-                case 2:
-                    if self.validate and a[0] != "+":
-                        raise ValueError(f"invalid separator on line {line + 1} of FASTQ")
-                case 3:
-                    if self.validate and len(a) != len(read):
-                        raise ValueError(f"quality and sequence length mismatch on line {line + 1} of FASTQ")
-                    qual = self._preprocess_qual(a)
-                    assert read.len >= 0
-                    if not seqs:
-                        yield (name, read, qual)
-                case _:
-                    assert False
+            x = line % 4
+            if x == 0:
+                if self.validate and a[0] != "@":
+                    raise ValueError(f"sequence name on line {line + 1} of FASTQ does not begin with '@'")
+                name = copy(a[1:]) if self.copy else a[1:]
+            elif x == 1:
+                read = self._preprocess_read(a)
+                if seqs:
+                    yield ("", read, "")
+            elif x == 2:
+                if self.validate and a[0] != "+":
+                    raise ValueError(f"invalid separator on line {line + 1} of FASTQ")
+            elif x == 3:
+                if self.validate and len(a) != len(read):
+                    raise ValueError(f"quality and sequence length mismatch on line {line + 1} of FASTQ")
+                qual = self._preprocess_qual(a)
+                assert read.len >= 0
+                if not seqs:
+                    yield (name, read, qual)
+            else:
+                assert False
             line += 1
 
     def __seqs__(self):

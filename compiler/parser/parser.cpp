@@ -20,6 +20,7 @@
 #include "parser/visitors/format/format.h"
 #include "parser/visitors/simplify/simplify.h"
 #include "parser/visitors/typecheck/typecheck.h"
+#include "sir/sir.h"
 #include "util/fmt/format.h"
 
 int _ocaml_time = 0;
@@ -30,8 +31,9 @@ bool _isTest = false;
 
 namespace seq {
 
-seq::SeqModule *parse(const string &argv0, const string &file, const string &code,
-                      bool isCode, int isTest, int startLine) {
+std::unique_ptr<ir::IRModule> parse(const string &argv0, const string &file,
+                                    const string &code, bool isCode, int isTest,
+                                    int startLine) {
   try {
     auto d = getenv("SEQ_DEBUG");
     if (d) {
@@ -101,7 +103,7 @@ seq::SeqModule *parse(const string &argv0, const string &file, const string &cod
       seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
                             e.getSrcInfo().col);
     }
-    return nullptr;
+    return std::unique_ptr<ir::IRModule>();
   } catch (seq::exc::ParserException &e) {
     for (int i = 0; i < e.messages.size(); i++) {
       if (isTest) {
@@ -112,10 +114,11 @@ seq::SeqModule *parse(const string &argv0, const string &file, const string &cod
                            e.locations[i].col);
       }
     }
-    return nullptr;
+    return std::unique_ptr<ir::IRModule>();
   }
 }
 
+/*
 void execute(seq::SeqModule *module, const vector<string> &args,
              const vector<string> &libs, bool debug) {
   config::config().debug = debug;
@@ -136,6 +139,7 @@ void compile(seq::SeqModule *module, const string &out, bool debug) {
                      e.getSrcInfo().col);
   }
 }
+*/
 
 void generateDocstr(const string &argv0) {
   vector<string> files;

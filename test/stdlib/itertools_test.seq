@@ -90,10 +90,10 @@ def cycle():
 
 @test
 def compress():
-    assert itertools.compress('ABCDEF', [1, 0, 1, 0, 1, 1]) == ['A', 'C', 'E', 'F']
-    assert itertools.compress('ABCDEF', [1, 1, 1, 1, 1, 1]) == ['A', 'B', 'C', 'D', 'E', 'F']
-    assert itertools.compress('ABCDEF', [1, 0, 1]) == ['A', 'C']
-    assert itertools.compress('ABC', [0, 1, 1, 1, 1, 1]) == ['B', 'C']
+    assert list(itertools.compress('ABCDEF', [1, 0, 1, 0, 1, 1])) == ['A', 'C', 'E', 'F']
+    assert list(itertools.compress('ABCDEF', [1, 1, 1, 1, 1, 1])) == ['A', 'B', 'C', 'D', 'E', 'F']
+    assert list(itertools.compress('ABCDEF', [1, 0, 1])) == ['A', 'C']
+    assert list(itertools.compress('ABC', [0, 1, 1, 1, 1, 1])) == ['B', 'C']
 
 @test
 def dropwhile():
