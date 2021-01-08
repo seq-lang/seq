@@ -92,7 +92,7 @@ public:
 LLVMVisitor::LLVMVisitor(bool debug)
     : util::SIRVisitor(), context(), module(), func(nullptr), block(nullptr),
       value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(), trycatch(),
-      debug(debug) {
+      db(debug) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   resetOMPABI();
@@ -111,7 +111,7 @@ void LLVMVisitor::dump(const std::string &filename) {
 }
 
 void LLVMVisitor::applyDebugTransformations() {
-  if (!debug)
+  if (!db.debug)
     return;
   // remove tail calls and fix linkage for stack traces
   for (auto &f : *module) {
@@ -202,7 +202,7 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
   static llvm::OpenMPABI omp;
   builder.tapirTarget = &omp;
 
-  if (!debug) {
+  if (!db.debug) {
     builder.OptLevel = optLevel;
     builder.SizeLevel = sizeLevel;
     builder.Inliner = llvm::createFunctionInliningPass(optLevel, sizeLevel, false);
@@ -231,16 +231,16 @@ void LLVMVisitor::runLLVMPipeline() {
   verify();
   runLLVMOptimizationPasses();
   applyGCTransformations();
-  if (!debug) {
+  if (!db.debug) {
     runLLVMOptimizationPasses();
   }
   verify();
 }
 
-void LLVMVisitor::compile(const std::string &outname) {
+void LLVMVisitor::compile(const std::string &filename) {
   runLLVMPipeline();
   std::error_code err;
-  llvm::raw_fd_ostream stream(outname, err, llvm::sys::fs::F_None);
+  llvm::raw_fd_ostream stream(filename, err, llvm::sys::fs::F_None);
   llvm::WriteBitcodeToFile(module.get(), stream);
   if (err) {
     throw std::runtime_error(err.message());
@@ -252,7 +252,7 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
   runLLVMPipeline();
 
   std::vector<std::string> functionNames;
-  if (debug) {
+  if (db.debug) {
     for (auto &f : *module) {
       functionNames.push_back(f.getName());
     }
@@ -271,7 +271,7 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
     }
   }
 
-  if (debug) {
+  if (db.debug) {
     for (auto &name : functionNames) {
       void *addr = eng->getPointerToNamedFunction(name, /*AbortOnFailure=*/false);
       if (addr)
@@ -283,8 +283,8 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
   delete eng;
 }
 
-llvm::Type *LLVMVisitor::getLLVMType(const types::Type *x) {
-  process(x);
+llvm::Type *LLVMVisitor::getLLVMType(const types::Type *t) {
+  process(t);
   return type;
 }
 

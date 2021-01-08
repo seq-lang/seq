@@ -24,11 +24,15 @@ private:
   };
 
   struct CoroData {
-    // coroutine-specific data
+    /// coroutine promise (where yielded values are stored)
     llvm::Value *promise;
+    /// coroutine handle
     llvm::Value *handle;
+    /// coroutine cleanup block
     llvm::BasicBlock *cleanup;
+    /// coroutine suspend block
     llvm::BasicBlock *suspend;
+    /// coroutine exit block
     llvm::BasicBlock *exit;
   };
 
@@ -39,11 +43,13 @@ private:
   };
 
   struct LoopData : NestableData {
+    /// block to branch to in case of "break"
     llvm::BasicBlock *breakBlock;
+    /// block to branch to in case of "continue"
     llvm::BasicBlock *continueBlock;
 
     LoopData(llvm::BasicBlock *breakBlock, llvm::BasicBlock *continueBlock)
-        : NestableData(), breakBlock(breakBlock), continueBlock(continueBlock){};
+        : NestableData(), breakBlock(breakBlock), continueBlock(continueBlock) {}
   };
 
   struct TryCatchData : NestableData {
@@ -71,7 +77,27 @@ private:
     TryCatchData()
         : NestableData(), exceptionBlock(nullptr), exceptionRouteBlock(nullptr),
           finallyBlock(nullptr), catchTypes(), handlers(), excFlag(nullptr),
-          catchStore(nullptr), delegateDepth(nullptr), retStore(nullptr){};
+          catchStore(nullptr), delegateDepth(nullptr), retStore(nullptr) {}
+  };
+
+  struct DebugInfo {
+    /// LLVM debug info builder
+    std::unique_ptr<llvm::DIBuilder> builder;
+    /// Current compilation unit
+    llvm::DICompileUnit *unit;
+    /// Mapping of file names to LLVM DIFiles
+    std::unordered_map<std::string, llvm::DIFile *> files;
+    /// Mapping of type names to LLVM DITypes
+    std::unordered_map<std::string, llvm::DIType *> types;
+    /// LLVM DIVariables corresponding to IR variables
+    Cache<Var, llvm::DIVariable> vars;
+    /// LLVM DISubprograms corresponding to IR functions
+    Cache<Func, llvm::DISubprogram> funcs;
+    /// Whether we are compiling in debug mode
+    bool debug;
+
+    explicit DebugInfo(bool debug)
+        : builder(), unit(nullptr), files(), types(), vars(), funcs(), debug(debug) {}
   };
 
   /// LLVM context used for compilation
@@ -96,8 +122,8 @@ private:
   std::vector<LoopData> loops;
   /// Try-catch data stack
   std::vector<TryCatchData> trycatch;
-  /// Whether we are compiling in debug mode
-  bool debug;
+  /// Debug information
+  DebugInfo db;
 
   template <typename T> void process(T *x) { x->accept(*this); }
 
@@ -142,13 +168,28 @@ private:
 public:
   LLVMVisitor(bool debug = false);
 
+  /// Performs LLVM's module verification on the contained module.
+  /// Causes an assertion failure if verification fails.
   void verify();
+  /// Dumps the unoptimized module IR to a file.
+  /// @param filename name of file to write IR to
   void dump(const std::string &filename = "_dump.ll");
-  void compile(const std::string &outname);
+  /// Runs optimization passes on module and writes LLVM bitcode
+  /// to the specified file.
+  /// @param filename name of the file to write bitcode to
+  void compile(const std::string &filename);
+  /// Runs optimization passes on module and executes it.
+  /// @param args vector of arguments to program
+  /// @param libs vector of libraries to load
+  /// @param envp program environment
   void run(const std::vector<std::string> &args = {},
            const std::vector<std::string> &libs = {},
            const char *const *envp = nullptr);
-  llvm::Type *getLLVMType(const types::Type *x);
+
+  /// Get LLVM type from IR type
+  /// @param t the IR type
+  /// @return corresponding LLVM type
+  llvm::Type *getLLVMType(const types::Type *t);
 
   void visit(IRModule *) override;
   void visit(BodiedFunc *) override;
