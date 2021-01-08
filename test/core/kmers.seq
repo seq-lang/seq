@@ -136,3 +136,41 @@ def test_base_counts():
     assert (s'A'.bases + s'G'.bases) - s'A'.bases == s'G'.bases
     assert s'A'.bases.add(T=True) - s'A'.bases == s'T'.bases
 test_base_counts()
+
+@test
+def test_kmer_revcomp[K: int](path: str):
+    v1 = []
+    v2 = []
+
+    for x in FASTA(path):
+        for y in x.seq.split(k=K, step=1):
+            if not y.N():
+                v1.append(str(~y).upper())
+
+    for x in FASTA(path):
+        for y in x.seq.kmers[Kmer[K]](step=1):
+            v2.append(str(~y).upper())
+
+    '''
+    if len(v1) == len(v2):
+        for i in range(len(v1)):
+            if v1[i] != v2[i]:
+                print i, v1[i], v2[i]
+    '''
+
+    assert v1 == v2
+
+testfile = 'test/data/MT-Human.fa'
+test_kmer_revcomp[1](testfile)
+test_kmer_revcomp[2](testfile)
+test_kmer_revcomp[3](testfile)
+test_kmer_revcomp[4](testfile)
+test_kmer_revcomp[5](testfile)
+test_kmer_revcomp[25](testfile)
+test_kmer_revcomp[32](testfile)
+test_kmer_revcomp[31](testfile)
+test_kmer_revcomp[33](testfile)
+test_kmer_revcomp[64](testfile)
+test_kmer_revcomp[65](testfile)
+test_kmer_revcomp[129](testfile)
+test_kmer_revcomp[1000](testfile)

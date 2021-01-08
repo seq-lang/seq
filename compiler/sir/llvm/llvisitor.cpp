@@ -1,4 +1,5 @@
-#include "sir/llvm/llvisitor.h"
+#include "llvisitor.h"
+#include "revcomp.h"
 #include "llvm/CodeGen/CommandFlags.def"
 #include <algorithm>
 #include <utility>
@@ -693,175 +694,6 @@ bool internalFuncMatches(const std::string &name, InternalFunc *x) {
   return internalFuncMatches<ParentType, ArgTypes...>(
       name, x, std::make_index_sequence<sizeof...(ArgTypes)>());
 }
-
-// reverse complement
-// TODO: move to Seq
-unsigned revcompBits(unsigned n) {
-  unsigned c1 = (n & (3u << 0u)) << 6u;
-  unsigned c2 = (n & (3u << 2u)) << 2u;
-  unsigned c3 = (n & (3u << 4u)) >> 2u;
-  unsigned c4 = (n & (3u << 6u)) >> 6u;
-  return ~(c1 | c2 | c3 | c4) & 0xffu;
-}
-
-// table mapping 8-bit encoded 4-mers to reverse complement encoded 4-mers
-llvm::GlobalVariable *getRevCompTable(llvm::Module *module,
-                                      const std::string &name = "seq.revcomp_table") {
-  llvm::LLVMContext &context = module->getContext();
-  llvm::Type *ty = llvm::Type::getInt8Ty(context);
-  llvm::GlobalVariable *table = module->getGlobalVariable(name);
-
-  if (!table) {
-    std::vector<llvm::Constant *> v(256, llvm::ConstantInt::get(ty, 0));
-    for (unsigned i = 0; i < v.size(); i++)
-      v[i] = llvm::ConstantInt::get(ty, revcompBits(i));
-
-    auto *arrTy = llvm::ArrayType::get(llvm::Type::getInt8Ty(context), v.size());
-    table = new GlobalVariable(*module, arrTy, true, llvm::GlobalValue::PrivateLinkage,
-                               llvm::ConstantArray::get(arrTy, v), name);
-  }
-
-  return table;
-}
-
-llvm::Value *codegenRevCompByBitShift(const unsigned k, llvm::Value *self,
-                                      llvm::IRBuilder<> &b) {
-  llvm::Type *kmerType = b.getIntNTy(2 * k);
-  llvm::LLVMContext &context = b.getContext();
-
-  unsigned kpow2 = 1;
-  while (kpow2 < k)
-    kpow2 *= 2;
-  const unsigned w = 2 * kpow2;
-
-  llvm::Type *ty = llvm::IntegerType::get(context, w);
-  llvm::Value *comp = b.CreateNot(self);
-  comp = b.CreateZExt(comp, ty);
-  llvm::Value *result = comp;
-
-  for (unsigned i = 2; i <= kpow2; i = i * 2) {
-    llvm::Value *mask = llvm::ConstantInt::get(ty, 0);
-    llvm::Value *bitpattern = llvm::ConstantInt::get(ty, 1);
-    bitpattern = b.CreateShl(bitpattern, i);
-    bitpattern = b.CreateSub(bitpattern, ConstantInt::get(ty, 1));
-
-    unsigned j = 0;
-    while (j < w) {
-      llvm::Value *shift = b.CreateShl(bitpattern, j);
-      mask = b.CreateOr(mask, shift);
-      j += 2 * i;
-    }
-
-    llvm::Value *r1 = b.CreateLShr(result, i);
-    r1 = b.CreateAnd(r1, mask);
-    llvm::Value *r2 = b.CreateAnd(result, mask);
-    r2 = b.CreateShl(r2, i);
-    result = b.CreateOr(r1, r2);
-  }
-
-  if (w != 2 * k) {
-    assert(w > 2 * k);
-    result = b.CreateLShr(result, w - (2 * k));
-    result = b.CreateTrunc(result, kmerType);
-  }
-  return result;
-}
-
-llvm::Value *codegenRevCompByLookup(const unsigned k, llvm::Value *self,
-                                    llvm::IRBuilder<> &b) {
-  Type *kmerType = b.getIntNTy(2 * k);
-  llvm::Module *module = b.GetInsertBlock()->getModule();
-  llvm::Value *table = getRevCompTable(module);
-  llvm::Value *mask = llvm::ConstantInt::get(kmerType, 0xffu);
-  llvm::Value *result = llvm::ConstantInt::get(kmerType, 0);
-
-  // deal with 8-bit chunks:
-  for (unsigned i = 0; i < k / 4; i++) {
-    llvm::Value *slice = b.CreateShl(mask, i * 8);
-    slice = b.CreateAnd(self, slice);
-    slice = b.CreateLShr(slice, i * 8);
-    slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
-
-    llvm::Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
-    sliceRC = b.CreateLoad(sliceRC);
-    sliceRC = b.CreateZExtOrTrunc(sliceRC, kmerType);
-    sliceRC = b.CreateShl(sliceRC, (k - 4 * (i + 1)) * 2);
-    result = b.CreateOr(result, sliceRC);
-  }
-
-  // deal with remaining high bits:
-  unsigned rem = k % 4;
-  if (rem > 0) {
-    mask = llvm::ConstantInt::get(kmerType, (1u << (rem * 2)) - 1);
-    llvm::Value *slice = b.CreateShl(mask, (k - rem) * 2);
-    slice = b.CreateAnd(self, slice);
-    slice = b.CreateLShr(slice, (k - rem) * 2);
-    slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
-
-    llvm::Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
-    sliceRC = b.CreateLoad(sliceRC);
-    sliceRC = b.CreateAShr(sliceRC,
-                           (4 - rem) * 2); // slice isn't full 8-bits, so shift out junk
-    sliceRC = b.CreateZExtOrTrunc(sliceRC, kmerType);
-    sliceRC = b.CreateAnd(sliceRC, mask);
-    result = b.CreateOr(result, sliceRC);
-  }
-
-  return result;
-}
-
-llvm::Value *codegenRevCompBySIMD(const unsigned k, llvm::Value *self,
-                                  llvm::IRBuilder<> &b) {
-  llvm::Type *kmerType = b.getIntNTy(2 * k);
-  llvm::LLVMContext &context = b.getContext();
-  llvm::Value *comp = b.CreateNot(self);
-
-  llvm::Type *ty = kmerType;
-  const unsigned w = ((2 * k + 7) / 8) * 8;
-  const unsigned m = w / 8;
-
-  if (w != 2 * k) {
-    ty = llvm::IntegerType::get(context, w);
-    comp = b.CreateZExt(comp, ty);
-  }
-
-  auto *vecTy = llvm::VectorType::get(b.getInt8Ty(), m);
-  std::vector<unsigned> shufMask;
-  for (unsigned i = 0; i < m; i++)
-    shufMask.push_back(m - 1 - i);
-
-  llvm::Value *vec = llvm::UndefValue::get(llvm::VectorType::get(ty, 1));
-  vec = b.CreateInsertElement(vec, comp, (uint64_t)0);
-  vec = b.CreateBitCast(vec, vecTy);
-  // shuffle reverses bytes
-  vec = b.CreateShuffleVector(vec, UndefValue::get(vecTy), shufMask);
-
-  // shifts reverse 2-bit chunks in each byte
-  llvm::Value *shift1 = llvm::ConstantVector::getSplat(m, b.getInt8(6));
-  llvm::Value *shift2 = llvm::ConstantVector::getSplat(m, b.getInt8(2));
-  llvm::Value *mask1 = llvm::ConstantVector::getSplat(m, b.getInt8(0x0c));
-  llvm::Value *mask2 = llvm::ConstantVector::getSplat(m, b.getInt8(0x30));
-
-  llvm::Value *vec1 = b.CreateLShr(vec, shift1);
-  llvm::Value *vec2 = b.CreateShl(vec, shift1);
-  llvm::Value *vec3 = b.CreateLShr(vec, shift2);
-  llvm::Value *vec4 = b.CreateShl(vec, shift2);
-  vec3 = b.CreateAnd(vec3, mask1);
-  vec4 = b.CreateAnd(vec4, mask2);
-
-  vec = b.CreateOr(vec1, vec2);
-  vec = b.CreateOr(vec, vec3);
-  vec = b.CreateOr(vec, vec4);
-
-  vec = b.CreateBitCast(vec, llvm::VectorType::get(ty, 1));
-  llvm::Value *result = b.CreateExtractElement(vec, (uint64_t)0);
-  if (w != 2 * k) {
-    assert(w > 2 * k);
-    result = b.CreateLShr(result, w - (2 * k));
-    result = b.CreateTrunc(result, kmerType);
-  }
-  return result;
-}
 } // namespace
 
 void LLVMVisitor::visit(InternalFunc *x) {
@@ -883,16 +715,6 @@ void LLVMVisitor::visit(InternalFunc *x) {
   block = llvm::BasicBlock::Create(context, "entry", func);
   llvm::IRBuilder<> builder(block);
   llvm::Value *result = nullptr;
-
-  if (internalFuncMatches<PointerType>("__elemsize__", x)) {
-    auto *pointerType = cast<PointerType>(parentType);
-    result = builder.getInt64(
-        module->getDataLayout().getTypeAllocSize(getLLVMType(pointerType->getBase())));
-  }
-
-  if (internalFuncMatches<PointerType>("__atomic__", x)) {
-    result = builder.getInt8(parentType->isAtomic() ? 1 : 0);
-  }
 
   if (internalFuncMatches<PointerType, IntType>("__new__", x)) {
     auto *pointerType = cast<PointerType>(parentType);
@@ -932,21 +754,7 @@ void LLVMVisitor::visit(InternalFunc *x) {
     result = builder.CreateCall(allocFunc, size);
   }
 
-  else if (internalFuncMatches<RefType, RefType>("__raw__", x)) {
-    result = args[0];
-  }
-
-  else if (internalFuncMatches<GeneratorType, GeneratorType>("done", x)) {
-    llvm::Function *coroResume =
-        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_resume);
-    llvm::Function *coroDone =
-        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_done);
-    builder.CreateCall(coroResume, args[0]);
-    result =
-        builder.CreateZExt(builder.CreateCall(coroDone, args[0]), builder.getInt8Ty());
-  }
-
-  else if (internalFuncMatches<GeneratorType, GeneratorType>("next", x)) {
+  else if (internalFuncMatches<GeneratorType, GeneratorType>("__promise__", x)) {
     auto *generatorType = cast<GeneratorType>(parentType);
     llvm::Type *baseType = getLLVMType(generatorType->getBase());
     llvm::Function *coroPromise =
@@ -955,47 +763,7 @@ void LLVMVisitor::visit(InternalFunc *x) {
         builder.getInt32(module->getDataLayout().getPrefTypeAlignment(baseType));
     llvm::Value *from = builder.getFalse();
     llvm::Value *ptr = builder.CreateCall(coroPromise, {args[0], aln, from});
-    ptr = builder.CreateBitCast(ptr, baseType->getPointerTo());
-    result = builder.CreateLoad(ptr);
-  }
-
-  else if (internalFuncMatches<OptionalType>("__new__", x)) {
-    auto *optionalType = cast<OptionalType>(parentType);
-    if (cast<RefType>(optionalType->getBase())) {
-      result = llvm::ConstantPointerNull::get(builder.getInt8PtrTy());
-    } else {
-      result = llvm::UndefValue::get(getLLVMType(optionalType));
-      result = builder.CreateInsertValue(result, builder.getFalse(), 0);
-    }
-  } else if (internalFuncMatchesIgnoreArgs<OptionalType>("__new__", x)) {
-    assert(args.size() == 1);
-    auto *optionalType = cast<OptionalType>(parentType);
-    if (cast<RefType>(optionalType->getBase())) {
-      result = args[0];
-    } else {
-      result = llvm::UndefValue::get(getLLVMType(optionalType));
-      result = builder.CreateInsertValue(result, builder.getTrue(), 0);
-      result = builder.CreateInsertValue(result, args[0], 1);
-    }
-  }
-
-  else if (internalFuncMatches<OptionalType, OptionalType>("__bool__", x)) {
-    auto *optionalType = cast<OptionalType>(parentType);
-    if (cast<RefType>(optionalType->getBase())) {
-      result = builder.CreateIsNotNull(args[0]);
-    } else {
-      result = builder.CreateExtractValue(args[0], 0);
-    }
-    result = builder.CreateZExt(result, builder.getInt8Ty());
-  }
-
-  else if (internalFuncMatches<OptionalType, OptionalType>("__invert__", x)) {
-    auto *optionalType = cast<OptionalType>(parentType);
-    if (cast<RefType>(optionalType->getBase())) {
-      result = args[0];
-    } else {
-      result = builder.CreateExtractValue(args[0], 1);
-    }
+    result = builder.CreateBitCast(ptr, baseType->getPointerTo());
   }
 
   else if (internalFuncMatchesIgnoreArgs<RecordType>("__new__", x)) {
@@ -1007,30 +775,13 @@ void LLVMVisitor::visit(InternalFunc *x) {
     }
   }
 
-  else if (internalFuncMatches<RecordType, RecordType, IntType>("__getitem__", x)) {
-    // TODO: move to Seq (does not perform bounds check or index correction)
-    auto *recordType = cast<RecordType>(parentType);
-    llvm::Value *storage = builder.CreateAlloca(getLLVMType(recordType));
-    builder.CreateStore(args[0], storage);
-    llvm::Value *ptr = builder.CreateBitCast(
-        storage, getLLVMType(recordType->front().type)->getPointerTo());
-    ptr = builder.CreateGEP(ptr, args[1]);
-    result = builder.CreateLoad(ptr);
-  }
-
   else if (internalFuncMatches<IntNType, IntNType>("__revcomp__", x)) {
     auto *intNType = cast<IntNType>(parentType);
     if (intNType->getLen() % 2 != 0) {
       result = llvm::ConstantAggregateZero::get(getLLVMType(intNType));
     } else {
       const unsigned k = intNType->getLen() / 2;
-      if (k <= 20) {
-        result = codegenRevCompByLookup(k, args[0], builder);
-      } else if (k < 32) {
-        result = codegenRevCompByBitShift(k, args[0], builder);
-      } else {
-        result = codegenRevCompBySIMD(k, args[0], builder);
-      }
+      result = codegenRevCompHeuristic(k, args[0], block);
     }
   }
 
