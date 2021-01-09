@@ -69,6 +69,7 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
       // Realize fields.
       vector<const seq::ir::types::Type *> typeArgs;
       vector<string> names;
+      map<std::string, SrcInfo> memberInfo;
       for (auto &m : ctx->cache->classes[realizedType->name].fields) {
         auto mt =
             ctx->instantiate(realizedType->getSrcInfo(), m.type, realizedType.get());
@@ -81,10 +82,15 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
             .fields.emplace_back(m.name, tf);
         names.emplace_back(m.name);
         typeArgs.emplace_back(getLLVMType(tf->getClass().get()));
+        memberInfo[m.name] = mt->getSrcInfo();
       }
-      if (auto cls = seq::ir::cast<seq::ir::types::RefType>(lt))
-        if (!names.empty())
+      if (auto *cls = seq::ir::cast<seq::ir::types::RefType>(lt))
+        if (!names.empty()) {
           cls->getContents()->realize(typeArgs, names);
+          cls->setAttribute(
+              seq::ir::kMemberAttribute,
+              std::make_unique<seq::ir::MemberAttribute>(std::move(memberInfo)));
+        }
     }
     return realizedType;
   } catch (exc::ParserException &e) {
@@ -396,19 +402,26 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   } else if (t->isRecord()) {
     vector<const seq::ir::types::Type *> typeArgs;
     vector<string> names;
+    map<std::string, SrcInfo> memberInfo;
     for (int ai = 0; ai < t->args.size(); ai++) {
       names.emplace_back(ctx->cache->classes[t->name].fields[ai].name);
       typeArgs.emplace_back(getLLVM(t->args[ai]));
+      memberInfo[ctx->cache->classes[t->name].fields[ai].name] =
+          t->args[ai]->getSrcInfo();
     }
     auto record = seq::ir::cast<seq::ir::types::RecordType>(
         ctx->cache->module->getMemberedType(t->realizeString()));
     record->realize(typeArgs, names);
     handle = record;
+    handle->setAttribute(
+        seq::ir::kMemberAttribute,
+        std::make_unique<seq::ir::MemberAttribute>(std::move(memberInfo)));
   } else {
     // Type arguments will be populated afterwards to avoid infinite loop with recursive
     // reference types.
     handle = ctx->cache->module->getMemberedType(t->realizeString(), true);
   }
+  handle->setSrcInfo(t->getSrcInfo());
   return ctx->cache->classes[t->name].realizations[t->realizeString()].llvm = handle;
 }
 
