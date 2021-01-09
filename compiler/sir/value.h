@@ -25,6 +25,9 @@ public:
   /// @return the value's type
   virtual const types::Type *getType() const = 0;
 
+  /// @return the children of this node
+  virtual std::vector<const Value *> getChildren() const { return {}; }
+
   /// @return a clone of the value
   std::unique_ptr<Value> clone() const { return std::unique_ptr<Value>(doClone()); }
 

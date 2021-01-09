@@ -15,6 +15,13 @@ const char Flow::NodeId = 0;
 
 const char SeriesFlow::NodeId = 0;
 
+std::vector<const Value *> SeriesFlow::getChildren() const {
+  std::vector<const Value *> ret;
+  for (auto *c : *this)
+    ret.push_back(c);
+  return ret;
+}
+
 std::ostream &SeriesFlow::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: [\n{}\n]"), referenceString(),
              fmt::join(util::dereference_adaptor(series.begin()),
@@ -72,6 +79,13 @@ Value *IfFlow::doClone() const {
 
 const char TryCatchFlow::NodeId = 0;
 
+std::vector<const Value *> TryCatchFlow::getChildren() const {
+  std::vector<const Value *> ret;
+  for (auto &c : *this)
+    ret.push_back(c.getHandler());
+  return ret;
+}
+
 std::ostream &TryCatchFlow::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: try {{\n{}\n}}"), referenceString(), *body);
   for (auto &c : catches) {
@@ -95,6 +109,13 @@ Value *TryCatchFlow::doClone() const {
 }
 
 const char UnorderedFlow::NodeId = 0;
+
+std::vector<const Value *> UnorderedFlow::getChildren() const {
+  std::vector<const Value *> ret;
+  for (auto *c : *this)
+    ret.push_back(c);
+  return ret;
+}
 
 std::ostream &UnorderedFlow::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: {{\n{}\n}}"), referenceString(),

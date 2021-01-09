@@ -1,5 +1,6 @@
 #include "instr.h"
 
+#include "constant.h"
 #include "module.h"
 #include "util/iterators.h"
 
@@ -51,9 +52,18 @@ Value *InsertInstr::doClone() const {
 const char CallInstr::NodeId = 0;
 
 const types::Type *CallInstr::getType() const {
+  if (auto *intrinsic = cast<IntrinsicConstant>(func))
+    return intrinsic->getReturnType();
   auto *funcType = func->getType()->as<types::FuncType>();
   assert(funcType);
   return funcType->getReturnType();
+}
+
+std::vector<const Value *> CallInstr::getChildren() const {
+  std::vector<const Value *> ret = {func.get()};
+  for (auto *arg : *this)
+    ret.push_back(arg);
+  return ret;
 }
 
 std::ostream &CallInstr::doFormat(std::ostream &os) const {
@@ -133,6 +143,8 @@ Value *TernaryInstr::doClone() const {
 
 const char ControlFlowInstr::NodeId = 0;
 
+const char UnconditionalControlFlowInstr::NodeId = 0;
+
 const char BreakInstr::NodeId = 0;
 
 std::ostream &BreakInstr::doFormat(std::ostream &os) const {
@@ -141,7 +153,7 @@ std::ostream &BreakInstr::doFormat(std::ostream &os) const {
 }
 
 Value *BreakInstr::doClone() const {
-  return getModule()->Nrs<BreakInstr>(getSrcInfo(), target, getName());
+  return getModule()->Nrs<BreakInstr>(getSrcInfo(), target->clone(), getName());
 }
 
 const char ContinueInstr::NodeId = 0;
@@ -152,7 +164,7 @@ std::ostream &ContinueInstr::doFormat(std::ostream &os) const {
 }
 
 Value *ContinueInstr::doClone() const {
-  return getModule()->Nrs<ContinueInstr>(getSrcInfo(), target, getName());
+  return getModule()->Nrs<ContinueInstr>(getSrcInfo(), target->clone(), getName());
 }
 
 const char ReturnInstr::NodeId = 0;
@@ -169,6 +181,65 @@ std::ostream &ReturnInstr::doFormat(std::ostream &os) const {
 Value *ReturnInstr::doClone() const {
   return getModule()->Nrs<ReturnInstr>(getSrcInfo(), value ? value->clone() : nullptr,
                                        getName());
+}
+
+const char BranchInstr::NodeId = 0;
+
+std::ostream &BranchInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("jmp({})"), target->referenceString());
+  return os;
+}
+
+Value *BranchInstr::doClone() const {
+  return getModule()->Nrs<BranchInstr>(getSrcInfo(), target->clone(), getName());
+}
+
+std::ostream &operator<<(std::ostream &os, const CondBranchInstr::Target &t) {
+  fmt::print(os, FMT_STRING("({}, {})"),
+             t.cond ? fmt::format(FMT_STRING("{}"), *t.cond) : "true", *t.dst);
+  return os;
+}
+
+const char CondBranchInstr::NodeId = 0;
+
+std::vector<const Value *> CondBranchInstr::getChildren() const {
+  std::vector<const Value *> ret;
+  for (auto &t : *this) {
+    ret.push_back(t.getCond());
+    ret.push_back(t.getDst());
+  }
+  return ret;
+}
+
+std::vector<Flow *> CondBranchInstr::getTargets() const {
+  std::vector<Flow *> ret;
+  for (auto &t : targets) {
+    auto *target = t.getDst();
+    if (auto *proxy = cast<ValueProxy>(target)) {
+      auto *flow = cast<Flow>(proxy->getValue());
+      assert(flow);
+      return {const_cast<Flow *>(flow)};
+    } else if (auto *flow = cast<Flow>(target))
+      return {const_cast<Flow *>(flow)};
+    else
+      assert(false);
+  }
+  return ret;
+}
+
+std::ostream &CondBranchInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("cond_jmp({})"),
+             fmt::join(targets.begin(), targets.end(), ", "));
+  return os;
+}
+
+Value *CondBranchInstr::doClone() const {
+  std::vector<Target> newTargets;
+  for (auto &t : targets)
+    newTargets.emplace_back(t.getDst()->clone(), t.getCond()->clone());
+
+  return getModule()->Nrs<CondBranchInstr>(getSrcInfo(), std::move(newTargets),
+                                           getName());
 }
 
 const char YieldInstr::NodeId = 0;
@@ -208,6 +279,38 @@ std::ostream &FlowInstr::doFormat(std::ostream &os) const {
 Value *FlowInstr::doClone() const {
   return getModule()->Nrs<FlowInstr>(getSrcInfo(), flow->clone(), val->clone(),
                                      getName());
+}
+
+std::ostream &operator<<(std::ostream &os, const PhiInstr::Predecessor &p) {
+  fmt::print(os, FMT_STRING("({}, {})"), *p.pred, *p.val);
+  return os;
+}
+
+const char PhiInstr::NodeId = 0;
+
+const types::Type *PhiInstr::getType() const { return front().getVal()->getType(); }
+
+std::vector<const Value *> PhiInstr::getChildren() const {
+  std::vector<const Value *> ret;
+  for (auto &t : *this) {
+    ret.push_back(t.getVal());
+    ret.push_back(t.getPred());
+  }
+  return ret;
+}
+
+std::ostream &PhiInstr::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("phi({})"),
+             fmt::join(predecessors.begin(), predecessors.end(), ", "));
+  return os;
+}
+
+Value *PhiInstr::doClone() const {
+  std::vector<Predecessor> newPreds;
+  for (auto &t : predecessors)
+    newPreds.emplace_back(t.getPred()->clone(), t.getVal()->clone());
+
+  return getModule()->Nrs<PhiInstr>(getSrcInfo(), std::move(newPreds), getName());
 }
 
 } // namespace ir

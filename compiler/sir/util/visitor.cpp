@@ -62,6 +62,10 @@ void SIRVisitor::visit(BreakInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(const BreakInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(ContinueInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(const ContinueInstr *x) { defaultVisit(x); }
+void SIRVisitor::visit(BranchInstr *x) { defaultVisit(x); }
+void SIRVisitor::visit(const BranchInstr *x) { defaultVisit(x); }
+void SIRVisitor::visit(CondBranchInstr *x) { defaultVisit(x); }
+void SIRVisitor::visit(const CondBranchInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(ReturnInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(const ReturnInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(TypePropertyInstr *x) { defaultVisit(x); }
@@ -72,6 +76,8 @@ void SIRVisitor::visit(ThrowInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(const ThrowInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(FlowInstr *x) { defaultVisit(x); }
 void SIRVisitor::visit(const FlowInstr *x) { defaultVisit(x); }
+void SIRVisitor::visit(PhiInstr *x) { defaultVisit(x); }
+void SIRVisitor::visit(const PhiInstr *x) { defaultVisit(x); }
 
 void SIRVisitor::visit(types::PrimitiveType *x) { defaultVisit(x); }
 void SIRVisitor::visit(const types::PrimitiveType *x) { defaultVisit(x); }

@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include "sir/transform/lower_flows.h"
+
 #define SEQ_PATH_ENV_VAR "SEQ_PATH"
 
 using namespace std;
@@ -56,6 +58,10 @@ int main(int argc, char **argv) {
   auto module = parse(argv[0], input.c_str(), "", false, false);
   if (!module)
     return EXIT_FAILURE;
+
+  seq::ir::transform::LowerFlowsVisitor::process(module.get());
+
+  std::cout << *module;
 
   seq::ir::LLVMVisitor visitor(debug.getValue());
   visitor.visit(module.get());

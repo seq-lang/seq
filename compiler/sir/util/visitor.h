@@ -19,6 +19,7 @@
 #define VISIT(x)                                                                       \
   virtual void visit(seq::ir::x *v);                                                   \
   virtual void visit(const seq::ir::x *v)
+
 namespace seq {
 namespace ir {
 
@@ -79,9 +80,12 @@ class TernaryInstr;
 class BreakInstr;
 class ContinueInstr;
 class ReturnInstr;
+class BranchInstr;
+class CondBranchInstr;
 class YieldInstr;
 class ThrowInstr;
 class FlowInstr;
+class PhiInstr;
 
 namespace util {
 
@@ -129,9 +133,12 @@ public:
   VISIT(BreakInstr);
   VISIT(ContinueInstr);
   VISIT(ReturnInstr);
+  VISIT(BranchInstr);
+  VISIT(CondBranchInstr);
   VISIT(YieldInstr);
   VISIT(ThrowInstr);
   VISIT(FlowInstr);
+  VISIT(PhiInstr);
 
   DEFAULT_VISIT(types::Type);
   VISIT(types::PrimitiveType);

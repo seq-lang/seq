@@ -64,6 +64,9 @@ public:
   /// @return iterator beyond the last symbol
   auto end() const { return util::const_raw_ptr_adaptor(symbols.end()); }
 
+  /// @return true if the object is empty
+  bool empty() const { return begin() == end(); }
+
   /// @return a pointer to the first symbol
   Var *front() { return symbols.front().get(); }
   /// @return a pointer to the last symbol
@@ -125,6 +128,14 @@ public:
     auto ret = std::make_unique<DesiredType>(std::forward<Args>(args)...);
     ret->setModule(this);
     ret->setSrcInfo(s->getSrcInfo());
+    return std::move(ret);
+  }
+
+  template <typename DesiredType, typename... Args>
+  std::unique_ptr<DesiredType> Nxs(seq::SrcInfo s, Args &&... args) {
+    auto ret = std::make_unique<DesiredType>(std::forward<Args>(args)...);
+    ret->setModule(this);
+    ret->setSrcInfo(s);
     return std::move(ret);
   }
 

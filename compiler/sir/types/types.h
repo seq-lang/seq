@@ -135,6 +135,9 @@ public:
   /// @return a reference to the last field
   virtual const_reference back() const = 0;
 
+  /// @return true if the object is empty
+  bool empty() const { return begin() == end(); }
+
   /// Changes the body of the membered type.
   /// @param mTypes the new body
   /// @param mNames the new names
@@ -267,6 +270,9 @@ public:
   const_iterator begin() const { return argTypes.begin(); }
   /// @return iterator beyond the last argument
   const_iterator end() const { return argTypes.end(); }
+
+  /// @return true if the object is empty
+  bool empty() const { return begin() == end(); }
 
   /// @return a reference to the first argument
   const_reference front() const { return argTypes.front(); }

@@ -40,6 +40,8 @@ public:
 
   using AcceptorExtend::AcceptorExtend;
 
+  std::vector<const Value *> getChildren() const override;
+
   /// @return an iterator to the first instruction/flow
   auto begin() { return util::raw_ptr_adaptor(series.begin()); }
   /// @return an iterator beyond the last instruction/flow
@@ -48,6 +50,9 @@ public:
   auto begin() const { return util::const_raw_ptr_adaptor(series.begin()); }
   /// @return an iterator beyond the last instruction/flow
   auto end() const { return util::const_raw_ptr_adaptor(series.end()); }
+
+  /// @return true if the object is empty
+  bool empty() const { return begin() == end(); }
 
   /// @return a pointer to the first instruction/flow
   Value *front() { return series.front().get(); }
@@ -100,6 +105,10 @@ public:
   WhileFlow(ValuePtr cond, FlowPtr body, std::string name = "")
       : AcceptorExtend(std::move(name)), cond(std::move(cond)), body(std::move(body)) {}
 
+  std::vector<const Value *> getChildren() const override {
+    return {cond.get(), body.get()};
+  }
+
   /// @return the condition
   Value *getCond() { return cond.get(); }
   /// @return the condition
@@ -145,6 +154,10 @@ public:
   ForFlow(ValuePtr iter, FlowPtr body, Var *var, std::string name = "")
       : AcceptorExtend(std::move(name)), iter(std::move(iter)), body(std::move(body)),
         var(var) {}
+
+  std::vector<const Value *> getChildren() const override {
+    return {iter.get(), body.get()};
+  }
 
   /// @return the iter
   Value *getIter() { return iter.get(); }
@@ -198,6 +211,10 @@ public:
          std::string name = "")
       : AcceptorExtend(std::move(name)), cond(std::move(cond)),
         trueBranch(std::move(trueBranch)), falseBranch(std::move(falseBranch)) {}
+
+  std::vector<const Value *> getChildren() const override {
+    return {cond.get(), trueBranch.get(), falseBranch.get()};
+  }
 
   /// @return the true branch
   Flow *getTrueBranch() { return trueBranch.get(); }
@@ -290,6 +307,8 @@ public:
       : AcceptorExtend(std::move(name)), body(std::move(body)),
         finally(std::move(finally)) {}
 
+  std::vector<const Value *> getChildren() const override;
+
   /// @return the body
   Flow *getBody() { return body.get(); }
   /// @return the body
@@ -314,6 +333,9 @@ public:
   auto begin() const { return catches.begin(); }
   /// @return an iterator beyond the last catch
   auto end() const { return catches.end(); }
+
+  /// @return true if the object is empty
+  bool empty() const { return begin() == end(); }
 
   /// @return a reference to the first catch
   auto &front() { return catches.front(); }
@@ -363,6 +385,8 @@ public:
 
   using AcceptorExtend::AcceptorExtend;
 
+  std::vector<const Value *> getChildren() const override;
+
   /// @return an iterator to the first flow
   auto begin() { return util::raw_ptr_adaptor(series.begin()); }
   /// @return an iterator beyond the last flow
@@ -371,6 +395,9 @@ public:
   auto begin() const { return util::const_raw_ptr_adaptor(series.begin()); }
   /// @return an iterator beyond the last flow
   auto end() const { return util::const_raw_ptr_adaptor(series.end()); }
+
+  /// @return true if the object is empty
+  bool empty() const { return begin() == end(); }
 
   /// @return a pointer to the first flow
   Flow *front() { return series.front().get(); }

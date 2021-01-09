@@ -183,7 +183,8 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/sir/var.h
         compiler/sir/llvm/llvisitor.h
         compiler/sir/llvm/llvm.h
-        compiler/sir/llvm/revcomp.h)
+        compiler/sir/llvm/revcomp.h
+        compiler/sir/transform/lower_flows.h)
 set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/lang/func.cpp
         compiler/lang/lang.cpp
@@ -239,7 +240,8 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/sir/value.cpp
         compiler/sir/var.cpp
         compiler/sir/llvm/llvisitor.cpp
-        compiler/sir/llvm/revcomp.cpp)
+        compiler/sir/llvm/revcomp.cpp
+        compiler/sir/transform/lower_flows.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})

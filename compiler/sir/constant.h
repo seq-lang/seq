@@ -10,7 +10,7 @@ namespace ir {
 class Constant : public AcceptorExtend<Constant, Value> {
 private:
   /// the type
-  types::Type *type;
+  const types::Type *type;
 
 public:
   static const char NodeId;
@@ -18,10 +18,10 @@ public:
   /// Constructs a constant.
   /// @param type the type
   /// @param name the name
-  explicit Constant(types::Type *type, std::string name = "")
+  explicit Constant(const types::Type *type, std::string name = "")
       : AcceptorExtend(std::move(name)), type(type) {}
 
-  types::Type *getType() const override { return type; }
+  const types::Type *getType() const override { return type; }
 };
 
 template <typename ValueType>
@@ -37,7 +37,7 @@ public:
   using AcceptorExtend<TemplatedConstant<ValueType>, Constant>::getSrcInfo;
   using AcceptorExtend<TemplatedConstant<ValueType>, Constant>::getType;
 
-  TemplatedConstant(ValueType v, types::Type *type, std::string name = "")
+  TemplatedConstant(ValueType v, const types::Type *type, std::string name = "")
       : AcceptorExtend<TemplatedConstant<ValueType>, Constant>(type, std::move(name)),
         val(v) {}
 
@@ -72,7 +72,7 @@ private:
 public:
   static const char NodeId;
 
-  TemplatedConstant(std::string v, types::Type *type, std::string name = "")
+  TemplatedConstant(std::string v, const types::Type *type, std::string name = "")
       : AcceptorExtend(type, std::move(name)), val(std::move(v)) {}
 
   /// @return the internal value.
@@ -87,6 +87,58 @@ private:
   Value *doClone() const override {
     return getModule()->Nrs<TemplatedConstant<std::string>>(getSrcInfo(), val,
                                                             getType());
+  }
+};
+
+enum IntrinsicType { NEXT, DONE };
+
+std::ostream &operator<<(std::ostream &os, const IntrinsicType &t);
+
+using IntrinsicConstant = TemplatedConstant<IntrinsicType>;
+
+template <>
+class TemplatedConstant<IntrinsicType>
+    : public AcceptorExtend<TemplatedConstant<IntrinsicType>, Constant> {
+private:
+  IntrinsicType val;
+  const types::Type *returnType;
+
+public:
+  static const char NodeId;
+
+  TemplatedConstant(IntrinsicType v, const types::Type *returnType,
+                    std::string name = "")
+      : AcceptorExtend(nullptr, std::move(name)), val(v), returnType(returnType) {}
+
+  /// @return the internal value.
+  IntrinsicType getVal() { return val; }
+
+  const types::Type *getReturnType() const { return returnType; }
+
+private:
+  std::ostream &doFormat(std::ostream &os) const override {
+    fmt::print(os, "{}", val);
+    return os;
+  }
+
+  Value *doClone() const override {
+    return getModule()->Nrs<TemplatedConstant<IntrinsicType>>(getSrcInfo(), val,
+                                                              getType());
+  }
+};
+
+/// Signifies an undefined value.
+class UndefinedConstant : public AcceptorExtend<UndefinedConstant, Constant> {
+public:
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
+
+private:
+  std::ostream &doFormat(std::ostream &os) const override { return os << "undef"; }
+
+  Value *doClone() const override {
+    return getModule()->Nrs<UndefinedConstant>(getSrcInfo(), getType());
   }
 };
 

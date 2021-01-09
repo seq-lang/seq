@@ -165,8 +165,18 @@ template <typename Desired> const Desired *cast(const IRNode *other) {
   return other != nullptr ? other->as<Desired>() : nullptr;
 }
 
-template <typename Desired> bool isA(IRNode *other) {
+template <typename Desired, typename Node>
+Desired *cast(const std::unique_ptr<Node> &other) {
+  return other != nullptr ? other->template as<Desired>() : nullptr;
+}
+
+template <typename Desired> bool isA(const IRNode *other) {
   return other && other->is<Desired>();
+}
+
+template <typename Desired, typename Node>
+bool isA(const std::unique_ptr<Node> &other) {
+  return other && other->template is<Desired>();
 }
 
 } // namespace ir
