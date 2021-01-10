@@ -24,28 +24,28 @@ private:
   };
 
   struct CoroData {
-    /// coroutine promise (where yielded values are stored)
+    /// Coroutine promise (where yielded values are stored)
     llvm::Value *promise;
-    /// coroutine handle
+    /// Coroutine handle
     llvm::Value *handle;
-    /// coroutine cleanup block
+    /// Coroutine cleanup block
     llvm::BasicBlock *cleanup;
-    /// coroutine suspend block
+    /// Coroutine suspend block
     llvm::BasicBlock *suspend;
-    /// coroutine exit block
+    /// Coroutine exit block
     llvm::BasicBlock *exit;
   };
 
   struct NestableData {
     int sequenceNumber;
 
-    NestableData() : sequenceNumber(-1){};
+    NestableData() : sequenceNumber(-1) {}
   };
 
   struct LoopData : NestableData {
-    /// block to branch to in case of "break"
+    /// Block to branch to in case of "break"
     llvm::BasicBlock *breakBlock;
-    /// block to branch to in case of "continue"
+    /// Block to branch to in case of "continue"
     llvm::BasicBlock *continueBlock;
 
     LoopData(llvm::BasicBlock *breakBlock, llvm::BasicBlock *continueBlock)
@@ -85,23 +85,23 @@ private:
     std::unique_ptr<llvm::DIBuilder> builder;
     /// Current compilation unit
     llvm::DICompileUnit *unit;
-    /// Mapping of file names to LLVM DIFiles
-    std::unordered_map<std::string, llvm::DIFile *> files;
-    /// Mapping of type names to LLVM DITypes
-    std::unordered_map<std::string, llvm::DIType *> types;
-    /// LLVM DIVariables corresponding to IR variables
-    Cache<Var, llvm::DIVariable> vars;
-    /// LLVM DISubprograms corresponding to IR functions
-    Cache<Func, llvm::DISubprogram> funcs;
     /// Whether we are compiling in debug mode
     bool debug;
+    /// Program command-line flags
+    std::string flags;
+    /// Last type that was visited as a LLVM DIType
+    llvm::DIType *type;
 
-    explicit DebugInfo(bool debug)
-        : builder(), unit(nullptr), files(), types(), vars(), funcs(), debug(debug) {}
+    explicit DebugInfo(bool debug, const std::string &flags)
+        : builder(), unit(nullptr), debug(debug), flags(flags), type(nullptr) {}
+
+    llvm::DIFile *getFile(const std::string &path);
   };
 
   /// LLVM context used for compilation
   llvm::LLVMContext context;
+  /// LLVM IR builder used for constructing LLVM IR
+  llvm::IRBuilder<> builder;
   /// Module we are compiling
   std::unique_ptr<llvm::Module> module;
   /// Current function we are compiling
@@ -125,7 +125,9 @@ private:
   /// Debug information
   DebugInfo db;
 
-  template <typename T> void process(T *x) { x->accept(*this); }
+  void setDebugInfoForNode(const IRNode *);
+  void process(IRNode *);
+  void process(const IRNode *);
 
   /// GC allocation functions
   llvm::Function *makeAllocFunc(bool atomic);
@@ -166,7 +168,7 @@ private:
   void runLLVMPipeline();
 
 public:
-  LLVMVisitor(bool debug = false);
+  LLVMVisitor(bool debug = false, const std::string &flags = "");
 
   /// Performs LLVM's module verification on the contained module.
   /// Causes an assertion failure if verification fails.
@@ -190,6 +192,10 @@ public:
   /// @param t the IR type
   /// @return corresponding LLVM type
   llvm::Type *getLLVMType(const types::Type *t);
+  /// Get the LLVM debug info type from the IR type
+  /// @param t the IR type
+  /// @return corresponding LLVM DI type
+  llvm::DIType *getDIType(const types::Type *t);
 
   void visit(IRModule *) override;
   void visit(BodiedFunc *) override;

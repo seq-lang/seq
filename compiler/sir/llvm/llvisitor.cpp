@@ -1,8 +1,15 @@
 #include "llvisitor.h"
+#include "lang/seq.h"
 #include "revcomp.h"
 #include "llvm/CodeGen/CommandFlags.def"
 #include <algorithm>
 #include <utility>
+
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+#define SEQ_VERSION_STRING()                                                           \
+  ("seqc version " STR(SEQ_VERSION_MAJOR) "." STR(SEQ_VERSION_MINOR) "." STR(          \
+      SEQ_VERSION_PATCH))
 
 extern llvm::StructType *IdentTy;
 extern llvm::FunctionType *Kmpc_MicroTy;
@@ -36,6 +43,25 @@ std::string getNameForFunction(Func *x) {
     return x->getUnmangledName();
   } else {
     return x->referenceString();
+  }
+}
+
+std::string getDebugNameForVariable(Var *x) {
+  std::string name = x->getName();
+  auto pos = name.find(".");
+  if (pos != 0 && pos != std::string::npos) {
+    return name.substr(0, pos);
+  } else {
+    return name;
+  }
+}
+
+SrcInfo *getSrcInfo(const IRNode *x) {
+  if (auto *srcInfo = x->getAttribute<SrcInfoAttribute>(kSrcInfoAttribute)) {
+    return &srcInfo->info;
+  } else {
+    static SrcInfo defaultSrcInfo("<internal>", 0, 0, 0, 0);
+    return &defaultSrcInfo;
   }
 }
 
@@ -89,13 +115,45 @@ public:
 };
 } // namespace
 
-LLVMVisitor::LLVMVisitor(bool debug)
-    : util::SIRVisitor(), context(), module(), func(nullptr), block(nullptr),
-      value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(), trycatch(),
-      db(debug) {
+llvm::DIFile *LLVMVisitor::DebugInfo::getFile(const std::string &path) {
+  std::string filename;
+  std::string directory;
+  auto pos = path.find_last_of("/");
+  if (pos != std::string::npos) {
+    filename = path.substr(pos + 1);
+    directory = path.substr(0, pos);
+  } else {
+    filename = path;
+    directory = ".";
+  }
+  return builder->createFile(filename, directory);
+}
+
+LLVMVisitor::LLVMVisitor(bool debug, const std::string &flags)
+    : util::SIRVisitor(), context(), builder(context), module(), func(nullptr),
+      block(nullptr), value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(),
+      trycatch(), db(debug, flags) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   resetOMPABI();
+}
+
+void LLVMVisitor::setDebugInfoForNode(const IRNode *x) {
+  if (!cast<types::Type>(x)) {
+    auto *srcInfo = getSrcInfo(x);
+    builder.SetCurrentDebugLocation(llvm::DILocation::get(
+        context, srcInfo->line, srcInfo->col, func->getSubprogram()));
+  }
+}
+
+void LLVMVisitor::process(IRNode *x) {
+  setDebugInfoForNode(x);
+  x->accept(*this);
+}
+
+void LLVMVisitor::process(const IRNode *x) {
+  setDebugInfoForNode(x);
+  x->accept(*this);
 }
 
 void LLVMVisitor::verify() {
@@ -150,7 +208,7 @@ void LLVMVisitor::applyGCTransformations() {
             if (g->getName() == "__kmpc_omp_task_alloc") {
               llvm::Value *taskSize = call->getArgOperand(3);
               llvm::Value *sharedSize = call->getArgOperand(4);
-              llvm::IRBuilder<> builder(call->getNextNode());
+              builder.SetInsertPoint(call->getNextNode());
               llvm::Value *baseOffset = builder.CreateSub(taskSize, sharedSize);
               llvm::Value *ptr = builder.CreateBitCast(call, builder.getInt8PtrTy());
               llvm::Value *lo = builder.CreateGEP(ptr, baseOffset);
@@ -198,26 +256,28 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
 
   unsigned optLevel = 3;
   unsigned sizeLevel = 0;
-  llvm::PassManagerBuilder builder;
+  llvm::PassManagerBuilder pmb;
   static llvm::OpenMPABI omp;
-  builder.tapirTarget = &omp;
+  pmb.tapirTarget = &omp;
 
   if (!db.debug) {
-    builder.OptLevel = optLevel;
-    builder.SizeLevel = sizeLevel;
-    builder.Inliner = llvm::createFunctionInliningPass(optLevel, sizeLevel, false);
-    builder.DisableUnitAtATime = false;
-    builder.DisableUnrollLoops = false;
-    builder.LoopVectorize = true;
-    builder.SLPVectorize = true;
+    pmb.OptLevel = optLevel;
+    pmb.SizeLevel = sizeLevel;
+    pmb.Inliner = llvm::createFunctionInliningPass(optLevel, sizeLevel, false);
+    pmb.DisableUnitAtATime = false;
+    pmb.DisableUnrollLoops = false;
+    pmb.LoopVectorize = true;
+    pmb.SLPVectorize = true;
+  } else {
+    pmb.OptLevel = 0;
   }
 
   if (tm)
-    tm->adjustPassManager(builder);
+    tm->adjustPassManager(pmb);
 
-  llvm::addCoroutinePassesToExtensionPoints(builder);
-  builder.populateModulePassManager(*pm);
-  builder.populateFunctionPassManager(*fpm);
+  llvm::addCoroutinePassesToExtensionPoints(pmb);
+  pmb.populateModulePassManager(*pm);
+  pmb.populateFunctionPassManager(*fpm);
 
   fpm->doInitialization();
   for (llvm::Function &f : *module)
@@ -286,6 +346,11 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
 llvm::Type *LLVMVisitor::getLLVMType(const types::Type *t) {
   process(t);
   return type;
+}
+
+llvm::DIType *LLVMVisitor::getDIType(const types::Type *t) {
+  process(t);
+  return db.type;
 }
 
 llvm::Function *LLVMVisitor::makeAllocFunc(bool atomic) {
@@ -384,7 +449,7 @@ int LLVMVisitor::getTypeIdx(const types::Type *catchType) {
 
 llvm::Value *LLVMVisitor::call(llvm::Value *callee,
                                llvm::ArrayRef<llvm::Value *> args) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (trycatch.empty()) {
     return builder.CreateCall(callee, args);
   } else {
@@ -434,6 +499,21 @@ void LLVMVisitor::visit(IRModule *x) {
   module->setTargetTriple(
       llvm::EngineBuilder().selectTarget()->getTargetTriple().str());
   module->setDataLayout(llvm::EngineBuilder().selectTarget()->createDataLayout());
+  auto *srcInfo = getSrcInfo(x);
+  module->setSourceFileName(srcInfo->file);
+
+  // debug info setup
+  db.builder = std::make_unique<llvm::DIBuilder>(*module);
+  llvm::DIFile *file = db.getFile(srcInfo->file);
+  db.unit =
+      db.builder->createCompileUnit(llvm::dwarf::DW_LANG_C, file, SEQ_VERSION_STRING(),
+                                    !db.debug, db.flags, /*RV=*/0);
+  module->addModuleFlag(llvm::Module::Warning, "Debug Info Version",
+                        llvm::DEBUG_METADATA_VERSION);
+  // darwin only supports dwarf2
+  if (llvm::Triple(module->getTargetTriple()).isOSDarwin()) {
+    module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", 2);
+  }
 
   // args variable
   Var *argVar = x->getArgVar();
@@ -457,6 +537,17 @@ void LLVMVisitor::visit(IRModule *x) {
             *module.get(), llvmType, false, llvm::GlobalValue::PrivateLinkage,
             llvm::Constant::getNullValue(llvmType), var->getName());
         vars.insert(var, storage);
+
+        // debug info
+        auto *srcInfo = getSrcInfo(var);
+        llvm::DIFile *file = db.getFile(srcInfo->file);
+        llvm::DIScope *scope = db.unit;
+        llvm::DIGlobalVariableExpression *debugVar =
+            db.builder->createGlobalVariableExpression(
+                scope, getDebugNameForVariable(var), var->getName(), file,
+                srcInfo->line, getDIType(var->getType()),
+                /*IsLocalToUnit=*/true);
+        storage->addDebugInfo(debugVar);
       }
     }
   }
@@ -474,7 +565,6 @@ void LLVMVisitor::visit(IRModule *x) {
   process(main);
 
   // build canonical main function
-  llvm::IRBuilder<> builder(context);
   auto *strType =
       llvm::StructType::get(context, {builder.getInt64Ty(), builder.getInt8PtrTy()});
   auto *arrType =
@@ -619,12 +709,24 @@ void LLVMVisitor::visit(IRModule *x) {
 
   builder.SetInsertPoint(exitBlock);
   builder.CreateRet(builder.getInt32(0));
+  db.builder->finalize();
 }
 
 void LLVMVisitor::makeLLVMFunction(Func *x) {
+  auto *srcInfo = getSrcInfo(x);
+  llvm::DIFile *file = db.getFile(srcInfo->file);
+  auto *subroutineType = llvm::cast<llvm::DISubroutineType>(getDIType(x->getType()));
+  llvm::DISubprogram *subprogram = db.builder->createFunction(
+      file, x->getUnmangledName(), getNameForFunction(x), file, srcInfo->line,
+      subroutineType,
+      /*isLocalToUnit=*/true, /*isDefinition=*/true, /*ScopeLine=*/0,
+      llvm::DINode::FlagZero, /*isOptimized=*/!db.debug);
+
   // process LLVM functions in full immediately
   if (auto *llvmFunc = cast<LLVMFunc>(x)) {
     process(llvmFunc);
+    func = module->getFunction(getNameForFunction(x));
+    func->setSubprogram(subprogram);
     return;
   }
 
@@ -640,10 +742,13 @@ void LLVMVisitor::makeLLVMFunction(Func *x) {
   const std::string functionName = getNameForFunction(x);
   func = llvm::cast<llvm::Function>(
       module->getOrInsertFunction(functionName, llvmFuncType));
+  if (!cast<ExternalFunc>(x)) {
+    func->setSubprogram(subprogram);
+  }
 }
 
 void LLVMVisitor::makeYield(llvm::Value *value, bool finalYield) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (value) {
     assert(coro.promise);
     builder.CreateStore(value, coro.promise);
@@ -700,6 +805,8 @@ void LLVMVisitor::visit(InternalFunc *x) {
   using namespace types;
   func = module->getFunction(getNameForFunction(x)); // inserted during module visit
   coro = {};
+  assert(func);
+  setDebugInfoForNode(x);
 
   const Type *parentType = x->getParentType();
   auto *funcType = cast<FuncType>(x->getType());
@@ -713,7 +820,7 @@ void LLVMVisitor::visit(InternalFunc *x) {
     args.push_back(it);
   }
   block = llvm::BasicBlock::Create(context, "entry", func);
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   llvm::Value *result = nullptr;
 
   if (internalFuncMatches<PointerType, IntType>("__new__", x)) {
@@ -888,6 +995,7 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   func = module->getFunction(getNameForFunction(x)); // inserted during module visit
   coro = {};
   assert(func);
+  setDebugInfoForNode(x);
 
   if (x->hasAttribute("export")) {
     func->setLinkage(llvm::GlobalValue::ExternalLinkage);
@@ -906,27 +1014,54 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   auto *returnType = funcType->getReturnType();
   assert(funcType);
   auto *entryBlock = llvm::BasicBlock::Create(context, "entry", func);
-  llvm::IRBuilder<> builder(entryBlock);
+  builder.SetInsertPoint(entryBlock);
+  builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // set up arguments and other symbols
   assert(std::distance(func->arg_begin(), func->arg_end()) ==
          std::distance(x->arg_begin(), x->arg_end()));
+  unsigned argIdx = 0;
   auto argIter = func->arg_begin();
   for (auto varIter = x->arg_begin(); varIter != x->arg_end(); ++varIter) {
     Var *var = *varIter;
     llvm::Value *storage = builder.CreateAlloca(getLLVMType(var->getType()));
     builder.CreateStore(argIter, storage);
     vars.insert(var, storage);
+
+    // debug info
+    auto *srcInfo = getSrcInfo(var);
+    llvm::DIFile *file = db.getFile(srcInfo->file);
+    llvm::DISubprogram *scope = func->getSubprogram();
+    llvm::DILocalVariable *debugVar = db.builder->createParameterVariable(
+        scope, getDebugNameForVariable(var), argIdx, file, srcInfo->line,
+        getDIType(var->getType()), db.debug);
+    db.builder->insertDeclare(
+        storage, debugVar, db.builder->createExpression(),
+        llvm::DILocation::get(context, srcInfo->line, srcInfo->col, scope), entryBlock);
+
     ++argIter;
+    ++argIdx;
   }
 
-  for (auto *symbol : *x) {
-    llvm::Type *llvmType = getLLVMType(symbol->getType());
+  for (auto *var : *x) {
+    llvm::Type *llvmType = getLLVMType(var->getType());
     if (llvmType->isVoidTy()) {
-      vars.insert(symbol, getDummyVoidValue(context));
+      vars.insert(var, getDummyVoidValue(context));
     } else {
       llvm::Value *storage = builder.CreateAlloca(llvmType);
-      vars.insert(symbol, storage);
+      vars.insert(var, storage);
+
+      // debug info
+      auto *srcInfo = getSrcInfo(var);
+      llvm::DIFile *file = db.getFile(srcInfo->file);
+      llvm::DISubprogram *scope = func->getSubprogram();
+      llvm::DILocalVariable *debugVar = db.builder->createAutoVariable(
+          scope, getDebugNameForVariable(var), file, srcInfo->line,
+          getDIType(var->getType()), db.debug);
+      db.builder->insertDeclare(
+          storage, debugVar, db.builder->createExpression(),
+          llvm::DILocation::get(context, srcInfo->line, srcInfo->col, scope),
+          entryBlock);
     }
   }
 
@@ -1039,7 +1174,7 @@ void LLVMVisitor::visit(VarValue *x) {
   } else {
     llvm::Value *varPtr = vars[x->getVar()];
     assert(varPtr);
-    llvm::IRBuilder<> builder(block);
+    builder.SetInsertPoint(block);
     value = builder.CreateLoad(varPtr);
   }
 }
@@ -1057,71 +1192,139 @@ void LLVMVisitor::visit(ValueProxy *x) { assert(0); }
  */
 
 void LLVMVisitor::visit(const types::IntType *x) {
-  type = llvm::Type::getInt64Ty(context);
+  type = builder.getInt64Ty();
+  db.type = db.builder->createBasicType(
+      x->getName(), module->getDataLayout().getTypeAllocSizeInBits(type),
+      llvm::dwarf::DW_ATE_signed);
 }
 
 void LLVMVisitor::visit(const types::FloatType *x) {
-  type = llvm::Type::getDoubleTy(context);
+  type = builder.getDoubleTy();
+  db.type = db.builder->createBasicType(
+      x->getName(), module->getDataLayout().getTypeAllocSizeInBits(type),
+      llvm::dwarf::DW_ATE_float);
 }
 
 void LLVMVisitor::visit(const types::BoolType *x) {
-  type = llvm::Type::getInt8Ty(context);
+  type = builder.getInt8Ty();
+  db.type = db.builder->createBasicType(
+      x->getName(), module->getDataLayout().getTypeAllocSizeInBits(type),
+      llvm::dwarf::DW_ATE_boolean);
 }
 
 void LLVMVisitor::visit(const types::ByteType *x) {
-  type = llvm::Type::getInt8Ty(context);
+  type = builder.getInt8Ty();
+  db.type = db.builder->createBasicType(
+      x->getName(), module->getDataLayout().getTypeAllocSizeInBits(type),
+      llvm::dwarf::DW_ATE_signed_char);
 }
 
 void LLVMVisitor::visit(const types::VoidType *x) {
-  type = llvm::Type::getVoidTy(context);
+  type = builder.getVoidTy();
+  db.type = nullptr;
 }
 
 void LLVMVisitor::visit(const types::RecordType *x) {
   std::vector<llvm::Type *> body;
+  std::vector<llvm::DIType *> diTypes;
   for (const auto &field : *x) {
     body.push_back(getLLVMType(field.type));
+    diTypes.push_back(db.type);
   }
-  type = llvm::StructType::get(context, body);
+  auto *structType = llvm::StructType::get(context, body);
+
+  auto *layout = module->getDataLayout().getStructLayout(structType);
+
+  auto *srcInfo = getSrcInfo(x);
+  auto *memberInfo = x->getAttribute<MemberAttribute>(kMemberAttribute);
+  llvm::DIFile *file = db.getFile(srcInfo->file);
+  std::vector<llvm::Metadata *> members;
+
+  llvm::DICompositeType *diType = db.builder->createStructType(
+      file, x->getName(), file, srcInfo->line, layout->getSizeInBits(),
+      /*AlignInBits=*/0, llvm::DINode::FlagZero, /*DerivedFrom=*/nullptr,
+      db.builder->getOrCreateArray(members));
+
+  unsigned memberIdx = 0;
+  for (const auto &field : *x) {
+    auto *subSrcInfo = srcInfo;
+    auto *subFile = file;
+    if (memberInfo) {
+      auto it = memberInfo->memberSrcInfo.find(field.name);
+      if (it != memberInfo->memberSrcInfo.end()) {
+        subSrcInfo = &it->second;
+        subFile = db.getFile(subSrcInfo->file);
+      }
+    }
+    members.push_back(db.builder->createMemberType(
+        diType, field.name, subFile, subSrcInfo->line,
+        module->getDataLayout().getTypeAllocSizeInBits(body[memberIdx]),
+        /*OffsetInBits=*/0, layout->getElementOffsetInBits(memberIdx),
+        llvm::DINode::FlagZero, diTypes[memberIdx]));
+    ++memberIdx;
+  }
+
+  db.builder->replaceArrays(diType, db.builder->getOrCreateArray(members));
+  type = structType;
+  db.type = diType;
 }
 
 void LLVMVisitor::visit(const types::RefType *x) {
-  type = llvm::Type::getInt8PtrTy(context);
+  llvm::DIType *contentsDebugType = getDIType(x->getContents());
+  type = builder.getInt8PtrTy();
+  db.type = db.builder->createPointerType(
+      contentsDebugType, module->getDataLayout().getTypeAllocSizeInBits(type),
+      /*AlignInBits=*/0, /*DWARFAddressSpace=*/None, x->getName());
 }
 
 void LLVMVisitor::visit(const types::FuncType *x) {
   llvm::Type *returnType = getLLVMType(x->getReturnType());
   std::vector<llvm::Type *> argTypes;
+  std::vector<llvm::Metadata *> diTypes = {db.type};
   for (const auto &argType : *x) {
     argTypes.push_back(getLLVMType(argType));
+    diTypes.push_back(db.type);
   }
   type =
       llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false)->getPointerTo();
+  db.type = db.builder->createSubroutineType(llvm::MDTuple::get(context, diTypes));
 }
 
 void LLVMVisitor::visit(const types::OptionalType *x) {
   if (cast<types::RefType>(x->getBase())) {
-    type = llvm::Type::getInt8PtrTy(context);
+    type = builder.getInt8PtrTy();
   } else {
-    type = llvm::StructType::get(llvm::Type::getInt1Ty(context),
-                                 getLLVMType(x->getBase()));
+    type = llvm::StructType::get(builder.getInt1Ty(), getLLVMType(x->getBase()));
   }
+  db.type = db.builder->createUnspecifiedType(cast<types::Type>(x)->getName()); // TODO
 }
 
 void LLVMVisitor::visit(const types::ArrayType *x) {
-  type = llvm::StructType::get(llvm::Type::getInt64Ty(context),
+  type = llvm::StructType::get(builder.getInt64Ty(),
                                getLLVMType(x->getBase())->getPointerTo());
+  db.type = db.builder->createUnspecifiedType(cast<types::Type>(x)->getName());
 }
 
 void LLVMVisitor::visit(const types::PointerType *x) {
   type = getLLVMType(x->getBase())->getPointerTo();
+  db.type = db.builder->createPointerType(
+      db.type, module->getDataLayout().getTypeAllocSizeInBits(type));
 }
 
 void LLVMVisitor::visit(const types::GeneratorType *x) {
-  type = llvm::Type::getInt8PtrTy(context);
+  type = builder.getInt8PtrTy();
+  db.type =
+      db.builder->createBasicType(cast<types::Type>(x)->getName(),
+                                  module->getDataLayout().getTypeAllocSizeInBits(type),
+                                  llvm::dwarf::DW_ATE_address);
 }
 
 void LLVMVisitor::visit(const types::IntNType *x) {
-  type = llvm::Type::getIntNTy(context, x->getLen());
+  type = builder.getIntNTy(x->getLen());
+  db.type = db.builder->createBasicType(
+      cast<types::Type>(x)->getName(),
+      module->getDataLayout().getTypeAllocSizeInBits(type),
+      x->isSigned() ? llvm::dwarf::DW_ATE_signed : llvm::dwarf::DW_ATE_unsigned);
 }
 
 /*
@@ -1129,22 +1332,22 @@ void LLVMVisitor::visit(const types::IntNType *x) {
  */
 
 void LLVMVisitor::visit(IntConstant *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   value = builder.getInt64(x->getVal());
 }
 
 void LLVMVisitor::visit(FloatConstant *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   value = llvm::ConstantFP::get(builder.getDoubleTy(), x->getVal());
 }
 
 void LLVMVisitor::visit(BoolConstant *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   value = builder.getInt8(x->getVal() ? 1 : 0);
 }
 
 void LLVMVisitor::visit(StringConstant *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   std::string s = x->getVal();
   auto *strVar = new llvm::GlobalVariable(
       *module, llvm::ArrayType::get(builder.getInt8Ty(), s.length() + 1), true,
@@ -1176,7 +1379,7 @@ void LLVMVisitor::visit(IfFlow *x) {
 
   process(x->getCond());
   llvm::Value *cond = value;
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   cond = builder.CreateTrunc(cond, builder.getInt1Ty());
   builder.CreateCondBr(cond, trueBlock, falseBlock);
 
@@ -1202,7 +1405,7 @@ void LLVMVisitor::visit(WhileFlow *x) {
   auto *bodyBlock = llvm::BasicBlock::Create(context, "while.body", func);
   auto *exitBlock = llvm::BasicBlock::Create(context, "while.exit", func);
 
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   builder.CreateBr(condBlock);
 
   block = condBlock;
@@ -1245,7 +1448,7 @@ void LLVMVisitor::visit(ForFlow *x) {
 
   process(x->getIter());
   llvm::Value *iter = value;
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   builder.CreateBr(condBlock);
 
   block = condBlock;
@@ -1299,7 +1502,7 @@ bool anyMatch(const types::Type *type, std::vector<const types::Type *> types) {
 void LLVMVisitor::visit(TryCatchFlow *x) {
   const bool isRoot = trycatch.empty();
   const bool supportBreakAndContinue = !loops.empty();
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   auto *entryBlock = llvm::BasicBlock::Create(context, "trycatch.entry", func);
   builder.CreateBr(entryBlock);
 
@@ -1594,7 +1797,7 @@ void LLVMVisitor::visit(AssignInstr *x) {
   assert(var);
   process(x->getRhs());
   if (var != getDummyVoidValue(context)) {
-    llvm::IRBuilder<> builder(block);
+    builder.SetInsertPoint(block);
     builder.CreateStore(value, var);
   }
 }
@@ -1606,7 +1809,7 @@ void LLVMVisitor::visit(ExtractInstr *x) {
   assert(index >= 0);
 
   process(x->getVal());
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (auto *refType = cast<types::RefType>(memberedType)) {
     value = builder.CreateBitCast(value,
                                   getLLVMType(refType->getContents())->getPointerTo());
@@ -1626,7 +1829,7 @@ void LLVMVisitor::visit(InsertInstr *x) {
   process(x->getRhs());
   llvm::Value *rhs = value;
 
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   lhs = builder.CreateBitCast(lhs, getLLVMType(refType->getContents())->getPointerTo());
   llvm::Value *load = builder.CreateLoad(lhs);
   load = builder.CreateInsertValue(load, rhs, index);
@@ -1634,7 +1837,7 @@ void LLVMVisitor::visit(InsertInstr *x) {
 }
 
 void LLVMVisitor::visit(CallInstr *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   process(x->getFunc());
   llvm::Value *f = value;
 
@@ -1649,7 +1852,7 @@ void LLVMVisitor::visit(CallInstr *x) {
 }
 
 void LLVMVisitor::visit(TypePropertyInstr *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   switch (x->getProperty()) {
   case TypePropertyInstr::Property::SIZEOF:
     value = builder.getInt64(
@@ -1664,7 +1867,7 @@ void LLVMVisitor::visit(TypePropertyInstr *x) {
 }
 
 void LLVMVisitor::visit(YieldInInstr *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (x->isSuspending()) {
     llvm::Function *coroSuspend =
         llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_suspend);
@@ -1696,7 +1899,7 @@ void LLVMVisitor::visit(StackAllocInstr *x) {
     assert(0 && "StackAllocInstr size is not constant");
   }
 
-  llvm::IRBuilder<> builder(func->getEntryBlock().getTerminator());
+  builder.SetInsertPoint(func->getEntryBlock().getTerminator());
   auto *arrType = llvm::StructType::get(builder.getInt64Ty(), baseType->getPointerTo());
   llvm::Value *len = builder.getInt64(size);
   llvm::Value *ptr = builder.CreateAlloca(baseType, len);
@@ -1715,7 +1918,7 @@ void LLVMVisitor::visit(TernaryInstr *x) {
   process(x->getCond());
   llvm::Value *cond = value;
 
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   cond = builder.CreateTrunc(cond, builder.getInt1Ty());
   builder.CreateCondBr(cond, trueBlock, falseBlock);
 
@@ -1743,7 +1946,7 @@ void LLVMVisitor::visit(TernaryInstr *x) {
 
 void LLVMVisitor::visit(BreakInstr *x) {
   assert(!loops.empty());
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (auto *tc = getInnermostTryCatchBeforeLoop()) {
     auto *excStateBreak = builder.getInt8(TryCatchData::State::BREAK);
     builder.CreateStore(excStateBreak, tc->excFlag);
@@ -1756,7 +1959,7 @@ void LLVMVisitor::visit(BreakInstr *x) {
 
 void LLVMVisitor::visit(ContinueInstr *x) {
   assert(!loops.empty());
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (auto *tc = getInnermostTryCatchBeforeLoop()) {
     auto *excStateContinue = builder.getInt8(TryCatchData::State::CONTINUE);
     builder.CreateStore(excStateContinue, tc->excFlag);
@@ -1772,7 +1975,7 @@ void LLVMVisitor::visit(ReturnInstr *x) {
   if (!voidReturn) {
     process(x->getValue());
   }
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (coro.exit) {
     builder.CreateBr(coro.exit);
   } else {
@@ -1809,7 +2012,7 @@ void LLVMVisitor::visit(ThrowInstr *x) {
   llvm::Function *excAllocFunc = makeExcAllocFunc();
   llvm::Function *throwFunc = makeThrowFunc();
   process(x->getValue());
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   llvm::Value *exc = builder.CreateCall(
       excAllocFunc, {builder.getInt32(getTypeIdx(x->getValue()->getType())), value});
   call(throwFunc, exc);
