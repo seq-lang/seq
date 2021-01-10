@@ -23,7 +23,7 @@ def test_suffix_array():
     assert len(s''.suffix_array()) == 0
     assert s'A'.suffix_array() == [0]
 
-    for s in list(FASTA(Q) |> seqs) + list(FASTA(T) |> seqs):
+    for s in list(seqs(FASTA(Q))) + list(seqs(FASTA(T))):
         SA = s.suffix_array()
         assert SA == suffix_array_slow(s)
         s = ~s
@@ -35,7 +35,7 @@ def test_bwt():
     assert s''.bwt() == s'$'
     assert s'A'.bwt() == s'A$'
 
-    for s in list(FASTA(Q) |> seqs) + list(FASTA(T) |> seqs):
+    for s in list(seqs(FASTA(Q))) + list(seqs(FASTA(T))):
         b = str(s.bwt())
         assert b == bwt_slow(s)
         s = ~s
