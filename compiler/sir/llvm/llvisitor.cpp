@@ -174,8 +174,9 @@ void LLVMVisitor::applyDebugTransformations() {
   // remove tail calls and fix linkage for stack traces
   for (auto &f : *module) {
     f.setLinkage(llvm::GlobalValue::ExternalLinkage);
-    if (f.hasFnAttribute(llvm::Attribute::AttrKind::AlwaysInline))
+    if (f.hasFnAttribute(llvm::Attribute::AttrKind::AlwaysInline)) {
       f.removeFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+    }
     f.addFnAttr(llvm::Attribute::AttrKind::NoInline);
     f.setHasUWTable();
     f.addFnAttr("no-frame-pointer-elim", "true");
@@ -193,16 +194,16 @@ void LLVMVisitor::applyDebugTransformations() {
 }
 
 void LLVMVisitor::applyGCTransformations() {
-  auto *addRoots = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_gc_add_roots", llvm::Type::getVoidTy(context),
-      llvm::Type::getInt8PtrTy(context), llvm::Type::getInt8PtrTy(context)));
+  auto *addRoots = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("seq_gc_add_roots", builder.getVoidTy(),
+                                  builder.getInt8PtrTy(), builder.getInt8PtrTy()));
   addRoots->setDoesNotThrow();
 
   // insert add_roots calls where needed
   for (auto &f : *module) {
     for (auto &block : f.getBasicBlockList()) {
       for (auto &inst : block) {
-        if (auto *call = dyn_cast<CallInst>(&inst)) {
+        if (auto *call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
           if (auto *g = call->getCalledFunction()) {
             // tell GC about OpenMP's allocation
             if (g->getName() == "__kmpc_omp_task_alloc") {
@@ -272,16 +273,18 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
     pmb.OptLevel = 0;
   }
 
-  if (tm)
+  if (tm) {
     tm->adjustPassManager(pmb);
+  }
 
   llvm::addCoroutinePassesToExtensionPoints(pmb);
   pmb.populateModulePassManager(*pm);
   pmb.populateFunctionPassManager(*fpm);
 
   fpm->doInitialization();
-  for (llvm::Function &f : *module)
+  for (llvm::Function &f : *module) {
     fpm->run(f);
+  }
   fpm->doFinalization();
   pm->run(*module);
   applyDebugTransformations();
@@ -333,9 +336,9 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
 
   if (db.debug) {
     for (auto &name : functionNames) {
-      void *addr = eng->getPointerToNamedFunction(name, /*AbortOnFailure=*/false);
-      if (addr)
+      if (void *addr = eng->getPointerToNamedFunction(name, /*AbortOnFailure=*/false)) {
         seq_add_symbol(addr, name);
+      }
     }
   }
 
@@ -354,9 +357,9 @@ llvm::DIType *LLVMVisitor::getDIType(const types::Type *t) {
 }
 
 llvm::Function *LLVMVisitor::makeAllocFunc(bool atomic) {
-  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      atomic ? "seq_alloc_atomic" : "seq_alloc", llvm::Type::getInt8PtrTy(context),
-      llvm::Type::getInt64Ty(context)));
+  auto *f = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction(atomic ? "seq_alloc_atomic" : "seq_alloc",
+                                  builder.getInt8PtrTy(), builder.getInt64Ty()));
   f->setDoesNotThrow();
   f->setReturnDoesNotAlias();
   f->setOnlyAccessesInaccessibleMemory();
@@ -365,46 +368,43 @@ llvm::Function *LLVMVisitor::makeAllocFunc(bool atomic) {
 
 llvm::Function *LLVMVisitor::makePersonalityFunc() {
   return llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_personality", llvm::Type::getInt32Ty(context),
-      llvm::Type::getInt32Ty(context), llvm::Type::getInt32Ty(context),
-      llvm::Type::getInt64Ty(context), llvm::Type::getInt8PtrTy(context),
-      llvm::Type::getInt8PtrTy(context)));
+      "seq_personality", builder.getInt32Ty(), builder.getInt32Ty(),
+      builder.getInt32Ty(), builder.getInt64Ty(), builder.getInt8PtrTy(),
+      builder.getInt8PtrTy()));
 }
 
 llvm::Function *LLVMVisitor::makeExcAllocFunc() {
-  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_alloc_exc", llvm::Type::getInt8PtrTy(context),
-      llvm::Type::getInt32Ty(context), llvm::Type::getInt8PtrTy(context)));
+  auto *f = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("seq_alloc_exc", builder.getInt8PtrTy(),
+                                  builder.getInt32Ty(), builder.getInt8PtrTy()));
   f->setDoesNotThrow();
   return f;
 }
 
 llvm::Function *LLVMVisitor::makeThrowFunc() {
   auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_throw", llvm::Type::getVoidTy(context), llvm::Type::getInt8PtrTy(context)));
+      "seq_throw", builder.getVoidTy(), builder.getInt8PtrTy()));
   f->setDoesNotReturn();
   return f;
 }
 
 llvm::Function *LLVMVisitor::makeTerminateFunc() {
-  auto *f = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("seq_terminate", llvm::Type::getVoidTy(context),
-                                  llvm::Type::getInt8PtrTy(context)));
+  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      "seq_terminate", builder.getVoidTy(), builder.getInt8PtrTy()));
   f->setDoesNotReturn();
   return f;
 }
 
 llvm::StructType *LLVMVisitor::getTypeInfoType() {
-  return llvm::StructType::get(llvm::Type::getInt32Ty(context));
+  return llvm::StructType::get(builder.getInt32Ty());
 }
 
 llvm::StructType *LLVMVisitor::getPadType() {
-  return llvm::StructType::get(llvm::Type::getInt8PtrTy(context),
-                               llvm::Type::getInt32Ty(context));
+  return llvm::StructType::get(builder.getInt8PtrTy(), builder.getInt32Ty());
 }
 
 llvm::StructType *LLVMVisitor::getExceptionType() {
-  return llvm::StructType::get(getTypeInfoType(), llvm::Type::getInt8PtrTy(context));
+  return llvm::StructType::get(getTypeInfoType(), builder.getInt8PtrTy());
 }
 
 namespace {
@@ -429,13 +429,11 @@ llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(const std::string &name) {
   const std::string typeVarName = "seq.typeidx." + (name.empty() ? "<all>" : name);
   llvm::GlobalVariable *tidx = module->getGlobalVariable(typeVarName);
   int idx = typeIdxLookup(name);
-  if (!tidx)
+  if (!tidx) {
     tidx = new llvm::GlobalVariable(
         *module.get(), typeInfoType, true, llvm::GlobalValue::PrivateLinkage,
-        llvm::ConstantStruct::get(
-            typeInfoType, llvm::ConstantInt::get(llvm::Type::getInt32Ty(context),
-                                                 (uint64_t)idx, false)),
-        typeVarName);
+        llvm::ConstantStruct::get(typeInfoType, builder.getInt32(idx)), typeVarName);
+  }
   return tidx;
 }
 
@@ -1231,10 +1229,9 @@ void LLVMVisitor::visit(const types::RecordType *x) {
     body.push_back(getLLVMType(field.type));
     diTypes.push_back(db.type);
   }
+
   auto *structType = llvm::StructType::get(context, body);
-
   auto *layout = module->getDataLayout().getStructLayout(structType);
-
   auto *srcInfo = getSrcInfo(x);
   auto *memberInfo = x->getAttribute<MemberAttribute>(kMemberAttribute);
   llvm::DIFile *file = db.getFile(srcInfo->file);
@@ -1259,7 +1256,7 @@ void LLVMVisitor::visit(const types::RecordType *x) {
     members.push_back(db.builder->createMemberType(
         diType, field.name, subFile, subSrcInfo->line,
         module->getDataLayout().getTypeAllocSizeInBits(body[memberIdx]),
-        /*OffsetInBits=*/0, layout->getElementOffsetInBits(memberIdx),
+        /*AlignInBits=*/0, layout->getElementOffsetInBits(memberIdx),
         llvm::DINode::FlagZero, diTypes[memberIdx]));
     ++memberIdx;
   }
@@ -1272,9 +1269,8 @@ void LLVMVisitor::visit(const types::RecordType *x) {
 void LLVMVisitor::visit(const types::RefType *x) {
   llvm::DIType *contentsDebugType = getDIType(x->getContents());
   type = builder.getInt8PtrTy();
-  db.type = db.builder->createPointerType(
-      contentsDebugType, module->getDataLayout().getTypeAllocSizeInBits(type),
-      /*AlignInBits=*/0, /*DWARFAddressSpace=*/None, x->getName());
+  db.type = db.builder->createReferenceType(llvm::dwarf::DW_TAG_reference_type,
+                                            contentsDebugType);
 }
 
 void LLVMVisitor::visit(const types::FuncType *x) {
@@ -1292,11 +1288,40 @@ void LLVMVisitor::visit(const types::FuncType *x) {
 
 void LLVMVisitor::visit(const types::OptionalType *x) {
   if (cast<types::RefType>(x->getBase())) {
-    type = builder.getInt8PtrTy();
+    process(x->getBase());
   } else {
-    type = llvm::StructType::get(builder.getInt1Ty(), getLLVMType(x->getBase()));
+    auto *baseType = getLLVMType(x->getBase());
+    auto *structType = llvm::StructType::get(builder.getInt1Ty(), baseType);
+    auto *layout = module->getDataLayout().getStructLayout(structType);
+    auto *srcInfo = getSrcInfo(x);
+    auto i1SizeInBits =
+        module->getDataLayout().getTypeAllocSizeInBits(builder.getInt1Ty());
+    auto *i1DebugType =
+        db.builder->createBasicType("i1", i1SizeInBits, llvm::dwarf::DW_ATE_boolean);
+    llvm::DIFile *file = db.getFile(srcInfo->file);
+    std::vector<llvm::Metadata *> members;
+
+    llvm::DICompositeType *diType = db.builder->createStructType(
+        file, cast<types::Type>(x)->getName(), file, srcInfo->line,
+        layout->getSizeInBits(),
+        /*AlignInBits=*/0, llvm::DINode::FlagZero, /*DerivedFrom=*/nullptr,
+        db.builder->getOrCreateArray(members));
+
+    members.push_back(db.builder->createMemberType(
+        diType, "has", file, srcInfo->line, i1SizeInBits,
+        /*AlignInBits=*/0, layout->getElementOffsetInBits(0), llvm::DINode::FlagZero,
+        i1DebugType));
+
+    members.push_back(db.builder->createMemberType(
+        diType, "val", file, srcInfo->line,
+        module->getDataLayout().getTypeAllocSizeInBits(baseType),
+        /*AlignInBits=*/0, layout->getElementOffsetInBits(1), llvm::DINode::FlagZero,
+        db.type));
+
+    db.builder->replaceArrays(diType, db.builder->getOrCreateArray(members));
+    type = structType;
+    db.type = diType;
   }
-  db.type = db.builder->createUnspecifiedType(cast<types::Type>(x)->getName()); // TODO
 }
 
 void LLVMVisitor::visit(const types::ArrayType *x) {
