@@ -157,14 +157,14 @@ void LLVMVisitor::process(const IRNode *x) {
 }
 
 void LLVMVisitor::verify() {
-  const bool broken = llvm::verifyModule(*module.get(), &llvm::errs());
+  const bool broken = llvm::verifyModule(*module, &llvm::errs());
   assert(!broken);
 }
 
 void LLVMVisitor::dump(const std::string &filename) {
   auto fo = fopen(filename.c_str(), "w");
   llvm::raw_fd_ostream fout(fileno(fo), true);
-  fout << *module.get();
+  fout << *module;
   fout.close();
 }
 
@@ -431,7 +431,7 @@ llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(const std::string &name) {
   int idx = typeIdxLookup(name);
   if (!tidx) {
     tidx = new llvm::GlobalVariable(
-        *module.get(), typeInfoType, true, llvm::GlobalValue::PrivateLinkage,
+        *module, typeInfoType, /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
         llvm::ConstantStruct::get(typeInfoType, builder.getInt32(idx)), typeVarName);
   }
   return tidx;
@@ -517,7 +517,7 @@ void LLVMVisitor::visit(IRModule *x) {
   Var *argVar = x->getArgVar();
   llvm::Type *argVarType = getLLVMType(argVar->getType());
   auto *argStorage = new llvm::GlobalVariable(
-      *module.get(), argVarType, false, llvm::GlobalValue::PrivateLinkage,
+      *module, argVarType, /*isConstant=*/false, llvm::GlobalValue::PrivateLinkage,
       llvm::Constant::getNullValue(argVarType), argVar->getName());
   vars.insert(argVar, argStorage);
 
@@ -532,7 +532,8 @@ void LLVMVisitor::visit(IRModule *x) {
         vars.insert(var, getDummyVoidValue(context));
       } else {
         auto *storage = new llvm::GlobalVariable(
-            *module.get(), llvmType, false, llvm::GlobalValue::PrivateLinkage,
+            *module, llvmType, /*isConstant=*/false,
+            llvm::GlobalVariable::InternalLinkage,
             llvm::Constant::getNullValue(llvmType), var->getName());
         vars.insert(var, storage);
 
@@ -1375,9 +1376,9 @@ void LLVMVisitor::visit(StringConstant *x) {
   builder.SetInsertPoint(block);
   std::string s = x->getVal();
   auto *strVar = new llvm::GlobalVariable(
-      *module, llvm::ArrayType::get(builder.getInt8Ty(), s.length() + 1), true,
-      llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::getString(context, s),
-      "str_literal");
+      *module, llvm::ArrayType::get(builder.getInt8Ty(), s.length() + 1),
+      /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
+      llvm::ConstantDataArray::getString(context, s), "str_literal");
   auto *strType = llvm::StructType::get(builder.getInt64Ty(), builder.getInt8PtrTy());
   llvm::Value *ptr = builder.CreateBitCast(strVar, builder.getInt8PtrTy());
   llvm::Value *len = builder.getInt64(s.length());
