@@ -5,9 +5,7 @@
 namespace seq {
 namespace ir {
 
-const std::string kFuncAttribute = "funcAttribute";
-const std::string kMemberAttribute = "memberAttribute";
-const std::string kSrcInfoAttribute = "srcInfoAttribute";
+const std::string FuncAttribute::AttributeName = "funcAttribute";
 
 bool FuncAttribute::has(const std::string &val) const {
   return attributes.find(val) != attributes.end();
@@ -21,6 +19,8 @@ std::ostream &FuncAttribute::doFormat(std::ostream &os) const {
   return os;
 }
 
+const std::string MemberAttribute::AttributeName = "memberAttribute";
+
 std::ostream &MemberAttribute::doFormat(std::ostream &os) const {
   std::vector<std::string> strings;
   for (auto &val : memberSrcInfo)
@@ -28,6 +28,8 @@ std::ostream &MemberAttribute::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("({})"), fmt::join(strings.begin(), strings.end(), ","));
   return os;
 }
+
+const std::string SrcInfoAttribute::AttributeName = "srcInfoAttribute";
 
 } // namespace ir
 } // namespace seq

@@ -57,7 +57,7 @@ std::string getDebugNameForVariable(Var *x) {
 }
 
 SrcInfo *getSrcInfo(const IRNode *x) {
-  if (auto *srcInfo = x->getAttribute<SrcInfoAttribute>(kSrcInfoAttribute)) {
+  if (auto *srcInfo = x->getAttribute<SrcInfoAttribute>()) {
     return &srcInfo->info;
   } else {
     static SrcInfo defaultSrcInfo("<internal>", 0, 0, 0, 0);
@@ -996,15 +996,16 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   assert(func);
   setDebugInfoForNode(x);
 
-  if (x->hasAttribute("export")) {
+  auto *fnAttributes = x->getAttribute<FuncAttribute>();
+  if (fnAttributes && fnAttributes->has("export")) {
     func->setLinkage(llvm::GlobalValue::ExternalLinkage);
   } else {
     func->setLinkage(llvm::GlobalValue::PrivateLinkage);
   }
-  if (x->hasAttribute("inline")) {
+  if (fnAttributes && fnAttributes->has("inline")) {
     func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
   }
-  if (x->hasAttribute("noinline")) {
+  if (fnAttributes && fnAttributes->has("noinline")) {
     func->addFnAttr(llvm::Attribute::AttrKind::NoInline);
   }
   func->setPersonalityFn(makePersonalityFunc());
@@ -1234,7 +1235,7 @@ void LLVMVisitor::visit(const types::RecordType *x) {
   auto *structType = llvm::StructType::get(context, body);
   auto *layout = module->getDataLayout().getStructLayout(structType);
   auto *srcInfo = getSrcInfo(x);
-  auto *memberInfo = x->getAttribute<MemberAttribute>(kMemberAttribute);
+  auto *memberInfo = x->getAttribute<MemberAttribute>();
   llvm::DIFile *file = db.getFile(srcInfo->file);
   std::vector<llvm::Metadata *> members;
 

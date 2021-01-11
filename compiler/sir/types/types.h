@@ -255,7 +255,7 @@ public:
   /// @param rType the function's return type
   /// @param argTypes the function's arg types
   FuncType(const Type *rType, std::vector<const Type *> argTypes)
-      : AcceptorExtend(getName(rType, argTypes)), rType(rType),
+      : AcceptorExtend(getInstanceName(rType, argTypes)), rType(rType),
         argTypes(std::move(argTypes)) {}
 
   bool isAtomic() const override { return false; }
@@ -273,8 +273,8 @@ public:
   /// @return a reference to the last argument
   const_reference back() const { return argTypes.back(); }
 
-  static std::string getName(const Type *rType,
-                             const std::vector<const Type *> &argTypes);
+  static std::string getInstanceName(const Type *rType,
+                                     const std::vector<const Type *> &argTypes);
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -308,11 +308,12 @@ public:
 
   /// Constructs a pointer type.
   /// @param base the type's base
-  explicit PointerType(const Type *base) : AcceptorExtend(getName(base), base) {}
+  explicit PointerType(const Type *base)
+      : AcceptorExtend(getInstanceName(base), base) {}
 
   bool isAtomic() const override { return false; }
 
-  static std::string getName(const Type *base);
+  static std::string getInstanceName(const Type *base);
 };
 
 /// Type of an optional containing another SIR type
@@ -322,13 +323,14 @@ public:
 
   /// Constructs an optional type.
   /// @param base the type's base
-  explicit OptionalType(const Type *base) : AcceptorExtend(getName(base), base) {}
+  explicit OptionalType(const Type *base)
+      : AcceptorExtend(getInstanceName(base), base) {}
 
   bool isAtomic() const override { return getBase()->isAtomic(); }
 
   void accept(util::SIRVisitor &v) override { v.visit(this); }
 
-  static std::string getName(const Type *base);
+  static std::string getInstanceName(const Type *base);
 };
 
 /// Type of an array containing another SIR type
@@ -352,7 +354,7 @@ public:
 
   void accept(util::SIRVisitor &v) override { v.visit(this); }
 
-  static std::string getName(const Type *base);
+  static std::string getInstanceName(const Type *base);
 };
 
 /// Type of a generator yielding another SIR type
@@ -362,11 +364,12 @@ public:
 
   /// Constructs a generator type.
   /// @param base the type's base
-  explicit GeneratorType(const Type *base) : AcceptorExtend(getName(base), base) {}
+  explicit GeneratorType(const Type *base)
+      : AcceptorExtend(getInstanceName(base), base) {}
 
   bool isAtomic() const override { return false; }
 
-  static std::string getName(const Type *base);
+  static std::string getInstanceName(const Type *base);
 };
 
 /// Type of a variably sized integer
@@ -386,7 +389,7 @@ public:
   /// @param len the length of the integer
   /// @param sign true if signed, false otherwise
   IntNType(unsigned len, bool sign)
-      : AcceptorExtend(getName(len, sign)), len(len), sign(sign) {}
+      : AcceptorExtend(getInstanceName(len, sign)), len(len), sign(sign) {}
 
   bool isAtomic() const override { return true; }
 
@@ -396,9 +399,9 @@ public:
   bool isSigned() const { return sign; }
 
   /// @return the name of the opposite signed corresponding type
-  std::string oppositeSignName() const { return getName(len, !sign); }
+  std::string oppositeSignName() const { return getInstanceName(len, !sign); }
 
-  static std::string getName(unsigned len, bool sign);
+  static std::string getInstanceName(unsigned len, bool sign);
 };
 
 } // namespace types

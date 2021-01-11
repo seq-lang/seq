@@ -88,23 +88,25 @@ public:
   virtual void accept(util::SIRVisitor &v) const = 0;
 
   /// Sets an attribute
-  /// @param key the attribute's key
   /// @param value the attribute
-  void setAttribute(const std::string &key, AttributePtr value) {
-    kvStore[key] = std::move(value);
+  template <typename AttributeType>
+  void setAttribute(std::unique_ptr<AttributeType> value) {
+    kvStore[AttributeType::AttributeName] = std::move(value);
   }
 
-  /// @return true if the key is in the store
-  bool hasAttribute(const std::string &key) const {
-    return kvStore.find(key) != kvStore.end();
+  /// @return true if the attribute is in the store
+  template <typename AttributeType> bool hasAttribute() const {
+    return hasAttribute(AttributeType::AttributeName);
   }
 
-  /// Gets an attribute static casted to the desired type.
-  /// @param key the key
+  /// @param n the name
+  /// @return true if the attribute is in the store
+  bool hasAttribute(const std::string &n) { return kvStore.find(n) != kvStore.end(); }
+
+  /// Gets the appropriate attribute.
   /// @tparam AttributeType the return type
-  template <typename AttributeType = Attribute>
-  AttributeType *getAttribute(const std::string &key) const {
-    auto it = kvStore.find(key);
+  template <typename AttributeType> AttributeType *getAttribute() const {
+    auto it = kvStore.find(AttributeType::AttributeName);
     return it != kvStore.end() ? static_cast<AttributeType *>(it->second.get())
                                : nullptr;
   }
@@ -112,13 +114,12 @@ public:
   /// Helper to add source information.
   /// @param the source information
   void setSrcInfo(seq::SrcInfo s) {
-    setAttribute(kSrcInfoAttribute, std::make_unique<SrcInfoAttribute>(std::move(s)));
+    setAttribute(std::make_unique<SrcInfoAttribute>(std::move(s)));
   }
   /// @return the src info
   seq::SrcInfo getSrcInfo() const {
-    return getAttribute<SrcInfoAttribute>(kSrcInfoAttribute)
-               ? getAttribute<SrcInfoAttribute>(kSrcInfoAttribute)->info
-               : seq::SrcInfo();
+    return getAttribute<SrcInfoAttribute>() ? getAttribute<SrcInfoAttribute>()->info
+                                            : seq::SrcInfo();
   }
 
   /// @return a text representation of a reference to the object
