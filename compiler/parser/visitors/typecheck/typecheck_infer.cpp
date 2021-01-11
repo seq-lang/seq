@@ -88,7 +88,6 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
         if (!names.empty()) {
           cls->getContents()->realize(typeArgs, names);
           cls->setAttribute(
-              seq::ir::kMemberAttribute,
               std::make_unique<seq::ir::MemberAttribute>(std::move(memberInfo)));
         }
     }
@@ -414,7 +413,6 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
     record->realize(typeArgs, names);
     handle = record;
     handle->setAttribute(
-        seq::ir::kMemberAttribute,
         std::make_unique<seq::ir::MemberAttribute>(std::move(memberInfo)));
   } else {
     // Type arguments will be populated afterwards to avoid infinite loop with recursive

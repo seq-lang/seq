@@ -563,7 +563,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
       ctx->addScope();
 
       f->realize(cast<ir::types::FuncType>(funcType), names);
-      f->setAttribute(kFuncAttribute, make_unique<FuncAttribute>(ast->attributes));
+      f->setAttribute(make_unique<FuncAttribute>(ast->attributes));
       for (auto &a : ast->attributes) {
         if (a.first == "atomic")
           ctx->setFlag("atomic");

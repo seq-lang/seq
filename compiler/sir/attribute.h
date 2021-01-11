@@ -15,10 +15,6 @@
 namespace seq {
 namespace ir {
 
-extern const std::string kFuncAttribute;
-extern const std::string kMemberAttribute;
-extern const std::string kSrcInfoAttribute;
-
 /// Base for SIR attributes.
 struct Attribute {
   virtual ~Attribute() noexcept = default;
@@ -35,6 +31,8 @@ using AttributePtr = std::unique_ptr<Attribute>;
 
 /// Attribute containing SrcInfo
 struct SrcInfoAttribute : public Attribute {
+  static const std::string AttributeName;
+
   /// source info
   seq::SrcInfo info;
 
@@ -48,6 +46,8 @@ struct SrcInfoAttribute : public Attribute {
 
 /// Attribute containing function information
 struct FuncAttribute : public Attribute {
+  static const std::string AttributeName;
+
   /// attributes map
   std::map<std::string, std::string> attributes;
 
@@ -65,6 +65,8 @@ struct FuncAttribute : public Attribute {
 
 /// Attribute containing type member information
 struct MemberAttribute : public Attribute {
+  static const std::string AttributeName;
+
   /// member source info map
   std::map<std::string, SrcInfo> memberSrcInfo;
 

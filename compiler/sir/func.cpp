@@ -46,7 +46,8 @@ Var *Func::getArgVar(const std::string &n) {
 const char BodiedFunc::NodeId = 0;
 
 std::string BodiedFunc::getUnmangledName() const {
-  return builtin ? ast::split(getName(), '.').back() : getName();
+  auto split = ast::split(getName(), '.');
+  return builtin ? split.back() : split[split.size() - 1];
 }
 
 std::ostream &BodiedFunc::doFormat(std::ostream &os) const {
