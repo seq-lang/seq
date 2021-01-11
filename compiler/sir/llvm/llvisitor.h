@@ -2,6 +2,7 @@
 
 #include "llvm.h"
 #include "sir/sir.h"
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -89,11 +90,9 @@ private:
     bool debug;
     /// Program command-line flags
     std::string flags;
-    /// Last type that was visited as a LLVM DIType
-    llvm::DIType *type;
 
     explicit DebugInfo(bool debug, const std::string &flags)
-        : builder(), unit(nullptr), debug(debug), flags(flags), type(nullptr) {}
+        : builder(), unit(nullptr), debug(debug), flags(flags) {}
 
     llvm::DIFile *getFile(const std::string &path);
   };
@@ -110,8 +109,6 @@ private:
   llvm::BasicBlock *block;
   /// Last compiled value
   llvm::Value *value;
-  /// LLVM type that was just translated from the IR type
-  llvm::Type *type;
   /// LLVM values corresponding to IR variables
   Cache<Var, llvm::Value> vars;
   /// LLVM functions corresponding to IR functions
@@ -125,6 +122,9 @@ private:
   /// Debug information
   DebugInfo db;
 
+  llvm::DIType *
+  getDITypeHelper(const types::Type *t,
+                  std::unordered_map<std::string, llvm::DICompositeType *> &cache);
   void setDebugInfoForNode(const IRNode *);
   void process(IRNode *);
   void process(const IRNode *);
@@ -206,20 +206,6 @@ public:
   void visit(VarValue *) override;
   void visit(PointerValue *) override;
   void visit(ValueProxy *) override;
-
-  void visit(const types::IntType *) override;
-  void visit(const types::FloatType *) override;
-  void visit(const types::BoolType *) override;
-  void visit(const types::ByteType *) override;
-  void visit(const types::VoidType *) override;
-  void visit(const types::RecordType *) override;
-  void visit(const types::RefType *) override;
-  void visit(const types::FuncType *) override;
-  void visit(const types::OptionalType *) override;
-  void visit(const types::ArrayType *) override;
-  void visit(const types::PointerType *) override;
-  void visit(const types::GeneratorType *) override;
-  void visit(const types::IntNType *) override;
 
   void visit(IntConstant *) override;
   void visit(FloatConstant *) override;

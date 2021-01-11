@@ -131,19 +131,17 @@ llvm::DIFile *LLVMVisitor::DebugInfo::getFile(const std::string &path) {
 
 LLVMVisitor::LLVMVisitor(bool debug, const std::string &flags)
     : util::SIRVisitor(), context(), builder(context), module(), func(nullptr),
-      block(nullptr), value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(),
-      trycatch(), db(debug, flags) {
+      block(nullptr), value(nullptr), vars(), funcs(), coro(), loops(), trycatch(),
+      db(debug, flags) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   resetOMPABI();
 }
 
 void LLVMVisitor::setDebugInfoForNode(const IRNode *x) {
-  if (!cast<types::Type>(x)) {
-    auto *srcInfo = getSrcInfo(x);
-    builder.SetCurrentDebugLocation(llvm::DILocation::get(
-        context, srcInfo->line, srcInfo->col, func->getSubprogram()));
-  }
+  auto *srcInfo = getSrcInfo(x);
+  builder.SetCurrentDebugLocation(llvm::DILocation::get(
+      context, srcInfo->line, srcInfo->col, func->getSubprogram()));
 }
 
 void LLVMVisitor::process(IRNode *x) {
@@ -344,16 +342,6 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
 
   eng->runFunctionAsMain(main, args, envp);
   delete eng;
-}
-
-llvm::Type *LLVMVisitor::getLLVMType(const types::Type *t) {
-  process(t);
-  return type;
-}
-
-llvm::DIType *LLVMVisitor::getDIType(const types::Type *t) {
-  process(t);
-  return db.type;
 }
 
 llvm::Function *LLVMVisitor::makeAllocFunc(bool atomic) {
@@ -714,7 +702,9 @@ void LLVMVisitor::visit(IRModule *x) {
 void LLVMVisitor::makeLLVMFunction(Func *x) {
   auto *srcInfo = getSrcInfo(x);
   llvm::DIFile *file = db.getFile(srcInfo->file);
-  auto *subroutineType = llvm::cast<llvm::DISubroutineType>(getDIType(x->getType()));
+  auto *derivedType = llvm::cast<llvm::DIDerivedType>(getDIType(x->getType()));
+  auto *subroutineType =
+      llvm::cast<llvm::DISubroutineType>(derivedType->getRawBaseType());
   llvm::DISubprogram *subprogram = db.builder->createFunction(
       file, x->getUnmangledName(), getNameForFunction(x), file, srcInfo->line,
       subroutineType,
@@ -1191,167 +1181,232 @@ void LLVMVisitor::visit(ValueProxy *x) { assert(0); }
  * Types
  */
 
-void LLVMVisitor::visit(const types::IntType *x) {
-  type = builder.getInt64Ty();
-  db.type = db.builder->createBasicType(
-      x->getName(), module->getDataLayout().getTypeAllocSizeInBits(type),
-      llvm::dwarf::DW_ATE_signed);
-}
-
-void LLVMVisitor::visit(const types::FloatType *x) {
-  type = builder.getDoubleTy();
-  db.type = db.builder->createBasicType(
-      x->getName(), module->getDataLayout().getTypeAllocSizeInBits(type),
-      llvm::dwarf::DW_ATE_float);
-}
-
-void LLVMVisitor::visit(const types::BoolType *x) {
-  type = builder.getInt8Ty();
-  db.type = db.builder->createBasicType(
-      x->getName(), module->getDataLayout().getTypeAllocSizeInBits(type),
-      llvm::dwarf::DW_ATE_boolean);
-}
-
-void LLVMVisitor::visit(const types::ByteType *x) {
-  type = builder.getInt8Ty();
-  db.type = db.builder->createBasicType(
-      x->getName(), module->getDataLayout().getTypeAllocSizeInBits(type),
-      llvm::dwarf::DW_ATE_signed_char);
-}
-
-void LLVMVisitor::visit(const types::VoidType *x) {
-  type = builder.getVoidTy();
-  db.type = nullptr;
-}
-
-void LLVMVisitor::visit(const types::RecordType *x) {
-  std::vector<llvm::Type *> body;
-  std::vector<llvm::DIType *> diTypes;
-  for (const auto &field : *x) {
-    body.push_back(getLLVMType(field.type));
-    diTypes.push_back(db.type);
+llvm::Type *LLVMVisitor::getLLVMType(const types::Type *t) {
+  if (auto *x = cast<types::IntType>(t)) {
+    return builder.getInt64Ty();
   }
 
-  auto *structType = llvm::StructType::get(context, body);
-  auto *layout = module->getDataLayout().getStructLayout(structType);
-  auto *srcInfo = getSrcInfo(x);
-  auto *memberInfo = x->getAttribute<MemberAttribute>();
-  llvm::DIFile *file = db.getFile(srcInfo->file);
-  std::vector<llvm::Metadata *> members;
+  if (auto *x = cast<types::FloatType>(t)) {
+    return builder.getDoubleTy();
+  }
 
-  llvm::DICompositeType *diType = db.builder->createStructType(
-      file, x->getName(), file, srcInfo->line, layout->getSizeInBits(),
-      /*AlignInBits=*/0, llvm::DINode::FlagZero, /*DerivedFrom=*/nullptr,
-      db.builder->getOrCreateArray(members));
+  if (auto *x = cast<types::BoolType>(t)) {
+    return builder.getInt8Ty();
+  }
 
-  unsigned memberIdx = 0;
-  for (const auto &field : *x) {
-    auto *subSrcInfo = srcInfo;
-    auto *subFile = file;
-    if (memberInfo) {
-      auto it = memberInfo->memberSrcInfo.find(field.name);
-      if (it != memberInfo->memberSrcInfo.end()) {
-        subSrcInfo = &it->second;
-        subFile = db.getFile(subSrcInfo->file);
-      }
+  if (auto *x = cast<types::ByteType>(t)) {
+    return builder.getInt8Ty();
+  }
+
+  if (auto *x = cast<types::VoidType>(t)) {
+    return builder.getVoidTy();
+  }
+
+  if (auto *x = cast<types::ArrayType>(t)) {
+    return llvm::StructType::get(builder.getInt64Ty(),
+                                 getLLVMType(x->getBase())->getPointerTo());
+  }
+
+  if (auto *x = cast<types::RecordType>(t)) {
+    std::vector<llvm::Type *> body;
+    for (const auto &field : *x) {
+      body.push_back(getLLVMType(field.type));
     }
-    members.push_back(db.builder->createMemberType(
-        diType, field.name, subFile, subSrcInfo->line,
-        module->getDataLayout().getTypeAllocSizeInBits(body[memberIdx]),
-        /*AlignInBits=*/0, layout->getElementOffsetInBits(memberIdx),
-        llvm::DINode::FlagZero, diTypes[memberIdx]));
-    ++memberIdx;
+    return llvm::StructType::get(context, body);
   }
 
-  db.builder->replaceArrays(diType, db.builder->getOrCreateArray(members));
-  type = structType;
-  db.type = diType;
-}
-
-void LLVMVisitor::visit(const types::RefType *x) {
-  llvm::DIType *contentsDebugType = getDIType(x->getContents());
-  type = builder.getInt8PtrTy();
-  db.type = db.builder->createReferenceType(llvm::dwarf::DW_TAG_reference_type,
-                                            contentsDebugType);
-}
-
-void LLVMVisitor::visit(const types::FuncType *x) {
-  llvm::Type *returnType = getLLVMType(x->getReturnType());
-  std::vector<llvm::Type *> argTypes;
-  std::vector<llvm::Metadata *> diTypes = {db.type};
-  for (const auto &argType : *x) {
-    argTypes.push_back(getLLVMType(argType));
-    diTypes.push_back(db.type);
+  if (auto *x = cast<types::RefType>(t)) {
+    return builder.getInt8PtrTy();
   }
-  type =
-      llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false)->getPointerTo();
-  db.type = db.builder->createSubroutineType(llvm::MDTuple::get(context, diTypes));
-}
 
-void LLVMVisitor::visit(const types::OptionalType *x) {
-  if (cast<types::RefType>(x->getBase())) {
-    process(x->getBase());
-  } else {
-    auto *baseType = getLLVMType(x->getBase());
-    auto *structType = llvm::StructType::get(builder.getInt1Ty(), baseType);
-    auto *layout = module->getDataLayout().getStructLayout(structType);
-    auto *srcInfo = getSrcInfo(x);
-    auto i1SizeInBits =
-        module->getDataLayout().getTypeAllocSizeInBits(builder.getInt1Ty());
-    auto *i1DebugType =
-        db.builder->createBasicType("i1", i1SizeInBits, llvm::dwarf::DW_ATE_boolean);
-    llvm::DIFile *file = db.getFile(srcInfo->file);
-    std::vector<llvm::Metadata *> members;
-
-    llvm::DICompositeType *diType = db.builder->createStructType(
-        file, cast<types::Type>(x)->getName(), file, srcInfo->line,
-        layout->getSizeInBits(),
-        /*AlignInBits=*/0, llvm::DINode::FlagZero, /*DerivedFrom=*/nullptr,
-        db.builder->getOrCreateArray(members));
-
-    members.push_back(db.builder->createMemberType(
-        diType, "has", file, srcInfo->line, i1SizeInBits,
-        /*AlignInBits=*/0, layout->getElementOffsetInBits(0), llvm::DINode::FlagZero,
-        i1DebugType));
-
-    members.push_back(db.builder->createMemberType(
-        diType, "val", file, srcInfo->line,
-        module->getDataLayout().getTypeAllocSizeInBits(baseType),
-        /*AlignInBits=*/0, layout->getElementOffsetInBits(1), llvm::DINode::FlagZero,
-        db.type));
-
-    db.builder->replaceArrays(diType, db.builder->getOrCreateArray(members));
-    type = structType;
-    db.type = diType;
+  if (auto *x = cast<types::FuncType>(t)) {
+    llvm::Type *returnType = getLLVMType(x->getReturnType());
+    std::vector<llvm::Type *> argTypes;
+    for (const auto *argType : *x) {
+      argTypes.push_back(getLLVMType(argType));
+    }
+    return llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false)
+        ->getPointerTo();
   }
+
+  if (auto *x = cast<types::OptionalType>(t)) {
+    if (cast<types::RefType>(x->getBase())) {
+      return getLLVMType(x->getBase());
+    } else {
+      return llvm::StructType::get(builder.getInt1Ty(), getLLVMType(x->getBase()));
+    }
+  }
+
+  if (auto *x = cast<types::PointerType>(t)) {
+    return getLLVMType(x->getBase())->getPointerTo();
+  }
+
+  if (auto *x = cast<types::GeneratorType>(t)) {
+    return builder.getInt8PtrTy();
+  }
+
+  if (auto *x = cast<types::IntNType>(t)) {
+    return builder.getIntNTy(x->getLen());
+  }
+
+  assert(0 && "unknown type");
+  return nullptr;
 }
 
-void LLVMVisitor::visit(const types::ArrayType *x) {
-  type = llvm::StructType::get(builder.getInt64Ty(),
-                               getLLVMType(x->getBase())->getPointerTo());
-  db.type = db.builder->createUnspecifiedType(cast<types::Type>(x)->getName());
+llvm::DIType *LLVMVisitor::getDITypeHelper(
+    const types::Type *t,
+    std::unordered_map<std::string, llvm::DICompositeType *> &cache) {
+  llvm::Type *type = getLLVMType(t);
+  auto &layout = module->getDataLayout();
+
+  if (auto *x = cast<types::IntType>(t)) {
+    return db.builder->createBasicType(
+        x->getName(), layout.getTypeAllocSizeInBits(type), llvm::dwarf::DW_ATE_signed);
+  }
+
+  if (auto *x = cast<types::FloatType>(t)) {
+    return db.builder->createBasicType(
+        x->getName(), layout.getTypeAllocSizeInBits(type), llvm::dwarf::DW_ATE_float);
+  }
+
+  if (auto *x = cast<types::BoolType>(t)) {
+    return db.builder->createBasicType(
+        x->getName(), layout.getTypeAllocSizeInBits(type), llvm::dwarf::DW_ATE_boolean);
+  }
+
+  if (auto *x = cast<types::ByteType>(t)) {
+    return db.builder->createBasicType(x->getName(),
+                                       layout.getTypeAllocSizeInBits(type),
+                                       llvm::dwarf::DW_ATE_signed_char);
+  }
+
+  if (auto *x = cast<types::VoidType>(t)) {
+    return nullptr;
+  }
+
+  if (auto *x = cast<types::ArrayType>(t)) {
+    return db.builder->createUnspecifiedType(x->getName());
+  }
+
+  if (auto *x = cast<types::RecordType>(t)) {
+    auto it = cache.find(x->getName());
+    if (it != cache.end()) {
+      return it->second;
+    } else {
+      auto *structType = llvm::cast<llvm::StructType>(type);
+      auto *structLayout = layout.getStructLayout(structType);
+      auto *srcInfo = getSrcInfo(x);
+      auto *memberInfo = x->getAttribute<MemberAttribute>();
+      llvm::DIFile *file = db.getFile(srcInfo->file);
+      std::vector<llvm::Metadata *> members;
+
+      llvm::DICompositeType *diType = db.builder->createStructType(
+          file, x->getName(), file, srcInfo->line, structLayout->getSizeInBits(),
+          /*AlignInBits=*/0, llvm::DINode::FlagZero, /*DerivedFrom=*/nullptr,
+          db.builder->getOrCreateArray(members));
+
+      // prevent infinite recursion on recursive types
+      cache.emplace(x->getName(), diType);
+
+      unsigned memberIdx = 0;
+      for (const auto &field : *x) {
+        auto *subSrcInfo = srcInfo;
+        auto *subFile = file;
+        if (memberInfo) {
+          auto it = memberInfo->memberSrcInfo.find(field.name);
+          if (it != memberInfo->memberSrcInfo.end()) {
+            subSrcInfo = &it->second;
+            subFile = db.getFile(subSrcInfo->file);
+          }
+        }
+        members.push_back(db.builder->createMemberType(
+            diType, field.name, subFile, subSrcInfo->line,
+            layout.getTypeAllocSizeInBits(getLLVMType(field.type)),
+            /*AlignInBits=*/0, structLayout->getElementOffsetInBits(memberIdx),
+            llvm::DINode::FlagZero, getDITypeHelper(field.type, cache)));
+        ++memberIdx;
+      }
+
+      db.builder->replaceArrays(diType, db.builder->getOrCreateArray(members));
+      return diType;
+    }
+  }
+
+  if (auto *x = cast<types::RefType>(t)) {
+    return db.builder->createReferenceType(llvm::dwarf::DW_TAG_reference_type,
+                                           getDITypeHelper(x->getContents(), cache));
+  }
+
+  if (auto *x = cast<types::FuncType>(t)) {
+    std::vector<llvm::Metadata *> argTypes = {
+        getDITypeHelper(x->getReturnType(), cache)};
+    for (const auto *argType : *x) {
+      argTypes.push_back(getDITypeHelper(argType, cache));
+    }
+    return db.builder->createPointerType(
+        db.builder->createSubroutineType(llvm::MDTuple::get(context, argTypes)),
+        layout.getTypeAllocSizeInBits(type));
+  }
+
+  if (auto *x = cast<types::OptionalType>(t)) {
+    if (cast<types::RefType>(x->getBase())) {
+      return getDITypeHelper(x->getBase(), cache);
+    } else {
+      auto *baseType = getLLVMType(x->getBase());
+      auto *structType = llvm::StructType::get(builder.getInt1Ty(), baseType);
+      auto *structLayout = layout.getStructLayout(structType);
+      auto *srcInfo = getSrcInfo(x);
+      auto i1SizeInBits =
+          module->getDataLayout().getTypeAllocSizeInBits(builder.getInt1Ty());
+      auto *i1DebugType =
+          db.builder->createBasicType("i1", i1SizeInBits, llvm::dwarf::DW_ATE_boolean);
+      llvm::DIFile *file = db.getFile(srcInfo->file);
+      std::vector<llvm::Metadata *> members;
+
+      llvm::DICompositeType *diType = db.builder->createStructType(
+          file, x->getName(), file, srcInfo->line, structLayout->getSizeInBits(),
+          /*AlignInBits=*/0, llvm::DINode::FlagZero, /*DerivedFrom=*/nullptr,
+          db.builder->getOrCreateArray(members));
+
+      members.push_back(db.builder->createMemberType(
+          diType, "has", file, srcInfo->line, i1SizeInBits,
+          /*AlignInBits=*/0, structLayout->getElementOffsetInBits(0),
+          llvm::DINode::FlagZero, i1DebugType));
+
+      members.push_back(db.builder->createMemberType(
+          diType, "val", file, srcInfo->line,
+          module->getDataLayout().getTypeAllocSizeInBits(baseType),
+          /*AlignInBits=*/0, structLayout->getElementOffsetInBits(1),
+          llvm::DINode::FlagZero, getDITypeHelper(x->getBase(), cache)));
+
+      db.builder->replaceArrays(diType, db.builder->getOrCreateArray(members));
+      return diType;
+    }
+  }
+
+  if (auto *x = cast<types::PointerType>(t)) {
+    return db.builder->createPointerType(getDITypeHelper(x->getBase(), cache),
+                                         layout.getTypeAllocSizeInBits(type));
+  }
+
+  if (auto *x = cast<types::GeneratorType>(t)) {
+    return db.builder->createBasicType(
+        x->getName(), layout.getTypeAllocSizeInBits(type), llvm::dwarf::DW_ATE_address);
+  }
+
+  if (auto *x = cast<types::IntNType>(t)) {
+    return db.builder->createBasicType(
+        x->getName(), layout.getTypeAllocSizeInBits(type),
+        x->isSigned() ? llvm::dwarf::DW_ATE_signed : llvm::dwarf::DW_ATE_unsigned);
+  }
+
+  assert(0 && "unknown type");
+  return nullptr;
 }
 
-void LLVMVisitor::visit(const types::PointerType *x) {
-  type = getLLVMType(x->getBase())->getPointerTo();
-  db.type = db.builder->createPointerType(
-      db.type, module->getDataLayout().getTypeAllocSizeInBits(type));
-}
-
-void LLVMVisitor::visit(const types::GeneratorType *x) {
-  type = builder.getInt8PtrTy();
-  db.type =
-      db.builder->createBasicType(cast<types::Type>(x)->getName(),
-                                  module->getDataLayout().getTypeAllocSizeInBits(type),
-                                  llvm::dwarf::DW_ATE_address);
-}
-
-void LLVMVisitor::visit(const types::IntNType *x) {
-  type = builder.getIntNTy(x->getLen());
-  db.type = db.builder->createBasicType(
-      cast<types::Type>(x)->getName(),
-      module->getDataLayout().getTypeAllocSizeInBits(type),
-      x->isSigned() ? llvm::dwarf::DW_ATE_signed : llvm::dwarf::DW_ATE_unsigned);
+llvm::DIType *LLVMVisitor::getDIType(const types::Type *t) {
+  std::unordered_map<std::string, llvm::DICompositeType *> cache;
+  return getDITypeHelper(t, cache);
 }
 
 /*
