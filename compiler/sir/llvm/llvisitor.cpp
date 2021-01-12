@@ -877,7 +877,7 @@ void LLVMVisitor::visit(InternalFunc *x) {
       result = llvm::ConstantAggregateZero::get(getLLVMType(intNType));
     } else {
       const unsigned k = intNType->getLen() / 2;
-      result = codegenRevCompHeuristic(k, args[0], block);
+      result = codegenRevCompHeuristic(k, args[0], builder);
     }
   }
 
@@ -1356,8 +1356,7 @@ llvm::DIType *LLVMVisitor::getDITypeHelper(
       auto *structType = llvm::StructType::get(builder.getInt1Ty(), baseType);
       auto *structLayout = layout.getStructLayout(structType);
       auto *srcInfo = getSrcInfo(x);
-      auto i1SizeInBits =
-          module->getDataLayout().getTypeAllocSizeInBits(builder.getInt1Ty());
+      auto i1SizeInBits = layout.getTypeAllocSizeInBits(builder.getInt1Ty());
       auto *i1DebugType =
           db.builder->createBasicType("i1", i1SizeInBits, llvm::dwarf::DW_ATE_boolean);
       llvm::DIFile *file = db.getFile(srcInfo->file);
@@ -1374,8 +1373,7 @@ llvm::DIType *LLVMVisitor::getDITypeHelper(
           llvm::DINode::FlagZero, i1DebugType));
 
       members.push_back(db.builder->createMemberType(
-          diType, "val", file, srcInfo->line,
-          module->getDataLayout().getTypeAllocSizeInBits(baseType),
+          diType, "val", file, srcInfo->line, layout.getTypeAllocSizeInBits(baseType),
           /*AlignInBits=*/0, structLayout->getElementOffsetInBits(1),
           llvm::DINode::FlagZero, getDITypeHelper(x->getBase(), cache)));
 

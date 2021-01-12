@@ -18,7 +18,7 @@ llvm::GlobalVariable *getRevCompTable(llvm::Module *module,
 /// @param block LLVM block to generate the code in
 /// @return the reverse complemented k-mer value as a (2k)-bit integer
 llvm::Value *codegenRevCompByBitShift(const unsigned k, llvm::Value *self,
-                                      llvm::BasicBlock *block);
+                                      llvm::IRBuilder<> &builder);
 
 /// Generates code for k-mer reverse complement using a lookup table
 /// @param k the k-mer length
@@ -26,7 +26,7 @@ llvm::Value *codegenRevCompByBitShift(const unsigned k, llvm::Value *self,
 /// @param block LLVM block to generate the code in
 /// @return the reverse complemented k-mer value as a (2k)-bit integer
 llvm::Value *codegenRevCompByLookup(const unsigned k, llvm::Value *self,
-                                    llvm::BasicBlock *block);
+                                    llvm::IRBuilder<> &builder);
 
 /// Generates code for k-mer reverse complement using SIMD instructions
 /// @param k the k-mer length
@@ -34,7 +34,7 @@ llvm::Value *codegenRevCompByLookup(const unsigned k, llvm::Value *self,
 /// @param block LLVM block to generate the code in
 /// @return the reverse complemented k-mer value as a (2k)-bit integer
 llvm::Value *codegenRevCompBySIMD(const unsigned k, llvm::Value *self,
-                                  llvm::BasicBlock *block);
+                                  llvm::IRBuilder<> &builder);
 
 /// Generates code for k-mer reverse complement by selecting the best
 /// method based on the k-mer length via experimentally-found heuristics
@@ -43,6 +43,6 @@ llvm::Value *codegenRevCompBySIMD(const unsigned k, llvm::Value *self,
 /// @param block LLVM block to generate the code in
 /// @return the reverse complemented k-mer value as a (2k)-bit integer
 llvm::Value *codegenRevCompHeuristic(const unsigned k, llvm::Value *self,
-                                     llvm::BasicBlock *block);
+                                     llvm::IRBuilder<> &builder);
 } // namespace ir
 } // namespace seq

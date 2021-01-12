@@ -33,8 +33,7 @@ llvm::GlobalVariable *getRevCompTable(llvm::Module *module, const std::string &n
 }
 
 llvm::Value *codegenRevCompByBitShift(const unsigned k, llvm::Value *self,
-                                      llvm::BasicBlock *block) {
-  llvm::IRBuilder<> builder(block);
+                                      llvm::IRBuilder<> &builder) {
   llvm::Type *kmerType = builder.getIntNTy(2 * k);
   llvm::LLVMContext &context = builder.getContext();
 
@@ -77,10 +76,9 @@ llvm::Value *codegenRevCompByBitShift(const unsigned k, llvm::Value *self,
 }
 
 llvm::Value *codegenRevCompByLookup(const unsigned k, llvm::Value *self,
-                                    llvm::BasicBlock *block) {
-  llvm::IRBuilder<> builder(block);
+                                    llvm::IRBuilder<> &builder) {
   llvm::Type *kmerType = builder.getIntNTy(2 * k);
-  llvm::Module *module = block->getModule();
+  llvm::Module *module = builder.GetInsertBlock()->getModule();
   llvm::Value *table = getRevCompTable(module);
   llvm::Value *mask = llvm::ConstantInt::get(kmerType, 0xffu);
   llvm::Value *result = llvm::ConstantInt::get(kmerType, 0);
@@ -124,8 +122,7 @@ llvm::Value *codegenRevCompByLookup(const unsigned k, llvm::Value *self,
 }
 
 llvm::Value *codegenRevCompBySIMD(const unsigned k, llvm::Value *self,
-                                  llvm::BasicBlock *block) {
-  llvm::IRBuilder<> builder(block);
+                                  llvm::IRBuilder<> &builder) {
   llvm::Type *kmerType = builder.getIntNTy(2 * k);
   llvm::LLVMContext &context = builder.getContext();
   llvm::Value *comp = builder.CreateNot(self);
@@ -178,16 +175,15 @@ llvm::Value *codegenRevCompBySIMD(const unsigned k, llvm::Value *self,
 }
 
 llvm::Value *codegenRevCompHeuristic(const unsigned k, llvm::Value *self,
-                                     llvm::BasicBlock *block) {
+                                     llvm::IRBuilder<> &builder) {
   if (k == 1) {
-    llvm::IRBuilder<> builder(block);
     return builder.CreateNot(self);
   } else if (k <= 20) {
-    return codegenRevCompByLookup(k, self, block);
+    return codegenRevCompByLookup(k, self, builder);
   } else if (k < 32) {
-    return codegenRevCompByBitShift(k, self, block);
+    return codegenRevCompByBitShift(k, self, builder);
   } else {
-    return codegenRevCompBySIMD(k, self, block);
+    return codegenRevCompBySIMD(k, self, builder);
   }
 }
 
