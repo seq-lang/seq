@@ -336,6 +336,7 @@ public:
   /// This currently consists of adding default magic methods (described in
   /// codegenMagic() method below).
   void visit(ClassStmt *) override;
+  void visit(CustomStmt *) override;
 
   using CallbackASTVisitor<ExprPtr, StmtPtr>::transform;
 

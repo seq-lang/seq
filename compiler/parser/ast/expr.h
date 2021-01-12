@@ -124,7 +124,7 @@ protected:
 using ExprPtr = unique_ptr<Expr>;
 
 /// Function signature parameter helper node (name: type = deflt).
-struct Param {
+struct Param : public seq::SrcObject {
   string name;
   ExprPtr type;
   ExprPtr deflt;

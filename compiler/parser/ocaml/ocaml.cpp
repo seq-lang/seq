@@ -212,11 +212,13 @@ StmtPtr parse_stmt(value val) {
 
   auto parse_param = [](value p) {
     CAMLparam1(p);
-    CAMLlocal1(v);
+    CAMLlocal2(v, s);
     v = Field(p, 1); // ignore position
-    OcamlReturn(
-        (Param{parse_string(Field(v, 0)), parse_optional(Field(v, 1), parse_expr),
-               parse_optional(Field(v, 2), parse_expr)}));
+    s = Field(v, 0);
+    auto prm = Param{parse_string(Field(s, 1)), parse_optional(Field(v, 1), parse_expr),
+                     parse_optional(Field(v, 2), parse_expr)};
+    prm.setSrcInfo(parse_pos(Field(s, 0)));
+    OcamlReturn(move(prm));
   };
 
   auto pos = parse_pos(Field(val, 0));
@@ -308,6 +310,8 @@ StmtPtr parse_stmt(value val) {
                                          parse_optional(Field(j, 1), parse_string));
                       }),
            parse_stmt_list(Field(t, 1)));
+  case 22:
+    Return(Custom, parse_expr(Field(t, 0)), parse_stmt_list(Field(t, 1)));
   default:
     seq::compilationError("[internal] tag variant mismatch ...");
     return nullptr;

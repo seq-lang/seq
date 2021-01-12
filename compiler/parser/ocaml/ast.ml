@@ -49,7 +49,7 @@ and tcomprehension =
   }
 
 and param =
-  { name : string
+  { name : string ann
   ; typ : texpr ann option
   ; default : texpr ann option
   }
@@ -77,6 +77,7 @@ type tstmt =
   | Class of class_t
   | YieldFrom of texpr ann
   | With of ((texpr ann * string option) list * tstmt ann list)
+  | Custom of (texpr ann * tstmt ann list)
 
 and import =
   { imp_from: texpr ann

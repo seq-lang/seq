@@ -349,6 +349,15 @@ string WithStmt::toString() const {
 }
 ACCEPT_IMPL(WithStmt, ASTVisitor);
 
+CustomStmt::CustomStmt(ExprPtr head, StmtPtr suite)
+    : Stmt(), head(move(head)), suite(move(suite)) {}
+CustomStmt::CustomStmt(const CustomStmt &stmt)
+    : Stmt(stmt), head(ast::clone(stmt.head)), suite(ast::clone(stmt.suite)) {}
+string CustomStmt::toString() const {
+  return format("(custom {} {})", head->toString(), suite->toString());
+}
+ACCEPT_IMPL(CustomStmt, ASTVisitor);
+
 AssignMemberStmt::AssignMemberStmt(ExprPtr lhs, string member, ExprPtr rhs)
     : Stmt(), lhs(move(lhs)), member(move(member)), rhs(move(rhs)) {}
 AssignMemberStmt::AssignMemberStmt(const AssignMemberStmt &stmt)

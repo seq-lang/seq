@@ -682,6 +682,10 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
                             move(suite), vector<string>{"extend"});
 }
 
+void SimplifyVisitor::visit(CustomStmt *stmt) {
+  error("invalid block: {}", stmt->head->toString());
+}
+
 /**************************************************************************************/
 
 StmtPtr SimplifyVisitor::transformAssignment(const Expr *lhs, const Expr *rhs,

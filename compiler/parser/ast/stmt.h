@@ -503,6 +503,19 @@ struct WithStmt : public Stmt {
   ACCEPT(ASTVisitor);
 };
 
+/// Custom block statement (foo: ...).
+/// @example: pt_tree: pass
+struct CustomStmt : public Stmt {
+  ExprPtr head;
+  StmtPtr suite;
+
+  CustomStmt(ExprPtr head, StmtPtr suite);
+  CustomStmt(const CustomStmt &stmt);
+
+  string toString() const override;
+  ACCEPT(ASTVisitor);
+};
+
 /// The following nodes are created after the simplify stage.
 
 /// Member assignment statement (lhs.member = rhs).

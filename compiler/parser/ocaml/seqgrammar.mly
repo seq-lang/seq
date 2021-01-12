@@ -210,6 +210,7 @@ single_statement:
   | IF expr COLON suite elif_suite { $loc, If ((Some $2, $4) :: $5) }
   | MATCH expr COLON NL INDENT case+ DEDENT { $loc, Match ($2, $6) }
   | try_statement | with_statement | class_statement { $1 }
+  | ID COLON NL INDENT statement+ DEDENT { $loc, Custom (($loc($1), Id $1), List.concat $5) }
 suite:
   | FLNE(SEMICOLON, small_statement) NL { List.concat $1 }
   | NL INDENT statement+ DEDENT { List.concat $3 }
@@ -248,7 +249,7 @@ import_term:
 import_lterm:
   | dot_term { ($1, [], None) }
   | dot_term LP FL(COMMA, import_param) RP func_ret_type? { $1, $3, $5 }
-import_param: expr { $loc, { name = ""; typ = Some $1; default = None } }
+import_param: expr { $loc, { name = ($loc, ""); typ = Some $1; default = None } }
 dot_term: ID { $loc, Id $1 } | dot_term DOT ID { $loc, Dot ($1, $3) }
 
 assign_statement:
@@ -284,7 +285,7 @@ func_def:
 typed_param:
   | MUL? ID param_type? default_val?
     { let name = match $1 with Some _ -> "*" ^ $2 | None -> $2 in
-      $loc, { name; typ = $3; default = $4 } }
+      $loc, { name = ($loc($2), name); typ = $3; default = $4 } }
 generic_list: LS FLNE(COMMA, typed_param) RS { $2 }
 default_val: EQ expr { $2 }
 param_type: COLON expr { $2 }
@@ -296,7 +297,8 @@ cls_body:
   | ID generic_list? COLON NL INDENT dataclass_member+ DEDENT
     { let args = List.rev @@ List.fold_left
         (fun acc i -> match i with
-          | Some (pos, Assign ((_, Id name), default, typ)) -> (pos, { name; typ; default }) :: acc
+          | Some (pos, Assign ((ipos, Id name), default, typ)) ->
+            (pos, { name = (ipos, name); typ; default }) :: acc
           | _ -> acc) [] $6
       in
       let members = List.rev @@ List.fold_left
