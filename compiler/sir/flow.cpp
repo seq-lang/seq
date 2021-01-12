@@ -110,5 +110,47 @@ Value *UnorderedFlow::doClone() const {
   return newFlow;
 }
 
+const char PipelineFlow::NodeId = 0;
+
+const types::Type *PipelineFlow::Stage::getOutputType() const {
+  auto *funcType = func->getType()->as<types::FuncType>();
+  assert(funcType);
+  return funcType->getReturnType();
+}
+
+std::ostream &PipelineFlow::doFormat(std::ostream &os) const {
+  os << "pipeline(";
+  for (const auto &stage : *this) {
+    os << *stage.getFunc() << "[" << (stage.isGenerator() ? "g" : "f") << "](";
+    for (const auto *arg : stage) {
+      if (arg) {
+        os << *arg;
+      } else {
+        os << "...";
+      }
+    }
+    os << ")";
+    if (&stage != &back())
+      os << (stage.isParallel() ? " ||> " : " |> ");
+  }
+  os << ")";
+  return os;
+}
+
+PipelineFlow::Stage PipelineFlow::Stage::clone() const {
+  std::vector<ValuePtr> clonedArgs;
+  for (const auto *arg : *this)
+    clonedArgs.push_back(arg->clone());
+  return {func->clone(), std::move(clonedArgs), generator, parallel};
+}
+
+Value *PipelineFlow::doClone() const {
+  std::vector<Stage> clonedStages;
+  for (const auto &stage : *this)
+    clonedStages.emplace_back(stage.clone());
+  return getModule()->Nrs<PipelineFlow>(getSrcInfo(), std::move(clonedStages),
+                                        getName());
+}
+
 } // namespace ir
 } // namespace seq

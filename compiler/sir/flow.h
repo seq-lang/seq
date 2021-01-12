@@ -405,6 +405,112 @@ private:
   Value *doClone() const override;
 };
 
+/// Flow that represents a pipeline. Pipelines with only function
+/// stages are expressions and have a concrete type. Pipelines with
+/// generator stages are not expressions and have no type. This
+/// representation allows for stages that output generators but do
+/// not get explicitly iterated in the pipeline, since generator
+/// stages are denoted by a separate flag.
+class PipelineFlow : public AcceptorExtend<PipelineFlow, Flow> {
+public:
+  /// Represents a single stage in a pipeline.
+  class Stage {
+  private:
+    /// the function being (partially) called in this stage
+    ValuePtr func;
+    /// the function arguments, where null represents where
+    /// previous pipeline output should go
+    std::vector<ValuePtr> args;
+    /// true if this stage is a generator
+    bool generator;
+    /// true if this stage is marked parallel
+    bool parallel;
+
+  public:
+    /// Constructs a pipeline stage.
+    /// @param func the function being called
+    /// @param args call arguments, with exactly one null entry
+    /// @param generator whether this stage is a generator stage
+    /// @param parallel whether this stage is parallel
+    Stage(ValuePtr func, std::vector<ValuePtr> args, bool generator, bool parallel)
+        : func(std::move(func)), args(std::move(args)), generator(generator),
+          parallel(parallel) {}
+
+    /// @return an iterator to the first argument
+    auto begin() { return util::raw_ptr_adaptor(args.begin()); }
+    /// @return an iterator beyond the last argument
+    auto end() { return util::raw_ptr_adaptor(args.end()); }
+    /// @return an iterator to the first argument
+    auto begin() const { return util::const_raw_ptr_adaptor(args.begin()); }
+    /// @return an iterator beyond the last argument
+    auto end() const { return util::const_raw_ptr_adaptor(args.end()); }
+
+    /// @return a pointer to the first argument
+    Value *front() { return args.front().get(); }
+    /// @return a pointer to the last argument
+    Value *back() { return args.back().get(); }
+    /// @return a pointer to the first argument
+    const Value *front() const { return args.front().get(); }
+    /// @return a pointer to the last argument
+    const Value *back() const { return args.back().get(); }
+
+    /// @return the called function
+    Value *getFunc() { return func.get(); }
+    /// @return the called function
+    const Value *getFunc() const { return func.get(); }
+    /// @return whether this stage is a generator stage
+    bool isGenerator() const { return generator; }
+    /// @return whether this stage is parallel
+    bool isParallel() const { return parallel; }
+    /// @return the output type of this stage
+    const types::Type *getOutputType() const;
+    /// @return deep copy of this stage; used to clone pipelines
+    Stage clone() const;
+  };
+
+private:
+  /// pipeline stages
+  std::vector<Stage> stages;
+
+public:
+  static const char NodeId;
+
+  /// Constructs a pipeline flow.
+  /// @param stages vector of pipeline stages
+  /// @param name the name
+  explicit PipelineFlow(std::vector<Stage> stages = {}, std::string name = "")
+      : AcceptorExtend(std::move(name)), stages(std::move(stages)) {}
+
+  /// @return an iterator to the first stage
+  auto begin() { return stages.begin(); }
+  /// @return an iterator beyond the last stage
+  auto end() { return stages.end(); }
+  /// @return an iterator to the first stage
+  auto begin() const { return stages.begin(); }
+  /// @return an iterator beyond the last stage
+  auto end() const { return stages.end(); }
+
+  /// @return a pointer to the first stage
+  Stage &front() { return stages.front(); }
+  /// @return a pointer to the last stage
+  Stage &back() { return stages.back(); }
+  /// @return a pointer to the first stage
+  const Stage &front() const { return stages.front(); }
+  /// @return a pointer to the last stage
+  const Stage &back() const { return stages.back(); }
+
+  /// adds a stage to the back of the pipeline
+  void addStage(ValuePtr func, std::vector<ValuePtr> args, bool generator,
+                bool parallel) {
+    stages.emplace_back(std::move(func), std::move(args), generator, parallel);
+  }
+
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
+
+  Value *doClone() const override;
+};
+
 } // namespace ir
 } // namespace seq
 

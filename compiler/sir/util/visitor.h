@@ -62,6 +62,7 @@ class WhileFlow;
 class ForFlow;
 class TryCatchFlow;
 class UnorderedFlow;
+class PipelineFlow;
 
 class Constant;
 
@@ -110,6 +111,7 @@ public:
   VISIT(ForFlow);
   VISIT(TryCatchFlow);
   VISIT(UnorderedFlow);
+  VISIT(PipelineFlow);
 
   DEFAULT_VISIT(Constant);
   VISIT(TemplatedConstant<seq_int_t>);

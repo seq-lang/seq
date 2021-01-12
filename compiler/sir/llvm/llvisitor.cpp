@@ -1868,6 +1868,11 @@ void LLVMVisitor::visit(UnorderedFlow *x) {
   }
 }
 
+void LLVMVisitor::visit(PipelineFlow *x) {
+  // TODO
+  assert(0);
+}
+
 /*
  * Instructions
  */

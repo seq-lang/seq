@@ -218,6 +218,7 @@ public:
   void visit(ForFlow *) override;
   void visit(TryCatchFlow *) override;
   void visit(UnorderedFlow *) override;
+  void visit(PipelineFlow *) override;
 
   void visit(AssignInstr *) override;
   void visit(ExtractInstr *) override;

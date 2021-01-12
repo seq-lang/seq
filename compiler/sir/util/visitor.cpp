@@ -34,6 +34,8 @@ void SIRVisitor::visit(TryCatchFlow *x) { defaultVisit(x); }
 void SIRVisitor::visit(const TryCatchFlow *x) { defaultVisit(x); }
 void SIRVisitor::visit(UnorderedFlow *x) { defaultVisit(x); }
 void SIRVisitor::visit(const UnorderedFlow *x) { defaultVisit(x); }
+void SIRVisitor::visit(PipelineFlow *x) { defaultVisit(x); }
+void SIRVisitor::visit(const PipelineFlow *x) { defaultVisit(x); }
 
 void SIRVisitor::visit(TemplatedConstant<seq_int_t> *x) { defaultVisit(x); }
 void SIRVisitor::visit(const TemplatedConstant<seq_int_t> *x) { defaultVisit(x); }
