@@ -210,5 +210,55 @@ Value *FlowInstr::doClone() const {
                                      getName());
 }
 
+const char PipelineInstr::NodeId = 0;
+
+const types::Type *PipelineInstr::Stage::getOutputType() const {
+  auto *funcType = func->getType()->as<types::FuncType>();
+  assert(funcType);
+  return funcType->getReturnType();
+}
+
+const types::Type *PipelineInstr::getType() const {
+  for (const auto &stage : *this) {
+    if (stage.isGenerator() || stage.isParallel())
+      return nullptr;
+  }
+  return back().getOutputType();
+}
+
+std::ostream &PipelineInstr::doFormat(std::ostream &os) const {
+  os << "pipeline(";
+  for (const auto &stage : *this) {
+    os << *stage.getFunc() << "[" << (stage.isGenerator() ? "g" : "f") << "](";
+    for (const auto *arg : stage) {
+      if (arg) {
+        os << *arg;
+      } else {
+        os << "...";
+      }
+    }
+    os << ")";
+    if (&stage != &back())
+      os << (stage.isParallel() ? " ||> " : " |> ");
+  }
+  os << ")";
+  return os;
+}
+
+PipelineInstr::Stage PipelineInstr::Stage::clone() const {
+  std::vector<ValuePtr> clonedArgs;
+  for (const auto *arg : *this)
+    clonedArgs.push_back(arg->clone());
+  return {func->clone(), std::move(clonedArgs), generator, parallel};
+}
+
+Value *PipelineInstr::doClone() const {
+  std::vector<Stage> clonedStages;
+  for (const auto &stage : *this)
+    clonedStages.emplace_back(stage.clone());
+  return getModule()->Nrs<PipelineInstr>(getSrcInfo(), std::move(clonedStages),
+                                         getName());
+}
+
 } // namespace ir
 } // namespace seq
