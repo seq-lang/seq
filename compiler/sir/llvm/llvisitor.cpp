@@ -167,27 +167,29 @@ void LLVMVisitor::dump(const std::string &filename) {
 }
 
 void LLVMVisitor::applyDebugTransformations() {
-  if (!db.debug)
-    return;
-  // remove tail calls and fix linkage for stack traces
-  for (auto &f : *module) {
-    f.setLinkage(llvm::GlobalValue::ExternalLinkage);
-    if (f.hasFnAttribute(llvm::Attribute::AttrKind::AlwaysInline)) {
-      f.removeFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
-    }
-    f.addFnAttr(llvm::Attribute::AttrKind::NoInline);
-    f.setHasUWTable();
-    f.addFnAttr("no-frame-pointer-elim", "true");
-    f.addFnAttr("no-frame-pointer-elim-non-leaf");
-    f.addFnAttr("no-jump-tables", "false");
+  if (db.debug) {
+    // remove tail calls and fix linkage for stack traces
+    for (auto &f : *module) {
+      f.setLinkage(llvm::GlobalValue::ExternalLinkage);
+      if (f.hasFnAttribute(llvm::Attribute::AttrKind::AlwaysInline)) {
+        f.removeFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+      }
+      f.addFnAttr(llvm::Attribute::AttrKind::NoInline);
+      f.setHasUWTable();
+      f.addFnAttr("no-frame-pointer-elim", "true");
+      f.addFnAttr("no-frame-pointer-elim-non-leaf");
+      f.addFnAttr("no-jump-tables", "false");
 
-    for (auto &block : f.getBasicBlockList()) {
-      for (auto &inst : block) {
-        if (auto *call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
-          call->setTailCall(false);
+      for (auto &block : f.getBasicBlockList()) {
+        for (auto &inst : block) {
+          if (auto *call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
+            call->setTailCall(false);
+          }
         }
       }
     }
+  } else {
+    llvm::StripDebugInfo(*module);
   }
 }
 
@@ -1084,7 +1086,7 @@ void LLVMVisitor::visit(BodiedFunc *x) {
     llvm::Value *id = nullptr;
     llvm::Value *nullPtr = llvm::ConstantPointerNull::get(builder.getInt8PtrTy());
     if (!cast<types::VoidType>(generatorType->getBase())) {
-      coro.promise = makeAlloca(getLLVMType(generatorType->getBase()), entryBlock);
+      coro.promise = builder.CreateAlloca(getLLVMType(generatorType->getBase()));
       coro.promise->setName("coro.promise");
       llvm::Value *promiseRaw =
           builder.CreateBitCast(coro.promise, builder.getInt8PtrTy());
