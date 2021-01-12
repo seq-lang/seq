@@ -255,7 +255,7 @@ INSTANTIATE_TEST_SUITE_P(
         "core/bwtsa.seq",
         "core/empty.seq"
       ),
-      testing::Values(true),
+      testing::Values(true, false),
       testing::Values(""),
       testing::Values(""),
       testing::Values(0),
@@ -288,7 +288,7 @@ INSTANTIATE_TEST_SUITE_P(
         "python/pybridge.seq",
         "core/empty.seq"
       ),
-      testing::Values(true),
+      testing::Values(true, false),
       testing::Values(""),
       testing::Values(""),
       testing::Values(0),
