@@ -1192,18 +1192,18 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     if (unificationsDone)
       for (int i = 0; i < f->explicits.size(); i++)
         if (ast->generics[i].deflt && f->explicits[i].type->getUnbound()) {
-          LOG("- def: {}", calleeType->toString());
+          // LOG("- def: {}", calleeType->toString());
           for (auto &r : reorderedArgs)
-            LOG("  - {}", r.value->type->toString());
+            // LOG("  - {}", r.value->type->toString());
 
-          auto deflt = clone(ast->generics[i].deflt);
+            auto deflt = clone(ast->generics[i].deflt);
           if (deflt->getNone())
             f->explicits[i].type |=
                 ctx->instantiate(getSrcInfo(), ctx->findInternal("T.None"));
           else
             f->explicits[i].type |= transformType(deflt)->getType();
 
-          LOG("- def: {} => {}", deflt->toString(), calleeType->toString());
+          // LOG("- def: {} => {}", deflt->toString(), calleeType->toString());
         }
     if (realizeFunc(f))
       expr->expr = transform(expr->expr);
