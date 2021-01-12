@@ -1,7 +1,15 @@
-#include "sir/llvm/llvisitor.h"
+#include "llvisitor.h"
+#include "lang/seq.h"
+#include "revcomp.h"
 #include "llvm/CodeGen/CommandFlags.def"
 #include <algorithm>
 #include <utility>
+
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+#define SEQ_VERSION_STRING()                                                           \
+  ("seqc version " STR(SEQ_VERSION_MAJOR) "." STR(SEQ_VERSION_MINOR) "." STR(          \
+      SEQ_VERSION_PATCH))
 
 extern llvm::StructType *IdentTy;
 extern llvm::FunctionType *Kmpc_MicroTy;
@@ -35,6 +43,25 @@ std::string getNameForFunction(Func *x) {
     return x->getUnmangledName();
   } else {
     return x->referenceString();
+  }
+}
+
+std::string getDebugNameForVariable(Var *x) {
+  std::string name = x->getName();
+  auto pos = name.find(".");
+  if (pos != 0 && pos != std::string::npos) {
+    return name.substr(0, pos);
+  } else {
+    return name;
+  }
+}
+
+SrcInfo *getSrcInfo(const IRNode *x) {
+  if (auto *srcInfo = x->getAttribute<SrcInfoAttribute>()) {
+    return &srcInfo->info;
+  } else {
+    static SrcInfo defaultSrcInfo("<internal>", 0, 0, 0, 0);
+    return &defaultSrcInfo;
   }
 }
 
@@ -88,35 +115,66 @@ public:
 };
 } // namespace
 
-LLVMVisitor::LLVMVisitor(bool debug)
-    : util::SIRVisitor(), context(), module(), func(nullptr), block(nullptr),
-      value(nullptr), type(nullptr), vars(), funcs(), coro(), loops(), trycatch(),
-      debug(debug) {
+llvm::DIFile *LLVMVisitor::DebugInfo::getFile(const std::string &path) {
+  std::string filename;
+  std::string directory;
+  auto pos = path.find_last_of("/");
+  if (pos != std::string::npos) {
+    filename = path.substr(pos + 1);
+    directory = path.substr(0, pos);
+  } else {
+    filename = path;
+    directory = ".";
+  }
+  return builder->createFile(filename, directory);
+}
+
+LLVMVisitor::LLVMVisitor(bool debug, const std::string &flags)
+    : util::SIRVisitor(), context(), builder(context), module(), func(nullptr),
+      block(nullptr), value(nullptr), vars(), funcs(), coro(), loops(), trycatch(),
+      db(debug, flags) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   resetOMPABI();
 }
 
+void LLVMVisitor::setDebugInfoForNode(const IRNode *x) {
+  auto *srcInfo = getSrcInfo(x);
+  builder.SetCurrentDebugLocation(llvm::DILocation::get(
+      context, srcInfo->line, srcInfo->col, func->getSubprogram()));
+}
+
+void LLVMVisitor::process(IRNode *x) {
+  setDebugInfoForNode(x);
+  x->accept(*this);
+}
+
+void LLVMVisitor::process(const IRNode *x) {
+  setDebugInfoForNode(x);
+  x->accept(*this);
+}
+
 void LLVMVisitor::verify() {
-  const bool broken = llvm::verifyModule(*module.get(), &llvm::errs());
+  const bool broken = llvm::verifyModule(*module, &llvm::errs());
   assert(!broken);
 }
 
 void LLVMVisitor::dump(const std::string &filename) {
   auto fo = fopen(filename.c_str(), "w");
   llvm::raw_fd_ostream fout(fileno(fo), true);
-  fout << *module.get();
+  fout << *module;
   fout.close();
 }
 
 void LLVMVisitor::applyDebugTransformations() {
-  if (!debug)
+  if (!db.debug)
     return;
   // remove tail calls and fix linkage for stack traces
   for (auto &f : *module) {
     f.setLinkage(llvm::GlobalValue::ExternalLinkage);
-    if (f.hasFnAttribute(llvm::Attribute::AttrKind::AlwaysInline))
+    if (f.hasFnAttribute(llvm::Attribute::AttrKind::AlwaysInline)) {
       f.removeFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
+    }
     f.addFnAttr(llvm::Attribute::AttrKind::NoInline);
     f.setHasUWTable();
     f.addFnAttr("no-frame-pointer-elim", "true");
@@ -134,22 +192,22 @@ void LLVMVisitor::applyDebugTransformations() {
 }
 
 void LLVMVisitor::applyGCTransformations() {
-  auto *addRoots = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_gc_add_roots", llvm::Type::getVoidTy(context),
-      llvm::Type::getInt8PtrTy(context), llvm::Type::getInt8PtrTy(context)));
+  auto *addRoots = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("seq_gc_add_roots", builder.getVoidTy(),
+                                  builder.getInt8PtrTy(), builder.getInt8PtrTy()));
   addRoots->setDoesNotThrow();
 
   // insert add_roots calls where needed
   for (auto &f : *module) {
     for (auto &block : f.getBasicBlockList()) {
       for (auto &inst : block) {
-        if (auto *call = dyn_cast<CallInst>(&inst)) {
+        if (auto *call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
           if (auto *g = call->getCalledFunction()) {
             // tell GC about OpenMP's allocation
             if (g->getName() == "__kmpc_omp_task_alloc") {
               llvm::Value *taskSize = call->getArgOperand(3);
               llvm::Value *sharedSize = call->getArgOperand(4);
-              llvm::IRBuilder<> builder(call->getNextNode());
+              builder.SetInsertPoint(call->getNextNode());
               llvm::Value *baseOffset = builder.CreateSub(taskSize, sharedSize);
               llvm::Value *ptr = builder.CreateBitCast(call, builder.getInt8PtrTy());
               llvm::Value *lo = builder.CreateGEP(ptr, baseOffset);
@@ -197,30 +255,34 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
 
   unsigned optLevel = 3;
   unsigned sizeLevel = 0;
-  llvm::PassManagerBuilder builder;
+  llvm::PassManagerBuilder pmb;
   static llvm::OpenMPABI omp;
-  builder.tapirTarget = &omp;
+  pmb.tapirTarget = &omp;
 
-  if (!debug) {
-    builder.OptLevel = optLevel;
-    builder.SizeLevel = sizeLevel;
-    builder.Inliner = llvm::createFunctionInliningPass(optLevel, sizeLevel, false);
-    builder.DisableUnitAtATime = false;
-    builder.DisableUnrollLoops = false;
-    builder.LoopVectorize = true;
-    builder.SLPVectorize = true;
+  if (!db.debug) {
+    pmb.OptLevel = optLevel;
+    pmb.SizeLevel = sizeLevel;
+    pmb.Inliner = llvm::createFunctionInliningPass(optLevel, sizeLevel, false);
+    pmb.DisableUnitAtATime = false;
+    pmb.DisableUnrollLoops = false;
+    pmb.LoopVectorize = true;
+    pmb.SLPVectorize = true;
+  } else {
+    pmb.OptLevel = 0;
   }
 
-  if (tm)
-    tm->adjustPassManager(builder);
+  if (tm) {
+    tm->adjustPassManager(pmb);
+  }
 
-  llvm::addCoroutinePassesToExtensionPoints(builder);
-  builder.populateModulePassManager(*pm);
-  builder.populateFunctionPassManager(*fpm);
+  llvm::addCoroutinePassesToExtensionPoints(pmb);
+  pmb.populateModulePassManager(*pm);
+  pmb.populateFunctionPassManager(*fpm);
 
   fpm->doInitialization();
-  for (llvm::Function &f : *module)
+  for (llvm::Function &f : *module) {
     fpm->run(f);
+  }
   fpm->doFinalization();
   pm->run(*module);
   applyDebugTransformations();
@@ -230,16 +292,16 @@ void LLVMVisitor::runLLVMPipeline() {
   verify();
   runLLVMOptimizationPasses();
   applyGCTransformations();
-  if (!debug) {
+  if (!db.debug) {
     runLLVMOptimizationPasses();
   }
   verify();
 }
 
-void LLVMVisitor::compile(const std::string &outname) {
+void LLVMVisitor::compile(const std::string &filename) {
   runLLVMPipeline();
   std::error_code err;
-  llvm::raw_fd_ostream stream(outname, err, llvm::sys::fs::F_None);
+  llvm::raw_fd_ostream stream(filename, err, llvm::sys::fs::F_None);
   llvm::WriteBitcodeToFile(module.get(), stream);
   if (err) {
     throw std::runtime_error(err.message());
@@ -251,7 +313,7 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
   runLLVMPipeline();
 
   std::vector<std::string> functionNames;
-  if (debug) {
+  if (db.debug) {
     for (auto &f : *module) {
       functionNames.push_back(f.getName());
     }
@@ -270,11 +332,11 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
     }
   }
 
-  if (debug) {
+  if (db.debug) {
     for (auto &name : functionNames) {
-      void *addr = eng->getPointerToNamedFunction(name, /*AbortOnFailure=*/false);
-      if (addr)
+      if (void *addr = eng->getPointerToNamedFunction(name, /*AbortOnFailure=*/false)) {
         seq_add_symbol(addr, name);
+      }
     }
   }
 
@@ -282,15 +344,10 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
   delete eng;
 }
 
-llvm::Type *LLVMVisitor::getLLVMType(const types::Type *x) {
-  process(x);
-  return type;
-}
-
 llvm::Function *LLVMVisitor::makeAllocFunc(bool atomic) {
-  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      atomic ? "seq_alloc_atomic" : "seq_alloc", llvm::Type::getInt8PtrTy(context),
-      llvm::Type::getInt64Ty(context)));
+  auto *f = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction(atomic ? "seq_alloc_atomic" : "seq_alloc",
+                                  builder.getInt8PtrTy(), builder.getInt64Ty()));
   f->setDoesNotThrow();
   f->setReturnDoesNotAlias();
   f->setOnlyAccessesInaccessibleMemory();
@@ -299,46 +356,43 @@ llvm::Function *LLVMVisitor::makeAllocFunc(bool atomic) {
 
 llvm::Function *LLVMVisitor::makePersonalityFunc() {
   return llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_personality", llvm::Type::getInt32Ty(context),
-      llvm::Type::getInt32Ty(context), llvm::Type::getInt32Ty(context),
-      llvm::Type::getInt64Ty(context), llvm::Type::getInt8PtrTy(context),
-      llvm::Type::getInt8PtrTy(context)));
+      "seq_personality", builder.getInt32Ty(), builder.getInt32Ty(),
+      builder.getInt32Ty(), builder.getInt64Ty(), builder.getInt8PtrTy(),
+      builder.getInt8PtrTy()));
 }
 
 llvm::Function *LLVMVisitor::makeExcAllocFunc() {
-  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_alloc_exc", llvm::Type::getInt8PtrTy(context),
-      llvm::Type::getInt32Ty(context), llvm::Type::getInt8PtrTy(context)));
+  auto *f = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("seq_alloc_exc", builder.getInt8PtrTy(),
+                                  builder.getInt32Ty(), builder.getInt8PtrTy()));
   f->setDoesNotThrow();
   return f;
 }
 
 llvm::Function *LLVMVisitor::makeThrowFunc() {
   auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_throw", llvm::Type::getVoidTy(context), llvm::Type::getInt8PtrTy(context)));
+      "seq_throw", builder.getVoidTy(), builder.getInt8PtrTy()));
   f->setDoesNotReturn();
   return f;
 }
 
 llvm::Function *LLVMVisitor::makeTerminateFunc() {
-  auto *f = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("seq_terminate", llvm::Type::getVoidTy(context),
-                                  llvm::Type::getInt8PtrTy(context)));
+  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      "seq_terminate", builder.getVoidTy(), builder.getInt8PtrTy()));
   f->setDoesNotReturn();
   return f;
 }
 
 llvm::StructType *LLVMVisitor::getTypeInfoType() {
-  return llvm::StructType::get(llvm::Type::getInt32Ty(context));
+  return llvm::StructType::get(builder.getInt32Ty());
 }
 
 llvm::StructType *LLVMVisitor::getPadType() {
-  return llvm::StructType::get(llvm::Type::getInt8PtrTy(context),
-                               llvm::Type::getInt32Ty(context));
+  return llvm::StructType::get(builder.getInt8PtrTy(), builder.getInt32Ty());
 }
 
 llvm::StructType *LLVMVisitor::getExceptionType() {
-  return llvm::StructType::get(getTypeInfoType(), llvm::Type::getInt8PtrTy(context));
+  return llvm::StructType::get(getTypeInfoType(), builder.getInt8PtrTy());
 }
 
 namespace {
@@ -363,13 +417,11 @@ llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(const std::string &name) {
   const std::string typeVarName = "seq.typeidx." + (name.empty() ? "<all>" : name);
   llvm::GlobalVariable *tidx = module->getGlobalVariable(typeVarName);
   int idx = typeIdxLookup(name);
-  if (!tidx)
+  if (!tidx) {
     tidx = new llvm::GlobalVariable(
-        *module.get(), typeInfoType, true, llvm::GlobalValue::PrivateLinkage,
-        llvm::ConstantStruct::get(
-            typeInfoType, llvm::ConstantInt::get(llvm::Type::getInt32Ty(context),
-                                                 (uint64_t)idx, false)),
-        typeVarName);
+        *module, typeInfoType, /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
+        llvm::ConstantStruct::get(typeInfoType, builder.getInt32(idx)), typeVarName);
+  }
   return tidx;
 }
 
@@ -383,7 +435,7 @@ int LLVMVisitor::getTypeIdx(const types::Type *catchType) {
 
 llvm::Value *LLVMVisitor::call(llvm::Value *callee,
                                llvm::ArrayRef<llvm::Value *> args) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (trycatch.empty()) {
     return builder.CreateCall(callee, args);
   } else {
@@ -433,12 +485,27 @@ void LLVMVisitor::visit(IRModule *x) {
   module->setTargetTriple(
       llvm::EngineBuilder().selectTarget()->getTargetTriple().str());
   module->setDataLayout(llvm::EngineBuilder().selectTarget()->createDataLayout());
+  auto *srcInfo = getSrcInfo(x);
+  module->setSourceFileName(srcInfo->file);
+
+  // debug info setup
+  db.builder = std::make_unique<llvm::DIBuilder>(*module);
+  llvm::DIFile *file = db.getFile(srcInfo->file);
+  db.unit =
+      db.builder->createCompileUnit(llvm::dwarf::DW_LANG_C, file, SEQ_VERSION_STRING(),
+                                    !db.debug, db.flags, /*RV=*/0);
+  module->addModuleFlag(llvm::Module::Warning, "Debug Info Version",
+                        llvm::DEBUG_METADATA_VERSION);
+  // darwin only supports dwarf2
+  if (llvm::Triple(module->getTargetTriple()).isOSDarwin()) {
+    module->addModuleFlag(llvm::Module::Warning, "Dwarf Version", 2);
+  }
 
   // args variable
   Var *argVar = x->getArgVar();
   llvm::Type *argVarType = getLLVMType(argVar->getType());
   auto *argStorage = new llvm::GlobalVariable(
-      *module.get(), argVarType, false, llvm::GlobalValue::PrivateLinkage,
+      *module, argVarType, /*isConstant=*/false, llvm::GlobalValue::PrivateLinkage,
       llvm::Constant::getNullValue(argVarType), argVar->getName());
   vars.insert(argVar, argStorage);
 
@@ -453,9 +520,21 @@ void LLVMVisitor::visit(IRModule *x) {
         vars.insert(var, getDummyVoidValue(context));
       } else {
         auto *storage = new llvm::GlobalVariable(
-            *module.get(), llvmType, false, llvm::GlobalValue::PrivateLinkage,
+            *module, llvmType, /*isConstant=*/false,
+            llvm::GlobalVariable::InternalLinkage,
             llvm::Constant::getNullValue(llvmType), var->getName());
         vars.insert(var, storage);
+
+        // debug info
+        auto *srcInfo = getSrcInfo(var);
+        llvm::DIFile *file = db.getFile(srcInfo->file);
+        llvm::DIScope *scope = db.unit;
+        llvm::DIGlobalVariableExpression *debugVar =
+            db.builder->createGlobalVariableExpression(
+                scope, getDebugNameForVariable(var), var->getName(), file,
+                srcInfo->line, getDIType(var->getType()),
+                /*IsLocalToUnit=*/true);
+        storage->addDebugInfo(debugVar);
       }
     }
   }
@@ -473,7 +552,6 @@ void LLVMVisitor::visit(IRModule *x) {
   process(main);
 
   // build canonical main function
-  llvm::IRBuilder<> builder(context);
   auto *strType =
       llvm::StructType::get(context, {builder.getInt64Ty(), builder.getInt8PtrTy()});
   auto *arrType =
@@ -618,12 +696,26 @@ void LLVMVisitor::visit(IRModule *x) {
 
   builder.SetInsertPoint(exitBlock);
   builder.CreateRet(builder.getInt32(0));
+  db.builder->finalize();
 }
 
 void LLVMVisitor::makeLLVMFunction(Func *x) {
+  auto *srcInfo = getSrcInfo(x);
+  llvm::DIFile *file = db.getFile(srcInfo->file);
+  auto *derivedType = llvm::cast<llvm::DIDerivedType>(getDIType(x->getType()));
+  auto *subroutineType =
+      llvm::cast<llvm::DISubroutineType>(derivedType->getRawBaseType());
+  llvm::DISubprogram *subprogram = db.builder->createFunction(
+      file, x->getUnmangledName(), getNameForFunction(x), file, srcInfo->line,
+      subroutineType,
+      /*isLocalToUnit=*/true, /*isDefinition=*/true, /*ScopeLine=*/0,
+      llvm::DINode::FlagZero, /*isOptimized=*/!db.debug);
+
   // process LLVM functions in full immediately
   if (auto *llvmFunc = cast<LLVMFunc>(x)) {
     process(llvmFunc);
+    func = module->getFunction(getNameForFunction(x));
+    func->setSubprogram(subprogram);
     return;
   }
 
@@ -639,10 +731,13 @@ void LLVMVisitor::makeLLVMFunction(Func *x) {
   const std::string functionName = getNameForFunction(x);
   func = llvm::cast<llvm::Function>(
       module->getOrInsertFunction(functionName, llvmFuncType));
+  if (!cast<ExternalFunc>(x)) {
+    func->setSubprogram(subprogram);
+  }
 }
 
 void LLVMVisitor::makeYield(llvm::Value *value, bool finalYield) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (value) {
     assert(coro.promise);
     builder.CreateStore(value, coro.promise);
@@ -693,181 +788,14 @@ bool internalFuncMatches(const std::string &name, InternalFunc *x) {
   return internalFuncMatches<ParentType, ArgTypes...>(
       name, x, std::make_index_sequence<sizeof...(ArgTypes)>());
 }
-
-// reverse complement
-// TODO: move to Seq
-unsigned revcompBits(unsigned n) {
-  unsigned c1 = (n & (3u << 0u)) << 6u;
-  unsigned c2 = (n & (3u << 2u)) << 2u;
-  unsigned c3 = (n & (3u << 4u)) >> 2u;
-  unsigned c4 = (n & (3u << 6u)) >> 6u;
-  return ~(c1 | c2 | c3 | c4) & 0xffu;
-}
-
-// table mapping 8-bit encoded 4-mers to reverse complement encoded 4-mers
-llvm::GlobalVariable *getRevCompTable(llvm::Module *module,
-                                      const std::string &name = "seq.revcomp_table") {
-  llvm::LLVMContext &context = module->getContext();
-  llvm::Type *ty = llvm::Type::getInt8Ty(context);
-  llvm::GlobalVariable *table = module->getGlobalVariable(name);
-
-  if (!table) {
-    std::vector<llvm::Constant *> v(256, llvm::ConstantInt::get(ty, 0));
-    for (unsigned i = 0; i < v.size(); i++)
-      v[i] = llvm::ConstantInt::get(ty, revcompBits(i));
-
-    auto *arrTy = llvm::ArrayType::get(llvm::Type::getInt8Ty(context), v.size());
-    table = new GlobalVariable(*module, arrTy, true, llvm::GlobalValue::PrivateLinkage,
-                               llvm::ConstantArray::get(arrTy, v), name);
-  }
-
-  return table;
-}
-
-llvm::Value *codegenRevCompByBitShift(const unsigned k, llvm::Value *self,
-                                      llvm::IRBuilder<> &b) {
-  llvm::Type *kmerType = b.getIntNTy(2 * k);
-  llvm::LLVMContext &context = b.getContext();
-
-  unsigned kpow2 = 1;
-  while (kpow2 < k)
-    kpow2 *= 2;
-  const unsigned w = 2 * kpow2;
-
-  llvm::Type *ty = llvm::IntegerType::get(context, w);
-  llvm::Value *comp = b.CreateNot(self);
-  comp = b.CreateZExt(comp, ty);
-  llvm::Value *result = comp;
-
-  for (unsigned i = 2; i <= kpow2; i = i * 2) {
-    llvm::Value *mask = llvm::ConstantInt::get(ty, 0);
-    llvm::Value *bitpattern = llvm::ConstantInt::get(ty, 1);
-    bitpattern = b.CreateShl(bitpattern, i);
-    bitpattern = b.CreateSub(bitpattern, ConstantInt::get(ty, 1));
-
-    unsigned j = 0;
-    while (j < w) {
-      llvm::Value *shift = b.CreateShl(bitpattern, j);
-      mask = b.CreateOr(mask, shift);
-      j += 2 * i;
-    }
-
-    llvm::Value *r1 = b.CreateLShr(result, i);
-    r1 = b.CreateAnd(r1, mask);
-    llvm::Value *r2 = b.CreateAnd(result, mask);
-    r2 = b.CreateShl(r2, i);
-    result = b.CreateOr(r1, r2);
-  }
-
-  if (w != 2 * k) {
-    assert(w > 2 * k);
-    result = b.CreateLShr(result, w - (2 * k));
-    result = b.CreateTrunc(result, kmerType);
-  }
-  return result;
-}
-
-llvm::Value *codegenRevCompByLookup(const unsigned k, llvm::Value *self,
-                                    llvm::IRBuilder<> &b) {
-  Type *kmerType = b.getIntNTy(2 * k);
-  llvm::Module *module = b.GetInsertBlock()->getModule();
-  llvm::Value *table = getRevCompTable(module);
-  llvm::Value *mask = llvm::ConstantInt::get(kmerType, 0xffu);
-  llvm::Value *result = llvm::ConstantInt::get(kmerType, 0);
-
-  // deal with 8-bit chunks:
-  for (unsigned i = 0; i < k / 4; i++) {
-    llvm::Value *slice = b.CreateShl(mask, i * 8);
-    slice = b.CreateAnd(self, slice);
-    slice = b.CreateLShr(slice, i * 8);
-    slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
-
-    llvm::Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
-    sliceRC = b.CreateLoad(sliceRC);
-    sliceRC = b.CreateZExtOrTrunc(sliceRC, kmerType);
-    sliceRC = b.CreateShl(sliceRC, (k - 4 * (i + 1)) * 2);
-    result = b.CreateOr(result, sliceRC);
-  }
-
-  // deal with remaining high bits:
-  unsigned rem = k % 4;
-  if (rem > 0) {
-    mask = llvm::ConstantInt::get(kmerType, (1u << (rem * 2)) - 1);
-    llvm::Value *slice = b.CreateShl(mask, (k - rem) * 2);
-    slice = b.CreateAnd(self, slice);
-    slice = b.CreateLShr(slice, (k - rem) * 2);
-    slice = b.CreateZExtOrTrunc(slice, b.getInt64Ty());
-
-    llvm::Value *sliceRC = b.CreateInBoundsGEP(table, {b.getInt64(0), slice});
-    sliceRC = b.CreateLoad(sliceRC);
-    sliceRC = b.CreateAShr(sliceRC,
-                           (4 - rem) * 2); // slice isn't full 8-bits, so shift out junk
-    sliceRC = b.CreateZExtOrTrunc(sliceRC, kmerType);
-    sliceRC = b.CreateAnd(sliceRC, mask);
-    result = b.CreateOr(result, sliceRC);
-  }
-
-  return result;
-}
-
-llvm::Value *codegenRevCompBySIMD(const unsigned k, llvm::Value *self,
-                                  llvm::IRBuilder<> &b) {
-  llvm::Type *kmerType = b.getIntNTy(2 * k);
-  llvm::LLVMContext &context = b.getContext();
-  llvm::Value *comp = b.CreateNot(self);
-
-  llvm::Type *ty = kmerType;
-  const unsigned w = ((2 * k + 7) / 8) * 8;
-  const unsigned m = w / 8;
-
-  if (w != 2 * k) {
-    ty = llvm::IntegerType::get(context, w);
-    comp = b.CreateZExt(comp, ty);
-  }
-
-  auto *vecTy = llvm::VectorType::get(b.getInt8Ty(), m);
-  std::vector<unsigned> shufMask;
-  for (unsigned i = 0; i < m; i++)
-    shufMask.push_back(m - 1 - i);
-
-  llvm::Value *vec = llvm::UndefValue::get(llvm::VectorType::get(ty, 1));
-  vec = b.CreateInsertElement(vec, comp, (uint64_t)0);
-  vec = b.CreateBitCast(vec, vecTy);
-  // shuffle reverses bytes
-  vec = b.CreateShuffleVector(vec, UndefValue::get(vecTy), shufMask);
-
-  // shifts reverse 2-bit chunks in each byte
-  llvm::Value *shift1 = llvm::ConstantVector::getSplat(m, b.getInt8(6));
-  llvm::Value *shift2 = llvm::ConstantVector::getSplat(m, b.getInt8(2));
-  llvm::Value *mask1 = llvm::ConstantVector::getSplat(m, b.getInt8(0x0c));
-  llvm::Value *mask2 = llvm::ConstantVector::getSplat(m, b.getInt8(0x30));
-
-  llvm::Value *vec1 = b.CreateLShr(vec, shift1);
-  llvm::Value *vec2 = b.CreateShl(vec, shift1);
-  llvm::Value *vec3 = b.CreateLShr(vec, shift2);
-  llvm::Value *vec4 = b.CreateShl(vec, shift2);
-  vec3 = b.CreateAnd(vec3, mask1);
-  vec4 = b.CreateAnd(vec4, mask2);
-
-  vec = b.CreateOr(vec1, vec2);
-  vec = b.CreateOr(vec, vec3);
-  vec = b.CreateOr(vec, vec4);
-
-  vec = b.CreateBitCast(vec, llvm::VectorType::get(ty, 1));
-  llvm::Value *result = b.CreateExtractElement(vec, (uint64_t)0);
-  if (w != 2 * k) {
-    assert(w > 2 * k);
-    result = b.CreateLShr(result, w - (2 * k));
-    result = b.CreateTrunc(result, kmerType);
-  }
-  return result;
-}
 } // namespace
 
 void LLVMVisitor::visit(InternalFunc *x) {
   using namespace types;
   func = module->getFunction(getNameForFunction(x)); // inserted during module visit
   coro = {};
+  assert(func);
+  setDebugInfoForNode(x);
 
   const Type *parentType = x->getParentType();
   auto *funcType = cast<FuncType>(x->getType());
@@ -881,18 +809,8 @@ void LLVMVisitor::visit(InternalFunc *x) {
     args.push_back(it);
   }
   block = llvm::BasicBlock::Create(context, "entry", func);
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   llvm::Value *result = nullptr;
-
-  if (internalFuncMatches<PointerType>("__elemsize__", x)) {
-    auto *pointerType = cast<PointerType>(parentType);
-    result = builder.getInt64(
-        module->getDataLayout().getTypeAllocSize(getLLVMType(pointerType->getBase())));
-  }
-
-  if (internalFuncMatches<PointerType>("__atomic__", x)) {
-    result = builder.getInt8(parentType->isAtomic() ? 1 : 0);
-  }
 
   if (internalFuncMatches<PointerType, IntType>("__new__", x)) {
     auto *pointerType = cast<PointerType>(parentType);
@@ -932,21 +850,7 @@ void LLVMVisitor::visit(InternalFunc *x) {
     result = builder.CreateCall(allocFunc, size);
   }
 
-  else if (internalFuncMatches<RefType, RefType>("__raw__", x)) {
-    result = args[0];
-  }
-
-  else if (internalFuncMatches<GeneratorType, GeneratorType>("done", x)) {
-    llvm::Function *coroResume =
-        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_resume);
-    llvm::Function *coroDone =
-        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_done);
-    builder.CreateCall(coroResume, args[0]);
-    result =
-        builder.CreateZExt(builder.CreateCall(coroDone, args[0]), builder.getInt8Ty());
-  }
-
-  else if (internalFuncMatches<GeneratorType, GeneratorType>("next", x)) {
+  else if (internalFuncMatches<GeneratorType, GeneratorType>("__promise__", x)) {
     auto *generatorType = cast<GeneratorType>(parentType);
     llvm::Type *baseType = getLLVMType(generatorType->getBase());
     llvm::Function *coroPromise =
@@ -955,47 +859,7 @@ void LLVMVisitor::visit(InternalFunc *x) {
         builder.getInt32(module->getDataLayout().getPrefTypeAlignment(baseType));
     llvm::Value *from = builder.getFalse();
     llvm::Value *ptr = builder.CreateCall(coroPromise, {args[0], aln, from});
-    ptr = builder.CreateBitCast(ptr, baseType->getPointerTo());
-    result = builder.CreateLoad(ptr);
-  }
-
-  else if (internalFuncMatches<OptionalType>("__new__", x)) {
-    auto *optionalType = cast<OptionalType>(parentType);
-    if (cast<RefType>(optionalType->getBase())) {
-      result = llvm::ConstantPointerNull::get(builder.getInt8PtrTy());
-    } else {
-      result = llvm::UndefValue::get(getLLVMType(optionalType));
-      result = builder.CreateInsertValue(result, builder.getFalse(), 0);
-    }
-  } else if (internalFuncMatchesIgnoreArgs<OptionalType>("__new__", x)) {
-    assert(args.size() == 1);
-    auto *optionalType = cast<OptionalType>(parentType);
-    if (cast<RefType>(optionalType->getBase())) {
-      result = args[0];
-    } else {
-      result = llvm::UndefValue::get(getLLVMType(optionalType));
-      result = builder.CreateInsertValue(result, builder.getTrue(), 0);
-      result = builder.CreateInsertValue(result, args[0], 1);
-    }
-  }
-
-  else if (internalFuncMatches<OptionalType, OptionalType>("__bool__", x)) {
-    auto *optionalType = cast<OptionalType>(parentType);
-    if (cast<RefType>(optionalType->getBase())) {
-      result = builder.CreateIsNotNull(args[0]);
-    } else {
-      result = builder.CreateExtractValue(args[0], 0);
-    }
-    result = builder.CreateZExt(result, builder.getInt8Ty());
-  }
-
-  else if (internalFuncMatches<OptionalType, OptionalType>("__invert__", x)) {
-    auto *optionalType = cast<OptionalType>(parentType);
-    if (cast<RefType>(optionalType->getBase())) {
-      result = args[0];
-    } else {
-      result = builder.CreateExtractValue(args[0], 1);
-    }
+    result = builder.CreateBitCast(ptr, baseType->getPointerTo());
   }
 
   else if (internalFuncMatchesIgnoreArgs<RecordType>("__new__", x)) {
@@ -1007,30 +871,13 @@ void LLVMVisitor::visit(InternalFunc *x) {
     }
   }
 
-  else if (internalFuncMatches<RecordType, RecordType, IntType>("__getitem__", x)) {
-    // TODO: move to Seq (does not perform bounds check or index correction)
-    auto *recordType = cast<RecordType>(parentType);
-    llvm::Value *storage = builder.CreateAlloca(getLLVMType(recordType));
-    builder.CreateStore(args[0], storage);
-    llvm::Value *ptr = builder.CreateBitCast(
-        storage, getLLVMType(recordType->front().type)->getPointerTo());
-    ptr = builder.CreateGEP(ptr, args[1]);
-    result = builder.CreateLoad(ptr);
-  }
-
   else if (internalFuncMatches<IntNType, IntNType>("__revcomp__", x)) {
     auto *intNType = cast<IntNType>(parentType);
     if (intNType->getLen() % 2 != 0) {
       result = llvm::ConstantAggregateZero::get(getLLVMType(intNType));
     } else {
       const unsigned k = intNType->getLen() / 2;
-      if (k <= 20) {
-        result = codegenRevCompByLookup(k, args[0], builder);
-      } else if (k < 32) {
-        result = codegenRevCompByBitShift(k, args[0], builder);
-      } else {
-        result = codegenRevCompBySIMD(k, args[0], builder);
-      }
+      result = codegenRevCompHeuristic(k, args[0], block);
     }
   }
 
@@ -1137,16 +984,18 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   func = module->getFunction(getNameForFunction(x)); // inserted during module visit
   coro = {};
   assert(func);
+  setDebugInfoForNode(x);
 
-  if (x->hasAttribute("export")) {
+  auto *fnAttributes = x->getAttribute<FuncAttribute>();
+  if (fnAttributes && fnAttributes->has("export")) {
     func->setLinkage(llvm::GlobalValue::ExternalLinkage);
   } else {
     func->setLinkage(llvm::GlobalValue::PrivateLinkage);
   }
-  if (x->hasAttribute("inline")) {
+  if (fnAttributes && fnAttributes->has("inline")) {
     func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
   }
-  if (x->hasAttribute("noinline")) {
+  if (fnAttributes && fnAttributes->has("noinline")) {
     func->addFnAttr(llvm::Attribute::AttrKind::NoInline);
   }
   func->setPersonalityFn(makePersonalityFunc());
@@ -1155,27 +1004,54 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   auto *returnType = funcType->getReturnType();
   assert(funcType);
   auto *entryBlock = llvm::BasicBlock::Create(context, "entry", func);
-  llvm::IRBuilder<> builder(entryBlock);
+  builder.SetInsertPoint(entryBlock);
+  builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // set up arguments and other symbols
   assert(std::distance(func->arg_begin(), func->arg_end()) ==
          std::distance(x->arg_begin(), x->arg_end()));
+  unsigned argIdx = 0;
   auto argIter = func->arg_begin();
   for (auto varIter = x->arg_begin(); varIter != x->arg_end(); ++varIter) {
     Var *var = *varIter;
     llvm::Value *storage = builder.CreateAlloca(getLLVMType(var->getType()));
     builder.CreateStore(argIter, storage);
     vars.insert(var, storage);
+
+    // debug info
+    auto *srcInfo = getSrcInfo(var);
+    llvm::DIFile *file = db.getFile(srcInfo->file);
+    llvm::DISubprogram *scope = func->getSubprogram();
+    llvm::DILocalVariable *debugVar = db.builder->createParameterVariable(
+        scope, getDebugNameForVariable(var), argIdx, file, srcInfo->line,
+        getDIType(var->getType()), db.debug);
+    db.builder->insertDeclare(
+        storage, debugVar, db.builder->createExpression(),
+        llvm::DILocation::get(context, srcInfo->line, srcInfo->col, scope), entryBlock);
+
     ++argIter;
+    ++argIdx;
   }
 
-  for (auto *symbol : *x) {
-    llvm::Type *llvmType = getLLVMType(symbol->getType());
+  for (auto *var : *x) {
+    llvm::Type *llvmType = getLLVMType(var->getType());
     if (llvmType->isVoidTy()) {
-      vars.insert(symbol, getDummyVoidValue(context));
+      vars.insert(var, getDummyVoidValue(context));
     } else {
       llvm::Value *storage = builder.CreateAlloca(llvmType);
-      vars.insert(symbol, storage);
+      vars.insert(var, storage);
+
+      // debug info
+      auto *srcInfo = getSrcInfo(var);
+      llvm::DIFile *file = db.getFile(srcInfo->file);
+      llvm::DISubprogram *scope = func->getSubprogram();
+      llvm::DILocalVariable *debugVar = db.builder->createAutoVariable(
+          scope, getDebugNameForVariable(var), file, srcInfo->line,
+          getDIType(var->getType()), db.debug);
+      db.builder->insertDeclare(
+          storage, debugVar, db.builder->createExpression(),
+          llvm::DILocation::get(context, srcInfo->line, srcInfo->col, scope),
+          entryBlock);
     }
   }
 
@@ -1288,7 +1164,7 @@ void LLVMVisitor::visit(VarValue *x) {
   } else {
     llvm::Value *varPtr = vars[x->getVar()];
     assert(varPtr);
-    llvm::IRBuilder<> builder(block);
+    builder.SetInsertPoint(block);
     value = builder.CreateLoad(varPtr);
   }
 }
@@ -1305,72 +1181,232 @@ void LLVMVisitor::visit(ValueProxy *x) { assert(0); }
  * Types
  */
 
-void LLVMVisitor::visit(const types::IntType *x) {
-  type = llvm::Type::getInt64Ty(context);
-}
-
-void LLVMVisitor::visit(const types::FloatType *x) {
-  type = llvm::Type::getDoubleTy(context);
-}
-
-void LLVMVisitor::visit(const types::BoolType *x) {
-  type = llvm::Type::getInt8Ty(context);
-}
-
-void LLVMVisitor::visit(const types::ByteType *x) {
-  type = llvm::Type::getInt8Ty(context);
-}
-
-void LLVMVisitor::visit(const types::VoidType *x) {
-  type = llvm::Type::getVoidTy(context);
-}
-
-void LLVMVisitor::visit(const types::RecordType *x) {
-  std::vector<llvm::Type *> body;
-  for (const auto &field : *x) {
-    body.push_back(getLLVMType(field.type));
+llvm::Type *LLVMVisitor::getLLVMType(const types::Type *t) {
+  if (auto *x = cast<types::IntType>(t)) {
+    return builder.getInt64Ty();
   }
-  type = llvm::StructType::get(context, body);
-}
 
-void LLVMVisitor::visit(const types::RefType *x) {
-  type = llvm::Type::getInt8PtrTy(context);
-}
-
-void LLVMVisitor::visit(const types::FuncType *x) {
-  llvm::Type *returnType = getLLVMType(x->getReturnType());
-  std::vector<llvm::Type *> argTypes;
-  for (const auto &argType : *x) {
-    argTypes.push_back(getLLVMType(argType));
+  if (auto *x = cast<types::FloatType>(t)) {
+    return builder.getDoubleTy();
   }
-  type =
-      llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false)->getPointerTo();
-}
 
-void LLVMVisitor::visit(const types::OptionalType *x) {
-  if (cast<types::RefType>(x->getBase())) {
-    type = llvm::Type::getInt8PtrTy(context);
-  } else {
-    type = llvm::StructType::get(llvm::Type::getInt1Ty(context),
-                                 getLLVMType(x->getBase()));
+  if (auto *x = cast<types::BoolType>(t)) {
+    return builder.getInt8Ty();
   }
+
+  if (auto *x = cast<types::ByteType>(t)) {
+    return builder.getInt8Ty();
+  }
+
+  if (auto *x = cast<types::VoidType>(t)) {
+    return builder.getVoidTy();
+  }
+
+  if (auto *x = cast<types::ArrayType>(t)) {
+    return llvm::StructType::get(builder.getInt64Ty(),
+                                 getLLVMType(x->getBase())->getPointerTo());
+  }
+
+  if (auto *x = cast<types::RecordType>(t)) {
+    std::vector<llvm::Type *> body;
+    for (const auto &field : *x) {
+      body.push_back(getLLVMType(field.type));
+    }
+    return llvm::StructType::get(context, body);
+  }
+
+  if (auto *x = cast<types::RefType>(t)) {
+    return builder.getInt8PtrTy();
+  }
+
+  if (auto *x = cast<types::FuncType>(t)) {
+    llvm::Type *returnType = getLLVMType(x->getReturnType());
+    std::vector<llvm::Type *> argTypes;
+    for (const auto *argType : *x) {
+      argTypes.push_back(getLLVMType(argType));
+    }
+    return llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false)
+        ->getPointerTo();
+  }
+
+  if (auto *x = cast<types::OptionalType>(t)) {
+    if (cast<types::RefType>(x->getBase())) {
+      return getLLVMType(x->getBase());
+    } else {
+      return llvm::StructType::get(builder.getInt1Ty(), getLLVMType(x->getBase()));
+    }
+  }
+
+  if (auto *x = cast<types::PointerType>(t)) {
+    return getLLVMType(x->getBase())->getPointerTo();
+  }
+
+  if (auto *x = cast<types::GeneratorType>(t)) {
+    return builder.getInt8PtrTy();
+  }
+
+  if (auto *x = cast<types::IntNType>(t)) {
+    return builder.getIntNTy(x->getLen());
+  }
+
+  assert(0 && "unknown type");
+  return nullptr;
 }
 
-void LLVMVisitor::visit(const types::ArrayType *x) {
-  type = llvm::StructType::get(llvm::Type::getInt64Ty(context),
-                               getLLVMType(x->getBase())->getPointerTo());
+llvm::DIType *LLVMVisitor::getDITypeHelper(
+    const types::Type *t,
+    std::unordered_map<std::string, llvm::DICompositeType *> &cache) {
+  llvm::Type *type = getLLVMType(t);
+  auto &layout = module->getDataLayout();
+
+  if (auto *x = cast<types::IntType>(t)) {
+    return db.builder->createBasicType(
+        x->getName(), layout.getTypeAllocSizeInBits(type), llvm::dwarf::DW_ATE_signed);
+  }
+
+  if (auto *x = cast<types::FloatType>(t)) {
+    return db.builder->createBasicType(
+        x->getName(), layout.getTypeAllocSizeInBits(type), llvm::dwarf::DW_ATE_float);
+  }
+
+  if (auto *x = cast<types::BoolType>(t)) {
+    return db.builder->createBasicType(
+        x->getName(), layout.getTypeAllocSizeInBits(type), llvm::dwarf::DW_ATE_boolean);
+  }
+
+  if (auto *x = cast<types::ByteType>(t)) {
+    return db.builder->createBasicType(x->getName(),
+                                       layout.getTypeAllocSizeInBits(type),
+                                       llvm::dwarf::DW_ATE_signed_char);
+  }
+
+  if (auto *x = cast<types::VoidType>(t)) {
+    return nullptr;
+  }
+
+  if (auto *x = cast<types::ArrayType>(t)) {
+    return db.builder->createUnspecifiedType(x->getName());
+  }
+
+  if (auto *x = cast<types::RecordType>(t)) {
+    auto it = cache.find(x->getName());
+    if (it != cache.end()) {
+      return it->second;
+    } else {
+      auto *structType = llvm::cast<llvm::StructType>(type);
+      auto *structLayout = layout.getStructLayout(structType);
+      auto *srcInfo = getSrcInfo(x);
+      auto *memberInfo = x->getAttribute<MemberAttribute>();
+      llvm::DIFile *file = db.getFile(srcInfo->file);
+      std::vector<llvm::Metadata *> members;
+
+      llvm::DICompositeType *diType = db.builder->createStructType(
+          file, x->getName(), file, srcInfo->line, structLayout->getSizeInBits(),
+          /*AlignInBits=*/0, llvm::DINode::FlagZero, /*DerivedFrom=*/nullptr,
+          db.builder->getOrCreateArray(members));
+
+      // prevent infinite recursion on recursive types
+      cache.emplace(x->getName(), diType);
+
+      unsigned memberIdx = 0;
+      for (const auto &field : *x) {
+        auto *subSrcInfo = srcInfo;
+        auto *subFile = file;
+        if (memberInfo) {
+          auto it = memberInfo->memberSrcInfo.find(field.name);
+          if (it != memberInfo->memberSrcInfo.end()) {
+            subSrcInfo = &it->second;
+            subFile = db.getFile(subSrcInfo->file);
+          }
+        }
+        members.push_back(db.builder->createMemberType(
+            diType, field.name, subFile, subSrcInfo->line,
+            layout.getTypeAllocSizeInBits(getLLVMType(field.type)),
+            /*AlignInBits=*/0, structLayout->getElementOffsetInBits(memberIdx),
+            llvm::DINode::FlagZero, getDITypeHelper(field.type, cache)));
+        ++memberIdx;
+      }
+
+      db.builder->replaceArrays(diType, db.builder->getOrCreateArray(members));
+      return diType;
+    }
+  }
+
+  if (auto *x = cast<types::RefType>(t)) {
+    return db.builder->createReferenceType(llvm::dwarf::DW_TAG_reference_type,
+                                           getDITypeHelper(x->getContents(), cache));
+  }
+
+  if (auto *x = cast<types::FuncType>(t)) {
+    std::vector<llvm::Metadata *> argTypes = {
+        getDITypeHelper(x->getReturnType(), cache)};
+    for (const auto *argType : *x) {
+      argTypes.push_back(getDITypeHelper(argType, cache));
+    }
+    return db.builder->createPointerType(
+        db.builder->createSubroutineType(llvm::MDTuple::get(context, argTypes)),
+        layout.getTypeAllocSizeInBits(type));
+  }
+
+  if (auto *x = cast<types::OptionalType>(t)) {
+    if (cast<types::RefType>(x->getBase())) {
+      return getDITypeHelper(x->getBase(), cache);
+    } else {
+      auto *baseType = getLLVMType(x->getBase());
+      auto *structType = llvm::StructType::get(builder.getInt1Ty(), baseType);
+      auto *structLayout = layout.getStructLayout(structType);
+      auto *srcInfo = getSrcInfo(x);
+      auto i1SizeInBits =
+          module->getDataLayout().getTypeAllocSizeInBits(builder.getInt1Ty());
+      auto *i1DebugType =
+          db.builder->createBasicType("i1", i1SizeInBits, llvm::dwarf::DW_ATE_boolean);
+      llvm::DIFile *file = db.getFile(srcInfo->file);
+      std::vector<llvm::Metadata *> members;
+
+      llvm::DICompositeType *diType = db.builder->createStructType(
+          file, x->getName(), file, srcInfo->line, structLayout->getSizeInBits(),
+          /*AlignInBits=*/0, llvm::DINode::FlagZero, /*DerivedFrom=*/nullptr,
+          db.builder->getOrCreateArray(members));
+
+      members.push_back(db.builder->createMemberType(
+          diType, "has", file, srcInfo->line, i1SizeInBits,
+          /*AlignInBits=*/0, structLayout->getElementOffsetInBits(0),
+          llvm::DINode::FlagZero, i1DebugType));
+
+      members.push_back(db.builder->createMemberType(
+          diType, "val", file, srcInfo->line,
+          module->getDataLayout().getTypeAllocSizeInBits(baseType),
+          /*AlignInBits=*/0, structLayout->getElementOffsetInBits(1),
+          llvm::DINode::FlagZero, getDITypeHelper(x->getBase(), cache)));
+
+      db.builder->replaceArrays(diType, db.builder->getOrCreateArray(members));
+      return diType;
+    }
+  }
+
+  if (auto *x = cast<types::PointerType>(t)) {
+    return db.builder->createPointerType(getDITypeHelper(x->getBase(), cache),
+                                         layout.getTypeAllocSizeInBits(type));
+  }
+
+  if (auto *x = cast<types::GeneratorType>(t)) {
+    return db.builder->createBasicType(
+        x->getName(), layout.getTypeAllocSizeInBits(type), llvm::dwarf::DW_ATE_address);
+  }
+
+  if (auto *x = cast<types::IntNType>(t)) {
+    return db.builder->createBasicType(
+        x->getName(), layout.getTypeAllocSizeInBits(type),
+        x->isSigned() ? llvm::dwarf::DW_ATE_signed : llvm::dwarf::DW_ATE_unsigned);
+  }
+
+  assert(0 && "unknown type");
+  return nullptr;
 }
 
-void LLVMVisitor::visit(const types::PointerType *x) {
-  type = getLLVMType(x->getBase())->getPointerTo();
-}
-
-void LLVMVisitor::visit(const types::GeneratorType *x) {
-  type = llvm::Type::getInt8PtrTy(context);
-}
-
-void LLVMVisitor::visit(const types::IntNType *x) {
-  type = llvm::Type::getIntNTy(context, x->getLen());
+llvm::DIType *LLVMVisitor::getDIType(const types::Type *t) {
+  std::unordered_map<std::string, llvm::DICompositeType *> cache;
+  return getDITypeHelper(t, cache);
 }
 
 /*
@@ -1378,27 +1414,27 @@ void LLVMVisitor::visit(const types::IntNType *x) {
  */
 
 void LLVMVisitor::visit(IntConstant *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   value = builder.getInt64(x->getVal());
 }
 
 void LLVMVisitor::visit(FloatConstant *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   value = llvm::ConstantFP::get(builder.getDoubleTy(), x->getVal());
 }
 
 void LLVMVisitor::visit(BoolConstant *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   value = builder.getInt8(x->getVal() ? 1 : 0);
 }
 
 void LLVMVisitor::visit(StringConstant *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   std::string s = x->getVal();
   auto *strVar = new llvm::GlobalVariable(
-      *module, llvm::ArrayType::get(builder.getInt8Ty(), s.length() + 1), true,
-      llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::getString(context, s),
-      "str_literal");
+      *module, llvm::ArrayType::get(builder.getInt8Ty(), s.length() + 1),
+      /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
+      llvm::ConstantDataArray::getString(context, s), "str_literal");
   auto *strType = llvm::StructType::get(builder.getInt64Ty(), builder.getInt8PtrTy());
   llvm::Value *ptr = builder.CreateBitCast(strVar, builder.getInt8PtrTy());
   llvm::Value *len = builder.getInt64(s.length());
@@ -1425,7 +1461,7 @@ void LLVMVisitor::visit(IfFlow *x) {
 
   process(x->getCond());
   llvm::Value *cond = value;
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   cond = builder.CreateTrunc(cond, builder.getInt1Ty());
   builder.CreateCondBr(cond, trueBlock, falseBlock);
 
@@ -1451,7 +1487,7 @@ void LLVMVisitor::visit(WhileFlow *x) {
   auto *bodyBlock = llvm::BasicBlock::Create(context, "while.body", func);
   auto *exitBlock = llvm::BasicBlock::Create(context, "while.exit", func);
 
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   builder.CreateBr(condBlock);
 
   block = condBlock;
@@ -1494,7 +1530,7 @@ void LLVMVisitor::visit(ForFlow *x) {
 
   process(x->getIter());
   llvm::Value *iter = value;
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   builder.CreateBr(condBlock);
 
   block = condBlock;
@@ -1548,7 +1584,7 @@ bool anyMatch(const types::Type *type, std::vector<const types::Type *> types) {
 void LLVMVisitor::visit(TryCatchFlow *x) {
   const bool isRoot = trycatch.empty();
   const bool supportBreakAndContinue = !loops.empty();
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   auto *entryBlock = llvm::BasicBlock::Create(context, "trycatch.entry", func);
   builder.CreateBr(entryBlock);
 
@@ -1843,7 +1879,7 @@ void LLVMVisitor::visit(AssignInstr *x) {
   assert(var);
   process(x->getRhs());
   if (var != getDummyVoidValue(context)) {
-    llvm::IRBuilder<> builder(block);
+    builder.SetInsertPoint(block);
     builder.CreateStore(value, var);
   }
 }
@@ -1855,7 +1891,7 @@ void LLVMVisitor::visit(ExtractInstr *x) {
   assert(index >= 0);
 
   process(x->getVal());
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (auto *refType = cast<types::RefType>(memberedType)) {
     value = builder.CreateBitCast(value,
                                   getLLVMType(refType->getContents())->getPointerTo());
@@ -1875,7 +1911,7 @@ void LLVMVisitor::visit(InsertInstr *x) {
   process(x->getRhs());
   llvm::Value *rhs = value;
 
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   lhs = builder.CreateBitCast(lhs, getLLVMType(refType->getContents())->getPointerTo());
   llvm::Value *load = builder.CreateLoad(lhs);
   load = builder.CreateInsertValue(load, rhs, index);
@@ -1883,7 +1919,7 @@ void LLVMVisitor::visit(InsertInstr *x) {
 }
 
 void LLVMVisitor::visit(CallInstr *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   process(x->getFunc());
   llvm::Value *f = value;
 
@@ -1898,7 +1934,7 @@ void LLVMVisitor::visit(CallInstr *x) {
 }
 
 void LLVMVisitor::visit(TypePropertyInstr *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   switch (x->getProperty()) {
   case TypePropertyInstr::Property::SIZEOF:
     value = builder.getInt64(
@@ -1913,7 +1949,7 @@ void LLVMVisitor::visit(TypePropertyInstr *x) {
 }
 
 void LLVMVisitor::visit(YieldInInstr *x) {
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (x->isSuspending()) {
     llvm::Function *coroSuspend =
         llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_suspend);
@@ -1945,7 +1981,7 @@ void LLVMVisitor::visit(StackAllocInstr *x) {
     assert(0 && "StackAllocInstr size is not constant");
   }
 
-  llvm::IRBuilder<> builder(func->getEntryBlock().getTerminator());
+  builder.SetInsertPoint(func->getEntryBlock().getTerminator());
   auto *arrType = llvm::StructType::get(builder.getInt64Ty(), baseType->getPointerTo());
   llvm::Value *len = builder.getInt64(size);
   llvm::Value *ptr = builder.CreateAlloca(baseType, len);
@@ -1964,7 +2000,7 @@ void LLVMVisitor::visit(TernaryInstr *x) {
   process(x->getCond());
   llvm::Value *cond = value;
 
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   cond = builder.CreateTrunc(cond, builder.getInt1Ty());
   builder.CreateCondBr(cond, trueBlock, falseBlock);
 
@@ -1992,7 +2028,7 @@ void LLVMVisitor::visit(TernaryInstr *x) {
 
 void LLVMVisitor::visit(BreakInstr *x) {
   assert(!loops.empty());
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (auto *tc = getInnermostTryCatchBeforeLoop()) {
     auto *excStateBreak = builder.getInt8(TryCatchData::State::BREAK);
     builder.CreateStore(excStateBreak, tc->excFlag);
@@ -2005,7 +2041,7 @@ void LLVMVisitor::visit(BreakInstr *x) {
 
 void LLVMVisitor::visit(ContinueInstr *x) {
   assert(!loops.empty());
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (auto *tc = getInnermostTryCatchBeforeLoop()) {
     auto *excStateContinue = builder.getInt8(TryCatchData::State::CONTINUE);
     builder.CreateStore(excStateContinue, tc->excFlag);
@@ -2021,7 +2057,7 @@ void LLVMVisitor::visit(ReturnInstr *x) {
   if (!voidReturn) {
     process(x->getValue());
   }
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   if (coro.exit) {
     builder.CreateBr(coro.exit);
   } else {
@@ -2058,7 +2094,7 @@ void LLVMVisitor::visit(ThrowInstr *x) {
   llvm::Function *excAllocFunc = makeExcAllocFunc();
   llvm::Function *throwFunc = makeThrowFunc();
   process(x->getValue());
-  llvm::IRBuilder<> builder(block);
+  builder.SetInsertPoint(block);
   llvm::Value *exc = builder.CreateCall(
       excAllocFunc, {builder.getInt32(getTypeIdx(x->getValue()->getType())), value});
   call(throwFunc, exc);

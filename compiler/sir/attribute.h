@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include "util/common.h"
@@ -13,9 +14,6 @@
 
 namespace seq {
 namespace ir {
-
-extern const std::string kSrcInfoAttribute;
-extern const std::string kFuncAttribute;
 
 /// Base for SIR attributes.
 struct Attribute {
@@ -33,6 +31,8 @@ using AttributePtr = std::unique_ptr<Attribute>;
 
 /// Attribute containing SrcInfo
 struct SrcInfoAttribute : public Attribute {
+  static const std::string AttributeName;
+
   /// source info
   seq::SrcInfo info;
 
@@ -46,6 +46,8 @@ struct SrcInfoAttribute : public Attribute {
 
 /// Attribute containing function information
 struct FuncAttribute : public Attribute {
+  static const std::string AttributeName;
+
   /// attributes map
   std::map<std::string, std::string> attributes;
 
@@ -57,6 +59,23 @@ struct FuncAttribute : public Attribute {
 
   /// @return true if the map contains val, false otherwise
   bool has(const std::string &val) const;
+
+  std::ostream &doFormat(std::ostream &os) const override;
+};
+
+/// Attribute containing type member information
+struct MemberAttribute : public Attribute {
+  static const std::string AttributeName;
+
+  /// member source info map
+  std::map<std::string, SrcInfo> memberSrcInfo;
+
+  /// Constructs a FuncAttribute.
+  /// @param attributes the map of attributes
+  explicit MemberAttribute(std::map<std::string, SrcInfo> memberSrcInfo)
+      : memberSrcInfo(std::move(memberSrcInfo)) {}
+
+  MemberAttribute() = default;
 
   std::ostream &doFormat(std::ostream &os) const override;
 };

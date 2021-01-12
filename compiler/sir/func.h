@@ -115,7 +115,7 @@ private:
   /// the function body
   FlowPtr body;
   /// whether the function is builtin
-  bool builtin;
+  bool builtin = false;
 
 public:
   static const char NodeId;

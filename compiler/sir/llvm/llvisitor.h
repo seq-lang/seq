@@ -1,7 +1,8 @@
 #pragma once
 
+#include "llvm.h"
 #include "sir/sir.h"
-#include "util/llvm.h"
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -24,26 +25,32 @@ private:
   };
 
   struct CoroData {
-    // coroutine-specific data
+    /// Coroutine promise (where yielded values are stored)
     llvm::Value *promise;
+    /// Coroutine handle
     llvm::Value *handle;
+    /// Coroutine cleanup block
     llvm::BasicBlock *cleanup;
+    /// Coroutine suspend block
     llvm::BasicBlock *suspend;
+    /// Coroutine exit block
     llvm::BasicBlock *exit;
   };
 
   struct NestableData {
     int sequenceNumber;
 
-    NestableData() : sequenceNumber(-1){};
+    NestableData() : sequenceNumber(-1) {}
   };
 
   struct LoopData : NestableData {
+    /// Block to branch to in case of "break"
     llvm::BasicBlock *breakBlock;
+    /// Block to branch to in case of "continue"
     llvm::BasicBlock *continueBlock;
 
     LoopData(llvm::BasicBlock *breakBlock, llvm::BasicBlock *continueBlock)
-        : NestableData(), breakBlock(breakBlock), continueBlock(continueBlock){};
+        : NestableData(), breakBlock(breakBlock), continueBlock(continueBlock) {}
   };
 
   struct TryCatchData : NestableData {
@@ -71,11 +78,29 @@ private:
     TryCatchData()
         : NestableData(), exceptionBlock(nullptr), exceptionRouteBlock(nullptr),
           finallyBlock(nullptr), catchTypes(), handlers(), excFlag(nullptr),
-          catchStore(nullptr), delegateDepth(nullptr), retStore(nullptr){};
+          catchStore(nullptr), delegateDepth(nullptr), retStore(nullptr) {}
+  };
+
+  struct DebugInfo {
+    /// LLVM debug info builder
+    std::unique_ptr<llvm::DIBuilder> builder;
+    /// Current compilation unit
+    llvm::DICompileUnit *unit;
+    /// Whether we are compiling in debug mode
+    bool debug;
+    /// Program command-line flags
+    std::string flags;
+
+    explicit DebugInfo(bool debug, const std::string &flags)
+        : builder(), unit(nullptr), debug(debug), flags(flags) {}
+
+    llvm::DIFile *getFile(const std::string &path);
   };
 
   /// LLVM context used for compilation
   llvm::LLVMContext context;
+  /// LLVM IR builder used for constructing LLVM IR
+  llvm::IRBuilder<> builder;
   /// Module we are compiling
   std::unique_ptr<llvm::Module> module;
   /// Current function we are compiling
@@ -84,8 +109,6 @@ private:
   llvm::BasicBlock *block;
   /// Last compiled value
   llvm::Value *value;
-  /// LLVM type that was just translated from the IR type
-  llvm::Type *type;
   /// LLVM values corresponding to IR variables
   Cache<Var, llvm::Value> vars;
   /// LLVM functions corresponding to IR functions
@@ -96,10 +119,15 @@ private:
   std::vector<LoopData> loops;
   /// Try-catch data stack
   std::vector<TryCatchData> trycatch;
-  /// Whether we are compiling in debug mode
-  bool debug;
+  /// Debug information
+  DebugInfo db;
 
-  template <typename T> void process(T *x) { x->accept(*this); }
+  llvm::DIType *
+  getDITypeHelper(const types::Type *t,
+                  std::unordered_map<std::string, llvm::DICompositeType *> &cache);
+  void setDebugInfoForNode(const IRNode *);
+  void process(IRNode *);
+  void process(const IRNode *);
 
   /// GC allocation functions
   llvm::Function *makeAllocFunc(bool atomic);
@@ -140,15 +168,34 @@ private:
   void runLLVMPipeline();
 
 public:
-  LLVMVisitor(bool debug = false);
+  LLVMVisitor(bool debug = false, const std::string &flags = "");
 
+  /// Performs LLVM's module verification on the contained module.
+  /// Causes an assertion failure if verification fails.
   void verify();
+  /// Dumps the unoptimized module IR to a file.
+  /// @param filename name of file to write IR to
   void dump(const std::string &filename = "_dump.ll");
-  void compile(const std::string &outname);
+  /// Runs optimization passes on module and writes LLVM bitcode
+  /// to the specified file.
+  /// @param filename name of the file to write bitcode to
+  void compile(const std::string &filename);
+  /// Runs optimization passes on module and executes it.
+  /// @param args vector of arguments to program
+  /// @param libs vector of libraries to load
+  /// @param envp program environment
   void run(const std::vector<std::string> &args = {},
            const std::vector<std::string> &libs = {},
            const char *const *envp = nullptr);
-  llvm::Type *getLLVMType(const types::Type *x);
+
+  /// Get LLVM type from IR type
+  /// @param t the IR type
+  /// @return corresponding LLVM type
+  llvm::Type *getLLVMType(const types::Type *t);
+  /// Get the LLVM debug info type from the IR type
+  /// @param t the IR type
+  /// @return corresponding LLVM DI type
+  llvm::DIType *getDIType(const types::Type *t);
 
   void visit(IRModule *) override;
   void visit(BodiedFunc *) override;
@@ -159,20 +206,6 @@ public:
   void visit(VarValue *) override;
   void visit(PointerValue *) override;
   void visit(ValueProxy *) override;
-
-  void visit(const types::IntType *) override;
-  void visit(const types::FloatType *) override;
-  void visit(const types::BoolType *) override;
-  void visit(const types::ByteType *) override;
-  void visit(const types::VoidType *) override;
-  void visit(const types::RecordType *) override;
-  void visit(const types::RefType *) override;
-  void visit(const types::FuncType *) override;
-  void visit(const types::OptionalType *) override;
-  void visit(const types::ArrayType *) override;
-  void visit(const types::PointerType *) override;
-  void visit(const types::GeneratorType *) override;
-  void visit(const types::IntNType *) override;
 
   void visit(IntConstant *) override;
   void visit(FloatConstant *) override;

@@ -136,7 +136,7 @@ public:
   }
 
   types::Type *getPointerType(const types::Type *base) {
-    auto name = types::PointerType::getName(base);
+    auto name = types::PointerType::getInstanceName(base);
     auto *rVal = getType(name);
     if (!rVal) {
       rVal = Nr<types::PointerType>(base);
@@ -146,7 +146,7 @@ public:
   }
 
   types::Type *getArrayType(const types::Type *base) {
-    auto name = types::ArrayType::getName(base);
+    auto name = types::ArrayType::getInstanceName(base);
     auto *rVal = getType(name);
     if (!rVal) {
       rVal = Nr<types::ArrayType>(getPointerType(base), getIntType());
@@ -156,7 +156,7 @@ public:
   }
 
   types::Type *getGeneratorType(const types::Type *base) {
-    auto name = types::GeneratorType::getName(base);
+    auto name = types::GeneratorType::getInstanceName(base);
     auto *rVal = getType(name);
     if (!rVal) {
       rVal = Nr<types::GeneratorType>(base);
@@ -166,7 +166,7 @@ public:
   }
 
   types::Type *getOptionalType(const types::Type *base) {
-    auto name = types::OptionalType::getName(base);
+    auto name = types::OptionalType::getInstanceName(base);
     auto *rVal = getType(name);
     if (!rVal) {
       rVal = Nr<types::OptionalType>(base);
@@ -232,7 +232,7 @@ public:
 
   types::Type *getFuncType(const types::Type *rType,
                            std::vector<const types::Type *> argTypes) {
-    auto name = types::FuncType::getName(rType, argTypes);
+    auto name = types::FuncType::getInstanceName(rType, argTypes);
     auto *rVal = getType(name);
     if (!rVal) {
       rVal = Nr<types::FuncType>(rType, std::move(argTypes));
@@ -265,7 +265,7 @@ public:
   }
 
   types::Type *getIntNType(unsigned len, bool sign) {
-    auto name = types::IntNType::getName(len, sign);
+    auto name = types::IntNType::getInstanceName(len, sign);
     auto *rVal = getType(name);
     if (!rVal) {
       rVal = Nr<types::IntNType>(len, sign);

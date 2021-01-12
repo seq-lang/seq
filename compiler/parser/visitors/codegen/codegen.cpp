@@ -502,6 +502,8 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
     auto *funcType =
         ctx->getModule()->getFuncType(realizeType(t->args[0]->getClass().get()), types);
 
+    cast<ir::Func>(fp.first)->setSrcInfo(getSrcInfo());
+
     LOG_REALIZE("[codegen] generating fn {}", real.first);
     if (in(stmt->attributes, "llvm")) {
       auto *f = cast<ir::LLVMFunc>(fp.first);
@@ -556,13 +558,12 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
     } else {
       auto *f = cast<ir::Func>(fp.first);
       assert(f);
-      f->setSrcInfo(getSrcInfo());
       //      if (!ctx->isToplevel())
       //        f->p
       ctx->addScope();
 
       f->realize(cast<ir::types::FuncType>(funcType), names);
-      f->setAttribute(kFuncAttribute, make_unique<FuncAttribute>(ast->attributes));
+      f->setAttribute(make_unique<FuncAttribute>(ast->attributes));
       for (auto &a : ast->attributes) {
         if (a.first == "atomic")
           ctx->setFlag("atomic");

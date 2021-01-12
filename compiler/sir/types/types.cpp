@@ -98,8 +98,8 @@ std::ostream &FuncType::doFormat(std::ostream &os) const {
   return os;
 }
 
-std::string FuncType::getName(const Type *rType,
-                              const std::vector<const Type *> &argTypes) {
+std::string FuncType::getInstanceName(const Type *rType,
+                                      const std::vector<const Type *> &argTypes) {
   auto wrap = [](auto it) -> auto {
     auto f = [](auto it) { return it->referenceString(); };
     auto m = [](auto it) { return nullptr; };
@@ -115,37 +115,37 @@ const char DerivedType::NodeId = 0;
 
 const char PointerType::NodeId = 0;
 
-std::string PointerType::getName(const Type *base) {
+std::string PointerType::getInstanceName(const Type *base) {
   return fmt::format(FMT_STRING(".Pointer[{}]"), base->referenceString());
 }
 
 const char OptionalType::NodeId = 0;
 
-std::string OptionalType::getName(const Type *base) {
+std::string OptionalType::getInstanceName(const Type *base) {
   return fmt::format(FMT_STRING(".Optional[{}]"), base->referenceString());
 }
 
 const char ArrayType::NodeId = 0;
 
 ArrayType::ArrayType(const Type *pointerType, const Type *countType)
-    : AcceptorExtend(getName(cast<PointerType>(pointerType)->getBase()),
+    : AcceptorExtend(getInstanceName(cast<PointerType>(pointerType)->getBase()),
                      std::vector<const Type *>{countType, pointerType},
                      std::vector<std::string>{"len", "ptr"}),
       base(cast<PointerType>(pointerType)->getBase()) {}
 
-std::string ArrayType::getName(const Type *base) {
+std::string ArrayType::getInstanceName(const Type *base) {
   return fmt::format(FMT_STRING(".Array[{}]"), base->referenceString());
 }
 
 const char GeneratorType::NodeId = 0;
 
-std::string GeneratorType::getName(const Type *base) {
+std::string GeneratorType::getInstanceName(const Type *base) {
   return fmt::format(FMT_STRING(".Generator[{}]"), base->referenceString());
 }
 
 const char IntNType::NodeId = 0;
 
-std::string IntNType::getName(unsigned int len, bool sign) {
+std::string IntNType::getInstanceName(unsigned int len, bool sign) {
   return fmt::format(FMT_STRING(".{}Int{}"), sign ? "" : "U", len);
 }
 
