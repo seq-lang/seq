@@ -379,6 +379,7 @@ void SimplifyVisitor::visit(IndexExpr *expr) {
     // For some expressions (e.g. self.foo[N]) we are not yet sure if it is an
     // instantiation or an element access (the expression might be a function and we
     // do not know it yet, and all indices are StaticExpr).
+    generateTupleStub(it.size());
     resultExpr =
         N<IndexExpr>(move(e), it.size() == 1 ? move(it[0]) : N<TupleExpr>(move(it)));
   }

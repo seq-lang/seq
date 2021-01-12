@@ -322,12 +322,12 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               auto val = ctx->find(ei->value);
               seqassert(val && val->isStatic(), "invalid static expression");
               auto genTyp = val->type->follow();
-              staticGenerics.emplace_back(Generic{
-                  ei->value, genTyp,
-                  genTyp->getLink() ? genTyp->getLink()->id
-                                    : genTyp->getStatic()->explicits.empty()
-                                          ? 0
-                                          : genTyp->getStatic()->explicits[0].id});
+              staticGenerics.emplace_back(
+                  Generic{ei->value, genTyp,
+                          genTyp->getLink() ? genTyp->getLink()->id
+                          : genTyp->getStatic()->explicits.empty()
+                              ? 0
+                              : genTyp->getStatic()->explicits[0].id});
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -402,13 +402,19 @@ void TypecheckVisitor::visit(IndexExpr *expr) {
   } else if (auto c = typ->getClass()) {
     // Case 2: check if this is a static tuple access...
     resultExpr = transformStaticTupleIndex(c.get(), expr->expr, expr->index);
-    if (!resultExpr)
+    if (!resultExpr) {
       // Case 3: ... and if not, just call __getitem__.
-      resultExpr = transform(
-          N<CallExpr>(N<DotExpr>(move(expr->expr), "__getitem__"), move(expr->index)));
+      if (auto et = const_cast<TupleExpr *>(expr->index->getTuple()))
+        expr->index = N<CallExpr>(
+            N<DotExpr>(N<IdExpr>(format("Tuple.N{}", et->items.size())), "__new__"),
+            move(et->items));
+      ExprPtr e =
+          N<CallExpr>(N<DotExpr>(move(expr->expr), "__getitem__"), move(expr->index));
+      resultExpr = transform(e, false, allowVoidExpr);
+    }
   } else {
     // Case 4: type is still unknown.
-    expr->index = transform(expr->index);
+    // expr->index = transform(expr->index);
     expr->type |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
   }
 }
