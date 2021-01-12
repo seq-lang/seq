@@ -1010,7 +1010,7 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   // set up arguments and other symbols
   assert(std::distance(func->arg_begin(), func->arg_end()) ==
          std::distance(x->arg_begin(), x->arg_end()));
-  unsigned argIdx = 0;
+  unsigned argIdx = 1;
   auto argIter = func->arg_begin();
   for (auto varIter = x->arg_begin(); varIter != x->arg_end(); ++varIter) {
     Var *var = *varIter;
