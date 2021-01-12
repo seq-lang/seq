@@ -1193,10 +1193,10 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       for (int i = 0; i < f->explicits.size(); i++)
         if (ast->generics[i].deflt && f->explicits[i].type->getUnbound()) {
           // LOG("- def: {}", calleeType->toString());
-          for (auto &r : reorderedArgs)
-            // LOG("  - {}", r.value->type->toString());
+          // for (auto &r : reorderedArgs)
+          // LOG("  - {}", r.value->type->toString());
 
-            auto deflt = clone(ast->generics[i].deflt);
+          auto deflt = clone(ast->generics[i].deflt);
           if (deflt->getNone())
             f->explicits[i].type |=
                 ctx->instantiate(getSrcInfo(), ctx->findInternal("T.None"));
