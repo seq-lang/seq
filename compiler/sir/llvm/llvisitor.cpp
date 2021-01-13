@@ -1870,9 +1870,195 @@ void LLVMVisitor::visit(UnorderedFlow *x) {
   }
 }
 
+void LLVMVisitor::callStage(const PipelineFlow::Stage *stage) {
+  llvm::Value *output = value;
+  process(stage->getFunc());
+  llvm::Value *f = value;
+  std::vector<llvm::Value *> args;
+  for (const auto *arg : *stage) {
+    if (arg) {
+      process(arg);
+      args.push_back(value);
+    } else {
+      args.push_back(output);
+    }
+  }
+  value = call(f, args);
+}
+
+void LLVMVisitor::codegenPipeline(
+    const std::vector<const PipelineFlow::Stage *> &stages, llvm::Value *syncReg,
+    unsigned where) {
+  if (where >= stages.size()) {
+    return;
+  }
+
+  auto *stage = stages[where];
+
+  if (where == 0) {
+    process(stage->getFunc());
+    codegenPipeline(stages, syncReg, where + 1);
+    return;
+  }
+
+  auto *prevStage = stages[where - 1];
+  const bool generator = prevStage->isGenerator();
+  const bool parallel = prevStage->isParallel();
+
+  if (generator) {
+    auto *generatorType = cast<types::GeneratorType>(prevStage->getOutputType());
+    assert(generatorType);
+    auto *baseType = getLLVMType(generatorType->getBase());
+
+    auto *condBlock = llvm::BasicBlock::Create(context, "pipeline.cond", func);
+    auto *bodyBlock = llvm::BasicBlock::Create(context, "pipeline.body", func);
+    auto *cleanupBlock = llvm::BasicBlock::Create(context, "pipeline.cleanup", func);
+    auto *exitBlock = llvm::BasicBlock::Create(context, "pipeline.exit", func);
+
+    // LLVM coroutine intrinsics
+    // https://prereleases.llvm.org/6.0.0/rc3/docs/Coroutines.html
+    llvm::Function *coroResume =
+        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_resume);
+    llvm::Function *coroDone =
+        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_done);
+    llvm::Function *coroPromise =
+        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_promise);
+    llvm::Function *coroDestroy =
+        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_destroy);
+
+    llvm::Value *iter = value;
+    builder.SetInsertPoint(block);
+    builder.CreateBr(condBlock);
+
+    block = condBlock;
+    call(coroResume, {iter});
+    builder.SetInsertPoint(block);
+    llvm::Value *done = builder.CreateCall(coroDone, iter);
+    builder.CreateCondBr(done, cleanupBlock, bodyBlock);
+
+    builder.SetInsertPoint(bodyBlock);
+    llvm::Value *alignment =
+        builder.getInt32(module->getDataLayout().getPrefTypeAlignment(baseType));
+    llvm::Value *from = builder.getFalse();
+    llvm::Value *promise = builder.CreateCall(coroPromise, {iter, alignment, from});
+    promise = builder.CreateBitCast(promise, baseType->getPointerTo());
+    value = builder.CreateLoad(promise);
+
+    block = bodyBlock;
+    if (parallel) {
+      auto *detachBlock = llvm::BasicBlock::Create(context, "pipeline.detach", func);
+      builder.SetInsertPoint(block);
+      if (trycatch.empty()) {
+        builder.CreateDetach(detachBlock, condBlock, syncReg);
+      } else {
+        auto *unwindBlock = trycatch.back().exceptionBlock;
+        builder.CreateDetach(detachBlock, condBlock, unwindBlock, syncReg);
+      }
+      block = detachBlock;
+    }
+
+    callStage(stage);
+    codegenPipeline(stages, syncReg, where + 1);
+    builder.SetInsertPoint(block);
+
+    if (parallel) {
+      builder.CreateBr(condBlock);
+    } else {
+      builder.CreateReattach(condBlock, syncReg);
+    }
+
+    builder.SetInsertPoint(cleanupBlock);
+    builder.CreateCall(coroDestroy, iter);
+    builder.CreateBr(exitBlock);
+
+    block = exitBlock;
+  } else {
+    llvm::BasicBlock *resumeBlock = nullptr;
+    if (parallel) {
+      auto *detachBlock = llvm::BasicBlock::Create(context, "pipeline.detach", func);
+      resumeBlock = llvm::BasicBlock::Create(context, "pipeline.resume", func);
+      builder.SetInsertPoint(block);
+      if (trycatch.empty()) {
+        builder.CreateDetach(detachBlock, resumeBlock, syncReg);
+      } else {
+        auto *unwindBlock = trycatch.back().exceptionBlock;
+        builder.CreateDetach(detachBlock, resumeBlock, unwindBlock, syncReg);
+      }
+      block = detachBlock;
+    }
+
+    callStage(stage);
+    codegenPipeline(stages, syncReg, where + 1);
+
+    if (parallel) {
+      builder.SetInsertPoint(block);
+      builder.CreateReattach(resumeBlock, syncReg);
+      block = resumeBlock;
+    }
+  }
+}
+
 void LLVMVisitor::visit(PipelineFlow *x) {
-  // TODO
-  assert(0);
+  unsigned numParallel = 0;
+  std::vector<const PipelineFlow::Stage *> stages;
+  for (const auto &stage : *x) {
+    stages.push_back(&stage);
+    if (stage.isParallel()) {
+      ++numParallel;
+    }
+  }
+
+  // set up parallelism if needed
+  // TODO: move nested parallel setup to Tapir backend
+  const bool anyParallel = numParallel > 0;
+  const bool nestedParallel = numParallel > 1;
+
+  getOrCreateIdentTy(module.get());
+  auto *threadNumFunc = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      "__kmpc_global_thread_num", builder.getInt32Ty(), getIdentTyPointerTy()));
+  threadNumFunc->setDoesNotThrow();
+
+  auto *taskGroupFunc = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("__kmpc_taskgroup", builder.getVoidTy(),
+                                  getIdentTyPointerTy(), builder.getInt32Ty()));
+  taskGroupFunc->setDoesNotThrow();
+
+  auto *endTaskGroupFunc = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("__kmpc_end_taskgroup", builder.getVoidTy(),
+                                  getIdentTyPointerTy(), builder.getInt32Ty()));
+  endTaskGroupFunc->setDoesNotThrow();
+
+  llvm::Value *syncReg = nullptr;
+  llvm::Value *ompLoc = nullptr;
+  llvm::Value *gtid = nullptr;
+
+  if (anyParallel) {
+    llvm::Function *syncStart = llvm::Intrinsic::getDeclaration(
+        module.get(), llvm::Intrinsic::syncregion_start);
+    builder.SetInsertPoint(block);
+    syncReg = builder.CreateCall(syncStart);
+  }
+
+  if (nestedParallel) {
+    ompLoc = getOrCreateDefaultLocation(module.get());
+    builder.SetInsertPoint(func->getEntryBlock().getTerminator());
+    gtid = builder.CreateCall(threadNumFunc, ompLoc);
+
+    builder.SetInsertPoint(block);
+    builder.CreateCall(taskGroupFunc, {ompLoc, gtid});
+  }
+
+  codegenPipeline(stages, syncReg);
+
+  // create sync
+  builder.SetInsertPoint(block);
+  if (nestedParallel) {
+    builder.CreateCall(endTaskGroupFunc, {ompLoc, gtid});
+  } else if (anyParallel) {
+    auto *exitBlock = llvm::BasicBlock::Create(context, "pipeline.exit", func);
+    builder.CreateSync(exitBlock, syncReg);
+    block = exitBlock;
+  }
 }
 
 /*

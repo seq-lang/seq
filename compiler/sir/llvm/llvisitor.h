@@ -153,6 +153,9 @@ private:
   void makeLLVMFunction(Func *);
   void makeYield(llvm::Value *value = nullptr, bool finalYield = false);
   std::string buildLLVMCodeString(LLVMFunc *);
+  void callStage(const PipelineFlow::Stage *stage);
+  void codegenPipeline(const std::vector<const PipelineFlow::Stage *> &stages,
+                       llvm::Value *syncReg, unsigned where = 0);
 
   // Loop and try-catch state
   void enterLoop(LoopData data);
