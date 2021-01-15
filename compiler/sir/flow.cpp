@@ -115,9 +115,13 @@ Value *UnorderedFlow::doClone() const {
 const char PipelineFlow::NodeId = 0;
 
 const types::Type *PipelineFlow::Stage::getOutputType() const {
-  auto *funcType = func->getType()->as<types::FuncType>();
-  assert(funcType);
-  return funcType->getReturnType();
+  if (args.empty()) {
+    return func->getType();
+  } else {
+    auto *funcType = func->getType()->as<types::FuncType>();
+    assert(funcType);
+    return funcType->getReturnType();
+  }
 }
 
 std::ostream &PipelineFlow::doFormat(std::ostream &os) const {
