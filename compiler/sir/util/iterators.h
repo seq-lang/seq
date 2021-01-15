@@ -70,6 +70,20 @@ template <typename It> auto const_raw_ptr_adaptor(It it) {
                                                                  std::move(m));
 }
 
+template <typename It> auto map_key_adaptor(It it) {
+  auto f = [](auto &v) -> auto & { return v.first; };
+  auto m = [](auto &v) -> auto & { return v.first; };
+  return function_iterator_adaptor<It, decltype(f), decltype(m)>(it, std::move(f),
+                                                                 std::move(m));
+}
+
+template <typename It> auto const_map_key_adaptor(It it) {
+  auto f = [](auto &v) -> const auto & { return v.first; };
+  auto m = [](auto &v) -> const auto & { return v.first; };
+  return function_iterator_adaptor<It, decltype(f), decltype(m)>(it, std::move(f),
+                                                                 std::move(m));
+}
+
 } // namespace util
 } // namespace ir
 } // namespace seq

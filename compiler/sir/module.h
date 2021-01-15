@@ -121,11 +121,16 @@ public:
   }
 
   template <typename DesiredType, typename... Args>
-  std::unique_ptr<DesiredType> Nxs(const seq::SrcObject *s, Args &&... args) {
+  std::unique_ptr<DesiredType> Nxs(seq::SrcInfo s, Args &&... args) {
     auto ret = std::make_unique<DesiredType>(std::forward<Args>(args)...);
     ret->setModule(this);
-    ret->setSrcInfo(s->getSrcInfo());
+    ret->setSrcInfo(std::move(s));
     return std::move(ret);
+  }
+
+  template <typename DesiredType, typename... Args>
+  std::unique_ptr<DesiredType> Nxs(const seq::SrcObject *s, Args &&... args) {
+    return Nxs<DesiredType>(s->getSrcInfo(), std::forward<Args>(args)...);
   }
 
   template <typename DesiredType, typename... Args>

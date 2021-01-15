@@ -19,11 +19,21 @@ namespace ir {
 struct Attribute {
   virtual ~Attribute() noexcept = default;
 
+  /// @return true if the attribute should be propagated across clones
+  virtual bool needsClone() const { return true; }
+
   friend std::ostream &operator<<(std::ostream &os, const Attribute &a) {
     return a.doFormat(os);
   }
 
+  /// @return a clone of the attribute
+  std::unique_ptr<Attribute> clone() const {
+    return std::unique_ptr<Attribute>(doClone());
+  }
+
 private:
+  virtual Attribute *doClone() const = 0;
+
   virtual std::ostream &doFormat(std::ostream &os) const = 0;
 };
 
@@ -41,6 +51,8 @@ struct SrcInfoAttribute : public Attribute {
   explicit SrcInfoAttribute(seq::SrcInfo info) : info(std::move(info)) {}
   SrcInfoAttribute() = default;
 
+private:
+  Attribute *doClone() const override { return new SrcInfoAttribute(*this); }
   std::ostream &doFormat(std::ostream &os) const override { return os << info; }
 };
 
@@ -60,6 +72,9 @@ struct FuncAttribute : public Attribute {
   /// @return true if the map contains val, false otherwise
   bool has(const std::string &val) const;
 
+private:
+  Attribute *doClone() const override { return new FuncAttribute(*this); }
+
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
@@ -76,6 +91,9 @@ struct MemberAttribute : public Attribute {
       : memberSrcInfo(std::move(memberSrcInfo)) {}
 
   MemberAttribute() = default;
+
+private:
+  Attribute *doClone() const override { return new MemberAttribute(*this); }
 
   std::ostream &doFormat(std::ostream &os) const override;
 };

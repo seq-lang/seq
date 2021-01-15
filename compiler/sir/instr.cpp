@@ -8,6 +8,8 @@ namespace ir {
 
 const char Instr::NodeId = 0;
 
+const types::Type *Instr::getType() const { return getModule()->getVoidType(); }
+
 const char AssignInstr::NodeId = 0;
 
 std::ostream &AssignInstr::doFormat(std::ostream &os) const {
@@ -93,7 +95,7 @@ const types::Type *TypePropertyInstr::getType() const {
   case Property::SIZEOF:
     return getModule()->getIntType();
   default:
-    return nullptr;
+    return getModule()->getVoidType();
   }
 }
 

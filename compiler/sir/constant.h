@@ -42,7 +42,7 @@ public:
         val(v) {}
 
   /// @return the internal value.
-  ValueType getVal() { return val; }
+  ValueType getVal() const { return val; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override {
@@ -76,7 +76,7 @@ public:
       : AcceptorExtend(type, std::move(name)), val(std::move(v)) {}
 
   /// @return the internal value.
-  std::string getVal() { return val; }
+  std::string getVal() const { return val; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override {

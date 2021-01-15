@@ -89,6 +89,8 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
           cls->getContents()->realize(typeArgs, names);
           cls->setAttribute(
               std::make_unique<seq::ir::MemberAttribute>(std::move(memberInfo)));
+          cls->getContents()->setAttribute(
+              std::make_unique<seq::ir::MemberAttribute>(std::move(memberInfo)));
         }
     }
     return realizedType;

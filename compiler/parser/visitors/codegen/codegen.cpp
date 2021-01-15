@@ -260,6 +260,66 @@ void CodegenVisitor::visit(StmtExpr *expr) {
   ctx->popScope();
 }
 
+void CodegenVisitor::visit(PipeExpr *expr) {
+  auto isGen = [](const ValuePtr &v) -> bool {
+    auto *type = v->getType();
+    if (isA<ir::types::GeneratorType>(type))
+      return true;
+    else if (auto *fn = cast<ir::types::FuncType>(type)) {
+      return isA<ir::types::GeneratorType>(fn->getReturnType());
+    }
+    return false;
+  };
+
+  vector<PipelineFlow::Stage> stages;
+
+  auto firstStage = transform(expr->items[0].expr);
+  auto firstIsGen = isGen(firstStage);
+  stages.emplace_back(move(firstStage), std::vector<ValuePtr>(), firstIsGen, false);
+
+  auto hasGen = firstIsGen;
+
+  for (auto i = 1; i < expr->items.size(); ++i) {
+    auto &item = expr->items[i];
+    auto *call = CAST(item.expr, CallExpr);
+    assert(call);
+
+    auto fn = transform(call->expr);
+    auto genStage = isGen(fn);
+
+    hasGen = hasGen || genStage;
+
+    vector<ValuePtr> args(call->args.size());
+    for (auto i = 0; i < call->args.size(); ++i) {
+      args[i] = transform(call->args[i].value);
+    }
+    stages.emplace_back(move(fn), move(args), genStage, false);
+  }
+
+  if (!hasGen) {
+    result = stages[0].getFunc()->clone();
+
+    for (auto i = 1; i < stages.size(); ++i) {
+      auto &stage = stages[i];
+      std::vector<ValuePtr> newArgs;
+      for (auto *arg : stage) {
+        newArgs.push_back(arg ? arg->clone() : move(result));
+      }
+      result = ctx->getModule()->Nxs<CallInstr>(expr, stage.getFunc()->clone(),
+                                                move(newArgs));
+    }
+    return;
+  }
+
+  for (int i = 0; i < expr->items.size(); i++)
+    if (expr->items[i].op == "||>")
+      stages[i].setParallel();
+
+  ctx->getSeries()->push_back(ctx->getModule()->Nxs<PipelineFlow>(expr, move(stages)));
+}
+
+void CodegenVisitor::visit(EllipsisExpr *expr) {}
+
 void CodegenVisitor::visit(SuiteStmt *stmt) {
   for (auto &s : stmt->stmts)
     transform(s);
@@ -278,7 +338,9 @@ void CodegenVisitor::visit(ContinueStmt *stmt) {
 }
 
 void CodegenVisitor::visit(ExprStmt *stmt) {
-  ctx->getSeries()->push_back(transform(stmt->expr));
+  auto r = transform(stmt->expr);
+  if (r)
+    ctx->getSeries()->push_back(move(r));
 }
 
 void CodegenVisitor::visit(AssignStmt *stmt) {
@@ -574,10 +636,11 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
         external->setUnmangledName(ctx->cache->reverseIdentifierLookup[stmt->name]);
       } else if (!in(ast->attributes, "internal")) {
         for (auto i = 0; i < names.size(); ++i) {
-          auto var = cast<ir::Var>(f->getArgVar(names[i]));
+          auto var = f->getArgVar(names[i]);
           assert(var);
           ctx->addVar(ast->args[i].name, var);
         }
+
         auto body = newScope(stmt, "body");
         ctx->addSeries(body.get(), f);
         transform(ast->suite);
@@ -589,6 +652,11 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
         bodied->setBody(move(body));
       }
       ctx->popScope();
+    }
+    for (auto i = 0; i < names.size(); ++i) {
+      auto var = fp.first->getArgVar(names[i]);
+      assert(var);
+      var->setSrcInfo(ast->args[i].getSrcInfo());
     }
   }
 }

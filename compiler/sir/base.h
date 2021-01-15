@@ -10,6 +10,7 @@
 #include "util/fmt/ostream.h"
 
 #include "attribute.h"
+#include "util/iterators.h"
 #include "util/visitor.h"
 
 namespace seq {
@@ -42,7 +43,7 @@ private:
   /// the node's name
   std::string name;
   /// key-value attribute store
-  std::map<std::string, AttributePtr> kvStore;
+  std::map<std::string, AttributePtr> attributes;
   /// the module
   IRModule *module = nullptr;
 
@@ -88,10 +89,16 @@ public:
   virtual void accept(util::SIRVisitor &v) const = 0;
 
   /// Sets an attribute
+  /// @param the attribute key
+  /// @param value the attribute
+  void setAttribute(std::unique_ptr<Attribute> value, const std::string &key) {
+    attributes[key] = std::move(value);
+  }
+  /// Sets an attribute
   /// @param value the attribute
   template <typename AttributeType>
   void setAttribute(std::unique_ptr<AttributeType> value) {
-    kvStore[AttributeType::AttributeName] = std::move(value);
+    setAttribute(std::move(value), AttributeType::AttributeName);
   }
 
   /// @return true if the attribute is in the store
@@ -101,15 +108,46 @@ public:
 
   /// @param n the name
   /// @return true if the attribute is in the store
-  bool hasAttribute(const std::string &n) { return kvStore.find(n) != kvStore.end(); }
+  bool hasAttribute(const std::string &n) {
+    return attributes.find(n) != attributes.end();
+  }
+
+  /// Gets the appropriate attribute.
+  /// @param key the attribute key
+  Attribute *getAttribute(const std::string &key) {
+    auto it = attributes.find(key);
+    return it != attributes.end() ? it->second.get() : nullptr;
+  }
+  /// Gets the appropriate attribute.
+  /// @param key the attribute key
+  const Attribute *getAttribute(const std::string &key) const {
+    auto it = attributes.find(key);
+    return it != attributes.end() ? it->second.get() : nullptr;
+  }
 
   /// Gets the appropriate attribute.
   /// @tparam AttributeType the return type
-  template <typename AttributeType> AttributeType *getAttribute() const {
-    auto it = kvStore.find(AttributeType::AttributeName);
-    return it != kvStore.end() ? static_cast<AttributeType *>(it->second.get())
-                               : nullptr;
+  template <typename AttributeType> AttributeType *getAttribute() {
+    return static_cast<AttributeType *>(getAttribute(AttributeType::AttributeName));
   }
+  /// Gets the appropriate attribute.
+  /// @tparam AttributeType the return type
+  template <typename AttributeType> const AttributeType *getAttribute() const {
+    return static_cast<const AttributeType *>(
+        getAttribute(AttributeType::AttributeName));
+  }
+
+  /// @return iterator to the first attribute
+  auto attributes_begin() { return util::map_key_adaptor(attributes.begin()); }
+  /// @return iterator beyond the last attribute
+  auto attributes_end() { return util::map_key_adaptor(attributes.end()); }
+  /// @return iterator to the first attribute
+  auto attributes_begin() const {
+    return util::const_map_key_adaptor(attributes.begin());
+    ;
+  }
+  /// @return iterator beyond the last attribute
+  auto attributes_end() const { return util::const_map_key_adaptor(attributes.end()); }
 
   /// Helper to add source information.
   /// @param the source information
@@ -167,6 +205,10 @@ template <typename Desired> const Desired *cast(const IRNode *other) {
 }
 
 template <typename Desired> bool isA(IRNode *other) {
+  return other && other->is<Desired>();
+}
+
+template <typename Desired> bool isA(const IRNode *other) {
   return other && other->is<Desired>();
 }
 
