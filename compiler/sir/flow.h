@@ -11,14 +11,14 @@
 namespace seq {
 namespace ir {
 
-/// Base fors, which represent control.
+/// Base for flows, which represent control flow.
 class Flow : public AcceptorExtend<Flow, Value> {
 public:
   static const char NodeId;
 
   using AcceptorExtend::AcceptorExtend;
 
-  types::Type *getType() const override { return nullptr; }
+  const types::Type *getType() const override;
 
   virtual ~Flow() noexcept = default;
 
@@ -458,8 +458,15 @@ public:
     Value *getFunc() { return func.get(); }
     /// @return the called function
     const Value *getFunc() const { return func.get(); }
+
+    /// Sets the stage's generator flag.
+    /// @param v the new value
+    void setGenerator(bool v = true) { generator = v; }
     /// @return whether this stage is a generator stage
     bool isGenerator() const { return generator; }
+    /// Sets the stage's parallel flag.
+    /// @param v the new value
+    void setParallel(bool v = true) { parallel = v; }
     /// @return whether this stage is parallel
     bool isParallel() const { return parallel; }
     /// @return the output type of this stage
@@ -499,10 +506,26 @@ public:
   /// @return a pointer to the last stage
   const Stage &back() const { return stages.back(); }
 
-  /// adds a stage to the back of the pipeline
-  void addStage(ValuePtr func, std::vector<ValuePtr> args, bool generator,
-                bool parallel) {
-    stages.emplace_back(std::move(func), std::move(args), generator, parallel);
+  /// Inserts a stage
+  /// @param pos the position
+  /// @param v the stage
+  /// @return an iterator to the newly added stage
+  template <typename It> auto insert(It pos, Stage v) {
+    return stages.insert(pos, std::move(v));
+  }
+  /// Appends an stage.
+  /// @param v the stage
+  void push_back(Stage v) { stages.push_back(std::move(v)); }
+
+  /// Erases the item at the supplied position.
+  /// @param pos the position
+  /// @return the iterator beyond the removed stage
+  template <typename It> auto erase(It pos) { return stages.erase(pos.internal); }
+
+  /// Emplaces a stage.
+  /// @param args the args
+  template <typename... Args> void emplace_back(Args &&... args) {
+    stages.emplace_back(std::forward<Args>(args)...);
   }
 
 private:

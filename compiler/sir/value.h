@@ -26,7 +26,7 @@ public:
   virtual const types::Type *getType() const = 0;
 
   /// @return a clone of the value
-  std::unique_ptr<Value> clone() const { return std::unique_ptr<Value>(doClone()); }
+  std::unique_ptr<Value> clone() const;
 
 protected:
   virtual Value *doClone() const = 0;

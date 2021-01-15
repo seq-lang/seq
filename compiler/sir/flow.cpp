@@ -13,6 +13,8 @@ namespace ir {
 
 const char Flow::NodeId = 0;
 
+const types::Type *Flow::getType() const { return getModule()->getVoidType(); }
+
 const char SeriesFlow::NodeId = 0;
 
 std::ostream &SeriesFlow::doFormat(std::ostream &os) const {

@@ -22,7 +22,7 @@ public:
 
   virtual ~Instr() = default;
 
-  const types::Type *getType() const override { return nullptr; }
+  const types::Type *getType() const override;
 };
 
 /// Instr representing setting a memory location.
@@ -95,7 +95,7 @@ public:
   void setVal(ValuePtr p) { val = std::move(p); }
 
   /// @return the field
-  const std::string &getField() { return field; }
+  const std::string &getField() const { return field; }
   /// Sets the field.
   /// @param f the new field
   void setField(std::string f) { field = std::move(f); }
@@ -148,7 +148,7 @@ public:
   void setRhs(ValuePtr p) { rhs = std::move(p); }
 
   /// @return the field
-  const std::string &getField() { return field; }
+  const std::string &getField() const { return field; }
   /// Sets the field.
   /// @param f the new field
   void setField(std::string f) { field = std::move(f); }
@@ -291,7 +291,7 @@ public:
   const types::Type *getType() const override;
 
   /// @return the type being inspected
-  const types::Type *getInspectType() { return inspectType; }
+  const types::Type *getInspectType() const { return inspectType; }
 
   /// @return the property being inspected
   Property getProperty() const { return property; }

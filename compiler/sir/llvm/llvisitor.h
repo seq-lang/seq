@@ -126,7 +126,6 @@ private:
   getDITypeHelper(const types::Type *t,
                   std::unordered_map<std::string, llvm::DICompositeType *> &cache);
   void setDebugInfoForNode(const IRNode *);
-  void process(IRNode *);
   void process(const IRNode *);
 
   /// GC allocation functions
@@ -150,9 +149,9 @@ private:
 
   // General function helpers
   llvm::Value *call(llvm::Value *callee, llvm::ArrayRef<llvm::Value *> args);
-  void makeLLVMFunction(Func *);
+  void makeLLVMFunction(const Func *);
   void makeYield(llvm::Value *value = nullptr, bool finalYield = false);
-  std::string buildLLVMCodeString(LLVMFunc *);
+  std::string buildLLVMCodeString(const LLVMFunc *);
   void callStage(const PipelineFlow::Stage *stage);
   void codegenPipeline(const std::vector<const PipelineFlow::Stage *> &stages,
                        llvm::Value *syncReg, unsigned where = 0);
@@ -200,43 +199,43 @@ public:
   /// @return corresponding LLVM DI type
   llvm::DIType *getDIType(const types::Type *t);
 
-  void visit(IRModule *) override;
-  void visit(BodiedFunc *) override;
-  void visit(ExternalFunc *) override;
-  void visit(InternalFunc *) override;
-  void visit(LLVMFunc *) override;
-  void visit(Var *) override;
-  void visit(VarValue *) override;
-  void visit(PointerValue *) override;
-  void visit(ValueProxy *) override;
+  void visit(const IRModule *) override;
+  void visit(const BodiedFunc *) override;
+  void visit(const ExternalFunc *) override;
+  void visit(const InternalFunc *) override;
+  void visit(const LLVMFunc *) override;
+  void visit(const Var *) override;
+  void visit(const VarValue *) override;
+  void visit(const PointerValue *) override;
+  void visit(const ValueProxy *) override;
 
-  void visit(IntConstant *) override;
-  void visit(FloatConstant *) override;
-  void visit(BoolConstant *) override;
-  void visit(StringConstant *) override;
+  void visit(const IntConstant *) override;
+  void visit(const FloatConstant *) override;
+  void visit(const BoolConstant *) override;
+  void visit(const StringConstant *) override;
 
-  void visit(SeriesFlow *) override;
-  void visit(IfFlow *) override;
-  void visit(WhileFlow *) override;
-  void visit(ForFlow *) override;
-  void visit(TryCatchFlow *) override;
-  void visit(UnorderedFlow *) override;
-  void visit(PipelineFlow *) override;
+  void visit(const SeriesFlow *) override;
+  void visit(const IfFlow *) override;
+  void visit(const WhileFlow *) override;
+  void visit(const ForFlow *) override;
+  void visit(const TryCatchFlow *) override;
+  void visit(const UnorderedFlow *) override;
+  void visit(const PipelineFlow *) override;
 
-  void visit(AssignInstr *) override;
-  void visit(ExtractInstr *) override;
-  void visit(InsertInstr *) override;
-  void visit(CallInstr *) override;
-  void visit(StackAllocInstr *) override;
-  void visit(TypePropertyInstr *) override;
-  void visit(YieldInInstr *) override;
-  void visit(TernaryInstr *) override;
-  void visit(BreakInstr *) override;
-  void visit(ContinueInstr *) override;
-  void visit(ReturnInstr *) override;
-  void visit(YieldInstr *) override;
-  void visit(ThrowInstr *) override;
-  void visit(FlowInstr *) override;
+  void visit(const AssignInstr *) override;
+  void visit(const ExtractInstr *) override;
+  void visit(const InsertInstr *) override;
+  void visit(const CallInstr *) override;
+  void visit(const StackAllocInstr *) override;
+  void visit(const TypePropertyInstr *) override;
+  void visit(const YieldInInstr *) override;
+  void visit(const TernaryInstr *) override;
+  void visit(const BreakInstr *) override;
+  void visit(const ContinueInstr *) override;
+  void visit(const ReturnInstr *) override;
+  void visit(const YieldInstr *) override;
+  void visit(const ThrowInstr *) override;
+  void visit(const FlowInstr *) override;
 };
 
 } // namespace ir

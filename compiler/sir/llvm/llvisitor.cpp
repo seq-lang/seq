@@ -38,7 +38,7 @@ void resetOMPABI() {
   KmpRoutineEntryPtrTy = nullptr;
 }
 
-std::string getNameForFunction(Func *x) {
+std::string getNameForFunction(const Func *x) {
   if (auto *externalFunc = cast<ExternalFunc>(x)) {
     return x->getUnmangledName();
   } else {
@@ -46,7 +46,7 @@ std::string getNameForFunction(Func *x) {
   }
 }
 
-std::string getDebugNameForVariable(Var *x) {
+std::string getDebugNameForVariable(const Var *x) {
   std::string name = x->getName();
   auto pos = name.find(".");
   if (pos != 0 && pos != std::string::npos) {
@@ -56,7 +56,7 @@ std::string getDebugNameForVariable(Var *x) {
   }
 }
 
-SrcInfo *getSrcInfo(const IRNode *x) {
+const SrcInfo *getSrcInfo(const IRNode *x) {
   if (auto *srcInfo = x->getAttribute<SrcInfoAttribute>()) {
     return &srcInfo->info;
   } else {
@@ -142,11 +142,6 @@ void LLVMVisitor::setDebugInfoForNode(const IRNode *x) {
   auto *srcInfo = getSrcInfo(x);
   builder.SetCurrentDebugLocation(llvm::DILocation::get(
       context, srcInfo->line, srcInfo->col, func->getSubprogram()));
-}
-
-void LLVMVisitor::process(IRNode *x) {
-  setDebugInfoForNode(x);
-  x->accept(*this);
 }
 
 void LLVMVisitor::process(const IRNode *x) {
@@ -482,7 +477,7 @@ LLVMVisitor::TryCatchData *LLVMVisitor::getInnermostTryCatchBeforeLoop() {
  * General values, module, functions, vars
  */
 
-void LLVMVisitor::visit(IRModule *x) {
+void LLVMVisitor::visit(const IRModule *x) {
   module = std::make_unique<llvm::Module>("seq", context);
   module->setTargetTriple(
       llvm::EngineBuilder().selectTarget()->getTargetTriple().str());
@@ -504,7 +499,7 @@ void LLVMVisitor::visit(IRModule *x) {
   }
 
   // args variable
-  Var *argVar = x->getArgVar();
+  const Var *argVar = x->getArgVar();
   llvm::Type *argVarType = getLLVMType(argVar->getType());
   auto *argStorage = new llvm::GlobalVariable(
       *module, argVarType, /*isConstant=*/false, llvm::GlobalValue::PrivateLinkage,
@@ -548,7 +543,7 @@ void LLVMVisitor::visit(IRModule *x) {
     }
   }
 
-  Func *main = x->getMainFunc();
+  const Func *main = x->getMainFunc();
   makeLLVMFunction(main);
   llvm::Function *realMain = func;
   process(main);
@@ -701,7 +696,7 @@ void LLVMVisitor::visit(IRModule *x) {
   db.builder->finalize();
 }
 
-void LLVMVisitor::makeLLVMFunction(Func *x) {
+void LLVMVisitor::makeLLVMFunction(const Func *x) {
   auto *srcInfo = getSrcInfo(x);
   llvm::DIFile *file = db.getFile(srcInfo->file);
   auto *derivedType = llvm::cast<llvm::DIDerivedType>(getDIType(x->getType()));
@@ -757,7 +752,7 @@ void LLVMVisitor::makeYield(llvm::Value *value, bool finalYield) {
   inst->addCase(builder.getInt8(1), coro.cleanup);
 }
 
-void LLVMVisitor::visit(ExternalFunc *x) {
+void LLVMVisitor::visit(const ExternalFunc *x) {
   func = module->getFunction(getNameForFunction(x)); // inserted during module visit
   coro = {};
   assert(func);
@@ -767,12 +762,12 @@ void LLVMVisitor::visit(ExternalFunc *x) {
 namespace {
 // internal function type checking
 template <typename ParentType>
-bool internalFuncMatchesIgnoreArgs(const std::string &name, InternalFunc *x) {
+bool internalFuncMatchesIgnoreArgs(const std::string &name, const InternalFunc *x) {
   return name == x->getUnmangledName() && cast<ParentType>(x->getParentType());
 }
 
 template <typename ParentType, typename... ArgTypes, std::size_t... Index>
-bool internalFuncMatches(const std::string &name, InternalFunc *x,
+bool internalFuncMatches(const std::string &name, const InternalFunc *x,
                          std::index_sequence<Index...>) {
   auto *funcType = cast<types::FuncType>(x->getType());
   if (name != x->getUnmangledName() ||
@@ -786,13 +781,13 @@ bool internalFuncMatches(const std::string &name, InternalFunc *x,
 }
 
 template <typename ParentType, typename... ArgTypes>
-bool internalFuncMatches(const std::string &name, InternalFunc *x) {
+bool internalFuncMatches(const std::string &name, const InternalFunc *x) {
   return internalFuncMatches<ParentType, ArgTypes...>(
       name, x, std::make_index_sequence<sizeof...(ArgTypes)>());
 }
 } // namespace
 
-void LLVMVisitor::visit(InternalFunc *x) {
+void LLVMVisitor::visit(const InternalFunc *x) {
   using namespace types;
   func = module->getFunction(getNameForFunction(x)); // inserted during module visit
   coro = {};
@@ -887,7 +882,7 @@ void LLVMVisitor::visit(InternalFunc *x) {
   builder.CreateRet(result);
 }
 
-std::string LLVMVisitor::buildLLVMCodeString(LLVMFunc *x) {
+std::string LLVMVisitor::buildLLVMCodeString(const LLVMFunc *x) {
   auto *funcType = cast<types::FuncType>(x->getType());
   assert(funcType);
   std::string bufStr;
@@ -929,7 +924,7 @@ std::string LLVMVisitor::buildLLVMCodeString(LLVMFunc *x) {
   return buf.str();
 }
 
-void LLVMVisitor::visit(LLVMFunc *x) {
+void LLVMVisitor::visit(const LLVMFunc *x) {
   func = module->getFunction(getNameForFunction(x));
   coro = {};
   if (func)
@@ -982,7 +977,7 @@ void LLVMVisitor::visit(LLVMFunc *x) {
   func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
 }
 
-void LLVMVisitor::visit(BodiedFunc *x) {
+void LLVMVisitor::visit(const BodiedFunc *x) {
   func = module->getFunction(getNameForFunction(x)); // inserted during module visit
   coro = {};
   assert(func);
@@ -1015,7 +1010,7 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   unsigned argIdx = 1;
   auto argIter = func->arg_begin();
   for (auto varIter = x->arg_begin(); varIter != x->arg_end(); ++varIter) {
-    Var *var = *varIter;
+    const Var *var = *varIter;
     llvm::Value *storage = builder.CreateAlloca(getLLVMType(var->getType()));
     builder.CreateStore(argIter, storage);
     vars.insert(var, storage);
@@ -1157,9 +1152,9 @@ void LLVMVisitor::visit(BodiedFunc *x) {
   }
 }
 
-void LLVMVisitor::visit(Var *x) { assert(0); }
+void LLVMVisitor::visit(const Var *x) { assert(0); }
 
-void LLVMVisitor::visit(VarValue *x) {
+void LLVMVisitor::visit(const VarValue *x) {
   if (auto *f = cast<Func>(x->getVar())) {
     value = funcs[f];
     assert(value);
@@ -1171,13 +1166,13 @@ void LLVMVisitor::visit(VarValue *x) {
   }
 }
 
-void LLVMVisitor::visit(PointerValue *x) {
+void LLVMVisitor::visit(const PointerValue *x) {
   llvm::Value *var = vars[x->getVar()];
   assert(var);
   value = var; // note: we don't load the pointer
 }
 
-void LLVMVisitor::visit(ValueProxy *x) { assert(0); }
+void LLVMVisitor::visit(const ValueProxy *x) { assert(0); }
 
 /*
  * Types
@@ -1413,22 +1408,22 @@ llvm::DIType *LLVMVisitor::getDIType(const types::Type *t) {
  * Constants
  */
 
-void LLVMVisitor::visit(IntConstant *x) {
+void LLVMVisitor::visit(const IntConstant *x) {
   builder.SetInsertPoint(block);
   value = builder.getInt64(x->getVal());
 }
 
-void LLVMVisitor::visit(FloatConstant *x) {
+void LLVMVisitor::visit(const FloatConstant *x) {
   builder.SetInsertPoint(block);
   value = llvm::ConstantFP::get(builder.getDoubleTy(), x->getVal());
 }
 
-void LLVMVisitor::visit(BoolConstant *x) {
+void LLVMVisitor::visit(const BoolConstant *x) {
   builder.SetInsertPoint(block);
   value = builder.getInt8(x->getVal() ? 1 : 0);
 }
 
-void LLVMVisitor::visit(StringConstant *x) {
+void LLVMVisitor::visit(const StringConstant *x) {
   builder.SetInsertPoint(block);
   std::string s = x->getVal();
   auto *strVar = new llvm::GlobalVariable(
@@ -1448,13 +1443,13 @@ void LLVMVisitor::visit(StringConstant *x) {
  * Control flow
  */
 
-void LLVMVisitor::visit(SeriesFlow *x) {
+void LLVMVisitor::visit(const SeriesFlow *x) {
   for (auto *value : *x) {
     process(value);
   }
 }
 
-void LLVMVisitor::visit(IfFlow *x) {
+void LLVMVisitor::visit(const IfFlow *x) {
   auto *trueBlock = llvm::BasicBlock::Create(context, "if.true", func);
   auto *falseBlock = llvm::BasicBlock::Create(context, "if.false", func);
   auto *exitBlock = llvm::BasicBlock::Create(context, "if.exit", func);
@@ -1482,7 +1477,7 @@ void LLVMVisitor::visit(IfFlow *x) {
   block = exitBlock;
 }
 
-void LLVMVisitor::visit(WhileFlow *x) {
+void LLVMVisitor::visit(const WhileFlow *x) {
   auto *condBlock = llvm::BasicBlock::Create(context, "while.cond", func);
   auto *bodyBlock = llvm::BasicBlock::Create(context, "while.body", func);
   auto *exitBlock = llvm::BasicBlock::Create(context, "while.exit", func);
@@ -1507,7 +1502,7 @@ void LLVMVisitor::visit(WhileFlow *x) {
   block = exitBlock;
 }
 
-void LLVMVisitor::visit(ForFlow *x) {
+void LLVMVisitor::visit(const ForFlow *x) {
   llvm::Type *loopVarType = getLLVMType(x->getVar()->getType());
   llvm::Value *loopVar = vars[x->getVar()];
   assert(loopVar);
@@ -1581,7 +1576,7 @@ bool anyMatch(const types::Type *type, std::vector<const types::Type *> types) {
 }
 } // namespace
 
-void LLVMVisitor::visit(TryCatchFlow *x) {
+void LLVMVisitor::visit(const TryCatchFlow *x) {
   const bool isRoot = trycatch.empty();
   const bool supportBreakAndContinue = !loops.empty();
   builder.SetInsertPoint(block);
@@ -1705,7 +1700,7 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
   }
 
   // try and catch codegen
-  std::vector<TryCatchFlow::Catch *> catches;
+  std::vector<const TryCatchFlow::Catch *> catches;
   for (auto &c : *x) {
     catches.push_back(&c);
   }
@@ -1844,7 +1839,7 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
     if (i < catches.size()) {
       block = handlersFull[i];
       builder.SetInsertPoint(block);
-      Var *var = catches[i]->getVar();
+      const Var *var = catches[i]->getVar();
 
       if (var) {
         llvm::Value *obj =
@@ -1864,7 +1859,7 @@ void LLVMVisitor::visit(TryCatchFlow *x) {
   block = endBlock;
 }
 
-void LLVMVisitor::visit(UnorderedFlow *x) {
+void LLVMVisitor::visit(const UnorderedFlow *x) {
   for (auto *flow : *x) {
     process(flow);
   }
@@ -1998,7 +1993,7 @@ void LLVMVisitor::codegenPipeline(
   }
 }
 
-void LLVMVisitor::visit(PipelineFlow *x) {
+void LLVMVisitor::visit(const PipelineFlow *x) {
   unsigned numParallel = 0;
   std::vector<const PipelineFlow::Stage *> stages;
   for (const auto &stage : *x) {
@@ -2065,7 +2060,7 @@ void LLVMVisitor::visit(PipelineFlow *x) {
  * Instructions
  */
 
-void LLVMVisitor::visit(AssignInstr *x) {
+void LLVMVisitor::visit(const AssignInstr *x) {
   llvm::Value *var = vars[x->getLhs()];
   assert(var);
   process(x->getRhs());
@@ -2075,7 +2070,7 @@ void LLVMVisitor::visit(AssignInstr *x) {
   }
 }
 
-void LLVMVisitor::visit(ExtractInstr *x) {
+void LLVMVisitor::visit(const ExtractInstr *x) {
   auto *memberedType = cast<types::MemberedType>(x->getVal()->getType());
   assert(memberedType);
   const int index = memberedType->getMemberIndex(x->getField());
@@ -2091,7 +2086,7 @@ void LLVMVisitor::visit(ExtractInstr *x) {
   value = builder.CreateExtractValue(value, index);
 }
 
-void LLVMVisitor::visit(InsertInstr *x) {
+void LLVMVisitor::visit(const InsertInstr *x) {
   auto *refType = cast<types::RefType>(x->getLhs()->getType());
   assert(refType);
   const int index = refType->getMemberIndex(x->getField());
@@ -2109,7 +2104,7 @@ void LLVMVisitor::visit(InsertInstr *x) {
   builder.CreateStore(load, lhs);
 }
 
-void LLVMVisitor::visit(CallInstr *x) {
+void LLVMVisitor::visit(const CallInstr *x) {
   builder.SetInsertPoint(block);
   process(x->getFunc());
   llvm::Value *f = value;
@@ -2124,7 +2119,7 @@ void LLVMVisitor::visit(CallInstr *x) {
   value = call(f, args);
 }
 
-void LLVMVisitor::visit(TypePropertyInstr *x) {
+void LLVMVisitor::visit(const TypePropertyInstr *x) {
   builder.SetInsertPoint(block);
   switch (x->getProperty()) {
   case TypePropertyInstr::Property::SIZEOF:
@@ -2139,7 +2134,7 @@ void LLVMVisitor::visit(TypePropertyInstr *x) {
   }
 }
 
-void LLVMVisitor::visit(YieldInInstr *x) {
+void LLVMVisitor::visit(const YieldInInstr *x) {
   builder.SetInsertPoint(block);
   if (x->isSuspending()) {
     llvm::Function *coroSuspend =
@@ -2157,7 +2152,7 @@ void LLVMVisitor::visit(YieldInInstr *x) {
   value = builder.CreateLoad(coro.promise);
 }
 
-void LLVMVisitor::visit(StackAllocInstr *x) {
+void LLVMVisitor::visit(const StackAllocInstr *x) {
   llvm::Type *baseType = nullptr;
   if (auto *arrayType = cast<types::ArrayType>(x->getType())) {
     baseType = getLLVMType(arrayType->getBase());
@@ -2182,7 +2177,7 @@ void LLVMVisitor::visit(StackAllocInstr *x) {
   value = arr;
 }
 
-void LLVMVisitor::visit(TernaryInstr *x) {
+void LLVMVisitor::visit(const TernaryInstr *x) {
   auto *trueBlock = llvm::BasicBlock::Create(context, "ternary.true", func);
   auto *falseBlock = llvm::BasicBlock::Create(context, "ternary.false", func);
   auto *exitBlock = llvm::BasicBlock::Create(context, "ternary.exit", func);
@@ -2217,7 +2212,7 @@ void LLVMVisitor::visit(TernaryInstr *x) {
   block = exitBlock;
 }
 
-void LLVMVisitor::visit(BreakInstr *x) {
+void LLVMVisitor::visit(const BreakInstr *x) {
   assert(!loops.empty());
   builder.SetInsertPoint(block);
   if (auto *tc = getInnermostTryCatchBeforeLoop()) {
@@ -2230,7 +2225,7 @@ void LLVMVisitor::visit(BreakInstr *x) {
   block = llvm::BasicBlock::Create(context, "break.new", func);
 }
 
-void LLVMVisitor::visit(ContinueInstr *x) {
+void LLVMVisitor::visit(const ContinueInstr *x) {
   assert(!loops.empty());
   builder.SetInsertPoint(block);
   if (auto *tc = getInnermostTryCatchBeforeLoop()) {
@@ -2243,7 +2238,7 @@ void LLVMVisitor::visit(ContinueInstr *x) {
   block = llvm::BasicBlock::Create(context, "continue.new", func);
 }
 
-void LLVMVisitor::visit(ReturnInstr *x) {
+void LLVMVisitor::visit(const ReturnInstr *x) {
   const bool voidReturn = !bool(x->getValue());
   if (!voidReturn) {
     process(x->getValue());
@@ -2271,7 +2266,7 @@ void LLVMVisitor::visit(ReturnInstr *x) {
   block = llvm::BasicBlock::Create(context, "return.new", func);
 }
 
-void LLVMVisitor::visit(YieldInstr *x) {
+void LLVMVisitor::visit(const YieldInstr *x) {
   if (x->getValue()) {
     process(x->getValue());
     makeYield(value);
@@ -2280,7 +2275,7 @@ void LLVMVisitor::visit(YieldInstr *x) {
   }
 }
 
-void LLVMVisitor::visit(ThrowInstr *x) {
+void LLVMVisitor::visit(const ThrowInstr *x) {
   // note: exception header should be set in the frontend
   llvm::Function *excAllocFunc = makeExcAllocFunc();
   llvm::Function *throwFunc = makeThrowFunc();
@@ -2291,7 +2286,7 @@ void LLVMVisitor::visit(ThrowInstr *x) {
   call(throwFunc, exc);
 }
 
-void LLVMVisitor::visit(FlowInstr *x) {
+void LLVMVisitor::visit(const FlowInstr *x) {
   process(x->getFlow());
   process(x->getValue());
 }
