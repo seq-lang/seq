@@ -1957,9 +1957,9 @@ void LLVMVisitor::codegenPipeline(
     builder.SetInsertPoint(block);
 
     if (parallel) {
-      builder.CreateBr(condBlock);
-    } else {
       builder.CreateReattach(condBlock, syncReg);
+    } else {
+      builder.CreateBr(condBlock);
     }
 
     builder.SetInsertPoint(cleanupBlock);
