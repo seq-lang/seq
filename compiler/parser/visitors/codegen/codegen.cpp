@@ -277,7 +277,7 @@ void CodegenVisitor::visit(PipeExpr *expr) {
   auto firstIsGen = isGen(firstStage);
   stages.emplace_back(move(firstStage), std::vector<ValuePtr>(), firstIsGen, false);
 
-  auto hasGen = firstIsGen;
+  auto sugar = !firstIsGen;
 
   for (auto i = 1; i < expr->items.size(); ++i) {
     auto &item = expr->items[i];
@@ -287,16 +287,17 @@ void CodegenVisitor::visit(PipeExpr *expr) {
     auto fn = transform(call->expr);
     auto genStage = isGen(fn);
 
-    hasGen = hasGen || genStage;
+    if (i + 1 != expr->items.size())
+      sugar = sugar && !genStage;
 
     vector<ValuePtr> args(call->args.size());
-    for (auto i = 0; i < call->args.size(); ++i) {
-      args[i] = transform(call->args[i].value);
+    for (auto j = 0; i < call->args.size(); ++i) {
+      args[j] = transform(call->args[j].value);
     }
     stages.emplace_back(move(fn), move(args), genStage, false);
   }
 
-  if (!hasGen) {
+  if (sugar) {
     result = stages[0].getFunc()->clone();
 
     for (auto i = 1; i < stages.size(); ++i) {
