@@ -10,8 +10,10 @@ class Generator[T]:
         self.__resume__()
         return self.__done__()
 
-    def next(self) -> T:
+    def next(self: Generator[T]) -> T:
         return self.__promise__()[0]
+    def next(self: Generator[void]):
+        self.__promise__()
 
     def __iter__(self) -> Generator[T]:
         return self
