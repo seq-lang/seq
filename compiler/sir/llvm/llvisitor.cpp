@@ -850,13 +850,17 @@ void LLVMVisitor::visit(const InternalFunc *x) {
   else if (internalFuncMatches<GeneratorType, GeneratorType>("__promise__", x)) {
     auto *generatorType = cast<GeneratorType>(parentType);
     llvm::Type *baseType = getLLVMType(generatorType->getBase());
-    llvm::Function *coroPromise =
-        llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_promise);
-    llvm::Value *aln =
-        builder.getInt32(module->getDataLayout().getPrefTypeAlignment(baseType));
-    llvm::Value *from = builder.getFalse();
-    llvm::Value *ptr = builder.CreateCall(coroPromise, {args[0], aln, from});
-    result = builder.CreateBitCast(ptr, baseType->getPointerTo());
+    if (baseType->isVoidTy()) {
+      result = llvm::ConstantPointerNull::get(builder.getVoidTy()->getPointerTo());
+    } else {
+      llvm::Function *coroPromise =
+          llvm::Intrinsic::getDeclaration(module.get(), llvm::Intrinsic::coro_promise);
+      llvm::Value *aln =
+          builder.getInt32(module->getDataLayout().getPrefTypeAlignment(baseType));
+      llvm::Value *from = builder.getFalse();
+      llvm::Value *ptr = builder.CreateCall(coroPromise, {args[0], aln, from});
+      result = builder.CreateBitCast(ptr, baseType->getPointerTo());
+    }
   }
 
   else if (internalFuncMatchesIgnoreArgs<RecordType>("__new__", x)) {
