@@ -291,7 +291,7 @@ void CodegenVisitor::visit(PipeExpr *expr) {
       sugar = sugar && !genStage;
 
     vector<ValuePtr> args(call->args.size());
-    for (auto j = 0; i < call->args.size(); ++i) {
+    for (auto j = 0; j < call->args.size(); ++j) {
       args[j] = transform(call->args[j].value);
     }
     stages.emplace_back(move(fn), move(args), genStage, false);
