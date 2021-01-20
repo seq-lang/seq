@@ -126,6 +126,10 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
                                                          ctx->bases.end());
     while (ctx->bases.size() > depth)
       ctx->bases.pop_back();
+    if (ctx->realizationDepth > 500)
+      seq::compilationError(
+          "maximum realization depth exceeded (recursive static function?)",
+          getSrcInfo().file, getSrcInfo().line, getSrcInfo().col);
 
     // Special cases: Tuple.(__iter__, __getitem__, __contains__).
     if (endswith(type->name, ".__iter__")) {
@@ -151,6 +155,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
                   type->realizeString(), ctx->getBase(), depth);
     {
       _level++;
+      ctx->realizationDepth++;
       ctx->addBlock();
       ctx->typecheckLevel++;
       ctx->bases.push_back({type->name, type, type->args[0]});
@@ -202,6 +207,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
       ctx->bases.pop_back();
       ctx->popBlock();
       ctx->typecheckLevel--;
+      ctx->realizationDepth--;
       LOG_REALIZE("done with {}", type->realizeString());
       _level--;
     }

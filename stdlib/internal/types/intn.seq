@@ -1,11 +1,18 @@
+def check_N[N: int]():
+    if N <= 0:
+        compile_error("N must be greater than 0")
+    pass
+
 @extend
 class Int[N]:
-    @llvm
     def __new__() -> Int[N]:
-        ret i{=N} 0
+        check_N[N]()
+        return Int[N](0)
     def __new__(what: Int[N]) -> Int[N]:
+        check_N[N]()
         return what
     def __new__(what: int) -> Int[N]:
+        check_N[N]()
         if N < 64:
             return __internal__.int_trunc[64,N](what)
         elif N == 64:
@@ -16,6 +23,7 @@ class Int[N]:
     def __new__(what: UInt[N]) -> Int[N]:
         ret i{=N} %what
     def __new__(what: str) -> Int[N]:
+        check_N[N]()
         ret = Int[N]()
         i = 0
         sign = Int[N](1)
@@ -156,12 +164,14 @@ class UInt[N]:
     @internal
     def __revcomp__(self) -> UInt[N]: pass
 
-    @llvm
     def __new__() -> UInt[N]:
-        ret i{=N} 0
+        check_N[N]()
+        return UInt[N](0)
     def __new__(what: UInt[N]) -> UInt[N]:
+        check_N[N]()
         return what
     def __new__(what: int) -> UInt[N]:
+        check_N[N]()
         if N < 64:
             return UInt[N](__internal__.int_trunc[64,N](what))
         elif N == 64:
@@ -172,6 +182,7 @@ class UInt[N]:
     def __new__(what: Int[N]) -> UInt[N]:
         ret i{=N} %what
     def __new__(what: str) -> UInt[N]:
+        check_N[N]()
         return UInt[N](Int[N](what))
     def __copy__(self) -> UInt[N]:
         return self

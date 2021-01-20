@@ -48,6 +48,8 @@ public:
   bool allowActivation;
   int age;
 
+  int realizationDepth;
+
 public:
   explicit TypeContext(shared_ptr<Cache> cache);
 
