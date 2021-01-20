@@ -112,7 +112,7 @@ class pyobj:
     def decref(self):
         Py_DecRef(self.p)
 
-    def __call__[T](self, args : Optional[T] = None):
+    def __call__[T](self, args : Optional[T] = None) -> pyobj:
         args_py = (~args).__to_py__().p if args else cobj()
         return pyobj.exc_wrap(pyobj(PyObject_CallObject(self.p, args_py)))
 

@@ -11,9 +11,10 @@ class Generator[T]:
         return self.__done__()
 
     def next(self: Generator[T]) -> T:
-        return self.__promise__()[0]
-    # def next(self: Generator[void]):
-        # self.__promise__()
+        if isinstance(T, void):
+            pass
+        else:
+            return self.__promise__()[0]
 
     def __iter__(self) -> Generator[T]:
         return self
