@@ -197,7 +197,7 @@ struct Generic {
 typedef shared_ptr<ClassType> ClassTypePtr;
 struct ClassType : public Type {
   vector<Generic> generics;
-  TypePtr parent;
+  //  TypePtr parent;
   bool isTrait;
 
 public:
@@ -209,12 +209,10 @@ public:
   vector<TypePtr> args;
 
   ClassType(ClassTypePtr c)
-      : generics(c->generics), parent(c->parent), name(c->name), record(c->record),
-        args(c->args) {}
+      : generics(c->generics), name(c->name), record(c->record), args(c->args) {}
   ClassType(const string &name, bool isRecord = false,
             const vector<TypePtr> &args = vector<TypePtr>(),
-            const vector<Generic> &explicits = vector<Generic>(),
-            TypePtr parent = nullptr);
+            const vector<Generic> &explicits = vector<Generic>());
 
 public:
   virtual int unify(Type *typ, Unification *undo) override;

@@ -119,7 +119,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
         depth++;
         p = f->parent;
       } else {
-        p = p->getClass()->parent;
+        break;
       }
     }
     auto oldBases = vector<TypeContext::RealizationBase>(ctx->bases.begin() + depth,

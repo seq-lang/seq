@@ -1326,7 +1326,7 @@ void TypecheckVisitor::addFunctionGenerics(const FuncType *t) {
           ctx->add(TypecheckItem::Type, g.name, s, true);
         else if (!g.name.empty())
           ctx->add(TypecheckItem::Type, g.name, g.type);
-      p = c->parent;
+      break;
     }
   }
   for (auto &g : t->explicits)

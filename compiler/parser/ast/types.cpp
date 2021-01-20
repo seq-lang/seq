@@ -181,8 +181,8 @@ bool LinkType::occurs(Type *typ, Type::Unification *undo) {
     for (auto &g : t->generics)
       if (g.type && occurs(g.type.get(), undo))
         return true;
-    if (t->parent && occurs(t->parent.get(), undo))
-      return true;
+    //    if (t->parent && occurs(t->parent.get(), undo))
+    //      return true;
     for (auto &t : t->args)
       if (occurs(t.get(), undo))
         return true;
@@ -318,9 +318,8 @@ bool isCallable(const string &name) {
 bool isFunc(const string &name) { return startswith(name, "Function.N"); }
 
 ClassType::ClassType(const string &name, bool isRecord, const vector<TypePtr> &args,
-                     const vector<Generic> &explicits, TypePtr parent)
-    : generics(explicits), parent(parent), isTrait(false), name(name), record(isRecord),
-      args(args) {}
+                     const vector<Generic> &explicits)
+    : generics(explicits), isTrait(false), name(name), record(isRecord), args(args) {}
 
 string ClassType::toString() const {
   vector<string> gs;
@@ -339,8 +338,7 @@ string ClassType::realizeString() const {
     if (!a.name.empty())
       gs.push_back(a.type->realizeString());
   string s = join(gs, ",");
-  return fmt::format("{}{}{}", parent ? parent->realizeString() + ":" : "", name,
-                     s.empty() ? "" : fmt::format("[{}]", s));
+  return fmt::format("{}{}", name, s.empty() ? "" : fmt::format("[{}]", s));
 }
 
 int ClassType::unify(Type *typ, Unification *us) {
@@ -373,8 +371,8 @@ int ClassType::unify(Type *typ, Unification *us) {
     }
     if (name != t->name)
       return -1;
-    if (bool(parent) ^ bool(t->parent))
-      return -1;
+    //    if (bool(parent) ^ bool(t->parent))
+    //      return -1;
 
     s = 0;
     if (generics.size() != t->generics.size())
@@ -384,12 +382,12 @@ int ClassType::unify(Type *typ, Unification *us) {
         return -1;
       s1 += s;
     }
-    if (parent) {
-      if ((s = parent->unify(t->parent.get(), us)) == -1) {
-        return -1;
-      }
-      s1 += s;
-    }
+    //    if (parent) {
+    //      if ((s = parent->unify(t->parent.get(), us)) == -1) {
+    //        return -1;
+    //      }
+    //      s1 += s;
+    //    }
     return s1;
   } else if (auto t = typ->getLink()) {
     return t->unify(this, us);
@@ -404,8 +402,8 @@ TypePtr ClassType::generalize(int level) {
   auto e = generics;
   for (auto &t : e)
     t.type = t.type ? t.type->generalize(level) : nullptr;
-  auto p = parent ? parent->generalize(level) : nullptr;
-  auto c = make_shared<ClassType>(name, record, a, e, p);
+  //  auto p = parent ? parent->generalize(level) : nullptr;
+  auto c = make_shared<ClassType>(name, record, a, e);
   c->isTrait = isTrait;
   c->setSrcInfo(getSrcInfo());
   return c;
@@ -423,8 +421,8 @@ TypePtr ClassType::instantiate(int level, int &unboundCount,
   auto a = args;
   for (auto &t : a)
     t = t->instantiate(level, unboundCount, cache);
-  auto p = parent ? parent->instantiate(level, unboundCount, cache) : nullptr;
-  auto c = make_shared<ClassType>(name, record, a, e, p);
+  //  auto p = parent ? parent->instantiate(level, unboundCount, cache) : nullptr;
+  auto c = make_shared<ClassType>(name, record, a, e);
   c->isTrait = isTrait;
   c->setSrcInfo(getSrcInfo());
   return c;
@@ -441,10 +439,10 @@ vector<TypePtr> ClassType::getUnbounds() const {
       auto tu = t.type->getUnbounds();
       u.insert(u.begin(), tu.begin(), tu.end());
     }
-  if (parent) {
-    auto tu = parent->getUnbounds();
-    u.insert(u.begin(), tu.begin(), tu.end());
-  }
+  //  if (parent) {
+  //    auto tu = parent->getUnbounds();
+  //    u.insert(u.begin(), tu.begin(), tu.end());
+  //  }
   return u;
 }
 
@@ -455,8 +453,8 @@ bool ClassType::canRealize() const {
   for (auto &t : generics)
     if (t.type && !t.type->canRealize())
       return false;
-  if (parent && !parent->canRealize())
-    return false;
+  //  if (parent && !parent->canRealize())
+  //    return false;
   return true;
 }
 
@@ -475,7 +473,7 @@ FuncType::FuncType(const string &name, ClassType *funcClass,
   vector<Generic> exp;
   for (int ai = 0; ai < args.size(); ai++)
     exp.push_back({fmt::format("T{}", ai), args[ai], funcClass->generics[ai].id});
-  this->funcClass = make_shared<ClassType>(funcClass->name, true, args, exp, nullptr);
+  this->funcClass = make_shared<ClassType>(funcClass->name, true, args, exp);
 }
 
 int FuncType::unify(Type *typ, Unification *us) {

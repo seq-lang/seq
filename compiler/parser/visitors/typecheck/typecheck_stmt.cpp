@@ -452,7 +452,7 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
   ClassTypePtr typ = nullptr;
   if (!extension) {
     typ = make_shared<ClassType>(stmt->name, stmt->isRecord(), vector<TypePtr>(),
-                                 vector<Generic>(), nullptr);
+                                 vector<Generic>());
     if (in(stmt->attributes, ATTR_TRAIT))
       typ->isTrait = true;
     typ->setSrcInfo(stmt->getSrcInfo());
