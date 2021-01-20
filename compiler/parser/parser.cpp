@@ -85,6 +85,9 @@ std::unique_ptr<ir::IRModule> parse(const string &argv0, const string &file,
         auto fo = fopen("_dump_typecheck.seq", "w");
         fmt::print(fo, "{}", ast::FormatVisitor::apply(typechecked, cache));
         fclose(fo);
+        fo = fopen("_dump_typecheck.sexp_", "w");
+        fmt::print(fo, "{}\n", typechecked->toString());
+        fclose(fo);
       }
     }
 

@@ -174,10 +174,6 @@ void CodegenVisitor::visit(IdExpr *expr) {
 
   auto val = ctx->find(expr->value);
   seqassert(val, "cannot find '{}'", expr->value);
-  // TODO: this makes no sense: why setAtomic on temporary expr?
-  // if (var->isGlobal() && var->getBase() == ctx->getBase() &&
-  //     ctx->hasFlag("atomic"))
-  //   dynamic_cast<seq::VarExpr *>(i->getExpr())->setAtomic();
 
   if (auto *v = val->getVar())
     result = module->Nxs<VarValue>(expr, v);
@@ -246,18 +242,17 @@ void CodegenVisitor::visit(YieldExpr *expr) {
 }
 
 void CodegenVisitor::visit(StmtExpr *expr) {
-  ctx->addScope();
+  // ctx->addScope();
 
   auto bodySeries = newScope(expr, "body");
   ctx->addSeries(bodySeries.get());
-  for (auto &s : expr->stmts) {
+  for (auto &s : expr->stmts)
     transform(s);
-  }
   ctx->popSeries();
   result =
       ctx->getModule()->Nxs<FlowInstr>(expr, move(bodySeries), transform(expr->expr));
 
-  ctx->popScope();
+  // ctx->popScope();
 }
 
 void CodegenVisitor::visit(PipeExpr *expr) {
@@ -399,14 +394,6 @@ void CodegenVisitor::visit(UpdateStmt *stmt) {
       module->Nxs<AssignInstr>(stmt, val->getVar(), transform(stmt->rhs)));
 }
 
-void CodegenVisitor::visit(DelStmt *stmt) {
-  auto expr = CAST(stmt->expr, IdExpr);
-  assert(expr);
-  auto v = ctx->find(expr->value, true)->getVar();
-  assert(v);
-  ctx->remove(expr->value);
-}
-
 void CodegenVisitor::visit(ReturnStmt *stmt) {
   auto *module = ctx->getModule();
   ValuePtr value;
@@ -432,11 +419,11 @@ void CodegenVisitor::visit(WhileStmt *stmt) {
                                                newScope(stmt, "body"));
 
   ctx->addLoop(loop.get());
-  ctx->addScope();
+  // ctx->addScope();
   ctx->addSeries(cast<SeriesFlow>(loop->getBody()));
   transform(stmt->suite);
   ctx->popSeries();
-  ctx->popScope();
+  // ctx->popScope();
   ctx->popLoop();
 
   ctx->getSeries()->push_back(move(loop));
@@ -454,13 +441,13 @@ void CodegenVisitor::visit(ForStmt *stmt) {
   auto loop = ctx->getModule()->Nxs<ForFlow>(stmt, transform(stmt->iter),
                                              move(bodySeries), resVar);
   ctx->addLoop(loop.get());
-  ctx->addScope();
+  // ctx->addScope();
   ctx->addVar(varId->value, resVar);
 
   ctx->addSeries(cast<SeriesFlow>(loop->getBody()));
   transform(stmt->suite);
   ctx->popSeries();
-  ctx->popScope();
+  // ctx->popScope();
   ctx->popLoop();
 
   ctx->getSeries()->push_back(move(loop));
@@ -468,49 +455,50 @@ void CodegenVisitor::visit(ForStmt *stmt) {
 
 void CodegenVisitor::visit(IfStmt *stmt) {
   if (!stmt->ifs[0].cond) {
-    ctx->addScope();
+    // ctx->addScope();
     transform(stmt->ifs[0].suite);
-    ctx->popScope();
+    // ctx->popScope();
     return;
   }
 
+  auto cond = transform(stmt->ifs[0].cond);
   auto trueSeries = newScope(stmt, "ifstmt_true");
-  ctx->addScope();
+  // ctx->addScope();
   ctx->addSeries(trueSeries.get());
   transform(stmt->ifs[0].suite);
   ctx->popSeries();
-  ctx->popScope();
+  // ctx->popScope();
 
   unique_ptr<SeriesFlow> falseSeries;
   if (stmt->ifs.size() > 1) {
     falseSeries = newScope(stmt, "ifstmt_false");
-    ctx->addScope();
+    // ctx->addScope();
     ctx->addSeries(falseSeries.get());
     transform(stmt->ifs[1].suite);
     ctx->popSeries();
-    ctx->popScope();
+    // ctx->popScope();
   }
 
   ctx->getSeries()->push_back(ctx->getModule()->Nxs<IfFlow>(
-      stmt, transform(stmt->ifs[0].cond), move(trueSeries), move(falseSeries)));
+      stmt, move(cond), move(trueSeries), move(falseSeries)));
 }
 
 void CodegenVisitor::visit(TryStmt *stmt) {
   auto bodySeries = newScope(stmt, "body");
-  ctx->addScope();
+  // ctx->addScope();
   ctx->addSeries(bodySeries.get());
   transform(stmt->suite);
   ctx->popSeries();
-  ctx->popScope();
+  // ctx->popScope();
 
   unique_ptr<SeriesFlow> finallySeries;
   if (stmt->finally) {
     finallySeries = newScope(stmt, "finally");
-    ctx->addScope();
+    // ctx->addScope();
     ctx->addSeries(finallySeries.get());
     transform(stmt->finally);
     ctx->popSeries();
-    ctx->popScope();
+    // ctx->popScope();
   }
 
   auto newTc = Nx<TryCatchFlow>(stmt, move(bodySeries), move(finallySeries));
@@ -519,7 +507,7 @@ void CodegenVisitor::visit(TryStmt *stmt) {
     auto catchBody = newScope(stmt, "catch");
     auto *excType = c.exc ? realizeType(c.exc->getType()->getClass().get()) : nullptr;
 
-    ctx->addScope();
+    // ctx->addScope();
 
     ir::Var *catchVar = nullptr;
     if (!c.var.empty()) {
@@ -532,7 +520,7 @@ void CodegenVisitor::visit(TryStmt *stmt) {
     transform(c.suite);
     ctx->popSeries();
 
-    ctx->popScope();
+    // ctx->popScope();
 
     newTc->push_back(TryCatchFlow::Catch(move(catchBody), excType, catchVar));
   }
@@ -621,9 +609,6 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
     } else {
       auto *f = cast<ir::Func>(fp.first);
       assert(f);
-      //      if (!ctx->isToplevel())
-      //        f->p
-      ctx->addScope();
 
       f->realize(cast<ir::types::FuncType>(funcType), names);
       f->setAttribute(make_unique<FuncAttribute>(ast->attributes));
@@ -636,6 +621,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
         assert(external);
         external->setUnmangledName(ctx->cache->reverseIdentifierLookup[stmt->name]);
       } else if (!in(ast->attributes, "internal")) {
+        ctx->addScope();
         for (auto i = 0; i < names.size(); ++i) {
           auto var = f->getArgVar(names[i]);
           assert(var);
@@ -651,8 +637,8 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
         assert(bodied);
 
         bodied->setBody(move(body));
+        ctx->popScope();
       }
-      ctx->popScope();
     }
     for (auto i = 0; i < names.size(); ++i) {
       auto var = fp.first->getArgVar(names[i]);

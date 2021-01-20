@@ -106,8 +106,9 @@ void TypecheckVisitor::visit(IdExpr *expr) {
   if (val->isStatic()) {
     // Evaluate the static expression.
     seqassert(val->type->getStatic(), "{} does not have static type", expr->value);
-    expr->staticEvaluation = {
-        true, val->type->getStatic()->evaluate(val->type->getStatic().get())};
+    val->type->getStatic()->staticEvaluation = {
+        true, val->type->getStatic()->staticExpr.second(val->type->getStatic().get())};
+    expr->staticEvaluation = {true, val->type->getStatic()->staticEvaluation.second};
     resultExpr = transform(N<IntExpr>(expr->staticEvaluation.second));
     return;
   }
@@ -343,17 +344,30 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
         };
         findGenerics(expr->typeParams[i].get());
         auto nctx = ctx; // To capture ctx without capturing this...
-        generics[i].type |= make_shared<StaticType>(
-            staticGenerics, expr->typeParams[i]->clone(), [nctx](const StaticType *t) {
-              nctx->addBlock();
-              for (auto &g : t->explicits)
-                nctx->add(TypecheckItem::Type, g.name, g.type, true);
-              auto en = TypecheckVisitor(nctx).transform(t->expr->clone());
-              seqassert(en->isStaticExpr && en->staticEvaluation.first,
-                        "{} cannot be evaluated", en->toString());
-              nctx->popBlock();
-              return en->staticEvaluation.second;
-            });
+        if (expr->typeParams[i]->isStaticExpr &&
+            expr->typeParams[i]->staticEvaluation.first)
+          generics[i].type |=
+              make_shared<StaticType>(expr->typeParams[i]->staticEvaluation.second);
+        else if (expr->typeParams[i]->getId())
+          generics[i].type |= staticGenerics[0].type;
+        else
+          generics[i].type |= make_shared<StaticType>(
+              staticGenerics,
+              std::make_pair(expr->typeParams[i]->clone(),
+                             [nctx](const StaticType *t) -> int {
+                               if (t->staticEvaluation.first)
+                                 return t->staticEvaluation.second;
+                               nctx->addBlock();
+                               for (auto &g : t->explicits)
+                                 nctx->add(TypecheckItem::Type, g.name, g.type, true);
+                               auto en = TypecheckVisitor(nctx).transform(
+                                   t->staticExpr.first->clone());
+                               seqassert(en->isStaticExpr && en->staticEvaluation.first,
+                                         "{} cannot be evaluated", en->toString());
+                               nctx->popBlock();
+                               return en->staticEvaluation.second;
+                             }),
+              std::make_pair(false, 0));
       }
     } else {
       seqassert(expr->typeParams[i]->isType(), "not a type: {}",
@@ -612,13 +626,12 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
 
 ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &expr,
                                                     ExprPtr &index) {
-  if (!tuple->isRecord())
+  if (!tuple->isRecord() || tuple->name == "Ptr")
+    // Ptr is internal and has one overloaded __getitem__
     return nullptr;
-  if (!startswith(tuple->name, "Tuple.N")) {
+  if (ctx->cache->classes[tuple->name].methods["__getitem__"].size() != 1)
     // TODO: be smarter! there might be a compatible getitem?
     return nullptr;
-  }
-  // TODO: Ptr/Array... Optional unpacking?
 
   // Extract a static integer value from a compatible expression.
   auto getInt = [](seq_int_t *o, const ExprPtr &e) {
@@ -639,7 +652,8 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
   auto classItem = ctx->cache->classes.find(tuple->name);
   seqassert(classItem != ctx->cache->classes.end(), "cannot find class '{}'",
             tuple->name);
-  seq_int_t start = 0, stop = tuple->args.size(), step = 1;
+  auto sz = classItem->second.fields.size();
+  seq_int_t start = 0, stop = sz, step = 1;
   if (getInt(&start, index)) {
     int i = translateIndex(start, stop);
     if (i < 0 || i >= stop)
@@ -651,16 +665,15 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
       return nullptr;
     // Correct slice indices.
     if (es->step && !es->start)
-      start = step > 0 ? 0 : tuple->args.size();
+      start = step > 0 ? 0 : sz;
     if (es->step && !es->stop)
-      stop = step > 0 ? tuple->args.size() : 0;
-    sliceAdjustIndices(tuple->args.size(), &start, &stop, step);
+      stop = step > 0 ? sz : 0;
+    sliceAdjustIndices(sz, &start, &stop, step);
     // Generate new tuple.
     vector<ExprPtr> te;
     for (auto i = start; (step >= 0) ? (i < stop) : (i >= stop); i += step) {
-      if (i < 0 || i >= tuple->args.size())
-        error("tuple index out of range (expected 0..{}, got {})", tuple->args.size(),
-              i);
+      if (i < 0 || i >= sz)
+        error("tuple index out of range (expected 0..{}, got {})", sz, i);
       te.push_back(N<DotExpr>(clone(expr), classItem->second.fields[i].name));
     }
     return transform(N<CallExpr>(

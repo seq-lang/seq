@@ -165,7 +165,7 @@ class UInt[N]:
         if N < 64:
             return UInt[N](__internal__.int_trunc[64,N](what))
         elif N == 64:
-            return what
+            return UInt[N](Int[N](what))
         else:
             return UInt[N](__internal__.int_zext[64,N](what))
     @llvm

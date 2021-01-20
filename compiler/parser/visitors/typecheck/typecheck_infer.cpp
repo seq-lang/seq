@@ -364,10 +364,12 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   vector<const seq::ir::types::Type *> types;
   vector<int> statics;
   for (auto &m : t->explicits)
-    if (auto s = m.type->getStatic())
-      statics.push_back(s->evaluate(s.get()));
-    else
+    if (auto s = m.type->getStatic()) {
+      seqassert(s->staticEvaluation.first, "static not realized");
+      statics.push_back(s->staticEvaluation.second);
+    } else {
       types.push_back(getLLVM(m.type));
+    }
   auto name = t->name;
   if (name == "void") {
     handle = ctx->cache->module->getVoidType();

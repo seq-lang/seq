@@ -32,13 +32,14 @@ void Expr::setType(types::TypePtr t) { this->type = move(t); }
 bool Expr::isType() const { return isTypeExpr; }
 void Expr::markType() { isTypeExpr = true; }
 string Expr::wrapType(const string &sexpr) const {
-  return format("({}{})", sexpr, type ? format(" #:type {}", type->toString()) : "");
+  return format("({}{})", sexpr,
+                type ? format(" #:type \"{}\"", type->toString()) : "");
 }
 
 Param::Param(string name, ExprPtr type, ExprPtr deflt)
     : name(move(name)), type(move(type)), deflt(move(deflt)) {}
 string Param::toString() const {
-  return format("({}{}{})", name, type ? " #:type " + type->toString() : "",
+  return format("({}{}{})", name, type ? " #:type \"" + type->toString() : "\"",
                 deflt ? " #:default " + deflt->toString() : "");
 }
 Param Param::clone() const { return Param(name, ast::clone(type), ast::clone(deflt)); }

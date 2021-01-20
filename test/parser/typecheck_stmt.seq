@@ -252,18 +252,18 @@ try:
 except MyError:
     print "my"
 except OSError as o:
-    print "os", len(o._hdr[1]), o._hdr[2][:-18], o._hdr[3]
-    #: os 0 typecheck_stmt.seq 249
+    print "os", o._hdr[0], len(o._hdr[1]), o._hdr[3][-18:], o._hdr[4]
+    #: os OSError 9 typecheck_stmt.seq 249
 finally:
     print "whoa"  #: whoa
 
 # Test function name
 def foo():
-    raise MyError("hello!")
+    raise MyError("foo!")
 try:
     foo()
 except MyError as e:
-    print e._hdr[0], e._hdr[1] #: MyError foo
+    print e._hdr[0], e._hdr[1] #: MyError foo!
 
 #%% throw_error,barebones
 raise 'hello' #! ERROR: cannot throw non-exception (first object member must be of type ExcHeader)

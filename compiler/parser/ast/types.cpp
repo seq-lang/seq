@@ -22,6 +22,8 @@ void Type::Unification::undo() {
     assert(leveled[i].first->kind == LinkType::Unbound);
     leveled[i].first->level = leveled[i].second;
   }
+  // for (int i = int(evaluated.size()) - 1; i >= 0; i--)
+  // evaluated[i].first->expr = move(evaluated[i].second);
 }
 TypePtr Type::follow() { return shared_from_this(); }
 bool Type::is(const string &s) { return getClass() && getClass()->name == s; }
@@ -192,19 +194,28 @@ bool LinkType::occurs(Type *typ, Type::Unification *undo) {
 
 /////
 
-StaticType::StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&e, EvalFn f)
-    : explicits(ex), expr(move(e)), evaluate(f) {}
+StaticType::StaticType(const vector<Generic> &ex,
+                       pair<unique_ptr<Expr>, EvalFn> staticExpr,
+                       pair<bool, int> staticEvaluation)
+    : explicits(ex), staticExpr(move(staticExpr)), staticEvaluation(staticEvaluation) {
+  seqassert(!staticExpr.first ||
+                (!staticExpr.first->getId() && !staticExpr.first->getInt()),
+            "invalid complex static expression");
+}
 
-StaticType::StaticType(int i) {
-  expr = std::make_unique<IntExpr>(i);
-  evaluate = [&](const StaticType *t) { return i; };
+StaticType::StaticType(int i) : staticEvaluation(true, i) {
+  staticExpr = {nullptr,
+                [](const StaticType *t) { return t->staticEvaluation.second; }};
 }
 
 string StaticType::toString() const {
+  if (staticEvaluation.first)
+    return fmt::format("{}", staticEvaluation.second);
   vector<string> s;
   for (auto &e : explicits)
     s.push_back(fmt::format("{}={}", e.name, e.type->toString()));
-  return fmt::format("Static[{}; {}]", join(s, ", "), expr->toString());
+  return fmt::format("Static[{}{}]", join(s, ", "),
+                     staticExpr.first ? ", " + staticExpr.first->toString() : "");
 }
 
 string StaticType::realizeString() const {
@@ -212,23 +223,47 @@ string StaticType::realizeString() const {
   vector<string> deps;
   for (auto &e : explicits)
     deps.push_back(e.type->realizeString());
-  return fmt::format("{}{}", deps.size() ? join(deps, ";") : "", evaluate(this));
+  if (!staticEvaluation.first)
+    const_cast<StaticType *>(this)->staticEvaluation = {true, staticExpr.second(this)};
+  return fmt::format("{}{}", deps.size() ? join(deps, ";") : "",
+                     staticEvaluation.second);
 }
 
 int StaticType::unify(Type *typ, Unification *us) {
   if (auto t = typ->getStatic()) {
-    // A + 5 + 3; 3 + A + 5
+    if (staticEvaluation.first && t->staticEvaluation.first)
+      return staticEvaluation == t->staticEvaluation ? 2 : -1;
+
+    if (explicits.size() != t->explicits.size())
+      return -1;
+    // We assume that both expressions are simple or both expressions are complex.
+    assert(!explicits.size() || staticExpr.first);
+
     int s1 = 2;
-    if (expr->toString() == t->expr->toString()) {
-      int s = 0;
+    int s = 0;
+    if (explicits.size()) {
+      if (staticExpr.first->toString() != t->staticExpr.first->toString())
+        return -1;
       for (int i = 0; i < explicits.size(); i++) {
         if ((s = explicits[i].type->unify(t->explicits[i].type.get(), us)) == -1)
           return -1;
         s1 += s;
       }
-      return s1;
+    } else {
+      seqassert(staticEvaluation.first && t->staticEvaluation.first,
+                "unevaluated simple expression");
+      return staticEvaluation == t->staticEvaluation ? 2 : -1;
     }
-    return -1;
+
+    // if (us && expr && canRealize()) {
+    //   us->evaluated.push_back(make_pair(this, move(expr)));
+    //   evaluate(this);
+    // }
+    // if (us && t->expr && t->canRealize()) {
+    //   us->evaluated.push_back(make_pair(t.get(), move(t->expr)));
+    //   t->evaluate(t.get());
+    // }
+    return s1;
   } else if (auto t = typ->getLink()) {
     return t->unify(this, us);
   }
@@ -239,7 +274,8 @@ TypePtr StaticType::generalize(int level) {
   auto e = explicits;
   for (auto &t : e)
     t.type = t.type ? t.type->generalize(level) : nullptr;
-  auto c = make_shared<StaticType>(e, expr->clone(), evaluate);
+  auto c = make_shared<StaticType>(
+      e, std::make_pair(clone(staticExpr.first), staticExpr.second), staticEvaluation);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -249,7 +285,8 @@ TypePtr StaticType::instantiate(int level, int &unboundCount,
   auto e = explicits;
   for (auto &t : e)
     t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
-  auto c = make_shared<StaticType>(e, expr->clone(), evaluate);
+  auto c = make_shared<StaticType>(
+      e, std::make_pair(clone(staticExpr.first), staticExpr.second), staticEvaluation);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -265,9 +302,10 @@ vector<TypePtr> StaticType::getUnbounds() const {
 }
 
 bool StaticType::canRealize() const {
-  for (auto &t : explicits)
-    if (t.type && !t.type->canRealize())
-      return false;
+  if (!staticEvaluation.first)
+    for (auto &t : explicits)
+      if (t.type && !t.type->canRealize())
+        return false;
   return true;
 }
 

@@ -135,7 +135,7 @@ string WhileStmt::toString() const {
     return format("(while-else {} {} {})", cond->toString(), suite->toString(),
                   elseSuite->toString());
   else
-    return format("(while {} {}})", cond->toString(), suite->toString());
+    return format("(while {} {})", cond->toString(), suite->toString());
 }
 ACCEPT_IMPL(WhileStmt, ASTVisitor);
 

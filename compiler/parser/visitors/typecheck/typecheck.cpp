@@ -52,8 +52,9 @@ TypePtr operator|=(TypePtr &a, const TypePtr &b) {
   if (a->unify(b.get(), &undo) >= 0)
     return a;
   undo.undo();
+  a->unify(b.get(), &undo);
   ast::error(
-      a->getSrcInfo(),
+      b->getSrcInfo(),
       fmt::format("cannot unify {} and {}", a->toString(), b->toString()).c_str());
   return nullptr;
 }

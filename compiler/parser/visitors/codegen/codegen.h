@@ -68,7 +68,6 @@ public:
   void visit(ExprStmt *) override;
   void visit(AssignStmt *) override;
   void visit(AssignMemberStmt *) override;
-  void visit(DelStmt *) override;
   void visit(ReturnStmt *) override;
   void visit(YieldStmt *) override;
   void visit(WhileStmt *) override;

@@ -46,6 +46,8 @@ struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
     vector<LinkType *> linked;
     /// List of unbound types whose level has been changed.
     vector<pair<LinkType *, int>> leveled;
+    /// List of static types that have been evaluated during the unification.
+    vector<StaticType *> evaluated;
 
   public:
     /// Undo the unification step.
@@ -268,9 +270,12 @@ public:
 struct StaticType : public Type {
   typedef std::function<int(const StaticType *)> EvalFn;
   vector<Generic> explicits;
-  unique_ptr<Expr> expr;
-  EvalFn evaluate;
-  StaticType(const vector<Generic> &ex, unique_ptr<Expr> &&expr, EvalFn f);
+
+  pair<bool, int> staticEvaluation;
+  pair<unique_ptr<Expr>, EvalFn> staticExpr;
+
+  StaticType(const vector<Generic> &ex, pair<unique_ptr<Expr>, EvalFn> staticExpr,
+             pair<bool, int> staticEvaluation);
   StaticType(int i);
 
 public:
