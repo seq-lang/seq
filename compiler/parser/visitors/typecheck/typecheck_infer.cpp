@@ -51,7 +51,7 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
     } else {
       realizedType = type->getClass();
       // Realize generics
-      for (auto &e : realizedType->explicits)
+      for (auto &e : realizedType->generics)
         if (!e.type->getStatic())
           if (!realizeType(e.type))
             return nullptr;
@@ -369,7 +369,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   seq::ir::types::Type *handle = nullptr;
   vector<const seq::ir::types::Type *> types;
   vector<int> statics;
-  for (auto &m : t->explicits)
+  for (auto &m : t->generics)
     if (auto s = m.type->getStatic()) {
       seqassert(s->staticEvaluation.first, "static not realized");
       statics.push_back(s->staticEvaluation.second);

@@ -247,7 +247,7 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
     auto iterType = stmt->iter->getType()->getClass();
     if (!iterType || iterType->name != "Generator")
       error(stmt->iter, "for loop expected a generator");
-    varType |= iterType->explicits[0].type;
+    varType |= iterType->generics[0].type;
     if (varType->is("void"))
       error("expression with void type");
   }
@@ -374,9 +374,9 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
     auto parentClass = ctx->find(attributes[ATTR_PARENT_CLASS])->type->getClass();
     seqassert(parentClass, "parent class not set");
     for (int i = 0; i < parentClassAST->generics.size(); i++) {
-      auto gen = parentClass->explicits[i].type->getLink();
+      auto gen = parentClass->generics[i].type->getLink();
       generics.push_back(
-          make_shared<LinkType>(LinkType::Unbound, parentClass->explicits[i].id,
+          make_shared<LinkType>(LinkType::Unbound, parentClass->generics[i].id,
                                 ctx->typecheckLevel - 1, nullptr, gen->isStatic));
       ctx->add(TypecheckItem::Type, parentClassAST->generics[i].name, generics.back(),
                gen->isStatic);
@@ -461,7 +461,7 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
         .visitedAsts[stmt->name] = {TypecheckItem::Type, typ};
 
     // Parse class fields.
-    typ->explicits = parseGenerics(stmt->generics, ctx->typecheckLevel);
+    typ->generics = parseGenerics(stmt->generics, ctx->typecheckLevel);
     {
       ctx->typecheckLevel++;
       for (auto ai = 0; ai < stmt->args.size(); ai++) {

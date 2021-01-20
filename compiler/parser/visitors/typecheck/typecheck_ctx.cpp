@@ -87,7 +87,7 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
   assert(type);
   unordered_map<int, types::TypePtr> genericCache;
   if (generics)
-    for (auto &g : generics->explicits)
+    for (auto &g : generics->generics)
       if (g.type &&
           !(g.type->getLink() && g.type->getLink()->kind == types::LinkType::Generic)) {
         genericCache[g.id] = g.type;
@@ -117,11 +117,11 @@ types::TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo,
   auto c = root->getClass();
   assert(c);
   auto g = make_shared<types::ClassType>(""); // dummy generic type
-  if (generics.size() != c->explicits.size())
+  if (generics.size() != c->generics.size())
     error(srcInfo, "generics do not match");
-  for (int i = 0; i < c->explicits.size(); i++) {
-    assert(c->explicits[i].type);
-    g->explicits.push_back(types::Generic("", generics[i], c->explicits[i].id));
+  for (int i = 0; i < c->generics.size(); i++) {
+    assert(c->generics[i].type);
+    g->generics.push_back(types::Generic("", generics[i], c->generics[i].id));
   }
   return instantiate(srcInfo, root, g.get());
 }

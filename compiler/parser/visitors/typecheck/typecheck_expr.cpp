@@ -223,7 +223,7 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
   // Returns T if t is of type Generator[T].
   auto getIterableType = [&](TypePtr t) {
     if (t->is("Generator"))
-      return t->getClass()->explicits[0].type;
+      return t->getClass()->generics[0].type;
     return t;
   };
   // List of output types (for a|>b|>c, this list is type(a), type(a|>b), type(a|>b|>c).
@@ -298,7 +298,7 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
   LOG_TYPECHECK("[inst] {} -> {}", expr->typeExpr->toString(), typ->toString());
   seqassert(typ->getFunc() || typ->getClass(), "unknown type");
   auto &generics =
-      typ->getFunc() ? typ->getFunc()->explicits : typ->getClass()->explicits;
+      typ->getFunc() ? typ->getFunc()->explicits : typ->getClass()->generics;
   if (expr->typeParams.size() != generics.size())
     error("expected {} generics", generics.size());
 
@@ -323,12 +323,12 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               auto val = ctx->find(ei->value);
               seqassert(val && val->isStatic(), "invalid static expression");
               auto genTyp = val->type->follow();
-              staticGenerics.emplace_back(Generic{
-                  ei->value, genTyp,
-                  genTyp->getLink() ? genTyp->getLink()->id
-                                    : genTyp->getStatic()->explicits.empty()
-                                          ? 0
-                                          : genTyp->getStatic()->explicits[0].id});
+              staticGenerics.emplace_back(
+                  Generic{ei->value, genTyp,
+                          genTyp->getLink() ? genTyp->getLink()->id
+                          : genTyp->getStatic()->explicits.empty()
+                              ? 0
+                              : genTyp->getStatic()->explicits[0].id});
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -481,7 +481,7 @@ void TypecheckVisitor::visit(YieldExpr *expr) {
                               {ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel)});
   LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), typ->toString());
   ctx->bases.back().returnType |= typ;
-  expr->type |= typ->getClass()->explicits[0].type;
+  expr->type |= typ->getClass()->generics[0].type;
   expr->done = realizeType(expr->type) != nullptr;
 }
 
@@ -787,8 +787,8 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     vector<pair<string, TypePtr>> methodArgs;
     if (!expr->expr->isType()) // self argument
       methodArgs.emplace_back(make_pair("", typ));
-    for (auto i = 1; i < oldType->explicits.size(); i++)
-      methodArgs.emplace_back(make_pair("", oldType->explicits[i].type));
+    for (auto i = 1; i < oldType->generics.size(); i++)
+      methodArgs.emplace_back(make_pair("", oldType->generics[i].type));
     bestMethod = findBestMethod(typ.get(), expr->member, methodArgs);
     if (!bestMethod) {
       // Print a nice error message.
@@ -887,7 +887,7 @@ TypecheckVisitor::findBestMethod(ClassType *typ, const string &member,
       // Unification failed: maybe we need to wrap an argument?
       if (expectedClass && expectedClass->name == "Optional" && argClass &&
           argClass->name != expectedClass->name) {
-        u = argType->unify(expectedClass->explicits[0].type.get(), &undo);
+        u = argType->unify(expectedClass->generics[0].type.get(), &undo);
         undo.undo();
         if (u >= 0) {
           score += u + 2;
@@ -897,7 +897,7 @@ TypecheckVisitor::findBestMethod(ClassType *typ, const string &member,
       // ... or unwrap it (less ideal)?
       if (argClass && argClass->name == "Optional" && expectedClass &&
           argClass->name != expectedClass->name) {
-        u = argClass->explicits[0].type->unify(expectedType.get(), &undo);
+        u = argClass->generics[0].type->unify(expectedType.get(), &undo);
         undo.undo();
         if (u >= 0) {
           score += u;
@@ -1161,11 +1161,11 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         }
         if (argClass && startswith(argClass->name, "Partial.N")) {
           // Handle partial call arguments.
-          argClass->explicits[0].type |= expectedClass->explicits[0].type;
-          if (argClass->explicits.size() != expectedClass->explicits.size() + 1)
+          argClass->generics[0].type |= expectedClass->generics[0].type;
+          if (argClass->generics.size() != expectedClass->generics.size() + 1)
             error("incompatible partial type");
-          for (int j = 1; j < expectedClass->explicits.size(); j++)
-            argClass->explicits[j + 1].type |= expectedClass->explicits[j].type;
+          for (int j = 1; j < expectedClass->generics.size(); j++)
+            argClass->generics[j + 1].type |= expectedClass->generics[j].type;
           expr->expr->getType()->getFunc()->args[ri + 1] = argClass;
         } else {
           reorderedArgs[ri].value->type |= expectedTyp;
@@ -1321,7 +1321,7 @@ void TypecheckVisitor::addFunctionGenerics(const FuncType *t) {
     } else {
       auto c = p->getClass();
       seqassert(c, "not a class: {}", p->toString());
-      for (auto &g : c->explicits)
+      for (auto &g : c->generics)
         if (auto s = g.type->getStatic())
           ctx->add(TypecheckItem::Type, g.name, s, true);
         else if (!g.name.empty())

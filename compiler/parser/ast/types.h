@@ -196,7 +196,7 @@ struct Generic {
  */
 typedef shared_ptr<ClassType> ClassTypePtr;
 struct ClassType : public Type {
-  vector<Generic> explicits;
+  vector<Generic> generics;
   TypePtr parent;
   bool isTrait;
 
@@ -209,7 +209,7 @@ public:
   vector<TypePtr> args;
 
   ClassType(ClassTypePtr c)
-      : explicits(c->explicits), parent(c->parent), name(c->name), record(c->record),
+      : generics(c->generics), parent(c->parent), name(c->name), record(c->record),
         args(c->args) {}
   ClassType(const string &name, bool isRecord = false,
             const vector<TypePtr> &args = vector<TypePtr>(),
