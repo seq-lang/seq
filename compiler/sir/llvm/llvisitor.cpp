@@ -508,6 +508,9 @@ void LLVMVisitor::visit(const IRModule *x) {
 
   // set up global variables and initialize functions
   for (auto *var : *x) {
+    if (!var->isGlobal())
+      continue;
+
     if (auto *f = cast<Func>(var)) {
       makeLLVMFunction(f);
       funcs.insert(f, func);
@@ -1175,8 +1178,6 @@ void LLVMVisitor::visit(const PointerValue *x) {
   assert(var);
   value = var; // note: we don't load the pointer
 }
-
-void LLVMVisitor::visit(const ValueProxy *x) { assert(0); }
 
 /*
  * Types

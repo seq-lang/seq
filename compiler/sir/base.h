@@ -17,6 +17,7 @@ namespace seq {
 namespace ir {
 
 class IRModule;
+class Func;
 
 /// Mixin class for IR nodes that need ids.
 class IdMixin {
@@ -35,6 +36,20 @@ public:
 
   /// @return the node's id.
   int getId() const { return id; }
+};
+
+class ParentFuncMixin {
+private:
+  Func *parentFunc = nullptr;
+
+public:
+  /// @return the containing function
+  Func *getParentFunc() { return parentFunc; }
+  /// @return the containing function
+  const Func *getParentFunc() const { return parentFunc; }
+  /// Sets the containing function.
+  /// @param f the new function
+  void setParentFunc(Func *f) { parentFunc = f; }
 };
 
 /// Base for named IR nodes.
@@ -144,7 +159,6 @@ public:
   /// @return iterator to the first attribute
   auto attributes_begin() const {
     return util::const_map_key_adaptor(attributes.begin());
-    ;
   }
   /// @return iterator beyond the last attribute
   auto attributes_end() const { return util::const_map_key_adaptor(attributes.end()); }

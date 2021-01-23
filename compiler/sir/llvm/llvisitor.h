@@ -207,7 +207,6 @@ public:
   void visit(const Var *) override;
   void visit(const VarValue *) override;
   void visit(const PointerValue *) override;
-  void visit(const ValueProxy *) override;
 
   void visit(const IntConstant *) override;
   void visit(const FloatConstant *) override;

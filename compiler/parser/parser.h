@@ -16,9 +16,9 @@
 
 namespace seq {
 
-std::unique_ptr<ir::IRModule> parse(const std::string &argv0, const std::string &file,
-                                    const std::string &code = "", bool isCode = false,
-                                    int isTest = 0, int startLine = 0);
+seq::ir::IRModule *parse(const std::string &argv0, const std::string &file,
+                         const std::string &code = "", bool isCode = false,
+                         int isTest = 0, int startLine = 0);
 /*
 void execute(seq::SeqModule *module, const std::vector<std::string> &args = {},
              const std::vector<std::string> &libs = {}, bool debug = false);

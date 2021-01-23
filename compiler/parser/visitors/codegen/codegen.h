@@ -24,9 +24,9 @@
 namespace seq {
 namespace ast {
 
-class CodegenVisitor : public CallbackASTVisitor<seq::ir::ValuePtr, seq::ir::ValuePtr> {
+class CodegenVisitor : public CallbackASTVisitor<seq::ir::Value *, seq::ir::Value *> {
   shared_ptr<CodegenContext> ctx;
-  seq::ir::ValuePtr result;
+  seq::ir::Value *result;
   const seq::ir::types::Type *typeResult = nullptr;
 
   void defaultVisit(Expr *expr) override;
@@ -38,10 +38,10 @@ class CodegenVisitor : public CallbackASTVisitor<seq::ir::ValuePtr, seq::ir::Val
 
 public:
   explicit CodegenVisitor(shared_ptr<CodegenContext> ctx);
-  static seq::ir::IRModulePtr apply(shared_ptr<Cache> cache, StmtPtr stmts);
+  static seq::ir::IRModule *apply(shared_ptr<Cache> cache, StmtPtr stmts);
 
-  seq::ir::ValuePtr transform(const ExprPtr &expr) override;
-  seq::ir::ValuePtr transform(const StmtPtr &stmt) override;
+  seq::ir::Value *transform(const ExprPtr &expr) override;
+  seq::ir::Value *transform(const StmtPtr &stmt) override;
 
   seq::ir::types::Type *realizeType(types::ClassType *t);
 
@@ -80,9 +80,13 @@ public:
   void visit(ClassStmt *stmt) override;
 
 private:
-  std::unique_ptr<ir::SeriesFlow> newScope(const seq::SrcObject *s, std::string name);
+  ir::SeriesFlow *newScope(const seq::SrcObject *s, std::string name);
 
-  template <typename T> auto wrap(T *obj) { return std::unique_ptr<T>(obj); }
+  template <typename ValueType, typename... Args> ValueType *make(Args &&... args) {
+    auto *ret = ctx->getModule()->N<ValueType>(std::forward<Args>(args)...);
+    ret->setParentFunc(ctx->getBase());
+    return ret;
+  }
 };
 
 } // namespace ast

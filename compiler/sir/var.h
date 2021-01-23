@@ -12,26 +12,37 @@
 namespace seq {
 namespace ir {
 
+class Func;
+
 /// SIR object representing a variable.
-class Var : public AcceptorExtend<Var, IRNode>, public IdMixin {
+class Var : public AcceptorExtend<Var, IRNode>, public IdMixin, public ParentFuncMixin {
 private:
   /// the variable's type
   const types::Type *type;
+  /// true if the variable is global
+  bool global;
 
 public:
   static const char NodeId;
 
   /// Constructs a variable.
-  /// @param name the variable's name
   /// @param type the variable's type
-  explicit Var(const types::Type *type, std::string name = "")
-      : AcceptorExtend(std::move(name)), type(type) {}
+  /// @param global true if the variable is global
+  /// @param name the variable's name
+  explicit Var(const types::Type *type, bool global = false, std::string name = "")
+      : AcceptorExtend(std::move(name)), type(type), global(global) {}
 
   /// @return the type
   const types::Type *getType() const { return type; }
   /// Sets the type.
   /// @param t the new type
   void setType(const types::Type *t) { type = t; }
+
+  /// @return true if the variable is global
+  bool isGlobal() const { return global; }
+  /// Sets the global flag.
+  /// @param v the new value
+  void setGlobal(bool v = true) { global = v; }
 
   std::string referenceString() const override {
     return fmt::format(FMT_STRING("{}.{}"), getName(), getId());
@@ -40,8 +51,6 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
-
-using VarPtr = std::unique_ptr<Var>;
 
 /// Value that contains an unowned variable reference.
 class VarValue : public AcceptorExtend<VarValue, Value> {

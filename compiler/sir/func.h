@@ -15,25 +15,18 @@ private:
 
 protected:
   /// list of arguments
-  std::list<VarPtr> args;
+  std::list<Var *> args;
   /// list of variables defined and used within the function
-  std::list<VarPtr> symbols;
+  std::list<Var *> symbols;
 
 public:
   static const char NodeId;
 
   /// Constructs an SIR function.
   /// @param type the function's type
-  /// @param argNames the function's argument names
-  /// @param name the function's name
-  Func(const types::Type *type, std::vector<std::string> argNames,
-       std::string name = "");
-
-  /// Constructs an SIR function.
-  /// @param type the function's type
   /// @param name the function's name
   explicit Func(const types::Type *type, std::string name = "")
-      : Func(type, {}, std::move(name)) {}
+      : AcceptorExtend(type, false, std::move(name)), generator(false) {}
 
   virtual ~Func() = default;
 
@@ -43,58 +36,56 @@ public:
   void realize(types::FuncType *newType, const std::vector<std::string> &names);
 
   /// @return iterator to the first arg
-  auto arg_begin() { return util::raw_ptr_adaptor(args.begin()); }
+  auto arg_begin() { return args.begin(); }
   /// @return iterator beyond the last arg
-  auto arg_end() { return util::raw_ptr_adaptor(args.end()); }
+  auto arg_end() { return args.end(); }
   /// @return iterator to the first arg
-  auto arg_begin() const { return util::const_raw_ptr_adaptor(args.begin()); }
+  auto arg_begin() const { return args.begin(); }
   /// @return iterator beyond the last arg
-  auto arg_end() const { return util::const_raw_ptr_adaptor(args.end()); }
+  auto arg_end() const { return args.end(); }
 
   /// @return a pointer to the last arg
-  Var *arg_front() { return args.front().get(); }
+  Var *arg_front() { return args.front(); }
   /// @return a pointer to the last arg
-  Var *arg_back() { return args.back().get(); }
+  Var *arg_back() { return args.back(); }
   /// @return a pointer to the last arg
-  const Var *arg_back() const { return args.back().get(); }
+  const Var *arg_back() const { return args.back(); }
   /// @return a pointer to the first arg
-  const Var *arg_front() const { return args.front().get(); }
+  const Var *arg_front() const { return args.front(); }
 
   /// @return iterator to the first symbol
-  auto begin() { return util::raw_ptr_adaptor(symbols.begin()); }
+  auto begin() { return symbols.begin(); }
   /// @return iterator beyond the last symbol
-  auto end() { return util::raw_ptr_adaptor(symbols.end()); }
+  auto end() { return symbols.end(); }
   /// @return iterator to the first symbol
-  auto begin() const { return util::const_raw_ptr_adaptor(symbols.begin()); }
+  auto begin() const { return symbols.begin(); }
   /// @return iterator beyond the last symbol
-  auto end() const { return util::const_raw_ptr_adaptor(symbols.end()); }
+  auto end() const { return symbols.end(); }
 
   /// @return a pointer to the first symbol
-  Var *front() { return symbols.front().get(); }
+  Var *front() { return symbols.front(); }
   /// @return a pointer to the last symbol
-  Var *back() { return symbols.back().get(); }
+  Var *back() { return symbols.back(); }
   /// @return a pointer to the first symbol
-  const Var *front() const { return symbols.front().get(); }
+  const Var *front() const { return symbols.front(); }
   /// @return a pointer to the last symbol
-  const Var *back() const { return symbols.back().get(); }
+  const Var *back() const { return symbols.back(); }
 
   /// Inserts an symbol at the given position.
   /// @param pos the position
   /// @param v the symbol
   /// @return an iterator to the newly added symbol
-  template <typename It> auto insert(It pos, VarPtr v) {
-    return util::raw_ptr_adaptor(symbols.insert(pos.internal, std::move(v)));
+  template <typename It> auto insert(It pos, Var *v) {
+    return symbols.insert(pos.internal, v);
   }
   /// Appends an symbol.
   /// @param v the new symbol
-  void push_back(VarPtr v) { symbols.push_back(std::move(v)); }
+  void push_back(Var *v) { symbols.push_back(v); }
 
   /// Erases the symbol at the given position.
   /// @param pos the position
   /// @return symbol_iterator following the removed symbol.
-  template <typename It> auto erase(It pos) {
-    return util::raw_ptr_adaptor(symbols.erase(pos.internal));
-  }
+  template <typename It> auto erase(It pos) { return symbols.erase(pos.internal); }
 
   /// @return true if the function is a generator
   bool isGenerator() const { return generator; }
@@ -108,12 +99,10 @@ public:
   virtual std::string getUnmangledName() const = 0;
 };
 
-using FuncPtr = std::unique_ptr<Func>;
-
 class BodiedFunc : public AcceptorExtend<BodiedFunc, Func> {
 private:
   /// the function body
-  FlowPtr body;
+  Flow *body;
   /// whether the function is builtin
   bool builtin = false;
 
@@ -125,12 +114,12 @@ public:
   std::string getUnmangledName() const override;
 
   /// @return the function body
-  Flow *getBody() { return body.get(); }
+  Flow *getBody() { return body; }
   /// @return the function body
-  const Flow *getBody() const { return body.get(); }
+  const Flow *getBody() const { return body; }
   /// Sets the function's body.
   /// @param b the new body
-  void setBody(FlowPtr b) { body = std::move(b); }
+  void setBody(Flow *b) { body = b; }
 
   /// @return true if the function is builtin
   bool isBuiltin() const { return builtin; }
