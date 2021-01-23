@@ -14,11 +14,10 @@ const std::string IRModule::STRING_NAME = ".str";
 
 const char IRModule::NodeId = 0;
 
-IRModule::IRModule(std::string name)
-    : AcceptorExtend(std::move(name)),
-      mainFunc(new BodiedFunc(getVoidRetAndArgFuncType(), "main")),
-      argVar(new Var(getArrayType(getStringType()), true, "argv")) {
+IRModule::IRModule(std::string name) : AcceptorExtend(std::move(name)) {
+  mainFunc = std::unique_ptr<Func>(new BodiedFunc(getVoidRetAndArgFuncType(), "main"));
   mainFunc->setModule(this);
+  argVar = std::unique_ptr<Var>(new Var(getArrayType(getStringType()), true, "argv"));
   argVar->setModule(this);
 }
 

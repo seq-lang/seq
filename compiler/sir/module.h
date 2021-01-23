@@ -217,7 +217,7 @@ public:
   }
 
 private:
-  void store(types::Type *t) { types[t->getName()] = std::unique_ptr<types::Type>(t); }
+  void store(types::Type *t) { types.emplace(t->getName(), t); }
   void store(Value *v) { values.emplace_back(v); }
   void store(Var *v) { vars.emplace_back(v); }
 
