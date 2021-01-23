@@ -31,9 +31,8 @@ bool _isTest = false;
 
 namespace seq {
 
-std::unique_ptr<ir::IRModule> parse(const string &argv0, const string &file,
-                                    const string &code, bool isCode, int isTest,
-                                    int startLine) {
+seq::ir::IRModule *parse(const string &argv0, const string &file, const string &code,
+                         bool isCode, int isTest, int startLine) {
   try {
     auto d = getenv("SEQ_DEBUG");
     if (d) {
@@ -107,7 +106,7 @@ std::unique_ptr<ir::IRModule> parse(const string &argv0, const string &file,
       seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
                             e.getSrcInfo().col);
     }
-    return std::unique_ptr<ir::IRModule>();
+    return nullptr;
   } catch (seq::exc::ParserException &e) {
     for (int i = 0; i < e.messages.size(); i++) {
       if (isTest) {
@@ -118,7 +117,7 @@ std::unique_ptr<ir::IRModule> parse(const string &argv0, const string &file,
                            e.locations[i].col);
       }
     }
-    return std::unique_ptr<ir::IRModule>();
+    return nullptr;
   }
 }
 

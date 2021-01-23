@@ -53,7 +53,6 @@ class LLVMFunc;
 class Value;
 class VarValue;
 class PointerValue;
-class ValueProxy;
 
 class Flow;
 class SeriesFlow;
@@ -102,7 +101,6 @@ public:
   DEFAULT_VISIT(Value);
   VISIT(VarValue);
   VISIT(PointerValue);
-  VISIT(ValueProxy);
 
   DEFAULT_VISIT(Flow);
   VISIT(SeriesFlow);

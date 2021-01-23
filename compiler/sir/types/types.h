@@ -12,9 +12,6 @@ namespace seq {
 namespace ir {
 namespace types {
 
-class Type;
-using TypePtr = std::unique_ptr<Type>;
-
 /// Type from which other SIR types derive. Generally types are immutable.
 class Type : public AcceptorExtend<Type, IRNode> {
 public:

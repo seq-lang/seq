@@ -31,7 +31,7 @@ private:
   /// the left-hand side
   Var *lhs;
   /// the right-hand side
-  ValuePtr rhs;
+  Value *rhs;
 
 public:
   static const char NodeId;
@@ -41,8 +41,8 @@ public:
   /// @param rhs the right-hand side
   /// @param field the field being set, may be empty
   /// @param name the instruction's name
-  AssignInstr(Var *lhs, ValuePtr rhs, std::string name = "")
-      : AcceptorExtend(std::move(name)), lhs(lhs), rhs(std::move(rhs)) {}
+  AssignInstr(Var *lhs, Value *rhs, std::string name = "")
+      : AcceptorExtend(std::move(name)), lhs(lhs), rhs(rhs) {}
 
   /// @return the left-hand side
   Var *getLhs() { return lhs; }
@@ -53,12 +53,12 @@ public:
   void setLhs(Var *v) { lhs = v; }
 
   /// @return the right-hand side
-  Value *getRhs() { return rhs.get(); }
+  Value *getRhs() { return rhs; }
   /// @return the right-hand side
-  const Value *getRhs() const { return rhs.get(); }
+  const Value *getRhs() const { return rhs; }
   /// Sets the right-hand side
   /// @param l the new value
-  void setRhs(ValuePtr v) { rhs = std::move(v); }
+  void setRhs(Value *v) { rhs = v; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -70,7 +70,7 @@ private:
 class ExtractInstr : public AcceptorExtend<ExtractInstr, Instr> {
 private:
   /// the value being manipulated
-  ValuePtr val;
+  Value *val;
   /// the field
   std::string field;
 
@@ -81,18 +81,18 @@ public:
   /// @param val the value being manipulated
   /// @param field the field
   /// @param name the instruction's name
-  explicit ExtractInstr(ValuePtr val, std::string field, std::string name = "")
-      : AcceptorExtend(std::move(name)), val(std::move(val)), field(std::move(field)) {}
+  explicit ExtractInstr(Value *val, std::string field, std::string name = "")
+      : AcceptorExtend(std::move(name)), val(val), field(std::move(field)) {}
 
   const types::Type *getType() const override;
 
   /// @return the location
-  Value *getVal() { return val.get(); }
+  Value *getVal() { return val; }
   /// @return the location
-  const Value *getVal() const { return val.get(); }
+  const Value *getVal() const { return val; }
   /// Sets the location.
   /// @param p the new value
-  void setVal(ValuePtr p) { val = std::move(p); }
+  void setVal(Value *p) { val = p; }
 
   /// @return the field
   const std::string &getField() const { return field; }
@@ -110,11 +110,11 @@ private:
 class InsertInstr : public AcceptorExtend<InsertInstr, Instr> {
 private:
   /// the value being manipulated
-  ValuePtr lhs;
+  Value *lhs;
   /// the field
   std::string field;
   /// the value being inserted
-  ValuePtr rhs;
+  Value *rhs;
 
 public:
   static const char NodeId;
@@ -124,28 +124,26 @@ public:
   /// @param field the field
   /// @param rhs the new value
   /// @param name the instruction's name
-  explicit InsertInstr(ValuePtr lhs, std::string field, ValuePtr rhs,
-                       std::string name = "")
-      : AcceptorExtend(std::move(name)), lhs(std::move(lhs)), field(std::move(field)),
-        rhs(std::move(rhs)) {}
+  explicit InsertInstr(Value *lhs, std::string field, Value *rhs, std::string name = "")
+      : AcceptorExtend(std::move(name)), lhs(lhs), field(std::move(field)), rhs(rhs) {}
 
   const types::Type *getType() const override { return lhs->getType(); }
 
   /// @return the left-hand side
-  Value *getLhs() { return lhs.get(); }
+  Value *getLhs() { return lhs; }
   /// @return the left-hand side
-  const Value *getLhs() const { return lhs.get(); }
+  const Value *getLhs() const { return lhs; }
   /// Sets the left-hand side.
   /// @param p the new value
-  void setLhs(ValuePtr p) { lhs = std::move(p); }
+  void setLhs(Value *p) { lhs = p; }
 
   /// @return the right-hand side
-  Value *getRhs() { return rhs.get(); }
+  Value *getRhs() { return rhs; }
   /// @return the right-hand side
-  const Value *getRhs() const { return rhs.get(); }
+  const Value *getRhs() const { return rhs; }
   /// Sets the right-hand side.
   /// @param p the new value
-  void setRhs(ValuePtr p) { rhs = std::move(p); }
+  void setRhs(Value *p) { rhs = p; }
 
   /// @return the field
   const std::string &getField() const { return field; }
@@ -163,9 +161,9 @@ private:
 class CallInstr : public AcceptorExtend<CallInstr, Instr> {
 private:
   /// the function
-  ValuePtr func;
+  Value *func;
   /// the arguments
-  std::vector<ValuePtr> args;
+  std::vector<Value *> args;
 
 public:
   static const char NodeId;
@@ -174,57 +172,57 @@ public:
   /// @param func the function
   /// @param args the arguments
   /// @param name the instruction's name
-  CallInstr(ValuePtr func, std::vector<ValuePtr> args, std::string name = "")
-      : AcceptorExtend(std::move(name)), func(std::move(func)), args(std::move(args)) {}
+  CallInstr(Value *func, std::vector<Value *> args, std::string name = "")
+      : AcceptorExtend(std::move(name)), func(func), args(std::move(args)) {}
 
   /// Constructs a call instruction with no arguments.
   /// @param func the function
   /// @param name the instruction's name
-  explicit CallInstr(ValuePtr func, std::string name = "")
-      : CallInstr(std::move(func), {}, std::move(name)) {}
+  explicit CallInstr(Value *func, std::string name = "")
+      : CallInstr(func, {}, std::move(name)) {}
 
   const types::Type *getType() const override;
 
   /// @return the func
-  Value *getFunc() { return func.get(); }
+  Value *getFunc() { return func; }
   /// @return the func
-  const Value *getFunc() const { return func.get(); }
+  const Value *getFunc() const { return func; }
   /// Sets the func.
   /// @param f the new value
-  void setFunc(ValuePtr f) { func = std::move(f); }
+  void setFunc(Value *f) { func = f; }
 
   /// @return an iterator to the first argument
-  auto begin() { return util::raw_ptr_adaptor(args.begin()); }
+  auto begin() { return args.begin(); }
   /// @return an iterator beyond the last argument
-  auto end() { return util::raw_ptr_adaptor(args.end()); }
+  auto end() { return args.end(); }
   /// @return an iterator to the first argument
-  auto begin() const { return util::const_raw_ptr_adaptor(args.begin()); }
+  auto begin() const { return args.begin(); }
   /// @return an iterator beyond the last argument
-  auto end() const { return util::const_raw_ptr_adaptor(args.end()); }
+  auto end() const { return args.end(); }
 
   /// @return a pointer to the first argument
-  Value *front() { return args.front().get(); }
+  Value *front() { return args.front(); }
   /// @return a pointer to the last argument
-  Value *back() { return args.back().get(); }
+  Value *back() { return args.back(); }
   /// @return a pointer to the first argument
-  const Value *front() const { return args.front().get(); }
+  const Value *front() const { return args.front(); }
   /// @return a pointer to the last argument
-  const Value *back() const { return args.back().get(); }
+  const Value *back() const { return args.back(); }
 
   /// Inserts an argument at the given position.
   /// @param pos the position
   /// @param v the argument
   /// @return an iterator to the newly added argument
-  template <typename It> auto insert(It pos, ValuePtr v) {
-    return util::raw_ptr_adaptor(args.insert(pos.internal, std::move(v)));
+  template <typename It> auto insert(It pos, Value *v) {
+    return util::raw_ptr_adaptor(args.insert(pos.internal, v));
   }
   /// Appends an argument.
   /// @param v the argument
-  void push_back(ValuePtr v) { args.push_back(std::move(v)); }
+  void push_back(Value *v) { args.push_back(v); }
 
   /// Sets the args.
   /// @param v the new args vector
-  void setArgs(std::vector<ValuePtr> v) { args = std::move(v); }
+  void setArgs(std::vector<Value *> v) { args = std::move(v); }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -238,7 +236,7 @@ private:
   /// the array type
   const types::Type *arrayType;
   /// number of elements to allocate
-  ValuePtr count;
+  Value *count;
 
 public:
   static const char NodeId;
@@ -247,19 +245,18 @@ public:
   /// @param arrayType the type of the array
   /// @param count the number of elements
   /// @param name the name
-  StackAllocInstr(const types::Type *arrayType, ValuePtr count, std::string name = "")
-      : AcceptorExtend(std::move(name)), arrayType(arrayType), count(std::move(count)) {
-  }
+  StackAllocInstr(const types::Type *arrayType, Value *count, std::string name = "")
+      : AcceptorExtend(std::move(name)), arrayType(arrayType), count(count) {}
 
   const types::Type *getType() const override { return arrayType; }
 
   /// @return the count
-  Value *getCount() { return count.get(); }
+  Value *getCount() { return count; }
   /// @return the count
-  const Value *getCount() const { return count.get(); }
+  const Value *getCount() const { return count; }
   /// Sets the count.
   /// @param c the new value
-  void setCount(ValuePtr c) { count = std::move(c); }
+  void setCount(Value *c) { count = c; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -342,11 +339,11 @@ private:
 class TernaryInstr : public AcceptorExtend<TernaryInstr, Instr> {
 private:
   /// the condition
-  ValuePtr cond;
+  Value *cond;
   /// the true value
-  ValuePtr trueValue;
+  Value *trueValue;
   /// the false value
-  ValuePtr falseValue;
+  Value *falseValue;
 
 public:
   static const char NodeId;
@@ -356,36 +353,35 @@ public:
   /// @param trueValue the true value
   /// @param falseValue the false value
   /// @param name the instruction's name
-  TernaryInstr(ValuePtr cond, ValuePtr trueValue, ValuePtr falseValue,
-               std::string name = "")
-      : AcceptorExtend(std::move(name)), cond(std::move(cond)),
-        trueValue(std::move(trueValue)), falseValue(std::move(falseValue)) {}
+  TernaryInstr(Value *cond, Value *trueValue, Value *falseValue, std::string name = "")
+      : AcceptorExtend(std::move(name)), cond(cond), trueValue(trueValue),
+        falseValue(falseValue) {}
 
   const types::Type *getType() const override { return trueValue->getType(); }
 
   /// @return the condition
-  Value *getCond() { return cond.get(); }
+  Value *getCond() { return cond; }
   /// @return the condition
-  const Value *getCond() const { return cond.get(); }
+  const Value *getCond() const { return cond; }
   /// Sets the condition.
   /// @param v the new value
-  void setCond(ValuePtr v) { cond = std::move(v); }
+  void setCond(Value *v) { cond = v; }
 
   /// @return the condition
-  Value *getTrueValue() { return trueValue.get(); }
+  Value *getTrueValue() { return trueValue; }
   /// @return the condition
-  const Value *getTrueValue() const { return trueValue.get(); }
+  const Value *getTrueValue() const { return trueValue; }
   /// Sets the true value.
   /// @param v the new value
-  void setTrueValue(ValuePtr v) { trueValue = std::move(v); }
+  void setTrueValue(Value *v) { trueValue = v; }
 
   /// @return the false value
-  Value *getFalseValue() { return falseValue.get(); }
+  Value *getFalseValue() { return falseValue; }
   /// @return the false value
-  const Value *getFalseValue() const { return falseValue.get(); }
+  const Value *getFalseValue() const { return falseValue; }
   /// Sets the value.
   /// @param v the new value
-  void setFalseValue(ValuePtr v) { falseValue = std::move(v); }
+  void setFalseValue(Value *v) { falseValue = v; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -395,7 +391,6 @@ private:
 
 /// Base for control flow instructions
 class ControlFlowInstr : public AcceptorExtend<ControlFlowInstr, Instr> {
-
 protected:
   /// the target
   Flow *target;
@@ -447,21 +442,21 @@ private:
 class ReturnInstr : public AcceptorExtend<ReturnInstr, ControlFlowInstr> {
 private:
   /// the value
-  ValuePtr value;
+  Value *value;
 
 public:
   static const char NodeId;
 
-  explicit ReturnInstr(ValuePtr value = nullptr, std::string name = "")
-      : AcceptorExtend(nullptr, std::move(name)), value(std::move(value)) {}
+  explicit ReturnInstr(Value *value = nullptr, std::string name = "")
+      : AcceptorExtend(nullptr, std::move(name)), value(value) {}
 
   /// @return the value
-  Value *getValue() { return value.get(); }
+  Value *getValue() { return value; }
   /// @return the value
-  const Value *getValue() const { return value.get(); }
+  const Value *getValue() const { return value; }
   /// Sets the value.
   /// @param v the new value
-  void setValue(ValuePtr v) { value = std::move(v); }
+  void setValue(Value *v) { value = v; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -472,21 +467,21 @@ private:
 class YieldInstr : public AcceptorExtend<YieldInstr, Instr> {
 private:
   /// the value
-  ValuePtr value;
+  Value *value;
 
 public:
   static const char NodeId;
 
-  explicit YieldInstr(ValuePtr value = nullptr, std::string name = "")
-      : AcceptorExtend(std::move(name)), value(std::move(value)) {}
+  explicit YieldInstr(Value *value = nullptr, std::string name = "")
+      : AcceptorExtend(std::move(name)), value(value) {}
 
   /// @return the value
-  Value *getValue() { return value.get(); }
+  Value *getValue() { return value; }
   /// @return the value
-  const Value *getValue() const { return value.get(); }
+  const Value *getValue() const { return value; }
   /// Sets the value.
   /// @param v the new value
-  void setValue(ValuePtr v) { value = std::move(v); }
+  void setValue(Value *v) { value = v; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -497,21 +492,21 @@ private:
 class ThrowInstr : public AcceptorExtend<ThrowInstr, Instr> {
 private:
   /// the value
-  ValuePtr value;
+  Value *value;
 
 public:
   static const char NodeId;
 
-  explicit ThrowInstr(ValuePtr value = nullptr, std::string name = "")
-      : AcceptorExtend(std::move(name)), value(std::move(value)) {}
+  explicit ThrowInstr(Value *value = nullptr, std::string name = "")
+      : AcceptorExtend(std::move(name)), value(value) {}
 
   /// @return the value
-  Value *getValue() { return value.get(); }
+  Value *getValue() { return value; }
   /// @return the value
-  const Value *getValue() const { return value.get(); }
+  const Value *getValue() const { return value; }
   /// Sets the value.
   /// @param v the new value
-  void setValue(ValuePtr v) { value = std::move(v); }
+  void setValue(Value *v) { value = v; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -523,9 +518,9 @@ private:
 class FlowInstr : public AcceptorExtend<FlowInstr, Instr> {
 private:
   /// the flow
-  FlowPtr flow;
+  Flow *flow;
   /// the output value
-  ValuePtr val;
+  Value *val;
 
 public:
   static const char NodeId;
@@ -534,26 +529,26 @@ public:
   /// @param flow the flow
   /// @param val the output value
   /// @param name the name
-  explicit FlowInstr(FlowPtr flow, ValuePtr val, std::string name = "")
-      : AcceptorExtend(std::move(name)), flow(std::move(flow)), val(std::move(val)) {}
+  explicit FlowInstr(Flow *flow, Value *val, std::string name = "")
+      : AcceptorExtend(std::move(name)), flow(flow), val(val) {}
 
   const types::Type *getType() const override { return val->getType(); }
 
   /// @return the flow
-  Flow *getFlow() { return flow.get(); }
+  Flow *getFlow() { return flow; }
   /// @return the flow
-  const Flow *getFlow() const { return flow.get(); }
+  const Flow *getFlow() const { return flow; }
   /// Sets the flow.
   /// @param f the new flow
-  void setFlow(FlowPtr f) { flow = std::move(f); }
+  void setFlow(Flow *f) { flow = f; }
 
   /// @return the value
-  Value *getValue() { return val.get(); }
+  Value *getValue() { return val; }
   /// @return the value
-  const Value *getValue() const { return val.get(); }
+  const Value *getValue() const { return val; }
   /// Sets the value.
   /// @param v the new value
-  void setValue(ValuePtr v) { val = std::move(v); }
+  void setValue(Value *v) { val = v; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;

@@ -24,71 +24,86 @@ public:
 
 private:
   /// the module's "main" function
-  FuncPtr mainFunc;
-  /// the module's argv variable
-  VarPtr argVar;
-  /// the global symbols table
-  std::list<VarPtr> symbols;
+  std::unique_ptr<Func> mainFunc;
+  /// the module's argv variabl{}e
+  std::unique_ptr<Var> argVar;
+  /// the global variables list
+  std::list<std::unique_ptr<Var>> vars;
+  /// the global value list
+  std::list<std::unique_ptr<Value>> values;
   /// the global types table
-  std::unordered_map<std::string, types::TypePtr> types;
+  std::unordered_map<std::string, std::unique_ptr<types::Type>> types;
 
 public:
   static const char NodeId;
 
   /// Constructs an SIR module.
   /// @param name the module name
-  explicit IRModule(std::string name) : AcceptorExtend(std::move(name)) {}
+  explicit IRModule(std::string name);
 
   /// @return the main function
   Func *getMainFunc() { return mainFunc.get(); }
   /// @return the main function
   const Func *getMainFunc() const { return mainFunc.get(); }
-  /// Sets the main function.
-  /// @param f the new funciton
-  void setMainFunc(FuncPtr f) { mainFunc = std::move(f); }
 
   /// @return the arg var
   Var *getArgVar() { return argVar.get(); }
   /// @return the arg var
   const Var *getArgVar() const { return argVar.get(); }
-  /// Sets the arg var.
-  /// @param f the new function
-  void setArgVar(VarPtr f) { argVar = std::move(f); }
 
   /// @return iterator to the first symbol
-  auto begin() { return util::raw_ptr_adaptor(symbols.begin()); }
+  auto begin() { return util::raw_ptr_adaptor(vars.begin()); }
   /// @return iterator beyond the last symbol
-  auto end() { return util::raw_ptr_adaptor(symbols.end()); }
+  auto end() { return util::raw_ptr_adaptor(vars.end()); }
   /// @return iterator to the first symbol
-  auto begin() const { return util::const_raw_ptr_adaptor(symbols.begin()); }
+  auto begin() const { return util::const_raw_ptr_adaptor(vars.begin()); }
   /// @return iterator beyond the last symbol
-  auto end() const { return util::const_raw_ptr_adaptor(symbols.end()); }
+  auto end() const { return util::const_raw_ptr_adaptor(vars.end()); }
 
   /// @return a pointer to the first symbol
-  Var *front() { return symbols.front().get(); }
+  Var *front() { return vars.front().get(); }
   /// @return a pointer to the last symbol
-  Var *back() { return symbols.back().get(); }
+  Var *back() { return vars.back().get(); }
   /// @return a pointer to the first symbol
-  const Var *front() const { return symbols.front().get(); }
+  const Var *front() const { return vars.front().get(); }
   /// @return a pointer to the last symbol
-  const Var *back() const { return symbols.back().get(); }
+  const Var *back() const { return vars.back().get(); }
 
-  /// Inserts an symbol at the given position.
-  /// @param pos the position
-  /// @param v the symbol
-  /// @return an iterator to the newly added symbol
-  template <typename It> auto insert(It pos, VarPtr v) {
-    return util::raw_ptr_adaptor(symbols.insert(pos.internal, std::move(v)));
+  /// @return iterator to the first value
+  auto values_begin() { return util::raw_ptr_adaptor(values.begin()); }
+  /// @return iterator beyond the last value
+  auto values_end() { return util::raw_ptr_adaptor(values.end()); }
+  /// @return iterator to the first value
+  auto values_begin() const { return util::const_raw_ptr_adaptor(values.begin()); }
+  /// @return iterator beyond the last value
+  auto values_end() const { return util::const_raw_ptr_adaptor(values.end()); }
+
+  /// @return a pointer to the first value
+  Value *values_front() { return values.front().get(); }
+  /// @return a pointer to the last value
+  Value *values_back() { return values.back().get(); }
+  /// @return a pointer to the first value
+  const Value *values_front() const { return values.front().get(); }
+  /// @return a pointer to the last value
+  const Value *values_back() const { return values.back().get(); }
+
+  template <typename DesiredType, typename... Args>
+  DesiredType *N(seq::SrcInfo s, Args &&... args) {
+    auto *ret = new DesiredType(std::forward<Args>(args)...);
+    ret->setModule(this);
+    ret->setSrcInfo(s);
+
+    store(ret);
+    return ret;
   }
-  /// Appends an symbol.
-  /// @param v the new symbol
-  void push_back(VarPtr v) { symbols.push_back(std::move(v)); }
 
-  /// Erases the symbol at the given position.
-  /// @param pos the position
-  /// @return iterator following the removed symbol.
-  template <typename It> auto erase(It pos) {
-    return util::raw_ptr_adaptor(symbols.erase(pos.internal));
+  template <typename DesiredType, typename... Args>
+  DesiredType *N(const seq::SrcObject *s, Args &&... args) {
+    return N<DesiredType>(s->getSrcInfo(), std::forward<Args>(args)...);
+  }
+
+  template <typename DesiredType, typename... Args> DesiredType *Nr(Args &&... args) {
+    return N<DesiredType>(seq::SrcInfo(), std::forward<Args>(args)...);
   }
 
   /// @param name the type's name
@@ -98,157 +113,84 @@ public:
     return it == types.end() ? nullptr : it->second.get();
   }
 
-  template <typename DesiredType, typename... Args>
-  DesiredType *Nrs(const seq::SrcObject *s, Args &&... args) {
-    auto *ret = new DesiredType(std::forward<Args>(args)...);
-    ret->setModule(this);
-    ret->setSrcInfo(s->getSrcInfo());
-    return ret;
-  }
-
-  template <typename DesiredType, typename... Args>
-  DesiredType *Nrs(seq::SrcInfo s, Args &&... args) {
-    auto *ret = new DesiredType(std::forward<Args>(args)...);
-    ret->setModule(this);
-    ret->setSrcInfo(s);
-    return ret;
-  }
-
-  template <typename DesiredType, typename... Args> DesiredType *Nr(Args &&... args) {
-    auto *ret = new DesiredType(std::forward<Args>(args)...);
-    ret->setModule(this);
-    return ret;
-  }
-
-  template <typename DesiredType, typename... Args>
-  std::unique_ptr<DesiredType> Nxs(seq::SrcInfo s, Args &&... args) {
-    auto ret = std::make_unique<DesiredType>(std::forward<Args>(args)...);
-    ret->setModule(this);
-    ret->setSrcInfo(std::move(s));
-    return std::move(ret);
-  }
-
-  template <typename DesiredType, typename... Args>
-  std::unique_ptr<DesiredType> Nxs(const seq::SrcObject *s, Args &&... args) {
-    return Nxs<DesiredType>(s->getSrcInfo(), std::forward<Args>(args)...);
-  }
-
-  template <typename DesiredType, typename... Args>
-  std::unique_ptr<DesiredType> Nx(Args &&... args) {
-    auto ret = std::make_unique<DesiredType>(std::forward<Args>(args)...);
-    ret->setModule(this);
-    return std::move(ret);
-  }
-
   types::Type *getPointerType(const types::Type *base) {
     auto name = types::PointerType::getInstanceName(base);
-    auto *rVal = getType(name);
-    if (!rVal) {
-      rVal = Nr<types::PointerType>(base);
-      types[name] = types::TypePtr(rVal);
-    }
-    return rVal;
+    if (auto *rVal = getType(name))
+      return rVal;
+    return Nr<types::PointerType>(base);
   }
 
   types::Type *getArrayType(const types::Type *base) {
     auto name = types::ArrayType::getInstanceName(base);
-    auto *rVal = getType(name);
-    if (!rVal) {
-      rVal = Nr<types::ArrayType>(getPointerType(base), getIntType());
-      types[name] = types::TypePtr(rVal);
-    }
-    return rVal;
+    if (auto *rVal = getType(name))
+      return rVal;
+    return Nr<types::ArrayType>(getPointerType(base), getIntType());
   }
 
   types::Type *getGeneratorType(const types::Type *base) {
     auto name = types::GeneratorType::getInstanceName(base);
-    auto *rVal = getType(name);
-    if (!rVal) {
-      rVal = Nr<types::GeneratorType>(base);
-      types[name] = types::TypePtr(rVal);
-    }
-    return rVal;
+    if (auto *rVal = getType(name))
+      return rVal;
+    return Nr<types::GeneratorType>(base);
   }
 
   types::Type *getOptionalType(const types::Type *base) {
     auto name = types::OptionalType::getInstanceName(base);
-    auto *rVal = getType(name);
-    if (!rVal) {
-      rVal = Nr<types::OptionalType>(base);
-      types[name] = types::TypePtr(rVal);
-    }
-    return rVal;
+    if (auto *rVal = getType(name))
+      return rVal;
+    return Nr<types::OptionalType>(base);
   }
 
   types::Type *getVoidType() {
-    auto *rVal = getType(VOID_NAME);
-    if (!rVal) {
-      rVal = Nr<types::VoidType>();
-      types[VOID_NAME] = types::TypePtr(rVal);
-    }
-    return rVal;
+    if (auto *rVal = getType(VOID_NAME))
+      return rVal;
+    return Nr<types::VoidType>();
   }
 
   types::Type *getBoolType() {
-    auto *rVal = getType(BOOL_NAME);
-    if (!rVal) {
-      rVal = Nr<types::BoolType>();
-      types[BOOL_NAME] = types::TypePtr(rVal);
-    }
-    return rVal;
+    if (auto *rVal = getType(BOOL_NAME))
+      return rVal;
+    return Nr<types::BoolType>();
   }
 
   types::Type *getByteType() {
-    auto *rVal = getType(BYTE_NAME);
-    if (!rVal) {
-      rVal = Nr<types::ByteType>();
-      types[BYTE_NAME] = types::TypePtr(rVal);
-    }
-    return rVal;
+    if (auto *rVal = getType(BYTE_NAME))
+      return rVal;
+    return Nr<types::ByteType>();
   }
 
   types::Type *getIntType() {
-    auto *rVal = getType(INT_NAME);
-    if (!rVal) {
-      rVal = Nr<types::IntType>();
-      types[INT_NAME] = types::TypePtr(rVal);
-    }
-    return rVal;
+    if (auto *rVal = getType(INT_NAME))
+      return rVal;
+    return Nr<types::IntType>();
   }
 
   types::Type *getFloatType() {
-    auto *rVal = getType(FLOAT_NAME);
-    if (!rVal) {
-      rVal = Nr<types::FloatType>();
-      types[FLOAT_NAME] = types::TypePtr(rVal);
-    }
-    return rVal;
+    if (auto *rVal = getType(FLOAT_NAME))
+      return rVal;
+    return Nr<types::FloatType>();
   }
 
   types::Type *getStringType() {
-    auto *rVal = getType(STRING_NAME);
-    if (!rVal) {
-      rVal = new types::RecordType(
-          STRING_NAME, {getIntType(), getPointerType(getByteType())}, {"len", "ptr"});
-      types[STRING_NAME] = types::TypePtr(rVal);
-    }
-    return rVal;
+    if (auto *rVal = getType(STRING_NAME))
+      return rVal;
+    return Nr<types::RecordType>(
+        STRING_NAME,
+        std::vector<const types::Type *>{getIntType(), getPointerType(getByteType())},
+        std::vector<std::string>{"len", "ptr"});
   }
 
   types::Type *getFuncType(const types::Type *rType,
                            std::vector<const types::Type *> argTypes) {
     auto name = types::FuncType::getInstanceName(rType, argTypes);
-    auto *rVal = getType(name);
-    if (!rVal) {
-      rVal = Nr<types::FuncType>(rType, std::move(argTypes));
-      types[name] = types::TypePtr(rVal);
-    }
-    return rVal;
+    if (auto *rVal = getType(name))
+      return rVal;
+    return Nr<types::FuncType>(rType, std::move(argTypes));
   }
 
   types::Type *getVoidRetAndArgFuncType() { return getFuncType(getVoidType(), {}); }
 
-  types::Type *getMemberedType(std::string name, bool ref = false) {
+  types::Type *getMemberedType(const std::string &name, bool ref = false) {
     auto *rVal = getType(name);
 
     if (!rVal) {
@@ -257,13 +199,11 @@ public:
         auto *record = getType(contentName);
         if (!record) {
           record = Nr<types::RecordType>(contentName);
-          types[contentName] = types::TypePtr(record);
         }
         rVal = Nr<types::RefType>(name, record->as<types::RecordType>());
       } else {
         rVal = Nr<types::RecordType>(name);
       }
-      types[name] = types::TypePtr(rVal);
     }
 
     return rVal;
@@ -271,19 +211,18 @@ public:
 
   types::Type *getIntNType(unsigned len, bool sign) {
     auto name = types::IntNType::getInstanceName(len, sign);
-    auto *rVal = getType(name);
-    if (!rVal) {
-      rVal = Nr<types::IntNType>(len, sign);
-      types[name] = types::TypePtr(rVal);
-    }
-    return rVal;
+    if (auto *rVal = getType(name))
+      return rVal;
+    return Nr<types::IntNType>(len, sign);
   }
 
 private:
+  void store(types::Type *t) { types[t->getName()] = std::unique_ptr<types::Type>(t); }
+  void store(Value *v) { values.emplace_back(v); }
+  void store(Var *v) { vars.emplace_back(v); }
+
   std::ostream &doFormat(std::ostream &os) const override;
 };
-
-using IRModulePtr = std::unique_ptr<IRModule>;
 
 } // namespace ir
 } // namespace seq

@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
 
   seq::ir::LLVMVisitor visitor(debug.getValue());
-  visitor.visit(module.get());
+  visitor.visit(module);
 
   if (output.getValue().empty()) {
     argsVec.insert(argsVec.begin(), input);

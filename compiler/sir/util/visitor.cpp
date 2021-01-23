@@ -19,8 +19,6 @@ void SIRVisitor::visit(VarValue *x) { defaultVisit(x); }
 void SIRVisitor::visit(const VarValue *x) { defaultVisit(x); }
 void SIRVisitor::visit(PointerValue *x) { defaultVisit(x); }
 void SIRVisitor::visit(const PointerValue *x) { defaultVisit(x); }
-void SIRVisitor::visit(ValueProxy *x) { defaultVisit(x); }
-void SIRVisitor::visit(const ValueProxy *x) { defaultVisit(x); }
 
 void SIRVisitor::visit(SeriesFlow *x) { defaultVisit(x); }
 void SIRVisitor::visit(const SeriesFlow *x) { defaultVisit(x); }
