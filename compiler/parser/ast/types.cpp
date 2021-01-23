@@ -197,7 +197,7 @@ bool LinkType::occurs(Type *typ, Type::Unification *undo) {
 StaticType::StaticType(const vector<Generic> &ex,
                        pair<unique_ptr<Expr>, EvalFn> staticExpr,
                        pair<bool, int> staticEvaluation)
-    : explicits(ex), staticExpr(move(staticExpr)), staticEvaluation(staticEvaluation) {
+    : explicits(ex), staticEvaluation(staticEvaluation), staticExpr(move(staticExpr)) {
   seqassert(!staticExpr.first ||
                 (!staticExpr.first->getId() && !staticExpr.first->getInt()),
             "invalid complex static expression");

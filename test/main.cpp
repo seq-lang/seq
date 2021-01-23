@@ -105,13 +105,13 @@ public:
       auto file = getFilename(get<0>(GetParam()));
       auto code = get<3>(GetParam());
       auto startLine = get<4>(GetParam());
-      auto module = parse(argv0, file, code, !code.empty(),
-                          /* isTest */ 1 + get<5>(GetParam()), startLine);
+      auto *module = parse(argv0, file, code, !code.empty(),
+                           /* isTest */ 1 + get<5>(GetParam()), startLine);
       if (!module)
         exit(EXIT_FAILURE);
 
       seq::ir::LLVMVisitor visitor(/*debug=*/get<1>(GetParam()));
-      visitor.visit(module.get());
+      visitor.visit(module);
       visitor.run({file});
 
       fflush(stdout);
