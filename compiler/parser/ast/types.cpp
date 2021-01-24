@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "parser/ast.h"
+#include "parser/visitors/format/format.h"
 #include "parser/visitors/typecheck/typecheck.h"
 
 using std::dynamic_pointer_cast;
@@ -22,8 +23,6 @@ void Type::Unification::undo() {
     assert(leveled[i].first->kind == LinkType::Unbound);
     leveled[i].first->level = leveled[i].second;
   }
-  // for (int i = int(evaluated.size()) - 1; i >= 0; i--)
-  // evaluated[i].first->expr = move(evaluated[i].second);
 }
 TypePtr Type::follow() { return shared_from_this(); }
 bool Type::is(const string &s) { return getClass() && getClass()->name == s; }
@@ -89,32 +88,31 @@ int LinkType::unify(Type *typ, Unification *undo) {
     return 0;
   }
 }
-TypePtr LinkType::generalize(int level) {
+TypePtr LinkType::generalize(int atLevel) {
   if (kind == Generic) {
     return shared_from_this();
   } else if (kind == Unbound) {
-    if (this->level >= level)
+    if (level >= atLevel)
       return make_shared<LinkType>(Generic, id, 0, nullptr, isStatic);
     else
       return shared_from_this();
   } else {
     seqassert(type, "link is null");
-    return type->generalize(level);
+    return type->generalize(atLevel);
   }
 }
-TypePtr LinkType::instantiate(int level, int &unboundCount,
+TypePtr LinkType::instantiate(int atLevel, int &unboundCount,
                               unordered_map<int, TypePtr> &cache) {
   if (kind == Generic) {
     if (cache.find(id) != cache.end())
       return cache[id];
-    // LOG_TYPECHECK("[inst] #{} -> ?{}", id, unboundCount);
-    return cache[id] =
-               make_shared<LinkType>(Unbound, unboundCount++, level, nullptr, isStatic);
+    return cache[id] = make_shared<LinkType>(Unbound, unboundCount++, atLevel, nullptr,
+                                             isStatic);
   } else if (kind == Unbound) {
     return shared_from_this();
   } else {
     seqassert(type, "link is null");
-    return type->instantiate(level, unboundCount, cache);
+    return type->instantiate(atLevel, unboundCount, cache);
   }
 }
 TypePtr LinkType::follow() {
@@ -144,11 +142,11 @@ string LinkType::toString() const {
   else
     return type->toString();
 }
-string LinkType::realizeString() const {
+string LinkType::realizedName() const {
   if (kind == Unbound)
     return "?";
   seqassert(kind == Link, "unexpected generic link");
-  return type->realizeString();
+  return type->realizedName();
 }
 shared_ptr<LinkType> LinkType::getUnbound() {
   if (kind == Unbound)
@@ -158,34 +156,32 @@ shared_ptr<LinkType> LinkType::getUnbound() {
   return nullptr;
 }
 bool LinkType::occurs(Type *typ, Type::Unification *undo) {
-  if (auto t = typ->getLink()) {
-    if (t->kind == Unbound) {
-      if (t->id == id)
+  if (auto tl = typ->getLink()) {
+    if (tl->kind == Unbound) {
+      if (tl->id == id)
         return true;
-      if (undo && t->level > level) {
-        undo->leveled.push_back({t.get(), t->level});
-        t->level = level;
+      if (undo && tl->level > level) {
+        undo->leveled.emplace_back(make_pair(tl.get(), tl->level));
+        tl->level = level;
       }
       return false;
-    } else if (t->kind == Link) {
-      return occurs(t->type.get(), undo);
+    } else if (tl->kind == Link) {
+      return occurs(tl->type.get(), undo);
     } else {
       return false;
     }
-  } else if (auto t = typ->getStatic()) {
-    for (auto &g : t->explicits)
+  } else if (auto ts = typ->getStatic()) {
+    return std::any_of(ts->generics.begin(), ts->generics.end(),
+                       [&](auto &g) { return g.type && occurs(g.type.get(), undo); });
+  }
+  if (auto tc = typ->getClass()) {
+    for (auto &g : tc->generics)
       if (g.type && occurs(g.type.get(), undo))
         return true;
-    return false;
-  } else if (auto t = typ->getClass()) {
-    for (auto &g : t->generics)
-      if (g.type && occurs(g.type.get(), undo))
-        return true;
-    //    if (t->parent && occurs(t->parent.get(), undo))
-    //      return true;
-    for (auto &t : t->args)
-      if (occurs(t.get(), undo))
-        return true;
+    if (auto tr = typ->getRecord())
+      for (auto &t : tr->args)
+        if (occurs(t.get(), undo))
+          return true;
     return false;
   } else {
     return false;
@@ -194,58 +190,287 @@ bool LinkType::occurs(Type *typ, Type::Unification *undo) {
 
 /////
 
-StaticType::StaticType(const vector<Generic> &ex,
+ClassType::ClassType(string name, vector<Generic> generics)
+    : name(move(name)), generics(move(generics)), isTrait(false) {}
+ClassType::ClassType(const ClassTypePtr &base)
+    : name(base->name), generics(base->generics), isTrait(base->isTrait) {}
+int ClassType::unify(Type *typ, Unification *us) {
+  if (auto tc = typ->getClass()) {
+    if (name != tc->name)
+      return -1;
+    int s1 = 2, s;
+    if (generics.size() != tc->generics.size())
+      return -1;
+    for (int i = 0; i < generics.size(); i++) {
+      if ((s = generics[i].type->unify(tc->generics[i].type.get(), us)) == -1)
+        return -1;
+      s1 += s;
+    }
+    return s1;
+  } else if (auto tl = typ->getLink()) {
+    return tl->unify(this, us);
+  } else {
+    return -1;
+  }
+}
+TypePtr ClassType::generalize(int atLevel) {
+  auto g = generics;
+  for (auto &t : g)
+    t.type = t.type ? t.type->generalize(atLevel) : nullptr;
+  auto c = make_shared<ClassType>(name, g);
+  c->isTrait = isTrait;
+  c->setSrcInfo(getSrcInfo());
+  return c;
+}
+TypePtr ClassType::instantiate(int atLevel, int &unboundCount,
+                               unordered_map<int, TypePtr> &cache) {
+  auto g = generics;
+  for (auto &t : g)
+    t.type = t.type ? t.type->instantiate(atLevel, unboundCount, cache) : nullptr;
+  auto c = make_shared<ClassType>(name, g);
+  c->isTrait = isTrait;
+  c->setSrcInfo(getSrcInfo());
+  return c;
+}
+vector<TypePtr> ClassType::getUnbounds() const {
+  vector<TypePtr> u;
+  for (auto &t : generics)
+    if (t.type) {
+      auto tu = t.type->getUnbounds();
+      u.insert(u.begin(), tu.begin(), tu.end());
+    }
+  return u;
+}
+bool ClassType::canRealize() const {
+  return std::all_of(generics.begin(), generics.end(),
+                     [](auto &t) { return !t.type || t.type->canRealize(); });
+}
+string ClassType::toString() const {
+  vector<string> gs;
+  for (auto &a : generics)
+    if (!a.name.empty())
+      gs.push_back(a.type->toString());
+  return fmt::format("{}{}", name,
+                     gs.empty() ? "" : fmt::format("[{}]", join(gs, ",")));
+}
+string ClassType::realizedName() const {
+  vector<string> gs;
+  for (auto &a : generics)
+    if (!a.name.empty())
+      gs.push_back(a.type->realizedName());
+  string s = join(gs, ",");
+  return fmt::format("{}{}", name, s.empty() ? "" : fmt::format("[{}]", s));
+}
+string ClassType::realizedTypeName() const {
+  return this->ClassType::realizedName();
+}
+
+RecordType::RecordType(string name, vector<Generic> generics, vector<TypePtr> args)
+    : ClassType(move(name), move(generics)), args(move(args)) {}
+RecordType::RecordType(const ClassTypePtr &base, vector<TypePtr> args)
+    : ClassType(base), args(move(args)) {}
+int RecordType::unify(Type *typ, Unification *us) {
+  if (auto tr = typ->getRecord()) {
+    if (name == "int" && tr->name == "Int")
+      return tr->unify(this, us);
+    if (tr->name == "int" && name == "Int") {
+      auto t64 = make_shared<StaticType>(64);
+      return generics[0].type->unify(t64.get(), us);
+    }
+    if (args.size() != tr->args.size())
+      return -1;
+    int s1 = 2, s;
+    for (int i = 0; i < args.size(); i++) {
+      if ((s = args[i]->unify(tr->args[i].get(), us)) != -1)
+        s1 += s;
+      else
+        return -1;
+    }
+    // When unifying records, only record members matter.
+    if (startswith(name, "Tuple.N") || startswith(tr->name, "Tuple.N"))
+      return s1;
+    // TODO : needed at all?
+    auto isFunc = [](const string &name) { return startswith(name, "Function.N"); };
+    if (isFunc(name) && isFunc(tr->name))
+      return s1;
+    return this->ClassType::unify(tr.get(), us);
+  } else if (auto t = typ->getLink()) {
+    return t->unify(this, us);
+  } else {
+    return -1;
+  }
+}
+TypePtr RecordType::generalize(int atLevel) {
+  auto c = static_pointer_cast<ClassType>(this->ClassType::generalize(atLevel));
+  auto a = args;
+  for (auto &t : a)
+    t = t->generalize(atLevel);
+  return make_shared<RecordType>(c, a);
+}
+TypePtr RecordType::instantiate(int atLevel, int &unboundCount,
+                                unordered_map<int, TypePtr> &cache) {
+  auto c = static_pointer_cast<ClassType>(
+      this->ClassType::instantiate(atLevel, unboundCount, cache));
+  auto a = args;
+  for (auto &t : a)
+    t = t->instantiate(atLevel, unboundCount, cache);
+  return make_shared<RecordType>(c, a);
+}
+vector<TypePtr> RecordType::getUnbounds() const {
+  vector<TypePtr> u;
+  for (auto &a : args) {
+    auto tu = a->getUnbounds();
+    u.insert(u.begin(), tu.begin(), tu.end());
+  }
+  auto tu = this->ClassType::getUnbounds();
+  u.insert(u.begin(), tu.begin(), tu.end());
+  return u;
+}
+bool RecordType::canRealize() const {
+  return std::all_of(args.begin(), args.end(),
+                     [](auto &a) { return a->canRealize(); }) &&
+         this->ClassType::canRealize();
+}
+string RecordType::toString() const {
+  vector<string> as;
+  for (auto &a : args)
+    as.push_back(a->toString());
+  return fmt::format("{}{}", this->ClassType::toString(),
+                     as.empty() ? "" : "<" + join(as, ",") + ">");
+}
+
+////
+
+FuncType::FuncType(const shared_ptr<RecordType> &baseType, string funcName,
+                   vector<Generic> funcGenerics, TypePtr funcParent)
+    : RecordType(*baseType), funcName(move(funcName)), funcGenerics(move(funcGenerics)),
+      funcParent(move(funcParent)) {}
+int FuncType::unify(Type *typ, Unification *us) {
+  int s1 = 2, s = 0;
+  if (auto t = typ->getFunc()) {
+    if (funcName != t->funcName || (bool(funcParent) ^ bool(t->funcParent)))
+      return -1;
+    if (funcParent && (s = funcParent->unify(t->funcParent.get(), us)) == -1)
+      return -1;
+    s1 += s;
+    seqassert(funcGenerics.size() == t->funcGenerics.size(),
+              "generic size mismatch for {}", funcName);
+    for (int i = 0; i < funcGenerics.size(); i++) {
+      if ((s = funcGenerics[i].type->unify(t->funcGenerics[i].type.get(), us)) == -1)
+        return -1;
+      s1 += s;
+    }
+  }
+  return s1 + this->RecordType::unify(typ, us);
+}
+TypePtr FuncType::generalize(int atLevel) {
+  auto g = funcGenerics;
+  for (auto &t : g)
+    t.type = t.type ? t.type->generalize(atLevel) : nullptr;
+  auto p = funcParent ? funcParent->generalize(atLevel) : nullptr;
+  return make_shared<FuncType>(
+      static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)), funcName,
+      g, p);
+}
+TypePtr FuncType::instantiate(int atLevel, int &unboundCount,
+                              unordered_map<int, TypePtr> &cache) {
+  auto g = funcGenerics;
+  for (auto &t : g)
+    if (t.type) {
+      t.type = t.type->instantiate(atLevel, unboundCount, cache);
+      if (cache.find(t.id) == cache.end())
+        cache[t.id] = t.type;
+    }
+  auto p = funcParent ? funcParent->instantiate(atLevel, unboundCount, cache) : nullptr;
+  return make_shared<FuncType>(
+      static_pointer_cast<RecordType>(
+          this->RecordType::instantiate(atLevel, unboundCount, cache)),
+      funcName, g, p);
+}
+vector<TypePtr> FuncType::getUnbounds() const {
+  vector<TypePtr> u;
+  for (auto &t : funcGenerics)
+    if (t.type) {
+      auto tu = t.type->getUnbounds();
+      u.insert(u.begin(), tu.begin(), tu.end());
+    }
+  if (funcParent) {
+    auto tu = funcParent->getUnbounds();
+    u.insert(u.begin(), tu.begin(), tu.end());
+  }
+  for (int ai = 1; ai < args.size(); ai++) {
+    auto tu = args[ai]->getUnbounds();
+    u.insert(u.begin(), tu.begin(), tu.end());
+  }
+  return u;
+}
+bool FuncType::canRealize() const {
+  for (int ai = 1; ai < args.size(); ai++)
+    if (!args[ai]->canRealize())
+      return false;
+  return std::all_of(funcGenerics.begin(), funcGenerics.end(),
+                     [](auto &a) { return !a.type || a.type->canRealize(); }) &&
+         (!funcParent || funcParent->canRealize());
+}
+string FuncType::toString() const {
+  vector<string> gs;
+  for (auto &a : funcGenerics)
+    if (!a.name.empty())
+      gs.push_back(a.type->toString());
+  string s = join(gs, ",");
+  vector<string> as;
+  for (auto &a : args)
+    as.push_back(a->toString());
+  string a = join(as, ",");
+  s = s.empty() ? a : join(vector<string>{s, a}, ";");
+  return fmt::format("{}{}", funcName, s.empty() ? "" : fmt::format("[{}]", s));
+}
+string FuncType::realizedName() const {
+  vector<string> gs;
+  for (auto &a : funcGenerics)
+    if (!a.name.empty())
+      gs.push_back(a.type->realizedName());
+  string s = join(gs, ",");
+  vector<string> as;
+  for (int ai = 1; ai < args.size(); ai++)
+    as.push_back(args[ai]->realizedName());
+  string a = join(as, ",");
+  s = s.empty() ? a : join(vector<string>{s, a}, ";");
+  return fmt::format("{}{}{}", funcParent ? funcParent->realizedName() + ":" : "",
+                     funcName, s.empty() ? "" : fmt::format("[{}]", s));
+}
+
+////
+
+StaticType::StaticType(vector<Generic> generics,
                        pair<unique_ptr<Expr>, EvalFn> staticExpr,
                        pair<bool, int> staticEvaluation)
-    : explicits(ex), staticExpr(move(staticExpr)), staticEvaluation(staticEvaluation) {
+    : generics(move(generics)), staticEvaluation(move(staticEvaluation)),
+      staticExpr(move(staticExpr)) {
   seqassert(!staticExpr.first ||
                 (!staticExpr.first->getId() && !staticExpr.first->getInt()),
             "invalid complex static expression");
 }
-
 StaticType::StaticType(int i) : staticEvaluation(true, i) {
   staticExpr = {nullptr,
                 [](const StaticType *t) { return t->staticEvaluation.second; }};
 }
-
-string StaticType::toString() const {
-  if (staticEvaluation.first)
-    return fmt::format("{}", staticEvaluation.second);
-  vector<string> s;
-  for (auto &e : explicits)
-    s.push_back(fmt::format("{}={}", e.name, e.type->toString()));
-  return fmt::format("Static[{}{}]", join(s, ", "),
-                     staticExpr.first ? ", " + staticExpr.first->toString() : "");
-}
-
-string StaticType::realizeString() const {
-  assert(canRealize());
-  vector<string> deps;
-  for (auto &e : explicits)
-    deps.push_back(e.type->realizeString());
-  if (!staticEvaluation.first)
-    const_cast<StaticType *>(this)->staticEvaluation = {true, staticExpr.second(this)};
-  return fmt::format("{}{}", deps.size() ? join(deps, ";") : "",
-                     staticEvaluation.second);
-}
-
 int StaticType::unify(Type *typ, Unification *us) {
   if (auto t = typ->getStatic()) {
     if (staticEvaluation.first && t->staticEvaluation.first)
       return staticEvaluation == t->staticEvaluation ? 2 : -1;
 
-    if (explicits.size() != t->explicits.size())
+    if (generics.size() != t->generics.size())
       return -1;
     // We assume that both expressions are simple or both expressions are complex.
-    assert(!explicits.size() || staticExpr.first);
+    assert(generics.empty() || staticExpr.first);
 
-    int s1 = 2;
-    int s = 0;
-    if (explicits.size()) {
+    int s1 = 2, s;
+    if (!generics.empty()) {
       if (staticExpr.first->toString() != t->staticExpr.first->toString())
         return -1;
-      for (int i = 0; i < explicits.size(); i++) {
-        if ((s = explicits[i].type->unify(t->explicits[i].type.get(), us)) == -1)
+      for (int i = 0; i < generics.size(); i++) {
+        if ((s = generics[i].type->unify(t->generics[i].type.get(), us)) == -1)
           return -1;
         s1 += s;
       }
@@ -254,338 +479,66 @@ int StaticType::unify(Type *typ, Unification *us) {
                 "unevaluated simple expression");
       return staticEvaluation == t->staticEvaluation ? 2 : -1;
     }
-
-    // if (us && expr && canRealize()) {
-    //   us->evaluated.push_back(make_pair(this, move(expr)));
-    //   evaluate(this);
-    // }
-    // if (us && t->expr && t->canRealize()) {
-    //   us->evaluated.push_back(make_pair(t.get(), move(t->expr)));
-    //   t->evaluate(t.get());
-    // }
     return s1;
-  } else if (auto t = typ->getLink()) {
-    return t->unify(this, us);
+  } else if (auto tl = typ->getLink()) {
+    return tl->unify(this, us);
+  } else {
+    return -1;
   }
-  return -1;
 }
-
-TypePtr StaticType::generalize(int level) {
-  auto e = explicits;
+TypePtr StaticType::generalize(int atLevel) {
+  auto e = generics;
   for (auto &t : e)
-    t.type = t.type ? t.type->generalize(level) : nullptr;
+    t.type = t.type ? t.type->generalize(atLevel) : nullptr;
   auto c = make_shared<StaticType>(
       e, std::make_pair(clone(staticExpr.first), staticExpr.second), staticEvaluation);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
-
-TypePtr StaticType::instantiate(int level, int &unboundCount,
+TypePtr StaticType::instantiate(int atLevel, int &unboundCount,
                                 unordered_map<int, TypePtr> &cache) {
-  auto e = explicits;
+  auto e = generics;
   for (auto &t : e)
-    t.type = t.type ? t.type->instantiate(level, unboundCount, cache) : nullptr;
+    t.type = t.type ? t.type->instantiate(atLevel, unboundCount, cache) : nullptr;
   auto c = make_shared<StaticType>(
       e, std::make_pair(clone(staticExpr.first), staticExpr.second), staticEvaluation);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
-
 vector<TypePtr> StaticType::getUnbounds() const {
   vector<TypePtr> u;
-  for (auto &t : explicits)
+  for (auto &t : generics)
     if (t.type) {
       auto tu = t.type->getUnbounds();
       u.insert(u.begin(), tu.begin(), tu.end());
     }
   return u;
 }
-
 bool StaticType::canRealize() const {
   if (!staticEvaluation.first)
-    for (auto &t : explicits)
+    for (auto &t : generics)
       if (t.type && !t.type->canRealize())
         return false;
   return true;
 }
-
-bool isTuple(const string &name) { return startswith(name, "Tuple.N"); }
-
-bool isCallable(const string &name) {
-  return startswith(name, "Function.N") || startswith(name, "Partial.N");
+string StaticType::toString() const {
+  if (staticEvaluation.first)
+    return fmt::format("{}", staticEvaluation.second);
+  vector<string> s;
+  for (auto &e : generics)
+    s.push_back(fmt::format("{}={}", e.name, e.type->toString()));
+  return fmt::format("Static[{}]",
+                     staticExpr.first ? FormatVisitor::apply(staticExpr.first) : "");
 }
-
-bool isFunc(const string &name) { return startswith(name, "Function.N"); }
-
-ClassType::ClassType(const string &name, bool isRecord, const vector<TypePtr> &args,
-                     const vector<Generic> &explicits)
-    : generics(explicits), isTrait(false), name(name), record(isRecord), args(args) {}
-
-string ClassType::toString() const {
-  vector<string> gs;
-  for (auto &a : generics)
-    if (!a.name.empty())
-      gs.push_back(a.type->toString());
-  auto g = join(gs, ",");
-  return fmt::format("{}{}",
-                     // reduced && parent ? parent->toString(reduced) + ":" : "",
-                     name, g.size() ? fmt::format("[{}]", g) : "");
-}
-
-string ClassType::realizeString() const {
-  vector<string> gs;
-  for (auto &a : generics)
-    if (!a.name.empty())
-      gs.push_back(a.type->realizeString());
-  string s = join(gs, ",");
-  return fmt::format("{}{}", name, s.empty() ? "" : fmt::format("[{}]", s));
-}
-
-int ClassType::unify(Type *typ, Unification *us) {
-  if (auto t = typ->getClass()) {
-    if (isRecord() != t->isRecord())
-      return -1;
-
-    auto ti64 = make_shared<StaticType>(64);
-    if (name == "int" && t->name == "Int")
-      return t->generics[0].type->unify(ti64.get(), us);
-    if (t->name == "int" && name == "Int")
-      return generics[0].type->unify(ti64.get(), us);
-
-    if (args.size() != t->args.size())
-      return -1;
-    int s1 = 2, s;
-    for (int i = 0; i < args.size(); i++) {
-      if ((s = args[i]->unify(t->args[i].get(), us)) != -1)
-        s1 += s;
-      else
-        return -1;
-    }
-
-    // When unifying records, only record members matter
-    if (isRecord()) {
-      if (isTuple(name) || isTuple(t->name))
-        return s1;
-      if (isFunc(name) && isFunc(t->name))
-        return s1;
-    }
-    if (name != t->name)
-      return -1;
-    //    if (bool(parent) ^ bool(t->parent))
-    //      return -1;
-
-    s = 0;
-    if (generics.size() != t->generics.size())
-      return -1;
-    for (int i = 0; i < generics.size(); i++) {
-      if ((s = generics[i].type->unify(t->generics[i].type.get(), us)) == -1)
-        return -1;
-      s1 += s;
-    }
-    //    if (parent) {
-    //      if ((s = parent->unify(t->parent.get(), us)) == -1) {
-    //        return -1;
-    //      }
-    //      s1 += s;
-    //    }
-    return s1;
-  } else if (auto t = typ->getLink()) {
-    return t->unify(this, us);
-  }
-  return -1;
-}
-
-TypePtr ClassType::generalize(int level) {
-  auto a = args;
-  for (auto &t : a)
-    t = t->generalize(level);
-  auto e = generics;
-  for (auto &t : e)
-    t.type = t.type ? t.type->generalize(level) : nullptr;
-  //  auto p = parent ? parent->generalize(level) : nullptr;
-  auto c = make_shared<ClassType>(name, record, a, e);
-  c->isTrait = isTrait;
-  c->setSrcInfo(getSrcInfo());
-  return c;
-}
-
-TypePtr ClassType::instantiate(int level, int &unboundCount,
-                               unordered_map<int, TypePtr> &cache) {
-  auto e = generics;
-  for (auto &t : e)
-    if (t.type) {
-      t.type = t.type->instantiate(level, unboundCount, cache);
-      // if (cache.find(t.id) == cache.end())
-      // cache[t.id] = t.type;
-    }
-  auto a = args;
-  for (auto &t : a)
-    t = t->instantiate(level, unboundCount, cache);
-  //  auto p = parent ? parent->instantiate(level, unboundCount, cache) : nullptr;
-  auto c = make_shared<ClassType>(name, record, a, e);
-  c->isTrait = isTrait;
-  c->setSrcInfo(getSrcInfo());
-  return c;
-}
-
-vector<TypePtr> ClassType::getUnbounds() const {
-  vector<TypePtr> u;
-  for (int i = 0; i < args.size(); i++) {
-    auto tu = args[i]->getUnbounds();
-    u.insert(u.begin(), tu.begin(), tu.end());
-  }
-  for (auto &t : generics)
-    if (t.type) {
-      auto tu = t.type->getUnbounds();
-      u.insert(u.begin(), tu.begin(), tu.end());
-    }
-  //  if (parent) {
-  //    auto tu = parent->getUnbounds();
-  //    u.insert(u.begin(), tu.begin(), tu.end());
-  //  }
-  return u;
-}
-
-bool ClassType::canRealize() const {
-  for (int i = 0; i < args.size(); i++)
-    if (!args[i]->canRealize())
-      return false;
-  for (auto &t : generics)
-    if (t.type && !t.type->canRealize())
-      return false;
-  //  if (parent && !parent->canRealize())
-  //    return false;
-  return true;
-}
-
-TypePtr ClassType::getCallable() {
-  if (startswith(name, "Partial.N"))
-    return generics[0].type;
-  if (isCallable(name))
-    return shared_from_this();
-  return nullptr;
-}
-
-FuncType::FuncType(const string &name, ClassType *funcClass,
-                   const vector<TypePtr> &args, const vector<Generic> &explicits,
-                   TypePtr parent)
-    : explicits(explicits), parent(parent), name(name), args(args) {
-  vector<Generic> exp;
-  for (int ai = 0; ai < args.size(); ai++)
-    exp.push_back({fmt::format("T{}", ai), args[ai], funcClass->generics[ai].id});
-  this->funcClass = make_shared<ClassType>(funcClass->name, true, args, exp);
-}
-
-int FuncType::unify(Type *typ, Unification *us) {
-  int s1 = 2, s = 0;
-  if (auto t = typ->getFunc()) {
-    if (explicits.size() != t->explicits.size())
-      return -1;
-    for (int i = 0; i < explicits.size(); i++) {
-      if ((s = explicits[i].type->unify(t->explicits[i].type.get(), us)) == -1)
-        return -1;
-      s1 += s;
-    }
-    if (bool(parent) ^ bool(t->parent))
-      return -1;
-    if (parent) {
-      if ((s = parent->unify(t->parent.get(), us)) == -1)
-        return -1;
-      s1 += s;
-    }
-  }
-  return s1 + getClass()->unify(typ, us);
-}
-
-string FuncType::realizeString() const {
-  vector<string> gs;
-  for (auto &a : explicits)
-    if (!a.name.empty())
-      gs.push_back(a.type->realizeString());
-  string s = join(gs, ",");
-  vector<string> as;
-  for (int ai = 1; ai < args.size(); ai++)
-    as.push_back(args[ai]->realizeString());
-  string a = join(as, ",");
-  s = s.size() ? join(vector<string>{s, a}, ";") : a;
-  return fmt::format("{}{}{}", parent ? parent->realizeString() + ":" : "", name,
-                     s.empty() ? "" : fmt::format("[{}]", s));
-}
-
-string FuncType::toString() const {
-  vector<string> gs;
-  for (auto &a : explicits)
-    if (!a.name.empty())
-      gs.push_back(a.type->toString());
-  string s = join(gs, ",");
-  vector<string> as;
-  for (int ai = 0; ai < args.size(); ai++)
-    as.push_back(args[ai]->toString());
-  string a = join(as, ",");
-  s = s.size() ? join(vector<string>{s, a}, ";") : a;
-  return fmt::format("{}{}", // parent ? parent->toString(reduced) + ":" : "",
-                     name, s.empty() ? "" : fmt::format("[{}]", s));
-}
-
-TypePtr FuncType::generalize(int level) {
-  auto a = args;
-  for (auto &t : a)
-    t = t->generalize(level);
-  auto e = explicits;
-  for (auto &t : e)
-    t.type = t.type ? t.type->generalize(level) : nullptr;
-  auto p = parent ? parent->generalize(level) : nullptr;
-  auto c = make_shared<FuncType>(name, funcClass.get(), a, e, p);
-  c->setSrcInfo(getSrcInfo());
-  return c;
-}
-
-TypePtr FuncType::instantiate(int level, int &unboundCount,
-                              unordered_map<int, TypePtr> &cache) {
-  auto e = explicits;
-  for (auto &t : e)
-    if (t.type) {
-      t.type = t.type->instantiate(level, unboundCount, cache);
-      if (cache.find(t.id) == cache.end())
-        cache[t.id] = t.type;
-    }
-  auto a = args;
-  for (auto &t : a)
-    t = t->instantiate(level, unboundCount, cache);
-  auto p = parent ? parent->instantiate(level, unboundCount, cache) : nullptr;
-  auto c = make_shared<FuncType>(name, funcClass.get(), a, e, p);
-  c->setSrcInfo(getSrcInfo());
-  return c;
-}
-
-bool FuncType::canRealize() const {
-  for (auto &t : explicits)
-    if (t.type && !t.type->canRealize())
-      return false;
-  for (int i = 1; i < args.size(); i++)
-    if (!args[i]->canRealize())
-      return false;
-  if (parent && !parent->canRealize())
-    return false;
-  return true;
-}
-
-vector<TypePtr> FuncType::getUnbounds() const {
-  vector<TypePtr> u;
-  for (auto &t : explicits)
-    if (t.type) {
-      auto tu = t.type->getUnbounds();
-      u.insert(u.begin(), tu.begin(), tu.end());
-    }
-  for (int i = 1; i < args.size(); i++) {
-    auto tu = args[i]->getUnbounds();
-    u.insert(u.begin(), tu.begin(), tu.end());
-  }
-  if (parent) {
-    auto tu = parent->getUnbounds();
-    u.insert(u.begin(), tu.begin(), tu.end());
-  }
-  return u;
+string StaticType::realizedName() const {
+  assert(canRealize());
+  vector<string> deps;
+  for (auto &e : generics)
+    deps.push_back(e.type->realizedName());
+  if (!staticEvaluation.first)
+    const_cast<StaticType *>(this)->staticEvaluation = {true, staticExpr.second(this)};
+  return fmt::format("{}{}", deps.empty() ? "" : join(deps, ";"),
+                     staticEvaluation.second);
 }
 
 } // namespace types

@@ -61,7 +61,7 @@ string TypeContext::getBase() const {
   vector<string> s;
   for (auto &b : bases)
     if (b.type)
-      s.push_back(b.type->realizeString());
+      s.push_back(b.type->realizedName());
   return join(s, ":");
 }
 
@@ -71,8 +71,6 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int 
                                         level, nullptr, isStatic);
   t->setSrcInfo(srcInfo);
   LOG_TYPECHECK("[ub] new {}: {} ({})", t->toString(), srcInfo, setActive);
-  if (t->toString() == "?11515.2")
-    assert(1);
   if (setActive && allowActivation)
     activeUnbounds.insert(t);
   return t;
@@ -99,10 +97,8 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
         continue;
       i.second->setSrcInfo(srcInfo);
       if (activeUnbounds.find(i.second) == activeUnbounds.end()) {
-        // LOG_TYPECHECK("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
-        //               i.second->toString(), type->toString(), srcInfo, activate);
-        if (i.second->toString() == "?11515.2")
-          assert(1);
+        LOG_TYPECHECK("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
+                      i.second->toString(), type->toString(), srcInfo, activate);
         if (activate && allowActivation)
           activeUnbounds.insert(i.second);
       }
@@ -165,6 +161,10 @@ vector<types::FuncTypePtr> TypeContext::findMethod(const string &typeName,
 
 types::TypePtr TypeContext::findMember(const string &typeName,
                                        const string &member) const {
+  if (member == "__elemsize__")
+    return findInternal("int");
+  if (member == "__atomic__")
+    return findInternal("bool");
   auto m = cache->classes.find(typeName);
   if (m != cache->classes.end()) {
     for (auto &mm : m->second.fields)

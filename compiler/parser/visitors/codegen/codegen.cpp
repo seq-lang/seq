@@ -45,7 +45,7 @@ ValuePtr CodegenVisitor::transform(const ExprPtr &expr) {
 }
 
 seq::ir::types::Type *CodegenVisitor::realizeType(types::ClassType *t) {
-  auto i = ctx->find(t->getClass()->realizeString());
+  auto i = ctx->find(t->getClass()->realizedTypeName());
   seqassert(i, "type {} not realized", t->toString());
   return i->getType();
 }
@@ -73,7 +73,7 @@ IRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   for (auto &ff : cache->classes)
     for (auto &f : ff.second.realizations) {
       //      LOG("[codegen] add {} -> {} | {}", f.first,
-      //      f.second.type->realizeString(),
+      //      f.second.type->realizedName(),
       //          f.second.llvm->getName());
       ctx->addType(f.first, f.second.llvm);
     }
@@ -86,12 +86,12 @@ IRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
       auto ast = cache->functions[ff.first].ast.get();
       if (in(ast->attributes, ATTR_INTERNAL)) {
         vector<ir::types::Type *> types;
-        auto p = t->parent;
+        auto p = t->funcParent;
         assert(in(ast->attributes, ATTR_PARENT_CLASS));
         if (!in(ast->attributes, ATTR_NOT_STATIC)) { // hack for non-generic types
           for (auto &x :
                ctx->cache->classes[ast->attributes[ATTR_PARENT_CLASS]].realizations) {
-            if (startswith(t->realizeString(), x.first)) {
+            if (startswith(t->realizedName(), x.first)) {
               p = x.second.type;
               break;
             }
@@ -102,13 +102,15 @@ IRModulePtr CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
                   ast->attributes[ATTR_PARENT_CLASS]);
 
         seq::ir::types::Type *typ =
-            ctx->find(p->getClass()->realizeString())->getType();
+            ctx->find(p->getClass()->realizedName())->getType();
         int startI = 1;
         if (!ast->args.empty() &&
             ctx->cache->reverseIdentifierLookup[ast->args[0].name] == "self")
           startI = 2;
-        for (int i = startI; i < t->args.size(); i++)
-          types.push_back(ctx->find(t->args[i]->realizeString())->getType());
+        for (int i = startI; i < t->args.size(); i++) {
+          types.push_back(ctx->find(t->args[i]->realizedName())->getType());
+          assert(types.back());
+        }
 
         auto names = split(ast->name, '.');
         auto name = names.back();

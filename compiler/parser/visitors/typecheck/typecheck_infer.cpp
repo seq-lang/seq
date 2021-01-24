@@ -43,9 +43,10 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
     if (!m.type)
       return nullptr;
 
+  auto realizedName = type->realizedTypeName();
   try {
     ClassTypePtr realizedType = nullptr;
-    auto it = ctx->cache->classes[type->name].realizations.find(type->realizeString());
+    auto it = ctx->cache->classes[type->name].realizations.find(realizedName);
     if (it != ctx->cache->classes[type->name].realizations.end()) {
       realizedType = it->second.type->getClass();
     } else {
@@ -55,16 +56,17 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
         if (!e.type->getStatic())
           if (!realizeType(e.type))
             return nullptr;
+      realizedName = realizedType->realizedTypeName();
 
-      LOG_TYPECHECK("[realize] ty {} -> {}", type->name, type->realizeString());
+      LOG_TYPECHECK("[realize] ty {} -> {}", type->name, realizedName);
       // Realizations are stored in the top-most base.
-      ctx->bases[0].visitedAsts[realizedType->realizeString()] = {TypecheckItem::Type,
-                                                                  realizedType};
-      ctx->cache->classes[realizedType->name]
-          .realizations[realizedType->realizeString()] = {realizedType, {}, nullptr};
+      ctx->bases[0].visitedAsts[realizedName] = {TypecheckItem::Type, realizedType};
+      ctx->cache->classes[realizedType->name].realizations[realizedName] = {
+          realizedType, {}, nullptr};
       // Realize arguments
-      for (auto &a : realizedType->args)
-        realizeType(a);
+      if (auto tr = realizedType->getRecord())
+        for (auto &a : tr->args)
+          realizeType(a);
       auto lt = getLLVMType(realizedType.get());
       // Realize fields.
       vector<const seq::ir::types::Type *> typeArgs;
@@ -76,9 +78,10 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
         LOG_REALIZE("- member: {} -> {}: {}", m.name, m.type->toString(),
                     mt->toString());
         auto tf = realizeType(mt);
-        seqassert(tf, "cannot realize {}.{}", typ->realizeString(), m.name);
+        seqassert(tf, "cannot realize {}.{}: {}", realizedName, m.name,
+                  mt->toString());
         ctx->cache->classes[realizedType->name]
-            .realizations[realizedType->realizeString()]
+            .realizations[realizedName]
             .fields.emplace_back(m.name, tf);
         names.emplace_back(m.name);
         typeArgs.emplace_back(getLLVMType(tf->getClass().get()));
@@ -107,17 +110,17 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
 
   try {
     auto it =
-        ctx->cache->functions[type->name].realizations.find(type->realizeString());
-    if (it != ctx->cache->functions[type->name].realizations.end())
+        ctx->cache->functions[type->funcName].realizations.find(type->realizedName());
+    if (it != ctx->cache->functions[type->funcName].realizations.end())
       return it->second.type;
 
     // Set up bases. Ensure that we have proper parent bases even during a realization
     // of mutually recursive functions.
     int depth = 1;
-    for (auto p = type->parent; p;) {
+    for (auto p = type->funcParent; p;) {
       if (auto f = p->getFunc()) {
         depth++;
-        p = f->parent;
+        p = f->funcParent;
       } else {
         break;
       }
@@ -132,34 +135,35 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
           getSrcInfo().file, getSrcInfo().line, getSrcInfo().col);
 
     // Special cases: Tuple.(__iter__, __getitem__, __contains__).
-    if (endswith(type->name, ".__iter__")) {
+    if (endswith(type->funcName, ".__iter__")) {
       // __iter__ in an empty tuple.
-      auto s = ctx->cache->functions[type->name].ast->suite->getSuite();
+      auto s = ctx->cache->functions[type->funcName].ast->suite->getSuite();
       if (s && s->stmts.empty())
         error("cannot iterate empty tuple");
     }
-    if (startswith(type->name, "Tuple.N") &&
-        (endswith(type->name, ".__iter__") || endswith(type->name, ".__getitem__") ||
-         endswith(type->name, ".__contains__"))) {
-      auto u = type->args[1]->getClass();
+    if (startswith(type->funcName, "Tuple.N") &&
+        (endswith(type->funcName, ".__iter__") ||
+         endswith(type->funcName, ".__getitem__") ||
+         endswith(type->funcName, ".__contains__"))) {
+      auto u = type->args[1]->getRecord();
       string s;
       for (auto &a : u->args) {
         if (s.empty())
-          s = a->realizeString();
-        else if (s != a->realizeString())
+          s = a->realizedName();
+        else if (s != a->realizedName())
           error("cannot iterate a heterogeneous tuple");
       }
     }
 
-    LOG_TYPECHECK("[realize] fn {} -> {} : base {} ; depth = {}", type->name,
-                  type->realizeString(), ctx->getBase(), depth);
+    LOG_REALIZE("[realize] fn {} -> {} : base {} ; depth = {}", type->funcName,
+                type->realizedName(), ctx->getBase(), depth);
     {
       _level++;
       ctx->realizationDepth++;
       ctx->addBlock();
       ctx->typecheckLevel++;
-      ctx->bases.push_back({type->name, type, type->args[0]});
-      auto clonedAst = ctx->cache->functions[type->name].ast->clone();
+      ctx->bases.push_back({type->funcName, type, type->args[0]});
+      auto clonedAst = ctx->cache->functions[type->funcName].ast->clone();
       auto *ast = (FunctionStmt *)clonedAst.get();
       addFunctionGenerics(type.get());
 
@@ -170,22 +174,22 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
       if (!isInternal)
         for (int i = 1; i < type->args.size(); i++) {
           seqassert(type->args[i] && type->args[i]->getUnbounds().empty(),
-                    "unbound argument");
+                    "unbound argument {}", type->args[i]->toString());
           ctx->add(TypecheckItem::Var, ast->args[i - 1].name,
                    make_shared<LinkType>(type->args[i]));
         }
 
       // Need to populate realization table in advance to make recursive functions
       // work.
-      ctx->cache->functions[type->name].realizations[type->realizeString()] = {type,
-                                                                               nullptr};
+      ctx->cache->functions[type->funcName].realizations[type->realizedName()] = {
+          type, nullptr};
       // Realizations are stored in the top-most base.
-      ctx->bases[0].visitedAsts[type->realizeString()] = {TypecheckItem::Func, type};
+      ctx->bases[0].visitedAsts[type->realizedName()] = {TypecheckItem::Func, type};
 
       StmtPtr realized = nullptr;
       if (!isInternal) {
         auto inferred = inferTypes(move(ast->suite));
-        LOG_TYPECHECK("realized {} in {} iterations", type->realizeString(),
+        LOG_TYPECHECK("realized {} in {} iterations", type->realizedName(),
                       inferred.first);
         realized = move(inferred.second);
         // Return type was not specified and the function returned nothing.
@@ -200,22 +204,22 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
       vector<Param> args;
       for (auto &i : ast->args)
         args.emplace_back(Param{i.name, nullptr, nullptr});
-      ctx->cache->functions[type->name].realizations[type->realizeString()].ast =
-          Nx<FunctionStmt>(ast, type->realizeString(), nullptr, vector<Param>(),
+      ctx->cache->functions[type->funcName].realizations[type->realizedName()].ast =
+          Nx<FunctionStmt>(ast, type->realizedName(), nullptr, vector<Param>(),
                            move(args), move(realized),
                            map<string, string>(ast->attributes));
       ctx->bases.pop_back();
       ctx->popBlock();
       ctx->typecheckLevel--;
       ctx->realizationDepth--;
-      LOG_REALIZE("done with {}", type->realizeString());
+      LOG_REALIZE("done with {}", type->realizedName());
       _level--;
     }
     // Restore old bases back.
     ctx->bases.insert(ctx->bases.end(), oldBases.begin(), oldBases.end());
     return type;
   } catch (exc::ParserException &e) {
-    e.trackRealize(fmt::format("{} (arguments {})", type->name, type->toString()),
+    e.trackRealize(fmt::format("{} (arguments {})", type->funcName, type->toString()),
                    getSrcInfo());
     throw;
   }
@@ -355,13 +359,14 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
 //}
 
 seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
-  if (auto l = ctx->cache->classes[t->name].realizations[t->realizeString()].llvm)
+  auto realizedName = t->realizedTypeName();
+  if (auto l = ctx->cache->classes[t->name].realizations[realizedName].llvm)
     return l;
   auto getLLVM = [&](const TypePtr &tt) {
     auto t = tt->getClass();
-    seqassert(t && in(ctx->cache->classes[t->name].realizations, t->realizeString()),
+    seqassert(t && in(ctx->cache->classes[t->name].realizations, t->realizedTypeName()),
               "{} not realized", tt->toString());
-    auto l = ctx->cache->classes[t->name].realizations[t->realizeString()].llvm;
+    auto l = ctx->cache->classes[t->name].realizations[t->realizedTypeName()].llvm;
     seqassert(l, "no LLVM type for {}", t->toString());
     return l;
   };
@@ -403,23 +408,23 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
     handle = ctx->cache->module->getOptionalType(types[0]);
   } else if (startswith(name, "Function.N")) {
     types.clear();
-    for (auto &m : t->args)
+    for (auto &m : const_cast<ClassType *>(t)->getRecord()->args)
       types.push_back(getLLVM(m));
     auto ret = types[0];
     types.erase(types.begin());
     handle = ctx->cache->module->getFuncType(ret, types);
-  } else if (t->isRecord()) {
+  } else if (auto tr = const_cast<ClassType *>(t)->getRecord()) {
     vector<const seq::ir::types::Type *> typeArgs;
     vector<string> names;
     map<std::string, SrcInfo> memberInfo;
-    for (int ai = 0; ai < t->args.size(); ai++) {
+    for (int ai = 0; ai < tr->args.size(); ai++) {
       names.emplace_back(ctx->cache->classes[t->name].fields[ai].name);
-      typeArgs.emplace_back(getLLVM(t->args[ai]));
+      typeArgs.emplace_back(getLLVM(tr->args[ai]));
       memberInfo[ctx->cache->classes[t->name].fields[ai].name] =
-          t->args[ai]->getSrcInfo();
+          tr->args[ai]->getSrcInfo();
     }
     auto record = seq::ir::cast<seq::ir::types::RecordType>(
-        ctx->cache->module->getMemberedType(t->realizeString()));
+        ctx->cache->module->getMemberedType(realizedName));
     record->realize(typeArgs, names);
     handle = record;
     handle->setAttribute(
@@ -427,10 +432,10 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   } else {
     // Type arguments will be populated afterwards to avoid infinite loop with recursive
     // reference types.
-    handle = ctx->cache->module->getMemberedType(t->realizeString(), true);
+    handle = ctx->cache->module->getMemberedType(realizedName, true);
   }
   handle->setSrcInfo(t->getSrcInfo());
-  return ctx->cache->classes[t->name].realizations[t->realizeString()].llvm = handle;
+  return ctx->cache->classes[t->name].realizations[realizedName].llvm = handle;
 }
 
 } // namespace ast

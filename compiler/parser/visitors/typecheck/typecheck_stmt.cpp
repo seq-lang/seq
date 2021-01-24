@@ -155,9 +155,9 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
     if (auto method = findBestMethod(lhsClass.get(),
                                      format("__atomic_{}__", c->expr->getId()->value),
                                      {{"", ptrTyp}, {"", rhsTyp}})) {
-      resultStmt = transform(
-          N<ExprStmt>(N<CallExpr>(N<IdExpr>(method->name), N<PtrExpr>(move(stmt->lhs)),
-                                  move(c->args[1].value))));
+      resultStmt = transform(N<ExprStmt>(N<CallExpr>(N<IdExpr>(method->funcName),
+                                                     N<PtrExpr>(move(stmt->lhs)),
+                                                     move(c->args[1].value))));
       return;
     }
   }
@@ -172,7 +172,7 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
     if (auto m = findBestMethod(lhsClass.get(), "__atomic_xchg__",
                                 {{"", ptrType}, {"", rhsClass}})) {
       resultStmt = transform(N<ExprStmt>(N<CallExpr>(
-          N<IdExpr>(m->name), N<PtrExpr>(move(stmt->lhs)), move(stmt->rhs))));
+          N<IdExpr>(m->funcName), N<PtrExpr>(move(stmt->lhs)), move(stmt->rhs))));
       return;
     }
     stmt->isAtomic = false;
@@ -199,7 +199,7 @@ void TypecheckVisitor::visit(AssignMemberStmt *stmt) {
     }
     if (!member)
       error("cannot find '{}' in {}", stmt->member, lhsClass->name);
-    if (lhsClass->isRecord())
+    if (lhsClass->getRecord())
       error("tuple element '{}' is read-only", stmt->member);
     auto typ = ctx->instantiate(getSrcInfo(), member, lhsClass.get());
     LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), typ->toString());
@@ -385,21 +385,24 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   for (const auto &i : stmt->generics)
     generics.push_back(ctx->find(i.name)->type);
   // Add function arguments.
-  vector<TypePtr> args;
+  auto baseType =
+      ctx->instantiate(getSrcInfo(),
+                       ctx->findInternal(format("Function.N{}", stmt->args.size())))
+          ->getRecord();
   {
     ctx->typecheckLevel++;
     if (stmt->ret) {
-      args.push_back(transformType(stmt->ret)->getType());
+      baseType->args[0] |= transformType(stmt->ret)->getType();
     } else {
-      args.push_back(ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
-      generics.push_back(args.back());
+      baseType->args[0] |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
+      generics.push_back(baseType->args[0]);
     }
-    for (auto &a : stmt->args) {
-      if (!a.type) {
-        args.push_back(ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel));
-        generics.push_back(args.back());
+    for (int ai = 0; ai < stmt->args.size(); ai++) {
+      if (!stmt->args[ai].type) {
+        baseType->args[ai + 1] |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
+        generics.push_back(baseType->args[ai + 1]);
       } else {
-        args.push_back(transformType(a.type)->getType());
+        baseType->args[ai + 1] |= transformType(stmt->args[ai].type)->getType();
       }
     }
     ctx->typecheckLevel--;
@@ -412,14 +415,11 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
       g->getLink()->kind = LinkType::Generic;
   }
   // Construct the type.
-  auto typ = make_shared<FuncType>(
-      stmt->name,
-      ctx->findInternal(format("Function.N{}", stmt->args.size()))->getClass().get(),
-      args, explicits);
+  auto typ = make_shared<FuncType>(baseType, stmt->name, explicits);
   if (isClassMember && in(attributes, ATTR_NOT_STATIC))
-    typ->parent = ctx->find(attributes[ATTR_PARENT_CLASS])->type;
+    typ->funcParent = ctx->find(attributes[ATTR_PARENT_CLASS])->type;
   else if (in(attributes, ATTR_PARENT_FUNCTION))
-    typ->parent = ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])].type;
+    typ->funcParent = ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])].type;
   typ->setSrcInfo(stmt->getSrcInfo());
   typ = std::static_pointer_cast<FuncType>(typ->generalize(ctx->typecheckLevel));
   // Check if this is a class method; if so, update the class method lookup table.
@@ -451,8 +451,10 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
   bool extension = in(attributes, "extend");
   ClassTypePtr typ = nullptr;
   if (!extension) {
-    typ = make_shared<ClassType>(stmt->name, stmt->isRecord(), vector<TypePtr>(),
-                                 vector<Generic>());
+    if (stmt->isRecord())
+      typ = make_shared<RecordType>(stmt->name);
+    else
+      typ = make_shared<ClassType>(stmt->name);
     if (in(stmt->attributes, ATTR_TRAIT))
       typ->isTrait = true;
     typ->setSrcInfo(stmt->getSrcInfo());
@@ -470,7 +472,8 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
                 ->getType()
                 ->generalize(ctx->typecheckLevel - 1);
         if (stmt->isRecord())
-          typ->args.push_back(ctx->cache->classes[stmt->name].fields[ai].type);
+          typ->getRecord()->args.push_back(
+              ctx->cache->classes[stmt->name].fields[ai].type);
       }
       ctx->typecheckLevel--;
     }
