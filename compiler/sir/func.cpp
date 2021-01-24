@@ -7,6 +7,7 @@
 #include "util/iterators.h"
 #include "util/visitor.h"
 
+#include "module.h"
 #include "var.h"
 
 namespace seq {
@@ -14,33 +15,21 @@ namespace ir {
 
 const char Func::NodeId = 0;
 
-Func::Func(const types::Type *type, std::vector<std::string> argNames, std::string name)
-    : AcceptorExtend(type, std::move(name)), generator(false) {
-  auto *funcType = cast<types::FuncType>(getType());
-  assert(funcType);
-
-  auto i = 0;
-  for (auto *t : *funcType) {
-    args.push_back(std::make_unique<Var>(t, argNames[i]));
-    ++i;
-  }
-}
-
 void Func::realize(types::FuncType *newType, const std::vector<std::string> &names) {
   setType(newType);
   args.clear();
 
   auto i = 0;
   for (auto *t : *newType) {
-    args.push_back(std::make_unique<Var>(t, names[i]));
+    args.push_back(getModule()->Nr<Var>(t, false, names[i]));
     ++i;
   }
 }
 
 Var *Func::getArgVar(const std::string &n) {
   auto it = std::find_if(args.begin(), args.end(),
-                         [n](const VarPtr &other) { return other->getName() == n; });
-  return (it != args.end()) ? it->get() : nullptr;
+                         [n](auto *other) { return other->getName() == n; });
+  return (it != args.end()) ? *it : nullptr;
 }
 
 const char BodiedFunc::NodeId = 0;

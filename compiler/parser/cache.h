@@ -91,7 +91,7 @@ struct Cache {
   /// Absolute path of seqc executable (if available).
   string argv0;
   /// LLVM module.
-  seq::ir::IRModulePtr module;
+  seq::ir::IRModule *module = nullptr;
 
   /// Table of imported files that maps an absolute filename to a Import structure.
   /// By convention, the key of Seq standard library is "".

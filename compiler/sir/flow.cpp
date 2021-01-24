@@ -1,7 +1,5 @@
 #include "flow.h"
 
-#include <algorithm>
-
 #include "util/iterators.h"
 
 #include "util/fmt/ostream.h"
@@ -25,7 +23,7 @@ std::ostream &SeriesFlow::doFormat(std::ostream &os) const {
 }
 
 Value *SeriesFlow::doClone() const {
-  auto *newFlow = getModule()->Nrs<SeriesFlow>(getSrcInfo(), getName());
+  auto *newFlow = getModule()->N<SeriesFlow>(getSrcInfo(), getName());
   for (auto *child : *this)
     newFlow->push_back(child->clone());
   return newFlow;
@@ -39,8 +37,8 @@ std::ostream &WhileFlow::doFormat(std::ostream &os) const {
 }
 
 Value *WhileFlow::doClone() const {
-  return getModule()->Nrs<WhileFlow>(getSrcInfo(), cond->clone(), body->clone(),
-                                     getName());
+  return getModule()->N<WhileFlow>(getSrcInfo(), cond->clone(), body->clone(),
+                                   getName());
 }
 
 const char ForFlow::NodeId = 0;
@@ -52,8 +50,8 @@ std::ostream &ForFlow::doFormat(std::ostream &os) const {
 }
 
 Value *ForFlow::doClone() const {
-  return getModule()->Nrs<ForFlow>(getSrcInfo(), iter->clone(), body->clone(), var,
-                                   getName());
+  return getModule()->N<ForFlow>(getSrcInfo(), iter->clone(), body->clone(), var,
+                                 getName());
 }
 
 const char IfFlow::NodeId = 0;
@@ -67,9 +65,9 @@ std::ostream &IfFlow::doFormat(std::ostream &os) const {
 }
 
 Value *IfFlow::doClone() const {
-  return getModule()->Nrs<IfFlow>(getSrcInfo(), cond->clone(), trueBranch->clone(),
-                                  falseBranch ? falseBranch->clone() : nullptr,
-                                  getName());
+  return getModule()->N<IfFlow>(getSrcInfo(), cond->clone(), trueBranch->clone(),
+                                falseBranch ? falseBranch->clone() : nullptr,
+                                getName());
 }
 
 const char TryCatchFlow::NodeId = 0;
@@ -88,7 +86,7 @@ std::ostream &TryCatchFlow::doFormat(std::ostream &os) const {
 }
 
 Value *TryCatchFlow::doClone() const {
-  auto *newFlow = getModule()->Nrs<TryCatchFlow>(
+  auto *newFlow = getModule()->N<TryCatchFlow>(
       getSrcInfo(), body->clone(), finally ? finally->clone() : nullptr, getName());
   for (auto &child : *this)
     newFlow->emplace_back(child.getHandler()->clone(), child.getType(),
@@ -106,7 +104,7 @@ std::ostream &UnorderedFlow::doFormat(std::ostream &os) const {
 }
 
 Value *UnorderedFlow::doClone() const {
-  auto *newFlow = getModule()->Nrs<UnorderedFlow>(getSrcInfo(), getName());
+  auto *newFlow = getModule()->N<UnorderedFlow>(getSrcInfo(), getName());
   for (auto *child : *this)
     newFlow->push_back(child->clone());
   return newFlow;
@@ -144,7 +142,7 @@ std::ostream &PipelineFlow::doFormat(std::ostream &os) const {
 }
 
 PipelineFlow::Stage PipelineFlow::Stage::clone() const {
-  std::vector<ValuePtr> clonedArgs;
+  std::vector<Value *> clonedArgs;
   for (const auto *arg : *this)
     clonedArgs.push_back(arg->clone());
   return {func->clone(), std::move(clonedArgs), generator, parallel};
@@ -154,8 +152,7 @@ Value *PipelineFlow::doClone() const {
   std::vector<Stage> clonedStages;
   for (const auto &stage : *this)
     clonedStages.emplace_back(stage.clone());
-  return getModule()->Nrs<PipelineFlow>(getSrcInfo(), std::move(clonedStages),
-                                        getName());
+  return getModule()->N<PipelineFlow>(getSrcInfo(), std::move(clonedStages), getName());
 }
 
 } // namespace ir

@@ -53,6 +53,7 @@ struct SrcInfoAttribute : public Attribute {
 
 private:
   Attribute *doClone() const override { return new SrcInfoAttribute(*this); }
+
   std::ostream &doFormat(std::ostream &os) const override { return os << info; }
 };
 

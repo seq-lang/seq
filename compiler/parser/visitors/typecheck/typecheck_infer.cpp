@@ -91,9 +91,9 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
         if (!names.empty()) {
           cls->getContents()->realize(typeArgs, names);
           cls->setAttribute(
-              std::make_unique<seq::ir::MemberAttribute>(std::move(memberInfo)));
+              std::make_unique<seq::ir::MemberAttribute>(memberInfo));
           cls->getContents()->setAttribute(
-              std::make_unique<seq::ir::MemberAttribute>(std::move(memberInfo)));
+              std::make_unique<seq::ir::MemberAttribute>(memberInfo));
         }
     }
     return realizedType;

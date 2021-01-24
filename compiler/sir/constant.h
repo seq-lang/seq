@@ -51,8 +51,8 @@ private:
   }
 
   Value *doClone() const override {
-    return getModule()->template Nrs<TemplatedConstant<ValueType>>(getSrcInfo(), val,
-                                                                   getType());
+    return getModule()->template N<TemplatedConstant<ValueType>>(getSrcInfo(), val,
+                                                                 getType());
   }
 };
 
@@ -85,8 +85,7 @@ private:
   }
 
   Value *doClone() const override {
-    return getModule()->Nrs<TemplatedConstant<std::string>>(getSrcInfo(), val,
-                                                            getType());
+    return getModule()->N<TemplatedConstant<std::string>>(getSrcInfo(), val, getType());
   }
 };
 
