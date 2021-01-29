@@ -5,19 +5,12 @@
 #include "llvm/Support/CommandLine.h"
 #include <cstdio>
 #include <cstdlib>
-#include <iostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
-#define SEQ_PATH_ENV_VAR "SEQ_PATH"
-
-using namespace std;
-using namespace seq;
-using namespace llvm;
-using namespace llvm::cl;
-
 namespace {
-void versMsg(raw_ostream &out) {
+void versMsg(llvm::raw_ostream &out) {
   out << "Seq " << SEQ_VERSION_MAJOR << "." << SEQ_VERSION_MINOR << "."
       << SEQ_VERSION_PATCH << "\n";
 }
@@ -35,25 +28,52 @@ bool isLLVMFilename(const std::string &filename) { return endsWith(filename, ".l
 } // namespace
 
 int main(int argc, char **argv) {
-  opt<string> input(Positional, desc("<input file>"), init("-"));
-  opt<bool> debug("d", desc("Compile in debug mode"));
-  opt<bool> docstr("docstr", desc("Generate docstrings"));
-  opt<string> output(
-      "o", desc("Write LLVM bitcode to specified file instead of running with JIT"));
-  cl::list<string> libs("L", desc("Load and link the specified library"));
-  cl::list<string> args(ConsumeAfter, desc("<program arguments>..."));
+  llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::desc("<input file>"),
+                                   llvm::cl::init("-"));
+  llvm::cl::opt<bool> debug("d", llvm::cl::desc("Compile in debug mode"));
+  llvm::cl::opt<bool> docstr("docstr", llvm::cl::desc("Generate docstrings"));
+  llvm::cl::opt<std::string> output(
+      "o", llvm::cl::desc(
+               "Write LLVM bitcode to specified file instead of running with JIT"));
+  llvm::cl::list<std::string> defines(
+      "D", llvm::cl::Prefix,
+      llvm::cl::desc("Add static variable definitions. The syntax is <name>=<value>"));
+  llvm::cl::list<std::string> libs(
+      "L", llvm::cl::desc("Load and link the specified library"));
+  llvm::cl::list<std::string> args(llvm::cl::ConsumeAfter,
+                                   llvm::cl::desc("<program arguments>..."));
 
-  SetVersionPrinter(versMsg);
-  ParseCommandLineOptions(argc, argv);
-  vector<string> libsVec(libs);
-  vector<string> argsVec(args);
+  llvm::cl::SetVersionPrinter(versMsg);
+  llvm::cl::ParseCommandLineOptions(argc, argv);
+  std::vector<std::string> libsVec(libs);
+  std::vector<std::string> argsVec(args);
+
+  std::unordered_map<std::string, std::string> defmap;
+  for (const auto &define : defines) {
+    auto eq = define.find('=');
+    if (eq == std::string::npos || !eq) {
+      seq::compilationWarning("ignoring malformed definition: " + define);
+      continue;
+    }
+
+    auto name = define.substr(0, eq);
+    auto value = define.substr(eq + 1);
+
+    if (defmap.find(name) != defmap.end()) {
+      seq::compilationWarning("ignoring duplicate definition: " + define);
+      continue;
+    }
+
+    defmap.emplace(name, value);
+  }
 
   if (docstr.getValue()) {
-    generateDocstr(argv[0]);
+    seq::generateDocstr(argv[0]);
     return EXIT_SUCCESS;
   }
 
-  auto module = parse(argv[0], input.c_str(), "", false, false);
+  auto module = seq::parse(argv[0], input.c_str(), /*code=*/"", /*isCode=*/false,
+                           /*isTest=*/false, /*startLine=*/0, defmap);
   if (!module)
     return EXIT_FAILURE;
 
@@ -65,10 +85,10 @@ int main(int argc, char **argv) {
     visitor.run(argsVec, libsVec);
   } else {
     if (!libsVec.empty())
-      compilationWarning("ignoring libraries during compilation");
+      seq::compilationWarning("ignoring libraries during compilation");
 
     if (!argsVec.empty())
-      compilationWarning("ignoring arguments during compilation");
+      seq::compilationWarning("ignoring arguments during compilation");
 
     const std::string filename = output.getValue();
     if (isLLVMFilename(filename)) {
