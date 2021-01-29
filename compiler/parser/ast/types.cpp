@@ -261,9 +261,7 @@ string ClassType::realizedName() const {
   string s = join(gs, ",");
   return fmt::format("{}{}", name, s.empty() ? "" : fmt::format("[{}]", s));
 }
-string ClassType::realizedTypeName() const {
-  return this->ClassType::realizedName();
-}
+string ClassType::realizedTypeName() const { return this->ClassType::realizedName(); }
 
 RecordType::RecordType(string name, vector<Generic> generics, vector<TypePtr> args)
     : ClassType(move(name), move(generics)), args(move(args)) {}

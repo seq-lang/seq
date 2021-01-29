@@ -97,8 +97,7 @@ IRModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
                   p ? p->toString() : "-", t->toString(),
                   ast->attributes[ATTR_PARENT_CLASS]);
 
-        seq::ir::types::Type *typ =
-            ctx->find(p->getClass()->realizedName())->getType();
+        seq::ir::types::Type *typ = ctx->find(p->getClass()->realizedName())->getType();
         int startI = 1;
         if (!ast->args.empty() &&
             ctx->cache->reverseIdentifierLookup[ast->args[0].name] == "self")

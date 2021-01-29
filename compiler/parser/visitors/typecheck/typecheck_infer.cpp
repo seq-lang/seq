@@ -78,8 +78,7 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
         LOG_REALIZE("- member: {} -> {}: {}", m.name, m.type->toString(),
                     mt->toString());
         auto tf = realizeType(mt);
-        seqassert(tf, "cannot realize {}.{}: {}", realizedName, m.name,
-                  mt->toString());
+        seqassert(tf, "cannot realize {}.{}: {}", realizedName, m.name, mt->toString());
         ctx->cache->classes[realizedType->name]
             .realizations[realizedName]
             .fields.emplace_back(m.name, tf);
@@ -90,8 +89,7 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
       if (auto *cls = seq::ir::cast<seq::ir::types::RefType>(lt))
         if (!names.empty()) {
           cls->getContents()->realize(typeArgs, names);
-          cls->setAttribute(
-              std::make_unique<seq::ir::MemberAttribute>(memberInfo));
+          cls->setAttribute(std::make_unique<seq::ir::MemberAttribute>(memberInfo));
           cls->getContents()->setAttribute(
               std::make_unique<seq::ir::MemberAttribute>(memberInfo));
         }
