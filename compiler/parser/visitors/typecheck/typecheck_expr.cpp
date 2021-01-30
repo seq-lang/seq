@@ -1246,7 +1246,7 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
     expr->args[0].value = transform(expr->args[0].value, true);
     ctx->allowActivation = oldActivation;
     // if (auto t = realizeType(expr->args[0].value->getType()))
-      // expr->args[0].value->type |= t;
+    // expr->args[0].value->type |= t;
     auto typ = expr->args[0].value->type;
     if (!typ) {
       return {true, nullptr};

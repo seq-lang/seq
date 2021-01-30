@@ -1,13 +1,9 @@
 #pragma once
 
-#include <iostream>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
-
-#include "util/fmt/format.h"
-#include "util/fmt/ostream.h"
 
 #include "attribute.h"
 #include "util/iterators.h"
@@ -16,8 +12,8 @@
 namespace seq {
 namespace ir {
 
-class IRModule;
 class Func;
+class IRModule;
 
 /// Mixin class for IR nodes that need ids.
 class IdMixin {
@@ -98,10 +94,10 @@ public:
 
   /// Accepts visitors.
   /// @param v the visitor
-  virtual void accept(util::SIRVisitor &v) = 0;
+  virtual void accept(util::IRVisitor &v) = 0;
   /// Accepts visitors.
   /// @param v the visitor
-  virtual void accept(util::SIRVisitor &v) const = 0;
+  virtual void accept(util::ConstIRVisitor &v) const = 0;
 
   /// Sets an attribute
   /// @param the attribute key
@@ -177,18 +173,11 @@ public:
   /// @return a text representation of a reference to the object
   virtual std::string referenceString() const { return name; }
 
-  friend std::ostream &operator<<(std::ostream &os, const IRNode &a) {
-    return a.doFormat(os);
-  }
-
   /// @return the IR module
   IRModule *getModule() const { return module; }
   /// Sets the module.
   /// @param m the new module
   void setModule(IRModule *m) { module = m; }
-
-private:
-  virtual std::ostream &doFormat(std::ostream &os) const = 0;
 };
 
 template <typename Derived, typename Parent> class AcceptorExtend : public Parent {
@@ -204,8 +193,8 @@ public:
     return other == nodeId() || Parent::isConvertible(other);
   }
 
-  void accept(util::SIRVisitor &v) { v.visit(static_cast<Derived *>(this)); }
-  void accept(util::SIRVisitor &v) const {
+  void accept(util::IRVisitor &v) { v.visit(static_cast<Derived *>(this)); }
+  void accept(util::ConstIRVisitor &v) const {
     v.visit(static_cast<const Derived *>(this));
   }
 };
@@ -228,11 +217,3 @@ template <typename Desired> bool isA(const IRNode *other) {
 
 } // namespace ir
 } // namespace seq
-
-namespace fmt {
-using seq::ir::IRNode;
-
-template <typename Char>
-struct formatter<IRNode, Char> : fmt::v6::internal::fallback_formatter<IRNode, Char> {};
-
-} // namespace fmt

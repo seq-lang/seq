@@ -1,8 +1,12 @@
 #pragma once
 
+#include <iterator>
 #include <memory>
 #include <string>
 #include <unordered_map>
+
+#include "util/fmt/format.h"
+#include "util/fmt/ostream.h"
 
 #include "func.h"
 #include "util/iterators.h"
@@ -25,14 +29,21 @@ public:
 private:
   /// the module's "main" function
   std::unique_ptr<Func> mainFunc;
-  /// the module's argv variabl{}e
+  /// the module's argv variable
   std::unique_ptr<Var> argVar;
   /// the global variables list
   std::list<std::unique_ptr<Var>> vars;
+  /// the global variables map
+  std::unordered_map<int, std::list<std::unique_ptr<Var>>::iterator> varMap;
   /// the global value list
   std::list<std::unique_ptr<Value>> values;
-  /// the global types table
-  std::unordered_map<std::string, std::unique_ptr<types::Type>> types;
+  /// the global value map
+  std::unordered_map<int, std::list<std::unique_ptr<Value>>::iterator> valueMap;
+  /// the global types list
+  std::list<std::unique_ptr<types::Type>> types;
+  /// the global types map
+  std::unordered_map<std::string, std::list<std::unique_ptr<types::Type>>::iterator>
+      typesMap;
 
 public:
   static const char NodeId;
@@ -59,7 +70,6 @@ public:
   auto begin() const { return util::const_raw_ptr_adaptor(vars.begin()); }
   /// @return iterator beyond the last symbol
   auto end() const { return util::const_raw_ptr_adaptor(vars.end()); }
-
   /// @return a pointer to the first symbol
   Var *front() { return vars.front().get(); }
   /// @return a pointer to the last symbol
@@ -69,6 +79,14 @@ public:
   /// @return a pointer to the last symbol
   const Var *back() const { return vars.back().get(); }
 
+  /// Removes a given var.
+  /// @param v the var
+  void remove(const Var *v) {
+    auto it = varMap.find(v->getId());
+    vars.erase(it->second);
+    varMap.erase(it);
+  }
+
   /// @return iterator to the first value
   auto values_begin() { return util::raw_ptr_adaptor(values.begin()); }
   /// @return iterator beyond the last value
@@ -77,7 +95,6 @@ public:
   auto values_begin() const { return util::const_raw_ptr_adaptor(values.begin()); }
   /// @return iterator beyond the last value
   auto values_end() const { return util::const_raw_ptr_adaptor(values.end()); }
-
   /// @return a pointer to the first value
   Value *values_front() { return values.front().get(); }
   /// @return a pointer to the last value
@@ -86,6 +103,68 @@ public:
   const Value *values_front() const { return values.front().get(); }
   /// @return a pointer to the last value
   const Value *values_back() const { return values.back().get(); }
+
+  /// Removes a given value.
+  /// @param v the value
+  void remove(const Value *v) {
+    auto it = valueMap.find(v->getId());
+    values.erase(it->second);
+    valueMap.erase(it);
+  }
+
+  /// @return iterator to the first type
+  auto types_begin() { return util::raw_ptr_adaptor(types.begin()); }
+  /// @return iterator beyond the last type
+  auto types_end() { return util::raw_ptr_adaptor(types.end()); }
+  /// @return iterator to the first type
+  auto types_begin() const { return util::const_raw_ptr_adaptor(types.begin()); }
+  /// @return iterator beyond the last type
+  auto types_end() const { return util::const_raw_ptr_adaptor(types.end()); }
+  /// @return a pointer to the first type
+  types::Type *types_front() { return types.front().get(); }
+  /// @return a pointer to the last type
+  types::Type *types_back() { return types.back().get(); }
+  /// @return a pointer to the first type
+  const types::Type *types_front() const { return types.front().get(); }
+  /// @return a pointer to the last type
+  const types::Type *types_back() const { return types.back().get(); }
+
+  /// @param name the type's name
+  /// @return the type with the given name
+  types::Type *getType(const std::string &name) {
+    auto it = typesMap.find(name);
+    return it == typesMap.end() ? nullptr : it->second->get();
+  }
+
+  /// @param name the type's name
+  /// @return the type with the given name
+  const types::Type *getType(const std::string &name) const {
+    auto it = typesMap.find(name);
+    return it == typesMap.end() ? nullptr : it->second->get();
+  }
+
+  /// Removes a given type.
+  /// @param t the type
+  void remove(const types::Type *t) {
+    auto it = typesMap.find(t->getName());
+    types.erase(it->second);
+    typesMap.erase(it);
+  }
+
+  /// Finds a function by mangled name and argument types.
+  /// @param name the mangled name
+  /// @param argTypes the argument types
+  /// @return the function if it exists, nullptr otherwise
+  Func *lookupFunc(const std::string &name, const std::vector<types::Type *> &argTypes);
+  /// Finds a function by mangled name.
+  /// @param name the mangled name
+  /// @param argTypes the argument types
+  /// @return the function if it exists, nullptr otherwise
+  Func *lookupFunc(const std::string &name);
+  /// Finds a builtin function by unmangled name.
+  /// @param name the unmangled name
+  /// @return the function if it exists, nullptr otherwise
+  BodiedFunc *lookupBuiltinFunc(const std::string &name);
 
   template <typename DesiredType, typename... Args>
   DesiredType *N(seq::SrcInfo s, Args &&... args) {
@@ -106,35 +185,28 @@ public:
     return N<DesiredType>(seq::SrcInfo(), std::forward<Args>(args)...);
   }
 
-  /// @param name the type's name
-  /// @return the type with the given name
-  types::Type *getType(const std::string &name) {
-    auto it = types.find(name);
-    return it == types.end() ? nullptr : it->second.get();
-  }
-
-  types::Type *getPointerType(const types::Type *base) {
+  types::Type *getPointerType(types::Type *base) {
     auto name = types::PointerType::getInstanceName(base);
     if (auto *rVal = getType(name))
       return rVal;
     return Nr<types::PointerType>(base);
   }
 
-  types::Type *getArrayType(const types::Type *base) {
+  types::Type *getArrayType(types::Type *base) {
     auto name = types::ArrayType::getInstanceName(base);
     if (auto *rVal = getType(name))
       return rVal;
     return Nr<types::ArrayType>(getPointerType(base), getIntType());
   }
 
-  types::Type *getGeneratorType(const types::Type *base) {
+  types::Type *getGeneratorType(types::Type *base) {
     auto name = types::GeneratorType::getInstanceName(base);
     if (auto *rVal = getType(name))
       return rVal;
     return Nr<types::GeneratorType>(base);
   }
 
-  types::Type *getOptionalType(const types::Type *base) {
+  types::Type *getOptionalType(types::Type *base) {
     auto name = types::OptionalType::getInstanceName(base);
     if (auto *rVal = getType(name))
       return rVal;
@@ -176,12 +248,11 @@ public:
       return rVal;
     return Nr<types::RecordType>(
         STRING_NAME,
-        std::vector<const types::Type *>{getIntType(), getPointerType(getByteType())},
+        std::vector<types::Type *>{getIntType(), getPointerType(getByteType())},
         std::vector<std::string>{"len", "ptr"});
   }
 
-  types::Type *getFuncType(const types::Type *rType,
-                           std::vector<const types::Type *> argTypes) {
+  types::Type *getFuncType(types::Type *rType, std::vector<types::Type *> argTypes) {
     auto name = types::FuncType::getInstanceName(rType, argTypes);
     if (auto *rVal = getType(name))
       return rVal;
@@ -216,12 +287,25 @@ public:
     return Nr<types::IntNType>(len, sign);
   }
 
-private:
-  void store(types::Type *t) { types.emplace(t->getName(), t); }
-  void store(Value *v) { values.emplace_back(v); }
-  void store(Var *v) { vars.emplace_back(v); }
+  friend std::ostream &operator<<(std::ostream &os, const IRModule &a) {
+    return a.doFormat(os);
+  }
 
-  std::ostream &doFormat(std::ostream &os) const override;
+private:
+  void store(types::Type *t) {
+    types.emplace_back(t);
+    typesMap[t->getName()] = std::prev(types.end());
+  }
+  void store(Value *v) {
+    values.emplace_back(v);
+    valueMap[v->getId()] = std::prev(values.end());
+  }
+  void store(Var *v) {
+    vars.emplace_back(v);
+    varMap[v->getId()] = std::prev(vars.end());
+  }
+
+  std::ostream &doFormat(std::ostream &os) const;
 };
 
 } // namespace ir

@@ -69,7 +69,7 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
           realizeType(a);
       auto lt = getLLVMType(realizedType.get());
       // Realize fields.
-      vector<const seq::ir::types::Type *> typeArgs;
+      vector<seq::ir::types::Type *> typeArgs;
       vector<string> names;
       map<std::string, SrcInfo> memberInfo;
       for (auto &m : ctx->cache->classes[realizedType->name].fields) {
@@ -78,8 +78,7 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
         LOG_REALIZE("- member: {} -> {}: {}", m.name, m.type->toString(),
                     mt->toString());
         auto tf = realizeType(mt);
-        seqassert(tf, "cannot realize {}.{}: {}", realizedName, m.name,
-                  mt->toString());
+        seqassert(tf, "cannot realize {}.{}: {}", realizedName, m.name, mt->toString());
         ctx->cache->classes[realizedType->name]
             .realizations[realizedName]
             .fields.emplace_back(m.name, tf);
@@ -90,8 +89,7 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
       if (auto *cls = seq::ir::cast<seq::ir::types::RefType>(lt))
         if (!names.empty()) {
           cls->getContents()->realize(typeArgs, names);
-          cls->setAttribute(
-              std::make_unique<seq::ir::MemberAttribute>(memberInfo));
+          cls->setAttribute(std::make_unique<seq::ir::MemberAttribute>(memberInfo));
           cls->getContents()->setAttribute(
               std::make_unique<seq::ir::MemberAttribute>(memberInfo));
         }
@@ -372,7 +370,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   };
 
   seq::ir::types::Type *handle = nullptr;
-  vector<const seq::ir::types::Type *> types;
+  vector<seq::ir::types::Type *> types;
   vector<int> statics;
   for (auto &m : t->generics)
     if (auto s = m.type->getStatic()) {
@@ -414,7 +412,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
     types.erase(types.begin());
     handle = ctx->cache->module->getFuncType(ret, types);
   } else if (auto tr = const_cast<ClassType *>(t)->getRecord()) {
-    vector<const seq::ir::types::Type *> typeArgs;
+    vector<seq::ir::types::Type *> typeArgs;
     vector<string> names;
     map<std::string, SrcInfo> memberInfo;
     for (int ai = 0; ai < tr->args.size(); ai++) {

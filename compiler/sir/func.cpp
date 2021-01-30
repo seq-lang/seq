@@ -39,6 +39,20 @@ std::string BodiedFunc::getUnmangledName() const {
   return builtin ? split.back() : split[split.size() - 1];
 }
 
+Var *BodiedFunc::doClone() const {
+  auto *ret = getModule()->N<BodiedFunc>(
+      getSrcInfo(), getModule()->getVoidRetAndArgFuncType(), getName());
+  std::vector<std::string> argNames;
+  for (auto *arg : args)
+    argNames.push_back(arg->getName());
+
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
+               argNames);
+  ret->setBody(body->clone());
+  ret->setBuiltin(builtin);
+  return ret;
+}
+
 std::ostream &BodiedFunc::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{} {}({}) -> {} [\n{}\n] {{\n{}\n}}"),
              builtin ? "builtin_def" : "def", referenceString(),
@@ -52,6 +66,18 @@ std::ostream &BodiedFunc::doFormat(std::ostream &os) const {
 }
 
 const char ExternalFunc::NodeId = 0;
+
+Var *ExternalFunc::doClone() const {
+  auto *ret = getModule()->N<ExternalFunc>(
+      getSrcInfo(), getModule()->getVoidRetAndArgFuncType(), getName());
+  std::vector<std::string> argNames;
+  for (auto *arg : args)
+    argNames.push_back(arg->getName());
+
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
+               argNames);
+  return ret;
+}
 
 std::ostream &ExternalFunc::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("external_def {} ~ {}({}) -> {}"), getUnmangledName(),
@@ -70,6 +96,19 @@ std::string InternalFunc::getUnmangledName() const {
   if (std::isdigit(name[0])) // TODO: get rid of this hack
     name = names[names.size() - 2];
   return name;
+}
+
+Var *InternalFunc::doClone() const {
+  auto *ret = getModule()->N<InternalFunc>(
+      getSrcInfo(), getModule()->getVoidRetAndArgFuncType(), getName());
+  std::vector<std::string> argNames;
+  for (auto *arg : args)
+    argNames.push_back(arg->getName());
+
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
+               argNames);
+  ret->setParentType(parentType);
+  return ret;
 }
 
 std::ostream &InternalFunc::doFormat(std::ostream &os) const {
@@ -91,14 +130,29 @@ std::string LLVMFunc::getUnmangledName() const {
   return name;
 }
 
+Var *LLVMFunc::doClone() const {
+  auto *ret = getModule()->N<LLVMFunc>(
+      getSrcInfo(), getModule()->getVoidRetAndArgFuncType(), getName());
+  std::vector<std::string> argNames;
+  for (auto *arg : args)
+    argNames.push_back(arg->getName());
+
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
+               argNames);
+  ret->setLLVMBody(llvmBody);
+  ret->setLLVMDeclarations(llvmDeclares);
+  ret->setLLVMLiterals(llvmLiterals);
+  return ret;
+}
+
 std::ostream &LLVMFunc::doFormat(std::ostream &os) const {
   fmt::dynamic_format_arg_store<fmt::format_context> store;
   for (auto &l : llvmLiterals) {
-    if (l.tag == LLVMLiteral::STATIC)
-      store.push_back(l.val.staticVal);
+    if (l.isStatic())
+      store.push_back(l.getStaticValue());
     else
       store.push_back(
-          fmt::format(FMT_STRING("(type_of {})"), l.val.type->referenceString()));
+          fmt::format(FMT_STRING("(type_of {})"), l.getType()->referenceString()));
   }
 
   auto body = fmt::vformat(llvmDeclares + llvmBody, store);

@@ -17,12 +17,13 @@ public:
 
   using AcceptorExtend::AcceptorExtend;
 
-  const types::Type *getType() const override;
-
   virtual ~Flow() noexcept = default;
 
   /// @return a clone of the value
   Flow *clone() const { return cast<Flow>(Value::clone()); }
+
+private:
+  const types::Type *doGetType() const override;
 };
 
 /// Flow that contains a series of flows or instructions.
@@ -72,6 +73,11 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  std::vector<Value *> doGetChildren() const override {
+    return std::vector<Value *>(series.begin(), series.end());
+  }
+  int doReplaceChild(int id, Value *newValue) override;
+
   Value *doClone() const override;
 };
 
@@ -111,6 +117,9 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<Value *> doGetChildren() const override { return {cond, body}; }
+  int doReplaceChild(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -165,6 +174,9 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  std::vector<Value *> doGetChildren() const override { return {iter, body}; }
+  int doReplaceChild(int id, Value *newValue) override;
+
   Value *doClone() const override;
 };
 
@@ -217,6 +229,9 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<Value *> doGetChildren() const override;
+  int doReplaceChild(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -339,55 +354,8 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  Value *doClone() const override;
-};
-
-/// Flow that contains an unordered list of flows. Execution starts at the first flow.
-class UnorderedFlow : public AcceptorExtend<SeriesFlow, Flow> {
-private:
-  std::list<Flow *> series;
-
-public:
-  static const char NodeId;
-
-  using AcceptorExtend::AcceptorExtend;
-
-  /// @return an iterator to the first flow
-  auto begin() { return series.begin(); }
-  /// @return an iterator beyond the last flow
-  auto end() { return series.end(); }
-  /// @return an iterator to the first flow
-  auto begin() const { return series.begin(); }
-  /// @return an iterator beyond the last flow
-  auto end() const { return series.end(); }
-
-  /// @return a pointer to the first flow
-  Flow *front() { return series.front(); }
-  /// @return a pointer to the last flow
-  Flow *back() { return series.back(); }
-  /// @return a pointer to the first flow
-  const Flow *front() const { return series.front(); }
-  /// @return a pointer to the last flow
-  const Flow *back() const { return series.back(); }
-
-  /// Inserts an flow at the given position.
-  /// @param pos the position
-  /// @param v the flow
-  /// @return an iterator to the newly added flow
-  template <typename It> auto insert(It pos, Flow *v) {
-    return series.insert(pos.internal, v);
-  }
-  /// Appends an flow.
-  /// @param f the flow
-  void push_back(Flow *f) { series.push_back(f); }
-
-  /// Erases the item at the supplied position.
-  /// @param pos the position
-  /// @return the iterator beyond the removed flow
-  template <typename It> auto erase(It pos) { return series.erase(pos.internal); }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
+  std::vector<Value *> doGetChildren() const override;
+  int doReplaceChild(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -459,6 +427,8 @@ public:
     const types::Type *getOutputType() const;
     /// @return deep copy of this stage; used to clone pipelines
     Stage clone() const;
+
+    friend class PipelineFlow;
   };
 
 private:
@@ -514,6 +484,9 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<Value *> doGetChildren() const override;
+  int doReplaceChild(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };

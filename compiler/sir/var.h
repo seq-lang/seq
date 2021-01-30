@@ -5,6 +5,9 @@
 #include <utility>
 #include <vector>
 
+#include "util/fmt/format.h"
+#include "util/fmt/ostream.h"
+
 #include "types/types.h"
 #include "util/common.h"
 #include "value.h"
@@ -18,7 +21,7 @@ class Func;
 class Var : public AcceptorExtend<Var, IRNode>, public IdMixin, public ParentFuncMixin {
 private:
   /// the variable's type
-  const types::Type *type;
+  types::Type *type;
   /// true if the variable is global
   bool global;
 
@@ -29,14 +32,16 @@ public:
   /// @param type the variable's type
   /// @param global true if the variable is global
   /// @param name the variable's name
-  explicit Var(const types::Type *type, bool global = false, std::string name = "")
+  explicit Var(types::Type *type, bool global = false, std::string name = "")
       : AcceptorExtend(std::move(name)), type(type), global(global) {}
 
+  /// @return the type
+  types::Type *getType() { return type; }
   /// @return the type
   const types::Type *getType() const { return type; }
   /// Sets the type.
   /// @param t the new type
-  void setType(const types::Type *t) { type = t; }
+  void setType(types::Type *t) { type = t; }
 
   /// @return true if the variable is global
   bool isGlobal() const { return global; }
@@ -48,8 +53,17 @@ public:
     return fmt::format(FMT_STRING("{}.{}"), getName(), getId());
   }
 
+  /// @return a clone of the value
+  Var *clone() const;
+
+  friend std::ostream &operator<<(std::ostream &os, const Var &a) {
+    return a.doFormat(os);
+  }
+
 private:
-  std::ostream &doFormat(std::ostream &os) const override;
+  virtual Var *doClone() const;
+
+  virtual std::ostream &doFormat(std::ostream &os) const;
 };
 
 /// Value that contains an unowned variable reference.
@@ -67,8 +81,6 @@ public:
   explicit VarValue(Var *val, std::string name = "")
       : AcceptorExtend(std::move(name)), val(val) {}
 
-  const types::Type *getType() const override { return val->getType(); }
-
   /// @return the variable
   Var *getVar() { return val; }
   /// @return the variable
@@ -81,6 +93,10 @@ private:
   std::ostream &doFormat(std::ostream &os) const override {
     return os << val->referenceString();
   }
+
+  const types::Type *doGetType() const override { return val->getType(); }
+  std::vector<Value *> doGetChildren() const override { return {}; }
+  int doReplaceChild(int id, Value *newValue) override { return 0; }
 
   Value *doClone() const override;
 };
@@ -100,8 +116,6 @@ public:
   explicit PointerValue(Var *val, std::string name = "")
       : AcceptorExtend(std::move(name)), val(val) {}
 
-  types::Type *getType() const override;
-
   /// @return the variable
   Var *getVar() { return val; }
   /// @return the variable
@@ -114,6 +128,10 @@ private:
   std::ostream &doFormat(std::ostream &os) const override {
     return os << '&' << val->referenceString();
   }
+
+  const types::Type *doGetType() const override;
+  std::vector<Value *> doGetChildren() const override { return {}; }
+  int doReplaceChild(int id, Value *newValue) override { return 0; }
 
   Value *doClone() const override;
 };

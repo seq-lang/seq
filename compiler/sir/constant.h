@@ -21,7 +21,10 @@ public:
   explicit Constant(types::Type *type, std::string name = "")
       : AcceptorExtend(std::move(name)), type(type) {}
 
-  types::Type *getType() const override { return type; }
+private:
+  const types::Type *doGetType() const override { return type; }
+  std::vector<Value *> doGetChildren() const override { return {}; }
+  int doReplaceChild(int id, Value *newValue) override { return 0; }
 };
 
 template <typename ValueType>
@@ -51,8 +54,8 @@ private:
   }
 
   Value *doClone() const override {
-    return getModule()->template N<TemplatedConstant<ValueType>>(getSrcInfo(), val,
-                                                                 getType());
+    return getModule()->template N<TemplatedConstant<ValueType>>(
+        getSrcInfo(), val, const_cast<types::Type *>(getType()));
   }
 };
 
@@ -85,7 +88,8 @@ private:
   }
 
   Value *doClone() const override {
-    return getModule()->N<TemplatedConstant<std::string>>(getSrcInfo(), val, getType());
+    return getModule()->N<TemplatedConstant<std::string>>(
+        getSrcInfo(), val, const_cast<types::Type *>(getType()));
   }
 };
 

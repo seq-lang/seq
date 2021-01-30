@@ -3,14 +3,38 @@
 #include "module.h"
 #include "util/iterators.h"
 
+namespace {
+
+int findAndReplace(int id, seq::ir::Value *newVal,
+                   std::vector<seq::ir::Value *> &values) {
+  auto replacements = 0;
+  for (auto &value : values) {
+    if (value->getId() == id) {
+      value = newVal;
+      ++replacements;
+    }
+  }
+  return replacements;
+}
+
+} // namespace
+
 namespace seq {
 namespace ir {
 
 const char Instr::NodeId = 0;
 
-const types::Type *Instr::getType() const { return getModule()->getVoidType(); }
+const types::Type *Instr::doGetType() const { return getModule()->getVoidType(); }
 
 const char AssignInstr::NodeId = 0;
+
+int AssignInstr::doReplaceChild(int id, Value *newValue) {
+  if (rhs->getId() == id) {
+    setRhs(newValue);
+    return 1;
+  }
+  return 0;
+}
 
 std::ostream &AssignInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("store({}, {})"), *lhs, *rhs);
@@ -23,10 +47,18 @@ Value *AssignInstr::doClone() const {
 
 const char ExtractInstr::NodeId = 0;
 
-const types::Type *ExtractInstr::getType() const {
+const types::Type *ExtractInstr::doGetType() const {
   auto *memberedType = val->getType()->as<types::MemberedType>();
   assert(memberedType);
   return memberedType->getMemberType(field);
+}
+
+int ExtractInstr::doReplaceChild(int id, Value *newValue) {
+  if (val->getId() == id) {
+    setVal(newValue);
+    return 1;
+  }
+  return 0;
 }
 
 Value *ExtractInstr::doClone() const {
@@ -40,6 +72,19 @@ std::ostream &ExtractInstr::doFormat(std::ostream &os) const {
 
 const char InsertInstr::NodeId = 0;
 
+int InsertInstr::doReplaceChild(int id, Value *newValue) {
+  auto replacements = 0;
+  if (lhs->getId() == id) {
+    setLhs(newValue);
+    ++replacements;
+  }
+  if (rhs->getId() == id) {
+    setRhs(newValue);
+    ++replacements;
+  }
+  return replacements;
+}
+
 std::ostream &InsertInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("insert({}, \"{}\", {})"), *lhs, field, *rhs);
   return os;
@@ -52,10 +97,26 @@ Value *InsertInstr::doClone() const {
 
 const char CallInstr::NodeId = 0;
 
-const types::Type *CallInstr::getType() const {
+const types::Type *CallInstr::doGetType() const {
   auto *funcType = func->getType()->as<types::FuncType>();
   assert(funcType);
   return funcType->getReturnType();
+}
+
+std::vector<Value *> CallInstr::doGetChildren() const {
+  std::vector<Value *> ret(args.begin(), args.end());
+  ret.push_back(func);
+  return ret;
+}
+
+int CallInstr::doReplaceChild(int id, Value *newValue) {
+  auto replacements = 0;
+  if (func->getId() == id) {
+    setFunc(newValue);
+    ++replacements;
+  }
+  replacements += findAndReplace(id, newValue, args);
+  return replacements;
 }
 
 std::ostream &CallInstr::doFormat(std::ostream &os) const {
@@ -77,18 +138,17 @@ const char StackAllocInstr::NodeId = 0;
 
 std::ostream &StackAllocInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("stack_alloc({}, {})"), arrayType->referenceString(),
-             *count);
+             count);
   return os;
 }
 
 Value *StackAllocInstr::doClone() const {
-  return getModule()->N<StackAllocInstr>(getSrcInfo(), arrayType, count->clone(),
-                                         getName());
+  return getModule()->N<StackAllocInstr>(getSrcInfo(), arrayType, count, getName());
 }
 
 const char TypePropertyInstr::NodeId = 0;
 
-const types::Type *TypePropertyInstr::getType() const {
+const types::Type *TypePropertyInstr::doGetType() const {
   switch (property) {
   case Property::IS_ATOMIC:
     return getModule()->getBoolType();
@@ -123,6 +183,23 @@ Value *YieldInInstr::doClone() const {
 
 const char TernaryInstr::NodeId = 0;
 
+int TernaryInstr::doReplaceChild(int id, Value *newValue) {
+  auto replacements = 0;
+  if (cond->getId() == id) {
+    setCond(newValue);
+    ++replacements;
+  }
+  if (trueValue->getId() == id) {
+    setTrueValue(newValue);
+    ++replacements;
+  }
+  if (falseValue->getId() == id) {
+    setFalseValue(newValue);
+    ++replacements;
+  }
+  return replacements;
+}
+
 std::ostream &TernaryInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("ternary({}, {}, {})"), *cond, *trueValue, *falseValue);
   return os;
@@ -134,6 +211,16 @@ Value *TernaryInstr::doClone() const {
 }
 
 const char ControlFlowInstr::NodeId = 0;
+
+int ControlFlowInstr::doReplaceChild(int id, Value *newValue) {
+  if (target->getId() == id) {
+    auto *flow = cast<Flow>(newValue);
+    assert(flow);
+    setTarget(flow);
+    return 1;
+  }
+  return 0;
+}
 
 const char BreakInstr::NodeId = 0;
 
@@ -159,6 +246,22 @@ Value *ContinueInstr::doClone() const {
 
 const char ReturnInstr::NodeId = 0;
 
+std::vector<Value *> ReturnInstr::doGetChildren() const {
+  if (value)
+    return {value};
+  return {};
+}
+
+int ReturnInstr::doReplaceChild(int id, Value *newValue) {
+  auto replacements = 0;
+  if (value && value->getId() == id) {
+    setValue(newValue);
+    ++replacements;
+  }
+  replacements += ControlFlowInstr::replaceChild(id, newValue);
+  return replacements;
+}
+
 std::ostream &ReturnInstr::doFormat(std::ostream &os) const {
   if (value) {
     fmt::print(os, FMT_STRING("return({})"), *value);
@@ -174,6 +277,20 @@ Value *ReturnInstr::doClone() const {
 }
 
 const char YieldInstr::NodeId = 0;
+
+std::vector<Value *> YieldInstr::doGetChildren() const {
+  if (value)
+    return {value};
+  return {};
+}
+
+int YieldInstr::doReplaceChild(int id, Value *newValue) {
+  if (value && value->getId() == id) {
+    setValue(newValue);
+    return 1;
+  }
+  return 0;
+}
 
 std::ostream &YieldInstr::doFormat(std::ostream &os) const {
   if (value) {
@@ -191,6 +308,14 @@ Value *YieldInstr::doClone() const {
 
 const char ThrowInstr::NodeId = 0;
 
+int ThrowInstr::doReplaceChild(int id, Value *newValue) {
+  if (value && value->getId() == id) {
+    setValue(newValue);
+    return 1;
+  }
+  return 0;
+}
+
 std::ostream &ThrowInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("throw({})"), *value);
   return os;
@@ -201,6 +326,21 @@ Value *ThrowInstr::doClone() const {
 }
 
 const char FlowInstr::NodeId = 0;
+
+int FlowInstr::doReplaceChild(int id, Value *newValue) {
+  auto replacements = 0;
+  if (flow->getId() == id) {
+    auto *f = cast<Flow>(newValue);
+    assert(f);
+    setFlow(f);
+    ++replacements;
+  }
+  if (val->getId() == id) {
+    setValue(newValue);
+    ++replacements;
+  }
+  return replacements;
+}
 
 std::ostream &FlowInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("inline_flow({}, {})"), *flow, *val);

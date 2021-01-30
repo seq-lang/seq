@@ -9,6 +9,10 @@
 #include <string>
 #include <vector>
 
+#include "sir/util/lambda_visitor.h"
+#include "sir/passes/cleanup/replacer.h"
+
+
 #define SEQ_PATH_ENV_VAR "SEQ_PATH"
 
 using namespace std;
@@ -17,6 +21,7 @@ using namespace llvm;
 using namespace llvm::cl;
 
 namespace {
+
 void versMsg(raw_ostream &out) {
   out << "Seq " << SEQ_VERSION_MAJOR << "." << SEQ_VERSION_MINOR << "."
       << SEQ_VERSION_PATCH << "\n";
@@ -32,6 +37,7 @@ bool endsWith(std::string const &query, std::string const &ending) {
 }
 
 bool isLLVMFilename(const std::string &filename) { return endsWith(filename, ".ll"); }
+
 } // namespace
 
 int main(int argc, char **argv) {
