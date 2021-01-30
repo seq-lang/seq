@@ -735,14 +735,15 @@ void seq::compilationMessage(const std::string &header, const std::string &msg,
                              const std::string &file, int line, int col) {
   assert(!(file.empty() && (line > 0 || col > 0)));
   assert(!(col > 0 && line <= 0));
+  const bool displayFile = (!file.empty() && file != SrcInfo().file);
   std::cerr << "\033[1m";
-  if (!file.empty())
+  if (displayFile)
     std::cerr << file; //.substr(file.rfind('/') + 1);
   if (line > 0)
     std::cerr << ":" << line;
   if (col > 0)
     std::cerr << ":" << col;
-  if (!file.empty())
+  if (displayFile)
     std::cerr << ": ";
   std::cerr << header << "\033[1m " << msg << "\033[0m" << std::endl;
 }

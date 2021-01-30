@@ -9,6 +9,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "lang/seq.h"
@@ -16,9 +17,10 @@
 
 namespace seq {
 
-seq::ir::IRModule *parse(const std::string &argv0, const std::string &file,
-                         const std::string &code = "", bool isCode = false,
-                         int isTest = 0, int startLine = 0);
+seq::ir::IRModule *
+parse(const std::string &argv0, const std::string &file, const std::string &code = "",
+      bool isCode = false, int isTest = 0, int startLine = 0,
+      const std::unordered_map<std::string, std::string> &defines = {});
 /*
 void execute(seq::SeqModule *module, const std::vector<std::string> &args = {},
              const std::vector<std::string> &libs = {}, bool debug = false);
