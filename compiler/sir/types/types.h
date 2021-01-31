@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
@@ -16,31 +17,47 @@ namespace ir {
 namespace types {
 
 /// Type from which other SIR types derive. Generally types are immutable.
-class Type : public AcceptorExtend<Type, IRNode> {
+class Type : public ReplaceableNodeBase<Type> {
 public:
+  using ReplacementType = Type;
+
   static const char NodeId;
 
-  using AcceptorExtend::AcceptorExtend;
+  using ReplaceableNodeBase::ReplaceableNodeBase;
 
   virtual ~Type() noexcept = default;
+
+  std::vector<Type *> getUsedTypes() override { return getActual()->doGetUsedTypes(); }
+  std::vector<const Type *> getUsedTypes() const override {
+    auto ret = getActual()->doGetUsedTypes();
+    return std::vector<const Type *>(ret.begin(), ret.end());
+  }
+  int replaceUsedType(const std::string &name, Type *newType) override {
+    return getActual()->doReplaceUsedType(name, newType);
+  }
+  using IRNode::replaceUsedType;
 
   /// A type is "atomic" iff it contains no pointers to dynamically
   /// allocated memory. Atomic types do not need to be scanned during
   /// garbage collection.
   /// @return true if the type is atomic
-  virtual bool isAtomic() const = 0;
-
-  friend std::ostream &operator<<(std::ostream &os, const Type &a) {
-    return a.doFormat(os);
-  }
+  bool isAtomic() const { return getActual()->doIsAtomic(); }
 
   /// Compares types.
   /// @param other the other type
   /// @return true if the types are equivalent
-  virtual bool equals(Type *other) { return getName() == other->getName(); }
+  bool equals(const Type *other) const { return getActual()->doEquals(other); }
 
 private:
-  virtual std::ostream &doFormat(std::ostream &os) const;
+  std::ostream &doFormat(std::ostream &os) const override;
+
+  virtual std::vector<Type *> doGetUsedTypes() const { return {}; }
+  virtual int doReplaceUsedType(const std::string &name, Type *newType) { return 0; }
+
+  virtual bool doIsAtomic() const = 0;
+  virtual bool doEquals(const Type *other) const {
+    return getName() == other->getName();
+  }
 };
 
 /// Type from which primitive atomic types derive.
@@ -50,7 +67,8 @@ public:
 
   using AcceptorExtend::AcceptorExtend;
 
-  bool isAtomic() const override { return true; }
+private:
+  bool doIsAtomic() const override { return true; }
 };
 
 /// Int type (64-bit signed integer)
@@ -126,6 +144,9 @@ public:
     Type *getType() { return type; }
     /// @return the field type
     const Type *getType() const { return type; }
+    /// Sets the type.
+    /// @param t the new type
+    void setType(Type *t) { type = t; }
   };
 
   using iterator = std::vector<Field>::iterator;
@@ -203,16 +224,6 @@ public:
 
   virtual ~RecordType() = default;
 
-  bool isAtomic() const override {
-    for (const auto &field : fields) {
-      if (!field.getType()->isAtomic())
-        return false;
-    }
-    return true;
-  }
-
-  bool equals(Type *other) override;
-
   Type *getMemberType(const std::string &n) override;
   const Type *getMemberType(const std::string &n) const override;
 
@@ -232,13 +243,22 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<Type *> doGetUsedTypes() const override;
+  int doReplaceUsedType(const std::string &name, Type *newType) override;
+
+  bool doIsAtomic() const override {
+    return !std::any_of(fields.begin(), fields.end(),
+                        [](auto &field) { return !field.getType()->isAtomic(); });
+  }
+  bool doEquals(const Type *other) const override;
 };
 
 /// Membered type that is passed by reference. Similar to Python classes.
 class RefType : public AcceptorExtend<RefType, MemberedType> {
 private:
   /// the internal contents of the type
-  RecordType *contents;
+  Type *contents;
 
 public:
   static const char NodeId;
@@ -249,44 +269,49 @@ public:
   RefType(std::string name, RecordType *contents)
       : AcceptorExtend(std::move(name)), contents(contents) {}
 
-  bool isAtomic() const override { return false; }
-
-  bool equals(Type *other) override {
-    return isA<RefType>(other) && contents->equals(cast<RefType>(other)->getContents());
-  }
-
   Type *getMemberType(const std::string &n) override {
-    return contents->getMemberType(n);
+    return getContents()->getMemberType(n);
   }
   const Type *getMemberType(const std::string &n) const override {
-    return contents->getMemberType(n);
+    return getContents()->getMemberType(n);
   }
 
   int getMemberIndex(const std::string &n) const override {
-    return contents->getMemberIndex(n);
+    return getContents()->getMemberIndex(n);
   }
 
-  iterator begin() override { return contents->begin(); }
-  iterator end() override { return contents->end(); }
-  reference front() override { return contents->front(); }
-  reference back() override { return contents->back(); }
+  iterator begin() override { return getContents()->begin(); }
+  iterator end() override { return getContents()->end(); }
+  reference front() override { return getContents()->front(); }
+  reference back() override { return getContents()->back(); }
 
-  const_iterator begin() const override { return contents->begin(); }
-  const_iterator end() const override { return contents->end(); }
-  const_reference front() const override { return contents->front(); }
-  const_reference back() const override { return contents->back(); }
+  const_iterator begin() const override { return getContents()->begin(); }
+  const_iterator end() const override { return getContents()->end(); }
+  const_reference front() const override { return getContents()->front(); }
+  const_reference back() const override { return getContents()->back(); }
 
   /// @return the reference type's contents
-  RecordType *getContents() { return contents; }
+  RecordType *getContents() { return cast<RecordType>(contents); }
   /// @return the reference type's contents
-  const RecordType *getContents() const { return contents; }
+  const RecordType *getContents() const { return cast<RecordType>(contents); }
+  /// Sets the reference type's contents.
+  /// @param t the new contents
+  void setContents(RecordType *t) { contents = t; }
 
   void realize(std::vector<Type *> mTypes, std::vector<std::string> mNames) override {
-    contents->realize(std::move(mTypes), std::move(mNames));
+    getContents()->realize(std::move(mTypes), std::move(mNames));
   }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<Type *> doGetUsedTypes() const override { return {contents}; }
+  int doReplaceUsedType(const std::string &name, Type *newType) override;
+
+  bool doIsAtomic() const override { return false; }
+  bool doEquals(const Type *other) const override {
+    return isA<RefType>(other) && contents->equals(cast<RefType>(other)->getContents());
+  }
 };
 
 /// Type associated with a SIR function.
@@ -312,10 +337,6 @@ public:
   FuncType(Type *rType, std::vector<Type *> argTypes)
       : AcceptorExtend(getInstanceName(rType, argTypes)), rType(rType),
         argTypes(std::move(argTypes)) {}
-
-  bool isAtomic() const override { return false; }
-
-  bool equals(Type *other) override;
 
   /// @return the function's return type
   Type *getReturnType() { return rType; }
@@ -344,6 +365,12 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<Type *> doGetUsedTypes() const override;
+  int doReplaceUsedType(const std::string &name, Type *newType) override;
+
+  bool doIsAtomic() const override { return false; }
+  bool doEquals(const Type *other) const override;
 };
 
 /// Base for simple derived types.
@@ -361,12 +388,16 @@ public:
   explicit DerivedType(std::string name, Type *base)
       : AcceptorExtend(std::move(name)), base(base) {}
 
-  bool isAtomic() const override { return base->isAtomic(); }
-
   /// @return the type's base
   Type *getBase() { return base; }
   /// @return the type's base
   const Type *getBase() const { return base; }
+
+private:
+  bool doIsAtomic() const override { return base->isAtomic(); }
+
+  std::vector<Type *> doGetUsedTypes() const override { return {base}; }
+  int doReplaceUsedType(const std::string &name, Type *newType) override;
 };
 
 /// Type of a pointer to another SIR type
@@ -378,14 +409,14 @@ public:
   /// @param base the type's base
   explicit PointerType(Type *base) : AcceptorExtend(getInstanceName(base), base) {}
 
-  bool isAtomic() const override { return false; }
+  static std::string getInstanceName(Type *base);
 
-  bool equals(Type *other) override {
+private:
+  bool doIsAtomic() const override { return false; }
+  bool doEquals(const Type *other) const override {
     return isA<PointerType>(other) &&
            getBase()->equals(cast<DerivedType>(other)->getBase());
   }
-
-  static std::string getInstanceName(Type *base);
 };
 
 /// Type of an optional containing another SIR type
@@ -397,14 +428,14 @@ public:
   /// @param base the type's base
   explicit OptionalType(Type *base) : AcceptorExtend(getInstanceName(base), base) {}
 
-  bool isAtomic() const override { return getBase()->isAtomic(); }
+  static std::string getInstanceName(Type *base);
 
-  bool equals(Type *other) override {
+private:
+  bool doIsAtomic() const override { return getBase()->isAtomic(); }
+  bool doEquals(const Type *other) const override {
     return isA<OptionalType>(other) &&
            getBase()->equals(cast<DerivedType>(other)->getBase());
   }
-
-  static std::string getInstanceName(Type *base);
 };
 
 /// Type of an array containing another SIR type
@@ -420,8 +451,6 @@ public:
   /// @param pointerType the base's pointer type
   /// @param countType the type of the array's count
   explicit ArrayType(Type *pointerType, Type *countType);
-
-  bool isAtomic() const override { return false; }
 
   /// @return the type's base
   Type *getBase() { return base; }
@@ -440,14 +469,14 @@ public:
   /// @param base the type's base
   explicit GeneratorType(Type *base) : AcceptorExtend(getInstanceName(base), base) {}
 
-  bool isAtomic() const override { return false; }
+  static std::string getInstanceName(Type *base);
 
-  bool equals(Type *other) override {
+private:
+  bool doIsAtomic() const override { return false; }
+  bool doEquals(const Type *other) const override {
     return isA<GeneratorType>(other) &&
            getBase()->equals(cast<DerivedType>(other)->getBase());
   }
-
-  static std::string getInstanceName(Type *base);
 };
 
 /// Type of a variably sized integer
@@ -469,10 +498,6 @@ public:
   IntNType(unsigned len, bool sign)
       : AcceptorExtend(getInstanceName(len, sign)), len(len), sign(sign) {}
 
-  bool isAtomic() const override { return true; }
-
-  bool equals(Type *other) override;
-
   /// @return the length of the integer
   unsigned getLen() const { return len; }
   /// @return true if signed
@@ -482,6 +507,10 @@ public:
   std::string oppositeSignName() const { return getInstanceName(len, !sign); }
 
   static std::string getInstanceName(unsigned len, bool sign);
+
+private:
+  bool doIsAtomic() const override { return true; }
+  bool doEquals(const Type *other) const override;
 };
 
 } // namespace types

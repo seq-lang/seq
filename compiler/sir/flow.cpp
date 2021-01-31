@@ -31,7 +31,7 @@ const types::Type *Flow::doGetType() const { return getModule()->getVoidType(); 
 
 const char SeriesFlow::NodeId = 0;
 
-int SeriesFlow::doReplaceChild(int id, Value *newValue) {
+int SeriesFlow::doReplaceUsedValue(int id, Value *newValue) {
   return findAndReplace(id, newValue, series);
 }
 
@@ -51,17 +51,17 @@ Value *SeriesFlow::doClone() const {
 
 const char WhileFlow::NodeId = 0;
 
-int WhileFlow::doReplaceChild(int id, Value *newValue) {
+int WhileFlow::doReplaceUsedValue(int id, Value *newValue) {
   auto replacements = 0;
 
   if (cond->getId() == id) {
-    setCond(newValue);
+    cond = newValue;
     ++replacements;
   }
   if (body->getId() == id) {
     auto *f = cast<Flow>(newValue);
     assert(f);
-    setBody(f);
+    body = f;
     ++replacements;
   }
   return replacements;
@@ -73,15 +73,30 @@ std::ostream &WhileFlow::doFormat(std::ostream &os) const {
 }
 
 Value *WhileFlow::doClone() const {
-  return getModule()->N<WhileFlow>(getSrcInfo(), cond->clone(), body->clone(),
-                                   getName());
+  return getModule()->N<WhileFlow>(getSrcInfo(), cond->clone(),
+                                   cast<Flow>(body->clone()), getName());
 }
 
 const char ForFlow::NodeId = 0;
 
-int ForFlow::doReplaceChild(int id, Value *newValue) {
+int ForFlow::doReplaceUsedValue(int id, Value *newValue) {
+  auto count = 0;
   if (iter->getId() == id) {
-    setIter(newValue);
+    iter = newValue;
+    ++count;
+  }
+  if (body->getId() == id) {
+    auto *f = cast<Flow>(newValue);
+    assert(f);
+    body = f;
+    ++count;
+  }
+  return count;
+}
+
+int ForFlow::doReplaceUsedVariable(int id, Var *newVar) {
+  if (var->getId() == id) {
+    var = newVar;
     return 1;
   }
   return 0;
@@ -94,36 +109,36 @@ std::ostream &ForFlow::doFormat(std::ostream &os) const {
 }
 
 Value *ForFlow::doClone() const {
-  return getModule()->N<ForFlow>(getSrcInfo(), iter->clone(), body->clone(), var,
-                                 getName());
+  return getModule()->N<ForFlow>(getSrcInfo(), iter->clone(), cast<Flow>(body->clone()),
+                                 var, getName());
 }
 
 const char IfFlow::NodeId = 0;
 
-std::vector<Value *> IfFlow::doGetChildren() const {
+std::vector<Value *> IfFlow::doGetUsedValues() const {
   std::vector<Value *> ret = {cond, trueBranch};
   if (falseBranch)
     ret.push_back(falseBranch);
   return ret;
 }
 
-int IfFlow::doReplaceChild(int id, Value *newValue) {
+int IfFlow::doReplaceUsedValue(int id, Value *newValue) {
   auto replacements = 0;
 
   if (cond->getId() == id) {
-    setCond(newValue);
+    cond = newValue;
     ++replacements;
   }
   if (trueBranch->getId() == id) {
     auto *f = cast<Flow>(newValue);
     assert(f);
-    setTrueBranch(f);
+    trueBranch = f;
     ++replacements;
   }
   if (falseBranch && falseBranch->getId() == id) {
     auto *f = cast<Flow>(newValue);
     assert(f);
-    setFalseBranch(f);
+    falseBranch = f;
     ++replacements;
   }
 
@@ -139,14 +154,14 @@ std::ostream &IfFlow::doFormat(std::ostream &os) const {
 }
 
 Value *IfFlow::doClone() const {
-  return getModule()->N<IfFlow>(getSrcInfo(), cond->clone(), trueBranch->clone(),
-                                falseBranch ? falseBranch->clone() : nullptr,
-                                getName());
+  return getModule()->N<IfFlow>(
+      getSrcInfo(), cond->clone(), cast<Flow>(trueBranch->clone()),
+      falseBranch ? cast<Flow>(falseBranch->clone()) : nullptr, getName());
 }
 
 const char TryCatchFlow::NodeId = 0;
 
-std::vector<Value *> TryCatchFlow::doGetChildren() const {
+std::vector<Value *> TryCatchFlow::doGetUsedValues() const {
   std::vector<Value *> ret = {body};
   if (finally)
     ret.push_back(finally);
@@ -156,19 +171,19 @@ std::vector<Value *> TryCatchFlow::doGetChildren() const {
   return ret;
 }
 
-int TryCatchFlow::doReplaceChild(int id, Value *newValue) {
+int TryCatchFlow::doReplaceUsedValue(int id, Value *newValue) {
   auto replacements = 0;
 
   if (body->getId() == id) {
     auto *f = cast<Flow>(newValue);
     assert(f);
-    setBody(f);
+    body = f;
     ++replacements;
   }
   if (finally && finally->getId() == id) {
     auto *f = cast<Flow>(newValue);
     assert(f);
-    setFinally(f);
+    finally = f;
     ++replacements;
   }
 
@@ -182,6 +197,46 @@ int TryCatchFlow::doReplaceChild(int id, Value *newValue) {
   }
 
   return replacements;
+}
+
+std::vector<types::Type *> TryCatchFlow::doGetUsedTypes() const {
+  std::vector<types::Type *> ret;
+  for (auto &c : catches) {
+    if (auto *t = c.getType())
+      ret.push_back(const_cast<types::Type *>(t));
+  }
+  return ret;
+}
+
+int TryCatchFlow::doReplaceUsedType(const std::string &name, types::Type *newType) {
+  auto count = 0;
+  for (auto &c : catches) {
+    if (c.getType()->getName() == name) {
+      c.setType(newType);
+      ++count;
+    }
+  }
+  return count;
+}
+
+std::vector<Var *> TryCatchFlow::doGetUsedVariables() const {
+  std::vector<Var *> ret;
+  for (auto &c : catches) {
+    if (auto *t = c.getVar())
+      ret.push_back(const_cast<Var *>(t));
+  }
+  return ret;
+}
+
+int TryCatchFlow::doReplaceUsedVariable(int id, Var *newVar) {
+  auto count = 0;
+  for (auto &c : catches) {
+    if (c.getVar()->getId() == id) {
+      c.setVar(newVar);
+      ++count;
+    }
+  }
+  return count;
 }
 
 std::ostream &TryCatchFlow::doFormat(std::ostream &os) const {
@@ -199,9 +254,11 @@ std::ostream &TryCatchFlow::doFormat(std::ostream &os) const {
 
 Value *TryCatchFlow::doClone() const {
   auto *newFlow = getModule()->N<TryCatchFlow>(
-      getSrcInfo(), body->clone(), finally ? finally->clone() : nullptr, getName());
+      getSrcInfo(), cast<Flow>(body->clone()),
+      finally ? cast<Flow>(finally->clone()) : nullptr, getName());
   for (auto &child : *this)
-    newFlow->emplace_back(child.getHandler()->clone(), child.getType(),
+    newFlow->emplace_back(cast<Flow>(child.getHandler()->clone()),
+                          const_cast<types::Type *>(child.getType()),
                           const_cast<Var *>(child.getVar()));
   return newFlow;
 }
@@ -218,7 +275,7 @@ const types::Type *PipelineFlow::Stage::getOutputType() const {
   }
 }
 
-std::vector<Value *> PipelineFlow::doGetChildren() const {
+std::vector<Value *> PipelineFlow::doGetUsedValues() const {
   std::vector<Value *> ret;
   for (auto &s : stages) {
     ret.push_back(const_cast<Value *>(s.getFunc()));
@@ -229,7 +286,7 @@ std::vector<Value *> PipelineFlow::doGetChildren() const {
   return ret;
 }
 
-int PipelineFlow::doReplaceChild(int id, Value *newValue) {
+int PipelineFlow::doReplaceUsedValue(int id, Value *newValue) {
   auto replacements = 0;
 
   for (auto &c : stages) {

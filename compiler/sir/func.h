@@ -99,12 +99,16 @@ public:
   virtual std::string getUnmangledName() const = 0;
 
   Func *clone() const { return cast<Func>(Var::clone()); }
+
+private:
+  std::vector<Var *> doGetUsedVariables() const override;
+  int doReplaceUsedVariable(int id, Var *newVar) override;
 };
 
 class BodiedFunc : public AcceptorExtend<BodiedFunc, Func> {
 private:
   /// the function body
-  Flow *body;
+  Value *body;
   /// whether the function is builtin
   bool builtin = false;
 
@@ -116,9 +120,9 @@ public:
   std::string getUnmangledName() const override;
 
   /// @return the function body
-  Flow *getBody() { return body; }
+  Flow *getBody() { return cast<Flow>(body); }
   /// @return the function body
-  const Flow *getBody() const { return body; }
+  const Flow *getBody() const { return cast<Flow>(body); }
   /// Sets the function's body.
   /// @param b the new body
   void setBody(Flow *b) { body = b; }
@@ -133,6 +137,9 @@ private:
   Var *doClone() const override;
 
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<Value *> doGetUsedValues() const override { return {body}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
 };
 
 class ExternalFunc : public AcceptorExtend<ExternalFunc, Func> {
@@ -179,6 +186,9 @@ private:
   Var *doClone() const override;
 
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<types::Type *> doGetUsedTypes() const override;
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 };
 
 class LLVMFunc : public AcceptorExtend<LLVMFunc, Func> {
@@ -264,6 +274,9 @@ private:
   Var *doClone() const override;
 
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<types::Type *> doGetUsedTypes() const override;
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 };
 
 } // namespace ir

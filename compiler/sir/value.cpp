@@ -8,8 +8,8 @@ namespace ir {
 const char Value::NodeId = 0;
 
 Value *Value::clone() const {
-  if (replacement)
-    return replacement->clone();
+  if (hasReplacement())
+    return getActual()->clone();
 
   auto *res = doClone();
   for (auto it = attributes_begin(); it != attributes_end(); ++it) {

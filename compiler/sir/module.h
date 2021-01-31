@@ -287,10 +287,6 @@ public:
     return Nr<types::IntNType>(len, sign);
   }
 
-  friend std::ostream &operator<<(std::ostream &os, const IRModule &a) {
-    return a.doFormat(os);
-  }
-
 private:
   void store(types::Type *t) {
     types.emplace_back(t);
@@ -305,7 +301,7 @@ private:
     varMap[v->getId()] = std::prev(vars.end());
   }
 
-  std::ostream &doFormat(std::ostream &os) const;
+  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 } // namespace ir

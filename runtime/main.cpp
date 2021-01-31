@@ -77,6 +77,9 @@ int main(int argc, char **argv) {
   if (!module)
     return EXIT_FAILURE;
 
+  auto *str = *std::find_if(module->values_begin(), module->values_end(), [](seq::ir::Value *v) { return v->getId() == 3246; });
+  str->replaceAll(module->Nr<seq::ir::StringConstant>("GOTCHA", module->getStringType()));
+
   seq::ir::LLVMVisitor visitor(debug.getValue());
   visitor.visit(module);
 

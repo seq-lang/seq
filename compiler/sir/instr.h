@@ -64,8 +64,11 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetChildren() const override { return {rhs}; }
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override { return {rhs}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
+
+  std::vector<Var *> doGetUsedVariables() const override { return {lhs}; }
+  int doReplaceUsedVariable(int id, Var *newVar) override;
 
   Value *doClone() const override;
 };
@@ -106,8 +109,8 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 
   const types::Type *doGetType() const override;
-  std::vector<Value *> doGetChildren() const override { return {val}; }
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override { return {val}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -159,8 +162,8 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 
   const types::Type *doGetType() const override { return lhs->getType(); }
-  std::vector<Value *> doGetChildren() const override { return {lhs, rhs}; }
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override { return {lhs, rhs}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -234,8 +237,8 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 
   const types::Type *doGetType() const override;
-  std::vector<Value *> doGetChildren() const override;
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override;
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -268,8 +271,9 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 
   const types::Type *doGetType() const override { return arrayType; }
-  std::vector<Value *> doGetChildren() const override { return {}; }
-  int doReplaceChild(int id, Value *newValue) override { return 0; }
+
+  std::vector<types::Type *> doGetUsedTypes() const override { return {arrayType}; }
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
   Value *doClone() const override;
 };
@@ -308,8 +312,8 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 
   const types::Type *doGetType() const override;
-  std::vector<Value *> doGetChildren() const override { return {}; }
-  int doReplaceChild(int id, Value *newValue) override { return 0; }
+  std::vector<types::Type *> doGetUsedTypes() const override { return {inspectType}; }
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
   Value *doClone() const override;
 };
@@ -342,8 +346,9 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 
   const types::Type *doGetType() const override { return type; }
-  std::vector<Value *> doGetChildren() const override { return {}; }
-  int doReplaceChild(int id, Value *newValue) override { return 0; }
+
+  std::vector<types::Type *> doGetUsedTypes() const override { return {type}; }
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
   Value *doClone() const override;
 };
@@ -398,10 +403,10 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 
   const types::Type *doGetType() const override { return trueValue->getType(); }
-  std::vector<Value *> doGetChildren() const override {
+  std::vector<Value *> doGetUsedValues() const override {
     return {cond, trueValue, falseValue};
   }
-  int doReplaceChild(int id, Value *newValue) override;
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -410,7 +415,7 @@ private:
 class ControlFlowInstr : public AcceptorExtend<ControlFlowInstr, Instr> {
 protected:
   /// the target
-  Flow *target;
+  Value *target;
 
 public:
   static const char NodeId;
@@ -421,16 +426,16 @@ public:
       : AcceptorExtend(std::move(name)), target(target) {}
 
   /// @return the target
-  Flow *getTarget() { return target; }
+  Flow *getTarget() { return cast<Flow>(target); }
   /// @return the target
-  const Flow *getTarget() const { return target; }
+  const Flow *getTarget() const { return cast<Flow>(target); }
   /// Sets the count.
   /// @param f the new value
   void setTarget(Flow *f) { target = f; }
 
 private:
-  std::vector<Value *> doGetChildren() const override { return {target}; }
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override { return {target}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
 };
 
 /// Instr representing a break statement.
@@ -482,8 +487,8 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetChildren() const override;
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override;
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -510,8 +515,8 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetChildren() const override;
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override;
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -538,8 +543,8 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetChildren() const override { return {value}; }
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override { return {value}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -548,7 +553,7 @@ private:
 class FlowInstr : public AcceptorExtend<FlowInstr, Instr> {
 private:
   /// the flow
-  Flow *flow;
+  Value *flow;
   /// the output value
   Value *val;
 
@@ -563,9 +568,9 @@ public:
       : AcceptorExtend(std::move(name)), flow(flow), val(val) {}
 
   /// @return the flow
-  Flow *getFlow() { return flow; }
+  Flow *getFlow() { return cast<Flow>(flow); }
   /// @return the flow
-  const Flow *getFlow() const { return flow; }
+  const Flow *getFlow() const { return cast<Flow>(flow); }
   /// Sets the flow.
   /// @param f the new flow
   void setFlow(Flow *f) { flow = f; }
@@ -582,8 +587,8 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 
   const types::Type *doGetType() const override { return val->getType(); }
-  std::vector<Value *> doGetChildren() const override { return {flow, val}; }
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override { return {flow, val}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };

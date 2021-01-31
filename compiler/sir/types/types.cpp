@@ -47,7 +47,24 @@ RecordType::RecordType(std::string name, std::vector<Type *> mTypes)
   }
 }
 
-bool RecordType::equals(Type *other) {
+std::vector<Type *> RecordType::doGetUsedTypes() const {
+  std::vector<Type *> ret;
+  for (auto &f : fields)
+    ret.push_back(const_cast<Type *>(f.getType()));
+  return ret;
+}
+
+int RecordType::doReplaceUsedType(const std::string &name, Type *newType) {
+  auto count = 0;
+  for (auto &f : fields)
+    if (f.getType()->getName() == name) {
+      f.setType(newType);
+      ++count;
+    }
+  return count;
+}
+
+bool RecordType::doEquals(const Type *other) const {
   auto *r = cast<RecordType>(other);
 
   if (!r || fields.size() != r->fields.size())
@@ -76,7 +93,7 @@ const Type *RecordType::getMemberType(const std::string &n) const {
 int RecordType::getMemberIndex(const std::string &n) const {
   auto it = std::find_if(fields.begin(), fields.end(),
                          [n](auto &x) { return x.getName() == n; });
-  size_t index = std::distance(fields.begin(), it);
+  int index = std::distance(fields.begin(), it);
   return (index < fields.size()) ? index : -1;
 }
 
@@ -105,9 +122,39 @@ std::ostream &RefType::doFormat(std::ostream &os) const {
   return os;
 }
 
+int RefType::doReplaceUsedType(const std::string &name, Type *newType) {
+  if (contents->getName() == name) {
+    auto *record = cast<RecordType>(newType);
+    assert(record);
+    contents = record;
+    return 1;
+  }
+  return 0;
+}
+
 const char FuncType::NodeId = 0;
 
-bool FuncType::equals(Type *other) {
+std::vector<Type *> FuncType::doGetUsedTypes() const {
+  auto ret = argTypes;
+  ret.push_back(rType);
+  return ret;
+}
+
+int FuncType::doReplaceUsedType(const std::string &name, Type *newType) {
+  auto count = 0;
+  if (rType->getName() == name) {
+    rType = newType;
+    ++count;
+  }
+  for (auto &a : argTypes)
+    if (a->getName() == name) {
+      a = newType;
+      ++count;
+    }
+  return count;
+}
+
+bool FuncType::doEquals(const Type *other) const {
   auto *f = cast<FuncType>(other);
   if (!f || !rType->equals(f->rType) || argTypes.size() != f->argTypes.size())
     return false;
@@ -144,6 +191,14 @@ std::string FuncType::getInstanceName(Type *rType,
 
 const char DerivedType::NodeId = 0;
 
+int DerivedType::doReplaceUsedType(const std::string &name, Type *newType) {
+  if (base->getName() == name) {
+    base = newType;
+    return 1;
+  }
+  return 0;
+}
+
 const char PointerType::NodeId = 0;
 
 std::string PointerType::getInstanceName(Type *base) {
@@ -176,7 +231,7 @@ std::string GeneratorType::getInstanceName(Type *base) {
 
 const char IntNType::NodeId = 0;
 
-bool IntNType::equals(Type *other) {
+bool IntNType::doEquals(const Type *other) const {
   auto *i = cast<IntNType>(other);
   return i && sign == i->sign && len == i->len;
 }

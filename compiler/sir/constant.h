@@ -23,8 +23,9 @@ public:
 
 private:
   const types::Type *doGetType() const override { return type; }
-  std::vector<Value *> doGetChildren() const override { return {}; }
-  int doReplaceChild(int id, Value *newValue) override { return 0; }
+
+  std::vector<types::Type *> doGetUsedTypes() const override { return {type}; }
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 };
 
 template <typename ValueType>

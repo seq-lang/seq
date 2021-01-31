@@ -73,10 +73,10 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetChildren() const override {
+  std::vector<Value *> doGetUsedValues() const override {
     return std::vector<Value *>(series.begin(), series.end());
   }
-  int doReplaceChild(int id, Value *newValue) override;
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -87,7 +87,7 @@ private:
   /// the condition
   Value *cond;
   /// the body
-  Flow *body;
+  Value *body;
 
 public:
   static const char NodeId;
@@ -108,9 +108,9 @@ public:
   void setCond(Value *c) { cond = c; }
 
   /// @return the body
-  Flow *getBody() { return body; }
+  Flow *getBody() { return cast<Flow>(body); }
   /// @return the body
-  const Flow *getBody() const { return body; }
+  const Flow *getBody() const { return cast<Flow>(body); }
   /// Sets the body.
   /// @param f the new value
   void setBody(Flow *f) { body = f; }
@@ -118,8 +118,8 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetChildren() const override { return {cond, body}; }
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override { return {cond, body}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -130,7 +130,7 @@ private:
   /// the iterator
   Value *iter;
   /// the body
-  Flow *body;
+  Value *body;
 
   /// the variable
   Var *var;
@@ -156,9 +156,9 @@ public:
   void setIter(Value *f) { iter = f; }
 
   /// @return the body
-  Flow *getBody() { return body; }
+  Flow *getBody() { return cast<Flow>(body); }
   /// @return the body
-  const Flow *getBody() const { return body; }
+  const Flow *getBody() const { return cast<Flow>(body); }
   /// Sets the body.
   /// @param f the new body
   void setBody(Flow *f) { body = f; }
@@ -174,8 +174,11 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetChildren() const override { return {iter, body}; }
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override { return {iter, body}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
+
+  std::vector<Var *> doGetUsedVariables() const override { return {var}; }
+  int doReplaceUsedVariable(int id, Var *newVar) override;
 
   Value *doClone() const override;
 };
@@ -186,9 +189,9 @@ private:
   /// the condition
   Value *cond;
   /// the true branch
-  Flow *trueBranch;
+  Value *trueBranch;
   /// the false branch
-  Flow *falseBranch;
+  Value *falseBranch;
 
 public:
   static const char NodeId;
@@ -204,17 +207,17 @@ public:
         falseBranch(falseBranch) {}
 
   /// @return the true branch
-  Flow *getTrueBranch() { return trueBranch; }
+  Flow *getTrueBranch() { return cast<Flow>(trueBranch); }
   /// @return the true branch
-  const Flow *getTrueBranch() const { return trueBranch; }
+  const Flow *getTrueBranch() const { return cast<Flow>(trueBranch); }
   /// Sets the true branch.
   /// @param f the new true branch
   void setTrueBranch(Flow *f) { trueBranch = f; }
 
   /// @return the false branch
-  Flow *getFalseBranch() { return falseBranch; }
+  Flow *getFalseBranch() { return cast<Flow>(falseBranch); }
   /// @return the false branch
-  const Flow *getFalseBranch() const { return falseBranch; }
+  const Flow *getFalseBranch() const { return cast<Flow>(falseBranch); }
   /// Sets the false.
   /// @param f the new false
   void setFalseBranch(Flow *f) { falseBranch = f; }
@@ -230,8 +233,8 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetChildren() const override;
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override;
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -243,25 +246,26 @@ public:
   class Catch {
   private:
     /// the handler
-    Flow *handler;
+    Value *handler;
     /// the catch type, may be nullptr
-    const types::Type *type;
+    types::Type *type;
     /// the catch variable, may be nullptr
     Var *catchVar;
 
   public:
-    explicit Catch(Flow *handler, const types::Type *type = nullptr,
-                   Var *catchVar = nullptr)
+    explicit Catch(Flow *handler, types::Type *type = nullptr, Var *catchVar = nullptr)
         : handler(handler), type(type), catchVar(catchVar) {}
 
     /// @return the handler
-    Flow *getHandler() { return handler; }
+    Flow *getHandler() { return cast<Flow>(handler); }
     /// @return the handler
-    const Flow *getHandler() const { return handler; }
+    const Flow *getHandler() const { return cast<Flow>(handler); }
     /// Sets the handler.
     /// @param h the new value
     void setHandler(Flow *h) { handler = h; }
 
+    /// @return the catch type, may be nullptr
+    types::Type *getType() { return type; }
     /// @return the catch type, may be nullptr
     const types::Type *getType() const { return type; }
     /// Sets the catch type.
@@ -282,9 +286,9 @@ private:
   std::list<Catch> catches;
 
   /// the body
-  Flow *body;
+  Value *body;
   /// the finally, may be nullptr
-  Flow *finally;
+  Value *finally;
 
 public:
   static const char NodeId;
@@ -297,17 +301,17 @@ public:
       : AcceptorExtend(std::move(name)), body(body), finally(finally) {}
 
   /// @return the body
-  Flow *getBody() { return body; }
+  Flow *getBody() { return cast<Flow>(body); }
   /// @return the body
-  const Flow *getBody() const { return body; }
+  const Flow *getBody() const { return cast<Flow>(body); }
   /// Sets the body.
   /// @param f the new
   void setBody(Flow *f) { body = f; }
 
   /// @return the finally
-  Flow *getFinally() { return finally; }
+  Flow *getFinally() { return cast<Flow>(finally); }
   /// @return the finally
-  const Flow *getFinally() const { return finally; }
+  const Flow *getFinally() const { return cast<Flow>(finally); }
   /// Sets the finally.
   /// @param f the new
   void setFinally(Flow *f) { finally = f; }
@@ -354,8 +358,14 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetChildren() const override;
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override;
+  int doReplaceUsedValue(int id, Value *newValue) override;
+
+  std::vector<types::Type *> doGetUsedTypes() const override;
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
+
+  std::vector<Var *> doGetUsedVariables() const override;
+  int doReplaceUsedVariable(int id, Var *newVar) override;
 
   Value *doClone() const override;
 };
@@ -442,7 +452,7 @@ public:
   /// @param stages vector of pipeline stages
   /// @param name the name
   explicit PipelineFlow(std::vector<Stage> stages = {}, std::string name = "")
-      : AcceptorExtend(std::move(name)), stages(stages) {}
+      : AcceptorExtend(std::move(name)), stages(std::move(stages)) {}
 
   /// @return an iterator to the first stage
   auto begin() { return stages.begin(); }
@@ -485,8 +495,8 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetChildren() const override;
-  int doReplaceChild(int id, Value *newValue) override;
+  std::vector<Value *> doGetUsedValues() const override;
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };

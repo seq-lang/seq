@@ -16,9 +16,10 @@ namespace seq {
 namespace ir {
 
 class Func;
+class Var;
 
 /// SIR object representing a variable.
-class Var : public AcceptorExtend<Var, IRNode>, public IdMixin, public ParentFuncMixin {
+class Var : public ReplaceableNodeBase<Var>, public IdMixin, public ParentFuncMixin {
 private:
   /// the variable's type
   types::Type *type;
@@ -33,37 +34,77 @@ public:
   /// @param global true if the variable is global
   /// @param name the variable's name
   explicit Var(types::Type *type, bool global = false, std::string name = "")
-      : AcceptorExtend(std::move(name)), type(type), global(global) {}
+      : ReplaceableNodeBase(std::move(name)), type(type), global(global) {}
+
+  std::vector<Value *> getUsedValues() override {
+    return getActual()->doGetUsedValues();
+  }
+  std::vector<const Value *> getUsedValues() const override {
+    auto ret = getActual()->doGetUsedValues();
+    return std::vector<const Value *>(ret.begin(), ret.end());
+  }
+  int replaceUsedValue(int id, Value *newValue) override {
+    return doReplaceUsedValue(id, newValue);
+  }
+  using IRNode::replaceUsedValue;
+
+  std::vector<types::Type *> getUsedTypes() override {
+    return getActual()->doGetUsedTypes();
+  }
+  std::vector<const types::Type *> getUsedTypes() const override {
+    auto ret = getActual()->doGetUsedTypes();
+    return std::vector<const types::Type *>(ret.begin(), ret.end());
+  }
+  int replaceUsedType(const std::string &name, types::Type *newType) override {
+    return getActual()->doReplaceUsedType(name, newType);
+  }
+  using IRNode::replaceUsedType;
+
+  std::vector<Var *> getUsedVariables() override { return doGetUsedVariables(); }
+  std::vector<const Var *> getUsedVariables() const override {
+    auto ret = doGetUsedVariables();
+    return std::vector<const Var *>(ret.begin(), ret.end());
+  }
+  int replaceUsedVariable(int id, Var *newVar) override {
+    return getActual()->doReplaceUsedVariable(id, newVar);
+  }
+  using IRNode::replaceUsedVariable;
 
   /// @return the type
-  types::Type *getType() { return type; }
+  types::Type *getType() { return getActual()->type; }
   /// @return the type
-  const types::Type *getType() const { return type; }
+  const types::Type *getType() const { return getActual()->type; }
   /// Sets the type.
   /// @param t the new type
-  void setType(types::Type *t) { type = t; }
+  void setType(types::Type *t) { getActual()->type = t; }
 
   /// @return true if the variable is global
-  bool isGlobal() const { return global; }
+  bool isGlobal() const { return getActual()->global; }
   /// Sets the global flag.
   /// @param v the new value
-  void setGlobal(bool v = true) { global = v; }
+  void setGlobal(bool v = true) { getActual()->global = v; }
 
   std::string referenceString() const override {
-    return fmt::format(FMT_STRING("{}.{}"), getName(), getId());
+    return fmt::format(FMT_STRING("{}.{}"), getActual()->getName(),
+                       getActual()->getId());
   }
 
   /// @return a clone of the value
   Var *clone() const;
 
-  friend std::ostream &operator<<(std::ostream &os, const Var &a) {
-    return a.doFormat(os);
-  }
-
 private:
   virtual Var *doClone() const;
 
-  virtual std::ostream &doFormat(std::ostream &os) const;
+  std::ostream &doFormat(std::ostream &os) const override;
+
+  virtual std::vector<Value *> doGetUsedValues() const { return {}; }
+  virtual int doReplaceUsedValue(int id, Value *newValue) { return 0; }
+
+  virtual std::vector<types::Type *> doGetUsedTypes() const { return {type}; }
+  virtual int doReplaceUsedType(const std::string &name, types::Type *newType);
+
+  virtual std::vector<Var *> doGetUsedVariables() const { return {}; }
+  virtual int doReplaceUsedVariable(int id, Var *newVar) { return 0; }
 };
 
 /// Value that contains an unowned variable reference.
@@ -95,8 +136,9 @@ private:
   }
 
   const types::Type *doGetType() const override { return val->getType(); }
-  std::vector<Value *> doGetChildren() const override { return {}; }
-  int doReplaceChild(int id, Value *newValue) override { return 0; }
+
+  std::vector<Var *> doGetUsedVariables() const override { return {val}; }
+  int doReplaceUsedVariable(int id, Var *newVar) override;
 
   Value *doClone() const override;
 };
@@ -130,8 +172,9 @@ private:
   }
 
   const types::Type *doGetType() const override;
-  std::vector<Value *> doGetChildren() const override { return {}; }
-  int doReplaceChild(int id, Value *newValue) override { return 0; }
+
+  std::vector<Var *> doGetUsedVariables() const override { return {val}; }
+  int doReplaceUsedVariable(int id, Var *newVar) override;
 
   Value *doClone() const override;
 };
