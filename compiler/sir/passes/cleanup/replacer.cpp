@@ -34,6 +34,28 @@ void ReplaceCleanupPass::execute(IRModule *module) {
     }
   }
 
+  {
+    auto *v = module->getArgVar();
+    for (auto *c : v->getUsedValues()) {
+      if (c->hasReplacement()) {
+        v->replaceUsedValue(c, c->getActual());
+        valuesToDelete.insert(c);
+      }
+    }
+    for (auto *t : v->getUsedTypes()) {
+      if (t->hasReplacement()) {
+        v->replaceUsedType(t, t->getActual());
+        typesToDelete.insert(t);
+      }
+    }
+    for (auto *v2 : v->getUsedVariables()) {
+      if (v2->hasReplacement()) {
+        v->replaceUsedVariable(v2, v2->getActual());
+        varsToDelete.insert(v2);
+      }
+    }
+  }
+
   for (auto it = module->values_begin(); it != module->values_end(); ++it) {
     for (auto *c : it->getUsedValues()) {
       if (c->hasReplacement()) {

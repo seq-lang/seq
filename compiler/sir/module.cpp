@@ -45,8 +45,10 @@ const char IRModule::NodeId = 0;
 IRModule::IRModule(std::string name) : AcceptorExtend(std::move(name)) {
   mainFunc = std::make_unique<BodiedFunc>(getVoidRetAndArgFuncType(), "main");
   mainFunc->setModule(this);
+  mainFunc->setReplaceable(false);
   argVar = std::make_unique<Var>(getArrayType(getStringType()), true, "argv");
   argVar->setModule(this);
+  argVar->setReplaceable(false);
 }
 
 Func *IRModule::lookupFunc(const std::string &name,

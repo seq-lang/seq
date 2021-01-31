@@ -293,24 +293,41 @@ public:
 
 template <typename Derived>
 class ReplaceableNodeBase : public AcceptorExtend<Derived, IRNode> {
+private:
+  /// true if the node can be lazily replaced
+  bool replaceable = true;
+
 public:
   using AcceptorExtend<Derived, IRNode>::AcceptorExtend;
 
   static const char NodeId;
 
+  /// @return the logical value of the node
   Derived *getActual() {
     return IRNode::replacement
                ? static_cast<Derived *>(IRNode::replacement)->getActual()
                : static_cast<Derived *>(this);
   }
 
+  /// @return the logical value of the node
   const Derived *getActual() const {
     return IRNode::replacement
                ? static_cast<const Derived *>(IRNode::replacement)->getActual()
                : static_cast<const Derived *>(this);
   }
 
-  void replaceAll(Derived *v) { IRNode::replacement = v; }
+  /// Lazily replaces all instances of the node.
+  /// @param v the new value
+  void replaceAll(Derived *v) {
+    assert(replaceable);
+    IRNode::replacement = v;
+  }
+
+  /// @return true if the object can be replaced
+  bool isReplaceable() const { return replaceable; }
+  /// Sets the object's replaceable flag.
+  /// @param v the new value
+  void setReplaceable(bool v = true) { replaceable = v; }
 };
 
 template <typename Derived> const char ReplaceableNodeBase<Derived>::NodeId = 0;
