@@ -203,3 +203,16 @@ def foo():
 print a, b,
 foo()
 print a, b #: None None [1, 2] 3
+
+#%% default_type_none
+class Test:
+    value: int
+    def __init__(self, value: int):
+        self.value = value
+    def __str__(self):
+        return str(self.value)
+def key_func(k: Test):
+    return k.value
+print sorted([Test(1), Test(3), Test(2)], key=key_func)  #: [1, 2, 3]
+print sorted([Test(1), Test(3), Test(2)], key=lambda x: x.value)  #: [1, 2, 3]
+print sorted([1, 3, 2])  #: [1, 2, 3]

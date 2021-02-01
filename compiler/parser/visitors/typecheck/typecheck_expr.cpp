@@ -52,7 +52,7 @@ ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes, bool allowVo
     seqassert(expr->type, "type not set for {}", expr->toString());
     typ |= expr->type;
   }
-  realizeType(typ->getClass());
+  realize(typ);
   if (!expr->isType() && !allowVoid &&
       (expr->type->is("void") || expr->type->is("T.None")))
     error("expression with void type");
@@ -122,7 +122,7 @@ void TypecheckVisitor::visit(IdExpr *expr) {
   if (getRealizedType(expr->type) &&
       (val->kind == TypecheckItem::Type || val->kind == TypecheckItem::Func))
     expr->value = expr->type->realizedName();
-  expr->done = realizeType(expr->type) != nullptr;
+  expr->done = realize(expr->type) != nullptr;
 }
 
 void TypecheckVisitor::visit(IfExpr *expr) {
@@ -482,7 +482,7 @@ void TypecheckVisitor::visit(YieldExpr *expr) {
   LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), typ->toString());
   ctx->bases.back().returnType |= typ;
   expr->type |= typ->getClass()->generics[0].type;
-  expr->done = realizeType(expr->type) != nullptr;
+  expr->done = realize(expr->type) != nullptr;
 }
 
 void TypecheckVisitor::visit(StmtExpr *expr) {
@@ -499,13 +499,8 @@ void TypecheckVisitor::visit(StmtExpr *expr) {
 /**************************************************************************************/
 
 TypePtr TypecheckVisitor::getRealizedType(TypePtr &typ) {
-  if (typ->getFunc()) {
-    if (auto tf = realizeFunc(typ->getFunc()))
-      return typ |= tf;
-  } else {
-    if (auto tt = realizeType(typ->getClass()))
-      return typ |= tt;
-  }
+  if (auto tf = realize(typ))
+    return typ |= tf;
   return nullptr;
 }
 
@@ -557,8 +552,8 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
   // Check the type equality (operand types and __raw__ pointers must match).
   // TODO: more special cases needed (Optional[T] == Optonal[U] if both are None)
   if (expr->op == "is") {
-    auto lc = realizeType(expr->lexpr->getType());
-    auto rc = realizeType(expr->rexpr->getType());
+    auto lc = realize(expr->lexpr->getType());
+    auto rc = realize(expr->rexpr->getType());
     if (!lc || !rc) {
       // We still do not know the exact types...
       expr->type |= ctx->findInternal("bool");
@@ -691,8 +686,12 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   if (expr->member == "__class__") {
     expr->expr = transform(expr->expr, true, true);
     expr->type |= ctx->findInternal("str");
-    if (auto t = realizeType(expr->expr->type))
-      return transform(N<StringExpr>(t->realizedName()));
+    if (auto t = realize(expr->expr->type)) {
+      if (auto f = t->getFunc())
+        return transform(N<StringExpr>(f->RecordType::realizedName()));
+      else
+        return transform(N<StringExpr>(t->realizedName()));
+    }
     return nullptr;
   }
   expr->expr = transform(expr->expr, true);
@@ -713,7 +712,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
       auto t = ctx->instantiate(getSrcInfo(), member, typ.get());
       LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
       expr->type |= t;
-      expr->done = expr->expr->done && realizeType(expr->type) != nullptr;
+      expr->done = expr->expr->done && realize(expr->type) != nullptr;
       return nullptr;
     } else if (typ->name == "Optional") {
       // Case 3: Transform optional.member to unwrap(optional).member.
@@ -1180,7 +1179,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   // Realize arguments.
   expr->done = true;
   for (auto &ra : reorderedArgs) {
-    if (realizeType(ra.value->type))
+    if (realize(ra.value->type))
       ra.value = transform(ra.value);
     expr->done &= ra.value->done;
   }
@@ -1190,17 +1189,19 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     if (unificationsDone)
       for (int i = 0; i < f->funcGenerics.size(); i++)
         if (ast->generics[i].deflt && f->funcGenerics[i].type->getUnbound()) {
-          // LOG("- def: {}", calleeType->toString());
+          auto deflt = clone(ast->generics[i].deflt);
+          // LOG("- def: {} [{}: {} <~> {}]", calleeFn->toString(),
+          // ast->generics[i].name, deflt->toString(),
+          // f->funcGenerics[i].type->toString());
           // for (auto &r : reorderedArgs)
           // LOG("  - {}", r.value->type->toString());
-          auto deflt = clone(ast->generics[i].deflt);
           if (deflt->getNone())
             f->funcGenerics[i].type |=
                 ctx->instantiate(getSrcInfo(), ctx->findInternal("T.None"));
           else
             f->funcGenerics[i].type |= transformType(deflt)->getType();
         }
-    if (realizeFunc(f))
+    if (realize(f))
       expr->expr = transform(expr->expr);
     expr->done &= expr->expr->done;
   }

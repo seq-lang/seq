@@ -34,10 +34,21 @@ namespace ast {
 
 using namespace types;
 
-types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
+types::TypePtr TypecheckVisitor::realize(types::TypePtr typ) {
   if (!typ || !typ->getClass() || !typ->canRealize())
     return nullptr;
-  auto type = typ->getClass();
+  if (auto f = typ->getFunc()) {
+    auto ret = realizeFunc(f.get());
+    realizeType(ret->getClass().get());
+    return ret;
+  } else {
+    return realizeType(typ->getClass().get());
+  }
+}
+
+types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
+  seqassert(type->canRealize(), "{} not realizable", type->toString());
+
   // We are still not done with type creation...
   for (auto &m : ctx->cache->classes[type->name].fields)
     if (!m.type)
@@ -54,7 +65,7 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
       // Realize generics
       for (auto &e : realizedType->generics)
         if (!e.type->getStatic())
-          if (!realizeType(e.type))
+          if (!realize(e.type))
             return nullptr;
       realizedName = realizedType->realizedTypeName();
 
@@ -66,7 +77,7 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
       // Realize arguments
       if (auto tr = realizedType->getRecord())
         for (auto &a : tr->args)
-          realizeType(a);
+          realize(a);
       auto lt = getLLVMType(realizedType.get());
       // Realize fields.
       vector<const seq::ir::types::Type *> typeArgs;
@@ -77,7 +88,7 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
             ctx->instantiate(realizedType->getSrcInfo(), m.type, realizedType.get());
         LOG_REALIZE("- member: {} -> {}: {}", m.name, m.type->toString(),
                     mt->toString());
-        auto tf = realizeType(mt);
+        auto tf = realize(mt);
         seqassert(tf, "cannot realize {}.{}: {}", realizedName, m.name, mt->toString());
         ctx->cache->classes[realizedType->name]
             .realizations[realizedName]
@@ -101,10 +112,8 @@ types::TypePtr TypecheckVisitor::realizeType(const types::TypePtr &typ) {
   }
 }
 
-types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
-  if (!typ || !typ->getFunc() || !typ->canRealize())
-    return nullptr;
-  auto type = typ->getFunc();
+types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
+  seqassert(type->canRealize(), "{} not realizable", type->toString());
 
   try {
     auto it =
@@ -160,10 +169,10 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
       ctx->realizationDepth++;
       ctx->addBlock();
       ctx->typecheckLevel++;
-      ctx->bases.push_back({type->funcName, type, type->args[0]});
+      ctx->bases.push_back({type->funcName, type->getFunc(), type->args[0]});
       auto clonedAst = ctx->cache->functions[type->funcName].ast->clone();
       auto *ast = (FunctionStmt *)clonedAst.get();
-      addFunctionGenerics(type.get());
+      addFunctionGenerics(type);
 
       // There is no AST linked to internal functions, so make sure not to parse it.
       bool isInternal = in(ast->attributes, ATTR_INTERNAL);
@@ -180,9 +189,10 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
       // Need to populate realization table in advance to make recursive functions
       // work.
       ctx->cache->functions[type->funcName].realizations[type->realizedName()] = {
-          type, nullptr};
+          type->getFunc(), nullptr};
       // Realizations are stored in the top-most base.
-      ctx->bases[0].visitedAsts[type->realizedName()] = {TypecheckItem::Func, type};
+      ctx->bases[0].visitedAsts[type->realizedName()] = {TypecheckItem::Func,
+                                                         type->getFunc()};
 
       StmtPtr realized = nullptr;
       if (!isInternal) {
@@ -195,7 +205,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
           type->args[0] |= ctx->findInternal("void");
       }
       // Realize the return type.
-      type->args[0] |= realizeType(type->args[0]);
+      type->args[0] |= realize(type->args[0]);
       // Create and store a realized AST to be used during the code generation.
       seqassert(ast->args.size() == type->args.size() - 1,
                 "type/AST argument mismatch");
@@ -215,7 +225,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(const types::TypePtr &typ) {
     }
     // Restore old bases back.
     ctx->bases.insert(ctx->bases.end(), oldBases.begin(), oldBases.end());
-    return type;
+    return type->getFunc();
   } catch (exc::ParserException &e) {
     e.trackRealize(fmt::format("{} (arguments {})", type->funcName, type->toString()),
                    getSrcInfo());

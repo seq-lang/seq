@@ -268,8 +268,9 @@ private:
   vector<types::Generic> parseGenerics(const vector<Param> &generics, int level);
 
 private:
-  types::TypePtr realizeType(const types::TypePtr &typ);
-  types::TypePtr realizeFunc(const types::TypePtr &typ);
+  types::TypePtr realize(types::TypePtr typ);
+  types::TypePtr realizeType(types::ClassType *typ);
+  types::TypePtr realizeFunc(types::FuncType *typ);
   std::pair<int, StmtPtr> inferTypes(StmtPtr &&stmt, bool keepLast = false);
   seq::ir::types::Type *getLLVMType(const types::ClassType *t);
 };

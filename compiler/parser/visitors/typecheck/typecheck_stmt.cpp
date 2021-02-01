@@ -97,7 +97,7 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
     stmt->lhs->type |= stmt->type ? stmt->type->getType()
                                   : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
     ctx->add(kind = TypecheckItem::Var, lhs, stmt->lhs->type);
-    stmt->done = realizeType(stmt->lhs->type) != nullptr;
+    stmt->done = realize(stmt->lhs->type) != nullptr;
   } else { // Case 2: Normal assignment
     if (stmt->type && stmt->type->getType()->getClass()) {
       auto t = ctx->instantiate(getSrcInfo(), stmt->type->getType());
@@ -357,7 +357,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
         error("builtins and external functions must be realizable");
       auto typ = ctx->instantiate(getSrcInfo(), t);
       LOG_TYPECHECK("[inst] fn {} -> {}", stmt->name, typ->toString());
-      typ |= realizeFunc(typ->getFunc());
+      typ |= realize(typ->getFunc());
     }
     stmt->done = true;
     return;
