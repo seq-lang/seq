@@ -70,7 +70,7 @@ public:
   template <typename Node> void process(Node *v) { v->accept(*this); }
 
   void processChildren(Value *v) {
-    for (auto *c : v->getChildren()) {
+    for (auto *c : v->getUsedVariables()) {
       if (seen.find(c->getId()) != seen.end())
         continue;
       seen.insert(c->getId());
