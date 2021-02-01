@@ -75,8 +75,15 @@ public:
   /// @param cache Pointer to the shared transformation cache.
   /// @param file Filename of a AST node.
   /// @param barebones Set if a bare-bones standard library is used during testing.
+  /// @param defines
+  ///        User-defined static values (typically pased via seqc -DX=Y).
+  ///        Each value is passed as a string (integer part is ignored).
+  ///        The method will replace this map with a map that links canonical names
+  ///        to their string and integer values.
   static StmtPtr apply(shared_ptr<Cache> cache, const unique_ptr<Stmt> &node,
-                       const string &file, bool barebones = false);
+                       const string &file,
+                       unordered_map<string, pair<string, seq_int_t>> &defines,
+                       bool barebones = false);
 
   /// TODO
   static StmtPtr apply(shared_ptr<SimplifyContext> cache, const StmtPtr &node,

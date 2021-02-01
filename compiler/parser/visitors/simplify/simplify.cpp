@@ -34,7 +34,9 @@ namespace ast {
 using namespace types;
 
 StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
-                               const string &file, bool barebones) {
+                               const string &file,
+                               unordered_map<string, pair<string, seq_int_t>> &defines,
+                               bool barebones) {
   vector<StmtPtr> stmts;
   auto preamble = make_shared<Preamble>();
 
@@ -123,12 +125,24 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   cache->age++;
   // Reuse standard library context as it contains all standard library symbols.
   auto ctx = static_pointer_cast<SimplifyContext>(cache->imports[STDLIB_IMPORT].ctx);
-  // Transform the input node.
   ctx->setFilename(file);
   ctx->moduleName = MODULE_MAIN;
+  // Load the command-line defines.
+  unordered_map<string, pair<string, seq_int_t>> newDefines;
+  for (auto &d : defines) {
+    try {
+      auto canName = ctx->generateCanonicalName(d.first);
+      newDefines[canName] = {d.second.first, stoll(d.second.first)};
+      ctx->add(SimplifyItem::Type, d.first, canName, false, true);
+    } catch (...) {
+      ast::error(format("parameter '{}' is not a valid integer", d.first).c_str());
+    }
+  }
+  defines = newDefines;
   // Prepend __name__ = "__main__".
   stmts.push_back(make_unique<AssignStmt>(make_unique<IdExpr>("__name__"),
                                           make_unique<StringExpr>(MODULE_MAIN)));
+  // Transform the input node.
   stmts.emplace_back(SimplifyVisitor(ctx, preamble).transform(node));
 
   auto suite = make_unique<SuiteStmt>();
