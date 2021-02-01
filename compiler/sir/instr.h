@@ -22,7 +22,8 @@ public:
 
   virtual ~Instr() = default;
 
-  const types::Type *getType() const override;
+private:
+  const types::Type *doGetType() const override;
 };
 
 /// Instr representing setting a memory location.
@@ -63,6 +64,12 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  std::vector<Value *> doGetUsedValues() const override { return {rhs}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
+
+  std::vector<Var *> doGetUsedVariables() const override { return {lhs}; }
+  int doReplaceUsedVariable(int id, Var *newVar) override;
+
   Value *doClone() const override;
 };
 
@@ -84,8 +91,6 @@ public:
   explicit ExtractInstr(Value *val, std::string field, std::string name = "")
       : AcceptorExtend(std::move(name)), val(val), field(std::move(field)) {}
 
-  const types::Type *getType() const override;
-
   /// @return the location
   Value *getVal() { return val; }
   /// @return the location
@@ -102,6 +107,10 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  const types::Type *doGetType() const override;
+  std::vector<Value *> doGetUsedValues() const override { return {val}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -127,8 +136,6 @@ public:
   explicit InsertInstr(Value *lhs, std::string field, Value *rhs, std::string name = "")
       : AcceptorExtend(std::move(name)), lhs(lhs), field(std::move(field)), rhs(rhs) {}
 
-  const types::Type *getType() const override { return lhs->getType(); }
-
   /// @return the left-hand side
   Value *getLhs() { return lhs; }
   /// @return the left-hand side
@@ -153,6 +160,10 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  const types::Type *doGetType() const override { return lhs->getType(); }
+  std::vector<Value *> doGetUsedValues() const override { return {lhs, rhs}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -180,8 +191,6 @@ public:
   /// @param name the instruction's name
   explicit CallInstr(Value *func, std::string name = "")
       : CallInstr(func, {}, std::move(name)) {}
-
-  const types::Type *getType() const override;
 
   /// @return the func
   Value *getFunc() { return func; }
@@ -227,6 +236,10 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  const types::Type *doGetType() const override;
+  std::vector<Value *> doGetUsedValues() const override;
+  int doReplaceUsedValue(int id, Value *newValue) override;
+
   Value *doClone() const override;
 };
 
@@ -234,9 +247,9 @@ private:
 class StackAllocInstr : public AcceptorExtend<StackAllocInstr, Instr> {
 private:
   /// the array type
-  const types::Type *arrayType;
+  types::Type *arrayType;
   /// number of elements to allocate
-  Value *count;
+  seq_int_t count;
 
 public:
   static const char NodeId;
@@ -245,21 +258,22 @@ public:
   /// @param arrayType the type of the array
   /// @param count the number of elements
   /// @param name the name
-  StackAllocInstr(const types::Type *arrayType, Value *count, std::string name = "")
+  StackAllocInstr(types::Type *arrayType, seq_int_t count, std::string name = "")
       : AcceptorExtend(std::move(name)), arrayType(arrayType), count(count) {}
 
-  const types::Type *getType() const override { return arrayType; }
-
   /// @return the count
-  Value *getCount() { return count; }
-  /// @return the count
-  const Value *getCount() const { return count; }
+  seq_int_t getCount() const { return count; }
   /// Sets the count.
   /// @param c the new value
-  void setCount(Value *c) { count = c; }
+  void setCount(seq_int_t c) { count = c; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  const types::Type *doGetType() const override { return arrayType; }
+
+  std::vector<types::Type *> doGetUsedTypes() const override { return {arrayType}; }
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
   Value *doClone() const override;
 };
@@ -271,7 +285,7 @@ public:
 
 private:
   /// the type being inspected
-  const types::Type *inspectType;
+  types::Type *inspectType;
   /// the property being checked
   Property property;
 
@@ -281,11 +295,9 @@ public:
   /// Constructs a type property instruction.
   /// @param type the type being inspected
   /// @param name the name
-  explicit TypePropertyInstr(const types::Type *type, Property property,
+  explicit TypePropertyInstr(types::Type *type, Property property,
                              std::string name = "")
       : AcceptorExtend(std::move(name)), inspectType(type), property(property) {}
-
-  const types::Type *getType() const override;
 
   /// @return the type being inspected
   const types::Type *getInspectType() const { return inspectType; }
@@ -299,6 +311,10 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  const types::Type *doGetType() const override;
+  std::vector<types::Type *> doGetUsedTypes() const override { return {inspectType}; }
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
+
   Value *doClone() const override;
 };
 
@@ -306,7 +322,7 @@ private:
 class YieldInInstr : public AcceptorExtend<YieldInInstr, Instr> {
 private:
   /// the type of the value being yielded in.
-  const types::Type *type;
+  types::Type *type;
   /// whether or not to suspend
   bool suspend;
 
@@ -317,11 +333,8 @@ public:
   /// @param type the type of the value being yielded in
   /// @param supsend whether to suspend
   /// @param name the instruction's name
-  explicit YieldInInstr(const types::Type *type, bool suspend = true,
-                        std::string name = "")
+  explicit YieldInInstr(types::Type *type, bool suspend = true, std::string name = "")
       : AcceptorExtend(std::move(name)), type(type), suspend(suspend) {}
-
-  const types::Type *getType() const override { return type; }
 
   /// @return true if the instruction suspends
   bool isSuspending() const { return suspend; }
@@ -331,6 +344,11 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  const types::Type *doGetType() const override { return type; }
+
+  std::vector<types::Type *> doGetUsedTypes() const override { return {type}; }
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
   Value *doClone() const override;
 };
@@ -356,8 +374,6 @@ public:
   TernaryInstr(Value *cond, Value *trueValue, Value *falseValue, std::string name = "")
       : AcceptorExtend(std::move(name)), cond(cond), trueValue(trueValue),
         falseValue(falseValue) {}
-
-  const types::Type *getType() const override { return trueValue->getType(); }
 
   /// @return the condition
   Value *getCond() { return cond; }
@@ -386,6 +402,12 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  const types::Type *doGetType() const override { return trueValue->getType(); }
+  std::vector<Value *> doGetUsedValues() const override {
+    return {cond, trueValue, falseValue};
+  }
+  int doReplaceUsedValue(int id, Value *newValue) override;
+
   Value *doClone() const override;
 };
 
@@ -393,7 +415,7 @@ private:
 class ControlFlowInstr : public AcceptorExtend<ControlFlowInstr, Instr> {
 protected:
   /// the target
-  Flow *target;
+  Value *target;
 
 public:
   static const char NodeId;
@@ -404,12 +426,16 @@ public:
       : AcceptorExtend(std::move(name)), target(target) {}
 
   /// @return the target
-  Flow *getTarget() { return target; }
+  Flow *getTarget() { return cast<Flow>(target); }
   /// @return the target
-  const Flow *getTarget() const { return target; }
+  const Flow *getTarget() const { return cast<Flow>(target); }
   /// Sets the count.
   /// @param f the new value
   void setTarget(Flow *f) { target = f; }
+
+private:
+  std::vector<Value *> doGetUsedValues() const override { return {target}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
 };
 
 /// Instr representing a break statement.
@@ -461,6 +487,9 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  std::vector<Value *> doGetUsedValues() const override;
+  int doReplaceUsedValue(int id, Value *newValue) override;
+
   Value *doClone() const override;
 };
 
@@ -485,6 +514,9 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<Value *> doGetUsedValues() const override;
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };
@@ -511,6 +543,9 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  std::vector<Value *> doGetUsedValues() const override { return {value}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
+
   Value *doClone() const override;
 };
 
@@ -518,7 +553,7 @@ private:
 class FlowInstr : public AcceptorExtend<FlowInstr, Instr> {
 private:
   /// the flow
-  Flow *flow;
+  Value *flow;
   /// the output value
   Value *val;
 
@@ -532,12 +567,10 @@ public:
   explicit FlowInstr(Flow *flow, Value *val, std::string name = "")
       : AcceptorExtend(std::move(name)), flow(flow), val(val) {}
 
-  const types::Type *getType() const override { return val->getType(); }
-
   /// @return the flow
-  Flow *getFlow() { return flow; }
+  Flow *getFlow() { return cast<Flow>(flow); }
   /// @return the flow
-  const Flow *getFlow() const { return flow; }
+  const Flow *getFlow() const { return cast<Flow>(flow); }
   /// Sets the flow.
   /// @param f the new flow
   void setFlow(Flow *f) { flow = f; }
@@ -552,6 +585,10 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
+
+  const types::Type *doGetType() const override { return val->getType(); }
+  std::vector<Value *> doGetUsedValues() const override { return {flow, val}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
 
   Value *doClone() const override;
 };

@@ -80,7 +80,7 @@ types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
           realize(a);
       auto lt = getLLVMType(realizedType.get());
       // Realize fields.
-      vector<const seq::ir::types::Type *> typeArgs;
+      vector<seq::ir::types::Type *> typeArgs;
       vector<string> names;
       map<std::string, SrcInfo> memberInfo;
       for (auto &m : ctx->cache->classes[realizedType->name].fields) {
@@ -380,7 +380,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   };
 
   seq::ir::types::Type *handle = nullptr;
-  vector<const seq::ir::types::Type *> types;
+  vector<seq::ir::types::Type *> types;
   vector<int> statics;
   for (auto &m : t->generics)
     if (auto s = m.type->getStatic()) {
@@ -422,7 +422,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
     types.erase(types.begin());
     handle = ctx->cache->module->getFuncType(ret, types);
   } else if (auto tr = const_cast<ClassType *>(t)->getRecord()) {
-    vector<const seq::ir::types::Type *> typeArgs;
+    vector<seq::ir::types::Type *> typeArgs;
     vector<string> names;
     map<std::string, SrcInfo> memberInfo;
     for (int ai = 0; ai < tr->args.size(); ai++) {

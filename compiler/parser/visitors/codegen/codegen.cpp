@@ -197,9 +197,10 @@ void CodegenVisitor::visit(CallExpr *expr) {
 void CodegenVisitor::visit(StackAllocExpr *expr) {
   auto c = expr->typeExpr->getType()->getClass();
   assert(c);
-  result =
-      make<StackAllocInstr>(expr, ctx->getModule()->getArrayType(realizeType(c.get())),
-                            transform(expr->expr));
+  auto val = CAST(expr->expr, IntExpr);
+  assert(val);
+  result = make<StackAllocInstr>(
+      expr, ctx->getModule()->getArrayType(realizeType(c.get())), val->intValue);
 }
 
 void CodegenVisitor::visit(DotExpr *expr) {
@@ -518,7 +519,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
     assert(ast);
 
     vector<string> names;
-    vector<const seq::ir::types::Type *> types;
+    vector<seq::ir::types::Type *> types;
     auto t = real.second.type;
     for (int i = 1; i < t->args.size(); i++) {
       types.push_back(realizeType(t->args[i]->getClass().get()));

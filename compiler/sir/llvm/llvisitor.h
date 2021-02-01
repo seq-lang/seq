@@ -9,7 +9,7 @@
 namespace seq {
 namespace ir {
 
-class LLVMVisitor : public util::SIRVisitor {
+class LLVMVisitor : public util::ConstIRVisitor {
 private:
   template <typename V> using CacheBase = std::unordered_map<int, V *>;
   template <typename K, typename V> class Cache : public CacheBase<V> {
@@ -218,7 +218,6 @@ public:
   void visit(const WhileFlow *) override;
   void visit(const ForFlow *) override;
   void visit(const TryCatchFlow *) override;
-  void visit(const UnorderedFlow *) override;
   void visit(const PipelineFlow *) override;
 
   void visit(const AssignInstr *) override;
