@@ -252,7 +252,7 @@ private:
   pair<bool, ExprPtr> transformSpecialCall(CallExpr *expr);
   /// Find all generics on which a given function depends and add them to the context.
   void addFunctionGenerics(const types::FuncType *t);
-  /// Generate a partial function type Partial.N01...01 (where 01...01 is a given mask
+  /// Generate a partial function type Partial.N01...01 (where 01...01 is a mask
   /// of size N) as follows:
   ///   @tuple @no_total_ordering @no_pickle @no_container @no_python
   ///   class Partial.N01...01[T0, T1, ..., TN]:
