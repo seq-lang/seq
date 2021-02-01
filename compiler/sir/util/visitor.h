@@ -10,15 +10,17 @@
   virtual void defaultVisit(seq::ir::x *) {                                            \
     throw std::runtime_error("cannot visit node");                                     \
   }                                                                                    \
-  virtual void visit(seq::ir::x *v) { defaultVisit(v); }                               \
+  virtual void visit(seq::ir::x *v) { defaultVisit(v); }
+
+#define CONST_DEFAULT_VISIT(x)                                                         \
   virtual void defaultVisit(const seq::ir::x *) {                                      \
     throw std::runtime_error("cannot visit const node");                               \
   }                                                                                    \
   virtual void visit(const seq::ir::x *v) { defaultVisit(v); }
 
-#define VISIT(x)                                                                       \
-  virtual void visit(seq::ir::x *v);                                                   \
-  virtual void visit(const seq::ir::x *v)
+#define VISIT(x) virtual void visit(seq::ir::x *v)
+#define CONST_VISIT(x) virtual void visit(const seq::ir::x *v)
+
 namespace seq {
 namespace ir {
 
@@ -60,7 +62,6 @@ class IfFlow;
 class WhileFlow;
 class ForFlow;
 class TryCatchFlow;
-class UnorderedFlow;
 class PipelineFlow;
 
 class Constant;
@@ -86,7 +87,7 @@ class FlowInstr;
 namespace util {
 
 /// Base for SIR visitors
-class SIRVisitor {
+class IRVisitor {
 public:
   DEFAULT_VISIT(IRModule);
 
@@ -108,7 +109,6 @@ public:
   VISIT(WhileFlow);
   VISIT(ForFlow);
   VISIT(TryCatchFlow);
-  VISIT(UnorderedFlow);
   VISIT(PipelineFlow);
 
   DEFAULT_VISIT(Constant);
@@ -150,8 +150,74 @@ public:
   VISIT(types::IntNType);
 };
 
+class ConstIRVisitor {
+public:
+  CONST_DEFAULT_VISIT(IRModule);
+
+  CONST_DEFAULT_VISIT(Var);
+
+  CONST_DEFAULT_VISIT(Func);
+  CONST_VISIT(BodiedFunc);
+  CONST_VISIT(ExternalFunc);
+  CONST_VISIT(InternalFunc);
+  CONST_VISIT(LLVMFunc);
+
+  CONST_DEFAULT_VISIT(Value);
+  CONST_VISIT(VarValue);
+  CONST_VISIT(PointerValue);
+
+  CONST_DEFAULT_VISIT(Flow);
+  CONST_VISIT(SeriesFlow);
+  CONST_VISIT(IfFlow);
+  CONST_VISIT(WhileFlow);
+  CONST_VISIT(ForFlow);
+  CONST_VISIT(TryCatchFlow);
+  CONST_VISIT(PipelineFlow);
+
+  CONST_DEFAULT_VISIT(Constant);
+  CONST_VISIT(TemplatedConstant<seq_int_t>);
+  CONST_VISIT(TemplatedConstant<double>);
+  CONST_VISIT(TemplatedConstant<bool>);
+  CONST_VISIT(TemplatedConstant<std::string>);
+
+  CONST_DEFAULT_VISIT(Instr);
+  CONST_VISIT(AssignInstr);
+  CONST_VISIT(ExtractInstr);
+  CONST_VISIT(InsertInstr);
+  CONST_VISIT(CallInstr);
+  CONST_VISIT(StackAllocInstr);
+  CONST_VISIT(TypePropertyInstr);
+  CONST_VISIT(YieldInInstr);
+  CONST_VISIT(TernaryInstr);
+  CONST_VISIT(BreakInstr);
+  CONST_VISIT(ContinueInstr);
+  CONST_VISIT(ReturnInstr);
+  CONST_VISIT(YieldInstr);
+  CONST_VISIT(ThrowInstr);
+  CONST_VISIT(FlowInstr);
+
+  CONST_DEFAULT_VISIT(types::Type);
+  CONST_VISIT(types::PrimitiveType);
+  CONST_VISIT(types::IntType);
+  CONST_VISIT(types::FloatType);
+  CONST_VISIT(types::BoolType);
+  CONST_VISIT(types::ByteType);
+  CONST_VISIT(types::VoidType);
+  CONST_VISIT(types::RecordType);
+  CONST_VISIT(types::RefType);
+  CONST_VISIT(types::FuncType);
+  CONST_VISIT(types::OptionalType);
+  CONST_VISIT(types::ArrayType);
+  CONST_VISIT(types::PointerType);
+  CONST_VISIT(types::GeneratorType);
+  CONST_VISIT(types::IntNType);
+};
+
 } // namespace util
 } // namespace ir
 } // namespace seq
 
+#undef DEFAULT_VISIT
+#undef CONST_DEFAULT_VISIT
+#undef VISIT
 #undef DEFAULT_VISIT

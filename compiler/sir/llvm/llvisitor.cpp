@@ -130,7 +130,7 @@ llvm::DIFile *LLVMVisitor::DebugInfo::getFile(const std::string &path) {
 }
 
 LLVMVisitor::LLVMVisitor(bool debug, const std::string &flags)
-    : util::SIRVisitor(), context(), builder(context), module(), func(nullptr),
+    : util::ConstIRVisitor(), context(), builder(context), module(), func(nullptr),
       block(nullptr), value(nullptr), vars(), funcs(), coro(), loops(), trycatch(),
       db(debug, flags) {
   llvm::InitializeNativeTarget();
@@ -943,20 +943,15 @@ void LLVMVisitor::visit(const LLVMFunc *x) {
   // format code
   fmt::dynamic_format_arg_store<fmt::format_context> store;
   for (auto it = x->literal_begin(); it != x->literal_end(); ++it) {
-    switch (it->tag) {
-    case LLVMFunc::LLVMLiteral::STATIC: {
-      store.push_back(it->val.staticVal);
-      break;
-    }
-    case LLVMFunc::LLVMLiteral::TYPE: {
-      llvm::Type *llvmType = getLLVMType(it->val.type);
+    if (it->isStatic()) {
+      store.push_back(it->getStaticValue());
+    } else if (it->isType()) {
+      llvm::Type *llvmType = getLLVMType(it->getType());
       std::string bufStr;
       llvm::raw_string_ostream buf(bufStr);
       llvmType->print(buf);
       store.push_back(buf.str());
-      break;
-    }
-    default:
+    } else {
       assert(0);
     }
   }
@@ -1212,7 +1207,7 @@ llvm::Type *LLVMVisitor::getLLVMType(const types::Type *t) {
   if (auto *x = cast<types::RecordType>(t)) {
     std::vector<llvm::Type *> body;
     for (const auto &field : *x) {
-      body.push_back(getLLVMType(field.type));
+      body.push_back(getLLVMType(field.getType()));
     }
     return llvm::StructType::get(context, body);
   }
@@ -1315,17 +1310,17 @@ llvm::DIType *LLVMVisitor::getDITypeHelper(
         auto *subSrcInfo = srcInfo;
         auto *subFile = file;
         if (memberInfo) {
-          auto it = memberInfo->memberSrcInfo.find(field.name);
+          auto it = memberInfo->memberSrcInfo.find(field.getName());
           if (it != memberInfo->memberSrcInfo.end()) {
             subSrcInfo = &it->second;
             subFile = db.getFile(subSrcInfo->file);
           }
         }
         members.push_back(db.builder->createMemberType(
-            diType, field.name, subFile, subSrcInfo->line,
-            layout.getTypeAllocSizeInBits(getLLVMType(field.type)),
+            diType, field.getName(), subFile, subSrcInfo->line,
+            layout.getTypeAllocSizeInBits(getLLVMType(field.getType())),
             /*AlignInBits=*/0, structLayout->getElementOffsetInBits(memberIdx),
-            llvm::DINode::FlagZero, getDITypeHelper(field.type, cache)));
+            llvm::DINode::FlagZero, getDITypeHelper(field.getType(), cache)));
         ++memberIdx;
       }
 
@@ -1864,12 +1859,6 @@ void LLVMVisitor::visit(const TryCatchFlow *x) {
   block = endBlock;
 }
 
-void LLVMVisitor::visit(const UnorderedFlow *x) {
-  for (auto *flow : *x) {
-    process(flow);
-  }
-}
-
 void LLVMVisitor::callStage(const PipelineFlow::Stage *stage) {
   llvm::Value *output = value;
   process(stage->getFunc());
@@ -2165,12 +2154,7 @@ void LLVMVisitor::visit(const StackAllocInstr *x) {
     assert(0 && "StackAllocInstr type is not an array type");
   }
 
-  seq_int_t size = 0;
-  if (auto *constSize = cast<IntConstant>(x->getCount())) {
-    size = constSize->getVal();
-  } else {
-    assert(0 && "StackAllocInstr size is not constant");
-  }
+  seq_int_t size = x->getCount();
 
   builder.SetInsertPoint(func->getEntryBlock().getTerminator());
   auto *arrType = llvm::StructType::get(builder.getInt64Ty(), baseType->getPointerTo());

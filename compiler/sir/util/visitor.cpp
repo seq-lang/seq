@@ -6,101 +6,95 @@ namespace seq {
 namespace ir {
 namespace util {
 
-void SIRVisitor::visit(BodiedFunc *x) { defaultVisit(x); }
-void SIRVisitor::visit(const BodiedFunc *x) { defaultVisit(x); }
-void SIRVisitor::visit(ExternalFunc *x) { defaultVisit(x); }
-void SIRVisitor::visit(const ExternalFunc *x) { defaultVisit(x); }
-void SIRVisitor::visit(InternalFunc *x) { defaultVisit(x); }
-void SIRVisitor::visit(const InternalFunc *x) { defaultVisit(x); }
-void SIRVisitor::visit(LLVMFunc *x) { defaultVisit(x); }
-void SIRVisitor::visit(const LLVMFunc *x) { defaultVisit(x); }
+void IRVisitor::visit(BodiedFunc *x) { defaultVisit(x); }
+void IRVisitor::visit(ExternalFunc *x) { defaultVisit(x); }
+void IRVisitor::visit(InternalFunc *x) { defaultVisit(x); }
+void IRVisitor::visit(LLVMFunc *x) { defaultVisit(x); }
+void IRVisitor::visit(VarValue *x) { defaultVisit(x); }
+void IRVisitor::visit(PointerValue *x) { defaultVisit(x); }
+void IRVisitor::visit(SeriesFlow *x) { defaultVisit(x); }
+void IRVisitor::visit(IfFlow *x) { defaultVisit(x); }
+void IRVisitor::visit(WhileFlow *x) { defaultVisit(x); }
+void IRVisitor::visit(ForFlow *x) { defaultVisit(x); }
+void IRVisitor::visit(TryCatchFlow *x) { defaultVisit(x); }
+void IRVisitor::visit(PipelineFlow *x) { defaultVisit(x); }
+void IRVisitor::visit(TemplatedConstant<seq_int_t> *x) { defaultVisit(x); }
+void IRVisitor::visit(TemplatedConstant<double> *x) { defaultVisit(x); }
+void IRVisitor::visit(TemplatedConstant<bool> *x) { defaultVisit(x); }
+void IRVisitor::visit(TemplatedConstant<std::string> *x) { defaultVisit(x); }
+void IRVisitor::visit(AssignInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(ExtractInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(InsertInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(CallInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(StackAllocInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(YieldInInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(TernaryInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(BreakInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(ContinueInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(ReturnInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(TypePropertyInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(YieldInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(ThrowInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(FlowInstr *x) { defaultVisit(x); }
+void IRVisitor::visit(types::PrimitiveType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::IntType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::FloatType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::BoolType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::ByteType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::VoidType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::RecordType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::RefType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::FuncType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::OptionalType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::ArrayType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::PointerType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::GeneratorType *x) { defaultVisit(x); }
+void IRVisitor::visit(types::IntNType *x) { defaultVisit(x); }
 
-void SIRVisitor::visit(VarValue *x) { defaultVisit(x); }
-void SIRVisitor::visit(const VarValue *x) { defaultVisit(x); }
-void SIRVisitor::visit(PointerValue *x) { defaultVisit(x); }
-void SIRVisitor::visit(const PointerValue *x) { defaultVisit(x); }
-
-void SIRVisitor::visit(SeriesFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(const SeriesFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(IfFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(const IfFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(WhileFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(const WhileFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(ForFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(const ForFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(TryCatchFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(const TryCatchFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(UnorderedFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(const UnorderedFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(PipelineFlow *x) { defaultVisit(x); }
-void SIRVisitor::visit(const PipelineFlow *x) { defaultVisit(x); }
-
-void SIRVisitor::visit(TemplatedConstant<seq_int_t> *x) { defaultVisit(x); }
-void SIRVisitor::visit(const TemplatedConstant<seq_int_t> *x) { defaultVisit(x); }
-void SIRVisitor::visit(TemplatedConstant<double> *x) { defaultVisit(x); }
-void SIRVisitor::visit(const TemplatedConstant<double> *x) { defaultVisit(x); }
-void SIRVisitor::visit(TemplatedConstant<bool> *x) { defaultVisit(x); }
-void SIRVisitor::visit(const TemplatedConstant<bool> *x) { defaultVisit(x); }
-void SIRVisitor::visit(TemplatedConstant<std::string> *x) { defaultVisit(x); }
-void SIRVisitor::visit(const TemplatedConstant<std::string> *x) { defaultVisit(x); }
-
-void SIRVisitor::visit(AssignInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const AssignInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(ExtractInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const ExtractInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(InsertInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const InsertInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(CallInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const CallInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(StackAllocInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const StackAllocInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(YieldInInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const YieldInInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(TernaryInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const TernaryInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(BreakInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const BreakInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(ContinueInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const ContinueInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(ReturnInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const ReturnInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(TypePropertyInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const TypePropertyInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(YieldInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const YieldInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(ThrowInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const ThrowInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(FlowInstr *x) { defaultVisit(x); }
-void SIRVisitor::visit(const FlowInstr *x) { defaultVisit(x); }
-
-void SIRVisitor::visit(types::PrimitiveType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::PrimitiveType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::IntType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::IntType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::FloatType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::FloatType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::BoolType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::BoolType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::ByteType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::ByteType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::VoidType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::VoidType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::RecordType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::RecordType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::RefType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::RefType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::FuncType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::FuncType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::OptionalType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::OptionalType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::ArrayType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::ArrayType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::PointerType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::PointerType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::GeneratorType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::GeneratorType *x) { defaultVisit(x); }
-void SIRVisitor::visit(types::IntNType *x) { defaultVisit(x); }
-void SIRVisitor::visit(const types::IntNType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const BodiedFunc *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const ExternalFunc *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const InternalFunc *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const LLVMFunc *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const VarValue *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const PointerValue *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const SeriesFlow *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const IfFlow *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const WhileFlow *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const ForFlow *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const TryCatchFlow *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const PipelineFlow *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const TemplatedConstant<seq_int_t> *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const TemplatedConstant<double> *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const TemplatedConstant<bool> *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const TemplatedConstant<std::string> *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const AssignInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const ExtractInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const InsertInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const CallInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const StackAllocInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const YieldInInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const TernaryInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const BreakInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const ContinueInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const ReturnInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const TypePropertyInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const YieldInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const ThrowInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const FlowInstr *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::PrimitiveType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::IntType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::FloatType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::BoolType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::ByteType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::VoidType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::RecordType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::RefType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::FuncType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::OptionalType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::ArrayType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::PointerType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::GeneratorType *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const types::IntNType *x) { defaultVisit(x); }
 
 } // namespace util
 } // namespace ir

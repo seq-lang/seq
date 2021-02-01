@@ -170,6 +170,7 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/sir/types/types.h
         compiler/sir/util/context.h
         compiler/sir/util/iterators.h
+        compiler/sir/util/lambda_visitor.h
         compiler/sir/util/visitor.h
         compiler/sir/attribute.h
         compiler/sir/base.h
@@ -183,7 +184,9 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/sir/var.h
         compiler/sir/llvm/llvisitor.h
         compiler/sir/llvm/llvm.h
-        compiler/sir/llvm/revcomp.h)
+        compiler/sir/llvm/revcomp.h
+        compiler/sir/passes/pass.h
+        compiler/sir/passes/cleanup/replacer.h)
 set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/lang/func.cpp
         compiler/lang/lang.cpp
@@ -239,7 +242,8 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/sir/value.cpp
         compiler/sir/var.cpp
         compiler/sir/llvm/llvisitor.cpp
-        compiler/sir/llvm/revcomp.cpp)
+        compiler/sir/llvm/revcomp.cpp
+        compiler/sir/passes/cleanup/replacer.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})

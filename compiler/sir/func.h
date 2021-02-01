@@ -25,7 +25,7 @@ public:
   /// Constructs an SIR function.
   /// @param type the function's type
   /// @param name the function's name
-  explicit Func(const types::Type *type, std::string name = "")
+  explicit Func(types::Type *type, std::string name = "")
       : AcceptorExtend(type, false, std::move(name)), generator(false) {}
 
   virtual ~Func() = default;
@@ -97,12 +97,18 @@ public:
 
   /// @return the unmangled function name
   virtual std::string getUnmangledName() const = 0;
+
+  Func *clone() const { return cast<Func>(Var::clone()); }
+
+private:
+  std::vector<Var *> doGetUsedVariables() const override;
+  int doReplaceUsedVariable(int id, Var *newVar) override;
 };
 
 class BodiedFunc : public AcceptorExtend<BodiedFunc, Func> {
 private:
   /// the function body
-  Flow *body;
+  Value *body;
   /// whether the function is builtin
   bool builtin = false;
 
@@ -114,9 +120,9 @@ public:
   std::string getUnmangledName() const override;
 
   /// @return the function body
-  Flow *getBody() { return body; }
+  Flow *getBody() { return cast<Flow>(body); }
   /// @return the function body
-  const Flow *getBody() const { return body; }
+  const Flow *getBody() const { return cast<Flow>(body); }
   /// Sets the function's body.
   /// @param b the new body
   void setBody(Flow *b) { body = b; }
@@ -128,7 +134,12 @@ public:
   void setBuiltin(bool v = true) { builtin = v; }
 
 private:
+  Var *doClone() const override;
+
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<Value *> doGetUsedValues() const override { return {body}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
 };
 
 class ExternalFunc : public AcceptorExtend<ExternalFunc, Func> {
@@ -146,13 +157,15 @@ public:
   void setUnmangledName(std::string v) { unmangledName = std::move(v); }
 
 private:
+  Var *doClone() const override;
+
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
 class InternalFunc : public AcceptorExtend<InternalFunc, Func> {
 private:
   /// parent type of the function if it is magic
-  const types::Type *parentType = nullptr;
+  types::Type *parentType = nullptr;
 
 public:
   static const char NodeId;
@@ -162,26 +175,51 @@ public:
   std::string getUnmangledName() const override;
 
   /// @return the parent type
+  types::Type *getParentType() { return parentType; }
+  /// @return the parent type
   const types::Type *getParentType() const { return parentType; }
   /// Sets the parent type.
   /// @param p the new parent
-  void setParentType(const types::Type *p) { parentType = p; }
+  void setParentType(types::Type *p) { parentType = p; }
 
 private:
+  Var *doClone() const override;
+
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<types::Type *> doGetUsedTypes() const override;
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 };
 
 class LLVMFunc : public AcceptorExtend<LLVMFunc, Func> {
 public:
-  struct LLVMLiteral {
+  class LLVMLiteral {
+  private:
     union {
       int64_t staticVal;
-      const types::Type *type;
+      types::Type *type;
     } val;
     enum { STATIC, TYPE } tag;
 
+  public:
     explicit LLVMLiteral(int64_t v) : val{v}, tag(STATIC) {}
-    explicit LLVMLiteral(const types::Type *t) : val{}, tag(TYPE) { val.type = t; }
+    explicit LLVMLiteral(types::Type *t) : val{}, tag(TYPE) { val.type = t; }
+
+    bool isType() const { return tag == TYPE; }
+    bool isStatic() const { return tag == STATIC; }
+
+    types::Type *getType() { return val.type; }
+    const types::Type *getType() const { return val.type; }
+    void setType(types::Type *t) {
+      val.type = t;
+      tag = TYPE;
+    }
+
+    int64_t getStaticValue() const { return val.staticVal; }
+    void setStaticValue(int64_t v) {
+      val.staticVal = v;
+      tag = STATIC;
+    }
   };
 
 private:
@@ -233,7 +271,12 @@ public:
   void setLLVMBody(std::string v) { llvmBody = std::move(v); }
 
 private:
+  Var *doClone() const override;
+
   std::ostream &doFormat(std::ostream &os) const override;
+
+  std::vector<types::Type *> doGetUsedTypes() const override;
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 };
 
 } // namespace ir
