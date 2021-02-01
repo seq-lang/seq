@@ -57,8 +57,8 @@ Func *IRModule::lookupFunc(const std::string &name,
   auto it = std::find_if(begin(), end(), [name, argTypes, rType](Var *v) {
     auto *f = cast<Func>(v);
     auto *t = cast<types::FuncType>(v->getType());
-    return f && name == f->getUnmangledName() &&
-           argMatch(t, argTypes) && t->getReturnType()->getName() == rType->getName();
+    return f && name == f->getUnmangledName() && argMatch(t, argTypes) &&
+           t->getReturnType()->getName() == rType->getName();
   });
   return it != end() ? cast<Func>(*it) : nullptr;
 }

@@ -17,15 +17,19 @@ namespace seq {
 namespace ir {
 namespace util {
 
+/// Pass that visits all values in a module.
 class LambdaValueVisitor : public IRVisitor {
 private:
   std::unordered_set<int> seen;
+  std::vector<IRNode *> stack;
 
 public:
   void visit(IRModule *m) override {
+    stack.push_back(m);
     process(m->getMainFunc());
     for (auto *s : *m)
       process(s);
+    stack.pop_back();
   }
 
   void defaultVisit(Var *v) override {}
@@ -69,13 +73,22 @@ public:
 
   template <typename Node> void process(Node *v) { v->accept(*this); }
 
+  /// Return the parent of the current node.
+  /// @param level the number of levels up from the current node
+  template <typename Desired = IRNode> Desired *getParent(int level = 0) {
+    return cast<Desired>(stack[stack.size() - level - 1]);
+  }
+
+private:
   void processChildren(Value *v) {
+    stack.push_back(v);
     for (auto *c : v->getUsedVariables()) {
       if (seen.find(c->getId()) != seen.end())
         continue;
       seen.insert(c->getId());
       process(c);
     }
+    stack.pop_back();
   }
 };
 
