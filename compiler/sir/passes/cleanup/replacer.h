@@ -7,9 +7,9 @@ namespace ir {
 namespace passes {
 namespace cleanup {
 
-class ReplaceCleanupPass : public IRTransformationPass {
+class ReplaceCleanupPass : public Pass {
 public:
-  void execute(IRModule *module) override;
+  void run(IRModule *module) override;
 };
 
 } // namespace cleanup

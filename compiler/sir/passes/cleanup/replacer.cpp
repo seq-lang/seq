@@ -7,7 +7,7 @@ namespace ir {
 namespace passes {
 namespace cleanup {
 
-void ReplaceCleanupPass::execute(IRModule *module) {
+void ReplaceCleanupPass::run(IRModule *module) {
   std::unordered_set<Value *> valuesToDelete;
   std::unordered_set<types::Type *> typesToDelete;
   std::unordered_set<Var *> varsToDelete;

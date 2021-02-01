@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
                            /*isTest=*/false, /*startLine=*/0, defmap);
   if (!module)
     return EXIT_FAILURE;
-  
+
   seq::ir::LLVMVisitor visitor(debug.getValue());
   visitor.visit(module);
 
