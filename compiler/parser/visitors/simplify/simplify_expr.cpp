@@ -360,12 +360,11 @@ void SimplifyVisitor::visit(IndexExpr *expr) {
   bool allTypes = true;
   bool hasRealTypes = false; // real types are non-static type expressions
   for (auto &i : it) {
-    bool isType = i->isType() || i->isStaticExpr;
     if (i->isType())
       hasRealTypes = true;
-    if (!isType)
+    if (!i->isType() && !i->isStaticExpr)
       allTypes = false;
-    if (isType && !allTypes)
+    if (i->isType() && !allTypes)
       error(i, "invalid type expression");
   }
   if (!allTypes && e->isType())

@@ -204,6 +204,16 @@ print f(1) #: 2
 fx: Function[int, int] = foo
 print fx(2) #: 3
 
+#%% index_special,barebones
+class Foo:
+    def __getitem__(self, foo):
+        print foo
+f = Foo()
+f[0,0] #: (0, 0)
+f[0,:] #: (0, (None, None, None))
+f[:,:] #: ((None, None, None), (None, None, None))
+f[:,0] #: ((None, None, None), 0)
+
 #%% index_error,barebones
 Ptr['s'] #! ERROR: expected type parameters
 

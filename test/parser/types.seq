@@ -216,3 +216,12 @@ def key_func(k: Test):
 print sorted([Test(1), Test(3), Test(2)], key=key_func)  #: [1, 2, 3]
 print sorted([Test(1), Test(3), Test(2)], key=lambda x: x.value)  #: [1, 2, 3]
 print sorted([1, 3, 2])  #: [1, 2, 3]
+
+#%% nested_map
+print list(map(lambda i: i-2, map(lambda i: i+1, range(5))))
+#: [-1, 0, 1, 2, 3]
+
+def h(x: list[int]):
+    return x
+print h(list(map(lambda i: i-1, map(lambda i: i+2, range(5)))))
+#: [1, 2, 3, 4, 5]
