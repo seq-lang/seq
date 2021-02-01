@@ -118,7 +118,7 @@ void TypecheckVisitor::visit(IdExpr *expr) {
   LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
   expr->type |= t;
 
-  /// Check if we can realize the type.
+  // Check if we can realize the type.
   if (getRealizedType(expr->type) &&
       (val->kind == TypecheckItem::Type || val->kind == TypecheckItem::Func))
     expr->value = expr->type->realizedName();
@@ -1135,25 +1135,14 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
             N<CallExpr>(N<IdExpr>("Optional"), move(reorderedArgs[ri].value)));
         reorderedArgs[ri].value->type |= expectedClass;
       } else if (ast && startswith(expectedClass->name, "Function.N") && argClass &&
-                 !startswith(argClass->name, "Function.N")) {
+                 (!startswith(argClass->name, "Function.N"))) {
         // Case 3: allow any callable to match Function[] signature.
-        // TODO: this is only allowed with Seq function calls (not function pointers).
-        if (!startswith(argClass->name, "Partial.N")) {
+        if (!startswith(argClass->name, "Partial.N"))
+          // Transform it to a Partial.N... via __call__ magic.
           reorderedArgs[ri].value =
               transform(N<DotExpr>(move(reorderedArgs[ri].value), "__call__"));
-          argClass = reorderedArgs[ri].value->getType()->getClass();
-        }
-        if (argClass && startswith(argClass->name, "Partial.N")) {
-          // Handle partial call arguments.
-          argClass->generics[0].type |= expectedClass->generics[0].type;
-          if (argClass->generics.size() != expectedClass->generics.size() + 1)
-            error("incompatible partial type");
-          for (int j = 1; j < expectedClass->generics.size(); j++)
-            argClass->generics[j + 1].type |= expectedClass->generics[j].type;
-          expr->expr->getType()->getFunc()->args[ri + 1] = argClass;
-        } else {
-          reorderedArgs[ri].value->type |= expectedTyp;
-        }
+        reorderedArgs[ri].value->type |= expectedTyp;
+        calleeFn->args[argIndex[ri] + 1] = reorderedArgs[ri].value->type;
       } else {
         // Case 4: normal unification.
         reorderedArgs[ri].value->type |= expectedTyp;
