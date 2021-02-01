@@ -151,13 +151,15 @@ public:
     typesMap.erase(it);
   }
 
-  /// Finds a function by mangled name and argument types.
-  /// @param name the mangled name
+  /// Finds a function by unmangled name and types.
+  /// @param name the unmangled name
   /// @param argTypes the argument types
+  /// @param rType the return type
   /// @return the function if it exists, nullptr otherwise
-  Func *lookupFunc(const std::string &name, const std::vector<types::Type *> &argTypes);
-  /// Finds a function by mangled name.
-  /// @param name the mangled name
+  Func *lookupFunc(const std::string &name, const std::vector<types::Type *> &argTypes,
+                   const types::Type *rType);
+  /// Finds a function by unmangled name.
+  /// @param name the unmangled name
   /// @param argTypes the argument types
   /// @return the function if it exists, nullptr otherwise
   Func *lookupFunc(const std::string &name);
