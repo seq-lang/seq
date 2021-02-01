@@ -52,10 +52,13 @@ IRModule::IRModule(std::string name) : AcceptorExtend(std::move(name)) {
 }
 
 Func *IRModule::lookupFunc(const std::string &name,
-                           const std::vector<types::Type *> &argTypes) {
-  auto it = std::find_if(begin(), end(), [name, argTypes](Var *v) {
-    return isA<Func>(v) && name == v->getName() &&
-           argMatch(cast<types::FuncType>(v->getType()), argTypes);
+                           const std::vector<types::Type *> &argTypes,
+                           const types::Type *rType) {
+  auto it = std::find_if(begin(), end(), [name, argTypes, rType](Var *v) {
+    auto *f = cast<Func>(v);
+    auto *t = cast<types::FuncType>(v->getType());
+    return f && name == f->getUnmangledName() &&
+           argMatch(t, argTypes) && t->getReturnType()->getName() == rType->getName();
   });
   return it != end() ? cast<Func>(*it) : nullptr;
 }

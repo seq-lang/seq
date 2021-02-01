@@ -69,18 +69,16 @@ def test_min_max():
 def test_map_filter():
     assert list(map(lambda i: i+1, (i*2 for i in range(5)))) == [1, 3, 5, 7, 9]
     assert list(map(lambda i: i+1, (i*2 for i in range(0)))) == []
-    #assert list(map(lambda i: i-1, map(lambda i: i+1, (i*2 for i in range(5))))) == [0, 2, 4, 6, 8]  # TODO: does not work
+    assert list(map(lambda i: i//2, map(lambda i: i-1, map(lambda i: i+1, (i*2 for i in range(5)))))) == [0, 1, 2, 3, 4]
     def f(x: int) -> int:
         return x - 1
     def g(x: int) -> int:
         return x + 1
     assert list(map(f, map(g, (i*2 for i in range(5))))) == [0, 2, 4, 6, 8]
 
-    ''' TODO: does not work
     def h(x: list[int]):
         return x
     assert h(list(map(lambda i: i-1, map(lambda i: i+1, range(5))))) == [0, 1, 2, 3, 4]
-    '''
 
     assert list(filter(lambda i: i % 2 == 0, range(5))) == [0, 2, 4]
     assert list(filter(lambda i: i % 2 == 1, filter(lambda i: i % 2 == 0, range(5)))) == []
