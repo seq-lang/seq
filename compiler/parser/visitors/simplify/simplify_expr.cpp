@@ -459,6 +459,8 @@ void SimplifyVisitor::visit(CallExpr *expr) {
   for (auto &i : expr->args) {
     if (i.name.empty() && namesStarted)
       error("unnamed argument after a named argument");
+    if (!i.name.empty() && i.value->getStar())
+      error("invalid star-expression");
     namesStarted |= !i.name.empty();
     if (!i.name.empty()) {
       if (in(seenNames, i.name))
@@ -467,6 +469,8 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     }
     if (i.value->getEllipsis())
       args.push_back({i.name, clone(i.value)});
+    else if (auto es = i.value->getStar())
+      args.push_back({i.name, N<StarExpr>(transform(es->what))});
     else
       args.push_back({i.name, transform(i.value)});
   }

@@ -957,13 +957,29 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     oldExpr = expr->clone(); // keep the old expression if we end up with an extra stage
 
   // First transform the arguments.
-  for (auto &a : expr->args) {
-    a.value = transform(a.value);
+  for (int ai = 0; ai < expr->args.size(); ai++) {
+    if (auto es = const_cast<StarExpr *>(expr->args[ai].value->getStar())) {
+      es->what = transform(es->what);
+      auto t = es->what->type->getClass();
+      if (!t)
+        return nullptr;
+      if (!t->getRecord())
+        error("can only unpack tuple types");
+      auto &ff = ctx->cache->classes[t->name].fields;
+      for (int i = 0; i < t->getRecord()->args.size(); i++, ai++)
+        expr->args.insert(
+            expr->args.begin() + ai,
+            CallExpr::Arg{"", transform(N<DotExpr>(clone(es->what), ff[i].name))});
+      expr->args.erase(expr->args.begin() + ai);
+      ai--;
+    } else {
+      expr->args[ai].value = transform(expr->args[ai].value);
+    }
     // Unbound inType might become a generator that will need to be extracted, so
     // don't unify it yet.
-    if (inType && !inType->getUnbound() && a.value->getEllipsis() &&
-        a.value->getEllipsis()->isPipeArg)
-      a.value->type |= inType;
+    if (inType && !inType->getUnbound() && expr->args[ai].value->getEllipsis() &&
+        expr->args[ai].value->getEllipsis()->isPipeArg)
+      expr->args[ai].value->type |= inType;
   }
 
   // Intercept dot-callees (e.g. expr.foo). Needed in order to select a proper
