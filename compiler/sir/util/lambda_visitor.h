@@ -79,6 +79,9 @@ public:
     return cast<Desired>(stack[stack.size() - level - 1]);
   }
 
+  /// @return current depth in the tree
+  int depth() const { return stack.size(); }
+
 private:
   void processChildren(Value *v) {
     stack.push_back(v);
