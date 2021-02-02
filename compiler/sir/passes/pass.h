@@ -10,6 +10,7 @@ namespace passes {
 
 /// General pass base class.
 class Pass {
+public:
   /// Execute the pass.
   /// @param module the module
   virtual void run(IRModule *module) = 0;
@@ -17,6 +18,7 @@ class Pass {
 
 /// Pass that runs a single LambdaValueVisitor.
 class LambdaValuePass : public Pass, public util::LambdaValueVisitor {
+public:
   void run(IRModule *module) override { process(module); }
 };
 
