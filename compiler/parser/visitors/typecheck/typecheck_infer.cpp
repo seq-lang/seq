@@ -150,17 +150,9 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
     }
     if (startswith(type->funcName, "Tuple.N") &&
         (endswith(type->funcName, ".__iter__") ||
-         endswith(type->funcName, ".__getitem__") ||
-         endswith(type->funcName, ".__contains__"))) {
-      auto u = type->args[1]->getRecord();
-      string s;
-      for (auto &a : u->args) {
-        if (s.empty())
-          s = a->realizedName();
-        else if (s != a->realizedName())
-          error("cannot iterate a heterogeneous tuple");
-      }
-    }
+         endswith(type->funcName, ".__getitem__")) &&
+        type->args[1]->getHeterogenousTuple())
+      error("cannot iterate a heterogeneous tuple");
 
     LOG_REALIZE("[realize] fn {} -> {} : base {} ; depth = {}", type->funcName,
                 type->realizedName(), ctx->getBase(), depth);

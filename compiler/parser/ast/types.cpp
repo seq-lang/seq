@@ -348,6 +348,16 @@ string RecordType::toString() const {
   return fmt::format("{}{}", this->ClassType::toString(),
                      as.empty() ? "" : "<" + join(as, ",") + ">");
 }
+shared_ptr<RecordType> RecordType::getHeterogenousTuple() {
+  seqassert(canRealize(), "{} not realizable", toString());
+  if (startswith(name, "Tuple.N") && args.size() > 1) {
+    string first = args[0]->realizedName();
+    for (int i = 1; i < args.size(); i++)
+      if (args[i]->realizedName() != first)
+        return getRecord();
+  }
+  return nullptr;
+}
 
 ////
 

@@ -242,23 +242,46 @@ void TypecheckVisitor::visit(WhileStmt *stmt) {
 void TypecheckVisitor::visit(ForStmt *stmt) {
   stmt->iter = transform(stmt->iter);
   // Extract the type of the for variable.
-  TypePtr varType = ctx->addUnbound(stmt->var->getSrcInfo(), ctx->typecheckLevel);
-  if (!stmt->iter->getType()->getUnbound()) {
-    auto iterType = stmt->iter->getType()->getClass();
-    if (!iterType || iterType->name != "Generator")
-      error(stmt->iter, "for loop expected a generator");
-    varType |= iterType->generics[0].type;
-    if (varType->is("void"))
-      error("expression with void type");
+  if (!stmt->iter->getType()->canRealize()) {
+    return; // continue after the iterator is realizable
   }
-  string varName;
-  if (auto e = stmt->var->getId())
-    varName = e->value;
-  seqassert(!varName.empty(), "empty for variable {}", stmt->var->toString());
-  stmt->var->type |= varType;
-  ctx->add(TypecheckItem::Var, varName, varType);
-  stmt->suite = transform(stmt->suite);
-  stmt->done = stmt->iter->done && stmt->suite->done;
+
+  auto varType = stmt->iter->getType()->getClass();
+  if (auto tuple = varType->getHeterogenousTuple()) {
+    // Case 1: iterating heterogenous tuple.
+    // Unroll a separate suite for each tuple member.
+    auto block = N<SuiteStmt>();
+    auto tupleVar = ctx->cache->getTemporaryVar("tuple");
+    block->stmts.push_back(N<AssignStmt>(N<IdExpr>(tupleVar), move(stmt->iter)));
+    for (int ai = 0; ai < tuple->args.size(); ai++) {
+      vector<StmtPtr> stmts;
+      stmts.push_back(N<AssignStmt>(clone(stmt->var),
+                                    N<IndexExpr>(N<IdExpr>(tupleVar), N<IntExpr>(ai))));
+      stmts.push_back(clone(stmt->suite));
+      block->stmts.push_back(N<SuiteStmt>(move(stmts), true));
+    }
+    resultStmt = transform(move(block));
+  } else {
+    // Case 2: iterating a generator. Standard for loop logic.
+    if (varType->name != "Generator") {
+      stmt->iter = transform(N<CallExpr>(N<DotExpr>(move(stmt->iter), "__iter__")));
+      varType = stmt->iter->getType()->getClass();
+      seqassert(varType && varType->canRealize(), "cannot realize __iter__");
+      if (varType->name != "Generator")
+        error("for loop expected a generator");
+      varType = varType->generics[0].type->getClass();
+      if (varType->is("void"))
+        error("expression with void type");
+    }
+    string varName;
+    if (auto e = stmt->var->getId())
+      varName = e->value;
+    seqassert(!varName.empty(), "empty for variable {}", stmt->var->toString());
+    stmt->var->type |= varType;
+    ctx->add(TypecheckItem::Var, varName, varType);
+    stmt->suite = transform(stmt->suite);
+    stmt->done = stmt->iter->done && stmt->suite->done;
+  }
 }
 
 void TypecheckVisitor::visit(IfStmt *stmt) {

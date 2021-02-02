@@ -103,6 +103,7 @@ public:
   virtual shared_ptr<LinkType> getLink() { return nullptr; }
   virtual shared_ptr<LinkType> getUnbound() { return nullptr; }
   virtual shared_ptr<StaticType> getStatic() { return nullptr; }
+  virtual shared_ptr<RecordType> getHeterogenousTuple() { return nullptr; }
 
   virtual bool is(const string &s);
 };
@@ -247,6 +248,7 @@ public:
   shared_ptr<RecordType> getRecord() override {
     return std::static_pointer_cast<RecordType>(shared_from_this());
   }
+  shared_ptr<RecordType> getHeterogenousTuple() override;
 };
 
 /**

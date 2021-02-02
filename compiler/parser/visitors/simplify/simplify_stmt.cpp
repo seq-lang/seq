@@ -14,6 +14,7 @@
 #include "parser/ast.h"
 #include "parser/common.h"
 #include "parser/ocaml/ocaml.h"
+#include "parser/visitors/format/format.h"
 #include "parser/visitors/simplify/simplify.h"
 
 using fmt::format;
@@ -176,7 +177,6 @@ void SimplifyVisitor::visit(WhileStmt *stmt) {
 }
 
 void SimplifyVisitor::visit(ForStmt *stmt) {
-  ExprPtr iter = transform(N<CallExpr>(N<DotExpr>(clone(stmt->iter), "__iter__")));
   string breakVar;
   StmtPtr assign = nullptr, forStmt = nullptr;
   if (stmt->elseSuite && stmt->elseSuite->firstInBlock()) {
@@ -187,7 +187,8 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
   ctx->addBlock();
   if (auto i = stmt->var->getId()) {
     ctx->add(SimplifyItem::Var, i->value, ctx->generateCanonicalName(i->value));
-    forStmt = N<ForStmt>(transform(stmt->var), move(iter), transform(stmt->suite));
+    forStmt =
+        N<ForStmt>(transform(stmt->var), transform(stmt->iter), transform(stmt->suite));
   } else {
     string varName = ctx->cache->getTemporaryVar("for");
     ctx->add(SimplifyItem::Var, varName, varName);
@@ -195,7 +196,8 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
     vector<StmtPtr> stmts;
     stmts.push_back(N<AssignStmt>(clone(stmt->var), clone(var)));
     stmts.push_back(clone(stmt->suite));
-    forStmt = N<ForStmt>(clone(var), move(iter), transform(N<SuiteStmt>(move(stmts))));
+    forStmt = N<ForStmt>(clone(var), transform(stmt->iter),
+                         transform(N<SuiteStmt>(move(stmts))));
   }
   ctx->popBlock();
   ctx->loops.pop_back();
@@ -1268,18 +1270,18 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
     for (auto &a : args)
       stmts.emplace_back(N<YieldStmt>(N<DotExpr>(N<IdExpr>("self"), a.name)));
   } else if (op == "contains") {
-    // Tuples: @internal def __contains__(self: T, what: T1) -> bool:
-    //            if what == self.a1: return True ...
+    // Tuples: @internal def __contains__(self: T, what) -> bool:
+    //            if isinstance(what, T1): if what == self.a1: return True ...
     //            return False
-    //         (error during a realizeFunc() method if T is a heterogenous tuple)
     // TODO: make it work with heterogenous tuples.
     fargs.emplace_back(Param{"self", typExpr->clone()});
-    fargs.emplace_back(Param{"what", !args.empty() ? clone(args[0].type) : I("void")});
+    fargs.emplace_back(Param{"what", nullptr});
     ret = I("bool");
     for (auto &a : args)
-      stmts.push_back(N<IfStmt>(
-          N<CallExpr>(N<DotExpr>(I("what"), "__eq__"), N<DotExpr>(I("self"), a.name)),
-          N<ReturnStmt>(N<BoolExpr>(true))));
+      stmts.push_back(N<IfStmt>(N<CallExpr>(I("isinstance"), I("what"), clone(a.type)),
+                                N<IfStmt>(N<CallExpr>(N<DotExpr>(I("what"), "__eq__"),
+                                                      N<DotExpr>(I("self"), a.name)),
+                                          N<ReturnStmt>(N<BoolExpr>(true)))));
     stmts.emplace_back(N<ReturnStmt>(N<BoolExpr>(false)));
   } else if (op == "eq") {
     // def __eq__(self: T, other: T) -> bool:
