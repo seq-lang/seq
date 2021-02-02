@@ -95,7 +95,7 @@ types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
             .fields.emplace_back(m.name, tf);
         names.emplace_back(m.name);
         typeArgs.emplace_back(getLLVMType(tf->getClass().get()));
-        memberInfo[m.name] = mt->getSrcInfo();
+        memberInfo[m.name] = m.type->getSrcInfo();
       }
       if (auto *cls = seq::ir::cast<seq::ir::types::RefType>(lt))
         if (!names.empty()) {
@@ -429,7 +429,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
       names.emplace_back(ctx->cache->classes[t->name].fields[ai].name);
       typeArgs.emplace_back(getLLVM(tr->args[ai]));
       memberInfo[ctx->cache->classes[t->name].fields[ai].name] =
-          tr->args[ai]->getSrcInfo();
+          ctx->cache->classes[t->name].fields[ai].type->getSrcInfo();
     }
     auto record = seq::ir::cast<seq::ir::types::RecordType>(
         ctx->cache->module->getMemberedType(realizedName));
