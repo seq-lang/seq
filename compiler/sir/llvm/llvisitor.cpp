@@ -139,9 +139,13 @@ LLVMVisitor::LLVMVisitor(bool debug, const std::string &flags)
 }
 
 void LLVMVisitor::setDebugInfoForNode(const IRNode *x) {
-  auto *srcInfo = getSrcInfo(x);
-  builder.SetCurrentDebugLocation(llvm::DILocation::get(
-      context, srcInfo->line, srcInfo->col, func->getSubprogram()));
+  if (x) {
+    auto *srcInfo = getSrcInfo(x);
+    builder.SetCurrentDebugLocation(llvm::DILocation::get(
+        context, srcInfo->line, srcInfo->col, func->getSubprogram()));
+  } else {
+    builder.SetCurrentDebugLocation(llvm::DebugLoc());
+  }
 }
 
 void LLVMVisitor::process(const IRNode *x) {
@@ -550,6 +554,7 @@ void LLVMVisitor::visit(const IRModule *x) {
   makeLLVMFunction(main);
   llvm::Function *realMain = func;
   process(main);
+  setDebugInfoForNode(nullptr);
 
   // build canonical main function
   auto *strType =
@@ -716,6 +721,7 @@ void LLVMVisitor::makeLLVMFunction(const Func *x) {
     process(llvmFunc);
     func = module->getFunction(getNameForFunction(x));
     func->setSubprogram(subprogram);
+    setDebugInfoForNode(nullptr);
     return;
   }
 
