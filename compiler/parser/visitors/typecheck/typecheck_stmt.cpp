@@ -246,8 +246,8 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
     return; // continue after the iterator is realizable
   }
 
-  auto varType = stmt->iter->getType()->getClass();
-  if (auto tuple = varType->getHeterogenousTuple()) {
+  auto iterType = stmt->iter->getType()->getClass();
+  if (auto tuple = iterType->getHeterogenousTuple()) {
     // Case 1: iterating heterogenous tuple.
     // Unroll a separate suite for each tuple member.
     auto block = N<SuiteStmt>();
@@ -263,13 +263,15 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
     resultStmt = transform(move(block));
   } else {
     // Case 2: iterating a generator. Standard for loop logic.
-    if (varType->name != "Generator") {
+    if (iterType->name != "Generator" && !stmt->wrapped) {
       stmt->iter = transform(N<CallExpr>(N<DotExpr>(move(stmt->iter), "__iter__")));
-      varType = stmt->iter->getType()->getClass();
-      seqassert(varType && varType->canRealize(), "cannot realize __iter__");
-      if (varType->name != "Generator")
+      stmt->wrapped = true;
+    }
+    TypePtr varType = ctx->addUnbound(stmt->var->getSrcInfo(), ctx->typecheckLevel);
+    if ((iterType = stmt->iter->getType()->getClass())) {
+      if (iterType->name != "Generator")
         error("for loop expected a generator");
-      varType = varType->generics[0].type->getClass();
+      varType |= iterType->generics[0].type;
       if (varType->is("void"))
         error("expression with void type");
     }

@@ -152,10 +152,6 @@ public:
   using CallbackASTVisitor<ExprPtr, StmtPtr>::transform;
 
 private:
-  /// Attempts to realize a given type and returns a realization or a nullptr if type is
-  /// not realizable.
-  /// Note: unifies a given type with its realization if the type can be realized.
-  types::TypePtr getRealizedType(types::TypePtr &typ);
   /// If a target type is Optional but the type of a given expression is not,
   /// replace the given expression with Optional(expr).
   void wrapOptionalIfNeeded(const types::TypePtr &targetType, ExprPtr &e);

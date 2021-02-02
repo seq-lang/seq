@@ -178,6 +178,8 @@ void SimplifyVisitor::visit(WhileStmt *stmt) {
 
 void SimplifyVisitor::visit(ForStmt *stmt) {
   string breakVar;
+  auto iter = transform(stmt->iter); // needs in-advance transformation to prevent
+                                     // name clashes with the iterator variable
   StmtPtr assign = nullptr, forStmt = nullptr;
   if (stmt->elseSuite && stmt->elseSuite->firstInBlock()) {
     breakVar = ctx->cache->getTemporaryVar("no_break");
@@ -187,8 +189,7 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
   ctx->addBlock();
   if (auto i = stmt->var->getId()) {
     ctx->add(SimplifyItem::Var, i->value, ctx->generateCanonicalName(i->value));
-    forStmt =
-        N<ForStmt>(transform(stmt->var), transform(stmt->iter), transform(stmt->suite));
+    forStmt = N<ForStmt>(transform(stmt->var), clone(iter), transform(stmt->suite));
   } else {
     string varName = ctx->cache->getTemporaryVar("for");
     ctx->add(SimplifyItem::Var, varName, varName);
@@ -196,8 +197,7 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
     vector<StmtPtr> stmts;
     stmts.push_back(N<AssignStmt>(clone(stmt->var), clone(var)));
     stmts.push_back(clone(stmt->suite));
-    forStmt = N<ForStmt>(clone(var), transform(stmt->iter),
-                         transform(N<SuiteStmt>(move(stmts))));
+    forStmt = N<ForStmt>(clone(var), clone(iter), transform(N<SuiteStmt>(move(stmts))));
   }
   ctx->popBlock();
   ctx->loops.pop_back();
@@ -645,8 +645,11 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
           for (auto &i : {"pickle", "unpickle"})
             magics.emplace_back(i);
         if (!in(stmt->attributes, ATTR_NO(ATTR_CONTAINER)))
-          for (auto &i : {"iter", "getitem", "contains"})
+          for (auto &i : {"iter", "getitem"})
             magics.emplace_back(i);
+        if (!in(stmt->attributes, ATTR_NO(ATTR_CONTAINER)) &&
+            startswith(stmt->name, "Tuple.N"))
+          magics.emplace_back("contains");
         if (!in(stmt->attributes, ATTR_NO(ATTR_PYTHON)))
           for (auto &i : {"to_py", "from_py"})
             magics.emplace_back(i);

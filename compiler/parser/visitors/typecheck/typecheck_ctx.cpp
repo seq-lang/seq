@@ -70,6 +70,8 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int 
   auto t = make_shared<types::LinkType>(types::LinkType::Unbound, cache->unboundCount++,
                                         level, nullptr, isStatic);
   t->setSrcInfo(srcInfo);
+  if (cache->unboundCount == 8091)
+    assert(1);
   LOG_TYPECHECK("[ub] new {}: {} ({})", t->toString(), srcInfo, setActive);
   if (setActive && allowActivation)
     activeUnbounds.insert(t);

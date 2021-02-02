@@ -647,7 +647,7 @@ print a < a, a < b, b < a #: False True False
 print a <= a, a <= b, b <= a #: True True False
 print a > a, a > b, b > a #: False False True
 print a >= a, a >= b, b >= a #: True False True
-print a.__contains__(1), a.__getitem__(1)  #: True 2
+print a.__getitem__(1)  #: 2
 print list(a.__iter__()) #: [1, 2]
 
 #%% magic_class,barebones
@@ -682,11 +682,16 @@ print a >= a, a >= b, b >= a #: True True True
 
 # TODO: pickle / to_py / from_py
 
-#%% magic_err_1,barebones
-@tuple
-class Foo:
-    pass
-print Foo().__contains__(1)  #! ERROR: cannot unify int and void
+#%% magic_contains,barebones
+sponge = (1, 'z', 1.55, 'q', 48556)
+print 1.1 in sponge #: False
+print 'q' in sponge #: True
+print True in sponge #: False
+
+bob = (1, 2, 3)
+print 1.1 in sponge #: False
+print 1 in sponge #: True
+print 0 in sponge #: False
 
 #%% magic_err_2,barebones
 @tuple

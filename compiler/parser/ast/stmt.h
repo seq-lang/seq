@@ -265,6 +265,9 @@ struct ForStmt : public Stmt {
   StmtPtr suite;
   StmtPtr elseSuite;
 
+  /// Indicates if iter was wrapped with __iter__() call.
+  bool wrapped;
+
   ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite = nullptr);
   ForStmt(const ForStmt &stmt);
 

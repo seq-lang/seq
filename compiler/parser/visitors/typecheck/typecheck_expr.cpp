@@ -52,7 +52,8 @@ ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes, bool allowVo
     seqassert(expr->type, "type not set for {}", expr->toString());
     typ |= expr->type;
   }
-  realize(typ);
+  if (auto rt = realize(typ))
+    typ |= rt;
   if (!expr->isType() && !allowVoid &&
       (expr->type->is("void") || expr->type->is("T.None")))
     error("expression with void type");
@@ -119,10 +120,14 @@ void TypecheckVisitor::visit(IdExpr *expr) {
   expr->type |= t;
 
   // Check if we can realize the type.
-  if (getRealizedType(expr->type) &&
-      (val->kind == TypecheckItem::Type || val->kind == TypecheckItem::Func))
-    expr->value = expr->type->realizedName();
-  expr->done = realize(expr->type) != nullptr;
+  if (auto rt = realize(expr->type)) {
+    expr->type |= rt;
+    if (val->kind == TypecheckItem::Type || val->kind == TypecheckItem::Func)
+      expr->value = expr->type->realizedName();
+    expr->done = true;
+  } else {
+    expr->done = false;
+  }
 }
 
 void TypecheckVisitor::visit(IfExpr *expr) {
@@ -323,12 +328,12 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               auto val = ctx->find(ei->value);
               seqassert(val && val->isStatic(), "invalid static expression");
               auto genTyp = val->type->follow();
-              staticGenerics.emplace_back(Generic{
-                  ei->value, genTyp,
-                  genTyp->getLink() ? genTyp->getLink()->id
-                                    : genTyp->getStatic()->generics.empty()
-                                          ? 0
-                                          : genTyp->getStatic()->generics[0].id});
+              staticGenerics.emplace_back(
+                  Generic{ei->value, genTyp,
+                          genTyp->getLink() ? genTyp->getLink()->id
+                          : genTyp->getStatic()->generics.empty()
+                              ? 0
+                              : genTyp->getStatic()->generics[0].id});
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -384,7 +389,8 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
 
   // If this is realizable, use the realized name (e.g. use Id("Ptr[byte]") instead of
   // Instantiate(Ptr, {byte})).
-  if (getRealizedType(expr->type)) {
+  if (auto rt = realize(expr->type)) {
+    expr->type |= rt;
     resultExpr = N<IdExpr>(expr->type->realizedName());
     resultExpr->type |= typ;
     resultExpr->done = true;
@@ -445,8 +451,10 @@ void TypecheckVisitor::visit(StackAllocExpr *expr) {
   LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
   expr->type |= t;
   // Realize the Array[T] type of possible.
-  if (getRealizedType(expr->type))
+  if (auto rt = realize(expr->type)) {
+    expr->type |= rt;
     expr->done = expr->expr->done;
+  }
 }
 
 void TypecheckVisitor::visit(EllipsisExpr *expr) {
@@ -457,7 +465,8 @@ void TypecheckVisitor::visit(TypeOfExpr *expr) {
   expr->expr = transform(expr->expr);
   expr->type |= expr->expr->type;
 
-  if (getRealizedType(expr->type)) {
+  if (auto rt = realize(expr->type)) {
+    expr->type |= rt;
     resultExpr = N<IdExpr>(expr->type->realizedName());
     resultExpr->type |= expr->type;
     resultExpr->done = true;
@@ -497,12 +506,6 @@ void TypecheckVisitor::visit(StmtExpr *expr) {
 }
 
 /**************************************************************************************/
-
-TypePtr TypecheckVisitor::getRealizedType(TypePtr &typ) {
-  if (auto tf = realize(typ))
-    return typ |= tf;
-  return nullptr;
-}
 
 void TypecheckVisitor::wrapOptionalIfNeeded(const TypePtr &targetType, ExprPtr &e) {
   if (!targetType)
@@ -1184,8 +1187,10 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   // Realize arguments.
   expr->done = true;
   for (auto &ra : reorderedArgs) {
-    if (realize(ra.value->type))
+    if (auto rt = realize(ra.value->type)) {
+      rt |= ra.value->type;
       ra.value = transform(ra.value);
+    }
     expr->done &= ra.value->done;
   }
   if (auto f = calleeFn->getFunc()) {
@@ -1195,19 +1200,18 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       for (int i = 0; i < f->funcGenerics.size(); i++)
         if (ast->generics[i].deflt && f->funcGenerics[i].type->getUnbound()) {
           auto deflt = clone(ast->generics[i].deflt);
-          // LOG("- def: {} [{}: {} <~> {}]", calleeFn->toString(),
-          // ast->generics[i].name, deflt->toString(),
-          // f->funcGenerics[i].type->toString());
-          // for (auto &r : reorderedArgs)
-          // LOG("  - {}", r.value->type->toString());
           if (deflt->getNone())
             f->funcGenerics[i].type |=
                 ctx->instantiate(getSrcInfo(), ctx->findInternal("T.None"));
           else
             f->funcGenerics[i].type |= transformType(deflt)->getType();
         }
-    if (realize(f))
+    if (f->toString() == "AVLNode.__iter__[?8404.2,AVLNode[int,int]]")
+      assert(1);
+    if (auto rt = realize(f)) {
+      rt |= static_pointer_cast<Type>(calleeFn);
       expr->expr = transform(expr->expr);
+    }
     expr->done &= expr->expr->done;
   }
 
