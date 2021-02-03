@@ -223,6 +223,23 @@ std::string ArrayType::getInstanceName(Type *base) {
   return fmt::format(FMT_STRING(".Array[{}]"), base->referenceString());
 }
 
+std::vector<Type *> ArrayType::doGetUsedTypes() const {
+  std::vector<Type *> ret;
+  for (auto *t : RecordType::getUsedTypes())
+    ret.push_back(const_cast<Type *>(t));
+  ret.push_back(base);
+  return ret;
+}
+
+int ArrayType::doReplaceUsedType(const std::string &name, Type *newType) {
+  auto count = RecordType::replaceUsedType(name, newType);
+  if (base->getName() == name) {
+    base = newType;
+    ++count;
+  }
+  return count;
+}
+
 const char GeneratorType::NodeId = 0;
 
 std::string GeneratorType::getInstanceName(Type *base) {

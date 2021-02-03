@@ -28,8 +28,6 @@ public:
   explicit Func(types::Type *type, std::string name = "")
       : AcceptorExtend(type, false, std::move(name)), generator(false) {}
 
-  virtual ~Func() = default;
-
   /// Re-initializes the function with a new type and names.
   /// @param newType the function's new type
   /// @param names the function's new argument names
