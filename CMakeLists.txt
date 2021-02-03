@@ -186,7 +186,10 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/sir/llvm/llvm.h
         compiler/sir/llvm/revcomp.h
         compiler/sir/passes/pass.h
-        compiler/sir/passes/cleanup/replacer.h)
+        compiler/sir/passes/cleanup/replacer.h
+        compiler/sir/dsl/llvm.h
+        compiler/sir/dsl/nodes.h
+        )
 set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/lang/func.cpp
         compiler/lang/lang.cpp
@@ -243,7 +246,9 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/sir/var.cpp
         compiler/sir/llvm/llvisitor.cpp
         compiler/sir/llvm/revcomp.cpp
-        compiler/sir/passes/cleanup/replacer.cpp)
+        compiler/sir/passes/cleanup/replacer.cpp
+        compiler/sir/dsl/nodes.cpp
+        )
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})
