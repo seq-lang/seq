@@ -56,7 +56,7 @@ private:
   /// the node's name
   std::string name;
   /// key-value attribute store
-  std::map<std::string, AttributePtr> attributes;
+  std::map<std::string, std::unique_ptr<Attribute>> attributes;
   /// the module
   IRModule *module = nullptr;
   /// a replacement, if set

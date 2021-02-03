@@ -37,8 +37,6 @@ private:
   virtual Attribute *doClone() const = 0;
 };
 
-using AttributePtr = std::unique_ptr<Attribute>;
-
 /// Attribute containing SrcInfo
 struct SrcInfoAttribute : public Attribute {
   static const std::string AttributeName;
