@@ -85,7 +85,7 @@ public:
 private:
   void processChildren(Value *v) {
     stack.push_back(v);
-    for (auto *c : v->getUsedVariables()) {
+    for (auto *c : v->getUsedValues()) {
       if (seen.find(c->getId()) != seen.end())
         continue;
       seen.insert(c->getId());
