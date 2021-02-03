@@ -222,9 +222,7 @@ public:
   /// @param pos the position
   /// @param v the argument
   /// @return an iterator to the newly added argument
-  template <typename It> auto insert(It pos, Value *v) {
-    return util::raw_ptr_adaptor(args.insert(pos.internal, v));
-  }
+  template <typename It> auto insert(It pos, Value *v) { return args.insert(pos, v); }
   /// Appends an argument.
   /// @param v the argument
   void push_back(Value *v) { args.push_back(v); }

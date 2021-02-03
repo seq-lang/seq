@@ -58,9 +58,7 @@ public:
   /// @param pos the position
   /// @param v the flow or instruction
   /// @return an iterator to the newly added instruction/flow
-  template <typename It> auto insert(It pos, Value *v) {
-    return series.insert(pos.internal, v);
-  }
+  template <typename It> auto insert(It pos, Value *v) { return series.insert(pos, v); }
   /// Appends an instruction/flow.
   /// @param f the flow or instruction
   void push_back(Value *f) { series.push_back(f); }
@@ -68,7 +66,7 @@ public:
   /// Erases the item at the supplied position.
   /// @param pos the position
   /// @return the iterator beyond the removed flow or instruction
-  template <typename It> auto erase(It pos) { return series.erase(pos.internal); }
+  template <typename It> auto erase(It pos) { return series.erase(pos); }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -484,7 +482,7 @@ public:
   /// Erases the item at the supplied position.
   /// @param pos the position
   /// @return the iterator beyond the removed stage
-  template <typename It> auto erase(It pos) { return stages.erase(pos.internal); }
+  template <typename It> auto erase(It pos) { return stages.erase(pos); }
 
   /// Emplaces a stage.
   /// @param args the args
