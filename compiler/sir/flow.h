@@ -17,13 +17,11 @@ public:
 
   using AcceptorExtend::AcceptorExtend;
 
-  virtual ~Flow() noexcept = default;
-
   /// @return a clone of the value
   Flow *clone() const { return cast<Flow>(Value::clone()); }
 
 private:
-  const types::Type *doGetType() const override;
+  const types::Type *doGetType() const final;
 };
 
 /// Flow that contains a series of flows or instructions.

@@ -32,9 +32,9 @@ struct Attribute {
   }
 
 private:
-  virtual Attribute *doClone() const = 0;
-
   virtual std::ostream &doFormat(std::ostream &os) const = 0;
+
+  virtual Attribute *doClone() const = 0;
 };
 
 using AttributePtr = std::unique_ptr<Attribute>;
@@ -46,15 +46,15 @@ struct SrcInfoAttribute : public Attribute {
   /// source info
   seq::SrcInfo info;
 
+  SrcInfoAttribute() = default;
   /// Constructs a SrcInfoAttribute.
   /// @param info the source info
   explicit SrcInfoAttribute(seq::SrcInfo info) : info(std::move(info)) {}
-  SrcInfoAttribute() = default;
 
 private:
-  Attribute *doClone() const override { return new SrcInfoAttribute(*this); }
-
   std::ostream &doFormat(std::ostream &os) const override { return os << info; }
+
+  Attribute *doClone() const override { return new SrcInfoAttribute(*this); }
 };
 
 /// Attribute containing function information
@@ -64,19 +64,19 @@ struct FuncAttribute : public Attribute {
   /// attributes map
   std::map<std::string, std::string> attributes;
 
+  FuncAttribute() = default;
   /// Constructs a FuncAttribute.
   /// @param attributes the map of attributes
   explicit FuncAttribute(std::map<std::string, std::string> attributes)
       : attributes(std::move(attributes)) {}
-  FuncAttribute() = default;
 
   /// @return true if the map contains val, false otherwise
   bool has(const std::string &val) const;
 
 private:
-  Attribute *doClone() const override { return new FuncAttribute(*this); }
-
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Attribute *doClone() const override { return new FuncAttribute(*this); }
 };
 
 /// Attribute containing type member information
@@ -86,17 +86,16 @@ struct MemberAttribute : public Attribute {
   /// member source info map
   std::map<std::string, SrcInfo> memberSrcInfo;
 
+  MemberAttribute() = default;
   /// Constructs a FuncAttribute.
   /// @param attributes the map of attributes
   explicit MemberAttribute(std::map<std::string, SrcInfo> memberSrcInfo)
       : memberSrcInfo(std::move(memberSrcInfo)) {}
 
-  MemberAttribute() = default;
-
 private:
-  Attribute *doClone() const override { return new MemberAttribute(*this); }
-
   std::ostream &doFormat(std::ostream &os) const override;
+
+  Attribute *doClone() const override { return new MemberAttribute(*this); }
 };
 
 } // namespace ir

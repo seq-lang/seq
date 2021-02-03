@@ -2,6 +2,10 @@
 
 #include <unordered_set>
 
+#include "sir/types/types.h"
+#include "sir/value.h"
+#include "sir/var.h"
+
 namespace seq {
 namespace ir {
 namespace passes {

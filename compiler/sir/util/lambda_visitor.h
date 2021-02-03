@@ -20,7 +20,9 @@ namespace util {
 /// Pass that visits all values in a module.
 class LambdaValueVisitor : public IRVisitor {
 private:
+  /// IDs of previously visited nodes
   std::unordered_set<int> seen;
+  /// stack of IR nodes being visited
   std::vector<IRNode *> stack;
 
 public:

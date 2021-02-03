@@ -19,20 +19,18 @@ namespace types {
 /// Type from which other SIR types derive. Generally types are immutable.
 class Type : public ReplaceableNodeBase<Type> {
 public:
-  using ReplacementType = Type;
-
   static const char NodeId;
 
   using ReplaceableNodeBase::ReplaceableNodeBase;
 
   virtual ~Type() noexcept = default;
 
-  std::vector<Type *> getUsedTypes() override { return getActual()->doGetUsedTypes(); }
-  std::vector<const Type *> getUsedTypes() const override {
+  std::vector<Type *> getUsedTypes() final { return getActual()->doGetUsedTypes(); }
+  std::vector<const Type *> getUsedTypes() const final {
     auto ret = getActual()->doGetUsedTypes();
     return std::vector<const Type *>(ret.begin(), ret.end());
   }
-  int replaceUsedType(const std::string &name, Type *newType) override {
+  int replaceUsedType(const std::string &name, Type *newType) final {
     return getActual()->doReplaceUsedType(name, newType);
   }
   using IRNode::replaceUsedType;
@@ -68,7 +66,7 @@ public:
   using AcceptorExtend::AcceptorExtend;
 
 private:
-  bool doIsAtomic() const override { return true; }
+  bool doIsAtomic() const final { return true; }
 };
 
 /// Int type (64-bit signed integer)
@@ -158,8 +156,6 @@ public:
   /// @param name the type's name
   explicit MemberedType(std::string name) : AcceptorExtend(std::move(name)) {}
 
-  virtual ~MemberedType() = default;
-
   /// Gets a field type by name.
   /// @param name the field's name
   /// @return the type if it exists
@@ -176,19 +172,19 @@ public:
 
   /// @return iterator to the first field
   virtual iterator begin() = 0;
-  /// @return iterator beyond the last field
-  virtual iterator end() = 0;
-  /// @return a reference to the first field
-  virtual reference front() = 0;
-  /// @return a reference to the last field
-  virtual reference back() = 0;
-
   /// @return iterator to the first field
   virtual const_iterator begin() const = 0;
   /// @return iterator beyond the last field
+  virtual iterator end() = 0;
+  /// @return iterator beyond the last field
   virtual const_iterator end() const = 0;
+
+  /// @return a reference to the first field
+  virtual reference front() = 0;
   /// @return a reference to the first field
   virtual const_reference front() const = 0;
+  /// @return a reference to the last field
+  virtual reference back() = 0;
   /// @return a reference to the last field
   virtual const_reference back() const = 0;
 
@@ -222,21 +218,19 @@ public:
   /// @param name the name
   explicit RecordType(std::string name) : AcceptorExtend(std::move(name)) {}
 
-  virtual ~RecordType() = default;
-
   Type *getMemberType(const std::string &n) override;
   const Type *getMemberType(const std::string &n) const override;
 
   int getMemberIndex(const std::string &n) const override;
 
   iterator begin() override { return fields.begin(); }
-  iterator end() override { return fields.end(); }
-  reference front() override { return fields.front(); }
-  reference back() override { return fields.back(); }
-
   const_iterator begin() const override { return fields.begin(); }
+  iterator end() override { return fields.end(); }
   const_iterator end() const override { return fields.end(); }
+
+  reference front() override { return fields.front(); }
   const_reference front() const override { return fields.front(); }
+  reference back() override { return fields.back(); }
   const_reference back() const override { return fields.back(); }
 
   void realize(std::vector<Type *> mTypes, std::vector<std::string> mNames) override;
@@ -281,13 +275,13 @@ public:
   }
 
   iterator begin() override { return getContents()->begin(); }
-  iterator end() override { return getContents()->end(); }
-  reference front() override { return getContents()->front(); }
-  reference back() override { return getContents()->back(); }
-
   const_iterator begin() const override { return getContents()->begin(); }
+  iterator end() override { return getContents()->end(); }
   const_iterator end() const override { return getContents()->end(); }
+
+  reference front() override { return getContents()->front(); }
   const_reference front() const override { return getContents()->front(); }
+  reference back() override { return getContents()->back(); }
   const_reference back() const override { return getContents()->back(); }
 
   /// @return the reference type's contents
@@ -345,19 +339,19 @@ public:
 
   /// @return iterator to the first argument
   iterator begin() { return argTypes.begin(); }
-  /// @return iterator beyond the last argument
-  iterator end() { return argTypes.end(); }
-  /// @return a reference to the first argument
-  reference front() { return argTypes.front(); }
-  /// @return a reference to the last argument
-  reference back() { return argTypes.back(); }
-
   /// @return iterator to the first argument
   const_iterator begin() const { return argTypes.begin(); }
   /// @return iterator beyond the last argument
+  iterator end() { return argTypes.end(); }
+  /// @return iterator beyond the last argument
   const_iterator end() const { return argTypes.end(); }
+
+  /// @return a reference to the first argument
+  reference front() { return argTypes.front(); }
   /// @return a reference to the first argument
   const_reference front() const { return argTypes.front(); }
+  /// @return a reference to the last argument
+  reference back() { return argTypes.back(); }
   /// @return a reference to the last argument
   const_reference back() const { return argTypes.back(); }
 
@@ -458,6 +452,10 @@ public:
   const Type *getBase() const { return base; }
 
   static std::string getInstanceName(Type *base);
+
+private:
+  std::vector<Type *> doGetUsedTypes() const override;
+  int doReplaceUsedType(const std::string &name, Type *newType) override;
 };
 
 /// Type of a generator yielding another SIR type

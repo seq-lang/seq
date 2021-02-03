@@ -20,41 +20,39 @@ public:
 
   virtual ~Value() noexcept = default;
 
-  std::string referenceString() const override {
+  std::string referenceString() const final {
     return fmt::format(FMT_STRING("{}.{}"), getActual()->getName(),
                        getActual()->getId());
   }
 
-  std::vector<Value *> getUsedValues() override {
-    return getActual()->doGetUsedValues();
-  }
-  std::vector<const Value *> getUsedValues() const override {
+  std::vector<Value *> getUsedValues() final { return getActual()->doGetUsedValues(); }
+  std::vector<const Value *> getUsedValues() const final {
     auto ret = getActual()->doGetUsedValues();
     return std::vector<const Value *>(ret.begin(), ret.end());
   }
-  int replaceUsedValue(int id, Value *newValue) override {
+  int replaceUsedValue(int id, Value *newValue) final {
     return doReplaceUsedValue(id, newValue);
   }
   using IRNode::replaceUsedValue;
 
-  std::vector<types::Type *> getUsedTypes() override {
+  std::vector<types::Type *> getUsedTypes() final {
     return getActual()->doGetUsedTypes();
   }
-  std::vector<const types::Type *> getUsedTypes() const override {
+  std::vector<const types::Type *> getUsedTypes() const final {
     auto ret = getActual()->doGetUsedTypes();
     return std::vector<const types::Type *>(ret.begin(), ret.end());
   }
-  int replaceUsedType(const std::string &name, types::Type *newType) override {
+  int replaceUsedType(const std::string &name, types::Type *newType) final {
     return getActual()->doReplaceUsedType(name, newType);
   }
   using IRNode::replaceUsedType;
 
-  std::vector<Var *> getUsedVariables() override { return doGetUsedVariables(); }
-  std::vector<const Var *> getUsedVariables() const override {
+  std::vector<Var *> getUsedVariables() final { return doGetUsedVariables(); }
+  std::vector<const Var *> getUsedVariables() const final {
     auto ret = doGetUsedVariables();
     return std::vector<const Var *>(ret.begin(), ret.end());
   }
-  int replaceUsedVariable(int id, Var *newVar) override {
+  int replaceUsedVariable(int id, Var *newVar) final {
     return getActual()->doReplaceUsedVariable(id, newVar);
   }
   using IRNode::replaceUsedVariable;
