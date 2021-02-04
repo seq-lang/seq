@@ -1,10 +1,10 @@
 #pragma once
 
-#include "sir/passes/pass.h"
+#include "sir/transform/pass.h"
 
 namespace seq {
 namespace ir {
-namespace passes {
+namespace transform {
 namespace cleanup {
 
 class ReplaceCleanupPass : public Pass {
@@ -13,6 +13,6 @@ public:
 };
 
 } // namespace cleanup
-} // namespace passes
+} // namespace transform
 } // namespace ir
 } // namespace seq

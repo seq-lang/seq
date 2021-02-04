@@ -20,7 +20,9 @@ namespace util {
 /// Pass that visits all values in a module.
 class LambdaValueVisitor : public IRVisitor {
 private:
+  /// IDs of previously visited nodes
   std::unordered_set<int> seen;
+  /// stack of IR nodes being visited
   std::vector<IRNode *> stack;
 
 public:
@@ -85,7 +87,7 @@ public:
 private:
   void processChildren(Value *v) {
     stack.push_back(v);
-    for (auto *c : v->getUsedVariables()) {
+    for (auto *c : v->getUsedValues()) {
       if (seen.find(c->getId()) != seen.end())
         continue;
       seen.insert(c->getId());

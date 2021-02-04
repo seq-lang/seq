@@ -113,7 +113,8 @@ set_property(SOURCE ${LIB_SEQPARSE} PROPERTY GENERATED 1)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-set(SEQ_HPPFILES compiler/lang/expr.h
+set(SEQ_HPPFILES
+        compiler/lang/expr.h
         compiler/lang/func.h
         compiler/lang/lang.h
         compiler/lang/patterns.h
@@ -125,9 +126,8 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/parser/ast/expr.h
         compiler/parser/ast/stmt.h
         compiler/parser/ast/types.h
-        compiler/parser/visitors/visitor.h
-        compiler/parser/common.h
         compiler/parser/cache.h
+        compiler/parser/common.h
         compiler/parser/ctx.h
         compiler/parser/ocaml/ocaml.h
         compiler/parser/parser.h
@@ -139,6 +139,29 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/parser/visitors/simplify/simplify_ctx.h
         compiler/parser/visitors/typecheck/typecheck.h
         compiler/parser/visitors/typecheck/typecheck_ctx.h
+        compiler/parser/visitors/visitor.h
+        compiler/sir/analyze/analysis.h
+        compiler/sir/attribute.h
+        compiler/sir/base.h
+        compiler/sir/constant.h
+        compiler/sir/flow.h
+        compiler/sir/func.h
+        compiler/sir/instr.h
+        compiler/sir/llvm/llvisitor.h
+        compiler/sir/llvm/llvm.h
+        compiler/sir/llvm/revcomp.h
+        compiler/sir/module.h
+        compiler/sir/sir.h
+        compiler/sir/transform/cleanup/replacer.h
+        compiler/sir/transform/manager.h
+        compiler/sir/transform/pass.h
+        compiler/sir/types/types.h
+        compiler/sir/util/context.h
+        compiler/sir/util/iterators.h
+        compiler/sir/util/lambda_visitor.h
+        compiler/sir/util/visitor.h
+        compiler/sir/value.h
+        compiler/sir/var.h
         compiler/types/any.h
         compiler/types/array.h
         compiler/types/base.h
@@ -166,28 +189,9 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/util/fmt/ranges.h
         compiler/util/jit.h
         compiler/util/llvm.h
-        compiler/util/tapir.h
-        compiler/sir/types/types.h
-        compiler/sir/util/context.h
-        compiler/sir/util/iterators.h
-        compiler/sir/util/lambda_visitor.h
-        compiler/sir/util/visitor.h
-        compiler/sir/attribute.h
-        compiler/sir/base.h
-        compiler/sir/constant.h
-        compiler/sir/flow.h
-        compiler/sir/func.h
-        compiler/sir/instr.h
-        compiler/sir/module.h
-        compiler/sir/sir.h
-        compiler/sir/value.h
-        compiler/sir/var.h
-        compiler/sir/llvm/llvisitor.h
-        compiler/sir/llvm/llvm.h
-        compiler/sir/llvm/revcomp.h
-        compiler/sir/passes/pass.h
-        compiler/sir/passes/cleanup/replacer.h)
-set(SEQ_CPPFILES compiler/lang/expr.cpp
+        compiler/util/tapir.h)
+set(SEQ_CPPFILES
+        compiler/lang/expr.cpp
         compiler/lang/func.cpp
         compiler/lang/lang.cpp
         compiler/lang/patterns.cpp
@@ -197,22 +201,39 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/lang/var.cpp
         compiler/parser/ast/expr.cpp
         compiler/parser/ast/stmt.cpp
-        compiler/parser/visitors/visitor.cpp
+        compiler/parser/ast/types.cpp
+        compiler/parser/common.cpp
+        compiler/parser/ocaml/ocaml.cpp
+        compiler/parser/parser.cpp
         compiler/parser/visitors/codegen/codegen.cpp
         compiler/parser/visitors/codegen/codegen_ctx.cpp
         compiler/parser/visitors/doc/doc.cpp
         compiler/parser/visitors/format/format.cpp
         compiler/parser/visitors/simplify/simplify.cpp
         compiler/parser/visitors/simplify/simplify_ctx.cpp
+        compiler/parser/visitors/simplify/simplify_expr.cpp
+        compiler/parser/visitors/simplify/simplify_stmt.cpp
         compiler/parser/visitors/typecheck/typecheck.cpp
         compiler/parser/visitors/typecheck/typecheck_ctx.cpp
         compiler/parser/visitors/typecheck/typecheck_expr.cpp
         compiler/parser/visitors/typecheck/typecheck_infer.cpp
         compiler/parser/visitors/typecheck/typecheck_stmt.cpp
-        compiler/parser/ast/types.cpp
-        compiler/parser/common.cpp
-        compiler/parser/ocaml/ocaml.cpp
-        compiler/parser/parser.cpp
+        compiler/parser/visitors/visitor.cpp
+        compiler/sir/attribute.cpp
+        compiler/sir/base.cpp
+        compiler/sir/constant.cpp
+        compiler/sir/flow.cpp
+        compiler/sir/func.cpp
+        compiler/sir/instr.cpp
+        compiler/sir/llvm/llvisitor.cpp
+        compiler/sir/llvm/revcomp.cpp
+        compiler/sir/module.cpp
+        compiler/sir/transform/cleanup/replacer.cpp
+        compiler/sir/transform/manager.cpp
+        compiler/sir/types/types.cpp
+        compiler/sir/util/visitor.cpp
+        compiler/sir/value.cpp
+        compiler/sir/var.cpp
         compiler/types/any.cpp
         compiler/types/array.cpp
         compiler/types/base.cpp
@@ -227,23 +248,7 @@ set(SEQ_CPPFILES compiler/lang/expr.cpp
         compiler/types/union.cpp
         compiler/types/void.cpp
         compiler/util/fmt/format.cpp
-        compiler/util/jit.cpp
-        compiler/parser/visitors/simplify/simplify_expr.cpp
-        compiler/parser/visitors/simplify/simplify_stmt.cpp
-        compiler/sir/types/types.cpp
-        compiler/sir/util/visitor.cpp
-        compiler/sir/attribute.cpp
-        compiler/sir/base.cpp
-        compiler/sir/constant.cpp
-        compiler/sir/flow.cpp
-        compiler/sir/func.cpp
-        compiler/sir/instr.cpp
-        compiler/sir/module.cpp
-        compiler/sir/value.cpp
-        compiler/sir/var.cpp
-        compiler/sir/llvm/llvisitor.cpp
-        compiler/sir/llvm/revcomp.cpp
-        compiler/sir/passes/cleanup/replacer.cpp)
+        compiler/util/jit.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})

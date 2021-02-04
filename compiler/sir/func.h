@@ -28,8 +28,6 @@ public:
   explicit Func(types::Type *type, std::string name = "")
       : AcceptorExtend(type, false, std::move(name)), generator(false) {}
 
-  virtual ~Func() = default;
-
   /// Re-initializes the function with a new type and names.
   /// @param newType the function's new type
   /// @param names the function's new argument names
@@ -75,9 +73,7 @@ public:
   /// @param pos the position
   /// @param v the symbol
   /// @return an iterator to the newly added symbol
-  template <typename It> auto insert(It pos, Var *v) {
-    return symbols.insert(pos.internal, v);
-  }
+  template <typename It> auto insert(It pos, Var *v) { return symbols.insert(pos, v); }
   /// Appends an symbol.
   /// @param v the new symbol
   void push_back(Var *v) { symbols.push_back(v); }
@@ -85,7 +81,7 @@ public:
   /// Erases the symbol at the given position.
   /// @param pos the position
   /// @return symbol_iterator following the removed symbol.
-  template <typename It> auto erase(It pos) { return symbols.erase(pos.internal); }
+  template <typename It> auto erase(It pos) { return symbols.erase(pos); }
 
   /// @return true if the function is a generator
   bool isGenerator() const { return generator; }

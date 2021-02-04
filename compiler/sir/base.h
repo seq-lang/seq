@@ -31,7 +31,6 @@ public:
   static void resetId();
 
   IdMixin() : id(currentId++) {}
-  virtual ~IdMixin() = default;
 
   /// @return the node's id.
   int getId() const { return id; }
@@ -57,7 +56,7 @@ private:
   /// the node's name
   std::string name;
   /// key-value attribute store
-  std::map<std::string, AttributePtr> attributes;
+  std::map<std::string, std::unique_ptr<Attribute>> attributes;
   /// the module
   IRModule *module = nullptr;
   /// a replacement, if set
@@ -72,8 +71,6 @@ public:
   /// Constructs a node.
   /// @param name the node's name
   explicit IRNode(std::string name = "") : name(std::move(name)) {}
-
-  virtual ~IRNode() = default;
 
   /// See LLVM documentation.
   static const void *nodeId() { return &NodeId; }
@@ -265,8 +262,6 @@ template <typename Derived, typename Parent> class AcceptorExtend : public Paren
 public:
   using Parent::Parent;
 
-  virtual ~AcceptorExtend() = default;
-
   /// See LLVM documentation.
   static const void *nodeId() { return &Derived::NodeId; }
   /// See LLVM documentation.
@@ -283,6 +278,7 @@ public:
     else
       v.visit(static_cast<Derived *>(this));
   }
+
   void accept(util::ConstIRVisitor &v) const {
     if (IRNode::hasReplacement())
       IRNode::getActual()->accept(v);
