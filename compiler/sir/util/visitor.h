@@ -51,7 +51,7 @@ class CustomType;
 class CustomConstant;
 class CustomFlow;
 class CustomInstr;
-}
+} // namespace dsl
 
 class IRModule;
 

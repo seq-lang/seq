@@ -27,7 +27,7 @@ struct ValueBuilder {
   virtual llvm::Value *buildValue(LLVMVisitor *visitor) = 0;
 };
 
-}
-}
-}
-}
+} // namespace codegen
+} // namespace dsl
+} // namespace ir
+} // namespace seq

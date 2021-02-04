@@ -6,7 +6,8 @@
 #include "sir/constant.h"
 #include "sir/instr.h"
 
-#define CUSTOM_VALUE virtual std::unique_ptr<codegen::ValueBuilder> getBuilder() const = 0
+#define CUSTOM_VALUE                                                                   \
+  virtual std::unique_ptr<codegen::ValueBuilder> getBuilder() const = 0
 
 namespace seq {
 namespace ir {
@@ -15,7 +16,7 @@ namespace dsl {
 namespace codegen {
 struct TypeBuilder;
 struct ValueBuilder;
-}
+} // namespace codegen
 
 namespace types {
 

@@ -2070,9 +2070,7 @@ void LLVMVisitor::visit(const PipelineFlow *x) {
   }
 }
 
-void LLVMVisitor::visit(const dsl::CustomFlow *x) {
-  x->getBuilder()->buildValue(this);
-}
+void LLVMVisitor::visit(const dsl::CustomFlow *x) { x->getBuilder()->buildValue(this); }
 
 /*
  * Instructions
