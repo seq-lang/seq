@@ -121,8 +121,7 @@ void SimplifyVisitor::visit(IdExpr *expr) {
 }
 
 void SimplifyVisitor::visit(StarExpr *expr) {
-  resultExpr = transform(N<CallExpr>(
-      N<IdExpr>("List"), N<CallExpr>(N<DotExpr>(clone(expr->what), "__iter__"))));
+  error("cannot use star-expression here");
 }
 
 void SimplifyVisitor::visit(TupleExpr *expr) {
@@ -174,8 +173,17 @@ void SimplifyVisitor::visit(DictExpr *expr) {
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("dict"));
   stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Dict")))));
   for (auto &it : expr->items)
-    stmts.push_back(transform(N<ExprStmt>(N<CallExpr>(
-        N<DotExpr>(clone(var), "__setitem__"), clone(it.key), clone(it.value)))));
+    if (auto star = CAST(it.value, KeywordStarExpr)) {
+      ExprPtr forVar = N<IdExpr>(ctx->cache->getTemporaryVar("it"));
+      stmts.push_back(transform(N<ForStmt>(
+          clone(forVar), N<CallExpr>(N<DotExpr>(star->what->clone(), "items")),
+          N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__setitem__"),
+                                  N<IndexExpr>(clone(forVar), N<IntExpr>(0)),
+                                  N<IndexExpr>(clone(forVar), N<IntExpr>(1)))))));
+    } else {
+      stmts.push_back(transform(N<ExprStmt>(N<CallExpr>(
+          N<DotExpr>(clone(var), "__setitem__"), clone(it.key), clone(it.value)))));
+    }
   resultExpr = N<StmtExpr>(move(stmts), transform(var));
 }
 
@@ -455,22 +463,18 @@ void SimplifyVisitor::visit(CallExpr *expr) {
   generateTupleStub(expr->args.size());
   vector<CallExpr::Arg> args;
   bool namesStarted = false;
-  set<string> seenNames;
   for (auto &i : expr->args) {
     if (i.name.empty() && namesStarted)
       error("unnamed argument after a named argument");
-    if (!i.name.empty() && i.value->getStar())
+    if (!i.name.empty() && (i.value->getStar() || CAST(i.value, KeywordStarExpr)))
       error("invalid star-expression");
     namesStarted |= !i.name.empty();
-    if (!i.name.empty()) {
-      if (in(seenNames, i.name))
-        error("repeated named argument '{}'", i.name);
-      seenNames.insert(i.name);
-    }
     if (i.value->getEllipsis())
       args.push_back({i.name, clone(i.value)});
     else if (auto es = i.value->getStar())
       args.push_back({i.name, N<StarExpr>(transform(es->what))});
+    else if (auto ek = CAST(i.value, KeywordStarExpr))
+      args.push_back({i.name, N<KeywordStarExpr>(transform(ek->what))});
     else
       args.push_back({i.name, transform(i.value)});
   }

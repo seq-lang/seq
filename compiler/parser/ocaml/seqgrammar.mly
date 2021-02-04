@@ -83,7 +83,9 @@ tuple:
   | LP RP { $loc, Tuple [] }
   | LP expr COMMA RP { $loc, Tuple [$2] }
   | LP expr COMMA FLNE(COMMA, expr) RP { $loc, Tuple ($2 :: $4) }
-dictitem: expr COLON expr { $1, $3 }
+dictitem:
+  | MUL MUL ID { ($loc, Id ""), ($loc($3), KwStar ($loc($3), Id $3)) }
+  | expr COLON expr { $1, $3 }
 comprehension: FOR lassign IN pipe_expr comprehension_if* comprehension?
   { $loc, { var = $2; gen = flat_pipe $4; cond = $5; next = $6 } }
 comprehension_if: IF pipe_expr { $loc, snd (flat_pipe $2) }
@@ -153,17 +155,15 @@ arith_term:
   | ELLIPSIS { $loc, Ellipsis () }
   | INT ELLIPSIS INT { $loc, Range (($loc($1), Int $1), ($loc($3), Int $3)) }
 call_term:
-  /* | ELLIPSIS { None, ($loc, Ellipsis ()) } */
   | expr { None, $1 }
   | ID EQ expr { Some $1, $3 }
-  /* | ID EQ ELLIPSIS { Some $1, ($loc($3), Ellipsis ()) } */
+  | MUL MUL ID { None, ($loc($3), KwStar ($loc($3), Id $3)) }
 index_term:
   | expr { $1 }
   | expr? COLON expr? { $loc, Slice ($1, $3, None) }
   | expr? COLON expr? COLON expr? { $loc, Slice ($1, $3, $5) }
 walrus:
   | ID WALRUS expr { $loc, AssignExpr (($loc($1), Id $1), $3) }
-  /* | LP FL(COMMA, ID) RP WALRUS expr { $loc, AssignExpr ($loc($1), Id $1) $3 } */
 
 /* 3. Statements */
 statement:
@@ -283,9 +283,12 @@ func_def:
   | decorator(DEF) ID generic_list? LP FL(COMMA, typed_param) RP func_ret_type?
     { { fn_name = $2; fn_rettyp = $7; fn_generics = opt_val $3 []; fn_args = $5; fn_stmts = []; fn_attrs = $1 } }
 typed_param:
-  | MUL? ID param_type? default_val?
-    { let name = match $1 with Some _ -> "*" ^ $2 | None -> $2 in
-      $loc, { name = ($loc($2), name); typ = $3; default = $4 } }
+  | ID param_type? default_val?
+    { $loc, { name = ($loc($1), $1); typ = $2; default = $3 } }
+  | MUL ID
+    { $loc, { name = ($loc($2), "*" ^ $2); typ = None; default = None } }
+  | MUL MUL ID
+    { $loc, { name = ($loc($3), "**" ^ $3); typ = None; default = None } }
 generic_list: LS FLNE(COMMA, typed_param) RS { $2 }
 default_val: EQ expr { $2 }
 param_type: COLON expr { $2 }

@@ -22,6 +22,7 @@ void ASTVisitor::visit(FloatExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(StringExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(IdExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(StarExpr *expr) { defaultVisit(expr); }
+void ASTVisitor::visit(KeywordStarExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(TupleExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(ListExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(SetExpr *expr) { defaultVisit(expr); }

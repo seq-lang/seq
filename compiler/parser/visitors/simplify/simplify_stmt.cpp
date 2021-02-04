@@ -436,19 +436,25 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   bool defaultsStarted = false;
   for (int ia = 0; ia < stmt->args.size(); ia++) {
     auto &a = stmt->args[ia];
-    if (in(seenArgs, a.name))
-      error("'{}' declared twice", a.name);
-    seenArgs.insert(a.name);
+    string varName = a.name, prefix = "";
+    for (int i = 0; i < 2; i++)
+      if (startswith(varName, "*"))
+        varName = varName.substr(1), prefix += "*";
+
+    if (in(seenArgs, varName))
+      error("'{}' declared twice", varName);
+    seenArgs.insert(varName);
     if (!a.deflt && defaultsStarted)
-      error("non-default argument '{}' after a default argument", a.name);
+      error("non-default argument '{}' after a default argument", varName);
     defaultsStarted |= bool(a.deflt);
     auto typeAst = transformType(a.type.get());
     // If the first argument of a class method is self and if it has no type, add it.
     if (!typeAst && isClassMember && ia == 0 && a.name == "self")
       typeAst = transformType(ctx->bases[ctx->bases.size() - 2].ast.get());
-    auto name = ctx->generateCanonicalName(a.name);
-    args.emplace_back(Param{name, move(typeAst), transform(a.deflt)});
-    ctx->add(SimplifyItem::Var, a.name, name);
+
+    auto name = ctx->generateCanonicalName(varName);
+    args.emplace_back(Param{prefix + name, move(typeAst), transform(a.deflt)});
+    ctx->add(SimplifyItem::Var, varName, name);
   }
   // Parse the return type.
   if (!stmt->ret && in(stmt->attributes, ATTR_EXTERN_LLVM))

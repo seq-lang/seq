@@ -96,6 +96,14 @@ string StarExpr::toString() const {
 }
 ACCEPT_IMPL(StarExpr, ASTVisitor);
 
+KeywordStarExpr::KeywordStarExpr(ExprPtr what) : Expr(), what(move(what)) {}
+KeywordStarExpr::KeywordStarExpr(const KeywordStarExpr &expr)
+    : Expr(expr), what(ast::clone(expr.what)) {}
+string KeywordStarExpr::toString() const {
+  return wrapType(format("kwstar {}", what->toString()));
+}
+ACCEPT_IMPL(KeywordStarExpr, ASTVisitor);
+
 TupleExpr::TupleExpr(vector<ExprPtr> &&items) : Expr(), items(move(items)) {}
 TupleExpr::TupleExpr(const TupleExpr &expr)
     : Expr(expr), items(ast::clone(expr.items)) {}

@@ -36,6 +36,7 @@ public:
   virtual void visit(StringExpr *);
   virtual void visit(IdExpr *);
   virtual void visit(StarExpr *);
+  virtual void visit(KeywordStarExpr *);
   virtual void visit(TupleExpr *);
   virtual void visit(ListExpr *);
   virtual void visit(SetExpr *);

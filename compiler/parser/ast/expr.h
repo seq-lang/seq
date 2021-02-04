@@ -242,6 +242,18 @@ struct StarExpr : public Expr {
   const StarExpr *getStar() const override { return this; }
 };
 
+/// KeywordStar (unpacking) expression (**what).
+/// @example **kwargs
+struct KeywordStarExpr : public Expr {
+  ExprPtr what;
+
+  explicit KeywordStarExpr(ExprPtr what);
+  KeywordStarExpr(const KeywordStarExpr &expr);
+
+  string toString() const override;
+  ACCEPT(ASTVisitor);
+};
+
 /// Tuple expression ((items...)).
 /// @example (1, a)
 struct TupleExpr : public Expr {

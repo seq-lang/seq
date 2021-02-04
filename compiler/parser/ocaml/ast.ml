@@ -40,6 +40,7 @@ type texpr =
   | YieldTo of unit
   | AssignExpr of (texpr ann * texpr ann)
   | Range of (texpr ann * texpr ann)
+  | KwStar of texpr ann
 
 and tcomprehension =
   { var : texpr ann

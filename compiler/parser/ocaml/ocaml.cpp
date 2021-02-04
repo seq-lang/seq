@@ -183,6 +183,8 @@ ExprPtr parse_expr(value val) {
     Return(Assign, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)));
   case 28:
     Return(Range, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)));
+  case 29:
+    Return(KeywordStar, parse_expr(t));
   default:
     seq::compilationError("[internal] tag variant mismatch ...");
     return nullptr;

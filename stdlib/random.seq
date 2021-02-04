@@ -385,7 +385,6 @@ class Random:
         if alpha <= 0.0 or beta <= 0.0:
             raise ValueError('gammavariate: alpha and beta must be > 0.0')
 
-        random = self.random
         if alpha > 1.0:
 
             # Uses R.C.H. Cheng, "The generation of Gamma
@@ -410,21 +409,21 @@ class Random:
 
         elif alpha == 1.0:
             # expovariate(1/beta)
-            return -_log(1.0 - random()) * beta
+            return -_log(1.0 - self.random()) * beta
 
         else:   # alpha is between 0 and 1 (exclusive)
 
             # Uses ALGORITHM GS of Statistical Computing - Kennedy & Gentle
             x = 0.0
             while 1:
-                u = random()
+                u = self.random()
                 b = (_e + alpha) / _e
                 p = b * u
                 if p <= 1.0:
                     x = p ** (1.0 / alpha)
                 else:
                     x = -_log((b - p) / alpha)
-                u1 = random()
+                u1 = self.random()
                 if p > 1.0:
                     if u1 <= x ** (alpha - 1.0):
                         break
@@ -472,10 +471,9 @@ class Random:
         slightly faster than the normalvariate() function.
         Not thread-safe without a lock around calls.
         """
-        random = self.random
         z = 0.0
-        x2pi = random() * TWOPI
-        g2rad = _sqrt(-2.0 * _log(1.0 - random()))
+        x2pi = self.random() * TWOPI
+        g2rad = _sqrt(-2.0 * _log(1.0 - self.random()))
         z = _cos(x2pi) * g2rad
         # self.gauss_next = _sin(x2pi) * g2rad
         return mu + z * sigma
@@ -483,8 +481,7 @@ class Random:
     def paretovariate(self, alpha: float) -> float:
         """
         Pareto distribution.  alpha is the shape parameter."""
-        random = self.random
-        u = 1.0 - random()
+        u = 1.0 - self.random()
         return 1.0 / u ** (1.0/alpha)
 
     def weibullvariate(self, alpha: float, beta: float) -> float:
@@ -493,8 +490,7 @@ class Random:
 
         alpha is the scale parameter and beta is the shape parameter.
         """
-        random = self.random
-        u = 1.0 - random()
+        u = 1.0 - self.random()
         return alpha * (-_log(u)) ** (1.0/beta)
 
     def normalvariate(self, mu: float, sigma: float) -> float:
@@ -503,11 +499,10 @@ class Random:
 
         mu is the mean, and sigma is the standard deviation.
         """
-        random = self.random
         z = 0.0
         while 1:
-            u1 = random()
-            u2 = 1.0 - random()
+            u1 = self.random()
+            u2 = 1.0 - self.random()
             z = NV_MAGICCONST * (u1 - 0.5) / u2
             zz = z * z / 4.0
             if zz <= - _log(u2):
@@ -536,25 +531,24 @@ class Random:
         z = 0.0
         theta = 0.0
 
-        random = self.random
         if kappa <= 1e-6:
-            return TWOPI * random()
+            return TWOPI * self.random()
 
         s = 0.5 / kappa
         r = s + _sqrt(1.0 + s * s)
 
         while 1:
-            u1 = random()
+            u1 = self.random()
             z = _cos(_pi * u1)
 
             d = z / (r + z)
-            u2 = random()
+            u2 = self.random()
             if u2 < 1.0 - d * d or u2 <= (1.0 - d) * _exp(d):
                 break
 
         q = 1.0 / r
         f = (q + z) / (1.0 + q * z)
-        u3 = random()
+        u3 = self.random()
         if u3 > 0.5:
             theta = (mu + _acos(f)) % TWOPI
         else:
@@ -632,11 +626,10 @@ class Random:
 
             return cum_weight
 
-        random = self.random
         n = len(population)
         if cum_weights is None:
             if weights is None:
-                return [population[int(random() * n)] for i in range(k)]
+                return [population[int(self.random() * n)] for i in range(k)]
             cum_weights = accumulate(weights)
         elif weights is not None:
             raise TypeError('Cannot specify both weights and cumulative weights')
@@ -645,7 +638,7 @@ class Random:
 
         total = float(cum_weights[-1])  # convert to float
         hi = n - 1
-        return [population[_bisect(cum_weights, int(random() * total), 0, hi)]
+        return [population[_bisect(cum_weights, int(self.random() * total), 0, hi)]
                 for i in range(k)]
 
 _gen = RandomGenerator()
