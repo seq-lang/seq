@@ -5,13 +5,14 @@
 #include <unordered_set>
 #include <vector>
 
-#include "pass.h"
-
+#include "sir/analyze/analysis.h"
 #include "sir/module.h"
 
 namespace seq {
 namespace ir {
-namespace passes {
+namespace transform {
+
+class Pass;
 
 /// Utility class to run a series of passes.
 class PassManager {
@@ -24,15 +25,13 @@ private:
     std::vector<std::string> reqs;
     /// vector of invalidated passes
     std::vector<std::string> invalidates;
-    /// true if this is an analysis pass
-    bool isAnalysis = false;
 
     PassMetadata() = default;
 
     PassMetadata(std::unique_ptr<Pass> pass, std::vector<std::string> reqs,
-                 std::vector<std::string> invalidates, bool isAnalysis = false)
+                 std::vector<std::string> invalidates)
         : pass(std::move(pass)), reqs(std::move(reqs)),
-          invalidates(std::move(invalidates)), isAnalysis(isAnalysis) {}
+          invalidates(std::move(invalidates)) {}
 
     PassMetadata(PassMetadata &&) = default;
     PassMetadata &operator=(PassMetadata &&) = default;
@@ -40,31 +39,46 @@ private:
 
   /// map of keys to passes
   std::unordered_map<std::string, PassMetadata> passes;
-  /// execution order of non-analysis passes
-  std::vector<std::string> executionOrder;
+  /// map of keys to analyses
+  std::unordered_map<std::string, std::unique_ptr<analyze::Analysis>> analyses;
 
-  /// set of valid passes
-  std::unordered_set<std::string> valid;
+  /// execution order of passes
+  std::vector<std::string> executionOrder;
+  /// map of valid analysis results
+  std::unordered_map<std::string, std::unique_ptr<analyze::Result>> results;
 
 public:
-  /// Registers a pass. If this is a non-analysis pass, append it to the execution
-  /// order.
-  /// @param pass the pass
+  /// Registers a pass and appends it to the execution order.
   /// @param key the pass's key
+  /// @param pass the pass
   /// @param reqs keys of passes that must be run before the current one
   /// @param invalidates keys of passes that are invalidated by the current one
-  void registerPass(std::unique_ptr<Pass> pass, const std::string &key,
+  void registerPass(const std::string &key, std::unique_ptr<Pass> pass,
                     std::vector<std::string> reqs = {},
                     std::vector<std::string> invalidates = {});
+
+  /// Registers an analysis.
+  /// @param key the analysis's key
+  /// @param analysis the analysis
+  void registerAnalysis(const std::string &key,
+                        std::unique_ptr<analyze::Analysis> analysis);
 
   /// Run all passes.
   /// @param module the module
   void run(IRModule *module);
 
+  /// Gets the result of a given analysis.
+  /// @param key the analysis key
+  /// @return the result
+  analyze::Result *getAnalysisResult(const std::string &key) {
+    auto it = results.find(key);
+    return it != results.end() ? it->second.get() : nullptr;
+  }
+
 private:
   void runPass(IRModule *module, const std::string &name);
 };
 
-} // namespace passes
+} // namespace transform
 } // namespace ir
 } // namespace seq

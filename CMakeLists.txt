@@ -140,6 +140,7 @@ set(SEQ_HPPFILES
         compiler/parser/visitors/typecheck/typecheck.h
         compiler/parser/visitors/typecheck/typecheck_ctx.h
         compiler/parser/visitors/visitor.h
+        compiler/sir/analyze/analysis.h
         compiler/sir/attribute.h
         compiler/sir/base.h
         compiler/sir/constant.h
@@ -150,10 +151,10 @@ set(SEQ_HPPFILES
         compiler/sir/llvm/llvm.h
         compiler/sir/llvm/revcomp.h
         compiler/sir/module.h
-        compiler/sir/passes/cleanup/replacer.h
-        compiler/sir/passes/manager.h
-        compiler/sir/passes/pass.h
         compiler/sir/sir.h
+        compiler/sir/transform/cleanup/replacer.h
+        compiler/sir/transform/manager.h
+        compiler/sir/transform/pass.h
         compiler/sir/types/types.h
         compiler/sir/util/context.h
         compiler/sir/util/iterators.h
@@ -227,8 +228,8 @@ set(SEQ_CPPFILES
         compiler/sir/llvm/llvisitor.cpp
         compiler/sir/llvm/revcomp.cpp
         compiler/sir/module.cpp
-        compiler/sir/passes/cleanup/replacer.cpp
-        compiler/sir/passes/manager.cpp
+        compiler/sir/transform/cleanup/replacer.cpp
+        compiler/sir/transform/manager.cpp
         compiler/sir/types/types.cpp
         compiler/sir/util/visitor.cpp
         compiler/sir/value.cpp
