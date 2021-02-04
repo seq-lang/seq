@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <utility>
 
+#include "sir/dsl/codegen.h"
+
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 #define SEQ_VERSION_STRING()                                                           \
@@ -1252,6 +1254,10 @@ llvm::Type *LLVMVisitor::getLLVMType(const types::Type *t) {
     return builder.getIntNTy(x->getLen());
   }
 
+  if (auto *x = cast<dsl::types::CustomType>(t)) {
+    return x->getBuilder()->buildType(this);
+  }
+
   assert(0 && "unknown type");
   return nullptr;
 }
@@ -1401,6 +1407,10 @@ llvm::DIType *LLVMVisitor::getDITypeHelper(
         x->isSigned() ? llvm::dwarf::DW_ATE_signed : llvm::dwarf::DW_ATE_unsigned);
   }
 
+  if (auto *x = cast<dsl::types::CustomType>(t)) {
+    return x->getBuilder()->buildDebugType(this);
+  }
+
   assert(0 && "unknown type");
   return nullptr;
 }
@@ -1443,6 +1453,10 @@ void LLVMVisitor::visit(const StringConstant *x) {
   str = builder.CreateInsertValue(str, len, 0);
   str = builder.CreateInsertValue(str, ptr, 1);
   value = str;
+}
+
+void LLVMVisitor::visit(const dsl::CustomConstant *x) {
+  x->getBuilder()->buildValue(this);
 }
 
 /*
@@ -2056,6 +2070,10 @@ void LLVMVisitor::visit(const PipelineFlow *x) {
   }
 }
 
+void LLVMVisitor::visit(const dsl::CustomFlow *x) {
+  x->getBuilder()->buildValue(this);
+}
+
 /*
  * Instructions
  */
@@ -2284,6 +2302,10 @@ void LLVMVisitor::visit(const ThrowInstr *x) {
 void LLVMVisitor::visit(const FlowInstr *x) {
   process(x->getFlow());
   process(x->getValue());
+}
+
+void LLVMVisitor::visit(const dsl::CustomInstr *x) {
+  x->getBuilder()->buildValue(this);
 }
 
 } // namespace ir

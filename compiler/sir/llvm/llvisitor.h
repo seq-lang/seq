@@ -212,6 +212,7 @@ public:
   void visit(const FloatConstant *) override;
   void visit(const BoolConstant *) override;
   void visit(const StringConstant *) override;
+  void visit(const dsl::CustomConstant *) override;
 
   void visit(const SeriesFlow *) override;
   void visit(const IfFlow *) override;
@@ -219,6 +220,7 @@ public:
   void visit(const ForFlow *) override;
   void visit(const TryCatchFlow *) override;
   void visit(const PipelineFlow *) override;
+  void visit(const dsl::CustomFlow *) override;
 
   void visit(const AssignInstr *) override;
   void visit(const ExtractInstr *) override;
@@ -234,6 +236,7 @@ public:
   void visit(const YieldInstr *) override;
   void visit(const ThrowInstr *) override;
   void visit(const FlowInstr *) override;
+  void visit(const dsl::CustomInstr *) override;
 };
 
 } // namespace ir

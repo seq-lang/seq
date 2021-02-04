@@ -187,7 +187,7 @@ set(SEQ_HPPFILES compiler/lang/expr.h
         compiler/sir/llvm/revcomp.h
         compiler/sir/passes/pass.h
         compiler/sir/passes/cleanup/replacer.h
-        compiler/sir/dsl/llvm.h
+        compiler/sir/dsl/codegen.h
         compiler/sir/dsl/nodes.h
         )
 set(SEQ_CPPFILES compiler/lang/expr.cpp
