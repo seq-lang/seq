@@ -250,6 +250,7 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
   if (auto tuple = iterType->getHeterogenousTuple()) {
     // Case 1: iterating heterogenous tuple.
     // Unroll a separate suite for each tuple member.
+    // LOG("hetero");
     auto block = N<SuiteStmt>();
     auto tupleVar = ctx->cache->getTemporaryVar("tuple");
     block->stmts.push_back(N<AssignStmt>(N<IdExpr>(tupleVar), move(stmt->iter)));
@@ -410,9 +411,10 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   for (const auto &i : stmt->generics)
     generics.push_back(ctx->find(i.name)->type);
   // Add function arguments.
+  generateFunctionStub(stmt->args.size());
   auto baseType =
       ctx->instantiate(getSrcInfo(),
-                       ctx->findInternal(format("Function.N{}", stmt->args.size())))
+                       ctx->find(format("Function.N{}", stmt->args.size()))->type)
           ->getRecord();
   {
     ctx->typecheckLevel++;

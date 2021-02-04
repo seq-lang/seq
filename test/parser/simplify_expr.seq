@@ -210,9 +210,9 @@ class Foo:
         print foo
 f = Foo()
 f[0,0] #: (0, 0)
-f[0,:] #: (0, (None, None, None))
-f[:,:] #: ((None, None, None), (None, None, None))
-f[:,0] #: ((None, None, None), 0)
+f[0,:] #: (0, (start: None, stop: None, step: None))
+f[:,:] #: ((start: None, stop: None, step: None), (start: None, stop: None, step: None))
+f[:,0] #: ((start: None, stop: None, step: None), 0)
 
 #%% index_error,barebones
 Ptr['s'] #! ERROR: expected type parameters

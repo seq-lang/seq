@@ -68,6 +68,10 @@ public:
   /// Correct the identifier with a realized identifier (e.g. replace Id("Ptr") with
   /// Id("Ptr[byte]")).
   void visit(IdExpr *) override;
+  /// Transform a tuple (a1, ..., aN) to:
+  ///   Tuple.N.__new__(a1, ..., aN).
+  /// If Tuple.N has not been seen before, generate a stub class for it.
+  void visit(TupleExpr *) override;
   /// Set type to the unification of both sides.
   /// Wrap a side with Optional.__new__() if other side is optional.
   /// Also evaluates static if expressions.
@@ -248,6 +252,20 @@ private:
   pair<bool, ExprPtr> transformSpecialCall(CallExpr *expr);
   /// Find all generics on which a given function depends and add them to the context.
   void addFunctionGenerics(const types::FuncType *t);
+
+  /// Generate a tuple class Tuple.N[T1,...,TN](a1: T1, ..., aN: TN).
+  /// Also used to generate a named tuple class Name.N[T1,...,TN] with field names
+  /// provided in names parameter.
+  string generateTupleStub(int len, string name = "Tuple",
+                           vector<string> names = vector<string>{});
+  /// Generate a function type Function.N[TR, T1, ..., TN] as follows:
+  ///   @internal @tuple @trait
+  ///   class Function.N[TR, T1, ..., TN]:
+  ///     def __new__(what: Ptr[byte]) -> Function.N[TR, T1, ..., TN]
+  ///     def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]
+  ///     def __str__(self: Function.N[TR, T1, ..., TN]) -> str
+  /// Return the canonical name of Function.N.
+  string generateFunctionStub(int n);
   /// Generate a partial function type Partial.N01...01 (where 01...01 is a mask
   /// of size N) as follows:
   ///   @tuple @no_total_ordering @no_pickle @no_container @no_python

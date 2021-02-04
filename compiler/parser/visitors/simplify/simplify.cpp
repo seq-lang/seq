@@ -119,12 +119,14 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
                 make_unique<IndexExpr>(make_unique<IdExpr>("Array"),
                                        make_unique<IdExpr>("str")))));
     stdlib->isStdlibLoading = false;
+
+    // The whole standard library has the age of zero to allow back-references.
+    cache->age++;
   }
 
-  // The whole standard library has the age of zero to allow back-references.
-  cache->age++;
-  // Reuse standard library context as it contains all standard library symbols.
-  auto ctx = static_pointer_cast<SimplifyContext>(cache->imports[STDLIB_IMPORT].ctx);
+  auto ctx = make_shared<SimplifyContext>(file, cache);
+  // static_pointer_cast<SimplifyContext>(cache->imports[STDLIB_IMPORT].ctx);
+  cache->imports[file] = {file, ctx};
   ctx->setFilename(file);
   ctx->moduleName = MODULE_MAIN;
   // Load the command-line defines.
@@ -158,10 +160,15 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
 }
 
 StmtPtr SimplifyVisitor::apply(shared_ptr<SimplifyContext> ctx, const StmtPtr &node,
-                               const string &file) {
+                               const string &file, int atAge) {
   vector<StmtPtr> stmts;
+  int oldAge = ctx->cache->age;
+  if (atAge != -1)
+    ctx->cache->age = atAge;
   auto preamble = make_shared<Preamble>();
-  stmts.emplace_back(SimplifyVisitor(move(ctx), preamble).transform(node));
+  stmts.emplace_back(SimplifyVisitor(ctx, preamble).transform(node));
+  if (atAge != -1)
+    ctx->cache->age = oldAge;
   auto suite = make_unique<SuiteStmt>();
   for (auto &s : preamble->types)
     suite->stmts.push_back(move(s));

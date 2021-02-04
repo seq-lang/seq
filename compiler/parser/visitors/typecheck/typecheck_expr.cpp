@@ -102,6 +102,10 @@ void TypecheckVisitor::visit(StringExpr *expr) {
 }
 
 void TypecheckVisitor::visit(IdExpr *expr) {
+  if (startswith(expr->value, "Tuple.N"))
+    generateTupleStub(std::stoi(expr->value.substr(7)));
+  else if (startswith(expr->value, "Function.N"))
+    generateFunctionStub(std::stoi(expr->value.substr(10)));
   auto val = ctx->find(expr->value);
   seqassert(val, "cannot find IdExpr '{}'", expr->value);
   if (val->isStatic()) {
@@ -128,6 +132,13 @@ void TypecheckVisitor::visit(IdExpr *expr) {
   } else {
     expr->done = false;
   }
+}
+
+void TypecheckVisitor::visit(TupleExpr *expr) {
+  auto name = generateTupleStub(expr->items.size());
+  /// TODO: tuple star-expression
+  resultExpr = transform(
+      N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"), clone(expr->items)));
 }
 
 void TypecheckVisitor::visit(IfExpr *expr) {
@@ -729,6 +740,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
       return transform(N<CallExpr>(N<DotExpr>(move(expr->expr), "_getattr"),
                                    N<StringExpr>(expr->member)));
     } else {
+      ctx->findMethod(typ->name, expr->member);
       error("cannot find '{}' in {}", expr->member, typ->toString());
     }
   }
@@ -980,8 +992,8 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       auto t = ek->what->type->getClass();
       if (!t)
         return nullptr;
-      if (!t->getRecord() || startswith(t->name, "Tuple.N"))
-        error("can only unpack named tuple types");
+      if (!t->getRecord() || (startswith(t->name, "Tuple.N") && t->name != "Tuple.N0"))
+        error("can only unpack named tuple types: {}", t->toString());
       auto &ff = ctx->cache->classes[t->name].fields;
       for (int i = 0; i < t->getRecord()->args.size(); i++, ai++)
         expr->args.insert(expr->args.begin() + ai,
@@ -1090,10 +1102,8 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   // 0. Get the list of available slots.
   map<int, int> argIndex;
   for (int i = 1; i < calleeFn->args.size(); i++)
-    if (knownTypes.empty() || knownTypes[i - 1] == '0') {
+    if (knownTypes.empty() || knownTypes[i - 1] == '0')
       argIndex[i - 1] = argIndex.size();
-      // LOG("{} {}", i - 1, argIndex[i - 1]);
-    }
   if (ast) {
     ctx->addBlock();
     addFunctionGenerics(calleeFn->getFunc().get()); // needed for default arguments.
@@ -1101,7 +1111,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   // 1. Assign positional arguments to slots
   vector<CallExpr::Arg> slots;
   vector<ExprPtr> extra;
-  unordered_map<string, ExprPtr> namedArgs, extraNamedArgs;
+  map<string, ExprPtr> namedArgs, extraNamedArgs; // keep the map--- we need it sorted!
   for (auto &a : expr->args) {
     if (a.name.empty()) {
       if (slots.size() < argIndex.size())
@@ -1114,6 +1124,20 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   }
   while (slots.size() < argIndex.size())
     slots.push_back({"", nullptr});
+  int starArgIndex = -1, kwstarArgIndex = -1;
+  for (int i = 0; ast && i < ast->args.size(); i++)
+    if (in(argIndex, i)) {
+      if (startswith(ast->args[i].name, "**"))
+        kwstarArgIndex = argIndex[i];
+      else if (startswith(ast->args[i].name, "*"))
+        starArgIndex = argIndex[i];
+    }
+  for (auto ai : vector<int>{std::max(starArgIndex, kwstarArgIndex),
+                             std::min(starArgIndex, kwstarArgIndex)})
+    if (ai != -1 && slots[ai].value) {
+      extra.insert(extra.begin(), move(slots[ai].value));
+      slots[ai].value = nullptr;
+    }
   // 2. Assign named arguments to slots
   if (!namedArgs.empty()) {
     if (!ast)
@@ -1133,7 +1157,39 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         slots[slotNames[n.first]].value = move(n.second);
     }
   }
-  // 3. Fill in the default arguments
+  // 3. Fill in *args, if present
+  if (!extra.empty() && starArgIndex == -1)
+    error("too many arguments for {} (expected {}, got {})", calleeFn->toString(),
+          argIndex.size(), expr->args.size());
+  if (starArgIndex != -1) {
+    if (!extra.empty())
+      for (auto &e : extra)
+        if (e->getEllipsis())
+          error(e, "cannot pass an ellipsis to *args");
+    slots[starArgIndex].value = transform(N<TupleExpr>(move(extra)));
+  }
+  // 4. Fill in **kwargs, if present
+  if (!extraNamedArgs.empty() && kwstarArgIndex == -1)
+    error(extraNamedArgs.begin()->second, "unknown argument '{}'",
+          extraNamedArgs.begin()->first);
+  if (kwstarArgIndex != -1) {
+    vector<string> names;
+    vector<CallExpr::Arg> values;
+    for (auto &e : extraNamedArgs) {
+      if (e.second->getEllipsis())
+        error(e.second, "cannot pass an ellipsis to **kwargs");
+      names.emplace_back(e.first);
+      values.emplace_back(CallExpr::Arg{"", move(e.second)});
+    }
+    if (!extraNamedArgs.empty()) {
+      auto name = generateTupleStub(extraNamedArgs.size(), "KwTuple", names);
+      slots[kwstarArgIndex].value =
+          transform(N<CallExpr>(N<IdExpr>(name), move(values)));
+    } else {
+      slots[kwstarArgIndex].value = transform(N<TupleExpr>(vector<ExprPtr>{}));
+    }
+  }
+  // 5. Fill in the default arguments
   for (auto i : argIndex)
     if (!slots[i.second].value) {
       if (ast->args[i.first].deflt)
@@ -1142,40 +1198,6 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         error("missing argument '{}'",
               ctx->cache->reverseIdentifierLookup[ast->args[i.first].name]);
     }
-  // 4. Fill in *args, if present
-  if (!extra.empty()) {
-    int starArgIndex = -1;
-    for (int i = 0; ast && i < ast->args.size(); i++)
-      if (ast->args[i].name[0] == '*' && in(argIndex, i))
-        starArgIndex = argIndex[i];
-    if (starArgIndex != -1) {
-      vector<ExprPtr> items;
-      for (auto &e : extra)
-        if (e->getEllipsis())
-          error(e, "cannot pass an ellipsis to *args");
-      slots[starArgIndex].value = transform(N<TupleExpr>(move(extra)));
-    } else {
-      error("too many arguments for {} (expected {}, got {})", calleeFn->toString(),
-            argIndex.size(), expr->args.size());
-    }
-  }
-  // 5. Fill in **kwargs, if present
-  if (!extraNamedArgs.empty()) {
-    int starArgIndex = -1;
-    for (int i = 0; ast && i < ast->args.size(); i++)
-      if (startswith(ast->args[i].name, "**") && in(argIndex, i))
-        starArgIndex = argIndex[i];
-    if (starArgIndex != -1) {
-      for (auto &e : extraNamedArgs)
-        if (e.second->getEllipsis())
-          error(e.second, "cannot pass an ellipsis to **kwargs");
-      error("to-do!");
-      // slots[starArgIndex].value = transform(N<TupleExpr>(move(extra)));
-    } else {
-      error(extraNamedArgs.begin()->second, "unknown argument '{}'",
-            extraNamedArgs.begin()->first);
-    }
-  }
   // 6. Form pending array for partial calls
   vector<int> pending;
   for (auto &ai : argIndex)
@@ -1388,6 +1410,105 @@ void TypecheckVisitor::addFunctionGenerics(const FuncType *t) {
       ctx->add(TypecheckItem::Type, g.name, g.type);
 }
 
+string TypecheckVisitor::generateTupleStub(int len, string name, vector<string> names) {
+  static map<string, int> usedNames;
+  auto key = join(names, ";");
+  string suffix;
+  if (!names.empty()) {
+    if (!in(usedNames, key))
+      usedNames[key] = usedNames.size();
+    suffix = format("_{}", usedNames[key]);
+  } else {
+    for (int i = 1; i <= len; i++)
+      names.push_back(format("item{}", i));
+  }
+  auto typeName = format("{}.N{}{}", name, len, suffix);
+  if (!ctx->find(typeName)) {
+    vector<Param> generics, args;
+    for (int i = 1; i <= len; i++) {
+      generics.emplace_back(Param{format("T{}", i), nullptr, nullptr});
+      args.emplace_back(Param{names[i - 1], N<IdExpr>(format("T{}", i)), nullptr});
+    }
+    StmtPtr stmt = make_unique<ClassStmt>(typeName, move(generics), move(args), nullptr,
+                                          vector<string>{ATTR_TUPLE});
+    stmt->setSrcInfo(ctx->cache->generateSrcInfo());
+
+    stmt = SimplifyVisitor::apply(ctx->cache->imports[STDLIB_IMPORT].ctx, stmt,
+                                  FILE_GENERATED, 0);
+    stmt = TypecheckVisitor(ctx).transform(stmt);
+    prependStmts->push_back(move(stmt));
+  }
+  return typeName;
+}
+
+string TypecheckVisitor::generateFunctionStub(int n) {
+  seqassert(n >= 0, "invalid n");
+  auto typeName = format("Function.N{}", n);
+  if (!ctx->find(typeName)) {
+    vector<Param> generics;
+    generics.emplace_back(Param{"TR", nullptr, nullptr});
+    vector<ExprPtr> genericNames;
+    genericNames.emplace_back(N<IdExpr>("TR"));
+    // TODO: remove this args hack
+    vector<Param> args;
+    args.emplace_back(Param{"ret", N<IdExpr>("TR"), nullptr});
+    for (int i = 1; i <= n; i++) {
+      genericNames.emplace_back(N<IdExpr>(format("T{}", i)));
+      generics.emplace_back(Param{format("T{}", i), nullptr, nullptr});
+      args.emplace_back(Param{format("a{}", i), N<IdExpr>(format("T{}", i)), nullptr});
+    }
+    ExprPtr type = N<IndexExpr>(N<IdExpr>(typeName), N<TupleExpr>(move(genericNames)));
+
+    vector<StmtPtr> fns;
+    vector<Param> params;
+    vector<StmtPtr> stmts;
+    // def __new__(what: Ptr[byte]) -> Function.N[TR, T1, ..., TN]:
+    //   return __internal__.fn_new[Function.N[TR, ...]](what)
+    params.emplace_back(
+        Param{"what", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte"))});
+    stmts.push_back(N<ReturnStmt>(N<CallExpr>(
+        N<IndexExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "fn_new"), clone(type)),
+        N<IdExpr>("what"))));
+    fns.emplace_back(make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{},
+                                               move(params), N<SuiteStmt>(move(stmts)),
+                                               vector<string>{}));
+    params.clear();
+    stmts.clear();
+    // def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]:
+    //   return __internal__.fn_raw(self)
+    params.emplace_back(Param{"self", clone(type)});
+    stmts.push_back(N<ReturnStmt>(N<CallExpr>(
+        N<DotExpr>(N<IdExpr>("__internal__"), "fn_raw"), N<IdExpr>("self"))));
+    fns.emplace_back(make_unique<FunctionStmt>(
+        "__raw__", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte")), vector<Param>{},
+        move(params), N<SuiteStmt>(move(stmts)), vector<string>{}));
+    params.clear();
+    stmts.clear();
+    // def __str__(self: Function.N[TR, T1, ..., TN]) -> str:
+    //   return __internal__.raw_type_str(self.__raw__(), "function")
+    params.emplace_back(Param{"self", clone(type)});
+    stmts.push_back(
+        N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "raw_type_str"),
+                                  N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__raw__")),
+                                  N<StringExpr>("function"))));
+    fns.emplace_back(make_unique<FunctionStmt>(
+        "__str__", N<IdExpr>("str"), vector<Param>{}, move(params),
+        N<SuiteStmt>(move(stmts)), vector<string>{}));
+    // class Function.N[TR, T1, ..., TN]
+    StmtPtr stmt = make_unique<ClassStmt>(
+        typeName, move(generics), move(args), N<SuiteStmt>(move(fns)),
+        vector<string>{ATTR_INTERNAL, ATTR_TRAIT, ATTR_TUPLE});
+    stmt->setSrcInfo(ctx->cache->generateSrcInfo());
+
+    // Parse this function in a clean context.
+    stmt = SimplifyVisitor::apply(ctx->cache->imports[STDLIB_IMPORT].ctx, stmt,
+                                  FILE_GENERATED, 0);
+    stmt = TypecheckVisitor(ctx).transform(stmt);
+    prependStmts->push_back(move(stmt));
+  }
+  return typeName;
+}
+
 string TypecheckVisitor::generatePartialStub(const string &mask,
                                              const string &oldMask) {
   auto typeName = format("Partial.N{}", mask);
@@ -1424,7 +1545,7 @@ string TypecheckVisitor::generatePartialStub(const string &mask,
                        ATTR_NO(ATTR_CONTAINER), ATTR_NO(ATTR_PYTHON)});
 
     stmt = SimplifyVisitor::apply(ctx->cache->imports[STDLIB_IMPORT].ctx, stmt,
-                                  FILE_GENERATED);
+                                  FILE_GENERATED, 0);
     stmt = TypecheckVisitor(ctx).transform(stmt);
     prependStmts->push_back(move(stmt));
   }
@@ -1449,8 +1570,9 @@ string TypecheckVisitor::generatePartialStub(const string &mask,
         fnName, nullptr, vector<Param>{}, move(args),
         N<SuiteStmt>(N<ReturnStmt>(N<CallExpr>(move(callee), move(newArgs)))),
         vector<string>{});
+
     stmt = SimplifyVisitor::apply(ctx->cache->imports[STDLIB_IMPORT].ctx, stmt,
-                                  FILE_GENERATED);
+                                  FILE_GENERATED, 0);
     stmt = TypecheckVisitor(ctx).transform(stmt);
     prependStmts->push_back(move(stmt));
   }

@@ -75,11 +75,6 @@ string SimplifyContext::generateCanonicalName(const string &name,
   return newName;
 }
 
-SrcInfo SimplifyContext::generateSrcInfo() const {
-  return {FILE_GENERATED, cache->generatedSrcInfoCount, cache->generatedSrcInfoCount++,
-          0, 0};
-}
-
 void SimplifyContext::dump(int pad) {
   auto ordered = std::map<string, decltype(map)::mapped_type>(map.begin(), map.end());
   LOG("base: {}", getBase());

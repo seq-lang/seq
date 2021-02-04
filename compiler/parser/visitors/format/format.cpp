@@ -93,6 +93,10 @@ void FormatVisitor::visit(StarExpr *expr) {
   result = renderExpr(expr, "*{}", transform(expr->what));
 }
 
+void FormatVisitor::visit(KeywordStarExpr *expr) {
+  result = renderExpr(expr, "**{}", transform(expr->what));
+}
+
 void FormatVisitor::visit(TupleExpr *expr) {
   result = renderExpr(expr, "({})", transform(expr->items));
 }

@@ -327,7 +327,7 @@ class Moo:
         print 'Moo.__new__'
         return (i,)
 print Moo(1) #: Moo.__new__
-#: (1)
+#: (moo: 1)
 
 #%% call_partial,barebones
 def foo(i, j, k):

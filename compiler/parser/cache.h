@@ -183,6 +183,11 @@ public:
     return fmt::format("{}{}_{}", sigil ? fmt::format("{}_", sigil) : "", prefix,
                        ++varCount);
   }
+
+  /// Generate a unique SrcInfo for internally generated AST nodes.
+  SrcInfo generateSrcInfo() {
+    return {FILE_GENERATED, generatedSrcInfoCount, generatedSrcInfoCount++, 0, 0};
+  }
 };
 
 } // namespace ast

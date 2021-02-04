@@ -87,7 +87,7 @@ public:
 
   /// TODO
   static StmtPtr apply(shared_ptr<SimplifyContext> cache, const StmtPtr &node,
-                       const string &file);
+                       const string &file, int atAge = -1);
 
 public:
   explicit SimplifyVisitor(shared_ptr<SimplifyContext> ctx,
@@ -130,9 +130,6 @@ public:
   /// This function is called only if other nodes (CallExpr, AssignStmt, ListExpr) do
   /// not handle their star-expression cases.
   void visit(StarExpr *) override;
-  /// Transform a tuple (a1, ..., aN) to:
-  ///   Tuple.N.__new__(a1, ..., aN).
-  /// If Tuple.N has not been seen before, generate a stub class for it.
   void visit(TupleExpr *) override;
   /// Transform a list [a1, ..., aN] to a statement expression:
   ///   list = List(N); (list.append(a1))...; list.
@@ -360,9 +357,6 @@ private:
   /// Also supports "{x=}" specifier (that prints the raw expression as well).
   /// @example f"{x+1=}" becomes str.cat(["x+1=", str(x+1)]).
   ExprPtr transformFString(string value);
-  /// Generate tuple classes Tuple.N[T1,...,TN](a1: T1, ..., aN: TN) for all
-  /// 0 <= len <= N, and return the canonical name of Tuple.len.
-  string generateTupleStub(int len);
   /// Transforms a list of GeneratorBody loops to a corresponding set of statements.
   /// @example (for i in j if a for k in i if a if b) becomes:
   ///          for i in j: if a: for k in i: if a: if b: <prev>
@@ -484,14 +478,6 @@ private:
   /// Note that any brace ({ or }) that is not part of {= expr} reference will be
   /// escaped (e.g. { -> {{ and } -> }}) so that fmt::format can print them as-is.
   StmtPtr transformLLVMDefinition(const Stmt *codeStmt);
-  /// Generate a function type Function.N[TR, T1, ..., TN] as follows:
-  ///   @internal @tuple @trait
-  ///   class Function.N[TR, T1, ..., TN]:
-  ///     def __new__(what: Ptr[byte]) -> Function.N[TR, T1, ..., TN]
-  ///     def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]
-  ///     def __str__(self: Function.N[TR, T1, ..., TN]) -> str
-  /// Return the canonical name of Function.N.
-  string generateFunctionStub(int n);
   /// Generate a magic method __op__ for a type described by typExpr and type arguments
   /// args.
   /// Currently able to generate:

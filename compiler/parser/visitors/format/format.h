@@ -75,6 +75,7 @@ public:
   void visit(StringExpr *) override;
   void visit(IdExpr *) override;
   void visit(StarExpr *) override;
+  void visit(KeywordStarExpr *) override;
   void visit(TupleExpr *) override;
   void visit(ListExpr *) override;
   void visit(SetExpr *) override;

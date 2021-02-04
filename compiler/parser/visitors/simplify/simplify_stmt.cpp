@@ -406,7 +406,6 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   if (in(stmt->attributes, ATTR_BUILTIN) && (ctx->getLevel() || isClassMember))
     error("builtins must be defined at the toplevel");
 
-  generateFunctionStub(stmt->args.size());
   if (!isClassMember)
     // Class members are added to class' method table
     ctx->add(SimplifyItem::Func, stmt->name, canonicalName, ctx->isToplevel());
@@ -908,7 +907,6 @@ StmtPtr SimplifyVisitor::transformCImport(const string &name, const vector<Param
                                           const Expr *ret, const string &altName) {
   auto canonicalName = ctx->generateCanonicalName(name, ctx->getBase());
   vector<Param> fnArgs;
-  generateFunctionStub(args.size());
   for (int ai = 0; ai < args.size(); ai++) {
     seqassert(args[ai].name.empty(), "unexpected argument name");
     seqassert(!args[ai].deflt, "unexpected default argument");
@@ -1152,75 +1150,6 @@ StmtPtr SimplifyVisitor::transformLLVMDefinition(const Stmt *codeStmt) {
   return N<SuiteStmt>(move(items));
 }
 
-string SimplifyVisitor::generateFunctionStub(int n) {
-  seqassert(n >= 0, "invalid n");
-  auto typeName = format("Function.N{}", n);
-  if (!ctx->find(typeName)) {
-    vector<Param> generics;
-    generics.emplace_back(Param{"TR", nullptr, nullptr});
-    vector<ExprPtr> genericNames;
-    genericNames.emplace_back(N<IdExpr>("TR"));
-    // TODO: remove this args hack
-    vector<Param> args;
-    args.emplace_back(Param{"ret", N<IdExpr>("TR"), nullptr});
-    for (int i = 1; i <= n; i++) {
-      genericNames.emplace_back(N<IdExpr>(format("T{}", i)));
-      generics.emplace_back(Param{format("T{}", i), nullptr, nullptr});
-      args.emplace_back(Param{format("a{}", i), N<IdExpr>(format("T{}", i)), nullptr});
-    }
-    ExprPtr type = N<IndexExpr>(N<IdExpr>(typeName), N<TupleExpr>(move(genericNames)));
-
-    vector<StmtPtr> fns;
-    vector<Param> params;
-    vector<StmtPtr> stmts;
-    // def __new__(what: Ptr[byte]) -> Function.N[TR, T1, ..., TN]:
-    //   return __internal__.fn_new[Function.N[TR, ...]](what)
-    params.emplace_back(
-        Param{"what", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte"))});
-    stmts.push_back(N<ReturnStmt>(N<CallExpr>(
-        N<IndexExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "fn_new"), clone(type)),
-        N<IdExpr>("what"))));
-    fns.emplace_back(make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{},
-                                               move(params), N<SuiteStmt>(move(stmts)),
-                                               vector<string>{}));
-    params.clear();
-    stmts.clear();
-    // def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]:
-    //   return __internal__.fn_raw(self)
-    params.emplace_back(Param{"self", clone(type)});
-    stmts.push_back(N<ReturnStmt>(N<CallExpr>(
-        N<DotExpr>(N<IdExpr>("__internal__"), "fn_raw"), N<IdExpr>("self"))));
-    fns.emplace_back(make_unique<FunctionStmt>(
-        "__raw__", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte")), vector<Param>{},
-        move(params), N<SuiteStmt>(move(stmts)), vector<string>{}));
-    params.clear();
-    stmts.clear();
-    // def __str__(self: Function.N[TR, T1, ..., TN]) -> str:
-    //   return __internal__.raw_type_str(self.__raw__(), "function")
-    params.emplace_back(Param{"self", clone(type)});
-    stmts.push_back(
-        N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "raw_type_str"),
-                                  N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__raw__")),
-                                  N<StringExpr>("function"))));
-    fns.emplace_back(make_unique<FunctionStmt>(
-        "__str__", N<IdExpr>("str"), vector<Param>{}, move(params),
-        N<SuiteStmt>(move(stmts)), vector<string>{}));
-    // class Function.N[TR, T1, ..., TN]
-    StmtPtr stmt = make_unique<ClassStmt>(
-        typeName, move(generics), move(args), N<SuiteStmt>(move(fns)),
-        vector<string>{ATTR_INTERNAL, ATTR_TRAIT, ATTR_TUPLE});
-    stmt->setSrcInfo(ctx->generateSrcInfo());
-    // Parse this function in a clean context.
-    auto nctx = make_shared<SimplifyContext>(FILE_GENERATED, ctx->cache);
-    SimplifyVisitor(nctx, preamble).transform(stmt);
-    auto nval = nctx->find(typeName);
-    seqassert(nval, "cannot find '{}'", typeName);
-    ctx->cache->imports[STDLIB_IMPORT].ctx->addToplevel(typeName, nval);
-    ctx->cache->imports[STDLIB_IMPORT].ctx->addToplevel(nval->canonicalName, nval);
-  }
-  return typeName;
-}
-
 StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
                                       const vector<Param> &args, bool isRecord) {
 #define I(s) N<IdExpr>(s)
@@ -1452,21 +1381,33 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
   } else if (op == "str") {
     // def __str__(self: T) -> str:
     //   a = __array__[str](N)  (number of args)
+    //   n = __array__[str](N)  (number of args)
     //   a.__setitem__(0, self.arg1.__str__()) ...
-    //   return __internal__.tuple_str(a.ptr, N)
+    //   n.__setitem__(0, "arg1") ...  (if not a Tuple.N; otherwise "")
+    //   return __internal__.tuple_str(a.ptr, n.ptr, N)
     fargs.emplace_back(Param{"self", typExpr->clone()});
     ret = I("str");
     if (!args.empty()) {
       stmts.emplace_back(
           N<AssignStmt>(I("a"), N<CallExpr>(N<IndexExpr>(I("__array__"), I("str")),
                                             N<IntExpr>(args.size()))));
-      for (int i = 0; i < args.size(); i++)
+      stmts.emplace_back(
+          N<AssignStmt>(I("n"), N<CallExpr>(N<IndexExpr>(I("__array__"), I("str")),
+                                            N<IntExpr>(args.size()))));
+      for (int i = 0; i < args.size(); i++) {
         stmts.push_back(N<ExprStmt>(N<CallExpr>(
             N<DotExpr>(I("a"), "__setitem__"), N<IntExpr>(i),
             N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), args[i].name), "__str__")))));
-      stmts.emplace_back(N<ReturnStmt>(
-          N<CallExpr>(N<DotExpr>(I("__internal__"), "tuple_str"),
-                      N<DotExpr>(I("a"), "ptr"), N<IntExpr>(args.size()))));
+
+        auto name = typExpr->getIndex() ? typExpr->getIndex()->expr->getId() : nullptr;
+        stmts.push_back(N<ExprStmt>(N<CallExpr>(
+            N<DotExpr>(I("n"), "__setitem__"), N<IntExpr>(i),
+            N<StringExpr>(name && !startswith(name->value, "Tuple.N") ? args[i].name
+                                                                      : ""))));
+      }
+      stmts.emplace_back(N<ReturnStmt>(N<CallExpr>(
+          N<DotExpr>(I("__internal__"), "tuple_str"), N<DotExpr>(I("a"), "ptr"),
+          N<DotExpr>(I("n"), "ptr"), N<IntExpr>(args.size()))));
     } else {
       stmts.emplace_back(N<ReturnStmt>(N<StringExpr>("()")));
     }
@@ -1477,7 +1418,7 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
   auto t =
       make_unique<FunctionStmt>(format("__{}__", op), move(ret), vector<Param>{},
                                 move(fargs), N<SuiteStmt>(move(stmts)), move(attrs));
-  t->setSrcInfo(ctx->generateSrcInfo());
+  t->setSrcInfo(ctx->cache->generateSrcInfo());
   return t;
 }
 

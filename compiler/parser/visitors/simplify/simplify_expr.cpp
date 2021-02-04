@@ -125,9 +125,10 @@ void SimplifyVisitor::visit(StarExpr *expr) {
 }
 
 void SimplifyVisitor::visit(TupleExpr *expr) {
-  auto name = generateTupleStub(expr->items.size());
-  resultExpr = transform(
-      N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"), clone(expr->items)));
+  vector<ExprPtr> items;
+  for (auto &i : expr->items)
+    items.emplace_back(transform(i));
+  resultExpr = N<TupleExpr>(move(items));
 }
 
 void SimplifyVisitor::visit(ListExpr *expr) {
@@ -344,13 +345,13 @@ void SimplifyVisitor::visit(IndexExpr *expr) {
   // First handle the tuple[] and function[] cases.
   if (expr->expr->isId("tuple") || expr->expr->isId("Tuple")) {
     auto t = expr->index->getTuple();
-    auto name = generateTupleStub(t ? int(t->items.size()) : 1);
-    e = transformType(N<IdExpr>(name).get());
+    e = N<IdExpr>(format("Tuple.N{}", t ? t->items.size() : 1));
+    // e = transformType(N<IdExpr>(name).get());
     e->markType();
   } else if (expr->expr->isId("function") || expr->expr->isId("Function")) {
     auto t = expr->index->getTuple();
-    auto name = generateFunctionStub(t ? int(t->items.size()) - 1 : 0);
-    e = transformType(N<IdExpr>(name).get());
+    e = N<IdExpr>(format("Function.N{}", t ? int(t->items.size()) - 1 : 0));
+    // e = transformType(N<IdExpr>(name).get());
     e->markType();
   } else {
     e = transform(expr->expr.get(), true);
@@ -386,7 +387,6 @@ void SimplifyVisitor::visit(IndexExpr *expr) {
     // For some expressions (e.g. self.foo[N]) we are not yet sure if it is an
     // instantiation or an element access (the expression might be a function and we
     // do not know it yet, and all indices are StaticExpr).
-    generateTupleStub(it.size());
     resultExpr =
         N<IndexExpr>(move(e), it.size() == 1 ? move(it[0]) : N<TupleExpr>(move(it)));
   }
@@ -460,7 +460,6 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     resultExpr = N<CallExpr>(clone(expr->expr), move(s));
     return;
   }
-  generateTupleStub(expr->args.size());
   vector<CallExpr::Arg> args;
   bool namesStarted = false;
   for (auto &i : expr->args) {
@@ -660,31 +659,6 @@ ExprPtr SimplifyVisitor::transformFString(string value) {
     items.push_back(N<StringExpr>(value.substr(braceStart, value.size() - braceStart)));
   return transform(
       N<CallExpr>(N<DotExpr>(N<IdExpr>("str"), "cat"), N<ListExpr>(move(items))));
-}
-
-string SimplifyVisitor::generateTupleStub(int len) {
-  // Generate all tuples Tuple.(0...len) (to ensure that any slice results in a valid
-  // type).
-  for (int len_i = 0; len_i <= len; len_i++) {
-    auto typeName = format("Tuple.N{}", len_i);
-    if (!ctx->find(typeName)) {
-      vector<Param> generics, args;
-      for (int i = 1; i <= len_i; i++) {
-        generics.emplace_back(Param{format("T{}", i), nullptr, nullptr});
-        args.emplace_back(
-            Param{format("a{0}", i), N<IdExpr>(format("T{}", i)), nullptr});
-      }
-      StmtPtr stmt = make_unique<ClassStmt>(typeName, move(generics), move(args),
-                                            nullptr, vector<string>{ATTR_TUPLE});
-      stmt->setSrcInfo(ctx->generateSrcInfo());
-      // Make sure to generate this in a clean context.
-      auto nctx = make_shared<SimplifyContext>(FILE_GENERATED, ctx->cache);
-      SimplifyVisitor(nctx, preamble).transform(stmt);
-      auto nval = nctx->find(typeName);
-      seqassert(nval, "cannot find '{}'", typeName);
-    }
-  }
-  return format("Tuple.N{}", len);
 }
 
 StmtPtr SimplifyVisitor::transformGeneratorBody(const vector<GeneratorBody> &loops,

@@ -13,6 +13,9 @@ class Alignment:
     _cigar: CIGAR
     _score: int
 
+    def __str__(self):
+        return str((self._cigar, self._score))
+
 from C import seq_align(seq, seq, Ptr[i8], i8, i8, int, int, int, int, Ptr[Alignment])
 from C import seq_align_dual(seq, seq, Ptr[i8], i8, i8, i8, i8, int, int, int, int, Ptr[Alignment])
 from C import seq_align_splice(seq, seq, Ptr[i8], i8, i8, i8, i8, int, int, Ptr[Alignment])

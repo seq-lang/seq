@@ -174,8 +174,12 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
         for (int i = 1; i < type->args.size(); i++) {
           seqassert(type->args[i] && type->args[i]->getUnbounds().empty(),
                     "unbound argument {}", type->args[i]->toString());
-          ctx->add(TypecheckItem::Var, ast->args[i - 1].name,
-                   make_shared<LinkType>(type->args[i]));
+
+          string varName = ast->args[i - 1].name;
+          for (int i = 0; i < 2; i++)
+            if (startswith(varName, "*"))
+              varName = varName.substr(1);
+          ctx->add(TypecheckItem::Var, varName, make_shared<LinkType>(type->args[i]));
         }
 
       // Need to populate realization table in advance to make recursive functions
@@ -202,8 +206,13 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       seqassert(ast->args.size() == type->args.size() - 1,
                 "type/AST argument mismatch");
       vector<Param> args;
-      for (auto &i : ast->args)
-        args.emplace_back(Param{i.name, nullptr, nullptr});
+      for (auto &i : ast->args) {
+        string varName = i.name;
+        for (int i = 0; i < 2; i++)
+          if (startswith(varName, "*"))
+            varName = varName.substr(1);
+        args.emplace_back(Param{varName, nullptr, nullptr});
+      }
       ctx->cache->functions[type->funcName].realizations[type->realizedName()].ast =
           Nx<FunctionStmt>(ast, type->realizedName(), nullptr, vector<Param>(),
                            move(args), move(realized),

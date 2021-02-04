@@ -116,11 +116,13 @@ class __internal__:
         buf[where] = byte(62) # '>'
         gc.free(pstr.ptr)
         return str(buf, total)
-    def tuple_str(strs: Ptr[str], n: int) -> str:
+    def tuple_str(strs: Ptr[str], names: Ptr[str], n: int) -> str:
         total = 2  # one for each of '(' and ')'
         i = 0
         while i < n:
             total += strs[i].len
+            if names[i].len:
+                total += names[i].len + 2  # extra : and space
             if i < n - 1:
                 total += 2  # ", "
             i += 1
@@ -130,6 +132,15 @@ class __internal__:
         where += 1
         i = 0
         while i < n:
+            s = names[i]
+            l = s.len
+            if l:
+                str.memcpy(buf + where, s.ptr, l)
+                where += l
+                buf[where] = byte(58) # ':'
+                where += 1
+                buf[where] = byte(32) # ' '
+                where += 1
             s = strs[i]
             l = s.len
             str.memcpy(buf + where, s.ptr, l)

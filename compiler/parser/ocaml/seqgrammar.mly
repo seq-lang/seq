@@ -84,7 +84,7 @@ tuple:
   | LP expr COMMA RP { $loc, Tuple [$2] }
   | LP expr COMMA FLNE(COMMA, expr) RP { $loc, Tuple ($2 :: $4) }
 dictitem:
-  | MUL MUL ID { ($loc, Id ""), ($loc($3), KwStar ($loc($3), Id $3)) }
+  | POW ID { ($loc, Id ""), ($loc($2), KwStar ($loc($2), Id $2)) }
   | expr COLON expr { $1, $3 }
 comprehension: FOR lassign IN pipe_expr comprehension_if* comprehension?
   { $loc, { var = $2; gen = flat_pipe $4; cond = $5; next = $6 } }
@@ -157,7 +157,7 @@ arith_term:
 call_term:
   | expr { None, $1 }
   | ID EQ expr { Some $1, $3 }
-  | MUL MUL ID { None, ($loc($3), KwStar ($loc($3), Id $3)) }
+  | POW ID { None, ($loc($2), KwStar ($loc($2), Id $2)) }
 index_term:
   | expr { $1 }
   | expr? COLON expr? { $loc, Slice ($1, $3, None) }
@@ -285,10 +285,10 @@ func_def:
 typed_param:
   | ID param_type? default_val?
     { $loc, { name = ($loc($1), $1); typ = $2; default = $3 } }
+  | POW ID
+    { $loc, { name = ($loc($2), "**" ^ $2); typ = None; default = None } }
   | MUL ID
     { $loc, { name = ($loc($2), "*" ^ $2); typ = None; default = None } }
-  | MUL MUL ID
-    { $loc, { name = ($loc($3), "**" ^ $3); typ = None; default = None } }
 generic_list: LS FLNE(COMMA, typed_param) RS { $2 }
 default_val: EQ expr { $2 }
 param_type: COLON expr { $2 }
