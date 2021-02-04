@@ -20,8 +20,6 @@ public:
 
   using AcceptorExtend::AcceptorExtend;
 
-  virtual ~Instr() = default;
-
 private:
   const types::Type *doGetType() const override;
 };

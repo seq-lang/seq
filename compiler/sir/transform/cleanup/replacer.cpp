@@ -2,9 +2,13 @@
 
 #include <unordered_set>
 
+#include "sir/types/types.h"
+#include "sir/value.h"
+#include "sir/var.h"
+
 namespace seq {
 namespace ir {
-namespace passes {
+namespace transform {
 namespace cleanup {
 
 void ReplaceCleanupPass::run(IRModule *module) {
@@ -128,6 +132,6 @@ void ReplaceCleanupPass::run(IRModule *module) {
 }
 
 } // namespace cleanup
-} // namespace passes
+} // namespace transform
 } // namespace ir
 } // namespace seq
