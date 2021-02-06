@@ -530,6 +530,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
         ctx->getModule()->getFuncType(realizeType(t->args[0]->getClass().get()), types);
 
     cast<ir::Func>(fp.first)->setSrcInfo(getSrcInfo());
+    real.second.ir = cast<ir::Func>(fp.first);
 
     LOG_REALIZE("[codegen] generating fn {}", real.first);
     if (in(stmt->attributes, "llvm")) {
