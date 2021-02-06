@@ -329,6 +329,9 @@ class Moo:
 print Moo(1) #: Moo.__new__
 #: (moo: 1)
 
+#%% call_err_2,barebones
+seq_print(1, name="56", name=2) #! ERROR: repeated named argument 'name'
+
 #%% call_partial,barebones
 def foo(i, j, k):
     return i + j + k

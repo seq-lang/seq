@@ -456,6 +456,34 @@ def foo(a, b, a):
 def foo(a, b=1, c):
     pass #! ERROR: non-default argument 'c' after a default argument
 
+#%% function_err_0b_ok,barebones
+def foo(a, b=1, *c):
+    pass
+
+#%% function_err_0c,barebones
+def foo(a, b=1, *c, *d):
+    pass #! ERROR: invalid *args
+
+#%% function_err_0d,barebones
+def foo(a, b=1, *c: int):
+    pass #! ERROR: invalid *args
+
+#%% function_err_0e,barebones
+def foo(a, b=1, *c = 1):
+    pass #! ERROR: invalid *args
+
+#%% function_err_0f,barebones
+def foo(a, b=1, **c, **kwargs):
+    pass #! ERROR: invalid **kwargs
+
+#%% function_err_0g,barebones
+def foo(a, b=1, **c: int):
+    pass #! ERROR: invalid **kwargs
+
+#%% function_err_0h,barebones
+def foo(a, b=1, **c = 1):
+    pass #! ERROR: invalid **kwargs
+
 #%% function_err_1,barebones
 def foo():
     @builtin

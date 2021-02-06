@@ -210,10 +210,14 @@ private:
   /// Returns the reordered vector and an associated reordering score (missing
   /// default arguments' score is half of the present arguments).
   /// Score is -1 if the given arguments cannot be reordered.
-  /// TODO: parts of this method are repeated in transformCall().
-  std::pair<int, vector<std::pair<string, types::TypePtr>>>
-  reorderNamedArgs(const types::FuncType *func,
-                   const vector<std::pair<string, types::TypePtr>> &args);
+
+  typedef std::function<int(const map<int, int> &, int, int,
+                            const vector<vector<int>> &)>
+      ReorderDoneFn;
+  typedef std::function<int(string)> ReorderErrorFn;
+  int reorderNamedArgs(types::RecordType *func, const string &knownTypes,
+                       const vector<CallExpr::Arg> &args, ReorderDoneFn onDone,
+                       ReorderErrorFn onError);
   /// Transform a call expression callee(args...).
   /// Intercepts callees that are expr.dot, expr.dot[T1, T2] etc.
   /// Performs the following transformations:

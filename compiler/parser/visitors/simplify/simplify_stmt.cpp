@@ -432,18 +432,27 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   // Parse function arguments and add them to the context.
   vector<Param> args;
   unordered_set<string> seenArgs;
-  bool defaultsStarted = false;
+  bool defaultsStarted = false, hasStarArg = false, hasKwArg = false;
   for (int ia = 0; ia < stmt->args.size(); ia++) {
     auto &a = stmt->args[ia];
     string varName = a.name, prefix = "";
     for (int i = 0; i < 2; i++)
       if (startswith(varName, "*"))
         varName = varName.substr(1), prefix += "*";
+    if (prefix.size() == 2) {
+      if (hasKwArg || a.type || a.deflt)
+        error("invalid **kwargs");
+      hasKwArg = true;
+    } else if (prefix.size() == 1) {
+      if (hasStarArg || a.type || a.deflt)
+        error("invalid *args");
+      hasStarArg = true;
+    }
 
     if (in(seenArgs, varName))
       error("'{}' declared twice", varName);
     seenArgs.insert(varName);
-    if (!a.deflt && defaultsStarted)
+    if (!a.deflt && defaultsStarted && prefix.empty())
       error("non-default argument '{}' after a default argument", varName);
     defaultsStarted |= bool(a.deflt);
     auto typeAst = transformType(a.type.get());

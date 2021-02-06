@@ -463,10 +463,10 @@ void SimplifyVisitor::visit(CallExpr *expr) {
   vector<CallExpr::Arg> args;
   bool namesStarted = false;
   for (auto &i : expr->args) {
-    if (i.name.empty() && namesStarted)
+    if ((i.name.empty() && !CAST(i.value, KeywordStarExpr)) && namesStarted)
       error("unnamed argument after a named argument");
     if (!i.name.empty() && (i.value->getStar() || CAST(i.value, KeywordStarExpr)))
-      error("invalid star-expression");
+      error("named star-expressions not allowed");
     namesStarted |= !i.name.empty();
     if (i.value->getEllipsis())
       args.push_back({i.name, clone(i.value)});

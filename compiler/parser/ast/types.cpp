@@ -343,8 +343,8 @@ bool RecordType::canRealize() const {
 }
 string RecordType::toString() const {
   vector<string> as;
-  for (auto &a : args)
-    as.push_back(a->toString());
+  // for (auto &a : args)
+  // as.push_back(a->toString());
   return fmt::format("{}{}", this->ClassType::toString(),
                      as.empty() ? "" : "<" + join(as, ",") + ">");
 }

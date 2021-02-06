@@ -250,7 +250,12 @@ a = __array__[int](2, 3) #! ERROR: __array__ only accepts a single argument (siz
 seq_print(1, name="56", 2) #! ERROR: unnamed argument after a named argument
 
 #%% call_err_2,barebones
-seq_print(1, name="56", name=2) #! ERROR: repeated named argument 'name'
+x = (1, 2)
+seq_print(1, name=*x) #! ERROR: named star-expressions not allowed
+
+#%% call_err_3,barebones
+x = (1, 2)
+seq_print(1, name=**x) #! ERROR: named star-expressions not allowed
 
 #%% ellipsis_err,barebones
 ... #! ERROR: unexpected ellipsis expression
