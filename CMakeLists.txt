@@ -144,6 +144,8 @@ set(SEQ_HPPFILES
         compiler/sir/attribute.h
         compiler/sir/base.h
         compiler/sir/constant.h
+        compiler/sir/dsl/codegen.h
+        compiler/sir/dsl/nodes.h
         compiler/sir/flow.h
         compiler/sir/func.h
         compiler/sir/instr.h
@@ -222,6 +224,7 @@ set(SEQ_CPPFILES
         compiler/sir/attribute.cpp
         compiler/sir/base.cpp
         compiler/sir/constant.cpp
+        compiler/sir/dsl/nodes.cpp
         compiler/sir/flow.cpp
         compiler/sir/func.cpp
         compiler/sir/instr.cpp

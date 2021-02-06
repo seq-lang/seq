@@ -51,11 +51,13 @@ public:
   LAMBDA_VISIT(ForFlow);
   LAMBDA_VISIT(TryCatchFlow);
   LAMBDA_VISIT(PipelineFlow);
+  LAMBDA_VISIT(dsl::CustomFlow);
 
   LAMBDA_VISIT(TemplatedConstant<seq_int_t>);
   LAMBDA_VISIT(TemplatedConstant<double>);
   LAMBDA_VISIT(TemplatedConstant<bool>);
   LAMBDA_VISIT(TemplatedConstant<std::string>);
+  LAMBDA_VISIT(dsl::CustomConstant);
 
   LAMBDA_VISIT(Instr);
   LAMBDA_VISIT(AssignInstr);
@@ -72,6 +74,7 @@ public:
   LAMBDA_VISIT(YieldInstr);
   LAMBDA_VISIT(ThrowInstr);
   LAMBDA_VISIT(FlowInstr);
+  LAMBDA_VISIT(dsl::CustomInstr);
 
   template <typename Node> void process(Node *v) { v->accept(*this); }
 

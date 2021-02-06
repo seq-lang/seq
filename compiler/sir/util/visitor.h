@@ -42,6 +42,17 @@ class GeneratorType;
 class IntNType;
 } // namespace types
 
+namespace dsl {
+
+namespace types {
+class CustomType;
+}
+
+class CustomConstant;
+class CustomFlow;
+class CustomInstr;
+} // namespace dsl
+
 class IRModule;
 
 class Var;
@@ -110,12 +121,14 @@ public:
   VISIT(ForFlow);
   VISIT(TryCatchFlow);
   VISIT(PipelineFlow);
+  VISIT(dsl::CustomFlow);
 
   DEFAULT_VISIT(Constant);
   VISIT(TemplatedConstant<seq_int_t>);
   VISIT(TemplatedConstant<double>);
   VISIT(TemplatedConstant<bool>);
   VISIT(TemplatedConstant<std::string>);
+  VISIT(dsl::CustomConstant);
 
   DEFAULT_VISIT(Instr);
   VISIT(AssignInstr);
@@ -132,6 +145,7 @@ public:
   VISIT(YieldInstr);
   VISIT(ThrowInstr);
   VISIT(FlowInstr);
+  VISIT(dsl::CustomInstr);
 
   DEFAULT_VISIT(types::Type);
   VISIT(types::PrimitiveType);
@@ -148,6 +162,7 @@ public:
   VISIT(types::PointerType);
   VISIT(types::GeneratorType);
   VISIT(types::IntNType);
+  VISIT(dsl::types::CustomType);
 };
 
 class ConstIRVisitor {
@@ -173,12 +188,14 @@ public:
   CONST_VISIT(ForFlow);
   CONST_VISIT(TryCatchFlow);
   CONST_VISIT(PipelineFlow);
+  CONST_VISIT(dsl::CustomFlow);
 
   CONST_DEFAULT_VISIT(Constant);
   CONST_VISIT(TemplatedConstant<seq_int_t>);
   CONST_VISIT(TemplatedConstant<double>);
   CONST_VISIT(TemplatedConstant<bool>);
   CONST_VISIT(TemplatedConstant<std::string>);
+  CONST_VISIT(dsl::CustomConstant);
 
   CONST_DEFAULT_VISIT(Instr);
   CONST_VISIT(AssignInstr);
@@ -195,6 +212,7 @@ public:
   CONST_VISIT(YieldInstr);
   CONST_VISIT(ThrowInstr);
   CONST_VISIT(FlowInstr);
+  CONST_VISIT(dsl::CustomInstr);
 
   CONST_DEFAULT_VISIT(types::Type);
   CONST_VISIT(types::PrimitiveType);
@@ -211,6 +229,7 @@ public:
   CONST_VISIT(types::PointerType);
   CONST_VISIT(types::GeneratorType);
   CONST_VISIT(types::IntNType);
+  CONST_VISIT(dsl::types::CustomType);
 };
 
 } // namespace util
