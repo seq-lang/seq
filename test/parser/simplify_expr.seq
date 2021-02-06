@@ -255,7 +255,7 @@ seq_print(1, name=*x) #! ERROR: named star-expressions not allowed
 
 #%% call_err_3,barebones
 x = (1, 2)
-seq_print(1, name=**x) #! ERROR: named star-expressions not allowed
+seq_print(1, name=**x) #! ERROR: parsing error: '**'
 
 #%% ellipsis_err,barebones
 ... #! ERROR: unexpected ellipsis expression

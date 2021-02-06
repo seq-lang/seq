@@ -466,11 +466,11 @@ def foo(a, b=1, *c, *d):
 
 #%% function_err_0d,barebones
 def foo(a, b=1, *c: int):
-    pass #! ERROR: invalid *args
+    pass #! ERROR: parsing error: ':'
 
 #%% function_err_0e,barebones
 def foo(a, b=1, *c = 1):
-    pass #! ERROR: invalid *args
+    pass #! ERROR: parsing error: '='
 
 #%% function_err_0f,barebones
 def foo(a, b=1, **c, **kwargs):
@@ -478,11 +478,11 @@ def foo(a, b=1, **c, **kwargs):
 
 #%% function_err_0g,barebones
 def foo(a, b=1, **c: int):
-    pass #! ERROR: invalid **kwargs
+    pass #! ERROR: parsing error: ':'
 
 #%% function_err_0h,barebones
 def foo(a, b=1, **c = 1):
-    pass #! ERROR: invalid **kwargs
+    pass #! ERROR: parsing error: '='
 
 #%% function_err_1,barebones
 def foo():

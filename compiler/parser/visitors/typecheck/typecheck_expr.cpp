@@ -859,14 +859,19 @@ TypecheckVisitor::findBestMethod(ClassType *typ, const string &member,
     vector<TypePtr> reordered;
     vector<CallExpr::Arg> callArgs;
     for (auto &a : args) {
-      callArgs.push_back({"", N<NoneExpr>()}); // dummy expression
+      callArgs.push_back({a.first, N<NoneExpr>()}); // dummy expression
       callArgs.back().value->setType(a.second);
     }
     auto score = reorderNamedArgs(
         method.get(), "", callArgs,
-        [&](const map<int, int> &, int, int, const vector<vector<int>> &slots) {
-          for (auto &s : slots)
-            reordered.emplace_back(s.size() != 1 ? nullptr : args[s[0]].second);
+        [&](const map<int, int> &argIndex, int s, int k,
+            const vector<vector<int>> &slots) {
+          for (auto &ai : argIndex)
+            // Ignore *args, *kwargs and default arguments
+            reordered.emplace_back(ai.first == s || ai.first == k ||
+                                           slots[ai.second].size() != 1
+                                       ? nullptr
+                                       : args[slots[ai.second][0]].second);
           return 0;
         },
         [](const string &) { return -1; });
@@ -877,6 +882,7 @@ TypecheckVisitor::findBestMethod(ClassType *typ, const string &member,
     //   Optional unwrap gets the score of 1.
     //   Optional wrap gets the score of 2.
     //   Successful unification gets the score of 3 (highest priority).
+    // LOG("{} {} / {}", typ->toString(), method->toString(), score);
     for (int ai = 0; ai < reordered.size(); ai++) {
       auto expectedType = method->args[ai + 1];
       auto expectedClass = expectedType->getClass();
@@ -924,11 +930,12 @@ TypecheckVisitor::findBestMethod(ClassType *typ, const string &member,
     return nullptr;
   // Get the best score.
   sort(scores.begin(), scores.end(), std::greater<>());
-  LOG("Method: {}", methods[scores[0].second]->toString());
-  string x;
-  for (auto &a : args)
-    x += format("{}{},", a.first.empty() ? "" : a.first + ": ", a.second->toString());
-  LOG("        {} :: {} ( {} )", typ->toString(), member, x);
+  // LOG("Method: {}", methods[scores[0].second]->toString());
+  // string x;
+  // for (auto &a : args)
+  //   x += format("{}{},", a.first.empty() ? "" : a.first + ": ",
+  //   a.second->toString());
+  // LOG("        {} :: {} ( {} )", typ->toString(), member, x);
   return methods[scores[0].second];
 }
 
@@ -937,9 +944,8 @@ int TypecheckVisitor::reorderNamedArgs(RecordType *func, const string &knownType
                                        ReorderDoneFn onDone, ReorderErrorFn onError) {
   // See https://docs.python.org/3.6/reference/expressions.html#calls for details.
   // Final score:
-  //  - +2 for each matched argument
-  //  - +1 for each missing default argument
-  //  -  0 for *args/**kwargs
+  //  - +1 for each matched argument
+  //  -  0 for *args/**kwargs/default arguments
   //  - -1 for failed match
   int score = 0;
 
@@ -1024,7 +1030,7 @@ int TypecheckVisitor::reorderNamedArgs(RecordType *func, const string &knownType
     if (slots[i.second].empty() && i.second != starArgIndex &&
         i.second != kwstarArgIndex) {
       if (ast && ast->args[i.first].deflt)
-        score -= 1;
+        score -= 2;
       else
         return onError(
             format("missing argument '{}'",
@@ -1139,9 +1145,6 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
 
   auto calleeFn = expr->expr->getType()->getRecord();
   // Case 5: we are calling a function!
-  FunctionStmt *ast = nullptr; // might be nullptr if calling a function pointer.
-  if (auto fn = calleeFn->getFunc())
-    ast = ctx->cache->functions[fn->funcName].ast.get();
   string knownTypes; // A string that contains 0 if an argument is already "known"
                      // (i.e. if we are handling a partial function with stored
                      // arguments) or 0 if it is available.
@@ -1150,6 +1153,9 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     calleeFn = calleeFn->args[0]->getRecord(); // This is Function[...] type.
     seqassert(calleeFn, "calleeFn not set");
   }
+  FunctionStmt *ast = nullptr; // might be nullptr if calling a function pointer.
+  if (auto fn = calleeFn->getFunc())
+    ast = ctx->cache->functions[fn->funcName].ast.get();
 
   // Handle named and default arguments
   vector<CallExpr::Arg> args;

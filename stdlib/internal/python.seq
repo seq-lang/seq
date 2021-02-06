@@ -77,7 +77,7 @@ class pyobj:
         return self
 
     def __str__(self):
-        return str.__from_py__(self._getattr("__str__").__call__[pyobj]())
+        return str.__from_py__(self._getattr("__str__").__call__())
 
     def to_str(self, errors: str, empty: str = "") -> str:
         obj = PyUnicode_AsEncodedString(self.p, "utf-8".c_str(), errors.c_str())
@@ -112,9 +112,8 @@ class pyobj:
     def decref(self):
         Py_DecRef(self.p)
 
-    def __call__[T](self, args : Optional[T] = None) -> pyobj:
-        args_py = (~args).__to_py__().p if args else cobj()
-        return pyobj.exc_wrap(pyobj(PyObject_CallObject(self.p, args_py)))
+    def __call__(self, *args) -> pyobj:
+        return pyobj.exc_wrap(pyobj(PyObject_CallObject(self.p, args.__to_py__().p)))
 
     def _tuple_new(length: int) -> pyobj:
         t = PyTuple_New(length)
