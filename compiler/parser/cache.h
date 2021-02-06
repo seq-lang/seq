@@ -49,6 +49,7 @@ namespace ast {
 
 /// Forward declarations
 struct SimplifyContext;
+struct TypeContext;
 
 /**
  * Cache encapsulation that holds data structures shared across various transformation
@@ -56,7 +57,7 @@ struct SimplifyContext;
  * checking) assumes that previous stages populated this structure correctly.
  * Implemented to avoid bunch of global objects.
  */
-struct Cache {
+struct Cache : public std::enable_shared_from_this<Cache> {
   /// Stores a count for each identifier (name) seen in the code.
   /// Used to generate unique identifier for each name in the code (e.g. Foo -> Foo.2).
   unordered_map<string, int> identifierCount;
@@ -137,8 +138,8 @@ struct Cache {
       types::ClassTypePtr type;
       /// A list of field names and realization's realized field types.
       vector<std::pair<string, types::TypePtr>> fields;
-      /// LLVM type pointer.
-      seq::ir::types::Type *llvm;
+      /// IR type pointer.
+      seq::ir::types::Type *ir;
     };
     /// Realization lookup table that maps a realized class name to the corresponding
     /// ClassRealization instance.
@@ -161,6 +162,8 @@ struct Cache {
       /// Realized function AST (stored here for later realization in code generations
       /// stage).
       unique_ptr<FunctionStmt> ast;
+      /// IR function pointer.
+      ir::Func *ir;
     };
     /// Realization lookup table that maps a realized function name to the corresponding
     /// FunctionRealization instance.
@@ -172,22 +175,27 @@ struct Cache {
   /// corresponding Function instance.
   unordered_map<string, Function> functions;
 
+  /// Pointer to the typechecking context needed for later type realization.
+  shared_ptr<TypeContext> typeCtx;
+
 public:
-  explicit Cache(string argv0 = "")
-      : generatedSrcInfoCount(0), unboundCount(0), varCount(0), age(0), testFlags(0),
-        argv0(move(argv0)), module(nullptr) {}
+  explicit Cache(string argv0 = "");
 
   /// Return a uniquely named temporary variable of a format
   /// "{sigil}_{prefix}{counter}". A sigil should be a non-lexable symbol.
-  string getTemporaryVar(const string &prefix = "", char sigil = '.') {
-    return fmt::format("{}{}_{}", sigil ? fmt::format("{}_", sigil) : "", prefix,
-                       ++varCount);
-  }
+  string getTemporaryVar(const string &prefix = "", char sigil = '.');
 
   /// Generate a unique SrcInfo for internally generated AST nodes.
-  SrcInfo generateSrcInfo() {
-    return {FILE_GENERATED, generatedSrcInfoCount, generatedSrcInfoCount++, 0, 0};
-  }
+  SrcInfo generateSrcInfo();
+
+  types::ClassTypePtr findClass(const string &name) const;
+  types::FuncTypePtr findFunction(const string &name) const;
+  types::FuncTypePtr findMethod(types::ClassType *typ, const string &member,
+                                    const vector<pair<string, types::TypePtr>> &args);
+  ir::types::Type *realizeType(types::ClassTypePtr type,
+                               vector<types::TypePtr> generics);
+  ir::Func *realizeFunction(types::FuncTypePtr type, vector<types::TypePtr> generics,
+                            vector<types::TypePtr> args);
 };
 
 } // namespace ast

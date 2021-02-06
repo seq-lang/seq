@@ -176,5 +176,201 @@ types::TypePtr TypeContext::findMember(const string &typeName,
   return nullptr;
 }
 
+types::FuncTypePtr
+TypeContext::findBestMethod(types::ClassType *typ, const string &member,
+                            const vector<pair<string, types::TypePtr>> &args) {
+  auto methods = findMethod(typ->name, member);
+  if (methods.empty())
+    return nullptr;
+  if (methods.size() == 1) // methods is not overloaded
+    return methods[0];
+
+  // Calculate the unification score for each available methods and pick the one with
+  // highest score.
+  vector<pair<int, int>> scores;
+  for (int mi = 0; mi < methods.size(); mi++) {
+    auto method = instantiate(typ->getSrcInfo(), methods[mi], typ, false)->getFunc();
+    vector<types::TypePtr> reordered;
+    vector<CallExpr::Arg> callArgs;
+    for (auto &a : args) {
+      callArgs.push_back({a.first, make_unique<NoneExpr>()}); // dummy expression
+      callArgs.back().value->setType(a.second);
+    }
+    auto score = reorderNamedArgs(
+        method.get(), "", callArgs,
+        [&](const std::map<int, int> &argIndex, int s, int k,
+            const vector<vector<int>> &slots) {
+          for (auto &ai : argIndex)
+            // Ignore *args, *kwargs and default arguments
+            reordered.emplace_back(ai.first == s || ai.first == k ||
+                                           slots[ai.second].size() != 1
+                                       ? nullptr
+                                       : args[slots[ai.second][0]].second);
+          return 0;
+        },
+        [](const string &) { return -1; });
+    if (score == -1)
+      continue;
+    // Scoring system for each argument:
+    //   Generics, traits and default arguments get a score of zero (lowest priority).
+    //   Optional unwrap gets the score of 1.
+    //   Optional wrap gets the score of 2.
+    //   Successful unification gets the score of 3 (highest priority).
+    // LOG("{} {} / {}", typ->toString(), method->toString(), score);
+    for (int ai = 0; ai < reordered.size(); ai++) {
+      auto expectedType = method->args[ai + 1];
+      auto expectedClass = expectedType->getClass();
+      auto argType = reordered[ai];
+      // Ignore traits, *args/**kwargs and default arguments.
+      if (!argType || (expectedClass && expectedClass->isTrait))
+        continue;
+      auto argClass = argType->getClass();
+
+      types::Type::Unification undo;
+      int u = argType->unify(expectedType.get(), &undo);
+      undo.undo();
+      if (u >= 0) {
+        score += u + 3;
+        continue;
+      }
+      // Unification failed: maybe we need to wrap an argument?
+      if (expectedClass && expectedClass->name == "Optional" && argClass &&
+          argClass->name != expectedClass->name) {
+        u = argType->unify(expectedClass->generics[0].type.get(), &undo);
+        undo.undo();
+        if (u >= 0) {
+          score += u + 2;
+          continue;
+        }
+      }
+      // ... or unwrap it (less ideal)?
+      if (argClass && argClass->name == "Optional" && expectedClass &&
+          argClass->name != expectedClass->name) {
+        u = argClass->generics[0].type->unify(expectedType.get(), &undo);
+        undo.undo();
+        if (u >= 0) {
+          score += u;
+          continue;
+        }
+      }
+      // This method cannot be selected, ignore it.
+      score = -1;
+      break;
+    }
+    if (score >= 0)
+      scores.emplace_back(std::make_pair(score, mi));
+  }
+  if (scores.empty())
+    return nullptr;
+  // Get the best score.
+  sort(scores.begin(), scores.end(), std::greater<>());
+  // LOG("Method: {}", methods[scores[0].second]->toString());
+  // string x;
+  // for (auto &a : args)
+  //   x += format("{}{},", a.first.empty() ? "" : a.first + ": ",
+  //   a.second->toString());
+  // LOG("        {} :: {} ( {} )", typ->toString(), member, x);
+  return methods[scores[0].second];
+}
+
+int TypeContext::reorderNamedArgs(types::RecordType *func, const string &knownTypes,
+                                  const vector<CallExpr::Arg> &args,
+                                  ReorderDoneFn onDone, ReorderErrorFn onError) {
+  // See https://docs.python.org/3.6/reference/expressions.html#calls for details.
+  // Final score:
+  //  - +1 for each matched argument
+  //  -  0 for *args/**kwargs/default arguments
+  //  - -1 for failed match
+  int score = 0;
+
+  // 0. Get the list of available slots.
+  std::map<int, int> argIndex;
+  for (int i = 1; i < func->args.size(); i++)
+    if (knownTypes.empty() || knownTypes[i - 1] == '0')
+      argIndex[i - 1] = argIndex.size();
+
+  // 1. Assign positional arguments to slots
+  vector<vector<int>> slots; // each slot contains a list of arg's indices
+  vector<int> extra;
+  std::map<string, int> namedArgs, extraNamedArgs; // keep the map--- we need it sorted!
+  for (int ai = 0; ai < args.size(); ai++) {
+    if (args[ai].name.empty()) {
+      if (slots.size() < argIndex.size())
+        slots.push_back({ai});
+      else
+        extra.emplace_back(ai);
+    } else {
+      namedArgs[args[ai].name] = ai;
+    }
+  }
+  while (slots.size() < argIndex.size())
+    slots.push_back({});
+  score = 2 * slots.size();
+
+  FunctionStmt *ast = nullptr;
+  if (auto fn = func->getFunc())
+    ast = cache->functions[fn->funcName].ast.get();
+  int starArgIndex = -1, kwstarArgIndex = -1;
+  for (int i = 0; ast && i < ast->args.size(); i++)
+    if (in(argIndex, i)) {
+      if (startswith(ast->args[i].name, "**"))
+        kwstarArgIndex = argIndex[i], score -= 2;
+      else if (startswith(ast->args[i].name, "*"))
+        starArgIndex = argIndex[i], score -= 2;
+    }
+  for (auto ai : vector<int>{std::max(starArgIndex, kwstarArgIndex),
+                             std::min(starArgIndex, kwstarArgIndex)})
+    if (ai != -1 && !slots[ai].empty()) {
+      extra.insert(extra.begin(), ai);
+      slots[ai].clear();
+    }
+
+  // 2. Assign named arguments to slots
+  if (!namedArgs.empty()) {
+    if (!ast)
+      return onError(format("unexpected named argument '{}' "
+                            "(function pointers cannot have named arguments)",
+                            namedArgs.begin()->first));
+    std::map<string, int> slotNames;
+    for (int i = 0; i < ast->args.size(); i++)
+      if (in(argIndex, i))
+        slotNames[cache->reverseIdentifierLookup[ast->args[i].name]] = argIndex[i];
+    for (auto &n : namedArgs) {
+      if (!in(slotNames, n.first))
+        extraNamedArgs[n.first] = n.second;
+      else if (slots[slotNames[n.first]].empty())
+        slots[slotNames[n.first]].push_back(n.second);
+      else
+        return onError(format("argument '{}' already assigned", n.first));
+    }
+  }
+
+  // 3. Fill in *args, if present
+  if (!extra.empty() && starArgIndex == -1)
+    return onError(format("too many arguments for {} (expected {}, got {})",
+                          func->toString(), argIndex.size(), args.size()));
+  if (starArgIndex != -1)
+    slots[starArgIndex] = extra;
+
+  // 4. Fill in **kwargs, if present
+  if (!extraNamedArgs.empty() && kwstarArgIndex == -1)
+    return onError(format("unknown argument '{}'", extraNamedArgs.begin()->first));
+  if (kwstarArgIndex != -1)
+    for (auto &e : extraNamedArgs)
+      slots[kwstarArgIndex].push_back(e.second);
+
+  // 5. Fill in the default arguments
+  for (auto i : argIndex)
+    if (slots[i.second].empty() && i.second != starArgIndex &&
+        i.second != kwstarArgIndex) {
+      if (ast && ast->args[i.first].deflt)
+        score -= 2;
+      else
+        return onError(format("missing argument '{}'",
+                              cache->reverseIdentifierLookup[ast->args[i.first].name]));
+    }
+  return score + onDone(argIndex, starArgIndex, kwstarArgIndex, slots);
+}
+
 } // namespace ast
 } // namespace seq

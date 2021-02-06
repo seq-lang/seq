@@ -369,13 +369,13 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
 
 seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   auto realizedName = t->realizedTypeName();
-  if (auto l = ctx->cache->classes[t->name].realizations[realizedName].llvm)
+  if (auto l = ctx->cache->classes[t->name].realizations[realizedName].ir)
     return l;
   auto getLLVM = [&](const TypePtr &tt) {
     auto t = tt->getClass();
     seqassert(t && in(ctx->cache->classes[t->name].realizations, t->realizedTypeName()),
               "{} not realized", tt->toString());
-    auto l = ctx->cache->classes[t->name].realizations[t->realizedTypeName()].llvm;
+    auto l = ctx->cache->classes[t->name].realizations[t->realizedTypeName()].ir;
     seqassert(l, "no LLVM type for {}", t->toString());
     return l;
   };
@@ -444,7 +444,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
     handle = ctx->cache->module->getMemberedType(realizedName, true);
   }
   handle->setSrcInfo(t->getSrcInfo());
-  return ctx->cache->classes[t->name].realizations[realizedName].llvm = handle;
+  return ctx->cache->classes[t->name].realizations[realizedName].ir = handle;
 }
 
 } // namespace ast

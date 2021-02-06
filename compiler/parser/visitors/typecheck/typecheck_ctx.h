@@ -27,7 +27,7 @@ struct TypecheckItem {
   bool isStatic() const { return isType() && staticType; }
 };
 
-class TypeContext : public Context<TypecheckItem> {
+struct TypeContext : public Context<TypecheckItem> {
 public:
   shared_ptr<Cache> cache;
 
@@ -94,6 +94,27 @@ public:
   vector<types::FuncTypePtr> findMethod(const string &typeName,
                                         const string &method) const;
   types::TypePtr findMember(const string &typeName, const string &member) const;
+
+  /// Picks the best method named member in a given type that matches the given argument
+  /// types. Prefers methods whose signatures are closer to the given arguments (e.g.
+  /// a foo(int) will match (int) better that a generic foo(T)). Also takes care of the
+  /// Optional arguments.
+  /// If multiple valid methods are found, returns the first one. Returns nullptr if no
+  /// methods were found.
+  types::FuncTypePtr findBestMethod(types::ClassType *typ, const string &member,
+                                    const vector<pair<string, types::TypePtr>> &args);
+  /// Reorders a given vector or named arguments (consisting of names and the
+  /// corresponding types) according to the signature of a given function.
+  /// Returns the reordered vector and an associated reordering score (missing
+  /// default arguments' score is half of the present arguments).
+  /// Score is -1 if the given arguments cannot be reordered.
+  typedef std::function<int(const std::map<int, int> &, int, int,
+                            const vector<vector<int>> &)>
+      ReorderDoneFn;
+  typedef std::function<int(string)> ReorderErrorFn;
+  int reorderNamedArgs(types::RecordType *func, const string &knownTypes,
+                       const vector<CallExpr::Arg> &args, ReorderDoneFn onDone,
+                       ReorderErrorFn onError);
 };
 
 } // namespace ast

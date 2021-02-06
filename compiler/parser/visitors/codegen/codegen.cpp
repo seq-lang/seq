@@ -71,7 +71,7 @@ IRModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
       //      LOG("[codegen] add {} -> {} | {}", f.first,
       //      f.second.type->realizedName(),
       //          f.second.llvm->getName());
-      ctx->addType(f.first, f.second.llvm);
+      ctx->addType(f.first, f.second.ir);
     }
 
   // Now add all realization stubs

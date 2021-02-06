@@ -152,9 +152,9 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
     LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), ptrTyp->toString());
     c->args[1].value = transform(c->args[1].value);
     auto rhsTyp = c->args[1].value->getType()->getClass();
-    if (auto method = findBestMethod(lhsClass.get(),
-                                     format("__atomic_{}__", c->expr->getId()->value),
-                                     {{"", ptrTyp}, {"", rhsTyp}})) {
+    if (auto method = ctx->findBestMethod(
+            lhsClass.get(), format("__atomic_{}__", c->expr->getId()->value),
+            {{"", ptrTyp}, {"", rhsTyp}})) {
       resultStmt = transform(N<ExprStmt>(N<CallExpr>(N<IdExpr>(method->funcName),
                                                      N<PtrExpr>(move(stmt->lhs)),
                                                      move(c->args[1].value))));
@@ -169,8 +169,8 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
     auto ptrType =
         ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("Ptr"), {lhsClass});
     LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), ptrType->toString());
-    if (auto m = findBestMethod(lhsClass.get(), "__atomic_xchg__",
-                                {{"", ptrType}, {"", rhsClass}})) {
+    if (auto m = ctx->findBestMethod(lhsClass.get(), "__atomic_xchg__",
+                                     {{"", ptrType}, {"", rhsClass}})) {
       resultStmt = transform(N<ExprStmt>(N<CallExpr>(
           N<IdExpr>(m->funcName), N<PtrExpr>(move(stmt->lhs)), move(stmt->rhs))));
       return;

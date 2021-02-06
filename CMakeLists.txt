@@ -204,6 +204,7 @@ set(SEQ_CPPFILES
         compiler/parser/ast/expr.cpp
         compiler/parser/ast/stmt.cpp
         compiler/parser/ast/types.cpp
+        compiler/parser/cache.cpp
         compiler/parser/common.cpp
         compiler/parser/ocaml/ocaml.cpp
         compiler/parser/parser.cpp

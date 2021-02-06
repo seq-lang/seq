@@ -40,6 +40,7 @@ StmtPtr
 TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts,
                         const unordered_map<string, pair<string, seq_int_t>> &defines) {
   auto ctx = make_shared<TypeContext>(cache);
+  cache->typeCtx = ctx;
   TypecheckVisitor v(ctx);
   for (auto &d : defines)
     ctx->add(TypecheckItem::Type, d.first, make_shared<StaticType>(d.second.second),

@@ -49,6 +49,7 @@ public:
   StmtPtr transform(const StmtPtr &s) override;
   ExprPtr transform(ExprPtr &e, bool allowTypes, bool allowVoid = false);
   ExprPtr transformType(ExprPtr &expr);
+  types::TypePtr realize(types::TypePtr typ);
 
 private:
   void defaultVisit(Expr *e) override;
@@ -196,28 +197,6 @@ private:
   ExprPtr transformDot(DotExpr *expr, vector<CallExpr::Arg> *args = nullptr);
   /// Deactivate any unbound that was activated during the instantiation of type t.
   void deactivateUnbounds(types::Type *t);
-  /// Picks the best method named member in a given type that matches the given argument
-  /// types. Prefers methods whose signatures are closer to the given arguments (e.g.
-  /// a foo(int) will match (int) better that a generic foo(T)). Also takes care of the
-  /// Optional arguments.
-  /// If multiple valid methods are found, returns the first one. Returns nullptr if no
-  /// methods were found.
-  types::FuncTypePtr
-  findBestMethod(types::ClassType *typ, const string &member,
-                 const vector<std::pair<string, types::TypePtr>> &args);
-  /// Reorders a given vector or named arguments (consisting of names and the
-  /// corresponding types) according to the signature of a given function.
-  /// Returns the reordered vector and an associated reordering score (missing
-  /// default arguments' score is half of the present arguments).
-  /// Score is -1 if the given arguments cannot be reordered.
-
-  typedef std::function<int(const map<int, int> &, int, int,
-                            const vector<vector<int>> &)>
-      ReorderDoneFn;
-  typedef std::function<int(string)> ReorderErrorFn;
-  int reorderNamedArgs(types::RecordType *func, const string &knownTypes,
-                       const vector<CallExpr::Arg> &args, ReorderDoneFn onDone,
-                       ReorderErrorFn onError);
   /// Transform a call expression callee(args...).
   /// Intercepts callees that are expr.dot, expr.dot[T1, T2] etc.
   /// Performs the following transformations:
@@ -286,7 +265,6 @@ private:
   vector<types::Generic> parseGenerics(const vector<Param> &generics, int level);
 
 private:
-  types::TypePtr realize(types::TypePtr typ);
   types::TypePtr realizeType(types::ClassType *typ);
   types::TypePtr realizeFunc(types::FuncType *typ);
   std::pair<int, StmtPtr> inferTypes(StmtPtr &&stmt, bool keepLast = false);
