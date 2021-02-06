@@ -188,6 +188,7 @@ public:
   /// Generate a unique SrcInfo for internally generated AST nodes.
   SrcInfo generateSrcInfo();
 
+  /// Realization API.
   types::ClassTypePtr findClass(const string &name) const;
   types::FuncTypePtr findFunction(const string &name) const;
   types::FuncTypePtr findMethod(types::ClassType *typ, const string &member,
