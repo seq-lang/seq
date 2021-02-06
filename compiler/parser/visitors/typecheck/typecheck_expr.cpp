@@ -236,10 +236,14 @@ void TypecheckVisitor::visit(BinaryExpr *expr) {
 }
 
 void TypecheckVisitor::visit(PipeExpr *expr) {
+  bool hasGenerator = false;
+
   // Returns T if t is of type Generator[T].
   auto getIterableType = [&](TypePtr t) {
-    if (t->is("Generator"))
+    if (t->is("Generator")) {
+      hasGenerator = true;
       return t->getClass()->generics[0].type;
+    }
     return t;
   };
   // List of output types (for a|>b|>c, this list is type(a), type(a|>b), type(a|>b|>c).
@@ -305,7 +309,7 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
       inType = getIterableType(inType);
     expr->done &= expr->items[i].expr->done;
   }
-  expr->type |= inType;
+  expr->type |= (hasGenerator ? ctx->findInternal("void") : inType);
 }
 
 void TypecheckVisitor::visit(InstantiateExpr *expr) {
@@ -339,12 +343,12 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               auto val = ctx->find(ei->value);
               seqassert(val && val->isStatic(), "invalid static expression");
               auto genTyp = val->type->follow();
-              staticGenerics.emplace_back(Generic{
-                  ei->value, genTyp,
-                  genTyp->getLink() ? genTyp->getLink()->id
-                                    : genTyp->getStatic()->generics.empty()
-                                          ? 0
-                                          : genTyp->getStatic()->generics[0].id});
+              staticGenerics.emplace_back(
+                  Generic{ei->value, genTyp,
+                          genTyp->getLink() ? genTyp->getLink()->id
+                          : genTyp->getStatic()->generics.empty()
+                              ? 0
+                              : genTyp->getStatic()->generics[0].id});
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {

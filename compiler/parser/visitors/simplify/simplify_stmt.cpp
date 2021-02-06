@@ -652,6 +652,8 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
             magics.emplace_back(i);
       } else {
         magics = {"new", "str", "len", "hash"};
+        if (!startswith(stmt->name, "Tuple.N"))
+          magics.emplace_back("dict");
         if (!in(stmt->attributes, ATTR_NO(ATTR_TOTAL_ORDERING)))
           for (auto &i : {"eq", "ne", "lt", "gt", "le", "ge"})
             magics.emplace_back(i);
@@ -1420,6 +1422,19 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
     } else {
       stmts.emplace_back(N<ReturnStmt>(N<StringExpr>("()")));
     }
+  } else if (op == "dict") {
+    // def __dict__(self: T):
+    //   d = List[str](N)
+    //   d.append('arg1')  ...
+    //   return d
+    fargs.emplace_back(Param{"self", typExpr->clone()});
+    stmts.emplace_back(
+        N<AssignStmt>(I("d"), N<CallExpr>(N<IndexExpr>(I("List"), I("str")),
+                                          N<IntExpr>(args.size()))));
+    for (int ai = 0; ai < args.size(); ai++)
+      stmts.push_back(N<ExprStmt>(
+          N<CallExpr>(N<DotExpr>(I("d"), "append"), N<StringExpr>(args[ai].name))));
+    stmts.emplace_back(N<ReturnStmt>(I("d")));
   } else {
     seqassert(false, "invalid magic {}", op);
   }

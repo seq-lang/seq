@@ -1,10 +1,7 @@
 import internal.gc as gc
 
-@tuple
+@extend
 class Array[T]:
-    len: int
-    ptr: Ptr[T]
-
     def __new__(ptr: Ptr[T], sz: int) -> Array[T]:
         return (sz, ptr)
     def __new__(sz: int) -> Array[T]:

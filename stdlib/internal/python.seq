@@ -11,7 +11,7 @@ from C import LD.PyObject_Str(cobj) -> cobj
 from C import LD.PyRun_SimpleString(cobj)
 from C import LD.Py_IncRef(cobj)
 from C import LD.Py_DecRef(cobj)
-from C import LD.PyObject_CallObject(cobj, cobj) -> cobj
+from C import LD.PyObject_Call(cobj, cobj, cobj) -> cobj
 from C import LD.PyObject_SetAttrString(cobj, cobj, cobj) -> cobj
 from C import LD.PyObject_Length(cobj) -> int
 from C import LD.Py_Initialize()
@@ -112,8 +112,12 @@ class pyobj:
     def decref(self):
         Py_DecRef(self.p)
 
-    def __call__(self, *args) -> pyobj:
-        return pyobj.exc_wrap(pyobj(PyObject_CallObject(self.p, args.__to_py__().p)))
+    def __call__(self, *args, **kwargs) -> pyobj:
+        names = iter(kwargs.__dict__())
+        kws = Dict[str, pyobj]()
+        if staticlen(kwargs) > 0:
+            kws = {next(names): i.__to_py__() for i in kwargs}
+        return pyobj.exc_wrap(pyobj(PyObject_Call(self.p, args.__to_py__().p, kws.__to_py__().p)))
 
     def _tuple_new(length: int) -> pyobj:
         t = PyTuple_New(length)

@@ -1,11 +1,7 @@
 import internal.gc as gc
 
+@extend
 class List[T]:
-    arr: Array[T]
-    len: int
-
-# Magic methods
-
     def __init__(self, arr: Array[T], len: int):
         self.arr = arr
         self.len = len
