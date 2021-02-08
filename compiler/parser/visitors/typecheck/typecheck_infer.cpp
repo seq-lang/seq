@@ -421,7 +421,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
       types.push_back(getLLVM(m));
     auto ret = types[0];
     types.erase(types.begin());
-    handle = ctx->cache->module->getFuncType(ret, types);
+    handle = ctx->cache->module->getFuncType(realizedName, ret, types);
   } else if (auto tr = const_cast<ClassType *>(t)->getRecord()) {
     vector<seq::ir::types::Type *> typeArgs;
     vector<string> names;
@@ -444,6 +444,8 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
     handle = ctx->cache->module->getMemberedType(realizedName, true);
   }
   handle->setSrcInfo(t->getSrcInfo());
+  handle->setAstType(
+      std::const_pointer_cast<seq::ast::types::Type>(t->shared_from_this()));
   return ctx->cache->classes[t->name].realizations[realizedName].ir = handle;
 }
 

@@ -14,6 +14,11 @@
 #include "var.h"
 
 namespace seq {
+
+namespace ast {
+struct Cache;
+}
+
 namespace ir {
 
 /// SIR object representing a program.
@@ -45,12 +50,16 @@ private:
   std::unordered_map<std::string, std::list<std::unique_ptr<types::Type>>::iterator>
       typesMap;
 
+  /// the type-checker cache
+  std::shared_ptr<ast::Cache> cache;
+
 public:
   static const char NodeId;
 
   /// Constructs an SIR module.
   /// @param name the module name
-  explicit IRModule(std::string name);
+  /// @param cache the type-checker cache
+  explicit IRModule(std::string name, std::shared_ptr<ast::Cache> cache);
 
   /// @return the main function
   Func *getMainFunc() { return mainFunc.get(); }
@@ -151,23 +160,10 @@ public:
     typesMap.erase(it);
   }
 
-  /// Finds a function by unmangled name and types.
-  /// @param name the unmangled name
-  /// @param argTypes the argument types
-  /// @param rType the return type
-  /// @return the function if it exists, nullptr otherwise
-  Func *lookupFunc(const std::string &name, const std::vector<types::Type *> &argTypes,
-                   const types::Type *rType);
-  /// Finds a function by unmangled name.
-  /// @param name the unmangled name
-  /// @param argTypes the argument types
-  /// @return the function if it exists, nullptr otherwise
-  Func *lookupFunc(const std::string &name);
-  /// Finds a builtin function by unmangled name.
-  /// @param name the unmangled name
-  /// @return the function if it exists, nullptr otherwise
-  BodiedFunc *lookupBuiltinFunc(const std::string &name);
-
+  /// Constructs and registers an IR node with provided source information.
+  /// @param s the source information
+  /// @param args the arguments
+  /// @return the new node
   template <typename DesiredType, typename... Args>
   DesiredType *N(seq::SrcInfo s, Args &&... args) {
     auto *ret = new DesiredType(std::forward<Args>(args)...);
@@ -177,117 +173,93 @@ public:
     store(ret);
     return ret;
   }
-
+  /// Constructs and registers an IR node with provided source node.
+  /// @param s the source node
+  /// @param args the arguments
+  /// @return the new node
   template <typename DesiredType, typename... Args>
   DesiredType *N(const seq::SrcObject *s, Args &&... args) {
     return N<DesiredType>(s->getSrcInfo(), std::forward<Args>(args)...);
   }
-
+  /// Constructs and registers an IR node with no source information.
+  /// @param args the arguments
+  /// @return the new node
   template <typename DesiredType, typename... Args> DesiredType *Nr(Args &&... args) {
     return N<DesiredType>(seq::SrcInfo(), std::forward<Args>(args)...);
   }
 
-  types::Type *getPointerType(types::Type *base) {
-    auto name = types::PointerType::getInstanceName(base);
-    if (auto *rVal = getType(name))
-      return rVal;
-    return Nr<types::PointerType>(base);
-  }
+  /// @param base the base type
+  /// @return a pointer type that references the base
+  types::Type *getPointerType(types::Type *base);
+  /// @param base the base type
+  /// @return an array type that contains the base
+  types::Type *getArrayType(types::Type *base);
+  /// @param base the base type
+  /// @return a generator type that yields the base
+  types::Type *getGeneratorType(types::Type *base);
+  /// @param base the base type
+  /// @return an optional type that contains the base
+  types::Type *getOptionalType(types::Type *base);
+  /// @return the void type
+  types::Type *getVoidType();
+  /// @return the bool type
+  types::Type *getBoolType();
+  /// @return the byte type
+  types::Type *getByteType();
+  /// @return the int type
+  types::Type *getIntType();
+  /// @return the float type
+  types::Type *getFloatType();
+  /// @return the string type
+  types::Type *getStringType();
+  /// @param rType the return type
+  /// @param argTypes the argument types
+  /// @return the void type
+  types::Type *getFuncType(const std::string &name, types::Type *rType,
+                           std::vector<types::Type *> argTypes);
+  /// @return a func type with no args and void return type
+  types::Type *getVoidRetAndArgFuncType();
+  /// @param name the type's name
+  /// @param ref whether the type should be a ref
+  /// @return an empty membered/ref type
+  types::Type *getMemberedType(const std::string &name, bool ref = false);
+  /// @param len the length
+  /// @param sign true if signed
+  /// @return a variable length integer type
+  types::Type *getIntNType(unsigned len, bool sign);
 
-  types::Type *getArrayType(types::Type *base) {
-    auto name = types::ArrayType::getInstanceName(base);
-    if (auto *rVal = getType(name))
-      return rVal;
-    return Nr<types::ArrayType>(getPointerType(base), getIntType());
-  }
+  /// @return the type-checker cache
+  std::shared_ptr<ast::Cache> getCache() { return cache; }
+  /// @return the type-checker cache
+  std::shared_ptr<const ast::Cache> getCache() const { return cache; }
 
-  types::Type *getGeneratorType(types::Type *base) {
-    auto name = types::GeneratorType::getInstanceName(base);
-    if (auto *rVal = getType(name))
-      return rVal;
-    return Nr<types::GeneratorType>(base);
-  }
+  /// Gets or realizes a method.
+  /// @param parent the parent class
+  /// @param methodName the method name
+  /// @param rType the return type
+  /// @param args the argument types
+  /// @param generics the generics
+  /// @return the method or nullptr
+  Func *getOrRealizeMethod(types::Type *parent, const std::string &methodName,
+                           types::Type *rType, std::vector<types::Type *> args,
+                           std::vector<types::Generic> generics = {});
 
-  types::Type *getOptionalType(types::Type *base) {
-    auto name = types::OptionalType::getInstanceName(base);
-    if (auto *rVal = getType(name))
-      return rVal;
-    return Nr<types::OptionalType>(base);
-  }
+  /// Gets or realizes a function.
+  /// @param funcName the function name
+  /// @param rType the return type
+  /// @param args the argument types
+  /// @param generics the generics
+  /// @return the function or nullptr
+  Func *getOrRealizeFunc(const std::string &funcName, types::Type *rType,
+                         std::vector<types::Type *> args,
+                         std::vector<types::Generic> generics = {});
 
-  types::Type *getVoidType() {
-    if (auto *rVal = getType(VOID_NAME))
-      return rVal;
-    return Nr<types::VoidType>();
-  }
-
-  types::Type *getBoolType() {
-    if (auto *rVal = getType(BOOL_NAME))
-      return rVal;
-    return Nr<types::BoolType>();
-  }
-
-  types::Type *getByteType() {
-    if (auto *rVal = getType(BYTE_NAME))
-      return rVal;
-    return Nr<types::ByteType>();
-  }
-
-  types::Type *getIntType() {
-    if (auto *rVal = getType(INT_NAME))
-      return rVal;
-    return Nr<types::IntType>();
-  }
-
-  types::Type *getFloatType() {
-    if (auto *rVal = getType(FLOAT_NAME))
-      return rVal;
-    return Nr<types::FloatType>();
-  }
-
-  types::Type *getStringType() {
-    if (auto *rVal = getType(STRING_NAME))
-      return rVal;
-    return Nr<types::RecordType>(
-        STRING_NAME,
-        std::vector<types::Type *>{getIntType(), getPointerType(getByteType())},
-        std::vector<std::string>{"len", "ptr"});
-  }
-
-  types::Type *getFuncType(types::Type *rType, std::vector<types::Type *> argTypes) {
-    auto name = types::FuncType::getInstanceName(rType, argTypes);
-    if (auto *rVal = getType(name))
-      return rVal;
-    return Nr<types::FuncType>(rType, std::move(argTypes));
-  }
-
-  types::Type *getVoidRetAndArgFuncType() { return getFuncType(getVoidType(), {}); }
-
-  types::Type *getMemberedType(const std::string &name, bool ref = false) {
-    auto *rVal = getType(name);
-
-    if (!rVal) {
-      if (ref) {
-        auto contentName = name + ".contents";
-        auto *record = getType(contentName);
-        if (!record) {
-          record = Nr<types::RecordType>(contentName);
-        }
-        rVal = Nr<types::RefType>(name, record->as<types::RecordType>());
-      } else {
-        rVal = Nr<types::RecordType>(name);
-      }
-    }
-
-    return rVal;
-  }
-
-  types::Type *getIntNType(unsigned len, bool sign) {
-    auto name = types::IntNType::getInstanceName(len, sign);
-    if (auto *rVal = getType(name))
-      return rVal;
-    return Nr<types::IntNType>(len, sign);
-  }
+  /// Gets or realizes a type.
+  /// @param typeName the type name
+  /// @param generics the generics
+  /// @return the function or nullptr
+  types::Type *getOrRealizeType(const std::string &typeName,
+                                std::vector<types::Generic> generics = {});
 
 private:
   void store(types::Type *t) {

@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include "parser/ast.h"
+
 #include "util/fmt/format.h"
 #include "util/fmt/ostream.h"
 
@@ -16,8 +18,43 @@ namespace seq {
 namespace ir {
 namespace types {
 
+class Type;
+
+class Generic {
+private:
+  union {
+    int staticValue;
+    types::Type *typeValue;
+  } value;
+  enum { STATIC, TYPE } tag;
+
+public:
+  explicit Generic(int staticValue) : value(), tag(STATIC) {
+    value.staticValue = staticValue;
+  }
+  explicit Generic(types::Type *typeValue) : value(), tag(TYPE) {
+    value.typeValue = typeValue;
+  }
+
+  /// @return true if the generic is a type
+  bool isType() const { return tag == TYPE; }
+  /// @return true if the generic is static
+  bool isStatic() const { return tag == STATIC; }
+
+  /// @return the static value
+  int getStaticValue() const { return value.staticValue; }
+
+  /// @return the type value
+  types::Type *getTypeValue() { return value.typeValue; }
+  /// @return the type value
+  const types::Type *getTypeValue() const { return value.typeValue; }
+};
+
 /// Type from which other SIR types derive. Generally types are immutable.
 class Type : public ReplaceableNodeBase<Type> {
+private:
+  ast::types::TypePtr astType;
+
 public:
   static const char NodeId;
 
@@ -45,6 +82,16 @@ public:
   /// @param other the other type
   /// @return true if the types are equivalent
   bool equals(const Type *other) const { return getActual()->doEquals(other); }
+
+  /// @return the ast type
+  ast::types::TypePtr getAstType() { return astType; }
+  /// @return the ast type
+  std::shared_ptr<const ast::types::Type> getAstType() const { return astType; }
+  /// Sets the ast type.
+  /// @param t the new type
+  void setAstType(ast::types::TypePtr t) { astType = std::move(t); }
+
+  virtual std::vector<Generic> getGenerics();
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -75,7 +122,7 @@ public:
   static const char NodeId;
 
   /// Constructs an int type.
-  IntType() : AcceptorExtend(".int") {}
+  IntType() : AcceptorExtend("int") {}
 };
 
 /// Float type (64-bit double)
@@ -84,7 +131,7 @@ public:
   static const char NodeId;
 
   /// Constructs a float type.
-  FloatType() : AcceptorExtend(".float") {}
+  FloatType() : AcceptorExtend("float") {}
 };
 
 /// Bool type (8-bit unsigned integer; either 0 or 1)
@@ -93,7 +140,7 @@ public:
   static const char NodeId;
 
   /// Constructs a bool type.
-  BoolType() : AcceptorExtend(".bool") {}
+  BoolType() : AcceptorExtend("bool") {}
 };
 
 /// Byte type (8-bit unsigned integer)
@@ -102,7 +149,7 @@ public:
   static const char NodeId;
 
   /// Constructs a byte type.
-  ByteType() : AcceptorExtend(".byte") {}
+  ByteType() : AcceptorExtend("byte") {}
 };
 
 /// Void type
@@ -111,7 +158,7 @@ public:
   static const char NodeId;
 
   /// Constructs a void type.
-  VoidType() : AcceptorExtend(".void") {}
+  VoidType() : AcceptorExtend("void") {}
 };
 
 /// Type from which membered types derive.
@@ -328,9 +375,8 @@ public:
   /// Constructs a function type.
   /// @param rType the function's return type
   /// @param argTypes the function's arg types
-  FuncType(Type *rType, std::vector<Type *> argTypes)
-      : AcceptorExtend(getInstanceName(rType, argTypes)), rType(rType),
-        argTypes(std::move(argTypes)) {}
+  FuncType(std::string name, Type *rType, std::vector<Type *> argTypes)
+      : AcceptorExtend(std::move(name)), rType(rType), argTypes(std::move(argTypes)) {}
 
   /// @return the function's return type
   Type *getReturnType() { return rType; }
@@ -354,8 +400,6 @@ public:
   reference back() { return argTypes.back(); }
   /// @return a reference to the last argument
   const_reference back() const { return argTypes.back(); }
-
-  static std::string getInstanceName(Type *rType, const std::vector<Type *> &argTypes);
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;

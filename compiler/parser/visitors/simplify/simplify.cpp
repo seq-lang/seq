@@ -41,7 +41,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   auto preamble = make_shared<Preamble>();
 
   if (!cache->module)
-    cache->module = new seq::ir::IRModule("");
+    cache->module = new seq::ir::IRModule("", cache);
 
   // Load standard library if it has not been loaded.
   if (!in(cache->imports, STDLIB_IMPORT)) {

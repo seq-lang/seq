@@ -199,8 +199,11 @@ void CodegenVisitor::visit(StackAllocExpr *expr) {
   assert(c);
   auto val = CAST(expr->expr, IntExpr);
   assert(val);
-  result = make<StackAllocInstr>(
-      expr, ctx->getModule()->getArrayType(realizeType(c.get())), val->intValue);
+
+  auto *arrayType = ctx->getModule()->getArrayType(realizeType(c.get()));
+  arrayType->setAstType(expr->getType());
+
+  result = make<StackAllocInstr>(expr, arrayType, val->intValue);
 }
 
 void CodegenVisitor::visit(DotExpr *expr) {
@@ -526,8 +529,9 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
       names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i - 1].name]);
     }
 
-    auto *funcType =
-        ctx->getModule()->getFuncType(realizeType(t->args[0]->getClass().get()), types);
+    auto *funcType = ctx->getModule()->getFuncType(
+        t->realizedName(), realizeType(t->args[0]->getClass().get()), types);
+    funcType->setAstType(t);
 
     cast<ir::Func>(fp.first)->setSrcInfo(getSrcInfo());
     real.second.ir = cast<ir::Func>(fp.first);
