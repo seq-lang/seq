@@ -100,9 +100,14 @@ seq::ir::IRModule *parse(const string &argv0, const string &file, const string &
     auto module = ast::CodegenVisitor::apply(cache, move(typechecked));
     module->setSrcInfo({abs, 0, 0, 0, 0});
 
-    auto *intn = module->getOrRealizeType("Int", {seq::ir::types::Generic(1)});
-    auto *fn =
-        module->getOrRealizeFunc("foo", module->getOrRealizeType("void"), {intn});
+    auto *fn = cache->realizeFunction(
+        cache->findFunction("foo"),
+        {cache->realizeType(cache->findClass("void"))->getAstType(),
+         cache
+             ->realizeType(cache->findClass("Int"),
+                           {make_shared<ast::types::StaticType>(20)})
+             ->getAstType()});
+    // LOG("-- found {}", fn->getName());
 
     if (!isTest)
       LOG_TIME("[T] codegen   = {:.1f}",

@@ -194,9 +194,10 @@ public:
   types::FuncTypePtr findMethod(types::ClassType *typ, const string &member,
                                 const vector<pair<string, types::TypePtr>> &args);
   ir::types::Type *realizeType(types::ClassTypePtr type,
-                               vector<types::TypePtr> generics);
-  ir::Func *realizeFunction(types::FuncTypePtr type, vector<types::TypePtr> generics,
-                            vector<types::TypePtr> args);
+                               vector<types::TypePtr> generics = {});
+  ir::Func *realizeFunction(types::FuncTypePtr type,
+                            vector<types::TypePtr> args,
+                            vector<types::TypePtr> generics = {});
 
   /// @param type previously realized type
   /// @return the ir type
