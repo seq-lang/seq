@@ -189,19 +189,31 @@ public:
   SrcInfo generateSrcInfo();
 
   /// Realization API.
+
+  /// Find a class with a given canonical name and return a matching types::Type pointer
+  /// or a nullptr if a class is not found.
+  /// Returns an _uninstantiated_ type.
   types::ClassTypePtr findClass(const string &name) const;
+  /// Find a function with a given canonical name and return a matching types::Type
+  /// pointer or a nullptr if a function is not found.
+  /// Returns an _uninstantiated_ type.
   types::FuncTypePtr findFunction(const string &name) const;
+  /// Find the class method in a given class type that best matches the given arguments.
+  /// Returns an _uninstantiated_ type.
   types::FuncTypePtr findMethod(types::ClassType *typ, const string &member,
                                 const vector<pair<string, types::TypePtr>> &args);
+
+  /// Given a class type and the matching generic vector, instantiate the type and
+  /// realize it.
   ir::types::Type *realizeType(types::ClassTypePtr type,
                                vector<types::TypePtr> generics = {});
-  ir::Func *realizeFunction(types::FuncTypePtr type,
-                            vector<types::TypePtr> args,
+  /// Given a function type and function arguments, instantiate the type and
+  /// realize it. The first argument is the function return type.
+  /// You can also pass function generics if a function has one (e.g. T in def
+  /// foo[T](...)). If a generic is used as an argument, it will be auto-deduced. Pass
+  /// only if a generic cannot be deduced from the provided args.
+  ir::Func *realizeFunction(types::FuncTypePtr type, vector<types::TypePtr> args,
                             vector<types::TypePtr> generics = {});
-
-  /// @param type previously realized type
-  /// @return the ir type
-  ir::types::Type *lookupType(types::ClassTypePtr type);
 };
 
 } // namespace ast
