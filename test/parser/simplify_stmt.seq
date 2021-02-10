@@ -494,6 +494,11 @@ def f[T: str]():
     pass
 #! ERROR: only integer static generics are supported
 
+#%% function_err_3,barebones
+def f(a, b=a):
+    pass
+#! ERROR: identifier 'a' not found
+
 #%% function_llvm_err_1,barebones
 @llvm
 def foo():

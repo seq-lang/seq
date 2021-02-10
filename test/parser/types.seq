@@ -364,7 +364,7 @@ def test(i: Int[32]):
     print int(i)
 test(Int[5](1)) #! ERROR: cannot unify Int[5] and Int[32]
 
-#%% nested_generic,barebones
+#%% nested_fn_generic,barebones
 def f(x):
     def g(y):
         return y
@@ -379,7 +379,7 @@ x, y = 1, 'haha'
 print f(x, y).__class__ #: Tuple.N2[str,int]
 print f[str]('aa', 1.1).__class__ #: Tuple.N2[float,str]
 
-#%% nested_generic_error,barebones
+#%% nested_fn_generic_error,barebones
 def f[U](x: U, y): # ('u, 'a) -> tuple['a, 'u]
     def g[T, U](x: T, y: U): # ('t, 'u) -> tuple['t, 'u]
         return (x, y)

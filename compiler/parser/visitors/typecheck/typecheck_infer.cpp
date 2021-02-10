@@ -176,9 +176,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
                     "unbound argument {}", type->args[i]->toString());
 
           string varName = ast->args[i - 1].name;
-          for (int i = 0; i < 2; i++)
-            if (startswith(varName, "*"))
-              varName = varName.substr(1);
+          trimStars(varName);
           ctx->add(TypecheckItem::Var, varName, make_shared<LinkType>(type->args[i]));
         }
 
@@ -208,9 +206,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       vector<Param> args;
       for (auto &i : ast->args) {
         string varName = i.name;
-        for (int i = 0; i < 2; i++)
-          if (startswith(varName, "*"))
-            varName = varName.substr(1);
+        trimStars(varName);
         args.emplace_back(Param{varName, nullptr, nullptr});
       }
       ctx->cache->functions[type->funcName].realizations[type->realizedName()].ast =

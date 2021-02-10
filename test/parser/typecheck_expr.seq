@@ -6,10 +6,6 @@ print a.__class__ #: bool
 i = 15
 print i.__class__ #: int
 
-#%% bool,barebones
-a = True
-print a.__class__ #: bool
-
 #%% float,barebones
 a = 1.11
 print a.__class__ #: float

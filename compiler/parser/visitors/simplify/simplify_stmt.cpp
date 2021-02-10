@@ -435,15 +435,13 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   bool defaultsStarted = false, hasStarArg = false, hasKwArg = false;
   for (int ia = 0; ia < stmt->args.size(); ia++) {
     auto &a = stmt->args[ia];
-    string varName = a.name, prefix = "";
-    for (int i = 0; i < 2; i++)
-      if (startswith(varName, "*"))
-        varName = varName.substr(1), prefix += "*";
-    if (prefix.size() == 2) {
+    string varName = a.name;
+    int stars = trimStars(varName);
+    if (stars == 2) {
       if (hasKwArg || a.type || a.deflt)
         error("invalid **kwargs");
       hasKwArg = true;
-    } else if (prefix.size() == 1) {
+    } else if (stars == 1) {
       if (hasStarArg || a.type || a.deflt)
         error("invalid *args");
       hasStarArg = true;
@@ -452,7 +450,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     if (in(seenArgs, varName))
       error("'{}' declared twice", varName);
     seenArgs.insert(varName);
-    if (!a.deflt && defaultsStarted && prefix.empty())
+    if (!a.deflt && defaultsStarted && !stars)
       error("non-default argument '{}' after a default argument", varName);
     defaultsStarted |= bool(a.deflt);
     auto typeAst = transformType(a.type.get());
@@ -461,8 +459,15 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
       typeAst = transformType(ctx->bases[ctx->bases.size() - 2].ast.get());
 
     auto name = ctx->generateCanonicalName(varName);
-    args.emplace_back(Param{prefix + name, move(typeAst), transform(a.deflt)});
-    ctx->add(SimplifyItem::Var, varName, name);
+    args.emplace_back(
+        Param{string(stars, '*') + name, move(typeAst), transform(a.deflt)});
+  }
+  // Delay adding to context to prevent "def foo(a, b=a)"
+  for (int ia = 0; ia < stmt->args.size(); ia++) {
+    string varName = stmt->args[ia].name, canName = args[ia].name;
+    trimStars(varName);
+    trimStars(canName);
+    ctx->add(SimplifyItem::Var, varName, canName);
   }
   // Parse the return type.
   if (!stmt->ret && in(stmt->attributes, ATTR_EXTERN_LLVM))

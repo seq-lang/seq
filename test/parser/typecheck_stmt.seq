@@ -132,7 +132,7 @@ class Foo:
     x: Optional[int]
 Foo().y = 5 #! ERROR: cannot find 'y' in Foo
 
-#%% assign_member_err_1,barebones
+#%% assign_member_err_2,barebones
 @tuple
 class Foo:
     x: Optional[int]

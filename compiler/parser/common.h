@@ -86,6 +86,8 @@ bool endswith(const string &str, const string &suffix);
 void ltrim(string &str);
 /// Trims whitespace at the end of the string.
 void rtrim(string &str);
+/// Removes leading stars in front of the string and returns the number of such stars.
+int trimStars(string &str);
 /// True if a string only contains digits.
 bool isdigit(const string &str);
 /// Combine items separated by a delimiter into a string.
