@@ -225,7 +225,8 @@ INSTANTIATE_TEST_SUITE_P(
       "parser/typecheck_expr.seq",
       "parser/typecheck_stmt.seq",
       "parser/statements.seq",
-      "parser/types.seq"
+      "parser/types.seq",
+      "parser/llvm.seq"
     })),
     getTypeTestNameFromParam);
 

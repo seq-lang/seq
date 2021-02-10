@@ -3,6 +3,17 @@
 from internal.types.ptr import *
 from internal.types.str import *
 from internal.types.bool import *
+
+# Forward-declare for Tuples
+@internal
+@tuple
+class Array[T]:
+    len: int
+    ptr: Ptr[T]
+class List[T]:
+    arr: Array[T]
+    len: int
+
 from internal.types.int import *
 from internal.types.error import *
 from internal.types.intn import *

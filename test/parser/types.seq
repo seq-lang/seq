@@ -1,13 +1,29 @@
-#%% basic
+#%% basic,barebones
 a = 5
 b: float = 6.16
 c: optional[str] = None
 print a, b, c  #: 5 6.16 None
 
-#%% late_unify
+#%% late_unify,barebones
 a = []
 a.append(1)
 print a  #: [1]
+
+#%% late_unify_2,barebones
+class XX[T]:
+    y: T
+a = XX()
+def f(i: int) -> int:
+    return i
+print a.y.__class__ #: int
+f(a.y)
+print a.__class__ #: XX[int]
+print XX[bool].__class__ #: XX[bool]
+
+#%% nested_generic,barebones
+x = Array[Array[int]](0)
+f = Optional[Optional[Optional[int]]](Optional[Optional[int]](Optional[int](5)))
+print x.len, f  #: 0 5
 
 #%% map_unify
 def map[T,S](l: list[T], f: function[S,T]):
@@ -15,7 +31,7 @@ def map[T,S](l: list[T], f: function[S,T]):
 e = 1
 print map([1, 2, 3], lambda x: x+e)  #: [2, 3, 4]
 
-#%% nested
+#%% nested,barebones
 def m4[TD](a: int, d: TD):
     def m5[TE](a: int, d: TD, e: TE):
         print a, d, e
@@ -23,7 +39,7 @@ def m4[TD](a: int, d: TD):
 m4(1, 's')  #: 1 s 1.12
 m4(1, True)  #: 1 True 1.12
 
-#%% nested_class
+#%% nested_class,barebones
 class A[TA]:
     a: TA
     # lots of nesting:
@@ -34,7 +50,7 @@ class A[TA]:
 ax = A(42)
 ax.m4(1)  #: 42 1 1
 
-#%% static
+#%% static,barebones
 class A[TA]:
     a: TA
     def dump(a, b, c):
@@ -113,7 +129,7 @@ print A.m6(v1)                      #: world
 f = a2.m0
 f(99)                               #: 99
 
-#%% realization_small
+#%% realization_small,barebones
 class B1[T]:
     a: T
     def foo[S](self: S) -> B1[int]:
@@ -135,7 +151,7 @@ m7[str,float]()                     #: works
 m7[str,float]()                     #: works
 m7[float,str]()                     #: works
 
-#%% recursive
+#%% recursive,barebones
 def foo(a):
     if not a:
         foo(True)
@@ -154,7 +170,59 @@ bar(0)
 #: True
 #: 0
 
-#%% optionals
+def rec2(x, y):
+    if x:
+        return rec2(y, x)
+    else:
+        return 1.0
+print rec2(1, False).__class__ #: float
+
+def pq(x):
+    return True
+def rec3(x, y):
+    if pq(x):
+        return rec3(y, x)
+    else:
+        return y
+print rec3('x', 's').__class__  #: str
+
+# Nested mutually recursive function
+def f[T](x: T) -> T:
+    def g(z):
+        return z(T())
+    return g(f[T])
+print f(1.2).__class__ #: float
+print f('s').__class__ #: str
+
+def f[T](x: T):
+    return f[T](x - 1) if x else 1
+print f(1) #: 1
+print f(1.1).__class__ #: int
+
+
+#%% recursive_error,barebones
+def pq(x):
+    return True
+def rec3(x, y): #- ('a, 'b) -> 'b
+    if pq(x):
+        return rec3(y, x)
+    else:
+        return y
+rec3(1, 's')
+#!   ERROR: cannot unify int and str
+#!   ERROR: while realizing rec3 (arguments rec3[int,int,str])
+
+#%% instantiate_function_error,barebones
+def f[T](x: T) -> T:
+    def g(z):
+        return z(T())
+    return g(f)
+f(1)
+#!   ERROR: cannot resolve 1 unbound variables
+#!   ERROR: while realizing f (arguments f[int;int,int])
+
+
+#%% optionals,barebones
 y = None
 print y  #: None
 y = 5
@@ -172,7 +240,7 @@ except ValueError:
     print 'unwrap failed'  #: unwrap failed
 
 
-#%% optional_methods
+#%% optional_methods,barebones
 @extend
 class int:
     def x(self):
@@ -191,7 +259,6 @@ try:
     z.x()
 except ValueError:
     print 'unwrap failed'  #: unwrap failed
-
 
 
 #%% global_none,barebones
@@ -226,7 +293,208 @@ def h(x: list[int]):
 print h(list(map(lambda i: i-1, map(lambda i: i+2, range(5)))))
 #: [1, 2, 3, 4, 5]
 
-#%% func_unify_error
+#%% func_unify_error,barebones
 def foo(x:int):
     print x
 z = 1 & foo #! ERROR: cannot unify foo[void,int] and int
+
+#%% void_error,barebones
+def foo():
+    print 'foo'
+def bar(x):
+    print 'bar'
+a = foo()
+bar(a) #! ERROR: expression with void type
+
+#%% void_error_2,barebones
+def foo():
+    i = 0
+    while i < 10:
+        print i
+        yield
+        i += 1
+a = list(foo())
+#!     ERROR: expression with void type
+#!     ERROR: while realizing List.__init__.2
+#!     ERROR: while realizing list
+
+#%% instantiate_swap,barebones
+class Foo[T, U]:
+    t: T
+    u: U
+    def __init__(self):
+        self.t = T()
+        self.u = U()
+    def __str__(self):
+        return f'{self.t} {self.u}'
+print Foo[int, bool](), Foo[bool, int]() #: 0 False False 0
+
+#%% static,barebones
+class Num[N_: int]:
+    def __str__(self):
+        return f'[{N_}]'
+    def __init__(self):
+        pass
+def foo[N: int]():
+    print Num[N*2]()
+foo[3]() #: [6]
+
+class XX[N_: int]:
+    a: Num[N_*2]
+    def __init__(self):
+        self.a = Num()
+y = XX[5]()
+print y.a, y.__class__, y.a.__class__ #: [10] XX[5] Num[10]
+
+@tuple
+class FooBar[N: int]:
+    x: Int[N]
+z = FooBar(i32(5))
+print z, z.__class__, z.x.__class__ #: (x: 5) FooBar[32] Int[32]
+
+@tuple
+class Foo[N: int]:
+    x: Int[2*N]
+    def __new__(x: Int[2*N]) -> Foo[N]:
+        return (x,)
+foo = Foo[10](Int[20](0))
+print foo.__class__, foo.x.__class__ #: Foo[10] Int[20]
+
+#%% static_fail,barebones
+def test(i: Int[32]):
+    print int(i)
+test(Int[5](1)) #! ERROR: cannot unify Int[5] and Int[32]
+
+#%% nested_generic,barebones
+def f(x):
+    def g(y):
+        return y
+    return g(x)
+print f(5), f('s') #: 5 s
+
+def f[U](x: U, y):
+    def g[T, U](x: T, y: U):
+        return (x, y)
+    return g(y, x)
+x, y = 1, 'haha'
+print f(x, y).__class__ #: Tuple.N2[str,int]
+print f[str]('aa', 1.1).__class__ #: Tuple.N2[float,str]
+
+#%% nested_generic_error,barebones
+def f[U](x: U, y): # ('u, 'a) -> tuple['a, 'u]
+    def g[T, U](x: T, y: U): # ('t, 'u) -> tuple['t, 'u]
+        return (x, y)
+    return g(y, x)
+print f[int](1.1, 1).__class__ #! ERROR: cannot unify float and int
+
+#%% fn_realization,barebones
+def f[T](x: T, y: tuple[T]):
+      print f[str].__class__ #: Function.N2[str,str,Tuple.N1[str]]
+      return x
+x = f(1, (1,))
+print x, x.__class__ #: 1 int
+# print f.__class__  # TODO ERRORS
+
+def f[T](x:T):
+    def g(y):
+        z = T()
+        return z
+    print f[str].__class__  #: Function.N1[void,str]
+    print g(1).__class__ #: int
+f(1)
+print f(1).__class__ #: void
+
+def f[T](x: T):
+    print f[T](x).__class__  #: int
+    print f(x).__class__      #: int
+    print f[int](x).__class__ #: int
+    return x
+print f(1), f(1).__class__ #: 1 int
+print f[int](1).__class__ #: int
+
+#%% fn_realization_error,barebones
+def f[T](x: T):
+    print f[int](x).__class__
+    return x
+f('s')
+#!   ERROR: cannot unify str and int
+#!   ERROR: while realizing f
+
+#%% nested_class_error,barebones
+class X:
+    def foo(self, x):
+        return x
+    class Y:
+        def bar(self, x):
+            return x
+y = X.Y()
+y.foo(1) #! ERROR: cannot find 'foo' in X.X.Y
+
+#%% nested_deep_class,barebones
+class A[T]:
+    a: T
+    class B[U]:
+        b: U
+        class C[V]:
+            c: V
+            def foo[W](t: V, u: V, v: V, w: W):
+                return (t, u, v, w)
+
+print A.B.C[bool].foo[str].__class__ #: Function.N4[Tuple.N4[bool,bool,bool,str],bool,bool,bool,str]
+print A.B.C.foo(1,1,1,True) #: (1, 1, 1, True)
+print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
+print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
+print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
+
+x = A.B.C[bool]()
+print x.__class__ #: A.A.B.A.B.C[bool]
+
+#%% nested_deep_class_error,barebones
+class A[T]:
+    a: T
+    class B[U]:
+        b: U
+        class C[V]:
+            c: V
+            def foo[W](t: V, u: V, v: V, w: W):
+                return (t, u, v, w)
+print A.B.C[float].foo(1,1,1,True) #! ERROR: cannot unify int and float
+
+#%% nested_deep_class_error_2,barebones
+class A[T]:
+    a: T
+    class B[U]:
+        b: U
+        class C[V]:
+            c: V
+            def foo[W](t: V, u: V, v: V, w: W):
+                return (t, u, v, w)
+print A.B[int].C[float].foo(1,1,1,True) #! ERROR: cannot find 'C' in A.A.B[int]
+
+#%% nested_class_function,barebones
+def f(x):
+    def g(y):
+        return y
+    a = g(1)
+    b = g('s')
+    c = g(x)
+    return a, b, c
+print f(1.1).__class__ #: Tuple.N3[int,str,float]
+print f(False).__class__ #: Tuple.N3[int,str,bool]
+
+class A[T]:
+    a: T
+    class B[U]:
+        b: U
+        class C[V]:
+            c: V
+            def f(x):
+                def g(y):
+                    return y
+                a = g(1)
+                b = g('s')
+                c = g(x)
+                return a, b, c
+print A.B.C.f(1.1).__class__ #: Tuple.N3[int,str,float]
+print A.B.C[Optional[int]].f(False).__class__ #: Tuple.N3[int,str,bool]
+

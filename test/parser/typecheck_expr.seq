@@ -386,6 +386,50 @@ foo(b=l, d=Optional(5), c=l[0], a=adder(..., 4))
 #: 1 Optional[int]
 #: 5 int
 
+#%% call_kwargs,barebones
+def whatever(*args):
+    print 'kw', args
+def foo(a, b, c=1, *args, **kwargs):
+    print a, b, c, args, kwargs
+    whatever(a, b, *args, c)
+    whoa(x=1, **kwargs)
+foo(1, 2, 3, 4, 5, arg1='s', kwa=2)
+#: 1 2 3 (4, 5) (arg1: s, kwa: 2)
+#: * (1, 2, 4, 5, 3)
+#: ** (arg1: s, kwa: 2, x: 1)
+foo(1, 2)
+#: 1 2 1 () ()
+#: * (1, 2, 1)
+#: ** (x: 1)
+foo(1, 2, 3)
+#: 1 2 3 () ()
+#: * (1, 2, 3)
+#: ** (x: 1)
+foo(1, 2, 3, 4)
+#: 1 2 3 (4) ()
+#: * (1, 2, 4, 3)
+#: ** (x: 1)
+foo(1, 2, zamboni=3)
+#: 1 2 1 () (zamboni: 3)
+#: * (1, 2, 1)
+#: ** (x: 1, zamboni: 3)
+
+#%% call_unpack,barebones
+def foo(*args, **kwargs):
+    print args, kwargs
+
+@tuple
+class Foo:
+    x: int = 5
+    y: bool = True
+
+t = (1, 's')
+f = Foo(6)
+foo(*t, **f) #: (1, s) (x: 6, y: True)
+foo(*(1,2)) #: (1, 2) ()
+foo(3, f) #: (3, (x: 6, y: True)) ()
+foo(k = 3, **f) #: () (k: 3, x: 6, y: True)
+
 #%% call_static,barebones
 print isinstance(1, int), isinstance(2.2, float), isinstance(3, bool)
 #: True True False

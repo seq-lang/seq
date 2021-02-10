@@ -804,3 +804,23 @@ system("echo 'hello!'")  #: hello!
 def test_pydef(n) -> str:
     return ''.join(map(str,range(n)))
 print test_pydef(5)  #: 01234
+
+#%% python_pydef_nested
+def foo():
+    @python
+    def pyfoo():
+        return 1
+    print pyfoo() #: 1
+    if True:
+        @python
+        def pyfoo2():
+            return 2
+        print pyfoo2() #: 2
+    pass
+    @python
+    def pyfoo3():
+        if 1:
+            return 3
+    return str(pyfoo3())
+print foo() #: 3
+

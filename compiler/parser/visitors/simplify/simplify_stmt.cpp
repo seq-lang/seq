@@ -1117,7 +1117,7 @@ StmtPtr SimplifyVisitor::transformPythonDefinition(const string &name,
       N<ExprStmt>(
           N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_exec"), N<StringExpr>(code))),
       N<ImportStmt>(N<IdExpr>("python"), N<DotExpr>(N<IdExpr>("__main__"), name),
-                    clone_nop(args), ret ? ret->clone() : nullptr)));
+                    clone_nop(args), ret ? ret->clone() : N<IdExpr>("pyobj"))));
 }
 
 StmtPtr SimplifyVisitor::transformLLVMDefinition(const Stmt *codeStmt) {
