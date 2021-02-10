@@ -652,7 +652,8 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
             magics.emplace_back(i);
       } else {
         magics = {"new", "str", "len", "hash"};
-        if (!startswith(stmt->name, "Tuple.N"))
+        if (!startswith(stmt->name, "Tuple.N") &&
+            !in(stmt->attributes, ATTR_NO(ATTR_DICT)))
           magics.emplace_back("dict");
         if (!in(stmt->attributes, ATTR_NO(ATTR_TOTAL_ORDERING)))
           for (auto &i : {"eq", "ne", "lt", "gt", "le", "ge"})

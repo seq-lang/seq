@@ -387,32 +387,34 @@ foo(b=l, d=Optional(5), c=l[0], a=adder(..., 4))
 #: 5 int
 
 #%% call_kwargs,barebones
+def kwhatever(**kwargs):
+    print 'k', kwargs
 def whatever(*args):
-    print 'kw', args
+    print 'a', args
 def foo(a, b, c=1, *args, **kwargs):
     print a, b, c, args, kwargs
     whatever(a, b, *args, c)
-    whoa(x=1, **kwargs)
+    kwhatever(x=1, **kwargs)
 foo(1, 2, 3, 4, 5, arg1='s', kwa=2)
 #: 1 2 3 (4, 5) (arg1: s, kwa: 2)
-#: * (1, 2, 4, 5, 3)
-#: ** (arg1: s, kwa: 2, x: 1)
+#: a (1, 2, 4, 5, 3)
+#: k (arg1: s, kwa: 2, x: 1)
 foo(1, 2)
 #: 1 2 1 () ()
-#: * (1, 2, 1)
-#: ** (x: 1)
+#: a (1, 2, 1)
+#: k (x: 1)
 foo(1, 2, 3)
 #: 1 2 3 () ()
-#: * (1, 2, 3)
-#: ** (x: 1)
+#: a (1, 2, 3)
+#: k (x: 1)
 foo(1, 2, 3, 4)
 #: 1 2 3 (4) ()
-#: * (1, 2, 4, 3)
-#: ** (x: 1)
+#: a (1, 2, 4, 3)
+#: k (x: 1)
 foo(1, 2, zamboni=3)
 #: 1 2 1 () (zamboni: 3)
-#: * (1, 2, 1)
-#: ** (x: 1, zamboni: 3)
+#: a (1, 2, 1)
+#: k (x: 1, zamboni: 3)
 
 #%% call_unpack,barebones
 def foo(*args, **kwargs):

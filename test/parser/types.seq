@@ -50,7 +50,7 @@ class A[TA]:
 ax = A(42)
 ax.m4(1)  #: 42 1 1
 
-#%% static,barebones
+#%% static_fn,barebones
 class A[TA]:
     a: TA
     def dump(a, b, c):
@@ -213,14 +213,13 @@ rec3(1, 's')
 #!   ERROR: while realizing rec3 (arguments rec3[int,int,str])
 
 #%% instantiate_function_error,barebones
-def f[T](x: T) -> T:
+def fx[T](x: T) -> T:
     def g(z):
         return z(T())
-    return g(f)
-f(1)
+    return g(fx)
+fx(1)
 #!   ERROR: cannot resolve 1 unbound variables
-#!   ERROR: while realizing f (arguments f[int;int,int])
-
+#!   ERROR: while realizing fx (arguments fx[int;int,int])
 
 #%% optionals,barebones
 y = None

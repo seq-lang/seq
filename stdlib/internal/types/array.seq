@@ -1,7 +1,10 @@
 import internal.gc as gc
 
-@extend
+@internal
+@tuple
 class Array[T]:
+    len: int
+    ptr: Ptr[T]
     def __new__(ptr: Ptr[T], sz: int) -> Array[T]:
         return (sz, ptr)
     def __new__(sz: int) -> Array[T]:
@@ -21,3 +24,8 @@ class Array[T]:
     def slice(self, s: int, e: int) -> Array[T]:
         return (e - s, self.ptr + s)
 array = Array
+
+# Forward-declare for Tuple.__dict__
+class List[T]:
+    arr: Array[T]
+    len: int

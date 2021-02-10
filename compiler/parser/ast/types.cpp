@@ -559,7 +559,7 @@ string StaticType::realizedName() const {
     deps.push_back(e.type->realizedName());
   if (!staticEvaluation.first)
     const_cast<StaticType *>(this)->staticEvaluation = {true, staticExpr.second(this)};
-  return fmt::format("{}{}", deps.empty() ? "" : join(deps, ";"),
+  return fmt::format("{}", // deps.empty() ? "" : join(deps, ";") + ";",
                      staticEvaluation.second);
 }
 

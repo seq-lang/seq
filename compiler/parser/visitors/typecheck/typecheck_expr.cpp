@@ -643,7 +643,8 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
 
 ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &expr,
                                                     ExprPtr &index) {
-  if (!tuple->getRecord() || in(set<string>{"Ptr", "pyobj", "str"}, tuple->name))
+  if (!tuple->getRecord() ||
+      in(set<string>{"Ptr", "pyobj", "str", "Array"}, tuple->name))
     // Ptr, pyobj and str are internal types and have only one overloaded __getitem__
     return nullptr;
   if (ctx->cache->classes[tuple->name].methods["__getitem__"].size() != 1)
