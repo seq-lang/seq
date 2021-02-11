@@ -38,6 +38,10 @@ class CodegenVisitor : public CallbackASTVisitor<seq::ir::Value *, seq::ir::Valu
 
 public:
   explicit CodegenVisitor(shared_ptr<CodegenContext> ctx);
+
+  static std::unordered_set<std::string>
+  initializeContext(shared_ptr<CodegenContext> ctx);
+
   static seq::ir::IRModule *apply(shared_ptr<Cache> cache, StmtPtr stmts);
 
   seq::ir::Value *transform(const ExprPtr &expr) override;

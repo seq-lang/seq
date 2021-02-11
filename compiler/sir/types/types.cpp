@@ -11,6 +11,16 @@
 #include "sir/util/iterators.h"
 #include "sir/util/visitor.h"
 
+namespace {
+std::vector<seq::ast::types::TypePtr>
+extractTypes(const std::vector<seq::ast::types::Generic> &gens) {
+  std::vector<seq::ast::types::TypePtr> ret;
+  for (auto &g : gens)
+    ret.push_back(g.type);
+  return ret;
+}
+} // namespace
+
 namespace seq {
 namespace ir {
 namespace types {
@@ -25,7 +35,8 @@ std::vector<Generic> Type::getGenerics() {
   for (auto &g : astType->getClass()->generics) {
     auto bound = g.type->getLink();
     if (auto cls = bound->type->getClass())
-      ret.emplace_back(getModule()->getCache()->lookupType(cls));
+      ret.emplace_back(
+          getModule()->getCache()->realizeType(cls, extractTypes(cls->generics)));
     else
       ret.emplace_back(bound->type->getStatic()->staticEvaluation.second);
   }
