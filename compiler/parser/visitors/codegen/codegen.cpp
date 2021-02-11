@@ -239,7 +239,8 @@ void CodegenVisitor::visit(PtrExpr *expr) {
   auto val = ctx->find(var, true);
   assert(val && val->getVar());
 
-  result = make<PointerValue>(expr, val->getVar());
+  result = make<PointerValue>(expr, val->getVar(),
+                              realizeType(expr->getType()->getClass().get()));
 }
 
 void CodegenVisitor::visit(YieldExpr *expr) {

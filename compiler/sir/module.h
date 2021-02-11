@@ -223,18 +223,6 @@ public:
   types::Type *getOrRealizeType(const std::string &typeName,
                                 std::vector<types::Generic> generics = {});
 
-  /// @param base the base type
-  /// @return a pointer type that references the base
-  types::Type *getPointerType(types::Type *base);
-  /// @param base the base type
-  /// @return an array type that contains the base
-  types::Type *getArrayType(types::Type *base);
-  /// @param base the base type
-  /// @return a generator type that yields the base
-  types::Type *getGeneratorType(types::Type *base);
-  /// @param base the base type
-  /// @return an optional type that contains the base
-  types::Type *getOptionalType(types::Type *base);
   /// @return the void type
   types::Type *getVoidType();
   /// @return the bool type
@@ -269,6 +257,18 @@ private:
     varMap[v->getId()] = std::prev(vars.end());
   }
 
+  /// @param base the base type
+  /// @return a pointer type that references the base
+  types::Type *getPointerType(types::Type *base);
+  /// @param base the base type
+  /// @return an array type that contains the base
+  types::Type *getArrayType(types::Type *base);
+  /// @param base the base type
+  /// @return a generator type that yields the base
+  types::Type *getGeneratorType(types::Type *base);
+  /// @param base the base type
+  /// @return an optional type that contains the base
+  types::Type *getOptionalType(types::Type *base);
   /// @param rType the return type
   /// @param argTypes the argument types
   /// @return the void type

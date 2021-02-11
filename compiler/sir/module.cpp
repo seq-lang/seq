@@ -88,34 +88,6 @@ types::Type *IRModule::getOrRealizeType(const std::string &typeName,
   return cache->realizeType(type, translateGenerics(generics));
 }
 
-types::Type *IRModule::getPointerType(types::Type *base) {
-  auto name = types::PointerType::getInstanceName(base);
-  if (auto *rVal = getType(name))
-    return rVal;
-  return Nr<types::PointerType>(base);
-}
-
-types::Type *IRModule::getArrayType(types::Type *base) {
-  auto name = types::ArrayType::getInstanceName(base);
-  if (auto *rVal = getType(name))
-    return rVal;
-  return Nr<types::ArrayType>(getPointerType(base), getIntType());
-}
-
-types::Type *IRModule::getGeneratorType(types::Type *base) {
-  auto name = types::GeneratorType::getInstanceName(base);
-  if (auto *rVal = getType(name))
-    return rVal;
-  return Nr<types::GeneratorType>(base);
-}
-
-types::Type *IRModule::getOptionalType(types::Type *base) {
-  auto name = types::OptionalType::getInstanceName(base);
-  if (auto *rVal = getType(name))
-    return rVal;
-  return Nr<types::OptionalType>(base);
-}
-
 types::Type *IRModule::getVoidType() {
   if (auto *rVal = getType(VOID_NAME))
     return rVal;
@@ -157,6 +129,34 @@ types::Type *IRModule::getStringType() {
 
 types::Type *IRModule::getDummyFuncType() {
   return getFuncType("<internal_func_type>", getVoidType(), {});
+}
+
+types::Type *IRModule::getPointerType(types::Type *base) {
+  auto name = types::PointerType::getInstanceName(base);
+  if (auto *rVal = getType(name))
+    return rVal;
+  return Nr<types::PointerType>(base);
+}
+
+types::Type *IRModule::getArrayType(types::Type *base) {
+  auto name = types::ArrayType::getInstanceName(base);
+  if (auto *rVal = getType(name))
+    return rVal;
+  return Nr<types::ArrayType>(getPointerType(base), getIntType());
+}
+
+types::Type *IRModule::getGeneratorType(types::Type *base) {
+  auto name = types::GeneratorType::getInstanceName(base);
+  if (auto *rVal = getType(name))
+    return rVal;
+  return Nr<types::GeneratorType>(base);
+}
+
+types::Type *IRModule::getOptionalType(types::Type *base) {
+  auto name = types::OptionalType::getInstanceName(base);
+  if (auto *rVal = getType(name))
+    return rVal;
+  return Nr<types::OptionalType>(base);
 }
 
 types::Type *IRModule::getFuncType(const std::string &name, types::Type *rType,
