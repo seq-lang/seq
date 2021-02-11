@@ -17,7 +17,9 @@ namespace seq {
 
 namespace ast {
 struct Cache;
-}
+class CodegenVisitor;
+class TypecheckVisitor;
+} // namespace ast
 
 namespace ir {
 
@@ -188,46 +190,6 @@ public:
     return N<DesiredType>(seq::SrcInfo(), std::forward<Args>(args)...);
   }
 
-  /// @param base the base type
-  /// @return a pointer type that references the base
-  types::Type *getPointerType(types::Type *base);
-  /// @param base the base type
-  /// @return an array type that contains the base
-  types::Type *getArrayType(types::Type *base);
-  /// @param base the base type
-  /// @return a generator type that yields the base
-  types::Type *getGeneratorType(types::Type *base);
-  /// @param base the base type
-  /// @return an optional type that contains the base
-  types::Type *getOptionalType(types::Type *base);
-  /// @return the void type
-  types::Type *getVoidType();
-  /// @return the bool type
-  types::Type *getBoolType();
-  /// @return the byte type
-  types::Type *getByteType();
-  /// @return the int type
-  types::Type *getIntType();
-  /// @return the float type
-  types::Type *getFloatType();
-  /// @return the string type
-  types::Type *getStringType();
-  /// @param rType the return type
-  /// @param argTypes the argument types
-  /// @return the void type
-  types::Type *getFuncType(const std::string &name, types::Type *rType,
-                           std::vector<types::Type *> argTypes);
-  /// @return a func type with no args and void return type
-  types::Type *getVoidRetAndArgFuncType();
-  /// @param name the type's name
-  /// @param ref whether the type should be a ref
-  /// @return an empty membered/ref type
-  types::Type *getMemberedType(const std::string &name, bool ref = false);
-  /// @param len the length
-  /// @param sign true if signed
-  /// @return a variable length integer type
-  types::Type *getIntNType(unsigned len, bool sign);
-
   /// @return the type-checker cache
   std::shared_ptr<ast::Cache> getCache() { return cache; }
   /// @return the type-checker cache
@@ -261,6 +223,38 @@ public:
   types::Type *getOrRealizeType(const std::string &typeName,
                                 std::vector<types::Generic> generics = {});
 
+  /// @param base the base type
+  /// @return a pointer type that references the base
+  types::Type *getPointerType(types::Type *base);
+  /// @param base the base type
+  /// @return an array type that contains the base
+  types::Type *getArrayType(types::Type *base);
+  /// @param base the base type
+  /// @return a generator type that yields the base
+  types::Type *getGeneratorType(types::Type *base);
+  /// @param base the base type
+  /// @return an optional type that contains the base
+  types::Type *getOptionalType(types::Type *base);
+  /// @return the void type
+  types::Type *getVoidType();
+  /// @return the bool type
+  types::Type *getBoolType();
+  /// @return the byte type
+  types::Type *getByteType();
+  /// @return the int type
+  types::Type *getIntType();
+  /// @return the float type
+  types::Type *getFloatType();
+  /// @return the string type
+  types::Type *getStringType();
+  /// Gets a dummy function type. Should generally not be used as no typechecker
+  /// information is generated.
+  /// @return a func type with no args and void return type.
+  types::Type *getDummyFuncType();
+
+  friend class seq::ast::CodegenVisitor;
+  friend class seq::ast::TypecheckVisitor;
+
 private:
   void store(types::Type *t) {
     types.emplace_back(t);
@@ -274,6 +268,20 @@ private:
     vars.emplace_back(v);
     varMap[v->getId()] = std::prev(vars.end());
   }
+
+  /// @param rType the return type
+  /// @param argTypes the argument types
+  /// @return the void type
+  types::Type *getFuncType(const std::string &name, types::Type *rType,
+                           std::vector<types::Type *> argTypes);
+  /// @param name the type's name
+  /// @param ref whether the type should be a ref
+  /// @return an empty membered/ref type
+  types::Type *getMemberedType(const std::string &name, bool ref = false);
+  /// @param len the length
+  /// @param sign true if signed
+  /// @return a variable length integer type
+  types::Type *getIntNType(unsigned len, bool sign);
 
   std::ostream &doFormat(std::ostream &os) const override;
 };

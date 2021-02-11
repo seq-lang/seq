@@ -56,12 +56,36 @@ const char IRModule::NodeId = 0;
 
 IRModule::IRModule(std::string name, std::shared_ptr<ast::Cache> cache)
     : AcceptorExtend(std::move(name)), cache(std::move(cache)) {
-  mainFunc = std::make_unique<BodiedFunc>(getVoidRetAndArgFuncType(), "main");
+  mainFunc = std::make_unique<BodiedFunc>(getDummyFuncType(), "main");
   mainFunc->setModule(this);
   mainFunc->setReplaceable(false);
   argVar = std::make_unique<Var>(getArrayType(getStringType()), true, "argv");
   argVar->setModule(this);
   argVar->setReplaceable(false);
+}
+
+Func *IRModule::getOrRealizeMethod(types::Type *parent, const std::string &methodName,
+                                   types::Type *rType, std::vector<types::Type *> args,
+                                   std::vector<types::Generic> generics) {
+
+  auto method = cache->findMethod(parent->getAstType()->getClass().get(), methodName,
+                                  generateDummyNames(args));
+  return cache->realizeFunction(method, translateArgs(rType, args),
+                                translateGenerics(generics));
+}
+
+Func *IRModule::getOrRealizeFunc(const std::string &funcName, types::Type *rType,
+                                 std::vector<types::Type *> args,
+                                 std::vector<types::Generic> generics) {
+  auto func = cache->findFunction(funcName);
+  return cache->realizeFunction(func, translateArgs(rType, args),
+                                translateGenerics(generics));
+}
+
+types::Type *IRModule::getOrRealizeType(const std::string &typeName,
+                                        std::vector<types::Generic> generics) {
+  auto type = cache->findClass(typeName);
+  return cache->realizeType(type, translateGenerics(generics));
 }
 
 types::Type *IRModule::getPointerType(types::Type *base) {
@@ -131,15 +155,15 @@ types::Type *IRModule::getStringType() {
       std::vector<std::string>{"len", "ptr"});
 }
 
+types::Type *IRModule::getDummyFuncType() {
+  return getFuncType("<internal_func_type>", getVoidType(), {});
+}
+
 types::Type *IRModule::getFuncType(const std::string &name, types::Type *rType,
                                    std::vector<types::Type *> argTypes) {
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::FuncType>(name, rType, std::move(argTypes));
-}
-
-types::Type *IRModule::getVoidRetAndArgFuncType() {
-  return getFuncType("internal.void[void]", getVoidType(), {});
 }
 
 types::Type *IRModule::getMemberedType(const std::string &name, bool ref) {
@@ -166,30 +190,6 @@ types::Type *IRModule::getIntNType(unsigned int len, bool sign) {
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::IntNType>(len, sign);
-}
-
-Func *IRModule::getOrRealizeMethod(types::Type *parent, const std::string &methodName,
-                                   types::Type *rType, std::vector<types::Type *> args,
-                                   std::vector<types::Generic> generics) {
-
-  auto method = cache->findMethod(parent->getAstType()->getClass().get(), methodName,
-                                  generateDummyNames(args));
-  return cache->realizeFunction(method, translateArgs(rType, args),
-                                translateGenerics(generics));
-}
-
-Func *IRModule::getOrRealizeFunc(const std::string &funcName, types::Type *rType,
-                                 std::vector<types::Type *> args,
-                                 std::vector<types::Generic> generics) {
-  auto func = cache->findFunction(funcName);
-  return cache->realizeFunction(func, translateArgs(rType, args),
-                                translateGenerics(generics));
-}
-
-types::Type *IRModule::getOrRealizeType(const std::string &typeName,
-                                        std::vector<types::Generic> generics) {
-  auto type = cache->findClass(typeName);
-  return cache->realizeType(type, translateGenerics(generics));
 }
 
 std::ostream &IRModule::doFormat(std::ostream &os) const {

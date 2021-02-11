@@ -66,8 +66,8 @@ std::string BodiedFunc::getUnmangledName() const {
 }
 
 Var *BodiedFunc::doClone() const {
-  auto *ret = getModule()->N<BodiedFunc>(
-      getSrcInfo(), getModule()->getVoidRetAndArgFuncType(), getName());
+  auto *ret = getModule()->N<BodiedFunc>(getSrcInfo(), getModule()->getDummyFuncType(),
+                                         getName());
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
@@ -104,8 +104,8 @@ int BodiedFunc::doReplaceUsedValue(int id, Value *newValue) {
 const char ExternalFunc::NodeId = 0;
 
 Var *ExternalFunc::doClone() const {
-  auto *ret = getModule()->N<ExternalFunc>(
-      getSrcInfo(), getModule()->getVoidRetAndArgFuncType(), getName());
+  auto *ret = getModule()->N<ExternalFunc>(getSrcInfo(),
+                                           getModule()->getDummyFuncType(), getName());
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
@@ -135,8 +135,8 @@ std::string InternalFunc::getUnmangledName() const {
 }
 
 Var *InternalFunc::doClone() const {
-  auto *ret = getModule()->N<InternalFunc>(
-      getSrcInfo(), getModule()->getVoidRetAndArgFuncType(), getName());
+  auto *ret = getModule()->N<InternalFunc>(getSrcInfo(),
+                                           getModule()->getDummyFuncType(), getName());
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
@@ -188,8 +188,8 @@ std::string LLVMFunc::getUnmangledName() const {
 }
 
 Var *LLVMFunc::doClone() const {
-  auto *ret = getModule()->N<LLVMFunc>(
-      getSrcInfo(), getModule()->getVoidRetAndArgFuncType(), getName());
+  auto *ret = getModule()->N<LLVMFunc>(getSrcInfo(), getModule()->getDummyFuncType(),
+                                       getName());
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
