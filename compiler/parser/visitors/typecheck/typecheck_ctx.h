@@ -49,6 +49,7 @@ public:
   int age;
 
   int realizationDepth;
+  set<string> defaultCallDepth;
 
 public:
   explicit TypeContext(shared_ptr<Cache> cache);

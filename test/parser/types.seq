@@ -497,3 +497,70 @@ class A[T]:
 print A.B.C.f(1.1).__class__ #: Tuple.N3[int,str,float]
 print A.B.C[Optional[int]].f(False).__class__ #: Tuple.N3[int,str,bool]
 
+#%% rec_class_1,barebones
+class A:
+    y: A
+    def __init__(self): pass  # necessary to prevent recursive instantiation!
+x = A()
+print x.__class__, x.y.__class__ #: A A
+
+#%% rec_class_2,barebones
+class A[T]:
+    a: T
+    b: A[T]
+    c: A[str]
+    def __init__(self): pass
+a = A[int]()
+print a.__class__, a.b.__class__, a.c.__class__, a.b.b.__class__, a.b.c.__class__
+#: A[int] A[int] A[str] A[int] A[str]
+print a.c.b.__class__, a.c.c.__class__, a.b.b.b.b.b.b.b.b.b.b.b.b.b.b.b.b.b.b.__class__
+#: A[str] A[str] A[int]
+
+#%% rec_class_3,barebones
+class X:
+    x: int
+    rec: X
+    def __init__(self): pass
+    def foo(x: X, y: int):
+        return y
+    class Y:
+        y: int
+        def bar(self, y):
+            print y
+            return self.y
+x, y = X(), X.Y()
+print x.__class__, y.__class__
+#: X X.X.Y
+print X.foo(x, 4), x.foo(5)
+#: 4 5
+print y.bar(1), y.bar('s'), X.Y.bar(y, True)
+#: 1
+#: 0 s
+#: 0 True
+#: 0
+
+#%% rec_class_4,barebones
+class A[T]:
+    a: T
+    b: A[T]
+    c: A[str]
+    def __init__(self): pass
+class B[T]:
+    a: T
+    b: A[T]
+    c: B[T]
+    def __init__(self): pass
+    class Nest1[U]:
+        n: U
+    class Nest2[T, U]:
+        m: T
+        n: U
+b = B[float]()
+print b.__class__, b.a.__class__, b.b.__class__, b.c.__class__, b.c.b.c.a.__class__
+#: B[float] float A[float] B[float] str
+
+n1 = B.Nest1[int]()
+print n1.n, n1.__class__, n1.n.__class__ #: 0 B.B.Nest1[int] int
+
+n1: B.Nest2 = B.Nest2[float, int]()
+print (n1.m, n1.n), n1.__class__, n1.m.__class__, n1.n.__class__ #: (0, 0) B.B.Nest2[float,int] float int

@@ -1002,7 +1002,12 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
             auto name = generateTupleStub(names.size(), "KwTuple", names);
             args.push_back({"", transform(N<CallExpr>(N<IdExpr>(name), move(values)))});
           } else if (slots[ai.first].empty()) {
+            auto es = ast->args[ai.first].deflt->toString();
+            if (in(ctx->defaultCallDepth, es))
+              error("recursive default arguments");
+            ctx->defaultCallDepth.insert(es);
             args.push_back({"", transform(clone(ast->args[ai.first].deflt))});
+            ctx->defaultCallDepth.erase(es);
           } else {
             seqassert(slots[ai.second].size() == 1, "call transformation failed");
             args.push_back({"", move(expr->args[slots[ai.second][0]].value)});

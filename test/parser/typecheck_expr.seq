@@ -326,6 +326,18 @@ print Moo(1) #: Moo.__new__
 #: (moo: 1)
 
 #%% call_err_2,barebones
+class A:
+    a: A
+a = A() #! ERROR: recursive default arguments
+
+#%% call_err_3,barebones
+class G[T]:
+    t: T
+class A:
+    ga: G[A]
+a = A() #! ERROR: recursive default arguments
+
+#%% call_err_4,barebones
 seq_print(1, name="56", name=2) #! ERROR: repeated named argument 'name'
 
 #%% call_partial,barebones
