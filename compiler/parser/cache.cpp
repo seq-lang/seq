@@ -89,8 +89,7 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type, vector<types::TypePtr>
   if (auto rtv = tv.realize(type)->getFunc()) {
     auto &f = functions[rtv->funcName].realizations[rtv->realizedName()];
     auto *main = ir::cast<ir::BodiedFunc>(module->getMainFunc());
-    auto *block = module->Nr<ir::SeriesFlow>("body");
-    main->setBody(block);
+    auto *block = ir::cast<ir::SeriesFlow>(main->getBody());
 
     auto ctx = make_shared<CodegenContext>(shared_from_this(), block, main);
     auto toRealize = CodegenVisitor::initializeContext(ctx);
