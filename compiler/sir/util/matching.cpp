@@ -8,10 +8,14 @@
 
 #define VISIT(x)                                                                       \
   void visit(const x *v) override {                                                    \
-    if (!nodeId) {                                                                     \
+    if (matchAny || dynamic_cast<const util::Any *>(v)) {                              \
+      result = true;                                                                   \
+      matchAny = true;                                                                 \
+    } else if (!nodeId) {                                                              \
       nodeId = &x::NodeId;                                                             \
       other = v;                                                                       \
-    } else if (nodeId != &x::NodeId || v->getName() != other->getName())               \
+    } else if (nodeId != &x::NodeId ||                                                 \
+               (!checkName && v->getName() != other->getName()))                       \
       result = false;                                                                  \
     else                                                                               \
       handle(v, static_cast<const x *>(other));                                        \
@@ -20,19 +24,22 @@
 namespace {
 using namespace seq::ir;
 
-class EqualityVisitor : public util::ConstIRVisitor {
+class MatchVisitor : public util::ConstIRVisitor {
 private:
+  bool matchAny = false;
   bool checkName;
   const char *nodeId = nullptr;
   bool result = false;
   const IRNode *other = nullptr;
 
 public:
-  explicit EqualityVisitor(bool checkName = true) : checkName(checkName) {}
+  explicit MatchVisitor(bool checkName = true) : checkName(checkName) {}
 
   VISIT(Var);
   void handle(const Var *x, const Var *y) { result = compareVars(x, y); }
 
+  VISIT(Func);
+  void handle(const Func *x, const Func *y) {}
   VISIT(BodiedFunc);
   void handle(const BodiedFunc *x, const BodiedFunc *y) {
     result = compareFuncs(x, y) && process(x->getBody(), y->getBody());
@@ -53,13 +60,15 @@ public:
                           if (x.isStatic() && y.isStatic())
                             return x.getStaticValue() == y.getStaticValue();
                           else if (x.isType() && y.isType())
-                            return process(x->getTypeValue(), y->getTypeValue());
+                            return process(x.getTypeValue(), y.getTypeValue());
                           return false;
                         }) &&
              x->getLLVMDeclarations() == y->getLLVMDeclarations() &&
              x->getLLVMBody() == y->getLLVMBody() && compareFuncs(x, y);
   }
 
+  VISIT(Value);
+  void handle(const Value *x, const Value *y) {}
   VISIT(VarValue);
   void handle(const VarValue *x, const VarValue *y) {
     result = compareVars(x->getVar(), y->getVar());
@@ -69,6 +78,8 @@ public:
     result = compareVars(x->getVar(), y->getVar());
   }
 
+  VISIT(Flow);
+  void handle(const Flow *x, const Flow *y) {}
   VISIT(SeriesFlow);
   void handle(const SeriesFlow *x, const SeriesFlow *y) {
     result = std::equal(x->begin(), x->end(), y->begin(), y->end(),
@@ -105,11 +116,10 @@ public:
   void handle(const PipelineFlow *x, const PipelineFlow *y) {
     result = std::equal(
         x->begin(), x->end(), y->begin(), y->end(), [this](auto &x, auto &y) {
-          return process(x->getFunc(), y->getFunc()) &&
-                 std::equal(x->begin(), x->end(), y->begin(), y->end(),
+          return process(x.getFunc(), y.getFunc()) &&
+                 std::equal(x.begin(), x.end(), y.begin(), y.end(),
                             [this](auto *x, auto *y) { return process(x, y); }) &&
-                 x->isGenerator() == y->isGenerator() &&
-                 x->isParallel() == y->isParallel();
+                 x.isGenerator() == y.isGenerator() && x.isParallel() == y.isParallel();
         });
   }
   VISIT(dsl::CustomFlow);
@@ -206,6 +216,8 @@ public:
     result = x->equals(y);
   }
 
+  VISIT(types::Type);
+  void handle(const types::Type *x, const types::Type *y) {}
   VISIT(types::IntType);
   void handle(const types::IntType *, const types::IntType *) { result = true; }
   VISIT(types::FloatType);
@@ -269,7 +281,7 @@ public:
     else if ((!x && y) || (x && !y))
       return false;
 
-    EqualityVisitor v(checkName);
+    MatchVisitor v(checkName);
     x->accept(v);
     y->accept(v);
 
@@ -303,7 +315,19 @@ namespace seq {
 namespace ir {
 namespace util {
 
-bool areEqual(IRNode *a, IRNode *b) { return EqualityVisitor().process(a, b); }
+const char AnyType::NodeId = 0;
+
+const char AnyValue::NodeId = 0;
+
+const char AnyFlow::NodeId = 0;
+
+const char AnyVar::NodeId = 0;
+
+const char AnyFunc::NodeId = 0;
+
+bool match(IRNode *a, IRNode *b, bool checkNames) {
+  return MatchVisitor(checkNames).process(a, b);
+}
 
 } // namespace util
 } // namespace ir
