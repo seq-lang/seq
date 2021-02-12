@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include "parser/ast.h"
+
 #include "util/fmt/format.h"
 #include "util/fmt/ostream.h"
 
@@ -16,8 +18,55 @@ namespace seq {
 namespace ir {
 namespace types {
 
+class Type;
+
+class Generic {
+private:
+  union {
+    int64_t staticValue;
+    types::Type *typeValue;
+  } value;
+  enum { STATIC, TYPE } tag;
+
+public:
+  explicit Generic(int64_t staticValue) : value(), tag(STATIC) {
+    value.staticValue = staticValue;
+  }
+  explicit Generic(types::Type *typeValue) : value(), tag(TYPE) {
+    value.typeValue = typeValue;
+  }
+
+  /// @return true if the generic is a type
+  bool isType() const { return tag == TYPE; }
+  /// @return true if the generic is static
+  bool isStatic() const { return tag == STATIC; }
+
+  /// @return the static value
+  int64_t getStaticValue() const { return value.staticValue; }
+  /// Sets the static value.
+  /// @param v the new value
+  void setStaticValue(int64_t v) {
+    value.staticValue = v;
+    tag = STATIC;
+  }
+
+  /// @return the type value
+  types::Type *getTypeValue() { return value.typeValue; }
+  /// @return the type value
+  const types::Type *getTypeValue() const { return value.typeValue; }
+  /// Sets the type value.
+  /// @param v the new value
+  void setTypeValue(types::Type *v) {
+    value.typeValue = v;
+    tag = TYPE;
+  }
+};
+
 /// Type from which other SIR types derive. Generally types are immutable.
 class Type : public ReplaceableNodeBase<Type> {
+private:
+  ast::types::TypePtr astType;
+
 public:
   static const char NodeId;
 
@@ -45,6 +94,16 @@ public:
   /// @param other the other type
   /// @return true if the types are equivalent
   bool equals(const Type *other) const { return getActual()->doEquals(other); }
+
+  /// @return the ast type
+  ast::types::TypePtr getAstType() { return astType; }
+  /// @return the ast type
+  std::shared_ptr<const ast::types::Type> getAstType() const { return astType; }
+  /// Sets the ast type.
+  /// @param t the new type
+  void setAstType(ast::types::TypePtr t) { astType = std::move(t); }
+
+  virtual std::vector<Generic> getGenerics();
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -75,7 +134,7 @@ public:
   static const char NodeId;
 
   /// Constructs an int type.
-  IntType() : AcceptorExtend(".int") {}
+  IntType() : AcceptorExtend("int") {}
 };
 
 /// Float type (64-bit double)
@@ -84,7 +143,7 @@ public:
   static const char NodeId;
 
   /// Constructs a float type.
-  FloatType() : AcceptorExtend(".float") {}
+  FloatType() : AcceptorExtend("float") {}
 };
 
 /// Bool type (8-bit unsigned integer; either 0 or 1)
@@ -93,7 +152,7 @@ public:
   static const char NodeId;
 
   /// Constructs a bool type.
-  BoolType() : AcceptorExtend(".bool") {}
+  BoolType() : AcceptorExtend("bool") {}
 };
 
 /// Byte type (8-bit unsigned integer)
@@ -102,7 +161,7 @@ public:
   static const char NodeId;
 
   /// Constructs a byte type.
-  ByteType() : AcceptorExtend(".byte") {}
+  ByteType() : AcceptorExtend("byte") {}
 };
 
 /// Void type
@@ -111,7 +170,7 @@ public:
   static const char NodeId;
 
   /// Constructs a void type.
-  VoidType() : AcceptorExtend(".void") {}
+  VoidType() : AcceptorExtend("void") {}
 };
 
 /// Type from which membered types derive.
@@ -328,14 +387,16 @@ public:
   /// Constructs a function type.
   /// @param rType the function's return type
   /// @param argTypes the function's arg types
-  FuncType(Type *rType, std::vector<Type *> argTypes)
-      : AcceptorExtend(getInstanceName(rType, argTypes)), rType(rType),
-        argTypes(std::move(argTypes)) {}
+  FuncType(std::string name, Type *rType, std::vector<Type *> argTypes)
+      : AcceptorExtend(std::move(name)), rType(rType), argTypes(std::move(argTypes)) {}
 
   /// @return the function's return type
   Type *getReturnType() { return rType; }
   /// @return the function's return type
   const Type *getReturnType() const { return rType; }
+  /// Sets the return type.
+  /// @param t the new type
+  void setReturnType(Type *t) { rType = t; }
 
   /// @return iterator to the first argument
   iterator begin() { return argTypes.begin(); }
@@ -354,8 +415,6 @@ public:
   reference back() { return argTypes.back(); }
   /// @return a reference to the last argument
   const_reference back() const { return argTypes.back(); }
-
-  static std::string getInstanceName(Type *rType, const std::vector<Type *> &argTypes);
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -386,6 +445,9 @@ public:
   Type *getBase() { return base; }
   /// @return the type's base
   const Type *getBase() const { return base; }
+  /// Sets the base.
+  /// @param t the new base
+  void setBase(Type *t) { base = t; }
 
 private:
   bool doIsAtomic() const override { return base->isAtomic(); }
@@ -498,8 +560,15 @@ public:
 
   /// @return the length of the integer
   unsigned getLen() const { return len; }
+  /// Sets the length.
+  /// @param v the new length
+  void setLen(unsigned v) { len = v; }
+
   /// @return true if signed
   bool isSigned() const { return sign; }
+  /// Sets the signed flag.
+  /// @param v the new value
+  void setSigned(bool v = true) { sign = v; }
 
   /// @return the name of the opposite signed corresponding type
   std::string oppositeSignName() const { return getInstanceName(len, !sign); }

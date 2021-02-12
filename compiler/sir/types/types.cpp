@@ -5,14 +5,44 @@
 
 #include "util/fmt/format.h"
 
+#include "parser/cache.h"
+
+#include "sir/module.h"
 #include "sir/util/iterators.h"
 #include "sir/util/visitor.h"
+
+namespace {
+std::vector<seq::ast::types::TypePtr>
+extractTypes(const std::vector<seq::ast::types::Generic> &gens) {
+  std::vector<seq::ast::types::TypePtr> ret;
+  for (auto &g : gens)
+    ret.push_back(g.type);
+  return ret;
+}
+} // namespace
 
 namespace seq {
 namespace ir {
 namespace types {
 
 const char Type::NodeId = 0;
+
+std::vector<Generic> Type::getGenerics() {
+  if (!astType)
+    return {};
+
+  std::vector<Generic> ret;
+  for (auto &g : astType->getClass()->generics) {
+    auto bound = g.type->getLink();
+    if (auto cls = bound->type->getClass())
+      ret.emplace_back(
+          getModule()->getCache()->realizeType(cls, extractTypes(cls->generics)));
+    else
+      ret.emplace_back(bound->type->getStatic()->staticEvaluation.second);
+  }
+
+  return ret;
+}
 
 std::ostream &Type::doFormat(std::ostream &os) const { return os << referenceString(); }
 
@@ -174,19 +204,6 @@ std::ostream &FuncType::doFormat(std::ostream &os) const {
   }
   fmt::print(os, FMT_STRING(")->{}"), rType->referenceString());
   return os;
-}
-
-std::string FuncType::getInstanceName(Type *rType,
-                                      const std::vector<Type *> &argTypes) {
-  auto wrap = [](auto it) -> auto {
-    auto f = [](auto it) { return it->referenceString(); };
-    auto m = [](auto it) { return nullptr; };
-    return util::function_iterator_adaptor<decltype(it), decltype(f), decltype(m)>(
-        it, std::move(f), std::move(m));
-  };
-
-  return fmt::format(FMT_STRING(".Function.{}[{}]"), rType->referenceString(),
-                     fmt::join(wrap(argTypes.begin()), wrap(argTypes.end()), ", "));
 }
 
 const char DerivedType::NodeId = 0;

@@ -53,7 +53,7 @@ public:
   LAMBDA_VISIT(PipelineFlow);
   LAMBDA_VISIT(dsl::CustomFlow);
 
-  LAMBDA_VISIT(TemplatedConstant<seq_int_t>);
+  LAMBDA_VISIT(TemplatedConstant<int64_t>);
   LAMBDA_VISIT(TemplatedConstant<double>);
   LAMBDA_VISIT(TemplatedConstant<bool>);
   LAMBDA_VISIT(TemplatedConstant<std::string>);
