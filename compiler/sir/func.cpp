@@ -66,8 +66,8 @@ std::string BodiedFunc::getUnmangledName() const {
 }
 
 Var *BodiedFunc::doClone() const {
-  auto *ret = getModule()->N<BodiedFunc>(
-      getSrcInfo(), getModule()->getVoidRetAndArgFuncType(), getName());
+  auto *ret = getModule()->N<BodiedFunc>(getSrcInfo(), getModule()->getDummyFuncType(),
+                                         getName());
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
@@ -104,8 +104,8 @@ int BodiedFunc::doReplaceUsedValue(int id, Value *newValue) {
 const char ExternalFunc::NodeId = 0;
 
 Var *ExternalFunc::doClone() const {
-  auto *ret = getModule()->N<ExternalFunc>(
-      getSrcInfo(), getModule()->getVoidRetAndArgFuncType(), getName());
+  auto *ret = getModule()->N<ExternalFunc>(getSrcInfo(),
+                                           getModule()->getDummyFuncType(), getName());
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
@@ -135,8 +135,8 @@ std::string InternalFunc::getUnmangledName() const {
 }
 
 Var *InternalFunc::doClone() const {
-  auto *ret = getModule()->N<InternalFunc>(
-      getSrcInfo(), getModule()->getVoidRetAndArgFuncType(), getName());
+  auto *ret = getModule()->N<InternalFunc>(getSrcInfo(),
+                                           getModule()->getDummyFuncType(), getName());
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
@@ -188,8 +188,8 @@ std::string LLVMFunc::getUnmangledName() const {
 }
 
 Var *LLVMFunc::doClone() const {
-  auto *ret = getModule()->N<LLVMFunc>(
-      getSrcInfo(), getModule()->getVoidRetAndArgFuncType(), getName());
+  auto *ret = getModule()->N<LLVMFunc>(getSrcInfo(), getModule()->getDummyFuncType(),
+                                       getName());
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
@@ -209,7 +209,7 @@ std::ostream &LLVMFunc::doFormat(std::ostream &os) const {
       store.push_back(l.getStaticValue());
     else
       store.push_back(
-          fmt::format(FMT_STRING("(type_of {})"), l.getType()->referenceString()));
+          fmt::format(FMT_STRING("(type_of {})"), l.getTypeValue()->referenceString()));
   }
 
   auto body = fmt::vformat(llvmDeclares + llvmBody, store);
@@ -230,7 +230,7 @@ std::vector<types::Type *> LLVMFunc::doGetUsedTypes() const {
 
   for (auto &l : llvmLiterals)
     if (l.isType())
-      ret.push_back(const_cast<types::Type *>(l.getType()));
+      ret.push_back(const_cast<types::Type *>(l.getTypeValue()));
 
   return ret;
 }
@@ -238,8 +238,8 @@ std::vector<types::Type *> LLVMFunc::doGetUsedTypes() const {
 int LLVMFunc::doReplaceUsedType(const std::string &name, types::Type *newType) {
   auto count = Func::replaceUsedType(name, newType);
   for (auto &l : llvmLiterals)
-    if (l.isType() && l.getType()->getName() == name) {
-      l.setType(newType);
+    if (l.isType() && l.getTypeValue()->getName() == name) {
+      l.setTypeValue(newType);
       ++count;
     }
   return count;

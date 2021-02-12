@@ -57,6 +57,90 @@ Value *CodegenVisitor::transform(const StmtPtr &stmt) {
   return v.result;
 }
 
+std::unordered_set<std::string>
+CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
+  std::unordered_set<std::string> ret;
+
+  for (auto &ff : ctx->cache->classes)
+    for (auto &f : ff.second.realizations)
+      ctx->addType(f.first, f.second.ir);
+
+  for (auto &ff : ctx->cache->functions)
+    for (auto &f : ff.second.realizations) {
+      if (f.second.ir)
+        ctx->functions[f.first] = {f.second.ir, false};
+      else {
+        ret.insert(ff.first);
+
+        auto *module = ctx->getModule();
+        auto t = f.second.type;
+        assert(t);
+        auto *ast = ctx->cache->functions[ff.first].ast.get();
+        if (in(ast->attributes, ATTR_INTERNAL)) {
+          vector<ir::types::Type *> types;
+          auto p = t->funcParent;
+          assert(in(ast->attributes, ATTR_PARENT_CLASS));
+          if (!in(ast->attributes, ATTR_NOT_STATIC)) { // hack for non-generic types
+            for (auto &x :
+                 ctx->cache->classes[ast->attributes[ATTR_PARENT_CLASS]].realizations) {
+              if (startswith(t->realizedName(), x.first)) {
+                p = x.second.type;
+                break;
+              }
+            }
+          }
+          seqassert(p && p->getClass(), "parent must be set ({}) for {}; parent={}",
+                    p ? p->toString() : "-", t->toString(),
+                    ast->attributes[ATTR_PARENT_CLASS]);
+
+          seq::ir::types::Type *typ =
+              ctx->find(p->getClass()->realizedName())->getType();
+          int startI = 1;
+          if (!ast->args.empty() &&
+              ctx->cache->reverseIdentifierLookup[ast->args[0].name] == "self")
+            startI = 2;
+          for (int i = startI; i < t->args.size(); i++) {
+            types.push_back(ctx->find(t->args[i]->realizedName())->getType());
+            assert(types.back());
+          }
+
+          auto names = split(ast->name, '.');
+          auto name = names.back();
+          if (std::isdigit(name[0])) // TODO: get rid of this hack
+            name = names[names.size() - 2];
+          LOG_REALIZE("[codegen] generating internal fn {} -> {}", ast->name, name);
+          auto *fn =
+              module->Nr<seq::ir::InternalFunc>(module->getDummyFuncType(), ast->name);
+          fn->setParentType(typ);
+          fn->setGlobal();
+          ctx->functions[f.first] = {fn, false};
+        } else if (in(ast->attributes, "llvm")) {
+          auto *fn =
+              module->Nr<seq::ir::LLVMFunc>(module->getDummyFuncType(), ast->name);
+          ctx->functions[f.first] = {fn, false};
+          fn->setGlobal();
+        } else if (in(ast->attributes, ".c")) {
+          auto *fn =
+              module->Nr<seq::ir::ExternalFunc>(module->getDummyFuncType(), ast->name);
+          ctx->functions[f.first] = {fn, false};
+          fn->setGlobal();
+        } else {
+          auto *fn =
+              module->Nr<seq::ir::BodiedFunc>(module->getDummyFuncType(), ast->name);
+          ctx->functions[f.first] = {fn, false};
+
+          if (in(ast->attributes, "builtin")) {
+            fn->setBuiltin();
+          }
+
+          fn->setGlobal();
+        }
+      }
+      ctx->addFunc(f.first, ctx->functions[f.first].first);
+    }
+  return ret;
+}
+
 IRModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto *module = cache->module;
   auto *main = cast<BodiedFunc>(module->getMainFunc());
@@ -65,81 +149,7 @@ IRModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   main->setBody(block);
 
   auto ctx = make_shared<CodegenContext>(cache, block, main);
-
-  for (auto &ff : cache->classes)
-    for (auto &f : ff.second.realizations) {
-      //      LOG("[codegen] add {} -> {} | {}", f.first,
-      //      f.second.type->realizedName(),
-      //          f.second.llvm->getName());
-      ctx->addType(f.first, f.second.ir);
-    }
-
-  // Now add all realization stubs
-  for (auto &ff : cache->functions)
-    for (auto &f : ff.second.realizations) {
-      auto t = f.second.type;
-      assert(t);
-      auto *ast = cache->functions[ff.first].ast.get();
-      if (in(ast->attributes, ATTR_INTERNAL)) {
-        vector<ir::types::Type *> types;
-        auto p = t->funcParent;
-        assert(in(ast->attributes, ATTR_PARENT_CLASS));
-        if (!in(ast->attributes, ATTR_NOT_STATIC)) { // hack for non-generic types
-          for (auto &x :
-               ctx->cache->classes[ast->attributes[ATTR_PARENT_CLASS]].realizations) {
-            if (startswith(t->realizedName(), x.first)) {
-              p = x.second.type;
-              break;
-            }
-          }
-        }
-        seqassert(p && p->getClass(), "parent must be set ({}) for {}; parent={}",
-                  p ? p->toString() : "-", t->toString(),
-                  ast->attributes[ATTR_PARENT_CLASS]);
-
-        seq::ir::types::Type *typ = ctx->find(p->getClass()->realizedName())->getType();
-        int startI = 1;
-        if (!ast->args.empty() &&
-            ctx->cache->reverseIdentifierLookup[ast->args[0].name] == "self")
-          startI = 2;
-        for (int i = startI; i < t->args.size(); i++) {
-          types.push_back(ctx->find(t->args[i]->realizedName())->getType());
-          assert(types.back());
-        }
-
-        auto names = split(ast->name, '.');
-        auto name = names.back();
-        if (std::isdigit(name[0])) // TODO: get rid of this hack
-          name = names[names.size() - 2];
-        LOG_REALIZE("[codegen] generating internal fn {} -> {}", ast->name, name);
-        auto *fn = module->Nr<seq::ir::InternalFunc>(module->getVoidRetAndArgFuncType(),
-                                                     ast->name);
-        fn->setParentType(typ);
-        fn->setGlobal();
-        ctx->functions[f.first] = {fn, false};
-      } else if (in(ast->attributes, "llvm")) {
-        auto *fn = module->Nr<seq::ir::LLVMFunc>(module->getVoidRetAndArgFuncType(),
-                                                 ast->name);
-        ctx->functions[f.first] = {fn, false};
-        fn->setGlobal();
-      } else if (in(ast->attributes, ".c")) {
-        auto *fn = module->Nr<seq::ir::ExternalFunc>(module->getVoidRetAndArgFuncType(),
-                                                     ast->name);
-        ctx->functions[f.first] = {fn, false};
-        fn->setGlobal();
-      } else {
-        auto *fn = module->Nr<seq::ir::BodiedFunc>(module->getVoidRetAndArgFuncType(),
-                                                   ast->name);
-        ctx->functions[f.first] = {fn, false};
-
-        if (in(ast->attributes, "builtin")) {
-          fn->setBuiltin();
-        }
-
-        fn->setGlobal();
-      }
-      ctx->addFunc(f.first, ctx->functions[f.first].first);
-    }
+  initializeContext(ctx);
 
   CodegenVisitor(ctx).transform(stmts);
 
@@ -199,8 +209,11 @@ void CodegenVisitor::visit(StackAllocExpr *expr) {
   assert(c);
   auto val = CAST(expr->expr, IntExpr);
   assert(val);
-  result = make<StackAllocInstr>(
-      expr, ctx->getModule()->getArrayType(realizeType(c.get())), val->intValue);
+
+  auto *arrayType = ctx->getModule()->getArrayType(realizeType(c.get()));
+  arrayType->setAstType(expr->getType());
+
+  result = make<StackAllocInstr>(expr, arrayType, val->intValue);
 }
 
 void CodegenVisitor::visit(DotExpr *expr) {
@@ -226,7 +239,8 @@ void CodegenVisitor::visit(PtrExpr *expr) {
   auto val = ctx->find(var, true);
   assert(val && val->getVar());
 
-  result = make<PointerValue>(expr, val->getVar());
+  result = make<PointerValue>(expr, val->getVar(),
+                              realizeType(expr->getType()->getClass().get()));
 }
 
 void CodegenVisitor::visit(YieldExpr *expr) {
@@ -526,8 +540,9 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
       names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i - 1].name]);
     }
 
-    auto *funcType =
-        ctx->getModule()->getFuncType(realizeType(t->args[0]->getClass().get()), types);
+    auto *funcType = ctx->getModule()->getFuncType(
+        t->realizedName(), realizeType(t->args[0]->getClass().get()), types);
+    funcType->setAstType(t);
 
     cast<ir::Func>(fp.first)->setSrcInfo(getSrcInfo());
     real.second.ir = cast<ir::Func>(fp.first);
@@ -547,7 +562,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
       auto *sp = CAST(e->expr, StringExpr);
       assert(sp);
 
-      std::vector<ir::LLVMFunc::LLVMLiteral> literals;
+      std::vector<ir::types::Generic> literals;
       auto &ss = ast->suite->getSuite()->stmts;
       for (int i = 1; i < ss.size(); i++) {
         auto &ex = ss[i]->getExpr()->expr;

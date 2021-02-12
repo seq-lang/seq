@@ -39,7 +39,9 @@ int Var::doReplaceUsedType(const std::string &name, types::Type *newType) {
 
 const char VarValue::NodeId = 0;
 
-Value *VarValue::doClone() const { return getModule()->N<VarValue>(getSrcInfo(), val); }
+Value *VarValue::doClone() const {
+  return getModule()->N<VarValue>(getSrcInfo(), val, getName());
+}
 
 int VarValue::doReplaceUsedVariable(int id, Var *newVar) {
   if (val->getId() == id) {
@@ -51,12 +53,8 @@ int VarValue::doReplaceUsedVariable(int id, Var *newVar) {
 
 const char PointerValue::NodeId = 0;
 
-const types::Type *PointerValue::doGetType() const {
-  return getModule()->getPointerType(const_cast<types::Type *>(val->getType()));
-}
-
 Value *PointerValue::doClone() const {
-  return getModule()->N<PointerValue>(getSrcInfo(), val);
+  return getModule()->N<PointerValue>(getSrcInfo(), val, pointerType, getName());
 }
 
 int PointerValue::doReplaceUsedVariable(int id, Var *newVar) {

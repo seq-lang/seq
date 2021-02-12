@@ -56,20 +56,20 @@ ir::types::Type *Cache::realizeType(types::ClassTypePtr type,
                                     vector<types::TypePtr> generics) {
   type = typeCtx->instantiateGeneric(type->getSrcInfo(), type, generics)->getClass();
   auto tv = TypecheckVisitor(typeCtx);
-  if (auto rtv = tv.realize(type)->getClass())
+  if (auto rtv = tv.realize(type)->getClass()) {
     return classes[rtv->name].realizations[rtv->realizedTypeName()].ir;
+  }
   return nullptr;
 }
 
-ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
-                                 vector<types::TypePtr> generics,
-                                 vector<types::TypePtr> args) {
+ir::Func *Cache::realizeFunction(types::FuncTypePtr type, vector<types::TypePtr> args,
+                                 vector<types::TypePtr> generics) {
   type = typeCtx->instantiate(type->getSrcInfo(), type)->getFunc();
   if (args.size() != type->args.size())
     return nullptr;
   for (int gi = 0; gi < args.size(); gi++) {
     types::Type::Unification undo;
-    if (type->args[gi + 1]->unify(args[gi].get(), &undo) < 0) {
+    if (type->args[gi]->unify(args[gi].get(), &undo) < 0) {
       undo.undo();
       return nullptr;
     }
@@ -87,12 +87,14 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
   }
   auto tv = TypecheckVisitor(typeCtx);
   if (auto rtv = tv.realize(type)->getFunc()) {
-    auto &f = functions[rtv->funcName].realizations[rtv->realizedTypeName()];
+    auto &f = functions[rtv->funcName].realizations[rtv->realizedName()];
     auto *main = ir::cast<ir::BodiedFunc>(module->getMainFunc());
-    auto *block = module->Nr<ir::SeriesFlow>("body");
-    main->setBody(block);
-    CodegenVisitor(make_shared<CodegenContext>(shared_from_this(), block, main))
-        .transform(f.ast->clone());
+    auto *block = ir::cast<ir::SeriesFlow>(main->getBody());
+
+    auto ctx = make_shared<CodegenContext>(shared_from_this(), block, main);
+    auto toRealize = CodegenVisitor::initializeContext(ctx);
+    for (auto &fnName : toRealize)
+      CodegenVisitor(ctx).transform(functions[fnName].ast->clone());
     return f.ir;
   }
   return nullptr;

@@ -954,7 +954,7 @@ void LLVMVisitor::visit(const LLVMFunc *x) {
     if (it->isStatic()) {
       store.push_back(it->getStaticValue());
     } else if (it->isType()) {
-      llvm::Type *llvmType = getLLVMType(it->getType());
+      llvm::Type *llvmType = getLLVMType(it->getTypeValue());
       std::string bufStr;
       llvm::raw_string_ostream buf(bufStr);
       llvmType->print(buf);
@@ -2176,7 +2176,7 @@ void LLVMVisitor::visit(const StackAllocInstr *x) {
     assert(0 && "StackAllocInstr type is not an array type");
   }
 
-  seq_int_t size = x->getCount();
+  int64_t size = x->getCount();
 
   builder.SetInsertPoint(func->getEntryBlock().getTerminator());
   auto *arrType = llvm::StructType::get(builder.getInt64Ty(), baseType->getPointerTo());

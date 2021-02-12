@@ -245,7 +245,7 @@ private:
   /// the array type
   types::Type *arrayType;
   /// number of elements to allocate
-  seq_int_t count;
+  int64_t count;
 
 public:
   static const char NodeId;
@@ -254,14 +254,14 @@ public:
   /// @param arrayType the type of the array
   /// @param count the number of elements
   /// @param name the name
-  StackAllocInstr(types::Type *arrayType, seq_int_t count, std::string name = "")
+  StackAllocInstr(types::Type *arrayType, int64_t count, std::string name = "")
       : AcceptorExtend(std::move(name)), arrayType(arrayType), count(count) {}
 
   /// @return the count
-  seq_int_t getCount() const { return count; }
+  int64_t getCount() const { return count; }
   /// Sets the count.
   /// @param c the new value
-  void setCount(seq_int_t c) { count = c; }
+  void setCount(int64_t c) { count = c; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
