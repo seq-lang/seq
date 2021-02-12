@@ -124,7 +124,7 @@ public:
   VISIT(dsl::CustomFlow);
 
   DEFAULT_VISIT(Constant);
-  VISIT(TemplatedConstant<seq_int_t>);
+  VISIT(TemplatedConstant<int64_t>);
   VISIT(TemplatedConstant<double>);
   VISIT(TemplatedConstant<bool>);
   VISIT(TemplatedConstant<std::string>);
@@ -191,7 +191,7 @@ public:
   CONST_VISIT(dsl::CustomFlow);
 
   CONST_DEFAULT_VISIT(Constant);
-  CONST_VISIT(TemplatedConstant<seq_int_t>);
+  CONST_VISIT(TemplatedConstant<int64_t>);
   CONST_VISIT(TemplatedConstant<double>);
   CONST_VISIT(TemplatedConstant<bool>);
   CONST_VISIT(TemplatedConstant<std::string>);

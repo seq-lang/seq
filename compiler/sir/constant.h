@@ -60,7 +60,7 @@ private:
   }
 };
 
-using IntConstant = TemplatedConstant<seq_int_t>;
+using IntConstant = TemplatedConstant<int64_t>;
 using FloatConstant = TemplatedConstant<double>;
 using BoolConstant = TemplatedConstant<bool>;
 using StringConstant = TemplatedConstant<std::string>;

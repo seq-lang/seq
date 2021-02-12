@@ -562,7 +562,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
       auto *sp = CAST(e->expr, StringExpr);
       assert(sp);
 
-      std::vector<ir::LLVMFunc::LLVMLiteral> literals;
+      std::vector<ir::types::Generic> literals;
       auto &ss = ast->suite->getSuite()->stmts;
       for (int i = 1; i < ss.size(); i++) {
         auto &ex = ss[i]->getExpr()->expr;

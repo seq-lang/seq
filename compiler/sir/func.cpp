@@ -209,7 +209,7 @@ std::ostream &LLVMFunc::doFormat(std::ostream &os) const {
       store.push_back(l.getStaticValue());
     else
       store.push_back(
-          fmt::format(FMT_STRING("(type_of {})"), l.getType()->referenceString()));
+          fmt::format(FMT_STRING("(type_of {})"), l.getTypeValue()->referenceString()));
   }
 
   auto body = fmt::vformat(llvmDeclares + llvmBody, store);
@@ -230,7 +230,7 @@ std::vector<types::Type *> LLVMFunc::doGetUsedTypes() const {
 
   for (auto &l : llvmLiterals)
     if (l.isType())
-      ret.push_back(const_cast<types::Type *>(l.getType()));
+      ret.push_back(const_cast<types::Type *>(l.getTypeValue()));
 
   return ret;
 }
@@ -238,8 +238,8 @@ std::vector<types::Type *> LLVMFunc::doGetUsedTypes() const {
 int LLVMFunc::doReplaceUsedType(const std::string &name, types::Type *newType) {
   auto count = Func::replaceUsedType(name, newType);
   for (auto &l : llvmLiterals)
-    if (l.isType() && l.getType()->getName() == name) {
-      l.setType(newType);
+    if (l.isType() && l.getTypeValue()->getName() == name) {
+      l.setTypeValue(newType);
       ++count;
     }
   return count;

@@ -23,13 +23,13 @@ class Type;
 class Generic {
 private:
   union {
-    int staticValue;
+    int64_t staticValue;
     types::Type *typeValue;
   } value;
   enum { STATIC, TYPE } tag;
 
 public:
-  explicit Generic(int staticValue) : value(), tag(STATIC) {
+  explicit Generic(int64_t staticValue) : value(), tag(STATIC) {
     value.staticValue = staticValue;
   }
   explicit Generic(types::Type *typeValue) : value(), tag(TYPE) {
@@ -42,12 +42,24 @@ public:
   bool isStatic() const { return tag == STATIC; }
 
   /// @return the static value
-  int getStaticValue() const { return value.staticValue; }
+  int64_t getStaticValue() const { return value.staticValue; }
+  /// Sets the static value.
+  /// @param v the new value
+  void setStaticValue(int64_t v) {
+    value.staticValue = v;
+    tag = STATIC;
+  }
 
   /// @return the type value
   types::Type *getTypeValue() { return value.typeValue; }
   /// @return the type value
   const types::Type *getTypeValue() const { return value.typeValue; }
+  /// Sets the type value.
+  /// @param v the new value
+  void setTypeValue(types::Type *v) {
+    value.typeValue = v;
+    tag = TYPE;
+  }
 };
 
 /// Type from which other SIR types derive. Generally types are immutable.
