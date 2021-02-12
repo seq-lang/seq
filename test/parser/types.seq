@@ -564,3 +564,49 @@ print n1.n, n1.__class__, n1.n.__class__ #: 0 B.B.Nest1[int] int
 
 n1: B.Nest2 = B.Nest2[float, int]()
 print (n1.m, n1.n), n1.__class__, n1.m.__class__, n1.n.__class__ #: (0, 0) B.B.Nest2[float,int] float int
+
+#%% func_arg_instantiate,barebones
+class A[T]:
+    y: T
+    def foo(self, y: T):
+        self.y = y
+        return y
+    def bar(self, y):
+        return y
+a = A()
+print a.__class__ #: A[int]
+a.y = 5
+print a.__class__ #: A[int]
+
+b = A()
+print b.foo(5) #: 5
+print b.__class__, b.y #: A[int] 5
+print b.bar('s'), b.bar('s').__class__ #: s str
+print b.bar(5), b.bar(5).__class__ #: 5 int
+
+aa = A()
+print aa.foo('s') #: s
+print aa.__class__, aa.y, aa.bar(5.1).__class__ #: A[str] s float
+
+#%% no_func_arg_instantiate_err,barebones
+# TODO: allow unbound self?
+class A[T]:
+    y: T
+    def foo(self, y): self.y = y
+a = A()
+a.foo(1) #! ERROR: cannot resolve 2 unbound variables
+
+#%% return_deduction,barebones
+def fun[T, R](x, y: T) -> R:
+   	def ffi[T, Z](x: T, y: R, z: Z):
+   		return (x, y, z)
+   	yy = ffi[bool, str](False, byte(2), 's')
+   	yz = ffi[int, str](1, byte(2), 's')
+   	return byte(1)
+print fun[float,byte](2, 1.1).__class__ #: byte
+
+#%% return_auto_deduction_err,barebones
+def fun[T, R](x, y: T) -> R:
+   	return byte(1)
+print fun(2, 1.1).__class__ #! ERROR: cannot resolve 1 unbound variables
+
