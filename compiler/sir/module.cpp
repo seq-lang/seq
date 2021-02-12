@@ -15,6 +15,7 @@ std::vector<seq::ast::types::TypePtr>
 translateGenerics(std::vector<types::Generic> &generics) {
   std::vector<seq::ast::types::TypePtr> ret;
   for (auto &g : generics) {
+    assert(g.isStatic() || g.getTypeValue());
     ret.push_back(std::make_shared<seq::ast::types::LinkType>(
         g.isStatic() ? std::make_shared<seq::ast::types::StaticType>(g.getStaticValue())
                      : g.getTypeValue()->getAstType()));
@@ -26,6 +27,7 @@ std::vector<std::pair<std::string, seq::ast::types::TypePtr>>
 generateDummyNames(std::vector<types::Type *> &types) {
   std::vector<std::pair<std::string, seq::ast::types::TypePtr>> ret;
   for (auto *t : types) {
+    assert(t->getAstType());
     ret.emplace_back("", t->getAstType());
   }
   return ret;
@@ -33,8 +35,10 @@ generateDummyNames(std::vector<types::Type *> &types) {
 
 std::vector<seq::ast::types::TypePtr> translateArgs(types::Type *rType,
                                                     std::vector<types::Type *> &types) {
+  assert(rType->getAstType());
   std::vector<seq::ast::types::TypePtr> ret = {rType->getAstType()};
   for (auto *t : types) {
+    assert(t->getAstType());
     ret.push_back(t->getAstType());
   }
   return ret;

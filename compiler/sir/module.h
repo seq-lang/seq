@@ -235,13 +235,49 @@ public:
   types::Type *getFloatType();
   /// @return the string type
   types::Type *getStringType();
-  /// Gets a dummy function type. Should generally not be used as no typechecker
+  /// Gets a dummy function type. Should generally not be used as no type-checker
   /// information is generated.
   /// @return a func type with no args and void return type.
   types::Type *getDummyFuncType();
-
-  friend class seq::ast::CodegenVisitor;
-  friend class seq::ast::TypecheckVisitor;
+  /// Gets a pointer type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @param base the base type
+  /// @return a pointer type that references the base
+  types::Type *getPointerType(types::Type *base);
+  /// Gets an array type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @param base the base type
+  /// @return an array type that contains the base
+  types::Type *getArrayType(types::Type *base);
+  /// Gets a generator type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @param base the base type
+  /// @return a generator type that yields the base
+  types::Type *getGeneratorType(types::Type *base);
+  /// Gets an optional type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @param base the base type
+  /// @return an optional type that contains the base
+  types::Type *getOptionalType(types::Type *base);
+  /// Gets a function type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @param rType the return type
+  /// @param argTypes the argument types
+  /// @return the void type
+  types::Type *getFuncType(const std::string &name, types::Type *rType,
+                           std::vector<types::Type *> argTypes);
+  /// Gets a membered type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @param name the type's name
+  /// @param ref whether the type should be a ref
+  /// @return an empty membered/ref type
+  types::Type *getMemberedType(const std::string &name, bool ref = false);
+  /// Gets a variable length integer type. Should generally not be used as no
+  /// type-checker information is generated.
+  /// @param len the length
+  /// @param sign true if signed
+  /// @return a variable length integer type
+  types::Type *getIntNType(unsigned len, bool sign);
 
 private:
   void store(types::Type *t) {
@@ -256,32 +292,6 @@ private:
     vars.emplace_back(v);
     varMap[v->getId()] = std::prev(vars.end());
   }
-
-  /// @param base the base type
-  /// @return a pointer type that references the base
-  types::Type *getPointerType(types::Type *base);
-  /// @param base the base type
-  /// @return an array type that contains the base
-  types::Type *getArrayType(types::Type *base);
-  /// @param base the base type
-  /// @return a generator type that yields the base
-  types::Type *getGeneratorType(types::Type *base);
-  /// @param base the base type
-  /// @return an optional type that contains the base
-  types::Type *getOptionalType(types::Type *base);
-  /// @param rType the return type
-  /// @param argTypes the argument types
-  /// @return the void type
-  types::Type *getFuncType(const std::string &name, types::Type *rType,
-                           std::vector<types::Type *> argTypes);
-  /// @param name the type's name
-  /// @param ref whether the type should be a ref
-  /// @return an empty membered/ref type
-  types::Type *getMemberedType(const std::string &name, bool ref = false);
-  /// @param len the length
-  /// @param sign true if signed
-  /// @return a variable length integer type
-  types::Type *getIntNType(unsigned len, bool sign);
 
   std::ostream &doFormat(std::ostream &os) const override;
 };

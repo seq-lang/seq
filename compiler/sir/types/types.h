@@ -382,6 +382,9 @@ public:
   Type *getReturnType() { return rType; }
   /// @return the function's return type
   const Type *getReturnType() const { return rType; }
+  /// Sets the return type.
+  /// @param t the new type
+  void setReturnType(Type *t) { rType = t; }
 
   /// @return iterator to the first argument
   iterator begin() { return argTypes.begin(); }
@@ -430,6 +433,9 @@ public:
   Type *getBase() { return base; }
   /// @return the type's base
   const Type *getBase() const { return base; }
+  /// Sets the base.
+  /// @param t the new base
+  void setBase(Type *t) { base = t; }
 
 private:
   bool doIsAtomic() const override { return base->isAtomic(); }
@@ -542,8 +548,15 @@ public:
 
   /// @return the length of the integer
   unsigned getLen() const { return len; }
+  /// Sets the length.
+  /// @param v the new length
+  void setLen(unsigned v) { len = v; }
+
   /// @return true if signed
   bool isSigned() const { return sign; }
+  /// Sets the signed flag.
+  /// @param v the new value
+  void setSigned(bool v = true) { sign = v; }
 
   /// @return the name of the opposite signed corresponding type
   std::string oppositeSignName() const { return getInstanceName(len, !sign); }
