@@ -48,8 +48,7 @@ types::FuncTypePtr Cache::findFunction(const string &name) const {
 }
 
 types::FuncTypePtr Cache::findMethod(types::ClassType *typ, const string &member,
-                                  const vector<pair<string, types::TypePtr>> &args)
-{
+                                     const vector<pair<string, types::TypePtr>> &args) {
   return typeCtx->findBestMethod(typ, member, args);
 }
 
@@ -92,7 +91,8 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
     auto *main = ir::cast<ir::BodiedFunc>(module->getMainFunc());
     auto *block = module->Nr<ir::SeriesFlow>("body");
     main->setBody(block);
-    CodegenVisitor(make_shared<CodegenContext>(shared_from_this(), block, main)).transform(f.ast->clone());
+    CodegenVisitor(make_shared<CodegenContext>(shared_from_this(), block, main))
+        .transform(f.ast->clone());
     return f.ir;
   }
   return nullptr;

@@ -218,9 +218,12 @@ public:
     }
 
     friend bool operator==(const LLVMLiteral &x, const LLVMLiteral &y) {
-      if (x.tag != y.tag) return false;
-      if (x.tag == STATIC) return x.val.staticVal == y.val.staticVal;
-      else return x.val.type == y.val.type;
+      if (x.tag != y.tag)
+        return false;
+      if (x.tag == STATIC)
+        return x.val.staticVal == y.val.staticVal;
+      else
+        return x.val.type == y.val.type;
     }
   };
 

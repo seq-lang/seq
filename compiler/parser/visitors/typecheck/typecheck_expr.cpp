@@ -343,12 +343,12 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               auto val = ctx->find(ei->value);
               seqassert(val && val->isStatic(), "invalid static expression");
               auto genTyp = val->type->follow();
-              staticGenerics.emplace_back(
-                  Generic{ei->value, genTyp,
-                          genTyp->getLink() ? genTyp->getLink()->id
-                          : genTyp->getStatic()->generics.empty()
-                              ? 0
-                              : genTyp->getStatic()->generics[0].id});
+              staticGenerics.emplace_back(Generic{
+                  ei->value, genTyp,
+                  genTyp->getLink() ? genTyp->getLink()->id
+                                    : genTyp->getStatic()->generics.empty()
+                                          ? 0
+                                          : genTyp->getStatic()->generics[0].id});
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {

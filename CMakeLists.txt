@@ -159,9 +159,9 @@ set(SEQ_HPPFILES
         compiler/sir/transform/pass.h
         compiler/sir/types/types.h
         compiler/sir/util/context.h
-        compiler/sir/util/equality.h
         compiler/sir/util/iterators.h
         compiler/sir/util/lambda_visitor.h
+        compiler/sir/util/matching.h
         compiler/sir/util/visitor.h
         compiler/sir/value.h
         compiler/sir/var.h
@@ -236,7 +236,7 @@ set(SEQ_CPPFILES
         compiler/sir/transform/cleanup/replacer.cpp
         compiler/sir/transform/manager.cpp
         compiler/sir/types/types.cpp
-        compiler/sir/util/equality.cpp
+        compiler/sir/util/matching.cpp
         compiler/sir/util/visitor.cpp
         compiler/sir/value.cpp
         compiler/sir/var.cpp

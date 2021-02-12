@@ -193,7 +193,7 @@ public:
   types::ClassTypePtr findClass(const string &name) const;
   types::FuncTypePtr findFunction(const string &name) const;
   types::FuncTypePtr findMethod(types::ClassType *typ, const string &member,
-                                    const vector<pair<string, types::TypePtr>> &args);
+                                const vector<pair<string, types::TypePtr>> &args);
   ir::types::Type *realizeType(types::ClassTypePtr type,
                                vector<types::TypePtr> generics);
   ir::Func *realizeFunction(types::FuncTypePtr type, vector<types::TypePtr> generics,

@@ -7,7 +7,8 @@
 #include "sir/instr.h"
 
 #define CUSTOM_VALUE                                                                   \
-  virtual std::unique_ptr<codegen::ValueBuilder> getBuilder() const = 0
+  virtual std::unique_ptr<codegen::ValueBuilder> getBuilder() const = 0;               \
+  virtual bool equals(const Value *v) const = 0
 
 namespace seq {
 namespace ir {
@@ -27,6 +28,7 @@ public:
   using AcceptorExtend::AcceptorExtend;
 
   virtual std::unique_ptr<codegen::TypeBuilder> getBuilder() const = 0;
+  virtual bool equals(const Type *v) const = 0;
 };
 
 } // namespace types

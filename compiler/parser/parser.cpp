@@ -23,6 +23,8 @@
 #include "sir/sir.h"
 #include "util/fmt/format.h"
 
+#include "sir/util/matching.h"
+
 int _ocaml_time = 0;
 int _ll_time = 0;
 int _level = 0;
@@ -99,6 +101,9 @@ seq::ir::IRModule *parse(const string &argv0, const string &file, const string &
     t = high_resolution_clock::now();
     auto module = ast::CodegenVisitor::apply(cache, move(typechecked));
     module->setSrcInfo({abs, 0, 0, 0, 0});
+
+    auto res = seq::ir::util::areEqual(module->getIntType(), module->getIntType());
+
     if (!isTest)
       LOG_TIME("[T] codegen   = {:.1f}",
                duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
