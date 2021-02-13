@@ -148,6 +148,8 @@ class PointerValue : public AcceptorExtend<PointerValue, Value> {
 private:
   /// the referenced var
   Var *val;
+  /// the pointer type
+  types::Type *pointerType;
 
 public:
   static const char NodeId;
@@ -155,8 +157,8 @@ public:
   /// Constructs a variable value.
   /// @param val the referenced value
   /// @param name the name
-  explicit PointerValue(Var *val, std::string name = "")
-      : AcceptorExtend(std::move(name)), val(val) {}
+  explicit PointerValue(Var *val, types::Type *pointerType, std::string name = "")
+      : AcceptorExtend(std::move(name)), val(val), pointerType(pointerType) {}
 
   /// @return the variable
   Var *getVar() { return val; }
@@ -171,7 +173,7 @@ private:
     return os << '&' << val->referenceString();
   }
 
-  const types::Type *doGetType() const override;
+  const types::Type *doGetType() const override { return pointerType; }
 
   std::vector<Var *> doGetUsedVariables() const override { return {val}; }
   int doReplaceUsedVariable(int id, Var *newVar) override;

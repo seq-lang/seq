@@ -188,39 +188,9 @@ private:
 };
 
 class LLVMFunc : public AcceptorExtend<LLVMFunc, Func> {
-public:
-  class LLVMLiteral {
-  private:
-    union {
-      int64_t staticVal;
-      types::Type *type;
-    } val;
-    enum { STATIC, TYPE } tag;
-
-  public:
-    explicit LLVMLiteral(int64_t v) : val{v}, tag(STATIC) {}
-    explicit LLVMLiteral(types::Type *t) : val{}, tag(TYPE) { val.type = t; }
-
-    bool isType() const { return tag == TYPE; }
-    bool isStatic() const { return tag == STATIC; }
-
-    types::Type *getType() { return val.type; }
-    const types::Type *getType() const { return val.type; }
-    void setType(types::Type *t) {
-      val.type = t;
-      tag = TYPE;
-    }
-
-    int64_t getStaticValue() const { return val.staticVal; }
-    void setStaticValue(int64_t v) {
-      val.staticVal = v;
-      tag = STATIC;
-    }
-  };
-
 private:
   /// literals that must be formatted into the body
-  std::vector<LLVMLiteral> llvmLiterals;
+  std::vector<types::Generic> llvmLiterals;
   /// declares for llvm-only function
   std::string llvmDeclares;
   /// body of llvm-only function
@@ -235,7 +205,7 @@ public:
 
   /// Sets the LLVM literals.
   /// @param v the new values.
-  void setLLVMLiterals(std::vector<LLVMLiteral> v) { llvmLiterals = std::move(v); }
+  void setLLVMLiterals(std::vector<types::Generic> v) { llvmLiterals = std::move(v); }
 
   /// @return iterator to the first literal
   auto literal_begin() { return llvmLiterals.begin(); }

@@ -19,7 +19,7 @@ void IRVisitor::visit(ForFlow *x) { defaultVisit(x); }
 void IRVisitor::visit(TryCatchFlow *x) { defaultVisit(x); }
 void IRVisitor::visit(PipelineFlow *x) { defaultVisit(x); }
 void IRVisitor::visit(dsl::CustomFlow *x) { defaultVisit(x); }
-void IRVisitor::visit(TemplatedConstant<seq_int_t> *x) { defaultVisit(x); }
+void IRVisitor::visit(TemplatedConstant<int64_t> *x) { defaultVisit(x); }
 void IRVisitor::visit(TemplatedConstant<double> *x) { defaultVisit(x); }
 void IRVisitor::visit(TemplatedConstant<bool> *x) { defaultVisit(x); }
 void IRVisitor::visit(TemplatedConstant<std::string> *x) { defaultVisit(x); }
@@ -68,7 +68,7 @@ void ConstIRVisitor::visit(const ForFlow *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const TryCatchFlow *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const PipelineFlow *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const dsl::CustomFlow *x) { defaultVisit(x); }
-void ConstIRVisitor::visit(const TemplatedConstant<seq_int_t> *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const TemplatedConstant<int64_t> *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const TemplatedConstant<double> *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const TemplatedConstant<bool> *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const TemplatedConstant<std::string> *x) { defaultVisit(x); }
