@@ -461,7 +461,7 @@ class SeqPair:
         return (i32(id), i32(len1), i32(len2), i32(_ALIGN_SCORE_NEG_INF), Ptr[u32](), i32(0), i32(flags))
 
 # (!) caller must ensure len(s) <= LEN_LIMIT
-@builtin
+@force_realize
 @inline
 def _interaln_add_to_buf(s: seq, buf: Ptr[byte], step: int, idx: int):
     n = len(s)
@@ -478,7 +478,7 @@ def _interaln_add_to_buf(s: seq, buf: Ptr[byte], step: int, idx: int):
             buf[(idx * step) + (n - i - 1)] = byte(3 - c if c < 4 else c)
             i -= 1
 
-@builtin
+@force_realize
 @inline
 def _interaln_sort_pairs_len_ext(pairs_array: Ptr[SeqPair], tmp_array: Ptr[SeqPair], count: int, hist: Ptr[i32]) -> Tuple[int,int,int]:
     def _max(a: i32, b: i32) -> i32: return a if a > b else b
@@ -554,7 +554,7 @@ def _interaln_sort_pairs_len_ext(pairs_array: Ptr[SeqPair], tmp_array: Ptr[SeqPa
 
 InterAlignYield = Tuple[seq,seq,Alignment]
 
-@builtin
+@force_realize
 @inline
 def _interaln_queue(coro: Generator[InterAlignYield],
                     pairs_array: Ptr[SeqPair],
@@ -599,7 +599,7 @@ def _interaln_queue(coro: Generator[InterAlignYield],
         m += 1
     return m
 
-@builtin
+@force_realize
 @inline
 def _interaln_flush(pairs_array: Ptr[SeqPair],
                     seq_buf_ref: Ptr[byte],

@@ -486,7 +486,7 @@ def foo(a, b=1, **c = 1):
 
 #%% function_err_1,barebones
 def foo():
-    @builtin
+    @force_realize
     def bar(): pass #! ERROR: builtins must be defined at the toplevel
 
 #%% function_err_2,barebones

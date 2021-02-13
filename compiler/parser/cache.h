@@ -34,7 +34,7 @@
 #define ATTR_EXTERN_C ".c"
 #define ATTR_EXTERN_LLVM "llvm"
 #define ATTR_EXTERN_PYTHON "python"
-#define ATTR_BUILTIN "builtin"
+#define ATTR_FORCE_REALIZE "force_realize"
 #define ATTR_PARENT_FUNCTION ".parentFunc"
 #define ATTR_PARENT_CLASS ".parentClass"
 #define ATTR_NOT_STATIC ".notStatic"
@@ -43,6 +43,7 @@
 #define ATTR_PYTHON "python"
 #define ATTR_PICKLE "pickle"
 #define ATTR_DICT "dict"
+#define ATTR_STDLIB ".stdlib"
 #define ATTR_NO(x) ("no_" x)
 
 namespace seq {
