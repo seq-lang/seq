@@ -359,10 +359,45 @@ class Foo[N: int]:
 foo = Foo[10](Int[20](0))
 print foo.__class__, foo.x.__class__ #: Foo[10] Int[20]
 
+#%% static_2,barebones
+class Num[N: int]:
+    def __str__(self):
+        return f'~{N}'
+    def __init__(self):
+        pass
+class Foo[T, A: int, B: int]:
+    a: Num[A+B]
+    b: Num[A-B]
+    c: Num[A if A > 3 else B]
+    t: T
+    def __init__(self):
+        self.a = Num()
+        self.b = Num()
+        self.c = Num()
+        self.t = T()
+    def __str__(self):
+        return f'<{self.a} {self.b} {self.c} :: {self.t}>'
+print Foo[int, 3, 4](), Foo[int, 5, 4]()
+#: <~7 ~-1 ~4 :: 0> <~9 ~1 ~5 :: 0>
+
 #%% static_fail,barebones
 def test(i: Int[32]):
     print int(i)
 test(Int[5](1)) #! ERROR: cannot unify Int[5] and Int[32]
+
+#%% static_fail_2,barebones
+zi = Int[32](6)
+def test3[N](i: Int[N]):
+    print int(i)
+test3(zi) #! ERROR: cannot unify
+# TODO: nicer error message!
+
+#%% static_fail_3,barebones
+zi = Int[32](6)
+def test3[N](i: Int[N]):
+    print int(i)
+test3[int](1) #! ERROR: cannot unify
+# TODO: nicer error message!
 
 #%% nested_fn_generic,barebones
 def f(x):
@@ -610,3 +645,11 @@ def fun[T, R](x, y: T) -> R:
    	return byte(1)
 print fun(2, 1.1).__class__ #! ERROR: cannot resolve 1 unbound variables
 
+#%% random
+# shuffle used to fail before for some reason (sth about unbound variables)...
+def foo():
+    from random import shuffle
+    v = list(range(10))
+    shuffle(v)
+    print sorted(v) #: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+foo()

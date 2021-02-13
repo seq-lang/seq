@@ -39,7 +39,8 @@ types::TypePtr TypecheckVisitor::realize(types::TypePtr typ) {
     return nullptr;
   if (auto f = typ->getFunc()) {
     auto ret = realizeFunc(f.get());
-    realizeType(ret->getClass().get());
+    if (ret)
+      realizeType(ret->getClass().get());
     return ret;
   } else {
     return realizeType(typ->getClass().get());
@@ -182,8 +183,9 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
 
       // Need to populate realization table in advance to make recursive functions
       // work.
-      ctx->cache->functions[type->funcName].realizations[type->realizedName()] = {
-          type->getFunc(), nullptr};
+      auto &real =
+          ctx->cache->functions[type->funcName].realizations[type->realizedName()] = {
+              type->getFunc(), nullptr};
       // Realizations are stored in the top-most base.
       ctx->bases[0].visitedAsts[type->realizedName()] = {TypecheckItem::Func,
                                                          type->getFunc()};
@@ -199,30 +201,35 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
           type->args[0] |= ctx->findInternal("void");
       }
       // Realize the return type.
-      type->args[0] |= realize(type->args[0]);
+      if (auto t = realize(type->args[0]))
+        type->args[0] |= t;
+      else
+        type = nullptr; // Not realized! Roll-back!
       // Create and store a realized AST to be used during the code generation.
-      seqassert(ast->args.size() == type->args.size() - 1,
+      seqassert(!type || ast->args.size() == type->args.size() - 1,
                 "type/AST argument mismatch");
-      vector<Param> args;
-      for (auto &i : ast->args) {
-        string varName = i.name;
-        trimStars(varName);
-        args.emplace_back(Param{varName, nullptr, nullptr});
+      if (type) {
+        vector<Param> args;
+        for (auto &i : ast->args) {
+          string varName = i.name;
+          trimStars(varName);
+          args.emplace_back(Param{varName, nullptr, nullptr});
+        }
+        real.ast = Nx<FunctionStmt>(ast, type->realizedName(), nullptr, vector<Param>(),
+                                    move(args), move(realized),
+                                    map<string, string>(ast->attributes));
+        LOG_REALIZE("done with {}", type->realizedName());
+      } else {
       }
-      ctx->cache->functions[type->funcName].realizations[type->realizedName()].ast =
-          Nx<FunctionStmt>(ast, type->realizedName(), nullptr, vector<Param>(),
-                           move(args), move(realized),
-                           map<string, string>(ast->attributes));
       ctx->bases.pop_back();
       ctx->popBlock();
       ctx->typecheckLevel--;
       ctx->realizationDepth--;
-      LOG_REALIZE("done with {}", type->realizedName());
       _level--;
     }
     // Restore old bases back.
     ctx->bases.insert(ctx->bases.end(), oldBases.begin(), oldBases.end());
-    return type->getFunc();
+    return type ? type->getFunc() : nullptr;
   } catch (exc::ParserException &e) {
     e.trackRealize(fmt::format("{} (arguments {})", type->funcName, type->toString()),
                    getSrcInfo());

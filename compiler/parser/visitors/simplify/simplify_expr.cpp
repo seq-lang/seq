@@ -248,7 +248,7 @@ void SimplifyVisitor::visit(DictGeneratorExpr *expr) {
 }
 
 void SimplifyVisitor::visit(IfExpr *expr) {
-  auto cond = transform(N<CallExpr>(N<DotExpr>(clone(expr->cond), "__bool__")));
+  auto cond = transform(expr->cond);
   auto oldAssign = ctx->canAssign;
   ctx->canAssign = false;
   auto newExpr =
