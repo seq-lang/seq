@@ -1,21 +1,10 @@
-#include <algorithm>
+#include "test.h"
 
-#include "sir/sir.h"
-#include "gtest/gtest.h"
+#include "sir/util/matching.h"
 
 using namespace seq::ir;
 
-class SIRTest : public testing::Test {
-protected:
-  std::unique_ptr<IRModule> module;
-
-  void SetUp() override {
-    IdMixin::resetId();
-    module = std::make_unique<IRModule>("test");
-  }
-};
-
-TEST_F(SIRTest, NodeBuildingAndRemoval) {
+TEST_F(SIRTest, ModuleNodeBuildingRemovalAndIterators) {
   {
     auto n1 = module->Nr<types::OptionalType>(module->getIntType());
     ASSERT_EQ(n1->getModule(), module.get());
@@ -42,4 +31,33 @@ TEST_F(SIRTest, NodeBuildingAndRemoval) {
     module->remove(n1);
     ASSERT_EQ(numVars - 1, std::distance(module->begin(), module->end()));
   }
+}
+
+TEST_F(SIRTest, ModuleMainFunctionAndArgVar) {
+  auto *main = module->getMainFunc();
+  ASSERT_TRUE(main);
+  auto *mainType = cast<types::FuncType>(main->getType());
+  ASSERT_TRUE(mainType);
+  ASSERT_TRUE(util::match(mainType->getReturnType(), module->getVoidType()));
+  ASSERT_EQ(0, std::distance(mainType->begin(), mainType->end()));
+  ASSERT_FALSE(main->isReplaceable());
+
+  auto *argVar = module->getArgVar();
+  ASSERT_TRUE(argVar);
+  auto *argVarType = cast<types::ArrayType>(argVar->getType());
+  ASSERT_TRUE(argVarType);
+  ASSERT_TRUE(util::match(argVarType->getBase(), module->getStringType()));
+  ASSERT_FALSE(argVar->isReplaceable());
+}
+
+TEST_F(SIRTest, ModuleTypeGetAndLookup) {
+  auto TYPE_NAME = "**test_type**";
+  auto *newType = module->getMemberedType(TYPE_NAME);
+  ASSERT_TRUE(isA<types::RecordType>(newType));
+  ASSERT_EQ(newType, module->getType(TYPE_NAME));
+  module->remove(newType);
+
+  newType = module->getMemberedType(TYPE_NAME, true);
+  ASSERT_TRUE(isA<types::RefType>(newType));
+  ASSERT_EQ(newType, module->getType(TYPE_NAME));
 }
