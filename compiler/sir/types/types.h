@@ -29,12 +29,10 @@ private:
   enum { STATIC, TYPE } tag;
 
 public:
-  explicit Generic(int64_t staticValue) : value(), tag(STATIC) {
+  Generic(int64_t staticValue) : value(), tag(STATIC) {
     value.staticValue = staticValue;
   }
-  explicit Generic(types::Type *typeValue) : value(), tag(TYPE) {
-    value.typeValue = typeValue;
-  }
+  Generic(types::Type *typeValue) : value(), tag(TYPE) { value.typeValue = typeValue; }
 
   /// @return true if the generic is a type
   bool isType() const { return tag == TYPE; }
