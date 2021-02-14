@@ -141,7 +141,7 @@ LLVMVisitor::LLVMVisitor(bool debug, const std::string &flags)
 }
 
 void LLVMVisitor::setDebugInfoForNode(const IRNode *x) {
-  if (x) {
+  if (x && func) {
     auto *srcInfo = getSrcInfo(x);
     builder.SetCurrentDebugLocation(llvm::DILocation::get(
         context, srcInfo->line, srcInfo->col, func->getSubprogram()));
