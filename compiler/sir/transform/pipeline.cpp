@@ -5,6 +5,15 @@ namespace ir {
 namespace transform {
 namespace pipeline {
 
+bool hasAttribute(const Func *func, const std::string &attribute) {
+  if (auto *attr = func->getAttribute<FuncAttribute>()) {
+    return attr->has(attribute);
+  }
+  return false;
+}
+
+bool isStdlibFunc(const Func *func) { return hasAttribute(func, ".stdlib"); }
+
 template <typename T> bool isConst(const Value *x) {
   return isA<TemplatedConstant<T>>(x);
 }
@@ -22,7 +31,7 @@ template <typename T> T getConst(const Value *x) {
   return c->getVal();
 }
 
-const Var *getVar(const Value *x) {
+Var *getVar(Value *x) {
   if (auto *v = cast<VarValue>(x)) {
     if (auto *var = cast<Var>(v->getVar())) {
       if (!isA<Func>(var)) {
@@ -33,42 +42,7 @@ const Var *getVar(const Value *x) {
   return nullptr;
 }
 
-const Func *getFunc(const Value *x) {
-  if (auto *v = cast<VarValue>(x)) {
-    if (auto *func = cast<Func>(v->getVar())) {
-      return func;
-    }
-  }
-  return nullptr;
-}
-
-const BodiedFunc *getBuiltinFunc(const Value *x, const std::string &name) {
-  if (auto *f = getFunc(x)) {
-    if (auto *g = cast<BodiedFunc>(f)) {
-      if (g->isBuiltin() && g->getUnmangledName() == name) {
-        return g;
-      }
-    }
-  }
-  return nullptr;
-}
-
-template <typename T> bool isConst(Value *x) { return isA<TemplatedConstant<T>>(x); }
-
-template <typename T> bool isConst(Value *x, const T &value) {
-  if (auto *c = cast<TemplatedConstant<T>>(x)) {
-    return c->getVal() == value;
-  }
-  return false;
-}
-
-template <typename T> T getConst(Value *x) {
-  auto *c = cast<TemplatedConstant<T>>(x);
-  assert(c);
-  return c->getVal();
-}
-
-Var *getVar(Value *x) {
+const Var *getVar(const Value *x) {
   if (auto *v = cast<VarValue>(x)) {
     if (auto *var = cast<Var>(v->getVar())) {
       if (!isA<Func>(var)) {
@@ -88,10 +62,30 @@ Func *getFunc(Value *x) {
   return nullptr;
 }
 
-BodiedFunc *getBuiltinFunc(Value *x, const std::string &name) {
+const Func *getFunc(const Value *x) {
+  if (auto *v = cast<VarValue>(x)) {
+    if (auto *func = cast<Func>(v->getVar())) {
+      return func;
+    }
+  }
+  return nullptr;
+}
+
+BodiedFunc *getStdlibFunc(Value *x, const std::string &name) {
   if (auto *f = getFunc(x)) {
     if (auto *g = cast<BodiedFunc>(f)) {
-      if (/*g->isBuiltin() &&*/ g->getUnmangledName() == name) {
+      if (/*isStdlibFunc(g) &&*/ g->getUnmangledName() == name) {
+        return g;
+      }
+    }
+  }
+  return nullptr;
+}
+
+const BodiedFunc *getStdlibFunc(const Value *x, const std::string &name) {
+  if (auto *f = getFunc(x)) {
+    if (auto *g = cast<BodiedFunc>(f)) {
+      if (/*isStdlibFunc(g) &&*/ g->getUnmangledName() == name) {
         return g;
       }
     }
@@ -119,8 +113,8 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
   while (it != p->end()) {
     if (prev) {
       {
-        auto *f1 = getBuiltinFunc(prev->getFunc(), "kmers");
-        auto *f2 = getBuiltinFunc(it->getFunc(), "revcomp");
+        auto *f1 = getStdlibFunc(prev->getFunc(), "kmers");
+        auto *f2 = getStdlibFunc(it->getFunc(), "revcomp");
         if (f1 && f2) {
           auto *funcType = cast<types::FuncType>(f1->getType());
           auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
@@ -135,8 +129,8 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
       }
 
       {
-        auto *f1 = getBuiltinFunc(prev->getFunc(), "kmers_with_pos");
-        auto *f2 = getBuiltinFunc(it->getFunc(), "revcomp_with_pos");
+        auto *f1 = getStdlibFunc(prev->getFunc(), "kmers_with_pos");
+        auto *f2 = getStdlibFunc(it->getFunc(), "revcomp_with_pos");
         if (f1 && f2) {
           auto *funcType = cast<types::FuncType>(f1->getType());
           auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
@@ -153,8 +147,8 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
       }
 
       {
-        auto *f1 = getBuiltinFunc(prev->getFunc(), "kmers");
-        auto *f2 = getBuiltinFunc(it->getFunc(), "canonical");
+        auto *f1 = getStdlibFunc(prev->getFunc(), "kmers");
+        auto *f2 = getStdlibFunc(it->getFunc(), "canonical");
         if (f1 && f2 && isConst<int64_t>(prev->back(), 1)) {
           auto *funcType = cast<types::FuncType>(f1->getType());
           auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
@@ -170,8 +164,8 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
       }
 
       {
-        auto *f1 = getBuiltinFunc(prev->getFunc(), "kmers_with_pos");
-        auto *f2 = getBuiltinFunc(it->getFunc(), "canonical_with_pos");
+        auto *f1 = getStdlibFunc(prev->getFunc(), "kmers_with_pos");
+        auto *f2 = getStdlibFunc(it->getFunc(), "canonical_with_pos");
         if (f1 && f2 && isConst<int64_t>(prev->back(), 1)) {
           auto *funcType = cast<types::FuncType>(f1->getType());
           auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
