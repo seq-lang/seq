@@ -129,7 +129,7 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
               module->Nr<seq::ir::BodiedFunc>(module->getDummyFuncType(), ast->name);
           ctx->functions[f.first] = {fn, false};
 
-          if (in(ast->attributes, "builtin")) {
+          if (in(ast->attributes, ATTR_FORCE_REALIZE)) {
             fn->setBuiltin();
           }
 

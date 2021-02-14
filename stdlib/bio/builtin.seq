@@ -82,7 +82,7 @@ def base[K,T](kmer: K, idx: int, b: T):
     k |= n << U(2*idx)
     return K(k)
 
-@builtin
+@force_realize
 def _is_iupac_nt(b: byte) -> bool:
     iupac = ('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
              '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
@@ -102,7 +102,7 @@ def _is_iupac_nt(b: byte) -> bool:
              '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
     return bool(iupac.ptr[int(b)])
 
-@builtin
+@force_realize
 def _is_iupac_aa(b: byte) -> bool:
     iupac = ('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
              '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
@@ -122,7 +122,7 @@ def _is_iupac_aa(b: byte) -> bool:
              '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
     return bool(iupac.ptr[int(b)])
 
-@builtin
+@force_realize
 def _validate_str_as_seq(s: str, copy: bool = False):
     def ensure_valid(b: byte, i: int):
         if not _is_iupac_nt(b):
@@ -144,7 +144,7 @@ def _validate_str_as_seq(s: str, copy: bool = False):
             i += 1
         return seq(p, n)
 
-@builtin
+@force_realize
 def _validate_str_as_qual(s: str, copy: bool = False):
     def ensure_valid(b: byte, i: int):
         if not (byte(0x21) <= b <= byte(0x7e)):
@@ -166,7 +166,7 @@ def _validate_str_as_qual(s: str, copy: bool = False):
             i += 1
         return str(p, n)
 
-@builtin
+@force_realize
 def _split_header_on_space(s: str):
     a = 0
     while a < len(s) and not s[a].isspace():

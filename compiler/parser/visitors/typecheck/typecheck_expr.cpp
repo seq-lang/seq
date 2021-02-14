@@ -154,6 +154,8 @@ void TypecheckVisitor::visit(IfExpr *expr) {
                                             : expr->elsexpr->staticEvaluation.second));
     }
   } else {
+    if (expr->cond->type->getClass() && !expr->cond->type->is("bool"))
+      expr->cond = transform(N<CallExpr>(N<DotExpr>(move(expr->cond), "__bool__")));
     wrapOptionalIfNeeded(expr->ifexpr->getType(), expr->elsexpr);
     wrapOptionalIfNeeded(expr->elsexpr->getType(), expr->ifexpr);
     expr->type |= expr->ifexpr->getType();

@@ -378,7 +378,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   if (auto t = ctx->findInVisited(stmt->name).second) {
     // We realize built-ins and extern C function when we see them for the second time
     // (to avoid preamble realization).
-    if (in(stmt->attributes, ATTR_BUILTIN) || in(stmt->attributes, ATTR_EXTERN_C)) {
+    if (in(stmt->attributes, ATTR_FORCE_REALIZE) || in(stmt->attributes, ATTR_EXTERN_C)) {
       if (!t->canRealize())
         error("builtins and external functions must be realizable");
       auto typ = ctx->instantiate(getSrcInfo(), t);

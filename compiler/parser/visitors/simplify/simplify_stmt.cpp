@@ -403,7 +403,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   auto canonicalName = ctx->generateCanonicalName(stmt->name, ctx->getBase());
   bool isClassMember = ctx->getLevel() && ctx->bases.back().isType();
 
-  if (in(stmt->attributes, ATTR_BUILTIN) && (ctx->getLevel() || isClassMember))
+  if (in(stmt->attributes, ATTR_FORCE_REALIZE) && (ctx->getLevel() || isClassMember))
     error("builtins must be defined at the toplevel");
 
   if (!isClassMember)
@@ -494,6 +494,8 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
       ctx->bases.back().parent == -1 ? "" : ctx->bases[ctx->bases.back().parent].name;
   ctx->bases.pop_back();
   ctx->popBlock();
+  if (ctx->isStdlibLoading)
+    attributes[ATTR_STDLIB] = "";
 
   // Get the name of parent function (if there is any).
   // This should reach parent function even if there is a class base in the middle.
@@ -527,7 +529,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   auto fl =
       N<FunctionStmt>(canonicalName, clone(f->ret), clone_nop(f->generics),
                       clone_nop(f->args), nullptr, map<string, string>(f->attributes));
-  if (!parentFunc.empty() || in(f->attributes, ATTR_BUILTIN) ||
+  if (!parentFunc.empty() || in(f->attributes, ATTR_FORCE_REALIZE) ||
       in(f->attributes, ATTR_EXTERN_C))
     resultStmt = clone(fl);
   if (parentFunc.empty())
@@ -637,10 +639,12 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
       ctx->cache->imports[STDLIB_IMPORT].ctx->addToplevel(canonicalName, classItem);
     }
     // Create a cached AST.
-    ctx->cache->classes[canonicalName].ast = N<ClassStmt>(
-        canonicalName, move(newGenerics), move(args), N<SuiteStmt>(vector<StmtPtr>()),
-        map<string, string>(stmt->attributes));
-
+    auto attributes = stmt->attributes;
+    if (ctx->isStdlibLoading)
+      attributes[ATTR_STDLIB] = "";
+    ctx->cache->classes[canonicalName].ast =
+        N<ClassStmt>(canonicalName, move(newGenerics), move(args),
+                     N<SuiteStmt>(vector<StmtPtr>()), move(attributes));
     vector<StmtPtr> fns;
     ExprPtr codeType = clone(ctx->bases.back().ast);
     vector<string> magics{};
@@ -1097,14 +1101,14 @@ void SimplifyVisitor::transformNewImport(const string &file, const string &modul
     for (auto &g : globalVars)
       const_cast<SuiteStmt *>(stmts[0]->getSuite())->stmts.push_back(N<GlobalStmt>(g));
     // Add a def import(): ... manually to the cache and to the preamble (it won't be
-    // transformed here!) and set ATTR_BUILTIN to realize it during the type-checking
-    // even if it is not called.
+    // transformed here!) and set ATTR_FORCE_REALIZE to realize it during the
+    // type-checking even if it is not called.
     ctx->cache->functions[importVar].ast =
         N<FunctionStmt>(importVar, nullptr, vector<Param>{}, vector<Param>{},
-                        N<SuiteStmt>(move(stmts)), vector<string>{ATTR_BUILTIN});
+                        N<SuiteStmt>(move(stmts)), vector<string>{ATTR_FORCE_REALIZE});
     preamble->functions.push_back(N<FunctionStmt>(importVar, nullptr, vector<Param>{},
                                                   vector<Param>{}, nullptr,
-                                                  vector<string>{ATTR_BUILTIN}));
+                                                  vector<string>{ATTR_FORCE_REALIZE}));
   }
 }
 

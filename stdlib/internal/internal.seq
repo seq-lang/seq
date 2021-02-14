@@ -3,7 +3,7 @@ from C import seq_check_errno() -> str
 from C import seq_print(str)
 from C import exit(int)
 
-@builtin
+@force_realize
 def _ensure_not_none(p: Ptr[byte], memb: str):
     if not p:
         raise AttributeError("'NoneType' object has no attribute '" + memb + "'")
