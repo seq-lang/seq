@@ -1303,18 +1303,31 @@ string TypecheckVisitor::generateFunctionStub(int n) {
     stmts.clear();
     // @llvm
     // def __new__(what: Function[TR, T1, ..., TN]) -> Function.N[TR, T1, ..., TN]:
-    //   return what
+    //   ret {=TR}({=T1},...,{=TN})* %what)
     params.emplace_back(Param{"what", clone(type)});
     vector<string> llvmTypes;
     for (int i = 1; i <= n; i++)
       llvmTypes.emplace_back(format("{{=T{}}}", i));
-    stmts.push_back(
-        N<ExprStmt>(N<StringExpr>("ret {{=TR}}({})* %what", join(llvmTypes, ","))));
+    stmts.push_back(N<ReturnStmt>(N<IdExpr>("what")));
     fns.emplace_back(make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{},
                                                move(params), N<SuiteStmt>(move(stmts)),
-                                               vector<string>{ATTR_EXTERN_LLVM}));
+                                               vector<string>{}));
     params.clear();
     stmts.clear();
+    //    vector<string> llvmTypes;
+    //    for (int i = 1; i <= n; i++)
+    //      llvmTypes.emplace_back(format("{{=T{}}}", i));
+    //    stmts.push_back(
+    //        N<ExprStmt>(N<StringExpr>("ret {{=TR}}({})* %what", join(llvmTypes,
+    //        ","))));
+    //    LOG("{}", stmts[0]->toString());
+    //    fns.emplace_back(make_unique<FunctionStmt>("__new__", clone(type),
+    //    vector<Param>{},
+    //                                               move(params),
+    //                                               N<SuiteStmt>(move(stmts)),
+    //                                               vector<string>{ATTR_EXTERN_LLVM}));
+    //    params.clear();
+    //    stmts.clear();
     // def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]:
     //   return __internal__.fn_raw(self)
     params.emplace_back(Param{"self", clone(type)});
