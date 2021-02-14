@@ -57,6 +57,10 @@ shared_ptr<SimplifyItem> SimplifyContext::find(const string &name) const {
     if (t)
       return t;
   }
+  // Check if there is a global mangled function with this name (for Simplify callbacks)
+  auto fn = cache->functions.find(name);
+  if (fn != cache->functions.end())
+    return make_shared<SimplifyItem>(SimplifyItem::Func, "", name, true, false);
   return nullptr;
 }
 

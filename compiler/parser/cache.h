@@ -24,7 +24,8 @@
 #define TYPECHECK_MAX_ITERATIONS 100
 #define FILE_GENERATED "<generated>"
 #define MODULE_MAIN "__main__"
-#define STDLIB_IMPORT ""
+#define MAIN_IMPORT ""
+#define STDLIB_IMPORT ":stdlib:"
 #define STDLIB_INTERNAL_MODULE "internal"
 #define ATTR_INTERNAL "internal"
 #define ATTR_TUPLE "tuple"

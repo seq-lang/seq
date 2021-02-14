@@ -126,7 +126,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
 
   auto ctx = make_shared<SimplifyContext>(file, cache);
   // static_pointer_cast<SimplifyContext>(cache->imports[STDLIB_IMPORT].ctx);
-  cache->imports[file] = {file, ctx};
+  cache->imports[file] = cache->imports[MAIN_IMPORT] = {file, ctx};
   ctx->setFilename(file);
   ctx->moduleName = MODULE_MAIN;
   // Load the command-line defines.

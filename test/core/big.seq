@@ -105,7 +105,7 @@ class X[T]:
             class F:
                 f: function[int, int]
                 x: int
-            def apply(f: function[int, int], x: int):
+            def apply(f, x):
                 return f(x)
             def rec(pair: F):
                 return apply(pair.f, pair.x - 1) + apply(pair.f, pair.x - 2)

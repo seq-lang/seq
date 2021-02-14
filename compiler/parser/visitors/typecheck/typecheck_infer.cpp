@@ -39,8 +39,8 @@ types::TypePtr TypecheckVisitor::realize(types::TypePtr typ) {
     return nullptr;
   if (auto f = typ->getFunc()) {
     auto ret = realizeFunc(f.get());
-    if (ret)
-      realizeType(ret->getClass().get());
+    //    if (ret)
+    //      realizeType(ret->getClass().get());
     return ret;
   } else {
     return realizeType(typ->getClass().get());

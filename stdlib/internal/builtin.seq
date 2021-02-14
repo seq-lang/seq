@@ -162,7 +162,7 @@ def zip(a, b):
         yield (i, bi.next())
     bi.destroy()
 
-def filter[T](f: Function[bool,T], x: Generator[T]):
+def filter[T](f: Callable[bool,T], x: Generator[T]):
     """
     Returns all a from the iterable x that are filtered by f
     """
@@ -170,7 +170,7 @@ def filter[T](f: Function[bool,T], x: Generator[T]):
         if f(a):
             yield a
 
-def map[S,T](f: Function[S,T], x: Generator[T]):
+def map[S,T](f: Callable[S,T], x: Generator[T]):
     """
     Applies a function on all a in x and returns map object
     """

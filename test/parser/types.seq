@@ -26,7 +26,7 @@ f = Optional[Optional[Optional[int]]](Optional[Optional[int]](Optional[int](5)))
 print x.len, f  #: 0 5
 
 #%% map_unify
-def map[T,S](l: list[T], f: function[S,T]):
+def map[T,S](l: list[T], f: Callable[S,T]):
     return [f(x) for x in l]
 e = 1
 print map([1, 2, 3], lambda x: x+e)  #: [2, 3, 4]

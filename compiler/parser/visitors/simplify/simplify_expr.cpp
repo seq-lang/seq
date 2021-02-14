@@ -346,12 +346,14 @@ void SimplifyVisitor::visit(IndexExpr *expr) {
   if (expr->expr->isId("tuple") || expr->expr->isId("Tuple")) {
     auto t = expr->index->getTuple();
     e = N<IdExpr>(format("Tuple.N{}", t ? t->items.size() : 1));
-    // e = transformType(N<IdExpr>(name).get());
     e->markType();
   } else if (expr->expr->isId("function") || expr->expr->isId("Function")) {
     auto t = expr->index->getTuple();
     e = N<IdExpr>(format("Function.N{}", t ? int(t->items.size()) - 1 : 0));
-    // e = transformType(N<IdExpr>(name).get());
+    e->markType();
+  } else if (expr->expr->isId("Callable")) {
+    auto t = expr->index->getTuple();
+    e = N<IdExpr>(format("Callable.N{}", t ? int(t->items.size()) - 1 : 0));
     e->markType();
   } else {
     e = transform(expr->expr.get(), true);
