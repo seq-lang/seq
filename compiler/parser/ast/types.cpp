@@ -276,22 +276,35 @@ int RecordType::unify(Type *typ, Unification *us) {
       return generics[0].type->unify(t64.get(), us);
     }
     int s1 = 2, s;
-    // Special handling for unifying partial functions.
-    if (startswith(tr->name, "Function.N") && startswith(name, "Partial.N"))
+    // Special handling for functions.
+    if (startswith(tr->name, "Callable.N") && startswith(name, "Function.N"))
       return tr->unify(this, us);
-    if (startswith(name, "Function.N") && startswith(tr->name, "Partial.N")) {
-      tr->generics[0].type |= generics[0].type;
-      if (tr->generics.size() - (tr->args.size() - 1) != generics.size())
+    if (startswith(name, "Callable.N") && startswith(tr->name, "Function.N")) {
+      if (tr->generics.size() != generics.size())
         return -1;
-      for (int i = 1, j = 1; i < tr->generics.size(); i++)
-        if (tr->name[8 + i] == '0') {
-          if ((s = tr->generics[i].type->unify(generics[j++].type.get(), us)) != -1)
-            s1 += s;
-          else
-            return -1;
-        }
+      for (int i = 0; i < generics.size(); i++) {
+        if ((s = generics[i].type->unify(tr->generics[i].type.get(), us)) == -1)
+          return -1;
+        s1 += s;
+      }
       return s1;
     }
+    //    if (startswith(tr->name, "Function.N") && startswith(name, "Partial.N"))
+    //      return tr->unify(this, us);
+    //    if (startswith(name, "Function.N") && startswith(tr->name, "Partial.N")) {
+    //      tr->generics[0].type |= generics[0].type;
+    //      if (tr->generics.size() - (tr->args.size() - 1) != generics.size())
+    //        return -1;
+    //      for (int i = 1, j = 1; i < tr->generics.size(); i++)
+    //        if (tr->name[8 + i] == '0') {
+    //          if ((s = tr->generics[i].type->unify(generics[j++].type.get(), us)) !=
+    //          -1)
+    //            s1 += s;
+    //          else
+    //            return -1;
+    //        }
+    //      return s1;
+    //    }
     if (args.size() != tr->args.size())
       return -1;
     for (int i = 0; i < args.size(); i++) {

@@ -136,7 +136,7 @@ def compress[S,T](data: Generator[S], selectors: Generator[T]):
     """
     return (d for d, s in zip(data, selectors) if s)
 
-def dropwhile[T](predicate: Function[bool,T], iterable: Generator[T]):
+def dropwhile[T](predicate: Callable[bool,T], iterable: Generator[T]):
     """
     Drop items from the iterable while predicate(item) is true.
 
@@ -150,7 +150,7 @@ def dropwhile[T](predicate: Function[bool,T], iterable: Generator[T]):
     for x in it:
         yield x
 
-def takewhile[T](predicate: Function[bool,T], iterable: Generator[T]):
+def takewhile[T](predicate: Callable[bool,T], iterable: Generator[T]):
     """
     Return successive entries from an iterable as long as the predicate evaluates to true for each entry.
     """
@@ -160,7 +160,7 @@ def takewhile[T](predicate: Function[bool,T], iterable: Generator[T]):
         else:
             break
 
-def filterfalse[T](predicate: Function[bool,T], iterable: Generator[T]):
+def filterfalse[T](predicate: Callable[bool,T], iterable: Generator[T]):
     """
     Return those items of iterable for which function(item) is false.
 
@@ -201,7 +201,7 @@ def permutations[T](pool: Generator[T], r: Optional[int] = None) -> Generator[Li
         if b == -1:
             return
 
-def accumulate[T,S](iterable: Generator[T], func: Function[S,S,T], initial: S):
+def accumulate[T,S](iterable: Generator[T], func: Callable[S,S,T], initial: S):
     """
     Return series of accumulated sums (or other binary function results).
 
@@ -236,7 +236,7 @@ def starmap(function, iterable):
     for args in iterable:
         yield function(args[0], args[1])
 
-def groupby[V,K=int](iterable: Generator[V], key: Optional[Function[K,V]] = None):
+def groupby[V,K=int](iterable: Generator[V], key: Optional[Callable[K,V]] = None):
     """
     make an iterator that returns consecutive keys and groups from the iterable
 

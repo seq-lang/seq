@@ -248,6 +248,7 @@ private:
   ///     def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]
   ///     def __str__(self: Function.N[TR, T1, ..., TN]) -> str
   /// Return the canonical name of Function.N.
+  string generateCallableStub(int n);
   string generateFunctionStub(int n);
   /// Generate a partial function type Partial.N01...01 (where 01...01 is a mask
   /// of size N) as follows:
@@ -260,7 +261,7 @@ private:
   /// The following partial constructor is added if an oldMask is set:
   ///     def __new_<old_mask>_<mask>(p, aI: TI...) # (if oldMask[I-1] != mask[I-1]):
   ///       return Partial.N<mask>.__new__(self.ptr, self.a1, a2, ...) # (see above)
-  string generatePartialStub(const string &mask, const string &oldMask);
+  string generatePartialStub(const string &mask, types::FuncType *fn);
   /// Create generic types for type or function generics and add them to the context.
   vector<types::Generic> parseGenerics(const vector<Param> &generics, int level);
 

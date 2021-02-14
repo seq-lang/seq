@@ -345,7 +345,9 @@ def foo(i, j, k):
     return i + j + k
 print foo(1.1, 2.2, 3.3)  #: 6.6
 p = foo(6, ..., ...)
+print p.__class__ #: Partial.N100.foo[int]
 print p(2, 1)  #: 9
+print p(k=3, j=6) #: 15
 q = p(..., 1)
 print q(3)  #: 10
 
@@ -359,15 +361,21 @@ print 42 |> add_two  #: 44
 def moo(a, b, c=3):
     print a, b, c
 m = moo(..., 2, ...)
-print m.__class__ #: Partial.N010[void,str,int,float]
+print m.__class__ #: Partial.N010.moo[int]
 m('s', 1.1) #: s 2 1.1
-n = m(..., 2.2)
-print n.__class__ #: Partial.N011[void,str,int,float]
+
+n = m(c=2.2, a=...)
+print n.__class__ #: Partial.N101.Partial.N010.moo.__call__[Partial.N010.moo[int],float]
 n('x') #: x 2 2.2
 print n('y').__class__ #: void
 
+o = m(a=...)
+print o.__class__ #: Partial.N101.Partial.N010.moo.__call__[Partial.N010.moo[int],int]
+o('x') #: x 2 3
+print o('y').__class__ #: void
+
 #%% call_arguments,barebones
-def foo[R, T](a: Function[R, T], b: Generator[T], c: Optional[T], d: T):
+def foo[R, T](a: Callable[R, T], b: Generator[T], c: Optional[T], d: T):
     print R.__class__, T.__class__
     print a.__class__, b.__class__
     for i in b:

@@ -38,7 +38,6 @@ shared_ptr<TypecheckItem> TypeContext::find(const string &name) const {
   auto tt = findInVisited(name);
   if (tt.second)
     return make_shared<TypecheckItem>(tt.first, tt.second);
-  // ((SimplifyContext *)this)->dump();
   return nullptr;
 }
 
