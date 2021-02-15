@@ -94,20 +94,6 @@ int RecordType::doReplaceUsedType(const std::string &name, Type *newType) {
   return count;
 }
 
-bool RecordType::doEquals(const Type *other) const {
-  auto *r = cast<RecordType>(other);
-
-  if (!r || fields.size() != r->fields.size())
-    return false;
-
-  for (auto i = 0; i < fields.size(); ++i)
-    if (fields[i].getName() != r->fields[i].getName() ||
-        !fields[i].getType()->equals(r->fields[i].getType()))
-      return false;
-
-  return true;
-}
-
 Type *RecordType::getMemberType(const std::string &n) {
   auto it = std::find_if(fields.begin(), fields.end(),
                          [n](auto &x) { return x.getName() == n; });
@@ -184,18 +170,6 @@ int FuncType::doReplaceUsedType(const std::string &name, Type *newType) {
   return count;
 }
 
-bool FuncType::doEquals(const Type *other) const {
-  auto *f = cast<FuncType>(other);
-  if (!f || !rType->equals(f->rType) || argTypes.size() != f->argTypes.size())
-    return false;
-
-  for (auto i = 0; i < argTypes.size(); ++i)
-    if (!argTypes[i]->equals(f->argTypes[i]))
-      return false;
-
-  return true;
-}
-
 std::ostream &FuncType::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: ("), referenceString());
   for (auto it = argTypes.begin(); it != argTypes.end(); ++it) {
@@ -264,11 +238,6 @@ std::string GeneratorType::getInstanceName(Type *base) {
 }
 
 const char IntNType::NodeId = 0;
-
-bool IntNType::doEquals(const Type *other) const {
-  auto *i = cast<IntNType>(other);
-  return i && sign == i->sign && len == i->len;
-}
 
 std::string IntNType::getInstanceName(unsigned int len, bool sign) {
   return fmt::format(FMT_STRING(".{}Int{}"), sign ? "" : "U", len);

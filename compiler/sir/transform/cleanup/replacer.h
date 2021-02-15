@@ -7,6 +7,7 @@ namespace ir {
 namespace transform {
 namespace cleanup {
 
+/// Cleanup pass that physically replaces nodes.
 class ReplaceCleanupPass : public Pass {
 public:
   void run(IRModule *module) override;
