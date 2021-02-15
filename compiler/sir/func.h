@@ -26,7 +26,7 @@ public:
   /// @param type the function's type
   /// @param name the function's name
   explicit Func(types::Type *type, std::string name = "")
-      : AcceptorExtend(type, false, std::move(name)), generator(false) {}
+      : AcceptorExtend(type, true, std::move(name)), generator(false) {}
 
   /// Re-initializes the function with a new type and names.
   /// @param newType the function's new type
@@ -101,10 +101,11 @@ private:
   int doReplaceUsedVariable(int id, Var *newVar) override;
 };
 
+/// Function with a body, uninitialized by default.
 class BodiedFunc : public AcceptorExtend<BodiedFunc, Func> {
 private:
   /// the function body
-  Value *body;
+  Value *body = nullptr;
   /// whether the function is builtin
   bool builtin = false;
 
@@ -134,7 +135,10 @@ private:
 
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetUsedValues() const override { return {body}; }
+protected:
+  std::vector<Value *> doGetUsedValues() const override {
+    return body ? std::vector<Value *>{body} : std::vector<Value *>{};
+  }
   int doReplaceUsedValue(int id, Value *newValue) override;
 };
 
@@ -158,6 +162,7 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
+/// Internal, LLVM-only function.
 class InternalFunc : public AcceptorExtend<InternalFunc, Func> {
 private:
   /// parent type of the function if it is magic
@@ -183,10 +188,12 @@ private:
 
   std::ostream &doFormat(std::ostream &os) const override;
 
+protected:
   std::vector<types::Type *> doGetUsedTypes() const override;
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 };
 
+/// LLVM function defined in Seq source.
 class LLVMFunc : public AcceptorExtend<LLVMFunc, Func> {
 private:
   /// literals that must be formatted into the body
@@ -241,6 +248,7 @@ private:
 
   std::ostream &doFormat(std::ostream &os) const override;
 
+protected:
   std::vector<types::Type *> doGetUsedTypes() const override;
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 };

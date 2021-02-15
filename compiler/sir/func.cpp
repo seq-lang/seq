@@ -62,7 +62,7 @@ const char BodiedFunc::NodeId = 0;
 
 std::string BodiedFunc::getUnmangledName() const {
   auto split = ast::split(getName(), '.');
-  return builtin ? split.back() : split[split.size() - 1];
+  return split.back();
 }
 
 Var *BodiedFunc::doClone() const {
@@ -74,7 +74,8 @@ Var *BodiedFunc::doClone() const {
 
   ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
                argNames);
-  ret->setBody(cast<Flow>(body->clone()));
+  if (body)
+    ret->setBody(cast<Flow>(body->clone()));
   ret->setBuiltin(builtin);
   return ret;
 }
@@ -92,7 +93,7 @@ std::ostream &BodiedFunc::doFormat(std::ostream &os) const {
 }
 
 int BodiedFunc::doReplaceUsedValue(int id, Value *newValue) {
-  if (body->getId() == id) {
+  if (body && body->getId() == id) {
     auto *flow = cast<Flow>(newValue);
     assert(flow);
     body = flow;
@@ -112,6 +113,7 @@ Var *ExternalFunc::doClone() const {
 
   ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
                argNames);
+  ret->setUnmangledName(unmangledName);
   return ret;
 }
 
@@ -236,7 +238,7 @@ std::vector<types::Type *> LLVMFunc::doGetUsedTypes() const {
 }
 
 int LLVMFunc::doReplaceUsedType(const std::string &name, types::Type *newType) {
-  auto count = Func::replaceUsedType(name, newType);
+  auto count = Var::doReplaceUsedType(name, newType);
   for (auto &l : llvmLiterals)
     if (l.isType() && l.getTypeValue()->getName() == name) {
       l.setTypeValue(newType);

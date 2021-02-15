@@ -121,7 +121,7 @@ public:
 
   /// @param n the name
   /// @return true if the attribute is in the store
-  bool hasAttribute(const std::string &n) {
+  bool hasAttribute(const std::string &n) const {
     auto *actual = getActual();
     return actual->attributes.find(n) != actual->attributes.end();
   }
