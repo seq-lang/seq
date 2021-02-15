@@ -6,7 +6,7 @@
 
 using namespace seq::ir;
 
-TEST_F(SIRTest, ConstantTypeQueryAndReplace) {
+TEST_F(SIRTest, ConstantTypeQueryAndPhysicalReplace) {
   auto *node = module->Nr<IntConstant>(1, module->getIntType());
   ASSERT_EQ(module->getIntType(), node->getType());
 
@@ -25,6 +25,16 @@ TEST_F(SIRTest, ConstantValueMatches) {
   std::stringstream s;
   s << *node;
   ASSERT_EQ(std::to_string(VALUE), s.str());
+}
+
+TEST_F(SIRTest, ConstantCloning) {
+  auto VALUE = 1;
+  auto *node = module->Nr<IntConstant>(VALUE, module->getIntType());
+  auto *clone = cast<IntConstant>(node->clone());
+
+  ASSERT_TRUE(clone);
+  ASSERT_EQ(VALUE, clone->getVal());
+  ASSERT_EQ(module->getIntType(), clone->getType());
 }
 
 TEST_F(SIRTest, StringConstantFormatting) {

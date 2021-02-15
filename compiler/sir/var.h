@@ -97,6 +97,7 @@ private:
 
   std::ostream &doFormat(std::ostream &os) const override;
 
+protected:
   virtual std::vector<Value *> doGetUsedValues() const { return {}; }
   virtual int doReplaceUsedValue(int id, Value *newValue) { return 0; }
 
