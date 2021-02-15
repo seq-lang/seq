@@ -289,22 +289,25 @@ int RecordType::unify(Type *typ, Unification *us) {
       }
       return s1;
     }
-    //    if (startswith(tr->name, "Function.N") && startswith(name, "Partial.N"))
-    //      return tr->unify(this, us);
-    //    if (startswith(name, "Function.N") && startswith(tr->name, "Partial.N")) {
-    //      tr->generics[0].type |= generics[0].type;
-    //      if (tr->generics.size() - (tr->args.size() - 1) != generics.size())
-    //        return -1;
-    //      for (int i = 1, j = 1; i < tr->generics.size(); i++)
-    //        if (tr->name[8 + i] == '0') {
-    //          if ((s = tr->generics[i].type->unify(generics[j++].type.get(), us)) !=
-    //          -1)
-    //            s1 += s;
-    //          else
-    //            return -1;
-    //        }
-    //      return s1;
-    //    }
+    if (startswith(tr->name, "Callable.N") && !tr->getFunc() &&
+        startswith(name, "Partial.N"))
+      return tr->unify(this, us);
+    if (startswith(name, "Callable.N") && !getFunc() &&
+        startswith(tr->name, "Partial.N")) {
+      vector<int> zeros;
+      for (int pi = 9; pi < tr->name.size() && tr->name[pi] != '.'; pi++)
+        if (tr->name[pi] == '0')
+          zeros.emplace_back(pi - 9);
+      if (zeros.size() + 1 != args.size())
+        return -1;
+      for (int i = 0; i < zeros.size(); i++)
+        if ((s = tr->generics[zeros[i]].type->unify(generics[i + 1].type.get(), us)) !=
+            -1)
+          s1 += s;
+        else
+          return -1;
+      return s1;
+    }
     if (args.size() != tr->args.size())
       return -1;
     for (int i = 0; i < args.size(); i++) {

@@ -45,7 +45,8 @@ Value *CodegenVisitor::transform(const ExprPtr &expr) {
 }
 
 seq::ir::types::Type *CodegenVisitor::realizeType(types::ClassType *t) {
-  auto i = ctx->find(t->getClass()->realizedTypeName());
+  string name = t->getClass()->realizedTypeName();
+  auto i = ctx->find(name);
   seqassert(i, "type {} not realized", t->toString());
   return i->getType();
 }
@@ -100,7 +101,10 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
               ctx->cache->reverseIdentifierLookup[ast->args[0].name] == "self")
             startI = 2;
           for (int i = startI; i < t->args.size(); i++) {
-            types.push_back(ctx->find(t->args[i]->realizedName())->getType());
+            if (auto ff = t->args[i]->getFunc())
+              types.push_back(ctx->find(ff->RecordType::realizedName())->getType());
+            else
+              types.push_back(ctx->find(t->args[i]->realizedName())->getType());
             assert(types.back());
           }
 

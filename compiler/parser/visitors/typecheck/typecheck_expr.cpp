@@ -713,12 +713,8 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   if (expr->member == "__class__") {
     expr->expr = transform(expr->expr, true, true);
     expr->type |= ctx->findInternal("str");
-    if (auto t = realize(expr->expr->type)) {
-      if (auto f = t->getFunc())
-        return transform(N<StringExpr>(f->RecordType::realizedName()));
-      else
-        return transform(N<StringExpr>(t->realizedName()));
-    }
+    if (auto t = realize(expr->expr->type))
+      return transform(N<StringExpr>(t->realizedName()));
     return nullptr;
   }
   expr->expr = transform(expr->expr, true);
@@ -960,36 +956,29 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     return transform(newCall, false, allowVoidExpr);
   }
 
-  auto calleeFn = expr->expr->getType()->getRecord();
-  FunctionStmt *ast = nullptr;
-  if (auto fn = calleeFn->getFunc())
-    ast = ctx->cache->functions[fn->funcName].ast.get();
+  auto calleeFn = expr->expr->getType()->getFunc();
+  FunctionStmt *ast = ctx->cache->functions[calleeFn->funcName].ast.get();
 
   // Handle named and default arguments
   vector<CallExpr::Arg> args;
-  map<int, int> argIndex;
   ctx->reorderNamedArgs(
-      calleeFn.get(), "", expr->args,
-      [&](const map<int, int> &aIdx, int starArgIndex, int kwstarArgIndex,
-          const vector<vector<int>> &slots) {
-        argIndex = aIdx;
-        if (ast) { // add generics for default arguments.
-          ctx->addBlock();
-          addFunctionGenerics(calleeFn->getFunc().get());
-        }
-        for (auto &ai : argIndex) {
-          if (ai.first == starArgIndex) {
+      calleeFn.get(), expr->args,
+      [&](int starArgIndex, int kwstarArgIndex, const vector<vector<int>> &slots) {
+        ctx->addBlock(); // add generics for default arguments.
+        addFunctionGenerics(calleeFn->getFunc().get());
+        for (int si = 0; si < slots.size(); si++) {
+          if (si == starArgIndex) {
             vector<ExprPtr> extra;
-            for (auto &e : slots[ai.second]) {
+            for (auto &e : slots[si]) {
               if (expr->args[e].value->getEllipsis())
                 error(expr->args[e].value, "cannot pass an ellipsis to *args");
               extra.push_back(move(expr->args[e].value));
             }
             args.push_back({"", transform(N<TupleExpr>(move(extra)))});
-          } else if (ai.first == kwstarArgIndex) {
+          } else if (si == kwstarArgIndex) {
             vector<string> names;
             vector<CallExpr::Arg> values;
-            for (auto &e : slots[ai.second]) {
+            for (auto &e : slots[si]) {
               if (expr->args[e].value->getEllipsis())
                 error(expr->args[e].value, "cannot pass an ellipsis to **kwargs");
               names.emplace_back(expr->args[e].name);
@@ -997,20 +986,19 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
             }
             auto name = generateTupleStub(names.size(), "KwTuple", names);
             args.push_back({"", transform(N<CallExpr>(N<IdExpr>(name), move(values)))});
-          } else if (slots[ai.first].empty()) {
-            auto es = ast->args[ai.first].deflt->toString();
+          } else if (slots[si].empty()) {
+            auto es = ast->args[si].deflt->toString();
             if (in(ctx->defaultCallDepth, es))
               error("recursive default arguments");
             ctx->defaultCallDepth.insert(es);
-            args.push_back({"", transform(clone(ast->args[ai.first].deflt))});
+            args.push_back({"", transform(clone(ast->args[si].deflt))});
             ctx->defaultCallDepth.erase(es);
           } else {
-            seqassert(slots[ai.second].size() == 1, "call transformation failed");
-            args.push_back({"", move(expr->args[slots[ai.second][0]].value)});
+            seqassert(slots[si].size() == 1, "call transformation failed");
+            args.push_back({"", move(expr->args[slots[si][0]].value)});
           }
         }
-        if (ast)
-          ctx->popBlock();
+        ctx->popBlock();
         return 0;
       },
       [&](const string &errorMsg) {
@@ -1020,23 +1008,23 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
 
   // Form a new mask if this is a partial call
   string newMask;
-  for (auto &ai : argIndex)
-    if (args[ai.second].value->getEllipsis() &&
-        !args[ai.second].value->getEllipsis()->isPipeArg) {
+  for (int si = 0; si < calleeFn->args.size() - 1; si++)
+    if (args[si].value->getEllipsis() && !args[si].value->getEllipsis()->isPipeArg) {
       if (newMask.empty())
         newMask = string(calleeFn->args.size() - 1, '1');
-      newMask[ai.first] = '0';
+      newMask[si] = '0';
     }
 
   // Typecheck given arguments with the expected (signature) types.
   bool unificationsDone = true;
-  for (auto &ai : argIndex) {
-    auto expectedTyp = calleeFn->args[ai.first + 1];
+  vector<TypePtr> replacements(calleeFn->args.size() - 1, nullptr);
+  for (int si = 0; si < calleeFn->args.size() - 1; si++) {
+    auto expectedTyp = calleeFn->args[si + 1];
     auto expectedClass = expectedTyp->getClass();
-    auto argClass = args[ai.second].value->getType()->getClass();
+    auto argClass = args[si].value->getType()->getClass();
 
-    if (expectedClass &&
-        (expectedClass->isTrait || expectedClass->name == "Optional")) {
+    if (expectedClass && (expectedClass->isTrait || expectedClass->name == "Optional" ||
+                          expectedClass->name == "float")) {
       if (!argClass) {
         // Case 0: argument type not yet known.
         unificationsDone = false;
@@ -1044,89 +1032,126 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
                  argClass->name != expectedClass->name && !extraStage) {
         // Case 1: wrap expected generators with iter().
         // Note: do not do this in pipelines (TODO: why?).
-        args[ai.second].value =
-            transform(N<CallExpr>(N<DotExpr>(move(args[ai.second].value), "__iter__")));
-        args[ai.second].value->type |= expectedClass;
+        args[si].value =
+            transform(N<CallExpr>(N<DotExpr>(move(args[si].value), "__iter__")));
+        args[si].value->type |= expectedClass;
+      } else if (expectedClass->name == "float" && argClass &&
+                 argClass->name == "int") {
+        // Case 2: wrap ints with float().
+        if (extraStage && args[si].value->getEllipsis()) {
+          // Check if this is a pipe call...
+          *extraStage = N<DotExpr>(N<IdExpr>("float"), "__new__");
+          return oldExpr;
+        }
+        args[si].value =
+            transform(N<CallExpr>(N<IdExpr>("float"), move(args[si].value)));
+        args[si].value->type |= expectedClass;
       } else if (expectedClass->name == "Optional" && argClass &&
                  argClass->name != expectedClass->name) {
-        // Case 2: wrap expected optionals with Optional().
-        if (extraStage && args[ai.second].value->getEllipsis()) {
+        // Case 3: wrap expected optionals with Optional().
+        if (extraStage && args[si].value->getEllipsis()) {
           // Check if this is a pipe call...
           *extraStage = N<DotExpr>(N<IdExpr>("Optional"), "__new__");
           return oldExpr;
         }
-        args[ai.second].value =
-            transform(N<CallExpr>(N<IdExpr>("Optional"), move(args[ai.second].value)));
-        args[ai.second].value->type |= expectedClass;
-      } else if (ast && startswith(expectedClass->name, "Callable.N") && argClass &&
-                 (!startswith(argClass->name, "Callable.N"))) {
-        // Case 3: allow any callable to match Function[] signature.
-        args[ai.second].value =
-            transform(N<DotExpr>(move(args[ai.second].value), "__call__"));
-        args[ai.second].value->type |= expectedTyp;
-        calleeFn->args[ai.first + 1] = args[ai.second].value->type;
+        args[si].value =
+            transform(N<CallExpr>(N<IdExpr>("Optional"), move(args[si].value)));
+        args[si].value->type |= expectedClass;
+      } else if (ast && startswith(expectedClass->name, "Callable.N")) {
+        // Case 4: allow any callable to match Callable[] signature.
+        if (argClass && !startswith(argClass->name, "Callable.N") &&
+            !startswith(argClass->name, "Partial.N")) {
+          args[si].value = transform(N<DotExpr>(move(args[si].value), "__call__"));
+        }
+        args[si].value->type |= expectedTyp;
       } else {
-        // Case 4: normal unification.
-        args[ai.second].value->type |= expectedTyp;
+        // Case 5: normal unification.
+        args[si].value->type |= expectedTyp;
       }
     } else if (expectedClass && argClass && argClass->name == "Optional" &&
                argClass->name != expectedClass->name) { // unwrap optional
-      // Case 5: Optional unwrapping.
-      if (extraStage && args[ai.second].value->getEllipsis()) {
+      // Case 6: Optional unwrapping.
+      if (extraStage && args[si].value->getEllipsis()) {
         *extraStage = N<IdExpr>("unwrap");
         return oldExpr;
       }
-      args[ai.second].value =
-          transform(N<CallExpr>(N<IdExpr>("unwrap"), move(args[ai.second].value)));
-      args[ai.second].value->type |= expectedTyp;
+      args[si].value =
+          transform(N<CallExpr>(N<IdExpr>("unwrap"), move(args[si].value)));
+      args[si].value->type |= expectedTyp;
     } else {
-      // Case 6: normal unification.
-      args[ai.second].value->type |= expectedTyp;
+      // Case 7: normal unification.
+      args[si].value->type |= expectedTyp;
     }
+    replacements[si] = args[si].value->type;
   }
 
   // Realize arguments.
   expr->done = true;
-  for (auto &ra : args) {
-    if (auto rt = realize(ra.value->type)) {
-      rt |= ra.value->type;
-      ra.value = transform(ra.value);
+  for (auto si = 0; si < args.size(); si++) {
+    if (auto rt = realize(args[si].value->type)) {
+      rt |= args[si].value->type;
+
+      auto expectedTyp = calleeFn->args[si + 1]->getRecord();
+      if (startswith(rt->getClass()->name, "Partial.N") && expectedTyp &&
+          startswith(expectedTyp->name, "Callable.N")) {
+        // We need to unify TR in Callable[TR, ...].
+        vector<pair<string, TypePtr>> callTypes;
+        callTypes.emplace_back(make_pair("", rt));
+        for (int i = 1; i < expectedTyp->getRecord()->args.size(); i++)
+          callTypes.emplace_back(make_pair("", expectedTyp->getRecord()->args[i]));
+        auto bestMethod =
+            ctx->findBestMethod(rt->getClass().get(), "__call__", callTypes);
+        seqassert(bestMethod, "cannot find a method '__call__' in {}", rt->toString());
+        bestMethod =
+            ctx->instantiate(getSrcInfo(), bestMethod, rt->getClass().get())->getFunc();
+        bestMethod = realize(bestMethod)->getFunc();
+        seqassert(bestMethod, "cannot realize partial {}", rt->toString());
+        expectedTyp->args[0] |= bestMethod->args[0];
+      }
+      args[si].value = transform(args[si].value);
     }
-    expr->done &= ra.value->done;
+    expr->done &= args[si].value->done;
   }
-  if (auto f = calleeFn->getFunc()) {
-    // Handle default generics (calleeFn.g. foo[S, T=int]) only if all arguments were
-    // unified.
-    if (unificationsDone)
-      for (int i = 0; i < f->funcGenerics.size(); i++)
-        if (ast->generics[i].deflt && f->funcGenerics[i].type->getUnbound()) {
-          auto deflt = clone(ast->generics[i].deflt);
-          if (deflt->getNone())
-            f->funcGenerics[i].type |=
-                ctx->instantiate(getSrcInfo(), ctx->findInternal("T.None"));
-          else
-            f->funcGenerics[i].type |= transformType(deflt)->getType();
-        }
-    if (auto rt = realize(f)) {
-      rt |= static_pointer_cast<Type>(calleeFn);
-      expr->expr = transform(expr->expr);
-    }
-    expr->done &= expr->expr->done;
+  // Handle default generics (calleeFn.g. foo[S, T=int]) only if all arguments were
+  // unified.
+  if (unificationsDone)
+    for (int i = 0; i < calleeFn->funcGenerics.size(); i++)
+      if (ast->generics[i].deflt && calleeFn->funcGenerics[i].type->getUnbound()) {
+        auto deflt = clone(ast->generics[i].deflt);
+        if (deflt->getNone())
+          calleeFn->funcGenerics[i].type |=
+              ctx->instantiate(getSrcInfo(), ctx->findInternal("T.None"));
+        else
+          calleeFn->funcGenerics[i].type |= transformType(deflt)->getType();
+      }
+  for (int si = 0; si < replacements.size(); si++)
+    if (replacements[si])
+      calleeFn->generics[si + 1].type = calleeFn->args[si + 1] = replacements[si];
+  if (auto rt = realize(calleeFn)) {
+    rt |= static_pointer_cast<Type>(calleeFn);
+    expr->expr = transform(expr->expr);
   }
+  expr->done &= expr->expr->done;
+
   // Emit the final call.
   if (!newMask.empty()) {
     // Case 1: partial call.
-    // Transform calleeFn(args...) to Partial.N<known>(calleeFn, args...).
-    auto partialType = generatePartialStub(newMask, calleeFn->getFunc().get());
+    // Transform calleeFn(args...) to Partial.N<known>.<calleeFn>(args...).
+    auto partialTypeName = generatePartialStub(newMask, calleeFn->getFunc().get());
     vector<ExprPtr> newArgs;
-    //    newArgs.push_back(move(expr->expr));
     for (auto &r : args)
       if (!r.value->getEllipsis())
         newArgs.push_back(move(r.value));
-    deactivateUnbounds(calleeFn.get());
+
+    vector<TypePtr> partialGenerics(calleeFn->args.begin() + 1, calleeFn->args.end());
+    auto partialNode = N<IdExpr>(partialTypeName);
+    partialNode->type = ctx->instantiateGeneric(
+        getSrcInfo(), ctx->find(partialTypeName)->type, partialGenerics);
+    //    deactivateUnbounds(calleeFn.get());
     deactivateUnbounds(calleeFn->args[0].get());
-    ExprPtr newCall = N<CallExpr>(N<IdExpr>(partialType), move(newArgs));
-    return transform(newCall, false, allowVoidExpr);
+    ExprPtr newCall = N<CallExpr>(move(partialNode), move(newArgs));
+    auto e = transform(newCall, false, allowVoidExpr);
+    return e;
   } else {
     // Case 2. Normal function call.
     expr->args = move(args);
@@ -1254,6 +1279,7 @@ string TypecheckVisitor::generateCallableStub(int n) {
   auto typeName = format("Callable.N{}", n);
   if (!ctx->find(typeName)) {
     auto baseType = make_shared<RecordType>(typeName);
+    baseType->isTrait = true;
     for (int i = 0; i <= n; i++) {
       baseType->generics.emplace_back(
           Generic(!i ? "TR" : format("T{}", i),
@@ -1301,33 +1327,13 @@ string TypecheckVisitor::generateFunctionStub(int n) {
                                                vector<string>{}));
     params.clear();
     stmts.clear();
-    // @llvm
     // def __new__(what: Function[TR, T1, ..., TN]) -> Function.N[TR, T1, ..., TN]:
-    //   ret {=TR}({=T1},...,{=TN})* %what)
+    //   return what
     params.emplace_back(Param{"what", clone(type)});
-    vector<string> llvmTypes;
-    for (int i = 1; i <= n; i++)
-      llvmTypes.emplace_back(format("{{=T{}}}", i));
-    stmts.push_back(N<ReturnStmt>(N<IdExpr>("what")));
-    fns.emplace_back(make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{},
-                                               move(params), N<SuiteStmt>(move(stmts)),
-                                               vector<string>{}));
+    fns.emplace_back(make_unique<FunctionStmt>(
+        "__new__", clone(type), vector<Param>{}, move(params),
+        N<SuiteStmt>(N<ReturnStmt>(N<IdExpr>("what"))), vector<string>{}));
     params.clear();
-    stmts.clear();
-    //    vector<string> llvmTypes;
-    //    for (int i = 1; i <= n; i++)
-    //      llvmTypes.emplace_back(format("{{=T{}}}", i));
-    //    stmts.push_back(
-    //        N<ExprStmt>(N<StringExpr>("ret {{=TR}}({})* %what", join(llvmTypes,
-    //        ","))));
-    //    LOG("{}", stmts[0]->toString());
-    //    fns.emplace_back(make_unique<FunctionStmt>("__new__", clone(type),
-    //    vector<Param>{},
-    //                                               move(params),
-    //                                               N<SuiteStmt>(move(stmts)),
-    //                                               vector<string>{ATTR_EXTERN_LLVM}));
-    //    params.clear();
-    //    stmts.clear();
     // def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]:
     //   return __internal__.fn_raw(self)
     params.emplace_back(Param{"self", clone(type)});
@@ -1404,13 +1410,12 @@ string TypecheckVisitor::generatePartialStub(const string &mask, types::FuncType
   auto typeName = format("Partial.N{}.{}", mask, fn->funcName);
   if (!ctx->find(typeName)) {
     /*
-     @tuple class Partial.N10001.name[T1, ... TX]:
-        preserved1: T1
-        preservedX: TX
-        def __call__(self, missing1, ..., missingN):
-          return name(missing1, preserved1, ..., missingN, preservedN)
+     @tuple class Partial.N10001.name[TP1, TM1, ... TPN]:
+        preserved1: TP1
+        preservedX: TPN
+        def __call__(self, missing1: TM1, ..., missingN: TMN):
+          return name(missing1, self.preserved1, ..., missingN, self.preservedN)
     */
-    //    LOG("generating {}", typeName);
     vector<Param> generics, args, missingArgs;
     vector<ExprPtr> callArgs;
     missingArgs.emplace_back(Param{"self", nullptr, nullptr});
@@ -1418,17 +1423,21 @@ string TypecheckVisitor::generatePartialStub(const string &mask, types::FuncType
     for (int ai = 0; ai < ast->args.size(); ai++) {
       auto name = ctx->cache->reverseIdentifierLookup[ast->args[ai].name];
       if (mask[ai] == '1') {
-        generics.emplace_back(Param{format("T{}", ai + 1), nullptr, nullptr});
-        args.emplace_back(Param{name, N<IdExpr>(format("T{}", ai + 1)), nullptr});
+        generics.emplace_back(Param{format("TP{}", ai + 1), nullptr, nullptr});
+        args.emplace_back(Param{name, N<IdExpr>(format("TP{}", ai + 1)), nullptr});
         callArgs.emplace_back(N<DotExpr>(N<IdExpr>("self"), name));
       } else {
-        missingArgs.emplace_back(Param{name, nullptr, clone(ast->args[ai].deflt)});
+        generics.emplace_back(Param{format("TM{}", ai + 1), nullptr, nullptr});
+        missingArgs.emplace_back(
+            Param{name, N<IdExpr>(format("TM{}", ai + 1)), clone(ast->args[ai].deflt)});
         callArgs.emplace_back(N<IdExpr>(name));
       }
     }
     auto call = N<CallExpr>(N<IdExpr>(fn->funcName), move(callArgs));
     StmtPtr callFunc = N<FunctionStmt>(
-        "__call__", nullptr, vector<Param>{}, move(missingArgs),
+        "__call__",
+        nullptr, //        N<IdExpr>("TR"),
+        vector<Param>{}, move(missingArgs),
         N<IfStmt>(N<CallExpr>(N<IdExpr>("isinstance"), clone(call), N<IdExpr>("void")),
                   N<ExprStmt>(clone(call)), nullptr, N<ReturnStmt>(clone(call))),
         vector<string>{});
