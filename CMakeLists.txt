@@ -162,6 +162,7 @@ set(SEQ_HPPFILES
         compiler/sir/util/context.h
         compiler/sir/util/iterators.h
         compiler/sir/util/lambda_visitor.h
+        compiler/sir/util/matching.h
         compiler/sir/util/visitor.h
         compiler/sir/value.h
         compiler/sir/var.h
@@ -237,6 +238,7 @@ set(SEQ_CPPFILES
         compiler/sir/transform/manager.cpp
         compiler/sir/transform/pipeline.cpp
         compiler/sir/types/types.cpp
+        compiler/sir/util/matching.cpp
         compiler/sir/util/visitor.cpp
         compiler/sir/value.cpp
         compiler/sir/var.cpp
@@ -295,7 +297,7 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
         ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
         EXCLUDE_FROM_ALL)
 
-add_executable(seqtest test/main.cpp test/types.cpp)
+add_executable(seqtest test/main.cpp test/sir.cpp test/types.cpp)
 target_include_directories(seqtest PRIVATE ${SEQ_DEP}/include)
 target_link_libraries(seqtest seq gtest_main)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")

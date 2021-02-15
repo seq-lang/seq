@@ -88,11 +88,6 @@ public:
   /// @return true if the type is atomic
   bool isAtomic() const { return getActual()->doIsAtomic(); }
 
-  /// Compares types.
-  /// @param other the other type
-  /// @return true if the types are equivalent
-  bool equals(const Type *other) const { return getActual()->doEquals(other); }
-
   /// @return the ast type
   ast::types::TypePtr getAstType() { return astType; }
   /// @return the ast type
@@ -110,9 +105,6 @@ private:
   virtual int doReplaceUsedType(const std::string &name, Type *newType) { return 0; }
 
   virtual bool doIsAtomic() const = 0;
-  virtual bool doEquals(const Type *other) const {
-    return getName() == other->getName();
-  }
 };
 
 /// Type from which primitive atomic types derive.
@@ -302,7 +294,6 @@ private:
     return !std::any_of(fields.begin(), fields.end(),
                         [](auto &field) { return !field.getType()->isAtomic(); });
   }
-  bool doEquals(const Type *other) const override;
 };
 
 /// Membered type that is passed by reference. Similar to Python classes.
@@ -360,9 +351,6 @@ private:
   int doReplaceUsedType(const std::string &name, Type *newType) override;
 
   bool doIsAtomic() const override { return false; }
-  bool doEquals(const Type *other) const override {
-    return isA<RefType>(other) && contents->equals(cast<RefType>(other)->getContents());
-  }
 };
 
 /// Type associated with a SIR function.
@@ -421,7 +409,6 @@ private:
   int doReplaceUsedType(const std::string &name, Type *newType) override;
 
   bool doIsAtomic() const override { return false; }
-  bool doEquals(const Type *other) const override;
 };
 
 /// Base for simple derived types.
@@ -467,10 +454,6 @@ public:
 
 private:
   bool doIsAtomic() const override { return false; }
-  bool doEquals(const Type *other) const override {
-    return isA<PointerType>(other) &&
-           getBase()->equals(cast<DerivedType>(other)->getBase());
-  }
 };
 
 /// Type of an optional containing another SIR type
@@ -486,10 +469,6 @@ public:
 
 private:
   bool doIsAtomic() const override { return getBase()->isAtomic(); }
-  bool doEquals(const Type *other) const override {
-    return isA<OptionalType>(other) &&
-           getBase()->equals(cast<DerivedType>(other)->getBase());
-  }
 };
 
 /// Type of an array containing another SIR type
@@ -531,10 +510,6 @@ public:
 
 private:
   bool doIsAtomic() const override { return false; }
-  bool doEquals(const Type *other) const override {
-    return isA<GeneratorType>(other) &&
-           getBase()->equals(cast<DerivedType>(other)->getBase());
-  }
 };
 
 /// Type of a variably sized integer
@@ -575,7 +550,6 @@ public:
 
 private:
   bool doIsAtomic() const override { return true; }
-  bool doEquals(const Type *other) const override;
 };
 
 } // namespace types
