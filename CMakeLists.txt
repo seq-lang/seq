@@ -303,7 +303,9 @@ set(SEQ_TEST_CPPFILES
         test/sir/func.cpp
         test/sir/instr.cpp
         test/sir/module.cpp
-        test/sir/transform/pass.cpp
+        test/sir/transform/manager.cpp
+        test/sir/types/types.cpp
+        test/sir/util/matching.cpp
         test/sir/value.cpp
         test/sir/var.cpp
         test/types.cpp)

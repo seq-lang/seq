@@ -363,7 +363,8 @@ std::ostream &ThrowInstr::doFormat(std::ostream &os) const {
 }
 
 Value *ThrowInstr::doClone() const {
-  return getModule()->N<ThrowInstr>(getSrcInfo(), value ? value->clone() : nullptr, getName());
+  return getModule()->N<ThrowInstr>(getSrcInfo(), value ? value->clone() : nullptr,
+                                    getName());
 }
 
 const char FlowInstr::NodeId = 0;

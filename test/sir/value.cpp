@@ -2,7 +2,7 @@
 
 using namespace seq::ir;
 
-TEST_F(SIRTest, ValueQueryMethodsDelegate) {
+TEST_F(SIRCoreTest, ValueQueryMethodsDelegate) {
   Value *original = module->Nr<IntConstant>(1, module->getIntType(), "foo");
   auto originalRef = original->referenceString();
 
@@ -30,7 +30,7 @@ TEST_F(SIRTest, ValueQueryMethodsDelegate) {
   ASSERT_EQ(1, original->getUsedTypes().size());
 }
 
-TEST_F(SIRTest, ValueReplaceMethodsDelegate) {
+TEST_F(SIRCoreTest, ValueReplaceMethodsDelegate) {
   Value *original = module->Nr<IntConstant>(1, module->getIntType(), "foo");
   auto originalRef = original->referenceString();
 

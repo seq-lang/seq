@@ -7,12 +7,12 @@
 
 using namespace seq::ir;
 
-TEST_F(SIRTest, FlowTypeIsVoid) {
+TEST_F(SIRCoreTest, FlowTypeIsVoid) {
   auto *f = module->Nr<SeriesFlow>();
   ASSERT_EQ(module->getVoidType(), f->getType());
 }
 
-TEST_F(SIRTest, SeriesFlowInsertionEraseAndIterators) {
+TEST_F(SIRCoreTest, SeriesFlowInsertionEraseAndIterators) {
   auto FIRST_VALUE = 2;
   auto SECOND_VALUE = 1;
 
@@ -30,7 +30,7 @@ TEST_F(SIRTest, SeriesFlowInsertionEraseAndIterators) {
   ASSERT_EQ(SECOND_VALUE, cast<IntConstant>(*f->begin())->getVal());
 }
 
-TEST_F(SIRTest, SeriesFlowQueryAndReplace) {
+TEST_F(SIRCoreTest, SeriesFlowQueryAndReplace) {
   auto FIRST_VALUE = 2;
   auto SECOND_VALUE = 1;
 
@@ -48,7 +48,7 @@ TEST_F(SIRTest, SeriesFlowQueryAndReplace) {
   ASSERT_EQ(1, f->replaceUsedValue(contents[0], contents[1]));
 }
 
-TEST_F(SIRTest, SeriesFlowCloning) {
+TEST_F(SIRCoreTest, SeriesFlowCloning) {
   auto FIRST_VALUE = 2;
   auto SECOND_VALUE = 1;
 
@@ -59,7 +59,7 @@ TEST_F(SIRTest, SeriesFlowCloning) {
   ASSERT_TRUE(util::match(f, f->clone()));
 }
 
-TEST_F(SIRTest, WhileFlowQueryAndReplace) {
+TEST_F(SIRCoreTest, WhileFlowQueryAndReplace) {
   auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
   auto *body = module->Nr<SeriesFlow>();
   auto *f = module->Nr<WhileFlow>(cond, body);
@@ -85,14 +85,14 @@ TEST_F(SIRTest, WhileFlowQueryAndReplace) {
       std::equal(usedValues.begin(), usedValues.end(), queried.begin(), queried.end()));
 }
 
-TEST_F(SIRTest, WhileFlowCloning) {
+TEST_F(SIRCoreTest, WhileFlowCloning) {
   auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
   auto *body = module->Nr<SeriesFlow>();
   auto *f = module->Nr<WhileFlow>(cond, body);
   ASSERT_TRUE(util::match(f, f->clone()));
 }
 
-TEST_F(SIRTest, ForFlowQueryAndReplace) {
+TEST_F(SIRCoreTest, ForFlowQueryAndReplace) {
   auto *iter = module->Nr<StringConstant>("hi", module->getStringType());
   auto *body = module->Nr<SeriesFlow>();
   auto *var = module->Nr<Var>(module->getStringType(), false, "x");
@@ -124,7 +124,7 @@ TEST_F(SIRTest, ForFlowQueryAndReplace) {
   ASSERT_NE(var, f->getVar());
 }
 
-TEST_F(SIRTest, ForFlowCloning) {
+TEST_F(SIRCoreTest, ForFlowCloning) {
   auto *iter = module->Nr<StringConstant>("hi", module->getStringType());
   auto *body = module->Nr<SeriesFlow>();
   auto *var = module->Nr<Var>(module->getStringType(), false, "x");
@@ -133,7 +133,7 @@ TEST_F(SIRTest, ForFlowCloning) {
   ASSERT_TRUE(util::match(f, f->clone()));
 }
 
-TEST_F(SIRTest, IfFlowQueryAndReplace) {
+TEST_F(SIRCoreTest, IfFlowQueryAndReplace) {
   auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
   auto *tBody = module->Nr<SeriesFlow>();
   auto *fBody = module->Nr<SeriesFlow>();
@@ -176,7 +176,7 @@ TEST_F(SIRTest, IfFlowQueryAndReplace) {
       std::equal(usedValues.begin(), usedValues.end(), qVal.begin(), qVal.end()));
 }
 
-TEST_F(SIRTest, IfFlowCloning) {
+TEST_F(SIRCoreTest, IfFlowCloning) {
   auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
   auto *tBody = module->Nr<SeriesFlow>();
   auto *fBody = module->Nr<SeriesFlow>();
@@ -185,7 +185,7 @@ TEST_F(SIRTest, IfFlowCloning) {
   ASSERT_TRUE(util::match(f, f->clone()));
 }
 
-TEST_F(SIRTest, TryCatchFlowSingleCatchQueryAndReplace) {
+TEST_F(SIRCoreTest, TryCatchFlowSingleCatchQueryAndReplace) {
   auto *body = module->Nr<SeriesFlow>();
   auto *finally = module->Nr<SeriesFlow>();
   auto *f = module->Nr<TryCatchFlow>(body, finally);

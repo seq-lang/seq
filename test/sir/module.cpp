@@ -4,7 +4,7 @@
 
 using namespace seq::ir;
 
-TEST_F(SIRTest, ModuleNodeBuildingRemovalAndIterators) {
+TEST_F(SIRCoreTest, ModuleNodeBuildingRemovalAndIterators) {
   {
     auto n1 = module->Nr<types::OptionalType>(module->getIntType());
     ASSERT_EQ(n1->getModule(), module.get());
@@ -33,7 +33,7 @@ TEST_F(SIRTest, ModuleNodeBuildingRemovalAndIterators) {
   }
 }
 
-TEST_F(SIRTest, ModuleMainFunctionAndArgVar) {
+TEST_F(SIRCoreTest, ModuleMainFunctionAndArgVar) {
   auto *main = module->getMainFunc();
   ASSERT_TRUE(main);
   auto *mainType = cast<types::FuncType>(main->getType());
@@ -50,7 +50,7 @@ TEST_F(SIRTest, ModuleMainFunctionAndArgVar) {
   ASSERT_FALSE(argVar->isReplaceable());
 }
 
-TEST_F(SIRTest, ModuleTypeGetAndLookup) {
+TEST_F(SIRCoreTest, ModuleTypeGetAndLookup) {
   auto TYPE_NAME = "**test_type**";
   auto *newType = module->getMemberedType(TYPE_NAME);
   ASSERT_TRUE(isA<types::RecordType>(newType));

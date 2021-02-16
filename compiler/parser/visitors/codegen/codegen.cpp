@@ -109,24 +109,20 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
           if (std::isdigit(name[0])) // TODO: get rid of this hack
             name = names[names.size() - 2];
           LOG_REALIZE("[codegen] generating internal fn {} -> {}", ast->name, name);
-          auto *fn =
-              module->Nr<seq::ir::InternalFunc>(ast->name);
+          auto *fn = module->Nr<seq::ir::InternalFunc>(ast->name);
           fn->setParentType(typ);
           fn->setGlobal();
           ctx->functions[f.first] = {fn, false};
         } else if (in(ast->attributes, "llvm")) {
-          auto *fn =
-              module->Nr<seq::ir::LLVMFunc>(ast->name);
+          auto *fn = module->Nr<seq::ir::LLVMFunc>(ast->name);
           ctx->functions[f.first] = {fn, false};
           fn->setGlobal();
         } else if (in(ast->attributes, ".c")) {
-          auto *fn =
-              module->Nr<seq::ir::ExternalFunc>(ast->name);
+          auto *fn = module->Nr<seq::ir::ExternalFunc>(ast->name);
           ctx->functions[f.first] = {fn, false};
           fn->setGlobal();
         } else {
-          auto *fn =
-              module->Nr<seq::ir::BodiedFunc>(ast->name);
+          auto *fn = module->Nr<seq::ir::BodiedFunc>(ast->name);
           ctx->functions[f.first] = {fn, false};
 
           if (in(ast->attributes, ATTR_FORCE_REALIZE)) {

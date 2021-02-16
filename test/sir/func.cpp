@@ -6,7 +6,7 @@
 
 using namespace seq::ir;
 
-TEST_F(SIRTest, FuncRealizationAndVarInsertionEraseAndIterators) {
+TEST_F(SIRCoreTest, FuncRealizationAndVarInsertionEraseAndIterators) {
   auto *fn = module->Nr<BodiedFunc>();
   fn->realize(module->getDummyFuncType(), {});
 
@@ -29,7 +29,7 @@ TEST_F(SIRTest, FuncRealizationAndVarInsertionEraseAndIterators) {
   ASSERT_EQ(module->getIntType(), fn->front()->getType());
 }
 
-TEST_F(SIRTest, BodiedFuncQueryAndReplace) {
+TEST_F(SIRCoreTest, BodiedFuncQueryAndReplace) {
   auto *fn = module->Nr<BodiedFunc>();
   fn->realize(module->getDummyFuncType(), {});
   fn->setBuiltin();
@@ -52,13 +52,13 @@ TEST_F(SIRTest, BodiedFuncQueryAndReplace) {
   ASSERT_NE(fn->getBody(), body);
 }
 
-TEST_F(SIRTest, BodiedFuncUnmangledName) {
+TEST_F(SIRCoreTest, BodiedFuncUnmangledName) {
   auto *fn = module->Nr<BodiedFunc>("Int.foo");
   fn->realize(module->getDummyFuncType(), {});
   ASSERT_EQ("foo", fn->getUnmangledName());
 }
 
-TEST_F(SIRTest, BodiedFuncCloning) {
+TEST_F(SIRCoreTest, BodiedFuncCloning) {
   auto *fn = module->Nr<BodiedFunc>("fn");
   fn->realize(module->getDummyFuncType(), {});
 
@@ -67,7 +67,7 @@ TEST_F(SIRTest, BodiedFuncCloning) {
   ASSERT_TRUE(util::match(fn, fn->clone()));
 }
 
-TEST_F(SIRTest, ExternalFuncUnmangledNameAndCloning) {
+TEST_F(SIRCoreTest, ExternalFuncUnmangledNameAndCloning) {
   auto *fn = module->Nr<ExternalFunc>("fn");
   fn->realize(module->getDummyFuncType(), {});
 
@@ -76,7 +76,7 @@ TEST_F(SIRTest, ExternalFuncUnmangledNameAndCloning) {
   ASSERT_TRUE(util::match(fn, fn->clone()));
 }
 
-TEST_F(SIRTest, InternalFuncParentTypeUnmangledNameAndCloning) {
+TEST_F(SIRCoreTest, InternalFuncParentTypeUnmangledNameAndCloning) {
   auto *fn = module->Nr<InternalFunc>("fn.1");
   fn->realize(module->getDummyFuncType(), {});
 
@@ -86,7 +86,7 @@ TEST_F(SIRTest, InternalFuncParentTypeUnmangledNameAndCloning) {
   ASSERT_TRUE(util::match(fn, fn->clone()));
 }
 
-TEST_F(SIRTest, LLVMFuncUnmangledNameQueryAndReplace) {
+TEST_F(SIRCoreTest, LLVMFuncUnmangledNameQueryAndReplace) {
   auto *fn = module->Nr<LLVMFunc>("fn");
   fn->realize(module->getDummyFuncType(), {});
 

@@ -19,7 +19,7 @@ public:
 
 using namespace seq::ir;
 
-TEST_F(SIRTest, IRNodeNoReplacementRTTI) {
+TEST_F(SIRCoreTest, IRNodeNoReplacementRTTI) {
   auto *derived = module->Nr<IntConstant>(1, module->getIntType());
   ASSERT_TRUE(derived);
   ASSERT_FALSE(derived->hasReplacement());
@@ -35,7 +35,7 @@ TEST_F(SIRTest, IRNodeNoReplacementRTTI) {
   ASSERT_TRUE(cast<Constant>(constBase));
 }
 
-TEST_F(SIRTest, IRNodeNoReplacementAttributes) {
+TEST_F(SIRCoreTest, IRNodeNoReplacementAttributes) {
   auto *node = module->Nr<IntConstant>(1, module->getIntType());
   ASSERT_FALSE(node->hasReplacement());
   ASSERT_FALSE(node->hasAttribute<FuncAttribute>());
@@ -45,7 +45,7 @@ TEST_F(SIRTest, IRNodeNoReplacementAttributes) {
   ASSERT_EQ(1, std::distance(node->attributes_begin(), node->attributes_end()));
 }
 
-TEST_F(SIRTest, IRNodeReplacementRTTI) {
+TEST_F(SIRCoreTest, IRNodeReplacementRTTI) {
   Value *node = module->Nr<IntConstant>(1, module->getIntType());
   ASSERT_TRUE(node);
   ASSERT_FALSE(node->hasReplacement());
@@ -58,7 +58,7 @@ TEST_F(SIRTest, IRNodeReplacementRTTI) {
   ASSERT_TRUE(cast<BoolConstant>(node));
 }
 
-TEST_F(SIRTest, IRNodeReplacementDelegates) {
+TEST_F(SIRCoreTest, IRNodeReplacementDelegates) {
   auto NODE_NAME = "foo";
 
   Value *originalNode = module->Nr<IntConstant>(1, module->getIntType());
@@ -83,7 +83,7 @@ TEST_F(SIRTest, IRNodeReplacementDelegates) {
   newNode->accept(v2);
 }
 
-TEST_F(SIRTest, IRNodeNonReplaceableFails) {
+TEST_F(SIRCoreTest, IRNodeNonReplaceableFails) {
   Value *originalNode = module->Nr<IntConstant>(1, module->getIntType());
   originalNode->setReplaceable(false);
   ASSERT_DEATH(originalNode->replaceAll(originalNode), "");

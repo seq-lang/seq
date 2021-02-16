@@ -8,8 +8,7 @@ namespace ir {
 
 class Func;
 
-class Value : public ReplaceableNodeBase<Value>,
-              public IdMixin {
+class Value : public ReplaceableNodeBase<Value>, public IdMixin {
 public:
   static const char NodeId;
 
@@ -46,7 +45,9 @@ public:
   }
   using IRNode::replaceUsedType;
 
-  std::vector<Var *> getUsedVariables() final { return getActual()->doGetUsedVariables(); }
+  std::vector<Var *> getUsedVariables() final {
+    return getActual()->doGetUsedVariables();
+  }
   std::vector<const Var *> getUsedVariables() const final {
     auto ret = getActual()->doGetUsedVariables();
     return std::vector<const Var *>(ret.begin(), ret.end());
