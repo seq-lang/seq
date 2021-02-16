@@ -26,7 +26,7 @@ public:
   /// @param type the function's type
   /// @param name the function's name
   explicit Func(types::Type *type, std::string name = "")
-      : AcceptorExtend(type, false, std::move(name)), generator(false) {}
+      : AcceptorExtend(type, /*global=*/true, std::move(name)), generator(false) {}
 
   /// Re-initializes the function with a new type and names.
   /// @param newType the function's new type
