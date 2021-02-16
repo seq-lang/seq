@@ -621,12 +621,11 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
         }
 
         auto *body = newScope(stmt, "body");
-        ctx->addSeries(body, f);
-        transform(ast->suite);
-        ctx->popSeries();
-
         auto *bodied = cast<ir::BodiedFunc>(f);
         assert(bodied);
+        ctx->addSeries(body, bodied);
+        transform(ast->suite);
+        ctx->popSeries();
 
         bodied->setBody(body);
         ctx->popScope();

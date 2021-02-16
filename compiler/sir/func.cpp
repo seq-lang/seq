@@ -91,13 +91,11 @@ Var *Func::getArgVar(const std::string &n) {
 
 std::vector<Var *> Func::doGetUsedVariables() const {
   std::vector<Var *> ret(args.begin(), args.end());
-  ret.insert(ret.end(), symbols.begin(), symbols.end());
   return ret;
 }
 
 int Func::doReplaceUsedVariable(int id, Var *newVar) {
-  auto count = findAndReplace(id, newVar, args);
-  return count + findAndReplace(id, newVar, symbols);
+  return findAndReplace(id, newVar, args);
 }
 
 const char BodiedFunc::NodeId = 0;
@@ -160,6 +158,16 @@ int BodiedFunc::doReplaceUsedValue(int id, Value *newValue) {
   return 0;
 }
 
+std::vector<Var *> BodiedFunc::doGetUsedVariables() const {
+  auto ret = Func::doGetUsedVariables();
+  ret.insert(ret.end(), symbols.begin(), symbols.end());
+  return ret;
+}
+
+int BodiedFunc::doReplaceUsedVariable(int id, Var *newVar) {
+  return Func::doReplaceUsedVariable(id, newVar) + findAndReplace(id, newVar, symbols);
+}
+
 const char ExternalFunc::NodeId = 0;
 
 Var *ExternalFunc::doClone() const {
@@ -168,8 +176,6 @@ Var *ExternalFunc::doClone() const {
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
-  for (auto *var : symbols)
-    ret->push_back(var->clone());
   ret->setGenerator(isGenerator());
   ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
                argNames);
@@ -201,8 +207,6 @@ Var *InternalFunc::doClone() const {
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
-  for (auto *var : symbols)
-    ret->push_back(var->clone());
   ret->setGenerator(isGenerator());
   ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
                argNames);
@@ -256,8 +260,6 @@ Var *LLVMFunc::doClone() const {
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
-  for (auto *var : symbols)
-    ret->push_back(var->clone());
   ret->setGenerator(isGenerator());
   ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
                argNames);

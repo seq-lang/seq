@@ -42,7 +42,10 @@ public:
   void handle(const Func *x, const Func *y) {}
   VISIT(BodiedFunc);
   void handle(const BodiedFunc *x, const BodiedFunc *y) {
-    result = compareFuncs(x, y) && process(x->getBody(), y->getBody());
+    result = compareFuncs(x, y) &&
+             std::equal(x->begin(), x->end(), y->begin(), y->end(),
+                        [this](auto *x, auto *y) { return process(x, y); }) &&
+             process(x->getBody(), y->getBody());
   }
   VISIT(ExternalFunc);
   void handle(const ExternalFunc *x, const ExternalFunc *y) {
@@ -289,10 +292,6 @@ private:
       return false;
 
     if (!std::equal(x->arg_begin(), x->arg_end(), y->arg_begin(), y->arg_end(),
-                    [this](auto *x, auto *y) { return process(x, y); }))
-      return false;
-
-    if (!std::equal(x->begin(), x->end(), y->begin(), y->arg_end(),
                     [this](auto *x, auto *y) { return process(x, y); }))
       return false;
 
