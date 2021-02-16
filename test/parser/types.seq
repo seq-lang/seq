@@ -692,3 +692,23 @@ test('hi', foo, lambda x: x+1) #: hi [2, 3, 4, 5]
 # def foof(l: List[int], x, f: Callable[int, int]):
 #     return [f(i)+x for i in l]
 # test('qsort', foof(..., 3, ...))
+
+#%% class_fn_access,barebones
+class X[T]:
+    def foo[U](self, x: T, y: U):
+        return (x+x, y+y)
+y = X[X[int]]()
+print y.__class__ #: X[X[int]]
+print X[float].foo[int].__class__ #: X[float]:X.foo[int;X[float],float,int]
+# print y.foo[float].__class__
+print X[int]().foo(1, 's') #: (2, ss)
+
+#%% class_partial_access_err,barebones
+# TODO: propagate instatitation to partial functions!
+class X[T]:
+    # TODO: def foo[U](self, x: T, y: U) fails because T does not propagate: fix it!
+    def foo[U](self, x, y: U):
+        return (x+x, y+y)
+y = X[X[int]]()
+print y.foo[float].__class__ #! ERROR: cannot unify X[X[int]] and float
+

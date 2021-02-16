@@ -345,7 +345,7 @@ def foo(i, j, k):
     return i + j + k
 print foo(1.1, 2.2, 3.3)  #: 6.6
 p = foo(6, ..., ...)
-print p.__class__ #: Partial.N100.foo[int,int,int]
+print p.__class__ #: Partial.N100.foo[int]
 print p(2, 1)  #: 9
 print p(k=3, j=6) #: 15
 q = p(..., 1)
@@ -359,11 +359,11 @@ print 42 |> add_two  #: 44
 def moo(a, b, c=3):
     print a, b, c
 m = moo(..., 2, ...)
-print m.__class__ #: Partial.N010.moo[str,int,float]
+print m.__class__ #: Partial.N010.moo[int]
 m('s', 1.1) #: s 2 1.1
 
 n = m(c=2.2, a=...)
-print n.__class__ #: Partial.N101.Partial.N010.moo.__call__[Partial.N010.moo[str,int,float],str,float]
+print n.__class__ #: Partial.N101.Partial.N010.moo.__call__[Partial.N010.moo[int],float]
 n('x') #: x 2 2.2
 print n('y').__class__ #: void
 
@@ -372,9 +372,11 @@ def ff(a, b, c):
 print ff(1.1, 2, True).__class__ #: Tuple.N3[float,int,bool]
 print ff(1.1, ..., ...)(2, True).__class__ #: Tuple.N3[float,int,bool]
 y = ff(1.1, ..., ...)(..., True)
-print y.__class__ #: Partial.N101.Partial.N100.ff.__call__[Partial.N100.ff[float,str,bool],str,bool]
+print y.__class__ #: Partial.N101.Partial.N100.ff.__call__[Partial.N100.ff[float],bool]
 print ff(1.1, ..., ...)(2, ...)(True).__class__ #: Tuple.N3[float,int,bool]
 print y('hei').__class__ #: Tuple.N3[float,str,bool]
+z = ff(1.1, ..., ...)(..., True)
+print z.__class__ #: Partial.N101.Partial.N100.ff.__call__[Partial.N100.ff[float],bool]
 
 #%% call_arguments_partial,barebones
 def doo[R, T](a: Callable[R, T], b: Generator[T], c: Optional[T], d: T):
@@ -399,7 +401,7 @@ l = [1]
 def adder(a, b): return a+b
 doo(b=l, d=Optional(5), c=l[0], a=adder(..., 4))
 #: int int
-#: Partial.N01.adder[int,int] Generator[int]
+#: Partial.N01.adder[int] Generator[int]
 #: 5
 #: 1 Optional[int]
 #: 5 int
