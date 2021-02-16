@@ -14,6 +14,7 @@ class LLVMVisitor;
 namespace dsl {
 namespace codegen {
 
+/// Builder for LLVM types.
 struct TypeBuilder {
   virtual ~TypeBuilder() noexcept = default;
 
@@ -21,6 +22,7 @@ struct TypeBuilder {
   virtual llvm::DIType *buildDebugType(LLVMVisitor *visitor) = 0;
 };
 
+/// Builder for LLVM values.
 struct ValueBuilder {
   virtual ~ValueBuilder() noexcept = default;
 

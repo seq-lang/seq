@@ -7,6 +7,10 @@
 namespace seq {
 namespace ir {
 
+int IdMixin::currentId = 0;
+
+void IdMixin::resetId() { currentId = 0; }
+
 const char IRNode::NodeId = 0;
 
 int IRNode::replaceUsedValue(Value *old, Value *newValue) {
@@ -20,10 +24,6 @@ int IRNode::replaceUsedType(types::Type *old, types::Type *newType) {
 int IRNode::replaceUsedVariable(Var *old, Var *newVar) {
   return replaceUsedVariable(old->getId(), newVar);
 }
-
-int IdMixin::currentId = 0;
-
-void IdMixin::resetId() { currentId = 0; }
 
 } // namespace ir
 } // namespace seq

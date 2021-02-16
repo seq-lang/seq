@@ -239,4 +239,4 @@ public:
 #undef DEFAULT_VISIT
 #undef CONST_DEFAULT_VISIT
 #undef VISIT
-#undef DEFAULT_VISIT
+#undef CONST_VISIT

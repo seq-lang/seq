@@ -61,7 +61,7 @@ public:
   /// Constructs an SIR module.
   /// @param name the module name
   /// @param cache the type-checker cache
-  explicit IRModule(std::string name, std::shared_ptr<ast::Cache> cache);
+  explicit IRModule(std::string name, std::shared_ptr<ast::Cache> cache = nullptr);
 
   /// @return the main function
   Func *getMainFunc() { return mainFunc.get(); }
