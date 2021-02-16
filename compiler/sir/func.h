@@ -22,16 +22,15 @@ protected:
 public:
   static const char NodeId;
 
-  /// Constructs an SIR function.
-  /// @param type the function's type
+  /// Constructs an unrealized SIR function.
   /// @param name the function's name
-  explicit Func(types::Type *type, std::string name = "")
-      : AcceptorExtend(type, true, std::move(name)), generator(false) {}
+  explicit Func(std::string name = "")
+      : AcceptorExtend(nullptr, true, std::move(name)), generator(false) {}
 
   /// Re-initializes the function with a new type and names.
   /// @param newType the function's new type
   /// @param names the function's new argument names
-  void realize(types::FuncType *newType, const std::vector<std::string> &names);
+  void realize(types::Type *newType, const std::vector<std::string> &names);
 
   /// @return iterator to the first arg
   auto arg_begin() { return args.begin(); }

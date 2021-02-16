@@ -7,10 +7,11 @@
 using namespace seq::ir;
 
 TEST_F(SIRTest, FuncRealizationAndVarInsertionEraseAndIterators) {
-  auto *fn = module->Nr<BodiedFunc>(module->getDummyFuncType(), "fn");
+  auto *fn = module->Nr<BodiedFunc>();
+  fn->realize(module->getDummyFuncType(), {});
 
-  auto *fnType = module->getFuncType("**test_type**",
-                                     module->getIntType(), {module->getIntType()});
+  auto *fnType = module->getFuncType("**test_type**", module->getIntType(),
+                                     {module->getIntType()});
   std::vector<std::string> names = {"foo"};
   fn->realize(cast<types::FuncType>(fnType), names);
   ASSERT_TRUE(fn->isGlobal());
@@ -28,8 +29,9 @@ TEST_F(SIRTest, FuncRealizationAndVarInsertionEraseAndIterators) {
   ASSERT_EQ(module->getIntType(), fn->front()->getType());
 }
 
-TEST_F(SIRTest, BodiedFuncQueryAndPhysicalReplace) {
-  auto *fn = module->Nr<BodiedFunc>(module->getDummyFuncType(), "fn");
+TEST_F(SIRTest, BodiedFuncQueryAndReplace) {
+  auto *fn = module->Nr<BodiedFunc>();
+  fn->realize(module->getDummyFuncType(), {});
   fn->setBuiltin();
   ASSERT_TRUE(fn->isBuiltin());
 
@@ -51,38 +53,48 @@ TEST_F(SIRTest, BodiedFuncQueryAndPhysicalReplace) {
 }
 
 TEST_F(SIRTest, BodiedFuncUnmangledName) {
-  auto *fn = module->Nr<BodiedFunc>(module->getDummyFuncType(), "Int.foo");
+  auto *fn = module->Nr<BodiedFunc>("Int.foo");
+  fn->realize(module->getDummyFuncType(), {});
   ASSERT_EQ("foo", fn->getUnmangledName());
 }
 
 TEST_F(SIRTest, BodiedFuncCloning) {
-  auto *fn = module->Nr<BodiedFunc>(module->getDummyFuncType(), "fn");
+  auto *fn = module->Nr<BodiedFunc>("fn");
+  fn->realize(module->getDummyFuncType(), {});
+
   fn->setBuiltin();
   fn->setBody(module->Nr<SeriesFlow>());
   ASSERT_TRUE(util::match(fn, fn->clone()));
 }
 
 TEST_F(SIRTest, ExternalFuncUnmangledNameAndCloning) {
-  auto *fn = module->Nr<ExternalFunc>(module->getDummyFuncType(), "fn");
+  auto *fn = module->Nr<ExternalFunc>("fn");
+  fn->realize(module->getDummyFuncType(), {});
+
   fn->setUnmangledName("foo");
   ASSERT_EQ("foo", fn->getUnmangledName());
   ASSERT_TRUE(util::match(fn, fn->clone()));
 }
 
 TEST_F(SIRTest, InternalFuncParentTypeUnmangledNameAndCloning) {
-  auto *fn = module->Nr<InternalFunc>(module->getDummyFuncType(), "fn.1");
+  auto *fn = module->Nr<InternalFunc>("fn.1");
+  fn->realize(module->getDummyFuncType(), {});
+
   fn->setParentType(module->getIntType());
   ASSERT_EQ("fn", fn->getUnmangledName());
   ASSERT_EQ(fn->getParentType(), module->getIntType());
   ASSERT_TRUE(util::match(fn, fn->clone()));
 }
 
-TEST_F(SIRTest, LLVMFuncUnmangledNameQueryAndPhysicalReplace) {
-  auto *fn = module->Nr<LLVMFunc>(module->getDummyFuncType(), "fn");
+TEST_F(SIRTest, LLVMFuncUnmangledNameQueryAndReplace) {
+  auto *fn = module->Nr<LLVMFunc>("fn");
+  fn->realize(module->getDummyFuncType(), {});
+
   fn->setLLVMBody("body");
   fn->setLLVMDeclarations("decl");
 
-  std::vector<types::Generic> literals = {types::Generic(1), types::Generic(module->getIntType())};
+  std::vector<types::Generic> literals = {types::Generic(1),
+                                          types::Generic(module->getIntType())};
   fn->setLLVMLiterals(literals);
 
   ASSERT_EQ("body", fn->getLLVMBody());

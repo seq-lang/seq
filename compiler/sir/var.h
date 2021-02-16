@@ -19,7 +19,7 @@ class Func;
 class Var;
 
 /// SIR object representing a variable.
-class Var : public ReplaceableNodeBase<Var>, public IdMixin, public ParentFuncMixin {
+class Var : public ReplaceableNodeBase<Var>, public IdMixin {
 private:
   /// the variable's type
   types::Type *type;

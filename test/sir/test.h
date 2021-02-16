@@ -3,7 +3,7 @@
 #include "sir/sir.h"
 #include "gtest/gtest.h"
 
-class SIRTest : public testing::Test {
+class SIRCoreTest : public testing::Test {
 protected:
   std::unique_ptr<seq::ir::IRModule> module;
 

@@ -30,7 +30,7 @@ TEST_F(SIRTest, SeriesFlowInsertionEraseAndIterators) {
   ASSERT_EQ(SECOND_VALUE, cast<IntConstant>(*f->begin())->getVal());
 }
 
-TEST_F(SIRTest, SeriesFlowQueryAndPhysicalReplace) {
+TEST_F(SIRTest, SeriesFlowQueryAndReplace) {
   auto FIRST_VALUE = 2;
   auto SECOND_VALUE = 1;
 
@@ -59,7 +59,7 @@ TEST_F(SIRTest, SeriesFlowCloning) {
   ASSERT_TRUE(util::match(f, f->clone()));
 }
 
-TEST_F(SIRTest, WhileFlowQueryAndPhysicalReplace) {
+TEST_F(SIRTest, WhileFlowQueryAndReplace) {
   auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
   auto *body = module->Nr<SeriesFlow>();
   auto *f = module->Nr<WhileFlow>(cond, body);
@@ -69,15 +69,20 @@ TEST_F(SIRTest, WhileFlowQueryAndPhysicalReplace) {
 
   std::vector<Value *> usedValues = {cond, body};
   auto queried = f->getUsedValues();
-  ASSERT_TRUE(std::equal(usedValues.begin(), usedValues.end(), queried.begin(), queried.end()));
+  ASSERT_TRUE(
+      std::equal(usedValues.begin(), usedValues.end(), queried.begin(), queried.end()));
   ASSERT_EQ(0, f->getUsedTypes().size());
   ASSERT_EQ(0, f->getUsedVariables().size());
 
-  ASSERT_EQ(1, f->replaceUsedValue(cond, module->Nr<BoolConstant>(true, module->getBoolType())));
+  ASSERT_EQ(1, f->replaceUsedValue(
+                   cond, module->Nr<BoolConstant>(true, module->getBoolType())));
   ASSERT_EQ(1, f->replaceUsedValue(body, module->Nr<SeriesFlow>()));
-  ASSERT_DEATH(f->replaceUsedValue(f->getBody(), module->Nr<BoolConstant>(true, module->getBoolType())), "");
+  ASSERT_DEATH(f->replaceUsedValue(
+                   f->getBody(), module->Nr<BoolConstant>(true, module->getBoolType())),
+               "");
   queried = f->getUsedValues();
-  ASSERT_FALSE(std::equal(usedValues.begin(), usedValues.end(), queried.begin(), queried.end()));
+  ASSERT_FALSE(
+      std::equal(usedValues.begin(), usedValues.end(), queried.begin(), queried.end()));
 }
 
 TEST_F(SIRTest, WhileFlowCloning) {
@@ -87,7 +92,7 @@ TEST_F(SIRTest, WhileFlowCloning) {
   ASSERT_TRUE(util::match(f, f->clone()));
 }
 
-TEST_F(SIRTest, ForFlowQueryAndPhysicalReplace) {
+TEST_F(SIRTest, ForFlowQueryAndReplace) {
   auto *iter = module->Nr<StringConstant>("hi", module->getStringType());
   auto *body = module->Nr<SeriesFlow>();
   auto *var = module->Nr<Var>(module->getStringType(), false, "x");
@@ -99,19 +104,23 @@ TEST_F(SIRTest, ForFlowQueryAndPhysicalReplace) {
 
   std::vector<Value *> usedValues = {iter, body};
   auto qVal = f->getUsedValues();
-  ASSERT_TRUE(std::equal(usedValues.begin(), usedValues.end(), qVal.begin(), qVal.end()));
+  ASSERT_TRUE(
+      std::equal(usedValues.begin(), usedValues.end(), qVal.begin(), qVal.end()));
   ASSERT_EQ(0, f->getUsedTypes().size());
 
   std::vector<Var *> usedVars = {var};
   auto qVar = f->getUsedVariables();
   ASSERT_TRUE(std::equal(usedVars.begin(), usedVars.end(), qVar.begin(), qVar.end()));
 
-  ASSERT_EQ(1, f->replaceUsedValue(iter, module->Nr<StringConstant>("hi", module->getStringType())));
+  ASSERT_EQ(1, f->replaceUsedValue(
+                   iter, module->Nr<StringConstant>("hi", module->getStringType())));
   ASSERT_EQ(1, f->replaceUsedValue(body, module->Nr<SeriesFlow>()));
   qVal = f->getUsedValues();
-  ASSERT_FALSE(std::equal(usedValues.begin(), usedValues.end(), qVal.begin(), qVal.end()));
+  ASSERT_FALSE(
+      std::equal(usedValues.begin(), usedValues.end(), qVal.begin(), qVal.end()));
 
-  ASSERT_EQ(1, f->replaceUsedVariable(var, module->Nr<Var>(module->getStringType(), false, "x")));
+  ASSERT_EQ(1, f->replaceUsedVariable(
+                   var, module->Nr<Var>(module->getStringType(), false, "x")));
   ASSERT_NE(var, f->getVar());
 }
 
@@ -124,7 +133,7 @@ TEST_F(SIRTest, ForFlowCloning) {
   ASSERT_TRUE(util::match(f, f->clone()));
 }
 
-TEST_F(SIRTest, IfFlowQueryAndPhysicalReplace) {
+TEST_F(SIRTest, IfFlowQueryAndReplace) {
   auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
   auto *tBody = module->Nr<SeriesFlow>();
   auto *fBody = module->Nr<SeriesFlow>();
@@ -136,25 +145,35 @@ TEST_F(SIRTest, IfFlowQueryAndPhysicalReplace) {
 
   std::vector<Value *> usedValues = {cond, tBody, fBody};
   auto qVal = f->getUsedValues();
-  ASSERT_TRUE(std::equal(usedValues.begin(), usedValues.end(), qVal.begin(), qVal.end()));
+  ASSERT_TRUE(
+      std::equal(usedValues.begin(), usedValues.end(), qVal.begin(), qVal.end()));
   ASSERT_EQ(0, f->getUsedTypes().size());
   ASSERT_EQ(0, f->getUsedVariables().size());
 
   usedValues.pop_back();
   f->setFalseBranch(nullptr);
   qVal = f->getUsedValues();
-  ASSERT_TRUE(std::equal(usedValues.begin(), usedValues.end(), qVal.begin(), qVal.end()));
+  ASSERT_TRUE(
+      std::equal(usedValues.begin(), usedValues.end(), qVal.begin(), qVal.end()));
   f->setFalseBranch(fBody);
 
-  ASSERT_EQ(1, f->replaceUsedValue(cond, module->Nr<BoolConstant>(true, module->getBoolType())));
+  ASSERT_EQ(1, f->replaceUsedValue(
+                   cond, module->Nr<BoolConstant>(true, module->getBoolType())));
   ASSERT_EQ(1, f->replaceUsedValue(tBody, module->Nr<SeriesFlow>()));
   ASSERT_EQ(1, f->replaceUsedValue(fBody, module->Nr<SeriesFlow>()));
 
-  ASSERT_DEATH(f->replaceUsedValue(f->getTrueBranch(), module->Nr<BoolConstant>(true, module->getBoolType())), "");
-  ASSERT_DEATH(f->replaceUsedValue(f->getFalseBranch(), module->Nr<BoolConstant>(true, module->getBoolType())), "");
+  ASSERT_DEATH(
+      f->replaceUsedValue(f->getTrueBranch(),
+                          module->Nr<BoolConstant>(true, module->getBoolType())),
+      "");
+  ASSERT_DEATH(
+      f->replaceUsedValue(f->getFalseBranch(),
+                          module->Nr<BoolConstant>(true, module->getBoolType())),
+      "");
 
   qVal = f->getUsedValues();
-  ASSERT_FALSE(std::equal(usedValues.begin(), usedValues.end(), qVal.begin(), qVal.end()));
+  ASSERT_FALSE(
+      std::equal(usedValues.begin(), usedValues.end(), qVal.begin(), qVal.end()));
 }
 
 TEST_F(SIRTest, IfFlowCloning) {
@@ -166,7 +185,7 @@ TEST_F(SIRTest, IfFlowCloning) {
   ASSERT_TRUE(util::match(f, f->clone()));
 }
 
-TEST_F(SIRTest, TryCatchFlowSingleCatchQueryAndPhysicalReplace) {
+TEST_F(SIRTest, TryCatchFlowSingleCatchQueryAndReplace) {
   auto *body = module->Nr<SeriesFlow>();
   auto *finally = module->Nr<SeriesFlow>();
   auto *f = module->Nr<TryCatchFlow>(body, finally);
@@ -179,4 +198,3 @@ TEST_F(SIRTest, TryCatchFlowSingleCatchQueryAndPhysicalReplace) {
   ASSERT_EQ(1, f->replaceUsedType(module->getIntType(), module->getFloatType()));
   ASSERT_EQ(1, f->replaceUsedValue(handler, module->Nr<SeriesFlow>()));
 }
-

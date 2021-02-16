@@ -301,7 +301,11 @@ set(SEQ_TEST_CPPFILES
         test/sir/constant.cpp
         test/sir/flow.cpp
         test/sir/func.cpp
+        test/sir/instr.cpp
         test/sir/module.cpp
+        test/sir/transform/pass.cpp
+        test/sir/value.cpp
+        test/sir/var.cpp
         test/types.cpp)
 add_executable(seqtest ${SEQ_TEST_CPPFILES})
 target_include_directories(seqtest PRIVATE ${SEQ_DEP}/include test/sir)

@@ -6,7 +6,7 @@
 
 using namespace seq::ir;
 
-TEST_F(SIRTest, ConstantTypeQueryAndPhysicalReplace) {
+TEST_F(SIRTest, ConstantTypeQueryAndReplace) {
   auto *node = module->Nr<IntConstant>(1, module->getIntType());
   ASSERT_EQ(module->getIntType(), node->getType());
 

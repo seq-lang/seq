@@ -15,7 +15,7 @@ public:
   void visit(const seq::ir::BoolConstant *) override {}
 };
 
-}
+} // namespace
 
 using namespace seq::ir;
 
@@ -62,7 +62,7 @@ TEST_F(SIRTest, IRNodeReplacementDelegates) {
   auto NODE_NAME = "foo";
 
   Value *originalNode = module->Nr<IntConstant>(1, module->getIntType());
-  Value *newNode = module->Nr<BoolConstant >(false, module->getBoolType(), NODE_NAME);
+  Value *newNode = module->Nr<BoolConstant>(false, module->getBoolType(), NODE_NAME);
   newNode->setAttribute(std::make_unique<FuncAttribute>());
 
   ASSERT_EQ(0, originalNode->getName().size());

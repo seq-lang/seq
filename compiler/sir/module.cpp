@@ -60,7 +60,8 @@ const char IRModule::NodeId = 0;
 
 IRModule::IRModule(std::string name, std::shared_ptr<ast::Cache> cache)
     : AcceptorExtend(std::move(name)), cache(std::move(cache)) {
-  mainFunc = std::make_unique<BodiedFunc>(getDummyFuncType(), "main");
+  mainFunc = std::make_unique<BodiedFunc>("main");
+  mainFunc->realize(cast<types::FuncType>(getDummyFuncType()), {});
   mainFunc->setModule(this);
   mainFunc->setReplaceable(false);
   argVar = std::make_unique<Var>(getArrayType(getStringType()), true, "argv");

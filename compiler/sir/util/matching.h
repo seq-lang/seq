@@ -66,7 +66,7 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override { return os << "any"; }
   Var *doClone() const override {
-    return getModule()->Nr<AnyFunc>(const_cast<types::Type *>(getType()), getName());
+    return getModule()->Nr<AnyFunc>(getName());
   }
   std::string getUnmangledName() const override { return "any"; }
 };
