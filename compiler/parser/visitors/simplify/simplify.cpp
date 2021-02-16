@@ -92,8 +92,6 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       auto c =
           make_unique<ClassStmt>(canonical, move(generics), vector<Param>(), nullptr,
                                  vector<string>{ATTR_INTERNAL, ATTR_TUPLE});
-      if (name == "Generator")
-        c->attributes[ATTR_TRAIT] = "";
       preamble->types.emplace_back(clone(c));
       cache->classes[canonical].ast = move(c);
     }

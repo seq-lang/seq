@@ -143,7 +143,7 @@ def _heapify_max[T](x: List[T]):
     for i in reversed(range(n//2)):
         _siftup_max(x, i)
 
-def nsmallest[T,S=int](n: int, iterable: Generator[T], key: Optional[Callable[S,T]] = None):
+def nsmallest[T](n: int, iterable: Generator[T], key = Optional[int]()):
     """Find the n smallest elements in a dataset.
     Equivalent to:  sorted(iterable, key=key)[:n]
     """
@@ -153,15 +153,15 @@ def nsmallest[T,S=int](n: int, iterable: Generator[T], key: Optional[Callable[S,
             if not v:
                 v.append(a)
             else:
-                if key:
-                    if (~key)(a) < (~key)(v[0]):
+                if not isinstance(key, Optional):
+                    if key(a) < key(v[0]):
                         v[0] = a
                 elif a < v[0]:
                     v[0] = a
         return v
 
     # When key is none, use simpler decoration
-    if not key:
+    if isinstance(key, Optional):
         it = iter(iterable)
         # put the range(n) first so that zip() doesn't
         # consume one too many elements from the iterator
@@ -188,36 +188,36 @@ def nsmallest[T,S=int](n: int, iterable: Generator[T], key: Optional[Callable[S,
             it.destroy()
         result.sort()
         return [elem for elem, order in result]
-
-    # General case, slowest method
-    it = iter(iterable)
-    result = List[Tuple[S,int,T]](n)
-    done = False
-    for i in range(n):
-        if it.done():
-            done = True
-            break
-        elem = it.next()
-        result.append(((~key)(elem), i, elem))
-    if not result:
-        it.destroy()
-        return List[T](0)
-    _heapify_max(result)
-    top = result[0][0]
-    order = n
-    if not done:
-        for elem in it:
-            k = (~key)(elem)
-            if k < top:
-                _heapreplace_max(result, (k, order, elem))
-                top, _order, _elem = result[0]
-                order += 1
     else:
-        it.destroy()
-    result.sort()
-    return [elem for k, order, elem in result]
+        # General case, slowest method
+        it = iter(iterable)
+        result = List[Tuple[typeof(key(T())),int,T]](n)
+        done = False
+        for i in range(n):
+            if it.done():
+                done = True
+                break
+            elem = it.next()
+            result.append((key(elem), i, elem))
+        if not result:
+            it.destroy()
+            return List[T](0)
+        _heapify_max(result)
+        top = result[0][0]
+        order = n
+        if not done:
+            for elem in it:
+                k = key(elem)
+                if k < top:
+                    _heapreplace_max(result, (k, order, elem))
+                    top, _order, _elem = result[0]
+                    order += 1
+        else:
+            it.destroy()
+        result.sort()
+        return [elem for k, order, elem in result]
 
-def nlargest[T,S=int](n: int, iterable: Generator[T], key: Optional[Callable[S,T]] = None):
+def nlargest[T](n: int, iterable: Generator[T], key = Optional[int]()):
     """Find the n largest elements in a dataset.
     Equivalent to:  sorted(iterable, key=key, reverse=True)[:n]
     """
@@ -227,15 +227,15 @@ def nlargest[T,S=int](n: int, iterable: Generator[T], key: Optional[Callable[S,T
             if not v:
                 v.append(a)
             else:
-                if key:
-                    if (~key)(a) > (~key)(v[0]):
+                if not isinstance(key, Optional):
+                    if key(a) > key(v[0]):
                         v[0] = a
                 elif a > v[0]:
                     v[0] = a
         return v
 
     # When key is none, use simpler decoration
-    if not key:
+    if isinstance(key, Optional):
         it = iter(iterable)
         result = List[Tuple[T,int]](n)
         done = False
@@ -260,30 +260,30 @@ def nlargest[T,S=int](n: int, iterable: Generator[T], key: Optional[Callable[S,T
             it.destroy()
         result.sort()
         return [elem for elem, order in reversed(result)]
-
-    # General case, slowest method
-    it = iter(iterable)
-    result = List[Tuple[S,int,T]](n)
-    done = False
-    for i in range(0, -n, -1):
-        if it.done():
-            done = True
-            break
-        elem = it.next()
-        result.append(((~key)(elem), i, elem))
-    if not result:
-        return List[T](0)
-    heapify(result)
-    top = result[0][0]
-    order = -n
-    if not done:
-        for elem in it:
-            k = (~key)(elem)
-            if top < k:
-                heapreplace(result, (k, order, elem))
-                top, _order, _elem = result[0]
-                order -= 1
     else:
-        it.destroy()
-    result.sort()
-    return [elem for k, order, elem in reversed(result)]
+        # General case, slowest method
+        it = iter(iterable)
+        result = List[Tuple[typeof(key(T())),int,T]](n)
+        done = False
+        for i in range(0, -n, -1):
+            if it.done():
+                done = True
+                break
+            elem = it.next()
+            result.append((key(elem), i, elem))
+        if not result:
+            return List[T](0)
+        heapify(result)
+        top = result[0][0]
+        order = -n
+        if not done:
+            for elem in it:
+                k = key(elem)
+                if top < k:
+                    heapreplace(result, (k, order, elem))
+                    top, _order, _elem = result[0]
+                    order -= 1
+        else:
+            it.destroy()
+        result.sort()
+        return [elem for k, order, elem in reversed(result)]

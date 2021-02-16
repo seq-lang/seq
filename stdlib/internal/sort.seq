@@ -4,9 +4,9 @@ from algorithms.insertionsort import insertion_sort_inplace
 from algorithms.heapsort import heap_sort_inplace
 from algorithms.qsort import qsort_inplace
 
-def sorted[T,S=None](
+def sorted[T](
     v: Generator[T],
-    key: Optional[Callable[S,T]] = None,
+    key = Optional[int](),
     algorithm: Optional[str] = None,
     reverse: bool = False
 ):
@@ -14,19 +14,13 @@ def sorted[T,S=None](
     Return a sorted list of the elements in v
     """
     newlist = [a for a in v]
-    if not isinstance(S, None):
-        if algorithm:
-            newlist.sort(~key, ~algorithm, reverse)
-        else:
-            newlist.sort(~key, None, reverse)
+    if not isinstance(key, Optional):
+        newlist.sort(key, algorithm, reverse)
     else:
-        if algorithm:
-            newlist.sort(None, ~algorithm, reverse)
-        else:
-            newlist.sort(None, None, reverse)
+        newlist.sort(algorithm=algorithm, reverse=reverse)
     return newlist
 
-def _sort_list[T,S](self, key: Callable[S,T], algorithm: str):
+def _sort_list(self, key, algorithm: str):
     if algorithm == 'pdq':
         pdq_sort_inplace(self, key)
     elif algorithm == 'insertion':
@@ -42,18 +36,16 @@ def _sort_list[T,S](self, key: Callable[S,T], algorithm: str):
 
 @extend
 class List[T]:
-    def sort[S=None](
+    def sort(
         self,
-        key: Optional[Callable[S,T]] = None,
+        key = Optional[int](),
         algorithm: Optional[str] = None,
         reverse: bool = False
     ):
         alg = ~algorithm if algorithm else 'pdq'
-        if isinstance(S, None):
-            def id(x: T) -> T: return x
-            _sort_list(self, id, alg)
+        if isinstance(key, Optional):
+            _sort_list(self, lambda x: x, alg)
         else:
-            assert key
-            _sort_list(self, ~key, alg)
+            _sort_list(self, key, alg)
         if reverse:
             self.reverse()

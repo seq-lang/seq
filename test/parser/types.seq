@@ -31,6 +31,10 @@ def map[T,S](l: list[T], f: Callable[S,T]):
 e = 1
 print map([1, 2, 3], lambda x: x+e)  #: [2, 3, 4]
 
+def map2(l, f):
+    return [f(x) for x in l]
+print map2([1, 2, 3], lambda x: x+e)  #: [2, 3, 4]
+
 #%% nested,barebones
 def m4[TD](a: int, d: TD):
     def m5[TE](a: int, d: TD, e: TE):
@@ -212,14 +216,12 @@ rec3(1, 's')
 #!   ERROR: cannot unify int and str
 #!   ERROR: while realizing rec3 (arguments rec3[int,int,str])
 
-#%% instantiate_function_error,barebones
+#%% instantiate_function_2,barebones
 def fx[T](x: T) -> T:
     def g(z):
         return z(T())
     return g(fx)
-fx(1)
-#!   ERROR: cannot resolve 1 unbound variables
-#!   ERROR: while realizing fx (arguments fx[int;int,int])
+print fx[float].__class__, fx(1).__class__ #: fx[float;float] int
 
 #%% optionals,barebones
 y = None
@@ -678,3 +680,15 @@ z(3) #: hai(3,2,3)
 #%% int_float,barebones
 l = [1., 2, 3, 4]
 print l, l.__class__ #: [1, 2, 3, 4] List[float]
+
+#%% forward_fn,barebones
+def test(name, sort, key):
+    v1 = [1, 2, 3, 4]
+    sp = sort(v1, key)
+    print name, sp
+def foo(l, f):
+    return [f(i) for i in l]
+test('hi', foo, lambda x: x+1) #: hi [2, 3, 4, 5]
+# def foof(l: List[int], x, f: Callable[int, int]):
+#     return [f(i)+x for i in l]
+# test('qsort', foof(..., 3, ...))

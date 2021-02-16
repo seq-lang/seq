@@ -199,11 +199,17 @@ void CodegenVisitor::visit(IfExpr *expr) {
 
 void CodegenVisitor::visit(CallExpr *expr) {
   vector<Value *> items;
-  for (auto &&i : expr->args) {
-    if (CAST(i.value, EllipsisExpr))
-      assert(false);
-    else
-      items.push_back(transform(i.value));
+
+  auto ft = expr->expr->type->getFunc();
+  seqassert(ft, "not calling function: {}", ft->toString());
+
+  auto *fAST = ctx->cache->functions[ft->funcName].ast.get();
+  bool isLLVM = fAST && in(fAST->attributes, ATTR_EXTERN_LLVM);
+
+  for (int i = 0; i < expr->args.size(); i++) {
+    seqassert(!expr->args[i].value->getEllipsis(), "ellipsis not elided");
+    if (!ft->args[i + 1]->getFunc() || isLLVM)
+      items.push_back(transform(expr->args[i].value));
   }
   result = make<CallInstr>(expr, transform(expr->expr), move(items));
 }
@@ -536,12 +542,18 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
     const auto &ast = real.second.ast;
     assert(ast);
 
-    vector<string> names;
+    vector<string> names, realNames;
     vector<seq::ir::types::Type *> types;
     auto t = real.second.type;
     for (int i = 1; i < t->args.size(); i++) {
-      types.push_back(realizeType(t->args[i]->getClass().get()));
-      names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i - 1].name]);
+      if (!t->args[i]->getFunc() || in(stmt->attributes, ATTR_EXTERN_LLVM)) {
+        types.push_back(realizeType(t->args[i]->getClass().get()));
+        names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i - 1].name]);
+        realNames.push_back(ast->args[i - 1].name);
+      } else {
+        //        LOG("{} // {} : {}", t->toString(), ast->args[i - 1].name,
+        //            t->args[i]->toString());
+      }
     }
 
     auto *funcType = ctx->getModule()->getFuncType(
@@ -621,7 +633,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
         for (auto i = 0; i < names.size(); ++i) {
           auto *var = f->getArgVar(names[i]);
           assert(var);
-          ctx->addVar(ast->args[i].name, var);
+          ctx->addVar(realNames[i], var);
         }
 
         auto *body = newScope(stmt, "body");

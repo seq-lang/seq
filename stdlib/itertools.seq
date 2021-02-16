@@ -236,7 +236,7 @@ def starmap(function, iterable):
     for args in iterable:
         yield function(args[0], args[1])
 
-def groupby[V,K=int](iterable: Generator[V], key: Optional[Callable[K,V]] = None):
+def groupby[V](iterable: Generator[V], key = Optional[int]()):
     """
     make an iterator that returns consecutive keys and groups from the iterable
 
@@ -253,14 +253,14 @@ def groupby[V,K=int](iterable: Generator[V], key: Optional[Callable[K,V]] = None
         iterable.destroy()
         return
 
-    if key:
+    if not isinstance(key, Optional):
         currvalue = iterable.next()
-        currkey = (~key)(currvalue)
+        currkey = key(currvalue)
         group = [currvalue]
 
         while not iterable.done():
             currvalue = iterable.next()
-            k = (~key)(currvalue)
+            k = key(currvalue)
 
             if k != currkey:
                 yield currkey, group

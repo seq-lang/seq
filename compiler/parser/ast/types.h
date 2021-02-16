@@ -220,6 +220,7 @@ public:
   bool canRealize() const override;
   string toString() const override;
   string realizedName() const override;
+  virtual bool hasTrait() const;
   virtual string realizedTypeName() const;
   shared_ptr<ClassType> getClass() override {
     return std::static_pointer_cast<ClassType>(shared_from_this());

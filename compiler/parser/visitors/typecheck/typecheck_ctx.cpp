@@ -219,7 +219,8 @@ TypeContext::findBestMethod(types::ClassType *typ, const string &member,
       auto expectedClass = expectedType->getClass();
       auto argType = reordered[ai];
       // Ignore traits, *args/**kwargs and default arguments.
-      if (!argType || (expectedClass && expectedClass->isTrait))
+      if (!argType || (expectedClass &&
+                       (expectedClass->isTrait || expectedClass->name == "Generator")))
         continue;
       auto argClass = argType->getClass();
 

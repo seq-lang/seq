@@ -242,6 +242,8 @@ vector<TypePtr> ClassType::getUnbounds() const {
   return u;
 }
 bool ClassType::canRealize() const {
+  if (isTrait)
+    return false;
   return std::all_of(generics.begin(), generics.end(),
                      [](auto &t) { return !t.type || t.type->canRealize(); });
 }
@@ -260,6 +262,12 @@ string ClassType::realizedName() const {
       gs.push_back(a.type->realizedName());
   string s = join(gs, ",");
   return fmt::format("{}{}", name, s.empty() ? "" : fmt::format("[{}]", s));
+}
+bool ClassType::hasTrait() const {
+  for (auto &a : generics)
+    if (a.type && a.type->getClass() && a.type->getClass()->hasTrait())
+      return true;
+  return isTrait;
 }
 string ClassType::realizedTypeName() const { return this->ClassType::realizedName(); }
 
@@ -444,7 +452,9 @@ vector<TypePtr> FuncType::getUnbounds() const {
 }
 bool FuncType::canRealize() const {
   for (int ai = 1; ai < args.size(); ai++)
-    if (!args[ai]->canRealize())
+    if (!args[ai]->getFunc() &&
+        (!args[ai]->canRealize() ||
+         (args[ai]->getClass() && args[ai]->getClass()->hasTrait())))
       return false;
   return std::all_of(funcGenerics.begin(), funcGenerics.end(),
                      [](auto &a) { return !a.type || a.type->canRealize(); }) &&
@@ -471,7 +481,8 @@ string FuncType::realizedName() const {
   string s = join(gs, ",");
   vector<string> as;
   for (int ai = 1; ai < args.size(); ai++)
-    as.push_back(args[ai]->realizedName());
+    as.push_back(args[ai]->getFunc() ? args[ai]->getFunc()->funcName
+                                     : args[ai]->realizedName());
   string a = join(as, ",");
   s = s.empty() ? a : join(vector<string>{s, a}, ";");
   return fmt::format("{}{}{}", funcParent ? funcParent->realizedName() + ":" : "",

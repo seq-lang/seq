@@ -1006,15 +1006,6 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         return -1;
       });
 
-  // Form a new mask if this is a partial call
-  string newMask;
-  for (int si = 0; si < calleeFn->args.size() - 1; si++)
-    if (args[si].value->getEllipsis() && !args[si].value->getEllipsis()->isPipeArg) {
-      if (newMask.empty())
-        newMask = string(calleeFn->args.size() - 1, '1');
-      newMask[si] = '0';
-    }
-
   // Typecheck given arguments with the expected (signature) types.
   bool unificationsDone = true;
   vector<TypePtr> replacements(calleeFn->args.size() - 1, nullptr);
@@ -1023,8 +1014,10 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     auto expectedClass = expectedTyp->getClass();
     auto argClass = args[si].value->getType()->getClass();
 
-    if (expectedClass && (expectedClass->isTrait || expectedClass->name == "Optional" ||
-                          expectedClass->name == "float")) {
+    unordered_set<string> hints = {"Generator", "float", "Optional"};
+    bool mightChange =
+        expectedClass && (expectedClass->isTrait || in(hints, expectedClass->name));
+    if (mightChange) {
       if (!argClass) {
         // Case 0: argument type not yet known.
         unificationsDone = false;
@@ -1082,7 +1075,12 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       // Case 7: normal unification.
       args[si].value->type |= expectedTyp;
     }
-    replacements[si] = args[si].value->type;
+    replacements[si] = !expectedClass || expectedClass->hasTrait()
+                           ? args[si].value->type
+                           : expectedTyp;
+    //    LOG("--{} {} {} :: {}", calleeFn->funcName, ast->args[si].name,
+    //        expectedClass ? expectedClass->toString() : "-",
+    //        replacements[si]->toString());
   }
 
   // Realize arguments.
@@ -1129,11 +1127,19 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       calleeFn->generics[si + 1].type = calleeFn->args[si + 1] = replacements[si];
   if (auto rt = realize(calleeFn)) {
     rt |= static_pointer_cast<Type>(calleeFn);
+    //    LOG("calling {}", rt->toString());
     expr->expr = transform(expr->expr);
   }
   expr->done &= expr->expr->done;
 
   // Emit the final call.
+  string newMask;
+  for (int si = 0; si < calleeFn->args.size() - 1; si++)
+    if (args[si].value->getEllipsis() && !args[si].value->getEllipsis()->isPipeArg) {
+      if (newMask.empty())
+        newMask = string(calleeFn->args.size() - 1, '1');
+      newMask[si] = '0';
+    }
   if (!newMask.empty()) {
     // Case 1: partial call.
     // Transform calleeFn(args...) to Partial.N<known>.<calleeFn>(args...).
@@ -1327,7 +1333,7 @@ string TypecheckVisitor::generateFunctionStub(int n) {
                                                vector<string>{}));
     params.clear();
     stmts.clear();
-    // def __new__(what: Function[TR, T1, ..., TN]) -> Function.N[TR, T1, ..., TN]:
+    // def __new__(what: Function.N[TR, T1, ..., TN]) -> Function.N[TR, T1, ..., TN]:
     //   return what
     params.emplace_back(Param{"what", clone(type)});
     fns.emplace_back(make_unique<FunctionStmt>(
@@ -1392,9 +1398,9 @@ string TypecheckVisitor::generateFunctionStub(int n) {
     params.clear();
     stmts.clear();
     // class Function.N[TR, T1, ..., TN]
-    StmtPtr stmt = make_unique<ClassStmt>(
-        typeName, move(generics), move(args), N<SuiteStmt>(move(fns)),
-        vector<string>{ATTR_INTERNAL, ATTR_TRAIT, ATTR_TUPLE});
+    StmtPtr stmt = make_unique<ClassStmt>(typeName, move(generics), move(args),
+                                          N<SuiteStmt>(move(fns)),
+                                          vector<string>{ATTR_INTERNAL, ATTR_TUPLE});
     stmt->setSrcInfo(ctx->cache->generateSrcInfo());
 
     // Parse this function in a clean context.
