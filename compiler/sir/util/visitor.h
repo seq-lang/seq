@@ -36,7 +36,6 @@ class RecordType;
 class RefType;
 class FuncType;
 class OptionalType;
-class ArrayType;
 class PointerType;
 class GeneratorType;
 class IntNType;
@@ -158,7 +157,6 @@ public:
   VISIT(types::RefType);
   VISIT(types::FuncType);
   VISIT(types::OptionalType);
-  VISIT(types::ArrayType);
   VISIT(types::PointerType);
   VISIT(types::GeneratorType);
   VISIT(types::IntNType);
@@ -225,7 +223,6 @@ public:
   CONST_VISIT(types::RefType);
   CONST_VISIT(types::FuncType);
   CONST_VISIT(types::OptionalType);
-  CONST_VISIT(types::ArrayType);
   CONST_VISIT(types::PointerType);
   CONST_VISIT(types::GeneratorType);
   CONST_VISIT(types::IntNType);

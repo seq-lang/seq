@@ -143,10 +143,12 @@ types::Type *IRModule::getPointerType(types::Type *base) {
 }
 
 types::Type *IRModule::getArrayType(types::Type *base) {
-  auto name = types::ArrayType::getInstanceName(base);
+  auto name = fmt::format(FMT_STRING(".Array[{}]"), base->referenceString());
   if (auto *rVal = getType(name))
     return rVal;
-  return Nr<types::ArrayType>(getPointerType(base), getIntType());
+  std::vector<types::Type *> types = {getIntType(), getPointerType(base)};
+  std::vector<std::string> names = {"len", "ptr"};
+  return Nr<types::RecordType>(name, types, names);
 }
 
 types::Type *IRModule::getGeneratorType(types::Type *base) {

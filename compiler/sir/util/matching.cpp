@@ -249,15 +249,6 @@ public:
   void handle(const types::OptionalType *x, const types::OptionalType *y) {
     result = process(x->getBase(), y->getBase());
   }
-  VISIT(types::ArrayType);
-  void handle(const types::ArrayType *x, const types::ArrayType *y) {
-    result = process(x->getBase(), y->getBase()) &&
-             std::equal(x->begin(), x->end(), y->begin(), y->end(),
-                        [this](auto &x, auto &y) {
-                          return x.getName() == y.getName() &&
-                                 process(x.getType(), y.getType());
-                        });
-  }
   VISIT(types::PointerType);
   void handle(const types::PointerType *x, const types::PointerType *y) {
     result = process(x->getBase(), y->getBase());

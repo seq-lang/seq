@@ -1,10 +1,12 @@
 #include "func.h"
 
 #include <algorithm>
+#include <unordered_map>
 
 #include "parser/common.h"
 
 #include "util/iterators.h"
+#include "util/lambda_visitor.h"
 #include "util/visitor.h"
 
 #include "module.h"
@@ -27,6 +29,46 @@ int findAndReplace(int id, seq::ir::Var *newVal, std::list<seq::ir::Var *> &valu
 
 namespace seq {
 namespace ir {
+
+class VarReplacer : public util::LambdaValueVisitor {
+private:
+  std::unordered_map<Var *, Var *> replacements;
+
+  Var *findReplacement(Var *var) {
+    auto iter = replacements.find(var);
+    return (iter != replacements.end()) ? iter->second : nullptr;
+  }
+
+public:
+  explicit VarReplacer(std::unordered_map<Var *, Var *> replacements)
+      : util::LambdaValueVisitor(), replacements(std::move(replacements)) {}
+
+  void handle(VarValue *x) override {
+    if (auto *r = findReplacement(x->getVar())) {
+      x->setVar(r);
+    }
+  }
+
+  void handle(AssignInstr *x) override {
+    if (auto *r = findReplacement(x->getLhs())) {
+      x->setLhs(r);
+    }
+  }
+
+  void handle(ForFlow *x) override {
+    if (auto *r = findReplacement(x->getVar())) {
+      x->setVar(r);
+    }
+  }
+
+  void handle(TryCatchFlow *x) override {
+    for (auto &c : *x) {
+      if (auto *r = findReplacement(c.getVar())) {
+        c.setVar(r);
+      }
+    }
+  }
+};
 
 const char Func::NodeId = 0;
 
@@ -68,14 +110,31 @@ std::string BodiedFunc::getUnmangledName() const {
 Var *BodiedFunc::doClone() const {
   auto *ret = getModule()->N<BodiedFunc>(getSrcInfo(), getModule()->getDummyFuncType(),
                                          getName());
+
+  std::unordered_map<Var *, Var *> replacements;
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
-
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
+  for (auto *var : symbols) {
+    auto *newVar = var->clone();
+    replacements.emplace(var, newVar);
+    ret->push_back(newVar);
+  }
+  ret->setGenerator(isGenerator());
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
                argNames);
   ret->setBody(cast<Flow>(body->clone()));
   ret->setBuiltin(builtin);
+
+  auto argsIter1 = arg_begin();
+  auto argsIter2 = ret->arg_begin();
+  while (argsIter1 != arg_end() && argsIter2 != ret->arg_end()) {
+    replacements.emplace(*argsIter1, *argsIter2);
+    ++argsIter1;
+    ++argsIter2;
+  }
+  VarReplacer replacer(replacements); // replace vars with clones
+  ret->getBody()->accept(replacer);
   return ret;
 }
 
@@ -109,8 +168,10 @@ Var *ExternalFunc::doClone() const {
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
-
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
+  for (auto *var : symbols)
+    ret->push_back(var->clone());
+  ret->setGenerator(isGenerator());
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
                argNames);
   return ret;
 }
@@ -140,8 +201,10 @@ Var *InternalFunc::doClone() const {
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
-
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
+  for (auto *var : symbols)
+    ret->push_back(var->clone());
+  ret->setGenerator(isGenerator());
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
                argNames);
   ret->setParentType(parentType);
   return ret;
@@ -193,8 +256,10 @@ Var *LLVMFunc::doClone() const {
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
-
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
+  for (auto *var : symbols)
+    ret->push_back(var->clone());
+  ret->setGenerator(isGenerator());
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
                argNames);
   ret->setLLVMBody(llvmBody);
   ret->setLLVMDeclarations(llvmDeclares);

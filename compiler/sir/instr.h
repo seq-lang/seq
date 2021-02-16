@@ -229,6 +229,9 @@ public:
   /// @param v the new args vector
   void setArgs(std::vector<Value *> v) { args = std::move(v); }
 
+  /// @return the number of arguments
+  int numArgs() const { return args.size(); }
+
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
