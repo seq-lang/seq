@@ -93,18 +93,6 @@ const BodiedFunc *getStdlibFunc(const Value *x, const std::string &name) {
   return nullptr;
 }
 
-FlowInstr *convertGetitemForPrefetch(Value *getitem) {
-  auto *M = getitem->getModule();
-  Value *prefetch = nullptr; // TODO
-  auto *yield = M->Nr<YieldInstr>();
-
-  auto *series = M->Nr<SeriesFlow>();
-  series->push_back(prefetch);
-  series->push_back(yield);
-
-  return M->Nr<FlowInstr>(series, getitem);
-}
-
 void applySubstitutionOptimizations(PipelineFlow *p) {
   auto *M = p->getModule();
 
@@ -187,29 +175,62 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
 }
 
 class PrefetchFunctionTransformer : public util::LambdaValueVisitor {
-  void handle(ReturnInstr *x) override {
-    auto *M = x->getModule();
-    x->replaceAll(M->Nr<YieldInstr>(x->getValue()));
-  }
-
   void handle(CallInstr *x) override {
-    // if (!getitem_call) return
+    auto *func = cast<BodiedFunc>(getFunc(x->getFunc()));
+    if (!func || func->getUnmangledName() != "__getitem__" || x->numArgs() != 2)
+      return;
+
     auto *M = x->getModule();
-    Value *prefetch = nullptr; // TODO
+    Value *self = x->front();
+    Value *key = x->back();
+    types::Type *selfType = self->getType();
+    types::Type *keyType = key->getType();
+    Func *prefetchFunc = M->getOrRealizeMethod(selfType, "__prefetch__",
+                                               M->getVoidType(), {selfType, keyType});
+    if (!prefetchFunc)
+      return;
+
+    std::vector<Value *> args = {self, key};
+    Value *prefetch = M->Nr<CallInstr>(M->Nr<VarValue>(prefetchFunc), args);
     auto *yield = M->Nr<YieldInstr>();
 
     auto *series = M->Nr<SeriesFlow>();
     series->push_back(prefetch);
     series->push_back(yield);
 
-    x->replaceAll(M->Nr<FlowInstr>(series, x));
+    auto *clone = x->clone();
+    see(clone); // avoid infinite loop on clone
+    x->replaceAll(M->Nr<FlowInstr>(series, clone));
   }
 };
 
+void applyPrefetchOptimizations(PipelineFlow *p) {
+  auto *M = p->getModule();
+  PrefetchFunctionTransformer pft;
+  for (const auto &stage : *p) {
+    if (auto *func = cast<BodiedFunc>(getFunc(stage.getFunc()))) {
+      if (!hasAttribute(func, "prefetch"))
+        continue;
+
+      auto *clone = cast<BodiedFunc>(func->clone());
+      auto *funcType = cast<types::FuncType>(clone->getType());
+      funcType->setReturnType(M->getGeneratorType(funcType->getReturnType()));
+      clone->setGenerator();
+      clone->getBody()->accept(pft);
+
+      std::cout << "BEFORE:" << std::endl;
+      std::cout << *func << std::endl;
+      std::cout << "AFTER:" << std::endl;
+      std::cout << *clone << std::endl;
+    }
+  }
+}
+
 void PipelineOptimizations::handle(PipelineFlow *x) {
-  std::cout << "BEFORE: " << *x << std::endl;
+  // std::cout << "BEFORE: " << *x << std::endl;
   applySubstitutionOptimizations(x);
-  std::cout << "AFTER:  " << *x << std::endl << std::endl;
+  applyPrefetchOptimizations(x);
+  // std::cout << "AFTER:  " << *x << std::endl << std::endl;
 }
 
 } // namespace pipeline
