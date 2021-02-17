@@ -31,10 +31,6 @@ const types::Type *Flow::doGetType() const { return getModule()->getVoidType(); 
 
 const char SeriesFlow::NodeId = 0;
 
-int SeriesFlow::doReplaceUsedValue(int id, Value *newValue) {
-  return findAndReplace(id, newValue, series);
-}
-
 std::ostream &SeriesFlow::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: [\n{}\n]"), referenceString(),
              fmt::join(util::dereference_adaptor(series.begin()),
@@ -49,7 +45,21 @@ Value *SeriesFlow::doClone() const {
   return newFlow;
 }
 
+int SeriesFlow::doReplaceUsedValue(int id, Value *newValue) {
+  return findAndReplace(id, newValue, series);
+}
+
 const char WhileFlow::NodeId = 0;
+
+std::ostream &WhileFlow::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("{}: while ({}){{\n{}}}"), referenceString(), *cond, *body);
+  return os;
+}
+
+Value *WhileFlow::doClone() const {
+  return getModule()->N<WhileFlow>(getSrcInfo(), cond->clone(),
+                                   cast<Flow>(body->clone()), getName());
+}
 
 int WhileFlow::doReplaceUsedValue(int id, Value *newValue) {
   auto replacements = 0;
@@ -67,17 +77,18 @@ int WhileFlow::doReplaceUsedValue(int id, Value *newValue) {
   return replacements;
 }
 
-std::ostream &WhileFlow::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: while ({}){{\n{}}}"), referenceString(), *cond, *body);
+const char ForFlow::NodeId = 0;
+
+std::ostream &ForFlow::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("{}: for ({} : {}){{\n{}}}"), referenceString(),
+             var->referenceString(), *iter, *body);
   return os;
 }
 
-Value *WhileFlow::doClone() const {
-  return getModule()->N<WhileFlow>(getSrcInfo(), cond->clone(),
-                                   cast<Flow>(body->clone()), getName());
+Value *ForFlow::doClone() const {
+  return getModule()->N<ForFlow>(getSrcInfo(), iter->clone(), cast<Flow>(body->clone()),
+                                 var, getName());
 }
-
-const char ForFlow::NodeId = 0;
 
 int ForFlow::doReplaceUsedValue(int id, Value *newValue) {
   auto count = 0;
@@ -102,18 +113,21 @@ int ForFlow::doReplaceUsedVariable(int id, Var *newVar) {
   return 0;
 }
 
-std::ostream &ForFlow::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: for ({} : {}){{\n{}}}"), referenceString(),
-             var->referenceString(), *iter, *body);
+const char IfFlow::NodeId = 0;
+
+std::ostream &IfFlow::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("{}: if ("), referenceString());
+  fmt::print(os, FMT_STRING("{}) {{\n{}\n}}"), *cond, *trueBranch);
+  if (falseBranch)
+    fmt::print(os, FMT_STRING(" else {{\n{}\n}}"), *falseBranch);
   return os;
 }
 
-Value *ForFlow::doClone() const {
-  return getModule()->N<ForFlow>(getSrcInfo(), iter->clone(), cast<Flow>(body->clone()),
-                                 var, getName());
+Value *IfFlow::doClone() const {
+  return getModule()->N<IfFlow>(
+      getSrcInfo(), cond->clone(), cast<Flow>(trueBranch->clone()),
+      falseBranch ? cast<Flow>(falseBranch->clone()) : nullptr, getName());
 }
-
-const char IfFlow::NodeId = 0;
 
 std::vector<Value *> IfFlow::doGetUsedValues() const {
   std::vector<Value *> ret = {cond, trueBranch};
@@ -145,21 +159,31 @@ int IfFlow::doReplaceUsedValue(int id, Value *newValue) {
   return replacements;
 }
 
-std::ostream &IfFlow::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: if ("), referenceString());
-  fmt::print(os, FMT_STRING("{}) {{\n{}\n}}"), *cond, *trueBranch);
-  if (falseBranch)
-    fmt::print(os, FMT_STRING(" else {{\n{}\n}}"), *falseBranch);
+const char TryCatchFlow::NodeId = 0;
+
+std::ostream &TryCatchFlow::doFormat(std::ostream &os) const {
+  fmt::print(os, FMT_STRING("{}: try {{\n{}\n}}"), referenceString(), *body);
+  for (auto &c : catches) {
+    fmt::print(os, FMT_STRING("catch ({}{}{}) {{\n{}\n}} "),
+               c.getType() ? c.getType()->referenceString() : "all",
+               c.getVar() ? " -> " : "",
+               c.getVar() ? c.getVar()->referenceString() : "", *c.getHandler());
+  }
+  if (finally)
+    fmt::print(os, FMT_STRING("finally {{\n{}\n}}"), *finally);
   return os;
 }
 
-Value *IfFlow::doClone() const {
-  return getModule()->N<IfFlow>(
-      getSrcInfo(), cond->clone(), cast<Flow>(trueBranch->clone()),
-      falseBranch ? cast<Flow>(falseBranch->clone()) : nullptr, getName());
+Value *TryCatchFlow::doClone() const {
+  auto *newFlow = getModule()->N<TryCatchFlow>(
+      getSrcInfo(), cast<Flow>(body->clone()),
+      finally ? cast<Flow>(finally->clone()) : nullptr, getName());
+  for (auto &child : *this)
+    newFlow->emplace_back(cast<Flow>(child.getHandler()->clone()),
+                          const_cast<types::Type *>(child.getType()),
+                          const_cast<Var *>(child.getVar()));
+  return newFlow;
 }
-
-const char TryCatchFlow::NodeId = 0;
 
 std::vector<Value *> TryCatchFlow::doGetUsedValues() const {
   std::vector<Value *> ret = {body};
@@ -239,30 +263,6 @@ int TryCatchFlow::doReplaceUsedVariable(int id, Var *newVar) {
   return count;
 }
 
-std::ostream &TryCatchFlow::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: try {{\n{}\n}}"), referenceString(), *body);
-  for (auto &c : catches) {
-    fmt::print(os, FMT_STRING("catch ({}{}{}) {{\n{}\n}} "),
-               c.getType() ? c.getType()->referenceString() : "all",
-               c.getVar() ? " -> " : "",
-               c.getVar() ? c.getVar()->referenceString() : "", *c.getHandler());
-  }
-  if (finally)
-    fmt::print(os, FMT_STRING("finally {{\n{}\n}}"), *finally);
-  return os;
-}
-
-Value *TryCatchFlow::doClone() const {
-  auto *newFlow = getModule()->N<TryCatchFlow>(
-      getSrcInfo(), cast<Flow>(body->clone()),
-      finally ? cast<Flow>(finally->clone()) : nullptr, getName());
-  for (auto &child : *this)
-    newFlow->emplace_back(cast<Flow>(child.getHandler()->clone()),
-                          const_cast<types::Type *>(child.getType()),
-                          const_cast<Var *>(child.getVar()));
-  return newFlow;
-}
-
 const char PipelineFlow::NodeId = 0;
 
 const types::Type *PipelineFlow::Stage::getOutputType() const {
@@ -273,6 +273,42 @@ const types::Type *PipelineFlow::Stage::getOutputType() const {
     assert(funcType);
     return funcType->getReturnType();
   }
+}
+
+std::ostream &PipelineFlow::doFormat(std::ostream &os) const {
+  os << "pipeline(";
+  for (const auto &stage : *this) {
+    os << *stage.getFunc() << "[" << (stage.isGenerator() ? "g" : "f") << "](";
+    std::string sep = "";
+    for (const auto *arg : stage) {
+      os << sep;
+      if (arg) {
+        os << *arg;
+      } else {
+        os << "...";
+      }
+      sep = ", ";
+    }
+    os << ")";
+    if (&stage != &back())
+      os << (stage.isParallel() ? " ||> " : " |> ");
+  }
+  os << ")";
+  return os;
+}
+
+PipelineFlow::Stage PipelineFlow::Stage::clone() const {
+  std::vector<Value *> clonedArgs;
+  for (const auto *arg : *this)
+    clonedArgs.push_back(arg->clone());
+  return {func->clone(), std::move(clonedArgs), generator, parallel};
+}
+
+Value *PipelineFlow::doClone() const {
+  std::vector<Stage> clonedStages;
+  for (const auto &stage : *this)
+    clonedStages.emplace_back(stage.clone());
+  return getModule()->N<PipelineFlow>(getSrcInfo(), std::move(clonedStages), getName());
 }
 
 std::vector<Value *> PipelineFlow::doGetUsedValues() const {
@@ -302,39 +338,6 @@ int PipelineFlow::doReplaceUsedValue(int id, Value *newValue) {
   }
 
   return replacements;
-}
-
-std::ostream &PipelineFlow::doFormat(std::ostream &os) const {
-  os << "pipeline(";
-  for (const auto &stage : *this) {
-    os << *stage.getFunc() << "[" << (stage.isGenerator() ? "g" : "f") << "](";
-    for (const auto *arg : stage) {
-      if (arg) {
-        os << *arg;
-      } else {
-        os << "...";
-      }
-    }
-    os << ")";
-    if (&stage != &back())
-      os << (stage.isParallel() ? " ||> " : " |> ");
-  }
-  os << ")";
-  return os;
-}
-
-PipelineFlow::Stage PipelineFlow::Stage::clone() const {
-  std::vector<Value *> clonedArgs;
-  for (const auto *arg : *this)
-    clonedArgs.push_back(arg->clone());
-  return {func->clone(), std::move(clonedArgs), generator, parallel};
-}
-
-Value *PipelineFlow::doClone() const {
-  std::vector<Stage> clonedStages;
-  for (const auto &stage : *this)
-    clonedStages.emplace_back(stage.clone());
-  return getModule()->N<PipelineFlow>(getSrcInfo(), std::move(clonedStages), getName());
 }
 
 } // namespace ir

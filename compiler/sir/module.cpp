@@ -60,7 +60,8 @@ const char IRModule::NodeId = 0;
 
 IRModule::IRModule(std::string name, std::shared_ptr<ast::Cache> cache)
     : AcceptorExtend(std::move(name)), cache(std::move(cache)) {
-  mainFunc = std::make_unique<BodiedFunc>(getDummyFuncType(), "main");
+  mainFunc = std::make_unique<BodiedFunc>("main");
+  mainFunc->realize(cast<types::FuncType>(getDummyFuncType()), {});
   mainFunc->setModule(this);
   mainFunc->setReplaceable(false);
   argVar = std::make_unique<Var>(getArrayType(getStringType()), true, "argv");
@@ -74,6 +75,8 @@ Func *IRModule::getOrRealizeMethod(types::Type *parent, const std::string &metho
 
   auto method = cache->findMethod(parent->getAstType()->getClass().get(), methodName,
                                   generateDummyNames(args));
+  if (!method)
+    return nullptr;
   return cache->realizeFunction(method, translateArgs(rType, args),
                                 translateGenerics(generics));
 }
@@ -82,6 +85,8 @@ Func *IRModule::getOrRealizeFunc(const std::string &funcName, types::Type *rType
                                  std::vector<types::Type *> args,
                                  std::vector<types::Generic> generics) {
   auto func = cache->findFunction(funcName);
+  if (!func)
+    return nullptr;
   return cache->realizeFunction(func, translateArgs(rType, args),
                                 translateGenerics(generics));
 }
@@ -89,6 +94,8 @@ Func *IRModule::getOrRealizeFunc(const std::string &funcName, types::Type *rType
 types::Type *IRModule::getOrRealizeType(const std::string &typeName,
                                         std::vector<types::Generic> generics) {
   auto type = cache->findClass(typeName);
+  if (!type)
+    return nullptr;
   return cache->realizeType(type, translateGenerics(generics));
 }
 
@@ -143,10 +150,12 @@ types::Type *IRModule::getPointerType(types::Type *base) {
 }
 
 types::Type *IRModule::getArrayType(types::Type *base) {
-  auto name = types::ArrayType::getInstanceName(base);
+  auto name = fmt::format(FMT_STRING(".Array[{}]"), base->referenceString());
   if (auto *rVal = getType(name))
     return rVal;
-  return Nr<types::ArrayType>(getPointerType(base), getIntType());
+  std::vector<types::Type *> types = {getIntType(), getPointerType(base)};
+  std::vector<std::string> names = {"len", "ptr"};
+  return Nr<types::RecordType>(name, types, names);
 }
 
 types::Type *IRModule::getGeneratorType(types::Type *base) {

@@ -20,7 +20,7 @@ public:
   /// @return a clone of the value
   Flow *clone() const { return cast<Flow>(Value::clone()); }
 
-private:
+protected:
   const types::Type *doGetType() const final;
 };
 
@@ -69,12 +69,13 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  Value *doClone() const override;
+
+protected:
   std::vector<Value *> doGetUsedValues() const override {
     return std::vector<Value *>(series.begin(), series.end());
   }
   int doReplaceUsedValue(int id, Value *newValue) override;
-
-  Value *doClone() const override;
 };
 
 /// Flow representing a while loop.
@@ -114,10 +115,12 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetUsedValues() const override { return {cond, body}; }
-  int doReplaceUsedValue(int id, Value *newValue) override;
-
   Value *doClone() const override;
+
+protected:
+  std::vector<Value *> doGetUsedValues() const override { return {cond, body}; }
+
+  int doReplaceUsedValue(int id, Value *newValue) override;
 };
 
 /// Flow representing a for loop.
@@ -170,13 +173,14 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  Value *doClone() const override;
+
+protected:
   std::vector<Value *> doGetUsedValues() const override { return {iter, body}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {var}; }
   int doReplaceUsedVariable(int id, Var *newVar) override;
-
-  Value *doClone() const override;
 };
 
 /// Flow representing an if statement.
@@ -229,10 +233,11 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  Value *doClone() const override;
+
+protected:
   std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
-
-  Value *doClone() const override;
 };
 
 /// Flow representing a try-catch statement.
@@ -354,6 +359,9 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  Value *doClone() const override;
+
+protected:
   std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
 
@@ -362,8 +370,6 @@ private:
 
   std::vector<Var *> doGetUsedVariables() const override;
   int doReplaceUsedVariable(int id, Var *newVar) override;
-
-  Value *doClone() const override;
 };
 
 /// Flow that represents a pipeline. Pipelines with only function
@@ -413,6 +419,20 @@ public:
     const Value *front() const { return args.front(); }
     /// @return a pointer to the last argument
     const Value *back() const { return args.back(); }
+
+    /// Inserts an argument.
+    /// @param pos the position
+    /// @param v the argument
+    /// @return an iterator to the newly added argument
+    template <typename It> auto insert(It pos, Value *v) { return args.insert(pos, v); }
+    /// Appends an argument.
+    /// @param v the argument
+    void push_back(Value *v) { args.push_back(v); }
+
+    /// Erases the item at the supplied position.
+    /// @param pos the position
+    /// @return the iterator beyond the removed argument
+    template <typename It> auto erase(It pos) { return args.erase(pos); }
 
     /// @return the called function
     Value *getFunc() { return func; }
@@ -491,10 +511,11 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  Value *doClone() const override;
+
+protected:
   std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
-
-  Value *doClone() const override;
 };
 
 } // namespace ir

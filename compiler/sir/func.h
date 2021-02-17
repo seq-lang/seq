@@ -16,22 +16,22 @@ private:
 protected:
   /// list of arguments
   std::list<Var *> args;
-  /// list of variables defined and used within the function
-  std::list<Var *> symbols;
+
+  std::vector<Var *> doGetUsedVariables() const override;
+  int doReplaceUsedVariable(int id, Var *newVar) override;
 
 public:
   static const char NodeId;
 
-  /// Constructs an SIR function.
-  /// @param type the function's type
+  /// Constructs an unrealized SIR function.
   /// @param name the function's name
-  explicit Func(types::Type *type, std::string name = "")
-      : AcceptorExtend(type, false, std::move(name)), generator(false) {}
+  explicit Func(std::string name = "")
+      : AcceptorExtend(nullptr, true, std::move(name)), generator(false) {}
 
   /// Re-initializes the function with a new type and names.
   /// @param newType the function's new type
   /// @param names the function's new argument names
-  void realize(types::FuncType *newType, const std::vector<std::string> &names);
+  void realize(types::Type *newType, const std::vector<std::string> &names);
 
   /// @return iterator to the first arg
   auto arg_begin() { return args.begin(); }
@@ -50,6 +50,36 @@ public:
   const Var *arg_back() const { return args.back(); }
   /// @return a pointer to the first arg
   const Var *arg_front() const { return args.front(); }
+
+  /// @return true if the function is a generator
+  bool isGenerator() const { return generator; }
+  /// Sets the function's generator flag.
+  /// @param v the new value
+  void setGenerator(bool v = true) { generator = v; }
+
+  /// @return the variable corresponding to the given argument name
+  /// @param n the argument name
+  Var *getArgVar(const std::string &n);
+
+  /// @return the unmangled function name
+  virtual std::string getUnmangledName() const = 0;
+
+  Func *clone() const { return cast<Func>(Var::clone()); }
+};
+
+class BodiedFunc : public AcceptorExtend<BodiedFunc, Func> {
+private:
+  /// list of variables defined and used within the function
+  std::list<Var *> symbols;
+  /// the function body
+  Value *body = nullptr;
+  /// whether the function is builtin
+  bool builtin = false;
+
+public:
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
 
   /// @return iterator to the first symbol
   auto begin() { return symbols.begin(); }
@@ -83,36 +113,6 @@ public:
   /// @return symbol_iterator following the removed symbol.
   template <typename It> auto erase(It pos) { return symbols.erase(pos); }
 
-  /// @return true if the function is a generator
-  bool isGenerator() const { return generator; }
-  /// Sets the function's generator flag.
-  /// @param v the new value
-  void setGenerator(bool v = true) { generator = v; }
-
-  Var *getArgVar(const std::string &n);
-
-  /// @return the unmangled function name
-  virtual std::string getUnmangledName() const = 0;
-
-  Func *clone() const { return cast<Func>(Var::clone()); }
-
-private:
-  std::vector<Var *> doGetUsedVariables() const override;
-  int doReplaceUsedVariable(int id, Var *newVar) override;
-};
-
-class BodiedFunc : public AcceptorExtend<BodiedFunc, Func> {
-private:
-  /// the function body
-  Value *body;
-  /// whether the function is builtin
-  bool builtin = false;
-
-public:
-  static const char NodeId;
-
-  using AcceptorExtend::AcceptorExtend;
-
   std::string getUnmangledName() const override;
 
   /// @return the function body
@@ -134,8 +134,14 @@ private:
 
   std::ostream &doFormat(std::ostream &os) const override;
 
-  std::vector<Value *> doGetUsedValues() const override { return {body}; }
+protected:
+  std::vector<Value *> doGetUsedValues() const override {
+    return body ? std::vector<Value *>{body} : std::vector<Value *>{};
+  }
   int doReplaceUsedValue(int id, Value *newValue) override;
+
+  std::vector<Var *> doGetUsedVariables() const override;
+  int doReplaceUsedVariable(int id, Var *newVar) override;
 };
 
 class ExternalFunc : public AcceptorExtend<ExternalFunc, Func> {
@@ -158,6 +164,7 @@ private:
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
+/// Internal, LLVM-only function.
 class InternalFunc : public AcceptorExtend<InternalFunc, Func> {
 private:
   /// parent type of the function if it is magic
@@ -183,10 +190,12 @@ private:
 
   std::ostream &doFormat(std::ostream &os) const override;
 
+protected:
   std::vector<types::Type *> doGetUsedTypes() const override;
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 };
 
+/// LLVM function defined in Seq source.
 class LLVMFunc : public AcceptorExtend<LLVMFunc, Func> {
 private:
   /// literals that must be formatted into the body
@@ -241,6 +250,7 @@ private:
 
   std::ostream &doFormat(std::ostream &os) const override;
 
+protected:
   std::vector<types::Type *> doGetUsedTypes() const override;
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 };

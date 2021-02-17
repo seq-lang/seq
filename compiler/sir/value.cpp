@@ -17,7 +17,6 @@ Value *Value::clone() const {
     if (attr->needsClone())
       res->setAttribute(attr->clone(), *it);
   }
-  res->setParentFunc(const_cast<Func *>(getParentFunc()));
   return res;
 }
 

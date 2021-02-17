@@ -246,7 +246,7 @@ Value *TernaryInstr::doClone() const {
 const char ControlFlowInstr::NodeId = 0;
 
 int ControlFlowInstr::doReplaceUsedValue(int id, Value *newValue) {
-  if (target->getId() == id) {
+  if (target && target->getId() == id) {
     auto *flow = cast<Flow>(newValue);
     assert(flow);
     target = flow;
@@ -293,7 +293,7 @@ int ReturnInstr::doReplaceUsedValue(int id, Value *newValue) {
     setValue(newValue);
     ++replacements;
   }
-  replacements += ControlFlowInstr::replaceUsedValue(id, newValue);
+  replacements += ControlFlowInstr::doReplaceUsedValue(id, newValue);
   return replacements;
 }
 
@@ -343,6 +343,12 @@ Value *YieldInstr::doClone() const {
 
 const char ThrowInstr::NodeId = 0;
 
+std::vector<Value *> ThrowInstr::doGetUsedValues() const {
+  if (value)
+    return {value};
+  return {};
+}
+
 int ThrowInstr::doReplaceUsedValue(int id, Value *newValue) {
   if (value && value->getId() == id) {
     setValue(newValue);
@@ -357,7 +363,8 @@ std::ostream &ThrowInstr::doFormat(std::ostream &os) const {
 }
 
 Value *ThrowInstr::doClone() const {
-  return getModule()->N<ThrowInstr>(getSrcInfo(), value->clone(), getName());
+  return getModule()->N<ThrowInstr>(getSrcInfo(), value ? value->clone() : nullptr,
+                                    getName());
 }
 
 const char FlowInstr::NodeId = 0;

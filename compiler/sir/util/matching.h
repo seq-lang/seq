@@ -18,6 +18,7 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override { return os << "any"; }
   bool doIsAtomic() const override { return true; }
+  types::Type *doClone() const override { return getModule()->Nr<AnyType>(getName()); }
 };
 
 /// Any value.
@@ -65,9 +66,7 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override { return os << "any"; }
-  Var *doClone() const override {
-    return getModule()->Nr<AnyFunc>(const_cast<types::Type *>(getType()), getName());
-  }
+  Var *doClone() const override { return getModule()->Nr<AnyFunc>(getName()); }
   std::string getUnmangledName() const override { return "any"; }
 };
 
