@@ -74,6 +74,8 @@ Func *IRModule::getOrRealizeMethod(types::Type *parent, const std::string &metho
 
   auto method = cache->findMethod(parent->getAstType()->getClass().get(), methodName,
                                   generateDummyNames(args));
+  if (!method)
+    return nullptr;
   return cache->realizeFunction(method, translateArgs(rType, args),
                                 translateGenerics(generics));
 }
@@ -82,6 +84,8 @@ Func *IRModule::getOrRealizeFunc(const std::string &funcName, types::Type *rType
                                  std::vector<types::Type *> args,
                                  std::vector<types::Generic> generics) {
   auto func = cache->findFunction(funcName);
+  if (!func)
+    return nullptr;
   return cache->realizeFunction(func, translateArgs(rType, args),
                                 translateGenerics(generics));
 }
@@ -89,6 +93,8 @@ Func *IRModule::getOrRealizeFunc(const std::string &funcName, types::Type *rType
 types::Type *IRModule::getOrRealizeType(const std::string &typeName,
                                         std::vector<types::Generic> generics) {
   auto type = cache->findClass(typeName);
+  if (!type)
+    return nullptr;
   return cache->realizeType(type, translateGenerics(generics));
 }
 
