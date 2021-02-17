@@ -184,8 +184,10 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
 
           string varName = ast->args[i - 1].name;
           trimStars(varName);
-          ctx->add(type->args[i]->getFunc() ? TypecheckItem::Func : TypecheckItem::Var,
-                   varName, make_shared<LinkType>(type->args[i]));
+          ctx->add(
+              type->args[i]->getFunc() ? TypecheckItem::Func : TypecheckItem::Var,
+              varName,
+              make_shared<LinkType>(type->args[i]->generalize(ctx->typecheckLevel)));
         }
 
       // Need to populate realization table in advance to make recursive functions

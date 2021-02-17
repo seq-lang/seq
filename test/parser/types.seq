@@ -710,5 +710,6 @@ class X[T]:
     def foo[U](self, x, y: U):
         return (x+x, y+y)
 y = X[X[int]]()
-print y.foo[float].__class__ #! ERROR: cannot unify X[X[int]] and float
+print y.foo[float].__class__ #! ERROR: expected 3 generics
+# cannot unify X[X[int]] and float
 

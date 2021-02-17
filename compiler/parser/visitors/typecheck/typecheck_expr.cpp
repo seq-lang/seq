@@ -713,8 +713,11 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   if (expr->member == "__class__") {
     expr->expr = transform(expr->expr, true, true);
     expr->type |= ctx->findInternal("str");
+    if (auto f = expr->expr->type->getFunc())
+      return transform(N<StringExpr>(f->realizedName()));
     if (auto t = realize(expr->expr->type))
       return transform(N<StringExpr>(t->realizedName()));
+    expr->done = false;
     return nullptr;
   }
   expr->expr = transform(expr->expr, true);
@@ -1078,9 +1081,6 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     replacements[si] = !expectedClass || expectedClass->hasTrait()
                            ? args[si].value->type
                            : expectedTyp;
-    //    LOG("--{} {} {} :: {}", calleeFn->funcName, ast->args[si].name,
-    //        expectedClass ? expectedClass->toString() : "-",
-    //        replacements[si]->toString());
   }
 
   // Realize arguments.
@@ -1114,20 +1114,19 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   // unified.
   if (unificationsDone)
     for (int i = 0; i < calleeFn->funcGenerics.size(); i++)
-      if (ast->generics[i].deflt && calleeFn->funcGenerics[i].type->getUnbound()) {
-        auto deflt = clone(ast->generics[i].deflt);
-        if (deflt->getNone())
-          calleeFn->funcGenerics[i].type |=
-              ctx->instantiate(getSrcInfo(), ctx->findInternal("T.None"));
-        else
-          calleeFn->funcGenerics[i].type |= transformType(deflt)->getType();
-      }
+      if (ast->generics[i].deflt && calleeFn->funcGenerics[i].type->getUnbound())
+        calleeFn->funcGenerics[i].type |=
+            transformType(ast->generics[i].deflt)->getType();
   for (int si = 0; si < replacements.size(); si++)
-    if (replacements[si])
+    if (replacements[si]) {
+      if (replacements[si]->getFunc()) {
+        deactivateUnbounds(replacements[si].get());
+        deactivateUnbounds(replacements[si]->getFunc()->args[0].get());
+      }
       calleeFn->generics[si + 1].type = calleeFn->args[si + 1] = replacements[si];
+    }
   if (auto rt = realize(calleeFn)) {
     rt |= static_pointer_cast<Type>(calleeFn);
-    //    LOG("calling {}", rt->toString());
     expr->expr = transform(expr->expr);
   }
   expr->done &= expr->expr->done;

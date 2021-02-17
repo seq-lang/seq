@@ -29,6 +29,7 @@ struct FuncType;
 struct ClassType;
 struct LinkType;
 struct RecordType;
+struct PartialType;
 struct StaticType;
 
 /**
@@ -98,6 +99,7 @@ public:
 
   /// Convenience virtual functions to avoid unnecessary dynamic_cast calls.
   virtual shared_ptr<FuncType> getFunc() { return nullptr; }
+  virtual shared_ptr<PartialType> getPartial() { return nullptr; }
   virtual shared_ptr<ClassType> getClass() { return nullptr; }
   virtual shared_ptr<RecordType> getRecord() { return nullptr; }
   virtual shared_ptr<LinkType> getLink() { return nullptr; }
@@ -160,6 +162,9 @@ public:
   shared_ptr<LinkType> getUnbound() override;
   shared_ptr<FuncType> getFunc() override {
     return kind == Link ? type->getFunc() : nullptr;
+  }
+  shared_ptr<PartialType> getPartial() override {
+    return kind == Link ? type->getPartial() : nullptr;
   }
   shared_ptr<ClassType> getClass() override {
     return kind == Link ? type->getClass() : nullptr;
@@ -279,6 +284,34 @@ public:
 
   shared_ptr<FuncType> getFunc() override {
     return std::static_pointer_cast<FuncType>(shared_from_this());
+  }
+};
+typedef shared_ptr<FuncType> FuncTypePtr;
+
+/**
+ * FuncType describes a (generic) function type that can be realized.
+ */
+struct PartialType : public RecordType {
+  FuncTypePtr func;
+  vector<char> used;
+
+  // public:
+  //  PartialType(const shared_ptr<FuncType> &baseType, const vector<char> &used);
+  //
+  // public:
+  //  int unify(Type *typ, Unification *undo) override;
+  //  TypePtr generalize(int atLevel) override;
+  //  TypePtr instantiate(int atLevel, int &unboundCount,
+  //                      unordered_map<int, TypePtr> &cache) override;
+  //
+  // public:
+  //  vector<TypePtr> getUnbounds() const override;
+  //  bool canRealize() const override;
+  //  string toString() const override;
+  //  string realizedName() const override;
+
+  shared_ptr<PartialType> getPartial() override {
+    return std::static_pointer_cast<PartialType>(shared_from_this());
   }
 };
 typedef shared_ptr<FuncType> FuncTypePtr;

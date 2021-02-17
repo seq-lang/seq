@@ -145,6 +145,8 @@ string LinkType::toString() const {
 string LinkType::realizedName() const {
   if (kind == Unbound)
     return "?";
+  //  if (kind == Generic)
+  //    return "#"; // fmt::format("#{}", id);
   seqassert(kind == Link, "unexpected generic link");
   return type->realizedName();
 }
@@ -481,7 +483,7 @@ string FuncType::realizedName() const {
   string s = join(gs, ",");
   vector<string> as;
   for (int ai = 1; ai < args.size(); ai++)
-    as.push_back(args[ai]->getFunc() ? args[ai]->getFunc()->funcName
+    as.push_back(args[ai]->getFunc() ? args[ai]->getFunc()->realizedName()
                                      : args[ai]->realizedName());
   string a = join(as, ",");
   s = s.empty() ? a : join(vector<string>{s, a}, ";");

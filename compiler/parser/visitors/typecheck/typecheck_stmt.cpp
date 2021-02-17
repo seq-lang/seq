@@ -106,10 +106,12 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
       wrapOptionalIfNeeded(stmt->lhs->getType(), stmt->rhs);
       stmt->lhs->type |= stmt->rhs->type;
     }
-    kind = stmt->rhs->isType() ? TypecheckItem::Type
-                               : (stmt->rhs->getType()->getFunc() ? TypecheckItem::Func
-                                                                  : TypecheckItem::Var);
-    ctx->add(kind, lhs, stmt->rhs->getType());
+    auto type = stmt->rhs->getType();
+    kind = stmt->rhs->isType()
+               ? TypecheckItem::Type
+               : (type->getFunc() ? TypecheckItem::Func : TypecheckItem::Var);
+    ctx->add(kind, lhs,
+             kind != TypecheckItem::Var ? type->generalize(ctx->typecheckLevel) : type);
     stmt->done = stmt->rhs->done;
   }
   // Save the variable to the local realization context
