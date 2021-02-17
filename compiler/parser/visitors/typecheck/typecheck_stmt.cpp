@@ -111,7 +111,9 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
                ? TypecheckItem::Type
                : (type->getFunc() ? TypecheckItem::Func : TypecheckItem::Var);
     ctx->add(kind, lhs,
-             kind != TypecheckItem::Var ? type->generalize(ctx->typecheckLevel) : type);
+             kind != TypecheckItem::Var || type->getPartial()
+                 ? type->generalize(ctx->typecheckLevel)
+                 : type);
     stmt->done = stmt->rhs->done;
   }
   // Save the variable to the local realization context

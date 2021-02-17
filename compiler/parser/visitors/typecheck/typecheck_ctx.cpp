@@ -273,7 +273,8 @@ TypeContext::findBestMethod(types::ClassType *typ, const string &member,
 
 int TypeContext::reorderNamedArgs(types::RecordType *func,
                                   const vector<CallExpr::Arg> &args,
-                                  ReorderDoneFn onDone, ReorderErrorFn onError) {
+                                  ReorderDoneFn onDone, ReorderErrorFn onError,
+                                  const vector<char> &known) {
   // See https://docs.python.org/3.6/reference/expressions.html#calls for details.
   // Final score:
   //  - +1 for each matched argument
@@ -352,7 +353,7 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
   // 5. Fill in the default arguments
   for (auto i = 0; i < func->args.size() - 1; i++)
     if (slots[i].empty() && i != starArgIndex && i != kwstarArgIndex) {
-      if (ast && ast->args[i].deflt)
+      if ((ast && ast->args[i].deflt) || (!known.empty() && known[i]))
         score -= 2;
       else
         return onError(format("missing argument '{}'",

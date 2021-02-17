@@ -293,17 +293,17 @@ typedef shared_ptr<FuncType> FuncTypePtr;
  */
 struct PartialType : public RecordType {
   FuncTypePtr func;
-  vector<char> used;
+  vector<char> known;
 
-  // public:
-  //  PartialType(const shared_ptr<FuncType> &baseType, const vector<char> &used);
+public:
+  PartialType(const shared_ptr<RecordType> &baseType, shared_ptr<FuncType> func,
+              vector<char> known);
   //
-  // public:
+public:
   //  int unify(Type *typ, Unification *undo) override;
-  //  TypePtr generalize(int atLevel) override;
-  //  TypePtr instantiate(int atLevel, int &unboundCount,
-  //                      unordered_map<int, TypePtr> &cache) override;
-  //
+  TypePtr generalize(int atLevel) override;
+  TypePtr instantiate(int atLevel, int &unboundCount,
+                      unordered_map<int, TypePtr> &cache) override;
   // public:
   //  vector<TypePtr> getUnbounds() const override;
   //  bool canRealize() const override;

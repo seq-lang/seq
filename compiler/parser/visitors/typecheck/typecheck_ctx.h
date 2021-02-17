@@ -112,7 +112,8 @@ public:
   typedef std::function<int(int, int, const vector<vector<int>> &)> ReorderDoneFn;
   typedef std::function<int(string)> ReorderErrorFn;
   int reorderNamedArgs(types::RecordType *func, const vector<CallExpr::Arg> &args,
-                       ReorderDoneFn onDone, ReorderErrorFn onError);
+                       ReorderDoneFn onDone, ReorderErrorFn onError,
+                       const vector<char> &known = vector<char>());
 };
 
 } // namespace ast

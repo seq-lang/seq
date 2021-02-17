@@ -493,6 +493,24 @@ string FuncType::realizedName() const {
 
 ////
 
+PartialType::PartialType(const shared_ptr<RecordType> &baseType,
+                         shared_ptr<FuncType> func, vector<char> known)
+    : RecordType(*baseType), func(move(func)), known(move(known)) {}
+TypePtr PartialType::generalize(int atLevel) {
+  return make_shared<PartialType>(
+      static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)),
+      func->generalize(atLevel)->getFunc(), known);
+}
+TypePtr PartialType::instantiate(int atLevel, int &unboundCount,
+                                 unordered_map<int, TypePtr> &cache) {
+  return make_shared<PartialType>(
+      static_pointer_cast<RecordType>(
+          this->RecordType::instantiate(atLevel, unboundCount, cache)),
+      func->instantiate(atLevel, unboundCount, cache)->getFunc(), known);
+}
+
+////
+
 StaticType::StaticType(vector<Generic> generics,
                        pair<unique_ptr<Expr>, EvalFn> staticExpr,
                        pair<bool, int> staticEvaluation)
