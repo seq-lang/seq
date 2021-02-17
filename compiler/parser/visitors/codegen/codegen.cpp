@@ -113,24 +113,20 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
           if (std::isdigit(name[0])) // TODO: get rid of this hack
             name = names[names.size() - 2];
           LOG_REALIZE("[codegen] generating internal fn {} -> {}", ast->name, name);
-          auto *fn =
-              module->Nr<seq::ir::InternalFunc>(module->getDummyFuncType(), ast->name);
+          auto *fn = module->Nr<seq::ir::InternalFunc>(ast->name);
           fn->setParentType(typ);
           fn->setGlobal();
           ctx->functions[f.first] = {fn, false};
         } else if (in(ast->attributes, "llvm")) {
-          auto *fn =
-              module->Nr<seq::ir::LLVMFunc>(module->getDummyFuncType(), ast->name);
+          auto *fn = module->Nr<seq::ir::LLVMFunc>(ast->name);
           ctx->functions[f.first] = {fn, false};
           fn->setGlobal();
         } else if (in(ast->attributes, ".c")) {
-          auto *fn =
-              module->Nr<seq::ir::ExternalFunc>(module->getDummyFuncType(), ast->name);
+          auto *fn = module->Nr<seq::ir::ExternalFunc>(ast->name);
           ctx->functions[f.first] = {fn, false};
           fn->setGlobal();
         } else {
-          auto *fn =
-              module->Nr<seq::ir::BodiedFunc>(module->getDummyFuncType(), ast->name);
+          auto *fn = module->Nr<seq::ir::BodiedFunc>(ast->name);
           ctx->functions[f.first] = {fn, false};
 
           if (in(ast->attributes, ATTR_FORCE_REALIZE)) {
@@ -567,7 +563,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
     if (in(stmt->attributes, "llvm")) {
       auto *f = cast<ir::LLVMFunc>(fp.first);
       assert(f);
-      f->realize(cast<ir::types::FuncType>(funcType), names);
+      f->realize(funcType, names);
 
       // auto *s = CAST(tmp->suite, SuiteStmt);
       // assert(s && s->stmts.size() == 1)
@@ -618,7 +614,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
       auto *f = cast<ir::Func>(fp.first);
       assert(f);
 
-      f->realize(cast<ir::types::FuncType>(funcType), names);
+      f->realize(funcType, names);
       f->setAttribute(make_unique<FuncAttribute>(ast->attributes));
       for (auto &a : ast->attributes) {
         if (a.first == "atomic")

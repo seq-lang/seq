@@ -63,6 +63,8 @@ public:
   /// @param cache the type-checker cache
   explicit IRModule(std::string name, std::shared_ptr<ast::Cache> cache = nullptr);
 
+  virtual ~IRModule() noexcept = default;
+
   /// @return the main function
   Func *getMainFunc() { return mainFunc.get(); }
   /// @return the main function

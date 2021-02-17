@@ -88,7 +88,6 @@ private:
 
   template <typename ValueType, typename... Args> ValueType *make(Args &&... args) {
     auto *ret = ctx->getModule()->N<ValueType>(std::forward<Args>(args)...);
-    ret->setParentFunc(ctx->getBase());
     return ret;
   }
 };

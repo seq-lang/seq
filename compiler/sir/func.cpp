@@ -30,12 +30,15 @@ namespace ir {
 
 const char Func::NodeId = 0;
 
-void Func::realize(types::FuncType *newType, const std::vector<std::string> &names) {
-  setType(newType);
+void Func::realize(types::Type *newType, const std::vector<std::string> &names) {
+  auto *funcType = cast<types::FuncType>(newType);
+  assert(funcType);
+
+  setType(funcType);
   args.clear();
 
   auto i = 0;
-  for (auto *t : *newType) {
+  for (auto *t : *funcType) {
     args.push_back(getModule()->Nr<Var>(t, false, names[i]));
     ++i;
   }
@@ -62,19 +65,19 @@ const char BodiedFunc::NodeId = 0;
 
 std::string BodiedFunc::getUnmangledName() const {
   auto split = ast::split(getName(), '.');
-  return builtin ? split.back() : split[split.size() - 1];
+  return split.back();
 }
 
 Var *BodiedFunc::doClone() const {
-  auto *ret = getModule()->N<BodiedFunc>(getSrcInfo(), getModule()->getDummyFuncType(),
-                                         getName());
+  auto *ret = getModule()->N<BodiedFunc>(getSrcInfo(), getName());
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
 
   ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
                argNames);
-  ret->setBody(cast<Flow>(body->clone()));
+  if (body)
+    ret->setBody(cast<Flow>(body->clone()));
   ret->setBuiltin(builtin);
   return ret;
 }
@@ -92,7 +95,7 @@ std::ostream &BodiedFunc::doFormat(std::ostream &os) const {
 }
 
 int BodiedFunc::doReplaceUsedValue(int id, Value *newValue) {
-  if (body->getId() == id) {
+  if (body && body->getId() == id) {
     auto *flow = cast<Flow>(newValue);
     assert(flow);
     body = flow;
@@ -104,14 +107,14 @@ int BodiedFunc::doReplaceUsedValue(int id, Value *newValue) {
 const char ExternalFunc::NodeId = 0;
 
 Var *ExternalFunc::doClone() const {
-  auto *ret = getModule()->N<ExternalFunc>(getSrcInfo(),
-                                           getModule()->getDummyFuncType(), getName());
+  auto *ret = getModule()->N<ExternalFunc>(getSrcInfo(), getName());
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
 
   ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
                argNames);
+  ret->setUnmangledName(unmangledName);
   return ret;
 }
 
@@ -135,8 +138,7 @@ std::string InternalFunc::getUnmangledName() const {
 }
 
 Var *InternalFunc::doClone() const {
-  auto *ret = getModule()->N<InternalFunc>(getSrcInfo(),
-                                           getModule()->getDummyFuncType(), getName());
+  auto *ret = getModule()->N<InternalFunc>(getSrcInfo(), getName());
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
@@ -188,8 +190,7 @@ std::string LLVMFunc::getUnmangledName() const {
 }
 
 Var *LLVMFunc::doClone() const {
-  auto *ret = getModule()->N<LLVMFunc>(getSrcInfo(), getModule()->getDummyFuncType(),
-                                       getName());
+  auto *ret = getModule()->N<LLVMFunc>(getSrcInfo(), getName());
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
@@ -236,7 +237,7 @@ std::vector<types::Type *> LLVMFunc::doGetUsedTypes() const {
 }
 
 int LLVMFunc::doReplaceUsedType(const std::string &name, types::Type *newType) {
-  auto count = Func::replaceUsedType(name, newType);
+  auto count = Var::doReplaceUsedType(name, newType);
   for (auto &l : llvmLiterals)
     if (l.isType() && l.getTypeValue()->getName() == name) {
       l.setTypeValue(newType);
