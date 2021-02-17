@@ -270,6 +270,7 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
     pmb.DisableUnrollLoops = false;
     pmb.LoopVectorize = true;
     pmb.SLPVectorize = true;
+    // pmb.MergeFunctions = true;
   } else {
     pmb.OptLevel = 0;
   }
@@ -1207,11 +1208,6 @@ llvm::Type *LLVMVisitor::getLLVMType(const types::Type *t) {
     return builder.getVoidTy();
   }
 
-  if (auto *x = cast<types::ArrayType>(t)) {
-    return llvm::StructType::get(builder.getInt64Ty(),
-                                 getLLVMType(x->getBase())->getPointerTo());
-  }
-
   if (auto *x = cast<types::RecordType>(t)) {
     std::vector<llvm::Type *> body;
     for (const auto &field : *x) {
@@ -1291,10 +1287,6 @@ llvm::DIType *LLVMVisitor::getDITypeHelper(
 
   if (auto *x = cast<types::VoidType>(t)) {
     return nullptr;
-  }
-
-  if (auto *x = cast<types::ArrayType>(t)) {
-    return db.builder->createUnspecifiedType(x->getName());
   }
 
   if (auto *x = cast<types::RecordType>(t)) {
@@ -2169,20 +2161,13 @@ void LLVMVisitor::visit(const YieldInInstr *x) {
 }
 
 void LLVMVisitor::visit(const StackAllocInstr *x) {
-  llvm::Type *baseType = nullptr;
-  if (auto *arrayType = cast<types::ArrayType>(x->getType())) {
-    baseType = getLLVMType(arrayType->getBase());
-  } else {
-    assert(0 && "StackAllocInstr type is not an array type");
-  }
-
-  int64_t size = x->getCount();
-
+  auto *arrayType = llvm::cast<llvm::StructType>(getLLVMType(x->getType()));
   builder.SetInsertPoint(func->getEntryBlock().getTerminator());
-  auto *arrType = llvm::StructType::get(builder.getInt64Ty(), baseType->getPointerTo());
-  llvm::Value *len = builder.getInt64(size);
-  llvm::Value *ptr = builder.CreateAlloca(baseType, len);
-  llvm::Value *arr = llvm::UndefValue::get(arrType);
+  llvm::Value *len = builder.getInt64(x->getCount());
+  llvm::Value *ptr = builder.CreateAlloca(
+      llvm::cast<llvm::PointerType>(arrayType->getElementType(1))->getElementType(),
+      len);
+  llvm::Value *arr = llvm::UndefValue::get(arrayType);
   arr = builder.CreateInsertValue(arr, len, 0);
   arr = builder.CreateInsertValue(arr, ptr, 1);
   value = arr;
@@ -2256,6 +2241,10 @@ void LLVMVisitor::visit(const ReturnInstr *x) {
   }
   builder.SetInsertPoint(block);
   if (coro.exit) {
+    if (!voidReturn) {
+      assert(coro.promise);
+      builder.CreateStore(value, coro.promise);
+    }
     builder.CreateBr(coro.exit);
   } else {
     if (auto *tc = getInnermostTryCatchBeforeLoop()) {

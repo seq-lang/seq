@@ -181,7 +181,7 @@ public:
 
   friend std::ostream &operator<<(std::ostream &os, const IRNode &a) {
     if (a.hasReplacement())
-      return os << a.getActual();
+      return os << *a.getActual();
     return a.doFormat(os);
   }
 

@@ -229,6 +229,9 @@ public:
   /// @param v the new args vector
   void setArgs(std::vector<Value *> v) { args = std::move(v); }
 
+  /// @return the number of arguments
+  int numArgs() const { return args.size(); }
+
 protected:
   const types::Type *doGetType() const override;
   std::vector<Value *> doGetUsedValues() const override;
@@ -255,9 +258,7 @@ public:
   /// @param count the number of elements
   /// @param name the name
   StackAllocInstr(types::Type *arrayType, int64_t count, std::string name = "")
-      : AcceptorExtend(std::move(name)), arrayType(arrayType), count(count) {
-    assert(isA<types::ArrayType>(arrayType));
-  }
+      : AcceptorExtend(std::move(name)), arrayType(arrayType), count(count) {}
 
   /// @return the count
   int64_t getCount() const { return count; }

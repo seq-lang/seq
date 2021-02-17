@@ -42,8 +42,10 @@ public:
   void handle(const Func *x, const Func *y) {}
   VISIT(BodiedFunc);
   void handle(const BodiedFunc *x, const BodiedFunc *y) {
-    result = compareFuncs(x, y) && process(x->getBody(), y->getBody()) &&
-             x->isBuiltin() == y->isBuiltin();
+    result = compareFuncs(x, y) &&
+             std::equal(x->begin(), x->end(), y->begin(), y->end(),
+                        [this](auto *x, auto *y) { return process(x, y); }) &&
+             process(x->getBody(), y->getBody()) && x->isBuiltin() == y->isBuiltin();
   }
   VISIT(ExternalFunc);
   void handle(const ExternalFunc *x, const ExternalFunc *y) {
@@ -250,15 +252,6 @@ public:
   void handle(const types::OptionalType *x, const types::OptionalType *y) {
     result = process(x->getBase(), y->getBase());
   }
-  VISIT(types::ArrayType);
-  void handle(const types::ArrayType *x, const types::ArrayType *y) {
-    result = process(x->getBase(), y->getBase()) &&
-             std::equal(x->begin(), x->end(), y->begin(), y->end(),
-                        [this](auto &x, auto &y) {
-                          return x.getName() == y.getName() &&
-                                 process(x.getType(), y.getType());
-                        });
-  }
   VISIT(types::PointerType);
   void handle(const types::PointerType *x, const types::PointerType *y) {
     result = process(x->getBase(), y->getBase());
@@ -299,10 +292,6 @@ private:
       return false;
 
     if (!std::equal(x->arg_begin(), x->arg_end(), y->arg_begin(), y->arg_end(),
-                    [this](auto *x, auto *y) { return process(x, y); }))
-      return false;
-
-    if (!std::equal(x->begin(), x->end(), y->begin(), y->end(),
                     [this](auto *x, auto *y) { return process(x, y); }))
       return false;
 

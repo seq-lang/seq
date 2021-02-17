@@ -49,7 +49,6 @@ void IRVisitor::visit(types::RecordType *x) { defaultVisit(x); }
 void IRVisitor::visit(types::RefType *x) { defaultVisit(x); }
 void IRVisitor::visit(types::FuncType *x) { defaultVisit(x); }
 void IRVisitor::visit(types::OptionalType *x) { defaultVisit(x); }
-void IRVisitor::visit(types::ArrayType *x) { defaultVisit(x); }
 void IRVisitor::visit(types::PointerType *x) { defaultVisit(x); }
 void IRVisitor::visit(types::GeneratorType *x) { defaultVisit(x); }
 void IRVisitor::visit(types::IntNType *x) { defaultVisit(x); }
@@ -98,7 +97,6 @@ void ConstIRVisitor::visit(const types::RecordType *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const types::RefType *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const types::FuncType *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const types::OptionalType *x) { defaultVisit(x); }
-void ConstIRVisitor::visit(const types::ArrayType *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const types::PointerType *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const types::GeneratorType *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const types::IntNType *x) { defaultVisit(x); }

@@ -87,13 +87,20 @@ public:
   /// @return current depth in the tree
   int depth() const { return stack.size(); }
 
+  /// @param v the value
+  /// @return whether we have visited ("seen") the given value
+  bool saw(const Value *v) const { return seen.find(v->getId()) != seen.end(); }
+  /// Avoid visiting the given value in the future.
+  /// @param v the value
+  void see(const Value *v) { seen.insert(v->getId()); }
+
 private:
   void processChildren(Value *v) {
     stack.push_back(v);
     for (auto *c : v->getUsedValues()) {
-      if (seen.find(c->getId()) != seen.end())
+      if (saw(c))
         continue;
-      seen.insert(c->getId());
+      see(c);
       process(c);
     }
     stack.pop_back();

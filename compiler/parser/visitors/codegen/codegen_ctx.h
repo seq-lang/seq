@@ -20,7 +20,7 @@ namespace ast {
 
 struct CodegenItem {
   enum Kind { Func, Type, Var } kind;
-  seq::ir::Func *base;
+  seq::ir::BodiedFunc *base;
   bool global;
   unordered_set<string> attributes;
   union {
@@ -30,10 +30,10 @@ struct CodegenItem {
   } handle;
 
 public:
-  CodegenItem(Kind k, seq::ir::Func *base, bool global = false)
+  CodegenItem(Kind k, seq::ir::BodiedFunc *base, bool global = false)
       : kind(k), base(base), global(global) {}
 
-  const seq::ir::Func *getBase() const { return base; }
+  const seq::ir::BodiedFunc *getBase() const { return base; }
   bool isGlobal() const { return global; }
   bool isVar() const { return kind == Var; }
   bool isFunc() const { return kind == Func; }
@@ -45,7 +45,7 @@ public:
 };
 
 class CodegenContext : public Context<CodegenItem> {
-  vector<seq::ir::Func *> bases;
+  vector<seq::ir::BodiedFunc *> bases;
   vector<seq::ir::SeriesFlow *> series;
   vector<seq::ir::Flow *> loops;
   int topBlockIndex, topBaseIndex;
@@ -57,7 +57,7 @@ public:
   unordered_map<string, pair<seq::ir::Func *, bool>> functions;
 
 public:
-  CodegenContext(shared_ptr<Cache> cache, seq::ir::SeriesFlow *top, seq::ir::Func *base
+  CodegenContext(shared_ptr<Cache> cache, seq::ir::SeriesFlow *top, seq::ir::BodiedFunc *base
                  // ,seq::SeqJIT *jit
   );
 
@@ -72,7 +72,7 @@ public:
   void addType(const string &name, seq::ir::types::Type *t, bool global = false);
   void addFunc(const string &name, seq::ir::Func *f, bool global = false);
   void addImport(const string &name, const string &import, bool global = false);
-  void addSeries(seq::ir::SeriesFlow *s = nullptr, seq::ir::Func *newBase = nullptr);
+  void addSeries(seq::ir::SeriesFlow *s = nullptr, seq::ir::BodiedFunc *newBase = nullptr);
   void popSeries();
 
   void addScope() { Context<CodegenItem>::addBlock(); }
@@ -83,7 +83,7 @@ public:
   seq::ir::Flow *getLoop() const { return loops.back(); }
 
 public:
-  seq::ir::Func *getBase() const { return bases[topBaseIndex]; }
+  seq::ir::BodiedFunc *getBase() const { return bases[topBaseIndex]; }
   seq::ir::SeriesFlow *getSeries() const { return series[topBlockIndex]; }
   seq::ir::IRModule *getModule() const {
     return dynamic_cast<seq::ir::IRModule *>(bases[0]->getModule());

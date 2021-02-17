@@ -157,6 +157,7 @@ set(SEQ_HPPFILES
         compiler/sir/transform/cleanup/replacer.h
         compiler/sir/transform/manager.h
         compiler/sir/transform/pass.h
+        compiler/sir/transform/pipeline.h
         compiler/sir/types/types.h
         compiler/sir/util/context.h
         compiler/sir/util/iterators.h
@@ -235,6 +236,7 @@ set(SEQ_CPPFILES
         compiler/sir/module.cpp
         compiler/sir/transform/cleanup/replacer.cpp
         compiler/sir/transform/manager.cpp
+        compiler/sir/transform/pipeline.cpp
         compiler/sir/types/types.cpp
         compiler/sir/util/matching.cpp
         compiler/sir/util/visitor.cpp

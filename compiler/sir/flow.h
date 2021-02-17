@@ -420,6 +420,20 @@ public:
     /// @return a pointer to the last argument
     const Value *back() const { return args.back(); }
 
+    /// Inserts an argument.
+    /// @param pos the position
+    /// @param v the argument
+    /// @return an iterator to the newly added argument
+    template <typename It> auto insert(It pos, Value *v) { return args.insert(pos, v); }
+    /// Appends an argument.
+    /// @param v the argument
+    void push_back(Value *v) { args.push_back(v); }
+
+    /// Erases the item at the supplied position.
+    /// @param pos the position
+    /// @return the iterator beyond the removed argument
+    template <typename It> auto erase(It pos) { return args.erase(pos); }
+
     /// @return the called function
     Value *getFunc() { return func; }
     /// @return the called function

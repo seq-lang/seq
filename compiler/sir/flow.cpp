@@ -279,12 +279,15 @@ std::ostream &PipelineFlow::doFormat(std::ostream &os) const {
   os << "pipeline(";
   for (const auto &stage : *this) {
     os << *stage.getFunc() << "[" << (stage.isGenerator() ? "g" : "f") << "](";
+    std::string sep = "";
     for (const auto *arg : stage) {
+      os << sep;
       if (arg) {
         os << *arg;
       } else {
         os << "...";
       }
+      sep = ", ";
     }
     os << ")";
     if (&stage != &back())

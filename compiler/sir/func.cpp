@@ -1,10 +1,12 @@
 #include "func.h"
 
 #include <algorithm>
+#include <unordered_map>
 
 #include "parser/common.h"
 
 #include "util/iterators.h"
+#include "util/lambda_visitor.h"
 #include "util/visitor.h"
 
 #include "module.h"
@@ -27,6 +29,46 @@ int findAndReplace(int id, seq::ir::Var *newVal, std::list<seq::ir::Var *> &valu
 
 namespace seq {
 namespace ir {
+
+class VarReplacer : public util::LambdaValueVisitor {
+private:
+  std::unordered_map<Var *, Var *> replacements;
+
+  Var *findReplacement(Var *var) {
+    auto iter = replacements.find(var);
+    return (iter != replacements.end()) ? iter->second : nullptr;
+  }
+
+public:
+  explicit VarReplacer(std::unordered_map<Var *, Var *> replacements)
+      : util::LambdaValueVisitor(), replacements(std::move(replacements)) {}
+
+  void handle(VarValue *x) override {
+    if (auto *r = findReplacement(x->getVar())) {
+      x->setVar(r);
+    }
+  }
+
+  void handle(AssignInstr *x) override {
+    if (auto *r = findReplacement(x->getLhs())) {
+      x->setLhs(r);
+    }
+  }
+
+  void handle(ForFlow *x) override {
+    if (auto *r = findReplacement(x->getVar())) {
+      x->setVar(r);
+    }
+  }
+
+  void handle(TryCatchFlow *x) override {
+    for (auto &c : *x) {
+      if (auto *r = findReplacement(c.getVar())) {
+        c.setVar(r);
+      }
+    }
+  }
+};
 
 const char Func::NodeId = 0;
 
@@ -52,13 +94,11 @@ Var *Func::getArgVar(const std::string &n) {
 
 std::vector<Var *> Func::doGetUsedVariables() const {
   std::vector<Var *> ret(args.begin(), args.end());
-  ret.insert(ret.end(), symbols.begin(), symbols.end());
   return ret;
 }
 
 int Func::doReplaceUsedVariable(int id, Var *newVar) {
-  auto count = findAndReplace(id, newVar, args);
-  return count + findAndReplace(id, newVar, symbols);
+  return findAndReplace(id, newVar, args);
 }
 
 const char BodiedFunc::NodeId = 0;
@@ -70,15 +110,31 @@ std::string BodiedFunc::getUnmangledName() const {
 
 Var *BodiedFunc::doClone() const {
   auto *ret = getModule()->N<BodiedFunc>(getSrcInfo(), getName());
+  std::unordered_map<Var *, Var *> replacements;
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
-
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
+  for (auto *var : symbols) {
+    auto *newVar = var->clone();
+    replacements.emplace(var, newVar);
+    ret->push_back(newVar);
+  }
+  ret->setGenerator(isGenerator());
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
                argNames);
   if (body)
     ret->setBody(cast<Flow>(body->clone()));
   ret->setBuiltin(builtin);
+
+  auto argsIter1 = arg_begin();
+  auto argsIter2 = ret->arg_begin();
+  while (argsIter1 != arg_end() && argsIter2 != ret->arg_end()) {
+    replacements.emplace(*argsIter1, *argsIter2);
+    ++argsIter1;
+    ++argsIter2;
+  }
+  VarReplacer replacer(replacements); // replace vars with clones
+  ret->getBody()->accept(replacer);
   return ret;
 }
 
@@ -104,6 +160,16 @@ int BodiedFunc::doReplaceUsedValue(int id, Value *newValue) {
   return 0;
 }
 
+std::vector<Var *> BodiedFunc::doGetUsedVariables() const {
+  auto ret = Func::doGetUsedVariables();
+  ret.insert(ret.end(), symbols.begin(), symbols.end());
+  return ret;
+}
+
+int BodiedFunc::doReplaceUsedVariable(int id, Var *newVar) {
+  return Func::doReplaceUsedVariable(id, newVar) + findAndReplace(id, newVar, symbols);
+}
+
 const char ExternalFunc::NodeId = 0;
 
 Var *ExternalFunc::doClone() const {
@@ -111,8 +177,8 @@ Var *ExternalFunc::doClone() const {
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
-
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
+  ret->setGenerator(isGenerator());
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
                argNames);
   ret->setUnmangledName(unmangledName);
   return ret;
@@ -142,8 +208,8 @@ Var *InternalFunc::doClone() const {
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
-
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
+  ret->setGenerator(isGenerator());
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
                argNames);
   ret->setParentType(parentType);
   return ret;
@@ -194,8 +260,8 @@ Var *LLVMFunc::doClone() const {
   std::vector<std::string> argNames;
   for (auto *arg : args)
     argNames.push_back(arg->getName());
-
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
+  ret->setGenerator(isGenerator());
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
                argNames);
   ret->setLLVMBody(llvmBody);
   ret->setLLVMDeclarations(llvmDeclares);

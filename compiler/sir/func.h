@@ -16,8 +16,9 @@ private:
 protected:
   /// list of arguments
   std::list<Var *> args;
-  /// list of variables defined and used within the function
-  std::list<Var *> symbols;
+
+  std::vector<Var *> doGetUsedVariables() const override;
+  int doReplaceUsedVariable(int id, Var *newVar) override;
 
 public:
   static const char NodeId;
@@ -49,6 +50,36 @@ public:
   const Var *arg_back() const { return args.back(); }
   /// @return a pointer to the first arg
   const Var *arg_front() const { return args.front(); }
+
+  /// @return true if the function is a generator
+  bool isGenerator() const { return generator; }
+  /// Sets the function's generator flag.
+  /// @param v the new value
+  void setGenerator(bool v = true) { generator = v; }
+
+  /// @return the variable corresponding to the given argument name
+  /// @param n the argument name
+  Var *getArgVar(const std::string &n);
+
+  /// @return the unmangled function name
+  virtual std::string getUnmangledName() const = 0;
+
+  Func *clone() const { return cast<Func>(Var::clone()); }
+};
+
+class BodiedFunc : public AcceptorExtend<BodiedFunc, Func> {
+private:
+  /// list of variables defined and used within the function
+  std::list<Var *> symbols;
+  /// the function body
+  Value *body = nullptr;
+  /// whether the function is builtin
+  bool builtin = false;
+
+public:
+  static const char NodeId;
+
+  using AcceptorExtend::AcceptorExtend;
 
   /// @return iterator to the first symbol
   auto begin() { return symbols.begin(); }
@@ -82,37 +113,6 @@ public:
   /// @return symbol_iterator following the removed symbol.
   template <typename It> auto erase(It pos) { return symbols.erase(pos); }
 
-  /// @return true if the function is a generator
-  bool isGenerator() const { return generator; }
-  /// Sets the function's generator flag.
-  /// @param v the new value
-  void setGenerator(bool v = true) { generator = v; }
-
-  Var *getArgVar(const std::string &n);
-
-  /// @return the unmangled function name
-  virtual std::string getUnmangledName() const = 0;
-
-  Func *clone() const { return cast<Func>(Var::clone()); }
-
-private:
-  std::vector<Var *> doGetUsedVariables() const override;
-  int doReplaceUsedVariable(int id, Var *newVar) override;
-};
-
-/// Function with a body, uninitialized by default.
-class BodiedFunc : public AcceptorExtend<BodiedFunc, Func> {
-private:
-  /// the function body
-  Value *body = nullptr;
-  /// whether the function is builtin
-  bool builtin = false;
-
-public:
-  static const char NodeId;
-
-  using AcceptorExtend::AcceptorExtend;
-
   std::string getUnmangledName() const override;
 
   /// @return the function body
@@ -139,6 +139,9 @@ protected:
     return body ? std::vector<Value *>{body} : std::vector<Value *>{};
   }
   int doReplaceUsedValue(int id, Value *newValue) override;
+
+  std::vector<Var *> doGetUsedVariables() const override;
+  int doReplaceUsedVariable(int id, Var *newVar) override;
 };
 
 class ExternalFunc : public AcceptorExtend<ExternalFunc, Func> {

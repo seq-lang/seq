@@ -29,12 +29,10 @@ private:
   enum { STATIC, TYPE } tag;
 
 public:
-  explicit Generic(int64_t staticValue) : value(), tag(STATIC) {
+  Generic(int64_t staticValue) : value(), tag(STATIC) {
     value.staticValue = staticValue;
   }
-  explicit Generic(types::Type *typeValue) : value(), tag(TYPE) {
-    value.typeValue = typeValue;
-  }
+  Generic(types::Type *typeValue) : value(), tag(TYPE) { value.typeValue = typeValue; }
 
   /// @return true if the generic is a type
   bool isType() const { return tag == TYPE; }
@@ -100,6 +98,8 @@ public:
 
   virtual std::vector<Generic> getGenerics();
 
+  Type *clone() const;
+
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
@@ -107,6 +107,8 @@ private:
   virtual int doReplaceUsedType(const std::string &name, Type *newType) { return 0; }
 
   virtual bool doIsAtomic() const = 0;
+
+  virtual Type *doClone() const = 0;
 };
 
 /// Type from which primitive atomic types derive.
@@ -127,6 +129,9 @@ public:
 
   /// Constructs an int type.
   IntType() : AcceptorExtend("int") {}
+
+private:
+  IntType *doClone() const override;
 };
 
 /// Float type (64-bit double)
@@ -136,6 +141,9 @@ public:
 
   /// Constructs a float type.
   FloatType() : AcceptorExtend("float") {}
+
+private:
+  FloatType *doClone() const override;
 };
 
 /// Bool type (8-bit unsigned integer; either 0 or 1)
@@ -145,6 +153,9 @@ public:
 
   /// Constructs a bool type.
   BoolType() : AcceptorExtend("bool") {}
+
+private:
+  BoolType *doClone() const override;
 };
 
 /// Byte type (8-bit unsigned integer)
@@ -154,6 +165,9 @@ public:
 
   /// Constructs a byte type.
   ByteType() : AcceptorExtend("byte") {}
+
+private:
+  ByteType *doClone() const override;
 };
 
 /// Void type
@@ -163,6 +177,9 @@ public:
 
   /// Constructs a void type.
   VoidType() : AcceptorExtend("void") {}
+
+private:
+  VoidType *doClone() const override;
 };
 
 /// Type from which membered types derive.
@@ -287,6 +304,8 @@ public:
   void realize(std::vector<Type *> mTypes, std::vector<std::string> mNames) override;
 
 private:
+  RecordType *doClone() const override;
+
   std::ostream &doFormat(std::ostream &os) const override;
 
   std::vector<Type *> doGetUsedTypes() const override;
@@ -347,6 +366,8 @@ public:
   }
 
 private:
+  RefType *doClone() const override;
+
   std::ostream &doFormat(std::ostream &os) const override;
 
   std::vector<Type *> doGetUsedTypes() const override { return {contents}; }
@@ -405,6 +426,8 @@ public:
   const_reference back() const { return argTypes.back(); }
 
 private:
+  FuncType *doClone() const override;
+
   std::ostream &doFormat(std::ostream &os) const override;
 
   std::vector<Type *> doGetUsedTypes() const override;
@@ -437,6 +460,8 @@ public:
   void setBase(Type *t) { base = t; }
 
 private:
+  DerivedType *doClone() const override;
+
   bool doIsAtomic() const override { return base->isAtomic(); }
 
   std::vector<Type *> doGetUsedTypes() const override { return {base}; }
@@ -455,6 +480,8 @@ public:
   static std::string getInstanceName(Type *base);
 
 private:
+  PointerType *doClone() const override;
+
   bool doIsAtomic() const override { return false; }
 };
 
@@ -470,33 +497,9 @@ public:
   static std::string getInstanceName(Type *base);
 
 private:
+  OptionalType *doClone() const override;
+
   bool doIsAtomic() const override { return getBase()->isAtomic(); }
-};
-
-/// Type of an array containing another SIR type
-class ArrayType : public AcceptorExtend<ArrayType, RecordType> {
-private:
-  /// type's base type
-  Type *base;
-
-public:
-  static const char NodeId;
-
-  /// Constructs an array type.
-  /// @param pointerType the base's pointer type
-  /// @param countType the type of the array's count
-  explicit ArrayType(Type *pointerType, Type *countType);
-
-  /// @return the type's base
-  Type *getBase() { return base; }
-  /// @return the type's base
-  const Type *getBase() const { return base; }
-
-  static std::string getInstanceName(Type *base);
-
-private:
-  std::vector<Type *> doGetUsedTypes() const override;
-  int doReplaceUsedType(const std::string &name, Type *newType) override;
 };
 
 /// Type of a generator yielding another SIR type
@@ -511,6 +514,8 @@ public:
   static std::string getInstanceName(Type *base);
 
 private:
+  GeneratorType *doClone() const override;
+
   bool doIsAtomic() const override { return false; }
 };
 
@@ -551,6 +556,8 @@ public:
   static std::string getInstanceName(unsigned len, bool sign);
 
 private:
+  IntNType *doClone() const override;
+
   bool doIsAtomic() const override { return true; }
 };
 

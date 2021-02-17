@@ -21,7 +21,7 @@ Var *Var::clone() const {
 }
 
 Var *Var::doClone() const {
-  return getModule()->N<Var>(getSrcInfo(), type, global, getName());
+  return getModule()->N<Var>(getSrcInfo(), type->clone(), global, getName());
 }
 
 std::ostream &Var::doFormat(std::ostream &os) const {
@@ -54,7 +54,8 @@ int VarValue::doReplaceUsedVariable(int id, Var *newVar) {
 const char PointerValue::NodeId = 0;
 
 Value *PointerValue::doClone() const {
-  return getModule()->N<PointerValue>(getSrcInfo(), val, pointerType, getName());
+  return getModule()->N<PointerValue>(getSrcInfo(), val, pointerType->clone(),
+                                      getName());
 }
 
 int PointerValue::doReplaceUsedVariable(int id, Var *newVar) {

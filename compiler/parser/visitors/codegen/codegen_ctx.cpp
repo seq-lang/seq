@@ -18,7 +18,7 @@ namespace seq {
 namespace ast {
 
 CodegenContext::CodegenContext(shared_ptr<Cache> cache, seq::ir::SeriesFlow *top,
-                               seq::ir::Func *base)
+                               seq::ir::BodiedFunc *base)
     : Context<CodegenItem>(""), cache(std::move(cache)) {
   stack.push_front(vector<string>());
   topBaseIndex = topBlockIndex = 0;
@@ -55,7 +55,7 @@ void CodegenContext::addFunc(const string &name, seq::ir::Func *f, bool global) 
   add(name, i);
 }
 
-void CodegenContext::addSeries(seq::ir::SeriesFlow *s, seq::ir::Func *newBase) {
+void CodegenContext::addSeries(seq::ir::SeriesFlow *s, seq::ir::BodiedFunc *newBase) {
   if (s)
     topBlockIndex = series.size();
   series.push_back(s);

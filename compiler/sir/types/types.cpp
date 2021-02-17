@@ -1,6 +1,7 @@
 #include "types.h"
 
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 #include "util/fmt/format.h"
@@ -27,6 +28,20 @@ namespace types {
 
 const char Type::NodeId = 0;
 
+Type *Type::clone() const {
+  if (hasReplacement())
+    return getActual()->clone();
+
+  auto *res = doClone();
+  for (auto it = attributes_begin(); it != attributes_end(); ++it) {
+    auto *attr = getAttribute(*it);
+    if (attr->needsClone())
+      res->setAttribute(attr->clone(), *it);
+  }
+  res->setAstType(std::const_pointer_cast<ast::types::Type>(getAstType()));
+  return res;
+}
+
 std::vector<Generic> Type::getGenerics() {
   if (!astType)
     return {};
@@ -50,13 +65,31 @@ const char PrimitiveType::NodeId = 0;
 
 const char IntType::NodeId = 0;
 
+IntType *IntType::doClone() const { return cast<IntType>(getModule()->getIntType()); }
+
 const char FloatType::NodeId = 0;
+
+FloatType *FloatType::doClone() const {
+  return cast<FloatType>(getModule()->getFloatType());
+}
 
 const char BoolType::NodeId = 0;
 
+BoolType *BoolType::doClone() const {
+  return cast<BoolType>(getModule()->getBoolType());
+}
+
 const char ByteType::NodeId = 0;
 
+ByteType *ByteType::doClone() const {
+  return cast<ByteType>(getModule()->getByteType());
+}
+
 const char VoidType::NodeId = 0;
+
+VoidType *VoidType::doClone() const {
+  return cast<VoidType>(getModule()->getVoidType());
+}
 
 const char MemberedType::NodeId = 0;
 
@@ -120,6 +153,16 @@ void RecordType::realize(std::vector<Type *> mTypes, std::vector<std::string> mN
   }
 }
 
+RecordType *RecordType::doClone() const {
+  std::vector<Type *> fieldTypes;
+  std::vector<std::string> fieldNames;
+  for (const auto &field : *this) {
+    fieldTypes.push_back(field.getType()->clone());
+    fieldNames.push_back(field.getName());
+  }
+  return getModule()->N<RecordType>(getSrcInfo(), getName(), fieldTypes, fieldNames);
+}
+
 std::ostream &RecordType::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: ("), referenceString());
   for (auto i = 0; i < fields.size(); ++i) {
@@ -148,6 +191,11 @@ int RefType::doReplaceUsedType(const std::string &name, Type *newType) {
   return 0;
 }
 
+RefType *RefType::doClone() const {
+  return getModule()->N<RefType>(getSrcInfo(), getName(),
+                                 cast<RecordType>(getContents()->clone()));
+}
+
 const char FuncType::NodeId = 0;
 
 std::vector<Type *> FuncType::doGetUsedTypes() const {
@@ -170,6 +218,15 @@ int FuncType::doReplaceUsedType(const std::string &name, Type *newType) {
   return count;
 }
 
+FuncType *FuncType::doClone() const {
+  std::vector<Type *> argTypes;
+  for (const auto *type : *this) {
+    argTypes.push_back(type->clone());
+  }
+  return getModule()->N<FuncType>(getSrcInfo(), getName(), getReturnType()->clone(),
+                                  argTypes);
+}
+
 std::ostream &FuncType::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: ("), referenceString());
   for (auto it = argTypes.begin(); it != argTypes.end(); ++it) {
@@ -190,10 +247,18 @@ int DerivedType::doReplaceUsedType(const std::string &name, Type *newType) {
   return 0;
 }
 
+DerivedType *DerivedType::doClone() const {
+  return getModule()->N<DerivedType>(getSrcInfo(), getName(), getBase()->clone());
+}
+
 const char PointerType::NodeId = 0;
 
 std::string PointerType::getInstanceName(Type *base) {
   return fmt::format(FMT_STRING(".Pointer[{}]"), base->referenceString());
+}
+
+PointerType *PointerType::doClone() const {
+  return getModule()->N<PointerType>(getSrcInfo(), getBase()->clone());
 }
 
 const char OptionalType::NodeId = 0;
@@ -202,33 +267,8 @@ std::string OptionalType::getInstanceName(Type *base) {
   return fmt::format(FMT_STRING(".Optional[{}]"), base->referenceString());
 }
 
-const char ArrayType::NodeId = 0;
-
-ArrayType::ArrayType(Type *pointerType, Type *countType)
-    : AcceptorExtend(getInstanceName(cast<PointerType>(pointerType)->getBase()),
-                     std::vector<Type *>{countType, pointerType},
-                     std::vector<std::string>{"len", "ptr"}),
-      base(cast<PointerType>(pointerType)->getBase()) {}
-
-std::string ArrayType::getInstanceName(Type *base) {
-  return fmt::format(FMT_STRING(".Array[{}]"), base->referenceString());
-}
-
-std::vector<Type *> ArrayType::doGetUsedTypes() const {
-  std::vector<Type *> ret;
-  for (auto *t : RecordType::getUsedTypes())
-    ret.push_back(const_cast<Type *>(t));
-  ret.push_back(base);
-  return ret;
-}
-
-int ArrayType::doReplaceUsedType(const std::string &name, Type *newType) {
-  auto count = RecordType::replaceUsedType(name, newType);
-  if (base->getName() == name) {
-    base = newType;
-    ++count;
-  }
-  return count;
+OptionalType *OptionalType::doClone() const {
+  return getModule()->N<OptionalType>(getSrcInfo(), getBase()->clone());
 }
 
 const char GeneratorType::NodeId = 0;
@@ -237,10 +277,18 @@ std::string GeneratorType::getInstanceName(Type *base) {
   return fmt::format(FMT_STRING(".Generator[{}]"), base->referenceString());
 }
 
+GeneratorType *GeneratorType::doClone() const {
+  return getModule()->N<GeneratorType>(getSrcInfo(), getBase()->clone());
+}
+
 const char IntNType::NodeId = 0;
 
 std::string IntNType::getInstanceName(unsigned int len, bool sign) {
   return fmt::format(FMT_STRING(".{}Int{}"), sign ? "" : "U", len);
+}
+
+IntNType *IntNType::doClone() const {
+  return getModule()->N<IntNType>(getSrcInfo(), getLen(), isSigned());
 }
 
 } // namespace types
