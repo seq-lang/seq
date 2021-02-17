@@ -45,7 +45,8 @@ Value *CodegenVisitor::transform(const ExprPtr &expr) {
 }
 
 seq::ir::types::Type *CodegenVisitor::realizeType(types::ClassType *t) {
-  auto i = ctx->find(t->getClass()->realizedTypeName());
+  string name = t->getClass()->realizedTypeName();
+  auto i = ctx->find(name);
   seqassert(i, "type {} not realized", t->toString());
   return i->getType();
 }
@@ -100,7 +101,10 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
               ctx->cache->reverseIdentifierLookup[ast->args[0].name] == "self")
             startI = 2;
           for (int i = startI; i < t->args.size(); i++) {
-            types.push_back(ctx->find(t->args[i]->realizedName())->getType());
+            if (auto ff = t->args[i]->getFunc())
+              types.push_back(ctx->find(ff->RecordType::realizedName())->getType());
+            else
+              types.push_back(ctx->find(t->args[i]->realizedName())->getType());
             assert(types.back());
           }
 
@@ -109,24 +113,20 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
           if (std::isdigit(name[0])) // TODO: get rid of this hack
             name = names[names.size() - 2];
           LOG_REALIZE("[codegen] generating internal fn {} -> {}", ast->name, name);
-          auto *fn =
-              module->Nr<seq::ir::InternalFunc>(module->getDummyFuncType(), ast->name);
+          auto *fn = module->Nr<seq::ir::InternalFunc>(ast->name);
           fn->setParentType(typ);
           fn->setGlobal();
           ctx->functions[f.first] = {fn, false};
         } else if (in(ast->attributes, "llvm")) {
-          auto *fn =
-              module->Nr<seq::ir::LLVMFunc>(module->getDummyFuncType(), ast->name);
+          auto *fn = module->Nr<seq::ir::LLVMFunc>(ast->name);
           ctx->functions[f.first] = {fn, false};
           fn->setGlobal();
         } else if (in(ast->attributes, ".c")) {
-          auto *fn =
-              module->Nr<seq::ir::ExternalFunc>(module->getDummyFuncType(), ast->name);
+          auto *fn = module->Nr<seq::ir::ExternalFunc>(ast->name);
           ctx->functions[f.first] = {fn, false};
           fn->setGlobal();
         } else {
-          auto *fn =
-              module->Nr<seq::ir::BodiedFunc>(module->getDummyFuncType(), ast->name);
+          auto *fn = module->Nr<seq::ir::BodiedFunc>(ast->name);
           ctx->functions[f.first] = {fn, false};
 
           if (in(ast->attributes, ATTR_FORCE_REALIZE)) {
@@ -195,11 +195,17 @@ void CodegenVisitor::visit(IfExpr *expr) {
 
 void CodegenVisitor::visit(CallExpr *expr) {
   vector<Value *> items;
-  for (auto &&i : expr->args) {
-    if (CAST(i.value, EllipsisExpr))
-      assert(false);
-    else
-      items.push_back(transform(i.value));
+
+  auto ft = expr->expr->type->getFunc();
+  seqassert(ft, "not calling function: {}", ft->toString());
+
+  auto *fAST = ctx->cache->functions[ft->funcName].ast.get();
+  bool isLLVM = fAST && in(fAST->attributes, ATTR_EXTERN_LLVM);
+
+  for (int i = 0; i < expr->args.size(); i++) {
+    seqassert(!expr->args[i].value->getEllipsis(), "ellipsis not elided");
+    if (!ft->args[i + 1]->getFunc() || isLLVM)
+      items.push_back(transform(expr->args[i].value));
   }
   result = make<CallInstr>(expr, transform(expr->expr), move(items));
 }
@@ -532,12 +538,18 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
     const auto &ast = real.second.ast;
     assert(ast);
 
-    vector<string> names;
+    vector<string> names, realNames;
     vector<seq::ir::types::Type *> types;
     auto t = real.second.type;
     for (int i = 1; i < t->args.size(); i++) {
-      types.push_back(realizeType(t->args[i]->getClass().get()));
-      names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i - 1].name]);
+      if (!t->args[i]->getFunc() || in(stmt->attributes, ATTR_EXTERN_LLVM)) {
+        types.push_back(realizeType(t->args[i]->getClass().get()));
+        names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i - 1].name]);
+        realNames.push_back(ast->args[i - 1].name);
+      } else {
+        //        LOG("{} // {} : {}", t->toString(), ast->args[i - 1].name,
+        //            t->args[i]->toString());
+      }
     }
 
     auto *funcType = ctx->getModule()->getFuncType(
@@ -551,7 +563,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
     if (in(stmt->attributes, "llvm")) {
       auto *f = cast<ir::LLVMFunc>(fp.first);
       assert(f);
-      f->realize(cast<ir::types::FuncType>(funcType), names);
+      f->realize(funcType, names);
 
       // auto *s = CAST(tmp->suite, SuiteStmt);
       // assert(s && s->stmts.size() == 1)
@@ -602,7 +614,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
       auto *f = cast<ir::Func>(fp.first);
       assert(f);
 
-      f->realize(cast<ir::types::FuncType>(funcType), names);
+      f->realize(funcType, names);
       f->setAttribute(make_unique<FuncAttribute>(ast->attributes));
       for (auto &a : ast->attributes) {
         if (a.first == "atomic")
@@ -617,7 +629,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
         for (auto i = 0; i < names.size(); ++i) {
           auto *var = f->getArgVar(names[i]);
           assert(var);
-          ctx->addVar(ast->args[i].name, var);
+          ctx->addVar(realNames[i], var);
         }
 
         auto *body = newScope(stmt, "body");

@@ -31,6 +31,10 @@ def map[T,S](l: list[T], f: Callable[S,T]):
 e = 1
 print map([1, 2, 3], lambda x: x+e)  #: [2, 3, 4]
 
+def map2(l, f):
+    return [f(x) for x in l]
+print map2([1, 2, 3], lambda x: x+e)  #: [2, 3, 4]
+
 #%% nested,barebones
 def m4[TD](a: int, d: TD):
     def m5[TE](a: int, d: TD, e: TE):
@@ -212,14 +216,12 @@ rec3(1, 's')
 #!   ERROR: cannot unify int and str
 #!   ERROR: while realizing rec3 (arguments rec3[int,int,str])
 
-#%% instantiate_function_error,barebones
+#%% instantiate_function_2,barebones
 def fx[T](x: T) -> T:
     def g(z):
         return z(T())
     return g(fx)
-fx(1)
-#!   ERROR: cannot resolve 1 unbound variables
-#!   ERROR: while realizing fx (arguments fx[int;int,int])
+print fx[float].__class__, fx(1).__class__ #: fx[float;float] int
 
 #%% optionals,barebones
 y = None
@@ -422,21 +424,21 @@ def f[U](x: U, y): # ('u, 'a) -> tuple['a, 'u]
 print f[int](1.1, 1).__class__ #! ERROR: cannot unify float and int
 
 #%% fn_realization,barebones
-def f[T](x: T, y: tuple[T]):
-      print f[str].__class__ #: Function.N2[str,str,Tuple.N1[str]]
+def ff[T](x: T, y: tuple[T]):
+      print ff[str].__class__ #: ff[str;str,Tuple.N1[str]]
       return x
-x = f(1, (1,))
+x = ff(1, (1,))
 print x, x.__class__ #: 1 int
 # print f.__class__  # TODO ERRORS
 
-def f[T](x:T):
+def fg[T](x:T):
     def g(y):
         z = T()
         return z
-    print f[str].__class__  #: Function.N1[void,str]
+    print fg[str].__class__  #: fg[str;str]
     print g(1).__class__ #: int
-f(1)
-print f(1).__class__ #: void
+fg(1)
+print fg(1).__class__ #: void
 
 def f[T](x: T):
     print f[T](x).__class__  #: int
@@ -474,7 +476,7 @@ class A[T]:
             def foo[W](t: V, u: V, v: V, w: W):
                 return (t, u, v, w)
 
-print A.B.C[bool].foo[str].__class__ #: Function.N4[Tuple.N4[bool,bool,bool,str],bool,bool,bool,str]
+print A.B.C[bool].foo[str].__class__ #: A.A.B.A.B.C[bool]:A.A.B.A.B.C.foo[str;bool,bool,bool,str]
 print A.B.C.foo(1,1,1,True) #: (1, 1, 1, True)
 print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
 print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
@@ -492,7 +494,7 @@ class A[T]:
             c: V
             def foo[W](t: V, u: V, v: V, w: W):
                 return (t, u, v, w)
-print A.B.C[float].foo(1,1,1,True) #! ERROR: cannot unify int and float
+print A.B.C[str].foo(1,1,1,True) #! ERROR: cannot unify int and str
 
 #%% nested_deep_class_error_2,barebones
 class A[T]:
@@ -653,3 +655,40 @@ def foo():
     shuffle(v)
     print sorted(v) #: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 foo()
+
+#%% function_type,barebones
+class F:
+    f: function[int, int]
+    g: function[void, int]
+    x: int
+def foo(x: int):
+    return x+1
+def goo(x: int):
+    print x+2
+f = F(foo, goo, 2)
+print f.f(f.x) #: 3
+f.g(f.x) #: 4
+
+def hai(x, y, z):
+    print f'hai({x},{y},{z})'
+fn = Function[void, int, int, int](hai)
+fn(1, 2, 3) #: hai(1,2,3)
+print str(fn)[:12] #: <function at
+z = fn(..., 2, 3)
+z(3) #: hai(3,2,3)
+
+#%% int_float,barebones
+l = [1., 2, 3, 4]
+print l, l.__class__ #: [1, 2, 3, 4] List[float]
+
+#%% forward_fn,barebones
+def test(name, sort, key):
+    v1 = [1, 2, 3, 4]
+    sp = sort(v1, key)
+    print name, sp
+def foo(l, f):
+    return [f(i) for i in l]
+test('hi', foo, lambda x: x+1) #: hi [2, 3, 4, 5]
+# def foof(l: List[int], x, f: Callable[int, int]):
+#     return [f(i)+x for i in l]
+# test('qsort', foof(..., 3, ...))

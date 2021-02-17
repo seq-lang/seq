@@ -39,12 +39,13 @@ types::TypePtr TypecheckVisitor::realize(types::TypePtr typ) {
     return nullptr;
   if (auto f = typ->getFunc()) {
     auto ret = realizeFunc(f.get());
-    //    if (ret)
-    //      realizeType(ret->getClass().get());
+    if (ret)
+      realizeType(ret->getClass().get());
     return ret;
   } else {
     return realizeType(typ->getClass().get());
   }
+  return nullptr;
 }
 
 types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
@@ -54,6 +55,10 @@ types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
   for (auto &m : ctx->cache->classes[type->name].fields)
     if (!m.type)
       return nullptr;
+
+  // TODO: dissalow later?!
+  //  if (startswith(type->name, "Callable.N") && !type->getFunc())
+  //    error("realizing trait");
 
   auto realizedName = type->realizedTypeName();
   try {
@@ -173,12 +178,14 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       // Add function arguments.
       if (!isInternal)
         for (int i = 1; i < type->args.size(); i++) {
-          seqassert(type->args[i] && type->args[i]->getUnbounds().empty(),
+          seqassert(type->args[i] &&
+                        (type->getFunc() || type->args[i]->getUnbounds().empty()),
                     "unbound argument {}", type->args[i]->toString());
 
           string varName = ast->args[i - 1].name;
           trimStars(varName);
-          ctx->add(TypecheckItem::Var, varName, make_shared<LinkType>(type->args[i]));
+          ctx->add(type->args[i]->getFunc() ? TypecheckItem::Func : TypecheckItem::Var,
+                   varName, make_shared<LinkType>(type->args[i]));
         }
 
       // Need to populate realization table in advance to make recursive functions
@@ -418,7 +425,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   } else if (name == "Optional") {
     assert(types.size() == 1 && statics.empty());
     handle = ctx->cache->module->getOptionalType(types[0]);
-  } else if (startswith(name, "Function.N")) {
+  } else if (startswith(name, "Function.N") || startswith(name, "Callable.N")) {
     types.clear();
     for (auto &m : const_cast<ClassType *>(t)->getRecord()->args)
       types.push_back(getLLVM(m));

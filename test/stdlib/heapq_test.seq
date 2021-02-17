@@ -154,7 +154,7 @@ def test_nsmallest():
     for n in (10,):
         assert list(heapq.nsmallest(n, data)) == sorted(data)[:min(n, len(data))]
         assert list(heapq.nsmallest(n, data, key=mykey)) == sorted(data, key=mykey)[:min(n, len(data))]
-        assert list(heapq.nsmallest(n, data, key=None)) == sorted(data, key=None)[:min(n, len(data))]
+        assert list(heapq.nsmallest(n, data)) == sorted(data)[:min(n, len(data))]
 
 @test
 def test_nlargest():
@@ -162,7 +162,7 @@ def test_nlargest():
     for n in (0, 1, 2, 10, 100, 400, 999, 1000, 1100):
         assert list(heapq.nlargest(n, data)) == sorted(data)[::-1][:min(n, len(data))]
         assert list(heapq.nlargest(n, data, key=mykey)) == sorted(data, key=mykey)[::-1][:min(n, len(data))]
-        assert list(heapq.nlargest(n, data, key=None)) == sorted(data, key=None)[::-1][:min(n, len(data))]
+        assert list(heapq.nlargest(n, data)) == sorted(data)[::-1][:min(n, len(data))]
 
 @test
 def test_comparison_operator():

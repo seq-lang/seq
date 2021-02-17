@@ -47,6 +47,9 @@ public:
 
   /// @return the internal value.
   ValueType getVal() const { return val; }
+  /// Sets the value.
+  /// @param v the value
+  void setVal(ValueType v) { val = v; }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override {
@@ -81,6 +84,9 @@ public:
 
   /// @return the internal value.
   std::string getVal() const { return val; }
+  /// Sets the value.
+  /// @param v the value
+  void setVal(std::string v) { val = std::move(v); }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override {

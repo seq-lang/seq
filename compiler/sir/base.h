@@ -36,20 +36,6 @@ public:
   int getId() const { return id; }
 };
 
-class ParentFuncMixin {
-private:
-  Func *parentFunc = nullptr;
-
-public:
-  /// @return the containing function
-  Func *getParentFunc() { return parentFunc; }
-  /// @return the containing function
-  const Func *getParentFunc() const { return parentFunc; }
-  /// Sets the containing function.
-  /// @param f the new function
-  void setParentFunc(Func *f) { parentFunc = f; }
-};
-
 /// Base for named IR nodes.
 class IRNode {
 private:
@@ -121,7 +107,7 @@ public:
 
   /// @param n the name
   /// @return true if the attribute is in the store
-  bool hasAttribute(const std::string &n) {
+  bool hasAttribute(const std::string &n) const {
     auto *actual = getActual();
     return actual->attributes.find(n) != actual->attributes.end();
   }

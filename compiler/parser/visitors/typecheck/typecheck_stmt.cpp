@@ -242,9 +242,8 @@ void TypecheckVisitor::visit(WhileStmt *stmt) {
 void TypecheckVisitor::visit(ForStmt *stmt) {
   stmt->iter = transform(stmt->iter);
   // Extract the type of the for variable.
-  if (!stmt->iter->getType()->canRealize()) {
+  if (!stmt->iter->getType()->canRealize())
     return; // continue after the iterator is realizable
-  }
 
   auto iterType = stmt->iter->getType()->getClass();
   if (auto tuple = iterType->getHeterogenousTuple()) {

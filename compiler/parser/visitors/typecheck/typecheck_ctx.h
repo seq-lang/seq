@@ -109,13 +109,10 @@ public:
   /// Returns the reordered vector and an associated reordering score (missing
   /// default arguments' score is half of the present arguments).
   /// Score is -1 if the given arguments cannot be reordered.
-  typedef std::function<int(const std::map<int, int> &, int, int,
-                            const vector<vector<int>> &)>
-      ReorderDoneFn;
+  typedef std::function<int(int, int, const vector<vector<int>> &)> ReorderDoneFn;
   typedef std::function<int(string)> ReorderErrorFn;
-  int reorderNamedArgs(types::RecordType *func, const string &knownTypes,
-                       const vector<CallExpr::Arg> &args, ReorderDoneFn onDone,
-                       ReorderErrorFn onError);
+  int reorderNamedArgs(types::RecordType *func, const vector<CallExpr::Arg> &args,
+                       ReorderDoneFn onDone, ReorderErrorFn onError);
 };
 
 } // namespace ast

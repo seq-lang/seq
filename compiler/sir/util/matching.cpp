@@ -45,7 +45,7 @@ public:
     result = compareFuncs(x, y) &&
              std::equal(x->begin(), x->end(), y->begin(), y->end(),
                         [this](auto *x, auto *y) { return process(x, y); }) &&
-             process(x->getBody(), y->getBody());
+             process(x->getBody(), y->getBody()) && x->isBuiltin() == y->isBuiltin();
   }
   VISIT(ExternalFunc);
   void handle(const ExternalFunc *x, const ExternalFunc *y) {
@@ -90,7 +90,7 @@ public:
   }
   VISIT(IfFlow);
   void handle(const IfFlow *x, const IfFlow *y) {
-    result = result && process(x->getCond(), y->getCond()) &&
+    result = process(x->getCond(), y->getCond()) &&
              process(x->getTrueBranch(), y->getTrueBranch()) &&
              process(x->getFalseBranch(), y->getFalseBranch());
   }

@@ -59,15 +59,15 @@ public:
   /// @param l the new value
   void setRhs(Value *v) { rhs = v; }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
+protected:
   std::vector<Value *> doGetUsedValues() const override { return {rhs}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {lhs}; }
   int doReplaceUsedVariable(int id, Var *newVar) override;
 
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
   Value *doClone() const override;
 };
 
@@ -103,13 +103,13 @@ public:
   /// @param f the new field
   void setField(std::string f) { field = std::move(f); }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
+protected:
   const types::Type *doGetType() const override;
   std::vector<Value *> doGetUsedValues() const override { return {val}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
 
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
   Value *doClone() const override;
 };
 
@@ -156,13 +156,13 @@ public:
   /// @param f the new field
   void setField(std::string f) { field = std::move(f); }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
+protected:
   const types::Type *doGetType() const override { return lhs->getType(); }
   std::vector<Value *> doGetUsedValues() const override { return {lhs, rhs}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
 
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
   Value *doClone() const override;
 };
 
@@ -232,13 +232,13 @@ public:
   /// @return the number of arguments
   int numArgs() const { return args.size(); }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
+protected:
   const types::Type *doGetType() const override;
   std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
 
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
   Value *doClone() const override;
 };
 
@@ -258,7 +258,9 @@ public:
   /// @param count the number of elements
   /// @param name the name
   StackAllocInstr(types::Type *arrayType, int64_t count, std::string name = "")
-      : AcceptorExtend(std::move(name)), arrayType(arrayType), count(count) {}
+      : AcceptorExtend(std::move(name)), arrayType(arrayType), count(count) {
+    assert(isA<types::ArrayType>(arrayType));
+  }
 
   /// @return the count
   int64_t getCount() const { return count; }
@@ -266,14 +268,13 @@ public:
   /// @param c the new value
   void setCount(int64_t c) { count = c; }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
+protected:
   const types::Type *doGetType() const override { return arrayType; }
-
   std::vector<types::Type *> doGetUsedTypes() const override { return {arrayType}; }
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
   Value *doClone() const override;
 };
 
@@ -307,13 +308,13 @@ public:
   /// @param p the new value
   void setProperty(Property p) { property = p; }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
+protected:
   const types::Type *doGetType() const override;
   std::vector<types::Type *> doGetUsedTypes() const override { return {inspectType}; }
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
   Value *doClone() const override;
 };
 
@@ -341,14 +342,13 @@ public:
   /// @param v the new value
   void setSuspending(bool v = true) { suspend = v; }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
+protected:
   const types::Type *doGetType() const override { return type; }
-
   std::vector<types::Type *> doGetUsedTypes() const override { return {type}; }
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
   Value *doClone() const override;
 };
 
@@ -398,15 +398,15 @@ public:
   /// @param v the new value
   void setFalseValue(Value *v) { falseValue = v; }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
+protected:
   const types::Type *doGetType() const override { return trueValue->getType(); }
   std::vector<Value *> doGetUsedValues() const override {
     return {cond, trueValue, falseValue};
   }
   int doReplaceUsedValue(int id, Value *newValue) override;
 
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
   Value *doClone() const override;
 };
 
@@ -432,7 +432,7 @@ public:
   /// @param f the new value
   void setTarget(Flow *f) { target = f; }
 
-private:
+protected:
   std::vector<Value *> doGetUsedValues() const override { return {target}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
 };
@@ -483,12 +483,12 @@ public:
   /// @param v the new value
   void setValue(Value *v) { value = v; }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
+protected:
   std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
 
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
   Value *doClone() const override;
 };
 
@@ -511,12 +511,12 @@ public:
   /// @param v the new value
   void setValue(Value *v) { value = v; }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
+protected:
   std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
 
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
   Value *doClone() const override;
 };
 
@@ -539,12 +539,12 @@ public:
   /// @param v the new value
   void setValue(Value *v) { value = v; }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
-  std::vector<Value *> doGetUsedValues() const override { return {value}; }
+protected:
+  std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
 
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
   Value *doClone() const override;
 };
 
@@ -582,13 +582,13 @@ public:
   /// @param v the new value
   void setValue(Value *v) { val = v; }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
+protected:
   const types::Type *doGetType() const override { return val->getType(); }
   std::vector<Value *> doGetUsedValues() const override { return {flow, val}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
 
+private:
+  std::ostream &doFormat(std::ostream &os) const override;
   Value *doClone() const override;
 };
 
