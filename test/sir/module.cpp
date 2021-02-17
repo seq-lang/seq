@@ -44,9 +44,7 @@ TEST_F(SIRCoreTest, ModuleMainFunctionAndArgVar) {
 
   auto *argVar = module->getArgVar();
   ASSERT_TRUE(argVar);
-  auto *argVarType = cast<types::ArrayType>(argVar->getType());
-  ASSERT_TRUE(argVarType);
-  ASSERT_TRUE(util::match(argVarType->getBase(), module->getStringType()));
+  ASSERT_TRUE(util::match(argVar->getType(), module->getArrayType(module->getStringType())));
   ASSERT_FALSE(argVar->isReplaceable());
 }
 
