@@ -47,7 +47,7 @@ public:
   static const std::string ADD_MAGIC_NAME;
   static const std::string SUB_MAGIC_NAME;
   static const std::string MUL_MAGIC_NAME;
-  static const std::string FLOOR_DIV_MAGIC_NAME;
+  static const std::string TRUE_DIV_MAGIC_NAME;
   static const std::string DIV_MAGIC_NAME;
   static const std::string MOD_MAGIC_NAME;
   static const std::string POW_MAGIC_NAME;
@@ -63,6 +63,7 @@ public:
   static const std::string BOOL_MAGIC_NAME;
   static const std::string STR_MAGIC_NAME;
 
+  static const std::string ITER_MAGIC_NAME;
   static const std::string LEN_MAGIC_NAME;
 
 private:

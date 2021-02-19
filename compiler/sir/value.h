@@ -79,7 +79,7 @@ public:
   Value *operator+(const Value &other) const;
   Value *operator-(const Value &other) const;
   Value *operator*(const Value &other) const;
-  Value *floorDiv(const Value &other) const;
+  Value *trueDiv(const Value &other) const;
   Value *operator/(const Value &other) const;
   Value *operator%(const Value &other) const;
   Value *pow(const Value &other) const;
@@ -102,6 +102,7 @@ public:
   Value *toBool() const;
   Value *toStr() const;
 
+  Value *iter() const;
   Value *len() const;
 
 private:

@@ -72,7 +72,7 @@ const std::string IRModule::INVERT_MAGIC_NAME = "__invert__";
 const std::string IRModule::ADD_MAGIC_NAME = "__add__";
 const std::string IRModule::SUB_MAGIC_NAME = "__sub__";
 const std::string IRModule::MUL_MAGIC_NAME = "__mul__";
-const std::string IRModule::FLOOR_DIV_MAGIC_NAME = "__floordiv__";
+const std::string IRModule::TRUE_DIV_MAGIC_NAME = "__truediv__";
 const std::string IRModule::DIV_MAGIC_NAME = "__div__";
 const std::string IRModule::MOD_MAGIC_NAME = "__mod__";
 const std::string IRModule::POW_MAGIC_NAME = "__pow__";
@@ -88,6 +88,7 @@ const std::string IRModule::INT_MAGIC_NAME = "__int__";
 const std::string IRModule::BOOL_MAGIC_NAME = "__bool__";
 const std::string IRModule::STR_MAGIC_NAME = "__str__";
 
+const std::string IRModule::ITER_MAGIC_NAME = "__iter__";
 const std::string IRModule::LEN_MAGIC_NAME = "__len__";
 
 const char IRModule::NodeId = 0;

@@ -63,8 +63,8 @@ Value *Value::operator*(const Value &other) const {
   return doBinaryOp(IRModule::MUL_MAGIC_NAME, other);
 }
 
-Value *Value::floorDiv(const Value &other) const {
-  return doBinaryOp(IRModule::FLOOR_DIV_MAGIC_NAME, other);
+Value *Value::trueDiv(const Value &other) const {
+  return doBinaryOp(IRModule::TRUE_DIV_MAGIC_NAME, other, getModule()->getFloatType());
 }
 
 Value *Value::operator/(const Value &other) const {
@@ -76,7 +76,7 @@ Value *Value::operator%(const Value &other) const {
 }
 
 Value *Value::pow(const Value &other) const {
-  return doBinaryOp(IRModule::FLOOR_DIV_MAGIC_NAME, other);
+  return doBinaryOp(IRModule::POW_MAGIC_NAME, other);
 }
 
 Value *Value::operator<<(const Value &other) const {
@@ -121,6 +121,12 @@ Value *Value::toBool() const {
 
 Value *Value::toStr() const {
   return doUnaryOp(IRModule::STR_MAGIC_NAME, getModule()->getStringType());
+}
+
+Value *Value::iter() const {
+  auto *rType = getModule()->getOrRealizeType("Generator",
+                                              {const_cast<types::Type *>(getType())});
+  return doUnaryOp(IRModule::ITER_MAGIC_NAME, rType);
 }
 
 Value *Value::len() const {
