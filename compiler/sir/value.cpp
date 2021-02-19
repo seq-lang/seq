@@ -123,12 +123,6 @@ Value *Value::toStr() const {
   return doUnaryOp(IRModule::STR_MAGIC_NAME, getModule()->getStringType());
 }
 
-Value *Value::iter() const {
-  auto *rType = getModule()->getOrRealizeType("Generator",
-                                              {const_cast<types::Type *>(getType())});
-  return doUnaryOp(IRModule::ITER_MAGIC_NAME, rType);
-}
-
 Value *Value::len() const {
   return doUnaryOp(IRModule::LEN_MAGIC_NAME, getModule()->getIntType());
 }

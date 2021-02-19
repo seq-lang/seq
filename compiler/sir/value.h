@@ -102,7 +102,6 @@ public:
   Value *toBool() const;
   Value *toStr() const;
 
-  Value *iter() const;
   Value *len() const;
 
 private:
