@@ -57,7 +57,8 @@ public:
   unordered_map<string, pair<seq::ir::Func *, bool>> functions;
 
 public:
-  CodegenContext(shared_ptr<Cache> cache, seq::ir::SeriesFlow *top, seq::ir::BodiedFunc *base
+  CodegenContext(shared_ptr<Cache> cache, seq::ir::SeriesFlow *top,
+                 seq::ir::BodiedFunc *base
                  // ,seq::SeqJIT *jit
   );
 
@@ -72,7 +73,8 @@ public:
   void addType(const string &name, seq::ir::types::Type *t, bool global = false);
   void addFunc(const string &name, seq::ir::Func *f, bool global = false);
   void addImport(const string &name, const string &import, bool global = false);
-  void addSeries(seq::ir::SeriesFlow *s = nullptr, seq::ir::BodiedFunc *newBase = nullptr);
+  void addSeries(seq::ir::SeriesFlow *s = nullptr,
+                 seq::ir::BodiedFunc *newBase = nullptr);
   void popSeries();
 
   void addScope() { Context<CodegenItem>::addBlock(); }
