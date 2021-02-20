@@ -538,10 +538,11 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
                                           bool *noReturn) {
   // Table of supported binary operations and the corresponding magic methods.
   auto magics = unordered_map<string, string>{
-      {"+", "add"},     {"-", "sub"},    {"*", "mul"}, {"**", "pow"}, {"/", "truediv"},
-      {"//", "div"},    {"@", "matmul"}, {"%", "mod"}, {"<", "lt"},   {"<=", "le"},
-      {">", "gt"},      {">=", "ge"},    {"==", "eq"}, {"!=", "ne"},  {"<<", "lshift"},
-      {">>", "rshift"}, {"&", "and"},    {"|", "or"},  {"^", "xor"},
+      {"+", "add"},     {"-", "sub"},       {"*", "mul"},     {"**", "pow"},
+      {"/", "truediv"}, {"//", "floordiv"}, {"@", "matmul"},  {"%", "mod"},
+      {"<", "lt"},      {"<=", "le"},       {">", "gt"},      {">=", "ge"},
+      {"==", "eq"},     {"!=", "ne"},       {"<<", "lshift"}, {">>", "rshift"},
+      {"&", "and"},     {"|", "or"},        {"^", "xor"},
   };
   if (noReturn)
     *noReturn = false;

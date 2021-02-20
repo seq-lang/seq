@@ -47,7 +47,7 @@ jobs:
   precise:
     runs-on: ubuntu-latest
     name: Seq CI (ubuntu-precise)
-    needs: [release]
+    needs: [ release ]
     steps:
       - uses: actions/checkout@v2
 
@@ -97,7 +97,7 @@ jobs:
           - macos-latest
     runs-on: ${{ matrix.os }}
     name: Seq CI
-    needs: [release]
+    needs: [ release ]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -149,6 +149,7 @@ jobs:
 
       - name: Test
         run: |
+          echo $SEQ_PYTHON
           python -m pip install --upgrade pip
           pip install numpy
           ln -s build/libseqrt.${LIBEXT} .

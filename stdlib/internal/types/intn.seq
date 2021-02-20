@@ -68,7 +68,7 @@ class Int[N]:
         %0 = mul i{=N} %self, %other
         ret i{=N} %0
     @llvm
-    def __div__(self, other: Int[N]) -> Int[N]:
+    def __floordiv__(self, other: Int[N]) -> Int[N]:
         %0 = sdiv i{=N} %self, %other
         ret i{=N} %0
     @llvm
@@ -216,7 +216,7 @@ class UInt[N]:
         %0 = mul i{=N} %self, %other
         ret i{=N} %0
     @llvm
-    def __div__(self, other: UInt[N]) -> UInt[N]:
+    def __floordiv__(self, other: UInt[N]) -> UInt[N]:
         %0 = udiv i{=N} %self, %other
         ret i{=N} %0
     @llvm

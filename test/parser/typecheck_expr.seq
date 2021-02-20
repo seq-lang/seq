@@ -43,7 +43,7 @@ class int:
     def __mul__(self, i: int): print 'mul'; return 0
     def __pow__(self, i: int): print 'pow'; return 0
     def __truediv__(self, i: int): print 'truediv'; return 0
-    def __div__(self, i: int): print 'div'; return 0
+    def __floordiv__(self, i: int): print 'div'; return 0
     def __matmul__(self, i: int): print 'matmul'; return 0
     def __mod__(self, i: int): print 'mod'; return 0
     def __lt__(self, i: int): print 'lt'; return 0

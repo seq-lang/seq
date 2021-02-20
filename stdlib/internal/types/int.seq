@@ -95,11 +95,11 @@ class int:
         %1 = fmul double %0, %other
         ret double %1
     @llvm
-    def __div__(self, b: int) -> int:
+    def __floordiv__(self, b: int) -> int:
         %tmp = sdiv i64 %self, %b
         ret i64 %tmp
     @llvm
-    def __div__(self, other: float) -> float:
+    def __floordiv__(self, other: float) -> float:
         declare double @llvm.floor.f64(double)
         %0 = sitofp i64 %self to double
         %1 = fdiv double %0, %other

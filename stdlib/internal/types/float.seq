@@ -45,10 +45,10 @@ class float:
         ret double %tmp
     def __mul__(self, other: int) -> float:
         return self.__mul__(float(other))
-    def __div__(self, other: float) -> float:
+    def __floordiv__(self, other: float) -> float:
         return self.__truediv__(other).__floor__()
-    def __div__(self, other: int) -> float:
-        return self.__div__(float(other))
+    def __floordiv__(self, other: int) -> float:
+        return self.__floordiv__(float(other))
     @llvm
     def __truediv__(a: float, b: float) -> float:
         %tmp = fdiv double %a, %b

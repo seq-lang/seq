@@ -70,12 +70,12 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type, vector<types::TypePtr>
                                  vector<types::TypePtr> generics) {
   auto e = make_unique<IdExpr>(type->funcName);
   e->type = type;
-  type = typeCtx->instantiate(e.get(), type)->getFunc();
+  type = typeCtx->instantiate(e.get(), type, nullptr, false)->getFunc();
   if (args.size() != type->args.size())
     return nullptr;
   for (int gi = 0; gi < args.size(); gi++) {
     types::Type::Unification undo;
-    if (type->args[gi]->unify(args[gi].get(), &undo) < 0) {
+    if (type->args[gi + 1]->unify(args[gi].get(), &undo) < 0) {
       undo.undo();
       return nullptr;
     }

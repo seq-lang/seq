@@ -745,3 +745,14 @@ print sorted([1,2,3,4,5], key=foo(..., y=2))
 print sorted([1,2,3,4,5], key=foo(..., y=-2))
 #: [1, 2, 3, 4, 5]
 #: [5, 3, 1, 2, 4]
+
+#%% mutually_recursive_error,barebones
+def bl(x):
+    return True
+def frec(x, y):
+    def grec(x, y):
+        return frec(y, x)
+    return grec(x, y) if bl(y) else 2
+print frec(1, 2).__class__, frec('s', 1).__class__
+#!   ERROR: expression with void type
+#!   ERROR: while realizing frec (arguments frec[int,int])
