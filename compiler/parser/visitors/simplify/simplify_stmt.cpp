@@ -438,7 +438,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     string varName = a.name;
     int stars = trimStars(varName);
     if (stars == 2) {
-      if (hasKwArg || a.type || a.deflt)
+      if (hasKwArg || a.type || a.deflt || ia != stmt->args.size() - 1)
         error("invalid **kwargs");
       hasKwArg = true;
     } else if (stars == 1) {

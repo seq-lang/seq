@@ -206,7 +206,6 @@ print fx(2) #: 3
 fxx: Function[int, int] = foo
 print fxx(3) #: 4
 
-
 #%% index_special,barebones
 class Foo:
     def __getitem__(self, foo):

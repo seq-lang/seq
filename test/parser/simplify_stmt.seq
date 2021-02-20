@@ -484,6 +484,10 @@ def foo(a, b=1, **c: int):
 def foo(a, b=1, **c = 1):
     pass #! ERROR: parsing error: '='
 
+#%% function_err_0i,barebones
+def foo(a, **c, d):
+    pass #! ERROR: invalid **kwargs
+
 #%% function_err_1,barebones
 def foo():
     @force_realize
