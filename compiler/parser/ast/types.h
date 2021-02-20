@@ -135,10 +135,12 @@ struct LinkType : public Type {
   TypePtr type;
   /// True if a type is a static type (e.g. N in Int[N: int]).
   bool isStatic;
+  /// The generic name of a generic type, if applicable.
+  string genericName;
 
 public:
   LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
-           bool isStatic = false);
+           bool isStatic = false, string genericName = "");
   /// Convenience constructor for linked types.
   explicit LinkType(TypePtr type);
 
@@ -299,7 +301,7 @@ public:
               vector<char> known);
   //
 public:
-  //  int unify(Type *typ, Unification *undo) override;
+  int unify(Type *typ, Unification *undo) override;
   TypePtr generalize(int atLevel) override;
   TypePtr instantiate(int atLevel, int &unboundCount,
                       unordered_map<int, TypePtr> &cache) override;

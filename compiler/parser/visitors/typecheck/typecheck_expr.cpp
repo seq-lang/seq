@@ -961,9 +961,8 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   } else if (auto pc = callee->getPartial()) {
     known = pc->known;
     ExprPtr var = N<IdExpr>(partialVar = ctx->cache->getTemporaryVar("pt"));
-    expr->expr =
-        transform(N<StmtExpr>(N<AssignStmt>(clone(var), move(expr->expr)),
-                              N<IdExpr>(callee->getPartial()->func->funcName)));
+    expr->expr = transform(N<StmtExpr>(N<AssignStmt>(clone(var), move(expr->expr)),
+                                       N<IdExpr>(pc->func->funcName)));
     calleeFn = expr->expr->type->getFunc();
     seqassert(calleeFn, "not a function: {}", expr->expr->type->toString());
   } else if (!callee->getFunc()) {
@@ -1080,13 +1079,11 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         }
         args[si].value->type |= expectedTyp;
         if (auto pt = argClass->getPartial()) {
-          auto instFn = ctx->instantiate(args[si].value.get(), pt)->getFunc();
-          expectedClass->generics[0].type |= instFn->args[0];
+          pt->func = ctx->instantiate(args[si].value.get(), pt->func)->getFunc();
+          expectedClass->generics[0].type |= pt->func->args[0];
           for (int pi = 0, gi = 1; pi < pt->known.size(); pi++)
-            if (pt->known[pi])
-              deactivateUnbounds(instFn->args[pi + 1].get());
-            else
-              expectedClass->generics[gi++].type |= instFn->args[pi + 1];
+            if (!pt->known[pi])
+              expectedClass->generics[gi++].type |= pt->func->args[pi + 1];
         }
       } else {
         // Case 5: normal unification.
@@ -1118,6 +1115,10 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       rt |= args[si].value->type;
       args[si].value = transform(args[si].value);
     }
+    if (auto pt = args[si].value->type->getPartial())
+      if (auto rt = realize(pt->func))
+        rt |= pt->func;
+    //    LOG("--> {} {}", expr->expr->toString(), args[si].value->toString());
     expr->done &= args[si].value->done;
   }
   // Handle default generics (calleeFn.g. foo[S, T=int]) only if all arguments were
@@ -1131,6 +1132,8 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     if (replacements[si]) {
       if (replacements[si]->getFunc())
         deactivateUnbounds(replacements[si].get());
+      if (auto pt = replacements[si]->getPartial())
+        deactivateUnbounds(pt->func.get());
       calleeFn->generics[si + 1].type = calleeFn->args[si + 1] = replacements[si];
     }
   if (auto rt = realize(calleeFn)) {
@@ -1166,7 +1169,6 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       call = N<StmtExpr>(move(stmts), N<IdExpr>(var));
     } else {
       call = N<StmtExpr>(
-          //          N<ExprStmt>(move(expr->expr)),
           N<AssignStmt>(N<IdExpr>(var),
                         N<CallExpr>(N<IdExpr>(partialTypeName), move(newArgs))),
           N<IdExpr>(var));
@@ -1314,6 +1316,8 @@ string TypecheckVisitor::generateCallableStub(int n) {
           Generic(!i ? "TR" : format("T{}", i),
                   make_shared<LinkType>(LinkType::Generic, ctx->cache->unboundCount++),
                   ctx->cache->unboundCount));
+      baseType->generics.back().type->getLink()->genericName =
+          baseType->generics.back().name;
       baseType->args.emplace_back(baseType->generics.back().type);
     }
     ctx->cache->classes[typeName] = Cache::Class();
@@ -1446,10 +1450,11 @@ string TypecheckVisitor::generatePartialStub(const vector<char> &mask,
     auto tupleSize = std::count_if(mask.begin(), mask.end(), [](char c) { return c; });
     auto tupleType =
         ctx->find(generateTupleStub(tupleSize, typeName))->type->getRecord();
-    auto type = make_shared<PartialType>(
-        tupleType, fn->generalize(ctx->getLevel())->getFunc(), mask);
+    //    auto type = make_shared<PartialType>(
+    //        tupleType, fn->generalize(ctx->getLevel())->getFunc(), mask);
     ctx->cache->classes[typeName] = Cache::Class();
-    ctx->addToplevel(typeName, make_shared<TypecheckItem>(TypecheckItem::Type, type));
+    ctx->addToplevel(typeName,
+                     make_shared<TypecheckItem>(TypecheckItem::Type, tupleType));
   }
   return typeName;
 }

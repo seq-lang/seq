@@ -112,9 +112,7 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
                ? TypecheckItem::Type
                : (type->getFunc() ? TypecheckItem::Func : TypecheckItem::Var);
     ctx->add(kind, lhs,
-             kind != TypecheckItem::Var || type->getPartial()
-                 ? type->generalize(ctx->typecheckLevel)
-                 : type);
+             kind != TypecheckItem::Var ? type->generalize(ctx->typecheckLevel) : type);
     stmt->done = stmt->rhs->done;
   }
   // Save the variable to the local realization context
@@ -407,9 +405,9 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
     seqassert(parentClass, "parent class not set");
     for (int i = 0; i < parentClassAST->generics.size(); i++) {
       auto gen = parentClass->generics[i].type->getLink();
-      generics.push_back(
-          make_shared<LinkType>(LinkType::Unbound, parentClass->generics[i].id,
-                                ctx->typecheckLevel - 1, nullptr, gen->isStatic));
+      generics.push_back(make_shared<LinkType>(
+          LinkType::Unbound, parentClass->generics[i].id, ctx->typecheckLevel - 1,
+          nullptr, gen->isStatic, gen->genericName));
       ctx->add(TypecheckItem::Type, parentClassAST->generics[i].name, generics.back(),
                gen->isStatic);
     }
@@ -538,6 +536,7 @@ vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &gene
   auto genericTypes = vector<Generic>();
   for (const auto &g : generics) {
     auto typ = ctx->addUnbound(N<IdExpr>(g.name).get(), level, true, bool(g.type));
+    typ->getLink()->genericName = g.name;
     genericTypes.emplace_back(Generic{g.name, typ->generalize(level),
                                       ctx->cache->unboundCount - 1, clone(g.deflt)});
     LOG_REALIZE("[generic] {} -> {} {}", g.name, typ->toString(), bool(g.type));

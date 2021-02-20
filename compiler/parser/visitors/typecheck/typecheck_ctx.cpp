@@ -101,8 +101,9 @@ types::TypePtr TypeContext::instantiate(const Expr *expr, types::TypePtr type,
                       i.second->toString(), type->toString(), expr->toString(),
                       activate);
         if (activate && allowActivation)
-          activeUnbounds[i.second] = format(
-              "?{} of {} in {}", i.first, type->toString(), FormatVisitor::apply(expr));
+          activeUnbounds[i.second] =
+              format("{} of {} in {}", l->genericName.empty() ? "?" : l->genericName,
+                     type->toString(), FormatVisitor::apply(expr));
       }
     }
   }

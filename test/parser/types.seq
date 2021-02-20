@@ -214,7 +214,7 @@ def rec3(x, y): #- ('a, 'b) -> 'b
         return y
 rec3(1, 's')
 #!   ERROR: cannot unify int and str
-#!   ERROR: while realizing rec3 (arguments rec3[int,int,str])
+#!   ERROR: while realizing rec3 (arguments rec3[int,str])
 
 #%% instantiate_function_2,barebones
 def fx[T](x: T) -> T:
@@ -297,7 +297,7 @@ print h(list(map(lambda i: i-1, map(lambda i: i+2, range(5)))))
 #%% func_unify_error,barebones
 def foo(x:int):
     print x
-z = 1 & foo #! ERROR: cannot unify foo[void,int] and int
+z = 1 & foo #! ERROR: cannot unify foo[int] and int
 
 #%% void_error,barebones
 def foo():
@@ -413,8 +413,8 @@ def f[U](x: U, y):
         return (x, y)
     return g(y, x)
 x, y = 1, 'haha'
-print f(x, y).__class__ #: Tuple.N2[str,int]
-print f[str]('aa', 1.1).__class__ #: Tuple.N2[float,str]
+print f(x, y).__class__ #: Tuple[str,int]
+print f[str]('aa', 1.1).__class__ #: Tuple[float,str]
 
 #%% nested_fn_generic_error,barebones
 def f[U](x: U, y): # ('u, 'a) -> tuple['a, 'u]
@@ -425,7 +425,7 @@ print f[int](1.1, 1).__class__ #! ERROR: cannot unify float and int
 
 #%% fn_realization,barebones
 def ff[T](x: T, y: tuple[T]):
-      print ff[str].__class__ #: ff[str;str,Tuple.N1[str]]
+      print ff[str].__class__ #: ff[str;str,Tuple[str]]
       return x
 x = ff(1, (1,))
 print x, x.__class__ #: 1 int
@@ -476,7 +476,7 @@ class A[T]:
             def foo[W](t: V, u: V, v: V, w: W):
                 return (t, u, v, w)
 
-print A.B.C[bool].foo[str].__class__ #: A.A.B.A.B.C[bool]:A.A.B.A.B.C.foo[str;bool,bool,bool,str]
+print A.B.C[bool].foo[str].__class__ #: A.A.B.A.B.C.foo[str;bool,bool,bool,str]
 print A.B.C.foo(1,1,1,True) #: (1, 1, 1, True)
 print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
 print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
@@ -515,8 +515,8 @@ def f(x):
     b = g('s')
     c = g(x)
     return a, b, c
-print f(1.1).__class__ #: Tuple.N3[int,str,float]
-print f(False).__class__ #: Tuple.N3[int,str,bool]
+print f(1.1).__class__ #: Tuple[int,str,float]
+print f(False).__class__ #: Tuple[int,str,bool]
 
 class A[T]:
     a: T
@@ -531,8 +531,8 @@ class A[T]:
                 b = g('s')
                 c = g(x)
                 return a, b, c
-print A.B.C.f(1.1).__class__ #: Tuple.N3[int,str,float]
-print A.B.C[Optional[int]].f(False).__class__ #: Tuple.N3[int,str,bool]
+print A.B.C.f(1.1).__class__ #: Tuple[int,str,float]
+print A.B.C[Optional[int]].f(False).__class__ #: Tuple[int,str,bool]
 
 #%% rec_class_1,barebones
 class A:
@@ -631,7 +631,7 @@ class A[T]:
     y: T
     def foo(self, y): self.y = y
 a = A()
-a.foo(1) #! ERROR: cannot resolve 2 unbound variables
+a.foo(1) #! ERROR: cannot typecheck the program
 
 #%% return_deduction,barebones
 def fun[T, R](x, y: T) -> R:
@@ -645,7 +645,7 @@ print fun[float,byte](2, 1.1).__class__ #: byte
 #%% return_auto_deduction_err,barebones
 def fun[T, R](x, y: T) -> R:
    	return byte(1)
-print fun(2, 1.1).__class__ #! ERROR: cannot resolve 1 unbound variables
+print fun(2, 1.1).__class__ #! ERROR: cannot typecheck the program
 
 #%% random
 # shuffle used to fail before for some reason (sth about unbound variables)...
@@ -699,7 +699,7 @@ class X[T]:
         return (x+x, y+y)
 y = X[X[int]]()
 print y.__class__ #: X[X[int]]
-print X[float].foo[int].__class__ #: X[float]:X.foo[int;X[float],float,int]
+print X[float].foo[int].__class__ #: X.foo[int;X[float],float,int]
 # print y.foo[float].__class__
 print X[int]().foo(1, 's') #: (2, ss)
 
@@ -710,6 +710,38 @@ class X[T]:
     def foo[U](self, x, y: U):
         return (x+x, y+y)
 y = X[X[int]]()
-print y.foo[float].__class__ #! ERROR: expected 3 generics
-# cannot unify X[X[int]] and float
+print y.foo[float].__class__ #! ERROR: cannot unify X[X[int]] and float
 
+#%% forward,barebones
+def foo(f, x):
+    f[typeof(x)](x)
+    print f.__class__
+def bar[T](x):
+    print x, T.__class__
+foo(bar, 1)
+#: 1 int
+#: bar[int;int]
+foo(bar[int], 1)
+#: 1 int
+#: bar[int;int]
+foo(bar[str], 's')
+#: s str
+#: bar[str;str]
+z = bar
+z[int]('s')
+#: s int
+z[str](1)
+#: 1 str
+
+zz = bar[int]
+zz(1)
+#: 1 int
+# zz('s') # TODO: zz = foo[int] is update stmt, messes up everything... :/
+
+#%% sort_partial
+def foo(x, y):
+    return y**x
+print sorted([1,2,3,4,5], key=foo(..., y=2))
+print sorted([1,2,3,4,5], key=foo(..., y=-2))
+#: [1, 2, 3, 4, 5]
+#: [5, 3, 1, 2, 4]

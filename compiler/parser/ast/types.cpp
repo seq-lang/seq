@@ -27,8 +27,10 @@ void Type::Unification::undo() {
 TypePtr Type::follow() { return shared_from_this(); }
 bool Type::is(const string &s) { return getClass() && getClass()->name == s; }
 
-LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic)
-    : kind(kind), id(id), level(level), type(move(type)), isStatic(isStatic) {
+LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic,
+                   string genericName)
+    : kind(kind), id(id), level(level), type(move(type)), isStatic(isStatic),
+      genericName(move(genericName)) {
   seqassert((this->type && kind == Link) || (!this->type && kind == Generic) ||
                 (!this->type && kind == Unbound),
             "inconsistent link state");
@@ -93,7 +95,7 @@ TypePtr LinkType::generalize(int atLevel) {
     return shared_from_this();
   } else if (kind == Unbound) {
     if (level >= atLevel)
-      return make_shared<LinkType>(Generic, id, 0, nullptr, isStatic);
+      return make_shared<LinkType>(Generic, id, 0, nullptr, isStatic, genericName);
     else
       return shared_from_this();
   } else {
@@ -107,7 +109,7 @@ TypePtr LinkType::instantiate(int atLevel, int &unboundCount,
     if (cache.find(id) != cache.end())
       return cache[id];
     return cache[id] = make_shared<LinkType>(Unbound, unboundCount++, atLevel, nullptr,
-                                             isStatic);
+                                             isStatic, genericName);
   } else if (kind == Unbound) {
     return shared_from_this();
   } else {
@@ -136,9 +138,13 @@ bool LinkType::canRealize() const {
 }
 string LinkType::toString() const {
   if (kind == Unbound)
-    return "_"; // ? fmt::format("?{}.{}", id, level, isStatic ? "_s" : "") : "_";
+    return genericName.empty() ? "?"
+                               : genericName; // ? fmt::format("?{}.{}", id, level,
+                                              // isStatic ? "_s" : "") : "_";
   else if (kind == Generic)
-    return "_"; // ? fmt::format("#{}.{}", id, level, isStatic ? "_s" : "") : "_";
+    return genericName.empty() ? "?"
+                               : genericName; // ? fmt::format("#{}.{}", id, level,
+                                              // isStatic ? "_s" : "") : "_";
   else
     return type->toString();
 }
@@ -490,8 +496,8 @@ string FuncType::toString() const {
       gs.push_back(a.type->toString());
   string s = join(gs, ",");
   vector<string> as;
-  for (auto &a : args)
-    as.push_back(a->toString());
+  for (int ai = 1; ai < args.size(); ai++)
+    as.push_back(args[ai]->toString());
   string a = join(as, ",");
   s = s.empty() ? a : join(vector<string>{s, a}, ";");
   return fmt::format("{}{}", funcName, s.empty() ? "" : fmt::format("[{}]", s));
@@ -517,9 +523,21 @@ string FuncType::realizedName() const {
 PartialType::PartialType(const shared_ptr<RecordType> &baseType,
                          shared_ptr<FuncType> func, vector<char> known)
     : RecordType(*baseType), func(move(func)), known(move(known)) {}
+int PartialType::unify(Type *typ, Unification *us) {
+  //  int s1 = 2, s = 0;
+  //  if (auto t = typ->getPartial()) {
+  //    if ((s = func->unify(t->func.get(), us)) == -1)
+  //      return -1;
+  //    s1 += s;
+  //  }
+  //  s = this->RecordType::unify(typ, us);
+  //  return s == -1 ? s : s1 + s;
+  return this->RecordType::unify(typ, us);
+}
 TypePtr PartialType::generalize(int atLevel) {
   return make_shared<PartialType>(
-      static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)), func,
+      static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)),
+      func, //->generalize(atLevel)->getFunc(),
       known);
 }
 TypePtr PartialType::instantiate(int atLevel, int &unboundCount,
@@ -527,7 +545,8 @@ TypePtr PartialType::instantiate(int atLevel, int &unboundCount,
   return make_shared<PartialType>(
       static_pointer_cast<RecordType>(
           this->RecordType::instantiate(atLevel, unboundCount, cache)),
-      func, known);
+      func, //->instantiate(atLevel, unboundCount, cache)->getFunc(),
+      known);
 }
 
 ////

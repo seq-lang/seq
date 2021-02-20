@@ -56,7 +56,7 @@ types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
     if (!m.type)
       return nullptr;
 
-  // TODO: dissalow later?!
+  // TODO: disallow later?!
   //  if (startswith(type->name, "Callable.N") && !type->getFunc())
   //    error("realizing trait");
 
@@ -281,14 +281,16 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
       break;
     } else {
       if (newUnbounds >= prevSize) {
+        map<int, pair<seq::SrcInfo, string>> v;
         for (auto &ub : ctx->activeUnbounds)
           if (ub.first->getLink()->id >= minUnbound) {
-            seq::compilationMessage("\033[1;31merror:\033[0m",
-                                    format("cannot infer the type of {}", ub.second),
-                                    ub.first->getSrcInfo().file,
-                                    ub.first->getSrcInfo().line,
-                                    ub.first->getSrcInfo().col);
+            v[ub.first->getLink()->id] = {ub.first->getSrcInfo(), ub.second};
           }
+        for (auto &ub : v)
+          seq::compilationMessage(
+              "\033[1;31merror:\033[0m",
+              format("cannot infer the type of {}", ub.second.second),
+              ub.second.first.file, ub.second.first.line, ub.second.first.col);
         error("cannot typecheck the program");
       }
       prevSize = newUnbounds;
