@@ -150,8 +150,7 @@ jobs:
       - name: Test
         run: |
           echo $SEQ_PYTHON
-          python -m pip install --upgrade pip
-          pip install numpy
+          python -m pip install --upgrade pip numpy
           ln -s build/libseqrt.${LIBEXT} .
           build/seqtest
           build/seqc test/core/helloworld.seq
