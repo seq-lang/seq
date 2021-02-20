@@ -1079,6 +1079,15 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
           args[si].value = transform(N<DotExpr>(move(args[si].value), "__call__"));
         }
         args[si].value->type |= expectedTyp;
+        if (auto pt = argClass->getPartial()) {
+          auto instFn = ctx->instantiate(args[si].value.get(), pt)->getFunc();
+          expectedClass->generics[0].type |= instFn->args[0];
+          for (int pi = 0, gi = 1; pi < pt->known.size(); pi++)
+            if (pt->known[pi])
+              deactivateUnbounds(instFn->args[pi + 1].get());
+            else
+              expectedClass->generics[gi++].type |= instFn->args[pi + 1];
+        }
       } else {
         // Case 5: normal unification.
         args[si].value->type |= expectedTyp;
