@@ -98,12 +98,11 @@ public:
   /// @tparam Desired the desired type
   /// @return the last encountered example of the desired type
   template <typename Desired> Desired *findLast() {
-    Desired *ret = nullptr;
     for (auto it = nodeStack.rbegin(); it != nodeStack.rend(); ++it) {
       if (auto *v = cast<Desired>(*it))
-        ret = v;
+        return v;
     }
-    return ret;
+    return nullptr;
   }
   /// @return the last encountered function
   Func *getParentFunc() { return findLast<Func>(); }
