@@ -198,6 +198,7 @@ void CodegenVisitor::visit(CallExpr *expr) {
 
   auto ft = expr->expr->type->getFunc();
   seqassert(ft, "not calling function: {}", ft->toString());
+  auto callee = transform(expr->expr);
 
   auto *fAST = ctx->cache->functions[ft->funcName].ast.get();
   bool isLLVM = fAST && in(fAST->attributes, ATTR_EXTERN_LLVM);
@@ -207,7 +208,7 @@ void CodegenVisitor::visit(CallExpr *expr) {
     if (!ft->args[i + 1]->getFunc() || isLLVM)
       items.push_back(transform(expr->args[i].value));
   }
-  result = make<CallInstr>(expr, transform(expr->expr), move(items));
+  result = make<CallInstr>(expr, callee, move(items));
 }
 
 void CodegenVisitor::visit(StackAllocExpr *expr) {

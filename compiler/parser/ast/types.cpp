@@ -136,9 +136,9 @@ bool LinkType::canRealize() const {
 }
 string LinkType::toString() const {
   if (kind == Unbound)
-    return fmt::format("?{}.{}", id, level, isStatic ? "_s" : "");
+    return "_"; // ? fmt::format("?{}.{}", id, level, isStatic ? "_s" : "") : "_";
   else if (kind == Generic)
-    return fmt::format("#{}.{}", id, level, isStatic ? "_s" : "");
+    return "_"; // ? fmt::format("#{}.{}", id, level, isStatic ? "_s" : "") : "_";
   else
     return type->toString();
 }
@@ -254,8 +254,30 @@ string ClassType::toString() const {
   for (auto &a : generics)
     if (!a.name.empty())
       gs.push_back(a.type->toString());
-  return fmt::format("{}{}", name,
-                     gs.empty() ? "" : fmt::format("[{}]", join(gs, ",")));
+  //  if ()
+  //    return fmt::format("{}{}", name,
+  //                       gs.empty() ? "" : fmt::format("[{}]", join(gs, ",")));
+  //  else
+  if (startswith(name, "Partial.N")) {
+    vector<string> as;
+    int i, gi;
+    for (i = 9, gi = 0; i < name.size() && name[i] != '.'; i++)
+      if (name[i] == '0')
+        as.push_back("...");
+      else
+        as.push_back(gs[gi++]);
+    auto n = split(name.substr(i + 1), '[')[0];
+    return fmt::format("{}[{}]", n, join(as, ","));
+  } else {
+    auto n = name;
+    if (startswith(n, "Tuple.N"))
+      n = "Tuple";
+    if (startswith(n, "Function.N"))
+      n = "Function";
+    if (startswith(n, "Callable.N"))
+      n = "Callable";
+    return fmt::format("{}{}", n, gs.empty() ? "" : fmt::format("[{}]", join(gs, ",")));
+  }
 }
 string ClassType::realizedName() const {
   vector<string> gs;
@@ -299,23 +321,22 @@ int RecordType::unify(Type *typ, Unification *us) {
       }
       return s1;
     }
-    if (startswith(tr->name, "Callable.N") && !tr->getFunc() &&
-        startswith(name, "Partial.N"))
+    if (startswith(tr->name, "Callable.N") && !tr->getFunc() && getPartial())
       return tr->unify(this, us);
-    if (startswith(name, "Callable.N") && !getFunc() &&
-        startswith(tr->name, "Partial.N")) {
+    if (startswith(name, "Callable.N") && !getFunc() && tr->getPartial()) {
       vector<int> zeros;
       for (int pi = 9; pi < tr->name.size() && tr->name[pi] != '.'; pi++)
         if (tr->name[pi] == '0')
           zeros.emplace_back(pi - 9);
       if (zeros.size() + 1 != args.size())
         return -1;
-      for (int i = 0; i < zeros.size(); i++)
-        if ((s = tr->generics[zeros[i]].type->unify(generics[i + 1].type.get(), us)) !=
-            -1)
-          s1 += s;
-        else
-          return -1;
+      //      for (int i = 0; i < zeros.size(); i++)
+      //        if ((s = tr->generics[zeros[i]].type->unify(generics[i + 1].type.get(),
+      //        us)) !=
+      //            -1)
+      //          s1 += s;
+      //        else
+      //          return -1;
       return s1;
     }
     if (args.size() != tr->args.size())
@@ -368,11 +389,11 @@ bool RecordType::canRealize() const {
          this->ClassType::canRealize();
 }
 string RecordType::toString() const {
-  vector<string> as;
+  //  vector<string> as;
   // for (auto &a : args)
   // as.push_back(a->toString());
-  return fmt::format("{}{}", this->ClassType::toString(),
-                     as.empty() ? "" : "<" + join(as, ",") + ">");
+  return fmt::format("{}", this->ClassType::toString());
+  //                     as.empty() ? "" : "<" + join(as, ",") + ">");
 }
 shared_ptr<RecordType> RecordType::getHeterogenousTuple() {
   seqassert(canRealize(), "{} not realizable", toString());
@@ -498,15 +519,15 @@ PartialType::PartialType(const shared_ptr<RecordType> &baseType,
     : RecordType(*baseType), func(move(func)), known(move(known)) {}
 TypePtr PartialType::generalize(int atLevel) {
   return make_shared<PartialType>(
-      static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)),
-      func->generalize(atLevel)->getFunc(), known);
+      static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)), func,
+      known);
 }
 TypePtr PartialType::instantiate(int atLevel, int &unboundCount,
                                  unordered_map<int, TypePtr> &cache) {
   return make_shared<PartialType>(
       static_pointer_cast<RecordType>(
           this->RecordType::instantiate(atLevel, unboundCount, cache)),
-      func->instantiate(atLevel, unboundCount, cache)->getFunc(), known);
+      func, known);
 }
 
 ////
@@ -593,9 +614,6 @@ bool StaticType::canRealize() const {
 string StaticType::toString() const {
   if (staticEvaluation.first)
     return fmt::format("{}", staticEvaluation.second);
-  vector<string> s;
-  for (auto &e : generics)
-    s.push_back(fmt::format("{}={}", e.name, e.type->toString()));
   return fmt::format("Static[{}]",
                      staticExpr.first ? FormatVisitor::apply(staticExpr.first) : "");
 }

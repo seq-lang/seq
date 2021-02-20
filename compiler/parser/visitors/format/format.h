@@ -36,7 +36,7 @@ class FormatVisitor : public CallbackASTVisitor<string, string> {
   shared_ptr<Cache> cache;
 
 private:
-  template <typename T, typename... Ts> string renderExpr(T &&t, Ts &&... args) {
+  template <typename T, typename... Ts> string renderExpr(T &&t, Ts &&...args) {
     string s;
     // if (renderType)
     // s += fmt::format("{}{}{}", typeStart,
@@ -44,7 +44,7 @@ private:
     return fmt::format("{}{}{}{}{}{}", exprStart, s, nodeStart, fmt::format(args...),
                        nodeEnd, exprEnd);
   }
-  template <typename... Ts> string renderComment(Ts &&... args) {
+  template <typename... Ts> string renderComment(Ts &&...args) {
     return fmt::format("{}{}{}", commentStart, fmt::format(args...), commentEnd);
   }
   string pad(int indent = 0) const;
@@ -54,6 +54,7 @@ private:
 public:
   FormatVisitor(bool html, shared_ptr<Cache> cache = nullptr);
   string transform(const ExprPtr &e) override;
+  string transform(const Expr *expr);
   string transform(const StmtPtr &stmt) override;
   string transform(Stmt *stmt, int indent);
 

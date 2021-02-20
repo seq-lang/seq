@@ -46,7 +46,7 @@ TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts,
     ctx->add(TypecheckItem::Type, d.first, make_shared<StaticType>(d.second.second),
              true);
   auto infer = v.inferTypes(stmts->clone(), true);
-  LOG_TYPECHECK("toplevel type inference done in {} iterations", infer.first);
+  LOG_TYPECHECK("realized <toplevel> in {} iterations", infer.first);
   return move(infer.second);
 }
 

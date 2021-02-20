@@ -582,6 +582,8 @@ struct StmtExpr : public Expr {
   ExprPtr expr;
 
   StmtExpr(vector<unique_ptr<Stmt>> &&stmts, ExprPtr expr);
+  StmtExpr(unique_ptr<Stmt> stmt, ExprPtr expr);
+  StmtExpr(unique_ptr<Stmt> stmt, unique_ptr<Stmt> stmt2, ExprPtr expr);
   StmtExpr(const StmtExpr &expr);
 
   string toString() const override;

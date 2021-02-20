@@ -90,7 +90,6 @@ public:
   /// True if a type is realizable.
   virtual bool canRealize() const = 0;
   /// Pretty-print facility.
-  /// @param reduced If True, do not print parent types.
   virtual string toString() const = 0;
   /// Print the realization string.
   /// Similar to toString, but does not print the data unnecessary for realization

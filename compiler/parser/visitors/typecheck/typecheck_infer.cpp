@@ -90,8 +90,7 @@ types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
       vector<string> names;
       map<std::string, SrcInfo> memberInfo;
       for (auto &m : ctx->cache->classes[realizedType->name].fields) {
-        auto mt =
-            ctx->instantiate(realizedType->getSrcInfo(), m.type, realizedType.get());
+        auto mt = ctx->instantiate(N<IdExpr>(m.name).get(), m.type, realizedType.get());
         LOG_REALIZE("- member: {} -> {}: {}", m.name, m.type->toString(),
                     mt->toString());
         auto tf = realize(mt);
@@ -265,12 +264,12 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
     ctx->typecheckLevel--;
 
     int newUnbounds = 0;
-    set<types::TypePtr> newActiveUnbounds;
+    std::map<types::TypePtr, string> newActiveUnbounds;
     for (auto i = ctx->activeUnbounds.begin(); i != ctx->activeUnbounds.end();) {
-      auto l = (*i)->getLink();
+      auto l = i->first->getLink();
       assert(l);
       if (l->kind == LinkType::Unbound) {
-        newActiveUnbounds.insert(*i);
+        newActiveUnbounds[i->first] = i->second;
         if (l->id >= minUnbound)
           newUnbounds++;
       }
@@ -278,24 +277,19 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
     }
     ctx->activeUnbounds = newActiveUnbounds;
 
-    //    ctx->popBlock();
     if (ctx->activeUnbounds.empty() || !newUnbounds) {
       break;
     } else {
       if (newUnbounds >= prevSize) {
-        TypePtr fu = nullptr;
-        int count = 0;
         for (auto &ub : ctx->activeUnbounds)
-          if (ub->getLink()->id >= minUnbound) {
-            // Attempt to use default generics here
-            // TODO: this is awfully inefficient way to do it
-            if (!fu)
-              fu = ub;
-            LOG_TYPECHECK("[realizeBlock] dangling {} @ {}", ub->toString(),
-                          ub->getSrcInfo());
-            count++;
+          if (ub.first->getLink()->id >= minUnbound) {
+            seq::compilationMessage("\033[1;31merror:\033[0m",
+                                    format("cannot infer the type of {}", ub.second),
+                                    ub.first->getSrcInfo().file,
+                                    ub.first->getSrcInfo().line,
+                                    ub.first->getSrcInfo().col);
           }
-        error(fu, "cannot resolve {} unbound variables", count);
+        error("cannot typecheck the program");
       }
       prevSize = newUnbounds;
     }
