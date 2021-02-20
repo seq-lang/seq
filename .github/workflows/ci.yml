@@ -104,8 +104,13 @@ jobs:
         with:
           python-version: '3.8'
 
-      - name: Find Python
-        run: echo "SEQ_PYTHON=$(python test/python/find-python-library.py)" >> $GITHUB_ENV
+      - name: Set up Python
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install numpy
+          which python
+          which pip
+          echo "SEQ_PYTHON=$(python test/python/find-python-library.py)" >> $GITHUB_ENV
 
       - name: Cache Dependencies
         id: cache-deps
@@ -150,7 +155,7 @@ jobs:
       - name: Test
         run: |
           echo $SEQ_PYTHON
-          python -m pip install --upgrade pip numpy
+          ls -lah test/data/
           ln -s build/libseqrt.${LIBEXT} .
           build/seqtest
           build/seqc test/core/helloworld.seq
