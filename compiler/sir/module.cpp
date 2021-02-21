@@ -242,7 +242,11 @@ types::Type *IRModule::getIntNType(unsigned int len, bool sign) {
   return Nr<types::IntNType>(len, sign);
 }
 
-Value *IRModule::getIntConstant(int v) { return Nr<IntConstant>(v, getIntType()); }
+Value *IRModule::getIntConstant(int64_t v) { return Nr<IntConstant>(v, getIntType()); }
+
+Value *IRModule::getFloatConstant(double v) {
+  return Nr<FloatConstant>(v, getFloatType());
+}
 
 Value *IRModule::getBoolConstant(bool v) { return Nr<BoolConstant>(v, getBoolType()); }
 

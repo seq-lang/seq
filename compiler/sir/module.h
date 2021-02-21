@@ -314,13 +314,16 @@ public:
   types::Type *getIntNType(unsigned len, bool sign);
 
   /// @param v the value
-  /// @return a bool constant
-  Value *getIntConstant(int v);
+  /// @return an int constant
+  Value *getIntConstant(int64_t v);
+  /// @param v the value
+  /// @return a float constant
+  Value *getFloatConstant(double v);
   /// @param v the value
   /// @return a bool constant
   Value *getBoolConstant(bool v);
   /// @param v the value
-  /// @return a bool constant
+  /// @return a string constant
   Value *getStringConstant(std::string v);
 
 private:
