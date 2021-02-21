@@ -29,6 +29,7 @@ struct FuncType;
 struct ClassType;
 struct LinkType;
 struct RecordType;
+struct PartialType;
 struct StaticType;
 
 /**
@@ -89,7 +90,6 @@ public:
   /// True if a type is realizable.
   virtual bool canRealize() const = 0;
   /// Pretty-print facility.
-  /// @param reduced If True, do not print parent types.
   virtual string toString() const = 0;
   /// Print the realization string.
   /// Similar to toString, but does not print the data unnecessary for realization
@@ -98,6 +98,7 @@ public:
 
   /// Convenience virtual functions to avoid unnecessary dynamic_cast calls.
   virtual shared_ptr<FuncType> getFunc() { return nullptr; }
+  virtual shared_ptr<PartialType> getPartial() { return nullptr; }
   virtual shared_ptr<ClassType> getClass() { return nullptr; }
   virtual shared_ptr<RecordType> getRecord() { return nullptr; }
   virtual shared_ptr<LinkType> getLink() { return nullptr; }
@@ -134,10 +135,12 @@ struct LinkType : public Type {
   TypePtr type;
   /// True if a type is a static type (e.g. N in Int[N: int]).
   bool isStatic;
+  /// The generic name of a generic type, if applicable.
+  string genericName;
 
 public:
   LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
-           bool isStatic = false);
+           bool isStatic = false, string genericName = "");
   /// Convenience constructor for linked types.
   explicit LinkType(TypePtr type);
 
@@ -160,6 +163,9 @@ public:
   shared_ptr<LinkType> getUnbound() override;
   shared_ptr<FuncType> getFunc() override {
     return kind == Link ? type->getFunc() : nullptr;
+  }
+  shared_ptr<PartialType> getPartial() override {
+    return kind == Link ? type->getPartial() : nullptr;
   }
   shared_ptr<ClassType> getClass() override {
     return kind == Link ? type->getClass() : nullptr;
@@ -279,6 +285,34 @@ public:
 
   shared_ptr<FuncType> getFunc() override {
     return std::static_pointer_cast<FuncType>(shared_from_this());
+  }
+};
+typedef shared_ptr<FuncType> FuncTypePtr;
+
+/**
+ * FuncType describes a (generic) function type that can be realized.
+ */
+struct PartialType : public RecordType {
+  FuncTypePtr func;
+  vector<char> known;
+
+public:
+  PartialType(const shared_ptr<RecordType> &baseType, shared_ptr<FuncType> func,
+              vector<char> known);
+  //
+public:
+  int unify(Type *typ, Unification *undo) override;
+  TypePtr generalize(int atLevel) override;
+  TypePtr instantiate(int atLevel, int &unboundCount,
+                      unordered_map<int, TypePtr> &cache) override;
+  // public:
+  //  vector<TypePtr> getUnbounds() const override;
+  //  bool canRealize() const override;
+  //  string toString() const override;
+  //  string realizedName() const override;
+
+  shared_ptr<PartialType> getPartial() override {
+    return std::static_pointer_cast<PartialType>(shared_from_this());
   }
 };
 typedef shared_ptr<FuncType> FuncTypePtr;

@@ -33,10 +33,12 @@ FormatVisitor::FormatVisitor(bool html, shared_ptr<Cache> cache)
   }
 }
 
-string FormatVisitor::transform(const ExprPtr &expr) {
+string FormatVisitor::transform(const ExprPtr &expr) { return transform(expr.get()); }
+
+string FormatVisitor::transform(const Expr *expr) {
   FormatVisitor v(renderHTML, cache);
   if (expr)
-    expr->accept(v);
+    const_cast<Expr *>(expr)->accept(v);
   return v.result;
 }
 

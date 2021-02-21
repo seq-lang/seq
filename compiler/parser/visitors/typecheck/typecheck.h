@@ -239,7 +239,7 @@ private:
   /// Generate a tuple class Tuple.N[T1,...,TN](a1: T1, ..., aN: TN).
   /// Also used to generate a named tuple class Name.N[T1,...,TN] with field names
   /// provided in names parameter.
-  string generateTupleStub(int len, string name = "Tuple",
+  string generateTupleStub(int len, const string &name = "Tuple",
                            vector<string> names = vector<string>{});
   /// Generate a function type Function.N[TR, T1, ..., TN] as follows:
   ///   @internal @tuple @trait
@@ -261,7 +261,7 @@ private:
   /// The following partial constructor is added if an oldMask is set:
   ///     def __new_<old_mask>_<mask>(p, aI: TI...) # (if oldMask[I-1] != mask[I-1]):
   ///       return Partial.N<mask>.__new__(self.ptr, self.a1, a2, ...) # (see above)
-  string generatePartialStub(const string &mask, types::FuncType *fn);
+  string generatePartialStub(const vector<char> &mask, types::FuncType *fn);
   /// Create generic types for type or function generics and add them to the context.
   vector<types::Generic> parseGenerics(const vector<Param> &generics, int level);
 

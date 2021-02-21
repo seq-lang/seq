@@ -54,6 +54,7 @@ private:
 public:
   FormatVisitor(bool html, shared_ptr<Cache> cache = nullptr);
   string transform(const ExprPtr &e) override;
+  string transform(const Expr *expr);
   string transform(const StmtPtr &stmt) override;
   string transform(Stmt *stmt, int indent);
 

@@ -142,12 +142,12 @@ def test_kmer_revcomp[K: int](path: str):
     v1 = []
     v2 = []
 
-    for x in FASTA(path):
+    for x in FASTA(path, fai=False):
         for y in x.seq.split(k=K, step=1):
             if not y.N():
                 v1.append(str(~y).upper())
 
-    for x in FASTA(path):
+    for x in FASTA(path, fai=False):
         for y in x.seq.kmers[Kmer[K]](step=1):
             v2.append(str(~y).upper())
 

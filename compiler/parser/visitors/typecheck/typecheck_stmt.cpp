@@ -94,22 +94,25 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
   stmt->type = transformType(stmt->type);
   TypecheckItem::Kind kind;
   if (!stmt->rhs) { // Case 1: forward declaration: x: type
-    stmt->lhs->type |= stmt->type ? stmt->type->getType()
-                                  : ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
+    stmt->lhs->type |= stmt->type
+                           ? stmt->type->getType()
+                           : ctx->addUnbound(stmt->lhs.get(), ctx->typecheckLevel);
     ctx->add(kind = TypecheckItem::Var, lhs, stmt->lhs->type);
     stmt->done = realize(stmt->lhs->type) != nullptr;
   } else { // Case 2: Normal assignment
     if (stmt->type && stmt->type->getType()->getClass()) {
-      auto t = ctx->instantiate(getSrcInfo(), stmt->type->getType());
+      auto t = ctx->instantiate(stmt->type.get(), stmt->type->getType());
       LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), t->toString());
       stmt->lhs->type |= t;
       wrapOptionalIfNeeded(stmt->lhs->getType(), stmt->rhs);
       stmt->lhs->type |= stmt->rhs->type;
     }
-    kind = stmt->rhs->isType() ? TypecheckItem::Type
-                               : (stmt->rhs->getType()->getFunc() ? TypecheckItem::Func
-                                                                  : TypecheckItem::Var);
-    ctx->add(kind, lhs, stmt->rhs->getType());
+    auto type = stmt->rhs->getType();
+    kind = stmt->rhs->isType()
+               ? TypecheckItem::Type
+               : (type->getFunc() ? TypecheckItem::Func : TypecheckItem::Var);
+    ctx->add(kind, lhs,
+             kind != TypecheckItem::Var ? type->generalize(ctx->typecheckLevel) : type);
     stmt->done = stmt->rhs->done;
   }
   // Save the variable to the local realization context
@@ -148,12 +151,12 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
       (c->expr->isId("min") || c->expr->isId("max")) && c->args.size() == 2 &&
       c->args[0].value->isId(string(stmt->lhs->getId()->value))) {
     auto ptrTyp =
-        ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("Ptr"), {lhsClass});
+        ctx->instantiateGeneric(stmt->lhs.get(), ctx->findInternal("Ptr"), {lhsClass});
     LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), ptrTyp->toString());
     c->args[1].value = transform(c->args[1].value);
     auto rhsTyp = c->args[1].value->getType()->getClass();
     if (auto method = ctx->findBestMethod(
-            lhsClass.get(), format("__atomic_{}__", c->expr->getId()->value),
+            stmt->lhs.get(), format("__atomic_{}__", c->expr->getId()->value),
             {{"", ptrTyp}, {"", rhsTyp}})) {
       resultStmt = transform(N<ExprStmt>(N<CallExpr>(N<IdExpr>(method->funcName),
                                                      N<PtrExpr>(move(stmt->lhs)),
@@ -167,9 +170,9 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
   // Case 3: check for an atomic assignment.
   if (stmt->isAtomic && lhsClass && rhsClass) {
     auto ptrType =
-        ctx->instantiateGeneric(getSrcInfo(), ctx->findInternal("Ptr"), {lhsClass});
+        ctx->instantiateGeneric(stmt->lhs.get(), ctx->findInternal("Ptr"), {lhsClass});
     LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), ptrType->toString());
-    if (auto m = ctx->findBestMethod(lhsClass.get(), "__atomic_xchg__",
+    if (auto m = ctx->findBestMethod(stmt->lhs.get(), "__atomic_xchg__",
                                      {{"", ptrType}, {"", rhsClass}})) {
       resultStmt = transform(N<ExprStmt>(N<CallExpr>(
           N<IdExpr>(m->funcName), N<PtrExpr>(move(stmt->lhs)), move(stmt->rhs))));
@@ -201,7 +204,7 @@ void TypecheckVisitor::visit(AssignMemberStmt *stmt) {
       error("cannot find '{}' in {}", stmt->member, lhsClass->name);
     if (lhsClass->getRecord())
       error("tuple element '{}' is read-only", stmt->member);
-    auto typ = ctx->instantiate(getSrcInfo(), member, lhsClass.get());
+    auto typ = ctx->instantiate(stmt->lhs.get(), member, lhsClass.get());
     LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), typ->toString());
     wrapOptionalIfNeeded(typ, stmt->rhs);
     stmt->rhs->type |= typ;
@@ -226,8 +229,9 @@ void TypecheckVisitor::visit(YieldStmt *stmt) {
   if (stmt->expr)
     stmt->expr = transform(stmt->expr);
   auto baseTyp = stmt->expr ? stmt->expr->getType() : ctx->findInternal("void");
-  auto t = ctx->instantiateGeneric(stmt->getSrcInfo(), ctx->findInternal("Generator"),
-                                   {baseTyp});
+  auto t = ctx->instantiateGeneric(stmt->expr ? stmt->expr.get()
+                                              : N<IdExpr>("<yield>").get(),
+                                   ctx->findInternal("Generator"), {baseTyp});
   LOG_TYPECHECK("[inst] {} -> {}", stmt->toString(), t->toString());
   ctx->bases.back().returnType |= t;
   stmt->done = stmt->expr ? stmt->expr->done : true;
@@ -267,7 +271,7 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
       stmt->iter = transform(N<CallExpr>(N<DotExpr>(move(stmt->iter), "__iter__")));
       stmt->wrapped = true;
     }
-    TypePtr varType = ctx->addUnbound(stmt->var->getSrcInfo(), ctx->typecheckLevel);
+    TypePtr varType = ctx->addUnbound(stmt->var.get(), ctx->typecheckLevel);
     if ((iterType = stmt->iter->getType()->getClass())) {
       if (iterType->name != "Generator")
         error("for loop expected a generator");
@@ -381,7 +385,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
         in(stmt->attributes, ATTR_EXTERN_C)) {
       if (!t->canRealize())
         error("builtins and external functions must be realizable");
-      auto typ = ctx->instantiate(getSrcInfo(), t);
+      auto typ = ctx->instantiate(N<IdExpr>(stmt->name).get(), t);
       LOG_TYPECHECK("[inst] fn {} -> {}", stmt->name, typ->toString());
       typ |= realize(typ->getFunc());
     }
@@ -401,9 +405,9 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
     seqassert(parentClass, "parent class not set");
     for (int i = 0; i < parentClassAST->generics.size(); i++) {
       auto gen = parentClass->generics[i].type->getLink();
-      generics.push_back(
-          make_shared<LinkType>(LinkType::Unbound, parentClass->generics[i].id,
-                                ctx->typecheckLevel - 1, nullptr, gen->isStatic));
+      generics.push_back(make_shared<LinkType>(
+          LinkType::Unbound, parentClass->generics[i].id, ctx->typecheckLevel - 1,
+          nullptr, gen->isStatic, gen->genericName));
       ctx->add(TypecheckItem::Type, parentClassAST->generics[i].name, generics.back(),
                gen->isStatic);
     }
@@ -412,7 +416,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
     generics.push_back(ctx->find(i.name)->type);
   // Add function arguments.
   auto baseType =
-      ctx->instantiate(getSrcInfo(),
+      ctx->instantiate(N<IdExpr>(stmt->name).get(),
                        ctx->find(generateCallableStub(stmt->args.size()))->type)
           ->getRecord();
   {
@@ -420,12 +424,14 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
     if (stmt->ret) {
       baseType->args[0] |= transformType(stmt->ret)->getType();
     } else {
-      baseType->args[0] |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
+      baseType->args[0] |=
+          ctx->addUnbound(N<IdExpr>("<return>").get(), ctx->typecheckLevel);
       generics.push_back(baseType->args[0]);
     }
     for (int ai = 0; ai < stmt->args.size(); ai++) {
       if (!stmt->args[ai].type) {
-        baseType->args[ai + 1] |= ctx->addUnbound(getSrcInfo(), ctx->typecheckLevel);
+        baseType->args[ai + 1] |=
+            ctx->addUnbound(N<IdExpr>(stmt->args[ai].name).get(), ctx->typecheckLevel);
         generics.push_back(baseType->args[ai + 1]);
       } else {
         baseType->args[ai + 1] |= transformType(stmt->args[ai].type)->getType();
@@ -529,7 +535,8 @@ vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &gene
                                                        int level) {
   auto genericTypes = vector<Generic>();
   for (const auto &g : generics) {
-    auto typ = ctx->addUnbound(getSrcInfo(), level, true, bool(g.type));
+    auto typ = ctx->addUnbound(N<IdExpr>(g.name).get(), level, true, bool(g.type));
+    typ->getLink()->genericName = g.name;
     genericTypes.emplace_back(Generic{g.name, typ->generalize(level),
                                       ctx->cache->unboundCount - 1, clone(g.deflt)});
     LOG_REALIZE("[generic] {} -> {} {}", g.name, typ->toString(), bool(g.type));

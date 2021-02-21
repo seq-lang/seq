@@ -42,7 +42,7 @@ public:
   int typecheckLevel;
   /// Set of active unbound variables.
   /// If type checking is successful, all of them should be resolved.
-  set<types::TypePtr> activeUnbounds;
+  std::map<types::TypePtr, string> activeUnbounds;
   int iteration;
   bool needsAnotherIteration;
   bool allowActivation;
@@ -80,16 +80,16 @@ public:
   findInVisited(const string &name) const;
 
 public:
-  shared_ptr<types::LinkType> addUnbound(const SrcInfo &srcInfo, int level,
+  shared_ptr<types::LinkType> addUnbound(const Expr *expr, int level,
                                          bool setActive = true, bool isStatic = false);
   /// Calls `type->instantiate`, but populates the instantiation table
   /// with "parent" type.
   /// Example: for list[T].foo, list[int].foo will populate type of foo so that
   /// the generic T gets mapped to int.
-  types::TypePtr instantiate(const SrcInfo &srcInfo, types::TypePtr type);
-  types::TypePtr instantiate(const SrcInfo &srcInfo, types::TypePtr type,
+  types::TypePtr instantiate(const Expr *expr, types::TypePtr type);
+  types::TypePtr instantiate(const Expr *expr, types::TypePtr type,
                              types::ClassType *generics, bool activate = true);
-  types::TypePtr instantiateGeneric(const SrcInfo &srcInfo, types::TypePtr root,
+  types::TypePtr instantiateGeneric(const Expr *expr, types::TypePtr root,
                                     const vector<types::TypePtr> &generics);
 
   vector<types::FuncTypePtr> findMethod(const string &typeName,
@@ -102,7 +102,7 @@ public:
   /// Optional arguments.
   /// If multiple valid methods are found, returns the first one. Returns nullptr if no
   /// methods were found.
-  types::FuncTypePtr findBestMethod(types::ClassType *typ, const string &member,
+  types::FuncTypePtr findBestMethod(const Expr *expr, const string &member,
                                     const vector<pair<string, types::TypePtr>> &args);
   /// Reorders a given vector or named arguments (consisting of names and the
   /// corresponding types) according to the signature of a given function.
@@ -112,7 +112,8 @@ public:
   typedef std::function<int(int, int, const vector<vector<int>> &)> ReorderDoneFn;
   typedef std::function<int(string)> ReorderErrorFn;
   int reorderNamedArgs(types::RecordType *func, const vector<CallExpr::Arg> &args,
-                       ReorderDoneFn onDone, ReorderErrorFn onError);
+                       ReorderDoneFn onDone, ReorderErrorFn onError,
+                       const vector<char> &known = vector<char>());
 };
 
 } // namespace ast

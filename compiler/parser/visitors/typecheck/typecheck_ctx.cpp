@@ -5,6 +5,7 @@
 
 #include "parser/ast.h"
 #include "parser/common.h"
+#include "parser/visitors/format/format.h"
 #include "parser/visitors/typecheck/typecheck_ctx.h"
 
 using fmt::format;
@@ -64,24 +65,22 @@ string TypeContext::getBase() const {
   return join(s, ":");
 }
 
-shared_ptr<types::LinkType> TypeContext::addUnbound(const SrcInfo &srcInfo, int level,
+shared_ptr<types::LinkType> TypeContext::addUnbound(const Expr *expr, int level,
                                                     bool setActive, bool isStatic) {
   auto t = make_shared<types::LinkType>(types::LinkType::Unbound, cache->unboundCount++,
                                         level, nullptr, isStatic);
-  t->setSrcInfo(srcInfo);
-  if (cache->unboundCount == 8091)
-    assert(1);
-  LOG_TYPECHECK("[ub] new {}: {} ({})", t->toString(), srcInfo, setActive);
+  t->setSrcInfo(expr->getSrcInfo());
+  LOG_TYPECHECK("[ub] new {}: {} ({})", t->toString(), expr->toString(), setActive);
   if (setActive && allowActivation)
-    activeUnbounds.insert(t);
+    activeUnbounds[t] = FormatVisitor::apply(expr);
   return t;
 }
 
-types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr type) {
-  return instantiate(srcInfo, move(type), nullptr);
+types::TypePtr TypeContext::instantiate(const Expr *expr, types::TypePtr type) {
+  return instantiate(expr, move(type), nullptr);
 }
 
-types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr type,
+types::TypePtr TypeContext::instantiate(const Expr *expr, types::TypePtr type,
                                         types::ClassType *generics, bool activate) {
   assert(type);
   unordered_map<int, types::TypePtr> genericCache;
@@ -96,31 +95,33 @@ types::TypePtr TypeContext::instantiate(const SrcInfo &srcInfo, types::TypePtr t
     if (auto l = i.second->getLink()) {
       if (l->kind != types::LinkType::Unbound)
         continue;
-      i.second->setSrcInfo(srcInfo);
+      i.second->setSrcInfo(expr->getSrcInfo());
       if (activeUnbounds.find(i.second) == activeUnbounds.end()) {
         LOG_TYPECHECK("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
-                      i.second->toString(), type->toString(), srcInfo, activate);
+                      i.second->toString(), type->toString(), expr->toString(),
+                      activate);
         if (activate && allowActivation)
-          activeUnbounds.insert(i.second);
+          activeUnbounds[i.second] =
+              format("{} of {} in {}", l->genericName.empty() ? "?" : l->genericName,
+                     type->toString(), FormatVisitor::apply(expr));
       }
     }
   }
   return t;
 }
 
-types::TypePtr TypeContext::instantiateGeneric(const SrcInfo &srcInfo,
-                                               types::TypePtr root,
+types::TypePtr TypeContext::instantiateGeneric(const Expr *expr, types::TypePtr root,
                                                const vector<types::TypePtr> &generics) {
   auto c = root->getClass();
   assert(c);
   auto g = make_shared<types::ClassType>(""); // dummy generic type
   if (generics.size() != c->generics.size())
-    error(srcInfo, "generics do not match");
+    error(expr->getSrcInfo(), "generics do not match");
   for (int i = 0; i < c->generics.size(); i++) {
     assert(c->generics[i].type);
     g->generics.push_back(types::Generic("", generics[i], c->generics[i].id));
   }
-  return instantiate(srcInfo, root, g.get());
+  return instantiate(expr, root, g.get());
 }
 
 void TypeContext::dump(int pad) {
@@ -176,8 +177,10 @@ types::TypePtr TypeContext::findMember(const string &typeName,
 }
 
 types::FuncTypePtr
-TypeContext::findBestMethod(types::ClassType *typ, const string &member,
+TypeContext::findBestMethod(const Expr *expr, const string &member,
                             const vector<pair<string, types::TypePtr>> &args) {
+  auto typ = expr->getType()->getClass();
+  seqassert(typ, "not a class");
   auto methods = findMethod(typ->name, member);
   if (methods.empty())
     return nullptr;
@@ -188,7 +191,7 @@ TypeContext::findBestMethod(types::ClassType *typ, const string &member,
   // highest score.
   vector<pair<int, int>> scores;
   for (int mi = 0; mi < methods.size(); mi++) {
-    auto method = instantiate(typ->getSrcInfo(), methods[mi], typ, false)->getFunc();
+    auto method = instantiate(expr, methods[mi], typ.get(), false)->getFunc();
     vector<types::TypePtr> reordered;
     vector<CallExpr::Arg> callArgs;
     for (auto &a : args) {
@@ -273,7 +276,8 @@ TypeContext::findBestMethod(types::ClassType *typ, const string &member,
 
 int TypeContext::reorderNamedArgs(types::RecordType *func,
                                   const vector<CallExpr::Arg> &args,
-                                  ReorderDoneFn onDone, ReorderErrorFn onError) {
+                                  ReorderDoneFn onDone, ReorderErrorFn onError,
+                                  const vector<char> &known) {
   // See https://docs.python.org/3.6/reference/expressions.html#calls for details.
   // Final score:
   //  - +1 for each matched argument
@@ -282,21 +286,24 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
   int score = 0;
 
   // 1. Assign positional arguments to slots
-  vector<vector<int>> slots; // each slot contains a list of arg's indices
+  // Each slot contains a list of arg's indices
+  vector<vector<int>> slots(func->args.size() - 1);
+  seqassert(known.empty() || func->args.size() - 1 == known.size(),
+            "bad 'known' string");
   vector<int> extra;
   std::map<string, int> namedArgs, extraNamedArgs; // keep the map--- we need it sorted!
-  for (int ai = 0; ai < args.size(); ai++) {
+  for (int ai = 0, si = 0; ai < args.size(); ai++) {
     if (args[ai].name.empty()) {
-      if (slots.size() < func->args.size() - 1)
-        slots.push_back({ai});
+      while (!known.empty() && si < slots.size() && known[si])
+        si++;
+      if (si < slots.size())
+        slots[si++] = {ai};
       else
         extra.emplace_back(ai);
     } else {
       namedArgs[args[ai].name] = ai;
     }
   }
-  while (slots.size() < func->args.size() - 1)
-    slots.push_back({});
   score = 2 * slots.size();
 
   FunctionStmt *ast = nullptr;
@@ -309,6 +316,10 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
     else if (startswith(ast->args[i].name, "*"))
       starArgIndex = i, score -= 2;
   }
+  seqassert(known.empty() || starArgIndex == -1 || !known[starArgIndex],
+            "partial *args");
+  seqassert(known.empty() || kwstarArgIndex == -1 || !known[kwstarArgIndex],
+            "partial **kwargs");
   for (auto ai : vector<int>{std::max(starArgIndex, kwstarArgIndex),
                              std::min(starArgIndex, kwstarArgIndex)})
     if (ai != -1 && !slots[ai].empty()) {
@@ -324,7 +335,8 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
                             namedArgs.begin()->first));
     std::map<string, int> slotNames;
     for (int i = 0; i < ast->args.size(); i++)
-      slotNames[cache->reverseIdentifierLookup[ast->args[i].name]] = i;
+      if (known.empty() || !known[i])
+        slotNames[cache->reverseIdentifierLookup[ast->args[i].name]] = i;
     for (auto &n : namedArgs) {
       if (!in(slotNames, n.first))
         extraNamedArgs[n.first] = n.second;
@@ -352,7 +364,7 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
   // 5. Fill in the default arguments
   for (auto i = 0; i < func->args.size() - 1; i++)
     if (slots[i].empty() && i != starArgIndex && i != kwstarArgIndex) {
-      if (ast && ast->args[i].deflt)
+      if ((ast && ast->args[i].deflt) || (!known.empty() && known[i]))
         score -= 2;
       else
         return onError(format("missing argument '{}'",

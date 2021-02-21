@@ -27,8 +27,10 @@ void Type::Unification::undo() {
 TypePtr Type::follow() { return shared_from_this(); }
 bool Type::is(const string &s) { return getClass() && getClass()->name == s; }
 
-LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic)
-    : kind(kind), id(id), level(level), type(move(type)), isStatic(isStatic) {
+LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic,
+                   string genericName)
+    : kind(kind), id(id), level(level), type(move(type)), isStatic(isStatic),
+      genericName(move(genericName)) {
   seqassert((this->type && kind == Link) || (!this->type && kind == Generic) ||
                 (!this->type && kind == Unbound),
             "inconsistent link state");
@@ -93,7 +95,7 @@ TypePtr LinkType::generalize(int atLevel) {
     return shared_from_this();
   } else if (kind == Unbound) {
     if (level >= atLevel)
-      return make_shared<LinkType>(Generic, id, 0, nullptr, isStatic);
+      return make_shared<LinkType>(Generic, id, 0, nullptr, isStatic, genericName);
     else
       return shared_from_this();
   } else {
@@ -107,7 +109,7 @@ TypePtr LinkType::instantiate(int atLevel, int &unboundCount,
     if (cache.find(id) != cache.end())
       return cache[id];
     return cache[id] = make_shared<LinkType>(Unbound, unboundCount++, atLevel, nullptr,
-                                             isStatic);
+                                             isStatic, genericName);
   } else if (kind == Unbound) {
     return shared_from_this();
   } else {
@@ -136,15 +138,21 @@ bool LinkType::canRealize() const {
 }
 string LinkType::toString() const {
   if (kind == Unbound)
-    return fmt::format("?{}.{}", id, level, isStatic ? "_s" : "");
+    return genericName.empty() ? "?"
+                               : genericName; // ? fmt::format("?{}.{}", id, level,
+                                              // isStatic ? "_s" : "") : "_";
   else if (kind == Generic)
-    return fmt::format("#{}.{}", id, level, isStatic ? "_s" : "");
+    return genericName.empty() ? "?"
+                               : genericName; // ? fmt::format("#{}.{}", id, level,
+                                              // isStatic ? "_s" : "") : "_";
   else
     return type->toString();
 }
 string LinkType::realizedName() const {
   if (kind == Unbound)
     return "?";
+  //  if (kind == Generic)
+  //    return "#"; // fmt::format("#{}", id);
   seqassert(kind == Link, "unexpected generic link");
   return type->realizedName();
 }
@@ -252,8 +260,30 @@ string ClassType::toString() const {
   for (auto &a : generics)
     if (!a.name.empty())
       gs.push_back(a.type->toString());
-  return fmt::format("{}{}", name,
-                     gs.empty() ? "" : fmt::format("[{}]", join(gs, ",")));
+  //  if ()
+  //    return fmt::format("{}{}", name,
+  //                       gs.empty() ? "" : fmt::format("[{}]", join(gs, ",")));
+  //  else
+  if (startswith(name, "Partial.N")) {
+    vector<string> as;
+    int i, gi;
+    for (i = 9, gi = 0; i < name.size() && name[i] != '.'; i++)
+      if (name[i] == '0')
+        as.push_back("...");
+      else
+        as.push_back(gs[gi++]);
+    auto n = split(name.substr(i + 1), '[')[0];
+    return fmt::format("{}[{}]", n, join(as, ","));
+  } else {
+    auto n = name;
+    if (startswith(n, "Tuple.N"))
+      n = "Tuple";
+    if (startswith(n, "Function.N"))
+      n = "Function";
+    if (startswith(n, "Callable.N"))
+      n = "Callable";
+    return fmt::format("{}{}", n, gs.empty() ? "" : fmt::format("[{}]", join(gs, ",")));
+  }
 }
 string ClassType::realizedName() const {
   vector<string> gs;
@@ -297,23 +327,22 @@ int RecordType::unify(Type *typ, Unification *us) {
       }
       return s1;
     }
-    if (startswith(tr->name, "Callable.N") && !tr->getFunc() &&
-        startswith(name, "Partial.N"))
+    if (startswith(tr->name, "Callable.N") && !tr->getFunc() && getPartial())
       return tr->unify(this, us);
-    if (startswith(name, "Callable.N") && !getFunc() &&
-        startswith(tr->name, "Partial.N")) {
+    if (startswith(name, "Callable.N") && !getFunc() && tr->getPartial()) {
       vector<int> zeros;
       for (int pi = 9; pi < tr->name.size() && tr->name[pi] != '.'; pi++)
         if (tr->name[pi] == '0')
           zeros.emplace_back(pi - 9);
       if (zeros.size() + 1 != args.size())
         return -1;
-      for (int i = 0; i < zeros.size(); i++)
-        if ((s = tr->generics[zeros[i]].type->unify(generics[i + 1].type.get(), us)) !=
-            -1)
-          s1 += s;
-        else
-          return -1;
+      //      for (int i = 0; i < zeros.size(); i++)
+      //        if ((s = tr->generics[zeros[i]].type->unify(generics[i + 1].type.get(),
+      //        us)) !=
+      //            -1)
+      //          s1 += s;
+      //        else
+      //          return -1;
       return s1;
     }
     if (args.size() != tr->args.size())
@@ -366,11 +395,11 @@ bool RecordType::canRealize() const {
          this->ClassType::canRealize();
 }
 string RecordType::toString() const {
-  vector<string> as;
+  //  vector<string> as;
   // for (auto &a : args)
   // as.push_back(a->toString());
-  return fmt::format("{}{}", this->ClassType::toString(),
-                     as.empty() ? "" : "<" + join(as, ",") + ">");
+  return fmt::format("{}", this->ClassType::toString());
+  //                     as.empty() ? "" : "<" + join(as, ",") + ">");
 }
 shared_ptr<RecordType> RecordType::getHeterogenousTuple() {
   seqassert(canRealize(), "{} not realizable", toString());
@@ -467,8 +496,8 @@ string FuncType::toString() const {
       gs.push_back(a.type->toString());
   string s = join(gs, ",");
   vector<string> as;
-  for (auto &a : args)
-    as.push_back(a->toString());
+  for (int ai = 1; ai < args.size(); ai++)
+    as.push_back(args[ai]->toString());
   string a = join(as, ",");
   s = s.empty() ? a : join(vector<string>{s, a}, ";");
   return fmt::format("{}{}", funcName, s.empty() ? "" : fmt::format("[{}]", s));
@@ -481,12 +510,43 @@ string FuncType::realizedName() const {
   string s = join(gs, ",");
   vector<string> as;
   for (int ai = 1; ai < args.size(); ai++)
-    as.push_back(args[ai]->getFunc() ? args[ai]->getFunc()->funcName
+    as.push_back(args[ai]->getFunc() ? args[ai]->getFunc()->realizedName()
                                      : args[ai]->realizedName());
   string a = join(as, ",");
   s = s.empty() ? a : join(vector<string>{s, a}, ";");
   return fmt::format("{}{}{}", funcParent ? funcParent->realizedName() + ":" : "",
                      funcName, s.empty() ? "" : fmt::format("[{}]", s));
+}
+
+////
+
+PartialType::PartialType(const shared_ptr<RecordType> &baseType,
+                         shared_ptr<FuncType> func, vector<char> known)
+    : RecordType(*baseType), func(move(func)), known(move(known)) {}
+int PartialType::unify(Type *typ, Unification *us) {
+  //  int s1 = 2, s = 0;
+  //  if (auto t = typ->getPartial()) {
+  //    if ((s = func->unify(t->func.get(), us)) == -1)
+  //      return -1;
+  //    s1 += s;
+  //  }
+  //  s = this->RecordType::unify(typ, us);
+  //  return s == -1 ? s : s1 + s;
+  return this->RecordType::unify(typ, us);
+}
+TypePtr PartialType::generalize(int atLevel) {
+  return make_shared<PartialType>(
+      static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)),
+      func, //->generalize(atLevel)->getFunc(),
+      known);
+}
+TypePtr PartialType::instantiate(int atLevel, int &unboundCount,
+                                 unordered_map<int, TypePtr> &cache) {
+  return make_shared<PartialType>(
+      static_pointer_cast<RecordType>(
+          this->RecordType::instantiate(atLevel, unboundCount, cache)),
+      func, //->instantiate(atLevel, unboundCount, cache)->getFunc(),
+      known);
 }
 
 ////
@@ -573,9 +633,6 @@ bool StaticType::canRealize() const {
 string StaticType::toString() const {
   if (staticEvaluation.first)
     return fmt::format("{}", staticEvaluation.second);
-  vector<string> s;
-  for (auto &e : generics)
-    s.push_back(fmt::format("{}={}", e.name, e.type->toString()));
   return fmt::format("Static[{}]",
                      staticExpr.first ? FormatVisitor::apply(staticExpr.first) : "");
 }

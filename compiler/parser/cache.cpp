@@ -49,12 +49,21 @@ types::FuncTypePtr Cache::findFunction(const string &name) const {
 
 types::FuncTypePtr Cache::findMethod(types::ClassType *typ, const string &member,
                                      const vector<pair<string, types::TypePtr>> &args) {
-  return typeCtx->findBestMethod(typ, member, args);
+  auto e = make_unique<IdExpr>(typ->name);
+  e->type = typ->getClass();
+
+  auto oldAge = typeCtx->age;
+  typeCtx->age = age;
+  auto ret = typeCtx->findBestMethod(e.get(), member, args);
+  typeCtx->age = oldAge;
+  return ret;
 }
 
 ir::types::Type *Cache::realizeType(types::ClassTypePtr type,
                                     vector<types::TypePtr> generics) {
-  type = typeCtx->instantiateGeneric(type->getSrcInfo(), type, generics)->getClass();
+  auto e = make_unique<IdExpr>(type->name);
+  e->type = type;
+  type = typeCtx->instantiateGeneric(e.get(), type, generics)->getClass();
   auto tv = TypecheckVisitor(typeCtx);
   if (auto rtv = tv.realize(type)->getClass()) {
     return classes[rtv->name].realizations[rtv->realizedTypeName()].ir;
@@ -64,7 +73,9 @@ ir::types::Type *Cache::realizeType(types::ClassTypePtr type,
 
 ir::Func *Cache::realizeFunction(types::FuncTypePtr type, vector<types::TypePtr> args,
                                  vector<types::TypePtr> generics) {
-  type = typeCtx->instantiate(type->getSrcInfo(), type)->getFunc();
+  auto e = make_unique<IdExpr>(type->funcName);
+  e->type = type;
+  type = typeCtx->instantiate(e.get(), type, nullptr, false)->getFunc();
   if (args.size() != type->args.size())
     return nullptr;
   for (int gi = 0; gi < args.size(); gi++) {

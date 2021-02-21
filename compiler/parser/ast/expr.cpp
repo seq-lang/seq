@@ -338,6 +338,14 @@ ACCEPT_IMPL(RangeExpr, ASTVisitor);
 
 StmtExpr::StmtExpr(vector<unique_ptr<Stmt>> &&stmts, ExprPtr expr)
     : Expr(), stmts(move(stmts)), expr(move(expr)) {}
+StmtExpr::StmtExpr(unique_ptr<Stmt> stmt, ExprPtr expr) : Expr(), expr(move(expr)) {
+  stmts.push_back(move(stmt));
+}
+StmtExpr::StmtExpr(unique_ptr<Stmt> stmt, unique_ptr<Stmt> stmt2, ExprPtr expr)
+    : Expr(), expr(move(expr)) {
+  stmts.push_back(move(stmt));
+  stmts.push_back(move(stmt2));
+}
 StmtExpr::StmtExpr(const StmtExpr &expr)
     : Expr(expr), stmts(ast::clone(expr.stmts)), expr(ast::clone(expr.expr)) {}
 string StmtExpr::toString() const {

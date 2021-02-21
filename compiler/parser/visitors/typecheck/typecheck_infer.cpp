@@ -56,7 +56,7 @@ types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
     if (!m.type)
       return nullptr;
 
-  // TODO: dissalow later?!
+  // TODO: disallow later?!
   //  if (startswith(type->name, "Callable.N") && !type->getFunc())
   //    error("realizing trait");
 
@@ -90,8 +90,7 @@ types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
       vector<string> names;
       map<std::string, SrcInfo> memberInfo;
       for (auto &m : ctx->cache->classes[realizedType->name].fields) {
-        auto mt =
-            ctx->instantiate(realizedType->getSrcInfo(), m.type, realizedType.get());
+        auto mt = ctx->instantiate(N<IdExpr>(m.name).get(), m.type, realizedType.get());
         LOG_REALIZE("- member: {} -> {}: {}", m.name, m.type->toString(),
                     mt->toString());
         auto tf = realize(mt);
@@ -184,8 +183,10 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
 
           string varName = ast->args[i - 1].name;
           trimStars(varName);
-          ctx->add(type->args[i]->getFunc() ? TypecheckItem::Func : TypecheckItem::Var,
-                   varName, make_shared<LinkType>(type->args[i]));
+          ctx->add(
+              type->args[i]->getFunc() ? TypecheckItem::Func : TypecheckItem::Var,
+              varName,
+              make_shared<LinkType>(type->args[i]->generalize(ctx->typecheckLevel)));
         }
 
       // Need to populate realization table in advance to make recursive functions
@@ -263,12 +264,12 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
     ctx->typecheckLevel--;
 
     int newUnbounds = 0;
-    set<types::TypePtr> newActiveUnbounds;
+    std::map<types::TypePtr, string> newActiveUnbounds;
     for (auto i = ctx->activeUnbounds.begin(); i != ctx->activeUnbounds.end();) {
-      auto l = (*i)->getLink();
+      auto l = i->first->getLink();
       assert(l);
       if (l->kind == LinkType::Unbound) {
-        newActiveUnbounds.insert(*i);
+        newActiveUnbounds[i->first] = i->second;
         if (l->id >= minUnbound)
           newUnbounds++;
       }
@@ -276,24 +277,21 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
     }
     ctx->activeUnbounds = newActiveUnbounds;
 
-    //    ctx->popBlock();
     if (ctx->activeUnbounds.empty() || !newUnbounds) {
       break;
     } else {
       if (newUnbounds >= prevSize) {
-        TypePtr fu = nullptr;
-        int count = 0;
+        map<int, pair<seq::SrcInfo, string>> v;
         for (auto &ub : ctx->activeUnbounds)
-          if (ub->getLink()->id >= minUnbound) {
-            // Attempt to use default generics here
-            // TODO: this is awfully inefficient way to do it
-            if (!fu)
-              fu = ub;
-            LOG_TYPECHECK("[realizeBlock] dangling {} @ {}", ub->toString(),
-                          ub->getSrcInfo());
-            count++;
+          if (ub.first->getLink()->id >= minUnbound) {
+            v[ub.first->getLink()->id] = {ub.first->getSrcInfo(), ub.second};
           }
-        error(fu, "cannot resolve {} unbound variables", count);
+        for (auto &ub : v)
+          seq::compilationMessage(
+              "\033[1;31merror:\033[0m",
+              format("cannot infer the type of {}", ub.second.second),
+              ub.second.first.file, ub.second.first.line, ub.second.first.col);
+        error("cannot typecheck the program");
       }
       prevSize = newUnbounds;
     }
