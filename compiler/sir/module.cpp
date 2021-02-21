@@ -24,22 +24,24 @@ translateGenerics(std::vector<types::Generic> &generics) {
 }
 
 std::vector<std::pair<std::string, seq::ast::types::TypePtr>>
-generateDummyNames(std::vector<types::Type *> &types) {
+generateDummyNames(std::vector<const types::Type *> &types) {
   std::vector<std::pair<std::string, seq::ast::types::TypePtr>> ret;
   for (auto *t : types) {
     assert(t->getAstType());
-    ret.emplace_back("", t->getAstType());
+    ret.emplace_back("",
+                     std::const_pointer_cast<seq::ast::types::Type>(t->getAstType()));
   }
   return ret;
 }
 
-std::vector<seq::ast::types::TypePtr> translateArgs(std::vector<types::Type *> &types) {
+std::vector<seq::ast::types::TypePtr>
+translateArgs(std::vector<const types::Type *> &types) {
   std::vector<seq::ast::types::TypePtr> ret = {
       std::make_shared<seq::ast::types::LinkType>(
           seq::ast::types::LinkType::Kind::Unbound, 0)};
   for (auto *t : types) {
     assert(t->getAstType());
-    ret.push_back(t->getAstType());
+    ret.push_back(std::const_pointer_cast<seq::ast::types::Type>(t->getAstType()));
   }
   return ret;
 }
@@ -56,6 +58,38 @@ const std::string IRModule::INT_NAME = "int";
 const std::string IRModule::FLOAT_NAME = "float";
 const std::string IRModule::STRING_NAME = "str";
 
+const std::string IRModule::EQ_MAGIC_NAME = "__eq__";
+const std::string IRModule::NE_MAGIC_NAME = "__ne__";
+const std::string IRModule::LT_MAGIC_NAME = "__lt__";
+const std::string IRModule::GT_MAGIC_NAME = "__gt__";
+const std::string IRModule::LE_MAGIC_NAME = "__le__";
+const std::string IRModule::GE_MAGIC_NAME = "__ge__";
+
+const std::string IRModule::POS_MAGIC_NAME = "__pos__";
+const std::string IRModule::NEG_MAGIC_NAME = "__neg__";
+const std::string IRModule::INVERT_MAGIC_NAME = "__invert__";
+
+const std::string IRModule::ADD_MAGIC_NAME = "__add__";
+const std::string IRModule::SUB_MAGIC_NAME = "__sub__";
+const std::string IRModule::MUL_MAGIC_NAME = "__mul__";
+const std::string IRModule::TRUE_DIV_MAGIC_NAME = "__truediv__";
+const std::string IRModule::DIV_MAGIC_NAME = "__div__";
+const std::string IRModule::MOD_MAGIC_NAME = "__mod__";
+const std::string IRModule::POW_MAGIC_NAME = "__pow__";
+const std::string IRModule::LSHIFT_MAGIC_NAME = "__lshift__";
+const std::string IRModule::RSHIFT_MAGIC_NAME = "__rshift__";
+const std::string IRModule::AND_MAGIC_NAME = "__and__";
+const std::string IRModule::OR_MAGIC_NAME = "__or__";
+const std::string IRModule::XOR_MAGIC_NAME = "__xor__";
+
+const std::string IRModule::INT_MAGIC_NAME = "__int__";
+const std::string IRModule::BOOL_MAGIC_NAME = "__bool__";
+const std::string IRModule::STR_MAGIC_NAME = "__str__";
+
+const std::string IRModule::GET_MAGIC_NAME = "__getitem__";
+const std::string IRModule::ITER_MAGIC_NAME = "__iter__";
+const std::string IRModule::LEN_MAGIC_NAME = "__len__";
+
 const char IRModule::NodeId = 0;
 
 IRModule::IRModule(std::string name, std::shared_ptr<ast::Cache> cache)
@@ -69,12 +103,14 @@ IRModule::IRModule(std::string name, std::shared_ptr<ast::Cache> cache)
   argVar->setReplaceable(false);
 }
 
-Func *IRModule::getOrRealizeMethod(types::Type *parent, const std::string &methodName,
-                                   std::vector<types::Type *> args,
+Func *IRModule::getOrRealizeMethod(const types::Type *parent,
+                                   const std::string &methodName,
+                                   std::vector<const types::Type *> args,
                                    std::vector<types::Generic> generics) {
 
-  auto method = cache->findMethod(parent->getAstType()->getClass().get(), methodName,
-                                  generateDummyNames(args));
+  auto method = cache->findMethod(
+      std::const_pointer_cast<ast::types::Type>(parent->getAstType())->getClass().get(),
+      methodName, generateDummyNames(args));
   if (!method)
     return nullptr;
   return cache->realizeFunction(method, translateArgs(args),
@@ -82,7 +118,7 @@ Func *IRModule::getOrRealizeMethod(types::Type *parent, const std::string &metho
 }
 
 Func *IRModule::getOrRealizeFunc(const std::string &funcName,
-                                 std::vector<types::Type *> args,
+                                 std::vector<const types::Type *> args,
                                  std::vector<types::Generic> generics) {
   auto func = cache->findFunction(funcName);
   if (!func)
@@ -204,6 +240,14 @@ types::Type *IRModule::getIntNType(unsigned int len, bool sign) {
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::IntNType>(len, sign);
+}
+
+Value *IRModule::getIntConstant(int v) { return Nr<IntConstant>(v, getIntType()); }
+
+Value *IRModule::getBoolConstant(bool v) { return Nr<BoolConstant>(v, getBoolType()); }
+
+Value *IRModule::getStringConstant(std::string v) {
+  return Nr<StringConstant>(std::move(v), getStringType());
 }
 
 std::ostream &IRModule::doFormat(std::ostream &os) const {

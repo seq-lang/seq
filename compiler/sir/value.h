@@ -97,12 +97,14 @@ public:
     stripConstPack(dst, std::forward<Args>(args)...);
     return doCall(dst);
   }
+  Value *operator[](const Value &other) const;
 
   Value *toInt() const;
   Value *toBool() const;
   Value *toStr() const;
 
   Value *len() const;
+  Value *iter() const;
 
 private:
   template <typename... Args>
@@ -119,9 +121,8 @@ private:
   static Value *stripConst(const Value *other) { return const_cast<Value *>(other); }
   static Value *stripConst(const Value &other) { return const_cast<Value *>(&other); }
 
-  Value *doUnaryOp(const std::string &name, const types::Type *type = nullptr) const;
-  Value *doBinaryOp(const std::string &name, const Value &other,
-                    const types::Type *type = nullptr) const;
+  Value *doUnaryOp(const std::string &name) const;
+  Value *doBinaryOp(const std::string &name, const Value &other) const;
 
   Value *doCall(const std::vector<Value *> &args) const;
 

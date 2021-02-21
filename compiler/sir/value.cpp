@@ -22,27 +22,27 @@ Value *Value::clone() const {
 }
 
 Value *Value::operator==(const Value &other) const {
-  return doBinaryOp(IRModule::EQ_MAGIC_NAME, other, getModule()->getBoolType());
+  return doBinaryOp(IRModule::EQ_MAGIC_NAME, other);
 }
 
 Value *Value::operator!=(const Value &other) const {
-  return doBinaryOp(IRModule::NE_MAGIC_NAME, other, getModule()->getBoolType());
+  return doBinaryOp(IRModule::NE_MAGIC_NAME, other);
 }
 
 Value *Value::operator<(const Value &other) const {
-  return doBinaryOp(IRModule::LT_MAGIC_NAME, other, getModule()->getBoolType());
+  return doBinaryOp(IRModule::LT_MAGIC_NAME, other);
 }
 
 Value *Value::operator>(const Value &other) const {
-  return doBinaryOp(IRModule::GT_MAGIC_NAME, other, getModule()->getBoolType());
+  return doBinaryOp(IRModule::GT_MAGIC_NAME, other);
 }
 
 Value *Value::operator<=(const Value &other) const {
-  return doBinaryOp(IRModule::LE_MAGIC_NAME, other, getModule()->getBoolType());
+  return doBinaryOp(IRModule::LE_MAGIC_NAME, other);
 }
 
 Value *Value::operator>=(const Value &other) const {
-  return doBinaryOp(IRModule::GE_MAGIC_NAME, other, getModule()->getBoolType());
+  return doBinaryOp(IRModule::GE_MAGIC_NAME, other);
 }
 
 Value *Value::operator+() const { return doUnaryOp(IRModule::POS_MAGIC_NAME); }
@@ -64,7 +64,7 @@ Value *Value::operator*(const Value &other) const {
 }
 
 Value *Value::trueDiv(const Value &other) const {
-  return doBinaryOp(IRModule::TRUE_DIV_MAGIC_NAME, other, getModule()->getFloatType());
+  return doBinaryOp(IRModule::TRUE_DIV_MAGIC_NAME, other);
 }
 
 Value *Value::operator/(const Value &other) const {
@@ -111,26 +111,23 @@ Value *Value::operator&&(const Value &other) const {
                                   module->getBoolConstant(false));
 }
 
-Value *Value::toInt() const {
-  return doUnaryOp(IRModule::INT_MAGIC_NAME, getModule()->getIntType());
+Value *Value::operator[](const Value &other) const {
+  return doBinaryOp(IRModule::GET_MAGIC_NAME, other);
 }
 
-Value *Value::toBool() const {
-  return doUnaryOp(IRModule::BOOL_MAGIC_NAME, getModule()->getBoolType());
-}
+Value *Value::toInt() const { return doUnaryOp(IRModule::INT_MAGIC_NAME); }
 
-Value *Value::toStr() const {
-  return doUnaryOp(IRModule::STR_MAGIC_NAME, getModule()->getStringType());
-}
+Value *Value::toBool() const { return doUnaryOp(IRModule::BOOL_MAGIC_NAME); }
 
-Value *Value::len() const {
-  return doUnaryOp(IRModule::LEN_MAGIC_NAME, getModule()->getIntType());
-}
+Value *Value::toStr() const { return doUnaryOp(IRModule::STR_MAGIC_NAME); }
 
-Value *Value::doUnaryOp(const string &name, const types::Type *type) const {
+Value *Value::len() const { return doUnaryOp(IRModule::LEN_MAGIC_NAME); }
+
+Value *Value::iter() const { return doUnaryOp(IRModule::ITER_MAGIC_NAME); }
+
+Value *Value::doUnaryOp(const string &name) const {
   auto *module = getModule();
-  auto *resType = type ? type : getType();
-  auto *fn = module->getOrRealizeMethod(getType(), name, resType,
+  auto *fn = module->getOrRealizeMethod(getType(), name,
                                         std::vector<const types::Type *>{getType()});
 
   if (!fn)
@@ -140,13 +137,10 @@ Value *Value::doUnaryOp(const string &name, const types::Type *type) const {
   return (*fnVal)(*this);
 }
 
-Value *Value::doBinaryOp(const string &name, const Value &other,
-                         const types::Type *type) const {
+Value *Value::doBinaryOp(const string &name, const Value &other) const {
   auto *module = getModule();
-  auto *resType = type ? type : getType();
   auto *fn = module->getOrRealizeMethod(
-      getType(), name, resType,
-      std::vector<const types::Type *>{getType(), other.getType()});
+      getType(), name, std::vector<const types::Type *>{getType(), other.getType()});
 
   if (!fn)
     return nullptr;
