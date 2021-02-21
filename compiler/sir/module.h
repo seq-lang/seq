@@ -205,7 +205,7 @@ public:
   /// @param generics the generics
   /// @return the method or nullptr
   Func *getOrRealizeMethod(types::Type *parent, const std::string &methodName,
-                           types::Type *rType, std::vector<types::Type *> args,
+                           std::vector<types::Type *> args,
                            std::vector<types::Generic> generics = {});
 
   /// Gets or realizes a function.
@@ -214,8 +214,7 @@ public:
   /// @param args the argument types
   /// @param generics the generics
   /// @return the function or nullptr
-  Func *getOrRealizeFunc(const std::string &funcName, types::Type *rType,
-                         std::vector<types::Type *> args,
+  Func *getOrRealizeFunc(const std::string &funcName, std::vector<types::Type *> args,
                          std::vector<types::Generic> generics = {});
 
   /// Gets or realizes a type.

@@ -82,6 +82,10 @@ public:
   }
   using IRNode::replaceUsedType;
 
+  /// @param other another type
+  /// @return true if this type is equal to the argument type
+  bool is(const types::Type *other) const { return getName() == other->getName(); }
+
   /// A type is "atomic" iff it contains no pointers to dynamically
   /// allocated memory. Atomic types do not need to be scanned during
   /// garbage collection.

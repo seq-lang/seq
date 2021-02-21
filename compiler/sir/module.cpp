@@ -33,10 +33,8 @@ generateDummyNames(std::vector<types::Type *> &types) {
   return ret;
 }
 
-std::vector<seq::ast::types::TypePtr> translateArgs(types::Type *rType,
-                                                    std::vector<types::Type *> &types) {
-  assert(rType->getAstType());
-  std::vector<seq::ast::types::TypePtr> ret = {rType->getAstType()};
+std::vector<seq::ast::types::TypePtr> translateArgs(std::vector<types::Type *> &types) {
+  std::vector<seq::ast::types::TypePtr> ret;
   for (auto *t : types) {
     assert(t->getAstType());
     ret.push_back(t->getAstType());
@@ -70,25 +68,24 @@ IRModule::IRModule(std::string name, std::shared_ptr<ast::Cache> cache)
 }
 
 Func *IRModule::getOrRealizeMethod(types::Type *parent, const std::string &methodName,
-                                   types::Type *rType, std::vector<types::Type *> args,
+                                   std::vector<types::Type *> args,
                                    std::vector<types::Generic> generics) {
 
   auto method = cache->findMethod(parent->getAstType()->getClass().get(), methodName,
                                   generateDummyNames(args));
   if (!method)
     return nullptr;
-  return cache->realizeFunction(method, translateArgs(rType, args),
+  return cache->realizeFunction(method, translateArgs(args),
                                 translateGenerics(generics));
 }
 
-Func *IRModule::getOrRealizeFunc(const std::string &funcName, types::Type *rType,
+Func *IRModule::getOrRealizeFunc(const std::string &funcName,
                                  std::vector<types::Type *> args,
                                  std::vector<types::Generic> generics) {
   auto func = cache->findFunction(funcName);
   if (!func)
     return nullptr;
-  return cache->realizeFunction(func, translateArgs(rType, args),
-                                translateGenerics(generics));
+  return cache->realizeFunction(func, translateArgs(args), translateGenerics(generics));
 }
 
 types::Type *IRModule::getOrRealizeType(const std::string &typeName,
