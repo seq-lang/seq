@@ -1,5 +1,6 @@
 #include "value.h"
 
+#include "instr.h"
 #include "module.h"
 
 namespace seq {
@@ -18,6 +19,139 @@ Value *Value::clone() const {
       res->setAttribute(attr->clone(), *it);
   }
   return res;
+}
+
+Value *Value::operator==(const Value &other) const {
+  return doBinaryOp(IRModule::EQ_MAGIC_NAME, other);
+}
+
+Value *Value::operator!=(const Value &other) const {
+  return doBinaryOp(IRModule::NE_MAGIC_NAME, other);
+}
+
+Value *Value::operator<(const Value &other) const {
+  return doBinaryOp(IRModule::LT_MAGIC_NAME, other);
+}
+
+Value *Value::operator>(const Value &other) const {
+  return doBinaryOp(IRModule::GT_MAGIC_NAME, other);
+}
+
+Value *Value::operator<=(const Value &other) const {
+  return doBinaryOp(IRModule::LE_MAGIC_NAME, other);
+}
+
+Value *Value::operator>=(const Value &other) const {
+  return doBinaryOp(IRModule::GE_MAGIC_NAME, other);
+}
+
+Value *Value::operator+() const { return doUnaryOp(IRModule::POS_MAGIC_NAME); }
+
+Value *Value::operator-() const { return doUnaryOp(IRModule::NEG_MAGIC_NAME); }
+
+Value *Value::operator~() const { return doUnaryOp(IRModule::INVERT_MAGIC_NAME); }
+
+Value *Value::operator+(const Value &other) const {
+  return doBinaryOp(IRModule::ADD_MAGIC_NAME, other);
+}
+
+Value *Value::operator-(const Value &other) const {
+  return doBinaryOp(IRModule::SUB_MAGIC_NAME, other);
+}
+
+Value *Value::operator*(const Value &other) const {
+  return doBinaryOp(IRModule::MUL_MAGIC_NAME, other);
+}
+
+Value *Value::trueDiv(const Value &other) const {
+  return doBinaryOp(IRModule::TRUE_DIV_MAGIC_NAME, other);
+}
+
+Value *Value::operator/(const Value &other) const {
+  return doBinaryOp(IRModule::DIV_MAGIC_NAME, other);
+}
+
+Value *Value::operator%(const Value &other) const {
+  return doBinaryOp(IRModule::MOD_MAGIC_NAME, other);
+}
+
+Value *Value::pow(const Value &other) const {
+  return doBinaryOp(IRModule::POW_MAGIC_NAME, other);
+}
+
+Value *Value::operator<<(const Value &other) const {
+  return doBinaryOp(IRModule::LSHIFT_MAGIC_NAME, other);
+}
+
+Value *Value::operator>>(const Value &other) const {
+  return doBinaryOp(IRModule::RSHIFT_MAGIC_NAME, other);
+}
+
+Value *Value::operator&(const Value &other) const {
+  return doBinaryOp(IRModule::AND_MAGIC_NAME, other);
+}
+
+Value *Value::operator|(const Value &other) const {
+  return doBinaryOp(IRModule::OR_MAGIC_NAME, other);
+}
+
+Value *Value::operator^(const Value &other) const {
+  return doBinaryOp(IRModule::XOR_MAGIC_NAME, other);
+}
+
+Value *Value::operator||(const Value &other) const {
+  auto *module = getModule();
+  return module->Nr<TernaryInstr>(toBool(), module->getBoolConstant(true),
+                                  other.toBool());
+}
+
+Value *Value::operator&&(const Value &other) const {
+  auto *module = getModule();
+  return module->Nr<TernaryInstr>(toBool(), other.toBool(),
+                                  module->getBoolConstant(false));
+}
+
+Value *Value::operator[](const Value &other) const {
+  return doBinaryOp(IRModule::GET_MAGIC_NAME, other);
+}
+
+Value *Value::toInt() const { return doUnaryOp(IRModule::INT_MAGIC_NAME); }
+
+Value *Value::toBool() const { return doUnaryOp(IRModule::BOOL_MAGIC_NAME); }
+
+Value *Value::toStr() const { return doUnaryOp(IRModule::STR_MAGIC_NAME); }
+
+Value *Value::len() const { return doUnaryOp(IRModule::LEN_MAGIC_NAME); }
+
+Value *Value::iter() const { return doUnaryOp(IRModule::ITER_MAGIC_NAME); }
+
+Value *Value::doUnaryOp(const string &name) const {
+  auto *module = getModule();
+  auto *fn = module->getOrRealizeMethod(getType(), name,
+                                        std::vector<const types::Type *>{getType()});
+
+  if (!fn)
+    return nullptr;
+
+  auto *fnVal = module->Nr<VarValue>(fn);
+  return (*fnVal)(*this);
+}
+
+Value *Value::doBinaryOp(const string &name, const Value &other) const {
+  auto *module = getModule();
+  auto *fn = module->getOrRealizeMethod(
+      getType(), name, std::vector<const types::Type *>{getType(), other.getType()});
+
+  if (!fn)
+    return nullptr;
+
+  auto *fnVal = module->Nr<VarValue>(fn);
+  return (*fnVal)(*this, other);
+}
+
+Value *Value::doCall(const vector<Value *> &args) const {
+  auto *module = getModule();
+  return module->Nr<CallInstr>(const_cast<Value *>(this), args);
 }
 
 } // namespace ir

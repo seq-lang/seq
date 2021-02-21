@@ -65,7 +65,67 @@ public:
   /// @return a clone of the value
   Value *clone() const;
 
+  Value *operator==(const Value &other) const;
+  Value *operator!=(const Value &other) const;
+  Value *operator<(const Value &other) const;
+  Value *operator>(const Value &other) const;
+  Value *operator<=(const Value &other) const;
+  Value *operator>=(const Value &other) const;
+
+  Value *operator+() const;
+  Value *operator-() const;
+  Value *operator~() const;
+
+  Value *operator+(const Value &other) const;
+  Value *operator-(const Value &other) const;
+  Value *operator*(const Value &other) const;
+  Value *trueDiv(const Value &other) const;
+  Value *operator/(const Value &other) const;
+  Value *operator%(const Value &other) const;
+  Value *pow(const Value &other) const;
+  Value *operator<<(const Value &other) const;
+  Value *operator>>(const Value &other) const;
+  Value *operator&(const Value &other) const;
+  Value *operator|(const Value &other) const;
+  Value *operator^(const Value &other) const;
+
+  Value *operator||(const Value &other) const;
+  Value *operator&&(const Value &other) const;
+
+  template <typename... Args> Value *operator()(Args &&... args) {
+    std::vector<Value *> dst;
+    stripConstPack(dst, std::forward<Args>(args)...);
+    return doCall(dst);
+  }
+  Value *operator[](const Value &other) const;
+
+  Value *toInt() const;
+  Value *toBool() const;
+  Value *toStr() const;
+
+  Value *len() const;
+  Value *iter() const;
+
 private:
+  template <typename... Args>
+  static void stripConstPack(std::vector<Value *> &dst, const Value &first,
+                             Args &&... args) {
+    dst.push_back(stripConst(first));
+    stripConstPack(dst, std::forward<Args>(args)...);
+  }
+  static void stripConstPack(std::vector<Value *> &dst, const Value &first) {
+    dst.push_back(stripConst(first));
+  }
+  static void stripConstPack(std::vector<Value *> &dst) {}
+
+  static Value *stripConst(const Value *other) { return const_cast<Value *>(other); }
+  static Value *stripConst(const Value &other) { return const_cast<Value *>(&other); }
+
+  Value *doUnaryOp(const std::string &name) const;
+  Value *doBinaryOp(const std::string &name, const Value &other) const;
+
+  Value *doCall(const std::vector<Value *> &args) const;
+
   virtual const types::Type *doGetType() const = 0;
 
   virtual std::vector<Value *> doGetUsedValues() const { return {}; }
