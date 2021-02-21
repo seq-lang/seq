@@ -51,7 +51,12 @@ types::FuncTypePtr Cache::findMethod(types::ClassType *typ, const string &member
                                      const vector<pair<string, types::TypePtr>> &args) {
   auto e = make_unique<IdExpr>(typ->name);
   e->type = typ->getClass();
-  return typeCtx->findBestMethod(e.get(), member, args);
+
+  auto oldAge = typeCtx->age;
+  typeCtx->age = age;
+  auto ret = typeCtx->findBestMethod(e.get(), member, args);
+  typeCtx->age = oldAge;
+  return ret;
 }
 
 ir::types::Type *Cache::realizeType(types::ClassTypePtr type,
@@ -75,7 +80,7 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type, vector<types::TypePtr>
     return nullptr;
   for (int gi = 0; gi < args.size(); gi++) {
     types::Type::Unification undo;
-    if (type->args[gi + 1]->unify(args[gi].get(), &undo) < 0) {
+    if (type->args[gi]->unify(args[gi].get(), &undo) < 0) {
       undo.undo();
       return nullptr;
     }

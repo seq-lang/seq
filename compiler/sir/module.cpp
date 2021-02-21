@@ -34,7 +34,9 @@ generateDummyNames(std::vector<types::Type *> &types) {
 }
 
 std::vector<seq::ast::types::TypePtr> translateArgs(std::vector<types::Type *> &types) {
-  std::vector<seq::ast::types::TypePtr> ret;
+  std::vector<seq::ast::types::TypePtr> ret = {
+      std::make_shared<seq::ast::types::LinkType>(
+          seq::ast::types::LinkType::Kind::Unbound, 0)};
   for (auto *t : types) {
     assert(t->getAstType());
     ret.push_back(t->getAstType());
@@ -85,7 +87,9 @@ Func *IRModule::getOrRealizeFunc(const std::string &funcName,
   auto func = cache->findFunction(funcName);
   if (!func)
     return nullptr;
-  return cache->realizeFunction(func, translateArgs(args), translateGenerics(generics));
+  auto arg = translateArgs(args);
+  auto gens = translateGenerics(generics);
+  return cache->realizeFunction(func, arg, gens);
 }
 
 types::Type *IRModule::getOrRealizeType(const std::string &typeName,
