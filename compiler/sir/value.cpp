@@ -68,7 +68,7 @@ Value *Value::trueDiv(const Value &other) const {
 }
 
 Value *Value::operator/(const Value &other) const {
-  return doBinaryOp(IRModule::DIV_MAGIC_NAME, other);
+  return doBinaryOp(IRModule::FLOOR_DIV_MAGIC_NAME, other);
 }
 
 Value *Value::operator%(const Value &other) const {
