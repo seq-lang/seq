@@ -33,6 +33,38 @@ public:
   static const std::string FLOAT_NAME;
   static const std::string STRING_NAME;
 
+  static const std::string EQ_MAGIC_NAME;
+  static const std::string NE_MAGIC_NAME;
+  static const std::string LT_MAGIC_NAME;
+  static const std::string GT_MAGIC_NAME;
+  static const std::string LE_MAGIC_NAME;
+  static const std::string GE_MAGIC_NAME;
+
+  static const std::string POS_MAGIC_NAME;
+  static const std::string NEG_MAGIC_NAME;
+  static const std::string INVERT_MAGIC_NAME;
+
+  static const std::string ADD_MAGIC_NAME;
+  static const std::string SUB_MAGIC_NAME;
+  static const std::string MUL_MAGIC_NAME;
+  static const std::string TRUE_DIV_MAGIC_NAME;
+  static const std::string FLOOR_DIV_MAGIC_NAME;
+  static const std::string MOD_MAGIC_NAME;
+  static const std::string POW_MAGIC_NAME;
+  static const std::string LSHIFT_MAGIC_NAME;
+  static const std::string RSHIFT_MAGIC_NAME;
+  static const std::string AND_MAGIC_NAME;
+  static const std::string OR_MAGIC_NAME;
+  static const std::string XOR_MAGIC_NAME;
+
+  static const std::string INT_MAGIC_NAME;
+  static const std::string BOOL_MAGIC_NAME;
+  static const std::string STR_MAGIC_NAME;
+
+  static const std::string GET_MAGIC_NAME;
+  static const std::string ITER_MAGIC_NAME;
+  static const std::string LEN_MAGIC_NAME;
+
 private:
   /// the module's "main" function
   std::unique_ptr<Func> mainFunc;
@@ -204,8 +236,8 @@ public:
   /// @param args the argument types
   /// @param generics the generics
   /// @return the method or nullptr
-  Func *getOrRealizeMethod(types::Type *parent, const std::string &methodName,
-                           types::Type *rType, std::vector<types::Type *> args,
+  Func *getOrRealizeMethod(const types::Type *parent, const std::string &methodName,
+                           std::vector<const types::Type *> args,
                            std::vector<types::Generic> generics = {});
 
   /// Gets or realizes a function.
@@ -214,8 +246,8 @@ public:
   /// @param args the argument types
   /// @param generics the generics
   /// @return the function or nullptr
-  Func *getOrRealizeFunc(const std::string &funcName, types::Type *rType,
-                         std::vector<types::Type *> args,
+  Func *getOrRealizeFunc(const std::string &funcName,
+                         std::vector<const types::Type *> args,
                          std::vector<types::Generic> generics = {});
 
   /// Gets or realizes a type.
@@ -280,6 +312,19 @@ public:
   /// @param sign true if signed
   /// @return a variable length integer type
   types::Type *getIntNType(unsigned len, bool sign);
+
+  /// @param v the value
+  /// @return an int constant
+  Value *getIntConstant(int64_t v);
+  /// @param v the value
+  /// @return a float constant
+  Value *getFloatConstant(double v);
+  /// @param v the value
+  /// @return a bool constant
+  Value *getBoolConstant(bool v);
+  /// @param v the value
+  /// @return a string constant
+  Value *getStringConstant(std::string v);
 
 private:
   void store(types::Type *t) {

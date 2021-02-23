@@ -93,6 +93,14 @@ const BodiedFunc *getStdlibFunc(const Value *x, const std::string &name) {
   return nullptr;
 }
 
+types::Type *getReturnType(Func *func) {
+  return cast<types::FuncType>(func->getType())->getReturnType();
+}
+
+const types::Type *getReturnType(const Func *func) {
+  return cast<types::FuncType>(func->getType())->getReturnType();
+}
+
 void applySubstitutionOptimizations(PipelineFlow *p) {
   auto *M = p->getModule();
 
@@ -109,7 +117,8 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
           auto *seqType = funcType->front();
           auto *kmerType = genType->getBase();
           auto *kmersRevcompFunc = M->getOrRealizeFunc(
-              "_kmers_revcomp", genType, {seqType, M->getIntType()}, {kmerType});
+              "_kmers_revcomp", {seqType, M->getIntType()}, {kmerType});
+          assert(getReturnType(kmersRevcompFunc)->is(genType));
           cast<VarValue>(prev->getFunc())->setVar(kmersRevcompFunc);
           it = p->erase(it);
           continue;
@@ -125,9 +134,9 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
           auto *seqType = funcType->front();
           auto *kmerType =
               cast<types::MemberedType>(genType->getBase())->back().getType();
-          auto *kmersRevcompWithPosFunc =
-              M->getOrRealizeFunc("_kmers_revcomp_with_pos", genType,
-                                  {seqType, M->getIntType()}, {kmerType});
+          auto *kmersRevcompWithPosFunc = M->getOrRealizeFunc(
+              "_kmers_revcomp_with_pos", {seqType, M->getIntType()}, {kmerType});
+          assert(getReturnType(kmersRevcompWithPosFunc)->is(genType));
           cast<VarValue>(prev->getFunc())->setVar(kmersRevcompWithPosFunc);
           it = p->erase(it);
           continue;
@@ -143,7 +152,8 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
           auto *seqType = funcType->front();
           auto *kmerType = genType->getBase();
           auto *kmersCanonicalFunc =
-              M->getOrRealizeFunc("_kmers_canonical", genType, {seqType}, {kmerType});
+              M->getOrRealizeFunc("_kmers_canonical", {seqType}, {kmerType});
+          assert(getReturnType(kmersCanonicalFunc)->is(genType));
           cast<VarValue>(prev->getFunc())->setVar(kmersCanonicalFunc);
           prev->erase(prev->end() - 1); // remove step argument
           it = p->erase(it);
@@ -160,8 +170,9 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
           auto *seqType = funcType->front();
           auto *kmerType =
               cast<types::MemberedType>(genType->getBase())->back().getType();
-          auto *kmersCanonicalWithPosFunc = M->getOrRealizeFunc(
-              "_kmers_canonical_with_pos", genType, {seqType}, {kmerType});
+          auto *kmersCanonicalWithPosFunc =
+              M->getOrRealizeFunc("_kmers_canonical_with_pos", {seqType}, {kmerType});
+          assert(getReturnType(kmersCanonicalWithPosFunc)->is(genType));
           cast<VarValue>(prev->getFunc())->setVar(kmersCanonicalWithPosFunc);
           prev->erase(prev->end() - 1); // remove step argument
           it = p->erase(it);
@@ -185,8 +196,8 @@ class PrefetchFunctionTransformer : public util::LambdaValueVisitor {
     Value *key = x->back();
     types::Type *selfType = self->getType();
     types::Type *keyType = key->getType();
-    Func *prefetchFunc = M->getOrRealizeMethod(selfType, "__prefetch__",
-                                               M->getVoidType(), {selfType, keyType});
+    Func *prefetchFunc =
+        M->getOrRealizeMethod(selfType, "__prefetch__", {selfType, keyType});
     if (!prefetchFunc)
       return;
 
@@ -222,15 +233,17 @@ void applyPrefetchOptimizations(PipelineFlow *p) {
       std::cout << *func << std::endl;
       std::cout << "AFTER:" << std::endl;
       std::cout << *clone << std::endl;
+
+      break; // at most one prefetch transformation per pipeline
     }
   }
 }
 
 void PipelineOptimizations::handle(PipelineFlow *x) {
-  // std::cout << "BEFORE: " << *x << std::endl;
+  std::cout << "BEFORE: " << *x << std::endl;
   applySubstitutionOptimizations(x);
   applyPrefetchOptimizations(x);
-  // std::cout << "AFTER:  " << *x << std::endl << std::endl;
+  std::cout << "AFTER:  " << *x << std::endl << std::endl;
 }
 
 } // namespace pipeline
