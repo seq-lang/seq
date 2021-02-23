@@ -29,7 +29,7 @@ class pseq:
     def _cmp(self, other: pseq):
         self_len = len(self)
         other_len = len(other)
-        n = min2(self_len, other_len)
+        n = min(self_len, other_len)
         i = 0
         while i < n:
             c1 = self._at(i)

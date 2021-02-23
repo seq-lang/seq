@@ -1,28 +1,11 @@
 from internal.gc import alloc_atomic, free
 from C import strtoll(cobj, Ptr[cobj], i32) -> int
 
-@tuple
-class min[T]:
-    def __new__(a: T, b: T) -> T:
-        return a if a < b else b
-
-    def __new__(a: T, b: T, c: T) -> T:
-        x = a if a < b else b
-        return x if x < c else c
-
-    def __new__(a: T, b: T, c: T, d: T) -> T:
-        x = a if a < b else b
-        y = c if c < d else d
-        return x if x < y else y
-
-    def __new__(a: T, b: T, c: T, d: T, e: T) -> T:
-        x = a if a < b else b
-        y = c if c < d else d
-        z = x if x < y else y
-        return z if z < e else e
-
-    def __new__(a: Generator[T]) -> T:
-        x = a.__iter__()
+def min(*args):
+    if staticlen(args) == 0:
+        raise ValueError("empty sequence")
+    elif staticlen(args) == 1 and hasattr(typeof(args[0]), "__iter__"):
+        x = args[0].__iter__()
         if not x.done():
             s = x.next()
             while not x.done():
@@ -33,29 +16,17 @@ class min[T]:
         else:
             x.destroy()
         raise ValueError("empty sequence")
+    else:
+        m = args[0]
+        for i in args:
+            if i < m: m = i
+        return m
 
-@tuple
-class max[T]:
-    def __new__(a: T, b: T) -> T:
-        return a if a > b else b
-
-    def __new__(a: T, b: T, c: T) -> T:
-        x = a if a > b else b
-        return x if x > c else c
-
-    def __new__(a: T, b: T, c: T, d: T) -> T:
-        x = a if a > b else b
-        y = c if c > d else d
-        return x if x > y else y
-
-    def __new__(a: T, b: T, c: T, d: T, e: T) -> T:
-        x = a if a > b else b
-        y = c if c > d else d
-        z = x if x > y else y
-        return z if z > e else e
-
-    def __new__(a: Generator[T]) -> T:
-        x = a.__iter__()
+def max(*args):
+    if staticlen(args) == 0:
+        raise ValueError("empty sequence")
+    elif staticlen(args) == 1 and hasattr(typeof(args[0]), "__iter__"):
+        x = args[0].__iter__()
         if not x.done():
             s = x.next()
             while not x.done():
@@ -66,12 +37,11 @@ class max[T]:
         else:
             x.destroy()
         raise ValueError("empty sequence")
-
-def min2(a, b):
-    return a if a < b else b
-
-def max2(a, b):
-    return a if a > b else b
+    else:
+        m = args[0]
+        for i in args:
+            if i > m: m = i
+        return m
 
 def len(x):
     """

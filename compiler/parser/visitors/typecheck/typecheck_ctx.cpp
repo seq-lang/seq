@@ -187,6 +187,9 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
   if (methods.size() == 1) // methods is not overloaded
     return methods[0];
 
+  if (member == "cat")
+    LOG("{} {} ==>", expr->toString(), member);
+
   // Calculate the unification score for each available methods and pick the one with
   // highest score.
   vector<pair<int, int>> scores;
@@ -209,6 +212,8 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
           return 0;
         },
         [](const string &) { return -1; });
+    if (member == "cat")
+      LOG("{} {} -> {}", method->toString(), member, score);
     if (score == -1)
       continue;
     // Scoring system for each argument:

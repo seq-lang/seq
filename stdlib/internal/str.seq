@@ -95,7 +95,18 @@ class str:
         str.memcpy(p, self.ptr, n)
         return str(p, n)
 
-    def cat(v: List[str]):
+    def _cmp(self, other: str):
+        n = min(self.len, other.len)
+        i = 0
+        while i < n:
+            c1 = self.ptr[i]
+            c2 = other.ptr[i]
+            if c1 != c2:
+                return int(c1) - int(c2)
+            i += 1
+        return self.len - other.len
+
+    def cat_list(v: List[str]):
         total = 0
         for s in v:
             total += len(s)
@@ -106,65 +117,23 @@ class str:
             n += s.len
         return str(p, total)
 
-    def _cmp(self, other: str):
-        n = min2(self.len, other.len)
-        i = 0
-        while i < n:
-            c1 = self.ptr[i]
-            c2 = other.ptr[i]
-            if c1 != c2:
-                return int(c1) - int(c2)
-            i += 1
-        return self.len - other.len
+    def cat(*args):
+        if isinstance(args, Tuple[List[str]]):
+            return str.cat_list(args[0])
+        else:
+            total = 0
+            for i in args:
+                if not isinstance(i, str):
+                    compile_error("not a string")
+                total += len(i)
+            p = cobj(total)
+            n = 0
+            for i in args:
+                str.memcpy(p + n, i.ptr, i.len)
+                n += i.len
+            return str(p, total)
 
 import algorithms.strings as algorithms
-
-@tuple
-class __str_internal_join:
-    s: str
-
-    def __new__(s: str, x: Generator[str]) -> __str_internal_join:
-        if len(s) == 0:
-            return (str.cat(list(x)), )
-        v = List[str]()
-        for a in x:
-            v.append(a)
-            v.append(s)
-        if v:
-            del v[-1]
-        return (str.cat(v), )
-
-    def __new__(s: str, x: List[str]) -> __str_internal_join:
-        if len(x) == 0:
-            return ('', )
-        if len(x) == 1:
-            return (x[0], )
-        if len(s) == 0:
-            return (str.cat(x), )
-
-        # compute length
-        n = 0
-        i = 0
-        while i < len(x):
-            n += len(x[i])
-            if i < len(x) - 1:
-                n += len(s)
-            i += 1
-
-        # copy to new buffer
-        p = Ptr[byte](n)
-        r = 0
-        i = 0
-        while i < len(x):
-            str.memcpy(p + r, x[i].ptr, len(x[i]))
-            r += len(x[i])
-            if i < len(x) - 1:
-                str.memcpy(p + r, s.ptr, len(s))
-                r += len(s)
-            i += 1
-
-        return (str(p, n), )
-
 
 @extend
 class str:
@@ -198,8 +167,47 @@ class str:
             n += s.len
         return str(p, n)
 
-    def join(self, l):
-        return __str_internal_join(self, l).s
+    def join(self, l: Generator[str]):
+        if len(self) == 0:
+            return str.cat(list(l))
+        v = List[str]()
+        for a in l:
+            v.append(a)
+            v.append(self)
+        if v:
+            del v[-1]
+        return str.cat(v)
+
+    def join(self, l: List[str]):
+        if len(l) == 0:
+            return ''
+        if len(l) == 1:
+            return l[0]
+        if len(self) == 0:
+            return str.cat(l)
+
+        # compute length
+        n = 0
+        i = 0
+        while i < len(l):
+            n += len(l[i])
+            if i < len(l) - 1:
+                n += len(self)
+            i += 1
+
+        # copy to new buffer
+        p = Ptr[byte](n)
+        r = 0
+        i = 0
+        while i < len(l):
+            str.memcpy(p + r, l[i].ptr, len(l[i]))
+            r += len(l[i])
+            if i < len(l) - 1:
+                str.memcpy(p + r, self.ptr, len(self))
+                r += len(self)
+            i += 1
+
+        return str(p, n)
 
     def isdigit(self) -> bool:
         """

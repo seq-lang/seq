@@ -280,7 +280,7 @@ def _tim_sort[S,T](arr: Array[T], begin: int, end: int, keyf: Callable[S,T]):
             _reverse_sortslice(arr, i, i + n)
 
         if n < minrun:
-            force = min2(minrun, end)
+            force = min(minrun, end)
             _insertion_sort(arr, i, i + force, keyf)
             n = force
 

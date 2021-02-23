@@ -659,8 +659,7 @@ ExprPtr SimplifyVisitor::transformFString(string value) {
     error("f-string braces are not balanced");
   if (braceStart != value.size())
     items.push_back(N<StringExpr>(value.substr(braceStart, value.size() - braceStart)));
-  return transform(
-      N<CallExpr>(N<DotExpr>(N<IdExpr>("str"), "cat"), N<ListExpr>(move(items))));
+  return transform(N<CallExpr>(N<DotExpr>(N<IdExpr>("str"), "cat"), move(items)));
 }
 
 StmtPtr SimplifyVisitor::transformGeneratorBody(const vector<GeneratorBody> &loops,
