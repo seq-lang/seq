@@ -21,9 +21,9 @@ TEST_F(SIRCoreTest, MatchingNonEquivalentVar) {
 TEST_F(SIRCoreTest, MatchingEquivalentFunc) {
   {
     auto *first = module->Nr<BodiedFunc>();
-    first->realize(module->getDummyFuncType(), {});
+    first->realize(module->unsafeGetDummyFuncType(), {});
     auto *second = module->Nr<BodiedFunc>();
-    second->realize(module->getDummyFuncType(), {});
+    second->realize(module->unsafeGetDummyFuncType(), {});
 
     first->setBuiltin();
     second->setBuiltin();
@@ -32,9 +32,9 @@ TEST_F(SIRCoreTest, MatchingEquivalentFunc) {
   }
   {
     auto *first = module->Nr<ExternalFunc>();
-    first->realize(module->getDummyFuncType(), {});
+    first->realize(module->unsafeGetDummyFuncType(), {});
     auto *second = module->Nr<ExternalFunc>();
-    second->realize(module->getDummyFuncType(), {});
+    second->realize(module->unsafeGetDummyFuncType(), {});
 
     first->setUnmangledName("baz");
     second->setUnmangledName("baz");
@@ -43,9 +43,9 @@ TEST_F(SIRCoreTest, MatchingEquivalentFunc) {
   }
   {
     auto *first = module->Nr<LLVMFunc>();
-    first->realize(module->getDummyFuncType(), {});
+    first->realize(module->unsafeGetDummyFuncType(), {});
     auto *second = module->Nr<LLVMFunc>();
-    second->realize(module->getDummyFuncType(), {});
+    second->realize(module->unsafeGetDummyFuncType(), {});
 
     ASSERT_TRUE(util::match(first, second));
   }
@@ -54,9 +54,9 @@ TEST_F(SIRCoreTest, MatchingEquivalentFunc) {
 TEST_F(SIRCoreTest, MatchingNonEquivalentFunc) {
   {
     auto *first = module->Nr<BodiedFunc>();
-    first->realize(module->getDummyFuncType(), {});
+    first->realize(module->unsafeGetDummyFuncType(), {});
     auto *second = module->Nr<BodiedFunc>();
-    second->realize(module->getDummyFuncType(), {});
+    second->realize(module->unsafeGetDummyFuncType(), {});
 
     first->setBuiltin();
 
@@ -64,9 +64,9 @@ TEST_F(SIRCoreTest, MatchingNonEquivalentFunc) {
   }
   {
     auto *first = module->Nr<ExternalFunc>();
-    first->realize(module->getDummyFuncType(), {});
+    first->realize(module->unsafeGetDummyFuncType(), {});
     auto *second = module->Nr<ExternalFunc>();
-    second->realize(module->getDummyFuncType(), {});
+    second->realize(module->unsafeGetDummyFuncType(), {});
 
     first->setUnmangledName("baz");
     second->setUnmangledName("bar");
@@ -75,9 +75,9 @@ TEST_F(SIRCoreTest, MatchingNonEquivalentFunc) {
   }
   {
     auto *first = module->Nr<LLVMFunc>();
-    first->realize(module->getDummyFuncType(), {});
+    first->realize(module->unsafeGetDummyFuncType(), {});
     auto *second = module->Nr<LLVMFunc>();
-    second->realize(module->getDummyFuncType(), {});
+    second->realize(module->unsafeGetDummyFuncType(), {});
 
     first->setLLVMLiterals({types::Generic(1)});
 
@@ -99,10 +99,8 @@ TEST_F(SIRCoreTest, MatchingVarValue) {
 }
 
 TEST_F(SIRCoreTest, MatchingPointerValue) {
-  auto *first = module->Nr<PointerValue>(module->Nr<Var>(module->getIntType()),
-                                         module->getPointerType(module->getIntType()));
-  auto *second = module->Nr<PointerValue>(module->Nr<Var>(module->getIntType()),
-                                          module->getPointerType(module->getIntType()));
+  auto *first = module->Nr<PointerValue>(module->Nr<Var>(module->getIntType()));
+  auto *second = module->Nr<PointerValue>(module->Nr<Var>(module->getIntType()));
   ASSERT_TRUE(util::match(first, second));
   first->setVar(module->Nr<Var>(module->getFloatType()));
   ASSERT_FALSE(util::match(first, second));
@@ -187,7 +185,7 @@ TEST_F(SIRCoreTest, MatchingAssignInstr) {
 
 TEST_F(SIRCoreTest, MatchingExtractInstr) {
   auto FIELD = "foo";
-  auto *type = cast<types::RecordType>(module->getMemberedType("**internal**"));
+  auto *type = cast<types::RecordType>(module->unsafeGetMemberedType("**internal**"));
   type->realize({module->getIntType()}, {FIELD});
   auto *var = module->Nr<Var>(type);
   auto *val = module->Nr<VarValue>(var);
@@ -201,7 +199,7 @@ TEST_F(SIRCoreTest, MatchingExtractInstr) {
 
 TEST_F(SIRCoreTest, MatchingInsertInstr) {
   auto FIELD = "foo";
-  auto *type = cast<types::RecordType>(module->getMemberedType("**internal**"));
+  auto *type = cast<types::RecordType>(module->unsafeGetMemberedType("**internal**"));
   type->realize({module->getIntType()}, {FIELD});
   auto *var = module->Nr<Var>(type);
   auto *val = module->Nr<VarValue>(var);
@@ -215,11 +213,11 @@ TEST_F(SIRCoreTest, MatchingInsertInstr) {
 }
 
 TEST_F(SIRCoreTest, MatchingCallInstr) {
-  auto *type = module->getDummyFuncType();
+  auto *type = module->unsafeGetDummyFuncType();
   auto *func = module->Nr<BodiedFunc>();
   func->realize(type, {});
   auto *func2 = module->Nr<BodiedFunc>();
-  func2->realize(module->getFuncType("baz", module->getIntType(), {}), {});
+  func2->realize(module->unsafeGetFuncType("baz", module->getIntType(), {}), {});
 
   auto *funcVal = module->Nr<VarValue>(func);
   auto *first = module->Nr<CallInstr>(funcVal);

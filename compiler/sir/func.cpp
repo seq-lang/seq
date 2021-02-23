@@ -120,7 +120,7 @@ Var *BodiedFunc::doClone() const {
     ret->push_back(newVar);
   }
   ret->setGenerator(isGenerator());
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
                argNames);
   if (body)
     ret->setBody(cast<Flow>(body->clone()));
@@ -178,7 +178,7 @@ Var *ExternalFunc::doClone() const {
   for (auto *arg : args)
     argNames.push_back(arg->getName());
   ret->setGenerator(isGenerator());
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
                argNames);
   ret->setUnmangledName(unmangledName);
   return ret;
@@ -209,7 +209,7 @@ Var *InternalFunc::doClone() const {
   for (auto *arg : args)
     argNames.push_back(arg->getName());
   ret->setGenerator(isGenerator());
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
                argNames);
   ret->setParentType(parentType);
   return ret;
@@ -261,7 +261,7 @@ Var *LLVMFunc::doClone() const {
   for (auto *arg : args)
     argNames.push_back(arg->getName());
   ret->setGenerator(isGenerator());
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType()->clone())),
+  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
                argNames);
   ret->setLLVMBody(llvmBody);
   ret->setLLVMDeclarations(llvmDeclares);
@@ -306,7 +306,7 @@ int LLVMFunc::doReplaceUsedType(const std::string &name, types::Type *newType) {
   auto count = Var::doReplaceUsedType(name, newType);
   for (auto &l : llvmLiterals)
     if (l.isType() && l.getTypeValue()->getName() == name) {
-      l.setTypeValue(newType);
+      l = newType;
       ++count;
     }
   return count;

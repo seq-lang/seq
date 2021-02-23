@@ -4,7 +4,7 @@
 
 using namespace seq::ir;
 
-TEST_F(SIRCoreTest, RecordTypeQueryAndReplace) {
+TEST_F(SIRCoreTest, RecordTypeQuery) {
   auto MEMBER_NAME = "1";
   auto *type = module->Nr<types::RecordType>(
       "foo", std::vector<types::Type *>{module->getIntType()});
@@ -22,11 +22,9 @@ TEST_F(SIRCoreTest, RecordTypeQueryAndReplace) {
 
   ASSERT_EQ(1, type->getUsedTypes().size());
   ASSERT_EQ(module->getIntType(), type->getUsedTypes()[0]);
-
-  ASSERT_EQ(1, type->replaceUsedType(module->getIntType(), module->getFloatType()));
 }
 
-TEST_F(SIRCoreTest, RefTypeQueryAndReplace) {
+TEST_F(SIRCoreTest, RefTypeQuery) {
   auto MEMBER_NAME = "1";
   auto *contents = module->Nr<types::RecordType>(
       "foo", std::vector<types::Type *>{module->getIntType()});
@@ -45,11 +43,9 @@ TEST_F(SIRCoreTest, RefTypeQueryAndReplace) {
 
   ASSERT_EQ(1, type->getUsedTypes().size());
   ASSERT_EQ(contents, type->getUsedTypes()[0]);
-
-  ASSERT_EQ(1, type->replaceUsedType(contents, contents));
 }
 
-TEST_F(SIRCoreTest, FuncTypeQueryAndReplace) {
+TEST_F(SIRCoreTest, FuncTypeQuery) {
   auto *type = module->Nr<types::FuncType>(
       "foo", module->getIntType(), std::vector<types::Type *>{module->getFloatType()});
 
@@ -57,6 +53,4 @@ TEST_F(SIRCoreTest, FuncTypeQueryAndReplace) {
   ASSERT_EQ(module->getFloatType(), type->front());
 
   ASSERT_EQ(2, type->getUsedTypes().size());
-  ASSERT_EQ(1, type->replaceUsedType(module->getIntType(), module->getFloatType()));
-  ASSERT_EQ(2, type->replaceUsedType(module->getFloatType(), module->getFloatType()));
 }

@@ -236,8 +236,8 @@ public:
   /// @param args the argument types
   /// @param generics the generics
   /// @return the method or nullptr
-  Func *getOrRealizeMethod(const types::Type *parent, const std::string &methodName,
-                           std::vector<const types::Type *> args,
+  Func *getOrRealizeMethod(types::Type *parent, const std::string &methodName,
+                           std::vector<types::Type *> args,
                            std::vector<types::Generic> generics = {});
 
   /// Gets or realizes a function.
@@ -246,8 +246,7 @@ public:
   /// @param args the argument types
   /// @param generics the generics
   /// @return the function or nullptr
-  Func *getOrRealizeFunc(const std::string &funcName,
-                         std::vector<const types::Type *> args,
+  Func *getOrRealizeFunc(const std::string &funcName, std::vector<types::Type *> args,
                          std::vector<types::Generic> generics = {});
 
   /// Gets or realizes a type.
@@ -269,49 +268,36 @@ public:
   types::Type *getFloatType();
   /// @return the string type
   types::Type *getStringType();
-  /// Gets a dummy function type. Should generally not be used as no type-checker
-  /// information is generated.
-  /// @return a func type with no args and void return type.
-  types::Type *getDummyFuncType();
-  /// Gets a pointer type. Should generally not be used as no type-checker
-  /// information is generated.
+  /// Gets a pointer type.
   /// @param base the base type
   /// @return a pointer type that references the base
   types::Type *getPointerType(types::Type *base);
-  /// Gets an array type. Should generally not be used as no type-checker
-  /// information is generated.
+  /// Gets an array type.
   /// @param base the base type
   /// @return an array type that contains the base
   types::Type *getArrayType(types::Type *base);
-  /// Gets a generator type. Should generally not be used as no type-checker
-  /// information is generated.
+  /// Gets a generator type.
   /// @param base the base type
   /// @return a generator type that yields the base
   types::Type *getGeneratorType(types::Type *base);
-  /// Gets an optional type. Should generally not be used as no type-checker
-  /// information is generated.
+  /// Gets an optional type.
   /// @param base the base type
   /// @return an optional type that contains the base
   types::Type *getOptionalType(types::Type *base);
-  /// Gets a function type. Should generally not be used as no type-checker
-  /// information is generated.
+  /// Gets a function type.
   /// @param rType the return type
   /// @param argTypes the argument types
   /// @return the void type
-  types::Type *getFuncType(const std::string &name, types::Type *rType,
-                           std::vector<types::Type *> argTypes);
-  /// Gets a membered type. Should generally not be used as no type-checker
-  /// information is generated.
-  /// @param name the type's name
-  /// @param ref whether the type should be a ref
-  /// @return an empty membered/ref type
-  types::Type *getMemberedType(const std::string &name, bool ref = false);
-  /// Gets a variable length integer type. Should generally not be used as no
-  /// type-checker information is generated.
+  types::Type *getFuncType(types::Type *rType, std::vector<types::Type *> argTypes);
+  /// Gets a variable length integer type.
   /// @param len the length
   /// @param sign true if signed
   /// @return a variable length integer type
   types::Type *getIntNType(unsigned len, bool sign);
+  /// Gets a tuple type.
+  /// @param args the arg types
+  /// @return the tuple type
+  types::Type *getTupleType(std::vector<types::Type *> args);
 
   /// @param v the value
   /// @return an int constant
@@ -325,6 +311,50 @@ public:
   /// @param v the value
   /// @return a string constant
   Value *getStringConstant(std::string v);
+
+  /// Gets a dummy function type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @return a func type with no args and void return type.
+  types::Type *unsafeGetDummyFuncType();
+  /// Gets a pointer type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @param base the base type
+  /// @return a pointer type that references the base
+  types::Type *unsafeGetPointerType(types::Type *base);
+  /// Gets an array type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @param base the base type
+  /// @return an array type that contains the base
+  types::Type *unsafeGetArrayType(types::Type *base);
+  /// Gets a generator type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @param base the base type
+  /// @return a generator type that yields the base
+  types::Type *unsafeGetGeneratorType(types::Type *base);
+  /// Gets an optional type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @param base the base type
+  /// @return an optional type that contains the base
+  types::Type *unsafeGetOptionalType(types::Type *base);
+  /// Gets a function type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @param rType the return type
+  /// @param argTypes the argument types
+  /// @return the void type
+  types::Type *unsafeGetFuncType(const std::string &name, types::Type *rType,
+                                 std::vector<types::Type *> argTypes);
+  /// Gets a membered type. Should generally not be used as no type-checker
+  /// information is generated.
+  /// @param name the type's name
+  /// @param ref whether the type should be a ref
+  /// @return an empty membered/ref type
+  types::Type *unsafeGetMemberedType(const std::string &name, bool ref = false);
+  /// Gets a variable length integer type. Should generally not be used as no
+  /// type-checker information is generated.
+  /// @param len the length
+  /// @param sign true if signed
+  /// @return a variable length integer type
+  types::Type *unsafeGetIntNType(unsigned len, bool sign);
 
 private:
   void store(types::Type *t) {
