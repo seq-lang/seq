@@ -106,33 +106,6 @@ class str:
             i += 1
         return self.len - other.len
 
-    def cat_list(v: List[str]):
-        total = 0
-        for s in v:
-            total += len(s)
-        p = cobj(total)
-        n = 0
-        for s in v:
-            str.memcpy(p + n, s.ptr, s.len)
-            n += s.len
-        return str(p, total)
-
-    def cat(*args):
-        if isinstance(args, Tuple[List[str]]):
-            return str.cat_list(args[0])
-        else:
-            total = 0
-            for i in args:
-                if not isinstance(i, str):
-                    compile_error("not a string")
-                total += len(i)
-            p = cobj(total)
-            n = 0
-            for i in args:
-                str.memcpy(p + n, i.ptr, i.len)
-                n += i.len
-            return str(p, total)
-
 import algorithms.strings as algorithms
 
 @extend

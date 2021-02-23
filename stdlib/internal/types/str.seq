@@ -66,3 +66,28 @@ class str:
         return self.__eq__(other)
     def __ne__(self, other: str):
         return not self.__eq__(other)
+    def cat_list(v):
+        total = 0
+        for s in v:
+            total += s.len
+        p = cobj(total)
+        n = 0
+        for s in v:
+            str.memcpy(p + n, s.ptr, s.len)
+            n += s.len
+        return str(p, total)
+    def cat(*args):
+        if isinstance(args, Tuple[List[str]]):
+            return str.cat_list(args[0])
+        else:
+            total = 0
+            for i in args:
+                if not isinstance(i, str):
+                    compile_error("not a string")
+                total += i.len
+            p = cobj(total)
+            n = 0
+            for i in args:
+                str.memcpy(p + n, i.ptr, i.len)
+                n += i.len
+            return str(p, total)

@@ -7,7 +7,6 @@
  */
 
 #include <chrono>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -42,32 +41,37 @@ types::ClassTypePtr Cache::findClass(const string &name) const {
 
 types::FuncTypePtr Cache::findFunction(const string &name) const {
   auto f = typeCtx->find(name);
-  if (f->kind == TypecheckItem::Func)
+  if (f && f->type && f->kind == TypecheckItem::Func)
     return f->type->getFunc();
   return nullptr;
 }
 
-types::FuncTypePtr Cache::findMethod(types::ClassType *typ, const string &member,
-                                     const vector<pair<string, types::TypePtr>> &args) {
+types::FuncTypePtr
+Cache::findMethod(types::ClassType *typ, const string &member,
+                  const vector<pair<string, types::TypePtr>> &args) const {
   auto e = make_unique<IdExpr>(typ->name);
   e->type = typ->getClass();
+  seqassert(e->type, "not a class");
   return typeCtx->findBestMethod(e.get(), member, args);
 }
 
 ir::types::Type *Cache::realizeType(types::ClassTypePtr type,
-                                    vector<types::TypePtr> generics) {
+                                    const vector<types::TypePtr> &generics) {
   auto e = make_unique<IdExpr>(type->name);
   e->type = type;
   type = typeCtx->instantiateGeneric(e.get(), type, generics)->getClass();
   auto tv = TypecheckVisitor(typeCtx);
-  if (auto rtv = tv.realize(type)->getClass()) {
-    return classes[rtv->name].realizations[rtv->realizedTypeName()].ir;
+  if (auto rtv = tv.realize(type)) {
+    return classes[rtv->getClass()->name]
+        .realizations[rtv->getClass()->realizedTypeName()]
+        .ir;
   }
   return nullptr;
 }
 
-ir::Func *Cache::realizeFunction(types::FuncTypePtr type, vector<types::TypePtr> args,
-                                 vector<types::TypePtr> generics) {
+ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
+                                 const vector<types::TypePtr> &args,
+                                 const vector<types::TypePtr> &generics) {
   auto e = make_unique<IdExpr>(type->funcName);
   e->type = type;
   type = typeCtx->instantiate(e.get(), type, nullptr, false)->getFunc();
@@ -80,7 +84,7 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type, vector<types::TypePtr>
       return nullptr;
     }
   }
-  if (generics.size()) {
+  if (!generics.empty()) {
     if (generics.size() != type->funcGenerics.size())
       return nullptr;
     for (int gi = 0; gi < generics.size(); gi++) {
@@ -92,8 +96,8 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type, vector<types::TypePtr>
     }
   }
   auto tv = TypecheckVisitor(typeCtx);
-  if (auto rtv = tv.realize(type)->getFunc()) {
-    auto &f = functions[rtv->funcName].realizations[rtv->realizedName()];
+  if (auto rtv = tv.realize(type)) {
+    auto &f = functions[rtv->getFunc()->funcName].realizations[rtv->realizedName()];
     auto *main = ir::cast<ir::BodiedFunc>(module->getMainFunc());
     auto *block = ir::cast<ir::SeriesFlow>(main->getBody());
 
@@ -104,6 +108,23 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type, vector<types::TypePtr>
     return f.ir;
   }
   return nullptr;
+}
+
+ir::types::Type *Cache::makeTuple(const vector<types::TypePtr> &types) {
+  auto tv = TypecheckVisitor(typeCtx);
+  auto name = tv.generateTupleStub(types.size());
+  auto t = typeCtx->find(name);
+  seqassert(t && t->type, "cannot find {}", name);
+  return realizeType(t->type->getClass(), types);
+}
+
+ir::types::Type *Cache::makeFunction(const vector<types::TypePtr> &types) {
+  auto tv = TypecheckVisitor(typeCtx);
+  seqassert(!types.empty(), "types must have at least one argument");
+  auto name = tv.generateFunctionStub(types.size() - 1);
+  auto t = typeCtx->find(name);
+  seqassert(t && t->type, "cannot find {}", name);
+  return realizeType(t->type->getClass(), types);
 }
 
 } // namespace ast

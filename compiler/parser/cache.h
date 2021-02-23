@@ -204,19 +204,22 @@ public:
   /// Find the class method in a given class type that best matches the given arguments.
   /// Returns an _uninstantiated_ type.
   types::FuncTypePtr findMethod(types::ClassType *typ, const string &member,
-                                const vector<pair<string, types::TypePtr>> &args);
+                                const vector<pair<string, types::TypePtr>> &args) const;
 
   /// Given a class type and the matching generic vector, instantiate the type and
   /// realize it.
   ir::types::Type *realizeType(types::ClassTypePtr type,
-                               vector<types::TypePtr> generics = {});
+                               const vector<types::TypePtr> &generics = {});
   /// Given a function type and function arguments, instantiate the type and
   /// realize it. The first argument is the function return type.
   /// You can also pass function generics if a function has one (e.g. T in def
   /// foo[T](...)). If a generic is used as an argument, it will be auto-deduced. Pass
   /// only if a generic cannot be deduced from the provided args.
-  ir::Func *realizeFunction(types::FuncTypePtr type, vector<types::TypePtr> args,
-                            vector<types::TypePtr> generics = {});
+  ir::Func *realizeFunction(types::FuncTypePtr type, const vector<types::TypePtr> &args,
+                            const vector<types::TypePtr> &generics = {});
+
+  ir::types::Type *makeTuple(const vector<types::TypePtr> &types);
+  ir::types::Type *makeFunction(const vector<types::TypePtr> &types);
 };
 
 } // namespace ast

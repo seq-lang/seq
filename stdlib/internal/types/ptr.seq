@@ -135,6 +135,17 @@ class Ptr[T]:
         # if not self:
             # return '0x0'
         return seq_str_ptr(self.as_byte())
+
 ptr = Ptr
 Jar = Ptr[byte]
 cobj = Ptr[byte]
+
+# Forward declarations
+@internal
+@tuple
+class Array[T]:
+    len: int
+    ptr: Ptr[T]
+class List[T]:
+    arr: Array[T]
+    len: int

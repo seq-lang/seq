@@ -270,6 +270,8 @@ private:
   types::TypePtr realizeFunc(types::FuncType *typ);
   std::pair<int, StmtPtr> inferTypes(StmtPtr &&stmt, bool keepLast = false);
   seq::ir::types::Type *getLLVMType(const types::ClassType *t);
+
+  friend struct Cache;
 };
 
 } // namespace ast

@@ -83,25 +83,6 @@ class Dict[K, V]:
             return str.cat(lst)
 @extend
 class str:
-    def __eq__(self, other: str):
-        if self.len != other.len:
-            return False
-        i = 0
-        while i < self.len:
-            if self.ptr[i] != other.ptr[i]:
-                return False
-            i += 1
-        return True
-    def cat(v: List[str]):
-        total = 0
-        for s in v:
-            total += s.__len__()
-        p = cobj(total)
-        n = 0
-        for s in v:
-            str.memcpy(p + n, s.ptr, s.len)
-            n += s.len
-        return str(p, total)
     def __getitem__(self, idx: int):
         if idx < 0:
             idx += self.len
