@@ -55,10 +55,6 @@ int LinkType::unify(Type *typ, Unification *undo) {
     return type->unify(typ, undo);
   } else if (kind == Generic) {
     // Case 2: Generic types cannot be unified.
-    // HACK: allow unification between two identical generics (TODO: explain why?).
-    auto t = typ->getLink();
-    if (t && t->kind == Generic && id == t->id && isStatic == t->isStatic)
-      return 1;
     return -1;
   } else {
     // Case 3: Unbound unification
