@@ -305,7 +305,7 @@ def test_tuple_match():
     match t:
         case (0, 0):
             assert False
-        case (41 ... 43, 99 or 10) or (11 ... 13, 11 ... 13) or (-1, -1):
+        case (41 ... 43, 99 | 10) | (11 ... 13, 11 ... 13) | (-1, -1):
             b = True
         case _:
             assert False
@@ -315,7 +315,7 @@ def test_tuple_match():
     match r:
         case (0, 0):
             assert False
-        case (-1, -1) or (41 ... 43, 10 or 99) or (12 or 11, 9 or 11 ... 13):
+        case (-1, -1) | (41 ... 43, 10 | 99) | (12 | 11, 9 | 11 ... 13):
             b = True
         case _:
             assert False

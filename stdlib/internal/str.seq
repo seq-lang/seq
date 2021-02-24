@@ -118,28 +118,6 @@ class str:
     def _slice(self, i: int, j: int):
         return str(self.ptr + i, j - i)
 
-    def cati(v: Generator[str], total: int):
-        p = cobj(total)
-        n = 0
-        for s in v:
-            str.memcpy(p + n, s.ptr, s.len)
-            n += s.len
-        return str(p, total)
-
-    def cati_ext(v: Generator[str]):
-        sz = 10
-        p = cobj(sz)
-        n = 0
-        for s in v:
-            if n + s.len > sz:
-                sz = 1 + 3 * (n + s.len) // 2
-                pp = cobj(sz)
-                str.memcpy(pp, p, n)
-                p = pp
-            str.memcpy(p + n, s.ptr, s.len)
-            n += s.len
-        return str(p, n)
-
     def join(self, l: Generator[str]):
         if len(self) == 0:
             return str.cat(list(l))

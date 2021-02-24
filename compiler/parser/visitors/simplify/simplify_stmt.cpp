@@ -901,7 +901,7 @@ StmtPtr SimplifyVisitor::transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr 
                                              op, N<IntExpr>(sz)),
                                move(suite)));
   } else if (auto eb = pattern->getBinary()) {
-    if (eb->op == "||") {
+    if (eb->op == "|") {
       return N<SuiteStmt>(transformPattern(clone(var), clone(eb->lexpr), clone(suite)),
                           transformPattern(clone(var), clone(eb->rexpr), move(suite)));
     }
@@ -1232,7 +1232,6 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
     // Tuples: @internal def __contains__(self: T, what) -> bool:
     //            if isinstance(what, T1): if what == self.a1: return True ...
     //            return False
-    // TODO: make it work with heterogenous tuples.
     fargs.emplace_back(Param{"self", typExpr->clone()});
     fargs.emplace_back(Param{"what", nullptr});
     ret = I("bool");

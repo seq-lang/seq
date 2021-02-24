@@ -130,6 +130,7 @@ public:
   /// This function is called only if other nodes (CallExpr, AssignStmt, ListExpr) do
   /// not handle their star-expression cases.
   void visit(StarExpr *) override;
+  /// Tuples will be handled during the type-checking stage.
   void visit(TupleExpr *) override;
   /// Transform a list [a1, ..., aN] to a statement expression:
   ///   list = List(N); (list.append(a1))...; list.
@@ -143,7 +144,6 @@ public:
   void visit(SetExpr *) override;
   /// Transform a dictionary {k1: v1, ..., kN: vN} to a statement expression
   ///   dict = Dict(); (dict.__setitem__(k1, v1))...; dict.
-  /// TODO: allow dictionary unpacking (**dict) (needs parser support).
   void visit(DictExpr *) override;
   /// Transform a list comprehension [i+a for i in j if a] to a statement expression:
   ///    gen = List()
@@ -152,20 +152,20 @@ public:
   /// Also transform a generator (i+a for i in j if a) to a lambda call:
   ///    def _lambda(j, a): for i in j: yield i+a
   ///    _lambda(j, a).__iter__()
-  ///
-  /// TODO: add list.__len__() optimization.
+  /// Note: calls List(True, gen) if this is a simple generator [a for a in gen].
   void visit(GeneratorExpr *) override;
   /// Transform a dictionary comprehension [i: a for i in j] to a statement expression:
   ///    gen = Dict()
   ///    for i in j: gen.__setitem__(i, a)
   void visit(DictGeneratorExpr *) override;
   /// Transform a if-expression a if cond else b to:
-  ///   a if cond.__bool__() else b
+  ///   a if cond else b
   void visit(IfExpr *) override;
   /// Transform a unary expression to the corresponding magic call
   /// (__invert__, __pos__ or __neg__).
   /// Special case: not a is transformed to
   ///   a.__bool__().__invert__()
+  /// Note: static expressions are not transformed.
   void visit(UnaryExpr *) override;
   /// Transform the following binary expressions:
   ///   a and b -> b.__bool__() if a.__bool__() else False
@@ -176,6 +176,7 @@ public:
   ///   None is None -> True
   ///   None is b -> b is None.
   /// Other cases are handled during the type-checking stage.
+  /// Note: static expressions are not transformed.
   void visit(BinaryExpr *) override;
   /// Pipes will be handled during the type-checking stage.
   void visit(PipeExpr *) override;
@@ -265,15 +266,15 @@ public:
   ///   if no_break.__bool__(): ...
   void visit(WhileStmt *) override;
   /// Transform for i in it: ... to:
-  ///   for i in it.__iter__(): ...
+  ///   for i in it: ...
   /// Transform for i, j in it: ... to:
-  ///   for tmp in it.__iter__():
+  ///   for tmp in it:
   ///      i, j = tmp; ...
   /// This transformation uses AssignStmt and supports all unpack operations that are
   /// handled there.
   /// Transform for i in it: ... else: ... to:
   ///   no_break = True
-  ///   for i in it.__iter__(): ...
+  ///   for i in it: ...
   ///   if no_break.__bool__(): ...
   void visit(ForStmt *) override;
   /// Transform if cond: ... elif cond2: ... else: ... to:
@@ -283,7 +284,7 @@ public:
   ///     else: ...
   void visit(IfStmt *) override;
   /// Transforms the match e: case P1: ... case P2 if guard: ... statement to:
-  ///   tmp = e
+  ///   _match = e
   ///   while True:
   ///     <P1 transformation>: ...; break
   ///     <P2 transformation>: if guard: ...; break
@@ -324,9 +325,6 @@ public:
   ///
   /// This function also handles FFI imports (C, Python etc). For the details, see
   /// transformCImport(), transformCDLLImport() and transformPythonImport().
-  ///
-  /// ⚠️ Warning: This behavior is slightly different than Python's
-  /// behavior that executes imports when they are _executed_ first.
   void visit(ImportStmt *) override;
   /// Transforms function definitions.
   ///
@@ -353,7 +351,7 @@ private:
   ///   123pf -> int.__suffix_pf__("123")
   ExprPtr transformInt(const string &value, const string &suffix);
   /// Converts a Python-like F-string (f"foo {x+1} bar") to a concatenation:
-  ///   str.cat(["foo ", str(x + 1), " bar"]).
+  ///   str.cat("foo ", str(x + 1), " bar").
   /// Also supports "{x=}" specifier (that prints the raw expression as well).
   /// @example f"{x+1=}" becomes str.cat(["x+1=", str(x+1)]).
   ExprPtr transformFString(string value);
@@ -403,7 +401,7 @@ private:
   ///     if isinsance(var, "int"): if var == 1: ...
   ///   - Bool pattern
   ///     case True: ... ->
-  ///     if isinsance(var, "int"): if var == True: ...
+  ///     if isinsance(var, "bool"): if var == True: ...
   ///   - Range pattern
   ///     case 1 ... 3: ... ->
   ///     if isinsance(var, "int"): if var >= 1: if var <= 3: ...

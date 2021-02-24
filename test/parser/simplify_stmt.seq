@@ -246,7 +246,7 @@ def foo(x):
             print 'list 2'
         case [1, z, ...] if z < 5:
             print 'list 3', z
-        case [1, _, ..., zz] or (1, zz):
+        case [1, _, ..., zz] | (1, zz):
             print 'list 4', zz
         case (1 ... 10, s := ('AC_T', 1 ... 4)):
             print 'complex', s
@@ -275,7 +275,7 @@ match [1, 2]:
 
 #%% match_err_2,barebones
 match [1, 2]:
-    case 1 or ...: pass
+    case 1 | ...: pass
 #! ERROR: unexpected ellipsis expression
 
 #%% global,barebones
