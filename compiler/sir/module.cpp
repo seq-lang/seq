@@ -24,24 +24,22 @@ translateGenerics(std::vector<types::Generic> &generics) {
 }
 
 std::vector<std::pair<std::string, seq::ast::types::TypePtr>>
-generateDummyNames(std::vector<const types::Type *> &types) {
+generateDummyNames(std::vector<types::Type *> &types) {
   std::vector<std::pair<std::string, seq::ast::types::TypePtr>> ret;
   for (auto *t : types) {
     assert(t->getAstType());
-    ret.emplace_back("",
-                     std::const_pointer_cast<seq::ast::types::Type>(t->getAstType()));
+    ret.emplace_back("", t->getAstType());
   }
   return ret;
 }
 
-std::vector<seq::ast::types::TypePtr>
-translateArgs(std::vector<const types::Type *> &types) {
+std::vector<seq::ast::types::TypePtr> translateArgs(std::vector<types::Type *> &types) {
   std::vector<seq::ast::types::TypePtr> ret = {
       std::make_shared<seq::ast::types::LinkType>(
           seq::ast::types::LinkType::Kind::Unbound, 0)};
   for (auto *t : types) {
     assert(t->getAstType());
-    ret.push_back(std::const_pointer_cast<seq::ast::types::Type>(t->getAstType()));
+    ret.push_back(t->getAstType());
   }
   return ret;
 }
@@ -95,17 +93,16 @@ const char IRModule::NodeId = 0;
 IRModule::IRModule(std::string name, std::shared_ptr<ast::Cache> cache)
     : AcceptorExtend(std::move(name)), cache(std::move(cache)) {
   mainFunc = std::make_unique<BodiedFunc>("main");
-  mainFunc->realize(cast<types::FuncType>(getDummyFuncType()), {});
+  mainFunc->realize(cast<types::FuncType>(unsafeGetDummyFuncType()), {});
   mainFunc->setModule(this);
   mainFunc->setReplaceable(false);
-  argVar = std::make_unique<Var>(getArrayType(getStringType()), true, "argv");
+  argVar = std::make_unique<Var>(unsafeGetArrayType(getStringType()), true, "argv");
   argVar->setModule(this);
   argVar->setReplaceable(false);
 }
 
-Func *IRModule::getOrRealizeMethod(const types::Type *parent,
-                                   const std::string &methodName,
-                                   std::vector<const types::Type *> args,
+Func *IRModule::getOrRealizeMethod(types::Type *parent, const std::string &methodName,
+                                   std::vector<types::Type *> args,
                                    std::vector<types::Generic> generics) {
 
   auto method = cache->findMethod(
@@ -118,7 +115,7 @@ Func *IRModule::getOrRealizeMethod(const types::Type *parent,
 }
 
 Func *IRModule::getOrRealizeFunc(const std::string &funcName,
-                                 std::vector<const types::Type *> args,
+                                 std::vector<types::Type *> args,
                                  std::vector<types::Generic> generics) {
   auto func = cache->findFunction(funcName);
   if (!func)
@@ -171,52 +168,100 @@ types::Type *IRModule::getStringType() {
     return rVal;
   return Nr<types::RecordType>(
       STRING_NAME,
-      std::vector<types::Type *>{getIntType(), getPointerType(getByteType())},
+      std::vector<types::Type *>{getIntType(), unsafeGetPointerType(getByteType())},
       std::vector<std::string>{"len", "ptr"});
 }
 
-types::Type *IRModule::getDummyFuncType() {
-  return getFuncType("<internal_func_type>", getVoidType(), {});
+types::Type *IRModule::getPointerType(types::Type *base) {
+  return getOrRealizeType("Pointer", {base});
 }
 
-types::Type *IRModule::getPointerType(types::Type *base) {
+types::Type *IRModule::getArrayType(types::Type *base) {
+  return getOrRealizeType("Array", {base});
+}
+
+types::Type *IRModule::getGeneratorType(types::Type *base) {
+  return getOrRealizeType("Array", {base});
+}
+
+types::Type *IRModule::getOptionalType(types::Type *base) {
+  return getOrRealizeType("Array", {base});
+}
+
+types::Type *IRModule::getFuncType(types::Type *rType,
+                                   std::vector<types::Type *> argTypes) {
+  auto args = translateArgs(argTypes);
+  args[0] = std::make_shared<seq::ast::types::LinkType>(rType->getAstType());
+  return cache->makeFunction(args);
+}
+
+types::Type *IRModule::getIntNType(unsigned int len, bool sign) {
+  return getOrRealizeType(sign ? "Int" : "UInt", {len});
+}
+
+types::Type *IRModule::getTupleType(std::vector<types::Type *> args) {
+  std::vector<ast::types::TypePtr> argTypes;
+  for (auto *t : args) {
+    assert(t->getAstType());
+    argTypes.push_back(t->getAstType());
+  }
+  return cache->makeTuple(argTypes);
+}
+
+Value *IRModule::getIntConstant(int64_t v) { return Nr<IntConstant>(v, getIntType()); }
+
+Value *IRModule::getFloatConstant(double v) {
+  return Nr<FloatConstant>(v, getFloatType());
+}
+
+Value *IRModule::getBoolConstant(bool v) { return Nr<BoolConstant>(v, getBoolType()); }
+
+Value *IRModule::getStringConstant(std::string v) {
+  return Nr<StringConstant>(std::move(v), getStringType());
+}
+
+types::Type *IRModule::unsafeGetDummyFuncType() {
+  return unsafeGetFuncType("<internal_func_type>", getVoidType(), {});
+}
+
+types::Type *IRModule::unsafeGetPointerType(types::Type *base) {
   auto name = types::PointerType::getInstanceName(base);
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::PointerType>(base);
 }
 
-types::Type *IRModule::getArrayType(types::Type *base) {
+types::Type *IRModule::unsafeGetArrayType(types::Type *base) {
   auto name = fmt::format(FMT_STRING(".Array[{}]"), base->referenceString());
   if (auto *rVal = getType(name))
     return rVal;
-  std::vector<types::Type *> types = {getIntType(), getPointerType(base)};
+  std::vector<types::Type *> members = {getIntType(), unsafeGetPointerType(base)};
   std::vector<std::string> names = {"len", "ptr"};
-  return Nr<types::RecordType>(name, types, names);
+  return Nr<types::RecordType>(name, members, names);
 }
 
-types::Type *IRModule::getGeneratorType(types::Type *base) {
+types::Type *IRModule::unsafeGetGeneratorType(types::Type *base) {
   auto name = types::GeneratorType::getInstanceName(base);
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::GeneratorType>(base);
 }
 
-types::Type *IRModule::getOptionalType(types::Type *base) {
+types::Type *IRModule::unsafeGetOptionalType(types::Type *base) {
   auto name = types::OptionalType::getInstanceName(base);
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::OptionalType>(base);
 }
 
-types::Type *IRModule::getFuncType(const std::string &name, types::Type *rType,
-                                   std::vector<types::Type *> argTypes) {
+types::Type *IRModule::unsafeGetFuncType(const std::string &name, types::Type *rType,
+                                         std::vector<types::Type *> argTypes) {
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::FuncType>(name, rType, std::move(argTypes));
 }
 
-types::Type *IRModule::getMemberedType(const std::string &name, bool ref) {
+types::Type *IRModule::unsafeGetMemberedType(const std::string &name, bool ref) {
   auto *rVal = getType(name);
 
   if (!rVal) {
@@ -235,23 +280,11 @@ types::Type *IRModule::getMemberedType(const std::string &name, bool ref) {
   return rVal;
 }
 
-types::Type *IRModule::getIntNType(unsigned int len, bool sign) {
+types::Type *IRModule::unsafeGetIntNType(unsigned int len, bool sign) {
   auto name = types::IntNType::getInstanceName(len, sign);
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::IntNType>(len, sign);
-}
-
-Value *IRModule::getIntConstant(int64_t v) { return Nr<IntConstant>(v, getIntType()); }
-
-Value *IRModule::getFloatConstant(double v) {
-  return Nr<FloatConstant>(v, getFloatType());
-}
-
-Value *IRModule::getBoolConstant(bool v) { return Nr<BoolConstant>(v, getBoolType()); }
-
-Value *IRModule::getStringConstant(std::string v) {
-  return Nr<StringConstant>(std::move(v), getStringType());
 }
 
 std::ostream &IRModule::doFormat(std::ostream &os) const {

@@ -219,23 +219,23 @@ void applyPrefetchOptimizations(PipelineFlow *p) {
   auto *M = p->getModule();
   PrefetchFunctionTransformer pft;
   for (const auto &stage : *p) {
-    if (auto *func = cast<BodiedFunc>(getFunc(stage.getFunc()))) {
-      if (!hasAttribute(func, "prefetch"))
-        continue;
-
-      auto *clone = cast<BodiedFunc>(func->clone());
-      auto *funcType = cast<types::FuncType>(clone->getType());
-      funcType->setReturnType(M->getGeneratorType(funcType->getReturnType()));
-      clone->setGenerator();
-      clone->getBody()->accept(pft);
-
-      std::cout << "BEFORE:" << std::endl;
-      std::cout << *func << std::endl;
-      std::cout << "AFTER:" << std::endl;
-      std::cout << *clone << std::endl;
-
-      break; // at most one prefetch transformation per pipeline
-    }
+//    if (auto *func = cast<BodiedFunc>(getFunc(stage.getFunc()))) {
+//      if (!hasAttribute(func, "prefetch"))
+//        continue;
+//
+//      auto *clone = cast<BodiedFunc>(func->clone());
+//      auto *funcType = cast<types::FuncType>(clone->getType());
+//      funcType->setReturnType(M->getGeneratorType(funcType->getReturnType()));
+//      clone->setGenerator();
+//      clone->getBody()->accept(pft);
+//
+//      std::cout << "BEFORE:" << std::endl;
+//      std::cout << *func << std::endl;
+//      std::cout << "AFTER:" << std::endl;
+//      std::cout << *clone << std::endl;
+//
+//      break; // at most one prefetch transformation per pipeline
+//    }
   }
 }
 

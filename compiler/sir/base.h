@@ -203,9 +203,7 @@ public:
   int replaceUsedValue(Value *old, Value *newValue);
 
   /// @return a vector of all the node's used types
-  virtual std::vector<types::Type *> getUsedTypes() { return {}; }
-  /// @return a vector of all the node's used types
-  virtual std::vector<const types::Type *> getUsedTypes() const { return {}; }
+  virtual std::vector<types::Type *> getUsedTypes() const { return {}; }
   /// Physically replaces all instances of a used type.
   /// @param name the name of the type being replaced
   /// @param newType the new type

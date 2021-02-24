@@ -217,7 +217,7 @@ void CodegenVisitor::visit(StackAllocExpr *expr) {
   auto val = CAST(expr->expr, IntExpr);
   assert(val);
 
-  auto *arrayType = ctx->getModule()->getArrayType(realizeType(c.get()));
+  auto *arrayType = ctx->getModule()->unsafeGetArrayType(realizeType(c.get()));
   arrayType->setAstType(expr->getType());
 
   result = make<StackAllocInstr>(expr, arrayType, val->intValue);
@@ -246,8 +246,7 @@ void CodegenVisitor::visit(PtrExpr *expr) {
   auto val = ctx->find(var, true);
   assert(val && val->getVar());
 
-  result = make<PointerValue>(expr, val->getVar(),
-                              realizeType(expr->getType()->getClass().get()));
+  result = make<PointerValue>(expr, val->getVar());
 }
 
 void CodegenVisitor::visit(YieldExpr *expr) {
@@ -553,7 +552,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
       }
     }
 
-    auto *funcType = ctx->getModule()->getFuncType(
+    auto *funcType = ctx->getModule()->unsafeGetFuncType(
         t->realizedName(), realizeType(t->args[0]->getClass().get()), types);
     funcType->setAstType(t);
 
