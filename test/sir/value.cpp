@@ -7,7 +7,7 @@ TEST_F(SIRCoreTest, ValueQueryMethodsDelegate) {
   auto originalRef = original->referenceString();
 
   auto *fn = module->Nr<BodiedFunc>();
-  fn->realize(module->getDummyFuncType(), {});
+  fn->realize(module->unsafeGetDummyFuncType(), {});
   Value *replacement = module->Nr<VarValue>(fn, "baz");
   original->replaceAll(replacement);
 

@@ -399,37 +399,39 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
       types.push_back(getLLVM(m.type));
     }
   auto name = t->name;
+  auto *module = ctx->cache->module;
+
   if (name == "void") {
-    handle = ctx->cache->module->getVoidType();
+    handle = module->getVoidType();
   } else if (name == "bool") {
-    handle = ctx->cache->module->getBoolType();
+    handle = module->getBoolType();
   } else if (name == "byte") {
-    handle = ctx->cache->module->getByteType();
+    handle = module->getByteType();
   } else if (name == "int") {
-    handle = ctx->cache->module->getIntType();
+    handle = module->getIntType();
   } else if (name == "float") {
-    handle = ctx->cache->module->getFloatType();
+    handle = module->getFloatType();
   } else if (name == "str") {
-    handle = ctx->cache->module->getStringType();
+    handle = module->getStringType();
   } else if (name == "Int" || name == "UInt") {
     assert(statics.size() == 1 && types.empty());
-    handle = ctx->cache->module->getIntNType(statics[0], name == "Int");
+    handle = module->Nr<ir::types::IntNType>(statics[0], name == "Int");
   } else if (name == "Ptr") {
     assert(types.size() == 1 && statics.empty());
-    handle = ctx->cache->module->getPointerType(types[0]);
+    handle = module->unsafeGetPointerType(types[0]);
   } else if (name == "Generator") {
     assert(types.size() == 1 && statics.empty());
-    handle = ctx->cache->module->getGeneratorType(types[0]);
+    handle = module->unsafeGetGeneratorType(types[0]);
   } else if (name == "Optional") {
     assert(types.size() == 1 && statics.empty());
-    handle = ctx->cache->module->getOptionalType(types[0]);
+    handle = module->unsafeGetOptionalType(types[0]);
   } else if (startswith(name, "Function.N") || startswith(name, "Callable.N")) {
     types.clear();
     for (auto &m : const_cast<ClassType *>(t)->getRecord()->args)
       types.push_back(getLLVM(m));
     auto ret = types[0];
     types.erase(types.begin());
-    handle = ctx->cache->module->getFuncType(realizedName, ret, types);
+    handle = module->unsafeGetFuncType(realizedName, ret, types);
   } else if (auto tr = const_cast<ClassType *>(t)->getRecord()) {
     vector<seq::ir::types::Type *> typeArgs;
     vector<string> names;
@@ -441,7 +443,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
           ctx->cache->classes[t->name].fields[ai].type->getSrcInfo();
     }
     auto record = seq::ir::cast<seq::ir::types::RecordType>(
-        ctx->cache->module->getMemberedType(realizedName));
+        module->unsafeGetMemberedType(realizedName));
     record->realize(typeArgs, names);
     handle = record;
     handle->setAttribute(
@@ -449,7 +451,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   } else {
     // Type arguments will be populated afterwards to avoid infinite loop with recursive
     // reference types.
-    handle = ctx->cache->module->getMemberedType(realizedName, true);
+    handle = module->unsafeGetMemberedType(realizedName, true);
   }
   handle->setSrcInfo(t->getSrcInfo());
   handle->setAstType(

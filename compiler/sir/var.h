@@ -48,12 +48,8 @@ public:
   }
   using IRNode::replaceUsedValue;
 
-  std::vector<types::Type *> getUsedTypes() final {
+  std::vector<types::Type *> getUsedTypes() const final {
     return getActual()->doGetUsedTypes();
-  }
-  std::vector<const types::Type *> getUsedTypes() const final {
-    auto ret = getActual()->doGetUsedTypes();
-    return std::vector<const types::Type *>(ret.begin(), ret.end());
   }
   int replaceUsedType(const std::string &name, types::Type *newType) final {
     return getActual()->doReplaceUsedType(name, newType);
@@ -149,8 +145,6 @@ class PointerValue : public AcceptorExtend<PointerValue, Value> {
 private:
   /// the referenced var
   Var *val;
-  /// the pointer type
-  types::Type *pointerType;
 
 public:
   static const char NodeId;
@@ -158,8 +152,8 @@ public:
   /// Constructs a variable value.
   /// @param val the referenced value
   /// @param name the name
-  explicit PointerValue(Var *val, types::Type *pointerType, std::string name = "")
-      : AcceptorExtend(std::move(name)), val(val), pointerType(pointerType) {}
+  explicit PointerValue(Var *val, std::string name = "")
+      : AcceptorExtend(std::move(name)), val(val) {}
 
   /// @return the variable
   Var *getVar() { return val; }
@@ -174,7 +168,7 @@ private:
     return os << '&' << val->referenceString();
   }
 
-  const types::Type *doGetType() const override { return pointerType; }
+  const types::Type *doGetType() const override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {val}; }
   int doReplaceUsedVariable(int id, Var *newVar) override;

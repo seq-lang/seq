@@ -41,23 +41,8 @@ public:
 
   /// @return the static value
   int64_t getStaticValue() const { return value.staticValue; }
-  /// Sets the static value.
-  /// @param v the new value
-  void setStaticValue(int64_t v) {
-    value.staticValue = v;
-    tag = STATIC;
-  }
-
   /// @return the type value
-  types::Type *getTypeValue() { return value.typeValue; }
-  /// @return the type value
-  const types::Type *getTypeValue() const { return value.typeValue; }
-  /// Sets the type value.
-  /// @param v the new value
-  void setTypeValue(types::Type *v) {
-    value.typeValue = v;
-    tag = TYPE;
-  }
+  types::Type *getTypeValue() const { return value.typeValue; }
 };
 
 /// Type from which other SIR types derive. Generally types are immutable.
@@ -72,13 +57,9 @@ public:
 
   virtual ~Type() noexcept = default;
 
-  std::vector<Type *> getUsedTypes() final { return getActual()->doGetUsedTypes(); }
-  std::vector<const Type *> getUsedTypes() const final {
-    auto ret = getActual()->doGetUsedTypes();
-    return std::vector<const Type *>(ret.begin(), ret.end());
-  }
+  std::vector<Type *> getUsedTypes() const final { return getActual()->doGetUsedTypes(); }
   int replaceUsedType(const std::string &name, Type *newType) final {
-    return getActual()->doReplaceUsedType(name, newType);
+    assert(false);
   }
   using IRNode::replaceUsedType;
 
@@ -93,26 +74,20 @@ public:
   bool isAtomic() const { return getActual()->doIsAtomic(); }
 
   /// @return the ast type
-  ast::types::TypePtr getAstType() { return astType; }
-  /// @return the ast type
-  std::shared_ptr<const ast::types::Type> getAstType() const { return astType; }
-  /// Sets the ast type.
+  ast::types::TypePtr getAstType() const { return astType; }
+  /// Sets the ast type. Should not generally be used.
   /// @param t the new type
   void setAstType(ast::types::TypePtr t) { astType = std::move(t); }
 
-  virtual std::vector<Generic> getGenerics();
-
-  Type *clone() const;
+  std::vector<Generic> getGenerics() const { return getActual()->doGetGenerics(); }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
+  virtual std::vector<Generic> doGetGenerics() const;
+
   virtual std::vector<Type *> doGetUsedTypes() const { return {}; }
-  virtual int doReplaceUsedType(const std::string &name, Type *newType) { return 0; }
-
   virtual bool doIsAtomic() const = 0;
-
-  virtual Type *doClone() const = 0;
 };
 
 /// Type from which primitive atomic types derive.
@@ -133,9 +108,6 @@ public:
 
   /// Constructs an int type.
   IntType() : AcceptorExtend("int") {}
-
-private:
-  IntType *doClone() const override;
 };
 
 /// Float type (64-bit double)
@@ -145,9 +117,6 @@ public:
 
   /// Constructs a float type.
   FloatType() : AcceptorExtend("float") {}
-
-private:
-  FloatType *doClone() const override;
 };
 
 /// Bool type (8-bit unsigned integer; either 0 or 1)
@@ -157,9 +126,6 @@ public:
 
   /// Constructs a bool type.
   BoolType() : AcceptorExtend("bool") {}
-
-private:
-  BoolType *doClone() const override;
 };
 
 /// Byte type (8-bit unsigned integer)
@@ -169,9 +135,6 @@ public:
 
   /// Constructs a byte type.
   ByteType() : AcceptorExtend("byte") {}
-
-private:
-  ByteType *doClone() const override;
 };
 
 /// Void type
@@ -181,9 +144,6 @@ public:
 
   /// Constructs a void type.
   VoidType() : AcceptorExtend("void") {}
-
-private:
-  VoidType *doClone() const override;
 };
 
 /// Type from which membered types derive.
@@ -207,20 +167,10 @@ public:
 
     /// @return the field's name
     const std::string &getName() const { return name; }
-    /// Sets the field's name.
-    void setName(std::string n) { name = std::move(n); }
-
     /// @return the field type
-    Type *getType() { return type; }
-    /// @return the field type
-    const Type *getType() const { return type; }
-    /// Sets the type.
-    /// @param t the new type
-    void setType(Type *t) { type = t; }
+    Type *getType() const { return type; }
   };
 
-  using iterator = std::vector<Field>::iterator;
-  using reference = std::vector<Field>::reference;
   using const_iterator = std::vector<Field>::const_iterator;
   using const_reference = std::vector<Field>::const_reference;
 
@@ -231,32 +181,18 @@ public:
   /// Gets a field type by name.
   /// @param name the field's name
   /// @return the type if it exists
-  virtual Type *getMemberType(const std::string &name) = 0;
-  /// Gets a field type by name.
-  /// @param name the field's name
-  /// @return the type if it exists
-  virtual const Type *getMemberType(const std::string &name) const = 0;
-
+  virtual Type *getMemberType(const std::string &name) const = 0;
   /// Gets the index of a field by name.
   /// @param name the field's name
   /// @return 0-based field index, or -1 if not found
   virtual int getMemberIndex(const std::string &name) const = 0;
 
   /// @return iterator to the first field
-  virtual iterator begin() = 0;
-  /// @return iterator to the first field
   virtual const_iterator begin() const = 0;
   /// @return iterator beyond the last field
-  virtual iterator end() = 0;
-  /// @return iterator beyond the last field
   virtual const_iterator end() const = 0;
-
-  /// @return a reference to the first field
-  virtual reference front() = 0;
   /// @return a reference to the first field
   virtual const_reference front() const = 0;
-  /// @return a reference to the last field
-  virtual reference back() = 0;
   /// @return a reference to the last field
   virtual const_reference back() const = 0;
 
@@ -280,40 +216,28 @@ public:
   /// @param fieldNames the member names
   RecordType(std::string name, std::vector<Type *> fieldTypes,
              std::vector<std::string> fieldNames);
-
   /// Constructs a record type. The field's names are "1", "2"...
   /// @param name the type's name
   /// @param mTypes a vector of member types
   RecordType(std::string name, std::vector<Type *> mTypes);
-
   /// Constructs an empty record type.
   /// @param name the name
   explicit RecordType(std::string name) : AcceptorExtend(std::move(name)) {}
 
-  Type *getMemberType(const std::string &n) override;
-  const Type *getMemberType(const std::string &n) const override;
-
+  Type *getMemberType(const std::string &n) const override;
   int getMemberIndex(const std::string &n) const override;
 
-  iterator begin() override { return fields.begin(); }
   const_iterator begin() const override { return fields.begin(); }
-  iterator end() override { return fields.end(); }
   const_iterator end() const override { return fields.end(); }
-
-  reference front() override { return fields.front(); }
   const_reference front() const override { return fields.front(); }
-  reference back() override { return fields.back(); }
   const_reference back() const override { return fields.back(); }
 
   void realize(std::vector<Type *> mTypes, std::vector<std::string> mNames) override;
 
 private:
-  RecordType *doClone() const override;
-
   std::ostream &doFormat(std::ostream &os) const override;
 
   std::vector<Type *> doGetUsedTypes() const override;
-  int doReplaceUsedType(const std::string &name, Type *newType) override;
 
   bool doIsAtomic() const override {
     return !std::any_of(fields.begin(), fields.end(),
@@ -336,32 +260,21 @@ public:
   RefType(std::string name, RecordType *contents)
       : AcceptorExtend(std::move(name)), contents(contents) {}
 
-  Type *getMemberType(const std::string &n) override {
+  Type *getMemberType(const std::string &n) const override {
     return getContents()->getMemberType(n);
   }
-  const Type *getMemberType(const std::string &n) const override {
-    return getContents()->getMemberType(n);
-  }
-
   int getMemberIndex(const std::string &n) const override {
     return getContents()->getMemberIndex(n);
   }
 
-  iterator begin() override { return getContents()->begin(); }
   const_iterator begin() const override { return getContents()->begin(); }
-  iterator end() override { return getContents()->end(); }
   const_iterator end() const override { return getContents()->end(); }
-
-  reference front() override { return getContents()->front(); }
   const_reference front() const override { return getContents()->front(); }
-  reference back() override { return getContents()->back(); }
   const_reference back() const override { return getContents()->back(); }
 
   /// @return the reference type's contents
-  RecordType *getContents() { return cast<RecordType>(contents); }
-  /// @return the reference type's contents
-  const RecordType *getContents() const { return cast<RecordType>(contents); }
-  /// Sets the reference type's contents.
+  RecordType *getContents() const { return cast<RecordType>(contents); }
+  /// Sets the reference type's contents. Should not generally be used.
   /// @param t the new contents
   void setContents(RecordType *t) { contents = t; }
 
@@ -370,12 +283,9 @@ public:
   }
 
 private:
-  RefType *doClone() const override;
-
   std::ostream &doFormat(std::ostream &os) const override;
 
   std::vector<Type *> doGetUsedTypes() const override { return {contents}; }
-  int doReplaceUsedType(const std::string &name, Type *newType) override;
 
   bool doIsAtomic() const override { return false; }
 };
@@ -383,8 +293,6 @@ private:
 /// Type associated with a SIR function.
 class FuncType : public AcceptorExtend<FuncType, Type> {
 public:
-  using iterator = std::vector<Type *>::const_iterator;
-  using reference = std::vector<Type *>::const_reference;
   using const_iterator = std::vector<Type *>::const_iterator;
   using const_reference = std::vector<Type *>::const_reference;
 
@@ -404,38 +312,23 @@ public:
       : AcceptorExtend(std::move(name)), rType(rType), argTypes(std::move(argTypes)) {}
 
   /// @return the function's return type
-  Type *getReturnType() { return rType; }
-  /// @return the function's return type
-  const Type *getReturnType() const { return rType; }
-  /// Sets the return type.
-  /// @param t the new type
-  void setReturnType(Type *t) { rType = t; }
+  Type *getReturnType() const { return rType; }
 
-  /// @return iterator to the first argument
-  iterator begin() { return argTypes.begin(); }
   /// @return iterator to the first argument
   const_iterator begin() const { return argTypes.begin(); }
   /// @return iterator beyond the last argument
-  iterator end() { return argTypes.end(); }
-  /// @return iterator beyond the last argument
   const_iterator end() const { return argTypes.end(); }
-
-  /// @return a reference to the first argument
-  reference front() { return argTypes.front(); }
   /// @return a reference to the first argument
   const_reference front() const { return argTypes.front(); }
-  /// @return a reference to the last argument
-  reference back() { return argTypes.back(); }
   /// @return a reference to the last argument
   const_reference back() const { return argTypes.back(); }
 
 private:
-  FuncType *doClone() const override;
+  std::vector<Generic> doGetGenerics() const override;
 
   std::ostream &doFormat(std::ostream &os) const override;
 
   std::vector<Type *> doGetUsedTypes() const override;
-  int doReplaceUsedType(const std::string &name, Type *newType) override;
 
   bool doIsAtomic() const override { return false; }
 };
@@ -456,20 +349,12 @@ public:
       : AcceptorExtend(std::move(name)), base(base) {}
 
   /// @return the type's base
-  Type *getBase() { return base; }
-  /// @return the type's base
-  const Type *getBase() const { return base; }
-  /// Sets the base.
-  /// @param t the new base
-  void setBase(Type *t) { base = t; }
+  Type *getBase() const { return base; }
 
 private:
-  DerivedType *doClone() const override;
-
   bool doIsAtomic() const override { return base->isAtomic(); }
 
   std::vector<Type *> doGetUsedTypes() const override { return {base}; }
-  int doReplaceUsedType(const std::string &name, Type *newType) override;
 };
 
 /// Type of a pointer to another SIR type
@@ -484,8 +369,6 @@ public:
   static std::string getInstanceName(Type *base);
 
 private:
-  PointerType *doClone() const override;
-
   bool doIsAtomic() const override { return false; }
 };
 
@@ -501,8 +384,6 @@ public:
   static std::string getInstanceName(Type *base);
 
 private:
-  OptionalType *doClone() const override;
-
   bool doIsAtomic() const override { return getBase()->isAtomic(); }
 };
 
@@ -518,8 +399,6 @@ public:
   static std::string getInstanceName(Type *base);
 
 private:
-  GeneratorType *doClone() const override;
-
   bool doIsAtomic() const override { return false; }
 };
 
@@ -544,15 +423,8 @@ public:
 
   /// @return the length of the integer
   unsigned getLen() const { return len; }
-  /// Sets the length.
-  /// @param v the new length
-  void setLen(unsigned v) { len = v; }
-
   /// @return true if signed
   bool isSigned() const { return sign; }
-  /// Sets the signed flag.
-  /// @param v the new value
-  void setSigned(bool v = true) { sign = v; }
 
   /// @return the name of the opposite signed corresponding type
   std::string oppositeSignName() const { return getInstanceName(len, !sign); }
@@ -560,8 +432,6 @@ public:
   static std::string getInstanceName(unsigned len, bool sign);
 
 private:
-  IntNType *doClone() const override;
-
   bool doIsAtomic() const override { return true; }
 };
 

@@ -33,12 +33,8 @@ public:
   }
   using IRNode::replaceUsedValue;
 
-  std::vector<types::Type *> getUsedTypes() final {
+  std::vector<types::Type *> getUsedTypes() const final {
     return getActual()->doGetUsedTypes();
-  }
-  std::vector<const types::Type *> getUsedTypes() const final {
-    auto ret = getActual()->doGetUsedTypes();
-    return std::vector<const types::Type *>(ret.begin(), ret.end());
   }
   int replaceUsedType(const std::string &name, types::Type *newType) final {
     return getActual()->doReplaceUsedType(name, newType);
@@ -65,66 +61,62 @@ public:
   /// @return a clone of the value
   Value *clone() const;
 
-  Value *operator==(const Value &other) const;
-  Value *operator!=(const Value &other) const;
-  Value *operator<(const Value &other) const;
-  Value *operator>(const Value &other) const;
-  Value *operator<=(const Value &other) const;
-  Value *operator>=(const Value &other) const;
+  Value *operator==(Value &other);
+  Value *operator!=(Value &other);
+  Value *operator<(Value &other);
+  Value *operator>(Value &other);
+  Value *operator<=(Value &other);
+  Value *operator>=(Value &other);
 
-  Value *operator+() const;
-  Value *operator-() const;
-  Value *operator~() const;
+  Value *operator+();
+  Value *operator-();
+  Value *operator~();
 
-  Value *operator+(const Value &other) const;
-  Value *operator-(const Value &other) const;
-  Value *operator*(const Value &other) const;
-  Value *trueDiv(const Value &other) const;
-  Value *operator/(const Value &other) const;
-  Value *operator%(const Value &other) const;
-  Value *pow(const Value &other) const;
-  Value *operator<<(const Value &other) const;
-  Value *operator>>(const Value &other) const;
-  Value *operator&(const Value &other) const;
-  Value *operator|(const Value &other) const;
-  Value *operator^(const Value &other) const;
+  Value *operator+(Value &other);
+  Value *operator-(Value &other);
+  Value *operator*(Value &other);
+  Value *trueDiv(Value &other);
+  Value *operator/(Value &other);
+  Value *operator%(Value &other);
+  Value *pow(Value &other);
+  Value *operator<<(Value &other);
+  Value *operator>>(Value &other);
+  Value *operator&(Value &other);
+  Value *operator|(Value &other);
+  Value *operator^(Value &other);
 
-  Value *operator||(const Value &other) const;
-  Value *operator&&(const Value &other) const;
+  Value *operator||(Value &other);
+  Value *operator&&(Value &other);
 
   template <typename... Args> Value *operator()(Args &&... args) {
     std::vector<Value *> dst;
-    stripConstPack(dst, std::forward<Args>(args)...);
+    stripPack(dst, std::forward<Args>(args)...);
     return doCall(dst);
   }
-  Value *operator[](const Value &other) const;
+  Value *operator[](Value &other);
 
-  Value *toInt() const;
-  Value *toBool() const;
-  Value *toStr() const;
+  Value *toInt();
+  Value *toBool();
+  Value *toStr();
 
-  Value *len() const;
-  Value *iter() const;
+  Value *len();
+  Value *iter();
 
 private:
   template <typename... Args>
-  static void stripConstPack(std::vector<Value *> &dst, const Value &first,
-                             Args &&... args) {
-    dst.push_back(stripConst(first));
-    stripConstPack(dst, std::forward<Args>(args)...);
+  static void stripPack(std::vector<Value *> &dst, Value &first, Args &&... args) {
+    dst.push_back(&first);
+    stripPack(dst, std::forward<Args>(args)...);
   }
-  static void stripConstPack(std::vector<Value *> &dst, const Value &first) {
-    dst.push_back(stripConst(first));
+  static void stripPack(std::vector<Value *> &dst, Value &first) {
+    dst.push_back(&first);
   }
-  static void stripConstPack(std::vector<Value *> &dst) {}
+  static void stripPack(std::vector<Value *> &dst) {}
 
-  static Value *stripConst(const Value *other) { return const_cast<Value *>(other); }
-  static Value *stripConst(const Value &other) { return const_cast<Value *>(&other); }
+  Value *doUnaryOp(const std::string &name);
+  Value *doBinaryOp(const std::string &name, Value &other);
 
-  Value *doUnaryOp(const std::string &name) const;
-  Value *doBinaryOp(const std::string &name, const Value &other) const;
-
-  Value *doCall(const std::vector<Value *> &args) const;
+  Value *doCall(const std::vector<Value *> &args);
 
   virtual const types::Type *doGetType() const = 0;
 

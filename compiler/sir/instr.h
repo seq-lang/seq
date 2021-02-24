@@ -266,6 +266,14 @@ public:
   /// @param c the new value
   void setCount(int64_t c) { count = c; }
 
+  /// @return the array type
+  types::Type *getArrayType() { return arrayType; }
+  /// @return the array type
+  const types::Type *getArrayType() const { return arrayType; }
+  /// Sets the array type.
+  /// @param t the new type
+  void setArrayType(types::Type *t) { arrayType = t; }
+
 protected:
   const types::Type *doGetType() const override { return arrayType; }
   std::vector<types::Type *> doGetUsedTypes() const override { return {arrayType}; }
@@ -298,7 +306,12 @@ public:
       : AcceptorExtend(std::move(name)), inspectType(type), property(property) {}
 
   /// @return the type being inspected
+  types::Type *getInspectType() { return inspectType; }
+  /// @return the type being inspected
   const types::Type *getInspectType() const { return inspectType; }
+  /// Sets the type being inspected
+  /// @param t the new type
+  void setInspectType(types::Type *t) { inspectType = t; }
 
   /// @return the property being inspected
   Property getProperty() const { return property; }
@@ -339,6 +352,10 @@ public:
   /// Sets the instruction suspending flag.
   /// @param v the new value
   void setSuspending(bool v = true) { suspend = v; }
+
+  /// Sets the type being inspected
+  /// @param t the new type
+  void setType(types::Type *t) { type = t; }
 
 protected:
   const types::Type *doGetType() const override { return type; }

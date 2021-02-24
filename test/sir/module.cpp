@@ -44,18 +44,19 @@ TEST_F(SIRCoreTest, ModuleMainFunctionAndArgVar) {
 
   auto *argVar = module->getArgVar();
   ASSERT_TRUE(argVar);
-  ASSERT_TRUE(util::match(argVar->getType(), module->getArrayType(module->getStringType())));
+  ASSERT_TRUE(util::match(argVar->getType(),
+                          module->unsafeGetArrayType(module->getStringType())));
   ASSERT_FALSE(argVar->isReplaceable());
 }
 
 TEST_F(SIRCoreTest, ModuleTypeGetAndLookup) {
   auto TYPE_NAME = "**test_type**";
-  auto *newType = module->getMemberedType(TYPE_NAME);
+  auto *newType = module->unsafeGetMemberedType(TYPE_NAME);
   ASSERT_TRUE(isA<types::RecordType>(newType));
   ASSERT_EQ(newType, module->getType(TYPE_NAME));
   module->remove(newType);
 
-  newType = module->getMemberedType(TYPE_NAME, true);
+  newType = module->unsafeGetMemberedType(TYPE_NAME, true);
   ASSERT_TRUE(isA<types::RefType>(newType));
   ASSERT_EQ(newType, module->getType(TYPE_NAME));
 }
