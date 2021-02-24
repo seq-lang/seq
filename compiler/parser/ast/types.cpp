@@ -83,8 +83,6 @@ int LinkType::unify(Type *typ, Unification *undo) {
     seqassert(!type, "type has been already unified or is in inconsistent state");
     if (undo) {
       LOG_TYPECHECK("[unify] {} := {}", id, typ->toString());
-      if (id == 11677 || id == 11722)
-        assert(1);
       // Link current type to typ and ensure that this modification is recorded in undo.
       undo->linked.push_back(this);
       kind = Link;
@@ -143,22 +141,14 @@ bool LinkType::canRealize() const {
     return type->canRealize();
 }
 string LinkType::toString() const {
-  if (kind == Unbound)
-    return genericName.empty() ? "?"
-                               : genericName; // ? fmt::format("?{}.{}", id, level,
-                                              // isStatic ? "_s" : "") : "_";
-  else if (kind == Generic)
-    return genericName.empty() ? "?"
-                               : genericName; // ? fmt::format("#{}.{}", id, level,
-                                              // isStatic ? "_s" : "") : "_";
+  if (kind == Unbound || kind == Generic)
+    return genericName.empty() ? "?" : genericName;
   else
     return type->toString();
 }
 string LinkType::realizedName() const {
   if (kind == Unbound)
     return "?";
-  //  if (kind == Generic)
-  //    return "#"; // fmt::format("#{}", id);
   seqassert(kind == Link, "unexpected generic link");
   return type->realizedName();
 }
@@ -202,16 +192,16 @@ bool LinkType::occurs(Type *typ, Type::Unification *undo) {
   }
 }
 
-/////
-
 ClassType::ClassType(string name, vector<Generic> generics)
     : name(move(name)), generics(move(generics)), isTrait(false) {}
 ClassType::ClassType(const ClassTypePtr &base)
     : name(base->name), generics(base->generics), isTrait(base->isTrait) {}
 int ClassType::unify(Type *typ, Unification *us) {
   if (auto tc = typ->getClass()) {
+    // Check names.
     if (name != tc->name)
       return -1;
+    // Check generics.
     int s1 = 2, s;
     if (generics.size() != tc->generics.size())
       return -1;
@@ -266,10 +256,7 @@ string ClassType::toString() const {
   for (auto &a : generics)
     if (!a.name.empty())
       gs.push_back(a.type->toString());
-  //  if ()
-  //    return fmt::format("{}{}", name,
-  //                       gs.empty() ? "" : fmt::format("[{}]", join(gs, ",")));
-  //  else
+  // Special formatting for Partials, Functions and Tuples
   if (startswith(name, "Partial.N")) {
     vector<string> as;
     int i, gi;
@@ -313,6 +300,7 @@ RecordType::RecordType(const ClassTypePtr &base, vector<TypePtr> args)
     : ClassType(base), args(move(args)) {}
 int RecordType::unify(Type *typ, Unification *us) {
   if (auto tr = typ->getRecord()) {
+    // Handle int <-> Int[64]
     if (name == "int" && tr->name == "Int")
       return tr->unify(this, us);
     if (tr->name == "int" && name == "Int") {
@@ -320,7 +308,7 @@ int RecordType::unify(Type *typ, Unification *us) {
       return generics[0].type->unify(t64.get(), us);
     }
     int s1 = 2, s;
-    // Special handling for functions.
+    // Handle Callable[...]<->Function[...].
     if (startswith(tr->name, "Callable.N") && startswith(name, "Function.N"))
       return tr->unify(this, us);
     if (startswith(name, "Callable.N") && startswith(tr->name, "Function.N")) {
@@ -333,6 +321,7 @@ int RecordType::unify(Type *typ, Unification *us) {
       }
       return s1;
     }
+    // Handle Callable[...]<->Partial[...].
     if (startswith(tr->name, "Callable.N") && !tr->getFunc() && getPartial())
       return tr->unify(this, us);
     if (startswith(name, "Callable.N") && !getFunc() && tr->getPartial()) {
@@ -340,15 +329,10 @@ int RecordType::unify(Type *typ, Unification *us) {
       for (int pi = 9; pi < tr->name.size() && tr->name[pi] != '.'; pi++)
         if (tr->name[pi] == '0')
           zeros.emplace_back(pi - 9);
+      // Just check if the number of generics matches. The rest will be done in
+      // transformCall() procedure.
       if (zeros.size() + 1 != args.size())
         return -1;
-      //      for (int i = 0; i < zeros.size(); i++)
-      //        if ((s = tr->generics[zeros[i]].type->unify(generics[i + 1].type.get(),
-      //        us)) !=
-      //            -1)
-      //          s1 += s;
-      //        else
-      //          return -1;
       return s1;
     }
     if (args.size() != tr->args.size())
@@ -359,7 +343,7 @@ int RecordType::unify(Type *typ, Unification *us) {
       else
         return -1;
     }
-    // When unifying records, only record members matter.
+    // Handle Tuple<->@tuple: when unifying tuples, only record members matter.
     if (startswith(name, "Tuple.N") || startswith(tr->name, "Tuple.N"))
       return s1;
     return this->ClassType::unify(tr.get(), us);
@@ -401,14 +385,11 @@ bool RecordType::canRealize() const {
          this->ClassType::canRealize();
 }
 string RecordType::toString() const {
-  //  vector<string> as;
-  // for (auto &a : args)
-  // as.push_back(a->toString());
   return fmt::format("{}", this->ClassType::toString());
-  //                     as.empty() ? "" : "<" + join(as, ",") + ">");
 }
 shared_ptr<RecordType> RecordType::getHeterogenousTuple() {
   seqassert(canRealize(), "{} not realizable", toString());
+  // This is only relevant for Tuples and KwTuples.
   if ((startswith(name, "Tuple.N") || startswith(name, "KwTuple.N")) &&
       args.size() > 1) {
     string first = args[0]->realizedName();
@@ -419,8 +400,6 @@ shared_ptr<RecordType> RecordType::getHeterogenousTuple() {
   return nullptr;
 }
 
-////
-
 FuncType::FuncType(const shared_ptr<RecordType> &baseType, string funcName,
                    vector<Generic> funcGenerics, TypePtr funcParent)
     : RecordType(*baseType), funcName(move(funcName)), funcGenerics(move(funcGenerics)),
@@ -428,11 +407,13 @@ FuncType::FuncType(const shared_ptr<RecordType> &baseType, string funcName,
 int FuncType::unify(Type *typ, Unification *us) {
   int s1 = 2, s = 0;
   if (auto t = typ->getFunc()) {
+    // Check if names and parents match.
     if (funcName != t->funcName || (bool(funcParent) ^ bool(t->funcParent)))
       return -1;
     if (funcParent && (s = funcParent->unify(t->funcParent.get(), us)) == -1)
       return -1;
     s1 += s;
+    // Check if function generics match.
     seqassert(funcGenerics.size() == t->funcGenerics.size(),
               "generic size mismatch for {}", funcName);
     for (int i = 0; i < funcGenerics.size(); i++) {
@@ -479,6 +460,7 @@ vector<TypePtr> FuncType::getUnbounds() const {
     auto tu = funcParent->getUnbounds();
     u.insert(u.begin(), tu.begin(), tu.end());
   }
+  // Important: return type unbounds are not important, so skip them.
   for (int ai = 1; ai < args.size(); ai++) {
     auto tu = args[ai]->getUnbounds();
     u.insert(u.begin(), tu.begin(), tu.end());
@@ -486,6 +468,7 @@ vector<TypePtr> FuncType::getUnbounds() const {
   return u;
 }
 bool FuncType::canRealize() const {
+  // Important: return type does not have to be realized.
   for (int ai = 1; ai < args.size(); ai++)
     if (!args[ai]->getFunc() &&
         (!args[ai]->canRealize() ||
@@ -502,6 +485,7 @@ string FuncType::toString() const {
       gs.push_back(a.type->toString());
   string s = join(gs, ",");
   vector<string> as;
+  // Important: return type does not have to be realized.
   for (int ai = 1; ai < args.size(); ai++)
     as.push_back(args[ai]->toString());
   string a = join(as, ",");
@@ -515,6 +499,7 @@ string FuncType::realizedName() const {
       gs.push_back(a.type->realizedName());
   string s = join(gs, ",");
   vector<string> as;
+  // Important: return type does not have to be realized.
   for (int ai = 1; ai < args.size(); ai++)
     as.push_back(args[ai]->getFunc() ? args[ai]->getFunc()->realizedName()
                                      : args[ai]->realizedName());
@@ -524,26 +509,12 @@ string FuncType::realizedName() const {
                      funcName, s.empty() ? "" : fmt::format("[{}]", s));
 }
 
-////
-
 PartialType::PartialType(const shared_ptr<RecordType> &baseType,
                          shared_ptr<FuncType> func, vector<char> known)
     : RecordType(*baseType), func(move(func)), known(move(known)) {}
-int PartialType::unify(Type *typ, Unification *us) {
-  //  int s1 = 2, s = 0;
-  //  if (auto t = typ->getPartial()) {
-  //    if ((s = func->unify(t->func.get(), us)) == -1)
-  //      return -1;
-  //    s1 += s;
-  //  }
-  //  s = this->RecordType::unify(typ, us);
-  //  return s == -1 ? s : s1 + s;
-  return this->RecordType::unify(typ, us);
-}
 TypePtr PartialType::generalize(int atLevel) {
   return make_shared<PartialType>(
-      static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)),
-      func, //->generalize(atLevel)->getFunc(),
+      static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)), func,
       known);
 }
 TypePtr PartialType::instantiate(int atLevel, int &unboundCount,
@@ -551,11 +522,8 @@ TypePtr PartialType::instantiate(int atLevel, int &unboundCount,
   return make_shared<PartialType>(
       static_pointer_cast<RecordType>(
           this->RecordType::instantiate(atLevel, unboundCount, cache)),
-      func, //->instantiate(atLevel, unboundCount, cache)->getFunc(),
-      known);
+      func, known);
 }
-
-////
 
 StaticType::StaticType(vector<ClassType::Generic> generics,
                        pair<unique_ptr<Expr>, EvalFn> staticExpr,
@@ -572,6 +540,7 @@ StaticType::StaticType(int i) : staticEvaluation(true, i) {
 }
 int StaticType::unify(Type *typ, Unification *us) {
   if (auto t = typ->getStatic()) {
+    // Check if both types are already evaluated.
     if (staticEvaluation.first && t->staticEvaluation.first)
       return staticEvaluation == t->staticEvaluation ? 2 : -1;
 
@@ -643,14 +612,13 @@ string StaticType::toString() const {
                      staticExpr.first ? FormatVisitor::apply(staticExpr.first) : "");
 }
 string StaticType::realizedName() const {
-  assert(canRealize());
+  seqassert(canRealize(), "cannot realize {}", toString());
   vector<string> deps;
   for (auto &e : generics)
     deps.push_back(e.type->realizedName());
-  if (!staticEvaluation.first)
+  if (!staticEvaluation.first) // If not already evaluated, evaluate!
     const_cast<StaticType *>(this)->staticEvaluation = {true, staticExpr.second(this)};
-  return fmt::format("{}", // deps.empty() ? "" : join(deps, ";") + ";",
-                     staticEvaluation.second);
+  return fmt::format("{}", staticEvaluation.second);
 }
 
 } // namespace types

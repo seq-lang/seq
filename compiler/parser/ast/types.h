@@ -24,7 +24,6 @@ struct Expr;
 namespace types {
 
 /// Forward declarations
-
 struct FuncType;
 struct ClassType;
 struct LinkType;
@@ -226,7 +225,10 @@ public:
   bool canRealize() const override;
   string toString() const override;
   string realizedName() const override;
+  /// True if a calss is a trait or has a generic that is a trait.
   virtual bool hasTrait() const;
+  /// Convenience function to get the name of realized type
+  /// (needed if a subclass realizes something else as well).
   virtual string realizedTypeName() const;
   shared_ptr<ClassType> getClass() override {
     return std::static_pointer_cast<ClassType>(shared_from_this());
@@ -316,7 +318,6 @@ public:
               vector<char> known);
 
 public:
-  int unify(Type *typ, Unification *undo) override;
   TypePtr generalize(int atLevel) override;
   TypePtr instantiate(int atLevel, int &unboundCount,
                       unordered_map<int, TypePtr> &cache) override;

@@ -633,12 +633,12 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
     method = ctx->findBestMethod(expr->lexpr.get(), format("__{}__", magic),
                                  {{"", lt}, {"", rt}});
   // Check if rt.__rop__(rt, lt) exists.
-  if (!method)
-    method = ctx->findBestMethod(expr->lexpr.get(), format("__r{}__", magic),
+  if (!method) {
+    method = ctx->findBestMethod(expr->rexpr.get(), format("__r{}__", magic),
                                  {{"", rt}, {"", lt}});
-  if (!method)
-    method = ctx->findBestMethod(expr->lexpr.get(), format("__{}__", magic),
-                                 {{"", lt}, {"", rt}});
+    if (method)
+      swap(expr->lexpr, expr->rexpr);
+  }
   if (!method)
     error("cannot find magic '{}' in {}", magic, lt->toString());
 
