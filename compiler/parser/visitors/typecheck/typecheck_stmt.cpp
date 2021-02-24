@@ -531,14 +531,14 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
 
 /**************************************************************************************/
 
-vector<types::Generic> TypecheckVisitor::parseGenerics(const vector<Param> &generics,
-                                                       int level) {
-  auto genericTypes = vector<Generic>();
+vector<types::ClassType::Generic>
+TypecheckVisitor::parseGenerics(const vector<Param> &generics, int level) {
+  auto genericTypes = vector<ClassType::Generic>();
   for (const auto &g : generics) {
     auto typ = ctx->addUnbound(N<IdExpr>(g.name).get(), level, true, bool(g.type));
     typ->getLink()->genericName = g.name;
-    genericTypes.emplace_back(Generic{g.name, typ->generalize(level),
-                                      ctx->cache->unboundCount - 1, clone(g.deflt)});
+    genericTypes.emplace_back(ClassType::Generic(
+        g.name, typ->generalize(level), ctx->cache->unboundCount - 1, clone(g.deflt)));
     LOG_REALIZE("[generic] {} -> {} {}", g.name, typ->toString(), bool(g.type));
     ctx->add(TypecheckItem::Type, g.name, typ, bool(g.type));
   }

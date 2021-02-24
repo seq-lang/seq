@@ -119,7 +119,8 @@ types::TypePtr TypeContext::instantiateGeneric(const Expr *expr, types::TypePtr 
     error(expr->getSrcInfo(), "generics do not match");
   for (int i = 0; i < c->generics.size(); i++) {
     assert(c->generics[i].type);
-    g->generics.push_back(types::Generic("", generics[i], c->generics[i].id));
+    g->generics.push_back(
+        types::ClassType::Generic("", generics[i], c->generics[i].id));
   }
   return instantiate(expr, root, g.get());
 }

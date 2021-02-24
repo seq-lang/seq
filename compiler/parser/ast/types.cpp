@@ -1,3 +1,12 @@
+/*
+ * types.cpp --- Seq type definitions.
+ * Contains a basic implementation of Hindley-Milner's W algorithm.
+ *
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
+ */
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -25,6 +34,7 @@ void Type::Unification::undo() {
   }
 }
 TypePtr Type::follow() { return shared_from_this(); }
+vector<shared_ptr<Type>> Type::getUnbounds() const { return {}; }
 bool Type::is(const string &s) { return getClass() && getClass()->name == s; }
 
 LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic,
@@ -551,7 +561,7 @@ TypePtr PartialType::instantiate(int atLevel, int &unboundCount,
 
 ////
 
-StaticType::StaticType(vector<Generic> generics,
+StaticType::StaticType(vector<ClassType::Generic> generics,
                        pair<unique_ptr<Expr>, EvalFn> staticExpr,
                        pair<bool, int> staticEvaluation)
     : generics(move(generics)), staticEvaluation(move(staticEvaluation)),

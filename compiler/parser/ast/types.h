@@ -48,8 +48,6 @@ struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
     vector<LinkType *> linked;
     /// List of unbound types whose level has been changed.
     vector<pair<LinkType *, int>> leveled;
-    /// List of static types that have been evaluated during the unification.
-    vector<StaticType *> evaluated;
 
   public:
     /// Undo the unification step.
@@ -58,12 +56,13 @@ struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
 
 public:
   /// Unifies a given type with the current type.
-  /// ⚠️ Destructive operation! (both the current and a given type are modified).
   /// @param typ A given type.
   /// @param undo A reference to Unification structure to track the unification steps
   ///             and allow later undoing of the unification procedure.
   /// @return Unification score: -1 for failure, anything >= 0 for success.
   ///         Higher score translates to a "better" unification.
+  /// ⚠️ Destructive operation if undo is not null!
+  ///    (both the current and a given type are modified).
   virtual int unify(Type *typ, Unification *undo) = 0;
   /// Generalize all unbound types whose level is below the provided level.
   /// This method replaces all unbound types with a generic types (e.g. ?1 -> T1).
@@ -86,7 +85,7 @@ public:
   /// For example, for (a->b->c->d) it returns d.
   virtual shared_ptr<Type> follow();
   /// Obtain the list of internal unbound types.
-  virtual vector<shared_ptr<Type>> getUnbounds() const { return {}; }
+  virtual vector<shared_ptr<Type>> getUnbounds() const;
   /// True if a type is realizable.
   virtual bool canRealize() const = 0;
   /// Pretty-print facility.
@@ -135,7 +134,7 @@ struct LinkType : public Type {
   TypePtr type;
   /// True if a type is a static type (e.g. N in Int[N: int]).
   bool isStatic;
-  /// The generic name of a generic type, if applicable.
+  /// The generic name of a generic type, if applicable. Used for pretty-printing.
   string genericName;
 
 public:
@@ -183,36 +182,37 @@ private:
   bool occurs(Type *typ, Type::Unification *undo);
 };
 
-/// Done till here
-
 /**
- * A generic type declaration.
- * Each generic is defined by its name and unique ID.
- */
-struct Generic {
-  string name;
-  int id;
-  TypePtr type;
-  shared_ptr<Expr> deflt;
-
-  // -1 is for tuple "generics"
-  explicit Generic() : name(), id(-1), type(nullptr), deflt(nullptr) {}
-  Generic(string name, TypePtr type, int id, shared_ptr<Expr> deflt = nullptr)
-      : name(move(name)), id(id), type(move(type)), deflt(move(deflt)) {}
-  Generic(string name, TypePtr type, int id, unique_ptr<Expr> deflt)
-      : name(move(name)), id(id), type(move(type)), deflt(move(deflt)) {}
-};
-
-/**
- * ClassType describes a (generic) class type.
+ * A generic class reference type. All Seq types inherit from this class.
  */
 struct ClassType : public Type {
-  /// Global unique name for each type (generated from the getSrcPos())
+  /**
+   * A generic type declaration.
+   * Each generic is defined by its unique ID.
+   */
+  struct Generic {
+    // Generic name (used for pretty-printing).
+    string name;
+    // Unique generic ID.
+    int id;
+    // Pointer to realized tupe (or generic LinkType).
+    TypePtr type;
+    // Default value that is used if a generic is not realized (e.g. [T=int]).
+    shared_ptr<Expr> deflt;
+
+    Generic(string name, TypePtr type, int id, shared_ptr<Expr> deflt = nullptr)
+        : name(move(name)), id(id), type(move(type)), deflt(move(deflt)) {}
+  };
+
+  /// Canonical type name.
   string name;
+  /// List of generics, if present.
   vector<Generic> generics;
+  /// True if this class is just supposed to be type-checked upon
+  /// (not supposed to be instantiated).
   bool isTrait;
 
-  explicit ClassType(string name, vector<Generic> generics = vector<Generic>());
+  explicit ClassType(string name, vector<Generic> generics = {});
   explicit ClassType(const shared_ptr<ClassType> &base);
 
 public:
@@ -234,11 +234,15 @@ public:
 };
 typedef shared_ptr<ClassType> ClassTypePtr;
 
+/**
+ * A generic class tuple (record) type. All Seq tuples inherit from this class.
+ */
 struct RecordType : public ClassType {
+  /// List of tuple arguments.
   vector<TypePtr> args;
 
-  explicit RecordType(string name, vector<Generic> generics = vector<Generic>(),
-                      vector<TypePtr> args = vector<TypePtr>());
+  explicit RecordType(string name, vector<ClassType::Generic> generics = {},
+                      vector<TypePtr> args = {});
   RecordType(const ClassTypePtr &base, vector<TypePtr> args);
 
 public:
@@ -259,17 +263,22 @@ public:
 };
 
 /**
- * FuncType describes a (generic) function type that can be realized.
+ * A generic type that represents a Seq function instantiation.
+ * It inherits RecordType that realizes Callable[...].
+ *
+ * ⚠️ This is not a function pointer (Function[...]) type.
  */
 struct FuncType : public RecordType {
+  /// Canonical name of a (generic) function.
   string funcName;
-  vector<Generic> funcGenerics;
+  /// Function generics (e.g. T in def foo[T](...)).
+  vector<ClassType::Generic> funcGenerics;
+  /// Enclosing class or a function.
   TypePtr funcParent;
 
 public:
   FuncType(const shared_ptr<RecordType> &baseType, string funcName,
-           vector<Generic> funcGenerics = vector<Generic>(),
-           TypePtr funcParent = nullptr);
+           vector<ClassType::Generic> funcGenerics = {}, TypePtr funcParent = nullptr);
 
 public:
   int unify(Type *typ, Unification *undo) override;
@@ -290,42 +299,57 @@ public:
 typedef shared_ptr<FuncType> FuncTypePtr;
 
 /**
- * FuncType describes a (generic) function type that can be realized.
+ * A generic type that represents a partial Seq function instantiation.
+ * It inherits RecordType that realizes Tuple[...].
+ *
+ * Note: partials only work on Seq functions. Function pointer partials
+ *       will become a partials of Function.__call__ Seq function.
  */
 struct PartialType : public RecordType {
+  /// Seq function that is being partialized. Always generic (not instantiated).
   FuncTypePtr func;
+  /// Arguments that are already provided (1 for known argument, 0 for expecting).
   vector<char> known;
 
 public:
   PartialType(const shared_ptr<RecordType> &baseType, shared_ptr<FuncType> func,
               vector<char> known);
-  //
+
 public:
   int unify(Type *typ, Unification *undo) override;
   TypePtr generalize(int atLevel) override;
   TypePtr instantiate(int atLevel, int &unboundCount,
                       unordered_map<int, TypePtr> &cache) override;
-  // public:
-  //  vector<TypePtr> getUnbounds() const override;
-  //  bool canRealize() const override;
-  //  string toString() const override;
-  //  string realizedName() const override;
 
+public:
   shared_ptr<PartialType> getPartial() override {
     return std::static_pointer_cast<PartialType>(shared_from_this());
   }
 };
 typedef shared_ptr<FuncType> FuncTypePtr;
 
+/**
+ * A static integer type (e.g. N in def foo[N: int]). Usually an integer, but can point
+ * to a static expression.
+ */
 struct StaticType : public Type {
   typedef std::function<int(const StaticType *)> EvalFn;
-  vector<Generic> generics;
+  /// List of static variables that a type depends on
+  /// (e.g. for A+B+2, generics are {A, B}).
+  vector<ClassType::Generic> generics;
 
+  /// Evaluation status. If .first is true, the expression is evaluated and .second
+  /// provides the evaluated value.
   pair<bool, int> staticEvaluation;
+  /// A static expression that needs to be evaluated. .first is a pointer to such
+  /// expression, while .second is a function that evaluates it. .first can be nullptr
+  /// if there is no expression (assuming that staticEvaluation.first is set).
   pair<unique_ptr<Expr>, EvalFn> staticExpr;
 
-  StaticType(vector<Generic> generics, pair<unique_ptr<Expr>, EvalFn> staticExpr,
+  StaticType(vector<ClassType::Generic> generics,
+             pair<unique_ptr<Expr>, EvalFn> staticExpr,
              pair<bool, int> staticEvaluation);
+  /// Convenience function for static types whose evaluation is already known.
   explicit StaticType(int i);
 
 public:

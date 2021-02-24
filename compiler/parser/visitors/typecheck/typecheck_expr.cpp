@@ -340,19 +340,19 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
         // Case 2: Static expression (e.g. 32 or N+5).
         // Get the dependent types and create the underlying StaticType.
         unordered_set<string> seen;
-        vector<Generic> staticGenerics;
+        vector<ClassType::Generic> staticGenerics;
         std::function<void(Expr *)> findGenerics = [&](Expr *e) -> void {
           if (auto ei = e->getId()) {
             if (!in(seen, ei->value)) {
               auto val = ctx->find(ei->value);
               seqassert(val && val->isStatic(), "invalid static expression");
               auto genTyp = val->type->follow();
-              staticGenerics.emplace_back(Generic{
-                  ei->value, genTyp,
-                  genTyp->getLink() ? genTyp->getLink()->id
-                                    : genTyp->getStatic()->generics.empty()
-                                          ? 0
-                                          : genTyp->getStatic()->generics[0].id});
+              staticGenerics.emplace_back(
+                  ClassType::Generic(ei->value, genTyp,
+                                     genTyp->getLink() ? genTyp->getLink()->id
+                                     : genTyp->getStatic()->generics.empty()
+                                         ? 0
+                                         : genTyp->getStatic()->generics[0].id));
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -1313,10 +1313,10 @@ string TypecheckVisitor::generateCallableStub(int n) {
     auto baseType = make_shared<RecordType>(typeName);
     baseType->isTrait = true;
     for (int i = 0; i <= n; i++) {
-      baseType->generics.emplace_back(
-          Generic(!i ? "TR" : format("T{}", i),
-                  make_shared<LinkType>(LinkType::Generic, ctx->cache->unboundCount++),
-                  ctx->cache->unboundCount));
+      baseType->generics.emplace_back(ClassType::Generic(
+          !i ? "TR" : format("T{}", i),
+          make_shared<LinkType>(LinkType::Generic, ctx->cache->unboundCount++),
+          ctx->cache->unboundCount));
       baseType->generics.back().type->getLink()->genericName =
           baseType->generics.back().name;
       baseType->args.emplace_back(baseType->generics.back().type);

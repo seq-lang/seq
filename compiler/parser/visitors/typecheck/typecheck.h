@@ -263,7 +263,8 @@ private:
   ///       return Partial.N<mask>.__new__(self.ptr, self.a1, a2, ...) # (see above)
   string generatePartialStub(const vector<char> &mask, types::FuncType *fn);
   /// Create generic types for type or function generics and add them to the context.
-  vector<types::Generic> parseGenerics(const vector<Param> &generics, int level);
+  vector<types::ClassType::Generic> parseGenerics(const vector<Param> &generics,
+                                                  int level);
 
 private:
   types::TypePtr realizeType(types::ClassType *typ);

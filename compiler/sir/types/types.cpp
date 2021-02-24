@@ -14,7 +14,7 @@
 
 namespace {
 std::vector<seq::ast::types::TypePtr>
-extractTypes(const std::vector<seq::ast::types::Generic> &gens) {
+extractTypes(const std::vector<seq::ast::types::ClassType::Generic> &gens) {
   std::vector<seq::ast::types::TypePtr> ret;
   for (auto &g : gens)
     ret.push_back(g.type);
