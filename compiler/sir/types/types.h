@@ -57,10 +57,10 @@ public:
 
   virtual ~Type() noexcept = default;
 
-  std::vector<Type *> getUsedTypes() const final { return getActual()->doGetUsedTypes(); }
-  int replaceUsedType(const std::string &name, Type *newType) final {
-    assert(false);
+  std::vector<Type *> getUsedTypes() const final {
+    return getActual()->doGetUsedTypes();
   }
+  int replaceUsedType(const std::string &name, Type *newType) final { assert(false); }
   using IRNode::replaceUsedType;
 
   /// @param other another type

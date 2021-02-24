@@ -146,7 +146,6 @@ std::vector<Generic> FuncType::doGetGenerics() const {
   return ret;
 }
 
-
 std::vector<Type *> FuncType::doGetUsedTypes() const {
   auto ret = argTypes;
   ret.push_back(rType);
