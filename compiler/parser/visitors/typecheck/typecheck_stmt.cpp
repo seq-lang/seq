@@ -251,7 +251,7 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
 
   auto iterType = stmt->iter->getType()->getClass();
   if (auto tuple = iterType->getHeterogenousTuple()) {
-    // Case 1: iterating heterogenous tuple.
+    // Case 1: iterating heterogeneous tuple.
     // Unroll a separate suite for each tuple member.
     // LOG("hetero");
     auto block = N<SuiteStmt>();

@@ -29,7 +29,6 @@ types::TypePtr operator|=(types::TypePtr &a, const types::TypePtr &b);
 class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
   shared_ptr<TypeContext> ctx;
   shared_ptr<vector<StmtPtr>> prependStmts;
-
   bool allowVoidExpr;
 
   ExprPtr resultExpr;
@@ -68,6 +67,7 @@ public:
   /// transform the evaluated number to IntExpr.
   /// Correct the identifier with a realized identifier (e.g. replace Id("Ptr") with
   /// Id("Ptr[byte]")).
+  /// Also generates stubs for Tuple.N, Callable.N and Function.N.
   void visit(IdExpr *) override;
   /// Transform a tuple (a1, ..., aN) to:
   ///   Tuple.N.__new__(a1, ..., aN).
@@ -75,6 +75,7 @@ public:
   void visit(TupleExpr *) override;
   /// Set type to the unification of both sides.
   /// Wrap a side with Optional.__new__() if other side is optional.
+  /// Wrap conditional with .__bool__() if it is not a bool.
   /// Also evaluates static if expressions.
   void visit(IfExpr *) override;
   /// Evaluate static unary expressions.
@@ -87,8 +88,8 @@ public:
   ///   foo(..., x).
   /// Transform any non-CallExpr stage foo into a CallExpr stage:
   ///   foo(...).
-  /// If necessary, add stages (e.g. unwrap or Optional.__new__) to support function
-  // call type adjustments.
+  /// If necessary, add stages (e.g. unwrap, float,__new__ or Optional.__new__)
+  /// to support function call type adjustments.
   void visit(PipeExpr *) override;
   /// Transform an instantiation Instantiate(foo, {bar, baz}) to a canonical name:
   ///   IdExpr("foo[bar,baz]").
@@ -141,12 +142,31 @@ public:
   ///   unwrap(a).b = c
   /// if a is an Optional that does not have field b.
   void visit(AssignMemberStmt *) override;
+  /// Wrap return a to:
+  ///   return Optional(a)
+  /// if a is of type T and return type is of type Optional[T]/
   void visit(ReturnStmt *) override;
   void visit(YieldStmt *) override;
   void visit(WhileStmt *) override;
+  /// Unpack heterogeneous tuple iteration: for i in t: <suite> to:
+  ///   i = t[0]; <suite>
+  ///   i = t[1]; <suite> ...
+  /// Transform for i in t to:
+  ///   for i in t.__iter__()
+  /// if t is not a generator.
   void visit(ForStmt *) override;
+  /// Check if a condition is static expression. If it is and evaluates to zero,
+  /// DO NOT parse the enclosed suite.
+  /// Otherwise, transform if cond to:
+  ///   if cond.__bool__()
+  /// if cond is not of type bool (no pun intended).
   void visit(IfStmt *) override;
   void visit(TryStmt *) override;
+  /// Transform raise Exception() to:
+  ///   _e = Exception()
+  ///   _e._hdr = ExcHeader("<func>", "<file>", <line>, <col>)
+  ///   raise _e
+  /// Also ensure that the raised type is a tuple whose first element is ExcHeader.
   void visit(ThrowStmt *) override;
   /// Parse a function stub and create a corresponding generic function type.
   /// Also realize built-ins and extern C functions.
@@ -199,25 +219,30 @@ private:
   void deactivateUnbounds(types::Type *t);
   /// Transform a call expression callee(args...).
   /// Intercepts callees that are expr.dot, expr.dot[T1, T2] etc.
+  /// Before any transformation, all arguments are expanded:
+  ///   *args -> args[0], ..., args[N]
+  ///   **kwargs -> name0=kwargs.name0, ..., nameN=kwargs.nameN
   /// Performs the following transformations:
   ///   Tuple(args...) -> Tuple.__new__(args...) (tuple constructor)
   ///   Class(args...) -> c = Class.__new__(); c.__init__(args...); c (StmtExpr)
-  ///   pyobj(args...) -> pyobj(Tuple.__new__(args...))
+  ///   Partial(args...) -> StmtExpr(p = Partial; PartialFn(args...))
   ///   obj(args...) -> obj.__call__(args...) (non-functions)
   /// This method will also handle the following use-cases:
   ///   named arguments,
   ///   default arguments,
   ///   default generics, and
-  ///   *args (TODO).
+  ///   *args / **kwargs.
   /// Any partial call will be transformed as follows:
-  ///   callee(arg1, ...) -> Partial.N10(callee, arg1) (partial creation).
-  ///   partial_callee(arg1) -> partial_callee.__call__(arg1) (partial completion)
+  ///   callee(arg1, ...) -> StmtExpr(_v = Partial.callee.N10(arg1); _v).
+  /// If callee is partial and it is satisfied, it will be replaced with the originating
+  /// function call.
   /// Arguments are unified with the signature types. The following exceptions are
   /// supported:
   ///   Optional[T] -> T (via unwrap())
+  ///   int -> float (via float.__new__())
   ///   T -> Optional[T] (via Optional.__new__())
   ///   T -> Generator[T] (via T.__iter__())
-  ///   Partial[...] -> Function[...].
+  ///   T -> Callable[T] (via T.__call__())
   ///
   /// Pipe notes: if inType and extraStage are set, this method will use inType as a
   /// pipe ellipsis type. extraStage will be set if an Optional conversion/unwrapping

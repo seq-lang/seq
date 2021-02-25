@@ -72,11 +72,12 @@ class SimplifyVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
 
 public:
   /// Static method that applies SimplifyStage on a given AST node.
+  /// Loads standard library if needed.
   /// @param cache Pointer to the shared transformation cache.
   /// @param file Filename of a AST node.
   /// @param barebones Set if a bare-bones standard library is used during testing.
   /// @param defines
-  ///        User-defined static values (typically pased via seqc -DX=Y).
+  ///        User-defined static values (typically passed via seqc -DX=Y).
   ///        Each value is passed as a string (integer part is ignored).
   ///        The method will replace this map with a map that links canonical names
   ///        to their string and integer values.
@@ -85,7 +86,8 @@ public:
                        unordered_map<string, pair<string, seq_int_t>> &defines,
                        bool barebones = false);
 
-  /// TODO
+  /// Static method that applies SimplifyStage on a given AST node after the standard
+  /// library was loaded.
   static StmtPtr apply(shared_ptr<SimplifyContext> cache, const StmtPtr &node,
                        const string &file, int atAge = -1);
 
@@ -361,9 +363,6 @@ private:
   /// @param prev (out-argument) A pointer to the innermost block (suite) where a
   /// comprehension (or generator) expression should reside.
   StmtPtr transformGeneratorBody(const vector<GeneratorBody> &loops, SuiteStmt *&prev);
-  /// Transform an index expression: allow for type expressions, and check if an
-  /// expression is a static expression. If so, return StaticExpr.
-  ExprPtr transformIndexExpr(const ExprPtr &expr);
   /// Make an anonymous function _lambda_XX with provided statements and argument names.
   /// Function definition is prepended to the current statement.
   /// If the statements refer to outer variables, those variables will be captured and
@@ -398,13 +397,13 @@ private:
   /// Transform a match...case pattern to a series of if statements as follows:
   ///   - Int pattern
   ///     case 1: ... ->
-  ///     if isinsance(var, "int"): if var == 1: ...
+  ///     if isinstance(var, "int"): if var == 1: ...
   ///   - Bool pattern
   ///     case True: ... ->
-  ///     if isinsance(var, "bool"): if var == True: ...
+  ///     if isinstance(var, "bool"): if var == True: ...
   ///   - Range pattern
   ///     case 1 ... 3: ... ->
-  ///     if isinsance(var, "int"): if var >= 1: if var <= 3: ...
+  ///     if isinstance(var, "int"): if var >= 1: if var <= 3: ...
   ///   - Tuple pattern
   ///     case (1, pat1, pat2) ->
   ///     if isinstance(var, "Tuple"): if staticlen(var) == 3:

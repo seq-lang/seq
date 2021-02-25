@@ -1,12 +1,13 @@
-/**
- * TODO : Redo error messages (right now they are awful)
+/*
+ * typecheck.cpp --- Type inference and type-dependent AST transformations.
+ *
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
  */
 
 #include "util/fmt/format.h"
-#include <map>
 #include <memory>
-#include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -32,7 +33,7 @@ using namespace types;
 
 TypecheckVisitor::TypecheckVisitor(shared_ptr<TypeContext> ctx,
                                    const shared_ptr<vector<StmtPtr>> &stmts)
-    : ctx(move(ctx)) {
+    : ctx(move(ctx)), allowVoidExpr(false) {
   prependStmts = stmts ? stmts : make_shared<vector<StmtPtr>>();
 }
 

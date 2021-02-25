@@ -1,5 +1,5 @@
 /*
- * transform_ctx.h --- context for simplification transformation.
+ * simplify_ctx.h --- Context for simplification transformation.
  *
  * (c) Seq project. All rights reserved.
  * This file is subject to the terms and conditions defined in

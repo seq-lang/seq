@@ -78,6 +78,18 @@ a & 1 #: and
 a | 1 #: or
 a ^ 1 #: xor
 
+#%% binary_rmagic,barebones
+class Foo[T]:
+    def __add__(self, other: T):
+        print 'add'
+        return self
+    def __radd__(self, other: T):
+        print 'radd'
+        return self
+foo = Foo[int]()
+foo + 1 #: add
+1 + foo #: radd
+
 #%% binary_short_circuit,barebones
 def moo():
     print 'moo'

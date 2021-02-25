@@ -129,7 +129,7 @@ ExprPtr parse_expr(value val) {
     f1 = Field(t, 1);
     vector<GeneratorBody> loops;
     while (true) {
-      f1 = Field(f1, 1); // TODO: ignore position here for now
+      f1 = Field(f1, 1); // ignore position here for now
       loops.push_back({parse_expr(Field(f1, 0)), parse_expr(Field(f1, 1)),
                        parse_list(Field(f1, 2), parse_expr)});
       if (Field(f1, 3) == Val_int(0))

@@ -444,10 +444,6 @@ void TypecheckVisitor::visit(IndexExpr *expr) {
     resultExpr = transformStaticTupleIndex(c.get(), expr->expr, expr->index);
     if (!resultExpr) {
       // Case 3: ... and if not, just call __getitem__.
-      if (auto et = const_cast<TupleExpr *>(expr->index->getTuple()))
-        expr->index = N<CallExpr>(
-            N<DotExpr>(N<IdExpr>(format("Tuple.N{}", et->items.size())), "__new__"),
-            move(et->items));
       ExprPtr e =
           N<CallExpr>(N<DotExpr>(move(expr->expr), "__getitem__"), move(expr->index));
       resultExpr = transform(e, false, allowVoidExpr);

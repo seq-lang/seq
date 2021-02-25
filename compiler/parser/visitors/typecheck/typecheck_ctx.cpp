@@ -1,3 +1,10 @@
+/*
+ * typecheck_ctx.cpp --- Context for type-checking stage.
+ *
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
+ */
 #include <map>
 #include <memory>
 #include <unordered_map>
@@ -17,20 +24,16 @@ namespace ast {
 
 TypeContext::TypeContext(shared_ptr<Cache> cache)
     : Context<TypecheckItem>(""), cache(move(cache)), typecheckLevel(0), iteration(0),
-      needsAnotherIteration(false), allowActivation(true), age(0), realizationDepth(0) {
+      allowActivation(true), age(0), realizationDepth(0) {
   stack.push_front(vector<string>());
   bases.push_back({"", nullptr, nullptr});
 }
 
-pair<TypecheckItem::Kind, types::TypePtr>
-TypeContext::findInVisited(const string &name) const {
-  for (int bi = int(bases.size()) - 1; bi >= 0; bi--) {
-    auto t = bases[bi].visitedAsts.find(name);
-    if (t == bases[bi].visitedAsts.end())
-      continue;
-    return t->second;
-  }
-  return {TypecheckItem::Var, nullptr};
+shared_ptr<TypecheckItem> TypeContext::add(TypecheckItem::Kind kind, const string &name,
+                                           types::TypePtr type, bool stat) {
+  auto t = make_shared<TypecheckItem>(kind, type, stat);
+  add(name, t);
+  return t;
 }
 
 shared_ptr<TypecheckItem> TypeContext::find(const string &name) const {
@@ -48,11 +51,23 @@ types::TypePtr TypeContext::findInternal(const string &name) const {
   return t->type;
 }
 
-shared_ptr<TypecheckItem> TypeContext::add(TypecheckItem::Kind kind, const string &name,
-                                           types::TypePtr type, bool stat) {
-  auto t = make_shared<TypecheckItem>(kind, type, stat);
-  add(name, t);
-  return t;
+pair<TypecheckItem::Kind, types::TypePtr>
+TypeContext::findInVisited(const string &name) const {
+  for (int bi = int(bases.size()) - 1; bi >= 0; bi--) {
+    auto t = bases[bi].visitedAsts.find(name);
+    if (t == bases[bi].visitedAsts.end())
+      continue;
+    return t->second;
+  }
+  return {TypecheckItem::Var, nullptr};
+}
+
+int TypeContext::findBase(const string &b) {
+  for (int i = int(bases.size()) - 1; i >= 0; i--)
+    if (b == bases[i].name)
+      return i;
+  seqassert(false, "cannot find base '{}'", b);
+  return -1;
 }
 
 string TypeContext::getBase() const {
@@ -74,10 +89,6 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const Expr *expr, int level,
   if (setActive && allowActivation)
     activeUnbounds[t] = FormatVisitor::apply(expr);
   return t;
-}
-
-types::TypePtr TypeContext::instantiate(const Expr *expr, types::TypePtr type) {
-  return instantiate(expr, move(type), nullptr);
 }
 
 types::TypePtr TypeContext::instantiate(const Expr *expr, types::TypePtr type,
@@ -123,16 +134,6 @@ types::TypePtr TypeContext::instantiateGeneric(const Expr *expr, types::TypePtr 
         types::ClassType::Generic("", generics[i], c->generics[i].id));
   }
   return instantiate(expr, root, g.get());
-}
-
-void TypeContext::dump(int pad) {
-  auto ordered = std::map<string, decltype(map)::mapped_type>(map.begin(), map.end());
-  LOG("base: {}", getBase());
-  for (auto &i : ordered) {
-    string s;
-    auto t = i.second.front().second;
-    LOG("{}{:.<25} {}", string(pad * 2, ' '), i.first, t->type->toString());
-  }
 }
 
 vector<types::FuncTypePtr> TypeContext::findMethod(const string &typeName,
@@ -372,6 +373,16 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
                               cache->reverseIdentifierLookup[ast->args[i].name]));
     }
   return score + onDone(starArgIndex, kwstarArgIndex, slots);
+}
+
+void TypeContext::dump(int pad) {
+  auto ordered = std::map<string, decltype(map)::mapped_type>(map.begin(), map.end());
+  LOG("base: {}", getBase());
+  for (auto &i : ordered) {
+    string s;
+    auto t = i.second.front().second;
+    LOG("{}{:.<25} {}", string(pad * 2, ' '), i.first, t->type->toString());
+  }
 }
 
 } // namespace ast

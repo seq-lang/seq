@@ -1209,7 +1209,7 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
   } else if (op == "getitem") {
     // Tuples: def __getitem__(self: T, index: int) -> T1:
     //           return __internal__.tuple_getitem[T, T1](self, index)
-    //         (error during a realizeFunc() method if T is a heterogenous tuple)
+    //         (error during a realizeFunc() method if T is a heterogeneous tuple)
     fargs.emplace_back(Param{"self", typExpr->clone()});
     fargs.emplace_back(Param{"index", I("int")});
     ret = !args.empty() ? clone(args[0].type) : I("void");
@@ -1223,7 +1223,7 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
   } else if (op == "iter") {
     // Tuples: def __iter__(self: T) -> Generator[T]:
     //           yield self.aI ...
-    //         (error during a realizeFunc() method if T is a heterogenous tuple)
+    //         (error during a realizeFunc() method if T is a heterogeneous tuple)
     fargs.emplace_back(Param{"self", typExpr->clone()});
     ret = N<IndexExpr>(I("Generator"), !args.empty() ? clone(args[0].type) : I("void"));
     for (auto &a : args)

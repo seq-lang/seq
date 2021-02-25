@@ -112,7 +112,6 @@ bool isdigit(const string &str) {
 
 /// AST utilities
 
-/// TODO: move to a cache
 void error(const char *format) { throw exc::ParserException(format); }
 void error(const ::seq::SrcInfo &info, const char *format) {
   throw exc::ParserException(format, info);
