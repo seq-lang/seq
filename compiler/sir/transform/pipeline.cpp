@@ -14,6 +14,22 @@ bool hasAttribute(const Func *func, const std::string &attribute) {
 
 bool isStdlibFunc(const Func *func) { return hasAttribute(func, ".stdlib"); }
 
+CallInstr *call(Func *func, const std::vector<Value *> &args) {
+  auto *M = func->getModule();
+  return M->Nr<CallInstr>(M->Nr<VarValue>(func), args);
+}
+
+Value *makeTuple(const std::vector<Value *> &args, IRModule *M) {
+  std::vector<types::Type *> types;
+  for (auto *arg : args) {
+    types.push_back(arg->getType());
+  }
+  auto *tupleType = M->getTupleType(types);
+  auto *newFunc = M->getOrRealizeMethod(tupleType, "__new__", types);
+  assert(newFunc);
+  return M->Nr<CallInstr>(M->Nr<VarValue>(newFunc), args);
+}
+
 template <typename T> bool isConst(const Value *x) {
   return isA<TemplatedConstant<T>>(x);
 }
@@ -101,7 +117,15 @@ const types::Type *getReturnType(const Func *func) {
   return cast<types::FuncType>(func->getType())->getReturnType();
 }
 
-void applySubstitutionOptimizations(PipelineFlow *p) {
+void setReturnType(Func *func, types::Type *rType) {
+  auto *M = func->getModule();
+  auto *t = cast<types::FuncType>(func->getType());
+  assert(t);
+  std::vector<types::Type *> argTypes(t->begin(), t->end());
+  func->setType(M->getFuncType(rType, argTypes));
+}
+
+void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
   auto *M = p->getModule();
 
   PipelineFlow::Stage *prev = nullptr;
@@ -118,7 +142,7 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
           auto *kmerType = genType->getBase();
           auto *kmersRevcompFunc = M->getOrRealizeFunc(
               "_kmers_revcomp", {seqType, M->getIntType()}, {kmerType});
-          assert(getReturnType(kmersRevcompFunc)->is(genType));
+          assert(kmersRevcompFunc && getReturnType(kmersRevcompFunc)->is(genType));
           cast<VarValue>(prev->getFunc())->setVar(kmersRevcompFunc);
           it = p->erase(it);
           continue;
@@ -136,7 +160,8 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
               cast<types::MemberedType>(genType->getBase())->back().getType();
           auto *kmersRevcompWithPosFunc = M->getOrRealizeFunc(
               "_kmers_revcomp_with_pos", {seqType, M->getIntType()}, {kmerType});
-          assert(getReturnType(kmersRevcompWithPosFunc)->is(genType));
+          assert(kmersRevcompWithPosFunc &&
+                 getReturnType(kmersRevcompWithPosFunc)->is(genType));
           cast<VarValue>(prev->getFunc())->setVar(kmersRevcompWithPosFunc);
           it = p->erase(it);
           continue;
@@ -153,7 +178,7 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
           auto *kmerType = genType->getBase();
           auto *kmersCanonicalFunc =
               M->getOrRealizeFunc("_kmers_canonical", {seqType}, {kmerType});
-          assert(getReturnType(kmersCanonicalFunc)->is(genType));
+          assert(kmersCanonicalFunc && getReturnType(kmersCanonicalFunc)->is(genType));
           cast<VarValue>(prev->getFunc())->setVar(kmersCanonicalFunc);
           prev->erase(prev->end() - 1); // remove step argument
           it = p->erase(it);
@@ -172,7 +197,8 @@ void applySubstitutionOptimizations(PipelineFlow *p) {
               cast<types::MemberedType>(genType->getBase())->back().getType();
           auto *kmersCanonicalWithPosFunc =
               M->getOrRealizeFunc("_kmers_canonical_with_pos", {seqType}, {kmerType});
-          assert(getReturnType(kmersCanonicalWithPosFunc)->is(genType));
+          assert(kmersCanonicalWithPosFunc &&
+                 getReturnType(kmersCanonicalWithPosFunc)->is(genType));
           cast<VarValue>(prev->getFunc())->setVar(kmersCanonicalWithPosFunc);
           prev->erase(prev->end() - 1); // remove step argument
           it = p->erase(it);
@@ -201,8 +227,7 @@ class PrefetchFunctionTransformer : public util::LambdaValueVisitor {
     if (!prefetchFunc)
       return;
 
-    std::vector<Value *> args = {self, key};
-    Value *prefetch = M->Nr<CallInstr>(M->Nr<VarValue>(prefetchFunc), args);
+    Value *prefetch = call(prefetchFunc, {self, key});
     auto *yield = M->Nr<YieldInstr>();
 
     auto *series = M->Nr<SeriesFlow>();
@@ -215,27 +240,128 @@ class PrefetchFunctionTransformer : public util::LambdaValueVisitor {
   }
 };
 
-void applyPrefetchOptimizations(PipelineFlow *p) {
+BodiedFunc *makeStageWrapperFunc(PipelineFlow::Stage *stage, Func *callee,
+                                 types::Type *inputType) {
+  auto *M = callee->getModule();
+  std::vector<types::Type *> argTypes = {inputType};
+  std::vector<std::string> argNames = {"0"};
+  int i = 1;
+  for (auto *arg : *stage) {
+    if (arg) {
+      argTypes.push_back(arg->getType());
+      argNames.push_back(std::to_string(i++));
+    }
+  }
+  auto *funcType = M->getFuncType(getReturnType(callee), argTypes);
+  auto *wrapperFunc = M->Nr<BodiedFunc>("__stage_wrapper");
+  wrapperFunc->realize(funcType, argNames);
+
+  // reorder arguments
+  std::vector<Value *> args;
+  auto it = wrapperFunc->arg_begin();
+  ++it;
+  for (auto *arg : *stage) {
+    if (arg) {
+      args.push_back(M->Nr<VarValue>(*it++));
+    } else {
+      args.push_back(M->Nr<VarValue>(wrapperFunc->arg_front()));
+    }
+  }
+
+  auto *body = M->Nr<SeriesFlow>();
+  body->push_back(M->Nr<ReturnInstr>(call(callee, args)));
+  wrapperFunc->setBody(body);
+  return wrapperFunc;
+}
+
+void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
   auto *M = p->getModule();
   PrefetchFunctionTransformer pft;
-  for (const auto &stage : *p) {
-//    if (auto *func = cast<BodiedFunc>(getFunc(stage.getFunc()))) {
-//      if (!hasAttribute(func, "prefetch"))
-//        continue;
-//
-//      auto *clone = cast<BodiedFunc>(func->clone());
-//      auto *funcType = cast<types::FuncType>(clone->getType());
-//      funcType->setReturnType(M->getGeneratorType(funcType->getReturnType()));
-//      clone->setGenerator();
-//      clone->getBody()->accept(pft);
-//
-//      std::cout << "BEFORE:" << std::endl;
-//      std::cout << *func << std::endl;
-//      std::cout << "AFTER:" << std::endl;
-//      std::cout << *clone << std::endl;
-//
-//      break; // at most one prefetch transformation per pipeline
-//    }
+  PipelineFlow::Stage *prev = nullptr;
+  for (auto it = p->begin(); it != p->end(); ++it) {
+    if (auto *func = cast<BodiedFunc>(getFunc(it->getFunc()))) {
+      if (hasAttribute(func, "prefetch")) {
+        // transform prefetch'ing function
+        auto *clone = cast<BodiedFunc>(func->clone());
+        setReturnType(clone, M->getGeneratorType(getReturnType(clone)));
+        clone->setGenerator();
+        clone->getBody()->accept(pft);
+        std::cout << "CLONE:" << std::endl << *clone << std::endl;
+
+        // make sure the arguments are in the correct order
+        auto *inputType = prev->getOutputElementType();
+        clone = makeStageWrapperFunc(&*it, clone, inputType);
+        auto *coroType = cast<types::FuncType>(clone->getType());
+
+        std::cout << "CLONE:" << std::endl << *clone << std::endl;
+
+        // vars
+        auto *statesType = M->getArrayType(coroType->getReturnType());
+        auto *width = M->getIntConstant(SCHED_WIDTH_PREFETCH);
+        auto *filled = M->Nr<Var>(M->getIntType());
+        auto *next = M->Nr<Var>(M->getIntType());
+        auto *states = M->Nr<Var>(statesType);
+
+        auto *parent = cast<BodiedFunc>(getParentFunc());
+        assert(parent);
+        parent->push_back(filled);
+        parent->push_back(next);
+        parent->push_back(states);
+
+        // state initialization
+        auto *init = M->Nr<SeriesFlow>();
+        init->push_back(M->Nr<AssignInstr>(filled, M->getIntConstant(0)));
+        init->push_back(M->Nr<AssignInstr>(next, M->getIntConstant(0)));
+        init->push_back(M->Nr<AssignInstr>(
+            states, M->Nr<StackAllocInstr>(statesType, SCHED_WIDTH_PREFETCH)));
+        insertBefore(init);
+
+        // scheduler
+        auto *intType = M->getIntType();
+        auto *intPtrType = M->getPointerType(intType);
+
+        std::vector<types::Type *> stageArgTypes;
+        std::vector<Value *> stageArgs;
+        for (auto *arg : *it) {
+          if (arg) {
+            stageArgs.push_back(arg);
+            stageArgTypes.push_back(arg->getType());
+          }
+        }
+        auto *extraArgs = makeTuple(stageArgs, M);
+        std::vector<types::Type *> argTypes = {
+            inputType,  coroType, statesType,          intPtrType,
+            intPtrType, intType,  extraArgs->getType()};
+
+        Func *schedFunc = M->getOrRealizeFunc("_dynamic_coroutine_scheduler", argTypes);
+        assert(schedFunc);
+        PipelineFlow::Stage stage(M->Nr<VarValue>(schedFunc),
+                                  {nullptr, M->Nr<VarValue>(clone),
+                                   M->Nr<VarValue>(states), M->Nr<PointerValue>(next),
+                                   M->Nr<PointerValue>(filled), width, extraArgs},
+                                  /*generator=*/true, /*parallel=*/false);
+
+        // drain
+        Func *drainFunc = M->getOrRealizeFunc("_dynamic_coroutine_scheduler_drain",
+                                              {statesType, intType});
+        std::vector<Value *> args = {M->Nr<VarValue>(states), M->Nr<VarValue>(filled)};
+
+        std::vector<PipelineFlow::Stage> drainStages = {
+            {call(drainFunc, args), {}, /*generator=*/true, /*parallel=*/false}};
+        *it = stage;
+        for (++it; it != p->end(); ++it) {
+          drainStages.push_back(it->clone());
+        }
+
+        auto *drain = M->Nr<SeriesFlow>();
+        drain->push_back(M->Nr<AssignInstr>(next, M->getIntConstant(0)));
+        drain->push_back(M->Nr<PipelineFlow>(drainStages));
+        insertAfter(drain);
+
+        break; // at most one prefetch transformation per pipeline
+      }
+    }
+    prev = &*it;
   }
 }
 

@@ -9,7 +9,13 @@ namespace transform {
 namespace pipeline {
 
 class PipelineOptimizations : public LambdaValuePass {
-  void handle(PipelineFlow *x) override;
+  const unsigned SCHED_WIDTH_PREFETCH = 16;
+  const unsigned SCHED_WIDTH_INTERALIGN = 2048;
+
+  void handle(PipelineFlow *) override;
+
+  void applySubstitutionOptimizations(PipelineFlow *);
+  void applyPrefetchOptimizations(PipelineFlow *);
 };
 
 } // namespace pipeline
