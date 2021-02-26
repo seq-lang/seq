@@ -88,6 +88,9 @@ const std::string IRModule::GET_MAGIC_NAME = "__getitem__";
 const std::string IRModule::ITER_MAGIC_NAME = "__iter__";
 const std::string IRModule::LEN_MAGIC_NAME = "__len__";
 
+const std::string IRModule::NEW_MAGIC_NAME = "__new__";
+const std::string IRModule::INIT_MAGIC_NAME = "__init__";
+
 const char IRModule::NodeId = 0;
 
 IRModule::IRModule(std::string name, std::shared_ptr<ast::Cache> cache)

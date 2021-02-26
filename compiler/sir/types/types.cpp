@@ -11,6 +11,7 @@
 #include "sir/module.h"
 #include "sir/util/iterators.h"
 #include "sir/util/visitor.h"
+#include "sir/value.h"
 
 namespace {
 std::vector<seq::ast::types::TypePtr>
@@ -45,6 +46,20 @@ std::vector<Generic> Type::doGetGenerics() const {
   }
 
   return ret;
+}
+
+Value *Type::doConstruct(std::vector<Value *> args) {
+  auto *module = getModule();
+  std::vector<Type *> argTypes;
+  for (auto *a : args)
+    argTypes.push_back(a->getType());
+
+  auto *fn = module->getOrRealizeMethod(
+      this, IRModule::NEW_MAGIC_NAME, argTypes);
+  assert(fn);
+
+  return module->Nr<CallInstr>(module->Nr<VarValue>(fn),
+                               args);
 }
 
 const char PrimitiveType::NodeId = 0;
@@ -121,6 +136,31 @@ const char RefType::NodeId = 0;
 std::ostream &RefType::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{}: ref({})"), referenceString(), *contents);
   return os;
+}
+
+Value *RefType::doConstruct(std::vector<Value *> args) {
+  auto *module = getModule();
+
+  auto *series = module->Nr<SeriesFlow>();
+  auto *newFn = module->getOrRealizeMethod(this, IRModule::NEW_MAGIC_NAME, {});
+  assert(newFn);
+
+  auto *newValue = module->Nr<CallInstr>(module->Nr<VarValue>(newFn));
+  series->push_back(newValue);
+
+  std::vector<Type *> argTypes = {newValue->getType()};
+  std::vector<Value *> newArgs = {newValue};
+  for (auto *a : args) {
+    argTypes.push_back(a->getType());
+    newArgs.push_back(a);
+  }
+
+  auto *initFn = module->getOrRealizeMethod(this, IRModule::INIT_MAGIC_NAME, argTypes);
+  assert(initFn);
+
+  return module->Nr<FlowInstr>(
+      series, module->Nr<CallInstr>(module->Nr<VarValue>(initFn),
+                                    newArgs));
 }
 
 const char FuncType::NodeId = 0;

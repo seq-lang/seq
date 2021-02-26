@@ -102,6 +102,8 @@ seq::ir::IRModule *parse(const string &argv0, const string &file, const string &
     auto module = ast::CodegenVisitor::apply(cache, move(typechecked));
     module->setSrcInfo({abs, 0, 0, 0, 0});
 
+    auto *type = module->getOrRealizeType("Dict", {module->getStringType(), module->getIntType()});
+    auto *v =(*type)();
     if (!isTest)
       LOG_TIME("[T] codegen   = {:.1f}",
                duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /

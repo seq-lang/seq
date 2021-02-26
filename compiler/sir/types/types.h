@@ -13,9 +13,13 @@
 
 #include "sir/base.h"
 #include "sir/util/visitor.h"
+#include "sir/util/packs.h"
 
 namespace seq {
 namespace ir {
+
+class Value;
+
 namespace types {
 
 class Type;
@@ -74,12 +78,18 @@ public:
   bool isAtomic() const { return getActual()->doIsAtomic(); }
 
   /// @return the ast type
-  ast::types::TypePtr getAstType() const { return astType; }
+  ast::types::TypePtr getAstType() const { return getActual()->astType; }
   /// Sets the ast type. Should not generally be used.
   /// @param t the new type
-  void setAstType(ast::types::TypePtr t) { astType = std::move(t); }
+  void setAstType(ast::types::TypePtr t) { getActual()->astType = std::move(t); }
 
   std::vector<Generic> getGenerics() const { return getActual()->doGetGenerics(); }
+
+  template <typename... Args> Value *operator()(Args &&... args) {
+    std::vector<Value *> dst;
+    util::stripPack(dst, std::forward<Args>(args)...);
+    return getActual()->doConstruct(dst);
+  }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -88,6 +98,8 @@ private:
 
   virtual std::vector<Type *> doGetUsedTypes() const { return {}; }
   virtual bool doIsAtomic() const = 0;
+
+  virtual Value *doConstruct(std::vector<Value *> args);
 };
 
 /// Type from which primitive atomic types derive.
@@ -288,6 +300,8 @@ private:
   std::vector<Type *> doGetUsedTypes() const override { return {contents}; }
 
   bool doIsAtomic() const override { return false; }
+
+  Value *doConstruct(std::vector<Value *> args) override;
 };
 
 /// Type associated with a SIR function.
