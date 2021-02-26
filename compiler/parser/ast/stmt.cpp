@@ -95,9 +95,11 @@ DelStmt::DelStmt(const DelStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) 
 string DelStmt::toString() const { return format("(del {})", expr->toString()); }
 ACCEPT_IMPL(DelStmt, ASTVisitor);
 
-PrintStmt::PrintStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}
-PrintStmt::PrintStmt(const PrintStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) {}
-string PrintStmt::toString() const { return format("(print {})", expr->toString()); }
+PrintStmt::PrintStmt(vector<ExprPtr> &&items, bool isInline)
+    : Stmt(), items(move(items)), isInline(isInline) {}
+PrintStmt::PrintStmt(const PrintStmt &stmt)
+    : Stmt(stmt), items(ast::clone(stmt.items)), isInline(stmt.isInline) {}
+string PrintStmt::toString() const { return format("(print {})", combine(items)); }
 ACCEPT_IMPL(PrintStmt, ASTVisitor);
 
 ReturnStmt::ReturnStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}

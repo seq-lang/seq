@@ -54,7 +54,7 @@ struct TypeContext : public Context<TypecheckItem> {
   struct RealizationBase {
     /// Function name
     string name;
-    /// Functiomn type
+    /// Function type
     types::TypePtr type;
     /// The return type of currently realized function
     types::TypePtr returnType;

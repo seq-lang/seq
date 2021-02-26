@@ -157,6 +157,26 @@ def enumerate(x, start: int = 0):
         yield (i,a)
         i += 1
 
+_stdout = _C.seq_stdout()
+def print(*args, sep=' ', end='\n', file=_stdout, flush=False):
+    """
+    Print args to the text stream file.
+    """
+    fp = cobj()
+    if isinstance(file, Ptr[byte]):
+        fp = file
+    else:
+        fp = file.fp
+    i = 0
+    for a in args:
+        if i:
+            _C.seq_print_full(str(sep), fp)
+        _C.seq_print_full(str(a), fp)
+        i += 1
+    _C.seq_print_full(str(end), fp)
+    if flush:
+        _C.fflush(fp)
+
 def echo(x):
     """
     Print and return argument

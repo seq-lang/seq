@@ -21,7 +21,7 @@ namespace ast {
 
 Cache::Cache(string argv0)
     : generatedSrcInfoCount(0), unboundCount(0), varCount(0), age(0), testFlags(0),
-      argv0(move(argv0)), module(nullptr) {}
+      argv0(move(argv0)), module(nullptr), typeCtx(nullptr), codegenCtx(nullptr) {}
 
 string Cache::getTemporaryVar(const string &prefix, char sigil) {
   return fmt::format("{}{}_{}", sigil ? fmt::format("{}_", sigil) : "", prefix,
@@ -46,13 +46,16 @@ types::FuncTypePtr Cache::findFunction(const string &name) const {
   return nullptr;
 }
 
-types::FuncTypePtr
-Cache::findMethod(types::ClassType *typ, const string &member,
-                  const vector<pair<string, types::TypePtr>> &args) const {
+types::FuncTypePtr Cache::findMethod(types::ClassType *typ, const string &member,
+                                     const vector<pair<string, types::TypePtr>> &args) {
   auto e = make_unique<IdExpr>(typ->name);
   e->type = typ->getClass();
   seqassert(e->type, "not a class");
-  return typeCtx->findBestMethod(e.get(), member, args);
+  int oldAge = typeCtx->age;
+  typeCtx->age = 99999;
+  auto f = typeCtx->findBestMethod(e.get(), member, args);
+  typeCtx->age = oldAge;
+  return f;
 }
 
 ir::types::Type *Cache::realizeType(types::ClassTypePtr type,
@@ -71,10 +74,11 @@ ir::types::Type *Cache::realizeType(types::ClassTypePtr type,
 
 ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
                                  const vector<types::TypePtr> &args,
-                                 const vector<types::TypePtr> &generics) {
+                                 const vector<types::TypePtr> &generics,
+                                 types::ClassTypePtr parentClass) {
   auto e = make_unique<IdExpr>(type->funcName);
   e->type = type;
-  type = typeCtx->instantiate(e.get(), type, nullptr, false)->getFunc();
+  type = typeCtx->instantiate(e.get(), type, parentClass.get(), false)->getFunc();
   if (args.size() != type->args.size())
     return nullptr;
   for (int gi = 0; gi < args.size(); gi++) {
@@ -98,13 +102,9 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
   auto tv = TypecheckVisitor(typeCtx);
   if (auto rtv = tv.realize(type)) {
     auto &f = functions[rtv->getFunc()->funcName].realizations[rtv->realizedName()];
-    auto *main = ir::cast<ir::BodiedFunc>(module->getMainFunc());
-    auto *block = ir::cast<ir::SeriesFlow>(main->getBody());
-
-    auto ctx = make_shared<CodegenContext>(shared_from_this(), block, main);
-    auto toRealize = CodegenVisitor::initializeContext(ctx);
+    auto toRealize = CodegenVisitor::initializeContext(codegenCtx);
     for (auto &fnName : toRealize)
-      CodegenVisitor(ctx).transform(functions[fnName].ast->clone());
+      CodegenVisitor(codegenCtx).transform(functions[fnName].ast->clone());
     return f.ir;
   }
   return nullptr;

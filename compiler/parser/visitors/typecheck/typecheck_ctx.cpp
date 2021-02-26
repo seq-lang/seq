@@ -287,27 +287,7 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
   //  - -1 for failed match
   int score = 0;
 
-  // 1. Assign positional arguments to slots
-  // Each slot contains a list of arg's indices
-  vector<vector<int>> slots(func->args.size() - 1);
-  seqassert(known.empty() || func->args.size() - 1 == known.size(),
-            "bad 'known' string");
-  vector<int> extra;
-  std::map<string, int> namedArgs, extraNamedArgs; // keep the map--- we need it sorted!
-  for (int ai = 0, si = 0; ai < args.size(); ai++) {
-    if (args[ai].name.empty()) {
-      while (!known.empty() && si < slots.size() && known[si])
-        si++;
-      if (si < slots.size())
-        slots[si++] = {ai};
-      else
-        extra.emplace_back(ai);
-    } else {
-      namedArgs[args[ai].name] = ai;
-    }
-  }
-  score = 2 * slots.size();
-
+  // 0. Find *args and **kwargs
   FunctionStmt *ast = nullptr;
   if (auto fn = func->getFunc())
     ast = cache->functions[fn->funcName].ast.get();
@@ -322,6 +302,28 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
             "partial *args");
   seqassert(known.empty() || kwstarArgIndex == -1 || !known[kwstarArgIndex],
             "partial **kwargs");
+
+  // 1. Assign positional arguments to slots
+  // Each slot contains a list of arg's indices
+  vector<vector<int>> slots(func->args.size() - 1);
+  seqassert(known.empty() || func->args.size() - 1 == known.size(),
+            "bad 'known' string");
+  vector<int> extra;
+  std::map<string, int> namedArgs, extraNamedArgs; // keep the map--- we need it sorted!
+  for (int ai = 0, si = 0; ai < args.size(); ai++) {
+    if (args[ai].name.empty()) {
+      while (!known.empty() && si < slots.size() && known[si])
+        si++;
+      if (si < slots.size() && (starArgIndex == -1 || si < starArgIndex))
+        slots[si++] = {ai};
+      else
+        extra.emplace_back(ai);
+    } else {
+      namedArgs[args[ai].name] = ai;
+    }
+  }
+  score = 2 * slots.size();
+
   for (auto ai : vector<int>{std::max(starArgIndex, kwstarArgIndex),
                              std::min(starArgIndex, kwstarArgIndex)})
     if (ai != -1 && !slots[ai].empty()) {

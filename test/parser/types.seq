@@ -572,9 +572,9 @@ print X.foo(x, 4), x.foo(5)
 #: 4 5
 print y.bar(1), y.bar('s'), X.Y.bar(y, True)
 #: 1
-#: 0 s
-#: 0 True
-#: 0
+#: s
+#: True
+#: 0 0 0
 
 #%% rec_class_4,barebones
 class A[T]:

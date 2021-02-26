@@ -44,7 +44,7 @@ public:
   bool hasAttr(const string &s) const { return attributes.find(s) != attributes.end(); }
 };
 
-class CodegenContext : public Context<CodegenItem> {
+struct CodegenContext : public Context<CodegenItem> {
   vector<seq::ir::BodiedFunc *> bases;
   vector<seq::ir::SeriesFlow *> series;
   vector<seq::ir::Flow *> loops;

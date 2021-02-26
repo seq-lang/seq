@@ -64,7 +64,8 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
 
   for (auto &ff : ctx->cache->classes)
     for (auto &f : ff.second.realizations)
-      ctx->addType(f.first, f.second.ir);
+      if (!ctx->find(f.first))
+        ctx->addType(f.first, f.second.ir);
 
   for (auto &ff : ctx->cache->functions)
     for (auto &f : ff.second.realizations) {
@@ -136,7 +137,8 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
           fn->setGlobal();
         }
       }
-      ctx->addFunc(f.first, ctx->functions[f.first].first);
+      if (!ctx->find(f.first))
+        ctx->addFunc(f.first, ctx->functions[f.first].first);
     }
   return ret;
 }
@@ -148,10 +150,10 @@ IRModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto *block = module->Nr<SeriesFlow>("body");
   main->setBody(block);
 
-  auto ctx = make_shared<CodegenContext>(cache, block, main);
-  initializeContext(ctx);
+  cache->codegenCtx = make_shared<CodegenContext>(cache, block, main);
+  initializeContext(cache->codegenCtx);
 
-  CodegenVisitor(ctx).transform(stmts);
+  CodegenVisitor(cache->codegenCtx).transform(stmts);
 
   return module;
 }

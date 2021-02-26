@@ -183,12 +183,13 @@ struct DelStmt : public Stmt {
 };
 
 /// Print statement (print expr).
-/// @example print a
-/// @note OCaml transforms print a, b into a SuiteStmt of PrintStmt statements
+/// @example print a, b
 struct PrintStmt : public Stmt {
-  ExprPtr expr;
+  vector<ExprPtr> items;
+  /// True if there is a dangling comma after print: print a,
+  bool isInline;
 
-  explicit PrintStmt(ExprPtr expr);
+  explicit PrintStmt(vector<ExprPtr> &&items, bool isInline);
   PrintStmt(const PrintStmt &stmt);
 
   string toString() const override;

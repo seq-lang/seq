@@ -212,6 +212,11 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
 }
 
 class PrefetchFunctionTransformer : public util::LambdaValueVisitor {
+  void handle(ReturnInstr *x) override {
+    auto *M = x->getModule();
+    x->replaceAll(M->Nr<YieldInstr>(x->getValue(), /*final=*/true));
+  }
+
   void handle(CallInstr *x) override {
     auto *func = cast<BodiedFunc>(getFunc(x->getFunc()));
     if (!func || func->getUnmangledName() != "__getitem__" || x->numArgs() != 2)

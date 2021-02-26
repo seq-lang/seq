@@ -242,17 +242,18 @@ ACCEPT_IMPL(IndexExpr, ASTVisitor);
 CallExpr::Arg CallExpr::Arg::clone() const { return {name, ast::clone(value)}; }
 
 CallExpr::CallExpr(const CallExpr &expr)
-    : Expr(expr), expr(ast::clone(expr.expr)), args(ast::clone_nop(expr.args)) {}
+    : Expr(expr), expr(ast::clone(expr.expr)), args(ast::clone_nop(expr.args)),
+      ordered(expr.ordered) {}
 CallExpr::CallExpr(ExprPtr expr, vector<CallExpr::Arg> &&a)
-    : Expr(), expr(move(expr)), args(move(a)) {}
+    : Expr(), expr(move(expr)), args(move(a)), ordered(false) {}
 CallExpr::CallExpr(ExprPtr expr, vector<ExprPtr> &&exprArgs)
-    : Expr(), expr(move(expr)) {
+    : Expr(), expr(move(expr)), ordered(false) {
   for (auto &i : exprArgs) {
     args.push_back(CallExpr::Arg{"", move(i)});
   }
 }
 CallExpr::CallExpr(ExprPtr expr, ExprPtr arg1, ExprPtr arg2, ExprPtr arg3)
-    : Expr(), expr(move(expr)) {
+    : Expr(), expr(move(expr)), ordered(false) {
   if (arg1)
     args.push_back(CallExpr::Arg{"", move(arg1)});
   if (arg2)

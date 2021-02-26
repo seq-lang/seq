@@ -1,5 +1,6 @@
 # Seq runtime functions
 from C import seq_print(str)
+from C import seq_print_full(str, cobj)
 from C import seq_strdup(cobj) -> str
 from C import seq_stdin() -> cobj
 from C import seq_stdout() -> cobj
@@ -76,6 +77,7 @@ from C import fwrite(cobj, int, int, cobj) -> int
 from C import ftell(cobj) -> int
 from C import fseek(cobj, int, i32) -> i32
 from C import fgets(cobj, int, cobj) -> cobj
+from C import fflush(cobj) -> void
 from C import getline(Ptr[cobj], Ptr[int], cobj) -> int
 
 # <stdlib.h>

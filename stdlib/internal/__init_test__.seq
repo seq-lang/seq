@@ -24,7 +24,7 @@ def next[T](g: Generator[T], default: Optional[T] = None):
             raise StopIteration()
     return g.next()
 
-from C import seq_print(str)
+from C import seq_print_full(str, cobj)
 
 class Set[T]:
     items: List[T]
@@ -103,5 +103,28 @@ def iter(t):
     return t.__iter__()
 def len(t):
     return t.__len__()
+
+from C import seq_stdout() -> cobj
+from C import fflush(cobj)
+_stdout = seq_stdout()
+def print(*args, sep=' ', end='\n', file=_stdout, flush=False):
+    """
+    Print args to the text stream file.
+    """
+    fp = cobj()
+    if isinstance(file, Ptr[byte]):
+        fp = file
+    else:
+        fp = file.fp
+    i = 0
+    for a in args:
+        if i:
+            seq_print_full(str(sep), fp)
+        seq_print_full(str(a), fp)
+        i += 1
+    seq_print_full(str(end), fp)
+    if flush:
+        fflush(fp)
+
 
 from internal.dlopen import dlsym as _dlsym
