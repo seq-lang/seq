@@ -244,7 +244,7 @@ StmtPtr parse_stmt(value val) {
   case 5:
     Return(Del, parse_expr(t));
   case 6:
-    Return(Print, parse_expr(t));
+    Return(Print, parse_list(Field(t, 0), parse_expr), Bool_val(Field(t, 1)));
   case 7:
     Return(Return, parse_optional(t, parse_expr));
   case 8:

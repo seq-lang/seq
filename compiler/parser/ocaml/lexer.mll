@@ -166,7 +166,7 @@ and read state = parse
   | "is" white+ "not" white+ { [P.ISNOT "is not"] }
   | "not" white+ "in" white+ { [P.NOTIN "not in"] }
   | "@" (("python" | "llvm") as l) white* newline { is_extern := 1; [P.AT("@"); P.ID(l); P.NL] }
-  | "print(" { [P.PRINTLP] }
+  | "print " { [P.PRINT] }
   | ident as id
     { match id with
       | "True"     -> [P.TRUE]
@@ -178,7 +178,6 @@ and read state = parse
       | "for"      -> [P.FOR]
       | "break"    -> [P.BREAK]
       | "continue" -> [P.CONTINUE]
-      | "print"    -> [P.PRINT]
       | "return"   -> [P.RETURN]
       | "yield"    -> [P.YIELD]
       | "match"    -> [P.MATCH]

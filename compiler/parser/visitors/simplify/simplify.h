@@ -243,8 +243,9 @@ public:
   ///   del a -> a = typeof(a)() (and removes a from the context)
   ///   del a[x] -> a.__delitem__(x)
   void visit(DelStmt *) override;
-  /// Transform print a to:
-  ///   seq_print(a.__str__())
+  /// Transform print a, b to:
+  ///   print(a, b)
+  /// Add end=' ' if inPlace is set.
   void visit(PrintStmt *) override;
   /// Ensure that a return is in a function.
   void visit(ReturnStmt *) override;

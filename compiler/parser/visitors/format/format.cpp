@@ -278,7 +278,7 @@ void FormatVisitor::visit(DelStmt *stmt) {
 }
 
 void FormatVisitor::visit(PrintStmt *stmt) {
-  result = fmt::format("{} {}", keyword("print"), transform(stmt->expr));
+  result = fmt::format("{} {}", keyword("print"), transform(stmt->items));
 }
 
 void FormatVisitor::visit(ReturnStmt *stmt) {

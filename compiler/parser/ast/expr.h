@@ -450,6 +450,8 @@ struct CallExpr : public Expr {
 
   ExprPtr expr;
   vector<Arg> args;
+  /// True if type-checker has processed and re-ordered args.
+  bool ordered;
 
   CallExpr(ExprPtr expr, vector<Arg> &&a);
   /// One-argument unnamed call constructor (expr(arg1)).

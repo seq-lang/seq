@@ -210,6 +210,10 @@ SEQ_FUNC seq_str_t seq_check_errno() {
 
 SEQ_FUNC void seq_print(seq_str_t str) { fwrite(str.str, 1, (size_t)str.len, stdout); }
 
+SEQ_FUNC void seq_print_full(seq_str_t str, FILE *fo) {
+  fwrite(str.str, 1, (size_t)str.len, fo);
+}
+
 SEQ_FUNC void *seq_stdin() { return stdin; }
 
 SEQ_FUNC void *seq_stdout() { return stdout; }

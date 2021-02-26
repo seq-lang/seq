@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <unwind.h>
 
@@ -52,5 +53,6 @@ SEQ_FUNC seq_str_t seq_str_ptr(void *p);
 SEQ_FUNC seq_str_t seq_str_tuple(seq_str_t *strs, seq_int_t n);
 
 SEQ_FUNC void seq_print(seq_str_t str);
+SEQ_FUNC void seq_print_full(seq_str_t str, FILE *fo);
 
 #endif /* SEQ_LIB_H */

@@ -62,7 +62,7 @@ type tstmt =
   | Expr of texpr ann
   | Assign of (texpr ann * texpr ann option * texpr ann option)
   | Del of texpr ann
-  | Print of texpr ann
+  | Print of (texpr ann list * bool)
   | Return of texpr ann option
   | Yield of texpr ann option
   | Assert of (texpr ann * texpr ann option)

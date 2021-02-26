@@ -113,8 +113,12 @@ void SimplifyVisitor::visit(DelStmt *stmt) {
 }
 
 void SimplifyVisitor::visit(PrintStmt *stmt) {
-  resultStmt = N<ExprStmt>(transform(N<CallExpr>(
-      N<IdExpr>("seq_print"), N<CallExpr>(N<DotExpr>(clone(stmt->expr), "__str__")))));
+  vector<CallExpr::Arg> args;
+  for (auto &i : stmt->items)
+    args.emplace_back(CallExpr::Arg{"", transform(i)});
+  if (stmt->isInline)
+    args.emplace_back(CallExpr::Arg{"end", N<StringExpr>(" ")});
+  resultStmt = N<ExprStmt>(N<CallExpr>(transform(N<IdExpr>("print")), move(args)));
 }
 
 void SimplifyVisitor::visit(ReturnStmt *stmt) {

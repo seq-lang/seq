@@ -57,6 +57,9 @@ class File:
         _C.fseek(self.fp, offset, i32(whence))
         self._errcheck("error in seek")
 
+    def flush(self):
+        _C.fflush(self.fp)
+
     def close(self):
         if self.fp:
             _C.fclose(self.fp)

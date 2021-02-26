@@ -973,56 +973,62 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
 
   // Handle named and default arguments
   vector<CallExpr::Arg> args;
-  ctx->reorderNamedArgs(
-      calleeFn.get(), expr->args,
-      [&](int starArgIndex, int kwstarArgIndex, const vector<vector<int>> &slots) {
-        ctx->addBlock(); // add generics for default arguments.
-        addFunctionGenerics(calleeFn->getFunc().get());
-        for (int si = 0, pi = 0; si < slots.size(); si++) {
-          if (si == starArgIndex) {
-            vector<ExprPtr> extra;
-            for (auto &e : slots[si]) {
-              if (expr->args[e].value->getEllipsis())
-                error(expr->args[e].value, "cannot pass an ellipsis to *args");
-              extra.push_back(move(expr->args[e].value));
+  if (expr->ordered)
+    args = move(expr->args);
+  else {
+    ctx->reorderNamedArgs(
+        calleeFn.get(), expr->args,
+        [&](int starArgIndex, int kwstarArgIndex, const vector<vector<int>> &slots) {
+          ctx->addBlock(); // add generics for default arguments.
+          addFunctionGenerics(calleeFn->getFunc().get());
+          for (int si = 0, pi = 0; si < slots.size(); si++) {
+            if (si == starArgIndex) {
+              vector<ExprPtr> extra;
+              for (auto &e : slots[si]) {
+                if (expr->args[e].value->getEllipsis())
+                  error(expr->args[e].value, "cannot pass an ellipsis to *args");
+                extra.push_back(move(expr->args[e].value));
+              }
+              args.push_back({"", transform(N<TupleExpr>(move(extra)))});
+            } else if (si == kwstarArgIndex) {
+              vector<string> names;
+              vector<CallExpr::Arg> values;
+              for (auto &e : slots[si]) {
+                if (expr->args[e].value->getEllipsis())
+                  error(expr->args[e].value, "cannot pass an ellipsis to **kwargs");
+                names.emplace_back(expr->args[e].name);
+                values.emplace_back(CallExpr::Arg{"", move(expr->args[e].value)});
+              }
+              auto kwName = generateTupleStub(names.size(), "KwTuple", names);
+              args.push_back(
+                  {"", transform(N<CallExpr>(N<IdExpr>(kwName), move(values)))});
+            } else if (slots[si].empty()) {
+              if (!known.empty() && known[si])
+                args.push_back({"", transform(N<IndexExpr>(N<IdExpr>(partialVar),
+                                                           N<IntExpr>(pi++)))});
+              else {
+                auto es = ast->args[si].deflt->toString();
+                if (in(ctx->defaultCallDepth, es))
+                  error("recursive default arguments");
+                ctx->defaultCallDepth.insert(es);
+                args.push_back({"", transform(clone(ast->args[si].deflt))});
+                ctx->defaultCallDepth.erase(es);
+              }
+            } else {
+              seqassert(slots[si].size() == 1, "call transformation failed");
+              args.push_back({"", move(expr->args[slots[si][0]].value)});
             }
-            args.push_back({"", transform(N<TupleExpr>(move(extra)))});
-          } else if (si == kwstarArgIndex) {
-            vector<string> names;
-            vector<CallExpr::Arg> values;
-            for (auto &e : slots[si]) {
-              if (expr->args[e].value->getEllipsis())
-                error(expr->args[e].value, "cannot pass an ellipsis to **kwargs");
-              names.emplace_back(expr->args[e].name);
-              values.emplace_back(CallExpr::Arg{"", move(expr->args[e].value)});
-            }
-            auto name = generateTupleStub(names.size(), "KwTuple", names);
-            args.push_back({"", transform(N<CallExpr>(N<IdExpr>(name), move(values)))});
-          } else if (slots[si].empty()) {
-            if (!known.empty() && known[si])
-              args.push_back({"", transform(N<IndexExpr>(N<IdExpr>(partialVar),
-                                                         N<IntExpr>(pi++)))});
-            else {
-              auto es = ast->args[si].deflt->toString();
-              if (in(ctx->defaultCallDepth, es))
-                error("recursive default arguments");
-              ctx->defaultCallDepth.insert(es);
-              args.push_back({"", transform(clone(ast->args[si].deflt))});
-              ctx->defaultCallDepth.erase(es);
-            }
-          } else {
-            seqassert(slots[si].size() == 1, "call transformation failed");
-            args.push_back({"", move(expr->args[slots[si][0]].value)});
           }
-        }
-        ctx->popBlock();
-        return 0;
-      },
-      [&](const string &errorMsg) {
-        error("{}", errorMsg);
-        return -1;
-      },
-      known);
+          ctx->popBlock();
+          return 0;
+        },
+        [&](const string &errorMsg) {
+          error("{}", errorMsg);
+          return -1;
+        },
+        known);
+    expr->ordered = true;
+  }
 
   // Typecheck given arguments with the expected (signature) types.
   bool unificationsDone = true;

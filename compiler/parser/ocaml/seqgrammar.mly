@@ -19,7 +19,7 @@
 /* keywords */
 %token IF ELSE ELIF MATCH CASE FOR WHILE CONTINUE BREAK TRY EXCEPT FINALLY THROW WITH
 %token DEF RETURN YIELD LAMBDA CLASS TYPEOF AS
-%token IMPORT FROM GLOBAL PRINT PRINTLP PASS ASSERT DEL TRUE FALSE NONE
+%token IMPORT FROM GLOBAL PRINT PASS ASSERT DEL TRUE FALSE NONE
 /* %token ARROW */
 /* operators */
 %token<string> EQ WALRUS ELLIPSIS ADD SUB MUL DIV FDIV POW MOD
@@ -141,7 +141,6 @@ arith_expr:
   ADD | SUB | MUL | DIV | FDIV | MOD | POW | AT | B_AND | B_OR | B_XOR | B_LSH | B_RSH { $1 }
 arith_term:
   | atom { $1 }
-  | PRINTLP FL(COMMA, call_term) RP { $loc, Call (($loc($1), Id "echo"), $2) }
   | arith_term LP FL(COMMA, call_term) RP { $loc, Call ($1, $3) }
   | arith_term LP expr comprehension RP /* Generator: foo(x for x in y) */
     { $loc, Call ($1, [None, (($startpos($2), $endpos($5)), Generator ($3, $4))]) }
@@ -177,7 +176,7 @@ small_statement:
   | ASSERT expr { [$loc, Assert ($2, None)] }
   | ASSERT expr COMMA STRING { [$loc, Assert ($2, Some ($loc($4), String $4))] }
   | GLOBAL FLNE(COMMA, ID) { List.map (fun e -> $loc, Global e) $2 }
-  | print_statement { $1 }
+  | PRINT FL_HAS(COMMA, expr) { [$loc, Print (fst $2, snd $2)] }
   | import_statement { $1 }
   | assign_statement { $1 }
 small_single_statement:
@@ -190,13 +189,6 @@ small_single_statement:
     { $loc, Yield (match $2 with [] -> None | [e] -> Some e | l -> Some ($loc, Tuple l)) }
   | YIELD FROM expr { $loc, YieldFrom $3 }
   | THROW expr { $loc, Throw $2 }
-print_statement:
-  | PRINT FL_HAS(COMMA, expr)
-    { let term, len = (if snd $2 then " " else "\n"), List.length (fst $2) in
-      if len = 0 then [$loc, Print ($loc, String ("", term))]
-      else List.concat (List.mapi (fun i e -> [fst e, Print e;
-                                               fst e, Print (fst e, String ("", if i < len - 1 then " " else term))])
-                                  (fst $2)) }
 
 single_statement:
   | NL { $loc, Pass () }

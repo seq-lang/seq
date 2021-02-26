@@ -37,7 +37,7 @@ print zz, zz.__class__ #: 1.11 Optional[float]
 
 #%% binary,barebones
 @extend
-class int:
+class float:
     def __add__(self, i: int): print 'add'; return 0
     def __sub__(self, i: int): print 'sub'; return 0
     def __mul__(self, i: int): print 'mul'; return 0
@@ -57,7 +57,7 @@ class int:
     def __and__(self, i: int): print 'and'; return 0
     def __or__(self, i: int): print 'or'; return 0
     def __xor__(self, i: int): print 'xor'; return 0
-a = 5
+a = 5.0
 a + 1 #: add
 a - 1 #: sub
 a * 2 #: mul

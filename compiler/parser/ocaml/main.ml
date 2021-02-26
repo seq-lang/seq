@@ -108,8 +108,6 @@ let print_token t =
   | ADD s -> sprintf "ADD(%s)" s
   | EXTERN s -> sprintf "EXTERN(\n%s)" s
   | WALRUS s -> ":="
-  | PRINTLP -> "print("
-  (* | ARROW -> "=>" *)
 
 
 module I = Seqgrammar.MenhirInterpreter
