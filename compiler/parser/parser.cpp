@@ -102,11 +102,6 @@ seq::ir::IRModule *parse(const string &argv0, const string &file, const string &
     auto module = ast::CodegenVisitor::apply(cache, move(typechecked));
     module->setSrcInfo({abs, 0, 0, 0, 0});
 
-    auto kt = module->getOrRealizeType("Kmer", {ir::types::Generic(10)});
-    auto it = module->getOrRealizeType("MyIndex", {kt});
-    auto prefetchFunc = module->getOrRealizeMethod(it, "__prefetch__", {it, kt});
-    LOG("{}", prefetchFunc ? "ok" : "-");
-
     if (!isTest)
       LOG_TIME("[T] codegen   = {:.1f}",
                duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /

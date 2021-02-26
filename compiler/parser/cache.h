@@ -218,7 +218,8 @@ public:
   /// foo[T](...)). If a generic is used as an argument, it will be auto-deduced. Pass
   /// only if a generic cannot be deduced from the provided args.
   ir::Func *realizeFunction(types::FuncTypePtr type, const vector<types::TypePtr> &args,
-                            const vector<types::TypePtr> &generics = {});
+                            const vector<types::TypePtr> &generics = {},
+                            types::ClassTypePtr parentClass = nullptr);
 
   ir::types::Type *makeTuple(const vector<types::TypePtr> &types);
   ir::types::Type *makeFunction(const vector<types::TypePtr> &types);

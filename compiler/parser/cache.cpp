@@ -74,10 +74,11 @@ ir::types::Type *Cache::realizeType(types::ClassTypePtr type,
 
 ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
                                  const vector<types::TypePtr> &args,
-                                 const vector<types::TypePtr> &generics) {
+                                 const vector<types::TypePtr> &generics,
+                                 types::ClassTypePtr parentClass) {
   auto e = make_unique<IdExpr>(type->funcName);
   e->type = type;
-  type = typeCtx->instantiate(e.get(), type, nullptr, false)->getFunc();
+  type = typeCtx->instantiate(e.get(), type, parentClass.get(), false)->getFunc();
   if (args.size() != type->args.size())
     return nullptr;
   for (int gi = 0; gi < args.size(); gi++) {
@@ -101,7 +102,7 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
   auto tv = TypecheckVisitor(typeCtx);
   if (auto rtv = tv.realize(type)) {
     auto &f = functions[rtv->getFunc()->funcName].realizations[rtv->realizedName()];
-    auto toRealize = CodegenVisitor::initializeContext(ctx);
+    auto toRealize = CodegenVisitor::initializeContext(codegenCtx);
     for (auto &fnName : toRealize)
       CodegenVisitor(codegenCtx).transform(functions[fnName].ast->clone());
     return f.ir;
