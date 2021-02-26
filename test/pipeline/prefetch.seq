@@ -1,18 +1,20 @@
+from bio import *
+
 class MyIndex[K]:
     special: K
     getitem_calls: int
     prefetch_calls: int
 
-    def __init__(self: MyIndex[K], special: K):
+    def __init__(self, special: K):
         self.special = special
         self.getitem_calls = 0
         self.prefetch_calls = 0
 
-    def __getitem__(self: MyIndex[K], k: K):
+    def __getitem__(self, k: K):
         self.getitem_calls += 1
         return 1 if k == self.special else 0
 
-    def __prefetch__(self: MyIndex[K], k: K):
+    def __prefetch__(self, k: K):
         self.prefetch_calls += 1
 
 def lookup1[K](kmer: K, idx: MyIndex[K]):
@@ -33,7 +35,7 @@ def lookup3[K](kmer: K, idx: MyIndex[K]):
         idx[~kmer]  # issues prefetch
         return (kmer, idx[kmer])
 
-type K = Kmer[3]
+K = Kmer[3]
 
 @test
 def test_prefetch_transformation():

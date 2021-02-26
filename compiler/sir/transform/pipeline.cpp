@@ -291,14 +291,11 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
         setReturnType(clone, M->getGeneratorType(getReturnType(clone)));
         clone->setGenerator();
         clone->getBody()->accept(pft);
-        std::cout << "CLONE:" << std::endl << *clone << std::endl;
 
         // make sure the arguments are in the correct order
         auto *inputType = prev->getOutputElementType();
         clone = makeStageWrapperFunc(&*it, clone, inputType);
         auto *coroType = cast<types::FuncType>(clone->getType());
-
-        std::cout << "CLONE:" << std::endl << *clone << std::endl;
 
         // vars
         auto *statesType = M->getArrayType(coroType->getReturnType());
@@ -371,10 +368,8 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
 }
 
 void PipelineOptimizations::handle(PipelineFlow *x) {
-  std::cout << "BEFORE: " << *x << std::endl;
   applySubstitutionOptimizations(x);
   applyPrefetchOptimizations(x);
-  std::cout << "AFTER:  " << *x << std::endl << std::endl;
 }
 
 } // namespace pipeline
