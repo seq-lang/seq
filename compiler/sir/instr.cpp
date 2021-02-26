@@ -329,16 +329,16 @@ int YieldInstr::doReplaceUsedValue(int id, Value *newValue) {
 
 std::ostream &YieldInstr::doFormat(std::ostream &os) const {
   if (value) {
-    fmt::print(os, FMT_STRING("yield({})"), *value);
+    fmt::print(os, FMT_STRING("yield{}({})"), final ? "_final" : "", *value);
   } else {
-    os << "yield()";
+    os << (final ? "yield_final()" : "yield()");
   }
   return os;
 }
 
 Value *YieldInstr::doClone() const {
   return getModule()->N<YieldInstr>(getSrcInfo(), value ? value->clone() : nullptr,
-                                    getName());
+                                    final, getName());
 }
 
 const char ThrowInstr::NodeId = 0;

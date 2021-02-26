@@ -1625,7 +1625,7 @@ void LLVMVisitor::visit(const TryCatchFlow *x) {
     tc.excFlag = builder.CreateAlloca(builder.getInt8Ty());
     tc.catchStore = builder.CreateAlloca(padType);
     tc.delegateDepth = builder.CreateAlloca(builder.getInt64Ty());
-    tc.retStore = func->getReturnType()->isVoidTy()
+    tc.retStore = (coro.exit || func->getReturnType()->isVoidTy())
                       ? nullptr
                       : builder.CreateAlloca(func->getReturnType());
 
@@ -1677,7 +1677,9 @@ void LLVMVisitor::visit(const TryCatchFlow *x) {
         llvm::BasicBlock::Create(context, "trycatch.finally.return", func);
     theSwitch->addCase(excStateReturn, finallyReturn);
     builder.SetInsertPoint(finallyReturn);
-    if (tc.retStore) {
+    if (coro.exit) {
+      builder.CreateBr(coro.exit);
+    } else if (tc.retStore) {
       llvm::Value *retVal = builder.CreateLoad(tc.retStore);
       builder.CreateRet(retVal);
     } else {
@@ -2235,17 +2237,18 @@ void LLVMVisitor::visit(const ContinueInstr *x) {
 }
 
 void LLVMVisitor::visit(const ReturnInstr *x) {
-  const bool voidReturn = !bool(x->getValue());
-  if (!voidReturn) {
+  if (x->getValue()) {
     process(x->getValue());
   }
   builder.SetInsertPoint(block);
   if (coro.exit) {
-    if (!voidReturn) {
-      assert(coro.promise);
-      builder.CreateStore(value, coro.promise);
+    if (auto *tc = getInnermostTryCatchBeforeLoop()) {
+      auto *excStateReturn = builder.getInt8(TryCatchData::State::RETURN);
+      builder.CreateStore(excStateReturn, tc->excFlag);
+      builder.CreateBr(tc->finallyBlock);
+    } else {
+      builder.CreateBr(coro.exit);
     }
-    builder.CreateBr(coro.exit);
   } else {
     if (auto *tc = getInnermostTryCatchBeforeLoop()) {
       auto *excStateReturn = builder.getInt8(TryCatchData::State::RETURN);
@@ -2256,7 +2259,7 @@ void LLVMVisitor::visit(const ReturnInstr *x) {
       }
       builder.CreateBr(tc->finallyBlock);
     } else {
-      if (!voidReturn) {
+      if (x->getValue()) {
         builder.CreateRet(value);
       } else {
         builder.CreateRetVoid();
@@ -2267,11 +2270,29 @@ void LLVMVisitor::visit(const ReturnInstr *x) {
 }
 
 void LLVMVisitor::visit(const YieldInstr *x) {
-  if (x->getValue()) {
-    process(x->getValue());
-    makeYield(value);
+  if (x->isFinal()) {
+    if (x->getValue()) {
+      assert(coro.promise);
+      process(x->getValue());
+      builder.SetInsertPoint(block);
+      builder.CreateStore(value, coro.promise);
+    }
+    builder.SetInsertPoint(block);
+    if (auto *tc = getInnermostTryCatchBeforeLoop()) {
+      auto *excStateReturn = builder.getInt8(TryCatchData::State::RETURN);
+      builder.CreateStore(excStateReturn, tc->excFlag);
+      builder.CreateBr(tc->finallyBlock);
+    } else {
+      builder.CreateBr(coro.exit);
+    }
+    block = llvm::BasicBlock::Create(context, "yield.new", func);
   } else {
-    makeYield(nullptr);
+    if (x->getValue()) {
+      process(x->getValue());
+      makeYield(value);
+    } else {
+      makeYield(nullptr);
+    }
   }
 }
 

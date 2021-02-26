@@ -173,7 +173,7 @@ types::Type *IRModule::getStringType() {
 }
 
 types::Type *IRModule::getPointerType(types::Type *base) {
-  return getOrRealizeType("Pointer", {base});
+  return getOrRealizeType("Ptr", {base});
 }
 
 types::Type *IRModule::getArrayType(types::Type *base) {
@@ -181,11 +181,11 @@ types::Type *IRModule::getArrayType(types::Type *base) {
 }
 
 types::Type *IRModule::getGeneratorType(types::Type *base) {
-  return getOrRealizeType("Array", {base});
+  return getOrRealizeType("Generator", {base});
 }
 
 types::Type *IRModule::getOptionalType(types::Type *base) {
-  return getOrRealizeType("Array", {base});
+  return getOrRealizeType("Optional", {base});
 }
 
 types::Type *IRModule::getFuncType(types::Type *rType,

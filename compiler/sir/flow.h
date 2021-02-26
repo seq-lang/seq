@@ -450,7 +450,9 @@ public:
     /// @return whether this stage is parallel
     bool isParallel() const { return parallel; }
     /// @return the output type of this stage
-    const types::Type *getOutputType() const;
+    types::Type *getOutputType() const;
+    /// @return the output element type of this stage
+    types::Type *getOutputElementType() const;
     /// @return deep copy of this stage; used to clone pipelines
     Stage clone() const;
 

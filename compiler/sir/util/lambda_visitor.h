@@ -30,9 +30,14 @@ private:
 public:
   void visit(IRModule *m) override {
     nodeStack.push_back(m);
+    nodeStack.push_back(m->getMainFunc());
     process(m->getMainFunc());
-    for (auto *s : *m)
+    nodeStack.pop_back();
+    for (auto *s : *m) {
+      nodeStack.push_back(s);
       process(s);
+      nodeStack.pop_back();
+    }
     nodeStack.pop_back();
   }
 
@@ -48,11 +53,13 @@ public:
   LAMBDA_VISIT(PointerValue);
 
   void visit(seq::ir::SeriesFlow *v) override {
+    nodeStack.push_back(v);
     for (auto it = v->begin(); it != v->end(); ++it) {
       itStack.push_back(it);
       process(*it);
       itStack.pop_back();
     }
+    nodeStack.pop_back();
   }
 
   LAMBDA_VISIT(IfFlow);

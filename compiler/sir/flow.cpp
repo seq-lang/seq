@@ -265,13 +265,29 @@ int TryCatchFlow::doReplaceUsedVariable(int id, Var *newVar) {
 
 const char PipelineFlow::NodeId = 0;
 
-const types::Type *PipelineFlow::Stage::getOutputType() const {
+types::Type *PipelineFlow::Stage::getOutputType() const {
   if (args.empty()) {
     return func->getType();
   } else {
-    auto *funcType = func->getType()->as<types::FuncType>();
+    auto *funcType = cast<types::FuncType>(func->getType());
     assert(funcType);
     return funcType->getReturnType();
+  }
+}
+
+types::Type *PipelineFlow::Stage::getOutputElementType() const {
+  if (args.empty()) {
+    return func->getType();
+  } else {
+    auto *funcType = cast<types::FuncType>(func->getType());
+    assert(funcType);
+    if (isGenerator()) {
+      auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
+      assert(genType);
+      return genType->getBase();
+    } else {
+      return funcType->getReturnType();
+    }
   }
 }
 
@@ -300,7 +316,7 @@ std::ostream &PipelineFlow::doFormat(std::ostream &os) const {
 PipelineFlow::Stage PipelineFlow::Stage::clone() const {
   std::vector<Value *> clonedArgs;
   for (const auto *arg : *this)
-    clonedArgs.push_back(arg->clone());
+    clonedArgs.push_back(arg ? arg->clone() : nullptr);
   return {func->clone(), std::move(clonedArgs), generator, parallel};
 }
 

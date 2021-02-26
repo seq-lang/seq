@@ -511,12 +511,14 @@ class YieldInstr : public AcceptorExtend<YieldInstr, Instr> {
 private:
   /// the value
   Value *value;
+  /// whether this yield is final
+  bool final;
 
 public:
   static const char NodeId;
 
-  explicit YieldInstr(Value *value = nullptr, std::string name = "")
-      : AcceptorExtend(std::move(name)), value(value) {}
+  explicit YieldInstr(Value *value = nullptr, bool final = false, std::string name = "")
+      : AcceptorExtend(std::move(name)), value(value), final(final) {}
 
   /// @return the value
   Value *getValue() { return value; }
@@ -525,6 +527,12 @@ public:
   /// Sets the value.
   /// @param v the new value
   void setValue(Value *v) { value = v; }
+
+  /// @return if this yield is final
+  bool isFinal() const { return final; }
+  /// Sets whether this yield is final.
+  /// @param f true if final
+  void setFinal(bool f = true) { final = f; }
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
