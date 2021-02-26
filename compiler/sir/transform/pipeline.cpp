@@ -285,7 +285,7 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
   PipelineFlow::Stage *prev = nullptr;
   for (auto it = p->begin(); it != p->end(); ++it) {
     if (auto *func = cast<BodiedFunc>(getFunc(it->getFunc()))) {
-      if (hasAttribute(func, "prefetch")) {
+      if (!it->isGenerator() && hasAttribute(func, "prefetch")) {
         // transform prefetch'ing function
         auto *clone = cast<BodiedFunc>(func->clone());
         setReturnType(clone, M->getGeneratorType(getReturnType(clone)));
