@@ -53,6 +53,7 @@ namespace ast {
 /// Forward declarations
 struct SimplifyContext;
 struct TypeContext;
+struct CodegenContext;
 
 /**
  * Cache encapsulation that holds data structures shared across various transformation
@@ -178,8 +179,9 @@ struct Cache : public std::enable_shared_from_this<Cache> {
   /// corresponding Function instance.
   unordered_map<string, Function> functions;
 
-  /// Pointer to the typechecking context needed for later type realization.
+  /// Pointer to the later contexts needed for IR API access.
   shared_ptr<TypeContext> typeCtx;
+  shared_ptr<CodegenContext> codegenCtx;
 
 public:
   explicit Cache(string argv0 = "");
@@ -204,7 +206,7 @@ public:
   /// Find the class method in a given class type that best matches the given arguments.
   /// Returns an _uninstantiated_ type.
   types::FuncTypePtr findMethod(types::ClassType *typ, const string &member,
-                                const vector<pair<string, types::TypePtr>> &args) const;
+                                const vector<pair<string, types::TypePtr>> &args);
 
   /// Given a class type and the matching generic vector, instantiate the type and
   /// realize it.
