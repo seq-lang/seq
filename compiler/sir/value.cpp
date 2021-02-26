@@ -147,7 +147,7 @@ Value *Value::doBinaryOp(const std::string &name, Value &other) {
   return (*fnVal)(*this, other);
 }
 
-Value *Value::doCall(const vector<Value *> &args) {
+Value *Value::doCall(const std::vector<Value *> &args) {
   auto *module = getModule();
   return module->Nr<CallInstr>(this, args);
 }

@@ -163,6 +163,7 @@ set(SEQ_HPPFILES
         compiler/sir/util/iterators.h
         compiler/sir/util/lambda_visitor.h
         compiler/sir/util/matching.h
+        compiler/sir/util/packs.h
         compiler/sir/util/visitor.h
         compiler/sir/value.h
         compiler/sir/var.h
