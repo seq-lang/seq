@@ -54,12 +54,10 @@ Value *Type::doConstruct(std::vector<Value *> args) {
   for (auto *a : args)
     argTypes.push_back(a->getType());
 
-  auto *fn = module->getOrRealizeMethod(
-      this, IRModule::NEW_MAGIC_NAME, argTypes);
+  auto *fn = module->getOrRealizeMethod(this, IRModule::NEW_MAGIC_NAME, argTypes);
   assert(fn);
 
-  return module->Nr<CallInstr>(module->Nr<VarValue>(fn),
-                               args);
+  return module->Nr<CallInstr>(module->Nr<VarValue>(fn), args);
 }
 
 const char PrimitiveType::NodeId = 0;
@@ -159,8 +157,7 @@ Value *RefType::doConstruct(std::vector<Value *> args) {
   assert(initFn);
 
   return module->Nr<FlowInstr>(
-      series, module->Nr<CallInstr>(module->Nr<VarValue>(initFn),
-                                    newArgs));
+      series, module->Nr<CallInstr>(module->Nr<VarValue>(initFn), newArgs));
 }
 
 const char FuncType::NodeId = 0;

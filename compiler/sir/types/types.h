@@ -12,8 +12,8 @@
 #include "util/fmt/ostream.h"
 
 #include "sir/base.h"
-#include "sir/util/visitor.h"
 #include "sir/util/packs.h"
+#include "sir/util/visitor.h"
 
 namespace seq {
 namespace ir {
