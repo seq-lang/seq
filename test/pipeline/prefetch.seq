@@ -42,7 +42,7 @@ def lookup4(kmer, idx, v):
 K = Kmer[3]
 
 @test
-def test_prefetch_transformation():
+def test_prefetch_transformation(s):
     idx1 = MyIndex[K](K())
     idx2 = MyIndex[K](K())
     idx3 = MyIndex[K](K())
@@ -69,7 +69,13 @@ def test_prefetch_transformation():
     assert idx3.prefetch_calls == 5 * idx2.prefetch_calls
     assert idx4.getitem_calls == idx2.getitem_calls
     assert idx4.prefetch_calls == idx2.prefetch_calls
-test_prefetch_transformation()
+
+test_prefetch_transformation(s'')
+test_prefetch_transformation(s'A')
+test_prefetch_transformation(s'ACG')
+test_prefetch_transformation(s'ACGTA')
+test_prefetch_transformation(s'ACGTACGTAAAACGTACGTAAAACGTACGT')
+test_prefetch_transformation(s'ACGTACGTAAAACGTACGTAAAACGTACGTACGTACGTAAAACGTACGTAAAACGTACGTACGTACGTAAAACGTACGTAAAACGTACGTACGTACGTAAAACGTACGTAAAACGTACGT')
 
 @test
 def test_list_prefetch():
