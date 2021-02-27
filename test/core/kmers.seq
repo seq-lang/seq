@@ -160,7 +160,7 @@ def test_kmer_revcomp[K: int](path: str):
 
     assert v1 == v2
 
-testfile = 'test/data/MT-Human.fa'
+testfile = 'test/data/MT-human.fa'
 test_kmer_revcomp[1](testfile)
 test_kmer_revcomp[2](testfile)
 test_kmer_revcomp[3](testfile)
