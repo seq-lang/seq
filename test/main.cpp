@@ -264,15 +264,23 @@ INSTANTIATE_TEST_SUITE_P(
     ),
     getTestNameFromParam);
 
-// INSTANTIATE_TEST_SUITE_P(
-//     PipelineTests, SeqTest,
-//     testing::Combine(testing::Values("pipeline/parallel.seq",
-//                                      "pipeline/prefetch.seq",
-//                                      "pipeline/revcomp_opt.seq",
-//                                      "pipeline/canonical_opt.seq",
-//                                      "pipeline/interalign.seq"),
-//                      testing::Values(true, false)),
-//     getTestNameFromParam);
+INSTANTIATE_TEST_SUITE_P(
+    PipelineTests, SeqTest,
+    testing::Combine(
+      testing::Values(
+        "pipeline/parallel.seq",
+        "pipeline/prefetch.seq",
+        "pipeline/revcomp_opt.seq",
+        "pipeline/canonical_opt.seq",
+        "pipeline/interalign.seq"
+      ),
+      testing::Values(true, false),
+      testing::Values(""),
+      testing::Values(""),
+      testing::Values(0),
+      testing::Values(false)
+    ),
+    getTestNameFromParam);
 
 INSTANTIATE_TEST_SUITE_P(
     StdlibTests, SeqTest,
@@ -286,8 +294,7 @@ INSTANTIATE_TEST_SUITE_P(
         "stdlib/statistics_test.seq",
         "stdlib/sort_test.seq",
         "stdlib/heapq_test.seq",
-        "python/pybridge.seq",
-        "core/empty.seq"
+        "python/pybridge.seq"
       ),
       testing::Values(true, false),
       testing::Values(""),

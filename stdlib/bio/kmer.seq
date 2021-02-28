@@ -21,10 +21,34 @@ class Kmer[K: int]:
             if c > 3:
                 raise ValueError("sequence contains ambiguous bases")
             if K != 1:
-                n <<= two  # LLVM makes this a poisin value if i2
+                n <<= two  # LLVM makes this a poison value if i2
             n |= UInt[2*K](c)
             i += 1
         return Kmer[K](n.__revcomp__() if b else n)
+
+    def _make_fwd(p: Ptr[byte], L: int) -> Kmer[K]:
+        two = UInt[2*K](2)
+        n = UInt[2*K](0)
+        i = 0
+        while i < L:
+            c = seq._encz(p[i])
+            if K != 1:
+                n <<= two  # LLVM makes this a poison value if i2
+            n |= UInt[2*K](c)
+            i += 1
+        return Kmer[K](n)
+
+    def _make_rev(p: Ptr[byte], L: int) -> Kmer[K]:
+        two = UInt[2*K](2)
+        n = UInt[2*K](0)
+        i = L - 1
+        while i >= 0:
+            c = 3 - seq._encz(p[i])
+            if K != 1:
+                n <<= two  # LLVM makes this a poison value if i2
+            n |= UInt[2*K](c)
+            i -= 1
+        return Kmer[K](n)
 
     def __new__(s: seq) -> Kmer[K]:
         return Kmer[K](s.ptr, len(s), s.len < 0)
@@ -73,6 +97,28 @@ class Kmer[K: int]:
             i += 1
         return Kmer[K](n)
 
+    def _lsh_fwd(self, p: ptr[byte], L: int):
+        two = UInt[2*K](2)
+        n = self.x
+        i = 0
+        while i < L:
+            c = seq._encz(p[i])
+            n <<= two
+            n |= UInt[2*K](c)
+            i += 1
+        return Kmer[K](n)
+
+    def _lsh_rev(self, p: ptr[byte], L: int):
+        two = UInt[2*K](2)
+        n = self.x
+        i = L - 1
+        while i >= 0:
+            c = 3 - seq._encz(p[i])
+            n <<= two
+            n |= UInt[2*K](c)
+            i -= 1
+        return Kmer[K](n)
+
     def __rshift__(self, s: seq):
         two = UInt[2*K](2)
         n = self.x
@@ -85,6 +131,30 @@ class Kmer[K: int]:
             n >>= two
             n |= (UInt[2*K](c) << sh)
             i += 1
+        return Kmer[K](n)
+
+    def _rsh_fwd(self, p: ptr[byte], L: int):
+        two = UInt[2*K](2)
+        n = self.x
+        i = 0
+        while i < L:
+            c = seq._encz(p[i])
+            sh = UInt[2*K](2*(K - i - 1))
+            n >>= two
+            n |= (UInt[2*K](c) << sh)
+            i += 1
+        return Kmer[K](n)
+
+    def _rsh_rev(self, p: ptr[byte], L: int):
+        two = UInt[2*K](2)
+        n = self.x
+        i = L - 1
+        while i >= 0:
+            c = ~seq._encz(p[i])
+            sh = UInt[2*K](2*(K - i - 1))
+            n >>= two
+            n |= (UInt[2*K](c) << sh)
+            i -= 1
         return Kmer[K](n)
 
     def __sub__(self, other: Kmer[K]):

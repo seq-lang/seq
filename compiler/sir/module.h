@@ -65,6 +65,9 @@ public:
   static const std::string ITER_MAGIC_NAME;
   static const std::string LEN_MAGIC_NAME;
 
+  static const std::string NEW_MAGIC_NAME;
+  static const std::string INIT_MAGIC_NAME;
+
 private:
   /// the module's "main" function
   std::unique_ptr<Func> mainFunc;

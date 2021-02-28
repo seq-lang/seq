@@ -1,7 +1,9 @@
+from bio import *
+
 # test kmers |> canonical optimization
 @test
 def test[K](s: seq):
-    type K = Kmer[5]
+    K = Kmer[5]
 
     got1 = list[K]()
     s |> kmers[K](1) |> canonical |> got1.append

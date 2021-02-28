@@ -1,18 +1,20 @@
+from bio import *
+
 class MyIndex[K]:
     special: K
     getitem_calls: int
     prefetch_calls: int
 
-    def __init__(self: MyIndex[K], special: K):
+    def __init__(self, special: K):
         self.special = special
         self.getitem_calls = 0
         self.prefetch_calls = 0
 
-    def __getitem__(self: MyIndex[K], k: K):
+    def __getitem__(self, k: K):
         self.getitem_calls += 1
         return 1 if k == self.special else 0
 
-    def __prefetch__(self: MyIndex[K], k: K):
+    def __prefetch__(self, k: K):
         self.prefetch_calls += 1
 
 def lookup1[K](kmer: K, idx: MyIndex[K]):
@@ -33,30 +35,47 @@ def lookup3[K](kmer: K, idx: MyIndex[K]):
         idx[~kmer]  # issues prefetch
         return (kmer, idx[kmer])
 
-type K = Kmer[3]
+@prefetch
+def lookup4(kmer, idx, v):
+    v.append((kmer, idx[kmer]))
+
+K = Kmer[3]
 
 @test
-def test_prefetch_transformation():
+def test_prefetch_transformation(s):
     idx1 = MyIndex[K](K())
     idx2 = MyIndex[K](K())
     idx3 = MyIndex[K](K())
+    idx4 = MyIndex[K](K())
     v1 = list[tuple[K, int]]()
     v2 = list[tuple[K, int]]()
     v3 = list[tuple[K, int]]()
+    v4 = list[tuple[K, int]]()
     s = s'ACGTACGTAAAACGTACGTAAAACGTACGT'
 
     s |> kmers[K](1) |> lookup1(idx1) |> v1.append
     s |> kmers[K](1) |> lookup2(idx2) |> v2.append
     s |> kmers[K](1) |> lookup3(idx3) |> v3.append
+    s |> kmers[K](1) |> lookup4(idx4, v4)
 
     assert set(v1) == set(v2)
     assert set(v1) == set(v3)
+    assert set(v1) == set(v4)
+    assert idx1.getitem_calls == len(s) - (len(K()) - 1)
     assert idx1.prefetch_calls == 0
     assert idx1.getitem_calls == idx2.getitem_calls
     assert idx3.getitem_calls == 5 * idx1.getitem_calls
     assert idx2.prefetch_calls == idx2.getitem_calls
     assert idx3.prefetch_calls == 5 * idx2.prefetch_calls
-test_prefetch_transformation()
+    assert idx4.getitem_calls == idx2.getitem_calls
+    assert idx4.prefetch_calls == idx2.prefetch_calls
+
+test_prefetch_transformation(s'')
+test_prefetch_transformation(s'A')
+test_prefetch_transformation(s'ACG')
+test_prefetch_transformation(s'ACGTA')
+test_prefetch_transformation(s'ACGTACGTAAAACGTACGTAAAACGTACGT')
+test_prefetch_transformation(s'ACGTACGTAAAACGTACGTAAAACGTACGTACGTACGTAAAACGTACGTAAAACGTACGTACGTACGTAAAACGTACGTAAAACGTACGTACGTACGTAAAACGTACGTAAAACGTACGT')
 
 @test
 def test_list_prefetch():

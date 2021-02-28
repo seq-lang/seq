@@ -2,6 +2,7 @@
 
 #include "base.h"
 #include "types/types.h"
+#include "util/packs.h"
 
 namespace seq {
 namespace ir {
@@ -90,7 +91,7 @@ public:
 
   template <typename... Args> Value *operator()(Args &&... args) {
     std::vector<Value *> dst;
-    stripPack(dst, std::forward<Args>(args)...);
+    util::stripPack(dst, std::forward<Args>(args)...);
     return doCall(dst);
   }
   Value *operator[](Value &other);
@@ -103,16 +104,6 @@ public:
   Value *iter();
 
 private:
-  template <typename... Args>
-  static void stripPack(std::vector<Value *> &dst, Value &first, Args &&... args) {
-    dst.push_back(&first);
-    stripPack(dst, std::forward<Args>(args)...);
-  }
-  static void stripPack(std::vector<Value *> &dst, Value &first) {
-    dst.push_back(&first);
-  }
-  static void stripPack(std::vector<Value *> &dst) {}
-
   Value *doUnaryOp(const std::string &name);
   Value *doBinaryOp(const std::string &name, Value &other);
 

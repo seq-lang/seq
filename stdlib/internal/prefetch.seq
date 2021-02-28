@@ -1,5 +1,5 @@
 @inline
-def _dynamic_coroutine_scheduler[A,B,T,C](value: A, coro: B, states: Array[Generator[T]], I: Ptr[int], N: Ptr[int], M: int, args: C) -> Generator[T]:
+def _dynamic_coroutine_scheduler[A,B,T,C](value: A, coro: B, states: Array[Generator[T]], I: Ptr[int], N: Ptr[int], M: int, args: C):
     n = N[0]
     if n < M:
         states[n] = coro(value, *args)
@@ -9,7 +9,8 @@ def _dynamic_coroutine_scheduler[A,B,T,C](value: A, coro: B, states: Array[Gener
         while True:
             g = states[i]
             if g.done():
-                yield g.next()
+                if not isinstance(T, void):
+                    yield g.next()
                 g.destroy()
                 states[i] = coro(value, *args)
                 break
@@ -17,12 +18,13 @@ def _dynamic_coroutine_scheduler[A,B,T,C](value: A, coro: B, states: Array[Gener
         I[0] = i
 
 @inline
-def _dynamic_coroutine_scheduler_drain[T](states: Array[Generator[T]], N: int) -> Generator[T]:
+def _dynamic_coroutine_scheduler_drain[T](states: Array[Generator[T]], N: int):
     i = 0
     while i < N:
         g = states[i]
         while not g.done():
             g.next()
-        yield g.next()
+        if not isinstance(T, void):
+            yield g.next()
         g.destroy()
         i += 1

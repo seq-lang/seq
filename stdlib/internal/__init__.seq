@@ -19,8 +19,6 @@ from internal.types.collections.list import *
 from internal.types.collections.set import *
 from internal.types.collections.dict import *
 
-from internal.prefetch import *
-
 # Extended core library
 
 import internal.c_stubs as _C
@@ -38,3 +36,5 @@ import internal.python
 from bio.seq import *
 from bio.kmer import *
 from bio.pseq import *
+
+from internal.prefetch import *
