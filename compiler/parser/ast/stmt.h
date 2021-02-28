@@ -159,8 +159,11 @@ struct ExprStmt : public Stmt {
 /// @example a, b, c = 5, *z
 struct AssignStmt : public Stmt {
   ExprPtr lhs, rhs, type;
+  /// True if assignment always shadows existing variables. For internal use (e.g.
+  /// ForStmt).
+  bool shadow;
 
-  AssignStmt(ExprPtr lhs, ExprPtr rhs, ExprPtr type = nullptr);
+  AssignStmt(ExprPtr lhs, ExprPtr rhs, ExprPtr type = nullptr, bool shadow = false);
   AssignStmt(const AssignStmt &stmt);
 
   string toString() const override;

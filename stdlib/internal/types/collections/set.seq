@@ -98,6 +98,9 @@ class Set[K]:
     def __len__(self):
         return self._size
 
+    def __bool__(self):
+        return self.__len__() != 0
+
     def __copy__(self):
         if self.__len__() == 0:
             return Set[K]()

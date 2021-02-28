@@ -51,7 +51,7 @@ TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts,
   return move(infer.second);
 }
 
-TypePtr operator|=(TypePtr &a, const TypePtr &b) {
+TypePtr TypecheckVisitor::unify(TypePtr &a, const TypePtr &b) {
   if (!a)
     return a = b;
   seqassert(b, "rhs is nullptr");
@@ -60,9 +60,7 @@ TypePtr operator|=(TypePtr &a, const TypePtr &b) {
     return a;
   undo.undo();
   a->unify(b.get(), &undo);
-  ast::error(
-      b->getSrcInfo(),
-      fmt::format("cannot unify {} and {}", a->toString(), b->toString()).c_str());
+  error("cannot unify {} and {}", a->toString(), b->toString());
   return nullptr;
 }
 

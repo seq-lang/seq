@@ -24,8 +24,6 @@
 namespace seq {
 namespace ast {
 
-types::TypePtr operator|=(types::TypePtr &a, const types::TypePtr &b);
-
 class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
   shared_ptr<TypeContext> ctx;
   shared_ptr<vector<StmtPtr>> prependStmts;
@@ -292,6 +290,7 @@ private:
                                                   int level);
 
 private:
+  types::TypePtr unify(types::TypePtr &a, const types::TypePtr &b);
   types::TypePtr realizeType(types::ClassType *typ);
   types::TypePtr realizeFunc(types::FuncType *typ);
   std::pair<int, StmtPtr> inferTypes(StmtPtr &&stmt, bool keepLast = false);

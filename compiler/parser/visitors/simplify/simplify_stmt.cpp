@@ -94,7 +94,7 @@ void SimplifyVisitor::visit(AssignStmt *stmt) {
     stmts.push_back(transformAssignment(stmt->lhs.get(), stmt->rhs.get(),
                                         stmt->type.get(), true, false));
   } else {
-    unpackAssignments(stmt->lhs.get(), stmt->rhs.get(), stmts, false, false);
+    unpackAssignments(stmt->lhs.get(), stmt->rhs.get(), stmts, stmt->shadow, false);
   }
   resultStmt = stmts.size() == 1 ? move(stmts[0]) : N<SuiteStmt>(move(stmts));
 }
@@ -199,7 +199,7 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
     ctx->add(SimplifyItem::Var, varName, varName);
     auto var = N<IdExpr>(varName);
     vector<StmtPtr> stmts;
-    stmts.push_back(N<AssignStmt>(clone(stmt->var), clone(var)));
+    stmts.push_back(N<AssignStmt>(clone(stmt->var), clone(var), nullptr, true));
     stmts.push_back(clone(stmt->suite));
     forStmt = N<ForStmt>(clone(var), clone(iter), transform(N<SuiteStmt>(move(stmts))));
   }

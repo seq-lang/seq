@@ -3,6 +3,7 @@
 #include "sir/llvm/llvisitor.h"
 #include "util/jit.h"
 #include "llvm/Support/CommandLine.h"
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -77,8 +78,13 @@ int main(int argc, char **argv) {
   if (!module)
     return EXIT_FAILURE;
 
+  using namespace std::chrono;
+  auto t = high_resolution_clock::now();
   seq::ir::LLVMVisitor visitor(debug.getValue());
   visitor.visit(module);
+  LOG_TIME("[T] ir-visitor = {:.1f}",
+           duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+               1000.0);
 
   if (output.getValue().empty()) {
     argsVec.insert(argsVec.begin(), input);

@@ -6,27 +6,32 @@ from bio import FASTA
 from bio.fmindex import _enc, FMDIndex, bntseq, bntann, bntamb # accessing not work
 from itertools import product
 
-type Segment(xs: int, ys: int, xe: int, ye: int, aln: Alignment, anchor: bool):
-  def __str__(self: Segment):
-    return f'({self.xs}..{self.xe})-({self.ys}..{self.ye}) @ {self.aln}{" L" if self.anchor else ""}'
+@tuple
+class Segment:
+  xs: int
+  ys: int
+  xe: int
+  ye: int
+  aln: Alignment
+  anchor: bool
 
 class LCPNode:
   lcp: int
   start: int
   end: int
-  children: list[LCPNode]
-  data: list[list[int]]
+  children: List[LCPNode]
+  data: List[List[int]]
 
-  def __init__(self: LCPNode, lcp: int, start: int, end: int):
+  def __init__(self, lcp, start, end):
     self.lcp, self.start, self.end = lcp, start, end
-    self.children = list[LCPNode]()
-    self.data = [list[int]() for i in range(5)]
+    self.children = []
+    self.data = [[] for i in range(5)]
 
-def get_mems(n: LCPNode, s: seq, sa: list[int], lcp: list[int], min_size: int, anchors: list[tuple[int,int,int]]):
+def get_mems(n, s, sa, lcp, min_size, anchors):
   """ Find MEMs """
   i, ci = n.start, 0
   while i < n.end:
-    d = [list[int]() for i in range(5)]
+    d = [[] for i in range(5)]
     if ci < len(n.children) and i == n.children[ci].start:
       i = n.children[ci].end
       d = n.children[ci].data
@@ -44,9 +49,8 @@ def get_mems(n: LCPNode, s: seq, sa: list[int], lcp: list[int], min_size: int, a
     for a in range(5):
       n.data[a].ext(d[a])
 
-def lcp_bottom_up(self: seq, sa: list[int], lcp: list[int], min_size: int, anchors: list[tuple[int,int,int]]):
+def lcp_bottom_up(self, sa, lcp, min_size, anchors: List[Tuple[int,int,int]]):
   """ Reconstruct suffix tree from SA and find all MEMs whose length is >= min_size """
-  interval = LCPNode(0, 0, -1)
   interval = None
   stack = [LCPNode(0, 0, -1)]
   for i in range(1, len(lcp)):
@@ -67,13 +71,13 @@ def lcp_bottom_up(self: seq, sa: list[int], lcp: list[int], min_size: int, ancho
         stack[-1].children.append(interval)
         interval = None
 
-def anchor(x: seq, y: seq, sa: list[int], lcp: list[int], anchors, xs, xe, ys, ye, depth: int = 0) -> Segment:
+def anchor(x, y, sa, lcp, anchors, xs, xe, ys, ye, depth = 0):
   # AVID only uses MEMs for sequences >= 4 KB
   if xe - xs <= 4 * 1024 and ye - ys <= 4 * 1024:
     yield Segment(xs, ys, xe, ye, x[xs:xe] @ y[ys:ye], False)
     return
 
-  an = list[Segment]()
+  an = []
   max_l = 2
   # Find anchor matches
   for sa, sb, l in anchors:
@@ -104,7 +108,7 @@ def anchor(x: seq, y: seq, sa: list[int], lcp: list[int], anchors, xs, xe, ys, y
         scores[i] = (scores[j][0] + an[j].aln.score, j)
     if scores[i] > scores[best]:
       best = i
-  selected = list[int]()
+  selected = []
   while best != -1:
     selected.append(best)
     best = scores[best][1]
@@ -121,7 +125,7 @@ def anchor(x: seq, y: seq, sa: list[int], lcp: list[int], anchors, xs, xe, ys, y
   if (px, py) != (xe, ye):
     yield from anchor(x, y, sa, lcp, anchors, px, xe, py, ye, depth+1)
 
-def avid(x: seq, y: seq) -> Segment:
+def avid(x, y):
   # Construct SA & LCP
   t = time()
   s = seq(f'{x}X{y}')
@@ -131,7 +135,7 @@ def avid(x: seq, y: seq) -> Segment:
 
   # Get all MEMs
   t = time()
-  anchors = list[tuple[int,int,int]]()
+  anchors = []
   lcp_bottom_up(s, sa, lcp, 10, anchors)
   print(f'MEMs done, found {len(anchors)} MEMs... {time()-t}')
 

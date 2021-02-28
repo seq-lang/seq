@@ -293,11 +293,20 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
 }
 
 void LLVMVisitor::runLLVMPipeline() {
+  using namespace std::chrono;
+  auto t = high_resolution_clock::now();
   verify();
   runLLVMOptimizationPasses();
   applyGCTransformations();
+  LOG_TIME("[T] llvm/opt = {:.1f}",
+           duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+               1000.0);
   if (!db.debug) {
+    t = high_resolution_clock::now();
     runLLVMOptimizationPasses();
+    LOG_TIME("[T] llvm/opt2 = {:.1f}",
+             duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
+                 1000.0);
   }
   verify();
 }

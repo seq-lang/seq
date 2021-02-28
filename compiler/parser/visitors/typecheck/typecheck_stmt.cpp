@@ -94,18 +94,18 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
   stmt->type = transformType(stmt->type);
   TypecheckItem::Kind kind;
   if (!stmt->rhs) { // Case 1: forward declaration: x: type
-    stmt->lhs->type |= stmt->type
-                           ? stmt->type->getType()
-                           : ctx->addUnbound(stmt->lhs.get(), ctx->typecheckLevel);
+    unify(stmt->lhs->type, stmt->type
+                               ? stmt->type->getType()
+                               : ctx->addUnbound(stmt->lhs.get(), ctx->typecheckLevel));
     ctx->add(kind = TypecheckItem::Var, lhs, stmt->lhs->type);
     stmt->done = realize(stmt->lhs->type) != nullptr;
   } else { // Case 2: Normal assignment
     if (stmt->type && stmt->type->getType()->getClass()) {
       auto t = ctx->instantiate(stmt->type.get(), stmt->type->getType());
       LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), t->toString());
-      stmt->lhs->type |= t;
+      unify(stmt->lhs->type, t);
       wrapOptionalIfNeeded(stmt->lhs->getType(), stmt->rhs);
-      stmt->lhs->type |= stmt->rhs->type;
+      unify(stmt->lhs->type, stmt->rhs->type);
     }
     auto type = stmt->rhs->getType();
     kind = stmt->rhs->isType()
@@ -130,9 +130,9 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
     auto oldRhsType = stmt->rhs->type;
     if (auto nb = transformBinary(b, stmt->isAtomic, &noReturn))
       stmt->rhs = move(nb);
-    oldRhsType |= stmt->rhs->type;
+    unify(oldRhsType, stmt->rhs->type);
     if (stmt->rhs->getBinary()) { // still BinaryExpr: will be transformed later.
-      stmt->lhs->type |= stmt->rhs->type;
+      unify(stmt->lhs->type, stmt->rhs->type);
       return;
     } else if (noReturn) { // remove assignment, call update function instead
                            // (__i***__ or __atomic_***__)
@@ -182,7 +182,7 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
   }
   // Case 4: handle optionals if needed.
   wrapOptionalIfNeeded(stmt->lhs->getType(), stmt->rhs);
-  stmt->lhs->type |= stmt->rhs->type;
+  unify(stmt->lhs->type, stmt->rhs->type);
   stmt->done = stmt->rhs->done;
 }
 
@@ -207,7 +207,7 @@ void TypecheckVisitor::visit(AssignMemberStmt *stmt) {
     auto typ = ctx->instantiate(stmt->lhs.get(), member, lhsClass.get());
     LOG_TYPECHECK("[inst] {} -> {}", stmt->lhs->toString(), typ->toString());
     wrapOptionalIfNeeded(typ, stmt->rhs);
-    stmt->rhs->type |= typ;
+    unify(stmt->rhs->type, typ);
     stmt->done = stmt->rhs->done;
   }
 }
@@ -217,7 +217,7 @@ void TypecheckVisitor::visit(ReturnStmt *stmt) {
   if (stmt->expr) {
     auto &base = ctx->bases.back();
     wrapOptionalIfNeeded(base.returnType, stmt->expr);
-    base.returnType |= stmt->expr->type;
+    unify(base.returnType, stmt->expr->type);
     auto retTyp = stmt->expr->getType()->getClass();
     stmt->done = stmt->expr->done;
   } else {
@@ -233,7 +233,7 @@ void TypecheckVisitor::visit(YieldStmt *stmt) {
                                               : N<IdExpr>("<yield>").get(),
                                    ctx->findInternal("Generator"), {baseTyp});
   LOG_TYPECHECK("[inst] {} -> {}", stmt->toString(), t->toString());
-  ctx->bases.back().returnType |= t;
+  unify(ctx->bases.back().returnType, t);
   stmt->done = stmt->expr ? stmt->expr->done : true;
 }
 
@@ -275,7 +275,7 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
     if ((iterType = stmt->iter->getType()->getClass())) {
       if (iterType->name != "Generator")
         error("for loop expected a generator");
-      varType |= iterType->generics[0].type;
+      unify(varType, iterType->generics[0].type);
       if (varType->is("void"))
         error("expression with void type");
     }
@@ -283,7 +283,7 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
     if (auto e = stmt->var->getId())
       varName = e->value;
     seqassert(!varName.empty(), "empty for variable {}", stmt->var->toString());
-    stmt->var->type |= varType;
+    unify(stmt->var->type, varType);
     ctx->add(TypecheckItem::Var, varName, varType);
     stmt->suite = transform(stmt->suite);
     stmt->done = stmt->iter->done && stmt->suite->done;
@@ -387,7 +387,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
         error("builtins and external functions must be realizable");
       auto typ = ctx->instantiate(N<IdExpr>(stmt->name).get(), t);
       LOG_TYPECHECK("[inst] fn {} -> {}", stmt->name, typ->toString());
-      typ |= realize(typ->getFunc());
+      unify(typ, realize(typ->getFunc()));
     }
     stmt->done = true;
     return;
@@ -422,19 +422,20 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   {
     ctx->typecheckLevel++;
     if (stmt->ret) {
-      baseType->args[0] |= transformType(stmt->ret)->getType();
+      unify(baseType->args[0], transformType(stmt->ret)->getType());
     } else {
-      baseType->args[0] |=
-          ctx->addUnbound(N<IdExpr>("<return>").get(), ctx->typecheckLevel);
+      unify(baseType->args[0],
+            ctx->addUnbound(N<IdExpr>("<return>").get(), ctx->typecheckLevel));
       generics.push_back(baseType->args[0]);
     }
     for (int ai = 0; ai < stmt->args.size(); ai++) {
       if (!stmt->args[ai].type) {
-        baseType->args[ai + 1] |=
-            ctx->addUnbound(N<IdExpr>(stmt->args[ai].name).get(), ctx->typecheckLevel);
+        unify(
+            baseType->args[ai + 1],
+            ctx->addUnbound(N<IdExpr>(stmt->args[ai].name).get(), ctx->typecheckLevel));
         generics.push_back(baseType->args[ai + 1]);
       } else {
-        baseType->args[ai + 1] |= transformType(stmt->args[ai].type)->getType();
+        unify(baseType->args[ai + 1], transformType(stmt->args[ai].type)->getType());
       }
     }
     ctx->typecheckLevel--;

@@ -41,7 +41,7 @@ class Dict[K,V]:
         k, v = g
         self[k] = v
 
-    def __getitem__(self, key: K):
+    def __getitem__(self, key: K) -> V:
         x = self._kh_get(key)
         if x != self._kh_end():
             return self._vals[x]
@@ -125,11 +125,11 @@ class Dict[K,V]:
     def resize(self, new_n_buckets: int):
         self._kh_resize(new_n_buckets)
 
-    def get(self, key: K, s: V):
+    def get(self, key: K, s: V) -> V:
         x = self._kh_get(key)
         return self._vals[x] if x != self._kh_end() else s
 
-    def setdefault(self, key: K, val: V):
+    def setdefault(self, key: K, val: V) -> V:
         ret, x = self._kh_put(key)
         if ret != 0:  # i.e. key not present
             self._vals[x] = val

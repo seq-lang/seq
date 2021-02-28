@@ -79,11 +79,11 @@ ExprStmt::ExprStmt(const ExprStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr
 string ExprStmt::toString() const { return format("(expr {})", expr->toString()); }
 ACCEPT_IMPL(ExprStmt, ASTVisitor);
 
-AssignStmt::AssignStmt(ExprPtr lhs, ExprPtr rhs, ExprPtr type)
-    : Stmt(), lhs(move(lhs)), rhs(move(rhs)), type(move(type)) {}
+AssignStmt::AssignStmt(ExprPtr lhs, ExprPtr rhs, ExprPtr type, bool shadow)
+    : Stmt(), lhs(move(lhs)), rhs(move(rhs)), type(move(type)), shadow(shadow) {}
 AssignStmt::AssignStmt(const AssignStmt &stmt)
     : Stmt(stmt), lhs(ast::clone(stmt.lhs)), rhs(ast::clone(stmt.rhs)),
-      type(ast::clone(stmt.type)) {}
+      type(ast::clone(stmt.type)), shadow(stmt.shadow) {}
 string AssignStmt::toString() const {
   return format("(assign {}{}{})", lhs->toString(), rhs ? " " + rhs->toString() : "",
                 type ? format(" #:type {}", type->toString()) : "");

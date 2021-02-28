@@ -16,8 +16,8 @@ def isLO(r, ref_seq, pos_list):
     read_pos = 0
     ref_pos = r.pos
     cig_pos = 0
-    trim_cig = list[str]()
-    split = list[str]()
+    trim_cig = []
+    split = []
 
     # binary search for left overhang
     mid = 0
@@ -77,7 +77,7 @@ def isRO(r, ref_seq, pos_list):
 
     # get ref end position of the read
     end_pos = r.pos
-    cig = list[tuple[int, str]]()
+    cig = []
     for c in r.cigar:
         cig.append((c[0], c[1]))
         if c[1] == "M" or c[1] == "=" or c[1] == "X" or c[1] == "D":
@@ -85,11 +85,11 @@ def isRO(r, ref_seq, pos_list):
 
     rev_cig = cig[::-1]
     c_len = len(r.cigar)
-    trim_cig = list[str]()
+    trim_cig = []
     read_pos = len(r.read) - 1
     ref_pos = end_pos
     soft_clip = 0
-    split = list[str]()
+    split = []
     cig_pos = 0
     # binary search
     mid = 0
@@ -156,7 +156,7 @@ def getNewFlag(r, split_count):
 
 # function to refactor cigar strings with NDN to one N element
 def refactorCigar(cigar):
-    rc = list[str]()
+    rc = []
     j = 0
     num = 0
     nDn = False
@@ -212,9 +212,9 @@ def getFileLine(r, read, sec_cig, sec_pos, qual_ref, flag, bam):
 # function to store N element locations for overhang trimming
 def getIntronPos(bam_file, region):
     # intron start, end, and contig
-    pos_list = list[tuple[int, int]]()
+    pos_list = []
     # check for repeats
-    temp_list = set[tuple[int, int]]()
+    temp_list = set()
     for r in BAM(bam_file, region=region):
         n_pos = r.pos
         # loop through CIGAR
@@ -239,8 +239,8 @@ def SeqNSplit(bam_file, ref_file, output_sam, qual_ref, ndn, trim_overhang):
     ref_seq = s""
 
     # queues for writing to file in correct order
-    line_queue = deque[tuple[int, str]]()
-    split_queue = SortedList[tuple[int, str]]()
+    line_queue = deque()
+    split_queue = SortedList()
 
     # input BAM file
     bam = BAM(bam_file)
@@ -249,23 +249,23 @@ def SeqNSplit(bam_file, ref_file, output_sam, qual_ref, ndn, trim_overhang):
     # output SAM file
     f = open(output_sam, "w")
     for c in bam._contigs:
-        f.write(f"@SQ\tSN:{c}\tLN:{c.len}\n")
+        print(f"@SQ\tSN:{c}\tLN:{c.len}", file=f)
 
     # loop through reads
     print "Parsing BAM..."
     tx = time.time()
     mb = 0
-    pos_list = list[tuple[int, int]]()
+    pos_list = []
     for r in bam:
         line = ""
         # read on new contig? Empty queues
         if r.tid != curr_contig:
             # print 'here'
             for _, l in line_queue:
-                f.write(l); f.write("\n")
+                print(l, file=f)
             line_queue.clear()
             for _, l in split_queue:
-                f.write(l); f.write("\n")
+                print(l, file=f)
             split_queue.clear()
             # print 'here2'
             # set new contig
@@ -300,8 +300,8 @@ def SeqNSplit(bam_file, ref_file, output_sam, qual_ref, ndn, trim_overhang):
             sec_read_s = 0
             sec_ref_s = r.pos
             r_length = len(r.read)
-            temp_cig = list[str]()
-            section_cig = list[str]()
+            temp_cig = []
+            section_cig = []
 
             # maintain hard clipped ends
             hard_clip_s = False
@@ -403,19 +403,19 @@ def SeqNSplit(bam_file, ref_file, output_sam, qual_ref, ndn, trim_overhang):
 
         if len(line_queue) >= 2:
             l = line_queue.popleft()
-            f.write(l[1]); f.write("\n")
+            print(l[1], file=f)
         while split_queue and split_queue.left[0] < line_queue.left[0]:
-            f.write(split_queue.left[1]); f.write("\n")
+            print(split_queue.left[1], file=f)
             split_queue._delete(0, 0)
 
     # empty queues
     while split_queue and split_queue.left[0] < line_queue.left[0]:
-        f.write(split_queue.left[1]); f.write("\n")
+        print(split_queue.left[1], file=f)
         split_queue._delete(0, 0)
     for _, l in line_queue:
-        f.write(l); f.write("\n")
+        print(l, file=f)
     for _, l in split_queue:
-        f.write(l); f.write("\n")
+        print(l, file=f)
 
     f.close()
 

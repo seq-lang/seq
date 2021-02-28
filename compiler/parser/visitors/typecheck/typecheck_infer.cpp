@@ -206,11 +206,11 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
         realized = move(inferred.second);
         // Return type was not specified and the function returned nothing.
         if (!ast->ret && type->args[0]->getUnbound())
-          type->args[0] |= ctx->findInternal("void");
+          unify(type->args[0], ctx->findInternal("void"));
       }
       // Realize the return type.
       if (auto t = realize(type->args[0]))
-        type->args[0] |= t;
+        unify(type->args[0], t);
       else
         type = nullptr; // Not realized! Roll-back!
       // Create and store a realized AST to be used during the code generation.
