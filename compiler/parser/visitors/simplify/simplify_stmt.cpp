@@ -349,14 +349,15 @@ void SimplifyVisitor::visit(ImportStmt *stmt) {
   for (int i = int(dirs.size()) - 1; i >= 0; i--)
     path += dirs[i] + (i ? "/" : "");
   // Fetch the import!
-  auto file = getImportFile(ctx->cache->argv0, path, ctx->getFilename());
-  if (file.empty())
+  auto file = getImportFile(ctx->cache->argv0, path, ctx->getFilename(), false,
+                            ctx->cache->module0);
+  if (!file)
     error("cannot locate import '{}'", join(dirs, "."));
 
   // If the imported file has not been seen before, load it.
-  if (ctx->cache->imports.find(file) == ctx->cache->imports.end())
-    transformNewImport(file, dirs[0]);
-  const auto &import = ctx->cache->imports[file];
+  if (ctx->cache->imports.find(file->path) == ctx->cache->imports.end())
+    transformNewImport(*file);
+  const auto &import = ctx->cache->imports[file->path];
   string importVar = import.importVar;
   string importDoneVar = importVar + "_done";
 
@@ -373,7 +374,7 @@ void SimplifyVisitor::visit(ImportStmt *stmt) {
 
   if (!stmt->what) {
     // Case 1: import foo
-    ctx->add(SimplifyItem::Import, stmt->as.empty() ? path : stmt->as, file);
+    ctx->add(SimplifyItem::Import, stmt->as.empty() ? path : stmt->as, file->path);
   } else if (stmt->what->isId("*")) {
     // Case 2: from foo import *
     seqassert(stmt->as.empty(), "renamed star-import");
@@ -390,7 +391,7 @@ void SimplifyVisitor::visit(ImportStmt *stmt) {
     auto c = import.ctx->find(i->value);
     // Make sure that we are importing an existing global symbol
     if (!c || !c->isGlobal())
-      error("symbol '{}' not found in {}", i->value, file);
+      error("symbol '{}' not found in {}", i->value, file->path);
     ctx->add(stmt->as.empty() ? i->value : stmt->as, c);
     ctx->add(c->canonicalName, c);
   }
@@ -498,8 +499,9 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
       ctx->bases.back().parent == -1 ? "" : ctx->bases[ctx->bases.back().parent].name;
   ctx->bases.pop_back();
   ctx->popBlock();
-  if (ctx->isStdlibLoading)
-    attributes[ATTR_STDLIB] = "";
+  attributes[ATTR_MODULE] =
+      format("{}{}", ctx->moduleName.status == ImportFile::STDLIB ? "std::" : "::",
+             ctx->moduleName.module);
 
   // Get the name of parent function (if there is any).
   // This should reach parent function even if there is a class base in the middle.
@@ -644,8 +646,9 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
     }
     // Create a cached AST.
     auto attributes = stmt->attributes;
-    if (ctx->isStdlibLoading)
-      attributes[ATTR_STDLIB] = "";
+    attributes[ATTR_MODULE] =
+        format("{}{}", ctx->moduleName.status == ImportFile::STDLIB ? "std::" : "::",
+               ctx->moduleName.module);
     ctx->cache->classes[canonicalName].ast =
         N<ClassStmt>(canonicalName, move(newGenerics), move(args),
                      N<SuiteStmt>(vector<StmtPtr>()), move(attributes));
@@ -1046,15 +1049,15 @@ StmtPtr SimplifyVisitor::transformPythonImport(const Expr *what,
       move(params), N<SuiteStmt>(move(call), move(retStmt)), vector<string>()));
 }
 
-void SimplifyVisitor::transformNewImport(const string &file, const string &moduleName) {
+void SimplifyVisitor::transformNewImport(const ImportFile &file) {
   // Use a clean context to parse a new file.
   if (ctx->cache->age)
     ctx->cache->age++;
-  auto ictx = make_shared<SimplifyContext>(file, ctx->cache);
+  auto ictx = make_shared<SimplifyContext>(file.path, ctx->cache);
   ictx->isStdlibLoading = ctx->isStdlibLoading;
-  ictx->moduleName = moduleName;
-  auto import = ctx->cache->imports.insert({file, {file, ictx}}).first;
-  StmtPtr sf = parseFile(file);
+  ictx->moduleName = file;
+  auto import = ctx->cache->imports.insert({file.path, {file.path, ictx}}).first;
+  StmtPtr sf = parseFile(file.path);
   auto sn = SimplifyVisitor(ictx, preamble).transform(sf);
 
   // If we are loading standard library, we won't wrap imports in functions as we assume
@@ -1075,7 +1078,7 @@ void SimplifyVisitor::transformNewImport(const string &file, const string &modul
     stmts.push_back(nullptr);
     // __name__ = <import name> (set the Python's __name__ variable)
     stmts.push_back(
-        N<AssignStmt>(N<IdExpr>("__name__"), N<StringExpr>(ictx->moduleName)));
+        N<AssignStmt>(N<IdExpr>("__name__"), N<StringExpr>(ictx->moduleName.module)));
     vector<string> globalVars;
     // We need to wrap all imported top-level statements (not signatures! they have
     // already been handled and are in the preamble) into a function. We also take the
@@ -1085,7 +1088,7 @@ void SimplifyVisitor::transformNewImport(const string &file, const string &modul
         auto a = const_cast<AssignStmt *>(s->getAssign());
         auto val = ictx->find(a->lhs->getId()->value);
         seqassert(val, "cannot locate '{}' in imported file {}",
-                  s->getAssign()->lhs->getId()->value, file);
+                  s->getAssign()->lhs->getId()->value, file.path);
         if (val->kind == SimplifyItem::Var && val->global && val->base.empty()) {
           globalVars.emplace_back(val->canonicalName);
           stmts.push_back(N<UpdateStmt>(move(a->lhs), move(a->rhs)));

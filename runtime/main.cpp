@@ -29,6 +29,9 @@ bool isLLVMFilename(const std::string &filename) { return endsWith(filename, ".l
 } // namespace
 
 int main(int argc, char **argv) {
+  using namespace std::chrono;
+  auto total_t = high_resolution_clock::now();
+
   llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::desc("<input file>"),
                                    llvm::cl::init("-"));
   llvm::cl::opt<bool> debug("d", llvm::cl::desc("Compile in debug mode"));
@@ -78,7 +81,6 @@ int main(int argc, char **argv) {
   if (!module)
     return EXIT_FAILURE;
 
-  using namespace std::chrono;
   auto t = high_resolution_clock::now();
   seq::ir::LLVMVisitor visitor(debug.getValue());
   visitor.visit(module);

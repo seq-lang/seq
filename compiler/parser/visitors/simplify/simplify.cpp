@@ -47,14 +47,16 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   if (!in(cache->imports, STDLIB_IMPORT)) {
     // Load the internal module
     auto stdlib = make_shared<SimplifyContext>(STDLIB_IMPORT, cache);
-    auto stdlibPath = getImportFile(cache->argv0, STDLIB_INTERNAL_MODULE, "", true);
-    if (stdlibPath.empty() ||
-        stdlibPath.substr(stdlibPath.size() - 12) != "__init__.seq")
+    auto stdlibPath =
+        getImportFile(cache->argv0, STDLIB_INTERNAL_MODULE, "", true, cache->module0);
+    if (!stdlibPath ||
+        stdlibPath->path.substr(stdlibPath->path.size() - 12) != "__init__.seq")
       ast::error("cannot load standard library");
     if (barebones)
-      stdlibPath = stdlibPath.substr(0, stdlibPath.size() - 5) + "test__.seq";
-    stdlib->setFilename(stdlibPath);
-    cache->imports[STDLIB_IMPORT] = {stdlibPath, stdlib};
+      stdlibPath->path =
+          stdlibPath->path.substr(0, stdlibPath->path.size() - 5) + "test__.seq";
+    stdlib->setFilename(stdlibPath->path);
+    cache->imports[STDLIB_IMPORT] = {stdlibPath->path, stdlib};
 
     // Add __internal class that will store functions needed by other internal classes.
     // We will call them as __internal.fn because directly calling fn will result in a
@@ -102,13 +104,15 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     // This code must be placed in a preamble (these are not POD types but are
     // referenced by the various preamble Function.N and Tuple.N stubs)
     stdlib->isStdlibLoading = true;
-    stdlib->moduleName = "__internal__";
+    stdlib->moduleName = {ImportFile::STDLIB, stdlibPath->path, "__init__"};
     auto baseTypeCode = "@internal\n@tuple\nclass pyobj:\n  p: Ptr[byte]\n"
                         "@internal\n@tuple\nclass str:\n  ptr: Ptr[byte]\n  len: int\n";
-    SimplifyVisitor(stdlib, preamble).transform(parseCode(stdlibPath, baseTypeCode));
+    SimplifyVisitor(stdlib, preamble)
+        .transform(parseCode(stdlibPath->path, baseTypeCode));
     // Load the standard library
-    stdlib->setFilename(stdlibPath);
-    stmts.push_back(SimplifyVisitor(stdlib, preamble).transform(parseFile(stdlibPath)));
+    stdlib->setFilename(stdlibPath->path);
+    stmts.push_back(
+        SimplifyVisitor(stdlib, preamble).transform(parseFile(stdlibPath->path)));
     // Add __argv__ variable as __argv__: Array[str]
     preamble->globals.push_back(
         SimplifyVisitor(stdlib, preamble)
@@ -126,7 +130,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   // static_pointer_cast<SimplifyContext>(cache->imports[STDLIB_IMPORT].ctx);
   cache->imports[file] = cache->imports[MAIN_IMPORT] = {file, ctx};
   ctx->setFilename(file);
-  ctx->moduleName = MODULE_MAIN;
+  ctx->moduleName = {ImportFile::PACKAGE, file, MODULE_MAIN};
   // Load the command-line defines.
   unordered_map<string, pair<string, seq_int_t>> newDefines;
   for (auto &d : defines) {

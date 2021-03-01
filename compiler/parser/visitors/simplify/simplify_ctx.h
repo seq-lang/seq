@@ -98,8 +98,9 @@ struct SimplifyContext : public Context<SimplifyItem> {
   vector<set<string>> captures;
   /// True if standard library is being loaded.
   bool isStdlibLoading;
-  /// Current module name (Python's __name__). The default module is __main__.
-  string moduleName;
+  /// Current module name (Python's __name__) and its source. The default module is
+  /// __main__.
+  ImportFile moduleName;
   /// Tracks if we are in a dependent part of a short-circuiting expression (e.g. b in a
   /// and b) to disallow assignment expressions there.
   bool canAssign;

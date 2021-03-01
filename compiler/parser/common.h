@@ -171,11 +171,20 @@ template <typename T> vector<T> clone_nop(const vector<T> &t) {
 /// @return Absolute executable path or argv0 if one cannot be found.
 string executable_path(const char *argv0);
 
+struct ImportFile {
+  enum Status { STDLIB, PACKAGE };
+  Status status;
+  /// Absolute path of an import.
+  string path;
+  /// Module name (e.g. foo.bar.baz).
+  string module;
+};
 /// Find an import file what given an executable path (argv0) either in the standard
 /// library or relative to a file relativeTo. Set forceStdlib for searching only the
 /// standard library.
-string getImportFile(const string &argv0, const string &what, const string &relativeTo,
-                     bool forceStdlib = false);
+unique_ptr<ImportFile> getImportFile(const string &argv0, const string &what,
+                                     const string &relativeTo, bool forceStdlib = false,
+                                     const string &module0 = "");
 
 } // namespace ast
 } // namespace seq

@@ -32,10 +32,10 @@ json DocVisitor::apply(const string &argv0, const vector<string> &files) {
   auto shared = make_shared<DocShared>();
   shared->argv0 = argv0;
 
-  auto stdlib = getImportFile(argv0, "core", "", true);
-  auto ast = ast::parseFile(stdlib);
+  auto stdlib = getImportFile(argv0, "core", "", true, "");
+  auto ast = ast::parseFile(stdlib->path);
   shared->modules[""] = make_shared<DocContext>(shared);
-  shared->modules[""]->file = stdlib;
+  shared->modules[""]->file = stdlib->path;
   for (auto &s : vector<string>{"void", "byte", "float", "seq", "bool", "int", "str",
                                 "ptr", "function", "generator", "tuple", "array",
                                 "Kmer", "Int", "UInt", "optional"}) {

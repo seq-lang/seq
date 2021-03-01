@@ -44,7 +44,7 @@
 #define ATTR_PYTHON "python"
 #define ATTR_PICKLE "pickle"
 #define ATTR_DICT "dict"
-#define ATTR_STDLIB ".stdlib"
+#define ATTR_MODULE ".module"
 #define ATTR_NO(x) ("no_" x)
 
 namespace seq {
@@ -95,6 +95,8 @@ struct Cache : public std::enable_shared_from_this<Cache> {
 
   /// Absolute path of seqc executable (if available).
   string argv0;
+  /// Absolute path of the entry-point module (if available).
+  string module0;
   /// LLVM module.
   seq::ir::IRModule *module = nullptr;
 

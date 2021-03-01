@@ -55,6 +55,7 @@ seq::ir::IRModule *parse(const string &argv0, const string &file, const string &
     using namespace std::chrono;
 
     auto cache = make_shared<ast::Cache>(argv0);
+    cache->module0 = file;
     if (isTest)
       cache->testFlags = isTest;
 

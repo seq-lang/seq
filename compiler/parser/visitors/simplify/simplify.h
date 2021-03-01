@@ -459,7 +459,7 @@ private:
   ///     global <imported global variables>...
   ///     __name__ = moduleName
   ///     <imported top-level statements>.
-  void transformNewImport(const string &file, const string &moduleName);
+  void transformNewImport(const ImportFile &file);
   /// Transform a Python code-block @python def foo(x: int, y) -> int: <python code> to:
   ///   pyobj._exec("def foo(x, y): <python code>")
   ///   from python import __main__.foo(int, _) -> int
