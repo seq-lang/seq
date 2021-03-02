@@ -153,7 +153,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       if (s && s->stmts.empty())
         error("cannot iterate empty tuple");
     }
-    if (startswith(type->funcName, "Tuple.N") &&
+    if (startswith(type->funcName, TYPE_TUPLE) &&
         (endswith(type->funcName, ".__iter__") ||
          endswith(type->funcName, ".__getitem__")) &&
         type->args[1]->getHeterogenousTuple())
@@ -425,7 +425,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   } else if (name == "Optional") {
     assert(types.size() == 1 && statics.empty());
     handle = module->unsafeGetOptionalType(types[0]);
-  } else if (startswith(name, "Function.N") || startswith(name, "Callable.N")) {
+  } else if (startswith(name, TYPE_FUNCTION) || startswith(name, TYPE_CALLABLE)) {
     types.clear();
     for (auto &m : const_cast<ClassType *>(t)->getRecord()->args)
       types.push_back(getLLVM(m));

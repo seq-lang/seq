@@ -47,6 +47,16 @@
 #define ATTR_MODULE ".module"
 #define ATTR_NO(x) ("no_" x)
 
+#define TYPE_TUPLE "Tuple.N"
+#define TYPE_KWTUPLE "KwTuple.N"
+#define TYPE_FUNCTION "Function.N"
+#define TYPE_CALLABLE "Callable.N"
+#define TYPE_PARTIAL "Partial.N"
+#define TYPE_OPTIONAL "Optional"
+#define TYPE_EXCHEADER "std.internal.types.error.ExcHeader"
+#define TYPE_SLICE "std.internal.types.slice.Slice"
+#define FN_UNWRAP "std.internal.types.optional.unwrap"
+
 namespace seq {
 namespace ast {
 

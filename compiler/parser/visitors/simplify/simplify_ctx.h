@@ -124,7 +124,7 @@ public:
   void dump() override { dump(0); }
 
   /// Generate a unique identifier (name) for a given string.
-  string generateCanonicalName(const string &name, const string &base = "") const;
+  string generateCanonicalName(const string &name, bool includeBase = false) const;
 
 private:
   /// Pretty-print the current context state.

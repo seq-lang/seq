@@ -192,10 +192,12 @@ bool LinkType::occurs(Type *typ, Type::Unification *undo) {
   }
 }
 
-ClassType::ClassType(string name, vector<Generic> generics)
-    : name(move(name)), generics(move(generics)), isTrait(false) {}
+ClassType::ClassType(string name, string niceName, vector<Generic> generics)
+    : name(move(name)), niceName(move(niceName)), generics(move(generics)),
+      isTrait(false) {}
 ClassType::ClassType(const ClassTypePtr &base)
-    : name(base->name), generics(base->generics), isTrait(base->isTrait) {}
+    : name(base->name), niceName(base->niceName), generics(base->generics),
+      isTrait(base->isTrait) {}
 int ClassType::unify(Type *typ, Unification *us) {
   if (auto tc = typ->getClass()) {
     // Check names.
@@ -221,7 +223,7 @@ TypePtr ClassType::generalize(int atLevel) {
   auto g = generics;
   for (auto &t : g)
     t.type = t.type ? t.type->generalize(atLevel) : nullptr;
-  auto c = make_shared<ClassType>(name, g);
+  auto c = make_shared<ClassType>(name, niceName, g);
   c->isTrait = isTrait;
   c->setSrcInfo(getSrcInfo());
   return c;
@@ -231,7 +233,7 @@ TypePtr ClassType::instantiate(int atLevel, int &unboundCount,
   auto g = generics;
   for (auto &t : g)
     t.type = t.type ? t.type->instantiate(atLevel, unboundCount, cache) : nullptr;
-  auto c = make_shared<ClassType>(name, g);
+  auto c = make_shared<ClassType>(name, niceName, g);
   c->isTrait = isTrait;
   c->setSrcInfo(getSrcInfo());
   return c;
@@ -257,7 +259,7 @@ string ClassType::toString() const {
     if (!a.name.empty())
       gs.push_back(a.type->toString());
   // Special formatting for Partials, Functions and Tuples
-  if (startswith(name, "Partial.N")) {
+  if (startswith(name, TYPE_PARTIAL)) {
     vector<string> as;
     int i, gi;
     for (i = 9, gi = 0; i < name.size() && name[i] != '.'; i++)
@@ -268,12 +270,12 @@ string ClassType::toString() const {
     auto n = split(name.substr(i + 1), '[')[0];
     return fmt::format("{}[{}]", n, join(as, ","));
   } else {
-    auto n = name;
-    if (startswith(n, "Tuple.N"))
+    auto n = niceName;
+    if (startswith(n, TYPE_TUPLE))
       n = "Tuple";
-    if (startswith(n, "Function.N"))
+    if (startswith(n, TYPE_FUNCTION))
       n = "Function";
-    if (startswith(n, "Callable.N"))
+    if (startswith(n, TYPE_CALLABLE))
       n = "Callable";
     return fmt::format("{}{}", n, gs.empty() ? "" : fmt::format("[{}]", join(gs, ",")));
   }
@@ -294,8 +296,9 @@ bool ClassType::hasTrait() const {
 }
 string ClassType::realizedTypeName() const { return this->ClassType::realizedName(); }
 
-RecordType::RecordType(string name, vector<Generic> generics, vector<TypePtr> args)
-    : ClassType(move(name), move(generics)), args(move(args)) {}
+RecordType::RecordType(string name, string niceName, vector<Generic> generics,
+                       vector<TypePtr> args)
+    : ClassType(move(name), move(niceName), move(generics)), args(move(args)) {}
 RecordType::RecordType(const ClassTypePtr &base, vector<TypePtr> args)
     : ClassType(base), args(move(args)) {}
 int RecordType::unify(Type *typ, Unification *us) {
@@ -309,9 +312,9 @@ int RecordType::unify(Type *typ, Unification *us) {
     }
     int s1 = 2, s;
     // Handle Callable[...]<->Function[...].
-    if (startswith(tr->name, "Callable.N") && startswith(name, "Function.N"))
+    if (startswith(tr->name, TYPE_CALLABLE) && startswith(name, TYPE_FUNCTION))
       return tr->unify(this, us);
-    if (startswith(name, "Callable.N") && startswith(tr->name, "Function.N")) {
+    if (startswith(name, TYPE_CALLABLE) && startswith(tr->name, TYPE_FUNCTION)) {
       if (tr->generics.size() != generics.size())
         return -1;
       for (int i = 0; i < generics.size(); i++) {
@@ -322,9 +325,9 @@ int RecordType::unify(Type *typ, Unification *us) {
       return s1;
     }
     // Handle Callable[...]<->Partial[...].
-    if (startswith(tr->name, "Callable.N") && !tr->getFunc() && getPartial())
+    if (startswith(tr->name, TYPE_CALLABLE) && !tr->getFunc() && getPartial())
       return tr->unify(this, us);
-    if (startswith(name, "Callable.N") && !getFunc() && tr->getPartial()) {
+    if (startswith(name, TYPE_CALLABLE) && !getFunc() && tr->getPartial()) {
       vector<int> zeros;
       for (int pi = 9; pi < tr->name.size() && tr->name[pi] != '.'; pi++)
         if (tr->name[pi] == '0')
@@ -344,7 +347,7 @@ int RecordType::unify(Type *typ, Unification *us) {
         return -1;
     }
     // Handle Tuple<->@tuple: when unifying tuples, only record members matter.
-    if (startswith(name, "Tuple.N") || startswith(tr->name, "Tuple.N"))
+    if (startswith(name, TYPE_TUPLE) || startswith(tr->name, TYPE_TUPLE))
       return s1;
     return this->ClassType::unify(tr.get(), us);
   } else if (auto t = typ->getLink()) {
@@ -390,7 +393,7 @@ string RecordType::toString() const {
 shared_ptr<RecordType> RecordType::getHeterogenousTuple() {
   seqassert(canRealize(), "{} not realizable", toString());
   // This is only relevant for Tuples and KwTuples.
-  if ((startswith(name, "Tuple.N") || startswith(name, "KwTuple.N")) &&
+  if ((startswith(name, TYPE_TUPLE) || startswith(name, TYPE_KWTUPLE)) &&
       args.size() > 1) {
     string first = args[0]->realizedName();
     for (int i = 1; i < args.size(); i++)

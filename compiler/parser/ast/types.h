@@ -190,8 +190,10 @@ struct ClassType : public Type {
    * Each generic is defined by its unique ID.
    */
   struct Generic {
-    // Generic name (used for pretty-printing).
+    // Generic name.
     string name;
+    // Name used for pretty-printing.
+    string niceName;
     // Unique generic ID.
     int id;
     // Pointer to realized tupe (or generic LinkType).
@@ -199,19 +201,23 @@ struct ClassType : public Type {
     // Default value that is used if a generic is not realized (e.g. [T=int]).
     shared_ptr<Expr> deflt;
 
-    Generic(string name, TypePtr type, int id, shared_ptr<Expr> deflt = nullptr)
-        : name(move(name)), id(id), type(move(type)), deflt(move(deflt)) {}
+    Generic(string name, string niceName, TypePtr type, int id,
+            shared_ptr<Expr> deflt = nullptr)
+        : name(move(name)), niceName(move(niceName)), id(id), type(move(type)),
+          deflt(move(deflt)) {}
   };
 
   /// Canonical type name.
   string name;
+  /// Name used for pretty-printing.
+  string niceName;
   /// List of generics, if present.
   vector<Generic> generics;
   /// True if this class is just supposed to be type-checked upon
   /// (not supposed to be instantiated).
   bool isTrait;
 
-  explicit ClassType(string name, vector<Generic> generics = {});
+  explicit ClassType(string name, string niceName, vector<Generic> generics = {});
   explicit ClassType(const shared_ptr<ClassType> &base);
 
 public:
@@ -225,7 +231,7 @@ public:
   bool canRealize() const override;
   string toString() const override;
   string realizedName() const override;
-  /// True if a calss is a trait or has a generic that is a trait.
+  /// True if a class is a trait or has a generic that is a trait.
   virtual bool hasTrait() const;
   /// Convenience function to get the name of realized type
   /// (needed if a subclass realizes something else as well).
@@ -243,7 +249,8 @@ struct RecordType : public ClassType {
   /// List of tuple arguments.
   vector<TypePtr> args;
 
-  explicit RecordType(string name, vector<ClassType::Generic> generics = {},
+  explicit RecordType(string name, string niceName,
+                      vector<ClassType::Generic> generics = {},
                       vector<TypePtr> args = {});
   RecordType(const ClassTypePtr &base, vector<TypePtr> args);
 

@@ -316,8 +316,8 @@ def foo():
         i += 1
 a = list(foo())
 #!     ERROR: expression with void type
-#!     ERROR: while realizing List.__init__.2
-#!     ERROR: while realizing list
+#!     ERROR: while realizing std.internal.types.ptr.List.__init__.2
+#!     ERROR: while realizing std.__init__.list
 
 #%% instantiate_swap,barebones
 class Foo[T, U]:
@@ -464,7 +464,7 @@ class X:
         def bar(self, x):
             return x
 y = X.Y()
-y.foo(1) #! ERROR: cannot find 'foo' in X.X.Y
+y.foo(1) #! ERROR: cannot find 'foo' in X.Y
 
 #%% nested_deep_class,barebones
 class A[T]:
@@ -476,14 +476,14 @@ class A[T]:
             def foo[W](t: V, u: V, v: V, w: W):
                 return (t, u, v, w)
 
-print A.B.C[bool].foo[str].__class__ #: A.A.B.A.B.C.foo[str;bool,bool,bool,str]
+print A.B.C[bool].foo[str].__class__ #: A.B.C.foo[str;bool,bool,bool,str]
 print A.B.C.foo(1,1,1,True) #: (1, 1, 1, True)
 print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
 print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
 print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
 
 x = A.B.C[bool]()
-print x.__class__ #: A.A.B.A.B.C[bool]
+print x.__class__ #: A.B.C[bool]
 
 #%% nested_deep_class_error,barebones
 class A[T]:
@@ -505,7 +505,7 @@ class A[T]:
             c: V
             def foo[W](t: V, u: V, v: V, w: W):
                 return (t, u, v, w)
-print A.B[int].C[float].foo(1,1,1,True) #! ERROR: cannot find 'C' in A.A.B[int]
+print A.B[int].C[float].foo(1,1,1,True) #! ERROR: cannot find 'C' in A.B[int]
 
 #%% nested_class_function,barebones
 def f(x):
@@ -567,7 +567,7 @@ class X:
             return self.y
 x, y = X(), X.Y()
 print x.__class__, y.__class__
-#: X X.X.Y
+#: X X.Y
 print X.foo(x, 4), x.foo(5)
 #: 4 5
 print y.bar(1), y.bar('s'), X.Y.bar(y, True)
@@ -597,10 +597,10 @@ print b.__class__, b.a.__class__, b.b.__class__, b.c.__class__, b.c.b.c.a.__clas
 #: B[float] float A[float] B[float] str
 
 n1 = B.Nest1[int]()
-print n1.n, n1.__class__, n1.n.__class__ #: 0 B.B.Nest1[int] int
+print n1.n, n1.__class__, n1.n.__class__ #: 0 B.Nest1[int] int
 
 n1: B.Nest2 = B.Nest2[float, int]()
-print (n1.m, n1.n), n1.__class__, n1.m.__class__, n1.n.__class__ #: (0, 0) B.B.Nest2[float,int] float int
+print (n1.m, n1.n), n1.__class__, n1.m.__class__, n1.n.__class__ #: (0, 0) B.Nest2[float,int] float int
 
 #%% func_arg_instantiate,barebones
 class A[T]:

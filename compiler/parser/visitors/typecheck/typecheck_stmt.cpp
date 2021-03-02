@@ -196,7 +196,7 @@ void TypecheckVisitor::visit(AssignMemberStmt *stmt) {
     if (!member && lhsClass->name == "Optional") {
       // Unwrap optional and look up there:
       resultStmt = transform(
-          N<AssignMemberStmt>(N<CallExpr>(N<IdExpr>("unwrap"), move(stmt->lhs)),
+          N<AssignMemberStmt>(N<CallExpr>(N<IdExpr>(FN_UNWRAP), move(stmt->lhs)),
                               stmt->member, move(stmt->rhs)));
       return;
     }
@@ -352,7 +352,7 @@ void TypecheckVisitor::visit(ThrowStmt *stmt) {
   if (!stmt->transformed && tc) {
     auto &f = ctx->cache->classes[tc->name].fields;
     if (f.empty() || !f[0].type->getClass() ||
-        f[0].type->getClass()->name != "ExcHeader")
+        f[0].type->getClass()->name != TYPE_EXCHEADER)
       error("cannot throw non-exception (first object member must be of type "
             "ExcHeader)");
     auto var = ctx->cache->getTemporaryVar("exc");
@@ -370,7 +370,7 @@ void TypecheckVisitor::visit(ThrowStmt *stmt) {
         N<AssignStmt>(N<IdExpr>(var), move(stmt->expr)),
         N<AssignMemberStmt>(N<IdExpr>(var),
                             ctx->cache->classes[tc->name].fields[0].name,
-                            N<CallExpr>(N<IdExpr>("ExcHeader"), move(args))),
+                            N<CallExpr>(N<IdExpr>(TYPE_EXCHEADER), move(args))),
         N<ThrowStmt>(N<IdExpr>(var), true)));
   } else {
     stmt->done = false;
@@ -485,9 +485,11 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
   ClassTypePtr typ = nullptr;
   if (!extension) {
     if (stmt->isRecord())
-      typ = make_shared<RecordType>(stmt->name);
+      typ = make_shared<RecordType>(stmt->name,
+                                    ctx->cache->reverseIdentifierLookup[stmt->name]);
     else
-      typ = make_shared<ClassType>(stmt->name);
+      typ = make_shared<ClassType>(stmt->name,
+                                   ctx->cache->reverseIdentifierLookup[stmt->name]);
     if (in(stmt->attributes, ATTR_TRAIT))
       typ->isTrait = true;
     typ->setSrcInfo(stmt->getSrcInfo());
@@ -537,9 +539,10 @@ TypecheckVisitor::parseGenerics(const vector<Param> &generics, int level) {
   auto genericTypes = vector<ClassType::Generic>();
   for (const auto &g : generics) {
     auto typ = ctx->addUnbound(N<IdExpr>(g.name).get(), level, true, bool(g.type));
-    typ->getLink()->genericName = g.name;
-    genericTypes.emplace_back(ClassType::Generic(
-        g.name, typ->generalize(level), ctx->cache->unboundCount - 1, clone(g.deflt)));
+    typ->getLink()->genericName = ctx->cache->reverseIdentifierLookup[g.name];
+    genericTypes.emplace_back(
+        ClassType::Generic(g.name, typ->getLink()->genericName, typ->generalize(level),
+                           ctx->cache->unboundCount - 1, clone(g.deflt)));
     LOG_REALIZE("[generic] {} -> {} {}", g.name, typ->toString(), bool(g.type));
     ctx->add(TypecheckItem::Type, g.name, typ, bool(g.type));
   }

@@ -72,7 +72,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     }
     // Add simple POD types to the preamble (these types are defined in LLVM and we
     // cannot properly define them in Seq)
-    for (auto &name : {"void", "bool", "byte", "int", "float", "T.None"}) {
+    for (auto &name : {"void", "bool", "byte", "int", "float"}) {
       auto canonical = stdlib->generateCanonicalName(name);
       stdlib->add(SimplifyItem::Type, name, canonical, true);
       // Generate an AST for each POD type. All of them are tuples.

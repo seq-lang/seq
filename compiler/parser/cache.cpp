@@ -34,7 +34,7 @@ SrcInfo Cache::generateSrcInfo() {
 
 types::ClassTypePtr Cache::findClass(const string &name) const {
   auto f = typeCtx->find(name);
-  if (f->kind == TypecheckItem::Type)
+  if (f && f->kind == TypecheckItem::Type)
     return f->type->getClass();
   return nullptr;
 }

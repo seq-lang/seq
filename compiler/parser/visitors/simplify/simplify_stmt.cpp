@@ -405,7 +405,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     return;
   }
 
-  auto canonicalName = ctx->generateCanonicalName(stmt->name, ctx->getBase());
+  auto canonicalName = ctx->generateCanonicalName(stmt->name, true);
   bool isClassMember = ctx->getLevel() && ctx->bases.back().isType();
 
   if (in(stmt->attributes, ATTR_FORCE_REALIZE) && (ctx->getLevel() || isClassMember))
@@ -571,7 +571,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
       make_shared<SimplifyItem>(SimplifyItem::Type, "", "", ctx->isToplevel(), false);
   if (!extension) {
     classItem->canonicalName = canonicalName =
-        ctx->generateCanonicalName(name, ctx->getBase());
+        ctx->generateCanonicalName(name, !in(stmt->attributes, "internal"));
     // Reference types are added to the context at this stage.
     // Record types (tuples) are added after parsing class arguments to prevent
     // recursive record types (that are allowed for reference types).
@@ -668,7 +668,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
             magics.emplace_back(i);
       } else {
         magics = {"new", "str", "len", "hash"};
-        if (!startswith(stmt->name, "Tuple.N") &&
+        if (!startswith(stmt->name, TYPE_TUPLE) &&
             !in(stmt->attributes, ATTR_NO(ATTR_DICT)))
           magics.emplace_back("dict");
         if (!in(stmt->attributes, ATTR_NO(ATTR_TOTAL_ORDERING)))
@@ -681,7 +681,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
           for (auto &i : {"iter", "getitem"})
             magics.emplace_back(i);
         if (!in(stmt->attributes, ATTR_NO(ATTR_CONTAINER)) &&
-            startswith(stmt->name, "Tuple.N"))
+            startswith(stmt->name, TYPE_TUPLE))
           magics.emplace_back("contains");
         if (!in(stmt->attributes, ATTR_NO(ATTR_PYTHON)))
           for (auto &i : {"to_py", "from_py"})
@@ -933,7 +933,7 @@ StmtPtr SimplifyVisitor::transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr 
 
 StmtPtr SimplifyVisitor::transformCImport(const string &name, const vector<Param> &args,
                                           const Expr *ret, const string &altName) {
-  auto canonicalName = ctx->generateCanonicalName(name, ctx->getBase());
+  auto canonicalName = ctx->generateCanonicalName(name, true);
   vector<Param> fnArgs;
   for (int ai = 0; ai < args.size(); ai++) {
     seqassert(args[ai].name.empty(), "unexpected argument name");
@@ -1429,8 +1429,8 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
         auto name = typExpr->getIndex() ? typExpr->getIndex()->expr->getId() : nullptr;
         stmts.push_back(N<ExprStmt>(N<CallExpr>(
             N<DotExpr>(I("n"), "__setitem__"), N<IntExpr>(i),
-            N<StringExpr>(name && !startswith(name->value, "Tuple.N") ? args[i].name
-                                                                      : ""))));
+            N<StringExpr>(name && !startswith(name->value, TYPE_TUPLE) ? args[i].name
+                                                                       : ""))));
       }
       stmts.emplace_back(N<ReturnStmt>(N<CallExpr>(
           N<DotExpr>(I("__internal__"), "tuple_str"), N<DotExpr>(I("a"), "ptr"),

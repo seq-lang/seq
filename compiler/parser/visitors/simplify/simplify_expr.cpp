@@ -345,15 +345,15 @@ void SimplifyVisitor::visit(IndexExpr *expr) {
   // First handle the tuple[] and function[] cases.
   if (expr->expr->isId("tuple") || expr->expr->isId("Tuple")) {
     auto t = expr->index->getTuple();
-    e = N<IdExpr>(format("Tuple.N{}", t ? t->items.size() : 1));
+    e = N<IdExpr>(format(TYPE_TUPLE "{}", t ? t->items.size() : 1));
     e->markType();
   } else if (expr->expr->isId("function") || expr->expr->isId("Function")) {
     auto t = expr->index->getTuple();
-    e = N<IdExpr>(format("Function.N{}", t ? int(t->items.size()) - 1 : 0));
+    e = N<IdExpr>(format(TYPE_FUNCTION "{}", t ? int(t->items.size()) - 1 : 0));
     e->markType();
   } else if (expr->expr->isId("Callable")) {
     auto t = expr->index->getTuple();
-    e = N<IdExpr>(format("Callable.N{}", t ? int(t->items.size()) - 1 : 0));
+    e = N<IdExpr>(format(TYPE_CALLABLE "{}", t ? int(t->items.size()) - 1 : 0));
     e->markType();
   } else {
     e = transform(expr->expr.get(), true);

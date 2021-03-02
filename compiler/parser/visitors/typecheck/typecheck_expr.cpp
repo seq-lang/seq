@@ -102,11 +102,11 @@ void TypecheckVisitor::visit(StringExpr *expr) {
 }
 
 void TypecheckVisitor::visit(IdExpr *expr) {
-  if (startswith(expr->value, "Tuple.N"))
+  if (startswith(expr->value, TYPE_TUPLE))
     generateTupleStub(std::stoi(expr->value.substr(7)));
-  else if (startswith(expr->value, "Function.N"))
+  else if (startswith(expr->value, TYPE_FUNCTION))
     generateFunctionStub(std::stoi(expr->value.substr(10)));
-  else if (startswith(expr->value, "Callable.N"))
+  else if (startswith(expr->value, TYPE_CALLABLE))
     generateCallableStub(std::stoi(expr->value.substr(10)));
   auto val = ctx->find(expr->value);
   seqassert(val, "cannot find IdExpr '{}'", expr->value);
@@ -348,11 +348,11 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               seqassert(val && val->isStatic(), "invalid static expression");
               auto genTyp = val->type->follow();
               staticGenerics.emplace_back(ClassType::Generic(
-                  ei->value, genTyp,
+                  ei->value, ctx->cache->reverseIdentifierLookup[ei->value], genTyp,
                   genTyp->getLink() ? genTyp->getLink()->id
-                                    : genTyp->getStatic()->generics.empty()
-                                          ? 0
-                                          : genTyp->getStatic()->generics[0].id));
+                  : genTyp->getStatic()->generics.empty()
+                      ? 0
+                      : genTyp->getStatic()->generics[0].id));
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -423,7 +423,7 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
 
 void TypecheckVisitor::visit(SliceExpr *expr) {
   ExprPtr none = N<CallExpr>(N<DotExpr>(N<IdExpr>("Optional"), "__new__"));
-  resultExpr = transform(N<CallExpr>(N<IdExpr>("Slice"),
+  resultExpr = transform(N<CallExpr>(N<IdExpr>(TYPE_SLICE),
                                      expr->start ? move(expr->start) : clone(none),
                                      expr->stop ? move(expr->stop) : clone(none),
                                      expr->step ? move(expr->step) : clone(none)));
@@ -698,7 +698,8 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
       te.push_back(N<DotExpr>(clone(expr), classItem->second.fields[i].name));
     }
     return transform(N<CallExpr>(
-        N<DotExpr>(N<IdExpr>(format("Tuple.N{}", te.size())), "__new__"), move(te)));
+        N<DotExpr>(N<IdExpr>(format(TYPE_TUPLE "{}", te.size())), "__new__"),
+        move(te)));
   }
   return nullptr;
 }
@@ -741,8 +742,8 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
       return nullptr;
     } else if (typ->name == "Optional") {
       // Case 3: Transform optional.member to unwrap(optional).member.
-      auto d = N<DotExpr>(transform(N<CallExpr>(N<IdExpr>("unwrap"), move(expr->expr))),
-                          expr->member);
+      auto d = N<DotExpr>(
+          transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), move(expr->expr))), expr->member);
       if (auto dd = transformDot(d.get(), args))
         return dd;
       return d;
@@ -793,7 +794,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   // Case 6: multiple overloaded methods available.
   FuncTypePtr bestMethod = nullptr;
   auto oldType = expr->getType() ? expr->getType()->getClass() : nullptr;
-  if (methods.size() > 1 && oldType && startswith(oldType->name, "Callable.N")) {
+  if (methods.size() > 1 && oldType && startswith(oldType->name, TYPE_CALLABLE)) {
     // If old type is already a function, use its arguments to pick the best call.
     vector<pair<string, TypePtr>> methodArgs;
     if (!expr->expr->isType()) // self argument
@@ -889,7 +890,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       auto t = ek->what->type->getClass();
       if (!t)
         return nullptr;
-      if (!t->getRecord() || startswith(t->name, "Tuple.N"))
+      if (!t->getRecord() || startswith(t->name, TYPE_TUPLE))
         error("can only unpack named tuple types: {}", t->toString());
       auto &ff = ctx->cache->classes[t->name].fields;
       for (int i = 0; i < t->getRecord()->args.size(); i++, ai++)
@@ -1076,9 +1077,9 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         args[si].value =
             transform(N<CallExpr>(N<IdExpr>("Optional"), move(args[si].value)));
         unify(args[si].value->type, expectedClass);
-      } else if (ast && startswith(expectedClass->name, "Callable.N")) {
+      } else if (ast && startswith(expectedClass->name, TYPE_CALLABLE)) {
         // Case 4: allow any callable to match Callable[] signature.
-        if (argClass && !startswith(argClass->name, "Callable.N") &&
+        if (argClass && !startswith(argClass->name, TYPE_CALLABLE) &&
             !argClass->getPartial()) {
           args[si].value = transform(N<DotExpr>(move(args[si].value), "__call__"));
         }
@@ -1098,11 +1099,11 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
                argClass->name != expectedClass->name) { // unwrap optional
       // Case 6: Optional unwrapping.
       if (extraStage && args[si].value->getEllipsis()) {
-        *extraStage = N<IdExpr>("unwrap");
+        *extraStage = N<IdExpr>(FN_UNWRAP);
         return oldExpr;
       }
       args[si].value =
-          transform(N<CallExpr>(N<IdExpr>("unwrap"), move(args[si].value)));
+          transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), move(args[si].value)));
       unify(args[si].value->type, expectedTyp);
     } else {
       // Case 7: normal unification.
@@ -1310,17 +1311,17 @@ string TypecheckVisitor::generateTupleStub(int len, const string &name,
 }
 
 string TypecheckVisitor::generateCallableStub(int n) {
-  auto typeName = format("Callable.N{}", n);
+  auto typeName = format(TYPE_CALLABLE "{}", n);
   if (!ctx->find(typeName)) {
-    auto baseType = make_shared<RecordType>(typeName);
+    auto baseType = make_shared<RecordType>(typeName, typeName);
     baseType->isTrait = true;
     for (int i = 0; i <= n; i++) {
       baseType->generics.emplace_back(ClassType::Generic(
-          !i ? "TR" : format("T{}", i),
+          !i ? "TR" : format("T{}", i), !i ? "TR" : format("T{}", i),
           make_shared<LinkType>(LinkType::Generic, ctx->cache->unboundCount++),
           ctx->cache->unboundCount));
       baseType->generics.back().type->getLink()->genericName =
-          baseType->generics.back().name;
+          baseType->generics.back().niceName;
       baseType->args.emplace_back(baseType->generics.back().type);
     }
     ctx->cache->classes[typeName] = Cache::Class();
@@ -1332,7 +1333,7 @@ string TypecheckVisitor::generateCallableStub(int n) {
 
 string TypecheckVisitor::generateFunctionStub(int n) {
   seqassert(n >= 0, "invalid n");
-  auto typeName = format("Function.N{}", n);
+  auto typeName = format(TYPE_FUNCTION "{}", n);
   if (!ctx->find(typeName)) {
     vector<Param> generics;
     generics.emplace_back(Param{"TR", nullptr, nullptr});
@@ -1448,7 +1449,7 @@ string TypecheckVisitor::generatePartialStub(const vector<char> &mask,
   for (int i = 0; i < mask.size(); i++)
     if (!mask[i])
       strMask[i] = '0';
-  auto typeName = format("Partial.N{}.{}", strMask, fn->realizedName());
+  auto typeName = format(TYPE_PARTIAL "{}.{}", strMask, fn->realizedName());
   if (!ctx->find(typeName)) {
     auto tupleSize = std::count_if(mask.begin(), mask.end(), [](char c) { return c; });
     auto tupleType =

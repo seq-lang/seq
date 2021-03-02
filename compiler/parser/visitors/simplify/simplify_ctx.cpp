@@ -72,8 +72,18 @@ string SimplifyContext::getBase() const {
 }
 
 string SimplifyContext::generateCanonicalName(const string &name,
-                                              const string &base) const {
-  string newName = format("{}{}", base.empty() ? "" : base + ".", name);
+                                              bool includeBase) const {
+  string newName = name;
+  if (includeBase && name.find('.') == string::npos) {
+    string base = getBase();
+    if (base.empty()) {
+      base = moduleName.status == ImportFile::STDLIB ? "std." : "";
+      base += moduleName.module;
+      if (startswith(base, "__main__"))
+        base = base.substr(8);
+    }
+    newName = (base.empty() ? "" : (base + ".")) + newName;
+  }
   auto num = cache->identifierCount[newName]++;
   newName = num ? format("{}.{}", newName, num) : newName;
   cache->reverseIdentifierLookup[newName] = name;

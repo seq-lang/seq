@@ -125,13 +125,13 @@ types::TypePtr TypeContext::instantiateGeneric(const Expr *expr, types::TypePtr 
                                                const vector<types::TypePtr> &generics) {
   auto c = root->getClass();
   assert(c);
-  auto g = make_shared<types::ClassType>(""); // dummy generic type
+  auto g = make_shared<types::ClassType>("", ""); // dummy generic type
   if (generics.size() != c->generics.size())
     error(expr->getSrcInfo(), "generics do not match");
   for (int i = 0; i < c->generics.size(); i++) {
     assert(c->generics[i].type);
     g->generics.push_back(
-        types::ClassType::Generic("", generics[i], c->generics[i].id));
+        types::ClassType::Generic("", "", generics[i], c->generics[i].id));
   }
   return instantiate(expr, root, g.get());
 }
