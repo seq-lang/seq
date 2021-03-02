@@ -53,10 +53,13 @@ def test_prefetch_transformation(s):
     v4 = list[tuple[K, int]]()
     s = s'ACGTACGTAAAACGTACGTAAAACGTACGT'
 
+    def my_kmers(s):
+        return s.kmers[K](1)
+
     s |> kmers[K](1) |> lookup1(idx1) |> v1.append
     s |> kmers[K](1) |> lookup2(idx2) |> v2.append
     s |> kmers[K](1) |> lookup3(idx3) |> v3.append
-    s |> kmers[K](1) |> lookup4(idx4, v4)
+    my_kmers(s) |> lookup4(idx4, v4)
 
     assert set(v1) == set(v2)
     assert set(v1) == set(v3)

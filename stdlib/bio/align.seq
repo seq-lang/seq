@@ -443,6 +443,11 @@ class InterAlignParams:
     zdrop: i32
     end_bonus: i32
 
+    def __new__(a: int, b: int, ambig: int, gapo: int, gape: int, score_only: bool, bandwidth: int, zdrop: int, end_bonus: int):
+        return InterAlignParams(i8(a), i8(b), i8(ambig), i8(gapo), i8(gape),
+                                i8(1 if score_only else 0), i32(bandwidth),
+                                i32(zdrop), i32(end_bonus))
+
 _LEN_LIMIT     = 512
 _MAX_SEQ_LEN8  = 128
 _MAX_SEQ_LEN16 = 32768
@@ -552,7 +557,15 @@ def _interaln_sort_pairs_len_ext(pairs_array: Ptr[SeqPair], tmp_array: Ptr[SeqPa
 
     return num_pairs128, num_pairs16, num_pairs1
 
-InterAlignYield = Tuple[seq,seq,Alignment]
+@tuple
+class InterAlignYield:
+    query: seq
+    target: seq
+    aln: Alignment
+
+    def __new__(query: seq, target: seq, extz_only: bool, rev_cigar: bool):
+        flags = (_ALIGN_EXTZ_ONLY if extz_only else 0) | (_ALIGN_REV_CIGAR if rev_cigar else 0)
+        return InterAlignYield(query, target, Alignment(CIGAR(), flags))
 
 @force_realize
 @inline
@@ -642,3 +655,23 @@ def _interaln_flush(pairs_array: Ptr[SeqPair],
     str.memcpy(pending.as_byte(), tmp_pending.as_byte(), m * sizeof[Generator[InterAlignYield]]())
     str.memset(tmp_pending.as_byte(), byte(0), m * sizeof[Generator[InterAlignYield]]())
     return m
+
+@inline
+def _interaln_scheduler(value,
+                        coro,
+                        pairs_array: Ptr[SeqPair],
+                        seq_buf_ref: Ptr[byte],
+                        seq_buf_qer: Ptr[byte],
+                        pending: Ptr[Generator[InterAlignYield]],
+                        params: InterAlignParams,
+                        hist: Ptr[i32],
+                        tmp_array: Ptr[SeqPair],
+                        tmp_pending: Ptr[Generator[InterAlignYield]],
+                        N: Ptr[int],
+                        M: int,
+                        args):
+    m = N[0]
+    while m >= M:
+        m = _interaln_flush(pairs_array, seq_buf_ref, seq_buf_qer, pending, m, params, hist, tmp_array, tmp_pending)
+    N[0] = _interaln_queue(coro(value, *args), pairs_array, seq_buf_ref, seq_buf_qer, pending, m, params)
+

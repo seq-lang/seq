@@ -276,18 +276,24 @@ types::Type *PipelineFlow::Stage::getOutputType() const {
 }
 
 types::Type *PipelineFlow::Stage::getOutputElementType() const {
-  if (args.empty()) {
+  if (isGenerator()) {
+    types::GeneratorType *genType = nullptr;
+    if (args.empty()) {
+      genType = cast<types::GeneratorType>(func->getType());
+      return genType->getBase();
+    } else {
+      auto *funcType = cast<types::FuncType>(func->getType());
+      assert(funcType);
+      genType = cast<types::GeneratorType>(funcType->getReturnType());
+    }
+    assert(genType);
+    return genType->getBase();
+  } else if (args.empty()) {
     return func->getType();
   } else {
     auto *funcType = cast<types::FuncType>(func->getType());
     assert(funcType);
-    if (isGenerator()) {
-      auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
-      assert(genType);
-      return genType->getBase();
-    } else {
-      return funcType->getReturnType();
-    }
+    return funcType->getReturnType();
   }
 }
 

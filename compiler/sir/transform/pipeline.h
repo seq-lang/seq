@@ -16,6 +16,7 @@ class PipelineOptimizations : public LambdaValuePass {
 
   void applySubstitutionOptimizations(PipelineFlow *);
   void applyPrefetchOptimizations(PipelineFlow *);
+  void applyInterAlignOptimizations(PipelineFlow *);
 };
 
 } // namespace pipeline
