@@ -1,25 +1,24 @@
 from sys import argv, stderr, exit
 from time import timing
+from bio import FASTQ
 from bio.fmindex import FMIndex, SMEM, FMDInterval
 
 min_seed   = 17
 min_iwidth = 20
 min_intv   = 1
 
-def open_index_file(basename: str, mode: str):
+def open_index_file(basename, mode):
     import gzip
     return gzip.open(f'{basename}.fastmap.idx', mode)
 
-def index_load(basename: str):
+def index_load(basename):
     from pickle import load
     with open_index_file(basename, 'rb') as jar:
         return load[FMIndex](jar)
 
 @prefetch
-def fastmap(rec: FASTQRecord, fmi: FMIndex, out: File):
-    prev = list[SMEM]()
-    curr = list[SMEM]()
-    mems = list[SMEM]()
+def fastmap(rec, fmi, out):
+    prev, curr, mems = [], [], []
     q = rec.seq
     l = len(q)
 
@@ -36,7 +35,7 @@ def fastmap(rec: FASTQRecord, fmi: FMIndex, out: File):
         x = start
 
         if q[x].N():
-            return x + 1, mems
+            return
 
         ik = SMEM(fmi.biinterval(q[x]), start=x, stop=x+1)
 
@@ -67,14 +66,13 @@ def fastmap(rec: FASTQRecord, fmi: FMIndex, out: File):
             c = i >= 0 and not q[i].N()
             curr.clear()
             for p in prev:
-                ok = FMDInterval()
+                ok = None
                 if c:
                     ok = fmi[p.interval, q[i]]
                 if not c or len(ok) < min_intv:
                     if len(curr) == 0:
                         if len(mems) == 0 or i + 1 < mems[-1].start:
-                            ik = SMEM(p.interval, start=i+1, stop=p.stop)
-                            if len(ik) >= min_seed:
+                            if len(ik := SMEM(p.interval, start=i+1, stop=p.stop)) >= min_seed:
                                 mems.append(ik)
                 elif len(curr) == 0 or len(ok) != len(curr[-1].interval):
                     curr.append(SMEM(ok, start=p.start, stop=p.stop))
@@ -91,44 +89,38 @@ def fastmap(rec: FASTQRecord, fmi: FMIndex, out: File):
             offset = mem.start
             match_size = len(mem)
 
-            out.write(rec.name)
-            out.write('\tEM\t')
-            out.write(str(offset))
-            out.write('\t')
-            out.write(str(offset + match_size))
-            out.write('\t')
-            out.write(str(len(intv)))
+            print(f'{rec.name}\tEM\t{offset}\t{offset+match_size}\t{len(intv)}', end='', file=out)
             if len(intv) <= min_iwidth:
                 for rid, name, pos, is_rev in fmi.biresults(mem):
-                    out.write('\t')
-                    out.write(name)
-                    out.write(':-' if is_rev else ':+')
-                    out.write(str(pos + 1))
+                    print(f"\t{name}:{'-' if is_rev else '+'}{pos+1}", end='', file=out)
             else:
-                out.write('\t*\n')
-            out.write('\n')
+                print("\t*", file=out)
+            print("", file=out)
 
-def main_index():
+def main_index(path):
     from pickle import dump
-    stderr.write('building FM-index...\n')
-    fmi = FMIndex(argv[2], FMD=True)
-    stderr.write('writing to disk...\n')
-    with open_index_file(argv[2], 'wb0') as jar:
+    print('building FM-index...', file=stderr)
+    fmi = FMIndex(path, FMD=True)
+    print('writing to disk...', file=stderr)
+    with open_index_file(path, 'wb0') as jar:
         dump(fmi, jar)
 
-def main_search():
-    stderr.write('loading index...\n')
-    fmi = index_load(argv[2])
-    stderr.write('running alignment pipeline...\n')
-    with open(argv[4], 'w') as out, timing('fastmap'):
-        FASTQ(argv[3]) |> iter |> fastmap(fmi, out)
+def main_search(index, fastq, result):
+    print('loading index...', file=stderr)
+    fmi = None
+    with timing('load'):
+        fmi = index_load(index)
+    print('running alignment pipeline...', file=stderr)
+    with open(result, 'w') as out, timing('fastmap'):
+        FASTQ(fastq) |> iter |> fastmap(fmi, out)
 
+print __argv__[0]
 mode = argv[1]
 match mode:
-    case 'index':
-        main_index()
-    case 'search':
-        main_search()
+    case ['index', path]:
+        main_index(path)
+    case ['search', index, fastq, result]:
+        main_search(index, fastq, result)
     case _:
-        stderr.write("error: unknown mode: valid modes are 'index' and 'search'\n")
+        print("error: unknown mode: valid modes are 'index' and 'search'", file=stderr)
         exit(1)

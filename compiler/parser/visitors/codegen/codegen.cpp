@@ -358,7 +358,7 @@ void CodegenVisitor::visit(AssignStmt *stmt) {
   auto *module = ctx->getModule();
 
   if (!stmt->rhs) {
-    if (var == ".__argv__") {
+    if (var == "__argv__") {
       ctx->addVar(var, module->getArgVar());
     } else {
       auto *newVar =

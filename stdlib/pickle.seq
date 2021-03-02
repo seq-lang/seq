@@ -8,10 +8,10 @@ def pickle[T](x: T, jar: Jar):
 def unpickle[T](jar: Jar):
     return T.__unpickle__(jar)
 
-def dump[T](x: T, f: gzFile):
+def dump[T](x: T, f):
     x.__pickle__(f.fp)
 
-def load[T](f: gzFile):
+def load[T](f):
     return T.__unpickle__(f.fp)
 
 def _write_raw(jar: Jar, p: cobj, n: int):
