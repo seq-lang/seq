@@ -7,7 +7,7 @@ namespace transform {
 namespace pipeline {
 
 bool hasAttribute(const Func *func, const std::string &attribute) {
-  if (auto *attr = func->getAttribute<FuncAttribute>()) {
+  if (auto *attr = func->getAttribute<KeyValueAttribute>()) {
     return attr->has(attribute);
   }
   return false;

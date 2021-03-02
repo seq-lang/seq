@@ -1003,7 +1003,7 @@ void LLVMVisitor::visit(const BodiedFunc *x) {
   assert(func);
   setDebugInfoForNode(x);
 
-  auto *fnAttributes = x->getAttribute<FuncAttribute>();
+  auto *fnAttributes = x->getAttribute<KeyValueAttribute>();
   if (fnAttributes && fnAttributes->has("export")) {
     func->setLinkage(llvm::GlobalValue::ExternalLinkage);
   } else {

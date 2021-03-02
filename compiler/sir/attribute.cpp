@@ -5,13 +5,13 @@
 namespace seq {
 namespace ir {
 
-const std::string FuncAttribute::AttributeName = "funcAttribute";
+const std::string KeyValueAttribute::AttributeName = "kvAttribute";
 
-bool FuncAttribute::has(const std::string &val) const {
+bool KeyValueAttribute::has(const std::string &val) const {
   return attributes.find(val) != attributes.end();
 }
 
-std::ostream &FuncAttribute::doFormat(std::ostream &os) const {
+std::ostream &KeyValueAttribute::doFormat(std::ostream &os) const {
   std::vector<std::string> keys;
   for (auto &val : attributes)
     keys.push_back(val.second);

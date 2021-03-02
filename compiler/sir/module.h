@@ -248,16 +248,20 @@ public:
   /// @param rType the return type
   /// @param args the argument types
   /// @param generics the generics
+  /// @param module the module of the function
   /// @return the function or nullptr
   Func *getOrRealizeFunc(const std::string &funcName, std::vector<types::Type *> args,
-                         std::vector<types::Generic> generics = {});
+                         std::vector<types::Generic> generics = {},
+                         const std::string &module = "");
 
   /// Gets or realizes a type.
   /// @param typeName the type name
   /// @param generics the generics
+  /// @param module the module of the type
   /// @return the function or nullptr
   types::Type *getOrRealizeType(const std::string &typeName,
-                                std::vector<types::Generic> generics = {});
+                                std::vector<types::Generic> generics = {},
+                                const std::string &module = "");
 
   /// @return the void type
   types::Type *getVoidType();
