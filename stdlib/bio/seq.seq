@@ -1,4 +1,3 @@
-@internal
 @tuple
 class seq:
     len: int
