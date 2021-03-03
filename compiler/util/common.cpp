@@ -1,5 +1,4 @@
 #include "common.h"
-#include <cassert>
 #include <cstdlib>
 #include <iostream>
 

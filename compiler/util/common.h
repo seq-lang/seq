@@ -11,6 +11,7 @@
 #include <ostream>
 #include <stdexcept>
 #include <sys/stat.h>
+#include <cassert>
 
 #include "util/fmt/format.h"
 #include "util/fmt/ostream.h"
