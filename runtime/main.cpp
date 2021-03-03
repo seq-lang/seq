@@ -1,6 +1,8 @@
 #include "lang/seq.h"
 #include "parser/parser.h"
 #include "sir/llvm/llvisitor.h"
+#include "sir/transform/manager.h"
+#include "sir/transform/pipeline.h"
 #include "util/jit.h"
 #include "llvm/Support/CommandLine.h"
 #include <chrono>
@@ -26,6 +28,12 @@ bool endsWith(std::string const &query, std::string const &ending) {
 }
 
 bool isLLVMFilename(const std::string &filename) { return endsWith(filename, ".ll"); }
+
+void registerStandardPasses(seq::ir::transform::PassManager &pm) {
+  pm.registerPass(
+      "bio-pipeline-opts",
+      std::make_unique<seq::ir::transform::pipeline::PipelineOptimizations>());
+}
 } // namespace
 
 int main(int argc, char **argv) {
@@ -75,12 +83,15 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
   }
 
-  auto module = seq::parse(argv[0], input.c_str(), /*code=*/"", /*isCode=*/false,
-                           /*isTest=*/false, /*startLine=*/0, defmap);
+  auto *module = seq::parse(argv[0], input.c_str(), /*code=*/"", /*isCode=*/false,
+                            /*isTest=*/false, /*startLine=*/0, defmap);
   if (!module)
     return EXIT_FAILURE;
 
   auto t = high_resolution_clock::now();
+  seq::ir::transform::PassManager pm;
+  registerStandardPasses(pm);
+  pm.run(module);
   seq::ir::LLVMVisitor visitor(debug.getValue());
   visitor.visit(module);
   LOG_TIME("[T] ir-visitor = {:.1f}",

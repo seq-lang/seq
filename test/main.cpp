@@ -16,6 +16,8 @@
 #include "parser/common.h"
 #include "parser/parser.h"
 #include "sir/llvm/llvisitor.h"
+#include "sir/transform/manager.h"
+#include "sir/transform/pipeline.h"
 #include "gtest/gtest.h"
 
 using namespace seq;
@@ -75,6 +77,11 @@ static pair<vector<string>, bool> findExpects(const string &filename, bool isCod
   return {result, isError};
 }
 
+void registerStandardPasses(ir::transform::PassManager &pm) {
+  pm.registerPass("bio-pipeline-opts",
+                  std::make_unique<ir::transform::pipeline::PipelineOptimizations>());
+}
+
 string argv0;
 
 class SeqTest
@@ -109,6 +116,10 @@ public:
                            /* isTest */ 1 + get<5>(GetParam()), startLine);
       if (!module)
         exit(EXIT_FAILURE);
+
+      ir::transform::PassManager pm;
+      registerStandardPasses(pm);
+      pm.run(module);
 
       seq::ir::LLVMVisitor visitor(/*debug=*/get<1>(GetParam()));
       visitor.visit(module);

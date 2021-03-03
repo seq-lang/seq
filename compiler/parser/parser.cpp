@@ -33,9 +33,9 @@ bool _isTest = false;
 
 namespace seq {
 
-seq::ir::IRModule *parse(const string &argv0, const string &file, const string &code,
-                         bool isCode, int isTest, int startLine,
-                         const std::unordered_map<std::string, std::string> &defines) {
+ir::IRModule *parse(const string &argv0, const string &file, const string &code,
+                    bool isCode, int isTest, int startLine,
+                    const std::unordered_map<std::string, std::string> &defines) {
   try {
     auto d = getenv("SEQ_DEBUG");
     if (d) {
@@ -100,7 +100,7 @@ seq::ir::IRModule *parse(const string &argv0, const string &file, const string &
     }
 
     t = high_resolution_clock::now();
-    auto module = ast::CodegenVisitor::apply(cache, move(typechecked));
+    auto *module = ast::CodegenVisitor::apply(cache, move(typechecked));
     module->setSrcInfo({abs, 0, 0, 0, 0});
 
     if (!isTest)
@@ -109,15 +109,15 @@ seq::ir::IRModule *parse(const string &argv0, const string &file, const string &
                    1000.0);
     _isTest = isTest;
     return module;
-  } catch (seq::exc::SeqException &e) {
+  } catch (exc::SeqException &e) {
     if (isTest) {
       LOG("ERROR: {}", e.what());
     } else {
-      seq::compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
-                            e.getSrcInfo().col);
+      compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
+                       e.getSrcInfo().col);
     }
     return nullptr;
-  } catch (seq::exc::ParserException &e) {
+  } catch (exc::ParserException &e) {
     for (int i = 0; i < e.messages.size(); i++) {
       if (isTest) {
         LOG("ERROR: {}", e.messages[i]);
@@ -130,29 +130,6 @@ seq::ir::IRModule *parse(const string &argv0, const string &file, const string &
     return nullptr;
   }
 }
-
-/*
-void execute(seq::SeqModule *module, const vector<string> &args,
-             const vector<string> &libs, bool debug) {
-  config::config().debug = debug;
-  try {
-    module->execute(args, libs, !_isTest);
-  } catch (exc::SeqException &e) {
-    compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
-                     e.getSrcInfo().col);
-  }
-}
-
-void compile(seq::SeqModule *module, const string &out, bool debug) {
-  config::config().debug = debug;
-  try {
-    module->compile(out);
-  } catch (exc::SeqException &e) {
-    compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
-                     e.getSrcInfo().col);
-  }
-}
-*/
 
 void generateDocstr(const string &argv0) {
   vector<string> files;
