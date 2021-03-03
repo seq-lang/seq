@@ -4,6 +4,7 @@
 #define SEQ_VERSION_MINOR 10
 #define SEQ_VERSION_PATCH 0
 
+#include <climits>
 #include <cstdint>
 #include <libgen.h>
 #include <memory>
