@@ -583,6 +583,8 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
         setReturnType(clone, M->getGeneratorType(types.yield));
         clone->setGenerator();
         clone->getBody()->accept(aft);
+        if (aft.params.empty())
+          continue;
 
         // make sure the arguments are in the correct order
         auto *inputType = prev->getOutputElementType();
