@@ -7,8 +7,13 @@ namespace ir {
 
 const std::string KeyValueAttribute::AttributeName = "kvAttribute";
 
-bool KeyValueAttribute::has(const std::string &val) const {
-  return attributes.find(val) != attributes.end();
+bool KeyValueAttribute::has(const std::string &key) const {
+  return attributes.find(key) != attributes.end();
+}
+
+std::string KeyValueAttribute::get(const std::string &key) const {
+  auto it = attributes.find(key);
+  return it != attributes.end() ? it->second : "";
 }
 
 std::ostream &KeyValueAttribute::doFormat(std::ostream &os) const {

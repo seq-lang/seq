@@ -68,8 +68,14 @@ struct KeyValueAttribute : public Attribute {
   explicit KeyValueAttribute(std::map<std::string, std::string> attributes)
       : attributes(std::move(attributes)) {}
 
-  /// @return true if the map contains val, false otherwise
-  bool has(const std::string &val) const;
+  /// @param key the key
+  /// @return true if the map contains key, false otherwise
+  bool has(const std::string &key) const;
+
+  /// @param key the key
+  /// @return the value associated with the given key, or empty
+  ///         string if none
+  std::string get(const std::string &key) const;
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
