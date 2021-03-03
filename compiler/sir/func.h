@@ -178,9 +178,7 @@ public:
   std::string getUnmangledName() const override;
 
   /// @return the parent type
-  types::Type *getParentType() { return parentType; }
-  /// @return the parent type
-  const types::Type *getParentType() const { return parentType; }
+  types::Type *getParentType() const { return parentType; }
   /// Sets the parent type.
   /// @param p the new parent
   void setParentType(types::Type *p) { parentType = p; }

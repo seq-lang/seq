@@ -67,9 +67,7 @@ public:
   using IRNode::replaceUsedVariable;
 
   /// @return the type
-  types::Type *getType() { return getActual()->type; }
-  /// @return the type
-  const types::Type *getType() const { return getActual()->type; }
+  types::Type *getType() const { return getActual()->type; }
   /// Sets the type.
   /// @param t the new type
   void setType(types::Type *t) { getActual()->type = t; }
@@ -132,7 +130,7 @@ private:
     return os << val->referenceString();
   }
 
-  const types::Type *doGetType() const override { return val->getType(); }
+  types::Type *doGetType() const override { return val->getType(); }
 
   std::vector<Var *> doGetUsedVariables() const override { return {val}; }
   int doReplaceUsedVariable(int id, Var *newVar) override;
@@ -168,7 +166,7 @@ private:
     return os << '&' << val->referenceString();
   }
 
-  const types::Type *doGetType() const override;
+  types::Type *doGetType() const override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {val}; }
   int doReplaceUsedVariable(int id, Var *newVar) override;

@@ -169,13 +169,9 @@ public:
   /// @return iterator beyond the last type
   auto types_end() const { return util::const_raw_ptr_adaptor(types.end()); }
   /// @return a pointer to the first type
-  types::Type *types_front() { return types.front().get(); }
+  types::Type *types_front() const { return types.front().get(); }
   /// @return a pointer to the last type
-  types::Type *types_back() { return types.back().get(); }
-  /// @return a pointer to the first type
-  const types::Type *types_front() const { return types.front().get(); }
-  /// @return a pointer to the last type
-  const types::Type *types_back() const { return types.back().get(); }
+  types::Type *types_back() const { return types.back().get(); }
 
   /// @param name the type's name
   /// @return the type with the given name
@@ -186,14 +182,14 @@ public:
 
   /// @param name the type's name
   /// @return the type with the given name
-  const types::Type *getType(const std::string &name) const {
+  types::Type *getType(const std::string &name) const {
     auto it = typesMap.find(name);
     return it == typesMap.end() ? nullptr : it->second->get();
   }
 
   /// Removes a given type.
   /// @param t the type
-  void remove(const types::Type *t) {
+  void remove(types::Type *t) {
     auto it = typesMap.find(t->getName());
     types.erase(it->second);
     typesMap.erase(it);

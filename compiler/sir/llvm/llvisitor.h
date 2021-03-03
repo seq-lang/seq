@@ -63,7 +63,7 @@ private:
     /// Finally start block
     llvm::BasicBlock *finallyBlock;
     /// Try-catch catch types
-    std::vector<const types::Type *> catchTypes;
+    std::vector<types::Type *> catchTypes;
     /// Try-catch handlers, corresponding to catch types
     std::vector<llvm::BasicBlock *> handlers;
     /// Exception state flag (see "State")
@@ -123,7 +123,7 @@ private:
   DebugInfo db;
 
   llvm::DIType *
-  getDITypeHelper(const types::Type *t,
+  getDITypeHelper(types::Type *t,
                   std::unordered_map<std::string, llvm::DICompositeType *> &cache);
   void setDebugInfoForNode(const IRNode *);
   void process(const IRNode *);
@@ -144,8 +144,8 @@ private:
   llvm::StructType *getPadType();
   llvm::StructType *getExceptionType();
   llvm::GlobalVariable *getTypeIdxVar(const std::string &name);
-  llvm::GlobalVariable *getTypeIdxVar(const types::Type *catchType);
-  int getTypeIdx(const types::Type *catchType = nullptr);
+  llvm::GlobalVariable *getTypeIdxVar(types::Type *catchType);
+  int getTypeIdx(types::Type *catchType = nullptr);
 
   // General function helpers
   llvm::Value *call(llvm::Value *callee, llvm::ArrayRef<llvm::Value *> args);
@@ -193,11 +193,11 @@ public:
   /// Get LLVM type from IR type
   /// @param t the IR type
   /// @return corresponding LLVM type
-  llvm::Type *getLLVMType(const types::Type *t);
+  llvm::Type *getLLVMType(types::Type *t);
   /// Get the LLVM debug info type from the IR type
   /// @param t the IR type
   /// @return corresponding LLVM DI type
-  llvm::DIType *getDIType(const types::Type *t);
+  llvm::DIType *getDIType(types::Type *t);
 
   void visit(const IRModule *) override;
   void visit(const BodiedFunc *) override;

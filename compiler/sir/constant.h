@@ -22,7 +22,7 @@ public:
       : AcceptorExtend(std::move(name)), type(type) {}
 
 private:
-  const types::Type *doGetType() const override { return type; }
+  types::Type *doGetType() const override { return type; }
 
   std::vector<types::Type *> doGetUsedTypes() const override { return {type}; }
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;

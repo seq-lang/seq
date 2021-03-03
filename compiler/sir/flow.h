@@ -21,7 +21,7 @@ public:
   Flow *clone() const { return cast<Flow>(Value::clone()); }
 
 protected:
-  const types::Type *doGetType() const final;
+  types::Type *doGetType() const final;
 };
 
 /// Flow that contains a series of flows or instructions.
@@ -266,9 +266,7 @@ public:
     void setHandler(Flow *h) { handler = h; }
 
     /// @return the catch type, may be nullptr
-    types::Type *getType() { return type; }
-    /// @return the catch type, may be nullptr
-    const types::Type *getType() const { return type; }
+    types::Type *getType() const { return type; }
     /// Sets the catch type.
     /// @param t the new type, nullptr for catch all
     void setType(types::Type *t) { type = t; }

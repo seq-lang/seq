@@ -55,9 +55,7 @@ public:
   using IRNode::replaceUsedVariable;
 
   /// @return the value's type
-  types::Type *getType() { return const_cast<types::Type *>(getActual()->doGetType()); }
-  /// @return the value's type
-  const types::Type *getType() const { return getActual()->doGetType(); }
+  types::Type *getType() const { return getActual()->doGetType(); }
 
   /// @return a clone of the value
   Value *clone() const;
@@ -109,7 +107,7 @@ private:
 
   Value *doCall(const std::vector<Value *> &args);
 
-  virtual const types::Type *doGetType() const = 0;
+  virtual types::Type *doGetType() const = 0;
 
   virtual std::vector<Value *> doGetUsedValues() const { return {}; }
   virtual int doReplaceUsedValue(int id, Value *newValue) { return 0; }

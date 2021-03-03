@@ -53,7 +53,7 @@ int VarValue::doReplaceUsedVariable(int id, Var *newVar) {
 
 const char PointerValue::NodeId = 0;
 
-const types::Type *PointerValue::doGetType() const {
+types::Type *PointerValue::doGetType() const {
   return getModule()->getPointerType(val->getType());
 }
 

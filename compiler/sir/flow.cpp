@@ -27,7 +27,7 @@ namespace ir {
 
 const char Flow::NodeId = 0;
 
-const types::Type *Flow::doGetType() const { return getModule()->getVoidType(); }
+types::Type *Flow::doGetType() const { return getModule()->getVoidType(); }
 
 const char SeriesFlow::NodeId = 0;
 

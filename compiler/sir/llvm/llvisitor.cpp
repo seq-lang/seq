@@ -438,11 +438,11 @@ llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(const std::string &name) {
   return tidx;
 }
 
-llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(const types::Type *catchType) {
+llvm::GlobalVariable *LLVMVisitor::getTypeIdxVar(types::Type *catchType) {
   return getTypeIdxVar(catchType ? catchType->getName() : "");
 }
 
-int LLVMVisitor::getTypeIdx(const types::Type *catchType) {
+int LLVMVisitor::getTypeIdx(types::Type *catchType) {
   return typeIdxLookup(catchType ? catchType->getName() : "");
 }
 
@@ -794,7 +794,7 @@ bool internalFuncMatches(const std::string &name, const InternalFunc *x,
   if (name != x->getUnmangledName() ||
       std::distance(funcType->begin(), funcType->end()) != sizeof...(ArgTypes))
     return false;
-  std::vector<const types::Type *> argTypes(funcType->begin(), funcType->end());
+  std::vector<types::Type *> argTypes(funcType->begin(), funcType->end());
   std::vector<bool> m = {bool(cast<ParentType>(x->getParentType())),
                          bool(cast<ArgTypes>(argTypes[Index]))...};
   const bool match = std::all_of(m.begin(), m.end(), [](bool b) { return b; });
@@ -815,9 +815,9 @@ void LLVMVisitor::visit(const InternalFunc *x) {
   assert(func);
   setDebugInfoForNode(x);
 
-  const Type *parentType = x->getParentType();
+  Type *parentType = x->getParentType();
   auto *funcType = cast<FuncType>(x->getType());
-  std::vector<const Type *> argTypes(funcType->begin(), funcType->end());
+  std::vector<Type *> argTypes(funcType->begin(), funcType->end());
 
   assert(func);
   func->setLinkage(llvm::GlobalValue::PrivateLinkage);
@@ -832,7 +832,7 @@ void LLVMVisitor::visit(const InternalFunc *x) {
 
   if (internalFuncMatches<PointerType, IntType>("__new__", x)) {
     auto *pointerType = cast<PointerType>(parentType);
-    const Type *baseType = pointerType->getBase();
+    Type *baseType = pointerType->getBase();
     llvm::Type *llvmBaseType = getLLVMType(baseType);
     llvm::Function *allocFunc = makeAllocFunc(baseType->isAtomic());
     llvm::Value *elemSize =
@@ -1196,7 +1196,7 @@ void LLVMVisitor::visit(const PointerValue *x) {
  * Types
  */
 
-llvm::Type *LLVMVisitor::getLLVMType(const types::Type *t) {
+llvm::Type *LLVMVisitor::getLLVMType(types::Type *t) {
   if (auto *x = cast<types::IntType>(t)) {
     return builder.getInt64Ty();
   }
@@ -1232,7 +1232,7 @@ llvm::Type *LLVMVisitor::getLLVMType(const types::Type *t) {
   if (auto *x = cast<types::FuncType>(t)) {
     llvm::Type *returnType = getLLVMType(x->getReturnType());
     std::vector<llvm::Type *> argTypes;
-    for (const auto *argType : *x) {
+    for (auto *argType : *x) {
       argTypes.push_back(getLLVMType(argType));
     }
     return llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false)
@@ -1268,8 +1268,7 @@ llvm::Type *LLVMVisitor::getLLVMType(const types::Type *t) {
 }
 
 llvm::DIType *LLVMVisitor::getDITypeHelper(
-    const types::Type *t,
-    std::unordered_map<std::string, llvm::DICompositeType *> &cache) {
+    types::Type *t, std::unordered_map<std::string, llvm::DICompositeType *> &cache) {
   llvm::Type *type = getLLVMType(t);
   auto &layout = module->getDataLayout();
 
@@ -1350,7 +1349,7 @@ llvm::DIType *LLVMVisitor::getDITypeHelper(
   if (auto *x = cast<types::FuncType>(t)) {
     std::vector<llvm::Metadata *> argTypes = {
         getDITypeHelper(x->getReturnType(), cache)};
-    for (const auto *argType : *x) {
+    for (auto *argType : *x) {
       argTypes.push_back(getDITypeHelper(argType, cache));
     }
     return db.builder->createPointerType(
@@ -1416,7 +1415,7 @@ llvm::DIType *LLVMVisitor::getDITypeHelper(
   return nullptr;
 }
 
-llvm::DIType *LLVMVisitor::getDIType(const types::Type *t) {
+llvm::DIType *LLVMVisitor::getDIType(types::Type *t) {
   std::unordered_map<std::string, llvm::DICompositeType *> cache;
   return getDITypeHelper(t, cache);
 }
@@ -1581,7 +1580,7 @@ void LLVMVisitor::visit(const ForFlow *x) {
 }
 
 namespace {
-bool anyMatch(const types::Type *type, std::vector<const types::Type *> types) {
+bool anyMatch(types::Type *type, std::vector<types::Type *> types) {
   if (type) {
     for (auto *t : types) {
       if (t && t->getName() == type->getName())
@@ -1755,7 +1754,7 @@ void LLVMVisitor::visit(const TryCatchFlow *x) {
   builder.CreateResume(builder.CreateLoad(tc.catchStore));
 
   // make sure we delegate to parent try-catch if necessary
-  std::vector<const types::Type *> catchTypesFull(tc.catchTypes);
+  std::vector<types::Type *> catchTypesFull(tc.catchTypes);
   std::vector<llvm::BasicBlock *> handlersFull(tc.handlers);
   std::vector<unsigned> depths(tc.catchTypes.size(), 0);
   unsigned depth = 1;

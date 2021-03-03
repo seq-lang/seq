@@ -28,7 +28,7 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override { return os << "any"; }
-  const types::Type *doGetType() const override { return getModule()->getVoidType(); }
+  types::Type *doGetType() const override { return getModule()->getVoidType(); }
   Value *doClone() const override { return getModule()->Nr<AnyValue>(getName()); }
 };
 

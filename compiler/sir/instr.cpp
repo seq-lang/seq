@@ -24,7 +24,7 @@ namespace ir {
 
 const char Instr::NodeId = 0;
 
-const types::Type *Instr::doGetType() const { return getModule()->getVoidType(); }
+types::Type *Instr::doGetType() const { return getModule()->getVoidType(); }
 
 const char AssignInstr::NodeId = 0;
 
@@ -55,7 +55,7 @@ Value *AssignInstr::doClone() const {
 
 const char ExtractInstr::NodeId = 0;
 
-const types::Type *ExtractInstr::doGetType() const {
+types::Type *ExtractInstr::doGetType() const {
   auto *memberedType = val->getType()->as<types::MemberedType>();
   assert(memberedType);
   return memberedType->getMemberType(field);
@@ -105,7 +105,7 @@ Value *InsertInstr::doClone() const {
 
 const char CallInstr::NodeId = 0;
 
-const types::Type *CallInstr::doGetType() const {
+types::Type *CallInstr::doGetType() const {
   auto *funcType = func->getType()->as<types::FuncType>();
   assert(funcType);
   return funcType->getReturnType();
@@ -164,7 +164,7 @@ Value *StackAllocInstr::doClone() const {
 
 const char TypePropertyInstr::NodeId = 0;
 
-const types::Type *TypePropertyInstr::doGetType() const {
+types::Type *TypePropertyInstr::doGetType() const {
   switch (property) {
   case Property::IS_ATOMIC:
     return getModule()->getBoolType();

@@ -1,173 +1,17 @@
 #include "pipeline.h"
+#include "sir/util/irtools.h"
 #include "sir/util/matching.h"
 
 namespace seq {
 namespace ir {
 namespace transform {
 namespace pipeline {
-
-bool hasAttribute(const Func *func, const std::string &attribute) {
-  if (auto *attr = func->getAttribute<KeyValueAttribute>()) {
-    return attr->has(attribute);
-  }
-  return false;
-}
-
-bool isStdlibFunc(const Func *func, const std::string &submodule = "") {
-  if (auto *attr = func->getAttribute<KeyValueAttribute>()) {
-    std::string module = attr->get(".module");
-    return module.rfind("std::" + submodule, 0) == 0;
-  }
-  return false;
-}
-
-CallInstr *call(Func *func, const std::vector<Value *> &args) {
-  auto *M = func->getModule();
-  return M->Nr<CallInstr>(M->Nr<VarValue>(func), args);
-}
-
-Value *makeTuple(const std::vector<Value *> &args, IRModule *M) {
-  std::vector<types::Type *> types;
-  for (auto *arg : args) {
-    types.push_back(arg->getType());
-  }
-  auto *tupleType = M->getTupleType(types);
-  auto *newFunc = M->getOrRealizeMethod(tupleType, "__new__", types);
-  assert(newFunc);
-  return M->Nr<CallInstr>(M->Nr<VarValue>(newFunc), args);
-}
-
-VarValue *makeVar(Value *x, SeriesFlow *flow, BodiedFunc *parent) {
-  auto *M = x->getModule();
-  auto *v = M->Nr<Var>(x->getType());
-  flow->push_back(M->Nr<AssignInstr>(v, x));
-  parent->push_back(v);
-  return M->Nr<VarValue>(v);
-}
-
-Value *alloc(types::Type *type, Value *count) {
-  auto *M = type->getModule();
-  auto *ptrType = M->getPointerType(type);
-  return (*ptrType)(*count);
-}
-
-Value *alloc(types::Type *type, int64_t count) {
-  auto *M = type->getModule();
-  return alloc(type, M->getIntConstant(count));
-}
-
-template <typename... Args> SeriesFlow *series(Args... args) {
-  std::vector<Value *> vals = {args...};
-  if (vals.empty())
-    return nullptr;
-  auto *series = vals[0]->getModule()->Nr<SeriesFlow>();
-  for (auto *val : vals) {
-    series->push_back(val);
-  }
-  return series;
-}
-
-template <typename T> bool isConst(const Value *x) {
-  return isA<TemplatedConstant<T>>(x);
-}
-
-template <typename T> bool isConst(const Value *x, const T &value) {
-  if (auto *c = cast<TemplatedConstant<T>>(x)) {
-    return c->getVal() == value;
-  }
-  return false;
-}
-
-template <typename T> T getConst(const Value *x) {
-  auto *c = cast<TemplatedConstant<T>>(x);
-  assert(c);
-  return c->getVal();
-}
-
-Var *getVar(Value *x) {
-  if (auto *v = cast<VarValue>(x)) {
-    if (auto *var = cast<Var>(v->getVar())) {
-      if (!isA<Func>(var)) {
-        return var;
-      }
-    }
-  }
-  return nullptr;
-}
-
-const Var *getVar(const Value *x) {
-  if (auto *v = cast<VarValue>(x)) {
-    if (auto *var = cast<Var>(v->getVar())) {
-      if (!isA<Func>(var)) {
-        return var;
-      }
-    }
-  }
-  return nullptr;
-}
-
-Func *getFunc(Value *x) {
-  if (auto *v = cast<VarValue>(x)) {
-    if (auto *func = cast<Func>(v->getVar())) {
-      return func;
-    }
-  }
-  return nullptr;
-}
-
-const Func *getFunc(const Value *x) {
-  if (auto *v = cast<VarValue>(x)) {
-    if (auto *func = cast<Func>(v->getVar())) {
-      return func;
-    }
-  }
-  return nullptr;
-}
-
-BodiedFunc *getStdlibFunc(Value *x, const std::string &name,
-                          const std::string &submodule = "") {
-  if (auto *f = getFunc(x)) {
-    if (auto *g = cast<BodiedFunc>(f)) {
-      if (isStdlibFunc(g, submodule) && g->getUnmangledName() == name) {
-        return g;
-      }
-    }
-  }
-  return nullptr;
-}
-
-const BodiedFunc *getStdlibFunc(const Value *x, const std::string &name,
-                                const std::string &submodule = "") {
-  if (auto *f = getFunc(x)) {
-    if (auto *g = cast<BodiedFunc>(f)) {
-      if (isStdlibFunc(g, submodule) && g->getUnmangledName() == name) {
-        return g;
-      }
-    }
-  }
-  return nullptr;
-}
-
-types::Type *getReturnType(Func *func) {
-  return cast<types::FuncType>(func->getType())->getReturnType();
-}
-
-const types::Type *getReturnType(const Func *func) {
-  return cast<types::FuncType>(func->getType())->getReturnType();
-}
-
-void setReturnType(Func *func, types::Type *rType) {
-  auto *M = func->getModule();
-  auto *t = cast<types::FuncType>(func->getType());
-  assert(t);
-  std::vector<types::Type *> argTypes(t->begin(), t->end());
-  func->setType(M->getFuncType(rType, argTypes));
-}
-
+namespace {
 const std::string prefetchModule = "std.internal.prefetch";
 const std::string builtinModule = "std.bio.builtin";
 const std::string alignModule = "std.bio.align";
 const std::string seqModule = "std.bio.seq";
+} // namespace
 
 /*
  * Substitution optimizations
@@ -181,8 +25,8 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
   while (it != p->end()) {
     if (prev) {
       {
-        auto *f1 = getStdlibFunc(prev->getFunc(), "kmers", "bio");
-        auto *f2 = getStdlibFunc(it->getFunc(), "revcomp", "bio");
+        auto *f1 = util::getStdlibFunc(prev->getFunc(), "kmers", "bio");
+        auto *f2 = util::getStdlibFunc(it->getFunc(), "revcomp", "bio");
         if (f1 && f2) {
           auto *funcType = cast<types::FuncType>(f1->getType());
           auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
@@ -190,7 +34,8 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
           auto *kmerType = genType->getBase();
           auto *kmersRevcompFunc = M->getOrRealizeFunc(
               "_kmers_revcomp", {seqType, M->getIntType()}, {kmerType}, builtinModule);
-          assert(kmersRevcompFunc && getReturnType(kmersRevcompFunc)->is(genType));
+          assert(kmersRevcompFunc &&
+                 util::getReturnType(kmersRevcompFunc)->is(genType));
           cast<VarValue>(prev->getFunc())->setVar(kmersRevcompFunc);
           it = p->erase(it);
           continue;
@@ -198,8 +43,8 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
       }
 
       {
-        auto *f1 = getStdlibFunc(prev->getFunc(), "kmers_with_pos", "bio");
-        auto *f2 = getStdlibFunc(it->getFunc(), "revcomp_with_pos", "bio");
+        auto *f1 = util::getStdlibFunc(prev->getFunc(), "kmers_with_pos", "bio");
+        auto *f2 = util::getStdlibFunc(it->getFunc(), "revcomp_with_pos", "bio");
         if (f1 && f2) {
           auto *funcType = cast<types::FuncType>(f1->getType());
           auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
@@ -210,7 +55,7 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
               M->getOrRealizeFunc("_kmers_revcomp_with_pos", {seqType, M->getIntType()},
                                   {kmerType}, builtinModule);
           assert(kmersRevcompWithPosFunc &&
-                 getReturnType(kmersRevcompWithPosFunc)->is(genType));
+                 util::getReturnType(kmersRevcompWithPosFunc)->is(genType));
           cast<VarValue>(prev->getFunc())->setVar(kmersRevcompWithPosFunc);
           it = p->erase(it);
           continue;
@@ -218,16 +63,17 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
       }
 
       {
-        auto *f1 = getStdlibFunc(prev->getFunc(), "kmers", "bio");
-        auto *f2 = getStdlibFunc(it->getFunc(), "canonical", "bio");
-        if (f1 && f2 && isConst<int64_t>(prev->back(), 1)) {
+        auto *f1 = util::getStdlibFunc(prev->getFunc(), "kmers", "bio");
+        auto *f2 = util::getStdlibFunc(it->getFunc(), "canonical", "bio");
+        if (f1 && f2 && util::isConst<int64_t>(prev->back(), 1)) {
           auto *funcType = cast<types::FuncType>(f1->getType());
           auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
           auto *seqType = funcType->front();
           auto *kmerType = genType->getBase();
           auto *kmersCanonicalFunc = M->getOrRealizeFunc("_kmers_canonical", {seqType},
                                                          {kmerType}, builtinModule);
-          assert(kmersCanonicalFunc && getReturnType(kmersCanonicalFunc)->is(genType));
+          assert(kmersCanonicalFunc &&
+                 util::getReturnType(kmersCanonicalFunc)->is(genType));
           cast<VarValue>(prev->getFunc())->setVar(kmersCanonicalFunc);
           prev->erase(prev->end() - 1); // remove step argument
           it = p->erase(it);
@@ -236,9 +82,9 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
       }
 
       {
-        auto *f1 = getStdlibFunc(prev->getFunc(), "kmers_with_pos", "bio");
-        auto *f2 = getStdlibFunc(it->getFunc(), "canonical_with_pos", "bio");
-        if (f1 && f2 && isConst<int64_t>(prev->back(), 1)) {
+        auto *f1 = util::getStdlibFunc(prev->getFunc(), "kmers_with_pos", "bio");
+        auto *f2 = util::getStdlibFunc(it->getFunc(), "canonical_with_pos", "bio");
+        if (f1 && f2 && util::isConst<int64_t>(prev->back(), 1)) {
           auto *funcType = cast<types::FuncType>(f1->getType());
           auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
           auto *seqType = funcType->front();
@@ -247,7 +93,7 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
           auto *kmersCanonicalWithPosFunc = M->getOrRealizeFunc(
               "_kmers_canonical_with_pos", {seqType}, {kmerType}, builtinModule);
           assert(kmersCanonicalWithPosFunc &&
-                 getReturnType(kmersCanonicalWithPosFunc)->is(genType));
+                 util::getReturnType(kmersCanonicalWithPosFunc)->is(genType));
           cast<VarValue>(prev->getFunc())->setVar(kmersCanonicalWithPosFunc);
           prev->erase(prev->end() - 1); // remove step argument
           it = p->erase(it);
@@ -271,7 +117,7 @@ struct PrefetchFunctionTransformer : public util::LambdaValueVisitor {
   }
 
   void handle(CallInstr *x) override {
-    auto *func = cast<BodiedFunc>(getFunc(x->getFunc()));
+    auto *func = cast<BodiedFunc>(util::getFunc(x->getFunc()));
     if (!func || func->getUnmangledName() != "__getitem__" || x->numArgs() != 2)
       return;
 
@@ -285,9 +131,9 @@ struct PrefetchFunctionTransformer : public util::LambdaValueVisitor {
     if (!prefetchFunc)
       return;
 
-    Value *prefetch = call(prefetchFunc, {self, key});
+    Value *prefetch = util::call(prefetchFunc, {self, key});
     auto *yield = M->Nr<YieldInstr>();
-    auto *replacement = series(prefetch, yield);
+    auto *replacement = util::series(prefetch, yield);
 
     auto *clone = x->clone();
     see(clone); // avoid infinite loop on clone
@@ -307,7 +153,7 @@ BodiedFunc *makeStageWrapperFunc(PipelineFlow::Stage *stage, Func *callee,
       argNames.push_back(std::to_string(i++));
     }
   }
-  auto *funcType = M->getFuncType(getReturnType(callee), argTypes);
+  auto *funcType = M->getFuncType(util::getReturnType(callee), argTypes);
   auto *wrapperFunc = M->Nr<BodiedFunc>("__stage_wrapper");
   wrapperFunc->realize(funcType, argNames);
 
@@ -323,7 +169,7 @@ BodiedFunc *makeStageWrapperFunc(PipelineFlow::Stage *stage, Func *callee,
     }
   }
 
-  wrapperFunc->setBody(series(M->Nr<ReturnInstr>(call(callee, args))));
+  wrapperFunc->setBody(util::series(M->Nr<ReturnInstr>(util::call(callee, args))));
   return wrapperFunc;
 }
 
@@ -332,11 +178,11 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
   PrefetchFunctionTransformer pft;
   PipelineFlow::Stage *prev = nullptr;
   for (auto it = p->begin(); it != p->end(); ++it) {
-    if (auto *func = cast<BodiedFunc>(getFunc(it->getFunc()))) {
-      if (!it->isGenerator() && hasAttribute(func, "prefetch")) {
+    if (auto *func = cast<BodiedFunc>(util::getFunc(it->getFunc()))) {
+      if (!it->isGenerator() && util::hasAttribute(func, "prefetch")) {
         // transform prefetch'ing function
         auto *clone = cast<BodiedFunc>(func->clone());
-        setReturnType(clone, M->getGeneratorType(getReturnType(clone)));
+        util::setReturnType(clone, M->getGeneratorType(util::getReturnType(clone)));
         clone->setGenerator();
         clone->getBody()->accept(pft);
 
@@ -352,10 +198,10 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
         auto *init = M->Nr<SeriesFlow>();
         auto *parent = cast<BodiedFunc>(getParentFunc());
         assert(parent);
-        auto *filled = makeVar(M->getIntConstant(0), init, parent);
-        auto *next = makeVar(M->getIntConstant(0), init, parent);
-        auto *states = makeVar(M->Nr<StackAllocInstr>(statesType, SCHED_WIDTH_PREFETCH),
-                               init, parent);
+        auto *filled = util::makeVar(M->getIntConstant(0), init, parent);
+        auto *next = util::makeVar(M->getIntConstant(0), init, parent);
+        auto *states = util::makeVar(
+            M->Nr<StackAllocInstr>(statesType, SCHED_WIDTH_PREFETCH), init, parent);
         insertBefore(init);
 
         // scheduler
@@ -370,7 +216,7 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
             stageArgTypes.push_back(arg->getType());
           }
         }
-        auto *extraArgs = makeTuple(stageArgs, M);
+        auto *extraArgs = util::makeTuple(stageArgs, M);
         std::vector<types::Type *> argTypes = {
             inputType,  coroType, statesType,          intPtrType,
             intPtrType, intType,  extraArgs->getType()};
@@ -392,14 +238,15 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
         std::vector<Value *> args = {states, filled};
 
         std::vector<PipelineFlow::Stage> drainStages = {
-            {call(drainFunc, args), {}, /*generator=*/true, /*parallel=*/false}};
+            {util::call(drainFunc, args), {}, /*generator=*/true, /*parallel=*/false}};
         *it = stage;
         for (++it; it != p->end(); ++it) {
           drainStages.push_back(it->clone());
         }
 
-        auto *drain = series(M->Nr<AssignInstr>(next->getVar(), M->getIntConstant(0)),
-                             M->Nr<PipelineFlow>(drainStages));
+        auto *drain =
+            util::series(M->Nr<AssignInstr>(next->getVar(), M->getIntConstant(0)),
+                         M->Nr<PipelineFlow>(drainStages));
         insertAfter(drain);
 
         break; // at most one prefetch transformation per pipeline
@@ -439,7 +286,7 @@ bool isConstOrGlobal(const Value *x) {
   } else if (auto *v = cast<VarValue>(x)) {
     return v->getVar()->isGlobal();
   } else {
-    return isConst<int64_t>(x) || isConst<bool>(x);
+    return util::isConst<int64_t>(x) || util::isConst<bool>(x);
   }
 }
 
@@ -492,19 +339,19 @@ template <typename T> bool verifyAlignParams(T begin, T end) {
     Value *v = *it;
     switch (kinds[i]) {
     case SI:
-      if (!(isGlobalVar(v) || isConst<int64_t>(v)))
+      if (!(isGlobalVar(v) || util::isConst<int64_t>(v)))
         return false;
       break;
     case SB:
-      if (!(isGlobalVar(v) || isConst<bool>(v)))
+      if (!(isGlobalVar(v) || util::isConst<bool>(v)))
         return false;
       break;
     case UI:
-      if (!isConst<int64_t>(v, -1))
+      if (!util::isConst<int64_t>(v, -1))
         return false;
       break;
     case UB:
-      if (!isConst<bool>(v, false))
+      if (!util::isConst<bool>(v, false))
         return false;
       break;
     default:
@@ -537,7 +384,7 @@ struct InterAlignFunctionTransformer : public util::LambdaValueVisitor {
         types->seq, "align", {types->seq, types->seq, I, I, I, I, I, I, I, I, I, I,
                               B,          B,          B, B, B, B, B, B, B, B, B});
 
-    auto *func = cast<BodiedFunc>(getFunc(x->getFunc()));
+    auto *func = cast<BodiedFunc>(util::getFunc(x->getFunc()));
     if (!(func && alignFunc && util::match(func, alignFunc) &&
           verifyAlignParams(x->begin() + 2, x->end())))
       return;
@@ -552,7 +399,7 @@ struct InterAlignFunctionTransformer : public util::LambdaValueVisitor {
     auto *yieldOut = M->Nr<YieldInstr>(yieldValue);
     auto *yieldIn = M->Nr<YieldInInstr>(types->yield, /*suspend=*/false);
     auto *alnResult = M->Nr<ExtractInstr>(yieldIn, "aln");
-    x->replaceAll(M->Nr<FlowInstr>(series(yieldOut), alnResult));
+    x->replaceAll(M->Nr<FlowInstr>(util::series(yieldOut), alnResult));
   }
 
   InterAlignFunctionTransformer(InterAlignTypes *types)
@@ -574,13 +421,13 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
     return;
   PipelineFlow::Stage *prev = nullptr;
   for (auto it = p->begin(); it != p->end(); ++it) {
-    if (auto *func = cast<BodiedFunc>(getFunc(it->getFunc()))) {
-      if (!it->isGenerator() && hasAttribute(func, "inter_align") &&
-          getReturnType(func)->is(M->getVoidType())) {
+    if (auto *func = cast<BodiedFunc>(util::getFunc(it->getFunc()))) {
+      if (!it->isGenerator() && util::hasAttribute(func, "inter_align") &&
+          util::getReturnType(func)->is(M->getVoidType())) {
         // transform aligning function
         InterAlignFunctionTransformer aft(&types);
         auto *clone = cast<BodiedFunc>(func->clone());
-        setReturnType(clone, M->getGeneratorType(types.yield));
+        util::setReturnType(clone, M->getGeneratorType(types.yield));
         clone->setGenerator();
         clone->getBody()->accept(aft);
         if (aft.params.empty())
@@ -606,15 +453,19 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
         assert(parent);
 
         auto *init = M->Nr<SeriesFlow>();
-        auto *states = makeVar(alloc(coroType->getReturnType(), W), init, parent);
-        auto *statesTemp = makeVar(alloc(coroType->getReturnType(), W), init, parent);
-        auto *pairs = makeVar(alloc(types.pair, W), init, parent);
-        auto *pairsTemp = makeVar(alloc(types.pair, W), init, parent);
-        auto *bufRef = makeVar(alloc(M->getByteType(), LEN_LIMIT * W), init, parent);
-        auto *bufQer = makeVar(alloc(M->getByteType(), LEN_LIMIT * W), init, parent);
-        auto *hist =
-            makeVar(alloc(i32, MAX_SEQ_LEN8 + MAX_SEQ_LEN16 + 32), init, parent);
-        auto *filled = makeVar(M->getIntConstant(0), init, parent);
+        auto *states =
+            util::makeVar(util::alloc(coroType->getReturnType(), W), init, parent);
+        auto *statesTemp =
+            util::makeVar(util::alloc(coroType->getReturnType(), W), init, parent);
+        auto *pairs = util::makeVar(util::alloc(types.pair, W), init, parent);
+        auto *pairsTemp = util::makeVar(util::alloc(types.pair, W), init, parent);
+        auto *bufRef =
+            util::makeVar(util::alloc(M->getByteType(), LEN_LIMIT * W), init, parent);
+        auto *bufQer =
+            util::makeVar(util::alloc(M->getByteType(), LEN_LIMIT * W), init, parent);
+        auto *hist = util::makeVar(util::alloc(i32, MAX_SEQ_LEN8 + MAX_SEQ_LEN16 + 32),
+                                   init, parent);
+        auto *filled = util::makeVar(M->getIntConstant(0), init, parent);
         insertBefore(init);
 
         auto *width = M->getIntConstant(W);
@@ -628,7 +479,7 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
             stageArgTypes.push_back(arg->getType());
           }
         }
-        auto *extraArgs = makeTuple(stageArgs, M);
+        auto *extraArgs = util::makeTuple(stageArgs, M);
 
         auto *schedFunc = M->getOrRealizeFunc(
             "_interaln_scheduler",
@@ -654,8 +505,8 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
                                   /*generator=*/false, /*parallel=*/false);
         *it = stage;
 
-        auto *drain = call(flushFunc, {pairs, bufRef, bufQer, states, filled, params,
-                                       hist, pairsTemp, statesTemp});
+        auto *drain = util::call(flushFunc, {pairs, bufRef, bufQer, states, filled,
+                                             params, hist, pairsTemp, statesTemp});
         insertAfter(drain);
 
         break; // at most one inter-sequence alignment transformation per pipeline

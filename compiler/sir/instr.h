@@ -21,7 +21,7 @@ public:
   using AcceptorExtend::AcceptorExtend;
 
 private:
-  const types::Type *doGetType() const override;
+  types::Type *doGetType() const override;
 };
 
 /// Instr representing setting a memory location.
@@ -104,7 +104,7 @@ public:
   void setField(std::string f) { field = std::move(f); }
 
 protected:
-  const types::Type *doGetType() const override;
+  types::Type *doGetType() const override;
   std::vector<Value *> doGetUsedValues() const override { return {val}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
 
@@ -157,7 +157,7 @@ public:
   void setField(std::string f) { field = std::move(f); }
 
 protected:
-  const types::Type *doGetType() const override { return lhs->getType(); }
+  types::Type *doGetType() const override { return lhs->getType(); }
   std::vector<Value *> doGetUsedValues() const override { return {lhs, rhs}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
 
@@ -233,7 +233,7 @@ public:
   int numArgs() const { return args.size(); }
 
 protected:
-  const types::Type *doGetType() const override;
+  types::Type *doGetType() const override;
   std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
 
@@ -269,13 +269,13 @@ public:
   /// @return the array type
   types::Type *getArrayType() { return arrayType; }
   /// @return the array type
-  const types::Type *getArrayType() const { return arrayType; }
+  types::Type *getArrayType() const { return arrayType; }
   /// Sets the array type.
   /// @param t the new type
   void setArrayType(types::Type *t) { arrayType = t; }
 
 protected:
-  const types::Type *doGetType() const override { return arrayType; }
+  types::Type *doGetType() const override { return arrayType; }
   std::vector<types::Type *> doGetUsedTypes() const override { return {arrayType}; }
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
@@ -308,7 +308,7 @@ public:
   /// @return the type being inspected
   types::Type *getInspectType() { return inspectType; }
   /// @return the type being inspected
-  const types::Type *getInspectType() const { return inspectType; }
+  types::Type *getInspectType() const { return inspectType; }
   /// Sets the type being inspected
   /// @param t the new type
   void setInspectType(types::Type *t) { inspectType = t; }
@@ -320,7 +320,7 @@ public:
   void setProperty(Property p) { property = p; }
 
 protected:
-  const types::Type *doGetType() const override;
+  types::Type *doGetType() const override;
   std::vector<types::Type *> doGetUsedTypes() const override { return {inspectType}; }
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
@@ -358,7 +358,7 @@ public:
   void setType(types::Type *t) { type = t; }
 
 protected:
-  const types::Type *doGetType() const override { return type; }
+  types::Type *doGetType() const override { return type; }
   std::vector<types::Type *> doGetUsedTypes() const override { return {type}; }
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
@@ -414,7 +414,7 @@ public:
   void setFalseValue(Value *v) { falseValue = v; }
 
 protected:
-  const types::Type *doGetType() const override { return trueValue->getType(); }
+  types::Type *doGetType() const override { return trueValue->getType(); }
   std::vector<Value *> doGetUsedValues() const override {
     return {cond, trueValue, falseValue};
   }
@@ -606,7 +606,7 @@ public:
   void setValue(Value *v) { val = v; }
 
 protected:
-  const types::Type *doGetType() const override { return val->getType(); }
+  types::Type *doGetType() const override { return val->getType(); }
   std::vector<Value *> doGetUsedValues() const override { return {flow, val}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
 
