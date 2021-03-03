@@ -119,8 +119,11 @@ Func *IRModule::getOrRealizeMethod(types::Type *parent, const std::string &metho
 
 Func *IRModule::getOrRealizeFunc(const std::string &funcName,
                                  std::vector<types::Type *> args,
-                                 std::vector<types::Generic> generics) {
-  auto func = cache->findFunction(funcName);
+                                 std::vector<types::Generic> generics,
+                                 const std::string &module) {
+  auto fqName =
+      module.empty() ? funcName : fmt::format(FMT_STRING("{}.{}"), module, funcName);
+  auto func = cache->findFunction(fqName);
   if (!func)
     return nullptr;
   auto arg = translateArgs(args);
@@ -129,8 +132,11 @@ Func *IRModule::getOrRealizeFunc(const std::string &funcName,
 }
 
 types::Type *IRModule::getOrRealizeType(const std::string &typeName,
-                                        std::vector<types::Generic> generics) {
-  auto type = cache->findClass(typeName);
+                                        std::vector<types::Generic> generics,
+                                        const std::string &module) {
+  auto fqName =
+      module.empty() ? typeName : fmt::format(FMT_STRING("{}.{}"), module, typeName);
+  auto type = cache->findClass(fqName);
   if (!type)
     return nullptr;
   return cache->realizeType(type, translateGenerics(generics));

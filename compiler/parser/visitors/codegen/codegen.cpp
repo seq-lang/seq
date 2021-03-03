@@ -617,7 +617,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
       assert(f);
 
       f->realize(funcType, names);
-      f->setAttribute(make_unique<FuncAttribute>(ast->attributes));
+      f->setAttribute(make_unique<KeyValueAttribute>(ast->attributes));
       for (auto &a : ast->attributes) {
         if (a.first == "atomic")
           ctx->setFlag("atomic");

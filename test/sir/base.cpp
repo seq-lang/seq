@@ -38,7 +38,7 @@ TEST_F(SIRCoreTest, IRNodeNoReplacementRTTI) {
 TEST_F(SIRCoreTest, IRNodeNoReplacementAttributes) {
   auto *node = module->Nr<IntConstant>(1, module->getIntType());
   ASSERT_FALSE(node->hasReplacement());
-  ASSERT_FALSE(node->hasAttribute<FuncAttribute>());
+  ASSERT_FALSE(node->hasAttribute<KeyValueAttribute>());
 
   ASSERT_TRUE(node->hasAttribute<SrcInfoAttribute>());
   ASSERT_TRUE(node->getAttribute<SrcInfoAttribute>());
@@ -63,7 +63,7 @@ TEST_F(SIRCoreTest, IRNodeReplacementDelegates) {
 
   Value *originalNode = module->Nr<IntConstant>(1, module->getIntType());
   Value *newNode = module->Nr<BoolConstant>(false, module->getBoolType(), NODE_NAME);
-  newNode->setAttribute(std::make_unique<FuncAttribute>());
+  newNode->setAttribute(std::make_unique<KeyValueAttribute>());
 
   ASSERT_EQ(0, originalNode->getName().size());
   ASSERT_EQ(1, std::distance(originalNode->attributes_begin(),

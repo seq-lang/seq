@@ -56,25 +56,31 @@ private:
 };
 
 /// Attribute containing function information
-struct FuncAttribute : public Attribute {
+struct KeyValueAttribute : public Attribute {
   static const std::string AttributeName;
 
   /// attributes map
   std::map<std::string, std::string> attributes;
 
-  FuncAttribute() = default;
-  /// Constructs a FuncAttribute.
+  KeyValueAttribute() = default;
+  /// Constructs a KeyValueAttribute.
   /// @param attributes the map of attributes
-  explicit FuncAttribute(std::map<std::string, std::string> attributes)
+  explicit KeyValueAttribute(std::map<std::string, std::string> attributes)
       : attributes(std::move(attributes)) {}
 
-  /// @return true if the map contains val, false otherwise
-  bool has(const std::string &val) const;
+  /// @param key the key
+  /// @return true if the map contains key, false otherwise
+  bool has(const std::string &key) const;
+
+  /// @param key the key
+  /// @return the value associated with the given key, or empty
+  ///         string if none
+  std::string get(const std::string &key) const;
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  Attribute *doClone() const override { return new FuncAttribute(*this); }
+  Attribute *doClone() const override { return new KeyValueAttribute(*this); }
 };
 
 /// Attribute containing type member information
@@ -85,7 +91,7 @@ struct MemberAttribute : public Attribute {
   std::map<std::string, SrcInfo> memberSrcInfo;
 
   MemberAttribute() = default;
-  /// Constructs a FuncAttribute.
+  /// Constructs a KeyValueAttribute.
   /// @param attributes the map of attributes
   explicit MemberAttribute(std::map<std::string, SrcInfo> memberSrcInfo)
       : memberSrcInfo(std::move(memberSrcInfo)) {}

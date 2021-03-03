@@ -456,6 +456,8 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   handle->setSrcInfo(t->getSrcInfo());
   handle->setAstType(
       std::const_pointer_cast<seq::ast::types::Type>(t->shared_from_this()));
+  if (auto &ast = ctx->cache->classes[t->name].ast)
+    handle->setAttribute(std::make_unique<seq::ir::KeyValueAttribute>(ast->attributes));
   return ctx->cache->classes[t->name].realizations[realizedName].ir = handle;
 }
 

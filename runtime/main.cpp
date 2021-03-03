@@ -30,7 +30,6 @@ bool isLLVMFilename(const std::string &filename) { return endsWith(filename, ".l
 
 int main(int argc, char **argv) {
   using namespace std::chrono;
-  auto total_t = high_resolution_clock::now();
 
   llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::desc("<input file>"),
                                    llvm::cl::init("-"));
