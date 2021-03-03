@@ -167,6 +167,7 @@ void setReturnType(Func *func, types::Type *rType) {
 const std::string prefetchModule = "std.internal.prefetch";
 const std::string builtinModule = "std.bio.builtin";
 const std::string alignModule = "std.bio.align";
+const std::string seqModule = "std.bio.seq";
 
 /*
  * Substitution optimizations
@@ -424,7 +425,7 @@ struct InterAlignTypes {
 };
 
 InterAlignTypes gatherInterAlignTypes(IRModule *M) {
-  return {M->getOrRealizeType("seq", {}, alignModule),
+  return {M->getOrRealizeType("seq", {}, seqModule),
           M->getOrRealizeType("CIGAR", {}, alignModule),
           M->getOrRealizeType("Alignment", {}, alignModule),
           M->getOrRealizeType("InterAlignParams", {}, alignModule),
@@ -645,7 +646,7 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
 
         PipelineFlow::Stage stage(M->Nr<VarValue>(schedFunc),
                                   {nullptr, M->Nr<VarValue>(clone), pairs, bufRef,
-                                   bufRef, states, params, hist, pairsTemp, statesTemp,
+                                   bufQer, states, params, hist, pairsTemp, statesTemp,
                                    M->Nr<PointerValue>(filled->getVar()), width,
                                    extraArgs},
                                   /*generator=*/false, /*parallel=*/false);
