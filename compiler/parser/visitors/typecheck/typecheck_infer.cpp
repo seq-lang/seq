@@ -287,10 +287,9 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
             v[ub.first->getLink()->id] = {ub.first->getSrcInfo(), ub.second};
           }
         for (auto &ub : v)
-          seq::compilationMessage(
-              "\033[1;31merror:\033[0m",
-              format("cannot infer the type of {}", ub.second.second),
-              ub.second.first.file, ub.second.first.line, ub.second.first.col);
+          seq::compilationError(format("cannot infer the type of {}", ub.second.second),
+                                ub.second.first.file, ub.second.first.line,
+                                ub.second.first.col, /*terminate=*/false);
         error("cannot typecheck the program");
       }
       prevSize = newUnbounds;

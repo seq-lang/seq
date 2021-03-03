@@ -10,7 +10,6 @@
 #include <string>
 #include <sys/stat.h>
 
-#include "lang/seq.h"
 #include "parser/common.h"
 #include "util/fmt/format.h"
 

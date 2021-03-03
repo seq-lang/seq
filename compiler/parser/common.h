@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-#include "lang/seq.h"
+#include "util/common.h"
 
 using std::make_shared;
 using std::make_unique;

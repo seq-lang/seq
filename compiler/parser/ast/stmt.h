@@ -13,7 +13,6 @@
 #include <string>
 #include <vector>
 
-#include "lang/seq.h"
 #include "parser/ast/expr.h"
 #include "parser/ast/types.h"
 #include "parser/common.h"

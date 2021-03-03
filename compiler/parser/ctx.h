@@ -16,7 +16,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "lang/seq.h"
 #include "parser/ast.h"
 #include "parser/common.h"
 

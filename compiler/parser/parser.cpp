@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 
-#include "lang/seq.h"
 #include "parser/cache.h"
 #include "parser/ocaml/ocaml.h"
 #include "parser/parser.h"
@@ -122,9 +121,8 @@ ir::IRModule *parse(const string &argv0, const string &file, const string &code,
       if (isTest) {
         LOG("ERROR: {}", e.messages[i]);
       } else {
-        compilationMessage("\033[1;31merror:\033[0m", e.messages[i],
-                           e.locations[i].file, e.locations[i].line,
-                           e.locations[i].col);
+        compilationError(e.messages[i], e.locations[i].file, e.locations[i].line,
+                         e.locations[i].col, /*terminate=*/false);
       }
     }
     return nullptr;

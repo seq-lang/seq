@@ -12,8 +12,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "lang/seq.h"
 #include "sir/sir.h"
+#include "util/common.h"
 
 namespace seq {
 

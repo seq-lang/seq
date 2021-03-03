@@ -29,9 +29,9 @@ copyright = u'2019, seq-lang'
 author = u'seq-lang'
 
 # The short X.Y version
-version = u'0.9'
+version = u'0.10'
 # The full version, including alpha/beta/rc tags
-release = u'0.9.11'
+release = u'0.10.0'
 
 # Logo path
 html_logo = '../images/logo.png'

@@ -1,9 +1,8 @@
-#include "lang/seq.h"
 #include "parser/parser.h"
 #include "sir/llvm/llvisitor.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pipeline.h"
-#include "util/jit.h"
+#include "util/common.h"
 #include "llvm/Support/CommandLine.h"
 #include <chrono>
 #include <cstdio>

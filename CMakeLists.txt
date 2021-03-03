@@ -114,14 +114,6 @@ include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
 set(SEQ_HPPFILES
-        compiler/lang/expr.h
-        compiler/lang/func.h
-        compiler/lang/lang.h
-        compiler/lang/patterns.h
-        compiler/lang/pipeline.h
-        compiler/lang/seq.h
-        compiler/lang/stmt.h
-        compiler/lang/var.h
         compiler/parser/ast.h
         compiler/parser/ast/expr.h
         compiler/parser/ast/stmt.h
@@ -167,19 +159,6 @@ set(SEQ_HPPFILES
         compiler/sir/util/visitor.h
         compiler/sir/value.h
         compiler/sir/var.h
-        compiler/types/any.h
-        compiler/types/array.h
-        compiler/types/base.h
-        compiler/types/func.h
-        compiler/types/num.h
-        compiler/types/optional.h
-        compiler/types/ptr.h
-        compiler/types/record.h
-        compiler/types/ref.h
-        compiler/types/seq.h
-        compiler/types/types.h
-        compiler/types/union.h
-        compiler/types/void.h
         compiler/util/common.h
         compiler/util/fmt/chrono.h
         compiler/util/fmt/color.h
@@ -191,19 +170,8 @@ set(SEQ_HPPFILES
         compiler/util/fmt/ostream.h
         compiler/util/fmt/posix.h
         compiler/util/fmt/printf.h
-        compiler/util/fmt/ranges.h
-        compiler/util/jit.h
-        compiler/util/llvm.h
-        compiler/util/tapir.h)
+        compiler/util/fmt/ranges.h)
 set(SEQ_CPPFILES
-        compiler/lang/expr.cpp
-        compiler/lang/func.cpp
-        compiler/lang/lang.cpp
-        compiler/lang/patterns.cpp
-        compiler/lang/pipeline.cpp
-        compiler/lang/seq.cpp
-        compiler/lang/stmt.cpp
-        compiler/lang/var.cpp
         compiler/parser/ast/expr.cpp
         compiler/parser/ast/stmt.cpp
         compiler/parser/ast/types.cpp
@@ -243,21 +211,8 @@ set(SEQ_CPPFILES
         compiler/sir/util/visitor.cpp
         compiler/sir/value.cpp
         compiler/sir/var.cpp
-        compiler/types/any.cpp
-        compiler/types/array.cpp
-        compiler/types/base.cpp
-        compiler/types/func.cpp
-        compiler/types/num.cpp
-        compiler/types/optional.cpp
-        compiler/types/ptr.cpp
-        compiler/types/record.cpp
-        compiler/types/ref.cpp
-        compiler/types/seq.cpp
-        compiler/types/types.cpp
-        compiler/types/union.cpp
-        compiler/types/void.cpp
-        compiler/util/fmt/format.cpp
-        compiler/util/jit.cpp)
+        compiler/util/common.cpp
+        compiler/util/fmt/format.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 add_dependencies(seq seqparse_target)
 target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})

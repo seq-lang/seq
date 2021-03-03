@@ -1,6 +1,6 @@
 #include "llvisitor.h"
-#include "lang/seq.h"
 #include "revcomp.h"
+#include "util/common.h"
 #include "llvm/CodeGen/CommandFlags.def"
 #include <algorithm>
 #include <utility>

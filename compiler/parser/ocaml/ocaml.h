@@ -12,8 +12,8 @@
 #include <string>
 #include <vector>
 
-#include "lang/seq.h"
 #include "parser/ast.h"
+#include "util/common.h"
 
 namespace seq {
 namespace ast {

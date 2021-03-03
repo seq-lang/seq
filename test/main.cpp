@@ -12,12 +12,12 @@
 #include <unistd.h>
 #include <vector>
 
-#include "lang/seq.h"
 #include "parser/common.h"
 #include "parser/parser.h"
 #include "sir/llvm/llvisitor.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pipeline.h"
+#include "util/common.h"
 #include "gtest/gtest.h"
 
 using namespace seq;

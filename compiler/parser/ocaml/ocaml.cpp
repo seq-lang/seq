@@ -18,7 +18,6 @@
 #include <caml/memory.h>
 #include <caml/mlvalues.h>
 
-#include "lang/seq.h"
 #include "parser/common.h"
 #include "parser/ocaml/ocaml.h"
 
@@ -348,8 +347,8 @@ void initOcaml() {
 }
 
 /// OCaml error handler (called when an OCaml exception is raised).
-SEQ_FUNC CAMLprim value seq_ocaml_exception(value msg, value file, value line,
-                                            value col) {
+extern "C" CAMLprim value seq_ocaml_exception(value msg, value file, value line,
+                                              value col) {
   CAMLparam4(msg, file, line, col);
   error(seq::SrcInfo(parse_string(file), Int_val(line), Int_val(line), Int_val(col),
                      Int_val(col)),
