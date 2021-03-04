@@ -4,6 +4,7 @@
 #define SEQ_VERSION_MINOR 10
 #define SEQ_VERSION_PATCH 0
 
+#include <cassert>
 #include <climits>
 #include <cstdint>
 #include <libgen.h>
@@ -11,7 +12,6 @@
 #include <ostream>
 #include <stdexcept>
 #include <sys/stat.h>
-#include <cassert>
 
 #include "util/fmt/format.h"
 #include "util/fmt/ostream.h"
