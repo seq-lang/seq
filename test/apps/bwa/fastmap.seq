@@ -1,7 +1,7 @@
 from sys import argv, stderr, exit
 from time import timing
-from bio import FASTQ
-from bio.fmindex import FMIndex, SMEM, FMDInterval
+from bio import FASTQ, FASTA
+from bio.fmindex import FMIndex, SMEM
 
 min_seed   = 17
 min_iwidth = 20
@@ -17,7 +17,7 @@ def index_load(basename):
         return load[FMIndex](jar)
 
 @prefetch
-def fastmap(rec, fmi, out):
+def fastmap(rec, fmi, out, dna):
     prev, curr, mems = [], [], []
     q = rec.seq
     l = len(q)
@@ -93,6 +93,8 @@ def fastmap(rec, fmi, out):
             if len(intv) <= min_iwidth:
                 for rid, name, pos, is_rev in fmi.biresults(mem):
                     print(f"\t{name}:{'-' if is_rev else '+'}{pos+1}", end='', file=out)
+                    d = ~dna[pos:pos+match_size] if is_rev else dna[pos:pos+match_size]
+                    print(f":{rec.seq[offset:offset+match_size]}:{d}", end='', file=out)
             else:
                 print("\t*", file=out)
             print("", file=out)
@@ -107,16 +109,16 @@ def main_index(path):
 
 def main_search(index, fastq, result):
     print('loading index...', file=stderr)
-    fmi = None
+    fmi, dna = None, None
     with timing('load'):
-        fmi = index_load(index)
+        dna = next(FASTA(index, fai=False)).seq
+        fmi = FMIndex(index, FMD=True)
+        # fmi = index_load(index)
     print('running alignment pipeline...', file=stderr)
     with open(result, 'w') as out, timing('fastmap'):
-        FASTQ(fastq) |> iter |> fastmap(fmi, out)
+        FASTQ(fastq) |> iter |> fastmap(fmi, out, dna)
 
-print __argv__[0]
-mode = argv[1]
-match mode:
+match argv[1:]:
     case ['index', path]:
         main_index(path)
     case ['search', index, fastq, result]:

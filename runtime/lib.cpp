@@ -510,6 +510,8 @@ SEQ_FUNC bool seq_is_macos() {
 #endif
 }
 
+SEQ_FUNC
+
 /// HTSlib
 typedef struct __kstring_t {
   size_t l, m;

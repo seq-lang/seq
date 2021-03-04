@@ -168,7 +168,7 @@ class bntseq:
         self._n_seqs += 1
 
     def _add_fasta(self, path: str):
-        for rec in FASTA(path):
+        for rec in FASTA(path, fai=False):
             self._add1(rec.name, rec.seq, rec.comment)
 
     def depos(self, pos: int):

@@ -1,5 +1,31 @@
+from sys import stderr
+
 def time():
     return _C.seq_time() / (1000 * 1000 * 1000)
+
+@tuple
+class TimeVal:
+    tv_sec: int
+    tv_usec: i32
+
+@tuple
+class RUsage:
+    ru_utime: TimeVal   # user time used
+    ru_stime: TimeVal   # system time used
+    ru_maxrss: int      # integral max resident set size
+    ru_ixrss: int       # integral shared text memory size
+    ru_idrss: int       # integral unshared data size
+    ru_isrss: int       # integral unshared stack size
+    ru_minflt: int      # page reclaims
+    ru_majflt: int      # page faults
+    ru_nswap: int       # swaps
+    ru_inblock: int     # block input operations
+    ru_oublock: int     # block output operations
+    ru_msgsnd: int      # messages sent
+    ru_msgrcv: int      # messages received
+    ru_nsignals: int    # signals received
+    ru_nvcsw: int       # voluntary context switches
+    ru_nivcsw: int      # involuntary context switches
 
 class TimeInterval:
     """
@@ -8,16 +34,26 @@ class TimeInterval:
     start: int
     msg: str
 
+    def __init__(self):
+        self.start = _C.seq_time()
+        self.msg = ''
+
     def __enter__(self):
         self.start = _C.seq_time()
 
     def __exit__(self):
-        from sys import stderr
+        print(self.report(self.msg), file=stderr)
+
+    def report(self, msg='', memory=False):
         elapsed = float(_C.seq_time() - self.start) / 1e9
-        if self.msg == "":
-            stderr.write(f'Block took {elapsed}s\n')
-        else:
-            stderr.write(f'{self.msg} took {elapsed}s\n')
+        msg = f"{'Block' if not self.msg else self.msg} tool {elapsed}s"
+        # if memory:
+            # msg = f'{msg} ({_C.memory()} MB)'
+        return msg
+
+    def tick(self, msg, memory=False):
+        ret = self.report(msg)
+        self.start = _C.seq_time()
 
 def timing(msg: str = ""):
     """

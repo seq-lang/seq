@@ -217,7 +217,8 @@ struct ClassType : public Type {
   /// (not supposed to be instantiated).
   bool isTrait;
 
-  explicit ClassType(string name, string niceName, vector<Generic> generics = {});
+  explicit ClassType(string name, string niceName,
+                     vector<Generic> generics = vector<Generic>());
   explicit ClassType(const shared_ptr<ClassType> &base);
 
 public:
@@ -249,9 +250,10 @@ struct RecordType : public ClassType {
   /// List of tuple arguments.
   vector<TypePtr> args;
 
-  explicit RecordType(string name, string niceName,
-                      vector<ClassType::Generic> generics = {},
-                      vector<TypePtr> args = {});
+  explicit RecordType(
+      string name, string niceName,
+      vector<ClassType::Generic> generics = vector<ClassType::Generic>(),
+      vector<TypePtr> args = vector<TypePtr>());
   RecordType(const ClassTypePtr &base, vector<TypePtr> args);
 
 public:
@@ -287,7 +289,8 @@ struct FuncType : public RecordType {
 
 public:
   FuncType(const shared_ptr<RecordType> &baseType, string funcName,
-           vector<ClassType::Generic> funcGenerics = {}, TypePtr funcParent = nullptr);
+           vector<ClassType::Generic> funcGenerics = vector<ClassType::Generic>(),
+           TypePtr funcParent = nullptr);
 
 public:
   int unify(Type *typ, Unification *undo) override;
