@@ -29,8 +29,8 @@ public:
 
   /// Compares DSL nodes.
   /// @param v the other node
-  /// @return true if equal
-  virtual bool equals(const Type *v) const = 0;
+  /// @return true if they match
+  virtual bool match(const Type *v) const = 0;
 };
 
 } // namespace types
@@ -46,8 +46,8 @@ public:
   virtual std::unique_ptr<codegen::ValueBuilder> getBuilder() const = 0;
   /// Compares DSL nodes.
   /// @param v the other node
-  /// @return true if equal
-  virtual bool equals(const Value *v) const = 0;
+  /// @return true if they match
+  virtual bool match(const Value *v) const = 0;
 };
 
 /// DSL flow.
@@ -61,8 +61,8 @@ public:
   virtual std::unique_ptr<codegen::ValueBuilder> getBuilder() const = 0;
   /// Compares DSL nodes.
   /// @param v the other node
-  /// @return true if equal
-  virtual bool equals(const Value *v) const = 0;
+  /// @return true if they match
+  virtual bool match(const Value *v) const = 0;
 };
 
 /// DSL instruction.
@@ -76,8 +76,8 @@ public:
   virtual std::unique_ptr<codegen::ValueBuilder> getBuilder() const = 0;
   /// Compares DSL nodes.
   /// @param v the other node
-  /// @return true if equal
-  virtual bool equals(const Value *v) const = 0;
+  /// @return true if they match
+  virtual bool match(const Value *v) const = 0;
 };
 
 } // namespace dsl

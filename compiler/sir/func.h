@@ -63,8 +63,6 @@ public:
 
   /// @return the unmangled function name
   virtual std::string getUnmangledName() const = 0;
-
-  Func *clone() const { return cast<Func>(Var::clone()); }
 };
 
 class BodiedFunc : public AcceptorExtend<BodiedFunc, Func> {

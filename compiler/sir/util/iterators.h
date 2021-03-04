@@ -8,6 +8,7 @@ namespace seq {
 namespace ir {
 namespace util {
 
+/// Iterator wrapper that applies a function to the iterator.
 template <typename It, typename DereferenceFunc, typename MemberFunc>
 struct function_iterator_adaptor {
   It internal;
@@ -20,6 +21,10 @@ struct function_iterator_adaptor {
   using pointer = void;
   using difference_type = typename std::iterator_traits<It>::difference_type;
 
+  /// Constructs an adaptor.
+  /// @param internal the internal iterator
+  /// @param d the dereference function
+  /// @param m the member access function
   function_iterator_adaptor(It internal, DereferenceFunc &&d, MemberFunc &&m)
       : internal(std::move(internal)), d(std::move(d)), m(std::move(m)) {}
 
@@ -49,6 +54,9 @@ struct function_iterator_adaptor {
   }
 };
 
+/// Creates an adaptor that dereferences values.
+/// @param the internal iterator
+/// @return the adaptor
 template <typename It> auto dereference_adaptor(It it) {
   auto f = [](const auto &v) -> auto & { return *v; };
   auto m = [](const auto &v) -> auto { return v.get(); };
@@ -56,6 +64,9 @@ template <typename It> auto dereference_adaptor(It it) {
                                                                  std::move(m));
 }
 
+/// Creates an adaptor that gets the address of its values.
+/// @param the internal iterator
+/// @return the adaptor
 template <typename It> auto raw_ptr_adaptor(It it) {
   auto f = [](auto &v) -> auto * { return v.get(); };
   auto m = [](auto &v) -> auto * { return v.get(); };
@@ -63,6 +74,9 @@ template <typename It> auto raw_ptr_adaptor(It it) {
                                                                  std::move(m));
 }
 
+/// Creates an adaptor that gets the const address of its values.
+/// @param the internal iterator
+/// @return the adaptor
 template <typename It> auto const_raw_ptr_adaptor(It it) {
   auto f = [](auto &v) -> const auto * { return v.get(); };
   auto m = [](auto &v) -> const auto * { return v.get(); };
@@ -70,6 +84,9 @@ template <typename It> auto const_raw_ptr_adaptor(It it) {
                                                                  std::move(m));
 }
 
+/// Creates an adaptor that gets the keys of its values.
+/// @param the internal iterator
+/// @return the adaptor
 template <typename It> auto map_key_adaptor(It it) {
   auto f = [](auto &v) -> auto & { return v.first; };
   auto m = [](auto &v) -> auto & { return v.first; };
@@ -77,6 +94,9 @@ template <typename It> auto map_key_adaptor(It it) {
                                                                  std::move(m));
 }
 
+/// Creates an adaptor that gets the const keys of its values.
+/// @param the internal iterator
+/// @return the adaptor
 template <typename It> auto const_map_key_adaptor(It it) {
   auto f = [](auto &v) -> const auto & { return v.first; };
   auto m = [](auto &v) -> const auto & { return v.first; };

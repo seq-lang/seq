@@ -83,12 +83,15 @@ public:
   /// @param t the new type
   void setAstType(ast::types::TypePtr t) { getActual()->astType = std::move(t); }
 
+  /// @return the generics used in the type
   std::vector<Generic> getGenerics() const { return getActual()->doGetGenerics(); }
 
+  /// Constructs an instance of the type given the supplied args.
+  /// @param args the arguments
+  /// @return the new value
   Value *construct(std::vector<Value *> args) {
     return getActual()->doConstruct(std::move(args));
   }
-
   template <typename... Args> Value *operator()(Args &&... args) {
     std::vector<Value *> dst;
     util::stripPack(dst, std::forward<Args>(args)...);

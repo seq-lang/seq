@@ -127,7 +127,7 @@ public:
   }
   VISIT(dsl::CustomFlow);
   void handle(const dsl::CustomFlow *x, const dsl::CustomFlow *y) {
-    result = x->equals(y);
+    result = x->match(y);
   }
 
   VISIT(IntConstant);
@@ -148,7 +148,7 @@ public:
   }
   VISIT(dsl::CustomConstant);
   void handle(const dsl::CustomConstant *x, const dsl::CustomConstant *y) {
-    result = x->equals(y);
+    result = x->match(y);
   }
 
   VISIT(AssignInstr);
@@ -216,7 +216,7 @@ public:
   }
   VISIT(dsl::CustomInstr);
   void handle(const dsl::CustomInstr *x, const dsl::CustomInstr *y) {
-    result = x->equals(y);
+    result = x->match(y);
   }
 
   VISIT(types::Type);
@@ -266,7 +266,7 @@ public:
   }
   VISIT(dsl::types::CustomType);
   void handle(const dsl::types::CustomType *x, const dsl::types::CustomType *y) {
-    result = x->equals(y);
+    result = x->match(y);
   }
 
   bool process(const IRNode *x, const IRNode *y) const {

@@ -27,13 +27,12 @@ private:
     std::vector<std::string> invalidates;
 
     PassMetadata() = default;
-
     PassMetadata(std::unique_ptr<Pass> pass, std::vector<std::string> reqs,
                  std::vector<std::string> invalidates)
         : pass(std::move(pass)), reqs(std::move(reqs)),
           invalidates(std::move(invalidates)) {}
-
     PassMetadata(PassMetadata &&) = default;
+
     PassMetadata &operator=(PassMetadata &&) = default;
   };
 

@@ -17,9 +17,6 @@ public:
 
   using AcceptorExtend::AcceptorExtend;
 
-  /// @return a clone of the value
-  Flow *clone() const { return cast<Flow>(Value::clone()); }
-
 protected:
   types::Type *doGetType() const final;
 };

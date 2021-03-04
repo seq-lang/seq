@@ -18,7 +18,13 @@ namespace codegen {
 struct TypeBuilder {
   virtual ~TypeBuilder() noexcept = default;
 
+  /// Construct the LLVM type.
+  /// @param the LLVM visitor
+  /// @return the LLVM type
   virtual llvm::Type *buildType(LLVMVisitor *visitor) = 0;
+  /// Construct the LLVM debug type.
+  /// @param the LLVM visitor
+  /// @return the LLVM debug type
   virtual llvm::DIType *buildDebugType(LLVMVisitor *visitor) = 0;
 };
 
@@ -26,6 +32,9 @@ struct TypeBuilder {
 struct ValueBuilder {
   virtual ~ValueBuilder() noexcept = default;
 
+  /// Construct the LLVM value.
+  /// @param the LLVM visitor
+  /// @return the LLVM value
   virtual llvm::Value *buildValue(LLVMVisitor *visitor) = 0;
 };
 
