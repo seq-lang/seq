@@ -121,10 +121,10 @@ TEST_F(SIRCoreTest, MatchingIfFlow) {
   auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
   auto *tVal = module->Nr<SeriesFlow>();
   auto *first = module->Nr<IfFlow>(cond, tVal);
-  auto *second = module->Nr<IfFlow>(cond->clone(), tVal->clone());
+  auto *second = module->Nr<IfFlow>(cond->clone(), cast<Flow>(tVal->clone()));
 
   ASSERT_TRUE(util::match(first, second));
-  second->setFalseBranch(tVal->clone());
+  second->setFalseBranch(cast<Flow>(tVal->clone()));
   ASSERT_FALSE(util::match(first, second));
 }
 
@@ -133,7 +133,8 @@ TEST_F(SIRCoreTest, MatchingForFlow) {
   auto *var = module->Nr<Var>(module->getIntType());
   auto *iter = module->Nr<StringConstant>("hello", module->getStringType());
   auto *first = module->Nr<ForFlow>(iter, body, var);
-  auto *second = module->Nr<ForFlow>(iter->clone(), body->clone(), var->clone());
+  auto *second =
+      module->Nr<ForFlow>(iter->clone(), cast<Flow>(body->clone()), var->clone());
 
   ASSERT_TRUE(util::match(first, second));
   second->setIter(module->Nr<StringConstant>("foo", module->getStringType()));
