@@ -146,6 +146,7 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
 IRModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto *module = cache->module;
   auto *main = cast<BodiedFunc>(module->getMainFunc());
+  main->setSrcInfo({cache->module0, 0, 0, 0, 0});
 
   auto *block = module->Nr<SeriesFlow>("body");
   main->setBody(block);
