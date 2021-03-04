@@ -41,9 +41,9 @@ public:
   auto end() const { return series.end(); }
 
   /// @return a pointer to the first instruction/flow
-  Value *front() { return series.front(); }
+  Value *&front() { return series.front(); }
   /// @return a pointer to the last instruction/flow
-  Value *back() { return series.back(); }
+  Value *&back() { return series.back(); }
   /// @return a pointer to the first instruction/flow
   const Value *front() const { return series.front(); }
   /// @return a pointer to the last instruction/flow
@@ -322,13 +322,13 @@ public:
   auto end() const { return catches.end(); }
 
   /// @return a reference to the first catch
-  auto &front() { return catches.front(); }
+  Catch &front() { return catches.front(); }
   /// @return a reference to the last catch
-  auto &back() { return catches.back(); }
+  Catch &back() { return catches.back(); }
   /// @return a reference to the first catch
-  auto &front() const { return catches.front(); }
+  const Catch &front() const { return catches.front(); }
   /// @return a reference to the last catch
-  auto &back() const { return catches.back(); }
+  const Catch &back() const { return catches.back(); }
 
   /// Inserts a catch at the given position.
   /// @param pos the position
@@ -407,9 +407,9 @@ public:
     auto end() const { return args.end(); }
 
     /// @return a pointer to the first argument
-    Value *front() { return args.front(); }
+    Value *&front() { return args.front(); }
     /// @return a pointer to the last argument
-    Value *back() { return args.back(); }
+    Value *&back() { return args.back(); }
     /// @return a pointer to the first argument
     const Value *front() const { return args.front(); }
     /// @return a pointer to the last argument

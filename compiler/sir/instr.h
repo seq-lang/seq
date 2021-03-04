@@ -208,9 +208,9 @@ public:
   auto end() const { return args.end(); }
 
   /// @return a pointer to the first argument
-  Value *front() { return args.front(); }
+  Value *&front() { return args.front(); }
   /// @return a pointer to the last argument
-  Value *back() { return args.back(); }
+  Value *&back() { return args.back(); }
   /// @return a pointer to the first argument
   const Value *front() const { return args.front(); }
   /// @return a pointer to the last argument

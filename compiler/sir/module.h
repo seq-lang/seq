@@ -119,14 +119,6 @@ public:
   auto begin() const { return util::const_raw_ptr_adaptor(vars.begin()); }
   /// @return iterator beyond the last symbol
   auto end() const { return util::const_raw_ptr_adaptor(vars.end()); }
-  /// @return a pointer to the first symbol
-  Var *front() { return vars.front().get(); }
-  /// @return a pointer to the last symbol
-  Var *back() { return vars.back().get(); }
-  /// @return a pointer to the first symbol
-  const Var *front() const { return vars.front().get(); }
-  /// @return a pointer to the last symbol
-  const Var *back() const { return vars.back().get(); }
 
   /// Removes a given var.
   /// @param v the var
@@ -144,14 +136,6 @@ public:
   auto values_begin() const { return util::const_raw_ptr_adaptor(values.begin()); }
   /// @return iterator beyond the last value
   auto values_end() const { return util::const_raw_ptr_adaptor(values.end()); }
-  /// @return a pointer to the first value
-  Value *values_front() { return values.front().get(); }
-  /// @return a pointer to the last value
-  Value *values_back() { return values.back().get(); }
-  /// @return a pointer to the first value
-  const Value *values_front() const { return values.front().get(); }
-  /// @return a pointer to the last value
-  const Value *values_back() const { return values.back().get(); }
 
   /// Removes a given value.
   /// @param v the value
@@ -169,10 +153,6 @@ public:
   auto types_begin() const { return util::const_raw_ptr_adaptor(types.begin()); }
   /// @return iterator beyond the last type
   auto types_end() const { return util::const_raw_ptr_adaptor(types.end()); }
-  /// @return a pointer to the first type
-  types::Type *types_front() const { return types.front().get(); }
-  /// @return a pointer to the last type
-  types::Type *types_back() const { return types.back().get(); }
 
   /// @param name the type's name
   /// @return the type with the given name

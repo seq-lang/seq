@@ -43,9 +43,9 @@ public:
   auto arg_end() const { return args.end(); }
 
   /// @return a pointer to the last arg
-  Var *arg_front() { return args.front(); }
+  Var *&arg_front() { return args.front(); }
   /// @return a pointer to the last arg
-  Var *arg_back() { return args.back(); }
+  Var *&arg_back() { return args.back(); }
   /// @return a pointer to the last arg
   const Var *arg_back() const { return args.back(); }
   /// @return a pointer to the first arg
@@ -89,9 +89,9 @@ public:
   auto end() const { return symbols.end(); }
 
   /// @return a pointer to the first symbol
-  Var *front() { return symbols.front(); }
+  Var *&front() { return symbols.front(); }
   /// @return a pointer to the last symbol
-  Var *back() { return symbols.back(); }
+  Var *&back() { return symbols.back(); }
   /// @return a pointer to the first symbol
   const Var *front() const { return symbols.front(); }
   /// @return a pointer to the last symbol
@@ -226,9 +226,9 @@ public:
   /// @return a reference to the last literal
   auto &literal_back() { return llvmLiterals.back(); }
   /// @return a reference to the first literal
-  auto &literal_front() const { return llvmLiterals.front(); }
+  const auto &literal_front() const { return llvmLiterals.front(); }
   /// @return a reference to the last literal
-  auto &literal_back() const { return llvmLiterals.back(); }
+  const auto &literal_back() const { return llvmLiterals.back(); }
 
   /// @return the LLVM declarations
   const std::string &getLLVMDeclarations() const { return llvmDeclares; }
