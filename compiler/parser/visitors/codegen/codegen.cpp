@@ -6,6 +6,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
+#include <sys/stat.h>
 
 #include "parser/ast.h"
 #include "parser/common.h"
@@ -146,7 +147,10 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
 IRModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto *module = cache->module;
   auto *main = cast<BodiedFunc>(module->getMainFunc());
-  main->setSrcInfo({cache->module0, 0, 0, 0, 0});
+
+  char buf[PATH_MAX + 1];
+  realpath(cache->module0.c_str(), buf);
+  main->setSrcInfo({std::string(buf), 0, 0, 0, 0});
 
   auto *block = module->Nr<SeriesFlow>("body");
   main->setBody(block);
