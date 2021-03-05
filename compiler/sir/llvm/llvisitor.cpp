@@ -70,18 +70,18 @@ llvm::Value *getDummyVoidValue(LLVMContext &context) {
   return llvm::ConstantTokenNone::get(context);
 }
 
-llvm::TargetMachine *getTargetMachine(llvm::Triple triple, llvm::StringRef cpuStr,
-                                      llvm::StringRef featuresStr,
-                                      const llvm::TargetOptions &options) {
+std::unique_ptr<llvm::TargetMachine>
+getTargetMachine(llvm::Triple triple, llvm::StringRef cpuStr,
+                 llvm::StringRef featuresStr, const llvm::TargetOptions &options) {
   std::string err;
   const llvm::Target *target = llvm::TargetRegistry::lookupTarget(MArch, triple, err);
 
   if (!target)
     return nullptr;
 
-  return target->createTargetMachine(triple.getTriple(), cpuStr, featuresStr, options,
-                                     getRelocModel(), getCodeModel(),
-                                     llvm::CodeGenOpt::Aggressive);
+  return std::unique_ptr<llvm::TargetMachine>(target->createTargetMachine(
+      triple.getTriple(), cpuStr, featuresStr, options, getRelocModel(), getCodeModel(),
+      llvm::CodeGenOpt::Aggressive));
 }
 
 /**
@@ -133,7 +133,7 @@ llvm::DIFile *LLVMVisitor::DebugInfo::getFile(const std::string &path) {
 LLVMVisitor::LLVMVisitor(bool debug, const std::string &flags)
     : util::ConstIRVisitor(), context(), builder(context), module(), func(nullptr),
       block(nullptr), value(nullptr), vars(), funcs(), coro(), loops(), trycatch(),
-      db(debug, flags) {
+      db(debug, flags), machine() {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   resetOMPABI();
@@ -159,12 +159,7 @@ void LLVMVisitor::verify() {
   assert(!broken);
 }
 
-void LLVMVisitor::dump(const std::string &filename) {
-  auto fo = fopen(filename.c_str(), "w");
-  llvm::raw_fd_ostream fout(fileno(fo), true);
-  fout << *module;
-  fout.close();
-}
+void LLVMVisitor::dump(const std::string &filename) { writeToLLFile(filename); }
 
 void LLVMVisitor::applyDebugTransformations() {
   if (db.debug) {
@@ -231,7 +226,6 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
 
   llvm::Triple moduleTriple(module->getTargetTriple());
   std::string cpuStr, featuresStr;
-  llvm::TargetMachine *machine = nullptr;
   const llvm::TargetOptions options = InitTargetOptionsFromCodeGenFlags();
   llvm::TargetLibraryInfoImpl tlii(moduleTriple);
   pm->add(new llvm::TargetLibraryInfoWrapperPass(tlii));
@@ -242,15 +236,14 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
     machine = getTargetMachine(moduleTriple, cpuStr, featuresStr, options);
   }
 
-  std::unique_ptr<llvm::TargetMachine> tm(machine);
   setFunctionAttributes(cpuStr, featuresStr, *module);
-  pm->add(llvm::createTargetTransformInfoWrapperPass(tm ? tm->getTargetIRAnalysis()
-                                                        : llvm::TargetIRAnalysis()));
-  fpm->add(llvm::createTargetTransformInfoWrapperPass(tm ? tm->getTargetIRAnalysis()
-                                                         : llvm::TargetIRAnalysis()));
+  pm->add(llvm::createTargetTransformInfoWrapperPass(
+      machine ? machine->getTargetIRAnalysis() : llvm::TargetIRAnalysis()));
+  fpm->add(llvm::createTargetTransformInfoWrapperPass(
+      machine ? machine->getTargetIRAnalysis() : llvm::TargetIRAnalysis()));
 
-  if (tm) {
-    auto &ltm = dynamic_cast<llvm::LLVMTargetMachine &>(*tm);
+  if (machine) {
+    auto &ltm = dynamic_cast<llvm::LLVMTargetMachine &>(*machine);
     llvm::Pass *tpc = ltm.createPassConfig(*pm);
     pm->add(tpc);
   }
@@ -274,8 +267,8 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
     pmb.OptLevel = 0;
   }
 
-  if (tm) {
-    tm->adjustPassManager(pmb);
+  if (machine) {
+    machine->adjustPassManager(pmb);
   }
 
   llvm::addCoroutinePassesToExtensionPoints(pmb);
@@ -310,13 +303,53 @@ void LLVMVisitor::runLLVMPipeline() {
   verify();
 }
 
-void LLVMVisitor::compile(const std::string &filename) {
-  runLLVMPipeline();
+void LLVMVisitor::writeToObjectFile(const std::string &filename) {
+  auto &llvmtm = static_cast<llvm::LLVMTargetMachine &>(*machine);
+  auto *mmi = new llvm::MachineModuleInfo(&llvmtm);
+  llvm::legacy::PassManager pm;
+
+  llvm::Triple moduleTriple(module->getTargetTriple());
+  llvm::TargetLibraryInfoImpl tlii(moduleTriple);
+  pm.add(new llvm::TargetLibraryInfoWrapperPass(tlii));
+
+  std::error_code err;
+  auto out =
+      std::make_unique<llvm::ToolOutputFile>(filename, err, llvm::sys::fs::F_None);
+  if (err) {
+    throw std::runtime_error(err.message());
+  }
+  llvm::raw_pwrite_stream *os = &out->os();
+  assert(!machine->addPassesToEmitFile(pm, *os, llvm::TargetMachine::CGFT_ObjectFile,
+                                       /*DisableVerify=*/true, mmi));
+  pm.run(*module);
+  out->keep();
+}
+
+void LLVMVisitor::writeToBitcodeFile(const std::string &filename) {
   std::error_code err;
   llvm::raw_fd_ostream stream(filename, err, llvm::sys::fs::F_None);
   llvm::WriteBitcodeToFile(module.get(), stream);
   if (err) {
     throw std::runtime_error(err.message());
+  }
+}
+
+void LLVMVisitor::writeToLLFile(const std::string &filename) {
+  auto fo = fopen(filename.c_str(), "w");
+  llvm::raw_fd_ostream fout(fileno(fo), true);
+  fout << *module;
+  fout.close();
+}
+
+void LLVMVisitor::compile(const std::string &filename) {
+  runLLVMPipeline();
+  llvm::StringRef f(filename);
+  if (f.endswith(".bc")) {
+    writeToBitcodeFile(filename);
+  } else if (f.endswith(".o") || f.endswith(".obj")) {
+    writeToObjectFile(filename);
+  } else {
+    writeToLLFile(filename);
   }
 }
 

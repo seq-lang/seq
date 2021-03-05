@@ -17,17 +17,6 @@ void versMsg(llvm::raw_ostream &out) {
       << SEQ_VERSION_PATCH << "\n";
 }
 
-bool endsWith(std::string const &query, std::string const &ending) {
-  if (query.length() >= ending.length()) {
-    return (query.compare(query.length() - ending.length(), ending.length(), ending) ==
-            0);
-  } else {
-    return false;
-  }
-}
-
-bool isLLVMFilename(const std::string &filename) { return endsWith(filename, ".ll"); }
-
 void registerStandardPasses(seq::ir::transform::PassManager &pm) {
   pm.registerPass(
       "bio-pipeline-opts",
@@ -43,8 +32,9 @@ int main(int argc, char **argv) {
   llvm::cl::opt<bool> debug("d", llvm::cl::desc("Compile in debug mode"));
   llvm::cl::opt<bool> docstr("docstr", llvm::cl::desc("Generate docstrings"));
   llvm::cl::opt<std::string> output(
-      "o", llvm::cl::desc(
-               "Write LLVM bitcode to specified file instead of running with JIT"));
+      "o",
+      llvm::cl::desc("Write compiled output to specified file. Supported extensions: "
+                     ".ll (LLVM IR), .bc (LLVM bitcode), .o (object file)"));
   llvm::cl::list<std::string> defines(
       "D", llvm::cl::Prefix,
       llvm::cl::desc("Add static variable definitions. The syntax is <name>=<value>"));
@@ -108,11 +98,7 @@ int main(int argc, char **argv) {
       seq::compilationWarning("ignoring arguments during compilation");
 
     const std::string filename = output.getValue();
-    if (isLLVMFilename(filename)) {
-      visitor.dump(filename);
-    } else {
-      visitor.compile(filename);
-    }
+    visitor.compile(filename);
   }
 
   return EXIT_SUCCESS;

@@ -121,6 +121,8 @@ private:
   std::vector<TryCatchData> trycatch;
   /// Debug information
   DebugInfo db;
+  /// LLVM target machine
+  std::unique_ptr<llvm::TargetMachine> machine;
 
   llvm::DIType *
   getDITypeHelper(types::Type *t,
@@ -168,6 +170,11 @@ private:
   void applyGCTransformations();
   void runLLVMOptimizationPasses();
   void runLLVMPipeline();
+
+  // Output
+  void writeToObjectFile(const std::string &filename);
+  void writeToBitcodeFile(const std::string &filename);
+  void writeToLLFile(const std::string &filename);
 
 public:
   LLVMVisitor(bool debug = false, const std::string &flags = "");
