@@ -117,4 +117,12 @@ make -j$JOBS
 make install
 # [ ! -f ${INSTALLDIR}/lib/libomp.so ] && die "openmp library not found"
 
+# libbacktrace
+git clone https://github.com/seq-lang/libbacktrace ${SRCDIR}/libbacktrace
+cd ${SRCDIR}/libbacktrace
+./configure --prefix=${INSTALLDIR}
+make -j$JOBS
+make install
+[ ! -f ${INSTALLDIR}/lib/libbacktrace.a ] && die "libbacktrace library not found"
+
 echo "Dependency generation done: ${INSTALLDIR}"

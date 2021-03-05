@@ -26,7 +26,9 @@ template <typename T = void> struct seq_arr_t {
   T *arr;
 };
 
-SEQ_FUNC void seq_init();
+extern int debug;
+
+SEQ_FUNC void seq_init(int debug);
 SEQ_FUNC void seq_assert_failed(seq_str_t file, seq_int_t line);
 
 SEQ_FUNC void *seq_alloc(size_t n);

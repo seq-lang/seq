@@ -27,7 +27,6 @@ extern llvm::cl::opt<bool> fastOpenMP;
 
 extern "C" void seq_gc_add_roots(void *start, void *end);
 extern "C" void seq_gc_remove_roots(void *start, void *end);
-extern "C" void seq_add_symbol(void *addr, const std::string &symbol);
 
 namespace seq {
 namespace ir {
@@ -345,14 +344,6 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
     }
   }
 
-  if (db.debug) {
-    for (auto &name : functionNames) {
-      if (void *addr = eng->getPointerToNamedFunction(name, /*AbortOnFailure=*/false)) {
-        seq_add_symbol(addr, name);
-      }
-    }
-  }
-
   eng->runFunctionAsMain(main, args, envp);
   delete eng;
 }
@@ -498,7 +489,7 @@ void LLVMVisitor::visit(const IRModule *x) {
   module->setTargetTriple(
       llvm::EngineBuilder().selectTarget()->getTargetTriple().str());
   module->setDataLayout(llvm::EngineBuilder().selectTarget()->createDataLayout());
-  auto *srcInfo = getSrcInfo(x);
+  auto *srcInfo = getSrcInfo(x->getMainFunc());
   module->setSourceFileName(srcInfo->file);
 
   // debug info setup
@@ -574,8 +565,8 @@ void LLVMVisitor::visit(const IRModule *x) {
   auto *arrType =
       llvm::StructType::get(context, {builder.getInt64Ty(), strType->getPointerTo()});
 
-  auto *initFunc = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("seq_init", builder.getVoidTy()));
+  auto *initFunc = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      "seq_init", builder.getVoidTy(), builder.getInt32Ty()));
   auto *strlenFunc = llvm::cast<llvm::Function>(module->getOrInsertFunction(
       "strlen", builder.getInt64Ty(), builder.getInt8PtrTy()));
 
@@ -631,7 +622,7 @@ void LLVMVisitor::visit(const IRModule *x) {
 
   builder.SetInsertPoint(exitBlock);
   builder.CreateStore(arr, argStorage);
-  builder.CreateCall(initFunc);
+  builder.CreateCall(initFunc, builder.getInt32(db.debug ? 1 : 0));
 
   // Put the entire program in a parallel+single region
   {

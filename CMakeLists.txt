@@ -90,6 +90,8 @@ if (APPLE)
 else ()
     target_link_libraries(seqrt PUBLIC seqomp ${STATIC_LIBCPP} -Wl,--whole-archive ${ZLIB} ${BDWGC} -Wl,--no-whole-archive)
 endif ()
+set(BACKTRACE ${SEQ_DEP}/lib/libbacktrace.a)
+target_link_libraries(seqrt PUBLIC ${BACKTRACE})
 
 # Seq parsing library
 include_directories(${OCAML_STDLIB_PATH})

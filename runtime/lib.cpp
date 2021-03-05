@@ -49,13 +49,16 @@ static void register_thread(kmp_int32 *global_tid, kmp_int32 *bound_tid) {
 
 void seq_exc_init();
 
-SEQ_FUNC void seq_init() {
+int debug;
+
+SEQ_FUNC void seq_init(int d) {
   GC_INIT();
   GC_set_warn_proc(GC_ignore_warn_proc);
   GC_allow_register_threads();
   // equivalent to: #pragma omp parallel { register_thread }
   __kmpc_fork_call(&dummy_loc, 0, (kmpc_micro)register_thread);
   seq_exc_init();
+  debug = d;
 }
 
 SEQ_FUNC seq_int_t seq_pid() { return (seq_int_t)getpid(); }
