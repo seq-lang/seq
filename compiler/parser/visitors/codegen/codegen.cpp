@@ -3,10 +3,10 @@
 #include <sstream>
 #include <stack>
 #include <string>
+#include <sys/stat.h>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
-#include <sys/stat.h>
 
 #include "parser/ast.h"
 #include "parser/common.h"
