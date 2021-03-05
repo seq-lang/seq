@@ -13,6 +13,7 @@
 struct BacktraceFrame {
   char *function;
   char *filename;
+  uintptr_t pc;
   int32_t lineno;
 };
 
@@ -21,7 +22,8 @@ struct Backtrace {
   struct BacktraceFrame *frames;
   size_t count;
 
-  void push_back(const char *function, const char *filename, int32_t lineno) {
+  void push_back(const char *function, const char *filename, uintptr_t pc,
+                 int32_t lineno) {
     if (count >= LIMIT || !function || !filename) {
       return;
     } else if (count == 0) {
@@ -36,7 +38,7 @@ struct Backtrace {
     auto *filenameDup = (char *)seq_alloc_atomic(filenameLen);
     memcpy(filenameDup, filename, filenameLen);
 
-    frames[count++] = {functionDup, filenameDup, lineno};
+    frames[count++] = {functionDup, filenameDup, pc, lineno};
   }
 
   void free() {
@@ -58,7 +60,7 @@ void seq_backtrace_error_callback(void *data, const char *msg, int errnum) {
 int seq_backtrace_full_callback(void *data, uintptr_t pc, const char *filename,
                                 int lineno, const char *function) {
   auto *bt = ((Backtrace *)data);
-  bt->push_back(function, filename, lineno);
+  bt->push_back(function, filename, pc, lineno);
   return (bt->count < Backtrace::LIMIT) ? 0 : 1;
 }
 
@@ -125,7 +127,9 @@ static void seq_delete_exc(_Unwind_Exception *expToDelete) {
   if (!expToDelete || expToDelete->exception_class != ourBaseExceptionClass)
     return;
   auto *exc = (OurException *)((char *)expToDelete + ourBaseFromUnwindOffset);
-  exc->bt.free();
+  if (debug) {
+    exc->bt.free();
+  }
   seq_free(exc);
 }
 
@@ -209,8 +213,8 @@ SEQ_FUNC void seq_terminate(void *exc) {
       fprintf(stderr, "\n\033[1mBacktrace:\033[0m\n");
       for (unsigned i = 0; i < bt->count; i++) {
         auto *frame = &bt->frames[i];
-        fprintf(stderr, "  \033[32m%s\033[0m \033[1m(%s:%d)\033[0m\n", frame->function,
-                frame->filename, frame->lineno);
+        fprintf(stderr, "  [\033[33m0x%lx\033[0m] \033[32m%s\033[0m %s:%d\n", frame->pc,
+                frame->function, frame->filename, frame->lineno);
       }
     }
   }
