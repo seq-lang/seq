@@ -446,10 +446,6 @@ public:
   /// Sets the count.
   /// @param f the new value
   void setTarget(Flow *f) { target = f; }
-
-protected:
-  std::vector<Value *> doGetUsedValues() const override { return {target}; }
-  int doReplaceUsedValue(int id, Value *newValue) override;
 };
 
 /// Instr representing a break statement.

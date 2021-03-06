@@ -245,16 +245,6 @@ Value *TernaryInstr::doClone() const {
 
 const char ControlFlowInstr::NodeId = 0;
 
-int ControlFlowInstr::doReplaceUsedValue(int id, Value *newValue) {
-  if (target && target->getId() == id) {
-    auto *flow = cast<Flow>(newValue);
-    assert(flow);
-    target = flow;
-    return 1;
-  }
-  return 0;
-}
-
 const char BreakInstr::NodeId = 0;
 
 std::ostream &BreakInstr::doFormat(std::ostream &os) const {
@@ -293,7 +283,6 @@ int ReturnInstr::doReplaceUsedValue(int id, Value *newValue) {
     setValue(newValue);
     ++replacements;
   }
-  replacements += ControlFlowInstr::doReplaceUsedValue(id, newValue);
   return replacements;
 }
 
