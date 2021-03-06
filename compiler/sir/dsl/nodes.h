@@ -13,6 +13,7 @@ namespace dsl {
 namespace codegen {
 struct TypeBuilder;
 struct ValueBuilder;
+struct CFBuilder;
 } // namespace codegen
 
 namespace types {
@@ -43,7 +44,7 @@ public:
   using AcceptorExtend::AcceptorExtend;
 
   /// @return the value builder
-  virtual std::unique_ptr<codegen::ValueBuilder> getBuilder() const = 0;
+  virtual std::unique_ptr<codegen::ValueBuilder> getValueBuilder() const = 0;
   /// Compares DSL nodes.
   /// @param v the other node
   /// @return true if they match
@@ -58,7 +59,9 @@ public:
   using AcceptorExtend::AcceptorExtend;
 
   /// @return the value builder
-  virtual std::unique_ptr<codegen::ValueBuilder> getBuilder() const = 0;
+  virtual std::unique_ptr<codegen::ValueBuilder> getFlowBuilder() const = 0;
+  /// @return the control-flow builder
+  virtual std::unique_ptr<codegen::CFBuilder> getCFBuilder() const = 0;
   /// Compares DSL nodes.
   /// @param v the other node
   /// @return true if they match
@@ -73,7 +76,9 @@ public:
   using AcceptorExtend::AcceptorExtend;
 
   /// @return the value builder
-  virtual std::unique_ptr<codegen::ValueBuilder> getBuilder() const = 0;
+  virtual std::unique_ptr<codegen::ValueBuilder> getValueBuilder() const = 0;
+  /// @return the control-flow builder
+  virtual std::unique_ptr<codegen::CFBuilder> getCFBuilder() const = 0;
   /// Compares DSL nodes.
   /// @param v the other node
   /// @return true if they match

@@ -11,6 +11,10 @@ namespace ir {
 
 class LLVMVisitor;
 
+namespace analyze {
+class CFGraph;
+}
+
 namespace dsl {
 namespace codegen {
 
@@ -19,7 +23,7 @@ struct TypeBuilder {
   virtual ~TypeBuilder() noexcept = default;
 
   /// Construct the LLVM type.
-  /// @param the LLVM visitor
+  /// @param visitor the LLVM visitor
   /// @return the LLVM type
   virtual llvm::Type *buildType(LLVMVisitor *visitor) = 0;
   /// Construct the LLVM debug type.
@@ -33,9 +37,18 @@ struct ValueBuilder {
   virtual ~ValueBuilder() noexcept = default;
 
   /// Construct the LLVM value.
-  /// @param the LLVM visitor
+  /// @param visitor the LLVM visitor
   /// @return the LLVM value
   virtual llvm::Value *buildValue(LLVMVisitor *visitor) = 0;
+};
+
+/// Builder for control flow graphs.
+struct CFBuilder {
+  virtual ~CFBuilder() noexcept = default;
+
+  /// Construct the control-flow nodes.
+  /// @param graph the graph
+  virtual void buildCFNodes(analyze::CFGraph *graph) = 0;
 };
 
 } // namespace codegen

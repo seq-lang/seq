@@ -22,6 +22,8 @@
 #include "sir/sir.h"
 #include "util/fmt/format.h"
 
+#include "sir/analyze/cfg.h"
+
 #include "sir/util/matching.h"
 
 int _ocaml_time = 0;
@@ -101,6 +103,8 @@ ir::IRModule *parse(const string &argv0, const string &file, const string &code,
     t = high_resolution_clock::now();
     auto *module = ast::CodegenVisitor::apply(cache, move(typechecked));
     module->setSrcInfo({abs, 0, 0, 0, 0});
+
+    auto g = seq::ir::analyze::buildCFGraph(module->getMainFunc());
 
     if (!isTest)
       LOG_TIME("[T] codegen   = {:.1f}",

@@ -1547,7 +1547,7 @@ void LLVMVisitor::visit(const StringConstant *x) {
 }
 
 void LLVMVisitor::visit(const dsl::CustomConstant *x) {
-  x->getBuilder()->buildValue(this);
+  x->getValueBuilder()->buildValue(this);
 }
 
 /*
@@ -2163,7 +2163,9 @@ void LLVMVisitor::visit(const PipelineFlow *x) {
   }
 }
 
-void LLVMVisitor::visit(const dsl::CustomFlow *x) { x->getBuilder()->buildValue(this); }
+void LLVMVisitor::visit(const dsl::CustomFlow *x) {
+  x->getFlowBuilder()->buildValue(this);
+}
 
 /*
  * Instructions
@@ -2412,7 +2414,7 @@ void LLVMVisitor::visit(const FlowInstr *x) {
 }
 
 void LLVMVisitor::visit(const dsl::CustomInstr *x) {
-  x->getBuilder()->buildValue(this);
+  x->getValueBuilder()->buildValue(this);
 }
 
 } // namespace ir
