@@ -408,7 +408,6 @@ def stdev(data, xbar: Optional[float]=None):
     """
     xbar1 = ~xbar if xbar else mean(data)
     var = variance(data, xbar1)
-    print 'ddooo'
     return _sqrt(var)
 
 class NormalDist:
