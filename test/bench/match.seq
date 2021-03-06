@@ -3,15 +3,16 @@
 ######################
 from sys import argv
 from time import timing
+from bio import *
 
-def match_fast1[K](k: K):
+def match_fast1(k):
     match k:
-        case s'T_T_T_T_T_T_T_T_T_T_T_T_T_T_T_T_..._A_A_A_A_A_A_A_A_A_A_A_A_A_A_A_A':
+        case 'T_T_T_T_T_T_T_T_T_T_T_T_T_T_T_T_..._A_A_A_A_A_A_A_A_A_A_A_A_A_A_A_A':
             return True
         case _:
             return False
 
-def match_slow1[K](k: K):
+def match_slow1(k):
     for i in range(0, 32, 2):
         if k[i] != k'T':
             return False
@@ -20,7 +21,7 @@ def match_slow1[K](k: K):
             return False
     return True
 
-def test1[K](use_slow_match: bool):
+def test1[K](use_slow_match):
     n = 0
     with timing(f'{K.len()}-mer ({use_slow_match=})'):
         for s in FASTA(argv[1]) |> seqs:
@@ -33,14 +34,14 @@ def test1[K](use_slow_match: bool):
                 n += 1 if b else 0
     print n
 
-def match_fast2[K](k: K):
+def match_fast2(k):
     match k:
-        case s'T_T_..._A_A':
+        case 'T_T_..._A_A':
             return True
         case _:
             return False
 
-def match_slow2[K](k: K):
+def match_slow2(k):
     for i in range(0, 4, 2):
         if k[i] != k'T':
             return False
@@ -49,7 +50,7 @@ def match_slow2[K](k: K):
             return False
     return True
 
-def test2[K](use_slow_match: bool):
+def test2[K](use_slow_match):
     n = 0
     with timing(f'{K.len()}-mer ({use_slow_match=})'):
         for s in FASTA(argv[1]) |> seqs:

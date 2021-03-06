@@ -3,10 +3,11 @@
 ############################
 from sys import argv
 from time import timing
+from bio import *
 n, m = 0, 0
 
-def test_fasta_options(path: str):
-    def process(rec: FASTARecord):
+def test_fasta_options(path):
+    def process(rec):
         global n
         n += len(rec.name) + len(rec.seq)
     global n, m
@@ -24,8 +25,8 @@ def test_fasta_options(path: str):
         else:
             assert m == n
 
-def test_fastq_options(path: str):
-    def process(rec: FASTQRecord):
+def test_fastq_options(path):
+    def process(rec):
         global n
         n += len(rec.name) + len(rec.seq) + len(rec.qual)
     global n, m
@@ -41,8 +42,8 @@ def test_fastq_options(path: str):
         else:
             assert m == n
 
-def test_seqs_options(path: str):
-    def process(rec: seq):
+def test_seqs_options(path):
+    def process(rec):
         global n
         n += len(rec)
     global n, m

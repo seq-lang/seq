@@ -1,5 +1,6 @@
 # FASTQ counter benchmark from https://github.com/lh3/biofast
 from sys import argv, exit, stderr
+from bio import *
 
 if len(argv) != 2:
     stderr.write("Usage: fqcnt.py <in.fq.gz>\n")

@@ -623,7 +623,6 @@ def _interaln_flush(pairs_array: Ptr[SeqPair],
                     hist: Ptr[i32],
                     tmp_array: Ptr[SeqPair],
                     tmp_pending: Ptr[Generator[InterAlignYield]]) -> int:
-    print 'hello'
     from C import seq_inter_align128(Ptr[InterAlignParams], Ptr[SeqPair], Ptr[byte], Ptr[byte], int)
     from C import seq_inter_align16(Ptr[InterAlignParams], Ptr[SeqPair], Ptr[byte], Ptr[byte], int)
     from C import seq_inter_align1(Ptr[InterAlignParams], Ptr[SeqPair], Ptr[byte], Ptr[byte], int)
