@@ -3,6 +3,7 @@
 #include "util/common.h"
 #include "llvm/CodeGen/CommandFlags.def"
 #include <algorithm>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <utility>
 
