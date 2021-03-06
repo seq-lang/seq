@@ -5,31 +5,32 @@
 
 from sys import argv, stderr, exit
 from bio.fmindex import FMIndex
+from bio import FASTARecord, FASTQRecord, FASTQ, FASTA
 
-type GenomeIndex(ref: list[FASTARecord], fmi: FMIndex)
+class GenomeIndex:
+    ref: List[FASTARecord]
+    fmi: FMIndex
 
-def open_index_file(basename: str, mode: str):
+def open_index_file(basename, mode):
     import gzip
     return gzip.open(f'{basename}.exact.idx', mode)
 
-def index_load(basename: str):
+def index_load(basename):
     from pickle import load
     with open_index_file(basename, 'rb') as jar:
         return load[GenomeIndex](jar)
 
-def main_index():
+def main_index(basename):
     from pickle import dump
-    basename = argv[2]
     ref = [rec for rec in FASTA(basename)]
-    stderr.write('making FM-index...\n')
+    print('making FM-index...', file=stderr)
     fmi = FMIndex(basename)
     index = GenomeIndex(ref, fmi)
-    stderr.write('writing to disk...\n')
+    print('writing to disk...', file=stderr)
     with open_index_file(basename, 'wb0') as jar:
         dump(index, jar)
 
 num_aligned = 0
-output_buf = list[str](200)
 
 @prefetch
 def align(read: FASTQRecord, genome_index: GenomeIndex, out: File):
@@ -53,48 +54,29 @@ def align(read: FASTQRecord, genome_index: GenomeIndex, out: File):
                 continue
             if genome_index.ref[rid].seq[ref_pos:ref_pos + read_len].N():
                 continue
-
-            qual = read.qual
-            output_buf.clear()
-            output_buf.append(read.name)
-            output_buf.append('\t16\t' if rc else '\t0\t')
-            output_buf.append(name)
-            output_buf.append('\t')
-            output_buf.append(str(ref_pos + 1))
-            output_buf.append('\t255\t')
-            output_buf.append(str(read_len))
-            output_buf.append('M\t*\t0\t0\t')
-            output_buf.append(str(read_seq))
-            output_buf.append('\t')
-            if rc:
-                for i in range(len(read.qual)):
-                    output_buf.append(read.qual[-1-i])
-            else:
-                output_buf.append(read.qual)
-            output_buf.append('\tNM:i:0\n')
-            out.write(''.join(output_buf))
+            print(
+                read.name, 16 if rc else 0, name, ref_pos + 1, 255, f'{read_len}M',
+                '*', 0, 0, read_seq, read.qual if not rc else read.qual[::-1], 'NM:i:0',
+                sep='\t', file=out
+            )
 
     num_aligned += 1
     if num_aligned % 10000000 == 0:
         print 'aligned 10M reads'
 
-def main_search():
+def main_search(ref_path, fastq_path, out_path):
     from time import timing
-    ref_path = argv[2]
-    fastq_path = argv[3]
-    out_path = argv[4]
-    stderr.write('loading index...\n')
+    print('loading index...', file=stderr)
     genome_index = index_load(ref_path)
-    stderr.write('running alignment pipeline...\n')
+    print('running alignment pipeline...', file=stderr)
     with open(out_path, 'w') as out, timing('alignment pipeline'):
         FASTQ(fastq_path) |> iter |> align(genome_index, out)
 
-mode = argv[1]
-match mode:
-    case 'index':
-        main_index()
-    case 'search':
-        main_search()
+match argv[1:]:
+    case ['index', basename]:
+        main_index(basename)
+    case ['search', ref_path, fastq_path, out_path]:
+        main_search(ref_path, fastq_path, out_path)
     case _:
-        stderr.write("error: unknown mode: valid modes are 'index' and 'search'\n")
+        print("error: unknown mode: valid modes are 'index' and 'search'", file=stderr)
         exit(1)

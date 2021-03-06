@@ -172,7 +172,7 @@ def refactorCigar(cigar):
     if nDn == False:
         return cigar
     else:
-        return CIGAR("".join(rc))
+        return bio.CIGAR("".join(rc))
 
 
 # SAM file fields for split read
@@ -215,7 +215,7 @@ def getIntronPos(bam_file, region):
     pos_list = []
     # check for repeats
     temp_list = set()
-    for r in BAM(bam_file, region=region):
+    for r in bio.BAM(bam_file, region=region):
         n_pos = r.pos
         # loop through CIGAR
         for c in r.cigar:
@@ -235,7 +235,7 @@ def SeqNSplit(bam_file, ref_file, output_sam, qual_ref, ndn, trim_overhang):
     ti = time.time()
 
     # extract reference sequences
-    ref = FASTA(ref_file)
+    ref = bio.FASTA(ref_file)
     ref_seq = s""
 
     # queues for writing to file in correct order
@@ -243,7 +243,7 @@ def SeqNSplit(bam_file, ref_file, output_sam, qual_ref, ndn, trim_overhang):
     split_queue = SortedList()
 
     # input BAM file
-    bam = BAM(bam_file)
+    bam = bio.BAM(bam_file)
     curr_contig = -1
     curr_contig_name = "*"
     # output SAM file

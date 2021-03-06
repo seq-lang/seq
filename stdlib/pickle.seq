@@ -11,7 +11,7 @@ def unpickle[T](jar: Jar):
 def dump[T](x: T, f):
     x.__pickle__(f.fp)
 
-def load[T](f):
+def load[T](f) -> T:
     return T.__unpickle__(f.fp)
 
 def _write_raw(jar: Jar, p: cobj, n: int):

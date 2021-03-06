@@ -1,3 +1,5 @@
+from bio import CIGAR
+
 from os import getenv as _getenv
 BWA_LIB = _getenv('BWA_LIB')
 if not BWA_LIB:
@@ -30,7 +32,7 @@ class bntseq_t:
     _fp_pac: cobj
 
 @tuple
-class mem_alnreg_t
+class mem_alnreg_t:
     _rb: i64
     _re: i64
     _qb: i32
@@ -123,9 +125,6 @@ class mem_aln_t:
     _score: i32
     _sub: i32
     _alt_sc: i32
-
-    def __new__():
-        return self
 
     @property
     def pos(self):

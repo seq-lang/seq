@@ -1,6 +1,7 @@
 # Implementation of https://github.com/lh3/bwa/blob/master/example.c
 
 from sys import argv
+from bio import FASTQ
 from bio.bwa import BWA
 
 bwa = BWA(argv[1])
