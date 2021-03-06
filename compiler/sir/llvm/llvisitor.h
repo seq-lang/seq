@@ -175,6 +175,7 @@ private:
   void writeToObjectFile(const std::string &filename);
   void writeToBitcodeFile(const std::string &filename);
   void writeToLLFile(const std::string &filename);
+  void writeToExecutable(const std::string &filename);
 
 public:
   LLVMVisitor(bool debug = false, const std::string &flags = "");

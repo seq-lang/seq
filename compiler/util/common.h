@@ -62,7 +62,7 @@ struct SrcInfo {
     static int _id(0);
     id = _id++;
   };
-  SrcInfo() : SrcInfo("<internal>", 0, 0, 0, 0){};
+  SrcInfo() : SrcInfo("", 0, 0, 0, 0){};
   friend std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c) {
     char buf[PATH_MAX + 1];
     strncpy(buf, c.file.c_str(), PATH_MAX);

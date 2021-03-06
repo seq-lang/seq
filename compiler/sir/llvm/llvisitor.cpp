@@ -3,6 +3,7 @@
 #include "util/common.h"
 #include "llvm/CodeGen/CommandFlags.def"
 #include <algorithm>
+#include <unistd.h>
 #include <utility>
 
 #include "sir/dsl/codegen.h"
@@ -316,7 +317,7 @@ void LLVMVisitor::writeToObjectFile(const std::string &filename) {
   auto out =
       std::make_unique<llvm::ToolOutputFile>(filename, err, llvm::sys::fs::F_None);
   if (err) {
-    throw std::runtime_error(err.message());
+    compilationError(err.message());
   }
   llvm::raw_pwrite_stream *os = &out->os();
   assert(!machine->addPassesToEmitFile(pm, *os, llvm::TargetMachine::CGFT_ObjectFile,
@@ -330,7 +331,7 @@ void LLVMVisitor::writeToBitcodeFile(const std::string &filename) {
   llvm::raw_fd_ostream stream(filename, err, llvm::sys::fs::F_None);
   llvm::WriteBitcodeToFile(module.get(), stream);
   if (err) {
-    throw std::runtime_error(err.message());
+    compilationError(err.message());
   }
 }
 
@@ -341,15 +342,67 @@ void LLVMVisitor::writeToLLFile(const std::string &filename) {
   fout.close();
 }
 
+void executeCommand(const std::vector<std::string> &args) {
+  std::vector<const char *> cArgs;
+  for (auto &arg : args) {
+    cArgs.push_back(arg.c_str());
+  }
+  cArgs.push_back(nullptr);
+
+  if (fork() == 0) {
+    int status = execvp(cArgs[0], (char *const *)&cArgs[0]);
+    exit(status);
+  } else {
+    int status;
+    if (wait(&status) < 0) {
+      compilationError("process for '" + args[0] + "' encountered an error in wait");
+    }
+
+    if (WEXITSTATUS(status) != 0) {
+      compilationError("process for '" + args[0] + "' exited with status " +
+                       std::to_string(WEXITSTATUS(status)));
+    }
+  }
+}
+
+void LLVMVisitor::writeToExecutable(const std::string &filename) {
+#define LIB_PATH_ENV_VAR "SEQ_LIBRARY_PATH"
+  std::vector<std::string> command = {"ld"};
+  if (const char *path = getenv("SEQ_LIBRARY_PATH")) {
+    command.push_back("-L" + std::string(path));
+  }
+
+  const std::string objFile = filename + ".o";
+  writeToObjectFile(objFile);
+  std::vector<std::string> extraArgs = {"-lseqrt", "-lomp", "-lpthread", "-ldl",
+                                        "-lz",     "-lm",   "-lc",       "-o",
+                                        filename,  objFile};
+  for (const auto &arg : extraArgs) {
+    command.push_back(arg);
+  }
+
+  executeCommand(command);
+
+#if __APPLE__
+  if (db.debug) {
+    executeCommand({"dsymutil", filename});
+  }
+#endif
+
+#undef LIB_PATH_ENV_VAR
+}
+
 void LLVMVisitor::compile(const std::string &filename) {
   runLLVMPipeline();
   llvm::StringRef f(filename);
-  if (f.endswith(".bc")) {
+  if (f.endswith(".ll")) {
+    writeToLLFile(filename);
+  } else if (f.endswith(".bc")) {
     writeToBitcodeFile(filename);
   } else if (f.endswith(".o") || f.endswith(".obj")) {
     writeToObjectFile(filename);
   } else {
-    writeToLLFile(filename);
+    writeToExecutable(filename);
   }
 }
 
@@ -373,7 +426,7 @@ void LLVMVisitor::run(const std::vector<std::string> &args,
   std::string err;
   for (auto &lib : libs) {
     if (llvm::sys::DynamicLibrary::LoadLibraryPermanently(lib.c_str(), &err)) {
-      throw std::runtime_error(err);
+      compilationError(err);
     }
   }
 
@@ -1008,7 +1061,7 @@ void LLVMVisitor::visit(const LLVMFunc *x) {
     std::string bufStr;
     llvm::raw_string_ostream buf(bufStr);
     err.print("LLVM", buf);
-    throw std::runtime_error(buf.str());
+    compilationError(buf.str());
   }
   sub->setDataLayout(module->getDataLayout());
 
