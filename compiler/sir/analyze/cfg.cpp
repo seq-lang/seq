@@ -105,7 +105,6 @@ public:
     graph->setCurrentBlock(end);
   }
   void visit(const TryCatchFlow *v) override {
-    // TODO - synthetic assignment
     auto *routeBlock = graph->newBlock("tcRoute");
     auto *end = graph->newBlock("tcEnd");
     analyze::CFBlock *finally = nullptr;
