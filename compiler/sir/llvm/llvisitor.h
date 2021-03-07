@@ -171,12 +171,6 @@ private:
   void runLLVMOptimizationPasses();
   void runLLVMPipeline();
 
-  // Output
-  void writeToObjectFile(const std::string &filename);
-  void writeToBitcodeFile(const std::string &filename);
-  void writeToLLFile(const std::string &filename);
-  void writeToExecutable(const std::string &filename);
-
 public:
   LLVMVisitor(bool debug = false, const std::string &flags = "");
 
@@ -186,9 +180,24 @@ public:
   /// Dumps the unoptimized module IR to a file.
   /// @param filename name of file to write IR to
   void dump(const std::string &filename = "_dump.ll");
-  /// Runs optimization passes on module and writes LLVM bitcode
-  /// to the specified file.
-  /// @param filename name of the file to write bitcode to
+  /// Writes module as native object file.
+  /// @param filename the .o file to write to
+  void writeToObjectFile(const std::string &filename);
+  /// Writes module as LLVM bitcode file.
+  /// @param filename the .bc file to write to
+  void writeToBitcodeFile(const std::string &filename);
+  /// Writes module as LLVM IR file.
+  /// @param filename the .ll file to write to
+  void writeToLLFile(const std::string &filename);
+  /// Writes module as native executable. Invokes an
+  /// external linker to generate the final executable.
+  /// @param filename the file to write to
+  void writeToExecutable(const std::string &filename);
+  /// Runs optimization passes on module and writes the result
+  /// to the specified file. The output type is determined by
+  /// the file extension (.ll for LLVM IR, .bc for LLVM bitcode
+  /// .o or .obj for object file, other for executable).
+  /// @param filename name of the file to write to
   void compile(const std::string &filename);
   /// Runs optimization passes on module and executes it.
   /// @param args vector of arguments to program
