@@ -343,6 +343,7 @@ void LLVMVisitor::writeToLLFile(const std::string &filename) {
   fout.close();
 }
 
+namespace {
 void executeCommand(const std::vector<std::string> &args) {
   std::vector<const char *> cArgs;
   for (auto &arg : args) {
@@ -366,12 +367,26 @@ void executeCommand(const std::vector<std::string> &args) {
   }
 }
 
-void LLVMVisitor::writeToExecutable(const std::string &filename) {
-#define LIB_PATH_ENV_VAR "SEQ_LIBRARY_PATH"
-  std::vector<std::string> command = {"ld"};
-  if (const char *path = getenv("SEQ_LIBRARY_PATH")) {
-    command.push_back("-L" + std::string(path));
+void addEnvVarPathsToLinkerArgs(std::vector<std::string> &args,
+                                const std::string &var) {
+  if (const char *path = getenv(var.c_str())) {
+    llvm::StringRef pathStr(path);
+    llvm::SmallVector<llvm::StringRef, 16> split;
+    pathStr.split(split, ":");
+
+    for (const auto &subPath : split) {
+      args.push_back(("-L" + subPath).str());
+    }
   }
+}
+} // namespace
+
+void LLVMVisitor::writeToExecutable(const std::string &filename) {
+  std::vector<std::string> command = {"clang"};
+  addEnvVarPathsToLinkerArgs(command, "LIBRARY_PATH");
+  addEnvVarPathsToLinkerArgs(command, "LD_LIBRARY_PATH");
+  addEnvVarPathsToLinkerArgs(command, "DYLD_LIBRARY_PATH");
+  addEnvVarPathsToLinkerArgs(command, "SEQ_LIBRARY_PATH");
 
   const std::string objFile = filename + ".o";
   writeToObjectFile(objFile);
@@ -389,8 +404,6 @@ void LLVMVisitor::writeToExecutable(const std::string &filename) {
     executeCommand({"dsymutil", filename});
   }
 #endif
-
-#undef LIB_PATH_ENV_VAR
 }
 
 void LLVMVisitor::compile(const std::string &filename) {
