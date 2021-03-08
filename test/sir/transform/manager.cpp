@@ -1,7 +1,6 @@
 #include "test.h"
 
 #include "sir/transform/manager.h"
-#include "sir/transform/pass.h"
 
 using namespace seq::ir;
 
@@ -76,4 +75,40 @@ TEST_F(SIRCoreTest, PassManagerInvalidations) {
 
   ASSERT_EQ(2, DummyAnalysis::runCounter);
   ASSERT_EQ(3, DummyPass::runCounter);
+}
+
+TEST_F(SIRCoreTest, PassManagerMultipleInvalidations) {
+  auto ANALYSIS_KEY = "**test_analysis**";
+  auto ANALYSIS_KEY_2 = "**test_analysis2**";
+  auto PASS_KEY = "**test_pass**";
+  int counter = 0;
+
+  auto manager = std::make_unique<transform::PassManager>();
+  manager->registerAnalysis(ANALYSIS_KEY, std::make_unique<DummyAnalysis>(counter));
+  manager->registerAnalysis(ANALYSIS_KEY_2, std::make_unique<DummyAnalysis>(counter),
+                            {ANALYSIS_KEY});
+
+  manager->registerPass(PASS_KEY, std::make_unique<DummyPass>(counter, ANALYSIS_KEY),
+                        {ANALYSIS_KEY_2}, {ANALYSIS_KEY});
+  manager->run(module.get());
+  ASSERT_FALSE(manager->getAnalysisResult(ANALYSIS_KEY));
+  ASSERT_FALSE(manager->getAnalysisResult(ANALYSIS_KEY_2));
+}
+
+TEST_F(SIRCoreTest, PassManagerSingleInvalidation) {
+  auto ANALYSIS_KEY = "**test_analysis**";
+  auto ANALYSIS_KEY_2 = "**test_analysis2**";
+  auto PASS_KEY = "**test_pass**";
+  int counter = 0;
+
+  auto manager = std::make_unique<transform::PassManager>();
+  manager->registerAnalysis(ANALYSIS_KEY, std::make_unique<DummyAnalysis>(counter));
+  manager->registerAnalysis(ANALYSIS_KEY_2, std::make_unique<DummyAnalysis>(counter),
+                            {ANALYSIS_KEY});
+
+  manager->registerPass(PASS_KEY, std::make_unique<DummyPass>(counter, ANALYSIS_KEY),
+                        {ANALYSIS_KEY_2}, {ANALYSIS_KEY_2});
+  manager->run(module.get());
+  ASSERT_TRUE(manager->getAnalysisResult(ANALYSIS_KEY));
+  ASSERT_FALSE(manager->getAnalysisResult(ANALYSIS_KEY_2));
 }

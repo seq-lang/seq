@@ -2,8 +2,10 @@
 
 #include <list>
 #include <memory>
+#include <unordered_map>
 #include <unordered_set>
 
+#include "analysis.h"
 #include "sir/sir.h"
 #include "sir/util/iterators.h"
 
@@ -227,13 +229,13 @@ private:
   /// the current block
   CFBlock *cur = nullptr;
   /// the function being analyzed
-  const Func *func;
+  const BodiedFunc *func;
   /// a list of synthetic values
   std::list<std::unique_ptr<Value>> syntheticValues;
 
 public:
   /// Constructs a control-flow graph.
-  explicit CFGraph(const Func *f);
+  explicit CFGraph(const BodiedFunc *f);
 
   /// @return an iterator to the first block
   auto begin() { return util::dereference_adaptor(blocks.begin()); }
@@ -258,10 +260,10 @@ public:
   void setCurrentBlock(CFBlock *v) { cur = v; }
 
   /// @return the function
-  const Func *getFunc() const { return func; }
+  const BodiedFunc *getFunc() const { return func; }
   /// Sets the function.
   /// @param f the new value
-  void setFunc(Func *f) { func = f; }
+  void setFunc(BodiedFunc *f) { func = f; }
 
   /// Creates and inserts a new block
   /// @param name the name
@@ -286,7 +288,19 @@ public:
 /// Builds a control-flow graph from a given function.
 /// @param f the function
 /// @return the control-flow graph
-std::unique_ptr<CFGraph> buildCFGraph(const Func *f);
+std::unique_ptr<CFGraph> buildCFGraph(const BodiedFunc *f);
+
+/// Control-flow analysis result.
+struct CFResult : public Result {
+  /// map from function id to control-flow graph
+  std::unordered_map<int, std::unique_ptr<CFGraph>> graphs;
+};
+
+/// Control-flow analysis that runs on all functions.
+class CFAnalysis : public Analysis {
+public:
+  std::unique_ptr<Result> run(const IRModule *m) override;
+};
 
 } // namespace analyze
 } // namespace ir

@@ -341,11 +341,11 @@ void CodegenVisitor::visit(SuiteStmt *stmt) {
 void CodegenVisitor::visit(PassStmt *stmt) {}
 
 void CodegenVisitor::visit(BreakStmt *stmt) {
-  ctx->getSeries()->push_back(make<BreakInstr>(stmt, ctx->getLoop()));
+  ctx->getSeries()->push_back(make<BreakInstr>(stmt));
 }
 
 void CodegenVisitor::visit(ContinueStmt *stmt) {
-  ctx->getSeries()->push_back(make<ContinueInstr>(stmt, ctx->getLoop()));
+  ctx->getSeries()->push_back(make<ContinueInstr>(stmt));
 }
 
 void CodegenVisitor::visit(ExprStmt *stmt) {

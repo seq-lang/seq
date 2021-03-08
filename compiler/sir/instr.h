@@ -433,19 +433,7 @@ protected:
 
 public:
   static const char NodeId;
-
-  /// Constructs a control flow instruction.
-  /// @param target the flow being targeted
-  explicit ControlFlowInstr(Flow *target, std::string name = "")
-      : AcceptorExtend(std::move(name)), target(target) {}
-
-  /// @return the target
-  Flow *getTarget() { return cast<Flow>(target); }
-  /// @return the target
-  const Flow *getTarget() const { return cast<Flow>(target); }
-  /// Sets the count.
-  /// @param f the new value
-  void setTarget(Flow *f) { target = f; }
+  using AcceptorExtend::AcceptorExtend;
 };
 
 /// Instr representing a break statement.
@@ -484,7 +472,7 @@ public:
   static const char NodeId;
 
   explicit ReturnInstr(Value *value = nullptr, std::string name = "")
-      : AcceptorExtend(nullptr, std::move(name)), value(value) {}
+      : AcceptorExtend(std::move(name)), value(value) {}
 
   /// @return the value
   Value *getValue() { return value; }

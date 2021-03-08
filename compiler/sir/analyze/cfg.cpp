@@ -17,12 +17,14 @@ private:
   struct Loop {
     analyze::CFBlock *nextIt;
     analyze::CFBlock *end;
+
+    Loop(analyze::CFBlock *nextIt, analyze::CFBlock *end) : nextIt(nextIt), end(end) {}
   };
 
   analyze::CFGraph *graph;
   std::vector<analyze::CFBlock *> tryCatchStack;
   std::unordered_set<int> seenIds;
-  std::unordered_map<int, Loop> loops;
+  std::vector<Loop> loopStack;
 
 public:
   explicit CFVisitor(analyze::CFGraph *graph) : graph(graph) {}
@@ -68,12 +70,12 @@ public:
     process(v->getCond());
     graph->getCurrentBlock()->successors_insert(end);
 
-    loops[v->getId()] = {loopBegin, end};
-
+    loopStack.emplace_back(loopBegin, end);
     auto *body = graph->newBlock("whileBody", true);
     loopBegin->successors_insert(body);
     process(v->getBody());
     body->successors_insert(loopBegin);
+    loopStack.pop_back();
 
     graph->setCurrentBlock(end);
   }
@@ -89,18 +91,18 @@ public:
     graph->getCurrentBlock()->successors_insert(loopCheck);
     loopCheck->successors_insert(end);
 
-    loops[v->getId()] = {loopCheck, end};
-
     auto *loopNext = graph->newBlock("forNext");
     loopCheck->successors_insert(loopNext);
     loopNext->push_back(graph->N<analyze::SyntheticAssignInstr>(
         const_cast<Var *>(v->getVar()), const_cast<Value *>(v->getIter()),
         analyze::SyntheticAssignInstr::NEXT_VALUE));
 
+    loopStack.emplace_back(loopCheck, end);
     auto *loopBody = graph->newBlock("forBody", true);
     loopNext->successors_insert(loopBody);
     process(v->getBody());
     graph->getCurrentBlock()->successors_insert(loopCheck);
+    loopStack.pop_back();
 
     graph->setCurrentBlock(end);
   }
@@ -200,11 +202,11 @@ public:
     graph->setCurrentBlock(end);
   }
   void visit(const BreakInstr *v) override {
-    graph->getCurrentBlock()->successors_insert(loops[v->getTarget()->getId()].end);
+    graph->getCurrentBlock()->successors_insert(loopStack.back().end);
     defaultInsert(v);
   }
   void visit(const ContinueInstr *v) override {
-    graph->getCurrentBlock()->successors_insert(loops[v->getTarget()->getId()].nextIt);
+    graph->getCurrentBlock()->successors_insert(loopStack.back().nextIt);
     defaultInsert(v);
   }
   void visit(const ReturnInstr *v) override {
@@ -319,15 +321,23 @@ std::ostream &SyntheticPhiInstr::doFormat(std::ostream &os) const {
 
 Value *SyntheticPhiInstr::doClone() const { assert(false); }
 
-CFGraph::CFGraph(const Func *f) : func(f) { newBlock("entry", true); }
+CFGraph::CFGraph(const BodiedFunc *f) : func(f) { newBlock("entry", true); }
 
-std::unique_ptr<CFGraph> buildCFGraph(const Func *f) {
+std::unique_ptr<CFGraph> buildCFGraph(const BodiedFunc *f) {
   auto ret = std::make_unique<CFGraph>(f);
   CFVisitor v(ret.get());
   v.process(f);
   return ret;
 }
 
+std::unique_ptr<Result> CFAnalysis::run(const IRModule *m) {
+  auto res = std::make_unique<CFResult>();
+  for (const auto *var : *m) {
+    if (const auto *f = cast<BodiedFunc>(var))
+      res->graphs.insert(std::make_pair(f->getId(), buildCFGraph(f)));
+  }
+  return res;
+}
 } // namespace analyze
 } // namespace ir
 } // namespace seq

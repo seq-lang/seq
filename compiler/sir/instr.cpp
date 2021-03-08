@@ -253,8 +253,7 @@ std::ostream &BreakInstr::doFormat(std::ostream &os) const {
 }
 
 Value *BreakInstr::doClone() const {
-  return getModule()->N<BreakInstr>(getSrcInfo(), const_cast<Flow *>(getTarget()),
-                                    getName());
+  return getModule()->N<BreakInstr>(getSrcInfo(), getName());
 }
 
 const char ContinueInstr::NodeId = 0;
@@ -265,8 +264,7 @@ std::ostream &ContinueInstr::doFormat(std::ostream &os) const {
 }
 
 Value *ContinueInstr::doClone() const {
-  return getModule()->N<ContinueInstr>(getSrcInfo(), const_cast<Flow *>(getTarget()),
-                                       getName());
+  return getModule()->N<ContinueInstr>(getSrcInfo(), getName());
 }
 
 const char ReturnInstr::NodeId = 0;
