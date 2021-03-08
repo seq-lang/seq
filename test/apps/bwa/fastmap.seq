@@ -93,8 +93,8 @@ def fastmap(rec, fmi, out, dna):
             if len(intv) <= min_iwidth:
                 for rid, name, pos, is_rev in fmi.biresults(mem):
                     print(f"\t{name}:{'-' if is_rev else '+'}{pos+1}", end='', file=out)
-                    d = ~dna[pos:pos+match_size] if is_rev else dna[pos:pos+match_size]
-                    print(f":{rec.seq[offset:offset+match_size]}:{d}", end='', file=out)
+                    # d = ~dna[pos:pos+match_size] if is_rev else dna[pos:pos+match_size]
+                    # print(f":{rec.seq[offset:offset+match_size]}:{d}", end='', file=out)
             else:
                 print("\t*", file=out)
             print("", file=out)
