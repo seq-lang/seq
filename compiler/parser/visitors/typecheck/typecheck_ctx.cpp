@@ -85,7 +85,8 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const Expr *expr, int level,
   auto t = make_shared<types::LinkType>(types::LinkType::Unbound, cache->unboundCount++,
                                         level, nullptr, isStatic);
   t->setSrcInfo(expr->getSrcInfo());
-  LOG_TYPECHECK("[ub] new {}: {} ({})", t->toString(), expr->toString(), setActive);
+  LOG_TYPECHECK("[ub] new {}: {} ({})", t->debugString(true), expr->toString(),
+                setActive);
   if (setActive && allowActivation)
     activeUnbounds[t] = FormatVisitor::apply(expr);
   return t;
@@ -109,8 +110,8 @@ types::TypePtr TypeContext::instantiate(const Expr *expr, types::TypePtr type,
       i.second->setSrcInfo(expr->getSrcInfo());
       if (activeUnbounds.find(i.second) == activeUnbounds.end()) {
         LOG_TYPECHECK("[ub] #{} -> {} (during inst of {}): {} ({})", i.first,
-                      i.second->toString(), type->toString(), expr->toString(),
-                      activate);
+                      i.second->debugString(true), type->debugString(true),
+                      expr->toString(), activate);
         if (activate && allowActivation)
           activeUnbounds[i.second] =
               format("{} of {} in {}", l->genericName.empty() ? "?" : l->genericName,
@@ -118,6 +119,7 @@ types::TypePtr TypeContext::instantiate(const Expr *expr, types::TypePtr type,
       }
     }
   }
+  LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->debugString(debug));
   return t;
 }
 

@@ -165,7 +165,8 @@ void SimplifyVisitor::visit(WhileStmt *stmt) {
   StmtPtr assign = nullptr;
   if (stmt->elseSuite && stmt->elseSuite->firstInBlock()) {
     breakVar = ctx->cache->getTemporaryVar("no_break");
-    assign = transform(N<AssignStmt>(N<IdExpr>(breakVar), N<BoolExpr>(true)));
+    assign =
+        transform(N<AssignStmt>(N<IdExpr>(breakVar), N<BoolExpr>(true), nullptr, true));
   }
   ctx->loops.push_back(breakVar); // needed for transforming break in loop..else blocks
   StmtPtr whileStmt = N<WhileStmt>(transform(cond), transform(stmt->suite));
@@ -187,7 +188,8 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
   StmtPtr assign = nullptr, forStmt = nullptr;
   if (stmt->elseSuite && stmt->elseSuite->firstInBlock()) {
     breakVar = ctx->cache->getTemporaryVar("no_break");
-    assign = transform(N<AssignStmt>(N<IdExpr>(breakVar), N<BoolExpr>(true)));
+    assign =
+        transform(N<AssignStmt>(N<IdExpr>(breakVar), N<BoolExpr>(true), nullptr, true));
   }
   ctx->loops.push_back(breakVar); // needed for transforming break in loop..else blocks
   ctx->addBlock();
@@ -240,7 +242,8 @@ void SimplifyVisitor::visit(IfStmt *stmt) {
 void SimplifyVisitor::visit(MatchStmt *stmt) {
   auto var = ctx->cache->getTemporaryVar("match");
   auto result = N<SuiteStmt>();
-  result->stmts.push_back(N<AssignStmt>(N<IdExpr>(var), clone(stmt->what)));
+  result->stmts.push_back(
+      N<AssignStmt>(N<IdExpr>(var), clone(stmt->what), nullptr, true));
   for (auto &c : stmt->cases) {
     ctx->addBlock();
     StmtPtr suite = N<SuiteStmt>(clone(c.suite), N<BreakStmt>());
@@ -281,7 +284,8 @@ void SimplifyVisitor::visit(WithStmt *stmt) {
     vector<StmtPtr> internals;
     string var =
         stmt->vars[i].empty() ? ctx->cache->getTemporaryVar("with") : stmt->vars[i];
-    internals.push_back(N<AssignStmt>(N<IdExpr>(var), clone(stmt->items[i])));
+    internals.push_back(
+        N<AssignStmt>(N<IdExpr>(var), clone(stmt->items[i]), nullptr, true));
     internals.push_back(
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>(var), "__enter__"))));
 
@@ -1016,7 +1020,8 @@ StmtPtr SimplifyVisitor::transformPythonImport(const Expr *what,
     // altName = pyobj._import("name")
     return transform(N<AssignStmt>(
         N<IdExpr>(altName.empty() ? name : altName),
-        N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_import"), N<StringExpr>(name))));
+        N<CallExpr>(N<DotExpr>(N<IdExpr>("pyobj"), "_import"),
+                    N<StringExpr>((lib.empty() ? "" : lib + ".") + name))));
 
   // Typed function import: from python import foo.bar(int) -> float.
   // f = pyobj._import("lib")._getattr("name")

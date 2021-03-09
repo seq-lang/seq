@@ -66,7 +66,6 @@ ExprPtr TypecheckVisitor::transformType(ExprPtr &expr) {
     if (!expr->isType())
       error("expected type expression");
     auto t = ctx->instantiate(expr.get(), expr->getType());
-    LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
     expr->setType(t);
   }
   return move(expr);
@@ -122,7 +121,6 @@ void TypecheckVisitor::visit(IdExpr *expr) {
   if (val->isType())
     expr->markType();
   auto t = ctx->instantiate(expr, val->type);
-  LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
   unify(expr->type, t);
 
   // Check if we can realize the type.
@@ -319,7 +317,6 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
 void TypecheckVisitor::visit(InstantiateExpr *expr) {
   expr->typeExpr = transform(expr->typeExpr, true);
   auto typ = ctx->instantiate(expr->typeExpr.get(), expr->typeExpr->getType());
-  LOG_TYPECHECK("[inst] {} -> {}", expr->typeExpr->toString(), typ->toString());
   seqassert(typ->getFunc() || typ->getClass(), "unknown type");
   auto &generics =
       typ->getFunc() ? typ->getFunc()->funcGenerics : typ->getClass()->generics;
@@ -333,8 +330,6 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
         auto val = ctx->find(ei->value);
         seqassert(val && val->isStatic(), "invalid static expression");
         auto t = ctx->instantiate(ei, val->type);
-        LOG_TYPECHECK("[inst] {} -> {}", expr->typeParams[i]->toString(),
-                      t->toString());
         unify(generics[i].type, t);
       } else {
         // Case 2: Static expression (e.g. 32 or N+5).
@@ -350,9 +345,9 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               staticGenerics.emplace_back(ClassType::Generic(
                   ei->value, ctx->cache->reverseIdentifierLookup[ei->value], genTyp,
                   genTyp->getLink() ? genTyp->getLink()->id
-                                    : genTyp->getStatic()->generics.empty()
-                                          ? 0
-                                          : genTyp->getStatic()->generics[0].id));
+                  : genTyp->getStatic()->generics.empty()
+                      ? 0
+                      : genTyp->getStatic()->generics[0].id));
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -401,7 +396,6 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
       expr->typeParams[i] = transform(expr->typeParams[i], true);
       auto t =
           ctx->instantiate(expr->typeParams[i].get(), expr->typeParams[i]->getType());
-      LOG_TYPECHECK("[inst] {} -> {}", expr->typeParams[i]->toString(), t->toString());
       unify(generics[i].type, t);
     }
   }
@@ -466,7 +460,6 @@ void TypecheckVisitor::visit(StackAllocExpr *expr) {
   expr->expr = transform(expr->expr);
   auto t =
       ctx->instantiateGeneric(expr, ctx->findInternal("Array"), {expr->typeExpr->type});
-  LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
   unify(expr->type, t);
   // Realize the Array[T] type of possible.
   if (auto rt = realize(expr->type)) {
@@ -495,7 +488,6 @@ void TypecheckVisitor::visit(TypeOfExpr *expr) {
 void TypecheckVisitor::visit(PtrExpr *expr) {
   expr->expr = transform(expr->expr);
   auto t = ctx->instantiateGeneric(expr, ctx->findInternal("Ptr"), {expr->expr->type});
-  LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
   unify(expr->type, t);
   expr->done = expr->expr->done;
 }
@@ -504,7 +496,6 @@ void TypecheckVisitor::visit(YieldExpr *expr) {
   seqassert(!ctx->bases.empty(), "yield outside of a function");
   auto typ = ctx->instantiateGeneric(expr, ctx->findInternal("Generator"),
                                      {ctx->addUnbound(expr, ctx->typecheckLevel)});
-  LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), typ->toString());
   unify(ctx->bases.back().returnType, typ);
   unify(expr->type, typ->getClass()->generics[0].type);
   expr->done = realize(expr->type) != nullptr;
@@ -610,7 +601,6 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
   if (isAtomic) {
     auto ptrlt =
         ctx->instantiateGeneric(expr->lexpr.get(), ctx->findInternal("Ptr"), {lt});
-    LOG_TYPECHECK("[inst] {} -> {}", expr->lexpr->toString(), ptrlt->toString());
     method = ctx->findBestMethod(expr->lexpr.get(), format("__atomic_{}__", magic),
                                  {{"", ptrlt}, {"", rt}});
     if (method) {
@@ -790,7 +780,6 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     if (auto member = ctx->findMember(typ->name, expr->member)) {
       // Case 2: Object member access.
       auto t = ctx->instantiate(expr, member, typ.get());
-      LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
       unify(expr->type, t);
       expr->done = expr->expr->done && realize(expr->type) != nullptr;
       return nullptr;
@@ -825,7 +814,6 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
             ctx->findBestMethod(expr->expr.get(), expr->member, argTypes)) {
       ExprPtr e = N<IdExpr>(bestMethod->funcName);
       auto t = ctx->instantiate(expr, bestMethod, typ.get());
-      LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
       unify(e->type, t);
       unify(expr->type, e->type);
       if (!isType)
@@ -879,7 +867,6 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     seqassert(val, "cannot find method '{}'", name);
     ExprPtr e = N<IdExpr>(name);
     auto t = ctx->instantiate(expr, bestMethod, typ.get());
-    LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->toString());
     unify(e->type, t);
     unify(expr->type, e->type);
     e = transform(e); // Visit IdExpr and realize it if necessary.

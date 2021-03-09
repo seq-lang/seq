@@ -137,7 +137,8 @@ void SimplifyVisitor::visit(ListExpr *expr) {
   stmts.push_back(transform(N<AssignStmt>(
       clone(var),
       N<CallExpr>(N<IdExpr>("List"),
-                  !expr->items.empty() ? N<IntExpr>(expr->items.size()) : nullptr))));
+                  !expr->items.empty() ? N<IntExpr>(expr->items.size()) : nullptr),
+      nullptr, true)));
   for (const auto &it : expr->items) {
     if (auto star = it->getStar()) {
       ExprPtr forVar = N<IdExpr>(ctx->cache->getTemporaryVar("it"));
@@ -155,7 +156,8 @@ void SimplifyVisitor::visit(ListExpr *expr) {
 void SimplifyVisitor::visit(SetExpr *expr) {
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("set"));
-  stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Set")))));
+  stmts.push_back(transform(
+      N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Set")), nullptr, true)));
   for (auto &it : expr->items)
     if (auto star = it->getStar()) {
       ExprPtr forVar = N<IdExpr>(ctx->cache->getTemporaryVar("it"));
@@ -172,7 +174,8 @@ void SimplifyVisitor::visit(SetExpr *expr) {
 void SimplifyVisitor::visit(DictExpr *expr) {
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("dict"));
-  stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Dict")))));
+  stmts.push_back(transform(
+      N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Dict")), nullptr, true)));
   for (auto &it : expr->items)
     if (auto star = CAST(it.value, KeywordStarExpr)) {
       ExprPtr forVar = N<IdExpr>(ctx->cache->getTemporaryVar("it"));
@@ -199,8 +202,8 @@ void SimplifyVisitor::visit(GeneratorExpr *expr) {
   if (expr->kind == GeneratorExpr::ListGenerator && loops.size() == 1 &&
       loops[0].conds.empty()) {
     optimizeVar = ctx->cache->getTemporaryVar("iter");
-    stmts.push_back(
-        transform(N<AssignStmt>(N<IdExpr>(optimizeVar), move(loops[0].gen))));
+    stmts.push_back(transform(
+        N<AssignStmt>(N<IdExpr>(optimizeVar), move(loops[0].gen), nullptr, true)));
     loops[0].gen = N<IdExpr>(optimizeVar);
   }
 
@@ -213,15 +216,15 @@ void SimplifyVisitor::visit(GeneratorExpr *expr) {
       args.emplace_back(CallExpr::Arg{"", N<BoolExpr>(true)});
       args.emplace_back(CallExpr::Arg{"", N<IdExpr>(optimizeVar)});
     }
-    stmts.push_back(transform(
-        N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("List"), move(args)))));
+    stmts.push_back(transform(N<AssignStmt>(
+        clone(var), N<CallExpr>(N<IdExpr>("List"), move(args)), nullptr, true)));
     prev->stmts.push_back(
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "append"), clone(expr->expr))));
     stmts.push_back(transform(suite));
     resultExpr = N<StmtExpr>(move(stmts), transform(var));
   } else if (expr->kind == GeneratorExpr::SetGenerator) {
-    stmts.push_back(
-        transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Set")))));
+    stmts.push_back(transform(
+        N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Set")), nullptr, true)));
     prev->stmts.push_back(
         N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "add"), clone(expr->expr))));
     stmts.push_back(transform(suite));
@@ -240,7 +243,8 @@ void SimplifyVisitor::visit(DictGeneratorExpr *expr) {
 
   vector<StmtPtr> stmts;
   ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("gen"));
-  stmts.push_back(transform(N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Dict")))));
+  stmts.push_back(transform(
+      N<AssignStmt>(clone(var), N<CallExpr>(N<IdExpr>("Dict")), nullptr, true)));
   prev->stmts.push_back(N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__setitem__"),
                                                 clone(expr->key), clone(expr->expr))));
   stmts.push_back(transform(suite));
@@ -287,41 +291,42 @@ void SimplifyVisitor::visit(BinaryExpr *expr) {
   static unordered_set<string> supportedStaticOp{
       "<", "<=", ">", ">=", "==", "!=", "&&", "||", "+", "-", "*", "//", "%"};
   auto lhs = transform(expr->lexpr);
+  auto oldAssign = ctx->canAssign;
+  if (expr->op == "&&" || expr->op == "||")
+    ctx->canAssign = false;
   auto rhs = transform(expr->rexpr);
+  if (expr->op == "&&" || expr->op == "||")
+    ctx->canAssign = oldAssign;
   if (lhs->isStaticExpr && rhs->isStaticExpr && in(supportedStaticOp, expr->op) &&
       !expr->inPlace) {
     resultExpr = N<BinaryExpr>(move(lhs), expr->op, move(rhs));
     resultExpr->isStaticExpr = true;
   } else if (expr->op == "&&") {
-    resultExpr = transform(N<IfExpr>(
-        N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__")),
-        N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__")), N<BoolExpr>(false)));
+    resultExpr =
+        N<IfExpr>(N<CallExpr>(N<DotExpr>(move(lhs), "__bool__")),
+                  N<CallExpr>(N<DotExpr>(move(rhs), "__bool__")), N<BoolExpr>(false));
   } else if (expr->op == "||") {
-    resultExpr = transform(N<IfExpr>(
-        N<CallExpr>(N<DotExpr>(clone(expr->lexpr), "__bool__")), N<BoolExpr>(true),
-        N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__bool__"))));
-  } else if (expr->op == "is not") {
-    resultExpr = transform(N<CallExpr>(N<DotExpr>(
-        N<BinaryExpr>(clone(expr->lexpr), "is", clone(expr->rexpr)), "__invert__")));
+    resultExpr =
+        N<IfExpr>(N<CallExpr>(N<DotExpr>(move(lhs), "__bool__")), N<BoolExpr>(true),
+                  N<CallExpr>(N<DotExpr>(move(rhs), "__bool__")));
   } else if (expr->op == "not in") {
-    resultExpr = transform(
-        N<UnaryExpr>("!", N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__contains__"),
-                                      clone(expr->lexpr))));
+    resultExpr = N<CallExpr>(N<DotExpr>(
+        N<CallExpr>(N<DotExpr>(move(rhs), "__contains__"), move(lhs)), "__invert__"));
   } else if (expr->op == "in") {
-    resultExpr = transform(N<CallExpr>(N<DotExpr>(clone(expr->rexpr), "__contains__"),
-                                       clone(expr->lexpr)));
-  } else if (expr->op == "is") {
-    auto le = expr->lexpr->getNone() ? clone(expr->lexpr) : transform(expr->lexpr);
-    auto re = expr->rexpr->getNone() ? clone(expr->rexpr) : transform(expr->rexpr);
+    resultExpr = N<CallExpr>(N<DotExpr>(move(rhs), "__contains__"), move(lhs));
+  } else if (expr->op == "is" || expr->op == "is not") {
+    auto le = expr->lexpr->getNone() ? clone(expr->lexpr) : move(lhs);
+    auto re = expr->rexpr->getNone() ? clone(expr->rexpr) : move(rhs);
     if (expr->lexpr->getNone() && expr->rexpr->getNone())
       resultExpr = N<BoolExpr>(true);
     else if (expr->lexpr->getNone())
-      resultExpr = N<BinaryExpr>(move(re), expr->op, move(le));
+      resultExpr = N<BinaryExpr>(move(re), "is", move(le));
     else
-      resultExpr = N<BinaryExpr>(move(le), expr->op, move(re));
+      resultExpr = N<BinaryExpr>(move(le), "is", move(re));
+    if (expr->op == "is not")
+      resultExpr = N<CallExpr>(N<DotExpr>(move(resultExpr), "__invert__"));
   } else {
-    resultExpr = N<BinaryExpr>(transform(expr->lexpr), expr->op, transform(expr->rexpr),
-                               expr->inPlace);
+    resultExpr = N<BinaryExpr>(move(lhs), expr->op, move(rhs), expr->inPlace);
   }
 }
 

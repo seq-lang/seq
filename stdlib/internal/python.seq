@@ -34,6 +34,8 @@ from C import LD.PySet_Add(cobj, cobj) -> cobj
 from C import LD.PyDict_New() -> cobj
 from C import LD.PyDict_SetItem(cobj, cobj, cobj) -> cobj
 from C import LD.PyDict_Next(cobj, Ptr[int], Ptr[cobj], Ptr[cobj]) -> int
+from C import LD.PyObject_GetIter(cobj) -> cobj
+from C import LD.PyIter_Next(cobj) -> cobj
 
 _PY_MODULE_CACHE = Dict[str, pyobj]()
 
@@ -78,6 +80,16 @@ class pyobj:
 
     def __str__(self):
         return str.__from_py__(self._getattr("__str__").__call__())
+
+    def __iter__(self):
+        it = PyObject_GetIter(self.p)
+        if not it:
+            raise ValueError("Python object is not iterable")
+        while i := PyIter_Next(it):
+            yield pyobj(pyobj.exc_wrap(i))
+            pyobj(i).decref()
+        pyobj(it).decref()
+        pyobj.exc_check()
 
     def to_str(self, errors: str, empty: str = "") -> str:
         obj = PyUnicode_AsEncodedString(self.p, "utf-8".c_str(), errors.c_str())

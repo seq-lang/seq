@@ -35,6 +35,7 @@ void Type::Unification::undo() {
 }
 TypePtr Type::follow() { return shared_from_this(); }
 vector<shared_ptr<Type>> Type::getUnbounds() const { return {}; }
+string Type::toString() const { return debugString(false); }
 bool Type::is(const string &s) { return getClass() && getClass()->name == s; }
 
 LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic,
@@ -82,7 +83,7 @@ int LinkType::unify(Type *typ, Unification *undo) {
     // ⚠️ Unification: destructive part.
     seqassert(!type, "type has been already unified or is in inconsistent state");
     if (undo) {
-      LOG_TYPECHECK("[unify] {} := {}", id, typ->toString());
+      LOG_TYPECHECK("[unify] {} := {}", id, typ->debugString(true));
       // Link current type to typ and ensure that this modification is recorded in undo.
       undo->linked.push_back(this);
       kind = Link;
@@ -140,11 +141,12 @@ bool LinkType::canRealize() const {
   else
     return type->canRealize();
 }
-string LinkType::toString() const {
+string LinkType::debugString(bool debug) const {
   if (kind == Unbound || kind == Generic)
-    return genericName.empty() ? "?" : genericName;
+    return debug ? fmt::format("{}{}", kind == Unbound ? '?' : '#', id)
+                 : (genericName.empty() ? "?" : genericName);
   else
-    return type->toString();
+    return type->debugString(debug);
 }
 string LinkType::realizedName() const {
   if (kind == Unbound)
@@ -253,11 +255,11 @@ bool ClassType::canRealize() const {
   return std::all_of(generics.begin(), generics.end(),
                      [](auto &t) { return !t.type || t.type->canRealize(); });
 }
-string ClassType::toString() const {
+string ClassType::debugString(bool debug) const {
   vector<string> gs;
   for (auto &a : generics)
     if (!a.name.empty())
-      gs.push_back(a.type->toString());
+      gs.push_back(a.type->debugString(debug));
   // Special formatting for Partials, Functions and Tuples
   if (startswith(name, TYPE_PARTIAL)) {
     vector<string> as;
@@ -387,8 +389,8 @@ bool RecordType::canRealize() const {
                      [](auto &a) { return a->canRealize(); }) &&
          this->ClassType::canRealize();
 }
-string RecordType::toString() const {
-  return fmt::format("{}", this->ClassType::toString());
+string RecordType::debugString(bool debug) const {
+  return fmt::format("{}", this->ClassType::debugString(debug));
 }
 shared_ptr<RecordType> RecordType::getHeterogenousTuple() {
   seqassert(canRealize(), "{} not realizable", toString());
@@ -481,16 +483,16 @@ bool FuncType::canRealize() const {
                      [](auto &a) { return !a.type || a.type->canRealize(); }) &&
          (!funcParent || funcParent->canRealize());
 }
-string FuncType::toString() const {
+string FuncType::debugString(bool debug) const {
   vector<string> gs;
   for (auto &a : funcGenerics)
     if (!a.name.empty())
-      gs.push_back(a.type->toString());
+      gs.push_back(a.type->debugString(debug));
   string s = join(gs, ",");
   vector<string> as;
   // Important: return type does not have to be realized.
   for (int ai = 1; ai < args.size(); ai++)
-    as.push_back(args[ai]->toString());
+    as.push_back(args[ai]->debugString(debug));
   string a = join(as, ",");
   s = s.empty() ? a : join(vector<string>{s, a}, ";");
   return fmt::format("{}{}", funcName, s.empty() ? "" : fmt::format("[{}]", s));
@@ -608,7 +610,7 @@ bool StaticType::canRealize() const {
         return false;
   return true;
 }
-string StaticType::toString() const {
+string StaticType::debugString(bool debug) const {
   if (staticEvaluation.first)
     return fmt::format("{}", staticEvaluation.second);
   return fmt::format("Static[{}]",
