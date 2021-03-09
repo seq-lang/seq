@@ -399,7 +399,7 @@ class SAMRecord:
         '''
         Whether this record is paired
         '''
-        return self._htsr.flag & BAM_FREVERSE != 0
+        return self._htsr.flag & BAM_FPAIRED != 0
 
     @property
     def proper_pair(self):
