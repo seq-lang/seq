@@ -83,12 +83,7 @@ public:
                        getActual()->getId());
   }
 
-  /// @return a clone of the value
-  Var *clone() const;
-
 private:
-  virtual Var *doClone() const;
-
   std::ostream &doFormat(std::ostream &os) const override;
 
 protected:
@@ -134,8 +129,6 @@ private:
 
   std::vector<Var *> doGetUsedVariables() const override { return {val}; }
   int doReplaceUsedVariable(int id, Var *newVar) override;
-
-  Value *doClone() const override;
 };
 
 /// Value that represents a pointer.
@@ -170,8 +163,6 @@ private:
 
   std::vector<Var *> doGetUsedVariables() const override { return {val}; }
   int doReplaceUsedVariable(int id, Var *newVar) override;
-
-  Value *doClone() const override;
 };
 
 } // namespace ir

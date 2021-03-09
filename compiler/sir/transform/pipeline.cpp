@@ -1,4 +1,5 @@
 #include "pipeline.h"
+#include "sir/util/cloning.h"
 #include "sir/util/irtools.h"
 #include "sir/util/matching.h"
 
@@ -135,7 +136,8 @@ struct PrefetchFunctionTransformer : public util::LambdaValueVisitor {
     auto *yield = M->Nr<YieldInstr>();
     auto *replacement = util::series(prefetch, yield);
 
-    auto *clone = x->clone();
+    util::CloneVisitor cv(M);
+    auto *clone = cv.clone(x);
     see(clone); // avoid infinite loop on clone
     x->replaceAll(M->Nr<FlowInstr>(replacement, clone));
   }
@@ -177,11 +179,12 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
   auto *M = p->getModule();
   PrefetchFunctionTransformer pft;
   PipelineFlow::Stage *prev = nullptr;
+  util::CloneVisitor cv(M);
   for (auto it = p->begin(); it != p->end(); ++it) {
     if (auto *func = cast<BodiedFunc>(util::getFunc(it->getFunc()))) {
       if (!it->isGenerator() && util::hasAttribute(func, "prefetch")) {
         // transform prefetch'ing function
-        auto *clone = cast<BodiedFunc>(func->clone());
+        auto *clone = cast<BodiedFunc>(cv.clone(func));
         util::setReturnType(clone, M->getGeneratorType(util::getReturnType(clone)));
         clone->setGenerator();
         clone->getBody()->accept(pft);
@@ -241,7 +244,7 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
             {util::call(drainFunc, args), {}, /*generator=*/true, /*parallel=*/false}};
         *it = stage;
         for (++it; it != p->end(); ++it) {
-          drainStages.push_back(it->clone());
+          drainStages.push_back(cv.clone(*it));
         }
 
         auto *drain =
@@ -420,13 +423,14 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
   if (!types) // bio module not loaded; nothing to do
     return;
   PipelineFlow::Stage *prev = nullptr;
+  util::CloneVisitor cv(M);
   for (auto it = p->begin(); it != p->end(); ++it) {
     if (auto *func = cast<BodiedFunc>(util::getFunc(it->getFunc()))) {
       if (!it->isGenerator() && util::hasAttribute(func, "inter_align") &&
           util::getReturnType(func)->is(M->getVoidType())) {
         // transform aligning function
         InterAlignFunctionTransformer aft(&types);
-        auto *clone = cast<BodiedFunc>(func->clone());
+        auto *clone = cast<BodiedFunc>(cv.clone(func));
         util::setReturnType(clone, M->getGeneratorType(types.yield));
         clone->setGenerator();
         clone->getBody()->accept(aft);

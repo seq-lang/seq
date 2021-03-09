@@ -30,7 +30,7 @@ TEST_F(SIRCoreTest, ConstantValueMatches) {
 TEST_F(SIRCoreTest, ConstantCloning) {
   auto VALUE = 1;
   auto *node = module->Nr<IntConstant>(VALUE, module->getIntType());
-  auto *clone = cast<IntConstant>(node->clone());
+  auto *clone = cast<IntConstant>(cv->clone(node));
 
   ASSERT_TRUE(clone);
   ASSERT_EQ(VALUE, clone->getVal());

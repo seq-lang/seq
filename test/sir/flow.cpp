@@ -56,7 +56,7 @@ TEST_F(SIRCoreTest, SeriesFlowCloning) {
   f->push_back(module->Nr<IntConstant>(SECOND_VALUE, module->getIntType()));
   f->insert(f->begin(), module->Nr<IntConstant>(FIRST_VALUE, module->getIntType()));
 
-  ASSERT_TRUE(util::match(f, f->clone()));
+  ASSERT_TRUE(util::match(f, cv->clone(f)));
 }
 
 TEST_F(SIRCoreTest, WhileFlowQueryAndReplace) {
@@ -89,7 +89,7 @@ TEST_F(SIRCoreTest, WhileFlowCloning) {
   auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
   auto *body = module->Nr<SeriesFlow>();
   auto *f = module->Nr<WhileFlow>(cond, body);
-  ASSERT_TRUE(util::match(f, f->clone()));
+  ASSERT_TRUE(util::match(f, cv->clone(f)));
 }
 
 TEST_F(SIRCoreTest, ForFlowQueryAndReplace) {
@@ -130,7 +130,7 @@ TEST_F(SIRCoreTest, ForFlowCloning) {
   auto *var = module->Nr<Var>(module->getStringType(), false, "x");
   auto *f = module->Nr<ForFlow>(iter, body, var);
 
-  ASSERT_TRUE(util::match(f, f->clone()));
+  ASSERT_TRUE(util::match(f, cv->clone(f)));
 }
 
 TEST_F(SIRCoreTest, IfFlowQueryAndReplace) {
@@ -182,7 +182,7 @@ TEST_F(SIRCoreTest, IfFlowCloning) {
   auto *fBody = module->Nr<SeriesFlow>();
   auto *f = module->Nr<IfFlow>(cond, tBody, fBody);
 
-  ASSERT_TRUE(util::match(f, f->clone()));
+  ASSERT_TRUE(util::match(f, cv->clone(f)));
 }
 
 TEST_F(SIRCoreTest, TryCatchFlowSingleCatchQueryAndReplace) {

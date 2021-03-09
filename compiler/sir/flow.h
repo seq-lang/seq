@@ -66,8 +66,6 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  Value *doClone() const override;
-
 protected:
   std::vector<Value *> doGetUsedValues() const override {
     return std::vector<Value *>(series.begin(), series.end());
@@ -111,8 +109,6 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-
-  Value *doClone() const override;
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {cond, body}; }
@@ -169,8 +165,6 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-
-  Value *doClone() const override;
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {iter, body}; }
@@ -229,8 +223,6 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-
-  Value *doClone() const override;
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
@@ -354,8 +346,6 @@ public:
 private:
   std::ostream &doFormat(std::ostream &os) const override;
 
-  Value *doClone() const override;
-
 protected:
   std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
@@ -448,8 +438,6 @@ public:
     types::Type *getOutputType() const;
     /// @return the output element type of this stage
     types::Type *getOutputElementType() const;
-    /// @return deep copy of this stage; used to clone pipelines
-    Stage clone() const;
 
     friend class PipelineFlow;
   };
@@ -507,8 +495,6 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-
-  Value *doClone() const override;
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;

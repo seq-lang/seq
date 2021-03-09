@@ -121,10 +121,10 @@ TEST_F(SIRCoreTest, MatchingIfFlow) {
   auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
   auto *tVal = module->Nr<SeriesFlow>();
   auto *first = module->Nr<IfFlow>(cond, tVal);
-  auto *second = module->Nr<IfFlow>(cond->clone(), cast<Flow>(tVal->clone()));
+  auto *second = module->Nr<IfFlow>(cv->clone(cond), cast<Flow>(cv->clone(tVal)));
 
   ASSERT_TRUE(util::match(first, second));
-  second->setFalseBranch(cast<Flow>(tVal->clone()));
+  second->setFalseBranch(cast<Flow>(cv->clone(tVal)));
   ASSERT_FALSE(util::match(first, second));
 }
 
@@ -134,7 +134,7 @@ TEST_F(SIRCoreTest, MatchingForFlow) {
   auto *iter = module->Nr<StringConstant>("hello", module->getStringType());
   auto *first = module->Nr<ForFlow>(iter, body, var);
   auto *second =
-      module->Nr<ForFlow>(iter->clone(), cast<Flow>(body->clone()), var->clone());
+      module->Nr<ForFlow>(cv->clone(iter), cast<Flow>(cv->clone(body)), cv->clone(var));
 
   ASSERT_TRUE(util::match(first, second));
   second->setIter(module->Nr<StringConstant>("foo", module->getStringType()));
@@ -177,7 +177,7 @@ TEST_F(SIRCoreTest, MatchingAssignInstr) {
   auto *var = module->Nr<Var>(module->getIntType());
   auto *val = module->Nr<IntConstant>(1, module->getIntType());
   auto *first = module->Nr<AssignInstr>(var, val);
-  auto *second = module->Nr<AssignInstr>(var->clone(), val->clone());
+  auto *second = module->Nr<AssignInstr>(cv->clone(var), cv->clone(val));
 
   ASSERT_TRUE(util::match(first, second));
   second->setRhs(module->Nr<IntConstant>(5, module->getIntType()));
@@ -191,7 +191,7 @@ TEST_F(SIRCoreTest, MatchingExtractInstr) {
   auto *var = module->Nr<Var>(type);
   auto *val = module->Nr<VarValue>(var);
   auto *first = module->Nr<ExtractInstr>(val, FIELD);
-  auto *second = module->Nr<ExtractInstr>(val->clone(), FIELD);
+  auto *second = module->Nr<ExtractInstr>(cv->clone(val), FIELD);
 
   ASSERT_TRUE(util::match(first, second));
   second->setField("");
@@ -206,7 +206,7 @@ TEST_F(SIRCoreTest, MatchingInsertInstr) {
   auto *val = module->Nr<VarValue>(var);
   auto *toInsert = module->Nr<IntConstant>(1, module->getIntType());
   auto *first = module->Nr<InsertInstr>(val, FIELD, toInsert);
-  auto *second = module->Nr<InsertInstr>(val->clone(), FIELD, toInsert->clone());
+  auto *second = module->Nr<InsertInstr>(cv->clone(val), FIELD, cv->clone(toInsert));
 
   ASSERT_TRUE(util::match(first, second));
   second->setField("");
@@ -222,7 +222,7 @@ TEST_F(SIRCoreTest, MatchingCallInstr) {
 
   auto *funcVal = module->Nr<VarValue>(func);
   auto *first = module->Nr<CallInstr>(funcVal);
-  auto *second = module->Nr<CallInstr>(funcVal->clone());
+  auto *second = module->Nr<CallInstr>(cv->clone(funcVal));
 
   ASSERT_TRUE(util::match(first, second));
   second->setFunc(module->Nr<VarValue>(func2));
@@ -235,8 +235,8 @@ TEST_F(SIRCoreTest, MatchingTernaryInstr) {
   auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
 
   auto *first = module->Nr<TernaryInstr>(cond, trueValue, falseValue);
-  auto *second =
-      module->Nr<TernaryInstr>(cond->clone(), trueValue->clone(), falseValue->clone());
+  auto *second = module->Nr<TernaryInstr>(cv->clone(cond), cv->clone(trueValue),
+                                          cv->clone(falseValue));
 
   ASSERT_TRUE(util::match(first, second));
   second->setFalseValue(module->Nr<BoolConstant>(true, module->getBoolType()));

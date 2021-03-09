@@ -37,6 +37,7 @@ public:
     value.staticValue = staticValue;
   }
   Generic(types::Type *typeValue) : value(), tag(TYPE) { value.typeValue = typeValue; }
+  Generic(const types::Generic &) = default;
 
   /// @return true if the generic is a type
   bool isType() const { return tag == TYPE; }

@@ -49,10 +49,6 @@ std::ostream &AssignInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *AssignInstr::doClone() const {
-  return getModule()->N<AssignInstr>(getSrcInfo(), lhs, rhs->clone(), getName());
-}
-
 const char ExtractInstr::NodeId = 0;
 
 types::Type *ExtractInstr::doGetType() const {
@@ -67,10 +63,6 @@ int ExtractInstr::doReplaceUsedValue(int id, Value *newValue) {
     return 1;
   }
   return 0;
-}
-
-Value *ExtractInstr::doClone() const {
-  return getModule()->N<ExtractInstr>(getSrcInfo(), val->clone(), field, getName());
 }
 
 std::ostream &ExtractInstr::doFormat(std::ostream &os) const {
@@ -96,11 +88,6 @@ int InsertInstr::doReplaceUsedValue(int id, Value *newValue) {
 std::ostream &InsertInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("insert({}, \"{}\", {})"), *lhs, field, *rhs);
   return os;
-}
-
-Value *InsertInstr::doClone() const {
-  return getModule()->N<InsertInstr>(getSrcInfo(), lhs->clone(), field, rhs->clone(),
-                                     getName());
 }
 
 const char CallInstr::NodeId = 0;
@@ -134,14 +121,6 @@ std::ostream &CallInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *CallInstr::doClone() const {
-  std::vector<Value *> clonedArgs;
-  for (const auto *arg : *this)
-    clonedArgs.push_back(arg->clone());
-  return getModule()->N<CallInstr>(getSrcInfo(), func->clone(), std::move(clonedArgs),
-                                   getName());
-}
-
 const char StackAllocInstr::NodeId = 0;
 
 std::ostream &StackAllocInstr::doFormat(std::ostream &os) const {
@@ -156,10 +135,6 @@ int StackAllocInstr::doReplaceUsedType(const std::string &name, types::Type *new
     return 1;
   }
   return 0;
-}
-
-Value *StackAllocInstr::doClone() const {
-  return getModule()->N<StackAllocInstr>(getSrcInfo(), arrayType, count, getName());
 }
 
 const char TypePropertyInstr::NodeId = 0;
@@ -191,11 +166,6 @@ int TypePropertyInstr::doReplaceUsedType(const std::string &name,
   return 0;
 }
 
-Value *TypePropertyInstr::doClone() const {
-  return getModule()->N<TypePropertyInstr>(getSrcInfo(), inspectType, property,
-                                           getName());
-}
-
 const char YieldInInstr::NodeId = 0;
 
 int YieldInInstr::doReplaceUsedType(const std::string &name, types::Type *newType) {
@@ -208,10 +178,6 @@ int YieldInInstr::doReplaceUsedType(const std::string &name, types::Type *newTyp
 
 std::ostream &YieldInInstr::doFormat(std::ostream &os) const {
   return os << "yield_in()";
-}
-
-Value *YieldInInstr::doClone() const {
-  return getModule()->N<YieldInInstr>(getSrcInfo(), type, suspend, getName());
 }
 
 const char TernaryInstr::NodeId = 0;
@@ -238,35 +204,20 @@ std::ostream &TernaryInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *TernaryInstr::doClone() const {
-  return getModule()->N<TernaryInstr>(getSrcInfo(), cond->clone(), trueValue->clone(),
-                                      falseValue->clone(), getName());
-}
-
 const char ControlFlowInstr::NodeId = 0;
 
 const char BreakInstr::NodeId = 0;
 
 std::ostream &BreakInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("break({})"), target->referenceString());
+  fmt::print(os, FMT_STRING("break()"));
   return os;
-}
-
-Value *BreakInstr::doClone() const {
-  return getModule()->N<BreakInstr>(getSrcInfo(), const_cast<Flow *>(getTarget()),
-                                    getName());
 }
 
 const char ContinueInstr::NodeId = 0;
 
 std::ostream &ContinueInstr::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("continue({})"), target->referenceString());
+  fmt::print(os, FMT_STRING("continue()"));
   return os;
-}
-
-Value *ContinueInstr::doClone() const {
-  return getModule()->N<ContinueInstr>(getSrcInfo(), const_cast<Flow *>(getTarget()),
-                                       getName());
 }
 
 const char ReturnInstr::NodeId = 0;
@@ -295,11 +246,6 @@ std::ostream &ReturnInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *ReturnInstr::doClone() const {
-  return getModule()->N<ReturnInstr>(getSrcInfo(), value ? value->clone() : nullptr,
-                                     getName());
-}
-
 const char YieldInstr::NodeId = 0;
 
 std::vector<Value *> YieldInstr::doGetUsedValues() const {
@@ -325,11 +271,6 @@ std::ostream &YieldInstr::doFormat(std::ostream &os) const {
   return os;
 }
 
-Value *YieldInstr::doClone() const {
-  return getModule()->N<YieldInstr>(getSrcInfo(), value ? value->clone() : nullptr,
-                                    final, getName());
-}
-
 const char ThrowInstr::NodeId = 0;
 
 std::vector<Value *> ThrowInstr::doGetUsedValues() const {
@@ -349,11 +290,6 @@ int ThrowInstr::doReplaceUsedValue(int id, Value *newValue) {
 std::ostream &ThrowInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("throw({})"), *value);
   return os;
-}
-
-Value *ThrowInstr::doClone() const {
-  return getModule()->N<ThrowInstr>(getSrcInfo(), value ? value->clone() : nullptr,
-                                    getName());
 }
 
 const char FlowInstr::NodeId = 0;
@@ -376,11 +312,6 @@ int FlowInstr::doReplaceUsedValue(int id, Value *newValue) {
 std::ostream &FlowInstr::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("inline_flow({}, {})"), *flow, *val);
   return os;
-}
-
-Value *FlowInstr::doClone() const {
-  return getModule()->N<FlowInstr>(getSrcInfo(), cast<Flow>(flow->clone()),
-                                   val->clone(), getName());
 }
 
 } // namespace ir

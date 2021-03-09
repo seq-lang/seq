@@ -99,6 +99,8 @@ namespace util {
 /// Base for SIR visitors
 class IRVisitor {
 public:
+  virtual ~IRVisitor() noexcept = default;
+
   DEFAULT_VISIT(IRModule);
 
   DEFAULT_VISIT(Var);
@@ -165,6 +167,8 @@ public:
 
 class ConstIRVisitor {
 public:
+  virtual ~ConstIRVisitor() noexcept = default;
+
   CONST_DEFAULT_VISIT(IRModule);
 
   CONST_DEFAULT_VISIT(Var);
