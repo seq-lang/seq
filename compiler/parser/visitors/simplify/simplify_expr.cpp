@@ -698,19 +698,22 @@ ExprPtr SimplifyVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
     params.emplace_back(Param{s, nullptr, nullptr});
   auto fs = transform(N<FunctionStmt>(name, nullptr, vector<Param>{}, move(params),
                                       N<SuiteStmt>(move(stmts)), vector<string>{}));
+  vector<FunctionStmt *> fns;
   if (fs) {
     if (auto fp = const_cast<FunctionStmt *>(fs->getFunction())) {
-      for (auto &c : ctx->captures.back())
-        fp->args.emplace_back(Param{c, nullptr, nullptr});
+      fns.emplace_back(fp);
       prependStmts->push_back(move(fs));
       name = fp->name;
     } else {
       seqassert(false, "expected a FunctionStmt");
     }
+  } else {
+    fns.push_back(dynamic_cast<FunctionStmt *>(preamble->functions.back().get()));
   }
-  auto f = ctx->cache->functions[name].ast.get();
+  fns.emplace_back(ctx->cache->functions[name].ast.get());
   for (auto &c : ctx->captures.back()) {
-    f->args.emplace_back(Param{c, nullptr, nullptr});
+    for (auto f : fns)
+      f->args.emplace_back(Param{c, nullptr, nullptr});
     args.emplace_back(CallExpr::Arg{"", N<IdExpr>(c)});
   }
   ctx->captures.pop_back();

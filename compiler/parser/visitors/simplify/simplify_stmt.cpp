@@ -591,8 +591,8 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
       error("cannot find type '{}' to extend", name);
     canonicalName = val->canonicalName;
     const auto &astIter = ctx->cache->classes.find(canonicalName);
-    seqassert(astIter != ctx->cache->classes.end(), "cannot find AST for {}",
-              canonicalName);
+    if (astIter == ctx->cache->classes.end())
+      error("cannot extend type alias or an instantiation ({})", name);
     originalAST = astIter->second.ast.get();
     if (originalAST->generics.size() != stmt->generics.size())
       error("generics do not match");
@@ -937,24 +937,21 @@ StmtPtr SimplifyVisitor::transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr 
 
 StmtPtr SimplifyVisitor::transformCImport(const string &name, const vector<Param> &args,
                                           const Expr *ret, const string &altName) {
-  auto canonicalName = ctx->generateCanonicalName(name, true);
   vector<Param> fnArgs;
   for (int ai = 0; ai < args.size(); ai++) {
     seqassert(args[ai].name.empty(), "unexpected argument name");
     seqassert(!args[ai].deflt, "unexpected default argument");
     seqassert(args[ai].type, "missing type");
     fnArgs.emplace_back(Param{args[ai].name.empty() ? format("a{}", ai) : args[ai].name,
-                              transformType(args[ai].type.get()), nullptr});
+                              args[ai].type->clone(), nullptr});
   }
-  ctx->add(SimplifyItem::Func, altName.empty() ? name : altName, canonicalName,
-           ctx->isToplevel());
   auto f =
-      clone(ctx->cache->functions[canonicalName].ast = N<FunctionStmt>(
-                canonicalName,
-                ret ? transformType(ret) : transformType(N<IdExpr>("void").get()),
-                vector<Param>(), move(fnArgs), nullptr, vector<string>{ATTR_EXTERN_C}));
-  preamble->functions.push_back(clone(f));
-  return f; // Already in the preamble
+      N<FunctionStmt>(name, ret ? ret->clone() : N<IdExpr>("void"), vector<Param>(),
+                      move(fnArgs), nullptr, vector<string>{ATTR_EXTERN_C});
+  StmtPtr tf = transform(f.get()); // Already in the preamble
+  if (!altName.empty())
+    ctx->add(altName, ctx->find(name));
+  return tf;
 }
 
 StmtPtr SimplifyVisitor::transformCDLLImport(const Expr *dylib, const string &name,

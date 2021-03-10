@@ -108,7 +108,7 @@ void TypecheckVisitor::visit(IdExpr *expr) {
   else if (startswith(expr->value, TYPE_CALLABLE))
     generateCallableStub(std::stoi(expr->value.substr(10)));
   auto val = ctx->find(expr->value);
-  seqassert(val, "cannot find IdExpr '{}'", expr->value);
+  seqassert(val, "cannot find IdExpr '{}' ({})", expr->value, expr->getSrcInfo());
   if (val->isStatic()) {
     // Evaluate the static expression.
     seqassert(val->type->getStatic(), "{} does not have static type", expr->value);

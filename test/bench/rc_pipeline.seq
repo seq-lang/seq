@@ -3,11 +3,12 @@
 ######################
 from sys import argv
 from time import timing
+from bio import *
 
 n = 0
-def update[K](kmer: K):
+def update(kmer):
     global n
-    x = K() |> base(len(kmer) // 2, k'T')
+    x = typeof(kmer)() |> base(len(kmer) // 2, k'T')
     if kmer > x:
         n += 1
 

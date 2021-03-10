@@ -44,10 +44,10 @@ class GenomeIndex[K]:
         table = self.hash_tables[which]
         value_ptr = table.get_value_ptr_for_key(kmer)
 
-        if not value_ptr or value_Ptr[0] == table.invalid_val:
+        if not value_ptr or value_ptr[0] == table.invalid_val:
             return Array[u32](value_ptr, 0)
 
-        value = value_Ptr[0]
+        value = value_ptr[0]
 
         if int(value) < self.count_of_bases:
             return Array[u32](value_ptr, 1)
@@ -60,3 +60,4 @@ class GenomeIndex[K]:
         kmer, which = GenomeIndex[K]._partition(seed)
         table = self.hash_tables[which]
         table.__prefetch__(kmer)
+

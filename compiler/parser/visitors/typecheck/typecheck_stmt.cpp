@@ -380,8 +380,10 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
         in(stmt->attributes, ATTR_EXTERN_C)) {
       if (!t->canRealize())
         error("builtins and external functions must be realizable");
+
       auto typ = ctx->instantiate(N<IdExpr>(stmt->name).get(), t);
-      unify(typ, realize(typ->getFunc()));
+      auto r = realize(typ->getFunc());
+      unify(typ, r);
     }
     stmt->done = true;
     return;
@@ -466,7 +468,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])]
       .visitedAsts[stmt->name] = {TypecheckItem::Func, typ};
   ctx->add(TypecheckItem::Func, stmt->name, typ);
-  LOG_REALIZE("[stmt] added func {}: {} (base={})", stmt->name, typ->toString(),
+  LOG_REALIZE("[stmt] added func {}: {} (base={}})", stmt->name, typ->debugString(1),
               ctx->getBase());
 }
 

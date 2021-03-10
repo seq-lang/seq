@@ -16,7 +16,7 @@ def main(args):
         counts: Dict[int, int] = {}
         max_pos, max_count = 0, 0
 
-        for i,kmer in enumerate(read.kmers[K](step)):
+        for i,kmer in enumerate(read.seq.kmers[K](step)):
             offset = i * step
             hits = index[kmer]
             hits_rev = index[~kmer]

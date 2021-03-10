@@ -3,6 +3,7 @@
 ######################################
 from sys import argv
 from time import timing
+from bio import *
 
 prefix = argv[1]
 checksum = 0

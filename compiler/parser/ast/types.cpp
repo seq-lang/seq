@@ -491,7 +491,7 @@ string FuncType::debugString(bool debug) const {
   string s = join(gs, ",");
   vector<string> as;
   // Important: return type does not have to be realized.
-  for (int ai = 1; ai < args.size(); ai++)
+  for (int ai = debug ? 0 : 1; ai < args.size(); ai++)
     as.push_back(args[ai]->debugString(debug));
   string a = join(as, ",");
   s = s.empty() ? a : join(vector<string>{s, a}, ";");

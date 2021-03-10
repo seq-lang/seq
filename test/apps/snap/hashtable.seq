@@ -67,7 +67,7 @@ class SNAPHashTable[K,V]:
         entry = table[table_index]
 
         if entry[1] == k and entry[0] != invalid_val:
-            return Ptr[V](table.ptr + table_index)
+            return Ptr[V]((table.ptr + table_index).as_byte())
         else:
             n_probes = 0
             while True:
@@ -83,7 +83,7 @@ class SNAPHashTable[K,V]:
                 if not (entry[1] != k and entry[0] != invalid_val):
                     break
 
-            return Ptr[V](table.ptr + table_index)
+            return Ptr[V]((table.ptr + table_index).as_byte())
 
     def __prefetch__(self, k: K):
         table = self.table

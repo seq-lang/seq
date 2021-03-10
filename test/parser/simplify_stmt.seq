@@ -559,6 +559,13 @@ class Foo:
     pass
 #! ERROR: extend cannot be combined with other attributes
 
+#%% class_err_1b,barebones
+size_t = i32
+@extend
+class size_t:
+    pass
+#! ERROR: cannot extend type alias or an instantiation (size_t)
+
 #%% class_err_2,barebones
 def foo():
     @extend
