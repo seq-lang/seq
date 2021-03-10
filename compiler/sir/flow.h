@@ -456,7 +456,7 @@ public:
 
 private:
   /// pipeline stages
-  std::vector<Stage> stages;
+  std::list<Stage> stages;
 
 public:
   static const char NodeId;
@@ -465,7 +465,7 @@ public:
   /// @param stages vector of pipeline stages
   /// @param name the name
   explicit PipelineFlow(std::vector<Stage> stages = {}, std::string name = "")
-      : AcceptorExtend(std::move(name)), stages(std::move(stages)) {}
+      : AcceptorExtend(std::move(name)), stages(stages.begin(), stages.end()) {}
 
   /// @return an iterator to the first stage
   auto begin() { return stages.begin(); }

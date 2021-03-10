@@ -28,3 +28,7 @@ def _dynamic_coroutine_scheduler_drain[T](states: Array[Generator[T]], N: int):
             yield g.next()
         g.destroy()
         i += 1
+
+@inline
+def _dummy_prefetch_terminal_stage(x):
+    pass

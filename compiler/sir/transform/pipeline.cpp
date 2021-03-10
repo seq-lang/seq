@@ -1,6 +1,7 @@
 #include "pipeline.h"
 #include "sir/util/irtools.h"
 #include "sir/util/matching.h"
+#include <iterator>
 
 namespace seq {
 namespace ir {
@@ -240,6 +241,19 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
         std::vector<PipelineFlow::Stage> drainStages = {
             {util::call(drainFunc, args), {}, /*generator=*/true, /*parallel=*/false}};
         *it = stage;
+
+        if (std::distance(it, p->end()) == 1 &&
+            !util::getReturnType(func)->is(M->getVoidType())) {
+          Func *dummyFunc =
+              M->getOrRealizeFunc("_dummy_prefetch_terminal_stage",
+                                  {stage.getOutputElementType()}, {}, prefetchModule);
+          assert(dummyFunc);
+          p->push_back({M->Nr<VarValue>(dummyFunc),
+                        {nullptr},
+                        /*generator=*/false,
+                        /*parallel=*/false});
+        }
+
         for (++it; it != p->end(); ++it) {
           drainStages.push_back(it->clone());
         }
