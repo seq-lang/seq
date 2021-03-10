@@ -155,6 +155,7 @@ set(SEQ_HPPFILES
         compiler/sir/types/types.h
         compiler/sir/util/cloning.h
         compiler/sir/util/context.h
+        compiler/sir/util/format.h
         compiler/sir/util/irtools.h
         compiler/sir/util/iterators.h
         compiler/sir/util/lambda_visitor.h
@@ -212,6 +213,7 @@ set(SEQ_CPPFILES
         compiler/sir/transform/pipeline.cpp
         compiler/sir/types/types.cpp
         compiler/sir/util/cloning.cpp
+        compiler/sir/util/format.cpp
         compiler/sir/util/irtools.cpp
         compiler/sir/util/matching.cpp
         compiler/sir/util/visitor.cpp
