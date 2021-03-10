@@ -14,7 +14,7 @@ def _dynamic_coroutine_scheduler[A,B,T,C](value: A, coro: B, states: Array[Gener
                 g.destroy()
                 states[i] = coro(value, *args)
                 break
-            i = (i + 1) % M
+            i = (i + 1) & (M - 1)
         I[0] = i
 
 @inline

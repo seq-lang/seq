@@ -194,6 +194,7 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
 
         // vars
         auto *statesType = M->getArrayType(coroType->getReturnType());
+        assert((SCHED_WIDTH_PREFETCH & (SCHED_WIDTH_PREFETCH - 1)) == 0); // power of 2
         auto *width = M->getIntConstant(SCHED_WIDTH_PREFETCH);
 
         auto *init = M->Nr<SeriesFlow>();
