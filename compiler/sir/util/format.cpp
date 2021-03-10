@@ -49,11 +49,11 @@ public:
   void visit(const IRModule *v) override {
     auto types = makeFormatters(v->types_begin(), v->types_end(), true);
     auto vars = makeFormatters(v->begin(), v->end(), true);
-    fmt::print(os,
-               FMT_STRING("(module (types ({}))\n(vars ({}))\n(main {})\n(argv {}))"),
-               fmt::join(types.begin(), types.end(), "\n"),
-               fmt::join(vars.begin(), vars.end(), "\n"),
-               makeFormatter(v->getMainFunc(), true), makeFormatter(v->getArgVar(), true));
+    fmt::print(
+        os, FMT_STRING("(module (types ({}))\n(vars ({}))\n(main {})\n(argv {}))"),
+        fmt::join(types.begin(), types.end(), "\n"),
+        fmt::join(vars.begin(), vars.end(), "\n"),
+        makeFormatter(v->getMainFunc(), true), makeFormatter(v->getArgVar(), true));
   }
 
   void visit(const Var *v) override {
