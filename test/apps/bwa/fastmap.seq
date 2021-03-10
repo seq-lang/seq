@@ -16,7 +16,7 @@ def index_load(basename):
     with open_index_file(basename, 'rb') as jar:
         return load[FMIndex](jar)
 
-# @prefetch
+@prefetch
 def fastmap(rec, fmi, out, dna):
     prev, curr, mems = [], [], []
     q = rec.seq
