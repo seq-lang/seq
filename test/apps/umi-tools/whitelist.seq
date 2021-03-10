@@ -48,11 +48,12 @@ def get_knee_estimate_distance(cell_barcode_counts):
     return knee_final_barcodes
 
 def get_error_correct_mapping(cell_barcodes, whitelist):
-    def neighbors(kmer):
-        for i in range(len(kmer)):
-            for b in ('A', 'C', 'G', 'T'):
-                if kmer[i] != b:
-                    yield ''.join((kmer[:i], b, kmer[i+1:]))
+    def neighbors(barcode):
+        for i in range(len(barcode)):
+            for b in (s'A', s'C', s'G', s'T'):
+                if barcode[i] != b:
+                    s = str(barcode)
+                    yield seq(''.join((s[:i], str(b), s[i+1:])))
 
     true_to_false = {}
     whitelist_set = set(whitelist)
@@ -70,8 +71,8 @@ def get_cell_whitelist(cell_barcode_counts):
     return cell_whitelist, true_to_false_map
 
 with timing('whitelist construction'):
-    cell_barcode_counts = Dict[str, int]()
-    FASTQ(argv[1]) |> seqs |> (lambda s: str(s[:BARCODE_LEN])) |> cell_barcode_counts.increment
+    cell_barcode_counts = Dict[seq, int]()
+    FASTQ(argv[1]) |> seqs |> (lambda read: read[:BARCODE_LEN]) |> cell_barcode_counts.increment
     cell_whitelist, true_to_false_map = get_cell_whitelist(cell_barcode_counts)
 
     for barcode in sorted(cell_whitelist):
