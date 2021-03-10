@@ -1,6 +1,7 @@
 #include "func.h"
 
 #include <algorithm>
+#include <cctype>
 #include <unordered_map>
 
 #include "parser/common.h"
@@ -105,7 +106,11 @@ const char BodiedFunc::NodeId = 0;
 
 std::string BodiedFunc::getUnmangledName() const {
   auto split = ast::split(getName(), '.');
-  return split.back();
+  for (auto it = split.rbegin(); it != split.rend(); ++it) {
+    if (!std::all_of(it->begin(), it->end(), ::isdigit))
+      return *it;
+  }
+  return split.front();
 }
 
 Var *BodiedFunc::doClone() const {
