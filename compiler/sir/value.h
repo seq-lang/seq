@@ -10,6 +10,10 @@ namespace ir {
 class Func;
 
 class Value : public ReplaceableNodeBase<Value>, public IdMixin {
+private:
+  /// true if the node is synthetic
+  bool synthetic = false;
+
 public:
   static const char NodeId;
 
@@ -100,6 +104,12 @@ public:
 
   Value *len();
   Value *iter();
+
+  /// @return true if the value is synthetic
+  bool isSynthetic() const { return getActual()->synthetic; }
+  /// Sets the value's synthetic flag.
+  /// @param v the new value
+  void setIsSynthetic(bool v = true) { getActual()->synthetic = v; }
 
 private:
   Value *doUnaryOp(const std::string &name);

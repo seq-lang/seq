@@ -290,6 +290,8 @@ std::ostream &SyntheticAssignInstr::doFormat(std::ostream &os) const {
 
 Value *SyntheticAssignInstr::doClone() const { assert(false); }
 
+const char SyntheticPhiInstr::NodeId = 0;
+
 std::vector<Value *> SyntheticPhiInstr::doGetUsedValues() const {
   std::vector<Value *> ret;
   for (auto &p : *this) {
