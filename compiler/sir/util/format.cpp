@@ -15,7 +15,7 @@ struct NodeFormatter {
   const types::Type *type = nullptr;
   const Value *value = nullptr;
   const Var *var = nullptr;
-  bool canShowFullVar = false;
+  bool canShowFull = false;
 
   std::unordered_set<int> &seenNodes;
   std::unordered_set<std::string> &seenTypes;
@@ -47,7 +47,7 @@ public:
   virtual ~FormatVisitor() noexcept = default;
 
   void visit(const IRModule *v) override {
-    auto types = makeFormatters(v->types_begin(), v->types_end());
+    auto types = makeFormatters(v->types_begin(), v->types_end(), true);
     auto vars = makeFormatters(v->begin(), v->end(), true);
     fmt::print(os,
                FMT_STRING("(module (types ({}))\n(vars ({}))\n(main {})\n(argv {}))"),
@@ -371,9 +371,9 @@ public:
       os << "()";
   }
 
-  void format(const types::Type *t) {
+  void format(const types::Type *t, bool canShowFull = false) {
     if (t) {
-      if (seenTypes.find(t->getName()) != seenTypes.end())
+      if (seenTypes.find(t->getName()) != seenTypes.end() || !canShowFull)
         fmt::print(os, FMT_STRING("(type {})"), t->referenceString());
       else {
         seenTypes.insert(t->getName());
@@ -409,15 +409,17 @@ public:
   }
 
 private:
-  NodeFormatter makeFormatter(const types::Type *node) {
-    return NodeFormatter(node, seenNodes, seenTypes);
+  NodeFormatter makeFormatter(const types::Type *node, bool canShowFull = false) {
+    auto ret = NodeFormatter(node, seenNodes, seenTypes);
+    ret.canShowFull = canShowFull;
+    return ret;
   }
   NodeFormatter makeFormatter(const Value *node) {
     return NodeFormatter(node, seenNodes, seenTypes);
   }
-  NodeFormatter makeFormatter(const Var *node, bool canShowFullVar = false) {
+  NodeFormatter makeFormatter(const Var *node, bool canShowFull = false) {
     auto ret = NodeFormatter(node, seenNodes, seenTypes);
-    ret.canShowFullVar = canShowFullVar;
+    ret.canShowFull = canShowFull;
     return ret;
   }
 
@@ -430,10 +432,10 @@ private:
     return ret;
   }
   template <typename It>
-  std::vector<NodeFormatter> makeFormatters(It begin, It end, bool canShowFullVar) {
+  std::vector<NodeFormatter> makeFormatters(It begin, It end, bool canShowFull) {
     std::vector<NodeFormatter> ret;
     while (begin != end) {
-      ret.push_back(makeFormatter(*begin, canShowFullVar));
+      ret.push_back(makeFormatter(*begin, canShowFull));
       ++begin;
     }
     return ret;
@@ -443,11 +445,11 @@ private:
 std::ostream &operator<<(std::ostream &os, const NodeFormatter &n) {
   FormatVisitor fv(os, n.seenNodes, n.seenTypes);
   if (n.type)
-    fv.format(n.type);
+    fv.format(n.type, n.canShowFull);
   else if (n.value)
     fv.format(n.value);
   else
-    fv.format(n.var, n.canShowFullVar);
+    fv.format(n.var, n.canShowFull);
   return os;
 }
 } // namespace
