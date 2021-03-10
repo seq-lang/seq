@@ -103,14 +103,17 @@ ir::IRModule *parse(const string &argv0, const string &file, const string &code,
     auto *module = ast::CodegenVisitor::apply(cache, move(typechecked));
     module->setSrcInfo({abs, 0, 0, 0, 0});
 
-    auto out = seq::ir::util::format(module);
-    std::ofstream os("sir_dump.lisp");
-    os << out;
-    os.close();
     if (!isTest)
       LOG_TIME("[T] codegen   = {:.1f}",
                duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
                    1000.0);
+    if (_dbg_level) {
+      auto out = seq::ir::util::format(module);
+      std::ofstream os("_dump_sir.lisp");
+      os << out;
+      os.close();
+    }
+
     _isTest = isTest;
     return module;
   } catch (exc::SeqException &e) {
