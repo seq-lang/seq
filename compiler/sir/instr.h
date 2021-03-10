@@ -68,7 +68,6 @@ protected:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-  Value *doClone() const override;
 };
 
 /// Instr representing loading the field of a value.
@@ -110,7 +109,6 @@ protected:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-  Value *doClone() const override;
 };
 
 /// Instr representing setting the field of a value.
@@ -163,7 +161,6 @@ protected:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-  Value *doClone() const override;
 };
 
 /// Instr representing calling a function.
@@ -239,7 +236,6 @@ protected:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-  Value *doClone() const override;
 };
 
 /// Instr representing allocating an array on the stack.
@@ -281,7 +277,6 @@ protected:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-  Value *doClone() const override;
 };
 
 /// Instr representing getting information about a type.
@@ -326,7 +321,6 @@ protected:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-  Value *doClone() const override;
 };
 
 /// Instr representing a Python yield expression.
@@ -364,7 +358,6 @@ protected:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-  Value *doClone() const override;
 };
 
 /// Instr representing a ternary operator.
@@ -422,30 +415,13 @@ protected:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-  Value *doClone() const override;
 };
 
 /// Base for control flow instructions
 class ControlFlowInstr : public AcceptorExtend<ControlFlowInstr, Instr> {
-protected:
-  /// the target
-  Value *target;
-
 public:
   static const char NodeId;
-
-  /// Constructs a control flow instruction.
-  /// @param target the flow being targeted
-  explicit ControlFlowInstr(Flow *target, std::string name = "")
-      : AcceptorExtend(std::move(name)), target(target) {}
-
-  /// @return the target
-  Flow *getTarget() { return cast<Flow>(target); }
-  /// @return the target
-  const Flow *getTarget() const { return cast<Flow>(target); }
-  /// Sets the count.
-  /// @param f the new value
-  void setTarget(Flow *f) { target = f; }
+  using AcceptorExtend::AcceptorExtend;
 };
 
 /// Instr representing a break statement.
@@ -457,8 +433,6 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-
-  Value *doClone() const override;
 };
 
 /// Instr representing a continue statement.
@@ -470,8 +444,6 @@ public:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-
-  Value *doClone() const override;
 };
 
 /// Instr representing a return statement.
@@ -484,7 +456,7 @@ public:
   static const char NodeId;
 
   explicit ReturnInstr(Value *value = nullptr, std::string name = "")
-      : AcceptorExtend(nullptr, std::move(name)), value(value) {}
+      : AcceptorExtend(std::move(name)), value(value) {}
 
   /// @return the value
   Value *getValue() { return value; }
@@ -500,7 +472,6 @@ protected:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-  Value *doClone() const override;
 };
 
 class YieldInstr : public AcceptorExtend<YieldInstr, Instr> {
@@ -536,7 +507,6 @@ protected:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-  Value *doClone() const override;
 };
 
 class ThrowInstr : public AcceptorExtend<ThrowInstr, Instr> {
@@ -564,7 +534,6 @@ protected:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-  Value *doClone() const override;
 };
 
 /// Instr that contains a flow and value.
@@ -608,7 +577,6 @@ protected:
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
-  Value *doClone() const override;
 };
 
 } // namespace ir

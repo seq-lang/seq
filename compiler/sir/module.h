@@ -217,6 +217,14 @@ public:
   DesiredType *N(const seq::SrcObject *s, Args &&... args) {
     return N<DesiredType>(s->getSrcInfo(), std::forward<Args>(args)...);
   }
+  /// Constructs and registers an IR node with provided source node.
+  /// @param s the source node
+  /// @param args the arguments
+  /// @return the new node
+  template <typename DesiredType, typename... Args>
+  DesiredType *N(const IRNode *s, Args &&... args) {
+    return N<DesiredType>(s->getSrcInfo(), std::forward<Args>(args)...);
+  }
   /// Constructs and registers an IR node with no source information.
   /// @param args the arguments
   /// @return the new node

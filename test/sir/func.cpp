@@ -64,7 +64,7 @@ TEST_F(SIRCoreTest, BodiedFuncCloning) {
 
   fn->setBuiltin();
   fn->setBody(module->Nr<SeriesFlow>());
-  ASSERT_TRUE(util::match(fn, fn->clone()));
+  ASSERT_TRUE(util::match(fn, cv->clone(fn)));
 }
 
 TEST_F(SIRCoreTest, ExternalFuncUnmangledNameAndCloning) {
@@ -73,7 +73,7 @@ TEST_F(SIRCoreTest, ExternalFuncUnmangledNameAndCloning) {
 
   fn->setUnmangledName("foo");
   ASSERT_EQ("foo", fn->getUnmangledName());
-  ASSERT_TRUE(util::match(fn, fn->clone()));
+  ASSERT_TRUE(util::match(fn, cv->clone(fn)));
 }
 
 TEST_F(SIRCoreTest, InternalFuncParentTypeUnmangledNameAndCloning) {
@@ -83,7 +83,7 @@ TEST_F(SIRCoreTest, InternalFuncParentTypeUnmangledNameAndCloning) {
   fn->setParentType(module->getIntType());
   ASSERT_EQ("fn", fn->getUnmangledName());
   ASSERT_EQ(fn->getParentType(), module->getIntType());
-  ASSERT_TRUE(util::match(fn, fn->clone()));
+  ASSERT_TRUE(util::match(fn, cv->clone(fn)));
 }
 
 TEST_F(SIRCoreTest, LLVMFuncUnmangledNameQueryAndReplace) {

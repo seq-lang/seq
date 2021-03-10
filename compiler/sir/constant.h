@@ -56,11 +56,6 @@ private:
     fmt::print(os, "{}", val);
     return os;
   }
-
-  Value *doClone() const override {
-    return getModule()->template N<TemplatedConstant<ValueType>>(
-        getSrcInfo(), val, const_cast<types::Type *>(getType()));
-  }
 };
 
 using IntConstant = TemplatedConstant<int64_t>;
@@ -92,11 +87,6 @@ private:
   std::ostream &doFormat(std::ostream &os) const override {
     fmt::print(os, "\"{}\"", val);
     return os;
-  }
-
-  Value *doClone() const override {
-    return getModule()->N<TemplatedConstant<std::string>>(
-        getSrcInfo(), val, const_cast<types::Type *>(getType()));
   }
 };
 

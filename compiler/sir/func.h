@@ -128,8 +128,6 @@ public:
   void setBuiltin(bool v = true) { builtin = v; }
 
 private:
-  Var *doClone() const override;
-
   std::ostream &doFormat(std::ostream &os) const override;
 
 protected:
@@ -157,8 +155,6 @@ public:
   void setUnmangledName(std::string v) { unmangledName = std::move(v); }
 
 private:
-  Var *doClone() const override;
-
   std::ostream &doFormat(std::ostream &os) const override;
 };
 
@@ -182,8 +178,6 @@ public:
   void setParentType(types::Type *p) { parentType = p; }
 
 private:
-  Var *doClone() const override;
-
   std::ostream &doFormat(std::ostream &os) const override;
 
 protected:
@@ -242,8 +236,6 @@ public:
   void setLLVMBody(std::string v) { llvmBody = std::move(v); }
 
 private:
-  Var *doClone() const override;
-
   std::ostream &doFormat(std::ostream &os) const override;
 
 protected:

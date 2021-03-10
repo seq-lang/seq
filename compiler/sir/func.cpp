@@ -31,46 +31,6 @@ int findAndReplace(int id, seq::ir::Var *newVal, std::list<seq::ir::Var *> &valu
 namespace seq {
 namespace ir {
 
-class VarReplacer : public util::LambdaValueVisitor {
-private:
-  std::unordered_map<Var *, Var *> replacements;
-
-  Var *findReplacement(Var *var) {
-    auto iter = replacements.find(var);
-    return (iter != replacements.end()) ? iter->second : nullptr;
-  }
-
-public:
-  explicit VarReplacer(std::unordered_map<Var *, Var *> replacements)
-      : util::LambdaValueVisitor(), replacements(std::move(replacements)) {}
-
-  void handle(VarValue *x) override {
-    if (auto *r = findReplacement(x->getVar())) {
-      x->setVar(r);
-    }
-  }
-
-  void handle(AssignInstr *x) override {
-    if (auto *r = findReplacement(x->getLhs())) {
-      x->setLhs(r);
-    }
-  }
-
-  void handle(ForFlow *x) override {
-    if (auto *r = findReplacement(x->getVar())) {
-      x->setVar(r);
-    }
-  }
-
-  void handle(TryCatchFlow *x) override {
-    for (auto &c : *x) {
-      if (auto *r = findReplacement(c.getVar())) {
-        c.setVar(r);
-      }
-    }
-  }
-};
-
 const char Func::NodeId = 0;
 
 void Func::realize(types::Type *newType, const std::vector<std::string> &names) {
@@ -113,36 +73,6 @@ std::string BodiedFunc::getUnmangledName() const {
   return split.front();
 }
 
-Var *BodiedFunc::doClone() const {
-  auto *ret = getModule()->N<BodiedFunc>(getSrcInfo(), getName());
-  std::unordered_map<Var *, Var *> replacements;
-  std::vector<std::string> argNames;
-  for (auto *arg : args)
-    argNames.push_back(arg->getName());
-  for (auto *var : symbols) {
-    auto *newVar = var->clone();
-    replacements.emplace(var, newVar);
-    ret->push_back(newVar);
-  }
-  ret->setGenerator(isGenerator());
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
-               argNames);
-  if (body)
-    ret->setBody(cast<Flow>(body->clone()));
-  ret->setBuiltin(builtin);
-
-  auto argsIter1 = arg_begin();
-  auto argsIter2 = ret->arg_begin();
-  while (argsIter1 != arg_end() && argsIter2 != ret->arg_end()) {
-    replacements.emplace(*argsIter1, *argsIter2);
-    ++argsIter1;
-    ++argsIter2;
-  }
-  VarReplacer replacer(replacements); // replace vars with clones
-  ret->getBody()->accept(replacer);
-  return ret;
-}
-
 std::ostream &BodiedFunc::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("{} {}({}) -> {} [\n{}\n] {{\n{}\n}}"),
              builtin ? "builtin_def" : "def", referenceString(),
@@ -177,18 +107,6 @@ int BodiedFunc::doReplaceUsedVariable(int id, Var *newVar) {
 
 const char ExternalFunc::NodeId = 0;
 
-Var *ExternalFunc::doClone() const {
-  auto *ret = getModule()->N<ExternalFunc>(getSrcInfo(), getName());
-  std::vector<std::string> argNames;
-  for (auto *arg : args)
-    argNames.push_back(arg->getName());
-  ret->setGenerator(isGenerator());
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
-               argNames);
-  ret->setUnmangledName(unmangledName);
-  return ret;
-}
-
 std::ostream &ExternalFunc::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("external_def {} ~ {}({}) -> {}"), getUnmangledName(),
              referenceString(),
@@ -206,18 +124,6 @@ std::string InternalFunc::getUnmangledName() const {
   if (std::isdigit(name[0])) // TODO: get rid of this hack
     name = names[names.size() - 2];
   return name;
-}
-
-Var *InternalFunc::doClone() const {
-  auto *ret = getModule()->N<InternalFunc>(getSrcInfo(), getName());
-  std::vector<std::string> argNames;
-  for (auto *arg : args)
-    argNames.push_back(arg->getName());
-  ret->setGenerator(isGenerator());
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
-               argNames);
-  ret->setParentType(parentType);
-  return ret;
 }
 
 std::ostream &InternalFunc::doFormat(std::ostream &os) const {
@@ -258,20 +164,6 @@ std::string LLVMFunc::getUnmangledName() const {
   if (std::isdigit(name[0])) // TODO: get rid of this hack
     name = names[names.size() - 2];
   return name;
-}
-
-Var *LLVMFunc::doClone() const {
-  auto *ret = getModule()->N<LLVMFunc>(getSrcInfo(), getName());
-  std::vector<std::string> argNames;
-  for (auto *arg : args)
-    argNames.push_back(arg->getName());
-  ret->setGenerator(isGenerator());
-  ret->realize(const_cast<types::FuncType *>(cast<types::FuncType>(getType())),
-               argNames);
-  ret->setLLVMBody(llvmBody);
-  ret->setLLVMDeclarations(llvmDeclares);
-  ret->setLLVMLiterals(llvmLiterals);
-  return ret;
 }
 
 std::ostream &LLVMFunc::doFormat(std::ostream &os) const {

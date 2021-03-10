@@ -28,6 +28,8 @@ private:
   std::vector<decltype(SeriesFlow().begin())> itStack;
 
 public:
+  virtual ~LambdaValueVisitor() noexcept = default;
+
   void visit(IRModule *m) override {
     nodeStack.push_back(m);
     nodeStack.push_back(m->getMainFunc());

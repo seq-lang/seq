@@ -57,9 +57,6 @@ public:
   /// @return the value's type
   types::Type *getType() const { return getActual()->doGetType(); }
 
-  /// @return a clone of the value
-  Value *clone() const;
-
   Value *operator==(Value &other);
   Value *operator!=(Value &other);
   Value *operator<(Value &other);
@@ -119,8 +116,6 @@ private:
 
   virtual std::vector<Var *> doGetUsedVariables() const { return {}; }
   virtual int doReplaceUsedVariable(int id, Var *newVar) { return 0; }
-
-  virtual Value *doClone() const = 0;
 };
 
 } // namespace ir

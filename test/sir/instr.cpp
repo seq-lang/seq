@@ -31,7 +31,7 @@ TEST_F(SIRCoreTest, AssignInstrCloning) {
   auto *val = module->Nr<IntConstant>(1, module->getIntType());
   auto *instr = module->Nr<AssignInstr>(var, val);
 
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, ExtractInstrQueryAndReplace) {
@@ -61,7 +61,7 @@ TEST_F(SIRCoreTest, ExtractInstrCloning) {
   auto *val = module->Nr<VarValue>(var);
   auto *instr = module->Nr<ExtractInstr>(val, FIELD);
 
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, InsertInstrQueryAndReplace) {
@@ -94,7 +94,7 @@ TEST_F(SIRCoreTest, InsertInstrCloning) {
   auto *rhs = module->Nr<IntConstant>(1, module->getIntType());
   auto *instr = module->Nr<InsertInstr>(lhs, FIELD, rhs);
 
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, CallInstrQueryAndReplace) {
@@ -119,7 +119,7 @@ TEST_F(SIRCoreTest, CallInstrCloning) {
   auto *funcVal = module->Nr<VarValue>(func);
   auto *instr = module->Nr<CallInstr>(funcVal);
 
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, StackAllocInstrQueryAndReplace) {
@@ -143,7 +143,7 @@ TEST_F(SIRCoreTest, StackAllocInstrCloning) {
   auto COUNT = 1;
   auto *arrayType = module->unsafeGetArrayType(module->getIntType());
   auto *instr = module->Nr<StackAllocInstr>(arrayType, COUNT);
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, TypePropertyInstrQueryAndReplace) {
@@ -170,7 +170,7 @@ TEST_F(SIRCoreTest, TypePropertyInstrCloning) {
   auto *type = module->unsafeGetArrayType(module->getIntType());
   auto *instr =
       module->Nr<TypePropertyInstr>(type, TypePropertyInstr::Property::IS_ATOMIC);
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, YieldInInstrQueryAndReplace) {
@@ -190,7 +190,7 @@ TEST_F(SIRCoreTest, YieldInInstrQueryAndReplace) {
 TEST_F(SIRCoreTest, YieldInInstrCloning) {
   auto *type = module->unsafeGetArrayType(module->getIntType());
   auto *instr = module->Nr<YieldInInstr>(type);
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, TernaryInstrQueryAndReplace) {
@@ -219,31 +219,17 @@ TEST_F(SIRCoreTest, TernaryInstrCloning) {
   auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
   auto *instr = module->Nr<TernaryInstr>(cond, trueValue, falseValue);
 
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, ContinueInstrQueryReplaceAndCloning) {
-  auto *dst = module->Nr<SeriesFlow>();
-  auto *instr = module->Nr<ContinueInstr>(dst);
-
-  // ASSERT_EQ(dst, instr->getTarget());
-
-  // ASSERT_EQ(1, instr->getUsedValues().size());
-  // ASSERT_EQ(1, instr->replaceUsedValue(dst, module->Nr<SeriesFlow>()));
-
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  auto *instr = module->Nr<ContinueInstr>();
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, BreakInstrQueryReplaceAndCloning) {
-  auto *dst = module->Nr<SeriesFlow>();
-  auto *instr = module->Nr<BreakInstr>(dst);
-
-  // ASSERT_EQ(dst, instr->getTarget());
-
-  // ASSERT_EQ(1, instr->getUsedValues().size());
-  // ASSERT_EQ(1, instr->replaceUsedValue(dst, module->Nr<SeriesFlow>()));
-
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  auto *instr = module->Nr<BreakInstr>();
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, ReturnInstrQueryReplaceAndCloning) {
@@ -255,7 +241,7 @@ TEST_F(SIRCoreTest, ReturnInstrQueryReplaceAndCloning) {
   ASSERT_EQ(1, instr->replaceUsedValue(val, nullptr));
   ASSERT_EQ(0, instr->getUsedValues().size());
 
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, YieldInstrQueryReplaceAndCloning) {
@@ -267,7 +253,7 @@ TEST_F(SIRCoreTest, YieldInstrQueryReplaceAndCloning) {
   ASSERT_EQ(1, instr->replaceUsedValue(val, nullptr));
   ASSERT_EQ(0, instr->getUsedValues().size());
 
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, ThrowInstrQueryReplaceAndCloning) {
@@ -279,7 +265,7 @@ TEST_F(SIRCoreTest, ThrowInstrQueryReplaceAndCloning) {
   ASSERT_EQ(1, instr->replaceUsedValue(val, nullptr));
   ASSERT_EQ(0, instr->getUsedValues().size());
 
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }
 
 TEST_F(SIRCoreTest, FlowInstrQueryAndReplace) {
@@ -301,5 +287,5 @@ TEST_F(SIRCoreTest, FlowInstrCloning) {
   auto *flow = module->Nr<SeriesFlow>();
   auto *val = module->Nr<IntConstant>(1, module->getIntType());
   auto *instr = module->Nr<FlowInstr>(flow, val);
-  ASSERT_TRUE(util::match(instr, instr->clone()));
+  ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }

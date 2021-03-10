@@ -13,6 +13,8 @@
 #include "parser/visitors/codegen/codegen.h"
 #include "parser/visitors/codegen/codegen_ctx.h"
 
+#include "sir/util/cloning.h"
+
 using fmt::format;
 using std::function;
 using std::get;
@@ -311,15 +313,17 @@ void CodegenVisitor::visit(PipeExpr *expr) {
   }
 
   if (sugar) {
-    result = stages[0].getFunc()->clone();
+    util::CloneVisitor cv(ctx->getModule());
+
+    result = cv.clone(stages[0].getFunc());
 
     for (auto i = 1; i < stages.size(); ++i) {
       auto &stage = stages[i];
       std::vector<Value *> newArgs;
       for (auto *arg : stage) {
-        newArgs.push_back(arg ? arg->clone() : result);
+        newArgs.push_back(arg ? cv.clone(arg) : result);
       }
-      result = make<CallInstr>(expr, stage.getFunc()->clone(), newArgs);
+      result = make<CallInstr>(expr, cv.clone(stage.getFunc()), newArgs);
     }
     return;
   }
@@ -341,11 +345,11 @@ void CodegenVisitor::visit(SuiteStmt *stmt) {
 void CodegenVisitor::visit(PassStmt *stmt) {}
 
 void CodegenVisitor::visit(BreakStmt *stmt) {
-  ctx->getSeries()->push_back(make<BreakInstr>(stmt, ctx->getLoop()));
+  ctx->getSeries()->push_back(make<BreakInstr>(stmt));
 }
 
 void CodegenVisitor::visit(ContinueStmt *stmt) {
-  ctx->getSeries()->push_back(make<ContinueInstr>(stmt, ctx->getLoop()));
+  ctx->getSeries()->push_back(make<ContinueInstr>(stmt));
 }
 
 void CodegenVisitor::visit(ExprStmt *stmt) {
