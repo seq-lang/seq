@@ -4,6 +4,7 @@
 
 #include "sir/dsl/codegen.h"
 #include "sir/dsl/nodes.h"
+#include "sir/util/irtools.h"
 #include "sir/util/visitor.h"
 
 #define DEFAULT_VISIT(x)                                                               \
@@ -11,6 +12,41 @@
 
 namespace {
 using namespace seq::ir;
+
+const Value *
+convertPipelineToForLoopsHelper(const std::vector<const PipelineFlow::Stage *> &stages,
+                                unsigned idx = 0, const Value *last = nullptr) {
+  if (idx >= stages.size())
+    return last;
+  auto *stage = stages[idx];
+  auto *M = stage->getFunc()->getModule();
+  Value *next = nullptr;
+  if (last) {
+    std::vector<Value *> args;
+    for (auto *arg : *stage) {
+      args.push_back(const_cast<Value *>(arg ? arg : last));
+    }
+    next = M->Nr<CallInstr>(const_cast<Value *>(stage->getFunc()), args);
+  } else {
+    next = const_cast<Value *>(stage->getFunc());
+  }
+  if (stage->isGenerator()) {
+    auto *var = M->Nr<Var>(stage->getOutputElementType());
+    Value *body = const_cast<Value *>(
+        convertPipelineToForLoopsHelper(stages, idx + 1, M->Nr<VarValue>(var)));
+    return M->Nr<ForFlow>(next, util::series(body), var);
+  } else {
+    return convertPipelineToForLoopsHelper(stages, idx + 1, next);
+  }
+}
+
+const Value *convertPipelineToForLoops(const PipelineFlow *p) {
+  std::vector<const PipelineFlow::Stage *> stages;
+  for (const auto &stage : *p) {
+    stages.push_back(&stage);
+  }
+  return convertPipelineToForLoopsHelper(stages);
+}
 
 class CFVisitor : public util::ConstIRVisitor {
 private:
@@ -142,8 +178,11 @@ public:
     graph->setCurrentBlock(end);
   }
   void visit(const PipelineFlow *v) override {
-    // TODO
-    assert(false);
+    if (auto *loops = convertPipelineToForLoops(v)) {
+      process(loops);
+    } else {
+      // pipeline is empty
+    }
   }
   void visit(const dsl::CustomFlow *v) override {
     v->getCFBuilder()->buildCFNodes(graph);
