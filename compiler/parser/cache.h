@@ -42,6 +42,7 @@
 #define ATTR_CONTAINER "container"
 #define ATTR_PYTHON "python"
 #define ATTR_PICKLE "pickle"
+#define ATTR_EXTEND "extend"
 #define ATTR_DICT "dict"
 #define ATTR_MODULE ".module"
 #define ATTR_NO(x) ("no_" x)

@@ -112,8 +112,8 @@ def main_search(index, fastq, result):
     fmi, dna = None, None
     with timing('load'):
         dna = next(FASTA(index, fai=False)).seq
-        # fmi = FMIndex(index, FMD=True)
-        fmi = index_load(index)
+        fmi = FMIndex(index, FMD=True)
+        # fmi = index_load(index)
     print('running alignment pipeline...', file=stderr)
     with open(result, 'w') as out, timing('fastmap'):
         FASTQ(fastq) |> iter |> fastmap(fmi, out, dna)

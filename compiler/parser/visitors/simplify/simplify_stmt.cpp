@@ -551,7 +551,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
 void SimplifyVisitor::visit(ClassStmt *stmt) {
   // Extensions (@extend) cases are handled bit differently
   // (no auto method-generation, no arguments etc.)
-  bool extension = in(stmt->attributes, "extend");
+  bool extension = in(stmt->attributes, ATTR_EXTEND);
   if (extension && stmt->attributes.size() != 1)
     error("extend cannot be combined with other attributes");
   if (extension && !ctx->bases.empty())
@@ -721,7 +721,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
       ctx->bases.pop_back();
     }
   resultStmt = N<ClassStmt>(canonicalName, clone_nop(c->generics), vector<Param>{},
-                            move(suite), vector<string>{"extend"});
+                            move(suite), vector<string>{ATTR_EXTEND});
 }
 
 void SimplifyVisitor::visit(CustomStmt *stmt) {
@@ -964,12 +964,13 @@ StmtPtr SimplifyVisitor::transformCDLLImport(const Expr *dylib, const string &na
                                                    N<StringExpr>(name))));
   // Prepare Function[args...]
   vector<ExprPtr> fnArgs;
+  fnArgs.emplace_back(N<ListExpr>(vector<ExprPtr>{}));
   fnArgs.emplace_back(ret ? ret->clone() : N<IdExpr>("void"));
   for (const auto &a : args) {
     seqassert(a.name.empty(), "unexpected argument name");
     seqassert(!a.deflt, "unexpected default argument");
     seqassert(a.type, "missing type");
-    fnArgs.emplace_back(clone(a.type));
+    const_cast<ListExpr *>(fnArgs[0]->getList())->items.emplace_back(clone(a.type));
   }
   // f = Function[args...](fptr)
   stmts.emplace_back(N<AssignStmt>(

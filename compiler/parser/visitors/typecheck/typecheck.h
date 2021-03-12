@@ -285,6 +285,7 @@ private:
   ///     def __new_<old_mask>_<mask>(p, aI: TI...) # (if oldMask[I-1] != mask[I-1]):
   ///       return Partial.N<mask>.__new__(self.ptr, self.a1, a2, ...) # (see above)
   string generatePartialStub(const vector<char> &mask, types::FuncType *fn);
+  void generateFnCall(int n);
   /// Create generic types for type or function generics and add them to the context.
   vector<types::ClassType::Generic> parseGenerics(const vector<Param> &generics,
                                                   int level);

@@ -56,9 +56,8 @@ types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
     if (!m.type)
       return nullptr;
 
-  // TODO: disallow later?!
-  //  if (startswith(type->name, "Callable.N") && !type->getFunc())
-  //    error("realizing trait");
+  if (startswith(type->name, TYPE_CALLABLE))
+    error("realizing trait");
 
   auto realizedName = type->realizedTypeName();
   try {
@@ -426,7 +425,7 @@ seq::ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   } else if (name == "Optional") {
     assert(types.size() == 1 && statics.empty());
     handle = module->unsafeGetOptionalType(types[0]);
-  } else if (startswith(name, TYPE_FUNCTION) || startswith(name, TYPE_CALLABLE)) {
+  } else if (startswith(name, TYPE_FUNCTION)) {
     types.clear();
     for (auto &m : const_cast<ClassType *>(t)->getRecord()->args)
       types.push_back(getLLVM(m));

@@ -140,8 +140,10 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
           fn->setGlobal();
         }
       }
-      if (!ctx->find(f.first))
+      if (!ctx->find(f.first)) {
+        //        LOG("real {}", f.first);
         ctx->addFunc(f.first, ctx->functions[f.first].first);
+      }
     }
   return ret;
 }

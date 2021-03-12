@@ -35,7 +35,7 @@ class X[T]:
                 yield a[i]
                 i += 1
 
-        farr = array[function[array[seq], seq]](1)
+        farr = array[function[[seq], array[seq]]](1)
         farr[0] = f
 
         def ident(s):
@@ -103,7 +103,7 @@ class X[T]:
         def fib(n: int) -> int:
             @tuple
             class F:
-                f: function[int, int]
+                f: function[[int], int]
                 x: int
             def apply(f, x):
                 return f(x)
