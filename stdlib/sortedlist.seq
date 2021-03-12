@@ -130,7 +130,7 @@ class SortedList[T]:
                 pos += 1
 
             prev = pos - 1
-            self._lists[prev].ext(self._lists[pos])
+            self._lists[prev].extend(self._lists[pos])
             self._maxes[prev] = self._lists[prev][-1]
 
             del self._lists[pos]

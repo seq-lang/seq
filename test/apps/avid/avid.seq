@@ -47,7 +47,7 @@ def get_mems(n, s, sa, lcp, min_size, anchors):
           if a > b: a, b = b, a
           anchors.append((a, b, n.lcp))
     for a in range(5):
-      n.data[a].ext(d[a])
+      n.data[a].extend(d[a])
 
 def lcp_bottom_up(self, sa, lcp, min_size, anchors: List[Tuple[int,int,int]]):
   """ Reconstruct suffix tree from SA and find all MEMs whose length is >= min_size """

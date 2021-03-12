@@ -201,8 +201,7 @@ class List[T]:
         self.arr[self.len] = x
         self.len += 1
 
-    def ext(self, itr):
-        # TODO: can't use "extend" here since it is a keyword!
+    def extend(self, itr):
         for a in itr:
             self.append(a)
 
