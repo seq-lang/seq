@@ -126,7 +126,7 @@ class SeqLexer(RegexLexer):
             'assert', 'async', 'await', 'break', 'continue', 'del', 'elif',
             'else', 'except', 'finally', 'for', 'global', 'if', 'lambda', 'pass',
             'raise', 'nonlocal', 'return', 'try', 'while', 'yield', 'yield from',
-            'as', 'with', 'match', 'case', 'pydef', 'extern', 'prefetch',
+            'as', 'with', 'match', 'case', 'pydef',
             'type', 'extend', 'print', 'cimport', 'pyimport'), suffix=r'\b'),
          Keyword),
         (words((
@@ -193,7 +193,7 @@ class SeqLexer(RegexLexer):
             '__ror__', '__round__', '__rpow__', '__rrshift__', '__rshift__',
             '__rsub__', '__rtruediv__', '__rxor__', '__set__', '__setattr__',
             '__setitem__', '__str__', '__sub__', '__subclasscheck__', '__truediv__',
-            '__xor__', '__prefetch__'), suffix=r'\b'),
+            '__xor__'), suffix=r'\b'),
          Name.Function.Magic),
     ]
     tokens['magicvars'] = [

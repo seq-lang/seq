@@ -25,7 +25,7 @@ k-mer extraction
 .. code-block:: seq
 
     myseq  = s'CAATAGAGACTAAGCATTAT'
-    type K = Kmer[5]
+    K = Kmer[5]
     stride = 2
 
     # explicit for-loop
@@ -76,7 +76,7 @@ k-mer minimizer
 
 .. code-block:: seq
 
-    def minimizer[K](s: seq):
+    def minimizer[K](s):
         assert len(s) >= K.len()
         kmer_min = K(s)
         for kmer in s[1:].kmers[K](1):
@@ -91,7 +91,7 @@ de Bruijn edge
 
 .. code-block:: seq
 
-    def de_bruijn_edge[K](a: K, b: K):
+    def de_bruijn_edge(a, b):
         a = a |> base(0, k'A')  # reset first base: [T]GAG -> [A]GAG
         b = b >> s'A'           # shift right to A: [GAG]C -> A[GAG]
         return a == b           # suffix of a == prefix of b
@@ -104,18 +104,24 @@ Count bases
 
 .. code-block:: seq
 
-    type BaseCount(A: int, C: int, G: int, T: int):
+    @tuple
+    class BaseCount:
+        A: int
+        C: int
+        G: int
+        T: int
+
         def __add__(self: BaseCount, other: BaseCount):
             a1, c1, g1, t1 = self
             a2, c2, g2, t2 = other
             return (a1 + a2, c1 + c2, g1 + g2, t1 + t2)
 
-    def count_bases(s: seq) -> BaseCount:
+    def count_bases(s) -> BaseCount:
         match s:
-            case s'A...': return count_bases(s[1:]) + (1,0,0,0)
-            case s'C...': return count_bases(s[1:]) + (0,1,0,0)
-            case s'G...': return count_bases(s[1:]) + (0,0,1,0)
-            case s'T...': return count_bases(s[1:]) + (0,0,0,1)
+            case 'A*': return count_bases(s[1:]) + (1,0,0,0)
+            case 'C*': return count_bases(s[1:]) + (0,1,0,0)
+            case 'G*': return count_bases(s[1:]) + (0,0,1,0)
+            case 'T*': return count_bases(s[1:]) + (0,0,0,1)
             case _: return BaseCount(0,0,0,0)
 
 Spaced seed search
@@ -123,9 +129,9 @@ Spaced seed search
 
 .. code-block:: seq
 
-    def has_spaced_acgt(s: seq) -> bool:
+    def has_spaced_acgt(s) -> bool:
         match s:
-            case s'A_C_G_T...':
+            case 'A_C_G_T*':
                 return True
             case t if len(t) >= 8:
                 return has_spaced_acgt(s[1:])
@@ -137,11 +143,11 @@ Reverse-complement palindrome
 
 .. code-block:: seq
 
-    def is_own_revcomp(s: seq) -> bool:
+    def is_own_revcomp(s) -> bool:
         match s:
-            case s'A...T' or s'T...A' or s'C...G' or s'G...C':
+            case 'A*T' | 'T*A' | 'C*G' | 'G*C':
                 return is_own_revcomp(s[1:-1])
-            case s'':
+            case '':
                 return True
             case _:
                 return False

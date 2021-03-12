@@ -4,11 +4,12 @@
 # FASTA file.
 # Usage: seqc section2.seq <FASTA path>
 from sys import argv
+from bio import *
 import pickle
 import gzip
 
-type K = Kmer[32]
-index = dict[K,int]()
+K = Kmer[32]
+index = {}
 
 for record in FASTA(argv[1]):
     for pos,kmer in record.seq.kmers_with_pos[K](step=1):
