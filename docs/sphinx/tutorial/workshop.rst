@@ -136,6 +136,7 @@ on a single line:
 .. code:: seq
 
     from sys import argv
+    from bio import *
     for record in FASTQ(argv[1]):
         print record.name, record.seq
 
@@ -180,6 +181,7 @@ Full code listing
     # Reads and prints a FASTQ file.
     # Usage: seqc section1.seq <FASTQ path>
     from sys import argv
+    from bio import *
     for record in FASTQ(argv[1]):
         print record.name, record.seq
 
@@ -198,8 +200,9 @@ reference sequence:
 .. code:: seq
 
     from sys import argv
-    type K = Kmer[32]
-    index = dict[K,int]()
+    from bio import *
+    K = Kmer[32]
+    index = {}
 
     for record in FASTA(argv[1]):
         for pos,kmer in record.seq.kmers_with_pos[K](step=1):
@@ -217,8 +220,9 @@ the minimum of a k-mer and its reverse complement:
 .. code:: seq
 
     from sys import argv
-    type K = Kmer[32]
-    index = dict[K,int]()
+    from bio import *
+    K = Kmer[32]
+    index = {}
 
     for record in FASTA(argv[1]):
         for pos,kmer in record.seq.kmers_with_pos[K](step=1):
@@ -265,11 +269,12 @@ Full code listing
     # FASTA file.
     # Usage: seqc section2.seq <FASTA path>
     from sys import argv
+    from bio import *
     import pickle
     import gzip
 
-    type K = Kmer[32]
-    index = dict[K,int]()
+    K = Kmer[32]
+    index = {}
 
     for record in FASTA(argv[1]):
         for pos,kmer in record.seq.kmers_with_pos[K](step=1):
@@ -293,11 +298,12 @@ The first step is to load the index:
 .. code:: seq
 
     from sys import argv
+    from bio import *
     import pickle
     import gzip
 
-    type K = Kmer[32]
-    index: dict[K,int] = None
+    K = Kmer[32]
+    index = None
 
     with gzip.open(argv[1] + '.index', 'rb') as jar:
         index = pickle.load[dict[K,int]](jar)
@@ -314,7 +320,7 @@ read:
 
 .. code:: seq
 
-    candidates = dict[int,int]()  # position -> count mapping
+    candidates = Dict[int,int]()  # position -> count mapping
     for record in FASTQ(argv[2]):
         for pos,kmer in record.read.kmers_with_pos[K](step=1):
             found = index.get(min(kmer, ~kmer), -1)
@@ -370,16 +376,17 @@ Full code listing
     # input reads to find candidate mappings.
     # Usage: seqc section3.seq <FASTA path> <FASTQ path>
     from sys import argv
+    from bio import *
     import pickle
     import gzip
 
-    type K = Kmer[32]
-    index: dict[K,int] = None
+    K = Kmer[32]
+    index = None
 
     with gzip.open(argv[1] + '.index', 'rb') as jar:
         index = pickle.load[dict[K,int]](jar)
 
-    candidates = dict[int,int]()  # position -> count mapping
+    candidates = Dict[int,int]()  # position -> count mapping
     for record in FASTQ(argv[2]):
         for pos,kmer in record.read.kmers_with_pos[K](step=1):
             found = index.get(min(kmer, ~kmer), -1)
@@ -433,7 +440,7 @@ For now, we'll use a simple ``query.align(target)``:
 
 .. code:: seq
 
-    candidates = dict[int,int]()
+    candidates = Dict[int,int]()
     for record in FASTQ(argv[2]):
         for pos,kmer in record.read.kmers_with_pos[K](step=1):
             found = index.get(min(kmer, ~kmer), -1)
@@ -498,11 +505,12 @@ Full code listing
     # input reads to find candidate mappings, then performs alignment.
     # Usage: seqc section4.seq <FASTA path> <FASTQ path>
     from sys import argv
+    from bio import *
     import pickle
     import gzip
 
-    type K = Kmer[32]
-    index: dict[K,int] = None
+    K = Kmer[32]
+    index = None
 
     reference = s''
     for record in FASTA(argv[1]):
@@ -511,7 +519,7 @@ Full code listing
     with gzip.open(argv[1] + '.index', 'rb') as jar:
         index = pickle.load[dict[K,int]](jar)
 
-    candidates = dict[int,int]()
+    candidates = Dict[int,int]()
     for record in FASTQ(argv[2]):
         for pos,kmer in record.read.kmers_with_pos[K](step=1):
             found = index.get(min(kmer, ~kmer), -1)
@@ -544,7 +552,7 @@ We can write this as a pipeline in Seq as follows:
 .. code:: seq
 
     def find_candidates(record):
-        candidates = dict[int,int]()
+        candidates = Dict[int,int]()
         for pos,kmer in record.read.kmers_with_pos[K](step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
@@ -637,11 +645,12 @@ Full code listing
     # Usage: seqc section5.seq <FASTA path> <FASTQ path>
     from sys import argv
     from time import timing
+    from bio import *
     import pickle
     import gzip
 
-    type K = Kmer[32]
-    index: dict[K,int] = None
+    K = Kmer[32]
+    index = None
 
     reference = s''
     for record in FASTA(argv[1]):
@@ -651,7 +660,7 @@ Full code listing
         index = pickle.load[dict[K,int]](jar)
 
     def find_candidates(record):
-        candidates = dict[int,int]()
+        candidates = Dict[int,int]()
         for pos,kmer in record.read.kmers_with_pos[K](step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
@@ -721,11 +730,12 @@ Full code listing
     # Usage: seqc section6.seq <FASTA path> <FASTQ path>
     from sys import argv
     from time import timing
+    from bio import *
     import pickle
     import gzip
 
-    type K = Kmer[32]
-    index: dict[K,int] = None
+    K = Kmer[32]
+    index = None
 
     reference = s''
     for record in FASTA(argv[1]):
@@ -735,7 +745,7 @@ Full code listing
         index = pickle.load[dict[K,int]](jar)
 
     def find_candidates(record):
-        candidates = dict[int,int]()
+        candidates = Dict[int,int]()
         for pos,kmer in record.read.kmers_with_pos[K](step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:

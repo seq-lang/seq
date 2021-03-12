@@ -1,90 +1,6 @@
 Tutorial
 ========
 
-Introduction
-------------
-
-Seq is a subset of Python, with additional general-purpose and genomics-oriented language features, types and constructs. As a result, a lot of existing Python code will run as-is under Seq (but *much* faster), and if you know Python you're 95% of the way to knowing Seq.
-
-Limitations and key differences with Python
--------------------------------------------
-
-Seq is statically typed, and performs most of Python's duck typing strictly at compile time. For this reason, it has the following limitations:
-
-- Collections (list, set, dict, etc.) cannot contain objects of different types. For example, ``[42, 3.14, "hello"]`` is not allowed.
-- Variables cannot be assigned to objects of different types, and functions can only return objects of a single type.
-- Methods of an object cannot be modified/patched at runtime (although they can at compile time, which we discuss below).
-- Tuple indices must be constants, and iteration over a tuple is allowed only if its elements all have the same type.
-- Inheritance and polymorphism are currently not supported.
-- Seq enforces slightly stricter scoping rules than Python. In particular, a variable cannot be first assigned in a block then used *after* for the first time in the enclosing block. This restriction avoids the problem of unitialized variables.
-- A few other esoteric Python features like `loop-else <https://stackoverflow.com/questions/9979970/why-does-python-use-else-after-for-and-while-loops>`_ are also not supported.
-
-We have found that these features are rarely needed in bioinformatics/genomics software, and omitting them is what allows Seq to attain C-like performance.
-
-Finally, the following features are not supported by the *current* version of Seq, but we have plans of implementing them in the near future:
-
-- Empty collection literals: ``[]`` and ``{}`` (these must be replaced with ``list[T]()`` and ``dict[K,V]()``, respectively)
-- ``lambda``
-- Various Python standard modules, methods or built-ins (although many built-in functions are already supported, some do not have the full flexibility of Python's)
-
-Types
------
-
-Seq allows standard Python type-less functions (on which it performs type deduction), but also supports type annotations using `mypy <http://www.mypy-lang.org>`_ syntax. For example:
-
-.. code-block:: seq
-
-    def hypot(a: float, b: float) -> float:
-        return (a**2 + b**2) ** 0.5
-
-Seq also supports explicit generic type parameters, such as:
-
-.. code-block:: seq
-
-    def hypot[T](a: T, b: T) -> T:
-        return T((a**2 + b**2) ** 0.5)
-
-In this example, ``a`` and ``b`` must have the same type, which is also the function's return type. Calls to this function can then be type-parameterized (such as ``hypot[int](3,4)``) or can be unparameterized, in which case type parameters will be deduced if possible.
-
-Seq ``class`` constructs have a syntax similar to Python `dataclasses <https://docs.python.org/3/library/dataclasses.html>`_, and can similarly be generic. Here's a generic linked-list node class, for instance:
-
-.. code-block:: seq
-
-    class Node[T]:
-        data: T
-        link: Node[T]
-
-        def __init__(self: Node[T], data: T):
-            self.data = data
-            self.link = None
-
-        def __iter__(self: Node[T]):
-            while self is not None:
-                yield self.data
-                self = self.link
-
-Now ``Node`` can be used as such:
-
-.. code-block:: seq
-
-    a = Node[int](1)  # explicit type parameter
-    b = Node(2)       # type parameter deduction
-    c = Node(3)
-
-    a.link = b
-    b.link = c
-
-    for i in a:
-        print i  # 1, 2, 3
-
-Seq also supports a ``type`` construct for declaring named tuples (which are compatible with structs in C):
-
-.. code-block:: seq
-
-    type Vec(x: float, y: float):
-        def __abs__(self: Vec) -> float:
-            return (self.x**2 + self.y**2) ** 0.5
-
 Genomics-specific features
 --------------------------
 
@@ -183,7 +99,7 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
     # (a)
     def has_spaced_acgt(s: seq) -> bool:
         match s:
-            case s'A_C_G_T...':
+            case 'A_C_G_T*':
                 return True
             case t if len(t) >= 8:
                 return has_spaced_acgt(s[1:])
@@ -193,7 +109,7 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
     # (b)
     def is_own_revcomp(s: seq) -> bool:
         match s:
-            case s'A...T' or s'T...A' or s'C...G' or s'G...C':
+            case 'A*T' or 'T*A' or 'C*G' or 'G*C':
                 return is_own_revcomp(s[1:-1])
             case s'':
                 return True
@@ -201,7 +117,13 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
                 return False
 
     # (c)
-    type BaseCount(A: int, C: int, G: int, T: int):
+    @tuple
+    class BaseCount:
+        A: int
+        C: int
+        G: int
+        T: int
+
         def __add__(self: BaseCount, other: BaseCount):
             a1, c1, g1, t1 = self
             a2, c2, g2, t2 = other
@@ -209,10 +131,10 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
 
     def count_bases(s: seq) -> BaseCount:
         match s:
-            case s'A...': return count_bases(s[1:]) + (1,0,0,0)
-            case s'C...': return count_bases(s[1:]) + (0,1,0,0)
-            case s'G...': return count_bases(s[1:]) + (0,0,1,0)
-            case s'T...': return count_bases(s[1:]) + (0,0,0,1)
+            case 'A*': return count_bases(s[1:]) + (1,0,0,0)
+            case 'C*': return count_bases(s[1:]) + (0,1,0,0)
+            case 'G*': return count_bases(s[1:]) + (0,0,1,0)
+            case 'T*': return count_bases(s[1:]) + (0,0,0,1)
             case _: return BaseCount(0,0,0,0)
 
 - Example (a) checks if a given sequence contains the subsequence ``A_C_G_T``, where ``_`` is a wildcard base.
@@ -438,43 +360,6 @@ Seq provides arbitrary-width signed and unsigned integers up to ``Int[512]`` and
 The ``ptr[T]`` type in Seq also corresponds to a raw C pointer (e.g. ``ptr[byte]`` is equivalent to ``char*`` in C). The ``array[T]`` type represents a fixed-length array (essentially a pointer with a length).
 
 Seq also provides ``__ptr__`` for obtaining a pointer to a variable (as in ``__ptr__(myvar)``) and ``__array__`` for declaring stack-allocated arrays (as in ``__array__[int](10)``).
-
-.. _interop:
-
-C/C++ and Python interoperability
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Seq enables seamless interoperability with C and C++ via ``cimport`` functions as such:
-
-.. code-block:: seq
-
-    cimport sqrt(float) -> float
-    cimport puts(cobj)  # cobj is void*
-    print sqrt(100.0)
-    puts("hello world".c_str())
-
-    LD_LIBRARY="mylib.so"
-    from LD_LIBRARY cimport foo(cobj) -> int
-    print foo("hello".c_str())
-
-Primitive types like ``int``, ``float``, ``bool`` etc. are directly interoperable with the corresponding types in C/C++, while compound types like tuples are interoperable with the corresponding struct types. Other built-in types like ``str`` provide methods to convert to C analogs, such as ``c_str()`` as shown above.
-
-Seq also supports calling Python functions as follows:
-
-.. code-block:: seq
-
-    import python
-
-    from mymodule pyimport multiply () -> int  # assumes multiply in mymodule.py
-    print multiply(3, 4)  # 12
-
-    pydef myrange(n: int) -> list[int]:  # completely executed by Python runtime
-        from numpy import arange
-        return list(arange(n))
-
-    print myrange(5)  # [0, 1, 2, 3, 4]
-
-Please check `Python interop <python.html>`_ for more information.
 
 Calling BWA from Seq
 --------------------

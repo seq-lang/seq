@@ -13,9 +13,7 @@ Pre-built binaries for Linux and macOS on x86_64 are available alongside `each r
 
     /bin/bash -c "$(curl -fsSL https://seq-lang.org/install.sh)"
 
-This will install Seq in a new ``.seq`` directory within your home directory. Be sure to update ``~/.bash_profile`` as the script indicates afterwards!
-
-Seq binaries require a `libomp <https://openmp.llvm.org>`_ to be present on your machine. ``brew install libomp`` or ``apt install libomp5`` should do the trick.
+This will install Seq in a new ``.seq`` directory within your home directory.
 
 Building from source
 ^^^^^^^^^^^^^^^^^^^^
@@ -31,14 +29,38 @@ The ``seqc`` program can either directly run Seq source in JIT mode:
 
     seqc myprogram.seq
 
-or produce an LLVM bitcode file if a ``-o <out.bc>`` argument is provided. In the latter case, `llc <https://llvm.org/docs/CommandGuide/llc.html>`_ and the system compiler can be used to convert the bitcode file to an object file and link it to produce an executable, respectively:
+The default compilation and run mode is *debug* (``-debug``). Compile and run with optimizations with the ``-release`` option:
 
 .. code-block:: bash
 
-    seqc -o myprogram.bc myprogram.seq
-    llc myprogram.bc -filetype=obj -o myprogram.o
-    gcc -L/path/to/libseqrt/ -lseqrt -lomp -o myprogram myprogram.o
+    seqc -release myprogram.seq
 
-This produces a ``myprogram`` executable.
+``seqc`` can also produce executables (ensure you have ``clang`` installed, as it is used for linking):
 
-**Interfacing with C:** If a Seq program uses C functions from a particular library, that library can be specified via a ``-L/path/to/lib`` argument to ``seqc``. Otherwise it can be linked during the linking stage if producing an executable.
+.. code-block:: bash
+
+    # generate 'myprogram' executable
+    seqc -build -exe myprogram.seq
+
+    # generate 'foo' executable
+    seqc -build -o foo myprogram.seq
+
+``seqc`` can produce object files:
+
+.. code-block:: bash
+
+    # generate 'myprogram.o' object file
+    seqc -build -obj myprogram.seq
+
+    # generate 'foo.o' object file
+    seqc -build -o foo.o myprogram.seq
+
+``seqc`` can produce LLVM IR:
+
+.. code-block:: bash
+
+    # generate 'myprogram.ll' object file
+    seqc -build -llvm myprogram.seq
+
+    # generate 'foo.ll' object file
+    seqc -build -o foo.ll myprogram.seq

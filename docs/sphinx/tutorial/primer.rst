@@ -5,12 +5,26 @@ If you know Python, you already know 95% of Seq. The following primer
 assumes some familiarity with Python or at least one "modern"
 programming language (QBASIC doesn't count).
 
+Printing
+--------
+
+First and foremost, Seq supports both Python 2 and Python 3 printing:
+
+.. code:: seq
+
+    print 'hello world'  # Python 2 style works
+
+    from sys import stderr
+    print('hello world', end='', file=stderr)  # Python 3 style also works
+
+Use whichever you prefer!
+
 Comments
 --------
 
 .. code:: seq
 
-    # Seq comments start with "# 'and go till the end of the line
+    # Seq comments start with "# 'and go until the end of the line
 
     """
     There are no multi-line comments. You can (ab)use docstring operator (''')
@@ -63,45 +77,40 @@ expression must have a type that can be inferred at the compile-time.
     prt = p"MYX"  # type: bio.pseq. These are protein sequences.
     kmer = k"ACGT"  # type: Kmer[4]. Note that Kmer[5] is different than Kmer[12].
 
-.. caution::
-    While ``Seq`` happily parses ``None`` literals, it probably
-    does not stand for what you might expected (it is currently used
-    as C++'s equivalent of ``nullptr`` for reference types). The next
-    major release of Seq will unify ``None`` with all other types via
-    implicit optional types, making their use much more similar to that
-    in Python.
-
 Tuples
 ~~~~~~
 
 .. code:: seq
 
     # Tuples
-    t = (1, 2.3, 'hi')  # type: tuple[int, float, str].
+    t = (1, 2.3, 'hi')  # type: Tuple[int, float, str].
     t[1]  # type: float
-    u = (1, )  # type: tuple[int]
+    u = (1, )  # type: Tuple[int]
 
 As all types must be known at the compile time, tuple indexing works
 only if a tuple is homogenous (all types are the same) or if the value
 of the index is known at compile-time.
 
-For the same reasons, you can only iterate over a homogenous tuple.
+You can, however, iterate over heterogenous tuples in Seq. This is achieved
+by unrolling the loop to accomodate the different types.
 
 .. code:: seq
 
     t = (1, 2.3, 'hi')
     t[1]  # works because 1 is a constant int
 
-    x = 2
+    x = int(argv[1])
     t[x]  # compile error: x is not known at the compile time
 
-    for i in t:  # compile error: tuple is heterogenous
-        print i
-
     # This is a homogenous tuple (all member types are the same)
-    u = (1, 2, 3)  # type: tuple[int, int, int].
+    u = (1, 2, 3)  # type: Tuple[int, int, int].
     u[x]  # works because tuple members share the same type regardless of x
     for i in u:  # works
+        print i
+
+    # Also works
+    v = (42, 'x', 3.14)
+    for i in v:
         print i
 
 .. note::
@@ -113,33 +122,33 @@ Containers
 
 .. code:: seq
 
-    l = [1, 2, 3]  # type: list[int]; a list of integers
-    s = {1.1, 3.3, 2.2, 3.3}  # type: set[float]; a set of integers
-    d = {1: 'hi', 2: 'ola', 3: 'zdravo'}  # type: dict[int, str]; a simple dictionary
+    l = [1, 2, 3]  # type: List[int]; a list of integers
+    s = {1.1, 3.3, 2.2, 3.3}  # type: Set[float]; a set of integers
+    d = {1: 'hi', 2: 'ola', 3: 'zdravo'}  # type: Dict[int, str]; a simple dictionary
 
-    ln = list[int]()  # an empty list
-    ln = []  # compiler error; this does not (yet) work due to unknown list type
-    dn = dict[int, float]()  # an empty dictionary; {} does not (yet) work
+    ln = []  # an empty list whose type is deduced based on usage
+    ln = List[int]()  # an empty list with explicit element types
+    dn = Dict[int, float]()  # an empty dictionary; {} does not (yet) work
 
 Because Seq is strongly typed, these won't compile:
 
 .. code:: seq
 
-    l = [1, 's']  # is it a list[int] or list[str]? you cannot mix-and-match types
+    l = [1, 's']  # is it a List[int] or List[str]? you cannot mix-and-match types
     d = {1: 'hi'}
-    d[2] = 3  # d is a dict[int, str]; 3 is clearly not a string.
+    d[2] = 3  # d is a Dict[int, str]; 3 is clearly not a string.
 
     t = (1, 2.2)
-    list[int](t)  # compiler error: t is not heterogenous
+    List[int](t)  # compiler error: t is not homogenous
 
-    lp = [1, 2.1, 3, 5]  # compile error: Seq will not automatically cast an int to a float
+    lp = [1, 2.1, 3, 5]  # compile error: Seq will not automatically cast a float to an int
 
 This will work, though:
 
 .. code:: seq
 
     u = (1, 2, 3)
-    list[int](u)  # works: u is homogenous
+    List[int](u)  # works: u is homogenous
 
 .. note::
     Dictionaries and sets are unordered and are based on
@@ -167,8 +176,8 @@ Operator Magic method     Description
 ``+``    ``__add__``      addition
 ``-``    ``__sub__``      subtraction
 ``*``    ``__mul__``      multiplication
-``/``    ``__truediv__``  float division
-``//``   ``__div__``      integer division
+``/``    ``__truediv__``  float (true) division
+``//``   ``__floordiv__`` integer (floor) division
 ``**``   ``__pow__``      exponentiation
 ``%``    ``__mod__``      modulo
 ``@``    ``__matmul__``   matrix multiplication;
@@ -196,7 +205,7 @@ Operator Magic method     Description
 ======== ================ =============================
 ``~``    ``__invert__``   bitwise inversion;
                                   reverse complement;
-                                  ``optional[T]`` unpacking
+                                  ``Optional[T]`` unpacking
 ``+``    ``__pos__``      unary positive
 ``-``    ``__neg__``      unary negation
 ``not``  none             boolean negation
@@ -205,7 +214,7 @@ Operator Magic method     Description
 Tuple unpacking
 ~~~~~~~~~~~~~~~
 
-Seq supports most of the Python's tuple unpacking syntax:
+Seq supports most of Python's tuple unpacking syntax:
 
 .. code:: seq
 
@@ -269,26 +278,26 @@ But lo and behold! Seq extends the Python conditional syntax with a
 
     match str_expr():  # now it's a str expression
         case 'abc': print "it's ABC time!"
-        case 'def' or 'ghi':  # you can chain multiple rules with "or" operator
+        case 'def' | 'ghi':  # you can chain multiple rules with "|" operator
             print "it's not ABC time!"
         case s if len(s) > 10: print "so looong!"  # conditional match expression
         case _: assert False
 
-    match some_tuple:  # assuming typeof(some_tuple) is tuple[int, int]
+    match some_tuple:  # assuming typeof(some_tuple) is Tuple[int, int]
         case (1, 2): ...
         case (a, _) if a == 42:  # you can do away with useless terms with an underscore
-            print 'hitchhiker!"
-        case (a, 50 ... 100) or (10 ... 20, b) if b < 10:  # you can nest match expressions
-            print 'cooomplex!'
+            print 'hitchhiker!'
+        case (a, 50 ... 100) | (10 ... 20, b):  # you can nest match expressions
+            print 'complex!'
 
     match list_foo():
         case []:  # [] actually works here
             ...
-        case [1, 2, 3]:  # make sure that list_foo() returns list[int] though!
+        case [1, 2, 3]:  # make sure that list_foo() returns List[int] though!
             ...
         case [1, 2, ..., 5]:  # matches any list that starts with 1 and 2 and ends with 5
             ...
-        case [..., 6] or [6, ...]:  # matches a list that starts or ends with 6
+        case [..., 6] | [6, ...]:  # matches a list that starts or ends with 6
             ...
         case [..., w] if w < 0:  # matches a list that ends with a negative integer
             ...
@@ -296,10 +305,10 @@ But lo and behold! Seq extends the Python conditional syntax with a
             print l
 
     match sequence:  # of type seq
-        case s'ACGT': ...
-        case s'AC_T': ...  # _ is a wildcard character and it can be anything
-        case s'A_C_T_': ...  # a spaced k-mer AxCxTx
-        case s'AC...T': ...  # matches a sequence that starts with AC and ends with T
+        case 'ACGT': ...
+        case 'AC_T': ...  # _ is a wildcard character and it can be anything
+        case 'A_C_T_': ...  # a spaced k-mer AxCxTx
+        case 'AC*T': ...  # matches a sequence that starts with AC and ends with T
 
 You can mix, match and chain match rules as long as the match type
 matches the expression type.
@@ -329,11 +338,6 @@ implement this method, so you don't need to worry. If you need to
 implement one yourself, just keep in mind that ``__iter__`` is a
 generator and not a function.
 
-.. note::
-    Seq does not support ``while ... else`` and ``for ... else``
-    constructs. We're pretty confident nobody is going to miss those. Let
-    us know if you do!
-
 Comprehensions
 ~~~~~~~~~~~~~~
 
@@ -342,8 +346,8 @@ Comprehensions are a nifty, Pythonic way to create collections:
 
 .. code:: seq
 
-    l = [i for i in range(5)]  # type: list[int]; l is [0, 1, 2, 3, 4]
-    l = [i for i in range(15) if i % 1 == 1 if i > 10]  # type: list[int]; l is [11, 13]
+    l = [i for i in range(5)]  # type: List[int]; l is [0, 1, 2, 3, 4]
+    l = [i for i in range(15) if i % 1 == 1 if i > 10]  # type: List[int]; l is [11, 13]
     l = [i * j for i in range(5) for j in range(5) if i == j]  # l is [0, 1, 4, 9, 16]
 
     s = {abs(i - j) for i in range(5) for j in range(5)}  # s is {0, 1, 2, 3, 4}
@@ -355,15 +359,7 @@ on):
 .. code:: seq
 
     g = (i for i in range(10))
-    print list[int](g)  # prints number from 0 to 9, inclusive
-
-    for i in g:  # this code right now crashes because g is already exhausted!
-        print i
-
-.. caution::
-    If a generator is exhausted, a segmentation fault can be produced.
-    This behavior will be changed later by raising an exception instead;
-    in the meantime, be sure not to re-use exhausted generators.
+    print List[int](g)  # prints number from 0 to 9, inclusive
 
 Exception handling
 ~~~~~~~~~~~~~~~~~~
@@ -407,7 +403,7 @@ indentation level (as in Python). We recommend using 2 or 4 spaces to
 indent blocks. Do not mix indentation levels, and do not mix tabs and spaces;
 stick to any *consistent* way of indenting your code.
 
-One of the major differences between Seq and Python lies in their variable
+One of the major differences between Seq and Python lies in variable
 scoping rules. Seq variables cannot *leak* to outer blocks. Every
 variable is accessible only within its own block (after the variable is
 defined, of course), and within any block that is nested within the
@@ -553,17 +549,16 @@ Default arguments? Named arguments? You bet:
     foo(1, 2)  # prints "1 2 1.0 hi"
     foo(1, d='foo', b=1)  # prints "1 1 1.0 foo"
 
-How about optional arguments? Currently you have to use this:
+How about optional arguments? We support that too:
 
 .. code:: seq
 
-    def foo(a, b: optional[int] = None):
-        # operator ~ "unpacks" the optional value only if the optional is not None
-        bx = ~b if b else 0
-        # WARNING: unpacking None can lead to a segmentation fault
-        print a, bx
-    foo(1)  # prints "1 0"
-    foo(1, 2)  # prints "1 2"
+    # type of b promoted to Optional[int]
+    def foo(a, b: int = None):
+        print a, b + 1
+
+    foo(1, 2)  # prints "1 3"
+    foo(1)  # raises ValueError, since b is None
 
 Generics
 ~~~~~~~~
@@ -573,7 +568,7 @@ such, it is not as flexible as Python when it comes to types (e.g. you
 can't have lists with elements of different types). However,
 Seq tries to mimic Python's *"I don't care about types until I do"*
 attitude as much as possible by utilizing a technique known as
-*compile-time generics*. If there is a function that has an argument
+*monomorphization*. If there is a function that has an argument
 without a type definition, Seq will consider it a *generic* function,
 and will generate different functions for each invocation of
 that generic function:
@@ -584,7 +579,7 @@ that generic function:
         print x  # print relies on typeof(x).__str__(x) method to print the representation of x
     x(1)  # Seq automatically generates foo(x: int) and calls int.__str__ when needed
     x('s')  # Seq automatically generates foo(x: str) and calls str.__str__ when needed
-    x([1, 2])  # Seq automatically generates foo(x: list[int]) and calls list[int].__str__ when needed
+    x([1, 2])  # Seq automatically generates foo(x: List[int]) and calls List[int].__str__ when needed
 
 But what if you need to mix type definitions and generic types? Say, your
 function can take a list of *anything*? Well, you can use generic
@@ -592,12 +587,12 @@ specifiers:
 
 .. code:: seq
 
-    def foo[T](x: list[T]):
+    def foo[T](x: List[T]):
         print x
     foo([1, 2])  # prints [1, 2]
     foo(['s', 'u'])  # prints [s, u]
     foo(5)  # error: 5 is not a list!
-    foo[int](['s', 'u'])  # fails: T is int, so foo expects list[int] but it got list[str]
+    foo[int](['s', 'u'])  # fails: T is int, so foo expects List[int] but it got List[str]
 
     def foo[R](x) -> R:
         print x
@@ -607,7 +602,7 @@ specifiers:
 
 
 .. note::
-    Coming from C++? ``foo[T, U](x: T) -> U: ...`` is the same as
+    Coming from C++? ``foo[T, U](x: T) -> U: ...`` is roughly the same as
     ``template<typename T, typename U> U foo(T x) { ... }``.
 
 Generators
@@ -617,16 +612,12 @@ Seq supports generators, and they are fast! Really, really fast!
 
 .. code:: seq
 
-    def gen(i) -> int:
+    def gen(i):
         while i < 10:
             yield i
             i += 1
-    print list[int](gen(0))  # prints [0, 1, ..., 9]
-    print list[int](gen(10))  # prints []
-
-Notice the type of ``gen(0)`` is ``generator[int]``; however,
-you annotate the return type of generator with the type of value that
-you yield (``int`` in this example).
+    print List[int](gen(0))  # prints [0, 1, ..., 9]
+    print List[int](gen(10))  # prints []
 
 You can also use ``yield`` to implement coroutines: ``yield``
 suspends the function, while ``(yield)`` (yes, parentheses are required)
@@ -648,8 +639,8 @@ receives a value, as in Python.
         iadder.send(i)  # send a value to coroutine
     print(iadder.send(-1))  # prints 45
 
-Pipes
-~~~~~
+Pipelines
+~~~~~~~~~
 
 Seq extends the core Python language with a pipe operator, which is
 similar to bash pipes (or F#'s ``|>`` operator). You can chain multiple
@@ -705,18 +696,17 @@ Let's import some C functions:
 
 .. code:: seq
 
-    cimport pow(float) -> float
+    from C import pow(float) -> float
     pow(2.0)  # 4.0
 
     # Import and rename function
-    cimport puts(cobj) -> void as print_line  # type cobj is C's pointer (void*, char*, etc.)
-    print_line("hi!".ptr)  # prints "hi!".
-                           # Note .ptr at the end of string--- needed to cast Seq's string to char*.
+    from C import puts(cobj) -> void as print_line  # type cobj is C's pointer (void*, char*, etc.)
+    print_line("hi!".c_str())  # prints "hi!".
+                               # Note .ptr at the end of string--- needed to cast Seq's string to char*.
 
-``cimport`` only works if the symbol is available to the program. If you
+``from C import`` only works if the symbol is available to the program. If you
 are running your programs via ``seqc``, you can link dynamic libraries
-by running ``seqc -l path/to/dynamic/library.so ...``. Otherwise, link
-your libraries by passing them to the ``clang``.
+by running ``seqc -l path/to/dynamic/library.so ...``.
 
 Hate linking? You can also use dyld library loading as follows:
 
@@ -724,13 +714,13 @@ Hate linking? You can also use dyld library loading as follows:
 
 
     LIBRARY = "mycoollib.so"
-    from LIBRARY cimport mymethod(int, float) -> cobj
-    from LIBRARY cimport myothermethod(int, float) -> cobj as my2
+    from C import LIBRARY.mymethod(int, float) -> cobj
+    from C import LIBRARY.myothermethod(int, float) -> cobj as my2
     foo = mymethod(1, 2.2)
     foo2 = my2(4, 3.2)
 
 .. note::
-    When loading a function via FFI, you must explicitly specify
+    When importing external non-Seq functions, you must explicitly specify
     argument and return types.
 
 How about Python? If you have set the ``SEQ_PYTHON`` environment variable as
@@ -738,18 +728,16 @@ described in the first section, you can do:
 
 .. code:: seq
 
-    import python  # needed for Python support
-
-    pyimport len(str) -> int
-    print len("hehe")  # prints 4 by passing "hehe" to python
+    from python import mymodule.myfunction(str) -> int as foo
+    print foo("bar")
 
 Often you want to execute more complex Python code within Seq. To that
-end, you can use Seq's ``pydef`` construct:
+end, you can use Seq's ``@python`` annotation:
 
 .. code:: seq
 
-    import python
-    pydef scipy_here_i_come(i: list[list[float]]) -> list[float]:
+    @python
+    def scipy_here_i_come(i: List[List[float]]) -> List[float]:
         # Code within this block is executed by the Python interpreter,
         # and as such it must be valid Python code
         import scipy.linalg
@@ -776,23 +764,19 @@ Python's dataclasses).
         x: int
         y: float
 
-        def __init__(self: Foo, x: int, y: int):  # constructor
+        def __init__(self, x: int, y: int):  # constructor
             self.x, self.y = x, y
 
-        def method(self: Foo):
+        def method(self):
             print self.x, self.y
 
     f = Foo(1, 2)
     f.method()  # prints "1 2"
 
 .. note::
-    Right now, you must annotate the type of ``self``.
-
-.. note::
     Seq does not (yet!) support inheritance and polymorphism.
 
-Unlike Python, Seq supports method overloading **only for magic
-methods**:
+Unlike Python, Seq supports method overloading:
 
 .. code:: seq
 
@@ -800,11 +784,11 @@ methods**:
         x: int
         y: float
 
-        def __init__(self: Foo, x: int, y: int):  # constructor
+        def __init__(self, x: int, y: int):  # constructor
             self.x, self.y = 0, 0
-        def __init__(self: Foo, x: int, y: int):  # another constructor
+        def __init__(self, x: int, y: int):  # another constructor
             self.x, self.y = x, y
-        def __init__(self: Foo, x: int, y: float):  # another constructor
+        def __init__(self, x: int, y: float):  # another constructor
             self.x, self.y = x, int(y)
 
         def method(self: Foo):
@@ -815,16 +799,13 @@ methods**:
     Foo(1, 2.3).method()  # prints "1 2"
     Foo(1.1, 2.3).method()  # error: there is no Foo.__init__(float, float)
 
-.. note::
-    You cannot overload non-magic methods!
-
 Classes can also be generic:
 
 .. code:: seq
 
     class Container[T]:
-        l: list[T]
-        def __init__(self: Container[T], l: list[T]):
+        l: List[T]
+        def __init__(self, l: List[T]):
             self.l = l
         ...
 
@@ -845,21 +826,24 @@ Classes create objects that are passed by reference:
 If you need to copy an object's contents, implement the ``__copy__`` magic
 method and use ``p = copy(q)`` instead.
 
-Seq also supports pass-by-value types via the ``type`` construct:
+Seq also supports pass-by-value types via the ``@tuple`` annotation:
 
 .. code:: seq
 
-    type Point(x: int, y: int)
+    @tuple
+    class Point:
+        x: int
+        y: int
+
     p = Point(1, 2)
     q = p  # this is a copy!
     (p.x, p.y), (q.x, q.y)  # (1, 2), (1, 2)
 
 However, **by-value objects are immutable!**. The following code will
-fail:
+not compile:
 
 .. code:: seq
 
-    type Point(x: int, y: int)
     p = Point(1, 2)
     p.x = 2  # error! immutable type
 
@@ -870,13 +854,19 @@ You can also add methods to types:
 
 .. code:: seq
 
-    type Point(x: int, y: int):
-        def __new__(self: Point) -> Point:  # types are constructed via __new__, not __init__
+    @tuple
+    class Point:
+        x: int
+        y: int
+
+        def __new__(self) -> Point:  # types are constructed via __new__, not __init__
             return (0, 1)  # and __new__ returns a tuple representation of type's members
-        def some_method(self: Point) -> int:
+
+        def some_method(self):
             return self.x + self.y
+
     p = Point()  # p is (0, 1)
-    p.some_method()  # 1
+    print p.some_method()  # 1
 
 Type extensions
 ~~~~~~~~~~~~~~~
@@ -891,17 +881,22 @@ the compile time:
         ...
 
     f = Foo(...)
+
     # we need foo.cool() but it does not exist... not a problem for Seq
-    extend Foo:
+    @extend
+    class Foo:
         def cool(self: Foo):
             ...
+
     f.cool()  # works!
 
     # how about we add a support for adding integers and strings?
-    extend int:
+    @extend
+    class int:
         def __add__(self: int, other: str) -> int:
             return self + int(other)
-    5 + '4'  # 9
+
+    print 5 + '4'  # 9
 
 Magic methods
 ~~~~~~~~~~~~~
@@ -922,6 +917,22 @@ operators        overload unary and binary operators (see :ref:`operators`)
 ``__iter__``     support iterating over the object
 ``__str__``      support printing and ``str`` method
 ================ =============================================
+
+LLVM functions
+~~~~~~~~~~~~~~
+
+In certain cases, you might want to use LLVM features that are not directly
+accessible with Seq. This can be done with the ``@llvm`` attribute:
+
+.. code:: seq
+
+    @llvm
+    def llvm_add[T](a: T, b: T) -> T:
+        %res = add {=T} %a, %b
+        ret {=T} %res
+
+    print llvm_add(3, 4)  # 7
+    print llvm_add(i8(5), i8(6))  # 11
 
 --------------
 
