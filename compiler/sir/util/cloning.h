@@ -63,7 +63,53 @@ public:
   void visit(const FlowInstr *v) override;
   void visit(const dsl::CustomInstr *v) override;
 
-  template <typename NodeType> NodeType *clone(const NodeType *other) {
+  /// Clones a value, returning the previous value if other has already been cloned.
+  /// @param other the original
+  /// @return the clone
+  Value *clone(const Value *other) {
+    if (!other)
+      return nullptr;
+
+    auto id = other->getId();
+    if (ctx.find(id) == ctx.end()) {
+      other->accept(*this);
+      ctx[id] = result;
+
+      for (auto it = other->attributes_begin(); it != other->attributes_end(); ++it) {
+        const auto *attr = other->getAttribute(*it);
+        if (attr->needsClone()) {
+          ctx[id]->setAttribute(attr->clone(), *it);
+        }
+      }
+    }
+    return cast<Value>(ctx[id]);
+  }
+
+  /// Returns the original unless the variable has been force cloned.
+  /// @param other the original
+  /// @return the original or the previous clone
+  Var *clone(const Var *other) {
+    if (!other)
+      return nullptr;
+    auto id = other->getId();
+    if (ctx.find(id) != ctx.end())
+      return cast<Var>(ctx[id]);
+
+    return const_cast<Var *>(other);
+  }
+
+  /// Clones a flow, returning the previous value if other has already been cloned.
+  /// @param other the original
+  /// @return the clone
+  Flow *clone(const Flow *other) {
+    return cast<Flow>(clone(static_cast<const Value *>(other)));
+  }
+
+  /// Forces a clone. No difference for values but ensures that variables are actually
+  /// cloned.
+  /// @param other the original
+  /// @return the clone
+  template <typename NodeType> NodeType *forceClone(const NodeType *other) {
     if (!other)
       return nullptr;
 
@@ -80,6 +126,14 @@ public:
       }
     }
     return cast<NodeType>(ctx[id]);
+  }
+
+  /// Remaps a clone.
+  /// @param original the original
+  /// @param newVal the clone
+  template <typename NodeType>
+  void forceRemap(const NodeType *original, const NodeType *newVal) {
+    ctx[original->getId()] = const_cast<NodeType *>(newVal);
   }
 
   PipelineFlow::Stage clone(const PipelineFlow::Stage &other) {

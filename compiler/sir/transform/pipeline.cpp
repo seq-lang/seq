@@ -185,7 +185,7 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
     if (auto *func = cast<BodiedFunc>(util::getFunc(it->getFunc()))) {
       if (!it->isGenerator() && util::hasAttribute(func, "prefetch")) {
         // transform prefetch'ing function
-        auto *clone = cast<BodiedFunc>(cv.clone(func));
+        auto *clone = cast<BodiedFunc>(cv.forceClone(func));
         util::setReturnType(clone, M->getGeneratorType(util::getReturnType(clone)));
         clone->setGenerator();
         clone->getBody()->accept(pft);
@@ -445,7 +445,7 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
           util::getReturnType(func)->is(M->getVoidType())) {
         // transform aligning function
         InterAlignFunctionTransformer aft(&types);
-        auto *clone = cast<BodiedFunc>(cv.clone(func));
+        auto *clone = cast<BodiedFunc>(cv.forceClone(func));
         util::setReturnType(clone, M->getGeneratorType(types.yield));
         clone->setGenerator();
         clone->getBody()->accept(aft);

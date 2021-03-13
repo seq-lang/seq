@@ -15,11 +15,23 @@ void CloneVisitor::visit(const BodiedFunc *v) {
   for (auto it = v->arg_begin(); it != v->arg_end(); ++it)
     argNames.push_back((*it)->getName());
   for (const auto *var : *v) {
-    auto *newVar = clone(var);
+    auto *newVar = forceClone(var);
     res->push_back(newVar);
   }
   res->setGenerator(v->isGenerator());
   res->realize(cast<types::FuncType>(v->getType()), argNames);
+
+  auto argIt1 = v->arg_begin();
+  auto argIt2 = res->arg_begin();
+  while (argIt1 != v->arg_end()) {
+    forceRemap(*argIt1, *argIt2);
+    ++argIt1;
+    ++argIt2;
+  }
+
+  // body might reference this!
+  forceRemap(v, res);
+
   if (v->getBody())
     res->setBody(clone(v->getBody()));
   res->setBuiltin(v->isBuiltin());
@@ -33,6 +45,15 @@ void CloneVisitor::visit(const ExternalFunc *v) {
     argNames.push_back((*it)->getName());
   res->setGenerator(v->isGenerator());
   res->realize(cast<types::FuncType>(v->getType()), argNames);
+
+  auto argIt1 = v->arg_begin();
+  auto argIt2 = res->arg_begin();
+  while (argIt1 != v->arg_end()) {
+    forceRemap(*argIt1, *argIt2);
+    ++argIt1;
+    ++argIt2;
+  }
+
   res->setUnmangledName(v->getUnmangledName());
   result = res;
 }
@@ -44,6 +65,15 @@ void CloneVisitor::visit(const InternalFunc *v) {
     argNames.push_back((*it)->getName());
   res->setGenerator(v->isGenerator());
   res->realize(cast<types::FuncType>(v->getType()), argNames);
+
+  auto argIt1 = v->arg_begin();
+  auto argIt2 = res->arg_begin();
+  while (argIt1 != v->arg_end()) {
+    forceRemap(*argIt1, *argIt2);
+    ++argIt1;
+    ++argIt2;
+  }
+
   res->setParentType(v->getParentType());
   result = res;
 }
@@ -55,6 +85,15 @@ void CloneVisitor::visit(const LLVMFunc *v) {
     argNames.push_back((*it)->getName());
   res->setGenerator(v->isGenerator());
   res->realize(cast<types::FuncType>(v->getType()), argNames);
+
+  auto argIt1 = v->arg_begin();
+  auto argIt2 = res->arg_begin();
+  while (argIt1 != v->arg_end()) {
+    forceRemap(*argIt1, *argIt2);
+    ++argIt1;
+    ++argIt2;
+  }
+
   res->setLLVMBody(v->getLLVMBody());
   res->setLLVMDeclarations(v->getLLVMDeclarations());
   res->setLLVMLiterals(
