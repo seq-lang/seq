@@ -347,18 +347,23 @@ void SimplifyVisitor::visit(PipeExpr *expr) {
 
 void SimplifyVisitor::visit(IndexExpr *expr) {
   ExprPtr e = nullptr;
+  auto index = expr->index->clone();
   // First handle the tuple[] and function[] cases.
   if (expr->expr->isId("tuple") || expr->expr->isId("Tuple")) {
-    auto t = expr->index->getTuple();
+    auto t = index->getTuple();
     e = N<IdExpr>(format(TYPE_TUPLE "{}", t ? t->items.size() : 1));
     e->markType();
-  } else if (expr->expr->isId("function") || expr->expr->isId("Function")) {
-    auto t = expr->index->getTuple();
-    e = N<IdExpr>(format(TYPE_FUNCTION "{}", t ? int(t->items.size()) - 1 : 0));
-    e->markType();
-  } else if (expr->expr->isId("Callable")) {
-    auto t = expr->index->getTuple();
-    e = N<IdExpr>(format(TYPE_CALLABLE "{}", t ? int(t->items.size()) - 1 : 0));
+  } else if (expr->expr->isId("function") || expr->expr->isId("Function") ||
+             expr->expr->isId("Callable")) {
+    auto t = const_cast<TupleExpr *>(index->getTuple());
+    if (t->items.size() != 2 || !t->items[0]->getList())
+      error("invalid {} type declaration", expr->expr->getId()->value);
+    for (auto &i : const_cast<ListExpr *>(t->items[0]->getList())->items)
+      t->items.emplace_back(move(i));
+    t->items.erase(t->items.begin());
+    e = N<IdExpr>(
+        format(expr->expr->isId("Callable") ? TYPE_CALLABLE "{}" : TYPE_FUNCTION "{}",
+               t ? int(t->items.size()) - 1 : 0));
     e->markType();
   } else {
     e = transform(expr->expr.get(), true);
@@ -366,11 +371,11 @@ void SimplifyVisitor::visit(IndexExpr *expr) {
   // IndexExpr[i1, ..., iN] is internally stored as IndexExpr[TupleExpr[i1, ..., iN]]
   // for N > 1, so make sure to check that case.
   vector<ExprPtr> it;
-  if (auto t = expr->index->getTuple())
+  if (auto t = index->getTuple())
     for (auto &i : t->items)
       it.push_back(transform(i.get(), true));
   else
-    it.push_back(transform(expr->index.get(), true));
+    it.push_back(transform(index.get(), true));
 
   // Below we check if this is a proper instantiation expression.
   bool allTypes = true;

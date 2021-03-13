@@ -413,7 +413,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   // Add function arguments.
   auto baseType =
       ctx->instantiate(N<IdExpr>(stmt->name).get(),
-                       ctx->find(generateCallableStub(stmt->args.size()))->type)
+                       ctx->find(generateFunctionStub(stmt->args.size()))->type)
           ->getRecord();
   {
     ctx->typecheckLevel++;
@@ -473,11 +473,11 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
 }
 
 void TypecheckVisitor::visit(ClassStmt *stmt) {
-  if (ctx->findInVisited(stmt->name).second && !in(stmt->attributes, "extend"))
+  if (ctx->findInVisited(stmt->name).second && !in(stmt->attributes, ATTR_EXTEND))
     return;
 
   auto &attributes = const_cast<ClassStmt *>(stmt)->attributes;
-  bool extension = in(attributes, "extend");
+  bool extension = in(attributes, ATTR_EXTEND);
   ClassTypePtr typ = nullptr;
   if (!extension) {
     if (stmt->isRecord())

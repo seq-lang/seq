@@ -199,11 +199,11 @@ print tt #: (1)
 
 def foo(i: int) -> int:
     return i + 1
-f: Callable[int, int] = foo
+f: Callable[[int], int] = foo
 print f(1) #: 2
-fx: function[int, int] = foo
+fx: function[[int], int] = foo
 print fx(2) #: 3
-fxx: Function[int, int] = foo
+fxx: Function[[int], int] = foo
 print fxx(3) #: 4
 
 #%% index_special,barebones
@@ -273,7 +273,7 @@ print lp(1) #: 6
 e = 7
 print lp(2) #: 9
 
-def foo[T](a: T, l: Callable[T, T]):
+def foo[T](a: T, l: Callable[[T], T]):
     return l(a)
 print foo(4, lp) #: 11
 

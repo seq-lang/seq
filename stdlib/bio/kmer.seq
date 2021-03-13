@@ -1,4 +1,4 @@
-from bio.seq import seq
+from bio.seq import seq, _preprocess_seq_pattern
 
 @tuple
 class Kmer[K: int]:
@@ -241,7 +241,7 @@ class Kmer[K: int]:
         WILD = byte(95)
         p = pattern.ptr
         n = pattern.len
-        star = __internal__.preprocess_seq_pattern(pattern)
+        star = _preprocess_seq_pattern(pattern)
         nt4 = seq._nt4_table()
         if star >= 0:
             m = N

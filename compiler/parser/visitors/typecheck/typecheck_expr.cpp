@@ -345,9 +345,9 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               staticGenerics.emplace_back(ClassType::Generic(
                   ei->value, ctx->cache->reverseIdentifierLookup[ei->value], genTyp,
                   genTyp->getLink() ? genTyp->getLink()->id
-                                    : genTyp->getStatic()->generics.empty()
-                                          ? 0
-                                          : genTyp->getStatic()->generics[0].id));
+                  : genTyp->getStatic()->generics.empty()
+                      ? 0
+                      : genTyp->getStatic()->generics[0].id));
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -775,6 +775,9 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
 
   auto typ = expr->expr->getType()->getClass();
   seqassert(typ, "expected formed type: {}", typ->toString());
+
+  if (startswith(typ->name, TYPE_FUNCTION) && expr->member == "__call__")
+    generateFnCall(typ->generics.size() - 1);
   auto methods = ctx->findMethod(typ->name, expr->member);
   if (methods.empty()) {
     if (auto member = ctx->findMember(typ->name, expr->member)) {
@@ -836,7 +839,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   // Case 6: multiple overloaded methods available.
   FuncTypePtr bestMethod = nullptr;
   auto oldType = expr->getType() ? expr->getType()->getClass() : nullptr;
-  if (methods.size() > 1 && oldType && startswith(oldType->name, TYPE_CALLABLE)) {
+  if (methods.size() > 1 && oldType && oldType->getFunc()) {
     // If old type is already a function, use its arguments to pick the best call.
     vector<pair<string, TypePtr>> methodArgs;
     if (!expr->expr->isType()) // self argument
@@ -1120,8 +1123,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         unify(args[si].value->type, expectedClass);
       } else if (ast && startswith(expectedClass->name, TYPE_CALLABLE)) {
         // Case 4: allow any callable to match Callable[] signature.
-        if (argClass && !startswith(argClass->name, TYPE_CALLABLE) &&
-            !argClass->getPartial()) {
+        if (argClass && !argClass->getFunc() && !argClass->getPartial()) {
           args[si].value = transform(N<DotExpr>(move(args[si].value), "__call__"));
         }
         unify(args[si].value->type, expectedTyp);
@@ -1434,41 +1436,6 @@ string TypecheckVisitor::generateFunctionStub(int n) {
         N<SuiteStmt>(move(stmts)), vector<string>{}));
     params.clear();
     stmts.clear();
-    // @llvm
-    // def __call__(self: Function.N[TR, T1, ..., TN], a1: T1, ..., aN: TN) -> TR:
-    //   %0 = call {=TR} %self({=T1} %a1, ..., {=TN} %aN)
-    //   ret {=TR} %0
-    params.emplace_back(Param{"self", clone(type)});
-    vector<string> llvmArgs;
-    vector<CallExpr::Arg> callArgs;
-    for (int i = 1; i <= n; i++) {
-      llvmArgs.emplace_back(format("{{=T{}}} %a{}", i, i));
-      params.emplace_back(Param{format("a{}", i), N<IdExpr>(format("T{}", i))});
-      callArgs.emplace_back(CallExpr::Arg{"", N<IdExpr>(format("a{}", i))});
-    }
-    string llvmNonVoid =
-        format("%0 = call {{=TR}} %self({})\nret {{=TR}} %0", join(llvmArgs, ", "));
-    string llvmVoid = format("call {{=TR}} %self({})\nret void", join(llvmArgs, ", "));
-    fns.emplace_back(make_unique<FunctionStmt>(
-        "__call_void__", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
-        N<SuiteStmt>(N<ExprStmt>(N<StringExpr>(llvmVoid))),
-        vector<string>{ATTR_EXTERN_LLVM}));
-    fns.emplace_back(make_unique<FunctionStmt>(
-        "__call_nonvoid__", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
-        N<SuiteStmt>(N<ExprStmt>(N<StringExpr>(llvmNonVoid))),
-        vector<string>{ATTR_EXTERN_LLVM}));
-    fns.emplace_back(make_unique<FunctionStmt>(
-        "__call__", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
-        N<SuiteStmt>(N<IfStmt>(
-            N<CallExpr>(N<IdExpr>("isinstance"), N<IdExpr>("TR"), N<IdExpr>("void")),
-            N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__call_void__"),
-                                    clone_nop(callArgs))),
-            nullptr,
-            N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__call_nonvoid__"),
-                                      clone_nop(callArgs))))),
-        vector<string>{}));
-    params.clear();
-    stmts.clear();
     // class Function.N[TR, T1, ..., TN]
     StmtPtr stmt = make_unique<ClassStmt>(typeName, move(generics), move(args),
                                           N<SuiteStmt>(move(fns)),
@@ -1502,6 +1469,61 @@ string TypecheckVisitor::generatePartialStub(const vector<char> &mask,
                      make_shared<TypecheckItem>(TypecheckItem::Type, tupleType));
   }
   return typeName;
+}
+
+void TypecheckVisitor::generateFnCall(int n) {
+  // @llvm
+  // def __call__(self: Function.N[TR, T1, ..., TN], a1: T1, ..., aN: TN) -> TR:
+  //   %0 = call {=TR} %self({=T1} %a1, ..., {=TN} %aN)
+  //   ret {=TR} %0
+  //  string name = ctx->cache->generateSrcInfo()
+
+  auto typeName = format(TYPE_FUNCTION "{}", n);
+  if (!in(ctx->cache->classes[typeName].methods, "__call__")) {
+    vector<Param> generics;
+    generics.emplace_back(Param{format("TR"), nullptr, nullptr});
+    for (int i = 1; i <= n; i++)
+      generics.emplace_back(Param{format("T{}", i), nullptr, nullptr});
+    vector<Param> params;
+    vector<StmtPtr> fns;
+    params.emplace_back(Param{"self", nullptr});
+    vector<string> llvmArgs;
+    vector<CallExpr::Arg> callArgs;
+    for (int i = 1; i <= n; i++) {
+      llvmArgs.emplace_back(format("{{=T{}}} %a{}", i, i));
+      params.emplace_back(Param{format("a{}", i), N<IdExpr>(format("T{}", i))});
+      callArgs.emplace_back(CallExpr::Arg{"", N<IdExpr>(format("a{}", i))});
+    }
+    string llvmNonVoid =
+        format("%0 = call {{=TR}} %self({})\nret {{=TR}} %0", join(llvmArgs, ", "));
+    string llvmVoid = format("call {{=TR}} %self({})\nret void", join(llvmArgs, ", "));
+    fns.emplace_back(make_unique<FunctionStmt>(
+        "__call__.void", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
+        N<SuiteStmt>(N<ExprStmt>(N<StringExpr>(llvmVoid))),
+        vector<string>{ATTR_EXTERN_LLVM}));
+    fns.emplace_back(make_unique<FunctionStmt>(
+        "__call__.ret", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
+        N<SuiteStmt>(N<ExprStmt>(N<StringExpr>(llvmNonVoid))),
+        vector<string>{ATTR_EXTERN_LLVM}));
+    fns.emplace_back(make_unique<FunctionStmt>(
+        "__call__", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
+        N<SuiteStmt>(N<IfStmt>(
+            N<CallExpr>(N<IdExpr>("isinstance"), N<IdExpr>("TR"), N<IdExpr>("void")),
+            N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__call__.void"),
+                                    clone_nop(callArgs))),
+            nullptr,
+            N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__call__.ret"),
+                                      clone_nop(callArgs))))),
+        vector<string>{}));
+    // Parse this function in a clean context.
+
+    StmtPtr stmt = N<ClassStmt>(typeName, move(generics), vector<Param>{},
+                                N<SuiteStmt>(move(fns)), vector<string>{ATTR_EXTEND});
+    stmt = SimplifyVisitor::apply(ctx->cache->imports[STDLIB_IMPORT].ctx, stmt,
+                                  FILE_GENERATED, 0);
+    stmt = TypecheckVisitor(ctx).transform(stmt);
+    prependStmts->push_back(move(stmt));
+  }
 }
 
 } // namespace ast

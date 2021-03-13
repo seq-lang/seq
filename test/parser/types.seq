@@ -27,7 +27,7 @@ f = Optional[Optional[Optional[int]]](Optional[Optional[int]](Optional[int](5)))
 print x.len, f  #: 0 5
 
 #%% map_unify
-def map[T,S](l: list[T], f: Callable[S,T]):
+def map[T,S](l: List[T], f: Callable[[T], S]):
     return [f(x) for x in l]
 e = 1
 print map([1, 2, 3], lambda x: x+e)  #: [2, 3, 4]
@@ -659,8 +659,8 @@ foo()
 
 #%% function_type,barebones
 class F:
-    f: function[int, int]
-    g: function[void, int]
+    f: function[[int], int]
+    g: function[[int], void]
     x: int
 def foo(x: int):
     return x+1
@@ -672,7 +672,7 @@ f.g(f.x) #: 4
 
 def hai(x, y, z):
     print f'hai({x},{y},{z})'
-fn = Function[void, int, int, int](hai)
+fn = Function[[[int, int, int], void](hai)
 fn(1, 2, 3) #: hai(1,2,3)
 print str(fn)[:12] #: <function at
 z = fn(..., 2, 3)
@@ -690,7 +690,7 @@ def test(name, sort, key):
 def foo(l, f):
     return [f(i) for i in l]
 test('hi', foo, lambda x: x+1) #: hi [2, 3, 4, 5]
-# def foof(l: List[int], x, f: Callable[int, int]):
+# def foof(l: List[int], x, f: Callable[[int], int]):
 #     return [f(i)+x for i in l]
 # test('qsort', foof(..., 3, ...))
 
