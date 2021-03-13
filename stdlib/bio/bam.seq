@@ -176,7 +176,7 @@ class SAMAux:
           - "char": use ``A`` property for byte value
           - "string": use ``Z`` property for string value
           - "Array[int]": use ``B_len`` for array length and either ``B2i(index)`` to access elements
-          - "Array[float]": use ``B_len`` for array length and either ``B2i(index)`` to access elements
+          - "Array[float]": use ``B_len`` for array length and either ``B2f(index)`` to access elements
         '''
         t = self._type()
         if t & AUX_TYPE_INT:

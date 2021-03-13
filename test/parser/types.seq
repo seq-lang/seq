@@ -659,7 +659,7 @@ foo()
 
 #%% function_type,barebones
 class F:
-    f: function[[int], int]
+    f: Function[[int], int]
     g: function[[int], void]
     x: int
 def foo(x: int):
@@ -672,7 +672,7 @@ f.g(f.x) #: 4
 
 def hai(x, y, z):
     print f'hai({x},{y},{z})'
-fn = Function[[[int, int, int], void](hai)
+fn = Function[[int, int, int], void](hai)
 fn(1, 2, 3) #: hai(1,2,3)
 print str(fn)[:12] #: <function at
 z = fn(..., 2, 3)

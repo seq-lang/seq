@@ -1271,7 +1271,7 @@ void LLVMVisitor::visit(const VarValue *x) {
     assert(value);
   } else {
     llvm::Value *varPtr = vars[x->getVar()];
-    assert(varPtr);
+    seqassert(varPtr, "{}", *x);
     builder.SetInsertPoint(block);
     value = builder.CreateLoad(varPtr);
   }

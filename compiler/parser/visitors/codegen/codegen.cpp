@@ -637,7 +637,7 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
         auto *external = cast<ir::ExternalFunc>(f);
         assert(external);
         external->setUnmangledName(ctx->cache->reverseIdentifierLookup[stmt->name]);
-      } else if (!in(ast->attributes, "internal")) {
+      } else if (!in(ast->attributes, ATTR_INTERNAL)) {
         ctx->addScope();
         for (auto i = 0; i < names.size(); ++i) {
           auto *var = f->getArgVar(names[i]);
