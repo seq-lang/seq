@@ -111,12 +111,12 @@ Count bases
         G: int
         T: int
 
-        def __add__(self: BaseCount, other: BaseCount):
+        def __add__(self, other: BaseCount):
             a1, c1, g1, t1 = self
             a2, c2, g2, t2 = other
             return (a1 + a2, c1 + c2, g1 + g2, t1 + t2)
 
-    def count_bases(s) -> BaseCount:
+    def count_bases(s):
         match s:
             case 'A*': return count_bases(s[1:]) + (1,0,0,0)
             case 'C*': return count_bases(s[1:]) + (0,1,0,0)
@@ -129,7 +129,7 @@ Spaced seed search
 
 .. code-block:: seq
 
-    def has_spaced_acgt(s) -> bool:
+    def has_spaced_acgt(s):
         match s:
             case 'A_C_G_T*':
                 return True
@@ -143,7 +143,7 @@ Reverse-complement palindrome
 
 .. code-block:: seq
 
-    def is_own_revcomp(s) -> bool:
+    def is_own_revcomp(s):
         match s:
             case 'A*T' | 'T*A' | 'C*G' | 'G*C':
                 return is_own_revcomp(s[1:-1])
