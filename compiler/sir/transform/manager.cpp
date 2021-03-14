@@ -20,13 +20,13 @@ void PassManager::registerAnalysis(const std::string &key,
   analyses.insert(std::make_pair(key, std::move(analysis)));
 }
 
-void PassManager::run(IRModule *module) {
+void PassManager::run(Module *module) {
   for (auto &p : executionOrder) {
     runPass(module, p);
   }
 }
 
-void PassManager::runPass(IRModule *module, const std::string &name) {
+void PassManager::runPass(Module *module, const std::string &name) {
   auto &meta = passes[name];
 
   for (auto &dep : meta.reqs) {

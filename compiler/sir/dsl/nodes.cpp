@@ -8,7 +8,7 @@ namespace types {
 const char CustomType::NodeId = 0;
 }
 
-const char CustomConstant::NodeId = 0;
+const char CustomConst::NodeId = 0;
 
 const char CustomFlow::NodeId = 0;
 

@@ -19,11 +19,11 @@ void IRVisitor::visit(ForFlow *x) { defaultVisit(x); }
 void IRVisitor::visit(TryCatchFlow *x) { defaultVisit(x); }
 void IRVisitor::visit(PipelineFlow *x) { defaultVisit(x); }
 void IRVisitor::visit(dsl::CustomFlow *x) { defaultVisit(x); }
-void IRVisitor::visit(TemplatedConstant<int64_t> *x) { defaultVisit(x); }
-void IRVisitor::visit(TemplatedConstant<double> *x) { defaultVisit(x); }
-void IRVisitor::visit(TemplatedConstant<bool> *x) { defaultVisit(x); }
-void IRVisitor::visit(TemplatedConstant<std::string> *x) { defaultVisit(x); }
-void IRVisitor::visit(dsl::CustomConstant *x) { defaultVisit(x); }
+void IRVisitor::visit(TemplatedConst<int64_t> *x) { defaultVisit(x); }
+void IRVisitor::visit(TemplatedConst<double> *x) { defaultVisit(x); }
+void IRVisitor::visit(TemplatedConst<bool> *x) { defaultVisit(x); }
+void IRVisitor::visit(TemplatedConst<std::string> *x) { defaultVisit(x); }
+void IRVisitor::visit(dsl::CustomConst *x) { defaultVisit(x); }
 void IRVisitor::visit(AssignInstr *x) { defaultVisit(x); }
 void IRVisitor::visit(ExtractInstr *x) { defaultVisit(x); }
 void IRVisitor::visit(InsertInstr *x) { defaultVisit(x); }
@@ -67,11 +67,11 @@ void ConstIRVisitor::visit(const ForFlow *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const TryCatchFlow *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const PipelineFlow *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const dsl::CustomFlow *x) { defaultVisit(x); }
-void ConstIRVisitor::visit(const TemplatedConstant<int64_t> *x) { defaultVisit(x); }
-void ConstIRVisitor::visit(const TemplatedConstant<double> *x) { defaultVisit(x); }
-void ConstIRVisitor::visit(const TemplatedConstant<bool> *x) { defaultVisit(x); }
-void ConstIRVisitor::visit(const TemplatedConstant<std::string> *x) { defaultVisit(x); }
-void ConstIRVisitor::visit(const dsl::CustomConstant *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const TemplatedConst<int64_t> *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const TemplatedConst<double> *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const TemplatedConst<bool> *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const TemplatedConst<std::string> *x) { defaultVisit(x); }
+void ConstIRVisitor::visit(const dsl::CustomConst *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const AssignInstr *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const ExtractInstr *x) { defaultVisit(x); }
 void ConstIRVisitor::visit(const InsertInstr *x) { defaultVisit(x); }

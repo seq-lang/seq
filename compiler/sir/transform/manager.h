@@ -64,7 +64,7 @@ public:
 
   /// Run all passes.
   /// @param module the module
-  void run(IRModule *module);
+  void run(Module *module);
 
   /// Gets the result of a given analysis.
   /// @param key the analysis key
@@ -75,7 +75,7 @@ public:
   }
 
 private:
-  void runPass(IRModule *module, const std::string &name);
+  void runPass(Module *module, const std::string &name);
 };
 
 } // namespace transform

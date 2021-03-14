@@ -47,12 +47,12 @@ namespace types {
 class CustomType;
 }
 
-class CustomConstant;
+class CustomConst;
 class CustomFlow;
 class CustomInstr;
 } // namespace dsl
 
-class IRModule;
+class Module;
 
 class Var;
 
@@ -74,9 +74,9 @@ class ForFlow;
 class TryCatchFlow;
 class PipelineFlow;
 
-class Constant;
+class Const;
 
-template <typename ValueType> class TemplatedConstant;
+template <typename ValueType> class TemplatedConst;
 
 class Instr;
 class AssignInstr;
@@ -101,7 +101,7 @@ class IRVisitor {
 public:
   virtual ~IRVisitor() noexcept = default;
 
-  DEFAULT_VISIT(IRModule);
+  DEFAULT_VISIT(Module);
 
   DEFAULT_VISIT(Var);
 
@@ -124,12 +124,12 @@ public:
   VISIT(PipelineFlow);
   VISIT(dsl::CustomFlow);
 
-  DEFAULT_VISIT(Constant);
-  VISIT(TemplatedConstant<int64_t>);
-  VISIT(TemplatedConstant<double>);
-  VISIT(TemplatedConstant<bool>);
-  VISIT(TemplatedConstant<std::string>);
-  VISIT(dsl::CustomConstant);
+  DEFAULT_VISIT(Const);
+  VISIT(TemplatedConst<int64_t>);
+  VISIT(TemplatedConst<double>);
+  VISIT(TemplatedConst<bool>);
+  VISIT(TemplatedConst<std::string>);
+  VISIT(dsl::CustomConst);
 
   DEFAULT_VISIT(Instr);
   VISIT(AssignInstr);
@@ -169,7 +169,7 @@ class ConstIRVisitor {
 public:
   virtual ~ConstIRVisitor() noexcept = default;
 
-  CONST_DEFAULT_VISIT(IRModule);
+  CONST_DEFAULT_VISIT(Module);
 
   CONST_DEFAULT_VISIT(Var);
 
@@ -192,12 +192,12 @@ public:
   CONST_VISIT(PipelineFlow);
   CONST_VISIT(dsl::CustomFlow);
 
-  CONST_DEFAULT_VISIT(Constant);
-  CONST_VISIT(TemplatedConstant<int64_t>);
-  CONST_VISIT(TemplatedConstant<double>);
-  CONST_VISIT(TemplatedConstant<bool>);
-  CONST_VISIT(TemplatedConstant<std::string>);
-  CONST_VISIT(dsl::CustomConstant);
+  CONST_DEFAULT_VISIT(Const);
+  CONST_VISIT(TemplatedConst<int64_t>);
+  CONST_VISIT(TemplatedConst<double>);
+  CONST_VISIT(TemplatedConst<bool>);
+  CONST_VISIT(TemplatedConst<std::string>);
+  CONST_VISIT(dsl::CustomConst);
 
   CONST_DEFAULT_VISIT(Instr);
   CONST_VISIT(AssignInstr);

@@ -6,8 +6,8 @@
 
 using namespace seq::ir;
 
-TEST_F(SIRCoreTest, ConstantTypeQueryAndReplace) {
-  auto *node = module->Nr<IntConstant>(1, module->getIntType());
+TEST_F(SIRCoreTest, ConstTypeQueryAndReplace) {
+  auto *node = module->Nr<IntConst>(1, module->getIntType());
   ASSERT_EQ(module->getIntType(), node->getType());
 
   auto usedTypes = node->getUsedTypes();
@@ -16,10 +16,10 @@ TEST_F(SIRCoreTest, ConstantTypeQueryAndReplace) {
   ASSERT_EQ(1, node->replaceUsedType(module->getIntType(), module->getIntType()));
 }
 
-TEST_F(SIRCoreTest, ConstantValueMatches) {
+TEST_F(SIRCoreTest, ConstValueMatches) {
   auto VALUE = 1;
 
-  auto *node = module->Nr<IntConstant>(VALUE, module->getIntType());
+  auto *node = module->Nr<IntConst>(VALUE, module->getIntType());
   ASSERT_EQ(VALUE, node->getVal());
 
   std::stringstream s;
@@ -27,20 +27,20 @@ TEST_F(SIRCoreTest, ConstantValueMatches) {
   ASSERT_EQ(std::to_string(VALUE), s.str());
 }
 
-TEST_F(SIRCoreTest, ConstantCloning) {
+TEST_F(SIRCoreTest, ConstCloning) {
   auto VALUE = 1;
-  auto *node = module->Nr<IntConstant>(VALUE, module->getIntType());
-  auto *clone = cast<IntConstant>(cv->clone(node));
+  auto *node = module->Nr<IntConst>(VALUE, module->getIntType());
+  auto *clone = cast<IntConst>(cv->clone(node));
 
   ASSERT_TRUE(clone);
   ASSERT_EQ(VALUE, clone->getVal());
   ASSERT_EQ(module->getIntType(), clone->getType());
 }
 
-TEST_F(SIRCoreTest, StringConstantFormatting) {
+TEST_F(SIRCoreTest, StringConstFormatting) {
   auto VALUE = "hi";
 
-  auto *node = module->Nr<StringConstant>(VALUE, module->getStringType());
+  auto *node = module->Nr<StringConst>(VALUE, module->getStringType());
 
   std::stringstream s;
   s << *node;

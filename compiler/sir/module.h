@@ -25,7 +25,7 @@ class TypecheckVisitor;
 namespace ir {
 
 /// SIR object representing a program.
-class IRModule : public AcceptorExtend<IRModule, IRNode> {
+class Module : public AcceptorExtend<Module, Node> {
 public:
   static const std::string VOID_NAME;
   static const std::string BOOL_NAME;
@@ -97,9 +97,9 @@ public:
   /// Constructs an SIR module.
   /// @param name the module name
   /// @param cache the type-checker cache
-  explicit IRModule(std::string name, std::shared_ptr<ast::Cache> cache = nullptr);
+  explicit Module(std::string name, std::shared_ptr<ast::Cache> cache = nullptr);
 
-  virtual ~IRModule() noexcept = default;
+  virtual ~Module() noexcept = default;
 
   /// @return the main function
   Func *getMainFunc() { return mainFunc.get(); }
@@ -222,7 +222,7 @@ public:
   /// @param args the arguments
   /// @return the new node
   template <typename DesiredType, typename... Args>
-  DesiredType *N(const IRNode *s, Args &&... args) {
+  DesiredType *N(const Node *s, Args &&... args) {
     return N<DesiredType>(s->getSrcInfo(), std::forward<Args>(args)...);
   }
   /// Constructs and registers an IR node with no source information.
@@ -313,16 +313,16 @@ public:
 
   /// @param v the value
   /// @return an int constant
-  Value *getIntConstant(int64_t v);
+  Value *getInt(int64_t v);
   /// @param v the value
   /// @return a float constant
-  Value *getFloatConstant(double v);
+  Value *getFloat(double v);
   /// @param v the value
   /// @return a bool constant
-  Value *getBoolConstant(bool v);
+  Value *getBool(bool v);
   /// @param v the value
   /// @return a string constant
-  Value *getStringConstant(std::string v);
+  Value *getString(std::string v);
 
   /// Gets a dummy function type. Should generally not be used as no type-checker
   /// information is generated.

@@ -67,7 +67,7 @@ private:
 /// @param b the second IR node
 /// @param checkNames whether or not to check the node names
 /// @return true if the nodes are equal
-bool match(IRNode *a, IRNode *b, bool checkNames = false);
+bool match(Node *a, Node *b, bool checkNames = false);
 
 } // namespace util
 } // namespace ir

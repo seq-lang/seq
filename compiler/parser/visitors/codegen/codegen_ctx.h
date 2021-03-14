@@ -87,8 +87,8 @@ public:
 public:
   seq::ir::BodiedFunc *getBase() const { return bases[topBaseIndex]; }
   seq::ir::SeriesFlow *getSeries() const { return series[topBlockIndex]; }
-  seq::ir::IRModule *getModule() const {
-    return dynamic_cast<seq::ir::IRModule *>(bases[0]->getModule());
+  seq::ir::Module *getModule() const {
+    return dynamic_cast<seq::ir::Module *>(bases[0]->getModule());
   }
   bool isToplevel() const { return bases.size() == 1; }
   //  seq::SeqJIT *getJIT() { return jit; }

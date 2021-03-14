@@ -42,7 +42,7 @@ public:
   static std::unordered_set<std::string>
   initializeContext(shared_ptr<CodegenContext> ctx);
 
-  static seq::ir::IRModule *apply(shared_ptr<Cache> cache, StmtPtr stmts);
+  static seq::ir::Module *apply(shared_ptr<Cache> cache, StmtPtr stmts);
 
   seq::ir::Value *transform(const ExprPtr &expr) override;
   seq::ir::Value *transform(const StmtPtr &stmt) override;

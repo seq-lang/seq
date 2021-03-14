@@ -10,7 +10,7 @@ namespace cleanup {
 /// Cleanup pass that physically replaces nodes.
 class ReplaceCleanupPass : public Pass {
 public:
-  void run(IRModule *module) override;
+  void run(Module *module) override;
 };
 
 } // namespace cleanup

@@ -59,7 +59,7 @@ std::string getDebugNameForVariable(const Var *x) {
   }
 }
 
-const SrcInfo *getSrcInfo(const IRNode *x) {
+const SrcInfo *getSrcInfo(const Node *x) {
   if (auto *srcInfo = x->getAttribute<SrcInfoAttribute>()) {
     return &srcInfo->info;
   } else {
@@ -141,7 +141,7 @@ LLVMVisitor::LLVMVisitor(bool debug, const std::string &flags)
   resetOMPABI();
 }
 
-void LLVMVisitor::setDebugInfoForNode(const IRNode *x) {
+void LLVMVisitor::setDebugInfoForNode(const Node *x) {
   if (x && func) {
     auto *srcInfo = getSrcInfo(x);
     builder.SetCurrentDebugLocation(llvm::DILocation::get(
@@ -151,7 +151,7 @@ void LLVMVisitor::setDebugInfoForNode(const IRNode *x) {
   }
 }
 
-void LLVMVisitor::process(const IRNode *x) {
+void LLVMVisitor::process(const Node *x) {
   setDebugInfoForNode(x);
   x->accept(*this);
 }
@@ -584,7 +584,7 @@ LLVMVisitor::TryCatchData *LLVMVisitor::getInnermostTryCatchBeforeLoop() {
  * General values, module, functions, vars
  */
 
-void LLVMVisitor::visit(const IRModule *x) {
+void LLVMVisitor::visit(const Module *x) {
   module = std::make_unique<llvm::Module>("seq", context);
   module->setTargetTriple(
       llvm::EngineBuilder().selectTarget()->getTargetTriple().str());
@@ -1515,22 +1515,22 @@ llvm::DIType *LLVMVisitor::getDIType(types::Type *t) {
  * Constants
  */
 
-void LLVMVisitor::visit(const IntConstant *x) {
+void LLVMVisitor::visit(const IntConst *x) {
   builder.SetInsertPoint(block);
   value = builder.getInt64(x->getVal());
 }
 
-void LLVMVisitor::visit(const FloatConstant *x) {
+void LLVMVisitor::visit(const FloatConst *x) {
   builder.SetInsertPoint(block);
   value = llvm::ConstantFP::get(builder.getDoubleTy(), x->getVal());
 }
 
-void LLVMVisitor::visit(const BoolConstant *x) {
+void LLVMVisitor::visit(const BoolConst *x) {
   builder.SetInsertPoint(block);
   value = builder.getInt8(x->getVal() ? 1 : 0);
 }
 
-void LLVMVisitor::visit(const StringConstant *x) {
+void LLVMVisitor::visit(const StringConst *x) {
   builder.SetInsertPoint(block);
   std::string s = x->getVal();
   auto *strVar = new llvm::GlobalVariable(
@@ -1546,7 +1546,7 @@ void LLVMVisitor::visit(const StringConstant *x) {
   value = str;
 }
 
-void LLVMVisitor::visit(const dsl::CustomConstant *x) {
+void LLVMVisitor::visit(const dsl::CustomConst *x) {
   x->getBuilder()->buildValue(this);
 }
 

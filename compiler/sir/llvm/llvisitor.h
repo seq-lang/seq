@@ -127,8 +127,8 @@ private:
   llvm::DIType *
   getDITypeHelper(types::Type *t,
                   std::unordered_map<std::string, llvm::DICompositeType *> &cache);
-  void setDebugInfoForNode(const IRNode *);
-  void process(const IRNode *);
+  void setDebugInfoForNode(const Node *);
+  void process(const Node *);
 
   /// GC allocation functions
   llvm::Function *makeAllocFunc(bool atomic);
@@ -216,7 +216,7 @@ public:
   /// @return corresponding LLVM DI type
   llvm::DIType *getDIType(types::Type *t);
 
-  void visit(const IRModule *) override;
+  void visit(const Module *) override;
   void visit(const BodiedFunc *) override;
   void visit(const ExternalFunc *) override;
   void visit(const InternalFunc *) override;
@@ -225,11 +225,11 @@ public:
   void visit(const VarValue *) override;
   void visit(const PointerValue *) override;
 
-  void visit(const IntConstant *) override;
-  void visit(const FloatConstant *) override;
-  void visit(const BoolConstant *) override;
-  void visit(const StringConstant *) override;
-  void visit(const dsl::CustomConstant *) override;
+  void visit(const IntConst *) override;
+  void visit(const FloatConst *) override;
+  void visit(const BoolConst *) override;
+  void visit(const StringConst *) override;
+  void visit(const dsl::CustomConst *) override;
 
   void visit(const SeriesFlow *) override;
   void visit(const IfFlow *) override;

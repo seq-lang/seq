@@ -66,7 +66,7 @@ public:
     return getActual()->doGetUsedTypes();
   }
   int replaceUsedType(const std::string &name, Type *newType) final { assert(false); }
-  using IRNode::replaceUsedType;
+  using Node::replaceUsedType;
 
   /// @param other another type
   /// @return true if this type is equal to the argument type

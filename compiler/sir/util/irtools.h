@@ -31,7 +31,7 @@ CallInstr *call(Func *func, const std::vector<Value *> &args);
 /// @param args vector of tuple contents
 /// @param M the module
 /// @return value represents a tuple with the given contents
-Value *makeTuple(const std::vector<Value *> &args, IRModule *M);
+Value *makeTuple(const std::vector<Value *> &args, Module *M);
 
 /// Constructs and assigns a new variable.
 /// @param x the value to assign to the new variable
@@ -74,9 +74,7 @@ template <typename... Args> SeriesFlow *series(Args... args) {
 /// "int64_t", which should be used here.
 /// @param x the value to check
 /// @return true if the value is constant
-template <typename T> bool isConst(const Value *x) {
-  return isA<TemplatedConstant<T>>(x);
-}
+template <typename T> bool isConst(const Value *x) { return isA<TemplatedConst<T>>(x); }
 
 /// Checks whether the given value is a constant of the given
 /// type, and that is has a particular value. Note that standard
@@ -85,7 +83,7 @@ template <typename T> bool isConst(const Value *x) {
 /// @param value constant value to compare to
 /// @return true if the value is constant with the given value
 template <typename T> bool isConst(const Value *x, const T &value) {
-  if (auto *c = cast<TemplatedConstant<T>>(x)) {
+  if (auto *c = cast<TemplatedConst<T>>(x)) {
     return c->getVal() == value;
   }
   return false;
@@ -97,7 +95,7 @@ template <typename T> bool isConst(const Value *x, const T &value) {
 /// @param x the (constant) value
 /// @return the constant represented by the given value
 template <typename T> T getConst(const Value *x) {
-  auto *c = cast<TemplatedConstant<T>>(x);
+  auto *c = cast<TemplatedConst<T>>(x);
   assert(c);
   return c->getVal();
 }

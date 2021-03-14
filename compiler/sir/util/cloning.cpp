@@ -143,23 +143,23 @@ void CloneVisitor::visit(const PipelineFlow *v) {
 
 void CloneVisitor::visit(const dsl::CustomFlow *v) { result = v->doClone(*this); }
 
-void CloneVisitor::visit(const IntConstant *v) {
+void CloneVisitor::visit(const IntConst *v) {
   result = Nt(v, v->getVal(), v->getType());
 }
 
-void CloneVisitor::visit(const FloatConstant *v) {
+void CloneVisitor::visit(const FloatConst *v) {
   result = Nt(v, v->getVal(), v->getType());
 }
 
-void CloneVisitor::visit(const BoolConstant *v) {
+void CloneVisitor::visit(const BoolConst *v) {
   result = Nt(v, v->getVal(), v->getType());
 }
 
-void CloneVisitor::visit(const StringConstant *v) {
+void CloneVisitor::visit(const StringConst *v) {
   result = Nt(v, v->getVal(), v->getType());
 }
 
-void CloneVisitor::visit(const dsl::CustomConstant *v) { result = v->doClone(*this); }
+void CloneVisitor::visit(const dsl::CustomConst *v) { result = v->doClone(*this); }
 
 void CloneVisitor::visit(const AssignInstr *v) {
   result = Nt(v, clone(v->getLhs()), clone(v->getRhs()));

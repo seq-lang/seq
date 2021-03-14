@@ -5,38 +5,38 @@
 namespace {
 class TestVisitor : public seq::ir::util::IRVisitor {
 public:
-  void visit(seq::ir::IntConstant *) override { FAIL(); }
-  void visit(seq::ir::BoolConstant *) override {}
+  void visit(seq::ir::IntConst *) override { FAIL(); }
+  void visit(seq::ir::BoolConst *) override {}
 };
 
 class ConstTestVisitor : public seq::ir::util::ConstIRVisitor {
 public:
-  void visit(const seq::ir::IntConstant *) override { FAIL(); }
-  void visit(const seq::ir::BoolConstant *) override {}
+  void visit(const seq::ir::IntConst *) override { FAIL(); }
+  void visit(const seq::ir::BoolConst *) override {}
 };
 
 } // namespace
 
 using namespace seq::ir;
 
-TEST_F(SIRCoreTest, IRNodeNoReplacementRTTI) {
-  auto *derived = module->Nr<IntConstant>(1, module->getIntType());
+TEST_F(SIRCoreTest, NodeNoReplacementRTTI) {
+  auto *derived = module->Nr<IntConst>(1, module->getIntType());
   ASSERT_TRUE(derived);
   ASSERT_FALSE(derived->hasReplacement());
   auto *base = cast<Value>(derived);
   ASSERT_TRUE(base);
-  ASSERT_TRUE(isA<IntConstant>(base));
-  ASSERT_TRUE(isA<Constant>(base));
+  ASSERT_TRUE(isA<IntConst>(base));
+  ASSERT_TRUE(isA<Const>(base));
   ASSERT_TRUE(isA<Value>(base));
   ASSERT_FALSE(isA<Flow>(base));
 
   const auto *constBase = base;
-  ASSERT_TRUE(isA<Constant>(constBase));
-  ASSERT_TRUE(cast<Constant>(constBase));
+  ASSERT_TRUE(isA<Const>(constBase));
+  ASSERT_TRUE(cast<Const>(constBase));
 }
 
-TEST_F(SIRCoreTest, IRNodeNoReplacementAttributes) {
-  auto *node = module->Nr<IntConstant>(1, module->getIntType());
+TEST_F(SIRCoreTest, NodeNoReplacementAttributes) {
+  auto *node = module->Nr<IntConst>(1, module->getIntType());
   ASSERT_FALSE(node->hasReplacement());
   ASSERT_FALSE(node->hasAttribute<KeyValueAttribute>());
 
@@ -45,24 +45,24 @@ TEST_F(SIRCoreTest, IRNodeNoReplacementAttributes) {
   ASSERT_EQ(1, std::distance(node->attributes_begin(), node->attributes_end()));
 }
 
-TEST_F(SIRCoreTest, IRNodeReplacementRTTI) {
-  Value *node = module->Nr<IntConstant>(1, module->getIntType());
+TEST_F(SIRCoreTest, NodeReplacementRTTI) {
+  Value *node = module->Nr<IntConst>(1, module->getIntType());
   ASSERT_TRUE(node);
   ASSERT_FALSE(node->hasReplacement());
-  ASSERT_TRUE(isA<IntConstant>(node));
+  ASSERT_TRUE(isA<IntConst>(node));
 
-  node->replaceAll(module->Nr<BoolConstant>(false, module->getBoolType()));
+  node->replaceAll(module->Nr<BoolConst>(false, module->getBoolType()));
   ASSERT_TRUE(node->hasReplacement());
-  ASSERT_FALSE(isA<IntConstant>(node));
-  ASSERT_TRUE(isA<BoolConstant>(node));
-  ASSERT_TRUE(cast<BoolConstant>(node));
+  ASSERT_FALSE(isA<IntConst>(node));
+  ASSERT_TRUE(isA<BoolConst>(node));
+  ASSERT_TRUE(cast<BoolConst>(node));
 }
 
-TEST_F(SIRCoreTest, IRNodeReplacementDelegates) {
+TEST_F(SIRCoreTest, NodeReplacementDelegates) {
   auto NODE_NAME = "foo";
 
-  Value *originalNode = module->Nr<IntConstant>(1, module->getIntType());
-  Value *newNode = module->Nr<BoolConstant>(false, module->getBoolType(), NODE_NAME);
+  Value *originalNode = module->Nr<IntConst>(1, module->getIntType());
+  Value *newNode = module->Nr<BoolConst>(false, module->getBoolType(), NODE_NAME);
   newNode->setAttribute(std::make_unique<KeyValueAttribute>());
 
   ASSERT_EQ(0, originalNode->getName().size());
@@ -83,8 +83,8 @@ TEST_F(SIRCoreTest, IRNodeReplacementDelegates) {
   newNode->accept(v2);
 }
 
-TEST_F(SIRCoreTest, IRNodeNonReplaceableFails) {
-  Value *originalNode = module->Nr<IntConstant>(1, module->getIntType());
+TEST_F(SIRCoreTest, NodeNonReplaceableFails) {
+  Value *originalNode = module->Nr<IntConst>(1, module->getIntType());
   originalNode->setReplaceable(false);
   ASSERT_DEATH(originalNode->replaceAll(originalNode), "");
 }

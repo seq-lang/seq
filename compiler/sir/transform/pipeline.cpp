@@ -198,13 +198,13 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
         // vars
         auto *statesType = M->getArrayType(coroType->getReturnType());
         assert((SCHED_WIDTH_PREFETCH & (SCHED_WIDTH_PREFETCH - 1)) == 0); // power of 2
-        auto *width = M->getIntConstant(SCHED_WIDTH_PREFETCH);
+        auto *width = M->getInt(SCHED_WIDTH_PREFETCH);
 
         auto *init = M->Nr<SeriesFlow>();
         auto *parent = cast<BodiedFunc>(getParentFunc());
         assert(parent);
-        auto *filled = util::makeVar(M->getIntConstant(0), init, parent);
-        auto *next = util::makeVar(M->getIntConstant(0), init, parent);
+        auto *filled = util::makeVar(M->getInt(0), init, parent);
+        auto *next = util::makeVar(M->getInt(0), init, parent);
         auto *states = util::makeVar(
             M->Nr<StackAllocInstr>(statesType, SCHED_WIDTH_PREFETCH), init, parent);
         insertBefore(init);
@@ -262,9 +262,8 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
           drainStages.push_back(cv.clone(*it));
         }
 
-        auto *drain =
-            util::series(M->Nr<AssignInstr>(next->getVar(), M->getIntConstant(0)),
-                         M->Nr<PipelineFlow>(drainStages));
+        auto *drain = util::series(M->Nr<AssignInstr>(next->getVar(), M->getInt(0)),
+                                   M->Nr<PipelineFlow>(drainStages));
         insertAfter(drain);
 
         break; // at most one prefetch transformation per pipeline
@@ -289,7 +288,7 @@ struct InterAlignTypes {
   operator bool() const { return seq && cigar && align && params && pair && yield; }
 };
 
-InterAlignTypes gatherInterAlignTypes(IRModule *M) {
+InterAlignTypes gatherInterAlignTypes(Module *M) {
   return {M->getOrRealizeType("seq", {}, seqModule),
           M->getOrRealizeType("CIGAR", {}, alignModule),
           M->getOrRealizeType("Alignment", {}, alignModule),
@@ -484,10 +483,10 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
             util::makeVar(util::alloc(M->getByteType(), LEN_LIMIT * W), init, parent);
         auto *hist = util::makeVar(util::alloc(i32, MAX_SEQ_LEN8 + MAX_SEQ_LEN16 + 32),
                                    init, parent);
-        auto *filled = util::makeVar(M->getIntConstant(0), init, parent);
+        auto *filled = util::makeVar(M->getInt(0), init, parent);
         insertBefore(init);
 
-        auto *width = M->getIntConstant(W);
+        auto *width = M->getInt(W);
         auto *params = aft.getParams();
 
         std::vector<types::Type *> stageArgTypes;

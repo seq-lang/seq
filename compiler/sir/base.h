@@ -16,7 +16,7 @@ namespace seq {
 namespace ir {
 
 class Func;
-class IRModule;
+class Module;
 
 /// Mixin class for IR nodes that need ids.
 class IdMixin {
@@ -37,16 +37,16 @@ public:
 };
 
 /// Base for named IR nodes.
-class IRNode {
+class Node {
 private:
   /// the node's name
   std::string name;
   /// key-value attribute store
   std::map<std::string, std::unique_ptr<Attribute>> attributes;
   /// the module
-  IRModule *module = nullptr;
+  Module *module = nullptr;
   /// a replacement, if set
-  IRNode *replacement = nullptr;
+  Node *replacement = nullptr;
 
 public:
   // RTTI is implemented using a port of LLVM's Extensible RTTI
@@ -56,7 +56,7 @@ public:
 
   /// Constructs a node.
   /// @param name the node's name
-  explicit IRNode(std::string name = "") : name(std::move(name)) {}
+  explicit Node(std::string name = "") : name(std::move(name)) {}
 
   /// See LLVM documentation.
   static const void *nodeId() { return &NodeId; }
@@ -174,12 +174,12 @@ public:
   virtual std::string referenceString() const { return getActual()->name; }
 
   /// @return the IR module
-  IRModule *getModule() const { return getActual()->module; }
+  Module *getModule() const { return getActual()->module; }
   /// Sets the module.
   /// @param m the new module
-  void setModule(IRModule *m) { getActual()->module = m; }
+  void setModule(Module *m) { getActual()->module = m; }
 
-  friend std::ostream &operator<<(std::ostream &os, const IRNode &a) {
+  friend std::ostream &operator<<(std::ostream &os, const Node &a) {
     if (a.hasReplacement())
       return os << *a.getActual();
     return a.doFormat(os);
@@ -236,8 +236,8 @@ public:
   template <typename> friend class ReplaceableNodeBase;
 
 private:
-  IRNode *getActual() { return replacement ? replacement : this; }
-  const IRNode *getActual() const { return replacement ? replacement : this; }
+  Node *getActual() { return replacement ? replacement : this; }
+  const Node *getActual() const { return replacement ? replacement : this; }
 
   virtual std::ostream &doFormat(std::ostream &os) const = 0;
 };
@@ -250,49 +250,48 @@ public:
   static const void *nodeId() { return &Derived::NodeId; }
   /// See LLVM documentation.
   virtual bool isConvertible(const void *other) const {
-    if (IRNode::hasReplacement())
-      return IRNode::getActual()->isConvertible(other);
+    if (Node::hasReplacement())
+      return Node::getActual()->isConvertible(other);
 
     return other == nodeId() || Parent::isConvertible(other);
   }
 
   void accept(util::IRVisitor &v) {
-    if (IRNode::hasReplacement())
-      IRNode::getActual()->accept(v);
+    if (Node::hasReplacement())
+      Node::getActual()->accept(v);
     else
       v.visit(static_cast<Derived *>(this));
   }
 
   void accept(util::ConstIRVisitor &v) const {
-    if (IRNode::hasReplacement())
-      IRNode::getActual()->accept(v);
+    if (Node::hasReplacement())
+      Node::getActual()->accept(v);
     else
       v.visit(static_cast<const Derived *>(this));
   }
 };
 
 template <typename Derived>
-class ReplaceableNodeBase : public AcceptorExtend<Derived, IRNode> {
+class ReplaceableNodeBase : public AcceptorExtend<Derived, Node> {
 private:
   /// true if the node can be lazily replaced
   bool replaceable = true;
 
 public:
-  using AcceptorExtend<Derived, IRNode>::AcceptorExtend;
+  using AcceptorExtend<Derived, Node>::AcceptorExtend;
 
   static const char NodeId;
 
   /// @return the logical value of the node
   Derived *getActual() {
-    return IRNode::replacement
-               ? static_cast<Derived *>(IRNode::replacement)->getActual()
-               : static_cast<Derived *>(this);
+    return Node::replacement ? static_cast<Derived *>(Node::replacement)->getActual()
+                             : static_cast<Derived *>(this);
   }
 
   /// @return the logical value of the node
   const Derived *getActual() const {
-    return IRNode::replacement
-               ? static_cast<const Derived *>(IRNode::replacement)->getActual()
+    return Node::replacement
+               ? static_cast<const Derived *>(Node::replacement)->getActual()
                : static_cast<const Derived *>(this);
   }
 
@@ -300,7 +299,7 @@ public:
   /// @param v the new value
   void replaceAll(Derived *v) {
     assert(replaceable);
-    IRNode::replacement = v;
+    Node::replacement = v;
   }
 
   /// @return true if the object can be replaced
@@ -312,19 +311,19 @@ public:
 
 template <typename Derived> const char ReplaceableNodeBase<Derived>::NodeId = 0;
 
-template <typename Desired> Desired *cast(IRNode *other) {
+template <typename Desired> Desired *cast(Node *other) {
   return other != nullptr ? other->as<Desired>() : nullptr;
 }
 
-template <typename Desired> const Desired *cast(const IRNode *other) {
+template <typename Desired> const Desired *cast(const Node *other) {
   return other != nullptr ? other->as<Desired>() : nullptr;
 }
 
-template <typename Desired> bool isA(IRNode *other) {
+template <typename Desired> bool isA(Node *other) {
   return other && other->is<Desired>();
 }
 
-template <typename Desired> bool isA(const IRNode *other) {
+template <typename Desired> bool isA(const Node *other) {
   return other && other->is<Desired>();
 }
 
@@ -333,8 +332,8 @@ template <typename Desired> bool isA(const IRNode *other) {
 
 // See https://github.com/fmtlib/fmt/issues/1283.
 namespace fmt {
-using seq::ir::IRNode;
+using seq::ir::Node;
 
 template <typename Char>
-struct formatter<IRNode, Char> : fmt::v6::internal::fallback_formatter<IRNode, Char> {};
+struct formatter<Node, Char> : fmt::v6::internal::fallback_formatter<Node, Char> {};
 } // namespace fmt

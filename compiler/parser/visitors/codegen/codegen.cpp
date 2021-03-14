@@ -149,7 +149,7 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
   return ret;
 }
 
-IRModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
+Module *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto *module = cache->module;
   auto *main = cast<BodiedFunc>(module->getMainFunc());
 
@@ -169,23 +169,23 @@ IRModule *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
 }
 
 void CodegenVisitor::visit(BoolExpr *expr) {
-  result = make<BoolConstant>(expr, expr->value,
-                              realizeType(expr->getType()->getClass().get()));
+  result = make<BoolConst>(expr, expr->value,
+                           realizeType(expr->getType()->getClass().get()));
 }
 
 void CodegenVisitor::visit(IntExpr *expr) {
-  result = make<IntConstant>(expr, expr->intValue,
-                             realizeType(expr->getType()->getClass().get()));
+  result = make<IntConst>(expr, expr->intValue,
+                          realizeType(expr->getType()->getClass().get()));
 }
 
 void CodegenVisitor::visit(FloatExpr *expr) {
-  result = make<FloatConstant>(expr, expr->value,
-                               realizeType(expr->getType()->getClass().get()));
+  result = make<FloatConst>(expr, expr->value,
+                            realizeType(expr->getType()->getClass().get()));
 }
 
 void CodegenVisitor::visit(StringExpr *expr) {
-  result = make<StringConstant>(expr, expr->value,
-                                realizeType(expr->getType()->getClass().get()));
+  result = make<StringConst>(expr, expr->value,
+                             realizeType(expr->getType()->getClass().get()));
 }
 
 void CodegenVisitor::visit(IdExpr *expr) {

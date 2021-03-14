@@ -3,7 +3,7 @@
 using namespace seq::ir;
 
 TEST_F(SIRCoreTest, ValueQueryMethodsDelegate) {
-  Value *original = module->Nr<IntConstant>(1, module->getIntType(), "foo");
+  Value *original = module->Nr<IntConst>(1, module->getIntType(), "foo");
   auto originalRef = original->referenceString();
 
   auto *fn = module->Nr<BodiedFunc>();
@@ -31,7 +31,7 @@ TEST_F(SIRCoreTest, ValueQueryMethodsDelegate) {
 }
 
 TEST_F(SIRCoreTest, ValueReplaceMethodsDelegate) {
-  Value *original = module->Nr<IntConstant>(1, module->getIntType(), "foo");
+  Value *original = module->Nr<IntConst>(1, module->getIntType(), "foo");
   auto originalRef = original->referenceString();
 
   auto *var = module->Nr<BodiedFunc>();

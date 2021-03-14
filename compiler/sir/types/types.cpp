@@ -54,7 +54,7 @@ Value *Type::doConstruct(std::vector<Value *> args) {
   for (auto *a : args)
     argTypes.push_back(a->getType());
 
-  auto *fn = module->getOrRealizeMethod(this, IRModule::NEW_MAGIC_NAME, argTypes);
+  auto *fn = module->getOrRealizeMethod(this, Module::NEW_MAGIC_NAME, argTypes);
   assert(fn);
 
   return module->Nr<CallInstr>(module->Nr<VarValue>(fn), args);
@@ -140,7 +140,7 @@ Value *RefType::doConstruct(std::vector<Value *> args) {
   auto *module = getModule();
 
   auto *series = module->Nr<SeriesFlow>();
-  auto *newFn = module->getOrRealizeMethod(this, IRModule::NEW_MAGIC_NAME, {});
+  auto *newFn = module->getOrRealizeMethod(this, Module::NEW_MAGIC_NAME, {});
   assert(newFn);
 
   auto *newValue = module->Nr<CallInstr>(module->Nr<VarValue>(newFn));
@@ -153,7 +153,7 @@ Value *RefType::doConstruct(std::vector<Value *> args) {
     newArgs.push_back(a);
   }
 
-  auto *initFn = module->getOrRealizeMethod(this, IRModule::INIT_MAGIC_NAME, argTypes);
+  auto *initFn = module->getOrRealizeMethod(this, Module::INIT_MAGIC_NAME, argTypes);
   assert(initFn);
 
   return module->Nr<FlowInstr>(

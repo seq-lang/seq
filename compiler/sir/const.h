@@ -7,7 +7,7 @@ namespace seq {
 namespace ir {
 
 /// SIR constant base. Once created, constants are immutable.
-class Constant : public AcceptorExtend<Constant, Value> {
+class Const : public AcceptorExtend<Const, Value> {
 private:
   /// the type
   types::Type *type;
@@ -18,7 +18,7 @@ public:
   /// Constructs a constant.
   /// @param type the type
   /// @param name the name
-  explicit Constant(types::Type *type, std::string name = "")
+  explicit Const(types::Type *type, std::string name = "")
       : AcceptorExtend(std::move(name)), type(type) {}
 
 private:
@@ -29,20 +29,19 @@ private:
 };
 
 template <typename ValueType>
-class TemplatedConstant
-    : public AcceptorExtend<TemplatedConstant<ValueType>, Constant> {
+class TemplatedConst : public AcceptorExtend<TemplatedConst<ValueType>, Const> {
 private:
   ValueType val;
 
 public:
   static const char NodeId;
 
-  using AcceptorExtend<TemplatedConstant<ValueType>, Constant>::getModule;
-  using AcceptorExtend<TemplatedConstant<ValueType>, Constant>::getSrcInfo;
-  using AcceptorExtend<TemplatedConstant<ValueType>, Constant>::getType;
+  using AcceptorExtend<TemplatedConst<ValueType>, Const>::getModule;
+  using AcceptorExtend<TemplatedConst<ValueType>, Const>::getSrcInfo;
+  using AcceptorExtend<TemplatedConst<ValueType>, Const>::getType;
 
-  TemplatedConstant(ValueType v, types::Type *type, std::string name = "")
-      : AcceptorExtend<TemplatedConstant<ValueType>, Constant>(type, std::move(name)),
+  TemplatedConst(ValueType v, types::Type *type, std::string name = "")
+      : AcceptorExtend<TemplatedConst<ValueType>, Const>(type, std::move(name)),
         val(v) {}
 
   /// @return the internal value.
@@ -58,23 +57,23 @@ private:
   }
 };
 
-using IntConstant = TemplatedConstant<int64_t>;
-using FloatConstant = TemplatedConstant<double>;
-using BoolConstant = TemplatedConstant<bool>;
-using StringConstant = TemplatedConstant<std::string>;
+using IntConst = TemplatedConst<int64_t>;
+using FloatConst = TemplatedConst<double>;
+using BoolConst = TemplatedConst<bool>;
+using StringConst = TemplatedConst<std::string>;
 
-template <typename T> const char TemplatedConstant<T>::NodeId = 0;
+template <typename T> const char TemplatedConst<T>::NodeId = 0;
 
 template <>
-class TemplatedConstant<std::string>
-    : public AcceptorExtend<TemplatedConstant<std::string>, Constant> {
+class TemplatedConst<std::string>
+    : public AcceptorExtend<TemplatedConst<std::string>, Const> {
 private:
   std::string val;
 
 public:
   static const char NodeId;
 
-  TemplatedConstant(std::string v, types::Type *type, std::string name = "")
+  TemplatedConst(std::string v, types::Type *type, std::string name = "")
       : AcceptorExtend(type, std::move(name)), val(std::move(v)) {}
 
   /// @return the internal value.
