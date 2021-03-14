@@ -137,7 +137,7 @@ set(SEQ_HPPFILES
         compiler/sir/analyze/analysis.h
         compiler/sir/attribute.h
         compiler/sir/base.h
-        compiler/sir/constant.h
+        compiler/sir/const.h
         compiler/sir/dsl/codegen.h
         compiler/sir/dsl/nodes.h
         compiler/sir/flow.h
@@ -200,7 +200,7 @@ set(SEQ_CPPFILES
         compiler/parser/visitors/visitor.cpp
         compiler/sir/attribute.cpp
         compiler/sir/base.cpp
-        compiler/sir/constant.cpp
+        compiler/sir/const.cpp
         compiler/sir/dsl/nodes.cpp
         compiler/sir/flow.cpp
         compiler/sir/func.cpp

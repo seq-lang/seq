@@ -108,7 +108,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
   /// Absolute path of the entry-point module (if available).
   string module0;
   /// LLVM module.
-  seq::ir::IRModule *module = nullptr;
+  seq::ir::Module *module = nullptr;
 
   /// Table of imported files that maps an absolute filename to a Import structure.
   /// By convention, the key of Seq standard library is "".

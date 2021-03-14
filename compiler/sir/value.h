@@ -32,7 +32,7 @@ public:
   int replaceUsedValue(int id, Value *newValue) final {
     return getActual()->doReplaceUsedValue(id, newValue);
   }
-  using IRNode::replaceUsedValue;
+  using Node::replaceUsedValue;
 
   std::vector<types::Type *> getUsedTypes() const final {
     return getActual()->doGetUsedTypes();
@@ -40,7 +40,7 @@ public:
   int replaceUsedType(const std::string &name, types::Type *newType) final {
     return getActual()->doReplaceUsedType(name, newType);
   }
-  using IRNode::replaceUsedType;
+  using Node::replaceUsedType;
 
   std::vector<Var *> getUsedVariables() final {
     return getActual()->doGetUsedVariables();
@@ -52,7 +52,7 @@ public:
   int replaceUsedVariable(int id, Var *newVar) final {
     return getActual()->doReplaceUsedVariable(id, newVar);
   }
-  using IRNode::replaceUsedVariable;
+  using Node::replaceUsedVariable;
 
   /// @return the value's type
   types::Type *getType() const { return getActual()->doGetType(); }

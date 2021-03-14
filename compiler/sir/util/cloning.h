@@ -10,16 +10,16 @@ namespace util {
 class CloneVisitor : public ConstIRVisitor {
 private:
   /// the clone context
-  std::unordered_map<int, IRNode *> ctx;
+  std::unordered_map<int, Node *> ctx;
   /// the result
-  IRNode *result = nullptr;
+  Node *result = nullptr;
   /// the module
-  IRModule *module;
+  Module *module;
 
 public:
   /// Constructs a clone visitor.
   /// @param module the module
-  explicit CloneVisitor(IRModule *module) : module(module) {}
+  explicit CloneVisitor(Module *module) : module(module) {}
 
   virtual ~CloneVisitor() noexcept = default;
 
@@ -41,11 +41,11 @@ public:
   void visit(const PipelineFlow *v) override;
   void visit(const dsl::CustomFlow *v) override;
 
-  void visit(const IntConstant *v) override;
-  void visit(const FloatConstant *v) override;
-  void visit(const BoolConstant *v) override;
-  void visit(const StringConstant *v) override;
-  void visit(const dsl::CustomConstant *v) override;
+  void visit(const IntConst *v) override;
+  void visit(const FloatConst *v) override;
+  void visit(const BoolConst *v) override;
+  void visit(const StringConst *v) override;
+  void visit(const dsl::CustomConst *v) override;
 
   void visit(const AssignInstr *v) override;
   void visit(const ExtractInstr *v) override;

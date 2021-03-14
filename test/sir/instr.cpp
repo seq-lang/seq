@@ -6,7 +6,7 @@ using namespace seq::ir;
 
 TEST_F(SIRCoreTest, AssignInstrQueryAndReplace) {
   auto *var = module->Nr<Var>(module->getIntType());
-  auto *val = module->Nr<IntConstant>(1, module->getIntType());
+  auto *val = module->Nr<IntConst>(1, module->getIntType());
   auto *instr = module->Nr<AssignInstr>(var, val);
 
   ASSERT_EQ(var, instr->getLhs());
@@ -21,14 +21,14 @@ TEST_F(SIRCoreTest, AssignInstrQueryAndReplace) {
   ASSERT_EQ(1, usedVars.size());
   ASSERT_EQ(var, usedVars[0]);
 
-  ASSERT_EQ(1, instr->replaceUsedValue(
-                   val, module->Nr<IntConstant>(1, module->getIntType())));
+  ASSERT_EQ(
+      1, instr->replaceUsedValue(val, module->Nr<IntConst>(1, module->getIntType())));
   ASSERT_EQ(1, instr->replaceUsedVariable(var, module->Nr<Var>(module->getIntType())));
 }
 
 TEST_F(SIRCoreTest, AssignInstrCloning) {
   auto *var = module->Nr<Var>(module->getIntType());
-  auto *val = module->Nr<IntConstant>(1, module->getIntType());
+  auto *val = module->Nr<IntConst>(1, module->getIntType());
   auto *instr = module->Nr<AssignInstr>(var, val);
 
   ASSERT_TRUE(util::match(instr, cv->clone(instr)));
@@ -71,7 +71,7 @@ TEST_F(SIRCoreTest, InsertInstrQueryAndReplace) {
   type->realize({module->getIntType()}, {FIELD});
   auto *var = module->Nr<Var>(type);
   auto *lhs = module->Nr<VarValue>(var);
-  auto *rhs = module->Nr<IntConstant>(1, module->getIntType());
+  auto *rhs = module->Nr<IntConst>(1, module->getIntType());
   auto *instr = module->Nr<InsertInstr>(lhs, FIELD, rhs);
 
   ASSERT_EQ(type, instr->getType());
@@ -80,8 +80,8 @@ TEST_F(SIRCoreTest, InsertInstrQueryAndReplace) {
   ASSERT_EQ(2, usedVals.size());
 
   ASSERT_EQ(1, instr->replaceUsedValue(lhs, module->Nr<VarValue>(var)));
-  ASSERT_EQ(1, instr->replaceUsedValue(
-                   rhs, module->Nr<IntConstant>(1, module->getIntType())));
+  ASSERT_EQ(
+      1, instr->replaceUsedValue(rhs, module->Nr<IntConst>(1, module->getIntType())));
 }
 
 TEST_F(SIRCoreTest, InsertInstrCloning) {
@@ -91,7 +91,7 @@ TEST_F(SIRCoreTest, InsertInstrCloning) {
   type->realize({module->getIntType()}, {FIELD});
   auto *var = module->Nr<Var>(type);
   auto *lhs = module->Nr<VarValue>(var);
-  auto *rhs = module->Nr<IntConstant>(1, module->getIntType());
+  auto *rhs = module->Nr<IntConst>(1, module->getIntType());
   auto *instr = module->Nr<InsertInstr>(lhs, FIELD, rhs);
 
   ASSERT_TRUE(util::match(instr, cv->clone(instr)));
@@ -194,9 +194,9 @@ TEST_F(SIRCoreTest, YieldInInstrCloning) {
 }
 
 TEST_F(SIRCoreTest, TernaryInstrQueryAndReplace) {
-  auto *trueValue = module->Nr<BoolConstant>(true, module->getBoolType());
-  auto *falseValue = module->Nr<BoolConstant>(false, module->getBoolType());
-  auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
+  auto *trueValue = module->Nr<BoolConst>(true, module->getBoolType());
+  auto *falseValue = module->Nr<BoolConst>(false, module->getBoolType());
+  auto *cond = module->Nr<BoolConst>(true, module->getBoolType());
   auto *instr = module->Nr<TernaryInstr>(cond, trueValue, falseValue);
 
   ASSERT_EQ(trueValue, instr->getTrueValue());
@@ -206,17 +206,17 @@ TEST_F(SIRCoreTest, TernaryInstrQueryAndReplace) {
   ASSERT_EQ(3, instr->getUsedValues().size());
 
   ASSERT_EQ(1, instr->replaceUsedValue(
-                   cond, module->Nr<BoolConstant>(true, module->getBoolType())));
+                   cond, module->Nr<BoolConst>(true, module->getBoolType())));
   ASSERT_EQ(1, instr->replaceUsedValue(
-                   trueValue, module->Nr<BoolConstant>(true, module->getBoolType())));
+                   trueValue, module->Nr<BoolConst>(true, module->getBoolType())));
   ASSERT_EQ(1, instr->replaceUsedValue(
-                   falseValue, module->Nr<BoolConstant>(true, module->getBoolType())));
+                   falseValue, module->Nr<BoolConst>(true, module->getBoolType())));
 }
 
 TEST_F(SIRCoreTest, TernaryInstrCloning) {
-  auto *trueValue = module->Nr<BoolConstant>(true, module->getBoolType());
-  auto *falseValue = module->Nr<BoolConstant>(false, module->getBoolType());
-  auto *cond = module->Nr<BoolConstant>(true, module->getBoolType());
+  auto *trueValue = module->Nr<BoolConst>(true, module->getBoolType());
+  auto *falseValue = module->Nr<BoolConst>(false, module->getBoolType());
+  auto *cond = module->Nr<BoolConst>(true, module->getBoolType());
   auto *instr = module->Nr<TernaryInstr>(cond, trueValue, falseValue);
 
   ASSERT_TRUE(util::match(instr, cv->clone(instr)));
@@ -233,7 +233,7 @@ TEST_F(SIRCoreTest, BreakInstrQueryReplaceAndCloning) {
 }
 
 TEST_F(SIRCoreTest, ReturnInstrQueryReplaceAndCloning) {
-  auto *val = module->Nr<IntConstant>(1, module->getIntType());
+  auto *val = module->Nr<IntConst>(1, module->getIntType());
   auto *instr = module->Nr<ReturnInstr>(val);
   ASSERT_EQ(val, instr->getValue());
 
@@ -245,7 +245,7 @@ TEST_F(SIRCoreTest, ReturnInstrQueryReplaceAndCloning) {
 }
 
 TEST_F(SIRCoreTest, YieldInstrQueryReplaceAndCloning) {
-  auto *val = module->Nr<IntConstant>(1, module->getIntType());
+  auto *val = module->Nr<IntConst>(1, module->getIntType());
   auto *instr = module->Nr<YieldInstr>(val);
   ASSERT_EQ(val, instr->getValue());
 
@@ -257,7 +257,7 @@ TEST_F(SIRCoreTest, YieldInstrQueryReplaceAndCloning) {
 }
 
 TEST_F(SIRCoreTest, ThrowInstrQueryReplaceAndCloning) {
-  auto *val = module->Nr<IntConstant>(1, module->getIntType());
+  auto *val = module->Nr<IntConst>(1, module->getIntType());
   auto *instr = module->Nr<ThrowInstr>(val);
   ASSERT_EQ(val, instr->getValue());
 
@@ -270,7 +270,7 @@ TEST_F(SIRCoreTest, ThrowInstrQueryReplaceAndCloning) {
 
 TEST_F(SIRCoreTest, FlowInstrQueryAndReplace) {
   auto *flow = module->Nr<SeriesFlow>();
-  auto *val = module->Nr<IntConstant>(1, module->getIntType());
+  auto *val = module->Nr<IntConst>(1, module->getIntType());
   auto *instr = module->Nr<FlowInstr>(flow, val);
 
   ASSERT_EQ(module->getIntType(), instr->getType());
@@ -278,14 +278,14 @@ TEST_F(SIRCoreTest, FlowInstrQueryAndReplace) {
   ASSERT_EQ(flow, instr->getFlow());
 
   ASSERT_EQ(2, instr->getUsedValues().size());
-  ASSERT_EQ(1, instr->replaceUsedValue(
-                   val, module->Nr<IntConstant>(2, module->getIntType())));
+  ASSERT_EQ(
+      1, instr->replaceUsedValue(val, module->Nr<IntConst>(2, module->getIntType())));
   ASSERT_EQ(1, instr->replaceUsedValue(flow, module->Nr<SeriesFlow>()));
 }
 
 TEST_F(SIRCoreTest, FlowInstrCloning) {
   auto *flow = module->Nr<SeriesFlow>();
-  auto *val = module->Nr<IntConstant>(1, module->getIntType());
+  auto *val = module->Nr<IntConst>(1, module->getIntType());
   auto *instr = module->Nr<FlowInstr>(flow, val);
   ASSERT_TRUE(util::match(instr, cv->clone(instr)));
 }

@@ -21,7 +21,7 @@ public:
 
   /// Execute the analysis.
   /// @param module the module
-  virtual std::unique_ptr<Result> run(const IRModule *module) = 0;
+  virtual std::unique_ptr<Result> run(const Module *module) = 0;
 };
 
 } // namespace analyze

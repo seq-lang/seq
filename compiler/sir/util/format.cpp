@@ -46,7 +46,7 @@ public:
       : os(os), seenNodes(seenNodes), seenTypes(seenTypes) {}
   virtual ~FormatVisitor() noexcept = default;
 
-  void visit(const IRModule *v) override {
+  void visit(const Module *v) override {
     auto types = makeFormatters(v->types_begin(), v->types_end(), true);
     auto vars = makeFormatters(v->begin(), v->end(), true);
     fmt::print(
@@ -174,26 +174,26 @@ public:
   }
   void visit(const dsl::CustomFlow *v) override { os << *v; }
 
-  void visit(const IntConstant *v) override {
+  void visit(const IntConst *v) override {
     fmt::print(os, FMT_STRING("(int_constant (ref_string \"{}\")\n(value {}))"),
                v->referenceString(), v->getVal());
   }
-  void visit(const FloatConstant *v) override {
+  void visit(const FloatConst *v) override {
     fmt::print(os, FMT_STRING("(float_constant (ref_string \"{}\")\n(value {}))"),
                v->referenceString(), v->getVal());
   }
-  void visit(const BoolConstant *v) override {
+  void visit(const BoolConst *v) override {
     fmt::print(os, FMT_STRING("(bool_constant (ref_string \"{}\")\n(value {}))"),
                v->referenceString(), v->getVal());
   }
-  void visit(const StringConstant *v) override {
+  void visit(const StringConst *v) override {
     auto value = v->getVal();
     std::replace(value.begin(), value.end(), '\n', ' ');
 
     fmt::print(os, FMT_STRING("(string_constant (ref_string \"{}\")\n(value \"{}\"))"),
                v->referenceString(), value);
   }
-  void visit(const dsl::CustomConstant *v) override { os << *v; }
+  void visit(const dsl::CustomConst *v) override { os << *v; }
 
   void visit(const AssignInstr *v) override {
     fmt::print(os, FMT_STRING("(assign_instr (ref_string \"{}\")\n(lhs {})\n(rhs {}))"),
@@ -364,7 +364,7 @@ public:
 
   void visit(const dsl::types::CustomType *v) override { os << *v; }
 
-  void format(const IRNode *n) {
+  void format(const Node *n) {
     if (n)
       n->accept(*this);
     else
@@ -465,13 +465,13 @@ namespace seq {
 namespace ir {
 namespace util {
 
-std::string format(const IRNode *node) {
+std::string format(const Node *node) {
   std::stringstream ss;
   format(ss, node);
   return ss.str();
 }
 
-std::ostream &format(std::ostream &os, const IRNode *node) {
+std::ostream &format(std::ostream &os, const Node *node) {
   std::unordered_set<int> seenNodes;
   std::unordered_set<std::string> seenTypes;
 

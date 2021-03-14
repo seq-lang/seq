@@ -24,7 +24,7 @@ CallInstr *call(Func *func, const std::vector<Value *> &args) {
   return M->Nr<CallInstr>(M->Nr<VarValue>(func), args);
 }
 
-Value *makeTuple(const std::vector<Value *> &args, IRModule *M) {
+Value *makeTuple(const std::vector<Value *> &args, Module *M) {
   std::vector<types::Type *> types;
   for (auto *arg : args) {
     types.push_back(arg->getType());
@@ -51,7 +51,7 @@ Value *alloc(types::Type *type, Value *count) {
 
 Value *alloc(types::Type *type, int64_t count) {
   auto *M = type->getModule();
-  return alloc(type, M->getIntConstant(count));
+  return alloc(type, M->getInt(count));
 }
 
 Var *getVar(Value *x) {

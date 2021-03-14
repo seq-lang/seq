@@ -3,7 +3,7 @@
 #include <memory>
 
 #include "sir/base.h"
-#include "sir/constant.h"
+#include "sir/const.h"
 #include "sir/instr.h"
 
 namespace seq {
@@ -41,7 +41,7 @@ public:
 } // namespace types
 
 /// DSL constant.
-class CustomConstant : public AcceptorExtend<CustomConstant, Constant> {
+class CustomConst : public AcceptorExtend<CustomConst, Const> {
 public:
   static const char NodeId;
 

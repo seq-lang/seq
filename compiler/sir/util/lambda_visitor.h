@@ -23,14 +23,14 @@ private:
   /// IDs of previously visited nodes
   std::unordered_set<int> seen;
   /// stack of IR nodes being visited
-  std::vector<IRNode *> nodeStack;
+  std::vector<Node *> nodeStack;
   /// stack of iterators
   std::vector<decltype(SeriesFlow().begin())> itStack;
 
 public:
   virtual ~LambdaValueVisitor() noexcept = default;
 
-  void visit(IRModule *m) override {
+  void visit(Module *m) override {
     nodeStack.push_back(m);
     nodeStack.push_back(m->getMainFunc());
     process(m->getMainFunc());
@@ -71,11 +71,11 @@ public:
   LAMBDA_VISIT(PipelineFlow);
   LAMBDA_VISIT(dsl::CustomFlow);
 
-  LAMBDA_VISIT(TemplatedConstant<int64_t>);
-  LAMBDA_VISIT(TemplatedConstant<double>);
-  LAMBDA_VISIT(TemplatedConstant<bool>);
-  LAMBDA_VISIT(TemplatedConstant<std::string>);
-  LAMBDA_VISIT(dsl::CustomConstant);
+  LAMBDA_VISIT(TemplatedConst<int64_t>);
+  LAMBDA_VISIT(TemplatedConst<double>);
+  LAMBDA_VISIT(TemplatedConst<bool>);
+  LAMBDA_VISIT(TemplatedConst<std::string>);
+  LAMBDA_VISIT(dsl::CustomConst);
 
   LAMBDA_VISIT(Instr);
   LAMBDA_VISIT(AssignInstr);
@@ -98,7 +98,7 @@ public:
 
   /// Return the parent of the current node.
   /// @param level the number of levels up from the current node
-  template <typename Desired = IRNode> Desired *getParent(int level = 0) {
+  template <typename Desired = Node> Desired *getParent(int level = 0) {
     return cast<Desired>(nodeStack[nodeStack.size() - level - 1]);
   }
   /// @return current depth in the tree

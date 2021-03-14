@@ -33,9 +33,9 @@ bool _isTest = false;
 
 namespace seq {
 
-ir::IRModule *parse(const string &argv0, const string &file, const string &code,
-                    bool isCode, int isTest, int startLine,
-                    const std::unordered_map<std::string, std::string> &defines) {
+ir::Module *parse(const string &argv0, const string &file, const string &code,
+                  bool isCode, int isTest, int startLine,
+                  const std::unordered_map<std::string, std::string> &defines) {
   try {
     auto d = getenv("SEQ_DEBUG");
     if (d) {

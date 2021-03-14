@@ -16,7 +16,7 @@ public:
 
   explicit DummyAnalysis(int &counter) : counter(counter) {}
 
-  std::unique_ptr<analyze::Result> run(const IRModule *) override {
+  std::unique_ptr<analyze::Result> run(const Module *) override {
     runCounter = counter++;
     return std::make_unique<DummyResult>();
   }
@@ -35,7 +35,7 @@ public:
   explicit DummyPass(int &counter, std::string required)
       : counter(counter), required(std::move(required)) {}
 
-  void run(IRModule *) override {
+  void run(Module *) override {
     runCounter = counter++;
     ASSERT_TRUE(getAnalysisResult<DummyResult>(required));
   }

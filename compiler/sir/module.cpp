@@ -49,51 +49,51 @@ std::vector<seq::ast::types::TypePtr> translateArgs(std::vector<types::Type *> &
 namespace seq {
 namespace ir {
 
-const std::string IRModule::VOID_NAME = "void";
-const std::string IRModule::BOOL_NAME = "bool";
-const std::string IRModule::BYTE_NAME = "byte";
-const std::string IRModule::INT_NAME = "int";
-const std::string IRModule::FLOAT_NAME = "float";
-const std::string IRModule::STRING_NAME = "str";
+const std::string Module::VOID_NAME = "void";
+const std::string Module::BOOL_NAME = "bool";
+const std::string Module::BYTE_NAME = "byte";
+const std::string Module::INT_NAME = "int";
+const std::string Module::FLOAT_NAME = "float";
+const std::string Module::STRING_NAME = "str";
 
-const std::string IRModule::EQ_MAGIC_NAME = "__eq__";
-const std::string IRModule::NE_MAGIC_NAME = "__ne__";
-const std::string IRModule::LT_MAGIC_NAME = "__lt__";
-const std::string IRModule::GT_MAGIC_NAME = "__gt__";
-const std::string IRModule::LE_MAGIC_NAME = "__le__";
-const std::string IRModule::GE_MAGIC_NAME = "__ge__";
+const std::string Module::EQ_MAGIC_NAME = "__eq__";
+const std::string Module::NE_MAGIC_NAME = "__ne__";
+const std::string Module::LT_MAGIC_NAME = "__lt__";
+const std::string Module::GT_MAGIC_NAME = "__gt__";
+const std::string Module::LE_MAGIC_NAME = "__le__";
+const std::string Module::GE_MAGIC_NAME = "__ge__";
 
-const std::string IRModule::POS_MAGIC_NAME = "__pos__";
-const std::string IRModule::NEG_MAGIC_NAME = "__neg__";
-const std::string IRModule::INVERT_MAGIC_NAME = "__invert__";
+const std::string Module::POS_MAGIC_NAME = "__pos__";
+const std::string Module::NEG_MAGIC_NAME = "__neg__";
+const std::string Module::INVERT_MAGIC_NAME = "__invert__";
 
-const std::string IRModule::ADD_MAGIC_NAME = "__add__";
-const std::string IRModule::SUB_MAGIC_NAME = "__sub__";
-const std::string IRModule::MUL_MAGIC_NAME = "__mul__";
-const std::string IRModule::TRUE_DIV_MAGIC_NAME = "__truediv__";
-const std::string IRModule::FLOOR_DIV_MAGIC_NAME = "__floordiv__";
-const std::string IRModule::MOD_MAGIC_NAME = "__mod__";
-const std::string IRModule::POW_MAGIC_NAME = "__pow__";
-const std::string IRModule::LSHIFT_MAGIC_NAME = "__lshift__";
-const std::string IRModule::RSHIFT_MAGIC_NAME = "__rshift__";
-const std::string IRModule::AND_MAGIC_NAME = "__and__";
-const std::string IRModule::OR_MAGIC_NAME = "__or__";
-const std::string IRModule::XOR_MAGIC_NAME = "__xor__";
+const std::string Module::ADD_MAGIC_NAME = "__add__";
+const std::string Module::SUB_MAGIC_NAME = "__sub__";
+const std::string Module::MUL_MAGIC_NAME = "__mul__";
+const std::string Module::TRUE_DIV_MAGIC_NAME = "__truediv__";
+const std::string Module::FLOOR_DIV_MAGIC_NAME = "__floordiv__";
+const std::string Module::MOD_MAGIC_NAME = "__mod__";
+const std::string Module::POW_MAGIC_NAME = "__pow__";
+const std::string Module::LSHIFT_MAGIC_NAME = "__lshift__";
+const std::string Module::RSHIFT_MAGIC_NAME = "__rshift__";
+const std::string Module::AND_MAGIC_NAME = "__and__";
+const std::string Module::OR_MAGIC_NAME = "__or__";
+const std::string Module::XOR_MAGIC_NAME = "__xor__";
 
-const std::string IRModule::INT_MAGIC_NAME = "__int__";
-const std::string IRModule::BOOL_MAGIC_NAME = "__bool__";
-const std::string IRModule::STR_MAGIC_NAME = "__str__";
+const std::string Module::INT_MAGIC_NAME = "__int__";
+const std::string Module::BOOL_MAGIC_NAME = "__bool__";
+const std::string Module::STR_MAGIC_NAME = "__str__";
 
-const std::string IRModule::GET_MAGIC_NAME = "__getitem__";
-const std::string IRModule::ITER_MAGIC_NAME = "__iter__";
-const std::string IRModule::LEN_MAGIC_NAME = "__len__";
+const std::string Module::GET_MAGIC_NAME = "__getitem__";
+const std::string Module::ITER_MAGIC_NAME = "__iter__";
+const std::string Module::LEN_MAGIC_NAME = "__len__";
 
-const std::string IRModule::NEW_MAGIC_NAME = "__new__";
-const std::string IRModule::INIT_MAGIC_NAME = "__init__";
+const std::string Module::NEW_MAGIC_NAME = "__new__";
+const std::string Module::INIT_MAGIC_NAME = "__init__";
 
-const char IRModule::NodeId = 0;
+const char Module::NodeId = 0;
 
-IRModule::IRModule(std::string name, std::shared_ptr<ast::Cache> cache)
+Module::Module(std::string name, std::shared_ptr<ast::Cache> cache)
     : AcceptorExtend(std::move(name)), cache(std::move(cache)) {
   mainFunc = std::make_unique<BodiedFunc>("main");
   mainFunc->realize(cast<types::FuncType>(unsafeGetDummyFuncType()), {});
@@ -104,9 +104,9 @@ IRModule::IRModule(std::string name, std::shared_ptr<ast::Cache> cache)
   argVar->setReplaceable(false);
 }
 
-Func *IRModule::getOrRealizeMethod(types::Type *parent, const std::string &methodName,
-                                   std::vector<types::Type *> args,
-                                   std::vector<types::Generic> generics) {
+Func *Module::getOrRealizeMethod(types::Type *parent, const std::string &methodName,
+                                 std::vector<types::Type *> args,
+                                 std::vector<types::Generic> generics) {
 
   auto cls =
       std::const_pointer_cast<ast::types::Type>(parent->getAstType())->getClass();
@@ -117,10 +117,10 @@ Func *IRModule::getOrRealizeMethod(types::Type *parent, const std::string &metho
                                 translateGenerics(generics), cls);
 }
 
-Func *IRModule::getOrRealizeFunc(const std::string &funcName,
-                                 std::vector<types::Type *> args,
-                                 std::vector<types::Generic> generics,
-                                 const std::string &module) {
+Func *Module::getOrRealizeFunc(const std::string &funcName,
+                               std::vector<types::Type *> args,
+                               std::vector<types::Generic> generics,
+                               const std::string &module) {
   auto fqName =
       module.empty() ? funcName : fmt::format(FMT_STRING("{}.{}"), module, funcName);
   auto func = cache->findFunction(fqName);
@@ -131,9 +131,9 @@ Func *IRModule::getOrRealizeFunc(const std::string &funcName,
   return cache->realizeFunction(func, arg, gens);
 }
 
-types::Type *IRModule::getOrRealizeType(const std::string &typeName,
-                                        std::vector<types::Generic> generics,
-                                        const std::string &module) {
+types::Type *Module::getOrRealizeType(const std::string &typeName,
+                                      std::vector<types::Generic> generics,
+                                      const std::string &module) {
   auto fqName =
       module.empty() ? typeName : fmt::format(FMT_STRING("{}.{}"), module, typeName);
   auto type = cache->findClass(fqName);
@@ -142,37 +142,37 @@ types::Type *IRModule::getOrRealizeType(const std::string &typeName,
   return cache->realizeType(type, translateGenerics(generics));
 }
 
-types::Type *IRModule::getVoidType() {
+types::Type *Module::getVoidType() {
   if (auto *rVal = getType(VOID_NAME))
     return rVal;
   return Nr<types::VoidType>();
 }
 
-types::Type *IRModule::getBoolType() {
+types::Type *Module::getBoolType() {
   if (auto *rVal = getType(BOOL_NAME))
     return rVal;
   return Nr<types::BoolType>();
 }
 
-types::Type *IRModule::getByteType() {
+types::Type *Module::getByteType() {
   if (auto *rVal = getType(BYTE_NAME))
     return rVal;
   return Nr<types::ByteType>();
 }
 
-types::Type *IRModule::getIntType() {
+types::Type *Module::getIntType() {
   if (auto *rVal = getType(INT_NAME))
     return rVal;
   return Nr<types::IntType>();
 }
 
-types::Type *IRModule::getFloatType() {
+types::Type *Module::getFloatType() {
   if (auto *rVal = getType(FLOAT_NAME))
     return rVal;
   return Nr<types::FloatType>();
 }
 
-types::Type *IRModule::getStringType() {
+types::Type *Module::getStringType() {
   if (auto *rVal = getType(STRING_NAME))
     return rVal;
   return Nr<types::RecordType>(
@@ -181,34 +181,34 @@ types::Type *IRModule::getStringType() {
       std::vector<std::string>{"len", "ptr"});
 }
 
-types::Type *IRModule::getPointerType(types::Type *base) {
+types::Type *Module::getPointerType(types::Type *base) {
   return getOrRealizeType("Ptr", {base});
 }
 
-types::Type *IRModule::getArrayType(types::Type *base) {
+types::Type *Module::getArrayType(types::Type *base) {
   return getOrRealizeType("Array", {base});
 }
 
-types::Type *IRModule::getGeneratorType(types::Type *base) {
+types::Type *Module::getGeneratorType(types::Type *base) {
   return getOrRealizeType("Generator", {base});
 }
 
-types::Type *IRModule::getOptionalType(types::Type *base) {
+types::Type *Module::getOptionalType(types::Type *base) {
   return getOrRealizeType("Optional", {base});
 }
 
-types::Type *IRModule::getFuncType(types::Type *rType,
-                                   std::vector<types::Type *> argTypes) {
+types::Type *Module::getFuncType(types::Type *rType,
+                                 std::vector<types::Type *> argTypes) {
   auto args = translateArgs(argTypes);
   args[0] = std::make_shared<seq::ast::types::LinkType>(rType->getAstType());
   return cache->makeFunction(args);
 }
 
-types::Type *IRModule::getIntNType(unsigned int len, bool sign) {
+types::Type *Module::getIntNType(unsigned int len, bool sign) {
   return getOrRealizeType(sign ? "Int" : "UInt", {len});
 }
 
-types::Type *IRModule::getTupleType(std::vector<types::Type *> args) {
+types::Type *Module::getTupleType(std::vector<types::Type *> args) {
   std::vector<ast::types::TypePtr> argTypes;
   for (auto *t : args) {
     assert(t->getAstType());
@@ -217,30 +217,28 @@ types::Type *IRModule::getTupleType(std::vector<types::Type *> args) {
   return cache->makeTuple(argTypes);
 }
 
-Value *IRModule::getIntConstant(int64_t v) { return Nr<IntConstant>(v, getIntType()); }
+Value *Module::getInt(int64_t v) { return Nr<IntConst>(v, getIntType()); }
 
-Value *IRModule::getFloatConstant(double v) {
-  return Nr<FloatConstant>(v, getFloatType());
+Value *Module::getFloat(double v) { return Nr<FloatConst>(v, getFloatType()); }
+
+Value *Module::getBool(bool v) { return Nr<BoolConst>(v, getBoolType()); }
+
+Value *Module::getString(std::string v) {
+  return Nr<StringConst>(std::move(v), getStringType());
 }
 
-Value *IRModule::getBoolConstant(bool v) { return Nr<BoolConstant>(v, getBoolType()); }
-
-Value *IRModule::getStringConstant(std::string v) {
-  return Nr<StringConstant>(std::move(v), getStringType());
-}
-
-types::Type *IRModule::unsafeGetDummyFuncType() {
+types::Type *Module::unsafeGetDummyFuncType() {
   return unsafeGetFuncType("<internal_func_type>", getVoidType(), {});
 }
 
-types::Type *IRModule::unsafeGetPointerType(types::Type *base) {
+types::Type *Module::unsafeGetPointerType(types::Type *base) {
   auto name = types::PointerType::getInstanceName(base);
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::PointerType>(base);
 }
 
-types::Type *IRModule::unsafeGetArrayType(types::Type *base) {
+types::Type *Module::unsafeGetArrayType(types::Type *base) {
   auto name = fmt::format(FMT_STRING(".Array[{}]"), base->referenceString());
   if (auto *rVal = getType(name))
     return rVal;
@@ -249,28 +247,28 @@ types::Type *IRModule::unsafeGetArrayType(types::Type *base) {
   return Nr<types::RecordType>(name, members, names);
 }
 
-types::Type *IRModule::unsafeGetGeneratorType(types::Type *base) {
+types::Type *Module::unsafeGetGeneratorType(types::Type *base) {
   auto name = types::GeneratorType::getInstanceName(base);
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::GeneratorType>(base);
 }
 
-types::Type *IRModule::unsafeGetOptionalType(types::Type *base) {
+types::Type *Module::unsafeGetOptionalType(types::Type *base) {
   auto name = types::OptionalType::getInstanceName(base);
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::OptionalType>(base);
 }
 
-types::Type *IRModule::unsafeGetFuncType(const std::string &name, types::Type *rType,
-                                         std::vector<types::Type *> argTypes) {
+types::Type *Module::unsafeGetFuncType(const std::string &name, types::Type *rType,
+                                       std::vector<types::Type *> argTypes) {
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::FuncType>(name, rType, std::move(argTypes));
 }
 
-types::Type *IRModule::unsafeGetMemberedType(const std::string &name, bool ref) {
+types::Type *Module::unsafeGetMemberedType(const std::string &name, bool ref) {
   auto *rVal = getType(name);
 
   if (!rVal) {
@@ -289,14 +287,14 @@ types::Type *IRModule::unsafeGetMemberedType(const std::string &name, bool ref) 
   return rVal;
 }
 
-types::Type *IRModule::unsafeGetIntNType(unsigned int len, bool sign) {
+types::Type *Module::unsafeGetIntNType(unsigned int len, bool sign) {
   auto name = types::IntNType::getInstanceName(len, sign);
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::IntNType>(len, sign);
 }
 
-std::ostream &IRModule::doFormat(std::ostream &os) const {
+std::ostream &Module::doFormat(std::ostream &os) const {
   fmt::print(os, FMT_STRING("module {}{{\n"), referenceString());
   fmt::print(os, "{}\n", *mainFunc);
 

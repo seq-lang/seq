@@ -7,11 +7,11 @@ using namespace seq::ir;
 
 class SIRTest : public testing::Test {
 protected:
-  std::unique_ptr<IRModule> module;
+  std::unique_ptr<Module> module;
 
   void SetUp() override {
     IdMixin::resetId();
-    module = std::make_unique<IRModule>("test");
+    module = std::make_unique<Module>("test");
   }
 };
 

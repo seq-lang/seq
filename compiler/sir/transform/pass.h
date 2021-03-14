@@ -19,7 +19,7 @@ public:
 
   /// Execute the pass.
   /// @param module the module
-  virtual void run(IRModule *module) = 0;
+  virtual void run(Module *module) = 0;
 
   /// Sets the manager.
   /// @param mng the new manager
@@ -35,7 +35,7 @@ public:
 /// Pass that runs a single LambdaValueVisitor.
 class LambdaValuePass : public Pass, public util::LambdaValueVisitor {
 public:
-  void run(IRModule *module) override { process(module); }
+  void run(Module *module) override { process(module); }
 };
 
 } // namespace transform
