@@ -1,29 +1,29 @@
-#include "util/fmt/format.h"
-#include "util/fmt/ostream.h"
+/*
+ * doc.cpp --- Seq documentation generator.
+ *
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
+ */
+
 #include <memory>
-#include <ostream>
-#include <stack>
 #include <string>
 #include <tuple>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "parser/ast.h"
 #include "parser/common.h"
 #include "parser/ocaml/ocaml.h"
-#include "parser/parser.h"
 #include "parser/visitors/doc/doc.h"
 #include "parser/visitors/format/format.h"
 
 using fmt::format;
+using nlohmann::json;
 using std::get;
 using std::move;
 using std::ostream;
 using std::stack;
 using std::to_string;
-
-#define CAST(s, T) dynamic_cast<T *>(s.get())
 
 namespace seq {
 namespace ast {
@@ -32,13 +32,13 @@ json DocVisitor::apply(const string &argv0, const vector<string> &files) {
   auto shared = make_shared<DocShared>();
   shared->argv0 = argv0;
 
-  auto stdlib = getImportFile(argv0, "core", "", true, "");
+  auto stdlib = getImportFile(argv0, "internal", "", true, "");
   auto ast = ast::parseFile(stdlib->path);
   shared->modules[""] = make_shared<DocContext>(shared);
-  shared->modules[""]->file = stdlib->path;
-  for (auto &s : vector<string>{"void", "byte", "float", "seq", "bool", "int", "str",
-                                "ptr", "function", "generator", "tuple", "array",
-                                "Kmer", "Int", "UInt", "optional"}) {
+  shared->modules[""]->setFilename(stdlib->path);
+  for (auto &s : vector<string>{"void", "byte", "float", "bool", "int", "str", "pyobj",
+                                "Ptr", "Function", "Generator", "Tuple", "Int", "UInt",
+                                "Optional", "Callable"}) {
     shared->j[to_string(shared->itemID)] = {
         {"kind", "class"}, {"name", s}, {"type", "type"}};
     shared->modules[""]->add(s, make_shared<int>(shared->itemID++));
@@ -50,7 +50,7 @@ json DocVisitor::apply(const string &argv0, const vector<string> &files) {
   char abs[PATH_MAX];
   for (auto &f : files) {
     realpath(f.c_str(), abs);
-    ctx->file = abs;
+    ctx->setFilename(abs);
     ast = ast::parseFile(abs);
     DocVisitor(ctx).transformModule(move(ast));
   }
@@ -66,15 +66,15 @@ shared_ptr<int> DocContext::find(const string &s) const {
 }
 
 string getDocstr(const StmtPtr &s) {
-  if (auto se = CAST(s, ExprStmt))
-    if (auto e = CAST(se->expr, StringExpr))
+  if (auto se = s->getExpr())
+    if (auto e = se->expr->getString())
       return e->value;
   return "";
 }
 
 vector<StmtPtr> DocVisitor::flatten(StmtPtr stmt, string *docstr, bool deep) {
   vector<StmtPtr> stmts;
-  if (auto s = CAST(stmt, SuiteStmt)) {
+  if (auto s = const_cast<SuiteStmt *>(stmt->getSuite())) {
     for (int i = 0; i < (deep ? s->stmts.size() : 1); i++) {
       for (auto &x : flatten(move(s->stmts[i]), i ? nullptr : docstr, deep))
         stmts.push_back(move(x));
@@ -107,22 +107,24 @@ void DocVisitor::transformModule(StmtPtr stmt) {
   for (int i = 0; i < flat.size(); i++) {
     auto &s = flat[i];
     auto id = transform(s);
-    if (id == "")
+    if (id.empty())
       continue;
     if (i < (flat.size() - 1) && CAST(s, AssignStmt)) {
-      auto s = getDocstr(flat[i + 1]);
-      if (!s.empty())
-        ctx->shared->j[id]["doc"] = s;
+      auto ds = getDocstr(flat[i + 1]);
+      if (!ds.empty())
+        ctx->shared->j[id]["doc"] = ds;
     }
     children.push_back(id);
   }
 
   int id = ctx->shared->itemID++;
   ctx->shared->j[to_string(id)] = {
-      {"kind", "module"}, {"path", ctx->file}, {"children", children}};
-  if (docstr.size())
+      {"kind", "module"}, {"path", ctx->getFilename()}, {"children", children}};
+  if (!docstr.empty())
     ctx->shared->j[to_string(id)]["doc"] = docstr;
 }
+
+void DocVisitor::visit(IntExpr *expr) { resultExpr = expr->value; }
 
 void DocVisitor::visit(IdExpr *expr) {
   auto i = ctx->find(expr->value);
@@ -138,8 +140,13 @@ void DocVisitor::visit(IndexExpr *expr) {
   vector<json> v;
   v.push_back(transform(expr->expr));
   if (auto tp = CAST(expr->index, TupleExpr)) {
-    for (auto &e : tp->items)
-      v.push_back(transform(e));
+    if (auto l = tp->items[0]->getList()) {
+      for (auto &e : l->items)
+        v.push_back(transform(e));
+      v.push_back(transform(tp->items[1]));
+    } else
+      for (auto &e : tp->items)
+        v.push_back(transform(e));
   } else {
     v.push_back(transform(expr->index));
   }
@@ -185,13 +192,10 @@ void DocVisitor::visit(FunctionStmt *stmt) {
   flatten(move(const_cast<FunctionStmt *>(stmt)->suite), &docstr);
   for (auto &g : stmt->generics)
     ctx->remove(g.name);
-  if (docstr.size())
+  if (!docstr.empty() && !in(stmt->attributes, ATTR_EXTERN_LLVM))
     j["doc"] = docstr;
   ctx->shared->j[to_string(id)] = j;
   resultStmt = to_string(id);
-
-  // {"extern", stmt->lang}};
-  // j["dylib"] = bool(stmt->from);
 }
 
 void DocVisitor::visit(ClassStmt *stmt) {
@@ -208,15 +212,21 @@ void DocVisitor::visit(ClassStmt *stmt) {
     generics.push_back(g.name);
   }
   for (auto &a : stmt->args) {
-    json j;
-    j["name"] = a.name;
+    json ja;
+    ja["name"] = a.name;
     if (a.type)
-      j["type"] = transform(a.type);
-    args.push_back(j);
+      ja["type"] = transform(a.type);
+    args.push_back(ja);
   }
   j["generics"] = generics;
   j["args"] = args;
   j["pos"] = jsonify(stmt->getSrcInfo());
+
+  if (in(stmt->attributes, ATTR_EXTEND)) {
+    j["type"] = "extension";
+    auto i = ctx->find(stmt->name);
+    j["parent"] = to_string(*i);
+  }
 
   string docstr;
   vector<string> members;
@@ -232,12 +242,10 @@ void DocVisitor::visit(ClassStmt *stmt) {
   for (auto &g : stmt->generics)
     ctx->remove(g.name);
   j["members"] = members;
-  if (docstr.size())
+  if (!docstr.empty())
     j["doc"] = docstr;
   ctx->shared->j[to_string(id)] = j;
   resultStmt = to_string(id);
-
-  // {"type", "extension"}, {"parent", to_string(*i)}
 }
 
 json DocVisitor::jsonify(const seq::SrcInfo &s) {
@@ -249,36 +257,85 @@ json DocVisitor::jsonify(const seq::SrcInfo &s) {
 }
 
 void DocVisitor::visit(ImportStmt *stmt) {
-  // auto file = getImportFile(ctx->shared->argv0, stmt->from.first, ctx->file, false);
-  // if (file == "")
-  //   error(stmt, "cannot locate import '{}'", stmt->from.first);
+  if (stmt->from->isId("C") || stmt->from->isId("python")) {
+    int id = ctx->shared->itemID++;
+    string name, lib;
+    if (auto i = stmt->what->getId())
+      name = i->value;
+    else if (auto d = stmt->what->getDot())
+      name = d->member, lib = FormatVisitor::apply(d->expr);
+    else
+      seqassert(false, "invalid C import statement");
+    ctx->add(name, make_shared<int>(id));
+    name = stmt->as.empty() ? name : stmt->as;
 
-  // auto ictx = ctx;
-  // auto it = ctx->shared->modules.find(file);
-  // if (it == ctx->shared->modules.end()) {
-  //   ictx = make_shared<DocContext>(ctx->shared);
-  //   ictx->file = file;
-  //   auto tmp = tmp::parseFile(file);
-  //   DocVisitor(ictx).transformModule(move(tmp));
-  // } else {
-  //   ictx = it->second;
-  // }
+    json j{{"name", name},
+           {"kind", "function"},
+           {"pos", jsonify(stmt->getSrcInfo())},
+           {"extern", stmt->from->getId()->value}};
+    vector<json> args;
+    if (stmt->ret)
+      j["return"] = transform(stmt->ret);
+    for (auto &a : stmt->args) {
+      json ja;
+      ja["name"] = a.name;
+      ja["type"] = transform(a.type);
+      args.push_back(ja);
+    }
+    j["dylib"] = lib;
+    j["args"] = args;
+    ctx->shared->j[to_string(id)] = j;
+    resultStmt = to_string(id);
+    return;
+  }
 
-  // if (!stmt->what.size()) {
-  //   // TODO
-  //   // ctx.add(stmt->from.second == "" ? stmt->from.first : stmt->from.second,
-  //   // file);
-  // } else if (stmt->what.size() == 1 && stmt->what[0].first == "*") {
-  //   for (auto &i : *ictx)
-  //     ctx->add(i.first, i.second[0].second);
-  // } else
-  //   for (auto &w : stmt->what) {
-  //     if (auto c = ictx->find(w.first)) {
-  //       ctx->add(w.second == "" ? w.first : w.second, c);
-  //     } else {
-  //       error(stmt, "symbol '{}' not found in {}", w.first, file);
-  //     }
-  //   }
+  vector<string> dirs; // Path components
+  Expr *e = stmt->from.get();
+  while (auto d = e->getDot()) {
+    dirs.push_back(d->member);
+    e = d->expr.get();
+  }
+  if (!e->getId() || !stmt->args.empty() || stmt->ret ||
+      (stmt->what && !stmt->what->getId()))
+    error("invalid import statement");
+  // We have an empty stmt->from in "from .. import".
+  if (!e->getId()->value.empty())
+    dirs.push_back(e->getId()->value);
+  // Handle dots (e.g. .. in from ..m import x).
+  seqassert(stmt->dots >= 0, "negative dots in ImportStmt");
+  for (int i = 0; i < stmt->dots - 1; i++)
+    dirs.emplace_back("..");
+  string path;
+  for (int i = int(dirs.size()) - 1; i >= 0; i--)
+    path += dirs[i] + (i ? "/" : "");
+  // Fetch the import!
+  auto file = getImportFile(ctx->shared->argv0, path, ctx->getFilename());
+  if (!file)
+    error(stmt, "cannot locate import '{}'", path);
+
+  auto ictx = ctx;
+  auto it = ctx->shared->modules.find(file->path);
+  if (it == ctx->shared->modules.end()) {
+    ictx = make_shared<DocContext>(ctx->shared);
+    ictx->setFilename(file->path);
+    auto tmp = parseFile(file->path);
+    DocVisitor(ictx).transformModule(move(tmp));
+  } else {
+    ictx = it->second;
+  }
+
+  if (!stmt->what) {
+    // TODO: implement this corner case
+  } else if (stmt->what->isId("*")) {
+    for (auto &i : *ictx)
+      ctx->add(i.first, i.second[0].second);
+  } else {
+    auto i = stmt->what->getId();
+    if (auto c = ictx->find(i->value))
+      ctx->add(stmt->as.empty() ? i->value : stmt->as, c);
+    else
+      error(stmt, "symbol '{}' not found in {}", i->value, file->path);
+  }
 }
 
 void DocVisitor::visit(AssignStmt *stmt) {
