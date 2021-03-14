@@ -141,6 +141,9 @@ bool LinkType::canRealize() const {
   else
     return type->canRealize();
 }
+bool LinkType::isInstantiated() const {
+  return kind == Link ? type->isInstantiated() : false;
+}
 string LinkType::debugString(bool debug) const {
   if (kind == Unbound || kind == Generic)
     return debug ? fmt::format("{}{}", kind == Unbound ? '?' : '#', id)
@@ -254,6 +257,10 @@ bool ClassType::canRealize() const {
     return false;
   return std::all_of(generics.begin(), generics.end(),
                      [](auto &t) { return !t.type || t.type->canRealize(); });
+}
+bool ClassType::isInstantiated() const {
+  return std::all_of(generics.begin(), generics.end(),
+                     [](auto &t) { return !t.type || t.type->isInstantiated(); });
 }
 string ClassType::debugString(bool debug) const {
   vector<string> gs;
@@ -389,6 +396,11 @@ bool RecordType::canRealize() const {
                      [](auto &a) { return a->canRealize(); }) &&
          this->ClassType::canRealize();
 }
+bool RecordType::isInstantiated() const {
+  return std::all_of(args.begin(), args.end(),
+                     [](auto &a) { return a->isInstantiated(); }) &&
+         this->ClassType::isInstantiated();
+}
 string RecordType::debugString(bool debug) const {
   return fmt::format("{}", this->ClassType::debugString(debug));
 }
@@ -410,6 +422,8 @@ FuncType::FuncType(const shared_ptr<RecordType> &baseType, string funcName,
     : RecordType(*baseType), funcName(move(funcName)), funcGenerics(move(funcGenerics)),
       funcParent(move(funcParent)) {}
 int FuncType::unify(Type *typ, Unification *us) {
+  if (this == typ)
+    return 0;
   int s1 = 2, s = 0;
   if (auto t = typ->getFunc()) {
     // Check if names and parents match.
@@ -482,6 +496,20 @@ bool FuncType::canRealize() const {
   return std::all_of(funcGenerics.begin(), funcGenerics.end(),
                      [](auto &a) { return !a.type || a.type->canRealize(); }) &&
          (!funcParent || funcParent->canRealize());
+}
+bool FuncType::isInstantiated() const {
+  TypePtr removed = nullptr;
+  if (args[0]->getFunc() && args[0]->getFunc()->funcParent.get() == this) {
+    removed = args[0]->getFunc()->funcParent;
+    args[0]->getFunc()->funcParent = nullptr;
+  }
+  auto ret = std::all_of(funcGenerics.begin(), funcGenerics.end(),
+                         [](auto &a) { return !a.type || a.type->isInstantiated(); }) &&
+             (!funcParent || funcParent->isInstantiated()) &&
+             this->RecordType::isInstantiated();
+  if (removed)
+    args[0]->getFunc()->funcParent = removed;
+  return ret;
 }
 string FuncType::debugString(bool debug) const {
   vector<string> gs;
@@ -610,6 +638,7 @@ bool StaticType::canRealize() const {
         return false;
   return true;
 }
+bool StaticType::isInstantiated() const { return staticEvaluation.first; }
 string StaticType::debugString(bool debug) const {
   if (staticEvaluation.first)
     return fmt::format("{}", staticEvaluation.second);

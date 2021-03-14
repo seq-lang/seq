@@ -1239,7 +1239,7 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
     for (auto &a : args)
       stmts.emplace_back(N<YieldStmt>(N<DotExpr>(N<IdExpr>("self"), a.name)));
   } else if (op == "contains") {
-    // Tuples: @internal def __contains__(self: T, what) -> bool:
+    // Tuples: def __contains__(self: T, what) -> bool:
     //            if isinstance(what, T1): if what == self.a1: return True ...
     //            return False
     fargs.emplace_back(Param{"self", typExpr->clone()});

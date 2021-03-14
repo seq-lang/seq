@@ -84,6 +84,7 @@ CodegenVisitor::initializeContext(shared_ptr<CodegenContext> ctx) {
         if (in(ast->attributes, ATTR_INTERNAL)) {
           vector<ir::types::Type *> types;
           auto p = t->funcParent;
+          //          LOG("{}", t->realizedName());
           assert(in(ast->attributes, ATTR_PARENT_CLASS));
           if (!in(ast->attributes, ATTR_NOT_STATIC)) { // hack for non-generic types
             for (auto &x :

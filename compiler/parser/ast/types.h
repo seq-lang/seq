@@ -87,6 +87,8 @@ public:
   virtual vector<shared_ptr<Type>> getUnbounds() const;
   /// True if a type is realizable.
   virtual bool canRealize() const = 0;
+  /// True if a type is completely instantiated (has no unbounds or generics).
+  virtual bool isInstantiated() const = 0;
   /// Pretty-print facility.
   string toString() const;
   /// Pretty-print facility.
@@ -154,6 +156,7 @@ public:
   TypePtr follow() override;
   vector<TypePtr> getUnbounds() const override;
   bool canRealize() const override;
+  bool isInstantiated() const override;
   string debugString(bool debug) const override;
   string realizedName() const override;
 
@@ -232,6 +235,7 @@ public:
 public:
   vector<TypePtr> getUnbounds() const override;
   bool canRealize() const override;
+  bool isInstantiated() const override;
   string debugString(bool debug) const override;
   string realizedName() const override;
   /// True if a class is a trait or has a generic that is a trait.
@@ -267,6 +271,7 @@ public:
 public:
   vector<TypePtr> getUnbounds() const override;
   bool canRealize() const override;
+  bool isInstantiated() const override;
   string debugString(bool debug) const override;
 
   shared_ptr<RecordType> getRecord() override {
@@ -303,6 +308,7 @@ public:
 public:
   vector<TypePtr> getUnbounds() const override;
   bool canRealize() const override;
+  bool isInstantiated() const override;
   string debugString(bool debug) const override;
   string realizedName() const override;
 
@@ -374,6 +380,7 @@ public:
 public:
   vector<TypePtr> getUnbounds() const override;
   bool canRealize() const override;
+  bool isInstantiated() const override;
   string debugString(bool debug) const override;
   string realizedName() const override;
 

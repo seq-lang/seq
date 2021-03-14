@@ -208,9 +208,13 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
           unify(type->args[0], ctx->findInternal("void"));
       }
       // Realize the return type.
-      if (auto t = realize(type->args[0]))
+      if (auto t = realize(type->args[0])) {
+        //        LOG("{} {}", type->args[0]->debugString(1), t->debugString(1));
+        //        if (auto x = t->getFunc())
+        //          LOG("{:x} {:x} {:x} {}", size_t(type), size_t(t.get()),
+        //              size_t(x->funcParent.get()), t->getUnbounds().size());
         unify(type->args[0], t);
-      else
+      } else
         type = nullptr; // Not realized! Roll-back!
       // Create and store a realized AST to be used during the code generation.
       seqassert(!type || ast->args.size() == type->args.size() - 1,
