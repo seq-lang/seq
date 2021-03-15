@@ -8,7 +8,7 @@ def print_args(a,b,c,d,e):
     return ({'a': 3.14, 'b': 2.123}, (222, 3.14))
 
 def print_args_var(a,b,c=1,*args,**kwargs):
-    return f'a={a}, b={b}, c={c}, args={args}, kwargs={kwargs}'
+    return 'a={}, b={}, c={}, args={}, kwargs={}'.format(a, b, c, args, kwargs)
 
 def throw_exc():
     raise ValueError('foo')
