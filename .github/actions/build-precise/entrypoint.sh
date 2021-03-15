@@ -20,8 +20,7 @@ sudo ln -s /usr/bin/clang-4.0 /usr/bin/clang
 sudo ln -s /usr/bin/clang++-4.0 /usr/bin/clang++
 wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
 sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
-wget -q -O - https://bootstrap.pypa.io/get-pip.py | sudo python3.5
-
+wget -q -O - https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo python3.5
 python3.5 -m pip install numpy
 
 export CC=clang
