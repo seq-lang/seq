@@ -47,6 +47,7 @@ ln -s $(pwd)/deps/lib/libomp.so $(pwd)/build/libomp.so
 cmake --build build --config Release -- VERBOSE=1
 
 # test
+ln -s build/libseqrt.so .
 build/seqtest
 build/seqc test/core/helloworld.seq
 
