@@ -24,7 +24,7 @@ k-mer extraction
 
 .. code-block:: seq
 
-    myseq  = s'CAATAGAGACTAAGCATTAT'
+    myseq = s'CAATAGAGACTAAGCATTAT'
     K = Kmer[5]
     stride = 2
 
