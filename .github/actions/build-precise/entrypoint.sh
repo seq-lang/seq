@@ -15,13 +15,13 @@ sudo rm -f /etc/apt/sources.list.d/mongodb*
 sudo rm -f /etc/apt/sources.list.d/couchdb*
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
 sudo apt-get -q update
-sudo apt-get -y --force-yes install clang-4.0 clang++-4.0 python3.5 python3.5-dev
+sudo apt-get -y --force-yes install clang-4.0 clang++-4.0 python3.8 python3.8-dev
 sudo ln -s /usr/bin/clang-4.0 /usr/bin/clang
 sudo ln -s /usr/bin/clang++-4.0 /usr/bin/clang++
 wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
 sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
-wget -q -O - https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo python3.5
-python3.5 -m pip install numpy
+wget -q -O - https://bootstrap.pypa.io/get-pip.py | sudo python3.8
+python3.8 -m pip install numpy
 
 export CC=clang
 export CXX=clang++
@@ -35,7 +35,7 @@ fi
 export PYTHONPATH=$(pwd)/test/python
 export SEQ_PATH=$(pwd)/stdlib
 export SEQ_HTSLIB=$(pwd)/deps/lib/libhts.so
-export SEQ_PYTHON=$(python3.5 test/python/find-python-library.py)
+export SEQ_PYTHON=$(python3.8 test/python/find-python-library.py)
 
 # build
 mkdir build
