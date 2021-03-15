@@ -17,15 +17,12 @@
 
 namespace seq {
 
-seq::ir::Module *
-parse(const std::string &argv0, const std::string &file, const std::string &code = "",
-      bool isCode = false, int isTest = 0, int startLine = 0,
-      const std::unordered_map<std::string, std::string> &defines = {});
-/*
-void execute(seq::SeqModule *module, const std::vector<std::string> &args = {},
-             const std::vector<std::string> &libs = {}, bool debug = false);
-void compile(seq::SeqModule *module, const std::string &out, bool debug = false);
-*/
+seq::ir::Module *parse(const std::string &argv0, const std::string &file,
+                       const std::string &code = "", bool isCode = false,
+                       int isTest = 0, int startLine = 0,
+                       const std::unordered_map<std::string, std::string> &defines =
+                           std::unordered_map<std::string, std::string>{});
+
 void generateDocstr(const std::string &argv0);
 
 } // namespace seq
