@@ -1739,7 +1739,7 @@ void LLVMVisitor::visit(const TryCatchFlow *x) {
     tc.retStore = trycatch[0].retStore;
   }
 
-  // codegen finally
+  // translate finally
   block = tc.finallyBlock;
   process(x->getFinally());
   auto *finallyBlock = block;
@@ -1813,7 +1813,7 @@ void LLVMVisitor::visit(const TryCatchFlow *x) {
     }
   }
 
-  // try and catch codegen
+  // try and catch translate
   std::vector<const TryCatchFlow::Catch *> catches;
   for (auto &c : *x) {
     catches.push_back(&c);
@@ -1831,7 +1831,7 @@ void LLVMVisitor::visit(const TryCatchFlow *x) {
     }
   }
 
-  // codegen try
+  // translate try
   block = entryBlock;
   enterTryCatch(tc);
   process(x->getBody());
@@ -1949,7 +1949,7 @@ void LLVMVisitor::visit(const TryCatchFlow *x) {
           builder.getInt32((uint64_t)getTypeIdx(catchTypesFull[i])), depthSet);
     }
 
-    // codegen catch body if this block is ours (vs. a parent's)
+    // translate catch body if this block is ours (vs. a parent's)
     if (i < catches.size()) {
       block = handlersFull[i];
       builder.SetInsertPoint(block);

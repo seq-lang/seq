@@ -1,5 +1,5 @@
 /*
- * codegen.cpp --- AST-to-IR translation.
+ * translate.cpp --- AST-to-IR translation.
  *
  * (c) Seq project. All rights reserved.
  * This file is subject to the terms and conditions defined in
@@ -13,8 +13,8 @@
 
 #include "parser/ast.h"
 #include "parser/common.h"
-#include "parser/visitors/codegen/codegen.h"
-#include "parser/visitors/codegen/codegen_ctx.h"
+#include "parser/visitors/translate/translate.h"
+#include "parser/visitors/translate/translate_ctx.h"
 #include "sir/util/cloning.h"
 
 using fmt::format;
@@ -30,10 +30,10 @@ using std::vector;
 namespace seq {
 namespace ast {
 
-CodegenVisitor::CodegenVisitor(shared_ptr<CodegenContext> ctx)
+TranslateVisitor::TranslateVisitor(shared_ptr<TranslateContext> ctx)
     : ctx(move(ctx)), result(nullptr) {}
 
-ir::Module *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
+ir::Module *TranslateVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto main = cast<ir::BodiedFunc>(cache->module->getMainFunc());
 
   char buf[PATH_MAX + 1];
@@ -43,41 +43,41 @@ ir::Module *CodegenVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto block = cache->module->Nr<ir::SeriesFlow>("body");
   main->setBody(block);
 
-  cache->codegenCtx = make_shared<CodegenContext>(cache, block, main);
-  CodegenVisitor(cache->codegenCtx).transform(stmts);
+  cache->codegenCtx = make_shared<TranslateContext>(cache, block, main);
+  TranslateVisitor(cache->codegenCtx).transform(stmts);
   return cache->module;
 }
 
 /************************************************************************************/
 
-ir::Value *CodegenVisitor::transform(const ExprPtr &expr) {
-  CodegenVisitor v(ctx);
+ir::Value *TranslateVisitor::transform(const ExprPtr &expr) {
+  TranslateVisitor v(ctx);
   v.setSrcInfo(expr->getSrcInfo());
   expr->accept(v);
   return v.result;
 }
 
-void CodegenVisitor::defaultVisit(Expr *n) {
+void TranslateVisitor::defaultVisit(Expr *n) {
   seqassert(false, "invalid node {}", n->toString());
 }
 
-void CodegenVisitor::visit(BoolExpr *expr) {
+void TranslateVisitor::visit(BoolExpr *expr) {
   result = make<ir::BoolConst>(expr, expr->value, getType(expr->getType()));
 }
 
-void CodegenVisitor::visit(IntExpr *expr) {
+void TranslateVisitor::visit(IntExpr *expr) {
   result = make<ir::IntConst>(expr, expr->intValue, getType(expr->getType()));
 }
 
-void CodegenVisitor::visit(FloatExpr *expr) {
+void TranslateVisitor::visit(FloatExpr *expr) {
   result = make<ir::FloatConst>(expr, expr->value, getType(expr->getType()));
 }
 
-void CodegenVisitor::visit(StringExpr *expr) {
+void TranslateVisitor::visit(StringExpr *expr) {
   result = make<ir::StringConst>(expr, expr->value, getType(expr->getType()));
 }
 
-void CodegenVisitor::visit(IdExpr *expr) {
+void TranslateVisitor::visit(IdExpr *expr) {
   auto val = ctx->find(expr->value);
   seqassert(val, "cannot find '{}'", expr->value);
   if (auto *v = val->getVar())
@@ -86,12 +86,12 @@ void CodegenVisitor::visit(IdExpr *expr) {
     result = make<ir::VarValue>(expr, f);
 }
 
-void CodegenVisitor::visit(IfExpr *expr) {
+void TranslateVisitor::visit(IfExpr *expr) {
   result = make<ir::TernaryInstr>(expr, transform(expr->cond), transform(expr->ifexpr),
                                   transform(expr->elsexpr));
 }
 
-void CodegenVisitor::visit(CallExpr *expr) {
+void TranslateVisitor::visit(CallExpr *expr) {
   auto ft = expr->expr->type->getFunc();
   seqassert(ft, "not calling function: {}", ft->toString());
   auto *ast = ctx->cache->functions[ft->funcName].ast.get();
@@ -108,7 +108,7 @@ void CodegenVisitor::visit(CallExpr *expr) {
   result = make<ir::CallInstr>(expr, callee, move(items));
 }
 
-void CodegenVisitor::visit(StackAllocExpr *expr) {
+void TranslateVisitor::visit(StackAllocExpr *expr) {
   auto *arrayType =
       ctx->getModule()->unsafeGetArrayType(getType(expr->typeExpr->getType()));
   arrayType->setAstType(expr->getType());
@@ -117,7 +117,7 @@ void CodegenVisitor::visit(StackAllocExpr *expr) {
   result = make<ir::StackAllocInstr>(expr, arrayType, expr->expr->getInt()->intValue);
 }
 
-void CodegenVisitor::visit(DotExpr *expr) {
+void TranslateVisitor::visit(DotExpr *expr) {
   if (expr->member == "__atomic__" || expr->member == "__elemsize__") {
     seqassert(expr->expr->getId(), "expected IdExpr, got {}", expr->expr->toString());
     auto type = ctx->find(expr->expr->getId()->value)->getType();
@@ -131,18 +131,18 @@ void CodegenVisitor::visit(DotExpr *expr) {
   }
 }
 
-void CodegenVisitor::visit(PtrExpr *expr) {
+void TranslateVisitor::visit(PtrExpr *expr) {
   seqassert(expr->expr->getId(), "expected IdExpr, got {}", expr->expr->toString());
   auto val = ctx->find(expr->expr->getId()->value);
   seqassert(val && val->getVar(), "{} is not a variable", expr->expr->getId()->value);
   result = make<ir::PointerValue>(expr, val->getVar());
 }
 
-void CodegenVisitor::visit(YieldExpr *expr) {
+void TranslateVisitor::visit(YieldExpr *expr) {
   result = make<ir::YieldInInstr>(expr, getType(expr->getType()));
 }
 
-void CodegenVisitor::visit(PipeExpr *expr) {
+void TranslateVisitor::visit(PipeExpr *expr) {
   auto isGen = [](const ir::Value *v) -> bool {
     auto *type = v->getType();
     if (ir::isA<ir::types::GeneratorType>(type))
@@ -193,7 +193,7 @@ void CodegenVisitor::visit(PipeExpr *expr) {
   }
 }
 
-void CodegenVisitor::visit(StmtExpr *expr) {
+void TranslateVisitor::visit(StmtExpr *expr) {
   auto *bodySeries = make<ir::SeriesFlow>(expr, "body");
   ctx->addSeries(bodySeries);
   for (auto &s : expr->stmts)
@@ -204,8 +204,8 @@ void CodegenVisitor::visit(StmtExpr *expr) {
 
 /************************************************************************************/
 
-ir::Value *CodegenVisitor::transform(const StmtPtr &stmt) {
-  CodegenVisitor v(ctx);
+ir::Value *TranslateVisitor::transform(const StmtPtr &stmt) {
+  TranslateVisitor v(ctx);
   v.setSrcInfo(stmt->getSrcInfo());
   stmt->accept(v);
   if (v.result)
@@ -213,64 +213,64 @@ ir::Value *CodegenVisitor::transform(const StmtPtr &stmt) {
   return v.result;
 }
 
-void CodegenVisitor::defaultVisit(Stmt *n) {
+void TranslateVisitor::defaultVisit(Stmt *n) {
   seqassert(false, "invalid node {}", n->toString());
 }
 
-void CodegenVisitor::visit(SuiteStmt *stmt) {
+void TranslateVisitor::visit(SuiteStmt *stmt) {
   for (auto &s : stmt->stmts)
     transform(s);
 }
 
-void CodegenVisitor::visit(PassStmt *stmt) {}
+void TranslateVisitor::visit(PassStmt *stmt) {}
 
-void CodegenVisitor::visit(BreakStmt *stmt) { result = make<ir::BreakInstr>(stmt); }
+void TranslateVisitor::visit(BreakStmt *stmt) { result = make<ir::BreakInstr>(stmt); }
 
-void CodegenVisitor::visit(ContinueStmt *stmt) {
+void TranslateVisitor::visit(ContinueStmt *stmt) {
   result = make<ir::ContinueInstr>(stmt);
 }
 
-void CodegenVisitor::visit(ExprStmt *stmt) { result = transform(stmt->expr); }
+void TranslateVisitor::visit(ExprStmt *stmt) { result = transform(stmt->expr); }
 
-void CodegenVisitor::visit(AssignStmt *stmt) {
+void TranslateVisitor::visit(AssignStmt *stmt) {
   seqassert(stmt->lhs->getId(), "expected IdExpr, got {}", stmt->lhs->toString());
   auto var = stmt->lhs->getId()->value;
   if (!stmt->rhs && var == VAR_ARGV) {
-    ctx->add(CodegenItem::Var, var, ctx->getModule()->getArgVar());
+    ctx->add(TranslateItem::Var, var, ctx->getModule()->getArgVar());
   } else if (!stmt->rhs || !stmt->rhs->isType()) {
     auto *newVar =
         make<ir::Var>(stmt, getType((stmt->rhs ? stmt->rhs : stmt->lhs)->getType()),
                       in(ctx->cache->globals, var), var);
     if (!in(ctx->cache->globals, var))
       ctx->getBase()->push_back(newVar);
-    ctx->add(CodegenItem::Var, var, newVar);
+    ctx->add(TranslateItem::Var, var, newVar);
     if (stmt->rhs)
       result = make<ir::AssignInstr>(stmt, newVar, transform(stmt->rhs));
   }
 }
 
-void CodegenVisitor::visit(AssignMemberStmt *stmt) {
+void TranslateVisitor::visit(AssignMemberStmt *stmt) {
   result = make<ir::InsertInstr>(stmt, transform(stmt->lhs), stmt->member,
                                  transform(stmt->rhs));
 }
 
-void CodegenVisitor::visit(UpdateStmt *stmt) {
+void TranslateVisitor::visit(UpdateStmt *stmt) {
   seqassert(stmt->lhs->getId(), "expected IdExpr, got {}", stmt->lhs->toString());
   auto val = ctx->find(stmt->lhs->getId()->value);
   seqassert(val && val->getVar(), "{} is not a variable", stmt->lhs->getId()->value);
   result = make<ir::AssignInstr>(stmt, val->getVar(), transform(stmt->rhs));
 }
 
-void CodegenVisitor::visit(ReturnStmt *stmt) {
+void TranslateVisitor::visit(ReturnStmt *stmt) {
   result = make<ir::ReturnInstr>(stmt, stmt->expr ? transform(stmt->expr) : nullptr);
 }
 
-void CodegenVisitor::visit(YieldStmt *stmt) {
+void TranslateVisitor::visit(YieldStmt *stmt) {
   result = make<ir::YieldInstr>(stmt, stmt->expr ? transform(stmt->expr) : nullptr);
   ctx->getBase()->setGenerator();
 }
 
-void CodegenVisitor::visit(WhileStmt *stmt) {
+void TranslateVisitor::visit(WhileStmt *stmt) {
   auto loop = make<ir::WhileFlow>(stmt, transform(stmt->cond),
                                   make<ir::SeriesFlow>(stmt, "body"));
   ctx->addSeries(cast<ir::SeriesFlow>(loop->getBody()));
@@ -279,21 +279,21 @@ void CodegenVisitor::visit(WhileStmt *stmt) {
   result = loop;
 }
 
-void CodegenVisitor::visit(ForStmt *stmt) {
+void TranslateVisitor::visit(ForStmt *stmt) {
   seqassert(stmt->var->getId(), "expected IdExpr, got {}", stmt->var->toString());
   auto varName = stmt->var->getId()->value;
   auto var = make<ir::Var>(stmt, getType(stmt->var->getType()), false, varName);
   ctx->getBase()->push_back(var);
   auto bodySeries = make<ir::SeriesFlow>(stmt, "body");
   auto loop = make<ir::ForFlow>(stmt, transform(stmt->iter), bodySeries, var);
-  ctx->add(CodegenItem::Var, varName, var);
+  ctx->add(TranslateItem::Var, varName, var);
   ctx->addSeries(cast<ir::SeriesFlow>(loop->getBody()));
   transform(stmt->suite);
   ctx->popSeries();
   result = loop;
 }
 
-void CodegenVisitor::visit(IfStmt *stmt) {
+void TranslateVisitor::visit(IfStmt *stmt) {
   if (!stmt->ifs[0].cond) {
     transform(stmt->ifs[0].suite);
   } else {
@@ -314,7 +314,7 @@ void CodegenVisitor::visit(IfStmt *stmt) {
   }
 }
 
-void CodegenVisitor::visit(TryStmt *stmt) {
+void TranslateVisitor::visit(TryStmt *stmt) {
   auto *bodySeries = make<ir::SeriesFlow>(stmt, "body");
   ctx->addSeries(bodySeries);
   transform(stmt->suite);
@@ -335,7 +335,7 @@ void CodegenVisitor::visit(TryStmt *stmt) {
     ir::Var *catchVar = nullptr;
     if (!c.var.empty()) {
       catchVar = make<ir::Var>(stmt, excType, false, c.var);
-      ctx->add(CodegenItem::Var, c.var, catchVar);
+      ctx->add(TranslateItem::Var, c.var, catchVar);
       ctx->getBase()->push_back(catchVar);
     }
     ctx->addSeries(catchBody);
@@ -346,18 +346,18 @@ void CodegenVisitor::visit(TryStmt *stmt) {
   result = tc;
 }
 
-void CodegenVisitor::visit(ThrowStmt *stmt) {
+void TranslateVisitor::visit(ThrowStmt *stmt) {
   result = make<ir::ThrowInstr>(stmt, transform(stmt->expr));
 }
 
-void CodegenVisitor::visit(FunctionStmt *stmt) {
+void TranslateVisitor::visit(FunctionStmt *stmt) {
   // Process all realizations.
   for (auto &real : ctx->cache->functions[stmt->name].realizations) {
     if (!in(ctx->cache->pendingRealizations, make_pair(stmt->name, real.first)))
       continue;
     ctx->cache->pendingRealizations.erase(make_pair(stmt->name, real.first));
 
-    LOG_TYPECHECK("[codegen] generating fn {}", real.first);
+    LOG_TYPECHECK("[translate] generating fn {}", real.first);
     real.second->ir->setSrcInfo(getSrcInfo());
     const auto &ast = real.second->ast;
     seqassert(ast, "AST not set for {}", real.first);
@@ -368,14 +368,14 @@ void CodegenVisitor::visit(FunctionStmt *stmt) {
   }
 }
 
-void CodegenVisitor::visit(ClassStmt *stmt) {
+void TranslateVisitor::visit(ClassStmt *stmt) {
   // Nothing to see here, as all type handles are already generated.
   // Methods will be handled by FunctionStmt visitor.
 }
 
 /************************************************************************************/
 
-seq::ir::types::Type *CodegenVisitor::getType(const types::TypePtr &t) {
+seq::ir::types::Type *TranslateVisitor::getType(const types::TypePtr &t) {
   seqassert(t && t->getClass(), "{} is not a class", t ? t->toString() : "-");
   string name = t->getClass()->realizedTypeName();
   auto i = ctx->find(name);
@@ -383,8 +383,8 @@ seq::ir::types::Type *CodegenVisitor::getType(const types::TypePtr &t) {
   return i->getType();
 }
 
-void CodegenVisitor::transformFunction(types::FuncType *type, FunctionStmt *ast,
-                                       ir::Func *func) {
+void TranslateVisitor::transformFunction(types::FuncType *type, FunctionStmt *ast,
+                                         ir::Func *func) {
   vector<string> names;
   vector<int> indices;
   vector<SrcInfo> srcInfos;
@@ -409,7 +409,8 @@ void CodegenVisitor::transformFunction(types::FuncType *type, FunctionStmt *ast,
   } else if (!in(ast->attributes, ATTR_INTERNAL)) {
     ctx->addBlock();
     for (auto i = 0; i < names.size(); i++)
-      ctx->add(CodegenItem::Var, ast->args[indices[i]].name, func->getArgVar(names[i]));
+      ctx->add(TranslateItem::Var, ast->args[indices[i]].name,
+               func->getArgVar(names[i]));
     auto body = make<ir::SeriesFlow>(ast, "body");
     ctx->bases.push_back(cast<ir::BodiedFunc>(func));
     ctx->addSeries(body);
@@ -421,8 +422,8 @@ void CodegenVisitor::transformFunction(types::FuncType *type, FunctionStmt *ast,
   }
 }
 
-void CodegenVisitor::transformLLVMFunction(types::FuncType *type, FunctionStmt *ast,
-                                           ir::Func *func) {
+void TranslateVisitor::transformLLVMFunction(types::FuncType *type, FunctionStmt *ast,
+                                             ir::Func *func) {
   vector<string> names;
   vector<seq::ir::types::Type *> types;
   for (int i = 1; i < type->args.size(); i++) {

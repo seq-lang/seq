@@ -64,7 +64,7 @@ namespace ast {
 /// Forward declarations
 struct SimplifyContext;
 struct TypeContext;
-struct CodegenContext;
+struct TranslateContext;
 
 /**
  * Cache encapsulation that holds data structures shared across various transformation
@@ -194,7 +194,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
 
   /// Pointer to the later contexts needed for IR API access.
   shared_ptr<TypeContext> typeCtx;
-  shared_ptr<CodegenContext> codegenCtx;
+  shared_ptr<TranslateContext> codegenCtx;
   /// Set of function realizations that are to be translated to IR.
   set<std::pair<string, string>> pendingRealizations;
 

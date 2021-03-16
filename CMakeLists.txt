@@ -125,8 +125,8 @@ set(SEQ_HPPFILES
         compiler/parser/ctx.h
         compiler/parser/ocaml/ocaml.h
         compiler/parser/parser.h
-        compiler/parser/visitors/codegen/codegen.h
-        compiler/parser/visitors/codegen/codegen_ctx.h
+        compiler/parser/visitors/translate/translate.h
+        compiler/parser/visitors/translate/translate_ctx.h
         compiler/parser/visitors/doc/doc.h
         compiler/parser/visitors/format/format.h
         compiler/parser/visitors/simplify/simplify.h
@@ -184,8 +184,8 @@ set(SEQ_CPPFILES
         compiler/parser/common.cpp
         compiler/parser/ocaml/ocaml.cpp
         compiler/parser/parser.cpp
-        compiler/parser/visitors/codegen/codegen.cpp
-        compiler/parser/visitors/codegen/codegen_ctx.cpp
+        compiler/parser/visitors/translate/translate.cpp
+        compiler/parser/visitors/translate/translate_ctx.cpp
         compiler/parser/visitors/doc/doc.cpp
         compiler/parser/visitors/format/format.cpp
         compiler/parser/visitors/simplify/simplify.cpp

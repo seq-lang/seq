@@ -1,5 +1,5 @@
 /*
- * codegen_ctx.h --- Context for IR translation stage.
+ * translate_ctx.h --- Context for IR translation stage.
  *
  * (c) Seq project. All rights reserved.
  * This file is subject to the terms and conditions defined in
@@ -26,7 +26,7 @@ namespace ast {
  * This represents an identifier that can be either a function, a class (type), or a
  * variable.
  */
-struct CodegenItem {
+struct TranslateItem {
   enum Kind { Func, Type, Var } kind;
   /// IR handle.
   union {
@@ -37,7 +37,7 @@ struct CodegenItem {
   /// Base function pointer.
   seq::ir::BodiedFunc *base;
 
-  CodegenItem(Kind k, seq::ir::BodiedFunc *base)
+  TranslateItem(Kind k, seq::ir::BodiedFunc *base)
       : kind(k), handle{nullptr}, base(base) {}
   const seq::ir::BodiedFunc *getBase() const { return base; }
   seq::ir::Func *getFunc() const { return kind == Func ? handle.func : nullptr; }
@@ -48,7 +48,7 @@ struct CodegenItem {
 /**
  * A variable table (context) for the IR translation stage.
  */
-struct CodegenContext : public Context<CodegenItem> {
+struct TranslateContext : public Context<TranslateItem> {
   /// A pointer to the shared cache.
   shared_ptr<Cache> cache;
   /// Stack of function bases.
@@ -57,13 +57,14 @@ struct CodegenContext : public Context<CodegenItem> {
   vector<seq::ir::SeriesFlow *> series;
 
 public:
-  CodegenContext(shared_ptr<Cache> cache, seq::ir::SeriesFlow *series,
-                 seq::ir::BodiedFunc *base);
+  TranslateContext(shared_ptr<Cache> cache, seq::ir::SeriesFlow *series,
+                   seq::ir::BodiedFunc *base);
 
-  using Context<CodegenItem>::add;
+  using Context<TranslateItem>::add;
   /// Convenience method for adding an object to the context.
-  shared_ptr<CodegenItem> add(CodegenItem::Kind kind, const string &name, void *type);
-  shared_ptr<CodegenItem> find(const string &name) const override;
+  shared_ptr<TranslateItem> add(TranslateItem::Kind kind, const string &name,
+                                void *type);
+  shared_ptr<TranslateItem> find(const string &name) const override;
 
   /// Convenience method for adding a series.
   void addSeries(seq::ir::SeriesFlow *s);

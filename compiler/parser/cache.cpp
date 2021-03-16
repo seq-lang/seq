@@ -12,7 +12,7 @@
 
 #include "parser/cache.h"
 #include "parser/common.h"
-#include "parser/visitors/codegen/codegen.h"
+#include "parser/visitors/translate/translate.h"
 #include "parser/visitors/typecheck/typecheck.h"
 #include "parser/visitors/typecheck/typecheck_ctx.h"
 
@@ -103,7 +103,7 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
   if (auto rtv = tv.realize(type)) {
     auto pr = pendingRealizations; // copy it as it might be modified
     for (auto &fn : pr)
-      CodegenVisitor(codegenCtx).transform(functions[fn.first].ast->clone());
+      TranslateVisitor(codegenCtx).transform(functions[fn.first].ast->clone());
     return functions[rtv->getFunc()->funcName].realizations[rtv->realizedName()]->ir;
   }
   return nullptr;

@@ -14,7 +14,7 @@
 #include "parser/cache.h"
 #include "parser/ocaml/ocaml.h"
 #include "parser/parser.h"
-#include "parser/visitors/codegen/codegen.h"
+#include "parser/visitors/translate/translate.h"
 #include "parser/visitors/doc/doc.h"
 #include "parser/visitors/format/format.h"
 #include "parser/visitors/simplify/simplify.h"
@@ -100,11 +100,11 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
     }
 
     t = high_resolution_clock::now();
-    auto *module = ast::CodegenVisitor::apply(cache, move(typechecked));
+    auto *module = ast::TranslateVisitor::apply(cache, move(typechecked));
     module->setSrcInfo({abs, 0, 0, 0, 0});
 
     if (!isTest)
-      LOG_TIME("[T] codegen   = {:.1f}",
+      LOG_TIME("[T] translate   = {:.1f}",
                duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
                    1000.0);
     if (_dbg_level) {

@@ -1,5 +1,5 @@
 /*
- * codegen.h --- AST-to-IR translation.
+ * translate.h --- AST-to-IR translation.
  *
  * (c) Seq project. All rights reserved.
  * This file is subject to the terms and conditions defined in
@@ -17,19 +17,19 @@
 #include "parser/ast.h"
 #include "parser/cache.h"
 #include "parser/common.h"
-#include "parser/visitors/codegen/codegen_ctx.h"
+#include "parser/visitors/translate/translate_ctx.h"
 #include "parser/visitors/visitor.h"
 #include "sir/sir.h"
 
 namespace seq {
 namespace ast {
 
-class CodegenVisitor : public CallbackASTVisitor<ir::Value *, ir::Value *> {
-  shared_ptr<CodegenContext> ctx;
+class TranslateVisitor : public CallbackASTVisitor<ir::Value *, ir::Value *> {
+  shared_ptr<TranslateContext> ctx;
   ir::Value *result;
 
 public:
-  explicit CodegenVisitor(shared_ptr<CodegenContext> ctx);
+  explicit TranslateVisitor(shared_ptr<TranslateContext> ctx);
   static seq::ir::Module *apply(shared_ptr<Cache> cache, StmtPtr stmts);
 
   ir::Value *transform(const ExprPtr &expr) override;
