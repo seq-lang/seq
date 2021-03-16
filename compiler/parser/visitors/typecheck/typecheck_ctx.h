@@ -7,7 +7,6 @@
  */
 #pragma once
 
-#include <deque>
 #include <memory>
 #include <stack>
 #include <string>

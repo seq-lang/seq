@@ -619,6 +619,7 @@ void LLVMVisitor::visit(const Module *x) {
       continue;
 
     if (auto *f = cast<Func>(var)) {
+      //            LOG("{}", f->getName());
       makeLLVMFunction(f);
       funcs.insert(f, func);
     } else {
@@ -994,7 +995,7 @@ void LLVMVisitor::visit(const InternalFunc *x) {
     }
   }
 
-  assert(result && "internal function not found");
+  seqassert(result, "internal function {} not found", *x);
   builder.CreateRet(result);
 }
 

@@ -1,8 +1,9 @@
-/**
- * codegen.h
- * Code generation AST walker.
+/*
+ * codegen.h --- AST-to-IR translation.
  *
- * Transforms a given AST to a Seq LLVM AST.
+ * (c) Seq project. All rights reserved.
+ * This file is subject to the terms and conditions defined in
+ * file 'LICENSE', which is part of this source code package.
  */
 
 #pragma once
@@ -18,36 +19,25 @@
 #include "parser/common.h"
 #include "parser/visitors/codegen/codegen_ctx.h"
 #include "parser/visitors/visitor.h"
-
 #include "sir/sir.h"
 
 namespace seq {
 namespace ast {
 
-class CodegenVisitor : public CallbackASTVisitor<seq::ir::Value *, seq::ir::Value *> {
+class CodegenVisitor : public CallbackASTVisitor<ir::Value *, ir::Value *> {
   shared_ptr<CodegenContext> ctx;
-  seq::ir::Value *result;
-  const seq::ir::types::Type *typeResult = nullptr;
-
-  void defaultVisit(Expr *expr) override;
-  void defaultVisit(Stmt *expr) override;
-
-  seq::ir::Func *realizeFunc(const string &name);
-  shared_ptr<CodegenItem> processIdentifier(shared_ptr<CodegenContext> tctx,
-                                            const string &id);
+  ir::Value *result;
 
 public:
   explicit CodegenVisitor(shared_ptr<CodegenContext> ctx);
-
-  static std::unordered_set<std::string>
-  initializeContext(shared_ptr<CodegenContext> ctx);
-
   static seq::ir::Module *apply(shared_ptr<Cache> cache, StmtPtr stmts);
 
-  seq::ir::Value *transform(const ExprPtr &expr) override;
-  seq::ir::Value *transform(const StmtPtr &stmt) override;
+  ir::Value *transform(const ExprPtr &expr) override;
+  ir::Value *transform(const StmtPtr &stmt) override;
 
-  seq::ir::types::Type *realizeType(types::ClassType *t);
+private:
+  void defaultVisit(Expr *expr) override;
+  void defaultVisit(Stmt *expr) override;
 
 public:
   void visit(BoolExpr *) override;
@@ -63,7 +53,6 @@ public:
   void visit(YieldExpr *) override;
   void visit(StmtExpr *) override;
   void visit(PipeExpr *) override;
-  void visit(EllipsisExpr *) override;
 
   void visit(SuiteStmt *) override;
   void visit(PassStmt *) override;
@@ -81,12 +70,15 @@ public:
   void visit(TryStmt *) override;
   void visit(ThrowStmt *) override;
   void visit(FunctionStmt *) override;
-  void visit(ClassStmt *stmt) override;
+  void visit(ClassStmt *) override;
 
 private:
-  ir::SeriesFlow *newScope(const seq::SrcObject *s, std::string name);
+  ir::types::Type *getType(const types::TypePtr &t);
 
-  template <typename ValueType, typename... Args> ValueType *make(Args &&... args) {
+  void transformFunction(types::FuncType *type, FunctionStmt *ast, ir::Func *func);
+  void transformLLVMFunction(types::FuncType *type, FunctionStmt *ast, ir::Func *func);
+
+  template <typename ValueType, typename... Args> ValueType *make(Args &&...args) {
     auto *ret = ctx->getModule()->N<ValueType>(std::forward<Args>(args)...);
     return ret;
   }

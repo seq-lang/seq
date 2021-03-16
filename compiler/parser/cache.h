@@ -56,6 +56,7 @@
 #define TYPE_EXCHEADER "std.internal.types.error.ExcHeader"
 #define TYPE_SLICE "std.internal.types.slice.Slice"
 #define FN_UNWRAP "std.internal.types.optional.unwrap"
+#define VAR_ARGV "__argv__"
 
 namespace seq {
 namespace ast {
@@ -159,7 +160,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
     };
     /// Realization lookup table that maps a realized class name to the corresponding
     /// ClassRealization instance.
-    unordered_map<string, ClassRealization> realizations;
+    unordered_map<string, shared_ptr<ClassRealization>> realizations;
 
     Class() : ast(nullptr) {}
   };
@@ -183,7 +184,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
     };
     /// Realization lookup table that maps a realized function name to the corresponding
     /// FunctionRealization instance.
-    unordered_map<string, FunctionRealization> realizations;
+    unordered_map<string, shared_ptr<FunctionRealization>> realizations;
 
     Function() : ast(nullptr) {}
   };
@@ -194,6 +195,8 @@ struct Cache : public std::enable_shared_from_this<Cache> {
   /// Pointer to the later contexts needed for IR API access.
   shared_ptr<TypeContext> typeCtx;
   shared_ptr<CodegenContext> codegenCtx;
+  /// Set of function realizations that are to be translated to IR.
+  set<std::pair<string, string>> pendingRealizations;
 
 public:
   explicit Cache(string argv0 = "");

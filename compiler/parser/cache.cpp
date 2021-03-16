@@ -67,7 +67,7 @@ ir::types::Type *Cache::realizeType(types::ClassTypePtr type,
   if (auto rtv = tv.realize(type)) {
     return classes[rtv->getClass()->name]
         .realizations[rtv->getClass()->realizedTypeName()]
-        .ir;
+        ->ir;
   }
   return nullptr;
 }
@@ -101,11 +101,10 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
   }
   auto tv = TypecheckVisitor(typeCtx);
   if (auto rtv = tv.realize(type)) {
-    auto &f = functions[rtv->getFunc()->funcName].realizations[rtv->realizedName()];
-    auto toRealize = CodegenVisitor::initializeContext(codegenCtx);
-    for (auto &fnName : toRealize)
-      CodegenVisitor(codegenCtx).transform(functions[fnName].ast->clone());
-    return f.ir;
+    auto pr = pendingRealizations; // copy it as it might be modified
+    for (auto &fn : pr)
+      CodegenVisitor(codegenCtx).transform(functions[fn.first].ast->clone());
+    return functions[rtv->getFunc()->funcName].realizations[rtv->realizedName()]->ir;
   }
   return nullptr;
 }

@@ -117,7 +117,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     preamble->globals.push_back(
         SimplifyVisitor(stdlib, preamble)
             .transform(make_unique<AssignStmt>(
-                make_unique<IdExpr>("__argv__"), nullptr,
+                make_unique<IdExpr>(VAR_ARGV), nullptr,
                 make_unique<IndexExpr>(make_unique<IdExpr>("Array"),
                                        make_unique<IdExpr>("str")))));
     stdlib->isStdlibLoading = false;

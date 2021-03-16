@@ -371,7 +371,7 @@ void FormatVisitor::visit(FunctionStmt *fstmt) {
       if (!cache->functions[fstmt->name].realizations.empty()) {
         for (auto &real : cache->functions[fstmt->name].realizations) {
           if (real.first != fstmt->name) {
-            result += transform(real.second.ast.get(), 0);
+            result += transform(real.second->ast.get(), 0);
           }
         }
         return;
