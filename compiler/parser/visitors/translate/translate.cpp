@@ -403,10 +403,8 @@ void TranslateVisitor::transformFunction(types::FuncType *type, FunctionStmt *as
   func->setAttribute(make_unique<ir::KeyValueAttribute>(ast->attributes));
   for (int i = 0; i < names.size(); i++)
     func->getArgVar(names[i])->setSrcInfo(ast->args[indices[i]].getSrcInfo());
-  if (in(ast->attributes, ATTR_EXTERN_C)) {
-    cast<ir::ExternalFunc>(func)->setUnmangledName(
-        ctx->cache->reverseIdentifierLookup[type->funcName]);
-  } else if (!in(ast->attributes, ATTR_INTERNAL)) {
+  func->setUnmangledName(ctx->cache->reverseIdentifierLookup[type->funcName]);
+  if (!in(ast->attributes, ATTR_EXTERN_C) && !in(ast->attributes, ATTR_INTERNAL)) {
     ctx->addBlock();
     for (auto i = 0; i < names.size(); i++)
       ctx->add(TranslateItem::Var, ast->args[indices[i]].name,

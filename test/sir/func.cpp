@@ -54,6 +54,7 @@ TEST_F(SIRCoreTest, BodiedFuncQueryAndReplace) {
 
 TEST_F(SIRCoreTest, BodiedFuncUnmangledName) {
   auto *fn = module->Nr<BodiedFunc>("Int.foo");
+  fn->setUnmangledName("foo");
   fn->realize(module->unsafeGetDummyFuncType(), {});
   ASSERT_EQ("foo", fn->getUnmangledName());
 }
@@ -78,6 +79,7 @@ TEST_F(SIRCoreTest, ExternalFuncUnmangledNameAndCloning) {
 
 TEST_F(SIRCoreTest, InternalFuncParentTypeUnmangledNameAndCloning) {
   auto *fn = module->Nr<InternalFunc>("fn.1");
+  fn->setUnmangledName("fn");
   fn->realize(module->unsafeGetDummyFuncType(), {});
 
   fn->setParentType(module->getIntType());

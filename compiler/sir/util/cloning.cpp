@@ -18,6 +18,7 @@ void CloneVisitor::visit(const BodiedFunc *v) {
     auto *newVar = forceClone(var);
     res->push_back(newVar);
   }
+  res->setUnmangledName(v->getUnmangledName());
   res->setGenerator(v->isGenerator());
   res->realize(cast<types::FuncType>(v->getType()), argNames);
 
@@ -43,6 +44,7 @@ void CloneVisitor::visit(const ExternalFunc *v) {
   std::vector<std::string> argNames;
   for (auto it = v->arg_begin(); it != v->arg_end(); ++it)
     argNames.push_back((*it)->getName());
+  res->setUnmangledName(v->getUnmangledName());
   res->setGenerator(v->isGenerator());
   res->realize(cast<types::FuncType>(v->getType()), argNames);
 
@@ -54,7 +56,6 @@ void CloneVisitor::visit(const ExternalFunc *v) {
     ++argIt2;
   }
 
-  res->setUnmangledName(v->getUnmangledName());
   result = res;
 }
 
@@ -63,6 +64,7 @@ void CloneVisitor::visit(const InternalFunc *v) {
   std::vector<std::string> argNames;
   for (auto it = v->arg_begin(); it != v->arg_end(); ++it)
     argNames.push_back((*it)->getName());
+  res->setUnmangledName(v->getUnmangledName());
   res->setGenerator(v->isGenerator());
   res->realize(cast<types::FuncType>(v->getType()), argNames);
 
@@ -83,6 +85,7 @@ void CloneVisitor::visit(const LLVMFunc *v) {
   std::vector<std::string> argNames;
   for (auto it = v->arg_begin(); it != v->arg_end(); ++it)
     argNames.push_back((*it)->getName());
+  res->setUnmangledName(v->getUnmangledName());
   res->setGenerator(v->isGenerator());
   res->realize(cast<types::FuncType>(v->getType()), argNames);
 

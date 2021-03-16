@@ -10,6 +10,8 @@ namespace ir {
 /// SIR function
 class Func : public AcceptorExtend<Func, Var> {
 private:
+  /// unmangled (source code) name of the function
+  std::string unmangledName;
   /// whether the function is a generator
   bool generator;
 
@@ -51,6 +53,12 @@ public:
   /// @return a pointer to the first arg
   const Var *arg_front() const { return args.front(); }
 
+  /// @return the function's unmangled (source code) name
+  std::string getUnmangledName() const { return unmangledName; }
+  /// Sets the unmangled name.
+  /// @param v the new value
+  void setUnmangledName(std::string v) { unmangledName = std::move(v); }
+
   /// @return true if the function is a generator
   bool isGenerator() const { return generator; }
   /// Sets the function's generator flag.
@@ -60,9 +68,6 @@ public:
   /// @return the variable corresponding to the given argument name
   /// @param n the argument name
   Var *getArgVar(const std::string &n);
-
-  /// @return the unmangled function name
-  virtual std::string getUnmangledName() const = 0;
 };
 
 class BodiedFunc : public AcceptorExtend<BodiedFunc, Func> {
@@ -111,8 +116,6 @@ public:
   /// @return symbol_iterator following the removed symbol.
   template <typename It> auto erase(It pos) { return symbols.erase(pos); }
 
-  std::string getUnmangledName() const override;
-
   /// @return the function body
   Flow *getBody() { return cast<Flow>(body); }
   /// @return the function body
@@ -141,18 +144,10 @@ protected:
 };
 
 class ExternalFunc : public AcceptorExtend<ExternalFunc, Func> {
-private:
-  std::string unmangledName;
-
 public:
   static const char NodeId;
 
   using AcceptorExtend::AcceptorExtend;
-
-  std::string getUnmangledName() const override { return unmangledName; }
-  /// Sets the unmangled name.
-  /// @param v the new value
-  void setUnmangledName(std::string v) { unmangledName = std::move(v); }
 
 private:
   std::ostream &doFormat(std::ostream &os) const override;
@@ -168,8 +163,6 @@ public:
   static const char NodeId;
 
   using AcceptorExtend::AcceptorExtend;
-
-  std::string getUnmangledName() const override;
 
   /// @return the parent type
   types::Type *getParentType() const { return parentType; }
@@ -199,8 +192,6 @@ public:
   static const char NodeId;
 
   using AcceptorExtend::AcceptorExtend;
-
-  std::string getUnmangledName() const override;
 
   /// Sets the LLVM literals.
   /// @param v the new values.

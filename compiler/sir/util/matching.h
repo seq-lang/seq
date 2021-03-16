@@ -57,9 +57,10 @@ public:
   static const char NodeId;
   using AcceptorExtend::AcceptorExtend;
 
+  AnyFunc() : AcceptorExtend() { setUnmangledName("any"); }
+
 private:
   std::ostream &doFormat(std::ostream &os) const override { return os << "any"; }
-  std::string getUnmangledName() const override { return "any"; }
 };
 
 /// Checks if IR nodes match.

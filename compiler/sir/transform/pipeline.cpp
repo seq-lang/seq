@@ -120,7 +120,8 @@ struct PrefetchFunctionTransformer : public util::LambdaValueVisitor {
 
   void handle(CallInstr *x) override {
     auto *func = cast<BodiedFunc>(util::getFunc(x->getFunc()));
-    if (!func || func->getUnmangledName() != "__getitem__" || x->numArgs() != 2)
+    if (!func || func->getUnmangledName() != Module::GETITEM_MAGIC_NAME ||
+        x->numArgs() != 2)
       return;
 
     auto *M = x->getModule();
