@@ -97,9 +97,9 @@ class FlowInstr;
 namespace util {
 
 /// Base for SIR visitors
-class IRVisitor {
+class Visitor {
 public:
-  virtual ~IRVisitor() noexcept = default;
+  virtual ~Visitor() noexcept = default;
 
   DEFAULT_VISIT(Module);
 
@@ -165,9 +165,9 @@ public:
   VISIT(dsl::types::CustomType);
 };
 
-class ConstIRVisitor {
+class ConstVisitor {
 public:
-  virtual ~ConstIRVisitor() noexcept = default;
+  virtual ~ConstVisitor() noexcept = default;
 
   CONST_DEFAULT_VISIT(Module);
 

@@ -5,7 +5,7 @@
 #include "parser/common.h"
 
 #include "util/iterators.h"
-#include "util/lambda_visitor.h"
+#include "util/operator.h"
 #include "util/visitor.h"
 
 #include "module.h"

@@ -24,7 +24,7 @@
 namespace {
 using namespace seq::ir;
 
-class MatchVisitor : public util::ConstIRVisitor {
+class MatchVisitor : public util::ConstVisitor {
 private:
   bool matchAny = false;
   bool checkName;

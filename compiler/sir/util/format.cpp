@@ -34,7 +34,7 @@ struct NodeFormatter {
   friend std::ostream &operator<<(std::ostream &os, const NodeFormatter &n);
 };
 
-class FormatVisitor : util::ConstIRVisitor {
+class FormatVisitor : util::ConstVisitor {
 private:
   std::ostream &os;
   std::unordered_set<int> &seenNodes;

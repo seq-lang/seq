@@ -112,7 +112,7 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
  * Prefetch optimization
  */
 
-struct PrefetchFunctionTransformer : public util::LambdaValueVisitor {
+struct PrefetchFunctionTransformer : public util::Operator {
   void handle(ReturnInstr *x) override {
     auto *M = x->getModule();
     x->replaceAll(M->Nr<YieldInstr>(x->getValue(), /*final=*/true));
@@ -381,7 +381,7 @@ template <typename T> bool verifyAlignParams(T begin, T end) {
   return true;
 }
 
-struct InterAlignFunctionTransformer : public util::LambdaValueVisitor {
+struct InterAlignFunctionTransformer : public util::Operator {
   InterAlignTypes *types;
   std::vector<Value *> params;
 
@@ -421,7 +421,7 @@ struct InterAlignFunctionTransformer : public util::LambdaValueVisitor {
   }
 
   InterAlignFunctionTransformer(InterAlignTypes *types)
-      : util::LambdaValueVisitor(), types(types), params() {}
+      : util::Operator(), types(types), params() {}
 
   Value *getParams() {
     // order of 'args': a, b, ambig, gapo, gape, score_only, bandwidth, zdrop, end_bonus

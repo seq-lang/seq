@@ -87,10 +87,10 @@ public:
 
   /// Accepts visitors.
   /// @param v the visitor
-  virtual void accept(util::IRVisitor &v) = 0;
+  virtual void accept(util::Visitor &v) = 0;
   /// Accepts visitors.
   /// @param v the visitor
-  virtual void accept(util::ConstIRVisitor &v) const = 0;
+  virtual void accept(util::ConstVisitor &v) const = 0;
 
   /// Sets an attribute
   /// @param the attribute key
@@ -256,14 +256,14 @@ public:
     return other == nodeId() || Parent::isConvertible(other);
   }
 
-  void accept(util::IRVisitor &v) {
+  void accept(util::Visitor &v) {
     if (Node::hasReplacement())
       Node::getActual()->accept(v);
     else
       v.visit(static_cast<Derived *>(this));
   }
 
-  void accept(util::ConstIRVisitor &v) const {
+  void accept(util::ConstVisitor &v) const {
     if (Node::hasReplacement())
       Node::getActual()->accept(v);
     else

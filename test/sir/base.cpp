@@ -3,13 +3,13 @@
 #include <algorithm>
 
 namespace {
-class TestVisitor : public seq::ir::util::IRVisitor {
+class TestVisitor : public seq::ir::util::Visitor {
 public:
   void visit(seq::ir::IntConst *) override { FAIL(); }
   void visit(seq::ir::BoolConst *) override {}
 };
 
-class ConstTestVisitor : public seq::ir::util::ConstIRVisitor {
+class ConstTestVisitor : public seq::ir::util::ConstVisitor {
 public:
   void visit(const seq::ir::IntConst *) override { FAIL(); }
   void visit(const seq::ir::BoolConst *) override {}

@@ -9,7 +9,7 @@
 namespace seq {
 namespace ir {
 
-class LLVMVisitor : public util::ConstIRVisitor {
+class LLVMVisitor : public util::ConstVisitor {
 private:
   template <typename V> using CacheBase = std::unordered_map<int, V *>;
   template <typename K, typename V> class Cache : public CacheBase<V> {

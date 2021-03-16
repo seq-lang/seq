@@ -18,7 +18,7 @@ namespace ir {
 namespace util {
 
 /// Pass that visits all values in a module.
-class LambdaValueVisitor : public IRVisitor {
+class Operator : public Visitor {
 private:
   /// IDs of previously visited nodes
   std::unordered_set<int> seen;
@@ -28,7 +28,7 @@ private:
   std::vector<decltype(SeriesFlow().begin())> itStack;
 
 public:
-  virtual ~LambdaValueVisitor() noexcept = default;
+  virtual ~Operator() noexcept = default;
 
   void visit(Module *m) override {
     nodeStack.push_back(m);

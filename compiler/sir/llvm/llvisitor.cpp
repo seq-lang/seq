@@ -133,7 +133,7 @@ llvm::DIFile *LLVMVisitor::DebugInfo::getFile(const std::string &path) {
 }
 
 LLVMVisitor::LLVMVisitor(bool debug, const std::string &flags)
-    : util::ConstIRVisitor(), context(), builder(context), module(), func(nullptr),
+    : util::ConstVisitor(), context(), builder(context), module(), func(nullptr),
       block(nullptr), value(nullptr), vars(), funcs(), coro(), loops(), trycatch(),
       db(debug, flags), machine() {
   llvm::InitializeNativeTarget();

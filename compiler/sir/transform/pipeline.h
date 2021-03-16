@@ -8,7 +8,7 @@ namespace ir {
 namespace transform {
 namespace pipeline {
 
-class PipelineOptimizations : public LambdaValuePass {
+class PipelineOptimizations : public OperatorPass {
   const unsigned SCHED_WIDTH_PREFETCH = 16;
   const unsigned SCHED_WIDTH_INTERALIGN = 2048;
 

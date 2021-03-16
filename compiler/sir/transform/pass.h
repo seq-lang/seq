@@ -3,7 +3,7 @@
 #include "manager.h"
 
 #include "sir/module.h"
-#include "sir/util/lambda_visitor.h"
+#include "sir/util/operator.h"
 
 namespace seq {
 namespace ir {
@@ -32,8 +32,8 @@ public:
   }
 };
 
-/// Pass that runs a single LambdaValueVisitor.
-class LambdaValuePass : public Pass, public util::LambdaValueVisitor {
+/// Pass that runs a single Operator.
+class OperatorPass : public Pass, public util::Operator {
 public:
   void run(Module *module) override { process(module); }
 };

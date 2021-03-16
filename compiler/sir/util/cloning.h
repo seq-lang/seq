@@ -7,7 +7,7 @@ namespace seq {
 namespace ir {
 namespace util {
 
-class CloneVisitor : public ConstIRVisitor {
+class CloneVisitor : public ConstVisitor {
 private:
   /// the clone context
   std::unordered_map<int, Node *> ctx;

@@ -125,12 +125,12 @@ set(SEQ_HPPFILES
         compiler/parser/ctx.h
         compiler/parser/ocaml/ocaml.h
         compiler/parser/parser.h
-        compiler/parser/visitors/translate/translate.h
-        compiler/parser/visitors/translate/translate_ctx.h
         compiler/parser/visitors/doc/doc.h
         compiler/parser/visitors/format/format.h
         compiler/parser/visitors/simplify/simplify.h
         compiler/parser/visitors/simplify/simplify_ctx.h
+        compiler/parser/visitors/translate/translate.h
+        compiler/parser/visitors/translate/translate_ctx.h
         compiler/parser/visitors/typecheck/typecheck.h
         compiler/parser/visitors/typecheck/typecheck_ctx.h
         compiler/parser/visitors/visitor.h
@@ -158,8 +158,8 @@ set(SEQ_HPPFILES
         compiler/sir/util/format.h
         compiler/sir/util/irtools.h
         compiler/sir/util/iterators.h
-        compiler/sir/util/lambda_visitor.h
         compiler/sir/util/matching.h
+        compiler/sir/util/operator.h
         compiler/sir/util/packs.h
         compiler/sir/util/visitor.h
         compiler/sir/value.h
@@ -184,14 +184,14 @@ set(SEQ_CPPFILES
         compiler/parser/common.cpp
         compiler/parser/ocaml/ocaml.cpp
         compiler/parser/parser.cpp
-        compiler/parser/visitors/translate/translate.cpp
-        compiler/parser/visitors/translate/translate_ctx.cpp
         compiler/parser/visitors/doc/doc.cpp
         compiler/parser/visitors/format/format.cpp
         compiler/parser/visitors/simplify/simplify.cpp
         compiler/parser/visitors/simplify/simplify_ctx.cpp
         compiler/parser/visitors/simplify/simplify_expr.cpp
         compiler/parser/visitors/simplify/simplify_stmt.cpp
+        compiler/parser/visitors/translate/translate.cpp
+        compiler/parser/visitors/translate/translate_ctx.cpp
         compiler/parser/visitors/typecheck/typecheck.cpp
         compiler/parser/visitors/typecheck/typecheck_ctx.cpp
         compiler/parser/visitors/typecheck/typecheck_expr.cpp
