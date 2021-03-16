@@ -64,3 +64,15 @@ The default compilation and run mode is *debug* (``-debug``). Compile and run wi
 
     # generate 'foo.ll' object file
     seqc -build -o foo.ll myprogram.seq
+
+Compile-time definitions
+------------------------
+
+``seqc`` allows for compile-time definitions via the ``-D`` flag. For example, in the following code:
+
+.. code-block:: seq
+
+    from bio import *
+    print Kmer[SEED_LEN]()
+
+``SEED_LEN`` can be specified on the command line as such: ``seqc -DSEED_LEN=10 myprogram.seq``.
