@@ -201,7 +201,7 @@ public:
   /// @param args the arguments
   /// @return the new node
   template <typename DesiredType, typename... Args>
-  DesiredType *N(seq::SrcInfo s, Args &&...args) {
+  DesiredType *N(seq::SrcInfo s, Args &&... args) {
     auto *ret = new DesiredType(std::forward<Args>(args)...);
     ret->setModule(this);
     ret->setSrcInfo(s);
@@ -214,7 +214,7 @@ public:
   /// @param args the arguments
   /// @return the new node
   template <typename DesiredType, typename... Args>
-  DesiredType *N(const seq::SrcObject *s, Args &&...args) {
+  DesiredType *N(const seq::SrcObject *s, Args &&... args) {
     return N<DesiredType>(s->getSrcInfo(), std::forward<Args>(args)...);
   }
   /// Constructs and registers an IR node with provided source node.
@@ -222,13 +222,13 @@ public:
   /// @param args the arguments
   /// @return the new node
   template <typename DesiredType, typename... Args>
-  DesiredType *N(const Node *s, Args &&...args) {
+  DesiredType *N(const Node *s, Args &&... args) {
     return N<DesiredType>(s->getSrcInfo(), std::forward<Args>(args)...);
   }
   /// Constructs and registers an IR node with no source information.
   /// @param args the arguments
   /// @return the new node
-  template <typename DesiredType, typename... Args> DesiredType *Nr(Args &&...args) {
+  template <typename DesiredType, typename... Args> DesiredType *Nr(Args &&... args) {
     return N<DesiredType>(seq::SrcInfo(), std::forward<Args>(args)...);
   }
 
