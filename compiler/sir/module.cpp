@@ -84,7 +84,8 @@ const std::string Module::INT_MAGIC_NAME = "__int__";
 const std::string Module::BOOL_MAGIC_NAME = "__bool__";
 const std::string Module::STR_MAGIC_NAME = "__str__";
 
-const std::string Module::GET_MAGIC_NAME = "__getitem__";
+const std::string Module::GETITEM_MAGIC_NAME = "__getitem__";
+const std::string Module::SETITEM_MAGIC_NAME = "__setitem__";
 const std::string Module::ITER_MAGIC_NAME = "__iter__";
 const std::string Module::LEN_MAGIC_NAME = "__len__";
 

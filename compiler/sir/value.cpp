@@ -95,7 +95,7 @@ Value *Value::operator&&(Value &other) {
 }
 
 Value *Value::operator[](Value &other) {
-  return doBinaryOp(Module::GET_MAGIC_NAME, other);
+  return doBinaryOp(Module::GETITEM_MAGIC_NAME, other);
 }
 
 Value *Value::toInt() { return doUnaryOp(Module::INT_MAGIC_NAME); }

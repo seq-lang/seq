@@ -62,7 +62,8 @@ public:
   static const std::string BOOL_MAGIC_NAME;
   static const std::string STR_MAGIC_NAME;
 
-  static const std::string GET_MAGIC_NAME;
+  static const std::string GETITEM_MAGIC_NAME;
+  static const std::string SETITEM_MAGIC_NAME;
   static const std::string ITER_MAGIC_NAME;
   static const std::string LEN_MAGIC_NAME;
 
