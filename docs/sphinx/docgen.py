@@ -26,7 +26,7 @@ def load_json(directory):
             if f.endswith('.seq'):
                 files.append(os.path.abspath(os.path.join(root,f)))
     files='\n'.join(files)
-    s=sp.run(['../../build/seqc','-doc','-'],stdout=sp.PIPE,input=files.encode('utf-8'))
+    s=sp.run(['../../build/seqc','doc'],stdout=sp.PIPE,input=files.encode('utf-8'))
     if s.returncode!=0:
         raise ValueError('seqc failed')
     return json.loads(s.stdout.decode('utf-8'))
