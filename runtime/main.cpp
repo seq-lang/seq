@@ -43,19 +43,18 @@ std::string makeOutputFilename(const std::string &filename,
   return trimExtension(filename, ".seq") + extension;
 }
 
-enum BuildMode { LLVM, Bitcode, Object, Executable, Detect };
+enum BuildKind { LLVM, Bitcode, Object, Executable, Detect };
 enum OptMode { Debug, Release };
 
 } // namespace
 
-int docMode(const vector<char *> &args) {
-  llvm::cl::SetVersionPrinter(versMsg);
+int docMode(const std::vector<const char *> &args, const std::string &argv0) {
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
-  seq::generateDocstr(args[0]);
+  seq::generateDocstr(argv0);
   return EXIT_SUCCESS;
 }
 
-int runMode(const vector<char *> &args) {
+int runMode(const std::vector<const char *> &args) {
   llvm::cl::OptionCategory generalCat("Options");
   llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::Required,
                                    llvm::cl::desc("<input file>"));
@@ -75,9 +74,8 @@ int runMode(const vector<char *> &args) {
                                       llvm::cl::desc("<program arguments>..."),
                                       llvm::cl::cat(generalCat));
   llvm::cl::list<std::string> libs(
-      "L", llvm::cl::desc("Load and link the specified library"),
+      "l", llvm::cl::desc("Load and link the specified library"),
       llvm::cl::cat(generalCat));
-  llvm::cl::SetVersionPrinter(versMsg);
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
   std::vector<std::string> libsVec(libs);
   std::vector<std::string> argsVec(seqArgs);
@@ -127,7 +125,7 @@ int runMode(const vector<char *> &args) {
   return EXIT_SUCCESS;
 }
 
-int buildMode(const vector<char *> &args) {
+int buildMode(const std::vector<const char *> &args) {
   llvm::cl::OptionCategory generalCat("General Options");
   llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::Required,
                                    llvm::cl::desc("<input file>"));
@@ -139,11 +137,14 @@ int buildMode(const vector<char *> &args) {
           clEnumValN(Release, "release",
                      "Turn on compiler optimizations and disable debug info")),
       llvm::cl::init(Debug), llvm::cl::cat(generalCat));
+  llvm::cl::list<std::string> libs(
+      "l", llvm::cl::desc("Link the specified library (only for executables)"),
+      llvm::cl::cat(generalCat));
   llvm::cl::list<std::string> defines(
       "D", llvm::cl::Prefix,
       llvm::cl::desc("Add static variable definitions. The syntax is <name>=<value>"),
       llvm::cl::cat(generalCat));
-  llvm::cl::opt<BuildMode> buildMode(
+  llvm::cl::opt<BuildKind> buildKind(
       llvm::cl::desc("output type"),
       llvm::cl::values(clEnumValN(LLVM, "llvm", "Generate LLVM IR"),
                        clEnumValN(Bitcode, "bc", "Generate LLVM bitcode"),
@@ -155,10 +156,10 @@ int buildMode(const vector<char *> &args) {
   llvm::cl::opt<std::string> output(
       "o",
       llvm::cl::desc("Write compiled output to specified file. Supported extensions: "
-                     ".ll (LLVM IR), .bc (LLVM bitcode), .o (object file)"),
+                     "none (executable), .o (object file), .ll (LLVM IR), .bc (LLVM bitcode)"),
       llvm::cl::cat(generalCat));
-  llvm::cl::SetVersionPrinter(versMsg);
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
+  std::vector<std::string> libsVec(libs);
 
   if (input != "-" && !hasExtension(input, ".seq"))
     seq::compilationError("input file is expected to be a .seq file, or '-' for stdin");
@@ -203,18 +204,18 @@ int buildMode(const vector<char *> &args) {
   if (output.empty() && input == "-")
     seq::compilationError("output file must be specified when reading from stdin");
   std::string extension;
-  switch (buildMode) {
-  case BuildMode::LLVM:
+  switch (buildKind) {
+  case BuildKind::LLVM:
     extension = ".ll";
     break;
-  case BuildMode::Bitcode:
+  case BuildKind::Bitcode:
     extension = ".bc";
     break;
-  case BuildMode::Object:
+  case BuildKind::Object:
     extension = ".o";
     break;
-  case BuildMode::Executable:
-  case BuildMode::Detect:
+  case BuildKind::Executable:
+  case BuildKind::Detect:
     extension = "";
     break;
   default:
@@ -222,21 +223,21 @@ int buildMode(const vector<char *> &args) {
   }
   const std::string filename =
       output.empty() ? makeOutputFilename(input, extension) : output;
-  switch (buildMode) {
-  case BuildMode::LLVM:
+  switch (buildKind) {
+  case BuildKind::LLVM:
     visitor.writeToLLFile(filename);
     break;
-  case BuildMode::Bitcode:
+  case BuildKind::Bitcode:
     visitor.writeToBitcodeFile(filename);
     break;
-  case BuildMode::Object:
+  case BuildKind::Object:
     visitor.writeToObjectFile(filename);
     break;
-  case BuildMode::Executable:
-    visitor.writeToExecutable(filename);
+  case BuildKind::Executable:
+    visitor.writeToExecutable(filename, libsVec);
     break;
-  case BuildMode::Detect:
-    visitor.compile(filename);
+  case BuildKind::Detect:
+    visitor.compile(filename, libsVec);
     break;
   default:
     assert(0);
@@ -245,31 +246,42 @@ int buildMode(const vector<char *> &args) {
   return EXIT_SUCCESS;
 }
 
-int otherMode(const vector<char *> &args) {
+int otherMode(const std::vector<const char *> &args) {
   llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::desc("<mode>"));
   llvm::cl::extrahelp("\nMODES:\n\n"
                       "  run   - run a program interactively\n"
                       "  build - build a program\n"
                       "  doc   - generate program documentation\n");
-  llvm::cl::SetVersionPrinter(versMsg);
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
 
   if (!input.empty())
-    seq::compilationError("Available commands: seqc [build|run|doc]");
+    seq::compilationError("Available commands: seqc <run|build|doc>");
   return EXIT_SUCCESS;
 }
 
-int main(int argc, char **argv) {
-  vector<char *> args{argv[0]};
-  for (int i = 2; i < argc; i++)
-    args.emplace_back(argv[i]);
+int main(int argc, const char **argv) {
   if (argc < 2)
-    seq::compilationError("Available commands: seqc [build|run|doc]");
-  if (string(argv[1]) == "run")
+    seq::compilationError("Available commands: seqc <run|build|doc>");
+
+  llvm::cl::SetVersionPrinter(versMsg);
+  std::vector<const char *> args{argv[0]};
+  for (int i = 2; i < argc; i++)
+    args.push_back(argv[i]);
+
+  std::string mode(argv[1]);
+  std::string argv0 = std::string(args[0]) + " " + mode;
+  if (mode == "run") {
+    args[0] = argv0.data();
     return runMode(args);
-  if (string(argv[1]) == "build")
+  }
+  if (mode == "build") {
+    args[0] = argv0.data();
     return buildMode(args);
-  if (string(argv[1]) == "doc")
-    return docMode(args);
-  return otherMode(vector<char *>(argv, argv + argc));
+  }
+  if (mode == "doc") {
+    const char *oldArgv0 = args[0];
+    args[0] = argv0.data();
+    return docMode(args, oldArgv0);
+  }
+  return otherMode({argv, argv + argc});
 }

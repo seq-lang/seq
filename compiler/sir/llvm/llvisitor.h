@@ -192,13 +192,16 @@ public:
   /// Writes module as native executable. Invokes an
   /// external linker to generate the final executable.
   /// @param filename the file to write to
-  void writeToExecutable(const std::string &filename);
+  /// @param libs library names to link
+  void writeToExecutable(const std::string &filename,
+                         const std::vector<std::string> &libs = {});
   /// Runs optimization passes on module and writes the result
   /// to the specified file. The output type is determined by
   /// the file extension (.ll for LLVM IR, .bc for LLVM bitcode
   /// .o or .obj for object file, other for executable).
   /// @param filename name of the file to write to
-  void compile(const std::string &filename);
+  /// @param libs library names to link to, if creating executable
+  void compile(const std::string &filename, const std::vector<std::string> &libs = {});
   /// Runs optimization passes on module and executes it.
   /// @param args vector of arguments to program
   /// @param libs vector of libraries to load

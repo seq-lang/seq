@@ -306,6 +306,7 @@ void LLVMVisitor::runLLVMPipeline() {
 }
 
 void LLVMVisitor::writeToObjectFile(const std::string &filename) {
+  runLLVMPipeline();
   auto &llvmtm = static_cast<llvm::LLVMTargetMachine &>(*machine);
   auto *mmi = new llvm::MachineModuleInfo(&llvmtm);
   llvm::legacy::PassManager pm;
@@ -329,6 +330,7 @@ void LLVMVisitor::writeToObjectFile(const std::string &filename) {
 }
 
 void LLVMVisitor::writeToBitcodeFile(const std::string &filename) {
+  runLLVMPipeline();
   std::error_code err;
   llvm::raw_fd_ostream stream(filename, err, llvm::sys::fs::F_None);
   llvm::WriteBitcodeToFile(module.get(), stream);
@@ -338,6 +340,7 @@ void LLVMVisitor::writeToBitcodeFile(const std::string &filename) {
 }
 
 void LLVMVisitor::writeToLLFile(const std::string &filename) {
+  runLLVMPipeline();
   auto fo = fopen(filename.c_str(), "w");
   llvm::raw_fd_ostream fout(fileno(fo), true);
   fout << *module;
@@ -382,15 +385,19 @@ void addEnvVarPathsToLinkerArgs(std::vector<std::string> &args,
 }
 } // namespace
 
-void LLVMVisitor::writeToExecutable(const std::string &filename) {
+void LLVMVisitor::writeToExecutable(const std::string &filename,
+                                    const std::vector<std::string> &libs) {
+  const std::string objFile = filename + ".o";
+  writeToObjectFile(objFile);
+
   std::vector<std::string> command = {"clang"};
   addEnvVarPathsToLinkerArgs(command, "LIBRARY_PATH");
   addEnvVarPathsToLinkerArgs(command, "LD_LIBRARY_PATH");
   addEnvVarPathsToLinkerArgs(command, "DYLD_LIBRARY_PATH");
   addEnvVarPathsToLinkerArgs(command, "SEQ_LIBRARY_PATH");
-
-  const std::string objFile = filename + ".o";
-  writeToObjectFile(objFile);
+  for (const auto &lib : libs) {
+    command.push_back("-l" + lib);
+  }
   std::vector<std::string> extraArgs = {"-lseqrt", "-lomp", "-lpthread", "-ldl",
                                         "-lz",     "-lm",   "-lc",       "-o",
                                         filename,  objFile};
@@ -407,8 +414,8 @@ void LLVMVisitor::writeToExecutable(const std::string &filename) {
 #endif
 }
 
-void LLVMVisitor::compile(const std::string &filename) {
-  runLLVMPipeline();
+void LLVMVisitor::compile(const std::string &filename,
+                          const std::vector<std::string> &libs) {
   llvm::StringRef f(filename);
   if (f.endswith(".ll")) {
     writeToLLFile(filename);
@@ -417,7 +424,7 @@ void LLVMVisitor::compile(const std::string &filename) {
   } else if (f.endswith(".o") || f.endswith(".obj")) {
     writeToObjectFile(filename);
   } else {
-    writeToExecutable(filename);
+    writeToExecutable(filename, libs);
   }
 }
 
