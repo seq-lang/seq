@@ -130,9 +130,6 @@ public:
   /// @param v true if builtin, false otherwise
   void setBuiltin(bool v = true) { builtin = v; }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
 protected:
   std::vector<Value *> doGetUsedValues() const override {
     return body ? std::vector<Value *>{body} : std::vector<Value *>{};
@@ -148,9 +145,6 @@ public:
   static const char NodeId;
 
   using AcceptorExtend::AcceptorExtend;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Internal, LLVM-only function.
@@ -169,9 +163,6 @@ public:
   /// Sets the parent type.
   /// @param p the new parent
   void setParentType(types::Type *p) { parentType = p; }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 
 protected:
   std::vector<types::Type *> doGetUsedTypes() const override;
@@ -225,9 +216,6 @@ public:
   /// Sets the LLVM body.
   /// @param v the new value
   void setLLVMBody(std::string v) { llvmBody = std::move(v); }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 
 protected:
   std::vector<types::Type *> doGetUsedTypes() const override;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "llvm.h"
+#include "util/common.h"
 
 namespace seq {
 namespace ir {

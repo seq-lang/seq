@@ -31,23 +31,11 @@ types::Type *Flow::doGetType() const { return getModule()->getVoidType(); }
 
 const char SeriesFlow::NodeId = 0;
 
-std::ostream &SeriesFlow::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: [\n{}\n]"), referenceString(),
-             fmt::join(util::dereference_adaptor(series.begin()),
-                       util::dereference_adaptor(series.end()), "\n"));
-  return os;
-}
-
 int SeriesFlow::doReplaceUsedValue(int id, Value *newValue) {
   return findAndReplace(id, newValue, series);
 }
 
 const char WhileFlow::NodeId = 0;
-
-std::ostream &WhileFlow::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: while ({}){{\n{}}}"), referenceString(), *cond, *body);
-  return os;
-}
 
 int WhileFlow::doReplaceUsedValue(int id, Value *newValue) {
   auto replacements = 0;
@@ -58,7 +46,7 @@ int WhileFlow::doReplaceUsedValue(int id, Value *newValue) {
   }
   if (body->getId() == id) {
     auto *f = cast<Flow>(newValue);
-    assert(f);
+    seqassert(f, "{} is not a flow", *newValue);
     body = f;
     ++replacements;
   }
@@ -66,12 +54,6 @@ int WhileFlow::doReplaceUsedValue(int id, Value *newValue) {
 }
 
 const char ForFlow::NodeId = 0;
-
-std::ostream &ForFlow::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: for ({} : {}){{\n{}}}"), referenceString(),
-             var->referenceString(), *iter, *body);
-  return os;
-}
 
 int ForFlow::doReplaceUsedValue(int id, Value *newValue) {
   auto count = 0;
@@ -81,7 +63,7 @@ int ForFlow::doReplaceUsedValue(int id, Value *newValue) {
   }
   if (body->getId() == id) {
     auto *f = cast<Flow>(newValue);
-    assert(f);
+    seqassert(f, "{} is not a flow", *newValue);
     body = f;
     ++count;
   }
@@ -97,14 +79,6 @@ int ForFlow::doReplaceUsedVariable(int id, Var *newVar) {
 }
 
 const char IfFlow::NodeId = 0;
-
-std::ostream &IfFlow::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: if ("), referenceString());
-  fmt::print(os, FMT_STRING("{}) {{\n{}\n}}"), *cond, *trueBranch);
-  if (falseBranch)
-    fmt::print(os, FMT_STRING(" else {{\n{}\n}}"), *falseBranch);
-  return os;
-}
 
 std::vector<Value *> IfFlow::doGetUsedValues() const {
   std::vector<Value *> ret = {cond, trueBranch};
@@ -122,13 +96,13 @@ int IfFlow::doReplaceUsedValue(int id, Value *newValue) {
   }
   if (trueBranch->getId() == id) {
     auto *f = cast<Flow>(newValue);
-    assert(f);
+    seqassert(f, "{} is not a flow", *newValue);
     trueBranch = f;
     ++replacements;
   }
   if (falseBranch && falseBranch->getId() == id) {
     auto *f = cast<Flow>(newValue);
-    assert(f);
+    seqassert(f, "{} is not a flow", *newValue);
     falseBranch = f;
     ++replacements;
   }
@@ -137,19 +111,6 @@ int IfFlow::doReplaceUsedValue(int id, Value *newValue) {
 }
 
 const char TryCatchFlow::NodeId = 0;
-
-std::ostream &TryCatchFlow::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: try {{\n{}\n}}"), referenceString(), *body);
-  for (auto &c : catches) {
-    fmt::print(os, FMT_STRING("catch ({}{}{}) {{\n{}\n}} "),
-               c.getType() ? c.getType()->referenceString() : "all",
-               c.getVar() ? " -> " : "",
-               c.getVar() ? c.getVar()->referenceString() : "", *c.getHandler());
-  }
-  if (finally)
-    fmt::print(os, FMT_STRING("finally {{\n{}\n}}"), *finally);
-  return os;
-}
 
 std::vector<Value *> TryCatchFlow::doGetUsedValues() const {
   std::vector<Value *> ret = {body};
@@ -166,13 +127,13 @@ int TryCatchFlow::doReplaceUsedValue(int id, Value *newValue) {
 
   if (body->getId() == id) {
     auto *f = cast<Flow>(newValue);
-    assert(f);
+    seqassert(f, "{} is not a flow", *newValue);
     body = f;
     ++replacements;
   }
   if (finally && finally->getId() == id) {
     auto *f = cast<Flow>(newValue);
-    assert(f);
+    seqassert(f, "{} is not a flow", *newValue);
     finally = f;
     ++replacements;
   }
@@ -180,7 +141,7 @@ int TryCatchFlow::doReplaceUsedValue(int id, Value *newValue) {
   for (auto &c : catches) {
     if (c.getHandler()->getId() == id) {
       auto *f = cast<Flow>(newValue);
-      assert(f);
+      seqassert(f, "{} is not a flow", *newValue);
       c.setHandler(f);
       ++replacements;
     }
@@ -236,7 +197,7 @@ types::Type *PipelineFlow::Stage::getOutputType() const {
     return func->getType();
   } else {
     auto *funcType = cast<types::FuncType>(func->getType());
-    assert(funcType);
+    seqassert(funcType, "{} is not a function type", *func->getType());
     return funcType->getReturnType();
   }
 }
@@ -249,40 +210,18 @@ types::Type *PipelineFlow::Stage::getOutputElementType() const {
       return genType->getBase();
     } else {
       auto *funcType = cast<types::FuncType>(func->getType());
-      assert(funcType);
+      seqassert(funcType, "{} is not a function type", *func->getType());
       genType = cast<types::GeneratorType>(funcType->getReturnType());
     }
-    assert(genType);
+    seqassert(genType, "generator type not found");
     return genType->getBase();
   } else if (args.empty()) {
     return func->getType();
   } else {
     auto *funcType = cast<types::FuncType>(func->getType());
-    assert(funcType);
+    seqassert(funcType, "{} is not a function type", *func->getType());
     return funcType->getReturnType();
   }
-}
-
-std::ostream &PipelineFlow::doFormat(std::ostream &os) const {
-  os << "pipeline(";
-  for (const auto &stage : *this) {
-    os << *stage.getFunc() << "[" << (stage.isGenerator() ? "g" : "f") << "](";
-    std::string sep = "";
-    for (const auto *arg : stage) {
-      os << sep;
-      if (arg) {
-        os << *arg;
-      } else {
-        os << "...";
-      }
-      sep = ", ";
-    }
-    os << ")";
-    if (&stage != &back())
-      os << (stage.isParallel() ? " ||> " : " |> ");
-  }
-  os << ")";
-  return os;
 }
 
 std::vector<Value *> PipelineFlow::doGetUsedValues() const {

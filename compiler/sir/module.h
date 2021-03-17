@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cassert>
 #include <iterator>
 #include <memory>
 #include <string>
@@ -8,6 +7,8 @@
 
 #include "util/fmt/format.h"
 #include "util/fmt/ostream.h"
+
+#include "util/common.h"
 
 #include "func.h"
 #include "util/iterators.h"
@@ -382,8 +383,6 @@ private:
     vars.emplace_back(v);
     varMap[v->getId()] = std::prev(vars.end());
   }
-
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 } // namespace ir

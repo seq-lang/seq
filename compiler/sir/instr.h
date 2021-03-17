@@ -65,9 +65,6 @@ protected:
 
   std::vector<Var *> doGetUsedVariables() const override { return {lhs}; }
   int doReplaceUsedVariable(int id, Var *newVar) override;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing loading the field of a value.
@@ -106,9 +103,6 @@ protected:
   types::Type *doGetType() const override;
   std::vector<Value *> doGetUsedValues() const override { return {val}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing setting the field of a value.
@@ -158,9 +152,6 @@ protected:
   types::Type *doGetType() const override { return lhs->getType(); }
   std::vector<Value *> doGetUsedValues() const override { return {lhs, rhs}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing calling a function.
@@ -233,9 +224,6 @@ protected:
   types::Type *doGetType() const override;
   std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing allocating an array on the stack.
@@ -274,9 +262,6 @@ protected:
   types::Type *doGetType() const override { return arrayType; }
   std::vector<types::Type *> doGetUsedTypes() const override { return {arrayType}; }
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing getting information about a type.
@@ -318,9 +303,6 @@ protected:
   types::Type *doGetType() const override;
   std::vector<types::Type *> doGetUsedTypes() const override { return {inspectType}; }
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing a Python yield expression.
@@ -355,9 +337,6 @@ protected:
   types::Type *doGetType() const override { return type; }
   std::vector<types::Type *> doGetUsedTypes() const override { return {type}; }
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing a ternary operator.
@@ -412,9 +391,6 @@ protected:
     return {cond, trueValue, falseValue};
   }
   int doReplaceUsedValue(int id, Value *newValue) override;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Base for control flow instructions
@@ -430,9 +406,6 @@ public:
   static const char NodeId;
 
   using AcceptorExtend::AcceptorExtend;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing a continue statement.
@@ -441,9 +414,6 @@ public:
   static const char NodeId;
 
   using AcceptorExtend::AcceptorExtend;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr representing a return statement.
@@ -469,9 +439,6 @@ public:
 protected:
   std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 class YieldInstr : public AcceptorExtend<YieldInstr, Instr> {
@@ -504,9 +471,6 @@ public:
 protected:
   std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 class ThrowInstr : public AcceptorExtend<ThrowInstr, Instr> {
@@ -531,9 +495,6 @@ public:
 protected:
   std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(int id, Value *newValue) override;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 /// Instr that contains a flow and value.
@@ -574,9 +535,6 @@ protected:
   types::Type *doGetType() const override { return val->getType(); }
   std::vector<Value *> doGetUsedValues() const override { return {flow, val}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 };
 
 } // namespace ir

@@ -36,13 +36,3 @@ TEST_F(SIRCoreTest, ConstCloning) {
   ASSERT_EQ(VALUE, clone->getVal());
   ASSERT_EQ(module->getIntType(), clone->getType());
 }
-
-TEST_F(SIRCoreTest, StringConstFormatting) {
-  auto VALUE = "hi";
-
-  auto *node = module->Nr<StringConst>(VALUE, module->getStringType());
-
-  std::stringstream s;
-  s << *node;
-  ASSERT_EQ(fmt::format(FMT_STRING("\"{}\""), VALUE), s.str());
-}

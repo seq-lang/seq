@@ -15,7 +15,7 @@ std::vector<seq::ast::types::TypePtr>
 translateGenerics(std::vector<types::Generic> &generics) {
   std::vector<seq::ast::types::TypePtr> ret;
   for (auto &g : generics) {
-    assert(g.isStatic() || g.getTypeValue());
+    seqassert(g.isStatic() || g.getTypeValue(), "generic must be static or a type");
     ret.push_back(std::make_shared<seq::ast::types::LinkType>(
         g.isStatic() ? std::make_shared<seq::ast::types::StaticType>(g.getStaticValue())
                      : g.getTypeValue()->getAstType()));
@@ -27,7 +27,7 @@ std::vector<std::pair<std::string, seq::ast::types::TypePtr>>
 generateDummyNames(std::vector<types::Type *> &types) {
   std::vector<std::pair<std::string, seq::ast::types::TypePtr>> ret;
   for (auto *t : types) {
-    assert(t->getAstType());
+    seqassert(t->getAstType(), "{} must have an ast type", *t);
     ret.emplace_back("", t->getAstType());
   }
   return ret;
@@ -38,7 +38,7 @@ std::vector<seq::ast::types::TypePtr> translateArgs(std::vector<types::Type *> &
       std::make_shared<seq::ast::types::LinkType>(
           seq::ast::types::LinkType::Kind::Unbound, 0)};
   for (auto *t : types) {
-    assert(t->getAstType());
+    seqassert(t->getAstType(), "{} must have an ast type", *t);
     ret.push_back(t->getAstType());
   }
   return ret;
@@ -212,7 +212,7 @@ types::Type *Module::getIntNType(unsigned int len, bool sign) {
 types::Type *Module::getTupleType(std::vector<types::Type *> args) {
   std::vector<ast::types::TypePtr> argTypes;
   for (auto *t : args) {
-    assert(t->getAstType());
+    seqassert(t->getAstType(), "{} must have an ast type", *t);
     argTypes.push_back(t->getAstType());
   }
   return cache->makeTuple(argTypes);
@@ -279,7 +279,7 @@ types::Type *Module::unsafeGetMemberedType(const std::string &name, bool ref) {
       if (!record) {
         record = Nr<types::RecordType>(contentName);
       }
-      rVal = Nr<types::RefType>(name, record->as<types::RecordType>());
+      rVal = Nr<types::RefType>(name, cast<types::RecordType>(record));
     } else {
       rVal = Nr<types::RecordType>(name);
     }
@@ -293,18 +293,6 @@ types::Type *Module::unsafeGetIntNType(unsigned int len, bool sign) {
   if (auto *rVal = getType(name))
     return rVal;
   return Nr<types::IntNType>(len, sign);
-}
-
-std::ostream &Module::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("module {}{{\n"), referenceString());
-  fmt::print(os, "{}\n", *mainFunc);
-
-  for (auto &g : vars) {
-    if (g->isGlobal())
-      fmt::print(os, FMT_STRING("{}\n"), *g);
-  }
-  os << '}';
-  return os;
 }
 
 } // namespace ir

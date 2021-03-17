@@ -83,9 +83,6 @@ public:
                        getActual()->getId());
   }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
 protected:
   virtual std::vector<Value *> doGetUsedValues() const { return {}; }
   virtual int doReplaceUsedValue(int id, Value *newValue) { return 0; }
@@ -121,10 +118,6 @@ public:
   void setVar(Var *v) { val = v; }
 
 private:
-  std::ostream &doFormat(std::ostream &os) const override {
-    return os << val->referenceString();
-  }
-
   types::Type *doGetType() const override { return val->getType(); }
 
   std::vector<Var *> doGetUsedVariables() const override { return {val}; }
@@ -155,10 +148,6 @@ public:
   void setVar(Var *v) { val = v; }
 
 private:
-  std::ostream &doFormat(std::ostream &os) const override {
-    return os << '&' << val->referenceString();
-  }
-
   types::Type *doGetType() const override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {val}; }

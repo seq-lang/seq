@@ -36,6 +36,10 @@ public:
   /// @param v the other node
   /// @return true if they match
   virtual bool match(const Type *v) const = 0;
+
+  /// Format the DSL node.
+  /// @param os the output stream
+  virtual std::ostream &doFormat(std::ostream &os) const = 0;
 };
 
 } // namespace types
@@ -57,6 +61,10 @@ public:
   /// @param cv the clone visitor
   /// @return a clone of the object
   virtual Value *doClone(util::CloneVisitor &cv) const = 0;
+
+  /// Format the DSL node.
+  /// @param os the output stream
+  virtual std::ostream &doFormat(std::ostream &os) const = 0;
 };
 
 /// DSL flow.
@@ -76,6 +84,10 @@ public:
   /// @param cv the clone visitor
   /// @return a clone of the object
   virtual Value *doClone(util::CloneVisitor &cv) const = 0;
+
+  /// Format the DSL node.
+  /// @param os the output stream
+  virtual std::ostream &doFormat(std::ostream &os) const = 0;
 };
 
 /// DSL instruction.
@@ -95,6 +107,10 @@ public:
   /// @param cv the clone visitor
   /// @return a clone of the object
   virtual Value *doClone(util::CloneVisitor &cv) const = 0;
+
+  /// Format the DSL node.
+  /// @param os the output stream
+  virtual std::ostream &doFormat(std::ostream &os) const = 0;
 };
 
 } // namespace dsl

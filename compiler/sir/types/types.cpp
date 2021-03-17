@@ -29,8 +29,6 @@ namespace types {
 
 const char Type::NodeId = 0;
 
-std::ostream &Type::doFormat(std::ostream &os) const { return os << referenceString(); }
-
 std::vector<Generic> Type::doGetGenerics() const {
   if (!astType)
     return {};
@@ -55,7 +53,7 @@ Value *Type::doConstruct(std::vector<Value *> args) {
     argTypes.push_back(a->getType());
 
   auto *fn = module->getOrRealizeMethod(this, Module::NEW_MAGIC_NAME, argTypes);
-  assert(fn);
+  seqassert(fn, "could not realize {} new function", *this);
 
   return module->Nr<CallInstr>(module->Nr<VarValue>(fn), args);
 }
@@ -118,30 +116,14 @@ void RecordType::realize(std::vector<Type *> mTypes, std::vector<std::string> mN
   }
 }
 
-std::ostream &RecordType::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: ("), referenceString());
-  for (auto i = 0; i < fields.size(); ++i) {
-    auto sep = i + 1 != fields.size() ? ", " : "";
-    fmt::print(os, FMT_STRING("{}: {}{}"), fields[i].getName(),
-               fields[i].getType()->referenceString(), sep);
-  }
-  os << ')';
-  return os;
-}
-
 const char RefType::NodeId = 0;
-
-std::ostream &RefType::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: ref({})"), referenceString(), *contents);
-  return os;
-}
 
 Value *RefType::doConstruct(std::vector<Value *> args) {
   auto *module = getModule();
 
   auto *series = module->Nr<SeriesFlow>();
   auto *newFn = module->getOrRealizeMethod(this, Module::NEW_MAGIC_NAME, {});
-  assert(newFn);
+  seqassert(newFn, "could not realize {} new function", *this);
 
   auto *newValue = module->Nr<CallInstr>(module->Nr<VarValue>(newFn));
   series->push_back(newValue);
@@ -154,7 +136,7 @@ Value *RefType::doConstruct(std::vector<Value *> args) {
   }
 
   auto *initFn = module->getOrRealizeMethod(this, Module::INIT_MAGIC_NAME, argTypes);
-  assert(initFn);
+  seqassert(initFn, "could not realize {} init function", *this);
 
   return module->Nr<FlowInstr>(
       series, module->Nr<CallInstr>(module->Nr<VarValue>(initFn), newArgs));
@@ -187,16 +169,6 @@ std::vector<Type *> FuncType::doGetUsedTypes() const {
   auto ret = argTypes;
   ret.push_back(rType);
   return ret;
-}
-
-std::ostream &FuncType::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: ("), referenceString());
-  for (auto it = argTypes.begin(); it != argTypes.end(); ++it) {
-    auto sep = it + 1 != argTypes.end() ? ", " : "";
-    fmt::print(os, FMT_STRING("{}{}"), (*it)->referenceString(), sep);
-  }
-  fmt::print(os, FMT_STRING(")->{}"), rType->referenceString());
-  return os;
 }
 
 const char DerivedType::NodeId = 0;

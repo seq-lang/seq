@@ -7,11 +7,6 @@ namespace ir {
 
 const char Var::NodeId = 0;
 
-std::ostream &Var::doFormat(std::ostream &os) const {
-  fmt::print(os, FMT_STRING("{}: {}"), referenceString(), type->referenceString());
-  return os;
-}
-
 int Var::doReplaceUsedType(const std::string &name, types::Type *newType) {
   if (type->getName() == name) {
     type = newType;

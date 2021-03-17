@@ -96,7 +96,7 @@ template <typename T> bool isConst(const Value *x, const T &value) {
 /// @return the constant represented by the given value
 template <typename T> T getConst(const Value *x) {
   auto *c = cast<TemplatedConst<T>>(x);
-  assert(c);
+  seqassert(c, "{} is not a constant", *x);
   return c->getVal();
 }
 

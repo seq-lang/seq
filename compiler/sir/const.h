@@ -49,12 +49,6 @@ public:
   /// Sets the value.
   /// @param v the value
   void setVal(ValueType v) { val = v; }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override {
-    fmt::print(os, "{}", val);
-    return os;
-  }
 };
 
 using IntConst = TemplatedConst<int64_t>;
@@ -81,12 +75,6 @@ public:
   /// Sets the value.
   /// @param v the value
   void setVal(std::string v) { val = std::move(v); }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override {
-    fmt::print(os, "\"{}\"", val);
-    return os;
-  }
 };
 
 } // namespace ir

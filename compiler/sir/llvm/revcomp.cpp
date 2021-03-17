@@ -68,7 +68,7 @@ llvm::Value *codegenRevCompByBitShift(const unsigned k, llvm::Value *self,
   }
 
   if (w != 2 * k) {
-    assert(w > 2 * k);
+    seqassert(w > 2 * k, "cannot calculate rev comp by bit shift");
     result = builder.CreateLShr(result, w - (2 * k));
     result = builder.CreateTrunc(result, kmerType);
   }
@@ -167,7 +167,7 @@ llvm::Value *codegenRevCompBySIMD(const unsigned k, llvm::Value *self,
   vec = builder.CreateBitCast(vec, llvm::VectorType::get(ty, 1));
   llvm::Value *result = builder.CreateExtractElement(vec, (uint64_t)0);
   if (w != 2 * k) {
-    assert(w > 2 * k);
+    seqassert(w > 2 * k, "cannot calculate rev comp by simd");
     result = builder.CreateLShr(result, w - (2 * k));
     result = builder.CreateTrunc(result, kmerType);
   }

@@ -63,9 +63,6 @@ public:
   /// @return the iterator beyond the removed flow or instruction
   template <typename It> auto erase(It pos) { return series.erase(pos); }
 
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
 protected:
   std::vector<Value *> doGetUsedValues() const override {
     return std::vector<Value *>(series.begin(), series.end());
@@ -106,9 +103,6 @@ public:
   /// Sets the body.
   /// @param f the new value
   void setBody(Flow *f) { body = f; }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {cond, body}; }
@@ -162,9 +156,6 @@ public:
   /// Sets the var.
   /// @param c the new var
   void setVar(Var *c) { var = c; }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {iter, body}; }
@@ -220,9 +211,6 @@ public:
   /// Sets the condition.
   /// @param c the new condition
   void setCond(Value *c) { cond = c; }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
@@ -342,9 +330,6 @@ public:
   /// @param pos the position
   /// @return the iterator beyond the erased catch
   template <typename It> auto erase(It pos) { return catches.erase(pos); }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
@@ -492,9 +477,6 @@ public:
   template <typename... Args> void emplace_back(Args &&... args) {
     stages.emplace_back(std::forward<Args>(args)...);
   }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override;
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;

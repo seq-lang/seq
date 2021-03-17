@@ -16,7 +16,6 @@ public:
   using AcceptorExtend::AcceptorExtend;
 
 private:
-  std::ostream &doFormat(std::ostream &os) const override { return os << "any"; }
   bool doIsAtomic() const override { return true; }
 };
 
@@ -27,7 +26,6 @@ public:
   using AcceptorExtend::AcceptorExtend;
 
 private:
-  std::ostream &doFormat(std::ostream &os) const override { return os << "any"; }
   types::Type *doGetType() const override { return getModule()->getVoidType(); }
 };
 
@@ -36,9 +34,6 @@ class AnyFlow : public AcceptorExtend<AnyFlow, Flow>, public Any {
 public:
   static const char NodeId;
   using AcceptorExtend::AcceptorExtend;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override { return os << "any"; }
 };
 
 /// Any variable.
@@ -46,9 +41,6 @@ class AnyVar : public AcceptorExtend<AnyVar, Var>, public Any {
 public:
   static const char NodeId;
   using AcceptorExtend::AcceptorExtend;
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override { return os << "any"; }
 };
 
 /// Any function.
@@ -58,9 +50,6 @@ public:
   using AcceptorExtend::AcceptorExtend;
 
   AnyFunc() : AcceptorExtend() { setUnmangledName("any"); }
-
-private:
-  std::ostream &doFormat(std::ostream &os) const override { return os << "any"; }
 };
 
 /// Checks if IR nodes match.

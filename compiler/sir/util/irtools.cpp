@@ -31,7 +31,7 @@ Value *makeTuple(const std::vector<Value *> &args, Module *M) {
   }
   auto *tupleType = M->getTupleType(types);
   auto *newFunc = M->getOrRealizeMethod(tupleType, "__new__", types);
-  assert(newFunc);
+  seqassert(newFunc, "could not realize {} new function", *tupleType);
   return M->Nr<CallInstr>(M->Nr<VarValue>(newFunc), args);
 }
 
@@ -125,7 +125,7 @@ types::Type *getReturnType(const Func *func) {
 void setReturnType(Func *func, types::Type *rType) {
   auto *M = func->getModule();
   auto *t = cast<types::FuncType>(func->getType());
-  assert(t);
+  seqassert(t, "{} is not a function type", *func->getType());
   std::vector<types::Type *> argTypes(t->begin(), t->end());
   func->setType(M->getFuncType(rType, argTypes));
 }

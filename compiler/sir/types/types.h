@@ -65,7 +65,10 @@ public:
   std::vector<Type *> getUsedTypes() const final {
     return getActual()->doGetUsedTypes();
   }
-  int replaceUsedType(const std::string &name, Type *newType) final { assert(false); }
+  int replaceUsedType(const std::string &name, Type *newType) final {
+    seqassert(false, "types not replaceable");
+    return -1;
+  }
   using Node::replaceUsedType;
 
   /// @param other another type
@@ -100,8 +103,6 @@ public:
   }
 
 private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
   virtual std::vector<Generic> doGetGenerics() const;
 
   virtual std::vector<Type *> doGetUsedTypes() const { return {}; }
@@ -255,8 +256,6 @@ public:
   void realize(std::vector<Type *> mTypes, std::vector<std::string> mNames) override;
 
 private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
   std::vector<Type *> doGetUsedTypes() const override;
 
   bool doIsAtomic() const override {
@@ -303,8 +302,6 @@ public:
   }
 
 private:
-  std::ostream &doFormat(std::ostream &os) const override;
-
   std::vector<Type *> doGetUsedTypes() const override { return {contents}; }
 
   bool doIsAtomic() const override { return false; }
@@ -347,8 +344,6 @@ public:
 
 private:
   std::vector<Generic> doGetGenerics() const override;
-
-  std::ostream &doFormat(std::ostream &os) const override;
 
   std::vector<Type *> doGetUsedTypes() const override;
 
