@@ -52,4 +52,7 @@ def blocks(x, size: int):
     '''
     if size <= 0:
         raise ValueError(f"invalid block size: {size}")
-    return x.__blocks__(size)
+    if isinstance(x, Generator):
+        return _blocks(x, size)
+    else:
+        return x.__blocks__(size)
