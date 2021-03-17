@@ -16,17 +16,6 @@ TEST_F(SIRCoreTest, ConstTypeQueryAndReplace) {
   ASSERT_EQ(1, node->replaceUsedType(module->getIntType(), module->getIntType()));
 }
 
-TEST_F(SIRCoreTest, ConstValueMatches) {
-  auto VALUE = 1;
-
-  auto *node = module->Nr<IntConst>(VALUE, module->getIntType());
-  ASSERT_EQ(VALUE, node->getVal());
-
-  std::stringstream s;
-  s << *node;
-  ASSERT_EQ(std::to_string(VALUE), s.str());
-}
-
 TEST_F(SIRCoreTest, ConstCloning) {
   auto VALUE = 1;
   auto *node = module->Nr<IntConst>(VALUE, module->getIntType());
