@@ -13,6 +13,14 @@ const std::string prefetchModule = "std.internal.prefetch";
 const std::string builtinModule = "std.bio.builtin";
 const std::string alignModule = "std.bio.align";
 const std::string seqModule = "std.bio.seq";
+
+bool isParallel(PipelineFlow *p) {
+  for (const auto &stage : *p) {
+    if (stage.isParallel())
+      return true;
+  }
+  return false;
+}
 } // namespace
 
 /*
@@ -38,8 +46,10 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
               "_kmers_revcomp", {seqType, M->getIntType()}, {kmerType}, builtinModule);
           seqassert(kmersRevcompFunc &&
                         util::getReturnType(kmersRevcompFunc)->is(genType),
-                    "invalid reverse compliment function");
+                    "invalid reverse complement function");
           cast<VarValue>(prev->getFunc())->setVar(kmersRevcompFunc);
+          if (it->isParallel())
+            prev->setParallel();
           it = p->erase(it);
           continue;
         }
@@ -59,8 +69,10 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
                                   {kmerType}, builtinModule);
           seqassert(kmersRevcompWithPosFunc &&
                         util::getReturnType(kmersRevcompWithPosFunc)->is(genType),
-                    "invalid pos reverse compliment function");
+                    "invalid pos reverse complement function");
           cast<VarValue>(prev->getFunc())->setVar(kmersRevcompWithPosFunc);
+          if (it->isParallel())
+            prev->setParallel();
           it = p->erase(it);
           continue;
         }
@@ -81,6 +93,8 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
                     "invalid canonical kmers function");
           cast<VarValue>(prev->getFunc())->setVar(kmersCanonicalFunc);
           prev->erase(prev->end() - 1); // remove step argument
+          if (it->isParallel())
+            prev->setParallel();
           it = p->erase(it);
           continue;
         }
@@ -102,6 +116,8 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
                     "invalid pos canonical kmers function");
           cast<VarValue>(prev->getFunc())->setVar(kmersCanonicalWithPosFunc);
           prev->erase(prev->end() - 1); // remove step argument
+          if (it->isParallel())
+            prev->setParallel();
           it = p->erase(it);
           continue;
         }
@@ -182,6 +198,8 @@ BodiedFunc *makeStageWrapperFunc(PipelineFlow::Stage *stage, Func *callee,
 }
 
 void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
+  if (isParallel(p))
+    return;
   auto *M = p->getModule();
   PrefetchFunctionTransformer pft;
   PipelineFlow::Stage *prev = nullptr;
@@ -438,6 +456,8 @@ struct InterAlignFunctionTransformer : public util::Operator {
 };
 
 void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
+  if (isParallel(p))
+    return;
   auto *M = p->getModule();
   auto types = gatherInterAlignTypes(M);
   if (!types) // bio module not loaded; nothing to do
@@ -544,7 +564,6 @@ void PipelineOptimizations::handle(PipelineFlow *x) {
   applySubstitutionOptimizations(x);
   applyPrefetchOptimizations(x);
   applyInterAlignOptimizations(x);
-  // std::cout << *x << std::endl;
 }
 
 } // namespace pipeline
