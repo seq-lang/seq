@@ -49,7 +49,6 @@ enum OptMode { Debug, Release };
 } // namespace
 
 int docMode(const vector<char *> &args) {
-  llvm::cl::OptionCategory generalCat("Options");
   llvm::cl::SetVersionPrinter(versMsg);
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
   seq::generateDocstr(args[0]);
@@ -246,6 +245,20 @@ int buildMode(const vector<char *> &args) {
   return EXIT_SUCCESS;
 }
 
+int otherMode(const vector<char *> &args) {
+  llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::desc("<mode>"));
+  llvm::cl::extrahelp("\nMODES:\n\n"
+                      "  run   - run a program interactively\n"
+                      "  build - build a program\n"
+                      "  doc   - generate program documentation\n");
+  llvm::cl::SetVersionPrinter(versMsg);
+  llvm::cl::ParseCommandLineOptions(args.size(), args.data());
+
+  if (!input.empty())
+    seq::compilationError("Available commands: seqc [build|run|doc]");
+  return EXIT_SUCCESS;
+}
+
 int main(int argc, char **argv) {
   vector<char *> args{argv[0]};
   for (int i = 2; i < argc; i++)
@@ -258,6 +271,5 @@ int main(int argc, char **argv) {
     return buildMode(args);
   if (string(argv[1]) == "doc")
     return docMode(args);
-  seq::compilationError("Unknown command. Available commands: seqc [build|run|doc]");
-  return EXIT_SUCCESS;
+  return otherMode(vector<char *>(argv, argv + argc));
 }
