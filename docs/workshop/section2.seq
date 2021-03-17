@@ -2,7 +2,7 @@
 # Seq workshop -- Section 2
 # Reads and constructs a hash table index from an input
 # FASTA file.
-# Usage: seqc section2.seq <FASTA path>
+# Usage: seqc run section2.seq <FASTA path>
 from sys import argv
 from bio import *
 import pickle

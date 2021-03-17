@@ -706,7 +706,7 @@ Let's import some C functions:
 
 ``from C import`` only works if the symbol is available to the program. If you
 are running your programs via ``seqc``, you can link dynamic libraries
-by running ``seqc -l path/to/dynamic/library.so ...``.
+by running ``seqc run -l path/to/dynamic/library.so ...``.
 
 Hate linking? You can also use dyld library loading as follows:
 
