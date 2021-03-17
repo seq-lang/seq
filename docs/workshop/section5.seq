@@ -3,7 +3,7 @@
 # Reads index constructed in Section 2 and looks up k-mers from
 # input reads to find candidate mappings, then performs alignment.
 # Implemented with Seq pipelines.
-# Usage: seqc section5.seq <FASTA path> <FASTQ path>
+# Usage: seqc run section5.seq <FASTA path> <FASTQ path>
 from sys import argv
 from time import timing
 from bio import *

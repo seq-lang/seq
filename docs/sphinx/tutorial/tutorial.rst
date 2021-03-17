@@ -389,7 +389,7 @@ Now BWA can be used in Seq as such:
             aln = bwa.reg2aln(read.read, reg)
             print read.name, '-' if aln.rev else '+', bwa.name(aln), aln.pos, aln.mapq, aln.cigar, aln.NM
 
-This program can be invoked as ``seqc example.seq /path/to/hg19.fa /path/to/reads.fq``.
+This program can be invoked as ``seqc run example.seq /path/to/hg19.fa /path/to/reads.fq``.
 
 BWA options can be passed via ``BWA(options(...), ...)``. For example, to set a mismatch score of 5, use ``BWA(options(mismatch_score=5), "hg19.fa")``. Valid options are:
 

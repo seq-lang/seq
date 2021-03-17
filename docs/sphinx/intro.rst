@@ -27,43 +27,43 @@ The ``seqc`` program can either directly run Seq source in JIT mode:
 
 .. code-block:: bash
 
-    seqc myprogram.seq
+    seqc run myprogram.seq
 
 The default compilation and run mode is *debug* (``-debug``). Compile and run with optimizations with the ``-release`` option:
 
 .. code-block:: bash
 
-    seqc -release myprogram.seq
+    seqc run -release myprogram.seq
 
 ``seqc`` can also produce executables (ensure you have ``clang`` installed, as it is used for linking):
 
 .. code-block:: bash
 
     # generate 'myprogram' executable
-    seqc -build -exe myprogram.seq
+    seqc build -exe myprogram.seq
 
     # generate 'foo' executable
-    seqc -build -o foo myprogram.seq
+    seqc build -o foo myprogram.seq
 
 ``seqc`` can produce object files:
 
 .. code-block:: bash
 
     # generate 'myprogram.o' object file
-    seqc -build -obj myprogram.seq
+    seqc build -obj myprogram.seq
 
     # generate 'foo.o' object file
-    seqc -build -o foo.o myprogram.seq
+    seqc build -o foo.o myprogram.seq
 
 ``seqc`` can produce LLVM IR:
 
 .. code-block:: bash
 
     # generate 'myprogram.ll' object file
-    seqc -build -llvm myprogram.seq
+    seqc build -llvm myprogram.seq
 
     # generate 'foo.ll' object file
-    seqc -build -o foo.ll myprogram.seq
+    seqc build -o foo.ll myprogram.seq
 
 Compile-time definitions
 ------------------------
@@ -75,4 +75,4 @@ Compile-time definitions
     from bio import *
     print Kmer[SEED_LEN]()
 
-``SEED_LEN`` can be specified on the command line as such: ``seqc -DSEED_LEN=10 myprogram.seq``.
+``SEED_LEN`` can be specified on the command line as such: ``seqc run -DSEED_LEN=10 myprogram.seq``.

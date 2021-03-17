@@ -2,7 +2,7 @@
 # Seq workshop -- Section 3
 # Reads index constructed in Section 2 and looks up k-mers from
 # input reads to find candidate mappings.
-# Usage: seqc section3.seq <FASTA path> <FASTQ path>
+# Usage: seqc run section3.seq <FASTA path> <FASTQ path>
 from sys import argv
 from bio import *
 import pickle

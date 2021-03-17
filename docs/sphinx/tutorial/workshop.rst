@@ -144,7 +144,7 @@ Now we can run this Seq program:
 
 .. code:: bash
 
-    seqc section1.seq data/reads.fq > out.txt
+    seqc run section1.seq data/reads.fq > out.txt
 
 and view the results:
 
@@ -179,7 +179,7 @@ Full code listing
     # SeqMap
     # Seq workshop -- Section 1
     # Reads and prints a FASTQ file.
-    # Usage: seqc section1.seq <FASTQ path>
+    # Usage: seqc run section1.seq <FASTQ path>
     from sys import argv
     from bio import *
     for record in FASTQ(argv[1]):
@@ -247,7 +247,7 @@ Run the program:
 
 .. code:: bash
 
-    seqc section2.seq data/chr22.fa
+    seqc run section2.seq data/chr22.fa
 
 Now we should see a new file ``data/chr22.fa.index`` which stores our
 serialized index.
@@ -267,7 +267,7 @@ Full code listing
     # Seq workshop -- Section 2
     # Reads and constructs a hash table index from an input
     # FASTA file.
-    # Usage: seqc section2.seq <FASTA path>
+    # Usage: seqc run section2.seq <FASTA path>
     from sys import argv
     from bio import *
     import pickle
@@ -337,7 +337,7 @@ Run the program:
 
 .. code:: bash
 
-    seqc section3.seq data/chr22.fa data/reads.fq > out.txt
+    seqc run section3.seq data/chr22.fa data/reads.fq > out.txt
 
 Let's take a look at the output:
 
@@ -374,7 +374,7 @@ Full code listing
     # Seq workshop -- Section 3
     # Reads index constructed in Section 2 and looks up k-mers from
     # input reads to find candidate mappings.
-    # Usage: seqc section3.seq <FASTA path> <FASTQ path>
+    # Usage: seqc run section3.seq <FASTA path> <FASTQ path>
     from sys import argv
     from bio import *
     import pickle
@@ -461,7 +461,7 @@ Run the program:
 
 .. code:: bash
 
-    seqc section4.seq data/chr22.fa data/reads.fq > out.txt
+    seqc run section4.seq data/chr22.fa data/reads.fq > out.txt
 
 And let's take a look at the output once again:
 
@@ -503,7 +503,7 @@ Full code listing
     # Seq workshop -- Section 4
     # Reads index constructed in Section 2 and looks up k-mers from
     # input reads to find candidate mappings, then performs alignment.
-    # Usage: seqc section4.seq <FASTA path> <FASTQ path>
+    # Usage: seqc run section4.seq <FASTA path> <FASTQ path>
     from sys import argv
     from bio import *
     import pickle
@@ -597,11 +597,11 @@ We can try this for different numbers of threads:
 .. code:: bash
 
     export OMP_NUM_THREADS=1
-    seqc section5.seq data/chr22.fa data/reads.fq > out.txt
+    seqc run section5.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 48.2858s
 
     export OMP_NUM_THREADS=2
-    seqc section5.seq data/chr22.fa data/reads.fq > out.txt
+    seqc run section5.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 35.886s
 
 Often, batching reads into larger blocks and processing those blocks in parallel can
@@ -621,11 +621,11 @@ And now:
 .. code:: bash
 
     export OMP_NUM_THREADS=1
-    seqc section5.seq data/chr22.fa data/reads.fq > out.txt
+    seqc run section5.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 48.2858s
 
     export OMP_NUM_THREADS=2
-    seqc section5.seq data/chr22.fa data/reads.fq > out.txt
+    seqc run section5.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 25.2648s
 
 .. _section5-code:
@@ -642,7 +642,7 @@ Full code listing
     # Reads index constructed in Section 2 and looks up k-mers from
     # input reads to find candidate mappings, then performs alignment.
     # Implemented with Seq pipelines.
-    # Usage: seqc section5.seq <FASTA path> <FASTQ path>
+    # Usage: seqc run section5.seq <FASTA path> <FASTQ path>
     from sys import argv
     from time import timing
     from bio import *
@@ -703,11 +703,11 @@ Let's run the program with and without this optimization:
 .. code:: seq
 
     # without @inter_align
-    seqc section5.seq data/chr22.fa data/reads.fq > out.txt
+    seqc run section5.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 43.4457s
 
     # with @inter_align
-    seqc section6.seq data/chr22.fa data/reads.fq > out.txt
+    seqc run section6.seq data/chr22.fa data/reads.fq > out.txt
     # mapping took 32.3241s
 
 (The timings with inter-sequence alignment will depend on the SIMD instruction
@@ -727,7 +727,7 @@ Full code listing
     # Reads index constructed in Section 2 and looks up k-mers from
     # input reads to find candidate mappings, then performs alignment.
     # Implemented with Seq pipelines using inter-seq. alignment.
-    # Usage: seqc section6.seq <FASTA path> <FASTQ path>
+    # Usage: seqc run section6.seq <FASTA path> <FASTQ path>
     from sys import argv
     from time import timing
     from bio import *
