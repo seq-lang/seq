@@ -49,7 +49,7 @@ cmake --build build --config Release -- VERBOSE=1
 # test
 ln -s build/libseqrt.so .
 build/seqtest
-build/seqc test/core/helloworld.seq
+build/seqc run test/core/helloworld.seq
 
 # package
 export SEQ_BUILD_ARCHIVE=seq-$(uname -s | awk '{print tolower($0)}')-$(uname -m).tar.gz

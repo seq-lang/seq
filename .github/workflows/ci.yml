@@ -158,7 +158,7 @@ jobs:
           ls -lah test/data/
           ln -s build/libseqrt.${LIBEXT} .
           build/seqtest
-          build/seqc test/core/helloworld.seq
+          build/seqc run test/core/helloworld.seq
         env:
           SEQ_PATH: ./stdlib
           PYTHONPATH: ./test/python
