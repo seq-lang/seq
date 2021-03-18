@@ -29,11 +29,6 @@ StmtPtr SimplifyVisitor::transform(const Stmt *stmt) {
   SimplifyVisitor v(ctx, preamble);
   v.setSrcInfo(stmt->getSrcInfo());
   const_cast<Stmt *>(stmt)->accept(v);
-  if (!v.prependStmts->empty()) {
-    if (v.resultStmt)
-      v.prependStmts->push_back(move(v.resultStmt));
-    v.resultStmt = N<SuiteStmt>(move(*v.prependStmts));
-  }
   if (v.resultStmt)
     v.resultStmt->age = ctx->cache->age;
   return move(v.resultStmt);
@@ -122,13 +117,13 @@ void SimplifyVisitor::visit(PrintStmt *stmt) {
 }
 
 void SimplifyVisitor::visit(ReturnStmt *stmt) {
-  if (!ctx->getLevel() || ctx->bases.back().isType())
+  if (!ctx->inFunction())
     error("expected function body");
   resultStmt = N<ReturnStmt>(transform(stmt->expr));
 }
 
 void SimplifyVisitor::visit(YieldStmt *stmt) {
-  if (!ctx->getLevel() || ctx->bases.back().isType())
+  if (!ctx->inFunction())
     error("expected function body");
   resultStmt = N<YieldStmt>(transform(stmt->expr));
 }
@@ -315,7 +310,7 @@ void SimplifyVisitor::visit(GlobalStmt *stmt) {
 }
 
 void SimplifyVisitor::visit(ImportStmt *stmt) {
-  seqassert(!ctx->getLevel() || !ctx->bases.back().isType(), "imports within a class");
+  seqassert(!ctx->inClass(), "imports within a class");
   if (stmt->from->isId("C")) {
     /// Handle C imports
     if (auto i = stmt->what->getId())
@@ -410,15 +405,18 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   }
 
   auto canonicalName = ctx->generateCanonicalName(stmt->name, true);
-  bool isClassMember = ctx->getLevel() && ctx->bases.back().isType();
+  bool isClassMember = ctx->inClass();
 
   if (in(stmt->attributes, ATTR_FORCE_REALIZE) && (ctx->getLevel() || isClassMember))
     error("builtins must be defined at the toplevel");
 
+  auto oldBases = move(ctx->bases);
+  ctx->bases = vector<SimplifyContext::Base>();
   if (!isClassMember)
     // Class members are added to class' method table
     ctx->add(SimplifyItem::Func, stmt->name, canonicalName, ctx->isToplevel());
-
+  if (isClassMember)
+    ctx->bases.push_back(oldBases[0]);
   ctx->bases.emplace_back(SimplifyContext::Base{canonicalName}); // Add new base...
   ctx->addBlock();                                               // ... and a block!
   // Set atomic flag if @atomic attribute is present.
@@ -499,24 +497,13 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   // Once the body is done, check if this function refers to a variable (or generic)
   // from outer scope (e.g. it's parent is not -1). If so, store the name of the
   // innermost base that was referred to in this function.
-  auto refParent =
-      ctx->bases.back().parent == -1 ? "" : ctx->bases[ctx->bases.back().parent].name;
+  auto isMethod = ctx->bases.back().attributes & FLAG_METHOD;
   ctx->bases.pop_back();
+  ctx->bases = move(oldBases);
   ctx->popBlock();
   attributes[ATTR_MODULE] =
       format("{}{}", ctx->moduleName.status == ImportFile::STDLIB ? "std::" : "::",
              ctx->moduleName.module);
-
-  // Get the name of parent function (if there is any).
-  // This should reach parent function even if there is a class base in the middle.
-  string parentFunc;
-  for (int i = int(ctx->bases.size()) - 1; i >= 0; i--)
-    if (!ctx->bases[i].isType()) {
-      parentFunc = ctx->bases[i].name;
-      break;
-    }
-  if (!parentFunc.empty())
-    attributes[ATTR_PARENT_FUNCTION] = parentFunc;
 
   if (isClassMember) { // If this is a method...
     // ... set the enclosing class name...
@@ -528,22 +515,16 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     // generic), mark it as not static as it needs fully instantiated class to be
     // realized. For example, in class A[T]: def foo(): pass, A.foo() can be realized
     // even if T is unknown. However, def bar(): return T() cannot because it needs T
-    // (and is thus accordingly marked with ATTR_NOT_STATIC).
-    if (!ctx->bases.empty() && refParent == ctx->bases.back().name)
-      attributes[ATTR_NOT_STATIC] = "";
+    // (and is thus accordingly marked with ATTR_IS_METHOD).
+    if (isMethod)
+      attributes[ATTR_IS_METHOD] = "";
   }
   auto f = N<FunctionStmt>(canonicalName, move(ret), move(newGenerics), move(args),
                            move(suite), move(attributes));
-  // Do not clone suite in the resultStmt: the suite will be accessed later trough the
-  // cache.
-  auto fl =
+  // Do not clone suite: the suite will be accessed later trough the cache.
+  preamble->functions.push_back(
       N<FunctionStmt>(canonicalName, clone(f->ret), clone_nop(f->generics),
-                      clone_nop(f->args), nullptr, map<string, string>(f->attributes));
-  if (!parentFunc.empty() || in(f->attributes, ATTR_FORCE_REALIZE) ||
-      in(f->attributes, ATTR_EXTERN_C))
-    resultStmt = clone(fl);
-  if (parentFunc.empty())
-    preamble->functions.push_back(move(fl));
+                      clone_nop(f->args), nullptr, map<string, string>(f->attributes)));
   // Make sure to cache this (generic) AST for later realization.
   ctx->cache->functions[canonicalName].ast = move(f);
 }
@@ -602,7 +583,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
   auto oldBases = move(ctx->bases);
   ctx->bases = vector<SimplifyContext::Base>();
   ctx->bases.emplace_back(SimplifyContext::Base(canonicalName));
-  ctx->bases.back().ast = N<IdExpr>(name);
+  ctx->bases.back().ast = make_shared<IdExpr>(name);
 
   // Add generics, if any, to the context.
   ctx->addBlock();
@@ -625,7 +606,8 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
     newGenerics.emplace_back(
         Param{genName, transformType(originalAST->generics[gi].type.get()), nullptr});
   }
-  ctx->bases.back().ast = N<IndexExpr>(N<IdExpr>(name), N<TupleExpr>(move(genAst)));
+  ctx->bases.back().ast =
+      make_shared<IndexExpr>(N<IdExpr>(name), N<TupleExpr>(move(genAst)));
 
   // Parse class members (arguments) and methods.
   vector<Param> args;
@@ -657,7 +639,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
         N<ClassStmt>(canonicalName, move(newGenerics), move(args),
                      N<SuiteStmt>(vector<StmtPtr>()), move(attributes));
     vector<StmtPtr> fns;
-    ExprPtr codeType = clone(ctx->bases.back().ast);
+    ExprPtr codeType = ctx->bases.back().ast->clone();
     vector<string> magics{};
     // Internal classes do not get any auto-generated members.
     if (!in(stmt->attributes, ATTR_INTERNAL)) {
@@ -711,17 +693,20 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
     preamble->types.push_back(clone(ctx->cache->classes[canonicalName].ast));
     c->suite = clone(suite);
   }
+  vector<StmtPtr> stmts;
+  stmts.emplace_back(N<ClassStmt>(canonicalName, clone_nop(c->generics),
+                                  vector<Param>{}, move(suite),
+                                  vector<string>{ATTR_EXTEND}));
   // Parse nested classes
   for (auto sp : getClassMethods(stmt->suite.get()))
     if (sp && sp->getClass()) {
       // Add dummy base to fix nested class' name.
       ctx->bases.emplace_back(SimplifyContext::Base(canonicalName));
-      ctx->bases.back().ast = N<IdExpr>(name);
-      prependStmts->push_back(transform(sp));
+      ctx->bases.back().ast = make_shared<IdExpr>(name);
+      stmts.emplace_back(transform(sp));
       ctx->bases.pop_back();
     }
-  resultStmt = N<ClassStmt>(canonicalName, clone_nop(c->generics), vector<Param>{},
-                            move(suite), vector<string>{ATTR_EXTEND});
+  resultStmt = N<SuiteStmt>(move(stmts));
 }
 
 void SimplifyVisitor::visit(CustomStmt *stmt) {

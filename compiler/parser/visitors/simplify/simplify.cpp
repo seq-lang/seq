@@ -184,11 +184,8 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<SimplifyContext> ctx, const StmtPtr &n
 }
 
 SimplifyVisitor::SimplifyVisitor(shared_ptr<SimplifyContext> ctx,
-                                 shared_ptr<Preamble> preamble,
-                                 shared_ptr<vector<StmtPtr>> prepend)
-    : ctx(move(ctx)), preamble(move(preamble)) {
-  prependStmts = prepend ? move(prepend) : make_shared<vector<StmtPtr>>();
-}
+                                 shared_ptr<Preamble> preamble)
+    : ctx(move(ctx)), preamble(move(preamble)) {}
 
 } // namespace ast
 } // namespace seq

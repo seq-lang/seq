@@ -35,9 +35,8 @@
 #define ATTR_EXTERN_LLVM "llvm"
 #define ATTR_EXTERN_PYTHON "python"
 #define ATTR_FORCE_REALIZE "force_realize"
-#define ATTR_PARENT_FUNCTION ".parentFunc"
 #define ATTR_PARENT_CLASS ".parentClass"
-#define ATTR_NOT_STATIC ".notStatic"
+#define ATTR_IS_METHOD ".isMethod"
 #define ATTR_TOTAL_ORDERING "total_ordering"
 #define ATTR_CONTAINER "container"
 #define ATTR_PYTHON "python"
@@ -57,6 +56,10 @@
 #define TYPE_SLICE "std.internal.types.slice.Slice"
 #define FN_UNWRAP "std.internal.types.optional.unwrap"
 #define VAR_ARGV "__argv__"
+
+#define FLAG_METHOD 1
+#define FLAG_ATOMIC 2
+#define FLAG_TEST 3
 
 namespace seq {
 namespace ast {

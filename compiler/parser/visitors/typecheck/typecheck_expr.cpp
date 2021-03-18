@@ -751,7 +751,7 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
 ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *args) {
   auto isMethod = [&](const FuncType *f) {
     auto ast = ctx->cache->functions[f->funcName].ast.get();
-    return in(ast->attributes, ATTR_NOT_STATIC);
+    return in(ast->attributes, ATTR_IS_METHOD);
   };
 
   if (expr->member == "__class__") {

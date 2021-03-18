@@ -394,7 +394,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   bool isClassMember = in(stmt->attributes, ATTR_PARENT_CLASS);
   auto explicits = parseGenerics(stmt->generics, ctx->typecheckLevel); // level down
   vector<TypePtr> generics;
-  if (isClassMember && in(attributes, ATTR_NOT_STATIC)) {
+  if (isClassMember && in(attributes, ATTR_IS_METHOD)) {
     // Fetch parent class generics.
     auto parentClassAST = ctx->cache->classes[attributes[ATTR_PARENT_CLASS]].ast.get();
     auto parentClass = ctx->find(attributes[ATTR_PARENT_CLASS])->type->getClass();
@@ -445,10 +445,8 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   }
   // Construct the type.
   auto typ = make_shared<FuncType>(baseType, stmt->name, explicits);
-  if (isClassMember && in(attributes, ATTR_NOT_STATIC))
+  if (isClassMember && in(attributes, ATTR_IS_METHOD))
     typ->funcParent = ctx->find(attributes[ATTR_PARENT_CLASS])->type;
-  else if (in(attributes, ATTR_PARENT_FUNCTION))
-    typ->funcParent = ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])].type;
   typ->setSrcInfo(stmt->getSrcInfo());
   typ = std::static_pointer_cast<FuncType>(typ->generalize(ctx->typecheckLevel));
   // Check if this is a class method; if so, update the class method lookup table.
@@ -465,8 +463,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
     seqassert(found, "cannot find matching class method for {}", stmt->name);
   }
   // Update visited table.
-  ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])]
-      .visitedAsts[stmt->name] = {TypecheckItem::Func, typ};
+  ctx->bases[0].visitedAsts[stmt->name] = {TypecheckItem::Func, typ};
   ctx->add(TypecheckItem::Func, stmt->name, typ);
   LOG_REALIZE("[stmt] added func {}: {} (base={}})", stmt->name, typ->debugString(1),
               ctx->getBase());
@@ -490,8 +487,7 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
       typ->isTrait = true;
     typ->setSrcInfo(stmt->getSrcInfo());
     ctx->add(TypecheckItem::Type, stmt->name, typ);
-    ctx->bases[ctx->findBase(attributes[ATTR_PARENT_FUNCTION])]
-        .visitedAsts[stmt->name] = {TypecheckItem::Type, typ};
+    ctx->bases[0].visitedAsts[stmt->name] = {TypecheckItem::Type, typ};
 
     // Parse class fields.
     typ->generics = parseGenerics(stmt->generics, ctx->typecheckLevel);

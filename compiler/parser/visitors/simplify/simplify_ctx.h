@@ -20,9 +20,6 @@
 #include "parser/common.h"
 #include "parser/ctx.h"
 
-#define FLAG_ATOMIC 1
-#define FLAG_TEST 2
-
 namespace seq {
 namespace ast {
 
@@ -71,16 +68,11 @@ struct SimplifyContext : public Context<SimplifyItem> {
     /// Declaration AST of a base-defining class (or nullptr otherwise) for
     /// automatically annotating "self" and other parameters. For example, for
     /// class Foo[T, N: int]: ..., AST is Foo[T, N: int]
-    ExprPtr ast;
-    /// An index of an innermost base that this base references. -1 (top-level) by
-    /// default. Used to infer a relationship between a function and its base class
-    /// (e.g. is it a class function or a method).
-    int parent;
+    shared_ptr<Expr> ast;
     /// Tracks function attributes (e.g. if it has @atomic or @test attributes).
     int attributes;
 
-    explicit Base(string name, ExprPtr ast = nullptr, int parent = -1,
-                  int attributes = 0);
+    explicit Base(string name, shared_ptr<Expr> ast = nullptr, int attributes = 0);
     bool isType() const { return ast != nullptr; }
   };
   /// A stack of bases enclosing the current statement (the topmost base is the last
@@ -125,6 +117,9 @@ public:
 
   /// Generate a unique identifier (name) for a given string.
   string generateCanonicalName(const string &name, bool includeBase = false) const;
+
+  bool inFunction() const { return getLevel() && !bases.back().isType(); }
+  bool inClass() const { return getLevel() && bases.back().isType(); }
 
 private:
   /// Pretty-print the current context state.

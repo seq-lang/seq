@@ -639,7 +639,7 @@ class F[T: str]:
 def foo[T]():
     class A:
         x: T
-#! ERROR: identifier 'T' not found (classes cannot access outer function identifiers)
+#! ERROR: identifier 'T' not found (cannot access outer function identifiers)
 
 #%% class_err_11,barebones
 def foo(x):
@@ -654,7 +654,7 @@ def foo(x):
     class A:
         def bar():
             print T()
-#! ERROR: identifier 'T' not found (classes cannot access outer function identifiers)
+#! ERROR: identifier 'T' not found (cannot access outer function identifiers)
 
 #%% recursive_class,barebones
 class Node[T]:

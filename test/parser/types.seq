@@ -38,7 +38,7 @@ print map2([1, 2, 3], lambda x: x+e)  #: [2, 3, 4]
 
 #%% nested,barebones
 def m4[TD](a: int, d: TD):
-    def m5[TE](a: int, d: TD, e: TE):
+    def m5[TD,TE](a: int, d: TD, e: TE):
         print a, d, e
     m5(a, d, 1.12)
 m4(1, 's')  #: 1 s 1.12
@@ -49,7 +49,7 @@ class A[TA]:
     a: TA
     # lots of nesting:
     def m4[TD](self: A[TA], d: TD):
-        def m5[TE](a: TA, d: TD, e: TE):
+        def m5[TA,TD,TE](a: TA, d: TD, e: TE):
             print a, d, e
         m5(self.a, d, d)
 ax = A(42)
@@ -97,7 +97,7 @@ class A[TA,TB,TC]:
 
     # lots of nesting:
     def m4[TD](self: A[TA,TB,TC], d: TD):
-        def m5[TE](a: TA, b: TB, c: TC, d: TD, e: TE):
+        def m5[TA,TB,TC,TD,TE](a: TA, b: TB, c: TC, d: TD, e: TE):
             print a, b, c, d, e
         m5(self.a, self.b, self.c, d, d)
 
@@ -193,9 +193,9 @@ print rec3('x', 's').__class__  #: str
 
 # Nested mutually recursive function
 def f[T](x: T) -> T:
-    def g(z):
+    def g[T](z):
         return z(T())
-    return g(f[T])
+    return g[T](f[T])
 print f(1.2).__class__ #: float
 print f('s').__class__ #: str
 
@@ -219,9 +219,9 @@ rec3(1, 's')
 
 #%% instantiate_function_2,barebones
 def fx[T](x: T) -> T:
-    def g(z):
+    def g[T](z):
         return z(T())
-    return g(fx)
+    return g[T](fx)
 print fx[float].__class__, fx(1).__class__ #: fx[float;float] int
 
 #%% optionals,barebones
@@ -433,11 +433,11 @@ print x, x.__class__ #: 1 int
 # print f.__class__  # TODO ERRORS
 
 def fg[T](x:T):
-    def g(y):
+    def g[T](y):
         z = T()
         return z
     print fg[str].__class__  #: fg[str;str]
-    print g(1).__class__ #: int
+    print g[T](1).__class__ #: int
 fg(1)
 print fg(1).__class__ #: void
 
@@ -636,10 +636,10 @@ a.foo(1) #! ERROR: cannot typecheck the program
 
 #%% return_deduction,barebones
 def fun[T, R](x, y: T) -> R:
-   	def ffi[T, Z](x: T, y: R, z: Z):
+   	def ffi[T, R, Z](x: T, y: R, z: Z):
    		return (x, y, z)
-   	yy = ffi[bool, str](False, byte(2), 's')
-   	yz = ffi[int, str](1, byte(2), 's')
+   	yy = ffi[bool, R, str](False, byte(2), 's')
+   	yz = ffi[int, R, str](1, byte(2), 's')
    	return byte(1)
 print fun[float,byte](2, 1.1).__class__ #: byte
 

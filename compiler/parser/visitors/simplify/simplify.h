@@ -36,16 +36,12 @@ namespace ast {
 class SimplifyVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
   /// Shared simplification context.
   shared_ptr<SimplifyContext> ctx;
-  /// A pointer to a vector of statements that are to be prepended before the current
-  /// statement. Useful for prepending lambda function definition that are induced by a
-  /// child expression node. Pointer is needed as visitors can be spawned recursively.
-  shared_ptr<vector<StmtPtr>> prependStmts;
 
   /// Simplification step will divide the input AST into four sub-ASTs that are stored
   /// here:
   ///   - Type (class) signatures
   ///   - Global variable signatures (w/o rhs)
-  ///   - Function signatures
+  ///   - Functions
   ///   - Top-level statements.
   /// Each of these divisions will be populated via first-come first-serve method.
   /// This way, type and global signatures will be exposed to all executable statements,
@@ -93,8 +89,7 @@ public:
 
 public:
   explicit SimplifyVisitor(shared_ptr<SimplifyContext> ctx,
-                           shared_ptr<Preamble> preamble,
-                           shared_ptr<vector<StmtPtr>> prepend = nullptr);
+                           shared_ptr<Preamble> preamble);
 
   /// Transform an AST expression node.
   /// @raise ParserException if a node describes a type (use transformType instead).

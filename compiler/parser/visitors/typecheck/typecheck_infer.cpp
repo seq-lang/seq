@@ -219,7 +219,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
         if (in(ast->attributes, ATTR_INTERNAL)) {
           // This is either __new__, or Ptr.__new__, or UInt.__revcomp__
           auto parent = type->funcParent;
-          if (!in(ast->attributes, ATTR_NOT_STATIC)) // hack for non-generic types
+          if (!in(ast->attributes, ATTR_IS_METHOD)) // hack for non-generic types
             parent = ctx->find(ast->attributes[ATTR_PARENT_CLASS])->type;
           seqassert(parent && parent->canRealize(), "parent not set for {} (got {})",
                     type->debugString(1), parent ? parent->debugString(1) : "-");

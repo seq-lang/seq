@@ -29,7 +29,7 @@ ExprPtr SimplifyVisitor::transform(const ExprPtr &expr) {
 ExprPtr SimplifyVisitor::transform(const Expr *expr, bool allowTypes) {
   if (!expr)
     return nullptr;
-  SimplifyVisitor v(ctx, preamble, prependStmts);
+  SimplifyVisitor v(ctx, preamble);
   v.setSrcInfo(expr->getSrcInfo());
   const_cast<Expr *>(expr)->accept(v);
   if (!allowTypes && v.resultExpr && v.resultExpr->isType())
@@ -101,23 +101,20 @@ void SimplifyVisitor::visit(IdExpr *expr) {
   if (val->isStatic())
     resultExpr->isStaticExpr = true;
 
-  // Check if this variable is coming from an enclosing base; if so, ensure that the
-  // current base and all bases between the enclosing base point to the enclosing base.
-  for (int i = int(ctx->bases.size()) - 1; i >= 0; i--) {
-    if (ctx->bases[i].name == val->getBase()) {
-      for (int j = i + 1; j < ctx->bases.size(); j++) {
-        ctx->bases[j].parent = std::max(i, ctx->bases[j].parent);
-        seqassert(ctx->bases[j].parent < j, "invalid base");
-      }
+  // The only variables coming from the enclosing base must be class generics.
+  seqassert(!val->isFunc() || val->getBase().empty(), "{} has invalid base ({})",
+            expr->value, val->getBase());
+  if (val->isType() && !val->getBase().empty() && ctx->getBase() != val->getBase()) {
+    if (ctx->bases.size() == 2 && ctx->bases[0].name == val->getBase()) {
+      ctx->bases.back().attributes |= FLAG_METHOD;
       return;
     }
   }
   // If that is not the case, we are probably having a class accessing its enclosing
   // function variable (generic or other identifier). We do not like that!
-  if (!val->getBase().empty())
-    error(
-        "identifier '{}' not found (classes cannot access outer function identifiers)",
-        expr->value);
+  if (!captured && ctx->getBase() != val->getBase() && !val->getBase().empty())
+    error("identifier '{}' not found (cannot access outer function identifiers)",
+          expr->value);
 }
 
 void SimplifyVisitor::visit(StarExpr *expr) {
@@ -564,7 +561,7 @@ void SimplifyVisitor::visit(TypeOfExpr *expr) {
 }
 
 void SimplifyVisitor::visit(YieldExpr *expr) {
-  if (!ctx->getLevel() || ctx->bases.back().isType())
+  if (!ctx->inFunction())
     error("expected function body");
   defaultVisit(expr);
 }
@@ -701,20 +698,10 @@ ExprPtr SimplifyVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
   ctx->captures.emplace_back(set<string>{});
   for (auto &s : argNames)
     params.emplace_back(Param{s, nullptr, nullptr});
-  auto fs = transform(N<FunctionStmt>(name, nullptr, vector<Param>{}, move(params),
-                                      N<SuiteStmt>(move(stmts)), vector<string>{}));
+  transform(N<FunctionStmt>(name, nullptr, vector<Param>{}, move(params),
+                            N<SuiteStmt>(move(stmts)), vector<string>{}));
   vector<FunctionStmt *> fns;
-  if (fs) {
-    if (auto fp = const_cast<FunctionStmt *>(fs->getFunction())) {
-      fns.emplace_back(fp);
-      prependStmts->push_back(move(fs));
-      name = fp->name;
-    } else {
-      seqassert(false, "expected a FunctionStmt");
-    }
-  } else {
-    fns.push_back(dynamic_cast<FunctionStmt *>(preamble->functions.back().get()));
-  }
+  fns.push_back(dynamic_cast<FunctionStmt *>(preamble->functions.back().get()));
   fns.emplace_back(ctx->cache->functions[name].ast.get());
   for (auto &c : ctx->captures.back()) {
     for (auto f : fns)
