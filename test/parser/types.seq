@@ -675,7 +675,7 @@ def hai(x, y, z):
 fn = Function[[int, int, int], void](hai)
 fn(1, 2, 3) #: hai(1,2,3)
 print str(fn)[:12] #: <function at
-z = fn(..., 2, 3)
+z = fn(a2=2, a3=3, ...)
 z(3) #: hai(3,2,3)
 
 #%% int_float,barebones
@@ -690,6 +690,7 @@ def test(name, sort, key):
 def foo(l, f):
     return [f(i) for i in l]
 test('hi', foo, lambda x: x+1) #: hi [2, 3, 4, 5]
+# TODO
 # def foof(l: List[int], x, f: Callable[[int], int]):
 #     return [f(i)+x for i in l]
 # test('qsort', foof(..., 3, ...))
@@ -742,8 +743,8 @@ zz(1)
 #%% sort_partial
 def foo(x, y):
     return y**x
-print sorted([1,2,3,4,5], key=foo(..., y=2))
-print sorted([1,2,3,4,5], key=foo(..., y=-2))
+print sorted([1,2,3,4,5], key=foo(y=2, ...))
+print sorted([1,2,3,4,5], key=foo(y=-2, ...))
 #: [1, 2, 3, 4, 5]
 #: [5, 3, 1, 2, 4]
 
@@ -757,3 +758,30 @@ def frec(x, y):
 print frec(1, 2).__class__, frec('s', 1).__class__
 #!   ERROR: expression with void type
 #!   ERROR: while realizing frec (arguments frec[int,int])
+
+#%% return_fn,barebones
+def retfn(a):
+    def inner(b, *args, **kwargs):
+        print a, b, args, kwargs
+    print inner.__class__ #: retfn.inner[...,...,int,...]
+    return inner(15, ...)
+f = retfn(1)
+print f.__class__ #: retfn.inner[int,...,int,...]
+f(2,3,foo='bar') #: 1 15 (2, 3) (foo: bar)
+
+#%% decorator_manual,barebones
+def foo(x, *args, **kwargs):
+    print x, args, kwargs
+    return 1
+def dec(fn, a):
+    print 'decorating', fn.__class__ #: decorating foo[...,...,...]
+    def inner(*args, **kwargs):
+        print 'decorator', args, kwargs #: decorator (5.5, s) (z: True)
+        return fn(a, *args, **kwargs)
+    return inner(...)
+ff = dec(foo(...), 10)
+print ff(5.5, 's', z=True)
+#: 10 (5.5, s) (z: True)
+#: 1
+
+

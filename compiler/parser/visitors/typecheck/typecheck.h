@@ -263,7 +263,8 @@ private:
   /// Also used to generate a named tuple class Name.N[T1,...,TN] with field names
   /// provided in names parameter.
   string generateTupleStub(int len, const string &name = "Tuple",
-                           vector<string> names = vector<string>{});
+                           vector<string> names = vector<string>{},
+                           bool hasSuffix = true);
   /// Generate a function type Function.N[TR, T1, ..., TN] as follows:
   ///   @internal @tuple @trait
   ///   class Function.N[TR, T1, ..., TN]:

@@ -16,47 +16,51 @@ if [ -n "$1" ]; then export JOBS=$1; fi
 echo "Using $JOBS cores..."
 
 # Tapir
-git clone -b release_60-release https://github.com/seq-lang/Tapir-LLVM ${SRCDIR}/Tapir-LLVM
-mkdir -p ${SRCDIR}/Tapir-LLVM/build
-cd ${SRCDIR}/Tapir-LLVM/build
-cmake .. \
-   -DLLVM_INCLUDE_TESTS=OFF \
-   -DLLVM_ENABLE_RTTI=ON \
-   -DCMAKE_BUILD_TYPE=Release \
-   -DLLVM_TARGETS_TO_BUILD=host \
-   -DLLVM_ENABLE_ZLIB=OFF \
-   -DLLVM_ENABLE_TERMINFO=OFF \
-   -DCMAKE_C_COMPILER=${CC} \
-   -DCMAKE_CXX_COMPILER=${CXX} \
-   -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}
-make -j$JOBS
-make install
-${INSTALLDIR}/bin/llvm-config --cmakedir
+if [ ! -d "${SRCDIR}/Tapir-LLVM" ]; then
+  git clone -depth 1 -b release_60-release https://github.com/seq-lang/Tapir-LLVM ${SRCDIR}/Tapir-LLVM
+  mkdir -p ${SRCDIR}/Tapir-LLVM/build
+  cd ${SRCDIR}/Tapir-LLVM/build
+  cmake .. \
+     -DLLVM_INCLUDE_TESTS=OFF \
+     -DLLVM_ENABLE_RTTI=ON \
+     -DCMAKE_BUILD_TYPE=Release \
+     -DLLVM_TARGETS_TO_BUILD=host \
+     -DLLVM_ENABLE_ZLIB=OFF \
+     -DLLVM_ENABLE_TERMINFO=OFF \
+     -DCMAKE_C_COMPILER=${CC} \
+     -DCMAKE_CXX_COMPILER=${CXX} \
+     -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}
+  make -j$JOBS
+  make install
+  ${INSTALLDIR}/bin/llvm-config --cmakedir
+fi
 
 # OCaml
-curl -L https://github.com/ocaml/ocaml/archive/4.07.1.tar.gz | tar zxf - -C ${SRCDIR}
-cd ${SRCDIR}/ocaml-4.07.1
-./configure \
-    -cc "${CC} -Wno-implicit-function-declaration" \
-    -fPIC \
-    -no-pthread \
-    -no-debugger \
-    -no-debug-runtime \
-    -prefix ${INSTALLDIR}
-make -j$JOBS world.opt
-make install
-export PATH=${INSTALLDIR}/bin:${PATH}
-curl -L https://github.com/ocaml/ocamlbuild/archive/0.12.0.tar.gz | tar zxf - -C ${SRCDIR}
-cd ${SRCDIR}/ocamlbuild-0.12.0
-make configure \
-  PREFIX=${INSTALLDIR} \
-  OCAMLBUILD_BINDIR=${INSTALLDIR}/bin \
-  OCAMLBUILD_LIBDIR=${INSTALLDIR}/lib \
-  OCAMLBUILD_MANDIR=${INSTALLDIR}/man
-make -j$JOBS
-make install
-${INSTALLDIR}/bin/ocaml -version
-${INSTALLDIR}/bin/ocamlbuild -version
+if [ ! -d "${SRCDIR}/ocaml-4.07.1" ]; then
+  curl -L https://github.com/ocaml/ocaml/archive/4.07.1.tar.gz | tar zxf - -C ${SRCDIR}
+  cd ${SRCDIR}/ocaml-4.07.1
+  ./configure \
+      -cc "${CC} -Wno-implicit-function-declaration" \
+      -fPIC \
+      -no-pthread \
+      -no-debugger \
+      -no-debug-runtime \
+      -prefix ${INSTALLDIR}
+  make -j$JOBS world.opt
+  make install
+  export PATH=${INSTALLDIR}/bin:${PATH}
+  curl -L https://github.com/ocaml/ocamlbuild/archive/0.12.0.tar.gz | tar zxf - -C ${SRCDIR}
+  cd ${SRCDIR}/ocamlbuild-0.12.0
+  make configure \
+    PREFIX=${INSTALLDIR} \
+    OCAMLBUILD_BINDIR=${INSTALLDIR}/bin \
+    OCAMLBUILD_LIBDIR=${INSTALLDIR}/lib \
+    OCAMLBUILD_MANDIR=${INSTALLDIR}/man
+  make -j$JOBS
+  make install
+  ${INSTALLDIR}/bin/ocaml -version
+  ${INSTALLDIR}/bin/ocamlbuild -version
+fi
 
 # Menhir
 curl -L https://gitlab.inria.fr/fpottier/menhir/-/archive/20190924/menhir-20190924.tar.gz | tar zxf - -C ${SRCDIR}

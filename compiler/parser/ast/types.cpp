@@ -267,27 +267,15 @@ string ClassType::debugString(bool debug) const {
   for (auto &a : generics)
     if (!a.name.empty())
       gs.push_back(a.type->debugString(debug));
-  // Special formatting for Partials, Functions and Tuples
-  if (startswith(name, TYPE_PARTIAL)) {
-    vector<string> as;
-    int i, gi;
-    for (i = 9, gi = 0; i < name.size() && name[i] != '.'; i++)
-      if (name[i] == '0')
-        as.push_back("...");
-      else
-        as.push_back(gs[gi++]);
-    auto n = split(name.substr(i + 1), '[')[0];
-    return fmt::format("{}[{}]", n, join(as, ","));
-  } else {
-    auto n = niceName;
-    if (startswith(n, TYPE_TUPLE))
-      n = "Tuple";
-    if (startswith(n, TYPE_FUNCTION))
-      n = "Function";
-    if (startswith(n, TYPE_CALLABLE))
-      n = "Callable";
-    return fmt::format("{}{}", n, gs.empty() ? "" : fmt::format("[{}]", join(gs, ",")));
-  }
+  // Special formatting for Functions and Tuples
+  auto n = niceName;
+  if (startswith(n, TYPE_TUPLE))
+    n = "Tuple";
+  if (startswith(n, TYPE_FUNCTION))
+    n = "Function";
+  if (startswith(n, TYPE_CALLABLE))
+    n = "Callable";
+  return fmt::format("{}{}", n, gs.empty() ? "" : fmt::format("[{}]", join(gs, ",")));
 }
 string ClassType::realizedName() const {
   vector<string> gs;
@@ -545,6 +533,17 @@ string FuncType::realizedName() const {
 PartialType::PartialType(const shared_ptr<RecordType> &baseType,
                          shared_ptr<FuncType> func, vector<char> known)
     : RecordType(*baseType), func(move(func)), known(move(known)) {}
+int PartialType::unify(Type *typ, Unification *us) {
+  int s1 = 0, s;
+  if (auto tc = typ->getPartial()) {
+    // Check names.
+    if ((s = func->unify(tc->func.get(), us)) == -1)
+      return -1;
+    s1 += s;
+  }
+  s = this->RecordType::unify(typ, us);
+  return s == -1 ? s : s1 + s;
+}
 TypePtr PartialType::generalize(int atLevel) {
   return make_shared<PartialType>(
       static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)), func,
@@ -556,6 +555,29 @@ TypePtr PartialType::instantiate(int atLevel, int &unboundCount,
       static_pointer_cast<RecordType>(
           this->RecordType::instantiate(atLevel, unboundCount, cache)),
       func, known);
+}
+string PartialType::debugString(bool debug) const {
+  vector<string> gs;
+  for (auto &a : generics)
+    if (!a.name.empty())
+      gs.push_back(a.type->debugString(debug));
+  vector<string> as;
+  int i, gi;
+  for (i = 0, gi = 0; i < known.size(); i++)
+    if (!known[i])
+      as.emplace_back("...");
+    else
+      as.emplace_back(gs[gi++]);
+  return fmt::format("{}[{}]", func->funcName, join(as, ","));
+}
+string PartialType::realizedName() const {
+  vector<string> gs;
+  gs.push_back(func->realizedName());
+  for (auto &a : generics)
+    if (!a.name.empty())
+      gs.push_back(a.type->realizedName());
+  string s = join(gs, ",");
+  return fmt::format("{}{}", name, s.empty() ? "" : fmt::format("[{}]", s));
 }
 
 StaticType::StaticType(vector<ClassType::Generic> generics,

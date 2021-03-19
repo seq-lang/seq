@@ -89,12 +89,28 @@ print R'\n\r\t\\' #: \n\r\t\\
 #%% id_fstring_error,barebones
 f"a{b + 3}" #! ERROR: identifier 'b' not found
 
-#%% id_access_error,barebones
+#%% id_access,barebones
 def foo():
     a = 5
     def bar():
         print a
-foo() #! ERROR: cannot access non-global variable 'a'
+    bar()  #: 5
+    a = 4
+    bar()  #: 5
+foo()
+
+z = {}
+def fox():
+    a = 5
+    def goo():
+        z['x'] = 'y'
+        print a
+    return goo
+fox()()
+print z
+#: 5
+#: {x: y}
+
 
 #%% star_err,barebones
 a = (1, 2, 3)
@@ -160,6 +176,18 @@ g = (e for e in range(20) if e % z == 1)
 print str(g)[:13] #: <generator at
 print list(g) #: [1, 4, 7, 10, 13, 16, 19]
 
+g1 = (a for a in range(3))
+print list(g1) #: [0, 1, 2]
+g2 = (a for a in range(z + 1))
+print list(g2) #: [0, 1, 2, 3]
+
+def nest(z):
+    g1 = (a for a in range(3))
+    print list(g1) #: [0, 1, 2]
+    g2 = (a for a in range(z + 1))
+    print list(g2) #: [0, 1, 2, 3, 4]
+nest(4)
+
 #%% cond,barebones
 a = 5
 print (1 <= a <= 10), (1 >= a >= -5) #: True False
@@ -188,7 +216,7 @@ print z is None, None is z, None is not z, None is None #: True True False True
 #%% pipe_error,barebones
 def b(a, b, c, d):
     pass
-1 |> b(1, ..., 2, ...)  #! ERROR: unexpected partial argument
+1 |> b(1, ..., 2, ...)  #! ERROR: unexpected ellipsis expression
 
 #%% index_normal,barebones
 t: tuple[int, int] = (1, 2)
@@ -276,6 +304,10 @@ print lp(2) #: 9
 def foo[T](a: T, l: Callable[[T], T]):
     return l(a)
 print foo(4, lp) #: 11
+
+def foox(a, l):
+    return l(a)
+print foox(4, lp) #: 11
 
 #%% nested_lambda,barebones
 def foo():

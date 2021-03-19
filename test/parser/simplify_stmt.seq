@@ -552,6 +552,29 @@ class Foo:
         return 'F'
 Foo.foo(1) #! ERROR: cannot unify int and Foo
 
+#%% function_nested,barebones
+def foo(v):
+    value = v
+    def bar():
+        return value
+    return bar
+baz = foo(2)
+print baz() #: 2
+
+def f(x):
+    a=1
+    def g(y):
+        return a+y
+    return g(x)
+print f(5) #: 6
+
+#%% function_err_nested,barebones
+def f[T]():
+    def g():
+        return T()
+    g()
+f[int]() #! ERROR: identifier 'T' not found
+
 #%% class_err_1,barebones
 @extend
 @foo

@@ -43,7 +43,11 @@ types::TypePtr TypecheckVisitor::realize(types::TypePtr typ) {
       realizeType(ret->getClass().get());
     return ret;
   } else {
-    return realizeType(typ->getClass().get());
+    auto t = realizeType(typ->getClass().get());
+    if (auto p = typ->getPartial())
+      return make_shared<PartialType>(t->getRecord(), p->func, p->known);
+    else
+      return t;
   }
 }
 
@@ -328,7 +332,11 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
   // Last pass; TODO: detect if it is needed...
   //  ctx->addBlock();
   LOG_TYPECHECK("== iter {} ==========================================", ++iter);
-  result = TypecheckVisitor(ctx).transform(result);
+  for (int i = 0; i < 1; i++, iter++) {
+    ctx->typecheckLevel++;
+    result = TypecheckVisitor(ctx).transform(result);
+    ctx->typecheckLevel--;
+  }
   if (!keepLast)
     ctx->popBlock();
   return {iter, move(result)};

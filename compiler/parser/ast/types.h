@@ -336,9 +336,13 @@ public:
               vector<char> known);
 
 public:
+  int unify(Type *typ, Unification *us) override;
   TypePtr generalize(int atLevel) override;
   TypePtr instantiate(int atLevel, int &unboundCount,
                       unordered_map<int, TypePtr> &cache) override;
+
+  string debugString(bool debug) const override;
+  string realizedName() const override;
 
 public:
   shared_ptr<PartialType> getPartial() override {

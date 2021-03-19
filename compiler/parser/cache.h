@@ -44,6 +44,7 @@
 #define ATTR_EXTEND "extend"
 #define ATTR_DICT "dict"
 #define ATTR_MODULE ".module"
+#define ATTR_DO_CAPTURE ".doCapture"
 #define ATTR_NO(x) ("no_" x)
 
 #define TYPE_TUPLE "Tuple.N"

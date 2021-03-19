@@ -74,6 +74,8 @@ string SimplifyContext::getBase() const {
 string SimplifyContext::generateCanonicalName(const string &name,
                                               bool includeBase) const {
   string newName = name;
+  if (name == "._lambda_100")
+    assert(1);
   if (includeBase && name.find('.') == string::npos) {
     string base = getBase();
     if (base.empty()) {

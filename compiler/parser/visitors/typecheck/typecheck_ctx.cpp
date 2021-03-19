@@ -204,7 +204,7 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
     }
     auto score = reorderNamedArgs(
         method.get(), callArgs,
-        [&](int s, int k, const vector<vector<int>> &slots) {
+        [&](int s, int k, const vector<vector<int>> &slots, bool _) {
           for (int si = 0; si < slots.size(); si++)
             // Ignore *args, *kwargs and default arguments
             reordered.emplace_back(si == s || si == k || slots[si].size() != 1
@@ -293,11 +293,17 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
   FunctionStmt *ast = nullptr;
   if (auto fn = func->getFunc())
     ast = cache->functions[fn->funcName].ast.get();
+
+  // True if there is a trailing ellipsis (full partial: fn(all_args, ...))
+  bool partial = !args.empty() && args.back().value->getEllipsis() &&
+                 !args.back().value->getEllipsis()->isPipeArg &&
+                 args.back().name.empty();
+
   int starArgIndex = -1, kwstarArgIndex = -1;
   for (int i = 0; ast && i < ast->args.size(); i++) {
-    if (startswith(ast->args[i].name, "**"))
+    if ((known.empty() || !known[i]) && startswith(ast->args[i].name, "**"))
       kwstarArgIndex = i, score -= 2;
-    else if (startswith(ast->args[i].name, "*"))
+    else if ((known.empty() || !known[i]) && startswith(ast->args[i].name, "*"))
       starArgIndex = i, score -= 2;
   }
   seqassert(known.empty() || starArgIndex == -1 || !known[starArgIndex],
@@ -312,7 +318,7 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
             "bad 'known' string");
   vector<int> extra;
   std::map<string, int> namedArgs, extraNamedArgs; // keep the map--- we need it sorted!
-  for (int ai = 0, si = 0; ai < args.size(); ai++) {
+  for (int ai = 0, si = 0; ai < args.size() - partial; ai++) {
     if (args[ai].name.empty()) {
       while (!known.empty() && si < slots.size() && known[si])
         si++;
@@ -324,7 +330,7 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
       namedArgs[args[ai].name] = ai;
     }
   }
-  score = 2 * slots.size();
+  score = 2 * int(slots.size());
 
   for (auto ai : vector<int>{std::max(starArgIndex, kwstarArgIndex),
                              std::min(starArgIndex, kwstarArgIndex)})
@@ -356,7 +362,8 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
   // 3. Fill in *args, if present
   if (!extra.empty() && starArgIndex == -1)
     return onError(format("too many arguments for {} (expected {}, got {})",
-                          func->toString(), func->args.size() - 1, args.size()));
+                          func->toString(), func->args.size() - 1,
+                          args.size() - partial));
   if (starArgIndex != -1)
     slots[starArgIndex] = extra;
 
@@ -372,11 +379,11 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
     if (slots[i].empty() && i != starArgIndex && i != kwstarArgIndex) {
       if ((ast && ast->args[i].deflt) || (!known.empty() && known[i]))
         score -= 2;
-      else
+      else if (!partial)
         return onError(format("missing argument '{}'",
                               cache->reverseIdentifierLookup[ast->args[i].name]));
     }
-  return score + onDone(starArgIndex, kwstarArgIndex, slots);
+  return score + onDone(starArgIndex, kwstarArgIndex, slots, partial);
 }
 
 void TypeContext::dump(int pad) {

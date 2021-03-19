@@ -345,9 +345,9 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               staticGenerics.emplace_back(ClassType::Generic(
                   ei->value, ctx->cache->reverseIdentifierLookup[ei->value], genTyp,
                   genTyp->getLink() ? genTyp->getLink()->id
-                                    : genTyp->getStatic()->generics.empty()
-                                          ? 0
-                                          : genTyp->getStatic()->generics[0].id));
+                  : genTyp->getStatic()->generics.empty()
+                      ? 0
+                      : genTyp->getStatic()->generics[0].id));
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -798,7 +798,8 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
       return transform(N<CallExpr>(N<DotExpr>(move(expr->expr), "_getattr"),
                                    N<StringExpr>(expr->member)));
     } else {
-      // For debugging purposes: ctx->findMethod(typ->name, expr->member);
+      // For debugging purposes:
+      ctx->findMethod(typ->name, expr->member);
       error("cannot find '{}' in {}", expr->member, typ->toString());
     }
   }
@@ -1020,29 +1021,27 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
 
   // Handle named and default arguments
   vector<CallExpr::Arg> args;
+  bool isPartial = false;
   if (expr->ordered)
     args = move(expr->args);
   else {
     ctx->reorderNamedArgs(
         calleeFn.get(), expr->args,
-        [&](int starArgIndex, int kwstarArgIndex, const vector<vector<int>> &slots) {
+        [&](int starArgIndex, int kwstarArgIndex, const vector<vector<int>> &slots,
+            bool partial) {
+          isPartial = partial;
           ctx->addBlock(); // add generics for default arguments.
           addFunctionGenerics(calleeFn->getFunc().get());
           for (int si = 0, pi = 0; si < slots.size(); si++) {
-            if (si == starArgIndex) {
+            if (si == starArgIndex && !(partial && slots[si].empty())) {
               vector<ExprPtr> extra;
-              for (auto &e : slots[si]) {
-                if (expr->args[e].value->getEllipsis())
-                  error(expr->args[e].value, "cannot pass an ellipsis to *args");
+              for (auto &e : slots[si])
                 extra.push_back(move(expr->args[e].value));
-              }
               args.push_back({"", transform(N<TupleExpr>(move(extra)))});
-            } else if (si == kwstarArgIndex) {
+            } else if (si == kwstarArgIndex && !(partial && slots[si].empty())) {
               vector<string> names;
               vector<CallExpr::Arg> values;
               for (auto &e : slots[si]) {
-                if (expr->args[e].value->getEllipsis())
-                  error(expr->args[e].value, "cannot pass an ellipsis to **kwargs");
                 names.emplace_back(expr->args[e].name);
                 values.emplace_back(CallExpr::Arg{"", move(expr->args[e].value)});
               }
@@ -1050,10 +1049,12 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
               args.push_back(
                   {"", transform(N<CallExpr>(N<IdExpr>(kwName), move(values)))});
             } else if (slots[si].empty()) {
-              if (!known.empty() && known[si])
+              if (!known.empty() && known[si]) {
                 args.push_back({"", transform(N<IndexExpr>(N<IdExpr>(partialVar),
                                                            N<IntExpr>(pi++)))});
-              else {
+              } else if (partial) {
+                args.push_back({"", transform(N<EllipsisExpr>())});
+              } else {
                 auto es = ast->args[si].deflt->toString();
                 if (in(ctx->defaultCallDepth, es))
                   error("recursive default arguments");
@@ -1075,6 +1076,10 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         },
         known);
     expr->ordered = true;
+  }
+  if (isPartial) {
+    deactivateUnbounds(expr->args.back().value->getType().get());
+    expr->args.pop_back();
   }
 
   // Typecheck given arguments with the expected (signature) types.
@@ -1128,7 +1133,8 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         }
         unify(args[si].value->type, expectedTyp);
         if (auto pt = argClass->getPartial()) {
-          pt->func = ctx->instantiate(args[si].value.get(), pt->func)->getFunc();
+          //          pt->func = ctx->instantiate(args[si].value.get(),
+          //          pt->func)->getFunc();
           unify(expectedClass->generics[0].type, pt->func->args[0]);
           for (int pi = 0, gi = 1; pi < pt->known.size(); pi++)
             if (!pt->known[pi])
@@ -1193,12 +1199,11 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
 
   // Emit the final call.
   vector<char> newMask;
+  if (isPartial)
+    newMask = vector<char>(calleeFn->args.size() - 1, 1);
   for (int si = 0; si < calleeFn->args.size() - 1; si++)
-    if (args[si].value->getEllipsis() && !args[si].value->getEllipsis()->isPipeArg) {
-      if (newMask.empty())
-        newMask = vector<char>(calleeFn->args.size() - 1, 1);
+    if (args[si].value->getEllipsis() && !args[si].value->getEllipsis()->isPipeArg)
       newMask[si] = 0;
-    }
   if (!newMask.empty()) {
     // Case 1: partial call.
     // Transform calleeFn(args...) to Partial.N<known>.<calleeFn>(args...).
@@ -1227,9 +1232,9 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
                   startswith(call->type->getRecord()->name, partialTypeName) &&
                   !call->type->getPartial(),
               "bad partial transformation");
-    call->type =
-        N<PartialType>(call->type->getRecord(),
-                       calleeFn->generalize(ctx->typecheckLevel)->getFunc(), newMask);
+    call->type = N<PartialType>(call->type->getRecord(), calleeFn,
+                                //->generalize(ctx->typecheckLevel)->getFunc(),
+                                newMask);
     return call;
   } else {
     // Case 2. Normal function call.
@@ -1322,7 +1327,7 @@ void TypecheckVisitor::addFunctionGenerics(const FuncType *t) {
 }
 
 string TypecheckVisitor::generateTupleStub(int len, const string &name,
-                                           vector<string> names) {
+                                           vector<string> names, bool hasSuffix) {
   static map<string, int> usedNames;
   auto key = join(names, ";");
   string suffix;
@@ -1334,7 +1339,7 @@ string TypecheckVisitor::generateTupleStub(int len, const string &name,
     for (int i = 1; i <= len; i++)
       names.push_back(format("item{}", i));
   }
-  auto typeName = format("{}.N{}{}", name, len, suffix);
+  auto typeName = format("{}{}", name, hasSuffix ? format(".N{}{}", len, suffix) : "");
   if (!ctx->find(typeName)) {
     vector<Param> generics, args;
     for (int i = 1; i <= len; i++) {
@@ -1457,16 +1462,18 @@ string TypecheckVisitor::generatePartialStub(const vector<char> &mask,
   for (int i = 0; i < mask.size(); i++)
     if (!mask[i])
       strMask[i] = '0';
-  auto typeName = format(TYPE_PARTIAL "{}.{}", strMask, fn->realizedName());
+  auto typeName = format(TYPE_PARTIAL "{}", strMask); //, fn->realizedName());
   if (!ctx->find(typeName)) {
     auto tupleSize = std::count_if(mask.begin(), mask.end(), [](char c) { return c; });
-    auto tupleType =
-        ctx->find(generateTupleStub(tupleSize, typeName))->type->getRecord();
+    generateTupleStub(tupleSize, typeName, {}, false);
+    //        auto tupleType =
+    //            ctx->find(generateTupleStub(tupleSize, typeName, {},
+    //            false))->type->getRecord();
     //    auto type = make_shared<PartialType>(
     //        tupleType, fn->generalize(ctx->getLevel())->getFunc(), mask);
-    ctx->cache->classes[typeName] = Cache::Class();
-    ctx->addToplevel(typeName,
-                     make_shared<TypecheckItem>(TypecheckItem::Type, tupleType));
+    // ctx->cache->classes[typeName] = Cache::Class();
+    //    ctx->addToplevel(typeName,
+    //                     make_shared<TypecheckItem>(TypecheckItem::Type, tupleType));
   }
   return typeName;
 }

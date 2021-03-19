@@ -406,6 +406,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
 
   auto canonicalName = ctx->generateCanonicalName(stmt->name, true);
   bool isClassMember = ctx->inClass();
+  bool isEnclosedFunc = ctx->inFunction();
 
   if (in(stmt->attributes, ATTR_FORCE_REALIZE) && (ctx->getLevel() || isClassMember))
     error("builtins must be defined at the toplevel");
@@ -482,12 +483,20 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   auto ret = transformType(stmt->ret.get());
   // Parse function body.
   StmtPtr suite = nullptr;
+  std::map<string, string> captures;
   if (!in(stmt->attributes, ATTR_INTERNAL) && !in(stmt->attributes, ATTR_EXTERN_C)) {
     ctx->addBlock();
     if (in(stmt->attributes, ATTR_EXTERN_LLVM))
       suite = transformLLVMDefinition(stmt->suite->firstInBlock());
-    else
+    else {
+      if (isEnclosedFunc || in(stmt->attributes, ATTR_DO_CAPTURE))
+        ctx->captures.emplace_back(std::map<string, string>{});
       suite = SimplifyVisitor(ctx, preamble).transform(stmt->suite);
+      if (isEnclosedFunc) {
+        captures = ctx->captures.back();
+        ctx->captures.pop_back();
+      }
+    }
     ctx->popBlock();
   }
 
@@ -519,6 +528,23 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     if (isMethod)
       attributes[ATTR_IS_METHOD] = "";
   }
+
+  vector<CallExpr::Arg> partialArgs;
+  if (!captures.empty()) {
+    Param kw;
+    if (hasKwArg) {
+      kw = std::move(args.back());
+      args.pop_back();
+    }
+    for (auto &c : captures) {
+      args.emplace_back(Param{c.second, nullptr, nullptr});
+      partialArgs.emplace_back(CallExpr::Arg{
+          c.second, N<IdExpr>(ctx->cache->reverseIdentifierLookup[c.first])});
+    }
+    if (hasKwArg)
+      args.emplace_back(std::move(kw));
+    partialArgs.emplace_back(CallExpr::Arg{"", N<EllipsisExpr>()});
+  }
   auto f = N<FunctionStmt>(canonicalName, move(ret), move(newGenerics), move(args),
                            move(suite), move(attributes));
   // Do not clone suite: the suite will be accessed later trough the cache.
@@ -527,6 +553,9 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
                       clone_nop(f->args), nullptr, map<string, string>(f->attributes)));
   // Make sure to cache this (generic) AST for later realization.
   ctx->cache->functions[canonicalName].ast = move(f);
+  if (!captures.empty())
+    resultStmt = transform(N<AssignStmt>(
+        N<IdExpr>(stmt->name), N<CallExpr>(N<IdExpr>(stmt->name), move(partialArgs))));
 }
 
 void SimplifyVisitor::visit(ClassStmt *stmt) {

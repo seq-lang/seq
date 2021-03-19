@@ -83,11 +83,12 @@ struct SimplifyContext : public Context<SimplifyItem> {
   /// variable created while parsing a loop-else construct. If a loop has no else block,
   /// the corresponding loop variable is empty.
   vector<string> loops;
-  /// A stack of nested sets that capture variables defined in enclosing bases (e.g.
-  /// variables not defined in a function). Used for capturing outer variables in
-  /// generators and lambda functions. A stack is needed because there might be nested
-  /// generator or lambda constructs.
-  vector<set<string>> captures;
+  /// A stack of nested maps that capture variables defined in enclosing bases (e.g.
+  /// variables not defined in a function). Maps captured canonical names to new
+  /// canonical names (used in the inner function). Used for capturing outer variables
+  /// in generators and lambda functions. A stack is needed because there might be
+  /// nested generator or lambda constructs.
+  vector<std::map<string, string>> captures;
   /// True if standard library is being loaded.
   bool isStdlibLoading;
   /// Current module name (Python's __name__) and its source. The default module is

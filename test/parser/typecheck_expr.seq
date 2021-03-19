@@ -356,25 +356,27 @@ seq_print(1, name="56", name=2) #! ERROR: repeated named argument 'name'
 def foo(i, j, k):
     return i + j + k
 print foo(1.1, 2.2, 3.3)  #: 6.6
-p = foo(6, ..., ...)
+p = foo(6, ...)
 print p.__class__ #: foo[int,...,...]
 print p(2, 1)  #: 9
 print p(k=3, j=6) #: 15
-q = p(..., 1)
+q = p(k=1, ...)
 print q(3)  #: 10
+qq = q(2, ...)
+print qq()  #: 9
 #
-add_two = foo(3, ..., -1)
+add_two = foo(3, k=-1, ...)
 print add_two(42)  #: 44
 print 3 |> foo(1, 2)  #: 6
 print 42 |> add_two  #: 44
 #
 def moo(a, b, c=3):
     print a, b, c
-m = moo(..., 2, ...)
+m = moo(b=2, ...)
 print m.__class__ #: moo[...,int,...]
 m('s', 1.1) #: s 2 1.1
 # #
-n = m(c=2.2, a=...)
+n = m(c=2.2, ...)
 print n.__class__ #: moo[...,int,float]
 n('x') #: x 2 2.2
 print n('y').__class__ #: void
@@ -382,12 +384,12 @@ print n('y').__class__ #: void
 def ff(a, b, c):
     return a, b, c
 print ff(1.1, 2, True).__class__ #: Tuple[float,int,bool]
-print ff(1.1, ..., ...)(2, True).__class__ #: Tuple[float,int,bool]
-y = ff(1.1, ..., ...)(..., True)
+print ff(1.1, ...)(2, True).__class__ #: Tuple[float,int,bool]
+y = ff(1.1, ...)(c=True, ...)
 print y.__class__ #: ff[float,...,bool]
-print ff(1.1, ..., ...)(2, ...)(True).__class__ #: Tuple[float,int,bool]
+print ff(1.1, ...)(2, ...)(True).__class__ #: Tuple[float,int,bool]
 print y('hei').__class__ #: Tuple[float,str,bool]
-z = ff(1.1, ..., ...)(..., 's')
+z = ff(1.1, ...)(c='s', ...)
 print z.__class__ #: ff[float,...,str]
 
 #%% call_arguments_partial,barebones
@@ -411,12 +413,32 @@ doo(b=l, d=Optional(5), c=l[0], a=lambda x: x+1)
 
 l = [1]
 def adder(a, b): return a+b
-doo(b=l, d=Optional(5), c=l[0], a=adder(..., 4))
+doo(b=l, d=Optional(5), c=l[0], a=adder(b=4, ...))
 #: int int
 #: adder[...,int] Generator[int]
 #: 5
 #: 1 Optional[int]
 #: 5 int
+
+#%% call_partial_star,barebones
+def foo(x, *args, **kwargs):
+    print x, args, kwargs
+p = foo(...)
+p(1, z=5) #: 1 () (z: 5)
+q = p(zh=43, ...)
+q(1) #: 1 () (zh: 43)
+r = q(5, 38, ...)
+r() #: 5 (38) (zh: 43)
+
+#%% call_partial_star_error,barebones
+def foo(x, *args, **kwargs):
+    print x, args, kwargs
+p = foo(...)
+p(1, z=5)
+q = p(zh=43, ...)
+q(1)
+r = q(5, 38, ...)
+r(1, a=1) #! ERROR: too many arguments for foo[T1,T2,T3] (expected 3, got 2)
 
 #%% call_kwargs,barebones
 def kwhatever(**kwargs):

@@ -142,7 +142,7 @@ public:
   types::FuncTypePtr findBestMethod(const Expr *expr, const string &member,
                                     const vector<pair<string, types::TypePtr>> &args);
 
-  typedef std::function<int(int, int, const vector<vector<int>> &)> ReorderDoneFn;
+  typedef std::function<int(int, int, const vector<vector<int>> &, bool)> ReorderDoneFn;
   typedef std::function<int(string)> ReorderErrorFn;
   /// Reorders a given vector or named arguments (consisting of names and the
   /// corresponding types) according to the signature of a given function.
