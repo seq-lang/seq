@@ -178,3 +178,11 @@ chain()
 starmap()
 groupby()
 zip_longest()
+
+@test
+def zip_test():
+    assert list(zip()) == []
+    assert list(zip((1, 2))) == [(1,), (2,)]
+    assert list(zip([1, 2], ['a', 'b'], (False, True))) == [(1, 'a', False), (2, 'b', True)]
+zip_test()
+

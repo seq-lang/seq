@@ -148,12 +148,6 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
           getSrcInfo().file, getSrcInfo().line, getSrcInfo().col);
 
     // Special cases: Tuple.(__iter__, __getitem__, __contains__).
-    if (endswith(type->funcName, ".__iter__")) {
-      // __iter__ in an empty tuple.
-      auto s = ctx->cache->functions[type->funcName].ast->suite->getSuite();
-      if (s && s->stmts.empty())
-        error("cannot iterate empty tuple");
-    }
     if (startswith(type->funcName, TYPE_TUPLE) &&
         (endswith(type->funcName, ".__iter__") ||
          endswith(type->funcName, ".__getitem__")) &&

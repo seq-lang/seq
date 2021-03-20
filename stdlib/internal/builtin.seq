@@ -146,29 +146,19 @@ def zip(*args):
     Returns a zip object, which is an iterator of tuples
     that aggregates elements based on the iterables passed
     """
-    if len(args) == 0:
-        return
+    if staticlen(args) == 0:
+        yield from List[int]()
     else:
         iters = tuple(iter(i) for i in args)
-        while not iters[0].done():
+        done = False
+        while not done:
             for i in iters:
-                if i.done(): break
-            yield tuple(i.next() for i in iters)
+                if i.done():
+                    done = True
+            if not done:
+                yield tuple(i.next() for i in iters)
         for i in iters:
             i.destroy()
-
-def zip(a, b):
-    """
-    Returns a zip object, which is an iterator of tuples
-    that aggregates elements based on the iterables passed
-    """
-    ai = iter(a)
-    bi = iter(b)
-    while not ai.done():
-        if bi.done(): break
-        yield (ai.next(), bi.next())
-    ai.destroy()
-    bi.destroy()
 
 def filter[T](f: Callable[[T], bool], x: Generator[T]):
     """

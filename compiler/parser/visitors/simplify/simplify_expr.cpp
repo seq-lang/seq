@@ -507,6 +507,12 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     return;
   }
 
+  auto e = transform(expr->expr.get(), true);
+  // 8. namedtuple
+  //  if (e->isId("collections.namedtuple")) {
+  //    if
+  //  }
+
   vector<CallExpr::Arg> args;
   bool namesStarted = false;
   bool foundEllispis = false;
@@ -530,7 +536,7 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     else
       args.push_back({i.name, transform(i.value)});
   }
-  resultExpr = N<CallExpr>(transform(expr->expr.get(), true), move(args));
+  resultExpr = N<CallExpr>(move(e), move(args));
 }
 
 void SimplifyVisitor::visit(DotExpr *expr) {

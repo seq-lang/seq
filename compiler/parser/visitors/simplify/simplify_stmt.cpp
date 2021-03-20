@@ -1344,9 +1344,12 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
     //           yield self.aI ...
     //         (error during a realizeFunc() method if T is a heterogeneous tuple)
     fargs.emplace_back(Param{"self", typExpr->clone()});
-    ret = N<IndexExpr>(I("Generator"), !args.empty() ? clone(args[0].type) : I("void"));
+    ret = N<IndexExpr>(I("Generator"), !args.empty() ? clone(args[0].type) : I("int"));
     for (auto &a : args)
       stmts.emplace_back(N<YieldStmt>(N<DotExpr>(N<IdExpr>("self"), a.name)));
+    if (args.empty()) // Hack for empty tuple: yield from List[int]()
+      stmts.emplace_back(
+          N<YieldFromStmt>(N<CallExpr>(N<IndexExpr>(I("List"), I("int")))));
   } else if (op == "contains") {
     // Tuples: def __contains__(self: T, what) -> bool:
     //            if isinstance(what, T1): if what == self.a1: return True ...

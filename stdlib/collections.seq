@@ -112,3 +112,7 @@ class deque[T]:
 
     def __str__(self):
         return str(List[T](iter(self)))
+
+
+def namedtuple():  # internal
+    pass
