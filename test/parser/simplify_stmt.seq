@@ -779,13 +779,11 @@ print Foo().__getitem__(1)
 #!     ERROR: while realizing __internal__.tuple_getitem
 #!     ERROR: while realizing Foo.__getitem__
 
-#%% magic_err_3,barebones
+#%% magic_empty_tuple,barebones
 @tuple
 class Foo:
     pass
-print Foo().__iter__()
-#! ERROR: cannot iterate empty tuple
-#! ERROR: while realizing Foo.__iter__
+print list(Foo().__iter__())  #: []
 
 #%% magic_err_4,barebones
 @tuple(eq=False)
