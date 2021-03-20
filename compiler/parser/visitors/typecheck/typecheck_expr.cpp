@@ -388,9 +388,9 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               staticGenerics.emplace_back(ClassType::Generic(
                   ei->value, ctx->cache->reverseIdentifierLookup[ei->value], genTyp,
                   genTyp->getLink() ? genTyp->getLink()->id
-                  : genTyp->getStatic()->generics.empty()
-                      ? 0
-                      : genTyp->getStatic()->generics[0].id));
+                                    : genTyp->getStatic()->generics.empty()
+                                          ? 0
+                                          : genTyp->getStatic()->generics[0].id));
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {

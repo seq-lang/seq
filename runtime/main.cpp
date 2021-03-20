@@ -155,8 +155,9 @@ int buildMode(const std::vector<const char *> &args) {
       llvm::cl::init(Detect), llvm::cl::cat(generalCat));
   llvm::cl::opt<std::string> output(
       "o",
-      llvm::cl::desc("Write compiled output to specified file. Supported extensions: "
-                     "none (executable), .o (object file), .ll (LLVM IR), .bc (LLVM bitcode)"),
+      llvm::cl::desc(
+          "Write compiled output to specified file. Supported extensions: "
+          "none (executable), .o (object file), .ll (LLVM IR), .bc (LLVM bitcode)"),
       llvm::cl::cat(generalCat));
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
   std::vector<std::string> libsVec(libs);
