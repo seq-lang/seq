@@ -248,7 +248,6 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
   if (auto tuple = iterType->getHeterogenousTuple()) {
     // Case 1: iterating heterogeneous tuple.
     // Unroll a separate suite for each tuple member.
-    // LOG("hetero");
     auto block = N<SuiteStmt>();
     auto tupleVar = ctx->cache->getTemporaryVar("tuple");
     block->stmts.push_back(N<AssignStmt>(N<IdExpr>(tupleVar), move(stmt->iter)));

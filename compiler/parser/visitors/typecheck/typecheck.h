@@ -71,6 +71,9 @@ public:
   ///   Tuple.N.__new__(a1, ..., aN).
   /// If Tuple.N has not been seen before, generate a stub class for it.
   void visit(TupleExpr *) override;
+  /// Transform a tuple generator tuple(expr for i in tuple) to:
+  ///   Tuple.N.__new__(expr...).
+  void visit(GeneratorExpr *) override;
   /// Set type to the unification of both sides.
   /// Wrap a side with Optional.__new__() if other side is optional.
   /// Wrap conditional with .__bool__() if it is not a bool.

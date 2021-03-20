@@ -1,6 +1,26 @@
 from internal.gc import alloc_atomic, free
 from C import strtoll(cobj, Ptr[cobj], i32) -> int
 
+_stdout = _C.seq_stdout()
+def print(*args, sep=' ', end='\n', file=_stdout, flush=False):
+    """
+    Print args to the text stream file.
+    """
+    fp = cobj()
+    if isinstance(file, Ptr[byte]):
+        fp = file
+    else:
+        fp = file.fp
+    i = 0
+    for a in args:
+        if i:
+            _C.seq_print_full(str(sep), fp)
+        _C.seq_print_full(str(a), fp)
+        i += 1
+    _C.seq_print_full(str(end), fp)
+    if flush:
+        _C.fflush(fp)
+
 def min(*args):
     if staticlen(args) == 0:
         raise ValueError("empty sequence")
@@ -121,15 +141,33 @@ def all(x):
             return False
     return True
 
+def zip(*args):
+    """
+    Returns a zip object, which is an iterator of tuples
+    that aggregates elements based on the iterables passed
+    """
+    if len(args) == 0:
+        return
+    else:
+        iters = tuple(iter(i) for i in args)
+        while not iters[0].done():
+            for i in iters:
+                if i.done(): break
+            yield tuple(i.next() for i in iters)
+        for i in iters:
+            i.destroy()
+
 def zip(a, b):
     """
     Returns a zip object, which is an iterator of tuples
     that aggregates elements based on the iterables passed
     """
+    ai = iter(a)
     bi = iter(b)
-    for i in a:
+    while not ai.done():
         if bi.done(): break
-        yield (i, bi.next())
+        yield (ai.next(), bi.next())
+    ai.destroy()
     bi.destroy()
 
 def filter[T](f: Callable[[T], bool], x: Generator[T]):
@@ -156,26 +194,6 @@ def enumerate(x, start: int = 0):
     for a in x:
         yield (i,a)
         i += 1
-
-_stdout = _C.seq_stdout()
-def print(*args, sep=' ', end='\n', file=_stdout, flush=False):
-    """
-    Print args to the text stream file.
-    """
-    fp = cobj()
-    if isinstance(file, Ptr[byte]):
-        fp = file
-    else:
-        fp = file.fp
-    i = 0
-    for a in args:
-        if i:
-            _C.seq_print_full(str(sep), fp)
-        _C.seq_print_full(str(a), fp)
-        i += 1
-    _C.seq_print_full(str(end), fp)
-    if flush:
-        _C.fflush(fp)
 
 def echo(x):
     """

@@ -158,6 +158,32 @@ void TypecheckVisitor::visit(TupleExpr *expr) {
       N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"), clone(expr->items)));
 }
 
+void TypecheckVisitor::visit(GeneratorExpr *expr) {
+  seqassert(expr->kind == GeneratorExpr::Generator && expr->loops.size() == 1 &&
+                expr->loops[0].conds.empty(),
+            "invalid tuple generator");
+
+  auto gen = transform(expr->loops[0].gen);
+  if (!gen->type->getRecord())
+    return; // continue after the iterator is realizable
+
+  auto tuple = gen->type->getRecord();
+  if (!startswith(tuple->name, TYPE_TUPLE))
+    error("can only iterate over a tuple");
+
+  auto block = N<SuiteStmt>();
+  auto tupleVar = ctx->cache->getTemporaryVar("tuple");
+  block->stmts.push_back(N<AssignStmt>(N<IdExpr>(tupleVar), move(gen)));
+
+  vector<ExprPtr> items;
+  for (int ai = 0; ai < tuple->args.size(); ai++)
+    items.emplace_back(
+        N<StmtExpr>(N<AssignStmt>(clone(expr->loops[0].vars),
+                                  N<IndexExpr>(N<IdExpr>(tupleVar), N<IntExpr>(ai))),
+                    clone(expr->expr)));
+  resultExpr = transform(N<StmtExpr>(move(block), N<TupleExpr>(move(items))));
+}
+
 void TypecheckVisitor::visit(IfExpr *expr) {
   expr->cond = transform(expr->cond);
   expr->ifexpr = transform(expr->ifexpr, false, allowVoidExpr);

@@ -477,6 +477,36 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     resultExpr = N<CallExpr>(clone(expr->expr), move(s));
     return;
   }
+  // 7. tuple(i for i in j)
+  if (expr->expr->isId("tuple")) {
+    GeneratorExpr *g = nullptr;
+    if (expr->args.size() != 1 || !(g = CAST(expr->args[0].value, GeneratorExpr)) ||
+        g->kind != GeneratorExpr::Generator || g->loops.size() != 1 ||
+        !g->loops[0].conds.empty())
+      error("tuple only accepts a simple comprehension over a tuple");
+
+    ctx->addBlock();
+    auto var = clone(g->loops[0].vars);
+    auto ex = clone(g->expr);
+    if (auto i = var->getId()) {
+      ctx->add(SimplifyItem::Var, i->value, ctx->generateCanonicalName(i->value));
+      var = transform(var);
+      ex = transform(ex);
+    } else {
+      string varName = ctx->cache->getTemporaryVar("for");
+      ctx->add(SimplifyItem::Var, varName, varName);
+      var = N<IdExpr>(varName);
+      ex = N<StmtExpr>(
+          transform(N<AssignStmt>(clone(g->loops[0].vars), clone(var), nullptr, true)),
+          transform(ex));
+    }
+    vector<GeneratorBody> body;
+    body.push_back({move(var), transform(g->loops[0].gen), {}});
+    resultExpr = N<GeneratorExpr>(GeneratorExpr::Generator, move(ex), move(body));
+    ctx->popBlock();
+    return;
+  }
+
   vector<CallExpr::Arg> args;
   bool namesStarted = false;
   bool foundEllispis = false;
@@ -584,16 +614,6 @@ void SimplifyVisitor::visit(LambdaExpr *expr) {
   vector<StmtPtr> stmts;
   stmts.push_back(N<ReturnStmt>(clone(expr->expr)));
   resultExpr = makeAnonFn(move(stmts), expr->vars);
-  // OK to const_cast as c is already transformed and only handled here.
-  //  auto call = const_cast<CallExpr *>(origCall->getCall());
-  //  seqassert(call, "bad makeAnonFn return value");
-  //  if (!call->args.empty()) {
-  //    // Create a partial call
-  //    call->args.push_back({"", N<EllipsisExpr>()});
-  //    resultExpr = transform(origCall);
-  //  } else {
-  //    resultExpr = move(call->expr);
-  //  }
 }
 
 void SimplifyVisitor::visit(AssignExpr *expr) {
