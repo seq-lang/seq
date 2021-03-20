@@ -795,8 +795,8 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
         magics.emplace_back("contains");
       if (!startswith(stmt->name, TYPE_TUPLE))
         magics.emplace_back("dict");
-      //      if (startswith(stmt->name, TYPE_TUPLE))
-      //        magics.emplace_back("add");
+      if (startswith(stmt->name, TYPE_TUPLE))
+        magics.emplace_back("add");
     }
     // Codegen default magic methods and add them to the final AST.
     for (auto &m : magics)
@@ -1563,6 +1563,15 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
       stmts.push_back(N<ExprStmt>(
           N<CallExpr>(N<DotExpr>(I("d"), "append"), N<StringExpr>(a.name))));
     stmts.emplace_back(N<ReturnStmt>(I("d")));
+  } else if (op == "add") {
+    // def __add__(self, tup):
+    //   return (*self, *t)
+    fargs.emplace_back(Param{"self", typExpr->clone()});
+    fargs.emplace_back(Param{"tup", nullptr});
+    vector<ExprPtr> ta;
+    ta.emplace_back(N<StarExpr>(N<IdExpr>("self")));
+    ta.emplace_back(N<StarExpr>(N<IdExpr>("tup")));
+    stmts.emplace_back(N<ReturnStmt>(N<TupleExpr>(move(ta))));
   } else {
     seqassert(false, "invalid magic {}", op);
   }

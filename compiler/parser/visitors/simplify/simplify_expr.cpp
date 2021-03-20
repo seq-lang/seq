@@ -128,8 +128,12 @@ void SimplifyVisitor::visit(StarExpr *expr) {
 
 void SimplifyVisitor::visit(TupleExpr *expr) {
   vector<ExprPtr> items;
-  for (auto &i : expr->items)
-    items.emplace_back(transform(i));
+  for (auto &i : expr->items) {
+    if (auto es = i->getStar())
+      items.emplace_back(N<StarExpr>(transform(es->what)));
+    else
+      items.emplace_back(transform(i));
+  }
   resultExpr = N<TupleExpr>(move(items));
 }
 

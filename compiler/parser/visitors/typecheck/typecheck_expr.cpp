@@ -135,8 +135,25 @@ void TypecheckVisitor::visit(IdExpr *expr) {
 }
 
 void TypecheckVisitor::visit(TupleExpr *expr) {
+  for (int ai = 0; ai < expr->items.size(); ai++)
+    if (auto es = const_cast<StarExpr *>(expr->items[ai]->getStar())) {
+      // Case 1: *arg unpacking
+      es->what = transform(es->what);
+      auto t = es->what->type->getClass();
+      if (!t)
+        return;
+      if (!t->getRecord())
+        error("can only unpack tuple types");
+      auto &ff = ctx->cache->classes[t->name].fields;
+      for (int i = 0; i < t->getRecord()->args.size(); i++, ai++)
+        expr->items.insert(expr->items.begin() + ai,
+                           transform(N<DotExpr>(clone(es->what), ff[i].name)));
+      expr->items.erase(expr->items.begin() + ai);
+      ai--;
+    } else {
+      expr->items[ai] = transform(expr->items[ai]);
+    }
   auto name = generateTupleStub(expr->items.size());
-  /// TODO: tuple star-expression
   resultExpr = transform(
       N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"), clone(expr->items)));
 }
