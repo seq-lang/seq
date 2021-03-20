@@ -571,3 +571,17 @@ foo(1)
 foo('s')
 #: s
 #: x
+
+#%% tuple_generator,barebones
+a = (1, 2)
+b = ('f', 'g')
+print a, b #: (1, 2) (f, g)
+c = (*a, True, *b)
+print c #: (1, 2, True, f, g)
+print a + b + c #: (1, 2, f, g, 1, 2, True, f, g)
+print () + (1, ) + ('a', 'b') #: (1, a, b)
+
+t = tuple(i+1 for i in (1,2,3))
+print t #: (2, 3, 4)
+print tuple((j, i) for i, j in ((1, 'a'), (2, 'b'), (3, 'c')))
+#: ((a, 1), (b, 2), (c, 3))
