@@ -256,13 +256,23 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
     auto block = N<SuiteStmt>();
     auto tupleVar = ctx->cache->getTemporaryVar("tuple");
     block->stmts.push_back(N<AssignStmt>(N<IdExpr>(tupleVar), move(stmt->iter)));
+
+    auto cntVar = ctx->cache->getTemporaryVar("idx");
+    vector<StmtPtr> forBlock;
     for (int ai = 0; ai < tuple->args.size(); ai++) {
       vector<StmtPtr> stmts;
       stmts.push_back(N<AssignStmt>(clone(stmt->var),
                                     N<IndexExpr>(N<IdExpr>(tupleVar), N<IntExpr>(ai))));
       stmts.push_back(clone(stmt->suite));
-      block->stmts.push_back(N<SuiteStmt>(move(stmts), true));
+      forBlock.push_back(
+          N<IfStmt>(N<BinaryExpr>(N<IdExpr>(cntVar), "==", N<IntExpr>(ai)),
+                    N<SuiteStmt>(move(stmts), true)));
     }
+    block->stmts.push_back(
+        N<ForStmt>(N<IdExpr>(cntVar),
+                   N<CallExpr>(N<IdExpr>("std.internal.types.range.range"),
+                               N<IntExpr>(tuple->args.size())),
+                   N<SuiteStmt>(move(forBlock))));
     resultStmt = transform(move(block));
   } else {
     // Case 2: iterating a generator. Standard for loop logic.

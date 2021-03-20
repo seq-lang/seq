@@ -879,3 +879,12 @@ def dy2(func):
 def num(a, b):
     return a+b
 print(num(10, 20)) #: 3600
+
+#%% hetero_iter,barebones
+e = (1, 2, 3, 'foo', 5, 'bar', 6)
+for i in e:
+    if isinstance(i, int):
+        if i == 1: continue
+    if isinstance(i, str):
+        if i == 'bar': break
+    print i
