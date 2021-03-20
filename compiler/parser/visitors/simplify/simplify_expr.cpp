@@ -90,6 +90,7 @@ void SimplifyVisitor::visit(IdExpr *expr) {
               ctx->generateCanonicalName(val->canonicalName);
           ctx->cache->reverseIdentifierLookup[newName] = newName;
         }
+        newName = ctx->captures.back()[val->canonicalName];
       } else {
         error("cannot access non-global variable '{}'",
               ctx->cache->reverseIdentifierLookup[expr->value]);

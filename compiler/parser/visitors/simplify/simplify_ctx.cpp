@@ -74,8 +74,6 @@ string SimplifyContext::getBase() const {
 string SimplifyContext::generateCanonicalName(const string &name,
                                               bool includeBase) const {
   string newName = name;
-  if (name == "._lambda_100")
-    assert(1);
   if (includeBase && name.find('.') == string::npos) {
     string base = getBase();
     if (base.empty()) {
@@ -88,6 +86,8 @@ string SimplifyContext::generateCanonicalName(const string &name,
   }
   auto num = cache->identifierCount[newName]++;
   newName = num ? format("{}.{}", newName, num) : newName;
+  if (newName != name)
+    cache->identifierCount[newName]++;
   cache->reverseIdentifierLookup[newName] = name;
   return newName;
 }

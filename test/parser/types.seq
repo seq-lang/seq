@@ -298,7 +298,7 @@ print h(list(map(lambda i: i-1, map(lambda i: i+2, range(5)))))
 #%% func_unify_error,barebones
 def foo(x:int):
     print x
-z = 1 & foo #! ERROR: cannot unify foo[int] and int
+z = 1 & foo #! ERROR: cannot unify foo[...] and int
 
 #%% void_error,barebones
 def foo():
@@ -317,7 +317,7 @@ def foo():
         i += 1
 a = list(foo())
 #!     ERROR: expression with void type
-#!     ERROR: while realizing std.internal.types.ptr.List.__init__.2
+#!     ERROR: while realizing std.internal.types.ptr.List.__init__
 #!     ERROR: while realizing std.__init__.list
 
 #%% instantiate_swap,barebones
@@ -670,6 +670,11 @@ f = F(foo, goo, 2)
 print f.f(f.x) #: 3
 f.g(f.x) #: 4
 
+def hoo(z):
+    print z+3
+f.g = hoo
+f.g(f.x)  #: 5
+
 def hai(x, y, z):
     print f'hai({x},{y},{z})'
 fn = Function[[int, int, int], void](hai)
@@ -705,14 +710,13 @@ print X[float].foo[int].__class__ #: X.foo[int;X[float],float,int]
 # print y.foo[float].__class__
 print X[int]().foo(1, 's') #: (2, ss)
 
-#%% class_partial_access_err,barebones
-# TODO: propagate instatitation to partial functions!
+#%% class_partial_access,barebones
 class X[T]:
-    # TODO: def foo[U](self, x: T, y: U) fails because T does not propagate: fix it!
     def foo[U](self, x, y: U):
         return (x+x, y+y)
 y = X[X[int]]()
-print y.foo[float].__class__ #! ERROR: cannot unify X[X[int]] and float
+print y.foo[float].__class__ #: X.foo[float;X[X[int]],?,float]
+print y.foo[float](1, 2.2) #: (2, 4.4)
 
 #%% forward,barebones
 def foo(f, x):
@@ -722,13 +726,13 @@ def bar[T](x):
     print x, T.__class__
 foo(bar, 1)
 #: 1 int
-#: bar[int;int]
+#: bar[...]
 foo(bar[int], 1)
 #: 1 int
-#: bar[int;int]
+#: bar[...]
 foo(bar[str], 's')
 #: s str
-#: bar[str;str]
+#: bar[...]
 z = bar
 z[int]('s')
 #: s int
@@ -785,3 +789,93 @@ print ff(5.5, 's', z=True)
 #: 1
 
 
+#%% decorator,barebones
+def foo(x, *args, **kwargs):
+    print x, args, kwargs
+    return 1
+def dec(fn, a):
+    print 'decorating', fn.__class__
+    def inner(*args, **kwargs):
+        print 'decorator', args, kwargs
+        return fn(a, *args, **kwargs)
+    return inner
+ff = dec(foo, 10)
+print ff(5.5, 's', z=True)
+#: decorating foo[...,...,...]
+#: decorator (5.5, s) (z: True)
+#: 10 (5.5, s) (z: True)
+#: 1
+
+@dec(a=5)
+def zoo(e, b, *args):
+    return f'zoo: {e}, {b}, {args}'
+print zoo(2, 3)
+print zoo('s', 3)
+#: decorating zoo[...,...,...]
+#: decorator (2, 3) ()
+#: zoo: 5, 2, (3)
+#: decorator (s, 3) ()
+#: zoo: 5, s, (3)
+
+def mydecorator(func):
+    def inner():
+        print("before")
+        func()
+        print("after")
+    return inner
+@mydecorator
+def foo():
+    print("foo")
+foo()
+#: before
+#: foo
+#: after
+
+def timeme(func):
+    def inner(*args, **kwargs):
+        begin = 1
+        end = func(*args, **kwargs) - begin
+        print('time needed for', func.__class__, 'is', end)
+    return inner
+@timeme
+def factorial(num):
+    n = 1
+    for i in range(1,num + 1):
+        n *= i
+    print(n)
+    return n
+factorial(10)
+#: 3628800
+#: time needed for factorial[...] is 3628799
+
+def dx1(func):
+    def inner():
+        x = func()
+        return x * x
+    return inner
+def dx2(func):
+    def inner():
+        x = func()
+        return 2 * x
+    return inner
+@dx1
+@dx2
+def num():
+    return 10
+print(num()) #: 400
+
+def dy1(func):
+    def inner(*a, **kw):
+        x = func(*a, **kw)
+        return x * x
+    return inner
+def dy2(func):
+    def inner(*a, **kw):
+        x = func(*a, **kw)
+        return 2 * x
+    return inner
+@dy1
+@dy2
+def num(a, b):
+    return a+b
+print(num(10, 20)) #: 3600

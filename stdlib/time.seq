@@ -1,7 +1,7 @@
 from sys import stderr
 
 def time():
-    return _C.seq_time() / (1000 * 1000 * 1000)
+    return _C.seq_time() / 1e9
 
 class TimeInterval:
     """

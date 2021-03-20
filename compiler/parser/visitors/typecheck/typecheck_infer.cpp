@@ -172,15 +172,13 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       // Add function arguments.
       if (!isInternal)
         for (int i = 1; i < type->args.size(); i++) {
-          seqassert(type->args[i] &&
-                        (type->getFunc() || type->args[i]->getUnbounds().empty()),
+          seqassert(type->args[i] && type->args[i]->getUnbounds().empty(),
                     "unbound argument {}", type->args[i]->toString());
 
           string varName = ast->args[i - 1].name;
           trimStars(varName);
           ctx->add(
-              type->args[i]->getFunc() ? TypecheckItem::Func : TypecheckItem::Var,
-              varName,
+              TypecheckItem::Var, varName,
               make_shared<LinkType>(type->args[i]->generalize(ctx->typecheckLevel)));
         }
 

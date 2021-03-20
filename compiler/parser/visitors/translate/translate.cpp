@@ -94,16 +94,11 @@ void TranslateVisitor::visit(IfExpr *expr) {
 void TranslateVisitor::visit(CallExpr *expr) {
   auto ft = expr->expr->type->getFunc();
   seqassert(ft, "not calling function: {}", ft->toString());
-  auto *ast = ctx->cache->functions[ft->funcName].ast.get();
-  bool isLLVM = ast && ast->attributes.has(Attr::LLVM);
-
   auto callee = transform(expr->expr);
   vector<ir::Value *> items;
   for (int i = 0; i < expr->args.size(); i++) {
     seqassert(!expr->args[i].value->getEllipsis(), "ellipsis not elided");
-    // Remove function arguments
-    if (!ft->args[i + 1]->getFunc() || isLLVM)
-      items.emplace_back(transform(expr->args[i].value));
+    items.emplace_back(transform(expr->args[i].value));
   }
   result = make<ir::CallInstr>(expr, callee, move(items));
 }

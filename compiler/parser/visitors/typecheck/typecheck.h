@@ -293,6 +293,8 @@ private:
   /// Create generic types for type or function generics and add them to the context.
   vector<types::ClassType::Generic> parseGenerics(const vector<Param> &generics,
                                                   int level);
+  /// Make an empty partial call fn(...) for a function fn.
+  ExprPtr partializeFunction(ExprPtr expr);
 
 private:
   types::TypePtr unify(types::TypePtr &a, const types::TypePtr &b);

@@ -347,8 +347,9 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
                             namedArgs.begin()->first));
     std::map<string, int> slotNames;
     for (int i = 0; i < ast->args.size(); i++)
-      if (known.empty() || !known[i])
+      if (known.empty() || !known[i]) {
         slotNames[cache->reverseIdentifierLookup[ast->args[i].name]] = i;
+      }
     for (auto &n : namedArgs) {
       if (!in(slotNames, n.first))
         extraNamedArgs[n.first] = n.second;

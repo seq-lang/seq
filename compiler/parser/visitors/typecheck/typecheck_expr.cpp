@@ -359,7 +359,11 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
 
 void TypecheckVisitor::visit(InstantiateExpr *expr) {
   expr->typeExpr = transform(expr->typeExpr, true);
-  auto typ = ctx->instantiate(expr->typeExpr.get(), expr->typeExpr->getType());
+  TypePtr typ = nullptr;
+  if (auto tp = expr->typeExpr->type->getPartial())
+    typ = tp->func;
+  else
+    typ = ctx->instantiate(expr->typeExpr.get(), expr->typeExpr->getType());
   seqassert(typ->getFunc() || typ->getClass(), "unknown type");
   auto &generics =
       typ->getFunc() ? typ->getFunc()->funcGenerics : typ->getClass()->generics;
@@ -388,9 +392,9 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
               staticGenerics.emplace_back(ClassType::Generic(
                   ei->value, ctx->cache->reverseIdentifierLookup[ei->value], genTyp,
                   genTyp->getLink() ? genTyp->getLink()->id
-                                    : genTyp->getStatic()->generics.empty()
-                                          ? 0
-                                          : genTyp->getStatic()->generics[0].id));
+                  : genTyp->getStatic()->generics.empty()
+                      ? 0
+                      : genTyp->getStatic()->generics[0].id));
               seen.insert(ei->value);
             }
           } else if (auto eu = e->getUnary()) {
@@ -469,7 +473,7 @@ void TypecheckVisitor::visit(SliceExpr *expr) {
 void TypecheckVisitor::visit(IndexExpr *expr) {
   expr->expr = transform(expr->expr, true);
   auto typ = expr->expr->getType();
-  if (typ->getFunc()) {
+  if (typ->getFunc() || typ->getPartial()) {
     // Case 1: function instantiation
     vector<ExprPtr> it;
     if (auto et = const_cast<TupleExpr *>(expr->index->getTuple()))
@@ -1093,8 +1097,13 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
                   {"", transform(N<CallExpr>(N<IdExpr>(kwName), move(values)))});
             } else if (slots[si].empty()) {
               if (!known.empty() && known[si]) {
-                args.push_back({"", transform(N<IndexExpr>(N<IdExpr>(partialVar),
-                                                           N<IntExpr>(pi++)))});
+                // Manual call to transformStaticTupleIndex needed because otherwise
+                // IndexExpr routes this to InstantiateExpr.
+                auto id = transform(N<IdExpr>(partialVar));
+                ExprPtr it = N<IntExpr>(pi++);
+                auto ex = transformStaticTupleIndex(callee.get(), id, it);
+                seqassert(ex, "partial indexing failed");
+                args.push_back({"", move(ex)});
               } else if (partial) {
                 args.push_back({"", transform(N<EllipsisExpr>())});
               } else {
@@ -1171,13 +1180,12 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         unify(args[si].value->type, expectedClass);
       } else if (ast && startswith(expectedClass->name, TYPE_CALLABLE)) {
         // Case 4: allow any callable to match Callable[] signature.
-        if (argClass && !argClass->getFunc() && !argClass->getPartial()) {
+        if (argClass && !argClass->getFunc() && !argClass->getPartial())
           args[si].value = transform(N<DotExpr>(move(args[si].value), "__call__"));
-        }
         unify(args[si].value->type, expectedTyp);
-        if (auto pt = argClass->getPartial()) {
-          //          pt->func = ctx->instantiate(args[si].value.get(),
-          //          pt->func)->getFunc();
+        if (args[si].value->type->getFunc())
+          args[si].value = partializeFunction(move(args[si].value));
+        if (auto pt = args[si].value->type->getPartial()) {
           unify(expectedClass->generics[0].type, pt->func->args[0]);
           for (int pi = 0, gi = 1; pi < pt->known.size(); pi++)
             if (!pt->known[pi])
@@ -1197,8 +1205,14 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       args[si].value =
           transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), move(args[si].value)));
       unify(args[si].value->type, expectedTyp);
+    } else if (argClass && argClass->getFunc() &&
+               !(expectedClass && startswith(expectedClass->name, TYPE_FUNCTION))) {
+      // Case 7: wrap raw Seq functions into Partial(...) call for easy realization.
+      args[si].value = partializeFunction(move(args[si].value));
+      //      LOG("{}", args[si].value->toString());
+      unify(args[si].value->type, expectedTyp);
     } else {
-      // Case 7: normal unification.
+      // Case 8: normal unification.
       unify(args[si].value->type, expectedTyp);
     }
     replacements[si] = !expectedClass || expectedClass->hasTrait()
@@ -1208,16 +1222,15 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
 
   // Realize arguments.
   expr->done = true;
-  for (auto si = 0; si < args.size(); si++) {
-    if (auto rt = realize(args[si].value->type)) {
-      unify(rt, args[si].value->type);
-      args[si].value = transform(args[si].value);
+  for (auto &a : args) {
+    if (auto rt = realize(a.value->type)) {
+      unify(rt, a.value->type);
+      a.value = transform(a.value);
     }
-    if (auto pt = args[si].value->type->getPartial())
+    if (auto pt = a.value->type->getPartial())
       if (auto rt = realize(pt->func))
         unify(rt, pt->func);
-    //    LOG("--> {} {}", expr->expr->toString(), args[si].value->toString());
-    expr->done &= args[si].value->done;
+    expr->done &= a.value->done;
   }
   // Handle default generics (calleeFn.g. foo[S, T=int]) only if all arguments were
   // unified.
@@ -1571,6 +1584,25 @@ void TypecheckVisitor::generateFnCall(int n) {
     stmt = TypecheckVisitor(ctx).transform(stmt);
     prependStmts->push_back(move(stmt));
   }
+}
+
+ExprPtr TypecheckVisitor::partializeFunction(ExprPtr expr) {
+  auto fn = expr->getType()->getFunc();
+  seqassert(fn, "not a function: {}", expr->getType()->toString());
+  vector<char> mask(fn->args.size() - 1, 0);
+  auto partialTypeName = generatePartialStub(mask, fn.get());
+  deactivateUnbounds(fn.get());
+  string var = ctx->cache->getTemporaryVar("partial");
+  ExprPtr call = N<StmtExpr>(
+      N<AssignStmt>(N<IdExpr>(var), N<CallExpr>(N<IdExpr>(partialTypeName))),
+      N<IdExpr>(var));
+  call = transform(call, false, allowVoidExpr);
+  seqassert(call->type->getRecord() &&
+                startswith(call->type->getRecord()->name, partialTypeName) &&
+                !call->type->getPartial(),
+            "bad partial transformation");
+  call->type = N<PartialType>(call->type->getRecord(), fn, mask);
+  return call;
 }
 
 } // namespace ast
