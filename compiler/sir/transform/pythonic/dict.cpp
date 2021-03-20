@@ -99,7 +99,7 @@ void DictArithmeticTransform::handle(CallInstr *v) {
     auto *constant = opCall->back();
 
     auto *d1 = cast<VarValue>(dictValue);
-    auto *d2 = cast<VarValue>(dictValue);
+    auto *d2 = cast<VarValue>(getAnalysis.dict);
 
     if (!d1 || !d2)
       return;
@@ -113,12 +113,12 @@ void DictArithmeticTransform::handle(CallInstr *v) {
       // call non-throwing version if we have a default
       if (getAnalysis.dflt) {
         replacementFunc = M->getOrRealizeMethod(
-            dictValue->getType(), "_do_op",
+            dictValue->getType(), "__dict_do_op_throws__",
             {dictValue->getType(), keyValue->getType(), constant->getType(),
              getAnalysis.dflt->getType(), opFunc->getType()});
       } else {
         replacementFunc =
-            M->getOrRealizeMethod(dictValue->getType(), "_do_op_throws",
+            M->getOrRealizeMethod(dictValue->getType(), "__dict_do_op__",
                                   {dictValue->getType(), keyValue->getType(),
                                    constant->getType(), opFunc->getType()});
       }
