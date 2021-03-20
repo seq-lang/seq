@@ -95,7 +95,7 @@ void TranslateVisitor::visit(CallExpr *expr) {
   auto ft = expr->expr->type->getFunc();
   seqassert(ft, "not calling function: {}", ft->toString());
   auto *ast = ctx->cache->functions[ft->funcName].ast.get();
-  bool isLLVM = ast && in(ast->attributes, ATTR_EXTERN_LLVM);
+  bool isLLVM = ast && ast->attributes.has(Attr::LLVM);
 
   auto callee = transform(expr->expr);
   vector<ir::Value *> items;
@@ -361,7 +361,7 @@ void TranslateVisitor::visit(FunctionStmt *stmt) {
     real.second->ir->setSrcInfo(getSrcInfo());
     const auto &ast = real.second->ast;
     seqassert(ast, "AST not set for {}", real.first);
-    if (!in(stmt->attributes, ATTR_EXTERN_LLVM))
+    if (!stmt->attributes.has(Attr::LLVM))
       transformFunction(real.second->type.get(), ast.get(), real.second->ir);
     else
       transformLLVMFunction(real.second->type.get(), ast.get(), real.second->ir);
@@ -400,11 +400,24 @@ void TranslateVisitor::transformFunction(types::FuncType *type, FunctionStmt *as
                                                     getType(type->args[0]), types);
   irType->setAstType(type->getFunc());
   func->realize(irType, names);
-  func->setAttribute(make_unique<ir::KeyValueAttribute>(ast->attributes));
+  // TODO: refactor IR attribute API
+  map<string, string> attr;
+  attr[".module"] = ast->attributes.module;
+  if (ast->attributes.has(Attr::Prefetch))
+    attr["prefetch"] = "";
+  if (ast->attributes.has(Attr::InterAlign))
+    attr["inter_align"] = "";
+  if (ast->attributes.has(Attr::Export))
+    attr["export"] = "";
+  if (ast->attributes.has(Attr::Inline))
+    attr["inline"] = "";
+  if (ast->attributes.has(Attr::NoInline))
+    attr["no_inline"] = "";
+  func->setAttribute(make_unique<ir::KeyValueAttribute>(attr));
   for (int i = 0; i < names.size(); i++)
     func->getArgVar(names[i])->setSrcInfo(ast->args[indices[i]].getSrcInfo());
   func->setUnmangledName(ctx->cache->reverseIdentifierLookup[type->funcName]);
-  if (!in(ast->attributes, ATTR_EXTERN_C) && !in(ast->attributes, ATTR_INTERNAL)) {
+  if (!ast->attributes.has(Attr::C) && !ast->attributes.has(Attr::Internal)) {
     ctx->addBlock();
     for (auto i = 0; i < names.size(); i++)
       ctx->add(TranslateItem::Var, ast->args[indices[i]].name,

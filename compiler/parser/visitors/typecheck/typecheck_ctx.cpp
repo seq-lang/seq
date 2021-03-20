@@ -239,7 +239,7 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
         continue;
       }
       // Unification failed: maybe we need to wrap an argument?
-      if (expectedClass && expectedClass->name == "Optional" && argClass &&
+      if (expectedClass && expectedClass->name == TYPE_OPTIONAL && argClass &&
           argClass->name != expectedClass->name) {
         u = argType->unify(expectedClass->generics[0].type.get(), &undo);
         undo.undo();
@@ -249,7 +249,7 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
         }
       }
       // ... or unwrap it (less ideal)?
-      if (argClass && argClass->name == "Optional" && expectedClass &&
+      if (argClass && argClass->name == TYPE_OPTIONAL && expectedClass &&
           argClass->name != expectedClass->name) {
         u = argClass->generics[0].type->unify(expectedType.get(), &undo);
         undo.undo();

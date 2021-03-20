@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "parser/ast.h"
-#include "parser/cache.h"
 #include "parser/visitors/visitor.h"
 
 #define ACCEPT_IMPL(T, X)                                                              \
@@ -244,23 +243,25 @@ GlobalStmt::GlobalStmt(string var) : Stmt(), var(move(var)) {}
 string GlobalStmt::toString() const { return format("(global '{})", var); }
 ACCEPT_IMPL(GlobalStmt, ASTVisitor);
 
-FunctionStmt::FunctionStmt(string name, ExprPtr ret, vector<Param> &&generics,
-                           vector<Param> &&args, StmtPtr suite,
-                           vector<string> &&attributes)
-    : Stmt(), name(move(name)), ret(move(ret)), generics(move(generics)),
-      args(move(args)), suite(move(suite)) {
-  for (auto &a : attributes)
-    this->attributes[a] = "";
+Attr::Attr(const vector<int> &attrs) : bitmask(0), module(), parentClass() {
+  for (auto &a : attrs)
+    set(a);
 }
+void Attr::set(int a) { bitmask |= 1ull << a; }
+void Attr::unset(int a) { bitmask &= ~(1ull << a); }
+bool Attr::has(int a) const { return bool(bitmask & (1ull << a)); }
+
 FunctionStmt::FunctionStmt(string name, ExprPtr ret, vector<Param> &&generics,
-                           vector<Param> &&args, StmtPtr suite,
-                           map<string, string> &&attributes)
+                           vector<Param> &&args, StmtPtr suite, Attr attributes,
+                           vector<ExprPtr> &&decorators)
     : Stmt(), name(move(name)), ret(move(ret)), generics(move(generics)),
-      args(move(args)), suite(move(suite)), attributes(attributes) {}
+      args(move(args)), suite(move(suite)), attributes(move(attributes)),
+      decorators(move(decorators)) {}
 FunctionStmt::FunctionStmt(const FunctionStmt &stmt)
     : Stmt(stmt), name(stmt.name), ret(ast::clone(stmt.ret)),
       generics(ast::clone_nop(stmt.generics)), args(ast::clone_nop(stmt.args)),
-      suite(ast::clone(stmt.suite)), attributes(stmt.attributes) {}
+      suite(ast::clone(stmt.suite)), attributes(stmt.attributes),
+      decorators(ast::clone(stmt.decorators)) {}
 string FunctionStmt::toString() const {
   string gs;
   for (auto &a : generics)
@@ -269,9 +270,8 @@ string FunctionStmt::toString() const {
   for (auto &a : args)
     as += " " + a.toString();
   vector<string> attr;
-  for (auto &a : attributes)
-    attr.push_back(format("('{}{})", a.first, a.second.empty() ? "" : " '" + a.second));
-
+  for (auto &a : decorators)
+    attr.push_back(format("(dec {})", a->toString()));
   return format("(fn '{} ({}){}{} (attr {}) {})", name, as,
                 ret ? " #:ret " + ret->toString() : "",
                 !generics.empty() ? format(" #:generics ({})", gs) : "",
@@ -286,22 +286,16 @@ string FunctionStmt::signature() const {
     s.push_back(a.type ? a.type->toString() : "-");
   return format("{}", join(s, ":"));
 }
+bool FunctionStmt::hasAttr(int attr) const { return attributes.has(attr); }
 
 ClassStmt::ClassStmt(string name, vector<Param> &&g, vector<Param> &&a, StmtPtr s,
-                     map<string, string> &&at)
+                     Attr attributes, vector<ExprPtr> &&decorators)
     : Stmt(), name(move(name)), generics(move(g)), args(move(a)), suite(move(s)),
-      attributes(at) {}
-ClassStmt::ClassStmt(string name, vector<Param> &&generics, vector<Param> &&args,
-                     StmtPtr suite, vector<string> &&attributes)
-    : Stmt(), name(move(name)), generics(move(generics)), args(move(args)),
-      suite(move(suite)) {
-  for (auto &a : attributes)
-    this->attributes[a] = "";
-}
+      attributes(move(attributes)), decorators(move(decorators)) {}
 ClassStmt::ClassStmt(const ClassStmt &stmt)
     : Stmt(stmt), name(stmt.name), generics(ast::clone_nop(stmt.generics)),
       args(ast::clone_nop(stmt.args)), suite(ast::clone(stmt.suite)),
-      attributes(stmt.attributes) {}
+      attributes(stmt.attributes), decorators(ast::clone(stmt.decorators)) {}
 string ClassStmt::toString() const {
   string gs;
   for (auto &a : generics)
@@ -310,14 +304,15 @@ string ClassStmt::toString() const {
   for (auto &a : args)
     as += " " + a.toString();
   vector<string> attr;
-  for (auto &a : attributes)
-    attr.push_back(format("('{}{})", a.first, a.second.empty() ? "" : " '" + a.second));
+  for (auto &a : decorators)
+    attr.push_back(format("(dec {})", a->toString()));
   return format("(class '{} ({}){} (attr {}) {})", name, as,
                 !generics.empty() ? format(" #:generics ({})", gs) : "",
                 join(attr, " "), suite ? suite->toString() : "(pass)");
 }
 ACCEPT_IMPL(ClassStmt, ASTVisitor);
-bool ClassStmt::isRecord() const { return in(attributes, ATTR_TUPLE); }
+bool ClassStmt::isRecord() const { return hasAttr(Attr::Tuple); }
+bool ClassStmt::hasAttr(int attr) const { return attributes.has(attr); }
 
 YieldFromStmt::YieldFromStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}
 YieldFromStmt::YieldFromStmt(const YieldFromStmt &stmt)

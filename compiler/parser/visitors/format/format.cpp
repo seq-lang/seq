@@ -391,9 +391,12 @@ void FormatVisitor::visit(FunctionStmt *fstmt) {
   //  }
 
   vector<string> attrs;
-  for (auto &a : fstmt->attributes)
-    attrs.push_back(
-        fmt::format("@{}{}", a.first, a.second.empty() ? "" : ":" + a.second));
+  for (auto &a : fstmt->decorators)
+    attrs.push_back(fmt::format("@{}", transform(a)));
+  if (!fstmt->attributes.module.empty())
+    attrs.push_back(fmt::format("@module:{}", fstmt->attributes.parentClass));
+  if (!fstmt->attributes.parentClass.empty())
+    attrs.push_back(fmt::format("@parent:{}", fstmt->attributes.parentClass));
   vector<string> args;
   for (auto &a : fstmt->args)
     args.push_back(fmt::format(
@@ -429,9 +432,10 @@ void FormatVisitor::visit(ClassStmt *stmt) {
 
   vector<string> attrs;
 
-  for (auto &a : stmt->attributes)
-    attrs.push_back(
-        fmt::format("@{}{}", a.first, a.second.empty() ? "" : ":" + a.second));
+  if (!stmt->attributes.has(Attr::Extend))
+    attrs.push_back("@extend");
+  if (!stmt->attributes.has(Attr::Tuple))
+    attrs.push_back("@tuple");
   vector<string> args;
   string key = stmt->isRecord() ? "type" : "class";
   for (auto &a : stmt->args)

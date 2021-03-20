@@ -38,7 +38,7 @@ json DocVisitor::apply(const string &argv0, const vector<string> &files) {
   shared->modules[""]->setFilename(stdlib->path);
   for (auto &s : vector<string>{"void", "byte", "float", "bool", "int", "str", "pyobj",
                                 "Ptr", "Function", "Generator", "Tuple", "Int", "UInt",
-                                "Optional", "Callable"}) {
+                                TYPE_OPTIONAL, "Callable"}) {
     shared->j[to_string(shared->itemID)] = {
         {"kind", "class"}, {"name", s}, {"type", "type"}};
     shared->modules[""]->add(s, make_shared<int>(shared->itemID++));
@@ -184,7 +184,12 @@ void DocVisitor::visit(FunctionStmt *stmt) {
     args.push_back(j);
   }
   j["generics"] = generics;
-  j["attrs"] = stmt->attributes;
+  bool isLLVM = false;
+  for (auto &d : stmt->decorators)
+    if (auto e = d->getId()) {
+      j["attrs"][e->value] = "";
+      isLLVM |= (e->value == "llvm");
+    }
   if (stmt->ret)
     j["return"] = transform(stmt->ret);
   j["args"] = args;
@@ -192,7 +197,7 @@ void DocVisitor::visit(FunctionStmt *stmt) {
   flatten(move(const_cast<FunctionStmt *>(stmt)->suite), &docstr);
   for (auto &g : stmt->generics)
     ctx->remove(g.name);
-  if (!docstr.empty() && !in(stmt->attributes, ATTR_EXTERN_LLVM))
+  if (!docstr.empty() && !isLLVM)
     j["doc"] = docstr;
   ctx->shared->j[to_string(id)] = j;
   resultStmt = to_string(id);
@@ -222,7 +227,11 @@ void DocVisitor::visit(ClassStmt *stmt) {
   j["args"] = args;
   j["pos"] = jsonify(stmt->getSrcInfo());
 
-  if (in(stmt->attributes, ATTR_EXTEND)) {
+  bool isExtend = false;
+  for (auto &d : stmt->decorators)
+    if (auto e = d->getId())
+      isExtend |= (e->value == "extend");
+  if (isExtend) {
     j["type"] = "extension";
     auto i = ctx->find(stmt->name);
     j["parent"] = to_string(*i);

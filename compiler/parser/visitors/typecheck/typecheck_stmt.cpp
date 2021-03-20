@@ -190,7 +190,7 @@ void TypecheckVisitor::visit(AssignMemberStmt *stmt) {
 
   if (lhsClass) {
     auto member = ctx->findMember(lhsClass->name, stmt->member);
-    if (!member && lhsClass->name == "Optional") {
+    if (!member && lhsClass->name == TYPE_OPTIONAL) {
       // Unwrap optional and look up there:
       resultStmt = transform(
           N<AssignMemberStmt>(N<CallExpr>(N<IdExpr>(FN_UNWRAP), move(stmt->lhs)),
@@ -373,11 +373,11 @@ void TypecheckVisitor::visit(ThrowStmt *stmt) {
 }
 
 void TypecheckVisitor::visit(FunctionStmt *stmt) {
+  auto &attr = stmt->attributes;
   if (auto t = ctx->findInVisited(stmt->name).second) {
     // We realize built-ins and extern C function when we see them for the second time
     // (to avoid preamble realization).
-    if (in(stmt->attributes, ATTR_FORCE_REALIZE) ||
-        in(stmt->attributes, ATTR_EXTERN_C)) {
+    if (attr.has(Attr::ForceRealize) || attr.has(Attr::C)) {
       if (!t->canRealize())
         error("builtins and external functions must be realizable");
 
@@ -390,14 +390,13 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   }
 
   // Parse preamble.
-  auto &attributes = const_cast<FunctionStmt *>(stmt)->attributes;
-  bool isClassMember = in(stmt->attributes, ATTR_PARENT_CLASS);
+  bool isClassMember = !attr.parentClass.empty();
   auto explicits = parseGenerics(stmt->generics, ctx->typecheckLevel); // level down
   vector<TypePtr> generics;
-  if (isClassMember && in(attributes, ATTR_IS_METHOD)) {
+  if (isClassMember && attr.has(Attr::Method)) {
     // Fetch parent class generics.
-    auto parentClassAST = ctx->cache->classes[attributes[ATTR_PARENT_CLASS]].ast.get();
-    auto parentClass = ctx->find(attributes[ATTR_PARENT_CLASS])->type->getClass();
+    auto parentClassAST = ctx->cache->classes[attr.parentClass].ast.get();
+    auto parentClass = ctx->find(attr.parentClass)->type->getClass();
     seqassert(parentClass, "parent class not set");
     for (int i = 0; i < parentClassAST->generics.size(); i++) {
       auto gen = parentClass->generics[i].type->getLink();
@@ -445,13 +444,13 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   }
   // Construct the type.
   auto typ = make_shared<FuncType>(baseType, stmt->name, explicits);
-  if (isClassMember && in(attributes, ATTR_IS_METHOD))
-    typ->funcParent = ctx->find(attributes[ATTR_PARENT_CLASS])->type;
+  if (isClassMember && attr.has(Attr::Method))
+    typ->funcParent = ctx->find(attr.parentClass)->type;
   typ->setSrcInfo(stmt->getSrcInfo());
   typ = std::static_pointer_cast<FuncType>(typ->generalize(ctx->typecheckLevel));
   // Check if this is a class method; if so, update the class method lookup table.
   if (isClassMember) {
-    auto &methods = ctx->cache->classes[attributes[ATTR_PARENT_CLASS]]
+    auto &methods = ctx->cache->classes[attr.parentClass]
                         .methods[ctx->cache->reverseIdentifierLookup[stmt->name]];
     bool found = false;
     for (auto &i : methods)
@@ -470,11 +469,11 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
 }
 
 void TypecheckVisitor::visit(ClassStmt *stmt) {
-  if (ctx->findInVisited(stmt->name).second && !in(stmt->attributes, ATTR_EXTEND))
+  auto &attr = stmt->attributes;
+  bool extension = attr.has(Attr::Extend);
+  if (ctx->findInVisited(stmt->name).second && !extension)
     return;
 
-  auto &attributes = const_cast<ClassStmt *>(stmt)->attributes;
-  bool extension = in(attributes, ATTR_EXTEND);
   ClassTypePtr typ = nullptr;
   if (!extension) {
     if (stmt->isRecord())
@@ -483,8 +482,6 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
     else
       typ = make_shared<ClassType>(stmt->name,
                                    ctx->cache->reverseIdentifierLookup[stmt->name]);
-    if (in(stmt->attributes, ATTR_TRAIT))
-      typ->isTrait = true;
     typ->setSrcInfo(stmt->getSrcInfo());
     ctx->add(TypecheckItem::Type, stmt->name, typ);
     ctx->bases[0].visitedAsts[stmt->name] = {TypecheckItem::Type, typ};

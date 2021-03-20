@@ -416,8 +416,39 @@ struct GlobalStmt : public Stmt {
   ACCEPT(ASTVisitor);
 };
 
+struct Attr {
+  enum {
+    Method = 1,
+    LLVM = 2,
+    C = 3,
+    Internal = 4,
+    Capture = 5,
+    Atomic = 6,
+    Python = 7,
+    ForceRealize = 8,
+    Test = 9,
+    Extend = 10,
+    Tuple = 11,
+    Property = 12,
+    Prefetch = 13,
+    Export = 14,
+    Inline = 15,
+    NoInline = 16,
+    InterAlign = 17
+  };
+  /// Attributes bitmask for boolean attributes (e.g. IS_METHOD, IS_ATOMIC etc.)
+  int64_t bitmask;
+  string module;
+  string parentClass;
+
+  Attr(const vector<int> &attrs = vector<int>());
+  void set(int a);
+  void unset(int a);
+  bool has(int a) const;
+};
+
 /// Function statement (@(attributes...) def name[generics...](args...) -> ret: suite).
-/// @example: @some_attribute
+/// @example: @decorator
 ///           def foo[T=int, U: int](a, b: int = 0) -> list[T]: pass
 struct FunctionStmt : public Stmt {
   string name;
@@ -426,16 +457,12 @@ struct FunctionStmt : public Stmt {
   vector<Param> generics;
   vector<Param> args;
   StmtPtr suite;
-  /// Hash-map of attributes (e.g. @internal, @prefetch).
-  /// Some (internal) attributes might have a value associated with them, thus a map to
-  /// store them.
-  map<string, string> attributes;
+  Attr attributes;
+  vector<ExprPtr> decorators;
 
   FunctionStmt(string name, ExprPtr ret, vector<Param> &&generics, vector<Param> &&args,
-               StmtPtr suite, map<string, string> &&attributes);
-  /// Convenience constructor for attributes with empty values.
-  FunctionStmt(string name, ExprPtr ret, vector<Param> &&generics, vector<Param> &&args,
-               StmtPtr suite, vector<string> &&attributes);
+               StmtPtr suite, Attr attributes = Attr(),
+               vector<ExprPtr> &&decorators = vector<ExprPtr>());
   FunctionStmt(const FunctionStmt &stmt);
 
   string toString() const override;
@@ -445,6 +472,7 @@ struct FunctionStmt : public Stmt {
   /// S-expression form.
   /// @example (T U (int 0))
   string signature() const;
+  bool hasAttr(int attr) const;
 
   const FunctionStmt *getFunction() const override { return this; }
 };
@@ -459,16 +487,11 @@ struct ClassStmt : public Stmt {
   vector<Param> generics;
   vector<Param> args;
   StmtPtr suite;
-  /// Hash-map of attributes (e.g. @internal, @prefetch).
-  /// Some (internal) attributes might have a value associated with them, thus a map to
-  /// store them.
-  map<string, string> attributes;
+  Attr attributes;
+  vector<ExprPtr> decorators;
 
   ClassStmt(string n, vector<Param> &&g, vector<Param> &&a, StmtPtr s,
-            map<string, string> &&at);
-  /// Convenience constructor for attributes with empty values.
-  ClassStmt(string name, vector<Param> &&generics, vector<Param> &&args, StmtPtr suite,
-            vector<string> &&attributes);
+            Attr attributes = Attr(), vector<ExprPtr> &&decorators = vector<ExprPtr>());
   ClassStmt(const ClassStmt &stmt);
 
   string toString() const override;
@@ -476,6 +499,7 @@ struct ClassStmt : public Stmt {
 
   /// @return true if a class is a tuple-like record (e.g. has a "@tuple" attribute)
   bool isRecord() const;
+  bool hasAttr(int attr) const;
 
   const ClassStmt *getClass() const override { return this; }
 };

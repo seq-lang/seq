@@ -292,15 +292,11 @@ StmtPtr parse_stmt(value val) {
   case 18:
     Return(Function, parse_string(Field(t, 0)), parse_optional(Field(t, 1), parse_expr),
            parse_list(Field(t, 2), parse_param), parse_list(Field(t, 3), parse_param),
-           parse_stmt_list(Field(t, 4)), parse_list(Field(t, 5), [](value i) {
-             return parse_string(Field(i, 1)); // ignore position for now
-           }));
+           parse_stmt_list(Field(t, 4)), Attr(), parse_list(Field(t, 5), parse_expr));
   case 19:
     Return(Class, parse_string(Field(t, 0)), parse_list(Field(t, 1), parse_param),
-           parse_list(Field(t, 2), parse_param), parse_stmt_list(Field(t, 3)),
-           parse_list(Field(t, 4), [](value i) {
-             return parse_string(Field(i, 1)); // ignore position for now
-           }));
+           parse_list(Field(t, 2), parse_param), parse_stmt_list(Field(t, 3)), Attr(),
+           parse_list(Field(t, 4), parse_expr));
   case 20:
     Return(YieldFrom, parse_expr(t));
   case 21:

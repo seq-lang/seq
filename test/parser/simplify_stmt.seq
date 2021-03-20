@@ -580,7 +580,7 @@ f[int]() #! ERROR: identifier 'T' not found
 @foo
 class Foo:
     pass
-#! ERROR: extend cannot be combined with other attributes
+#! ERROR: extend cannot be combined with other decorators
 
 #%% class_err_1b,barebones
 size_t = i32
@@ -728,7 +728,7 @@ print a.__getitem__(1)  #: 2
 print list(a.__iter__()) #: [1, 2]
 
 #%% magic_class,barebones
-@total_ordering
+@dataclass(eq=True, order=True)
 class Foo:
     x: int
     y: int
@@ -788,30 +788,26 @@ print Foo().__iter__()
 #! ERROR: while realizing Foo.__iter__
 
 #%% magic_err_4,barebones
-@tuple
-@no_total_ordering
+@tuple(eq=False)
 class Foo:
     x: int
 Foo(1).__eq__(Foo(1)) #! ERROR: cannot find '__eq__' in Foo
 
 #%% magic_err_5,barebones
-@tuple
-@no_pickle
+@tuple(pickle=False)
 class Foo:
     x: int
 p = Ptr[byte]()
 Foo(1).__pickle__(p) #! ERROR: cannot find '__pickle__' in Foo
 
 #%% magic_err_6,barebones
-@tuple
-@no_container
+@tuple(container=False)
 class Foo:
     x: int
 Foo(1).__getitem__(0) #! ERROR: cannot find '__getitem__' in Foo
 
 #%% magic_err_7,barebones
-@tuple
-@no_python
+@tuple(python=False)
 class Foo:
     x: int
 p = Ptr[byte]()

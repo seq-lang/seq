@@ -173,7 +173,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       addFunctionGenerics(type);
 
       // There is no AST linked to internal functions, so make sure not to parse it.
-      bool isInternal = in(ast->attributes, ATTR_INTERNAL);
+      bool isInternal = ast->attributes.has(Attr::Internal);
       isInternal |= ast->suite == nullptr;
       // Add function arguments.
       if (!isInternal)
@@ -220,24 +220,24 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       // during the code generation.
       if (!in(ctx->cache->pendingRealizations,
               make_pair(type->funcName, type->realizedName()))) {
-        if (in(ast->attributes, ATTR_INTERNAL)) {
+        if (ast->attributes.has(Attr::Internal)) {
           // This is either __new__, or Ptr.__new__, or UInt.__revcomp__
           auto parent = type->funcParent;
-          if (!in(ast->attributes, ATTR_IS_METHOD)) // hack for non-generic types
-            parent = ctx->find(ast->attributes[ATTR_PARENT_CLASS])->type;
+          if (!ast->attributes.has(Attr::Method)) // hack for non-generic types
+            parent = ctx->find(ast->attributes.parentClass)->type;
           seqassert(parent && parent->canRealize(), "parent not set for {} (got {})",
                     type->debugString(1), parent ? parent->debugString(1) : "-");
           parent = realize(parent);
           r->ir = ctx->cache->module->Nr<ir::InternalFunc>(type->funcName);
           ir::cast<ir::InternalFunc>(r->ir)->setParentType(
               getLLVMType(parent->getClass().get()));
-        } else if (in(ast->attributes, ATTR_EXTERN_LLVM)) {
+        } else if (ast->attributes.has(Attr::LLVM)) {
           r->ir = ctx->cache->module->Nr<ir::LLVMFunc>(type->realizedName());
-        } else if (in(ast->attributes, ATTR_EXTERN_C)) {
+        } else if (ast->attributes.has(Attr::C)) {
           r->ir = ctx->cache->module->Nr<ir::ExternalFunc>(type->realizedName());
         } else {
           r->ir = ctx->cache->module->Nr<ir::BodiedFunc>(type->realizedName());
-          if (in(ast->attributes, ATTR_FORCE_REALIZE))
+          if (ast->attributes.has(Attr::ForceRealize))
             ir::cast<ir::BodiedFunc>(r->ir)->setBuiltin();
         }
         r->ir->setGlobal();
@@ -252,8 +252,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
           args.emplace_back(Param{varName, nullptr, nullptr});
         }
         r->ast = Nx<FunctionStmt>(ast, type->realizedName(), nullptr, vector<Param>(),
-                                  move(args), move(realized),
-                                  map<string, string>(ast->attributes));
+                                  move(args), move(realized), ast->attributes);
         ctx->cache->functions[type->funcName].realizations[type->realizedName()] = r;
       } else {
         ctx->cache->functions[type->funcName].realizations[oldKey] =
@@ -459,7 +458,7 @@ ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   } else if (name == "Generator") {
     assert(types.size() == 1 && statics.empty());
     handle = module->unsafeGetGeneratorType(types[0]);
-  } else if (name == "Optional") {
+  } else if (name == TYPE_OPTIONAL) {
     assert(types.size() == 1 && statics.empty());
     handle = module->unsafeGetOptionalType(types[0]);
   } else if (startswith(name, TYPE_FUNCTION)) {
@@ -492,8 +491,9 @@ ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   handle->setSrcInfo(t->getSrcInfo());
   handle->setAstType(
       std::const_pointer_cast<seq::ast::types::Type>(t->shared_from_this()));
-  if (auto &ast = ctx->cache->classes[t->name].ast)
-    handle->setAttribute(std::make_unique<ir::KeyValueAttribute>(ast->attributes));
+  // Not needed for classes, I guess
+  //  if (auto &ast = ctx->cache->classes[t->name].ast)
+  //    handle->setAttribute(std::make_unique<ir::KeyValueAttribute>(ast->attributes));
   return ctx->cache->classes[t->name].realizations[realizedName]->ir = handle;
 }
 

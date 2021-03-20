@@ -49,7 +49,7 @@ void SimplifyVisitor::defaultVisit(Expr *e) { resultExpr = e->clone(); }
 /**************************************************************************************/
 
 void SimplifyVisitor::visit(NoneExpr *expr) {
-  resultExpr = transform(N<CallExpr>(N<IdExpr>("Optional")));
+  resultExpr = transform(N<CallExpr>(N<IdExpr>(TYPE_OPTIONAL)));
 }
 
 void SimplifyVisitor::visit(IntExpr *expr) {
@@ -706,8 +706,7 @@ ExprPtr SimplifyVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
   for (auto &s : argNames)
     params.emplace_back(Param{s, nullptr, nullptr});
   auto s = transform(N<FunctionStmt>(name, nullptr, vector<Param>{}, move(params),
-                                     N<SuiteStmt>(move(stmts)),
-                                     vector<string>{ATTR_DO_CAPTURE}));
+                                     N<SuiteStmt>(move(stmts)), Attr({Attr::Capture})));
   if (s)
     return N<StmtExpr>(move(s), transform(N<IdExpr>(name)));
   return transform(N<IdExpr>(name));

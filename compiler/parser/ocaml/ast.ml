@@ -101,7 +101,7 @@ and fn_t =
   ; fn_generics : param ann list
   ; fn_args : param ann list
   ; fn_stmts : tstmt ann list
-  ; fn_attrs : string ann list
+  ; fn_attrs : texpr ann list
   }
 
 and class_t =
@@ -109,7 +109,7 @@ and class_t =
   ; generics : param ann list
   ; args : param ann list
   ; members : tstmt ann list
-  ; attrs : string ann list
+  ; attrs : texpr ann list
   }
 
 and pattern_t =

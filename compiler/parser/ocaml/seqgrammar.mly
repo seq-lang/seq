@@ -20,7 +20,6 @@
 %token IF ELSE ELIF MATCH CASE FOR WHILE CONTINUE BREAK TRY EXCEPT FINALLY THROW WITH
 %token DEF RETURN YIELD LAMBDA CLASS TYPEOF AS
 %token IMPORT FROM GLOBAL PRINT PASS ASSERT DEL TRUE FALSE NONE
-/* %token ARROW */
 /* operators */
 %token<string> EQ WALRUS ELLIPSIS ADD SUB MUL DIV FDIV POW MOD
 %token<string> PLUSEQ MINEQ MULEQ DIVEQ FDIVEQ POWEQ MODEQ AT GEQ
@@ -264,9 +263,10 @@ with_statement: WITH FLNE(COMMA, with_clause) COLON suite { $loc, With ($2, $4) 
 with_clause: expr { $1, None } | expr AS ID { $1, Some $3 }
 
 %public decorator(X):
-  | decorator_term* X { $1 } /* AT dot_term NL | AT dot_term LP FL(COMMA, expr) RP NL */
+  | decorator_term* X { $1 }
 decorator_term:
-  | AT ID NL { $loc, $2 }
+  | AT dot_term NL { $2 }
+  | AT dot_term LP FL(COMMA, call_term) RP NL { $loc, Call($2, $4) }
 
 func_statement:
   | func_def COLON EXTERN { [$loc, Function { $1 with fn_stmts = [$loc, Expr ($loc, String ("", $3))] }] }
@@ -309,10 +309,3 @@ dataclass_member:
   | string NL { Some ($loc, Expr ($loc, String $1)) }
   | func_statement { Some (List.hd $1) }
   | class_statement { Some $1 }
-
-/* typ:
-  | type_head NL { $loc, Type (snd $1) }
-  | type_head COLON NL INDENT class_member+ DEDENT { $loc, Type { (snd $1) with members = filter_opt $5 } }
-type_head:
-  | decorator(TYPE) ID generic_list? LP FL(COMMA, typed_param) RP
-    { $loc, { class_name = $2; generics = opt_val $3 []; args = $5; members = []; attrs = $1 } } */

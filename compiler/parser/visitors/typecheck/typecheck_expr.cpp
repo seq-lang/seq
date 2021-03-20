@@ -416,7 +416,7 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
 }
 
 void TypecheckVisitor::visit(SliceExpr *expr) {
-  ExprPtr none = N<CallExpr>(N<DotExpr>(N<IdExpr>("Optional"), "__new__"));
+  ExprPtr none = N<CallExpr>(N<DotExpr>(N<IdExpr>(TYPE_OPTIONAL), "__new__"));
   resultExpr = transform(N<CallExpr>(N<IdExpr>(TYPE_SLICE),
                                      expr->start ? move(expr->start) : clone(none),
                                      expr->stop ? move(expr->stop) : clone(none),
@@ -519,8 +519,8 @@ void TypecheckVisitor::wrapOptionalIfNeeded(const TypePtr &targetType, ExprPtr &
     return;
   auto t1 = targetType->getClass();
   auto t2 = e->getType()->getClass();
-  if (t1 && t2 && t1->name == "Optional" && t1->name != t2->name)
-    e = transform(N<CallExpr>(N<IdExpr>("Optional"), move(e)));
+  if (t1 && t2 && t1->name == TYPE_OPTIONAL && t1->name != t2->name)
+    e = transform(N<CallExpr>(N<IdExpr>(TYPE_OPTIONAL), move(e)));
 }
 
 ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
@@ -550,7 +550,7 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
   // Check if this is a "a is None" expression. If so, ...
   if (expr->op == "is" && expr->rexpr->getNone()) {
     if (expr->rexpr->getNone()) {
-      if (expr->lexpr->getType()->getClass()->name != "Optional")
+      if (expr->lexpr->getType()->getClass()->name != TYPE_OPTIONAL)
         // ... return False if lhs is not an Optional...
         return transform(N<BoolExpr>(false));
       else
@@ -573,10 +573,10 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
       return transform(
           N<BinaryExpr>(N<CallExpr>(N<DotExpr>(move(expr->lexpr), "__raw__")),
                         "==", N<CallExpr>(N<DotExpr>(move(expr->rexpr), "__raw__"))));
-    } else if (lc->getClass()->name == "Optional") {
+    } else if (lc->getClass()->name == TYPE_OPTIONAL) {
       return transform(N<CallExpr>(N<DotExpr>(move(expr->lexpr), "__is_optional__"),
                                    move(expr->rexpr)));
-    } else if (rc->getClass()->name == "Optional") {
+    } else if (rc->getClass()->name == TYPE_OPTIONAL) {
       return transform(N<CallExpr>(N<DotExpr>(move(expr->rexpr), "__is_optional__"),
                                    move(expr->lexpr)));
     } else if (lc->realizedName() != rc->realizedName()) {
@@ -751,7 +751,7 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
 ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *args) {
   auto isMethod = [&](const FuncType *f) {
     auto ast = ctx->cache->functions[f->funcName].ast.get();
-    return in(ast->attributes, ATTR_IS_METHOD);
+    return ast->attributes.has(Attr::Method);
   };
 
   if (expr->member == "__class__") {
@@ -786,7 +786,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
       unify(expr->type, t);
       expr->done = expr->expr->done && realize(expr->type) != nullptr;
       return nullptr;
-    } else if (typ->name == "Optional") {
+    } else if (typ->name == TYPE_OPTIONAL) {
       // Case 3: Transform optional.member to unwrap(optional).member.
       auto d = N<DotExpr>(
           transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), move(expr->expr))), expr->member);
@@ -887,7 +887,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     for (int i = 0; i < std::max(1, (int)bestMethod->args.size() - 2); i++)
       methodArgs.push_back(N<EllipsisExpr>());
     // Handle @property methods.
-    if (in(ctx->cache->functions[bestMethod->funcName].ast->attributes, "property"))
+    if (ctx->cache->functions[bestMethod->funcName].ast->attributes.has(Attr::Property))
       methodArgs.pop_back();
     ExprPtr e = N<CallExpr>(N<IdExpr>(bestMethod->funcName), move(methodArgs));
     return transform(e, false, allowVoidExpr);
@@ -1090,7 +1090,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     auto expectedClass = expectedTyp->getClass();
     auto argClass = args[si].value->getType()->getClass();
 
-    unordered_set<string> hints = {"Generator", "float", "Optional"};
+    unordered_set<string> hints = {"Generator", "float", TYPE_OPTIONAL};
     bool mightChange =
         expectedClass && (expectedClass->isTrait || in(hints, expectedClass->name));
     if (mightChange) {
@@ -1115,16 +1115,16 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         args[si].value =
             transform(N<CallExpr>(N<IdExpr>("float"), move(args[si].value)));
         unify(args[si].value->type, expectedClass);
-      } else if (expectedClass->name == "Optional" && argClass &&
+      } else if (expectedClass->name == TYPE_OPTIONAL && argClass &&
                  argClass->name != expectedClass->name) {
         // Case 3: wrap expected optionals with Optional().
         if (extraStage && args[si].value->getEllipsis()) {
           // Check if this is a pipe call...
-          *extraStage = N<DotExpr>(N<IdExpr>("Optional"), "__new__");
+          *extraStage = N<DotExpr>(N<IdExpr>(TYPE_OPTIONAL), "__new__");
           return oldExpr;
         }
         args[si].value =
-            transform(N<CallExpr>(N<IdExpr>("Optional"), move(args[si].value)));
+            transform(N<CallExpr>(N<IdExpr>(TYPE_OPTIONAL), move(args[si].value)));
         unify(args[si].value->type, expectedClass);
       } else if (ast && startswith(expectedClass->name, TYPE_CALLABLE)) {
         // Case 4: allow any callable to match Callable[] signature.
@@ -1144,7 +1144,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         // Case 5: normal unification.
         unify(args[si].value->type, expectedTyp);
       }
-    } else if (expectedClass && argClass && argClass->name == "Optional" &&
+    } else if (expectedClass && argClass && argClass->name == TYPE_OPTIONAL &&
                argClass->name != expectedClass->name) { // unwrap optional
       // Case 6: Optional unwrapping.
       if (extraStage && args[si].value->getEllipsis()) {
@@ -1347,7 +1347,7 @@ string TypecheckVisitor::generateTupleStub(int len, const string &name,
       args.emplace_back(Param{names[i - 1], N<IdExpr>(format("T{}", i)), nullptr});
     }
     StmtPtr stmt = make_unique<ClassStmt>(typeName, move(generics), move(args), nullptr,
-                                          vector<string>{ATTR_TUPLE});
+                                          Attr({Attr::Tuple}));
     stmt->setSrcInfo(ctx->cache->generateSrcInfo());
 
     stmt = SimplifyVisitor::apply(ctx->cache->imports[STDLIB_IMPORT].ctx, stmt,
@@ -1408,16 +1408,16 @@ string TypecheckVisitor::generateFunctionStub(int n) {
         N<IndexExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "fn_new"), clone(type)),
         N<IdExpr>("what"))));
     fns.emplace_back(make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{},
-                                               move(params), N<SuiteStmt>(move(stmts)),
-                                               vector<string>{}));
+                                               move(params),
+                                               N<SuiteStmt>(move(stmts))));
     params.clear();
     stmts.clear();
     // def __new__(what: Function.N[TR, T1, ..., TN]) -> Function.N[TR, T1, ..., TN]:
     //   return what
     params.emplace_back(Param{"what", clone(type)});
-    fns.emplace_back(make_unique<FunctionStmt>(
-        "__new__", clone(type), vector<Param>{}, move(params),
-        N<SuiteStmt>(N<ReturnStmt>(N<IdExpr>("what"))), vector<string>{}));
+    fns.emplace_back(
+        make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{}, move(params),
+                                  N<SuiteStmt>(N<ReturnStmt>(N<IdExpr>("what")))));
     params.clear();
     // def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]:
     //   return __internal__.fn_raw(self)
@@ -1426,7 +1426,7 @@ string TypecheckVisitor::generateFunctionStub(int n) {
         N<DotExpr>(N<IdExpr>("__internal__"), "fn_raw"), N<IdExpr>("self"))));
     fns.emplace_back(make_unique<FunctionStmt>(
         "__raw__", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte")), vector<Param>{},
-        move(params), N<SuiteStmt>(move(stmts)), vector<string>{}));
+        move(params), N<SuiteStmt>(move(stmts))));
     params.clear();
     stmts.clear();
     // def __str__(self: Function.N[TR, T1, ..., TN]) -> str:
@@ -1436,15 +1436,15 @@ string TypecheckVisitor::generateFunctionStub(int n) {
         N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "raw_type_str"),
                                   N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__raw__")),
                                   N<StringExpr>("function"))));
-    fns.emplace_back(make_unique<FunctionStmt>(
-        "__str__", N<IdExpr>("str"), vector<Param>{}, move(params),
-        N<SuiteStmt>(move(stmts)), vector<string>{}));
+    fns.emplace_back(make_unique<FunctionStmt>("__str__", N<IdExpr>("str"),
+                                               vector<Param>{}, move(params),
+                                               N<SuiteStmt>(move(stmts))));
     params.clear();
     stmts.clear();
     // class Function.N[TR, T1, ..., TN]
     StmtPtr stmt = make_unique<ClassStmt>(typeName, move(generics), move(args),
                                           N<SuiteStmt>(move(fns)),
-                                          vector<string>{ATTR_INTERNAL, ATTR_TUPLE});
+                                          Attr({Attr::Internal, Attr::Tuple}));
     stmt->setSrcInfo(ctx->cache->generateSrcInfo());
 
     // Parse this function in a clean context.
@@ -1506,12 +1506,10 @@ void TypecheckVisitor::generateFnCall(int n) {
     string llvmVoid = format("call {{=TR}} %self({})\nret void", join(llvmArgs, ", "));
     fns.emplace_back(make_unique<FunctionStmt>(
         "__call__.void", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
-        N<SuiteStmt>(N<ExprStmt>(N<StringExpr>(llvmVoid))),
-        vector<string>{ATTR_EXTERN_LLVM}));
+        N<SuiteStmt>(N<ExprStmt>(N<StringExpr>(llvmVoid))), Attr({Attr::LLVM})));
     fns.emplace_back(make_unique<FunctionStmt>(
         "__call__.ret", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
-        N<SuiteStmt>(N<ExprStmt>(N<StringExpr>(llvmNonVoid))),
-        vector<string>{ATTR_EXTERN_LLVM}));
+        N<SuiteStmt>(N<ExprStmt>(N<StringExpr>(llvmNonVoid))), Attr({Attr::LLVM})));
     fns.emplace_back(make_unique<FunctionStmt>(
         "__call__", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
         N<SuiteStmt>(N<IfStmt>(
@@ -1520,12 +1518,11 @@ void TypecheckVisitor::generateFnCall(int n) {
                                     clone_nop(callArgs))),
             nullptr,
             N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__call__.ret"),
-                                      clone_nop(callArgs))))),
-        vector<string>{}));
+                                      clone_nop(callArgs)))))));
     // Parse this function in a clean context.
 
     StmtPtr stmt = N<ClassStmt>(typeName, move(generics), vector<Param>{},
-                                N<SuiteStmt>(move(fns)), vector<string>{ATTR_EXTEND});
+                                N<SuiteStmt>(move(fns)), Attr({Attr::Extend}));
     stmt = SimplifyVisitor::apply(ctx->cache->imports[STDLIB_IMPORT].ctx, stmt,
                                   FILE_GENERATED, 0);
     stmt = TypecheckVisitor(ctx).transform(stmt);
