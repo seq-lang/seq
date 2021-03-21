@@ -75,7 +75,7 @@ if [ "${USE_ZLIBNG}" = '1' ] ; then
     # zlib-ng
     curl -L https://github.com/zlib-ng/zlib-ng/archive/2.0.1.tar.gz | tar zxf - -C ${SRCDIR}
     cd ${SRCDIR}/zlib-ng-2.0.1
-    CFLAGS=-fPIC ./configure \
+    CFLAGS="-fPIC -DNO_QUICK_STRATEGY" ./configure \
         --64 \
         --zlib-compat \
         --prefix=${INSTALLDIR}
@@ -95,7 +95,6 @@ else
     make install
     [ ! -f ${INSTALLDIR}/lib/libz.a ] && die "zlib library not found"
 fi
-
 
 # bdwgc
 curl -L https://github.com/ivmai/bdwgc/releases/download/v8.0.4/gc-8.0.4.tar.gz | tar zxf - -C ${SRCDIR}
