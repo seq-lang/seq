@@ -113,7 +113,7 @@ x = foo
 print x(1) #: 2
 
 #%% assign_err_6,barebones
-x = bar #! ERROR: cannot find 'bar'
+x = bar #! ERROR: identifier 'bar' not found
 
 #%% assign_err_7,barebones
 foo() += bar #! ERROR: invalid assignment

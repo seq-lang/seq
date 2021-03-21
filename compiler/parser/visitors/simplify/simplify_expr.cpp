@@ -510,9 +510,40 @@ void SimplifyVisitor::visit(CallExpr *expr) {
 
   auto e = transform(expr->expr.get(), true);
   // 8. namedtuple
-  //  if (e->isId("collections.namedtuple")) {
-  //    if
-  //  }
+  if (e->isId("std.collections.namedtuple")) {
+    if (expr->args.size() != 2 || !expr->args[0].value->getString() ||
+        !expr->args[1].value->getList())
+      error("invalid namedtuple arguments");
+    vector<Param> generics, args;
+    int ti = 1;
+    for (auto &i : expr->args[1].value->getList()->items)
+      if (auto s = i->getString()) {
+        generics.emplace_back(Param{format("T{}", ti), nullptr, nullptr});
+        args.emplace_back(Param{s->value, N<IdExpr>(format("T{}", ti++)), nullptr});
+      } else if (i->getTuple() && i->getTuple()->items.size() == 2 &&
+                 i->getTuple()->items[0]->getString()) {
+        args.emplace_back(Param{i->getTuple()->items[0]->getString()->value,
+                                transformType(i->getTuple()->items[1].get()), nullptr});
+      } else {
+        error("invalid namedtuple arguments");
+      }
+    auto name = expr->args[0].value->getString()->value;
+    transform(
+        N<ClassStmt>(name, move(generics), move(args), nullptr, Attr({Attr::Tuple})));
+    auto i = N<IdExpr>(name);
+    resultExpr = transformType(i.get());
+    return;
+  }
+  // 9. partial
+  if (e->isId("std.functools.partial")) {
+    if (expr->args.size() < 1)
+      error("invalid namedtuple arguments");
+    vector<CallExpr::Arg> args = clone_nop(expr->args);
+    args.erase(args.begin());
+    args.push_back({"", N<EllipsisExpr>()});
+    resultExpr = transform(N<CallExpr>(clone(expr->args[0].value), move(args)));
+    return;
+  }
 
   vector<CallExpr::Arg> args;
   bool namesStarted = false;
@@ -578,6 +609,8 @@ void SimplifyVisitor::visit(DotExpr *expr) {
       if (val && (importName.empty() || val->isGlobal())) {
         itemName = val->canonicalName;
         itemEnd = i + 1;
+        if (!importName.empty())
+          ctx->add(val->canonicalName, val);
         break;
       }
     }

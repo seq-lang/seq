@@ -520,7 +520,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     if (attr.has(Attr::LLVM))
       suite = transformLLVMDefinition(stmt->suite->firstInBlock());
     else {
-      if (isEnclosedFunc || attr.has(Attr::Capture))
+      if ((isEnclosedFunc || attr.has(Attr::Capture)) && !isClassMember)
         ctx->captures.emplace_back(std::map<string, string>{});
       suite = SimplifyVisitor(ctx, preamble).transform(stmt->suite);
       if (isEnclosedFunc) {
@@ -585,6 +585,8 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   ExprPtr finalExpr;
   if (!captures.empty())
     finalExpr = N<CallExpr>(N<IdExpr>(stmt->name), move(partialArgs));
+  if (isClassMember && decorators.size())
+    error("decorators cannot be applied to class methods");
   for (int j = int(decorators.size()) - 1; j >= 0; j--) {
     if (auto c = const_cast<CallExpr *>(decorators[j]->getCall())) {
       auto vop = move(c->args);
@@ -867,10 +869,11 @@ StmtPtr SimplifyVisitor::transformAssignment(const Expr *lhs, const Expr *rhs,
     // Function and type aliases are not normal assignments. They are treated like a
     // simple context renames.
     // Note: x = Ptr[byte] is not a simple alias, and is handled separately below.
-    if (rhs && rhs->getId()) {
-      auto val = ctx->find(rhs->getId()->value);
+    auto r = transform(rhs, true);
+    if (r && r->getId()) {
+      auto val = ctx->find(r->getId()->value);
       if (!val)
-        error("cannot find '{}'", rhs->getId()->value);
+        error("cannot find '{}'", r->getId()->value);
       if (val->isType() || val->isFunc()) {
         ctx->add(e->value, val);
         return nullptr;
@@ -880,7 +883,6 @@ StmtPtr SimplifyVisitor::transformAssignment(const Expr *lhs, const Expr *rhs,
     // Generate new canonical variable name for this assignment and use it afterwards.
     auto canonical = ctx->generateCanonicalName(e->value);
     auto l = N<IdExpr>(canonical);
-    auto r = transform(rhs, true);
     bool global = ctx->isToplevel();
     // ctx->moduleName != MODULE_MAIN;
     // ⚠️ TODO: should we make __main__ top-level variables NOT global by default?

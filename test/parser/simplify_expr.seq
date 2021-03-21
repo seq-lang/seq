@@ -287,6 +287,26 @@ seq_print(1, name=*x) #! ERROR: named star-expressions not allowed
 x = (1, 2)
 seq_print(1, name=**x) #! ERROR: parsing error: '**'
 
+#%% call_collections
+from collections import namedtuple as nt
+
+ee = nt('Foo', ['x', 'y'])
+f = ee(1, 2)
+print f #: (x: 1, y: 2)
+
+ee = nt('FooX', [('x', str), 'y'])
+fd = ee('s', 2)
+print fd #: (x: s, y: 2)
+
+#%% call_partial_functools
+from functools import partial
+def foo(x, y, z):
+    print x,y,z
+f1 = partial(foo, 1, z=3)
+f1(2) #: 1 2 3
+f2 = partial(foo, y=2)
+f2(1, 2) #: 1 2 2
+
 #%% ellipsis_err,barebones
 ... #! ERROR: unexpected ellipsis expression
 
