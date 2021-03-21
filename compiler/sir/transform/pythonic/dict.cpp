@@ -132,10 +132,11 @@ void DictArithmeticTransform::handle(CallInstr *v) {
         // sanity check to make sure function is inlined
         if (std::distance(replacementFunc->arg_begin(), replacementFunc->arg_end()) !=
             std::distance(replacementFunc->arg_begin(), replacementFunc->arg_end()))
-          args.push_back(M->Nr<VarValue>(opFunc));
+          args.push_back(M->N<VarValue>(v, opFunc));
 
         v->replaceAll(
-            M->Nr<CallInstr>(M->Nr<VarValue>(replacementFunc), std::move(args)));
+            M->N<CallInstr>(v, M->N<VarValue>(v, replacementFunc), std::move(args)));
+        see(v->getActual());
       }
     }
   }

@@ -25,6 +25,8 @@
 #include "sir/util/format.h"
 #include <fstream>
 
+#include "sir/transform/pythonic/str.h"
+
 int _ocaml_time = 0;
 int _ll_time = 0;
 int _level = 0;
@@ -103,6 +105,9 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
     t = high_resolution_clock::now();
     auto *module = ast::TranslateVisitor::apply(cache, move(typechecked));
     module->setSrcInfo({abs, 0, 0, 0, 0});
+
+    ir::transform::pythonic::StrAdditionTransform transform;
+    transform.run(module);
 
     if (!isTest)
       LOG_TIME("[T] translate   = {:.1f}",
