@@ -17,6 +17,8 @@
 #include "sir/llvm/llvisitor.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pipeline.h"
+#include "sir/transform/pythonic/dict.h"
+#include "sir/transform/pythonic/str.h"
 #include "util/common.h"
 #include "gtest/gtest.h"
 
@@ -80,6 +82,12 @@ static pair<vector<string>, bool> findExpects(const string &filename, bool isCod
 void registerStandardPasses(ir::transform::PassManager &pm) {
   pm.registerPass("bio-pipeline-opts",
                   std::make_unique<ir::transform::pipeline::PipelineOptimizations>());
+  pm.registerPass(
+      "pythonic-dict-arithmetic-opt",
+      std::make_unique<seq::ir::transform::pythonic::DictArithmeticOptimization>());
+  pm.registerPass(
+      "pythonic-str-addition-opt",
+      std::make_unique<seq::ir::transform::pythonic::StrAdditionOptimization>());
 }
 
 string argv0;

@@ -24,8 +24,9 @@ void inspect(Value *v, InspectionResult &r) {
   if (isString(v)) {
     if (auto *c = cast<CallInstr>(v)) {
       auto *func = util::getFunc(c->getCallee());
-      if (func->getUnmangledName() == "__add__" && std::distance(c->begin(), c->end()) == 2
-          && isString(c->front()) && isString(c->back())) {
+      if (func && func->getUnmangledName() == "__add__" &&
+          std::distance(c->begin(), c->end()) == 2 && isString(c->front()) &&
+          isString(c->back())) {
         inspect(c->front(), r);
         inspect(c->back(), r);
         return;
@@ -37,7 +38,7 @@ void inspect(Value *v, InspectionResult &r) {
   }
 }
 
-}
+} // namespace
 
 namespace seq {
 namespace ir {
@@ -48,7 +49,7 @@ void StrAdditionOptimization::handle(CallInstr *v) {
   auto *M = v->getModule();
 
   auto *f = util::getFunc(v->getCallee());
-  if (f->getUnmangledName() != "__add__")
+  if (!f || f->getUnmangledName() != "__add__")
     return;
 
   InspectionResult r;
@@ -63,10 +64,10 @@ void StrAdditionOptimization::handle(CallInstr *v) {
     }
 
     auto *arg = util::makeTuple(args, M);
-    auto *replacementFunc = M->getOrRealizeMethod(M->getStringType(), "cat", {arg->getType()});
+    auto *replacementFunc =
+        M->getOrRealizeMethod(M->getStringType(), "cat", {arg->getType()});
     seqassert(replacementFunc, "could not find cat function");
   }
-
 }
 
 } // namespace pythonic
