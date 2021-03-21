@@ -63,7 +63,7 @@ namespace ir {
 namespace transform {
 namespace pythonic {
 
-void DictArithmeticTransform::handle(CallInstr *v) {
+void DictArithmeticOptimization::handle(CallInstr *v) {
   auto *M = v->getModule();
 
   // get and check the exterior function (should be a __setitem__ with 3 args)

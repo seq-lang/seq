@@ -21,18 +21,16 @@ bool isString(Value *v) {
 
 void inspect(Value *v, InspectionResult &r) {
   // check if add first then go from there
-  if (auto *c = cast<CallInstr>(v)) {
-    auto *func = util::getFunc(c->getCallee());
-    if (func->getUnmangledName() == "__add__" && std::distance(c->begin(), c->end()) == 2
-        && isString(c->front()) && isString(c->back())) {
-      inspect(c->front(), r);
-      inspect(c->back(), r);
-    } else if (isString(v)) {
-      r.args.push_back(v);
-    } else {
-      r.valid = false;
+  if (isString(v)) {
+    if (auto *c = cast<CallInstr>(v)) {
+      auto *func = util::getFunc(c->getCallee());
+      if (func->getUnmangledName() == "__add__" && std::distance(c->begin(), c->end()) == 2
+          && isString(c->front()) && isString(c->back())) {
+        inspect(c->front(), r);
+        inspect(c->back(), r);
+        return;
+      }
     }
-  } else if (isString(v)) {
     r.args.push_back(v);
   } else {
     r.valid = false;
@@ -46,7 +44,7 @@ namespace ir {
 namespace transform {
 namespace pythonic {
 
-void StrAdditionTransform::handle(CallInstr *v) {
+void StrAdditionOptimization::handle(CallInstr *v) {
   auto *M = v->getModule();
 
   auto *f = util::getFunc(v->getCallee());
@@ -67,8 +65,6 @@ void StrAdditionTransform::handle(CallInstr *v) {
     auto *arg = util::makeTuple(args, M);
     auto *replacementFunc = M->getOrRealizeMethod(M->getStringType(), "cat", {arg->getType()});
     seqassert(replacementFunc, "could not find cat function");
-
-    v->replaceAll(M->N<CallInstr>(v, M->N<VarValue>(v, replacementFunc), std::vector<Value *>{arg}));
   }
 
 }

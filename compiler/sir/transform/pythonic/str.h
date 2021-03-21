@@ -8,7 +8,7 @@ namespace transform {
 namespace pythonic {
 
 /// Pass to optimize str1 + str2 + ...
-class StrAdditionTransform : public OperatorPass {
+class StrAdditionOptimization : public OperatorPass {
 public:
   void handle(CallInstr *v) override;
 };

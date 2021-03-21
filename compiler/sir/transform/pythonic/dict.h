@@ -10,7 +10,7 @@ namespace pythonic {
 /// Pass to optimize calls of form d[x] = func(d[x], any).
 /// This will work on any dictionary-like object that implements _do_op and
 /// _do_op_throws as well as getters.
-class DictArithmeticTransform : public OperatorPass {
+class DictArithmeticOptimization : public OperatorPass {
 public:
   void handle(CallInstr *v) override;
 };
