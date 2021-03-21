@@ -1,10 +1,8 @@
-import bio.seq
+from builtin import *
 
-from bio.builtin import *
-
-from bio.block import Block, blocks
-from bio.locus import Locus
-from bio.iter import Seqs
+from block import Block, blocks
+from locus import Locus
+from iter import Seqs
 
 from bio.align import SubMat, CIGAR, Alignment
 from bio.pseq import pseq, translate

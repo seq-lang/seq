@@ -16,6 +16,21 @@ Source code is available `on GitHub <https://github.com/seq-lang/seq>`_. You can
    build
    stdlib/index
 
+What's new in 0.10?
+-------------------
+
+Version 0.10 brings a slew of improvements to the language and compiler, including:
+
+- Nearly all of Python's syntax is now supported, including empty collections (``[]``, ``{}``), lambda functions (``lambda``), ``*args``/``**kwargs``, ``None`` and much more
+- Compiler error messages now pinpoint exactly where an error occured with compile-time backtraces
+- Runtime exceptions now include backtraces with file names and line numbers in debug mode
+- GDB and LLDB support
+- Various syntax updates to further close the gap with Python
+- Numerous standard library improvements
+
+.. caution::
+    The default compilation and execution mode is now "debug", which disables most optimizations. Pass the ``-release`` argument to ``seqc`` to enable optimizations.
+
 Frequently Asked Questions
 --------------------------
 
@@ -29,7 +44,7 @@ There are many great bioinformatics libraries on the market today, including `Bi
 
     *What about interoperability with other languages and frameworks?*
 
-Interoperability is and will continue to be a priority for the Seq project. We don't want using Seq to render you unable to use all the other great frameworks and libraries that exist. Seq already supports interoperability with C/C++ and Python (see :ref:`interop`), which we are in the process of expanding (e.g. by allowing Python libraries to be written in Seq).
+Interoperability is and will continue to be a priority for the Seq project. We don't want using Seq to render you unable to use all the other great frameworks and libraries that exist. Seq already supports interoperability with C/C++ and Python (see :ref:`interop`).
 
    *I want to contribute! How do I get started?*
 

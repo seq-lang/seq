@@ -15,8 +15,7 @@ Note that only top-level, non-generic functions can be exported. Now we can crea
 
 .. code-block:: bash
 
-    seqc -o foo.bc foo.seq
-    llc foo.bc -filetype=obj -o foo.o
+    seqc build -o foo.o foo.seq
     gcc -shared -lseqrt -lomp foo.o -o libfoo.so
 
 (The last command might require an additional ``-L/path/to/seqrt/lib/`` argumment if ``libseqrt`` is not installed on a standard path.)
@@ -56,6 +55,6 @@ The following table shows the conversions between Seq and C/C++ types:
 ``byte``      ``int8_t``
 ``str``       ``{int64_t, char*}``
 ``seq``       ``{int64_t, char*}``
-``tuple``     Struct of fields
 ``class``     Pointer to corresponding tuple
+``@tuple``    Struct of fields
 ============  ============

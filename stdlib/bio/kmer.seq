@@ -1,0 +1,274 @@
+from bio.seq import seq, _preprocess_seq_pattern
+
+@tuple
+class Kmer[K: int]:
+    x: UInt[2*K]
+
+    def __new__() -> Kmer[K]:
+        return Kmer[K](0)
+
+    def __new__(k: Kmer[K]) -> Kmer[K]:
+        return k
+
+    def __new__(p: Ptr[byte], L: int, b: bool) -> Kmer[K]:
+        if L != K:
+            raise ValueError("sequence length does not match k-mer type's")
+        two = UInt[2*K](2)
+        n = UInt[2*K](0)
+        i = 0
+        while i < L:
+            c = seq(p + i, 1).__int__()
+            if c > 3:
+                raise ValueError("sequence contains ambiguous bases")
+            if K != 1:
+                n <<= two  # LLVM makes this a poison value if i2
+            n |= UInt[2*K](c)
+            i += 1
+        return Kmer[K](n.__revcomp__() if b else n)
+
+    def _make_fwd(p: Ptr[byte], L: int) -> Kmer[K]:
+        two = UInt[2*K](2)
+        n = UInt[2*K](0)
+        i = 0
+        while i < L:
+            c = seq._encz(p[i])
+            if K != 1:
+                n <<= two  # LLVM makes this a poison value if i2
+            n |= UInt[2*K](c)
+            i += 1
+        return Kmer[K](n)
+
+    def _make_rev(p: Ptr[byte], L: int) -> Kmer[K]:
+        two = UInt[2*K](2)
+        n = UInt[2*K](0)
+        i = L - 1
+        while i >= 0:
+            c = 3 - seq._encz(p[i])
+            if K != 1:
+                n <<= two  # LLVM makes this a poison value if i2
+            n |= UInt[2*K](c)
+            i -= 1
+        return Kmer[K](n)
+
+    def __new__(s: seq) -> Kmer[K]:
+        return Kmer[K](s.ptr, len(s), s.len < 0)
+
+    def __new__(s: seq, rc: bool) -> Kmer[K]:
+        return Kmer[K](s.ptr, len(s), rc)
+
+    def __new__(s: seq) -> Kmer[K]:
+        return Kmer[K](s.ptr, len(s), s.len < 0)
+
+    def __new__(s: str) -> Kmer[K]:
+        return Kmer[K](s.ptr, s.len, False)
+
+    def __new__(n: int) -> Kmer[K]:
+        return Kmer[K](UInt[2*K](n))
+
+    def __int__(self):
+        return int(self.x)
+
+    def __copy__(self):
+        return self
+
+    def __invert__(self):
+        return Kmer[K](self.x.__revcomp__())
+
+    def __getitem__(self, idx: int):
+        if idx < 0:
+            idx += K
+        if idx < 0 or idx >= K:
+            raise IndexError("k-mer index out of range")
+        m = UInt[2*K](3)
+        s = UInt[2*K](2*(K - idx - 1))
+        y = (self.x & (m << s)) >> s
+        return Kmer[1](int(y))
+
+    def __lshift__(self, s: seq):
+        two = UInt[2*K](2)
+        n = self.x
+        i = 0
+        while i < len(s):
+            c = s[i].__int__()
+            if c > 3:
+                raise ValueError("sequence contains ambiguous bases")
+            n <<= two
+            n |= UInt[2*K](c)
+            i += 1
+        return Kmer[K](n)
+
+    def _lsh_fwd(self, p: ptr[byte], L: int):
+        two = UInt[2*K](2)
+        n = self.x
+        i = 0
+        while i < L:
+            c = seq._encz(p[i])
+            n <<= two
+            n |= UInt[2*K](c)
+            i += 1
+        return Kmer[K](n)
+
+    def _lsh_rev(self, p: ptr[byte], L: int):
+        two = UInt[2*K](2)
+        n = self.x
+        i = L - 1
+        while i >= 0:
+            c = 3 - seq._encz(p[i])
+            n <<= two
+            n |= UInt[2*K](c)
+            i -= 1
+        return Kmer[K](n)
+
+    def __rshift__(self, s: seq):
+        two = UInt[2*K](2)
+        n = self.x
+        i = 0
+        while i < len(s):
+            c = s[i].__int__()
+            if c > 3:
+                raise ValueError("sequence contains ambiguous bases")
+            sh = UInt[2*K](2*(K - i - 1))
+            n >>= two
+            n |= (UInt[2*K](c) << sh)
+            i += 1
+        return Kmer[K](n)
+
+    def _rsh_fwd(self, p: ptr[byte], L: int):
+        two = UInt[2*K](2)
+        n = self.x
+        i = 0
+        while i < L:
+            c = seq._encz(p[i])
+            sh = UInt[2*K](2*(K - i - 1))
+            n >>= two
+            n |= (UInt[2*K](c) << sh)
+            i += 1
+        return Kmer[K](n)
+
+    def _rsh_rev(self, p: ptr[byte], L: int):
+        two = UInt[2*K](2)
+        n = self.x
+        i = L - 1
+        while i >= 0:
+            c = ~seq._encz(p[i])
+            sh = UInt[2*K](2*(K - i - 1))
+            n >>= two
+            n |= (UInt[2*K](c) << sh)
+            i -= 1
+        return Kmer[K](n)
+
+    def __sub__(self, other: Kmer[K]):
+        '''
+        Hamming distance algorithm:
+          input: kmer1, kmer2
+          mask1 = 0101...0101  (same bit width as encoded kmer)
+          mask2 = 1010...1010  (same bit width as encoded kmer)
+          popcnt(
+            (((kmer1 & mask1) ^ (kmer2 & mask1)) << 1) |
+            ((kmer1 & mask2) ^ (kmer2 & mask2))
+          )
+        '''
+        one   = UInt[2*K](1)
+        mask1 = UInt[2*K](0)
+        i = 0
+        while i < K:
+            mask1 |= one << UInt[2*K](2*i)
+            i += 1
+        mask2 = mask1 << one
+        kmer1 = self.x
+        kmer2 = other.x
+        diff1 = (kmer1 & mask1) ^ (kmer2 & mask1)
+        diff2 = (kmer1 & mask2) ^ (kmer2 & mask2)
+        n = ((diff1 << one) | diff2).popcnt()
+        return -n if kmer1 < kmer2 else n
+
+    def __hash__(self):
+        if K <= 32:
+            return int(self.x)
+        else:
+            lo = int(self.x & UInt[2*K](0xFFFFFFFFFFFFFFFF))
+            hi = int(self.x >> UInt[2*K](2*K - 64))
+            return lo ^ hi
+
+    def __len__(self):
+        return K
+
+    def __eq__(self, other: Kmer[K]):
+        return self.x == other.x
+
+    def __ne__(self, other: Kmer[K]):
+        return self.x != other.x
+
+    def __lt__(self, other: Kmer[K]):
+        return self.x < other.x
+
+    def __gt__(self, other: Kmer[K]):
+        return self.x > other.x
+
+    def __le__(self, other: Kmer[K]):
+        return self.x <= other.x
+
+    def __ge__(self, other: Kmer[K]):
+        return self.x >= other.x
+
+    def __contains__(self, s: seq):
+        return str(s) in str(self)
+
+    def __str__(self):
+        ACGT = 'ACGT'
+        p = Ptr[byte](K)
+        x = self.x
+        i = K - 1
+        while i >= 0:
+            p[i] = ACGT.ptr[int(x & UInt[2*K](3))]
+            x >>= UInt[2*K](2)
+            i -= 1
+        return str(p, K)
+
+    def __pickle__(self, jar: Jar):
+        self.x.__pickle__(jar)
+
+    def __unpickle__(jar: Jar):
+        return Kmer[K](UInt[2*K].__unpickle__(jar))
+
+    def len():
+        return K
+
+    def as_int(self):
+        return self.x
+
+    def __match__[N: int](self: Kmer[N], pattern: str):
+        WILD = byte(95)
+        p = pattern.ptr
+        n = pattern.len
+        star = _preprocess_seq_pattern(pattern)
+        nt4 = seq._nt4_table()
+        if star >= 0:
+            m = N
+            if m < n - 1:
+                return False
+            i = 0
+            while i < star:
+                if p[i] != WILD and int(nt4[int(p[i])]) != int(self[i]):
+                    return False
+                i += 1
+            i = star + 1
+            while i < n:
+                if p[i] != WILD and int(nt4[int(p[i])]) != int(self[i + m - n]):
+                    return False
+                i += 1
+            return True
+        else:
+            if N != n:
+                return False
+            i = 0
+            while i < n:
+                if p[i] != WILD and int(nt4[int(p[i])]) != int(self[i]):
+                    return False
+                i += 1
+            return True
+
+@extend
+class str:
+    def __prefix_k__[N: int](s: str) -> Kmer[N]:
+        return Kmer[N](s)

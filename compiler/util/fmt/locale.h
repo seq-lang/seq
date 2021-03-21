@@ -43,29 +43,27 @@ vformat(const std::locale &loc, const S &format_str,
 }
 
 template <typename S, typename... Args, typename Char = char_t<S>>
-inline std::basic_string<Char> format(const std::locale &loc,
-                                      const S &format_str, Args &&... args) {
-  return internal::vformat(
-      loc, to_string_view(format_str),
-      internal::make_args_checked<Args...>(format_str, args...));
+inline std::basic_string<Char> format(const std::locale &loc, const S &format_str,
+                                      Args &&... args) {
+  return internal::vformat(loc, to_string_view(format_str),
+                           internal::make_args_checked<Args...>(format_str, args...));
 }
 
 template <typename S, typename OutputIt, typename... Args,
-          typename Char = enable_if_t<
-              internal::is_output_iterator<OutputIt>::value, char_t<S>>>
-inline OutputIt
-vformat_to(OutputIt out, const std::locale &loc, const S &format_str,
-           format_args_t<type_identity_t<OutputIt>, Char> args) {
+          typename Char =
+              enable_if_t<internal::is_output_iterator<OutputIt>::value, char_t<S>>>
+inline OutputIt vformat_to(OutputIt out, const std::locale &loc, const S &format_str,
+                           format_args_t<type_identity_t<OutputIt>, Char> args) {
   using range = internal::output_range<OutputIt, Char>;
-  return vformat_to<arg_formatter<range>>(
-      range(out), to_string_view(format_str), args, internal::locale_ref(loc));
+  return vformat_to<arg_formatter<range>>(range(out), to_string_view(format_str), args,
+                                          internal::locale_ref(loc));
 }
 
 template <typename OutputIt, typename S, typename... Args,
           FMT_ENABLE_IF(internal::is_output_iterator<OutputIt>::value
                             &&internal::is_string<S>::value)>
-inline OutputIt format_to(OutputIt out, const std::locale &loc,
-                          const S &format_str, Args &&... args) {
+inline OutputIt format_to(OutputIt out, const std::locale &loc, const S &format_str,
+                          Args &&... args) {
   internal::check_format_string<Args...>(format_str);
   using context = format_context_t<OutputIt, char_t<S>>;
   format_arg_store<context, Args...> as{args...};

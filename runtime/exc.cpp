@@ -1,24 +1,68 @@
 #include "lib.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include <backtrace.h>
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
-#ifdef __APPLE__
-#define BACKTRACE
-#endif
+struct BacktraceFrame {
+  char *function;
+  char *filename;
+  uintptr_t pc;
+  int32_t lineno;
+};
 
-#ifdef BACKTRACE
-#define UNW_LOCAL_ONLY
-#include <libunwind.h>
+struct Backtrace {
+  static const size_t LIMIT = 20;
+  struct BacktraceFrame *frames;
+  size_t count;
 
-#define BACKTRACE_LIMIT 20
-#endif
+  void push_back(const char *function, const char *filename, uintptr_t pc,
+                 int32_t lineno) {
+    if (count >= LIMIT || !function || !filename) {
+      return;
+    } else if (count == 0) {
+      frames = (BacktraceFrame *)seq_alloc(LIMIT * sizeof(*frames));
+    }
+
+    size_t functionLen = strlen(function) + 1;
+    auto *functionDup = (char *)seq_alloc_atomic(functionLen);
+    memcpy(functionDup, function, functionLen);
+
+    size_t filenameLen = strlen(filename) + 1;
+    auto *filenameDup = (char *)seq_alloc_atomic(filenameLen);
+    memcpy(filenameDup, filename, filenameLen);
+
+    frames[count++] = {functionDup, filenameDup, pc, lineno};
+  }
+
+  void free() {
+    for (auto i = 0; i < count; i++) {
+      auto *frame = &frames[i];
+      seq_free(frame->function);
+      seq_free(frame->filename);
+    }
+    seq_free(frames);
+    frames = nullptr;
+    count = 0;
+  }
+};
+
+void seq_backtrace_error_callback(void *data, const char *msg, int errnum) {
+  // nothing to do
+}
+
+int seq_backtrace_full_callback(void *data, uintptr_t pc, const char *filename,
+                                int lineno, const char *function) {
+  auto *bt = ((Backtrace *)data);
+  bt->push_back(function, filename, pc, lineno);
+  return (bt->count < Backtrace::LIMIT) ? 0 : 1;
+}
 
 /*
  * This is largely based on
@@ -39,8 +83,7 @@ static int64_t ourBaseFromUnwindOffset;
 static const unsigned char ourBaseExcpClassChars[] = {'o', 'b', 'j', '\0',
                                                       's', 'e', 'q', '\0'};
 
-static uint64_t genClass(const unsigned char classChars[],
-                         size_t classCharsSize) {
+static uint64_t genClass(const unsigned char classChars[], size_t classCharsSize) {
   uint64_t ret = classChars[0];
 
   for (unsigned i = 1; i < classCharsSize; i++) {
@@ -57,21 +100,10 @@ struct OurExceptionType_t {
   int type;
 };
 
-#ifdef BACKTRACE
-struct BTItem {
-  unw_word_t pc;
-  unw_word_t offset;
-  char *name;
-};
-#endif
-
 struct OurBaseException_t {
   OurExceptionType_t type; // Seq exception type
   void *obj;               // Seq exception instance
-#ifdef BACKTRACE
-  BTItem *bt;        // backtrace
-  unsigned bt_count; // size of backtrace
-#endif
+  Backtrace bt;
   _Unwind_Exception unwindException;
 };
 
@@ -95,12 +127,9 @@ static void seq_delete_exc(_Unwind_Exception *expToDelete) {
   if (!expToDelete || expToDelete->exception_class != ourBaseExceptionClass)
     return;
   auto *exc = (OurException *)((char *)expToDelete + ourBaseFromUnwindOffset);
-#ifdef BACKTRACE
-  for (unsigned i = 0; i < exc->bt_count; i++) {
-    seq_free(exc->bt[i].name);
+  if (debug) {
+    exc->bt.free();
   }
-  seq_free(exc->bt);
-#endif
   seq_free(exc);
 }
 
@@ -109,97 +138,42 @@ static void seq_delete_unwind_exc(_Unwind_Reason_Code reason,
   seq_delete_exc(expToDelete);
 }
 
-static std::unordered_map<void *, std::string> symbols;
-
-SEQ_FUNC void seq_add_symbol(void *addr, const std::string &symbol) {
-  symbols.insert({addr, symbol});
-}
-
-SEQ_FUNC std::string seq_get_symbol(void *addr) {
-  auto iter = symbols.find(addr);
-  return iter == symbols.end() ? "" : iter->second;
-}
+static struct backtrace_state *state = nullptr;
 
 SEQ_FUNC void *seq_alloc_exc(int type, void *obj) {
-#ifdef BACKTRACE
-  // generate backtrace
-  unw_cursor_t cursor;
-  unw_context_t context;
-  unw_getcontext(&context);
-  unw_init_local(&cursor, &context);
-  std::vector<BTItem> btv;
-
-  while (btv.size() < BACKTRACE_LIMIT && unw_step(&cursor) > 0) {
-    unw_word_t pc, offset = -1;
-    unw_proc_info_t info;
-    unw_get_reg(&cursor, UNW_REG_IP, &pc);
-    if (pc == 0 || unw_get_proc_info(&cursor, &info) != 0)
-      break;
-
-    std::string sym;
-    if (!symbols.empty()) {
-      sym = seq_get_symbol((void *)info.start_ip);
-    } else {
-      char symbuf[256];
-      if (unw_get_proc_name(&cursor, symbuf, sizeof(symbuf), &offset) == 0) {
-        sym = std::string(symbuf);
-      }
-    }
-
-    BTItem item;
-    if (sym.empty()) {
-      item.name = nullptr;
-    } else {
-      auto *name = (char *)seq_alloc_atomic(sym.length() + 1);
-      memcpy(name, sym.c_str(), sym.length() + 1);
-      item.name = name;
-    }
-
-    item.pc = pc;
-    item.offset = offset;
-    btv.push_back(item);
-  }
-
-  BTItem *bt = nullptr;
-  if (!btv.empty()) {
-    bt = (BTItem *)seq_alloc(btv.size() * sizeof(*bt));
-    memcpy(bt, &btv[0], btv.size() * sizeof(*bt));
-  }
-#endif
-
   const size_t size = sizeof(OurException);
   auto *e = (OurException *)memset(seq_alloc(size), 0, size);
   assert(e);
   e->type.type = type;
   e->obj = obj;
-#ifdef BACKTRACE
-  e->bt = bt;
-  e->bt_count = btv.size();
-#endif
   e->unwindException.exception_class = ourBaseExceptionClass;
   e->unwindException.exception_cleanup = seq_delete_unwind_exc;
+  if (debug) {
+    e->bt.frames = nullptr;
+    e->bt.count = 0;
+    if (!state)
+      state = backtrace_create_state(/*filename=*/nullptr, /*threaded=*/0,
+                                     seq_backtrace_error_callback, /*data=*/nullptr);
+    backtrace_full(state, /*skip=*/1, seq_backtrace_full_callback,
+                   seq_backtrace_error_callback, &e->bt);
+  }
   return &(e->unwindException);
 }
 
-#ifdef BACKTRACE
-static void pretty_print_name(const char *name) {
-  if (!name || *name == '\0') {
-    fprintf(stderr, "\033[32m(?)\033[0m");
-    return;
+static void print_from_last_dot(seq_str_t s) {
+  char *p = s.str;
+  int64_t n = s.len;
+
+  for (int64_t i = n - 1; i >= 0; i--) {
+    if (p[i] == '.') {
+      p += (i + 1);
+      n -= (i + 1);
+      break;
+    }
   }
-  unsigned i = 0;
-  fprintf(stderr, "\033[32m");
-  while (name[i] && name[i] != '.') {
-    fputc(name[i], stderr);
-    i++;
-  }
-  fprintf(stderr, "\033[0m");
-  while (name[i]) {
-    fputc(name[i], stderr);
-    i++;
-  }
+
+  fwrite(p, 1, (size_t)n, stderr);
 }
-#endif
 
 SEQ_FUNC void seq_terminate(void *exc) {
   auto *base = (OurBaseException_t *)((char *)exc + seq_exc_offset());
@@ -212,7 +186,7 @@ SEQ_FUNC void seq_terminate(void *exc) {
   }
 
   fprintf(stderr, "\033[1m");
-  fwrite(hdr->type.str, 1, (size_t)hdr->type.len, stderr);
+  print_from_last_dot(hdr->type);
   if (hdr->msg.len > 0) {
     fprintf(stderr, ": ");
     fprintf(stderr, "\033[0m");
@@ -222,7 +196,7 @@ SEQ_FUNC void seq_terminate(void *exc) {
   }
 
   fprintf(stderr, "\n\n");
-  fprintf(stderr, "\033[1mraised from:\033[0m \033[32m");
+  fprintf(stderr, "\033[1mRaised from:\033[0m \033[32m");
   fwrite(hdr->func.str, 1, (size_t)hdr->func.len, stderr);
   fprintf(stderr, "\033[0m\n");
   fwrite(hdr->file.str, 1, (size_t)hdr->file.len, stderr);
@@ -233,19 +207,17 @@ SEQ_FUNC void seq_terminate(void *exc) {
   }
   fprintf(stderr, "\n");
 
-#ifdef BACKTRACE
-  if (base->bt_count) {
-    BTItem *bt = base->bt;
-    fprintf(stderr, "\n\033[1mbacktrace:\033[0m\n");
-    for (unsigned i = 0; i < base->bt_count; i++) {
-      fprintf(stderr, "  [\033[33m0x%llx\033[0m] ", (long long)bt[i].pc);
-      pretty_print_name(bt[i].name);
-      if (bt[i].offset != -1)
-        fprintf(stderr, " (\033[33m+0x%llx\033[0m)", (long long)bt[i].offset);
-      fprintf(stderr, "\n");
+  if (debug) {
+    auto *bt = &base->bt;
+    if (bt->count > 0) {
+      fprintf(stderr, "\n\033[1mBacktrace:\033[0m\n");
+      for (unsigned i = 0; i < bt->count; i++) {
+        auto *frame = &bt->frames[i];
+        fprintf(stderr, "  [\033[33m0x%lx\033[0m] \033[32m%s\033[0m %s:%d\n", frame->pc,
+                frame->function, frame->filename, frame->lineno);
+      }
     }
   }
-#endif
 
   abort();
 }
@@ -394,8 +366,7 @@ static bool handleActionValue(int64_t *resultAction, uint8_t TTypeEncoding,
                               _Unwind_Exception *exceptionObject) {
   bool ret = false;
 
-  if (!resultAction || !exceptionObject ||
-      (exceptionClass != ourBaseExceptionClass))
+  if (!resultAction || !exceptionObject || (exceptionClass != ourBaseExceptionClass))
     return ret;
 
   auto *excp = (struct OurBaseException_t *)(((char *)exceptionObject) +
@@ -441,8 +412,7 @@ static bool handleActionValue(int64_t *resultAction, uint8_t TTypeEncoding,
 }
 
 static _Unwind_Reason_Code handleLsda(int version, const uint8_t *lsda,
-                                      _Unwind_Action actions,
-                                      uint64_t exceptionClass,
+                                      _Unwind_Action actions, uint64_t exceptionClass,
                                       _Unwind_Exception *exceptionObject,
                                       _Unwind_Context *context) {
   _Unwind_Reason_Code ret = _URC_CONTINUE_UNWIND;
@@ -520,8 +490,8 @@ static _Unwind_Reason_Code handleLsda(int version, const uint8_t *lsda,
 
       if (actionEntry) {
         exceptionMatched =
-            handleActionValue(&actionValue, ttypeEncoding, ClassInfo,
-                              actionEntry, exceptionClass, exceptionObject);
+            handleActionValue(&actionValue, ttypeEncoding, ClassInfo, actionEntry,
+                              exceptionClass, exceptionObject);
       }
 
       if (!(actions & _UA_SEARCH_PHASE)) {
@@ -558,15 +528,13 @@ static _Unwind_Reason_Code handleLsda(int version, const uint8_t *lsda,
   return ret;
 }
 
-SEQ_FUNC _Unwind_Reason_Code seq_personality(int version,
-                                             _Unwind_Action actions,
+SEQ_FUNC _Unwind_Reason_Code seq_personality(int version, _Unwind_Action actions,
                                              uint64_t exceptionClass,
                                              _Unwind_Exception *exceptionObject,
                                              _Unwind_Context *context) {
   const auto *lsda = (uint8_t *)_Unwind_GetLanguageSpecificData(context);
   // The real work of the personality function is captured here
-  return handleLsda(version, lsda, actions, exceptionClass, exceptionObject,
-                    context);
+  return handleLsda(version, lsda, actions, exceptionClass, exceptionObject, context);
 }
 
 SEQ_FUNC int64_t seq_exc_offset() {

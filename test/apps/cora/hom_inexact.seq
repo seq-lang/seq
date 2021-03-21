@@ -12,40 +12,37 @@
 from sys import argv, stderr, exit
 from pickle import dump, load
 from util import K, BitSet
-import gzip
+from bio import FASTA, Locus
+import gzip, itertools
 
 MAX_MISMATCHES = 3
 
 if len(argv) != 4:
-    stderr.write('usage: ' + argv[0] + ' <input_ref.fa> <num_mismatches> <output_prefix>\n')
+    print(f'usage: {argv[0]} <input_ref.fa> <num_mismatches> <output_prefix>', file=stderr)
     exit(1)
 
 ref = [rec for rec in FASTA(argv[1])]
 num_mismatches = int(argv[2])
 
 if not (1 <= num_mismatches <= MAX_MISMATCHES):
-    stderr.write('error: num_mismatches argument must be between 1 and ' + str(MAX_MISMATCHES) + '\n')
+    print(f'error: num_mismatches argument must be between 1 and {MAX_MISMATCHES}', file=stderr)
     exit(1)
 
 num_seeds = num_mismatches + 1
-bitsets: list[BitSet] = None
+bitsets = None
 with gzip.open(argv[3] + '.reps_bitsets', 'rb') as reps:
-    bitsets = load[list[BitSet]](reps)
+    bitsets = load[List[BitSet]](reps)
 
 class MapSegment[K]:
     locus: Locus
-    next: MapSegment[K]
-
-    def __init__(self: MapSegment[K], locus: Locus):
-        self.locus = locus
-        self.next = None
+    next: Optional[MapSegment[K]]
 
     @property
-    def kmer(self: MapSegment[K]):
+    def kmer(self):
         k = K(ref[self.locus.tid].seq[self.locus.pos:])
         return ~k if self.locus.reversed else k
 
-def segment_code[K](seed_no: int, kmer: K):
+def segment_code(seed_no, kmer):
     assert 0 <= seed_no < num_seeds
     k = len(kmer)
     h = 0
@@ -58,13 +55,12 @@ def segment_code[K](seed_no: int, kmer: K):
 
 def gen_signals():
     t = (k'A', k'C', k'G', k'T')
-    for a in t:
-        for b in t:
-            x, y = (a, b), (~b, ~a)
-            if x <= y:
-                yield (x, y)
+    for a, b in itertools.product(t, t):
+        x, y = (a, b), (~b, ~a)
+        if x <= y:
+            yield (x, y)
 
-def extract_signal[K](seed_no: int, kmer: K):
+def extract_signal(seed_no, kmer):
     assert 0 <= seed_no < num_seeds
     k = len(kmer)
     a1 = kmer[seed_no]
@@ -78,7 +74,7 @@ def extract_signal[K](seed_no: int, kmer: K):
 def signal_match(signal, target1, target2):
     return signal[0] in target1[0] and signal[1] in target1[1] and signal[2] in target2
 
-def compare_and_report[K](seg1: MapSegment[K], seg2: MapSegment[K], seed_no: int, precompact):
+def compare_and_report(seg1, seg2, seed_no, precompact):
     k1, k2 = seg1.kmer, seg2.kmer
     if any(segment_code(i, k1) == segment_code(i, k2) for i in range(seed_no)):
         return  # homology was reported by an earlier seed match
@@ -95,12 +91,12 @@ def compare_and_report[K](seg1: MapSegment[K], seg2: MapSegment[K], seed_no: int
 
 signals1 = [(a,b) for a in gen_signals() for b in gen_signals()]
 signals2 = [a for a in gen_signals()]
-basename = argv[3] + '.hom_inexact.precompact'
+basename = f'{argv[3]}.hom_inexact.precompact'
 
 def process_signal(t):
     idx, signal1 = t
     print 'signal: ', signal1
-    d = dict[int, MapSegment[K]]()
+    d = {}
     d.resize(10000000)
     with gzip.open(basename + '.' + str(idx), 'wb0') as precompact:
         for signal2 in signals2:
@@ -119,7 +115,7 @@ def process_signal(t):
                             pos = -pos
 
                         s = segment_code(seed_no, kmer)
-                        m = MapSegment[K](Locus(tid, pos))
+                        m: Optional = MapSegment[K](Locus(tid, pos))
                         p = d.setdefault(s, m)
 
                         if m is not p:

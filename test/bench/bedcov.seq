@@ -1,6 +1,7 @@
 # BED coverage benchmark from https://github.com/lh3/biofast
 from sys import argv
 from time import timing
+from bio import *
 from bio.intervals import IntervalTree
 
 with timing('bed coverage (total)'):

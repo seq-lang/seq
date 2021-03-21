@@ -1,4 +1,3 @@
-@builtin
 def seqs(x):
     '''
     Returns an iterator over sequences from the specified
@@ -9,7 +8,6 @@ def seqs(x):
     '''
     return x.__seqs__()
 
-@builtin
 def split(self: seq, k: int, step: int):
     '''
     Iterator over length-`k` subsequences of the given sequence
@@ -17,7 +15,6 @@ def split(self: seq, k: int, step: int):
     '''
     return self.split(k, step)
 
-@builtin
 def kmers[K](self: seq, step: int):
     '''
     Iterator over k-mers (type `K`) of the given sequence
@@ -26,7 +23,6 @@ def kmers[K](self: seq, step: int):
     '''
     return self.kmers[K](step)
 
-@builtin
 def kmers_with_pos[K](self: seq, step: int):
     '''
     Iterator over (0-based index, k-mer) tuples of the given
@@ -35,14 +31,12 @@ def kmers_with_pos[K](self: seq, step: int):
     '''
     return self.kmers_with_pos[K](step)
 
-@builtin
 def revcomp(s):
     '''
     Returns the reverse complement of the argument sequence or k-mer.
     '''
     return ~s
 
-@builtin
 def revcomp_with_pos(t):
     '''
     Returns the reverse complement of the argument sequence or k-mer,
@@ -51,15 +45,12 @@ def revcomp_with_pos(t):
     '''
     return (t[0], ~t[1])
 
-@builtin
 def _kmers_revcomp_with_pos[K](self: seq, step: int):
     return self._kmers_revcomp_with_pos[K](step)
 
-@builtin
 def _kmers_revcomp[K](self: seq, step: int):
     return self._kmers_revcomp[K](step)
 
-@builtin
 def canonical(k):
     '''
     Returns the minimum of a sequence / k-mer and its reverse complement.
@@ -67,7 +58,6 @@ def canonical(k):
     kr = ~k
     return k if k < kr else kr
 
-@builtin
 def canonical_with_pos(t):
     '''
     Returns the minimum of a sequence / k-mer and its reverse complement,
@@ -76,28 +66,14 @@ def canonical_with_pos(t):
     '''
     return (t[0], canonical(t[1]))
 
-@builtin
 def _kmers_canonical[K](self: seq):
     return self.kmers_canonical[K]()
 
-@builtin
 def _kmers_canonical_with_pos[K](self: seq):
     return self.kmers_canonical_with_pos[K]()
 
-@builtin
-def _kmer_in_seq[K](kmer: K, s: seq) -> bool:
-    for k in s.kmers[K](step=1):
-        if k == kmer:
-            return True
-    return False
-
-@builtin
 def base[K,T](kmer: K, idx: int, b: T):
-    '''
-    Returns a new k-mer based on `kmer` with the base
-    at `idx` replaced with `b`.
-    '''
-    type U = typeof(kmer.as_int())
+    U = typeof(kmer.as_int())
     if idx < 0:
         idx += len(kmer)
     idx = K.len() - idx - 1
@@ -106,7 +82,7 @@ def base[K,T](kmer: K, idx: int, b: T):
     k |= n << U(2*idx)
     return K(k)
 
-@builtin
+@force_realize
 def _is_iupac_nt(b: byte) -> bool:
     iupac = ('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
              '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
@@ -126,7 +102,7 @@ def _is_iupac_nt(b: byte) -> bool:
              '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
     return bool(iupac.ptr[int(b)])
 
-@builtin
+@force_realize
 def _is_iupac_aa(b: byte) -> bool:
     iupac = ('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
              '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
@@ -146,7 +122,7 @@ def _is_iupac_aa(b: byte) -> bool:
              '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
     return bool(iupac.ptr[int(b)])
 
-@builtin
+@force_realize
 def _validate_str_as_seq(s: str, copy: bool = False):
     def ensure_valid(b: byte, i: int):
         if not _is_iupac_nt(b):
@@ -155,7 +131,7 @@ def _validate_str_as_seq(s: str, copy: bool = False):
     n = s.len
     i = 0
     if copy:
-        q = ptr[byte](n)
+        q = Ptr[byte](n)
         while i < n:
             b = p[i]
             ensure_valid(b, i)
@@ -168,7 +144,7 @@ def _validate_str_as_seq(s: str, copy: bool = False):
             i += 1
         return seq(p, n)
 
-@builtin
+@force_realize
 def _validate_str_as_qual(s: str, copy: bool = False):
     def ensure_valid(b: byte, i: int):
         if not (byte(0x21) <= b <= byte(0x7e)):
@@ -177,7 +153,7 @@ def _validate_str_as_qual(s: str, copy: bool = False):
     n = s.len
     i = 0
     if copy:
-        q = ptr[byte](n)
+        q = Ptr[byte](n)
         while i < n:
             b = p[i]
             ensure_valid(b, i)
@@ -190,7 +166,7 @@ def _validate_str_as_qual(s: str, copy: bool = False):
             i += 1
         return str(p, n)
 
-@builtin
+@force_realize
 def _split_header_on_space(s: str):
     a = 0
     while a < len(s) and not s[a].isspace():

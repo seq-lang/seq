@@ -35,7 +35,7 @@ class X[T]:
                 yield a[i]
                 i += 1
 
-        farr = array[function[array[seq], seq]](1)
+        farr = array[function[[seq], array[seq]]](1)
         farr[0] = f
 
         def ident(s):
@@ -62,7 +62,7 @@ class X[T]:
 
             print v[0]
             match v[0]:
-                case s'A...':
+                case 'A*':
                     print 'caught'
                 case _:
                     print 'default'
@@ -101,8 +101,11 @@ class X[T]:
         print b[1]
 
         def fib(n: int) -> int:
-            type F(f: function[int, int], x: int)
-            def apply(f: function[int, int], x: int):
+            @tuple
+            class F:
+                f: function[[int], int]
+                x: int
+            def apply(f, x):
                 return f(x)
             def rec(pair: F):
                 return apply(pair.f, pair.x - 1) + apply(pair.f, pair.x - 2)
@@ -120,7 +123,10 @@ class X[T]:
             else:
                 for z in range(i, i + 1): print z
 
-        type Person(name: str, age: int)
+        @tuple
+        class Person:
+            name: str
+            age: int
 
         def whois(person: Person):
             print person.name, person.age
@@ -149,8 +155,8 @@ class X[T]:
         def add[T](a: T, b: T, c: T):
             return a + b + c
 
-        add_one = add(1)
-        add_two = add[int](3, ..., -1)
+        add_one = add(1, ...)
+        add_two = add[int](3, c=-1, ...)
         print add[int](1, 2, 3)
         print add_one(5, 0)
         print 42 |> add_two

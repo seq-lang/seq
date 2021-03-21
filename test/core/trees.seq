@@ -1,14 +1,17 @@
 import sys
 
+def max(a, b):
+    return a if a>=b else b
+
 class AVLNode[K,V]:
     key: K
     value: V
-    parent: AVLNode[K,V]
-    left: AVLNode[K,V]
-    right: AVLNode[K,V]
+    parent: Optional[AVLNode[K,V]]
+    left: Optional[AVLNode[K,V]]
+    right: Optional[AVLNode[K,V]]
     height: int
 
-    def __init__(self: AVLNode[K,V], parent: AVLNode[K,V], k: K, v: V):
+    def __init__(self: AVLNode[K,V], parent: Optional[AVLNode[K,V]], k: K, v: V):
         self.key = k
         self.value = v
         self.parent = parent
@@ -16,14 +19,14 @@ class AVLNode[K,V]:
         self.right = None
         self.height = -1
 
-    def find(self, k) -> AVLNode[K,V]:
-        if k == self.key:
-            return self
-        elif k < self.key:
+    def find(self, k):
+        if k < self.key:
             if self.left is None:
                 return None
             else:
                 return self.left.find(k)
+        elif k == self.key:
+            return self
         else:
             if self.right is None:
                 return None
@@ -31,7 +34,7 @@ class AVLNode[K,V]:
                 return self.right.find(k)
 
     def find_min(self):
-        current = self
+        current: Optional[AVLNode[K, V]] = self
         while current.left is not None:
             current = current.left
         return current
@@ -39,7 +42,7 @@ class AVLNode[K,V]:
     def next_larger(self):
         if self.right is not None:
             return self.right.find_min()
-        current = self
+        current: Optional[AVLNode[K, V]] = self
         while current.parent is not None and current is current.parent.right:
             current = current.parent
         return current.parent
@@ -76,7 +79,7 @@ class AVLNode[K,V]:
             self.key, s.key = s.key, self.key
             return s.delete()
 
-    def __iter__(self: AVLNode[K,V]) -> AVLNode[K,V]:
+    def __iter__(self: AVLNode[K,V]):
         if self.left:
             for i in self.left:
                 yield i
@@ -95,17 +98,17 @@ def update_height(node):
     node.height = max(height(node.left), height(node.right)) + 1
 
 class AVL[K,V]:
-    root: AVLNode[K,V]
+    root: Optional[AVLNode[K,V]]
 
     def __init__(self: AVL[K,V]):
         self.root = None
 
-    def find(self, k) -> AVLNode[K,V]:
+    def find(self, k):
         if not self.root:
             return None
         return self.root.find(k)
 
-    def find_min(self) -> AVLNode[K,V]:
+    def find_min(self):
         if not self.root:
             return None
         return self.root.find_min()
@@ -150,7 +153,7 @@ class AVL[K,V]:
         update_height(x)
         update_height(y)
 
-    def rebalance(self, node):
+    def rebalance(self, node: Optional[AVLNode[K, V]]):
         while node is not None:
             update_height(node)
             if height(node.left) >= 2 + height(node.right):
@@ -176,11 +179,10 @@ class AVL[K,V]:
             self.root.insert(node)
         self.rebalance(node)
 
-    def delete(self, k) -> AVLNode[K,V]:
+    def delete(self, k):
         node = self.find(k)
         if node is None:
-            return None
-        deleted = node  # make sure `deleted` has the right type
+            return
         deleted = None
         if node is self.root:
             pseudoroot = AVLNode[K,V](None, 0, 0)

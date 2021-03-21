@@ -616,9 +616,9 @@ def test_slice(s = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567
 @test
 def test_join():
     assert ''.join(str(a) for a in range(0)) == ''
-    assert ''.join(list[str]()) == ''
+    assert ''.join(List[str]()) == ''
     assert 'a'.join(str(a) for a in range(0)) == ''
-    assert 'a'.join(list[str]()) == ''
+    assert 'a'.join(List[str]()) == ''
     assert 'ab'.join(str(a) for a in range(999, 1000)) == '999'
     assert 'ab'.join(['999']) == '999'
     assert 'xyz'.join(str(a) for a in range(5)) == '0xyz1xyz2xyz3xyz4'

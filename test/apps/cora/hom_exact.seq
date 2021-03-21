@@ -15,28 +15,28 @@
 from sys import argv, stderr, exit
 from pickle import dump
 from util import K, BitSet
+from bio import FASTA, Locus
 import gzip
 
 if len(argv) != 3:
-    stderr.write('usage: ' + argv[0] + ' <input_ref.fa> <output_prefix>\n')
+    print(f'usage: {argv[0]} <input_ref.fa> <output_prefix>', file=stderr)
     exit(1)
 
 path = argv[1]
 num_kmers = sum(2 if kmer == ~kmer else 1  # palindromes added twice
-                    for rec in FASTA(path)
-                        for kmer in rec.seq.kmers[K](1))
+                for rec in FASTA(path) for kmer in rec.seq.kmers[K](1))
 print 'num_kmers:', num_kmers
-kmer_list = list[tuple[K,Locus]](num_kmers)
+kmer_list = List(num_kmers)
 
-type EqClass(idx: int, count: int):
-    def __getitem__(self: EqClass, idx: int):
+@tuple
+class EqClass:
+    idx: int
+    count: int
+
+    def __getitem__(self, idx: int):
         return kmer_list[self.idx + idx][1]
 
-    def sort_key(self: EqClass) -> tuple[int,int]:
-        a = kmer_list[self.idx][1]
-        return (a.tid, a.pos)
-
-bitsets = list[BitSet]()  # markers for equivalence class representatives
+bitsets = []  # markers for equivalence class representatives
 for tid, rec in enumerate(FASTA(path)):
     print 'processing', rec.name
     bitsets.append(BitSet(len(rec.seq)))
@@ -65,7 +65,7 @@ while i < len(kmer_list):
     i = j
 
 print 'num_classes:', num_classes
-eq_set = list[EqClass](num_classes)
+eq_set = List(num_classes)
 i = 0
 while i < len(kmer_list):
     j = i + 1
@@ -82,7 +82,7 @@ while i < len(kmer_list):
     i = j
 
 print 'sorting eq_set...'
-eq_set.sort(key=EqClass.sort_key)
+eq_set.sort(key=lambda x: (x[0].tid, x[0].pos))
 print 'done'
 
 def find_block_size(start: int, eq_set: list[EqClass]):

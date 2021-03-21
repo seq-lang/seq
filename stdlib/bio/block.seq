@@ -2,14 +2,14 @@ class Block[T]:
     '''
     Represents a block of data; useful in parallelization to batch data
     '''
-    _data: ptr[T]
+    _data: Ptr[T]
     _size: int
 
-    def __init__(self: Block[T], size: int):
-        self._data = ptr[T](size)
+    def __init__(self, size: int):
+        self._data = Ptr[T](size)
         self._size = 0
 
-    def __iter__(self: Block[T]):
+    def __iter__(self):
         data = self._data
         size = self._size
         i = 0
@@ -17,25 +17,25 @@ class Block[T]:
             yield data[i]
             i += 1
 
-    def __getitem__(self: Block[T], idx: int):
+    def __getitem__(self, idx: int):
         if not (0 <= idx < len(self)):
             raise ValueError("block index out of range")
         return self._data[idx]
 
-    def __len__(self: Block[T]):
+    def __len__(self):
         return self._size
 
-    def __bool__(self: Block[T]):
+    def __bool__(self):
         return len(self) != 0
 
-    def __str__(self: Block[T]):
+    def __str__(self):
         return f'<block of size {self._size}>'
 
-    def _add(self: Block[T], elem: T):
+    def _add(self, elem: T):
         self._data[self._size] = elem
         self._size += 1
 
-def _blocks[T](g: generator[T], size: int):
+def _blocks[T](g: Generator[T], size: int):
     b = Block[T](size)
     for a in g:
         if len(b) == size:
@@ -52,4 +52,7 @@ def blocks(x, size: int):
     '''
     if size <= 0:
         raise ValueError(f"invalid block size: {size}")
-    return x.__blocks__(size)
+    if isinstance(x, Generator):
+        return _blocks(x, size)
+    else:
+        return x.__blocks__(size)

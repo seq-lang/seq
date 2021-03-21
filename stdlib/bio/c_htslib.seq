@@ -1,62 +1,62 @@
 import os
-from core.dlopen import dlext
+from internal.dlopen import dlext
 LD = os.getenv('SEQ_HTSLIB', default='libhts.' + dlext())
 
 # <htslib.h>
-from LD cimport hts_open(cobj, cobj) -> cobj
-from LD cimport hts_close(cobj)
-from LD cimport hts_idx_destroy(cobj)
-from LD cimport hts_itr_destroy(cobj)
-from LD cimport hts_itr_destroy(cobj)
-from LD cimport hts_itr_next(cobj, cobj, cobj, cobj) -> i32
-from LD cimport sam_index_load(cobj, cobj) -> cobj
-from LD cimport sam_hdr_read(cobj) -> cobj
-from LD cimport sam_itr_querys(cobj, cobj, cobj) -> cobj
-from LD cimport sam_read1(cobj, cobj, cobj) -> i32
-from LD cimport bam_read1(cobj, cobj) -> i32
-from LD cimport bam_init1() -> cobj
-from LD cimport bam_cigar2qlen(int, ptr[u32]) -> int
-from LD cimport bam_cigar2rlen(int, ptr[u32]) -> int
-from LD cimport bam_aux_get(cobj, ptr[byte]) -> ptr[u8]
-from LD cimport bam_aux2i(ptr[u8]) -> int
-from LD cimport bam_aux2f(ptr[u8]) -> float
-from LD cimport bam_aux2A(ptr[u8]) -> byte
-from LD cimport bam_aux2Z(ptr[u8]) -> ptr[byte]
-from LD cimport bam_auxB_len(ptr[u8]) -> u32
-from LD cimport bam_auxB2i(ptr[u8], idx: u32) -> int
-from LD cimport bam_auxB2f(ptr[u8], idx: u32) -> float
-from LD cimport bam_endpos(cobj) -> int
-from LD cimport sam_hdr_destroy(cobj)
-from LD cimport bam_destroy1(cobj)
+from C import LD.hts_open(cobj, cobj) -> cobj
+from C import LD.hts_close(cobj)
+from C import LD.hts_idx_destroy(cobj)
+from C import LD.hts_itr_destroy(cobj)
+from C import LD.hts_itr_destroy(cobj)
+from C import LD.hts_itr_next(cobj, cobj, cobj, cobj) -> i32
+from C import LD.sam_index_load(cobj, cobj) -> cobj
+from C import LD.sam_hdr_read(cobj) -> cobj
+from C import LD.sam_itr_querys(cobj, cobj, cobj) -> cobj
+from C import LD.sam_read1(cobj, cobj, cobj) -> i32
+from C import LD.bam_read1(cobj, cobj) -> i32
+from C import LD.bam_init1() -> cobj
+from C import LD.bam_cigar2qlen(int, Ptr[u32]) -> int
+from C import LD.bam_cigar2rlen(int, Ptr[u32]) -> int
+from C import LD.bam_aux_get(cobj, Ptr[byte]) -> Ptr[u8]
+from C import LD.bam_aux2i(Ptr[u8]) -> int
+from C import LD.bam_aux2f(Ptr[u8]) -> float
+from C import LD.bam_aux2A(Ptr[u8]) -> byte
+from C import LD.bam_aux2Z(Ptr[u8]) -> Ptr[byte]
+from C import LD.bam_auxB_len(Ptr[u8]) -> u32
+from C import LD.bam_auxB2i(Ptr[u8], u32) -> int
+from C import LD.bam_auxB2f(Ptr[u8], u32) -> float
+from C import LD.bam_endpos(cobj) -> int
+from C import LD.sam_hdr_destroy(cobj)
+from C import LD.bam_destroy1(cobj)
 
-from LD cimport bcf_hdr_read(cobj) -> cobj
-from LD cimport bcf_read(cobj, cobj, cobj) -> i32
-from LD cimport bcf_unpack(cobj, i32) -> i32
-from LD cimport bcf_hdr_destroy(cobj)
-from LD cimport bcf_init() -> cobj
-from LD cimport bcf_destroy(cobj)
-from LD cimport bcf_get_variant_types(cobj) -> i32
-from LD cimport bcf_get_variant_type(cobj, i32) -> i32
-from LD cimport bcf_is_snp(cobj) -> i32
-from LD cimport bcf_has_filter(cobj, cobj, cobj) -> i32
-from LD cimport bcf_get_fmt(cobj, cobj, cobj) -> cobj
-from LD cimport bcf_get_info(cobj, cobj, cobj) -> cobj
-from LD cimport bcf_get_fmt_id(cobj, i32) -> cobj
-from LD cimport bcf_get_info_id(cobj, i32) -> cobj
-from LD cimport bcf_get_format_values(cobj, cobj, cobj, cobj, cobj, i32) -> i32
-from LD cimport bcf_hdr_id2int(cobj, i32, cobj) -> i32
-from LD cimport bcf_has_filter(cobj, cobj, cobj) -> i32
-from LD cimport bcf_hrec_format(cobj, cobj)
-from LD cimport bcf_clear(cobj)
-from LD cimport bcf_empty(cobj)
-from LD cimport bcf_dup(cobj) -> cobj
-from LD cimport bcf_get_info_values(cobj, cobj, ptr[byte], ptr[cobj], ptr[i32], i32) -> i32
+from C import LD.bcf_hdr_read(cobj) -> cobj
+from C import LD.bcf_read(cobj, cobj, cobj) -> i32
+from C import LD.bcf_unpack(cobj, i32) -> i32
+from C import LD.bcf_hdr_destroy(cobj)
+from C import LD.bcf_init() -> cobj
+from C import LD.bcf_destroy(cobj)
+from C import LD.bcf_get_variant_types(cobj) -> i32
+from C import LD.bcf_get_variant_type(cobj, i32) -> i32
+from C import LD.bcf_is_snp(cobj) -> i32
+from C import LD.bcf_has_filter(cobj, cobj, cobj) -> i32
+from C import LD.bcf_get_fmt(cobj, cobj, cobj) -> cobj
+from C import LD.bcf_get_info(cobj, cobj, cobj) -> cobj
+from C import LD.bcf_get_fmt_id(cobj, i32) -> cobj
+from C import LD.bcf_get_info_id(cobj, i32) -> cobj
+from C import LD.bcf_get_format_values(cobj, cobj, cobj, cobj, cobj, i32) -> i32
+from C import LD.bcf_hdr_id2int(cobj, i32, cobj) -> i32
+from C import LD.bcf_has_filter(cobj, cobj, cobj) -> i32
+from C import LD.bcf_hrec_format(cobj, cobj)
+from C import LD.bcf_clear(cobj)
+from C import LD.bcf_empty(cobj)
+from C import LD.bcf_dup(cobj) -> cobj
+from C import LD.bcf_get_info_values(cobj, cobj, Ptr[byte], Ptr[cobj], Ptr[i32], i32) -> i32
 
-from LD cimport hts_version() -> cobj
+from C import LD.hts_version() -> cobj
 
-cimport seq_get_htsfile_fp(cobj) -> cobj
-cimport seq_is_htsfile_cram(cobj) -> bool
-cimport seq_is_htsfile_bgzf(cobj) -> bool
+from C import seq_get_htsfile_fp(cobj) -> cobj
+from C import seq_is_htsfile_cram(cobj) -> bool
+from C import seq_is_htsfile_bgzf(cobj) -> bool
 
 # Seq HTSlib
 def sam_itr_next(file: cobj, itr: cobj, r: cobj) -> int:

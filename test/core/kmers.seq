@@ -1,4 +1,6 @@
-type K = Kmer[5]
+from bio import *
+
+K = Kmer[5]
 
 s = s'ACGTAACGTA'
 print s                       # EXPECT: ACGTAACGTA
@@ -31,6 +33,18 @@ print ~s  # EXPECT: GNCTANAGGTCT
 print list((~s).kmers_with_pos[Kmer[3]](1))  # EXPECT: [(2, CTA), (6, AGG), (7, GGT), (8, GTC), (9, TCT)]
 print list((~s).kmers_with_pos[Kmer[3]](2))  # EXPECT: [(2, CTA), (6, AGG), (8, GTC)]
 print list((~s).kmers_with_pos[Kmer[3]](4))  # EXPECT: [(8, GTC)]
+
+s = s'AGACCTNTAGC'
+print list(s.split(k=100, step=1))         # EXPECT: []
+print list((~s).split(k=100, step=1))      # EXPECT: []
+print list(s.kmers[Kmer[100]](step=1))     # EXPECT: []
+print list((~s).kmers[Kmer[100]](step=1))  # EXPECT: []
+
+s = s'TAGCC'
+print list(s.split(k=5, step=17))         # EXPECT: [TAGCC]
+print list((~s).split(k=5, step=17))      # EXPECT: [GGCTA]
+print list(s.kmers[Kmer[5]](step=17))     # EXPECT: [TAGCC]
+print list((~s).kmers[Kmer[5]](step=17))  # EXPECT: [GGCTA]
 
 k1 = K(s'ACGTA')
 k2 = K(s'ATGTT')
@@ -88,8 +102,8 @@ print k1 >> s'G'   # EXPECT: GACGT
 print k1 << ~s'G'  # EXPECT: CGTAC
 print k1 >> ~s'G'  # EXPECT: CACGT
 
-type K100 = Kmer[100]
-type K1 = Kmer[1]
+K100 = Kmer[100]
+K1 = Kmer[1]
 print K100() |> base(-1, K1(s'C')) |> base(98, s'G') |> base(0, K1(s'T'))
 # EXPECT: TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGC
 
@@ -134,3 +148,73 @@ def test_base_counts():
     assert (s'A'.bases + s'G'.bases) - s'A'.bases == s'G'.bases
     assert s'A'.bases.add(T=True) - s'A'.bases == s'T'.bases
 test_base_counts()
+
+@test
+def test_kmer_revcomp[K: int](path: str):
+    v1 = []
+    v2 = []
+
+    for x in FASTA(path, fai=False):
+        for y in x.seq.split(k=K, step=1):
+            if not y.N():
+                v1.append(str(~y).upper())
+
+    for x in FASTA(path, fai=False):
+        for y in x.seq.kmers[Kmer[K]](step=1):
+            v2.append(str(~y).upper())
+
+    '''
+    if len(v1) == len(v2):
+        for i in range(len(v1)):
+            if v1[i] != v2[i]:
+                print i, v1[i], v2[i]
+    '''
+
+    assert v1 == v2
+
+testfile = 'test/data/MT-human.fa'
+test_kmer_revcomp[1](testfile)
+test_kmer_revcomp[2](testfile)
+test_kmer_revcomp[3](testfile)
+test_kmer_revcomp[4](testfile)
+test_kmer_revcomp[5](testfile)
+test_kmer_revcomp[25](testfile)
+test_kmer_revcomp[32](testfile)
+test_kmer_revcomp[31](testfile)
+test_kmer_revcomp[33](testfile)
+test_kmer_revcomp[64](testfile)
+test_kmer_revcomp[65](testfile)
+test_kmer_revcomp[129](testfile)
+test_kmer_revcomp[1000](testfile)
+
+@test
+def test_kmer_iteration[K: int](path: str):
+    for rc in (True, False):
+        for step in range(1, K + 2):
+            v1 = []
+            v2 = []
+
+            for x in FASTA(path, fai=False):
+                for y in (~(x.seq) if rc else x.seq).split(k=K, step=step):
+                    if not y.N():
+                        v1.append(str(y).upper())
+
+            for x in FASTA(path, fai=False):
+                for y in (~(x.seq) if rc else x.seq).kmers[Kmer[K]](step=step):
+                    v2.append(str(y).upper())
+
+            assert v1 == v2
+
+testfile = 'test/data/MT-human.fa'
+test_kmer_iteration[1](testfile)
+test_kmer_iteration[2](testfile)
+test_kmer_iteration[3](testfile)
+test_kmer_iteration[4](testfile)
+test_kmer_iteration[5](testfile)
+test_kmer_iteration[25](testfile)
+test_kmer_iteration[32](testfile)
+test_kmer_iteration[31](testfile)
+test_kmer_iteration[33](testfile)
+test_kmer_iteration[64](testfile)
+test_kmer_iteration[65](testfile)
+test_kmer_iteration[129](testfile)

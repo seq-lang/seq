@@ -70,8 +70,7 @@ OutputIterator copy(const char *str, OutputIterator out) {
   return out;
 }
 
-template <typename OutputIterator>
-OutputIterator copy(char ch, OutputIterator out) {
+template <typename OutputIterator> OutputIterator copy(char ch, OutputIterator out) {
   *out++ = ch;
   return out;
 }
@@ -97,11 +96,11 @@ template <typename T, typename _ = void> struct is_range_ : std::false_type {};
 
 #if !FMT_MSC_VER || FMT_MSC_VER > 1800
 template <typename T>
-struct is_range_<
-    T, conditional_t<false,
-                     conditional_helper<decltype(std::declval<T>().begin()),
-                                        decltype(std::declval<T>().end())>,
-                     void>> : std::true_type {};
+struct is_range_<T,
+                 conditional_t<false,
+                               conditional_helper<decltype(std::declval<T>().begin()),
+                                                  decltype(std::declval<T>().end())>,
+                               void>> : std::true_type {};
 #endif
 
 /// tuple_size and tuple_element check.
@@ -117,11 +116,9 @@ public:
 
 // Check for integer_sequence
 #if defined(__cpp_lib_integer_sequence) || FMT_MSC_VER >= 1900
-template <typename T, T... N>
-using integer_sequence = std::integer_sequence<T, N...>;
+template <typename T, T... N> using integer_sequence = std::integer_sequence<T, N...>;
 template <std::size_t... N> using index_sequence = std::index_sequence<N...>;
-template <std::size_t N>
-using make_index_sequence = std::make_index_sequence<N>;
+template <std::size_t N> using make_index_sequence = std::make_index_sequence<N>;
 #else
 template <typename T, T... N> struct integer_sequence {
   using value_type = T;
@@ -129,8 +126,7 @@ template <typename T, T... N> struct integer_sequence {
   static FMT_CONSTEXPR std::size_t size() { return sizeof...(N); }
 };
 
-template <std::size_t... N>
-using index_sequence = integer_sequence<std::size_t, N...>;
+template <std::size_t... N> using index_sequence = integer_sequence<std::size_t, N...>;
 
 template <typename T, std::size_t N, T... Ns>
 struct make_integer_sequence : make_integer_sequence<T, N - 1, N - 1, Ns...> {};
@@ -150,8 +146,7 @@ void for_each(index_sequence<Is...>, Tuple &&tup, F &&f) FMT_NOEXCEPT {
 }
 
 template <class T>
-FMT_CONSTEXPR make_index_sequence<std::tuple_size<T>::value>
-get_indexes(T const &) {
+FMT_CONSTEXPR make_index_sequence<std::tuple_size<T>::value> get_indexes(T const &) {
   return {};
 }
 
@@ -160,14 +155,14 @@ template <class Tuple, class F> void for_each(Tuple &&tup, F &&f) {
   for_each(indexes, std::forward<Tuple>(tup), std::forward<F>(f));
 }
 
-template <typename Arg, FMT_ENABLE_IF(!is_like_std_string<
-                                      typename std::decay<Arg>::type>::value)>
+template <typename Arg,
+          FMT_ENABLE_IF(!is_like_std_string<typename std::decay<Arg>::type>::value)>
 FMT_CONSTEXPR const char *format_str_quoted(bool add_space, const Arg &) {
   return add_space ? " {}" : "{}";
 }
 
-template <typename Arg, FMT_ENABLE_IF(is_like_std_string<
-                                      typename std::decay<Arg>::type>::value)>
+template <typename Arg,
+          FMT_ENABLE_IF(is_like_std_string<typename std::decay<Arg>::type>::value)>
 FMT_CONSTEXPR const char *format_str_quoted(bool add_space, const Arg &) {
   return add_space ? " \"{}\"" : "\"{}\"";
 }
@@ -175,8 +170,7 @@ FMT_CONSTEXPR const char *format_str_quoted(bool add_space, const Arg &) {
 FMT_CONSTEXPR const char *format_str_quoted(bool add_space, const char *) {
   return add_space ? " \"{}\"" : "\"{}\"";
 }
-FMT_CONSTEXPR const wchar_t *format_str_quoted(bool add_space,
-                                               const wchar_t *) {
+FMT_CONSTEXPR const wchar_t *format_str_quoted(bool add_space, const wchar_t *) {
   return add_space ? L" \"{}\"" : L"\"{}\"";
 }
 
@@ -206,10 +200,10 @@ private:
         }
         out = internal::copy(formatting.delimiter, out);
       }
-      out = format_to(out,
-                      internal::format_str_quoted(
-                          (formatting.add_delimiter_spaces && i > 0), v),
-                      v);
+      out = format_to(
+          out,
+          internal::format_str_quoted((formatting.add_delimiter_spaces && i > 0), v),
+          v);
       ++i;
     }
 
@@ -245,15 +239,13 @@ public:
 
 template <typename T, typename Char> struct is_range {
   static FMT_CONSTEXPR_DECL const bool value =
-      internal::is_range_<T>::value &&
-      !internal::is_like_std_string<T>::value &&
+      internal::is_range_<T>::value && !internal::is_like_std_string<T>::value &&
       !std::is_convertible<T, std::basic_string<Char>>::value &&
       !std::is_constructible<internal::std_string_view<Char>, T>::value;
 };
 
 template <typename RangeT, typename Char>
-struct formatter<RangeT, Char,
-                 enable_if_t<fmt::is_range<RangeT, Char>::value>> {
+struct formatter<RangeT, Char, enable_if_t<fmt::is_range<RangeT, Char>::value>> {
   formatting_range<Char> formatting;
 
   template <typename ParseContext>
@@ -262,8 +254,7 @@ struct formatter<RangeT, Char,
   }
 
   template <typename FormatContext>
-  typename FormatContext::iterator format(const RangeT &values,
-                                          FormatContext &ctx) {
+  typename FormatContext::iterator format(const RangeT &values, FormatContext &ctx) {
     auto out = internal::copy(formatting.prefix, ctx.out());
     std::size_t i = 0;
     for (auto it = values.begin(), end = values.end(); it != end; ++it) {
@@ -272,10 +263,10 @@ struct formatter<RangeT, Char,
           *out++ = ' ';
         out = internal::copy(formatting.delimiter, out);
       }
-      out = format_to(out,
-                      internal::format_str_quoted(
-                          (formatting.add_delimiter_spaces && i > 0), *it),
-                      *it);
+      out = format_to(
+          out,
+          internal::format_str_quoted((formatting.add_delimiter_spaces && i > 0), *it),
+          *it);
       if (++i > formatting.range_length_limit) {
         out = format_to(out, " ... <other elements>");
         break;
@@ -303,31 +294,31 @@ struct formatter<tuple_arg_join<Char, T...>, Char> {
   }
 
   template <typename FormatContext>
-  typename FormatContext::iterator
-  format(const tuple_arg_join<Char, T...> &value, FormatContext &ctx) {
+  typename FormatContext::iterator format(const tuple_arg_join<Char, T...> &value,
+                                          FormatContext &ctx) {
     return format(value, ctx, internal::make_index_sequence<sizeof...(T)>{});
   }
 
 private:
   template <typename FormatContext, size_t... N>
-  typename FormatContext::iterator
-  format(const tuple_arg_join<Char, T...> &value, FormatContext &ctx,
-         internal::index_sequence<N...>) {
+  typename FormatContext::iterator format(const tuple_arg_join<Char, T...> &value,
+                                          FormatContext &ctx,
+                                          internal::index_sequence<N...>) {
     return format_args(value, ctx, std::get<N>(value.tuple)...);
   }
 
   template <typename FormatContext>
-  typename FormatContext::iterator
-  format_args(const tuple_arg_join<Char, T...> &, FormatContext &ctx) {
+  typename FormatContext::iterator format_args(const tuple_arg_join<Char, T...> &,
+                                               FormatContext &ctx) {
     // NOTE: for compilers that support C++17, this empty function instantiation
     // can be replaced with a constexpr branch in the variadic overload.
     return ctx.out();
   }
 
   template <typename FormatContext, typename Arg, typename... Args>
-  typename FormatContext::iterator
-  format_args(const tuple_arg_join<Char, T...> &value, FormatContext &ctx,
-              const Arg &arg, const Args &... args) {
+  typename FormatContext::iterator format_args(const tuple_arg_join<Char, T...> &value,
+                                               FormatContext &ctx, const Arg &arg,
+                                               const Args &... args) {
     using base = formatter<typename std::decay<Arg>::type, Char>;
     auto out = ctx.out();
     out = base{}.format(arg, ctx);

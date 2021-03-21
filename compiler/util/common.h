@@ -1,22 +1,76 @@
 #pragma once
 
-#include "runtime/lib.h"
-#include "util/llvm.h"
+#define SEQ_VERSION_MAJOR 0
+#define SEQ_VERSION_MINOR 10
+#define SEQ_VERSION_PATCH 0
+
+#include <cassert>
+#include <climits>
 #include <cstdint>
+#include <libgen.h>
 #include <memory>
 #include <ostream>
 #include <stdexcept>
+#include <sys/stat.h>
+
+#include "util/fmt/format.h"
+#include "util/fmt/ostream.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+
+extern int _dbg_level;
+extern int _level;
+#define DBG(c, ...) fmt::print("{}" c "\n", std::string(2 * _level, ' '), ##__VA_ARGS__)
+#define LOG(c, ...) DBG(c, ##__VA_ARGS__)
+#define LOG_TIME(c, ...)                                                               \
+  {                                                                                    \
+    if (_dbg_level & (1 << 0))                                                         \
+      DBG(c, ##__VA_ARGS__);                                                           \
+  }
+#define LOG_REALIZE(c, ...)                                                            \
+  {                                                                                    \
+    if (_dbg_level & (1 << 2))                                                         \
+      DBG(c, ##__VA_ARGS__);                                                           \
+  }
+#define LOG_TYPECHECK(c, ...)                                                          \
+  {                                                                                    \
+    if (_dbg_level & (1 << 4))                                                         \
+      DBG(c, ##__VA_ARGS__);                                                           \
+  }
+#define CAST(s, T) dynamic_cast<T *>(s.get())
+
+#ifndef NDEBUG
+#define seqassert(expr, msg, ...)                                                      \
+  ((expr) ? (void)(0)                                                                  \
+          : _seqassert(#expr, __FILE__, __LINE__, fmt::format(msg, ##__VA_ARGS__)))
+#else
+#define seqassert(expr, msg, ...) ;
+#endif
+#pragma clang diagnostic pop
+void _seqassert(const char *expr_str, const char *file, int line,
+                const std::string &msg);
 
 namespace seq {
 struct SrcInfo {
   std::string file;
   int line, endLine;
   int col, endCol;
+  int id; /// used to differentiate different
   SrcInfo(std::string file, int line, int endLine, int col, int endCol)
-      : file(std::move(file)), line(line), endLine(endLine), col(col),
-        endCol(endCol){};
-  SrcInfo() : SrcInfo("<internal>", 0, 0, 0, 0){};
-  friend std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c);
+      : file(std::move(file)), line(line), endLine(endLine), col(col), endCol(endCol) {
+    static int _id(0);
+    id = _id++;
+  };
+  SrcInfo() : SrcInfo("", 0, 0, 0, 0){};
+  friend std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c) {
+    char buf[PATH_MAX + 1];
+    strncpy(buf, c.file.c_str(), PATH_MAX);
+    auto f = basename(buf);
+    out << f << ":" << c.line << ":" << c.col;
+    return out;
+  }
+  bool operator==(const SrcInfo &src) const { return id == src.id; }
 };
 
 struct SrcObject {
@@ -34,131 +88,11 @@ public:
   void setSrcInfo(SrcInfo info) { this->info = std::move(info); }
 };
 
-inline llvm::IntegerType *seqIntLLVM(llvm::LLVMContext &context) {
-  return llvm::IntegerType::getIntNTy(context, 8 * sizeof(seq_int_t));
-}
+void compilationError(const std::string &msg, const std::string &file = "",
+                      int line = 0, int col = 0, bool terminate = true);
 
-inline llvm::Constant *nullPtrLLVM(llvm::LLVMContext &context) {
-  return llvm::ConstantPointerNull::get(
-      llvm::PointerType::getInt8PtrTy(context));
-}
-
-inline llvm::Constant *zeroLLVM(llvm::LLVMContext &context) {
-  return llvm::ConstantInt::get(seqIntLLVM(context), 0);
-}
-
-inline llvm::Constant *oneLLVM(llvm::LLVMContext &context) {
-  return llvm::ConstantInt::get(seqIntLLVM(context), 1);
-}
-
-inline llvm::Value *makeAlloca(llvm::Type *type, llvm::BasicBlock *block,
-                               uint64_t n = 1) {
-  llvm::LLVMContext &context = block->getContext();
-  llvm::IRBuilder<> builder(block);
-  llvm::Value *ptr = builder.CreateAlloca(
-      type, llvm::ConstantInt::get(seqIntLLVM(context), n));
-  return ptr;
-}
-
-inline llvm::Value *makeAlloca(llvm::Value *value, llvm::BasicBlock *block,
-                               uint64_t n = 1) {
-  llvm::IRBuilder<> builder(block);
-  llvm::Value *ptr = makeAlloca(value->getType(), block, n);
-  builder.CreateStore(value, ptr);
-  return ptr;
-}
-
-inline void makeMemCpy(llvm::Value *dst, llvm::Value *src, llvm::Value *size,
-                       llvm::BasicBlock *block, unsigned align = 0) {
-  llvm::IRBuilder<> builder(block);
-#if LLVM_VERSION_MAJOR >= 7
-  builder.CreateMemCpy(dst, align, src, align, size);
-#else
-  builder.CreateMemCpy(dst, src, size, align);
-#endif
-}
-
-inline void makeMemMove(llvm::Value *dst, llvm::Value *src, llvm::Value *size,
-                        llvm::BasicBlock *block, unsigned align = 0) {
-  llvm::IRBuilder<> builder(block);
-#if LLVM_VERSION_MAJOR >= 7
-  builder.CreateMemMove(dst, align, src, align, size);
-#else
-  builder.CreateMemMove(dst, src, size, align);
-#endif
-}
-
-// Our custom GC allocators:
-inline llvm::Function *makeAllocFunc(llvm::Module *module, bool atomic) {
-  llvm::LLVMContext &context = module->getContext();
-  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      atomic ? "seq_alloc_atomic" : "seq_alloc",
-      llvm::IntegerType::getInt8PtrTy(context), seqIntLLVM(context)));
-  f->setDoesNotThrow();
-  f->setReturnDoesNotAlias();
-  f->setOnlyAccessesInaccessibleMemory();
-  return f;
-}
-
-// Standard malloc:
-inline llvm::Function *makeMallocFunc(llvm::Module *module) {
-  llvm::LLVMContext &context = module->getContext();
-  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "malloc", llvm::IntegerType::getInt8PtrTy(context), seqIntLLVM(context)));
-  f->setDoesNotThrow();
-  f->setReturnDoesNotAlias();
-  f->setOnlyAccessesInaccessibleMemory();
-  return f;
-}
-
-// Standard free:
-inline llvm::Function *makeFreeFunc(llvm::Module *module) {
-  llvm::LLVMContext &context = module->getContext();
-  auto *f = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("free", llvm::Type::getVoidTy(context),
-                                  llvm::IntegerType::getInt8PtrTy(context)));
-  f->setDoesNotThrow();
-  return f;
-}
-
-inline llvm::Function *makePersonalityFunc(llvm::Module *module) {
-  llvm::LLVMContext &context = module->getContext();
-  return llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_personality", llvm::IntegerType::getInt32Ty(context),
-      llvm::IntegerType::getInt32Ty(context),
-      llvm::IntegerType::getInt32Ty(context),
-      llvm::IntegerType::getInt64Ty(context),
-      llvm::IntegerType::getInt8PtrTy(context),
-      llvm::IntegerType::getInt8PtrTy(context)));
-}
-
-inline llvm::Function *makeExcAllocFunc(llvm::Module *module) {
-  llvm::LLVMContext &context = module->getContext();
-  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_alloc_exc", llvm::IntegerType::getInt8PtrTy(context),
-      llvm::IntegerType::getInt32Ty(context),
-      llvm::IntegerType::getInt8PtrTy(context)));
-  f->setDoesNotThrow();
-  return f;
-}
-
-inline llvm::Function *makeThrowFunc(llvm::Module *module) {
-  llvm::LLVMContext &context = module->getContext();
-  auto *f = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("seq_throw", llvm::Type::getVoidTy(context),
-                                  llvm::IntegerType::getInt8PtrTy(context)));
-  f->setDoesNotReturn();
-  return f;
-}
-
-inline llvm::Function *makeTerminateFunc(llvm::Module *module) {
-  llvm::LLVMContext &context = module->getContext();
-  auto *f = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "seq_terminate", llvm::Type::getVoidTy(context),
-      llvm::IntegerType::getInt8PtrTy(context)));
-  f->setDoesNotReturn();
-  return f;
-}
+void compilationWarning(const std::string &msg, const std::string &file = "",
+                        int line = 0, int col = 0, bool terminate = false);
 
 namespace exc {
 class SeqException : public SrcObject, public std::runtime_error {
@@ -168,28 +102,11 @@ public:
     setSrcInfo(std::move(info));
   }
 
-  explicit SeqException(const std::string &msg) noexcept
-      : SeqException(msg, {}) {}
+  explicit SeqException(const std::string &msg) noexcept : SeqException(msg, {}) {}
 
   SeqException(const SeqException &e) noexcept
       : SrcObject(e), std::runtime_error(e) // NOLINT
   {}
 };
 } // namespace exc
-
 } // namespace seq
-
-#define SEQ_RETURN_CLONE(e)                                                    \
-  do {                                                                         \
-    auto *__x = (e);                                                           \
-    __x->setSrcInfo(getSrcInfo());                                             \
-    if (getTryCatch())                                                         \
-      __x->setTryCatch(getTryCatch()->clone(ref));                             \
-    return __x;                                                                \
-  } while (0)
-
-#if defined(TAPIR_VERSION_MAJOR)
-#define SEQ_HAS_TAPIR 1
-#else
-#define SEQ_HAS_TAPIR 0
-#endif

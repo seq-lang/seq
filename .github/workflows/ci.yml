@@ -47,7 +47,7 @@ jobs:
   precise:
     runs-on: ubuntu-latest
     name: Seq CI (ubuntu-precise)
-    needs: [release]
+    needs: [ release ]
     steps:
       - uses: actions/checkout@v2
 
@@ -97,15 +97,20 @@ jobs:
           - macos-latest
     runs-on: ${{ matrix.os }}
     name: Seq CI
-    needs: [release]
+    needs: [ release ]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
           python-version: '3.8'
 
-      - name: Find Python
-        run: echo "SEQ_PYTHON=$(python test/python/find-python-library.py)" >> $GITHUB_ENV
+      - name: Set up Python
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install numpy
+          which python
+          which pip
+          echo "SEQ_PYTHON=$(python test/python/find-python-library.py)" >> $GITHUB_ENV
 
       - name: Cache Dependencies
         id: cache-deps
@@ -149,8 +154,11 @@ jobs:
 
       - name: Test
         run: |
+          echo $SEQ_PYTHON
+          ls -lah test/data/
+          ln -s build/libseqrt.${LIBEXT} .
           build/seqtest
-          build/seqc test/core/helloworld.seq
+          build/seqc run test/core/helloworld.seq
         env:
           SEQ_PATH: ./stdlib
           PYTHONPATH: ./test/python

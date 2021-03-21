@@ -1,18 +1,20 @@
-type A(a: int, b: float):
+@tuple
+class A:
+    a: int
+    b: float
+
     def __getitem__(self: A, n: int):
         return 1
 
-    def __getitem__(self: A, x: lslice):
-        return '2'
-
-    def __getitem__(self: A, x: rslice):
-        return 3.0
-
-    def __getitem__(self: A, x: slice):
-        return self.a
-
-    def __getitem__(self: A, x: eslice):
-        return -1
+    def __getitem__(self: A, x: Slice):
+        if x.start is None and x.stop is None:
+            return -1
+        if x.start is None:
+            return 2
+        elif x.stop is None:
+            return 3
+        else:
+            return self.a
 
 @test
 def test_tuple():
@@ -55,8 +57,8 @@ def test_tuple():
 
     a = A(42, 3.14)
     assert a[0] == 1
-    assert a[:1] == '2'
-    assert a[0:] == 3.0
+    assert a[:1] == 2
+    assert a[0:] == 3
     assert a[0:1] == 42
     assert a[:] == -1
 test_tuple()
@@ -83,8 +85,8 @@ def test_list():
     assert l3 == [1, 3]
     assert list[int]().remove(0) == False
 
-    #l4 = [5, 1, 4, 2, 1, -10, 10, 100, -100]
-    #assert sorted(l4) == [-100, -10, 1, 1, 2, 4, 5, 10, 100]
+    # l4 = [5, 1, 4, 2, 1, -10, 10, 100, -100]
+    # assert sorted(l4) == [-100, -10, 1, 1, 2, 4, 5, 10, 100]
     #l4.sort()
     #assert l4 == [-100, -10, 1, 1, 2, 4, 5, 10, 100]
     #assert str(sorted(list[int]())) == "[]"

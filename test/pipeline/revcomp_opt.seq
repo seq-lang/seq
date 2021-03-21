@@ -1,3 +1,5 @@
+from bio import *
+
 def ground_truth_kmers[K](s: seq, step: int = 1):
     return {revcomp_with_pos(t) for t in s.kmers_with_pos[K](step)}
 

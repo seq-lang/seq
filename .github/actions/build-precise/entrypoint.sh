@@ -5,7 +5,7 @@ set -e
 # setup
 cd /github/workspace
 apt-get update
-apt-get -y install build-essential sudo curl wget git zlib1g-dev libbz2-dev liblzma-dev python-software-properties apt-transport-https ca-certificates
+apt-get -y --force-yes install build-essential sudo curl wget git zlib1g-dev libbz2-dev liblzma-dev python-software-properties apt-transport-https ca-certificates
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
 sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 sudo add-apt-repository -y ppa:fkrull/deadsnakes
@@ -15,12 +15,14 @@ sudo rm -f /etc/apt/sources.list.d/mongodb*
 sudo rm -f /etc/apt/sources.list.d/couchdb*
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
 sudo apt-get -q update
-sudo apt-get -y install clang-4.0 clang++-4.0 python3.5 python3.5-dev
+sudo apt-get -y --force-yes install clang-4.0 clang++-4.0 python3.5 python3.5-dev
 sudo ln -s /usr/bin/clang-4.0 /usr/bin/clang
 sudo ln -s /usr/bin/clang++-4.0 /usr/bin/clang++
 wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
 sudo sh cmake-3.18.1-Linux-x86_64.sh --prefix=/usr --skip-license
-wget -q -O - https://bootstrap.pypa.io/get-pip.py | sudo python3.5
+wget -q -O - https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo python3.5
+python3.5 -m pip install numpy
+
 export CC=clang
 export CXX=clang++
 
@@ -45,8 +47,9 @@ ln -s $(pwd)/deps/lib/libomp.so $(pwd)/build/libomp.so
 cmake --build build --config Release -- VERBOSE=1
 
 # test
+ln -s build/libseqrt.so .
 build/seqtest
-build/seqc test/core/helloworld.seq
+build/seqc run test/core/helloworld.seq
 
 # package
 export SEQ_BUILD_ARCHIVE=seq-$(uname -s | awk '{print tolower($0)}')-$(uname -m).tar.gz

@@ -24,7 +24,7 @@ class A[TA,TB,TC]:
 
     # lots of nesting:
     def m4[TD](self: A[TA,TB,TC], d: TD):
-        def m5[TE](a: TA, b: TB, c: TC, d: TD, e: TE):
+        def m5[TA,TB,TC,TD,TE](a: TA, b: TB, c: TC, d: TD, e: TE):
             print a, b, c, d, e
         m5(self.a, self.b, self.c, d, d)
 

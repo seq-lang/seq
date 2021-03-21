@@ -2,7 +2,9 @@
 # Adapted from https://github.com/bwa-mem2/bwa-mem2/blob/master/src/sais.h
 # Original implementation by Yuta Mori for sais-lite
 
-def _get_counts[X](T: ptr[X], C: ptr[int], n: int, k: int):
+from internal.gc import sizeof, free, alloc_atomic
+
+def _get_counts[X](T: Ptr[X], C: Ptr[int], n: int, k: int):
     i = 0
     while i < k:
         C[i] = 0
@@ -12,7 +14,7 @@ def _get_counts[X](T: ptr[X], C: ptr[int], n: int, k: int):
         C[int(T[i])] += 1
         i += 1
 
-def _get_buckets(C: ptr[int], B: ptr[int], k: int, end: bool):
+def _get_buckets(C: Ptr[int], B: Ptr[int], k: int, end: bool):
     sum = 0
     i = 0
     if end:
@@ -26,7 +28,7 @@ def _get_buckets(C: ptr[int], B: ptr[int], k: int, end: bool):
             B[i] = sum - C[i]
             i += 1
 
-def _LMS_sort1[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], n: int, k: int, recount: bool):
+def _LMS_sort1[X](T: Ptr[X], SA: Ptr[int], C: Ptr[int], B: Ptr[int], n: int, k: int, recount: bool):
     # compute SAl
     if recount:
         _get_counts(T, C, n, k)
@@ -79,7 +81,7 @@ def _LMS_sort1[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], n: int, k: 
             SA[i] = 0
         i -= 1
 
-def _LMS_post_proc1[X](T: ptr[X], SA: ptr[int], n: int, m: int):
+def _LMS_post_proc1[X](T: Ptr[X], SA: Ptr[int], n: int, m: int):
     assert n > 0
     i = 0
     while SA[i] < 0:
@@ -158,7 +160,7 @@ def _LMS_post_proc1[X](T: ptr[X], SA: ptr[int], n: int, m: int):
 
     return name
 
-def _LMS_sort2[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], D: ptr[int], n: int, k: int):
+def _LMS_sort2[X](T: Ptr[X], SA: Ptr[int], C: Ptr[int], B: Ptr[int], D: Ptr[int], n: int, k: int):
     # compute SAl
     _get_buckets(C, B, k, False)  # find starts of buckets
     j = n - 1
@@ -237,7 +239,7 @@ def _LMS_sort2[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], D: ptr[int]
             SA[i] = 0
         i -= 1
 
-def _LMS_post_proc2(SA: ptr[int], n: int, m: int):
+def _LMS_post_proc2(SA: Ptr[int], n: int, m: int):
     assert n > 0
     i = 0
     name = 0
@@ -291,7 +293,7 @@ def _LMS_post_proc2(SA: ptr[int], n: int, m: int):
 
     return name
 
-def _induce_SA[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], n: int, k: int, recount: bool):
+def _induce_SA[X](T: Ptr[X], SA: Ptr[int], C: Ptr[int], B: Ptr[int], n: int, k: int, recount: bool):
     # compute SAl
     if recount:
         _get_counts(T, C, n, k)
@@ -338,7 +340,7 @@ def _induce_SA[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], n: int, k: 
             SA[i] = ~j
         i -= 1
 
-def _compute_bwt[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], n: int, k: int, recount: bool):
+def _compute_bwt[X](T: Ptr[X], SA: Ptr[int], C: Ptr[int], B: Ptr[int], n: int, k: int, recount: bool):
     # compute SAl
     if recount:
         _get_counts(T, C, n, k)
@@ -392,7 +394,7 @@ def _compute_bwt[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], n: int, k
         i -= 1
     return pidx
 
-def _stage1_sort[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], n: int, k: int, flags: int):
+def _stage1_sort[X](T: Ptr[X], SA: Ptr[int], C: Ptr[int], B: Ptr[int], n: int, k: int, flags: int):
     _get_counts(T, C, n, k)
     _get_buckets(C, B, k, True)  # find ends of buckets
     i = 0
@@ -445,7 +447,7 @@ def _stage1_sort[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], n: int, k
             assert j + 1 < n
             B[int(T[j + 1])] += 1
             if flags & 16:
-                D = ptr[int](_gc.alloc_atomic(2 * k * _gc.sizeof[int]()))
+                D = Ptr[int](alloc_atomic(2 * k * sizeof[int]()))
                 i = 0
                 j = 0
                 while i < k:
@@ -457,7 +459,7 @@ def _stage1_sort[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], n: int, k
                     D[i + k] = 0
                     i += 1
                 _LMS_sort2(T, SA, C, B, D, n, k)
-                _gc.free(ptr[byte](D))
+                free(D.as_byte())
             else:
                 D = B + (-k * 2)
                 i = 0
@@ -482,7 +484,7 @@ def _stage1_sort[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], n: int, k
         name = 0
     return m, name
 
-def _stage3_sort[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], n: int, m: int, k: int, flags: int, isbwt: bool):
+def _stage3_sort[X](T: Ptr[X], SA: Ptr[int], C: Ptr[int], B: Ptr[int], n: int, m: int, k: int, flags: int, isbwt: bool):
     if flags & 8 != 0:
         _get_counts(T, C, n, k)
     if 1 < m:
@@ -520,21 +522,21 @@ def _stage3_sort[X](T: ptr[X], SA: ptr[int], C: ptr[int], B: ptr[int], n: int, m
         pidx = _compute_bwt(T, SA, C, B, n, k, (flags & (4 | 64)) != 0)
     return pidx
 
-def _suffixsort[X](T: ptr[X], SA: ptr[int], fs: int, n: int, k: int, isbwt: bool):
+def _suffixsort[X](T: Ptr[X], SA: Ptr[int], fs: int, n: int, k: int, isbwt: bool):
     flags = 0
 
     # stage 1
     C = SA
     B = SA
-    Cp = ptr[int]()
-    Bp = ptr[int]()
+    Cp = Ptr[int]()
+    Bp = Ptr[int]()
     if k <= 256:
-        Cp = ptr[int](_gc.alloc_atomic(k * _gc.sizeof[int]()))
+        Cp = Ptr[int](alloc_atomic(k * sizeof[int]()))
         if k <= fs:
             B = SA + (n + fs - k)
             flags = 1
         else:
-            Bp = ptr[int](_gc.alloc_atomic(k * _gc.sizeof[int]()))
+            Bp = Ptr[int](alloc_atomic(k * sizeof[int]()))
             flags = 3
     elif k <= fs:
         C = SA + (n + fs - k)
@@ -542,13 +544,13 @@ def _suffixsort[X](T: ptr[X], SA: ptr[int], fs: int, n: int, k: int, isbwt: bool
             B = C + (-k)
             flags = 0
         elif k <= 1024:
-            Bp = ptr[int](_gc.alloc_atomic(k * _gc.sizeof[int]()))
+            Bp = Ptr[int](alloc_atomic(k * sizeof[int]()))
             flags = 2
         else:
             B = C
             flags = 64 | 8
     else:
-        Cp = ptr[int](_gc.alloc_atomic(k * _gc.sizeof[int]()))
+        Cp = Ptr[int](alloc_atomic(k * sizeof[int]()))
         Bp = Cp
         flags = 4 | 8
     if 2 <= n // k:
@@ -571,17 +573,17 @@ def _suffixsort[X](T: ptr[X], SA: ptr[int], fs: int, n: int, k: int, isbwt: bool
     m, name = r
     if m < 0:
         if flags & (1 | 4):
-            _gc.free(ptr[byte](Cp))
+            free(Cp.as_byte())
         if flags & 2:
-            _gc.free(ptr[byte](Bp))
+            free(Bp.as_byte())
         return -2
 
     # stage 2
     if name < m:
         if flags & 4:
-            _gc.free(ptr[byte](Cp))
+            free(Cp.as_byte())
         if flags & 2:
-            _gc.free(ptr[byte](Bp))
+            free(Bp.as_byte())
         newfs = (n + fs) - (m * 2)
         if flags & (1 | 4 | 64) == 0:
             if k + name <= newfs:
@@ -599,7 +601,7 @@ def _suffixsort[X](T: ptr[X], SA: ptr[int], fs: int, n: int, k: int, isbwt: bool
             i -= 1
         if _suffixsort(RA, SA, newfs, m, name, False) != 0:
             if flags & 1:
-                _gc.free(ptr[byte](Cp))
+                free(Cp.as_byte())
             return -2
         i = n - 1
         j = m - 1
@@ -637,10 +639,10 @@ def _suffixsort[X](T: ptr[X], SA: ptr[int], fs: int, n: int, k: int, isbwt: bool
             SA[i] = RA[SA[i]]
             i += 1
         if flags & 4:
-            Cp = ptr[int](_gc.alloc_atomic(k * _gc.sizeof[int]()))
+            Cp = Ptr[int](alloc_atomic(k * sizeof[int]()))
             Bp = Cp
         if flags & 2:
-            Bp = ptr[int](_gc.alloc_atomic(k * _gc.sizeof[int]()))
+            Bp = Ptr[int](alloc_atomic(k * sizeof[int]()))
 
     # stage 3
     pidx = 0
@@ -655,16 +657,16 @@ def _suffixsort[X](T: ptr[X], SA: ptr[int], fs: int, n: int, k: int, isbwt: bool
         else:
             pidx = _stage3_sort(T, SA, C, B, n, m, k, flags, isbwt)
         if flags & (1 | 4):
-            _gc.free(ptr[byte](Cp))
+            free(Cp.as_byte())
         if flags & 2:
-            _gc.free(ptr[byte](Bp))
+            free(Bp.as_byte())
 
     return pidx
 
-def _saisxx(T: ptr[byte], n: int, k: int = 256) -> ptr[int]:
+def _saisxx(T: Ptr[byte], n: int, k: int = 256) -> Ptr[int]:
     if n < 0 or k <= 0:
         raise ValueError("need n >= 0 and k > 0!")
-    SA = ptr[int](_gc.alloc_atomic((n + 1) * _gc.sizeof[int]()))
+    SA = Ptr[int](alloc_atomic((n + 1) * sizeof[int]()))
     if n <= 1:
         if n == 1:
             SA[0] = 0
@@ -672,17 +674,17 @@ def _saisxx(T: ptr[byte], n: int, k: int = 256) -> ptr[int]:
     pidx = _suffixsort(T, SA, 0, n, k, False)
     return SA
 
-def _saisxx_bwt(T: ptr[byte], n: int, k: int = 256) -> ptr[byte]:
+def _saisxx_bwt(T: Ptr[byte], n: int, k: int = 256) -> Ptr[byte]:
     if n < 0 or k <= 0:
         raise ValueError("need n >= 0 and k > 0!")
     if n == 0:
         return '$'.ptr
-    U = _gc.alloc_atomic(n + 1)
+    U = alloc_atomic(n + 1)
     if n == 1:
         U[0] = T[0]
         U[1] = byte(36)  # $
         return U
-    A = ptr[int](_gc.alloc_atomic((n + 1) * _gc.sizeof[int]()))
+    A = Ptr[int](alloc_atomic((n + 1) * sizeof[int]()))
     pidx = _suffixsort(T, A, 0, n, k, True)
     if 0 <= pidx:
         U[0] = T[n - 1]
@@ -699,8 +701,9 @@ def _saisxx_bwt(T: ptr[byte], n: int, k: int = 256) -> ptr[byte]:
         pidx += 1
     return U
 
-extend seq:
-    def suffix_array(self: seq):
+@extend
+class seq:
+    def suffix_array(self):
         '''
         Suffix array of this sequence as a list of integers
         '''
@@ -710,9 +713,9 @@ extend seq:
             p = str(self).ptr
             n = -n
         SA = _saisxx(p, n)
-        return list[int](array[int](SA, n), n)
+        return List[int](Array[int](SA, n), n)
 
-    def bwt(self: seq):
+    def bwt(self):
         '''
         Burrows-Wheeler transform of this sequence (contains `$`)
         '''
@@ -724,7 +727,7 @@ extend seq:
         B = _saisxx_bwt(p, n)
         return seq(B, n + 1)
 
-    def lcp(self: seq, sa: list[int]):
+    def lcp(self, sa: List[int]):
         '''
         Longest common prefix array based on suffix array
         [https://rahmannlab.gitlab.io/algorithmen-auf-sequenzen/pdfs/skript-aas.pdf](https://rahmannlab.gitlab.io/algorithmen-auf-sequenzen/pdfs/skript-aas.pdf), p. 61
@@ -744,17 +747,18 @@ extend seq:
         return lcp
 
 from bio.pseq import pseq
-extend pseq:
-    def suffix_array(self: pseq):
+@extend
+class pseq:
+    def suffix_array(self):
         '''
         Suffix array of this sequence as a list of integers
         '''
         p = self.ptr
         n = self.len
         SA = _saisxx(p, n)
-        return list[int](array[int](SA, n), n)
+        return List[int](Array[int](SA, n), n)
 
-    def bwt(self: pseq):
+    def bwt(self):
         '''
         Burrows-Wheeler transform of this sequence (contains `$`)
         '''

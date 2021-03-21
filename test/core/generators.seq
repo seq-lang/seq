@@ -28,7 +28,7 @@ print [a for a in v]  # EXPECT: []
 print list(reversed(v))  # EXPECT: []
 print bool(v)  # EXPECT: False
 
-def perms[T](elements: list[T]) -> list[T]:
+def perms[T](elements: list[T]):
     if len(elements) <=1:
         yield elements
     else:
@@ -65,7 +65,7 @@ for a in perms([1,2,3,4]):
 # EXPECT: [4, 3, 2, 1]
 
 
-def mysum[T](start: T) -> T:
+def mysum[T](start: T):
     m = start
     while True:
         a = (yield)

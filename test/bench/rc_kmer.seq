@@ -3,20 +3,21 @@
 ######################################
 from sys import argv
 from time import timing
+from bio import *
 
 print 'loading ref...'
 ref = [a.seq for a in FASTA(argv[1])]
 print 'done.'
 
-def test_slow[K](kmer: K):
-    rc = K().as_int()
-    type I = typeof(rc)
+def test_slow(kmer):
+    rc = typeof(kmer).as_int()
+    I = typeof(rc)
 
     for i in range(len(kmer)):
         b = I(int((~kmer[i]).as_int()))
         b <<= I(2*i)
         rc |= b
-    return kmer > K(rc)
+    return kmer > typeof(kmer)(rc)
 
 def test_lookup[K]():
     n = 0

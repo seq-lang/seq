@@ -1,21 +1,22 @@
 from sys import argv
+from bio import FASTQ
 from genomeindex import *
-type K = Kmer[20]
+K = Kmer[20]
 
-def update(counts: dict[int,int], pos: int, max_pos: int, max_count: int):
+def update(counts, pos, max_pos, max_count):
     count = counts.get(pos, 0) + 1
     counts[pos] = count
     return (pos, count) if count > max_count else (max_pos, max_count)
 
-def main(args: array[str]):
+def main(args):
     index = GenomeIndex[K](args[0])
     step = K.len()
 
     for read in FASTQ(args[1]):
-        counts = dict[int,int]()
+        counts: Dict[int, int] = {}
         max_pos, max_count = 0, 0
 
-        for i,kmer in enumerate(read.kmers[K](step)):
+        for i,kmer in enumerate(read.seq.kmers[K](step)):
             offset = i * step
             hits = index[kmer]
             hits_rev = index[~kmer]

@@ -12,58 +12,16 @@
 #include <unistd.h>
 #include <vector>
 
-#include "lang/seq.h"
+#include "parser/common.h"
 #include "parser/parser.h"
+#include "sir/llvm/llvisitor.h"
+#include "sir/transform/manager.h"
+#include "sir/transform/pipeline.h"
+#include "util/common.h"
 #include "gtest/gtest.h"
 
 using namespace seq;
 using namespace std;
-
-class SeqTest : public testing::TestWithParam<
-                    tuple<const char * /*filename*/, bool /*debug*/>> {
-protected:
-  vector<char> buf;
-  int out_pipe[2];
-  pid_t pid;
-
-  SeqTest() : buf(65536), out_pipe(), pid() {}
-
-  string filename() {
-    const string basename = get<0>(GetParam());
-    return string(TEST_DIR) + "/" + basename;
-  }
-
-  int runInChildProcess() {
-    const bool debug = get<1>(GetParam());
-    assert(pipe(out_pipe) != -1);
-    pid = fork();
-    GC_atfork_prepare();
-    assert(pid != -1);
-
-    if (pid == 0) {
-      GC_atfork_child();
-      dup2(out_pipe[1], STDOUT_FILENO);
-      close(out_pipe[0]);
-      close(out_pipe[1]);
-
-      SeqModule *module = parse("", filename(), false, false);
-      execute(module, {filename()}, {}, debug);
-      fflush(stdout);
-      exit(EXIT_SUCCESS);
-    } else {
-      GC_atfork_parent();
-      int status = -1;
-      close(out_pipe[1]);
-      assert(waitpid(pid, &status, 0) == pid);
-      read(out_pipe[0], buf.data(), buf.size() - 1);
-      close(out_pipe[0]);
-      return status;
-    }
-    return -1;
-  }
-
-  string result() { return string(buf.data()); }
-};
 
 vector<string> splitLines(const string &output) {
   vector<string> result;
@@ -77,173 +35,289 @@ vector<string> splitLines(const string &output) {
   return result;
 }
 
-static string findExpectOnLine(const string &line) {
-  static const string EXPECT_STR = "# EXPECT: ";
-  size_t pos = line.find(EXPECT_STR);
-  return pos == string::npos ? "" : line.substr(pos + EXPECT_STR.length());
+static pair<bool, string> findExpectOnLine(const string &line) {
+  for (auto EXPECT_STR : vector<pair<bool, string>>{
+           {false, "# EXPECT: "}, {false, "#: "}, {true, "#! "}}) {
+    size_t pos = line.find(EXPECT_STR.second);
+    if (pos != string::npos)
+      return {EXPECT_STR.first, line.substr(pos + EXPECT_STR.second.length())};
+  }
+  return {false, ""};
 }
 
-static vector<string> findExpects(const string &filename) {
-  ifstream file(filename);
-
-  if (!file.good()) {
-    cerr << "error: could not open " << filename << endl;
-    exit(EXIT_FAILURE);
-  }
-
-  string line;
+static pair<vector<string>, bool> findExpects(const string &filename, bool isCode) {
   vector<string> result;
+  bool isError = false;
+  string line;
+  if (!isCode) {
+    ifstream file(filename);
+    if (!file.good()) {
+      cerr << "error: could not open " << filename << endl;
+      exit(EXIT_FAILURE);
+    }
 
-  while (getline(file, line)) {
-    string expect = findExpectOnLine(line);
-    if (!expect.empty())
-      result.push_back(expect);
+    while (getline(file, line)) {
+      auto expect = findExpectOnLine(line);
+      if (!expect.second.empty()) {
+        result.push_back(expect.second);
+        isError |= expect.first;
+      }
+    }
+    file.close();
+  } else {
+    istringstream file(filename);
+    while (getline(file, line)) {
+      auto expect = findExpectOnLine(line);
+      if (!expect.second.empty()) {
+        result.push_back(expect.second);
+        isError |= expect.first;
+      }
+    }
   }
-
-  file.close();
-  return result;
+  return {result, isError};
 }
 
+void registerStandardPasses(ir::transform::PassManager &pm) {
+  pm.registerPass("bio-pipeline-opts",
+                  std::make_unique<ir::transform::pipeline::PipelineOptimizations>());
+}
+
+string argv0;
+
+class SeqTest
+    : public testing::TestWithParam<tuple<
+          string /*filename*/, bool /*debug*/, string /* case name */,
+          string /* case code */, int /* case line */, bool /* barebones stdlib */>> {
+  vector<char> buf;
+  int out_pipe[2];
+  pid_t pid;
+
+public:
+  SeqTest() : buf(65536), out_pipe(), pid() {}
+  string getFilename(const string &basename) {
+    return string(TEST_DIR) + "/" + basename;
+  }
+  int runInChildProcess() {
+    assert(pipe(out_pipe) != -1);
+    pid = fork();
+    GC_atfork_prepare();
+    assert(pid != -1);
+
+    if (pid == 0) {
+      GC_atfork_child();
+      dup2(out_pipe[1], STDOUT_FILENO);
+      close(out_pipe[0]);
+      close(out_pipe[1]);
+
+      auto file = getFilename(get<0>(GetParam()));
+      auto code = get<3>(GetParam());
+      auto startLine = get<4>(GetParam());
+      auto *module = parse(argv0, file, code, !code.empty(),
+                           /* isTest */ 1 + get<5>(GetParam()), startLine);
+      if (!module)
+        exit(EXIT_FAILURE);
+
+      ir::transform::PassManager pm;
+      registerStandardPasses(pm);
+      pm.run(module);
+
+      seq::ir::LLVMVisitor visitor(/*debug=*/get<1>(GetParam()));
+      visitor.visit(module);
+      visitor.run({file});
+
+      fflush(stdout);
+      exit(EXIT_SUCCESS);
+    } else {
+      GC_atfork_parent();
+      int status = -1;
+      close(out_pipe[1]);
+      assert(waitpid(pid, &status, 0) == pid);
+      read(out_pipe[0], buf.data(), buf.size() - 1);
+      close(out_pipe[0]);
+      return status;
+    }
+    return -1;
+  }
+  string result() { return string(buf.data()); }
+};
 static string
 getTestNameFromParam(const testing::TestParamInfo<SeqTest::ParamType> &info) {
   const string basename = get<0>(info.param);
   const bool debug = get<1>(info.param);
 
   // normalize basename
-  size_t found1 = basename.find('/');
-  size_t found2 = basename.find('.');
-  assert(found1 != string::npos);
-  assert(found2 != string::npos);
-  assert(found2 > found1);
-  string normname = basename.substr(found1 + 1, found2 - found1 - 1);
-
+  // size_t found1 = basename.find('/');
+  // size_t found2 = basename.find('.');
+  // assert(found1 != string::npos);
+  // assert(found2 != string::npos);
+  // assert(found2 > found1);
+  // string normname = basename.substr(found1 + 1, found2 - found1 - 1);
+  string normname = basename;
+  replace(normname.begin(), normname.end(), '/', '_');
+  replace(normname.begin(), normname.end(), '.', '_');
   return normname + (debug ? "_debug" : "");
 }
-
+static string
+getTypeTestNameFromParam(const testing::TestParamInfo<SeqTest::ParamType> &info) {
+  return getTestNameFromParam(info) + "_" + get<2>(info.param);
+}
 TEST_P(SeqTest, Run) {
-  const int status = runInChildProcess();
+  const string file = get<0>(GetParam());
+  int status;
+  bool isCase = !get<2>(GetParam()).empty();
+  if (!isCase)
+    status = runInChildProcess();
+  else
+    status = runInChildProcess();
   ASSERT_TRUE(WIFEXITED(status));
-  ASSERT_EQ(WEXITSTATUS(status), 0);
+
   string output = result();
+
+  auto expects = findExpects(!isCase ? getFilename(file) : get<3>(GetParam()), isCase);
+  if (WEXITSTATUS(status) != int(expects.second))
+    fprintf(stderr, "%s\n", output.c_str());
+  ASSERT_EQ(WEXITSTATUS(status), int(expects.second));
   const bool assertsFailed = output.find("TEST FAILED") != string::npos;
   EXPECT_FALSE(assertsFailed);
   if (assertsFailed)
     std::cerr << output << std::endl;
-  vector<string> expects = findExpects(filename());
-  if (!expects.empty()) {
+
+  if (!expects.first.empty()) {
     vector<string> results = splitLines(output);
-    EXPECT_EQ(results.size(), expects.size());
-    if (expects.size() == results.size()) {
-      for (unsigned i = 0; i < expects.size(); i++) {
-        EXPECT_EQ(results[i], expects[i]);
-      }
+    EXPECT_EQ(results.size(), expects.first.size());
+    if (expects.first.size() == results.size()) {
+      for (unsigned i = 0; i < expects.first.size(); i++)
+        if (expects.second)
+          EXPECT_EQ(results[i].substr(0, expects.first[i].size()), expects.first[i]);
+        else
+          EXPECT_EQ(results[i], expects.first[i]);
     }
   }
 }
-
-class ParserTest
-    : public testing::TestWithParam<tuple<
-          const char * /*code*/, bool /*success*/, const char * /*output*/>> {
-protected:
-  vector<char> buf;
-  int out_pipe[2];
-  int save;
-
-  ParserTest() : buf(65536), out_pipe(), save() {}
-
-  void SetUp() override {
-    save = dup(STDOUT_FILENO);
-    assert(pipe(out_pipe) == 0);
-    long flags = fcntl(out_pipe[0], F_GETFL);
-    flags |= O_NONBLOCK;
-    fcntl(out_pipe[0], F_SETFL, flags);
-    dup2(out_pipe[1], STDOUT_FILENO);
-    close(out_pipe[1]);
+auto getTypeTests(const vector<string> &files) {
+  vector<tuple<string, bool, string, string, int, bool>> cases;
+  for (auto &f : files) {
+    bool barebones = false;
+    string l;
+    ifstream fin(string(TEST_DIR) + "/" + f);
+    string code, testName;
+    int test = 0;
+    int codeLine = 0;
+    int line = 0;
+    while (getline(fin, l)) {
+      if (l.substr(0, 3) == "#%%") {
+        if (line)
+          cases.emplace_back(make_tuple(f, true, to_string(line) + "_" + testName, code,
+                                        codeLine, barebones));
+        auto t = seq::ast::split(l.substr(4), ',');
+        barebones = (t.size() > 1 && t[1] == "barebones");
+        testName = t[0];
+        code = l + "\n";
+        codeLine = line;
+        test++;
+      } else {
+        code += l + "\n";
+      }
+      line++;
+    }
+    if (line)
+      cases.emplace_back(make_tuple(f, true, to_string(line) + "_" + testName, code,
+                                    codeLine, barebones));
   }
+  return cases;
+}
 
-  void TearDown() override { dup2(save, STDOUT_FILENO); }
-
-  string result() {
-    fflush(stdout);
-    read(out_pipe[0], buf.data(), buf.size() - 1);
-    return string(buf.data());
-  }
-};
-
-// TEST_P(ParserTest, Run) {
-//   string code = get<0>(GetParam());
-//   bool success = get<1>(GetParam());
-//   string output = get<2>(GetParam());
-//   string filename = "<test>";
-//   try {
-//     SeqModule *module = parse(filename.c_str(), code.c_str(), true, true);
-//     execute(module, {filename}, {}, false);
-//     string seqOutput = result();
-//     EXPECT_TRUE(success);
-//     EXPECT_EQ(output, seqOutput);
-//   } catch (seq::exc::SeqException &e) {
-//     EXPECT_FALSE(success);
-//   }
-// }
-// vector<tuple<const char *, bool, const char *>> cases{
-//     {"1", true, "1"},
-//     {"0xFFFFFFFFFFFFFFFFu", true, ""},
-//     {"-45.353", true, "-45.353"},
-//     {"245.e12", true, "245.e12"},
-//     {"'hai'", true, "hai"},
-//     {"\"\"\"\nEEE\"\"\"", true, "\nEEE"},
-//     // {"f'{1} + {2} = {1+2}'", true, "1 + 2 = 3"},
-//     {"k'ACGT'", true, "ACGT"},
-//     {"s'ACGT'", true, "ACGT"},
-//     {"p'ACGT'", true, "ACGT"}};
-// INSTANTIATE_TEST_SUITE_P(
-//   CppParserTests, ParserTest,
-//   testing::ValuesIn(cases)
-// );
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(
+    TypeTests, SeqTest,
+    testing::ValuesIn(getTypeTests({
+      "parser/simplify_expr.seq",
+      "parser/simplify_stmt.seq",
+      "parser/typecheck_expr.seq",
+      "parser/typecheck_stmt.seq",
+      "parser/statements.seq",
+      "parser/types.seq",
+      "parser/llvm.seq"
+    })),
+    getTypeTestNameFromParam);
 
 INSTANTIATE_TEST_SUITE_P(
     CoreTests, SeqTest,
-    testing::Combine(testing::Values("core/parser.seq", "core/align.seq",
-                                     "core/arguments.seq",
-                                     "core/arithmetic.seq", "core/big.seq",
-                                     "core/bltin.seq", "core/bwtsa.seq",
-                                     "core/containers.seq", "core/empty.seq",
-                                     "core/exceptions.seq", "core/formats.seq",
-                                     "core/generators.seq", "core/generics.seq",
-                                     "core/helloworld.seq", "core/kmers.seq",
-                                     "core/match.seq", "core/proteins.seq",
-                                     "core/range.seq", "core/serialization.seq",
-                                     "core/trees.seq"),
-                     testing::Values(true, false)),
+    testing::Combine(
+      testing::Values(
+        "core/helloworld.seq",
+        // "core/llvmops.seq",
+        "core/arithmetic.seq",
+        "core/parser.seq",
+        "core/generics.seq",
+        "core/generators.seq",
+        "core/exceptions.seq",
+        "core/big.seq",
+        "core/containers.seq",
+        "core/trees.seq",
+        "core/range.seq",
+        "core/bltin.seq",
+        "core/arguments.seq",
+        "core/match.seq",
+        "core/kmers.seq",
+        "core/formats.seq",
+        "core/proteins.seq",
+        "core/align.seq",
+        "core/serialization.seq",
+        "core/bwtsa.seq",
+        "core/empty.seq"
+      ),
+      testing::Values(true, false),
+      testing::Values(""),
+      testing::Values(""),
+      testing::Values(0),
+      testing::Values(false)
+    ),
     getTestNameFromParam);
 
 INSTANTIATE_TEST_SUITE_P(
     PipelineTests, SeqTest,
-    testing::Combine(testing::Values("pipeline/parallel.seq",
-                                     "pipeline/prefetch.seq",
-                                     "pipeline/revcomp_opt.seq",
-                                     "pipeline/canonical_opt.seq",
-                                     "pipeline/interalign.seq"),
-                     testing::Values(true, false)),
+    testing::Combine(
+      testing::Values(
+        "pipeline/parallel.seq",
+        "pipeline/prefetch.seq",
+        "pipeline/revcomp_opt.seq",
+        "pipeline/canonical_opt.seq",
+        "pipeline/interalign.seq"
+      ),
+      testing::Values(true, false),
+      testing::Values(""),
+      testing::Values(""),
+      testing::Values(0),
+      testing::Values(false)
+    ),
     getTestNameFromParam);
 
 INSTANTIATE_TEST_SUITE_P(
     StdlibTests, SeqTest,
     testing::Combine(
-        testing::Values("stdlib/str_test.seq", "stdlib/math_test.seq",
-                        "stdlib/itertools_test.seq", "stdlib/bisect_test.seq",
-                        "stdlib/sort_test.seq", "stdlib/random_test.seq",
-                        "stdlib/heapq_test.seq", "stdlib/statistics_test.seq"),
-        testing::Values(true, false)),
+      testing::Values(
+        "stdlib/str_test.seq",
+        "stdlib/math_test.seq",
+        "stdlib/itertools_test.seq",
+        "stdlib/bisect_test.seq",
+        "stdlib/random_test.seq",
+        "stdlib/statistics_test.seq",
+        "stdlib/sort_test.seq",
+        "stdlib/heapq_test.seq",
+        "python/pybridge.seq"
+      ),
+      testing::Values(true, false),
+      testing::Values(""),
+      testing::Values(""),
+      testing::Values(0),
+      testing::Values(false)
+    ),
     getTestNameFromParam);
-
-INSTANTIATE_TEST_SUITE_P(
-    PythonTests, SeqTest,
-    testing::Combine(testing::Values("python/pybridge.seq"),
-                     testing::Values(true, false)),
-    getTestNameFromParam);
+// clang-format on
 
 int main(int argc, char *argv[]) {
+  argv0 = ast::executable_path(argv[0]);
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

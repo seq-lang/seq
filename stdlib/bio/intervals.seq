@@ -1,66 +1,86 @@
 # cgranges implementation adapted from
 # https://github.com/lh3/cgranges
-type Interval(st: int, en: int, max: int, chrom_id: int):
-    def __init__(self: Interval, st: int, en: int, chrom_id: int) -> Interval:
+
+from internal.gc import sizeof, realloc
+
+@tuple
+class Interval:
+    st: int
+    en: int
+    max: int
+    chrom_id: int
+
+    def __new__(st: int, en: int, chrom_id: int) -> Interval:
         return (st, en, en, chrom_id)
 
-    def with_max(self: Interval, max: int) -> Interval:
+    def with_max(self, max: int) -> Interval:
         return (self.st, self.en, max, self.chrom_id)
 
     @property
-    def start(self: Interval):
+    def start(self):
         return int(self.st)
 
     @property
-    def end(self: Interval):
+    def end(self):
         return int(self.en)
 
-    def __len__(self: Interval):
+    def __len__(self):
         return self.end - self.start
 
-    def __bool__(self: Interval):
+    def __bool__(self):
         return len(self) > 0
 
-type _StackCell(_x: int, _k: i32, _w: i32):
-    def __init__(self: _StackCell, k: int, x: int, w: int) -> _StackCell:
+@tuple
+class _StackCell:
+    _x: int
+    _k: i32
+    _w: i32
+
+    def __new__(k: int, x: int, w: int) -> _StackCell:
         return (x, i32(k), i32(w))
 
     @property
-    def k(self: _StackCell):
+    def k(self):
         return int(self._k)
 
     @property
-    def x(self: _StackCell):
+    def x(self):
         return int(self._x)
 
     @property
-    def w(self: _StackCell):
+    def w(self):
         return int(self._w)
 
-type _Contig(name: str, len: int, root_k: int, n: int, off: int)
+@tuple
+class _Contig:
+    name: str
+    len: int
+    root_k: int
+    n: int
+    off: int
 
 class IntervalTree:
     '''
     Interval tree data structure.
-    Adapted from [cgranges](# cgranges implementation adapted from
-# https://github.com/lh3/cgranges).
+    Adapted from [cgranges](https://github.com/lh3/cgranges).
     '''
-    a: ptr[Interval]
+
+    a: Ptr[Interval]
     n: int
     m: int
-    contigs: list[_Contig]
-    hc: dict[str, int]
+    contigs: List[_Contig]
+    hc: Dict[str, int]
 
-    def __init__(self: IntervalTree):
+    def __init__(self):
         M = 32
-        self.a = ptr[Interval](M)
+        self.a = Ptr[Interval](M)
         self.n = 0
         self.m = M
-        self.contigs = list[_Contig]()
-        self.hc = dict[str, int]()
+        self.contigs = List[_Contig]()
+        self.hc = Dict[str, int]()
         self.hc.resize(1024)
 
-    def _chrom_id(self: IntervalTree, chrom: str, end: int):
+    def _chrom_id(self, chrom: str, end: int):
         contigs = self.contigs
         idx = self.hc.get(chrom, -1)
         if idx == -1:
@@ -73,15 +93,15 @@ class IntervalTree:
                 contigs[idx] = _Contig(contig.name, end, contig.root_k, contig.n, contig.off)
         return idx
 
-    def _append(self: IntervalTree, intv: Interval):
+    def _append(self, intv: Interval):
         if self.n >= self.m:
             m = (3 * self.m)//2 + 1
-            self.a = ptr[Interval](_gc.realloc(ptr[byte](self.a), m * _gc.sizeof[Interval]()))
+            self.a = Ptr[Interval](realloc(self.a.as_byte(), m * sizeof[Interval]()))
             self.m = m
         self.a[self.n] = intv
         self.n += 1
 
-    def _is_sorted(self: IntervalTree):
+    def _is_sorted(self):
         i = 1
         while i < self.n:
             if self.a[i - 1].start > self.a[i].start:
@@ -89,14 +109,14 @@ class IntervalTree:
             i += 1
         return i == self.n
 
-    def _sort(self: IntervalTree):
+    def _sort(self):
         from algorithms.pdqsort import pdq_sort_array
         a = self.a
         n = self.n
-        def key(intv: Interval) -> tuple[int,int]: return (intv.chrom_id, intv.start)
-        pdq_sort_array(array[Interval](a, n), n, key)
+        def key(intv: Interval) -> Tuple[int,int]: return (intv.chrom_id, intv.start)
+        pdq_sort_array(Array[Interval](a, n), n, key)
 
-    def _index_prepare(self: IntervalTree):
+    def _index_prepare(self):
         if not self._is_sorted(): self._sort()
         p = self.a
         n = self.n
@@ -111,7 +131,7 @@ class IntervalTree:
                 st = i
             i += 1
 
-    def _index_core(a: ptr[Interval], n: int):
+    def _index_core(a: Ptr[Interval], n: int):
         if not a or n <= 0:
             return -1
         i = 0
@@ -146,7 +166,7 @@ class IntervalTree:
             k += 1
         return k - 1
 
-    def add(self: IntervalTree, chrom: str, start: int, end: int):
+    def add(self, chrom: str, start: int, end: int):
         '''
         Adds an interval to the tree. An interval is a chromosome name `chrom` and
         0-based `start` and `end` (non-inclusive) positions.
@@ -154,7 +174,7 @@ class IntervalTree:
         chrom_id = self._chrom_id(chrom, end)
         self._append(Interval(start, end, chrom_id))
 
-    def index(self: IntervalTree):
+    def index(self):
         '''
         Indexes the tree for querying.
         '''
@@ -168,7 +188,7 @@ class IntervalTree:
             self.contigs[i] = contig
             i += 1
 
-    def overlap(self: IntervalTree, chrom: str, start: int, end: int):
+    def overlap(self, chrom: str, start: int, end: int):
         '''
         Yields all `Interval`s overlapping the argument interval.
         '''
@@ -213,16 +233,16 @@ class IntervalTree:
                 stack[t] = _StackCell(z.k - 1, z.x + (1 << (z.k - 1)), 0)  # push the right child
                 t += 1
 
-    def __len__(self: IntervalTree):
+    def __len__(self):
         return self.n
 
-    def __bool__(self: IntervalTree):
+    def __bool__(self):
         return len(self) > 0
 
-    def __contains__(self: IntervalTree, chrom: str):
+    def __contains__(self, chrom: str):
         return chrom in self.hc
 
-    def __iter__(self: IntervalTree):
+    def __iter__(self):
         '''
         Iterator over all intervals in the tree
         '''

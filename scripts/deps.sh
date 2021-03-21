@@ -4,6 +4,7 @@ set -e
 
 export CC=$CC
 export CXX=$CXX
+export USE_ZLIBNG="${USE_ZLIBNG:-1}"
 
 export INSTALLDIR=${PWD}/deps
 export SRCDIR=${PWD}/deps_src
@@ -16,47 +17,51 @@ if [ -n "$1" ]; then export JOBS=$1; fi
 echo "Using $JOBS cores..."
 
 # Tapir
-git clone -b release_60-release https://github.com/seq-lang/Tapir-LLVM ${SRCDIR}/Tapir-LLVM
-mkdir -p ${SRCDIR}/Tapir-LLVM/build
-cd ${SRCDIR}/Tapir-LLVM/build
-cmake .. \
-   -DLLVM_INCLUDE_TESTS=OFF \
-   -DLLVM_ENABLE_RTTI=ON \
-   -DCMAKE_BUILD_TYPE=Release \
-   -DLLVM_TARGETS_TO_BUILD=host \
-   -DLLVM_ENABLE_ZLIB=OFF \
-   -DLLVM_ENABLE_TERMINFO=OFF \
-   -DCMAKE_C_COMPILER=${CC} \
-   -DCMAKE_CXX_COMPILER=${CXX} \
-   -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}
-make -j$JOBS
-make install
-${INSTALLDIR}/bin/llvm-config --cmakedir
+if [ ! -d "${SRCDIR}/Tapir-LLVM" ]; then
+  git clone -depth 1 -b release_60-release https://github.com/seq-lang/Tapir-LLVM ${SRCDIR}/Tapir-LLVM
+  mkdir -p ${SRCDIR}/Tapir-LLVM/build
+  cd ${SRCDIR}/Tapir-LLVM/build
+  cmake .. \
+     -DLLVM_INCLUDE_TESTS=OFF \
+     -DLLVM_ENABLE_RTTI=ON \
+     -DCMAKE_BUILD_TYPE=Release \
+     -DLLVM_TARGETS_TO_BUILD=host \
+     -DLLVM_ENABLE_ZLIB=OFF \
+     -DLLVM_ENABLE_TERMINFO=OFF \
+     -DCMAKE_C_COMPILER=${CC} \
+     -DCMAKE_CXX_COMPILER=${CXX} \
+     -DCMAKE_INSTALL_PREFIX=${INSTALLDIR}
+  make -j$JOBS
+  make install
+  ${INSTALLDIR}/bin/llvm-config --cmakedir
+fi
 
 # OCaml
-curl -L https://github.com/ocaml/ocaml/archive/4.07.1.tar.gz | tar zxf - -C ${SRCDIR}
-cd ${SRCDIR}/ocaml-4.07.1
-./configure \
-    -cc "${CC} -Wno-implicit-function-declaration" \
-    -fPIC \
-    -no-pthread \
-    -no-debugger \
-    -no-debug-runtime \
-    -prefix ${INSTALLDIR}
-make -j$JOBS world.opt
-make install
-export PATH=${INSTALLDIR}/bin:${PATH}
-curl -L https://github.com/ocaml/ocamlbuild/archive/0.12.0.tar.gz | tar zxf - -C ${SRCDIR}
-cd ${SRCDIR}/ocamlbuild-0.12.0
-make configure \
-  PREFIX=${INSTALLDIR} \
-  OCAMLBUILD_BINDIR=${INSTALLDIR}/bin \
-  OCAMLBUILD_LIBDIR=${INSTALLDIR}/lib \
-  OCAMLBUILD_MANDIR=${INSTALLDIR}/man
-make -j$JOBS
-make install
-${INSTALLDIR}/bin/ocaml -version
-${INSTALLDIR}/bin/ocamlbuild -version
+if [ ! -d "${SRCDIR}/ocaml-4.07.1" ]; then
+  curl -L https://github.com/ocaml/ocaml/archive/4.07.1.tar.gz | tar zxf - -C ${SRCDIR}
+  cd ${SRCDIR}/ocaml-4.07.1
+  ./configure \
+      -cc "${CC} -Wno-implicit-function-declaration" \
+      -fPIC \
+      -no-pthread \
+      -no-debugger \
+      -no-debug-runtime \
+      -prefix ${INSTALLDIR}
+  make -j$JOBS world.opt
+  make install
+  export PATH=${INSTALLDIR}/bin:${PATH}
+  curl -L https://github.com/ocaml/ocamlbuild/archive/0.12.0.tar.gz | tar zxf - -C ${SRCDIR}
+  cd ${SRCDIR}/ocamlbuild-0.12.0
+  make configure \
+    PREFIX=${INSTALLDIR} \
+    OCAMLBUILD_BINDIR=${INSTALLDIR}/bin \
+    OCAMLBUILD_LIBDIR=${INSTALLDIR}/lib \
+    OCAMLBUILD_MANDIR=${INSTALLDIR}/man
+  make -j$JOBS
+  make install
+  ${INSTALLDIR}/bin/ocaml -version
+  ${INSTALLDIR}/bin/ocamlbuild -version
+fi
 
 # Menhir
 curl -L https://gitlab.inria.fr/fpottier/menhir/-/archive/20190924/menhir-20190924.tar.gz | tar zxf - -C ${SRCDIR}
@@ -66,17 +71,31 @@ make PREFIX=${INSTALLDIR} install
 ${INSTALLDIR}/bin/menhir --version
 [ ! -f ${INSTALLDIR}/share/menhir/menhirLib.cmx ] && die "Menhir library not found"
 
-# zlib
-curl -L https://zlib.net/zlib-1.2.11.tar.gz | tar zxf - -C ${SRCDIR}
-cd ${SRCDIR}/zlib-1.2.11
-CFLAGS=-fPIC ./configure \
-    --64 \
-    --static \
-    --shared \
-    --prefix=${INSTALLDIR}
-make -j$JOBS
-make install
-[ ! -f ${INSTALLDIR}/lib/libz.a ] && die "zlib library not found"
+if [ "${USE_ZLIBNG}" = '1' ] ; then
+    # zlib-ng
+    curl -L https://github.com/zlib-ng/zlib-ng/archive/2.0.1.tar.gz | tar zxf - -C ${SRCDIR}
+    cd ${SRCDIR}/zlib-ng-2.0.1
+    CFLAGS=-fPIC ./configure \
+        --64 \
+        --zlib-compat \
+        --prefix=${INSTALLDIR}
+    make -j$JOBS
+    make install
+    [ ! -f ${INSTALLDIR}/lib/libz.a ] && die "zlib (zlib-ng) library not found"
+else
+    # zlib
+    curl -L https://zlib.net/zlib-1.2.11.tar.gz | tar zxf - -C ${SRCDIR}
+    cd ${SRCDIR}/zlib-1.2.11
+    CFLAGS=-fPIC ./configure \
+        --64 \
+        --static \
+        --shared \
+        --prefix=${INSTALLDIR}
+    make -j$JOBS
+    make install
+    [ ! -f ${INSTALLDIR}/lib/libz.a ] && die "zlib library not found"
+fi
+
 
 # bdwgc
 curl -L https://github.com/ivmai/bdwgc/releases/download/v8.0.4/gc-8.0.4.tar.gz | tar zxf - -C ${SRCDIR}
@@ -116,5 +135,13 @@ cmake .. \
 make -j$JOBS
 make install
 # [ ! -f ${INSTALLDIR}/lib/libomp.so ] && die "openmp library not found"
+
+# libbacktrace
+git clone https://github.com/seq-lang/libbacktrace ${SRCDIR}/libbacktrace
+cd ${SRCDIR}/libbacktrace
+CFLAGS="-fPIC" ./configure --prefix=${INSTALLDIR}
+make -j$JOBS
+make install
+[ ! -f ${INSTALLDIR}/lib/libbacktrace.a ] && die "libbacktrace library not found"
 
 echo "Dependency generation done: ${INSTALLDIR}"

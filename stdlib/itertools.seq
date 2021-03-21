@@ -1,7 +1,7 @@
 import math
 import collections
 
-def combinations[T](pool: generator[T], r: int):
+def combinations[T](pool: Generator[T], r: int):
     """
     Return successive r-length combinations of elements in the iterable.
 
@@ -26,7 +26,7 @@ def combinations[T](pool: generator[T], r: int):
             indices[j] = indices[j-1] + 1
         yield [pool_list[i] for i in indices]
 
-def combinations_with_replacement[T](pool: generator[T], r: int):
+def combinations_with_replacement[T](pool: Generator[T], r: int):
     """
     Return successive r-length combinations of elements in the iterable
     allowing individual elements to have successive repeats.
@@ -51,7 +51,7 @@ def combinations_with_replacement[T](pool: generator[T], r: int):
         indices = [indices[i] for i in range(b)] + [indices[b]+1 for i in range(r-b)]
         yield [pool_list[indices[i]] for i in range(len(indices))]
 
-def islice[T](iterable: generator[T], start: int, stop: int, step: int):
+def islice[T](iterable: Generator[T], start: int, stop: int, step: int):
     """
     Make an iterator that returns selected elements from the iterable.
 
@@ -115,7 +115,7 @@ def repeat(object, times: int):
         for i in range(times):
             yield object
 
-def cycle[T](iterable: generator[T]):
+def cycle[T](iterable: Generator[T]):
     """
     fixed
     """
@@ -127,16 +127,16 @@ def cycle[T](iterable: generator[T]):
         for element in saved:
               yield element
 
-def compress(data, selectors):
+def compress[S,T](data: Generator[S], selectors: Generator[T]):
     """
     Return data elements corresponding to true selector elements.
 
     Forms a shorter iterator from selected data elements using the selectors to
     choose the data elements.
     """
-    return [d for d, s in zip(data, selectors) if s]
+    return (d for d, s in zip(data, selectors) if s)
 
-def dropwhile(predicate, iterable):
+def dropwhile[T](predicate: Callable[[T], bool], iterable: Generator[T]):
     """
     Drop items from the iterable while predicate(item) is true.
 
@@ -150,7 +150,7 @@ def dropwhile(predicate, iterable):
     for x in it:
         yield x
 
-def takewhile(predicate, iterable):
+def takewhile[T](predicate: Callable[[T], bool], iterable: Generator[T]):
     """
     Return successive entries from an iterable as long as the predicate evaluates to true for each entry.
     """
@@ -160,7 +160,7 @@ def takewhile(predicate, iterable):
         else:
             break
 
-def filterfalse(predicate, iterable):
+def filterfalse[T](predicate: Callable[[T], bool], iterable: Generator[T]):
     """
     Return those items of iterable for which function(item) is false.
 
@@ -172,7 +172,7 @@ def filterfalse(predicate, iterable):
         if not predicate(x):
             yield x
 
-def permutations[T](pool: generator[T], r: optional[int] = None) -> list[T]:
+def permutations[T](pool: Generator[T], r: Optional[int] = None) -> Generator[List[T]]:
     """
     Return successive r-length permutations of elements in the iterable.
     """
@@ -201,7 +201,7 @@ def permutations[T](pool: generator[T], r: optional[int] = None) -> list[T]:
         if b == -1:
             return
 
-def accumulate(iterable, func, initial):
+def accumulate[T,S](iterable: Generator[T], func: Callable[[S,T], S], initial: S):
     """
     Return series of accumulated sums (or other binary function results).
 
@@ -236,8 +236,7 @@ def starmap(function, iterable):
     for args in iterable:
         yield function(args[0], args[1])
 
-@deduceall
-def groupby[K,V](iterable: generator[V], key: optional[function[K,V]] = None):
+def groupby[V](iterable: Generator[V], key = Optional[int]()):
     """
     make an iterator that returns consecutive keys and groups from the iterable
 
@@ -254,19 +253,19 @@ def groupby[K,V](iterable: generator[V], key: optional[function[K,V]] = None):
         iterable.destroy()
         return
 
-    if key:
+    if not isinstance(key, Optional):
         currvalue = iterable.next()
-        currkey = (~key)(currvalue)
+        currkey = key(currvalue)
         group = [currvalue]
 
         while not iterable.done():
             currvalue = iterable.next()
-            k = (~key)(currvalue)
+            k = key(currvalue)
 
             if k != currkey:
                 yield currkey, group
                 currkey = k
-                group = list[V]()
+                group = List[V]()
             group.append(currvalue)
         yield currkey, group
     else:
@@ -281,12 +280,12 @@ def groupby[K,V](iterable: generator[V], key: optional[function[K,V]] = None):
             if k != currkey:
                 yield currkey, group
                 currkey = k
-                group = list[V]()
+                group = List[V]()
             group.append(currvalue)
         yield currkey, group
     iterable.destroy()
 
-def zip_longest[T](a: generator[T], b: generator[T], fillvalue: T):
+def zip_longest[T](a: Generator[T], b: Generator[T], fillvalue: T):
     a_done = False
     b_done = False
 
@@ -316,12 +315,6 @@ def product(a, b, equals_ok: bool = True):
 
 
 '''
-def product[T](iterables: generator[T], repeat: int):
-    """
-    Needs implementing.
-    """
-    pass
-
 def tee(iterable, n):
     """
     Needs implementing.

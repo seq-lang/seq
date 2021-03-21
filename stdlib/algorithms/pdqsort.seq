@@ -16,7 +16,7 @@ def _floor_log2(n: int) -> int:
         log += 1
     return log
 
-def _partial_insertion_sort[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T]) -> bool:
+def _partial_insertion_sort[S,T](arr: Array[T], begin: int, end: int, keyf: Callable[[T], S]) -> bool:
     if begin == end:
         return True
 
@@ -46,7 +46,7 @@ def _partial_insertion_sort[S,T](arr: array[T], begin: int, end: int, keyf: func
 
     return True
 
-def _partition_left[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T]) -> int:
+def _partition_left[S,T](arr: Array[T], begin: int, end: int, keyf: Callable[[T], S]) -> int:
     pivot = arr[begin]
     first = begin
     last = end
@@ -85,7 +85,7 @@ def _partition_left[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T
 
     return pivot_pos
 
-def _partition_right[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T]) -> tuple[int,int]:
+def _partition_right[S,T](arr: Array[T], begin: int, end: int, keyf: Callable[[T], S]) -> Tuple[int,int]:
     pivot = arr[begin]
     first = begin
     last = end
@@ -130,16 +130,16 @@ def _partition_right[S,T](arr: array[T], begin: int, end: int, keyf: function[S,
 
     return (pivot_pos, already_partitioned)
 
-def _sort2[S,T](arr: array[T], i: int, j: int, keyf: function[S,T]):
+def _sort2[S,T](arr: Array[T], i: int, j: int, keyf: Callable[[T], S]):
     if keyf(arr[j]) < keyf(arr[i]):
         arr[i], arr[j] = arr[j], arr[i]
 
-def _sort3[S,T](arr: array[T], i: int, j: int, k: int, keyf: function[S,T]):
+def _sort3[S,T](arr: Array[T], i: int, j: int, k: int, keyf: Callable[[T], S]):
     _sort2(arr, i, j, keyf)
     _sort2(arr, j, k, keyf)
     _sort2(arr, i, j, keyf)
 
-def _pdq_sort[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T], bad_allowed: int, leftmost: bool):
+def _pdq_sort[S,T](arr: Array[T], begin: int, end: int, keyf: Callable[[T], S], bad_allowed: int, leftmost: bool):
     while True:
         size = end - begin
         if size < INSERTION_SORT_THRESHOLD:
@@ -202,7 +202,7 @@ def _pdq_sort[S,T](arr: array[T], begin: int, end: int, keyf: function[S,T], bad
         begin = pivot_pos + 1
         leftmost = False
 
-def pdq_sort_array[S,T](collection: array[T], size: int, keyf: function[S,T]):
+def pdq_sort_array[S,T](collection: Array[T], size: int, keyf: Callable[[T], S]):
     """
         Pattern-defeating Quicksort
         By Orson Peters, published at https://github.com/orlp/pdqsort
@@ -211,7 +211,7 @@ def pdq_sort_array[S,T](collection: array[T], size: int, keyf: function[S,T]):
     """
     _pdq_sort(collection, 0, size, keyf, _floor_log2(size), True)
 
-def pdq_sort_inplace[S,T](collection: list[T], keyf: function[S,T]):
+def pdq_sort_inplace[S,T](collection: List[T], keyf: Callable[[T], S]):
     """
         Pattern-defeating Quicksort
         By Orson Peters, published at https://github.com/orlp/pdqsort
@@ -220,7 +220,7 @@ def pdq_sort_inplace[S,T](collection: list[T], keyf: function[S,T]):
     """
     pdq_sort_array(collection.arr, collection.len, keyf)
 
-def pdq_sort[S,T](collection: list[T], keyf: function[S,T]) -> list[T]:
+def pdq_sort[S,T](collection: List[T], keyf: Callable[[T], S]) -> List[T]:
     """
         Pattern-defeating Quicksort
         By Orson Peters, published at https://github.com/orlp/pdqsort

@@ -1,15 +1,74 @@
-type BaseCounts(A: int, C: int, G: int, T: int, N: int):
+@inline
+def _preprocess_seq_pattern(pattern: str):
+    VALID = ('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x01\x00\x01\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+    STAR = byte(42)
+    p = pattern.ptr
+    n = pattern.len
+    star = -1
+    i = 0
+    while i < n:
+        c = p[i]
+        if not VALID[int(c)]:
+            raise ValueError("invalid character '" +  str(c) + "' in seq pattern")
+        if c == STAR:
+            if star >= 0:
+                raise ValueError("seq pattern can contain at most one '*'")
+            star = i
+        i += 1
+    return star
+
+@tuple
+class seq:
+    len: int
+    ptr: Ptr[byte]
+
+    def __new__(s: str) -> seq:
+        return (s.len, s.ptr)
+    def __new__(p: Ptr[byte], l: int) -> seq:
+        return (l, p)
+    def __str__(self) -> str:
+        return str(self.ptr, self.len)
+    def __len__(self):
+        return self.len if self.len >= 0 else -self.len
+
+@extend
+class str:
+    def __prefix_s__[N: int = 0](s: str) -> seq:
+        return seq(s)
+
+@tuple
+class BaseCounts:
     '''
     Representation of base counts of a sequence
     '''
+    A: int
+    C: int
+    G: int
+    T: int
+    N: int
 
-    def __init__(self: BaseCounts) -> BaseCounts:
+    def __new__() -> BaseCounts:
         '''
         Base counts of empty sequence (i.e. all zero)
         '''
         return (0, 0, 0, 0, 0)
 
-    def __add__(self: BaseCounts, other: BaseCounts):
+    def __add__(self, other: BaseCounts):
         '''
         Adds corresponding base counts
         '''
@@ -17,7 +76,7 @@ type BaseCounts(A: int, C: int, G: int, T: int, N: int):
         A2, C2, G2, T2, N2 = other
         return BaseCounts(A1 + A2, C1 + C2, G1 + G2, T1 + T2, N1 + N2)
 
-    def __sub__(self: BaseCounts, other: BaseCounts):
+    def __sub__(self, other: BaseCounts):
         '''
         Subtracts corresponding base counts
         '''
@@ -25,7 +84,7 @@ type BaseCounts(A: int, C: int, G: int, T: int, N: int):
         A2, C2, G2, T2, N2 = other
         return BaseCounts(A1 - A2, C1 - C2, G1 - G2, T1 - T2, N1 - N2)
 
-    def add(self: BaseCounts, A: bool = False, C: bool = False, G: bool = False, T: bool = False, N: bool = False):
+    def add(self, A: bool = False, C: bool = False, G: bool = False, T: bool = False, N: bool = False):
         '''
         Increments the specified base counts
         '''
@@ -42,18 +101,19 @@ type BaseCounts(A: int, C: int, G: int, T: int, N: int):
             N1 += 1
         return BaseCounts(A1, C1, G1, T1, N1)
 
-    def __str__(self: BaseCounts):
+    def __str__(self):
         A, C, G, T, N = self
         return f'BaseCounts({A=}, {C=}, {G=}, {T=}, {N=})'
 
-extend seq:
-    def __init__(self: seq, s: str):
+@extend
+class seq:
+    def __new__(s: str) -> seq:
         return seq(s.ptr, s.len)
 
-    def __init__(self: seq):
+    def __new__() -> seq:
         return seq(cobj(), 0)
 
-    def __eq__(self: seq, other: seq):
+    def __eq__(self, other: seq):
         n = len(self)
         if n != len(other):
             return False
@@ -64,13 +124,13 @@ extend seq:
             i += 1
         return True
 
-    def __ne__(self: seq, other: seq):
+    def __ne__(self, other: seq):
         return not (self == other)
 
-    def _cmp(self: seq, other: seq):
+    def _cmp(self, other: seq):
         self_len = len(self)
         other_len = len(other)
-        n = min2(self_len, other_len)
+        n = min(self_len, other_len)
         i = 0
         while i < n:
             c1 = self._at(i)
@@ -80,43 +140,55 @@ extend seq:
             i += 1
         return self_len - other_len
 
-    def __lt__(self: seq, other: seq):
+    def __to_py__(self) -> pyobj:
+        return str(self.ptr, self.len).__to_py__()
+
+    def __from_py__(s: pyobj) -> seq:
+        return seq(str.__from_py__(s))
+
+    def __lt__(self, other: seq):
         return self._cmp(other) < 0
 
-    def __le__(self: seq, other: seq):
+    def __le__(self, other: seq):
         return self._cmp(other) <= 0
 
-    def __gt__(self: seq, other: seq):
+    def __gt__(self, other: seq):
         return self._cmp(other) > 0
 
-    def __ge__(self: seq, other: seq):
+    def __ge__(self, other: seq):
         return self._cmp(other) >= 0
 
-    def __str__(self: seq):
+    def __str__(self):
         if self.len >= 0:
             return str(self.ptr, self.len)
         n = -self.len
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         for i in range(n):
             p[i] = self._at(i)
         return str(p, n)
 
-    def __contains__(self: seq, other: seq):
+    def __contains__(self, other: seq):
         return str(other) in str(self)
 
-    def __len__(self: seq):
+    def __contains__[K](self, kmer: K):
+        for k in self.kmers[K](step=1):
+            if k == kmer:
+                return True
+        return False
+
+    def __len__(self):
         return abs(self.len)
 
-    def __bool__(self: seq):
+    def __bool__(self):
         return self.len != 0
 
-    def __hash__(self: seq):
+    def __hash__(self):
         h = 0
         for i in range(len(self)):
             h = 31*h + int(self._at(i))
         return h
 
-    def __getitem__(self: seq, idx: int):
+    def __getitem__(self, idx: int):
         n = len(self)
         if idx < 0:
             idx += n
@@ -127,49 +199,56 @@ extend seq:
         else:
             return seq(self.ptr + (n - idx - 1), -1)
 
-    def _at(self: seq, idx: int):
+    def _at(self, idx: int):
         b = self.ptr[(-self.len - idx - 1) if (self.len < 0) else idx]
         return b.comp() if self.len < 0 else b
 
-    def _slice_direct(self: seq, a: int, b: int):
+    @inline
+    def _slice_fwd(self, a: int, b: int):
+        return seq(self.ptr + a, b - a)
+
+    @inline
+    def _slice_rev(self, a: int, b: int):
+        return seq(self.ptr + (-self.len - b), -(b - a))
+
+    def _slice_direct(self, a: int, b: int):
         if self.len >= 0:
-            return seq(self.ptr + a, b - a)
+            return self._slice_fwd(a, b)
         else:
-            return seq(self.ptr + (-self.len - b), -(b - a))
+            return self._slice_rev(a, b)
 
-    def __getitem__(self: seq, s: slice):
-        a, b = s
-        n = len(self)
-        if a < 0: a += n
-        if b < 0: b += n
-        if a > n: a = n
-        if b > n: b = n
-        return self._slice_direct(a, b)
-
-    def __getitem__(self: seq, s: lslice):
-        b = s.end
-        n = len(self)
-        if b < 0: b += n
-        if b > n: b = n
-        if self.len >= 0:
-            return seq(self.ptr, b)
+    def __getitem__(self, s: Slice):
+        assert s.step is None
+        if s.start is None and s.stop is None and s.step is None:
+            return self.__copy__()
+        elif s.start is None:
+            b = ~s.stop
+            n = len(self)
+            if b < 0: b += n
+            if b > n: b = n
+            if self.len >= 0:
+                return seq(self.ptr, b)
+            else:
+                return seq(self.ptr + (n - b), -b)
+        elif s.stop is None:
+            a = ~s.start
+            n = len(self)
+            if a < 0: a += n
+            if a > n: a = n
+            if self.len >= 0:
+                return seq(self.ptr + a, n - a)
+            else:
+                return seq(self.ptr, -(n - a))
         else:
-            return seq(self.ptr + (n - b), -b)
+            a, b = ~s.start, ~s.stop
+            n = len(self)
+            if a < 0: a += n
+            if b < 0: b += n
+            if a > n: a = n
+            if b > n: b = n
+            return self._slice_direct(a, b)
 
-    def __getitem__(self: seq, s: rslice):
-        a = s.start
-        n = len(self)
-        if a < 0: a += n
-        if a > n: a = n
-        if self.len >= 0:
-            return seq(self.ptr + a, n - a)
-        else:
-            return seq(self.ptr, -(n - a))
-
-    def __getitem__(self: seq, s: eslice):
-        return self
-
-    def _copy_to(self: seq, p: cobj):
+    def _copy_to(self, p: cobj):
         if self.len >= 0:
             str.memcpy(p, self.ptr, self.len)
         else:
@@ -177,13 +256,13 @@ extend seq:
             for i in range(n):
                 p[i] = self.ptr[n - i - 1]
 
-    def __copy__(self: seq):
+    def __copy__(self):
         n = len(self)
         p = cobj(n)
         self._copy_to(p)
         return seq(p, n)
 
-    def split(self: seq, k: int, step: int = 1):
+    def split(self, k: int, step: int = 1):
         '''
         Iterator over length-`k` subsequences of the given sequence
         with the specified step size.
@@ -193,16 +272,16 @@ extend seq:
             yield self._slice_direct(i,i+k)
             i += step
 
-    def __iter__(self: seq):
+    def __iter__(self):
         return self.split(1, 1)
 
-    def __reversed__(self: seq):
+    def __reversed__(self):
         i = len(self) - 1
         while i >= 0:
             yield self._slice_direct(i,i+1)
             i -= 1
 
-    def kmers[K](self: seq, step: int = 1):
+    def kmers[K](self, step: int = 1):
         '''
         Iterator over k-mers (type `K`) of the given sequence
         with the specified step size. Note that k-mers spanning
@@ -211,7 +290,7 @@ extend seq:
         for pos, kmer in self.kmers_with_pos[K](step):
             yield kmer
 
-    def kmers_canonical[K](self: seq):
+    def kmers_canonical[K](self):
         '''
         Iterator over canonical k-mers (type `K`) of the given sequence.
         Note that k-mers spanning ambiguous bases will be skipped.
@@ -236,7 +315,7 @@ extend seq:
                 l = 0
             i += 1
 
-    def kmers_canonical_with_pos[K](self: seq):
+    def kmers_canonical_with_pos[K](self):
         '''
         Iterator over (0-based index, canonical k-mer) tuples of the given
         sequence with the specified step size. Note that k-mers
@@ -260,7 +339,7 @@ extend seq:
                 l = 0
             i += 1
 
-    def kmers_with_pos[K](self: seq, step: int = 1):
+    def kmers_with_pos[K](self, step: int = 1):
         '''
         Iterator over (0-based index, k-mer) tuples of the given
         sequence with the specified step size. Note that k-mers
@@ -276,15 +355,15 @@ extend seq:
             refresh = True
             while i + k <= n:
                 if refresh:
-                    sub = self._slice_direct(i, i + k)
+                    sub = self._slice_fwd(i, i + k)
                     if not sub.N():
-                        kmer = K(sub, False)
+                        kmer = K._make_fwd(sub.ptr, k)
                         refresh = step >= k
                         yield (i, kmer)
                 else:
-                    sub = self._slice_direct(i + k - step, i + k)
+                    sub = self._slice_fwd(i + k - step, i + k)
                     if not sub.N():
-                        kmer <<= sub
+                        kmer = kmer._lsh_fwd(sub.ptr, step)
                         yield (i, kmer)
                     else:
                         refresh = True
@@ -296,25 +375,25 @@ extend seq:
             refresh = True
             while i + k <= n:
                 if refresh:
-                    sub = self._slice_direct(i, i + k)
+                    sub = self._slice_rev(i, i + k)
                     if not sub.N():
-                        kmer = K(sub, True)
+                        kmer = K._make_rev(sub.ptr, k)
                         refresh = step >= k
                         yield (i, kmer)
                 else:
-                    sub = self._slice_direct(i + k - step, i + k)
+                    sub = self._slice_rev(i + k - step, i + k)
                     if not sub.N():
-                        kmer <<= sub
+                        kmer = kmer._lsh_rev(sub.ptr, step)
                         yield (i, kmer)
                     else:
                         refresh = True
                 i += step
 
-    def _kmers_revcomp[K](self: seq, step: int):
+    def _kmers_revcomp[K](self, step: int):
         for pos, kmer in self._kmers_revcomp_with_pos[K](step):
             yield kmer
 
-    def _kmers_revcomp_with_pos[K](self: seq, step: int):
+    def _kmers_revcomp_with_pos[K](self, step: int):
         # This function is intentionally written this way. It could be simplified,
         # but this version was found to be the most performant due to inlining etc.
         k = K.len()
@@ -325,15 +404,15 @@ extend seq:
             refresh = True
             while i + 1 - k >= 0:
                 if refresh:
-                    sub = ~self._slice_direct(i + 1 - k, i + 1)
+                    sub = self._slice_fwd(i + 1 - k, i + 1)
                     if not sub.N():
-                        kmer = K(sub, True)
+                        kmer = K._make_rev(sub.ptr, k)
                         refresh = step >= k
                         yield (i - k + 1, kmer)
                 else:
-                    sub = self._slice_direct(i + 1 - k, i + 1 - k + step)
+                    sub = self._slice_fwd(i + 1 - k, i + 1 - k + step)
                     if not sub.N():
-                        kmer <<= ~sub
+                        kmer = kmer._lsh_rev(sub.ptr, step)
                         yield (i - k + 1, kmer)
                     else:
                         refresh = True
@@ -345,15 +424,15 @@ extend seq:
             refresh = True
             while i + 1 - k >= 0:
                 if refresh:
-                    sub = ~self._slice_direct(i + 1 - k, i + 1)
+                    sub = self._slice_rev(i + 1 - k, i + 1)
                     if not sub.N():
-                        kmer = K(sub, False)
+                        kmer = K._make_fwd(sub.ptr, k)
                         refresh = step >= k
                         yield (i - k + 1, kmer)
                 else:
-                    sub = self._slice_direct(i + 1 - k, i + 1 - k + step)
+                    sub = self._slice_rev(i + 1 - k, i + 1 - k + step)
                     if not sub.N():
-                        kmer <<= ~sub
+                        kmer = kmer._lsh_fwd(sub.ptr, step)
                         yield (i - k + 1, kmer)
                     else:
                         refresh = True
@@ -377,7 +456,33 @@ extend seq:
                 '\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04'
                 '\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04').ptr
 
-    def N(self: seq):
+    def _nt4z_table():
+        return ('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x01\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+                '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00').ptr
+
+    @inline
+    def _enc(b: byte):
+        return int(seq._nt4_table()[int(b)])
+
+    @inline
+    def _encz(b: byte):
+        return int(seq._nt4z_table()[int(b)])
+
+    def N(self):
         '''
         Returns whether this sequence contains ambiguous bases.
         An ambiguous base is defined to be a non-ACGT base.
@@ -392,17 +497,17 @@ extend seq:
         return False
 
     def _base_value(b: byte, n: int):
-        c = int(seq._nt4_table()[int(b)])
+        c = seq._enc(b)
         if c == 4: return 4
         return c if n > 0 else 3 - c
 
-    def __int__(self: seq):
+    def __int__(self):
         if len(self) != 1:
             raise ValueError("sequence length is not 1")
         return seq._base_value(self.ptr[0], self.len)
 
     @property
-    def bases(self: seq):
+    def bases(self):
         '''
         `BaseCount` for this sequence
         '''
@@ -416,17 +521,49 @@ extend seq:
         A, C, G, T, N = p
         return BaseCounts(A, C, G, T, N)
 
-    def __invert__(self: seq):
+    def __invert__(self):
         '''
         Reverse complemented sequence
         '''
         return seq(self.ptr, -self.len)
 
-    def __reversed__(self: seq):
+    def __reversed__(self):
         n = len(self)
-        p = ptr[byte](n)
+        p = Ptr[byte](n)
         i = 0
         while i < n:
             p[i] = self._at(n - i - 1)
             i += 1
         return seq(p, n)
+
+@extend
+class seq:
+    def __match__(self, pattern: str):
+        WILD = byte(95)
+        p = pattern.ptr
+        n = pattern.len
+        star = _preprocess_seq_pattern(pattern)
+        if star >= 0:
+            m = len(self)
+            if m < n - 1:
+                return False
+            i = 0
+            while i < star:
+                if p[i] != WILD and p[i] != self._at(i):
+                    return False
+                i += 1
+            i = star + 1
+            while i < n:
+                if p[i] != WILD and p[i] != self._at(i + m - n):
+                    return False
+                i += 1
+            return True
+        else:
+            if len(self) != n:
+                return False
+            i = 0
+            while i < n:
+                if p[i] != WILD and p[i] != self._at(i):
+                    return False
+                i += 1
+            return True

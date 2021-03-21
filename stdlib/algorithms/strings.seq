@@ -1,11 +1,11 @@
-def filter_overlaps(v: generator[int], n: int):
+def filter_overlaps(v: Generator[int], n: int):
     prev = -1
     for pos in v:
         if prev < 0 or pos - prev >= n:
             prev = pos
             yield pos
 
-def rfilter_overlaps(v: generator[int], n: int):
+def rfilter_overlaps(v: Generator[int], n: int):
     prev = -1
     for pos in v:
         if prev < 0 or prev - pos >= n:
@@ -77,13 +77,13 @@ def string_search_rabin_karp(text: str, pattern: str, prime: int = 645419):
     if p == t and text[-len(pattern):] == pattern:
         yield len(text) - len(pattern)
 
-def computeLPArray(pattern: str, len_pat: int) -> list[int]:
+def computeLPArray(pattern: str, len_pat: int) -> List[int]:
     """
     Return a list containing the length of the maximum matching
     proper prefix of the pattern[0, 1, ..., i]
     """
     len = 0 # length of the previous longest prefix
-    lp = list[int]()    # longest proper prefix will hold the longest prefix values for pattern
+    lp = List[int]()    # longest proper prefix will hold the longest prefix values for pattern
     lp.append(0)
     i = 1
 
@@ -129,13 +129,13 @@ def string_search_KMP(text: str, pattern: str):
             else:
                 i += 1
 
-def replace_interleave(self: str, new: str, maxcount: int) -> str:
+def replace_interleave(self, new: str, maxcount: int) -> str:
     """
     Returns a string inserting the 'new' string everywhere.
     """
 
     j = 0
-    res = list[str]()
+    res = List[str]()
     # insert the new string for maxcount <= len(self) times.
     for i in range(len(self)):
         if i+1 > maxcount:
@@ -149,7 +149,7 @@ def replace_interleave(self: str, new: str, maxcount: int) -> str:
         res.append(self[j+1:])
     return str.cat(res)
 
-def replace_delete_substring(self: str, old: str, new: str, maxcount: int) -> str:
+def replace_delete_substring(self, old: str, new: str, maxcount: int) -> str:
     """
     Returns a string deleting any instances of the 'old' string in self and
     replaceing it with the 'new' string.
@@ -171,7 +171,7 @@ def replace_delete_substring(self: str, old: str, new: str, maxcount: int) -> st
     assert result_len >= 0
 
     j = li[0]
-    res = list[str]()
+    res = List[str]()
     res.append(self[0:j])
 
     # replace the old substring with the new substring

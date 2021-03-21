@@ -23,21 +23,21 @@ import os
 class GetoptError:
     _hdr: ExcHeader
 
-    def __init__(self: GetoptError):
+    def __init__(self):
         self._hdr = ('GetoptError', '', '', '', 0, 0)
 
-    def __init__(self: GetoptError, message: str):
+    def __init__(self, message: str):
         self._hdr = ('GetoptError', message, '', '', 0, 0)
 
     @property
-    def message(self: GetoptError):
+    def message(self):
         return self._hdr.msg
 
 
 # Return:
 #   has_arg?
 #   full option name
-def long_has_args(opt: str, longopts: list[str]):
+def long_has_args(opt: str, longopts: List[str]):
     possibilities = [o for o in longopts if o.startswith(opt)]
     if not possibilities:
         raise GetoptError(f'option --{opt} not recognized')
@@ -59,7 +59,7 @@ def long_has_args(opt: str, longopts: list[str]):
     return has_arg, unique_match
 
 
-def do_longs(opts: list[tuple[str, str]], opt: str, longopts: list[str], args: list[str]):
+def do_longs(opts: List[Tuple[str, str]], opt: str, longopts: List[str], args: List[str]):
     optarg = ""
     try:
         i = opt.index('=')
@@ -86,7 +86,7 @@ def short_has_arg(opt: str, shortopts: str):
     raise GetoptError(f'option -{opt} not recognized')
 
 
-def do_shorts(opts: list[tuple[str, str]], optstring: str, shortopts: str, args: list[str]):
+def do_shorts(opts: List[Tuple[str, str]], optstring: str, shortopts: str, args: List[str]):
     while optstring != '':
         opt, optstring = optstring[0], optstring[1:]
         optarg = ''
@@ -101,9 +101,9 @@ def do_shorts(opts: list[tuple[str, str]], optstring: str, shortopts: str, args:
 
 
 def getopt(
-    args: list[str],
+    args: List[str],
     shortopts: str,
-    longopts: list[str] = list[str]()
+    longopts: List[str] = List[str]()
 ):
     """
     Parses command line options and parameter list.  args is the
@@ -139,8 +139,8 @@ def getopt(
     processing stops as soon as a non-option argument is encountered.
     """
 
-    opts = list[tuple[str, str]]()
-    prog_args = list[str]()
+    opts = List[Tuple[str, str]]()
+    prog_args = List[str]()
 
     # Allow options after non-option arguments?
     all_options_first = False

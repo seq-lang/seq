@@ -12,18 +12,18 @@ SG_MAGICCONST = 1.0 + _log(4.5)
 TWOPI = 2.0 * _pi
 
 # http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/MT2002/CODES/mt19937ar.c
-class Generator:
-    state: array[u32]     # the array for the state vector
+class RandomGenerator:
+    state: Array[u32]     # the array for the state vector
     next: int
 
-    def __init__(self: Generator):
-        self.state = array[u32](N)
+    def __init__(self):
+        self.state = Array[u32](N)
         self.next = N+1
 
-    def gettimeofday(self: Generator):
+    def gettimeofday(self):
         return _C.seq_time() * 1000
 
-    def init_genrand(self: Generator, s: u32):
+    def init_genrand(self, s: u32):
         """
         init_genrand(u32) -> void
 
@@ -34,7 +34,7 @@ class Generator:
             self.state[i] = u32(1812433253) * (self.state[i-1] ^ (self.state[i-1]) >> u32(30)) + u32(i)
         self.next = N
 
-    def init_by_array(self: Generator, init_key: array[u32], key_length: int):
+    def init_by_array(self, init_key: Array[u32], key_length: int):
         """
         initialize by an array with array-length
         init_key is the array for initializing keys
@@ -69,7 +69,7 @@ class Generator:
 
         self.state[0] = u32(0x80000000)
 
-    def genrand_int32(self: Generator) -> u32:
+    def genrand_int32(self) -> u32:
         """
         genrand_int32() -> u32
 
@@ -114,7 +114,7 @@ class Generator:
 
         return y
 
-    def genrand_res53(self: Generator) -> float:
+    def genrand_res53(self) -> float:
         """
         genrand_res53() -> float
 
@@ -125,7 +125,7 @@ class Generator:
         b = self.genrand_int32() >> u32(6)
         return (int(a)*67108864.0 + int(b)) * (1.0 / 9007199254740992.0)
 
-    def random_seed_time_pid(self: Generator):
+    def random_seed_time_pid(self):
         """
         helper method for seed()
         """
@@ -161,9 +161,9 @@ Optionally, implement a getrandbits() method so that randrange()
 can cover arbitrarily large ranges.
 """
 class Random:
-    gen: Generator # comment for another error
+    gen: RandomGenerator # comment for another error
 
-    def __init__(self: Random, g: Generator):
+    def __init__(self, g: RandomGenerator):
         """
         Initialize an instance.
 
@@ -194,7 +194,7 @@ class Random:
         self.gen.seed()
         # self.gauss_next = None
 
-    def from_bytes_big(self: Random, b) -> int:
+    def from_bytes_big(self, b) -> int:
         """
         Return the integer represented by the given array of bytes.
         The argument b must either be a bytes-like object or an iterable
@@ -206,7 +206,7 @@ class Random:
             n |= int(b[x])
         return n
 
-    def getrandbits(self: Random, k: int) -> int:
+    def getrandbits(self, k: int) -> int:
         """
         getrandbits(k) -> x
         Generates an int with k random bits.
@@ -226,9 +226,9 @@ class Random:
             wordarray[i] = u32(r)
             k -= 32
 
-        return self.from_bytes_big(wordarray.__slice__(0, words))
+        return self.from_bytes_big(wordarray.slice(0, words))
 
-    def bit_length(self: Random, n: int) -> int:
+    def bit_length(self, n: int) -> int:
         """
         """
         len = 0
@@ -237,7 +237,7 @@ class Random:
             n = int(u64(n) >> u64(1))
         return len
 
-    def _randbelow_with_getrandbits(self: Random, n: int) -> int:
+    def _randbelow_with_getrandbits(self, n: int) -> int:
         """
         Return a random int in the range [0,n).  Raises ValueError if n==0.
         """
@@ -248,7 +248,7 @@ class Random:
             r = getrandbits(k)
         return r
 
-    def randrange(self: Random, start: int, stop: int, step: int) -> int:
+    def randrange(self, start: int, stop: int, step: int) -> int:
         """
         Choose a random item from range(start, stop[, step]).
 
@@ -286,13 +286,13 @@ class Random:
 
         return start + step * self._randbelow_with_getrandbits(int(n))
 
-    def randint(self: Random, a: int, b: int):
+    def randint(self, a: int, b: int):
         """
         Return random integer in range [a, b], including both end points.
         """
         return self.randrange(a, b+1, 1)
 
-    def random(self: Random) -> float:
+    def random(self) -> float:
         """
         random(self) -> float
 
@@ -300,19 +300,19 @@ class Random:
         """
         return self.gen.genrand_res53()
 
-    def choice[T](self: Random, seq: generator[T]) -> T:
+    def choice[T](self, sequence: Generator[T]) -> T:
         """
         Choose a random element from a non-empty sequence.
         """
         i = 0
-        l = list(seq)
+        l = list(sequence)
         try:
             i = self._randbelow_with_getrandbits(len(l))
         except ValueError:
             raise IndexError("Cannot choose from an empty sequence")
         return l[i]
 
-    def shuffle(self: Random, x):
+    def shuffle(self, x):
         """
         Shuffle list x in place, and return None.
 
@@ -335,13 +335,13 @@ class Random:
                 j = int(self.random() * (i+1))
                 x[i], x[j] = x[j], x[i]
 
-    def uniform(self: Random, a, b) -> float:
+    def uniform(self, a, b) -> float:
         """
         Get a random number in the range [a, b) or [a, b] depending on rounding.
         """
         return a + (b-a) * self.random()
 
-    def triangular(self: Random, low: float, high: float, mode: float) -> float:
+    def triangular(self, low: float, high: float, mode: float) -> float:
         """
         Triangular distribution.
 
@@ -364,7 +364,7 @@ class Random:
             low, high = high, low
         return low + (high - low) * _sqrt(u * c)
 
-    def gammavariate(self: Random, alpha: float, beta: float) -> float:
+    def gammavariate(self, alpha: float, beta: float) -> float:
         """
         Gamma distribution.  Not the gamma function!
 
@@ -385,7 +385,6 @@ class Random:
         if alpha <= 0.0 or beta <= 0.0:
             raise ValueError('gammavariate: alpha and beta must be > 0.0')
 
-        random = self.random
         if alpha > 1.0:
 
             # Uses R.C.H. Cheng, "The generation of Gamma
@@ -410,21 +409,21 @@ class Random:
 
         elif alpha == 1.0:
             # expovariate(1/beta)
-            return -_log(1.0 - random()) * beta
+            return -_log(1.0 - self.random()) * beta
 
         else:   # alpha is between 0 and 1 (exclusive)
 
             # Uses ALGORITHM GS of Statistical Computing - Kennedy & Gentle
             x = 0.0
             while 1:
-                u = random()
+                u = self.random()
                 b = (_e + alpha) / _e
                 p = b * u
                 if p <= 1.0:
                     x = p ** (1.0 / alpha)
                 else:
                     x = -_log((b - p) / alpha)
-                u1 = random()
+                u1 = self.random()
                 if p > 1.0:
                     if u1 <= x ** (alpha - 1.0):
                         break
@@ -432,7 +431,7 @@ class Random:
                     break
             return x * beta
 
-    def betavariate(self: Random, alpha: float, beta: float) -> float:
+    def betavariate(self, alpha: float, beta: float) -> float:
         """
         Beta distribution.
         Conditions on the parameters are alpha > 0 and beta > 0.
@@ -446,7 +445,7 @@ class Random:
         else:
             return y / (y + self.gammavariate(beta, 1.0))
 
-    def expovariate(self: Random, lambd: float) -> float:
+    def expovariate(self, lambd: float) -> float:
         """
         Exponential distribution.
 
@@ -464,7 +463,7 @@ class Random:
         # possibility of taking the log of zero.
         return -_log(1.0 - self.random())/lambd
 
-    def gauss(self: Random, mu: float, sigma: float) -> float:
+    def gauss(self, mu: float, sigma: float) -> float:
         """
         Gaussian distribution.
 
@@ -472,49 +471,45 @@ class Random:
         slightly faster than the normalvariate() function.
         Not thread-safe without a lock around calls.
         """
-        random = self.random
         z = 0.0
-        x2pi = random() * TWOPI
-        g2rad = _sqrt(-2.0 * _log(1.0 - random()))
+        x2pi = self.random() * TWOPI
+        g2rad = _sqrt(-2.0 * _log(1.0 - self.random()))
         z = _cos(x2pi) * g2rad
         # self.gauss_next = _sin(x2pi) * g2rad
         return mu + z * sigma
 
-    def paretovariate(self: Random, alpha: float) -> float:
+    def paretovariate(self, alpha: float) -> float:
         """
         Pareto distribution.  alpha is the shape parameter."""
-        random = self.random
-        u = 1.0 - random()
+        u = 1.0 - self.random()
         return 1.0 / u ** (1.0/alpha)
 
-    def weibullvariate(self: Random, alpha: float, beta: float) -> float:
+    def weibullvariate(self, alpha: float, beta: float) -> float:
         """
         Weibull distribution.
 
         alpha is the scale parameter and beta is the shape parameter.
         """
-        random = self.random
-        u = 1.0 - random()
+        u = 1.0 - self.random()
         return alpha * (-_log(u)) ** (1.0/beta)
 
-    def normalvariate(self: Random, mu: float, sigma: float) -> float:
+    def normalvariate(self, mu: float, sigma: float) -> float:
         """
         Normal distribution.
 
         mu is the mean, and sigma is the standard deviation.
         """
-        random = self.random
         z = 0.0
         while 1:
-            u1 = random()
-            u2 = 1.0 - random()
+            u1 = self.random()
+            u2 = 1.0 - self.random()
             z = NV_MAGICCONST * (u1 - 0.5) / u2
             zz = z * z / 4.0
             if zz <= - _log(u2):
                 break
         return mu + z * sigma
 
-    def lognormvariate(self: Random, mu: float, sigma: float) -> float:
+    def lognormvariate(self, mu: float, sigma: float) -> float:
           """
           Log normal distribution.
 
@@ -524,7 +519,7 @@ class Random:
           """
           return _exp(self.normalvariate(mu, sigma))
 
-    def vonmisesvariate(self: Random, mu: float, kappa: float) -> float:
+    def vonmisesvariate(self, mu: float, kappa: float) -> float:
         """
         Circular data distribution.
 
@@ -536,25 +531,24 @@ class Random:
         z = 0.0
         theta = 0.0
 
-        random = self.random
         if kappa <= 1e-6:
-            return TWOPI * random()
+            return TWOPI * self.random()
 
         s = 0.5 / kappa
         r = s + _sqrt(1.0 + s * s)
 
         while 1:
-            u1 = random()
+            u1 = self.random()
             z = _cos(_pi * u1)
 
             d = z / (r + z)
-            u2 = random()
+            u2 = self.random()
             if u2 < 1.0 - d * d or u2 <= (1.0 - d) * _exp(d):
                 break
 
         q = 1.0 / r
         f = (q + z) / (1.0 + q * z)
-        u3 = random()
+        u3 = self.random()
         if u3 > 0.5:
             theta = (mu + _acos(f)) % TWOPI
         else:
@@ -562,7 +556,7 @@ class Random:
 
         return theta
 
-    def sample[T](self: Random, population: list[T], k: int):
+    def sample[T](self, population: List[T], k: int):
         """
         Chooses k unique random elements from a population sequence or set.
 
@@ -599,7 +593,7 @@ class Random:
                 result[i] = pool[j]
                 pool[j] = pool[n-i-1]   # move non-selected item into vacancy
         else:
-            selected = set[int]()
+            selected = Set[int]()
             selected_add = selected.add
             for i in range(k):
                 j = randbelow(n)
@@ -609,7 +603,7 @@ class Random:
                 result[i] = population[j]
         return result
 
-    def choices(self: Random, population, weights: list[int], cum_weights: list[int], k: int):
+    def choices(self, population, weights: Optional[List[int]], cum_weights: Optional[List[int]], k: int):
         """
         Return a k sized list of population elements chosen with replacement.
 
@@ -618,12 +612,12 @@ class Random:
 
         Since weights and cum_weights is assumed to be positive, we will replace None with [-1].
         """
-        def accumulate(weights: list[int]) -> list[int]:
+        def accumulate(weights: List[int]) -> List[int]:
             """
             Calculate cum_weights
             """
             n = len(weights)
-            cum_weight = list[int](n)
+            cum_weight = List[int](n)
             accum = 0
             if n > 0:
                 for i in range(n):
@@ -632,11 +626,10 @@ class Random:
 
             return cum_weight
 
-        random = self.random
         n = len(population)
         if cum_weights is None:
             if weights is None:
-                return [population[int(random() * n)] for i in range(k)]
+                return [population[int(self.random() * n)] for i in range(k)]
             cum_weights = accumulate(weights)
         elif weights is not None:
             raise TypeError('Cannot specify both weights and cumulative weights')
@@ -645,10 +638,10 @@ class Random:
 
         total = float(cum_weights[-1])  # convert to float
         hi = n - 1
-        return [population[_bisect(cum_weights, int(random() * total), 0, hi)]
+        return [population[_bisect(cum_weights, int(self.random() * total), 0, hi)]
                 for i in range(k)]
 
-_gen = Generator()
+_gen = RandomGenerator()
 _rnd = Random(_gen)
 
 def seed(a: int):
@@ -659,7 +652,7 @@ seed(int(_time()))
 def getrandbits(k: int):
     return _rnd.getrandbits(k)
 
-def randrange(start: int, stop: optional[int] = None, step: int = 1):
+def randrange(start: int, stop: Optional[int] = None, step: int = 1):
     stopx = start
     if stop:
         stopx = ~stop
@@ -673,7 +666,7 @@ def randint(a: int, b: int):
 def choice(s):
     return _rnd.choice(s)
 
-def choices(population, weights: list[int] = None, cum_weights: list[int] = None, k: int = 1):
+def choices(population, weights: Optional[List[int]] = None, cum_weights: Optional[List[int]] = None, k: int = 1):
     return _rnd.choices(population, weights, cum_weights, k)
 
 def shuffle(s):
@@ -688,7 +681,7 @@ def random():
 def uniform(a, b):
     return _rnd.uniform(a, b)
 
-def triangular(low: float = 0.0, high: float = 1.0, mode: optional[float] = None):
+def triangular(low: float = 0.0, high: float = 1.0, mode: Optional[float] = None):
     return _rnd.triangular(low, high, ~mode if mode else (low + high)/2)
 
 def betavariate(alpha: float, beta: float):

@@ -3,18 +3,19 @@
 ###############################
 from sys import argv
 from time import timing
+from bio import *
 
-def dist_fast[K](k1: K, k2: K):
+def dist_fast(k1, k2):
     return abs(k1 - k2)
 
-def dist_slow[K](k1: K, k2: K):
+def dist_slow(k1, k2):
     d = 0
-    for i in range(K.len()):
+    for i in range(typeof(k1).len()):
         if k1[i] != k2[i]:
             d += 1
     return d
 
-def test[K](use_slow_dist: bool):
+def test[K](use_slow_dist):
     n = 0
     with timing(f'{K.len()}-mer ({use_slow_dist=})'):
         for s in FASTA(argv[1]) |> seqs:

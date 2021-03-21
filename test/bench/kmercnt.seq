@@ -2,7 +2,8 @@
 # Usage: seqc kmercnt.seq <input.fastq>
 from sys import argv
 from time import timing
-type K = Kmer[31]
+from bio import *
+K = Kmer[31]
 
 def print_hist(h, N = 256):
     cnt = [0 for _ in range(N)]
@@ -12,6 +13,6 @@ def print_hist(h, N = 256):
         print f'{i}\t{cnt[i]}'
 
 with timing('k-mer counting'), FASTQ(argv[1], copy=False, validate=False) as fastq:
-    h = dict[K, int]()
+    h: Dict[K, int] = {}
     fastq |> seqs |> kmers[K](step=1) |> canonical |> h.increment
     print_hist(h)
