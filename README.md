@@ -60,7 +60,7 @@ s = s'ACGTACGT'    # sequence literal
 print s[2:5]       # subsequence
 print ~s           # reverse complement
 kmer = Kmer[8](s)  # convert to k-mer
-type K2 = Kmer[2]  # type definition
+K2 = Kmer[2]       # type definition
 
 # iterate over length-3 subsequences
 # with step 2
