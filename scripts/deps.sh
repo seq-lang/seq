@@ -18,7 +18,7 @@ echo "Using $JOBS cores..."
 
 # Tapir
 if [ ! -d "${SRCDIR}/Tapir-LLVM" ]; then
-  git clone -depth 1 -b release_60-release https://github.com/seq-lang/Tapir-LLVM ${SRCDIR}/Tapir-LLVM
+  git clone --depth 1 -b release_60-release https://github.com/seq-lang/Tapir-LLVM ${SRCDIR}/Tapir-LLVM
   mkdir -p ${SRCDIR}/Tapir-LLVM/build
   cd ${SRCDIR}/Tapir-LLVM/build
   cmake .. \
