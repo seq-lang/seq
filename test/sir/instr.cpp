@@ -104,7 +104,7 @@ TEST_F(SIRCoreTest, CallInstrQueryAndReplace) {
   auto *funcVal = module->Nr<VarValue>(func);
   auto *instr = module->Nr<CallInstr>(funcVal);
 
-  ASSERT_EQ(funcVal, instr->getFunc());
+  ASSERT_EQ(funcVal, instr->getCallee());
   ASSERT_EQ(type->getReturnType(), instr->getType());
 
   auto usedVals = instr->getUsedValues();

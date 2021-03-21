@@ -172,12 +172,12 @@ void TranslateVisitor::visit(PipeExpr *expr) {
   if (simplePipeline) {
     // Transform a |> b |> c to c(b(a))
     ir::util::CloneVisitor cv(ctx->getModule());
-    result = cv.clone(stages[0].getFunc());
+    result = cv.clone(stages[0].getCallee());
     for (auto i = 1; i < stages.size(); ++i) {
       vector<ir::Value *> newArgs;
       for (auto arg : stages[i])
         newArgs.push_back(arg ? cv.clone(arg) : result);
-      result = make<ir::CallInstr>(expr, cv.clone(stages[i].getFunc()), newArgs);
+      result = make<ir::CallInstr>(expr, cv.clone(stages[i].getCallee()), newArgs);
     }
   } else {
     for (int i = 0; i < expr->items.size(); i++)

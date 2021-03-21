@@ -35,8 +35,8 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
   while (it != p->end()) {
     if (prev) {
       {
-        auto *f1 = util::getStdlibFunc(prev->getFunc(), "kmers", "bio");
-        auto *f2 = util::getStdlibFunc(it->getFunc(), "revcomp", "bio");
+        auto *f1 = util::getStdlibFunc(prev->getCallee(), "kmers", "bio");
+        auto *f2 = util::getStdlibFunc(it->getCallee(), "revcomp", "bio");
         if (f1 && f2) {
           auto *funcType = cast<types::FuncType>(f1->getType());
           auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
@@ -47,7 +47,7 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
           seqassert(kmersRevcompFunc &&
                         util::getReturnType(kmersRevcompFunc)->is(genType),
                     "invalid reverse complement function");
-          cast<VarValue>(prev->getFunc())->setVar(kmersRevcompFunc);
+          cast<VarValue>(prev->getCallee())->setVar(kmersRevcompFunc);
           if (it->isParallel())
             prev->setParallel();
           it = p->erase(it);
@@ -56,8 +56,8 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
       }
 
       {
-        auto *f1 = util::getStdlibFunc(prev->getFunc(), "kmers_with_pos", "bio");
-        auto *f2 = util::getStdlibFunc(it->getFunc(), "revcomp_with_pos", "bio");
+        auto *f1 = util::getStdlibFunc(prev->getCallee(), "kmers_with_pos", "bio");
+        auto *f2 = util::getStdlibFunc(it->getCallee(), "revcomp_with_pos", "bio");
         if (f1 && f2) {
           auto *funcType = cast<types::FuncType>(f1->getType());
           auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
@@ -70,7 +70,7 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
           seqassert(kmersRevcompWithPosFunc &&
                         util::getReturnType(kmersRevcompWithPosFunc)->is(genType),
                     "invalid pos reverse complement function");
-          cast<VarValue>(prev->getFunc())->setVar(kmersRevcompWithPosFunc);
+          cast<VarValue>(prev->getCallee())->setVar(kmersRevcompWithPosFunc);
           if (it->isParallel())
             prev->setParallel();
           it = p->erase(it);
@@ -79,8 +79,8 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
       }
 
       {
-        auto *f1 = util::getStdlibFunc(prev->getFunc(), "kmers", "bio");
-        auto *f2 = util::getStdlibFunc(it->getFunc(), "canonical", "bio");
+        auto *f1 = util::getStdlibFunc(prev->getCallee(), "kmers", "bio");
+        auto *f2 = util::getStdlibFunc(it->getCallee(), "canonical", "bio");
         if (f1 && f2 && util::isConst<int64_t>(prev->back(), 1)) {
           auto *funcType = cast<types::FuncType>(f1->getType());
           auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
@@ -91,7 +91,7 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
           seqassert(kmersCanonicalFunc &&
                         util::getReturnType(kmersCanonicalFunc)->is(genType),
                     "invalid canonical kmers function");
-          cast<VarValue>(prev->getFunc())->setVar(kmersCanonicalFunc);
+          cast<VarValue>(prev->getCallee())->setVar(kmersCanonicalFunc);
           prev->erase(prev->end() - 1); // remove step argument
           if (it->isParallel())
             prev->setParallel();
@@ -101,8 +101,8 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
       }
 
       {
-        auto *f1 = util::getStdlibFunc(prev->getFunc(), "kmers_with_pos", "bio");
-        auto *f2 = util::getStdlibFunc(it->getFunc(), "canonical_with_pos", "bio");
+        auto *f1 = util::getStdlibFunc(prev->getCallee(), "kmers_with_pos", "bio");
+        auto *f2 = util::getStdlibFunc(it->getCallee(), "canonical_with_pos", "bio");
         if (f1 && f2 && util::isConst<int64_t>(prev->back(), 1)) {
           auto *funcType = cast<types::FuncType>(f1->getType());
           auto *genType = cast<types::GeneratorType>(funcType->getReturnType());
@@ -114,7 +114,7 @@ void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
           seqassert(kmersCanonicalWithPosFunc &&
                         util::getReturnType(kmersCanonicalWithPosFunc)->is(genType),
                     "invalid pos canonical kmers function");
-          cast<VarValue>(prev->getFunc())->setVar(kmersCanonicalWithPosFunc);
+          cast<VarValue>(prev->getCallee())->setVar(kmersCanonicalWithPosFunc);
           prev->erase(prev->end() - 1); // remove step argument
           if (it->isParallel())
             prev->setParallel();
@@ -139,7 +139,7 @@ struct PrefetchFunctionTransformer : public util::Operator {
   }
 
   void handle(CallInstr *x) override {
-    auto *func = cast<BodiedFunc>(util::getFunc(x->getFunc()));
+    auto *func = cast<BodiedFunc>(util::getFunc(x->getCallee()));
     if (!func || func->getUnmangledName() != Module::GETITEM_MAGIC_NAME ||
         x->numArgs() != 2)
       return;
@@ -205,7 +205,7 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
   PipelineFlow::Stage *prev = nullptr;
   util::CloneVisitor cv(M);
   for (auto it = p->begin(); it != p->end(); ++it) {
-    if (auto *func = cast<BodiedFunc>(util::getFunc(it->getFunc()))) {
+    if (auto *func = cast<BodiedFunc>(util::getFunc(it->getCallee()))) {
       if (!it->isGenerator() && util::hasAttribute(func, "prefetch")) {
         // transform prefetch'ing function
         auto *clone = cast<BodiedFunc>(cv.forceClone(func));
@@ -425,7 +425,7 @@ struct InterAlignFunctionTransformer : public util::Operator {
         types->seq, "align", {types->seq, types->seq, I, I, I, I, I, I, I, I, I, I,
                               B,          B,          B, B, B, B, B, B, B, B, B});
 
-    auto *func = cast<BodiedFunc>(util::getFunc(x->getFunc()));
+    auto *func = cast<BodiedFunc>(util::getFunc(x->getCallee()));
     if (!(func && alignFunc && util::match(func, alignFunc) &&
           verifyAlignParams(x->begin() + 2, x->end())))
       return;
@@ -465,7 +465,7 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
   PipelineFlow::Stage *prev = nullptr;
   util::CloneVisitor cv(M);
   for (auto it = p->begin(); it != p->end(); ++it) {
-    if (auto *func = cast<BodiedFunc>(util::getFunc(it->getFunc()))) {
+    if (auto *func = cast<BodiedFunc>(util::getFunc(it->getCallee()))) {
       if (!it->isGenerator() && util::hasAttribute(func, "inter_align") &&
           util::getReturnType(func)->is(M->getVoidType())) {
         // transform aligning function

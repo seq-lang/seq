@@ -180,7 +180,7 @@ void CloneVisitor::visit(const CallInstr *v) {
   std::vector<Value *> args;
   for (const auto *a : *v)
     args.push_back(clone(a));
-  result = Nt(v, clone(v->getFunc()), std::move(args));
+  result = Nt(v, clone(v->getCallee()), std::move(args));
 }
 
 void CloneVisitor::visit(const StackAllocInstr *v) {

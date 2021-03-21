@@ -225,7 +225,7 @@ TEST_F(SIRCoreTest, MatchingCallInstr) {
   auto *second = module->Nr<CallInstr>(cv->clone(funcVal));
 
   ASSERT_TRUE(util::match(first, second));
-  second->setFunc(module->Nr<VarValue>(func2));
+  second->setCallee(module->Nr<VarValue>(func2));
   ASSERT_FALSE(util::match(first, second));
 }
 

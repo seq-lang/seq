@@ -194,10 +194,10 @@ const char PipelineFlow::NodeId = 0;
 
 types::Type *PipelineFlow::Stage::getOutputType() const {
   if (args.empty()) {
-    return func->getType();
+    return callee->getType();
   } else {
-    auto *funcType = cast<types::FuncType>(func->getType());
-    seqassert(funcType, "{} is not a function type", *func->getType());
+    auto *funcType = cast<types::FuncType>(callee->getType());
+    seqassert(funcType, "{} is not a function type", *callee->getType());
     return funcType->getReturnType();
   }
 }
@@ -206,20 +206,20 @@ types::Type *PipelineFlow::Stage::getOutputElementType() const {
   if (isGenerator()) {
     types::GeneratorType *genType = nullptr;
     if (args.empty()) {
-      genType = cast<types::GeneratorType>(func->getType());
+      genType = cast<types::GeneratorType>(callee->getType());
       return genType->getBase();
     } else {
-      auto *funcType = cast<types::FuncType>(func->getType());
-      seqassert(funcType, "{} is not a function type", *func->getType());
+      auto *funcType = cast<types::FuncType>(callee->getType());
+      seqassert(funcType, "{} is not a function type", *callee->getType());
       genType = cast<types::GeneratorType>(funcType->getReturnType());
     }
     seqassert(genType, "generator type not found");
     return genType->getBase();
   } else if (args.empty()) {
-    return func->getType();
+    return callee->getType();
   } else {
-    auto *funcType = cast<types::FuncType>(func->getType());
-    seqassert(funcType, "{} is not a function type", *func->getType());
+    auto *funcType = cast<types::FuncType>(callee->getType());
+    seqassert(funcType, "{} is not a function type", *callee->getType());
     return funcType->getReturnType();
   }
 }
@@ -227,7 +227,7 @@ types::Type *PipelineFlow::Stage::getOutputElementType() const {
 std::vector<Value *> PipelineFlow::doGetUsedValues() const {
   std::vector<Value *> ret;
   for (auto &s : stages) {
-    ret.push_back(const_cast<Value *>(s.getFunc()));
+    ret.push_back(const_cast<Value *>(s.getCallee()));
     for (auto *arg : s.args)
       if (arg)
         ret.push_back(arg);
@@ -239,8 +239,8 @@ int PipelineFlow::doReplaceUsedValue(int id, Value *newValue) {
   auto replacements = 0;
 
   for (auto &c : stages) {
-    if (c.getFunc()->getId() == id) {
-      c.func = newValue;
+    if (c.getCallee()->getId() == id) {
+      c.setCallee(newValue);
       ++replacements;
     }
     for (auto &s : c.args)

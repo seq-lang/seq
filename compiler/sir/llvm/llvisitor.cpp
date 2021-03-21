@@ -1984,7 +1984,7 @@ void LLVMVisitor::visit(const TryCatchFlow *x) {
 
 void LLVMVisitor::callStage(const PipelineFlow::Stage *stage) {
   llvm::Value *output = value;
-  process(stage->getFunc());
+  process(stage->getCallee());
   llvm::Value *f = value;
   std::vector<llvm::Value *> args;
   for (const auto *arg : *stage) {
@@ -2008,7 +2008,7 @@ void LLVMVisitor::codegenPipeline(
   auto *stage = stages[where];
 
   if (where == 0) {
-    process(stage->getFunc());
+    process(stage->getCallee());
     codegenPipeline(stages, syncReg, where + 1);
     return;
   }
@@ -2225,7 +2225,7 @@ void LLVMVisitor::visit(const InsertInstr *x) {
 
 void LLVMVisitor::visit(const CallInstr *x) {
   builder.SetInsertPoint(block);
-  process(x->getFunc());
+  process(x->getCallee());
   llvm::Value *f = value;
 
   std::vector<llvm::Value *> args;

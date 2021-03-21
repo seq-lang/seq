@@ -78,21 +78,21 @@ int InsertInstr::doReplaceUsedValue(int id, Value *newValue) {
 const char CallInstr::NodeId = 0;
 
 types::Type *CallInstr::doGetType() const {
-  auto *funcType = cast<types::FuncType>(func->getType());
-  seqassert(funcType, "{} is not a function type", *func->getType());
+  auto *funcType = cast<types::FuncType>(callee->getType());
+  seqassert(funcType, "{} is not a function type", *callee->getType());
   return funcType->getReturnType();
 }
 
 std::vector<Value *> CallInstr::doGetUsedValues() const {
   std::vector<Value *> ret(args.begin(), args.end());
-  ret.push_back(func);
+  ret.push_back(callee);
   return ret;
 }
 
 int CallInstr::doReplaceUsedValue(int id, Value *newValue) {
   auto replacements = 0;
-  if (func->getId() == id) {
-    func = newValue;
+  if (callee->getId() == id) {
+    callee = newValue;
     ++replacements;
   }
   replacements += findAndReplace(id, newValue, args);

@@ -167,7 +167,7 @@ public:
       auto args = makeFormatters(s.begin(), s.end());
       stages.push_back(fmt::format(
           FMT_STRING("(stage (func {})\n(args ({}))\n(generator {})\n(parallel{}))"),
-          makeFormatter(s.getFunc()), fmt::join(args.begin(), args.end(), "\n"),
+          makeFormatter(s.getCallee()), fmt::join(args.begin(), args.end(), "\n"),
           s.isGenerator(), s.isParallel()));
     }
     fmt::print(os, FMT_STRING("(pipeline (stages ({})))"),
@@ -221,7 +221,7 @@ public:
     auto args = makeFormatters(v->begin(), v->end());
     fmt::print(os,
                FMT_STRING("(call_instr (ref_string \"{}\")\n(func {})\n(args ({})))"),
-               v->referenceString(), makeFormatter(v->getFunc()),
+               v->referenceString(), makeFormatter(v->getCallee()),
                fmt::join(args.begin(), args.end(), "\n"));
   }
   void visit(const StackAllocInstr *v) override {

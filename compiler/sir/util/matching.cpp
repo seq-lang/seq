@@ -119,7 +119,7 @@ public:
   void handle(const PipelineFlow *x, const PipelineFlow *y) {
     result = std::equal(
         x->begin(), x->end(), y->begin(), y->end(), [this](auto &x, auto &y) {
-          return process(x.getFunc(), y.getFunc()) &&
+          return process(x.getCallee(), y.getCallee()) &&
                  std::equal(x.begin(), x.end(), y.begin(), y.end(),
                             [this](auto *x, auto *y) { return process(x, y); }) &&
                  x.isGenerator() == y.isGenerator() && x.isParallel() == y.isParallel();
@@ -166,7 +166,7 @@ public:
   }
   VISIT(CallInstr);
   void handle(const CallInstr *x, const CallInstr *y) {
-    result = process(x->getFunc(), y->getFunc()) &&
+    result = process(x->getCallee(), y->getCallee()) &&
              std::equal(x->begin(), x->end(), y->begin(), y->end(),
                         [this](auto *x, auto *y) { return process(x, y); });
   }

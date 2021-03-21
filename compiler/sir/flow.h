@@ -354,7 +354,7 @@ public:
   class Stage {
   private:
     /// the function being (partially) called in this stage
-    Value *func;
+    Value *callee;
     /// the function arguments, where null represents where
     /// previous pipeline output should go
     std::vector<Value *> args;
@@ -365,12 +365,13 @@ public:
 
   public:
     /// Constructs a pipeline stage.
-    /// @param func the function being called
+    /// @param callee the function being called
     /// @param args call arguments, with exactly one null entry
     /// @param generator whether this stage is a generator stage
     /// @param parallel whether this stage is parallel
-    Stage(Value *func, std::vector<Value *> args, bool generator, bool parallel)
-        : func(func), args(std::move(args)), generator(generator), parallel(parallel) {}
+    Stage(Value *callee, std::vector<Value *> args, bool generator, bool parallel)
+        : callee(callee), args(std::move(args)), generator(generator),
+          parallel(parallel) {}
 
     /// @return an iterator to the first argument
     auto begin() { return args.begin(); }
@@ -404,10 +405,13 @@ public:
     /// @return the iterator beyond the removed argument
     template <typename It> auto erase(It pos) { return args.erase(pos); }
 
+    /// Sets the called function.
+    /// @param c the callee
+    void setCallee(Value *c) { callee = c; }
     /// @return the called function
-    Value *getFunc() { return func; }
+    Value *getCallee() { return callee; }
     /// @return the called function
-    const Value *getFunc() const { return func; }
+    const Value *getCallee() const { return callee; }
 
     /// Sets the stage's generator flag.
     /// @param v the new value

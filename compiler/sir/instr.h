@@ -158,7 +158,7 @@ protected:
 class CallInstr : public AcceptorExtend<CallInstr, Instr> {
 private:
   /// the function
-  Value *func;
+  Value *callee;
   /// the arguments
   std::vector<Value *> args;
 
@@ -166,25 +166,25 @@ public:
   static const char NodeId;
 
   /// Constructs a call instruction.
-  /// @param func the function
+  /// @param callee the function
   /// @param args the arguments
   /// @param name the instruction's name
-  CallInstr(Value *func, std::vector<Value *> args, std::string name = "")
-      : AcceptorExtend(std::move(name)), func(func), args(std::move(args)) {}
+  CallInstr(Value *callee, std::vector<Value *> args, std::string name = "")
+      : AcceptorExtend(std::move(name)), callee(callee), args(std::move(args)) {}
 
   /// Constructs a call instruction with no arguments.
-  /// @param func the function
+  /// @param callee the function
   /// @param name the instruction's name
-  explicit CallInstr(Value *func, std::string name = "")
-      : CallInstr(func, {}, std::move(name)) {}
+  explicit CallInstr(Value *callee, std::string name = "")
+      : CallInstr(callee, {}, std::move(name)) {}
 
-  /// @return the func
-  Value *getFunc() { return func; }
-  /// @return the func
-  const Value *getFunc() const { return func; }
-  /// Sets the func.
-  /// @param f the new value
-  void setFunc(Value *f) { func = f; }
+  /// @return the callee
+  Value *getCallee() { return callee; }
+  /// @return the callee
+  const Value *getCallee() const { return callee; }
+  /// Sets the callee.
+  /// @param c the new value
+  void setCallee(Value *c) { callee = c; }
 
   /// @return an iterator to the first argument
   auto begin() { return args.begin(); }
