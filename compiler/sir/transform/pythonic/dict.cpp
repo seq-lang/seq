@@ -27,7 +27,7 @@ struct GetCall {
 /// @return the metadata
 GetCall analyzeGet(CallInstr *call) {
   // extract the function
-  auto *func = util::getFunc(call->getFunc());
+  auto *func = util::getFunc(call->getCallee());
   auto unmangled = func->getUnmangledName();
 
   // canonical get/__getitem__ calls have at least two arguments
@@ -67,7 +67,7 @@ void DictArithmeticTransform::handle(CallInstr *v) {
   auto *M = v->getModule();
 
   // get and check the exterior function (should be a __setitem__ with 3 args)
-  auto *setFunc = util::getFunc(v->getFunc());
+  auto *setFunc = util::getFunc(v->getCallee());
   if (setFunc->getUnmangledName() == "__setitem__" &&
       std::distance(v->begin(), v->end()) == 3) {
     auto it = v->begin();
@@ -85,7 +85,7 @@ void DictArithmeticTransform::handle(CallInstr *v) {
       return;
 
     // grab the function, which does not necessarily need to be a magic
-    auto *opFunc = util::getFunc(opCall->getFunc());
+    auto *opFunc = util::getFunc(opCall->getCallee());
     auto *getCall = cast<CallInstr>(opCall->front());
     if (!getCall)
       return;
