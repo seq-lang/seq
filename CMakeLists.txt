@@ -136,6 +136,8 @@ set(SEQ_HPPFILES
         compiler/parser/visitors/typecheck/typecheck_ctx.h
         compiler/parser/visitors/visitor.h
         compiler/sir/analyze/analysis.h
+        compiler/sir/analyze/dataflow/cfg.h
+        compiler/sir/analyze/dataflow/reaching.h
         compiler/sir/attribute.h
         compiler/sir/base.h
         compiler/sir/const.h
@@ -203,6 +205,8 @@ set(SEQ_CPPFILES
         compiler/parser/visitors/typecheck/typecheck_infer.cpp
         compiler/parser/visitors/typecheck/typecheck_stmt.cpp
         compiler/parser/visitors/visitor.cpp
+        compiler/sir/analyze/dataflow/cfg.cpp
+        compiler/sir/analyze/dataflow/reaching.cpp
         compiler/sir/attribute.cpp
         compiler/sir/base.cpp
         compiler/sir/const.cpp
