@@ -205,7 +205,10 @@ set(SEQ_CPPFILES
         compiler/parser/visitors/typecheck/typecheck_infer.cpp
         compiler/parser/visitors/typecheck/typecheck_stmt.cpp
         compiler/parser/visitors/visitor.cpp
+<<<<<<< HEAD
         compiler/sir/analyze/analysis.cpp
+=======
+>>>>>>> wip
         compiler/sir/analyze/dataflow/cfg.cpp
         compiler/sir/analyze/dataflow/reaching.cpp
         compiler/sir/attribute.cpp

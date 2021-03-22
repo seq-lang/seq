@@ -109,7 +109,6 @@ bool RDInspector::calculateOut(CFBlock *blk) {
       newOut[it->first].insert(it->second.begin(), it->second.end());
     }
   }
-
   auto res = entry.out == newOut;
   entry.out = std::move(newOut);
   return res;
