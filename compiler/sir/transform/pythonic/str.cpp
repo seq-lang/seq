@@ -64,9 +64,11 @@ void StrAdditionOptimization::handle(CallInstr *v) {
     }
 
     auto *arg = util::makeTuple(args, M);
+    args = {arg};
     auto *replacementFunc =
         M->getOrRealizeMethod(M->getStringType(), "cat", {arg->getType()});
     seqassert(replacementFunc, "could not find cat function");
+    v->replaceAll(util::call(replacementFunc, args));
   }
 }
 

@@ -137,9 +137,7 @@ void DictArithmeticOptimization::handle(CallInstr *v) {
             std::distance(replacementFunc->arg_begin(), replacementFunc->arg_end()))
           args.push_back(M->N<VarValue>(v, opFunc));
 
-        v->replaceAll(
-            M->N<CallInstr>(v, M->N<VarValue>(v, replacementFunc), std::move(args)));
-        see(v->getActual());
+        v->replaceAll(util::call(replacementFunc, args));
       }
     }
   }
