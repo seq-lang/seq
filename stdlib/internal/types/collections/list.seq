@@ -39,7 +39,7 @@ class List[T]:
     def __bool__(self):
         return self.__len__() > 0
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> T:
         if idx < 0:
             idx += self.__len__()
         self._idx_check(idx, "list index out of range")
