@@ -49,40 +49,35 @@ public:
   void visit(const Module *v) override {
     auto types = makeFormatters(v->types_begin(), v->types_end(), true);
     auto vars = makeFormatters(v->begin(), v->end(), true);
-    fmt::print(
-        os, FMT_STRING("(module (types ({}))\n(vars ({}))\n(main {})\n(argv {}))"),
-        fmt::join(types.begin(), types.end(), "\n"),
-        fmt::join(vars.begin(), vars.end(), "\n"),
-        makeFormatter(v->getMainFunc(), true), makeFormatter(v->getArgVar(), true));
+    fmt::print(os, FMT_STRING("(module\n(argv {})\n(types {})\n(vars {})\n{})"),
+               makeFormatter(v->getArgVar(), true),
+               fmt::join(types.begin(), types.end(), "\n"),
+               fmt::join(vars.begin(), vars.end(), "\n"),
+               makeFormatter(v->getMainFunc(), true));
   }
 
   void visit(const Var *v) override {
-    fmt::print(os, FMT_STRING("(var (ref_string \"{}\")\n(type {})\n(global {}))"),
-               v->referenceString(), makeFormatter(v->getType()), v->isGlobal());
+    fmt::print(os, FMT_STRING("(var '\"{}\" {} (global {}))"), v->referenceString(),
+               makeFormatter(v->getType()), v->isGlobal());
   }
 
   void defaultVisit(const Func *) override { os << "(unknown_func)"; }
   void visit(const BodiedFunc *v) override {
     auto args = makeFormatters(v->arg_begin(), v->arg_end(), true);
     auto symbols = makeFormatters(v->begin(), v->end(), true);
-    fmt::print(os,
-               FMT_STRING("(bodied_func (ref_string \"{}\")\n(type {})\n(builtin {})\n"
-                          "(args ({}))\n(vars ({}))\n(body {}))"),
-               v->referenceString(), makeFormatter(v->getType()), v->isBuiltin(),
-               fmt::join(args.begin(), args.end(), "\n"),
-               fmt::join(symbols.begin(), symbols.end(), "\n"),
+    fmt::print(os, FMT_STRING("(bodied_func '\"{}\" {}\n(args {})\n(vars {})\n{})"),
+               v->referenceString(), makeFormatter(v->getType()),
+               fmt::join(args.begin(), args.end(), " "),
+               fmt::join(symbols.begin(), symbols.end(), " "),
                makeFormatter(v->getBody()));
   }
   void visit(const ExternalFunc *v) override {
-    fmt::print(
-        os,
-        FMT_STRING(
-            "(external_func (ref_string \"{}\")\n(type {})\n(unmangled_name \"{}\"))"),
-        v->referenceString(), makeFormatter(v->getType()), v->getUnmangledName());
+    fmt::print(os, FMT_STRING("(external_func '\"{}\" {}))"), v->referenceString(),
+               makeFormatter(v->getType()));
   }
   void visit(const InternalFunc *v) override {
-    fmt::print(os, FMT_STRING("(internal_func (ref_string \"{}\")\n(type {}))"),
-               v->referenceString(), makeFormatter(v->getType()));
+    fmt::print(os, FMT_STRING("(internal_func '\"{}\" {})"), v->referenceString(),
+               makeFormatter(v->getType()));
   }
   void visit(const LLVMFunc *v) override {
     std::vector<std::string> literals;
@@ -101,8 +96,8 @@ public:
     std::replace(body.begin(), body.end(), '\n', ' ');
 
     fmt::print(os,
-               FMT_STRING("(llvm_func (ref_string \"{}\")\n(type {})\n(decls \"{}\")\n"
-                          "(body \"{}\")\n(literals ({})))"),
+               FMT_STRING("(llvm_func '\"{}\" {}\n(decls \"{}\")\n"
+                          "\"{}\"\n(literals ({})))"),
                v->referenceString(), makeFormatter(v->getType()),
                v->getLLVMDeclarations(), body,
                fmt::join(literals.begin(), literals.end(), "\n"));
@@ -110,235 +105,207 @@ public:
 
   void defaultVisit(const Value *) override { os << "(unknown_value)"; }
   void visit(const VarValue *v) override {
-    fmt::print(os, FMT_STRING("(var_value (ref_string \"{}\")\n(var {}))"),
-               v->referenceString(), makeFormatter(v->getVar()));
+    fmt::print(os, FMT_STRING("'\"{}\""), v->getVar()->referenceString());
   }
   void visit(const PointerValue *v) override {
-    fmt::print(os, FMT_STRING("(ptr_value (ref_string \"{}\")\n(var {}))"),
-               v->referenceString(), makeFormatter(v->getVar()));
+    fmt::print(os, FMT_STRING("(ptr '\"{}\")"), v->getVar()->referenceString());
   }
 
   void defaultVisit(const Flow *) override { os << "(unknown_flow)"; }
   void visit(const SeriesFlow *v) override {
     auto series = makeFormatters(v->begin(), v->end());
-    fmt::print(os, FMT_STRING("(series_flow (ref_string \"{}\")\n(body ({})))"),
-               v->referenceString(), fmt::join(series.begin(), series.end(), "\n"));
+    fmt::print(os, FMT_STRING("(series\n{}\n)"),
+               fmt::join(series.begin(), series.end(), "\n"));
   }
   void visit(const IfFlow *v) override {
-    fmt::print(os,
-               FMT_STRING("(if_flow (ref_string \"{}\")\n(cond {})\n(true_branch {})\n"
-                          "(false_branch {}))"),
-               v->referenceString(), makeFormatter(v->getCond()),
+    fmt::print(os, FMT_STRING("(if {}\n{}\n{}\n)"), makeFormatter(v->getCond()),
                makeFormatter(v->getTrueBranch()), makeFormatter(v->getFalseBranch()));
   }
   void visit(const WhileFlow *v) override {
-    fmt::print(os, FMT_STRING("(while_flow (ref_string \"{}\")\n(cond {})\n(body {}))"),
-               v->referenceString(), makeFormatter(v->getCond()),
+    fmt::print(os, FMT_STRING("(while {}\n{}\n)"), makeFormatter(v->getCond()),
                makeFormatter(v->getBody()));
   }
   void visit(const ForFlow *v) override {
-    fmt::print(
-        os,
-        FMT_STRING("(for_flow (ref_string \"{}\")\n(iter {})\n(var {})\n(body {}))"),
-        v->referenceString(), makeFormatter(v->getIter()), makeFormatter(v->getVar()),
-        makeFormatter(v->getBody()));
+    fmt::print(os, FMT_STRING("(for {}\n{}\n{}\n)"), makeFormatter(v->getIter()),
+               makeFormatter(v->getVar()), makeFormatter(v->getBody()));
   }
   void visit(const TryCatchFlow *v) override {
     std::vector<std::string> catches;
 
     for (auto &c : *v) {
       catches.push_back(
-          fmt::format(FMT_STRING("(catch (type {})\n(var {})\n(handler {}))"),
-                      makeFormatter(c.getType()), makeFormatter(c.getVar()),
-                      makeFormatter(c.getHandler())));
+          fmt::format(FMT_STRING("(catch {} {}\n{}\n)"), makeFormatter(c.getType()),
+                      makeFormatter(c.getVar()), makeFormatter(c.getHandler())));
     }
 
-    fmt::print(
-        os,
-        FMT_STRING("(try_catch_flow (ref_string \"{}\")\n(body {})\n(finally {})\n"
-                   "(catches ({})))"),
-        v->referenceString(), makeFormatter(v->getBody()),
-        makeFormatter(v->getFinally()),
-        fmt::join(catches.begin(), catches.end(), "\n"));
+    fmt::print(os, FMT_STRING("(try {}\n{}\n(finally\n{}\n)\n)"),
+               makeFormatter(v->getBody()),
+               fmt::join(catches.begin(), catches.end(), "\n"),
+               makeFormatter(v->getFinally()));
   }
   void visit(const PipelineFlow *v) override {
     std::vector<std::string> stages;
     for (const auto &s : *v) {
       auto args = makeFormatters(s.begin(), s.end());
       stages.push_back(fmt::format(
-          FMT_STRING("(stage (func {})\n(args ({}))\n(generator {})\n(parallel{}))"),
+          FMT_STRING("(stage {} {}\n(generator {})\n(parallel {}))"),
           makeFormatter(s.getCallee()), fmt::join(args.begin(), args.end(), "\n"),
           s.isGenerator(), s.isParallel()));
     }
-    fmt::print(os, FMT_STRING("(pipeline (stages ({})))"),
+    fmt::print(os, FMT_STRING("(pipeline {})"),
                fmt::join(stages.begin(), stages.end(), "\n"));
   }
   void visit(const dsl::CustomFlow *v) override { v->doFormat(os); }
 
-  void defaultVisit(const Const *) override { os << "(unknown_const)"; }
+  void defaultVisit(const Const *) override { os << "unknown_const"; }
   void visit(const IntConst *v) override {
-    fmt::print(os, FMT_STRING("(int_const (ref_string \"{}\")\n(value {}))"),
-               v->referenceString(), v->getVal());
+    fmt::print(os, FMT_STRING("{}"), v->getVal());
   }
   void visit(const FloatConst *v) override {
-    fmt::print(os, FMT_STRING("(float_const (ref_string \"{}\")\n(value {}))"),
-               v->referenceString(), v->getVal());
+    fmt::print(os, FMT_STRING("{}"), v->getVal());
   }
   void visit(const BoolConst *v) override {
-    fmt::print(os, FMT_STRING("(bool_const (ref_string \"{}\")\n(value {}))"),
-               v->referenceString(), v->getVal());
+    fmt::print(os, FMT_STRING("{}"), v->getVal());
   }
   void visit(const StringConst *v) override {
-    auto value = v->getVal();
-    std::replace(value.begin(), value.end(), '\n', ' ');
-
-    fmt::print(os, FMT_STRING("(string_const (ref_string \"{}\")\n(value \"{}\"))"),
-               v->referenceString(), value);
+    std::stringstream escaped;
+    for (char c : v->getVal()) {
+      switch (c) {
+      case '\a':
+        escaped << "\\a";
+        break;
+      case '\b':
+        escaped << "\\b";
+        break;
+      case '\f':
+        escaped << "\\f";
+        break;
+      case '\n':
+        escaped << "\\n";
+        break;
+      case '\r':
+        escaped << "\\r";
+        break;
+      case '\t':
+        escaped << "\\t";
+        break;
+      case '\v':
+        escaped << "\\v";
+        break;
+      case '\\':
+        escaped << "\\\\";
+        break;
+      case '\'':
+        escaped << "\\'";
+        break;
+      case '\"':
+        escaped << "\\\"";
+        break;
+      case '\?':
+        escaped << "\\\?";
+        break;
+      default:
+        escaped << c;
+      }
+    }
+    fmt::print(os, FMT_STRING("\"{}\""), escaped.str());
   }
   void visit(const dsl::CustomConst *v) override { v->doFormat(os); }
 
   void defaultVisit(const Instr *) override { os << "(unknown_instr)"; }
   void visit(const AssignInstr *v) override {
-    fmt::print(os, FMT_STRING("(assign_instr (ref_string \"{}\")\n(lhs {})\n(rhs {}))"),
-               v->referenceString(), makeFormatter(v->getLhs()),
+    fmt::print(os, FMT_STRING("(assign {} {})"), makeFormatter(v->getLhs()),
                makeFormatter(v->getRhs()));
   }
   void visit(const ExtractInstr *v) override {
-    fmt::print(
-        os,
-        FMT_STRING("(extract_instr (ref_string \"{}\")\n(value {})\n(field \"{}\"))"),
-        v->referenceString(), makeFormatter(v->getVal()), v->getField());
+    fmt::print(os, FMT_STRING("(extract {} \"{}\")"), makeFormatter(v->getVal()),
+               v->getField());
   }
   void visit(const InsertInstr *v) override {
-    fmt::print(
-        os,
-        FMT_STRING(
-            "(insert_instr (ref_string \"{}\")\n(lhs {})\n(field \"{}\")\n(rhs {}))"),
-        v->referenceString(), makeFormatter(v->getLhs()), v->getField(),
-        makeFormatter(v->getRhs()));
+    fmt::print(os, FMT_STRING("(insert {} \"{}\" {})"), makeFormatter(v->getLhs()),
+               v->getField(), makeFormatter(v->getRhs()));
   }
   void visit(const CallInstr *v) override {
     auto args = makeFormatters(v->begin(), v->end());
-    fmt::print(os,
-               FMT_STRING("(call_instr (ref_string \"{}\")\n(func {})\n(args ({})))"),
-               v->referenceString(), makeFormatter(v->getCallee()),
+    fmt::print(os, FMT_STRING("(call {}\n{}\n)"), makeFormatter(v->getCallee()),
                fmt::join(args.begin(), args.end(), "\n"));
   }
   void visit(const StackAllocInstr *v) override {
-    fmt::print(
-        os,
-        FMT_STRING(
-            "(stack_alloc_instr (ref_string \"{}\")\n(array_type {})\n(count {}))"),
-        v->referenceString(), makeFormatter(v->getArrayType()), v->getCount());
+    fmt::print(os, FMT_STRING("(stack_alloc {} {})"), makeFormatter(v->getArrayType()),
+               v->getCount());
   }
   void visit(const TypePropertyInstr *v) override {
-    fmt::print(
-        os,
-        FMT_STRING("(type_property_instr (ref_string \"{}\")\n(inspect_type {})\n"
-                   "(property \"{}\"))"),
-        v->referenceString(), makeFormatter(v->getInspectType()),
-        v->getProperty() == TypePropertyInstr::Property::IS_ATOMIC ? "is_atomic"
-                                                                   : "sizeof");
+    std::string property;
+    if (v->getProperty() == TypePropertyInstr::Property::IS_ATOMIC) {
+      property = "atomic";
+    } else if (v->getProperty() == TypePropertyInstr::Property::SIZEOF) {
+      property = "sizeof";
+    } else {
+      property = "unknown";
+    }
+    fmt::print(os, FMT_STRING("(property {} {})"), property,
+               makeFormatter(v->getInspectType()));
   }
   void visit(const YieldInInstr *v) override {
-    fmt::print(os, FMT_STRING("(yield_in_instr (ref_string \"{}\")\n(type {}))"),
-               v->referenceString(), makeFormatter(v->getType()));
+    fmt::print(os, FMT_STRING("(yield_in {})"), makeFormatter(v->getType()));
   }
   void visit(const TernaryInstr *v) override {
-    fmt::print(os,
-               FMT_STRING("(ternary_instr (ref_string \"{}\")\n(cond {})\n(true_value "
-                          "{})\n(false_value {}))"),
-               v->referenceString(), makeFormatter(v->getCond()),
+    fmt::print(os, FMT_STRING("(select {}\n{}\n{}\n)"), makeFormatter(v->getCond()),
                makeFormatter(v->getTrueValue()), makeFormatter(v->getFalseValue()));
   }
-  void visit(const BreakInstr *v) override {
-    fmt::print(os, FMT_STRING("(break_instr (ref_string \"{}\"))"),
-               v->referenceString());
-  }
-  void visit(const ContinueInstr *v) override {
-    fmt::print(os, FMT_STRING("(continue_instr (ref_string \"{}\"))"),
-               v->referenceString());
-  }
+  void visit(const BreakInstr *v) override { os << "break"; }
+  void visit(const ContinueInstr *v) override { os << "continue"; }
   void visit(const ReturnInstr *v) override {
-    fmt::print(os, FMT_STRING("(return_instr (ref_string \"{}\")\n(value {}))"),
-               v->referenceString(), makeFormatter(v->getValue()));
+    fmt::print(os, FMT_STRING("(return {})"), makeFormatter(v->getValue()));
   }
   void visit(const YieldInstr *v) override {
-    fmt::print(os, FMT_STRING("(yield_instr (ref_string \"{}\")\n(value {}))"),
-               v->referenceString(), makeFormatter(v->getValue()));
+    fmt::print(os, FMT_STRING("(yield {})"), makeFormatter(v->getValue()));
   }
   void visit(const ThrowInstr *v) override {
-    fmt::print(os, FMT_STRING("(throw_instr (ref_string \"{}\")\n(value {}))"),
-               v->referenceString(), makeFormatter(v->getValue()));
+    fmt::print(os, FMT_STRING("(throw {})"), makeFormatter(v->getValue()));
   }
   void visit(const FlowInstr *v) override {
-    fmt::print(os,
-               FMT_STRING("(flow_instr (ref_string \"{}\")\n(flow {})\n(value {}))"),
-               v->referenceString(), makeFormatter(v->getFlow()),
+    fmt::print(os, FMT_STRING("(flow {} {})"), makeFormatter(v->getFlow()),
                makeFormatter(v->getValue()));
   }
   void visit(const dsl::CustomInstr *v) override { v->doFormat(os); }
 
-  void defaultVisit(const types::Type *) override { os << "(unknown_type)"; }
-  void visit(const types::IntType *v) override {
-    fmt::print(os, FMT_STRING("(int_type (ref_string \"{}\"))"), v->referenceString());
-  }
-  void visit(const types::FloatType *v) override {
-    fmt::print(os, FMT_STRING("(float_type (ref_string \"{}\"))"),
-               v->referenceString());
-  }
-  void visit(const types::BoolType *v) override {
-    fmt::print(os, FMT_STRING("(bool_type (ref_string \"{}\"))"), v->referenceString());
-  }
-  void visit(const types::ByteType *v) override {
-    fmt::print(os, FMT_STRING("(byte_type (ref_string \"{}\"))"), v->referenceString());
-  }
-  void visit(const types::VoidType *v) override {
-    fmt::print(os, FMT_STRING("(void_type (ref_string \"{}\"))"), v->referenceString());
-  }
+  void defaultVisit(const types::Type *) override { os << "unknown_type"; }
+  void visit(const types::IntType *v) override { os << "int"; }
+  void visit(const types::FloatType *v) override { os << "float"; }
+  void visit(const types::BoolType *v) override { os << "bool"; }
+  void visit(const types::ByteType *v) override { os << "byte"; }
+  void visit(const types::VoidType *v) override { os << "void"; }
   void visit(const types::RecordType *v) override {
     std::vector<std::string> fields;
     std::vector<NodeFormatter> formatters;
     for (const auto &m : *v) {
-      fields.push_back(fmt::format(FMT_STRING("\"{}\""), m.getName()));
-      formatters.push_back(makeFormatter(m.getType()));
+      fields.push_back(fmt::format(FMT_STRING("(\"{}\" {})"), m.getName(),
+                                   makeFormatter(m.getType())));
     }
 
-    fmt::print(os,
-               FMT_STRING("(record_type (ref_string \"{}\")\n(field_names "
-                          "({}))\n(field_types ({})))"),
-               v->referenceString(), fmt::join(fields.begin(), fields.end(), "\n"),
-               fmt::join(formatters.begin(), formatters.end(), "\n"));
+    fmt::print(os, FMT_STRING("(record {})"),
+               fmt::join(fields.begin(), fields.end(), " "));
   }
   void visit(const types::RefType *v) override {
-    fmt::print(os, FMT_STRING("(ref_type (ref_string \"{}\")\n(contents {}))"),
-               v->referenceString(), makeFormatter(v->getContents()));
+    fmt::print(os, FMT_STRING("(ref {})"), makeFormatter(v->getContents()));
   }
   void visit(const types::FuncType *v) override {
     auto args = makeFormatters(v->begin(), v->end());
-    fmt::print(
-        os,
-        FMT_STRING(
-            "(func_type (ref_string \"{}\")\n(return_type {})\n(arg_types ({})))"),
-        v->referenceString(), makeFormatter(v->getReturnType()),
-        fmt::join(args.begin(), args.end(), "\n"));
+    fmt::print(os, FMT_STRING("(func {} {})"), fmt::join(args.begin(), args.end(), " "),
+               makeFormatter(v->getReturnType()));
   }
   void visit(const types::OptionalType *v) override {
-    fmt::print(os, FMT_STRING("(optional_type (ref_string \"{}\")\n(base {}))"),
-               v->referenceString(), makeFormatter(v->getBase()));
+    fmt::print(os, FMT_STRING("(optional {})"), makeFormatter(v->getBase()));
   }
   void visit(const types::PointerType *v) override {
-    fmt::print(os, FMT_STRING("(pointer_type (ref_string \"{}\")\n(base {}))"),
-               v->referenceString(), makeFormatter(v->getBase()));
+    fmt::print(os, FMT_STRING("(pointer {})"), makeFormatter(v->getBase()));
   }
   void visit(const types::GeneratorType *v) override {
-    fmt::print(os, FMT_STRING("(generator_type (ref_string \"{}\")\n(base {}))"),
-               v->referenceString(), makeFormatter(v->getBase()));
+    fmt::print(os, FMT_STRING("(generator {})"), makeFormatter(v->getBase()));
   }
   void visit(const types::IntNType *v) override {
-    fmt::print(os,
-               FMT_STRING("(intn_type (ref_string \"{}\")\n(size {})\n(signed {}))"),
-               v->referenceString(), v->getLen(), v->isSigned());
+    fmt::print(os, FMT_STRING("(intn {} (signed {}))"), v->getLen(), v->isSigned());
   }
   void visit(const dsl::types::CustomType *v) override { v->doFormat(os); }
 
@@ -346,44 +313,44 @@ public:
     if (n)
       n->accept(*this);
     else
-      os << "()";
+      os << "(null)";
   }
 
   void format(const types::Type *t, bool canShowFull = false) {
     if (t) {
       if (seenTypes.find(t->getName()) != seenTypes.end() || !canShowFull)
-        fmt::print(os, FMT_STRING("(type {})"), t->referenceString());
+        fmt::print(os, FMT_STRING("(type '\"{}\")"), t->referenceString());
       else {
         seenTypes.insert(t->getName());
         t->accept(*this);
       }
     } else
-      os << "()";
+      os << "(null)";
   }
 
   void format(const Value *t) {
     if (t) {
       if (seenNodes.find(t->getId()) != seenNodes.end())
-        fmt::print(os, FMT_STRING("(value {})"), t->referenceString());
+        fmt::print(os, FMT_STRING("(value '\"{}\")"), t->referenceString());
       else {
         seenNodes.insert(t->getId());
         t->accept(*this);
       }
 
     } else
-      os << "()";
+      os << "(null)";
   }
 
   void format(const Var *t, bool canShowFull = false) {
     if (t) {
       if (seenNodes.find(t->getId()) != seenNodes.end() || !canShowFull)
-        fmt::print(os, FMT_STRING("(var {})"), t->referenceString());
+        fmt::print(os, FMT_STRING("(var '\"{}\")"), t->referenceString());
       else {
         seenNodes.insert(t->getId());
         t->accept(*this);
       }
     } else
-      os << "()";
+      os << "(null)";
   }
 
 private:
