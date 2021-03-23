@@ -11,6 +11,50 @@
 namespace {
 using namespace seq::ir;
 
+std::string escapeString(const std::string &str) {
+  std::stringstream escaped;
+  for (char c : str) {
+    switch (c) {
+    case '\a':
+      escaped << "\\a";
+      break;
+    case '\b':
+      escaped << "\\b";
+      break;
+    case '\f':
+      escaped << "\\f";
+      break;
+    case '\n':
+      escaped << "\\n";
+      break;
+    case '\r':
+      escaped << "\\r";
+      break;
+    case '\t':
+      escaped << "\\t";
+      break;
+    case '\v':
+      escaped << "\\v";
+      break;
+    case '\\':
+      escaped << "\\\\";
+      break;
+    case '\'':
+      escaped << "\\'";
+      break;
+    case '\"':
+      escaped << "\\\"";
+      break;
+    case '\?':
+      escaped << "\\\?";
+      break;
+    default:
+      escaped << c;
+    }
+  }
+  return escaped.str();
+}
+
 struct NodeFormatter {
   const types::Type *type = nullptr;
   const Value *value = nullptr;
@@ -92,14 +136,11 @@ public:
       }
     }
 
-    auto body = v->getLLVMBody();
-    std::replace(body.begin(), body.end(), '\n', ' ');
-
     fmt::print(os,
                FMT_STRING("(llvm_func '\"{}\" {}\n(decls \"{}\")\n"
-                          "\"{}\"\n(literals ({})))"),
+                          "\"{}\"\n(literals {}))"),
                v->referenceString(), makeFormatter(v->getType()),
-               v->getLLVMDeclarations(), body,
+               escapeString(v->getLLVMDeclarations()), escapeString(v->getLLVMBody()),
                fmt::join(literals.begin(), literals.end(), "\n"));
   }
 
@@ -168,47 +209,7 @@ public:
     fmt::print(os, FMT_STRING("{}"), v->getVal());
   }
   void visit(const StringConst *v) override {
-    std::stringstream escaped;
-    for (char c : v->getVal()) {
-      switch (c) {
-      case '\a':
-        escaped << "\\a";
-        break;
-      case '\b':
-        escaped << "\\b";
-        break;
-      case '\f':
-        escaped << "\\f";
-        break;
-      case '\n':
-        escaped << "\\n";
-        break;
-      case '\r':
-        escaped << "\\r";
-        break;
-      case '\t':
-        escaped << "\\t";
-        break;
-      case '\v':
-        escaped << "\\v";
-        break;
-      case '\\':
-        escaped << "\\\\";
-        break;
-      case '\'':
-        escaped << "\\'";
-        break;
-      case '\"':
-        escaped << "\\\"";
-        break;
-      case '\?':
-        escaped << "\\\?";
-        break;
-      default:
-        escaped << c;
-      }
-    }
-    fmt::print(os, FMT_STRING("\"{}\""), escaped.str());
+    fmt::print(os, FMT_STRING("\"{}\""), escapeString(v->getVal()));
   }
   void visit(const dsl::CustomConst *v) override { v->doFormat(os); }
 
