@@ -20,8 +20,7 @@ public:
   virtual ~Value() noexcept = default;
 
   std::string referenceString() const final {
-    return fmt::format(FMT_STRING("{}.{}"), getActual()->getName(),
-                       getActual()->getId());
+    return fmt::format(FMT_STRING("{}.{}"), getName(), getId());
   }
 
   std::vector<Value *> getUsedValues() final { return getActual()->doGetUsedValues(); }
@@ -56,6 +55,8 @@ public:
 
   /// @return the value's type
   types::Type *getType() const { return getActual()->doGetType(); }
+
+  int getId() const override { return getActual()->id; }
 
   Value *operator==(Value &other);
   Value *operator!=(Value &other);

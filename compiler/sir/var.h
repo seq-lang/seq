@@ -79,9 +79,10 @@ public:
   void setGlobal(bool v = true) { getActual()->global = v; }
 
   std::string referenceString() const final {
-    return fmt::format(FMT_STRING("{}.{}"), getActual()->getName(),
-                       getActual()->getId());
+    return fmt::format(FMT_STRING("{}.{}"), getName(), getId());
   }
+
+  int getId() const override { return getActual()->id; }
 
 protected:
   virtual std::vector<Value *> doGetUsedValues() const { return {}; }

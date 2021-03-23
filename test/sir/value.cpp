@@ -33,7 +33,7 @@ TEST_F(SIRCoreTest, ValueQueryMethodsDelegate) {
 TEST_F(SIRCoreTest, ValueReplaceMethodsDelegate) {
   Value *original = module->Nr<IntConst>(1, module->getIntType(), "foo");
   auto originalRef = original->referenceString();
-
+  auto originalId = original->getId();
   auto *var = module->Nr<BodiedFunc>();
   Value *replacement = module->Nr<VarValue>(var, "baz");
   original->replaceAll(replacement);
@@ -49,4 +49,7 @@ TEST_F(SIRCoreTest, ValueReplaceMethodsDelegate) {
                                               TypePropertyInstr::Property::SIZEOF);
   original->replaceAll(replacement);
   ASSERT_EQ(1, original->replaceUsedType(module->getIntType(), module->getFloatType()));
+
+  ASSERT_NE(originalId, original->getId());
+  ASSERT_EQ(original->getId(), replacement->getId());
 }

@@ -14,7 +14,11 @@ TEST_F(SIRCoreTest, VarQueryMethodsDelegate) {
 TEST_F(SIRCoreTest, VarReplaceMethodsDelegate) {
   Var *original = module->Nr<Var>(module->getIntType());
   Var *replacement = module->Nr<Var>(module->getFloatType());
+
+  auto originalId = original->getId();
   original->replaceAll(replacement);
 
   ASSERT_EQ(1, original->replaceUsedType(module->getFloatType(), module->getIntType()));
+  ASSERT_NE(originalId, original->getId());
+  ASSERT_EQ(original->getId(), replacement->getId());
 }
