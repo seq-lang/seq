@@ -272,11 +272,21 @@ public:
   void visit(const dsl::CustomInstr *v) override { v->doFormat(os); }
 
   void defaultVisit(const types::Type *) override { os << "unknown_type"; }
-  void visit(const types::IntType *v) override { os << "int"; }
-  void visit(const types::FloatType *v) override { os << "float"; }
-  void visit(const types::BoolType *v) override { os << "bool"; }
-  void visit(const types::ByteType *v) override { os << "byte"; }
-  void visit(const types::VoidType *v) override { os << "void"; }
+  void visit(const types::IntType *v) override {
+    fmt::print(os, FMT_STRING("(int '\"{}\")"), v->referenceString());
+  }
+  void visit(const types::FloatType *v) override {
+    fmt::print(os, FMT_STRING("(float '\"{}\")"), v->referenceString());
+  }
+  void visit(const types::BoolType *v) override {
+    fmt::print(os, FMT_STRING("(bool '\"{}\")"), v->referenceString());
+  }
+  void visit(const types::ByteType *v) override {
+    fmt::print(os, FMT_STRING("(byte '\"{}\")"), v->referenceString());
+  }
+  void visit(const types::VoidType *v) override {
+    fmt::print(os, FMT_STRING("(void '\"{}\")"), v->referenceString());
+  }
   void visit(const types::RecordType *v) override {
     std::vector<std::string> fields;
     std::vector<NodeFormatter> formatters;
@@ -285,28 +295,34 @@ public:
                                    makeFormatter(m.getType())));
     }
 
-    fmt::print(os, FMT_STRING("(record {})"),
+    fmt::print(os, FMT_STRING("(record '\"{}\" {})"), v->referenceString(),
                fmt::join(fields.begin(), fields.end(), " "));
   }
   void visit(const types::RefType *v) override {
-    fmt::print(os, FMT_STRING("(ref {})"), makeFormatter(v->getContents()));
+    fmt::print(os, FMT_STRING("(ref '\"{}\" {})"), v->referenceString(),
+               makeFormatter(v->getContents()));
   }
   void visit(const types::FuncType *v) override {
     auto args = makeFormatters(v->begin(), v->end());
-    fmt::print(os, FMT_STRING("(func {} {})"), fmt::join(args.begin(), args.end(), " "),
+    fmt::print(os, FMT_STRING("(func '\"{}\" {} {})"), v->referenceString(),
+               fmt::join(args.begin(), args.end(), " "),
                makeFormatter(v->getReturnType()));
   }
   void visit(const types::OptionalType *v) override {
-    fmt::print(os, FMT_STRING("(optional {})"), makeFormatter(v->getBase()));
+    fmt::print(os, FMT_STRING("(optional '\"{}\" {})"), v->referenceString(),
+               makeFormatter(v->getBase()));
   }
   void visit(const types::PointerType *v) override {
-    fmt::print(os, FMT_STRING("(pointer {})"), makeFormatter(v->getBase()));
+    fmt::print(os, FMT_STRING("(pointer '\"{}\" {})"), v->referenceString(),
+               makeFormatter(v->getBase()));
   }
   void visit(const types::GeneratorType *v) override {
-    fmt::print(os, FMT_STRING("(generator {})"), makeFormatter(v->getBase()));
+    fmt::print(os, FMT_STRING("(generator '\"{}\" {})"), v->referenceString(),
+               makeFormatter(v->getBase()));
   }
   void visit(const types::IntNType *v) override {
-    fmt::print(os, FMT_STRING("(intn {} (signed {}))"), v->getLen(), v->isSigned());
+    fmt::print(os, FMT_STRING("(intn '\"{}\" {} (signed {}))"), v->referenceString(),
+               v->getLen(), v->isSigned());
   }
   void visit(const dsl::types::CustomType *v) override { v->doFormat(os); }
 
