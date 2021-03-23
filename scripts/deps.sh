@@ -10,6 +10,10 @@ export INSTALLDIR=${PWD}/deps
 export SRCDIR=${PWD}/deps_src
 mkdir -p ${INSTALLDIR} ${SRCDIR}
 
+export LD_LIBRARY_PATH=${INSTALLDIR}/lib:${LD_LIBRARY_PATH}
+export LIBRARY_PATH=${INSTALLDIR}/lib:${LIBRARY_PATH}
+export CPATH=${INSTALLDIR}/include:${CPATH}
+
 die() { echo "$*" 1>&2 ; exit 1; }
 
 export JOBS=1
@@ -117,8 +121,10 @@ make install
 [ ! -f ${INSTALLDIR}/lib/libgc.a ] && die "gc library not found"
 
 # htslib
-wget -c https://github.com/samtools/htslib/releases/download/1.10.2/htslib-1.10.2.tar.bz2 -O - | tar jxf - -C ${SRCDIR}
-cd ${SRCDIR}/htslib-1.10.2
+curl -L https://github.com/samtools/htslib/releases/download/1.12/htslib-1.12.tar.bz2 | tar jxf - -C ${SRCDIR}
+cd ${SRCDIR}/htslib-1.12
+# Get needed fix so HTSlib works with zlib-ng: https://github.com/samtools/htslib/compare/develop...jkbonfield:zlib-ng-fix
+curl -L -O https://raw.githubusercontent.com/jkbonfield/htslib/715056cdd3f85855a503ac932f58e84b92c7dd0e/bgzf.c
 ./configure \
     CFLAGS="-fPIC" \
     --disable-libcurl \
