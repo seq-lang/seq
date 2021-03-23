@@ -96,6 +96,12 @@ else
     [ ! -f ${INSTALLDIR}/lib/libz.a ] && die "zlib library not found"
 fi
 
+# libdeflate
+curl -L https://github.com/ebiggers/libdeflate/archive/refs/tags/v1.7.tar.gz | tar zxf - -C ${SRCDIR}
+cd ${SRCDIR}/libdeflate-1.7
+make -j$JOBS PREFIX=${INSTALLDIR}
+make install PREFIX=${INSTALLDIR}
+
 # bdwgc
 curl -L https://github.com/ivmai/bdwgc/releases/download/v8.0.4/gc-8.0.4.tar.gz | tar zxf - -C ${SRCDIR}
 cd ${SRCDIR}/gc-8.0.4
