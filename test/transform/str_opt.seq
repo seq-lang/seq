@@ -1,0 +1,11 @@
+DUMMY_CALLED = 0
+
+@extend
+class str:
+    def cat(*args):
+        return 'ok'
+
+@test
+def test_str_optimization():
+    assert 'hello ' + 'world' == "ok"
+test_str_optimization()

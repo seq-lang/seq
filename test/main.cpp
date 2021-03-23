@@ -322,6 +322,22 @@ INSTANTIATE_TEST_SUITE_P(
       testing::Values(false)
     ),
     getTestNameFromParam);
+
+INSTANTIATE_TEST_SUITE_P(
+    OptTests, SeqTest,
+    testing::Combine(
+        testing::Values(
+            "transform/str_opt.seq",
+            "transform/dict_opt.seq"
+        ),
+        testing::Values(true, false),
+        testing::Values(""),
+        testing::Values(""),
+        testing::Values(0),
+        testing::Values(false)
+    ),
+    getTestNameFromParam);
+
 // clang-format on
 
 int main(int argc, char *argv[]) {

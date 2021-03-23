@@ -116,12 +116,12 @@ void DictArithmeticOptimization::handle(CallInstr *v) {
       // call non-throwing version if we have a default
       if (getAnalysis.dflt) {
         replacementFunc = M->getOrRealizeMethod(
-            dictValue->getType(), "__dict_do_op_throws__",
+            dictValue->getType(), "__dict_do_op__",
             {dictValue->getType(), keyValue->getType(), constant->getType(),
              getAnalysis.dflt->getType(), opFunc->getType()});
       } else {
         replacementFunc =
-            M->getOrRealizeMethod(dictValue->getType(), "__dict_do_op__",
+            M->getOrRealizeMethod(dictValue->getType(), "__dict_do_op_throws__",
                                   {dictValue->getType(), keyValue->getType(),
                                    constant->getType(), opFunc->getType()});
       }

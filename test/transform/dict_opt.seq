@@ -1,0 +1,21 @@
+class DummyDict[K, V]:
+    def __getitem__(self, k: K):
+        assert False
+        return V()
+    def get(self, k: K, d: V):
+        assert False
+        return V()
+    def __setitem__(self, k: K, v: V):
+        assert False
+    def __dict_do_op_throws__[F, Z](self, key: K, other: Z, op: F):
+        pass
+    def __dict_do_op__[F, Z](self, key: K, other: Z, dflt: V, op: F):
+        pass
+
+@test
+def test_dict_op():
+    x = DummyDict[int, int]()
+    x[1] = x[1] + 1
+    x[1] = x.get(1, 1) + 1
+
+test_dict_op()
