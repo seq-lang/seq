@@ -24,6 +24,8 @@ class IdMixin {
 private:
   /// the global id counter
   static int currentId;
+
+protected:
   /// the instance's id
   int id;
 
@@ -34,7 +36,7 @@ public:
   IdMixin() : id(currentId++) {}
 
   /// @return the node's id.
-  int getId() const { return id; }
+  virtual int getId() const { return id; }
 };
 
 /// Base for named IR nodes.
