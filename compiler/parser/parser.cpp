@@ -46,8 +46,9 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
       _dbg_level |= s.find('l') != string::npos ? (1 << 5) : 0; // lexer
     }
 
-    char abs[PATH_MAX + 1];
-    realpath(file.c_str(), abs);
+    char abs[PATH_MAX + 1] = {'-', 0};
+    if (file != "-")
+      realpath(file.c_str(), abs);
 
     ast::StmtPtr codeStmt =
         isCode ? ast::parseCode(abs, code, startLine) : ast::parseFile(abs);
