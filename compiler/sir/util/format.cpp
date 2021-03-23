@@ -72,7 +72,7 @@ public:
                makeFormatter(v->getBody()));
   }
   void visit(const ExternalFunc *v) override {
-    fmt::print(os, FMT_STRING("(external_func '\"{}\" {}))"), v->referenceString(),
+    fmt::print(os, FMT_STRING("(external_func '\"{}\" {})"), v->referenceString(),
                makeFormatter(v->getType()));
   }
   void visit(const InternalFunc *v) override {
