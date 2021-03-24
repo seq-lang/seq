@@ -2,8 +2,8 @@
 
 set -e
 
-export CC="${CC}"
-export CXX="${CXX}"
+export CC="${CC:-clang}"
+export CXX="${CXX:-clang++}"
 export USE_ZLIBNG="${USE_ZLIBNG:-1}"
 
 export INSTALLDIR="${PWD}/deps"
