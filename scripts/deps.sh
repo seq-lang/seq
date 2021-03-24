@@ -19,6 +19,8 @@ echo "Using $JOBS cores..."
 # Tapir
 if [ ! -d "${SRCDIR}/Tapir-LLVM" ]; then
   git clone --depth 1 -b release_60-release https://github.com/seq-lang/Tapir-LLVM ${SRCDIR}/Tapir-LLVM
+fi
+if [ ! -f "${INSTALLDIR}/bin/llc" ]; then
   mkdir -p ${SRCDIR}/Tapir-LLVM/build
   cd ${SRCDIR}/Tapir-LLVM/build
   cmake .. \
@@ -39,9 +41,12 @@ fi
 # OCaml
 if [ ! -d "${SRCDIR}/ocaml-4.07.1" ]; then
   curl -L https://github.com/ocaml/ocaml/archive/4.07.1.tar.gz | tar zxf - -C ${SRCDIR}
+fi
+if [ ! -f "${INSTALLDIR}/bin/ocamlbuild" ]; then
   cd ${SRCDIR}/ocaml-4.07.1
+  # Use g++ for OCaml; newer versions of clang cannot compile it
   ./configure \
-      -cc "${CC} -Wno-implicit-function-declaration" \
+      -cc "gcc" \
       -fPIC \
       -no-pthread \
       -no-debugger \
