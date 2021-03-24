@@ -77,8 +77,8 @@ make PREFIX="${INSTALLDIR}" install
 
 if [ "${USE_ZLIBNG}" = '1' ] ; then
     # zlib-ng
-    curl -L https://github.com/zlib-ng/zlib-ng/archive/2.0.1.tar.gz | tar zxf - -C "${SRCDIR}"
-    cd "${SRCDIR}/zlib-ng-2.0.1"
+    curl -L https://github.com/zlib-ng/zlib-ng/archive/2.0.2.tar.gz | tar zxf - -C "${SRCDIR}"
+    cd "${SRCDIR}/zlib-ng-2.0.2"
     CFLAGS="-fPIC -DNO_QUICK_STRATEGY" ./configure \
         --64 \
         --zlib-compat \
