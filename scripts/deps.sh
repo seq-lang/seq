@@ -68,6 +68,7 @@ if [ ! -f "${INSTALLDIR}/bin/ocamlbuild" ]; then
   ${INSTALLDIR}/bin/ocamlbuild -version
 fi
 
+export PATH=${INSTALLDIR}/bin:${PATH}
 # Menhir
 curl -L https://gitlab.inria.fr/fpottier/menhir/-/archive/20190924/menhir-20190924.tar.gz | tar zxf - -C ${SRCDIR}
 cd ${SRCDIR}/menhir-20190924
