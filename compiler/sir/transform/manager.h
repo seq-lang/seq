@@ -6,14 +6,13 @@
 #include <unordered_set>
 #include <vector>
 
+#include "pass.h"
 #include "sir/analyze/analysis.h"
 #include "sir/module.h"
 
 namespace seq {
 namespace ir {
 namespace transform {
-
-class Pass;
 
 /// Utility class to run a series of passes.
 class PassManager {
@@ -38,9 +37,9 @@ private:
   struct PassMetadata {
     /// pointer to the pass instance
     std::unique_ptr<Pass> pass;
-    /// vector of required passes
+    /// vector of required analyses
     std::vector<std::string> reqs;
-    /// vector of invalidated passes
+    /// vector of invalidated analyses
     std::vector<std::string> invalidates;
 
     PassMetadata() = default;
@@ -53,13 +52,33 @@ private:
     PassMetadata &operator=(PassMetadata &&) = default;
   };
 
+  /// Container for analysis metadata.
+  struct AnalysisMetadata {
+    /// pointer to the analysis instance
+    std::unique_ptr<analyze::Analysis> analysis;
+    /// vector of required analyses
+    std::vector<std::string> reqs;
+    /// vector of invalidated analyses
+    std::vector<std::string> invalidates;
+
+    AnalysisMetadata() = default;
+    AnalysisMetadata(std::unique_ptr<analyze::Analysis> analysis,
+                     std::vector<std::string> reqs)
+        : analysis(std::move(analysis)), reqs(std::move(reqs)) {}
+    AnalysisMetadata(AnalysisMetadata &&) = default;
+
+    AnalysisMetadata &operator=(AnalysisMetadata &&) = default;
+  };
+
   /// key manager to handle duplicate keys (i.e. passes being added twice)
   KeyManager km;
 
   /// map of keys to passes
   std::unordered_map<std::string, PassMetadata> passes;
   /// map of keys to analyses
-  std::unordered_map<std::string, std::unique_ptr<analyze::Analysis>> analyses;
+  std::unordered_map<std::string, AnalysisMetadata> analyses;
+  /// reverse dependency map
+  std::unordered_map<std::string, std::vector<std::string>> deps;
 
   /// execution order of passes
   std::vector<std::string> executionOrder;
@@ -88,8 +107,10 @@ public:
 
   /// Registers an analysis.
   /// @param analysis the analysis
+  /// @param reqs keys of analyses that must be run before the current one
   /// @return unique'd key for the added analysis, or empty string if not added
-  std::string registerAnalysis(std::unique_ptr<analyze::Analysis> analysis);
+  std::string registerAnalysis(std::unique_ptr<analyze::Analysis> analysis,
+                               std::vector<std::string> reqs = {});
 
   /// Run all passes.
   /// @param module the module
@@ -113,6 +134,8 @@ public:
 private:
   void runPass(Module *module, const std::string &name);
   void registerStandardPasses();
+  void runAnalysis(Module *module, const std::string &name);
+  void invalidate(const std::string &key);
 };
 
 } // namespace transform

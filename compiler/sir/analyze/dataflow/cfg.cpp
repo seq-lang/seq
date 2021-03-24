@@ -58,6 +58,8 @@ public:
     original->successors_insert(tBranch);
     if (fBranch)
       original->successors_insert(fBranch);
+    else
+      original->successors_insert(end);
 
     graph->setCurrentBlock(end);
   }
@@ -260,6 +262,10 @@ namespace ir {
 namespace analyze {
 namespace dataflow {
 
+void CFBlock::reg(const Value *v) {
+  graph->valueLocations[v->getId()] = this;
+}
+
 const char SyntheticAssignInstr::NodeId = 0;
 
 int SyntheticAssignInstr::doReplaceUsedValue(int id, Value *newValue) {
@@ -312,13 +318,7 @@ std::unique_ptr<Result> CFAnalysis::run(const Module *m) {
   auto res = std::make_unique<CFResult>();
   for (const auto *var : *m) {
     if (const auto *f = cast<BodiedFunc>(var)) {
-      auto graph = buildCFGraph(f);
-      for (auto *blk : *graph) {
-        for (auto *val : *blk) {
-          res->valueMapping[val->getId()].insert(blk);
-        }
-      }
-      res->graphs.insert(std::make_pair(f->getId(), std::move(graph)));
+      res->graphs.insert(std::make_pair(f->getId(), buildCFGraph(f)));
     }
   }
   return res;

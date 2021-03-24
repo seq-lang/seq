@@ -52,10 +52,10 @@ public:
   /// @param it the position
   /// @param v the new value
   /// @param an iterator to the new value
-  template <typename It> auto insert(It it, const Value *v) { values.insert(it, v); }
+  template <typename It> auto insert(It it, const Value *v) { values.insert(it, v); reg(v); }
   /// Inserts a value at the back.
   /// @param v the new value
-  void push_back(const Value *v) { values.push_back(v); }
+  void push_back(const Value *v) { values.push_back(v); reg(v); }
   /// Erases a value at the given position.
   /// @param it the position
   /// @return an iterator following the removed value
@@ -84,13 +84,13 @@ public:
   }
 
   /// @return an iterator to the first predecessor
-  auto predecessors_begin() { return successors.begin(); }
+  auto predecessors_begin() { return predecessors.begin(); }
   /// @return an iterator beyond the last predecessor
-  auto predecessors_end() { return successors.end(); }
+  auto predecessors_end() { return predecessors.end(); }
   /// @return an iterator to the first predecessor
-  auto predecessors_begin() const { return successors.begin(); }
+  auto predecessors_begin() const { return predecessors.begin(); }
   /// @return an iterator beyond the last predecessor
-  auto predecessors_end() const { return successors.end(); }
+  auto predecessors_end() const { return predecessors.end(); }
 
   /// @return the graph
   CFGraph *getGraph() { return graph; }
@@ -99,6 +99,9 @@ public:
   /// Sets the graph.
   /// @param g the new graph
   void setGraph(CFGraph *g) { graph = g; }
+
+private:
+  void reg(const Value *v);
 };
 
 class SyntheticAssignInstr : public AcceptorExtend<SyntheticAssignInstr, Instr> {
@@ -255,6 +258,8 @@ private:
   const BodiedFunc *func;
   /// a list of synthetic values
   std::list<std::unique_ptr<Value>> syntheticValues;
+  /// a mapping from value id to block
+  std::unordered_map<int, CFBlock *> valueLocations;
 
 public:
   /// Constructs a control-flow graph.
@@ -288,6 +293,21 @@ public:
   /// @param f the new value
   void setFunc(BodiedFunc *f) { func = f; }
 
+  /// Gets the block containing a value.
+  /// @param val the value
+  /// @return the block
+  CFBlock *getBlock(const Value *v) {
+    auto it = valueLocations.find(v->getId());
+    return it != valueLocations.end() ? it->second : nullptr;
+  }
+  /// Gets the block containing a value.
+  /// @param val the value
+  /// @return the block
+  const CFBlock *getBlock(const Value *v) const {
+    auto it = valueLocations.find(v->getId());
+    return it != valueLocations.end() ? it->second : nullptr;
+  }
+
   /// Creates and inserts a new block
   /// @param name the name
   /// @param setCur true if the block should be made the current one
@@ -306,6 +326,8 @@ public:
     ret->setModule(func->getModule());
     return ret;
   }
+
+  friend class CFBlock;
 };
 
 /// Builds a control-flow graph from a given function.
@@ -317,8 +339,6 @@ std::unique_ptr<CFGraph> buildCFGraph(const BodiedFunc *f);
 struct CFResult : public Result {
   /// map from function id to control-flow graph
   std::unordered_map<int, std::unique_ptr<CFGraph>> graphs;
-  /// map from value id to control-flow block
-  std::unordered_map<int, std::unordered_set<CFBlock *>> valueMapping;
 };
 
 /// Control-flow analysis that runs on all functions.

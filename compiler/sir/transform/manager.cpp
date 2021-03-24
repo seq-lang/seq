@@ -1,5 +1,8 @@
 #include "manager.h"
 
+#include <cassert>
+#include <unordered_set>
+
 #include "pass.h"
 #include "sir/transform/lowering/imperative.h"
 #include "sir/transform/manager.h"
@@ -8,6 +11,8 @@
 #include "sir/transform/pythonic/io.h"
 #include "sir/transform/pythonic/str.h"
 #include "util/common.h"
+
+#include "sir/analyze/analysis.h"
 
 namespace seq {
 namespace ir {
@@ -34,6 +39,12 @@ std::string PassManager::registerPass(std::unique_ptr<Pass> pass,
   if (isDisabled(key))
     return "";
   key = km.getUniqueKey(key);
+
+  for (const auto &req : reqs) {
+    assert(deps.find(req) != deps.end());
+    deps[req].push_back(key);
+  }
+
   passes.insert(std::make_pair(
       key, PassMetadata(std::move(pass), std::move(reqs), std::move(invalidates))));
   passes[key].pass->setManager(this);
@@ -41,12 +52,22 @@ std::string PassManager::registerPass(std::unique_ptr<Pass> pass,
   return key;
 }
 
-std::string PassManager::registerAnalysis(std::unique_ptr<analyze::Analysis> analysis) {
+std::string PassManager::registerAnalysis(std::unique_ptr<analyze::Analysis> analysis,
+                                          std::vector<std::string> reqs) {
+
   std::string key = analysis->getKey();
   if (isDisabled(key))
     return "";
+
+  for (const auto &req : reqs) {
+    assert(deps.find(req) != deps.end());
+    deps[req].push_back(key);
+  }
+
   key = km.getUniqueKey(key);
-  analyses.insert(std::make_pair(key, std::move(analysis)));
+  analyses.insert(std::make_pair(key, AnalysisMetadata(std::move(analysis), std::move(reqs))));
+
+  deps[key] = {};
   return key;
 }
 
@@ -60,15 +81,39 @@ void PassManager::runPass(Module *module, const std::string &name) {
   auto &meta = passes[name];
 
   for (auto &dep : meta.reqs) {
-    auto it = results.find(dep);
-    if (it == results.end())
-      results[dep] = analyses[dep]->run(module);
+    runAnalysis(module, dep);
   }
 
   meta.pass->run(module);
 
   for (auto &inv : meta.invalidates)
-    results.erase(inv);
+    invalidate(inv);
+}
+
+void PassManager::runAnalysis(Module *module, const std::string &name) {
+  if (results.find(name) != results.end())
+    return;
+
+  auto &meta = analyses[name];
+  for (auto &dep : meta.reqs) {
+    runAnalysis(module, dep);
+  }
+  results[name] = meta.analysis->run(module);
+}
+
+void PassManager::invalidate(const std::string &key) {
+  std::unordered_set<std::string> open = {key};
+
+  while (!open.empty()) {
+    std::unordered_set<std::string> newOpen;
+    for (const auto &k : open) {
+      if (results.find(k) != results.end()) {
+        results.erase(k);
+        newOpen.insert(deps[k].begin(), deps[k].end());
+      }
+    }
+    open = std::move(newOpen);
+  }
 }
 
 void PassManager::registerStandardPasses() {
