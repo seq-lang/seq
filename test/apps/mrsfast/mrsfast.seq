@@ -102,12 +102,12 @@ def partition(kmer):
     lo = (n & u64(0x0000000fffffffff))
     return int(hi), int(lo)
 
-def count_qgrams[T](s, window):
+def count_qgrams(s, window):
     def bases2bytes(bases):
-        return (T(bases.A), T(bases.C), T(bases.G), T(bases.T))
+        return (byte(bases.A), byte(bases.C), byte(bases.G), byte(bases.T))
     if len(s) < window:
         return []
-    counts = [(T(0),T(0),T(0),T(0)) for _ in range(len(s) - window + 1)]
+    counts = [(byte(0),byte(0),byte(0),byte(0)) for _ in range(len(s) - window + 1)]
     bases = s[:window].bases
     counts[0] = bases2bytes(bases)
     for i in range(window, len(s)):
@@ -149,7 +149,7 @@ def index_make(rec: FASTARecord):
     print('making glist...', file=stderr)
     glist = [GeneralIndex(chsum=partition(kmer)[1], info=pos) for kmer, pos in v]
     print('counting q-grams...', file=stderr)
-    qgrams = count_qgrams[byte](s, SEQ_LENGTH)
+    qgrams = count_qgrams(s, SEQ_LENGTH)
     return GenomeIndex(rec, offsets, glist, qgrams)
 
 def index_load(basename):
