@@ -58,11 +58,8 @@ public:
     original->successors_insert(tBranch);
     if (fBranch)
       original->successors_insert(fBranch);
-<<<<<<< HEAD
     else
       original->successors_insert(end);
-=======
->>>>>>> wip
 
     graph->setCurrentBlock(end);
   }

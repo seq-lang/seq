@@ -25,6 +25,9 @@
 #include "sir/util/format.h"
 #include <fstream>
 
+#include "sir/analyze/dataflow/cfg.h"
+#include "sir/analyze/dataflow/reaching.h"
+
 int _ocaml_time = 0;
 int _ll_time = 0;
 int _level = 0;
@@ -103,6 +106,16 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
     t = high_resolution_clock::now();
     auto *module = ast::TranslateVisitor::apply(cache, move(typechecked));
     module->setSrcInfo({abs, 0, 0, 0, 0});
+
+
+    auto *main = ir::cast<ir::BodiedFunc>(module->getMainFunc());
+    auto cfg = ir::analyze::dataflow::buildCFGraph(main);
+    ir::analyze::dataflow::RDInspector rd(cfg.get());
+    rd.analyze();
+
+    auto *last = ir::cast<ir::SeriesFlow>(main->getBody())->back();
+    auto *var = ir::cast<ir::VarValue>(last)->getVar();
+    auto def = rd.getReachingDefinitions(var, last);
 
     if (!isTest)
       LOG_TIME("[T] translate   = {:.1f}",
