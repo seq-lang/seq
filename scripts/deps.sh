@@ -75,7 +75,7 @@ if [ ! -d "${SRCDIR}/menhir-20190924" ]; then
   curl -L https://gitlab.inria.fr/fpottier/menhir/-/archive/20190924/menhir-20190924.tar.gz | tar zxf - -C ${SRCDIR}
 fi
 cd ${SRCDIR}/menhir-20190924
-make USE_OCAMLFIND=0 PREFIX=${INSTALLDIR} all -j$JOBS 
+make USE_OCAMLFIND=0 PREFIX=${INSTALLDIR} all -j$JOBS
 make PREFIX=${INSTALLDIR} install
 ${INSTALLDIR}/bin/menhir --version
 [ ! -f ${INSTALLDIR}/share/menhir/menhirLib.cmx ] && die "Menhir library not found"
