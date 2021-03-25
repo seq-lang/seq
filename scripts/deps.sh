@@ -94,7 +94,7 @@ if [ "${USE_ZLIBNG}" = '1' ] ; then
     ZLIBNG_VERSION='2.0.2'
     curl -L "https://github.com/zlib-ng/zlib-ng/archive/${ZLIBNG_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
     cd "${SRCDIR}/zlib-ng-${ZLIBNG_VERSION}"
-    CFLAGS="-fPIC -DNO_QUICK_STRATEGY" ./configure \
+    CFLAGS="-fPIC" ./configure \
         --64 \
         --zlib-compat \
         --prefix="${INSTALLDIR}"
@@ -106,7 +106,7 @@ else
     ZLIB_VERSION='1.2.11'
     curl -L "https://zlib.net/zlib-${ZLIB_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
     cd "${SRCDIR}/zlib-${ZLIB_VERSION}"
-    CFLAGS=-fPIC ./configure \
+    CFLAGS="-fPIC" ./configure \
         --64 \
         --static \
         --shared \
@@ -128,7 +128,7 @@ BDWGC_VERSION='8.0.4'
 curl -L "https://github.com/ivmai/bdwgc/releases/download/v${BDWGC_VERSION}/gc-${BDWGC_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
 cd "${SRCDIR}/gc-${BDWGC_VERSION}"
 ./configure \
-    CFLAGS=-fPIC \
+    CFLAGS="-fPIC" \
     --enable-threads=posix \
     --enable-large-config \
     --enable-thread-local-alloc \
