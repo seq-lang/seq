@@ -120,7 +120,7 @@ fi
 LIBDEFLATE_VERSION='1.7'
 curl -L "https://github.com/ebiggers/libdeflate/archive/refs/tags/v${LIBDEFLATE_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
 cd "${SRCDIR}/libdeflate-${LIBDEFLATE_VERSION}"
-make -j "${JOBS}" -e libdeflate.a PREFIX="${INSTALLDIR}"
+make -j "${JOBS}" -e libdeflate.a CFLAGS="-fPIC" PREFIX="${INSTALLDIR}"
 install -m644 libdeflate.a "${INSTALLDIR}/lib"
 install -m644 libdeflate.h "${INSTALLDIR}/include"
 
