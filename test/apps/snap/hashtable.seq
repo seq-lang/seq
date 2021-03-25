@@ -29,11 +29,11 @@ class SNAPHashTable[K,V]:
             self.table[i] = (invalid_val, K())
 
     def __init__(self, p: Ptr[byte]):
-        from C import snap_hashtable_ptr(Ptr[byte]) -> Ptr[Tuple[V,K]]
+        from C import snap_hashtable_ptr(Ptr[byte]) -> Ptr[byte]
         from C import snap_hashtable_len(Ptr[byte]) -> int
-        from C import snap_hashtable_invalid_val(Ptr[byte]) -> V
-        self.table = Array[Tuple[V,K]](snap_hashtable_ptr(p), snap_hashtable_len(p))
-        self.invalid_val = snap_hashtable_invalid_val(p)
+        from C import snap_hashtable_invalid_val(Ptr[byte]) -> int
+        self.table = Array[Tuple[V,K]](Ptr[Tuple[V,K]](snap_hashtable_ptr(p)), snap_hashtable_len(p))
+        self.invalid_val = V(snap_hashtable_invalid_val(p))
 
     def _get_index(self, where: int):
         return int(UInt[64](where) % UInt[64](len(self.table)))

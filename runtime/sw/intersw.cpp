@@ -42,25 +42,25 @@ static int x86_simd() {
     return 0;
   __cpuidex(cpuid, 1, 0);
   if (cpuid[3] >> 25 & 1)
-    flag |= SIMD_SSE;
+    flag |= SIMD_SSE & SEQ_MAXSIMD;
   if (cpuid[3] >> 26 & 1)
-    flag |= SIMD_SSE2;
+    flag |= SIMD_SSE2 & SEQ_MAXSIMD;
   if (cpuid[2] >> 0 & 1)
-    flag |= SIMD_SSE3;
+    flag |= SIMD_SSE3 & SEQ_MAXSIMD;
   if (cpuid[2] >> 9 & 1)
-    flag |= SIMD_SSSE3;
+    flag |= SIMD_SSSE3 & SEQ_MAXSIMD;
   if (cpuid[2] >> 19 & 1)
-    flag |= SIMD_SSE4_1;
+    flag |= SIMD_SSE4_1 & SEQ_MAXSIMD;
   if (cpuid[2] >> 20 & 1)
-    flag |= SIMD_SSE4_2;
+    flag |= SIMD_SSE4_2 & SEQ_MAXSIMD;
   if (cpuid[2] >> 28 & 1)
-    flag |= SIMD_AVX;
+    flag |= SIMD_AVX & SEQ_MAXSIMD;
   if (max_id >= 7) {
     __cpuidex(cpuid, 7, 0);
     if (cpuid[1] >> 5 & 1)
-      flag |= SIMD_AVX2;
+      flag |= SIMD_AVX2 & SEQ_MAXSIMD;
     if (cpuid[1] >> 16 & 1)
-      flag |= SIMD_AVX512F;
+      flag |= SIMD_AVX512F & SEQ_MAXSIMD;
   }
   return flag;
 }

@@ -24,6 +24,8 @@ echo "Using ${JOBS} cores..."
 TAPIR_LLVM_BRANCH='release_60-release'
 if [ ! -d "${SRCDIR}/Tapir-LLVM" ]; then
   git clone --depth 1 -b "${TAPIR_LLVM_BRANCH}" https://github.com/seq-lang/Tapir-LLVM "${SRCDIR}/Tapir-LLVM"
+fi
+if [ ! -f "${INSTALLDIR}/bin/llc" ]; then
   mkdir -p "${SRCDIR}/Tapir-LLVM/build"
   cd "${SRCDIR}/Tapir-LLVM/build"
   cmake .. \
@@ -46,9 +48,12 @@ OCAML_VERSION='4.07.1'
 OCAMLBUILD_VERSION='0.12.0'
 if [ ! -d "${SRCDIR}/ocaml-${OCAML_VERSION}" ]; then
   curl -L "https://github.com/ocaml/ocaml/archive/${OCAML_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
+fi
+if [ ! -f "${INSTALLDIR}/bin/ocamlbuild" ]; then
   cd "${SRCDIR}/ocaml-${OCAML_VERSION}"
+  # Use gcc for OCaml; newer versions of clang cannot compile it
   ./configure \
-      -cc "${CC} -Wno-implicit-function-declaration" \
+      -cc "gcc" \
       -fPIC \
       -no-pthread \
       -no-debugger \
@@ -71,9 +76,13 @@ if [ ! -d "${SRCDIR}/ocaml-${OCAML_VERSION}" ]; then
   "${INSTALLDIR}/bin/ocamlbuild" -version
 fi
 
+export PATH=${INSTALLDIR}/bin:${PATH}
+
 # Menhir
 MENHIR_VERSION='20190924'
-curl -L "https://gitlab.inria.fr/fpottier/menhir/-/archive/${MENHIR_VERSION}/menhir-${MENHIR_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
+if [ ! -d "${SRCDIR}/menhir-${MENHIR_VERSION}" ]; then
+  curl -L "https://gitlab.inria.fr/fpottier/menhir/-/archive/${MENHIR_VERSION}/menhir-${MENHIR_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
+fi
 cd "${SRCDIR}/menhir-${MENHIR_VERSION}"
 make PREFIX="${INSTALLDIR}" all -j "${JOBS}"
 make PREFIX="${INSTALLDIR}" install

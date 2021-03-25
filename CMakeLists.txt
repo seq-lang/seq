@@ -73,6 +73,10 @@ else ()
 endif ()
 
 # Seq runtime library
+if(NOT SEQ_MAXSIMD)
+    set(SEQ_MAXSIMD 511)  # AVX 512
+endif()
+message(STATUS "SIMD level: ${SEQ_MAXSIMD}")
 set(SEQRT_FILES runtime/lib.h
         runtime/lib.cpp
         runtime/exc.cpp
@@ -84,6 +88,7 @@ set(SEQRT_FILES runtime/lib.h
         runtime/sw/intersw.h
         runtime/sw/intersw.cpp)
 add_library(seqrt SHARED ${SEQRT_FILES})
+target_compile_options(seqrt PRIVATE -mavx -DSEQ_MAXSIMD=${SEQ_MAXSIMD})
 target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include runtime)
 if (APPLE)
     target_link_libraries(seqrt PUBLIC seqomp ${STATIC_LIBCPP} -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC})
