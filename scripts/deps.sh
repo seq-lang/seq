@@ -120,7 +120,7 @@ fi
 LIBDEFLATE_VERSION='1.7'
 curl -L "https://github.com/ebiggers/libdeflate/archive/refs/tags/v${LIBDEFLATE_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
 cd "${SRCDIR}/libdeflate-${LIBDEFLATE_VERSION}"
-make -j "${JOBS}" PREFIX="${INSTALLDIR}"
+make -j "${JOBS}" -e libdeflate.a PREFIX="${INSTALLDIR}"
 make install PREFIX="${INSTALLDIR}"
 
 # bdwgc
