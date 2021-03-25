@@ -10,10 +10,3 @@ def test_file_io():
     f.write(str.cat("hello ", "world"))
 
 test_file_io()
-
-def print(*args, sep=' ', end='\n', file=_stdout, flush=False):
-    assert len(args) > 1
-
-@test
-def test_print():
-    print((str.cat("hello ", "world"), ))
