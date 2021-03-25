@@ -18,6 +18,7 @@
 #include "sir/transform/manager.h"
 #include "sir/transform/pipeline.h"
 #include "sir/transform/pythonic/dict.h"
+#include "sir/transform/pythonic/io.h"
 #include "sir/transform/pythonic/str.h"
 #include "util/common.h"
 #include "gtest/gtest.h"
@@ -88,6 +89,8 @@ void registerStandardPasses(ir::transform::PassManager &pm) {
   pm.registerPass(
       "pythonic-str-addition-opt",
       std::make_unique<seq::ir::transform::pythonic::StrAdditionOptimization>());
+  pm.registerPass("pythonic-io-cat-opt",
+                  std::make_unique<seq::ir::transform::pythonic::IOCatOptimization>());
 }
 
 string argv0;
@@ -327,8 +330,9 @@ INSTANTIATE_TEST_SUITE_P(
     OptTests, SeqTest,
     testing::Combine(
         testing::Values(
-            "transform/str_opt.seq",
-            "transform/dict_opt.seq"
+            "transform/dict_opt.seq",
+            "transform/io_opt.seq",
+            "transform/str_opt.seq"
         ),
         testing::Values(true, false),
         testing::Values(""),

@@ -1,5 +1,3 @@
-DUMMY_CALLED = 0
-
 @extend
 class str:
     def cat(*args):

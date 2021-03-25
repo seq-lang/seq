@@ -3,6 +3,7 @@
 #include "sir/transform/manager.h"
 #include "sir/transform/pipeline.h"
 #include "sir/transform/pythonic/dict.h"
+#include "sir/transform/pythonic/io.h"
 #include "sir/transform/pythonic/str.h"
 #include "util/common.h"
 #include "llvm/Support/CommandLine.h"
@@ -30,6 +31,9 @@ void registerStandardPasses(seq::ir::transform::PassManager &pm, bool debug) {
   pm.registerPass(
       "pythonic-str-addition-opt",
       std::make_unique<seq::ir::transform::pythonic::StrAdditionOptimization>());
+  pm.registerPass(
+      "pythonic-io-cat-opt",
+      std::make_unique<seq::ir::transform::pythonic::IOCatOptimization>());
 }
 
 bool hasExtension(const std::string &filename, const std::string &extension) {
