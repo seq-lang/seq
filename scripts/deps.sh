@@ -53,7 +53,7 @@ if [ ! -f "${INSTALLDIR}/bin/ocamlbuild" ]; then
   cd "${SRCDIR}/ocaml-${OCAML_VERSION}"
   # Use gcc for OCaml; newer versions of clang cannot compile it
   ./configure \
-      -cc "gcc-10" \
+      -cc "${CC}" \
       -fPIC \
       -no-pthread \
       -no-debugger \
