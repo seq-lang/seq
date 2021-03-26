@@ -55,9 +55,8 @@ int docMode(const std::vector<const char *> &args, const std::string &argv0) {
 }
 
 int runMode(const std::vector<const char *> &args) {
-  llvm::cl::OptionCategory generalCat("Options");
-  llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::Required,
-                                   llvm::cl::desc("<input file>"));
+  llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::desc("<input file>"),
+                                   llvm::cl::init("-"));
   llvm::cl::opt<OptMode> optMode(
       llvm::cl::desc("optimization mode"),
       llvm::cl::values(
@@ -65,17 +64,14 @@ int runMode(const std::vector<const char *> &args) {
                      "Turn off compiler optimizations and show backtraces"),
           clEnumValN(Release, "release",
                      "Turn on compiler optimizations and disable debug info")),
-      llvm::cl::init(Debug), llvm::cl::cat(generalCat));
+      llvm::cl::init(Debug));
   llvm::cl::list<std::string> defines(
       "D", llvm::cl::Prefix,
-      llvm::cl::desc("Add static variable definitions. The syntax is <name>=<value>"),
-      llvm::cl::cat(generalCat));
+      llvm::cl::desc("Add static variable definitions. The syntax is <name>=<value>"));
   llvm::cl::list<std::string> seqArgs(llvm::cl::ConsumeAfter,
-                                      llvm::cl::desc("<program arguments>..."),
-                                      llvm::cl::cat(generalCat));
+                                      llvm::cl::desc("<program arguments>..."));
   llvm::cl::list<std::string> libs(
-      "l", llvm::cl::desc("Load and link the specified library"),
-      llvm::cl::cat(generalCat));
+      "l", llvm::cl::desc("Load and link the specified library"));
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
   std::vector<std::string> libsVec(libs);
   std::vector<std::string> argsVec(seqArgs);
@@ -126,9 +122,8 @@ int runMode(const std::vector<const char *> &args) {
 }
 
 int buildMode(const std::vector<const char *> &args) {
-  llvm::cl::OptionCategory generalCat("General Options");
-  llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::Required,
-                                   llvm::cl::desc("<input file>"));
+  llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::desc("<input file>"),
+                                   llvm::cl::init("-"));
   llvm::cl::opt<OptMode> optMode(
       llvm::cl::desc("optimization mode"),
       llvm::cl::values(
@@ -136,14 +131,12 @@ int buildMode(const std::vector<const char *> &args) {
                      "Turn off compiler optimizations and show backtraces"),
           clEnumValN(Release, "release",
                      "Turn on compiler optimizations and disable debug info")),
-      llvm::cl::init(Debug), llvm::cl::cat(generalCat));
+      llvm::cl::init(Debug));
   llvm::cl::list<std::string> libs(
-      "l", llvm::cl::desc("Link the specified library (only for executables)"),
-      llvm::cl::cat(generalCat));
+      "l", llvm::cl::desc("Link the specified library (only for executables)"));
   llvm::cl::list<std::string> defines(
       "D", llvm::cl::Prefix,
-      llvm::cl::desc("Add static variable definitions. The syntax is <name>=<value>"),
-      llvm::cl::cat(generalCat));
+      llvm::cl::desc("Add static variable definitions. The syntax is <name>=<value>"));
   llvm::cl::opt<BuildKind> buildKind(
       llvm::cl::desc("output type"),
       llvm::cl::values(clEnumValN(LLVM, "llvm", "Generate LLVM IR"),
@@ -152,13 +145,12 @@ int buildMode(const std::vector<const char *> &args) {
                        clEnumValN(Executable, "exe", "Generate executable"),
                        clEnumValN(Detect, "detect",
                                   "Detect output type based on output file extension")),
-      llvm::cl::init(Detect), llvm::cl::cat(generalCat));
+      llvm::cl::init(Detect));
   llvm::cl::opt<std::string> output(
       "o",
       llvm::cl::desc(
           "Write compiled output to specified file. Supported extensions: "
-          "none (executable), .o (object file), .ll (LLVM IR), .bc (LLVM bitcode)"),
-      llvm::cl::cat(generalCat));
+          "none (executable), .o (object file), .ll (LLVM IR), .bc (LLVM bitcode)"));
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
   std::vector<std::string> libsVec(libs);
 
