@@ -115,7 +115,7 @@ int runMode(const std::vector<const char *> &args) {
   if (!module)
     return EXIT_FAILURE;
 
-  const bool isDebug = false;
+  const bool isDebug = (optMode == OptMode::Debug);
   auto t = std::chrono::high_resolution_clock::now();
   seq::ir::transform::PassManager pm;
   registerStandardPasses(pm, isDebug);

@@ -14,10 +14,10 @@ using namespace seq::ir;
 struct GetCall {
   /// the function, nullptr if not a get call
   Func *func = nullptr;
-  /// the dictionary
-  VarValue *dict = nullptr;
-  /// the key
-  Const *key = nullptr;
+  /// the dictionary, must not be a call
+  Value *dict = nullptr;
+  /// the key, must not be a call
+  Value *key = nullptr;
   /// the default value, may be null
   Const *dflt = nullptr;
 };
@@ -40,11 +40,11 @@ GetCall analyzeGet(CallInstr *call) {
     return {};
 
   // extract the dictionary and keys
-  auto *dict = cast<VarValue>(*it++);
-  auto *k = cast<Const>(*it++);
+  auto *dict = *it++;
+  auto *k = *it++;
 
-  // the dictionary must be a variable and key must be constant
-  if (!dict || !k)
+  // dictionary and key must not be calls
+  if (isA<CallInstr>(dict) || isA<CallInstr>(k))
     return {};
 
   // get calls have a default
@@ -76,15 +76,16 @@ void DictArithmeticOptimization::handle(CallInstr *v) {
     auto it = v->begin();
 
     // extract all the arguments to the function
-    // the dictionary must be a variable, the key must be a constant, and the value must
+    // the dictionary and key must not be calls, and the value must
     // be a call
-    auto *dictValue = cast<VarValue>(*it++);
-    auto *keyValue = cast<Const>(*it++);
+    auto *dictValue = *it++;
+    auto *keyValue = *it++;
+    if (isA<CallInstr>(dictValue) || isA<CallInstr>(keyValue))
+      return;
     auto *opCall = cast<CallInstr>(*it++);
 
     // the call must take exactly two arguments
-    if (!dictValue || !keyValue || !opCall ||
-        std::distance(opCall->begin(), opCall->end()) != 2)
+    if (!dictValue || !opCall || std::distance(opCall->begin(), opCall->end()) != 2)
       return;
 
     // grab the function, which does not necessarily need to be a magic
@@ -99,17 +100,11 @@ void DictArithmeticOptimization::handle(CallInstr *v) {
       return;
 
     // second argument can be any non-null value
-    auto *constant = opCall->back();
-
-    auto *d1 = cast<VarValue>(dictValue);
-    auto *d2 = cast<VarValue>(getAnalysis.dict);
-
-    if (!d1 || !d2)
-      return;
+    auto *secondValue = opCall->back();
 
     // verify that we are dealing with the same dictionary and key
-    if (constant && d1->getVar()->getId() == d2->getVar()->getId() &&
-        util::match(keyValue, getAnalysis.key)) {
+    if (util::match(dictValue, getAnalysis.dict, false, true) &&
+        util::match(keyValue, getAnalysis.key, false, true)) {
       util::CloneVisitor cv(M);
       Func *replacementFunc;
 
@@ -117,23 +112,23 @@ void DictArithmeticOptimization::handle(CallInstr *v) {
       if (getAnalysis.dflt) {
         replacementFunc = M->getOrRealizeMethod(
             dictValue->getType(), "__dict_do_op__",
-            {dictValue->getType(), keyValue->getType(), constant->getType(),
+            {dictValue->getType(), keyValue->getType(), secondValue->getType(),
              getAnalysis.dflt->getType(), opFunc->getType()});
       } else {
         replacementFunc =
             M->getOrRealizeMethod(dictValue->getType(), "__dict_do_op_throws__",
                                   {dictValue->getType(), keyValue->getType(),
-                                   constant->getType(), opFunc->getType()});
+                                   secondValue->getType(), opFunc->getType()});
       }
 
       if (replacementFunc) {
         std::vector<Value *> args = {cv.clone(dictValue), cv.clone(keyValue),
-                                     cv.clone(constant)};
+                                     cv.clone(secondValue)};
         if (getAnalysis.dflt)
           args.push_back(cv.clone(getAnalysis.dflt));
 
         // sanity check to make sure function is inlined
-        if (std::distance(replacementFunc->arg_begin(), replacementFunc->arg_end()) !=
+        if (args.size() !=
             std::distance(replacementFunc->arg_begin(), replacementFunc->arg_end()))
           args.push_back(M->N<VarValue>(v, opFunc));
 

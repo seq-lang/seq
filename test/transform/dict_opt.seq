@@ -1,9 +1,9 @@
 class DummyDict[K, V]:
     def __getitem__(self, k: K):
-        assert False
+        raise ValueError('failed')
         return V()
     def get(self, k: K, d: V):
-        assert False
+        raise ValueError('failed')
         return V()
     def __setitem__(self, k: K, v: V):
         assert False
@@ -19,3 +19,14 @@ def test_dict_op():
     x[1] = x.get(1, 1) + 1
 
 test_dict_op()
+
+@test
+def test_dict_do_not_op():
+    x = DummyDict[int, int]()
+    try:
+        x[1] = x[2] + 1
+    except ValueError:
+        return
+    assert False
+
+test_dict_do_not_op()
