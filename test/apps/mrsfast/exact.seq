@@ -32,7 +32,7 @@ def main_index(basename):
 
 num_aligned = 0
 
-@prefetch
+#@prefetch
 def align(read: FASTQRecord, genome_index: GenomeIndex, out: File):
     global num_aligned
     for rc in (False, True):

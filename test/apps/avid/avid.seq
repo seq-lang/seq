@@ -15,6 +15,7 @@ class Segment:
   aln: bio.Alignment
   anchor: bool
 
+@dataclass(init=False)
 class LCPNode:
   lcp: int
   start: int
