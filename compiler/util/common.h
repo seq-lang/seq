@@ -2,7 +2,7 @@
 
 #define SEQ_VERSION_MAJOR 0
 #define SEQ_VERSION_MINOR 10
-#define SEQ_VERSION_PATCH 0
+#define SEQ_VERSION_PATCH 1
 
 #include <cassert>
 #include <climits>
