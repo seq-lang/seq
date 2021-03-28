@@ -31,7 +31,7 @@ def process_intra(t):
 
 def run(queries, targets, msg, f):
     global num, total, score
-    for s in [True, False]:
+    for s in [False, True]:
         times = []
         for i in range(3):
             num, total = 0, 0
@@ -41,7 +41,7 @@ def run(queries, targets, msg, f):
             times.append(t.elapsed())
             # print '-', i, num, total, times[-1]
         m = mean(times)
-        print f'{msg}: (backtrace={not score}) {m}±{sqrt(sum((i - m)**2 for i in times) / len(times))}'
+        print f'[sw-time] seq-{msg} {int(score)} {m} {sqrt(sum((i - m)**2 for i in times) / len(times))}'
     # print stdev(times) # broken
 
 run(queries, targets, 'intra', process_intra)

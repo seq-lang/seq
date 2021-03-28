@@ -57,4 +57,16 @@ SEQ_FUNC seq_str_t seq_str_tuple(seq_str_t *strs, seq_int_t n);
 SEQ_FUNC void seq_print(seq_str_t str);
 SEQ_FUNC void seq_print_full(seq_str_t str, FILE *fo);
 
+template <typename T>
+static seq_str_t string_conv(const char *fmt, const size_t size, T t) {
+  auto *p = (char *)seq_alloc_atomic(size);
+  int n = snprintf(p, size, fmt, t);
+  if (n >= size) {
+    auto n2 = (size_t)n + 1;
+    p = (char *)seq_realloc((void *)p, n2);
+    n = snprintf(p, n2, fmt, t);
+  }
+  return {(seq_int_t)n, p};
+}
+
 #endif /* SEQ_LIB_H */

@@ -36,7 +36,7 @@ def run(queries, targets, msg, f, filter=False):
         if len(query) <= 512 and len(target) <= 512:
             yield query, target
 
-    for s in [True, False]:
+    for s in [False, True]:
         times = []
         for i in range(3):
             num, total = 0, 0
@@ -49,11 +49,12 @@ def run(queries, targets, msg, f, filter=False):
             times.append(t.elapsed())
             # print '-', i, num, total, times[-1]
         m = mean(times)
-        print f'{msg}: (backtrace={not score}) {m}±{sqrt(sum((i - m)**2 for i in times) / len(times))}'
+        print f'{msg}: seq-{msg} {int(score)} {m} {sqrt(sum((i - m)**2 for i in times) / len(times))}'
     # print stdev(times) # broken
 
 run(queries, targets, 'intra', process_intra)
-run(queries, targets, 'intra (<= 512)', process_intra, True)
 run(queries, targets, 'inter', process_inter)
-run(queries, targets, 'inter (<= 512)', process_inter, True)
+
+run(queries, targets, 'intra-512', process_intra, True)
+run(queries, targets, 'inter-512', process_inter, True)
 
