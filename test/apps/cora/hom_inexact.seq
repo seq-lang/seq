@@ -39,7 +39,7 @@ class MapSegment[K]:
 
     @property
     def kmer(self):
-        k = K(ref[self.locus.tid].seq[self.locus.pos:])
+        k = K(ref[self.locus.tid].seq[self.locus.pos:self.locus.pos + K.len()])
         return ~k if self.locus.reversed else k
 
 def segment_code(seed_no, kmer):

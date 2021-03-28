@@ -109,7 +109,7 @@ def main_search(index, fastq, result):
     print('loading index...', file=stderr)
     fmi = None
     with timing('load'):
-        fmi = index_load(index)
+        fmi = FMIndex(index, FMD=True)
     print('running alignment pipeline...', file=stderr)
     with open(result, 'w') as out, timing('fastmap'):
         FASTQ(fastq) |> iter |> fastmap(fmi, out)

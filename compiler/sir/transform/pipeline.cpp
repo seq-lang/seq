@@ -290,6 +290,7 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
                                    M->Nr<PipelineFlow>(drainStages));
         insertAfter(drain);
 
+        LOG_REALIZE("[prefetch] {}", *p);
         break; // at most one prefetch transformation per pipeline
       }
     }

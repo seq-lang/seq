@@ -478,7 +478,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   // Update visited table.
   ctx->bases[0].visitedAsts[stmt->name] = {TypecheckItem::Func, typ};
   ctx->add(TypecheckItem::Func, stmt->name, typ);
-  LOG_REALIZE("[stmt] added func {}: {} (base={}})", stmt->name, typ->debugString(1),
+  LOG_REALIZE("[stmt] added func {}: {} (base={})", stmt->name, typ->debugString(1),
               ctx->getBase());
 }
 
