@@ -53,11 +53,13 @@ def test_prefetch_transformation(s):
     idx3 = MyIndex[K](K())
     idx4 = MyIndex[K](K())
     idx5 = MyIndex[K](K())
+    idx6 = MyIndex[K](K())
     v1 = list[tuple[K, int]]()
     v2 = list[tuple[K, int]]()
     v3 = list[tuple[K, int]]()
     v4 = list[tuple[K, int]]()
     v5 = list[tuple[K, int]]()
+    v6 = list[tuple[K, int]]()
     s = s'ACGTACGTAAAACGTACGTAAAACGTACGT'
 
     def my_kmers(s):
@@ -69,10 +71,16 @@ def test_prefetch_transformation(s):
     my_kmers(s) |> lookup4(idx4, v4)
     s |> kmers[K](1) |> lookup5(idx5, v5)
 
+    def pass_prefetch_func_by_arg(s, lookup, idx, v):
+        s |> kmers[K](1) |> lookup(idx) |> v.append
+
+    pass_prefetch_func_by_arg(s, lookup3, idx6, v6)
+
     assert set(v1) == set(v2)
     assert set(v1) == set(v3)
     assert set(v1) == set(v4)
     assert set(v1) == set(v5)
+    assert set(v1) == set(v6)
     assert idx1.getitem_calls == len(s) - (len(K()) - 1)
     assert idx1.prefetch_calls == 0
     assert idx1.getitem_calls == idx2.getitem_calls
@@ -83,6 +91,8 @@ def test_prefetch_transformation(s):
     assert idx4.prefetch_calls == idx2.prefetch_calls
     assert idx5.getitem_calls == idx4.getitem_calls
     assert idx5.prefetch_calls == idx4.prefetch_calls
+    assert idx6.getitem_calls == idx3.getitem_calls
+    assert idx6.prefetch_calls == idx3.prefetch_calls
 
 test_prefetch_transformation(s'')
 test_prefetch_transformation(s'A')

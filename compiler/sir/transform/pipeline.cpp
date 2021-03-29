@@ -21,6 +21,69 @@ bool isParallel(PipelineFlow *p) {
   }
   return false;
 }
+
+BodiedFunc *makeStageWrapperFunc(PipelineFlow::Stage *stage, Func *callee,
+                                 types::Type *inputType) {
+  auto *M = callee->getModule();
+  std::vector<types::Type *> argTypes = {inputType};
+  std::vector<std::string> argNames = {"0"};
+  int i = 1;
+  for (auto *arg : *stage) {
+    if (arg) {
+      argTypes.push_back(arg->getType());
+      argNames.push_back(std::to_string(i++));
+    }
+  }
+  auto *funcType = M->getFuncType(util::getReturnType(callee), argTypes);
+  auto *wrapperFunc = M->Nr<BodiedFunc>("__stage_wrapper");
+  wrapperFunc->realize(funcType, argNames);
+
+  // reorder arguments
+  std::vector<Value *> args;
+  auto it = wrapperFunc->arg_begin();
+  ++it;
+  for (auto *arg : *stage) {
+    if (arg) {
+      args.push_back(M->Nr<VarValue>(*it++));
+    } else {
+      args.push_back(M->Nr<VarValue>(wrapperFunc->arg_front()));
+    }
+  }
+
+  wrapperFunc->setBody(util::series(M->Nr<ReturnInstr>(util::call(callee, args))));
+  return wrapperFunc;
+}
+
+// check for a regular func, or a flow-instr containing a func,
+// which is caused by a partial function.
+BodiedFunc *getStageFunc(PipelineFlow::Stage &stage) {
+  auto *callee = stage.getCallee();
+  if (auto *f = cast<BodiedFunc>(util::getFunc(callee))) {
+    return f;
+  } else if (auto *s = cast<FlowInstr>(callee)) {
+    if (auto *f = cast<BodiedFunc>(util::getFunc(s->getValue()))) {
+      return f;
+    }
+  }
+  return nullptr;
+}
+
+Value *replaceStageFunc(PipelineFlow::Stage &stage, Func *schedFunc,
+                        util::CloneVisitor &cv) {
+  auto *callee = stage.getCallee();
+  auto *M = callee->getModule();
+  if (auto *f = cast<BodiedFunc>(util::getFunc(callee))) {
+    return M->Nr<VarValue>(schedFunc);
+  } else if (auto *s = cast<FlowInstr>(callee)) {
+    if (auto *f = cast<BodiedFunc>(util::getFunc(s->getValue()))) {
+      auto *clone = cast<FlowInstr>(cv.clone(s));
+      clone->setValue(M->Nr<VarValue>(schedFunc));
+      return clone;
+    }
+  }
+  seqassert(0, "invalid stage func replacement");
+  return nullptr;
+}
 } // namespace
 
 /*
@@ -165,38 +228,6 @@ struct PrefetchFunctionTransformer : public util::Operator {
   }
 };
 
-BodiedFunc *makeStageWrapperFunc(PipelineFlow::Stage *stage, Func *callee,
-                                 types::Type *inputType) {
-  auto *M = callee->getModule();
-  std::vector<types::Type *> argTypes = {inputType};
-  std::vector<std::string> argNames = {"0"};
-  int i = 1;
-  for (auto *arg : *stage) {
-    if (arg) {
-      argTypes.push_back(arg->getType());
-      argNames.push_back(std::to_string(i++));
-    }
-  }
-  auto *funcType = M->getFuncType(util::getReturnType(callee), argTypes);
-  auto *wrapperFunc = M->Nr<BodiedFunc>("__stage_wrapper");
-  wrapperFunc->realize(funcType, argNames);
-
-  // reorder arguments
-  std::vector<Value *> args;
-  auto it = wrapperFunc->arg_begin();
-  ++it;
-  for (auto *arg : *stage) {
-    if (arg) {
-      args.push_back(M->Nr<VarValue>(*it++));
-    } else {
-      args.push_back(M->Nr<VarValue>(wrapperFunc->arg_front()));
-    }
-  }
-
-  wrapperFunc->setBody(util::series(M->Nr<ReturnInstr>(util::call(callee, args))));
-  return wrapperFunc;
-}
-
 void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
   if (isParallel(p))
     return;
@@ -205,7 +236,7 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
   PipelineFlow::Stage *prev = nullptr;
   util::CloneVisitor cv(M);
   for (auto it = p->begin(); it != p->end(); ++it) {
-    if (auto *func = cast<BodiedFunc>(util::getFunc(it->getCallee()))) {
+    if (auto *func = getStageFunc(*it)) {
       if (!it->isGenerator() && util::hasAttribute(func, "prefetch")) {
         // transform prefetch'ing function
         auto *clone = cast<BodiedFunc>(cv.forceClone(func));
@@ -253,7 +284,7 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
         Func *schedFunc = M->getOrRealizeFunc("_dynamic_coroutine_scheduler", argTypes,
                                               {}, prefetchModule);
         seqassert(schedFunc, "could not realize scheduler function");
-        PipelineFlow::Stage stage(M->Nr<VarValue>(schedFunc),
+        PipelineFlow::Stage stage(replaceStageFunc(*it, schedFunc, cv),
                                   {nullptr, M->Nr<VarValue>(clone), states,
                                    M->Nr<PointerValue>(next->getVar()),
                                    M->Nr<PointerValue>(filled->getVar()), width,
@@ -466,7 +497,7 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
   PipelineFlow::Stage *prev = nullptr;
   util::CloneVisitor cv(M);
   for (auto it = p->begin(); it != p->end(); ++it) {
-    if (auto *func = cast<BodiedFunc>(util::getFunc(it->getCallee()))) {
+    if (auto *func = getStageFunc(*it)) {
       if (!it->isGenerator() && util::hasAttribute(func, "inter_align") &&
           util::getReturnType(func)->is(M->getVoidType())) {
         // transform aligning function
@@ -542,7 +573,7 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
         seqassert(schedFunc, "could not realize scheduler");
         seqassert(flushFunc, "could not realize flush");
 
-        PipelineFlow::Stage stage(M->Nr<VarValue>(schedFunc),
+        PipelineFlow::Stage stage(replaceStageFunc(*it, schedFunc, cv),
                                   {nullptr, M->Nr<VarValue>(clone), pairs, bufRef,
                                    bufQer, states, params, hist, pairsTemp, statesTemp,
                                    M->Nr<PointerValue>(filled->getVar()), width,
