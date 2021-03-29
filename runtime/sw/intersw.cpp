@@ -89,7 +89,6 @@ SEQ_FUNC seq_str_t seq_get_interaln_simd() {
   } else {
     return string_conv("%s", 10, "NONE");
   }
-
 }
 
 struct InterAlignParams { // must be consistent with bio/align.seq
