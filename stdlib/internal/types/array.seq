@@ -7,9 +7,9 @@ class Array[T]:
     def __new__(sz: int) -> Array[T]:
         return (sz, Ptr[T](sz))
     def __copy__(self) -> Array[T]:
-        p = Ptr[byte](self.len * gc.sizeof[T]())
+        p = Ptr[T](self.len)
         str.memcpy(p.as_byte(), self.ptr.as_byte(), self.len * gc.sizeof[T]())
-        return (self.len, Ptr[T](p))
+        return (self.len, p)
     def __len__(self) -> int:
         return self.len
     def __bool__(self) -> bool:

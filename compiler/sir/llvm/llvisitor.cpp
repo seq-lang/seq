@@ -961,7 +961,7 @@ void LLVMVisitor::visit(const InternalFunc *x) {
 
   else if (internalFuncMatches<RefType>("__new__", x)) {
     auto *refType = cast<RefType>(parentType);
-    llvm::Function *allocFunc = makeAllocFunc(parentType->isAtomic());
+    llvm::Function *allocFunc = makeAllocFunc(refType->getContents()->isAtomic());
     llvm::Value *size = builder.getInt64(
         module->getDataLayout().getTypeAllocSize(getLLVMType(refType->getContents())));
     result = builder.CreateCall(allocFunc, size);
