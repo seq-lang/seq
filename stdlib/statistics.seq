@@ -186,31 +186,6 @@ def quantiles[T](data: List[T], n: int = 4, method: str = 'exclusive') -> List[f
         return result
     raise ValueError(f'Unknown method: {method}')
 
-def as_integer_ratio(x: float):
-    """
-    as_integer_ratio()
-
-    Express a float in the form n / d.
-
-    Returns a pair (n, d) of integers.
-    """
-    float_part, exponent = _frexp(x)      # x == float_part * 2**exponent exactly
-
-    for i in range(300):
-        if float_part == _floor(float_part): break
-        float_part *= 2.0
-        exponent -= 1
-
-    numerator = int(float_part)
-    denominator = 1
-    _exponent = int(_fabs(float(exponent)))
-
-    # fold in 2**exponent
-    if exponent > 0: numerator <<= _exponent
-    else: denominator <<= _exponent
-
-    return (numerator, denominator)
-
 def _lcm(x: int, y: int):
     """
     Returns the lowest common multiple bewteen x and y
@@ -243,28 +218,10 @@ def _sum(data: List[float]) -> float:
     if len(data) == 1:
         return data[0]
 
-    n, d = as_integer_ratio(data[0])    # First fraction
+    s = sorted(data)
     total = 0.0
-
-    # sum fractions (n, d) + (a, b)
-    for a, b in map(as_integer_ratio, data[1:]):
-        lcm = _lcm(d, b)
-
-        if lcm > d:
-            multiplier = lcm//d
-            n *= multiplier
-            d *= multiplier
-
-        if lcm > b:
-            multiplier = lcm//b
-            a *= multiplier
-
-        n += a
-        gcd = int(_gcd(float(n), float(d)))
-        n //= gcd
-        d //= gcd
-
-    total = n/d
+    for a in s:
+        total += a
     return total
 
 def mean(data: List[float]) -> float:
