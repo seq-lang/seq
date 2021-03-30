@@ -215,14 +215,23 @@ def _sum(data: List[float]) -> float:
       - The start argument should default to 0 or 0.0
       - Assumes input is floats
     """
-    if len(data) == 1:
-        return data[0]
-
-    s = sorted(data)
-    total = 0.0
-    for a in s:
-        total += a
-    return total
+    # Neumaier sum
+    # https://en.wikipedia.org/wiki/Kahan_summation_algorithm#Further_enhancements
+    # https://www.mat.univie.ac.at/~neum/scan/01.pdf (German)
+    s = 0.0
+    c = 0.0
+    i = 0
+    N = len(data)
+    while i < N:
+        x = data[i]
+        t = s + x
+        if abs(s) >= abs(x):
+            c += (s - t) + x
+        else:
+            c += (x - t) + s
+        s = t
+        i += 1
+    return s + c
 
 def mean(data: List[float]) -> float:
     """
