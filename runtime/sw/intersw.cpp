@@ -35,17 +35,19 @@ void __cpuidex(int cpuid[4], int func_id, int subfunc_id) {
 
 static int intersw_simd = -1;
 
+static int SEQ_MAXSIMD = (SIMD_AVX512F << 1) - 1;
+
 static int x86_simd() {
-  char *env = getenv("SEQ_SWSIMD");
-  int SEQ_MAXSIMD = (SIMD_AVX512F << 1) - 1;
-  if (env && std::string(env) == "AVX2")
-    SEQ_MAXSIMD = (SIMD_AVX2 << 1) - 1;
-  if (env && std::string(env) == "AVX")
-    SEQ_MAXSIMD = (SIMD_AVX << 1) - 1;
-  if (env && std::string(env) == "AVX512")
-    SEQ_MAXSIMD = (SIMD_AVX512F << 1) - 1;
-  if (env && std::string(env) == "SSE4_2")
-    SEQ_MAXSIMD = (SIMD_SSE4_2 << 1) - 1;
+  // char *env = getenv("SEQ_SWSIMD");
+  // int SEQ_MAXSIMD = (SIMD_AVX512F << 1) - 1;
+  // if (env && std::string(env) == "AVX2")
+  //   SEQ_MAXSIMD = (SIMD_AVX2 << 1) - 1;
+  // if (env && std::string(env) == "AVX")
+  //   SEQ_MAXSIMD = (SIMD_AVX << 1) - 1;
+  // if (env && std::string(env) == "AVX512")
+  //   SEQ_MAXSIMD = (SIMD_AVX512F << 1) - 1;
+  // if (env && std::string(env) == "SSE4_2")
+  //   SEQ_MAXSIMD = (SIMD_SSE4_2 << 1) - 1;
 
   int flag = 0, cpuid[4], max_id;
   __cpuidex(cpuid, 0, 0);
@@ -89,6 +91,10 @@ SEQ_FUNC seq_str_t seq_get_interaln_simd() {
   } else {
     return string_conv("%s", 10, "NONE");
   }
+}
+
+SEQ_FUNC void seq_set_sw_maxsimd(int max) {
+  SEQ_MAXSIMD = (max << 1) - 1;
 }
 
 struct InterAlignParams { // must be consistent with bio/align.seq

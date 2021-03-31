@@ -53,11 +53,14 @@ def run(queries, targets, msg, f, filter=False):
     # print stdev(times) # broken
 
 from C import seq_get_interaln_simd() -> str
-print seq_get_interaln_simd()
+from C import seq_set_sw_maxsimd(int)
 
 run(queries, targets, 'intra', process_intra)
-run(queries, targets, 'inter', process_inter)
-
 run(queries, targets, 'intra-512', process_intra, True)
-run(queries, targets, 'inter-512', process_inter, True)
+
+for simd in [0x20, 0x80, 0x100]:
+    seq_set_sw_maxsimd(simd)
+    print seq_get_interaln_simd()
+    run(queries, targets, 'inter', process_inter)
+    run(queries, targets, 'inter-512', process_inter, True)
 
