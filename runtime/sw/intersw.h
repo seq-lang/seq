@@ -994,7 +994,7 @@ void InterSW<W, N, CIGAR>::SWCore(uint_t seq1SoA[], uint_t seq2SoA[], uint_t nro
 
   int_t i, j;
 
-  uint_t tlen[SIMD_WIDTH];
+  uint_t tlen[SIMD_WIDTH] __attribute((aligned(64)));
   uint_t tail[SIMD_WIDTH] __attribute((aligned(64)));
   uint_t head[SIMD_WIDTH] __attribute((aligned(64)));
 
