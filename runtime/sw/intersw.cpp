@@ -95,6 +95,7 @@ SEQ_FUNC seq_str_t seq_get_interaln_simd() {
 
 SEQ_FUNC void seq_set_sw_maxsimd(int max) {
   SEQ_MAXSIMD = (max << 1) - 1;
+  intersw_simd = x86_simd();
 }
 
 struct InterAlignParams { // must be consistent with bio/align.seq
