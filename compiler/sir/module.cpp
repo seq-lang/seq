@@ -39,10 +39,11 @@ std::vector<seq::ast::types::TypePtr> translateArgs(std::vector<types::Type *> &
           seq::ast::types::LinkType::Kind::Unbound, 0)};
   for (auto *t : types) {
     seqassert(t->getAstType(), "{} must have an ast type", *t);
-    if (auto *f = cast<types::FuncType>(t)) {
-      std::vector<char> mask(std::distance(f->begin(), f->end()), 0);
+    if (auto f = t->getAstType()->getFunc()) {
+      auto *irType = cast<types::FuncType>(t);
+      std::vector<char> mask(std::distance(irType->begin(), irType->end()), 0);
       ret.push_back(std::make_shared<seq::ast::types::PartialType>(
-          f->getAstType()->getRecord(), f->getAstType()->getFunc(), mask));
+          t->getAstType()->getRecord(), f, mask));
     } else {
       ret.push_back(t->getAstType());
     }
