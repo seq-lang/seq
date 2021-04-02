@@ -317,30 +317,35 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
     bet->formPolynomials();
     
     std::vector<int64_t> coefs = bet->extractCoefficents(0);
-    // for(auto e : coefs) std::cout << e << std::endl;
+    for(auto e : coefs) std::cout << e << std::endl;
     std::vector<std::vector<int64_t>> exps = bet->extractExponents(0);
-    // for(auto t : exps) {
-    //   std::cout << std::endl;
-    //   for(auto e : t) std::cout << e << " ";
-    // }
+    for(auto t : exps) {
+      std::cout << std::endl;
+      for(auto e : t) std::cout << e << " ";
+    }
     
     // auto *evalp = M->getOrRealizeFunc("secure_evalp", {});
     // auto *call = util::call(evalp, {args, coefs, exps});
     // v->replaceAll(call);
 
-    // auto *M = v->getModule();
-    // Value *self = v->front();
-    // auto *funcType = cast<types::FuncType>(bf->getType());
-    // auto *returnType = funcType->getReturnType();
-    // types::Type *selfType = self->getType();
-    // Func *evalPolyFunc = M->getOrRealizeMethod(
-    //     selfType, "secure_evalp",
-    //     {selfType, M->getArrayType(returnType),
-    //      M->getArrayType(M->getArrayType(returnType))});
+    auto *M = v->getModule();
+    Value *self = v->front();
+    auto *funcType = cast<types::FuncType>(bf->getType());
+    auto *returnType = funcType->getReturnType();
+    types::Type *selfType = self->getType();
+    Func *evalPolyFunc = M->getOrRealizeFunc(
+        "secure_evalp",
+        {selfType,
+         M->getArrayType(returnType),
+         M->getArrayType(returnType),
+         M->getArrayType(M->getArrayType(returnType)),
+         returnType});
+    // std::cout << "Method not found!" << std::endl;
     // if (!evalPolyFunc) return;
+    // std::cout << "Method found!" << std::endl;
 
-    // auto v = cast<Value>(coefs);
-    // Value *evalPoly = util::call(evalPolyFunc, {self, coefs, exps});
+    // Value *evalPolyCall = util::call(evalPolyFunc, {self, coefs, exps});
+    // v->replaceAll(evalPolyCall);
 }
 
 void ArithmeticsOptimizations::handle(CallInstr *v) {
