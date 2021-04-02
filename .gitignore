@@ -69,3 +69,5 @@ scratch.seq
 tmp
 _*
 gtest_parallel.py
+deps
+deps_src
