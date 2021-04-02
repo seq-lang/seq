@@ -2,6 +2,7 @@
 #include "sir/llvm/llvisitor.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pipeline.h"
+#include "sir/transform/sequre.h"
 #include "util/common.h"
 #include "llvm/Support/CommandLine.h"
 #include <chrono>
@@ -22,6 +23,9 @@ void registerStandardPasses(seq::ir::transform::PassManager &pm, bool debug) {
   pm.registerPass(
       "bio-pipeline-opts",
       std::make_unique<seq::ir::transform::pipeline::PipelineOptimizations>());
+  pm.registerPass(
+      "sequre-arithmetics-opt",
+      std::make_unique<seq::ir::transform::sequre::ArithmeticsOptimizations>());
 }
 
 bool hasExtension(const std::string &filename, const std::string &extension) {
