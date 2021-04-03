@@ -8,7 +8,8 @@ class Slice:
         stepx = ~self.step if self.step else 1
         startx = 0
         stopx = 0
-        assert stepx != 0
+        if stepx == 0:
+            raise ValueError("slice step cannot be zero")
         if stepx > 0:
             startx = ~self.start if self.start else 0
             stopx = ~self.stop if self.stop else length
