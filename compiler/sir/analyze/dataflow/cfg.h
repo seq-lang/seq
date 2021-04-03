@@ -163,7 +163,7 @@ protected:
   int doReplaceUsedVariable(int id, Var *newVar) override;
 };
 
-class SyntheticPhiInstr : public AcceptorExtend<SyntheticAssignInstr, Instr> {
+class SyntheticPhiInstr : public AcceptorExtend<SyntheticPhiInstr, Instr> {
 public:
   class Predecessor {
   private:
