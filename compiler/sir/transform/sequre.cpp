@@ -11,10 +11,10 @@ namespace sequre {
 /*
  * Binary expression tree
  */
-int BET_ADD_OP = 1;
-int BET_MUL_OP = 2;
-int BET_POW_OP = 3;
-int BET_OTHER_OP = 4;
+const int BET_ADD_OP = 1;
+const int BET_MUL_OP = 2;
+const int BET_POW_OP = 3;
+const int BET_OTHER_OP = 4;
 
 class BETNode {
 public:
@@ -334,7 +334,23 @@ types::Type* getTupleType(int n, types::Type* elemType, Module* M) {
   return M->getTupleType(tupleTypes);
 }
 
-void applyPolynomialOptimizations(CallInstr *v, BET *bet, BodiedFunc *bf) {
+bool isSequreFunc(Func *f) {
+  return bool(f) && f->getUnmangledName().find("sequre_") != std::string::npos;
+}
+
+void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
+  auto *f = util::getFunc(v->getCallee());
+  if (!isSequreFunc(f)) return;
+  // see(v);
+
+  auto *bf = cast<BodiedFunc>(f);
+  auto *b = cast<SeriesFlow>(bf->getBody());
+
+  BET *bet = new BET();
+  for (auto it = b->begin(); it != b->end(); ++it)
+    parseInstruction(*it, bet);
+  bet->parseVars(bet->root());
+  
   bet->formPolynomials();
 
   std::vector<int64_t> coefs = bet->extractCoefficents(0);
@@ -345,10 +361,6 @@ void applyPolynomialOptimizations(CallInstr *v, BET *bet, BodiedFunc *bf) {
     std::cout << exps[i] << (((i+1) % bet->vars.size()) ? " " : "\n");
   std::cout << "Exps len " << exps.size() / bet->vars.size() << std::endl;
 
-  // auto *evalp = M->getOrRealizeFunc("secure_evalp", {});
-  // auto *call = util::call(evalp, {args, coefs, exps});
-  // v->replaceAll(call);
-
   auto *M = v->getModule();
   Value *self = v->front();
   auto *funcType = cast<types::FuncType>(bf->getType());
@@ -358,8 +370,9 @@ void applyPolynomialOptimizations(CallInstr *v, BET *bet, BodiedFunc *bf) {
   types::Type *coefsType = getTupleType(coefs.size(), M->getIntType(), M);
   types::Type *expsType = getTupleType(exps.size(), M->getIntType() , M);
 
-  Func *evalPolyFunc = M->getOrRealizeFunc(
-      "test_evalp",
+  Func *evalPolyFunc = M->getOrRealizeMethod(
+      selfType,
+      "secure_evalp",
       {selfType, inputsType, coefsType, expsType});
   if (!evalPolyFunc) return;
 
@@ -379,40 +392,37 @@ void applyPolynomialOptimizations(CallInstr *v, BET *bet, BodiedFunc *bf) {
   v->replaceAll(evalPolyCall);
 }
 
-void applyBeaverOptimizations(CallInstr *v, BET *bet, BodiedFunc *bf) {}
+void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
+  auto *pf = getParentFunc();
+  if (!isSequreFunc(pf)) return;
+  auto *f = util::getFunc(v->getCallee());
+  if (!f) return;
+  if (f->getName().find("__mul__") == std::string::npos) return;
+
+  auto *M = v->getModule();
+  Value *self = M->Nr<VarValue>(pf->arg_front());
+  types::Type *selfType = self->getType();
+  Value *lhs = v->front();
+  Value *rhs = v->back();
+  types::Type *lhsType = lhs->getType();
+  types::Type *rhsType = rhs->getType();
+
+  if (cast<IntConst>(lhs)) return;
+  if (cast<IntConst>(rhs)) return;
+
+  Func *multMethod = M->getOrRealizeMethod(
+      selfType,
+      "secure_mult",
+      {selfType, lhsType, rhsType});
+  if (!multMethod) return;
+
+  Value *multFunc = util::call(multMethod, {self, lhs, rhs});
+  v->replaceAll(multFunc);
+}
 
 void ArithmeticsOptimizations::applyOptimizations(CallInstr *v) {
-  auto *f = util::getFunc(v->getCallee());
-
-  if (!f)
-    return;
-  if (f->getUnmangledName().find("sequre_") == std::string::npos)
-    return;
-  // see(v);
-
-  // if (!f) return;
-  // auto *pf = getParentFunc();
-  // if (!pf || pf->getUnmangledName() != "sequre_arithmetics") return;
-
-  // auto *arg = v->front(); // argument of call
-  // auto *bar = M->getOrRealizeFunc("bar", {arg->getType()});
-
-  // auto *bar = M->getOrRealizeFunc("bar", {});
-  // auto *call = util::call(bar, {});
-  // insertBefore(call); // call 'bar' before 'foo'
-
-  auto *bf = cast<BodiedFunc>(f);
-  auto *b = cast<SeriesFlow>(bf->getBody());
-
-  BET *bet = new BET();
-  for (auto it = b->begin(); it != b->end(); ++it)
-    parseInstruction(*it, bet);
-  bet->parseVars(bet->root());
-
-  // for (auto& it: bet->roots)
-  //   std::cout << it.first << " -> " << it.second << std::endl;
-
-  applyPolynomialOptimizations(v, bet, bf);
+  // applyPolynomialOptimizations(v);
+  applyBeaverOptimizations(v);
 }
 
 void ArithmeticsOptimizations::handle(CallInstr *v) { applyOptimizations(v); }
