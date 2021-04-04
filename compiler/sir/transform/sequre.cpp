@@ -209,8 +209,7 @@ std::vector<int64_t> BET::extractExponents(int polyIdx) {
   extractExponents(betNode, exponents);
   return exponents;
 }
-void BET::extractExponents(BETNode *betNode,
-                           std::vector<int64_t> &exponents) {
+void BET::extractExponents(BETNode *betNode, std::vector<int64_t> &exponents) {
   if (!(betNode->isAdd())) {
     std::map<int, int64_t> termExponents;
     for (auto varId : vars)
@@ -248,12 +247,13 @@ void BET::parseExponents(BETNode *betNode, std::map<int, int64_t> &termExponents
   parseExponents(rc, termExponents);
 }
 void BET::parseVars(BETNode *betNode) {
-  if (betNode->isConstant()) return;
+  if (betNode->isConstant())
+    return;
   if (betNode->isLeaf()) {
     addVar(betNode->getVariableId());
     return;
   }
-  
+
   parseVars(betNode->getLeftChild());
   parseVars(betNode->getRightChild());
 }
@@ -328,9 +328,10 @@ void parseInstruction(seq::ir::Value *instruction, BET *bet) {
   bet->addNode(betNode);
 }
 
-types::Type* getTupleType(int n, types::Type* elemType, Module* M) {
+types::Type *getTupleType(int n, types::Type *elemType, Module *M) {
   std::vector<types::Type *> tupleTypes;
-  for (int i = 0; i != n; ++i) tupleTypes.push_back(elemType);
+  for (int i = 0; i != n; ++i)
+    tupleTypes.push_back(elemType);
   return M->getTupleType(tupleTypes);
 }
 
@@ -340,7 +341,8 @@ bool isSequreFunc(Func *f) {
 
 void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
   auto *f = util::getFunc(v->getCallee());
-  if (!isSequreFunc(f)) return;
+  if (!isSequreFunc(f))
+    return;
   // see(v);
 
   auto *bf = cast<BodiedFunc>(f);
@@ -350,7 +352,7 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
   for (auto it = b->begin(); it != b->end(); ++it)
     parseInstruction(*it, bet);
   bet->parseVars(bet->root());
-  
+
   bet->formPolynomials();
 
   std::vector<int64_t> coefs = bet->extractCoefficents(0);
@@ -358,7 +360,7 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
     std::cout << e << std::endl;
   std::vector<int64_t> exps = bet->extractExponents(0);
   for (int i = 0; i != exps.size(); ++i)
-    std::cout << exps[i] << (((i+1) % bet->vars.size()) ? " " : "\n");
+    std::cout << exps[i] << (((i + 1) % bet->vars.size()) ? " " : "\n");
   std::cout << "Exps len " << exps.size() / bet->vars.size() << std::endl;
 
   auto *M = v->getModule();
@@ -368,21 +370,23 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
   types::Type *selfType = self->getType();
   types::Type *inputsType = getTupleType(bet->vars.size(), returnType, M);
   types::Type *coefsType = getTupleType(coefs.size(), M->getIntType(), M);
-  types::Type *expsType = getTupleType(exps.size(), M->getIntType() , M);
+  types::Type *expsType = getTupleType(exps.size(), M->getIntType(), M);
 
   Func *evalPolyFunc = M->getOrRealizeMethod(
-      selfType,
-      "secure_evalp",
-      {selfType, inputsType, coefsType, expsType});
-  if (!evalPolyFunc) return;
+      selfType, "secure_evalp", {selfType, inputsType, coefsType, expsType});
+  if (!evalPolyFunc)
+    return;
 
   std::vector<Value *> inputArgs;
   for (auto *arg : *v)
-    if (arg->getType()->is(returnType)) inputArgs.push_back(arg);
+    if (arg->getType()->is(returnType))
+      inputArgs.push_back(arg);
   std::vector<Value *> coefsArgs;
-  for (auto e : coefs) coefsArgs.push_back(M->getInt(e));
+  for (auto e : coefs)
+    coefsArgs.push_back(M->getInt(e));
   std::vector<Value *> expsArgs;
-  for (auto e : exps) expsArgs.push_back(M->getInt(e));
+  for (auto e : exps)
+    expsArgs.push_back(M->getInt(e));
 
   auto *inputArg = util::makeTuple(inputArgs, M);
   auto *coefsArg = util::makeTuple(coefsArgs, M);
@@ -394,10 +398,13 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
 
 void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v, bool noCache) {
   auto *pf = getParentFunc();
-  if (!isSequreFunc(pf)) return;
+  if (!isSequreFunc(pf))
+    return;
   auto *f = util::getFunc(v->getCallee());
-  if (!f) return;
-  if (f->getName().find("__mul__") == std::string::npos) return;
+  if (!f)
+    return;
+  if (f->getName().find("__mul__") == std::string::npos)
+    return;
 
   auto *M = v->getModule();
   Value *self = M->Nr<VarValue>(pf->arg_front());
@@ -407,14 +414,16 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v, bool noCac
   types::Type *lhsType = lhs->getType();
   types::Type *rhsType = rhs->getType();
 
-  if (cast<IntConst>(lhs)) return;
-  if (cast<IntConst>(rhs)) return;
+  if (cast<IntConst>(lhs))
+    return;
+  if (cast<IntConst>(rhs))
+    return;
 
-  Func *multMethod = M->getOrRealizeMethod(
-      selfType,
-      noCache ? "secure_mult_no_cache" : "secure_mult",
-      {selfType, lhsType, rhsType});
-  if (!multMethod) return;
+  Func *multMethod =
+      M->getOrRealizeMethod(selfType, noCache ? "secure_mult_no_cache" : "secure_mult",
+                            {selfType, lhsType, rhsType});
+  if (!multMethod)
+    return;
 
   Value *multFunc = util::call(multMethod, {self, lhs, rhs});
   v->replaceAll(multFunc);
