@@ -392,7 +392,7 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
   v->replaceAll(evalPolyCall);
 }
 
-void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
+void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v, bool noCache) {
   auto *pf = getParentFunc();
   if (!isSequreFunc(pf)) return;
   auto *f = util::getFunc(v->getCallee());
@@ -412,7 +412,7 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
 
   Func *multMethod = M->getOrRealizeMethod(
       selfType,
-      "secure_mult",
+      noCache ? "secure_mult_no_cache" : "secure_mult",
       {selfType, lhsType, rhsType});
   if (!multMethod) return;
 
@@ -422,7 +422,7 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
 
 void ArithmeticsOptimizations::applyOptimizations(CallInstr *v) {
   // applyPolynomialOptimizations(v);
-  applyBeaverOptimizations(v);
+  applyBeaverOptimizations(v, false);
 }
 
 void ArithmeticsOptimizations::handle(CallInstr *v) { applyOptimizations(v); }

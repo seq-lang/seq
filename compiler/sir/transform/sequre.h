@@ -11,7 +11,7 @@ namespace sequre {
 class ArithmeticsOptimizations : public OperatorPass {
   void handle(CallInstr *) override;
 
-  void applyBeaverOptimizations(CallInstr *);
+  void applyBeaverOptimizations(CallInstr *, bool);
   void applyPolynomialOptimizations(CallInstr *);
   void applyOptimizations(CallInstr *);
 };
