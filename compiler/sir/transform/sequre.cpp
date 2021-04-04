@@ -17,7 +17,6 @@ const int BET_POW_OP = 3;
 const int BET_OTHER_OP = 4;
 
 class BETNode {
-public:
   int variableId;
   int op;
   BETNode *leftChild;
@@ -26,7 +25,7 @@ public:
   int64_t value;
   bool constant;
 
-  // public:
+public:
   BETNode();
   BETNode(int variableId);
   BETNode(int variableId, int op, bool expanded, int64_t value, bool constant);
@@ -90,14 +89,13 @@ void BETNode::print() {
 }
 
 class BET {
-public:
   std::unordered_map<int, BETNode *> roots;
   std::vector<int> stopVarIds;
   std::set<int> vars;
   std::vector<BETNode *> polynomials;
   bool treeAltered;
 
-  // public:
+public:
   BET() : treeAltered(false) {}
   void addNode(BETNode *betNode) {
     expandNode(betNode);
@@ -116,6 +114,7 @@ public:
   void parseExponents(BETNode *betNode, std::map<int, int64_t> &termExponents);
   BETNode *root() { return roots[stopVarIds.back()]; }
   void parseVars(BETNode *betNode);
+  int getVarsSize() { return vars.size(); }
 };
 
 void BET::expandNode(BETNode *betNode) {
@@ -360,15 +359,15 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
     std::cout << e << std::endl;
   std::vector<int64_t> exps = bet->extractExponents(0);
   for (int i = 0; i != exps.size(); ++i)
-    std::cout << exps[i] << (((i + 1) % bet->vars.size()) ? " " : "\n");
-  std::cout << "Exps len " << exps.size() / bet->vars.size() << std::endl;
+    std::cout << exps[i] << (((i + 1) % bet->getVarsSize()) ? " " : "\n");
+  std::cout << "Exps len " << exps.size() / bet->getVarsSize() << std::endl;
 
   auto *M = v->getModule();
   Value *self = v->front();
   auto *funcType = cast<types::FuncType>(bf->getType());
   auto *returnType = funcType->getReturnType();
   types::Type *selfType = self->getType();
-  types::Type *inputsType = getTupleType(bet->vars.size(), returnType, M);
+  types::Type *inputsType = getTupleType(bet->getVarsSize(), returnType, M);
   types::Type *coefsType = getTupleType(coefs.size(), M->getIntType(), M);
   types::Type *expsType = getTupleType(exps.size(), M->getIntType(), M);
 
