@@ -316,6 +316,10 @@ std::unique_ptr<CFGraph> buildCFGraph(const BodiedFunc *f) {
 
 std::unique_ptr<Result> CFAnalysis::run(const Module *m) {
   auto res = std::make_unique<CFResult>();
+  if (const auto *main = cast<BodiedFunc>(m->getMainFunc())) {
+    res->graphs.insert(std::make_pair(main->getId(), buildCFGraph(main)));
+  }
+
   for (const auto *var : *m) {
     if (const auto *f = cast<BodiedFunc>(var)) {
       res->graphs.insert(std::make_pair(f->getId(), buildCFGraph(f)));
