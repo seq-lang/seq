@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace {
@@ -19,20 +20,33 @@ void versMsg(llvm::raw_ostream &out) {
       << SEQ_VERSION_PATCH << "\n";
 }
 
-void registerStandardPasses(seq::ir::transform::PassManager &pm, bool debug) {
+void registerStandardPasses(seq::ir::transform::PassManager &pm, bool debug,
+                            const std::unordered_set<std::string>& disabledPasses) {
   if (debug)
     return;
-  pm.registerPass(
-      "bio-pipeline-opts",
-      std::make_unique<seq::ir::transform::pipeline::PipelineOptimizations>());
-  pm.registerPass(
-      "pythonic-dict-arithmetic-opt",
-      std::make_unique<seq::ir::transform::pythonic::DictArithmeticOptimization>());
-  pm.registerPass(
-      "pythonic-str-addition-opt",
+
+  std::string pipelineKey = "bio-pipeline-opts";
+  if (disabledPasses.find(pipelineKey) == disabledPasses.end())
+    pm.registerPass(
+        pipelineKey,
+        std::make_unique<seq::ir::transform::pipeline::PipelineOptimizations>());
+
+  std::string dictOptKey = "pythonic-dict-arithmetic-opt";
+  if (disabledPasses.find(dictOptKey) == disabledPasses.end())
+    pm.registerPass(
+        dictOptKey,
+        std::make_unique<seq::ir::transform::pythonic::DictArithmeticOptimization>());
+
+  std::string strAdditionKey = "pythonic-str-addition-opt";
+  if (disabledPasses.find(strAdditionKey) == disabledPasses.end())
+    pm.registerPass(
+      strAdditionKey,
       std::make_unique<seq::ir::transform::pythonic::StrAdditionOptimization>());
-  pm.registerPass(
-      "pythonic-io-cat-opt",
+
+  std::string ioCatKey = "pythonic-io-cat-opt";
+  if (disabledPasses.find(ioCatKey) == disabledPasses.end())
+    pm.registerPass(
+      ioCatKey,
       std::make_unique<seq::ir::transform::pythonic::IOCatOptimization>());
 }
 
@@ -84,6 +98,8 @@ int runMode(const std::vector<const char *> &args) {
                                       llvm::cl::desc("<program arguments>..."));
   llvm::cl::list<std::string> libs(
       "l", llvm::cl::desc("Load and link the specified library"));
+  llvm::cl::list<std::string> dOpts(
+      "disable-opt", llvm::cl::desc("Disable the specified optimization."));
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
   std::vector<std::string> libsVec(libs);
   std::vector<std::string> argsVec(seqArgs);
@@ -117,8 +133,10 @@ int runMode(const std::vector<const char *> &args) {
 
   const bool isDebug = (optMode == OptMode::Debug);
   auto t = std::chrono::high_resolution_clock::now();
+
+  std::unordered_set<std::string> disabledOpts(dOpts.begin(), dOpts.end());
   seq::ir::transform::PassManager pm;
-  registerStandardPasses(pm, isDebug);
+  registerStandardPasses(pm, isDebug, disabledOpts);
   pm.run(module);
   seq::ir::LLVMVisitor visitor(isDebug);
   visitor.visit(module);
@@ -163,6 +181,8 @@ int buildMode(const std::vector<const char *> &args) {
       llvm::cl::desc(
           "Write compiled output to specified file. Supported extensions: "
           "none (executable), .o (object file), .ll (LLVM IR), .bc (LLVM bitcode)"));
+  llvm::cl::list<std::string> dOpts(
+      "disable-opt", llvm::cl::desc("Disable the specified optimization."));
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
   std::vector<std::string> libsVec(libs);
 
@@ -195,8 +215,9 @@ int buildMode(const std::vector<const char *> &args) {
 
   const bool isDebug = (optMode == OptMode::Debug);
   auto t = std::chrono::high_resolution_clock::now();
+  std::unordered_set<std::string> disabledOpts(dOpts.begin(), dOpts.end());
   seq::ir::transform::PassManager pm;
-  registerStandardPasses(pm, isDebug);
+  registerStandardPasses(pm, isDebug, disabledOpts);
   pm.run(module);
   seq::ir::LLVMVisitor visitor(isDebug);
   visitor.visit(module);
