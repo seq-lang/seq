@@ -157,6 +157,9 @@ class pyobj:
         ensure_initialized()
         PyRun_SimpleString(code.c_str())
 
+    def get[T](self) -> T:
+        return T.__from_py__(self)
+
 def none():
     raise NotImplementedError()
 

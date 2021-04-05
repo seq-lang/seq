@@ -97,7 +97,12 @@ types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
         LOG_REALIZE("- member: {} -> {}: {}", m.name, m.type->toString(),
                     mt->toString());
         auto tf = realize(mt);
-        seqassert(tf, "cannot realize {}.{}: {}", realizedName, m.name, mt->toString());
+        if (!tf)
+          error("cannot realize {}.{} of type {}",
+                ctx->cache->reverseIdentifierLookup[realizedType->name], m.name,
+                mt->toString());
+        // seqassert(tf, "cannot realize {}.{}: {}", realizedName, m.name,
+        // mt->toString());
         r->fields.emplace_back(m.name, tf);
         names.emplace_back(m.name);
         typeArgs.emplace_back(getLLVMType(tf->getClass().get()));
