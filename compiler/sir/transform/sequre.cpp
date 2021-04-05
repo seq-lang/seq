@@ -351,7 +351,6 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
   for (auto it = b->begin(); it != b->end(); ++it)
     parseInstruction(*it, bet);
   bet->parseVars(bet->root());
-
   bet->formPolynomials();
 
   std::vector<int64_t> coefs = bet->extractCoefficents(0);
@@ -402,7 +401,9 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v, bool noCac
   auto *f = util::getFunc(v->getCallee());
   if (!f)
     return;
-  if (f->getName().find("__mul__") == std::string::npos)
+  bool isMul = f->getName().find("__mul__") != std::string::npos;
+  bool isPow = f->getName().find("__pow__") != std::string::npos;
+  if (!isMul && !isPow)
     return;
 
   auto *M = v->getModule();
@@ -413,19 +414,26 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v, bool noCac
   types::Type *lhsType = lhs->getType();
   types::Type *rhsType = rhs->getType();
 
-  if (cast<IntConst>(lhs))
+  if (isMul && cast<IntConst>(lhs))
     return;
-  if (cast<IntConst>(rhs))
+  if (isMul && cast<IntConst>(rhs))
+    return;
+  if (isPow && cast<IntConst>(lhs))
+    return;
+  if (isPow && !cast<IntConst>(rhs))
     return;
 
-  Func *multMethod =
-      M->getOrRealizeMethod(selfType, noCache ? "secure_mult_no_cache" : "secure_mult",
+  std::string methodName = isMul ? "secure_mult" : "secure_pow";
+  if (noCache) methodName += "_no_cache";
+
+  Func *method =
+      M->getOrRealizeMethod(selfType, methodName,
                             {selfType, lhsType, rhsType});
-  if (!multMethod)
+  if (!method)
     return;
 
-  Value *multFunc = util::call(multMethod, {self, lhs, rhs});
-  v->replaceAll(multFunc);
+  Value *func = util::call(method, {self, lhs, rhs});
+  v->replaceAll(func);
 }
 
 void ArithmeticsOptimizations::applyOptimizations(CallInstr *v) {
