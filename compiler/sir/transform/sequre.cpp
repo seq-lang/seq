@@ -126,57 +126,29 @@ public:
   void addNode(BETNode *);
   void addVar(int varId) { vars.insert(varId); }
   void addStopVar(int varId) { stopVarIds.push_back(varId); }
-  void expandNode(BETNode *);
-  void expandPow(BETNode *);
-  void expandMul(BETNode *);
   void formPolynomials();
-  void formPolynomial(BETNode *);
-  void extractCoefficents(BETNode *, std::vector<int64_t> &);
-  void extractExponents(BETNode *, std::vector<int64_t> &);
-  void parseExponents(BETNode *, std::map<int, int64_t> &);
   void parseVars(BETNode *);
   BETNode *root();
   BETNode *polyRoot();
-  BETNode *getMulTree(BETNode *, BETNode *, int64_t, int64_t);
-  BETNode *getPowTree(BETNode *, BETNode *, int64_t, int64_t);
-  int64_t parseCoefficient(BETNode *);
   std::vector<int64_t> extractCoefficents(int);
   std::vector<int64_t> extractExponents(int);
   std::vector<std::vector<int64_t>> getPascalMatrix() { return pascalMatrix; }
 
 private:
+  void expandNode(BETNode *);
+  void expandPow(BETNode *);
+  void expandMul(BETNode *);
+  void formPolynomial(BETNode *);
+  void extractCoefficents(BETNode *, std::vector<int64_t> &);
+  void extractExponents(BETNode *, std::vector<int64_t> &);
+  void parseExponents(BETNode *, std::map<int, int64_t> &);
   void updatePascalMatrix(int64_t);
+  BETNode *getMulTree(BETNode *, BETNode *, int64_t, int64_t);
+  BETNode *getPowTree(BETNode *, BETNode *, int64_t, int64_t);
+  int64_t parseCoefficient(BETNode *);
   int64_t getBinomialCoefficient(int64_t, int64_t);
   std::vector<int64_t> getPascalRow(int64_t);
 };
-
-void BET::updatePascalMatrix(int64_t n) {
-  for (auto i = pascalMatrix.size(); i < n + 1; ++i) {
-    auto newRow = std::vector<int64_t>(i + 1);
-    for (auto j = 0; j < i + 1; ++j)
-      newRow[j] = (j == 0 || j == i)
-                      ? 1
-                      : (pascalMatrix[i - 1][j - 1] + pascalMatrix[i - 1][j]);
-    pascalMatrix.push_back(newRow);
-  }
-}
-
-int64_t BET::getBinomialCoefficient(int64_t n, int64_t k) {
-  auto pascalRow = getPascalRow(n);
-  return pascalRow[k];
-}
-
-std::vector<int64_t> BET::getPascalRow(int64_t n) {
-  if (n >= pascalMatrix.size())
-    updatePascalMatrix(n);
-
-  return pascalMatrix[n];
-}
-
-void BET::addNode(BETNode *betNode) {
-  expandNode(betNode);
-  roots[betNode->getVariableId()] = betNode;
-}
 
 void BET::expandNode(BETNode *betNode) {
   if (betNode->isExpanded())
@@ -246,17 +218,6 @@ void BET::expandMul(BETNode *betNode) {
   if (rc == otherNode)
     betNode->setRightChild(newMulNode);
   addNode->setRightChild(otherNode->copy());
-}
-
-void BET::formPolynomials() {
-  for (int stopVarId : stopVarIds) {
-    auto *polyRoot = roots[stopVarId]->copy();
-    do {
-      treeAltered = false;
-      formPolynomial(polyRoot);
-    } while (treeAltered);
-    polynomials.push_back(polyRoot);
-  }
 }
 
 void BET::formPolynomial(BETNode *betNode) {
@@ -330,35 +291,15 @@ void BET::parseExponents(BETNode *betNode, std::map<int, int64_t> &termExponents
   parseExponents(rc, termExponents);
 }
 
-void BET::parseVars(BETNode *betNode) {
-  if (betNode->isConstant())
-    return;
-  if (betNode->isLeaf()) {
-    addVar(betNode->getVariableId());
-    return;
+void BET::updatePascalMatrix(int64_t n) {
+  for (auto i = pascalMatrix.size(); i < n + 1; ++i) {
+    auto newRow = std::vector<int64_t>(i + 1);
+    for (auto j = 0; j < i + 1; ++j)
+      newRow[j] = (j == 0 || j == i)
+                      ? 1
+                      : (pascalMatrix[i - 1][j - 1] + pascalMatrix[i - 1][j]);
+    pascalMatrix.push_back(newRow);
   }
-
-  parseVars(betNode->getLeftChild());
-  parseVars(betNode->getRightChild());
-}
-
-BETNode *BET::root() {
-  if (!stopVarIds.size())
-    return nullptr;
-
-  auto stopVarId = stopVarIds.back();
-  auto search = roots.find(stopVarId);
-  if (search == roots.end())
-    return nullptr;
-
-  return roots[stopVarId];
-}
-
-BETNode *BET::polyRoot() {
-  if (!polynomials.size())
-    return nullptr;
-
-  return polynomials.back();
 }
 
 BETNode *BET::getMulTree(BETNode *v1, BETNode *v2, int64_t constant, int64_t iter) {
@@ -403,6 +344,65 @@ int64_t BET::parseCoefficient(BETNode *betNode) {
   }
 
   return parseCoefficient(lc) * parseCoefficient(rc);
+}
+
+int64_t BET::getBinomialCoefficient(int64_t n, int64_t k) {
+  auto pascalRow = getPascalRow(n);
+  return pascalRow[k];
+}
+
+std::vector<int64_t> BET::getPascalRow(int64_t n) {
+  if (n >= pascalMatrix.size())
+    updatePascalMatrix(n);
+
+  return pascalMatrix[n];
+}
+
+void BET::addNode(BETNode *betNode) {
+  expandNode(betNode);
+  roots[betNode->getVariableId()] = betNode;
+}
+
+void BET::formPolynomials() {
+  for (int stopVarId : stopVarIds) {
+    auto *polyRoot = roots[stopVarId]->copy();
+    do {
+      treeAltered = false;
+      formPolynomial(polyRoot);
+    } while (treeAltered);
+    polynomials.push_back(polyRoot);
+  }
+}
+
+void BET::parseVars(BETNode *betNode) {
+  if (betNode->isConstant())
+    return;
+  if (betNode->isLeaf()) {
+    addVar(betNode->getVariableId());
+    return;
+  }
+
+  parseVars(betNode->getLeftChild());
+  parseVars(betNode->getRightChild());
+}
+
+BETNode *BET::root() {
+  if (!stopVarIds.size())
+    return nullptr;
+
+  auto stopVarId = stopVarIds.back();
+  auto search = roots.find(stopVarId);
+  if (search == roots.end())
+    return nullptr;
+
+  return roots[stopVarId];
+}
+
+BETNode *BET::polyRoot() {
+  if (!polynomials.size())
+    return nullptr;
+
+  return polynomials.back();
 }
 
 std::vector<int64_t> BET::extractCoefficents(int polyIdx) {
