@@ -5,7 +5,6 @@
 #include <iterator>
 #include <math.h>
 
-
 namespace seq {
 namespace ir {
 namespace transform {
@@ -94,9 +93,8 @@ BETNode *BETNode::copy() {
 }
 
 void BETNode::print() {
-  std::cout << op << " " << variableId 
-    << (constant ? " Is constant " : " Not constant ")
-    << value << std::endl;
+  std::cout << op << " " << variableId
+            << (constant ? " Is constant " : " Not constant ") << value << std::endl;
   if (leftChild)
     leftChild->print();
   if (rightChild)
@@ -118,8 +116,8 @@ public:
     if (root)
       delete root;
   }
-  BETNode* root();
-  BETNode* polyRoot();
+  BETNode *root();
+  BETNode *polyRoot();
   void addNode(BETNode *betNode) {
     expandNode(betNode);
     roots[betNode->getVariableId()] = betNode;
@@ -131,8 +129,8 @@ public:
   void expandMul(BETNode *);
   void formPolynomials();
   void formPolynomial(BETNode *);
-  BETNode* getMulTree(BETNode *, BETNode *, int64_t, int64_t);
-  BETNode* getPowTree(BETNode *, BETNode *, int64_t, int64_t);
+  BETNode *getMulTree(BETNode *, BETNode *, int64_t, int64_t);
+  BETNode *getPowTree(BETNode *, BETNode *, int64_t, int64_t);
   std::vector<int64_t> extractCoefficents(int);
   void extractCoefficents(BETNode *, std::vector<int64_t> &);
   int64_t parseCoefficient(BETNode *);
@@ -143,28 +141,28 @@ public:
   int getVarsSize() { return vars.size(); }
   std::vector<std::vector<int64_t>> getPascalMatrix() { return pascalMatrix; }
 
- private: 
+private:
   int64_t getBinomialCoefficient(int64_t, int64_t);
   std::vector<int64_t> getPascalRow(int64_t);
   void updatePascalMatrix(int64_t);
 };
 
-BETNode* BET::root() {
+BETNode *BET::root() {
   if (!stopVarIds.size())
     return nullptr;
-  
+
   auto stopVarId = stopVarIds.back();
   auto search = roots.find(stopVarId);
   if (search == roots.end())
     return nullptr;
-  
+
   return roots[stopVarId];
 }
 
-BETNode* BET::polyRoot() {
+BETNode *BET::polyRoot() {
   if (!polynomials.size())
     return nullptr;
-  
+
   return polynomials.back();
 }
 
@@ -198,11 +196,13 @@ void BET::formPolynomials() {
 
 void BET::updatePascalMatrix(int64_t n) {
   for (auto i = pascalMatrix.size(); i < n + 1; ++i) {
-      auto newRow = std::vector<int64_t>(i + 1);
-      for (auto j = 0; j < i + 1; ++j)
-        newRow[j] = (j == 0 || j == i) ? 1 : (pascalMatrix[i - 1][j - 1] + pascalMatrix[i - 1][j]);
-      pascalMatrix.push_back(newRow);
-    }
+    auto newRow = std::vector<int64_t>(i + 1);
+    for (auto j = 0; j < i + 1; ++j)
+      newRow[j] = (j == 0 || j == i)
+                      ? 1
+                      : (pascalMatrix[i - 1][j - 1] + pascalMatrix[i - 1][j]);
+    pascalMatrix.push_back(newRow);
+  }
 }
 
 std::vector<int64_t> BET::getPascalRow(int64_t n) {
@@ -217,25 +217,22 @@ int64_t BET::getBinomialCoefficient(int64_t n, int64_t k) {
   return pascalRow[k];
 }
 
-BETNode* BET::getMulTree(BETNode *v1, BETNode *v2, int64_t constant, int64_t iter) {
-  BETNode *pascalNode = new BETNode(
-    0, 0, true, getBinomialCoefficient(constant, iter), true);
-  BETNode *leftConstNode = new BETNode(
-    0, 0, true, constant - iter, true);
-  BETNode *rightConstNode = new BETNode(
-    0, 0, true, iter, true);
-  BETNode *leftPowNode = new BETNode(
-    0, BET_POW_OP, v1->copy(), leftConstNode, true, 1, false);
-  BETNode *rightPowNode = new BETNode(
-    0, BET_POW_OP, v2->copy(), rightConstNode, true, 1, false);
-  BETNode *rightMulNode = new BETNode(
-    0, BET_MUL_OP, leftPowNode, rightPowNode, true, 1, false);
+BETNode *BET::getMulTree(BETNode *v1, BETNode *v2, int64_t constant, int64_t iter) {
+  BETNode *pascalNode =
+      new BETNode(0, 0, true, getBinomialCoefficient(constant, iter), true);
+  BETNode *leftConstNode = new BETNode(0, 0, true, constant - iter, true);
+  BETNode *rightConstNode = new BETNode(0, 0, true, iter, true);
+  BETNode *leftPowNode =
+      new BETNode(0, BET_POW_OP, v1->copy(), leftConstNode, true, 1, false);
+  BETNode *rightPowNode =
+      new BETNode(0, BET_POW_OP, v2->copy(), rightConstNode, true, 1, false);
+  BETNode *rightMulNode =
+      new BETNode(0, BET_MUL_OP, leftPowNode, rightPowNode, true, 1, false);
 
-  return new BETNode(
-    0, BET_MUL_OP, pascalNode, rightMulNode, true, 1, false);
+  return new BETNode(0, BET_MUL_OP, pascalNode, rightMulNode, true, 1, false);
 }
 
-BETNode* BET::getPowTree(BETNode *v1, BETNode *v2, int64_t constant, int64_t iter) {
+BETNode *BET::getPowTree(BETNode *v1, BETNode *v2, int64_t constant, int64_t iter) {
   BETNode *newMulNode = getMulTree(v1, v2, constant, iter);
 
   if (constant == iter)
@@ -249,13 +246,13 @@ BETNode* BET::getPowTree(BETNode *v1, BETNode *v2, int64_t constant, int64_t ite
   return newAddNode;
 }
 
-void BET::expandPow(BETNode *betNode) {  
+void BET::expandPow(BETNode *betNode) {
   BETNode *lc = betNode->getLeftChild();
   BETNode *rc = betNode->getRightChild();
-  
+
   if (!rc->isConstant())
-      throw "Sequre polynomial optimization expects each exponent to be a constant.";
-  
+    throw "Sequre polynomial optimization expects each exponent to be a constant.";
+
   if (lc->isMul()) {
     treeAltered = true;
     betNode->setOperator(BET_MUL_OP);
@@ -273,7 +270,7 @@ void BET::expandPow(BETNode *betNode) {
     BETNode *v2 = lc->getRightChild();
 
     BETNode *powTree = getPowTree(v1, v2, rc->getValue(), 0);
-    
+
     betNode->setOperator(BET_ADD_OP);
     delete lc;
     betNode->setLeftChild(powTree->getLeftChild());
@@ -305,12 +302,12 @@ void BET::expandMul(BETNode *betNode) {
 void BET::formPolynomial(BETNode *betNode) {
   if (betNode->isLeaf())
     return;
-  
+
   if (betNode->isPow()) {
     expandPow(betNode);
     return;
   }
-  
+
   BETNode *lc = betNode->getLeftChild();
   BETNode *rc = betNode->getRightChild();
   if (!betNode->isMul() || !(lc->isAdd() || rc->isAdd())) {
@@ -344,7 +341,7 @@ void BET::extractCoefficents(BETNode *betNode, std::vector<int64_t> &coefficient
 int64_t BET::parseCoefficient(BETNode *betNode) {
   BETNode *lc = betNode->getLeftChild();
   BETNode *rc = betNode->getRightChild();
-  
+
   if (betNode->isPow()) {
     assert(lc->isLeaf() && "Pow expression should be at bottom of the polynomial tree");
     return (lc->isConstant() ? std::pow(lc->getValue(), rc->getValue()) : 1);
@@ -576,11 +573,11 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v, bool noCac
     return;
 
   std::string methodName = isMul ? "secure_mult" : "secure_pow";
-  if (noCache) methodName += "_no_cache";
+  if (noCache)
+    methodName += "_no_cache";
 
   Func *method =
-      M->getOrRealizeMethod(selfType, methodName,
-                            {selfType, lhsType, rhsType});
+      M->getOrRealizeMethod(selfType, methodName, {selfType, lhsType, rhsType});
   if (!method)
     return;
 
