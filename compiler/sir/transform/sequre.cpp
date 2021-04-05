@@ -424,7 +424,15 @@ std::vector<int64_t> BET::extractExponents(int polyIdx) {
  */
 
 bool isSequreFunc(Func *f) {
-  return bool(f) && f->getUnmangledName().find("sequre_") != std::string::npos;
+  return bool(f) && f->getUnmangledName().find("sequre_") == 0;
+}
+
+bool isPolyOptFunc(Func *f) {
+  return bool(f) && f->getUnmangledName().find("sequre_poly_") == 0;
+}
+
+bool isBeaverOptFunc(Func *f) {
+  return bool(f) && f->getUnmangledName().find("sequre_beaver_") == 0;
 }
 
 int getOperator(CallInstr *callInstr) {
@@ -502,7 +510,7 @@ void parseInstruction(seq::ir::Value *instruction, BET *bet) {
 
 void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
   auto *f = util::getFunc(v->getCallee());
-  if (!isSequreFunc(f))
+  if (!isPolyOptFunc(f))
     return;
   // see(v);
 
@@ -551,9 +559,9 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
   v->replaceAll(evalPolyCall);
 }
 
-void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v, bool noCache) {
+void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
   auto *pf = getParentFunc();
-  if (!isSequreFunc(pf))
+  if (!isSequreFunc(pf) || isPolyOptFunc(pf))
     return;
   auto *f = util::getFunc(v->getCallee());
   if (!f)
@@ -581,7 +589,7 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v, bool noCac
     return;
 
   std::string methodName = isMul ? "secure_mult" : "secure_pow";
-  if (noCache)
+  if (!isBeaverOptFunc(pf))
     methodName += "_no_cache";
 
   auto *method =
@@ -594,8 +602,8 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v, bool noCac
 }
 
 void ArithmeticsOptimizations::applyOptimizations(CallInstr *v) {
-  // applyPolynomialOptimizations(v);
-  applyBeaverOptimizations(v, false);
+  applyPolynomialOptimizations(v);
+  applyBeaverOptimizations(v);
 }
 
 void ArithmeticsOptimizations::handle(CallInstr *v) { applyOptimizations(v); }
