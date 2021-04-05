@@ -2807,7 +2807,7 @@ public:
    \endrst
   */
   template <typename... Args>
-  system_error(int error_code, string_view message, const Args &... args)
+  system_error(int error_code, string_view message, const Args &...args)
       : std::runtime_error("") {
     init(error_code, message, make_format_args(args...));
   }
@@ -3360,7 +3360,7 @@ vformat_to(internal::buffer<Char> &buf, const S &format_str,
 template <typename S, typename... Args, std::size_t SIZE = inline_buffer_size,
           typename Char = enable_if_t<internal::is_string<S>::value, char_t<S>>>
 inline typename buffer_context<Char>::iterator
-format_to(basic_memory_buffer<Char, SIZE> &buf, const S &format_str, Args &&... args) {
+format_to(basic_memory_buffer<Char, SIZE> &buf, const S &format_str, Args &&...args) {
   internal::check_format_string<Args...>(format_str);
   using context = buffer_context<Char>;
   return internal::vformat_to(buf, to_string_view(format_str),
@@ -3398,7 +3398,7 @@ template <
     FMT_ENABLE_IF(internal::is_output_iterator<OutputIt>::value &&
                   !internal::is_contiguous_back_insert_iterator<OutputIt>::value &&
                   internal::is_string<S>::value)>
-inline OutputIt format_to(OutputIt out, const S &format_str, Args &&... args) {
+inline OutputIt format_to(OutputIt out, const S &format_str, Args &&...args) {
   internal::check_format_string<Args...>(format_str);
   using context = format_context_t<OutputIt, char_t<S>>;
   return vformat_to(out, to_string_view(format_str),
@@ -3421,7 +3421,7 @@ using format_to_n_args = basic_format_args<format_to_n_context<OutputIt, Char>>;
 
 template <typename OutputIt, typename Char, typename... Args>
 inline format_arg_store<format_to_n_context<OutputIt, Char>, Args...>
-make_format_to_n_args(const Args &... args) {
+make_format_to_n_args(const Args &...args) {
   return format_arg_store<format_to_n_context<OutputIt, Char>, Args...>(args...);
 }
 
@@ -3446,7 +3446,7 @@ template <typename OutputIt, typename S, typename... Args,
           FMT_ENABLE_IF(internal::is_string<S>::value
                             &&internal::is_output_iterator<OutputIt>::value)>
 inline format_to_n_result<OutputIt>
-format_to_n(OutputIt out, std::size_t n, const S &format_str, const Args &... args) {
+format_to_n(OutputIt out, std::size_t n, const S &format_str, const Args &...args) {
   internal::check_format_string<Args...>(format_str);
   using context = format_to_n_context<OutputIt, char_t<S>>;
   return vformat_to_n(out, n, to_string_view(format_str),
@@ -3467,7 +3467,7 @@ internal::vformat(basic_string_view<Char> format_str,
   ``format(format_str, args...)``.
  */
 template <typename... Args>
-inline std::size_t formatted_size(string_view format_str, const Args &... args) {
+inline std::size_t formatted_size(string_view format_str, const Args &...args) {
   return format_to(internal::counting_iterator(), format_str, args...).count();
 }
 
@@ -3491,8 +3491,7 @@ namespace internal {
 #if FMT_USE_UDL_TEMPLATE
 template <typename Char, Char... CHARS> class udl_formatter {
 public:
-  template <typename... Args>
-  std::basic_string<Char> operator()(Args &&... args) const {
+  template <typename... Args> std::basic_string<Char> operator()(Args &&...args) const {
     FMT_CONSTEXPR_DECL Char s[] = {CHARS..., '\0'};
     FMT_CONSTEXPR_DECL bool invalid_format =
         do_check_format_string<Char, error_handler, remove_cvref_t<Args>...>(
@@ -3505,8 +3504,7 @@ public:
 template <typename Char> struct udl_formatter {
   basic_string_view<Char> str;
 
-  template <typename... Args>
-  std::basic_string<Char> operator()(Args &&... args) const {
+  template <typename... Args> std::basic_string<Char> operator()(Args &&...args) const {
     return format(str, std::forward<Args>(args)...);
   }
 };

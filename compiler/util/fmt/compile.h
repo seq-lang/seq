@@ -328,7 +328,7 @@ template <typename... Args> struct type_list {};
 
 // Returns a reference to the argument at index N from [first, rest...].
 template <int N, typename T, typename... Args>
-constexpr const auto &get(const T &first, const Args &... rest) {
+constexpr const auto &get(const T &first, const Args &...rest) {
   static_assert(N < 1 + sizeof...(Args), "index is out of bounds");
   if constexpr (N == 0)
     return first;
@@ -396,7 +396,7 @@ template <typename Char, typename T, int N> struct field {
   using char_type = Char;
 
   template <typename OutputIt, typename... Args>
-  OutputIt format(OutputIt out, const Args &... args) const {
+  OutputIt format(OutputIt out, const Args &...args) const {
     // This ensures that the argument type is convertile to `const T&`.
     const T &arg = get<N>(args...);
     return format_default<Char>(out, arg);
@@ -412,7 +412,7 @@ template <typename L, typename R> struct concat {
   using char_type = typename L::char_type;
 
   template <typename OutputIt, typename... Args>
-  OutputIt format(OutputIt out, const Args &... args) const {
+  OutputIt format(OutputIt out, const Args &...args) const {
     out = lhs.format(out, args...);
     return rhs.format(out, args...);
   }
@@ -508,7 +508,7 @@ constexpr auto compile(S format_str) {
 template <typename CompiledFormat, typename... Args,
           typename Char = typename CompiledFormat::char_type,
           FMT_ENABLE_IF(internal::is_compiled_format<CompiledFormat>::value)>
-std::basic_string<Char> format(const CompiledFormat &cf, const Args &... args) {
+std::basic_string<Char> format(const CompiledFormat &cf, const Args &...args) {
   basic_memory_buffer<Char> buffer;
   cf.format(std::back_inserter(buffer), args...);
   return to_string(buffer);
@@ -516,7 +516,7 @@ std::basic_string<Char> format(const CompiledFormat &cf, const Args &... args) {
 
 template <typename OutputIt, typename CompiledFormat, typename... Args,
           FMT_ENABLE_IF(internal::is_compiled_format<CompiledFormat>::value)>
-OutputIt format_to(OutputIt out, const CompiledFormat &cf, const Args &... args) {
+OutputIt format_to(OutputIt out, const CompiledFormat &cf, const Args &...args) {
   return cf.format(out, args...);
 }
 #else
@@ -539,7 +539,7 @@ template <typename CompiledFormat, typename... Args,
           typename Char = typename CompiledFormat::char_type,
           FMT_ENABLE_IF(
               std::is_base_of<internal::basic_compiled_format, CompiledFormat>::value)>
-std::basic_string<Char> format(const CompiledFormat &cf, const Args &... args) {
+std::basic_string<Char> format(const CompiledFormat &cf, const Args &...args) {
   basic_memory_buffer<Char> buffer;
   using range = buffer_range<Char>;
   using context = buffer_context<Char>;
@@ -551,7 +551,7 @@ std::basic_string<Char> format(const CompiledFormat &cf, const Args &... args) {
 template <typename OutputIt, typename CompiledFormat, typename... Args,
           FMT_ENABLE_IF(
               std::is_base_of<internal::basic_compiled_format, CompiledFormat>::value)>
-OutputIt format_to(OutputIt out, const CompiledFormat &cf, const Args &... args) {
+OutputIt format_to(OutputIt out, const CompiledFormat &cf, const Args &...args) {
   using char_type = typename CompiledFormat::char_type;
   using range = internal::output_range<OutputIt, char_type>;
   using context = format_context_t<OutputIt, char_type>;
@@ -562,13 +562,13 @@ OutputIt format_to(OutputIt out, const CompiledFormat &cf, const Args &... args)
 template <typename OutputIt, typename CompiledFormat, typename... Args,
           FMT_ENABLE_IF(internal::is_output_iterator<OutputIt>::value)>
 format_to_n_result<OutputIt>
-format_to_n(OutputIt out, size_t n, const CompiledFormat &cf, const Args &... args) {
+format_to_n(OutputIt out, size_t n, const CompiledFormat &cf, const Args &...args) {
   auto it = format_to(internal::truncating_iterator<OutputIt>(out, n), cf, args...);
   return {it.base(), it.count()};
 }
 
 template <typename CompiledFormat, typename... Args>
-std::size_t formatted_size(const CompiledFormat &cf, const Args &... args) {
+std::size_t formatted_size(const CompiledFormat &cf, const Args &...args) {
   return format_to(internal::counting_iterator(), cf, args...).count();
 }
 
