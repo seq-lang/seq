@@ -3,6 +3,8 @@
 #include "sir/util/irtools.h"
 #include "sir/util/matching.h"
 #include <iterator>
+#include <math.h>
+
 
 namespace seq {
 namespace ir {
@@ -31,13 +33,19 @@ public:
   BETNode(int variableId, int op, bool expanded, int64_t value, bool constant);
   BETNode(int variableId, int op, BETNode *leftChild, BETNode *rightChild,
           bool expanded, int64_t value, bool constant);
+  ~BETNode() {
+    if (leftChild)
+      delete leftChild;
+    if (rightChild)
+      delete rightChild;
+  }
   void setVariableId(int variableId) { this->variableId = variableId; }
   void setOperator(int op) { this->op = op; }
   void setLeftChild(BETNode *leftChild) { this->leftChild = leftChild; }
   void setRightChild(BETNode *rightChild) { this->rightChild = rightChild; }
   int getVariableId() { return variableId; }
   int getOperator() { return op; }
-  int getValue() { return value; }
+  int64_t getValue() { return value; }
   BETNode *getLeftChild() { return leftChild; }
   BETNode *getRightChild() { return rightChild; }
   bool isExpanded() { return expanded; }
@@ -60,16 +68,20 @@ public:
 BETNode::BETNode()
     : variableId(0), op(0), leftChild(nullptr), rightChild(nullptr), expanded(false),
       value(1), constant(false) {}
+
 BETNode::BETNode(int variableId)
     : variableId(variableId), op(0), leftChild(nullptr), rightChild(nullptr),
       expanded(false), value(1), constant(false) {}
+
 BETNode::BETNode(int variableId, int op, bool expanded, int64_t value, bool constant)
     : variableId(variableId), op(op), leftChild(nullptr), rightChild(nullptr),
       expanded(expanded), value(value), constant(constant) {}
+
 BETNode::BETNode(int variableId, int op, BETNode *leftChild, BETNode *rightChild,
                  bool expanded, int64_t value, bool constant)
     : variableId(variableId), op(op), leftChild(leftChild), rightChild(rightChild),
       expanded(expanded), value(value), constant(constant) {}
+
 BETNode *BETNode::copy() {
   BETNode *newNode = new BETNode(variableId, op, expanded, value, constant);
   BETNode *lc = getLeftChild();
@@ -80,8 +92,11 @@ BETNode *BETNode::copy() {
     newNode->setRightChild(rc->copy());
   return newNode;
 }
+
 void BETNode::print() {
-  std::cout << op << " " << variableId << std::endl;
+  std::cout << op << " " << variableId 
+    << (constant ? " Is constant " : " Not constant ")
+    << value << std::endl;
   if (leftChild)
     leftChild->print();
   if (rightChild)
@@ -93,29 +108,65 @@ class BET {
   std::vector<int> stopVarIds;
   std::set<int> vars;
   std::vector<BETNode *> polynomials;
+  std::vector<std::vector<int64_t>> pascalMatrix;
   bool treeAltered;
 
 public:
   BET() : treeAltered(false) {}
+  ~BET() {
+    BETNode *root = this->root();
+    if (root)
+      delete root;
+  }
+  BETNode* root();
+  BETNode* polyRoot();
   void addNode(BETNode *betNode) {
     expandNode(betNode);
     roots[betNode->getVariableId()] = betNode;
   }
   void addVar(int varId) { vars.insert(varId); }
   void addStopVar(int varId) { stopVarIds.push_back(varId); }
-  void expandNode(BETNode *betNode);
+  void expandNode(BETNode *);
+  void expandPow(BETNode *);
+  void expandMul(BETNode *);
   void formPolynomials();
-  void formPolynomial(BETNode *betNode);
-  std::vector<int64_t> extractCoefficents(int polyIdx);
-  void extractCoefficents(BETNode *betNode, std::vector<int64_t> &coefficients);
-  int64_t parseCoefficient(BETNode *betNode);
-  std::vector<int64_t> extractExponents(int polyIdx);
-  void extractExponents(BETNode *betNode, std::vector<int64_t> &exponents);
-  void parseExponents(BETNode *betNode, std::map<int, int64_t> &termExponents);
-  BETNode *root() { return roots[stopVarIds.back()]; }
-  void parseVars(BETNode *betNode);
+  void formPolynomial(BETNode *);
+  BETNode* getMulTree(BETNode *, BETNode *, int64_t, int64_t);
+  BETNode* getPowTree(BETNode *, BETNode *, int64_t, int64_t);
+  std::vector<int64_t> extractCoefficents(int);
+  void extractCoefficents(BETNode *, std::vector<int64_t> &);
+  int64_t parseCoefficient(BETNode *);
+  std::vector<int64_t> extractExponents(int);
+  void extractExponents(BETNode *, std::vector<int64_t> &);
+  void parseExponents(BETNode *, std::map<int, int64_t> &);
+  void parseVars(BETNode *);
   int getVarsSize() { return vars.size(); }
+  std::vector<std::vector<int64_t>> getPascalMatrix() { return pascalMatrix; }
+
+ private: 
+  int64_t getBinomialCoefficient(int64_t, int64_t);
+  std::vector<int64_t> getPascalRow(int64_t);
+  void updatePascalMatrix(int64_t);
 };
+
+BETNode* BET::root() {
+  if (!stopVarIds.size())
+    return nullptr;
+  
+  auto stopVarId = stopVarIds.back();
+  auto search = roots.find(stopVarId);
+  if (search == roots.end())
+    return nullptr;
+  
+  return roots[stopVarId];
+}
+
+BETNode* BET::polyRoot() {
+  if (!polynomials.size())
+    return nullptr;
+  
+  return polynomials.back();
+}
 
 void BET::expandNode(BETNode *betNode) {
   if (betNode->isExpanded())
@@ -133,6 +184,7 @@ void BET::expandNode(BETNode *betNode) {
 
   betNode->setExpanded();
 }
+
 void BET::formPolynomials() {
   for (int stopVarId : stopVarIds) {
     BETNode *polyRoot = roots[stopVarId]->copy();
@@ -143,46 +195,140 @@ void BET::formPolynomials() {
     polynomials.push_back(polyRoot);
   }
 }
-void BET::formPolynomial(BETNode *betNode) {
-  if (betNode->isLeaf())
+
+void BET::updatePascalMatrix(int64_t n) {
+  for (auto i = pascalMatrix.size(); i < n + 1; ++i) {
+      auto newRow = std::vector<int64_t>(i + 1);
+      for (auto j = 0; j < i + 1; ++j)
+        newRow[j] = (j == 0 || j == i) ? 1 : (pascalMatrix[i - 1][j - 1] + pascalMatrix[i - 1][j]);
+      pascalMatrix.push_back(newRow);
+    }
+}
+
+std::vector<int64_t> BET::getPascalRow(int64_t n) {
+  if (n >= pascalMatrix.size())
+    updatePascalMatrix(n);
+
+  return pascalMatrix[n];
+}
+
+int64_t BET::getBinomialCoefficient(int64_t n, int64_t k) {
+  auto pascalRow = getPascalRow(n);
+  return pascalRow[k];
+}
+
+BETNode* BET::getMulTree(BETNode *v1, BETNode *v2, int64_t constant, int64_t iter) {
+  BETNode *pascalNode = new BETNode(
+    0, 0, true, getBinomialCoefficient(constant, iter), true);
+  BETNode *leftConstNode = new BETNode(
+    0, 0, true, constant - iter, true);
+  BETNode *rightConstNode = new BETNode(
+    0, 0, true, iter, true);
+  BETNode *leftPowNode = new BETNode(
+    0, BET_POW_OP, v1->copy(), leftConstNode, true, 1, false);
+  BETNode *rightPowNode = new BETNode(
+    0, BET_POW_OP, v2->copy(), rightConstNode, true, 1, false);
+  BETNode *rightMulNode = new BETNode(
+    0, BET_MUL_OP, leftPowNode, rightPowNode, true, 1, false);
+
+  return new BETNode(
+    0, BET_MUL_OP, pascalNode, rightMulNode, true, 1, false);
+}
+
+BETNode* BET::getPowTree(BETNode *v1, BETNode *v2, int64_t constant, int64_t iter) {
+  BETNode *newMulNode = getMulTree(v1, v2, constant, iter);
+
+  if (constant == iter)
+    return newMulNode;
+
+  BETNode *newAddNode = new BETNode(0, BET_ADD_OP, true, 1, false);
+
+  newAddNode->setLeftChild(newMulNode);
+  newAddNode->setRightChild(getPowTree(v1, v2, constant, iter + 1));
+
+  return newAddNode;
+}
+
+void BET::expandPow(BETNode *betNode) {  
+  BETNode *lc = betNode->getLeftChild();
+  BETNode *rc = betNode->getRightChild();
+  
+  if (!rc->isConstant())
+      throw "Sequre polynomial optimization expects each exponent to be a constant.";
+  
+  if (lc->isMul()) {
+    treeAltered = true;
+    betNode->setOperator(BET_MUL_OP);
+    lc->setOperator(BET_POW_OP);
+    BETNode *newPowNode =
+        new BETNode(0, BET_POW_OP, lc->getRightChild(), rc, true, 1, false);
+    betNode->setRightChild(newPowNode);
+    lc->setRightChild(rc->copy());
     return;
+  }
+
+  if (lc->isAdd()) {
+    treeAltered = true;
+    BETNode *v1 = lc->getLeftChild();
+    BETNode *v2 = lc->getRightChild();
+
+    BETNode *powTree = getPowTree(v1, v2, rc->getValue(), 0);
+    
+    betNode->setOperator(BET_ADD_OP);
+    delete lc;
+    betNode->setLeftChild(powTree->getLeftChild());
+    delete rc;
+    betNode->setRightChild(powTree->getRightChild());
+    return;
+  }
+}
+
+void BET::expandMul(BETNode *betNode) {
+  treeAltered = true;
 
   BETNode *lc = betNode->getLeftChild();
   BETNode *rc = betNode->getRightChild();
 
-  if (!(betNode->isMul() || betNode->isPow()) || !(lc->isAdd() || rc->isAdd())) {
+  BETNode *addNode = lc->isAdd() ? lc : rc;
+  BETNode *otherNode = lc->isAdd() ? rc : lc;
+  betNode->setOperator(BET_ADD_OP);
+  addNode->setOperator(BET_MUL_OP);
+  BETNode *newMulNode =
+      new BETNode(0, BET_MUL_OP, addNode->getRightChild(), otherNode, true, 1, false);
+  if (lc == otherNode)
+    betNode->setLeftChild(newMulNode);
+  if (rc == otherNode)
+    betNode->setRightChild(newMulNode);
+  addNode->setRightChild(otherNode->copy());
+}
+
+void BET::formPolynomial(BETNode *betNode) {
+  if (betNode->isLeaf())
+    return;
+  
+  if (betNode->isPow()) {
+    expandPow(betNode);
+    return;
+  }
+  
+  BETNode *lc = betNode->getLeftChild();
+  BETNode *rc = betNode->getRightChild();
+  if (!betNode->isMul() || !(lc->isAdd() || rc->isAdd())) {
     formPolynomial(lc);
     formPolynomial(rc);
     return;
   }
 
-  treeAltered = true;
-  BETNode *addNode = lc->isAdd() ? lc : rc;
-  BETNode *otherNode = lc->isAdd() ? rc : lc;
-
-  if (betNode->isMul()) {
-    betNode->setOperator(BET_ADD_OP);
-    addNode->setOperator(BET_MUL_OP);
-    BETNode *newMulNode =
-        new BETNode(0, BET_MUL_OP, addNode->getRightChild(), otherNode, true, 1, false);
-    if (lc == otherNode)
-      betNode->setLeftChild(newMulNode);
-    if (rc == otherNode)
-      betNode->setRightChild(newMulNode);
-    addNode->setRightChild(otherNode->copy());
-  }
-
-  if (betNode->isPow()) {
-    treeAltered = false;
-    throw "Not implemented!";
-  }
+  expandMul(betNode);
 }
+
 std::vector<int64_t> BET::extractCoefficents(int polyIdx) {
   BETNode *betNode = polynomials[polyIdx];
   std::vector<int64_t> coefficients;
   extractCoefficents(betNode, coefficients);
   return coefficients;
 }
+
 void BET::extractCoefficents(BETNode *betNode, std::vector<int64_t> &coefficients) {
   if (!(betNode->isAdd())) {
     coefficients.push_back(parseCoefficient(betNode));
@@ -194,20 +340,29 @@ void BET::extractCoefficents(BETNode *betNode, std::vector<int64_t> &coefficient
   extractCoefficents(lc, coefficients);
   extractCoefficents(rc, coefficients);
 }
-int64_t BET::parseCoefficient(BETNode *betNode) {
-  if (betNode->isConstant() || betNode->isLeaf())
-    return betNode->getValue();
 
+int64_t BET::parseCoefficient(BETNode *betNode) {
   BETNode *lc = betNode->getLeftChild();
   BETNode *rc = betNode->getRightChild();
+  
+  if (betNode->isPow()) {
+    assert(lc->isLeaf() && "Pow expression should be at bottom of the polynomial tree");
+    return (lc->isConstant() ? std::pow(lc->getValue(), rc->getValue()) : 1);
+  }
+  if (betNode->isConstant() || betNode->isLeaf()) {
+    return betNode->getValue();
+  }
+
   return parseCoefficient(lc) * parseCoefficient(rc);
 }
+
 std::vector<int64_t> BET::extractExponents(int polyIdx) {
   BETNode *betNode = polynomials[polyIdx];
   std::vector<int64_t> exponents;
   extractExponents(betNode, exponents);
   return exponents;
 }
+
 void BET::extractExponents(BETNode *betNode, std::vector<int64_t> &exponents) {
   if (!(betNode->isAdd())) {
     std::map<int, int64_t> termExponents;
@@ -224,6 +379,7 @@ void BET::extractExponents(BETNode *betNode, std::vector<int64_t> &exponents) {
   extractExponents(lc, exponents);
   extractExponents(rc, exponents);
 }
+
 void BET::parseExponents(BETNode *betNode, std::map<int, int64_t> &termExponents) {
   if (betNode->isConstant())
     return;
@@ -235,16 +391,17 @@ void BET::parseExponents(BETNode *betNode, std::map<int, int64_t> &termExponents
   BETNode *lc = betNode->getLeftChild();
   BETNode *rc = betNode->getRightChild();
 
-  if (betNode->isPow()) {
-    BETNode *constNode = lc->isConstant() ? lc : rc;
-    BETNode *varNode = lc->isConstant() ? rc : lc;
-    termExponents[varNode->getVariableId()] += constNode->getValue();
+  if (betNode->isPow() && !lc->isConstant()) {
+    if (!rc->isConstant())
+      throw "Sequre polynomial optimization expects each exponent to be a constant.";
+    termExponents[lc->getVariableId()] += rc->getValue();
     return;
   }
 
   parseExponents(lc, termExponents);
   parseExponents(rc, termExponents);
 }
+
 void BET::parseVars(BETNode *betNode) {
   if (betNode->isConstant())
     return;
@@ -354,12 +511,7 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
   bet->formPolynomials();
 
   std::vector<int64_t> coefs = bet->extractCoefficents(0);
-  for (auto e : coefs)
-    std::cout << e << std::endl;
   std::vector<int64_t> exps = bet->extractExponents(0);
-  for (int i = 0; i != exps.size(); ++i)
-    std::cout << exps[i] << (((i + 1) % bet->getVarsSize()) ? " " : "\n");
-  std::cout << "Exps len " << exps.size() / bet->getVarsSize() << std::endl;
 
   auto *M = v->getModule();
   Value *self = v->front();
@@ -437,8 +589,8 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v, bool noCac
 }
 
 void ArithmeticsOptimizations::applyOptimizations(CallInstr *v) {
-  // applyPolynomialOptimizations(v);
-  applyBeaverOptimizations(v, false);
+  applyPolynomialOptimizations(v);
+  // applyBeaverOptimizations(v, false);
 }
 
 void ArithmeticsOptimizations::handle(CallInstr *v) { applyOptimizations(v); }
