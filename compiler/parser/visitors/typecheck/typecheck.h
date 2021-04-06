@@ -89,7 +89,7 @@ public:
   ///   foo(..., x).
   /// Transform any non-CallExpr stage foo into a CallExpr stage:
   ///   foo(...).
-  /// If necessary, add stages (e.g. unwrap, float,__new__ or Optional.__new__)
+  /// If necessary, add stages (e.g. unwrap, float.__new__ or Optional.__new__)
   /// to support function call type adjustments.
   void visit(PipeExpr *) override;
   /// Transform an instantiation Instantiate(foo, {bar, baz}) to a canonical name:

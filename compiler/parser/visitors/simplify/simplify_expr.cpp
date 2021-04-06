@@ -337,6 +337,28 @@ void SimplifyVisitor::visit(BinaryExpr *expr) {
   }
 }
 
+void SimplifyVisitor::visit(ChainBinaryExpr *expr) {
+  seqassert(expr->exprs.size() >= 2, "not enough expressions in ChainBinaryExpr");
+  vector<ExprPtr> e;
+  string prev;
+  for (int i = 1; i < expr->exprs.size(); i++) {
+    auto l = prev.empty() ? clone(expr->exprs[i - 1].second) : N<IdExpr>(prev);
+    prev = ctx->generateCanonicalName("chain");
+    auto r =
+        (i + 1 == expr->exprs.size())
+            ? clone(expr->exprs[i].second)
+            : N<StmtExpr>(N<AssignStmt>(N<IdExpr>(prev), clone(expr->exprs[i].second)),
+                          N<IdExpr>(prev));
+    e.emplace_back(N<BinaryExpr>(move(l), expr->exprs[i].first, move(r)));
+  }
+
+  int i = int(e.size()) - 1;
+  ExprPtr b = move(e[i]);
+  for (i -= 1; i >= 0; i--)
+    b = N<BinaryExpr>(move(e[i]), "&&", move(b));
+  resultExpr = transform(b);
+}
+
 void SimplifyVisitor::visit(PipeExpr *expr) {
   vector<PipeExpr::Pipe> p;
   for (auto &i : expr->items) {
@@ -661,13 +683,19 @@ void SimplifyVisitor::visit(AssignExpr *expr) {
   if (!ctx->canAssign)
     error("assignment expression in a short-circuiting subexpression");
   vector<StmtPtr> s;
-  s.push_back(transform(N<AssignStmt>(clone(expr->var), clone(expr->expr))));
-  resultExpr =
-      transform(N<StmtExpr>(move(s), transform(N<IdExpr>(expr->var->getId()->value))));
+  s.push_back(N<AssignStmt>(clone(expr->var), clone(expr->expr)));
+  resultExpr = transform(N<StmtExpr>(move(s), clone(expr->var)));
 }
 
 void SimplifyVisitor::visit(RangeExpr *expr) {
   error("unexpected pattern range expression");
+}
+
+void SimplifyVisitor::visit(StmtExpr *expr) {
+  vector<StmtPtr> stmts;
+  for (auto &s : expr->stmts)
+    stmts.emplace_back(transform(s));
+  resultExpr = N<StmtExpr>(move(stmts), transform(expr->expr));
 }
 
 /**************************************************************************************/

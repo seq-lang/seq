@@ -322,7 +322,7 @@ public:
 
   /// Emplaces a catch.
   /// @tparam Args the catch constructor args
-  template <typename... Args> void emplace_back(Args &&... args) {
+  template <typename... Args> void emplace_back(Args &&...args) {
     catches.emplace_back(std::forward<Args>(args)...);
   }
 
@@ -478,7 +478,7 @@ public:
 
   /// Emplaces a stage.
   /// @param args the args
-  template <typename... Args> void emplace_back(Args &&... args) {
+  template <typename... Args> void emplace_back(Args &&...args) {
     stages.emplace_back(std::forward<Args>(args)...);
   }
 
