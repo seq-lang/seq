@@ -88,10 +88,16 @@ void DictArithmeticOptimization::handle(CallInstr *v) {
     if (!dictValue || !opCall || std::distance(opCall->begin(), opCall->end()) != 2)
       return;
 
-    // grab the function, which does not necessarily need to be a magic
+    // grab the function, which needs to be an int or float call for now
     auto *opFunc = util::getFunc(opCall->getCallee());
     auto *getCall = cast<CallInstr>(opCall->front());
     if (!opFunc || !getCall)
+      return;
+
+    auto *intType = M->getIntType();
+    auto *floatType = M->getFloatType();
+    auto *parentType = opFunc->getParentType();
+    if (!parentType || !(parentType->is(intType) || parentType->is(floatType)))
       return;
 
     // check the first argument

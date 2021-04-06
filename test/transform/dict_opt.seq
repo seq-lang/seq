@@ -62,34 +62,34 @@ def test_wrapped_dict():
         raise ValueError('my_op_throws')
         return a * b
 
-    x = WrappedDict[str, str]()
-    x['a'] = x.get('a', '0') + '1'
-    x['a'] = x['a'] * 2
-    x['b'] = x.setdefault('b', 'x') + 'y'
-    x['a'] += x['b']
-    x['b'] = my_op(x['b'], 2)
+    x = WrappedDict[str, float]()
+    x['a'] = x.get('a', 0.0) + 1.0        # invokes opt (do_op_count)
+    x['a'] = x['a'] * 2                   # invokes opt (do_op_throws_count)
+    x['b'] = x.setdefault('b', 4.5) + 99  # no opt (no getitem/get)
+    x['a'] += x['b']                      # invokes opt (do_op_throws_count)
+    x['b'] = my_op(x['b'], 2.0)           # no opt (not a int/float method)
     foo = x['a']
-    x['a'] = x['b'] + foo
+    x['a'] = x['b'] + foo                 # no opt (different keys)
 
     try:
-        x['c'] += 'one'
+        x['c'] += 1.0                     # invokes opt (do_op_throws_count)
         assert False
     except KeyError:
         pass
 
     try:
-        x['d'] = my_op_throws(x['d'], 2)
+        x['d'] = my_op_throws(x['d'], 2.0)  # no opt (not a int/float method)
         assert False
     except KeyError:
         pass
 
     try:
-        x['d'] = my_op_throws(x.get('d', 'aaa'), 2)
+        x['d'] = my_op_throws(x.get('d', 111.0), 2.0)  # no opt (not a int/float method)
         assert False
     except ValueError:
         pass
 
-    assert x.do_op_throws_count == 5
-    assert x.do_op_count == 2
-    assert x.d == {'a': 'xyxy0101xy', 'b': 'xyxy'}
+    assert x.do_op_throws_count == 3
+    assert x.do_op_count == 1
+    assert x.d == {'a': 312.5, 'b': 207}
 test_wrapped_dict()
