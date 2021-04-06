@@ -52,7 +52,7 @@ private:
 
 public:
   PassManager(const std::vector<std::string> &disabled = {})
-      : passes(), analyses(), executionOrder(), results(), disabled() {}
+      : passes(), analyses(), executionOrder(), results(), disabled(disabled) {}
 
   /// Registers a pass and appends it to the execution order.
   /// @param key the pass's key
