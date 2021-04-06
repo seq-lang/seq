@@ -2,7 +2,7 @@ from internal.gc import alloc_atomic, free
 from C import strtoll(cobj, Ptr[cobj], i32) -> int
 
 _stdout = _C.seq_stdout()
-def print(*args, sep=' ', end='\n', file=_stdout, flush=False):
+def print(*args, sep: str = ' ', end: str = '\n', file=_stdout, flush: bool = False):
     """
     Print args to the text stream file.
     """
@@ -13,11 +13,11 @@ def print(*args, sep=' ', end='\n', file=_stdout, flush=False):
         fp = file.fp
     i = 0
     for a in args:
-        if i:
-            _C.seq_print_full(str(sep), fp)
+        if i and sep:
+            _C.seq_print_full(sep, fp)
         _C.seq_print_full(str(a), fp)
         i += 1
-    _C.seq_print_full(str(end), fp)
+    _C.seq_print_full(end, fp)
     if flush:
         _C.fflush(fp)
 

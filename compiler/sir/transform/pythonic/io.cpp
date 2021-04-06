@@ -75,7 +75,7 @@ void optimizeWrite(CallInstr *v) {
 
   std::vector<Value *> args = {cv.clone(file), iter};
 
-  auto *replacement = M->getOrRealizeMethod(file->getType(), "write_gen",
+  auto *replacement = M->getOrRealizeMethod(file->getType(), "__file_write_gen__",
                                             {args[0]->getType(), args[1]->getType()});
   if (!replacement)
     return;
