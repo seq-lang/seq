@@ -55,7 +55,7 @@ void StrAdditionOptimization::handle(CallInstr *v) {
   InspectionResult r;
   inspect(v, r);
 
-  if (r.valid) {
+  if (r.valid && r.args.size() > 2) {
     std::vector<Value *> args;
     util::CloneVisitor cv(M);
 
