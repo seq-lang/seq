@@ -116,12 +116,15 @@ bool_expr:
   | bool_and_expr { $1 }
   | bool_and_expr OR bool_expr { $loc, Binary ($1, $2, $3, false) }
 bool_and_expr:
-  | cond_expr { flat_cond $1 }
-  | cond_expr AND bool_and_expr { $loc, Binary (flat_cond $1, $2, $3, false) }
+  | cond_expr { $1 }
+  | cond_expr AND bool_and_expr { $loc, Binary ($1, $2, $3, false) }
 cond_expr:
-  | arith_expr { $loc, Cond (snd $1) }
-  | NOT cond_expr { $loc, Cond (Unary ("!", flat_cond $2)) }
-  | arith_expr cond_op cond_expr { $loc, CondBinary ($1, $2, $3) }
+  | arith_expr { $1 }
+  | NOT cond_expr { $loc, Unary ("!", $2) }
+  | arith_expr cond_op cond_expr {
+    match snd $3 with
+      | ChainBinary ((_, l) :: r) -> $loc, ChainBinary (("", $1) :: ($2, l) :: r)
+      | _ -> $loc, ChainBinary ["", $1; $2, $3] }
 %inline cond_op:
   LESS | LEQ | GREAT | GEQ | EEQ | NEQ | IS | ISNOT | IN | NOTIN { $1 }
 

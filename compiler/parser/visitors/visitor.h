@@ -46,6 +46,7 @@ public:
   virtual void visit(IfExpr *);
   virtual void visit(UnaryExpr *);
   virtual void visit(BinaryExpr *);
+  virtual void visit(ChainBinaryExpr *);
   virtual void visit(PipeExpr *);
   virtual void visit(IndexExpr *);
   virtual void visit(CallExpr *);

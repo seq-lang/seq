@@ -184,6 +184,12 @@ ExprPtr parse_expr(value val) {
     Return(Range, parse_expr(Field(t, 0)), parse_expr(Field(t, 1)));
   case 29:
     Return(KeywordStar, parse_expr(t));
+  case 30:
+    Return(ChainBinary, parse_list(t, [](value in) {
+             CAMLparam1(in);
+             OcamlReturn(
+                 make_pair(parse_string(Field(in, 0)), parse_expr(Field(in, 1))));
+           }));
   default:
     seq::compilationError("[internal] tag variant mismatch ...");
     return nullptr;

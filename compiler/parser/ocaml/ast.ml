@@ -41,6 +41,7 @@ type texpr =
   | AssignExpr of (texpr ann * texpr ann)
   | Range of (texpr ann * texpr ann)
   | KwStar of texpr ann
+  | ChainBinary of (string * texpr ann) list
 
 and tcomprehension =
   { var : texpr ann
@@ -123,23 +124,6 @@ let flat_pipe x =
   | _, [] -> failwith "empty pipeline expression (grammar)"
   | _, [ h ] -> snd h
   | pos, l -> pos, Pipe l
-
-(* Converts list of conditionals into the AND AST node
-   (used for chained conditionals such as
-   0 < x < y < 10 that becomes (0 < x) AND (x < y) AND (y < 10)) *)
-type cond_t =
-  | Cond of texpr
-  | CondBinary of (texpr ann * string * cond_t ann)
-
-let rec flat_cond x =
-  let expr =
-    match snd x with
-    | CondBinary (lhs, op, ((_, CondBinary (next_lhs, _, _)) as rhs)) ->
-      Binary ((fst lhs, Binary (lhs, op, next_lhs, false)), "&&", flat_cond rhs, false)
-    | CondBinary (lhs, op, (pos, Cond rhs)) -> Binary (lhs, op, (pos, rhs), false)
-    | Cond n -> n
-  in
-  fst x, expr
 
 let ppl ?(sep = ", ") ~f l =
   String.concat sep (List.map f l)

@@ -399,6 +399,18 @@ struct BinaryExpr : public Expr {
   const BinaryExpr *getBinary() const override { return this; }
 };
 
+/// Chained binary expression.
+/// @example 1 <= x <= 2
+struct ChainBinaryExpr : public Expr {
+  vector<std::pair<string, ExprPtr>> exprs;
+
+  ChainBinaryExpr(vector<std::pair<string, ExprPtr>> &&exprs);
+  ChainBinaryExpr(const ChainBinaryExpr &expr);
+
+  string toString() const override;
+  ACCEPT(ASTVisitor);
+};
+
 /// Pipe expression [(op expr)...].
 /// op is either "" (only the first item), "|>" or "||>".
 /// @example a |> b ||> c

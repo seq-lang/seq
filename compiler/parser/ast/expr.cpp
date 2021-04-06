@@ -217,6 +217,20 @@ string BinaryExpr::toString() const {
 }
 ACCEPT_IMPL(BinaryExpr, ASTVisitor);
 
+ChainBinaryExpr::ChainBinaryExpr(vector<pair<string, ExprPtr>> &&exprs)
+    : Expr(), exprs(move(exprs)) {}
+ChainBinaryExpr::ChainBinaryExpr(const ChainBinaryExpr &expr) : Expr(expr) {
+  for (auto &e : expr.exprs)
+    exprs.emplace_back(make_pair(e.first, ast::clone(e.second)));
+}
+string ChainBinaryExpr::toString() const {
+  vector<string> s;
+  for (auto &i : exprs)
+    s.push_back(format("({} \"{}\")", i.first, i.second->toString()));
+  return wrapType(format("chain {}", join(s, " ")));
+}
+ACCEPT_IMPL(ChainBinaryExpr, ASTVisitor);
+
 PipeExpr::Pipe PipeExpr::Pipe::clone() const { return {op, ast::clone(expr)}; }
 
 PipeExpr::PipeExpr(vector<PipeExpr::Pipe> &&items) : Expr(), items(move(items)) {}
