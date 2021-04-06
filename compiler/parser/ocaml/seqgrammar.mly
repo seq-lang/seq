@@ -247,8 +247,12 @@ assign_statement:
   | expr aug_eq expr { [$loc, Assign ($1, Some ($loc, Binary ($1, String.sub $2 0 (String.length $2 - 1), $3, true)), None)] }
   | ID COLON expr EQ expr { [$loc, Assign (($loc($1), Id $1), Some $5, Some $3)] }
   | expr_list EQ separated_nonempty_list(EQ, expr_list)
-    { let all = List.map (function [l] -> l | l -> $loc, Tuple l) (List.rev ($1 :: $3)) in
-      List.rev @@ List.map (fun i -> $loc, Assign (i, Some (List.hd all), None)) (List.tl all) }
+    { let rec f l = match l with
+        | [] | [_] -> []
+        | lh :: rh :: tl -> ($loc, Assign(lh, Some rh, None)) :: (f (rh :: tl))
+      in
+      let all = List.map (function [l] -> l | l -> $loc, Tuple l) ($1 :: $3) in
+      List.rev (f all) }
 %inline aug_eq: PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ | LSHEQ | RSHEQ | ANDEQ | OREQ | XOREQ { $1 }
 
 try_statement: TRY COLON suite catch* finally? { $loc, Try ($3, $4, opt_val $5 []) }
