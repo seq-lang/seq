@@ -7,11 +7,11 @@
 #include "sir/transform/pythonic/str.h"
 #include "util/common.h"
 #include "llvm/Support/CommandLine.h"
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace {
@@ -40,6 +40,11 @@ void registerStandardPasses(seq::ir::transform::PassManager &pm, bool debug) {
                   std::make_unique<seq::ir::transform::pythonic::IOCatOptimization>());
 }
 
+const std::vector<std::string> &supportedExtensions() {
+  static const std::vector<std::string> extensions = {".seq", ".py"};
+  return extensions;
+}
+
 bool hasExtension(const std::string &filename, const std::string &extension) {
   return filename.size() >= extension.size() &&
          filename.compare(filename.size() - extension.size(), extension.size(),
@@ -56,8 +61,7 @@ std::string trimExtension(const std::string &filename, const std::string &extens
 
 std::string makeOutputFilename(const std::string &filename,
                                const std::string &extension) {
-  const std::vector<std::string> exts = {".seq", ".py"};
-  for (const auto &ext : exts) {
+  for (const auto &ext : supportedExtensions()) {
     if (hasExtension(filename, ext))
       return trimExtension(filename, ext) + extension;
   }
@@ -97,7 +101,10 @@ ProcessResult processSource(const std::vector<const char *> &args) {
 
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
 
-  if (input != "-" && !(hasExtension(input, ".seq") || hasExtension(input, ".py")))
+  auto &exts = supportedExtensions();
+  if (input != "-" && std::find_if(exts.begin(), exts.end(), [&](auto &ext) {
+                        return hasExtension(input, ext);
+                      }) == exts.end())
     seq::compilationError(
         "input file is expected to be a .seq/.py file, or '-' for stdin");
 
