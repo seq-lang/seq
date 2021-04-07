@@ -33,7 +33,7 @@ void registerStandardPasses(seq::ir::transform::PassManager &pm, bool debug) {
       std::make_unique<seq::ir::transform::pythonic::DictArithmeticOptimization>());
 
   pm.registerPass(
-      "pythonic-dict-arithmetic-opt",
+      "pythonic-str-addition-opt",
       std::make_unique<seq::ir::transform::pythonic::StrAdditionOptimization>());
 
   pm.registerPass("pythonic-io-cat-opt",
