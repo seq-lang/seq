@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -46,7 +47,13 @@ private:
   /// map of valid analysis results
   std::unordered_map<std::string, std::unique_ptr<analyze::Result>> results;
 
+  /// passes to avoid registering
+  std::vector<std::string> disabled;
+
 public:
+  PassManager(const std::vector<std::string> &disabled = {})
+      : passes(), analyses(), executionOrder(), results(), disabled(disabled) {}
+
   /// Registers a pass and appends it to the execution order.
   /// @param key the pass's key
   /// @param pass the pass
@@ -72,6 +79,13 @@ public:
   analyze::Result *getAnalysisResult(const std::string &key) {
     auto it = results.find(key);
     return it != results.end() ? it->second.get() : nullptr;
+  }
+
+  /// Returns whether a given pass or analysis is disabled.
+  /// @param key the pass or analysis key
+  /// @return true if the pass or analysis is disabled
+  bool isDisabled(const std::string &key) {
+    return std::find(disabled.begin(), disabled.end(), key) != disabled.end();
   }
 
 private:

@@ -60,6 +60,27 @@ int Func::doReplaceUsedVariable(int id, Var *newVar) {
   return findAndReplace(id, newVar, args);
 }
 
+std::vector<types::Type *> Func::doGetUsedTypes() const {
+  std::vector<types::Type *> ret;
+
+  for (auto *t : Var::getUsedTypes())
+    ret.push_back(const_cast<types::Type *>(t));
+
+  if (parentType)
+    ret.push_back(parentType);
+
+  return ret;
+}
+
+int Func::doReplaceUsedType(const std::string &name, types::Type *newType) {
+  auto count = Var::replaceUsedType(name, newType);
+  if (parentType && parentType->getName() == name) {
+    parentType = newType;
+    ++count;
+  }
+  return count;
+}
+
 const char BodiedFunc::NodeId = 0;
 
 int BodiedFunc::doReplaceUsedValue(int id, Value *newValue) {
@@ -85,27 +106,6 @@ int BodiedFunc::doReplaceUsedVariable(int id, Var *newVar) {
 const char ExternalFunc::NodeId = 0;
 
 const char InternalFunc::NodeId = 0;
-
-std::vector<types::Type *> InternalFunc::doGetUsedTypes() const {
-  std::vector<types::Type *> ret;
-
-  for (auto *t : Func::getUsedTypes())
-    ret.push_back(const_cast<types::Type *>(t));
-
-  if (parentType)
-    ret.push_back(parentType);
-
-  return ret;
-}
-
-int InternalFunc::doReplaceUsedType(const std::string &name, types::Type *newType) {
-  auto count = Func::replaceUsedType(name, newType);
-  if (parentType && parentType->getName() == name) {
-    parentType = newType;
-    ++count;
-  }
-  return count;
-}
 
 const char LLVMFunc::NodeId = 0;
 

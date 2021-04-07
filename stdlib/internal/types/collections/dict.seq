@@ -143,6 +143,17 @@ class Dict[K,V]:
         else:
             self._vals[x] += by
 
+    def __dict_do_op_throws__[F, Z](self, key: K, other: Z, op: F):
+        x = self._kh_get(key)
+        if x == self._kh_end():
+            raise KeyError(str(key))
+        else:
+            self._vals[x] = op(self._vals[x], other)
+
+    def __dict_do_op__[F, Z](self, key: K, other: Z, dflt: V, op: F):
+        ret, x = self._kh_put(key)
+        self._vals[x] = op(dflt if ret != 0 else self._vals[x], other)
+
     def update(self, other: Dict[K,V]):
         for k,v in other.items():
             self[k] = v

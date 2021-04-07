@@ -31,9 +31,11 @@ private:
   const char *nodeId = nullptr;
   bool result = false;
   const Node *other = nullptr;
+  bool varIdMatch;
 
 public:
-  explicit MatchVisitor(bool checkName = true) : checkName(checkName) {}
+  explicit MatchVisitor(bool checkName = false, bool varIdMatch = false)
+      : checkName(checkName), varIdMatch(varIdMatch) {}
 
   VISIT(Var);
   void handle(const Var *x, const Var *y) { result = compareVars(x, y); }
@@ -280,7 +282,8 @@ public:
 
 private:
   bool compareVars(const Var *x, const Var *y) const {
-    return process(x->getType(), y->getType());
+    return process(x->getType(), y->getType()) &&
+           (!varIdMatch || x->getId() == y->getId());
   }
 
   bool compareFuncs(const Func *x, const Func *y) const {
@@ -311,7 +314,7 @@ const char AnyVar::NodeId = 0;
 
 const char AnyFunc::NodeId = 0;
 
-bool match(Node *a, Node *b, bool checkNames) {
+bool match(Node *a, Node *b, bool checkNames, bool varIdMatch) {
   return MatchVisitor(checkNames).process(a, b);
 }
 

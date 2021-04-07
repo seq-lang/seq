@@ -17,6 +17,9 @@
 #include "sir/llvm/llvisitor.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pipeline.h"
+#include "sir/transform/pythonic/dict.h"
+#include "sir/transform/pythonic/io.h"
+#include "sir/transform/pythonic/str.h"
 #include "util/common.h"
 #include "gtest/gtest.h"
 
@@ -80,6 +83,14 @@ static pair<vector<string>, bool> findExpects(const string &filename, bool isCod
 void registerStandardPasses(ir::transform::PassManager &pm) {
   pm.registerPass("bio-pipeline-opts",
                   std::make_unique<ir::transform::pipeline::PipelineOptimizations>());
+  pm.registerPass(
+      "pythonic-dict-arithmetic-opt",
+      std::make_unique<seq::ir::transform::pythonic::DictArithmeticOptimization>());
+  pm.registerPass(
+      "pythonic-str-addition-opt",
+      std::make_unique<seq::ir::transform::pythonic::StrAdditionOptimization>());
+  pm.registerPass("pythonic-io-cat-opt",
+                  std::make_unique<seq::ir::transform::pythonic::IOCatOptimization>());
 }
 
 string argv0;
@@ -314,6 +325,23 @@ INSTANTIATE_TEST_SUITE_P(
       testing::Values(false)
     ),
     getTestNameFromParam);
+
+INSTANTIATE_TEST_SUITE_P(
+    OptTests, SeqTest,
+    testing::Combine(
+        testing::Values(
+            "transform/dict_opt.seq",
+            "transform/io_opt.seq",
+            "transform/str_opt.seq"
+        ),
+        testing::Values(true, false),
+        testing::Values(""),
+        testing::Values(""),
+        testing::Values(0),
+        testing::Values(false)
+    ),
+    getTestNameFromParam);
+
 // clang-format on
 
 int main(int argc, char *argv[]) {
