@@ -7,7 +7,15 @@
  * TODO: Add comment AST nodes
  * *****************************************************************************)
 
-%{ open Ast %}
+%{
+  open Ast
+
+  let flat_pipe x =
+    match x with
+    | _, [] -> failwith "empty pipeline expression (grammar)"
+    | _, [ h ] -> snd h
+    | pos, l -> pos, Pipe l
+%}
 
 /* constants */
 %token <string * string> INT STRING
@@ -119,12 +127,14 @@ bool_and_expr:
   | cond_expr { $1 }
   | cond_expr AND bool_and_expr { $loc, Binary ($1, $2, $3, false) }
 cond_expr:
-  | arith_expr { $1 }
+  | arith_expr cond_tail* {
+    match $2 with
+    | [] -> $1
+    | [op, r] -> $loc, Binary($1, op, r, false)
+    | rl -> $loc, ChainBinary (("", $1) :: rl) }
   | NOT cond_expr { $loc, Unary ("!", $2) }
-  | arith_expr cond_op cond_expr {
-    match snd $3 with
-      | ChainBinary ((_, l) :: r) -> $loc, ChainBinary (("", $1) :: ($2, l) :: r)
-      | _ -> $loc, ChainBinary ["", $1; $2, $3] }
+cond_tail:
+  | cond_op arith_expr { $1, $2 }
 %inline cond_op:
   LESS | LEQ | GREAT | GEQ | EEQ | NEQ | IS | ISNOT | IN | NOTIN { $1 }
 

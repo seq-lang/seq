@@ -119,12 +119,6 @@ and pattern_t =
   ; pat_stmts: tstmt ann list
   }
 
-let flat_pipe x =
-  match x with
-  | _, [] -> failwith "empty pipeline expression (grammar)"
-  | _, [ h ] -> snd h
-  | pos, l -> pos, Pipe l
-
 let ppl ?(sep = ", ") ~f l =
   String.concat sep (List.map f l)
 

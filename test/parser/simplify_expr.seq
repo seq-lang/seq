@@ -234,6 +234,7 @@ print 15 >= foo()-1 < 30 > 20 > foo()
 #: foo
 #: True
 
+print True == (b == 15) #: True
 
 #%% pipe_error,barebones
 def b(a, b, c, d):
