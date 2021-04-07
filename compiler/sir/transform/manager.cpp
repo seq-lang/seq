@@ -9,6 +9,8 @@ namespace transform {
 void PassManager::registerPass(const std::string &key, std::unique_ptr<Pass> pass,
                                std::vector<std::string> reqs,
                                std::vector<std::string> invalidates) {
+  if (isDisabled(key))
+    return;
   passes.insert(std::make_pair(
       key, PassMetadata(std::move(pass), std::move(reqs), std::move(invalidates))));
   passes[key].pass->setManager(this);
@@ -17,6 +19,8 @@ void PassManager::registerPass(const std::string &key, std::unique_ptr<Pass> pas
 
 void PassManager::registerAnalysis(const std::string &key,
                                    std::unique_ptr<analyze::Analysis> analysis) {
+  if (isDisabled(key))
+    return;
   analyses.insert(std::make_pair(key, std::move(analysis)));
 }
 

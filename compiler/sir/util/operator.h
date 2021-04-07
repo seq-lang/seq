@@ -9,8 +9,11 @@
 #define LAMBDA_VISIT(x)                                                                \
   virtual void handle(seq::ir::x *v) {}                                                \
   void visit(seq::ir::x *v) override {                                                 \
+    if (childrenFirst)                                                                 \
+      processChildren(v);                                                              \
     handle(v);                                                                         \
-    processChildren(v);                                                                \
+    if (!childrenFirst)                                                                \
+      processChildren(v);                                                              \
   }
 
 namespace seq {
@@ -26,8 +29,14 @@ private:
   std::vector<Node *> nodeStack;
   /// stack of iterators
   std::vector<decltype(SeriesFlow().begin())> itStack;
+  /// true if should visit children first
+  bool childrenFirst;
 
 public:
+  /// Constructs an operator.
+  /// @param childrenFirst true if children should be visited first
+  explicit Operator(bool childrenFirst = false) : childrenFirst(childrenFirst) {}
+
   virtual ~Operator() noexcept = default;
 
   void visit(Module *m) override {

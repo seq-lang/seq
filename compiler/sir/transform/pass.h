@@ -35,6 +35,10 @@ public:
 /// Pass that runs a single Operator.
 class OperatorPass : public Pass, public util::Operator {
 public:
+  /// Constructs an operator pass.
+  /// @param childrenFirst true if children should be iterated first
+  OperatorPass(bool childrenFirst = false) : util::Operator(childrenFirst) {}
+
   void run(Module *module) override { process(module); }
 };
 
