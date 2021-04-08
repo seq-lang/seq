@@ -19,6 +19,8 @@ std::pair<int, int> getGenerated(const Value *val) {
   } else if (auto *synthAssign = cast<analyze::dataflow::SyntheticAssignInstr>(val)) {
     if (synthAssign->getKind() == analyze::dataflow::SyntheticAssignInstr::KNOWN)
       return {synthAssign->getLhs()->getId(), synthAssign->getArg()->getId()};
+    else
+      return {synthAssign->getLhs()->getId(), -1};
   }
   return {-1, -1};
 }
@@ -47,7 +49,7 @@ void RDInspector::analyze() {
 std::unordered_set<int> RDInspector::getReachingDefinitions(Var *var, Value *loc) {
   auto *blk = cfg->getBlock(loc);
   if (!blk)
-    return {};
+    return std::unordered_set<int>();
   auto &entry = sets[blk->getId()];
   auto defs = entry.in[var->getId()];
 

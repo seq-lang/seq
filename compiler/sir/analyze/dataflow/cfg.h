@@ -35,6 +35,8 @@ public:
   /// @param name the block's name
   explicit CFBlock(CFGraph *graph, std::string name = "") : name(std::move(name)), graph(graph) {}
 
+  virtual ~CFBlock() noexcept = default;
+
   /// @return an iterator to the first value
   auto begin() { return values.begin(); }
   /// @return an iterator beyond the last value
