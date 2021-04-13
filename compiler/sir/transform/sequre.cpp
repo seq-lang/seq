@@ -417,12 +417,12 @@ BETNode *BET::polyRoot() {
 
 BETNode *BET::getNextPolyNode() {
   auto *polyNode = polyRoot();
-  
+
   if (polyNode) {
     polynomials.pop_back();
-    return polyNode;  
+    return polyNode;
   }
-  
+
   return nullptr;
 }
 
@@ -539,12 +539,6 @@ void parseInstruction(seq::ir::Value *instruction, BET *bet) {
 }
 
 CallInstr *nextPolynomialCall(CallInstr *v, BodiedFunc *bf, BET *bet) {
-  // auto *M = v->getModule();
-  // auto *a = M->Nr<VarValue>(bf->arg_back());
-  // std::cout << a << " c " << a->getName() << std::endl;
-  
-  // series->push_back(M->Nr<ReturnInstr>(a));
-  
   auto polyNode = bet->getNextPolyNode();
   auto coefs = bet->extractCoefficents(polyNode);
   auto exps = bet->extractExponents(polyNode);
@@ -560,8 +554,7 @@ CallInstr *nextPolynomialCall(CallInstr *v, BodiedFunc *bf, BET *bet) {
 
   auto *evalPolyFunc = M->getOrRealizeMethod(
       selfType, "secure_evalp", {selfType, inputsType, coefsType, expsType});
-  if (!evalPolyFunc)
-    return nullptr;
+  assert(evalPolyFunc && "secure_evalp not found in provided MPC class");
 
   std::vector<Value *> inputArgs;
   for (auto it = bf->arg_begin(); it != bf->arg_end(); ++it) {
@@ -598,7 +591,7 @@ void convertInstructions(CallInstr *v, BodiedFunc *bf, SeriesFlow *series, BET *
       ++it;
       continue;
     }
-      
+
     auto *callInstr = cast<CallInstr>(assIns->getRhs());
     if (!callInstr) {
       ++it;
@@ -612,9 +605,7 @@ void convertInstructions(CallInstr *v, BodiedFunc *bf, SeriesFlow *series, BET *
     }
 
     if (isReveal(op)) {
-      callInstr->setArgs(
-          {callInstr->front(), nextPolynomialCall(v, bf, bet)});
-      // assIns->setRhs();
+      callInstr->setArgs({callInstr->front(), nextPolynomialCall(v, bf, bet)});
       ++it;
       continue;
     }
