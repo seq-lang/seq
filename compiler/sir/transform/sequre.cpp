@@ -15,7 +15,8 @@ namespace sequre {
 const int BET_ADD_OP = 1;
 const int BET_MUL_OP = 2;
 const int BET_POW_OP = 3;
-const int BET_OTHER_OP = 4;
+const int BET_REVEAL_OP = 4;
+const int BET_OTHER_OP = 5;
 
 class BETNode {
   int64_t value;
@@ -123,18 +124,21 @@ public:
   }
 
   int getVarsSize() { return vars.size(); }
+  void addRoot(BETNode *betNode) { roots[betNode->getVariableId()] = betNode; }
+  void addRoot(int, int);
   void addNode(BETNode *);
-  void addVar(int varId) { vars.insert(varId); }
-  void addStopVar(int varId) { stopVarIds.push_back(varId); }
+  void addStopVar(int varId) { stopVarIds.insert(stopVarIds.begin(), varId); }
   void formPolynomials();
   void parseVars(BETNode *);
   BETNode *root();
   BETNode *polyRoot();
-  std::vector<int64_t> extractCoefficents(int);
-  std::vector<int64_t> extractExponents(int);
+  BETNode *getNextPolyNode();
+  std::vector<int64_t> extractCoefficents(BETNode *);
+  std::vector<int64_t> extractExponents(BETNode *);
   std::vector<std::vector<int64_t>> getPascalMatrix() { return pascalMatrix; }
 
 private:
+  void addVar(int varId) { vars.insert(varId); }
   void expandNode(BETNode *);
   void expandPow(BETNode *);
   void expandMul(BETNode *);
@@ -171,8 +175,8 @@ void BET::expandPow(BETNode *betNode) {
   auto *lc = betNode->getLeftChild();
   auto *rc = betNode->getRightChild();
 
-  if (!rc->isConstant())
-    throw "Sequre polynomial optimization expects each exponent to be a constant.";
+  assert(rc->isConstant() &&
+         "Sequre polynomial optimization expects each exponent to be a constant.");
 
   if (lc->isMul()) {
     treeAltered = true;
@@ -281,8 +285,8 @@ void BET::parseExponents(BETNode *betNode, std::map<int, int64_t> &termExponents
   auto *rc = betNode->getRightChild();
 
   if (betNode->isPow() && !lc->isConstant()) {
-    if (!rc->isConstant())
-      throw "Sequre polynomial optimization expects each exponent to be a constant.";
+    assert(rc->isConstant() &&
+           "Sequre polynomial optimization expects each exponent to be a constant.");
     termExponents[lc->getVariableId()] += rc->getValue();
     return;
   }
@@ -358,9 +362,15 @@ std::vector<int64_t> BET::getPascalRow(int64_t n) {
   return pascalMatrix[n];
 }
 
+void BET::addRoot(int newVarId, int oldVarId) {
+  auto *oldNode = roots[oldVarId]->copy();
+  oldNode->setVariableId(newVarId);
+  roots[newVarId] = oldNode;
+}
+
 void BET::addNode(BETNode *betNode) {
   expandNode(betNode);
-  roots[betNode->getVariableId()] = betNode;
+  addRoot(betNode);
 }
 
 void BET::formPolynomials() {
@@ -405,19 +415,31 @@ BETNode *BET::polyRoot() {
   return polynomials.back();
 }
 
-std::vector<int64_t> BET::extractCoefficents(int polyIdx) {
-  auto *betNode = polynomials[polyIdx];
+BETNode *BET::getNextPolyNode() {
+  auto *polyNode = polyRoot();
+  
+  if (polyNode) {
+    polynomials.pop_back();
+    return polyNode;  
+  }
+  
+  return nullptr;
+}
+
+std::vector<int64_t> BET::extractCoefficents(BETNode *betNode) {
   std::vector<int64_t> coefficients;
   extractCoefficents(betNode, coefficients);
   return coefficients;
 }
 
-std::vector<int64_t> BET::extractExponents(int polyIdx) {
-  auto *betNode = polynomials[polyIdx];
+std::vector<int64_t> BET::extractExponents(BETNode *betNode) {
   std::vector<int64_t> exponents;
   extractExponents(betNode, exponents);
   return exponents;
 }
+
+bool isArithmetic(int op) { return op && op < 4; }
+bool isReveal(int op) { return op == 4; }
 
 /*
  * Substitution optimizations
@@ -444,6 +466,8 @@ int getOperator(CallInstr *callInstr) {
     return BET_MUL_OP;
   if (instrName.find("__pow__") != std::string::npos)
     return BET_POW_OP;
+  if (instrName.find("secure_reveal") != std::string::npos)
+    return BET_REVEAL_OP;
   return BET_OTHER_OP;
 }
 
@@ -503,34 +527,33 @@ void parseInstruction(seq::ir::Value *instruction, BET *bet) {
   if (!callInstr)
     return;
 
-  auto *betNode = parseArithmetic(callInstr);
-  betNode->setVariableId(var->getId());
-  bet->addNode(betNode);
+  auto op = getOperator(callInstr);
+  if (isArithmetic(op)) {
+    auto *betNode = parseArithmetic(callInstr);
+    betNode->setVariableId(var->getId());
+    bet->addNode(betNode);
+  } else if (isReveal(op)) {
+    bet->addRoot(var->getId(), util::getVar(callInstr->back())->getId());
+    bet->addStopVar(var->getId());
+  }
 }
 
-void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
-  auto *f = util::getFunc(v->getCallee());
-  if (!isPolyOptFunc(f))
-    return;
-  // see(v);
-
-  auto *bf = cast<BodiedFunc>(f);
-  auto *b = cast<SeriesFlow>(bf->getBody());
-
-  auto *bet = new BET();
-  for (auto it = b->begin(); it != b->end(); ++it)
-    parseInstruction(*it, bet);
-  bet->parseVars(bet->root());
-  bet->formPolynomials();
-
-  auto coefs = bet->extractCoefficents(0);
-  auto exps = bet->extractExponents(0);
+CallInstr *nextPolynomialCall(CallInstr *v, BodiedFunc *bf, BET *bet) {
+  // auto *M = v->getModule();
+  // auto *a = M->Nr<VarValue>(bf->arg_back());
+  // std::cout << a << " c " << a->getName() << std::endl;
+  
+  // series->push_back(M->Nr<ReturnInstr>(a));
+  
+  auto polyNode = bet->getNextPolyNode();
+  auto coefs = bet->extractCoefficents(polyNode);
+  auto exps = bet->extractExponents(polyNode);
 
   auto *M = v->getModule();
-  auto *self = v->front();
+  auto *self = M->Nr<VarValue>(bf->arg_front());
+  auto *selfType = self->getType();
   auto *funcType = cast<types::FuncType>(bf->getType());
   auto *returnType = funcType->getReturnType();
-  auto *selfType = self->getType();
   auto *inputsType = getTupleType(bet->getVarsSize(), returnType, M);
   auto *coefsType = getTupleType(coefs.size(), M->getIntType(), M);
   auto *expsType = getTupleType(exps.size(), M->getIntType(), M);
@@ -538,12 +561,14 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
   auto *evalPolyFunc = M->getOrRealizeMethod(
       selfType, "secure_evalp", {selfType, inputsType, coefsType, expsType});
   if (!evalPolyFunc)
-    return;
+    return nullptr;
 
   std::vector<Value *> inputArgs;
-  for (auto *arg : *v)
+  for (auto it = bf->arg_begin(); it != bf->arg_end(); ++it) {
+    auto *arg = M->Nr<VarValue>(*it);
     if (arg->getType()->is(returnType))
       inputArgs.push_back(arg);
+  }
   std::vector<Value *> coefsArgs;
   for (auto e : coefs)
     coefsArgs.push_back(M->getInt(e));
@@ -555,8 +580,63 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
   auto *coefsArg = util::makeTuple(coefsArgs, M);
   auto *expsArg = util::makeTuple(expsArgs, M);
 
-  auto *evalPolyCall = util::call(evalPolyFunc, {self, inputArg, coefsArg, expsArg});
-  v->replaceAll(evalPolyCall);
+  return util::call(evalPolyFunc, {self, inputArg, coefsArg, expsArg});
+}
+
+void convertInstructions(CallInstr *v, BodiedFunc *bf, SeriesFlow *series, BET *bet) {
+  auto it = series->begin();
+  while (it != series->end()) {
+    auto *retIns = cast<ReturnInstr>(*it);
+    if (retIns) {
+      retIns->setValue(nextPolynomialCall(v, bf, bet));
+      ++it;
+      continue;
+    }
+
+    auto *assIns = cast<AssignInstr>(*it);
+    if (!assIns) {
+      ++it;
+      continue;
+    }
+      
+    auto *callInstr = cast<CallInstr>(assIns->getRhs());
+    if (!callInstr) {
+      ++it;
+      continue;
+    }
+
+    auto op = getOperator(callInstr);
+    if (isArithmetic(op)) {
+      it = series->erase(it);
+      continue;
+    }
+
+    if (isReveal(op)) {
+      callInstr->setArgs(
+          {callInstr->front(), nextPolynomialCall(v, bf, bet)});
+      // assIns->setRhs();
+      ++it;
+      continue;
+    }
+  }
+}
+
+void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
+  auto *f = util::getFunc(v->getCallee());
+  if (!isPolyOptFunc(f))
+    return;
+  // see(v);
+
+  auto *bf = cast<BodiedFunc>(f);
+  auto *series = cast<SeriesFlow>(bf->getBody());
+
+  auto *bet = new BET();
+  for (auto it = series->begin(); it != series->end(); ++it)
+    parseInstruction(*it, bet);
+  bet->parseVars(bet->root());
+  bet->formPolynomials();
+
+  convertInstructions(v, bf, series, bet);
 }
 
 void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
