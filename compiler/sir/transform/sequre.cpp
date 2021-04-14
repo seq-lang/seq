@@ -135,6 +135,7 @@ public:
   BETNode *getNextPolyNode();
   std::vector<int64_t> extractCoefficents(BETNode *);
   std::vector<int64_t> extractExponents(BETNode *);
+  std::set<int> extractVars(BETNode *);
   std::vector<std::vector<int64_t>> getPascalMatrix() { return pascalMatrix; }
 
 private:
@@ -145,6 +146,7 @@ private:
   void formPolynomial(BETNode *);
   void extractCoefficents(BETNode *, std::vector<int64_t> &);
   void extractExponents(BETNode *, std::vector<int64_t> &);
+  void extractVars(BETNode *, std::set<int> &);
   void parseExponents(BETNode *, std::map<int, int64_t> &);
   void updatePascalMatrix(int64_t);
   BETNode *getMulTree(BETNode *, BETNode *, int64_t, int64_t);
@@ -271,6 +273,20 @@ void BET::extractExponents(BETNode *betNode, std::vector<int64_t> &exponents) {
   auto *rc = betNode->getRightChild();
   extractExponents(lc, exponents);
   extractExponents(rc, exponents);
+}
+
+void BET::extractVars(BETNode *betNode, std::set<int> &vars) {
+  if (betNode->isConstant())
+    return;
+  if (betNode->isLeaf()) {
+    vars.insert(betNode->getVariableId());
+    return;
+  }
+    
+  auto *lc = betNode->getLeftChild();
+  auto *rc = betNode->getRightChild();
+  extractVars(lc, vars);
+  extractVars(rc, vars);
 }
 
 void BET::parseExponents(BETNode *betNode, std::map<int, int64_t> &termExponents) {
@@ -438,6 +454,12 @@ std::vector<int64_t> BET::extractExponents(BETNode *betNode) {
   return exponents;
 }
 
+std::set<int> BET::extractVars(BETNode *betNode) {
+  std::set<int> varIds;
+  extractVars(betNode, varIds);
+  return varIds;
+}
+
 bool isArithmetic(int op) { return op && op < 4; }
 bool isReveal(int op) { return op == 4; }
 
@@ -542,13 +564,14 @@ CallInstr *nextPolynomialCall(CallInstr *v, BodiedFunc *bf, BET *bet) {
   auto polyNode = bet->getNextPolyNode();
   auto coefs = bet->extractCoefficents(polyNode);
   auto exps = bet->extractExponents(polyNode);
+  auto vars = bet->extractVars(polyNode);
 
   auto *M = v->getModule();
   auto *self = M->Nr<VarValue>(bf->arg_front());
   auto *selfType = self->getType();
   auto *funcType = cast<types::FuncType>(bf->getType());
   auto *returnType = funcType->getReturnType();
-  auto *inputsType = getTupleType(bet->getVarsSize(), returnType, M);
+  auto *inputsType = getTupleType(vars.size(), returnType, M);
   auto *coefsType = getTupleType(coefs.size(), M->getIntType(), M);
   auto *expsType = getTupleType(exps.size(), M->getIntType(), M);
 
@@ -558,9 +581,10 @@ CallInstr *nextPolynomialCall(CallInstr *v, BodiedFunc *bf, BET *bet) {
 
   std::vector<Value *> inputArgs;
   for (auto it = bf->arg_begin(); it != bf->arg_end(); ++it) {
+    if (vars.find((*it)->getId()) == vars.end())
+      continue;
     auto *arg = M->Nr<VarValue>(*it);
-    if (arg->getType()->is(returnType))
-      inputArgs.push_back(arg);
+    inputArgs.push_back(arg);
   }
   std::vector<Value *> coefsArgs;
   for (auto e : coefs)
