@@ -586,8 +586,7 @@ using wprintf_args = basic_format_args<wprintf_context>;
   \endrst
  */
 template <typename... Args>
-inline format_arg_store<printf_context, Args...>
-make_printf_args(const Args &... args) {
+inline format_arg_store<printf_context, Args...> make_printf_args(const Args &...args) {
   return {args...};
 }
 
@@ -599,7 +598,7 @@ make_printf_args(const Args &... args) {
  */
 template <typename... Args>
 inline format_arg_store<wprintf_context, Args...>
-make_wprintf_args(const Args &... args) {
+make_wprintf_args(const Args &...args) {
   return {args...};
 }
 
@@ -623,7 +622,7 @@ vsprintf(const S &format,
 */
 template <typename S, typename... Args,
           typename Char = enable_if_t<internal::is_string<S>::value, char_t<S>>>
-inline std::basic_string<Char> sprintf(const S &format, const Args &... args) {
+inline std::basic_string<Char> sprintf(const S &format, const Args &...args) {
   using context = basic_printf_context_t<Char>;
   return vsprintf(to_string_view(format), make_format_args<context>(args...));
 }
@@ -651,7 +650,7 @@ vfprintf(std::FILE *f, const S &format,
  */
 template <typename S, typename... Args,
           typename Char = enable_if_t<internal::is_string<S>::value, char_t<S>>>
-inline int fprintf(std::FILE *f, const S &format, const Args &... args) {
+inline int fprintf(std::FILE *f, const S &format, const Args &...args) {
   using context = basic_printf_context_t<Char>;
   return vfprintf(f, to_string_view(format), make_format_args<context>(args...));
 }
@@ -673,7 +672,7 @@ vprintf(const S &format,
   \endrst
  */
 template <typename S, typename... Args, FMT_ENABLE_IF(internal::is_string<S>::value)>
-inline int printf(const S &format_str, const Args &... args) {
+inline int printf(const S &format_str, const Args &...args) {
   using context = basic_printf_context_t<char_t<S>>;
   return vprintf(to_string_view(format_str), make_format_args<context>(args...));
 }
@@ -711,7 +710,7 @@ vprintf(internal::buffer<Char> &out, basic_string_view<Char> format_str,
  */
 template <typename S, typename... Args, typename Char = char_t<S>>
 inline int fprintf(std::basic_ostream<Char> &os, const S &format_str,
-                   const Args &... args) {
+                   const Args &...args) {
   using context = basic_printf_context_t<Char>;
   return vfprintf(os, to_string_view(format_str), make_format_args<context>(args...));
 }
