@@ -1680,6 +1680,37 @@ void LLVMVisitor::visit(const ForFlow *x) {
   block = exitBlock;
 }
 
+void LLVMVisitor::visit(const ImperativeForFlow *x) {
+  llvm::Type *loopVarType = getLLVMType(x->getVar()->getType());
+  llvm::Value *loopVar = vars[x->getVar()];
+  seqassert(loopVar, "{} loop variable not found", *x);
+
+  auto *condBlock = llvm::BasicBlock::Create(context, "imp_for.cond", func);
+  auto *bodyBlock = llvm::BasicBlock::Create(context, "imp_for.body", func);
+  auto *exitBlock = llvm::BasicBlock::Create(context, "imp_for.exit", func);
+
+  builder.CreateStore(loopVar, builder.getInt64(x->getStart()));
+  builder.CreateBr(condBlock);
+
+  block = condBlock;
+  builder.SetInsertPoint(block);
+
+  llvm::Value *done =
+      builder.CreateICmpSGE(builder.CreateLoad(loopVar), builder.getInt64(x->getEnd()));
+  builder.CreateCondBr(done, exitBlock, bodyBlock);
+
+  block = bodyBlock;
+  enterLoop({/*breakBlock=*/exitBlock, /*continueBlock=*/condBlock});
+  process(x->getBody());
+  exitLoop();
+  builder.SetInsertPoint(block);
+  builder.CreateStore(loopVar, builder.CreateAdd(builder.CreateLoad(loopVar),
+                                                 builder.getInt64(x->getStep())));
+  builder.CreateBr(condBlock);
+
+  block = exitBlock;
+}
+
 namespace {
 bool anyMatch(types::Type *type, std::vector<types::Type *> types) {
   if (type) {

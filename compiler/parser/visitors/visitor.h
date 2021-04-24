@@ -113,7 +113,7 @@ struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
   }
 
   /// Convenience method that constructs a node with the visitor's source location.
-  template <typename Tn, typename... Ts> auto N(Ts &&...args) {
+  template <typename Tn, typename... Ts> auto N(Ts &&... args) {
     auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
     t->setSrcInfo(getSrcInfo());
     return t;
@@ -122,26 +122,26 @@ struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
   /// Convenience method that constructs a node.
   /// @param s source location.
   template <typename Tn, typename... Ts>
-  auto Nx(const seq::SrcObject *s, Ts &&...args) {
+  auto Nx(const seq::SrcObject *s, Ts &&... args) {
     auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
     t->setSrcInfo(s->getSrcInfo());
     return t;
   }
 
   /// Convenience method that raises an error at the current source location.
-  template <typename... TArgs> void error(const char *format, TArgs &&...args) {
+  template <typename... TArgs> void error(const char *format, TArgs &&... args) {
     ast::error(getSrcInfo(), fmt::format(format, args...).c_str());
   }
 
   /// Convenience method that raises an error at the source location of p.
   template <typename T, typename... TArgs>
-  void error(const T &p, const char *format, TArgs &&...args) {
+  void error(const T &p, const char *format, TArgs &&... args) {
     ast::error(p->getSrcInfo(), fmt::format(format, args...).c_str());
   }
 
   /// Convenience method that raises an internal error.
   template <typename T, typename... TArgs>
-  void internalError(const char *format, TArgs &&...args) {
+  void internalError(const char *format, TArgs &&... args) {
     throw exc::ParserException(
         fmt::format("INTERNAL: {}", fmt::format(format, args...), getSrcInfo()));
   }

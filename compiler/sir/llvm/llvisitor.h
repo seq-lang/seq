@@ -238,6 +238,7 @@ public:
   void visit(const IfFlow *) override;
   void visit(const WhileFlow *) override;
   void visit(const ForFlow *) override;
+  void visit(const ImperativeForFlow *) override;
   void visit(const TryCatchFlow *) override;
   void visit(const PipelineFlow *) override;
   void visit(const dsl::CustomFlow *) override;

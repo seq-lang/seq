@@ -76,6 +76,7 @@ public:
   LAMBDA_VISIT(IfFlow);
   LAMBDA_VISIT(WhileFlow);
   LAMBDA_VISIT(ForFlow);
+  LAMBDA_VISIT(ImperativeForFlow);
   LAMBDA_VISIT(TryCatchFlow);
   LAMBDA_VISIT(PipelineFlow);
   LAMBDA_VISIT(dsl::CustomFlow);

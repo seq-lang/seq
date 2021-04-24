@@ -125,10 +125,9 @@ public:
   static const char NodeId;
 
   /// Constructs a for loop.
-  /// @param setup the setup
   /// @param iter the iterator
   /// @param body the body
-  /// @param update the update
+  /// @param var the variable
   /// @param name the flow's name
   ForFlow(Value *iter, Flow *body, Var *var, std::string name = "")
       : AcceptorExtend(std::move(name)), iter(iter), body(body), var(var) {}
@@ -159,6 +158,79 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {iter, body}; }
+  int doReplaceUsedValue(int id, Value *newValue) override;
+
+  std::vector<Var *> doGetUsedVariables() const override { return {var}; }
+  int doReplaceUsedVariable(int id, Var *newVar) override;
+};
+
+/// Flow representing an imperative for loop.
+class ImperativeForFlow : public AcceptorExtend<ImperativeForFlow, Flow> {
+private:
+  /// the initial value
+  seq_int_t start;
+  /// the step value
+  seq_int_t step;
+  /// the step value
+  seq_int_t end;
+
+  /// the body
+  Value *body;
+
+  /// the variable, must be integer type
+  Var *var;
+
+public:
+  static const char NodeId;
+
+  /// Constructs an imperative for loop.
+  /// @param body the body
+  /// @param start the start value
+  /// @param step the step value
+  /// @param end the end value
+  /// @param var the end variable, must be integer
+  /// @param name the flow's name
+  ImperativeForFlow(seq_int_t start, seq_int_t step, seq_int_t end, Flow *body,
+                    Var *var, std::string name = "")
+      : AcceptorExtend(std::move(name)), start(start), step(step), end(end), body(body),
+        var(var) {}
+
+  /// @return the start value
+  seq_int_t getStart() const { return start; }
+  /// Sets the start value.
+  /// @param v the new value
+  void setStart(seq_int_t val) { start = val; }
+
+  /// @return the step value
+  seq_int_t getStep() const { return step; }
+  /// Sets the step value.
+  /// @param v the new value
+  void setStep(seq_int_t val) { step = val; }
+
+  /// @return the end value
+  seq_int_t getEnd() const { return end; }
+  /// Sets the end value.
+  /// @param v the new value
+  void setEnd(seq_int_t val) { end = val; }
+
+  /// @return the body
+  Flow *getBody() { return cast<Flow>(body); }
+  /// @return the body
+  const Flow *getBody() const { return cast<Flow>(body); }
+  /// Sets the body.
+  /// @param f the new body
+  void setBody(Flow *f) { body = f; }
+
+  /// @return the var
+  Var *getVar() { return var; }
+  /// @return the var
+  const Var *getVar() const { return var; }
+  /// Sets the var.
+  /// @param c the new var
+  void setVar(Var *c) { var = c; }
+
+protected:
+  std::vector<Value *> doGetUsedValues() const override { return {body}; }
   int doReplaceUsedValue(int id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {var}; }
@@ -322,7 +394,7 @@ public:
 
   /// Emplaces a catch.
   /// @tparam Args the catch constructor args
-  template <typename... Args> void emplace_back(Args &&...args) {
+  template <typename... Args> void emplace_back(Args &&... args) {
     catches.emplace_back(std::forward<Args>(args)...);
   }
 
@@ -478,7 +550,7 @@ public:
 
   /// Emplaces a stage.
   /// @param args the args
-  template <typename... Args> void emplace_back(Args &&...args) {
+  template <typename... Args> void emplace_back(Args &&... args) {
     stages.emplace_back(std::forward<Args>(args)...);
   }
 
