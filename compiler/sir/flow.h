@@ -168,11 +168,11 @@ protected:
 class ImperativeForFlow : public AcceptorExtend<ImperativeForFlow, Flow> {
 private:
   /// the initial value
-  seq_int_t start;
+  Value *start;
   /// the step value
   seq_int_t step;
-  /// the step value
-  seq_int_t end;
+  /// the end value
+  Value *end;
 
   /// the body
   Value *body;
@@ -190,16 +190,16 @@ public:
   /// @param end the end value
   /// @param var the end variable, must be integer
   /// @param name the flow's name
-  ImperativeForFlow(seq_int_t start, seq_int_t step, seq_int_t end, Flow *body,
-                    Var *var, std::string name = "")
+  ImperativeForFlow(Value *start, seq_int_t step, Value *end, Flow *body, Var *var,
+                    std::string name = "")
       : AcceptorExtend(std::move(name)), start(start), step(step), end(end), body(body),
         var(var) {}
 
   /// @return the start value
-  seq_int_t getStart() const { return start; }
+  Value *getStart() const { return start; }
   /// Sets the start value.
   /// @param v the new value
-  void setStart(seq_int_t val) { start = val; }
+  void setStart(Value *val) { start = val; }
 
   /// @return the step value
   seq_int_t getStep() const { return step; }
@@ -208,10 +208,10 @@ public:
   void setStep(seq_int_t val) { step = val; }
 
   /// @return the end value
-  seq_int_t getEnd() const { return end; }
+  Value *getEnd() const { return end; }
   /// Sets the end value.
   /// @param v the new value
-  void setEnd(seq_int_t val) { end = val; }
+  void setEnd(Value *val) { end = val; }
 
   /// @return the body
   Flow *getBody() { return cast<Flow>(body); }

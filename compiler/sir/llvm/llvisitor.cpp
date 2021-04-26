@@ -1681,7 +1681,6 @@ void LLVMVisitor::visit(const ForFlow *x) {
 }
 
 void LLVMVisitor::visit(const ImperativeForFlow *x) {
-  llvm::Type *loopVarType = getLLVMType(x->getVar()->getType());
   llvm::Value *loopVar = vars[x->getVar()];
   seqassert(loopVar, "{} loop variable not found", *x);
 
@@ -1689,14 +1688,16 @@ void LLVMVisitor::visit(const ImperativeForFlow *x) {
   auto *bodyBlock = llvm::BasicBlock::Create(context, "imp_for.body", func);
   auto *exitBlock = llvm::BasicBlock::Create(context, "imp_for.exit", func);
 
-  builder.CreateStore(loopVar, builder.getInt64(x->getStart()));
+  process(x->getStart());
+  builder.CreateStore(loopVar, value);
+  process(x->getEnd());
+  auto *end = value;
   builder.CreateBr(condBlock);
 
   block = condBlock;
   builder.SetInsertPoint(block);
 
-  llvm::Value *done =
-      builder.CreateICmpSGE(builder.CreateLoad(loopVar), builder.getInt64(x->getEnd()));
+  llvm::Value *done = builder.CreateICmpSGE(builder.CreateLoad(loopVar), end);
   builder.CreateCondBr(done, exitBlock, bodyBlock);
 
   block = bodyBlock;

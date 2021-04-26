@@ -109,8 +109,8 @@ public:
   VISIT(ImperativeForFlow);
   void handle(const ImperativeForFlow *x, const ImperativeForFlow *y) {
     result = process(x->getVar(), y->getVar()) && process(x->getBody(), y->getBody()) &&
-             x->getStart() == y->getStart() && x->getStep() == y->getStep() &&
-             x->getEnd() == y->getEnd();
+             process(x->getStart(), y->getStart()) && x->getStep() == y->getStep() &&
+             process(x->getEnd(), y->getEnd());
   }
   VISIT(TryCatchFlow);
   void handle(const TryCatchFlow *x, const TryCatchFlow *y) {

@@ -129,8 +129,8 @@ void CloneVisitor::visit(const ForFlow *v) {
 }
 
 void CloneVisitor::visit(const ImperativeForFlow *v) {
-  result = Nt(v, v->getStart(), v->getStep(), v->getEnd(), clone(v->getBody()),
-              clone(v->getVar()));
+  result = Nt(v, clone(v->getStart()), v->getStep(), clone(v->getEnd()),
+              clone(v->getBody()), clone(v->getVar()));
 }
 
 void CloneVisitor::visit(const TryCatchFlow *v) {
