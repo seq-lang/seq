@@ -1689,7 +1689,7 @@ void LLVMVisitor::visit(const ImperativeForFlow *x) {
   auto *exitBlock = llvm::BasicBlock::Create(context, "imp_for.exit", func);
 
   process(x->getStart());
-  builder.CreateStore(loopVar, value);
+  builder.CreateStore(value, loopVar);
   process(x->getEnd());
   auto *end = value;
   builder.CreateBr(condBlock);
@@ -1697,7 +1697,15 @@ void LLVMVisitor::visit(const ImperativeForFlow *x) {
   block = condBlock;
   builder.SetInsertPoint(block);
 
-  llvm::Value *done = builder.CreateICmpSGE(builder.CreateLoad(loopVar), end);
+  auto step = x->getStep();
+  seqassert(step != 0, "step cannot be 0");
+
+  llvm::Value *done;
+  if (x->getStep() > 0)
+    done = builder.CreateICmpSGE(builder.CreateLoad(loopVar), end);
+  else
+    done = builder.CreateICmpSLE(builder.CreateLoad(loopVar), end);
+
   builder.CreateCondBr(done, exitBlock, bodyBlock);
 
   block = bodyBlock;
@@ -1705,8 +1713,9 @@ void LLVMVisitor::visit(const ImperativeForFlow *x) {
   process(x->getBody());
   exitLoop();
   builder.SetInsertPoint(block);
-  builder.CreateStore(loopVar, builder.CreateAdd(builder.CreateLoad(loopVar),
-                                                 builder.getInt64(x->getStep())));
+  builder.CreateStore(
+      builder.CreateAdd(builder.CreateLoad(loopVar), builder.getInt64(x->getStep())),
+      loopVar);
   builder.CreateBr(condBlock);
 
   block = exitBlock;
