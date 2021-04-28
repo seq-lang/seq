@@ -26,7 +26,7 @@ PluginManager::Error PluginManager::load(const std::string &path) {
 
   dsl->addIRPasses(pm);
   // TODO: register new keywords
-  plugins.push_back({std::move(dsl), path});
+  plugins.push_back({std::move(dsl), path, handle});
 
   return Error::NONE;
 }
