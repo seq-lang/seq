@@ -117,6 +117,8 @@ include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
 set(SEQ_HPPFILES
+        compiler/dsl/dsl.h
+        compiler/dsl/plugins.h
         compiler/parser/ast.h
         compiler/parser/ast/expr.h
         compiler/parser/ast/stmt.h
@@ -181,6 +183,7 @@ set(SEQ_HPPFILES
         compiler/util/fmt/printf.h
         compiler/util/fmt/ranges.h)
 set(SEQ_CPPFILES
+        compiler/dsl/plugins.cpp
         compiler/parser/ast/expr.cpp
         compiler/parser/ast/stmt.cpp
         compiler/parser/ast/types.cpp
