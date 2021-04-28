@@ -79,7 +79,7 @@ public:
   ///        to their string and integer values.
   static StmtPtr apply(shared_ptr<Cache> cache, const unique_ptr<Stmt> &node,
                        const string &file,
-                       unordered_map<string, pair<string, seq_int_t>> &defines,
+                       unordered_map<string, pair<string, int64_t>> &defines,
                        bool barebones = false);
 
   /// Static method that applies SimplifyStage on a given AST node after the standard

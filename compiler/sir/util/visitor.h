@@ -4,8 +4,6 @@
 #include <stdexcept>
 #include <string>
 
-#include "runtime/lib.h"
-
 #define DEFAULT_VISIT(x)                                                               \
   virtual void defaultVisit(seq::ir::x *) {                                            \
     throw std::runtime_error("cannot visit node");                                     \

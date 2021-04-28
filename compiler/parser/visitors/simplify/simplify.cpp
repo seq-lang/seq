@@ -35,7 +35,7 @@ using namespace types;
 
 StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
                                const string &file,
-                               unordered_map<string, pair<string, seq_int_t>> &defines,
+                               unordered_map<string, pair<string, int64_t>> &defines,
                                bool barebones) {
   vector<StmtPtr> stmts;
   auto preamble = make_shared<Preamble>();
@@ -132,7 +132,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   ctx->setFilename(file);
   ctx->moduleName = {ImportFile::PACKAGE, file, MODULE_MAIN};
   // Load the command-line defines.
-  unordered_map<string, pair<string, seq_int_t>> newDefines;
+  unordered_map<string, pair<string, int64_t>> newDefines;
   for (auto &d : defines) {
     try {
       auto canName = ctx->generateCanonicalName(d.first);

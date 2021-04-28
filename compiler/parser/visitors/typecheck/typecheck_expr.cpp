@@ -682,7 +682,7 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
 }
 
 namespace {
-seq_int_t translateIndex(seq_int_t idx, seq_int_t len, bool clamp = false) {
+int64_t translateIndex(int64_t idx, int64_t len, bool clamp = false) {
   if (idx < 0)
     idx += len;
 
@@ -699,8 +699,8 @@ seq_int_t translateIndex(seq_int_t idx, seq_int_t len, bool clamp = false) {
   return idx;
 }
 
-seq_int_t sliceAdjustIndices(seq_int_t length, seq_int_t *start, seq_int_t *stop,
-                             seq_int_t step) {
+int64_t sliceAdjustIndices(int64_t length, int64_t *start, int64_t *stop,
+                           int64_t step) {
   if (step == 0)
     throw exc::SeqException("slice step cannot be 0");
 
@@ -746,7 +746,7 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
     return nullptr;
 
   // Extract a static integer value from a compatible expression.
-  auto getInt = [](seq_int_t *o, const ExprPtr &e) {
+  auto getInt = [](int64_t *o, const ExprPtr &e) {
     if (!e)
       return true;
     if (e->isStaticExpr) {
@@ -765,7 +765,7 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
   seqassert(classItem != ctx->cache->classes.end(), "cannot find class '{}'",
             tuple->name);
   auto sz = classItem->second.fields.size();
-  seq_int_t start = 0, stop = sz, step = 1;
+  int64_t start = 0, stop = sz, step = 1;
   if (getInt(&start, index)) {
     int i = translateIndex(start, stop);
     if (i < 0 || i >= stop)

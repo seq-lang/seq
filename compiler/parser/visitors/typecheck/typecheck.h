@@ -34,8 +34,8 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
 
 public:
   static StmtPtr apply(shared_ptr<Cache> cache, StmtPtr stmts,
-                       const unordered_map<string, pair<string, seq_int_t>> &defines =
-                           unordered_map<string, pair<string, seq_int_t>>());
+                       const unordered_map<string, pair<string, int64_t>> &defines =
+                           unordered_map<string, pair<string, int64_t>>());
 
 public:
   explicit TypecheckVisitor(shared_ptr<TypeContext> ctx,

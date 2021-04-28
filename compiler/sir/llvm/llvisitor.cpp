@@ -29,6 +29,8 @@ extern llvm::cl::opt<bool> fastOpenMP;
 
 extern "C" void seq_gc_add_roots(void *start, void *end);
 extern "C" void seq_gc_remove_roots(void *start, void *end);
+extern "C" int64_t seq_exc_offset();
+extern "C" uint64_t seq_exc_class();
 
 namespace seq {
 namespace ir {
