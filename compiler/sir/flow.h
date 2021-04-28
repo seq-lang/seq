@@ -170,7 +170,7 @@ private:
   /// the initial value
   Value *start;
   /// the step value
-  seq_int_t step;
+  int64_t step;
   /// the end value
   Value *end;
 
@@ -190,7 +190,7 @@ public:
   /// @param end the end value
   /// @param var the end variable, must be integer
   /// @param name the flow's name
-  ImperativeForFlow(Value *start, seq_int_t step, Value *end, Flow *body, Var *var,
+  ImperativeForFlow(Value *start, int64_t step, Value *end, Flow *body, Var *var,
                     std::string name = "")
       : AcceptorExtend(std::move(name)), start(start), step(step), end(end), body(body),
         var(var) {}
@@ -202,10 +202,10 @@ public:
   void setStart(Value *val) { start = val; }
 
   /// @return the step value
-  seq_int_t getStep() const { return step; }
+  int64_t getStep() const { return step; }
   /// Sets the step value.
   /// @param v the new value
-  void setStep(seq_int_t val) { step = val; }
+  void setStep(int64_t val) { step = val; }
 
   /// @return the end value
   Value *getEnd() const { return end; }

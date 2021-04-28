@@ -1,0 +1,18 @@
+@extend
+class range:
+  def __iter__(self):
+    assert False
+
+@test
+def test_for():
+    x = 0
+    for i in range(10):
+      x = i
+    assert x == 9
+    for i in range(-1, 7):
+      x = i
+    assert x == 6
+    for i in range(-1, 7, 3):
+      x = i
+    assert x == 5
+test_for()

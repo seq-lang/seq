@@ -43,7 +43,7 @@ void ImperativeForFlowLowering::handle(ForFlow *v) {
   IntConst *stepConst;
   Value *start;
   Value *end;
-  seq_int_t step = 0;
+  int64_t step = 0;
 
   switch (argCount) {
   case 1:
