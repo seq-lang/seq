@@ -67,7 +67,8 @@ void ImperativeForFlowLowering::handle(ForFlow *v) {
   default:
     seqassert(false, "unknown range constructor");
   }
-  seqassert(step, "zero step not allowed");
+  if (step == 0)
+    return;
 
   v->replaceAll(M->N<ImperativeForFlow>(v->getSrcInfo(), start, step, end, v->getBody(),
                                         v->getVar()));

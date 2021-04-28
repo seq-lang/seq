@@ -2,6 +2,7 @@
 class range:
   def __iter__(self):
     assert False
+    yield 1
 
 @test
 def test_for():

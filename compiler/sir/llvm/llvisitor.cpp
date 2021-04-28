@@ -1686,6 +1686,7 @@ void LLVMVisitor::visit(const ImperativeForFlow *x) {
 
   auto *condBlock = llvm::BasicBlock::Create(context, "imp_for.cond", func);
   auto *bodyBlock = llvm::BasicBlock::Create(context, "imp_for.body", func);
+  auto *updateBlock = llvm::BasicBlock::Create(context, "imp_for.update", func);
   auto *exitBlock = llvm::BasicBlock::Create(context, "imp_for.exit", func);
 
   process(x->getStart());
@@ -1709,9 +1710,13 @@ void LLVMVisitor::visit(const ImperativeForFlow *x) {
   builder.CreateCondBr(done, exitBlock, bodyBlock);
 
   block = bodyBlock;
-  enterLoop({/*breakBlock=*/exitBlock, /*continueBlock=*/condBlock});
+  enterLoop({/*breakBlock=*/exitBlock, /*continueBlock=*/updateBlock});
   process(x->getBody());
   exitLoop();
+  builder.SetInsertPoint(block);
+  builder.CreateBr(updateBlock);
+
+  block = updateBlock;
   builder.SetInsertPoint(block);
   builder.CreateStore(
       builder.CreateAdd(builder.CreateLoad(loopVar), builder.getInt64(x->getStep())),
