@@ -1,5 +1,6 @@
 #include "parser/parser.h"
 #include "sir/llvm/llvisitor.h"
+#include "sir/transform/lowering/imperative.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pipeline.h"
 #include "sir/transform/pythonic/dict.h"
@@ -38,6 +39,10 @@ void registerStandardPasses(seq::ir::transform::PassManager &pm, bool debug) {
 
   pm.registerPass("pythonic-io-cat-opt",
                   std::make_unique<seq::ir::transform::pythonic::IOCatOptimization>());
+
+  pm.registerPass("lowering-for-flow",
+                std::make_unique<seq::ir::transform::lowering::ImperativeForFlowLowering>());
+
 }
 
 const std::vector<std::string> &supportedExtensions() {
