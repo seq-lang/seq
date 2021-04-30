@@ -92,8 +92,9 @@ void registerStandardPasses(ir::transform::PassManager &pm) {
       std::make_unique<seq::ir::transform::pythonic::StrAdditionOptimization>());
   pm.registerPass("pythonic-io-cat-opt",
                   std::make_unique<seq::ir::transform::pythonic::IOCatOptimization>());
-  pm.registerPass("lowering-for-flow",
-                std::make_unique<seq::ir::transform::lowering::ImperativeForFlowLowering>());
+  pm.registerPass(
+      "lowering-for-flow",
+      std::make_unique<seq::ir::transform::lowering::ImperativeForFlowLowering>());
 }
 
 string argv0;

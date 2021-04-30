@@ -40,9 +40,9 @@ void registerStandardPasses(seq::ir::transform::PassManager &pm, bool debug) {
   pm.registerPass("pythonic-io-cat-opt",
                   std::make_unique<seq::ir::transform::pythonic::IOCatOptimization>());
 
-  pm.registerPass("lowering-for-flow",
-                std::make_unique<seq::ir::transform::lowering::ImperativeForFlowLowering>());
-
+  pm.registerPass(
+      "lowering-for-flow",
+      std::make_unique<seq::ir::transform::lowering::ImperativeForFlowLowering>());
 }
 
 const std::vector<std::string> &supportedExtensions() {
