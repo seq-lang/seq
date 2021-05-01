@@ -5,17 +5,16 @@
 namespace seq {
 namespace ir {
 namespace transform {
-namespace cleanup {
+namespace lowering {
 
-/// Cleanup pass that physically replaces nodes.
-class ReplaceCleanupPass : public Pass {
+class ImperativeForFlowLowering : public OperatorPass {
 public:
-  const std::string KEY = "core-replace-cleanup";
+  const std::string KEY = "core-imperative-for-lowering";
   std::string getKey() const override { return KEY; }
-  void run(Module *module) override;
+  void handle(ForFlow *v) override;
 };
 
-} // namespace cleanup
+} // namespace lowering
 } // namespace transform
 } // namespace ir
 } // namespace seq

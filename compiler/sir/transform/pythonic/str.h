@@ -10,6 +10,8 @@ namespace pythonic {
 /// Pass to optimize str1 + str2 + ...
 class StrAdditionOptimization : public OperatorPass {
 public:
+  const std::string KEY = "core-pythonic-str-addition-opt";
+  std::string getKey() const override { return KEY; }
   void handle(CallInstr *v) override;
 };
 

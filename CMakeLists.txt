@@ -152,6 +152,7 @@ set(SEQ_HPPFILES
         compiler/sir/module.h
         compiler/sir/sir.h
         compiler/sir/transform/cleanup/replacer.h
+        compiler/sir/transform/lowering/imperative.h
         compiler/sir/transform/manager.h
         compiler/sir/transform/pass.h
         compiler/sir/transform/pipeline.h
@@ -216,6 +217,7 @@ set(SEQ_CPPFILES
         compiler/sir/llvm/revcomp.cpp
         compiler/sir/module.cpp
         compiler/sir/transform/cleanup/replacer.cpp
+        compiler/sir/transform/lowering/imperative.cpp
         compiler/sir/transform/manager.cpp
         compiler/sir/transform/pipeline.cpp
         compiler/sir/transform/pythonic/dict.cpp

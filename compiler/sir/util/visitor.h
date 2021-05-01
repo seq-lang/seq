@@ -69,6 +69,7 @@ class SeriesFlow;
 class IfFlow;
 class WhileFlow;
 class ForFlow;
+class ImperativeForFlow;
 class TryCatchFlow;
 class PipelineFlow;
 
@@ -118,6 +119,7 @@ public:
   VISIT(IfFlow);
   VISIT(WhileFlow);
   VISIT(ForFlow);
+  VISIT(ImperativeForFlow);
   VISIT(TryCatchFlow);
   VISIT(PipelineFlow);
   VISIT(dsl::CustomFlow);
@@ -186,6 +188,7 @@ public:
   CONST_VISIT(IfFlow);
   CONST_VISIT(WhileFlow);
   CONST_VISIT(ForFlow);
+  CONST_VISIT(ImperativeForFlow);
   CONST_VISIT(TryCatchFlow);
   CONST_VISIT(PipelineFlow);
   CONST_VISIT(dsl::CustomFlow);

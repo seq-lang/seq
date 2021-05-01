@@ -1682,6 +1682,52 @@ void LLVMVisitor::visit(const ForFlow *x) {
   block = exitBlock;
 }
 
+void LLVMVisitor::visit(const ImperativeForFlow *x) {
+  llvm::Value *loopVar = vars[x->getVar()];
+  seqassert(loopVar, "{} loop variable not found", *x);
+
+  auto *condBlock = llvm::BasicBlock::Create(context, "imp_for.cond", func);
+  auto *bodyBlock = llvm::BasicBlock::Create(context, "imp_for.body", func);
+  auto *updateBlock = llvm::BasicBlock::Create(context, "imp_for.update", func);
+  auto *exitBlock = llvm::BasicBlock::Create(context, "imp_for.exit", func);
+
+  process(x->getStart());
+  builder.CreateStore(value, loopVar);
+  process(x->getEnd());
+  auto *end = value;
+  builder.CreateBr(condBlock);
+
+  block = condBlock;
+  builder.SetInsertPoint(block);
+
+  auto step = x->getStep();
+  seqassert(step != 0, "step cannot be 0");
+
+  llvm::Value *done;
+  if (x->getStep() > 0)
+    done = builder.CreateICmpSGE(builder.CreateLoad(loopVar), end);
+  else
+    done = builder.CreateICmpSLE(builder.CreateLoad(loopVar), end);
+
+  builder.CreateCondBr(done, exitBlock, bodyBlock);
+
+  block = bodyBlock;
+  enterLoop({/*breakBlock=*/exitBlock, /*continueBlock=*/updateBlock});
+  process(x->getBody());
+  exitLoop();
+  builder.SetInsertPoint(block);
+  builder.CreateBr(updateBlock);
+
+  block = updateBlock;
+  builder.SetInsertPoint(block);
+  builder.CreateStore(
+      builder.CreateAdd(builder.CreateLoad(loopVar), builder.getInt64(x->getStep())),
+      loopVar);
+  builder.CreateBr(condBlock);
+
+  block = exitBlock;
+}
+
 namespace {
 bool anyMatch(types::Type *type, std::vector<types::Type *> types) {
   if (type) {

@@ -78,6 +78,26 @@ int ForFlow::doReplaceUsedVariable(int id, Var *newVar) {
   return 0;
 }
 
+const char ImperativeForFlow::NodeId = 0;
+
+int ImperativeForFlow::doReplaceUsedValue(int id, Value *newValue) {
+  if (body->getId() == id) {
+    auto *f = cast<Flow>(newValue);
+    seqassert(f, "{} is not a flow", *newValue);
+    body = f;
+    return 1;
+  }
+  return 0;
+}
+
+int ImperativeForFlow::doReplaceUsedVariable(int id, Var *newVar) {
+  if (var->getId() == id) {
+    var = newVar;
+    return 1;
+  }
+  return 0;
+}
+
 const char IfFlow::NodeId = 0;
 
 std::vector<Value *> IfFlow::doGetUsedValues() const {

@@ -16,6 +16,7 @@ void Visitor::visit(SeriesFlow *x) { defaultVisit(x); }
 void Visitor::visit(IfFlow *x) { defaultVisit(x); }
 void Visitor::visit(WhileFlow *x) { defaultVisit(x); }
 void Visitor::visit(ForFlow *x) { defaultVisit(x); }
+void Visitor::visit(ImperativeForFlow *x) { defaultVisit(x); }
 void Visitor::visit(TryCatchFlow *x) { defaultVisit(x); }
 void Visitor::visit(PipelineFlow *x) { defaultVisit(x); }
 void Visitor::visit(dsl::CustomFlow *x) { defaultVisit(x); }
@@ -64,6 +65,7 @@ void ConstVisitor::visit(const SeriesFlow *x) { defaultVisit(x); }
 void ConstVisitor::visit(const IfFlow *x) { defaultVisit(x); }
 void ConstVisitor::visit(const WhileFlow *x) { defaultVisit(x); }
 void ConstVisitor::visit(const ForFlow *x) { defaultVisit(x); }
+void ConstVisitor::visit(const ImperativeForFlow *x) { defaultVisit(x); }
 void ConstVisitor::visit(const TryCatchFlow *x) { defaultVisit(x); }
 void ConstVisitor::visit(const PipelineFlow *x) { defaultVisit(x); }
 void ConstVisitor::visit(const dsl::CustomFlow *x) { defaultVisit(x); }
