@@ -17,6 +17,9 @@ private:
 public:
   virtual ~Pass() = default;
 
+  /// @return a unique key for this pass
+  virtual std::string getKey() const = 0;
+
   /// Execute the pass.
   /// @param module the module
   virtual void run(Module *module) = 0;

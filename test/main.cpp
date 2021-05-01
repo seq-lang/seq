@@ -81,22 +81,6 @@ static pair<vector<string>, bool> findExpects(const string &filename, bool isCod
   return {result, isError};
 }
 
-void registerStandardPasses(ir::transform::PassManager &pm) {
-  pm.registerPass("bio-pipeline-opts",
-                  std::make_unique<ir::transform::pipeline::PipelineOptimizations>());
-  pm.registerPass(
-      "pythonic-dict-arithmetic-opt",
-      std::make_unique<seq::ir::transform::pythonic::DictArithmeticOptimization>());
-  pm.registerPass(
-      "pythonic-str-addition-opt",
-      std::make_unique<seq::ir::transform::pythonic::StrAdditionOptimization>());
-  pm.registerPass("pythonic-io-cat-opt",
-                  std::make_unique<seq::ir::transform::pythonic::IOCatOptimization>());
-  pm.registerPass(
-      "lowering-for-flow",
-      std::make_unique<seq::ir::transform::lowering::ImperativeForFlowLowering>());
-}
-
 string argv0;
 
 class SeqTest
@@ -133,7 +117,6 @@ public:
         exit(EXIT_FAILURE);
 
       ir::transform::PassManager pm;
-      registerStandardPasses(pm);
       pm.run(module);
 
       seq::ir::LLVMVisitor visitor(/*debug=*/get<1>(GetParam()));

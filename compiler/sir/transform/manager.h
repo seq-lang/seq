@@ -18,6 +18,22 @@ class Pass;
 /// Utility class to run a series of passes.
 class PassManager {
 private:
+  /// Manager for keys of passes.
+  class KeyManager {
+  private:
+    /// mapping of raw key to number of occurences
+    std::unordered_map<std::string, int> keys;
+
+  public:
+    KeyManager() = default;
+    /// Returns a unique'd key for a given raw key.
+    /// Does so by appending ":<number>" if the key
+    /// has been seen.
+    /// @param key the raw key
+    /// @return the unique'd key
+    std::string getUniqueKey(const std::string &key);
+  };
+
   /// Container for pass metadata.
   struct PassMetadata {
     /// pointer to the pass instance
@@ -37,6 +53,9 @@ private:
     PassMetadata &operator=(PassMetadata &&) = default;
   };
 
+  /// key manager to handle duplicate keys (i.e. passes being added twice)
+  KeyManager km;
+
   /// map of keys to passes
   std::unordered_map<std::string, PassMetadata> passes;
   /// map of keys to analyses
@@ -51,30 +70,33 @@ private:
   std::vector<std::string> disabled;
 
 public:
-  PassManager(const std::vector<std::string> &disabled = {})
-      : passes(), analyses(), executionOrder(), results(), disabled(disabled) {}
+  PassManager(bool addStandardPasses = true,
+              const std::vector<std::string> &disabled = {})
+      : km(), passes(), analyses(), executionOrder(), results(), disabled(disabled) {
+    if (addStandardPasses)
+      registerStandardPasses();
+  }
 
   /// Registers a pass and appends it to the execution order.
-  /// @param key the pass's key
   /// @param pass the pass
   /// @param reqs keys of passes that must be run before the current one
   /// @param invalidates keys of passes that are invalidated by the current one
-  void registerPass(const std::string &key, std::unique_ptr<Pass> pass,
-                    std::vector<std::string> reqs = {},
-                    std::vector<std::string> invalidates = {});
+  /// @return unique'd key for the added pass, or empty string if not added
+  std::string registerPass(std::unique_ptr<Pass> pass,
+                           std::vector<std::string> reqs = {},
+                           std::vector<std::string> invalidates = {});
 
   /// Registers an analysis.
-  /// @param key the analysis's key
   /// @param analysis the analysis
-  void registerAnalysis(const std::string &key,
-                        std::unique_ptr<analyze::Analysis> analysis);
+  /// @return unique'd key for the added analysis, or empty string if not added
+  std::string registerAnalysis(std::unique_ptr<analyze::Analysis> analysis);
 
   /// Run all passes.
   /// @param module the module
   void run(Module *module);
 
   /// Gets the result of a given analysis.
-  /// @param key the analysis key
+  /// @param key the (unique'd) analysis key
   /// @return the result
   analyze::Result *getAnalysisResult(const std::string &key) {
     auto it = results.find(key);
@@ -82,7 +104,7 @@ public:
   }
 
   /// Returns whether a given pass or analysis is disabled.
-  /// @param key the pass or analysis key
+  /// @param key the (unique'd) pass or analysis key
   /// @return true if the pass or analysis is disabled
   bool isDisabled(const std::string &key) {
     return std::find(disabled.begin(), disabled.end(), key) != disabled.end();
@@ -90,6 +112,7 @@ public:
 
 private:
   void runPass(Module *module, const std::string &name);
+  void registerStandardPasses();
 };
 
 } // namespace transform

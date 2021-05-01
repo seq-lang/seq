@@ -19,6 +19,9 @@ class Analysis {
 public:
   virtual ~Analysis() noexcept = default;
 
+  /// @return a unique key for this pass
+  virtual std::string getKey() const = 0;
+
   /// Execute the analysis.
   /// @param module the module
   virtual std::unique_ptr<Result> run(const Module *module) = 0;

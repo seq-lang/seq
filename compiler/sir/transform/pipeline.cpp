@@ -90,7 +90,7 @@ Value *replaceStageFunc(PipelineFlow::Stage &stage, Func *schedFunc,
  * Substitution optimizations
  */
 
-void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
+void PipelineSubstitutionOptimization::handle(PipelineFlow *p) {
   auto *M = p->getModule();
 
   PipelineFlow::Stage *prev = nullptr;
@@ -228,7 +228,7 @@ struct PrefetchFunctionTransformer : public util::Operator {
   }
 };
 
-void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
+void PipelinePrefetchOptimization::handle(PipelineFlow *p) {
   if (isParallel(p))
     return;
   auto *M = p->getModule();
@@ -487,7 +487,7 @@ struct InterAlignFunctionTransformer : public util::Operator {
   }
 };
 
-void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
+void PipelineInterAlignOptimization::handle(PipelineFlow *p) {
   if (isParallel(p))
     return;
   auto *M = p->getModule();
@@ -590,12 +590,6 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
     }
     prev = &*it;
   }
-}
-
-void PipelineOptimizations::handle(PipelineFlow *x) {
-  applySubstitutionOptimizations(x);
-  applyPrefetchOptimizations(x);
-  applyInterAlignOptimizations(x);
 }
 
 } // namespace pipeline

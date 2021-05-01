@@ -1,11 +1,7 @@
 #include "parser/parser.h"
 #include "sir/llvm/llvisitor.h"
-#include "sir/transform/lowering/imperative.h"
 #include "sir/transform/manager.h"
-#include "sir/transform/pipeline.h"
-#include "sir/transform/pythonic/dict.h"
-#include "sir/transform/pythonic/io.h"
-#include "sir/transform/pythonic/str.h"
+#include "sir/transform/pass.h"
 #include "util/common.h"
 #include "llvm/Support/CommandLine.h"
 #include <algorithm>
@@ -19,30 +15,6 @@ namespace {
 void versMsg(llvm::raw_ostream &out) {
   out << "Seq " << SEQ_VERSION_MAJOR << "." << SEQ_VERSION_MINOR << "."
       << SEQ_VERSION_PATCH << "\n";
-}
-
-void registerStandardPasses(seq::ir::transform::PassManager &pm, bool debug) {
-  if (debug)
-    return;
-
-  pm.registerPass(
-      "bio-pipeline-opts",
-      std::make_unique<seq::ir::transform::pipeline::PipelineOptimizations>());
-
-  pm.registerPass(
-      "pythonic-dict-arithmetic-opt",
-      std::make_unique<seq::ir::transform::pythonic::DictArithmeticOptimization>());
-
-  pm.registerPass(
-      "pythonic-str-addition-opt",
-      std::make_unique<seq::ir::transform::pythonic::StrAdditionOptimization>());
-
-  pm.registerPass("pythonic-io-cat-opt",
-                  std::make_unique<seq::ir::transform::pythonic::IOCatOptimization>());
-
-  pm.registerPass(
-      "lowering-for-flow",
-      std::make_unique<seq::ir::transform::lowering::ImperativeForFlowLowering>());
 }
 
 const std::vector<std::string> &supportedExtensions() {
@@ -141,8 +113,7 @@ ProcessResult processSource(const std::vector<const char *> &args) {
   auto t = std::chrono::high_resolution_clock::now();
 
   std::vector<std::string> disabledOptsVec(disabledOpts);
-  seq::ir::transform::PassManager pm(disabledOptsVec);
-  registerStandardPasses(pm, isDebug);
+  seq::ir::transform::PassManager pm(/*addStandardPasses=*/!isDebug, disabledOptsVec);
   pm.run(module);
   auto visitor = std::make_unique<seq::ir::LLVMVisitor>(isDebug);
   visitor->visit(module);

@@ -9,6 +9,8 @@ namespace lowering {
 
 class ImperativeForFlowLowering : public OperatorPass {
 public:
+  const std::string KEY = "core-imperative-for-lowering";
+  std::string getKey() const override { return KEY; }
   void handle(ForFlow *v) override;
 };
 

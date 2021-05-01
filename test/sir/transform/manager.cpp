@@ -5,6 +5,9 @@
 
 using namespace seq::ir;
 
+std::string ANALYSIS_KEY = "**test_analysis**";
+std::string PASS_KEY = "**test_pass**";
+
 class DummyResult : public analyze::Result {};
 
 class DummyAnalysis : public analyze::Analysis {
@@ -15,6 +18,8 @@ public:
   static int runCounter;
 
   explicit DummyAnalysis(int &counter) : counter(counter) {}
+
+  std::string getKey() const override { return ANALYSIS_KEY; }
 
   std::unique_ptr<analyze::Result> run(const Module *) override {
     runCounter = counter++;
@@ -35,6 +40,8 @@ public:
   explicit DummyPass(int &counter, std::string required)
       : counter(counter), required(std::move(required)) {}
 
+  std::string getKey() const override { return PASS_KEY; }
+
   void run(Module *) override {
     runCounter = counter++;
     ASSERT_TRUE(getAnalysisResult<DummyResult>(required));
@@ -44,13 +51,11 @@ public:
 int DummyPass::runCounter = 0;
 
 TEST_F(SIRCoreTest, PassManagerNoInvalidations) {
-  auto ANALYSIS_KEY = "**test_analysis**";
-  auto PASS_KEY = "**test_pass**";
   int counter = 0;
 
-  auto manager = std::make_unique<transform::PassManager>();
-  manager->registerAnalysis(ANALYSIS_KEY, std::make_unique<DummyAnalysis>(counter));
-  manager->registerPass(PASS_KEY, std::make_unique<DummyPass>(counter, ANALYSIS_KEY),
+  auto manager = std::make_unique<transform::PassManager>(false);
+  manager->registerAnalysis(std::make_unique<DummyAnalysis>(counter));
+  manager->registerPass(std::make_unique<DummyPass>(counter, ANALYSIS_KEY),
                         {ANALYSIS_KEY});
   manager->run(module.get());
 
@@ -59,17 +64,13 @@ TEST_F(SIRCoreTest, PassManagerNoInvalidations) {
 }
 
 TEST_F(SIRCoreTest, PassManagerInvalidations) {
-  auto ANALYSIS_KEY = "**test_analysis**";
-  auto PASS_KEY = "**test_pass**";
-  auto PASS_KEY_2 = "**test_pass2**";
-
   int counter = 0;
 
-  auto manager = std::make_unique<transform::PassManager>();
-  manager->registerAnalysis(ANALYSIS_KEY, std::make_unique<DummyAnalysis>(counter));
-  manager->registerPass(PASS_KEY, std::make_unique<DummyPass>(counter, ANALYSIS_KEY),
+  auto manager = std::make_unique<transform::PassManager>(false);
+  manager->registerAnalysis(std::make_unique<DummyAnalysis>(counter));
+  manager->registerPass(std::make_unique<DummyPass>(counter, ANALYSIS_KEY),
                         {ANALYSIS_KEY}, {ANALYSIS_KEY});
-  manager->registerPass(PASS_KEY_2, std::make_unique<DummyPass>(counter, ANALYSIS_KEY),
+  manager->registerPass(std::make_unique<DummyPass>(counter, ANALYSIS_KEY),
                         {ANALYSIS_KEY});
 
   manager->run(module.get());
