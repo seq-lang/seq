@@ -9,6 +9,9 @@
 #include "sir/sir.h"
 #include "sir/util/iterators.h"
 
+#define DEFAULT_VISIT(x)                                                               \
+  void visit(const x *v) override { defaultInsert(v); }
+
 namespace seq {
 namespace ir {
 namespace analyze {
@@ -261,7 +264,7 @@ public:
 
   /// Emplaces a predecessor.
   /// @param args the args
-  template <typename... Args> void emplace_back(Args &&... args) {
+  template <typename... Args> void emplace_back(Args &&...args) {
     preds.emplace_back(std::forward<Args>(args)...);
   }
 
@@ -281,7 +284,7 @@ private:
   /// a list of synthetic values
   std::list<std::unique_ptr<Value>> syntheticValues;
   /// a map of synthetic values
-  std::unordered_map<int, Value *> syntheticValueMap;
+  std::unordered_map<int, Value *> valueMapping;
   /// a mapping from value id to block
   std::unordered_map<int, CFBlock *> valueLocations;
 
@@ -321,6 +324,10 @@ public:
   /// @param val the value
   /// @return the block
   CFBlock *getBlock(const Value *v) {
+    auto vmIt = valueMapping.find(v->getId());
+    if (vmIt != valueMapping.end())
+      v = vmIt->second;
+
     auto it = valueLocations.find(v->getId());
     return it != valueLocations.end() ? it->second : nullptr;
   }
@@ -328,6 +335,10 @@ public:
   /// @param val the value
   /// @return the block
   const CFBlock *getBlock(const Value *v) const {
+    auto vmIt = valueMapping.find(v->getId());
+    if (vmIt != valueMapping.end())
+      v = vmIt->second;
+
     auto it = valueLocations.find(v->getId());
     return it != valueLocations.end() ? it->second : nullptr;
   }
@@ -344,20 +355,31 @@ public:
     return ret;
   }
 
-  template <typename NodeType, typename... Args> NodeType *N(Args &&... args) {
+  template <typename NodeType, typename... Args> NodeType *N(Args &&...args) {
     auto *ret = new NodeType(std::forward<Args>(args)...);
     syntheticValues.emplace_back(ret);
-    syntheticValueMap[ret->getId()] = ret;
+    valueMapping[ret->getId()] = ret;
     ret->setModule(func->getModule());
     return ret;
+  }
+
+  /// Remaps a value.
+  /// @param id original id
+  /// @param newValue the new value
+  void remapValue(int id, Value *newValue) { valueMapping[id] = newValue; }
+  /// Remaps a value.
+  /// @param original the original value
+  /// @param newValue the new value
+  void remapValue(const Value *original, Value *newValue) {
+    remapValue(original->getId(), newValue);
   }
 
   /// Gets a value by id.
   /// @param id the id
   /// @return the value or nullptr
   Value *getValue(int id) {
-    auto it = syntheticValueMap.find(id);
-    return it != syntheticValueMap.end() ? it->second : func->getModule()->getValue(id);
+    auto it = valueMapping.find(id);
+    return it != valueMapping.end() ? it->second : func->getModule()->getValue(id);
   }
 
   friend class CFBlock;
@@ -383,7 +405,90 @@ public:
   std::unique_ptr<Result> run(const Module *m) override;
 };
 
+class CFVisitor : public util::ConstVisitor {
+private:
+  struct Loop {
+    analyze::dataflow::CFBlock *nextIt;
+    analyze::dataflow::CFBlock *end;
+
+    Loop(analyze::dataflow::CFBlock *nextIt, analyze::dataflow::CFBlock *end)
+        : nextIt(nextIt), end(end) {}
+  };
+
+  analyze::dataflow::CFGraph *graph;
+  std::vector<analyze::dataflow::CFBlock *> tryCatchStack;
+  std::unordered_set<int> seenIds;
+  std::vector<Loop> loopStack;
+
+public:
+  explicit CFVisitor(analyze::dataflow::CFGraph *graph) : graph(graph) {}
+
+  void visit(const BodiedFunc *f) override { process(f->getBody()); }
+
+  DEFAULT_VISIT(VarValue)
+  DEFAULT_VISIT(PointerValue)
+
+  void visit(const SeriesFlow *v) override;
+  void visit(const IfFlow *v) override;
+  void visit(const WhileFlow *v) override;
+  void visit(const ForFlow *v) override;
+  void visit(const ImperativeForFlow *v) override;
+
+  void visit(const TryCatchFlow *v) override;
+  void visit(const PipelineFlow *v) override {
+    // TODO
+    assert(false);
+  }
+  void visit(const dsl::CustomFlow *v) override;
+
+  DEFAULT_VISIT(TemplatedConst<int64_t>);
+  DEFAULT_VISIT(TemplatedConst<double>);
+  DEFAULT_VISIT(TemplatedConst<bool>);
+  DEFAULT_VISIT(TemplatedConst<std::string>);
+  DEFAULT_VISIT(dsl::CustomConst);
+
+  void visit(const AssignInstr *v) override;
+  void visit(const ExtractInstr *v) override;
+  void visit(const InsertInstr *v) override;
+  void visit(const CallInstr *v) override;
+  DEFAULT_VISIT(StackAllocInstr);
+  DEFAULT_VISIT(TypePropertyInstr);
+  DEFAULT_VISIT(YieldInInstr);
+
+  void visit(const TernaryInstr *v) override;
+
+  void visit(const BreakInstr *v) override;
+  void visit(const ContinueInstr *v) override;
+  void visit(const ReturnInstr *v) override;
+  void visit(const YieldInstr *v) override;
+  void visit(const ThrowInstr *v) override;
+  void visit(const FlowInstr *v) override;
+  void visit(const dsl::CustomInstr *v) override;
+
+  template <typename NodeType> void process(const NodeType *v) {
+    if (seenIds.find(v->getId()) != seenIds.end())
+      return;
+    seenIds.insert(v->getId());
+    v->accept(*this);
+  }
+
+  void defaultInsert(const Value *v) {
+    if (tryCatchStack.empty()) {
+      graph->getCurrentBlock()->push_back(v);
+    } else {
+      auto *original = graph->getCurrentBlock();
+      auto *newBlock = graph->newBlock("", true);
+      original->successors_insert(newBlock);
+      newBlock->successors_insert(tryCatchStack.back());
+      graph->getCurrentBlock()->push_back(v);
+    }
+    seenIds.insert(v->getId());
+  }
+};
+
 } // namespace dataflow
 } // namespace analyze
 } // namespace ir
 } // namespace seq
+
+#undef DEFAULT_VISIT

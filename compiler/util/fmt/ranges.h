@@ -209,8 +209,8 @@ private:
 
     formatting_tuple<Char> &formatting;
     std::size_t &i;
-    typename std::add_lvalue_reference<decltype(
-        std::declval<FormatContext>().out())>::type out;
+    typename std::add_lvalue_reference<
+        decltype(std::declval<FormatContext>().out())>::type out;
   };
 
 public:
@@ -318,7 +318,7 @@ private:
   template <typename FormatContext, typename Arg, typename... Args>
   typename FormatContext::iterator format_args(const tuple_arg_join<Char, T...> &value,
                                                FormatContext &ctx, const Arg &arg,
-                                               const Args &... args) {
+                                               const Args &...args) {
     using base = formatter<typename std::decay<Arg>::type, Char>;
     auto out = ctx.out();
     out = base{}.format(arg, ctx);

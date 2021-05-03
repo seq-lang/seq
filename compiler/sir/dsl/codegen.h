@@ -11,7 +11,7 @@ namespace ir {
 
 namespace analyze {
 namespace dataflow {
-class CFGraph;
+class CFVisitor;
 } // namespace dataflow
 } // namespace analyze
 
@@ -50,7 +50,7 @@ struct CFBuilder {
 
   /// Construct the control-flow nodes.
   /// @param graph the graph
-  virtual void buildCFNodes(analyze::dataflow::CFGraph *graph) = 0;
+  virtual void buildCFNodes(analyze::dataflow::CFVisitor *visitor) = 0;
 };
 
 } // namespace codegen

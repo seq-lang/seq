@@ -23,7 +23,7 @@ template <typename Desired> void stripPack(std::vector<Desired *> &dst) {}
 /// @param first the value
 /// @param args the argument pack
 template <typename Desired, typename... Args>
-void stripPack(std::vector<Desired *> &dst, Desired &first, Args &&... args) {
+void stripPack(std::vector<Desired *> &dst, Desired &first, Args &&...args) {
   dst.push_back(&first);
   stripPack<Desired>(dst, std::forward<Args>(args)...);
 }
