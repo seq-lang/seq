@@ -3,7 +3,6 @@
 #include "pass.h"
 #include "sir/transform/lowering/imperative.h"
 #include "sir/transform/manager.h"
-#include "sir/transform/pipeline.h"
 #include "sir/transform/pythonic/dict.h"
 #include "sir/transform/pythonic/io.h"
 #include "sir/transform/pythonic/str.h"
@@ -72,11 +71,6 @@ void PassManager::runPass(Module *module, const std::string &name) {
 }
 
 void PassManager::registerStandardPasses() {
-  // pipelines
-  registerPass(std::make_unique<pipeline::PipelineSubstitutionOptimization>());
-  registerPass(std::make_unique<pipeline::PipelinePrefetchOptimization>());
-  registerPass(std::make_unique<pipeline::PipelineInterAlignOptimization>());
-
   // Pythonic
   registerPass(std::make_unique<pythonic::DictArithmeticOptimization>());
   registerPass(std::make_unique<pythonic::StrAdditionOptimization>());

@@ -218,7 +218,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       if (!in(ctx->cache->pendingRealizations,
               make_pair(type->funcName, type->realizedName()))) {
         if (ast->attributes.has(Attr::Internal)) {
-          // This is either __new__, or Ptr.__new__, or UInt.__revcomp__
+          // This is either __new__, Ptr.__new__, etc.
           r->ir = ctx->cache->module->Nr<ir::InternalFunc>(type->funcName);
         } else if (ast->attributes.has(Attr::LLVM)) {
           r->ir = ctx->cache->module->Nr<ir::LLVMFunc>(type->realizedName());
