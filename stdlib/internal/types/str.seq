@@ -2,7 +2,7 @@ from C import strlen(cobj) -> int
 
 @extend
 class str:
-    @internal
+    @__internal__
     def __new__(l: int, p: Ptr[byte]) -> str:
         pass
     def __new__(p: Ptr[byte], l: int) -> str:

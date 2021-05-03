@@ -398,16 +398,8 @@ void TranslateVisitor::transformFunction(types::FuncType *type, FunctionStmt *as
   // TODO: refactor IR attribute API
   map<string, string> attr;
   attr[".module"] = ast->attributes.module;
-  if (ast->attributes.has(Attr::Prefetch))
-    attr["prefetch"] = "";
-  if (ast->attributes.has(Attr::InterAlign))
-    attr["inter_align"] = "";
-  if (ast->attributes.has(Attr::Export))
-    attr["export"] = "";
-  if (ast->attributes.has(Attr::Inline))
-    attr["inline"] = "";
-  if (ast->attributes.has(Attr::NoInline))
-    attr["no_inline"] = "";
+  for (auto &a : ast->attributes.customAttr)
+    attr[a] = "";
   func->setAttribute(make_unique<ir::KeyValueAttribute>(attr));
   for (int i = 0; i < names.size(); i++)
     func->getArgVar(names[i])->setSrcInfo(ast->args[indices[i]].getSrcInfo());
