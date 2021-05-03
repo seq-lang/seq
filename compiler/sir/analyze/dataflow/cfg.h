@@ -377,6 +377,9 @@ struct CFResult : public Result {
 /// Control-flow analysis that runs on all functions.
 class CFAnalysis : public Analysis {
 public:
+  const std::string KEY = "core-analyses-cfg";
+  std::string getKey() const override { return KEY; }
+
   std::unique_ptr<Result> run(const Module *m) override;
 };
 

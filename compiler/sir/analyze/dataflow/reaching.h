@@ -61,10 +61,14 @@ private:
   std::string cfAnalysisKey;
 
 public:
+  const std::string KEY = "core-analyses-rd";
+
   /// Initializes a reaching definition analysis.
   /// @param cfAnalysisKey the control-flow analysis key
   explicit RDAnalysis(std::string cfAnalysisKey)
       : cfAnalysisKey(std::move(cfAnalysisKey)) {}
+
+  std::string getKey() const override { return KEY; }
 
   std::unique_ptr<Result> run(const Module *m) override;
 };
