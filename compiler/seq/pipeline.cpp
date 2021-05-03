@@ -5,9 +5,9 @@
 #include <iterator>
 
 namespace seq {
-namespace ir {
-namespace transform {
-namespace pipeline {
+
+using namespace ir;
+
 namespace {
 const std::string prefetchModule = "std.internal.prefetch";
 const std::string builtinModule = "std.bio.builtin";
@@ -592,7 +592,4 @@ void PipelineInterAlignOptimization::handle(PipelineFlow *p) {
   }
 }
 
-} // namespace pipeline
-} // namespace transform
-} // namespace ir
 } // namespace seq

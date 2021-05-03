@@ -15,18 +15,22 @@ PluginManager::Error PluginManager::load(const std::string &path) {
   if (!handle)
     return Error::NOT_FOUND;
 
-  auto *load = (LoadFunc *)dlsym(handle, "load");
-  if (!load)
+  auto *entry = (LoadFunc *)dlsym(handle, "load");
+  if (!entry)
     return Error::NO_ENTRYPOINT;
 
-  auto dsl = (*load)();
+  auto dsl = (*entry)();
+  plugins.push_back({std::move(dsl), path, handle});
+  return load(plugins.back().dsl.get());
+}
+
+PluginManager::Error PluginManager::load(DSL *dsl) {
   if (!dsl ||
       !dsl->isVersionSupported(SEQ_VERSION_MAJOR, SEQ_VERSION_MINOR, SEQ_VERSION_PATCH))
     return Error::UNSUPPORTED_VERSION;
 
-  dsl->addIRPasses(pm);
+  dsl->addIRPasses(pm, debug);
   // TODO: register new keywords
-  plugins.push_back({std::move(dsl), path, handle});
 
   return Error::NONE;
 }

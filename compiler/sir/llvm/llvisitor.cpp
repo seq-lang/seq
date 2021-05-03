@@ -1,5 +1,4 @@
 #include "llvisitor.h"
-#include "revcomp.h"
 #include "util/common.h"
 #include "llvm/CodeGen/CommandFlags.def"
 #include <algorithm>
@@ -992,16 +991,6 @@ void LLVMVisitor::visit(const InternalFunc *x) {
     result = llvm::UndefValue::get(getLLVMType(recordType));
     for (auto i = 0; i < args.size(); i++) {
       result = builder.CreateInsertValue(result, args[i], i);
-    }
-  }
-
-  else if (internalFuncMatches<IntNType, IntNType>("__revcomp__", x)) {
-    auto *intNType = cast<IntNType>(parentType);
-    if (intNType->getLen() % 2 != 0) {
-      result = llvm::ConstantAggregateZero::get(getLLVMType(intNType));
-    } else {
-      const unsigned k = intNType->getLen() / 2;
-      result = codegenRevCompHeuristic(k, args[0], builder);
     }
   }
 
@@ -2221,7 +2210,10 @@ void LLVMVisitor::visit(const PipelineFlow *x) {
   }
 }
 
-void LLVMVisitor::visit(const dsl::CustomFlow *x) { x->getBuilder()->buildValue(this); }
+void LLVMVisitor::visit(const dsl::CustomFlow *x) {
+  builder.SetInsertPoint(block);
+  value = x->getBuilder()->buildValue(this);
+}
 
 /*
  * Instructions
@@ -2470,7 +2462,8 @@ void LLVMVisitor::visit(const FlowInstr *x) {
 }
 
 void LLVMVisitor::visit(const dsl::CustomInstr *x) {
-  x->getBuilder()->buildValue(this);
+  builder.SetInsertPoint(block);
+  value = x->getBuilder()->buildValue(this);
 }
 
 } // namespace ir

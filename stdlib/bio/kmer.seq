@@ -24,7 +24,8 @@ class Kmer[K: int]:
                 n <<= two  # LLVM makes this a poison value if i2
             n |= UInt[2*K](c)
             i += 1
-        return Kmer[K](n.__revcomp__() if b else n)
+        result = Kmer[K](n)
+        return ~result if b else result
 
     def _make_fwd(p: Ptr[byte], L: int) -> Kmer[K]:
         two = UInt[2*K](2)
@@ -71,8 +72,9 @@ class Kmer[K: int]:
     def __copy__(self):
         return self
 
-    def __invert__(self):
-        return Kmer[K](self.x.__revcomp__())
+    def __invert__(self) -> Kmer[K]:
+        assert False  # this will be intercepted in IR
+        return Kmer[K]()
 
     def __getitem__(self, idx: int):
         if idx < 0:

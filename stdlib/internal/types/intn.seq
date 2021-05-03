@@ -161,9 +161,6 @@ class Int[N]:
 
 @extend
 class UInt[N]:
-    @internal
-    def __revcomp__(self) -> UInt[N]: pass
-
     def __new__() -> UInt[N]:
         check_N[N]()
         return UInt[N](0)
