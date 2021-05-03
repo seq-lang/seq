@@ -24,6 +24,7 @@ private:
   };
   std::unordered_map<int, BlockData> sets;
   CFGraph *cfg;
+
 public:
   explicit RDInspector(CFGraph *cfg) : cfg(cfg) {}
 

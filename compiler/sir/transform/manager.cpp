@@ -65,7 +65,8 @@ std::string PassManager::registerAnalysis(std::unique_ptr<analyze::Analysis> ana
   }
 
   key = km.getUniqueKey(key);
-  analyses.insert(std::make_pair(key, AnalysisMetadata(std::move(analysis), std::move(reqs))));
+  analyses.insert(
+      std::make_pair(key, AnalysisMetadata(std::move(analysis), std::move(reqs))));
 
   deps[key] = {};
   return key;

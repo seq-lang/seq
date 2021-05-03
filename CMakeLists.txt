@@ -278,6 +278,7 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
 
 set(SEQ_TEST_CPPFILES
         test/main.cpp
+        test/sir/analyze/reaching.cpp
         test/sir/base.cpp
         test/sir/constant.cpp
         test/sir/flow.cpp

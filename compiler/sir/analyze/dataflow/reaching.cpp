@@ -25,7 +25,7 @@ std::pair<int, int> getGenerated(const Value *val) {
   return {-1, -1};
 }
 
-}
+} // namespace
 
 namespace seq {
 namespace ir {

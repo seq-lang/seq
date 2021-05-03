@@ -18,7 +18,8 @@ private:
     analyze::dataflow::CFBlock *nextIt;
     analyze::dataflow::CFBlock *end;
 
-    Loop(analyze::dataflow::CFBlock *nextIt, analyze::dataflow::CFBlock *end) : nextIt(nextIt), end(end) {}
+    Loop(analyze::dataflow::CFBlock *nextIt, analyze::dataflow::CFBlock *end)
+        : nextIt(nextIt), end(end) {}
   };
 
   analyze::dataflow::CFGraph *graph;
@@ -108,6 +109,36 @@ public:
 
     graph->setCurrentBlock(end);
   }
+  void visit(const ImperativeForFlow *v) override {
+    auto *original = graph->getCurrentBlock();
+    auto *end = graph->newBlock("endFor");
+
+    auto *loopBegin = graph->newBlock("forBegin", true);
+    original->successors_insert(loopBegin);
+    process(v->getStart());
+    loopBegin->push_back(graph->N<analyze::dataflow::SyntheticAssignInstr>(
+        const_cast<Var *>(v->getVar()), const_cast<Value *>(v->getStart()),
+        analyze::dataflow::SyntheticAssignInstr::KNOWN));
+
+    auto *loopCheck = graph->newBlock("forCheck");
+    graph->getCurrentBlock()->successors_insert(loopCheck);
+    loopCheck->successors_insert(end);
+
+    auto *loopNext = graph->newBlock("forUpdate");
+    loopNext->push_back(graph->N<analyze::dataflow::SyntheticAssignInstr>(
+        const_cast<Var *>(v->getVar()), v->getStep()));
+    loopNext->successors_insert(loopCheck);
+
+    loopStack.emplace_back(loopCheck, end);
+    auto *loopBody = graph->newBlock("forBody", true);
+    loopCheck->successors_insert(loopBody);
+    process(v->getBody());
+    graph->getCurrentBlock()->successors_insert(loopCheck);
+    loopStack.pop_back();
+
+    graph->setCurrentBlock(end);
+  }
+
   void visit(const TryCatchFlow *v) override {
     auto *routeBlock = graph->newBlock("tcRoute");
     auto *end = graph->newBlock("tcEnd");
@@ -131,8 +162,8 @@ public:
     for (auto &c : *v) {
       auto *cBlock = graph->newBlock("catch", true);
       if (c.getVar())
-        cBlock->push_back(
-            graph->N<analyze::dataflow::SyntheticAssignInstr>(const_cast<Var *>(c.getVar())));
+        cBlock->push_back(graph->N<analyze::dataflow::SyntheticAssignInstr>(
+            const_cast<Var *>(c.getVar())));
       process(c.getHandler());
       routeBlock->successors_insert(cBlock);
       graph->getCurrentBlock()->successors_insert(dst);
@@ -262,9 +293,7 @@ namespace ir {
 namespace analyze {
 namespace dataflow {
 
-void CFBlock::reg(const Value *v) {
-  graph->valueLocations[v->getId()] = this;
-}
+void CFBlock::reg(const Value *v) { graph->valueLocations[v->getId()] = this; }
 
 const char SyntheticAssignInstr::NodeId = 0;
 

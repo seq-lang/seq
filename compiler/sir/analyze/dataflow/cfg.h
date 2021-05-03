@@ -33,7 +33,8 @@ public:
   /// Constructs a control-flow block.
   /// @param graph the parent graph
   /// @param name the block's name
-  explicit CFBlock(CFGraph *graph, std::string name = "") : name(std::move(name)), graph(graph) {}
+  explicit CFBlock(CFGraph *graph, std::string name = "")
+      : name(std::move(name)), graph(graph) {}
 
   virtual ~CFBlock() noexcept = default;
 
@@ -54,10 +55,16 @@ public:
   /// @param it the position
   /// @param v the new value
   /// @param an iterator to the new value
-  template <typename It> auto insert(It it, const Value *v) { values.insert(it, v); reg(v); }
+  template <typename It> auto insert(It it, const Value *v) {
+    values.insert(it, v);
+    reg(v);
+  }
   /// Inserts a value at the back.
   /// @param v the new value
-  void push_back(const Value *v) { values.push_back(v); reg(v); }
+  void push_back(const Value *v) {
+    values.push_back(v);
+    reg(v);
+  }
   /// Erases a value at the given position.
   /// @param it the position
   /// @return an iterator following the removed value
@@ -108,7 +115,7 @@ private:
 
 class SyntheticAssignInstr : public AcceptorExtend<SyntheticAssignInstr, Instr> {
 public:
-  enum Kind { UNKNOWN, KNOWN, NEXT_VALUE };
+  enum Kind { UNKNOWN, KNOWN, NEXT_VALUE, ADD };
 
 private:
   /// the left-hand side
@@ -117,6 +124,8 @@ private:
   Kind kind;
   /// any argument to the synthetic assignment
   Value *arg = nullptr;
+  /// the difference
+  int64_t diff = 0;
 
 public:
   static const char NodeId;
@@ -126,14 +135,19 @@ public:
   /// @param arg the argument
   /// @param k the kind of assignment
   /// @param name the name of the instruction
-  explicit SyntheticAssignInstr(Var *lhs, Value *arg, Kind k = KNOWN,
-                                std::string name = "")
+  SyntheticAssignInstr(Var *lhs, Value *arg, Kind k = KNOWN, std::string name = "")
       : AcceptorExtend(std::move(name)), lhs(lhs), kind(k), arg(arg) {}
   /// Constructs an unknown synthetic assignment.
   /// @param lhs the variable being assigned
   /// @param name the name of the instruction
   explicit SyntheticAssignInstr(Var *lhs, std::string name = "")
       : SyntheticAssignInstr(lhs, nullptr, UNKNOWN, std::move(name)) {}
+  /// Constructs an addition synthetic assignment.
+  /// @param lhs the variable being assigned
+  /// @param diff the difference
+  /// @param name the name of the instruction
+  SyntheticAssignInstr(Var *lhs, int64_t diff, std::string name = "")
+      : AcceptorExtend(std::move(name)), lhs(lhs), kind(ADD), diff(diff) {}
 
   /// @return the variable being assigned
   Var *getLhs() { return lhs; }
@@ -150,6 +164,12 @@ public:
   /// Sets the argument.
   /// @param v the new value
   void setArg(Value *v) { arg = v; }
+
+  /// @return the diff
+  int64_t getDiff() const { return diff; }
+  /// Sets the diff.
+  /// @param v the new value
+  void setDiff(int64_t v) { diff = v; }
 
   /// @return the kind of synthetic assignment
   Kind getKind() const { return kind; }
@@ -241,7 +261,7 @@ public:
 
   /// Emplaces a predecessor.
   /// @param args the args
-  template <typename... Args> void emplace_back(Args &&... args) {
+  template <typename... Args> void emplace_back(Args &&...args) {
     preds.emplace_back(std::forward<Args>(args)...);
   }
 
@@ -322,7 +342,7 @@ public:
     return ret;
   }
 
-  template <typename NodeType, typename... Args> NodeType *N(Args &&... args) {
+  template <typename NodeType, typename... Args> NodeType *N(Args &&...args) {
     auto *ret = new NodeType(std::forward<Args>(args)...);
     syntheticValues.emplace_back(ret);
     ret->setModule(func->getModule());
