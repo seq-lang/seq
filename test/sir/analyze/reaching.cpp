@@ -131,3 +131,41 @@ TEST_F(SIRCoreTest, RDAnalysisTryCatch) {
   ASSERT_TRUE(middleRd.find(first->getId()) != endRd.end());
   ASSERT_TRUE(middleRd.find(third->getId()) != endRd.end());
 }
+
+TEST_F(SIRCoreTest, RDAnalysisWhileLoop) {
+  auto *f = module->Nr<BodiedFunc>("test_f");
+
+  auto *loopBody = module->Nr<SeriesFlow>();
+  auto *whileFlow = module->Nr<WhileFlow>(module->getBool(false), loopBody);
+  auto *b = module->Nr<SeriesFlow>();
+  f->setBody(b);
+
+  auto *v = module->Nr<Var>(module->getIntType());
+  f->push_back(v);
+
+  auto *first = module->getInt(1);
+  auto *second = module->getInt(2);
+
+  auto *start = module->getBool(false);
+  auto *firstAssign = module->Nr<AssignInstr>(v, first);
+  auto *secondAssign = module->Nr<AssignInstr>(v, second);
+  auto *end = module->getBool(false);
+
+  b->push_back(start);
+  b->push_back(firstAssign);
+  b->push_back(whileFlow);
+  loopBody->push_back(secondAssign);
+  b->push_back(end);
+
+  auto c = analyze::dataflow::buildCFGraph(f);
+  analyze::dataflow::RDInspector rd(c.get());
+  rd.analyze();
+
+  auto startRd = rd.getReachingDefinitions(v, start);
+  auto endRd = rd.getReachingDefinitions(v, end);
+
+  ASSERT_EQ(0, startRd.size());
+  ASSERT_EQ(2, endRd.size());
+  ASSERT_TRUE(endRd.find(first->getId()) != endRd.end());
+  ASSERT_TRUE(endRd.find(second->getId()) != endRd.end());
+}
