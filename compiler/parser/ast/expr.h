@@ -99,7 +99,7 @@ public:
   }
 
   /// Convenience virtual functions to avoid unnecessary dynamic_cast calls.
-  virtual bool isId(string &&val) const { return false; }
+  virtual bool isId(const string &val) const { return false; }
   virtual const BinaryExpr *getBinary() const { return nullptr; }
   virtual const CallExpr *getCall() const { return nullptr; }
   virtual const DotExpr *getDot() const { return nullptr; }
@@ -223,7 +223,7 @@ struct IdExpr : public Expr {
   string toString() const override;
   ACCEPT(ASTVisitor);
 
-  bool isId(string &&val) const override { return this->value == val; }
+  bool isId(const string &val) const override { return this->value == val; }
   const IdExpr *getId() const override { return this; }
 };
 

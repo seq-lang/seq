@@ -1106,15 +1106,15 @@ void LLVMVisitor::visit(const BodiedFunc *x) {
   setDebugInfoForNode(x);
 
   auto *fnAttributes = x->getAttribute<KeyValueAttribute>();
-  if (fnAttributes && fnAttributes->has("export")) {
+  if (fnAttributes && fnAttributes->has("std.internal.attributes.export")) {
     func->setLinkage(llvm::GlobalValue::ExternalLinkage);
   } else {
     func->setLinkage(llvm::GlobalValue::PrivateLinkage);
   }
-  if (fnAttributes && fnAttributes->has("inline")) {
+  if (fnAttributes && fnAttributes->has("std.internal.attributes.inline")) {
     func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
   }
-  if (fnAttributes && fnAttributes->has("noinline")) {
+  if (fnAttributes && fnAttributes->has("std.internal.attributes.noinline")) {
     func->addFnAttr(llvm::Attribute::AttrKind::NoInline);
   }
   func->setPersonalityFn(makePersonalityFunc());
