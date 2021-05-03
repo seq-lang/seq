@@ -29,7 +29,7 @@ struct function_iterator_adaptor {
       : internal(std::move(internal)), d(std::move(d)), m(std::move(m)) {}
 
   decltype(auto) operator*() { return d(*internal); }
-  decltype(auto) operator->() { return m(*internal); }
+  decltype(auto) operator-> () { return m(*internal); }
 
   function_iterator_adaptor &operator++() {
     internal++;

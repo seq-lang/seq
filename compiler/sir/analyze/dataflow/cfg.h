@@ -261,7 +261,7 @@ public:
 
   /// Emplaces a predecessor.
   /// @param args the args
-  template <typename... Args> void emplace_back(Args &&...args) {
+  template <typename... Args> void emplace_back(Args &&... args) {
     preds.emplace_back(std::forward<Args>(args)...);
   }
 
@@ -280,6 +280,8 @@ private:
   const BodiedFunc *func;
   /// a list of synthetic values
   std::list<std::unique_ptr<Value>> syntheticValues;
+  /// a map of synthetic values
+  std::unordered_map<int, Value *> syntheticValueMap;
   /// a mapping from value id to block
   std::unordered_map<int, CFBlock *> valueLocations;
 
@@ -342,11 +344,20 @@ public:
     return ret;
   }
 
-  template <typename NodeType, typename... Args> NodeType *N(Args &&...args) {
+  template <typename NodeType, typename... Args> NodeType *N(Args &&... args) {
     auto *ret = new NodeType(std::forward<Args>(args)...);
     syntheticValues.emplace_back(ret);
+    syntheticValueMap[ret->getId()] = ret;
     ret->setModule(func->getModule());
     return ret;
+  }
+
+  /// Gets a value by id.
+  /// @param id the id
+  /// @return the value or nullptr
+  Value *getValue(int id) {
+    auto it = syntheticValueMap.find(id);
+    return it != syntheticValueMap.end() ? it->second : func->getModule()->getValue(id);
   }
 
   friend class CFBlock;

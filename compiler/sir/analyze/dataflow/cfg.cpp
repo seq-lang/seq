@@ -281,6 +281,7 @@ private:
       auto *newBlock = graph->newBlock("", true);
       original->successors_insert(newBlock);
       newBlock->successors_insert(tryCatchStack.back());
+      graph->getCurrentBlock()->push_back(v);
     }
     seenIds.insert(v->getId());
   }

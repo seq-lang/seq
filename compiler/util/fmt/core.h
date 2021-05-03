@@ -1318,7 +1318,7 @@ public:
       is_packed ? internal::encode_types<Context, Args...>()
                 : internal::is_unpacked_bit | num_args;
 
-  format_arg_store(const Args &...args)
+  format_arg_store(const Args &... args)
       :
 #if FMT_GCC_VERSION && FMT_GCC_VERSION < 409
         basic_format_args<Context>(*this),
@@ -1338,7 +1338,7 @@ public:
   \endrst
  */
 template <typename Context = format_context, typename... Args>
-inline format_arg_store<Context, Args...> make_format_args(const Args &...args) {
+inline format_arg_store<Context, Args...> make_format_args(const Args &... args) {
   return {args...};
 }
 
@@ -1550,12 +1550,12 @@ public:
 // It is a separate type rather than an alias to make symbols readable.
 struct format_args : basic_format_args<format_context> {
   template <typename... Args>
-  format_args(Args &&...args)
+  format_args(Args &&... args)
       : basic_format_args<format_context>(static_cast<Args &&>(args)...) {}
 };
 struct wformat_args : basic_format_args<wformat_context> {
   template <typename... Args>
-  wformat_args(Args &&...args)
+  wformat_args(Args &&... args)
       : basic_format_args<wformat_context>(static_cast<Args &&>(args)...) {}
 };
 
@@ -1616,7 +1616,7 @@ using all_true = std::is_same<bool_pack<Args..., true>, bool_pack<true, Args...>
 
 template <typename... Args, typename S, typename Char = char_t<S>>
 inline format_arg_store<buffer_context<Char>, remove_reference_t<Args>...>
-make_args_checked(const S &format_str, const remove_reference_t<Args> &...args) {
+make_args_checked(const S &format_str, const remove_reference_t<Args> &... args) {
   static_assert(all_true<(!std::is_base_of<view, remove_reference_t<Args>>::value ||
                           !std::is_reference<Args>::value)...>::value,
                 "passing views as lvalues is disallowed");
@@ -1681,7 +1681,7 @@ template <
     FMT_ENABLE_IF(is_contiguous<Container>::value &&internal::is_string<S>::value)>
 inline std::back_insert_iterator<Container>
 format_to(std::back_insert_iterator<Container> out, const S &format_str,
-          Args &&...args) {
+          Args &&... args) {
   return vformat_to(out, to_string_view(format_str),
                     internal::make_args_checked<Args...>(format_str, args...));
 }
@@ -1706,7 +1706,7 @@ vformat(const S &format_str,
 // Pass char_t as a default template parameter instead of using
 // std::basic_string<char_t<S>> to reduce the symbol size.
 template <typename S, typename... Args, typename Char = char_t<S>>
-inline std::basic_string<Char> format(const S &format_str, Args &&...args) {
+inline std::basic_string<Char> format(const S &format_str, Args &&... args) {
   return internal::vformat(to_string_view(format_str),
                            internal::make_args_checked<Args...>(format_str, args...));
 }
@@ -1726,7 +1726,7 @@ FMT_API void vprint(std::FILE *, string_view, format_args);
   \endrst
  */
 template <typename S, typename... Args, typename Char = char_t<S>>
-inline void print(std::FILE *f, const S &format_str, Args &&...args) {
+inline void print(std::FILE *f, const S &format_str, Args &&... args) {
   return internal::is_unicode<Char>()
              ? vprint(f, to_string_view(format_str),
                       internal::make_args_checked<Args...>(format_str, args...))
@@ -1747,7 +1747,7 @@ inline void print(std::FILE *f, const S &format_str, Args &&...args) {
   \endrst
  */
 template <typename S, typename... Args, typename Char = char_t<S>>
-inline void print(const S &format_str, Args &&...args) {
+inline void print(const S &format_str, Args &&... args) {
   return internal::is_unicode<Char>()
              ? vprint(to_string_view(format_str),
                       internal::make_args_checked<Args...>(format_str, args...))

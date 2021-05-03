@@ -96,7 +96,7 @@ public:
   Value *construct(std::vector<Value *> args) {
     return getActual()->doConstruct(std::move(args));
   }
-  template <typename... Args> Value *operator()(Args &&...args) {
+  template <typename... Args> Value *operator()(Args &&... args) {
     std::vector<Value *> dst;
     util::stripPack(dst, std::forward<Args>(args)...);
     return construct(dst);
