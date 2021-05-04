@@ -417,34 +417,36 @@ struct GlobalStmt : public Stmt {
 };
 
 struct Attr {
-  enum {
-    Method = 1,
-    LLVM = 2,
-    C = 3,
-    Internal = 4,
-    Capture = 5,
-    Atomic = 6,
-    Python = 7,
-    ForceRealize = 8,
-    Test = 9,
-    Extend = 10,
-    Tuple = 11,
-    Property = 12,
-    Prefetch = 13,
-    Export = 14,
-    Inline = 15,
-    NoInline = 16,
-    InterAlign = 17
-  };
-  /// Attributes bitmask for boolean attributes (e.g. IS_METHOD, IS_ATOMIC etc.)
-  int64_t bitmask;
+  // Toplevel attributes
+  const static string LLVM;
+  const static string Python;
+  const static string Atomic;
+  const static string Property;
+  // Internal attributes
+  const static string Internal;
+  const static string ForceRealize;
+  // Compiler-generated attributes
+  const static string C;
+  const static string Method;
+  const static string Capture;
+  // Class attributes
+  const static string Extend;
+  const static string Tuple;
+  // Standard library attributes
+  const static string Test;
+  // Function module
   string module;
+  // Parent class (set for methods only)
   string parentClass;
+  // True if a function is decorated with __attribute__
+  bool isAttribute;
+  // Set of attributes
+  set<string> customAttr;
 
-  Attr(const vector<int> &attrs = vector<int>());
-  void set(int a);
-  void unset(int a);
-  bool has(int a) const;
+  Attr(const vector<string> &attrs = vector<string>());
+  void set(const string &attr);
+  void unset(const string &attr);
+  bool has(const string &attr) const;
 };
 
 /// Function statement (@(attributes...) def name[generics...](args...) -> ret: suite).
@@ -472,7 +474,7 @@ struct FunctionStmt : public Stmt {
   /// S-expression form.
   /// @example (T U (int 0))
   string signature() const;
-  bool hasAttr(int attr) const;
+  bool hasAttr(const string &attr) const;
 
   const FunctionStmt *getFunction() const override { return this; }
 };
@@ -499,7 +501,7 @@ struct ClassStmt : public Stmt {
 
   /// @return true if a class is a tuple-like record (e.g. has a "@tuple" attribute)
   bool isRecord() const;
-  bool hasAttr(int attr) const;
+  bool hasAttr(const string &attr) const;
 
   const ClassStmt *getClass() const override { return this; }
 };

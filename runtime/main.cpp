@@ -1,4 +1,6 @@
+#include "dsl/plugins.h"
 #include "parser/parser.h"
+#include "seq/seq.h"
 #include "sir/llvm/llvisitor.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pass.h"
@@ -75,6 +77,7 @@ ProcessResult processSource(const std::vector<const char *> &args) {
       llvm::cl::desc("Add static variable definitions. The syntax is <name>=<value>"));
   llvm::cl::list<std::string> disabledOpts(
       "disable-opt", llvm::cl::desc("Disable the specified IR optimization"));
+  llvm::cl::list<std::string> dsls("dsl", llvm::cl::desc("Use specified DSL"));
 
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
 
@@ -114,6 +117,32 @@ ProcessResult processSource(const std::vector<const char *> &args) {
 
   std::vector<std::string> disabledOptsVec(disabledOpts);
   seq::ir::transform::PassManager pm(/*addStandardPasses=*/!isDebug, disabledOptsVec);
+  seq::PluginManager plm(&pm, isDebug);
+
+  // load Seq
+  seq::Seq seqDSL;
+  plm.load(&seqDSL);
+
+  // load other plugins
+  for (const auto &dsl : dsls) {
+    auto result = plm.load(dsl);
+    switch (result) {
+    case seq::PluginManager::NONE:
+      break;
+    case seq::PluginManager::NOT_FOUND:
+      seq::compilationError("DSL '" + dsl + "' not found");
+      break;
+    case seq::PluginManager::NO_ENTRYPOINT:
+      seq::compilationError("DSL '" + dsl + "' has no entry point");
+      break;
+    case seq::PluginManager::UNSUPPORTED_VERSION:
+      seq::compilationError("DSL '" + dsl + "' version incompatible");
+      break;
+    default:
+      break;
+    }
+  }
+
   pm.run(module);
   auto visitor = std::make_unique<seq::ir::LLVMVisitor>(isDebug);
   visitor->visit(module);

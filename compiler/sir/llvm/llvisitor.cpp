@@ -1,5 +1,4 @@
 #include "llvisitor.h"
-#include "revcomp.h"
 #include "util/common.h"
 #include "llvm/CodeGen/CommandFlags.def"
 #include <algorithm>
@@ -995,16 +994,6 @@ void LLVMVisitor::visit(const InternalFunc *x) {
     }
   }
 
-  else if (internalFuncMatches<IntNType, IntNType>("__revcomp__", x)) {
-    auto *intNType = cast<IntNType>(parentType);
-    if (intNType->getLen() % 2 != 0) {
-      result = llvm::ConstantAggregateZero::get(getLLVMType(intNType));
-    } else {
-      const unsigned k = intNType->getLen() / 2;
-      result = codegenRevCompHeuristic(k, args[0], builder);
-    }
-  }
-
   seqassert(result, "internal function {} not found", *x);
   builder.CreateRet(result);
 }
@@ -1106,15 +1095,15 @@ void LLVMVisitor::visit(const BodiedFunc *x) {
   setDebugInfoForNode(x);
 
   auto *fnAttributes = x->getAttribute<KeyValueAttribute>();
-  if (fnAttributes && fnAttributes->has("export")) {
+  if (fnAttributes && fnAttributes->has("std.internal.attributes.export")) {
     func->setLinkage(llvm::GlobalValue::ExternalLinkage);
   } else {
     func->setLinkage(llvm::GlobalValue::PrivateLinkage);
   }
-  if (fnAttributes && fnAttributes->has("inline")) {
+  if (fnAttributes && fnAttributes->has("std.internal.attributes.inline")) {
     func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
   }
-  if (fnAttributes && fnAttributes->has("noinline")) {
+  if (fnAttributes && fnAttributes->has("std.internal.attributes.noinline")) {
     func->addFnAttr(llvm::Attribute::AttrKind::NoInline);
   }
   func->setPersonalityFn(makePersonalityFunc());
@@ -2221,7 +2210,10 @@ void LLVMVisitor::visit(const PipelineFlow *x) {
   }
 }
 
-void LLVMVisitor::visit(const dsl::CustomFlow *x) { x->getBuilder()->buildValue(this); }
+void LLVMVisitor::visit(const dsl::CustomFlow *x) {
+  builder.SetInsertPoint(block);
+  value = x->getBuilder()->buildValue(this);
+}
 
 /*
  * Instructions
@@ -2470,7 +2462,8 @@ void LLVMVisitor::visit(const FlowInstr *x) {
 }
 
 void LLVMVisitor::visit(const dsl::CustomInstr *x) {
-  x->getBuilder()->buildValue(this);
+  builder.SetInsertPoint(block);
+  value = x->getBuilder()->buildValue(this);
 }
 
 } // namespace ir

@@ -1,0 +1,15 @@
+@__attribute__
+def test():
+    pass
+
+@__attribute__
+def export():
+    pass
+
+@__attribute__
+def inline():
+    pass
+
+@__attribute__
+def noinline():
+    pass

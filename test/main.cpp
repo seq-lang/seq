@@ -14,13 +14,10 @@
 
 #include "parser/common.h"
 #include "parser/parser.h"
+#include "seq/seq.h"
 #include "sir/llvm/llvisitor.h"
-#include "sir/transform/lowering/imperative.h"
 #include "sir/transform/manager.h"
-#include "sir/transform/pipeline.h"
-#include "sir/transform/pythonic/dict.h"
-#include "sir/transform/pythonic/io.h"
-#include "sir/transform/pythonic/str.h"
+#include "sir/transform/pass.h"
 #include "util/common.h"
 #include "gtest/gtest.h"
 
@@ -117,9 +114,11 @@ public:
         exit(EXIT_FAILURE);
 
       ir::transform::PassManager pm;
+      Seq seqDSL;
+      seqDSL.addIRPasses(&pm, /*debug=*/false); // always add all passes
       pm.run(module);
 
-      seq::ir::LLVMVisitor visitor(/*debug=*/get<1>(GetParam()));
+      ir::LLVMVisitor visitor(/*debug=*/get<1>(GetParam()));
       visitor.visit(module);
       visitor.run({file});
 
@@ -207,7 +206,7 @@ auto getTypeTests(const vector<string> &files) {
         if (line)
           cases.emplace_back(make_tuple(f, true, to_string(line) + "_" + testName, code,
                                         codeLine, barebones));
-        auto t = seq::ast::split(l.substr(4), ',');
+        auto t = ast::split(l.substr(4), ',');
         barebones = (t.size() > 1 && t[1] == "barebones");
         testName = t[0];
         code = l + "\n";

@@ -2,7 +2,7 @@ import internal.gc as gc
 
 @extend
 class Generator[T]:
-    @internal
+    @__internal__
     def __promise__(self) -> Ptr[T]:
         pass
 

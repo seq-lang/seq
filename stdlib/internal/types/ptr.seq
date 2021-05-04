@@ -2,7 +2,7 @@ from C import seq_str_ptr(Ptr[byte]) -> str
 
 @extend
 class Ptr[T]:
-    @internal
+    @__internal__
     def __new__(sz: int) -> Ptr[T]:
         pass
     @llvm
@@ -138,7 +138,7 @@ Jar = Ptr[byte]
 cobj = Ptr[byte]
 
 # Forward declarations
-@internal
+@__internal__
 @tuple
 class Array[T]:
     len: int

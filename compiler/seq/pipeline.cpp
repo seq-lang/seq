@@ -5,9 +5,9 @@
 #include <iterator>
 
 namespace seq {
-namespace ir {
-namespace transform {
-namespace pipeline {
+
+using namespace ir;
+
 namespace {
 const std::string prefetchModule = "std.internal.prefetch";
 const std::string builtinModule = "std.bio.builtin";
@@ -237,7 +237,8 @@ void PipelinePrefetchOptimization::handle(PipelineFlow *p) {
   util::CloneVisitor cv(M);
   for (auto it = p->begin(); it != p->end(); ++it) {
     if (auto *func = getStageFunc(*it)) {
-      if (!it->isGenerator() && util::hasAttribute(func, "prefetch")) {
+      if (!it->isGenerator() &&
+          util::hasAttribute(func, "std.internal.prefetch.prefetch")) {
         // transform prefetch'ing function
         auto *clone = cast<BodiedFunc>(cv.forceClone(func));
         util::setReturnType(clone, M->getGeneratorType(util::getReturnType(clone)));
@@ -498,7 +499,8 @@ void PipelineInterAlignOptimization::handle(PipelineFlow *p) {
   util::CloneVisitor cv(M);
   for (auto it = p->begin(); it != p->end(); ++it) {
     if (auto *func = getStageFunc(*it)) {
-      if (!it->isGenerator() && util::hasAttribute(func, "inter_align") &&
+      if (!it->isGenerator() &&
+          util::hasAttribute(func, "std.bio.builtin.inter_align") &&
           util::getReturnType(func)->is(M->getVoidType())) {
         // transform aligning function
         InterAlignFunctionTransformer aft(&types);
@@ -592,7 +594,4 @@ void PipelineInterAlignOptimization::handle(PipelineFlow *p) {
   }
 }
 
-} // namespace pipeline
-} // namespace transform
-} // namespace ir
 } // namespace seq
