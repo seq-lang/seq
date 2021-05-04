@@ -6,6 +6,47 @@
 #include "sir/dsl/nodes.h"
 #include "sir/util/visitor.h"
 
+namespace {
+using namespace seq::ir;
+const Value *
+convertPipelineToForLoopsHelper(const std::vector<const PipelineFlow::Stage *> &stages,
+                                unsigned idx = 0, const Value *last = nullptr) {
+  if (idx >= stages.size())
+    return last;
+  auto *stage = stages[idx];
+  auto *M = stage->getCallee()->getModule();
+  Value *next = nullptr;
+  if (last) {
+    std::vector<Value *> args;
+    for (auto *arg : *stage) {
+      args.push_back(const_cast<Value *>(arg ? arg : last));
+    }
+    next = M->Nr<CallInstr>(const_cast<Value *>(stage->getCallee()), args);
+  } else {
+    next = const_cast<Value *>(stage->getCallee());
+  }
+  if (stage->isGenerator()) {
+    auto *var = M->Nr<Var>(stage->getOutputElementType());
+    Value *body = const_cast<Value *>(
+        convertPipelineToForLoopsHelper(stages, idx + 1, M->Nr<VarValue>(var)));
+    auto *s = M->Nr<SeriesFlow>();
+    s->push_back(body);
+
+    return M->Nr<ForFlow>(next, s, var);
+  } else {
+    return convertPipelineToForLoopsHelper(stages, idx + 1, next);
+  }
+}
+
+const Value *convertPipelineToForLoops(const PipelineFlow *p) {
+  std::vector<const PipelineFlow::Stage *> stages;
+  for (const auto &stage : *p) {
+    stages.push_back(&stage);
+  }
+  return convertPipelineToForLoopsHelper(stages);
+}
+} // namespace
+
 namespace seq {
 namespace ir {
 namespace analyze {
@@ -217,6 +258,14 @@ void CFVisitor::visit(const TryCatchFlow *v) {
     routeBlock->successors_insert(tryCatchStack.back());
 
   graph->setCurrentBlock(end);
+}
+
+void CFVisitor::visit(const PipelineFlow *v) {
+  if (auto *loops = convertPipelineToForLoops(v)) {
+    process(loops);
+  } else {
+    // pipeline is empty
+  }
 }
 
 void CFVisitor::visit(const dsl::CustomFlow *v) {

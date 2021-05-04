@@ -435,10 +435,7 @@ public:
   void visit(const ImperativeForFlow *v) override;
 
   void visit(const TryCatchFlow *v) override;
-  void visit(const PipelineFlow *v) override {
-    // TODO
-    assert(false);
-  }
+  void visit(const PipelineFlow *v) override;
   void visit(const dsl::CustomFlow *v) override;
 
   DEFAULT_VISIT(TemplatedConst<int64_t>);
