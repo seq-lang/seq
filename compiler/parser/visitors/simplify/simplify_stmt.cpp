@@ -418,7 +418,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
       attr.set(Attr::ForceRealize);
     else {
       // Let's check if this is a attribute
-      auto dt = transform(d);
+      auto dt = transform(clone(d));
       if (auto id = dt->getId()) {
         auto ci = ctx->find(id->value);
         if (ci && ci->kind == SimplifyItem::Func) {
