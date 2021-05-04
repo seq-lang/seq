@@ -414,6 +414,8 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
       attr.set(Attr::Atomic);
     else if (d->isId(Attr::Property))
       attr.set(Attr::Property);
+    else if (d->isId(Attr::ForceRealize))
+      attr.set(Attr::ForceRealize);
     else {
       // Let's check if this is a attribute
       auto dt = transform(d);
