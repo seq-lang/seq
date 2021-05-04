@@ -18,6 +18,8 @@ public:
   explicit KmerRevcomp(ir::Value *kmer) : AcceptorExtend(), kmer(kmer) {}
 
   std::unique_ptr<ir::dsl::codegen::ValueBuilder> getBuilder() const override;
+  std::unique_ptr<ir::dsl::codegen::CFBuilder> getCFBuilder() const override;
+
   bool match(const ir::Value *v) const override;
   ir::Value *doClone(ir::util::CloneVisitor &cv) const override;
   std::ostream &doFormat(std::ostream &os) const override;
