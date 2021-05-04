@@ -141,6 +141,8 @@ set(SEQ_HPPFILES
         compiler/seq/revcomp.h
         compiler/seq/seq.h
         compiler/sir/analyze/analysis.h
+        compiler/sir/analyze/dataflow/cfg.h
+        compiler/sir/analyze/dataflow/reaching.h
         compiler/sir/attribute.h
         compiler/sir/base.h
         compiler/sir/const.h
@@ -211,6 +213,9 @@ set(SEQ_CPPFILES
         compiler/seq/revcomp.cpp
         compiler/seq/seq.cpp
         compiler/sir/attribute.cpp
+        compiler/sir/analyze/analysis.cpp
+        compiler/sir/analyze/dataflow/cfg.cpp
+        compiler/sir/analyze/dataflow/reaching.cpp
         compiler/sir/base.cpp
         compiler/sir/const.cpp
         compiler/sir/dsl/nodes.cpp
@@ -222,6 +227,7 @@ set(SEQ_CPPFILES
         compiler/sir/transform/cleanup/replacer.cpp
         compiler/sir/transform/lowering/imperative.cpp
         compiler/sir/transform/manager.cpp
+        compiler/sir/transform/pass.cpp
         compiler/sir/transform/pythonic/dict.cpp
         compiler/sir/transform/pythonic/io.cpp
         compiler/sir/transform/pythonic/str.cpp
@@ -277,6 +283,7 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
 
 set(SEQ_TEST_CPPFILES
         test/main.cpp
+        test/sir/analyze/reaching.cpp
         test/sir/base.cpp
         test/sir/constant.cpp
         test/sir/flow.cpp

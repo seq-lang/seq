@@ -1,4 +1,5 @@
 #include "revcomp.h"
+#include "sir/analyze/dataflow/cfg.h"
 #include "sir/dsl/codegen.h"
 #include "sir/llvm/llvisitor.h"
 #include "sir/util/cloning.h"
@@ -222,12 +223,31 @@ llvm::Value *LLVMRevcomp::buildValue(LLVMVisitor *visitor) {
   result = builder.CreateInsertValue(result, revcomp, 0);
   return result;
 }
+
+class RevcompCFBuilder : public dsl::codegen::CFBuilder {
+private:
+  Value *kmer;
+
+public:
+  RevcompCFBuilder(Value *kmer) : kmer(kmer) {}
+
+  void buildCFNodes(analyze::dataflow::CFVisitor *visitor) override;
+};
+
+void RevcompCFBuilder::buildCFNodes(analyze::dataflow::CFVisitor *visitor) {
+  visitor->defaultInsert(kmer);
+}
+
 } // namespace
 
 const char KmerRevcomp::NodeId = 0;
 
 std::unique_ptr<ir::dsl::codegen::ValueBuilder> KmerRevcomp::getBuilder() const {
   return std::make_unique<LLVMRevcomp>(kmer);
+}
+
+std::unique_ptr<ir::dsl::codegen::CFBuilder> KmerRevcomp::getCFBuilder() const {
+  return std::make_unique<RevcompCFBuilder>(kmer);
 }
 
 bool KmerRevcomp::match(const Value *v) const {

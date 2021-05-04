@@ -9,6 +9,12 @@
 namespace seq {
 namespace ir {
 
+namespace analyze {
+namespace dataflow {
+class CFVisitor;
+} // namespace dataflow
+} // namespace analyze
+
 class LLVMVisitor;
 
 namespace dsl {
@@ -36,6 +42,15 @@ struct ValueBuilder {
   /// @param the LLVM visitor
   /// @return the LLVM value
   virtual llvm::Value *buildValue(LLVMVisitor *visitor) = 0;
+};
+
+/// Builder for control flow graphs.
+struct CFBuilder {
+  virtual ~CFBuilder() noexcept = default;
+
+  /// Construct the control-flow nodes.
+  /// @param graph the graph
+  virtual void buildCFNodes(analyze::dataflow::CFVisitor *visitor) = 0;
 };
 
 } // namespace codegen

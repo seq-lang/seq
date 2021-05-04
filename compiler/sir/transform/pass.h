@@ -1,18 +1,23 @@
 #pragma once
 
-#include "manager.h"
-
 #include "sir/module.h"
 #include "sir/util/operator.h"
 
 namespace seq {
 namespace ir {
+
+namespace analyze {
+struct Result;
+}
+
 namespace transform {
+
+class PassManager;
 
 /// General pass base class.
 class Pass {
 private:
-  PassManager *manager;
+  PassManager *manager = nullptr;
 
 public:
   virtual ~Pass() = default;
@@ -31,8 +36,11 @@ public:
   /// @param key the analysis key
   template <typename AnalysisType>
   const AnalysisType *getAnalysisResult(const std::string &key) {
-    return static_cast<const AnalysisType *>(manager->getAnalysisResult(key));
+    return static_cast<const AnalysisType *>(doGetAnalysis(key));
   }
+
+private:
+  const analyze::Result *doGetAnalysis(const std::string &key);
 };
 
 /// Pass that runs a single Operator.
@@ -40,7 +48,7 @@ class OperatorPass : public Pass, public util::Operator {
 public:
   /// Constructs an operator pass.
   /// @param childrenFirst true if children should be iterated first
-  OperatorPass(bool childrenFirst = false) : util::Operator(childrenFirst) {}
+  explicit OperatorPass(bool childrenFirst = false) : util::Operator(childrenFirst) {}
 
   void run(Module *module) override { process(module); }
 };

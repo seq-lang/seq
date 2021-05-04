@@ -16,6 +16,7 @@ class CloneVisitor;
 namespace dsl {
 
 namespace codegen {
+struct CFBuilder;
 struct TypeBuilder;
 struct ValueBuilder;
 } // namespace codegen
@@ -84,6 +85,8 @@ public:
   /// @param cv the clone visitor
   /// @return a clone of the object
   virtual Value *doClone(util::CloneVisitor &cv) const = 0;
+  /// @return the control-flow builder
+  virtual std::unique_ptr<codegen::CFBuilder> getCFBuilder() const = 0;
 
   /// Format the DSL node.
   /// @param os the output stream
@@ -107,6 +110,8 @@ public:
   /// @param cv the clone visitor
   /// @return a clone of the object
   virtual Value *doClone(util::CloneVisitor &cv) const = 0;
+  /// @return the control-flow builder
+  virtual std::unique_ptr<codegen::CFBuilder> getCFBuilder() const = 0;
 
   /// Format the DSL node.
   /// @param os the output stream
