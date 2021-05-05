@@ -11,17 +11,17 @@ void DominatorInspector::analyze() {
     changed = false;
     for (auto *blk : *cfg) {
       auto init = false;
-      std::set<int> old = sets[blk->getId()];
-      std::set<int> working;
+      std::set<id_t> old = sets[blk->getId()];
+      std::set<id_t> working;
 
       for (auto it = blk->predecessors_begin(); it != blk->predecessors_end(); ++it) {
         auto &predDoms = sets[(*it)->getId()];
         if (!init) {
           init = true;
-          working = std::set<int>(predDoms.begin(), predDoms.end());
+          working = std::set<id_t>(predDoms.begin(), predDoms.end());
         }
 
-        std::set<int> newWorking;
+        std::set<id_t> newWorking;
         std::set_intersection(working.begin(), working.end(), predDoms.begin(),
                               predDoms.end(),
                               std::inserter(newWorking, newWorking.begin()));
@@ -41,6 +41,15 @@ void DominatorInspector::analyze() {
 bool DominatorInspector::isDominated(const Value *v, const Value *dominator) {
   auto *vBlock = cfg->getBlock(v);
   auto *dBlock = cfg->getBlock(dominator);
+
+  if (vBlock->getId() == dBlock->getId()) {
+    auto vDist =
+        std::distance(vBlock->begin(), std::find(vBlock->begin(), vBlock->end(), v));
+    auto dDist = std::distance(vBlock->begin(),
+                               std::find(vBlock->begin(), vBlock->end(), dominator));
+    return dDist <= vDist;
+  }
+
   return sets[vBlock->getId()].find(dBlock->getId()) != sets[vBlock->getId()].end();
 }
 

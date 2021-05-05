@@ -15,7 +15,7 @@ namespace dataflow {
 /// Helper to query the dominators of a particular function.
 class DominatorInspector {
 private:
-  std::unordered_map<int, std::set<int>> sets;
+  std::unordered_map<id_t, std::set<id_t>> sets;
   CFGraph *cfg;
 
 public:
@@ -35,7 +35,7 @@ struct DominatorResult : public Result {
   /// the corresponding control flow result
   const CFResult *cfgResult;
   /// the dominator inspectors
-  std::unordered_map<int, std::unique_ptr<DominatorInspector>> results;
+  std::unordered_map<id_t, std::unique_ptr<DominatorInspector>> results;
 
   explicit DominatorResult(const CFResult *cfgResult) : cfgResult(cfgResult) {}
 };
