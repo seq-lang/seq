@@ -56,7 +56,7 @@ void CFBlock::reg(const Value *v) { graph->valueLocations[v->getId()] = this; }
 
 const char SyntheticAssignInstr::NodeId = 0;
 
-int SyntheticAssignInstr::doReplaceUsedValue(int id, Value *newValue) {
+int SyntheticAssignInstr::doReplaceUsedValue(id_t id, Value *newValue) {
   if (arg && arg->getId() == id) {
     arg = newValue;
     return 1;
@@ -64,7 +64,7 @@ int SyntheticAssignInstr::doReplaceUsedValue(int id, Value *newValue) {
   return 0;
 }
 
-int SyntheticAssignInstr::doReplaceUsedVariable(int id, Var *newVar) {
+int SyntheticAssignInstr::doReplaceUsedVariable(id_t id, Var *newVar) {
   if (lhs->getId() == id) {
     lhs = newVar;
     return 1;
@@ -82,7 +82,7 @@ std::vector<Value *> SyntheticPhiInstr::doGetUsedValues() const {
   return ret;
 }
 
-int SyntheticPhiInstr::doReplaceUsedValue(int id, Value *newValue) {
+int SyntheticPhiInstr::doReplaceUsedValue(id_t id, Value *newValue) {
   auto res = 0;
   for (auto &p : *this) {
     if (p.getResult()->getId() == id) {

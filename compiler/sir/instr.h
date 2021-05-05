@@ -61,10 +61,10 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {rhs}; }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {lhs}; }
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
 };
 
 /// Instr representing loading the field of a value.
@@ -102,7 +102,7 @@ public:
 protected:
   types::Type *doGetType() const override;
   std::vector<Value *> doGetUsedValues() const override { return {val}; }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Instr representing setting the field of a value.
@@ -151,7 +151,7 @@ public:
 protected:
   types::Type *doGetType() const override { return lhs->getType(); }
   std::vector<Value *> doGetUsedValues() const override { return {lhs, rhs}; }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Instr representing calling a function.
@@ -223,7 +223,7 @@ public:
 protected:
   types::Type *doGetType() const override;
   std::vector<Value *> doGetUsedValues() const override;
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Instr representing allocating an array on the stack.
@@ -390,7 +390,7 @@ protected:
   std::vector<Value *> doGetUsedValues() const override {
     return {cond, trueValue, falseValue};
   }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Base for control flow instructions
@@ -438,7 +438,7 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 class YieldInstr : public AcceptorExtend<YieldInstr, Instr> {
@@ -470,7 +470,7 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 class ThrowInstr : public AcceptorExtend<ThrowInstr, Instr> {
@@ -494,7 +494,7 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Instr that contains a flow and value.
@@ -534,7 +534,7 @@ public:
 protected:
   types::Type *doGetType() const override { return val->getType(); }
   std::vector<Value *> doGetUsedValues() const override { return {flow, val}; }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 } // namespace ir

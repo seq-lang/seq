@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -16,6 +17,8 @@
 namespace seq {
 namespace ir {
 
+using id_t = std::int64_t;
+
 class Func;
 class Module;
 
@@ -23,11 +26,11 @@ class Module;
 class IdMixin {
 private:
   /// the global id counter
-  static int currentId;
+  static id_t currentId;
 
 protected:
   /// the instance's id
-  int id;
+  id_t id;
 
 public:
   /// Resets the global id counter.
@@ -36,7 +39,7 @@ public:
   IdMixin() : id(currentId++) {}
 
   /// @return the node's id.
-  virtual int getId() const { return id; }
+  virtual id_t getId() const { return id; }
 };
 
 /// Base for named IR nodes.
@@ -194,7 +197,7 @@ public:
   /// @param id the id of the value to be replaced
   /// @param newValue the new value
   /// @return number of replacements
-  virtual int replaceUsedValue(int id, Value *newValue) { return 0; }
+  virtual int replaceUsedValue(id_t id, Value *newValue) { return 0; }
   /// Physically replaces all instances of a child value.
   /// @param oldValue the old value
   /// @param newValue the new value
@@ -224,7 +227,7 @@ public:
   /// @param id the id of the variable
   /// @param newType the new type
   /// @return number of replacements
-  virtual int replaceUsedVariable(int id, Var *newVar) { return 0; }
+  virtual int replaceUsedVariable(id_t id, Var *newVar) { return 0; }
   /// Physically replaces all instances of a used variable.
   /// @param old the old variable
   /// @param newVar the new variable

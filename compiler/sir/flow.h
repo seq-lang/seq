@@ -67,7 +67,7 @@ protected:
   std::vector<Value *> doGetUsedValues() const override {
     return std::vector<Value *>(series.begin(), series.end());
   }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Flow representing a while loop.
@@ -107,7 +107,7 @@ public:
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {cond, body}; }
 
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Flow representing a for loop.
@@ -158,10 +158,10 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {iter, body}; }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {var}; }
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
 };
 
 /// Flow representing an imperative for loop.
@@ -231,10 +231,10 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {body}; }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {var}; }
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
 };
 
 /// Flow representing an if statement.
@@ -286,7 +286,7 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Flow representing a try-catch statement.
@@ -405,13 +405,13 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 
   std::vector<types::Type *> doGetUsedTypes() const override;
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
   std::vector<Var *> doGetUsedVariables() const override;
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
 };
 
 /// Flow that represents a pipeline. Pipelines with only function
@@ -556,7 +556,7 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 } // namespace ir

@@ -14,15 +14,15 @@ namespace dataflow {
 class RDInspector {
 private:
   struct BlockData {
-    std::unordered_map<int, std::unordered_set<int>> in;
-    std::unordered_map<int, std::unordered_set<int>> out;
-    std::unordered_set<int> killed;
-    std::unordered_map<int, int> generated;
+    std::unordered_map<id_t, std::unordered_set<id_t>> in;
+    std::unordered_map<id_t, std::unordered_set<id_t>> out;
+    std::unordered_set<id_t> killed;
+    std::unordered_map<id_t, id_t> generated;
     bool initialized = false;
 
     BlockData() = default;
   };
-  std::unordered_map<int, BlockData> sets;
+  std::unordered_map<id_t, BlockData> sets;
   CFGraph *cfg;
 
 public:
@@ -35,7 +35,7 @@ public:
   /// @param var the variable being inspected
   /// @param loc the location
   /// @return an unordered set of value ids
-  std::unordered_set<int> getReachingDefinitions(Var *var, Value *loc);
+  std::unordered_set<id_t> getReachingDefinitions(Var *var, Value *loc);
 
 private:
   void initializeIfNecessary(CFBlock *blk);
@@ -49,7 +49,7 @@ struct RDResult : public Result {
   /// the corresponding control flow result
   const CFResult *cfgResult;
   /// the reaching definition inspectors
-  std::unordered_map<int, std::unique_ptr<RDInspector>> results;
+  std::unordered_map<id_t, std::unique_ptr<RDInspector>> results;
 
   explicit RDResult(const CFResult *cfgResult) : cfgResult(cfgResult) {}
 };

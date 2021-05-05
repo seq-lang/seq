@@ -22,7 +22,7 @@ protected:
   std::list<Var *> args;
 
   std::vector<Var *> doGetUsedVariables() const override;
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
 
   std::vector<types::Type *> doGetUsedTypes() const override;
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
@@ -146,10 +146,10 @@ protected:
   std::vector<Value *> doGetUsedValues() const override {
     return body ? std::vector<Value *>{body} : std::vector<Value *>{};
   }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override;
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
 };
 
 class ExternalFunc : public AcceptorExtend<ExternalFunc, Func> {
