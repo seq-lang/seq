@@ -4,14 +4,18 @@
 #include <unordered_set>
 
 #include "pass.h"
+
+#include "sir/analyze/analysis.h"
+#include "sir/analyze/dataflow/cfg.h"
+#include "sir/analyze/dataflow/reaching.h"
+
+#include "sir/transform/folding/constprop.h"
 #include "sir/transform/lowering/imperative.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pythonic/dict.h"
 #include "sir/transform/pythonic/io.h"
 #include "sir/transform/pythonic/str.h"
 #include "util/common.h"
-
-#include "sir/analyze/analysis.h"
 
 namespace seq {
 namespace ir {
@@ -66,7 +70,7 @@ std::string PassManager::registerAnalysis(std::unique_ptr<analyze::Analysis> ana
   key = km.getUniqueKey(key);
   analyses.insert(
       std::make_pair(key, AnalysisMetadata(std::move(analysis), std::move(reqs))));
-
+  analyses[key].analysis->setManager(this);
   deps[key] = {};
   return key;
 }
@@ -121,6 +125,13 @@ void PassManager::registerStandardPasses() {
   registerPass(std::make_unique<pythonic::DictArithmeticOptimization>());
   registerPass(std::make_unique<pythonic::StrAdditionOptimization>());
   registerPass(std::make_unique<pythonic::IOCatOptimization>());
+
+  // folding
+  auto cfgKey = registerAnalysis(std::make_unique<analyze::dataflow::CFAnalysis>());
+  auto rdKey = registerAnalysis(std::make_unique<analyze::dataflow::RDAnalysis>(cfgKey),
+                                {cfgKey});
+  registerPass(std::make_unique<folding::ConstPropPass>(rdKey), {rdKey},
+               {cfgKey, rdKey});
 
   // lowering
   registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());

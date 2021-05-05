@@ -149,7 +149,7 @@ void CFVisitor::visit(const IfFlow *v) {
 
 void CFVisitor::visit(const WhileFlow *v) {
   auto *original = graph->getCurrentBlock();
-  auto *end = graph->newBlock("endIf");
+  auto *end = graph->newBlock("endWhile");
 
   auto *loopBegin = graph->newBlock("whileBegin", true);
   original->successors_insert(loopBegin);
@@ -160,8 +160,8 @@ void CFVisitor::visit(const WhileFlow *v) {
   auto *body = graph->newBlock("whileBody", true);
   loopBegin->successors_insert(body);
   process(v->getBody());
-  body->successors_insert(loopBegin);
   loopStack.pop_back();
+  graph->getCurrentBlock()->successors_insert(loopBegin);
 
   graph->setCurrentBlock(end);
 }
