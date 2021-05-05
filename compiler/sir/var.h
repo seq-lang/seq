@@ -43,7 +43,7 @@ public:
     auto ret = getActual()->doGetUsedValues();
     return std::vector<const Value *>(ret.begin(), ret.end());
   }
-  int replaceUsedValue(int id, Value *newValue) final {
+  int replaceUsedValue(id_t id, Value *newValue) final {
     return doReplaceUsedValue(id, newValue);
   }
   using Node::replaceUsedValue;
@@ -61,7 +61,7 @@ public:
     auto ret = doGetUsedVariables();
     return std::vector<const Var *>(ret.begin(), ret.end());
   }
-  int replaceUsedVariable(int id, Var *newVar) final {
+  int replaceUsedVariable(id_t id, Var *newVar) final {
     return getActual()->doReplaceUsedVariable(id, newVar);
   }
   using Node::replaceUsedVariable;
@@ -82,17 +82,17 @@ public:
     return fmt::format(FMT_STRING("{}.{}"), getName(), getId());
   }
 
-  int getId() const override { return getActual()->id; }
+  id_t getId() const override { return getActual()->id; }
 
 protected:
   virtual std::vector<Value *> doGetUsedValues() const { return {}; }
-  virtual int doReplaceUsedValue(int id, Value *newValue) { return 0; }
+  virtual int doReplaceUsedValue(id_t id, Value *newValue) { return 0; }
 
   virtual std::vector<types::Type *> doGetUsedTypes() const { return {type}; }
   virtual int doReplaceUsedType(const std::string &name, types::Type *newType);
 
   virtual std::vector<Var *> doGetUsedVariables() const { return {}; }
-  virtual int doReplaceUsedVariable(int id, Var *newVar) { return 0; }
+  virtual int doReplaceUsedVariable(id_t id, Var *newVar) { return 0; }
 };
 
 /// Value that contains an unowned variable reference.
@@ -122,7 +122,7 @@ private:
   types::Type *doGetType() const override { return val->getType(); }
 
   std::vector<Var *> doGetUsedVariables() const override { return {val}; }
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
 };
 
 /// Value that represents a pointer.
@@ -152,7 +152,7 @@ private:
   types::Type *doGetType() const override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {val}; }
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
 };
 
 } // namespace ir

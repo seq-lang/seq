@@ -182,10 +182,10 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {arg}; }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {lhs}; }
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
 };
 
 class SyntheticPhiInstr : public AcceptorExtend<SyntheticPhiInstr, Instr> {
@@ -270,7 +270,7 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 class CFGraph {
@@ -284,9 +284,9 @@ private:
   /// a list of synthetic values
   std::list<std::unique_ptr<Value>> syntheticValues;
   /// a map of synthetic values
-  std::unordered_map<int, Value *> valueMapping;
+  std::unordered_map<id_t, Value *> valueMapping;
   /// a mapping from value id to block
-  std::unordered_map<int, CFBlock *> valueLocations;
+  std::unordered_map<id_t, CFBlock *> valueLocations;
 
 public:
   /// Constructs a control-flow graph.
@@ -366,7 +366,7 @@ public:
   /// Remaps a value.
   /// @param id original id
   /// @param newValue the new value
-  void remapValue(int id, Value *newValue) { valueMapping[id] = newValue; }
+  void remapValue(id_t id, Value *newValue) { valueMapping[id] = newValue; }
   /// Remaps a value.
   /// @param original the original value
   /// @param newValue the new value
@@ -377,7 +377,7 @@ public:
   /// Gets a value by id.
   /// @param id the id
   /// @return the value or nullptr
-  Value *getValue(int id) {
+  Value *getValue(id_t id) {
     auto it = valueMapping.find(id);
     return it != valueMapping.end() ? it->second : func->getModule()->getValue(id);
   }
@@ -393,7 +393,7 @@ std::unique_ptr<CFGraph> buildCFGraph(const BodiedFunc *f);
 /// Control-flow analysis result.
 struct CFResult : public Result {
   /// map from function id to control-flow graph
-  std::unordered_map<int, std::unique_ptr<CFGraph>> graphs;
+  std::unordered_map<id_t, std::unique_ptr<CFGraph>> graphs;
 };
 
 /// Control-flow analysis that runs on all functions.
@@ -417,7 +417,7 @@ private:
 
   analyze::dataflow::CFGraph *graph;
   std::vector<analyze::dataflow::CFBlock *> tryCatchStack;
-  std::unordered_set<int> seenIds;
+  std::unordered_set<id_t> seenIds;
   std::vector<Loop> loopStack;
 
 public:

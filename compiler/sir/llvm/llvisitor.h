@@ -11,7 +11,7 @@ namespace ir {
 
 class LLVMVisitor : public util::ConstVisitor {
 private:
-  template <typename V> using CacheBase = std::unordered_map<int, V *>;
+  template <typename V> using CacheBase = std::unordered_map<id_t, V *>;
   template <typename K, typename V> class Cache : public CacheBase<V> {
   public:
     using CacheBase<V>::CacheBase;

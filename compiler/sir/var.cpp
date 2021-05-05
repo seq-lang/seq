@@ -17,7 +17,7 @@ int Var::doReplaceUsedType(const std::string &name, types::Type *newType) {
 
 const char VarValue::NodeId = 0;
 
-int VarValue::doReplaceUsedVariable(int id, Var *newVar) {
+int VarValue::doReplaceUsedVariable(id_t id, Var *newVar) {
   if (val->getId() == id) {
     val = newVar;
     return 1;
@@ -31,7 +31,7 @@ types::Type *PointerValue::doGetType() const {
   return getModule()->getPointerType(val->getType());
 }
 
-int PointerValue::doReplaceUsedVariable(int id, Var *newVar) {
+int PointerValue::doReplaceUsedVariable(id_t id, Var *newVar) {
   if (val->getId() == id) {
     val = newVar;
     return 1;

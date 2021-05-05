@@ -24,7 +24,7 @@ namespace util {
 class Operator : public Visitor {
 private:
   /// IDs of previously visited nodes
-  std::unordered_set<int> seen;
+  std::unordered_set<id_t> seen;
   /// stack of IR nodes being visited
   std::vector<Node *> nodeStack;
   /// stack of iterators

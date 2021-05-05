@@ -8,7 +8,7 @@
 
 namespace {
 
-int findAndReplace(int id, seq::ir::Value *newVal,
+int findAndReplace(id_t id, seq::ir::Value *newVal,
                    std::list<seq::ir::Value *> &values) {
   auto replacements = 0;
   for (auto &value : values) {
@@ -31,13 +31,13 @@ types::Type *Flow::doGetType() const { return getModule()->getVoidType(); }
 
 const char SeriesFlow::NodeId = 0;
 
-int SeriesFlow::doReplaceUsedValue(int id, Value *newValue) {
+int SeriesFlow::doReplaceUsedValue(id_t id, Value *newValue) {
   return findAndReplace(id, newValue, series);
 }
 
 const char WhileFlow::NodeId = 0;
 
-int WhileFlow::doReplaceUsedValue(int id, Value *newValue) {
+int WhileFlow::doReplaceUsedValue(id_t id, Value *newValue) {
   auto replacements = 0;
 
   if (cond->getId() == id) {
@@ -55,7 +55,7 @@ int WhileFlow::doReplaceUsedValue(int id, Value *newValue) {
 
 const char ForFlow::NodeId = 0;
 
-int ForFlow::doReplaceUsedValue(int id, Value *newValue) {
+int ForFlow::doReplaceUsedValue(id_t id, Value *newValue) {
   auto count = 0;
   if (iter->getId() == id) {
     iter = newValue;
@@ -70,7 +70,7 @@ int ForFlow::doReplaceUsedValue(int id, Value *newValue) {
   return count;
 }
 
-int ForFlow::doReplaceUsedVariable(int id, Var *newVar) {
+int ForFlow::doReplaceUsedVariable(id_t id, Var *newVar) {
   if (var->getId() == id) {
     var = newVar;
     return 1;
@@ -80,7 +80,7 @@ int ForFlow::doReplaceUsedVariable(int id, Var *newVar) {
 
 const char ImperativeForFlow::NodeId = 0;
 
-int ImperativeForFlow::doReplaceUsedValue(int id, Value *newValue) {
+int ImperativeForFlow::doReplaceUsedValue(id_t id, Value *newValue) {
   if (body->getId() == id) {
     auto *f = cast<Flow>(newValue);
     seqassert(f, "{} is not a flow", *newValue);
@@ -90,7 +90,7 @@ int ImperativeForFlow::doReplaceUsedValue(int id, Value *newValue) {
   return 0;
 }
 
-int ImperativeForFlow::doReplaceUsedVariable(int id, Var *newVar) {
+int ImperativeForFlow::doReplaceUsedVariable(id_t id, Var *newVar) {
   if (var->getId() == id) {
     var = newVar;
     return 1;
@@ -107,7 +107,7 @@ std::vector<Value *> IfFlow::doGetUsedValues() const {
   return ret;
 }
 
-int IfFlow::doReplaceUsedValue(int id, Value *newValue) {
+int IfFlow::doReplaceUsedValue(id_t id, Value *newValue) {
   auto replacements = 0;
 
   if (cond->getId() == id) {
@@ -142,7 +142,7 @@ std::vector<Value *> TryCatchFlow::doGetUsedValues() const {
   return ret;
 }
 
-int TryCatchFlow::doReplaceUsedValue(int id, Value *newValue) {
+int TryCatchFlow::doReplaceUsedValue(id_t id, Value *newValue) {
   auto replacements = 0;
 
   if (body->getId() == id) {
@@ -199,7 +199,7 @@ std::vector<Var *> TryCatchFlow::doGetUsedVariables() const {
   return ret;
 }
 
-int TryCatchFlow::doReplaceUsedVariable(int id, Var *newVar) {
+int TryCatchFlow::doReplaceUsedVariable(id_t id, Var *newVar) {
   auto count = 0;
   for (auto &c : catches) {
     if (c.getVar()->getId() == id) {
@@ -255,7 +255,7 @@ std::vector<Value *> PipelineFlow::doGetUsedValues() const {
   return ret;
 }
 
-int PipelineFlow::doReplaceUsedValue(int id, Value *newValue) {
+int PipelineFlow::doReplaceUsedValue(id_t id, Value *newValue) {
   auto replacements = 0;
 
   for (auto &c : stages) {

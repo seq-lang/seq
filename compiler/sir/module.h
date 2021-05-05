@@ -79,11 +79,11 @@ private:
   /// the global variables list
   std::list<std::unique_ptr<Var>> vars;
   /// the global variables map
-  std::unordered_map<int, std::list<std::unique_ptr<Var>>::iterator> varMap;
+  std::unordered_map<id_t, std::list<std::unique_ptr<Var>>::iterator> varMap;
   /// the global value list
   std::list<std::unique_ptr<Value>> values;
   /// the global value map
-  std::unordered_map<int, std::list<std::unique_ptr<Value>>::iterator> valueMap;
+  std::unordered_map<id_t, std::list<std::unique_ptr<Value>>::iterator> valueMap;
   /// the global types list
   std::list<std::unique_ptr<types::Type>> types;
   /// the global types map
@@ -132,14 +132,14 @@ public:
   /// Gets a var by id.
   /// @param id the id
   /// @return the variable or nullptr
-  Var *getVar(int id) {
+  Var *getVar(id_t id) {
     auto it = varMap.find(id);
     return it != varMap.end() ? it->second->get() : nullptr;
   }
   /// Gets a var by id.
   /// @param id the id
   /// @return the variable or nullptr
-  const Var *getVar(int id) const {
+  const Var *getVar(id_t id) const {
     auto it = varMap.find(id);
     return it != varMap.end() ? it->second->get() : nullptr;
   }
@@ -170,14 +170,14 @@ public:
   /// Gets a value by id.
   /// @param id the id
   /// @return the value or nullptr
-  Value *getValue(int id) {
+  Value *getValue(id_t id) {
     auto it = valueMap.find(id);
     return it != valueMap.end() ? it->second->get() : nullptr;
   }
   /// Gets a value by id.
   /// @param id the id
   /// @return the value or nullptr
-  const Value *getValue(int id) const {
+  const Value *getValue(id_t id) const {
     auto it = valueMap.find(id);
     return it != valueMap.end() ? it->second->get() : nullptr;
   }

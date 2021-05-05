@@ -1,10 +1,9 @@
 #include "reaching.h"
 
+namespace seq {
+namespace ir {
 namespace {
-
-using namespace seq::ir;
-
-int getKilled(const Value *val) {
+id_t getKilled(const Value *val) {
   if (auto *assign = cast<AssignInstr>(val)) {
     return assign->getLhs()->getId();
   } else if (auto *synthAssign = cast<analyze::dataflow::SyntheticAssignInstr>(val)) {
@@ -13,7 +12,7 @@ int getKilled(const Value *val) {
   return -1;
 }
 
-std::pair<int, int> getGenerated(const Value *val) {
+std::pair<id_t, id_t> getGenerated(const Value *val) {
   if (auto *assign = cast<AssignInstr>(val)) {
     return {assign->getLhs()->getId(), assign->getRhs()->getId()};
   } else if (auto *synthAssign = cast<analyze::dataflow::SyntheticAssignInstr>(val)) {
@@ -24,11 +23,8 @@ std::pair<int, int> getGenerated(const Value *val) {
   }
   return {-1, -1};
 }
-
 } // namespace
 
-namespace seq {
-namespace ir {
 namespace analyze {
 namespace dataflow {
 
@@ -46,10 +42,10 @@ void RDInspector::analyze() {
   }
 }
 
-std::unordered_set<int> RDInspector::getReachingDefinitions(Var *var, Value *loc) {
+std::unordered_set<id_t> RDInspector::getReachingDefinitions(Var *var, Value *loc) {
   auto *blk = cfg->getBlock(loc);
   if (!blk)
-    return std::unordered_set<int>();
+    return std::unordered_set<id_t>();
   auto &entry = sets[blk->getId()];
   auto defs = entry.in[var->getId()];
 
@@ -87,7 +83,7 @@ void RDInspector::initializeIfNecessary(CFBlock *blk) {
 
 void RDInspector::calculateIn(CFBlock *blk) {
   auto &curEntry = sets[blk->getId()];
-  std::unordered_map<int, std::unordered_set<int>> newVal;
+  std::unordered_map<id_t, std::unordered_set<id_t>> newVal;
   for (auto it = blk->predecessors_begin(); it != blk->predecessors_end(); ++it) {
     auto *pred = *it;
     auto &predEntry = sets[pred->getId()];
@@ -101,7 +97,7 @@ void RDInspector::calculateIn(CFBlock *blk) {
 
 bool RDInspector::calculateOut(CFBlock *blk) {
   auto &entry = sets[blk->getId()];
-  std::unordered_map<int, std::unordered_set<int>> newOut;
+  std::unordered_map<id_t, std::unordered_set<id_t>> newOut;
   for (auto &gen : entry.generated) {
     newOut[gen.first] = {gen.second};
   }

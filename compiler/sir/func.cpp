@@ -13,7 +13,7 @@
 
 namespace {
 
-int findAndReplace(int id, seq::ir::Var *newVal, std::list<seq::ir::Var *> &values) {
+int findAndReplace(id_t id, seq::ir::Var *newVal, std::list<seq::ir::Var *> &values) {
   auto replacements = 0;
   for (auto &value : values) {
     if (value->getId() == id) {
@@ -56,7 +56,7 @@ std::vector<Var *> Func::doGetUsedVariables() const {
   return ret;
 }
 
-int Func::doReplaceUsedVariable(int id, Var *newVar) {
+int Func::doReplaceUsedVariable(id_t id, Var *newVar) {
   return findAndReplace(id, newVar, args);
 }
 
@@ -83,7 +83,7 @@ int Func::doReplaceUsedType(const std::string &name, types::Type *newType) {
 
 const char BodiedFunc::NodeId = 0;
 
-int BodiedFunc::doReplaceUsedValue(int id, Value *newValue) {
+int BodiedFunc::doReplaceUsedValue(id_t id, Value *newValue) {
   if (body && body->getId() == id) {
     auto *flow = cast<Flow>(newValue);
     seqassert(flow, "{} is not a flow", *newValue);
@@ -99,7 +99,7 @@ std::vector<Var *> BodiedFunc::doGetUsedVariables() const {
   return ret;
 }
 
-int BodiedFunc::doReplaceUsedVariable(int id, Var *newVar) {
+int BodiedFunc::doReplaceUsedVariable(id_t id, Var *newVar) {
   return Func::doReplaceUsedVariable(id, newVar) + findAndReplace(id, newVar, symbols);
 }
 
