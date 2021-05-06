@@ -33,7 +33,8 @@ void ConstPropPass::handle(VarValue *v) {
     return;
 
   auto *constDef = cast<Const>(cfg->getValue(def));
-  if (!constDef)
+  if (!constDef || (!isA<IntConst>(constDef) && !isA<FloatConst>(constDef) &&
+                    !isA<BoolConst>(constDef)))
     return;
 
   util::CloneVisitor cv(v->getModule());

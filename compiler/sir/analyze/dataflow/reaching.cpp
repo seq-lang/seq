@@ -8,8 +8,6 @@ id_t getKilled(const Value *val) {
     return assign->getLhs()->getId();
   } else if (auto *synthAssign = cast<analyze::dataflow::SyntheticAssignInstr>(val)) {
     return synthAssign->getLhs()->getId();
-  } else if (auto *ptr = cast<PointerValue>(val)) {
-    return ptr->getVar()->getId();
   }
   return -1;
 }
@@ -45,6 +43,9 @@ void RDInspector::analyze() {
 }
 
 std::unordered_set<id_t> RDInspector::getReachingDefinitions(Var *var, Value *loc) {
+  if (invalid.find(var->getId()) != invalid.end())
+    return std::unordered_set<id_t>();
+
   auto *blk = cfg->getBlock(loc);
   if (!blk)
     return std::unordered_set<id_t>();
@@ -74,6 +75,9 @@ void RDInspector::initializeIfNecessary(CFBlock *blk) {
     return;
   entry.initialized = true;
   for (auto *val : *blk) {
+    if (auto *ptr = cast<PointerValue>(val))
+      invalid.insert(ptr->getVar()->getId());
+
     auto killed = getKilled(val);
     if (killed != -1)
       entry.killed.insert(killed);
