@@ -8,6 +8,8 @@ id_t getKilled(const Value *val) {
     return assign->getLhs()->getId();
   } else if (auto *synthAssign = cast<analyze::dataflow::SyntheticAssignInstr>(val)) {
     return synthAssign->getLhs()->getId();
+  } else if (auto *ptr = cast<PointerValue>(val)) {
+    return ptr->getVar()->getId();
   }
   return -1;
 }
