@@ -1,3 +1,10 @@
+from bio.seq import seq
+from bio.kmer import Kmer
+
+@__attribute__
+def prefetch():
+    pass
+
 @__attribute__
 def inter_align():
     pass

@@ -2,6 +2,7 @@
 # https://github.com/lh3/bwa
 
 from random import randint
+from bio.seq import seq
 from bio.fasta import FASTA
 from bio.locus import Contig, Locus
 from internal.gc import sizeof, free, alloc_atomic, realloc

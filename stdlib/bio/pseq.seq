@@ -1,3 +1,6 @@
+from bio.seq import seq
+from bio.kmer import Kmer
+
 @tuple
 class pseq:
     '''

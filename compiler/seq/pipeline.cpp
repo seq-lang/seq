@@ -9,7 +9,7 @@ namespace seq {
 using namespace ir;
 
 namespace {
-const std::string prefetchModule = "std.internal.prefetch";
+const std::string prefetchModule = "std.bio.prefetch";
 const std::string builtinModule = "std.bio.builtin";
 const std::string alignModule = "std.bio.align";
 const std::string seqModule = "std.bio.seq";
@@ -238,7 +238,7 @@ void PipelinePrefetchOptimization::handle(PipelineFlow *p) {
   for (auto it = p->begin(); it != p->end(); ++it) {
     if (auto *func = getStageFunc(*it)) {
       if (!it->isGenerator() &&
-          util::hasAttribute(func, "std.internal.prefetch.prefetch")) {
+          util::hasAttribute(func, "std.bio.builtin.prefetch")) {
         // transform prefetch'ing function
         auto *clone = cast<BodiedFunc>(cv.forceClone(func));
         util::setReturnType(clone, M->getGeneratorType(util::getReturnType(clone)));

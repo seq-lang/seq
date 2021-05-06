@@ -1,5 +1,6 @@
 # FASTA format parser
 # https://en.wikipedia.org/wiki/FASTA_format
+from bio.seq import seq
 from bio.fai import FAIRecord, FAI
 from internal.gc import realloc
 
