@@ -43,7 +43,7 @@ void RDInspector::analyze() {
 }
 
 std::unordered_set<id_t> RDInspector::getReachingDefinitions(Var *var, Value *loc) {
-  if (invalid.find(var->getId()) != invalid.end())
+  if (invalid.find(var->getId()) != invalid.end() || var->isGlobal())
     return std::unordered_set<id_t>();
 
   auto *blk = cfg->getBlock(loc);
@@ -66,6 +66,10 @@ std::unordered_set<id_t> RDInspector::getReachingDefinitions(Var *var, Value *lo
     if (gen.first == var->getId())
       defs.insert(gen.second);
   }
+
+  if (defs.find(-1) != defs.end())
+    return std::unordered_set<id_t>();
+
   return defs;
 }
 
@@ -90,6 +94,15 @@ void RDInspector::initializeIfNecessary(CFBlock *blk) {
 void RDInspector::calculateIn(CFBlock *blk) {
   auto &curEntry = sets[blk->getId()];
   std::unordered_map<id_t, std::unordered_set<id_t>> newVal;
+
+  if (blk->getId() == cfg->getEntryBlock()->getId()) {
+    auto *fn = cfg->getFunc();
+    for (auto *v : *fn)
+      newVal[v->getId()] = {-1};
+    for (auto it = fn->arg_begin(); it != fn->arg_end(); ++it)
+      newVal[(*it)->getId()] = {-1};
+  }
+
   for (auto it = blk->predecessors_begin(); it != blk->predecessors_end(); ++it) {
     auto *pred = *it;
     auto &predEntry = sets[pred->getId()];
