@@ -67,6 +67,7 @@ std::string PassManager::registerAnalysis(std::unique_ptr<analyze::Analysis> ana
   analyses.insert(
       std::make_pair(key, AnalysisMetadata(std::move(analysis), std::move(reqs))));
 
+  analyses[key].analysis->setManager(this);
   deps[key] = {};
   return key;
 }

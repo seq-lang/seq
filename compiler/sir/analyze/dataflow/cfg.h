@@ -285,6 +285,8 @@ private:
   std::list<std::unique_ptr<Value>> syntheticValues;
   /// a map of synthetic values
   std::unordered_map<id_t, Value *> valueMapping;
+  /// a list of synthetic variables
+  std::list<std::unique_ptr<Var>> syntheticVars;
   /// a mapping from value id to block
   std::unordered_map<id_t, CFBlock *> valueLocations;
 
@@ -357,8 +359,7 @@ public:
 
   template <typename NodeType, typename... Args> NodeType *N(Args &&...args) {
     auto *ret = new NodeType(std::forward<Args>(args)...);
-    syntheticValues.emplace_back(ret);
-    valueMapping[ret->getId()] = ret;
+    reg(ret);
     ret->setModule(func->getModule());
     return ret;
   }
@@ -383,6 +384,14 @@ public:
   }
 
   friend class CFBlock;
+
+private:
+  void reg(Var *v) { syntheticVars.emplace_back(v); }
+
+  void reg(Value *v) {
+    syntheticValues.emplace_back(v);
+    valueMapping[v->getId()] = v;
+  }
 };
 
 /// Builds a control-flow graph from a given function.
