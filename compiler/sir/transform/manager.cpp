@@ -9,7 +9,8 @@
 #include "sir/analyze/dataflow/cfg.h"
 #include "sir/analyze/dataflow/reaching.h"
 
-#include "sir/transform/folding/constprop.h"
+#include "sir/transform/folding/const_fold.h"
+#include "sir/transform/folding/const_prop.h"
 #include "sir/transform/lowering/imperative.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pythonic/dict.h"
@@ -132,6 +133,7 @@ void PassManager::registerStandardPasses() {
                                 {cfgKey});
   registerPass(std::make_unique<folding::ConstPropPass>(rdKey), {rdKey},
                {cfgKey, rdKey});
+  registerPass(std::make_unique<folding::FoldingPass>());
 
   // lowering
   registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());

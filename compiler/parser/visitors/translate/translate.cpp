@@ -476,6 +476,7 @@ void TranslateVisitor::transformLLVMFunction(types::FuncType *type, FunctionStmt
   f->setLLVMBody(join(lines, "\n"));
   f->setLLVMDeclarations(declare);
   f->setLLVMLiterals(literals);
+  func->setUnmangledName(ctx->cache->reverseIdentifierLookup[type->funcName]);
 }
 
 } // namespace ast

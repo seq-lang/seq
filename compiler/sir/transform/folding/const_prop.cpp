@@ -1,4 +1,4 @@
-#include "constprop.h"
+#include "const_prop.h"
 
 #include "sir/analyze/dataflow/reaching.h"
 #include "sir/util/cloning.h"

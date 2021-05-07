@@ -7,8 +7,10 @@ namespace ir {
 namespace transform {
 namespace folding {
 
+/// Constant propagation pass.
 class ConstPropPass : public OperatorPass {
 private:
+  /// Key of the reaching definition analysis
   std::string reachingDefKey;
 
 public:
