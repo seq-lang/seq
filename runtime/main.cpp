@@ -123,6 +123,12 @@ ProcessResult processSource(const std::vector<const char *> &args) {
   seq::Seq seqDSL;
   plm.load(&seqDSL);
 
+  LOG_TIME("[T] ir-setup = {:.1f}",
+           std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::high_resolution_clock::now() - t)
+                   .count() /
+               1000.0);
+
   // load other plugins
   for (const auto &dsl : dsls) {
     auto result = plm.load(dsl);
@@ -142,8 +148,14 @@ ProcessResult processSource(const std::vector<const char *> &args) {
       break;
     }
   }
-
+  t = std::chrono::high_resolution_clock::now();
   pm.run(module);
+  LOG_TIME("[T] ir-opt = {:.1f}", std::chrono::duration_cast<std::chrono::milliseconds>(
+                                      std::chrono::high_resolution_clock::now() - t)
+                                          .count() /
+                                      1000.0);
+
+  t = std::chrono::high_resolution_clock::now();
   auto visitor = std::make_unique<seq::ir::LLVMVisitor>(isDebug);
   visitor->visit(module);
   LOG_TIME("[T] ir-visitor = {:.1f}",
