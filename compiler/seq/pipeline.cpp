@@ -237,8 +237,7 @@ void PipelinePrefetchOptimization::handle(PipelineFlow *p) {
   util::CloneVisitor cv(M);
   for (auto it = p->begin(); it != p->end(); ++it) {
     if (auto *func = getStageFunc(*it)) {
-      if (!it->isGenerator() &&
-          util::hasAttribute(func, "std.bio.builtin.prefetch")) {
+      if (!it->isGenerator() && util::hasAttribute(func, "std.bio.builtin.prefetch")) {
         // transform prefetch'ing function
         auto *clone = cast<BodiedFunc>(cv.forceClone(func));
         util::setReturnType(clone, M->getGeneratorType(util::getReturnType(clone)));

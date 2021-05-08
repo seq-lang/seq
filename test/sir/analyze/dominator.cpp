@@ -37,7 +37,8 @@ TEST_F(SIRCoreTest, DominatorAnalysisTernary) {
 
   auto *start = module->getBool(false);
   auto *middle = module->getBool(false);
-  auto *end = module->Nr<TernaryInstr>(module->getBool(true), middle, module->getBool(true));
+  auto *end =
+      module->Nr<TernaryInstr>(module->getBool(true), middle, module->getBool(true));
 
   b->push_back(start);
   b->push_back(end);
