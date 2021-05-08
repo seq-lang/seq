@@ -1,6 +1,5 @@
 #include "cfg.h"
 
-#include <fstream>
 #include <vector>
 
 #include "sir/dsl/codegen.h"
@@ -118,7 +117,7 @@ std::ostream &operator<<(std::ostream &os, const CFGraph &cfg) {
       os << ";\n";
     }
   }
-  os << "}\n";
+  os << "}";
   return os;
 }
 
