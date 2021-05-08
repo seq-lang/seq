@@ -1,5 +1,6 @@
 #include "cfg.h"
 
+#include <fstream>
 #include <vector>
 
 #include "sir/dsl/codegen.h"
@@ -94,6 +95,32 @@ int SyntheticPhiInstr::doReplaceUsedValue(id_t id, Value *newValue) {
 }
 
 CFGraph::CFGraph(const BodiedFunc *f) : func(f) { newBlock("entry", true); }
+
+std::ostream &operator<<(std::ostream &os, const CFGraph &cfg) {
+  os << "digraph \"" << cfg.func->getName() << "\" {\n";
+  for (auto *block : cfg) {
+    os << "  ";
+    os << block->getName() << "_" << reinterpret_cast<uintptr_t>(block);
+    os << " [ label=\"" << block->getName() << "\"";
+    if (block == cfg.getEntryBlock()) {
+      os << " shape=square";
+    }
+    os << " ];\n";
+  }
+  for (auto *block : cfg) {
+    for (auto next = block->successors_begin(); next != block->successors_end();
+         ++next) {
+      CFBlock *succ = *next;
+      os << "  ";
+      os << block->getName() << "_" << reinterpret_cast<uintptr_t>(block);
+      os << " -> ";
+      os << succ->getName() << "_" << reinterpret_cast<uintptr_t>(succ);
+      os << ";\n";
+    }
+  }
+  os << "}\n";
+  return os;
+}
 
 std::unique_ptr<CFGraph> buildCFGraph(const BodiedFunc *f) {
   auto ret = std::make_unique<CFGraph>(f);

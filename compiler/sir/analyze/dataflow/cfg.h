@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <list>
 #include <memory>
 #include <unordered_map>
@@ -40,6 +41,9 @@ public:
       : name(std::move(name)), graph(graph) {}
 
   virtual ~CFBlock() noexcept = default;
+
+  /// @return this block's name
+  std::string getName() const { return name; }
 
   /// @return an iterator to the first value
   auto begin() { return values.begin(); }
@@ -383,6 +387,7 @@ public:
     return it != valueMapping.end() ? it->second : func->getModule()->getValue(id);
   }
 
+  friend std::ostream &operator<<(std::ostream &os, const CFGraph &cfg);
   friend class CFBlock;
 
 private:
@@ -483,7 +488,7 @@ public:
       graph->getCurrentBlock()->push_back(v);
     } else {
       auto *original = graph->getCurrentBlock();
-      auto *newBlock = graph->newBlock("", true);
+      auto *newBlock = graph->newBlock("default", true);
       original->successors_insert(newBlock);
       newBlock->successors_insert(tryCatchStack.back());
       graph->getCurrentBlock()->push_back(v);
