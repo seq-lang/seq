@@ -236,6 +236,7 @@ else:
     print 'nope'
 
 #%% match
+from bio import *
 def foo(x):
     match x:
         case 1:

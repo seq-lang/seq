@@ -47,15 +47,6 @@ class Dict[K,V]:
             return self._vals[x]
         raise KeyError(str(key))
 
-    def prefetch(self, key: K):
-        if self._n_buckets:
-            mask = self._n_buckets - 1
-            k = _dict_hash(key)
-            i = k & mask
-            (self._keys + i).__prefetch_r1__()
-            (self._vals + i).__prefetch_r1__()
-            (self._flags + (i >> 4)).__prefetch_r1__()
-
     def __setitem__(self, key: K, val: V):
         ret, x = self._kh_put(key)
         self._vals[x] = val

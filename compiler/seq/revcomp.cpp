@@ -226,16 +226,18 @@ llvm::Value *LLVMRevcomp::buildValue(LLVMVisitor *visitor) {
 
 class RevcompCFBuilder : public dsl::codegen::CFBuilder {
 private:
-  Value *kmer;
+  const Value *instr;
+  const Value *kmer;
 
 public:
-  RevcompCFBuilder(Value *kmer) : kmer(kmer) {}
+  RevcompCFBuilder(const Value *instr, const Value *kmer) : instr(instr), kmer(kmer) {}
 
   void buildCFNodes(analyze::dataflow::CFVisitor *visitor) override;
 };
 
 void RevcompCFBuilder::buildCFNodes(analyze::dataflow::CFVisitor *visitor) {
-  visitor->defaultInsert(kmer);
+  visitor->process(kmer);
+  visitor->defaultInsert(instr);
 }
 
 } // namespace
@@ -247,7 +249,7 @@ std::unique_ptr<ir::dsl::codegen::ValueBuilder> KmerRevcomp::getBuilder() const 
 }
 
 std::unique_ptr<ir::dsl::codegen::CFBuilder> KmerRevcomp::getCFBuilder() const {
-  return std::make_unique<RevcompCFBuilder>(kmer);
+  return std::make_unique<RevcompCFBuilder>(this, kmer);
 }
 
 bool KmerRevcomp::match(const Value *v) const {

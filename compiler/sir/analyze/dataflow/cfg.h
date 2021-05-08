@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <list>
 #include <memory>
 #include <unordered_map>
@@ -40,6 +41,9 @@ public:
       : name(std::move(name)), graph(graph) {}
 
   virtual ~CFBlock() noexcept = default;
+
+  /// @return this block's name
+  std::string getName() const { return name; }
 
   /// @return an iterator to the first value
   auto begin() { return values.begin(); }
@@ -285,6 +289,8 @@ private:
   std::list<std::unique_ptr<Value>> syntheticValues;
   /// a map of synthetic values
   std::unordered_map<id_t, Value *> valueMapping;
+  /// a list of synthetic variables
+  std::list<std::unique_ptr<Var>> syntheticVars;
   /// a mapping from value id to block
   std::unordered_map<id_t, CFBlock *> valueLocations;
 
@@ -357,8 +363,7 @@ public:
 
   template <typename NodeType, typename... Args> NodeType *N(Args &&...args) {
     auto *ret = new NodeType(std::forward<Args>(args)...);
-    syntheticValues.emplace_back(ret);
-    valueMapping[ret->getId()] = ret;
+    reg(ret);
     ret->setModule(func->getModule());
     return ret;
   }
@@ -382,7 +387,16 @@ public:
     return it != valueMapping.end() ? it->second : func->getModule()->getValue(id);
   }
 
+  friend std::ostream &operator<<(std::ostream &os, const CFGraph &cfg);
   friend class CFBlock;
+
+private:
+  void reg(Var *v) { syntheticVars.emplace_back(v); }
+
+  void reg(Value *v) {
+    syntheticValues.emplace_back(v);
+    valueMapping[v->getId()] = v;
+  }
 };
 
 /// Builds a control-flow graph from a given function.
@@ -474,7 +488,7 @@ public:
       graph->getCurrentBlock()->push_back(v);
     } else {
       auto *original = graph->getCurrentBlock();
-      auto *newBlock = graph->newBlock("", true);
+      auto *newBlock = graph->newBlock("default", true);
       original->successors_insert(newBlock);
       newBlock->successors_insert(tryCatchStack.back());
       graph->getCurrentBlock()->push_back(v);

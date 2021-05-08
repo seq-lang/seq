@@ -1,8 +1,12 @@
-from builtin import *
+from bio.seq import *
+from bio.kmer import *
+from bio.pseq import *
 
-from block import Block, blocks
-from locus import Locus
-from iter import Seqs
+from bio.builtin import *
+
+from bio.block import Block, blocks
+from bio.locus import Locus
+from bio.iter import Seqs
 
 from bio.align import SubMat, CIGAR, Alignment
 from bio.pseq import pseq, translate
@@ -14,3 +18,6 @@ from bio.fai import FAIRecord, FAI
 from bio.bam import SAMRecord, SAM, BAM, CRAM
 from bio.bed import BEDRecord, BED
 from bio.vcf import VCFRecord, VCF, BCF
+
+from bio.prefetch import *
+from bio.types import *

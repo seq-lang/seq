@@ -1,5 +1,6 @@
 # Seq Alignment
-
+from bio.seq import seq
+from bio.pseq import pseq
 from c_htslib import bam_cigar2qlen, bam_cigar2rlen
 from internal.gc import sizeof
 

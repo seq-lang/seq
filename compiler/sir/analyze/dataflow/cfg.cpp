@@ -4,46 +4,46 @@
 
 #include "sir/dsl/codegen.h"
 #include "sir/dsl/nodes.h"
-#include "sir/util/visitor.h"
 
 namespace {
 using namespace seq::ir;
 const Value *
-convertPipelineToForLoopsHelper(const std::vector<const PipelineFlow::Stage *> &stages,
+convertPipelineToForLoopsHelper(analyze::dataflow::CFGraph *cfg,
+                                const std::vector<const PipelineFlow::Stage *> &stages,
                                 unsigned idx = 0, const Value *last = nullptr) {
   if (idx >= stages.size())
     return last;
   auto *stage = stages[idx];
-  auto *M = stage->getCallee()->getModule();
   Value *next = nullptr;
   if (last) {
     std::vector<Value *> args;
     for (auto *arg : *stage) {
       args.push_back(const_cast<Value *>(arg ? arg : last));
     }
-    next = M->Nr<CallInstr>(const_cast<Value *>(stage->getCallee()), args);
+    next = cfg->N<CallInstr>(const_cast<Value *>(stage->getCallee()), args);
   } else {
     next = const_cast<Value *>(stage->getCallee());
   }
   if (stage->isGenerator()) {
-    auto *var = M->Nr<Var>(stage->getOutputElementType());
-    Value *body = const_cast<Value *>(
-        convertPipelineToForLoopsHelper(stages, idx + 1, M->Nr<VarValue>(var)));
-    auto *s = M->Nr<SeriesFlow>();
+    auto *var = cfg->N<Var>(stage->getOutputElementType());
+    auto *body = const_cast<Value *>(
+        convertPipelineToForLoopsHelper(cfg, stages, idx + 1, cfg->N<VarValue>(var)));
+    auto *s = cfg->N<SeriesFlow>();
     s->push_back(body);
 
-    return M->Nr<ForFlow>(next, s, var);
+    return cfg->N<ForFlow>(next, s, var);
   } else {
-    return convertPipelineToForLoopsHelper(stages, idx + 1, next);
+    return convertPipelineToForLoopsHelper(cfg, stages, idx + 1, next);
   }
 }
 
-const Value *convertPipelineToForLoops(const PipelineFlow *p) {
+const Value *convertPipelineToForLoops(analyze::dataflow::CFGraph *cfg,
+                                       const PipelineFlow *p) {
   std::vector<const PipelineFlow::Stage *> stages;
   for (const auto &stage : *p) {
     stages.push_back(&stage);
   }
-  return convertPipelineToForLoopsHelper(stages);
+  return convertPipelineToForLoopsHelper(cfg, stages);
 }
 } // namespace
 
@@ -94,6 +94,32 @@ int SyntheticPhiInstr::doReplaceUsedValue(id_t id, Value *newValue) {
 }
 
 CFGraph::CFGraph(const BodiedFunc *f) : func(f) { newBlock("entry", true); }
+
+std::ostream &operator<<(std::ostream &os, const CFGraph &cfg) {
+  os << "digraph \"" << cfg.func->getName() << "\" {\n";
+  for (auto *block : cfg) {
+    os << "  ";
+    os << block->getName() << "_" << reinterpret_cast<uintptr_t>(block);
+    os << " [ label=\"" << block->getName() << "\"";
+    if (block == cfg.getEntryBlock()) {
+      os << " shape=square";
+    }
+    os << " ];\n";
+  }
+  for (auto *block : cfg) {
+    for (auto next = block->successors_begin(); next != block->successors_end();
+         ++next) {
+      CFBlock *succ = *next;
+      os << "  ";
+      os << block->getName() << "_" << reinterpret_cast<uintptr_t>(block);
+      os << " -> ";
+      os << succ->getName() << "_" << reinterpret_cast<uintptr_t>(succ);
+      os << ";\n";
+    }
+  }
+  os << "}";
+  return os;
+}
 
 std::unique_ptr<CFGraph> buildCFGraph(const BodiedFunc *f) {
   auto ret = std::make_unique<CFGraph>(f);
@@ -261,7 +287,7 @@ void CFVisitor::visit(const TryCatchFlow *v) {
 }
 
 void CFVisitor::visit(const PipelineFlow *v) {
-  if (auto *loops = convertPipelineToForLoops(v)) {
+  if (auto *loops = convertPipelineToForLoops(graph, v)) {
     process(loops);
   } else {
     // pipeline is empty

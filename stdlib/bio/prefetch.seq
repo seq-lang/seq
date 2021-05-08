@@ -1,7 +1,3 @@
-@__attribute__
-def prefetch():
-    pass
-
 @inline
 def _dynamic_coroutine_scheduler[A,B,T,C](value: A, coro: B, states: Array[Generator[T]], I: Ptr[int], N: Ptr[int], M: int, args: C):
     n = N[0]
