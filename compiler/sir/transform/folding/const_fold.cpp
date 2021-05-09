@@ -107,13 +107,13 @@ void FoldingPass::registerStandardRules(Module *m) {
   registerRule("int-constant-eq", intToBoolBinary(m, BINOP(==), Module::EQ_MAGIC_NAME));
   registerRule("int-constant-ne", intToBoolBinary(m, BINOP(!=), Module::NE_MAGIC_NAME));
   registerRule("int-constant-gt", intToBoolBinary(m, BINOP(>), Module::GT_MAGIC_NAME));
-  registerRule("int-constant-ge", intToBoolBinary(m, BINOP(>=), Module::LT_MAGIC_NAME));
+  registerRule("int-constant-ge", intToBoolBinary(m, BINOP(>=), Module::GE_MAGIC_NAME));
   registerRule("int-constant-lt", intToBoolBinary(m, BINOP(<), Module::LT_MAGIC_NAME));
-  registerRule("int-constant-le", intToBoolBinary(m, BINOP(<=), Module::LT_MAGIC_NAME));
+  registerRule("int-constant-le", intToBoolBinary(m, BINOP(<=), Module::LE_MAGIC_NAME));
 
   // unary, single constant, int->int
   registerRule("int-constant-pos", intToIntUnary(m, UNOP(+), Module::POS_MAGIC_NAME));
-  registerRule("int-constant-neg", intToIntUnary(m, UNOP(-), Module::POS_MAGIC_NAME));
+  registerRule("int-constant-neg", intToIntUnary(m, UNOP(-), Module::NEG_MAGIC_NAME));
   registerRule("int-constant-inv",
                intToIntUnary(m, UNOP(~), Module::INVERT_MAGIC_NAME));
 }
