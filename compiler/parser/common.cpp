@@ -202,21 +202,23 @@ unique_ptr<ImportFile> getImportFile(const string &argv0, const string &what,
   strncpy(abs, module0.c_str(), PATH_MAX);
   auto module0Root = string(dirname(abs));
   auto getRoot = [&](const string &s) {
+    bool isStdLib = false;
     string root;
-    if (startswith(s, module0Root))
+    for (auto &p : getStdLibPaths(argv0))
+      if (startswith(s, p)) {
+        root = p;
+        isStdLib = true;
+        break;
+      }
+    if (!isStdLib && startswith(s, module0Root))
       root = module0Root;
-    else
-      for (auto &p : getStdLibPaths(argv0))
-        if (startswith(s, p)) {
-          root = p;
-          break;
-        }
     seqassert(startswith(s, root) && endswith(s, ".seq"),
               "bad path substitution: {}, {}", s, root);
     auto module = s.substr(root.size() + 1, s.size() - root.size() - 5);
     std::replace(module.begin(), module.end(), '/', '.');
-    return ImportFile{root == module0Root ? ImportFile::PACKAGE : ImportFile::STDLIB, s,
-                      module};
+    return ImportFile{(!isStdLib && root == module0Root) ? ImportFile::PACKAGE
+                                                         : ImportFile::STDLIB,
+                      s, module};
   };
 
   vector<string> paths;

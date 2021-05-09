@@ -243,7 +243,7 @@ GlobalStmt::GlobalStmt(string var) : Stmt(), var(move(var)) {}
 string GlobalStmt::toString() const { return format("(global '{})", var); }
 ACCEPT_IMPL(GlobalStmt, ASTVisitor);
 
-Attr::Attr(const vector<string> &attrs) : module(), parentClass() {
+Attr::Attr(const vector<string> &attrs) : module(), parentClass(), isAttribute(false) {
   for (auto &a : attrs)
     set(a);
 }
