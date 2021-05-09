@@ -60,12 +60,14 @@ namespace folding {
 
 void FoldingPass::run(Module *m) {
   registerStandardRules(m);
+  numReplacements = 0;
   OperatorPass::run(m);
 }
 
 void FoldingPass::handle(CallInstr *v) {
   for (auto &r : rules)
     if (auto *rep = r.second->apply(v)) {
+      ++numReplacements;
       v->replaceAll(rep);
       continue;
     }

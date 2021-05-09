@@ -9,8 +9,7 @@
 #include "sir/analyze/dataflow/cfg.h"
 #include "sir/analyze/dataflow/reaching.h"
 
-#include "sir/transform/folding/const_fold.h"
-#include "sir/transform/folding/const_prop.h"
+#include "sir/transform/folding/folding.h"
 #include "sir/transform/lowering/imperative.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pythonic/dict.h"
@@ -21,6 +20,8 @@
 namespace seq {
 namespace ir {
 namespace transform {
+
+const int PassManager::PASS_IT_MAX = 5;
 
 std::string PassManager::KeyManager::getUniqueKey(const std::string &key) {
   // make sure we can't ever produce duplicate "unique'd" keys
@@ -85,14 +86,22 @@ void PassManager::run(Module *module) {
 void PassManager::runPass(Module *module, const std::string &name) {
   auto &meta = passes[name];
 
-  for (auto &dep : meta.reqs) {
-    runAnalysis(module, dep);
+  auto run = true;
+  auto it = 0;
+
+  while (run && it < PASS_IT_MAX) {
+    for (auto &dep : meta.reqs) {
+      runAnalysis(module, dep);
+    }
+
+    meta.pass->run(module);
+
+    for (auto &inv : meta.invalidates)
+      invalidate(inv);
+
+    ++it;
+    run = meta.pass->shouldRepeat();
   }
-
-  meta.pass->run(module);
-
-  for (auto &inv : meta.invalidates)
-    invalidate(inv);
 }
 
 void PassManager::runAnalysis(Module *module, const std::string &name) {
@@ -131,9 +140,9 @@ void PassManager::registerStandardPasses() {
   auto cfgKey = registerAnalysis(std::make_unique<analyze::dataflow::CFAnalysis>());
   auto rdKey = registerAnalysis(std::make_unique<analyze::dataflow::RDAnalysis>(cfgKey),
                                 {cfgKey});
-  registerPass(std::make_unique<folding::ConstPropPass>(rdKey), {rdKey},
-               {cfgKey, rdKey});
-  registerPass(std::make_unique<folding::FoldingPass>());
+
+  registerPass(std::make_unique<folding::FoldingPassGroup>(rdKey), {rdKey},
+               {rdKey, cfgKey});
 
   // lowering
   registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());

@@ -159,6 +159,7 @@ set(SEQ_HPPFILES
         compiler/sir/transform/cleanup/replacer.h
         compiler/sir/transform/folding/const_fold.h
         compiler/sir/transform/folding/const_prop.h
+        compiler/sir/transform/folding/folding.h
         compiler/sir/transform/folding/rule.h
         compiler/sir/transform/lowering/imperative.h
         compiler/sir/transform/manager.h
@@ -232,6 +233,7 @@ set(SEQ_CPPFILES
         compiler/sir/transform/cleanup/replacer.cpp
         compiler/sir/transform/folding/const_fold.cpp
         compiler/sir/transform/folding/const_prop.cpp
+        compiler/sir/transform/folding/folding.cpp
         compiler/sir/transform/lowering/imperative.cpp
         compiler/sir/transform/manager.cpp
         compiler/sir/transform/pass.cpp

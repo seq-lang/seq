@@ -15,6 +15,7 @@ namespace folding {
 class FoldingPass : public OperatorPass {
 private:
   std::unordered_map<std::string, std::unique_ptr<FoldingRule>> rules;
+  int numReplacements = 0;
 
 public:
   const std::string KEY = "core-folding-const-fold";
@@ -27,6 +28,9 @@ public:
   }
 
   void handle(CallInstr *v) override;
+
+  /// @return the number of replacements
+  int getNumReplacements() const { return numReplacements; }
 
 private:
   void registerStandardRules(Module *m);

@@ -259,10 +259,9 @@ void CFVisitor::visit(const TryCatchFlow *v) {
 
   auto *dst = finally ? finally : end;
 
-  tryCatchStack.emplace_back(end, finally);
+  tryCatchStack.emplace_back(routeBlock, finally);
   process(v->getBody());
   graph->getCurrentBlock()->successors_insert(dst);
-
 
   for (auto &c : *v) {
     auto *cBlock = graph->newBlock("catch", true);
@@ -282,7 +281,6 @@ void CFVisitor::visit(const TryCatchFlow *v) {
     graph->getCurrentBlock()->successors_insert(end);
     routeBlock->successors_insert(finally);
   }
-
 
   if (!tryCatchStack.empty()) {
     if (finally)

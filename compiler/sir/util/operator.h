@@ -148,6 +148,13 @@ public:
     return findLast<SeriesFlow>()->insert(newPos, v);
   }
 
+  /// Resets the operator.
+  void reset() {
+    seen.clear();
+    nodeStack.clear();
+    itStack.clear();
+  }
+
 private:
   void processChildren(Value *v) {
     nodeStack.push_back(v);
