@@ -204,8 +204,9 @@ public:
 
     auto *argConst = cast<TemplatedConst<ConstantType>>(arg);
 
-    if (argConst)
+    if (argConst) {
       return toValue(v, f(argConst->getVal()));
+    }
 
     return nullptr;
   }
@@ -216,6 +217,46 @@ private:
   template <typename NewType> Value *toValue(Value *og, NewType v) {
     return og->getModule()->template N<TemplatedConst<NewType>>(og->getSrcInfo(), v,
                                                                 resultType);
+  }
+};
+
+/// Unary rule that requires no constant.
+template <typename Func> class UnaryRule : public FoldingRule {
+private:
+  /// the calculator
+  Func f;
+  /// the input type
+  types::Type *inputType;
+  /// the magic method name
+  std::string magic;
+
+public:
+  /// Constructs a unary rule.
+  /// @param f the calculator
+  /// @param magic the magic method name
+  /// @param inputType the input type
+  UnaryRule(Func f, std::string magic, types::Type *inputType)
+      : f(std::move(f)), inputType(inputType), magic(std::move(magic)) {}
+
+  virtual ~UnaryRule() noexcept = default;
+
+  Value *apply(CallInstr *v) override {
+    auto *fn = util::getFunc(v->getCallee());
+    if (!fn)
+      return nullptr;
+
+    if (fn->getUnmangledName() != magic)
+      return nullptr;
+
+    if (std::distance(v->begin(), v->end()) != 1)
+      return nullptr;
+
+    auto *arg = v->front();
+
+    if (arg->getType()->getName() != inputType->getName())
+      return nullptr;
+
+    return f(arg);
   }
 };
 

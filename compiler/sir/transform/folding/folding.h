@@ -1,17 +1,21 @@
 #pragma once
 
-#include "const_fold.h"
-#include "const_prop.h"
+#include "sir/transform/pass.h"
+
+#include "sir/transform/cleanup/dead_code.h"
 
 namespace seq {
 namespace ir {
 namespace transform {
 namespace folding {
 
+class FoldingPass;
+
 /// Group of constant folding passes.
 class FoldingPassGroup : public PassGroup {
 private:
   FoldingPass *fp;
+  cleanup::DeadCodeCleanupPass *dce;
 
 public:
   const std::string KEY = "core-folding-pass-group";

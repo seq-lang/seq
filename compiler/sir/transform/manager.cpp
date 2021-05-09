@@ -21,7 +21,7 @@ namespace seq {
 namespace ir {
 namespace transform {
 
-const int PassManager::PASS_IT_MAX = 5;
+const int PassManager::PASS_IT_MAX = 50;
 
 std::string PassManager::KeyManager::getUniqueKey(const std::string &key) {
   // make sure we can't ever produce duplicate "unique'd" keys
@@ -136,16 +136,15 @@ void PassManager::registerStandardPasses() {
   registerPass(std::make_unique<pythonic::StrAdditionOptimization>());
   registerPass(std::make_unique<pythonic::IOCatOptimization>());
 
+  // lowering
+  registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());
+
   // folding
   auto cfgKey = registerAnalysis(std::make_unique<analyze::dataflow::CFAnalysis>());
   auto rdKey = registerAnalysis(std::make_unique<analyze::dataflow::RDAnalysis>(cfgKey),
                                 {cfgKey});
-
   registerPass(std::make_unique<folding::FoldingPassGroup>(rdKey), {rdKey},
                {rdKey, cfgKey});
-
-  // lowering
-  registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());
 }
 
 } // namespace transform
