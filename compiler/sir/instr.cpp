@@ -5,7 +5,7 @@
 
 namespace {
 
-int findAndReplace(int id, seq::ir::Value *newVal,
+int findAndReplace(id_t id, seq::ir::Value *newVal,
                    std::vector<seq::ir::Value *> &values) {
   auto replacements = 0;
   for (auto &value : values) {
@@ -28,7 +28,7 @@ types::Type *Instr::doGetType() const { return getModule()->getVoidType(); }
 
 const char AssignInstr::NodeId = 0;
 
-int AssignInstr::doReplaceUsedValue(int id, Value *newValue) {
+int AssignInstr::doReplaceUsedValue(id_t id, Value *newValue) {
   if (rhs->getId() == id) {
     rhs = newValue;
     return 1;
@@ -36,7 +36,7 @@ int AssignInstr::doReplaceUsedValue(int id, Value *newValue) {
   return 0;
 }
 
-int AssignInstr::doReplaceUsedVariable(int id, Var *newVar) {
+int AssignInstr::doReplaceUsedVariable(id_t id, Var *newVar) {
   if (lhs->getId() == id) {
     lhs = newVar;
     return 1;
@@ -52,7 +52,7 @@ types::Type *ExtractInstr::doGetType() const {
   return memberedType->getMemberType(field);
 }
 
-int ExtractInstr::doReplaceUsedValue(int id, Value *newValue) {
+int ExtractInstr::doReplaceUsedValue(id_t id, Value *newValue) {
   if (val->getId() == id) {
     val = newValue;
     return 1;
@@ -62,7 +62,7 @@ int ExtractInstr::doReplaceUsedValue(int id, Value *newValue) {
 
 const char InsertInstr::NodeId = 0;
 
-int InsertInstr::doReplaceUsedValue(int id, Value *newValue) {
+int InsertInstr::doReplaceUsedValue(id_t id, Value *newValue) {
   auto replacements = 0;
   if (lhs->getId() == id) {
     lhs = newValue;
@@ -89,7 +89,7 @@ std::vector<Value *> CallInstr::doGetUsedValues() const {
   return ret;
 }
 
-int CallInstr::doReplaceUsedValue(int id, Value *newValue) {
+int CallInstr::doReplaceUsedValue(id_t id, Value *newValue) {
   auto replacements = 0;
   if (callee->getId() == id) {
     callee = newValue;
@@ -143,7 +143,7 @@ int YieldInInstr::doReplaceUsedType(const std::string &name, types::Type *newTyp
 
 const char TernaryInstr::NodeId = 0;
 
-int TernaryInstr::doReplaceUsedValue(int id, Value *newValue) {
+int TernaryInstr::doReplaceUsedValue(id_t id, Value *newValue) {
   auto replacements = 0;
   if (cond->getId() == id) {
     cond = newValue;
@@ -174,7 +174,7 @@ std::vector<Value *> ReturnInstr::doGetUsedValues() const {
   return {};
 }
 
-int ReturnInstr::doReplaceUsedValue(int id, Value *newValue) {
+int ReturnInstr::doReplaceUsedValue(id_t id, Value *newValue) {
   auto replacements = 0;
   if (value && value->getId() == id) {
     setValue(newValue);
@@ -191,7 +191,7 @@ std::vector<Value *> YieldInstr::doGetUsedValues() const {
   return {};
 }
 
-int YieldInstr::doReplaceUsedValue(int id, Value *newValue) {
+int YieldInstr::doReplaceUsedValue(id_t id, Value *newValue) {
   if (value && value->getId() == id) {
     setValue(newValue);
     return 1;
@@ -207,7 +207,7 @@ std::vector<Value *> ThrowInstr::doGetUsedValues() const {
   return {};
 }
 
-int ThrowInstr::doReplaceUsedValue(int id, Value *newValue) {
+int ThrowInstr::doReplaceUsedValue(id_t id, Value *newValue) {
   if (value && value->getId() == id) {
     setValue(newValue);
     return 1;
@@ -217,7 +217,7 @@ int ThrowInstr::doReplaceUsedValue(int id, Value *newValue) {
 
 const char FlowInstr::NodeId = 0;
 
-int FlowInstr::doReplaceUsedValue(int id, Value *newValue) {
+int FlowInstr::doReplaceUsedValue(id_t id, Value *newValue) {
   auto replacements = 0;
   if (flow->getId() == id) {
     auto *f = cast<Flow>(newValue);

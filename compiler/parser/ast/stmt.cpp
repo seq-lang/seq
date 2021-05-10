@@ -243,13 +243,26 @@ GlobalStmt::GlobalStmt(string var) : Stmt(), var(move(var)) {}
 string GlobalStmt::toString() const { return format("(global '{})", var); }
 ACCEPT_IMPL(GlobalStmt, ASTVisitor);
 
-Attr::Attr(const vector<int> &attrs) : bitmask(0), module(), parentClass() {
+Attr::Attr(const vector<string> &attrs) : module(), parentClass(), isAttribute(false) {
   for (auto &a : attrs)
     set(a);
 }
-void Attr::set(int a) { bitmask |= 1ull << a; }
-void Attr::unset(int a) { bitmask &= ~(1ull << a); }
-bool Attr::has(int a) const { return bool(bitmask & (1ull << a)); }
+void Attr::set(const string &attr) { customAttr.insert(attr); }
+void Attr::unset(const string &attr) { customAttr.erase(attr); }
+bool Attr::has(const string &attr) const { return in(customAttr, attr); }
+
+const string Attr::LLVM = "llvm";
+const string Attr::Python = "python";
+const string Attr::Atomic = "atomic";
+const string Attr::Property = "property";
+const string Attr::Internal = "__internal__";
+const string Attr::ForceRealize = "__force__";
+const string Attr::C = ".__c__";
+const string Attr::Method = ".__method__";
+const string Attr::Capture = ".__capture__";
+const string Attr::Extend = "extend";
+const string Attr::Tuple = "tuple";
+const string Attr::Test = "std.internal.attributes.test";
 
 FunctionStmt::FunctionStmt(string name, ExprPtr ret, vector<Param> &&generics,
                            vector<Param> &&args, StmtPtr suite, Attr attributes,
@@ -286,7 +299,7 @@ string FunctionStmt::signature() const {
     s.push_back(a.type ? a.type->toString() : "-");
   return format("{}", join(s, ":"));
 }
-bool FunctionStmt::hasAttr(int attr) const { return attributes.has(attr); }
+bool FunctionStmt::hasAttr(const string &attr) const { return attributes.has(attr); }
 
 ClassStmt::ClassStmt(string name, vector<Param> &&g, vector<Param> &&a, StmtPtr s,
                      Attr attributes, vector<ExprPtr> &&decorators)
@@ -312,7 +325,7 @@ string ClassStmt::toString() const {
 }
 ACCEPT_IMPL(ClassStmt, ASTVisitor);
 bool ClassStmt::isRecord() const { return hasAttr(Attr::Tuple); }
-bool ClassStmt::hasAttr(int attr) const { return attributes.has(attr); }
+bool ClassStmt::hasAttr(const string &attr) const { return attributes.has(attr); }
 
 YieldFromStmt::YieldFromStmt(ExprPtr expr) : Stmt(), expr(move(expr)) {}
 YieldFromStmt::YieldFromStmt(const YieldFromStmt &stmt)

@@ -1,5 +1,7 @@
 # FASTQ format parser
 # https://en.wikipedia.org/wiki/FASTQ_format
+from bio.seq import seq
+
 @tuple
 class FASTQRecord:
     _header: str

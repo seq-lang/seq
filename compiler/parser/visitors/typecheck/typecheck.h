@@ -34,8 +34,8 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
 
 public:
   static StmtPtr apply(shared_ptr<Cache> cache, StmtPtr stmts,
-                       const unordered_map<string, pair<string, seq_int_t>> &defines =
-                           unordered_map<string, pair<string, seq_int_t>>());
+                       const unordered_map<string, pair<string, int64_t>> &defines =
+                           unordered_map<string, pair<string, int64_t>>());
 
 public:
   explicit TypecheckVisitor(shared_ptr<TypeContext> ctx,
@@ -89,7 +89,7 @@ public:
   ///   foo(..., x).
   /// Transform any non-CallExpr stage foo into a CallExpr stage:
   ///   foo(...).
-  /// If necessary, add stages (e.g. unwrap, float,__new__ or Optional.__new__)
+  /// If necessary, add stages (e.g. unwrap, float.__new__ or Optional.__new__)
   /// to support function call type adjustments.
   void visit(PipeExpr *) override;
   /// Transform an instantiation Instantiate(foo, {bar, baz}) to a canonical name:

@@ -79,7 +79,7 @@ public:
   ///        to their string and integer values.
   static StmtPtr apply(shared_ptr<Cache> cache, const unique_ptr<Stmt> &node,
                        const string &file,
-                       unordered_map<string, pair<string, seq_int_t>> &defines,
+                       unordered_map<string, pair<string, int64_t>> &defines,
                        bool barebones = false);
 
   /// Static method that applies SimplifyStage on a given AST node after the standard
@@ -175,6 +175,10 @@ public:
   /// Other cases are handled during the type-checking stage.
   /// Note: static expressions are not transformed.
   void visit(BinaryExpr *) override;
+  /// Transform chain binary expression:
+  ///   a <= b <= c -> (a <= b) and (b <= c).
+  /// Ensures that all expressions (a, b, and c) are executed only once.
+  void visit(ChainBinaryExpr *) override;
   /// Pipes will be handled during the type-checking stage.
   void visit(PipeExpr *) override;
   /// Perform the following transformations:
@@ -220,6 +224,8 @@ public:
   void visit(AssignExpr *) override;
   /// Disallow ranges except in match statements.
   void visit(RangeExpr *) override;
+  /// Parse all statements in StmtExpr.
+  void visit(StmtExpr *) override;
 
   /// Transform all statements in a suite and flatten them (unless a suite is a variable
   /// scope).

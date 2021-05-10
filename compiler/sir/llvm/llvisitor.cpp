@@ -1,5 +1,4 @@
 #include "llvisitor.h"
-#include "revcomp.h"
 #include "util/common.h"
 #include "llvm/CodeGen/CommandFlags.def"
 #include <algorithm>
@@ -29,6 +28,8 @@ extern llvm::cl::opt<bool> fastOpenMP;
 
 extern "C" void seq_gc_add_roots(void *start, void *end);
 extern "C" void seq_gc_remove_roots(void *start, void *end);
+extern "C" int64_t seq_exc_offset();
+extern "C" uint64_t seq_exc_class();
 
 namespace seq {
 namespace ir {
@@ -993,16 +994,6 @@ void LLVMVisitor::visit(const InternalFunc *x) {
     }
   }
 
-  else if (internalFuncMatches<IntNType, IntNType>("__revcomp__", x)) {
-    auto *intNType = cast<IntNType>(parentType);
-    if (intNType->getLen() % 2 != 0) {
-      result = llvm::ConstantAggregateZero::get(getLLVMType(intNType));
-    } else {
-      const unsigned k = intNType->getLen() / 2;
-      result = codegenRevCompHeuristic(k, args[0], builder);
-    }
-  }
-
   seqassert(result, "internal function {} not found", *x);
   builder.CreateRet(result);
 }
@@ -1104,15 +1095,15 @@ void LLVMVisitor::visit(const BodiedFunc *x) {
   setDebugInfoForNode(x);
 
   auto *fnAttributes = x->getAttribute<KeyValueAttribute>();
-  if (fnAttributes && fnAttributes->has("export")) {
+  if (fnAttributes && fnAttributes->has("std.internal.attributes.export")) {
     func->setLinkage(llvm::GlobalValue::ExternalLinkage);
   } else {
     func->setLinkage(llvm::GlobalValue::PrivateLinkage);
   }
-  if (fnAttributes && fnAttributes->has("inline")) {
+  if (fnAttributes && fnAttributes->has("std.internal.attributes.inline")) {
     func->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
   }
-  if (fnAttributes && fnAttributes->has("noinline")) {
+  if (fnAttributes && fnAttributes->has("std.internal.attributes.noinline")) {
     func->addFnAttr(llvm::Attribute::AttrKind::NoInline);
   }
   func->setPersonalityFn(makePersonalityFunc());
@@ -1680,6 +1671,52 @@ void LLVMVisitor::visit(const ForFlow *x) {
   block = exitBlock;
 }
 
+void LLVMVisitor::visit(const ImperativeForFlow *x) {
+  llvm::Value *loopVar = vars[x->getVar()];
+  seqassert(loopVar, "{} loop variable not found", *x);
+
+  auto *condBlock = llvm::BasicBlock::Create(context, "imp_for.cond", func);
+  auto *bodyBlock = llvm::BasicBlock::Create(context, "imp_for.body", func);
+  auto *updateBlock = llvm::BasicBlock::Create(context, "imp_for.update", func);
+  auto *exitBlock = llvm::BasicBlock::Create(context, "imp_for.exit", func);
+
+  process(x->getStart());
+  builder.CreateStore(value, loopVar);
+  process(x->getEnd());
+  auto *end = value;
+  builder.CreateBr(condBlock);
+
+  block = condBlock;
+  builder.SetInsertPoint(block);
+
+  auto step = x->getStep();
+  seqassert(step != 0, "step cannot be 0");
+
+  llvm::Value *done;
+  if (x->getStep() > 0)
+    done = builder.CreateICmpSGE(builder.CreateLoad(loopVar), end);
+  else
+    done = builder.CreateICmpSLE(builder.CreateLoad(loopVar), end);
+
+  builder.CreateCondBr(done, exitBlock, bodyBlock);
+
+  block = bodyBlock;
+  enterLoop({/*breakBlock=*/exitBlock, /*continueBlock=*/updateBlock});
+  process(x->getBody());
+  exitLoop();
+  builder.SetInsertPoint(block);
+  builder.CreateBr(updateBlock);
+
+  block = updateBlock;
+  builder.SetInsertPoint(block);
+  builder.CreateStore(
+      builder.CreateAdd(builder.CreateLoad(loopVar), builder.getInt64(x->getStep())),
+      loopVar);
+  builder.CreateBr(condBlock);
+
+  block = exitBlock;
+}
+
 namespace {
 bool anyMatch(types::Type *type, std::vector<types::Type *> types) {
   if (type) {
@@ -2173,7 +2210,10 @@ void LLVMVisitor::visit(const PipelineFlow *x) {
   }
 }
 
-void LLVMVisitor::visit(const dsl::CustomFlow *x) { x->getBuilder()->buildValue(this); }
+void LLVMVisitor::visit(const dsl::CustomFlow *x) {
+  builder.SetInsertPoint(block);
+  value = x->getBuilder()->buildValue(this);
+}
 
 /*
  * Instructions
@@ -2422,7 +2462,8 @@ void LLVMVisitor::visit(const FlowInstr *x) {
 }
 
 void LLVMVisitor::visit(const dsl::CustomInstr *x) {
-  x->getBuilder()->buildValue(this);
+  builder.SetInsertPoint(block);
+  value = x->getBuilder()->buildValue(this);
 }
 
 } // namespace ir

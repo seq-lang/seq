@@ -213,6 +213,29 @@ print c is c, c is not c #: True False
 z: Optional[int] = None
 print z is None, None is z, None is not z, None is None #: True True False True
 
+#%% chain_binary,barebones
+def foo():
+    print 'foo'
+    return 15
+a = b = c = foo() #: foo
+print a, b, c #: 15 15 15
+
+x = y = []
+x.append(1)
+print x, y #: [1] [1]
+
+print 1 <= foo() <= 10 #: foo
+#: False
+print 15 >= foo()+1 < 30 > 20 > foo()
+#: foo
+#: False
+print 15 >= foo()-1 < 30 > 20 > foo()
+#: foo
+#: foo
+#: True
+
+print True == (b == 15) #: True
+
 #%% pipe_error,barebones
 def b(a, b, c, d):
     pass

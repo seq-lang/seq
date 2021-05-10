@@ -14,13 +14,18 @@ private:
   std::string unmangledName;
   /// whether the function is a generator
   bool generator;
+  /// Parent type if func is a method, or null if not
+  types::Type *parentType;
 
 protected:
   /// list of arguments
   std::list<Var *> args;
 
   std::vector<Var *> doGetUsedVariables() const override;
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
+
+  std::vector<types::Type *> doGetUsedTypes() const override;
+  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
 public:
   static const char NodeId;
@@ -28,7 +33,8 @@ public:
   /// Constructs an unrealized SIR function.
   /// @param name the function's name
   explicit Func(std::string name = "")
-      : AcceptorExtend(nullptr, true, std::move(name)), generator(false) {}
+      : AcceptorExtend(nullptr, true, std::move(name)), generator(false),
+        parentType(nullptr) {}
 
   /// Re-initializes the function with a new type and names.
   /// @param newType the function's new type
@@ -68,6 +74,12 @@ public:
   /// @return the variable corresponding to the given argument name
   /// @param n the argument name
   Var *getArgVar(const std::string &n);
+
+  /// @return the parent type
+  types::Type *getParentType() const { return parentType; }
+  /// Sets the parent type.
+  /// @param p the new parent
+  void setParentType(types::Type *p) { parentType = p; }
 };
 
 class BodiedFunc : public AcceptorExtend<BodiedFunc, Func> {
@@ -134,10 +146,10 @@ protected:
   std::vector<Value *> doGetUsedValues() const override {
     return body ? std::vector<Value *>{body} : std::vector<Value *>{};
   }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override;
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
 };
 
 class ExternalFunc : public AcceptorExtend<ExternalFunc, Func> {
@@ -149,24 +161,10 @@ public:
 
 /// Internal, LLVM-only function.
 class InternalFunc : public AcceptorExtend<InternalFunc, Func> {
-private:
-  /// parent type of the function if it is magic
-  types::Type *parentType = nullptr;
-
 public:
   static const char NodeId;
 
   using AcceptorExtend::AcceptorExtend;
-
-  /// @return the parent type
-  types::Type *getParentType() const { return parentType; }
-  /// Sets the parent type.
-  /// @param p the new parent
-  void setParentType(types::Type *p) { parentType = p; }
-
-protected:
-  std::vector<types::Type *> doGetUsedTypes() const override;
-  int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 };
 
 /// LLVM function defined in Seq source.

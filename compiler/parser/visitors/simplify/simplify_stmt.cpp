@@ -400,32 +400,36 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   vector<ExprPtr> decorators;
   Attr attr = stmt->attributes;
   for (auto &d : stmt->decorators) {
-    if (d->isId("llvm"))
+    if (d->isId("__attribute__")) {
+      if (stmt->decorators.size() != 1)
+        error("__attribute__ cannot be mixed with other decorators");
+      attr.isAttribute = true;
+    } else if (d->isId(Attr::LLVM))
       attr.set(Attr::LLVM);
-    else if (d->isId("internal"))
-      attr.set(Attr::Internal);
-    else if (d->isId("atomic"))
-      attr.set(Attr::Atomic);
-    else if (d->isId("python"))
+    else if (d->isId(Attr::Python))
       attr.set(Attr::Python);
-    else if (d->isId("force_realize"))
-      attr.set(Attr::ForceRealize);
-    else if (d->isId("test"))
-      attr.set(Attr::Test);
-    else if (d->isId("property"))
+    else if (d->isId(Attr::Internal))
+      attr.set(Attr::Internal);
+    else if (d->isId(Attr::Atomic))
+      attr.set(Attr::Atomic);
+    else if (d->isId(Attr::Property))
       attr.set(Attr::Property);
-    else if (d->isId("inline"))
-      attr.set(Attr::Inline);
-    else if (d->isId("no_inline"))
-      attr.set(Attr::NoInline);
-    else if (d->isId("export"))
-      attr.set(Attr::Export);
-    else if (d->isId("prefetch"))
-      attr.set(Attr::Prefetch);
-    else if (d->isId("inter_align"))
-      attr.set(Attr::InterAlign);
-    else
+    else if (d->isId(Attr::ForceRealize))
+      attr.set(Attr::ForceRealize);
+    else {
+      // Let's check if this is a attribute
+      auto dt = transform(clone(d));
+      if (dt && dt->getId()) {
+        auto ci = ctx->find(dt->getId()->value);
+        if (ci && ci->kind == SimplifyItem::Func) {
+          if (ctx->cache->functions[ci->canonicalName].ast->attributes.isAttribute) {
+            attr.set(ci->canonicalName);
+            continue;
+          }
+        }
+      }
       decorators.emplace_back(clone(d));
+    }
   }
   if (attr.has(Attr::Python)) {
     // Handle Python code separately
@@ -613,7 +617,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
   // @extend
   for (auto &d : stmt->decorators) {
     if (auto c = d->getCall()) {
-      if (c->expr->isId("tuple"))
+      if (c->expr->isId(Attr::Tuple))
         attr.set(Attr::Tuple);
       else if (!c->expr->isId("dataclass"))
         error("invalid class attribute");
@@ -643,17 +647,17 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
         else
           error("invalid decorator argument");
       }
-    } else if (d->isId("tuple")) {
+    } else if (d->isId(Attr::Tuple)) {
       if (attr.has(Attr::Tuple))
         error("class already marked as tuple");
       attr.set(Attr::Tuple);
-    } else if (d->isId("extend")) {
+    } else if (d->isId(Attr::Extend)) {
       attr.set(Attr::Extend);
       if (stmt->decorators.size() != 1)
         error("extend cannot be combined with other decorators");
       if (!ctx->bases.empty())
         error("extend is only allowed at the toplevel");
-    } else if (d->isId("internal")) {
+    } else if (d->isId(Attr::Internal)) {
       attr.set(Attr::Internal);
     }
   }

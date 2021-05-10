@@ -62,7 +62,7 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
 
     auto t = high_resolution_clock::now();
 
-    unordered_map<string, pair<string, seq_int_t>> newDefines;
+    unordered_map<string, pair<string, int64_t>> newDefines;
     for (auto &d : defines)
       newDefines[d.first] = {d.second, 0};
     auto transformed = ast::SimplifyVisitor::apply(cache, move(codeStmt), abs,

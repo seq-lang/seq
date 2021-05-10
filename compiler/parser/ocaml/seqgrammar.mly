@@ -7,7 +7,15 @@
  * TODO: Add comment AST nodes
  * *****************************************************************************)
 
-%{ open Ast %}
+%{
+  open Ast
+
+  let flat_pipe x =
+    match x with
+    | _, [] -> failwith "empty pipeline expression (grammar)"
+    | _, [ h ] -> snd h
+    | pos, l -> pos, Pipe l
+%}
 
 /* constants */
 %token <string * string> INT STRING
@@ -116,12 +124,17 @@ bool_expr:
   | bool_and_expr { $1 }
   | bool_and_expr OR bool_expr { $loc, Binary ($1, $2, $3, false) }
 bool_and_expr:
-  | cond_expr { flat_cond $1 }
-  | cond_expr AND bool_and_expr { $loc, Binary (flat_cond $1, $2, $3, false) }
+  | cond_expr { $1 }
+  | cond_expr AND bool_and_expr { $loc, Binary ($1, $2, $3, false) }
 cond_expr:
-  | arith_expr { $loc, Cond (snd $1) }
-  | NOT cond_expr { $loc, Cond (Unary ("!", flat_cond $2)) }
-  | arith_expr cond_op cond_expr { $loc, CondBinary ($1, $2, $3) }
+  | arith_expr cond_tail* {
+    match $2 with
+    | [] -> $1
+    | [op, r] -> $loc, Binary($1, op, r, false)
+    | rl -> $loc, ChainBinary (("", $1) :: rl) }
+  | NOT cond_expr { $loc, Unary ("!", $2) }
+cond_tail:
+  | cond_op arith_expr { $1, $2 }
 %inline cond_op:
   LESS | LEQ | GREAT | GEQ | EEQ | NEQ | IS | ISNOT | IN | NOTIN { $1 }
 
@@ -247,8 +260,12 @@ assign_statement:
   | expr aug_eq expr { [$loc, Assign ($1, Some ($loc, Binary ($1, String.sub $2 0 (String.length $2 - 1), $3, true)), None)] }
   | ID COLON expr EQ expr { [$loc, Assign (($loc($1), Id $1), Some $5, Some $3)] }
   | expr_list EQ separated_nonempty_list(EQ, expr_list)
-    { let all = List.map (function [l] -> l | l -> $loc, Tuple l) (List.rev ($1 :: $3)) in
-      List.rev @@ List.map (fun i -> $loc, Assign (i, Some (List.hd all), None)) (List.tl all) }
+    { let rec f l = match l with
+        | [] | [_] -> []
+        | lh :: rh :: tl -> ($loc, Assign(lh, Some rh, None)) :: (f (rh :: tl))
+      in
+      let all = List.map (function [l] -> l | l -> $loc, Tuple l) ($1 :: $3) in
+      List.rev (f all) }
 %inline aug_eq: PLUSEQ | MINEQ | MULEQ | DIVEQ | MODEQ | POWEQ | FDIVEQ | LSHEQ | RSHEQ | ANDEQ | OREQ | XOREQ { $1 }
 
 try_statement: TRY COLON suite catch* finally? { $loc, Try ($3, $4, opt_val $5 []) }

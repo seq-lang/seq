@@ -56,8 +56,9 @@ public:
 /// @param a the first IR node
 /// @param b the second IR node
 /// @param checkNames whether or not to check the node names
+/// @param varIdMatch whether or not variable ids must match
 /// @return true if the nodes are equal
-bool match(Node *a, Node *b, bool checkNames = false);
+bool match(Node *a, Node *b, bool checkNames = false, bool varIdMatch = false);
 
 } // namespace util
 } // namespace ir

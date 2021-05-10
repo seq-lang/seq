@@ -11,7 +11,7 @@ namespace ir {
 
 class LLVMVisitor : public util::ConstVisitor {
 private:
-  template <typename V> using CacheBase = std::unordered_map<int, V *>;
+  template <typename V> using CacheBase = std::unordered_map<id_t, V *>;
   template <typename K, typename V> class Cache : public CacheBase<V> {
   public:
     using CacheBase<V>::CacheBase;
@@ -127,8 +127,6 @@ private:
   llvm::DIType *
   getDITypeHelper(types::Type *t,
                   std::unordered_map<std::string, llvm::DICompositeType *> &cache);
-  void setDebugInfoForNode(const Node *);
-  void process(const Node *);
 
   /// GC allocation functions
   llvm::Function *makeAllocFunc(bool atomic);
@@ -173,6 +171,32 @@ private:
 
 public:
   LLVMVisitor(bool debug = false, const std::string &flags = "");
+
+  llvm::LLVMContext &getContext() { return context; }
+  llvm::IRBuilder<> &getBuilder() { return builder; }
+  llvm::Module *getModule() { return module.get(); }
+  llvm::Function *getFunc() { return func; }
+  llvm::BasicBlock *getBlock() { return block; }
+  llvm::Value *getValue() { return value; }
+  Cache<Var, llvm::Value> &getVars() { return vars; }
+  Cache<Func, llvm::Function> &getFuncs() { return funcs; }
+  CoroData &getCoro() { return coro; }
+  std::vector<LoopData> &getLoops() { return loops; }
+  std::vector<TryCatchData> &getTryCatch() { return trycatch; }
+  DebugInfo &getDebugInfo() { return db; }
+
+  void setFunc(llvm::Function *f) { func = f; }
+  void setBlock(llvm::BasicBlock *b) { block = b; }
+  void setValue(llvm::Value *v) { value = v; }
+
+  /// Sets current debug info based on a given node.
+  /// @param node the node whose debug info to use
+  void setDebugInfoForNode(const Node *node);
+
+  /// Compiles a given IR node, updating the internal
+  /// LLVM value and/or function as a result.
+  /// @param node the node to compile
+  void process(const Node *node);
 
   /// Performs LLVM's module verification on the contained module.
   /// Causes an assertion failure if verification fails.
@@ -238,6 +262,7 @@ public:
   void visit(const IfFlow *) override;
   void visit(const WhileFlow *) override;
   void visit(const ForFlow *) override;
+  void visit(const ImperativeForFlow *) override;
   void visit(const TryCatchFlow *) override;
   void visit(const PipelineFlow *) override;
   void visit(const dsl::CustomFlow *) override;

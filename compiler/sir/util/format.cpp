@@ -8,9 +8,34 @@
 #include "util/fmt/ostream.h"
 #include "visitor.h"
 
-namespace {
-using namespace seq::ir;
+namespace seq {
+namespace ir {
+namespace util {
 
+struct NodeFormatter {
+  const types::Type *type = nullptr;
+  const Value *value = nullptr;
+  const Var *var = nullptr;
+  bool canShowFull = false;
+
+  std::unordered_set<id_t> &seenNodes;
+  std::unordered_set<std::string> &seenTypes;
+
+  NodeFormatter(const types::Type *type, std::unordered_set<id_t> &seenNodes,
+                std::unordered_set<std::string> &seenTypes)
+      : type(type), seenNodes(seenNodes), seenTypes(seenTypes) {}
+
+  NodeFormatter(const Value *value, std::unordered_set<id_t> &seenNodes,
+                std::unordered_set<std::string> &seenTypes)
+      : value(value), seenNodes(seenNodes), seenTypes(seenTypes) {}
+  NodeFormatter(const Var *var, std::unordered_set<id_t> &seenNodes,
+                std::unordered_set<std::string> &seenTypes)
+      : var(var), seenNodes(seenNodes), seenTypes(seenTypes) {}
+
+  friend std::ostream &operator<<(std::ostream &os, const NodeFormatter &n);
+};
+
+namespace {
 std::string escapeString(const std::string &str) {
   std::stringstream escaped;
   for (char c : str) {
@@ -55,37 +80,14 @@ std::string escapeString(const std::string &str) {
   return escaped.str();
 }
 
-struct NodeFormatter {
-  const types::Type *type = nullptr;
-  const Value *value = nullptr;
-  const Var *var = nullptr;
-  bool canShowFull = false;
-
-  std::unordered_set<int> &seenNodes;
-  std::unordered_set<std::string> &seenTypes;
-
-  NodeFormatter(const types::Type *type, std::unordered_set<int> &seenNodes,
-                std::unordered_set<std::string> &seenTypes)
-      : type(type), seenNodes(seenNodes), seenTypes(seenTypes) {}
-
-  NodeFormatter(const Value *value, std::unordered_set<int> &seenNodes,
-                std::unordered_set<std::string> &seenTypes)
-      : value(value), seenNodes(seenNodes), seenTypes(seenTypes) {}
-  NodeFormatter(const Var *var, std::unordered_set<int> &seenNodes,
-                std::unordered_set<std::string> &seenTypes)
-      : var(var), seenNodes(seenNodes), seenTypes(seenTypes) {}
-
-  friend std::ostream &operator<<(std::ostream &os, const NodeFormatter &n);
-};
-
 class FormatVisitor : util::ConstVisitor {
 private:
   std::ostream &os;
-  std::unordered_set<int> &seenNodes;
+  std::unordered_set<id_t> &seenNodes;
   std::unordered_set<std::string> &seenTypes;
 
 public:
-  FormatVisitor(std::ostream &os, std::unordered_set<int> &seenNodes,
+  FormatVisitor(std::ostream &os, std::unordered_set<id_t> &seenNodes,
                 std::unordered_set<std::string> &seenTypes)
       : os(os), seenNodes(seenNodes), seenTypes(seenTypes) {}
   virtual ~FormatVisitor() noexcept = default;
@@ -168,6 +170,11 @@ public:
   }
   void visit(const ForFlow *v) override {
     fmt::print(os, FMT_STRING("(for {}\n{}\n{}\n)"), makeFormatter(v->getIter()),
+               makeFormatter(v->getVar()), makeFormatter(v->getBody()));
+  }
+  void visit(const ImperativeForFlow *v) override {
+    fmt::print(os, FMT_STRING("(imp_for {}\n{}\n{}\n{}\n{}\n)"),
+               makeFormatter(v->getStart()), v->getStep(), makeFormatter(v->getEnd()),
                makeFormatter(v->getVar()), makeFormatter(v->getBody()));
   }
   void visit(const TryCatchFlow *v) override {
@@ -403,6 +410,7 @@ private:
     return ret;
   }
 };
+} // namespace
 
 std::ostream &operator<<(std::ostream &os, const NodeFormatter &n) {
   FormatVisitor fv(os, n.seenNodes, n.seenTypes);
@@ -414,18 +422,6 @@ std::ostream &operator<<(std::ostream &os, const NodeFormatter &n) {
     fv.format(n.var, n.canShowFull);
   return os;
 }
-} // namespace
-
-// See https://github.com/fmtlib/fmt/issues/1283.
-namespace fmt {
-template <typename Char>
-struct formatter<NodeFormatter, Char>
-    : fmt::v6::internal::fallback_formatter<NodeFormatter, Char> {};
-} // namespace fmt
-
-namespace seq {
-namespace ir {
-namespace util {
 
 std::string format(const Node *node) {
   std::stringstream ss;
@@ -434,7 +430,7 @@ std::string format(const Node *node) {
 }
 
 std::ostream &format(std::ostream &os, const Node *node) {
-  std::unordered_set<int> seenNodes;
+  std::unordered_set<id_t> seenNodes;
   std::unordered_set<std::string> seenTypes;
 
   FormatVisitor fv(os, seenNodes, seenTypes);
@@ -446,3 +442,10 @@ std::ostream &format(std::ostream &os, const Node *node) {
 } // namespace util
 } // namespace ir
 } // namespace seq
+
+// See https://github.com/fmtlib/fmt/issues/1283.
+namespace fmt {
+template <typename Char>
+struct formatter<seq::ir::util::NodeFormatter, Char>
+    : fmt::v6::internal::fallback_formatter<seq::ir::util::NodeFormatter, Char> {};
+} // namespace fmt

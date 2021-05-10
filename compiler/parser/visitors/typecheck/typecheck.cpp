@@ -39,7 +39,7 @@ TypecheckVisitor::TypecheckVisitor(shared_ptr<TypeContext> ctx,
 
 StmtPtr
 TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts,
-                        const unordered_map<string, pair<string, seq_int_t>> &defines) {
+                        const unordered_map<string, pair<string, int64_t>> &defines) {
   auto ctx = make_shared<TypeContext>(cache);
   cache->typeCtx = ctx;
   TypecheckVisitor v(ctx);

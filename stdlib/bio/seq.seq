@@ -1,3 +1,5 @@
+from bio.types import *
+
 @inline
 def _preprocess_seq_pattern(pattern: str):
     VALID = ('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'

@@ -1,3 +1,5 @@
+from bio.seq import seq
+
 # htslib integration
 BAM_FPAIRED        =    1
 BAM_FPROPER_PAIR   =    2

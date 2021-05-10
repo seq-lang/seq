@@ -1,7 +1,14 @@
 #include "revcomp.h"
+#include "sir/analyze/dataflow/cfg.h"
+#include "sir/dsl/codegen.h"
+#include "sir/llvm/llvisitor.h"
+#include "sir/util/cloning.h"
+#include "sir/util/irtools.h"
+#include "sir/util/matching.h"
 
 namespace seq {
-namespace ir {
+
+using namespace ir;
 
 namespace {
 unsigned revcompBits(unsigned n) {
@@ -11,9 +18,9 @@ unsigned revcompBits(unsigned n) {
   unsigned c4 = (n & (3u << 6u)) >> 6u;
   return ~(c1 | c2 | c3 | c4) & 0xffu;
 }
-} // namespace
 
-llvm::GlobalVariable *getRevCompTable(llvm::Module *module, const std::string &name) {
+llvm::GlobalVariable *getRevCompTable(llvm::Module *module,
+                                      const std::string &name = "seq.revcomp_table") {
   llvm::LLVMContext &context = module->getContext();
   llvm::Type *ty = llvm::Type::getInt8Ty(context);
   llvm::GlobalVariable *table = module->getGlobalVariable(name);
@@ -187,5 +194,98 @@ llvm::Value *codegenRevCompHeuristic(const unsigned k, llvm::Value *self,
   }
 }
 
-} // namespace ir
+class LLVMRevcomp : public dsl::codegen::ValueBuilder {
+private:
+  Value *kmer;
+
+public:
+  explicit LLVMRevcomp(Value *kmer) : kmer(kmer) {}
+  llvm::Value *buildValue(LLVMVisitor *visitor) override;
+};
+
+llvm::Value *LLVMRevcomp::buildValue(LLVMVisitor *visitor) {
+  auto generics = kmer->getType()->getGenerics();
+  seqassert(generics.size() == 1 && generics[0].isStatic(),
+            "k-mer type should have single int generic");
+  const unsigned k = generics[0].getStaticValue();
+
+  visitor->process(kmer);
+  auto &builder = visitor->getBuilder();
+  builder.SetInsertPoint(visitor->getBlock());
+  llvm::Value *value = visitor->getValue();
+  llvm::Type *llvmKmerType = value->getType();
+  value = builder.CreateExtractValue(value, 0); // extract int from struct
+  auto *llvmIntType = llvm::dyn_cast<llvm::IntegerType>(value->getType());
+  seqassert(llvmIntType && llvmIntType->getBitWidth() == 2 * k,
+            "unexpected k-mer type");
+  llvm::Value *revcomp = codegenRevCompHeuristic(k, value, builder);
+  llvm::Value *result = llvm::UndefValue::get(llvmKmerType);
+  result = builder.CreateInsertValue(result, revcomp, 0);
+  return result;
+}
+
+class RevcompCFBuilder : public dsl::codegen::CFBuilder {
+private:
+  const Value *instr;
+  const Value *kmer;
+
+public:
+  RevcompCFBuilder(const Value *instr, const Value *kmer) : instr(instr), kmer(kmer) {}
+
+  void buildCFNodes(analyze::dataflow::CFVisitor *visitor) override;
+};
+
+void RevcompCFBuilder::buildCFNodes(analyze::dataflow::CFVisitor *visitor) {
+  visitor->process(kmer);
+  visitor->defaultInsert(instr);
+}
+
+} // namespace
+
+const char KmerRevcomp::NodeId = 0;
+
+std::unique_ptr<ir::dsl::codegen::ValueBuilder> KmerRevcomp::getBuilder() const {
+  return std::make_unique<LLVMRevcomp>(kmer);
+}
+
+std::unique_ptr<ir::dsl::codegen::CFBuilder> KmerRevcomp::getCFBuilder() const {
+  return std::make_unique<RevcompCFBuilder>(this, kmer);
+}
+
+bool KmerRevcomp::match(const Value *v) const {
+  if (auto *krc = cast<KmerRevcomp>(v)) {
+    return util::match(kmer, krc->kmer);
+  }
+  return false;
+}
+
+ir::Value *KmerRevcomp::doClone(ir::util::CloneVisitor &cv) const {
+  return getModule()->N<KmerRevcomp>(cv.clone(kmer));
+}
+
+std::ostream &KmerRevcomp::doFormat(std::ostream &os) const {
+  return os << "(revcomp " << *kmer << ")";
+}
+
+void KmerRevcompInterceptor::run(Module *M) {
+  for (auto *var : *M) {
+    if (auto *func = cast<BodiedFunc>(var)) {
+      if (func->getUnmangledName() == Module::INVERT_MAGIC_NAME) {
+        auto *kmerType = func->getParentType();
+        if (kmerType && kmerType->getName().rfind("std.bio.kmer.Kmer", 0) == 0 &&
+            std::distance(func->arg_begin(), func->arg_end()) == 1) {
+          // sanity check
+          if (func->isGenerator() ||
+              !util::getReturnType(func)->is(func->arg_front()->getType()))
+            return;
+
+          auto *newBody = util::series(M->Nr<ReturnInstr>(
+              M->Nr<KmerRevcomp>(M->Nr<VarValue>(func->arg_front()))));
+          func->setBody(newBody);
+        }
+      }
+    }
+  }
+}
+
 } // namespace seq

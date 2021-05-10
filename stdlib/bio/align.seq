@@ -1,5 +1,6 @@
 # Seq Alignment
-
+from bio.seq import seq
+from bio.pseq import pseq
 from c_htslib import bam_cigar2qlen, bam_cigar2rlen
 from internal.gc import sizeof
 
@@ -466,7 +467,7 @@ class SeqPair:
         return (i32(id), i32(len1), i32(len2), i32(_ALIGN_SCORE_NEG_INF), Ptr[u32](), i32(0), i32(flags))
 
 # (!) caller must ensure len(s) <= LEN_LIMIT
-@force_realize
+@__force__
 @inline
 def _interaln_add_to_buf(s: seq, buf: Ptr[byte], step: int, idx: int):
     n = len(s)
@@ -483,7 +484,7 @@ def _interaln_add_to_buf(s: seq, buf: Ptr[byte], step: int, idx: int):
             buf[(idx * step) + (n - i - 1)] = byte(3 - c if c < 4 else c)
             i -= 1
 
-@force_realize
+@__force__
 @inline
 def _interaln_sort_pairs_len_ext(pairs_array: Ptr[SeqPair], tmp_array: Ptr[SeqPair], count: int, hist: Ptr[i32]) -> Tuple[int,int,int]:
     def _max(a: i32, b: i32) -> i32: return a if a > b else b
@@ -567,7 +568,7 @@ class InterAlignYield:
         flags = (_ALIGN_EXTZ_ONLY if extz_only else 0) | (_ALIGN_REV_CIGAR if rev_cigar else 0)
         return InterAlignYield(query, target, Alignment(CIGAR(), flags))
 
-@force_realize
+@__force__
 @inline
 def _interaln_queue(coro: Generator[InterAlignYield],
                     pairs_array: Ptr[SeqPair],
@@ -612,7 +613,7 @@ def _interaln_queue(coro: Generator[InterAlignYield],
         m += 1
     return m
 
-@force_realize
+@__force__
 @inline
 def _interaln_flush(pairs_array: Ptr[SeqPair],
                     seq_buf_ref: Ptr[byte],

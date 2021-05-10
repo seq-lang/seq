@@ -35,7 +35,7 @@ using namespace types;
 
 StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
                                const string &file,
-                               unordered_map<string, pair<string, seq_int_t>> &defines,
+                               unordered_map<string, pair<string, int64_t>> &defines,
                                bool barebones) {
   vector<StmtPtr> stmts;
   auto preamble = make_shared<Preamble>();
@@ -105,8 +105,9 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     // referenced by the various preamble Function.N and Tuple.N stubs)
     stdlib->isStdlibLoading = true;
     stdlib->moduleName = {ImportFile::STDLIB, stdlibPath->path, "__init__"};
-    auto baseTypeCode = "@internal\n@tuple\nclass pyobj:\n  p: Ptr[byte]\n"
-                        "@internal\n@tuple\nclass str:\n  ptr: Ptr[byte]\n  len: int\n";
+    auto baseTypeCode =
+        "@__internal__\n@tuple\nclass pyobj:\n  p: Ptr[byte]\n"
+        "@__internal__\n@tuple\nclass str:\n  ptr: Ptr[byte]\n  len: int\n";
     SimplifyVisitor(stdlib, preamble)
         .transform(parseCode(stdlibPath->path, baseTypeCode));
     // Load the standard library
@@ -132,7 +133,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   ctx->setFilename(file);
   ctx->moduleName = {ImportFile::PACKAGE, file, MODULE_MAIN};
   // Load the command-line defines.
-  unordered_map<string, pair<string, seq_int_t>> newDefines;
+  unordered_map<string, pair<string, int64_t>> newDefines;
   for (auto &d : defines) {
     try {
       auto canName = ctx->generateCanonicalName(d.first);

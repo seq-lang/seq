@@ -78,7 +78,7 @@ private:
   void transformFunction(types::FuncType *type, FunctionStmt *ast, ir::Func *func);
   void transformLLVMFunction(types::FuncType *type, FunctionStmt *ast, ir::Func *func);
 
-  template <typename ValueType, typename... Args> ValueType *make(Args &&... args) {
+  template <typename ValueType, typename... Args> ValueType *make(Args &&...args) {
     auto *ret = ctx->getModule()->N<ValueType>(std::forward<Args>(args)...);
     return ret;
   }

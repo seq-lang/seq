@@ -236,6 +236,7 @@ else:
     print 'nope'
 
 #%% match
+from bio import *
 def foo(x):
     match x:
         case 1:
@@ -500,7 +501,7 @@ def foo(a, **c, d):
 
 #%% function_err_1,barebones
 def foo():
-    @force_realize
+    @__force__
     def bar(): pass #! ERROR: builtins must be defined at the toplevel
 
 #%% function_err_2,barebones

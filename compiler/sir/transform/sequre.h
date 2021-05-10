@@ -9,6 +9,9 @@ namespace transform {
 namespace sequre {
 
 class ArithmeticsOptimizations : public OperatorPass {
+  const std::string KEY = "sequre-arithmetic-opt";
+  std::string getKey() const override { return KEY; }
+
   void handle(CallInstr *) override;
 
   void applyBeaverOptimizations(CallInstr *);

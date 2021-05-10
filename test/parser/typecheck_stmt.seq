@@ -269,7 +269,7 @@ except MyError as e:
 raise 'hello' #! ERROR: cannot throw non-exception (first object member must be of type ExcHeader)
 
 #%% function_builtin_error,barebones
-@force_realize
+@__force__
 def foo(x):
     pass
 #! ERROR: builtins and external functions must be realizable

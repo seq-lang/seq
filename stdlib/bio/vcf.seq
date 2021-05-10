@@ -1,3 +1,4 @@
+from bio.seq import seq
 from c_htslib import *
 
 # port of PySam VariantRecord functionality

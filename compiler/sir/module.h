@@ -79,11 +79,11 @@ private:
   /// the global variables list
   std::list<std::unique_ptr<Var>> vars;
   /// the global variables map
-  std::unordered_map<int, std::list<std::unique_ptr<Var>>::iterator> varMap;
+  std::unordered_map<id_t, std::list<std::unique_ptr<Var>>::iterator> varMap;
   /// the global value list
   std::list<std::unique_ptr<Value>> values;
   /// the global value map
-  std::unordered_map<int, std::list<std::unique_ptr<Value>>::iterator> valueMap;
+  std::unordered_map<id_t, std::list<std::unique_ptr<Value>>::iterator> valueMap;
   /// the global types list
   std::list<std::unique_ptr<types::Type>> types;
   /// the global types map
@@ -129,7 +129,20 @@ public:
   const Var *front() const { return vars.front().get(); }
   /// @return a pointer to the last symbol
   const Var *back() const { return vars.back().get(); }
-
+  /// Gets a var by id.
+  /// @param id the id
+  /// @return the variable or nullptr
+  Var *getVar(id_t id) {
+    auto it = varMap.find(id);
+    return it != varMap.end() ? it->second->get() : nullptr;
+  }
+  /// Gets a var by id.
+  /// @param id the id
+  /// @return the variable or nullptr
+  const Var *getVar(id_t id) const {
+    auto it = varMap.find(id);
+    return it != varMap.end() ? it->second->get() : nullptr;
+  }
   /// Removes a given var.
   /// @param v the var
   void remove(const Var *v) {
@@ -154,7 +167,20 @@ public:
   const Value *values_front() const { return values.front().get(); }
   /// @return a pointer to the last value
   const Value *values_back() const { return values.back().get(); }
-
+  /// Gets a value by id.
+  /// @param id the id
+  /// @return the value or nullptr
+  Value *getValue(id_t id) {
+    auto it = valueMap.find(id);
+    return it != valueMap.end() ? it->second->get() : nullptr;
+  }
+  /// Gets a value by id.
+  /// @param id the id
+  /// @return the value or nullptr
+  const Value *getValue(id_t id) const {
+    auto it = valueMap.find(id);
+    return it != valueMap.end() ? it->second->get() : nullptr;
+  }
   /// Removes a given value.
   /// @param v the value
   void remove(const Value *v) {
@@ -175,21 +201,18 @@ public:
   types::Type *types_front() const { return types.front().get(); }
   /// @return a pointer to the last type
   types::Type *types_back() const { return types.back().get(); }
-
   /// @param name the type's name
   /// @return the type with the given name
   types::Type *getType(const std::string &name) {
     auto it = typesMap.find(name);
     return it == typesMap.end() ? nullptr : it->second->get();
   }
-
   /// @param name the type's name
   /// @return the type with the given name
   types::Type *getType(const std::string &name) const {
     auto it = typesMap.find(name);
     return it == typesMap.end() ? nullptr : it->second->get();
   }
-
   /// Removes a given type.
   /// @param t the type
   void remove(types::Type *t) {
@@ -203,7 +226,7 @@ public:
   /// @param args the arguments
   /// @return the new node
   template <typename DesiredType, typename... Args>
-  DesiredType *N(seq::SrcInfo s, Args &&... args) {
+  DesiredType *N(seq::SrcInfo s, Args &&...args) {
     auto *ret = new DesiredType(std::forward<Args>(args)...);
     ret->setModule(this);
     ret->setSrcInfo(s);
@@ -216,7 +239,7 @@ public:
   /// @param args the arguments
   /// @return the new node
   template <typename DesiredType, typename... Args>
-  DesiredType *N(const seq::SrcObject *s, Args &&... args) {
+  DesiredType *N(const seq::SrcObject *s, Args &&...args) {
     return N<DesiredType>(s->getSrcInfo(), std::forward<Args>(args)...);
   }
   /// Constructs and registers an IR node with provided source node.
@@ -224,13 +247,13 @@ public:
   /// @param args the arguments
   /// @return the new node
   template <typename DesiredType, typename... Args>
-  DesiredType *N(const Node *s, Args &&... args) {
+  DesiredType *N(const Node *s, Args &&...args) {
     return N<DesiredType>(s->getSrcInfo(), std::forward<Args>(args)...);
   }
   /// Constructs and registers an IR node with no source information.
   /// @param args the arguments
   /// @return the new node
-  template <typename DesiredType, typename... Args> DesiredType *Nr(Args &&... args) {
+  template <typename DesiredType, typename... Args> DesiredType *Nr(Args &&...args) {
     return N<DesiredType>(seq::SrcInfo(), std::forward<Args>(args)...);
   }
 

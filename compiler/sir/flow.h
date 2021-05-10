@@ -67,7 +67,7 @@ protected:
   std::vector<Value *> doGetUsedValues() const override {
     return std::vector<Value *>(series.begin(), series.end());
   }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Flow representing a while loop.
@@ -107,7 +107,7 @@ public:
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {cond, body}; }
 
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Flow representing a for loop.
@@ -125,10 +125,9 @@ public:
   static const char NodeId;
 
   /// Constructs a for loop.
-  /// @param setup the setup
   /// @param iter the iterator
   /// @param body the body
-  /// @param update the update
+  /// @param var the variable
   /// @param name the flow's name
   ForFlow(Value *iter, Flow *body, Var *var, std::string name = "")
       : AcceptorExtend(std::move(name)), iter(iter), body(body), var(var) {}
@@ -159,10 +158,83 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {iter, body}; }
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {var}; }
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
+};
+
+/// Flow representing an imperative for loop.
+class ImperativeForFlow : public AcceptorExtend<ImperativeForFlow, Flow> {
+private:
+  /// the initial value
+  Value *start;
+  /// the step value
+  int64_t step;
+  /// the end value
+  Value *end;
+
+  /// the body
+  Value *body;
+
+  /// the variable, must be integer type
+  Var *var;
+
+public:
+  static const char NodeId;
+
+  /// Constructs an imperative for loop.
+  /// @param body the body
+  /// @param start the start value
+  /// @param step the step value
+  /// @param end the end value
+  /// @param var the end variable, must be integer
+  /// @param name the flow's name
+  ImperativeForFlow(Value *start, int64_t step, Value *end, Flow *body, Var *var,
+                    std::string name = "")
+      : AcceptorExtend(std::move(name)), start(start), step(step), end(end), body(body),
+        var(var) {}
+
+  /// @return the start value
+  Value *getStart() const { return start; }
+  /// Sets the start value.
+  /// @param v the new value
+  void setStart(Value *val) { start = val; }
+
+  /// @return the step value
+  int64_t getStep() const { return step; }
+  /// Sets the step value.
+  /// @param v the new value
+  void setStep(int64_t val) { step = val; }
+
+  /// @return the end value
+  Value *getEnd() const { return end; }
+  /// Sets the end value.
+  /// @param v the new value
+  void setEnd(Value *val) { end = val; }
+
+  /// @return the body
+  Flow *getBody() { return cast<Flow>(body); }
+  /// @return the body
+  const Flow *getBody() const { return cast<Flow>(body); }
+  /// Sets the body.
+  /// @param f the new body
+  void setBody(Flow *f) { body = f; }
+
+  /// @return the var
+  Var *getVar() { return var; }
+  /// @return the var
+  const Var *getVar() const { return var; }
+  /// Sets the var.
+  /// @param c the new var
+  void setVar(Var *c) { var = c; }
+
+protected:
+  std::vector<Value *> doGetUsedValues() const override { return {body}; }
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
+
+  std::vector<Var *> doGetUsedVariables() const override { return {var}; }
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
 };
 
 /// Flow representing an if statement.
@@ -214,7 +286,7 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Flow representing a try-catch statement.
@@ -322,7 +394,7 @@ public:
 
   /// Emplaces a catch.
   /// @tparam Args the catch constructor args
-  template <typename... Args> void emplace_back(Args &&... args) {
+  template <typename... Args> void emplace_back(Args &&...args) {
     catches.emplace_back(std::forward<Args>(args)...);
   }
 
@@ -333,13 +405,13 @@ public:
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 
   std::vector<types::Type *> doGetUsedTypes() const override;
   int doReplaceUsedType(const std::string &name, types::Type *newType) override;
 
   std::vector<Var *> doGetUsedVariables() const override;
-  int doReplaceUsedVariable(int id, Var *newVar) override;
+  int doReplaceUsedVariable(id_t id, Var *newVar) override;
 };
 
 /// Flow that represents a pipeline. Pipelines with only function
@@ -478,13 +550,13 @@ public:
 
   /// Emplaces a stage.
   /// @param args the args
-  template <typename... Args> void emplace_back(Args &&... args) {
+  template <typename... Args> void emplace_back(Args &&...args) {
     stages.emplace_back(std::forward<Args>(args)...);
   }
 
 protected:
   std::vector<Value *> doGetUsedValues() const override;
-  int doReplaceUsedValue(int id, Value *newValue) override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 } // namespace ir

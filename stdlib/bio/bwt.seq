@@ -701,6 +701,7 @@ def _saisxx_bwt(T: Ptr[byte], n: int, k: int = 256) -> Ptr[byte]:
         pidx += 1
     return U
 
+from bio.seq import seq
 @extend
 class seq:
     def suffix_array(self):

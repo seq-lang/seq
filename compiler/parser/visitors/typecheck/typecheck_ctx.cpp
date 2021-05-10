@@ -119,7 +119,7 @@ types::TypePtr TypeContext::instantiate(const Expr *expr, types::TypePtr type,
       }
     }
   }
-  LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->debugString(debug));
+  LOG_TYPECHECK("[inst] {} -> {}", expr->toString(), t->debugString(true));
   return t;
 }
 

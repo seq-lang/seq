@@ -8,7 +8,7 @@
 namespace seq {
 namespace ir {
 
-int IdMixin::currentId = 0;
+id_t IdMixin::currentId = 0;
 
 void IdMixin::resetId() { currentId = 0; }
 

@@ -97,7 +97,12 @@ types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
         LOG_REALIZE("- member: {} -> {}: {}", m.name, m.type->toString(),
                     mt->toString());
         auto tf = realize(mt);
-        seqassert(tf, "cannot realize {}.{}: {}", realizedName, m.name, mt->toString());
+        if (!tf)
+          error("cannot realize {}.{} of type {}",
+                ctx->cache->reverseIdentifierLookup[realizedType->name], m.name,
+                mt->toString());
+        // seqassert(tf, "cannot realize {}.{}: {}", realizedName, m.name,
+        // mt->toString());
         r->fields.emplace_back(m.name, tf);
         names.emplace_back(m.name);
         typeArgs.emplace_back(getLLVMType(tf->getClass().get()));
@@ -213,16 +218,8 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       if (!in(ctx->cache->pendingRealizations,
               make_pair(type->funcName, type->realizedName()))) {
         if (ast->attributes.has(Attr::Internal)) {
-          // This is either __new__, or Ptr.__new__, or UInt.__revcomp__
-          auto parent = type->funcParent;
-          if (!ast->attributes.has(Attr::Method)) // hack for non-generic types
-            parent = ctx->find(ast->attributes.parentClass)->type;
-          seqassert(parent && parent->canRealize(), "parent not set for {} (got {})",
-                    type->debugString(1), parent ? parent->debugString(1) : "-");
-          parent = realize(parent);
+          // This is either __new__, Ptr.__new__, etc.
           r->ir = ctx->cache->module->Nr<ir::InternalFunc>(type->funcName);
-          ir::cast<ir::InternalFunc>(r->ir)->setParentType(
-              getLLVMType(parent->getClass().get()));
         } else if (ast->attributes.has(Attr::LLVM)) {
           r->ir = ctx->cache->module->Nr<ir::LLVMFunc>(type->realizedName());
         } else if (ast->attributes.has(Attr::C)) {
@@ -231,6 +228,15 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
           r->ir = ctx->cache->module->Nr<ir::BodiedFunc>(type->realizedName());
           if (ast->attributes.has(Attr::ForceRealize))
             ir::cast<ir::BodiedFunc>(r->ir)->setBuiltin();
+        }
+
+        auto parent = type->funcParent;
+        if (!ast->attributes.parentClass.empty() &&
+            !ast->attributes.has(Attr::Method)) // hack for non-generic types
+          parent = ctx->find(ast->attributes.parentClass)->type;
+        if (parent && parent->canRealize()) {
+          parent = realize(parent);
+          r->ir->setParentType(getLLVMType(parent->getClass().get()));
         }
         r->ir->setGlobal();
         ctx->cache->pendingRealizations.insert({type->funcName, type->realizedName()});

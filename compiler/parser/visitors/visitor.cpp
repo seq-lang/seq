@@ -32,6 +32,7 @@ void ASTVisitor::visit(DictGeneratorExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(IfExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(UnaryExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(BinaryExpr *expr) { defaultVisit(expr); }
+void ASTVisitor::visit(ChainBinaryExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(PipeExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(IndexExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(TupleIndexExpr *expr) { defaultVisit(expr); }

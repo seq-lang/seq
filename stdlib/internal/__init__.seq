@@ -1,5 +1,6 @@
 # Core library
 
+from internal.attributes import *
 from internal.types.ptr import *
 from internal.types.str import *
 from internal.types.int import *
@@ -32,9 +33,3 @@ from internal.file import File, gzFile, open, gzopen
 from pickle import pickle, unpickle
 from internal.dlopen import dlsym as _dlsym
 import internal.python
-
-from bio.seq import *
-from bio.kmer import *
-from bio.pseq import *
-
-from internal.prefetch import *

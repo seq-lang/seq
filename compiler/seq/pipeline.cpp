@@ -5,11 +5,11 @@
 #include <iterator>
 
 namespace seq {
-namespace ir {
-namespace transform {
-namespace pipeline {
+
+using namespace ir;
+
 namespace {
-const std::string prefetchModule = "std.internal.prefetch";
+const std::string prefetchModule = "std.bio.prefetch";
 const std::string builtinModule = "std.bio.builtin";
 const std::string alignModule = "std.bio.align";
 const std::string seqModule = "std.bio.seq";
@@ -90,7 +90,7 @@ Value *replaceStageFunc(PipelineFlow::Stage &stage, Func *schedFunc,
  * Substitution optimizations
  */
 
-void PipelineOptimizations::applySubstitutionOptimizations(PipelineFlow *p) {
+void PipelineSubstitutionOptimization::handle(PipelineFlow *p) {
   auto *M = p->getModule();
 
   PipelineFlow::Stage *prev = nullptr;
@@ -228,7 +228,7 @@ struct PrefetchFunctionTransformer : public util::Operator {
   }
 };
 
-void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
+void PipelinePrefetchOptimization::handle(PipelineFlow *p) {
   if (isParallel(p))
     return;
   auto *M = p->getModule();
@@ -237,7 +237,7 @@ void PipelineOptimizations::applyPrefetchOptimizations(PipelineFlow *p) {
   util::CloneVisitor cv(M);
   for (auto it = p->begin(); it != p->end(); ++it) {
     if (auto *func = getStageFunc(*it)) {
-      if (!it->isGenerator() && util::hasAttribute(func, "prefetch")) {
+      if (!it->isGenerator() && util::hasAttribute(func, "std.bio.builtin.prefetch")) {
         // transform prefetch'ing function
         auto *clone = cast<BodiedFunc>(cv.forceClone(func));
         util::setReturnType(clone, M->getGeneratorType(util::getReturnType(clone)));
@@ -487,7 +487,7 @@ struct InterAlignFunctionTransformer : public util::Operator {
   }
 };
 
-void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
+void PipelineInterAlignOptimization::handle(PipelineFlow *p) {
   if (isParallel(p))
     return;
   auto *M = p->getModule();
@@ -498,7 +498,8 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
   util::CloneVisitor cv(M);
   for (auto it = p->begin(); it != p->end(); ++it) {
     if (auto *func = getStageFunc(*it)) {
-      if (!it->isGenerator() && util::hasAttribute(func, "inter_align") &&
+      if (!it->isGenerator() &&
+          util::hasAttribute(func, "std.bio.builtin.inter_align") &&
           util::getReturnType(func)->is(M->getVoidType())) {
         // transform aligning function
         InterAlignFunctionTransformer aft(&types);
@@ -592,13 +593,4 @@ void PipelineOptimizations::applyInterAlignOptimizations(PipelineFlow *p) {
   }
 }
 
-void PipelineOptimizations::handle(PipelineFlow *x) {
-  applySubstitutionOptimizations(x);
-  applyPrefetchOptimizations(x);
-  applyInterAlignOptimizations(x);
-}
-
-} // namespace pipeline
-} // namespace transform
-} // namespace ir
 } // namespace seq

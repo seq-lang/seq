@@ -154,6 +154,22 @@ def test_setslice():
     a = list[int]()
     a[:] = list(range(10))
     assert a == list(range(10))
+
+    a = list(range(20))
+    try:
+        a[0:10:0] = [1,2,3]
+        assert False
+    except ValueError:
+        pass
+
+    try:
+        a[0:10:2] = [1,2]
+        assert False
+    except ValueError:
+        pass
+
+    a[2:10:3] = [1,2,3]
+    assert a == [0, 1, 1, 3, 4, 2, 6, 7, 3, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 test_setslice()
 
 @test
@@ -198,6 +214,50 @@ def test_delslice():
     del a[:]
     assert a == list[int]()
 test_delslice()
+
+@test
+def test_extendedslicing():
+    a = [0,1,2,3,4]
+    del a[::2]
+    assert a == [1,3]
+
+    a = list(range(5))
+    del a[1::2]
+    assert a == [0,2,4]
+
+    a = list(range(5))
+    del a[1::-2]
+    assert a == [0,2,3,4]
+
+    a = list(range(10))
+    del a[::1000]
+    assert a == [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+    a = list(range(10))
+    a[::2] = [-1]*5
+    assert a == [-1, 1, -1, 3, -1, 5, -1, 7, -1, 9]
+
+    a = list(range(10))
+    a[::-4] = [10]*3
+    assert a == [0, 10, 2, 3, 4, 10, 6, 7, 8 ,10]
+
+    a = list(range(4))
+    a[::-1] = a
+    assert a == [3, 2, 1, 0]
+
+    a = list(range(10))
+    b = a[:]
+    c = a[:]
+    a[2:3] = [222, 333]
+    b[2:3] = [222, 333]
+    c[2:3:] = [222, 333]
+    assert a == b
+    assert a == c
+
+    a = list(range(10))
+    a[::2] = (0, 1, 2, 3, 4)
+    assert a == [0, 1, 1, 3, 2, 5, 3, 7, 4, 9]
+test_extendedslicing()
 
 @test
 def test_set():
@@ -271,7 +331,6 @@ def test_set():
         assert False
     except ValueError:
         pass
-
 test_set()
 
 @test

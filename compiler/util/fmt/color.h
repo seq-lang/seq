@@ -510,7 +510,7 @@ void vprint(std::FILE *f, const text_style &ts, const S &format,
  */
 template <typename S, typename... Args, FMT_ENABLE_IF(internal::is_string<S>::value)>
 void print(std::FILE *f, const text_style &ts, const S &format_str,
-           const Args &... args) {
+           const Args &...args) {
   internal::check_format_string<Args...>(format_str);
   using context = buffer_context<char_t<S>>;
   format_arg_store<context, Args...> as{args...};
@@ -525,7 +525,7 @@ void print(std::FILE *f, const text_style &ts, const S &format_str,
                "Elapsed time: {0:.2f} seconds", 1.23);
  */
 template <typename S, typename... Args, FMT_ENABLE_IF(internal::is_string<S>::value)>
-void print(const text_style &ts, const S &format_str, const Args &... args) {
+void print(const text_style &ts, const S &format_str, const Args &...args) {
   return print(stdout, ts, format_str, args...);
 }
 
@@ -552,7 +552,7 @@ vformat(const text_style &ts, const S &format_str,
 */
 template <typename S, typename... Args, typename Char = char_t<S>>
 inline std::basic_string<Char> format(const text_style &ts, const S &format_str,
-                                      const Args &... args) {
+                                      const Args &...args) {
   return vformat(ts, to_string_view(format_str),
                  internal::make_args_checked<Args...>(format_str, args...));
 }

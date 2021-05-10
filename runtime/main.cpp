@@ -1,10 +1,13 @@
+#include "dsl/plugins.h"
 #include "parser/parser.h"
+#include "seq/seq.h"
 #include "sir/llvm/llvisitor.h"
 #include "sir/transform/manager.h"
-#include "sir/transform/pipeline.h"
 #include "sir/transform/sequre.h"
+#include "sir/transform/pass.h"
 #include "util/common.h"
 #include "llvm/Support/CommandLine.h"
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <string>
@@ -17,15 +20,9 @@ void versMsg(llvm::raw_ostream &out) {
       << SEQ_VERSION_PATCH << "\n";
 }
 
-void registerStandardPasses(seq::ir::transform::PassManager &pm, bool debug) {
-  if (debug)
-    return;
-  pm.registerPass(
-      "bio-pipeline-opts",
-      std::make_unique<seq::ir::transform::pipeline::PipelineOptimizations>());
-  pm.registerPass(
-      "sequre-arithmetics-opt",
-      std::make_unique<seq::ir::transform::sequre::ArithmeticsOptimizations>());
+const std::vector<std::string> &supportedExtensions() {
+  static const std::vector<std::string> extensions = {".seq", ".py"};
+  return extensions;
 }
 
 bool hasExtension(const std::string &filename, const std::string &extension) {
@@ -44,12 +41,19 @@ std::string trimExtension(const std::string &filename, const std::string &extens
 
 std::string makeOutputFilename(const std::string &filename,
                                const std::string &extension) {
-  return trimExtension(filename, ".seq") + extension;
+  for (const auto &ext : supportedExtensions()) {
+    if (hasExtension(filename, ext))
+      return trimExtension(filename, ext) + extension;
+  }
+  return filename + extension;
 }
 
 enum BuildKind { LLVM, Bitcode, Object, Executable, Detect };
 enum OptMode { Debug, Release };
-
+struct ProcessResult {
+  std::unique_ptr<seq::ir::LLVMVisitor> visitor;
+  std::string input;
+};
 } // namespace
 
 int docMode(const std::vector<const char *> &args, const std::string &argv0) {
@@ -58,7 +62,7 @@ int docMode(const std::vector<const char *> &args, const std::string &argv0) {
   return EXIT_SUCCESS;
 }
 
-int runMode(const std::vector<const char *> &args) {
+ProcessResult processSource(const std::vector<const char *> &args) {
   llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::desc("<input file>"),
                                    llvm::cl::init("-"));
   llvm::cl::opt<OptMode> optMode(
@@ -72,16 +76,18 @@ int runMode(const std::vector<const char *> &args) {
   llvm::cl::list<std::string> defines(
       "D", llvm::cl::Prefix,
       llvm::cl::desc("Add static variable definitions. The syntax is <name>=<value>"));
-  llvm::cl::list<std::string> seqArgs(llvm::cl::ConsumeAfter,
-                                      llvm::cl::desc("<program arguments>..."));
-  llvm::cl::list<std::string> libs(
-      "l", llvm::cl::desc("Load and link the specified library"));
-  llvm::cl::ParseCommandLineOptions(args.size(), args.data());
-  std::vector<std::string> libsVec(libs);
-  std::vector<std::string> argsVec(seqArgs);
+  llvm::cl::list<std::string> disabledOpts(
+      "disable-opt", llvm::cl::desc("Disable the specified IR optimization"));
+  llvm::cl::list<std::string> dsls("dsl", llvm::cl::desc("Use specified DSL"));
 
-  if (input != "-" && !hasExtension(input, ".seq"))
-    seq::compilationError("input file is expected to be a .seq file, or '-' for stdin");
+  llvm::cl::ParseCommandLineOptions(args.size(), args.data());
+
+  auto &exts = supportedExtensions();
+  if (input != "-" && std::find_if(exts.begin(), exts.end(), [&](auto &ext) {
+                        return hasExtension(input, ext);
+                      }) == exts.end())
+    seq::compilationError(
+        "input file is expected to be a .seq/.py file, or '-' for stdin");
 
   std::unordered_map<std::string, std::string> defmap;
   for (const auto &define : defines) {
@@ -105,42 +111,69 @@ int runMode(const std::vector<const char *> &args) {
   auto *module = seq::parse(args[0], input.c_str(), /*code=*/"", /*isCode=*/false,
                             /*isTest=*/false, /*startLine=*/0, defmap);
   if (!module)
-    return EXIT_FAILURE;
+    return {{}, {}};
 
   const bool isDebug = (optMode == OptMode::Debug);
   auto t = std::chrono::high_resolution_clock::now();
-  seq::ir::transform::PassManager pm;
-  registerStandardPasses(pm, isDebug);
+
+  std::vector<std::string> disabledOptsVec(disabledOpts);
+  seq::ir::transform::PassManager pm(/*addStandardPasses=*/!isDebug, disabledOptsVec);
+  seq::PluginManager plm(&pm, isDebug);
+
+  // load Seq
+  seq::Seq seqDSL;
+  plm.load(&seqDSL);
+
+  // load other plugins
+  for (const auto &dsl : dsls) {
+    auto result = plm.load(dsl);
+    switch (result) {
+    case seq::PluginManager::NONE:
+      break;
+    case seq::PluginManager::NOT_FOUND:
+      seq::compilationError("DSL '" + dsl + "' not found");
+      break;
+    case seq::PluginManager::NO_ENTRYPOINT:
+      seq::compilationError("DSL '" + dsl + "' has no entry point");
+      break;
+    case seq::PluginManager::UNSUPPORTED_VERSION:
+      seq::compilationError("DSL '" + dsl + "' version incompatible");
+      break;
+    default:
+      break;
+    }
+  }
+
   pm.run(module);
-  seq::ir::LLVMVisitor visitor(isDebug);
-  visitor.visit(module);
+  auto visitor = std::make_unique<seq::ir::LLVMVisitor>(isDebug);
+  visitor->visit(module);
   LOG_TIME("[T] ir-visitor = {:.1f}",
            std::chrono::duration_cast<std::chrono::milliseconds>(
                std::chrono::high_resolution_clock::now() - t)
                    .count() /
                1000.0);
+  return {std::move(visitor), input};
+}
 
-  argsVec.insert(argsVec.begin(), input);
-  visitor.run(argsVec, libsVec);
+int runMode(const std::vector<const char *> &args) {
+  llvm::cl::list<std::string> libs(
+      "l", llvm::cl::desc("Load and link the specified library"));
+  llvm::cl::list<std::string> seqArgs(llvm::cl::ConsumeAfter,
+                                      llvm::cl::desc("<program arguments>..."));
+
+  auto result = processSource(args);
+  if (!result.visitor)
+    return EXIT_FAILURE;
+  std::vector<std::string> libsVec(libs);
+  std::vector<std::string> argsVec(seqArgs);
+  argsVec.insert(argsVec.begin(), result.input);
+  result.visitor->run(argsVec, libsVec);
   return EXIT_SUCCESS;
 }
 
 int buildMode(const std::vector<const char *> &args) {
-  llvm::cl::opt<std::string> input(llvm::cl::Positional, llvm::cl::desc("<input file>"),
-                                   llvm::cl::init("-"));
-  llvm::cl::opt<OptMode> optMode(
-      llvm::cl::desc("optimization mode"),
-      llvm::cl::values(
-          clEnumValN(Debug, "debug",
-                     "Turn off compiler optimizations and show backtraces"),
-          clEnumValN(Release, "release",
-                     "Turn on compiler optimizations and disable debug info")),
-      llvm::cl::init(Debug));
   llvm::cl::list<std::string> libs(
       "l", llvm::cl::desc("Link the specified library (only for executables)"));
-  llvm::cl::list<std::string> defines(
-      "D", llvm::cl::Prefix,
-      llvm::cl::desc("Add static variable definitions. The syntax is <name>=<value>"));
   llvm::cl::opt<BuildKind> buildKind(
       llvm::cl::desc("output type"),
       llvm::cl::values(clEnumValN(LLVM, "llvm", "Generate LLVM IR"),
@@ -155,50 +188,13 @@ int buildMode(const std::vector<const char *> &args) {
       llvm::cl::desc(
           "Write compiled output to specified file. Supported extensions: "
           "none (executable), .o (object file), .ll (LLVM IR), .bc (LLVM bitcode)"));
-  llvm::cl::ParseCommandLineOptions(args.size(), args.data());
+
+  auto result = processSource(args);
+  if (!result.visitor)
+    return EXIT_FAILURE;
   std::vector<std::string> libsVec(libs);
 
-  if (input != "-" && !hasExtension(input, ".seq"))
-    seq::compilationError("input file is expected to be a .seq file, or '-' for stdin");
-
-  std::unordered_map<std::string, std::string> defmap;
-  for (const auto &define : defines) {
-    auto eq = define.find('=');
-    if (eq == std::string::npos || !eq) {
-      seq::compilationWarning("ignoring malformed definition: " + define);
-      continue;
-    }
-
-    auto name = define.substr(0, eq);
-    auto value = define.substr(eq + 1);
-
-    if (defmap.find(name) != defmap.end()) {
-      seq::compilationWarning("ignoring duplicate definition: " + define);
-      continue;
-    }
-
-    defmap.emplace(name, value);
-  }
-
-  auto *module = seq::parse(args[0], input.c_str(), /*code=*/"", /*isCode=*/false,
-                            /*isTest=*/false, /*startLine=*/0, defmap);
-  if (!module)
-    return EXIT_FAILURE;
-
-  const bool isDebug = (optMode == OptMode::Debug);
-  auto t = std::chrono::high_resolution_clock::now();
-  seq::ir::transform::PassManager pm;
-  registerStandardPasses(pm, isDebug);
-  pm.run(module);
-  seq::ir::LLVMVisitor visitor(isDebug);
-  visitor.visit(module);
-  LOG_TIME("[T] ir-visitor = {:.1f}",
-           std::chrono::duration_cast<std::chrono::milliseconds>(
-               std::chrono::high_resolution_clock::now() - t)
-                   .count() /
-               1000.0);
-
-  if (output.empty() && input == "-")
+  if (output.empty() && result.input == "-")
     seq::compilationError("output file must be specified when reading from stdin");
   std::string extension;
   switch (buildKind) {
@@ -219,28 +215,32 @@ int buildMode(const std::vector<const char *> &args) {
     assert(0);
   }
   const std::string filename =
-      output.empty() ? makeOutputFilename(input, extension) : output;
+      output.empty() ? makeOutputFilename(result.input, extension) : output;
   switch (buildKind) {
   case BuildKind::LLVM:
-    visitor.writeToLLFile(filename);
+    result.visitor->writeToLLFile(filename);
     break;
   case BuildKind::Bitcode:
-    visitor.writeToBitcodeFile(filename);
+    result.visitor->writeToBitcodeFile(filename);
     break;
   case BuildKind::Object:
-    visitor.writeToObjectFile(filename);
+    result.visitor->writeToObjectFile(filename);
     break;
   case BuildKind::Executable:
-    visitor.writeToExecutable(filename, libsVec);
+    result.visitor->writeToExecutable(filename, libsVec);
     break;
   case BuildKind::Detect:
-    visitor.compile(filename, libsVec);
+    result.visitor->compile(filename, libsVec);
     break;
   default:
     assert(0);
   }
 
   return EXIT_SUCCESS;
+}
+
+void showCommandsAndExit() {
+  seq::compilationError("Available commands: seqc <run|build|doc>");
 }
 
 int otherMode(const std::vector<const char *> &args) {
@@ -252,13 +252,13 @@ int otherMode(const std::vector<const char *> &args) {
   llvm::cl::ParseCommandLineOptions(args.size(), args.data());
 
   if (!input.empty())
-    seq::compilationError("Available commands: seqc <run|build|doc>");
+    showCommandsAndExit();
   return EXIT_SUCCESS;
 }
 
 int main(int argc, const char **argv) {
   if (argc < 2)
-    seq::compilationError("Available commands: seqc <run|build|doc>");
+    showCommandsAndExit();
 
   llvm::cl::SetVersionPrinter(versMsg);
   std::vector<const char *> args{argv[0]};

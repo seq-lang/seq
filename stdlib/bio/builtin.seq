@@ -1,3 +1,14 @@
+from bio.seq import seq
+from bio.kmer import Kmer
+
+@__attribute__
+def prefetch():
+    pass
+
+@__attribute__
+def inter_align():
+    pass
+
 def seqs(x):
     '''
     Returns an iterator over sequences from the specified
@@ -82,7 +93,7 @@ def base[K,T](kmer: K, idx: int, b: T):
     k |= n << U(2*idx)
     return K(k)
 
-@force_realize
+@__force__
 def _is_iupac_nt(b: byte) -> bool:
     iupac = ('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
              '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
@@ -102,7 +113,7 @@ def _is_iupac_nt(b: byte) -> bool:
              '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
     return bool(iupac.ptr[int(b)])
 
-@force_realize
+@__force__
 def _is_iupac_aa(b: byte) -> bool:
     iupac = ('\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
              '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
@@ -122,7 +133,7 @@ def _is_iupac_aa(b: byte) -> bool:
              '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
     return bool(iupac.ptr[int(b)])
 
-@force_realize
+@__force__
 def _validate_str_as_seq(s: str, copy: bool = False):
     def ensure_valid(b: byte, i: int):
         if not _is_iupac_nt(b):
@@ -144,7 +155,7 @@ def _validate_str_as_seq(s: str, copy: bool = False):
             i += 1
         return seq(p, n)
 
-@force_realize
+@__force__
 def _validate_str_as_qual(s: str, copy: bool = False):
     def ensure_valid(b: byte, i: int):
         if not (byte(0x21) <= b <= byte(0x7e)):
@@ -166,7 +177,7 @@ def _validate_str_as_qual(s: str, copy: bool = False):
             i += 1
         return str(p, n)
 
-@force_realize
+@__force__
 def _split_header_on_space(s: str):
     a = 0
     while a < len(s) and not s[a].isspace():

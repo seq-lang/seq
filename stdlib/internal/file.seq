@@ -37,7 +37,7 @@ class File:
         _C.fwrite(s.ptr, 1, len(s), self.fp)
         self._errcheck("error in write")
 
-    def write_gen[T](self, g: Generator[T]):
+    def __file_write_gen__[T](self, g: Generator[T]):
         for s in g:
             self.write(str(s))
 
@@ -158,7 +158,7 @@ class gzFile:
         _C.gzwrite(self.fp, s.ptr, u32(len(s)))
         _gz_errcheck(self.fp)
 
-    def write_gen[T](self, g: Generator[T]):
+    def __file_write_gen__[T](self, g: Generator[T]):
         for s in g:
             self.write(str(s))
 
