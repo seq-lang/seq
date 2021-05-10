@@ -1,5 +1,7 @@
 #include "const_fold.h"
 
+#include <cmath>
+
 #include "sir/util/cloning.h"
 
 #define BINOP(o)                                                                       \
@@ -12,16 +14,16 @@
 namespace {
 using namespace seq::ir;
 
-template <typename... Args> auto intSingleRule(Module *m, Args &&...args) {
-  return std::make_unique<transform::folding::SingleConstantCommutativeRule<int64_t>>(
-      std::forward<Args>(args)..., m->getIntType());
-}
-
 auto id_val(Module *m) {
   return [=](Value *v) -> Value * {
     util::CloneVisitor cv(m);
     return cv.clone(v);
   };
+}
+
+template <typename... Args> auto intSingleRule(Module *m, Args &&...args) {
+  return std::make_unique<transform::folding::SingleConstantCommutativeRule<int64_t>>(
+      std::forward<Args>(args)..., m->getIntType());
 }
 
 template <typename T, typename Func>
@@ -61,6 +63,16 @@ template <typename Func> auto intToIntUnary(Module *m, Func f, std::string magic
 template <typename Func> auto boolToBoolUnary(Module *m, Func f, std::string magic) {
   return singleConstantUnaryRule<bool>(f, std::move(magic), m->getBoolType(),
                                        m->getBoolType());
+}
+
+template <typename Func> auto floatToFloatBinary(Module *m, Func f, std::string magic) {
+  return doubleConstantBinaryRule<double>(f, std::move(magic), m->getFloatType(),
+                                          m->getFloatType());
+}
+
+template <typename Func> auto floatToBoolBinary(Module *m, Func f, std::string magic) {
+  return doubleConstantBinaryRule<double>(f, std::move(magic), m->getFloatType(),
+                                          m->getBoolType());
 }
 
 } // namespace
@@ -112,6 +124,9 @@ void FoldingPass::registerStandardRules(Module *m) {
                intToIntBinary(m, BINOP(<<), Module::LSHIFT_MAGIC_NAME));
   registerRule("int-constant-rshift",
                intToIntBinary(m, BINOP(>>), Module::RSHIFT_MAGIC_NAME));
+  registerRule("int-constant-pow", intToIntBinary(
+                                       m, [](auto a, auto b) { return std::pow(a, b); },
+                                       Module::POW_MAGIC_NAME));
   registerRule("int-constant-xor", intToIntBinary(m, BINOP(^), Module::XOR_MAGIC_NAME));
   registerRule("int-constant-or", intToIntBinary(m, BINOP(|), Module::OR_MAGIC_NAME));
   registerRule("int-constant-and", intToIntBinary(m, BINOP(&), Module::AND_MAGIC_NAME));
@@ -140,6 +155,34 @@ void FoldingPass::registerStandardRules(Module *m) {
                    id_val(m), Module::BOOL_MAGIC_NAME, m->getBoolType()));
   registerRule("bool-constant-inv",
                boolToBoolUnary(m, UNOP(!), Module::INVERT_MAGIC_NAME));
+
+  // binary, double constant, float->float
+  registerRule("float-constant-addition",
+               floatToFloatBinary(m, BINOP(+), Module::ADD_MAGIC_NAME));
+  registerRule("float-constant-subtraction",
+               floatToFloatBinary(m, BINOP(-), Module::SUB_MAGIC_NAME));
+  registerRule("float-constant-floor-div",
+               floatToFloatBinary(m, BINOP(/), Module::TRUE_DIV_MAGIC_NAME));
+  registerRule("float-constant-mul",
+               floatToFloatBinary(m, BINOP(*), Module::MUL_MAGIC_NAME));
+  registerRule(
+      "float-constant-pow",
+      floatToFloatBinary(
+          m, [](auto a, auto b) { return std::pow(a, b); }, Module::POW_MAGIC_NAME));
+
+  // binary, double constant, float->bool
+  registerRule("float-constant-eq",
+               floatToBoolBinary(m, BINOP(==), Module::EQ_MAGIC_NAME));
+  registerRule("float-constant-ne",
+               floatToBoolBinary(m, BINOP(!=), Module::NE_MAGIC_NAME));
+  registerRule("float-constant-gt",
+               floatToBoolBinary(m, BINOP(>), Module::GT_MAGIC_NAME));
+  registerRule("float-constant-ge",
+               floatToBoolBinary(m, BINOP(>=), Module::GE_MAGIC_NAME));
+  registerRule("float-constant-lt",
+               floatToBoolBinary(m, BINOP(<), Module::LT_MAGIC_NAME));
+  registerRule("float-constant-le",
+               floatToBoolBinary(m, BINOP(<=), Module::LE_MAGIC_NAME));
 }
 
 } // namespace folding
