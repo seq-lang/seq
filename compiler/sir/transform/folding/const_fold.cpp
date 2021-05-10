@@ -124,9 +124,9 @@ void FoldingPass::registerStandardRules(Module *m) {
                intToIntBinary(m, BINOP(<<), Module::LSHIFT_MAGIC_NAME));
   registerRule("int-constant-rshift",
                intToIntBinary(m, BINOP(>>), Module::RSHIFT_MAGIC_NAME));
-  registerRule("int-constant-pow", intToIntBinary(
-                                       m, [](auto a, auto b) { return std::pow(a, b); },
-                                       Module::POW_MAGIC_NAME));
+  // registerRule("int-constant-pow", intToIntBinary(
+  //                                      m, [](auto a, auto b) { return std::pow(a, b); },
+  //                                      Module::POW_MAGIC_NAME));
   registerRule("int-constant-xor", intToIntBinary(m, BINOP(^), Module::XOR_MAGIC_NAME));
   registerRule("int-constant-or", intToIntBinary(m, BINOP(|), Module::OR_MAGIC_NAME));
   registerRule("int-constant-and", intToIntBinary(m, BINOP(&), Module::AND_MAGIC_NAME));
@@ -165,10 +165,10 @@ void FoldingPass::registerStandardRules(Module *m) {
                floatToFloatBinary(m, BINOP(/), Module::TRUE_DIV_MAGIC_NAME));
   registerRule("float-constant-mul",
                floatToFloatBinary(m, BINOP(*), Module::MUL_MAGIC_NAME));
-  registerRule(
-      "float-constant-pow",
-      floatToFloatBinary(
-          m, [](auto a, auto b) { return std::pow(a, b); }, Module::POW_MAGIC_NAME));
+  // registerRule(
+  //     "float-constant-pow",
+  //     floatToFloatBinary(
+  //         m, [](auto a, auto b) { return std::pow(a, b); }, Module::POW_MAGIC_NAME));
 
   // binary, double constant, float->bool
   registerRule("float-constant-eq",
