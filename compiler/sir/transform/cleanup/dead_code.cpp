@@ -62,7 +62,7 @@ void DeadCodeCleanupPass::handle(ImperativeForFlow *v) {
   auto endVal = end->getVal();
 
   auto *M = v->getModule();
-  if ((stepVal > 0 && startVal <= endVal) || (stepVal > 0 && startVal >= endVal)) {
+  if ((stepVal < 0 && startVal <= endVal) || (stepVal > 0 && startVal >= endVal)) {
     doReplacement(v, M->Nr<SeriesFlow>());
   }
 }
