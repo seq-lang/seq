@@ -245,6 +245,8 @@ class int:
     def __new__(s: str, base: int) -> int:
         return int._from_str(s, base)
     def __pow__(self, exp: int):
+        if exp < 0:
+            return 0
         result = 1
         while True:
             if exp & 1:
