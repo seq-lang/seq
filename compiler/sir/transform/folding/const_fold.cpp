@@ -21,6 +21,22 @@ auto id_val(Module *m) {
   };
 }
 
+int64_t int_pow(int64_t base, int64_t exp) {
+  if (exp < 0)
+    return 0;
+  int64_t result = 1;
+  while (true) {
+    if (exp & 1) {
+      result *= base;
+    }
+    exp = exp >> 1;
+    if (!exp)
+      break;
+    base = base * base;
+  }
+  return result;
+}
+
 template <typename... Args> auto intSingleRule(Module *m, Args &&...args) {
   return std::make_unique<transform::folding::SingleConstantCommutativeRule<int64_t>>(
       std::forward<Args>(args)..., m->getIntType());
@@ -124,9 +140,7 @@ void FoldingPass::registerStandardRules(Module *m) {
                intToIntBinary(m, BINOP(<<), Module::LSHIFT_MAGIC_NAME));
   registerRule("int-constant-rshift",
                intToIntBinary(m, BINOP(>>), Module::RSHIFT_MAGIC_NAME));
-  // registerRule("int-constant-pow", intToIntBinary(
-  //                                      m, [](auto a, auto b) { return std::pow(a, b); },
-  //                                      Module::POW_MAGIC_NAME));
+  registerRule("int-constant-pow", intToIntBinary(m, int_pow, Module::POW_MAGIC_NAME));
   registerRule("int-constant-xor", intToIntBinary(m, BINOP(^), Module::XOR_MAGIC_NAME));
   registerRule("int-constant-or", intToIntBinary(m, BINOP(|), Module::OR_MAGIC_NAME));
   registerRule("int-constant-and", intToIntBinary(m, BINOP(&), Module::AND_MAGIC_NAME));
@@ -165,10 +179,10 @@ void FoldingPass::registerStandardRules(Module *m) {
                floatToFloatBinary(m, BINOP(/), Module::TRUE_DIV_MAGIC_NAME));
   registerRule("float-constant-mul",
                floatToFloatBinary(m, BINOP(*), Module::MUL_MAGIC_NAME));
-  // registerRule(
-  //     "float-constant-pow",
-  //     floatToFloatBinary(
-  //         m, [](auto a, auto b) { return std::pow(a, b); }, Module::POW_MAGIC_NAME));
+  registerRule(
+      "float-constant-pow",
+      floatToFloatBinary(
+          m, [](auto a, auto b) { return std::pow(a, b); }, Module::POW_MAGIC_NAME));
 
   // binary, double constant, float->bool
   registerRule("float-constant-eq",
