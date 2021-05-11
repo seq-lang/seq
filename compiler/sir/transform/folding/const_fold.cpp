@@ -15,7 +15,7 @@
 namespace {
 using namespace seq::ir;
 
-template <typename Func, typename Out = bool>
+template <typename Func, typename Out>
 class IntFloatBinaryRule : public transform::folding::FoldingRule {
 private:
   Func f;
@@ -47,11 +47,11 @@ public:
     if (isA<FloatConst>(leftConst) && isA<IntConst>(rightConst)) {
       auto left = cast<FloatConst>(leftConst)->getVal();
       auto right = cast<IntConst>(rightConst)->getVal();
-      return M->template N<TemplatedConst<Out>>(v->getSrcInfo(), f(left, right), out);
+      return M->template N<TemplatedConst<Out>>(v->getSrcInfo(), f(left, (double) right), out);
     } else if (isA<IntConst>(leftConst) && isA<FloatConst>(rightConst)) {
       auto left = cast<IntConst>(leftConst)->getVal();
       auto right = cast<FloatConst>(rightConst)->getVal();
-      return M->template N<TemplatedConst<Out>>(v->getSrcInfo(), f(left, right), out);
+      return M->template N<TemplatedConst<Out>>(v->getSrcInfo(), f((double) left, right), out);
     } else {
       return nullptr;
     }
@@ -118,13 +118,13 @@ template <typename Func> auto floatToBoolBinary(Module *m, Func f, std::string m
 
 template <typename Func>
 auto intFloatToFloatBinary(Module *m, Func f, std::string magic) {
-  return std::make_unique<IntFloatBinaryRule<Func>>(std::move(f), std::move(magic),
+  return std::make_unique<IntFloatBinaryRule<Func, Float>>(std::move(f), std::move(magic),
                                                     m->getFloatType());
 }
 
 template <typename Func>
 auto intFloatToBoolBinary(Module *m, Func f, std::string magic) {
-  return std::make_unique<IntFloatBinaryRule<Func>>(std::move(f), std::move(magic),
+  return std::make_unique<IntFloatBinaryRule<Func, bool>>(std::move(f), std::move(magic),
                                                     m->getBoolType());
 }
 
