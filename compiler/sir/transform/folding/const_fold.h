@@ -18,6 +18,9 @@ private:
   int numReplacements = 0;
 
 public:
+  /// Constructs a folding pass.
+  FoldingPass() : OperatorPass(true) {}
+
   const std::string KEY = "core-folding-const-fold";
   std::string getKey() const override { return KEY; }
 

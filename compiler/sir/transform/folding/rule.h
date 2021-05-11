@@ -99,7 +99,7 @@ public:
 };
 
 /// Binary rule that requires two constants.
-template <typename ConstantType, typename Func>
+template <typename ConstantType, typename Func, typename OutputType = ConstantType>
 class DoubleConstantBinaryRule : public FoldingRule {
 private:
   /// the calculator
@@ -154,9 +154,9 @@ public:
 private:
   Value *toValue(Value *, Value *v) { return v; }
 
-  template <typename NewType> Value *toValue(Value *og, NewType v) {
-    return og->getModule()->template N<TemplatedConst<NewType>>(og->getSrcInfo(), v,
-                                                                resultType);
+  Value *toValue(Value *og, OutputType v) {
+    return og->getModule()->template N<TemplatedConst<OutputType>>(og->getSrcInfo(), v,
+                                                                   resultType);
   }
 };
 
