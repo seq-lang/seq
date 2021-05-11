@@ -118,7 +118,7 @@ template <typename Func> auto floatToBoolBinary(Module *m, Func f, std::string m
 
 template <typename Func>
 auto intFloatToFloatBinary(Module *m, Func f, std::string magic) {
-  return std::make_unique<IntFloatBinaryRule<Func, Float>>(std::move(f), std::move(magic),
+  return std::make_unique<IntFloatBinaryRule<Func, float>>(std::move(f), std::move(magic),
                                                     m->getFloatType());
 }
 
