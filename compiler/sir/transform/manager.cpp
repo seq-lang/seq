@@ -21,7 +21,7 @@ namespace seq {
 namespace ir {
 namespace transform {
 
-const int PassManager::PASS_IT_MAX = 50;
+const int PassManager::PASS_IT_MAX = 5;
 
 std::string PassManager::KeyManager::getUniqueKey(const std::string &key) {
   // make sure we can't ever produce duplicate "unique'd" keys

@@ -168,3 +168,9 @@ def test_imperative_for_fold():
     y = foo - 1
   assert y == 1
 test_imperative_for_fold()
+
+@test
+def test_long_fold():
+  x = 1
+  foo(x + x + x + x + x + x + x + x + x + x + x + x)
+test_long_fold()
