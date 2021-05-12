@@ -81,13 +81,22 @@ int ForFlow::doReplaceUsedVariable(id_t id, Var *newVar) {
 const char ImperativeForFlow::NodeId = 0;
 
 int ImperativeForFlow::doReplaceUsedValue(id_t id, Value *newValue) {
+  auto count = 0;
   if (body->getId() == id) {
     auto *f = cast<Flow>(newValue);
     seqassert(f, "{} is not a flow", *newValue);
     body = f;
-    return 1;
+    ++count;
   }
-  return 0;
+  if (start->getId() == id) {
+    start = newValue;
+    ++count;
+  }
+  if (end->getId() == id) {
+    end = newValue;
+    ++count;
+  }
+  return count;
 }
 
 int ImperativeForFlow::doReplaceUsedVariable(id_t id, Var *newVar) {

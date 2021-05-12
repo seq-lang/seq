@@ -317,6 +317,7 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Combine(
         testing::Values(
             "transform/dict_opt.seq",
+            "transform/folding.seq",
             "transform/for_lowering.seq",
             "transform/io_opt.seq",
             "transform/str_opt.seq"
