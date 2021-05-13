@@ -402,18 +402,46 @@ public:
 
 /// Instr representing a break statement.
 class BreakInstr : public AcceptorExtend<BreakInstr, ControlFlowInstr> {
+private:
+  /// the loop level being broken, nullptr if the immediate ancestor
+  Value *loop;
+
 public:
   static const char NodeId;
 
-  using AcceptorExtend::AcceptorExtend;
+  /// Constructs a break instruction.
+  /// @param loop the loop being broken, nullptr if immediate ancestor
+  /// @param name the instruction's name
+  BreakInstr(Value *loop = nullptr, std::string name = "")
+      : AcceptorExtend(std::move(name)), loop(loop) {}
+
+  /// @return the loop, nullptr if immediate ancestor
+  Value *getLoop() const { return loop; }
+  /// Sets the loop id.
+  /// @param v the new loop, nullptr if immediate ancestor
+  void setLoop(Value *v) { loop = v; }
 };
 
 /// Instr representing a continue statement.
 class ContinueInstr : public AcceptorExtend<ContinueInstr, ControlFlowInstr> {
+private:
+  /// the loop level being continued, nullptr if the immediate ancestor
+  Value *loop;
+
 public:
   static const char NodeId;
 
-  using AcceptorExtend::AcceptorExtend;
+  /// Constructs a continue instruction.
+  /// @param loop the loop being continued, nullptr if immediate ancestor
+  /// @param name the instruction's name
+  ContinueInstr(Value *loop = nullptr, std::string name = "")
+      : AcceptorExtend(std::move(name)), loop(loop) {}
+
+  /// @return the loop, nullptr if immediate ancestor
+  Value *getLoop() const { return loop; }
+  /// Sets the loop id.
+  /// @param v the new loop, -1 if immediate ancestor
+  void setLoop(Value *v) { loop = v; }
 };
 
 /// Instr representing a return statement.

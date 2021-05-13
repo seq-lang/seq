@@ -198,9 +198,13 @@ public:
              process(x->getFalseValue(), y->getFalseValue());
   }
   VISIT(BreakInstr);
-  void handle(const BreakInstr *x, const BreakInstr *y) { result = true; }
+  void handle(const BreakInstr *x, const BreakInstr *y) {
+    result = process(x->getLoop(), y->getLoop());
+  }
   VISIT(ContinueInstr);
-  void handle(const ContinueInstr *x, const ContinueInstr *y) { result = true; }
+  void handle(const ContinueInstr *x, const ContinueInstr *y) {
+    result = process(x->getLoop(), y->getLoop());
+  }
   VISIT(ReturnInstr);
   void handle(const ReturnInstr *x, const ReturnInstr *y) {
     result = process(x->getValue(), y->getValue());
