@@ -134,7 +134,6 @@ TEST_F(SIRCoreTest, RDAnalysisTryCatch) {
   ASSERT_TRUE(middleRd.find(first->getId()) != endRd.end());
   ASSERT_TRUE(middleRd.find(third->getId()) != endRd.end());
   ASSERT_TRUE(middleRd.find(initial->getId()) != endRd.end());
-
 }
 
 TEST_F(SIRCoreTest, RDAnalysisWhileLoop) {
