@@ -22,6 +22,7 @@ private:
 
     BlockData() = default;
   };
+  std::unordered_set<id_t> invalid;
   std::unordered_map<id_t, BlockData> sets;
   CFGraph *cfg;
 

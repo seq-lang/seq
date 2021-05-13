@@ -1,0 +1,176 @@
+@extend
+class int:
+    def __int__(self) -> int:
+        assert False
+        return self
+    def __pos__(self) -> int:
+        assert False
+        return self
+    def __neg__(self) -> int:
+        assert False
+        return 0 - self
+    def __lshift__(self, other: int) -> int:
+        assert False
+        return self
+    def __rshift__(self, other: int) -> int:
+        assert False
+        return self
+    def __add__(self, b: int) -> int:
+        assert False
+        return self
+    def __add__(self, other: float) -> float:
+        assert False
+        return self
+    def __sub__(self, b: int) -> int:
+        assert False
+        return self
+    def __sub__(self, other: float) -> float:
+        assert False
+        return self
+    def __mul__(self, b: int) -> int:
+        assert False
+        return self
+    def __mul__(self, other: float) -> float:
+        assert False
+        return self
+    def __floordiv__(self, b: int) -> int:
+        assert False
+        return self
+    def __floordiv__(self, other: float) -> float:
+        assert False
+        return self
+    def __truediv__(self, other: int) -> float:
+        assert False
+        return self
+    def __truediv__(self, other: float) -> float:
+        assert False
+        return self
+    def __mod__(self, b: int) -> int:
+        assert False
+        return self
+    def __mod__(self, other: float) -> float:
+        assert False
+        return self
+    def __invert__(self) -> int:
+        assert False
+        return self
+    def __and__(self, b: int) -> int:
+        assert False
+        return self
+    def __or__(self, b: int) -> int:
+        assert False
+        return self
+    def __xor__(self, b: int) -> int:
+        assert False
+        return self
+    def __shr__(self, b: int) -> int:
+        assert False
+        return self
+    def __shl__(self, b: int) -> int:
+        assert False
+        return self
+    def __eq__(self, b: int) -> bool:
+        assert False
+        return True
+    def __eq__(self, b: float) -> bool:
+        assert False
+        return True
+    def __ne__(self, b: int) -> bool:
+        assert False
+        return True
+    def __ne__(self, b: float) -> bool:
+        assert False
+        return True
+    def __lt__(self, b: int) -> bool:
+        assert False
+        return True
+    def __lt__(self, b: float) -> bool:
+        assert False
+        return True
+    def __gt__(self, b: int) -> bool:
+        assert False
+        return True
+    def __gt__(self, b: float) -> bool:
+        assert False
+        return True
+    def __le__(self, b: int) -> bool:
+        assert False
+        return True
+    def __le__(self, b: float) -> bool:
+        assert False
+        return True
+    def __ge__(self, b: int) -> bool:
+        assert False
+        return True
+    def __ge__(self, b: float) -> bool:
+        assert False
+        return True
+    def __pow__(self, exp: int):
+        assert False
+        return True
+
+def foo(x):
+  pass
+
+@test
+def test_int_simple_fold():
+  x = 1
+  y = x + 2
+  z = x + 3
+  foo(x + 1)
+  foo(y * 2)
+  foo(z // 3)
+  foo(x >> 2)
+  foo(x << y)
+  foo(x | y)
+  foo(z & z)
+  foo(x > y)
+  foo(y < z)
+  foo(x >= z)
+  foo(x <= 2)
+  foo(x == 1)
+  foo(x != 2)
+test_int_simple_fold()
+
+@test
+def test_ternary_fold():
+  x = 1
+  y = x * 2
+  assert (x + 1 if x != 0 else -1) > 0
+  assert (x + 1 if x == 0 else -1) < 0
+test_ternary_fold()
+
+@test
+def test_try_catch_fold():
+  x = 0
+  y = x + 1
+  try:
+      x = 1
+  finally:
+    x = 4
+  assert x == 4
+test_try_catch_fold()
+
+@test
+def test_while_fold():
+  x = 0
+  y = 1
+  while (x != 0):
+    y = 2
+  assert y + 1 == 2
+test_while_fold()
+
+@test
+def test_imperative_for_fold():
+  foo = 2
+  y = 1
+  for i in range(foo, 2):
+    y = foo - 1
+  assert y == 1
+test_imperative_for_fold()
+
+@test
+def test_long_fold():
+  x = 1
+  foo(x + x + x + x + x + x + x + x + x + x + x + x)
+test_long_fold()

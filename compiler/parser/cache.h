@@ -42,7 +42,7 @@
 
 #define FLAG_METHOD 1
 #define FLAG_ATOMIC 2
-#define FLAG_TEST 3
+#define FLAG_TEST 4
 
 namespace seq {
 namespace ast {

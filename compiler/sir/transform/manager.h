@@ -4,6 +4,7 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "pass.h"
@@ -89,9 +90,12 @@ private:
   std::vector<std::string> disabled;
 
 public:
-  PassManager(bool addStandardPasses = true,
-              const std::vector<std::string> &disabled = {})
-      : km(), passes(), analyses(), executionOrder(), results(), disabled(disabled) {
+  static const int PASS_IT_MAX;
+
+  explicit PassManager(bool addStandardPasses = true,
+                       std::vector<std::string> disabled = {})
+      : km(), passes(), analyses(), executionOrder(), results(),
+        disabled(std::move(disabled)) {
     if (addStandardPasses)
       registerStandardPasses();
   }

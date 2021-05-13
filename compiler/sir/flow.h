@@ -230,7 +230,7 @@ public:
   void setVar(Var *c) { var = c; }
 
 protected:
-  std::vector<Value *> doGetUsedValues() const override { return {body}; }
+  std::vector<Value *> doGetUsedValues() const override { return {start, end, body}; }
   int doReplaceUsedValue(id_t id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {var}; }

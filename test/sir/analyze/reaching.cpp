@@ -102,6 +102,8 @@ TEST_F(SIRCoreTest, RDAnalysisTryCatch) {
   auto *second = module->getInt(2);
   auto *third = module->getInt(3);
 
+  auto *initial = module->getInt(0);
+  auto *zeroAssign = module->Nr<AssignInstr>(v, initial);
   auto *start = module->getBool(false);
   auto *firstAssign = module->Nr<AssignInstr>(v, first);
   auto *secondAssign = module->Nr<AssignInstr>(v, second);
@@ -110,6 +112,7 @@ TEST_F(SIRCoreTest, RDAnalysisTryCatch) {
   auto *end = module->getBool(false);
 
   b->push_back(start);
+  b->push_back(zeroAssign);
   b->push_back(tc);
   body->push_back(firstAssign);
   except->push_back(thirdAssign);
@@ -130,6 +133,8 @@ TEST_F(SIRCoreTest, RDAnalysisTryCatch) {
   ASSERT_TRUE(endRd.find(second->getId()) != endRd.end());
   ASSERT_TRUE(middleRd.find(first->getId()) != endRd.end());
   ASSERT_TRUE(middleRd.find(third->getId()) != endRd.end());
+  ASSERT_TRUE(middleRd.find(initial->getId()) != endRd.end());
+
 }
 
 TEST_F(SIRCoreTest, RDAnalysisWhileLoop) {

@@ -424,13 +424,16 @@ private:
   struct Loop {
     analyze::dataflow::CFBlock *nextIt;
     analyze::dataflow::CFBlock *end;
+    int tcIndex;
 
-    Loop(analyze::dataflow::CFBlock *nextIt, analyze::dataflow::CFBlock *end)
-        : nextIt(nextIt), end(end) {}
+    Loop(analyze::dataflow::CFBlock *nextIt, analyze::dataflow::CFBlock *end,
+         int tcIndex = -1)
+        : nextIt(nextIt), end(end), tcIndex(tcIndex) {}
   };
 
   analyze::dataflow::CFGraph *graph;
-  std::vector<analyze::dataflow::CFBlock *> tryCatchStack;
+  std::vector<std::pair<analyze::dataflow::CFBlock *, analyze::dataflow::CFBlock *>>
+      tryCatchStack;
   std::unordered_set<id_t> seenIds;
   std::vector<Loop> loopStack;
 
@@ -483,18 +486,8 @@ public:
     v->accept(*this);
   }
 
-  void defaultInsert(const Value *v) {
-    if (tryCatchStack.empty()) {
-      graph->getCurrentBlock()->push_back(v);
-    } else {
-      auto *original = graph->getCurrentBlock();
-      auto *newBlock = graph->newBlock("default", true);
-      original->successors_insert(newBlock);
-      newBlock->successors_insert(tryCatchStack.back());
-      graph->getCurrentBlock()->push_back(v);
-    }
-    seenIds.insert(v->getId());
-  }
+  void defaultInsert(const Value *v);
+  void defaultJump(const CFBlock *cf, int newTcLevel = -1);
 };
 
 } // namespace dataflow

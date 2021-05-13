@@ -238,8 +238,10 @@ public:
   template <typename> friend class ReplaceableNodeBase;
 
 private:
-  Node *getActual() { return replacement ? replacement : this; }
-  const Node *getActual() const { return replacement ? replacement : this; }
+  Node *getActual() { return replacement ? replacement->getActual() : this; }
+  const Node *getActual() const {
+    return replacement ? replacement->getActual() : this;
+  }
 };
 
 template <typename Derived, typename Parent> class AcceptorExtend : public Parent {

@@ -175,19 +175,19 @@ void CFVisitor::visit(const IfFlow *v) {
 
 void CFVisitor::visit(const WhileFlow *v) {
   auto *original = graph->getCurrentBlock();
-  auto *end = graph->newBlock("endIf");
+  auto *end = graph->newBlock("endWhile");
 
   auto *loopBegin = graph->newBlock("whileBegin", true);
   original->successors_insert(loopBegin);
   process(v->getCond());
   graph->getCurrentBlock()->successors_insert(end);
 
-  loopStack.emplace_back(loopBegin, end);
+  loopStack.emplace_back(loopBegin, end, tryCatchStack.size() - 1);
   auto *body = graph->newBlock("whileBody", true);
   loopBegin->successors_insert(body);
   process(v->getBody());
-  body->successors_insert(loopBegin);
   loopStack.pop_back();
+  graph->getCurrentBlock()->successors_insert(loopBegin);
 
   graph->setCurrentBlock(end);
 }
@@ -210,7 +210,7 @@ void CFVisitor::visit(const ForFlow *v) {
       const_cast<Var *>(v->getVar()), const_cast<Value *>(v->getIter()),
       analyze::dataflow::SyntheticAssignInstr::NEXT_VALUE));
 
-  loopStack.emplace_back(loopCheck, end);
+  loopStack.emplace_back(loopCheck, end, tryCatchStack.size() - 1);
   auto *loopBody = graph->newBlock("forBody", true);
   loopNext->successors_insert(loopBody);
   process(v->getBody());
@@ -240,7 +240,7 @@ void CFVisitor::visit(const ImperativeForFlow *v) {
       const_cast<Var *>(v->getVar()), v->getStep()));
   loopNext->successors_insert(loopCheck);
 
-  loopStack.emplace_back(loopCheck, end);
+  loopStack.emplace_back(loopCheck, end, tryCatchStack.size() - 1);
   auto *loopBody = graph->newBlock("forBody", true);
   loopCheck->successors_insert(loopBody);
   process(v->getBody());
@@ -259,16 +259,9 @@ void CFVisitor::visit(const TryCatchFlow *v) {
 
   auto *dst = finally ? finally : end;
 
-  tryCatchStack.push_back(routeBlock);
+  tryCatchStack.emplace_back(routeBlock, finally);
   process(v->getBody());
-  tryCatchStack.pop_back();
   graph->getCurrentBlock()->successors_insert(dst);
-
-  if (v->getFinally()) {
-    graph->setCurrentBlock(finally);
-    process(v->getFinally());
-    graph->getCurrentBlock()->successors_insert(end);
-  }
 
   for (auto &c : *v) {
     auto *cBlock = graph->newBlock("catch", true);
@@ -280,8 +273,21 @@ void CFVisitor::visit(const TryCatchFlow *v) {
     graph->getCurrentBlock()->successors_insert(dst);
   }
 
-  if (!tryCatchStack.empty())
-    routeBlock->successors_insert(tryCatchStack.back());
+  tryCatchStack.pop_back();
+
+  if (v->getFinally()) {
+    graph->setCurrentBlock(finally);
+    process(v->getFinally());
+    graph->getCurrentBlock()->successors_insert(end);
+    routeBlock->successors_insert(finally);
+  }
+
+  if (!tryCatchStack.empty()) {
+    if (finally)
+      finally->successors_insert(tryCatchStack.back().first);
+    else
+      routeBlock->successors_insert(tryCatchStack.back().first);
+  }
 
   graph->setCurrentBlock(end);
 }
@@ -348,18 +354,19 @@ void CFVisitor::visit(const TernaryInstr *v) {
 }
 
 void CFVisitor::visit(const BreakInstr *v) {
-  graph->getCurrentBlock()->successors_insert(loopStack.back().end);
+  defaultJump(loopStack.back().end, loopStack.back().tcIndex);
   defaultInsert(v);
 }
 
 void CFVisitor::visit(const ContinueInstr *v) {
-  graph->getCurrentBlock()->successors_insert(loopStack.back().nextIt);
+  defaultJump(loopStack.back().nextIt, loopStack.back().tcIndex);
   defaultInsert(v);
 }
 
 void CFVisitor::visit(const ReturnInstr *v) {
   if (v->getValue())
     process(v->getValue());
+  defaultJump(nullptr, -1);
   defaultInsert(v);
 }
 
@@ -382,6 +389,44 @@ void CFVisitor::visit(const FlowInstr *v) {
 
 void CFVisitor::visit(const dsl::CustomInstr *v) {
   v->getCFBuilder()->buildCFNodes(this);
+}
+
+void CFVisitor::defaultInsert(const Value *v) {
+  if (tryCatchStack.empty()) {
+    graph->getCurrentBlock()->push_back(v);
+  } else {
+    auto *original = graph->getCurrentBlock();
+    auto *newBlock = graph->newBlock("default", true);
+    original->successors_insert(newBlock);
+    newBlock->successors_insert(tryCatchStack.back().first);
+    graph->getCurrentBlock()->push_back(v);
+  }
+  seenIds.insert(v->getId());
+}
+
+void CFVisitor::defaultJump(const CFBlock *cf, int newTcLevel) {
+  int curTc = tryCatchStack.size() - 1;
+
+  if (curTc == -1 || curTc <= newTcLevel) {
+    if (cf)
+      graph->getCurrentBlock()->successors_insert(const_cast<CFBlock *>(cf));
+  } else {
+    CFBlock *nearestFinally = nullptr;
+    for (auto i = newTcLevel + 1; i <= curTc; ++i) {
+      if (auto *n = tryCatchStack[i].second) {
+        nearestFinally = n;
+        break;
+      }
+    }
+    if (nearestFinally) {
+      graph->getCurrentBlock()->successors_insert(tryCatchStack.back().first);
+      if (cf)
+        nearestFinally->successors_insert(const_cast<CFBlock *>(cf));
+    } else {
+      if (cf)
+        graph->getCurrentBlock()->successors_insert(const_cast<CFBlock *>(cf));
+    }
+  }
 }
 
 } // namespace dataflow

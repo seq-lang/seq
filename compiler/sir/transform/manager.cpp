@@ -4,6 +4,12 @@
 #include <unordered_set>
 
 #include "pass.h"
+
+#include "sir/analyze/analysis.h"
+#include "sir/analyze/dataflow/cfg.h"
+#include "sir/analyze/dataflow/reaching.h"
+
+#include "sir/transform/folding/folding.h"
 #include "sir/transform/lowering/imperative.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pythonic/dict.h"
@@ -11,11 +17,11 @@
 #include "sir/transform/pythonic/str.h"
 #include "util/common.h"
 
-#include "sir/analyze/analysis.h"
-
 namespace seq {
 namespace ir {
 namespace transform {
+
+const int PassManager::PASS_IT_MAX = 5;
 
 std::string PassManager::KeyManager::getUniqueKey(const std::string &key) {
   // make sure we can't ever produce duplicate "unique'd" keys
@@ -66,7 +72,6 @@ std::string PassManager::registerAnalysis(std::unique_ptr<analyze::Analysis> ana
   key = km.getUniqueKey(key);
   analyses.insert(
       std::make_pair(key, AnalysisMetadata(std::move(analysis), std::move(reqs))));
-
   analyses[key].analysis->setManager(this);
   deps[key] = {};
   return key;
@@ -81,14 +86,22 @@ void PassManager::run(Module *module) {
 void PassManager::runPass(Module *module, const std::string &name) {
   auto &meta = passes[name];
 
-  for (auto &dep : meta.reqs) {
-    runAnalysis(module, dep);
+  auto run = true;
+  auto it = 0;
+
+  while (run && it < PASS_IT_MAX) {
+    for (auto &dep : meta.reqs) {
+      runAnalysis(module, dep);
+    }
+
+    meta.pass->run(module);
+
+    for (auto &inv : meta.invalidates)
+      invalidate(inv);
+
+    ++it;
+    run = meta.pass->shouldRepeat();
   }
-
-  meta.pass->run(module);
-
-  for (auto &inv : meta.invalidates)
-    invalidate(inv);
 }
 
 void PassManager::runAnalysis(Module *module, const std::string &name) {
@@ -125,6 +138,13 @@ void PassManager::registerStandardPasses() {
 
   // lowering
   registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());
+
+  // folding
+  auto cfgKey = registerAnalysis(std::make_unique<analyze::dataflow::CFAnalysis>());
+  auto rdKey = registerAnalysis(std::make_unique<analyze::dataflow::RDAnalysis>(cfgKey),
+                                {cfgKey});
+  registerPass(std::make_unique<folding::FoldingPassGroup>(rdKey), {rdKey},
+               {rdKey, cfgKey});
 }
 
 } // namespace transform
