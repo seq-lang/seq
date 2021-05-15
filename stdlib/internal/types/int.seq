@@ -8,36 +8,12 @@ class int:
         ret i64 0
     def __new__[T](what: T) -> int: # lowest priority!
         return what.__int__()
-    def __new__(i: int) -> int:
-        return i
-    @llvm
-    def __new__(f: float) -> int:
-        %0 = fptosi double %f to i64
-        ret i64 %0
-    @llvm
-    def __new__(b: bool) -> int:
-        %0 = zext i8 %b to i64
-        ret i64 %0
-    @llvm
-    def __new__(b: byte) -> int:
-        %0 = zext i8 %b to i64
-        ret i64 %0
-    def __new__[N: int](what: Int[N]) -> int:
-        if N > 64:
-            return __internal__.int_trunc[N,64](what)
-        elif N == 64:
-            return what
-        else:
-            return __internal__.int_sext[N,64](what)
-    def __new__[N: int](what: UInt[N]) -> int:
-        if N > 64:
-            return __internal__.int_trunc[N,64](what)
-        elif N == 64:
-            return Int[64](what)
-        else:
-            return __internal__.int_zext[N,64](what)
     def __int__(self) -> int:
         return self
+    @llvm
+    def __float__(self) -> float:
+        %tmp = sitofp i64 %self to double
+        ret double %tmp
     def __str__(self) -> str:
         return seq_str_int(self)
     def __copy__(self) -> int:

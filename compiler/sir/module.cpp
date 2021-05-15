@@ -88,6 +88,7 @@ const std::string Module::OR_MAGIC_NAME = "__or__";
 const std::string Module::XOR_MAGIC_NAME = "__xor__";
 
 const std::string Module::INT_MAGIC_NAME = "__int__";
+const std::string Module::FLOAT_MAGIC_NAME = "__float__";
 const std::string Module::BOOL_MAGIC_NAME = "__bool__";
 const std::string Module::STR_MAGIC_NAME = "__str__";
 

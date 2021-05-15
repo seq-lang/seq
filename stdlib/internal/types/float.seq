@@ -7,16 +7,18 @@ from C import strtod(cobj, Ptr[cobj]) -> float
 class float:
     def __new__() -> float:
         return 0.0
-    def __new__(f: float) -> float:
-        return f
-    @llvm
-    def __new__(i: int) -> float:
-        %tmp = sitofp i64 %i to double
-        ret double %tmp
+    def __new__[T](what: T):
+        return what.__float__()
     def __str__(self) -> str:
         s = seq_str_float(self)
         return s if s != "-nan" else "nan"
     def __copy__(self) -> float:
+        return self
+    @llvm
+    def __int__(self) -> int:
+        %0 = fptosi double %self to i64
+        ret i64 %0
+    def __float__(self):
         return self
     @llvm
     def __bool__(self) -> bool:

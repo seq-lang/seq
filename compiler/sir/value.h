@@ -93,6 +93,7 @@ public:
   Value *operator[](Value &other);
 
   Value *toInt();
+  Value *toFloat();
   Value *toBool();
   Value *toStr();
 

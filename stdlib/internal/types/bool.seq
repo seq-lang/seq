@@ -62,3 +62,11 @@ class bool:
     def __xor__(self, other: bool) -> bool:
         %0 = xor i8 %self, %other
         ret i8 %0
+    @llvm
+    def __int__(self) -> int:
+        %0 = zext i8 %self to i64
+        ret i64 %0
+    @llvm
+    def __float__(self) -> float:
+        %0 = uitofp i8 %self to double
+        ret double %0

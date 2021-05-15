@@ -60,6 +60,7 @@ public:
   static const std::string XOR_MAGIC_NAME;
 
   static const std::string INT_MAGIC_NAME;
+  static const std::string FLOAT_MAGIC_NAME;
   static const std::string BOOL_MAGIC_NAME;
   static const std::string STR_MAGIC_NAME;
 
