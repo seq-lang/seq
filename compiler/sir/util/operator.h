@@ -64,15 +64,14 @@ public:
   LAMBDA_VISIT(PointerValue);
 
   void visit(seq::ir::SeriesFlow *v) override {
-    nodeStack.push_back(v);
-    for (auto it = v->begin(); it != v->end(); ++it) {
-      itStack.push_back(it);
-      process(*it);
-      itStack.pop_back();
-    }
-    nodeStack.pop_back();
+    if (childrenFirst)
+      processSeriesFlowChildren(v);
+    handle(v);
+    if (!childrenFirst)
+      processSeriesFlowChildren(v);
   }
 
+  virtual void handle(seq::ir::SeriesFlow *v) {}
   LAMBDA_VISIT(IfFlow);
   LAMBDA_VISIT(WhileFlow);
   LAMBDA_VISIT(ForFlow);
@@ -163,6 +162,16 @@ private:
         continue;
       see(c);
       process(c);
+    }
+    nodeStack.pop_back();
+  }
+
+  void processSeriesFlowChildren(seq::ir::SeriesFlow *v) {
+    nodeStack.push_back(v);
+    for (auto it = v->begin(); it != v->end(); ++it) {
+      itStack.push_back(it);
+      process(*it);
+      itStack.pop_back();
     }
     nodeStack.pop_back();
   }
