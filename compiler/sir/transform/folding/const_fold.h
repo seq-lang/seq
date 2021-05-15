@@ -19,7 +19,7 @@ private:
 
 public:
   /// Constructs a folding pass.
-  FoldingPass() : OperatorPass(true) {}
+  FoldingPass() : OperatorPass(/*childrenFirst=*/true) {}
 
   const std::string KEY = "core-folding-const-fold";
   std::string getKey() const override { return KEY; }

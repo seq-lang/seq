@@ -9,14 +9,14 @@
   [](auto x, auto y) -> auto { return x o y; }
 #define UNOP(o)                                                                        \
   [](auto x) -> auto { return o x; }
-#define ID                                                                             \
-  [](auto x) -> auto { return x; }
 
+namespace seq {
+namespace ir {
+namespace transform {
+namespace folding {
 namespace {
-using namespace seq::ir;
 
-template <typename Func, typename Out>
-class IntFloatBinaryRule : public transform::folding::FoldingRule {
+template <typename Func, typename Out> class IntFloatBinaryRule : public FoldingRule {
 private:
   Func f;
   std::string magic;
@@ -60,6 +60,29 @@ public:
   }
 };
 
+/// Binary rule that requires two constants.
+template <typename ConstantType, typename Func, typename OutputType = ConstantType>
+class DoubleConstantBinaryRuleExcludeRHSZero
+    : public DoubleConstantBinaryRule<ConstantType, Func, OutputType> {
+public:
+  DoubleConstantBinaryRuleExcludeRHSZero(Func f, std::string magic,
+                                         types::Type *inputType,
+                                         types::Type *resultType)
+      : DoubleConstantBinaryRule<ConstantType, Func, OutputType>(f, magic, inputType,
+                                                                 resultType) {}
+
+  virtual ~DoubleConstantBinaryRuleExcludeRHSZero() noexcept = default;
+
+  Value *apply(CallInstr *v) override {
+    if (v->numArgs() == 2) {
+      auto *rightConst = cast<TemplatedConst<ConstantType>>(v->back());
+      if (rightConst->getVal() == ConstantType())
+        return nullptr;
+    }
+    return DoubleConstantBinaryRule<ConstantType, Func, OutputType>::apply(v);
+  }
+};
+
 auto id_val(Module *m) {
   return [=](Value *v) -> Value * {
     util::CloneVisitor cv(m);
@@ -83,38 +106,50 @@ int64_t int_pow(int64_t base, int64_t exp) {
   return result;
 }
 
+template <typename From, typename To> To convert(From x) { return To(x); }
+
 template <typename... Args> auto intSingleRule(Module *m, Args &&...args) {
-  return std::make_unique<transform::folding::SingleConstantCommutativeRule<int64_t>>(
+  return std::make_unique<SingleConstantCommutativeRule<int64_t>>(
       std::forward<Args>(args)..., m->getIntType());
 }
 
+auto intNoOp(Module *m, std::string magic) {
+  return std::make_unique<NoOpRule>(std::move(magic), m->getIntType());
+}
+
+auto intDoubleApplyNoOp(Module *m, std::string magic) {
+  return std::make_unique<DoubleApplicationNoOpRule>(std::move(magic), m->getIntType());
+}
+
 template <typename Func> auto intToIntBinary(Module *m, Func f, std::string magic) {
+  return std::make_unique<DoubleConstantBinaryRule<int64_t, Func, int64_t>>(
+      std::move(f), std::move(magic), m->getIntType(), m->getIntType());
+}
+
+template <typename Func>
+auto intToIntBinaryNoZeroRHS(Module *m, Func f, std::string magic) {
   return std::make_unique<
-      transform::folding::DoubleConstantBinaryRule<int64_t, Func, int64_t>>(
+      DoubleConstantBinaryRuleExcludeRHSZero<int64_t, Func, int64_t>>(
       std::move(f), std::move(magic), m->getIntType(), m->getIntType());
 }
 
 template <typename Func> auto intToBoolBinary(Module *m, Func f, std::string magic) {
-  return std::make_unique<
-      transform::folding::DoubleConstantBinaryRule<int64_t, Func, bool>>(
+  return std::make_unique<DoubleConstantBinaryRule<int64_t, Func, bool>>(
       std::move(f), std::move(magic), m->getIntType(), m->getBoolType());
 }
 
 template <typename Func> auto boolToBoolBinary(Module *m, Func f, std::string magic) {
-  return std::make_unique<
-      transform::folding::DoubleConstantBinaryRule<bool, Func, bool>>(
+  return std::make_unique<DoubleConstantBinaryRule<bool, Func, bool>>(
       std::move(f), std::move(magic), m->getBoolType(), m->getBoolType());
 }
 
 template <typename Func> auto floatToFloatBinary(Module *m, Func f, std::string magic) {
-  return std::make_unique<
-      transform::folding::DoubleConstantBinaryRule<double, Func, double>>(
+  return std::make_unique<DoubleConstantBinaryRule<double, Func, double>>(
       std::move(f), std::move(magic), m->getFloatType(), m->getFloatType());
 }
 
 template <typename Func> auto floatToBoolBinary(Module *m, Func f, std::string magic) {
-  return std::make_unique<
-      transform::folding::DoubleConstantBinaryRule<double, Func, bool>>(
+  return std::make_unique<DoubleConstantBinaryRule<double, Func, bool>>(
       std::move(f), std::move(magic), m->getFloatType(), m->getBoolType());
 }
 
@@ -131,21 +166,34 @@ auto intFloatToBoolBinary(Module *m, Func f, std::string magic) {
 }
 
 template <typename Func> auto intToIntUnary(Module *m, Func f, std::string magic) {
-  return std::make_unique<transform::folding::SingleConstantUnaryRule<int64_t, Func>>(
+  return std::make_unique<SingleConstantUnaryRule<int64_t, Func>>(
       std::move(f), std::move(magic), m->getIntType(), m->getIntType());
 }
 
+template <typename Func> auto floatToFloatUnary(Module *m, Func f, std::string magic) {
+  return std::make_unique<SingleConstantUnaryRule<double, Func>>(
+      std::move(f), std::move(magic), m->getFloatType(), m->getFloatType());
+}
+
 template <typename Func> auto boolToBoolUnary(Module *m, Func f, std::string magic) {
-  return std::make_unique<transform::folding::SingleConstantUnaryRule<bool, Func>>(
+  return std::make_unique<SingleConstantUnaryRule<bool, Func>>(
       std::move(f), std::move(magic), m->getBoolType(), m->getBoolType());
 }
 
-} // namespace
+auto identityConvert(Module *m, std::string magic, types::Type *type) {
+  return std::make_unique<UnaryRule<decltype(id_val(m))>>(id_val(m), std::move(magic),
+                                                          type);
+}
 
-namespace seq {
-namespace ir {
-namespace transform {
-namespace folding {
+template <typename From, typename To>
+auto typeConvert(Module *m, std::string magic, types::Type *fromType,
+                 types::Type *toType) {
+  return std::make_unique<
+      SingleConstantUnaryRule<From, std::function<decltype(convert<From, To>)>>>(
+      convert<From, To>, std::move(magic), fromType, toType);
+}
+
+} // namespace
 
 void FoldingPass::run(Module *m) {
   registerStandardRules(m);
@@ -164,18 +212,24 @@ void FoldingPass::handle(CallInstr *v) {
 
 void FoldingPass::registerStandardRules(Module *m) {
   // binary, single constant, int->int
+  using Kind = SingleConstantCommutativeRule<int64_t>::Kind;
   registerRule("int-multiply-by-zero",
-               intSingleRule(m, 0, 0, Module::MUL_MAGIC_NAME, -1));
-  registerRule("int-multiply-by-one",
-               intSingleRule(m, 1, id_val(m), Module::MUL_MAGIC_NAME, -1));
+               intSingleRule(m, 0, 0, Module::MUL_MAGIC_NAME, Kind::COMMUTATIVE));
+  registerRule(
+      "int-multiply-by-one",
+      intSingleRule(m, 1, id_val(m), Module::MUL_MAGIC_NAME, Kind::COMMUTATIVE));
   registerRule("int-subtract-zero",
-               intSingleRule(m, 0, id_val(m), Module::SUB_MAGIC_NAME, 1));
-  registerRule("int-add-zero",
-               intSingleRule(m, 0, id_val(m), Module::ADD_MAGIC_NAME, -1));
-  registerRule("int-floor-div-by-one",
-               intSingleRule(m, 1, id_val(m), Module::FLOOR_DIV_MAGIC_NAME, 1));
+               intSingleRule(m, 0, id_val(m), Module::SUB_MAGIC_NAME, Kind::RIGHT));
+  registerRule("int-add-zero", intSingleRule(m, 0, id_val(m), Module::ADD_MAGIC_NAME,
+                                             Kind::COMMUTATIVE));
+  registerRule(
+      "int-floor-div-by-one",
+      intSingleRule(m, 1, id_val(m), Module::FLOOR_DIV_MAGIC_NAME, Kind::RIGHT));
   registerRule("int-zero-floor-div",
-               intSingleRule(m, 0, 0, Module::FLOOR_DIV_MAGIC_NAME, 0));
+               intSingleRule(m, 0, 0, Module::FLOOR_DIV_MAGIC_NAME, Kind::LEFT));
+  registerRule("int-pos", intNoOp(m, Module::POS_MAGIC_NAME));
+  registerRule("int-double-neg", intDoubleApplyNoOp(m, Module::NEG_MAGIC_NAME));
+  registerRule("int-double-inv", intDoubleApplyNoOp(m, Module::INVERT_MAGIC_NAME));
 
   // binary, double constant, int->int
   registerRule("int-constant-addition",
@@ -183,7 +237,7 @@ void FoldingPass::registerStandardRules(Module *m) {
   registerRule("int-constant-subtraction",
                intToIntBinary(m, BINOP(-), Module::SUB_MAGIC_NAME));
   registerRule("int-constant-floor-div",
-               intToIntBinary(m, BINOP(/), Module::FLOOR_DIV_MAGIC_NAME));
+               intToIntBinaryNoZeroRHS(m, BINOP(/), Module::FLOOR_DIV_MAGIC_NAME));
   registerRule("int-constant-mul", intToIntBinary(m, BINOP(*), Module::MUL_MAGIC_NAME));
   registerRule("int-constant-lshift",
                intToIntBinary(m, BINOP(<<), Module::LSHIFT_MAGIC_NAME));
@@ -193,7 +247,8 @@ void FoldingPass::registerStandardRules(Module *m) {
   registerRule("int-constant-xor", intToIntBinary(m, BINOP(^), Module::XOR_MAGIC_NAME));
   registerRule("int-constant-or", intToIntBinary(m, BINOP(|), Module::OR_MAGIC_NAME));
   registerRule("int-constant-and", intToIntBinary(m, BINOP(&), Module::AND_MAGIC_NAME));
-  registerRule("int-constant-mod", intToIntBinary(m, BINOP(%), Module::MOD_MAGIC_NAME));
+  registerRule("int-constant-mod",
+               intToIntBinaryNoZeroRHS(m, BINOP(%), Module::MOD_MAGIC_NAME));
 
   // binary, double constant, int->bool
   registerRule("int-constant-eq", intToBoolBinary(m, BINOP(==), Module::EQ_MAGIC_NAME));
@@ -212,18 +267,18 @@ void FoldingPass::registerStandardRules(Module *m) {
                boolToBoolBinary(m, BINOP(&), Module::AND_MAGIC_NAME));
 
   // unary, single constant, int->int
-  registerRule("int-constant-int",
-               std::make_unique<UnaryRule<decltype(id_val(m))>>(
-                   id_val(m), Module::INT_MAGIC_NAME, m->getIntType()));
   registerRule("int-constant-pos", intToIntUnary(m, UNOP(+), Module::POS_MAGIC_NAME));
   registerRule("int-constant-neg", intToIntUnary(m, UNOP(-), Module::NEG_MAGIC_NAME));
   registerRule("int-constant-inv",
                intToIntUnary(m, UNOP(~), Module::INVERT_MAGIC_NAME));
 
+  // unary, singe constant, float->float
+  registerRule("float-constant-pos",
+               floatToFloatUnary(m, UNOP(+), Module::POS_MAGIC_NAME));
+  registerRule("float-constant-neg",
+               floatToFloatUnary(m, UNOP(-), Module::NEG_MAGIC_NAME));
+
   // unary, single constant, bool->bool
-  registerRule("bool-constant-bool",
-               std::make_unique<UnaryRule<decltype(id_val(m))>>(
-                   id_val(m), Module::BOOL_MAGIC_NAME, m->getBoolType()));
   registerRule("bool-constant-inv",
                boolToBoolUnary(m, UNOP(!), Module::INVERT_MAGIC_NAME));
 
@@ -278,6 +333,35 @@ void FoldingPass::registerStandardRules(Module *m) {
                intFloatToBoolBinary(m, BINOP(<), Module::LT_MAGIC_NAME));
   registerRule("int-float-constant-le",
                intFloatToBoolBinary(m, BINOP(<=), Module::LE_MAGIC_NAME));
+
+  // type conversions, identity
+  registerRule("int-constant-int",
+               identityConvert(m, Module::INT_MAGIC_NAME, m->getIntType()));
+  registerRule("float-constant-float",
+               identityConvert(m, Module::FLOAT_MAGIC_NAME, m->getFloatType()));
+  registerRule("bool-constant-bool",
+               identityConvert(m, Module::BOOL_MAGIC_NAME, m->getBoolType()));
+
+  registerRule("float-constant-int",
+               typeConvert<double, int64_t>(m, Module::INT_MAGIC_NAME,
+                                            m->getFloatType(), m->getIntType()));
+  registerRule("bool-constant-int",
+               typeConvert<bool, int64_t>(m, Module::INT_MAGIC_NAME, m->getBoolType(),
+                                          m->getIntType()));
+
+  registerRule("int-constant-float",
+               typeConvert<int64_t, double>(m, Module::FLOAT_MAGIC_NAME,
+                                            m->getIntType(), m->getFloatType()));
+  registerRule("bool-constant-float",
+               typeConvert<bool, double>(m, Module::FLOAT_MAGIC_NAME, m->getBoolType(),
+                                         m->getFloatType()));
+
+  registerRule("int-constant-bool",
+               typeConvert<int64_t, bool>(m, Module::BOOL_MAGIC_NAME, m->getIntType(),
+                                          m->getBoolType()));
+  registerRule("float-constant-bool",
+               typeConvert<double, bool>(m, Module::BOOL_MAGIC_NAME, m->getFloatType(),
+                                         m->getBoolType()));
 }
 
 } // namespace folding
@@ -287,4 +371,3 @@ void FoldingPass::registerStandardRules(Module *m) {
 
 #undef BINOP
 #undef UNOP
-#undef ID

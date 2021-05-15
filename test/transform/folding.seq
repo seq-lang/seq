@@ -2,7 +2,13 @@
 class int:
     def __int__(self) -> int:
         assert False
-        return self
+        return 0
+    def __float__(self) -> float:
+        assert False
+        return 0.0
+    def __bool__(self) -> bool:
+        assert False
+        return False
     def __pos__(self) -> int:
         assert False
         return self
@@ -109,27 +115,57 @@ class int:
         assert False
         return True
 
+@extend
+class float:
+    def __int__(self) -> int:
+        assert False
+        return 0
+    def __float__(self) -> float:
+        assert False
+        return 0.0
+    def __bool__(self) -> bool:
+        assert False
+        return False
+
+@extend
+class bool:
+    def __int__(self) -> int:
+        assert False
+        return 0
+    def __float__(self) -> float:
+        assert False
+        return 0.0
+    def __bool__(self) -> bool:
+        assert False
+        return False
+
+@llvm
+def eq(a: int, b: int) -> bool:
+    %tmp = icmp eq i64 %a, %b
+    %res = zext i1 %tmp to i8
+    ret i8 %res
+
 def foo(x):
-  pass
+  return x
 
 @test
 def test_int_simple_fold():
   x = 1
   y = x + 2
   z = x + 3
-  foo(x + 1)
-  foo(y * 2)
-  foo(z // 3)
-  foo(x >> 2)
-  foo(x << y)
-  foo(x | y)
-  foo(z & z)
-  foo(x > y)
-  foo(y < z)
-  foo(x >= z)
-  foo(x <= 2)
-  foo(x == 1)
-  foo(x != 2)
+  assert eq(foo(x + 1), 2)
+  assert eq(foo(y * 2), 6)
+  assert eq(foo(z // 3), 1)
+  assert eq(foo(x >> 2), 0)
+  assert eq(foo(x << y), 8)
+  assert eq(foo(x | y), 3)
+  assert eq(foo(z & z), 4)
+  assert not foo(x > y)
+  assert foo(y < z)
+  assert not foo(x >= z)
+  assert foo(x <= 2)
+  assert foo(x == 1)
+  assert foo(x != 2)
 test_int_simple_fold()
 
 @test
@@ -171,6 +207,25 @@ test_imperative_for_fold()
 
 @test
 def test_long_fold():
-  x = 1
-  foo(x + x + x + x + x + x + x + x + x + x + x + x)
+  x = 3
+  assert eq(foo(x + x + x + x + x + x + x + x + x + x + x + x), 36)
 test_long_fold()
+
+@test
+def test_conversions():
+  n = 42
+  b = True
+  x = 3.14
+
+  assert eq(foo(n.__int__()), n)
+  assert foo(n.__float__()) == 42.0
+  assert foo(n.__bool__())
+
+  assert eq(foo(b.__int__()), 1)
+  assert foo(b.__float__()) == 1.0
+  assert foo(b.__bool__())
+
+  assert eq(foo(x.__int__()), 3)
+  assert foo(x.__float__()) == x
+  assert foo(x.__bool__())
+test_conversions()
