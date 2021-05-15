@@ -229,3 +229,26 @@ def test_conversions():
   assert foo(x.__float__()) == x
   assert foo(x.__bool__())
 test_conversions()
+
+@test
+def test_no_ops():
+  def v(): return 42
+  n = v()
+  assert eq(+n, n)
+  assert eq(-(-n), n)
+  assert eq(~(~n), n)
+test_no_ops()
+
+@test
+def test_algebraic_simplification():
+  def v(): return 42
+  n = v()
+  assert eq(0*n, 0)
+  assert eq(n*0, 0)
+  assert eq(n*1, n)
+  assert eq(1*n, n)
+  assert eq(n+0, n)
+  assert eq(0+n, n)
+  assert eq(n-0, n)
+  assert eq(0//n, 0)
+test_algebraic_simplification()

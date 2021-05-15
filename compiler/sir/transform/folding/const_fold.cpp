@@ -342,20 +342,19 @@ void FoldingPass::registerStandardRules(Module *m) {
   registerRule("bool-constant-bool",
                identityConvert(m, Module::BOOL_MAGIC_NAME, m->getBoolType()));
 
+  // type conversions, distinct
   registerRule("float-constant-int",
                typeConvert<double, int64_t>(m, Module::INT_MAGIC_NAME,
                                             m->getFloatType(), m->getIntType()));
   registerRule("bool-constant-int",
                typeConvert<bool, int64_t>(m, Module::INT_MAGIC_NAME, m->getBoolType(),
                                           m->getIntType()));
-
   registerRule("int-constant-float",
                typeConvert<int64_t, double>(m, Module::FLOAT_MAGIC_NAME,
                                             m->getIntType(), m->getFloatType()));
   registerRule("bool-constant-float",
                typeConvert<bool, double>(m, Module::FLOAT_MAGIC_NAME, m->getBoolType(),
                                          m->getFloatType()));
-
   registerRule("int-constant-bool",
                typeConvert<int64_t, bool>(m, Module::BOOL_MAGIC_NAME, m->getIntType(),
                                           m->getBoolType()));
