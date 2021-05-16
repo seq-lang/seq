@@ -403,7 +403,7 @@ public:
 /// Instr representing a break statement.
 class BreakInstr : public AcceptorExtend<BreakInstr, ControlFlowInstr> {
 private:
-  /// the loop level being broken, nullptr if the immediate ancestor
+  /// the loop being broken, nullptr if the immediate ancestor
   Value *loop;
 
 public:
@@ -425,7 +425,7 @@ public:
 /// Instr representing a continue statement.
 class ContinueInstr : public AcceptorExtend<ContinueInstr, ControlFlowInstr> {
 private:
-  /// the loop level being continued, nullptr if the immediate ancestor
+  /// the loop being continued, nullptr if the immediate ancestor
   Value *loop;
 
 public:
