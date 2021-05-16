@@ -3,8 +3,9 @@
 #include "module.h"
 #include "util/iterators.h"
 
+namespace seq {
+namespace ir {
 namespace {
-
 int findAndReplace(id_t id, seq::ir::Value *newVal,
                    std::vector<seq::ir::Value *> &values) {
   auto replacements = 0;
@@ -16,11 +17,7 @@ int findAndReplace(id_t id, seq::ir::Value *newVal,
   }
   return replacements;
 }
-
 } // namespace
-
-namespace seq {
-namespace ir {
 
 const char Instr::NodeId = 0;
 

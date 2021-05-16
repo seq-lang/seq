@@ -15,7 +15,6 @@ namespace ir {
 namespace transform {
 namespace folding {
 namespace {
-
 template <typename Func, typename Out> class IntFloatBinaryRule : public FoldingRule {
 private:
   Func f;
@@ -192,7 +191,6 @@ auto typeConvert(Module *m, std::string magic, types::Type *fromType,
       SingleConstantUnaryRule<From, std::function<decltype(convert<From, To>)>>>(
       convert<From, To>, std::move(magic), fromType, toType);
 }
-
 } // namespace
 
 void FoldingPass::run(Module *m) {

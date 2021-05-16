@@ -11,8 +11,9 @@
 #include "module.h"
 #include "var.h"
 
+namespace seq {
+namespace ir {
 namespace {
-
 int findAndReplace(id_t id, seq::ir::Var *newVal, std::list<seq::ir::Var *> &values) {
   auto replacements = 0;
   for (auto &value : values) {
@@ -23,11 +24,7 @@ int findAndReplace(id_t id, seq::ir::Var *newVal, std::list<seq::ir::Var *> &val
   }
   return replacements;
 }
-
 } // namespace
-
-namespace seq {
-namespace ir {
 
 const char Func::NodeId = 0;
 

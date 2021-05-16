@@ -5,8 +5,11 @@
 #include "sir/dsl/codegen.h"
 #include "sir/dsl/nodes.h"
 
+namespace seq {
+namespace ir {
+namespace analyze {
+namespace dataflow {
 namespace {
-using namespace seq::ir;
 const Value *
 convertPipelineToForLoopsHelper(analyze::dataflow::CFGraph *cfg,
                                 const std::vector<const PipelineFlow::Stage *> &stages,
@@ -36,6 +39,7 @@ convertPipelineToForLoopsHelper(analyze::dataflow::CFGraph *cfg,
     return convertPipelineToForLoopsHelper(cfg, stages, idx + 1, next);
   }
 }
+} // namespace
 
 const Value *convertPipelineToForLoops(analyze::dataflow::CFGraph *cfg,
                                        const PipelineFlow *p) {
@@ -45,12 +49,6 @@ const Value *convertPipelineToForLoops(analyze::dataflow::CFGraph *cfg,
   }
   return convertPipelineToForLoopsHelper(cfg, stages);
 }
-} // namespace
-
-namespace seq {
-namespace ir {
-namespace analyze {
-namespace dataflow {
 
 void CFBlock::reg(const Value *v) { graph->valueLocations[v->getId()] = this; }
 

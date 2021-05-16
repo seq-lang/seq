@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <iostream>
 
+namespace seq {
 namespace {
 void compilationMessage(const std::string &header, const std::string &msg,
                         const std::string &file, int line, int col) {
@@ -20,7 +21,6 @@ void compilationMessage(const std::string &header, const std::string &msg,
 }
 } // namespace
 
-namespace seq {
 void compilationError(const std::string &msg, const std::string &file, int line,
                       int col, bool terminate) {
   compilationMessage("\033[1;31merror:\033[0m", msg, file, line, col);

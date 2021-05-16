@@ -5,10 +5,11 @@
 #include "sir/util/cloning.h"
 #include "sir/util/irtools.h"
 
+namespace seq {
+namespace ir {
+namespace transform {
+namespace pythonic {
 namespace {
-
-using namespace seq::ir;
-
 struct InspectionResult {
   bool valid = true;
   std::vector<Value *> args;
@@ -37,13 +38,7 @@ void inspect(Value *v, InspectionResult &r) {
     r.valid = false;
   }
 }
-
 } // namespace
-
-namespace seq {
-namespace ir {
-namespace transform {
-namespace pythonic {
 
 void StrAdditionOptimization::handle(CallInstr *v) {
   auto *M = v->getModule();

@@ -21,9 +21,10 @@
       handle(v, static_cast<const x *>(other));                                        \
   }
 
+namespace seq {
+namespace ir {
+namespace util {
 namespace {
-using namespace seq::ir;
-
 class MatchVisitor : public util::ConstVisitor {
 private:
   bool matchAny = false;
@@ -303,12 +304,7 @@ private:
     return true;
   }
 };
-
 } // namespace
-
-namespace seq {
-namespace ir {
-namespace util {
 
 const char AnyType::NodeId = 0;
 
