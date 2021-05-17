@@ -75,7 +75,7 @@ public:
   Value *apply(CallInstr *v) override {
     if (v->numArgs() == 2) {
       auto *rightConst = cast<TemplatedConst<ConstantType>>(v->back());
-      if (rightConst->getVal() == ConstantType())
+      if (rightConst && rightConst->getVal() == ConstantType())
         return nullptr;
     }
     return DoubleConstantBinaryRule<ConstantType, Func, OutputType>::apply(v);
