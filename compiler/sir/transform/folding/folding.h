@@ -22,7 +22,8 @@ public:
   std::string getKey() const override { return KEY; }
 
   /// @param reachingDefPass the key of the reaching definitions pass
-  explicit FoldingPassGroup(std::string reachingDefPass);
+  /// @param globalVarPass the key of the global variables pass
+  explicit FoldingPassGroup(std::string reachingDefPass, std::string globalVarPass);
 
   bool shouldRepeat() const override;
 };

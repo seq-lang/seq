@@ -4,7 +4,7 @@ namespace {
 using namespace seq::ir;
 
 template <typename NodeType>
-void validate(NodeType *n, analyze::module::GlobalVarsResult res) {
+void validate(NodeType *n, analyze::module::GlobalVarsResult &res) {
   if (auto *ptr = cast<PointerValue>(n)) {
     if (ptr->getVar()->isGlobal())
       res.assignments[ptr->getVar()->getId()] = -1;
@@ -13,7 +13,7 @@ void validate(NodeType *n, analyze::module::GlobalVarsResult res) {
       if (res.assignments.find(assign->getLhs()->getId()) != res.assignments.end()) {
         res.assignments[assign->getLhs()->getId()] = -1;
       } else {
-        res.assignments[assign->getLhs()->getId()] = assign->getLhs()->getId();
+        res.assignments[assign->getLhs()->getId()] = assign->getRhs()->getId();
       }
     }
   }
@@ -22,7 +22,7 @@ void validate(NodeType *n, analyze::module::GlobalVarsResult res) {
     validate(child, res);
 }
 
-}
+} // namespace
 
 namespace seq {
 namespace ir {
@@ -39,7 +39,7 @@ std::unique_ptr<Result> GlobalVarsAnalyses::run(const Module *m) {
   return res;
 }
 
-}
-}
-}
-}
+} // namespace module
+} // namespace analyze
+} // namespace ir
+} // namespace seq

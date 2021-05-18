@@ -9,8 +9,10 @@ namespace ir {
 namespace transform {
 namespace folding {
 
-FoldingPassGroup::FoldingPassGroup(std::string reachingDefPass) {
-  push_back(std::make_unique<ConstPropPass>(std::move(reachingDefPass)));
+FoldingPassGroup::FoldingPassGroup(std::string reachingDefPass,
+                                   std::string globalVarPass) {
+  push_back(std::make_unique<ConstPropPass>(std::move(reachingDefPass),
+                                            std::move(globalVarPass)));
   fp = new FoldingPass();
   push_back(std::unique_ptr<FoldingPass>(fp));
   dce = new cleanup::DeadCodeCleanupPass();
