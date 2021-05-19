@@ -468,15 +468,15 @@ bool isReveal(int op) { return op == 4; }
  */
 
 bool isSequreFunc(Func *f) {
-  return bool(f) && f->getUnmangledName().find("sequre_") == 0;
+  return bool(f) && util::hasAttribute(f, "std.sequre.sequre");
 }
 
 bool isPolyOptFunc(Func *f) {
-  return bool(f) && f->getUnmangledName().find("sequre_poly_") == 0;
+  return bool(f) && util::hasAttribute(f, "std.sequre.sequre_poly");
 }
 
 bool isBeaverOptFunc(Func *f) {
-  return bool(f) && f->getUnmangledName().find("sequre_beaver_") == 0;
+  return bool(f) && util::hasAttribute(f, "std.sequre.sequre_beaver");
 }
 
 int getOperator(CallInstr *callInstr) {
@@ -640,7 +640,6 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
   auto *f = util::getFunc(v->getCallee());
   if (!isPolyOptFunc(f))
     return;
-  // see(v);
 
   auto *bf = cast<BodiedFunc>(f);
   auto *series = cast<SeriesFlow>(bf->getBody());
@@ -656,7 +655,7 @@ void ArithmeticsOptimizations::applyPolynomialOptimizations(CallInstr *v) {
 
 void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
   auto *pf = getParentFunc();
-  if (!isSequreFunc(pf) || isPolyOptFunc(pf))
+  if (!isSequreFunc(pf) && !isBeaverOptFunc(pf))
     return;
   auto *f = util::getFunc(v->getCallee());
   if (!f)
