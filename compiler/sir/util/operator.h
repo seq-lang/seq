@@ -45,12 +45,12 @@ public:
   /// itself. It provides a way to write one function that gets
   /// applied to every visited node.
   /// @param node the node
-  virtual void preHook(Node *node){};
+  virtual void preHook(Node *node) {}
   /// This function is applied to all nodes after handling the node
   /// itself. It provides a way to write one function that gets
   /// applied to every visited node.
   /// @param node the node
-  virtual void postHook(Node *node){};
+  virtual void postHook(Node *node) {}
 
   void visit(Module *m) override {
     nodeStack.push_back(m);
