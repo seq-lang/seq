@@ -11,7 +11,9 @@
   void visit(seq::ir::x *v) override {                                                 \
     if (childrenFirst)                                                                 \
       processChildren(v);                                                              \
+    preHook(v);                                                                        \
     handle(v);                                                                         \
+    postHook(v);                                                                       \
     if (!childrenFirst)                                                                \
       processChildren(v);                                                              \
   }
@@ -38,6 +40,17 @@ public:
   explicit Operator(bool childrenFirst = false) : childrenFirst(childrenFirst) {}
 
   virtual ~Operator() noexcept = default;
+
+  /// This function is applied to all nodes before handling the node
+  /// itself. It provides a way to write one function that gets
+  /// applied to every visited node.
+  /// @param node the node
+  virtual void preHook(Node *node){};
+  /// This function is applied to all nodes after handling the node
+  /// itself. It provides a way to write one function that gets
+  /// applied to every visited node.
+  /// @param node the node
+  virtual void postHook(Node *node){};
 
   void visit(Module *m) override {
     nodeStack.push_back(m);
@@ -66,7 +79,9 @@ public:
   void visit(seq::ir::SeriesFlow *v) override {
     if (childrenFirst)
       processSeriesFlowChildren(v);
+    preHook(v);
     handle(v);
+    postHook(v);
     if (!childrenFirst)
       processSeriesFlowChildren(v);
   }
