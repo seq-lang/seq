@@ -18,11 +18,52 @@
 #include "sir/llvm/llvisitor.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pass.h"
+#include "sir/util/irtools.h"
+#include "sir/util/outlining.h"
 #include "util/common.h"
 #include "gtest/gtest.h"
 
 using namespace seq;
 using namespace std;
+
+class TestOutliner : public ir::transform::OperatorPass {
+  int count = 0;
+  ir::ReturnInstr *countReturn = nullptr;
+
+  const std::string KEY = "test-outliner-pass";
+  std::string getKey() const override { return KEY; }
+
+  void handle(ir::SeriesFlow *v) override {
+    auto *M = v->getModule();
+    auto begin = v->begin(), end = v->end();
+    bool sawBegin = false, sawEnd = false;
+    for (auto it = v->begin(); it != v->end(); ++it) {
+      if (ir::util::isCallOf(*it, "__outline_begin__") && !sawBegin) {
+        begin = it;
+        sawBegin = true;
+      } else if (ir::util::isCallOf(*it, "__outline_end__") && !sawEnd) {
+        end = it;
+        sawEnd = true;
+      }
+    }
+    if (sawBegin && sawEnd) {
+      auto result = ir::util::outlineRegion(ir::cast<ir::BodiedFunc>(getParentFunc()),
+                                            v, begin, end);
+      if (result)
+        ++count;
+      if (countReturn)
+        countReturn->setValue(M->getInt(count));
+    }
+  }
+
+  void handle(ir::ReturnInstr *v) override {
+    auto *M = v->getModule();
+    if (getParentFunc()->getUnmangledName() == "__outline_count__") {
+      v->setValue(M->getInt(count));
+      countReturn = v;
+    }
+  }
+};
 
 vector<string> splitLines(const string &output) {
   vector<string> result;
@@ -116,6 +157,7 @@ public:
       ir::transform::PassManager pm;
       Seq seqDSL;
       seqDSL.addIRPasses(&pm, /*debug=*/false); // always add all passes
+      pm.registerPass(std::make_unique<TestOutliner>());
       pm.run(module);
 
       ir::LLVMVisitor visitor(/*debug=*/get<1>(GetParam()));
@@ -320,6 +362,7 @@ INSTANTIATE_TEST_SUITE_P(
             "transform/folding.seq",
             "transform/for_lowering.seq",
             "transform/io_opt.seq",
+            "transform/outlining.seq",
             "transform/str_opt.seq"
         ),
         testing::Values(true, false),
