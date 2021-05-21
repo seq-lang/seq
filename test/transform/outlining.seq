@@ -1,0 +1,118 @@
+def __outline_begin__():
+    pass
+
+def __outline_end__():
+    pass
+
+# use this to avoid const-folding
+def N(n):
+    return n
+
+@test
+def test_basic_outline():
+    __outline_begin__()
+    print 'hello world'
+    __outline_end__()
+test_basic_outline()
+# EXPECT: hello world
+
+@test
+def test_private_vars_outline(x):
+    b = N(10)
+    __outline_begin__()
+    a = N(42)
+    print a + 1
+    a = N(99)
+    __outline_end__()
+    b = N(13)
+test_private_vars_outline('x')
+# EXPECT: 43
+
+@test
+def test_shared_vars_outline(x):
+    b = N(10)
+    __outline_begin__()
+    a = N(42)
+    print a + b + x
+    a = N(99)
+    __outline_end__()
+    b = N(13)
+    print b
+test_shared_vars_outline(100)
+# EXPECT: 152
+# EXPECT: 13
+
+f = 'f'
+@test
+def test_shared_vars_with_mod_outline(x):
+    global f
+    b = N(10)
+    f = 'o'
+    __outline_begin__()
+    for i in range(1):
+        a = N(42)
+        print a + b + x
+        a = N(99)
+        x = N(-5)
+        f = str(i)
+    __outline_end__()
+    b = N(13)
+    print b, x
+test_shared_vars_with_mod_outline(100)
+print f
+# EXPECT: 152
+# EXPECT: 13 -5
+# EXPECT: 0
+
+g = 'g'
+@test
+def test_out_flow_return_outline(x):
+    global g
+    b = N(10)
+    g = 'o'
+    __outline_begin__()
+    for i in range(1):
+        a = N(42)
+        print a + b + x
+        a = N(99)
+        x = N(-5)
+        g = str(i)
+        return a
+        break
+    __outline_end__()
+    assert False
+test_out_flow_return_outline(100)
+print g
+# EXPECT: 152
+# EXPECT: 0
+
+h = 'h'
+@test
+def test_out_flow_break_continue_outline(x):
+    global h
+    b = N(10)
+    h = 'o'
+    for i in range(3):
+        __outline_begin__()
+        if i == 0:
+            continue
+        if i == 2:
+            break
+        for j in range(2):
+            if j == 0:
+                continue
+
+            a = N(42)
+            print a + b + x + j
+            a = N(99)
+            x = N(-5)
+            h = str(i)
+            break
+        __outline_end__()
+    b = N(13)
+    print b, x
+test_out_flow_break_continue_outline(100)
+print h
+# EXPECT: 153
+# EXPECT: 13 -5
+# EXPECT: 1

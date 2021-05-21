@@ -22,11 +22,11 @@ struct OutlineResult {
   operator bool() const { return bool(func); }
 };
 
-OutlineResult outlineRegion(Func *func, SeriesFlow *series,
+OutlineResult outlineRegion(BodiedFunc *parent, SeriesFlow *series,
                             decltype(series->begin()) begin,
                             decltype(series->end()) end);
-OutlineResult outlineRegion(Func *func, SeriesFlow *series) {
-  return outlineRegion(func, series, series->begin(), series->end());
+OutlineResult outlineRegion(BodiedFunc *parent, SeriesFlow *series) {
+  return outlineRegion(parent, series, series->begin(), series->end());
 }
 
 } // namespace util

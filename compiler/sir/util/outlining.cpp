@@ -93,6 +93,7 @@ struct OutlineReplacer : public Operator {
 };
 
 struct Outliner : public Operator {
+  BodiedFunc *parent;
   SeriesFlow *flowRegion;
   decltype(flowRegion->begin()) begin, end;
   bool inRegion;
@@ -104,11 +105,11 @@ struct Outliner : public Operator {
   std::vector<id_t> loops;
   std::vector<Value *> outFlows;
 
-  Outliner(SeriesFlow *flowRegion, decltype(flowRegion->begin()) begin,
-           decltype(flowRegion->begin()) end)
-      : Operator(), flowRegion(flowRegion), begin(begin), end(end), inRegion(false),
-        invalid(false), inVars(), outVars(), modifiedInVars(), inLoops(), loops(),
-        outFlows() {}
+  Outliner(BodiedFunc *parent, SeriesFlow *flowRegion,
+           decltype(flowRegion->begin()) begin, decltype(flowRegion->begin()) end)
+      : Operator(), parent(parent), flowRegion(flowRegion), begin(begin), end(end),
+        inRegion(false), invalid(false), inVars(), outVars(), modifiedInVars(),
+        inLoops(), loops(), outFlows() {}
 
   bool isEnclosingLoopInRegion() {
     int d = depth();
@@ -307,16 +308,20 @@ struct Outliner : public Operator {
     }
     auto *outlinedCall = call(outlinedFunc, args);
 
-    it = flowRegion->insert(it, outlinedCall);
     if (callIndicatesControl) {
+      auto *codeVar = M->Nr<Var>(M->getIntType());
+      parent->push_back(codeVar);
+      it = flowRegion->insert(it, M->Nr<AssignInstr>(codeVar, outlinedCall));
       for (unsigned i = 0; i < outFlows.size(); i++) {
         auto *codeVal = M->getInt(i + 1); // 1-based by convention
-        auto *codeCheck = (*codeVal == *outlinedCall);
+        auto *codeCheck = (*codeVal == *M->Nr<VarValue>(codeVar));
         auto *codeBody = series(outFlows[i]);
         auto *codeIf = M->Nr<IfFlow>(codeCheck, codeBody);
         ++it;
         it = flowRegion->insert(it, codeIf);
       }
+    } else {
+      it = flowRegion->insert(it, outlinedCall);
     }
 
     return {outlinedFunc, outlinedCall, callIndicatesControl};
@@ -325,11 +330,11 @@ struct Outliner : public Operator {
 
 } // namespace
 
-OutlineResult outlineRegion(Func *func, SeriesFlow *series,
+OutlineResult outlineRegion(BodiedFunc *parent, SeriesFlow *series,
                             decltype(series->begin()) begin,
                             decltype(series->end()) end) {
-  Outliner outliner(series, begin, end);
-  func->accept(outliner);
+  Outliner outliner(parent, series, begin, end);
+  parent->accept(outliner);
   return outliner.outline();
 }
 
