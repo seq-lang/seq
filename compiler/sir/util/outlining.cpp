@@ -13,13 +13,16 @@ namespace ir {
 namespace util {
 namespace {
 struct OutlineReplacer : public Operator {
+  std::unordered_set<id_t> &modifiedInVars;
   std::vector<std::pair<Var *, Var *>> &remap;
   std::vector<Value *> &outFlows;
   CloneVisitor cv;
 
-  OutlineReplacer(Module *M, std::vector<std::pair<Var *, Var *>> &remap,
+  OutlineReplacer(Module *M, std::unordered_set<id_t> &modifiedInVars,
+                  std::vector<std::pair<Var *, Var *>> &remap,
                   std::vector<Value *> &outFlows)
-      : Operator(), remap(remap), outFlows(outFlows), cv(M) {}
+      : Operator(), modifiedInVars(modifiedInVars), remap(remap), outFlows(outFlows),
+        cv(M) {}
 
   void postHook(Node *node) override {
     for (auto &pair : remap) {
@@ -44,6 +47,22 @@ struct OutlineReplacer : public Operator {
   void handle(BreakInstr *v) override { replaceOutFlowWithReturn(v); }
 
   void handle(ContinueInstr *v) override { replaceOutFlowWithReturn(v); }
+
+  void handle(VarValue *v) override {
+    auto *M = v->getModule();
+    if (modifiedInVars.count(v->getVar()->getId()) > 0) {
+      // var -> pointer dereference
+      v->replaceAll((*M->Nr<VarValue>(v->getVar()))[*M->getInt(0)]);
+    }
+  }
+
+  void handle(PointerValue *v) override {
+    auto *M = v->getModule();
+    if (modifiedInVars.count(v->getVar()->getId()) > 0) {
+      // pointer -> var
+      v->replaceAll(M->Nr<VarValue>(v->getVar()));
+    }
+  }
 };
 
 struct Outliner : public Operator {
@@ -53,6 +72,7 @@ struct Outliner : public Operator {
   bool invalid;
   std::unordered_set<id_t> inVars;
   std::unordered_set<id_t> outVars;
+  std::unordered_set<id_t> modifiedInVars;
   std::unordered_set<id_t> inLoops;
   std::vector<id_t> loops;
   std::vector<Value *> outFlows;
@@ -60,7 +80,8 @@ struct Outliner : public Operator {
   Outliner(SeriesFlow *flowRegion, decltype(flowRegion->begin()) begin,
            decltype(flowRegion->begin()) end)
       : Operator(), flowRegion(flowRegion), begin(begin), end(end), inRegion(false),
-        invalid(false), inVars(), outVars(), inLoops(), loops(), outFlows() {}
+        invalid(false), inVars(), outVars(), modifiedInVars(), inLoops(), loops(),
+        outFlows() {}
 
   bool isEnclosingLoopInRegion() {
     int d = depth();
@@ -115,6 +136,16 @@ struct Outliner : public Operator {
   void handle(YieldInInstr *v) override {
     if (inRegion)
       invalid = true;
+  }
+
+  void handle(AssignInstr *v) override {
+    if (inRegion)
+      modifiedInVars.insert(v->getLhs()->getId());
+  }
+
+  void handle(PointerValue *v) override {
+    if (inRegion)
+      modifiedInVars.insert(v->getVar()->getId());
   }
 
   void visit(SeriesFlow *v) override {
@@ -178,12 +209,14 @@ struct Outliner : public Operator {
     std::vector<std::string> argNames;
 
     unsigned idx = 0;
-    auto shared = getSharedVars();
-    for (auto id : shared) {
+    for (auto id : getSharedVars()) {
       Var *var = M->getVar(id);
       seqassert(var, "unknown var id");
       remap.emplace_back(var, nullptr);
-      argTypes.push_back(var->getType());
+      types::Type *type = (modifiedInVars.count(id) > 0)
+                              ? M->getPointerType(var->getType())
+                              : var->getType();
+      argTypes.push_back(type);
       argNames.push_back(std::to_string(idx++));
     }
 
@@ -216,12 +249,16 @@ struct Outliner : public Operator {
     }
     outlinedFunc->setBody(body);
 
-    OutlineReplacer outRep(M, remap, outFlows);
+    OutlineReplacer outRep(M, modifiedInVars, remap, outFlows);
     body->accept(outRep);
 
     std::vector<Value *> args;
-    for (auto id : shared) {
-      args.push_back(M->Nr<VarValue>(M->getVar(id)));
+    for (auto &map : remap) {
+      Var *var = std::get<0>(map);
+      Value *arg = (modifiedInVars.count(var->getId()) > 0)
+                       ? static_cast<Value *>(M->Nr<PointerValue>(var))
+                       : M->Nr<VarValue>(var);
+      args.push_back(arg);
     }
     auto *outlinedCall = call(outlinedFunc, args);
 
