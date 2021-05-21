@@ -24,6 +24,52 @@ CallInstr *call(Func *func, const std::vector<Value *> &args) {
   return M->Nr<CallInstr>(M->Nr<VarValue>(func), args);
 }
 
+bool isCallOf(const Value *value, const std::string &name,
+              const std::vector<types::Type *> &inputs, types::Type *output,
+              bool method) {
+  if (auto *call = cast<CallInstr>(value)) {
+    auto *fn = getFunc(call->getCallee());
+    if (!fn || fn->getUnmangledName() != name || call->numArgs() != inputs.size())
+      return false;
+
+    unsigned i = 0;
+    for (auto *arg : *call) {
+      if (!arg->getType()->is(inputs[i++]))
+        return false;
+    }
+
+    if (output && !value->getType()->is(output))
+      return false;
+
+    // if (method && (inputs.empty() || !fn->getParentType()->is(inputs[0])))
+    //  return false;
+
+    return true;
+  }
+
+  return false;
+}
+
+bool isCallOf(const Value *value, const std::string &name, int numArgs,
+              types::Type *output, bool method) {
+  if (auto *call = cast<CallInstr>(value)) {
+    auto *fn = getFunc(call->getCallee());
+    if (!fn || fn->getUnmangledName() != name ||
+        (numArgs >= 0 && call->numArgs() != numArgs))
+      return false;
+
+    if (output && !value->getType()->is(output))
+      return false;
+
+    if (method && !fn->getParentType())
+      return false;
+
+    return true;
+  }
+
+  return false;
+}
+
 Value *makeTuple(const std::vector<Value *> &args, Module *M) {
   std::vector<types::Type *> types;
   for (auto *arg : args) {

@@ -100,6 +100,8 @@ Value *Value::operator[](Value &other) {
 
 Value *Value::toInt() { return doUnaryOp(Module::INT_MAGIC_NAME); }
 
+Value *Value::toFloat() { return doUnaryOp(Module::FLOAT_MAGIC_NAME); }
+
 Value *Value::toBool() { return doUnaryOp(Module::BOOL_MAGIC_NAME); }
 
 Value *Value::toStr() { return doUnaryOp(Module::STR_MAGIC_NAME); }

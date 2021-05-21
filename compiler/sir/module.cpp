@@ -7,10 +7,9 @@
 
 #include "func.h"
 
+namespace seq {
+namespace ir {
 namespace {
-
-using namespace seq::ir;
-
 std::vector<seq::ast::types::TypePtr>
 translateGenerics(std::vector<types::Generic> &generics) {
   std::vector<seq::ast::types::TypePtr> ret;
@@ -50,11 +49,7 @@ std::vector<seq::ast::types::TypePtr> translateArgs(std::vector<types::Type *> &
   }
   return ret;
 }
-
 } // namespace
-
-namespace seq {
-namespace ir {
 
 const std::string Module::VOID_NAME = "void";
 const std::string Module::BOOL_NAME = "bool";
@@ -88,6 +83,7 @@ const std::string Module::OR_MAGIC_NAME = "__or__";
 const std::string Module::XOR_MAGIC_NAME = "__xor__";
 
 const std::string Module::INT_MAGIC_NAME = "__int__";
+const std::string Module::FLOAT_MAGIC_NAME = "__float__";
 const std::string Module::BOOL_MAGIC_NAME = "__bool__";
 const std::string Module::STR_MAGIC_NAME = "__str__";
 

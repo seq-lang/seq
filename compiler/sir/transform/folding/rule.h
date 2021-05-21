@@ -27,6 +27,7 @@ template <typename ConstantType>
 class SingleConstantCommutativeRule : public FoldingRule {
 public:
   using Calculator = std::function<Value *(Value *)>;
+  enum Kind { LEFT, RIGHT, COMMUTATIVE };
 
 private:
   /// the value being matched against
@@ -37,19 +38,19 @@ private:
   std::string magic;
   /// the calculator
   Calculator calc;
-  /// the index for the constant
-  int i;
+  /// left, right or commutative
+  Kind kind;
 
 public:
   /// Constructs a commutative rule.
   /// @param val the matched value
   /// @param newVal the result
   /// @param magic the magic name
-  /// @param i 0 for left, 1 for right, -1 if commutative
+  /// @param kind left, right, or commutative
   /// @param type the matched type
   SingleConstantCommutativeRule(ConstantType val, ConstantType newVal,
-                                std::string magic, int i, types::Type *type)
-      : val(val), type(type), magic(std::move(magic)), i(i) {
+                                std::string magic, Kind kind, types::Type *type)
+      : val(val), type(type), magic(std::move(magic)), kind(kind) {
     calc = [=](Value *v) -> Value * {
       return v->getModule()->N<TemplatedConst<ConstantType>>(v->getSrcInfo(), val,
                                                              type);
@@ -60,38 +61,29 @@ public:
   /// @param newVal the result
   /// @param magic the magic name
   /// @param calc the calculator
-  /// @param i 0 for left, 1 for right, -1 if commutative
+  /// @param kind left, right, or commutative
   /// @param type the matched type
   SingleConstantCommutativeRule(ConstantType val, Calculator calc, std::string magic,
-                                int i, types::Type *type)
-      : val(val), type(type), magic(std::move(magic)), calc(std::move(calc)), i(i) {}
+                                Kind kind, types::Type *type)
+      : val(val), type(type), magic(std::move(magic)), calc(std::move(calc)),
+        kind(kind) {}
 
   virtual ~SingleConstantCommutativeRule() noexcept = default;
 
   Value *apply(CallInstr *v) override {
-    auto *fn = util::getFunc(v->getCallee());
-    if (!fn)
-      return nullptr;
-
-    if (fn->getUnmangledName() != magic)
-      return nullptr;
-
-    if (std::distance(v->begin(), v->end()) != 2)
+    if (!util::isCallOf(v, magic, {type, type}, type, /*method=*/true))
       return nullptr;
 
     auto *left = v->front();
     auto *right = v->back();
-
-    if (left->getType()->getName() != type->getName() ||
-        right->getType()->getName() != type->getName())
-      return nullptr;
-
     auto *leftConst = cast<TemplatedConst<ConstantType>>(left);
     auto *rightConst = cast<TemplatedConst<ConstantType>>(right);
 
-    if ((i == -1 || i == 0) && leftConst && leftConst->getVal() == val)
+    if ((kind == Kind::COMMUTATIVE || kind == Kind::LEFT) && leftConst &&
+        leftConst->getVal() == val)
       return calc(right);
-    if ((i == -1 || i == 1) && rightConst && rightConst->getVal() == val)
+    if ((kind == Kind::COMMUTATIVE || kind == Kind::RIGHT) && rightConst &&
+        rightConst->getVal() == val)
       return calc(left);
 
     return nullptr;
@@ -125,23 +117,11 @@ public:
   virtual ~DoubleConstantBinaryRule() noexcept = default;
 
   Value *apply(CallInstr *v) override {
-    auto *fn = util::getFunc(v->getCallee());
-    if (!fn)
-      return nullptr;
-
-    if (fn->getUnmangledName() != magic)
-      return nullptr;
-
-    if (std::distance(v->begin(), v->end()) != 2)
+    if (!util::isCallOf(v, magic, {inputType, inputType}, resultType, /*method=*/true))
       return nullptr;
 
     auto *left = v->front();
     auto *right = v->back();
-
-    if (left->getType()->getName() != inputType->getName() ||
-        right->getType()->getName() != inputType->getName())
-      return nullptr;
-
     auto *leftConst = cast<TemplatedConst<ConstantType>>(left);
     auto *rightConst = cast<TemplatedConst<ConstantType>>(right);
 
@@ -187,23 +167,11 @@ public:
   virtual ~SingleConstantUnaryRule() noexcept = default;
 
   Value *apply(CallInstr *v) override {
-    auto *fn = util::getFunc(v->getCallee());
-    if (!fn)
-      return nullptr;
-
-    if (fn->getUnmangledName() != magic)
-      return nullptr;
-
-    if (std::distance(v->begin(), v->end()) != 1)
+    if (!util::isCallOf(v, magic, {inputType}, resultType, /*method=*/true))
       return nullptr;
 
     auto *arg = v->front();
-
-    if (arg->getType()->getName() != inputType->getName())
-      return nullptr;
-
     auto *argConst = cast<TemplatedConst<ConstantType>>(arg);
-
     if (argConst) {
       return toValue(v, f(argConst->getVal()));
     }
@@ -241,22 +209,66 @@ public:
   virtual ~UnaryRule() noexcept = default;
 
   Value *apply(CallInstr *v) override {
-    auto *fn = util::getFunc(v->getCallee());
-    if (!fn)
-      return nullptr;
-
-    if (fn->getUnmangledName() != magic)
-      return nullptr;
-
-    if (std::distance(v->begin(), v->end()) != 1)
+    if (!util::isCallOf(v, magic, {inputType}, inputType, /*method=*/true))
       return nullptr;
 
     auto *arg = v->front();
+    return f(arg);
+  }
+};
 
-    if (arg->getType()->getName() != inputType->getName())
+/// Rule that eliminates an operation, like "+x".
+class NoOpRule : public FoldingRule {
+private:
+  /// the input type
+  types::Type *inputType;
+  /// the magic method name
+  std::string magic;
+
+public:
+  /// Constructs a no-op rule.
+  /// @param magic the magic method name
+  /// @param inputType the input type
+  NoOpRule(std::string magic, types::Type *inputType)
+      : inputType(inputType), magic(std::move(magic)) {}
+
+  virtual ~NoOpRule() noexcept = default;
+
+  Value *apply(CallInstr *v) override {
+    if (!util::isCallOf(v, magic, {inputType}, inputType, /*method=*/true))
       return nullptr;
 
-    return f(arg);
+    auto *arg = v->front();
+    return arg;
+  }
+};
+
+/// Rule that eliminates a double-application of an operation, like "-(-x)".
+class DoubleApplicationNoOpRule : public FoldingRule {
+private:
+  /// the input type
+  types::Type *inputType;
+  /// the magic method name
+  std::string magic;
+
+public:
+  /// Constructs a double-application no-op rule.
+  /// @param magic the magic method name
+  /// @param inputType the input type
+  DoubleApplicationNoOpRule(std::string magic, types::Type *inputType)
+      : inputType(inputType), magic(std::move(magic)) {}
+
+  virtual ~DoubleApplicationNoOpRule() noexcept = default;
+
+  Value *apply(CallInstr *v) override {
+    if (!util::isCallOf(v, magic, {inputType}, inputType, /*method=*/true))
+      return nullptr;
+
+    if (!util::isCallOf(v->front(), magic, {inputType}, inputType, /*method=*/true))
+      return nullptr;
+
+    auto *arg = v->front();
+    return cast<CallInstr>(arg)->front();
   }
 };
 

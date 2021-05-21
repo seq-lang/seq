@@ -27,6 +27,26 @@ bool isStdlibFunc(const Func *func, const std::string &submodule = "");
 /// @return call instruction with the given function and arguments
 CallInstr *call(Func *func, const std::vector<Value *> &args);
 
+/// Checks if a value represents a call of a particular function.
+/// @param value the value to check
+/// @param name the function's (unmangled) name
+/// @param inputs vector of input types
+/// @param output output type, null for no check
+/// @param method true to ensure this call is a method call
+/// @return true if value is a call matching all parameters above
+bool isCallOf(const Value *value, const std::string &name,
+              const std::vector<types::Type *> &inputs, types::Type *output = nullptr,
+              bool method = false);
+
+/// Checks if a value represents a call of a particular function.
+/// @param name the function's (unmangled) name
+/// @param numArgs argument count, negative for no check
+/// @param output output type, null for no check
+/// @param method true to ensure this call is a method call
+/// @return true if value is a call matching all parameters above
+bool isCallOf(const Value *value, const std::string &name, int numArgs = -1,
+              types::Type *output = nullptr, bool method = false);
+
 /// Constructs a new tuple.
 /// @param args vector of tuple contents
 /// @param M the module

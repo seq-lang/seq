@@ -6,10 +6,11 @@
 #include "sir/util/irtools.h"
 #include "sir/util/matching.h"
 
+namespace seq {
+namespace ir {
+namespace transform {
+namespace pythonic {
 namespace {
-
-using namespace seq::ir;
-
 /// get or __getitem__ call metadata
 struct GetCall {
   /// the function, nullptr if not a get call
@@ -58,13 +59,7 @@ GetCall analyzeGet(CallInstr *call) {
   // call is not correct
   return {};
 }
-
 } // namespace
-
-namespace seq {
-namespace ir {
-namespace transform {
-namespace pythonic {
 
 void DictArithmeticOptimization::handle(CallInstr *v) {
   auto *M = v->getModule();

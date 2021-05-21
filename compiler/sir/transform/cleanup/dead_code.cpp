@@ -2,19 +2,15 @@
 
 #include "sir/util/cloning.h"
 
-namespace {
-using namespace seq::ir;
-
-BoolConst *boolConst(Value *v) { return cast<BoolConst>(v); }
-
-IntConst *intConst(Value *v) { return cast<IntConst>(v); }
-
-} // namespace
-
 namespace seq {
 namespace ir {
 namespace transform {
 namespace cleanup {
+namespace {
+BoolConst *boolConst(Value *v) { return cast<BoolConst>(v); }
+
+IntConst *intConst(Value *v) { return cast<IntConst>(v); }
+} // namespace
 
 void DeadCodeCleanupPass::run(Module *m) {
   numReplacements = 0;

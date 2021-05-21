@@ -6,8 +6,9 @@
 
 #include "module.h"
 
+namespace seq {
+namespace ir {
 namespace {
-
 int findAndReplace(id_t id, seq::ir::Value *newVal,
                    std::list<seq::ir::Value *> &values) {
   auto replacements = 0;
@@ -19,11 +20,7 @@ int findAndReplace(id_t id, seq::ir::Value *newVal,
   }
   return replacements;
 }
-
 } // namespace
-
-namespace seq {
-namespace ir {
 
 const char Flow::NodeId = 0;
 

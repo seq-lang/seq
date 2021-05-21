@@ -36,10 +36,21 @@ class Int[N]:
             ret = ret * Int[N](10) + Int[N](int(what.ptr[i]) - 48)
             i += 1
         return sign * ret
+    def __int__(self) -> int:
+        if N > 64:
+            return __internal__.int_trunc[N,64](self)
+        elif N == 64:
+            return self
+        else:
+            return __internal__.int_sext[N,64](self)
     def __copy__(self) -> Int[N]:
         return self
     def __hash__(self) -> int:
         return int(self)
+    @llvm
+    def __float__(self) -> float:
+        %0 = sitofp i{=N} %self to double
+        ret double %0
     @llvm
     def __bool__(self) -> bool:
         %0 = icmp ne i{=N} %self, 0
@@ -181,10 +192,21 @@ class UInt[N]:
     def __new__(what: str) -> UInt[N]:
         check_N[N]()
         return UInt[N](Int[N](what))
+    def __int__(self) -> int:
+        if N > 64:
+            return __internal__.int_trunc[N,64](self)
+        elif N == 64:
+            return Int[64](self)
+        else:
+            return __internal__.int_zext[N,64](self)
     def __copy__(self) -> UInt[N]:
         return self
     def __hash__(self) -> int:
         return int(self)
+    @llvm
+    def __float__(self) -> float:
+        %0 = uitofp i{=N} %self to double
+        ret double %0
     @llvm
     def __bool__(self) -> bool:
         %0 = icmp ne i{=N} %self, 0

@@ -13,6 +13,9 @@
 #include "sir/util/visitor.h"
 #include "sir/value.h"
 
+namespace seq {
+namespace ir {
+namespace types {
 namespace {
 std::vector<seq::ast::types::TypePtr>
 extractTypes(const std::vector<seq::ast::types::ClassType::Generic> &gens) {
@@ -22,10 +25,6 @@ extractTypes(const std::vector<seq::ast::types::ClassType::Generic> &gens) {
   return ret;
 }
 } // namespace
-
-namespace seq {
-namespace ir {
-namespace types {
 
 const char Type::NodeId = 0;
 

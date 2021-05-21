@@ -5,10 +5,11 @@
 #include "sir/util/cloning.h"
 #include "sir/util/irtools.h"
 
+namespace seq {
+namespace ir {
+namespace transform {
+namespace pythonic {
 namespace {
-
-using namespace seq::ir;
-
 void optimizePrint(CallInstr *v) {
   auto *M = v->getModule();
 
@@ -82,13 +83,7 @@ void optimizeWrite(CallInstr *v) {
 
   v->replaceAll(util::call(replacement, args));
 }
-
 } // namespace
-
-namespace seq {
-namespace ir {
-namespace transform {
-namespace pythonic {
 
 void IOCatOptimization::handle(CallInstr *v) {
   if (util::getStdlibFunc(v->getCallee(), "print")) {

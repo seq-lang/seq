@@ -178,6 +178,7 @@ set(SEQ_HPPFILES
         compiler/sir/util/iterators.h
         compiler/sir/util/matching.h
         compiler/sir/util/operator.h
+        compiler/sir/util/outlining.h
         compiler/sir/util/packs.h
         compiler/sir/util/visitor.h
         compiler/sir/value.h
@@ -251,6 +252,7 @@ set(SEQ_CPPFILES
         compiler/sir/util/inlining.cpp
         compiler/sir/util/irtools.cpp
         compiler/sir/util/matching.cpp
+        compiler/sir/util/outlining.cpp
         compiler/sir/util/visitor.cpp
         compiler/sir/value.cpp
         compiler/sir/var.cpp
