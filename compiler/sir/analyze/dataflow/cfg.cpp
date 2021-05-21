@@ -433,7 +433,7 @@ void CFVisitor::defaultJump(const CFBlock *cf, int newTcLevel) {
 
 CFVisitor::Loop &CFVisitor::findLoop(id_t id) {
   return *std::find_if(loopStack.begin(), loopStack.end(),
-                       [=](auto &it) { return it.getId() == id; });
+                       [=](auto &it) { return it.loopId == id; });
 }
 
 } // namespace dataflow
