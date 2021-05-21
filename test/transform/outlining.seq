@@ -4,6 +4,9 @@ def __outline_begin__():
 def __outline_end__():
     pass
 
+def __outline_count__():
+    return 0
+
 # use this to avoid const-folding
 def N(n):
     return n
@@ -116,3 +119,27 @@ print h
 # EXPECT: 153
 # EXPECT: 13 -5
 # EXPECT: 1
+
+@test
+def test_invalid_outline_yield(x):
+    b = N(10)
+    __outline_begin__()
+    a = N(42)
+    yield a + b + x
+    a = N(99)
+    __outline_end__()
+    b = N(13)
+test_invalid_outline_yield(-123)
+
+@test
+def test_invalid_outline_yield_in(x):
+    b = N(10)
+    __outline_begin__()
+    a = (yield) + b
+    yield b
+    __outline_end__()
+    b = N(13)
+test_invalid_outline_yield_in(-123)
+
+print __outline_count__()
+# EXPECT: 6

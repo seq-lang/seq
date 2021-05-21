@@ -27,10 +27,14 @@ using namespace seq;
 using namespace std;
 
 class TestOutliner : public ir::transform::OperatorPass {
+  int count = 0;
+  ir::ReturnInstr *countReturn = nullptr;
+
   const std::string KEY = "test-outliner-pass";
   std::string getKey() const override { return KEY; }
 
   void handle(ir::SeriesFlow *v) override {
+    auto *M = v->getModule();
     auto begin = v->begin(), end = v->end();
     bool sawBegin = false, sawEnd = false;
     for (auto it = v->begin(); it != v->end(); ++it) {
@@ -45,7 +49,18 @@ class TestOutliner : public ir::transform::OperatorPass {
     if (sawBegin && sawEnd) {
       auto result = ir::util::outlineRegion(ir::cast<ir::BodiedFunc>(getParentFunc()),
                                             v, begin, end);
-      EXPECT_TRUE(bool(result));
+      if (result)
+        ++count;
+      if (countReturn)
+        countReturn->setValue(M->getInt(count));
+    }
+  }
+
+  void handle(ir::ReturnInstr *v) override {
+    auto *M = v->getModule();
+    if (getParentFunc()->getUnmangledName() == "__outline_count__") {
+      v->setValue(M->getInt(count));
+      countReturn = v;
     }
   }
 };
