@@ -660,11 +660,13 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
   auto *f = util::getFunc(v->getCallee());
   if (!f)
     return;
+  bool isGt = f->getName().find("__gt__") != std::string::npos;
+  bool isLt = f->getName().find("__lt__") != std::string::npos;
   bool isAdd = f->getName().find("__add__") != std::string::npos;
   bool isSub = f->getName().find("__sub__") != std::string::npos;
   bool isMul = f->getName().find("__mul__") != std::string::npos;
   bool isPow = f->getName().find("__pow__") != std::string::npos;
-  if (!isAdd && !isSub && !isMul && !isPow)
+  if (!isGt && !isLt && !isAdd && !isSub && !isMul && !isPow)
     return;
 
   auto *M = v->getModule();
@@ -675,6 +677,10 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
   auto *lhsType = lhs->getType();
   auto *rhsType = rhs->getType();
 
+  if (isGt && cast<IntConst>(lhs) && cast<IntConst>(rhs))
+    return;
+  if (isLt && cast<IntConst>(lhs) && cast<IntConst>(rhs))
+    return;
   if (isAdd && !cast<IntConst>(lhs) && !cast<IntConst>(rhs))
     return;
   if (isSub && !cast<IntConst>(lhs) && !cast<IntConst>(rhs))
@@ -689,11 +695,13 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
     return;
 
   std::string methodName =
+    isGt  ? "secure_gt"   :
+    isLt  ? "secure_lt"   :
     isAdd ? "secure_add"  :
     isSub ? "secure_sub"  :
     isMul ? "secure_mult" :
     "secure_pow";
-  if (!isBeaverOptFunc(pf))
+  if (!isBeaverOptFunc(pf) && (isMul || isPow))
     methodName += "_no_cache";
 
   auto *method =
