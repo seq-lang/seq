@@ -2419,7 +2419,7 @@ void LLVMVisitor::visit(const ContinueInstr *x) {
   builder.SetInsertPoint(block);
   auto *loop = !x->getLoop() ? &loops.back() : getLoopData(x->getLoop()->getId());
 
-  if (trycatch.empty() || trycatch.back().sequenceNumber < loop->loopId) {
+  if (trycatch.empty() || trycatch.back().sequenceNumber < loop->sequenceNumber) {
     builder.CreateBr(loop->continueBlock);
   } else {
     auto *tc = &trycatch.back();
