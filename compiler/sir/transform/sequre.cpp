@@ -660,9 +660,11 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
   auto *f = util::getFunc(v->getCallee());
   if (!f)
     return;
+  bool isAdd = f->getName().find("__add__") != std::string::npos;
+  bool isSub = f->getName().find("__sub__") != std::string::npos;
   bool isMul = f->getName().find("__mul__") != std::string::npos;
   bool isPow = f->getName().find("__pow__") != std::string::npos;
-  if (!isMul && !isPow)
+  if (!isAdd && !isSub && !isMul && !isPow)
     return;
 
   auto *M = v->getModule();
@@ -673,6 +675,10 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
   auto *lhsType = lhs->getType();
   auto *rhsType = rhs->getType();
 
+  if (isAdd && !cast<IntConst>(lhs) && !cast<IntConst>(rhs))
+    return;
+  if (isSub && !cast<IntConst>(lhs) && !cast<IntConst>(rhs))
+    return;
   if (isMul && cast<IntConst>(lhs))
     return;
   if (isMul && cast<IntConst>(rhs))
@@ -682,7 +688,11 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
   if (isPow && !cast<IntConst>(rhs))
     return;
 
-  std::string methodName = isMul ? "secure_mult" : "secure_pow";
+  std::string methodName =
+    isAdd ? "secure_add"  :
+    isSub ? "secure_sub"  :
+    isMul ? "secure_mult" :
+    "secure_pow";
   if (!isBeaverOptFunc(pf))
     methodName += "_no_cache";
 

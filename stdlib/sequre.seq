@@ -2,9 +2,11 @@
 def sequre():
     pass
 
+
 @__attribute__
 def sequre_beaver():
     pass
+
 
 @__attribute__
 def sequre_poly():
