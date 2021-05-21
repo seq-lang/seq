@@ -23,6 +23,7 @@ struct OutlineReplacer : public Operator {
                   std::vector<Value *> &outFlows)
       : Operator(), modVars(modVars), remap(remap), outFlows(outFlows), cv(M) {}
 
+  // Replace all used vars based on remapping.
   void postHook(Node *node) override {
     for (auto &pair : remap) {
       node->replaceUsedVariable(std::get<0>(pair), std::get<1>(pair));
@@ -37,6 +38,9 @@ struct OutlineReplacer : public Operator {
     return nullptr;
   }
 
+  // A return in the outlined func, or a break/continue that references a
+  // non-outlined loop, will return a status code that tells the call site
+  // what action to perform.
   template <typename InstrType> void replaceOutFlowWithReturn(InstrType *v) {
     auto *M = v->getModule();
     for (unsigned i = 0; i < outFlows.size(); i++) {
@@ -55,6 +59,8 @@ struct OutlineReplacer : public Operator {
 
   void handle(ContinueInstr *v) override { replaceOutFlowWithReturn(v); }
 
+  // If passed by pointer (i.e. a "mod var"), change variable reference to
+  // a pointer dereference.
   void handle(VarValue *v) override {
     auto *M = v->getModule();
     if (modVars.count(v->getVar()->getId()) > 0) {
@@ -66,6 +72,8 @@ struct OutlineReplacer : public Operator {
     }
   }
 
+  // If passed by pointer (i.e. a "mod var"), change pointer value to just
+  // be the var itself.
   void handle(PointerValue *v) override {
     auto *M = v->getModule();
     if (modVars.count(v->getVar()->getId()) > 0) {
@@ -76,6 +84,8 @@ struct OutlineReplacer : public Operator {
     }
   }
 
+  // If passed by pointer (i.e. a "mod var"), change assignment to store
+  // in the pointer.
   void handle(AssignInstr *v) override {
     auto *M = v->getModule();
     if (modVars.count(v->getLhs()->getId()) > 0) {
@@ -96,20 +106,21 @@ struct Outliner : public Operator {
   BodiedFunc *parent;
   SeriesFlow *flowRegion;
   decltype(flowRegion->begin()) begin, end;
-  bool inRegion;
-  bool invalid;
-  std::unordered_set<id_t> inVars;
-  std::unordered_set<id_t> outVars;
-  std::unordered_set<id_t> modifiedInVars;
-  std::unordered_set<id_t> inLoops;
-  std::vector<id_t> loops;
-  std::vector<Value *> outFlows;
+  bool inRegion;                    // are we in the outlined region?
+  bool invalid;                     // if we can't outline for whatever reason
+  std::unordered_set<id_t> inVars;  // vars used inside region
+  std::unordered_set<id_t> outVars; // vars used outside region
+  std::unordered_set<id_t>
+      modifiedInVars;               // vars modified (assigned or address'd) in region
+  std::unordered_set<id_t> inLoops; // loops contained in region
+  std::vector<Value *>
+      outFlows; // control flows that need to be handled externally (e.g. return)
 
   Outliner(BodiedFunc *parent, SeriesFlow *flowRegion,
            decltype(flowRegion->begin()) begin, decltype(flowRegion->begin()) end)
       : Operator(), parent(parent), flowRegion(flowRegion), begin(begin), end(end),
         inRegion(false), invalid(false), inVars(), outVars(), modifiedInVars(),
-        inLoops(), loops(), outFlows() {}
+        inLoops(), outFlows() {}
 
   bool isEnclosingLoopInRegion() {
     int d = depth();
@@ -249,10 +260,14 @@ struct Outliner : public Operator {
       return {};
 
     auto *M = flowRegion->getModule();
-    std::vector<std::pair<Var *, Var *>> remap;
-    std::vector<types::Type *> argTypes;
-    std::vector<std::string> argNames;
+    std::vector<std::pair<Var *, Var *>> remap; // mapping of old vars to new func vars
+    std::vector<types::Type *> argTypes;        // arg types of new func
+    std::vector<std::string> argNames;          // arg names of new func
 
+    // Figure out arguments and outlined function type:
+    //   - Private variables can be made local to the new function
+    //   - Shared variables will be passed as arguments
+    //   - Modified+shared variables will be passed as pointers
     unsigned idx = 0;
     auto shared = getSharedVars();
     auto mod = getModVars();
@@ -266,18 +281,22 @@ struct Outliner : public Operator {
       argNames.push_back(std::to_string(idx++));
     }
 
+    // Check if we need to handle control flow externally.
+    // If so, function will return an int code indicating control.
     const bool callIndicatesControl = !outFlows.empty();
     auto *funcType = M->getFuncType(
         callIndicatesControl ? M->getIntType() : M->getVoidType(), argTypes);
     auto *outlinedFunc = M->Nr<BodiedFunc>("__outlined");
     outlinedFunc->realize(funcType, argNames);
 
+    // Insert function arguments in variable remappings.
     idx = 0;
     for (auto it = outlinedFunc->arg_begin(); it != outlinedFunc->arg_end(); ++it) {
       remap[idx] = {std::get<0>(remap[idx]), *it};
       ++idx;
     }
 
+    // Make private vars locals of the new function.
     for (auto id : getPrivateVars()) {
       Var *var = M->getVar(id);
       seqassert(var, "unknown var id");
@@ -287,6 +306,7 @@ struct Outliner : public Operator {
       outlinedFunc->push_back(newVar);
     }
 
+    // Delete outlined region from parent function and insert into outlined function.
     auto *body = M->N<SeriesFlow>((*begin)->getSrcInfo());
     auto it = begin;
     while (it != end) {
@@ -295,9 +315,11 @@ struct Outliner : public Operator {
     }
     outlinedFunc->setBody(body);
 
+    // Replace vars and externally-handled flows.
     OutlineReplacer outRep(M, mod, remap, outFlows);
     body->accept(outRep);
 
+    // Determine arguments for call to outlined function.
     std::vector<Value *> args;
     for (unsigned i = 0; i < shared.size(); i++) {
       Var *var = std::get<0>(remap[i]);
@@ -308,11 +330,14 @@ struct Outliner : public Operator {
     }
     auto *outlinedCall = call(outlinedFunc, args);
 
+    // Check if we need external control-flow handling.
     if (callIndicatesControl) {
-      auto *codeVar = M->Nr<Var>(M->getIntType());
+      auto *codeVar = M->Nr<Var>(M->getIntType()); // result of outlined func call
       parent->push_back(codeVar);
       it = flowRegion->insert(it, M->Nr<AssignInstr>(codeVar, outlinedCall));
+      // Check each return code of the function. 0 means normal return; do nothing.
       for (unsigned i = 0; i < outFlows.size(); i++) {
+        // Generate "if (result == code) { action }".
         auto *codeVal = M->getInt(i + 1); // 1-based by convention
         auto *codeCheck = (*codeVal == *M->Nr<VarValue>(codeVar));
         auto *codeBody = series(outFlows[i]);
@@ -324,7 +349,7 @@ struct Outliner : public Operator {
       it = flowRegion->insert(it, outlinedCall);
     }
 
-    return {outlinedFunc, outlinedCall, callIndicatesControl};
+    return {outlinedFunc, outlinedCall, static_cast<int>(outFlows.size())};
   }
 };
 
