@@ -1512,6 +1512,14 @@ llvm::DIType *LLVMVisitor::getDIType(types::Type *t) {
   return getDITypeHelper(t, cache);
 }
 
+LLVMVisitor::LoopData *LLVMVisitor::getLoopData(id_t loopId) {
+  for (auto &d : loops) {
+    if (d.loopId == loopId)
+      return &d;
+  }
+  return nullptr;
+}
+
 /*
  * Constants
  */
@@ -1605,7 +1613,8 @@ void LLVMVisitor::visit(const WhileFlow *x) {
   builder.CreateCondBr(cond, bodyBlock, exitBlock);
 
   block = bodyBlock;
-  enterLoop({/*breakBlock=*/exitBlock, /*continueBlock=*/condBlock});
+  enterLoop(
+      {/*breakBlock=*/exitBlock, /*continueBlock=*/condBlock, /*loopId=*/x->getId()});
   process(x->getBody());
   exitLoop();
   builder.SetInsertPoint(block);
@@ -1658,7 +1667,8 @@ void LLVMVisitor::visit(const ForFlow *x) {
   }
 
   block = bodyBlock;
-  enterLoop({/*breakBlock=*/exitBlock, /*continueBlock=*/condBlock});
+  enterLoop(
+      {/*breakBlock=*/exitBlock, /*continueBlock=*/condBlock, /*loopId=*/x->getId()});
   process(x->getBody());
   exitLoop();
   builder.SetInsertPoint(block);
@@ -1701,7 +1711,8 @@ void LLVMVisitor::visit(const ImperativeForFlow *x) {
   builder.CreateCondBr(done, exitBlock, bodyBlock);
 
   block = bodyBlock;
-  enterLoop({/*breakBlock=*/exitBlock, /*continueBlock=*/updateBlock});
+  enterLoop(
+      {/*breakBlock=*/exitBlock, /*continueBlock=*/updateBlock, /*loopId=*/x->getId()});
   process(x->getBody());
   exitLoop();
   builder.SetInsertPoint(block);
@@ -1774,15 +1785,17 @@ void LLVMVisitor::visit(const TryCatchFlow *x) {
     tc.retStore = (coro.exit || func->getReturnType()->isVoidTy())
                       ? nullptr
                       : builder.CreateAlloca(func->getReturnType());
-
+    tc.loopSequence = builder.CreateAlloca(builder.getInt64Ty());
     builder.CreateStore(excStateNotThrown, tc.excFlag);
     builder.CreateStore(llvm::ConstantAggregateZero::get(padType), tc.catchStore);
     builder.CreateStore(builder.getInt64(0), tc.delegateDepth);
+    builder.CreateStore(builder.getInt64(-1), tc.loopSequence);
   } else {
     tc.excFlag = trycatch[0].excFlag;
     tc.catchStore = trycatch[0].catchStore;
     tc.delegateDepth = trycatch[0].delegateDepth;
     tc.retStore = trycatch[0].retStore;
+    tc.loopSequence = trycatch[0].loopSequence;
   }
 
   // translate finally
@@ -1836,27 +1849,50 @@ void LLVMVisitor::visit(const TryCatchFlow *x) {
   }
 
   if (supportBreakAndContinue) {
-    const bool outer = (getInnermostTryCatchBeforeLoop() == nullptr);
-    if (outer) {
-      auto *finallyBreak =
-          llvm::BasicBlock::Create(context, "trycatch.finally.break", func);
-      auto *finallyContinue =
-          llvm::BasicBlock::Create(context, "trycatch.finally.continue", func);
-      theSwitch->addCase(excStateBreak, finallyBreak);
-      theSwitch->addCase(excStateContinue, finallyContinue);
+    auto prevSeq = isRoot ? -1 : trycatch.back().sequenceNumber;
 
-      builder.SetInsertPoint(finallyBreak);
-      builder.CreateStore(excStateNotThrown, tc.excFlag);
-      builder.CreateBr(loops.back().breakBlock);
+    auto *finallyBreak =
+        llvm::BasicBlock::Create(context, "trycatch.finally.break", func);
+    auto *finallyBreakDone =
+        llvm::BasicBlock::Create(context, "trycatch.finally.break.done", func);
+    auto *finallyContinue =
+        llvm::BasicBlock::Create(context, "trycatch.finally.continue", func);
+    auto *finallyContinueDone =
+        llvm::BasicBlock::Create(context, "trycatch.finally.continue.done", func);
 
-      builder.SetInsertPoint(finallyContinue);
-      builder.CreateStore(excStateNotThrown, tc.excFlag);
-      builder.CreateBr(loops.back().continueBlock);
-    } else {
-      seqassert(!isRoot, "cannot be root");
-      theSwitch->addCase(excStateBreak, trycatch.back().finallyBlock);
-      theSwitch->addCase(excStateContinue, trycatch.back().finallyBlock);
+    builder.SetInsertPoint(finallyBreak);
+    auto *breakSwitch =
+        builder.CreateSwitch(builder.CreateLoad(tc.loopSequence), endBlock, 0);
+    builder.SetInsertPoint(finallyBreakDone);
+    builder.CreateStore(excStateNotThrown, tc.excFlag);
+    auto *breakDoneSwitch =
+        builder.CreateSwitch(builder.CreateLoad(tc.loopSequence), endBlock, 0);
+
+    builder.SetInsertPoint(finallyContinue);
+    auto *continueSwitch =
+        builder.CreateSwitch(builder.CreateLoad(tc.loopSequence), endBlock, 0);
+    builder.SetInsertPoint(finallyContinueDone);
+    builder.CreateStore(excStateNotThrown, tc.excFlag);
+    auto *continueDoneSwitch =
+        builder.CreateSwitch(builder.CreateLoad(tc.loopSequence), endBlock, 0);
+
+    for (auto &l : loops) {
+      if (!trycatch.empty() && l.sequenceNumber < prevSeq) {
+        breakSwitch->addCase(builder.getInt64(l.sequenceNumber),
+                             trycatch.back().finallyBlock);
+        continueSwitch->addCase(builder.getInt64(l.sequenceNumber),
+                                trycatch.back().finallyBlock);
+      } else {
+        breakSwitch->addCase(builder.getInt64(l.sequenceNumber), finallyBreakDone);
+        breakDoneSwitch->addCase(builder.getInt64(l.sequenceNumber), l.breakBlock);
+        continueSwitch->addCase(builder.getInt64(l.sequenceNumber),
+                                finallyContinueDone);
+        continueDoneSwitch->addCase(builder.getInt64(l.sequenceNumber),
+                                    l.continueBlock);
+      }
     }
+    theSwitch->addCase(excStateBreak, finallyBreak);
+    theSwitch->addCase(excStateContinue, finallyContinue);
   }
 
   // try and catch translate
@@ -2362,26 +2398,37 @@ void LLVMVisitor::visit(const TernaryInstr *x) {
 void LLVMVisitor::visit(const BreakInstr *x) {
   seqassert(!loops.empty(), "not in a loop");
   builder.SetInsertPoint(block);
-  if (auto *tc = getInnermostTryCatchBeforeLoop()) {
+
+  auto *loop = !x->getLoop() ? &loops.back() : getLoopData(x->getLoop()->getId());
+
+  if (trycatch.empty() || trycatch.back().sequenceNumber < loop->sequenceNumber) {
+    builder.CreateBr(loop->breakBlock);
+  } else {
+    auto *tc = &trycatch.back();
     auto *excStateBreak = builder.getInt8(TryCatchData::State::BREAK);
     builder.CreateStore(excStateBreak, tc->excFlag);
+    builder.CreateStore(builder.getInt64(loop->sequenceNumber), tc->loopSequence);
     builder.CreateBr(tc->finallyBlock);
-  } else {
-    builder.CreateBr(loops.back().breakBlock);
   }
+
   block = llvm::BasicBlock::Create(context, "break.new", func);
 }
 
 void LLVMVisitor::visit(const ContinueInstr *x) {
   seqassert(!loops.empty(), "not in a loop");
   builder.SetInsertPoint(block);
-  if (auto *tc = getInnermostTryCatchBeforeLoop()) {
+  auto *loop = !x->getLoop() ? &loops.back() : getLoopData(x->getLoop()->getId());
+
+  if (trycatch.empty() || trycatch.back().sequenceNumber < loop->loopId) {
+    builder.CreateBr(loop->continueBlock);
+  } else {
+    auto *tc = &trycatch.back();
     auto *excStateContinue = builder.getInt8(TryCatchData::State::CONTINUE);
     builder.CreateStore(excStateContinue, tc->excFlag);
+    builder.CreateStore(builder.getInt64(loop->sequenceNumber), tc->loopSequence);
     builder.CreateBr(tc->finallyBlock);
-  } else {
-    builder.CreateBr(loops.back().continueBlock);
   }
+
   block = llvm::BasicBlock::Create(context, "continue.new", func);
 }
 

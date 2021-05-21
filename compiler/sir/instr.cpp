@@ -164,7 +164,39 @@ const char ControlFlowInstr::NodeId = 0;
 
 const char BreakInstr::NodeId = 0;
 
+std::vector<Value *> BreakInstr::doGetUsedValues() const {
+  if (loop)
+    return {loop};
+  return {};
+}
+
+int BreakInstr::doReplaceUsedValue(id_t id, Value *newValue) {
+  if (loop && loop->getId() == id) {
+    auto *f = cast<Flow>(newValue);
+    seqassert(f, "{} is not a flow", *newValue);
+    loop = f;
+    return 1;
+  }
+  return 0;
+}
+
 const char ContinueInstr::NodeId = 0;
+
+std::vector<Value *> ContinueInstr::doGetUsedValues() const {
+  if (loop)
+    return {loop};
+  return {};
+}
+
+int ContinueInstr::doReplaceUsedValue(id_t id, Value *newValue) {
+  if (loop && loop->getId() == id) {
+    auto *f = cast<Flow>(newValue);
+    seqassert(f, "{} is not a flow", *newValue);
+    loop = f;
+    return 1;
+  }
+  return 0;
+}
 
 const char ReturnInstr::NodeId = 0;
 

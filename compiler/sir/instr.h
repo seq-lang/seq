@@ -412,7 +412,7 @@ public:
   /// Constructs a break instruction.
   /// @param loop the loop being broken, nullptr if immediate ancestor
   /// @param name the instruction's name
-  BreakInstr(Value *loop = nullptr, std::string name = "")
+  explicit BreakInstr(Value *loop = nullptr, std::string name = "")
       : AcceptorExtend(std::move(name)), loop(loop) {}
 
   /// @return the loop, nullptr if immediate ancestor
@@ -420,6 +420,9 @@ public:
   /// Sets the loop id.
   /// @param v the new loop, nullptr if immediate ancestor
   void setLoop(Value *v) { loop = v; }
+
+  std::vector<Value *> doGetUsedValues() const override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Instr representing a continue statement.
@@ -434,7 +437,7 @@ public:
   /// Constructs a continue instruction.
   /// @param loop the loop being continued, nullptr if immediate ancestor
   /// @param name the instruction's name
-  ContinueInstr(Value *loop = nullptr, std::string name = "")
+  explicit ContinueInstr(Value *loop = nullptr, std::string name = "")
       : AcceptorExtend(std::move(name)), loop(loop) {}
 
   /// @return the loop, nullptr if immediate ancestor
@@ -442,6 +445,9 @@ public:
   /// Sets the loop id.
   /// @param v the new loop, -1 if immediate ancestor
   void setLoop(Value *v) { loop = v; }
+
+  std::vector<Value *> doGetUsedValues() const override;
+  int doReplaceUsedValue(id_t id, Value *newValue) override;
 };
 
 /// Instr representing a return statement.
