@@ -13,16 +13,15 @@ namespace ir {
 namespace util {
 namespace {
 struct OutlineReplacer : public Operator {
-  std::unordered_set<id_t> &modifiedInVars;
+  std::unordered_set<id_t> &modVars;
   std::vector<std::pair<Var *, Var *>> &remap;
   std::vector<Value *> &outFlows;
   CloneVisitor cv;
 
-  OutlineReplacer(Module *M, std::unordered_set<id_t> &modifiedInVars,
+  OutlineReplacer(Module *M, std::unordered_set<id_t> &modVars,
                   std::vector<std::pair<Var *, Var *>> &remap,
                   std::vector<Value *> &outFlows)
-      : Operator(), modifiedInVars(modifiedInVars), remap(remap), outFlows(outFlows),
-        cv(M) {}
+      : Operator(), modVars(modVars), remap(remap), outFlows(outFlows), cv(M) {}
 
   void postHook(Node *node) override {
     for (auto &pair : remap) {
@@ -30,12 +29,20 @@ struct OutlineReplacer : public Operator {
     }
   }
 
+  Var *mappedVar(Var *v) {
+    for (auto &pair : remap) {
+      if (std::get<0>(pair)->getId() == v->getId())
+        return std::get<1>(pair);
+    }
+    return nullptr;
+  }
+
   template <typename InstrType> void replaceOutFlowWithReturn(InstrType *v) {
     auto *M = v->getModule();
     for (unsigned i = 0; i < outFlows.size(); i++) {
       if (outFlows[i]->getId() == v->getId()) {
         auto *copy = cv.clone(v);
-        v->replaceAll(M->template Nr<ReturnInstr>(M->getInt(i)));
+        v->replaceAll(M->template Nr<ReturnInstr>(M->getInt(i + 1)));
         outFlows[i] = copy;
         break;
       }
@@ -50,17 +57,37 @@ struct OutlineReplacer : public Operator {
 
   void handle(VarValue *v) override {
     auto *M = v->getModule();
-    if (modifiedInVars.count(v->getVar()->getId()) > 0) {
+    if (modVars.count(v->getVar()->getId()) > 0) {
       // var -> pointer dereference
-      v->replaceAll((*M->Nr<VarValue>(v->getVar()))[*M->getInt(0)]);
+      auto *deref = (*M->Nr<VarValue>(mappedVar(v->getVar())))[*M->getInt(0)];
+      seqassert(deref, "pointer getitem not found");
+      saw(deref);
+      v->replaceAll(deref);
     }
   }
 
   void handle(PointerValue *v) override {
     auto *M = v->getModule();
-    if (modifiedInVars.count(v->getVar()->getId()) > 0) {
+    if (modVars.count(v->getVar()->getId()) > 0) {
       // pointer -> var
-      v->replaceAll(M->Nr<VarValue>(v->getVar()));
+      auto *ref = M->Nr<VarValue>(mappedVar(v->getVar()));
+      saw(ref);
+      v->replaceAll(ref);
+    }
+  }
+
+  void handle(AssignInstr *v) override {
+    auto *M = v->getModule();
+    if (modVars.count(v->getLhs()->getId()) > 0) {
+      // store in pointer
+      Var *newVar = mappedVar(v->getLhs());
+      auto *fn = M->getOrRealizeMethod(
+          newVar->getType(), Module::SETITEM_MAGIC_NAME,
+          {newVar->getType(), M->getIntType(), v->getLhs()->getType()});
+      seqassert(fn, "pointer setitem not found");
+      auto *setitem = call(fn, {M->Nr<VarValue>(newVar), M->getInt(0), v->getRhs()});
+      saw(setitem);
+      v->replaceAll(setitem);
     }
   }
 };
@@ -170,6 +197,13 @@ struct Outliner : public Operator {
     }
   }
 
+  void visit(BodiedFunc *v) override {
+    for (auto it = v->arg_begin(); it != v->arg_end(); ++it) {
+      outVars.insert((*it)->getId());
+    }
+    Operator::visit(v);
+  }
+
   void preHook(Node *node) override {
     auto vars = node->getUsedVariables();
     auto &set = (inRegion ? inVars : outVars);
@@ -199,6 +233,16 @@ struct Outliner : public Operator {
     return sharedVars;
   }
 
+  // mod = shared AND modified in region
+  std::unordered_set<id_t> getModVars() {
+    std::unordered_set<id_t> modVars;
+    for (auto id : getSharedVars()) {
+      if (modifiedInVars.count(id) > 0)
+        modVars.insert(id);
+    }
+    return modVars;
+  }
+
   OutlineResult outline() {
     if (invalid)
       return {};
@@ -209,13 +253,14 @@ struct Outliner : public Operator {
     std::vector<std::string> argNames;
 
     unsigned idx = 0;
-    for (auto id : getSharedVars()) {
+    auto shared = getSharedVars();
+    auto mod = getModVars();
+    for (auto id : shared) {
       Var *var = M->getVar(id);
       seqassert(var, "unknown var id");
       remap.emplace_back(var, nullptr);
-      types::Type *type = (modifiedInVars.count(id) > 0)
-                              ? M->getPointerType(var->getType())
-                              : var->getType();
+      types::Type *type =
+          (mod.count(id) > 0) ? M->getPointerType(var->getType()) : var->getType();
       argTypes.push_back(type);
       argNames.push_back(std::to_string(idx++));
     }
@@ -249,13 +294,13 @@ struct Outliner : public Operator {
     }
     outlinedFunc->setBody(body);
 
-    OutlineReplacer outRep(M, modifiedInVars, remap, outFlows);
+    OutlineReplacer outRep(M, mod, remap, outFlows);
     body->accept(outRep);
 
     std::vector<Value *> args;
-    for (auto &map : remap) {
-      Var *var = std::get<0>(map);
-      Value *arg = (modifiedInVars.count(var->getId()) > 0)
+    for (unsigned i = 0; i < shared.size(); i++) {
+      Var *var = std::get<0>(remap[i]);
+      Value *arg = (mod.count(var->getId()) > 0)
                        ? static_cast<Value *>(M->Nr<PointerValue>(var))
                        : M->Nr<VarValue>(var);
       args.push_back(arg);
@@ -265,7 +310,7 @@ struct Outliner : public Operator {
     it = flowRegion->insert(it, outlinedCall);
     if (callIndicatesControl) {
       for (unsigned i = 0; i < outFlows.size(); i++) {
-        auto *codeVal = M->getInt(i);
+        auto *codeVal = M->getInt(i + 1); // 1-based by convention
         auto *codeCheck = (*codeVal == *outlinedCall);
         auto *codeBody = series(outFlows[i]);
         auto *codeIf = M->Nr<IfFlow>(codeCheck, codeBody);
