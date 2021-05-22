@@ -129,6 +129,34 @@ print h
 # EXPECT: 1
 
 @test
+def test_generator_return_outline(x):
+    for i in range(x):
+        yield i
+        __outline_begin__()
+        if i == 2:
+            continue
+        if i == 4:
+            return
+        __outline_end__()
+        yield i
+print list(test_generator_return_outline(10))
+# EXPECT: [0, 0, 1, 1, 2, 3, 3, 4]
+
+@test
+def test_normal_return_outline(x):
+    for i in range(x):
+        yield i
+        __outline_begin__()
+        if i == 2:
+            continue
+        if i == 4:
+            return
+        __outline_end__()
+        yield i
+print list(test_normal_return_outline(1))
+# EXPECT: [0, 0]
+
+@test
 def test_invalid_outline_yield(x):
     b = N(10)
     __outline_begin__()
@@ -161,5 +189,5 @@ test_invalid_outline_stack_alloc()
 
 print __outline_successes__()
 print __outline_failures__()
-# EXPECT: 6
+# EXPECT: 8
 # EXPECT: 3
