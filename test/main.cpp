@@ -27,8 +27,10 @@ using namespace seq;
 using namespace std;
 
 class TestOutliner : public ir::transform::OperatorPass {
-  int count = 0;
-  ir::ReturnInstr *countReturn = nullptr;
+  int successes = 0;
+  int failures = 0;
+  ir::ReturnInstr *successesReturn = nullptr;
+  ir::ReturnInstr *failuresReturn = nullptr;
 
   const std::string KEY = "test-outliner-pass";
   std::string getKey() const override { return KEY; }
@@ -49,18 +51,23 @@ class TestOutliner : public ir::transform::OperatorPass {
     if (sawBegin && sawEnd) {
       auto result = ir::util::outlineRegion(ir::cast<ir::BodiedFunc>(getParentFunc()),
                                             v, begin, end);
-      if (result)
-        ++count;
-      if (countReturn)
-        countReturn->setValue(M->getInt(count));
+      ++(result ? successes : failures);
+      if (successesReturn)
+        successesReturn->setValue(M->getInt(successes));
+      if (failuresReturn)
+        failuresReturn->setValue(M->getInt(failures));
     }
   }
 
   void handle(ir::ReturnInstr *v) override {
     auto *M = v->getModule();
-    if (getParentFunc()->getUnmangledName() == "__outline_count__") {
-      v->setValue(M->getInt(count));
-      countReturn = v;
+    if (getParentFunc()->getUnmangledName() == "__outline_successes__") {
+      v->setValue(M->getInt(successes));
+      successesReturn = v;
+    }
+    if (getParentFunc()->getUnmangledName() == "__outline_failures__") {
+      v->setValue(M->getInt(failures));
+      failuresReturn = v;
     }
   }
 };

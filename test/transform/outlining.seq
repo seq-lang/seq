@@ -4,7 +4,10 @@ def __outline_begin__():
 def __outline_end__():
     pass
 
-def __outline_count__():
+def __outline_successes__():
+    return 0
+
+def __outline_failures__():
     return 0
 
 # use this to avoid const-folding
@@ -38,12 +41,17 @@ def test_shared_vars_outline(x):
     a = N(42)
     print a + b + x
     a = N(99)
+    y = N(-42)
     __outline_end__()
     b = N(13)
+    print a
     print b
+    print y
 test_shared_vars_outline(100)
 # EXPECT: 152
+# EXPECT: 99
 # EXPECT: 13
+# EXPECT: -42
 
 f = 'f'
 @test
@@ -141,5 +149,17 @@ def test_invalid_outline_yield_in(x):
     b = N(13)
 test_invalid_outline_yield_in(-123)
 
-print __outline_count__()
+@test
+def test_invalid_outline_stack_alloc():
+    __outline_begin__()
+    a = __array__[int](1)
+    a[0] = 42
+    __outline_end__()
+    print a[0]
+test_invalid_outline_stack_alloc()
+# EXPECT: 42
+
+print __outline_successes__()
+print __outline_failures__()
 # EXPECT: 6
+# EXPECT: 3
