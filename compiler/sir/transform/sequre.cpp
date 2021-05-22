@@ -665,8 +665,9 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
   bool isAdd = f->getName().find("__add__") != std::string::npos;
   bool isSub = f->getName().find("__sub__") != std::string::npos;
   bool isMul = f->getName().find("__mul__") != std::string::npos;
+  bool isDiv = f->getName().find("__truediv__") != std::string::npos;
   bool isPow = f->getName().find("__pow__") != std::string::npos;
-  if (!isGt && !isLt && !isAdd && !isSub && !isMul && !isPow)
+  if (!isGt && !isLt && !isAdd && !isSub && !isMul && !isPow && !isDiv)
     return;
 
   auto *M = v->getModule();
@@ -676,6 +677,17 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
   auto *rhs = v->back();
   auto *lhsType = lhs->getType();
   auto *rhsType = rhs->getType();
+
+  bool isSqrtInv = false;
+  if (isDiv) {  // Special case where 1 / sqrt(x) is called
+    auto *sqrtInstr = cast<CallInstr>(rhs);
+    if (!sqrtInstr)
+      return;
+    auto *sqrtFunc = util::getFunc(sqrtInstr->getCallee());
+    if (!sqrtFunc)
+      return;
+    isSqrtInv = sqrtFunc->getName().find("sqrt") != std::string::npos;
+  }
 
   if (isGt && cast<IntConst>(lhs) && cast<IntConst>(rhs))
     return;
@@ -689,20 +701,32 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
     return;
   if (isMul && cast<IntConst>(rhs))
     return;
+  if (isDiv && cast<IntConst>(lhs) && !isSqrtInv)
+    return;
+  if (isDiv && cast<IntConst>(rhs))
+    return;
   if (isPow && cast<IntConst>(lhs))
     return;
   if (isPow && !cast<IntConst>(rhs))
     return;
 
   std::string methodName =
-    isGt  ? "secure_gt"   :
-    isLt  ? "secure_lt"   :
-    isAdd ? "secure_add"  :
-    isSub ? "secure_sub"  :
-    isMul ? "secure_mult" :
-    "secure_pow";
-  if (!isBeaverOptFunc(pf) && (isMul || isPow))
+    isGt      ? "secure_gt"       :
+    isLt      ? "secure_lt"       :
+    isAdd     ? "secure_add"      :
+    isSub     ? "secure_sub"      :
+    isMul     ? "secure_mult"     :
+    isSqrtInv ? "secure_sqrt_inv" :
+    isDiv     ? "secure_div"      :
+    isPow     ? "secure_pow"      :
+    "invalid_operation";
+  if (!isBeaverOptFunc(pf) && (isMul || isPow || isDiv || isSqrtInv))
     methodName += "_no_cache";
+
+  if (isSqrtInv) {
+    rhs = cast<CallInstr>(rhs)->back();
+    rhsType = rhs->getType();
+  }
 
   auto *method =
       M->getOrRealizeMethod(selfType, methodName, {selfType, lhsType, rhsType});
