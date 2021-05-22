@@ -41,8 +41,8 @@ bool isCallOf(const Value *value, const std::string &name,
     if (output && !value->getType()->is(output))
       return false;
 
-    // if (method && (inputs.empty() || !fn->getParentType()->is(inputs[0])))
-    //  return false;
+    if (method && (inputs.empty() || !fn->getParentType()->is(inputs[0])))
+      return false;
 
     return true;
   }
