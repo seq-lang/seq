@@ -10,10 +10,12 @@ namespace util {
 struct InlineResult {
   /// true if valid
   bool valid;
-  /// the result
+  /// the result, either a SeriesFlow or FlowInstr
   Value *result;
-  /// new variables
+  /// variables added by the inlining
   std::vector<Var *> newVars;
+
+  operator bool() const { return valid; }
 };
 
 /// Inline the given function with the supplied arguments.

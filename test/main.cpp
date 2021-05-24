@@ -71,7 +71,9 @@ class TestInliner : public ir::transform::OperatorPass {
   std::string getKey() const override { return KEY; }
 
   void handle(ir::CallInstr *v) override {
+    auto *M = v->getModule();
     auto *f = ir::cast<ir::BodiedFunc>(ir::util::getFunc(v->getCallee()));
+    auto *neg = M->getOrRealizeMethod(M->getIntType(), ir::Module::NEG_MAGIC_NAME, {M->getIntType()});
     if (!f)
       return;
     auto name = f->getUnmangledName();
@@ -81,7 +83,7 @@ class TestInliner : public ir::transform::OperatorPass {
 
       for (auto *var : res.newVars)
         ir::cast<ir::BodiedFunc>(getParentFunc())->push_back(var);
-      v->replaceAll(res.result);
+      v->replaceAll(ir::util::call(neg, {res.result}));
     }
   }
 };

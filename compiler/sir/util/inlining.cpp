@@ -6,9 +6,11 @@
 #include "sir/util/irtools.h"
 #include "sir/util/operator.h"
 
-namespace {
-using namespace seq::ir;
+namespace seq {
+namespace ir {
+namespace util {
 
+namespace {
 class ReturnReplacer : public util::Operator {
 private:
   Value *implicitLoop;
@@ -58,12 +60,7 @@ private:
     return prev->back()->getId() == v->getId();
   }
 };
-
 } // namespace
-
-namespace seq {
-namespace ir {
-namespace util {
 
 InlineResult inlineFunction(Func *func, std::vector<Value *> args, bool agressive,
                             seq::SrcInfo info) {

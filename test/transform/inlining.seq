@@ -10,9 +10,14 @@ def inline_me_complex():
       return 1
     return 2
 
+def inline_me_args(x):
+  return x + 1
+
+
 @test
 def inlining_test():
-  assert inline_me_simple() == 1
-  assert inline_me_complex() == 2
+  assert inline_me_simple() == -1
+  assert inline_me_complex() == -2
+  assert inline_me_args(2) == -3
 
 inlining_test()
