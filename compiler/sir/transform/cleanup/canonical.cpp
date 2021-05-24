@@ -162,6 +162,7 @@ CallInstr *convertAddMul(CallInstr *v) {
 } // namespace
 
 void CanonicalizationPass::handle(CallInstr *v) {
+  auto *M = v->getModule();
   auto *fn = util::getFunc(v->getCallee());
   if (!fn)
     return;
@@ -201,13 +202,18 @@ void CanonicalizationPass::handle(CallInstr *v) {
     return;
   }
 
+  // some float ops are not actually associative
+  auto *floatType = M->getFloatType();
+  const bool isFloatOp = (type->is(floatType) ||
+                          (fn->getParentType() && fn->getParentType()->is(floatType)));
+
   // convert [a*x + b*x] --> (a + b) * x
-  CallInstr *newCall = convertAddMul(v);
+  CallInstr *newCall = isFloatOp ? v : convertAddMul(v);
 
   // rearrange associative/commutative ops
   if (util::isCallOf(newCall, op, {type, type}, type, /*method=*/true)) {
     std::vector<Value *> operands;
-    if (isAssociative) {
+    if (!isFloatOp && isAssociative) {
       extractAssociativeOpChain(newCall, op, type, operands);
     } else {
       operands.push_back(newCall->front());
