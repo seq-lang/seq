@@ -80,7 +80,6 @@ class TestInliner : public ir::transform::OperatorPass {
     if (name.find("inline_me") != std::string::npos) {
       auto res = ir::util::inlineCall(v, true);
       assert(res.valid);
-
       for (auto *var : res.newVars)
         ir::cast<ir::BodiedFunc>(getParentFunc())->push_back(var);
       v->replaceAll(ir::util::call(neg, {res.result}));

@@ -105,7 +105,8 @@ InlineResult inlineFunction(Func *func, std::vector<Value *> args, bool agressiv
   if (!rr.ok)
     return {false, nullptr, {}};
 
-  Value *v = implicit ? implicit : clonedBody;
+  newFlow->push_back(implicit ? implicit : clonedBody);
+  Value *v = newFlow;
   if (retVal) {
     v = M->N<FlowInstr>(info, cast<Flow>(v), M->N<VarValue>(info, retVal));
   }
