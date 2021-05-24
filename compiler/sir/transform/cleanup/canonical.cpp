@@ -35,7 +35,7 @@ struct NodeRanker : public util::Operator {
     }
   }
 
-  Rank getRank() { return {-maxDepth, hash}; }
+  Rank getRank() { return std::make_tuple(-maxDepth, hash); }
 };
 
 NodeRanker::Rank getRank(Node *node) {
