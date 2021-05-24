@@ -71,11 +71,15 @@ class TestInliner : public ir::transform::OperatorPass {
   std::string getKey() const override { return KEY; }
 
   void handle(ir::CallInstr *v) override {
-    if (getParentFunc()->getUnmangledName() == "__inline_all__") {
+    auto *f = ir::cast<ir::BodiedFunc>(ir::util::getFunc(v->getCallee()));
+    if (!f)
+      return;
+    auto name = f->getUnmangledName();
+    if (name.find("inline_me") != std::string::npos) {
       auto res = ir::util::inlineCall(v, true);
       assert(res.valid);
       for (auto *var : res.newVars)
-        ir::cast<ir::BodiedFunc>(getParentFunc())->push_back(var);
+        f->push_back(var);
       v->replaceAll(res.result);
     }
   }
@@ -379,6 +383,7 @@ INSTANTIATE_TEST_SUITE_P(
             "transform/folding.seq",
             "transform/for_lowering.seq",
             "transform/io_opt.seq",
+            "transform/inlining.seq",
             "transform/outlining.seq",
             "transform/str_opt.seq"
         ),

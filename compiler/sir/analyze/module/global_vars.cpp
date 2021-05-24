@@ -4,7 +4,8 @@ namespace {
 using namespace seq::ir;
 
 template <typename NodeType>
-void validate(NodeType *n, analyze::module::GlobalVarsResult &res) {
+void validate(NodeType *n, analyze::module::GlobalVarsResult &res,
+              std::unordered_set<seq::ir::id_t> &seen) {
   if (auto *ptr = cast<PointerValue>(n)) {
     if (ptr->getVar()->isGlobal())
       res.assignments[ptr->getVar()->getId()] = -1;
@@ -19,7 +20,10 @@ void validate(NodeType *n, analyze::module::GlobalVarsResult &res) {
   }
 
   for (auto *child : n->getUsedValues())
-    validate(child, res);
+    if (seen.find(child->getId()) != seen.end()) {
+      seen.insert(child->getId());
+      validate(child, res, seen);
+    }
 }
 
 } // namespace
@@ -31,11 +35,12 @@ namespace module {
 
 std::unique_ptr<Result> GlobalVarsAnalyses::run(const Module *m) {
   auto res = std::make_unique<GlobalVarsResult>();
+  std::unordered_set<id_t> seen;
   for (auto *v : *m) {
     if (auto *f = cast<Func>(v))
-      validate(f, *res);
+      validate(f, *res, seen);
   }
-  validate(m->getMainFunc(), *res);
+  validate(m->getMainFunc(), *res, seen);
   return res;
 }
 

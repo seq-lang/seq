@@ -68,8 +68,10 @@ namespace util {
 InlineResult inlineFunction(Func *func, std::vector<Value *> args, bool agressive,
                             seq::SrcInfo info) {
   auto *bodied = cast<BodiedFunc>(func);
+  if (!bodied)
+    return {false, nullptr, {}};
   auto *fType = cast<types::FuncType>(bodied->getType());
-  if (!bodied || args.size() != std::distance(bodied->arg_begin(), bodied->arg_end()))
+  if (!fType || args.size() != std::distance(bodied->arg_begin(), bodied->arg_end()))
     return {false, nullptr, {}};
   auto *M = bodied->getModule();
 
