@@ -89,6 +89,76 @@ void orderOperands(std::vector<Value *> &operands) {
     operands.push_back(std::get<1>(p));
   }
 }
+
+bool varMatch(Value *a, Value *b) {
+  auto *v1 = cast<VarValue>(a);
+  auto *v2 = cast<VarValue>(b);
+  return v1 && v2 && v1->getVar()->getId() == v2->getVar()->getId();
+}
+
+// (a + b) * x, or null if invalid
+Value *addMul(Value *a, Value *b, Value *x) {
+  if (!a || !b || !x)
+    return nullptr;
+  auto *y = (*a + *b);
+  if (!y)
+    y = (*b + *a);
+  if (!y)
+    return nullptr;
+  auto *z = (*y) * (*x);
+  if (!z)
+    z = (*x) * (*y);
+  return z;
+}
+
+//  a*x + b*x --> (a + b) * x
+CallInstr *convertAddMul(CallInstr *v) {
+  auto *M = v->getModule();
+  auto *type = v->getType();
+
+  if (!util::isCallOf(v, Module::ADD_MAGIC_NAME, {type, type}, type, /*method=*/true))
+    return v;
+
+  // decompose the operation
+  Value *lhs = v->front();
+  Value *rhs = v->back();
+  Value *lhs1 = nullptr, *lhs2 = nullptr, *rhs1 = nullptr, *rhs2 = nullptr;
+
+  if (util::isCallOf(lhs, Module::MUL_MAGIC_NAME, {type, type}, type,
+                     /*method=*/true)) {
+    auto *lhsCall = cast<CallInstr>(lhs);
+    lhs1 = lhsCall->front();
+    lhs2 = lhsCall->back();
+  } else {
+    lhs1 = lhs;
+    lhs2 = M->getInt(1);
+  }
+
+  if (util::isCallOf(rhs, Module::MUL_MAGIC_NAME, {type, type}, type,
+                     /*method=*/true)) {
+    auto *rhsCall = cast<CallInstr>(rhs);
+    rhs1 = rhsCall->front();
+    rhs2 = rhsCall->back();
+  } else {
+    rhs1 = rhs;
+    rhs2 = M->getInt(1);
+  }
+
+  Value *newCall = nullptr;
+  if (varMatch(lhs1, rhs1)) {
+    newCall = addMul(lhs2, rhs2, lhs1);
+  } else if (varMatch(lhs1, rhs2)) {
+    newCall = addMul(lhs2, rhs1, lhs1);
+  } else if (varMatch(lhs2, rhs1)) {
+    newCall = addMul(lhs1, rhs2, lhs2);
+  } else if (varMatch(lhs2, rhs2)) {
+    newCall = addMul(lhs1, rhs1, lhs2);
+  }
+
+  if (newCall && newCall->getType()->is(type))
+    return cast<CallInstr>(newCall);
+  return v;
+}
 } // namespace
 
 void CanonicalizationPass::handle(CallInstr *v) {
@@ -131,29 +201,33 @@ void CanonicalizationPass::handle(CallInstr *v) {
     return;
   }
 
-  // from here on out, deal only with type-consistent ops
-  if (!util::isCallOf(v, op, {type, type}, type, /*method=*/true))
-    return;
+  // convert [a*x + b*x] --> (a + b) * x
+  CallInstr *newCall = convertAddMul(v);
 
-  std::vector<Value *> operands;
-  if (isAssociative) {
-    extractAssociativeOpChain(v, op, type, operands);
-  } else {
-    operands.push_back(v->front());
-    operands.push_back(v->back());
+  // rearrange associative/commutative ops
+  if (util::isCallOf(newCall, op, {type, type}, type, /*method=*/true)) {
+    std::vector<Value *> operands;
+    if (isAssociative) {
+      extractAssociativeOpChain(newCall, op, type, operands);
+    } else {
+      operands.push_back(newCall->front());
+      operands.push_back(newCall->back());
+    }
+    seqassert(operands.size() >= 2, "bad call canonicalization");
+
+    if (isCommutative)
+      orderOperands(operands);
+
+    newCall = util::call(fn, {operands[0], operands[1]});
+    for (auto it = operands.begin() + 2; it != operands.end(); ++it) {
+      newCall = util::call(fn, {newCall, *it});
+    }
   }
-  seqassert(operands.size() >= 2, "bad call canonicalization");
 
-  if (isCommutative)
-    orderOperands(operands);
-
-  CallInstr *newCall = util::call(fn, {operands[0], operands[1]});
-  for (auto it = operands.begin() + 2; it != operands.end(); ++it) {
-    newCall = util::call(fn, {newCall, *it});
+  if (newCall != v) {
+    seqassert(newCall->getType()->is(type), "inconsistent types");
+    v->replaceAll(newCall);
   }
-
-  seqassert(newCall->getType()->is(type), "inconsistent types");
-  v->replaceAll(newCall);
 }
 
 void CanonicalizationPass::handle(SeriesFlow *v) {
