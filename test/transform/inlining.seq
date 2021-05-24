@@ -1,6 +1,18 @@
 v = 1
 v = 2
 
+def inline_me_aggressive_simple():
+  return 1
+
+def inline_me_aggressive_complex():
+  while True:
+    if v == 1:
+      return 1
+    return 2
+
+def inline_me_aggressive_args(x):
+  return x + 1
+
 def inline_me_simple():
   return 1
 
@@ -16,8 +28,11 @@ def inline_me_args(x):
 @test
 def inlining_test():
   assert inline_me_simple() == -1
-  assert inline_me_complex() == -2
-  print inline_me_args(2)
+  assert inline_me_complex() == 2
   assert inline_me_args(2) == -3
+  assert inline_me_aggressive_simple() == -1
+  assert inline_me_aggressive_complex() == -2
+  assert inline_me_aggressive_args(2) == -3
+
 
 inlining_test()

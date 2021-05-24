@@ -78,8 +78,10 @@ class TestInliner : public ir::transform::OperatorPass {
       return;
     auto name = f->getUnmangledName();
     if (name.find("inline_me") != std::string::npos) {
-      auto res = ir::util::inlineCall(v, true);
-      assert(res.valid);
+      auto aggressive = name.find("aggressive") != std::string::npos;
+      auto res = ir::util::inlineCall(v, aggressive);
+      if (!res)
+        return;
       for (auto *var : res.newVars)
         ir::cast<ir::BodiedFunc>(getParentFunc())->push_back(var);
       v->replaceAll(ir::util::call(neg, {res.result}));
