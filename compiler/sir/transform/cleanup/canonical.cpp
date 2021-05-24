@@ -38,6 +38,12 @@ struct NodeRanker : public util::Operator {
   Rank getRank() { return {-maxDepth, hash}; }
 };
 
+NodeRanker::Rank getRank(Node *node) {
+  NodeRanker ranker;
+  node->accept(ranker);
+  return ranker.getRank();
+}
+
 bool isAssociativeOp(const std::string &name) {
   static const std::unordered_set<std::string> ops = {
       Module::ADD_MAGIC_NAME, Module::MUL_MAGIC_NAME, Module::AND_MAGIC_NAME,
@@ -50,6 +56,13 @@ bool isCommutativeOp(const std::string &name) {
       Module::ADD_MAGIC_NAME, Module::MUL_MAGIC_NAME, Module::AND_MAGIC_NAME,
       Module::OR_MAGIC_NAME,  Module::XOR_MAGIC_NAME, Module::EQ_MAGIC_NAME,
       Module::NE_MAGIC_NAME};
+  return ops.find(name) != ops.end();
+}
+
+bool isInequalityOp(const std::string &name) {
+  static const std::unordered_set<std::string> ops = {
+      Module::EQ_MAGIC_NAME, Module::NE_MAGIC_NAME, Module::LT_MAGIC_NAME,
+      Module::LE_MAGIC_NAME, Module::GT_MAGIC_NAME, Module::GE_MAGIC_NAME};
   return ops.find(name) != ops.end();
 }
 
@@ -67,9 +80,7 @@ void extractAssociativeOpChain(Value *v, const std::string &op, types::Type *typ
 void orderOperands(std::vector<Value *> &operands) {
   std::vector<std::pair<NodeRanker::Rank, Value *>> rankedOperands;
   for (auto *v : operands) {
-    NodeRanker ranker;
-    v->accept(ranker);
-    rankedOperands.push_back({ranker.getRank(), v});
+    rankedOperands.push_back({getRank(v), v});
   }
   std::sort(rankedOperands.begin(), rankedOperands.end());
 
@@ -86,15 +97,46 @@ void CanonicalizationPass::handle(CallInstr *v) {
     return;
 
   std::string op = fn->getUnmangledName();
-  if (!isAssociativeOp(op))
-    return;
-
   types::Type *type = v->getType();
+  const bool isAssociative = isAssociativeOp(op);
+  const bool isCommutative = isCommutativeOp(op);
+  const bool isInequality = isInequalityOp(op);
+
+  // canonicalize inequalities
+  if (v->numArgs() == 2 && isInequality) {
+    Value *newCall = nullptr;
+    auto *lhs = v->front();
+    auto *rhs = v->back();
+    if (getRank(lhs) > getRank(rhs)) { // are we out of order?
+      // re-order
+      if (op == Module::EQ_MAGIC_NAME) { // lhs == rhs
+        newCall = *rhs == *lhs;
+      } else if (op == Module::NE_MAGIC_NAME) { // lhs != rhs
+        newCall = *rhs != *lhs;
+      } else if (op == Module::LT_MAGIC_NAME) { // lhs < rhs
+        newCall = *rhs > *lhs;
+      } else if (op == Module::LE_MAGIC_NAME) { // lhs <= rhs
+        newCall = *rhs >= *lhs;
+      } else if (op == Module::GT_MAGIC_NAME) { // lhs > rhs
+        newCall = *rhs < *lhs;
+      } else if (op == Module::GE_MAGIC_NAME) { // lhs >= rhs
+        newCall = *rhs <= *lhs;
+      } else {
+        seqassert(false, "unknown comparison op: {}", op);
+      }
+
+      if (newCall && newCall->getType()->is(type))
+        v->replaceAll(newCall);
+    }
+    return;
+  }
+
+  // from here on out, deal only with type-consistent ops
   if (!util::isCallOf(v, op, {type, type}, type, /*method=*/true))
     return;
 
   std::vector<Value *> operands;
-  if (isAssociativeOp(op)) {
+  if (isAssociative) {
     extractAssociativeOpChain(v, op, type, operands);
   } else {
     operands.push_back(v->front());
@@ -102,7 +144,7 @@ void CanonicalizationPass::handle(CallInstr *v) {
   }
   seqassert(operands.size() >= 2, "bad call canonicalization");
 
-  if (isCommutativeOp(op))
+  if (isCommutative)
     orderOperands(operands);
 
   CallInstr *newCall = util::call(fn, {operands[0], operands[1]});
@@ -110,6 +152,7 @@ void CanonicalizationPass::handle(CallInstr *v) {
     newCall = util::call(fn, {newCall, *it});
   }
 
+  seqassert(newCall->getType()->is(type), "inconsistent types");
   v->replaceAll(newCall);
 }
 
