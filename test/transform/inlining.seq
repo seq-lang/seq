@@ -1,18 +1,18 @@
 v = 1
 v = 2
 
-def simple():
+def inline_me_simple():
   return 1
 
-def complex():
+def inline_me_complex():
   while True:
     if v == 1:
       return 1
     return 2
 
 @test
-def __inline_all__():
-  assert simple() == 1
-  assert complex() == 2
+def inlining_test():
+  assert inline_me_simple() == 1
+  assert inline_me_complex() == 2
 
-__inline_all__()
+inlining_test()
