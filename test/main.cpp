@@ -18,6 +18,7 @@
 #include "sir/llvm/llvisitor.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pass.h"
+#include "sir/util/inlining.h"
 #include "sir/util/irtools.h"
 #include "sir/util/outlining.h"
 #include "util/common.h"
@@ -61,6 +62,21 @@ class TestOutliner : public ir::transform::OperatorPass {
     if (getParentFunc()->getUnmangledName() == "__outline_count__") {
       v->setValue(M->getInt(count));
       countReturn = v;
+    }
+  }
+};
+
+class TestInliner : public ir::transform::OperatorPass {
+  const std::string KEY = "test-inliner-pass";
+  std::string getKey() const override { return KEY; }
+
+  void handle(ir::CallInstr *v) override {
+    if (getParentFunc()->getUnmangledName() == "__inline_all__") {
+      auto res = ir::util::inlineCall(v, true);
+      assert(res.valid);
+      for (auto *var : res.newVars)
+        ir::cast<ir::BodiedFunc>(getParentFunc())->push_back(var);
+      v->replaceAll(res.result);
     }
   }
 };
@@ -158,6 +174,7 @@ public:
       Seq seqDSL;
       seqDSL.addIRPasses(&pm, /*debug=*/false); // always add all passes
       pm.registerPass(std::make_unique<TestOutliner>());
+      pm.registerPass(std::make_unique<TestInliner>());
       pm.run(module);
 
       ir::LLVMVisitor visitor(/*debug=*/get<1>(GetParam()));
