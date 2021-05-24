@@ -35,7 +35,7 @@ struct NodeRanker : public util::Operator {
     }
   }
 
-  Rank getRank() { return {maxDepth, hash}; }
+  Rank getRank() { return {-maxDepth, hash}; }
 };
 
 bool isAssociativeOp(const std::string &name) {
