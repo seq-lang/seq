@@ -180,7 +180,7 @@ void CFVisitor::visit(const WhileFlow *v) {
   process(v->getCond());
   graph->getCurrentBlock()->successors_insert(end);
 
-  loopStack.emplace_back(loopBegin, end, tryCatchStack.size() - 1);
+  loopStack.emplace_back(loopBegin, end, v->getId(), tryCatchStack.size() - 1);
   auto *body = graph->newBlock("whileBody", true);
   loopBegin->successors_insert(body);
   process(v->getBody());
@@ -208,7 +208,7 @@ void CFVisitor::visit(const ForFlow *v) {
       const_cast<Var *>(v->getVar()), const_cast<Value *>(v->getIter()),
       analyze::dataflow::SyntheticAssignInstr::NEXT_VALUE));
 
-  loopStack.emplace_back(loopCheck, end, tryCatchStack.size() - 1);
+  loopStack.emplace_back(loopCheck, end, v->getId(), tryCatchStack.size() - 1);
   auto *loopBody = graph->newBlock("forBody", true);
   loopNext->successors_insert(loopBody);
   process(v->getBody());
@@ -238,7 +238,7 @@ void CFVisitor::visit(const ImperativeForFlow *v) {
       const_cast<Var *>(v->getVar()), v->getStep()));
   loopNext->successors_insert(loopCheck);
 
-  loopStack.emplace_back(loopCheck, end, tryCatchStack.size() - 1);
+  loopStack.emplace_back(loopCheck, end, v->getId(), tryCatchStack.size() - 1);
   auto *loopBody = graph->newBlock("forBody", true);
   loopCheck->successors_insert(loopBody);
   process(v->getBody());
@@ -352,12 +352,14 @@ void CFVisitor::visit(const TernaryInstr *v) {
 }
 
 void CFVisitor::visit(const BreakInstr *v) {
-  defaultJump(loopStack.back().end, loopStack.back().tcIndex);
+  auto &loop = v->getLoop() ? findLoop(v->getLoop()->getId()) : loopStack.back();
+  defaultJump(loop.end, loop.tcIndex);
   defaultInsert(v);
 }
 
 void CFVisitor::visit(const ContinueInstr *v) {
-  defaultJump(loopStack.back().nextIt, loopStack.back().tcIndex);
+  auto &loop = v->getLoop() ? findLoop(v->getLoop()->getId()) : loopStack.back();
+  defaultJump(loop.nextIt, loop.tcIndex);
   defaultInsert(v);
 }
 
@@ -425,6 +427,11 @@ void CFVisitor::defaultJump(const CFBlock *cf, int newTcLevel) {
         graph->getCurrentBlock()->successors_insert(const_cast<CFBlock *>(cf));
     }
   }
+}
+
+CFVisitor::Loop &CFVisitor::findLoop(id_t id) {
+  return *std::find_if(loopStack.begin(), loopStack.end(),
+                       [=](auto &it) { return it.loopId == id; });
 }
 
 } // namespace dataflow

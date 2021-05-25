@@ -21,7 +21,7 @@ struct OutlineReplacer : public Operator {
   OutlineReplacer(Module *M, std::unordered_set<id_t> &modVars,
                   std::vector<std::pair<Var *, Var *>> &remap,
                   std::vector<Value *> &outFlows)
-      : Operator(), modVars(modVars), remap(remap), outFlows(outFlows), cv(M) {}
+      : Operator(), modVars(modVars), remap(remap), outFlows(outFlows), cv(M, false) {}
 
   // Replace all used vars based on remapping.
   void postHook(Node *node) override {
@@ -122,7 +122,7 @@ struct Outliner : public Operator {
         inRegion(false), invalid(false), inVars(), outVars(), modifiedInVars(),
         inLoops(), outFlows() {}
 
-  bool isEnclosingLoopInRegion() {
+  bool isEnclosingLoopInRegion(id_t loopId = -1) {
     int d = depth();
     for (int i = 0; i < d; i++) {
       Flow *v = getParent<WhileFlow>(i);
@@ -131,7 +131,7 @@ struct Outliner : public Operator {
       if (!v)
         v = getParent<ImperativeForFlow>(i);
 
-      if (v)
+      if (v && (loopId == -1 || loopId == v->getId()))
         return inLoops.count(v->getId()) > 0;
     }
     return false;
@@ -158,12 +158,14 @@ struct Outliner : public Operator {
   }
 
   void handle(BreakInstr *v) override {
-    if (inRegion && !isEnclosingLoopInRegion())
+    auto *loop = v->getLoop();
+    if (inRegion && !isEnclosingLoopInRegion(loop ? loop->getId() : -1))
       outFlows.push_back(v);
   }
 
   void handle(ContinueInstr *v) override {
-    if (inRegion && !isEnclosingLoopInRegion())
+    auto *loop = v->getLoop();
+    if (inRegion && !isEnclosingLoopInRegion(loop ? loop->getId() : -1))
       outFlows.push_back(v);
   }
 

@@ -140,6 +140,11 @@ public:
   /// @return the last encountered function
   Func *getParentFunc() { return findLast<Func>(); }
 
+  /// @return an iterator to the first parent
+  auto parent_begin() const { return nodeStack.begin(); }
+  /// @return an iterator beyond the last parent
+  auto parent_end() const { return nodeStack.end(); }
+
   /// @param v the value
   /// @return whether we have visited ("seen") the given value
   bool saw(const Value *v) const { return seen.find(v->getId()) != seen.end(); }

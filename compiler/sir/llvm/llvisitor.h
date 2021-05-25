@@ -48,9 +48,12 @@ private:
     llvm::BasicBlock *breakBlock;
     /// Block to branch to in case of "continue"
     llvm::BasicBlock *continueBlock;
+    /// Loop id
+    id_t loopId;
 
-    LoopData(llvm::BasicBlock *breakBlock, llvm::BasicBlock *continueBlock)
-        : NestableData(), breakBlock(breakBlock), continueBlock(continueBlock) {}
+    LoopData(llvm::BasicBlock *breakBlock, llvm::BasicBlock *continueBlock, id_t loopId)
+        : NestableData(), breakBlock(breakBlock), continueBlock(continueBlock),
+          loopId(loopId) {}
   };
 
   struct TryCatchData : NestableData {
@@ -74,11 +77,14 @@ private:
     llvm::Value *delegateDepth;
     /// Storage for postponed return
     llvm::Value *retStore;
+    /// Loop being manipulated
+    llvm::Value *loopSequence;
 
     TryCatchData()
         : NestableData(), exceptionBlock(nullptr), exceptionRouteBlock(nullptr),
           finallyBlock(nullptr), catchTypes(), handlers(), excFlag(nullptr),
-          catchStore(nullptr), delegateDepth(nullptr), retStore(nullptr) {}
+          catchStore(nullptr), delegateDepth(nullptr), retStore(nullptr),
+          loopSequence(nullptr) {}
   };
 
   struct DebugInfo {
@@ -243,6 +249,8 @@ public:
   /// @param t the IR type
   /// @return corresponding LLVM DI type
   llvm::DIType *getDIType(types::Type *t);
+
+  LoopData *getLoopData(id_t loopId);
 
   void visit(const Module *) override;
   void visit(const BodiedFunc *) override;

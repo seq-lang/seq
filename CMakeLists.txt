@@ -144,6 +144,7 @@ set(SEQ_HPPFILES
         compiler/sir/analyze/dataflow/cfg.h
         compiler/sir/analyze/dataflow/dominator.h
         compiler/sir/analyze/dataflow/reaching.h
+        compiler/sir/analyze/module/global_vars.h
         compiler/sir/attribute.h
         compiler/sir/base.h
         compiler/sir/const.h
@@ -172,6 +173,7 @@ set(SEQ_HPPFILES
         compiler/sir/util/cloning.h
         compiler/sir/util/context.h
         compiler/sir/util/format.h
+        compiler/sir/util/inlining.h
         compiler/sir/util/irtools.h
         compiler/sir/util/iterators.h
         compiler/sir/util/matching.h
@@ -224,6 +226,7 @@ set(SEQ_CPPFILES
         compiler/sir/analyze/dataflow/cfg.cpp
         compiler/sir/analyze/dataflow/dominator.cpp
         compiler/sir/analyze/dataflow/reaching.cpp
+        compiler/sir/analyze/module/global_vars.cpp
         compiler/sir/base.cpp
         compiler/sir/const.cpp
         compiler/sir/dsl/nodes.cpp
@@ -246,6 +249,7 @@ set(SEQ_CPPFILES
         compiler/sir/types/types.cpp
         compiler/sir/util/cloning.cpp
         compiler/sir/util/format.cpp
+        compiler/sir/util/inlining.cpp
         compiler/sir/util/irtools.cpp
         compiler/sir/util/matching.cpp
         compiler/sir/util/outlining.cpp

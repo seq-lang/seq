@@ -12,14 +12,17 @@ class ConstPropPass : public OperatorPass {
 private:
   /// Key of the reaching definition analysis
   std::string reachingDefKey;
+  /// Key of the global variables analysis
+  std::string globalVarsKey;
 
 public:
   const std::string KEY = "core-folding-const-prop";
 
   /// Constructs a constant propagation pass.
   /// @param reachingDefKey the reaching definition analysis' key
-  explicit ConstPropPass(std::string reachingDefKey)
-      : reachingDefKey(std::move(reachingDefKey)) {}
+  explicit ConstPropPass(std::string reachingDefKey, std::string globalVarsKey)
+      : reachingDefKey(std::move(reachingDefKey)),
+        globalVarsKey(std::move(globalVarsKey)) {}
 
   std::string getKey() const override { return KEY; }
   void handle(VarValue *v) override;
