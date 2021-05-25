@@ -115,13 +115,12 @@ InlineResult inlineFunction(Func *func, std::vector<Value *> args, bool aggressi
   ReturnReplacer rr(implicit, retVal, rv.needLoop, cv);
   rr.process(clonedBody);
 
-  Value *v = implicit ? implicit : clonedBody;
-  newFlow->push_back(v);
+  newFlow->push_back(implicit ? implicit : clonedBody);
 
   if (retVal) {
-    v = M->N<FlowInstr>(info, newFlow, M->N<VarValue>(info, retVal));
+    return {M->N<FlowInstr>(info, newFlow, M->N<VarValue>(info, retVal)),
+            std::move(newVars)};
   }
-
   return {newFlow, std::move(newVars)};
 }
 

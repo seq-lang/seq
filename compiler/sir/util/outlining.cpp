@@ -45,7 +45,7 @@ struct OutlineReplacer : public Operator {
     auto *M = v->getModule();
     for (unsigned i = 0; i < outFlows.size(); i++) {
       if (outFlows[i]->getId() == v->getId()) {
-        auto *copy = cv.clone(v);
+        auto *copy = cv.clone(v, false);
         v->replaceAll(M->template Nr<ReturnInstr>(M->getInt(i + 1)));
         outFlows[i] = copy;
         break;

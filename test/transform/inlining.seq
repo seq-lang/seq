@@ -64,7 +64,6 @@ def inline_test_nested_while_finally():
             try:
                 a = inline_me_aggressive_nested_while_finally(a)
                 checkpoint1 = True
-                print a
                 assert a == -42
             finally:
                 a = 4

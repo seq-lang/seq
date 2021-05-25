@@ -219,10 +219,12 @@ void CloneVisitor::visit(const TernaryInstr *v) {
       Nt(v, clone(v->getCond()), clone(v->getTrueValue()), clone(v->getFalseValue()));
 }
 
-void CloneVisitor::visit(const BreakInstr *v) { result = Nt(v, clone(v->getLoop())); }
+void CloneVisitor::visit(const BreakInstr *v) {
+  result = Nt(v, cloneLoop ? clone(v->getLoop()) : v->getLoop());
+}
 
 void CloneVisitor::visit(const ContinueInstr *v) {
-  result = Nt(v, clone(v->getLoop()));
+  result = Nt(v, cloneLoop ? clone(v->getLoop()) : v->getLoop());
 }
 
 void CloneVisitor::visit(const ReturnInstr *v) { result = Nt(v, clone(v->getValue())); }
