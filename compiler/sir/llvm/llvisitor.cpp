@@ -582,6 +582,10 @@ void LLVMVisitor::exitTryCatch() {
   trycatch.pop_back();
 }
 
+LLVMVisitor::TryCatchData *LLVMVisitor::getInnermostTryCatch() {
+  return trycatch.empty() ? nullptr : &trycatch.back();
+}
+
 LLVMVisitor::TryCatchData *LLVMVisitor::getInnermostTryCatchBeforeLoop() {
   if (!trycatch.empty() &&
       (loops.empty() || trycatch.back().sequenceNumber > loops.back().sequenceNumber))
@@ -2391,7 +2395,7 @@ void LLVMVisitor::visit(const ReturnInstr *x) {
   }
   builder.SetInsertPoint(block);
   if (coro.exit) {
-    if (auto *tc = getInnermostTryCatchBeforeLoop()) {
+    if (auto *tc = getInnermostTryCatch()) {
       auto *excStateReturn = builder.getInt8(TryCatchData::State::RETURN);
       builder.CreateStore(excStateReturn, tc->excFlag);
       builder.CreateBr(tc->finallyBlock);
@@ -2399,7 +2403,7 @@ void LLVMVisitor::visit(const ReturnInstr *x) {
       builder.CreateBr(coro.exit);
     }
   } else {
-    if (auto *tc = getInnermostTryCatchBeforeLoop()) {
+    if (auto *tc = getInnermostTryCatch()) {
       auto *excStateReturn = builder.getInt8(TryCatchData::State::RETURN);
       builder.CreateStore(excStateReturn, tc->excFlag);
       if (tc->retStore) {
@@ -2427,7 +2431,7 @@ void LLVMVisitor::visit(const YieldInstr *x) {
       builder.CreateStore(value, coro.promise);
     }
     builder.SetInsertPoint(block);
-    if (auto *tc = getInnermostTryCatchBeforeLoop()) {
+    if (auto *tc = getInnermostTryCatch()) {
       auto *excStateReturn = builder.getInt8(TryCatchData::State::RETURN);
       builder.CreateStore(excStateReturn, tc->excFlag);
       builder.CreateBr(tc->finallyBlock);
