@@ -689,25 +689,32 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
     isSqrtInv = sqrtFunc->getName().find("sqrt") != std::string::npos;
   }
 
-  if (isGt && cast<IntConst>(lhs) && cast<IntConst>(rhs))
+  bool lhs_is_int = bool(cast<IntConst>(lhs));
+  bool rhs_is_int = bool(cast<IntConst>(rhs));
+
+  if (isGt && lhs_is_int && rhs_is_int)
     return;
-  if (isLt && cast<IntConst>(lhs) && cast<IntConst>(rhs))
+  if (isLt && lhs_is_int && rhs_is_int)
     return;
-  if (isAdd && !cast<IntConst>(lhs) && !cast<IntConst>(rhs))
+  if (isAdd && !lhs_is_int && !rhs_is_int)
     return;
-  if (isSub && !cast<IntConst>(lhs) && !cast<IntConst>(rhs))
+  if (isAdd && lhs_is_int && rhs_is_int)
     return;
-  if (isMul && cast<IntConst>(lhs))
+  if (isSub && !lhs_is_int && !rhs_is_int)
     return;
-  if (isMul && cast<IntConst>(rhs))
+  if (isSub && lhs_is_int && rhs_is_int)
     return;
-  if (isDiv && cast<IntConst>(lhs) && !isSqrtInv)
+  if (isMul && lhs_is_int)
     return;
-  if (isDiv && cast<IntConst>(rhs))
+  if (isMul && rhs_is_int)
     return;
-  if (isPow && cast<IntConst>(lhs))
+  if (isDiv && lhs_is_int && !isSqrtInv)
     return;
-  if (isPow && !cast<IntConst>(rhs))
+  if (isDiv && rhs_is_int)
+    return;
+  if (isPow && lhs_is_int)
+    return;
+  if (isPow && !rhs_is_int)
     return;
 
   std::string methodName =
