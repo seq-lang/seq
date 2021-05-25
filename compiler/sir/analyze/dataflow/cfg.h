@@ -424,11 +424,12 @@ private:
   struct Loop {
     analyze::dataflow::CFBlock *nextIt;
     analyze::dataflow::CFBlock *end;
+    id_t loopId;
     int tcIndex;
 
     Loop(analyze::dataflow::CFBlock *nextIt, analyze::dataflow::CFBlock *end,
-         int tcIndex = -1)
-        : nextIt(nextIt), end(end), tcIndex(tcIndex) {}
+         id_t loopId, int tcIndex = -1)
+        : nextIt(nextIt), end(end), loopId(loopId), tcIndex(tcIndex) {}
   };
 
   analyze::dataflow::CFGraph *graph;
@@ -488,6 +489,9 @@ public:
 
   void defaultInsert(const Value *v);
   void defaultJump(const CFBlock *cf, int newTcLevel = -1);
+
+private:
+  Loop &findLoop(id_t id);
 };
 
 } // namespace dataflow

@@ -18,6 +18,7 @@
 #include "sir/llvm/llvisitor.h"
 #include "sir/transform/manager.h"
 #include "sir/transform/pass.h"
+#include "sir/util/inlining.h"
 #include "sir/util/irtools.h"
 #include "sir/util/outlining.h"
 #include "util/common.h"
@@ -68,6 +69,29 @@ class TestOutliner : public ir::transform::OperatorPass {
     if (getParentFunc()->getUnmangledName() == "__outline_failures__") {
       v->setValue(M->getInt(failures));
       failuresReturn = v;
+    }
+  }
+};
+
+class TestInliner : public ir::transform::OperatorPass {
+  const std::string KEY = "test-inliner-pass";
+  std::string getKey() const override { return KEY; }
+
+  void handle(ir::CallInstr *v) override {
+    auto *M = v->getModule();
+    auto *f = ir::cast<ir::BodiedFunc>(ir::util::getFunc(v->getCallee()));
+    auto *neg = M->getOrRealizeMethod(M->getIntType(), ir::Module::NEG_MAGIC_NAME, {M->getIntType()});
+    if (!f)
+      return;
+    auto name = f->getUnmangledName();
+    if (name.find("inline_me") != std::string::npos) {
+      auto aggressive = name.find("aggressive") != std::string::npos;
+      auto res = ir::util::inlineCall(v, aggressive);
+      if (!res)
+        return;
+      for (auto *var : res.newVars)
+        ir::cast<ir::BodiedFunc>(getParentFunc())->push_back(var);
+      v->replaceAll(ir::util::call(neg, {res.result}));
     }
   }
 };
@@ -165,6 +189,7 @@ public:
       Seq seqDSL;
       seqDSL.addIRPasses(&pm, /*debug=*/false); // always add all passes
       pm.registerPass(std::make_unique<TestOutliner>());
+      pm.registerPass(std::make_unique<TestInliner>());
       pm.run(module);
 
       ir::LLVMVisitor visitor(/*debug=*/get<1>(GetParam()));
@@ -369,6 +394,7 @@ INSTANTIATE_TEST_SUITE_P(
             "transform/folding.seq",
             "transform/for_lowering.seq",
             "transform/io_opt.seq",
+            "transform/inlining.seq",
             "transform/outlining.seq",
             "transform/str_opt.seq"
         ),

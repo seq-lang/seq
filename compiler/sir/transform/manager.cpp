@@ -8,6 +8,7 @@
 #include "sir/analyze/analysis.h"
 #include "sir/analyze/dataflow/cfg.h"
 #include "sir/analyze/dataflow/reaching.h"
+#include "sir/analyze/module/global_vars.h"
 
 #include "sir/transform/folding/folding.h"
 #include "sir/transform/lowering/imperative.h"
@@ -143,8 +144,10 @@ void PassManager::registerStandardPasses() {
   auto cfgKey = registerAnalysis(std::make_unique<analyze::dataflow::CFAnalysis>());
   auto rdKey = registerAnalysis(std::make_unique<analyze::dataflow::RDAnalysis>(cfgKey),
                                 {cfgKey});
-  registerPass(std::make_unique<folding::FoldingPassGroup>(rdKey), {rdKey},
-               {rdKey, cfgKey});
+  auto globalKey =
+      registerAnalysis(std::make_unique<analyze::module::GlobalVarsAnalyses>());
+  registerPass(std::make_unique<folding::FoldingPassGroup>(rdKey, globalKey),
+               {rdKey, globalKey}, {rdKey, cfgKey, globalKey});
 }
 
 } // namespace transform

@@ -258,8 +258,12 @@ public:
     fmt::print(os, FMT_STRING("(select {}\n{}\n{}\n)"), makeFormatter(v->getCond()),
                makeFormatter(v->getTrueValue()), makeFormatter(v->getFalseValue()));
   }
-  void visit(const BreakInstr *v) override { os << "break"; }
-  void visit(const ContinueInstr *v) override { os << "continue"; }
+  void visit(const BreakInstr *v) override {
+    os << "(break " << (v->getLoop() ? v->getLoop()->getId() : -1) << ')';
+  }
+  void visit(const ContinueInstr *v) override {
+    os << "(continue " << (v->getLoop() ? v->getLoop()->getId() : -1) << ')';
+  }
   void visit(const ReturnInstr *v) override {
     fmt::print(os, FMT_STRING("(return {})"), makeFormatter(v->getValue()));
   }

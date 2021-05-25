@@ -121,16 +121,30 @@ void CloneVisitor::visit(const IfFlow *v) {
 }
 
 void CloneVisitor::visit(const WhileFlow *v) {
-  result = Nt(v, clone(v->getCond()), clone(v->getBody()));
+  auto *loop = Nt(v, nullptr, nullptr);
+  forceRemap(v, loop);
+  loop->setCond(clone(v->getCond()));
+  loop->setBody(clone(v->getBody()));
+  result = loop;
 }
 
 void CloneVisitor::visit(const ForFlow *v) {
-  result = Nt(v, clone(v->getIter()), clone(v->getBody()), clone(v->getVar()));
+  auto *loop = Nt(v, nullptr, nullptr, nullptr);
+  forceRemap(v, loop);
+  loop->setIter(clone(v->getIter()));
+  loop->setBody(clone(v->getBody()));
+  loop->setVar(clone(v->getVar()));
+  result = loop;
 }
 
 void CloneVisitor::visit(const ImperativeForFlow *v) {
-  result = Nt(v, clone(v->getStart()), v->getStep(), clone(v->getEnd()),
-              clone(v->getBody()), clone(v->getVar()));
+  auto *loop = Nt(v, nullptr, v->getStep(), nullptr, nullptr, nullptr);
+  forceRemap(v, loop);
+  loop->setStart(clone(v->getStart()));
+  loop->setBody(clone(v->getBody()));
+  loop->setVar(clone(v->getVar()));
+  loop->setEnd(clone(v->getEnd()));
+  result = loop;
 }
 
 void CloneVisitor::visit(const TryCatchFlow *v) {
@@ -205,9 +219,13 @@ void CloneVisitor::visit(const TernaryInstr *v) {
       Nt(v, clone(v->getCond()), clone(v->getTrueValue()), clone(v->getFalseValue()));
 }
 
-void CloneVisitor::visit(const BreakInstr *v) { result = Nt(v); }
+void CloneVisitor::visit(const BreakInstr *v) {
+  result = Nt(v, cloneLoop ? clone(v->getLoop()) : v->getLoop());
+}
 
-void CloneVisitor::visit(const ContinueInstr *v) { result = Nt(v); }
+void CloneVisitor::visit(const ContinueInstr *v) {
+  result = Nt(v, cloneLoop ? clone(v->getLoop()) : v->getLoop());
+}
 
 void CloneVisitor::visit(const ReturnInstr *v) { result = Nt(v, clone(v->getValue())); }
 

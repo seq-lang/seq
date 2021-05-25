@@ -15,11 +15,14 @@ private:
   Node *result = nullptr;
   /// the module
   Module *module;
+  /// true if break/continue loops should be cloned
+  bool cloneLoop;
 
 public:
   /// Constructs a clone visitor.
   /// @param module the module
-  explicit CloneVisitor(Module *module) : module(module) {}
+  /// @param cloneLoop true if break/continue loops should be cloned
+  explicit CloneVisitor(Module *module, bool cloneLoop = true) : module(module) {}
 
   virtual ~CloneVisitor() noexcept = default;
 
