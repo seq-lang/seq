@@ -167,6 +167,7 @@ private:
   void exitLoop();
   void enterTryCatch(TryCatchData data);
   void exitTryCatch();
+  TryCatchData *getInnermostTryCatch();
   TryCatchData *getInnermostTryCatchBeforeLoop();
 
   // LLVM passes
