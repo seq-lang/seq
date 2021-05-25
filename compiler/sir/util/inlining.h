@@ -8,14 +8,12 @@ namespace util {
 
 /// Result of an inlining operation.
 struct InlineResult {
-  /// true if valid
-  bool valid;
   /// the result, either a SeriesFlow or FlowInstr
   Value *result;
   /// variables added by the inlining
   std::vector<Var *> newVars;
 
-  operator bool() const { return valid; }
+  operator bool() const { return bool(result); }
 };
 
 /// Inline the given function with the supplied arguments.

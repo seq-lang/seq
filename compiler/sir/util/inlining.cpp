@@ -11,65 +11,70 @@ namespace ir {
 namespace util {
 
 namespace {
+
+class ReturnVerifier : public util::Operator {
+public:
+  bool needLoop = false;
+
+  void handle(ReturnInstr *v) {
+    if (needLoop) {
+      return;
+    }
+
+    auto it = parent_begin();
+    if (it == parent_end()) {
+      needLoop = true;
+      return;
+    }
+
+    SeriesFlow *prev = nullptr;
+    while (it != parent_end()) {
+      Value *v = cast<Value>(*it++);
+      auto *cur = cast<SeriesFlow>(v);
+      if (!cur || (prev && prev->back()->getId() != cur->getId())) {
+        needLoop = true;
+        return;
+      }
+      prev = cur;
+    }
+    needLoop = prev->back()->getId() != v->getId();
+  }
+};
+
 class ReturnReplacer : public util::Operator {
 private:
   Value *implicitLoop;
   Var *var;
-  bool agressive;
+  bool aggressive;
   util::CloneVisitor &cv;
 
 public:
-  bool ok = true;
-
-  ReturnReplacer(Value *implicitLoop, Var *var, bool agressive, util::CloneVisitor &cv)
-      : implicitLoop(implicitLoop), var(var), agressive(agressive), cv(cv) {}
+  ReturnReplacer(Value *implicitLoop, Var *var, bool aggressive, util::CloneVisitor &cv)
+      : implicitLoop(implicitLoop), var(var), aggressive(aggressive), cv(cv) {}
 
   void handle(ReturnInstr *v) {
-    if (!verifyReturn(v)) {
-      ok = false;
-      return;
-    }
-
     auto *M = v->getModule();
     auto *rep = M->N<SeriesFlow>(v);
     if (var) {
       rep->push_back(M->N<AssignInstr>(v, var, cv.clone(v->getValue())));
     }
-    if (agressive)
+    if (aggressive)
       rep->push_back(M->N<BreakInstr>(v, implicitLoop));
 
     v->replaceAll(rep);
   }
-
-private:
-  bool verifyReturn(ReturnInstr *v) {
-    if (agressive)
-      return true;
-
-    auto it = parent_begin();
-    if (it == parent_end())
-      return false;
-
-    SeriesFlow *prev = nullptr;
-    while (it != parent_end()) {
-      auto *cur = cast<SeriesFlow>(*it++);
-      if (!cur || (prev && prev->back()->getId() != cur->getId()))
-        return false;
-      prev = cur;
-    }
-    return prev->back()->getId() == v->getId();
-  }
 };
+
 } // namespace
 
-InlineResult inlineFunction(Func *func, std::vector<Value *> args, bool agressive,
+InlineResult inlineFunction(Func *func, std::vector<Value *> args, bool aggressive,
                             seq::SrcInfo info) {
   auto *bodied = cast<BodiedFunc>(func);
   if (!bodied)
-    return {false, nullptr, {}};
+    return {nullptr, {}};
   auto *fType = cast<types::FuncType>(bodied->getType());
   if (!fType || args.size() != std::distance(bodied->arg_begin(), bodied->arg_end()))
-    return {false, nullptr, {}};
+    return {nullptr, {}};
   auto *M = bodied->getModule();
 
   util::CloneVisitor cv(M);
@@ -90,32 +95,39 @@ InlineResult inlineFunction(Func *func, std::vector<Value *> args, bool agressiv
     newVars.push_back(retVal);
   }
 
-  auto *clonedBody = cv.clone(bodied->getBody());
+  Flow *clonedBody = cv.clone(bodied->getBody());
+
+  ReturnVerifier rv;
+  rv.process(clonedBody);
+
+  if (!aggressive && rv.needLoop)
+    return {nullptr, {}};
 
   WhileFlow *implicit = nullptr;
-  if (agressive) {
-    implicit = M->N<WhileFlow>(info, M->getBool(true), clonedBody);
+  if (rv.needLoop) {
+    auto *loopBody = M->N<SeriesFlow>(info);
+    implicit = M->N<WhileFlow>(info, M->getBool(true), loopBody);
+    loopBody->push_back(clonedBody);
     if (!retVal)
-      cast<SeriesFlow>(clonedBody)->push_back(M->N<BreakInstr>(info, implicit));
+      loopBody->push_back(M->N<BreakInstr>(info, implicit));
   }
 
-  ReturnReplacer rr(implicit, retVal, agressive, cv);
+  ReturnReplacer rr(implicit, retVal, rv.needLoop, cv);
   rr.process(clonedBody);
 
-  if (!rr.ok)
-    return {false, nullptr, {}};
+  Value *v = implicit ? implicit : clonedBody;
+  newFlow->push_back(v);
 
-  newFlow->push_back(implicit ? implicit : clonedBody);
-  Value *v = newFlow;
   if (retVal) {
-    v = M->N<FlowInstr>(info, cast<Flow>(v), M->N<VarValue>(info, retVal));
+    v = M->N<FlowInstr>(info, newFlow, M->N<VarValue>(info, retVal));
   }
-  return {true, v, std::move(newVars)};
+
+  return {newFlow, std::move(newVars)};
 }
 
-InlineResult inlineCall(CallInstr *v, bool agressive) {
+InlineResult inlineCall(CallInstr *v, bool aggressive) {
   return inlineFunction(util::getFunc(v->getCallee()),
-                        std::vector<Value *>(v->begin(), v->end()), agressive,
+                        std::vector<Value *>(v->begin(), v->end()), aggressive,
                         v->getSrcInfo());
 }
 
