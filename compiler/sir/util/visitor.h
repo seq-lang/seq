@@ -4,23 +4,12 @@
 #include <stdexcept>
 #include <string>
 
-#define DEFAULT_VISIT(x)                                                               \
-  virtual void defaultVisit(seq::ir::x *) {                                            \
-    throw std::runtime_error("cannot visit node");                                     \
-  }                                                                                    \
-  virtual void visit(seq::ir::x *v) { defaultVisit(v); }
-
-#define CONST_DEFAULT_VISIT(x)                                                         \
-  virtual void defaultVisit(const seq::ir::x *) {                                      \
-    throw std::runtime_error("cannot visit const node");                               \
-  }                                                                                    \
-  virtual void visit(const seq::ir::x *v) { defaultVisit(v); }
-
-#define VISIT(x) virtual void visit(seq::ir::x *v)
-#define CONST_VISIT(x) virtual void visit(const seq::ir::x *v)
+#define VISIT(x) virtual void visit(seq::ir::x *)
+#define CONST_VISIT(x) virtual void visit(const seq::ir::x *)
 
 namespace seq {
 namespace ir {
+class Node;
 
 namespace types {
 class Type;
@@ -97,24 +86,29 @@ namespace util {
 
 /// Base for SIR visitors
 class Visitor {
+protected:
+  virtual void defaultVisit(seq::ir::Node *) {
+    throw std::runtime_error("cannot visit node");
+  }
+
 public:
   virtual ~Visitor() noexcept = default;
 
-  DEFAULT_VISIT(Module);
+  VISIT(Module);
 
-  DEFAULT_VISIT(Var);
+  VISIT(Var);
 
-  DEFAULT_VISIT(Func);
+  VISIT(Func);
   VISIT(BodiedFunc);
   VISIT(ExternalFunc);
   VISIT(InternalFunc);
   VISIT(LLVMFunc);
 
-  DEFAULT_VISIT(Value);
+  VISIT(Value);
   VISIT(VarValue);
   VISIT(PointerValue);
 
-  DEFAULT_VISIT(Flow);
+  VISIT(Flow);
   VISIT(SeriesFlow);
   VISIT(IfFlow);
   VISIT(WhileFlow);
@@ -124,14 +118,14 @@ public:
   VISIT(PipelineFlow);
   VISIT(dsl::CustomFlow);
 
-  DEFAULT_VISIT(Const);
+  VISIT(Const);
   VISIT(TemplatedConst<int64_t>);
   VISIT(TemplatedConst<double>);
   VISIT(TemplatedConst<bool>);
   VISIT(TemplatedConst<std::string>);
   VISIT(dsl::CustomConst);
 
-  DEFAULT_VISIT(Instr);
+  VISIT(Instr);
   VISIT(AssignInstr);
   VISIT(ExtractInstr);
   VISIT(InsertInstr);
@@ -148,7 +142,7 @@ public:
   VISIT(FlowInstr);
   VISIT(dsl::CustomInstr);
 
-  DEFAULT_VISIT(types::Type);
+  VISIT(types::Type);
   VISIT(types::PrimitiveType);
   VISIT(types::IntType);
   VISIT(types::FloatType);
@@ -166,24 +160,29 @@ public:
 };
 
 class ConstVisitor {
+protected:
+  virtual void defaultVisit(const seq::ir::Node *) {
+    throw std::runtime_error("cannot visit const node");
+  }
+
 public:
   virtual ~ConstVisitor() noexcept = default;
 
-  CONST_DEFAULT_VISIT(Module);
+  CONST_VISIT(Module);
 
-  CONST_DEFAULT_VISIT(Var);
+  CONST_VISIT(Var);
 
-  CONST_DEFAULT_VISIT(Func);
+  CONST_VISIT(Func);
   CONST_VISIT(BodiedFunc);
   CONST_VISIT(ExternalFunc);
   CONST_VISIT(InternalFunc);
   CONST_VISIT(LLVMFunc);
 
-  CONST_DEFAULT_VISIT(Value);
+  CONST_VISIT(Value);
   CONST_VISIT(VarValue);
   CONST_VISIT(PointerValue);
 
-  CONST_DEFAULT_VISIT(Flow);
+  CONST_VISIT(Flow);
   CONST_VISIT(SeriesFlow);
   CONST_VISIT(IfFlow);
   CONST_VISIT(WhileFlow);
@@ -193,14 +192,14 @@ public:
   CONST_VISIT(PipelineFlow);
   CONST_VISIT(dsl::CustomFlow);
 
-  CONST_DEFAULT_VISIT(Const);
+  CONST_VISIT(Const);
   CONST_VISIT(TemplatedConst<int64_t>);
   CONST_VISIT(TemplatedConst<double>);
   CONST_VISIT(TemplatedConst<bool>);
   CONST_VISIT(TemplatedConst<std::string>);
   CONST_VISIT(dsl::CustomConst);
 
-  CONST_DEFAULT_VISIT(Instr);
+  CONST_VISIT(Instr);
   CONST_VISIT(AssignInstr);
   CONST_VISIT(ExtractInstr);
   CONST_VISIT(InsertInstr);
@@ -217,7 +216,7 @@ public:
   CONST_VISIT(FlowInstr);
   CONST_VISIT(dsl::CustomInstr);
 
-  CONST_DEFAULT_VISIT(types::Type);
+  CONST_VISIT(types::Type);
   CONST_VISIT(types::PrimitiveType);
   CONST_VISIT(types::IntType);
   CONST_VISIT(types::FloatType);
@@ -238,7 +237,5 @@ public:
 } // namespace ir
 } // namespace seq
 
-#undef DEFAULT_VISIT
-#undef CONST_DEFAULT_VISIT
 #undef VISIT
 #undef CONST_VISIT

@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "sir/transform/pass.h"
+#include "sir/transform/rewrite.h"
 #include "sir/util/irtools.h"
 
 namespace seq {
@@ -11,20 +12,9 @@ namespace ir {
 namespace transform {
 namespace folding {
 
-/// Base for folding rules.
-class FoldingRule {
-public:
-  virtual ~FoldingRule() noexcept = default;
-
-  /// Apply the rule.
-  /// @param v the instruction
-  /// @return nullptr if no match, the replacement otherwise
-  virtual Value *apply(CallInstr *v) = 0;
-};
-
 /// Commutative, binary rule that requires a single constant.
 template <typename ConstantType>
-class SingleConstantCommutativeRule : public FoldingRule {
+class SingleConstantCommutativeRule : public RewriteRule {
 public:
   using Calculator = std::function<Value *(Value *)>;
   enum Kind { LEFT, RIGHT, COMMUTATIVE };
@@ -70,9 +60,9 @@ public:
 
   virtual ~SingleConstantCommutativeRule() noexcept = default;
 
-  Value *apply(CallInstr *v) override {
+  void visit(CallInstr *v) override {
     if (!util::isCallOf(v, magic, {type, type}, type, /*method=*/true))
-      return nullptr;
+      return;
 
     auto *left = v->front();
     auto *right = v->back();
@@ -81,18 +71,16 @@ public:
 
     if ((kind == Kind::COMMUTATIVE || kind == Kind::LEFT) && leftConst &&
         leftConst->getVal() == val)
-      return calc(right);
+      return setResult(calc(right));
     if ((kind == Kind::COMMUTATIVE || kind == Kind::RIGHT) && rightConst &&
         rightConst->getVal() == val)
-      return calc(left);
-
-    return nullptr;
+      return setResult(calc(left));
   }
 };
 
 /// Binary rule that requires two constants.
 template <typename ConstantType, typename Func, typename OutputType = ConstantType>
-class DoubleConstantBinaryRule : public FoldingRule {
+class DoubleConstantBinaryRule : public RewriteRule {
 private:
   /// the calculator
   Func f;
@@ -116,9 +104,9 @@ public:
 
   virtual ~DoubleConstantBinaryRule() noexcept = default;
 
-  Value *apply(CallInstr *v) override {
+  void visit(CallInstr *v) override {
     if (!util::isCallOf(v, magic, {inputType, inputType}, resultType, /*method=*/true))
-      return nullptr;
+      return;
 
     auto *left = v->front();
     auto *right = v->back();
@@ -126,9 +114,7 @@ public:
     auto *rightConst = cast<TemplatedConst<ConstantType>>(right);
 
     if (leftConst && rightConst)
-      return toValue(v, f(leftConst->getVal(), rightConst->getVal()));
-
-    return nullptr;
+      return setResult(toValue(v, f(leftConst->getVal(), rightConst->getVal())));
   }
 
 private:
@@ -142,7 +128,7 @@ private:
 
 /// Unary rule that requires one constant.
 template <typename ConstantType, typename Func>
-class SingleConstantUnaryRule : public FoldingRule {
+class SingleConstantUnaryRule : public RewriteRule {
 private:
   /// the calculator
   Func f;
@@ -166,17 +152,14 @@ public:
 
   virtual ~SingleConstantUnaryRule() noexcept = default;
 
-  Value *apply(CallInstr *v) override {
+  void visit(CallInstr *v) override {
     if (!util::isCallOf(v, magic, {inputType}, resultType, /*method=*/true))
-      return nullptr;
+      return;
 
     auto *arg = v->front();
     auto *argConst = cast<TemplatedConst<ConstantType>>(arg);
-    if (argConst) {
-      return toValue(v, f(argConst->getVal()));
-    }
-
-    return nullptr;
+    if (argConst)
+      return setResult(toValue(v, f(argConst->getVal())));
   }
 
 private:
@@ -189,7 +172,7 @@ private:
 };
 
 /// Unary rule that requires no constant.
-template <typename Func> class UnaryRule : public FoldingRule {
+template <typename Func> class UnaryRule : public RewriteRule {
 private:
   /// the calculator
   Func f;
@@ -208,17 +191,17 @@ public:
 
   virtual ~UnaryRule() noexcept = default;
 
-  Value *apply(CallInstr *v) override {
+  void visit(CallInstr *v) override {
     if (!util::isCallOf(v, magic, {inputType}, inputType, /*method=*/true))
-      return nullptr;
+      return;
 
     auto *arg = v->front();
-    return f(arg);
+    return setResult(f(arg));
   }
 };
 
 /// Rule that eliminates an operation, like "+x".
-class NoOpRule : public FoldingRule {
+class NoOpRule : public RewriteRule {
 private:
   /// the input type
   types::Type *inputType;
@@ -234,17 +217,17 @@ public:
 
   virtual ~NoOpRule() noexcept = default;
 
-  Value *apply(CallInstr *v) override {
+  void visit(CallInstr *v) override {
     if (!util::isCallOf(v, magic, {inputType}, inputType, /*method=*/true))
-      return nullptr;
+      return;
 
     auto *arg = v->front();
-    return arg;
+    return setResult(arg);
   }
 };
 
 /// Rule that eliminates a double-application of an operation, like "-(-x)".
-class DoubleApplicationNoOpRule : public FoldingRule {
+class DoubleApplicationNoOpRule : public RewriteRule {
 private:
   /// the input type
   types::Type *inputType;
@@ -260,15 +243,15 @@ public:
 
   virtual ~DoubleApplicationNoOpRule() noexcept = default;
 
-  Value *apply(CallInstr *v) override {
+  void visit(CallInstr *v) override {
     if (!util::isCallOf(v, magic, {inputType}, inputType, /*method=*/true))
-      return nullptr;
+      return;
 
     if (!util::isCallOf(v->front(), magic, {inputType}, inputType, /*method=*/true))
-      return nullptr;
+      return;
 
     auto *arg = v->front();
-    return cast<CallInstr>(arg)->front();
+    return setResult(cast<CallInstr>(arg)->front());
   }
 };
 

@@ -34,6 +34,9 @@ private:
   /// true if should visit children first
   bool childrenFirst;
 
+protected:
+  void defaultVisit(Node *) override {}
+
 public:
   /// Constructs an operator.
   /// @param childrenFirst true if children should be visited first
@@ -64,9 +67,6 @@ public:
     }
     nodeStack.pop_back();
   }
-
-  void defaultVisit(Var *v) override {}
-  void defaultVisit(Func *f) override {}
 
   void visit(BodiedFunc *f) override {
     seen.insert(f->getBody()->getId());

@@ -15,7 +15,7 @@ namespace ir {
 namespace transform {
 namespace folding {
 namespace {
-template <typename Func, typename Out> class IntFloatBinaryRule : public FoldingRule {
+template <typename Func, typename Out> class IntFloatBinaryRule : public RewriteRule {
 private:
   Func f;
   std::string magic;
@@ -24,37 +24,32 @@ private:
 public:
   IntFloatBinaryRule(Func f, std::string magic, types::Type *out)
       : f(std::move(f)), magic(std::move(magic)), out(out) {}
+
   virtual ~IntFloatBinaryRule() noexcept = default;
-  Value *apply(CallInstr *v) override {
-    auto *fn = util::getFunc(v->getCallee());
-    if (!fn)
-      return nullptr;
 
-    if (fn->getUnmangledName() != magic)
-      return nullptr;
-
-    if (std::distance(v->begin(), v->end()) != 2)
-      return nullptr;
+  void visit(CallInstr *v) override {
+    if (!util::isCallOf(v, magic, 2, /*output=*/nullptr, /*method=*/true))
+      return;
 
     auto *leftConst = cast<Const>(v->front());
     auto *rightConst = cast<Const>(v->back());
 
     if (!leftConst || !rightConst)
-      return nullptr;
+      return;
 
     auto *M = v->getModule();
     if (isA<FloatConst>(leftConst) && isA<IntConst>(rightConst)) {
       auto left = cast<FloatConst>(leftConst)->getVal();
       auto right = cast<IntConst>(rightConst)->getVal();
-      return M->template N<TemplatedConst<Out>>(v->getSrcInfo(), f(left, (double)right),
-                                                out);
+      return setResult(M->template N<TemplatedConst<Out>>(v->getSrcInfo(),
+                                                          f(left, (double)right), out));
     } else if (isA<IntConst>(leftConst) && isA<FloatConst>(rightConst)) {
       auto left = cast<IntConst>(leftConst)->getVal();
       auto right = cast<FloatConst>(rightConst)->getVal();
-      return M->template N<TemplatedConst<Out>>(v->getSrcInfo(), f((double)left, right),
-                                                out);
+      return setResult(M->template N<TemplatedConst<Out>>(v->getSrcInfo(),
+                                                          f((double)left, right), out));
     } else {
-      return nullptr;
+      return;
     }
   }
 };
@@ -72,13 +67,13 @@ public:
 
   virtual ~DoubleConstantBinaryRuleExcludeRHSZero() noexcept = default;
 
-  Value *apply(CallInstr *v) override {
+  void visit(CallInstr *v) override {
     if (v->numArgs() == 2) {
       auto *rightConst = cast<TemplatedConst<ConstantType>>(v->back());
       if (rightConst && rightConst->getVal() == ConstantType())
-        return nullptr;
+        return;
     }
-    return DoubleConstantBinaryRule<ConstantType, Func, OutputType>::apply(v);
+    DoubleConstantBinaryRule<ConstantType, Func, OutputType>::visit(v);
   }
 };
 
@@ -195,18 +190,11 @@ auto typeConvert(Module *m, std::string magic, types::Type *fromType,
 
 void FoldingPass::run(Module *m) {
   registerStandardRules(m);
-  numReplacements = 0;
+  Rewriter::reset();
   OperatorPass::run(m);
 }
 
-void FoldingPass::handle(CallInstr *v) {
-  for (auto &r : rules)
-    if (auto *rep = r.second->apply(v)) {
-      ++numReplacements;
-      v->replaceAll(rep);
-      continue;
-    }
-}
+void FoldingPass::handle(CallInstr *v) { rewrite(v); }
 
 void FoldingPass::registerStandardRules(Module *m) {
   // binary, single constant, int->int

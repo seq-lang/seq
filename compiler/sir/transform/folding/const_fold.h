@@ -12,11 +12,7 @@ namespace ir {
 namespace transform {
 namespace folding {
 
-class FoldingPass : public OperatorPass {
-private:
-  std::unordered_map<std::string, std::unique_ptr<FoldingRule>> rules;
-  int numReplacements = 0;
-
+class FoldingPass : public OperatorPass, public Rewriter {
 public:
   /// Constructs a folding pass.
   FoldingPass() : OperatorPass(/*childrenFirst=*/true) {}
@@ -25,15 +21,7 @@ public:
   std::string getKey() const override { return KEY; }
 
   void run(Module *m) override;
-
-  void registerRule(const std::string &key, std::unique_ptr<FoldingRule> rule) {
-    rules.emplace(std::make_pair(key, std::move(rule)));
-  }
-
   void handle(CallInstr *v) override;
-
-  /// @return the number of replacements
-  int getNumReplacements() const { return numReplacements; }
 
 private:
   void registerStandardRules(Module *m);

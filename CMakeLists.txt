@@ -169,6 +169,7 @@ set(SEQ_HPPFILES
         compiler/sir/transform/pythonic/dict.h
         compiler/sir/transform/pythonic/io.h
         compiler/sir/transform/pythonic/str.h
+        compiler/sir/transform/rewrite.h
         compiler/sir/types/types.h
         compiler/sir/util/cloning.h
         compiler/sir/util/context.h
