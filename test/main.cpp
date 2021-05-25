@@ -80,7 +80,8 @@ class TestInliner : public ir::transform::OperatorPass {
   void handle(ir::CallInstr *v) override {
     auto *M = v->getModule();
     auto *f = ir::cast<ir::BodiedFunc>(ir::util::getFunc(v->getCallee()));
-    auto *neg = M->getOrRealizeMethod(M->getIntType(), ir::Module::NEG_MAGIC_NAME, {M->getIntType()});
+    auto *neg = M->getOrRealizeMethod(M->getIntType(), ir::Module::NEG_MAGIC_NAME,
+                                      {M->getIntType()});
     if (!f)
       return;
     auto name = f->getUnmangledName();
