@@ -21,7 +21,7 @@ struct OutlineReplacer : public Operator {
   OutlineReplacer(Module *M, std::unordered_set<id_t> &modVars,
                   std::vector<std::pair<Var *, Var *>> &remap,
                   std::vector<Value *> &outFlows)
-      : Operator(), modVars(modVars), remap(remap), outFlows(outFlows), cv(M) {}
+      : Operator(), modVars(modVars), remap(remap), outFlows(outFlows), cv(M, false) {}
 
   // Replace all used vars based on remapping.
   void postHook(Node *node) override {
@@ -45,7 +45,7 @@ struct OutlineReplacer : public Operator {
     auto *M = v->getModule();
     for (unsigned i = 0; i < outFlows.size(); i++) {
       if (outFlows[i]->getId() == v->getId()) {
-        auto *copy = cv.clone(v, false);
+        auto *copy = cv.clone(v);
         v->replaceAll(M->template Nr<ReturnInstr>(M->getInt(i + 1)));
         outFlows[i] = copy;
         break;
