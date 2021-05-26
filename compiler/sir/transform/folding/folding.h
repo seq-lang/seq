@@ -2,6 +2,7 @@
 
 #include "sir/transform/pass.h"
 
+#include "sir/transform/cleanup/canonical.h"
 #include "sir/transform/cleanup/dead_code.h"
 
 namespace seq {
@@ -14,6 +15,7 @@ class FoldingPass;
 /// Group of constant folding passes.
 class FoldingPassGroup : public PassGroup {
 private:
+  cleanup::CanonicalizationPass *canon;
   FoldingPass *fp;
   cleanup::DeadCodeCleanupPass *dce;
 
@@ -23,7 +25,8 @@ public:
 
   /// @param reachingDefPass the key of the reaching definitions pass
   /// @param globalVarPass the key of the global variables pass
-  explicit FoldingPassGroup(std::string reachingDefPass, std::string globalVarPass);
+  FoldingPassGroup(const std::string &reachingDefPass,
+                   const std::string &globalVarPass);
 
   bool shouldRepeat() const override;
 };

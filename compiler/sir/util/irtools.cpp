@@ -41,7 +41,8 @@ bool isCallOf(const Value *value, const std::string &name,
     if (output && !value->getType()->is(output))
       return false;
 
-    if (method && (inputs.empty() || !fn->getParentType()->is(inputs[0])))
+    if (method &&
+        (inputs.empty() || !fn->getParentType() || !fn->getParentType()->is(inputs[0])))
       return false;
 
     return true;
@@ -62,6 +63,24 @@ bool isCallOf(const Value *value, const std::string &name, int numArgs,
       return false;
 
     if (method && !fn->getParentType())
+      return false;
+
+    return true;
+  }
+
+  return false;
+}
+
+bool isMagicMethodCall(const Value *value) {
+  if (auto *call = cast<CallInstr>(value)) {
+    auto *fn = getFunc(call->getCallee());
+    if (!fn || !fn->getParentType() || call->numArgs() == 0)
+      return false;
+
+    auto name = fn->getUnmangledName();
+    auto size = name.size();
+    if (size < 5 || !(name[0] == '_' && name[1] == '_' && name[size - 1] == '_' &&
+                      name[size - 2] == '_'))
       return false;
 
     return true;

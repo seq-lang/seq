@@ -57,6 +57,34 @@ NodeRanker::Rank getRank(Node *node) {
   return ranker.getRank();
 }
 
+struct PurityChecker : public util::Operator {
+  bool result = true;
+
+  void defaultVisit(Node *node) override {
+    if (!isA<Const>(node))
+      result = false;
+  }
+
+  void handle(VarValue *v) override {}
+
+  void handle(CallInstr *v) override {
+    if (util::isMagicMethodCall(v))
+      return;
+
+    auto *fn = util::getFunc(v->getCallee());
+    if (!fn || !util::hasAttribute(fn, "std.internal.attributes.pure"))
+      result = false;
+  }
+
+  bool isPure() { return result; }
+};
+
+bool isPure(Node *node) {
+  PurityChecker pc;
+  node->accept(pc);
+  return pc.isPure();
+}
+
 bool isAssociativeOp(const std::string &name) {
   static const std::unordered_set<std::string> ops = {
       Module::ADD_MAGIC_NAME, Module::MUL_MAGIC_NAME, Module::AND_MAGIC_NAME,
@@ -270,7 +298,8 @@ struct CanonConstSub : public RewriteRule {
     auto *M = v->getModule();
     auto *type = v->getType();
 
-    if (!util::isCallOf(v, Module::SUB_MAGIC_NAME, {type, type}, type, /*method=*/true))
+    if (!util::isCallOf(v, Module::SUB_MAGIC_NAME, 2, /*output=*/nullptr,
+                        /*method=*/true))
       return;
 
     Value *lhs = v->front();
@@ -298,7 +327,10 @@ void CanonicalizationPass::run(Module *m) {
   OperatorPass::run(m);
 }
 
-void CanonicalizationPass::handle(CallInstr *v) { rewrite(v); }
+void CanonicalizationPass::handle(CallInstr *v) {
+  if (isPure(v))
+    rewrite(v);
+}
 
 void CanonicalizationPass::handle(SeriesFlow *v) {
   auto it = v->begin();

@@ -13,3 +13,7 @@ def inline():
 @__attribute__
 def noinline():
     pass
+
+@__attribute__
+def pure():
+    pass
