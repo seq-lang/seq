@@ -309,6 +309,12 @@ void CanonicalizationPass::handle(SeriesFlow *v) {
         it = v->insert(it, x);
         ++it;
       }
+    } else if (auto *flowInstr = cast<FlowInstr>(*it)) {
+      it = v->erase(it);
+      // inserting in reverse order causes [flow, value] to be added
+      it = v->insert(it, flowInstr->getValue());
+      it = v->insert(it, flowInstr->getFlow());
+      // don't increment; re-traverse in case a new series flow added
     } else {
       ++it;
     }
