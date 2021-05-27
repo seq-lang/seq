@@ -58,10 +58,12 @@ class float:
     def __or__(self, i: int): print 'or'; return 0
     def __xor__(self, i: int): print 'xor'; return 0
 # double assignment to disable propagation
+def f(x): return x
 a = 1.0
 a = 5.0
 a + 1 #: add
-a - 1 #: sub
+# wrap in function to disable canonicalization
+a - f(1) #: sub
 a * 2 #: mul
 a ** 2 #: pow
 a // 2 #: div

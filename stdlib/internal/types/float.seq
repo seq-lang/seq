@@ -1,3 +1,4 @@
+from internal.attributes import commutative
 import internal.gc as gc
 
 from C import seq_str_float(float) -> str
@@ -29,10 +30,12 @@ class float:
         return self
     def __neg__(self) -> float:
         return 0.0 - self
+    @commutative
     @llvm
     def __add__(a: float, b: float) -> float:
         %tmp = fadd double %a, %b
         ret double %tmp
+    @commutative
     def __add__(self, other: int) -> float:
         return self.__add__(float(other))
     @llvm
@@ -41,10 +44,12 @@ class float:
         ret double %tmp
     def __sub__(self, other: int) -> float:
         return self.__sub__(float(other))
+    @commutative
     @llvm
     def __mul__(a: float, b: float) -> float:
         %tmp = fmul double %a, %b
         ret double %tmp
+    @commutative
     def __mul__(self, other: int) -> float:
         return self.__mul__(float(other))
     def __floordiv__(self, other: float) -> float:

@@ -85,26 +85,23 @@ bool isPure(Node *node) {
   return pc.isPure();
 }
 
-bool isAssociativeOp(const std::string &name) {
-  static const std::unordered_set<std::string> ops = {
-      Module::ADD_MAGIC_NAME, Module::MUL_MAGIC_NAME, Module::AND_MAGIC_NAME,
-      Module::OR_MAGIC_NAME, Module::XOR_MAGIC_NAME};
-  return ops.find(name) != ops.end();
+bool isCommutativeOp(Func *fn) {
+  return fn && util::hasAttribute(fn, "std.internal.attributes.commutative");
 }
 
-bool isCommutativeOp(const std::string &name) {
-  static const std::unordered_set<std::string> ops = {
-      Module::ADD_MAGIC_NAME, Module::MUL_MAGIC_NAME, Module::AND_MAGIC_NAME,
-      Module::OR_MAGIC_NAME,  Module::XOR_MAGIC_NAME, Module::EQ_MAGIC_NAME,
-      Module::NE_MAGIC_NAME};
-  return ops.find(name) != ops.end();
+bool isAssociativeOp(Func *fn) {
+  return fn && util::hasAttribute(fn, "std.internal.attributes.associative");
 }
 
-bool isInequalityOp(const std::string &name) {
+bool isDistributiveOp(Func *fn) {
+  return fn && util::hasAttribute(fn, "std.internal.attributes.distributive");
+}
+
+bool isInequalityOp(Func *fn) {
   static const std::unordered_set<std::string> ops = {
       Module::EQ_MAGIC_NAME, Module::NE_MAGIC_NAME, Module::LT_MAGIC_NAME,
       Module::LE_MAGIC_NAME, Module::GT_MAGIC_NAME, Module::GE_MAGIC_NAME};
-  return ops.find(name) != ops.end();
+  return fn && ops.find(fn->getUnmangledName()) != ops.end();
 }
 
 // c + b + a --> a + b + c
@@ -135,23 +132,18 @@ struct CanonOpChain : public RewriteRule {
   }
 
   void visit(CallInstr *v) override {
-    auto *M = v->getModule();
     auto *fn = util::getFunc(v->getCallee());
     if (!fn)
       return;
 
     std::string op = fn->getUnmangledName();
     types::Type *type = v->getType();
-    const bool isAssociative = isAssociativeOp(op);
-    const bool isCommutative = isCommutativeOp(op);
-    auto *floatType = M->getFloatType();
-    const bool isFloatOp =
-        (type->is(floatType) ||
-         (fn->getParentType() && fn->getParentType()->is(floatType)));
+    const bool isAssociative = isAssociativeOp(fn);
+    const bool isCommutative = isCommutativeOp(fn);
 
     if (util::isCallOf(v, op, {type, type}, type, /*method=*/true)) {
       std::vector<Value *> operands;
-      if (!isFloatOp && isAssociative) {
+      if (isAssociative) {
         extractAssociativeOpChain(v, op, type, operands);
       } else {
         operands.push_back(v->front());
@@ -183,7 +175,7 @@ struct CanonInequality : public RewriteRule {
     types::Type *type = v->getType();
 
     // canonicalize inequalities
-    if (v->numArgs() == 2 && isInequalityOp(op)) {
+    if (v->numArgs() == 2 && isInequalityOp(fn)) {
       Value *newCall = nullptr;
       auto *lhs = v->front();
       auto *rhs = v->back();
@@ -220,35 +212,42 @@ struct CanonAddMul : public RewriteRule {
     return v1 && v2 && v1->getVar()->getId() == v2->getVar()->getId();
   }
 
+  static Func *getOp(Value *v) {
+    return isA<CallInstr>(v) ? util::getFunc(cast<CallInstr>(v)->getCallee()) : nullptr;
+  }
+
   // (a + b) * x, or null if invalid
   static Value *addMul(Value *a, Value *b, Value *x) {
     if (!a || !b || !x)
       return nullptr;
+
     auto *y = (*a + *b);
-    if (!y)
+    if (!y) {
       y = (*b + *a);
+      if (y && !isCommutativeOp(getOp(y)))
+        return nullptr;
+    }
     if (!y)
       return nullptr;
+
     auto *z = (*y) * (*x);
-    if (!z)
+    if (!z) {
       z = (*x) * (*y);
+      if (z && !isCommutativeOp(getOp(z)))
+        return nullptr;
+    }
+    if (!z)
+      return nullptr;
+
     return z;
   }
 
   void visit(CallInstr *v) override {
     auto *M = v->getModule();
     auto *fn = util::getFunc(v->getCallee());
-    if (!fn)
-      return;
-
-    auto *type = v->getType();
-    auto *floatType = M->getFloatType();
-    const bool isFloatOp =
-        (type->is(floatType) ||
-         (fn->getParentType() && fn->getParentType()->is(floatType)));
-
-    if (isFloatOp ||
-        !util::isCallOf(v, Module::ADD_MAGIC_NAME, {type, type}, type, /*method=*/true))
+    if (!isCommutativeOp(fn) ||
+        !util::isCallOf(v, Module::ADD_MAGIC_NAME, 2, /*output=*/nullptr,
+                        /*method=*/true))
       return;
 
     // decompose the operation
@@ -256,7 +255,7 @@ struct CanonAddMul : public RewriteRule {
     Value *rhs = v->back();
     Value *lhs1 = nullptr, *lhs2 = nullptr, *rhs1 = nullptr, *rhs2 = nullptr;
 
-    if (util::isCallOf(lhs, Module::MUL_MAGIC_NAME, {type, type}, type,
+    if (util::isCallOf(lhs, Module::MUL_MAGIC_NAME, 2, /*output=*/nullptr,
                        /*method=*/true)) {
       auto *lhsCall = cast<CallInstr>(lhs);
       lhs1 = lhsCall->front();
@@ -266,7 +265,7 @@ struct CanonAddMul : public RewriteRule {
       lhs2 = M->getInt(1);
     }
 
-    if (util::isCallOf(rhs, Module::MUL_MAGIC_NAME, {type, type}, type,
+    if (util::isCallOf(rhs, Module::MUL_MAGIC_NAME, 2, /*output=*/nullptr,
                        /*method=*/true)) {
       auto *rhsCall = cast<CallInstr>(rhs);
       rhs1 = rhsCall->front();
@@ -287,7 +286,8 @@ struct CanonAddMul : public RewriteRule {
       newCall = addMul(lhs1, rhs1, lhs2);
     }
 
-    if (newCall && newCall->getType()->is(type))
+    if (newCall && isDistributiveOp(getOp(newCall)) &&
+        newCall->getType()->is(v->getType()))
       return setResult(newCall);
   }
 };

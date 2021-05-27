@@ -1,3 +1,5 @@
+from internal.attributes import commutative, associative, distributive
+
 def check_N[N: int]():
     if N <= 0:
         compile_error("N must be greater than 0")
@@ -66,6 +68,8 @@ class Int[N]:
     def __invert__(self) -> Int[N]:
         %0 = xor i{=N} %self, -1
         ret i{=N} %0
+    @commutative
+    @associative
     @llvm
     def __add__(self, other: Int[N]) -> Int[N]:
         %0 = add i{=N} %self, %other
@@ -74,6 +78,9 @@ class Int[N]:
     def __sub__(self, other: Int[N]) -> Int[N]:
         %0 = sub i{=N} %self, %other
         ret i{=N} %0
+    @commutative
+    @associative
+    @distributive
     @llvm
     def __mul__(self, other: Int[N]) -> Int[N]:
         %0 = mul i{=N} %self, %other
@@ -130,14 +137,20 @@ class Int[N]:
         %0 = icmp sge i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @commutative
+    @associative
     @llvm
     def __and__(self, other: Int[N]) -> Int[N]:
         %0 = and i{=N} %self, %other
         ret i{=N} %0
+    @commutative
+    @associative
     @llvm
     def __or__(self, other: Int[N]) -> Int[N]:
         %0 = or i{=N} %self, %other
         ret i{=N} %0
+    @commutative
+    @associative
     @llvm
     def __xor__(self, other: Int[N]) -> Int[N]:
         %0 = xor i{=N} %self, %other
@@ -222,6 +235,8 @@ class UInt[N]:
     def __invert__(self) -> UInt[N]:
         %0 = xor i{=N} %self, -1
         ret i{=N} %0
+    @commutative
+    @associative
     @llvm
     def __add__(self, other: UInt[N]) -> UInt[N]:
         %0 = add i{=N} %self, %other
@@ -230,6 +245,9 @@ class UInt[N]:
     def __sub__(self, other: UInt[N]) -> UInt[N]:
         %0 = sub i{=N} %self, %other
         ret i{=N} %0
+    @commutative
+    @associative
+    @distributive
     @llvm
     def __mul__(self, other: UInt[N]) -> UInt[N]:
         %0 = mul i{=N} %self, %other
@@ -286,14 +304,20 @@ class UInt[N]:
         %0 = icmp uge i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @commutative
+    @associative
     @llvm
     def __and__(self, other: UInt[N]) -> UInt[N]:
         %0 = and i{=N} %self, %other
         ret i{=N} %0
+    @commutative
+    @associative
     @llvm
     def __or__(self, other: UInt[N]) -> UInt[N]:
         %0 = or i{=N} %self, %other
         ret i{=N} %0
+    @commutative
+    @associative
     @llvm
     def __xor__(self, other: UInt[N]) -> UInt[N]:
         %0 = xor i{=N} %self, %other

@@ -1,5 +1,6 @@
 # set implementation based on klib's khash
 
+from internal.attributes import commutative, associative
 import internal.khash as khash
 import internal.gc as gc
 
@@ -40,6 +41,8 @@ class Set[K]:
         self.difference_update(other)
         return self
 
+    @commutative
+    @associative
     def __and__(self, other: Set[K]):
         return self.intersection(other)
 
@@ -47,6 +50,8 @@ class Set[K]:
         self.intersection_update(other)
         return self
 
+    @commutative
+    @associative
     def __or__(self, other: Set[K]):
         return self.union(other)
 
@@ -55,6 +60,8 @@ class Set[K]:
             self.add(a)
         return self
 
+    @commutative
+    @associative
     def __xor__(self, other: Set[K]):
         return self.symmetric_difference(other)
 
