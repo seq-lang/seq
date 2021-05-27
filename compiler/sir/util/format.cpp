@@ -102,12 +102,13 @@ public:
                makeFormatter(v->getMainFunc(), true));
   }
 
+  void defaultVisit(const Node *) override { os << "(unknown_node)"; }
+
   void visit(const Var *v) override {
     fmt::print(os, FMT_STRING("(var '\"{}\" {} (global {}))"), v->referenceString(),
                makeFormatter(v->getType()), v->isGlobal());
   }
 
-  void defaultVisit(const Func *) override { os << "(unknown_func)"; }
   void visit(const BodiedFunc *v) override {
     auto args = makeFormatters(v->arg_begin(), v->arg_end(), true);
     auto symbols = makeFormatters(v->begin(), v->end(), true);
@@ -146,7 +147,6 @@ public:
                fmt::join(literals.begin(), literals.end(), "\n"));
   }
 
-  void defaultVisit(const Value *) override { os << "(unknown_value)"; }
   void visit(const VarValue *v) override {
     fmt::print(os, FMT_STRING("'\"{}\""), v->getVar()->referenceString());
   }
@@ -154,7 +154,6 @@ public:
     fmt::print(os, FMT_STRING("(ptr '\"{}\")"), v->getVar()->referenceString());
   }
 
-  void defaultVisit(const Flow *) override { os << "(unknown_flow)"; }
   void visit(const SeriesFlow *v) override {
     auto series = makeFormatters(v->begin(), v->end());
     fmt::print(os, FMT_STRING("(series\n{}\n)"),
@@ -205,7 +204,6 @@ public:
   }
   void visit(const dsl::CustomFlow *v) override { v->doFormat(os); }
 
-  void defaultVisit(const Const *) override { os << "unknown_const"; }
   void visit(const IntConst *v) override {
     fmt::print(os, FMT_STRING("{}"), v->getVal());
   }
@@ -220,7 +218,6 @@ public:
   }
   void visit(const dsl::CustomConst *v) override { v->doFormat(os); }
 
-  void defaultVisit(const Instr *) override { os << "(unknown_instr)"; }
   void visit(const AssignInstr *v) override {
     fmt::print(os, FMT_STRING("(assign {} {})"), makeFormatter(v->getLhs()),
                makeFormatter(v->getRhs()));
@@ -282,7 +279,6 @@ public:
   }
   void visit(const dsl::CustomInstr *v) override { v->doFormat(os); }
 
-  void defaultVisit(const types::Type *) override { os << "unknown_type"; }
   void visit(const types::IntType *v) override {
     fmt::print(os, FMT_STRING("(int '\"{}\")"), v->referenceString());
   }

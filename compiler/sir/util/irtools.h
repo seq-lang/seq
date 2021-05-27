@@ -39,6 +39,7 @@ bool isCallOf(const Value *value, const std::string &name,
               bool method = false);
 
 /// Checks if a value represents a call of a particular function.
+/// @param value the value to check
 /// @param name the function's (unmangled) name
 /// @param numArgs argument count, negative for no check
 /// @param output output type, null for no check
@@ -46,6 +47,12 @@ bool isCallOf(const Value *value, const std::string &name,
 /// @return true if value is a call matching all parameters above
 bool isCallOf(const Value *value, const std::string &name, int numArgs = -1,
               types::Type *output = nullptr, bool method = false);
+
+/// Checks if a value represents a call to a magic method.
+/// Magic method names start and end in "__" (two underscores).
+/// @param value the value to check
+/// @return true if value is a magic method call
+bool isMagicMethodCall(const Value *value);
 
 /// Constructs a new tuple.
 /// @param args vector of tuple contents

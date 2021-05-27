@@ -13,3 +13,19 @@ def inline():
 @__attribute__
 def noinline():
     pass
+
+@__attribute__
+def pure():
+    pass
+
+@__attribute__
+def commutative():
+    pass
+
+@__attribute__
+def associative():
+    pass
+
+@__attribute__
+def distributive():
+    pass

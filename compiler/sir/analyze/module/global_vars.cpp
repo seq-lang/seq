@@ -1,47 +1,38 @@
 #include "global_vars.h"
 
-namespace {
-using namespace seq::ir;
-
-template <typename NodeType>
-void validate(NodeType *n, analyze::module::GlobalVarsResult &res,
-              std::unordered_set<seq::ir::id_t> &seen) {
-  if (auto *ptr = cast<PointerValue>(n)) {
-    if (ptr->getVar()->isGlobal())
-      res.assignments[ptr->getVar()->getId()] = -1;
-  } else if (auto *assign = cast<AssignInstr>(n)) {
-    if (assign->getLhs()->isGlobal()) {
-      if (res.assignments.find(assign->getLhs()->getId()) != res.assignments.end()) {
-        res.assignments[assign->getLhs()->getId()] = -1;
-      } else {
-        res.assignments[assign->getLhs()->getId()] = assign->getRhs()->getId();
-      }
-    }
-  }
-
-  for (auto *child : n->getUsedValues())
-    if (seen.find(child->getId()) != seen.end()) {
-      seen.insert(child->getId());
-      validate(child, res, seen);
-    }
-}
-
-} // namespace
+#include "sir/util/operator.h"
 
 namespace seq {
 namespace ir {
 namespace analyze {
 namespace module {
+namespace {
+struct GlobalVarAnalyzer : public util::Operator {
+  std::unordered_map<id_t, id_t> assignments;
+
+  void handle(PointerValue *v) override {
+    if (v->getVar()->isGlobal())
+      assignments[v->getVar()->getId()] = -1;
+  }
+
+  void handle(AssignInstr *v) override {
+    auto *lhs = v->getLhs();
+    auto id = lhs->getId();
+    if (lhs->isGlobal()) {
+      if (assignments.find(id) != assignments.end()) {
+        assignments[id] = -1;
+      } else {
+        assignments[id] = v->getRhs()->getId();
+      }
+    }
+  }
+};
+} // namespace
 
 std::unique_ptr<Result> GlobalVarsAnalyses::run(const Module *m) {
-  auto res = std::make_unique<GlobalVarsResult>();
-  std::unordered_set<id_t> seen;
-  for (auto *v : *m) {
-    if (auto *f = cast<Func>(v))
-      validate(f, *res, seen);
-  }
-  validate(m->getMainFunc(), *res, seen);
-  return res;
+  GlobalVarAnalyzer gva;
+  gva.visit(const_cast<Module *>(m)); // TODO: any way around this cast?
+  return std::make_unique<GlobalVarsResult>(std::move(gva.assignments));
 }
 
 } // namespace module

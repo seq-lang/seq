@@ -6,12 +6,17 @@ namespace seq {
 namespace ir {
 namespace util {
 
+void Visitor::visit(Module *x) { defaultVisit(x); }
+void Visitor::visit(Var *x) { defaultVisit(x); }
+void Visitor::visit(Func *x) { defaultVisit(x); }
 void Visitor::visit(BodiedFunc *x) { defaultVisit(x); }
 void Visitor::visit(ExternalFunc *x) { defaultVisit(x); }
 void Visitor::visit(InternalFunc *x) { defaultVisit(x); }
 void Visitor::visit(LLVMFunc *x) { defaultVisit(x); }
+void Visitor::visit(Value *x) { defaultVisit(x); }
 void Visitor::visit(VarValue *x) { defaultVisit(x); }
 void Visitor::visit(PointerValue *x) { defaultVisit(x); }
+void Visitor::visit(Flow *x) { defaultVisit(x); }
 void Visitor::visit(SeriesFlow *x) { defaultVisit(x); }
 void Visitor::visit(IfFlow *x) { defaultVisit(x); }
 void Visitor::visit(WhileFlow *x) { defaultVisit(x); }
@@ -20,11 +25,13 @@ void Visitor::visit(ImperativeForFlow *x) { defaultVisit(x); }
 void Visitor::visit(TryCatchFlow *x) { defaultVisit(x); }
 void Visitor::visit(PipelineFlow *x) { defaultVisit(x); }
 void Visitor::visit(dsl::CustomFlow *x) { defaultVisit(x); }
+void Visitor::visit(Const *x) { defaultVisit(x); }
 void Visitor::visit(TemplatedConst<int64_t> *x) { defaultVisit(x); }
 void Visitor::visit(TemplatedConst<double> *x) { defaultVisit(x); }
 void Visitor::visit(TemplatedConst<bool> *x) { defaultVisit(x); }
 void Visitor::visit(TemplatedConst<std::string> *x) { defaultVisit(x); }
 void Visitor::visit(dsl::CustomConst *x) { defaultVisit(x); }
+void Visitor::visit(Instr *x) { defaultVisit(x); }
 void Visitor::visit(AssignInstr *x) { defaultVisit(x); }
 void Visitor::visit(ExtractInstr *x) { defaultVisit(x); }
 void Visitor::visit(InsertInstr *x) { defaultVisit(x); }
@@ -40,6 +47,7 @@ void Visitor::visit(YieldInstr *x) { defaultVisit(x); }
 void Visitor::visit(ThrowInstr *x) { defaultVisit(x); }
 void Visitor::visit(FlowInstr *x) { defaultVisit(x); }
 void Visitor::visit(dsl::CustomInstr *x) { defaultVisit(x); }
+void Visitor::visit(types::Type *x) { defaultVisit(x); }
 void Visitor::visit(types::PrimitiveType *x) { defaultVisit(x); }
 void Visitor::visit(types::IntType *x) { defaultVisit(x); }
 void Visitor::visit(types::FloatType *x) { defaultVisit(x); }
@@ -55,12 +63,17 @@ void Visitor::visit(types::GeneratorType *x) { defaultVisit(x); }
 void Visitor::visit(types::IntNType *x) { defaultVisit(x); }
 void Visitor::visit(dsl::types::CustomType *x) { defaultVisit(x); }
 
+void ConstVisitor::visit(const Module *x) { defaultVisit(x); }
+void ConstVisitor::visit(const Var *x) { defaultVisit(x); }
+void ConstVisitor::visit(const Func *x) { defaultVisit(x); }
 void ConstVisitor::visit(const BodiedFunc *x) { defaultVisit(x); }
 void ConstVisitor::visit(const ExternalFunc *x) { defaultVisit(x); }
 void ConstVisitor::visit(const InternalFunc *x) { defaultVisit(x); }
 void ConstVisitor::visit(const LLVMFunc *x) { defaultVisit(x); }
+void ConstVisitor::visit(const Value *x) { defaultVisit(x); }
 void ConstVisitor::visit(const VarValue *x) { defaultVisit(x); }
 void ConstVisitor::visit(const PointerValue *x) { defaultVisit(x); }
+void ConstVisitor::visit(const Flow *x) { defaultVisit(x); }
 void ConstVisitor::visit(const SeriesFlow *x) { defaultVisit(x); }
 void ConstVisitor::visit(const IfFlow *x) { defaultVisit(x); }
 void ConstVisitor::visit(const WhileFlow *x) { defaultVisit(x); }
@@ -69,11 +82,13 @@ void ConstVisitor::visit(const ImperativeForFlow *x) { defaultVisit(x); }
 void ConstVisitor::visit(const TryCatchFlow *x) { defaultVisit(x); }
 void ConstVisitor::visit(const PipelineFlow *x) { defaultVisit(x); }
 void ConstVisitor::visit(const dsl::CustomFlow *x) { defaultVisit(x); }
+void ConstVisitor::visit(const Const *x) { defaultVisit(x); }
 void ConstVisitor::visit(const TemplatedConst<int64_t> *x) { defaultVisit(x); }
 void ConstVisitor::visit(const TemplatedConst<double> *x) { defaultVisit(x); }
 void ConstVisitor::visit(const TemplatedConst<bool> *x) { defaultVisit(x); }
 void ConstVisitor::visit(const TemplatedConst<std::string> *x) { defaultVisit(x); }
 void ConstVisitor::visit(const dsl::CustomConst *x) { defaultVisit(x); }
+void ConstVisitor::visit(const Instr *x) { defaultVisit(x); }
 void ConstVisitor::visit(const AssignInstr *x) { defaultVisit(x); }
 void ConstVisitor::visit(const ExtractInstr *x) { defaultVisit(x); }
 void ConstVisitor::visit(const InsertInstr *x) { defaultVisit(x); }
@@ -89,6 +104,7 @@ void ConstVisitor::visit(const YieldInstr *x) { defaultVisit(x); }
 void ConstVisitor::visit(const ThrowInstr *x) { defaultVisit(x); }
 void ConstVisitor::visit(const FlowInstr *x) { defaultVisit(x); }
 void ConstVisitor::visit(const dsl::CustomInstr *x) { defaultVisit(x); }
+void ConstVisitor::visit(const types::Type *x) { defaultVisit(x); }
 void ConstVisitor::visit(const types::PrimitiveType *x) { defaultVisit(x); }
 void ConstVisitor::visit(const types::IntType *x) { defaultVisit(x); }
 void ConstVisitor::visit(const types::FloatType *x) { defaultVisit(x); }

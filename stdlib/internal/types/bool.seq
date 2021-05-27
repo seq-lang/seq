@@ -1,3 +1,5 @@
+from internal.attributes import commutative, associative
+
 from C import seq_str_bool(bool) -> str
 
 @extend
@@ -50,14 +52,20 @@ class bool:
         %0 = icmp uge i8 %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @commutative
+    @associative
     @llvm
     def __and__(self, other: bool) -> bool:
         %0 = and i8 %self, %other
         ret i8 %0
+    @commutative
+    @associative
     @llvm
     def __or__(self, other: bool) -> bool:
         %0 = or i8 %self, %other
         ret i8 %0
+    @commutative
+    @associative
     @llvm
     def __xor__(self, other: bool) -> bool:
         %0 = xor i8 %self, %other

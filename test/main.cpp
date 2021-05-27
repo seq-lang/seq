@@ -391,6 +391,7 @@ INSTANTIATE_TEST_SUITE_P(
     OptTests, SeqTest,
     testing::Combine(
         testing::Values(
+            "transform/canonical.seq",
             "transform/dict_opt.seq",
             "transform/folding.seq",
             "transform/for_lowering.seq",

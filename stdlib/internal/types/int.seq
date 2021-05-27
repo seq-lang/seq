@@ -1,3 +1,5 @@
+from internal.attributes import commutative, associative, distributive
+
 from C import seq_str_int(int) -> str
 from C import seq_str_uint(int) -> str
 
@@ -43,10 +45,13 @@ class int:
     def __rshift__(self, other: int) -> int:
         %0 = ashr i64 %self, %other
         ret i64 %0
+    @commutative
+    @associative
     @llvm
     def __add__(self, b: int) -> int:
         %tmp = add i64 %self, %b
         ret i64 %tmp
+    @commutative
     @llvm
     def __add__(self, other: float) -> float:
         %0 = sitofp i64 %self to double
@@ -61,10 +66,14 @@ class int:
         %0 = sitofp i64 %self to double
         %1 = fsub double %0, %other
         ret double %1
+    @commutative
+    @associative
+    @distributive
     @llvm
     def __mul__(self, b: int) -> int:
         %tmp = mul i64 %self, %b
         ret i64 %tmp
+    @commutative
     @llvm
     def __mul__(self, other: float) -> float:
         %0 = sitofp i64 %self to double
@@ -105,25 +114,23 @@ class int:
     def __invert__(a: int) -> int:
         %tmp = xor i64 %a, -1
         ret i64 %tmp
+    @commutative
+    @associative
     @llvm
     def __and__(a: int, b: int) -> int:
         %tmp = and i64 %a, %b
         ret i64 %tmp
+    @commutative
+    @associative
     @llvm
     def __or__(a: int, b: int) -> int:
         %tmp = or i64 %a, %b
         ret i64 %tmp
+    @commutative
+    @associative
     @llvm
     def __xor__(a: int, b: int) -> int:
         %tmp = xor i64 %a, %b
-        ret i64 %tmp
-    @llvm
-    def __shr__(a: int, b: int) -> int:
-        %tmp = ashr i64 %a, %b
-        ret i64 %tmp
-    @llvm
-    def __shl__(a: int, b: int) -> int:
-        %tmp = shl i64 %a, %b
         ret i64 %tmp
     @llvm
     def __bitreverse__(a: int) -> int:
@@ -257,7 +264,7 @@ class int:
         %tmp = atomicrmw nand i64* %d, i64 %b seq_cst
         ret i64 %tmp
     @llvm
-    def _atomic_or(_d__: Ptr[int], b: int) -> int:
+    def __atomic_or__(d: Ptr[int], b: int) -> int:
         %tmp = atomicrmw or i64* %d, i64 %b seq_cst
         ret i64 %tmp
     @llvm

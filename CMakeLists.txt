@@ -157,6 +157,7 @@ set(SEQ_HPPFILES
         compiler/sir/llvm/llvm.h
         compiler/sir/module.h
         compiler/sir/sir.h
+        compiler/sir/transform/cleanup/canonical.h
         compiler/sir/transform/cleanup/dead_code.h
         compiler/sir/transform/cleanup/replacer.h
         compiler/sir/transform/folding/const_fold.h
@@ -169,6 +170,7 @@ set(SEQ_HPPFILES
         compiler/sir/transform/pythonic/dict.h
         compiler/sir/transform/pythonic/io.h
         compiler/sir/transform/pythonic/str.h
+        compiler/sir/transform/rewrite.h
         compiler/sir/types/types.h
         compiler/sir/util/cloning.h
         compiler/sir/util/context.h
@@ -235,6 +237,7 @@ set(SEQ_CPPFILES
         compiler/sir/instr.cpp
         compiler/sir/llvm/llvisitor.cpp
         compiler/sir/module.cpp
+        compiler/sir/transform/cleanup/canonical.cpp
         compiler/sir/transform/cleanup/dead_code.cpp
         compiler/sir/transform/cleanup/replacer.cpp
         compiler/sir/transform/folding/const_fold.cpp

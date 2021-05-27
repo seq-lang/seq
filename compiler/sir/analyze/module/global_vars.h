@@ -11,6 +11,8 @@ namespace module {
 
 struct GlobalVarsResult : public Result {
   std::unordered_map<id_t, id_t> assignments;
+  explicit GlobalVarsResult(std::unordered_map<id_t, id_t> assignments)
+      : assignments(std::move(assignments)) {}
 };
 
 class GlobalVarsAnalyses : public Analysis {
