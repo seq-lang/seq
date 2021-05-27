@@ -48,8 +48,6 @@ public:
       auto right = cast<FloatConst>(rightConst)->getVal();
       return setResult(M->template N<TemplatedConst<Out>>(v->getSrcInfo(),
                                                           f((double)left, right), out));
-    } else {
-      return;
     }
   }
 };
