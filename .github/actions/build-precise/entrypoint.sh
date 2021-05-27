@@ -4,7 +4,7 @@ set -e
 
 # setup
 cd /github/workspace
-sudo sed -i.bak -r 's/(archive|security).ubuntu.com/old-releases.ubuntu.com/g' /etc/apt/sources.list
+sed -i.bak -r 's/(archive|security).ubuntu.com/old-releases.ubuntu.com/g' /etc/apt/sources.list
 apt-get update
 apt-get -y --force-yes install build-essential sudo curl wget git zlib1g-dev libbz2-dev liblzma-dev python-software-properties apt-transport-https ca-certificates
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
