@@ -696,11 +696,7 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
     return;
   if (isLt && lhs_is_int && rhs_is_int)
     return;
-  if (isAdd && !lhs_is_int && !rhs_is_int)
-    return;
   if (isAdd && lhs_is_int && rhs_is_int)
-    return;
-  if (isSub && !lhs_is_int && !rhs_is_int)
     return;
   if (isSub && lhs_is_int && rhs_is_int)
     return;
