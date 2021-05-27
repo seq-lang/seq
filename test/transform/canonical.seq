@@ -103,6 +103,12 @@ def test_op_chain_canon():
     assert f(1e100) + f(f(-1e100)) + f(f(f(1.))) == 1.
 test_op_chain_canon()
 
+class C:
+    n: int
+
+    def __lt__(self: C, other: C):
+        return self.n < other.n
+
 @test
 def test_inequality_canon():
     @pure
@@ -136,6 +142,11 @@ def test_inequality_canon():
     # EXPECT: vec ge (x: 2, y: 2) (x: 1, y: 1)
     # EXPECT: vec lt (x: 2, y: 2) (x: 1, y: 1)
     # EXPECT: vec le (x: 2, y: 2) (x: 1, y: 1)
+
+    c1 = C(1)
+    c2 = C(2)
+    # ensure we don't use missing ops
+    assert c1 < f(c2)
 test_inequality_canon()
 
 @test
