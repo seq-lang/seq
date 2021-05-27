@@ -546,3 +546,12 @@ def test_algebraic_simplification():
     assert eq(0//n, 0)
     assert eq(op_count, OP_COUNT)
 test_algebraic_simplification()
+
+n = 42
+@test
+def test_global_fold():
+    op_count = OP_COUNT
+    m = 1
+    assert eq(n + m, 43)
+    assert eq(op_count, OP_COUNT)
+test_global_fold()
