@@ -1,6 +1,11 @@
 from internal.gc import alloc_atomic, free
 from C import strtoll(cobj, Ptr[cobj], i32) -> int
 
+@tuple
+class object:
+    def __str__(self):
+        return '<object>'
+
 _stdout = _C.seq_stdout()
 def print(*args, sep: str = ' ', end: str = '\n', file=_stdout, flush: bool = False):
     """
@@ -168,12 +173,18 @@ def filter[T](f: Callable[[T], bool], x: Generator[T]):
         if f(a):
             yield a
 
-def map[S,T](f: Callable[[T], S], x: Generator[T]):
+def map(f, *args):
     """
     Applies a function on all a in x and returns map object
     """
-    for a in x:
-        yield f(a)
+    if staticlen(args) == 0:
+        compile_error("map() expects at least one iterator")
+    elif staticlen(args) == 1:
+        for a in args[0]:
+            yield f(a)
+    else:
+        for a in zip(*args):
+            yield f(*a)
 
 def enumerate(x, start: int = 0):
     """
