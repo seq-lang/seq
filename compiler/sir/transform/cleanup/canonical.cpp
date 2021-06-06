@@ -37,7 +37,6 @@ struct NodeRanker : public util::Operator {
     if (!root)
       root = node;
     maxDepth = std::max(maxDepth, depth());
-    hash_combine(node->nodeId());
     for (auto *v : node->getUsedVariables()) {
       hash_combine(v->getName());
     }
