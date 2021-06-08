@@ -706,8 +706,6 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
     return;
   if (isDiv && lhs_is_int && !isSqrtInv)
     return;
-  if (isDiv && rhs_is_int)
-    return;
   if (isPow && lhs_is_int)
     return;
   if (isPow && !rhs_is_int)
