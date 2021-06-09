@@ -689,8 +689,8 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
     isSqrtInv = sqrtFunc->getName().find("sqrt") != std::string::npos;
   }
 
-  bool lhs_is_int = bool(cast<IntConst>(lhs));
-  bool rhs_is_int = bool(cast<IntConst>(rhs));
+  bool lhs_is_int = lhsType->is(M->getIntType());
+  bool rhs_is_int = rhsType->is(M->getIntType());
 
   if (isGt && lhs_is_int && rhs_is_int)
     return;
