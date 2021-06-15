@@ -124,16 +124,19 @@ install -m644 libdeflate.a "${INSTALLDIR}/lib"
 install -m644 libdeflate.h "${INSTALLDIR}/include"
 
 # bdwgc
-BDWGC_VERSION='8.0.4'
-curl -L "https://github.com/ivmai/bdwgc/releases/download/v${BDWGC_VERSION}/gc-${BDWGC_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
-cd "${SRCDIR}/gc-${BDWGC_VERSION}"
+# BDWGC_VERSION='8.0.4'
+# curl -L "https://github.com/ivmai/bdwgc/releases/download/v${BDWGC_VERSION}/gc-${BDWGC_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
+cd "${SRCDIR}"
+git clone https://github.com/wangp/bdwgc -b unmap-limit
+cd bdwgc
+git clone git://github.com/ivmai/libatomic_ops.git
+./autogen.sh
 ./configure \
     CFLAGS="-fPIC" \
     --enable-threads=posix \
     --enable-large-config \
     --enable-thread-local-alloc \
     --prefix="${INSTALLDIR}"
-    # --enable-handle-fork=yes --disable-shared --enable-static
 make -j "${JOBS}" LDFLAGS=-static
 make install
 [ ! -f "${INSTALLDIR}/lib/libgc.a" ] && die "gc library not found"
