@@ -1688,6 +1688,7 @@ void LLVMVisitor::visit(const ForFlow *x) {
 void LLVMVisitor::visit(const ImperativeForFlow *x) {
   llvm::Value *loopVar = vars[x->getVar()];
   seqassert(loopVar, "{} loop variable not found", *x);
+  seqassert(x->getStep() != 0, "step cannot be 0");
 
   auto *condBlock = llvm::BasicBlock::Create(context, "imp_for.cond", func);
   auto *bodyBlock = llvm::BasicBlock::Create(context, "imp_for.body", func);
@@ -1695,16 +1696,13 @@ void LLVMVisitor::visit(const ImperativeForFlow *x) {
   auto *exitBlock = llvm::BasicBlock::Create(context, "imp_for.exit", func);
 
   process(x->getStart());
+  builder.SetInsertPoint(block);
   builder.CreateStore(value, loopVar);
   process(x->getEnd());
   auto *end = value;
-  builder.CreateBr(condBlock);
-
-  block = condBlock;
   builder.SetInsertPoint(block);
-
-  auto step = x->getStep();
-  seqassert(step != 0, "step cannot be 0");
+  builder.CreateBr(condBlock);
+  builder.SetInsertPoint(condBlock);
 
   llvm::Value *done;
   if (x->getStep() > 0)
@@ -1722,8 +1720,7 @@ void LLVMVisitor::visit(const ImperativeForFlow *x) {
   builder.SetInsertPoint(block);
   builder.CreateBr(updateBlock);
 
-  block = updateBlock;
-  builder.SetInsertPoint(block);
+  builder.SetInsertPoint(updateBlock);
   builder.CreateStore(
       builder.CreateAdd(builder.CreateLoad(loopVar), builder.getInt64(x->getStep())),
       loopVar);
