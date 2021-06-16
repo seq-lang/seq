@@ -1,4 +1,5 @@
 from C import seq_is_macos() -> bool
+import threading
 
 # <dlfcn.h>
 from C import dlerror() -> cobj as c_dlerror
@@ -21,10 +22,12 @@ _DLOPEN_CACHE = Dict[str, cobj]()
 def dlopen(name: str, flag: int = RTLD_NOW | RTLD_GLOBAL) -> cobj:
     if name in _DLOPEN_CACHE:
         return _DLOPEN_CACHE[name]
-    h = c_dlopen(cobj(0) if name == "" else name.c_str(), flag)
-    if h == cobj():
-        raise CError(dlerror())
-    _DLOPEN_CACHE[name] = h
+    h = cobj()
+    with threading.Lock():
+        h = c_dlopen(cobj(0) if name == "" else name.c_str(), flag)
+        if h == cobj():
+            raise CError(dlerror())
+        _DLOPEN_CACHE[name] = h
     return h
 
 def _dlsym(handle: cobj, name: str) -> cobj:
@@ -39,8 +42,10 @@ def dlsym(lib: str, name: str) -> cobj:
     if key in _DLSYM_CACHE:
         return _DLSYM_CACHE[key]
     h = dlopen(lib)
-    f = _dlsym(h, name)
-    _DLSYM_CACHE[key] = f
+    f = cobj()
+    with threading.Lock():
+        f = _dlsym(h, name)
+        _DLSYM_CACHE[key] = f
     return f
 
 def dlclose(handle: cobj):
