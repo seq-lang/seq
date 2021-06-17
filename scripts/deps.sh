@@ -124,10 +124,8 @@ install -m644 libdeflate.a "${INSTALLDIR}/lib"
 install -m644 libdeflate.h "${INSTALLDIR}/include"
 
 # bdwgc
-# BDWGC_VERSION='8.0.4'
-# curl -L "https://github.com/ivmai/bdwgc/releases/download/v${BDWGC_VERSION}/gc-${BDWGC_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
 cd "${SRCDIR}"
-git clone https://github.com/wangp/bdwgc -b unmap-limit
+git clone https://github.com/seq-lang/bdwgc
 cd bdwgc
 git clone git://github.com/ivmai/libatomic_ops.git
 ./autogen.sh
@@ -136,6 +134,7 @@ git clone git://github.com/ivmai/libatomic_ops.git
     --enable-threads=posix \
     --enable-large-config \
     --enable-thread-local-alloc \
+    --enable-handle-fork=yes \
     --prefix="${INSTALLDIR}"
 make -j "${JOBS}" LDFLAGS=-static
 make install
