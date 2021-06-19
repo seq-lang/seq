@@ -681,12 +681,11 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
   bool isSqrtInv = false;
   if (isDiv) {  // Special case where 1 / sqrt(x) is called
     auto *sqrtInstr = cast<CallInstr>(rhs);
-    if (!sqrtInstr)
-      return;
-    auto *sqrtFunc = util::getFunc(sqrtInstr->getCallee());
-    if (!sqrtFunc)
-      return;
-    isSqrtInv = sqrtFunc->getName().find("sqrt") != std::string::npos;
+    if (sqrtInstr) {
+      auto *sqrtFunc = util::getFunc(sqrtInstr->getCallee());
+      if (sqrtFunc)
+        isSqrtInv = sqrtFunc->getName().find("sqrt") != std::string::npos;
+    }
   }
 
   bool lhs_is_int = lhsType->is(M->getIntType());
