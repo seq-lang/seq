@@ -1572,7 +1572,6 @@ void TypecheckVisitor::generateFnCall(int n) {
             N<CallExpr>(N<IdExpr>("isinstance"), N<IdExpr>("TR"), N<IdExpr>("void")),
             N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__call__.void"),
                                     clone_nop(callArgs))),
-            nullptr,
             N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__call__.ret"),
                                       clone_nop(callArgs)))))));
     // Parse this function in a clean context.

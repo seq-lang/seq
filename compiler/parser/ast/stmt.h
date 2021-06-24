@@ -21,6 +21,7 @@ namespace seq {
 namespace ast {
 
 #define ACCEPT(X)                                                                      \
+  using Stmt::toString; \
   StmtPtr clone() const override;                                                      \
   void accept(X &visitor) override
 
@@ -50,7 +51,8 @@ public:
   explicit Stmt(const seq::SrcInfo &s);
 
   /// Convert a node to an S-expression.
-  virtual string toString() const = 0;
+  string toString() const;
+  virtual string toString(int indent) const = 0;
   /// Deep copy a node.
   virtual unique_ptr<Stmt> clone() const = 0;
   /// Accept an AST visitor.
@@ -95,7 +97,7 @@ struct SuiteStmt : public Stmt {
   SuiteStmt();
   SuiteStmt(const SuiteStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 
   const SuiteStmt *getSuite() const override { return this; }
@@ -114,7 +116,7 @@ struct PassStmt : public Stmt {
   PassStmt() = default;
   PassStmt(const PassStmt &stmt) = default;
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -124,7 +126,7 @@ struct BreakStmt : public Stmt {
   BreakStmt() = default;
   BreakStmt(const BreakStmt &stmt) = default;
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -134,7 +136,7 @@ struct ContinueStmt : public Stmt {
   ContinueStmt() = default;
   ContinueStmt(const ContinueStmt &stmt) = default;
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -146,7 +148,7 @@ struct ExprStmt : public Stmt {
   explicit ExprStmt(ExprPtr expr);
   ExprStmt(const ExprStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 
   const ExprStmt *getExpr() const override { return this; }
@@ -165,7 +167,7 @@ struct AssignStmt : public Stmt {
   AssignStmt(ExprPtr lhs, ExprPtr rhs, ExprPtr type = nullptr, bool shadow = false);
   AssignStmt(const AssignStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 
   const AssignStmt *getAssign() const override { return this; }
@@ -180,7 +182,7 @@ struct DelStmt : public Stmt {
   explicit DelStmt(ExprPtr expr);
   DelStmt(const DelStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -194,7 +196,7 @@ struct PrintStmt : public Stmt {
   explicit PrintStmt(vector<ExprPtr> &&items, bool isInline);
   PrintStmt(const PrintStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -208,7 +210,7 @@ struct ReturnStmt : public Stmt {
   explicit ReturnStmt(ExprPtr expr = nullptr);
   ReturnStmt(const ReturnStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -222,7 +224,7 @@ struct YieldStmt : public Stmt {
   explicit YieldStmt(ExprPtr expr = nullptr);
   YieldStmt(const YieldStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -237,7 +239,7 @@ struct AssertStmt : public Stmt {
   explicit AssertStmt(ExprPtr expr, ExprPtr message = nullptr);
   AssertStmt(const AssertStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -254,7 +256,7 @@ struct WhileStmt : public Stmt {
   WhileStmt(ExprPtr cond, StmtPtr suite, StmtPtr elseSuite = nullptr);
   WhileStmt(const WhileStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -274,7 +276,7 @@ struct ForStmt : public Stmt {
   ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite = nullptr);
   ForStmt(const ForStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -286,25 +288,14 @@ struct ForStmt : public Stmt {
 ///          elif b: bar()
 ///          else: baz()
 struct IfStmt : public Stmt {
-  struct If {
-    ExprPtr cond;
-    StmtPtr suite;
+  ExprPtr cond;
+  /// elseSuite can be nullptr (if no else is found).
+  StmtPtr ifSuite, elseSuite;
 
-    If clone() const;
-  };
-
-  /// Last member's cond is nullptr if there is more than one element (else block).
-  vector<If> ifs;
-
-  explicit IfStmt(vector<If> &&ifs);
-  /// Convenience constructor (if cond: suite).
-  IfStmt(ExprPtr cond, StmtPtr suite);
-  /// Convenience constructor (if cond: suite; elif elseCond: elseSuite).
-  /// elseCond can be nullptr (for unconditional else suite).
-  IfStmt(ExprPtr cond, StmtPtr suite, ExprPtr elseCond, StmtPtr elseSuite);
+  IfStmt(ExprPtr cond, StmtPtr ifSuite, StmtPtr elseSuite = nullptr);
   IfStmt(const IfStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -326,7 +317,7 @@ struct MatchStmt : public Stmt {
   MatchStmt(ExprPtr what, vector<MatchCase> &&cases);
   MatchStmt(const MatchStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -356,7 +347,7 @@ struct ImportStmt : public Stmt {
              ExprPtr ret = nullptr, string as = "", int dots = 0);
   ImportStmt(const ImportStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -385,7 +376,7 @@ struct TryStmt : public Stmt {
   TryStmt(StmtPtr suite, vector<Catch> &&catches, StmtPtr finally = nullptr);
   TryStmt(const TryStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -400,7 +391,7 @@ struct ThrowStmt : public Stmt {
   explicit ThrowStmt(ExprPtr expr, bool transformed = false);
   ThrowStmt(const ThrowStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -412,7 +403,7 @@ struct GlobalStmt : public Stmt {
   explicit GlobalStmt(string var);
   GlobalStmt(const GlobalStmt &stmt) = default;
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -467,7 +458,7 @@ struct FunctionStmt : public Stmt {
                vector<ExprPtr> &&decorators = vector<ExprPtr>());
   FunctionStmt(const FunctionStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 
   /// @return a function signature that consists of generics and arguments in a
@@ -496,7 +487,7 @@ struct ClassStmt : public Stmt {
             Attr attributes = Attr(), vector<ExprPtr> &&decorators = vector<ExprPtr>());
   ClassStmt(const ClassStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 
   /// @return true if a class is a tuple-like record (e.g. has a "@tuple" attribute)
@@ -514,7 +505,7 @@ struct YieldFromStmt : public Stmt {
   explicit YieldFromStmt(ExprPtr expr);
   YieldFromStmt(const YieldFromStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -531,7 +522,7 @@ struct WithStmt : public Stmt {
   WithStmt(vector<pair<ExprPtr, string>> &&itemVarPairs, StmtPtr suite);
   WithStmt(const WithStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -544,7 +535,7 @@ struct CustomStmt : public Stmt {
   CustomStmt(ExprPtr head, StmtPtr suite);
   CustomStmt(const CustomStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -560,7 +551,7 @@ struct AssignMemberStmt : public Stmt {
   AssignMemberStmt(ExprPtr lhs, string member, ExprPtr rhs);
   AssignMemberStmt(const AssignMemberStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 
@@ -575,7 +566,7 @@ struct UpdateStmt : public Stmt {
   UpdateStmt(ExprPtr lhs, ExprPtr rhs, bool isAtomic = false);
   UpdateStmt(const UpdateStmt &stmt);
 
-  string toString() const override;
+  string toString(int indent) const override;
   ACCEPT(ASTVisitor);
 };
 

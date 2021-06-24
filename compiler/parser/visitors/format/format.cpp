@@ -307,19 +307,11 @@ void FormatVisitor::visit(ForStmt *stmt) {
 }
 
 void FormatVisitor::visit(IfStmt *stmt) {
-  string ifs;
-  string prefix = "";
-  for (int i = 0; i < stmt->ifs.size(); i++) {
-    if (stmt->ifs[i].cond)
-      ifs += fmt::format("{}{} {}:{}{}", i ? pad() : "", keyword(prefix + "if"),
-                         transform(stmt->ifs[i].cond), newline(),
-                         transform(stmt->ifs[i].suite.get(), 1));
-    else
-      ifs += fmt::format("{}{}:{}{}", pad(), keyword("else"), newline(),
-                         transform(stmt->ifs[i].suite.get(), 1));
-    prefix = "el";
-  }
-  result = ifs;
+  result = fmt::format("{} {}:{}{}{}", keyword("if"), transform(stmt->cond), newline(),
+                       transform(stmt->ifSuite.get(), 1),
+                       stmt->elseSuite ? format("{}:{}{}", keyword("else"), newline(),
+                                                transform(stmt->elseSuite.get(), 1))
+                                       : "");
 }
 
 void FormatVisitor::visit(MatchStmt *stmt) {

@@ -214,24 +214,9 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
 }
 
 void SimplifyVisitor::visit(IfStmt *stmt) {
-  seqassert(!stmt->ifs.empty() && stmt->ifs[0].cond, "invalid if statement");
-
-  vector<IfStmt::If> topIf;
-  topIf.emplace_back(
-      IfStmt::If{transform(clone(stmt->ifs[0].cond)), transform(stmt->ifs[0].suite)});
-  vector<IfStmt::If> subIf;
-  for (auto i = 1; i < stmt->ifs.size(); i++) {
-    seqassert(stmt->ifs[i].cond || i == int(stmt->ifs.size() - 1),
-              "else that is not last condition");
-    subIf.push_back({clone(stmt->ifs[i].cond), clone(stmt->ifs[i].suite)});
-  }
-  if (!subIf.empty()) {
-    if (!subIf[0].cond)
-      topIf.emplace_back(IfStmt::If{nullptr, transform(subIf[0].suite)});
-    else
-      topIf.emplace_back(IfStmt::If{nullptr, transform(N<IfStmt>(move(subIf)))});
-  }
-  resultStmt = N<IfStmt>(move(topIf));
+  seqassert(stmt->cond, "invalid if statement");
+  resultStmt = N<IfStmt>(transform(stmt->cond), transform(stmt->ifSuite),
+                         transform(stmt->elseSuite));
 }
 
 void SimplifyVisitor::visit(MatchStmt *stmt) {
@@ -1412,10 +1397,13 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
               N<DotExpr>(N<DotExpr>(I("self"), args[i].name), format("__{}__", op)),
               N<DotExpr>(I("other"), args[i].name)),
           N<ReturnStmt>(N<BoolExpr>(true)),
-          N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), args[i].name), "__eq__"),
-                      N<DotExpr>(I("other"), args[i].name)),
-          N<SuiteStmt>()));
-      v = &((SuiteStmt *)(((IfStmt *)(v->back().get()))->ifs.back().suite).get())
+          N<IfStmt>(
+              N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), args[i].name), "__eq__"),
+                          N<DotExpr>(I("other"), args[i].name)),
+              N<SuiteStmt>())));
+      v = &((SuiteStmt *)(((IfStmt *)(((IfStmt *)(v->back().get()))->elseSuite.get()))
+                              ->ifSuite)
+                .get())
                ->stmts;
     }
     if (!args.empty())
@@ -1439,10 +1427,13 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
                                                    format("__{}__", op)),
                                         N<DotExpr>(I("other"), args[i].name))),
           N<ReturnStmt>(N<BoolExpr>(false)),
-          N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), args[i].name), "__eq__"),
-                      N<DotExpr>(I("other"), args[i].name)),
-          N<SuiteStmt>()));
-      v = &((SuiteStmt *)(((IfStmt *)(v->back().get()))->ifs.back().suite).get())
+          N<IfStmt>(
+              N<CallExpr>(N<DotExpr>(N<DotExpr>(I("self"), args[i].name), "__eq__"),
+                          N<DotExpr>(I("other"), args[i].name)),
+              N<SuiteStmt>())));
+      v = &((SuiteStmt *)(((IfStmt *)(((IfStmt *)(v->back().get()))->elseSuite.get()))
+                              ->ifSuite)
+                .get())
                ->stmts;
     }
     if (!args.empty())
