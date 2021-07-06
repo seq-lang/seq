@@ -300,44 +300,40 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
 }
 
 void TypecheckVisitor::visit(IfStmt *stmt) {
-  seqassert(stmt->ifs.size() == 1 || (stmt->ifs.size() == 2 && !stmt->ifs[1].cond),
-            "if not simplified");
-
   stmt->done = true;
-  vector<IfStmt::If> ifs;
   bool includeElse = true, transformElse = true;
-  auto cond = transform(stmt->ifs[0].cond);
-  if (cond->isStaticExpr) {
-    if (cond->staticEvaluation.first && !cond->staticEvaluation.second) {
+  stmt->cond = transform(stmt->cond);
+  StmtPtr ifSuite(nullptr), elseSuite(nullptr);
+  if (stmt->cond->isStaticExpr) {
+    if (stmt->cond->staticEvaluation.first && !stmt->cond->staticEvaluation.second) {
       ; // do not include this suite
-    } else if (!cond->staticEvaluation.first) {
+    } else if (!stmt->cond->staticEvaluation.first) {
       stmt->done = false; // do not typecheck this suite yet
       transformElse = false;
-      ifs.emplace_back(IfStmt::If{move(cond), move(stmt->ifs[0].suite)});
+      ifSuite = move(stmt->ifSuite);
     } else {
-      if ((stmt->ifs[0].suite = transform(stmt->ifs[0].suite))) {
-        ifs.emplace_back(IfStmt::If{move(cond), move(stmt->ifs[0].suite)});
-      }
+      if ((stmt->ifSuite = transform(stmt->ifSuite)))
+        ifSuite = move(stmt->ifSuite);
       includeElse = false;
     }
   } else {
-    if (cond->type->getClass() && !cond->type->is("bool"))
-      cond = transform(N<CallExpr>(N<DotExpr>(move(cond), "__bool__")));
-    ifs.emplace_back(IfStmt::If{move(cond), transform(stmt->ifs[0].suite)});
+    if (stmt->cond->type->getClass() && !stmt->cond->type->is("bool"))
+      stmt->cond = transform(N<CallExpr>(N<DotExpr>(move(stmt->cond), "__bool__")));
+    ifSuite = transform(stmt->ifSuite);
   }
-  if (!ifs.empty())
-    stmt->done &= ifs.back().cond->done && ifs.back().suite->done;
-  if (stmt->ifs.size() == 2 && includeElse) {
-    ifs.emplace_back(IfStmt::If{nullptr, transformElse ? transform(stmt->ifs[1].suite)
-                                                       : move(stmt->ifs[1].suite)});
-    stmt->done &= ifs.back().suite->done;
+  if (ifSuite)
+    stmt->done &= stmt->cond->done && ifSuite->done;
+  if (stmt->elseSuite && includeElse) {
+    elseSuite =  transformElse ? transform(stmt->elseSuite)
+                                                       : move(stmt->elseSuite);
+    stmt->done &= elseSuite->done;
   }
-  if (!ifs.empty() && !ifs[0].cond)
-    resultStmt = move(ifs[0].suite);
-  else if (!ifs.empty())
-    stmt->ifs = move(ifs);
-  else
+  if (!ifSuite && !elseSuite)
     resultStmt = transform(N<PassStmt>());
+  else if (!ifSuite && elseSuite)
+    resultStmt = move(elseSuite);
+  else if (ifSuite)
+    stmt->ifSuite = move(ifSuite), stmt->elseSuite = move(elseSuite);
 }
 
 void TypecheckVisitor::visit(TryStmt *stmt) {

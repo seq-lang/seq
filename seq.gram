@@ -1,0 +1,139 @@
+# Seq PEG grammar
+# Adpoted from Python 3's PEG grammar (https://docs.python.org/3/reference/grammar.html)
+
+program <- statements !.
+
+# Macros
+T(x) <- < x > _
+list(c, e)  <- e _ (T(c) e _)*
+tlist(c, e) <- e _ (T(c) e _)* T(c)?
+
+statements <- (statement / COMMENT EOL / _ EOL)+
+statement <- SAMEDENT simple_stmt # compound_stmt
+simple_stmt <- tlist(';', small_stmt) _ EOL
+small_stmt <- T('pass')
+            / T('break')
+            / T('continue')
+            / global_stmt
+            / yield_stmt
+            / assert_stmt
+            / del_stmt
+            / return_stmt
+            / raise_stmt
+            / print_stmt
+            / expressions
+global_stmt <- T('global') tlist(',', NAME)
+yield_stmt <- T('yield') T('from') expression / T('yield') expressions?
+assert_stmt <- T('assert') expression _ (T(',') expression _)?
+del_stmt <- T('del') tlist(',', expression) # TODO: do targets as in Python
+return_stmt <- T('return') expressions?
+raise_stmt <- T('raise') expression?  # TODO: raise expression 'from' expression
+print_stmt <- T('print ') expression _ (T(',') expression _)* T(',')
+            / T('print ') expression _ (T(',') expression _)*
+            / T('print')
+
+########################################################################################
+# (2) Expressions
+########################################################################################
+
+expressions <- tlist(',', expression)
+expression <- disjunction _ T('if') disjunction _ T('else') expression / disjunction
+disjunction <- conjunction _ (T('or') conjunction _)+ / conjunction
+conjunction <- inversion _ (T('and') inversion _)+ / inversion
+inversion <- T('not') inversion / comparison
+comparison <- bitwise_or _ (compare_op_bitwise_or _)*
+compare_op_bitwise_or <- T('not') T('in') bitwise_or
+                       / T('is') T('not') bitwise_or
+                       / T('==' / '!=' / '<=' / '<' / '>=' / '>' / 'in' / 'is') bitwise_or
+bitwise_or <- bitwise_xor _ (T('|') bitwise_xor _)*
+bitwise_xor <- bitwise_and _ (T('^') bitwise_and _)*
+bitwise_and <- shift_expr _ (T('&') shift_expr _)*
+shift_expr <- sum _ (T('<<' / '>>') sum _)*
+sum <- term _ (T('+' / '-') term _)*
+term <- factor _ (T('*' / '/' / '//' / '%' / '@') factor _)*
+factor <- T('+') factor / T('-') factor / T('~') factor / power
+power <- primary _ T('**') factor / primary
+primary <- atom _ (primary_tail _)*
+t_primary <- atom _ (t_primary_tail _)* &T_LOOKAHEAD
+~T_LOOKAHEAD <- '(' / '[' / '.'
+primary_tail <- T('.') NAME / genexp / arguments / slices
+t_primary_tail <- T('.') NAME / genexp / arguments / slices
+slices <- '[' _ (slice !',' / list(',', slice)) _ ']'
+slice <- slice_part _ T(':') slice_part _ (T(':') slice_part _)? / expression
+slice_part <- expression?
+atom <- T('True') / T('False') / T('None')
+      / (STRING _)+ / NAME _ / INT NAME? _
+      / parentheses
+      / T('...')
+parentheses <- tuple / yield / named / genexp 
+             / listexpr / listcomp 
+             / dict / set / dictcomp / setcomp
+tuple <- '(' _ tlist(',', star_named_expression) _ ')'
+yield <- '(' _ T('yield') _ ')'
+named <- '(' _ named_expression _ ')'
+genexp <- '(' _ named_expression _ for_if_clauses _ ')'
+listexpr <- '[' _ tlist(',', star_named_expression)? _ ']'
+listcomp <- '[' _ named_expression _ for_if_clauses _ ']'
+set <- '{' _ tlist(',', star_named_expression) _ '}'
+setcomp <- '{' _ named_expression _ for_if_clauses _ '}'
+dict <- '{' _ tlist(',', double_starred_kvpair)? _ '}'
+dictcomp <- '{' _ kvpair for_if_clauses _ '}'
+double_starred_kvpair <- T('**') bitwise_or / kvpair
+kvpair <- expression _ T(':') expression
+for_if_clauses <- (for_if_clause _)+
+for_if_clause <- T('for') star_targets _ T('in') disjunction _ (T('if') disjunction _)*
+star_targets <- star_target !',' / tlist(',', star_target)
+star_target <- T('*') !'*' star_target / target_with_star_atom
+target_with_star_atom <- t_primary _ T('.') NAME _ !T_LOOKAHEAD 
+                       / t_primary _ slices _ !T_LOOKAHEAD 
+                       / NAME 
+                       / star_parens
+star_parens <- '(' _ target_with_star_atom _ ')'
+             / '(' _ (star_target _ (T(',') star_target _)+ T(',')? / star_target _ T(',')) _ ')' 
+             / '[' _ tlist(',', star_target) _ ']'
+star_named_expression <- T('*') bitwise_or / named_expression
+named_expression <- NAME _ T(':=') ↑ expression / expression _ !':='
+arguments <- '(' _ tlist(',', args)* _ ')'
+args <- simple_args _ (T(',') kwargs _)? / kwargs
+simple_args <- list(',', (starred_expression / named_expression !'='))
+starred_expression <- T('*') _ expression 
+kwargs <- list(',', kwarg_or_starred) _ T(',') list(',', kwarg_or_double_starred)
+        / list(',', kwarg_or_starred)
+        / list(',', kwarg_or_double_starred)
+kwarg_or_starred <- NAME _ T('=') expression / starred_expression 
+kwarg_or_double_starred <- NAME _ T('=') expression / T('**') expression 
+
+INT <- BININT / HEXINT / DECINT
+BININT <- <'0' [bB] [0-1] ('_'* [0-1])*>
+HEXINT <- <'0' [xX] [0-9a-fA-F] ('_'* [0-9a-fA-F])*>
+DECINT <- <[0-9] ('_'* [0-9])*>
+NAME <- < [a-zA-Z_] [a-zA-Z_0-9]* >
+
+STRING <- < NAME? STR >
+STR <- < '"""' (!'"""' CHAR)* '"""' /  '\'\'\'' (!'\'\'\'' CHAR)* '\'\'\'' / '"' (!('"' / EOL) CHAR)* '"' /  '\'' (!('\'' / EOL) CHAR)* '\'' >
+CHAR <- '\\' . / .
+
+~COMMENT <- <'#' (!EOL .)*>
+~INDENT <- < [ \t]* >
+~SAMEDENT <- < [ \t]* >
+~DEDENT <- < [ \t]* >
+~EOL <- < '\r\n' / [\r\n] >
+~_ <- ([ \t] / COMMENT / (NLP EOL))*
+
+
+# ###
+# stmt <- block_stmt / (SAMEDENT small_stmt) _
+# block_stmt <- if_stmt
+# small_stmt <- print_stmt / expr_stmt
+# print_stmt <- 'print' _ expr
+# expr_stmt <- expr
+# if_stmt <- eblock('if') eblock('elif')* block('else')?
+# eblock(T) <- SAMEDENT T _ expr _ ':' _ suite
+# block(T) <- SAMEDENT T _ ':' _ suite
+# suite <- EOL &INDENT stmts &DEDENT
+
+# # floatsuffix <- float IDENT
+# # pointfloat <- INT? '.' INT
+# # float <- pointfloat / expfloat
+# # expfloat <- (INT / pointfloat / INT '.') [eE] [+-]? INT
+

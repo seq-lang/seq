@@ -99,6 +99,7 @@ public:
   void visit(LambdaExpr *) override;
   void visit(YieldExpr *) override;
   void visit(StmtExpr *expr) override;
+  void visit(AssignExpr *expr) override;
 
   void visit(SuiteStmt *) override;
   void visit(PassStmt *) override;

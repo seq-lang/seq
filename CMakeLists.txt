@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.9)
 project(Seq)
 include(ExternalProject)
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -pedantic -Wall -Wno-return-type-c-linkage")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -pedantic -Wall -Wno-return-type-c-linkage -Wno-gnu-zero-variadic-macro-arguments")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -fno-limit-debug-info")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 include_directories(.)
@@ -35,21 +35,6 @@ if (NOT EXISTS ${BDWGC})
     message(FATAL_ERROR "Cannot find ${BDWGC}")
 endif ()
 message(STATUS "Found bdwgc: ${BDWGC}")
-
-execute_process(COMMAND ${SEQ_DEP}/bin/ocamlc -where
-        RESULT_VARIABLE result
-        OUTPUT_VARIABLE OCAML_STDLIB_PATH
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-if (result)
-    message(FATAL_ERROR "CMake step for ocaml failed: ${result}")
-endif ()
-message(STATUS "Found OCaml: ${OCAML_STDLIB_PATH}")
-
-set(MENHIRLIB ${SEQ_DEP}/share/menhir)
-if (NOT EXISTS ${MENHIRLIB}/menhirLib.cmx)
-    message(FATAL_ERROR "Cannot find ${MENHIRLIB}/menhirLib.cmx")
-endif ()
-message(STATUS "Found Menhir: ${MENHIRLIB}")
 
 if (APPLE)
     set(OMPLIB ${SEQ_DEP}/lib/libomp.dylib)
@@ -94,24 +79,6 @@ endif ()
 set(BACKTRACE ${SEQ_DEP}/lib/libbacktrace.a)
 target_link_libraries(seqrt PUBLIC ${BACKTRACE})
 
-# Seq parsing library
-include_directories(${OCAML_STDLIB_PATH})
-link_directories(${OCAML_STDLIB_PATH})
-
-ExternalProject_Add(seqparse_target
-        SOURCE_DIR ${CMAKE_SOURCE_DIR}/compiler/parser/ocaml
-        CONFIGURE_COMMAND cp -r ${CMAKE_SOURCE_DIR}/compiler/parser/ocaml ${CMAKE_BINARY_DIR}/seqparse
-        BINARY_DIR ${CMAKE_BINARY_DIR}/seqparse
-        BUILD_COMMAND make -C ocaml
-        OCAML=${SEQ_DEP}/bin/ocamlopt
-        OCAMLLEX=${SEQ_DEP}/bin/ocamllex
-        MENHIR=${SEQ_DEP}/bin/menhir
-        MENHIR_LIB=${MENHIRLIB}
-        INSTALL_COMMAND "")
-ExternalProject_Get_Property(seqparse_target BINARY_DIR)
-set(LIB_SEQPARSE ${BINARY_DIR}/ocaml/seqparser.o)
-set_property(SOURCE ${LIB_SEQPARSE} PROPERTY GENERATED 1)
-
 # Seq compiler library
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
@@ -126,7 +93,7 @@ set(SEQ_HPPFILES
         compiler/parser/cache.h
         compiler/parser/common.h
         compiler/parser/ctx.h
-        compiler/parser/ocaml/ocaml.h
+        compiler/parser/peg.h
         compiler/parser/parser.h
         compiler/parser/visitors/doc/doc.h
         compiler/parser/visitors/format/format.h
@@ -186,6 +153,7 @@ set(SEQ_HPPFILES
         compiler/sir/value.h
         compiler/sir/var.h
         compiler/util/common.h
+        compiler/util/peglib.h
         compiler/util/fmt/chrono.h
         compiler/util/fmt/color.h
         compiler/util/fmt/compile.h
@@ -204,7 +172,7 @@ set(SEQ_CPPFILES
         compiler/parser/ast/types.cpp
         compiler/parser/cache.cpp
         compiler/parser/common.cpp
-        compiler/parser/ocaml/ocaml.cpp
+        compiler/parser/peg.cpp
         compiler/parser/parser.cpp
         compiler/parser/visitors/doc/doc.cpp
         compiler/parser/visitors/format/format.cpp
@@ -262,8 +230,7 @@ set(SEQ_CPPFILES
         compiler/util/common.cpp
         compiler/util/fmt/format.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
-add_dependencies(seq seqparse_target)
-target_sources(seq PRIVATE ${LIB_SEQPARSE} ${SEQ_CPPFILES})
+target_sources(seq PRIVATE ${SEQ_CPPFILES})
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 if (APPLE)
     target_link_libraries(seq ${LLVM_LIBS} dl seqrt)

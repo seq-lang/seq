@@ -289,24 +289,20 @@ void TranslateVisitor::visit(ForStmt *stmt) {
 }
 
 void TranslateVisitor::visit(IfStmt *stmt) {
-  if (!stmt->ifs[0].cond) {
-    transform(stmt->ifs[0].suite);
-  } else {
-    auto cond = transform(stmt->ifs[0].cond);
-    auto trueSeries = make<ir::SeriesFlow>(stmt, "ifstmt_true");
-    ctx->addSeries(trueSeries);
-    transform(stmt->ifs[0].suite);
-    ctx->popSeries();
+  auto cond = transform(stmt->cond);
+  auto trueSeries = make<ir::SeriesFlow>(stmt, "ifstmt_true");
+  ctx->addSeries(trueSeries);
+  transform(stmt->ifSuite);
+  ctx->popSeries();
 
-    ir::SeriesFlow *falseSeries = nullptr;
-    if (stmt->ifs.size() > 1) {
-      falseSeries = make<ir::SeriesFlow>(stmt, "ifstmt_false");
-      ctx->addSeries(falseSeries);
-      transform(stmt->ifs[1].suite);
-      ctx->popSeries();
-    }
-    result = make<ir::IfFlow>(stmt, cond, trueSeries, falseSeries);
+  ir::SeriesFlow *falseSeries = nullptr;
+  if (stmt->elseSuite) {
+    falseSeries = make<ir::SeriesFlow>(stmt, "ifstmt_false");
+    ctx->addSeries(falseSeries);
+    transform(stmt->elseSuite);
+    ctx->popSeries();
   }
+  result = make<ir::IfFlow>(stmt, cond, trueSeries, falseSeries);
 }
 
 void TranslateVisitor::visit(TryStmt *stmt) {
