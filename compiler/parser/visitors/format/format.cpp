@@ -239,6 +239,10 @@ void FormatVisitor::visit(StmtExpr *expr) {
                       transform(expr->expr));
 }
 
+void FormatVisitor::visit(AssignExpr *expr) {
+  result = renderExpr(expr, "({} := {})", transform(expr->var), transform(expr->expr));
+}
+
 void FormatVisitor::visit(SuiteStmt *stmt) {
   for (int i = 0; i < stmt->stmts.size(); i++)
     result += transform(stmt->stmts[i]);

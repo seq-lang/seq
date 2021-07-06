@@ -260,7 +260,7 @@ void setExprRules(parser &rules) {
   };
   rules["primary_tail"] = primary_tail;
   rules["t_primary_tail"] = primary_tail;
-  rules["slices"] = [](SV &vs) {
+  auto TUPLE = [](SV &vs) {
     if (vs.size() == 1)
       return vs[0];
     vector<ExprPtr> e;
@@ -268,6 +268,7 @@ void setExprRules(parser &rules) {
       e.push_back(UE(i));
     return NE(Tuple, move(e));
   };
+  rules["slices"] = TUPLE;
   rules["slice"] = [](SV &vs) {
     if (vs.choice() == 0)
       return NE(Slice, UE(vs[0]), UE(vs[1]), vs.size() > 2 ? UE(vs[2]) : nullptr);
@@ -283,12 +284,22 @@ void setExprRules(parser &rules) {
       return NE(Bool, false);
     if (vs.choice() == 2)
       return NE(None);
-    if (vs.choice() == 3)
-      return NE(Id, any_cast<string>(vs[0]));
     if (vs.choice() == 4)
+      return NE(Id, any_cast<string>(vs[0]));
+    if (vs.choice() == 5)
       return NE(Int, any_cast<string>(vs[0]),
                 vs.size() > 1 ? any_cast<string>(vs[1]) : "");
-    if (vs.choice() == 5)
+    if (vs.choice() == 3) {
+      string s;
+      string f;
+      for (auto &v: vs) {
+        auto p = any_cast<pair<string, string>>(v);
+        s += p.second;
+        f = p.first; // TODO fix
+      }
+      return NE(String, s, f);
+    }
+    if (vs.choice() == 6)
       return vs[0];
     return NE(Ellipsis);
   };
@@ -348,7 +359,7 @@ void setExprRules(parser &rules) {
   };
   rules["double_starred_kvpair"] = [](SV &vs) {
     if (vs.choice() == 0)
-      return make_any<pair<any, any>>(make_any<Expr *>(nullptr),
+      return make_any<pair<any, any>>(NE(Id, ""),
                                       NE(KeywordStar, UE(vs[0])));
     return vs[0];
   };
@@ -357,30 +368,22 @@ void setExprRules(parser &rules) {
   rules["for_if_clause"] = [](SV &vs) {
     return make_tuple(vs[0], vs[1], vector<any>(vs.begin() + 2, vs.end()));
   };
-
-
-  rules["star_targets"] = [](SV &vs) {
-    return NE(Id, "--");
-    // return vector<any>(vs.begin(), vs.end());
+  rules["star_targets"] = TUPLE;
+  rules["star_target"] = [](SV &vs) {
+    if (vs.choice() == 0)
+      return NE(Star, UE(vs[0]));
+    return vs[0];
   };
-  rules["star_target"] = COPY;
   rules["target_with_star_atom"] = [](SV &vs) {
     if (vs.choice() == 0)
       return NE(Dot, UE(vs[0]), any_cast<string>(vs[1]));
     if (vs.choice() == 1)
       return NE(Index, UE(vs[0]), UE(vs[1]));
+    if (vs.choice() == 2)
+      return NE(Id, any_cast<string>(vs[0]));
     return vs[0];
   };
-  rules["star_atom"] = [](SV &vs) {
-    if (vs.choice() == 2 || vs.choice() == 3) {
-      vector<ExprPtr> e;
-      for (auto &i : vs)
-        e.push_back(UE(i));
-      return NE(Tuple, move(e));
-    }
-    return vs[0];
-  };
-
+  rules["star_parens"] = TUPLE;
   rules["star_named_expression"] = [](SV &vs) {
     if (vs.choice() == 0)
       return NE(Star, UE(vs[0]));
@@ -456,6 +459,17 @@ void setLexingRules(parser &rules) {
   };
   rules["NAME"] = STRING;
   rules["INT"] = STRING;
+  rules["STRING"] = [](SV &vs) {
+    return make_pair(vs.size() > 1 ? any_cast<string>(vs[0]) : "", any_cast<string>(vs[vs.size() > 1 ? 1 : 0]));
+  };
+  rules["STR"] = [](SV &vs) {
+    string s;
+    s.reserve(vs.size());
+    for (auto &v: vs)
+      s.append(any_cast<string>(v));
+    return s;
+  };
+  rules["CHAR"] = STRING;
 
   // arguments | slices | genexp | parentheses
   auto inc = [](string x) { return [x](const char* c, size_t n, any& dt) {
@@ -466,7 +480,7 @@ void setLexingRules(parser &rules) {
     //LOG("DEC {} / {}", x, any_cast<ParseContext &>(dt).parens-1);
     any_cast<ParseContext &>(dt).parens--; };
   } ;
-  for (auto &rule: vector<string>{"arguments", "slices", "genexp", "parentheses"}) {
+  for (auto &rule: vector<string>{"arguments", "slices", "genexp", "parentheses", "star_parens"}) {
     rules[rule.c_str()].enter = inc(rule);
     rules[rule.c_str()].leave = dec(rule);
   }
@@ -514,35 +528,35 @@ StmtPtr parseFile(const string &file) {
 
   Stmt *stmt = nullptr;
   auto ctx = make_any<ParseContext>(0);
-  parser.enable_trace([&](const peg::Ope &ope, const char *s, size_t /*n*/,
-                          const peg::SemanticValues &sv, const peg::Context &c,
-                          const std::any & /*dt*/) {},
-                      [&](const peg::Ope &ope, const char *s, size_t /*n*/,
-                          const peg::SemanticValues &sv, const peg::Context &c,
-                          const std::any & /*dt*/, size_t len) {
-                        auto pos = static_cast<size_t>(s - c.s);
-                        if (len != static_cast<size_t>(-1)) {
-                          pos += len;
-                        }
-                        string indent;
-                        auto level = c.trace_ids.size() - 1;
-                        while (level--) {
-                          indent += " ";
-                        }
-                        auto name = peg::TraceOpeName::get(const_cast<peg::Ope &>(ope));
-                        if (len != static_cast<size_t>(-1) && name[0] == '[') {
-                          std::stringstream choice;
-                          if (sv.choice_count() > 0)
-                            choice << " " << sv.choice() << "/" << sv.choice_count();
-                          std::string matched;
-                          if (peg::success(len))
-                            matched =
-                                ", match '" + peg::escape_characters(s, len) + "'";
-                          // std::cout << "L " << sv.line_info().first << "\t" << indent
-                          //           << name << " #" << choice.str() << matched
-                          //           << std::endl;
-                        }
-                      });
+  // parser.enable_trace([&](const peg::Ope &ope, const char *s, size_t /*n*/,
+  //                         const peg::SemanticValues &sv, const peg::Context &c,
+  //                         const std::any & /*dt*/) {},
+  //                     [&](const peg::Ope &ope, const char *s, size_t /*n*/,
+  //                         const peg::SemanticValues &sv, const peg::Context &c,
+  //                         const std::any & /*dt*/, size_t len) {
+  //                       auto pos = static_cast<size_t>(s - c.s);
+  //                       if (len != static_cast<size_t>(-1)) {
+  //                         pos += len;
+  //                       }
+  //                       string indent;
+  //                       auto level = c.trace_ids.size() - 1;
+  //                       while (level--) {
+  //                         indent += " ";
+  //                       }
+  //                       auto name = peg::TraceOpeName::get(const_cast<peg::Ope &>(ope));
+  //                       if (len != static_cast<size_t>(-1) && name[0] == '[') {
+  //                         std::stringstream choice;
+  //                         if (sv.choice_count() > 0)
+  //                           choice << " " << sv.choice() << "/" << sv.choice_count();
+  //                         std::string matched;
+  //                         if (peg::success(len))
+  //                           matched =
+  //                               ", match '" + peg::escape_characters(s, len) + "'";
+  //                         // std::cout << "L " << sv.line_info().first << "\t" << indent
+  //                         //           << name << " #" << choice.str() << matched
+  //                         //           << std::endl;
+  //                       }
+  //                     });
   auto ret = parser.parse_n(source.data(), source.size(), ctx, stmt, file.c_str());
   assert(ret);
   assert(stmt);

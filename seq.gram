@@ -8,8 +8,6 @@ T(x) <- < x > _
 list(c, e)  <- e _ (T(c) e _)*
 tlist(c, e) <- e _ (T(c) e _)* T(c)?
 
-#  [LR][PSB]
-
 statements <- (statement / COMMENT EOL / _ EOL)+
 statement <- SAMEDENT simple_stmt # compound_stmt
 simple_stmt <- tlist(';', small_stmt) _ EOL
@@ -27,7 +25,7 @@ small_stmt <- T('pass')
 global_stmt <- T('global') tlist(',', NAME)
 yield_stmt <- T('yield') T('from') expression / T('yield') expressions?
 assert_stmt <- T('assert') expression _ (T(',') expression _)?
-del_stmt <- T('del') tlist(',', expression)
+del_stmt <- T('del') tlist(',', expression) # TODO: do targets as in Python
 return_stmt <- T('return') expressions?
 raise_stmt <- T('raise') expression?  # TODO: raise expression 'from' expression
 print_stmt <- T('print ') expression _ (T(',') expression _)* T(',')
@@ -64,7 +62,7 @@ slices <- '[' _ (slice !',' / list(',', slice)) _ ']'
 slice <- slice_part _ T(':') slice_part _ (T(':') slice_part _)? / expression
 slice_part <- expression?
 atom <- T('True') / T('False') / T('None')
-      / NAME _ / INT NAME? _
+      / (STRING _)+ / NAME _ / INT NAME? _
       / parentheses
       / T('...')
 parentheses <- tuple / yield / named / genexp 
@@ -84,18 +82,15 @@ double_starred_kvpair <- T('**') bitwise_or / kvpair
 kvpair <- expression _ T(':') expression
 for_if_clauses <- (for_if_clause _)+
 for_if_clause <- T('for') star_targets _ T('in') disjunction _ (T('if') disjunction _)*
-
-####################################
-star_targets <- NAME _ # star_target !',' / tlist(',', star_target)
-# star_target <- T('*') !'*' star_target / target_with_star_atom
-# target_with_star_atom <- t_primary _ T('.') NAME _ !T_LOOKAHEAD 
-#                        / t_primary _ slices _ !T_LOOKAHEAD 
-#                        / star_atom
-# star_atom <- NAME
-#            / LP target_with_star_atom _ RP 
-#            / LP (star_target _ (T(',') star_target _)+ T(',')? / star_target _ T(',')) _ RP 
-#            / LS tlist(',', star_target) _ RS
-
+star_targets <- star_target !',' / tlist(',', star_target)
+star_target <- T('*') !'*' star_target / target_with_star_atom
+target_with_star_atom <- t_primary _ T('.') NAME _ !T_LOOKAHEAD 
+                       / t_primary _ slices _ !T_LOOKAHEAD 
+                       / NAME 
+                       / star_parens
+star_parens <- '(' _ target_with_star_atom _ ')'
+             / '(' _ (star_target _ (T(',') star_target _)+ T(',')? / star_target _ T(',')) _ ')' 
+             / '[' _ tlist(',', star_target) _ ']'
 star_named_expression <- T('*') bitwise_or / named_expression
 named_expression <- NAME _ T(':=') ↑ expression / expression _ !':='
 arguments <- '(' _ tlist(',', args)* _ ')'
@@ -113,6 +108,10 @@ BININT <- <'0' [bB] [0-1] ('_'* [0-1])*>
 HEXINT <- <'0' [xX] [0-9a-fA-F] ('_'* [0-9a-fA-F])*>
 DECINT <- <[0-9] ('_'* [0-9])*>
 NAME <- < [a-zA-Z_] [a-zA-Z_0-9]* >
+
+STRING <- < NAME? STR >
+STR <- < '"""' (!'"""' CHAR)* '"""' /  '\'\'\'' (!'\'\'\'' CHAR)* '\'\'\'' / '"' (!('"' / EOL) CHAR)* '"' /  '\'' (!('\'' / EOL) CHAR)* '\'' >
+CHAR <- '\\' . / .
 
 ~COMMENT <- <'#' (!EOL .)*>
 ~INDENT <- < [ \t]* >
