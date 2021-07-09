@@ -1,4 +1,4 @@
-#include "sequre.h"
+#include "arithmetics.h"
 #include "sir/util/cloning.h"
 #include "sir/util/irtools.h"
 #include "sir/util/matching.h"
@@ -6,9 +6,9 @@
 #include <math.h>
 
 namespace seq {
-namespace ir {
-namespace transform {
-namespace sequre {
+
+using namespace ir;
+
 /*
  * Binary expression tree
  */
@@ -744,7 +744,4 @@ void ArithmeticsOptimizations::applyOptimizations(CallInstr *v) {
 
 void ArithmeticsOptimizations::handle(CallInstr *v) { applyOptimizations(v); }
 
-} // namespace sequre
-} // namespace transform
-} // namespace ir
 } // namespace seq

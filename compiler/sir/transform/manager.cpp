@@ -9,7 +9,6 @@
 #include "sir/transform/pythonic/dict.h"
 #include "sir/transform/pythonic/io.h"
 #include "sir/transform/pythonic/str.h"
-#include "sir/transform/sequre.h"
 #include "util/common.h"
 
 #include "sir/analyze/analysis.h"
@@ -126,9 +125,6 @@ void PassManager::registerStandardPasses() {
 
   // lowering
   registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());
-
-  // TODO Haris: Move elsewhere
-  registerPass(std::make_unique<sequre::ArithmeticsOptimizations>());
 }
 
 } // namespace transform

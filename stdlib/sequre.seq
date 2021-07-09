@@ -11,3 +11,15 @@ def sequre_beaver():
 @__attribute__
 def sequre_poly():
     pass
+
+
+class SecureContainer[TP]:
+    share: TP
+    x_r: TP
+    r: TP
+    sqrt: TP
+    sqrt_inv: TP
+    pows: list[TP]
+    fp: bool
+    public: bool
+    diagonal: bool

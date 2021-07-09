@@ -140,6 +140,8 @@ set(SEQ_HPPFILES
         compiler/seq/pipeline.h
         compiler/seq/revcomp.h
         compiler/seq/seq.h
+        compiler/sequre/arithmetics.h
+        compiler/sequre/sequre.h
         compiler/sir/analyze/analysis.h
         compiler/sir/analyze/dataflow/cfg.h
         compiler/sir/analyze/dataflow/dominator.h
@@ -160,7 +162,6 @@ set(SEQ_HPPFILES
         compiler/sir/transform/lowering/imperative.h
         compiler/sir/transform/manager.h
         compiler/sir/transform/pass.h
-        compiler/sir/transform/sequre.h
         compiler/sir/transform/pythonic/dict.h
         compiler/sir/transform/pythonic/io.h
         compiler/sir/transform/pythonic/str.h
@@ -214,6 +215,8 @@ set(SEQ_CPPFILES
         compiler/seq/pipeline.cpp
         compiler/seq/revcomp.cpp
         compiler/seq/seq.cpp
+        compiler/sequre/arithmetics.cpp
+        compiler/sequre/sequre.cpp
         compiler/sir/attribute.cpp
         compiler/sir/analyze/analysis.cpp
         compiler/sir/analyze/dataflow/cfg.cpp
@@ -230,7 +233,6 @@ set(SEQ_CPPFILES
         compiler/sir/transform/cleanup/replacer.cpp
         compiler/sir/transform/lowering/imperative.cpp
         compiler/sir/transform/manager.cpp
-        compiler/sir/transform/sequre.cpp
         compiler/sir/transform/pass.cpp
         compiler/sir/transform/pythonic/dict.cpp
         compiler/sir/transform/pythonic/io.cpp
