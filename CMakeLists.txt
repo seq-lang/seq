@@ -36,6 +36,24 @@ if (NOT EXISTS ${BDWGC})
 endif ()
 message(STATUS "Found bdwgc: ${BDWGC}")
 
+set(BZ2 ${SEQ_DEP}/lib/libbz2.a)
+if (NOT EXISTS ${BZ2})
+    message(FATAL_ERROR "Cannot find ${BZ2}")
+endif ()
+message(STATUS "Found libbz2: ${BZ2}")
+
+set(LZMA ${SEQ_DEP}/lib/liblzma.a)
+if (NOT EXISTS ${LZMA})
+    message(FATAL_ERROR "Cannot find ${LZMA}")
+endif ()
+message(STATUS "Found liblzma: ${LZMA}")
+
+set(HTSLIB ${SEQ_DEP}/lib/libhts.a)
+if (NOT EXISTS ${HTSLIB})
+    message(FATAL_ERROR "Cannot find ${HTSLIB}")
+endif ()
+message(STATUS "Found htslib: ${HTSLIB}")
+
 execute_process(COMMAND ${SEQ_DEP}/bin/ocamlc -where
         RESULT_VARIABLE result
         OUTPUT_VARIABLE OCAML_STDLIB_PATH
@@ -87,9 +105,9 @@ add_library(seqrt SHARED ${SEQRT_FILES})
 target_compile_options(seqrt PRIVATE -mavx)
 target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include runtime)
 if (APPLE)
-    target_link_libraries(seqrt PUBLIC seqomp ${STATIC_LIBCPP} -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC})
+    target_link_libraries(seqrt PUBLIC seqomp ${BZ2} ${LZMA} ${STATIC_LIBCPP} -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC} -Wl,-force_load,${HTSLIB})
 else ()
-    target_link_libraries(seqrt PUBLIC seqomp ${STATIC_LIBCPP} -Wl,--whole-archive ${ZLIB} ${BDWGC} -Wl,--no-whole-archive)
+    target_link_libraries(seqrt PUBLIC seqomp ${BZ2} ${LZMA} ${STATIC_LIBCPP} -Wl,--whole-archive ${ZLIB} ${BDWGC} ${HTSLIB} -Wl,--no-whole-archive)
 endif ()
 set(BACKTRACE ${SEQ_DEP}/lib/libbacktrace.a)
 target_link_libraries(seqrt PUBLIC ${BACKTRACE})

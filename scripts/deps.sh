@@ -115,6 +115,30 @@ else
     [ ! -f "${INSTALLDIR}/lib/libz.a" ] && die "zlib library not found"
 fi
 
+# libbz2
+BZ2_VERSION='1.0.8'
+curl -L "https://www.sourceware.org/pub/bzip2/bzip2-${BZ2_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
+cd "${SRCDIR}/bzip2-${BZ2_VERSION}"
+make
+make install PREFIX="${INSTALLDIR}"
+[ ! -f "${INSTALLDIR}/lib/libbz2.a" ] && die "bz2 library not found"
+
+# liblzma
+XZ_VERSION='5.2.5'
+curl -L "https://tukaani.org/xz/xz-${XZ_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
+cd "${SRCDIR}/xz-${XZ_VERSION}"
+./autogen.sh
+./configure \
+    --disable-xz \
+    --disable-xzdec \
+    --disable-lzmadec \
+    --disable-lzmainfo \
+    --disable-shared \
+    --prefix="${INSTALLDIR}"
+make -j "${JOBS}"
+make install
+[ ! -f "${INSTALLDIR}/lib/liblzma.a" ] && die "lzma library not found"
+
 # libdeflate
 LIBDEFLATE_VERSION='1.7'
 curl -L "https://github.com/ebiggers/libdeflate/archive/refs/tags/v${LIBDEFLATE_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
