@@ -90,7 +90,7 @@ make PREFIX="${INSTALLDIR}" install
 
 if [ "${USE_ZLIBNG}" = '1' ] ; then
     # zlib-ng
-    ZLIBNG_VERSION='2.0.4'
+    ZLIBNG_VERSION='2.0.5'
     curl -L "https://github.com/zlib-ng/zlib-ng/archive/${ZLIBNG_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
     cd "${SRCDIR}/zlib-ng-${ZLIBNG_VERSION}"
     CFLAGS="-fPIC" ./configure \
