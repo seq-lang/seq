@@ -146,6 +146,7 @@ cd "${SRCDIR}/libdeflate-${LIBDEFLATE_VERSION}"
 make -j "${JOBS}" -e libdeflate.a CFLAGS="-fPIC" PREFIX="${INSTALLDIR}"
 install -m644 libdeflate.a "${INSTALLDIR}/lib"
 install -m644 libdeflate.h "${INSTALLDIR}/include"
+[ ! -f "${INSTALLDIR}/lib/libdeflate.a" ] && die "deflate library not found"
 
 # bdwgc
 cd "${SRCDIR}"
