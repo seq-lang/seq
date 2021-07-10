@@ -119,7 +119,7 @@ fi
 BZ2_VERSION='1.0.8'
 curl -L "https://www.sourceware.org/pub/bzip2/bzip2-${BZ2_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
 cd "${SRCDIR}/bzip2-${BZ2_VERSION}"
-make
+make CFLAGS="-Wall -Winline -O2 -g -D_FILE_OFFSET_BITS=64 -fPIC"
 make install PREFIX="${INSTALLDIR}"
 [ ! -f "${INSTALLDIR}/lib/libbz2.a" ] && die "bz2 library not found"
 
