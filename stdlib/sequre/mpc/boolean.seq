@@ -1,0 +1,378 @@
+import math
+
+from ..utils.param import *
+from ..types.utils import num_to_bits
+
+from prg import MPCPRG
+from comms import MPCComms
+from arithmetic import MPCArithmetic
+from polynomial import MPCPolynomial
+
+
+class MPCBoolean[TP]:
+    or_lagrange_cache: dict[tuple[int, TP], list[TP]]
+    or_lagrange_cache_small: dict[tuple[int, int], list[int]]
+    primes_bits: dict[int, int]
+    primes_bytes: dict[int, int]
+    pid: int
+    prg: MPCPRG
+    comms: MPCComms[TP]
+    arithmetic: MPCArithmetic[TP]
+    polynomial: MPCPolynomial[TP]
+
+    def __init__(self, pid: int, prg: MPCPRG, comms: MPCComms[TP], arithmetic: MPCArithmetic[TP], polynomial: MPCPolynomial[TP]):
+        self.pid = pid
+        self.prg = prg
+        self.comms = comms
+        self.arithmetic = arithmetic
+        self.polynomial = polynomial
+
+        self.or_lagrange_cache = dict[tuple[int, TP], list[TP]]()
+        self.or_lagrange_cache_small = dict[tuple[int, int], list[int]]()
+        self.primes_bits = {0: 63, 1: 5, 2: 5}  # TODO: #56 Fix. {k: int(math.ceil(math.log2(float(v)))) for k, v in self.primes.items()}
+        self.primes_bytes = {k: (v + 7) // 8 for k, v in self.primes_bits.items()}
+    
+    def in_lagrange_cache(self, key):
+        if isinstance(key[1], TP):
+            return key in self.or_lagrange_cache
+        elif isinstance(key[1], int):
+            return key in self.or_lagrange_cache_small
+        raise TypeError(f"Invalid type of {key}")
+    
+    def from_lagrange_cache(self, key):
+        if isinstance(key[1], TP):
+            return self.or_lagrange_cache[key]
+        elif isinstance(key[1], int):
+            return self.or_lagrange_cache_small[key]
+        raise TypeError(f"Invalid type of {key}")
+    
+    def to_lagrange_cache(self, key, lagrange_list):
+        if isinstance(key[1], TP):
+            self.or_lagrange_cache[key] = lagrange_list
+        elif isinstance(key[1], int):
+            self.or_lagrange_cache_small[key] = lagrange_list
+        else:
+            raise TypeError(f"Invalid type {key}")
+
+    def fan_in_or(self, a, field = BASE_P):
+        n, d = a.shape()
+        a_sum = [typeof(field)(0) for _ in range(n)]
+
+        # TODO: #16 Vectorize a_sum calculation below
+        if self.pid > 0:
+            for i in range(n):
+                a_sum[i] = typeof(field)(self.pid == 1)
+                for j in range(d):
+                    a_sum[i] += a[i][j]
+        
+        a_sum %= field
+
+        key: tuple[int, typeof(field)] = (d + 1, field)
+        if not self.in_lagrange_cache(key):
+            y = [typeof(field)(i != 0) for i in range(d + 1)]
+            coeff_param = self.polynomial.lagrange_interp_simple(y, field) # OR function
+            self.to_lagrange_cache(key, coeff_param)
+        
+        coeff = [self.from_lagrange_cache(key)]
+        bmat = self.polynomial.evaluate_poly(a_sum, coeff, field)
+
+        return bmat[0]
+        
+    def prefix_or(self, a, field = BASE_P):
+        # TODO: #57 Performance warning. Allocation/assignment is redundant in this method.
+        n, m = a.shape()
+
+        # Find next largest squared integer
+        L: int = int(math.ceil(math.sqrt(float(m))))
+        L2: int = L * L
+
+        # Zero-pad to L2 bits
+        a_padded = list[list[typeof(field)]](n)  # zeros((n, L2))
+        
+        if self.pid > 0:
+            for i in range(n):
+                row = list[typeof(field)](L2)
+                for j in range(L2):
+                    if j >= L2 - m: row.append(a[i][j - L2 + m])
+                    else: row.append(typeof(field)(0))
+                a_padded.append(row)
+        else:
+            for i in range(n):
+                a_padded.append([typeof(field)(0) for _ in range(L2)])
+        
+        a_padded = a_padded.reshape([n * L, L])
+        
+        x = self.fan_in_or(a_padded, field)        
+        xpre = [[typeof(field)(0) for _ in range(L)] for _ in range(n * L)]  # zeros((n * L, L))
+        
+        if self.pid > 0:
+            for i in range(n):
+                for j in range(L):
+                    xpi: int = L * i + j
+                    for k in range(L):
+                        xpre[xpi][k] = x[L * i + k] * int(k <= j)
+        
+        y = self.fan_in_or(xpre, field)
+
+        # TODO: #16 Make it parallel by using ndarray
+        f = [[[typeof(field)(0) for _ in range(L)]] for _ in range(n)]
+        if self.pid > 0:
+            for i in range(n):
+                for j in range(L):
+                    if j == 0:
+                        f[i][0][j] = x[L * i]
+                    else:
+                        f[i][0][j] = y[L * i + j] - y[L * i + j - 1]
+                f[i] %= field
+
+        # TODO: #16 Make it parallel by using ndarray
+        tmp = [[[typeof(field)(0) for _ in range(L)] for _ in range(L)] for _ in range(n)]
+        if self.pid > 0:
+            for i in range(n):
+                for j in range(L):
+                    tmp[i][j][:] = a_padded[L * i + j]
+                tmp[i] %= field
+
+        c = self.arithmetic.multiply_mat_bulk(f, tmp, field)  # c is a concatenation of n 1-by-L matrices
+
+        cpre = [[typeof(field)(0) for _ in range(L)] for _ in range(n * L)]  # zeros((n * L, L))
+        if self.pid > 0:
+            for i in range(n):
+                for j in range(L):
+                    cpi: int = L * i + j
+                    for k in range(L):
+                        cpre[cpi][k] = c[i][0][k] * int(k <= j)
+        
+        bdot_vec = self.fan_in_or(cpre, field)
+
+        bdot = [[[typeof(field)(0) for _ in range(L)]] for _ in range(n)]
+        if self.pid > 0:
+            for i in range(n):
+                for j in range(L):
+                    bdot[i][0][j] = bdot_vec[L * i + j]
+        
+        for i in range(n):
+            f[i] = f[i].reshape([L, 1])
+
+        s = self.arithmetic.multiply_mat_bulk(f, bdot, field)
+
+        b = list[list[typeof(field)]](n)  # zeros(a.shape)
+        if self.pid > 0:
+            for i in range(n):
+                row = list[typeof(field)](m)
+                for j in range(m):
+                    j_pad: int = L2 - m + j
+
+                    il: int = j_pad // L
+                    jl: int = j_pad - il * L
+
+                    row.append(((s[i][il][jl] + y[L * i + il]) % field - f[i][il][0]) % field)
+                b.append(row)
+        else:
+            for i in range(n):
+                b.append([typeof(field)(0) for _ in range(m)])
+
+        return b
+    
+    def less_than_bits_public(self, a, b_pub, field = BASE_P):
+        return self.less_than_bits_aux(a, b_pub, 2, field)
+
+    def less_than_bits(self, a, b, field = BASE_P):
+        return self.less_than_bits_aux(a, b, 0, field)
+    
+    def less_than_bits_aux(self, a, b, public_flag, field = BASE_P):
+        # TODO: #60 needs to be fixed.
+        min_i = min(len(a), len(b))
+        min_j = min(len(a[0]), len(b[0]))
+        a = a[:min_i, :min_j]
+        b = b[:min_i, :min_j]
+        # assert a.shape() == b.shape(), f"Unaligned bits shapes at CP{self.pid}: {a.shape()} and {b.shape()}"
+
+        n, L = a.shape()
+
+        # TODO: #57 Performance warning. Redundant allocation/assignment of x bellow.
+        # Calculate XOR
+        x = a.zeros()
+
+        if public_flag == 0:
+            x = self.arithmetic.multiply(a, b, field)
+            if self.pid > 0:
+                x = ((a + b) % field - (x + x) % field) % field
+        elif self.pid > 0:
+            x = (a * b) % field
+            x = ((a + b) % field - (x + x) % field) % field
+            if self.pid == 2:
+                x = (x - (a if public_flag == 1 else b)) % field
+
+        f = self.prefix_or(x, field)
+
+        if self.pid > 0:
+            for i in range(n):
+                for j in range(L - 1, 0, -1):
+                    f[i][j] = (f[i][j] - f[i][j - 1]) % field
+        
+        if public_flag == 2:
+            c = [typeof(field)(0) for _ in range(n)]  # zeros(n)
+            if self.pid > 0:
+                fb: list[list[typeof(field)]] = (f * b) % field
+                for i in range(n):
+                    for e in fb[i]:
+                        c[i] = (c[i] + e) % field
+            
+            return c
+
+        # TODO: #16 Optimize
+        f_arr = [[[typeof(field)(0) for _ in range(L)]] for _ in range(n)]
+        b_arr = [[[typeof(field)(0)] for _ in range(L)] for _ in range(n)]
+
+        if self.pid > 0:
+            for i in range(n):
+                f_arr[i][0][:] = f[i]
+                for j in range(L):
+                    b_arr[i][j][0] = b[i][j]
+        
+        c_arr = self.arithmetic.multiply_mat_bulk(f_arr, b_arr, field)
+
+        return [c_arr[i][0][0] if self.pid > 0 else typeof(field)(0) for i in range(n)]
+    
+    def is_positive(self, a):
+        if isinstance(a, int_t):
+            return self.__is_positive([a])[0]
+        else:
+            return self.__is_positive(a)
+    
+    def less_than_public(self, a, bpub, field = BASE_P):
+        if isinstance(a, int_t):
+            return self.__less_than_public([a], bpub, field)[0]
+        else:
+            return self.__less_than_public(a, bpub, field)
+    
+    def less_than(self, a, b, field = BASE_P):
+        if isinstance(a, int_t):
+            return self.__less_than([a], b, field)[0]
+        else:
+            return self.__less_than(a, b, field)
+    
+    def not_less_than(self, a, b, field = BASE_P):
+        if isinstance(a, int_t):
+            return self.__not_less_than([a], b, field)[0]
+        else:
+            return self.__not_less_than(a, b, field)
+    
+    def not_less_than_public(self, a, bpub, field = BASE_P):
+        if isinstance(a, int_t):
+            return self.__not_less_than_public([a], bpub, field)[0]
+        else:
+            return self.__not_less_than_public(a, bpub, field)
+    
+    def flip_bit(self, a):
+        b = a.zeros() if self.pid == 0 else -a
+        if self.pid == 1: b += 1
+
+        return b
+    
+    def beaver_flip_bit(self, a, a_mask):
+        if self.pid > 0:
+            a *= -1
+            for i in range(len(a)): a[i] += 1
+        a_mask *= -1
+
+    def __is_positive(self, a):
+        n = len(a)
+        nbits = self.primes_bits[0]
+        field = THIRD_P
+
+        r = [TP(0) for _ in range(n)]
+        r_bits = [[typeof(field)(0) for _ in range(nbits)] for _ in range(n)]
+        if self.pid == 0:
+            r = a.rand(BASE_P)
+            r_bits = num_to_bits[typeof(field)](r, nbits)
+
+            self.prg.switch_seed(1)
+            r_mask = r.rand(BASE_P)
+            r_bits_mask = r_bits.rand(field)
+            self.prg.restore_seed(1)
+
+            r -= r_mask
+            r_bits -= r_bits_mask
+            r %= BASE_P
+            r_bits %= field
+
+            self.comms.send(r, 2)
+            self.comms.send(r_bits, 2)
+        elif self.pid == 2:
+            r = self.comms.receive[TP](0, n)
+            r_bits = self.comms.receive[typeof(field)](0, shape=[n, nbits])
+        else:
+            self.prg.switch_seed(0)
+            r = r.rand(BASE_P)
+            r_bits = r_bits.rand(field)
+            self.prg.restore_seed(0)
+
+        c = (((a + a) % BASE_P) + r) % BASE_P if self.pid != 0 else [TP(0)]
+        c = self.comms.reveal(c, field=BASE_P)
+
+        c_bits = num_to_bits[typeof(field)](c, nbits) if self.pid != 0 else [[typeof(field)(0) for _ in range(nbits)] for _ in range(n)]  # zeros((n, nbits))
+
+        # Incorrect result if r = 0, which happens with probaility 1 / BASE_P
+        no_overflow = self.less_than_bits_public(r_bits, c_bits, field=field)
+
+        c_xor_r = list[typeof(field)](n)  # zeros(n)
+        if self.pid > 0:
+            # Warning: Overflow might occur below.
+            for i in range(n):
+                v = r_bits[i][nbits - 1] - typeof(field)(2) * c_bits[i][nbits - 1] * r_bits[i][nbits - 1]
+                if self.pid == 1:
+                    v += c_bits[i][nbits - 1]
+                c_xor_r.append(v)
+            c_xor_r %= field
+        else:
+            for _ in range(n):
+                c_xor_r.append(typeof(field)(0))
+        
+        lsb = self.arithmetic.multiply(c_xor_r, no_overflow, field)
+        if self.pid > 0:
+            lsb = (lsb + lsb) % field
+            lsb -= (no_overflow + c_xor_r) % field
+            if self.pid == 1:
+                lsb = (lsb + 1) % field
+        lsb %= field
+
+        # 0, 1 -> 1, 2
+        if self.pid == 1:
+            lsb = (lsb + 1) % field
+        
+        b_mat = self.polynomial.table_lookup([TP(e) for e in lsb], 0)
+
+        return b_mat[0]
+
+    def __less_than_public(self, a, bpub, field = BASE_P):
+        a_b = self.arithmetic.add_public(a, -bpub, field) if self.pid != 0 else a.zeros()
+
+        # a - b >= 0?
+        c = self.__is_positive(a_b)
+        c = self.flip_bit(c)
+
+        return c
+    
+    def __less_than(self, a, b, field = BASE_P):
+        a_b = (a - b) if self.pid != 0 else a.zeros()
+        a_b %= field
+
+        # a - b >= 0?
+        c = self.__is_positive(a_b)
+        c = self.flip_bit(c)
+
+        return c
+
+    def __not_less_than(self, a, b, field = BASE_P):
+        c = self.__less_than(a, b, field)
+        c = self.flip_bit(c)
+
+        return c
+    
+    def __not_less_than_public(self, a, bpub, field = BASE_P):
+        c = self.__less_than_public(a, bpub, field)
+        c = self.flip_bit(c)
+
+        return c

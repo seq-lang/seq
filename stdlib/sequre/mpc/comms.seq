@@ -1,0 +1,173 @@
+from ..utils.param import *
+from ..utils.utils import shapeof, field_size
+from ..types.utils import fp_to_double
+
+from prg import MPCPRG
+from ..network.socket import CSocket
+from ..network.connect import open_channel, connect
+
+
+class MPCComms[TP]:
+    pid: int
+    sockets: dict[int, CSocket]
+    bytes_sent: int
+    requests_sent: int
+    prg: MPCPRG
+
+    def __init__(self: MPCComms[TP], pid: int, prg: MPCPRG):
+        self.pid = pid
+        self.prg = prg
+        self.sockets = dict[int, CSocket]()
+        self.bytes_sent = 0
+        self.requests_sent = 0
+
+        self.__setup_channels()
+
+    def send_bool(self: MPCComms[TP], flag: bool, to_pid: int):
+        self.sockets[to_pid].send([int(flag)], 1, field_size[int]())
+
+    def receive_bool(self: MPCComms[TP], from_pid: int) -> bool:
+        return bool(next(self.sockets[from_pid].receive[int](elem_count=1)))
+
+    def send[CT](self: MPCComms[TP], data: CT, to_pid: int) -> int:
+        bytes_sent = self.sockets[to_pid].send(data.to_bytes(), data.elem_count(), field_size[typeof(data)]())
+        self.bytes_sent += bytes_sent
+        self.requests_sent += 1
+        return bytes_sent
+    
+    def receive[T](self, from_pid: int, shape = False):
+        if isinstance(shape, bool):
+            return self.__receive_elem[T](from_pid)
+        if isinstance(shape, int):
+            return self.__receive_vector[T](from_pid, shape)
+        if isinstance(shape, list[int]):
+            return self.__receive_matrix[T](from_pid, shape)
+        
+        raise TypeError(f"Invalid type for {shape}")
+
+    def share(self, value):
+        if self.pid == 0:
+            self.prg.switch_seed(1)
+            r = value.rand(BASE_P)
+            self.prg.restore_seed(1)
+
+            value -= r
+            value %= BASE_P
+
+            self.send(value, 2)
+            return value
+        elif self.pid == 2:
+            return self.receive[int_t](0, shapeof(value))
+        else:
+            self.prg.switch_seed(0)
+            r = value.rand(BASE_P)
+            self.prg.restore_seed(0)
+            return r
+
+    def reveal(self, value, field = BASE_P):
+        if self.pid == 0:
+            return value
+        
+        if self.pid == 1:
+            self.send(value, 3 - self.pid)
+            received_value = self.receive[typeof(field)](3 - self.pid, shapeof(value))
+            
+            return (value + received_value) % field
+        
+        received_value = self.receive[typeof(field)](3 - self.pid, shapeof(value))
+        self.send(value, 3 - self.pid)
+
+        return (value + received_value) % field
+    
+    def broadcast(self, value, field = BASE_P):
+        revealed_value = self.reveal(value, field)
+        if self.pid == 2: self.send(revealed_value, 0)
+        elif self.pid == 0: revealed_value = self.receive[typeof(field)](2, shapeof(value))
+        return revealed_value
+    
+    def sync_parties(self: MPCComms[TP]):
+        if (self.pid == 0):
+            self.receive_bool(1)
+            self.receive_bool(2)
+        else: self.send_bool(True, 0)
+    
+    def clean_up(self: MPCComms[TP]):
+        for socket in self.sockets.values():
+            socket.close()
+    
+    def print_stats(self: MPCComms[TP]):
+        print f'Total bytes sent from {self.pid}: {self.bytes_sent}.'
+        print f'Total send requests at {self.pid}: {self.requests_sent}.'
+    
+    def reset_stats(self: MPCComms[TP]):
+        self.bytes_sent = 0
+        self.requests_sent = 0
+    
+    def print_fp(self, value, field = BASE_P, debug = False):
+        if self.pid == 0:
+            return value.zeros_float()
+        
+        revealed_value = self.reveal(value, field=field)
+        value_float = fp_to_double(revealed_value, NBIT_K, NBIT_F, field=field)
+
+        if self.pid == 2:
+            if debug: print(f'{self.pid}: Revealed value - {revealed_value}')
+            print(f'{self.pid}: Float value - {value_float}')
+        
+        return value_float
+    
+    def __receive_elem[T](self, from_pid: int) -> T:
+        return T(next(self.sockets[from_pid].receive[T](elem_count=1)))
+
+    def __receive_vector[T](self, from_pid: int, length: int) -> list[T]:
+        received_vec = list[T](length)
+
+        for elem in self.sockets[from_pid].receive[T](elem_count=length):
+            received_vec.append(T(elem))
+
+        return received_vec
+    
+    def __receive_matrix[T](self, from_pid: int, shape: list[int]):
+        rows, cols = shape
+        matrix = list[list[T]](rows)
+        row = list[T](cols)
+        j = 0
+
+        for elem in self.sockets[from_pid].receive[T](elem_count=rows * cols):
+            if j != cols:
+                row.append(T(elem))
+                j += 1
+            if j == cols:
+                matrix.append(row)
+                j = 0
+                row = list[T](cols)
+
+        return matrix
+    
+    def __setup_channels(self):
+        for p_1 in range(2):
+            for p_2 in range(p_1 + 1, 3):
+                if (p_1 != self.pid and p_2 != self.pid):
+                    continue
+
+                serveraddr = SERVERADDR_P0_P1
+                serveraddr_len = ADDR_LEN_P0_P1
+                if (p_1 == 0 and p_2 == 1):
+                    serveraddr = SERVERADDR_P0_P1
+                    serveraddr_len = ADDR_LEN_P0_P1
+                elif (p_1 == 0 and p_2 == 2):
+                    serveraddr = SERVERADDR_P0_P2
+                    serveraddr_len = ADDR_LEN_P0_P2
+                elif (p_1 == 1 and p_2 == 2):
+                    serveraddr = SERVERADDR_P1_P2
+                    serveraddr_len = ADDR_LEN_P1_P2
+                else:
+                    raise ValueError('Ivalid node pairs!')
+                
+                pother: int = p_1 + p_2 - self.pid
+                self.sockets[pother] = CSocket()
+
+                if (p_1 == self.pid):
+                    open_channel(self.sockets[pother], serveraddr, serveraddr_len)
+                elif (not connect(self.sockets[pother], serveraddr, serveraddr_len)):
+                    raise ValueError(f"{self.pid} failed to connect with {pother}")

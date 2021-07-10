@@ -1,0 +1,99 @@
+from math import ceil, log2
+
+from param import MATMUL_LEAF_SIZE
+
+
+def mod_pow[TP](value: TP, power, mod: TP) -> TP:
+    # Performance warning: Not the most efficient implementation
+    # See http://cacr.uwaterloo.ca/hac/about/chap14.pdf pg24-pg31 for better approach
+    # Also see: https://stackoverflow.com/questions/354421/how-is-implemented-in-python
+    if value == TP(0): return TP(0)
+    number = TP(1)
+    while power:
+        if power & 1:
+            number = number * value % mod
+        power >>= 1
+        value = value * value % mod
+    
+    return number
+
+
+def mod_inv[TP](value, field: TP):
+    if isinstance(value, list):
+        return [mod_pow(TP(e), field - 2, field) for e in value]
+    else:
+        return mod_pow(TP(value), field - 2, field)
+
+
+def next_pow_of_two(n: int):
+    return 2 ** int(ceil(log2(n)))
+
+
+def strassenR[TP](A, B, field: TP):
+    n = len(A)
+
+    if n <= MATMUL_LEAF_SIZE:
+        return A.naive_mult(B, field)
+    
+    # initializing the new sub-matrices
+    newSize = n // 2
+    a11 = A[:newSize, :newSize]
+    a12 = A[:newSize, newSize:]
+    a21 = A[newSize:, :newSize]
+    a22 = A[newSize:, newSize:]
+    
+    b11 = B[:newSize, :newSize]
+    b12 = B[:newSize, newSize:]
+    b21 = B[newSize:, :newSize]
+    b22 = B[newSize:, newSize:]
+
+    # Calculating p1 to p7:
+    p1 = strassenR(a11 + a22, b11 + b22, field)
+    p2 = strassenR(a21 + a22, b11, field)
+    p3 = strassenR(a11, b12 - b22, field)
+    p4 = strassenR(a22, b21 - b11, field)
+    p5 = strassenR(a11 + a12, b22, field)
+    p6 = strassenR(a21 - a11, b11 + b12, field)
+    p7 = strassenR(a12 - a22, b21 + b22, field)
+
+    # calculating c21, c21, c11 e c22:
+    c12 = p3 + p5
+    c21 = p2 + p4
+    c11 = p1 + p4 + p7 - p5
+    c22 = p1 + p3 + p6 - p2
+
+    # Grouping the results obtained in a single matrix:
+    C = [[TP(0) for _ in range(0, n)] for _ in range(0, n)]
+    C[:newSize, :newSize] = c11
+    C[:newSize, newSize:] = c12
+    C[newSize:, :newSize] = c21
+    C[newSize:, newSize:] = c22
+    return C
+
+
+def strassen_padded[TP](A, B, field: TP):
+    a_rows, a_cols = A.shape()
+    b_rows, b_cols = B.shape()
+
+    # Pad with next pow of two
+    n = max(a_rows, b_cols, a_cols)
+    m = next_pow_of_two(n)
+    APrep = [[TP(0) for _ in range(m)] for _ in range(m)]
+    BPrep = [[TP(0) for _ in range(m)] for _ in range(m)]
+    APrep[:a_rows, :a_cols] = A
+    BPrep[:b_rows, :b_cols] = B
+    CPrep = strassenR(APrep, BPrep, field)
+    return CPrep[:a_rows, :b_cols]
+
+
+def strassen(A, B, field):
+    a_rows, a_cols = A.shape()
+    b_rows, b_cols = B.shape()
+    assert a_cols == b_rows
+
+    if (a_cols < MATMUL_LEAF_SIZE or 
+        b_rows < MATMUL_LEAF_SIZE or
+        a_rows < MATMUL_LEAF_SIZE):
+            return A.naive_mult(B, field)
+    
+    return strassen_padded(A, B, field) % field

@@ -1,0 +1,94 @@
+from ..utils.param import *
+from ..utils.utils import cartesian, evalp
+from ..utils.primitives import mod_pow
+
+from prg import MPCPRG
+from comms import MPCComms
+from arithmetic import MPCArithmetic
+from polynomial import MPCPolynomial
+
+
+class MPCOptimizations[TP]:
+    pid: int
+    prg: MPCPRG
+    comms: MPCComms[TP]
+    arithmetic: MPCArithmetic[TP]
+    polynomial: MPCPolynomial[TP]
+
+    def __init__(self: MPCOptimizations[TP], pid: int, prg: MPCPRG,
+                 comms: MPCComms[TP], arithmetic: MPCArithmetic[TP],
+                 polynomial: MPCPolynomial[TP]):
+        self.pid = pid
+        self.prg = prg
+        self.comms = comms
+        self.arithmetic = arithmetic
+        self.polynomial = polynomial
+
+    def secure_evalp(self, x_r, r, coefs, exps, field):
+        masks = self.__get_masks(exps)
+        masks_no = len(masks)
+        r_masks = list[TP](masks_no)
+
+        if self.pid == 0:
+            for mask in masks:
+                r_masks.append(r.powers(mask.split(), field))
+
+            self.prg.switch_seed(1)
+            r_ = r_masks.rand(field)
+            self.prg.restore_seed(1)
+
+            r_masks = (r_masks - r_) % field
+            self.comms.send(r_masks, 2)
+
+            return TP(0)
+        
+        if self.pid == 1:
+            self.prg.switch_seed(0)
+            r_masks = r_masks.rand(field)
+            self.prg.restore_seed(0)
+        else:
+            r_masks = self.comms.receive[typeof(field)](0, masks_no)
+        
+        coef_masks: dict[str, int_t] = {k: int_t(0) for k in masks}
+
+        pascal_matrix: list[list[int]] = self.polynomial.get_pascal_matrix(
+            max([e for t in exps for e in t]))
+        for coef, exp_term in zip(coefs, exps):
+            power_expansions = list[list[TP]](len(exp_term))
+            for i, power in enumerate(exp_term):
+                x_r_pow: list[TP] = [mod_pow(x_r[i], p, field) for p in range(power, -1, -1)]
+                x_r_pow *= pascal_matrix[power][:power + 1]
+                power_expansions.append(x_r_pow % field)
+            
+            exp_term_ranges = [[str(e) for e in range(i + 1)] for i in exp_term]
+            exp_masks: list[str] = sorted(self.generate_masks(exp_term_ranges))[1:]
+
+            for mask in exp_masks:
+                mults = TP(1)
+                for i, m in enumerate(mask.split()):
+                    mults *= power_expansions[i][int(m)]
+                    mults %= field
+                coef_masks[mask] = (coef_masks[mask] + mults * coef) % field
+
+        result = evalp(x_r, coefs, exps, field) if self.pid == 1 else TP(0)
+        for i in range(masks_no): result += r_masks[i] * coef_masks[masks[i]]
+
+        return result
+    
+    def generate_masks(self, exp_term_ranges) -> list[str]:
+        if len(exp_term_ranges) == 1:
+            return exp_term_ranges[0]
+
+        expansion = cartesian(exp_term_ranges[-2], exp_term_ranges[-1])
+        new_exp_term = exp_term_ranges[:-2]
+        new_exp_term.append(expansion)
+        
+        return self.generate_masks(new_exp_term)
+
+    def __get_masks(self, exps):
+        masks = set()
+        for exp_term in exps:
+            exp_term_ranges = [[str(e) for e in range(i + 1)] for i in exp_term]
+            for mask in self.generate_masks(exp_term_ranges): masks.add(mask)
+        return sorted(list(masks))[1:]
+    

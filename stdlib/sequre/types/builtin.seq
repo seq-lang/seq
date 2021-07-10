@@ -1,0 +1,703 @@
+from ..utils.param import sockaddr_un, int_t, BASE_P
+from ..utils.utils import __rand_int, __rand_vec, __rand_mat
+from ..utils.primitives import mod_pow, strassen
+from secure_container import SecureContainer
+from utils import double_to_fp, int_to_fp
+    
+
+@extend
+class sockaddr_un:
+    def __str__(self: sockaddr_un, str_len: int) -> str:
+        return str(self.sun_path, str_len)
+
+
+@extend
+class str:
+    def __init__(self: str, sockaddr: sockaddr_un, str_len: int) -> str:
+        return str(sockaddr.sun_path, str_len)
+
+
+@extend
+class float:
+    def __init__(self: float, other: int_t):
+        self = float(int(other))
+    
+    def __add__[TP](self, other: SecureContainer[TP]) -> SecureContainer[TP]:
+        return other + self
+    
+    def __sub__[TP](self, other: SecureContainer[TP]) -> SecureContainer[TP]:
+        return -other + self
+    
+    def __mul__[TP](self, other: SecureContainer[TP]) -> SecureContainer[TP]:
+        return other * self
+    
+    def to_fp(self) -> int_t:
+        return double_to_fp(self)
+
+
+@extend
+class int:
+    def __add__[TP](self, other: SecureContainer[TP]) -> SecureContainer[TP]:
+        return other + self
+    def __sub__[TP](self, other: SecureContainer[TP]) -> SecureContainer[TP]:
+        return -other + self
+    def __mul__[TP](self, other: SecureContainer[TP]) -> SecureContainer[TP]:
+        return other * self
+    def __truediv__[TP](self, other: SecureContainer[TP]) -> SecureContainer[TP]:
+        raise NotImplementedError("Cannot divide by secure value without IR passes enabled.")
+    @llvm
+    def __mod__(self: int, other: int) -> int:
+        #TODO: Temp and inefficient solution. Fix it.
+        %0 = srem i64 %self, %other
+        %1 = icmp slt i64 %0, 0
+        %2 = add i64 %0, %other
+        %3 = select i1 %1, i64 %2, i64 %0
+        ret i64 %3
+    def to_fp(self) -> int_t:
+        return int_to_fp(self)
+    def to_bytes(self):
+        for _ in range(1): yield self
+    def elem_count(self) -> int:
+        return 1
+    def rand(self, base) -> int:
+        return __rand_int(base)
+    def zeros(self) -> int:
+        return 0
+    def to_float(self) -> float:
+        return float(self)
+
+
+@extend
+class Int[N]:
+    def __new__(other: bool) -> Int[N]:
+        return Int[N](int(other))
+    def __eq__(self: Int[N], other: int) -> bool:
+        return self == Int[N](other)
+    def __ne__(self: Int[N], other: int) -> bool:
+        return self != Int[N](other)
+    def __gt__(self: Int[N], other: int) -> bool:
+        return self > Int[N](other)
+    def __add__(self: Int[N], other: int) -> Int[N]:
+        return self + Int[N](other)
+    def __mul__(self: Int[N], other: int) -> Int[N]:
+        return self * Int[N](other)
+    def __sub__(self: Int[N], other: int) -> Int[N]:
+        return self - Int[N](other)
+    def __truediv__(self: Int[N], other: int) -> Int[N]:
+        return self / Int[N](other)
+    def __floordiv__(self: Int[N], other: int) -> Int[N]:
+        return self // Int[N](other)
+    @llvm
+    def __mod__(self: Int[N], other: Int[N]) -> Int[N]:
+        #TODO: Temp and inefficient solution. Fix it.
+        %0 = srem i{=N} %self, %other
+        %1 = icmp slt i{=N} %0, 0
+        %2 = add i{=N} %0, %other
+        %3 = select i1 %1, i{=N} %2, i{=N} %0
+        ret i{=N} %3
+    def __or__(self: Int[N], other: int) -> Int[N]:
+        return self | Int[N](other)
+    def __pow__(self: Int[N], other: Int[N]) -> Int[N]:
+        number = Int[N](1)
+        value = self
+        while other:
+            if other & 1:
+                number = number * value
+            other >>= 1
+            value = value * value
+        return number
+    def __pow__(self: Int[N], other: int) -> Int[N]:
+        return self ** Int[N](other)
+    def __and__(self: Int[N], other: int) -> Int[N]:
+        return self & Int[N](other)
+    def __lshift__(self: Int[N], other: int) -> Int[N]:
+        return self << Int[N](other)
+    def __rshift__(self: Int[N], other: int) -> Int[N]:
+        return self >> Int[N](other)
+    def to_bytes(self: Int[N]):
+        for _ in range(1): yield self
+    def elem_count(self: Int[N]) -> int:
+        return 1
+    def rand(self: Int[N], base) -> Int[N]:
+        # TODO: Adapt random to work with Int[*] return TP(random.randint(1, base - 1))
+        return typeof(base)(__rand_int(base))
+    def zeros(self: Int[N]) -> Int[N]:
+        return Int[N](0)
+    def zeros_float(self: Int[N]) -> float:
+        return 0.0
+    def ones(self: Int[N]) -> Int[N]:
+        return Int[N](1)
+    def copy(self: Int[N]) -> Int[N]:
+        return Int[N](self)
+    def shape(self: Int[N]) -> list[int]:
+        return []
+    def has_zero(self: Int[N]) -> bool:
+        return self == Int[N](0)
+    def to_float(self: Int[N]) -> float:
+        return float(int(self))
+
+
+@extend
+class list[T]:
+    def __getitem__(self: list[T], s: tuple[slice, slice]) -> list[T]:
+        rs, cs = s
+        sliced_arr = self[rs]
+        new_arr = list[T](len(sliced_arr))
+        for i in range(len(sliced_arr)): new_arr.append(sliced_arr[i][cs])
+        return new_arr
+    
+    def __setitem__(self: list[T], s: tuple[slice, slice], other: generator[T]):
+        rs, cs = s
+        start, stop, _, _ = rs.adjust_indices(len(self))
+        for i in range(start, stop):
+            self[i][cs] = next(other)
+
+    def __getitem__(self: list[list[int_t]], s: tuple[slice, int]) -> list[int_t]:
+        rs, cs = s
+        sliced_arr = self[rs]
+        new_arr = list[int_t](len(sliced_arr))
+        for i in range(len(sliced_arr)): new_arr.append(sliced_arr[i][cs])
+        return new_arr
+
+    def __setitem__(self: list[list[int_t]], s: tuple[slice, int], other: generator[int_t]):
+        rs, cs = s
+        start, stop, _, _ = rs.adjust_indices(len(self))
+        for i in range(start, stop):
+            self[i][cs] = next(other)
+    
+    def __getitem__(self: list[list[int_t]], s: tuple[int, slice]) -> list[int_t]:
+        ri, cs = s
+        return self[ri][cs]
+
+    def __setitem__(self: list[list[int_t]], s: tuple[int, slice], other: generator[int_t]):
+        ri, cs = s
+        start, stop, _, _ = cs.adjust_indices(len(self))
+        for j in range(start, stop):
+            self[ri][j] = next(other)
+    
+    def __getitem__(self: list[list[int_t]], s: tuple[int, int]) -> int_t:
+        i, j = s
+        return self[i][j]
+
+    def __setitem__(self: list[list[int_t]], s: tuple[int, int], other: int_t):
+        i, j = s
+        self[i][j] = other
+
+    def __setitem__(self: list[T], s: tuple[slice, slice], other: int_t):
+        rs, cs = s
+        start_row, stop_row, _, _ = rs.adjust_indices(len(self))
+        start_col, stop_col, _, _ = cs.adjust_indices(len(self[0]))
+        for i in range(start_row, stop_row):
+            for j in range(start_col, stop_col):
+                self[i][j] = other
+
+    def __neg__(self: list[T]) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(-s)
+        return l
+
+    def __iadd__(self: list[T], other: list[T]) -> list[T]:
+        for i, o in enumerate(other):
+            self[i] += o
+        return self
+
+    def __add__(self: list[T], other: list[T]) -> list[T]:
+        l = list[T](len(self))
+        for s, o in zip(self, other): l.append(s + o)
+        return l
+    
+    def __iadd__(self: list[list[int_t]], other: list[int_t]) -> list[list[int_t]]:
+        # TODO: #89 Revisit this method within #89
+        for i, o in enumerate(other):
+            self[i] += o
+        return self
+
+    def __add__(self: list[list[int_t]], other: list[int_t]) -> list[list[int_t]]:
+        # TODO: #89 Revisit this method within #89
+        l = list[list[int_t]](len(self))
+        for s, o in zip(self, other): l.append(s + o)
+        return l
+    
+    def __iadd__(self: list[T], scalar: int_t) -> list[T]:
+        for i in range(len(self)):
+            self[i] += scalar
+        return self
+
+    def __add__(self: list[T], scalar: int_t) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s + scalar)
+        return l
+    
+    def __iadd__(self: list[T], scalar: int) -> list[T]:
+        for i in range(len(self)):
+            self[i] += scalar
+        return self
+
+    def __add__(self: list[T], scalar: int) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s + scalar)
+        return l
+
+    def __iadd__(self: list[T], scalar: float) -> list[T]:
+        for i in range(len(self)):
+            self[i] += scalar
+        return self
+
+    def __add__(self: list[T], scalar: float) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s + scalar)
+        return l
+
+    def __isub__(self: list[T], other: list[T]) -> list[T]:
+        for i, o in enumerate(other):
+            self[i] -= o
+        return self
+
+    def __sub__(self: list[T], other: list[T]) -> list[T]:
+        l = list[T](len(self))
+        for s, o in zip(self, other): l.append(s - o)
+        return l
+
+    def __isub__(self: list[T], scalar: int_t) -> list[T]:
+        for i in range(len(self)):
+            self[i] -= scalar
+        return self
+
+    def __sub__(self: list[T], scalar: int_t) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s - scalar)
+        return l
+
+    def __isub__(self: list[T], scalar: int) -> list[T]:
+        for i in range(len(self)):
+            self[i] -= scalar
+        return self
+
+    def __sub__(self: list[T], scalar: int) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s - scalar)
+        return l
+
+    def __isub__(self: list[T], scalar: float) -> list[T]:
+        for i in range(len(self)):
+            self[i] -= scalar
+        return self
+
+    def __sub__(self: list[T], scalar: float) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s - scalar)
+        return l
+
+    def __imul__(self: list[T], other: list[T]) -> list[T]:
+        for i, o in enumerate(other):
+            self[i] *= o
+        return self
+
+    def __mul__(self: list[T], other: list[T]) -> list[T]:
+        l = list[T](len(self))
+        for s, o in zip(self, other): l.append(s * o)
+        return l
+    
+    def __imul__(self: list[T], other: list[list[T]]) -> list[T]:
+        self = [self].mult(other, BASE_P)[0]
+        return self
+
+    def __mul__(self: list[T], other: list[list[T]]) -> list[T]:
+        return [self].mult(other, BASE_P)[0]
+    
+    def __imul__(self: list[T], other: T) -> list[T]:
+        for i in range(len(self)):
+            self[i] *= other
+        return self
+
+    def __mul__(self: list[T], other: T) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s * other)
+        return l
+
+    def __imul__(self: list[T], other: list[int]) -> list[T]:
+        for i, o in enumerate(other):
+            self[i] *= o
+        return self
+
+    def __mul__(self: list[T], other: list[int]) -> list[T]:
+        l = list[T](len(self))
+        for s, o in zip(self, other): l.append(s * o)
+        return l
+    
+    def __imul__(self: list[T], scalar: int_t) -> list[T]:
+        for i in range(len(self)):
+            self[i] *= scalar
+        return self
+
+    def __mul__(self: list[T], scalar: int_t) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s * scalar)
+        return l
+    
+    def __imul__(self: list[T], scalar: int) -> list[T]:
+        for i in range(len(self)):
+            self[i] *= scalar
+        return self
+
+    def __mul__(self: list[T], scalar: int) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s * scalar)
+        return l
+    
+    def __imul__(self: list[T], scalar: float) -> list[T]:
+        raise ValueError("MPC lists should not be multiplied by floats")
+
+    def __mul__(self: list[T], scalar: float) -> list[T]:
+        raise ValueError("MPC lists should not be multiplied by floats")
+    
+    def __itruediv__(self: list[T], scalar: int_t) -> list[T]:
+        for i in range(len(self)):
+            self[i] /= scalar
+        return self
+
+    def __truediv__(self: list[T], scalar: int_t) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s / scalar)
+        return l
+    
+    def __itruediv__(self: list[T], scalar: int) -> list[T]:
+        for i in range(len(self)):
+            self[i] /= scalar
+        return self
+
+    def __truediv__(self: list[T], scalar: int) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s / scalar)
+        return l
+    
+    def __ifloordiv__(self: list[T], scalar: int_t) -> list[T]:
+        for i in range(len(self)):
+            self[i] //= scalar
+        return self
+
+    def __floordiv__(self: list[T], scalar: int_t) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s // scalar)
+        return l
+    
+    def __ifloordiv__(self: list[T], scalar: int) -> list[T]:
+        for i in range(len(self)):
+            self[i] //= scalar
+        return self
+
+    def __floordiv__(self: list[T], scalar: int) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s // scalar)
+        return l
+
+    def __imod__(self: list[T], scalar: int_t) -> list[T]:
+        for i in range(len(self)):
+            self[i] %= scalar
+        return self
+
+    def __mod__(self: list[T], scalar: int_t) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s % scalar)
+        return l
+    
+    def __imod__(self: list[T], scalar: int) -> list[T]:
+        for i in range(len(self)):
+            self[i] %= scalar
+        return self
+
+    def __mod__(self: list[T], scalar: int) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s % scalar)
+        return l
+
+    def __ipow__(self: list[T], scalar: int_t) -> list[T]:
+        for i in range(len(self)):
+            self[i] **= scalar
+        return self
+
+    def __pow__(self: list[T], scalar: int_t) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s ** scalar)
+        return l
+    
+    def __ipow__(self: list[T], scalar: int) -> list[T]:
+        for i in range(len(self)):
+            self[i] **= scalar
+        return self
+
+    def __pow__(self: list[T], scalar: int) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s ** scalar)
+        return l
+    
+    def __iand__(self: list[T], scalar: int_t) -> list[T]:
+        for i in range(len(self)):
+            self[i] &= scalar
+        return self
+
+    def __and__(self: list[T], scalar: int_t) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s & scalar)
+        return l
+    
+    def __iand__(self: list[T], scalar: int) -> list[T]:
+        for i in range(len(self)):
+            self[i] &= scalar
+        return self
+
+    def __and__(self: list[T], scalar: int) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s & scalar)
+        return l
+
+    def __ilshift__(self: list[T], scalar: int_t) -> list[T]:
+        for i in range(len(self)):
+            self[i] <<= scalar
+        return self
+
+    def __lshift__(self: list[T], scalar: int_t) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s << scalar)
+        return l
+
+    def __irshift__(self: list[T], scalar: int_t) -> list[T]:
+        for i in range(len(self)):
+            self[i] >>= scalar
+        return self
+
+    def __rshift__(self: list[T], scalar: int_t) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s >> scalar)
+        return l
+    
+    def __ilshift__(self: list[T], scalar: int) -> list[T]:
+        for i in range(len(self)):
+            self[i] <<= scalar
+        return self
+
+    def __lshift__(self: list[T], scalar: int) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s << scalar)
+        return l
+    
+    def __irshift__(self: list[T], scalar: int) -> list[T]:
+        for i in range(len(self)):
+            self[i] >>= scalar
+        return self
+
+    def __rshift__(self: list[T], scalar: int) -> list[T]:
+        l = list[T](len(self))
+        for s in self: l.append(s >> scalar)
+        return l
+    
+    def __lt__(self: list[T], other: list[T]) -> bool:
+        assert len(self) == len(other), 'Comparing lists of different sizes'
+
+        for s, o in zip(self, other):
+            if s < o: continue
+            else: return False
+
+        return True
+
+    def __gt__(self: list[T], other: list[T]) -> bool:
+        assert len(self) == len(other), 'Comparing lists of different sizes'
+        
+        for s, o in zip(self, other):
+            if s > o: continue
+            else: return False
+
+        return True
+
+    def __ge__(self: list[T], other: list[T]) -> bool:
+        assert len(self) == len(other), 'Comparing lists of different sizes'
+
+        for s, o in zip(self, other):
+            if s >= o: continue
+            else: return False
+
+        return True
+
+    def __le__(self: list[T], other: list[T]) -> bool:
+        assert len(self) == len(other), 'Comparing lists of different sizes'
+
+        for s, o in zip(self, other):
+            if s <= o: continue
+            else: return False
+
+        return True
+
+    def powers(self: list[T], other, field: int_t) -> int_t:
+        result = int_t(1)
+        for s, o in zip(self, other):
+            result *= mod_pow(s, int_t(o), field)
+            result %= field
+        return result
+
+    def naive_mult(self: list[T], other: list[T], field) -> list[T]:
+        # Performance warning: Modular overhead. Inefficient method.
+        self_shape = self.shape()
+        other_shape = other.shape()
+        assert self_shape[1] == other_shape[0], f"Not aligned shapes {self_shape} and {other_shape} for matmul"
+
+        new_mat = list[T](self_shape[0])
+        other_t = other.transpose()
+
+        for i in range(self_shape[0]):
+            new_row = list[typeof(field)](other_shape[1])
+            for j in range(other_shape[1]):
+                cell_value = typeof(field)(0)
+                for k in range(self_shape[1]):
+                    cell_value += (self[i][k] * other_t[j][k]) % field
+                    cell_value %= field
+                new_row.append(cell_value)
+            new_mat.append(new_row)
+
+        return new_mat
+    
+    def mult(self: list[T], other: list[T], field) -> list[T]:
+        return self.naive_mult(other, field)
+
+    def shape(self: list[T]):
+        if isinstance(T, int) or isinstance(T, int_t):
+            return [len(self)]
+        
+        return [len(self), len(self[0])]
+
+    def transpose(self: list[T]) -> list[T]:
+        if not self:
+            return self
+        
+        rows, cols = self.shape()
+        new_mat = list[T](cols)
+        t = typeof(self[0][0])
+
+        for i in range(cols):
+            row = list[t](rows)
+            for j in range(rows):
+                row.append(self[j][i])
+            new_mat.append(row)
+
+        return new_mat
+
+    def flatten(self: list[T]) -> list[int_t]:
+        return [e for row in self for e in row]
+
+    def reshape(self: list[T], shape) -> list[T]:
+        rows, cols = shape
+        _, old_cols = self.shape()
+        new_mat = list[T](rows)
+        position: int = 0
+        first_elem = self[0][0]
+
+        for _ in range(rows):
+            row = list[typeof(first_elem)](cols)
+            for _ in range(cols):
+                old_i = position // old_cols
+                old_j = position % old_cols
+                row.append(self[old_i][old_j])
+                position += 1
+            new_mat.append(row)
+
+        return new_mat
+
+    def to_bytes(self: list[T]):
+        for v in self:
+            for b in v.to_bytes():
+                yield b
+    
+    def pad_vec(self: list[T], length: int) -> list[T]:
+        new_vec = list[T](length)
+        for _ in range(length): new_vec.append(int_t(0))
+        for i in range(min(len(self), length)): new_vec[i] = self[i]
+
+        return new_vec
+
+    def pad(self: list[T], rows: int, cols: int) -> list[T]:
+        new_mat = list[T](rows)
+
+        for _ in range(rows):
+            row = list[int_t](cols)
+            for _ in range(cols): row.append(int_t(0))
+            new_mat.append(row)
+
+        m, n = self.shape()
+
+        for i in range(min(m, rows)):
+            for j in range(min(n, cols)):
+                new_mat[i][j] = self[i][j]
+
+        return new_mat
+    
+    def elem_count(self: list[T]) -> int:
+        if isinstance(T, list[list]):
+            raise TypeError("Sequre does not support dimensions higher than 2.")
+        
+        if isinstance(T, list):
+            return len(self) * len(self[0])
+        
+        return len(self)
+    
+    def rand(self: list[T], base):
+        if isinstance(self, list[list[list]]):
+            raise TypeError("Sequre does not support dimensions higher than 2.")
+
+        if isinstance(self, list[list]):
+            return __rand_mat(self.shape(), base)
+        else:
+            return __rand_vec(len(self), base)
+    
+    def get_identity(self: list[T]) -> list[T]:
+        identity = self.zeros()
+        for i in range(len(self)):
+            identity[i][i] = int_t(1)
+        return identity
+    
+    def zeros(self: list[T]) -> list[T]:
+        if isinstance(self, list[int_t]):
+            return [int_t(0) for _ in range(len(self))]
+        if isinstance(self, list[list[int_t]]):
+            return [[int_t(0) for _ in range(len(self[0]))] for _ in range(len(self))]
+        if isinstance(self, list[int]):
+            return [0 for _ in range(len(self))]
+        if isinstance(self, list[list[int]]):
+            return [[0 for _ in range(len(self[0]))] for _ in range(len(self))]
+        
+        raise TypeError(f'Invalid type for {self}')
+    
+    def zeros_float(self: list[T]):
+        if isinstance(self, list[list[list]]):
+            raise TypeError("Sequre does not support dimensions higher than 2.")
+        
+        if isinstance(self, list[list]):
+            return [[0.0 for _ in range(len(self[0]))] for _ in range(len(self))]
+        else:
+            return [0.0 for _ in range(len(self))]
+    
+    def ones(self: list[T]) -> list[T]:
+        if isinstance(self, list[int_t]):
+            return [int_t(1) for _ in range(len(self))]
+        if isinstance(self, list[list[int_t]]):
+            return [[int_t(1) for _ in range(len(self[0]))] for _ in range(len(self))]
+        if isinstance(self, list[int]):
+            return [1 for _ in range(len(self))]
+        if isinstance(self, list[list[int]]):
+            return [[1 for _ in range(len(self[0]))] for _ in range(len(self))]
+        
+        raise TypeError(f'Invalid type for {self}')
+    
+    def copy(self: list[T]):
+        new_list = list[T](len(self))
+
+        for e in self:
+            new_list.append(e.copy())
+        
+        return new_list
+    
+    def has_zero(self: list[T]) -> bool:
+        for e in self:
+            if e.has_zero(): return True
+        return False
+    
+    def to_float(self: list[T]):
+        return [e.to_float() for e in self]

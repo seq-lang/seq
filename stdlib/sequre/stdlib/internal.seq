@@ -1,0 +1,368 @@
+from ..utils.param import *
+from ..utils.primitives import mod_inv
+from ..types.secure_container import SecureContainer
+from ..types.utils import double_to_fp
+
+from fp import fp_div, fp_sqrt
+
+
+TP = int_t
+
+
+class Internal:
+    def secure_evalp(mpc, x_, coefs_, exps_):
+        field = BASE_P
+        x_r = list[TP](len(x_))
+        r = list[TP](len(x_))
+
+        for sn in x_:
+            if not sn.is_partitioned():
+                sn.set_partitions(
+                    mpc.arithmetic.__beaver_partition(sn.share, field))
+            
+            x_r_, r_ = sn.get_partitions()
+            x_r.append(x_r_)
+            r.append(r_)
+
+        coefs = [int_t(coefs_[i])
+                    for i in range(len(coefs_))]
+        exps = [[exps_[i + j] for j in range(len(x_))]
+                for i in range(0, len(exps_), len(x_))]
+        
+        result = mpc.optimizations.secure_evalp(
+            x_r, r, coefs, exps, field)
+        sv = SecureContainer[typeof(result)](result)
+        sv.fp = x_[0].is_fp()
+        
+        # TODO: #23 Handle sqrts and partitions
+
+        return sv
+
+    def secure_add(mpc, x, y):
+        if isinstance(x, float):
+            return Internal.__add_public(mpc, x.to_fp(), y, False)
+        elif isinstance(y, float):
+            return Internal.__add_public(mpc, y.to_fp(), x, False)
+        elif isinstance(x, int):
+            return Internal.__add_public(mpc, x.to_fp() if y.fp else int_t(x), y, False)
+        elif isinstance(y, int):
+            return Internal.__add_public(mpc, y.to_fp() if x.fp else int_t(y), x, False)
+        elif isinstance(x, SecureContainer[list[list[int_t]]]) and isinstance(y, SecureContainer[list[int_t]]):
+            # TODO: #89 Implement addition broadcasting
+            raise NotImplementedError("Broadcasting not implemented yet")
+        else:
+            if not x.is_public() and not y.is_public():
+                return x + y
+            elif x.is_public():
+                return Internal.__add_public(mpc, x.share, y, x.diagonal)
+            elif y.is_public():
+                return Internal.__add_public(mpc, y.share, x, y.diagonal)
+            
+            raise TypeError("Invalid type of addends")
+
+    def secure_sub(mpc, x, y):
+        return Internal.secure_add(mpc, x, -y)
+
+    def secure_mult(mpc, x, y):
+        if isinstance(y, float):
+            y_fp = double_to_fp(y)
+            sv = x * y_fp
+            if x.is_fp(): sv = sv.trunc(mpc.fp)
+            sv.fp = True
+            return sv
+        else:
+            field = BASE_P
+            if not x.is_partitioned():
+                x.set_partitions(mpc.arithmetic.__beaver_partition(x.share, field))
+            if not y.is_partitioned():
+                y.set_partitions(mpc.arithmetic.__beaver_partition(y.share, field))
+            
+            x_1_r, r_1 = x.get_partitions()
+            x_2_r, r_2 = y.get_partitions()
+
+            c = mpc.arithmetic.__beaver_mult(x_1_r, r_1, x_2_r, r_2, field)
+            c = mpc.arithmetic.__beaver_reconstruct(c, field)
+
+            if x.is_fp() and y.is_fp():
+                c = mpc.fp.trunc(c)
+            
+            sv = SecureContainer[typeof(c)](c)
+            sv.fp = x.is_fp() or y.is_fp()
+
+            # TODO: #23 Efficiently calculate beaver partitions of c here
+            # Bellow is temp dirty solution for beaver partitioning which should be both:
+            # - Computed with less network overhead
+            # - Computed only if compiler figures out that partitions will be needed downstream
+            # sv.set_partitions(mpc.arithmetic.__beaver_partition(sv.share, field))
+
+            # TODO: #23 Check if there is a better way to do this
+            # if x.sqrt and y.sqrt:
+            #     sv.sqrt = mpc.arithmetic.multiply(x.sqrt, y.sqrt)
+            #     sv.sqrt = mpc.fp.trunc(sv.sqrt)
+            #     sv.sqrt_inv = mpc.arithmetic.multiply(x.sqrt_inv, y.sqrt_inv)
+            #     sv.sqrt_inv = mpc.fp.trunc(sv.sqrt_inv)
+            return sv
+
+    def secure_mult_no_cache(mpc, x_, y_):
+        x = x_.share
+        y = y_.share
+
+        c = mpc.arithmetic.multiply(x, y)
+
+        if x_.is_fp() and x_.is_fp():
+            c = mpc.fp.trunc(c)
+
+        sv = SecureContainer[typeof(c)](c)
+        sv.fp = x_.is_fp() or y_.is_fp()
+
+        return sv
+
+    def secure_pow(mpc, x_, p):
+        field = BASE_P
+
+        if x_.is_fp():
+            # TODO: #58 Implement efficient pows calculation for FPs
+            return Internal.secure_pow_no_cache(mpc, x_, p)
+
+        if p >= len(x_.pows):
+            if not x_.is_partitioned():
+                x_.set_partitions(mpc.arithmetic.__beaver_partition(x_.share, field))
+
+            pows = mpc.polynomial.powers_cached(
+                x_.x_r, x_.r, p, field)
+            for i in range(len(x_.pows), len(pows)):
+                x_.pows.append(pows[i])
+        
+        c = x_.pows[p]
+        sv = SecureContainer[typeof(c)](c)
+        sv.fp = x_.is_fp()
+
+        # TODO: #23 Efficiently calculate beaver partitions of c here
+        # TODO: #23 Check if there is a way to calculate cached sqrts efficiently
+        return sv
+
+    def secure_pow_no_cache(mpc, x_, p):
+        x = x_.share
+
+        for _ in range(p - 1):
+            x = mpc.arithmetic.multiply(x, x_.share)
+            if x_.is_fp(): x = mpc.fp.trunc(x)
+        
+        sv = SecureContainer[typeof(x)](x)
+        sv.fp = x_.is_fp()
+
+        return sv
+
+    def secure_div(mpc, x, y):
+        # TODO: #26 Currently does not work for complex algebraic structures.
+        # Resolve issue #26 and change code below in order to fix this.
+        if isinstance(y, float):
+            return x * mod_inv(double_to_fp(y), BASE_P) 
+        elif isinstance(y, int) or isinstance(y, TP):
+            denom = double_to_fp(1.0 / y) if x.is_fp() else mod_inv(y, BASE_P)
+            sv = x * denom
+            if x.is_fp(): sv = sv.trunc(mpc.fp)
+            return sv
+        else:
+            # TODO: Efficiently calculate beaver partitions of sv here
+            return fp_div(mpc, x, y)
+
+    def secure_gt(mpc, x, y):
+        # TODO: #26 Currently does not work for complex algebraic structures.
+        # Resolve issue #26 and change code below in order to fix this.
+        if isinstance(y, int) or isinstance(y, TP):
+            if y == 0:
+                return SecureContainer[typeof(x.share)](mpc.boolean.is_positive(x.share))
+
+            return SecureContainer[typeof(x.share)](mpc.boolean.not_less_than_public(x.share, TP(y)))
+        elif isinstance(y, float):
+            return SecureContainer[typeof(x.share)](mpc.boolean.not_less_than_public(x.share, double_to_fp(y)))
+        else:
+            return SecureContainer[typeof(x.share)](mpc.boolean.not_less_than(x.share, y.share))
+        
+        # TODO: Efficiently calculate beaver partitions of sv here
+
+    def secure_lt(mpc, x, y):
+        # TODO: #26 Currently does not work for complex algebraic structures.
+        # Resolve issue #26 and change code below in order to fix this.
+        if isinstance(y, int) or isinstance(y, TP):
+            if y == 0:
+                return SecureContainer[typeof(x.share)](mpc.boolean.is_not_positive(x.share))
+            
+            return SecureContainer[typeof(x.share)](mpc.boolean.less_than_public(x.share, TP(y)))
+        elif isinstance(y, float):
+            return SecureContainer[typeof(x.share)](mpc.boolean.less_than_public(x.share, double_to_fp(y)))
+        else:
+            return SecureContainer[typeof(x.share)](mpc.boolean.less_than(x.share, y.share))
+        
+        # TODO: #23 Efficiently calculate beaver partitions of sv here
+
+    def secure_sqrt_inv(mpc, x, y):
+        # TODO: #26 Currently does not work for complex algebraic structures.
+        # Resolve issue #26 and change code below in order to fix this.
+        field = BASE_P
+
+        if not y.sqrt_inv:
+            s, sinv = fp_sqrt(mpc, y)
+            y.sqrt, y.sqrt_inv = s.share, sinv.share
+        
+        if isinstance(x, int):
+            sv = SecureContainer[typeof(y.sqrt_inv)](y.sqrt_inv)
+            sv.fp = True
+            # TODO: #23 Efficiently calculate beaver partitions of c here
+            # Bellow is temp dirty solution for beaver partitioning which should be both:
+            # - Computed with less network overhead
+            # - Computed only if compiler figures out that partitions will be needed downstream
+            # sv.set_partitions(mpc.arithmetic.__beaver_partition(sv.share, field))
+            return sv * x
+        else:
+            if not x.is_partitioned():
+                x.set_partitions(mpc.arithmetic.__beaver_partition(x.share, field))
+
+            x_1_r, r_1 = x.get_partitions()
+            x_2_r, r_2 = mpc.arithmetic.__beaver_partition(y.sqrt_inv, field)
+            
+            c = mpc.arithmetic.__beaver_mult(x_1_r, r_1, x_2_r, r_2, field)
+            c = mpc.arithmetic.__beaver_reconstruct(c, field)
+            c = mpc.fp.trunc(c)
+            
+            sv = SecureContainer[typeof(c)](c)
+            sv.fp = True
+            # TODO: #23 Efficiently calculate beaver partitions of c here
+            # Bellow is temp dirty solution for beaver partitioning which should be both:
+            # - Computed with less network overhead
+            # - Computed only if compiler figures out that partitions will be needed downstream
+            # sv.set_partitions(mpc.arithmetic.__beaver_partition(sv.share, field))
+            
+            return sv
+
+    def secure_sqrt_inv_no_cache(mpc, x, y):
+        # TODO: #26 Currently does not work for complex algebraic structures.
+        sqrt_inv = fp_sqrt(mpc, y)[1].share
+
+        result = mpc.arithmetic.multiply(x.share, sqrt_inv)
+        result = mpc.fp.trunc(result)
+
+        return SecureContainer[typeof(result)](result)
+
+    def secure_reveal(mpc, e):
+        revealed_e = mpc.comms.reveal(e.share)
+        
+        c = revealed_e // 2
+        if mpc.pid == 1: c += (revealed_e % TP(2))
+
+        sv = SecureContainer[typeof(c)](c, e.x_r, e.r)
+        sv.fp = e.is_fp()
+            
+        return sv
+
+    def dot(mpc, x, y):
+        field = BASE_P
+        if not x.is_partitioned():
+            x.set_partitions(mpc.arithmetic.__beaver_partition(x.share, field))
+        if not y.is_partitioned():
+            y.set_partitions(mpc.arithmetic.__beaver_partition(y.share, field))
+        
+        x_1_r, r_1 = x.get_partitions()
+        x_2_r, r_2 = y.get_partitions()
+
+        c = mpc.arithmetic.__beaver_dot_prod(x_1_r, r_1, x_2_r, r_2, field)
+        c = mpc.arithmetic.__beaver_reconstruct(c, field)
+
+        if x.is_fp() and y.is_fp():
+            c = mpc.fp.trunc(c)
+        
+        sv = SecureContainer[typeof(c)](c)
+        sv.fp = x.is_fp() or y.is_fp()
+        # TODO: #23 Efficiently calculate beaver partitions of sv here
+        # Bellow is temp dirty solution for beaver partitioning which should be both:
+        # - Computed with less network overhead
+        # - Computed only if compiler figures out that partitions will be needed downstream
+        # sv.set_partitions(mpc.arithmetic.__beaver_partition(sv.share, field))
+        
+        return sv
+
+    def dot(mpc, x):
+        return Internal.dot(mpc, x, x)
+
+    def matmul(mpc, x, y):
+        field = BASE_P
+        if not x.is_partitioned():
+            x.set_partitions(mpc.arithmetic.__beaver_partition(x.share, field))
+        if not y.is_partitioned():
+            y.set_partitions(mpc.arithmetic.__beaver_partition(y.share, field))
+
+        x_1_r, r_1 = x.get_partitions()
+        x_2_r, r_2 = y.get_partitions()
+
+        c = mpc.arithmetic.__beaver_matmul(x_1_r, r_1, x_2_r, r_2, field)
+        c = mpc.arithmetic.__beaver_reconstruct(c, field)
+
+        if x.is_fp() and y.is_fp():
+            c = mpc.fp.trunc(c)
+        
+        sv = SecureContainer[typeof(c)](c)
+        sv.fp = x.is_fp() or y.is_fp()
+
+        # TODO: #23 Efficiently calculate beaver partitions of sv here
+        # Bellow is temp dirty solution for beaver partitioning which should be both:
+        # - Computed with less network overhead
+        # - Computed only if compiler figures out that partitions will be needed downstream
+        # sv.set_partitions(mpc.arithmetic.__beaver_partition(sv.share, field))
+        
+        # TODO: #23 Check if there is a better way to do this
+        # if x.sqrt and y.sqrt:
+        #     sv.sqrt = mpc.arithmetic.multiply(x.sqrt, y.sqrt)
+        #     sv.sqrt = mpc.fp.trunc(sv.sqrt)
+        #     sv.sqrt_inv = mpc.arithmetic.multiply(x.sqrt_inv, y.sqrt_inv)
+        #     sv.sqrt_inv = mpc.fp.trunc(sv.sqrt_inv)
+        
+        return sv
+
+    def matmul(mpc, x, y, z):
+        return Internal.matmul(mpc, Internal.matmul(mpc, x, y), z)
+
+    def sqrt(mpc, x):
+        # TODO: #26 Currently does not work for complex algebraic structures.
+        # Resolve issue #26 and change code below in order to fix this.
+        if not x.sqrt:
+            s, sinv = fp_sqrt(mpc, x)
+            x.sqrt, x.sqrt_inv = s.share, sinv.share
+        
+        sv = SecureContainer[typeof(x.sqrt)](x.sqrt)
+        sv.fp = True
+        # TODO: #23 Efficiently calculate beaver partitions of sv here
+        return sv
+
+    def sqrt_no_cache(mpc, x):
+        return fp_sqrt(mpc, x)[0]
+
+    def broadcast(mpc, value):
+        value.share = mpc.comms.broadcast(value.share)
+        value.public = True
+        return value
+
+    def __add_public(mpc, x_public, y, diagonal):
+        share = y.share
+
+        if isinstance(share, list[list]) and isinstance(x_public, list[list]):
+            if diagonal:
+                for i in range(len(share)):
+                    share[i][i] = mpc.arithmetic.add_public(share[i][i], x_public[i][i])
+            else: share = mpc.arithmetic.add_public(share, x_public)
+        else: share = mpc.arithmetic.add_public(share, x_public)
+        
+        sv = SecureContainer[typeof(share)](share)
+        sv.fp = y.fp
+
+        if y.sqrt:
+            sv.sqrt = typeof(share)(0)
+            sv.sqrt_inv = typeof(share)(0)
+        
+        if not y.is_partitioned():
+            return sv
+        
+        sv.x_r = y.x_r + x_public
+        sv.r = y.r
+
+        return sv

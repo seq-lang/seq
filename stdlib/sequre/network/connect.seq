@@ -1,0 +1,29 @@
+import time
+
+from socket import CSocket
+from ..types.builtin import sockaddr_un
+
+from C import usleep(int) -> int
+
+
+RETRY_CONNECT: int = 100
+
+
+def connect(socket: CSocket, address_obj: sockaddr_un, address_len: int) -> bool:
+    for _ in range(RETRY_CONNECT):
+        socket.socket()
+
+        if (socket.connect(address_obj, address_len)):
+            print(f'Connected at {address_obj.__str__(address_len - 2)}!')
+            return True
+
+        print(f'Connection failed at {address_obj.__str__(address_len - 2)}, retrying ...')
+        usleep(1 << 20)
+
+    return False
+
+
+def open_channel(socket: CSocket, address_obj: sockaddr_un, address_len: int):
+    print(f'Listening init {address_obj.__str__(address_len - 2)}')
+    socket.open_channel(address_obj, address_len)
+    print(f'Listening at {address_obj.__str__(address_len - 2)}')

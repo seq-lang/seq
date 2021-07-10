@@ -1,0 +1,98 @@
+import math
+
+from ..attributes import sequre_beaver
+
+from ..types.secure_container import SecureContainer
+from ..utils.param import NBIT_K, NBIT_F
+
+
+def normalizer_even_exponent(mpc, a):
+    s_val, s_sqrt_val = mpc.fp.__nee_wrapper(a.share)
+    s = SecureContainer(s_val)
+    s_sqrt = SecureContainer(s_sqrt_val)
+    s.fp = True
+    s_sqrt.fp = True
+    return s, s_sqrt
+
+
+@sequre_beaver
+def fp_div(mpc, a, b):
+        niter = int(2 * math.ceil(math.log2(NBIT_K / 3.5))) + 1
+        s, _ = normalizer_even_exponent(mpc, b)
+
+        # TODO: #67 Have Sequre calculate truncation sizes. Below code should be just: b_scaled = b * s
+        if not b.is_partitioned(): b.set_partitions(mpc.arithmetic.__beaver_partition(b.share))
+        if not s.is_partitioned(): s.set_partitions(mpc.arithmetic.__beaver_partition(s.share))
+        b_scaled_val = mpc.arithmetic.__beaver_mult(b.x_r, b.r, s.x_r, s.r)
+        b_scaled_val = mpc.arithmetic.__beaver_reconstruct(b_scaled_val)
+        b_scaled_val = mpc.fp.trunc(b_scaled_val, NBIT_K, NBIT_K - NBIT_F)
+        b_scaled = SecureContainer(b_scaled_val)
+        b_scaled.fp = True
+
+        scaled_est = b_scaled * b_scaled * 5 - b_scaled * 10 + 5.9430
+
+        # TODO: #67 Have Sequre calculate truncation sizes. Below code should be just: w = scaled_est * s
+        if not scaled_est.is_partitioned(): scaled_est.set_partitions(mpc.arithmetic.__beaver_partition(scaled_est.share))
+        if not s.is_partitioned(): s.set_partitions(mpc.arithmetic.__beaver_partition(s.share))
+        w_val = mpc.arithmetic.__beaver_mult(scaled_est.x_r, scaled_est.r, s.x_r, s.r)
+        w_val = mpc.arithmetic.__beaver_reconstruct(w_val)
+        w_val = mpc.fp.trunc(w_val, NBIT_K + NBIT_F + 2, NBIT_K - NBIT_F)
+        w = SecureContainer(w_val)
+        w.fp = True
+
+        # TODO: #67 Have Sequre calculate truncation sizes. Below code should be just: x = 1 - w * b; y = a * w
+        old_a_fp = a.fp
+        old_b_fp = b.fp
+        b.fp = a.fp = True
+        x = 1 - w * b
+        y = a * w
+        a.fp = old_a_fp
+        b.fp = old_b_fp
+
+        # TODO: #32 Have Sequre inspect code downstream in order to figure out if partitions are necessary.
+        for _ in range(niter):
+            if not x.is_partitioned(): x.set_partitions(mpc.arithmetic.__beaver_partition(x.share))
+            if not y.is_partitioned(): y.set_partitions(mpc.arithmetic.__beaver_partition(y.share))
+            y = y * (x + 1)
+            x = x * x
+        
+        # TODO: #32 Have Sequre inspect code downstream in order to figure out if partitions are necessary.
+        if not x.is_partitioned(): x.set_partitions(mpc.arithmetic.__beaver_partition(x.share))
+        if not y.is_partitioned(): y.set_partitions(mpc.arithmetic.__beaver_partition(y.share))
+
+        return y * (x + 1)
+
+
+@sequre_beaver
+def fp_sqrt(mpc, a):
+    niter = int(2 * math.ceil(math.log2(NBIT_K / 3.5)))
+    s, s_sqrt = normalizer_even_exponent(mpc, a)
+
+    # TODO: #67 Have Sequre calculate truncation sizes. Below code should be just: a_scaled = a * s
+    if not a.is_partitioned(): a.set_partitions(mpc.arithmetic.__beaver_partition(a.share))
+    if not s.is_partitioned(): s.set_partitions(mpc.arithmetic.__beaver_partition(s.share))
+    a_scaled_val = mpc.arithmetic.__beaver_mult(a.x_r, a.r, s.x_r, s.r)
+    a_scaled_val = mpc.arithmetic.__beaver_reconstruct(a_scaled_val)
+    a_scaled_val = mpc.fp.trunc(a_scaled_val, NBIT_K, NBIT_K - NBIT_F)
+    a_scaled = SecureContainer(a_scaled_val)
+    a_scaled.fp = True
+
+    scaled_est = a_scaled * a_scaled * 2 - a_scaled * 4 + 2.9581
+
+    # TODO: #67 Have Sequre calculate truncation sizes. Below code should be just: h = scaled_est * s_sqrt
+    if not scaled_est.is_partitioned(): scaled_est.set_partitions(mpc.arithmetic.__beaver_partition(scaled_est.share))
+    if not s_sqrt.is_partitioned(): s_sqrt.set_partitions(mpc.arithmetic.__beaver_partition(s_sqrt.share))
+    h_val = mpc.arithmetic.__beaver_mult(scaled_est.x_r, scaled_est.r, s_sqrt.x_r, s_sqrt.r)
+    h_val = mpc.arithmetic.__beaver_reconstruct(h_val)
+    h_val = mpc.fp.trunc(h_val, NBIT_K // 2 + NBIT_F + 2, (NBIT_K - NBIT_F) // 2 + 1)
+    h = SecureContainer(h_val)
+    h.fp = True
+
+    g = h * a * 2
+    for _ in range(niter):
+        r = 1.5 - h * g
+        # TODO: #16 Calculate h and g in parallel
+        h = h * r
+        g = g * r
+    
+    return g, h * 2

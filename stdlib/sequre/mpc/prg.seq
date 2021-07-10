@@ -1,0 +1,42 @@
+import random
+
+from ..utils.param import list_u32
+
+
+class MPCPRG:
+    # Performance warning: States are pretty big arrays. Might introduce some overhead.
+    pid: int
+    prg_states: dict[int, tuple[list_u32, int]]
+    
+    def __init__(self: MPCPRG, pid: int):
+        self.pid = pid
+        self.prg_states = dict[int, tuple[list_u32, int]]()
+
+        # random.seed(0)
+        self.prg_states[self.pid] = self.get_state()
+        self.import_seed(-1, hash('global'))
+        
+        for other_pid in set(range(3)) - {self.pid}:
+            self.import_seed(other_pid)
+        
+        self.switch_seed(self.pid)
+        
+    def get_state(self: MPCPRG) -> tuple[list_u32, int]:
+        return copy(random._rnd.gen.state), random._rnd.gen.next
+    
+    def set_state(self: MPCPRG, state: tuple[list_u32, int]):
+        random._rnd.gen.state = state[0]
+        random._rnd.gen.next = state[1]
+
+    def import_seed(self: MPCPRG, pid: int, seed: int = -1):
+        seed: int = hash((min(self.pid, pid), max(self.pid, pid))) if seed == -1 else seed
+        random.seed(seed)
+        self.prg_states[pid] = self.get_state()
+        
+    def switch_seed(self: MPCPRG, pid: int):
+        self.prg_states[self.pid] = self.get_state()
+        self.set_state(self.prg_states[pid])
+    
+    def restore_seed(self: MPCPRG, pid: int):
+        self.prg_states[pid] = self.get_state()
+        self.set_state(self.prg_states[self.pid])

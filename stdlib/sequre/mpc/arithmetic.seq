@@ -1,0 +1,209 @@
+from ..utils.param import *
+from ..utils.utils import shapeof
+
+from prg import MPCPRG
+from comms import MPCComms
+
+
+class MPCArithmetic[TP]:
+    pid: int
+    partitions: int
+    reconstructs: int
+    prg: MPCPRG
+    comms: MPCComms[TP]
+    
+    def __init__(self, pid: int, prg: MPCPRG, comms: MPCComms[TP]):
+        self.pid = pid
+        self.prg = prg
+        self.comms = comms
+
+        self.reset_stats()
+    
+    def print_stats(self):
+        print(f"Partitions: {self.partitions}. Reconstructs: {self.reconstructs}. At CP{self.pid}")
+    
+    def reset_stats(self):
+        self.partitions = 0
+        self.reconstructs = 0
+
+    def add_public(self, x, a, field = BASE_P):
+        if self.pid == 1:
+            return (x + a) % field
+        return x % field
+    
+    def multiply(self, a, b, field = BASE_P):
+        x_1_r, r_1 = self.__beaver_partition(a, field)
+        x_2_r, r_2 = self.__beaver_partition(b, field)
+        
+        c = self.__beaver_mult(x_1_r, r_1, x_2_r, r_2, field)
+        c = self.__beaver_reconstruct(c, field)
+        
+        return c
+
+    def multiply_matmul(self, a, b, field = BASE_P):
+        x_1_r, r_1 = self.__beaver_partition(a, field)
+        x_2_r, r_2 = self.__beaver_partition(b, field)
+
+        c = self.__beaver_matmul(x_1_r, r_1, x_2_r, r_2, field)
+        c = self.__beaver_reconstruct(c, field)
+        
+        return c
+    
+    def beaver_inner_prod(self, ar, am, field = BASE_P):
+        # TODO: #55 This method might be redundant with __beaver_dot_prod and not needed
+        ab = ((am * am) % field) if self.pid == 0 else (((ar * am) % field) * 2) % field
+        if self.pid == 1:
+            ab = (ab + (ar * ar) % field) % field
+
+        cum_sum = typeof(field)(0)
+        for e in ab: cum_sum = (cum_sum + e) % field
+
+        return cum_sum
+    
+    def inner_prod(self, a, field = BASE_P):
+        ar, am = self.__beaver_partition(a, field)
+        n = len(a)
+
+        c = list[typeof(field)](n)
+        for i in range(n): c.append(self.beaver_inner_prod(ar[i], am[i], field))
+
+        return self.__beaver_reconstruct(c, field)
+    
+    def __beaver_partition_mat_bulk(self, x, field = BASE_P):
+        # TODO: #55 Deprecate this method
+        # TODO: #55 Do this in parallel
+        partitions = [self.__beaver_partition(e, field) for e in x]
+        x_r = [p[0] for p in partitions]
+        r = [p[1] for p in partitions]
+        return x_r, r
+    
+    def __beaver_reconstruct_mat_bulk(self, x, field = BASE_P):
+        # TODO: #55 Deprecate this method
+        # TODO: #55 Do this in parallel
+        return [self.__beaver_reconstruct(e, field) for e in x]
+
+    def multiply_bulk(self, a, b, field = BASE_P):
+        # TODO: #55 Deprecate this method
+        # TODO: #16 Vectorize this method. Make it parallel by having a and b as ndarrays.
+        nmat = len(a)
+
+        ar, am = self.__beaver_partition_mat_bulk(a, field)
+        br, bm = self.__beaver_partition_mat_bulk(b, field)
+
+        c = [self.__beaver_mult(ar[k], am[k], br[k], bm[k], field)
+             for k in range(nmat)]
+        
+        return self.__beaver_reconstruct_mat_bulk(c, field)
+    
+    def multiply_mat_bulk(self, a, b, field = BASE_P):
+        # TODO: #55 Deprecate this method
+        # TODO: #16 Vectorize/parallelize this method. Make it parallel by having a and b as ndarrays.
+        nmat = len(a)
+
+        ar, am = self.__beaver_partition_mat_bulk(a, field)
+        br, bm = self.__beaver_partition_mat_bulk(b, field)
+
+        c = [self.__beaver_matmul(ar[k], am[k], br[k], bm[k], field)
+             for k in range(nmat)]
+            
+        return self.__beaver_reconstruct_mat_bulk(c, field)
+    
+    def beaver_inner_prod_pair(self, ar, am, br, bm, field = BASE_P):
+        # TODO: #55 Deprecate this method
+        ab = typeof(field)(0)
+        
+        for i in range(len(ar)):
+            if self.pid == 0:
+                ab += am[i] * bm[i]
+            else:
+                ab += ar[i] * bm[i]
+                ab %= field
+                ab += br[i] * am[i]
+                ab %= field
+                if self.pid == 1:
+                    ab += ar[i] * br[i]
+
+        return ab % field
+    
+    def __beaver_partition(self, value, field = BASE_P):
+        self.partitions += 1
+
+        if self.pid == 0:
+            self.prg.switch_seed(1)
+            r_1 = value.rand(field)
+            self.prg.restore_seed(1)
+
+            self.prg.switch_seed(2)
+            r_2 = value.rand(field)
+            self.prg.restore_seed(2)
+
+            r = (r_1 + r_2) % field
+            return value.zeros(), r
+        else:
+            self.prg.switch_seed(0)
+            r = value.rand(field)
+            self.prg.restore_seed(0)
+            
+            x_r = (value - r) % field
+            x_r = self.comms.reveal(x_r, field)
+
+            return x_r, r
+
+    def __beaver_reconstruct(self, value, field = BASE_P):
+        self.reconstructs += 1
+
+        if self.pid == 0:
+            self.prg.switch_seed(1)
+            mask = value.rand(field)
+            self.prg.restore_seed(1)
+
+            mm = (value - mask) % field
+            self.comms.send(mm, 2)
+            
+            return mm
+        elif self.pid == 1:
+            self.prg.switch_seed(0)
+            rr = value.rand(field)
+            self.prg.restore_seed(0)
+            
+            return (value + rr) % field
+        else:
+            rr = self.comms.receive[typeof(field)](0, shapeof(value))
+                
+            return (value + rr) % field
+    
+    def __beaver_mult(self, x_r, r_1, y_r, r_2, field = BASE_P):
+        if self.pid == 0:
+            return (r_1 * r_2) % field
+
+        xy = (x_r * r_2) % field
+        xy += (r_1 * y_r) % field
+        xy %= field
+        
+        if self.pid == 1:
+            xy += (x_r * y_r) % field
+            xy %= field
+
+        return xy
+    
+    def __beaver_matmul(
+            self, x_r, r_1, y_r, r_2, field = BASE_P):
+        if self.pid == 0:
+            return r_1.mult(r_2, field)
+
+        xy = x_r.mult(r_2, field)
+        xy += r_1.mult(y_r, field)
+        xy %= field
+        if self.pid == 1:
+            xy += x_r.mult(y_r, field)
+            xy %= field
+
+        return xy
+    
+    def __beaver_dot_prod(self, x_r, r_1, y_r, r_2, field = BASE_P):
+        xy = self.__beaver_mult(x_r, r_1, y_r, r_2, field)
+        
+        cum_sum = xy[0].zeros()
+        for e in xy: cum_sum = (cum_sum + e) % field
+
+        return cum_sum

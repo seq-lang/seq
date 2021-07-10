@@ -1,0 +1,116 @@
+import sys
+
+from ..utils.param import *
+from ..utils.utils import field_size
+
+from C import socket(int, int, int) -> int
+from C import bind(int, ptr[sockaddr_un], int) -> int
+from C import connect(int, ptr[sockaddr_un], int) -> int
+from C import listen(int, int) -> int
+from C import accept(int, int, int) -> int
+from C import recv(int, cobj, int, int) -> int
+from C import send(int, cobj, int, int) -> int
+from C import shutdown(int, int) -> int
+from C import close(int) -> int
+from C import perror(cobj)
+from C import memcpy(cobj, cobj, int)
+
+
+class CSocket:
+    sock_fd: int
+
+    def __init__(self: CSocket):
+        self.sock_fd = -1
+
+    def socket(self: CSocket):
+        self.close()
+        self.sock_fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        if self.sock_fd == -1:
+            perror(f'Socket not instantiated'.c_str())
+            raise ValueError(f'Socket not instantiated')
+
+    def connect(self: CSocket, serveraddr: sockaddr_un, serveraddr_len: int) -> bool:
+        connection: int = connect(self.sock_fd, __ptr__(serveraddr), serveraddr_len)
+
+        if connection != 0:
+            perror(f'Could not connect at {serveraddr.__str__(serveraddr_len - 2)}'.c_str())
+
+        return connection == 0
+
+    def close(self: CSocket):
+        if self.sock_fd != -1:
+            shutdown(self.sock_fd, SHUT_RDWR)
+            close(self.sock_fd)
+
+    def bind(self: CSocket, serveraddr: sockaddr_un, serveraddr_len: int):
+        rc: int = bind(self.sock_fd, __ptr__(serveraddr), serveraddr_len)
+        if rc < 0:
+            perror(f'Server not binded at {serveraddr.__str__(serveraddr_len - 2)} and fd {self.sock_fd}'.c_str())
+            raise ValueError(f'Server not binded at {serveraddr.__str__(serveraddr_len - 2)} and fd {self.sock_fd}')
+        else:
+            print(f'Server binded at {serveraddr.__str__(serveraddr_len - 2)}')
+
+    def listen(self: CSocket):
+        rc: int = listen(self.sock_fd, 3)
+        if rc == -1:
+            perror(f'Server not listening: {rc}'.c_str())
+            raise ValueError('Server not listening.')
+        else:
+            print(f'Server listening at {self.sock_fd}')
+
+    def accept(self: CSocket):
+        accepted_fd: int = accept(self.sock_fd, 0, 0)
+        if accepted_fd == -1:
+            perror(f'Socket could not accept connection'.c_str())
+            raise ValueError('Socket could not accept connection.')
+        else:
+            print(f'Server accepted at {self.sock_fd}')
+
+        self.close()
+        self.sock_fd = accepted_fd
+
+    def open_channel(self: CSocket, serveraddr: sockaddr_un, serveraddr_len: int):
+        self.socket()
+        self.bind(serveraddr, serveraddr_len)
+        self.listen()
+        self.accept()
+
+    def send(self: CSocket, data, elem_count: int, fs: int) -> int:
+        totalsent: int = 0
+        msg_len = elem_count * fs
+        buffer = ptr[byte](msg_len)
+
+        for i, value in enumerate(data):
+            p = ptr[byte](__ptr__(value).as_byte())
+            memcpy(buffer + i * fs, p, fs)
+
+        while totalsent < msg_len:
+            sent: int = send(self.sock_fd, buffer + totalsent, msg_len, 0)
+            if sent == 0:
+                perror('Send socket connection broken'.c_str())
+                raise ValueError(f'Socket connection broken for msg_len of {msg_len}')
+            totalsent += sent
+        
+        return totalsent
+
+    def receive[T](self: CSocket, elem_count: int):
+        bytes_recd = 0
+        offset = 0
+        fs = field_size[T]()
+        msg_len = elem_count * fs
+        buffer = ptr[byte](msg_len)
+
+        while bytes_recd < msg_len:
+            received: int = recv(self.sock_fd, buffer + offset, msg_len, 0)
+            if received <= 0:
+                perror('Receive socket connection broken'.c_str())
+                raise ValueError(f'Socket connection broken for msg_len of {msg_len}')
+            bytes_recd += received
+            buffered = received + offset 
+            offset = buffered % fs
+            if offset != 0: print('Sockets offset by: ', offset)
+            # TODO: #84 Recursevily figure out if T contains int_t bellow
+            if isinstance(T, int_t):
+                for i in range(0, buffered - offset, fs): yield ptr[transfer_int](buffer + i)[0]
+            else:
+                for i in range(0, buffered - offset, fs): yield ptr[transfer_int_small](buffer + i)[0]

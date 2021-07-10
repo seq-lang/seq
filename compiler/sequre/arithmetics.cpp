@@ -470,15 +470,15 @@ bool isReveal(int op) { return op == 4; }
  */
 
 bool isSequreFunc(Func *f) {
-  return bool(f) && util::hasAttribute(f, "std.sequre.sequre");
+  return bool(f) && util::hasAttribute(f, "std.sequre.attributes.sequre");
 }
 
 bool isPolyOptFunc(Func *f) {
-  return bool(f) && util::hasAttribute(f, "std.sequre.sequre_poly");
+  return bool(f) && util::hasAttribute(f, "std.sequre.attributes.sequre_poly");
 }
 
 bool isBeaverOptFunc(Func *f) {
-  return bool(f) && util::hasAttribute(f, "std.sequre.sequre_beaver");
+  return bool(f) && util::hasAttribute(f, "std.sequre.attributes.sequre_beaver");
 }
 
 int getOperator(CallInstr *callInstr) {
@@ -728,8 +728,10 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
     rhsType = rhs->getType();
   }
 
+  auto *sequreInternalType = M->getOrRealizeType("Internal", {}, "std.sequre.stdlib.internal");
   auto *method =
-      M->getOrRealizeMethod(selfType, methodName, {selfType, lhsType, rhsType});
+      M->getOrRealizeMethod(sequreInternalType, methodName, {selfType, lhsType, rhsType});
+  
   if (!method)
     return;
 

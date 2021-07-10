@@ -1,0 +1,322 @@
+from ..utils.utils import shapeof
+from ..utils.param import *
+from ..utils.primitives import mod_inv
+from ..types.utils import double_to_fp
+
+from prg import MPCPRG
+from comms import MPCComms
+from arithmetic import MPCArithmetic
+
+
+class MPCPolynomial[TP]:
+    # Performance warning: See if explicit TP(number) conversions introduce overhead.
+    # Performance warning: See if list comprehensions instead of allocate/append introduce overhead.
+    pid: int
+    prg: MPCPRG
+    comms: MPCComms[TP]
+    arithmetic: MPCArithmetic[TP]
+
+    pascal_cache: dict[int, list[list[int]]]
+    table_cache: dict[int, list[list[TP]]]
+    table_type_modular: dict[int, bool]
+    lagrange_cache: dict[int, list[list[TP]]]
+
+    def __init__(self,
+                 pid: int,
+                 prg: MPCPRG,
+                 comms: MPCComms[TP],
+                 arithmetic: MPCArithmetic[TP]):
+        self.pid = pid
+        self.prg = prg
+        self.comms = comms
+        self.arithmetic = arithmetic
+
+        self.pascal_cache = dict[int, list[list[int]]]()
+        self.table_cache = dict[int, list[list[TP]]]()
+        self.table_type_modular = dict[int, bool]()
+        self.lagrange_cache = dict[int, list[list[TP]]]()
+
+        self.__setup_tables()
+    
+    def lagrange_interp_simple(self, y, field):
+        n: int = len(y)
+        x: list[int] = [i for i in range(1, n + 1)]
+
+        return self.lagrange_interp(x, y, field)
+
+    def table_lookup(self, x, table_id, field = BASE_P):
+        # Warning: Negative x value might cause bad results
+        return self.evaluate_poly(x, self.lagrange_cache[table_id], field=field)
+    
+    def lagrange_interp(self, x, y, field = BASE_P):
+        n = len(y)
+
+        inv_table = dict[int, typeof(field)]()
+        for i in range(n):
+            for j in range(n):
+                if i == j:
+                    continue
+
+                key: int = abs(x[i] - x[j])
+                if key not in inv_table:
+                    inv_table[key] = mod_inv(typeof(field)(key), field)
+        
+        # Initialize numer and denom_inv
+        numer = [[typeof(field)(0) for _ in range(n)] for _ in range(n)]  # zeros((n, n))
+        denom_inv = [typeof(field)(1) for _ in range(n)]  # ones(n)
+        numer[0][:] = y % field
+
+        for i in range(n):
+            for j in range(n):
+                if i == j:
+                    continue
+
+                for k in range(n - 1, -1, -1):
+                    numer[k][j] = ((typeof(field)(0) if k == 0 else numer[k - 1][j]) - numer[k][j] * x[i]) % field
+                denom_inv[i] = (denom_inv[i] * (typeof(field)(1) if x[i] > x[j] else typeof(field)(-1)) * inv_table[abs(x[i] - x[j])]) % field
+
+        numer_dot = [(n * denom_inv) % field for n in numer]
+        numer_sum = [typeof(field)(0) for _ in range(n)]  # ones(n)
+
+        for i in range(n):
+            for e in numer_dot[i]:
+                numer_sum[i] = (numer_sum[i] + e) % field
+
+        return numer_sum
+ 
+    def get_pascal_matrix(self, power):
+        if power not in self.pascal_cache:
+            pascal_matrix = self.calculate_pascal_matrix(power)
+            self.pascal_cache[power] = pascal_matrix
+
+        return self.pascal_cache[power]
+    
+    def calculate_pascal_matrix(self, pow):
+        t = [[0 for _ in range(pow + 1)] for _ in range(pow + 1)]  # zeros((pow + 1, pow + 1))
+        for i in range(pow + 1):
+            for j in range(pow + 1):
+                if j > i:
+                    t[i][j] = 0
+                elif j == 0 or j == i:
+                    t[i][j] = 1
+                else:
+                    t[i][j] = t[i - 1][j - 1] + t[i - 1][j]
+        
+        return t
+
+    def powers(self, x, power, field = BASE_P):
+        assert power >= 1
+        # TODO: #26 # Does not work for x of instance list[list[T]]. Fix it.
+
+        b = [x.zeros() for _ in range(power + 1)]
+        ones = x.ones()
+        
+        # TODO: #64 Shallow copies all around in code bellow. Fix this. Probably by overriding assign magics for list.
+        if power == 1:
+            if self.pid > 0:
+                if self.pid == 1:
+                    b[0] += ones
+                b[1] = x
+        else:  # power > 1
+            x_r, r = self.arithmetic.__beaver_partition(x, field=field)
+            r_pow = [x.zeros() for _ in range(power - 1)]
+
+            if self.pid == 0:
+                r_pow[0] = (r * r) % field
+
+                for p in range(1, len(r_pow)):
+                    r_pow[p] = (r_pow[p - 1] * r) % field
+                
+                self.prg.switch_seed(1)
+                r_ = r_pow.rand(field)
+                self.prg.restore_seed(1)
+
+                r_pow = (r_pow - r_) % field
+                self.comms.send(r_pow, 2)
+            else:
+                if self.pid == 1:
+                    self.prg.switch_seed(0)
+                    r_pow = r_pow.rand(field)
+                    self.prg.restore_seed(0)
+                else:
+                    r_pow = self.comms.receive[typeof(field)](0, shapeof(r_pow))
+                
+                x_r_pow = [x.zeros() for _ in range(power - 1)]
+                x_r_pow[0] = (x_r * x_r) % field
+
+                for p in range(1, len(x_r_pow)):
+                    x_r_pow[p] = (x_r_pow[p - 1] * x_r) % field
+                
+                pascal_matrix = self.get_pascal_matrix(power)
+
+                if self.pid == 1:
+                    b[0] = (b[0] + ones) % field
+                b[1] = x
+
+                for p in range(2, power + 1):
+                    if self.pid == 1:
+                        b[p] = x_r_pow[p - 2]
+
+                    if p == 2:
+                        b[p] = (b[p] + (((x_r * r) % field) * pascal_matrix[p][1]) % field) % field
+                    else:
+                        b[p] = (b[p] + (((x_r_pow[p - 3] * r) % field) * pascal_matrix[p][1]) % field) % field
+
+                        for j in range(2, p - 1):
+                            b[p] = (b[p] + (((x_r_pow[p - 2 - j] * r_pow[j - 2]) % field) * pascal_matrix[p][j]) % field) % field
+                        
+                        b[p] = (b[p] + (((x_r * r_pow[p - 3]) % field) * pascal_matrix[p][p - 1]) % field) % field
+
+                    b[p] = (b[p] + r_pow[p - 2]) % field
+                
+        return b
+    
+    def powers_cached(self, x_r, r, power, field = BASE_P):
+        # TODO: #65 This method is temporary as it is completely redundant with self.powers
+        assert power >= 1
+        # TODO: #26 Does not work for x of instance list[list[T]]. Fix it.
+
+        b = [x_r.zeros() for _ in range(power + 1)]
+        ones = x_r.ones()
+        
+        # TODO: #64 Shallow copies all around in code bellow. Fix this. Probably by overriding assign magics for list.
+        if power == 1:
+            if self.pid > 0:
+                if self.pid == 1:
+                    b[0] += ones
+                b[1] = x_r + r
+        else:  # power > 1
+            r_pow = [x_r.zeros() for _ in range(power - 1)]
+
+            if self.pid == 0:
+                r_pow[0] = (r * r) % field
+
+                for p in range(1, len(r_pow)):
+                    r_pow[p] = (r_pow[p - 1] * r) % field
+                
+                self.prg.switch_seed(1)
+                r_ = r_pow.rand(field)
+                self.prg.restore_seed(1)
+
+                r_pow = (r_pow - r_) % field
+                self.comms.send(r_pow, 2)
+            else:
+                if self.pid == 1:
+                    self.prg.switch_seed(0)
+                    r_pow = r_pow.rand(field)
+                    self.prg.restore_seed(0)
+                else:
+                    r_pow = self.comms.receive[typeof(field)](0, shapeof(r_pow))
+                
+                x_r_pow = [x_r.zeros() for _ in range(power - 1)]
+                x_r_pow[0] = (x_r * x_r) % field
+
+                for p in range(1, len(x_r_pow)):
+                    x_r_pow[p] = (x_r_pow[p - 1] * x_r) % field
+                
+                pascal_matrix = self.get_pascal_matrix(power)
+
+                if self.pid == 1:
+                    b[0] = (b[0] + ones) % field
+                b[1] = x_r + r
+
+                for p in range(2, power + 1):
+                    if self.pid == 1:
+                        b[p] = x_r_pow[p - 2]
+
+                    if p == 2:
+                        b[p] = (b[p] + (((x_r * r) % field) * pascal_matrix[p][1]) % field) % field
+                    else:
+                        b[p] = (b[p] + (((x_r_pow[p - 3] * r) % field) * pascal_matrix[p][1]) % field) % field
+
+                        for j in range(2, p - 1):
+                            b[p] = (b[p] + (((x_r_pow[p - 2 - j] * r_pow[j - 2]) % field) * pascal_matrix[p][j]) % field) % field
+                        
+                        b[p] = (b[p] + (((x_r * r_pow[p - 3]) % field) * pascal_matrix[p][p - 1]) % field) % field
+
+                    b[p] = (b[p] + r_pow[p - 2]) % field
+                
+        return b
+
+    def evaluate_poly(self, x, coeff, field = BASE_P):
+        n: int = len(x)
+        npoly: int = len(coeff)
+        deg: int = len(coeff[0]) - 1
+
+        pows = self.powers(x, deg, field)
+
+        if self.pid > 0:
+            return coeff.mult(pows, field)
+
+        return [[typeof(field)(0) for _ in range(n)] for _ in range(npoly)]  # zeros((npoly, n))
+    
+    def __setup_tables(self):
+        # Table 0
+        table = [[TP(1), TP(0)]] if self.pid > 0 else [[TP(0), TP(0)]]
+
+        self.table_type_modular[0] = True
+        self.table_cache[0] = copy(table)
+
+        # Table 1
+        half_len = NBIT_K // 2
+        table = [list[TP](half_len + 1), list[TP](half_len + 1)]  # zeros((2, half_len + 1))
+        table[0].append(TP(1))
+        table[1].append(TP(1))
+        # Warning: Not having table instantiated to zeros might be problematic for CP0
+        if self.pid > 0:
+            for i in range(1, half_len + 1):
+                table[0].append(table[0][i - 1] * 2)
+                table[1].append(table[1][i - 1] * 4)
+        else:
+            for i in range(1, half_len + 1):
+                table[0].append(TP(0))
+                table[1].append(TP(0))
+
+        self.table_type_modular[1] = True
+        self.table_cache[1] = copy(table)
+
+        # Table 2: parameters (intercept, slope) for piecewise-linear approximation
+        # of negative log-sigmoid function
+        table = [list[TP](64), list[TP](64)]  # zeros((2, 64))
+        # Warning: Not having table instantiated to zeros might be problematic for CP0
+        if self.pid > 0:
+            with open(SIGMOID_APPROX_PATH) as f:
+                for line, _ in zip(f, range(64)):
+                    intercept, slope = line.split()
+                    fp_intercept = double_to_fp(
+                        float(intercept), NBIT_K, NBIT_F)
+                    fp_slope = double_to_fp(float(slope), NBIT_K, NBIT_F)
+
+                    table[0].append(fp_intercept)
+                    table[1].append(fp_slope)
+        else:
+            for i in range(64):
+                table[0].append(TP(0))
+                table[1].append(TP(0))
+
+        self.table_type_modular[2] = False
+        self.table_cache[2] = copy(table)
+
+        for cid in range(len(self.table_cache)):
+            nrow = len(self.table_cache[cid])
+            ncol = len(self.table_cache[cid][0])
+
+            self.lagrange_cache[cid] = list[list[TP]](nrow)
+
+            if self.pid > 0:
+                for i in range(nrow):
+                    x = [0 for _ in range(ncol * (2 if self.table_type_modular[cid] else 1))]
+                    y = [TP(0) for _ in range(ncol * (2 if self.table_type_modular[cid] else 1))]
+
+                    for j in range(ncol):
+                        x[j] = j + 1
+                        y[j] = self.table_cache[cid][i][j]
+    
+                        if (self.table_type_modular[cid]):
+                            x[j + ncol] = x[j] + (int(SECOND_P) if cid == 1 else int(THIRD_P))
+                            y[j + ncol] = self.table_cache[cid][i][j]
+                    
+                    self.lagrange_cache[cid].append(self.lagrange_interp(x, y))
+            else:
+                for _ in range(nrow):
+                    self.lagrange_cache[cid].append([TP(0) for _ in range(ncol * (2 if self.table_type_modular[cid] else 1))])

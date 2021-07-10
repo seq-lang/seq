@@ -1,0 +1,90 @@
+from ..utils.param import *
+
+
+def __double_to_fp[TP](x: float, k: int = NBIT_K, f: int = NBIT_F, field: TP = BASE_P) -> TP:
+    sn: int = 1
+    if x < 0:
+        x = -x
+        sn = -sn
+
+    az = TP(int(x))
+
+    az_shift: TP = az << f  # left_shift(az, f)
+    az_trunc: TP = az_shift & ((1 << (k - 1)) - 1)  # trunc_elem(az_shift, k - 1)
+
+    xf: float = x - int(x)  # remainder
+    for fbit in range(f - 1, -1, -1):
+        xf *= 2
+        if (xf >= 1):
+            xf -= int(xf)
+            az_trunc = az_trunc | (1 << fbit)  # set_bit(az_trunc, fbit)
+    
+    return (az_trunc * sn) % field
+
+
+def __fp_to_double_mat[TP](a: list[list[TP]], k: int, f: int, field: TP = BASE_P) -> list[list[float]]:
+    rows, cols = a.shape()
+    twokm1: int = 1 << (k - 1)
+
+    sn: list[list[float]] = [[(-1.0 if a[i][j] > twokm1 else 1.0) for j in range(cols)] for i in range(rows)]
+    x: list[list[TP]] = [[(field - a[i][j] if a[i][j] > twokm1 else a[i][j]) for j in range(cols)] for i in range(rows)]
+    x_trunc: list[list[TP]] = x & ((1 << (k - 1)) - 1)
+    x_int: list[list[TP]] = x_trunc >> f
+    x_float: list[list[float]] = [[float(int(e)) for e in row] for row in x_int]
+
+    # TODO: consider better ways of doing this
+    x_frac: list[list[float]] = [[0.0 for _ in range(cols)] for _ in range(rows)]
+    for bi in range(f):
+        x_frac = [[(x_frac[i][j] + 1 if (x_trunc[i][j] & (1 << bi)) != 0 else x_frac[i][j]) for j in range(cols)] for i in range(rows)]
+        x_frac /= 2
+
+    return (x_float + x_frac) * sn
+
+
+def __fp_to_double_vec[TP](a: list[TP], k: int, f: int, field: TP = BASE_P) -> list[float]:
+    return __fp_to_double_mat[TP]([a], k, f, field)[0]
+
+
+def __fp_to_double_elem[TP](a: TP, k: int, f: int, field: TP = BASE_P) -> float:
+    return __fp_to_double_mat[TP]([[a]], k, f, field)[0][0]
+
+
+def int_to_fp[TP](a: int, k: int = NBIT_K, f: int = NBIT_F, field = BASE_P) -> TP:
+    sn: int = 1 if a >= 0 else -1
+
+    az_shift = TP(a << f)
+    az_trunc: TP = az_shift & ((1 << (k - 1)) - 1)
+
+    return (az_trunc * sn) % field
+
+
+def double_to_fp[TP](x, k: int = NBIT_K, f: int = NBIT_F, field: TP = BASE_P) -> TP:
+    if isinstance(x, list[list[float]]):
+        return [[__double_to_fp[TP](e, k, f, field) for e in row] for row in x]
+    elif isinstance(x, list[float]):
+        return [__double_to_fp[TP](e, k, f, field) for e in x]
+    else:
+        return __double_to_fp[TP](x, k, f, field)
+
+
+def fp_to_double(a, k = NBIT_K, f = NBIT_F, field = BASE_P):
+    if isinstance(a, list[list[int_t]]):
+        return __fp_to_double_mat(a, k, f, field)
+    if isinstance(a, list[int_t]):
+        return __fp_to_double_vec(a, k, f, field)
+    if isinstance(a, int_t):
+        return __fp_to_double_elem(a, k, f, field)
+    
+    raise TypeError(f"Invalid type of {a}.\n It shoudl be either, Int[N], list[Int[N]] ot list[list[Int[N]]]")
+
+
+def num_to_bits[TP](a, bitlen):
+    b = list[list[TP]](len(a))
+
+    for i in range(len(a)):
+        row = list[TP](bitlen)
+        for j in range(bitlen):
+            row.append(TP((a[i] & (1 << (bitlen - 1 - j))) != 0))
+        b.append(row)
+    
+    return b

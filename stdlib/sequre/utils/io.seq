@@ -1,0 +1,39 @@
+import param
+
+from C import stat(cobj, cobj) -> int
+
+
+def get_cache_path(pid: int, name: str) -> str:
+    return f'{param.CACHE_FILE_PREFIX}_P{pid}_{name}.bin'
+
+
+def get_output_path(pid: int, name: str) -> str:
+    return f'{param.OUTPUT_FILE_PREFIX}_P{pid}_{name}.txt'
+
+
+def skip_data(f: File, rows: int, cols: int = 0, primes_bytes: int = 0):
+    if primes_bytes:
+        raise NotImplementedError()
+    
+    for _ in range(rows): next(f)
+
+
+def read_vector[TP](f: File, length: int, primes_bytes: int = 0) -> list[TP]:
+    if primes_bytes:
+        # a = list[TP](n)
+        # for _ in range(n):
+        #     a.append(TP(f.read(primes_bytes)))
+        # return a
+        raise NotImplementedError()
+    
+    return [TP(int(e.strip())) for e in next(f).split()[:length]]
+
+
+def read_matrix[TP](f: File, rows: int, cols: int, primes_bytes: int = 0) -> list[list[TP]]:
+    if primes_bytes:
+        # a = list[list[TP]](nrows)
+        # for _ in range(nrows): a.append(read_vector_from_cache[TP](f, ncols, primes_bytes))
+        # return a
+        raise NotImplementedError()
+    
+    return [[TP(int(e.strip())) for e in next(f).split()[:cols]] for row in range(rows)]

@@ -1,0 +1,339 @@
+import math
+
+from ..utils.param import *
+from ..types.utils import double_to_fp
+
+from comms import MPCComms
+from arithmetic import MPCArithmetic
+from fp import MPCFP
+from boolean import MPCBoolean
+
+
+class MPCLinAlg[TP]:
+    pid: int
+    arithmetic: MPCArithmetic[TP]
+    boolean: MPCBoolean[TP]
+    fp: MPCFP[TP]
+    comms: MPCComms[TP]
+
+    def __init__(self: MPCLinAlg[TP], pid: int, arithmetic: MPCArithmetic[TP], boolean: MPCBoolean[TP], fp: MPCFP[TP], comms: MPCComms[TP]):
+        self.pid = pid
+        self.arithmetic = arithmetic
+        self.boolean = boolean
+        self.fp = fp
+        self.comms = comms
+
+    def householder(self: MPCLinAlg[TP], x: list[TP], field: TP = BASE_P) -> list[TP]:
+        xr, xm = self.arithmetic.__beaver_partition(x)
+
+        xdot = [self.arithmetic.beaver_inner_prod(xr, xm)]
+        xdot = self.arithmetic.__beaver_reconstruct(xdot)
+        xdot = self.fp.trunc(xdot)
+
+        # Bottleneck
+        xnorm, _ = self.fp.fp_sqrt(xdot)
+
+        x1 = [x[0]]
+        x1sign = self.boolean.is_positive(x1)
+
+        x1sign = (x1sign + x1sign) % field
+        if self.pid == 1:
+            x1sign[0] = (x1sign[0] - 1) % field
+
+        shift = self.arithmetic.multiply(xnorm, x1sign)
+        sr, sm = self.arithmetic.__beaver_partition(shift[0])
+
+        xr_0 = [xr[0]]
+        xm_0 = [xm[0]]
+        dot_shift = self.arithmetic.__beaver_mult(xr_0, xm_0, sr, sm)
+        dot_shift = self.arithmetic.__beaver_reconstruct(dot_shift)
+        dot_shift = self.fp.trunc(dot_shift)
+
+        vdot = (((xdot + dot_shift) % field) * 2) % field if self.pid > 0 else [TP(0)]
+
+        # Bottleneck
+        _, vnorm_inv = self.fp.fp_sqrt(vdot)
+
+        invr, invm = self.arithmetic.__beaver_partition(vnorm_inv[0])
+
+        if self.pid > 0:
+            xr[0] = (xr[0] + sr) % field
+        xm[0] = (xm[0] + sm) % field
+
+        v = self.arithmetic.__beaver_mult(xr, xm, invr, invm)
+        v = self.arithmetic.__beaver_reconstruct(v)
+        v = self.fp.trunc(v)
+
+        return v
+    
+    def qr_fact_square(self: MPCLinAlg[TP], A: list[list[TP]], field: TP = BASE_P) -> tuple[list[list[TP]], list[list[TP]]]:
+        shape = A.shape()
+        assert shape[0] == shape[1]
+
+        n = shape[0]
+
+        R = [[TP(0) for _ in range(n)] for _ in range(n)]
+        Q = [[TP(0) for _ in range(n)] for _ in range(n)]
+
+        Ap = A if self.pid != 0 else [[TP(0) for _ in range(n)] for _ in range(n)]
+        one = double_to_fp(1.0, NBIT_K, NBIT_F)
+
+        for i in range(n - 1):
+            v = [self.householder(Ap[0])]
+            vt = v.transpose() if self.pid != 0 else [[TP(0)] for _ in range(len(Ap[0]))]
+
+            # Note: vt partitions should be reused here from v instead of recalculating them within multiply_matmul
+            P = self.arithmetic.multiply_matmul(vt, v)
+            P = self.fp.trunc(P, NBIT_K + NBIT_F, NBIT_F)
+
+            if self.pid > 0:
+                P *= -2
+                P %= field
+                if self.pid == 1:
+                    for i in range(P.shape()[1]):
+                        P[i][i] += one
+                        P[i][i] %= field
+            
+            B = [[TP(0) for _ in range(n - i)] for _ in range(n - i)]  # zeros((n - i, n - i))
+            if i == 0:
+                Q = P
+                B = self.arithmetic.multiply_matmul(Ap, P)
+                B = self.fp.trunc(B, NBIT_K + NBIT_F, NBIT_F)
+            else:
+                Qsub = [[TP(0) for _ in range(n)] for _ in range(n - i)]  # zeros((n - i, n))
+                if self.pid > 0:
+                    Qsub[:n - i] = Q[i:n]
+
+                # TODO: #16 Parallelize following two multiplications
+                left = self.arithmetic.multiply_matmul(P, Qsub)
+                right = self.arithmetic.multiply_matmul(Ap, P)
+
+                # TODO: #16 Parallelize Trunc
+                left = self.fp.trunc(left, NBIT_K + NBIT_F, NBIT_F)
+                right = self.fp.trunc(right, NBIT_K + NBIT_F, NBIT_F)
+
+                if self.pid > 0:
+                    Q[i:n] = left
+                    B = right
+            
+            Ap = [[TP(0) for _ in range(n - i - 1)] for _ in range(n - i - 1)]  # zeros((n - i - 1, n - i - 1))
+            if self.pid > 0:
+                # R[i:n, i] = B[:n-i, 0]
+                for j in range(n - i):
+                    R[j + i][i] = B[j][0]
+                if i == n - 2: R[n - 1][n - 1] = B[1][1]
+                # Ap[:n - i - 1, :n - i - 1] = B[1:n - i, 1:n - i]
+                for j in range(n - i - 1):
+                    for k in range(n - i - 1):
+                        Ap[j][k] = B[j + 1][k + 1]
+            
+        return Q, R
+
+    def tridiag(self: MPCLinAlg[TP], A: list[list[TP]], field: TP = BASE_P) -> tuple[list[list[TP]], list[list[TP]]]:
+        shape = A.shape()
+        assert shape[0] == shape[1]
+        assert shape[0] > 2
+
+        n = shape[0]
+        one = double_to_fp(1.0, NBIT_K, NBIT_F)
+
+        Q = [[TP(0) for _ in range(n)] for _ in range(n)]  # zeros((n, n))
+        T = [[TP(0) for _ in range(n)] for _ in range(n)]  # zeros((n, n))
+        if self.pid > 0:
+            if self.pid == 1:
+                for i in range(n):
+                    Q[i][i] = one
+
+        Ap = A if self.pid != 0 else [[TP(0) for _ in range(n)] for _ in range(n)]
+
+        for i in range(n - 2):
+            ap_shape = Ap.shape()
+
+            x = [TP(0) for _ in range(ap_shape[1] - 1)]  # zeros((Ap.shape[1] - 1))
+            if self.pid > 0:
+                x[:] = Ap[0][1:]
+            
+            v = [self.householder(x)]
+            vt = v.transpose()
+
+            vv = self.arithmetic.multiply_matmul(vt, v)
+            vv = self.fp.trunc(vv, NBIT_K + NBIT_F, NBIT_F)
+
+            P = [[TP(0) for _ in range(ap_shape[1])] for _ in range(ap_shape[0])]  # zeros(Ap.shape)
+            if self.pid > 0:
+                cols_no = ap_shape[1]
+                P[1:, 1:] = -((vv[:cols_no-1, :cols_no-1] + vv[:cols_no-1, :cols_no-1]) % field)
+                if self.pid == 1:
+                    for i in range(len(P)):
+                        P[i][i] = (P[i][i] + one) % field
+
+            # TODO: #16 parallelize? (minor improvement)
+            PAp = self.arithmetic.multiply_matmul(P, Ap)
+            PAp = self.fp.trunc(PAp, NBIT_K + NBIT_F, NBIT_F)
+            B = self.arithmetic.multiply_matmul(PAp, P)
+            B = self.fp.trunc(B, NBIT_K + NBIT_F, NBIT_F)
+
+            Qsub = [[TP(0) for _ in range(n - i)] for _ in range(n)]  # zeros((n, n - i))
+            if self.pid > 0:
+                # Qsub[:, :n - i] = Q[:, i:n] TODO: Implement support for advanced slicing.
+                for j in range(n):
+                    for k in range(n - i):
+                        Qsub[j][k] = Q[j][i + k]
+
+            Qsub = self.arithmetic.multiply_matmul(Qsub, P)
+            Qsub = self.fp.trunc(Qsub, NBIT_K + NBIT_F, NBIT_F)
+            if self.pid > 0:
+                # Q[:, i:n] = Qsub[:, :n - i] TODO: Implement support for advanced slicing.
+                for j in range(n):
+                    for k in range(n - i):
+                        Q[j][k + i] = Qsub[j][k]
+            
+            if self.pid > 0:
+                T[i][i] = B[0][0]
+                T[i + 1][i] = B[1][0]
+                T[i][i + 1] = B[0][1]
+                if i == n - 3:
+                    T[i + 1][i + 1] = B[1][1]
+                    T[i + 1][i + 2] = B[1][2]
+                    T[i + 2][i + 1] = B[2][1]
+                    T[i + 2][i + 2] = B[2][2]
+
+            b_shape = B.shape()
+            Ap = [[TP(0) for _ in range(b_shape[1] - 1)] for _ in range(b_shape[0] - 1)]  # zeros((B.shape[0] - 1, B.shape[1] - 1))
+            if self.pid > 0:
+                # Ap[:b_shape[0] - 1, :b_shape[1] - 1] = B[1:b_shape[0], 1:b_shape[1]] TODO: Implement support for advanced slicing.
+                for j in range(b_shape[0] - 1):
+                    for k in range(b_shape[1] - 1):
+                        Ap[j][k] = B[j + 1][k + 1]
+            
+        return T, Q
+
+    def eigen_decomp(self: MPCLinAlg[TP], A: list[list[TP]], field: TP = BASE_P) -> tuple[list[list[TP]], list[TP]]:
+        a_shape = A.shape()
+        assert a_shape[0] == a_shape[1]
+        n = a_shape[0]
+
+        L = [TP(0) for _ in range(n)]  # zeros(n)
+
+        Ap, Q = self.tridiag(A)
+        V = Q.transpose()
+
+        for i in range(n - 1, 0, -1):
+            for _ in range(ITER_PER_EVAL):
+                shift = Ap[i][i]
+                if self.pid > 0:
+                    for j in range(len(Ap[0])):
+                        Ap[j][j] = (Ap[j][j] - shift) % field
+
+                Q, R = self.qr_fact_square(Ap)
+
+                Ap = self.arithmetic.multiply_matmul(Q, R)
+                Ap = self.fp.trunc(Ap, NBIT_K + NBIT_F, NBIT_F)
+
+                if self.pid > 0:
+                    for i in range(len(Ap)):
+                        Ap[i][i] = (Ap[i][i] + shift) % field
+                
+                Vsub: list[list[TP]] = [[TP(0) for _ in range(n)] for _ in range(i + 1)]  # zeros((i + 1, n))
+                if self.pid > 0:
+                    Vsub[:i + 1] = V[:i + 1]
+
+                Vsub = self.arithmetic.multiply_matmul(Q, Vsub)
+                Vsub = self.fp.trunc(Vsub, NBIT_K + NBIT_F, NBIT_F)
+
+                if self.pid > 0:
+                    V[:i + 1] = Vsub[:i + 1]
+                
+            L[i] = Ap[i][i]
+            if i == 1:
+                L[0] = Ap[0][0]
+
+            Ap_copy = copy(Ap)
+            Ap = [[TP(0) for _ in range(i)] for _ in range(i)]
+            if self.pid > 0:
+                #Ap = Ap_copy[:i, :i] TODO: Implement support for advanced slicing.
+                for j in range(i):
+                    for k in range(i):
+                        Ap[j][k] = Ap_copy[j][k]
+            
+        return V, L
+
+    def orthonormal_basis(self: MPCLinAlg[TP], A: list[list[TP]], field: TP = BASE_P) -> list[list[TP]]:
+        a_shape: list[int] = A.shape()
+        assert a_shape[1] >= a_shape[0]
+
+        c: int = a_shape[0]
+        n: int = a_shape[1]
+
+        v_list = list[list[TP]](c)
+
+        Ap = A if self.pid != 0 else [[TP(0) for _ in range(n)] for _ in range(c)]
+        one = double_to_fp(1.0, NBIT_K, NBIT_F)
+
+        for i in range(c):
+            ap_shape: list[int] = Ap.shape()
+            v = [self.householder(Ap[0])]
+
+            if self.pid == 0:
+                v_list.append([TP(0) for _ in range(ap_shape[1])])
+            else:
+                v_list.append(v[0])
+
+            vt = v.transpose() if self.pid != 0 else [[TP(0)] for _ in range(ap_shape[1])]
+
+            Apv = self.arithmetic.multiply_matmul(Ap, vt)
+            Apv = self.fp.trunc(Apv, NBIT_K + NBIT_F, NBIT_F)
+            
+            B = self.arithmetic.multiply_matmul(Apv, v)
+            B = self.fp.trunc(B, NBIT_K + NBIT_F, NBIT_F)
+            
+            if self.pid > 0:
+                B = -B
+                B += B
+                B %= field
+                B += Ap
+                B %= field
+
+            b_shape = B.shape()
+            Ap = list[list[TP]](b_shape[0] - 1)
+            is_cp = int(self.pid != 0)
+            for i in range(b_shape[0] - 1):
+                row = list[TP](b_shape[1] - 1)
+                for j in range(b_shape[1] - 1):
+                    row.append(B[i + 1][j + 1] * is_cp)
+                Ap.append(row)
+            
+            # self.comms.sync_nodes()  # TODO: #46 Remove sync
+
+        Q = [[TP(0) for _ in range(n)] for _ in range(c)]
+        if self.pid == 1:
+            for i in range(c):
+                Q[i][i] = one
+
+        for i in range(c - 1, -1, -1):
+            v = [v_list[i]] if self.pid > 0 else [[TP(0) for _ in range(len(v_list[i]))]]
+            vt = v.transpose() if self.pid != 0 else [[TP(0)] for _ in range(len(v_list[i]))]
+
+            Qsub = [[TP(0) for _ in range(n - i)] for _ in range(c)]  # zeros((c, n - i))
+            if self.pid > 0:
+                for j in range(c):
+                    for k in range(n - i):
+                        Qsub[j][k] = Q[j][k + i]
+
+            Qv = self.arithmetic.multiply_matmul(Qsub, vt)
+            Qv = self.fp.trunc(Qv, NBIT_K + NBIT_F, NBIT_F)
+
+            Qvv = self.arithmetic.multiply_matmul(Qv, v)
+            Qvv = self.fp.trunc(Qvv, NBIT_K + NBIT_F, NBIT_F)
+            if self.pid > 0:
+                Qvv = -Qvv
+                Qvv += Qvv
+                Qvv %= field
+            
+            if self.pid > 0:
+                for j in range(c):
+                    for k in range(n - i):
+                        Q[j][k + i] = (Q[j][k + i] + Qvv[j][k]) % field
+
+        self.comms.sync_parties()  # TODO: #46 Remove sync
+        return Q

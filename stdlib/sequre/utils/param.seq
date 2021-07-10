@@ -1,0 +1,103 @@
+""" Module containing all params """
+import math
+
+
+# Custom types
+@tuple
+class sockaddr_un:
+    sun_family: int
+    sun_path: ptr[byte]
+int_t = Int[128]
+transfer_int = Int[64]  # Must be half the size of int_t
+transfer_int_small = Int[8]  # Must be one byte, as none of the small fields should exceed 128
+list_u32 = array[u32]
+
+# Ports
+# The party with smaller ID listens on the port
+# and the other connects to it. Make sure the firewall
+# setting of the listener allows these ports.
+PORT_P0_P1: int = 8111
+PORT_P0_P2: int = 8222
+PORT_P1_P2: int = 8333
+ALL_PORTS: list[int] = [PORT_P0_P1, PORT_P0_P2, PORT_P1_P2]
+
+# Socket
+# BUFFER_SIZE: int = 1 << 10
+AF_PREFIX: str = "_socket_"
+
+AF_UNIX: int = 1
+SOCK_STREAM: int = 1
+SHUT_RDWR: int = 2
+SOCKET_LIB: str = "legacy/socket_wrapper/socket_wrapper.so"
+ADDRESS_P0_P1: str = f'{AF_PREFIX}{PORT_P0_P1}'
+SERVERADDR_P0_P1 = sockaddr_un(AF_UNIX, ADDRESS_P0_P1.c_str())
+ADDR_LEN_P0_P1: int = len(ADDRESS_P0_P1) + 2
+ADDRESS_P0_P2: str = f'{AF_PREFIX}{PORT_P0_P2}'
+SERVERADDR_P0_P2 = sockaddr_un(AF_UNIX, ADDRESS_P0_P2.c_str())
+ADDR_LEN_P0_P2: int = len(ADDRESS_P0_P2) + 2
+ADDRESS_P1_P2: str = f'{AF_PREFIX}{PORT_P1_P2}'
+SERVERADDR_P1_P2 = sockaddr_un(AF_UNIX, ADDRESS_P1_P2.c_str())
+ADDR_LEN_P1_P2: int = len(ADDRESS_P1_P2) + 2
+
+# BASE_P = int_t(1461501637330902918203684832716283019655932542929)  # 160 bit
+# BASE_P = int_t(16 * 71 * 40813 * 82963182251 * (60 * 31 * 197 * 881 * 5926803983 * 198591845047 + 1) + 1)  # 160 bit
+# BASE_P = int_t(1461501637330902918203684832716283019655932542929)  # 128 bit
+BASE_P = int_t(9223372036854775783)  # 63 bit
+# BASE_P: int = 4294967291  # 32 bit
+# BASE_P: int_t = (1 << 31) - 1  # 31 bit
+
+# SECOND_P = int_t(31)  # 160 bit
+# THIRD_P = int_t(17)  # 160 bit
+SECOND_P = 23  # 63 bit
+THIRD_P = 11  # 63 bit
+assert SECOND_P < typeof(SECOND_P)(128)
+assert THIRD_P < typeof(THIRD_P)(128)
+
+# NBIT_K: int = 60  # 160 bit
+NBIT_K: int = 40  # 63 bit
+# NBIT_K: int = 20  # 31 bit
+# NBIT_F: int = 45  # 160 bit
+NBIT_F: int = 19  # 63 bit
+# NBIT_F: int = 9  # 31 bit
+# NBIT_V: int = 64  # 160 bit
+NBIT_V: int = 1  # 63 bit
+# NBIT_V: int = 1  # 31 bit
+
+ITER_PER_EVAL: int = 5
+
+NUM_INDS: int = 1000
+NUM_SNPS: int = 1000
+NUM_COVS: int = 10
+NUM_DIM_TO_REDUCE_TO: int = 5
+
+NUM_OVERSAMPLE: int = 5
+NUM_POWER_ITER: int = 10
+
+SIGMOID_APPROX_PATH: str = 'data/sigmoid_approx.txt'
+OUTPUT_FILE_PREFIX: str = "out/test"
+CACHE_FILE_PREFIX: str = "cache/test"
+GWAS_DATA_PATH: str = "data/gwas/input"
+LOGIREG_DATA_PATH: str = "data/logireg/input"
+SNP_POS_FILE: str = f"{GWAS_DATA_PATH}/pos.txt"
+
+IMISS_UB: float = 0.05
+GMISS_UB: float = 0.1
+HET_LB: float = 0.25
+HET_UB: float = 0.30
+MAF_LB: float = 0.4
+MAF_UB: float = 0.6
+HWE_UB: float = 28.3740
+LD_DIST_THRES: int = 1
+DIV_MAX_N: int = 100000
+
+NUM_INDS: int = 1000
+NUM_SNPS: int = 1000
+NUM_COVS: int = 10
+
+PITER_BATCH_SIZE: int = 100
+PAR_THRES: int = 50
+NUM_THREADS: int = 20
+
+SKIP_QC: bool = True
+LOGIREG_ITER: int = 1
+MATMUL_LEAF_SIZE: int = 64
