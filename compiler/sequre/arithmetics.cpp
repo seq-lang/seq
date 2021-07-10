@@ -9,6 +9,8 @@ namespace seq {
 
 using namespace ir;
 
+const std::string secureContainerTypeName = "SecureContainer";
+
 /*
  * Binary expression tree
  */
@@ -688,17 +690,15 @@ void ArithmeticsOptimizations::applyBeaverOptimizations(CallInstr *v) {
     }
   }
 
+  bool lhs_is_secure_container = lhsType->getName().find(secureContainerTypeName) != std::string::npos;
+  bool rhs_is_secure_container = rhsType->getName().find(secureContainerTypeName) != std::string::npos;
+
+  if (!lhs_is_secure_container and !rhs_is_secure_container)
+    return;
+
   bool lhs_is_int = lhsType->is(M->getIntType());
   bool rhs_is_int = rhsType->is(M->getIntType());
 
-  if (isGt && lhs_is_int && rhs_is_int)
-    return;
-  if (isLt && lhs_is_int && rhs_is_int)
-    return;
-  if (isAdd && lhs_is_int && rhs_is_int)
-    return;
-  if (isSub && lhs_is_int && rhs_is_int)
-    return;
   if (isMul && lhs_is_int)
     return;
   if (isMul && rhs_is_int)
