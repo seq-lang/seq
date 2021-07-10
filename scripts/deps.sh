@@ -174,6 +174,7 @@ curl -L -O https://raw.githubusercontent.com/jkbonfield/htslib/715056cdd3f85855a
 ./configure \
     CFLAGS="-fPIC" \
     --disable-libcurl \
+    --without-libdeflate \
     --prefix="${INSTALLDIR}"
 make -j "${JOBS}"
 make install
