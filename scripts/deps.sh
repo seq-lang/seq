@@ -127,7 +127,6 @@ make install PREFIX="${INSTALLDIR}"
 XZ_VERSION='5.2.5'
 curl -L "https://tukaani.org/xz/xz-${XZ_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
 cd "${SRCDIR}/xz-${XZ_VERSION}"
-./autogen.sh
 ./configure \
     --disable-xz \
     --disable-xzdec \
