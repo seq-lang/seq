@@ -128,6 +128,7 @@ XZ_VERSION='5.2.5'
 curl -L "https://tukaani.org/xz/xz-${XZ_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
 cd "${SRCDIR}/xz-${XZ_VERSION}"
 ./configure \
+    CFLAGS="-fPIC" \
     --disable-xz \
     --disable-xzdec \
     --disable-lzmadec \
