@@ -157,7 +157,7 @@ make install
 [ ! -f "${INSTALLDIR}/lib/libgc.a" ] && die "gc library not found"
 
 # htslib
-HTSLIB_VERSION='1.12'
+HTSLIB_VERSION='1.13'
 curl -L "https://github.com/samtools/htslib/releases/download/${HTSLIB_VERSION}/htslib-${HTSLIB_VERSION}.tar.bz2" | tar jxf - -C "${SRCDIR}"
 cd "${SRCDIR}/htslib-${HTSLIB_VERSION}"
 # Get needed fix so HTSlib works with zlib-ng: https://github.com/samtools/htslib/compare/develop...jkbonfield:zlib-ng-fix
