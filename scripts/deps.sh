@@ -160,8 +160,6 @@ make install
 HTSLIB_VERSION='1.13'
 curl -L "https://github.com/samtools/htslib/releases/download/${HTSLIB_VERSION}/htslib-${HTSLIB_VERSION}.tar.bz2" | tar jxf - -C "${SRCDIR}"
 cd "${SRCDIR}/htslib-${HTSLIB_VERSION}"
-# Get needed fix so HTSlib works with zlib-ng: https://github.com/samtools/htslib/compare/develop...jkbonfield:zlib-ng-fix
-curl -L -O https://raw.githubusercontent.com/jkbonfield/htslib/715056cdd3f85855a503ac932f58e84b92c7dd0e/bgzf.c
 ./configure \
     CFLAGS="-fPIC" \
     --disable-libcurl \
