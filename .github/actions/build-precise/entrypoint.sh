@@ -36,7 +36,6 @@ fi
 # env
 export PYTHONPATH=$(pwd)/test/python
 export SEQ_PATH=$(pwd)/stdlib
-export SEQ_HTSLIB=$(pwd)/deps/lib/libhts.so
 export SEQ_PYTHON=$(python3.5 test/python/find-python-library.py)
 
 # build

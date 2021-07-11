@@ -113,7 +113,7 @@ jobs:
       - name: macOS Setup
         if: startsWith(matrix.os, 'macos')
         run: |
-          brew install autoconf automake libtool
+          brew install automake
           echo "LIBEXT=dylib" >> $GITHUB_ENV
           echo "OS_NAME=osx" >> $GITHUB_ENV
 
@@ -143,7 +143,6 @@ jobs:
         run: |
           mkdir build
           ln -s $(pwd)/deps/lib/libomp.${LIBEXT} $(pwd)/build/libomp.${LIBEXT}
-          echo "SEQ_HTSLIB=$(pwd)/deps/lib/libhts.${LIBEXT}" >> $GITHUB_ENV
           (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
                                 -DSEQ_DEP=$(pwd)/../deps \
                                 -DCMAKE_C_COMPILER=${CC} \
