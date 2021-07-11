@@ -135,6 +135,7 @@ jobs:
       - name: macOS Setup
         if: startsWith(matrix.os, 'macos')
         run: |
+          brew install autoconf automake libtool
           echo "LIBEXT=dylib" >> $GITHUB_ENV
           echo "OS_NAME=osx" >> $GITHUB_ENV
 
