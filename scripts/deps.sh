@@ -139,15 +139,6 @@ make -j "${JOBS}"
 make install
 [ ! -f "${INSTALLDIR}/lib/liblzma.a" ] && die "lzma library not found"
 
-# libdeflate
-LIBDEFLATE_VERSION='1.7'
-curl -L "https://github.com/ebiggers/libdeflate/archive/refs/tags/v${LIBDEFLATE_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
-cd "${SRCDIR}/libdeflate-${LIBDEFLATE_VERSION}"
-make -j "${JOBS}" -e libdeflate.a CFLAGS="-fPIC" PREFIX="${INSTALLDIR}"
-install -m644 libdeflate.a "${INSTALLDIR}/lib"
-install -m644 libdeflate.h "${INSTALLDIR}/include"
-[ ! -f "${INSTALLDIR}/lib/libdeflate.a" ] && die "deflate library not found"
-
 # bdwgc
 cd "${SRCDIR}"
 git clone https://github.com/seq-lang/bdwgc
