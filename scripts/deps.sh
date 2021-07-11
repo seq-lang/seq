@@ -52,7 +52,7 @@ fi
 if [ ! -f "${INSTALLDIR}/bin/ocamlbuild" ]; then
   cd "${SRCDIR}/ocaml-${OCAML_VERSION}"
   ./configure \
-      -cc "${CC} -Wno-implicit-function-declaration" \
+      -cc "gcc -Wno-implicit-function-declaration" \
       -fPIC \
       -no-pthread \
       -no-debugger \
