@@ -104,6 +104,19 @@ jobs:
         with:
           python-version: '3.8'
 
+      - name: Linux Setup
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          echo "LIBEXT=so" >> $GITHUB_ENV
+          echo "OS_NAME=linux" >> $GITHUB_ENV
+
+      - name: macOS Setup
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          brew install autoconf automake libtool
+          echo "LIBEXT=dylib" >> $GITHUB_ENV
+          echo "OS_NAME=osx" >> $GITHUB_ENV
+
       - name: Set up Python
         run: |
           python -m pip install --upgrade pip setuptools wheel
@@ -125,19 +138,6 @@ jobs:
         env:
           CC: clang
           CXX: clang++
-
-      - name: Linux Setup
-        if: startsWith(matrix.os, 'ubuntu')
-        run: |
-          echo "LIBEXT=so" >> $GITHUB_ENV
-          echo "OS_NAME=linux" >> $GITHUB_ENV
-
-      - name: macOS Setup
-        if: startsWith(matrix.os, 'macos')
-        run: |
-          brew install autoconf automake libtool
-          echo "LIBEXT=dylib" >> $GITHUB_ENV
-          echo "OS_NAME=osx" >> $GITHUB_ENV
 
       - name: Build
         run: |
