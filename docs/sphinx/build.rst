@@ -2,7 +2,7 @@ Building from Source
 ====================
 
 Unless you really need to build Seq for whatever reason, we strongly
-recommend using `pre-built binaries`_.
+recommend using pre-built binaries.
 
 Dependencies
 ------------

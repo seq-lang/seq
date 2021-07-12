@@ -52,7 +52,7 @@ fi
 if [ ! -f "${INSTALLDIR}/bin/ocamlbuild" ]; then
   cd "${SRCDIR}/ocaml-${OCAML_VERSION}"
   ./configure \
-      -cc "${CC} -Wno-implicit-function-declaration" \
+      -cc "gcc -Wno-implicit-function-declaration" \
       -fPIC \
       -no-pthread \
       -no-debugger \
@@ -90,7 +90,7 @@ make PREFIX="${INSTALLDIR}" install
 
 if [ "${USE_ZLIBNG}" = '1' ] ; then
     # zlib-ng
-    ZLIBNG_VERSION='2.0.2'
+    ZLIBNG_VERSION='2.0.5'
     curl -L "https://github.com/zlib-ng/zlib-ng/archive/${ZLIBNG_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
     cd "${SRCDIR}/zlib-ng-${ZLIBNG_VERSION}"
     CFLAGS="-fPIC" ./configure \
@@ -115,19 +115,33 @@ else
     [ ! -f "${INSTALLDIR}/lib/libz.a" ] && die "zlib library not found"
 fi
 
-# libdeflate
-LIBDEFLATE_VERSION='1.7'
-curl -L "https://github.com/ebiggers/libdeflate/archive/refs/tags/v${LIBDEFLATE_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
-cd "${SRCDIR}/libdeflate-${LIBDEFLATE_VERSION}"
-make -j "${JOBS}" -e libdeflate.a CFLAGS="-fPIC" PREFIX="${INSTALLDIR}"
-install -m644 libdeflate.a "${INSTALLDIR}/lib"
-install -m644 libdeflate.h "${INSTALLDIR}/include"
+# libbz2
+BZ2_VERSION='1.0.8'
+curl -L "https://www.sourceware.org/pub/bzip2/bzip2-${BZ2_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
+cd "${SRCDIR}/bzip2-${BZ2_VERSION}"
+make CFLAGS="-Wall -Winline -O2 -g -D_FILE_OFFSET_BITS=64 -fPIC"
+make install PREFIX="${INSTALLDIR}"
+[ ! -f "${INSTALLDIR}/lib/libbz2.a" ] && die "bz2 library not found"
+
+# liblzma
+XZ_VERSION='5.2.5'
+curl -L "https://tukaani.org/xz/xz-${XZ_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
+cd "${SRCDIR}/xz-${XZ_VERSION}"
+./configure \
+    CFLAGS="-fPIC" \
+    --disable-xz \
+    --disable-xzdec \
+    --disable-lzmadec \
+    --disable-lzmainfo \
+    --disable-shared \
+    --prefix="${INSTALLDIR}"
+make -j "${JOBS}"
+make install
+[ ! -f "${INSTALLDIR}/lib/liblzma.a" ] && die "lzma library not found"
 
 # bdwgc
-# BDWGC_VERSION='8.0.4'
-# curl -L "https://github.com/ivmai/bdwgc/releases/download/v${BDWGC_VERSION}/gc-${BDWGC_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
 cd "${SRCDIR}"
-git clone https://github.com/wangp/bdwgc -b unmap-limit
+git clone https://github.com/seq-lang/bdwgc
 cd bdwgc
 git clone git://github.com/ivmai/libatomic_ops.git
 ./autogen.sh
@@ -136,20 +150,20 @@ git clone git://github.com/ivmai/libatomic_ops.git
     --enable-threads=posix \
     --enable-large-config \
     --enable-thread-local-alloc \
+    --enable-handle-fork=yes \
     --prefix="${INSTALLDIR}"
 make -j "${JOBS}" LDFLAGS=-static
 make install
 [ ! -f "${INSTALLDIR}/lib/libgc.a" ] && die "gc library not found"
 
 # htslib
-HTSLIB_VERSION='1.12'
+HTSLIB_VERSION='1.13'
 curl -L "https://github.com/samtools/htslib/releases/download/${HTSLIB_VERSION}/htslib-${HTSLIB_VERSION}.tar.bz2" | tar jxf - -C "${SRCDIR}"
 cd "${SRCDIR}/htslib-${HTSLIB_VERSION}"
-# Get needed fix so HTSlib works with zlib-ng: https://github.com/samtools/htslib/compare/develop...jkbonfield:zlib-ng-fix
-curl -L -O https://raw.githubusercontent.com/jkbonfield/htslib/715056cdd3f85855a503ac932f58e84b92c7dd0e/bgzf.c
 ./configure \
     CFLAGS="-fPIC" \
     --disable-libcurl \
+    --without-libdeflate \
     --prefix="${INSTALLDIR}"
 make -j "${JOBS}"
 make install

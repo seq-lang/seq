@@ -10,12 +10,9 @@ Simple!
 
     /bin/bash -c "$(curl -fsSL https://seq-lang.org/install.sh)"
 
-Some features require `htslib <http://www.htslib.org/>`__ 1.10+ and
-Python 3.5+. If you want to use Python interop, you also need to point
+If you want to use Python interop, you also need to point
 ``SEQ_PYTHON`` to the Python library (typically called
-``libpython3.8m.so`` or similar). Also, if you have a custom build of
-htslib, you can point ``SEQ_HTSLIB`` to it
-(e.g. ``export SEQ_HTSLIB=/path/to/libhts-custom.so``).
+``libpython3.8m.so`` or similar).
 
 Usage
 -----
