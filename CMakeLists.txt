@@ -54,6 +54,12 @@ if (NOT EXISTS ${HTSLIB})
 endif ()
 message(STATUS "Found htslib: ${HTSLIB}")
 
+set(BACKTRACE ${SEQ_DEP}/lib/libbacktrace.a)
+if (NOT EXISTS ${BACKTRACE})
+    message(FATAL_ERROR "Cannot find ${BACKTRACE}")
+endif ()
+message(STATUS "Found libbacktrace: ${BACKTRACE}")
+
 execute_process(COMMAND ${SEQ_DEP}/bin/ocamlc -where
         RESULT_VARIABLE result
         OUTPUT_VARIABLE OCAML_STDLIB_PATH
@@ -104,13 +110,12 @@ set(SEQRT_FILES runtime/lib.h
 add_library(seqrt SHARED ${SEQRT_FILES})
 target_compile_options(seqrt PRIVATE -mavx)
 target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include runtime)
+target_link_libraries(seqrt PUBLIC seqomp ${BZ2} ${LZMA} ${BACKTRACE} ${STATIC_LIBCPP})
 if (APPLE)
-    target_link_libraries(seqrt PUBLIC seqomp ${BZ2} ${LZMA} ${STATIC_LIBCPP} -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC} -Wl,-force_load,${HTSLIB})
+    target_link_libraries(seqrt PUBLIC -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC} -Wl,-force_load,${HTSLIB})
 else ()
-    target_link_libraries(seqrt PUBLIC seqomp ${BZ2} ${LZMA} ${STATIC_LIBCPP} -Wl,--whole-archive ${ZLIB} ${BDWGC} ${HTSLIB} -Wl,--no-whole-archive)
+    target_link_libraries(seqrt PUBLIC -Wl,--whole-archive ${ZLIB} ${BDWGC} ${HTSLIB} -Wl,--no-whole-archive)
 endif ()
-set(BACKTRACE ${SEQ_DEP}/lib/libbacktrace.a)
-target_link_libraries(seqrt PUBLIC ${BACKTRACE})
 
 # Seq parsing library
 include_directories(${OCAML_STDLIB_PATH})
