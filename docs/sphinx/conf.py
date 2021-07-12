@@ -34,7 +34,7 @@ version = u'0.10'
 release = u'0.10.2'
 
 # Logo path
-html_logo = '../images/logo.png'
+html_logo = 'logo.png'
 
 # -- General configuration ---------------------------------------------------
 
