@@ -1,4 +1,5 @@
 from C import seq_is_macos() -> bool
+from threading import Lock
 
 # <dlfcn.h>
 from C import dlerror() -> cobj as c_dlerror
@@ -7,6 +8,8 @@ from C import dlsym(cobj, cobj) -> cobj as c_dlsym
 from C import dlclose(cobj) -> i32 as c_dlclose
 RTLD_NOW = 2
 RTLD_GLOBAL = 8 if seq_is_macos() else 256
+DLOPEN_LOCK = Lock()
+DLSYM_LOCK = Lock()
 
 def dlext():
     if seq_is_macos():
@@ -19,13 +22,14 @@ def dlerror():
 
 _DLOPEN_CACHE = Dict[str, cobj]()
 def dlopen(name: str, flag: int = RTLD_NOW | RTLD_GLOBAL) -> cobj:
-    if name in _DLOPEN_CACHE:
-        return _DLOPEN_CACHE[name]
-    h = c_dlopen(cobj(0) if name == "" else name.c_str(), flag)
-    if h == cobj():
-        raise CError(dlerror())
-    _DLOPEN_CACHE[name] = h
-    return h
+    with DLOPEN_LOCK:
+        if name in _DLOPEN_CACHE:
+            return _DLOPEN_CACHE[name]
+        h = c_dlopen(cobj(0) if name == "" else name.c_str(), flag)
+        if h == cobj():
+            raise CError(dlerror())
+        _DLOPEN_CACHE[name] = h
+        return h
 
 def _dlsym(handle: cobj, name: str) -> cobj:
     fn = c_dlsym(handle, name.c_str())
@@ -35,13 +39,14 @@ def _dlsym(handle: cobj, name: str) -> cobj:
 
 _DLSYM_CACHE = Dict[str, cobj]()
 def dlsym(lib: str, name: str) -> cobj:
-    key = lib + "/" + name
-    if key in _DLSYM_CACHE:
-        return _DLSYM_CACHE[key]
-    h = dlopen(lib)
-    f = _dlsym(h, name)
-    _DLSYM_CACHE[key] = f
-    return f
+    with DLSYM_LOCK:
+        key = lib + "/" + name
+        if key in _DLSYM_CACHE:
+            return _DLSYM_CACHE[key]
+        h = dlopen(lib)
+        f = _dlsym(h, name)
+        _DLSYM_CACHE[key] = f
+        return f
 
 def dlclose(handle: cobj):
     if c_dlclose(handle) != i32(0):

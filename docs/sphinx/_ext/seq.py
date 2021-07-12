@@ -21,7 +21,6 @@ from sphinx import addnodes
 from sphinx.addnodes import pending_xref,desc_signature
 from sphinx.application import Sphinx
 from sphinx.builders import Builder
-from sphinx.deprecation import RemovedInSphinx40Warning,RemovedInSphinx50Warning
 from sphinx.directives import ObjectDescription
 from sphinx.domains import Domain,ObjType,Index,IndexEntry
 from sphinx.environment import BuildEnvironment

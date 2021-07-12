@@ -16,7 +16,7 @@ sudo rm -f /etc/apt/sources.list.d/mongodb*
 sudo rm -f /etc/apt/sources.list.d/couchdb*
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 762E3157
 sudo apt-get -q update
-sudo apt-get -y --force-yes install clang-4.0 clang++-4.0 python3.5 python3.5-dev
+sudo apt-get -y --force-yes install clang-4.0 clang++-4.0 python3.5 python3.5-dev autoconf libtool
 sudo ln -s /usr/bin/clang-4.0 /usr/bin/clang
 sudo ln -s /usr/bin/clang++-4.0 /usr/bin/clang++
 wget https://github.com/Kitware/CMake/releases/download/v3.18.1/cmake-3.18.1-Linux-x86_64.sh
@@ -28,6 +28,7 @@ export CC=clang
 export CXX=clang++
 
 # deps
+ls
 if [ ! -d ./deps ]; then
   /bin/bash scripts/deps.sh 2;
 fi
@@ -35,7 +36,6 @@ fi
 # env
 export PYTHONPATH=$(pwd)/test/python
 export SEQ_PATH=$(pwd)/stdlib
-export SEQ_HTSLIB=$(pwd)/deps/lib/libhts.so
 export SEQ_PYTHON=$(python3.5 test/python/find-python-library.py)
 
 # build
