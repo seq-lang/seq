@@ -687,6 +687,8 @@ In the last example, Seq will automatically schedule the ``process`` and
 ``clean`` functions to execute as soon as possible. You can control the
 number of threads via the ``OMP_NUM_THREADS`` environment variable.
 
+.. _interop:
+
 Foreign function interface (FFI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
