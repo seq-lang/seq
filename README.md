@@ -1,5 +1,5 @@
 <p align="center">
- <img src="docs/images/logo.png?raw=true" width="200" alt="Seq"/>
+ <img src="docs/sphinx/logo.png?raw=true" width="200" alt="Seq"/>
 </p>
 
 <h1 align="center"> Seq — a language for bioinformatics</h1>
