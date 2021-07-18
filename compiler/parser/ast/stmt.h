@@ -427,6 +427,7 @@ struct Attr {
   const static string ForceRealize;
   // Compiler-generated attributes
   const static string C;
+  const static string CVarArg;
   const static string Method;
   const static string Capture;
   // Class attributes

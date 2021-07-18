@@ -258,6 +258,7 @@ const string Attr::Property = "property";
 const string Attr::Internal = "__internal__";
 const string Attr::ForceRealize = "__force__";
 const string Attr::C = ".__c__";
+const string Attr::CVarArg = ".__vararg__";
 const string Attr::Method = ".__method__";
 const string Attr::Capture = ".__capture__";
 const string Attr::Extend = "extend";
