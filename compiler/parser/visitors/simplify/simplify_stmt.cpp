@@ -1058,12 +1058,13 @@ StmtPtr SimplifyVisitor::transformCImport(const string &name, const vector<Param
     seqassert(args[ai].name.empty(), "unexpected argument name");
     seqassert(!args[ai].deflt, "unexpected default argument");
     seqassert(args[ai].type, "missing type");
-    if (dynamic_cast<EllipsisExpr*>(args[ai].type.get()) && ai + 1 == args.size()) {
+    if (dynamic_cast<EllipsisExpr *>(args[ai].type.get()) && ai + 1 == args.size()) {
       attr.set(Attr::CVarArg);
       fnArgs.emplace_back(Param{"*args", nullptr, nullptr});
     } else {
-      fnArgs.emplace_back(Param{args[ai].name.empty() ? format("a{}", ai) : args[ai].name,
-                              args[ai].type->clone(), nullptr});
+      fnArgs.emplace_back(
+          Param{args[ai].name.empty() ? format("a{}", ai) : args[ai].name,
+                args[ai].type->clone(), nullptr});
     }
   }
   auto f = N<FunctionStmt>(name, ret ? ret->clone() : N<IdExpr>("void"),

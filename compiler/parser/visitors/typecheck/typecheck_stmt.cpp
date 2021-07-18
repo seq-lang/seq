@@ -391,7 +391,8 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   if (auto t = ctx->findInVisited(stmt->name).second) {
     // We realize built-ins and extern C function when we see them for the second time
     // (to avoid preamble realization).
-    if (attr.has(Attr::ForceRealize) || (attr.has(Attr::C) && !attr.has(Attr::CVarArg))) {
+    if (attr.has(Attr::ForceRealize) ||
+        (attr.has(Attr::C) && !attr.has(Attr::CVarArg))) {
       if (!t->canRealize())
         error("builtins and external functions must be realizable");
 

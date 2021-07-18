@@ -72,6 +72,7 @@ const std::string Module::INVERT_MAGIC_NAME = "__invert__";
 const std::string Module::ADD_MAGIC_NAME = "__add__";
 const std::string Module::SUB_MAGIC_NAME = "__sub__";
 const std::string Module::MUL_MAGIC_NAME = "__mul__";
+const std::string Module::MATMUL_MAGIC_NAME = "__matmul__";
 const std::string Module::TRUE_DIV_MAGIC_NAME = "__truediv__";
 const std::string Module::FLOOR_DIV_MAGIC_NAME = "__floordiv__";
 const std::string Module::MOD_MAGIC_NAME = "__mod__";
@@ -266,10 +267,11 @@ types::Type *Module::unsafeGetOptionalType(types::Type *base) {
 }
 
 types::Type *Module::unsafeGetFuncType(const std::string &name, types::Type *rType,
-                                       std::vector<types::Type *> argTypes) {
+                                       std::vector<types::Type *> argTypes,
+                                       bool variadic) {
   if (auto *rVal = getType(name))
     return rVal;
-  return Nr<types::FuncType>(name, rType, std::move(argTypes));
+  return Nr<types::FuncType>(name, rType, std::move(argTypes), variadic);
 }
 
 types::Type *Module::unsafeGetMemberedType(const std::string &name, bool ref) {

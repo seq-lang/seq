@@ -50,6 +50,10 @@ Value *Value::operator*(Value &other) {
   return doBinaryOp(Module::MUL_MAGIC_NAME, other);
 }
 
+Value *Value::matMul(Value &other) {
+  return doBinaryOp(Module::MATMUL_MAGIC_NAME, other);
+}
+
 Value *Value::trueDiv(Value &other) {
   return doBinaryOp(Module::TRUE_DIV_MAGIC_NAME, other);
 }
