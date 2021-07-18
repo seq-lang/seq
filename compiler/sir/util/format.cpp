@@ -311,9 +311,9 @@ public:
   }
   void visit(const types::FuncType *v) override {
     auto args = makeFormatters(v->begin(), v->end());
-    fmt::print(os, FMT_STRING("(func '\"{}\" {} {})"), v->referenceString(),
+    fmt::print(os, FMT_STRING("(func '\"{}\" {}{} {})"), v->referenceString(),
                fmt::join(args.begin(), args.end(), " "),
-               makeFormatter(v->getReturnType()));
+               (v->isVariadic() ? " ..." : ""), makeFormatter(v->getReturnType()));
   }
   void visit(const types::OptionalType *v) override {
     fmt::print(os, FMT_STRING("(optional '\"{}\" {})"), v->referenceString(),

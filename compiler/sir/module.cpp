@@ -203,10 +203,20 @@ types::Type *Module::getOptionalType(types::Type *base) {
 }
 
 types::Type *Module::getFuncType(types::Type *rType,
-                                 std::vector<types::Type *> argTypes) {
+                                 std::vector<types::Type *> argTypes, bool variadic) {
   auto args = translateArgs(argTypes);
   args[0] = std::make_shared<seq::ast::types::LinkType>(rType->getAstType());
-  return cache->makeFunction(args);
+  auto *result = cache->makeFunction(args);
+  if (variadic) {
+    // Type checker types have no concept of variadic functions, so we will
+    // create a new IR type here with the same AST type.
+    auto *f = cast<types::FuncType>(result);
+    result = unsafeGetFuncType(f->getName() + "$variadic", f->getReturnType(),
+                               std::vector<types::Type *>(f->begin(), f->end()),
+                               /*variadic=*/true);
+    result->setAstType(f->getAstType());
+  }
+  return result;
 }
 
 types::Type *Module::getIntNType(unsigned int len, bool sign) {
