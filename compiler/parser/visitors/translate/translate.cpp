@@ -401,6 +401,11 @@ void TranslateVisitor::transformFunction(types::FuncType *type, FunctionStmt *as
       indices.push_back(i - 1);
     }
   }
+  if (ast->hasAttr(Attr::CVarArg)) {
+    types.pop_back();
+    names.pop_back();
+    indices.pop_back();
+  }
   auto irType = ctx->getModule()->unsafeGetFuncType(type->realizedName(),
                                                     getType(type->args[0]), types,
                                                     ast->hasAttr(Attr::CVarArg));
