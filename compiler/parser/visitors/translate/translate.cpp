@@ -391,8 +391,11 @@ void TranslateVisitor::transformFunction(types::FuncType *type, FunctionStmt *as
       indices.push_back(i - 1);
     }
   }
+  if (ast->hasAttr(Attr::CVarArg))
+    LOG("> {}", type->realizedName());
   auto irType = ctx->getModule()->unsafeGetFuncType(type->realizedName(),
-                                                    getType(type->args[0]), types);
+                                                    getType(type->args[0]), types,
+                                                    ast->hasAttr(Attr::CVarArg));
   irType->setAstType(type->getFunc());
   func->realize(irType, names);
   // TODO: refactor IR attribute API
