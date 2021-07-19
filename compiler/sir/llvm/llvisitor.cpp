@@ -850,7 +850,7 @@ void LLVMVisitor::makeLLVMFunction(const Func *x) {
   }
 
   auto *llvmFuncType =
-      llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false);
+      llvm::FunctionType::get(returnType, argTypes, funcType->isVariadic());
   const std::string functionName = getNameForFunction(x);
   func = llvm::cast<llvm::Function>(
       module->getOrInsertFunction(functionName, llvmFuncType));
@@ -1331,7 +1331,7 @@ llvm::Type *LLVMVisitor::getLLVMType(types::Type *t) {
     for (auto *argType : *x) {
       argTypes.push_back(getLLVMType(argType));
     }
-    return llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false)
+    return llvm::FunctionType::get(returnType, argTypes, x->isVariadic())
         ->getPointerTo();
   }
 
