@@ -95,10 +95,20 @@ void TranslateVisitor::visit(CallExpr *expr) {
   auto ft = expr->expr->type->getFunc();
   seqassert(ft, "not calling function: {}", ft->toString());
   auto callee = transform(expr->expr);
+  auto ast = ctx->cache->functions[ft->funcName].realizations[ft->realizedName()]->ast.get();
+  seqassert(ast, "function {} has no ast", ft->realizedName());
+  bool isVariardic = ast->hasAttr(Attr::CVarArg);
   vector<ir::Value *> items;
   for (int i = 0; i < expr->args.size(); i++) {
     seqassert(!expr->args[i].value->getEllipsis(), "ellipsis not elided");
-    items.emplace_back(transform(expr->args[i].value));
+    if (i + 1 == expr->args.size() && isVariardic) {
+      auto call = expr->args[i].value->getCall();
+      seqassert(call && call->expr->getId() && startswith(call->expr->getId()->value, TYPE_TUPLE), "expected *args tuple");
+      for (auto &arg: call->args)
+        items.emplace_back(transform(arg.value));
+    } else {
+      items.emplace_back(transform(expr->args[i].value));
+    }
   }
   result = make<ir::CallInstr>(expr, callee, move(items));
 }
@@ -391,8 +401,6 @@ void TranslateVisitor::transformFunction(types::FuncType *type, FunctionStmt *as
       indices.push_back(i - 1);
     }
   }
-  if (ast->hasAttr(Attr::CVarArg))
-    LOG("> {}", type->realizedName());
   auto irType = ctx->getModule()->unsafeGetFuncType(type->realizedName(),
                                                     getType(type->args[0]), types,
                                                     ast->hasAttr(Attr::CVarArg));
