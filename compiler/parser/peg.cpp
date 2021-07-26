@@ -31,12 +31,95 @@ using namespace std;
 #define V2     vs[2]
 #define CHOICE vs.choice()
 
-
 namespace seq {
 namespace ast {
 
 using namespace peg;
 typedef const SemanticValues SV;
+
+class PEGVisitor : public Ope::Visitor {
+  vector<string> v;
+
+public:
+  static string parse(const shared_ptr<Ope> &op) {
+    PEGVisitor v;
+    op->accept(v);
+    if (v.v.size()) {
+      if (v.v[0].empty())
+        return fmt::format("g[\"{}\"]", v.v[1]);
+      else
+        return fmt::format("{}({})", v.v[0], join(v.v, ", ", 1));
+    }
+    return "-";
+  };
+
+private:
+  void visit(Sequence &s) override {
+    v = { "seq" };
+    for (auto &o: s.opes_)
+      v.push_back(parse(o));
+  }
+  void visit(PrioritizedChoice &s) override {
+    v = { "cho" };
+    for (auto &o: s.opes_)
+      v.push_back(parse(o));
+  }
+  void visit(Repetition &s) override {
+    if (s.is_zom())
+      v = { "zom", parse(s.ope_) };
+    else if (s.min_ == 1 && s.max_ == std::numeric_limits<size_t>::max())
+      v = { "oom", parse(s.ope_) };
+    else if (s.min_ == 0 && s.max_ == 1)
+      v = { "opt", parse(s.ope_) };
+    else
+      v = { "rep", parse(s.ope_), to_string(s.min_), to_string(s.max_) };
+  }
+  void visit(AndPredicate &s) override {
+    v = { "apd", parse(s.ope_) };
+  }
+  void visit(NotPredicate &s) override {
+    v = { "npd", parse(s.ope_) };
+  }
+  void visit(LiteralString &s) override {
+    v = { s.ignore_case_ ? "liti" : "lit", fmt::format("\"{}\"", escape(s.lit_)) };
+  }
+  void visit(CharacterClass &s) override {
+    vector<string> sv;
+    for (auto &c: s.ranges_)
+      sv.push_back(fmt::format("{{0x{:x}, 0x{:x}}}", (int)c.first, (int)c.second));
+    v = { s.negated_ ? "ncls" : "cls", "{" + join(sv, ",") + "}" };
+  }
+  void visit(Character &s) override {
+    v = { "chr", fmt::format("'{}'", s.ch_) };
+  }
+  void visit(AnyCharacter &s) override {
+    v = { "dot" };
+  }
+  void visit(Cut &s) override {
+    v = { "cut" };
+  }
+  void visit(Reference &s) override {
+    if (s.is_macro_) {
+      vector<string> vs;
+      for (auto &o: s.args_)
+        vs.push_back(parse(o));
+      v = { "ref", "g", fmt::format("\"{}\"", s.name_), "\"\"", "true", join(vs, ", ") };
+    }
+    else
+      v = { "", s.name_ };
+  }
+  void visit(TokenBoundary &s) override {
+    v = { "tok", parse(s.ope_) };
+  }
+  void visit(Ignore &s) override {
+    v = { "ign", parse(s.ope_) };
+  }
+  void visit(Recovery &s) override {
+    v = { "rec", parse(s.ope_) };
+  }
+  // infix TODO
+};
+
 
 struct ParseContext {
   stack<int> indent;
@@ -85,405 +168,31 @@ Expr *singleOrTuple(const any &vs) {
 
 void setStmtRules(parser &rules) {
   auto SUITE = [](SV &vs) { return NS(Suite, vecFromSv<Stmt>(vs)); };
-
-  rules["program"] = COPY;
-  rules["statements"] = SUITE;
-  rules["statement"] = COPY;
-  rules["simple_stmt"] = SUITE;
-  RULE("small_stmt",
-    switch (CHOICE) {
-      case 0:  return NS(Pass);
-      case 1:  return NS(Break);
-      case 2:  return NS(Continue);
-      case 10: return NS(Expr, unique_ptr<Expr>(singleOrTuple(V0)));
-      default: return V0;
-    }
-  );
-
-  rules["global_stmt"] = [](SV &vs) {
-    vector<StmtPtr> stmts;
-    for (auto &i : vs)
-      stmts.push_back(N(GlobalStmt, any_cast<string>(i)));
-    return NS(Suite, move(stmts));
-  };
-  rules["yield_stmt"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return NS(YieldFrom, UE(vs[0]));
-    if (!vs.size())
-      return NS(Yield, nullptr);
-    return NS(Yield, unique_ptr<Expr>(singleOrTuple(vs[0])));
-  };
-  rules["assert_stmt"] = [](SV &vs) { return NS(Assert, UE(vs[0]), getOrNull(vs, 1)); };
-  rules["del_stmt"] = [](SV &vs) {
-    vector<StmtPtr> stmts;
-    for (auto &i : vs)
-      stmts.push_back(N(DelStmt, UE(i)));
-    return NS(Suite, move(stmts));
-  };
-  rules["return_stmt"] = [](SV &vs) {
-    if (!vs.size())
-      return NS(Return, nullptr);
-    return NS(Return, unique_ptr<Expr>(singleOrTuple(vs[0])));
-  };
-  rules["raise_stmt"] = [](SV &vs) { return NS(Throw, getOrNull(vs, 0)); };
-  rules["print_stmt"] = [](SV &vs) {
-    if (vs.choice() == 2)
-      return NS(Print, vector<ExprPtr>(), false);
-    vector<ExprPtr> v;
-    for (int i = 0; i < vs.size(); i++)
-      v.push_back(UE(vs[i]));
-    return NS(Print, move(v), vs.choice() == 0);
-  };
-
-  // rules["if_stmt"] = [](const peg::SemanticValues &vs) {
-  //   vector<IfStmt::If> e;
-  //   for (size_t i = 0; i < vs.size(); i += 2) {
-  //     ExprPtr expr = nullptr;
-  //     StmtPtr suite = nullptr;
-  //     if (i + 1 == vs.size())
-  //       suite = UP(Stmt, vs[i]);
-  //     else
-  //       expr = UP(Expr, vs[i]), suite = UP(Stmt, vs[i + 1]);
-  //     e.push_back(IfStmt::If{move(expr), move(suite)});
-  //   }
-  //   return NS(If, move(e));
-  // };
 }
 
 void setExprRules(parser &rules) {
-  rules["expressions"] = [](SV &vs) {
-    vector<Expr *> v;
-    for (auto &i : vs)
-      v.push_back(any_cast<Expr *>(i));
-    return v;
-  };
-  rules["expression"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return NE(If, UE(vs[1]), UE(vs[0]), UE(vs[2]));
-    return vs[0];
-  };
-  rules["disjunction"] = [](SV &vs) {
-    if (vs.choice() == 0) {
-      seqassert(vs.size() >= 2, "bad disjunction parse");
-      Expr *b = NX<BinaryExpr>(vs, UE(vs[0]), "||", UE(vs[1]));
-      for (int i = 2; i < vs.size(); i++)
-        b = NX<BinaryExpr>(vs, unique_ptr<Expr>(b), "||", UE(vs[i]));
-      return make_any<Expr *>(b);
-    }
-    return vs[0];
-  };
-  rules["conjunction"] = [](SV &vs) {
-    if (vs.choice() == 0) {
-      seqassert(vs.size() >= 2, "bad conjunction parse");
-      Expr *b = NX<BinaryExpr>(vs, UE(vs[0]), "&&", UE(vs[1]));
-      for (int i = 2; i < vs.size(); i++)
-        b = NX<BinaryExpr>(vs, unique_ptr<Expr>(b), "&&", UE(vs[i]));
-      return make_any<Expr *>(b);
-    }
-    return vs[0];
-  };
-  rules["inversion"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return NE(Unary, "!", UE(vs[0]));
-    return vs[0];
-  };
-  rules["comparison"] = [](SV &vs) {
-    Expr *b = any_cast<Expr *>(vs[0]);
-    for (int i = 1; i < vs.size(); i++) {
-      auto p = any_cast<pair<string, any>>(vs[i]);
-      b = new BinaryExpr(unique_ptr<Expr>(b), p.first, UE(p.second));
-    }
-    return b;
-  };
-  rules["compare_op_bitwise_or"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return make_pair(string("not in"), vs[0]);
-    else if (vs.choice() == 1)
-      return make_pair(string("is not"), vs[0]);
-    return make_pair(vs.token_to_string(), vs[0]);
-  };
-  auto chain = [](SV &vs) {
-    if (vs.choice() == 0) {
-      Expr *b = any_cast<Expr *>(vs[0]);
-      for (int i = 1; i < vs.size(); i++)
-        b = new BinaryExpr(unique_ptr<Expr>(b), vs.token_to_string(i - 1), UE(vs[i]));
-      return make_any<Expr *>(b);
-    }
-    return vs[0];
-  };
-  rules["bitwise_or"] = chain;
-  rules["bitwise_xor"] = chain;
-  rules["bitwise_and"] = chain;
-  rules["shift_expr"] = chain;
-  rules["sum"] = chain;
-  rules["term"] = chain;
-  rules["factor"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return NE(Unary, "+", UE(vs[0]));
-    else if (vs.choice() == 1)
-      return NE(Unary, "-", UE(vs[0]));
-    else if (vs.choice() == 0)
-      return NE(Unary, "~", UE(vs[0]));
-    return vs[0];
-  };
-  rules["power"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return NE(Binary, UE(vs[0]), "**", UE(vs[1]));
-    return vs[0];
-  };
-  auto primary = [](SV &vs) {
-    Expr *e = any_cast<Expr *>(vs[0]);
-    for (int i = 1; i < vs.size(); i++) {
-      auto p = any_cast<pair<size_t, any>>(vs[i]);
-      if (p.first == 0) {
-        e = new DotExpr(unique_ptr<Expr>(e), any_cast<string>(p.second));
-      } else if (p.first == 1) {
-        e = new CallExpr(unique_ptr<Expr>(e), UE(p.second));
-      } else if (p.first == 2) {
-        vector<CallExpr::Arg> a;
-        for (auto &i : any_cast<vector<pair<string, any>>>(p.second))
-          a.push_back(CallExpr::Arg{i.first, UE(i.second)});
-        e = new CallExpr(unique_ptr<Expr>(e), move(a));
-      } else {
-        e = new IndexExpr(unique_ptr<Expr>(e), UE(p.second));
-      }
-    }
-    return e;
-  };
-  rules["primary"] = primary;
-  rules["t_primary"] = primary;
-  auto primary_tail = [](SV &vs) {
-    if (vs.choice() == 2)
-      return make_pair(vs.choice(),
-                       vs.size() ? vs[0] : make_any<vector<pair<string, any>>>());
-    return make_pair(vs.choice(), vs[0]);
-  };
-  rules["primary_tail"] = primary_tail;
-  rules["t_primary_tail"] = primary_tail;
-  auto TUPLE = [](SV &vs) {
-    if (vs.size() == 1)
-      return vs[0];
-    vector<ExprPtr> e;
-    for (auto &i : vs)
-      e.push_back(UE(i));
-    return NE(Tuple, move(e));
-  };
-  rules["slices"] = TUPLE;
-  rules["slice"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return NE(Slice, UE(vs[0]), UE(vs[1]), vs.size() > 2 ? UE(vs[2]) : nullptr);
-    return vs[0];
-  };
-  rules["slice_part"] = [](SV &vs) {
-    return vs.size() ? vs[0] : make_any<Expr *>(nullptr);
-  };
-  rules["atom"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return NE(Bool, true);
-    if (vs.choice() == 1)
-      return NE(Bool, false);
-    if (vs.choice() == 2)
-      return NE(None);
-    if (vs.choice() == 4)
-      return NE(Id, any_cast<string>(vs[0]));
-    if (vs.choice() == 5)
-      return NE(Int, any_cast<string>(vs[0]),
-                vs.size() > 1 ? any_cast<string>(vs[1]) : "");
-    if (vs.choice() == 3) {
-      string s;
-      string f;
-      for (auto &v: vs) {
-        auto p = any_cast<pair<string, string>>(v);
-        s += p.second;
-        f = p.first; // TODO fix
-      }
-      return NE(String, s, f);
-    }
-    if (vs.choice() == 6)
-      return vs[0];
-    return NE(Ellipsis);
-  };
-  rules["parentheses"] = COPY;
-  rules["tuple"] = [](SV &vs) {
-    vector<ExprPtr> e;
-    for (auto &i : vs)
-      e.push_back(UE(i));
-    return NE(Tuple, move(e));
-  };
-  rules["yield"] = [](SV &vs) { return NE(Yield); };
-  rules["named"] = COPY;
-  auto genBody = [](const any &a) {
-    vector<GeneratorBody> v;
-    auto vx = any_cast<vector<any>>(a);
-    for (auto &i : vx) {
-      auto ti = any_cast<tuple<any, any, vector<any>>>(i);
-      vector<ExprPtr> conds;
-      for (auto &c : get<2>(ti))
-        conds.push_back(UE(c));
-      v.push_back({UE(get<0>(ti)), UE(get<1>(ti)), move(conds)});
-    }
-    return v;
-  };
-  rules["genexp"] = [genBody](SV &vs) {
-    return NE(Generator, GeneratorExpr::Generator, UE(vs[0]), genBody(vs[1]));
-  };
-  rules["listexpr"] = [](SV &vs) {
-    vector<ExprPtr> e;
-    for (auto &i : vs)
-      e.push_back(UE(i));
-    return NE(List, move(e));
-  };
-  rules["listcomp"] = [genBody](SV &vs) {
-    return NE(Generator, GeneratorExpr::ListGenerator, UE(vs[0]), genBody(vs[1]));
-  };
-  rules["set"] = [](SV &vs) {
-    vector<ExprPtr> e;
-    for (auto &i : vs)
-      e.push_back(UE(i));
-    return NE(Set, move(e));
-  };
-  rules["setcomp"] = [genBody](SV &vs) {
-    return NE(Generator, GeneratorExpr::SetGenerator, UE(vs[0]), genBody(vs[1]));
-  };
-  rules["dict"] = [](SV &vs) {
-    vector<DictExpr::DictItem> e;
-    for (auto &i : vs) {
-      auto p = any_cast<pair<any, any>>(i);
-      e.push_back({UE(p.first), UE(p.second)});
-    }
-    return NE(Dict, move(e));
-  };
-  rules["dictcomp"] = [genBody](SV &vs) {
-    auto p = any_cast<pair<any, any>>(vs[0]);
-    return NE(DictGenerator, UE(p.first), UE(p.second), genBody(vs[1]));
-  };
-  rules["double_starred_kvpair"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return make_any<pair<any, any>>(NE(Id, ""),
-                                      NE(KeywordStar, UE(vs[0])));
-    return vs[0];
-  };
-  rules["kvpair"] = [](SV &vs) { return make_pair(vs[0], vs[1]); };
-  rules["for_if_clauses"] = [](SV &vs) { return vector<any>(vs.begin(), vs.end()); };
-  rules["for_if_clause"] = [](SV &vs) {
-    return make_tuple(vs[0], vs[1], vector<any>(vs.begin() + 2, vs.end()));
-  };
-  rules["star_targets"] = TUPLE;
-  rules["star_target"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return NE(Star, UE(vs[0]));
-    return vs[0];
-  };
-  rules["target_with_star_atom"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return NE(Dot, UE(vs[0]), any_cast<string>(vs[1]));
-    if (vs.choice() == 1)
-      return NE(Index, UE(vs[0]), UE(vs[1]));
-    if (vs.choice() == 2)
-      return NE(Id, any_cast<string>(vs[0]));
-    return vs[0];
-  };
-  rules["star_parens"] = TUPLE;
-  rules["star_named_expression"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return NE(Star, UE(vs[0]));
-    return vs[0];
-  };
-  rules["named_expression"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return NE(Assign, make_unique<IdExpr>(any_cast<string>(vs[0])), UE(vs[1]));
-    return vs[0];
-  };
-  rules["arguments"] = [](SV &vs) {
-    vector<pair<string, any>> vr;
-    for (auto &v: vs)
-      for (auto &i: any_cast<vector<pair<string, any>>>(v))
-        vr.push_back(i);
-    return vr;
-  };
-  rules["args"] = [](SV &vs) {
-    auto vx = any_cast<vector<pair<string, any>>>(vs[0]);
-    vector<pair<string, any>> v(vx.begin(), vx.end());
-    if (vs.size() > 1) {
-      vx = any_cast<vector<pair<string, any>>>(vs[1]);
-      v.insert(v.end(), vx.begin(), vx.end());
-    }
-    return v;
-  };
-  rules["simple_args"] = [](SV &vs) {
-    vector<pair<string, any>> v;
-    for (auto &i : vs)
-      v.push_back(make_pair(string(), i));
-    return v;
-  };
-  rules["starred_expression"] = [](SV &vs) { return NE(Star, UE(vs[0])); };
-  rules["kwargs"] = [](SV &vs) {
-    vector<pair<string, any>> v;
-    for (auto &i : vs)
-      v.push_back(any_cast<pair<string, any>>(i));
-    return v;
-  };
-  rules["kwarg_or_starred"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return make_pair(any_cast<string>(vs[0]), vs[1]);
-    return make_pair(string(), vs[0]);
-  };
-  rules["kwarg_or_double_starred"] = [](SV &vs) {
-    if (vs.choice() == 0)
-      return make_pair(any_cast<string>(vs[0]), vs[1]);
-    return make_pair(string(), NE(KeywordStar, UE(vs[0])));
-  };
+
+
 }
 
 void setLexingRules(parser &rules) {
-  rules["INDENT"] = [](SV &vs, any &dt) {
-    if ((!any_cast<ParseContext &>(dt).indent.size() && vs.sv().size()) ||
-        (vs.sv().size() > any_cast<ParseContext &>(dt).indent.top()))
-      any_cast<ParseContext &>(dt).indent.push(vs.sv().size());
-    else
-      throw peg::parse_error("bad indent");
-  };
-  rules["DEDENT"] = [](SV &vs, any &dt) {
-    if (any_cast<ParseContext &>(dt).indent.size() &&
-        vs.sv().size() < any_cast<ParseContext &>(dt).indent.top())
-      any_cast<ParseContext &>(dt).indent.pop();
-    else
-      throw peg::parse_error("bad dedent");
-  };
-  rules["SAMEDENT"] = [](SV &vs, any &dt) {
-    if ((!any_cast<ParseContext &>(dt).indent.size() && vs.sv().size()) ||
-        (any_cast<ParseContext &>(dt).indent.size() &&
-         vs.sv().size() != any_cast<ParseContext &>(dt).indent.top())) {
-      throw peg::parse_error("bad eqdent");
-    }
-  };
-  rules["NAME"] = STRING;
-  rules["INT"] = STRING;
-  rules["STRING"] = [](SV &vs) {
-    return make_pair(vs.size() > 1 ? any_cast<string>(vs[0]) : "", any_cast<string>(vs[vs.size() > 1 ? 1 : 0]));
-  };
-  rules["STR"] = [](SV &vs) {
-    string s;
-    s.reserve(vs.size());
-    for (auto &v: vs)
-      s.append(any_cast<string>(v));
-    return s;
-  };
-  rules["CHAR"] = STRING;
+  rules["INDENT"].enablePackratParsing = false;
+  rules["DEDENT"].enablePackratParsing = false;
+  rules["SAMEDENT"].enablePackratParsing = false;
 
   // arguments | slices | genexp | parentheses
   auto inc = [](string x) { return [x](const char* c, size_t n, any& dt) {
-    //LOG("INC {} / {}", x, any_cast<ParseContext &>(dt).parens+1);
     any_cast<ParseContext &>(dt).parens++; };
   } ;
   auto dec = [](string x) { return [x](const char* c, size_t n, size_t, any&, any& dt) {
-    //LOG("DEC {} / {}", x, any_cast<ParseContext &>(dt).parens-1);
     any_cast<ParseContext &>(dt).parens--; };
   } ;
   for (auto &rule: vector<string>{"arguments", "slices", "genexp", "parentheses", "star_parens"}) {
     rules[rule.c_str()].enter = inc(rule);
     rules[rule.c_str()].leave = dec(rule);
   }
+  for (auto &rule: vector<string>{"INDENT", "DEDENT", "SAMEDENT", "suite", "statement", "statements", "compound_stmt", "if_stmt"})
+    rules[rule.c_str()].enable_memoize = false;
 }
 
 StmtPtr parseCode(const string &file, const string &code, int line_offset = 0,
@@ -515,6 +224,14 @@ StmtPtr parseFile(const string &file) {
   auto ok = parser.load_grammar(grammar, additional_rules);
   assert(ok);
 
+  for (auto &name: parser.get_rule_names()) {
+    auto op = parser[name.c_str()];
+    LOG("g[\"{}\"] <= {};", name, PEGVisitor::parse(op.get_core_operator()));
+    if (!op.code.empty())
+      LOG("g[\"{}\"] = [](SemanticValue &vs, any &dt) {};", name, op.code);
+  };
+  LOG("preamble -> {}", parser.preamble_);
+
   setLexingRules(parser);
   setStmtRules(parser);
   setExprRules(parser);
@@ -528,35 +245,7 @@ StmtPtr parseFile(const string &file) {
 
   Stmt *stmt = nullptr;
   auto ctx = make_any<ParseContext>(0);
-  // parser.enable_trace([&](const peg::Ope &ope, const char *s, size_t /*n*/,
-  //                         const peg::SemanticValues &sv, const peg::Context &c,
-  //                         const std::any & /*dt*/) {},
-  //                     [&](const peg::Ope &ope, const char *s, size_t /*n*/,
-  //                         const peg::SemanticValues &sv, const peg::Context &c,
-  //                         const std::any & /*dt*/, size_t len) {
-  //                       auto pos = static_cast<size_t>(s - c.s);
-  //                       if (len != static_cast<size_t>(-1)) {
-  //                         pos += len;
-  //                       }
-  //                       string indent;
-  //                       auto level = c.trace_ids.size() - 1;
-  //                       while (level--) {
-  //                         indent += " ";
-  //                       }
-  //                       auto name = peg::TraceOpeName::get(const_cast<peg::Ope &>(ope));
-  //                       if (len != static_cast<size_t>(-1) && name[0] == '[') {
-  //                         std::stringstream choice;
-  //                         if (sv.choice_count() > 0)
-  //                           choice << " " << sv.choice() << "/" << sv.choice_count();
-  //                         std::string matched;
-  //                         if (peg::success(len))
-  //                           matched =
-  //                               ", match '" + peg::escape_characters(s, len) + "'";
-  //                         // std::cout << "L " << sv.line_info().first << "\t" << indent
-  //                         //           << name << " #" << choice.str() << matched
-  //                         //           << std::endl;
-  //                       }
-  //                     });
+  parser.enable_packrat_parsing();
   auto ret = parser.parse_n(source.data(), source.size(), ctx, stmt, file.c_str());
   assert(ret);
   assert(stmt);

@@ -1,6 +1,67 @@
 # Seq PEG grammar
 # Adpoted from Python 3's PEG grammar (https://docs.python.org/3/reference/grammar.html)
 
+%preamble {{
+  auto chain(SV &vs) {
+    if (vs.choice() == 0) {
+      Expr *b = any_cast<Expr *>(vs[0]);
+      for (int i = 1; i < vs.size(); i++)
+        b = new BinaryExpr(unique_ptr<Expr>(b), vs.token_to_string(i - 1), UE(vs[i]));
+      return make_any<Expr *>(b);
+    }
+    return vs[0];
+  };
+
+  auto primary(SV &vs) {
+    Expr *e = any_cast<Expr *>(vs[0]);
+    for (int i = 1; i < vs.size(); i++) {
+      auto p = any_cast<pair<size_t, any>>(vs[i]);
+      if (p.first == 0) {
+        e = new DotExpr(unique_ptr<Expr>(e), any_cast<string>(p.second));
+      } else if (p.first == 1) {
+        e = new CallExpr(unique_ptr<Expr>(e), UE(p.second));
+      } else if (p.first == 2) {
+        vector<CallExpr::Arg> a;
+        for (auto &i : any_cast<vector<pair<string, any>>>(p.second))
+          a.push_back(CallExpr::Arg{i.first, UE(i.second)});
+        e = new CallExpr(unique_ptr<Expr>(e), move(a));
+      } else {
+        e = new IndexExpr(unique_ptr<Expr>(e), UE(p.second));
+      }
+    }
+    return e;
+  };
+
+  auto primary_tail(SV &vs) {
+    if (vs.choice() == 2)
+      return make_pair(vs.choice(),
+                       vs.size() ? vs[0] : make_any<vector<pair<string, any>>>());
+    return make_pair(vs.choice(), vs[0]);
+  };
+
+  auto tuple(SV &vs) {
+    if (vs.size() == 1)
+      return vs[0];
+    vector<ExprPtr> e;
+    for (auto &i : vs)
+      e.push_back(UE(i));
+    return NE(Tuple, move(e));
+  };
+
+  auto genBody(const any &a) {
+    vector<GeneratorBody> v;
+    auto vx = any_cast<vector<any>>(a);
+    for (auto &i : vx) {
+      auto ti = any_cast<tuple<any, any, vector<any>>>(i);
+      vector<ExprPtr> conds;
+      for (auto &c : get<2>(ti))
+        conds.push_back(UE(c));
+      v.push_back({UE(get<0>(ti)), UE(get<1>(ti)), move(conds)});
+    }
+    return v;
+  };
+}}
+
 program <- statements !.
 
 # Macros
@@ -8,10 +69,13 @@ T(x) <- < x > _
 list(c, e)  <- e _ (T(c) e _)*
 tlist(c, e) <- e _ (T(c) e _)* T(c)?
 
-statements <- (statement / COMMENT EOL / _ EOL)+
-statement <- SAMEDENT simple_stmt # compound_stmt
-simple_stmt <- tlist(';', small_stmt) _ EOL
-small_stmt <- T('pass')
+statements <- (statement / _ COMMENT EOL / _ EOL)+ 
+  {{ return suite(vs); }}
+statement <- compound_stmt / SAMEDENT simple_stmt 
+simple_stmt <- tlist(';', small_stmt) _ EOL 
+  {{ return suite(vs); }}
+small_stmt <- assignment
+            / T('pass')
             / T('break')
             / T('continue')
             / global_stmt
@@ -21,102 +85,455 @@ small_stmt <- T('pass')
             / return_stmt
             / raise_stmt
             / print_stmt
-            / expressions
-global_stmt <- T('global') tlist(',', NAME)
-yield_stmt <- T('yield') T('from') expression / T('yield') expressions?
-assert_stmt <- T('assert') expression _ (T(',') expression _)?
-del_stmt <- T('del') tlist(',', expression) # TODO: do targets as in Python
-return_stmt <- T('return') expressions?
-raise_stmt <- T('raise') expression?  # TODO: raise expression 'from' expression
+            # import_stmt
+            / expressions 
+  {{
+    switch (CHOICE) {
+      case 1:  return NS(Pass);
+      case 2:  return NS(Break);
+      case 3:  return NS(Continue);
+      case 11: return NS(Expr, unique_ptr<Expr>(singleOrTuple(V0)));
+      default: return V0;
+    }
+  }}
+assignment <- NAME _ ':' _ expression _ ('=' _ star_expressions _)*
+            / (star_targets _ '=' _)+ star_expressions _ !'='
+            / star_target _ augassign ↑ _ star_expressions 
+  {{
+    switch (CHOICE) {
+      case 0: return NS(Assign, make_unique<IdExpr>(any_cast<string>(V0)), vs.size() > 2 ? UE(V2) : nullptr, UE(V1));
+      case 1: {
+        vector<StmtPtr> stmts;
+        for (int i = int(vs.size()) - 2; i >= 0; i--)
+          stmts.push_back(make_unique<AssignStmt>(UE(vs[i]), UE(vs[i + 1])));
+        return NS(Suite, move(stmts));
+      }
+      default: return NS(Assign, UE(V0), make_unique<BinaryExpr>(UE(V0), any_cast<string>(V1), UE(V2), true));
+    }
+  }}
+augassign <- '+=' / '-=' / '*=' / '@=' / '/=' / '%=' / '&=' / '/=' / '^=' / '<<=' / '>>=' / '**=' / '//=' 
+  {{ return string(vs.token().substr(0, vs.token().size() - 1)); }}
+global_stmt <- T('global') tlist(',', NAME) 
+  {{
+    vector<StmtPtr> stmts;
+    for (auto &i : vs)
+      stmts.push_back(N(GlobalStmt, any_cast<string>(i)));
+    return NS(Suite, move(stmts));
+  }}
+yield_stmt <- T('yield') T('from') expression / T('yield') expressions? 
+  {{
+    if (vs.choice() == 0)
+      return NS(YieldFrom, UE(vs[0]));
+    if (!vs.size())
+      return NS(Yield, nullptr);
+    return NS(Yield, unique_ptr<Expr>(singleOrTuple(vs[0])));
+  }}
+assert_stmt <- T('assert') expression _ (T(',') expression _)? 
+  {{ return NS(Assert, UE(vs[0]), getOrNull(vs, 1)); }}
+# TODO: do targets as in Python
+del_stmt <- T('del') tlist(',', expression) 
+  {{ 
+    vector<StmtPtr> stmts;
+    for (auto &i : vs)
+      stmts.push_back(N(DelStmt, UE(i)));
+    return NS(Suite, move(stmts));
+  }}
+return_stmt <- T('return') expressions? 
+  {{
+    if (!vs.size())
+      return NS(Return, nullptr);
+    return NS(Return, unique_ptr<Expr>(singleOrTuple(vs[0])));
+  }}
+# TODO: raise expression 'from' expression
+raise_stmt <- T('raise') expression? 
+  {{ return NS(Throw, getOrNull(vs, 0)); }}
 print_stmt <- T('print ') expression _ (T(',') expression _)* T(',')
             / T('print ') expression _ (T(',') expression _)*
-            / T('print')
+            / T('print') 
+  {{
+    if (vs.choice() == 2)
+      return NS(Print, vector<ExprPtr>(), false);
+    vector<ExprPtr> v;
+    for (int i = 0; i < vs.size(); i++)
+      v.push_back(UE(vs[i]));
+    return NS(Print, move(v), vs.choice() == 0);
+  }}
+
+exprblock(kwd, expr) <- SAMEDENT T(kwd) _ expr _ ':' _ suite
+block(kwd) <- SAMEDENT T(kwd) _ ':' _ suite
+suite <- simple_stmt / EOL &INDENT statements &DEDENT
+compound_stmt <- if_stmt / with_stmt / for_stmt / try_stmt / while_stmt
+if_stmt <- exprblock('if', named_expression) exprblock('elif', named_expression)* block('else')? 
+  {{
+    Stmt *stmt = new IfStmt(nullptr, nullptr);
+    IfStmt *p = (IfStmt*)stmt;
+    for (int i = 0; i < vs.size(); i += 2) {
+      if (i == vs.size() - 1) {
+        p->elseSuite = US(vs[i]);
+      } else {
+        if (i) {
+          p->elseSuite = make_unique<IfStmt>(nullptr, nullptr);
+          p = (IfStmt*)(p->elseSuite.get());
+        }
+        p->cond = UE(vs[i]);
+        p->ifSuite = US(vs[i + 1]);
+      }
+    }
+    return stmt;
+  }}
+while_stmt <- exprblock('while', named_expression) block('else')?
+for_stmt <- exprblock('for', for_tail) block('else')?
+for_tail <- star_targets T('in') star_expressions
+with_stmt <- exprblock('with', with_item)
+with_item <- as_item
+as_item <- expression _ T('as') star_target / expression 
+try_stmt <- block('try') block('finally')?
+#           / block('try') expect_block+ block('finally')?
+# except_block <- exprblock('except', expression _ (T('as') NAME)*) / block('except')
 
 ########################################################################################
 # (2) Expressions
 ########################################################################################
 
 expressions <- tlist(',', expression)
+  {{
+    vector<Expr *> v;
+    for (auto &i : vs)
+      v.push_back(any_cast<Expr *>(i));
+    return v;
+  }}
 expression <- disjunction _ T('if') disjunction _ T('else') expression / disjunction
+  {{
+    if (vs.choice() == 0)
+      return NE(If, UE(vs[1]), UE(vs[0]), UE(vs[2]));
+    return vs[0];
+  }}
 disjunction <- conjunction _ (T('or') conjunction _)+ / conjunction
+  {{
+    if (vs.choice() == 0) {
+      seqassert(vs.size() >= 2, "bad disjunction parse");
+      Expr *b = NX<BinaryExpr>(vs, UE(vs[0]), "||", UE(vs[1]));
+      for (int i = 2; i < vs.size(); i++)
+        b = NX<BinaryExpr>(vs, unique_ptr<Expr>(b), "||", UE(vs[i]));
+      return make_any<Expr *>(b);
+    }
+    return vs[0];
+  }}
 conjunction <- inversion _ (T('and') inversion _)+ / inversion
+  {{
+    if (vs.choice() == 0) {
+      seqassert(vs.size() >= 2, "bad conjunction parse");
+      Expr *b = NX<BinaryExpr>(vs, UE(vs[0]), "&&", UE(vs[1]));
+      for (int i = 2; i < vs.size(); i++)
+        b = NX<BinaryExpr>(vs, unique_ptr<Expr>(b), "&&", UE(vs[i]));
+      return make_any<Expr *>(b);
+    }
+    return vs[0];
+  }}
 inversion <- T('not') inversion / comparison
+  {{
+    if (vs.choice() == 0)
+      return NE(Unary, "!", UE(vs[0]));
+    return vs[0];
+  }}
 comparison <- bitwise_or _ (compare_op_bitwise_or _)*
+  {{
+    Expr *b = any_cast<Expr *>(vs[0]);
+    for (int i = 1; i < vs.size(); i++) {
+      auto p = any_cast<pair<string, any>>(vs[i]);
+      b = new BinaryExpr(unique_ptr<Expr>(b), p.first, UE(p.second));
+    }
+    return b;
+  }}
 compare_op_bitwise_or <- T('not') T('in') bitwise_or
                        / T('is') T('not') bitwise_or
                        / T('==' / '!=' / '<=' / '<' / '>=' / '>' / 'in' / 'is') bitwise_or
+  {{
+    if (vs.choice() == 0)
+      return make_pair(string("not in"), vs[0]);
+    else if (vs.choice() == 1)
+      return make_pair(string("is not"), vs[0]);
+    return make_pair(vs.token_to_string(), vs[0]);
+  }}
 bitwise_or <- bitwise_xor _ (T('|') bitwise_xor _)*
+  {{ return chain(vs); }}
 bitwise_xor <- bitwise_and _ (T('^') bitwise_and _)*
+  {{ return chain(vs); }}
 bitwise_and <- shift_expr _ (T('&') shift_expr _)*
+  {{ return chain(vs); }}
 shift_expr <- sum _ (T('<<' / '>>') sum _)*
+  {{ return chain(vs); }}
 sum <- term _ (T('+' / '-') term _)*
+  {{ return chain(vs); }}
 term <- factor _ (T('*' / '/' / '//' / '%' / '@') factor _)*
+  {{ return chain(vs); }}
 factor <- T('+') factor / T('-') factor / T('~') factor / power
+  {{
+    if (vs.choice() == 0)
+      return NE(Unary, "+", UE(vs[0]));
+    else if (vs.choice() == 1)
+      return NE(Unary, "-", UE(vs[0]));
+    else if (vs.choice() == 0)
+      return NE(Unary, "~", UE(vs[0]));
+    return vs[0];
+  }}
 power <- primary _ T('**') factor / primary
+  {{
+    if (vs.choice() == 0)
+      return NE(Binary, UE(vs[0]), "**", UE(vs[1]));
+    return vs[0];
+  }}
 primary <- atom _ (primary_tail _)*
+  {{ return primary(vs); }}
 t_primary <- atom _ (t_primary_tail _)* &T_LOOKAHEAD
+  {{ return primary(vs); }}
 ~T_LOOKAHEAD <- '(' / '[' / '.'
 primary_tail <- T('.') NAME / genexp / arguments / slices
+  {{ return primary_tail(vs); }}
 t_primary_tail <- T('.') NAME / genexp / arguments / slices
+  {{ return primary_tail(vs); }}
 slices <- '[' _ (slice !',' / list(',', slice)) _ ']'
+  {{ return tuple(sv); }}
 slice <- slice_part _ T(':') slice_part _ (T(':') slice_part _)? / expression
+  {{
+    if (vs.choice() == 0)
+      return NE(Slice, UE(vs[0]), UE(vs[1]), vs.size() > 2 ? UE(vs[2]) : nullptr);
+    return vs[0];
+  }}
 slice_part <- expression?
+  {{ return vs.size() ? vs[0] : make_any<Expr *>(nullptr); }}
 atom <- T('True') / T('False') / T('None')
       / (STRING _)+ / NAME _ / INT NAME? _
       / parentheses
       / T('...')
+  {{
+    if (vs.choice() == 0)
+      return NE(Bool, true);
+    if (vs.choice() == 1)
+      return NE(Bool, false);
+    if (vs.choice() == 2)
+      return NE(None);
+    if (vs.choice() == 4)
+      return NE(Id, any_cast<string>(vs[0]));
+    if (vs.choice() == 5)
+      return NE(Int, any_cast<string>(vs[0]),
+                vs.size() > 1 ? any_cast<string>(vs[1]) : "");
+    if (vs.choice() == 3) {
+      string s;
+      string f;
+      for (auto &v: vs) {
+        auto p = any_cast<pair<string, string>>(v);
+        s += p.second;
+        f = p.first; // TODO fix
+      }
+      return NE(String, s, f);
+    }
+    if (vs.choice() == 6)
+      return vs[0];
+    return NE(Ellipsis);
+  }}
 parentheses <- tuple / yield / named / genexp 
              / listexpr / listcomp 
              / dict / set / dictcomp / setcomp
 tuple <- '(' _ tlist(',', star_named_expression) _ ')'
+  {{ 
+    vector<ExprPtr> e;
+    for (auto &i : vs)
+      e.push_back(UE(i));
+    return NE(Tuple, move(e));
+  }}
 yield <- '(' _ T('yield') _ ')'
+  {{ return NE(Yield); }}
 named <- '(' _ named_expression _ ')'
 genexp <- '(' _ named_expression _ for_if_clauses _ ')'
+  {{ return NE(Generator, GeneratorExpr::Generator, UE(vs[0]), genBody(vs[1])); }}
 listexpr <- '[' _ tlist(',', star_named_expression)? _ ']'
+  {{
+    vector<ExprPtr> e;
+    for (auto &i : vs)
+      e.push_back(UE(i));
+    return NE(List, move(e));
+  }}
 listcomp <- '[' _ named_expression _ for_if_clauses _ ']'
+  {{ return NE(Generator, GeneratorExpr::ListGenerator, UE(vs[0]), genBody(vs[1])); }}
 set <- '{' _ tlist(',', star_named_expression) _ '}'
+  {{ 
+    vector<ExprPtr> e;
+    for (auto &i : vs)
+      e.push_back(UE(i));
+    return NE(Set, move(e));
+  }}
 setcomp <- '{' _ named_expression _ for_if_clauses _ '}'
+  {{ return NE(Generator, GeneratorExpr::SetGenerator, UE(vs[0]), genBody(vs[1])); }}
 dict <- '{' _ tlist(',', double_starred_kvpair)? _ '}'
+  {{
+    vector<DictExpr::DictItem> e;
+    for (auto &i : vs) {
+      auto p = any_cast<pair<any, any>>(i);
+      e.push_back({UE(p.first), UE(p.second)});
+    }
+    return NE(Dict, move(e));
+  }}
 dictcomp <- '{' _ kvpair for_if_clauses _ '}'
+  {{ 
+    auto p = any_cast<pair<any, any>>(vs[0]);
+    return NE(DictGenerator, UE(p.first), UE(p.second), genBody(vs[1]));
+  }}
 double_starred_kvpair <- T('**') bitwise_or / kvpair
+  {{
+    if (vs.choice() == 0)
+      return make_any<pair<any, any>>(NE(Id, ""),
+                                      NE(KeywordStar, UE(vs[0])));
+    return vs[0];
+  }}
 kvpair <- expression _ T(':') expression
+  {{ return make_pair(vs[0], vs[1]); }}
 for_if_clauses <- (for_if_clause _)+
+  {{ return vector<any>(vs.begin(), vs.end()); }}
 for_if_clause <- T('for') star_targets _ T('in') disjunction _ (T('if') disjunction _)*
+  {{ return make_tuple(vs[0], vs[1], vector<any>(vs.begin() + 2, vs.end())); }}
 star_targets <- star_target !',' / tlist(',', star_target)
+  {{ return tuple(sv); }}
 star_target <- T('*') !'*' star_target / target_with_star_atom
+  {{
+    if (vs.choice() == 0)
+      return NE(Star, UE(vs[0]));
+    return vs[0];
+  }}
 target_with_star_atom <- t_primary _ T('.') NAME _ !T_LOOKAHEAD 
                        / t_primary _ slices _ !T_LOOKAHEAD 
                        / NAME 
                        / star_parens
+  {{
+    if (vs.choice() == 0)
+      return NE(Dot, UE(vs[0]), any_cast<string>(vs[1]));
+    if (vs.choice() == 1)
+      return NE(Index, UE(vs[0]), UE(vs[1]));
+    if (vs.choice() == 2)
+      return NE(Id, any_cast<string>(vs[0]));
+    return vs[0];
+  }}
 star_parens <- '(' _ target_with_star_atom _ ')'
              / '(' _ (star_target _ (T(',') star_target _)+ T(',')? / star_target _ T(',')) _ ')' 
              / '[' _ tlist(',', star_target) _ ']'
+  {{ return tuple(sv); }}
+star_expressions <- tlist(',', star_expression)
+  {{ return tuple(sv); }}
+star_expression <- T('*') bitwise_or / expression
+  {{
+    if (vs.choice() == 0)
+      return NE(Star, UE(vs[0]));
+    return vs[0];
+  }}
 star_named_expression <- T('*') bitwise_or / named_expression
+  {{
+    if (vs.choice() == 0)
+      return NE(Star, UE(vs[0]));
+    return vs[0];
+  }}
 named_expression <- NAME _ T(':=') ↑ expression / expression _ !':='
+  {{
+    if (vs.choice() == 0)
+      return NE(Assign, make_unique<IdExpr>(any_cast<string>(vs[0])), UE(vs[1]));
+    return vs[0];
+  }}
 arguments <- '(' _ tlist(',', args)* _ ')'
+  {{
+    vector<pair<string, any>> vr;
+    for (auto &v: vs)
+      for (auto &i: any_cast<vector<pair<string, any>>>(v))
+        vr.push_back(i);
+    return vr;
+  }}
 args <- simple_args _ (T(',') kwargs _)? / kwargs
+  {{
+    auto vx = any_cast<vector<pair<string, any>>>(vs[0]);
+    vector<pair<string, any>> v(vx.begin(), vx.end());
+    if (vs.size() > 1) {
+      vx = any_cast<vector<pair<string, any>>>(vs[1]);
+      v.insert(v.end(), vx.begin(), vx.end());
+    }
+    return v;
+  }}
 simple_args <- list(',', (starred_expression / named_expression !'='))
+  {{
+    vector<pair<string, any>> v;
+    for (auto &i : vs)
+      v.push_back(make_pair(string(), i));
+    return v;
+  }}
 starred_expression <- T('*') _ expression 
+  {{ return NE(Star, UE(vs[0])); }}
 kwargs <- list(',', kwarg_or_starred) _ T(',') list(',', kwarg_or_double_starred)
         / list(',', kwarg_or_starred)
         / list(',', kwarg_or_double_starred)
+  {{
+    vector<pair<string, any>> v;
+    for (auto &i : vs)
+      v.push_back(any_cast<pair<string, any>>(i));
+    return v;
+  }}
 kwarg_or_starred <- NAME _ T('=') expression / starred_expression 
+  {{
+    if (vs.choice() == 0)
+      return make_pair(any_cast<string>(vs[0]), vs[1]);
+    return make_pair(string(), vs[0]);
+  }}
 kwarg_or_double_starred <- NAME _ T('=') expression / T('**') expression 
+  {{
+    if (vs.choice() == 0)
+      return make_pair(any_cast<string>(vs[0]), vs[1]);
+    return make_pair(string(), NE(KeywordStar, UE(vs[0])));
+  }}
 
 INT <- BININT / HEXINT / DECINT
+  {{ return str(vs); }}
 BININT <- <'0' [bB] [0-1] ('_'* [0-1])*>
 HEXINT <- <'0' [xX] [0-9a-fA-F] ('_'* [0-9a-fA-F])*>
 DECINT <- <[0-9] ('_'* [0-9])*>
 NAME <- < [a-zA-Z_] [a-zA-Z_0-9]* >
+  {{ return str(vs); }}
 
 STRING <- < NAME? STR >
+  {{ return make_pair(vs.size() > 1 ? any_cast<string>(vs[0]) : "", any_cast<string>(vs[vs.size() > 1 ? 1 : 0])); }}
 STR <- < '"""' (!'"""' CHAR)* '"""' /  '\'\'\'' (!'\'\'\'' CHAR)* '\'\'\'' / '"' (!('"' / EOL) CHAR)* '"' /  '\'' (!('\'' / EOL) CHAR)* '\'' >
+  {{ 
+    string s;
+    s.reserve(vs.size());
+    for (auto &v: vs)
+      s.append(any_cast<string>(v));
+    return s;
+  }}
 CHAR <- '\\' . / .
+  {{ return str(vs); }}
 
 ~COMMENT <- <'#' (!EOL .)*>
 ~INDENT <- < [ \t]* >
+  {{
+    if ((!any_cast<ParseContext &>(dt).indent.size() && vs.sv().size()) ||
+        (vs.sv().size() > any_cast<ParseContext &>(dt).indent.top())) {
+      any_cast<ParseContext &>(dt).indent.push(vs.sv().size());
+    } else {
+      throw peg::parse_error("bad indent");
+    }
+  }}
 ~SAMEDENT <- < [ \t]* >
+  {{
+    if ((!any_cast<ParseContext &>(dt).indent.size() && vs.sv().size()) ||
+        (any_cast<ParseContext &>(dt).indent.size() &&
+         vs.sv().size() != any_cast<ParseContext &>(dt).indent.top())) {
+      throw peg::parse_error();
+    }
+  }}
 ~DEDENT <- < [ \t]* >
+  {{
+    if (any_cast<ParseContext &>(dt).indent.size() &&
+        vs.sv().size() < any_cast<ParseContext &>(dt).indent.top()) {
+      any_cast<ParseContext &>(dt).indent.pop();
+    } else {
+      throw peg::parse_error("bad dedent");
+    }
+  }}
 ~EOL <- < '\r\n' / [\r\n] >
 ~_ <- ([ \t] / COMMENT / (NLP EOL))*
 

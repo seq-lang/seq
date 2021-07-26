@@ -852,9 +852,9 @@ public:
   Context operator=(const Context &) = delete;
 
   template <typename T>
-  void packrat(const char *a_s, size_t def_id, size_t &len, std::any &val,
+  void packrat(const char *a_s, bool enable_memoize, size_t def_id, size_t &len, std::any &val,
                T fn) {
-    if (!enablePackratParsing) {
+    if (!enablePackratParsing || !enable_memoize) {
       fn(val);
       return;
     }
@@ -2251,7 +2251,8 @@ public:
 
   Definition() : holder_(std::make_shared<Holder>(this)) {}
 
-  Definition(const Definition &rhs) : name(rhs.name), holder_(rhs.holder_) {
+  Definition(const Definition &rhs)
+      : name(rhs.name), code(rhs.code), holder_(rhs.holder_) {
     holder_->outer_ = this;
   }
 
@@ -2370,6 +2371,7 @@ public:
   std::shared_ptr<Ope> whitespaceOpe;
   std::shared_ptr<Ope> wordOpe;
   bool enablePackratParsing = false;
+  bool enable_memoize = true;
   bool is_macro = false;
   std::vector<std::string> params;
   TracerEnter tracer_enter;
@@ -2377,6 +2379,7 @@ public:
   bool disable_action = false;
 
   std::string error_message;
+  std::string code;
   bool no_ast_opt = false;
 
 private:
@@ -2584,7 +2587,7 @@ inline size_t Holder::parse_core(const char *s, size_t n, SemanticValues &vs,
   size_t len;
   std::any val;
 
-  c.packrat(s, outer_->id, len, val, [&](std::any &a_val) {
+  c.packrat(s, outer_->enable_memoize, outer_->id, len, val, [&](std::any &a_val) {
     if (outer_->enter) { outer_->enter(s, n, dt); }
 
     auto se2 = scope_exit([&]() {
@@ -3023,16 +3026,18 @@ class ParserGenerator {
 public:
   static std::shared_ptr<Grammar> parse(const char *s, size_t n,
                                         const Rules &rules, std::string &start,
-                                        bool &enablePackratParsing, Log log) {
+                                        bool &enablePackratParsing,
+                                        std::string &preamble, Log log) {
     return get_instance().perform_core(s, n, rules, start, enablePackratParsing,
-                                       log);
+                                       preamble, log);
   }
 
   static std::shared_ptr<Grammar> parse(const char *s, size_t n,
                                         std::string &start,
-                                        bool &enablePackratParsing, Log log) {
+                                        bool &enablePackratParsing,
+                                        std::string &preamble, Log log) {
     Rules dummy;
-    return parse(s, n, dummy, start, enablePackratParsing, log);
+    return parse(s, n, dummy, start, enablePackratParsing, preamble, log);
   }
 
   // For debuging purpose
@@ -3062,6 +3067,7 @@ private:
     std::map<std::string, Instruction> instructions;
     std::set<std::string_view> captures;
     bool enablePackratParsing = true;
+    std::string preamble;
 
     Data() : grammar(std::make_shared<Grammar>()) {}
   };
@@ -3071,9 +3077,12 @@ private:
     g["Grammar"] <= seq(g["Spacing"], oom(g["Definition"]), g["EndOfFile"]);
     g["Definition"] <=
         cho(seq(g["Ignore"], g["IdentCont"], g["Parameters"], g["LEFTARROW"],
-                g["Expression"], opt(g["Instruction"])),
-            seq(g["Ignore"], g["Identifier"], g["LEFTARROW"], g["Expression"],
-                opt(g["Instruction"])));
+                g["TopExpression"], opt(g["Instruction"])),
+            seq(g["Ignore"], g["Identifier"], g["LEFTARROW"], g["TopExpression"],
+                opt(g["Instruction"])),
+            seq(g["Ignore"], lit("%preamble"), g["Spacing"], g["Instruction"]));
+    g["TopExpression"] <= seq(g["Choice"], zom(seq(g["SLASH"], g["Choice"])));
+    g["Choice"] <= seq(g["Sequence"], opt(g["Instruction"]));
     g["Expression"] <= seq(g["Sequence"], zom(seq(g["SLASH"], g["Sequence"])));
     g["Sequence"] <= zom(cho(g["CUT"], g["Prefix"]));
     g["Prefix"] <= seq(opt(cho(g["AND"], g["NOT"])), g["SuffixWithLabel"]);
@@ -3190,7 +3199,8 @@ private:
     // Instruction grammars
     g["Instruction"] <= seq(g["BeginBlacket"],
                             cho(cho(g["PrecedenceClimbing"]),
-                                cho(g["ErrorMessage"]), cho(g["NoAstOpt"])),
+                                cho(g["ErrorMessage"]), cho(g["NoAstOpt"]),
+                                cho(g["CppCode"])),
                             g["EndBlacket"]);
 
     ~g["SpacesZom"] <= zom(g["Space"]);
@@ -3223,6 +3233,13 @@ private:
     // No Ast node optimazation instruction
     g["NoAstOpt"] <= seq(lit("no_ast_opt"), g["SpacesZom"]);
 
+    g["CppCode"] <= seq(
+      chr('{'), zom(g["CppChar"]), chr('}'), g["Spacing"]
+    );
+    g["CppChar"] <= cho(
+      g["CppCode"], seq(npd(chr('{')), npd(chr('}')), dot())
+    );
+
     // Set definition names
     for (auto &x : g) {
       x.second.name = x.first;
@@ -3232,6 +3249,11 @@ private:
   void setup_actions() {
     g["Definition"] = [&](const SemanticValues &vs, std::any &dt) {
       auto &data = *std::any_cast<Data *>(dt);
+
+      if (vs.choice() == 2) {
+        data.preamble = std::any_cast<std::string>(std::any_cast<Instruction>(vs[1]).data);
+        return;
+      }
 
       auto is_macro = vs.choice() == 0;
       auto ignore = std::any_cast<bool>(vs[0]);
@@ -3557,6 +3579,13 @@ private:
       return instruction;
     };
 
+    g["CppCode"] = [](const SemanticValues &vs) {
+      Instruction instruction;
+      instruction.type = "cpp_code";
+      instruction.data = std::any_cast<std::string>(std::string(vs.sv()));
+      return instruction;
+    };
+
     g["NoAstOpt"] = [](const SemanticValues & /*vs*/) {
       Instruction instruction;
       instruction.type = "no_ast_opt";
@@ -3605,7 +3634,8 @@ private:
 
   std::shared_ptr<Grammar> perform_core(const char *s, size_t n,
                                         const Rules &rules, std::string &start,
-                                        bool &enablePackratParsing, Log log) {
+                                        bool &enablePackratParsing,
+                                        std::string &preamble, Log log) {
     Data data;
     auto &grammar = *data.grammar;
 
@@ -3774,7 +3804,6 @@ private:
     // Apply instructions
     for (const auto &[name, instruction] : data.instructions) {
       auto &rule = grammar[name];
-
       if (instruction.type == "precedence") {
         const auto &info =
             std::any_cast<PrecedenceClimbing::BinOpeInfo>(instruction.data);
@@ -3786,13 +3815,15 @@ private:
         rule.error_message = std::any_cast<std::string>(instruction.data);
       } else if (instruction.type == "no_ast_opt") {
         rule.no_ast_opt = true;
+      } else if (instruction.type == "cpp_code") {
+        rule.code = std::any_cast<std::string>(instruction.data);
       }
     }
 
     // Set root definition
     start = data.start;
     enablePackratParsing = data.enablePackratParsing;
-
+    preamble = data.preamble;
     return data.grammar;
   }
 
@@ -4113,7 +4144,7 @@ public:
 
   bool load_grammar(const char *s, size_t n, const Rules &rules) {
     grammar_ =
-        ParserGenerator::parse(s, n, rules, start_, enablePackratParsing_, log);
+        ParserGenerator::parse(s, n, rules, start_, enablePackratParsing_, preamble_, log);
     return grammar_ != nullptr;
   }
 
@@ -4229,6 +4260,7 @@ public:
   }
 
   Log log;
+  std::string preamble_;
 
 private:
   bool post_process(const char *s, size_t n,
