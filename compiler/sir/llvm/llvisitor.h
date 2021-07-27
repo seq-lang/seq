@@ -172,7 +172,6 @@ private:
 
   // LLVM passes
   void applyDebugTransformations();
-  void applyGCTransformations();
   void runLLVMOptimizationPasses();
   void runLLVMPipeline();
 

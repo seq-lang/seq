@@ -170,36 +170,6 @@ void LLVMVisitor::applyDebugTransformations() {
   }
 }
 
-void LLVMVisitor::applyGCTransformations() {
-  auto *addRoots = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("seq_gc_add_roots", builder.getVoidTy(),
-                                  builder.getInt8PtrTy(), builder.getInt8PtrTy()));
-  addRoots->setDoesNotThrow();
-
-  // insert add_roots calls where needed
-  for (auto &f : *module) {
-    for (auto &block : f.getBasicBlockList()) {
-      for (auto &inst : block) {
-        if (auto *call = llvm::dyn_cast<llvm::CallInst>(&inst)) {
-          if (auto *g = call->getCalledFunction()) {
-            // tell GC about OpenMP's allocation
-            if (g->getName() == "__kmpc_omp_task_alloc") {
-              llvm::Value *taskSize = call->getArgOperand(3);
-              llvm::Value *sharedSize = call->getArgOperand(4);
-              builder.SetInsertPoint(call->getNextNode());
-              llvm::Value *baseOffset = builder.CreateSub(taskSize, sharedSize);
-              llvm::Value *ptr = builder.CreateBitCast(call, builder.getInt8PtrTy());
-              llvm::Value *lo = builder.CreateGEP(ptr, baseOffset);
-              llvm::Value *hi = builder.CreateGEP(ptr, taskSize);
-              builder.CreateCall(addRoots, {lo, hi});
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
 void LLVMVisitor::runLLVMOptimizationPasses() {
   using namespace llvm::orc;
   applyDebugTransformations();
@@ -271,7 +241,6 @@ void LLVMVisitor::runLLVMPipeline() {
   auto t = high_resolution_clock::now();
   verify();
   runLLVMOptimizationPasses();
-  applyGCTransformations();
   LOG_TIME("[T] llvm/opt = {:.1f}",
            duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
                1000.0);
