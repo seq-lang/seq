@@ -51,6 +51,7 @@ cmake --build build --config Release -- VERBOSE=1
 ln -s build/libseqrt.so .
 build/seqtest
 build/seqc run test/core/helloworld.seq
+build/seqc run test/core/exit.seq || if [[ $? -ne 42 ]]; then false; fi
 
 # package
 export SEQ_BUILD_ARCHIVE=seq-$(uname -s | awk '{print tolower($0)}')-$(uname -m).tar.gz

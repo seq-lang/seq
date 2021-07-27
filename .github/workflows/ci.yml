@@ -159,6 +159,7 @@ jobs:
           ln -s build/libseqrt.${LIBEXT} .
           build/seqtest
           build/seqc run test/core/helloworld.seq
+          build/seqc run test/core/exit.seq || if [[ $? -ne 42 ]]; then false; fi
         env:
           SEQ_PATH: ./stdlib
           PYTHONPATH: ./test/python
