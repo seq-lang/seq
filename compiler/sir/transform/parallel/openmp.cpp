@@ -30,9 +30,6 @@ struct OMPTypes {
     routine = M->getFuncType(i32, {i32ptr, i8ptr});
     ident = M->getOrRealizeType("Ident", {}, ompModule);
     task = M->getOrRealizeType("Task", {}, ompModule);
-
-    // seqassert(micro, "openmp.Micro type not found");
-    // seqassert(routine, "openmp.Routine type not found");
     seqassert(ident, "openmp.Ident type not found");
     seqassert(task, "openmp.Task type not found");
   }
@@ -72,7 +69,6 @@ struct StaticLoopTemplateReplacer : public util::Operator {
 
       std::vector<Value *> newArgs;
       unsigned i = 1;
-
       for (auto *arg : *replacement) {
         if (getVarFromOutlinedArg(arg)->getId() != loopVar->getId()) {
           auto *val = M->Nr<VarValue>(extras);
