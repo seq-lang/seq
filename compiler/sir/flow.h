@@ -117,9 +117,10 @@ private:
   Value *iter;
   /// the body
   Value *body;
-
   /// the variable
   Var *var;
+  /// true if async for
+  bool async;
 
 public:
   static const char NodeId;
@@ -129,8 +130,9 @@ public:
   /// @param body the body
   /// @param var the variable
   /// @param name the flow's name
-  ForFlow(Value *iter, Flow *body, Var *var, std::string name = "")
-      : AcceptorExtend(std::move(name)), iter(iter), body(body), var(var) {}
+  ForFlow(Value *iter, Flow *body, Var *var, bool async = false, std::string name = "")
+      : AcceptorExtend(std::move(name)), iter(iter), body(body), var(var),
+        async(async) {}
 
   /// @return the iter
   Value *getIter() { return iter; }
@@ -156,6 +158,12 @@ public:
   /// @param c the new var
   void setVar(Var *c) { var = c; }
 
+  /// @return true if async
+  bool isAsync() const { return async; }
+  /// Sets async status.
+  /// @param a true if async
+  void setAsync(bool a = true) { async = a; }
+
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {iter, body}; }
   int doReplaceUsedValue(id_t id, Value *newValue) override;
@@ -173,12 +181,12 @@ private:
   int64_t step;
   /// the end value
   Value *end;
-
   /// the body
   Value *body;
-
   /// the variable, must be integer type
   Var *var;
+  /// true if async for
+  bool async;
 
 public:
   static const char NodeId;
@@ -191,9 +199,9 @@ public:
   /// @param var the end variable, must be integer
   /// @param name the flow's name
   ImperativeForFlow(Value *start, int64_t step, Value *end, Flow *body, Var *var,
-                    std::string name = "")
+                    bool async = false, std::string name = "")
       : AcceptorExtend(std::move(name)), start(start), step(step), end(end), body(body),
-        var(var) {}
+        var(var), async(async) {}
 
   /// @return the start value
   Value *getStart() const { return start; }
@@ -228,6 +236,12 @@ public:
   /// Sets the var.
   /// @param c the new var
   void setVar(Var *c) { var = c; }
+
+  /// @return true if async
+  bool isAsync() const { return async; }
+  /// Sets async status.
+  /// @param a true if async
+  void setAsync(bool a = true) { async = a; }
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {start, end, body}; }

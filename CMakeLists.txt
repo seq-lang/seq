@@ -220,6 +220,7 @@ set(SEQ_HPPFILES
         compiler/sir/transform/folding/rule.h
         compiler/sir/transform/lowering/imperative.h
         compiler/sir/transform/manager.h
+        compiler/sir/transform/parallel/openmp.h
         compiler/sir/transform/pass.h
         compiler/sir/transform/pythonic/dict.h
         compiler/sir/transform/pythonic/io.h
@@ -300,6 +301,7 @@ set(SEQ_CPPFILES
         compiler/sir/transform/folding/folding.cpp
         compiler/sir/transform/lowering/imperative.cpp
         compiler/sir/transform/manager.cpp
+        compiler/sir/transform/parallel/openmp.cpp
         compiler/sir/transform/pass.cpp
         compiler/sir/transform/pythonic/dict.cpp
         compiler/sir/transform/pythonic/io.cpp

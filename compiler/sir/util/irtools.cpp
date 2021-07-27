@@ -102,11 +102,19 @@ Value *makeTuple(const std::vector<Value *> &args, Module *M) {
   return M->Nr<CallInstr>(M->Nr<VarValue>(newFunc), args);
 }
 
-VarValue *makeVar(Value *x, SeriesFlow *flow, BodiedFunc *parent) {
+VarValue *makeVar(Value *x, SeriesFlow *flow, BodiedFunc *parent, bool prepend) {
+  const bool global = (parent == nullptr);
   auto *M = x->getModule();
-  auto *v = M->Nr<Var>(x->getType());
-  flow->push_back(M->Nr<AssignInstr>(v, x));
-  parent->push_back(v);
+  auto *v = M->Nr<Var>(x->getType(), global);
+  auto *a = M->Nr<AssignInstr>(v, x);
+  if (prepend) {
+    flow->insert(flow->begin(), a);
+  } else {
+    flow->push_back(a);
+  }
+  if (!global) {
+    parent->push_back(v);
+  }
   return M->Nr<VarValue>(v);
 }
 

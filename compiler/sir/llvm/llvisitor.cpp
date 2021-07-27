@@ -14,18 +14,6 @@
   ("seqc version " STR(SEQ_VERSION_MAJOR) "." STR(SEQ_VERSION_MINOR) "." STR(          \
       SEQ_VERSION_PATCH))
 
-extern llvm::StructType *IdentTy;
-extern llvm::FunctionType *Kmpc_MicroTy;
-extern llvm::Constant *DefaultOpenMPPSource;
-extern llvm::Constant *DefaultOpenMPLocation;
-extern llvm::PointerType *KmpRoutineEntryPtrTy;
-extern llvm::Type *getOrCreateIdentTy(llvm::Module *module);
-extern llvm::Value *getOrCreateDefaultLocation(llvm::Module *module);
-extern llvm::PointerType *getIdentTyPointerTy();
-extern llvm::FunctionType *getOrCreateKmpc_MicroTy(llvm::LLVMContext &context);
-extern llvm::PointerType *getKmpc_MicroPointerTy(llvm::LLVMContext &context);
-extern llvm::cl::opt<bool> fastOpenMP;
-
 extern "C" void seq_gc_add_roots(void *start, void *end);
 extern "C" void seq_gc_remove_roots(void *start, void *end);
 extern "C" int64_t seq_exc_offset();
@@ -34,14 +22,6 @@ extern "C" uint64_t seq_exc_class();
 namespace seq {
 namespace ir {
 namespace {
-void resetOMPABI() {
-  IdentTy = nullptr;
-  Kmpc_MicroTy = nullptr;
-  DefaultOpenMPPSource = nullptr;
-  DefaultOpenMPLocation = nullptr;
-  KmpRoutineEntryPtrTy = nullptr;
-}
-
 std::string getNameForFunction(const Func *x) {
   if (auto *externalFunc = cast<ExternalFunc>(x)) {
     return x->getUnmangledName();
@@ -139,7 +119,6 @@ LLVMVisitor::LLVMVisitor(bool debug, const std::string &flags)
       db(debug, flags), machine() {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
-  resetOMPABI();
 }
 
 void LLVMVisitor::setDebugInfoForNode(const Node *x) {
@@ -739,36 +718,9 @@ void LLVMVisitor::visit(const Module *x) {
   builder.CreateStore(arr, argStorage);
   builder.CreateCall(initFunc, builder.getInt32(db.debug ? 1 : 0));
 
-  // Put the entire program in a parallel+single region
+  // Put the entire program in a new function
   {
-    getOrCreateKmpc_MicroTy(context);
-    getOrCreateIdentTy(module.get());
-    getOrCreateDefaultLocation(module.get());
-
-    auto *IdentTyPtrTy = getIdentTyPointerTy();
-
-    llvm::Type *forkParams[] = {IdentTyPtrTy, builder.getInt32Ty(),
-                                getKmpc_MicroPointerTy(context)};
-    auto *forkFnTy = llvm::FunctionType::get(builder.getVoidTy(), forkParams, true);
-    auto *forkFunc = llvm::cast<llvm::Function>(
-        module->getOrInsertFunction("__kmpc_fork_call", forkFnTy));
-
-    llvm::Type *singleParams[] = {IdentTyPtrTy, builder.getInt32Ty()};
-    auto *singleFnTy =
-        llvm::FunctionType::get(builder.getInt32Ty(), singleParams, false);
-    auto *singleFunc = llvm::cast<llvm::Function>(
-        module->getOrInsertFunction("__kmpc_single", singleFnTy));
-
-    llvm::Type *singleEndParams[] = {IdentTyPtrTy, builder.getInt32Ty()};
-    auto *singleEndFnTy =
-        llvm::FunctionType::get(builder.getVoidTy(), singleEndParams, false);
-    auto *singleEndFunc = llvm::cast<llvm::Function>(
-        module->getOrInsertFunction("__kmpc_end_single", singleEndFnTy));
-
-    // make the proxy main function that will be called by __kmpc_fork_call
-    std::vector<llvm::Type *> proxyArgs = {builder.getInt32Ty()->getPointerTo(),
-                                           builder.getInt32Ty()->getPointerTo()};
-    auto *proxyMainTy = llvm::FunctionType::get(builder.getVoidTy(), proxyArgs, false);
+    auto *proxyMainTy = llvm::FunctionType::get(builder.getVoidTy(), {}, false);
     auto *proxyMain = llvm::cast<llvm::Function>(
         module->getOrInsertFunction("seq.proxy_main", proxyMainTy));
     proxyMain->setLinkage(llvm::GlobalValue::PrivateLinkage);
@@ -778,11 +730,7 @@ void LLVMVisitor::visit(const Module *x) {
     auto *proxyBlockExit = llvm::BasicBlock::Create(context, "exit", proxyMain);
     builder.SetInsertPoint(proxyBlockEntry);
 
-    llvm::Value *tid = proxyMain->arg_begin();
-    tid = builder.CreateLoad(tid);
-    llvm::Value *singleCall =
-        builder.CreateCall(singleFunc, {DefaultOpenMPLocation, tid});
-    llvm::Value *shouldExit = builder.CreateICmpEQ(singleCall, builder.getInt32(0));
+    llvm::Value *shouldExit = builder.getFalse();
     builder.CreateCondBr(shouldExit, proxyBlockExit, proxyBlockMain);
 
     builder.SetInsertPoint(proxyBlockExit);
@@ -803,18 +751,11 @@ void LLVMVisitor::visit(const Module *x) {
     builder.CreateUnreachable();
 
     builder.SetInsertPoint(normal);
-    builder.CreateCall(singleEndFunc, {DefaultOpenMPLocation, tid});
     builder.CreateRetVoid();
 
-    // actually make the fork call
-    std::vector<llvm::Value *> forkArgs = {
-        DefaultOpenMPLocation, builder.getInt32(0),
-        builder.CreateBitCast(proxyMain, getKmpc_MicroPointerTy(context))};
+    // actually make the call
     builder.SetInsertPoint(exitBlock);
-    builder.CreateCall(forkFunc, forkArgs);
-
-    // tell Tapir to NOT create its own parallel regions
-    fastOpenMP.setValue(true);
+    builder.CreateCall(proxyMain);
   }
 
   builder.SetInsertPoint(exitBlock);
@@ -2073,9 +2014,9 @@ void LLVMVisitor::callStage(const PipelineFlow::Stage *stage) {
   value = call(f, args);
 }
 
+// TODO: handle parallel stages with new OpenMP integration
 void LLVMVisitor::codegenPipeline(
-    const std::vector<const PipelineFlow::Stage *> &stages, llvm::Value *syncReg,
-    unsigned where) {
+    const std::vector<const PipelineFlow::Stage *> &stages, unsigned where) {
   if (where >= stages.size()) {
     return;
   }
@@ -2084,13 +2025,13 @@ void LLVMVisitor::codegenPipeline(
 
   if (where == 0) {
     process(stage->getCallee());
-    codegenPipeline(stages, syncReg, where + 1);
+    codegenPipeline(stages, where + 1);
     return;
   }
 
   auto *prevStage = stages[where - 1];
   const bool generator = prevStage->isGenerator();
-  const bool parallel = prevStage->isParallel();
+  // const bool parallel = prevStage->isParallel();
 
   if (generator) {
     auto *generatorType = cast<types::GeneratorType>(prevStage->getOutputType());
@@ -2132,27 +2073,11 @@ void LLVMVisitor::codegenPipeline(
     value = builder.CreateLoad(promise);
 
     block = bodyBlock;
-    if (parallel) {
-      auto *detachBlock = llvm::BasicBlock::Create(context, "pipeline.detach", func);
-      builder.SetInsertPoint(block);
-      if (trycatch.empty()) {
-        builder.CreateDetach(detachBlock, condBlock, syncReg);
-      } else {
-        auto *unwindBlock = trycatch.back().exceptionBlock;
-        builder.CreateDetach(detachBlock, condBlock, unwindBlock, syncReg);
-      }
-      block = detachBlock;
-    }
-
     callStage(stage);
-    codegenPipeline(stages, syncReg, where + 1);
-    builder.SetInsertPoint(block);
+    codegenPipeline(stages, where + 1);
 
-    if (parallel) {
-      builder.CreateReattach(condBlock, syncReg);
-    } else {
-      builder.CreateBr(condBlock);
-    }
+    builder.SetInsertPoint(block);
+    builder.CreateBr(condBlock);
 
     builder.SetInsertPoint(cleanupBlock);
     builder.CreateCall(coroDestroy, iter);
@@ -2160,92 +2085,17 @@ void LLVMVisitor::codegenPipeline(
 
     block = exitBlock;
   } else {
-    llvm::BasicBlock *resumeBlock = nullptr;
-    if (parallel) {
-      auto *detachBlock = llvm::BasicBlock::Create(context, "pipeline.detach", func);
-      resumeBlock = llvm::BasicBlock::Create(context, "pipeline.resume", func);
-      builder.SetInsertPoint(block);
-      if (trycatch.empty()) {
-        builder.CreateDetach(detachBlock, resumeBlock, syncReg);
-      } else {
-        auto *unwindBlock = trycatch.back().exceptionBlock;
-        builder.CreateDetach(detachBlock, resumeBlock, unwindBlock, syncReg);
-      }
-      block = detachBlock;
-    }
-
     callStage(stage);
-    codegenPipeline(stages, syncReg, where + 1);
-
-    if (parallel) {
-      builder.SetInsertPoint(block);
-      builder.CreateReattach(resumeBlock, syncReg);
-      block = resumeBlock;
-    }
+    codegenPipeline(stages, where + 1);
   }
 }
 
 void LLVMVisitor::visit(const PipelineFlow *x) {
-  unsigned numParallel = 0;
   std::vector<const PipelineFlow::Stage *> stages;
   for (const auto &stage : *x) {
     stages.push_back(&stage);
-    if (stage.isParallel()) {
-      ++numParallel;
-    }
   }
-
-  // set up parallelism if needed
-  // TODO: move nested parallel setup to Tapir backend
-  const bool anyParallel = numParallel > 0;
-  const bool nestedParallel = numParallel > 1;
-
-  getOrCreateIdentTy(module.get());
-  auto *threadNumFunc = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "__kmpc_global_thread_num", builder.getInt32Ty(), getIdentTyPointerTy()));
-  threadNumFunc->setDoesNotThrow();
-
-  auto *taskGroupFunc = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("__kmpc_taskgroup", builder.getVoidTy(),
-                                  getIdentTyPointerTy(), builder.getInt32Ty()));
-  taskGroupFunc->setDoesNotThrow();
-
-  auto *endTaskGroupFunc = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("__kmpc_end_taskgroup", builder.getVoidTy(),
-                                  getIdentTyPointerTy(), builder.getInt32Ty()));
-  endTaskGroupFunc->setDoesNotThrow();
-
-  llvm::Value *syncReg = nullptr;
-  llvm::Value *ompLoc = nullptr;
-  llvm::Value *gtid = nullptr;
-
-  if (anyParallel) {
-    llvm::Function *syncStart = llvm::Intrinsic::getDeclaration(
-        module.get(), llvm::Intrinsic::syncregion_start);
-    builder.SetInsertPoint(block);
-    syncReg = builder.CreateCall(syncStart);
-  }
-
-  if (nestedParallel) {
-    ompLoc = getOrCreateDefaultLocation(module.get());
-    builder.SetInsertPoint(func->getEntryBlock().getTerminator());
-    gtid = builder.CreateCall(threadNumFunc, ompLoc);
-
-    builder.SetInsertPoint(block);
-    builder.CreateCall(taskGroupFunc, {ompLoc, gtid});
-  }
-
-  codegenPipeline(stages, syncReg);
-
-  // create sync
-  builder.SetInsertPoint(block);
-  if (nestedParallel) {
-    builder.CreateCall(endTaskGroupFunc, {ompLoc, gtid});
-  } else if (anyParallel) {
-    auto *exitBlock = llvm::BasicBlock::Create(context, "pipeline.exit", func);
-    builder.CreateSync(exitBlock, syncReg);
-    block = exitBlock;
-  }
+  codegenPipeline(stages);
 }
 
 void LLVMVisitor::visit(const dsl::CustomFlow *x) {

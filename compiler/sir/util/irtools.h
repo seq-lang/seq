@@ -63,9 +63,10 @@ Value *makeTuple(const std::vector<Value *> &args, Module *M);
 /// Constructs and assigns a new variable.
 /// @param x the value to assign to the new variable
 /// @param flow series flow in which to assign the new variable
-/// @param parent function to add the new variable to
+/// @param parent function to add the new variable to, or null for global variable
+/// @param prepend true to insert assignment at start of block
 /// @return value containing the new variable
-VarValue *makeVar(Value *x, SeriesFlow *flow, BodiedFunc *parent);
+VarValue *makeVar(Value *x, SeriesFlow *flow, BodiedFunc *parent, bool prepend = false);
 
 /// Dynamically allocates memory for the given type with the given
 /// number of elements.

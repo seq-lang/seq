@@ -13,6 +13,7 @@
 #include "sir/transform/folding/folding.h"
 #include "sir/transform/lowering/imperative.h"
 #include "sir/transform/manager.h"
+#include "sir/transform/parallel/openmp.h"
 #include "sir/transform/pythonic/dict.h"
 #include "sir/transform/pythonic/io.h"
 #include "sir/transform/pythonic/str.h"
@@ -148,6 +149,9 @@ void PassManager::registerStandardPasses() {
       registerAnalysis(std::make_unique<analyze::module::GlobalVarsAnalyses>());
   registerPass(std::make_unique<folding::FoldingPassGroup>(rdKey, globalKey),
                {rdKey, globalKey}, {rdKey, cfgKey, globalKey});
+
+  // parallel
+  registerPass(std::make_unique<parallel::OpenMPPass>());
 }
 
 } // namespace transform

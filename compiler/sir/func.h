@@ -90,6 +90,8 @@ private:
   Value *body = nullptr;
   /// whether the function is builtin
   bool builtin = false;
+  /// whether this function is async
+  bool async = false;
 
 public:
   static const char NodeId;
@@ -141,6 +143,12 @@ public:
   /// Changes the function's builtin status.
   /// @param v true if builtin, false otherwise
   void setBuiltin(bool v = true) { builtin = v; }
+
+  /// @return true if the function is async
+  bool isAsync() const { return async; }
+  /// Changes the function's async status.
+  /// @param v true if async, false otherwise
+  void setAsync(bool v = true) { async = v; }
 
 protected:
   std::vector<Value *> doGetUsedValues() const override {

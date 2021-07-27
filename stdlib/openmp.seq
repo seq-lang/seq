@@ -1,0 +1,101 @@
+# OpenMP interface
+# Ref: https://github.com/llvm/llvm-project/tree/main/openmp
+Micro = Function[[Ptr[i32], Ptr[i32]], void]  # TODO: variadic
+Routine = Function[[i32, cobj], i32]
+
+@tuple
+class Ident:
+    reserved_1: i32
+    flags: i32
+    reserved_2: i32
+    reserved_3: i32
+    psource: cobj
+
+@tuple
+class LRData:
+    routine: Routine
+
+@tuple
+class Task:
+    shareds: cobj
+    routine: Routine
+    flags: i32
+    x: LRData
+    y: LRData
+
+@tuple
+class TaskWithPrivates[T]:
+    task: Task
+    data: T
+
+DEFAULT_SRC = ";unknown;unknown;0;0;;".ptr
+DEFAULT_LOC = Ident(i32(0), i32(2), i32(0), i32(0), DEFAULT_SRC)
+
+def default_loc():
+    return __ptr__(DEFAULT_LOC)
+
+@llvm
+def bitcast[T](x) -> T:
+    %y = bitcast {=typeof(x)} %x to {=T}
+    ret {=T} %y
+
+def single_begin(loc_ref: Ptr[Ident], gtid: int):
+    from C import __kmpc_single(Ptr[Ident], i32) -> i32
+    return int(__kmpc_single(loc_ref, i32(gtid)))
+
+def single_end(loc_ref: Ptr[Ident], gtid: int):
+    from C import __kmpc_end_single(Ptr[Ident], i32)
+    __kmpc_end_single(loc_ref, i32(gtid))
+
+def task_alloc(loc_ref: Ptr[Ident], gtid: int, flags: int, size_of_task: int, size_of_shareds: int, task_entry: Routine):
+    from C import __kmpc_omp_task_alloc(Ptr[Ident], i32, i32, int, int, Routine) -> cobj
+    return __kmpc_omp_task_alloc(loc_ref, i32(gtid), i32(flags), size_of_task, size_of_shareds, task_entry)
+
+def task_run(loc_ref: Ptr[Ident], gtid: int, new_task: cobj):
+    from C import __kmpc_omp_task(Ptr[Ident], i32, cobj) -> i32
+    return int(__kmpc_omp_task(loc_ref, i32(gtid), new_task))
+
+def barrier(loc_ref: Ptr[Ident], gtid: int):
+    from C import __kmpc_barrier(Ptr[Ident], i32)
+    __kmpc_barrier(loc_ref, i32(gtid))
+
+def static_init(loc_ref: Ptr[Ident], gtid: int, schedtype: int, loop: range, incr: int, chunk: int):
+    from C import __kmpc_for_static_init_8(Ptr[Ident], i32, i32, Ptr[i32], Ptr[int], Ptr[int], Ptr[int], int, int)
+    last = i32(0)
+    lower = 0
+    upper = len(loop) - 1
+    stride = 1
+    __kmpc_for_static_init_8(loc_ref, i32(gtid), i32(schedtype), __ptr__(last), __ptr__(lower), __ptr__(upper), __ptr__(stride), incr, chunk)
+    return range(loop._get(lower), loop._get(upper + 1), loop.step)
+
+def static_fini(loc_ref: Ptr[Ident], gtid: int):
+    from C import __kmpc_for_static_fini(Ptr[Ident], i32)
+    __kmpc_for_static_fini(loc_ref, i32(gtid))
+
+def _static_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], start: int, stop: int, step: int, args):
+    def _static_loop_body_stub(i: int):
+        pass
+
+    gtid = int(gtid_ptr[0])
+    loc_ref = default_loc()
+    loop = range(start, stop, step)
+    subloop = static_init(loc_ref, gtid, schedtype=34, loop=loop, incr=1, chunk=1)
+    for i in subloop:
+        _static_loop_body_stub(i)
+    static_fini(loc_ref, gtid)
+
+def fork_call(microtask: cobj, args):
+    from C import __kmpc_fork_call(Ptr[Ident], i32, cobj, ...)
+    loc_ref = default_loc()  # TODO: pass real loc?
+    __kmpc_fork_call(loc_ref, i32(staticlen(args)), microtask, *args)
+
+def spawn_and_run_task(loc_ref: Ptr[Ident], gtid: int, routine: Routine):
+    from internal.gc import sizeof
+
+    flags = 1
+    size_of_kmp_task_t = sizeof[Task]()
+    size_of_shareds = 0  # TODO
+
+    task = task_alloc(loc_ref, gtid, flags, size_of_kmp_task_t, size_of_shareds, routine)
+    task_run(loc_ref, gtid, task)
+

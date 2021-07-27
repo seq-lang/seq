@@ -262,7 +262,7 @@ struct Outliner : public Operator {
     return modVars;
   }
 
-  OutlineResult outline() {
+  OutlineResult outline(bool allowOutflows = true) {
     if (invalid)
       return {};
 
@@ -270,6 +270,7 @@ struct Outliner : public Operator {
     std::vector<std::pair<Var *, Var *>> remap; // mapping of old vars to new func vars
     std::vector<types::Type *> argTypes;        // arg types of new func
     std::vector<std::string> argNames;          // arg names of new func
+    std::vector<OutlineResult::ArgKind> argKinds; // arg information given back to user
 
     // Figure out arguments and outlined function type:
     //   - Private variables can be made local to the new function
@@ -282,15 +283,19 @@ struct Outliner : public Operator {
       Var *var = M->getVar(id);
       seqassert(var, "unknown var id");
       remap.emplace_back(var, nullptr);
-      types::Type *type =
-          (mod.count(id) > 0) ? M->getPointerType(var->getType()) : var->getType();
+      const bool isMod = (mod.count(id) > 0);
+      types::Type *type = isMod ? M->getPointerType(var->getType()) : var->getType();
       argTypes.push_back(type);
       argNames.push_back(std::to_string(idx++));
+      argKinds.push_back(isMod ? OutlineResult::ArgKind::MODIFIED
+                               : OutlineResult::ArgKind::CONSTANT);
     }
 
     // Check if we need to handle control flow externally.
     // If so, function will return an int code indicating control.
     const bool callIndicatesControl = !outFlows.empty();
+    if (callIndicatesControl && !allowOutflows)
+      return {};
     auto *funcType = M->getFuncType(
         callIndicatesControl ? M->getIntType() : M->getVoidType(), argTypes);
     auto *outlinedFunc = M->Nr<BodiedFunc>("__outlined");
@@ -356,7 +361,7 @@ struct Outliner : public Operator {
       it = flowRegion->insert(it, outlinedCall);
     }
 
-    return {outlinedFunc, outlinedCall, static_cast<int>(outFlows.size())};
+    return {outlinedFunc, outlinedCall, argKinds, static_cast<int>(outFlows.size())};
   }
 };
 
@@ -364,10 +369,15 @@ struct Outliner : public Operator {
 
 OutlineResult outlineRegion(BodiedFunc *parent, SeriesFlow *series,
                             decltype(series->begin()) begin,
-                            decltype(series->end()) end) {
+                            decltype(series->end()) end, bool allowOutflows) {
   Outliner outliner(parent, series, begin, end);
   parent->accept(outliner);
-  return outliner.outline();
+  return outliner.outline(allowOutflows);
+}
+
+OutlineResult outlineRegion(BodiedFunc *parent, SeriesFlow *series,
+                            bool allowOutflows) {
+  return outlineRegion(parent, series, series->begin(), series->end(), allowOutflows);
 }
 
 } // namespace util
