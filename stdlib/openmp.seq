@@ -1,6 +1,5 @@
 # OpenMP interface
 # Ref: https://github.com/llvm/llvm-project/tree/main/openmp
-Micro = Function[[Ptr[i32], Ptr[i32]], void]  # TODO: variadic
 Routine = Function[[i32, cobj], i32]
 
 @tuple
@@ -76,6 +75,11 @@ def static_fini(loc_ref: Ptr[Ident], gtid: int):
     from C import __kmpc_for_static_fini(Ptr[Ident], i32)
     __kmpc_for_static_fini(loc_ref, i32(gtid))
 
+def fork_call(microtask: cobj, args):
+    from C import __kmpc_fork_call(Ptr[Ident], i32, cobj, ...)
+    loc_ref = default_loc()  # TODO: pass real loc?
+    __kmpc_fork_call(loc_ref, i32(staticlen(args)), microtask, *args)
+
 def _static_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], start: int, stop: int, step: int, args):
     def _static_loop_body_stub(i: int):
         pass
@@ -88,18 +92,33 @@ def _static_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], start:
         _static_loop_body_stub(i)
     static_fini(loc_ref, gtid)
 
-def fork_call(microtask: cobj, args):
-    from C import __kmpc_fork_call(Ptr[Ident], i32, cobj, ...)
-    loc_ref = default_loc()  # TODO: pass real loc?
-    __kmpc_fork_call(loc_ref, i32(staticlen(args)), microtask, *args)
-
-def spawn_and_run_task(loc_ref: Ptr[Ident], gtid: int, routine: Routine):
+# P = privates; tuple of types
+# S = shareds; tuple of pointers
+def _spawn_and_run_task[P,S](loc_ref: Ptr[Ident], gtid: int, routine: cobj, priv: P, shared: S):
     from internal.gc import sizeof
 
+    TaskThunk = TaskWithPrivates[P]
     flags = 1
-    size_of_kmp_task_t = sizeof[Task]()
-    size_of_shareds = 0  # TODO
+    size_of_kmp_task_t = sizeof[TaskThunk]()
+    size_of_privs = sizeof[P]()
+    size_of_shareds = sizeof[S]()
+    loc_ref = default_loc()
 
-    task = task_alloc(loc_ref, gtid, flags, size_of_kmp_task_t, size_of_shareds, routine)
+    task = Ptr[TaskThunk](task_alloc(loc_ref, gtid, flags, size_of_kmp_task_t, size_of_shareds, Routine(routine)))
+    shared_ptr = task[0].task.shareds
+    str.memcpy(shared_ptr, __ptr__(shared).as_byte(), size_of_shareds)
+    priv_ptr = task.as_byte() + sizeof[Task]()
+    str.memcpy(priv_ptr, __ptr__(priv), size_of_privs)
+
     task_run(loc_ref, gtid, task)
 
+def _task_entry_template[T](gtid: i32, data: Ptr[TaskWithPrivates[T]]):
+    return i32(0)
+
+def _task_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], priv, shared):
+    def _routine_stub(gtid: i32, data: cobj):
+        return i32(0)
+
+    gtid = int(gtid_ptr[0])
+    loc_ref = default_loc()
+    _spawn_and_run_task(loc_ref, gtid, _routine_stub.__raw__(), priv, shared)
