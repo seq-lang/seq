@@ -57,6 +57,13 @@ else ()
     set(STATIC_LIBCPP "-static-libstdc++")
 endif ()
 
+add_executable(peg2cpp compiler/util/peg2cpp.cpp compiler/util/peglib.h)
+add_custom_command(
+    OUTPUT  rules.cpp
+    COMMAND peg2cpp ${CMAKE_SOURCE_DIR}/compiler/parser/peg/grammar.peg rules.cpp
+    DEPENDS peg2cpp compiler/parser/peg/grammar.peg
+)
+
 # Seq runtime library
 set(SEQRT_FILES runtime/lib.h
         runtime/lib.cpp
@@ -93,7 +100,8 @@ set(SEQ_HPPFILES
         compiler/parser/cache.h
         compiler/parser/common.h
         compiler/parser/ctx.h
-        compiler/parser/peg.h
+        compiler/parser/peg/peg.h
+        compiler/parser/peg/rules.h
         compiler/parser/parser.h
         compiler/parser/visitors/doc/doc.h
         compiler/parser/visitors/format/format.h
@@ -172,7 +180,7 @@ set(SEQ_CPPFILES
         compiler/parser/ast/types.cpp
         compiler/parser/cache.cpp
         compiler/parser/common.cpp
-        compiler/parser/peg.cpp
+        compiler/parser/peg/peg.cpp
         compiler/parser/parser.cpp
         compiler/parser/visitors/doc/doc.cpp
         compiler/parser/visitors/format/format.cpp
@@ -230,7 +238,7 @@ set(SEQ_CPPFILES
         compiler/util/common.cpp
         compiler/util/fmt/format.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
-target_sources(seq PRIVATE ${SEQ_CPPFILES})
+target_sources(seq PRIVATE ${SEQ_CPPFILES} rules.cpp)
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 if (APPLE)
     target_link_libraries(seq ${LLVM_LIBS} dl seqrt)
@@ -244,30 +252,15 @@ target_link_libraries(seqc ${STATIC_LIBCPP} seq Threads::Threads)
 
 # Seq test
 # Download and unpack googletest at configure time
-configure_file(test/CMakeLists.txt.in googletest-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-        RESULT_VARIABLE result
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
-if (result)
-    message(FATAL_ERROR "CMake step for googletest failed: ${result}")
-endif ()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-        RESULT_VARIABLE result
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
-if (result)
-    message(FATAL_ERROR "Build step for googletest failed: ${result}")
-endif ()
-
-# Prevent overriding the parent project's compiler/linker
-# settings on Windows
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
+)
+# For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-
-# Add googletest directly to our build. This defines
-# the gtest and gtest_main targets.
-add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
-        ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
-        EXCLUDE_FROM_ALL)
-
+FetchContent_MakeAvailable(googletest)
+enable_testing()
 set(SEQ_TEST_CPPFILES
         test/main.cpp
         test/sir/analyze/dominator.cpp

@@ -364,11 +364,13 @@ WithStmt::WithStmt(vector<ExprPtr> &&items, vector<string> &&vars, StmtPtr suite
     : Stmt(), items(move(items)), vars(vars), suite(move(suite)) {
   assert(items.size() == vars.size());
 }
-WithStmt::WithStmt(vector<pair<ExprPtr, string>> &&itemVarPairs, StmtPtr suite)
+WithStmt::WithStmt(vector<pair<ExprPtr, ExprPtr>> &&itemVarPairs, StmtPtr suite)
     : Stmt(), suite(move(suite)) {
   for (auto &i : itemVarPairs) {
     items.push_back(move(i.first));
-    vars.push_back(i.second);
+    if (!i.second->getId())
+      throw;
+    vars.push_back(i.second->getId()->value);
   }
 }
 WithStmt::WithStmt(const WithStmt &stmt)

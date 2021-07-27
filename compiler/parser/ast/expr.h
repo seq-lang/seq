@@ -48,6 +48,8 @@ struct Stmt;
  * unique_ptr.
  */
 struct Expr : public seq::SrcObject {
+  typedef Expr base_type;
+
   // private:
   /// Type of the expression. nullptr by default.
   types::TypePtr type;

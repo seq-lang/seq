@@ -39,6 +39,8 @@ struct FunctionStmt;
  * unique_ptr.
  */
 struct Stmt : public seq::SrcObject {
+  typedef Stmt base_type;
+
   /// Flag that indicates if all types in a statement are inferred (i.e. if a
   /// type-checking procedure was successful).
   bool done;
@@ -518,8 +520,7 @@ struct WithStmt : public Stmt {
   StmtPtr suite;
 
   WithStmt(vector<ExprPtr> &&items, vector<string> &&vars, StmtPtr suite);
-  /// Convenience constructor for parsing OCaml objects.
-  WithStmt(vector<pair<ExprPtr, string>> &&itemVarPairs, StmtPtr suite);
+  WithStmt(vector<pair<ExprPtr, ExprPtr>> &&items, StmtPtr suite);
   WithStmt(const WithStmt &stmt);
 
   string toString(int indent) const override;
