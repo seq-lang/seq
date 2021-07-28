@@ -78,18 +78,19 @@ def static_fini(loc_ref: Ptr[Ident], gtid: int):
 def fork_call(microtask: cobj, args):
     from C import __kmpc_fork_call(Ptr[Ident], i32, cobj, ...)
     loc_ref = default_loc()  # TODO: pass real loc?
-    __kmpc_fork_call(loc_ref, i32(staticlen(args)), microtask, *args)
+    __kmpc_fork_call(loc_ref, i32(1), microtask, __ptr__(args))
 
-def _static_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], start: int, stop: int, step: int, args):
-    def _static_loop_body_stub(i: int):
+def _static_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], args):
+    def _static_loop_body_stub(i, args):
         pass
 
+    start, stop, step, extra = args[0]
     gtid = int(gtid_ptr[0])
     loc_ref = default_loc()
     loop = range(start, stop, step)
     subloop = static_init(loc_ref, gtid, schedtype=34, loop=loop, incr=1, chunk=1)
     for i in subloop:
-        _static_loop_body_stub(i)
+        _static_loop_body_stub(i, extra)
     static_fini(loc_ref, gtid)
 
 # P = privates; tuple of types
@@ -105,27 +106,38 @@ def _spawn_and_run_task[P,S](loc_ref: Ptr[Ident], gtid: int, routine: cobj, priv
     loc_ref = default_loc()
 
     task = Ptr[TaskThunk](task_alloc(loc_ref, gtid, flags, size_of_kmp_task_t, size_of_shareds, Routine(routine)))
-    shared_ptr = task[0].task.shareds
-    str.memcpy(shared_ptr, __ptr__(shared).as_byte(), size_of_shareds)
-    priv_ptr = task.as_byte() + sizeof[Task]()
-    str.memcpy(priv_ptr, __ptr__(priv).as_byte(), size_of_privs)
+    if staticlen(shared) != 0:
+        shared_ptr = task[0].task.shareds
+        str.memcpy(shared_ptr, __ptr__(shared).as_byte(), size_of_shareds)
+    if staticlen(priv) != 0:
+        priv_ptr = task.as_byte() + sizeof[Task]()
+        str.memcpy(priv_ptr, __ptr__(priv).as_byte(), size_of_privs)
 
     task_run(loc_ref, gtid, task.as_byte())
 
 # Note: this is different than OpenMP's "taskloop" -- this template simply
 # spawns a new task for each loop iteration.
-def _task_loop_outline_template[P,S](gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], iterable, priv: P, shared: S):
+def _task_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], args):
     def _routine_stub[P,S](gtid: i32, data: cobj):
         def _task_loop_body_stub(priv, shared):
             pass
+
         task = Ptr[TaskWithPrivates[P]](data)[0]
         priv = task.data
-        shared = Ptr[S](task.task.shareds)[0]
-        _task_loop_body_stub(priv, shared)
+        if staticlen(S()) != 0:
+            shared = Ptr[S](task.task.shareds)[0]
+            _task_loop_body_stub(priv, shared)
+        else:
+            shared = ()
+            _task_loop_body_stub(priv, shared)
         return i32(0)
 
     def _insert_new_loop_var(i, priv, shared):
         return priv, shared
+
+    iterable, priv, shared = args[0]
+    P = typeof(priv)
+    S = typeof(shared)
 
     gtid = int(gtid_ptr[0])
     loc_ref = default_loc()

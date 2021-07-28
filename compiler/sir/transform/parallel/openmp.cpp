@@ -52,24 +52,25 @@ Value *tget(Value *tuple, unsigned idx) {
 }
 
 struct StaticLoopTemplateReplacer : public util::Operator {
-  Func *parent;
   CallInstr *replacement;
   Var *loopVar;
 
-  StaticLoopTemplateReplacer(Func *parent, CallInstr *replacement, Var *loopVar)
-      : util::Operator(), parent(parent), replacement(replacement), loopVar(loopVar) {}
+  StaticLoopTemplateReplacer(CallInstr *replacement, Var *loopVar)
+      : util::Operator(), replacement(replacement), loopVar(loopVar) {}
 
   void handle(CallInstr *v) override {
     auto *M = v->getModule();
     auto *func = util::getFunc(v->getCallee());
     if (func && func->getUnmangledName() == "_static_loop_body_stub") {
       seqassert(replacement, "unexpected double replacement");
-      seqassert(v->numArgs() == 1 && isA<VarValue>(v->front()),
+      seqassert(v->numArgs() == 2 && isA<VarValue>(v->front()) &&
+                    isA<VarValue>(v->back()),
                 "unexpected loop body stub");
 
-      // the template passes the new loop var to the body stub for convenience
-      auto *newLoopVar = cast<VarValue>(*v->begin())->getVar();
-      auto *extras = parent->arg_back();
+      // the template passes the new loop var and extra args
+      // to the body stub for convenience
+      auto *newLoopVar = util::getVar(v->front());
+      auto *extras = util::getVar(v->back());
 
       std::vector<Value *> newArgs;
       unsigned next = 1;
@@ -233,8 +234,10 @@ void OpenMPPass::handle(ForFlow *v) {
 
   // template call
   std::vector<types::Type *> templateFuncArgs = {
-      types.i32ptr, types.i32ptr, v->getIter()->getType(), privatesTuple->getType(),
-      sharedsTuple->getType()};
+      types.i32ptr, types.i32ptr,
+      M->getPointerType(
+          M->getTupleType({v->getIter()->getType(), privatesTuple->getType(),
+                           sharedsTuple->getType()}))};
   auto *templateFunc = M->getOrRealizeFunc("_task_loop_outline_template",
                                            templateFuncArgs, {}, ompModule);
   seqassert(templateFunc, "task loop outline template not found");
@@ -290,15 +293,16 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   // template call
   auto *intType = M->getIntType();
   std::vector<types::Type *> templateFuncArgs = {
-      types.i32ptr, types.i32ptr, intType,
-      intType,      intType,      M->getTupleType(extraArgTypes)};
+      types.i32ptr, types.i32ptr,
+      M->getPointerType(M->getTupleType(
+          {intType, intType, intType, M->getTupleType(extraArgTypes)}))};
   auto *templateFunc = M->getOrRealizeFunc("_static_loop_outline_template",
                                            templateFuncArgs, {}, ompModule);
   seqassert(templateFunc, "static loop outline template not found");
 
   util::CloneVisitor cv(M);
   templateFunc = cast<BodiedFunc>(cv.clone(templateFunc));
-  StaticLoopTemplateReplacer rep(templateFunc, outline.call, loopVar);
+  StaticLoopTemplateReplacer rep(outline.call, loopVar);
   templateFunc->accept(rep);
 
   // raw template func
