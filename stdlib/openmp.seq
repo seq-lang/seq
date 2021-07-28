@@ -108,17 +108,35 @@ def _spawn_and_run_task[P,S](loc_ref: Ptr[Ident], gtid: int, routine: cobj, priv
     shared_ptr = task[0].task.shareds
     str.memcpy(shared_ptr, __ptr__(shared).as_byte(), size_of_shareds)
     priv_ptr = task.as_byte() + sizeof[Task]()
-    str.memcpy(priv_ptr, __ptr__(priv), size_of_privs)
+    str.memcpy(priv_ptr, __ptr__(priv).as_byte(), size_of_privs)
 
-    task_run(loc_ref, gtid, task)
+    task_run(loc_ref, gtid, task.as_byte())
 
-def _task_entry_template[T](gtid: i32, data: Ptr[TaskWithPrivates[T]]):
-    return i32(0)
-
-def _task_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], priv, shared):
-    def _routine_stub(gtid: i32, data: cobj):
+# Note: this is different than OpenMP's "taskloop" -- this template simply
+# spawns a new task for each loop iteration.
+def _task_loop_outline_template[P,S](gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], iterable, priv: P, shared: S):
+    def _routine_stub[P,S](gtid: i32, data: cobj):
+        def _task_loop_body_stub(priv, shared):
+            pass
+        task = Ptr[TaskWithPrivates[P]](data)[0]
+        priv = task.data
+        shared = Ptr[S](task.task.shareds)[0]
+        _task_loop_body_stub(priv, shared)
         return i32(0)
+
+    def _insert_new_loop_var(i, priv, shared):
+        return priv, shared
 
     gtid = int(gtid_ptr[0])
     loc_ref = default_loc()
-    _spawn_and_run_task(loc_ref, gtid, _routine_stub.__raw__(), priv, shared)
+
+    if single_begin(loc_ref, gtid) != 0:
+        try:
+            for i in iterable:
+                priv, shared = _insert_new_loop_var(i, priv, shared)
+                _spawn_and_run_task(loc_ref, gtid, _routine_stub[P,S].__raw__(), priv, shared)
+        finally:
+            single_end(loc_ref, gtid)
+
+    barrier(loc_ref, gtid)
+

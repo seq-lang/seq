@@ -370,6 +370,8 @@ struct Outliner : public Operator {
 OutlineResult outlineRegion(BodiedFunc *parent, SeriesFlow *series,
                             decltype(series->begin()) begin,
                             decltype(series->end()) end, bool allowOutflows) {
+  if (begin == end)
+    return {};
   Outliner outliner(parent, series, begin, end);
   parent->accept(outliner);
   return outliner.outline(allowOutflows);
