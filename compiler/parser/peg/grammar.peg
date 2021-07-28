@@ -10,44 +10,36 @@ using namespace seq::ast;
 #define V1 VS[1]
 #define V2 VS[2]
 
-template<typename T, typename Functor>
-auto app(const std::vector<T> &c, Functor &&f) {
-  std::vector<typename std::result_of<Functor(const T&)>::type> ret;
+template<typename T, typename F> auto app(const std::vector<T> &c, F &&f) {
+  std::vector<typename std::result_of<F(const T&)>::type> ret;
   std::transform(std::begin(c), std::end(c), std::inserter(ret, std::end(ret)), f);
   return ret;
 }
-template<typename Functor>
-auto app(const peg::SemanticValues &c, Functor &&f) {
-  std::vector<typename std::result_of<Functor(const std::any&)>::type> ret;
+template<typename F> auto app(const peg::SemanticValues &c, F &&f) {
+  std::vector<typename std::result_of<F(const std::any&)>::type> ret;
   std::transform(std::begin(c), std::end(c), std::inserter(ret, std::end(ret)), f);
   return ret;
 }
-
 template <typename Tn, typename Tsv, typename... Ts> auto ast(Tsv &s, Ts &&...args) {
   typename Tn::base_type *t = new Tn(std::forward<Ts>(args)...);
-  t->setSrcInfo(seq::SrcInfo(s.path, s.line_info().first, s.line_info().first,
-                             s.line_info().second, s.line_info().second));
+  t->setSrcInfo(s);
   return t;
 }
-
 template <typename T> unique_ptr<T> any_to_unique(const any &i) {
   return unique_ptr<T>(any_cast<T *>(i));
 }
-
-auto chain(peg::SemanticValues &VS) {
+auto chain(peg::SemanticValues &VS, const seq::SrcInfo &LOC) {
   Expr *b = any_cast<Expr *>(V0);
   for (int i = 1; i < VS.size(); i++)
-    b = ast<BinaryExpr>(VS, ExprPtr(b), VS.token_to_string(i - 1),
+    b = ast<BinaryExpr>(LOC, ExprPtr(b), VS.token_to_string(i - 1),
                         any_to_unique<Expr>(VS[i]));
   return b;
 }
-
-auto wrap_tuple(peg::SemanticValues &VS) {
+auto wrap_tuple(peg::SemanticValues &VS, const seq::SrcInfo &LOC) {
   if (VS.size() == 1)
     return any_cast<Expr *>(V0);
-  return ast<TupleExpr>(VS, app(VS, any_to_unique<Expr>));
+  return ast<TupleExpr>(LOC, app(VS, any_to_unique<Expr>));
 }
-
 auto gen_body(const any &a) {
   return app(any_cast<vector<any>>(a), [](const any &i) {
     auto ti = any_cast<tuple<any, any, vector<any>>>(i);
@@ -64,14 +56,14 @@ program <- statements !.
 list(c, e)  <- e _ (c _ e _)*
 tlist(c, e) <- e _ (c _ e _)* c? _
 
-statements <- (statement / _ COMMENT EOL / _ EOL)+ { return ast<SuiteStmt>(VS, app(VS, any_to_unique<Stmt>)); }
+statements <- (statement / _ COMMENT EOL / _ EOL)+ { return ast<SuiteStmt>(LOC, app(VS, any_to_unique<Stmt>)); }
 statement <- compound_stmt / SAMEDENT simple_stmt
-simple_stmt <- tlist(';', small_stmt) _ EOL { return ast<SuiteStmt>(VS, app(VS, any_to_unique<Stmt>)); }
+simple_stmt <- tlist(';', small_stmt) _ EOL { return ast<SuiteStmt>(LOC, app(VS, any_to_unique<Stmt>)); }
 small_stmt <-
   / assignment
-  / 'pass' { return make_any<Stmt*>(ast<PassStmt>(VS)); }
-  / 'break' { return make_any<Stmt*>(ast<BreakStmt>(VS)); }
-  / 'continue' { return make_any<Stmt*>(ast<ContinueStmt>(VS)); }
+  / 'pass' { return make_any<Stmt*>(ast<PassStmt>(LOC)); }
+  / 'break' { return make_any<Stmt*>(ast<BreakStmt>(LOC)); }
+  / 'continue' { return make_any<Stmt*>(ast<ContinueStmt>(LOC)); }
   / global_stmt
   / yield_stmt
   / assert_stmt
@@ -80,10 +72,10 @@ small_stmt <-
   / raise_stmt
   / print_stmt
   # import_stmt
-  / expressions { return make_any<Stmt*>(ast<ExprStmt>(VS, any_to_unique<Expr>(V0))); }
+  / expressions { return make_any<Stmt*>(ast<ExprStmt>(LOC, any_to_unique<Expr>(V0))); }
 assignment <-
   / id _ ':' _ expression _ ('=' _ star_expressions _)* {
-    return ast<AssignStmt>(VS,
+    return ast<AssignStmt>(LOC,
       any_to_unique<Expr>(V0),
       VS.size() > 2 ? any_to_unique<Expr>(V2) : nullptr,
       any_to_unique<Expr>(V1)
@@ -92,53 +84,53 @@ assignment <-
   / (star_targets _ '=' _)+ star_expressions _ !'=' {
     vector<StmtPtr> stmts;
     for (int i = int(VS.size()) - 2; i >= 0; i--)
-      stmts.push_back(StmtPtr(ast<AssignStmt>(VS, any_to_unique<Expr>(VS[i]), any_to_unique<Expr>(VS[i + 1]))));
-    return ast<SuiteStmt>(VS, move(stmts));
+      stmts.push_back(StmtPtr(ast<AssignStmt>(LOC, any_to_unique<Expr>(VS[i]), any_to_unique<Expr>(VS[i + 1]))));
+    return ast<SuiteStmt>(LOC, move(stmts));
   }
   / star_target _ augassign ^ _ star_expressions {
-    return ast<AssignStmt>(VS,
+    return ast<AssignStmt>(LOC,
       any_to_unique<Expr>(V0),
-      ExprPtr(ast<BinaryExpr>(VS, any_to_unique<Expr>(V0), any_cast<string>(V1), any_to_unique<Expr>(V2), true))
+      ExprPtr(ast<BinaryExpr>(LOC, any_to_unique<Expr>(V0), any_cast<string>(V1), any_to_unique<Expr>(V2), true))
     );
   }
 augassign <- ('+=' / '-=' / '*=' / '@=' / '/=' / '%=' / '&=' / '/=' / '^=' / '<<=' / '>>=' / '**=' / '//=') {
   return string(VS.token().substr(0, VS.token().size() - 1));
 }
 global_stmt <- 'global' _ tlist(',', NAME) {
-  return ast<SuiteStmt>(VS, app(VS, [&](const any &i) { return StmtPtr(ast<GlobalStmt>(VS, any_cast<string>(i))); }) );
+  return ast<SuiteStmt>(LOC, app(VS, [&](const any &i) { return StmtPtr(ast<GlobalStmt>(LOC, any_cast<string>(i))); }) );
 }
 yield_stmt <-
-  / 'yield' _ 'from' _ expression { return ast<YieldFromStmt>(VS, any_to_unique<Expr>(V0)); }
-  / 'yield' _ expressions? { return ast<YieldStmt>(VS, !VS.empty() ? any_to_unique<Expr>(V0) : nullptr); }
+  / 'yield' _ 'from' _ expression { return ast<YieldFromStmt>(LOC, any_to_unique<Expr>(V0)); }
+  / 'yield' _ expressions? { return ast<YieldStmt>(LOC, !VS.empty() ? any_to_unique<Expr>(V0) : nullptr); }
 assert_stmt <- 'assert' _ expression _ (',' _ expression _)? {
-  return ast<AssertStmt>(VS, any_to_unique<Expr>(V0), VS.size() > 1 ? any_to_unique<Expr>(V1) : nullptr);
+  return ast<AssertStmt>(LOC, any_to_unique<Expr>(V0), VS.size() > 1 ? any_to_unique<Expr>(V1) : nullptr);
 }
 # TODO: do targets as in Python
 del_stmt <- 'del' _ tlist(',', expression) {
-  return ast<SuiteStmt>(VS, app(VS, [&](const any &i) { return StmtPtr(ast<DelStmt>(VS, any_to_unique<Expr>(i))); }));
+  return ast<SuiteStmt>(LOC, app(VS, [&](const any &i) { return StmtPtr(ast<DelStmt>(LOC, any_to_unique<Expr>(i))); }));
 }
-return_stmt <- 'return' _ expressions? { return ast<ReturnStmt>(VS, !VS.empty() ? any_to_unique<Expr>(V0) : nullptr); }
+return_stmt <- 'return' _ expressions? { return ast<ReturnStmt>(LOC, !VS.empty() ? any_to_unique<Expr>(V0) : nullptr); }
 # TODO: raise expression 'from' expression
-raise_stmt <- 'raise' _ expression? { return ast<ThrowStmt>(VS, !VS.empty() ? any_to_unique<Expr>(V0) : nullptr); }
+raise_stmt <- 'raise' _ expression? { return ast<ThrowStmt>(LOC, !VS.empty() ? any_to_unique<Expr>(V0) : nullptr); }
 print_stmt <-
   / 'print ' _ expression _ (',' _ expression _)* ','? {
-    return ast<PrintStmt>(VS, app(VS, any_to_unique<Expr>), VS.tokens.size() == VS.size());
+    return ast<PrintStmt>(LOC, app(VS, any_to_unique<Expr>), VS.tokens.size() == VS.size());
   }
-  / 'print' { return ast<PrintStmt>(VS, vector<ExprPtr>{}, false); }
+  / 'print' { return ast<PrintStmt>(LOC, vector<ExprPtr>{}, false); }
 
 exprblock(kwd, expr) <- SAMEDENT kwd _ expr _ ':' _ suite
 block(kwd) <- SAMEDENT kwd _ ':' _ suite
 suite <- simple_stmt / EOL &INDENT statements &DEDENT
 compound_stmt <- if_stmt / with_stmt / for_stmt / while_stmt
 if_stmt <- exprblock('if', named_expression) exprblock('elif', named_expression)* block('else')? {
-  Stmt *stmt = ast<IfStmt>(VS, nullptr, nullptr);
+  Stmt *stmt = ast<IfStmt>(LOC, nullptr, nullptr);
   IfStmt *p = (IfStmt*)stmt;
   for (int i = 0; i < VS.size(); i += 2) {
     if (i == VS.size() - 1) {
       p->elseSuite = any_to_unique<Stmt>(VS[i]);
     } else {
       if (i) {
-        p->elseSuite = StmtPtr(ast<IfStmt>(VS, nullptr, nullptr));
+        p->elseSuite = StmtPtr(ast<IfStmt>(LOC, nullptr, nullptr));
         p = (IfStmt*)(p->elseSuite.get());
       }
       p->cond = any_to_unique<Expr>(VS[i]);
@@ -148,14 +140,14 @@ if_stmt <- exprblock('if', named_expression) exprblock('elif', named_expression)
   return stmt;
 }
 while_stmt <- exprblock('while', named_expression) block('else')? {
-  return ast<WhileStmt>(VS,
+  return ast<WhileStmt>(LOC,
     any_to_unique<Expr>(V0),
     any_to_unique<Stmt>(V1),
     VS.size() > 2 ? any_to_unique<Stmt>(V2) : nullptr
   );
 }
 for_stmt <- exprblock('for', star_targets 'in' _ star_expressions) block('else')? {
-  return ast<ForStmt>(VS,
+  return ast<ForStmt>(LOC,
     any_to_unique<Expr>(V0),
     any_to_unique<Expr>(V1),
     any_to_unique<Stmt>(V2),
@@ -163,7 +155,7 @@ for_stmt <- exprblock('for', star_targets 'in' _ star_expressions) block('else')
   );
 }
 with_stmt <- exprblock('with', with_item) {
-  return ast<WithStmt>(VS,
+  return ast<WithStmt>(LOC,
     app(any_cast<vector<any>>(V0), [](const any &i) {
       auto p = any_cast<pair<Expr*, Expr*>>(i);
       return make_pair(ExprPtr(p.first), ExprPtr(p.second));
@@ -185,36 +177,36 @@ as_item <-
 # (2) Expressions
 ########################################################################################
 
-expressions <- tlist(',', expression) { return wrap_tuple(VS); }
+expressions <- tlist(',', expression) { return wrap_tuple(VS, LOC); }
 expression <-
   / disjunction _ 'if' _ disjunction _ 'else' _ expression {
-    return ast<IfExpr>(VS, any_to_unique<Expr>(V1), any_to_unique<Expr>(V0), any_to_unique<Expr>(V2));
+    return ast<IfExpr>(LOC, any_to_unique<Expr>(V1), any_to_unique<Expr>(V0), any_to_unique<Expr>(V2));
   }
   / disjunction { return any_cast<Expr*>(V0); }
 disjunction <-
   / conjunction _ ('or' _ conjunction _)+ {
-    Expr *b = ast<BinaryExpr>(VS, any_to_unique<Expr>(V0), "||", any_to_unique<Expr>(V1));
+    Expr *b = ast<BinaryExpr>(LOC, any_to_unique<Expr>(V0), "||", any_to_unique<Expr>(V1));
     for (int i = 2; i < VS.size(); i++)
-      b = ast<BinaryExpr>(VS, ExprPtr(b), "||", any_to_unique<Expr>(VS[i]));
+      b = ast<BinaryExpr>(LOC, ExprPtr(b), "||", any_to_unique<Expr>(VS[i]));
     return b;
   }
   / conjunction { return any_cast<Expr*>(V0); }
 conjunction <-
   / inversion _ ('and' _ inversion _)+ {
-    Expr *b = ast<BinaryExpr>(VS, any_to_unique<Expr>(V0), "&&", any_to_unique<Expr>(V1));
+    Expr *b = ast<BinaryExpr>(LOC, any_to_unique<Expr>(V0), "&&", any_to_unique<Expr>(V1));
     for (int i = 2; i < VS.size(); i++)
-      b = ast<BinaryExpr>(VS, ExprPtr(b), "&&", any_to_unique<Expr>(VS[i]));
+      b = ast<BinaryExpr>(LOC, ExprPtr(b), "&&", any_to_unique<Expr>(VS[i]));
     return b;
   }
   / inversion { return any_cast<Expr*>(V0); }
 inversion <-
-  / 'not' _ inversion { return ast<UnaryExpr>(VS, "!", any_to_unique<Expr>(V0)); }
+  / 'not' _ inversion { return ast<UnaryExpr>(LOC, "!", any_to_unique<Expr>(V0)); }
   / comparison { return any_cast<Expr*>(V0); }
 comparison <- bitwise_or _ (compare_op_bitwise_or _)* {
   Expr *b = any_cast<Expr *>(V0);
   for (int i = 1; i < VS.size(); i++) {
     auto p = any_cast<pair<string, Expr *>>(VS[i]);
-    b = ast<BinaryExpr>(VS, ExprPtr(b), p.first, ExprPtr(p.second));
+    b = ast<BinaryExpr>(LOC, ExprPtr(b), p.first, ExprPtr(p.second));
   }
   return b;
 }
@@ -224,35 +216,35 @@ compare_op_bitwise_or <-
   / ('==' / '!=' / '<=' / '<' / '>=' / '>' / 'in' / 'is') _ bitwise_or {
     return make_pair(VS.token_to_string(), any_cast<Expr*>(V0));
   }
-bitwise_or  <- bitwise_xor _ ('|' _ bitwise_xor _)* { return chain(VS); }
-bitwise_xor <- bitwise_and _ ('^' _ bitwise_and _)* { return chain(VS); }
-bitwise_and <- shift_expr  _ ('&' _ shift_expr  _)* { return chain(VS); }
-shift_expr <- sum       _ (('<<' / '>>') _ sum  _)* { return chain(VS); }
-sum        <- term      _ (('+' / '-')   _ term _)* { return chain(VS); }
-term <- factor _ (('*' / '/' / '//' / '%' / '@') _ factor _)* { return chain(VS); }
+bitwise_or  <- bitwise_xor _ ('|' _ bitwise_xor _)* { return chain(VS, LOC); }
+bitwise_xor <- bitwise_and _ ('^' _ bitwise_and _)* { return chain(VS, LOC); }
+bitwise_and <- shift_expr  _ ('&' _ shift_expr  _)* { return chain(VS, LOC); }
+shift_expr <- sum       _ (('<<' / '>>') _ sum  _)* { return chain(VS, LOC); }
+sum        <- term      _ (('+' / '-')   _ term _)* { return chain(VS, LOC); }
+term <- factor _ (('*' / '/' / '//' / '%' / '@') _ factor _)* { return chain(VS, LOC); }
 factor <-
-  / ('+' / '-' / '~') _ factor { return ast<UnaryExpr>(VS, VS.token_to_string(), any_to_unique<Expr>(V0)); }
+  / ('+' / '-' / '~') _ factor { return ast<UnaryExpr>(LOC, VS.token_to_string(), any_to_unique<Expr>(V0)); }
   / power { return any_cast<Expr*>(V0); }
 power <-
-  / primary _ '**' _ factor { return ast<BinaryExpr>(VS, any_to_unique<Expr>(V0), "**", any_to_unique<Expr>(V1)); }
+  / primary _ '**' _ factor { return ast<BinaryExpr>(LOC, any_to_unique<Expr>(V0), "**", any_to_unique<Expr>(V1)); }
   / primary { return any_cast<Expr*>(V0); }
 primary <- atom _ (primary_tail _)* {
   Expr *e = any_cast<Expr *>(V0);
   for (int i = 1; i < VS.size(); i++) {
     auto p = any_cast<pair<size_t, any>>(VS[i]);
     if (p.first == 0)
-      e = ast<DotExpr>(VS, ExprPtr(e), any_cast<string>(p.second));
+      e = ast<DotExpr>(LOC, ExprPtr(e), any_cast<string>(p.second));
     else if (p.first == 1)
-      e = ast<CallExpr>(VS, ExprPtr(e), any_to_unique<Expr>(p.second));
+      e = ast<CallExpr>(LOC, ExprPtr(e), any_to_unique<Expr>(p.second));
     else if (p.first == 2)
-      e = ast<CallExpr>(VS,
+      e = ast<CallExpr>(LOC,
         ExprPtr(e), app(
           any_cast<vector<pair<string, Expr*>>>(p.second),
           [](const pair<string, Expr*> &i) { return CallExpr::Arg{i.first, ExprPtr(i.second)};}
         )
       );
     else
-      e = ast<IndexExpr>(VS, ExprPtr(e), any_to_unique<Expr>(p.second));
+      e = ast<IndexExpr>(LOC, ExprPtr(e), any_to_unique<Expr>(p.second));
   }
   return e;
 }
@@ -261,10 +253,10 @@ primary_tail <-
   / genexp { return make_pair(1, V0); }
   / arguments { return make_pair(2, VS.size() ? V0 : make_any<vector<pair<string, Expr*>>>()); }
   / slices { return make_pair(3, V0); }
-slices <- '[' _ (slice !',' / list(',', slice)) _ ']' { return wrap_tuple(VS); }
+slices <- '[' _ (slice !',' / list(',', slice)) _ ']' { return wrap_tuple(VS, LOC); }
 slice <-
   / slice_part _ ':' _ slice_part _ (':' _ slice_part _)? {
-    return ast<SliceExpr>(VS,
+    return ast<SliceExpr>(LOC,
       any_to_unique<Expr>(V0),
       any_to_unique<Expr>(V1),
       VS.size() > 2 ? any_to_unique<Expr>(V2) : nullptr
@@ -273,9 +265,9 @@ slice <-
   / expression { return any_cast<Expr*>(V0); }
 slice_part <- expression? { return VS.size() ? V0 : make_any<Expr *>(nullptr); }
 atom <-
-  / 'True' { return ast<BoolExpr>(VS, true); }
-  / 'False' { return ast<BoolExpr>(VS, false);}
-  / 'None' { return ast<NoneExpr>(VS); }
+  / 'True' { return ast<BoolExpr>(LOC, true); }
+  / 'False' { return ast<BoolExpr>(LOC, false);}
+  / 'None' { return ast<NoneExpr>(LOC); }
   / (STRING _)+ {
     string s, f;
     for (auto &v: VS) {
@@ -283,73 +275,73 @@ atom <-
       s += p.second;
       f = p.first; // TODO fix
     }
-    return ast<StringExpr>(VS, s, f);
+    return ast<StringExpr>(LOC, s, f);
   }
   / id { return any_cast<Expr*>(V0); }
-  / INT NAME? { return ast<IntExpr>(VS, any_cast<string>(V0), VS.size() > 1 ? any_cast<string>(V1) : ""); }
+  / INT NAME? { return ast<IntExpr>(LOC, any_cast<string>(V0), VS.size() > 1 ? any_cast<string>(V1) : ""); }
   / parentheses { return any_cast<Expr*>(V0); }
-  / '...' { return ast<EllipsisExpr>(VS); }
+  / '...' { return ast<EllipsisExpr>(LOC); }
 parentheses <- (tuple / yield / named / genexp / listexpr / listcomp / dict / set / dictcomp / setcomp)
-tuple <- '(' _ tlist(',', star_named_expression) _ ')' { return ast<TupleExpr>(VS, app(VS, any_to_unique<Expr>)); }
-yield <- '(' _ 'yield' _ ')' { return ast<YieldExpr>(VS); }
+tuple <- '(' _ tlist(',', star_named_expression) _ ')' { return ast<TupleExpr>(LOC, app(VS, any_to_unique<Expr>)); }
+yield <- '(' _ 'yield' _ ')' { return ast<YieldExpr>(LOC); }
 named <- '(' _ named_expression _ ')'
 genexp <- '(' _ named_expression _ for_if_clauses _ ')' {
-  return ast<GeneratorExpr>(VS, GeneratorExpr::Generator, any_to_unique<Expr>(V0), gen_body(V1));
+  return ast<GeneratorExpr>(LOC, GeneratorExpr::Generator, any_to_unique<Expr>(V0), gen_body(V1));
 }
-listexpr <- '[' _ tlist(',', star_named_expression)? _ ']' { return ast<ListExpr>(VS, app(VS, any_to_unique<Expr>)); }
+listexpr <- '[' _ tlist(',', star_named_expression)? _ ']' { return ast<ListExpr>(LOC, app(VS, any_to_unique<Expr>)); }
 listcomp <- '[' _ named_expression _ for_if_clauses _ ']' {
-  return ast<GeneratorExpr>(VS, GeneratorExpr::ListGenerator, any_to_unique<Expr>(V0), gen_body(V1));
+  return ast<GeneratorExpr>(LOC, GeneratorExpr::ListGenerator, any_to_unique<Expr>(V0), gen_body(V1));
 }
-set <- '{' _ tlist(',', star_named_expression) _ '}' { return ast<SetExpr>(VS, app(VS, any_to_unique<Expr>)); }
+set <- '{' _ tlist(',', star_named_expression) _ '}' { return ast<SetExpr>(LOC, app(VS, any_to_unique<Expr>)); }
 setcomp <- '{' _ named_expression _ for_if_clauses _ '}' {
-  return ast<GeneratorExpr>(VS, GeneratorExpr::SetGenerator, any_to_unique<Expr>(V0), gen_body(V1));
+  return ast<GeneratorExpr>(LOC, GeneratorExpr::SetGenerator, any_to_unique<Expr>(V0), gen_body(V1));
 }
 dict <- '{' _ tlist(',', double_starred_kvpair)? _ '}' {
-  return ast<DictExpr>(VS, app(VS, [](const any &i) {
+  return ast<DictExpr>(LOC, app(VS, [](const any &i) {
     auto p = any_cast<pair<Expr*, Expr*>>(i);
     return DictExpr::DictItem{ExprPtr(p.first), ExprPtr(p.second)};
   }));
 }
 dictcomp <- '{' _ kvpair for_if_clauses _ '}' {
   auto p = any_cast<pair<any, any>>(V0);
-  return ast<DictGeneratorExpr>(VS, any_to_unique<Expr>(p.first), any_to_unique<Expr>(p.second), gen_body(V1));
+  return ast<DictGeneratorExpr>(LOC, any_to_unique<Expr>(p.first), any_to_unique<Expr>(p.second), gen_body(V1));
 }
 double_starred_kvpair <-
-  / '**' _ bitwise_or { return make_pair(ast<IdExpr>(VS, ""), ast<KeywordStarExpr>(VS, any_to_unique<Expr>(V0))); }
+  / '**' _ bitwise_or { return make_pair(ast<IdExpr>(LOC, ""), ast<KeywordStarExpr>(LOC, any_to_unique<Expr>(V0))); }
   / kvpair { return any_cast<pair<Expr*, Expr*>>(V0); }
 kvpair <- expression _ ':' _ expression { return make_pair(any_cast<Expr *>(V0), any_cast<Expr *>(V1)); }
 for_if_clauses <- (for_if_clause _)+ { return VS; }
 for_if_clause <- 'for' _ star_targets _ 'in' _ disjunction _ ('if' _ disjunction _)* {
   return make_tuple(V0, V1, vector<any>(VS.begin() + 2, VS.end()));
 }
-star_targets <- (star_target !',' / tlist(',', star_target)) { return wrap_tuple(VS); }
+star_targets <- (star_target !',' / tlist(',', star_target)) { return wrap_tuple(VS, LOC); }
 star_target <-
-  / '*' _ !'*' star_target { return ast<StarExpr>(VS, any_to_unique<Expr>(V0)); }
+  / '*' _ !'*' star_target { return ast<StarExpr>(LOC, any_to_unique<Expr>(V0)); }
   / target_with_star_atom { return any_cast<Expr*>(V0); }
 target_with_star_atom <-
   / primary &T_LOOKAHEAD _ '.' _ NAME _ !T_LOOKAHEAD {
-    return ast<DotExpr>(VS, any_to_unique<Expr>(V0), any_cast<string>(V1));
+    return ast<DotExpr>(LOC, any_to_unique<Expr>(V0), any_cast<string>(V1));
   }
   / primary &T_LOOKAHEAD _ slices _ !T_LOOKAHEAD {
-    return ast<IndexExpr>(VS, any_to_unique<Expr>(V0), any_to_unique<Expr>(V1));
+    return ast<IndexExpr>(LOC, any_to_unique<Expr>(V0), any_to_unique<Expr>(V1));
   }
   / id { return any_cast<Expr*>(V0); }
   / star_parens { return any_cast<Expr*>(V0); }
 ~T_LOOKAHEAD <- '(' / '[' / '.'
 star_parens <-
-  / '(' _ target_with_star_atom _ ')' { return wrap_tuple(VS); }
-  / '(' _ (star_target _ (',' _ star_target _)+ ','?  / star_target _ ',') _ ')' { return wrap_tuple(VS); }
-  / '[' _ tlist(',', star_target) _ ']' { return wrap_tuple(VS); }
-star_expressions <- tlist(',', star_expression) { return wrap_tuple(VS); }
+  / '(' _ target_with_star_atom _ ')' { return wrap_tuple(VS, LOC); }
+  / '(' _ (star_target _ (',' _ star_target _)+ ','?  / star_target _ ',') _ ')' { return wrap_tuple(VS, LOC); }
+  / '[' _ tlist(',', star_target) _ ']' { return wrap_tuple(VS, LOC); }
+star_expressions <- tlist(',', star_expression) { return wrap_tuple(VS, LOC); }
 star_expression <-
-  / '*' _ bitwise_or { return ast<StarExpr>(VS, any_to_unique<Expr>(V0)); }
+  / '*' _ bitwise_or { return ast<StarExpr>(LOC, any_to_unique<Expr>(V0)); }
   / expression { return any_cast<Expr*>(V0); }
 star_named_expression <-
-  / '*' _ bitwise_or { return ast<StarExpr>(VS, any_to_unique<Expr>(V0)); }
+  / '*' _ bitwise_or { return ast<StarExpr>(LOC, any_to_unique<Expr>(V0)); }
   / named_expression { return any_cast<Expr*>(V0); }
 named_expression <-
   / NAME _ ':=' _ ^ expression {
-    return ast<AssignExpr>(VS, ExprPtr(ast<IdExpr>(VS, any_cast<string>(V0))), any_to_unique<Expr>(V1));
+    return ast<AssignExpr>(LOC, ExprPtr(ast<IdExpr>(LOC, any_cast<string>(V0))), any_to_unique<Expr>(V1));
   }
   / expression _ !':=' { return any_cast<Expr*>(V0); }
 arguments <- '(' _ tlist(',', args)* _ ')' {
@@ -370,7 +362,7 @@ args <- (simple_args _ (',' _ kwargs _)? / kwargs) {
 simple_args <- list(',', (starred_expression / named_expression !'=')) {
   return app(VS, [](auto &i) { return make_pair(string(), any_cast<Expr*>(i)); });
 }
-starred_expression <- '*' _ expression { return ast<StarExpr>(VS, any_to_unique<Expr>(V0)); }
+starred_expression <- '*' _ expression { return ast<StarExpr>(LOC, any_to_unique<Expr>(V0)); }
 kwargs <-
   / list(',', kwarg_or_starred) _ ',' _ list(',', kwarg_or_double_starred) { return VS.transform<pair<string, any>>(); }
   / list(',', kwarg_or_starred) { return VS.transform<pair<string, any>>(); }
@@ -380,9 +372,9 @@ kwarg_or_starred <-
   / starred_expression { return make_pair(string(), any_cast<Expr*>(V0)); }
 kwarg_or_double_starred <-
   / NAME _ '=' _ expression { return make_pair(any_cast<string>(V0), any_cast<Expr*>(V1)); }
-  / '**' _ expression { return make_pair(string(), ast<KeywordStarExpr>(VS, any_to_unique<Expr>(V0))); }
-id <- NAME { return ast<IdExpr>(VS, any_cast<string>(V0)); }
-INT <- (BININT / HEXINT / DECINT) { return any_cast<string>(VS); }
+  / '**' _ expression { return make_pair(string(), ast<KeywordStarExpr>(LOC, any_to_unique<Expr>(V0))); }
+id <- NAME { return ast<IdExpr>(LOC, any_cast<string>(V0)); }
+INT <- (BININT / HEXINT / DECINT) { return string(VS.sv()); }
 # # floatsuffix <- float IDENT
 # # pointfloat <- INT? '.' INT
 # # float <- pointfloat / expfloat
@@ -390,7 +382,7 @@ INT <- (BININT / HEXINT / DECINT) { return any_cast<string>(VS); }
 BININT <- <'0' [bB] [0-1] ('_'* [0-1])*>
 HEXINT <- <'0' [xX] [0-9a-fA-F] ('_'* [0-9a-fA-F])*>
 DECINT <- <[0-9] ('_'* [0-9])*>
-NAME <- < [a-zA-Z_] [a-zA-Z_0-9]* > { return any_cast<string>(VS); }
+NAME <- < [a-zA-Z_] [a-zA-Z_0-9]* > { return string(VS.sv()); }
 STRING <- < NAME? STR > {
   return make_pair(VS.size() > 1 ? any_cast<string>(V0) : "", any_cast<string>(VS[VS.size() > 1 ? 1 : 0]));
 }
@@ -404,24 +396,21 @@ STR <- < '"""' (!'"""' CHAR)* '"""'
     s.append(any_cast<string>(v));
   return s;
 }
-CHAR <- ('\\' . / .) { return any_cast<string>(VS); }
+CHAR <- ('\\' . / .) { return any_cast<string>(V0); }
 ~COMMENT <- <'#' (!EOL .)*>
 ~INDENT <- < [ \t]* > {
-  auto &indent = any_cast<ParseContext &>(DT).indent;
-  if ((!indent.size() && VS.sv().size()) || (VS.sv().size() > indent.top()))
-    indent.push(VS.sv().size());
+  if ((!CTX.indent.size() && VS.sv().size()) || (VS.sv().size() > CTX.indent.top()))
+    CTX.indent.push(VS.sv().size());
   else
     throw peg::parse_error("bad indent");
 }
 ~SAMEDENT <- < [ \t]* > {
-  auto &indent = any_cast<ParseContext &>(DT).indent;
-  if ((!indent.size() && VS.sv().size()) || (indent.size() && VS.sv().size() != indent.top()))
+  if ((!CTX.indent.size() && VS.sv().size()) || (CTX.indent.size() && VS.sv().size() != CTX.indent.top()))
     throw peg::parse_error();
 }
 ~DEDENT <- < [ \t]* > {
-  auto &indent = any_cast<ParseContext &>(DT).indent;
-  if (indent.size() && VS.sv().size() < indent.top())
-    indent.pop();
+  if (CTX.indent.size() && VS.sv().size() < CTX.indent.top())
+    CTX.indent.pop();
   else
     throw peg::parse_error("bad dedent");
 }

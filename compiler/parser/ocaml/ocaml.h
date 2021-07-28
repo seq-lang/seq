@@ -22,7 +22,7 @@ namespace ast {
 /// Initializes the OCaml runtime if it is not initialized.
 /// @warning Not thread-safe (as it initializes OCaml environment!)
 StmtPtr parseCode(const string &file, const string &code, int line_offset = 0,
-                  int col_offset = 0);
+                  int col_offset = 0, const string &rule = "program");
 /// Parse a Seq code expression.
 ExprPtr parseExpr(const string &code, const seq::SrcInfo &offset);
 /// Parse a Seq file.

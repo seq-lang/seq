@@ -26,11 +26,13 @@ namespace ast {
 struct ParseContext {
   std::stack<int> indent;
   int parens;
-  ParseContext(int parens = 0) : parens(parens) {}
+  int line_offset, col_offset;
+  ParseContext(int parens = 0, int line_offset = 0, int col_offset = 0)
+      : parens(parens), line_offset(line_offset), col_offset(col_offset) {}
 };
-
-void init_rules(peg::parser &);
-void init_actions(peg::parser &);
 
 } // namespace ast
 } // namespace seq
+
+void init_rules(peg::Grammar &);
+void init_actions(peg::Grammar &);

@@ -905,10 +905,11 @@ private:
       vector<string> vs;
       for (auto &o : s.args_)
         vs.push_back(parse(o));
-      v = {"ref",  "P.grammar()", fmt::format("\"{}\"", s.name_),
-           "\"\"", "true",        "{" + join(vs, ", ") + "}"};
-    } else
-      v = {"", s.name_};
+      v = {"ref",  "P",    fmt::format("\"{}\"", s.name_),
+           "\"\"", "true", "{" + join(vs, ", ") + "}"};
+    } else {
+      v = {"ref", "P", fmt::format("\"{}\"", s.name_)};
+    }
   }
   void visit(TokenBoundary &s) override { v = {"tok", parse(s.ope_)}; }
   void visit(Ignore &s) override { v = {"ign", parse(s.ope_)}; }
@@ -920,7 +921,7 @@ private:
 
 int main(int argc, char **argv) {
   peg::parser parser;
-  fmt::print("parsing {}\n", argv[1]);
+  fmt::print("Generating grammar from {}\n", argv[1]);
   ifstream ifs(argv[1]);
   string g((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
   ifs.close();
@@ -938,11 +939,28 @@ int main(int argc, char **argv) {
   assert(grammar);
 
   string rules, actions;
+  string action_preamble = "  auto &CTX = any_cast<ParseContext &>(DT);\n"
+                           "  auto LOC = seq::SrcInfo(\n"
+                           "    VS.path, VS.line_info().first + CTX.line_offset,\n"
+                           "    VS.line_info().first + CTX.line_offset,\n"
+                           "    VS.line_info().second + CTX.col_offset,\n"
+                           "    VS.line_info().second + CTX.col_offset);";
+
   for (auto &[name, def] : *grammar) {
     auto op = def.get_core_operator();
     if (dummy.find(name) != dummy.end())
       continue;
-    rules += fmt::format("  P[\"{}\"] <= {};\n", name, peg::PrintVisitor::parse(op));
+    rules += fmt::format("  {}P[\"{}\"] <= {};\n", def.ignoreSemanticValue ? "~" : "",
+                         name, peg::PrintVisitor::parse(op));
+    rules += fmt::format("  P[\"{}\"].name = \"{}\";\n", name, escape(name));
+    if (def.is_macro)
+      rules += fmt::format("  P[\"{}\"].is_macro = true;\n", name);
+    if (!def.params.empty()) {
+      vector<string> params;
+      for (auto &p : def.params)
+        params.push_back(fmt::format("\"{}\"", escape(p)));
+      rules += fmt::format("  P[\"{}\"].params = {{{}}};\n", name, join(params, ", "));
+    }
 
     string code = op->code;
     if (code.empty()) {
@@ -958,8 +976,9 @@ int main(int argc, char **argv) {
         code = "{\n" + code + "}";
     }
     if (!code.empty())
-      actions += fmt::format("P[\"{}\"] = [](peg::SemanticValues &VS, any &DT) {};\n",
-                             name, code);
+      actions += fmt::format(
+          "P[\"{}\"] = [](peg::SemanticValues &VS, any &DT) {{\n{}\n{}\n}};\n", name,
+          action_preamble, code.substr(1, code.size() - 2));
   };
 
   FILE *fout = fopen(argv[2], "w");
@@ -970,16 +989,15 @@ int main(int argc, char **argv) {
   string rules_preamble = "  using namespace peg;\n"
                           "  using peg::seq;\n"
                           "  using vc = vector<pair<char32_t, char32_t>>;\n";
-  fmt::print(fout, "void init_rules(peg::parser &P) {{\n{}\n{}\n}}\n", rules_preamble,
+  fmt::print(fout, "void init_rules(peg::Grammar &P) {{\n{}\n{}\n}}\n", rules_preamble,
              rules);
-
   string act;
   for (auto &c : actions)
     if (c == '\n')
       act += "\n  ";
     else
       act += c;
-  fmt::print(fout, "void init_actions(peg::parser &P) {{\n  {}\n}}\n", act);
+  fmt::print(fout, "void init_actions(peg::Grammar &P) {{\n  {}\n}}\n", act);
   fmt::print(fout, "// clang-format on\n");
   fmt::print(fout, "#pragma clang diagnostic pop\n");
   fclose(fout);
