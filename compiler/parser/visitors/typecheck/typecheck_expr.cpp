@@ -1205,6 +1205,20 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       args[si].value =
           transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), move(args[si].value)));
       unify(args[si].value->type, expectedTyp);
+    } else if (calleeFn->funcName == "Ptr.__new_fn__") {
+      // if (argClass && argClass->getFunc())
+      if (auto pt = argClass->getPartial())
+        expectedTyp = pt->func;
+      else if (argClass->getFunc())
+        expectedTyp = argClass->getFunc();
+      else
+        error("expected a realizable function");
+      // construct Fn type
+      if (auto rt = realize(expectedTyp))
+        unify(rt, expectedTyp);
+      else
+        error("expected a realizable function");
+      expectedClass = expectedTyp->getClass();
     } else if (argClass && argClass->getFunc() &&
                !(expectedClass && startswith(expectedClass->name, TYPE_FUNCTION))) {
       // Case 7: wrap raw Seq functions into Partial(...) call for easy realization.
@@ -1232,6 +1246,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         unify(rt, pt->func);
     expr->done &= a.value->done;
   }
+
   // Handle default generics (calleeFn.g. foo[S, T=int]) only if all arguments were
   // unified.
   if (unificationsDone)
@@ -1518,18 +1533,10 @@ string TypecheckVisitor::generatePartialStub(const vector<char> &mask,
   for (int i = 0; i < mask.size(); i++)
     if (!mask[i])
       strMask[i] = '0';
-  auto typeName = format(TYPE_PARTIAL "{}", strMask); //, fn->realizedName());
+  auto typeName = format(TYPE_PARTIAL "{}", strMask);
   if (!ctx->find(typeName)) {
     auto tupleSize = std::count_if(mask.begin(), mask.end(), [](char c) { return c; });
     generateTupleStub(tupleSize, typeName, {}, false);
-    //        auto tupleType =
-    //            ctx->find(generateTupleStub(tupleSize, typeName, {},
-    //            false))->type->getRecord();
-    //    auto type = make_shared<PartialType>(
-    //        tupleType, fn->generalize(ctx->getLevel())->getFunc(), mask);
-    // ctx->cache->classes[typeName] = Cache::Class();
-    //    ctx->addToplevel(typeName,
-    //                     make_shared<TypecheckItem>(TypecheckItem::Type, tupleType));
   }
   return typeName;
 }

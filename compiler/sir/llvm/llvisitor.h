@@ -219,7 +219,7 @@ public:
   void writeToBitcodeFile(const std::string &filename);
   /// Writes module as LLVM IR file.
   /// @param filename the .ll file to write to
-  void writeToLLFile(const std::string &filename);
+  void writeToLLFile(const std::string &filename, bool optimize = true);
   /// Writes module as native executable. Invokes an
   /// external linker to generate the final executable.
   /// @param filename the file to write to

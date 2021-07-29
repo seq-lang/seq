@@ -113,6 +113,7 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
       std::ofstream os("_dump_sir.lisp");
       os << out;
       os.close();
+      os.close();
     }
 
     _isTest = isTest;

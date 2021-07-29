@@ -209,7 +209,7 @@ int ClassType::unify(Type *typ, Unification *us) {
     if (name != tc->name)
       return -1;
     // Check generics.
-    int s1 = 2, s;
+    int s1 = 3, s;
     if (generics.size() != tc->generics.size())
       return -1;
     for (int i = 0; i < generics.size(); i++) {
@@ -344,8 +344,9 @@ int RecordType::unify(Type *typ, Unification *us) {
         return -1;
     }
     // Handle Tuple<->@tuple: when unifying tuples, only record members matter.
-    if (startswith(name, TYPE_TUPLE) || startswith(tr->name, TYPE_TUPLE))
-      return s1;
+    if (startswith(name, TYPE_TUPLE) || startswith(tr->name, TYPE_TUPLE)) {
+      return s1 + int(name == tr->name);
+    }
     return this->ClassType::unify(tr.get(), us);
   } else if (auto t = typ->getLink()) {
     return t->unify(this, us);

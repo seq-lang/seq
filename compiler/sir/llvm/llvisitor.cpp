@@ -162,7 +162,7 @@ void LLVMVisitor::verify() {
   seqassert(!broken, "module broken");
 }
 
-void LLVMVisitor::dump(const std::string &filename) { writeToLLFile(filename); }
+void LLVMVisitor::dump(const std::string &filename) { writeToLLFile(filename, false); }
 
 void LLVMVisitor::applyDebugTransformations() {
   if (db.debug) {
@@ -340,8 +340,9 @@ void LLVMVisitor::writeToBitcodeFile(const std::string &filename) {
   }
 }
 
-void LLVMVisitor::writeToLLFile(const std::string &filename) {
-  runLLVMPipeline();
+void LLVMVisitor::writeToLLFile(const std::string &filename, bool optimize) {
+  if (optimize)
+    runLLVMPipeline();
   auto fo = fopen(filename.c_str(), "w");
   llvm::raw_fd_ostream fout(fileno(fo), true);
   fout << *module;

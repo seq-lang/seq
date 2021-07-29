@@ -220,7 +220,6 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
     //   Optional unwrap gets the score of 1.
     //   Optional wrap gets the score of 2.
     //   Successful unification gets the score of 3 (highest priority).
-    // LOG("{} {} / {}", typ->toString(), method->toString(), score);
     for (int ai = 0; ai < reordered.size(); ai++) {
       auto expectedType = method->args[ai + 1];
       auto expectedClass = expectedType->getClass();
@@ -262,6 +261,7 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
       score = -1;
       break;
     }
+    //    LOG("{} {} / {}", typ->toString(), method->toString(), score);
     if (score >= 0)
       scores.emplace_back(std::make_pair(score, mi));
   }
