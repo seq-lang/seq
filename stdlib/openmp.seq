@@ -209,7 +209,29 @@ def get_nested():
     return bool(omp_get_nested())
 '''
 
-# TODO: omp_set_schedule, omp_get_schedule
+def set_schedule(kind: str, chunk_size: int = 0):
+    from C import omp_set_schedule(i32, i32)
+    if kind == 'static':
+        omp_set_schedule(i32(1), i32(chunk_size))
+    elif kind == 'dynamic':
+        omp_set_schedule(i32(2), i32(chunk_size))
+    elif kind == 'guided':
+        omp_set_schedule(i32(3), i32(chunk_size))
+    elif kind == 'auto':
+        if chunk_size != 0:
+            raise ValueError('cannot specify chunk size for auto schedule')
+        omp_set_schedule(i32(4), i32(chunk_size))
+    else:
+        raise ValueError("invalid schedule kind; valid ones are: 'static', 'dynamic', 'guided', 'auto'")
+
+def get_schedule():
+    from C import omp_get_schedule(Ptr[i32], Ptr[i32])
+    kind_code = i32(0)
+    chunk_size = i32(0)
+    omp_get_schedule(__ptr__(kind_code), __ptr__(chunk_size))
+    idx = int(kind_code)
+    kind = ('static', 'dynamic', 'guided', 'auto')[idx - 1] if 1 < idx <= 4 else 'unknown'
+    return kind, int(chunk_size)
 
 def get_thread_limit():
     from C import omp_get_thread_limit() -> i32
