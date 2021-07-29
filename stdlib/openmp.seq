@@ -91,7 +91,7 @@ def _fork_call(microtask: cobj, args):
     loc_ref = _default_loc()  # TODO: pass real loc?
     __kmpc_fork_call(loc_ref, i32(1), microtask, __ptr__(args))
 
-def _static_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], args):
+def _static_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
     def _static_loop_body_stub(i, args):
         pass
 
@@ -128,7 +128,7 @@ def _spawn_and_run_task[P,S](loc_ref: Ptr[Ident], gtid: int, routine: cobj, priv
 
 # Note: this is different than OpenMP's "taskloop" -- this template simply
 # spawns a new task for each loop iteration.
-def _task_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], args):
+def _task_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
     def _routine_stub[P,S](gtid: i32, data: cobj):
         def _task_loop_body_stub(priv, shared):
             pass
