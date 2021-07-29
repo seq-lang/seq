@@ -939,12 +939,13 @@ int main(int argc, char **argv) {
   assert(grammar);
 
   string rules, actions;
-  string action_preamble = "  auto &CTX = any_cast<ParseContext &>(DT);\n"
-                           "  auto LOC = seq::SrcInfo(\n"
-                           "    VS.path, VS.line_info().first + CTX.line_offset,\n"
-                           "    VS.line_info().first + CTX.line_offset,\n"
-                           "    VS.line_info().second + CTX.col_offset,\n"
-                           "    VS.line_info().second + CTX.col_offset);";
+  string action_preamble = "  auto &CTX = any_cast<ParseContext &>(DT);\n";
+  string loc_preamble = "  auto LI = VS.line_info();\n"
+                        "  auto LOC = seq::SrcInfo(\n"
+                        "    VS.path, LI.first + CTX.line_offset,\n"
+                        "    LI.first + CTX.line_offset,\n"
+                        "    LI.second + CTX.col_offset,\n"
+                        "    LI.second + CTX.col_offset);\n";
 
   for (auto &[name, def] : *grammar) {
     auto op = def.get_core_operator();
@@ -975,10 +976,15 @@ int main(int argc, char **argv) {
       if (!code.empty())
         code = "{\n" + code + "}";
     }
-    if (!code.empty())
+    if (!code.empty()) {
+      code = code.substr(1, code.size() - 2);
+      if (code.find("LOC") != std::string::npos)
+        code = loc_preamble + code;
+      if (code.find("CTX") != std::string::npos)
+        code = action_preamble + code;
       actions += fmt::format(
-          "P[\"{}\"] = [](peg::SemanticValues &VS, any &DT) {{\n{}\n{}\n}};\n", name,
-          action_preamble, code.substr(1, code.size() - 2));
+          "P[\"{}\"] = [](peg::SemanticValues &VS, any &DT) {{\n{}\n}};\n", name, code);
+    }
   };
 
   FILE *fout = fopen(argv[2], "w");

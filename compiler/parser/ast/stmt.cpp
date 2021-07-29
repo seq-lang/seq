@@ -240,8 +240,6 @@ string TryStmt::toString(int indent) const {
         format("(catch {}{}{}{})", !i.var.empty() ? format("#:var '{}", i.var) : "",
                i.exc ? format(" #:exc {}", i.exc->toString()) : "", pad + padExtra,
                i.suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1 * 2)));
-  auto f =
-      format("{}{}", pad, finally->toString(indent >= 0 ? indent + INDENT_SIZE : -1));
   return format(
       "(try{}{}{}{}{})", pad, suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1),
       pad, join(s, pad),
@@ -368,9 +366,13 @@ WithStmt::WithStmt(vector<pair<ExprPtr, ExprPtr>> &&itemVarPairs, StmtPtr suite)
     : Stmt(), suite(move(suite)) {
   for (auto &i : itemVarPairs) {
     items.push_back(move(i.first));
-    if (!i.second->getId())
-      throw;
-    vars.push_back(i.second->getId()->value);
+    if (i.second) {
+      if (!i.second->getId())
+        throw;
+      vars.push_back(i.second->getId()->value);
+    } else {
+      vars.push_back("");
+    }
   }
 }
 WithStmt::WithStmt(const WithStmt &stmt)
