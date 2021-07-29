@@ -257,7 +257,7 @@ void OpenMPPass::handle(ForFlow *v) {
   std::vector<Value *> forkExtraArgs = {v->getIter(), privatesTuple, sharedsTuple};
   auto *forkExtra = util::makeTuple(forkExtraArgs, M);
   std::vector<types::Type *> forkArgTypes = {types.i8ptr, forkExtra->getType()};
-  auto *forkFunc = M->getOrRealizeFunc("fork_call", forkArgTypes, {}, ompModule);
+  auto *forkFunc = M->getOrRealizeFunc("_fork_call", forkArgTypes, {}, ompModule);
   seqassert(forkFunc, "fork call function not found");
 
   auto *fork = util::call(forkFunc, {rawTemplateFunc, forkExtra});
@@ -319,7 +319,7 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   }
   auto *forkExtra = util::makeTuple(forkExtraArgs, M);
   std::vector<types::Type *> forkArgTypes = {types.i8ptr, forkExtra->getType()};
-  auto *forkFunc = M->getOrRealizeFunc("fork_call", forkArgTypes, {}, ompModule);
+  auto *forkFunc = M->getOrRealizeFunc("_fork_call", forkArgTypes, {}, ompModule);
   seqassert(forkFunc, "fork call function not found");
 
   auto *fork = util::call(forkFunc, {rawTemplateFunc, forkExtra});

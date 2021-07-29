@@ -30,23 +30,34 @@ class TaskWithPrivates[T]:
 DEFAULT_SRC = ";unknown;unknown;0;0;;".ptr
 DEFAULT_LOC = Ident(i32(0), i32(2), i32(0), i32(0), DEFAULT_SRC)
 
-def default_loc():
+def _default_loc():
     return __ptr__(DEFAULT_LOC)
 
-@llvm
-def bitcast[T](x) -> T:
-    %y = bitcast {=typeof(x)} %x to {=T}
-    ret {=T} %y
-
-def single_begin(loc_ref: Ptr[Ident], gtid: int):
+def _single_begin(loc_ref: Ptr[Ident], gtid: int):
     from C import __kmpc_single(Ptr[Ident], i32) -> i32
     return int(__kmpc_single(loc_ref, i32(gtid)))
 
-def single_end(loc_ref: Ptr[Ident], gtid: int):
+def _single_end(loc_ref: Ptr[Ident], gtid: int):
     from C import __kmpc_end_single(Ptr[Ident], i32)
     __kmpc_end_single(loc_ref, i32(gtid))
 
-def task_alloc(loc_ref: Ptr[Ident], gtid: int, flags: int, size_of_task: int, size_of_shareds: int, task_entry: Routine):
+def _master_begin(loc_ref: Ptr[Ident], gtid: int):
+    from C import __kmpc_master(Ptr[Ident], i32) -> i32
+    return int(__kmpc_master(loc_ref, i32(gtid)))
+
+def _master_end(loc_ref: Ptr[Ident], gtid: int):
+    from C import __kmpc_end_master(Ptr[Ident], i32)
+    __kmpc_end_master(loc_ref, i32(gtid))
+
+def _ordered_begin(loc_ref: Ptr[Ident], gtid: int):
+    from C import __kmpc_ordered(Ptr[Ident], i32) -> i32
+    return int(__kmpc_ordered(loc_ref, i32(gtid)))
+
+def _ordered_end(loc_ref: Ptr[Ident], gtid: int):
+    from C import __kmpc_end_ordered(Ptr[Ident], i32)
+    __kmpc_end_ordered(loc_ref, i32(gtid))
+
+def _task_alloc(loc_ref: Ptr[Ident], gtid: int, flags: int, size_of_task: int, size_of_shareds: int, task_entry: Routine):
     from C import __kmpc_omp_task_alloc(Ptr[Ident], i32, i32, int, int, Routine) -> cobj
     from internal.gc import add_roots
     task_handle = __kmpc_omp_task_alloc(loc_ref, i32(gtid), i32(flags), size_of_task, size_of_shareds, task_entry)
@@ -54,15 +65,15 @@ def task_alloc(loc_ref: Ptr[Ident], gtid: int, flags: int, size_of_task: int, si
     add_roots(task_handle + base_offset, task_handle + size_of_task)
     return task_handle
 
-def task_run(loc_ref: Ptr[Ident], gtid: int, new_task: cobj):
+def _task_run(loc_ref: Ptr[Ident], gtid: int, new_task: cobj):
     from C import __kmpc_omp_task(Ptr[Ident], i32, cobj) -> i32
     return int(__kmpc_omp_task(loc_ref, i32(gtid), new_task))
 
-def barrier(loc_ref: Ptr[Ident], gtid: int):
+def _barrier(loc_ref: Ptr[Ident], gtid: int):
     from C import __kmpc_barrier(Ptr[Ident], i32)
     __kmpc_barrier(loc_ref, i32(gtid))
 
-def static_init(loc_ref: Ptr[Ident], gtid: int, schedtype: int, loop: range, incr: int, chunk: int):
+def _static_init(loc_ref: Ptr[Ident], gtid: int, schedtype: int, loop: range, incr: int, chunk: int):
     from C import __kmpc_for_static_init_8(Ptr[Ident], i32, i32, Ptr[i32], Ptr[int], Ptr[int], Ptr[int], int, int)
     last = i32(0)
     lower = 0
@@ -71,13 +82,13 @@ def static_init(loc_ref: Ptr[Ident], gtid: int, schedtype: int, loop: range, inc
     __kmpc_for_static_init_8(loc_ref, i32(gtid), i32(schedtype), __ptr__(last), __ptr__(lower), __ptr__(upper), __ptr__(stride), incr, chunk)
     return range(loop._get(lower), loop._get(upper + 1), loop.step)
 
-def static_fini(loc_ref: Ptr[Ident], gtid: int):
+def _static_fini(loc_ref: Ptr[Ident], gtid: int):
     from C import __kmpc_for_static_fini(Ptr[Ident], i32)
     __kmpc_for_static_fini(loc_ref, i32(gtid))
 
-def fork_call(microtask: cobj, args):
+def _fork_call(microtask: cobj, args):
     from C import __kmpc_fork_call(Ptr[Ident], i32, cobj, ...)
-    loc_ref = default_loc()  # TODO: pass real loc?
+    loc_ref = _default_loc()  # TODO: pass real loc?
     __kmpc_fork_call(loc_ref, i32(1), microtask, __ptr__(args))
 
 def _static_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], args):
@@ -86,12 +97,12 @@ def _static_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], args):
 
     start, stop, step, extra = args[0]
     gtid = int(gtid_ptr[0])
-    loc_ref = default_loc()
+    loc_ref = _default_loc()
     loop = range(start, stop, step)
-    subloop = static_init(loc_ref, gtid, schedtype=34, loop=loop, incr=1, chunk=1)
+    subloop = _static_init(loc_ref, gtid, schedtype=34, loop=loop, incr=1, chunk=1)
     for i in subloop:
         _static_loop_body_stub(i, extra)
-    static_fini(loc_ref, gtid)
+    _static_fini(loc_ref, gtid)
 
 # P = privates; tuple of types
 # S = shareds; tuple of pointers
@@ -103,9 +114,9 @@ def _spawn_and_run_task[P,S](loc_ref: Ptr[Ident], gtid: int, routine: cobj, priv
     size_of_kmp_task_t = sizeof[TaskThunk]()
     size_of_privs = sizeof[P]()
     size_of_shareds = sizeof[S]()
-    loc_ref = default_loc()
+    loc_ref = _default_loc()
 
-    task = Ptr[TaskThunk](task_alloc(loc_ref, gtid, flags, size_of_kmp_task_t, size_of_shareds, Routine(routine)))
+    task = Ptr[TaskThunk](_task_alloc(loc_ref, gtid, flags, size_of_kmp_task_t, size_of_shareds, Routine(routine)))
     if staticlen(shared) != 0:
         shared_ptr = task[0].task.shareds
         str.memcpy(shared_ptr, __ptr__(shared).as_byte(), size_of_shareds)
@@ -113,7 +124,7 @@ def _spawn_and_run_task[P,S](loc_ref: Ptr[Ident], gtid: int, routine: cobj, priv
         priv_ptr = task.as_byte() + sizeof[Task]()
         str.memcpy(priv_ptr, __ptr__(priv).as_byte(), size_of_privs)
 
-    task_run(loc_ref, gtid, task.as_byte())
+    _task_run(loc_ref, gtid, task.as_byte())
 
 # Note: this is different than OpenMP's "taskloop" -- this template simply
 # spawns a new task for each loop iteration.
@@ -140,15 +151,166 @@ def _task_loop_outline_template(gtid_ptr: Ptr[i32], data_ptr: Ptr[i32], args):
     S = typeof(shared)
 
     gtid = int(gtid_ptr[0])
-    loc_ref = default_loc()
+    loc_ref = _default_loc()
 
-    if single_begin(loc_ref, gtid) != 0:
+    if _single_begin(loc_ref, gtid) != 0:
         try:
             for i in iterable:
                 priv, shared = _insert_new_loop_var(i, priv, shared)
                 _spawn_and_run_task(loc_ref, gtid, _routine_stub[P,S].__raw__(), priv, shared)
         finally:
-            single_end(loc_ref, gtid)
+            _single_end(loc_ref, gtid)
 
-    barrier(loc_ref, gtid)
+    _barrier(loc_ref, gtid)
 
+def get_num_threads():
+    from C import omp_get_num_threads() -> i32
+    return int(omp_get_num_threads())
+
+def get_thread_num():
+    from C import omp_get_thread_num() -> i32
+    return int(omp_get_thread_num())
+
+def get_max_threads():
+    from C import omp_get_max_threads() -> i32
+    return int(omp_get_max_threads())
+
+def get_num_procs():
+    from C import omp_get_num_procs() -> i32
+    return int(omp_get_num_procs())
+
+def set_num_threads(num_threads: int):
+    from C import omp_set_num_threads(i32)
+    omp_set_num_threads(i32(num_threads))
+
+def in_parallel():
+    from C import omp_in_parallel() -> i32
+    return bool(omp_in_parallel())
+
+def set_dynamic(dynamic_threads: bool = True):
+    from C import omp_set_dynamic(i32)
+    omp_set_dynamic(i32(1 if dynamic_threads else 0))
+
+def get_dynamic():
+    from C import omp_get_dynamic() -> i32
+    return bool(omp_get_dynamic())
+
+def get_cancellation():
+    from C import omp_get_cancellation() -> i32
+    return bool(omp_get_cancellation())
+
+''' # deprecated
+def set_nested(nested: bool = True):
+    from C import omp_set_nested(i32)
+    omp_set_nested(i32(1 if nested else 0))
+
+def get_nested():
+    from C import omp_get_nested() -> i32
+    return bool(omp_get_nested())
+'''
+
+# TODO: omp_set_schedule, omp_get_schedule
+
+def get_thread_limit():
+    from C import omp_get_thread_limit() -> i32
+    return int(omp_get_thread_limit())
+
+def set_max_active_levels(max_levels: int):
+    from C import omp_set_max_active_levels(i32)
+    omp_set_max_active_levels(i32(max_levels))
+
+def get_max_active_levels():
+    from C import omp_get_max_active_levels() -> i32
+    return int(omp_get_max_active_levels())
+
+def get_level():
+    from C import omp_get_level() -> i32
+    return int(omp_get_level())
+
+def get_ancestor_thread_num(level: int):
+    from C import omp_get_ancestor_thread_num(i32) -> i32
+    return int(omp_get_ancestor_thread_num(i32(level)))
+
+def get_team_size(level: int):
+    from C import omp_get_team_size(i32) -> i32
+    return int(omp_get_team_size(i32(level)))
+
+def get_active_level():
+    from C import omp_get_active_level() -> i32
+    return int(omp_get_active_level())
+
+def in_final():
+    from C import omp_in_final() -> i32
+    return bool(omp_in_final())
+
+def get_proc_bind():
+    from C import omp_get_proc_bind() -> i32
+    result = int(omp_get_proc_bind())
+    if result < 0 or result > 4:
+        return 'unknown'
+    return ('false', 'true', 'master', 'close', 'spread')[result]
+
+def set_default_device(device_num: int):
+    from C import omp_set_default_device(i32)
+    omp_set_default_device(i32(device_num))
+
+def get_default_device():
+    from C import omp_get_default_device() -> i32
+    return int(omp_get_default_device())
+
+def get_num_devices():
+    from C import omp_get_num_devices() -> i32
+    return int(omp_get_num_devices())
+
+def get_num_teams():
+    from C import omp_get_num_teams() -> i32
+    return int(omp_get_num_teams())
+
+def get_team_num():
+    from C import omp_get_team_num() -> i32
+    return int(omp_get_team_num())
+
+def is_initial_device():
+    from C import omp_is_initial_device() -> i32
+    return bool(omp_is_initial_device())
+
+def get_wtime():
+    from C import omp_get_wtime() -> float
+    return omp_get_wtime()
+
+def get_wtick():
+    from C import omp_get_wtick() -> float
+    return omp_get_wtick()
+
+def single(func):
+    def _wrapper(*args, **kwargs):
+        gtid = get_thread_num()
+        loc = _default_loc()
+        if _single_begin(loc, gtid) != 0:
+            try:
+                func(*args, **kwargs)
+            finally:
+                _single_end(loc, gtid)
+    return _wrapper
+
+def master(func):
+    def _wrapper(*args, **kwargs):
+        gtid = get_thread_num()
+        loc = _default_loc()
+        if _master_begin(loc, gtid) != 0:
+            try:
+                func(*args, **kwargs)
+            finally:
+                _master_end(loc, gtid)
+    return _wrapper
+
+def ordered(func):
+    def _wrapper(*args, **kwargs):
+        gtid = get_thread_num()
+        loc = _default_loc()
+        if _ordered_begin(loc, gtid) != 0:
+            try:
+                func(*args, **kwargs)
+            finally:
+                _ordered_end(loc, gtid)
+    return _wrapper

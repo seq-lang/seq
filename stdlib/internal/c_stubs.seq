@@ -96,9 +96,3 @@ from C import gzread(cobj, cobj, u32) -> i32
 from C import gzwrite(cobj, cobj, u32) -> i32
 from C import gztell(cobj) -> int
 from C import gzseek(cobj, int, i32) -> int
-
-# OpenMP
-from C import omp_get_num_threads() -> i32
-from C import omp_get_thread_num() -> i32
-from C import omp_get_max_threads() -> i32
-from C import omp_get_num_procs() -> i32
