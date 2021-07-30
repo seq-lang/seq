@@ -177,7 +177,7 @@ string executable_path(const char *argv0) {
 string executable_path(const char *argv0) { return string(argv0); }
 #endif
 
-unique_ptr<ImportFile> getImportFile(const string &argv0, const string &what,
+shared_ptr<ImportFile> getImportFile(const string &argv0, const string &what,
                                      const string &relativeTo, bool forceStdlib,
                                      const string &module0) {
   using fmt::format;
@@ -238,7 +238,7 @@ unique_ptr<ImportFile> getImportFile(const string &argv0, const string &what,
     auto path = string(abs);
     struct stat buffer;
     if (!stat(path.c_str(), &buffer))
-      return std::make_unique<ImportFile>(getRoot(path));
+      return std::make_shared<ImportFile>(getRoot(path));
   }
   return nullptr;
 }

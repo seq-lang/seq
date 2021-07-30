@@ -67,7 +67,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       stdlib->add(SimplifyItem::Type, name, canonical, true);
       // Generate an AST for each POD type. All of them are tuples.
       cache->classes[canonical].ast =
-          make_unique<ClassStmt>(canonical, vector<Param>(), vector<Param>(), nullptr);
+          make_shared<ClassStmt>(canonical, vector<Param>(), vector<Param>(), nullptr);
       preamble->types.emplace_back(clone(cache->classes[canonical].ast));
     }
     // Add simple POD types to the preamble (these types are defined in LLVM and we
@@ -77,7 +77,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       stdlib->add(SimplifyItem::Type, name, canonical, true);
       // Generate an AST for each POD type. All of them are tuples.
       cache->classes[canonical].ast =
-          make_unique<ClassStmt>(canonical, vector<Param>(), vector<Param>(), nullptr,
+          make_shared<ClassStmt>(canonical, vector<Param>(), vector<Param>(), nullptr,
                                  Attr({Attr::Internal, Attr::Tuple}));
       preamble->types.emplace_back(clone(cache->classes[canonical].ast));
     }
@@ -89,10 +89,10 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       vector<Param> generics;
       auto genName = stdlib->generateCanonicalName("T");
       if (string(name) == "Int" || string(name) == "UInt")
-        generics.emplace_back(Param{genName, make_unique<IdExpr>("int"), nullptr});
+        generics.emplace_back(Param{genName, make_shared<IdExpr>("int"), nullptr});
       else
         generics.emplace_back(Param{genName, nullptr, nullptr});
-      auto c = make_unique<ClassStmt>(canonical, move(generics), vector<Param>(),
+      auto c = make_shared<ClassStmt>(canonical, move(generics), vector<Param>(),
                                       nullptr, Attr({Attr::Internal, Attr::Tuple}));
       preamble->types.emplace_back(clone(c));
       cache->classes[canonical].ast = move(c);
@@ -117,10 +117,10 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     // Add __argv__ variable as __argv__: Array[str]
     preamble->globals.push_back(
         SimplifyVisitor(stdlib, preamble)
-            .transform(make_unique<AssignStmt>(
-                make_unique<IdExpr>(VAR_ARGV), nullptr,
-                make_unique<IndexExpr>(make_unique<IdExpr>("Array"),
-                                       make_unique<IdExpr>("str")))));
+            .transform(make_shared<AssignStmt>(
+                make_shared<IdExpr>(VAR_ARGV), nullptr,
+                make_shared<IndexExpr>(make_shared<IdExpr>("Array"),
+                                       make_shared<IdExpr>("str")))));
     stdlib->isStdlibLoading = false;
 
     // The whole standard library has the age of zero to allow back-references.
@@ -145,12 +145,12 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   }
   defines = newDefines;
   // Prepend __name__ = "__main__".
-  stmts.push_back(make_unique<AssignStmt>(make_unique<IdExpr>("__name__"),
-                                          make_unique<StringExpr>(MODULE_MAIN)));
+  stmts.push_back(make_shared<AssignStmt>(make_shared<IdExpr>("__name__"),
+                                          make_shared<StringExpr>(MODULE_MAIN)));
   // Transform the input node.
   stmts.emplace_back(SimplifyVisitor(ctx, preamble).transform(node));
 
-  auto suite = make_unique<SuiteStmt>();
+  auto suite = make_shared<SuiteStmt>();
   for (auto &s : preamble->types)
     suite->stmts.push_back(move(s));
   for (auto &s : preamble->globals)
@@ -172,7 +172,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<SimplifyContext> ctx, const StmtPtr &n
   stmts.emplace_back(SimplifyVisitor(ctx, preamble).transform(node));
   if (atAge != -1)
     ctx->cache->age = oldAge;
-  auto suite = make_unique<SuiteStmt>();
+  auto suite = make_shared<SuiteStmt>();
   for (auto &s : preamble->types)
     suite->stmts.push_back(move(s));
   for (auto &s : preamble->globals)

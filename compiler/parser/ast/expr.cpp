@@ -15,7 +15,7 @@
 #include "parser/visitors/visitor.h"
 
 #define ACCEPT_IMPL(T, X)                                                              \
-  ExprPtr T::clone() const { return make_unique<T>(*this); }                           \
+  ExprPtr T::clone() const { return make_shared<T>(*this); }                           \
   void T::accept(X &visitor) { visitor.visit(this); }
 
 using fmt::format;
@@ -39,7 +39,7 @@ string Expr::wrapType(const string &sexpr) const {
 Param::Param(string name, ExprPtr type, ExprPtr deflt)
     : name(move(name)), type(move(type)), deflt(move(deflt)) {}
 string Param::toString() const {
-  return format("({}{}{})", name, type ? " #:type \"" + type->toString() : "\"",
+  return format("({}{}{})", name, type ? " #:type " + type->toString() : "",
                 deflt ? " #:default " + deflt->toString() : "");
 }
 Param Param::clone() const { return Param(name, ast::clone(type), ast::clone(deflt)); }
@@ -351,12 +351,12 @@ string RangeExpr::toString() const {
 }
 ACCEPT_IMPL(RangeExpr, ASTVisitor);
 
-StmtExpr::StmtExpr(vector<unique_ptr<Stmt>> &&stmts, ExprPtr expr)
+StmtExpr::StmtExpr(vector<shared_ptr<Stmt>> &&stmts, ExprPtr expr)
     : Expr(), stmts(move(stmts)), expr(move(expr)) {}
-StmtExpr::StmtExpr(unique_ptr<Stmt> stmt, ExprPtr expr) : Expr(), expr(move(expr)) {
+StmtExpr::StmtExpr(shared_ptr<Stmt> stmt, ExprPtr expr) : Expr(), expr(move(expr)) {
   stmts.push_back(move(stmt));
 }
-StmtExpr::StmtExpr(unique_ptr<Stmt> stmt, unique_ptr<Stmt> stmt2, ExprPtr expr)
+StmtExpr::StmtExpr(shared_ptr<Stmt> stmt, shared_ptr<Stmt> stmt2, ExprPtr expr)
     : Expr(), expr(move(expr)) {
   stmts.push_back(move(stmt));
   stmts.push_back(move(stmt2));

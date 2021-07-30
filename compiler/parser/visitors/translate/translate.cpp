@@ -21,10 +21,10 @@ using fmt::format;
 using seq::ir::cast;
 using std::function;
 using std::get;
-using std::make_unique;
+using std::make_shared;
 using std::move;
 using std::stack;
-using std::unique_ptr;
+using std::shared_ptr;
 using std::vector;
 
 namespace seq {

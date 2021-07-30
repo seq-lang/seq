@@ -101,8 +101,8 @@ template <typename TE, typename TS>
  * this visitor is generic for each different return type.
  */
 struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
-  virtual TE transform(const unique_ptr<Expr> &expr) = 0;
-  virtual TS transform(const unique_ptr<Stmt> &stmt) = 0;
+  virtual TE transform(const shared_ptr<Expr> &expr) = 0;
+  virtual TS transform(const shared_ptr<Stmt> &stmt) = 0;
 
   /// Convenience method that transforms a vector of nodes.
   template <typename T> auto transform(const vector<T> &ts) {
@@ -114,7 +114,7 @@ struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
 
   /// Convenience method that constructs a node with the visitor's source location.
   template <typename Tn, typename... Ts> auto N(Ts &&...args) {
-    auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
+    auto t = std::make_shared<Tn>(std::forward<Ts>(args)...);
     t->setSrcInfo(getSrcInfo());
     return t;
   }
@@ -123,7 +123,7 @@ struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
   /// @param s source location.
   template <typename Tn, typename... Ts>
   auto Nx(const seq::SrcObject *s, Ts &&...args) {
-    auto t = std::make_unique<Tn>(std::forward<Ts>(args)...);
+    auto t = std::make_shared<Tn>(std::forward<Ts>(args)...);
     t->setSrcInfo(s->getSrcInfo());
     return t;
   }

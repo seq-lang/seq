@@ -64,8 +64,61 @@ string join(const T &items, const string &delim = " ", int start = 0, int end = 
   return s;
 }
 
+const string NO_PACKRAT = ":NO_PACKRAT";
+
 namespace peg {
 using Rules = std::unordered_map<std::string, std::shared_ptr<Ope>>;
+
+struct SetUpPackrat : public Ope::Visitor {
+  bool packrat;
+  unordered_set<string> *seen;
+
+  static bool check(unordered_set<string> *seen, const shared_ptr<Ope> &op) {
+    SetUpPackrat v;
+    v.seen = seen;
+    v.packrat = true;
+    op->accept(v);
+    return v.packrat;
+  };
+
+  void visit(Sequence &ope) override {
+    for (auto op : ope.opes_)
+      packrat &= check(seen, op);
+  }
+  void visit(PrioritizedChoice &ope) override {
+    for (auto op : ope.opes_)
+      packrat &= check(seen, op);
+  }
+  void visit(Repetition &ope) override { packrat &= check(seen, ope.ope_); }
+  void visit(AndPredicate &ope) override { packrat &= check(seen, ope.ope_); }
+  void visit(NotPredicate &ope) override { packrat &= check(seen, ope.ope_); }
+  void visit(CaptureScope &ope) override { packrat &= check(seen, ope.ope_); }
+  void visit(Capture &ope) override { packrat &= check(seen, ope.ope_); }
+  void visit(TokenBoundary &ope) override { packrat &= check(seen, ope.ope_); }
+  void visit(Ignore &ope) override { packrat &= check(seen, ope.ope_); }
+  void visit(WeakHolder &ope) override { packrat &= check(seen, ope.weak_.lock()); }
+  void visit(Holder &ope) override { packrat &= check(seen, ope.ope_); }
+  void visit(Reference &ope) override {
+    if (seen->find(ope.name_) != seen->end()) {
+      if (ope.rule_)
+        packrat &= ope.rule_->enable_memoize;
+      return;
+    }
+    seen->insert(ope.name_);
+    for (auto op : ope.args_)
+      packrat &= check(seen, op);
+    if (ope.rule_) {
+      if (auto op = ope.get_core_operator())
+        packrat &= check(seen, op);
+      packrat &= ope.rule_->enable_memoize;
+      if (!packrat)
+        ope.rule_->enable_memoize = false;
+    }
+  }
+  void visit(Whitespace &ope) override { packrat &= check(seen, ope.ope_); }
+  void visit(PrecedenceClimbing &ope) override { packrat &= check(seen, ope.atom_); }
+  void visit(Recovery &ope) override { packrat &= check(seen, ope.ope_); }
+};
 
 class ParserGenerator {
 public:
@@ -127,7 +180,8 @@ private:
             g["LiteralI"], g["Dictionary"], g["Literal"], g["NegatedClass"], g["Class"],
             g["DOT"]);
 
-    g["Identifier"] <= seq(g["IdentCont"], g["Spacing"]);
+    g["Identifier"] <=
+        seq(g["IdentCont"], opt(tok(lit(string(NO_PACKRAT)))), g["Spacing"]);
     g["IdentCont"] <= seq(g["IdentStart"], zom(g["IdentRest"]));
 
     const static std::vector<std::pair<char32_t, char32_t>> range = {{0x0080, 0xFFFF}};
@@ -267,6 +321,12 @@ private:
       auto is_macro = vs.choice() == 0;
       auto ignore = std::any_cast<bool>(vs[0]);
       auto name = std::any_cast<std::string>(vs[1]);
+      auto enable_memoize = true;
+      if (name.size() > NO_PACKRAT.size() &&
+          name.substr(name.size() - NO_PACKRAT.size()) == NO_PACKRAT) {
+        enable_memoize = false;
+        name = name.substr(0, name.size() - NO_PACKRAT.size());
+      }
 
       std::vector<std::string> params;
       std::shared_ptr<Ope> ope;
@@ -292,6 +352,7 @@ private:
         rule.ignoreSemanticValue = ignore;
         rule.is_macro = is_macro;
         rule.params = params;
+        rule.enable_memoize = enable_memoize;
 
         if (data.start.empty()) {
           data.start = name;
@@ -490,6 +551,12 @@ private:
       }
     };
 
+    g["Identifier"] = [](const SemanticValues &vs) {
+      string s = std::any_cast<std::string>(vs[0]);
+      if (!vs.tokens.empty())
+        s += vs.token_to_string();
+      return s;
+    };
     g["IdentCont"] = [](const SemanticValues &vs) {
       return std::string(vs.sv().data(), vs.sv().length());
     };
@@ -839,6 +906,14 @@ public:
       }
     }
 
+    // Disable packrat on demand
+    unordered_set<string> seen;
+    for (auto &[name, rule] : grammar) {
+      auto packrat = SetUpPackrat::check(&seen, rule.get_core_operator());
+      if (!packrat)
+        rule.enable_memoize = false;
+    }
+
     // Set root definition
     start = data.start;
     enablePackratParsing = data.enablePackratParsing;
@@ -956,6 +1031,8 @@ int main(int argc, char **argv) {
     rules += fmt::format("  P[\"{}\"].name = \"{}\";\n", name, escape(name));
     if (def.is_macro)
       rules += fmt::format("  P[\"{}\"].is_macro = true;\n", name);
+    if (!def.enable_memoize)
+      rules += fmt::format("  P[\"{}\"].enable_memoize = false;\n", name);
     if (!def.params.empty()) {
       vector<string> params;
       for (auto &p : def.params)

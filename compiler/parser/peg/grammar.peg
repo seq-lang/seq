@@ -2,68 +2,59 @@
 # Adpoted from Python 3's PEG grammar (https://docs.python.org/3/reference/grammar.html)
 
 %preamble {
-#include "parser/peg/rules.h"
-using namespace std;
-using namespace seq::ast;
+  #include "parser/peg/rules.h"
+  #include <any>
+  using namespace std;
+  using namespace seq::ast;
 
-#define V0 VS[0]
-#define V1 VS[1]
-#define V2 VS[2]
+  #define V0 VS[0]
+  #define V1 VS[1]
+  #define V2 VS[2]
+  #define ac std::any_cast
+  #define ac_expr std::any_cast<ExprPtr>
+  #define ac_stmt std::any_cast<StmtPtr>
+  #define SemVals peg::SemanticValues
 
-template<typename T, typename F> auto app(const std::vector<T> &c, F &&f) {
-  std::vector<typename std::result_of<F(const T&)>::type> ret;
-  std::transform(std::begin(c), std::end(c), std::inserter(ret, std::end(ret)), f);
-  return ret;
+  template<typename F> auto vmap(const peg::SemanticValues &c, F &&f) {
+    return vmap(static_cast<const vector<any>&>(c), f);
+  }
+  template <typename Tn, typename Tsv, typename... Ts> auto ast(Tsv &s, Ts &&...args) {
+    auto t = make_shared<Tn>(std::forward<Ts>(args)...);
+    t->setSrcInfo(s);
+    return std::static_pointer_cast<typename Tn::base_type>(t);
+  }
+  auto chain(peg::SemanticValues &VS, const seq::SrcInfo &LOC) {
+    auto b = ac_expr(V0);
+    for (int i = 1; i < VS.size(); i++)
+      b = ast<BinaryExpr>(LOC, b, VS.token_to_string(i - 1), ac_expr(VS[i]));
+    return b;
+  }
+  auto wrap_tuple(peg::SemanticValues &VS, const seq::SrcInfo &LOC) {
+    if (VS.size() == 1)
+      return ac_expr(V0);
+    return ast<TupleExpr>(LOC, VS.transform<ExprPtr>());
+  }
 }
-template<typename F> auto app(const peg::SemanticValues &c, F &&f) {
-  std::vector<typename std::result_of<F(const std::any&)>::type> ret;
-  std::transform(std::begin(c), std::end(c), std::inserter(ret, std::end(ret)), f);
-  return ret;
-}
-template <typename Tn, typename Tsv, typename... Ts> auto ast(Tsv &s, Ts &&...args) {
-  typename Tn::base_type *t = new Tn(std::forward<Ts>(args)...);
-  t->setSrcInfo(s);
-  return t;
-}
-template <typename T> unique_ptr<T> any_to_unique(const any &i) {
-  return unique_ptr<T>(any_cast<T *>(i));
-}
-auto chain(peg::SemanticValues &VS, const seq::SrcInfo &LOC) {
-  Expr *b = any_cast<Expr *>(V0);
-  for (int i = 1; i < VS.size(); i++)
-    b = ast<BinaryExpr>(LOC, ExprPtr(b), VS.token_to_string(i - 1),
-                        any_to_unique<Expr>(VS[i]));
-  return b;
-}
-auto wrap_tuple(peg::SemanticValues &VS, const seq::SrcInfo &LOC) {
-  if (VS.size() == 1)
-    return any_cast<Expr *>(V0);
-  return ast<TupleExpr>(LOC, app(VS, any_to_unique<Expr>));
-}
-auto gen_body(const any &a) {
-  return app(any_cast<peg::SemanticValues>(a), [](const any &i) {
-    auto ti = any_cast<tuple<any, any, vector<any>>>(i);
-    return GeneratorBody{any_to_unique<Expr>(get<0>(ti)),
-                         any_to_unique<Expr>(get<1>(ti)),
-                         app(get<2>(ti), any_to_unique<Expr>)};
-  });
-}
-}
-
 program <- statements !.
 
 # Macros
 list(c, e)  <- e _ (c _ e _)*
 tlist(c, e) <- e _ (c _ e _)* c? _
+exprblock(kwd, expr) <- SAMEDENT kwd _ expr _ ':' _ suite
+block(kwd) <- SAMEDENT kwd _ ':' _ suite
 
-statements <- (statement / _ COMMENT EOL / _ EOL)+ { return ast<SuiteStmt>(LOC, app(VS, any_to_unique<Stmt>)); }
+statements <- (statement / _ COMMENT EOL / _ EOL)+ { 
+  return ast<SuiteStmt>(LOC, VS.transform<StmtPtr>()); 
+}
 statement <- compound_stmt / SAMEDENT simple_stmt
-simple_stmt <- tlist(';', small_stmt) _ EOL { return ast<SuiteStmt>(LOC, app(VS, any_to_unique<Stmt>)); }
+simple_stmt <- tlist(';', small_stmt) _ EOL { 
+  return ast<SuiteStmt>(LOC, VS.transform<StmtPtr>()); 
+}
 small_stmt <-
   / assignment
-  / 'pass' { return make_any<Stmt*>(ast<PassStmt>(LOC)); }
-  / 'break' { return make_any<Stmt*>(ast<BreakStmt>(LOC)); }
-  / 'continue' { return make_any<Stmt*>(ast<ContinueStmt>(LOC)); }
+  / 'pass' { return any(ast<PassStmt>(LOC)); }
+  / 'break' { return any(ast<BreakStmt>(LOC)); }
+  / 'continue' { return any(ast<ContinueStmt>(LOC)); }
   / global_stmt
   / yield_stmt
   / assert_stmt
@@ -71,194 +62,253 @@ small_stmt <-
   / return_stmt
   / raise_stmt
   / print_stmt
-  # import_stmt
-  / expressions { return make_any<Stmt*>(ast<ExprStmt>(LOC, any_to_unique<Expr>(V0))); }
+  / import_stmt
+  / expressions { return any(ast<ExprStmt>(LOC, ac_expr(V0))); }
 assignment <-
   / id _ ':' _ expression _ ('=' _ star_expressions _)* {
-    return ast<AssignStmt>(LOC,
-      any_to_unique<Expr>(V0),
-      VS.size() > 2 ? any_to_unique<Expr>(V2) : nullptr,
-      any_to_unique<Expr>(V1)
+    return ast<AssignStmt>(LOC, 
+      ac_expr(V0), VS.size() > 2 ? ac_expr(V2) : nullptr, ac_expr(V1)
     );
   }
   / (star_targets _ '=' _)+ star_expressions _ !'=' {
     vector<StmtPtr> stmts;
     for (int i = int(VS.size()) - 2; i >= 0; i--)
-      stmts.push_back(StmtPtr(ast<AssignStmt>(LOC, any_to_unique<Expr>(VS[i]), any_to_unique<Expr>(VS[i + 1]))));
+      stmts.push_back(ast<AssignStmt>(LOC, ac_expr(VS[i]), ac_expr(VS[i + 1])));
     return ast<SuiteStmt>(LOC, move(stmts));
   }
   / star_target _ augassign '=' ^ _ star_expressions {
-    return ast<AssignStmt>(LOC,
-      any_to_unique<Expr>(V0),
-      ExprPtr(ast<BinaryExpr>(LOC, any_to_unique<Expr>(V0), any_cast<string>(V1), any_to_unique<Expr>(V2), true))
+    return ast<AssignStmt>(LOC, 
+      ac_expr(V0), ast<BinaryExpr>(LOC, ac_expr(V0), ac<string>(V1), ac_expr(V2), true)
     );
   }
-augassign <- <'+' / '-' / '*' / '@' / '/' / '%' / '&' / '/' / '^' / '<<' / '>>' / '**' / '//'> {
+augassign <- <
+  '+' / '-' / '*' / '@' / '/' / '%' / '&' / '/' / '^' / '<<' / '>>' / '**' / '//'
+> {
   return VS.token_to_string();
 }
 global_stmt <- 'global' _ tlist(',', NAME) {
-  return ast<SuiteStmt>(LOC, app(VS, [&](const any &i) { return StmtPtr(ast<GlobalStmt>(LOC, any_cast<string>(i))); }) );
+  return ast<SuiteStmt>(LOC, 
+    vmap(VS, [&](const any &i) { return ast<GlobalStmt>(LOC, ac<string>(i)); }) 
+  );
 }
 yield_stmt <-
-  / 'yield' _ 'from' _ expression { return ast<YieldFromStmt>(LOC, any_to_unique<Expr>(V0)); }
-  / 'yield' _ expressions? { return ast<YieldStmt>(LOC, !VS.empty() ? any_to_unique<Expr>(V0) : nullptr); }
+  / 'yield' _ 'from' _ expression { return ast<YieldFromStmt>(LOC, ac_expr(V0)); }
+  / 'yield' _ expressions? { 
+    return ast<YieldStmt>(LOC, !VS.empty() ? ac_expr(V0) : nullptr); 
+  }
 assert_stmt <- 'assert' _ expression _ (',' _ expression _)? {
-  return ast<AssertStmt>(LOC, any_to_unique<Expr>(V0), VS.size() > 1 ? any_to_unique<Expr>(V1) : nullptr);
+  return ast<AssertStmt>(LOC, ac_expr(V0), VS.size() > 1 ? ac_expr(V1) : nullptr);
 }
 # TODO: do targets as in Python
 del_stmt <- 'del' _ tlist(',', expression) {
-  return ast<SuiteStmt>(LOC, app(VS, [&](const any &i) { return StmtPtr(ast<DelStmt>(LOC, any_to_unique<Expr>(i))); }));
+  return ast<SuiteStmt>(LOC, 
+    vmap(VS, [&](const any &i) { return ast<DelStmt>(LOC, ac_expr(i)); })
+  );
 }
-return_stmt <- 'return' _ expressions? { return ast<ReturnStmt>(LOC, !VS.empty() ? any_to_unique<Expr>(V0) : nullptr); }
+return_stmt <- 'return' _ expressions? { 
+  return ast<ReturnStmt>(LOC, !VS.empty() ? ac_expr(V0) : nullptr); 
+}
 # TODO: raise expression 'from' expression
-raise_stmt <- 'raise' _ expression? { return ast<ThrowStmt>(LOC, !VS.empty() ? any_to_unique<Expr>(V0) : nullptr); }
+raise_stmt <- 'raise' _ expression? { 
+  return ast<ThrowStmt>(LOC, !VS.empty() ? ac_expr(V0) : nullptr); 
+}
 print_stmt <-
   / 'print ' _ expression _ (',' _ expression _)* ','? {
-    return ast<PrintStmt>(LOC, app(VS, any_to_unique<Expr>), VS.tokens.size() == VS.size());
+    return ast<PrintStmt>(LOC, VS.transform<ExprPtr>(), VS.tokens.size() == VS.size());
   }
   / 'print' { return ast<PrintStmt>(LOC, vector<ExprPtr>{}, false); }
+import_stmt <- import_name / import_from
+import_name <- 'import' _ list(',', as_name) {
+  return ast<SuiteStmt>(LOC,
+    vmap(VS.transform<pair<ExprPtr, string>>(), [&](const pair<ExprPtr, string> &i) {
+      return ast<ImportStmt>(LOC, nullptr, i.first, vector<Param>{}, nullptr, i.second);
+    })
+  );
+}
+as_name <- primary (_ 'as' _ NAME)* { 
+  return pair(ac_expr(V0), VS.size() > 1 ? ac<string>(V1) : ""); 
+}
+import_from <- 
+  / 'from' _ (<'.'> _)* _ primary? _ 'import' _ '*' {
+    return ast<ImportStmt>(LOC, 
+      VS.size() == 1 ? ac_expr(V0) : nullptr, ast<IdExpr>(LOC, "*"), vector<Param>{}, 
+      nullptr, "", int(VS.tokens.size())
+    );
+  }
+  / 'from' _ (<'.'> _)* _ primary? _ 'import' _ (from_as_parens / from_as_items) {
+    auto f = VS.size() == 2 ? ac_expr(V0) : nullptr;
+    return ast<SuiteStmt>(LOC,
+      vmap(
+        ac<SemVals>(VS.size() == 2 ? V1 : V0), 
+        [&](const any &i) {
+          auto p = ac<pair<any, string>>(i);
+          auto t = ac<tuple<ExprPtr, vector<Param>, ExprPtr>>(p.first);
+          return ast<ImportStmt>(LOC, 
+            f, get<0>(t), move(get<1>(t)), get<2>(t), p.second, int(VS.tokens.size())
+          );
+        }
+      )
+    );
+  }
+from_as_parens <- '(' _ tlist(',', from_as) _ ')' { return VS; }
+from_as_items <- list(',', from_as) { return VS; }
+from_as <- from_id (_ 'as' _ NAME)* { 
+  return pair(V0, VS.size() > 1 ? ac<string>(V1) : ""); 
+}
+from_id <-
+  / primary _ params _ ('->' _ expression) { 
+    return tuple(
+      ac_expr(V0), 
+      ac<SemVals>(V1).transform<Param>(), 
+      VS.size() > 2 ? ac_expr(V2) : nullptr
+    ); 
+  }
+  / primary { return tuple(ac_expr(V0), vector<Param>{}, (ExprPtr)nullptr); }
 
-exprblock(kwd, expr) <- SAMEDENT kwd _ expr _ ':' _ suite
-block(kwd) <- SAMEDENT kwd _ ':' _ suite
 suite <- simple_stmt / EOL &INDENT statements &DEDENT
-compound_stmt <- 
+compound_stmt <-
   / function
-  / if_stmt 
+  / if_stmt
   / class
-  / with_stmt 
-  / for_stmt 
+  / with_stmt
+  / for_stmt
   / try_stmt
   / while_stmt
-if_stmt <- exprblock('if', named_expression) exprblock('elif', named_expression)* block('else')? {
-  Stmt *stmt = ast<IfStmt>(LOC, nullptr, nullptr);
-  IfStmt *p = (IfStmt*)stmt;
+if_stmt <- exprblock('if', named_expression) 
+           exprblock('elif', named_expression)* block('else')? {
+  shared_ptr<Stmt> stmt = ast<IfStmt>(LOC, nullptr, nullptr);
+  IfStmt *p = (IfStmt*)stmt.get();
   for (int i = 0; i < VS.size(); i += 2) {
     if (i == VS.size() - 1) {
-      p->elseSuite = any_to_unique<Stmt>(VS[i]);
+      p->elseSuite = ac_stmt(VS[i]);
     } else {
       if (i) {
-        p->elseSuite = StmtPtr(ast<IfStmt>(LOC, nullptr, nullptr));
+        p->elseSuite = ast<IfStmt>(LOC, nullptr, nullptr);
         p = (IfStmt*)(p->elseSuite.get());
       }
-      p->cond = any_to_unique<Expr>(VS[i]);
-      p->ifSuite = any_to_unique<Stmt>(VS[i + 1]);
+      p->cond = ac_expr(VS[i]);
+      p->ifSuite = ac_stmt(VS[i + 1]);
     }
   }
   return stmt;
 }
 while_stmt <- exprblock('while', named_expression) block('else')? {
-  return ast<WhileStmt>(LOC,
-    any_to_unique<Expr>(V0),
-    any_to_unique<Stmt>(V1),
-    VS.size() > 2 ? any_to_unique<Stmt>(V2) : nullptr
+  return ast<WhileStmt>(LOC, 
+    ac_expr(V0), ac_stmt(V1), VS.size() > 2 ? ac_stmt(V2) : nullptr
   );
 }
 for_stmt <- exprblock('for', star_targets 'in' _ star_expressions) block('else')? {
-  return ast<ForStmt>(LOC,
-    any_to_unique<Expr>(V0),
-    any_to_unique<Expr>(V1),
-    any_to_unique<Stmt>(V2),
-    VS.size() > 3 ? any_to_unique<Stmt>(V2) : nullptr
+  return ast<ForStmt>(LOC, 
+    ac_expr(V0), ac_expr(V1), ac_stmt(V2), VS.size() > 3 ? ac_stmt(V2) : nullptr
   );
 }
 with_stmt <- exprblock('with', (with_parens_item / with_item)) {
-  return ast<WithStmt>(LOC,
-    app(any_cast<peg::SemanticValues>(V0), [](const any &i) {
-      auto p = any_cast<pair<Expr*, Expr*>>(i);
-      return make_pair(ExprPtr(p.first), ExprPtr(p.second));
-    }),
-    any_to_unique<Stmt>(V1)
+  return ast<WithStmt>(LOC, 
+    ac<SemVals>(V0).transform<pair<ExprPtr, ExprPtr>>(), ac_stmt(V1)
   );
 }
 with_parens_item <- '(' _ tlist(',', as_item) _ ')' { return VS; }
 with_item <- list(',', as_item) { return VS; }
 as_item <-
-  / expression _ 'as' _ star_target &(',' / ')' / ':')  {
-    return make_pair(any_cast<Expr*>(V0), any_cast<Expr*>(V1));
+  / expression _ 'as' _ star_target &(',' / ')' / ':')  { 
+    return pair(ac_expr(V0), ac_expr(V1)); 
   }
-  / expression { return make_pair(any_cast<Expr*>(V0), (Expr*)nullptr); }
-try_stmt <- 
-  # TODO: else block?
+  / expression { return pair(ac_expr(V0), (ExprPtr)nullptr); }
+# TODO: else block?
+try_stmt <-
   / block('try') excepts block('finally')? {
-    return ast<TryStmt>(LOC, 
-      any_to_unique<Stmt>(V0), 
-      app(any_cast<peg::SemanticValues>(V1), [](const any &i) { 
-        auto p = any_cast<tuple<string, Expr*, Stmt*>>(i);
-        return TryStmt::Catch{get<0>(p), ExprPtr(get<1>(p)), StmtPtr(get<2>(p))}; 
-      }),
-      VS.size() > 2 ? any_to_unique<Stmt>(V2): nullptr
+    return ast<TryStmt>(LOC,
+      ac_stmt(V0), 
+      ac<SemVals>(V1).transform<TryStmt::Catch>(), 
+      VS.size() > 2 ? ac_stmt(V2): nullptr
     );
   }
   / block('try') block('finally')? {
     return ast<TryStmt>(LOC, 
-      any_to_unique<Stmt>(V0), 
-      vector<TryStmt::Catch>{}, 
-      VS.size() > 1 ? any_to_unique<Stmt>(V1): nullptr
+      ac_stmt(V0), vector<TryStmt::Catch>{}, VS.size() > 1 ? ac_stmt(V1): nullptr
     );
   }
 excepts <- except_block+ { return VS; }
-except_block <- 
+except_block <-
   / exprblock('except', expression _ ('as' _ NAME)*) {
     if (VS.size() == 3)
-      return make_tuple(any_cast<string>(V1), any_cast<Expr*>(V0), any_cast<Stmt*>(V2));
+      return TryStmt::Catch{ac<string>(V1), ac_expr(V0), ac_stmt(V2)};
     else
-      return make_tuple(string(), any_cast<Expr*>(V0), any_cast<Stmt*>(V1));
+      return TryStmt::Catch{"", ac_expr(V0), ac_stmt(V1)};
   }
-  / block('except') { return make_tuple(string(), (Expr*)nullptr, any_cast<Stmt*>(V0)); }
-
-function <- decorators? function_def {
-  if (VS.size() == 2) {
-    auto fn = (FunctionStmt*)any_cast<Stmt*>(V1);
-    fn->decorators = app(any_cast<peg::SemanticValues>(V0), any_to_unique<Expr>);
-    return (Stmt*)fn;
-  } else {
-    return any_cast<Stmt*>(V0);
+  / block('except') { return TryStmt::Catch{"", nullptr, ac_stmt(V0)}; }
+function <-
+  / extern_decorators function_def _ EOL &INDENT extern &DEDENT {
+    auto fn = dynamic_pointer_cast<FunctionStmt>(ac_stmt(V1));
+    fn->decorators = ac<vector<ExprPtr>>(V0);
+    fn->suite = ast<ExprStmt>(LOC, ast<StringExpr>(LOC, ac<string>(V2)));
+    return static_pointer_cast<Stmt>(fn);
   }
+  / decorators? function_def _ suite {
+    auto fn = dynamic_pointer_cast<FunctionStmt>(ac_stmt(VS.size() > 2 ? V1 : V0));
+    if (VS.size() > 2)
+      fn->decorators = ac<SemVals>(V0).transform<ExprPtr>();
+    fn->suite = ac_stmt(VS.size() > 2 ? V2 : V1);
+    return static_pointer_cast<Stmt>(fn);
+  }
+extern <- (empty_line* EXTERNDENT (!EOL .)* EOL empty_line*)+ { 
+  return string(VS.sv()); 
 }
-function_def <- 
-  / SAMEDENT 'def' _ NAME _ gens _ params _ ('->' _ expression _)? ':' _ suite {
+~empty_line <- [ \t]* EOL
+function_def <-
+  / SAMEDENT 'def' _ NAME _ gens _ params _ ('->' _ expression _)? ':' {
     return ast<FunctionStmt>(LOC,
-      any_cast<string>(V0),
-      VS.size() == 5 ? any_to_unique<Expr>(VS[3]) : nullptr,
-      app(any_cast<peg::SemanticValues>(V1), [](const any &i) {
-        auto p = any_cast<tuple<string, Expr*, Expr*>>(i);
-        return Param{get<0>(p), ExprPtr(get<1>(p)), ExprPtr(get<2>(p))};
-      }),
-      app(any_cast<peg::SemanticValues>(V2), [](const any &i) {
-        auto p = any_cast<tuple<string, Expr*, Expr*>>(i);
-        return Param{get<0>(p), ExprPtr(get<1>(p)), ExprPtr(get<2>(p))};
-      }),
-      any_to_unique<Stmt>(VS.size() == 5 ? VS[4] : VS[3])
+      ac<string>(V0),
+      VS.size() == 5 ? ac_expr(VS[3]) : nullptr,
+      ac<SemVals>(V1).transform<Param>(),
+      ac<SemVals>(V2).transform<Param>(),
+      nullptr
     );
   }
-params <- '(' _ param+ _ ')' { return VS; }
-param <-
-  / param_name _ ':' _ expression (_ '=' _ expression)* { 
-    return make_tuple(any_cast<string>(V0), any_cast<Expr*>(V1), VS.size() > 2 ? any_cast<Expr*>(V2) : nullptr); 
+  / SAMEDENT 'def' _ NAME _ params _ ('->' _ expression _)? ':' {
+    return ast<FunctionStmt>(LOC,
+      ac<string>(V0),
+      VS.size() == 4 ? ac_expr(VS[2]) : nullptr,
+      vector<Param>{},
+      ac<SemVals>(V1).transform<Param>(),
+      nullptr
+    );
   }
-  / param_name (_ '=' _ expression)* { 
-    return make_tuple(any_cast<string>(V0), (Expr*)nullptr, VS.size() > 1 ? any_cast<Expr*>(V1) : nullptr); 
+params <- '(' _ tlist(',', param)* _ ')' { return VS; }
+param <-
+  / param_name _ ':' _ expression (_ '=' _ expression)* {
+    return Param(ac<string>(V0), ac_expr(V1), VS.size() > 2 ? ac_expr(V2) : nullptr);
+  }
+  / param_name (_ '=' _ expression)* {
+    return Param(ac<string>(V0), nullptr, VS.size() > 1 ? ac_expr(V1) : nullptr);
   }
 param_name <- <'**' / '*'>? NAME { 
-  return (!VS.tokens.empty() ? VS.token_to_string() : "") + any_cast<string>(V0); 
+  return (!VS.tokens.empty() ? VS.token_to_string() : "") + ac<string>(V0); 
 }
-gens <- 
-  / '[' _ param+ _ ']' { return VS; } 
-  / '' { return peg::SemanticValues(); }
+gens <- '[' _ tlist(',', param) _ ']' { return VS; }
 decorators <- (SAMEDENT '@' named_expression _ EOL)+ { return VS; }
+extern_decorators <- decorators? (SAMEDENT '@' _ <'llvm'/'python'> _ EOL) decorators? {
+  vector<ExprPtr> vs;
+  for (auto &v: VS) {
+    auto nv = ac<SemVals>(v).transform<ExprPtr>();
+    vs.insert(vs.end(), nv.begin(), nv.end());
+  }
+  vs.push_back(ast<IdExpr>(LOC, VS.token_to_string()));
+  return vs;
+}
 class <- decorators? class_def {
   if (VS.size() == 2) {
-    auto fn = (ClassStmt*)any_cast<Stmt*>(V1);
-    fn->decorators = app(any_cast<peg::SemanticValues>(V0), any_to_unique<Expr>);
-    return (Stmt*)fn;
-  } else {
-    return any_cast<Stmt*>(V0);
+    auto fn = ac_stmt(V1);
+    dynamic_pointer_cast<ClassStmt>(fn)->decorators = 
+      ac<SemVals>(V0).transform<ExprPtr>();
+    return fn;
   }
+  return ac_stmt(V0);
 }
-class_def <- SAMEDENT 'class' _ NAME _ gens _ ':' _ suite {
+class_def <- SAMEDENT 'class' _ NAME _ gens? _ ':' _ suite {
   vector<Param> args;
-  vector<StmtPtr> suite;
-  auto s = const_cast<SuiteStmt*>(any_cast<Stmt*>(V2)->getSuite());
+  auto suite = make_shared<SuiteStmt>();
+  auto s = const_cast<SuiteStmt*>(ac_stmt(VS.size() == 3 ? V2 : V1)->getSuite());
   seqassert(s, "not a suite");
   for (auto &i: s->stmts) {
     if (auto a = const_cast<AssignStmt*>(i->getAssign()))
@@ -266,16 +316,13 @@ class_def <- SAMEDENT 'class' _ NAME _ gens _ ':' _ suite {
         args.push_back(Param(a->lhs->getId()->value, move(a->type), move(a->rhs)));
         continue;
       }
-    suite.push_back(move(i));
+    suite->stmts.push_back(i);
   }
   return ast<ClassStmt>(LOC,
-    any_cast<string>(V0),
-    app(any_cast<peg::SemanticValues>(V1), [](const any &i) {
-      auto p = any_cast<tuple<string, Expr*, Expr*>>(i);
-      return Param{get<0>(p), ExprPtr(get<1>(p)), ExprPtr(get<2>(p))};
-    }),
+    ac<string>(V0),
+    VS.size() == 3 ? ac<SemVals>(V1).transform<Param>() : vector<Param>{},
     move(args),
-    StmtPtr(ast<SuiteStmt>(LOC, move(suite)))
+    suite
   );
 }
 
@@ -285,42 +332,57 @@ class_def <- SAMEDENT 'class' _ NAME _ gens _ ':' _ suite {
 
 expressions <- tlist(',', expression) { return wrap_tuple(VS, LOC); }
 expression <-
+  / lambdef { return ac_expr(V0); }
   / disjunction _ 'if' _ disjunction _ 'else' _ expression {
-    return ast<IfExpr>(LOC, any_to_unique<Expr>(V1), any_to_unique<Expr>(V0), any_to_unique<Expr>(V2));
+    return ast<IfExpr>(LOC, ac_expr(V1), ac_expr(V0), ac_expr(V2));
   }
-  / disjunction { return any_cast<Expr*>(V0); }
+  / pipe { return ac_expr(V0); }
+# TODO: make it more pythonic
+lambdef <- 'lambda' _ list(',', NAME) _ ':' _ expression {
+  return ast<LambdaExpr>(LOC, 
+    VS.transform<string>(0, VS.size() - 1), ac_expr(VS.back())
+  );
+}
+pipe <- 
+  / disjunction ((_ EOL _ / _) <'|>' / '||>'> (_ EOL _ / _) disjunction)+ {
+    vector<PipeExpr::Pipe> v;
+    for (int i = 0; i < VS.size(); i++)
+      v.push_back(PipeExpr::Pipe{i ? VS.token_to_string(i - 1) : "", ac_expr(VS[i])});
+    return ast<PipeExpr>(LOC, move(v));
+  }
+  / disjunction { return ac_expr(V0); }
 disjunction <-
   / conjunction _ ('or' _ conjunction _)+ {
-    Expr *b = ast<BinaryExpr>(LOC, any_to_unique<Expr>(V0), "||", any_to_unique<Expr>(V1));
+    auto b = ast<BinaryExpr>(LOC, ac_expr(V0), "||", ac_expr(V1));
     for (int i = 2; i < VS.size(); i++)
-      b = ast<BinaryExpr>(LOC, ExprPtr(b), "||", any_to_unique<Expr>(VS[i]));
+      b = ast<BinaryExpr>(LOC, b, "||", ac_expr(VS[i]));
     return b;
   }
-  / conjunction { return any_cast<Expr*>(V0); }
+  / conjunction { return ac_expr(V0); }
 conjunction <-
   / inversion _ ('and' _ inversion _)+ {
-    Expr *b = ast<BinaryExpr>(LOC, any_to_unique<Expr>(V0), "&&", any_to_unique<Expr>(V1));
+    auto b = ast<BinaryExpr>(LOC, ac_expr(V0), "&&", ac_expr(V1));
     for (int i = 2; i < VS.size(); i++)
-      b = ast<BinaryExpr>(LOC, ExprPtr(b), "&&", any_to_unique<Expr>(VS[i]));
+      b = ast<BinaryExpr>(LOC, b, "&&", ac_expr(VS[i]));
     return b;
   }
-  / inversion { return any_cast<Expr*>(V0); }
+  / inversion { return ac_expr(V0); }
 inversion <-
-  / 'not' _ inversion { return ast<UnaryExpr>(LOC, "!", any_to_unique<Expr>(V0)); }
-  / comparison { return any_cast<Expr*>(V0); }
+  / 'not' _ inversion { return ast<UnaryExpr>(LOC, "!", ac_expr(V0)); }
+  / comparison { return ac_expr(V0); }
 comparison <- bitwise_or _ (compare_op_bitwise_or _)* {
-  Expr *b = any_cast<Expr *>(V0);
+  auto b = ac<ExprPtr>(V0);
   for (int i = 1; i < VS.size(); i++) {
-    auto p = any_cast<pair<string, Expr *>>(VS[i]);
-    b = ast<BinaryExpr>(LOC, ExprPtr(b), p.first, ExprPtr(p.second));
+    auto p = ac<pair<string, ExprPtr>>(VS[i]);
+    b = ast<BinaryExpr>(LOC, b, p.first, p.second);
   }
   return b;
 }
 compare_op_bitwise_or <-
-  / 'not' _ 'in' _ bitwise_or { return make_pair(string("not in"), any_cast<Expr *>(V0)); }
-  / 'is' _ 'not' _ bitwise_or { return make_pair(string("is not"), any_cast<Expr *>(V0)); }
+  / 'not' _ 'in' _ bitwise_or { return pair(string("not in"), ac_expr(V0)); }
+  / 'is' _ 'not' _ bitwise_or { return pair(string("is not"), ac_expr(V0)); }
   / <'==' / '!=' / '<=' / '<' / '>=' / '>' / 'in' / 'is'> _ bitwise_or {
-    return make_pair(VS.token_to_string(), any_cast<Expr*>(V0));
+    return pair(VS.token_to_string(), ac_expr(V0));
   }
 bitwise_or  <- bitwise_xor _ (<'|'> _ bitwise_xor _)* { return chain(VS, LOC); }
 bitwise_xor <- bitwise_and _ (<'^'> _ bitwise_and _)* { return chain(VS, LOC); }
@@ -329,47 +391,44 @@ shift_expr <- sum       _ (<'<<' / '>>'> _ sum  _)* { return chain(VS, LOC); }
 sum        <- term      _ (<'+' / '-'>   _ term _)* { return chain(VS, LOC); }
 term <- factor _ (<'*' / '/' / '//' / '%' / '@'> _ factor _)* { return chain(VS, LOC); }
 factor <-
-  / <'+' / '-' / '~'> _ factor { return ast<UnaryExpr>(LOC, VS.token_to_string(), any_to_unique<Expr>(V0)); }
-  / power { return any_cast<Expr*>(V0); }
+  / <'+' / '-' / '~'> _ factor { 
+    return ast<UnaryExpr>(LOC, VS.token_to_string(), ac_expr(V0)); 
+  }
+  / power { return ac_expr(V0); }
 power <-
-  / primary _ <'**'> _ factor { return ast<BinaryExpr>(LOC, any_to_unique<Expr>(V0), "**", any_to_unique<Expr>(V1)); }
-  / primary { return any_cast<Expr*>(V0); }
+  / primary _ <'**'> _ factor { 
+    return ast<BinaryExpr>(LOC, ac_expr(V0), "**", ac_expr(V1)); 
+  }
+  / primary { return ac_expr(V0); }
 primary <- atom _ (primary_tail _)* {
-  Expr *e = any_cast<Expr *>(V0);
+  auto e = ac<ExprPtr>(V0);
   for (int i = 1; i < VS.size(); i++) {
-    auto p = any_cast<pair<int, any>>(VS[i]);
+    auto p = ac<pair<int, any>>(VS[i]);
     if (p.first == 0)
-      e = ast<DotExpr>(LOC, ExprPtr(e), any_cast<string>(p.second));
+      e = ast<DotExpr>(LOC, e, ac<string>(p.second));
     else if (p.first == 1)
-      e = ast<CallExpr>(LOC, ExprPtr(e), any_to_unique<Expr>(p.second));
+      e = ast<CallExpr>(LOC, e, ac_expr(p.second));
     else if (p.first == 2)
-      e = ast<CallExpr>(LOC,
-        ExprPtr(e), app(
-          any_cast<vector<pair<string, Expr*>>>(p.second),
-          [](const pair<string, Expr*> &i) { return CallExpr::Arg{i.first, ExprPtr(i.second)};}
-        )
-      );
+      e = ast<CallExpr>(LOC, e, ac<vector<CallExpr::Arg>>(p.second));
     else
-      e = ast<IndexExpr>(LOC, ExprPtr(e), any_to_unique<Expr>(p.second));
+      e = ast<IndexExpr>(LOC, e, ac_expr(p.second));
   }
   return e;
 }
 primary_tail <-
-  / '.' _ NAME { return make_pair(0, V0); }
-  / genexp { return make_pair(1, V0); }
-  / arguments { return make_pair(2, VS.size() ? V0 : make_any<vector<pair<string, Expr*>>>()); }
-  / slices { return make_pair(3, V0); }
+  / '.' _ NAME { return pair(0, V0); }
+  / genexp { return pair(1, V0); }
+  / arguments { return pair(2, VS.size() ? V0 : any(vector<CallExpr::Arg>{})); }
+  / slices { return pair(3, V0); }
 slices <- '[' _ (slice !',' / list(',', slice)) _ ']' { return wrap_tuple(VS, LOC); }
 slice <-
   / slice_part _ ':' _ slice_part _ (':' _ slice_part _)? {
-    return ast<SliceExpr>(LOC,
-      any_to_unique<Expr>(V0),
-      any_to_unique<Expr>(V1),
-      VS.size() > 2 ? any_to_unique<Expr>(V2) : nullptr
+    return ast<SliceExpr>(LOC, 
+      ac_expr(V0), ac_expr(V1), VS.size() > 2 ? ac_expr(V2) : nullptr
     );
   }
-  / expression { return any_cast<Expr*>(V0); }
-slice_part <- expression? { return VS.size() ? V0 : make_any<Expr *>(nullptr); }
+  / expression { return ac_expr(V0); }
+slice_part <- expression? { return VS.size() ? V0 : make_any<ExprPtr>(nullptr); }
 atom <-
   / 'True' { return ast<BoolExpr>(LOC, true); }
   / 'False' { return ast<BoolExpr>(LOC, false);}
@@ -377,109 +436,143 @@ atom <-
   / (STRING _)+ {
     string s, f;
     for (auto &v: VS) {
-      auto p = any_cast<pair<string, string>>(v);
+      auto p = ac<pair<string, string>>(v);
       s += p.second;
       f = p.first; // TODO fix
     }
     return ast<StringExpr>(LOC, s, f);
   }
-  / id { return any_cast<Expr*>(V0); }
-  / INT NAME? { return ast<IntExpr>(LOC, any_cast<string>(V0), VS.size() > 1 ? any_cast<string>(V1) : ""); }
-  / parentheses { return any_cast<Expr*>(V0); }
+  / id { return ac_expr(V0); }
+  / INT NAME? { 
+    return ast<IntExpr>(LOC, ac<string>(V0), VS.size() > 1 ? ac<string>(V1) : ""); 
+  }
+  / parentheses { return ac_expr(V0); }
   / '...' { return ast<EllipsisExpr>(LOC); }
-parentheses <- (tuple / yield / named / genexp / listexpr / listcomp / dict / set / dictcomp / setcomp)
-tuple <- '(' _ tlist(',', star_named_expression) _ ')' { return ast<TupleExpr>(LOC, app(VS, any_to_unique<Expr>)); }
+parentheses <- (
+  tuple / yield / named / genexp / listexpr / listcomp / dict / set / dictcomp / setcomp
+)
+tuple <- '(' _ tlist(',', star_named_expression) _ ')' { 
+  return ast<TupleExpr>(LOC, VS.transform<ExprPtr>()); 
+}
 yield <- '(' _ 'yield' _ ')' { return ast<YieldExpr>(LOC); }
 named <- '(' _ named_expression _ ')'
 genexp <- '(' _ named_expression _ for_if_clauses _ ')' {
-  return ast<GeneratorExpr>(LOC, GeneratorExpr::Generator, any_to_unique<Expr>(V0), gen_body(V1));
+  return ast<GeneratorExpr>(LOC,
+    GeneratorExpr::Generator, ac_expr(V0), ac<SemVals>(V1).transform<GeneratorBody>()
+  );
 }
-listexpr <- '[' _ tlist(',', star_named_expression)? _ ']' { return ast<ListExpr>(LOC, app(VS, any_to_unique<Expr>)); }
+listexpr <- '[' _ tlist(',', star_named_expression)? _ ']' { 
+  return ast<ListExpr>(LOC, VS.transform<ExprPtr>()); 
+}
 listcomp <- '[' _ named_expression _ for_if_clauses _ ']' {
-  return ast<GeneratorExpr>(LOC, GeneratorExpr::ListGenerator, any_to_unique<Expr>(V0), gen_body(V1));
+  return ast<GeneratorExpr>(LOC,
+    GeneratorExpr::ListGenerator, 
+    ac_expr(V0), 
+    ac<SemVals>(V1).transform<GeneratorBody>()
+  );
 }
-set <- '{' _ tlist(',', star_named_expression) _ '}' { return ast<SetExpr>(LOC, app(VS, any_to_unique<Expr>)); }
+set <- '{' _ tlist(',', star_named_expression) _ '}' { 
+  return ast<SetExpr>(LOC, VS.transform<ExprPtr>()); 
+}
 setcomp <- '{' _ named_expression _ for_if_clauses _ '}' {
-  return ast<GeneratorExpr>(LOC, GeneratorExpr::SetGenerator, any_to_unique<Expr>(V0), gen_body(V1));
+  return ast<GeneratorExpr>(LOC,
+    GeneratorExpr::SetGenerator, 
+    ac_expr(V0), 
+    ac<SemVals>(V1).transform<GeneratorBody>()
+  );
 }
 dict <- '{' _ tlist(',', double_starred_kvpair)? _ '}' {
-  return ast<DictExpr>(LOC, app(VS, [](const any &i) {
-    auto p = any_cast<pair<Expr*, Expr*>>(i);
-    return DictExpr::DictItem{ExprPtr(p.first), ExprPtr(p.second)};
-  }));
+  return ast<DictExpr>(LOC, VS.transform<DictExpr::DictItem>());
 }
 dictcomp <- '{' _ kvpair for_if_clauses _ '}' {
-  auto p = any_cast<pair<any, any>>(V0);
-  return ast<DictGeneratorExpr>(LOC, any_to_unique<Expr>(p.first), any_to_unique<Expr>(p.second), gen_body(V1));
+  auto p = ac<DictExpr::DictItem>(V0);
+  return ast<DictGeneratorExpr>(LOC, 
+    p.key, p.value, ac<SemVals>(V1).transform<GeneratorBody>()
+  );
 }
 double_starred_kvpair <-
-  / '**' _ bitwise_or { return make_pair(ast<IdExpr>(LOC, ""), ast<KeywordStarExpr>(LOC, any_to_unique<Expr>(V0))); }
-  / kvpair { return any_cast<pair<Expr*, Expr*>>(V0); }
-kvpair <- expression _ ':' _ expression { return make_pair(any_cast<Expr *>(V0), any_cast<Expr *>(V1)); }
+  / '**' _ bitwise_or { 
+    return DictExpr::DictItem{
+      ast<IdExpr>(LOC, ""), 
+      ast<KeywordStarExpr>(LOC, ac_expr(V0))
+    }; 
+  }
+  / kvpair { return ac<DictExpr::DictItem>(V0); }
+kvpair <- expression _ ':' _ expression { 
+  return DictExpr::DictItem{ac_expr(V0), ac_expr(V1)}; 
+}
 for_if_clauses <- (for_if_clause _)+ { return VS; }
 for_if_clause <- 'for' _ star_targets _ 'in' _ disjunction _ ('if' _ disjunction _)* {
-  return make_tuple(V0, V1, vector<any>(VS.begin() + 2, VS.end()));
+  return GeneratorBody{ac_expr(V0), ac_expr(V1), VS.transform<ExprPtr>(2)};
 }
-star_targets <- (star_target !',' / tlist(',', star_target)) { return wrap_tuple(VS, LOC); }
+star_targets <- (star_target !',' / tlist(',', star_target)) { 
+  return wrap_tuple(VS, LOC); 
+}
 star_target <-
-  / '*' _ !'*' star_target { return ast<StarExpr>(LOC, any_to_unique<Expr>(V0)); }
-  / target_with_star_atom { return any_cast<Expr*>(V0); }
+  / '*' _ !'*' star_target { return ast<StarExpr>(LOC, ac_expr(V0)); }
+  / target_with_star_atom { return ac_expr(V0); }
 target_with_star_atom <-
   / primary &T_LOOKAHEAD _ '.' _ NAME _ !T_LOOKAHEAD {
-    return ast<DotExpr>(LOC, any_to_unique<Expr>(V0), any_cast<string>(V1));
+    return ast<DotExpr>(LOC, ac_expr(V0), ac<string>(V1));
   }
   / primary &T_LOOKAHEAD _ slices _ !T_LOOKAHEAD {
-    return ast<IndexExpr>(LOC, any_to_unique<Expr>(V0), any_to_unique<Expr>(V1));
+    return ast<IndexExpr>(LOC, ac_expr(V0), ac_expr(V1));
   }
-  / id { return any_cast<Expr*>(V0); }
-  / star_parens { return any_cast<Expr*>(V0); }
+  / id { return ac_expr(V0); }
+  / star_parens { return ac_expr(V0); }
 ~T_LOOKAHEAD <- '(' / '[' / '.'
 star_parens <-
   / '(' _ target_with_star_atom _ ')' { return wrap_tuple(VS, LOC); }
-  / '(' _ (star_target _ (',' _ star_target _)+ ','?  / star_target _ ',') _ ')' { return wrap_tuple(VS, LOC); }
+  / '(' _ (star_target _ (',' _ star_target _)+ ','?  / star_target _ ',') _ ')' { 
+    return wrap_tuple(VS, LOC); 
+  }
   / '[' _ tlist(',', star_target) _ ']' { return wrap_tuple(VS, LOC); }
 star_expressions <- tlist(',', star_expression) { return wrap_tuple(VS, LOC); }
 star_expression <-
-  / '*' _ bitwise_or { return ast<StarExpr>(LOC, any_to_unique<Expr>(V0)); }
-  / expression { return any_cast<Expr*>(V0); }
+  / '*' _ bitwise_or { return ast<StarExpr>(LOC, ac_expr(V0)); }
+  / expression { return ac_expr(V0); }
 star_named_expression <-
-  / '*' _ bitwise_or { return ast<StarExpr>(LOC, any_to_unique<Expr>(V0)); }
-  / named_expression { return any_cast<Expr*>(V0); }
+  / '*' _ bitwise_or { return ast<StarExpr>(LOC, ac_expr(V0)); }
+  / named_expression { return ac_expr(V0); }
 named_expression <-
   / NAME _ ':=' _ ^ expression {
-    return ast<AssignExpr>(LOC, ExprPtr(ast<IdExpr>(LOC, any_cast<string>(V0))), any_to_unique<Expr>(V1));
+    return ast<AssignExpr>(LOC, ast<IdExpr>(LOC, ac<string>(V0)), ac_expr(V1));
   }
-  / expression _ !':=' { return any_cast<Expr*>(V0); }
+  / expression _ !':=' { return ac_expr(V0); }
 arguments <- '(' _ tlist(',', args)* _ ')' {
-  vector<pair<string, Expr*>> result;
+  vector<CallExpr::Arg> result;
   for (auto &v: VS)
-    for (auto &i: any_cast<vector<pair<string, Expr*>>>(v))
+    for (auto &i: ac<vector<CallExpr::Arg>>(v))
       result.push_back(i);
   return result;
 }
 args <- (simple_args _ (',' _ kwargs _)? / kwargs) {
-  auto args = any_cast<vector<pair<string, Expr*>>>(V0);
+  auto args = ac<vector<CallExpr::Arg>>(V0);
   if (VS.size() > 1) {
-    auto v = any_cast<vector<pair<string, Expr*>>>(V1);
+    auto v = ac<vector<CallExpr::Arg>>(V1);
     args.insert(args.end(), v.begin(), v.end());
   }
   return args;
 }
 simple_args <- list(',', (starred_expression / named_expression !'=')) {
-  return app(VS, [](auto &i) { return make_pair(string(), any_cast<Expr*>(i)); });
+  return vmap(VS, [](auto &i) { return CallExpr::Arg{"", ac_expr(i)}; });
 }
-starred_expression <- '*' _ expression { return ast<StarExpr>(LOC, any_to_unique<Expr>(V0)); }
+starred_expression <- '*' _ expression { return ast<StarExpr>(LOC, ac_expr(V0)); }
 kwargs <-
-  / list(',', kwarg_or_starred) _ ',' _ list(',', kwarg_or_double_starred) { return VS.transform<pair<string, Expr*>>(); }
-  / list(',', kwarg_or_starred) { return VS.transform<pair<string, Expr*>>(); }
-  / list(',', kwarg_or_double_starred) { return VS.transform<pair<string, Expr*>>(); }
+  / list(',', kwarg_or_starred) _ ',' _ list(',', kwarg_or_double_starred) { 
+    return VS.transform<CallExpr::Arg>(); 
+  }
+  / list(',', kwarg_or_starred) { return VS.transform<CallExpr::Arg>(); }
+  / list(',', kwarg_or_double_starred) { return VS.transform<CallExpr::Arg>(); }
 kwarg_or_starred <-
-  / NAME _ '=' _ expression { return make_pair(any_cast<string>(V0), any_cast<Expr*>(V1)); }
-  / starred_expression { return make_pair(string(), any_cast<Expr*>(V0)); }
+  / NAME _ '=' _ expression { return CallExpr::Arg{ac<string>(V0), ac_expr(V1)}; }
+  / starred_expression { return CallExpr::Arg{"", ac_expr(V0)}; }
 kwarg_or_double_starred <-
-  / NAME _ '=' _ expression { return make_pair(any_cast<string>(V0), any_cast<Expr*>(V1)); }
-  / '**' _ expression { return make_pair(string(), ast<KeywordStarExpr>(LOC, any_to_unique<Expr>(V0))); }
-id <- NAME { return ast<IdExpr>(LOC, any_cast<string>(V0)); }
+  / NAME _ '=' _ expression { return CallExpr::Arg{ac<string>(V0), ac_expr(V1)}; }
+  / '**' _ expression { 
+    return CallExpr::Arg{"", ast<KeywordStarExpr>(LOC, ac_expr(V0))}; 
+  }
+id <- NAME { return ast<IdExpr>(LOC, ac<string>(V0)); }
 INT <- (BININT / HEXINT / DECINT) { return string(VS.sv()); }
 # # floatsuffix <- float IDENT
 # # pointfloat <- INT? '.' INT
@@ -490,35 +583,44 @@ HEXINT <- <'0' [xX] [0-9a-fA-F] ('_'* [0-9a-fA-F])*>
 DECINT <- <[0-9] ('_'* [0-9])*>
 NAME <- < [a-zA-Z_] [a-zA-Z_0-9]* > { return string(VS.sv()); }
 STRING <- < NAME? STR > {
-  return make_pair(VS.size() > 1 ? any_cast<string>(V0) : "", any_cast<string>(VS[VS.size() > 1 ? 1 : 0]));
+  return pair(
+    VS.size() > 1 ? ac<string>(V0) : "", 
+    ac<string>(VS[VS.size() > 1 ? 1 : 0])
+  );
 }
-STR <- < '"""' (!'"""' CHAR)* '"""'
-       /  '\'\'\'' (!'\'\'\'' CHAR)* '\'\'\''
-       / '"' (!('"' / EOL) CHAR)* '"'
-       /  '\'' (!('\'' / EOL) CHAR)* '\'' > {
+STR <- < 
+  '"""' (!'"""' CHAR)*       '"""'   /  '\'\'\'' (!'\'\'\'' CHAR)*     '\'\'\'' /
+  '"'   (!('"' / EOL) CHAR)* '"'     /  '\''     (!('\'' / EOL) CHAR)* '\'' 
+> {
   string s;
   s.reserve(VS.size());
   for (auto &v: VS)
-    s.append(any_cast<string>(v));
+    s.append(ac<string>(v));
   return s;
 }
 CHAR <- ('\\' . / .) { return string(VS.sv()); }
 ~COMMENT <- <'#' (!EOL .)*>
-~INDENT <- < [ \t]* > {
+~INDENT:NO_PACKRAT <- < [ \t]* > {
   if ((!CTX.indent.size() && VS.sv().size()) || (VS.sv().size() > CTX.indent.top()))
     CTX.indent.push(VS.sv().size());
   else
     throw peg::parse_error("bad indent");
 }
-~SAMEDENT <- < [ \t]* > {
-  if ((!CTX.indent.size() && VS.sv().size()) || (CTX.indent.size() && VS.sv().size() != CTX.indent.top()))
+~SAMEDENT:NO_PACKRAT <- < [ \t]* > {
+  if ((!CTX.indent.size() && VS.sv().size()) || 
+      (CTX.indent.size() && VS.sv().size() != CTX.indent.top()))
     throw peg::parse_error();
 }
-~DEDENT <- < [ \t]* > {
+~DEDENT:NO_PACKRAT <- < [ \t]* > {
   if (CTX.indent.size() && VS.sv().size() < CTX.indent.top())
     CTX.indent.pop();
   else
     throw peg::parse_error("bad dedent");
+}
+~EXTERNDENT:NO_PACKRAT <- < [ \t]* > {
+  if ((!CTX.indent.size() && VS.sv().size()) || 
+      (CTX.indent.size() && VS.sv().size() < CTX.indent.top()))
+    throw peg::parse_error();
 }
 ~EOL <- < '\r\n' / [\r\n] >
 ~_ <- ([ \t] / COMMENT / (NLP EOL))*

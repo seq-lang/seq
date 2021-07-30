@@ -108,7 +108,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
   /// Stores class data for each class (type) in the source code.
   struct Class {
     /// Generic (unrealized) class template AST.
-    unique_ptr<ClassStmt> ast;
+    shared_ptr<ClassStmt> ast;
 
     /// A class function method.
     struct ClassMethod {
@@ -156,7 +156,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
 
   struct Function {
     /// Generic (unrealized) function template AST.
-    unique_ptr<FunctionStmt> ast;
+    shared_ptr<FunctionStmt> ast;
 
     /// A function realization.
     struct FunctionRealization {
@@ -164,7 +164,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
       types::FuncTypePtr type;
       /// Realized function AST (stored here for later realization in code generations
       /// stage).
-      unique_ptr<FunctionStmt> ast;
+      shared_ptr<FunctionStmt> ast;
       /// IR function pointer.
       ir::Func *ir;
     };

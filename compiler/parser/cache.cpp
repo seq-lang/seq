@@ -48,7 +48,7 @@ types::FuncTypePtr Cache::findFunction(const string &name) const {
 
 types::FuncTypePtr Cache::findMethod(types::ClassType *typ, const string &member,
                                      const vector<pair<string, types::TypePtr>> &args) {
-  auto e = make_unique<IdExpr>(typ->name);
+  auto e = make_shared<IdExpr>(typ->name);
   e->type = typ->getClass();
   seqassert(e->type, "not a class");
   int oldAge = typeCtx->age;
@@ -60,7 +60,7 @@ types::FuncTypePtr Cache::findMethod(types::ClassType *typ, const string &member
 
 ir::types::Type *Cache::realizeType(types::ClassTypePtr type,
                                     const vector<types::TypePtr> &generics) {
-  auto e = make_unique<IdExpr>(type->name);
+  auto e = make_shared<IdExpr>(type->name);
   e->type = type;
   type = typeCtx->instantiateGeneric(e.get(), type, generics)->getClass();
   auto tv = TypecheckVisitor(typeCtx);
@@ -76,7 +76,7 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
                                  const vector<types::TypePtr> &args,
                                  const vector<types::TypePtr> &generics,
                                  types::ClassTypePtr parentClass) {
-  auto e = make_unique<IdExpr>(type->funcName);
+  auto e = make_shared<IdExpr>(type->funcName);
   e->type = type;
   type = typeCtx->instantiate(e.get(), type, parentClass.get(), false)->getFunc();
   if (args.size() != type->args.size())

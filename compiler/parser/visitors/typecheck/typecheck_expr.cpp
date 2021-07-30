@@ -1402,7 +1402,7 @@ string TypecheckVisitor::generateTupleStub(int len, const string &name,
       generics.emplace_back(Param{format("T{}", i), nullptr, nullptr});
       args.emplace_back(Param{names[i - 1], N<IdExpr>(format("T{}", i)), nullptr});
     }
-    StmtPtr stmt = make_unique<ClassStmt>(typeName, move(generics), move(args), nullptr,
+    StmtPtr stmt = make_shared<ClassStmt>(typeName, move(generics), move(args), nullptr,
                                           Attr({Attr::Tuple}));
     stmt->setSrcInfo(ctx->cache->generateSrcInfo());
 
@@ -1463,7 +1463,7 @@ string TypecheckVisitor::generateFunctionStub(int n) {
     stmts.push_back(N<ReturnStmt>(N<CallExpr>(
         N<IndexExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "fn_new"), clone(type)),
         N<IdExpr>("what"))));
-    fns.emplace_back(make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{},
+    fns.emplace_back(make_shared<FunctionStmt>("__new__", clone(type), vector<Param>{},
                                                move(params),
                                                N<SuiteStmt>(move(stmts))));
     params.clear();
@@ -1472,7 +1472,7 @@ string TypecheckVisitor::generateFunctionStub(int n) {
     //   return what
     params.emplace_back(Param{"what", clone(type)});
     fns.emplace_back(
-        make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{}, move(params),
+        make_shared<FunctionStmt>("__new__", clone(type), vector<Param>{}, move(params),
                                   N<SuiteStmt>(N<ReturnStmt>(N<IdExpr>("what")))));
     params.clear();
     // def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]:
@@ -1480,7 +1480,7 @@ string TypecheckVisitor::generateFunctionStub(int n) {
     params.emplace_back(Param{"self", clone(type)});
     stmts.push_back(N<ReturnStmt>(N<CallExpr>(
         N<DotExpr>(N<IdExpr>("__internal__"), "fn_raw"), N<IdExpr>("self"))));
-    fns.emplace_back(make_unique<FunctionStmt>(
+    fns.emplace_back(make_shared<FunctionStmt>(
         "__raw__", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte")), vector<Param>{},
         move(params), N<SuiteStmt>(move(stmts))));
     params.clear();
@@ -1492,13 +1492,13 @@ string TypecheckVisitor::generateFunctionStub(int n) {
         N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "raw_type_str"),
                                   N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__raw__")),
                                   N<StringExpr>("function"))));
-    fns.emplace_back(make_unique<FunctionStmt>("__str__", N<IdExpr>("str"),
+    fns.emplace_back(make_shared<FunctionStmt>("__str__", N<IdExpr>("str"),
                                                vector<Param>{}, move(params),
                                                N<SuiteStmt>(move(stmts))));
     params.clear();
     stmts.clear();
     // class Function.N[TR, T1, ..., TN]
-    StmtPtr stmt = make_unique<ClassStmt>(typeName, move(generics), move(args),
+    StmtPtr stmt = make_shared<ClassStmt>(typeName, move(generics), move(args),
                                           N<SuiteStmt>(move(fns)),
                                           Attr({Attr::Internal, Attr::Tuple}));
     stmt->setSrcInfo(ctx->cache->generateSrcInfo());
@@ -1560,13 +1560,13 @@ void TypecheckVisitor::generateFnCall(int n) {
     string llvmNonVoid =
         format("%0 = call {{=TR}} %self({})\nret {{=TR}} %0", join(llvmArgs, ", "));
     string llvmVoid = format("call {{=TR}} %self({})\nret void", join(llvmArgs, ", "));
-    fns.emplace_back(make_unique<FunctionStmt>(
+    fns.emplace_back(make_shared<FunctionStmt>(
         "__call__.void", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
         N<SuiteStmt>(N<ExprStmt>(N<StringExpr>(llvmVoid))), Attr({Attr::LLVM})));
-    fns.emplace_back(make_unique<FunctionStmt>(
+    fns.emplace_back(make_shared<FunctionStmt>(
         "__call__.ret", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
         N<SuiteStmt>(N<ExprStmt>(N<StringExpr>(llvmNonVoid))), Attr({Attr::LLVM})));
-    fns.emplace_back(make_unique<FunctionStmt>(
+    fns.emplace_back(make_shared<FunctionStmt>(
         "__call__", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
         N<SuiteStmt>(N<IfStmt>(
             N<CallExpr>(N<IdExpr>("isinstance"), N<IdExpr>("TR"), N<IdExpr>("void")),

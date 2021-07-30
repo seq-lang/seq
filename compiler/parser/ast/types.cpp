@@ -581,7 +581,7 @@ string PartialType::realizedName() const {
 }
 
 StaticType::StaticType(vector<ClassType::Generic> generics,
-                       pair<unique_ptr<Expr>, EvalFn> staticExpr,
+                       pair<shared_ptr<Expr>, EvalFn> staticExpr,
                        pair<bool, int> staticEvaluation)
     : generics(move(generics)), staticEvaluation(move(staticEvaluation)),
       staticExpr(move(staticExpr)) {

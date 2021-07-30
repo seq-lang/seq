@@ -44,8 +44,7 @@ struct Stmt;
 
 /**
  * A Seq AST expression.
- * Each AST expression owns its children and is intended to be instantiated as a
- * unique_ptr.
+ * Each AST expression is intended to be instantiated as a shared_ptr.
  */
 struct Expr : public seq::SrcObject {
   typedef Expr base_type;
@@ -81,7 +80,7 @@ public:
   /// Convert a node to an S-expression.
   virtual string toString() const = 0;
   /// Deep copy a node.
-  virtual unique_ptr<Expr> clone() const = 0;
+  virtual shared_ptr<Expr> clone() const = 0;
   /// Accept an AST visitor.
   virtual void accept(ASTVisitor &visitor) = 0;
 
@@ -122,7 +121,7 @@ protected:
   /// Add a type to S-expression string.
   string wrapType(const string &sexpr) const;
 };
-using ExprPtr = unique_ptr<Expr>;
+using ExprPtr = shared_ptr<Expr>;
 
 /// Function signature parameter helper node (name: type = deflt).
 struct Param : public seq::SrcObject {
@@ -593,12 +592,12 @@ struct RangeExpr : public Expr {
 /// (to support short-circuiting).
 /// @example (a = 1; b = 2; a + b)
 struct StmtExpr : public Expr {
-  vector<unique_ptr<Stmt>> stmts;
+  vector<shared_ptr<Stmt>> stmts;
   ExprPtr expr;
 
-  StmtExpr(vector<unique_ptr<Stmt>> &&stmts, ExprPtr expr);
-  StmtExpr(unique_ptr<Stmt> stmt, ExprPtr expr);
-  StmtExpr(unique_ptr<Stmt> stmt, unique_ptr<Stmt> stmt2, ExprPtr expr);
+  StmtExpr(vector<shared_ptr<Stmt>> &&stmts, ExprPtr expr);
+  StmtExpr(shared_ptr<Stmt> stmt, ExprPtr expr);
+  StmtExpr(shared_ptr<Stmt> stmt, shared_ptr<Stmt> stmt2, ExprPtr expr);
   StmtExpr(const StmtExpr &expr);
 
   string toString() const override;

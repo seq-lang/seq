@@ -1576,7 +1576,7 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
     seqassert(false, "invalid magic {}", op);
   }
 #undef I
-  auto t = make_unique<FunctionStmt>(format("__{}__", op), move(ret), vector<Param>{},
+  auto t = make_shared<FunctionStmt>(format("__{}__", op), move(ret), vector<Param>{},
                                      move(fargs), N<SuiteStmt>(move(stmts)), attr);
   t->setSrcInfo(ctx->cache->generateSrcInfo());
   return t;

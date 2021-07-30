@@ -199,7 +199,7 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
     vector<types::TypePtr> reordered;
     vector<CallExpr::Arg> callArgs;
     for (auto &a : args) {
-      callArgs.push_back({a.first, make_unique<NoneExpr>()}); // dummy expression
+      callArgs.push_back({a.first, make_shared<NoneExpr>()}); // dummy expression
       callArgs.back().value->setType(a.second);
     }
     auto score = reorderNamedArgs(

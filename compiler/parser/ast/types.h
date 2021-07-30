@@ -367,10 +367,10 @@ struct StaticType : public Type {
   /// A static expression that needs to be evaluated. .first is a pointer to such
   /// expression, while .second is a function that evaluates it. .first can be nullptr
   /// if there is no expression (assuming that staticEvaluation.first is set).
-  pair<unique_ptr<Expr>, EvalFn> staticExpr;
+  pair<shared_ptr<Expr>, EvalFn> staticExpr;
 
   StaticType(vector<ClassType::Generic> generics,
-             pair<unique_ptr<Expr>, EvalFn> staticExpr,
+             pair<shared_ptr<Expr>, EvalFn> staticExpr,
              pair<bool, int> staticEvaluation);
   /// Convenience function for static types whose evaluation is already known.
   explicit StaticType(int i);

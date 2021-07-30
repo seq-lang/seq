@@ -35,8 +35,7 @@ struct FunctionStmt;
 
 /**
  * A Seq AST statement.
- * Each AST statement owns its children and is intended to be instantiated as a
- * unique_ptr.
+ * Each AST statement is intended to be instantiated as a shared_ptr.
  */
 struct Stmt : public seq::SrcObject {
   typedef Stmt base_type;
@@ -56,7 +55,7 @@ public:
   string toString() const;
   virtual string toString(int indent) const = 0;
   /// Deep copy a node.
-  virtual unique_ptr<Stmt> clone() const = 0;
+  virtual shared_ptr<Stmt> clone() const = 0;
   /// Accept an AST visitor.
   virtual void accept(ASTVisitor &) = 0;
 
@@ -76,7 +75,7 @@ public:
   /// statement itself
   virtual const Stmt *firstInBlock() const { return this; }
 };
-using StmtPtr = unique_ptr<Stmt>;
+using StmtPtr = shared_ptr<Stmt>;
 
 /// Suite (block of statements) statement (stmt...).
 /// @example a = 5; foo(1)

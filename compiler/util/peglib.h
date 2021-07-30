@@ -460,7 +460,7 @@ inline constexpr unsigned int operator"" _(const char *s, size_t l) {
 /*
  * Semantic values
  */
-struct SemanticValues : protected std::vector<std::any> {
+struct SemanticValues : public std::vector<std::any> {
   // Input text
   const char *path = nullptr;
   const char *ss = nullptr;

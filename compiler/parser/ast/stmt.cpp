@@ -14,7 +14,7 @@
 #include "parser/visitors/visitor.h"
 
 #define ACCEPT_IMPL(T, X)                                                              \
-  StmtPtr T::clone() const { return make_unique<T>(*this); }                           \
+  StmtPtr T::clone() const { return make_shared<T>(*this); }                           \
   void T::accept(X &visitor) { visitor.visit(this); }
 
 using fmt::format;
