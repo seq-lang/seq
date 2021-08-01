@@ -57,13 +57,21 @@ public:
     messages.push_back(msg);
     locations.push_back(info);
   }
+  ParserException() noexcept : ParserException("", {}) {}
   explicit ParserException(const string &msg) noexcept : ParserException(msg, {}) {}
-  ParserException(const ParserException &e) noexcept : std::runtime_error(e) {}
+  ParserException(const ParserException &e) noexcept
+      : std::runtime_error(e), locations(e.locations), messages(e.messages) {}
 
   /// Add an error message to the current stack trace
   void trackRealize(const string &msg, const SrcInfo &info) {
     locations.push_back(info);
     messages.push_back(fmt::format("while realizing {}", msg));
+  }
+
+  /// Add an error message to the current stack trace
+  void track(const string &msg, const SrcInfo &info) {
+    locations.push_back(info);
+    messages.push_back(msg);
   }
 };
 } // namespace exc

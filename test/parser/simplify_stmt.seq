@@ -674,7 +674,7 @@ def foo(x):
 
 #%% class_err_12,barebones
 def foo(x):
-    T = typeof(x)
+    T = type(x)
     class A:
         def bar():
             print T()

@@ -511,7 +511,9 @@ print isinstance({1, 2}, List)
 print staticlen((1, 2, 3)), staticlen((1, )), staticlen('hehe')
 #: 3 1 2
 
-print hasattr(typeof([1, 2]), "__getitem__")
+print hasattr([1, 2], "__getitem__")
+#: True
+print hasattr(type([1, 2]), "__getitem__")
 #: True
 print hasattr(int, "__getitem__")
 #: False
@@ -528,9 +530,9 @@ print a.__class__ #: Array[int]
 
 #%% typeof,barebones
 a = 5
-z = List[typeof(a)]()
+z = List[type(a)]()
 z.append(6)
-print z.__class__, z, typeof(1.1).__class__  #: List[int] [6] float
+print z.__class__, z, type(1.1).__class__  #: List[int] [6] float
 
 #%% ptr,barebones
 v = 5

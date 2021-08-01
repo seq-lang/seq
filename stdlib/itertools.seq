@@ -28,7 +28,7 @@ def combinations(pool, r: int):
 
     if r < 0:
         raise ValueError("r must be non-negative")
-    if hasattr(typeof(pool), "__getitem__") and hasattr(typeof(pool), "__len__"):
+    if hasattr(pool, "__getitem__") and hasattr(pool, "__len__"):
         return combinations_helper(pool, r)
     else:
         return combinations_helper([a for a in pool], r)
@@ -59,7 +59,7 @@ def combinations_with_replacement(pool, r: int):
 
     if r < 0:
         raise ValueError("r must be non-negative")
-    if hasattr(typeof(pool), "__getitem__") and hasattr(typeof(pool), "__len__"):
+    if hasattr(pool, "__getitem__") and hasattr(pool, "__len__"):
         return combinations_with_replacement_helper(pool, r)
     else:
         return combinations_with_replacement_helper([a for a in pool], r)
@@ -226,7 +226,7 @@ def permutations(pool, r: Optional[int] = None):
 
     if r is not None and ~r < 0:
         raise ValueError("r must be non-negative")
-    if hasattr(typeof(pool), "__getitem__") and hasattr(typeof(pool), "__len__"):
+    if hasattr(pool, "__getitem__") and hasattr(pool, "__len__"):
         return permutations_helper(pool, r)
     else:
         return permutations_helper([a for a in pool], r)
@@ -403,7 +403,7 @@ class product:
         if repeat < 0:
             raise ValueError("repeat argument cannot be negative")
         pools = [list(pool) for _ in range(repeat) for pool in args]
-        result = [List[typeof(pools[0][0])]()]
+        result = [List[type(pools[0][0])]()]
         for pool in pools:
             result = [x+[y] for x in result for y in pool]
         for prod in result:

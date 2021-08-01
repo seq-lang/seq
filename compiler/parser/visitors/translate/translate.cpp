@@ -23,8 +23,8 @@ using std::function;
 using std::get;
 using std::make_shared;
 using std::move;
-using std::stack;
 using std::shared_ptr;
+using std::stack;
 using std::vector;
 
 namespace seq {
@@ -70,11 +70,11 @@ void TranslateVisitor::visit(IntExpr *expr) {
 }
 
 void TranslateVisitor::visit(FloatExpr *expr) {
-  result = make<ir::FloatConst>(expr, expr->value, getType(expr->getType()));
+  result = make<ir::FloatConst>(expr, expr->floatValue, getType(expr->getType()));
 }
 
 void TranslateVisitor::visit(StringExpr *expr) {
-  result = make<ir::StringConst>(expr, expr->value, getType(expr->getType()));
+  result = make<ir::StringConst>(expr, expr->getValue(), getType(expr->getType()));
 }
 
 void TranslateVisitor::visit(IdExpr *expr) {
@@ -436,7 +436,7 @@ void TranslateVisitor::transformLLVMFunction(types::FuncType *type, FunctionStmt
                 ast->suite->firstInBlock()->getExpr()->expr->getString(),
             "LLVM function does not begin with a string");
   std::istringstream sin(
-      ast->suite->firstInBlock()->getExpr()->expr->getString()->value);
+      ast->suite->firstInBlock()->getExpr()->expr->getString()->getValue());
   vector<ir::types::Generic> literals;
   auto &ss = ast->suite->getSuite()->stmts;
   for (int i = 1; i < ss.size(); i++) {

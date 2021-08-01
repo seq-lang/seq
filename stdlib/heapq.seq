@@ -191,7 +191,7 @@ def nsmallest[T](n: int, iterable: Generator[T], key = Optional[int]()):
     else:
         # General case, slowest method
         it = iter(iterable)
-        result = List[Tuple[typeof(key(T())),int,T]](n)
+        result = List[Tuple[type(key(T())),int,T]](n)
         done = False
         for i in range(n):
             if it.done():
@@ -263,7 +263,7 @@ def nlargest[T](n: int, iterable: Generator[T], key = Optional[int]()):
     else:
         # General case, slowest method
         it = iter(iterable)
-        result = List[Tuple[typeof(key(T())),int,T]](n)
+        result = List[Tuple[type(key(T())),int,T]](n)
         done = False
         for i in range(0, -n, -1):
             if it.done():

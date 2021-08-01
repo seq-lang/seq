@@ -29,7 +29,7 @@ def print(*args, sep: str = ' ', end: str = '\n', file=_stdout, flush: bool = Fa
 def min(*args):
     if staticlen(args) == 0:
         raise ValueError("empty sequence")
-    elif staticlen(args) == 1 and hasattr(typeof(args[0]), "__iter__"):
+    elif staticlen(args) == 1 and hasattr(args[0], "__iter__"):
         x = args[0].__iter__()
         if not x.done():
             s = x.next()
@@ -50,7 +50,7 @@ def min(*args):
 def max(*args):
     if staticlen(args) == 0:
         raise ValueError("empty sequence")
-    elif staticlen(args) == 1 and hasattr(typeof(args[0]), "__iter__"):
+    elif staticlen(args) == 1 and hasattr(args[0], "__iter__"):
         x = args[0].__iter__()
         if not x.done():
             s = x.next()

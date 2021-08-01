@@ -13,7 +13,7 @@
 
 #include "parser/ast.h"
 #include "parser/common.h"
-#include "parser/ocaml/ocaml.h"
+#include "parser/peg/peg.h"
 #include "parser/visitors/doc/doc.h"
 #include "parser/visitors/format/format.h"
 
@@ -68,7 +68,7 @@ shared_ptr<int> DocContext::find(const string &s) const {
 string getDocstr(const StmtPtr &s) {
   if (auto se = s->getExpr())
     if (auto e = se->expr->getString())
-      return e->value;
+      return e->getValue();
   return "";
 }
 

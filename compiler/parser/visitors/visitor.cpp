@@ -41,7 +41,6 @@ void ASTVisitor::visit(StackAllocExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(DotExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(SliceExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(EllipsisExpr *expr) { defaultVisit(expr); }
-void ASTVisitor::visit(TypeOfExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(PtrExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(LambdaExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(YieldExpr *expr) { defaultVisit(expr); }

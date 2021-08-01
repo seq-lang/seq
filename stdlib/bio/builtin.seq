@@ -84,7 +84,7 @@ def _kmers_canonical_with_pos[K](self: seq):
     return self.kmers_canonical_with_pos[K]()
 
 def base[K,T](kmer: K, idx: int, b: T):
-    U = typeof(kmer.as_int())
+    U = type(kmer.as_int())
     if idx < 0:
         idx += len(kmer)
     idx = K.len() - idx - 1

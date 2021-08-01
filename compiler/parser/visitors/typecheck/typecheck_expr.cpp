@@ -519,19 +519,6 @@ void TypecheckVisitor::visit(EllipsisExpr *expr) {
   unify(expr->type, ctx->addUnbound(expr, ctx->typecheckLevel));
 }
 
-void TypecheckVisitor::visit(TypeOfExpr *expr) {
-  expr->expr = transform(expr->expr);
-  unify(expr->type, expr->expr->type);
-
-  if (auto rt = realize(expr->type)) {
-    unify(expr->type, rt);
-    resultExpr = N<IdExpr>(expr->type->realizedName());
-    unify(resultExpr->type, expr->type);
-    resultExpr->done = true;
-    resultExpr->markType();
-  }
-}
-
 void TypecheckVisitor::visit(PtrExpr *expr) {
   expr->expr = transform(expr->expr);
   auto t = ctx->instantiateGeneric(expr, ctx->findInternal("Ptr"), {expr->expr->type});
@@ -1337,7 +1324,7 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
     else
       return {true, transform(N<IntExpr>(typ->getRecord()->args.size()))};
   } else if (val == "hasattr") {
-    auto member = expr->args[1].value->getString()->value;
+    auto member = expr->args[1].value->getString()->getValue();
     auto oldActivation = ctx->allowActivation;
     ctx->allowActivation = false;
     expr->args[0].value = transformType(expr->args[0].value);
@@ -1350,7 +1337,19 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
                         !ctx->findMethod(typ->getClass()->name, member).empty() ||
                         ctx->findMember(typ->getClass()->name, member)))};
   } else if (val == "compile_error") {
-    error("custom error: {}", expr->args[0].value->getString()->value);
+    error("custom error: {}", expr->args[0].value->getString()->getValue());
+  } else if (val == "type") {
+    expr->args[0].value = transform(expr->args[0].value);
+    unify(expr->type, expr->args[0].value->getType());
+    if (auto rt = realize(expr->type)) {
+      unify(expr->type, rt);
+      auto resultExpr = N<IdExpr>(expr->type->realizedName());
+      unify(resultExpr->type, expr->type);
+      resultExpr->done = true;
+      resultExpr->markType();
+      return {true, resultExpr};
+    }
+    return {true, nullptr};
   }
   return {false, nullptr};
 }

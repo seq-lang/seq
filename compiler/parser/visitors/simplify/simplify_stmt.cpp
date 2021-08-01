@@ -13,7 +13,7 @@
 
 #include "parser/ast.h"
 #include "parser/common.h"
-#include "parser/ocaml/ocaml.h"
+#include "parser/peg/peg.h"
 #include "parser/visitors/format/format.h"
 #include "parser/visitors/simplify/simplify.h"
 
@@ -99,8 +99,9 @@ void SimplifyVisitor::visit(DelStmt *stmt) {
     resultStmt = N<ExprStmt>(transform(
         N<CallExpr>(N<DotExpr>(clone(eix->expr), "__delitem__"), clone(eix->index))));
   } else if (auto ei = stmt->expr->getId()) {
-    resultStmt = transform(N<AssignStmt>(
-        clone(stmt->expr), N<CallExpr>(N<TypeOfExpr>(clone(stmt->expr)))));
+    resultStmt = transform(
+        N<AssignStmt>(clone(stmt->expr),
+                      N<CallExpr>(N<CallExpr>(N<IdExpr>("type"), clone(stmt->expr)))));
     ctx->remove(ei->value);
   } else {
     error("invalid del statement");
@@ -1029,7 +1030,7 @@ StmtPtr SimplifyVisitor::transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr 
   }
   pattern = transform(pattern); // basically check for errors
   return N<IfStmt>(
-      N<CallExpr>(N<IdExpr>("hasattr"), N<TypeOfExpr>(var->clone()),
+      N<CallExpr>(N<IdExpr>("hasattr"), N<CallExpr>(N<IdExpr>("type"), var->clone()),
                   N<StringExpr>("__match__")),
       N<IfStmt>(N<CallExpr>(N<DotExpr>(var->clone(), "__match__"), move(pattern)),
                 move(suite)));
@@ -1228,7 +1229,7 @@ StmtPtr SimplifyVisitor::transformPythonDefinition(const string &name,
                                                    const Stmt *codeStmt) {
   seqassert(codeStmt && codeStmt->getExpr() && codeStmt->getExpr()->expr->getString(),
             "invalid Python definition");
-  auto code = codeStmt->getExpr()->expr->getString()->value;
+  auto code = codeStmt->getExpr()->expr->getString()->getValue();
   vector<string> pyargs;
   for (const auto &a : args)
     pyargs.emplace_back(a.name);
@@ -1244,11 +1245,11 @@ StmtPtr SimplifyVisitor::transformLLVMDefinition(const Stmt *codeStmt) {
   seqassert(codeStmt && codeStmt->getExpr() && codeStmt->getExpr()->expr->getString(),
             "invalid LLVM definition");
 
-  auto code = codeStmt->getExpr()->expr->getString()->value;
+  auto code = codeStmt->getExpr()->expr->getString()->getValue();
   vector<StmtPtr> items;
   auto se = N<StringExpr>("");
-  string &finalCode = se->value;
-  items.push_back(N<ExprStmt>(move(se)));
+  string finalCode = se->getValue();
+  items.push_back(N<ExprStmt>(se));
 
   int braceCount = 0, braceStart = 0;
   for (int i = 0; i < code.size(); i++) {
@@ -1278,6 +1279,7 @@ StmtPtr SimplifyVisitor::transformLLVMDefinition(const Stmt *codeStmt) {
     error("invalid LLVM substitution");
   if (braceStart != code.size())
     finalCode += escapeFStringBraces(code, braceStart, int(code.size()) - braceStart);
+  se->strings[0].first = finalCode;
   return N<SuiteStmt>(move(items));
 }
 

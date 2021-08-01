@@ -13,7 +13,7 @@
 
 #include "parser/ast.h"
 #include "parser/common.h"
-#include "parser/ocaml/ocaml.h"
+#include "parser/peg/peg.h"
 #include "parser/visitors/simplify/simplify.h"
 #include "parser/visitors/simplify/simplify_ctx.h"
 

@@ -53,7 +53,6 @@ public:
   virtual void visit(DotExpr *);
   virtual void visit(SliceExpr *);
   virtual void visit(EllipsisExpr *);
-  virtual void visit(TypeOfExpr *);
   virtual void visit(LambdaExpr *);
   virtual void visit(YieldExpr *);
   virtual void visit(AssignExpr *);

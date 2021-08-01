@@ -154,7 +154,7 @@ print d  #: {0: 9}
 @extend
 class List[T]:
     def __init__(self, dummy: bool, other):
-        if hasattr(typeof(other), '__len__'):
+        if hasattr(other, '__len__'):
             print 'optimize', other.__len__()
             self.__init__(other.__len__())
         else:

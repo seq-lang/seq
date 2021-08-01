@@ -8,7 +8,7 @@ from bio import *
 n = 0
 def update(kmer):
     global n
-    x = typeof(kmer)() |> base(len(kmer) // 2, k'T')
+    x = type(kmer)() |> base(len(kmer) // 2, k'T')
     if kmer > x:
         n += 1
 

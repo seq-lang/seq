@@ -10,7 +10,7 @@ def dist_fast(k1, k2):
 
 def dist_slow(k1, k2):
     d = 0
-    for i in range(typeof(k1).len()):
+    for i in range(type(k1).len()):
         if k1[i] != k2[i]:
             d += 1
     return d

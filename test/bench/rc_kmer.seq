@@ -10,14 +10,14 @@ ref = [a.seq for a in FASTA(argv[1])]
 print 'done.'
 
 def test_slow(kmer):
-    rc = typeof(kmer).as_int()
-    I = typeof(rc)
+    rc = type(kmer).as_int()
+    I = type(rc)
 
     for i in range(len(kmer)):
         b = I(int((~kmer[i]).as_int()))
         b <<= I(2*i)
         rc |= b
-    return kmer > typeof(kmer)(rc)
+    return kmer > type(kmer)(rc)
 
 def test_lookup[K]():
     n = 0

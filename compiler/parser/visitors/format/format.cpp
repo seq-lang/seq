@@ -84,7 +84,7 @@ void FormatVisitor::visit(FloatExpr *expr) {
 }
 
 void FormatVisitor::visit(StringExpr *expr) {
-  result = renderExpr(expr, "\"{}\"", escape(expr->value));
+  result = renderExpr(expr, "\"{}\"", escape(expr->getValue()));
 }
 
 void FormatVisitor::visit(IdExpr *expr) {
@@ -215,10 +215,6 @@ void FormatVisitor::visit(SliceExpr *expr) {
 }
 
 void FormatVisitor::visit(EllipsisExpr *expr) { result = renderExpr(expr, "..."); }
-
-void FormatVisitor::visit(TypeOfExpr *expr) {
-  result = renderExpr(expr, "{}({})", keyword("typeof"), transform(expr->expr));
-}
 
 void FormatVisitor::visit(PtrExpr *expr) {
   result = renderExpr(expr, "__ptr__({})", transform(expr->expr));

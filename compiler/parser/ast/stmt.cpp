@@ -214,10 +214,14 @@ ImportStmt::ImportStmt(const ImportStmt &stmt)
     : Stmt(stmt), from(ast::clone(stmt.from)), what(ast::clone(stmt.what)), as(stmt.as),
       dots(stmt.dots), args(ast::clone_nop(stmt.args)), ret(ast::clone(stmt.ret)) {}
 string ImportStmt::toString(int) const {
-  return format("(import {}{}{}{})", what->toString(),
+  vector<string> va;
+  for (auto &a : args)
+    va.push_back(a.toString());
+  return format("(import {}{}{}{}{}{})", from->toString(),
                 as.empty() ? "" : format(" #:as '{}", as),
-                from ? format(" #:from {}", from->toString()) : "",
+                what ? format(" #:what {}", from->toString()) : "",
                 dots ? format(" #:dots {}", dots) : "",
+                va.empty() ? "" : format(" #:args ({})", join(va)),
                 ret ? format(" #:ret {}", ret->toString()) : "");
 }
 ACCEPT_IMPL(ImportStmt, ASTVisitor);

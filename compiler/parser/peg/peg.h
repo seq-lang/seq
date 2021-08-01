@@ -19,8 +19,7 @@ namespace seq {
 namespace ast {
 
 /// Parse a Seq code block with the appropriate file and position offsets.
-StmtPtr parseCode(const string &file, const string &code, int line_offset = 0,
-                  int col_offset = 0, const string &rule = "program");
+StmtPtr parseCode(const string &file, const string &code, int line_offset = 0);
 /// Parse a Seq code expression.
 ExprPtr parseExpr(const string &code, const seq::SrcInfo &offset);
 /// Parse a Seq file.

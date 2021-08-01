@@ -94,7 +94,6 @@ public:
   void visit(DotExpr *) override;
   void visit(SliceExpr *) override;
   void visit(EllipsisExpr *) override;
-  void visit(TypeOfExpr *) override;
   void visit(PtrExpr *) override;
   void visit(LambdaExpr *) override;
   void visit(YieldExpr *) override;

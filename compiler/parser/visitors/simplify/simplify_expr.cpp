@@ -14,7 +14,7 @@
 #include "parser/ast.h"
 #include "parser/cache.h"
 #include "parser/common.h"
-#include "parser/ocaml/ocaml.h"
+#include "parser/peg/peg.h"
 #include "parser/visitors/simplify/simplify.h"
 
 using fmt::format;
@@ -56,20 +56,35 @@ void SimplifyVisitor::visit(IntExpr *expr) {
   resultExpr = transformInt(expr->value, expr->suffix);
 }
 
+void SimplifyVisitor::visit(FloatExpr *expr) {
+  resultExpr = transformFloat(expr->value, expr->suffix);
+}
+
 void SimplifyVisitor::visit(StringExpr *expr) {
-  if (expr->prefix == "f") {
-    /// F-strings
-    resultExpr = transformFString(expr->value);
-  } else if (!expr->prefix.empty()) {
-    /// Custom-prefix strings
-    resultExpr = transform(
-        N<CallExpr>(N<IndexExpr>(N<DotExpr>(N<IdExpr>("str"),
-                                            format("__prefix_{}__", expr->prefix)),
-                                 N<IntExpr>(expr->value.size())),
-                    N<StringExpr>(expr->value)));
-  } else {
-    resultExpr = expr->clone();
+  vector<ExprPtr> exprs;
+  string concat;
+  int realStrings = 0;
+  for (auto &p : expr->strings) {
+    if (p.second == "f") {
+      /// F-strings
+      exprs.push_back(transformFString(p.first));
+    } else if (!p.second.empty()) {
+      /// Custom-prefix strings
+      exprs.push_back(transform(N<CallExpr>(
+          N<IndexExpr>(N<DotExpr>(N<IdExpr>("str"), format("__prefix_{}__", p.second)),
+                       N<IntExpr>(p.first.size())),
+          N<StringExpr>(p.first))));
+    } else {
+      exprs.push_back(N<StringExpr>(p.first));
+      concat += p.first;
+      realStrings++;
+    }
   }
+  if (realStrings == expr->strings.size())
+    resultExpr = N<StringExpr>(concat);
+  else
+    resultExpr =
+        transform(N<CallExpr>(N<DotExpr>(N<IdExpr>("str"), "cat"), move(exprs)));
 }
 
 void SimplifyVisitor::visit(IdExpr *expr) {
@@ -485,8 +500,8 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     auto s = transform(expr->args[1].value);
     if (!s->getString())
       error("hasattr requires the second string to be a compile-time string");
-    resultExpr = N<CallExpr>(clone(expr->expr),
-                             transformType(expr->args[0].value.get()), move(s));
+    auto arg = N<CallExpr>(N<IdExpr>("type"), expr->args[0].value);
+    resultExpr = N<CallExpr>(clone(expr->expr), transformType(arg.get()), move(s));
     resultExpr->isStaticExpr = true;
     return;
   }
@@ -529,6 +544,15 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     ctx->popBlock();
     return;
   }
+  // 8. type(i)
+  if (expr->expr->isId("type")) {
+    if (expr->args.size() != 1 || !expr->args[0].name.empty())
+      error("type only accepts two arguments");
+    resultExpr =
+        N<CallExpr>(clone(expr->expr), transform(expr->args[0].value.get(), true));
+    resultExpr->markType();
+    return;
+  }
 
   auto e = transform(expr->expr.get(), true);
   // 8. namedtuple
@@ -541,15 +565,16 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     for (auto &i : expr->args[1].value->getList()->items)
       if (auto s = i->getString()) {
         generics.emplace_back(Param{format("T{}", ti), nullptr, nullptr});
-        args.emplace_back(Param{s->value, N<IdExpr>(format("T{}", ti++)), nullptr});
+        args.emplace_back(
+            Param{s->getValue(), N<IdExpr>(format("T{}", ti++)), nullptr});
       } else if (i->getTuple() && i->getTuple()->items.size() == 2 &&
                  i->getTuple()->items[0]->getString()) {
-        args.emplace_back(Param{i->getTuple()->items[0]->getString()->value,
+        args.emplace_back(Param{i->getTuple()->items[0]->getString()->getValue(),
                                 transformType(i->getTuple()->items[1].get()), nullptr});
       } else {
         error("invalid namedtuple arguments");
       }
-    auto name = expr->args[0].value->getString()->value;
+    auto name = expr->args[0].value->getString()->getValue();
     transform(
         N<ClassStmt>(name, move(generics), move(args), nullptr, Attr({Attr::Tuple})));
     auto i = N<IdExpr>(name);
@@ -661,11 +686,6 @@ void SimplifyVisitor::visit(EllipsisExpr *expr) {
   error("unexpected ellipsis expression");
 }
 
-void SimplifyVisitor::visit(TypeOfExpr *expr) {
-  resultExpr = N<TypeOfExpr>(transform(expr->expr.get(), true));
-  resultExpr->markType();
-}
-
 void SimplifyVisitor::visit(YieldExpr *expr) {
   if (!ctx->inFunction())
     error("expected function body");
@@ -734,6 +754,21 @@ ExprPtr SimplifyVisitor::transformInt(const string &value, const string &suffix)
   /// NOTE: you cannot neither use binary (0bXXX) format here.
   return transform(
       N<CallExpr>(N<DotExpr>(N<IdExpr>("int"), format("__suffix_{}__", suffix)),
+                  N<StringExpr>(value)));
+}
+
+ExprPtr SimplifyVisitor::transformFloat(const string &value, const string &suffix) {
+  try {
+    if (suffix.empty()) {
+      auto expr = N<FloatExpr>(std::stod(value));
+      return expr;
+    }
+  } catch (std::out_of_range &) {
+    error("integer {} out of range", value);
+  }
+  /// Custom suffix sfx: use float.__suffix_sfx__(str) call.
+  return transform(
+      N<CallExpr>(N<DotExpr>(N<IdExpr>("float"), format("__suffix_{}__", suffix)),
                   N<StringExpr>(value)));
 }
 

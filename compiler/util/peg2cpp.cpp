@@ -797,11 +797,8 @@ public:
 
     // Check missing definitions
     auto referenced = std::unordered_set<std::string>{
-        WHITESPACE_DEFINITION_NAME,
-        WORD_DEFINITION_NAME,
-        RECOVER_DEFINITION_NAME,
-        start_rule.name,
-    };
+        WHITESPACE_DEFINITION_NAME, WORD_DEFINITION_NAME, RECOVER_DEFINITION_NAME,
+        start_rule.name, "fstring"};
 
     for (auto &[_, rule] : grammar) {
       ReferenceChecker vis(grammar, rule.params);
@@ -1042,14 +1039,19 @@ int main(int argc, char **argv) {
 
     string code = op->code;
     if (code.empty()) {
+      bool all_empty = true;
       if (auto ope = dynamic_cast<peg::PrioritizedChoice *>(op.get())) {
         for (int i = 0; i < ope->opes_.size(); i++)
-          if (!ope->opes_[i]->code.empty())
+          if (!ope->opes_[i]->code.empty()) {
             code +=
                 fmt::format("  if (VS.choice() == {}) {}\n", i, ope->opes_[i]->code);
-          else
+            all_empty = false;
+          } else {
             code += fmt::format("  if (VS.choice() == {}) return V0;\n", i);
+          }
       }
+      if (all_empty)
+        code = "";
       if (!code.empty())
         code = "{\n" + code + "}";
     }

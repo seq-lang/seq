@@ -187,11 +187,16 @@ struct IntExpr : public Expr {
 /// @example 13.15z
 /// @example e-12
 struct FloatExpr : public Expr {
-  double value;
+  /// Expression value is stored as a string that is parsed during the simplify stage.
+  string value;
   /// Number suffix (e.g. "u" for "123u").
   string suffix;
 
-  explicit FloatExpr(double value, string suffix = "");
+  /// Parsed value for 64-bit floats.
+  double floatValue;
+
+  explicit FloatExpr(double floatValue);
+  explicit FloatExpr(const string &value, string suffix = "");
   FloatExpr(const FloatExpr &expr) = default;
 
   string toString() const override;
@@ -202,16 +207,18 @@ struct FloatExpr : public Expr {
 /// @example s'ACGT'
 /// @example "fff"
 struct StringExpr : public Expr {
-  string value;
-  string prefix;
+  // Vector of {value, prefix} strings.
+  vector<pair<string, string>> strings;
 
   explicit StringExpr(string value, string prefix = "");
+  explicit StringExpr(vector<pair<string, string>> &&strings);
   StringExpr(const StringExpr &expr) = default;
 
   string toString() const override;
   ACCEPT(ASTVisitor);
 
   const StringExpr *getString() const override { return this; }
+  string getValue() const;
 };
 
 /// Identifier expression (value).
@@ -523,18 +530,6 @@ struct EllipsisExpr : public Expr {
   ACCEPT(ASTVisitor);
 
   const EllipsisExpr *getEllipsis() const override { return this; }
-};
-
-/// Type-of expression (typeof expr).
-/// @example typeof(5)
-struct TypeOfExpr : public Expr {
-  ExprPtr expr;
-
-  explicit TypeOfExpr(ExprPtr expr);
-  TypeOfExpr(const TypeOfExpr &n);
-
-  string toString() const override;
-  ACCEPT(ASTVisitor);
 };
 
 /// Lambda expression (lambda (vars)...: expr).

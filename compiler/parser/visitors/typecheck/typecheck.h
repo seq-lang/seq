@@ -113,9 +113,6 @@ public:
   void visit(StackAllocExpr *) override;
   /// Type-checks it with a new unbound type.
   void visit(EllipsisExpr *) override;
-  /// Transform a TypeOf expression typeof(expr) to a canonical name:
-  ///   IdExpr("foo[bar,baz]").
-  void visit(TypeOfExpr *) override;
   /// Type-checks __ptr__(expr) with Ptr[typeof(T)].
   void visit(PtrExpr *) override;
   /// Unifies a function return type with a Generator[T] where T is a new unbound type.
@@ -254,6 +251,7 @@ private:
   ///   hasattr(type, string) -> evaluates to bool
   ///   staticlen(var) -> evaluates to int
   ///   compile_error(string) -> raises a compiler error
+  ///   type(type) -> IdExpr(instantiated_type_name)
   ///
   /// Note: This is the most evil method in the whole parser suite. 🤦🏻‍
   ExprPtr transformCall(CallExpr *expr, const types::TypePtr &inType = nullptr,

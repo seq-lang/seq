@@ -12,8 +12,8 @@
 #include <vector>
 
 #include "parser/cache.h"
-#include "parser/ocaml/ocaml.h"
 #include "parser/parser.h"
+#include "parser/peg/peg.h"
 #include "parser/visitors/doc/doc.h"
 #include "parser/visitors/format/format.h"
 #include "parser/visitors/simplify/simplify.h"

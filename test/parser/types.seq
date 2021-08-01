@@ -720,7 +720,7 @@ print y.foo[float](1, 2.2) #: (2, 4.4)
 
 #%% forward,barebones
 def foo(f, x):
-    f[typeof(x)](x)
+    f[type(x)](x)
     print f.__class__
 def bar[T](x):
     print x, T.__class__

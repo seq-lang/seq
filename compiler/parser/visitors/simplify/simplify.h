@@ -115,6 +115,8 @@ public:
   void visit(NoneExpr *) override;
   /// See transformInt for details of integer transformation.
   void visit(IntExpr *) override;
+  /// See transformFloat for details of integer transformation.
+  void visit(FloatExpr *) override;
   /// String is transformed if it is an F-string or a custom-prefix string.
   /// Custom prefix strings are transformed to:
   ///   pfx'foo' -> str.__prefix_pfx__[len(foo)]('foo').
@@ -209,8 +211,6 @@ public:
   void visit(SliceExpr *) override;
   /// Disallow ellipsis except in a call expression.
   void visit(EllipsisExpr *) override;
-  /// TypeOf expressions will be handled during the type-checking stage.
-  void visit(TypeOfExpr *) override;
   /// Ensure that a yield is in a function.
   void visit(YieldExpr *) override;
   /// Transform lambda a, b: a+b+c to:
@@ -354,6 +354,8 @@ private:
   ///   123i56 -> Int[56]("123")  (same for UInt)
   ///   123pf -> int.__suffix_pf__("123")
   ExprPtr transformInt(const string &value, const string &suffix);
+  /// Converts a float string to double.
+  ExprPtr transformFloat(const string &value, const string &suffix);
   /// Converts a Python-like F-string (f"foo {x+1} bar") to a concatenation:
   ///   str.cat("foo ", str(x + 1), " bar").
   /// Also supports "{x=}" specifier (that prints the raw expression as well).

@@ -28,7 +28,7 @@ class List[T]:
 
     # Dummy __init__ used for list comprehension optimization
     def __init__(self, dummy: bool, other):
-        if hasattr(typeof(other), '__len__'):
+        if hasattr(other, '__len__'):
             self.__init__(other.__len__())
         else:
             self.__init__()

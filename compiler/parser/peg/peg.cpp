@@ -31,17 +31,17 @@ shared_ptr<peg::Grammar> initParser() {
   auto g = make_shared<peg::Grammar>();
   init_rules(*g);
   init_actions(*g);
-  ~(*g)["NLP"] <= peg::usr([](const char *, size_t, peg::SemanticValues &, any &dt) {
-    return any_cast<ParseContext &>(dt).parens ? 0 : -1;
+  ~(*g)["NLP"] <= peg::usr([](const char *s, size_t n, peg::SemanticValues &, any &dt) {
+    return any_cast<ParseContext &>(dt).parens ? 0 : (n >= 1 && s[0] == '\\' ? 1 : -1);
   });
   for (auto &x : *g) {
     auto v = peg::LinkReferences(*g, x.second.params);
     x.second.accept(v);
   }
   (*g)["program"].enablePackratParsing = true;
-  for (auto &rule :
-       vector<string>{"arguments", "slices", "genexp", "parentheses", "star_parens",
-                      "with_parens_item", "params", "from_as_parens"}) {
+  for (auto &rule : vector<string>{"arguments", "slices", "genexp", "parentheses",
+                                   "star_parens", "generics", "with_parens_item",
+                                   "params", "from_as_parens", "from_params"}) {
     (*g)[rule].enter = [](const char *, size_t, any &dt) {
       any_cast<ParseContext &>(dt).parens++;
     };
@@ -52,8 +52,9 @@ shared_ptr<peg::Grammar> initParser() {
   return g;
 }
 
-StmtPtr parseCode(const string &file, const string &code, int line_offset,
-                  int col_offset, const string &rule) {
+template <typename T>
+T parseCode(const string &file, string code, int line_offset, int col_offset,
+            const string &rule) {
   using namespace std::chrono;
   auto t = high_resolution_clock::now();
 
@@ -62,30 +63,35 @@ StmtPtr parseCode(const string &file, const string &code, int line_offset,
   if (!g)
     g = initParser();
 
-  auto log = [](size_t line, size_t col, const string &msg) {
-    LOG("line {}, col {}, msg {}", line, col, msg);
+  vector<tuple<size_t, size_t, string>> errors;
+  auto log = [&](size_t line, size_t col, const string &msg) {
+    errors.push_back({line, col, msg});
   };
-  StmtPtr result = nullptr;
+  T result = nullptr;
   auto ctx = make_any<ParseContext>(0, line_offset, col_offset);
   auto r = (*g)[rule].parse_and_get_value(code.c_str(), code.size(), ctx, result,
                                           file.c_str(), log);
-  if (!r.ret) {
-    if (r.error_info.message_pos) {
-      auto line = peg::line_info(code.c_str(), r.error_info.message_pos);
-      log(line.first + line_offset, line.second + col_offset, r.error_info.message);
-    } else {
-      auto line = peg::line_info(code.c_str(), r.error_info.error_pos);
-      log(line.first + line_offset, line.second + col_offset, "syntax error");
-    }
+  auto ret = r.ret && r.len == code.size();
+  if (!ret)
+    r.error_info.output_log(log, code.c_str(), code.size());
+  exc::ParserException ex;
+  if (!errors.empty()) {
+    for (auto &e : errors)
+      ex.track(fmt::format("{}", get<2>(e)),
+               SrcInfo(file, get<0>(e), get<0>(e), get<1>(e), get<1>(e)));
+    throw ex;
     return nullptr;
   }
   _ocaml_time += duration_cast<milliseconds>(high_resolution_clock::now() - t).count();
   return result;
 }
 
+StmtPtr parseCode(const string &file, const string &code, int line_offset) {
+  return parseCode<StmtPtr>(file, code + "\n", line_offset, 0, "program");
+}
+
 ExprPtr parseExpr(const string &code, const seq::SrcInfo &offset) {
-  seqassert(false, "not yet implemented");
-  return nullptr;
+  return parseCode<ExprPtr>(offset.file, code, offset.line, offset.col, "fstring");
 }
 
 StmtPtr parseFile(const string &file) {
@@ -103,12 +109,10 @@ StmtPtr parseFile(const string &file) {
   }
 
   auto result = parseCode(file, code);
-  LOG("peg := {}", result ? result->toString(0) : "<nullptr>");
+  // LOG("peg/{} := {}", file, result ? result->toString(0) : "<nullptr>");
+  // throw;
   // LOG("fmt := {}", FormatVisitor::apply(result));
-
-  LOG("[T] ocaml = {:.1f}", _ocaml_time / 1000.0);
-  seqassert(false, "not yet implemented");
-  return nullptr;
+  return result;
 }
 
 } // namespace ast

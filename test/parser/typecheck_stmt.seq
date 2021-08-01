@@ -225,7 +225,7 @@ def foo[N: int](x):
         return f'foo: {x[1]}'
     elif isinstance(x, Tuple) and (N >= 3 or staticlen(x) > 2):
         return x[2:]
-    elif hasattr(typeof(x), '__len__'):
+    elif hasattr(x, '__len__'):
         return 'len ' + str(x.__len__())
     else:
         compile_error('invalid type')

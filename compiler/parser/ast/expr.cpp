@@ -69,19 +69,31 @@ string IntExpr::toString() const {
 }
 ACCEPT_IMPL(IntExpr, ASTVisitor);
 
-FloatExpr::FloatExpr(double value, string suffix)
-    : Expr(), value(value), suffix(move(suffix)) {}
+FloatExpr::FloatExpr(double floatValue)
+    : Expr(), value(std::to_string(floatValue)), floatValue(floatValue) {}
+FloatExpr::FloatExpr(const string &value, string suffix)
+    : Expr(), value(value), suffix(move(suffix)), floatValue(0.0) {}
 string FloatExpr::toString() const {
   return wrapType(format("float {}{}", value,
                          suffix.empty() ? "" : format(" #:suffix \"{}\"", suffix)));
 }
 ACCEPT_IMPL(FloatExpr, ASTVisitor);
 
-StringExpr::StringExpr(string value, string prefix)
-    : Expr(), value(move(value)), prefix(move(prefix)) {}
+StringExpr::StringExpr(vector<pair<string, string>> &&strings)
+    : Expr(), strings(strings) {}
+StringExpr::StringExpr(string value, string prefix) : Expr() {
+  strings.push_back({value, prefix});
+}
 string StringExpr::toString() const {
-  return wrapType(format("string \"{}\"{}", escape(value),
-                         prefix.empty() ? "" : format(" #:prefix \"{}\"", prefix)));
+  vector<string> s;
+  for (auto &vp : strings)
+    s.push_back(format("\"{}\"{}", escape(vp.first),
+                       vp.second.empty() ? "" : format(" #:prefix \"{}\"", vp.second)));
+  return wrapType(format("string ({})", join(s)));
+}
+string StringExpr::getValue() const {
+  seqassert(!strings.empty(), "invalid StringExpr");
+  return strings[0].first;
 }
 ACCEPT_IMPL(StringExpr, ASTVisitor);
 
@@ -312,13 +324,6 @@ ACCEPT_IMPL(SliceExpr, ASTVisitor);
 EllipsisExpr::EllipsisExpr(bool isPipeArg) : Expr(), isPipeArg(isPipeArg) {}
 string EllipsisExpr::toString() const { return wrapType("ellipsis"); }
 ACCEPT_IMPL(EllipsisExpr, ASTVisitor);
-
-TypeOfExpr::TypeOfExpr(ExprPtr expr) : Expr(), expr(move(expr)) {}
-TypeOfExpr::TypeOfExpr(const TypeOfExpr &e) : Expr(e), expr(ast::clone(e.expr)) {}
-string TypeOfExpr::toString() const {
-  return wrapType(format("typeof {}", expr->toString()));
-}
-ACCEPT_IMPL(TypeOfExpr, ASTVisitor);
 
 LambdaExpr::LambdaExpr(vector<string> &&vars, ExprPtr expr)
     : Expr(), vars(vars), expr(move(expr)) {}
