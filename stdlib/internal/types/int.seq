@@ -281,3 +281,5 @@ class int:
     def __atomic_max__(d: Ptr[int], b: int) -> int:
         %tmp = atomicrmw max i64* %d, i64 %b seq_cst
         ret i64 %tmp
+    def __match__(self, i: int):
+        return self == i

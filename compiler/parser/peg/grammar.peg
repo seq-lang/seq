@@ -57,9 +57,9 @@ simple_stmt <- tlist(';', small_stmt) _ EOL {
 }
 small_stmt <-
   / assignment
-  / 'pass' { return any(ast<PassStmt>(LOC)); }
-  / 'break' { return any(ast<BreakStmt>(LOC)); }
-  / 'continue' { return any(ast<ContinueStmt>(LOC)); }
+  / 'pass' &(SPACE / EOL) { return any(ast<PassStmt>(LOC)); }
+  / 'break' &(SPACE / EOL) { return any(ast<BreakStmt>(LOC)); }
+  / 'continue' &(SPACE / EOL) { return any(ast<ContinueStmt>(LOC)); }
   / global_stmt
   / yield_stmt
   / assert_stmt

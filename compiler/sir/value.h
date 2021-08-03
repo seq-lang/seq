@@ -72,6 +72,7 @@ public:
   Value *operator+(Value &other);
   Value *operator-(Value &other);
   Value *operator*(Value &other);
+  Value *matMul(Value &other);
   Value *trueDiv(Value &other);
   Value *operator/(Value &other);
   Value *operator%(Value &other);

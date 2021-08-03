@@ -49,6 +49,7 @@ public:
   static const std::string ADD_MAGIC_NAME;
   static const std::string SUB_MAGIC_NAME;
   static const std::string MUL_MAGIC_NAME;
+  static const std::string MATMUL_MAGIC_NAME;
   static const std::string TRUE_DIV_MAGIC_NAME;
   static const std::string FLOOR_DIV_MAGIC_NAME;
   static const std::string MOD_MAGIC_NAME;
@@ -325,8 +326,10 @@ public:
   /// Gets a function type.
   /// @param rType the return type
   /// @param argTypes the argument types
+  /// @param variadic true if variadic (e.g. "printf" in C)
   /// @return the void type
-  types::Type *getFuncType(types::Type *rType, std::vector<types::Type *> argTypes);
+  types::Type *getFuncType(types::Type *rType, std::vector<types::Type *> argTypes,
+                           bool variadic = false);
   /// Gets a variable length integer type.
   /// @param len the length
   /// @param sign true if signed
@@ -378,9 +381,11 @@ public:
   /// information is generated.
   /// @param rType the return type
   /// @param argTypes the argument types
+  /// @param variadic true if variadic (e.g. "printf" in C)
   /// @return the void type
   types::Type *unsafeGetFuncType(const std::string &name, types::Type *rType,
-                                 std::vector<types::Type *> argTypes);
+                                 std::vector<types::Type *> argTypes,
+                                 bool variadic = false);
   /// Gets a membered type. Should generally not be used as no type-checker
   /// information is generated.
   /// @param name the type's name

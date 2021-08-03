@@ -26,36 +26,79 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 include(ExternalProject)
 ExternalProject_Add(zlibng
-        URL https://github.com/zlib-ng/zlib-ng/archive/2.0.2.tar.gz
-        BUILD_IN_SOURCE 1
-        UPDATE_DISCONNECTED TRUE
-        WORKING_DIRECTORY <SOURCE_DIR>
-        CONFIGURE_COMMAND ./configure --64 --static --zlib-compat --prefix=<INSTALL_DIR>
-        BUILD_COMMAND make -j${CONCURRENCY})
+    URL https://github.com/zlib-ng/zlib-ng/archive/2.0.2.tar.gz
+    BUILD_IN_SOURCE 1
+    UPDATE_DISCONNECTED TRUE
+    WORKING_DIRECTORY <SOURCE_DIR>
+    CONFIGURE_COMMAND ./configure --64 --static --zlib-compat --prefix=<INSTALL_DIR>
+    BUILD_COMMAND make -j${CONCURRENCY})
 ExternalProject_Get_Property(zlibng INSTALL_DIR)
 set(ZLIB ${INSTALL_DIR}/lib/libz.a)
 
 ExternalProject_Add(libbacktrace
-        GIT_REPOSITORY https://github.com/seq-lang/libbacktrace
-        BUILD_IN_SOURCE 1
-        UPDATE_DISCONNECTED TRUE
-        WORKING_DIRECTORY <SOURCE_DIR>
-        CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR>
-        BUILD_COMMAND make -j${CONCURRENCY})
+    GIT_REPOSITORY https://github.com/seq-lang/libbacktrace
+    BUILD_IN_SOURCE 1
+    UPDATE_DISCONNECTED TRUE
+    WORKING_DIRECTORY <SOURCE_DIR>
+    CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR>
+    BUILD_COMMAND make -j${CONCURRENCY})
 ExternalProject_Get_Property(libbacktrace INSTALL_DIR)
 set(BACKTRACE ${INSTALL_DIR}/lib/libbacktrace.a)
 
+ExternalProject_Add(bz2
+    URL https://www.sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
+    BUILD_IN_SOURCE 1
+    UPDATE_DISCONNECTED TRUE
+    WORKING_DIRECTORY <SOURCE_DIR>
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND make CFLAGS="-Wall -Winline -O2 -g -D_FILE_OFFSET_BITS=64 -fPIC" -j${CONCURRENCY}
+    INSTALL_COMMAND make install PREFIX=<INSTALL_DIR>)
+ExternalProject_Get_Property(bz2 INSTALL_DIR)
+set(BZ2 ${INSTALL_DIR}/lib/libbz2.a)
+
+ExternalProject_Add(xz
+    URL https://tukaani.org/xz/xz-5.2.5.tar.gz
+    BUILD_IN_SOURCE 1
+    UPDATE_DISCONNECTED TRUE
+    WORKING_DIRECTORY <SOURCE_DIR>
+    CONFIGURE_COMMAND ./configure
+        --disable-xz 
+        --disable-xzdec 
+        --disable-lzmadec 
+        --disable-lzmainfo 
+        --disable-shared 
+        --enable-pic
+        --prefix=<INSTALL_DIR>
+    BUILD_COMMAND make -j${CONCURRENCY})
+ExternalProject_Get_Property(xz INSTALL_DIR)
+set(LZMA ${INSTALL_DIR}/lib/liblzma.a)
+
+ExternalProject_Add(htslib
+    DEPENDS bz2 xz
+    URL https://github.com/samtools/htslib/releases/download/1.13/htslib-1.13.tar.bz2
+    BUILD_IN_SOURCE 1
+    UPDATE_DISCONNECTED TRUE
+    WORKING_DIRECTORY <SOURCE_DIR>
+    CONFIGURE_COMMAND ./configure
+        --disable-libcurl 
+        --without-libdeflate 
+        --prefix=<INSTALL_DIR>
+    BUILD_COMMAND make -j${CONCURRENCY})
+ExternalProject_Get_Property(htslib INSTALL_DIR)
+set(HTSLIB ${INSTALL_DIR}/lib/libhts.a)
+
 ExternalProject_Add(bdwgc
-        GIT_REPOSITORY https://github.com/ivmai/bdwgc
-        GIT_TAG d0ba209660ea8c663e06d9a68332ba5f42da54ba
-        UPDATE_DISCONNECTED TRUE
-        CMAKE_ARGS
+    GIT_REPOSITORY https://github.com/ivmai/bdwgc
+    GIT_TAG d0ba209660ea8c663e06d9a68332ba5f42da54ba
+    UPDATE_DISCONNECTED TRUE
+    CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_BUILD_TYPE=Release
         -DBUILD_SHARED_LIBS=OFF
         -Denable_threads=ON
         -Denable_large_config=ON
-        -Denable_thread_local_alloc=ON)
+        -Denable_thread_local_alloc=ON
+        -Denable_handle_fork=ON)
 ExternalProject_Get_Property(bdwgc INSTALL_DIR)
 set(BDWGC ${INSTALL_DIR}/lib/libgc.a)
 
@@ -79,8 +122,7 @@ else ()
 endif ()
 set_target_properties(seqomp PROPERTIES IMPORTED_LOCATION ${OMPLIB})
 add_custom_command(TARGET openmp POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${OMPLIB} ${CMAKE_BINARY_DIR})
-
+    COMMAND ${CMAKE_COMMAND} -E copy ${OMPLIB} ${CMAKE_BINARY_DIR})
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 if (APPLE)
@@ -110,13 +152,14 @@ set(SEQRT_FILES runtime/lib.h
         runtime/sw/intersw.h
         runtime/sw/intersw.cpp)
 add_library(seqrt SHARED ${SEQRT_FILES})
-add_dependencies(seqrt zlibng bdwgc libbacktrace)
+add_dependencies(seqrt zlibng bdwgc libbacktrace bz2 htslib xz)
 target_compile_options(seqrt PRIVATE -mavx)
 target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include runtime)
+target_link_libraries(seqrt PUBLIC seqomp ${BZ2} ${LZMA} ${BACKTRACE} ${STATIC_LIBCPP})
 if (APPLE)
-    target_link_libraries(seqrt PUBLIC seqomp ${STATIC_LIBCPP} -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC})
+    target_link_libraries(seqrt PUBLIC -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC} -Wl,-force_load,${HTSLIB})
 else ()
-    target_link_libraries(seqrt PUBLIC seqomp ${STATIC_LIBCPP} -Wl,--whole-archive ${ZLIB} ${BDWGC} -Wl,--no-whole-archive)
+    target_link_libraries(seqrt PUBLIC -Wl,--whole-archive ${ZLIB} ${BDWGC} ${HTSLIB} -Wl,--no-whole-archive)
 endif ()
 target_link_libraries(seqrt PUBLIC ${BACKTRACE})
 

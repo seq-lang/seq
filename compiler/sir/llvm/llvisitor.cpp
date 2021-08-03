@@ -162,7 +162,7 @@ void LLVMVisitor::verify() {
   seqassert(!broken, "module broken");
 }
 
-void LLVMVisitor::dump(const std::string &filename) { writeToLLFile(filename); }
+void LLVMVisitor::dump(const std::string &filename) { writeToLLFile(filename, false); }
 
 void LLVMVisitor::applyDebugTransformations() {
   if (db.debug) {
@@ -340,8 +340,9 @@ void LLVMVisitor::writeToBitcodeFile(const std::string &filename) {
   }
 }
 
-void LLVMVisitor::writeToLLFile(const std::string &filename) {
-  runLLVMPipeline();
+void LLVMVisitor::writeToLLFile(const std::string &filename, bool optimize) {
+  if (optimize)
+    runLLVMPipeline();
   auto fo = fopen(filename.c_str(), "w");
   llvm::raw_fd_ostream fout(fileno(fo), true);
   fout << *module;
@@ -850,7 +851,7 @@ void LLVMVisitor::makeLLVMFunction(const Func *x) {
   }
 
   auto *llvmFuncType =
-      llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false);
+      llvm::FunctionType::get(returnType, argTypes, funcType->isVariadic());
   const std::string functionName = getNameForFunction(x);
   func = llvm::cast<llvm::Function>(
       module->getOrInsertFunction(functionName, llvmFuncType));
@@ -1331,7 +1332,7 @@ llvm::Type *LLVMVisitor::getLLVMType(types::Type *t) {
     for (auto *argType : *x) {
       argTypes.push_back(getLLVMType(argType));
     }
-    return llvm::FunctionType::get(returnType, argTypes, /*isVarArg=*/false)
+    return llvm::FunctionType::get(returnType, argTypes, x->isVariadic())
         ->getPointerTo();
   }
 
@@ -1688,6 +1689,7 @@ void LLVMVisitor::visit(const ForFlow *x) {
 void LLVMVisitor::visit(const ImperativeForFlow *x) {
   llvm::Value *loopVar = vars[x->getVar()];
   seqassert(loopVar, "{} loop variable not found", *x);
+  seqassert(x->getStep() != 0, "step cannot be 0");
 
   auto *condBlock = llvm::BasicBlock::Create(context, "imp_for.cond", func);
   auto *bodyBlock = llvm::BasicBlock::Create(context, "imp_for.body", func);
@@ -1695,16 +1697,13 @@ void LLVMVisitor::visit(const ImperativeForFlow *x) {
   auto *exitBlock = llvm::BasicBlock::Create(context, "imp_for.exit", func);
 
   process(x->getStart());
+  builder.SetInsertPoint(block);
   builder.CreateStore(value, loopVar);
   process(x->getEnd());
   auto *end = value;
-  builder.CreateBr(condBlock);
-
-  block = condBlock;
   builder.SetInsertPoint(block);
-
-  auto step = x->getStep();
-  seqassert(step != 0, "step cannot be 0");
+  builder.CreateBr(condBlock);
+  builder.SetInsertPoint(condBlock);
 
   llvm::Value *done;
   if (x->getStep() > 0)
@@ -1722,8 +1721,7 @@ void LLVMVisitor::visit(const ImperativeForFlow *x) {
   builder.SetInsertPoint(block);
   builder.CreateBr(updateBlock);
 
-  block = updateBlock;
-  builder.SetInsertPoint(block);
+  builder.SetInsertPoint(updateBlock);
   builder.CreateStore(
       builder.CreateAdd(builder.CreateLoad(loopVar), builder.getInt64(x->getStep())),
       loopVar);

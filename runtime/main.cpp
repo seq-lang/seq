@@ -163,6 +163,8 @@ ProcessResult processSource(const std::vector<const char *> &args) {
                std::chrono::high_resolution_clock::now() - t)
                    .count() /
                1000.0);
+  if (_dbg_level)
+    visitor->dump();
   return {std::move(visitor), input};
 }
 

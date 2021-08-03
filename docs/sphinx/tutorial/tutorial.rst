@@ -1,8 +1,10 @@
 Tutorial
 ========
 
-Genomics-specific features
---------------------------
+Bio-specific features
+---------------------
+
+Seq's ``bio`` module contains all the following functions, types, and methods. The code snippets below should be preceded with ``from bio import *``, although we omit that line for simplicity below.
 
 Genomic types
 ^^^^^^^^^^^^^
@@ -124,7 +126,7 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
         G: int
         T: int
 
-        def __add__(self: BaseCount, other: BaseCount):
+        def __add__(self, other: BaseCount):
             a1, c1, g1, t1 = self
             a2, c2, g2, t2 = other
             return (a1 + a2, c1 + c2, g1 + g2, t1 + t2)
@@ -248,9 +250,9 @@ In particular, a typical prefetch-friendly index class would look like this:
 
     class MyIndex:  # abstract k-mer index
         ...
-        def __getitem__(self: MyIndex, kmer: Kmer[20]):
+        def __getitem__(self, kmer: Kmer[20]):
             # standard __getitem__
-        def __prefetch__(self: MyIndex, kmer: Kmer[20]):
+        def __prefetch__(self, kmer: Kmer[20]):
             # similar to __getitem__, but performs prefetch
 
 Now, if we were to process data in a pipeline as such:
@@ -331,24 +333,25 @@ Internally, the Seq compiler uses `Tapir <http://cilk.mit.edu/tapir/>`_ with an 
 Type extensions
 ^^^^^^^^^^^^^^^
 
-Seq provides an ``extend`` keyword that allows programmers to add and modify methods of various types at compile time, including built-in types like ``int`` or ``str``. This actually allows much of the functionality of built-in types to be implemented in Seq as type extensions in the standard library. Here is an example where the ``int`` type is extended to include a ``to`` method that generates integers in a specified range, as well as to override the ``__mul__`` magic method to "intercept" integer multiplications:
+Seq provides an ``@extend`` annotation that allows programmers to add and modify methods of various types at compile time, including built-in types like ``int`` or ``str``. This actually allows much of the functionality of built-in types to be implemented in Seq as type extensions in the standard library. Here is an example where the ``int`` type is extended to include a ``to`` method that generates integers in a specified range, as well as to override the ``__mul__`` magic method to "intercept" integer multiplications:
 
 .. code-block:: seq
 
-    extend int:
-        def to(self: int, other: int):
+    @extend
+    class int:
+        def to(self, other: int):
             for i in range(self, other + 1):
                 yield i
 
-        def __mul__(self: int, other: int):
-            print 'caught int mul!'
+        def __truediv__(self, other: int):
+            print 'caught int div!'
             return 42
 
     for i in (5).to(10):
         print i  # 5, 6, ..., 10
 
-    # prints 'caught int mul!' then '42'
-    print 2 * 3
+    # prints 'caught int div!' then '42'
+    print 2 / 3
 
 Note that all type extensions are performed strictly at compile time and incur no runtime overhead.
 

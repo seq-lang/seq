@@ -157,6 +157,9 @@ public:
   static const char NodeId;
 
   using AcceptorExtend::AcceptorExtend;
+
+  /// @return true if the function is variadic
+  bool isVariadic() const { return cast<types::FuncType>(getType())->isVariadic(); }
 };
 
 /// Internal, LLVM-only function.

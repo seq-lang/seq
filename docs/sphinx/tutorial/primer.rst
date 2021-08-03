@@ -577,9 +577,9 @@ that generic function:
 
     def foo(x):
         print x  # print relies on typeof(x).__str__(x) method to print the representation of x
-    x(1)  # Seq automatically generates foo(x: int) and calls int.__str__ when needed
-    x('s')  # Seq automatically generates foo(x: str) and calls str.__str__ when needed
-    x([1, 2])  # Seq automatically generates foo(x: List[int]) and calls List[int].__str__ when needed
+    foo(1)  # Seq automatically generates foo(x: int) and calls int.__str__ when needed
+    foo('s')  # Seq automatically generates foo(x: str) and calls str.__str__ when needed
+    foo([1, 2])  # Seq automatically generates foo(x: List[int]) and calls List[int].__str__ when needed
 
 But what if you need to mix type definitions and generic types? Say, your
 function can take a list of *anything*? Well, you can use generic
@@ -597,7 +597,7 @@ specifiers:
     def foo[R](x) -> R:
         print x
         return 1
-    foo(4)  # prints 4, returns 1
+    foo[int](4)  # prints 4, returns 1
     foo[str](4)  # error: return type is str, but foo returns int!
 
 
@@ -687,6 +687,8 @@ In the last example, Seq will automatically schedule the ``process`` and
 ``clean`` functions to execute as soon as possible. You can control the
 number of threads via the ``OMP_NUM_THREADS`` environment variable.
 
+.. _interop:
+
 Foreign function interface (FFI)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -745,7 +747,7 @@ end, you can use Seq's ``@python`` annotation:
         data = np.array(i)
         eigenvalues, _ = scipy.linalg.eig(data)
         return list(eigenvalues)
-    print scipy_here_i_come([[1, 2], [3, 4]])  # [-0.372281, 5.37228] with some warnings...
+    print scipy_here_i_come([[1.0, 2.0], [3.0, 4.0]])  # [-0.372281, 5.37228] with some warnings...
 
 Seq will automatically bridge any object that implements the ``__to_py__``
 and ``__from_py__`` magic methods. All standard Seq types already
@@ -762,7 +764,7 @@ Python's dataclasses).
 
     class Foo:
         x: int
-        y: float
+        y: int
 
         def __init__(self, x: int, y: int):  # constructor
             self.x, self.y = x, y
@@ -782,7 +784,7 @@ Unlike Python, Seq supports method overloading:
 
     class Foo:
         x: int
-        y: float
+        y: int
 
         def __init__(self, x: int, y: int):  # constructor
             self.x, self.y = 0, 0
@@ -790,6 +792,8 @@ Unlike Python, Seq supports method overloading:
             self.x, self.y = x, y
         def __init__(self, x: int, y: float):  # another constructor
             self.x, self.y = x, int(y)
+        def __init__(self):
+            self.x, self.y = 0, 0
 
         def method(self: Foo):
             print self.x, self.y
@@ -837,7 +841,7 @@ Seq also supports pass-by-value types via the ``@tuple`` annotation:
 
     p = Point(1, 2)
     q = p  # this is a copy!
-    (p.x, p.y), (q.x, q.y)  # (1, 2), (1, 2)
+    print (p.x, p.y), (q.x, q.y)  # (1, 2), (1, 2)
 
 However, **by-value objects are immutable!**. The following code will
 not compile:

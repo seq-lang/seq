@@ -72,6 +72,7 @@ const std::string Module::INVERT_MAGIC_NAME = "__invert__";
 const std::string Module::ADD_MAGIC_NAME = "__add__";
 const std::string Module::SUB_MAGIC_NAME = "__sub__";
 const std::string Module::MUL_MAGIC_NAME = "__mul__";
+const std::string Module::MATMUL_MAGIC_NAME = "__matmul__";
 const std::string Module::TRUE_DIV_MAGIC_NAME = "__truediv__";
 const std::string Module::FLOOR_DIV_MAGIC_NAME = "__floordiv__";
 const std::string Module::MOD_MAGIC_NAME = "__mod__";
@@ -202,10 +203,20 @@ types::Type *Module::getOptionalType(types::Type *base) {
 }
 
 types::Type *Module::getFuncType(types::Type *rType,
-                                 std::vector<types::Type *> argTypes) {
+                                 std::vector<types::Type *> argTypes, bool variadic) {
   auto args = translateArgs(argTypes);
   args[0] = std::make_shared<seq::ast::types::LinkType>(rType->getAstType());
-  return cache->makeFunction(args);
+  auto *result = cache->makeFunction(args);
+  if (variadic) {
+    // Type checker types have no concept of variadic functions, so we will
+    // create a new IR type here with the same AST type.
+    auto *f = cast<types::FuncType>(result);
+    result = unsafeGetFuncType(f->getName() + "$variadic", f->getReturnType(),
+                               std::vector<types::Type *>(f->begin(), f->end()),
+                               /*variadic=*/true);
+    result->setAstType(f->getAstType());
+  }
+  return result;
 }
 
 types::Type *Module::getIntNType(unsigned int len, bool sign) {
@@ -266,10 +277,11 @@ types::Type *Module::unsafeGetOptionalType(types::Type *base) {
 }
 
 types::Type *Module::unsafeGetFuncType(const std::string &name, types::Type *rType,
-                                       std::vector<types::Type *> argTypes) {
+                                       std::vector<types::Type *> argTypes,
+                                       bool variadic) {
   if (auto *rVal = getType(name))
     return rVal;
-  return Nr<types::FuncType>(name, rType, std::move(argTypes));
+  return Nr<types::FuncType>(name, rType, std::move(argTypes), variadic);
 }
 
 types::Type *Module::unsafeGetMemberedType(const std::string &name, bool ref) {

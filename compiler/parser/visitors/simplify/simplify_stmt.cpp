@@ -977,7 +977,7 @@ StmtPtr SimplifyVisitor::transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr 
 
   if (pattern->getInt() || CAST(pattern, BoolExpr)) {
     return N<IfStmt>(
-        isinstance(var, pattern->getInt() ? "int" : "bool"),
+        isinstance(var, CAST(pattern, BoolExpr) ? "bool" : "int"),
         N<IfStmt>(N<BinaryExpr>(var->clone(), "==", move(pattern)), move(suite)));
   } else if (auto er = CAST(pattern, RangeExpr)) {
     return N<IfStmt>(
@@ -1030,8 +1030,8 @@ StmtPtr SimplifyVisitor::transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr 
   }
   pattern = transform(pattern); // basically check for errors
   return N<IfStmt>(
-      N<CallExpr>(N<IdExpr>("hasattr"), N<CallExpr>(N<IdExpr>("type"), var->clone()),
-                  N<StringExpr>("__match__")),
+      N<CallExpr>(N<IdExpr>("hasattr"), var->clone(), N<StringExpr>("__match__"),
+                  N<CallExpr>(N<IdExpr>("type"), pattern->clone())),
       N<IfStmt>(N<CallExpr>(N<DotExpr>(var->clone(), "__match__"), move(pattern)),
                 move(suite)));
 }
@@ -1039,15 +1039,22 @@ StmtPtr SimplifyVisitor::transformPattern(ExprPtr var, ExprPtr pattern, StmtPtr 
 StmtPtr SimplifyVisitor::transformCImport(const string &name, const vector<Param> &args,
                                           const Expr *ret, const string &altName) {
   vector<Param> fnArgs;
+  auto attr = Attr({Attr::C});
   for (int ai = 0; ai < args.size(); ai++) {
     seqassert(args[ai].name.empty(), "unexpected argument name");
     seqassert(!args[ai].deflt, "unexpected default argument");
     seqassert(args[ai].type, "missing type");
-    fnArgs.emplace_back(Param{args[ai].name.empty() ? format("a{}", ai) : args[ai].name,
-                              args[ai].type->clone(), nullptr});
+    if (dynamic_cast<EllipsisExpr *>(args[ai].type.get()) && ai + 1 == args.size()) {
+      attr.set(Attr::CVarArg);
+      fnArgs.emplace_back(Param{"*args", nullptr, nullptr});
+    } else {
+      fnArgs.emplace_back(
+          Param{args[ai].name.empty() ? format("a{}", ai) : args[ai].name,
+                args[ai].type->clone(), nullptr});
+    }
   }
   auto f = N<FunctionStmt>(name, ret ? ret->clone() : N<IdExpr>("void"),
-                           vector<Param>(), move(fnArgs), nullptr, Attr({Attr::C}));
+                           vector<Param>(), move(fnArgs), nullptr, attr);
   StmtPtr tf = transform(f.get()); // Already in the preamble
   if (!altName.empty())
     ctx->add(altName, ctx->find(name));

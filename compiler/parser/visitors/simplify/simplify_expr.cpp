@@ -496,14 +496,17 @@ void SimplifyVisitor::visit(CallExpr *expr) {
   }
   // 5. hasattr(v, "id")
   if (expr->expr->isId("hasattr")) {
-    if (expr->args.size() != 2 || !expr->args[0].name.empty() ||
+    if (expr->args.size() < 2 || !expr->args[0].name.empty() ||
         !expr->args[1].name.empty())
-      error("hasattr accepts two arguments");
+      error("hasattr accepts at least two arguments");
     auto s = transform(expr->args[1].value);
     if (!s->getString())
       error("hasattr requires the second string to be a compile-time string");
     auto arg = N<CallExpr>(N<IdExpr>("type"), expr->args[0].value);
-    resultExpr = N<CallExpr>(clone(expr->expr), transformType(arg.get()), move(s));
+    vector<ExprPtr> args{transformType(arg.get()), move(s)};
+    for (int i = 2; i < expr->args.size(); i++)
+      args.push_back(transformType(expr->args[i].value.get()));
+    resultExpr = N<CallExpr>(clone(expr->expr), move(args));
     resultExpr->isStaticExpr = true;
     return;
   }

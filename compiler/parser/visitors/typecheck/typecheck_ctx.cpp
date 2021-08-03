@@ -182,13 +182,14 @@ types::TypePtr TypeContext::findMember(const string &typeName,
 
 types::FuncTypePtr
 TypeContext::findBestMethod(const Expr *expr, const string &member,
-                            const vector<pair<string, types::TypePtr>> &args) {
+                            const vector<pair<string, types::TypePtr>> &args,
+                            bool checkSingle) {
   auto typ = expr->getType()->getClass();
   seqassert(typ, "not a class");
   auto methods = findMethod(typ->name, member);
   if (methods.empty())
     return nullptr;
-  if (methods.size() == 1) // methods is not overloaded
+  if (methods.size() == 1 && !checkSingle) // methods is not overloaded
     return methods[0];
 
   // Calculate the unification score for each available methods and pick the one with
@@ -220,7 +221,6 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
     //   Optional unwrap gets the score of 1.
     //   Optional wrap gets the score of 2.
     //   Successful unification gets the score of 3 (highest priority).
-    // LOG("{} {} / {}", typ->toString(), method->toString(), score);
     for (int ai = 0; ai < reordered.size(); ai++) {
       auto expectedType = method->args[ai + 1];
       auto expectedClass = expectedType->getClass();
@@ -229,6 +229,7 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
       if (!argType || (expectedClass &&
                        (expectedClass->isTrait || expectedClass->name == "Generator")))
         continue;
+      // LOG("<~> {} {}", argType->toString(), expectedType->toString());
       auto argClass = argType->getClass();
 
       types::Type::Unification undo;
@@ -262,6 +263,7 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
       score = -1;
       break;
     }
+    //    LOG("{} {} / {}", typ->toString(), method->toString(), score);
     if (score >= 0)
       scores.emplace_back(std::make_pair(score, mi));
   }

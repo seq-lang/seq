@@ -15,6 +15,7 @@ from internal.types.slice import *
 from internal.types.range import *
 from internal.internal import *
 from internal.types.collections.list import *
+import internal.c_stubs as _C
 
 def next[T](g: Generator[T], default: Optional[T] = None):
     if g.done():

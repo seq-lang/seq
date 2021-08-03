@@ -140,7 +140,8 @@ public:
   /// If multiple equally good methods are found, return the first one.
   /// Return nullptr if no methods were found.
   types::FuncTypePtr findBestMethod(const Expr *expr, const string &member,
-                                    const vector<pair<string, types::TypePtr>> &args);
+                                    const vector<pair<string, types::TypePtr>> &args,
+                                    bool checkSingle = false);
 
   typedef std::function<int(int, int, const vector<vector<int>> &, bool)> ReorderDoneFn;
   typedef std::function<int(string)> ReorderErrorFn;

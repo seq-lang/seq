@@ -289,3 +289,5 @@ class float:
             raise ValueError("could not convert string to float: " + s)
 
         return result
+    def __match__(self, i: float):
+        return self == i

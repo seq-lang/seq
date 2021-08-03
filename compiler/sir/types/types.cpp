@@ -34,12 +34,11 @@ std::vector<Generic> Type::doGetGenerics() const {
 
   std::vector<Generic> ret;
   for (auto &g : astType->getClass()->generics) {
-    auto bound = g.type->getLink();
-    if (auto cls = bound->type->getClass())
+    if (auto cls = g.type->getClass())
       ret.emplace_back(
           getModule()->getCache()->realizeType(cls, extractTypes(cls->generics)));
     else
-      ret.emplace_back(bound->type->getStatic()->staticEvaluation.second);
+      ret.emplace_back(g.type->getStatic()->staticEvaluation.second);
   }
 
   return ret;
@@ -153,12 +152,11 @@ std::vector<Generic> FuncType::doGetGenerics() const {
 
   std::vector<Generic> ret;
   for (auto &g : astType->funcGenerics) {
-    auto bound = g.type->getLink();
-    if (auto cls = bound->type->getClass())
+    if (auto cls = g.type->getClass())
       ret.emplace_back(
           getModule()->getCache()->realizeType(cls, extractTypes(cls->generics)));
     else
-      ret.emplace_back(bound->type->getStatic()->staticEvaluation.second);
+      ret.emplace_back(g.type->getStatic()->staticEvaluation.second);
   }
 
   return ret;
