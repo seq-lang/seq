@@ -162,12 +162,17 @@ ForStmt::ForStmt(const ForStmt &stmt)
       attributes(ast::clone(stmt.attributes)), wrapped(stmt.wrapped) {}
 string ForStmt::toString(int indent) const {
   string pad = indent > 0 ? ("\n" + string(indent + INDENT_SIZE, ' ')) : " ";
+  string attr;
+  for (auto &a : attributes)
+    attr += " " + a->toString();
+  if (!attr.empty())
+    attr = " #:attr" + attr;
   if (elseSuite && elseSuite->firstInBlock())
-    return format("(for-else {} {}{}{}{}{})", var->toString(), iter->toString(), pad,
-                  suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1), pad,
+    return format("(for-else {} {}{}{}{}{}{})", var->toString(), iter->toString(), attr,
+                  pad, suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1), pad,
                   elseSuite->toString(indent >= 0 ? indent + INDENT_SIZE : -1));
   else
-    return format("(for {} {}{}{})", var->toString(), iter->toString(), pad,
+    return format("(for {} {}{}{}{})", var->toString(), iter->toString(), attr, pad,
                   suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1));
 }
 ACCEPT_IMPL(ForStmt, ASTVisitor);

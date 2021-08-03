@@ -57,9 +57,9 @@ simple_stmt <- tlist(';', small_stmt) _ EOL {
 }
 small_stmt <-
   / assignment
-  / 'pass' &(SPACE / EOL) { return any(ast<PassStmt>(LOC)); }
-  / 'break' &(SPACE / EOL) { return any(ast<BreakStmt>(LOC)); }
-  / 'continue' &(SPACE / EOL) { return any(ast<ContinueStmt>(LOC)); }
+  / 'pass' &(SPACE / ';' / EOL) { return any(ast<PassStmt>(LOC)); }
+  / 'break' &(SPACE / ';' / EOL) { return any(ast<BreakStmt>(LOC)); }
+  / 'continue' &(SPACE / ';' / EOL) { return any(ast<ContinueStmt>(LOC)); }
   / global_stmt
   / yield_stmt
   / assert_stmt
@@ -68,13 +68,13 @@ small_stmt <-
   / raise_stmt
   / print_stmt
   / import_stmt
+  / expressions &(_ ';' / _ EOL)  { return any(ast<ExprStmt>(LOC, ac_expr(V0))); }
   / NAME SPACE expressions {
     auto kwd = ac<string>(V0);
     if (!CTX.hasCustomExprStmt(kwd)) 
       throw peg::parse_error("keyword not recognized");
     return any(ast<CustomStmt>(LOC, kwd, ac_expr(V1), nullptr));
   }
-  / expressions { return any(ast<ExprStmt>(LOC, ac_expr(V0))); }
 assignment <-
   / id _ ':' _ expression (_ '=' _ star_expressions)? {
     return ast<AssignStmt>(LOC, 
@@ -198,7 +198,7 @@ compound_stmt <-
   / if_stmt
   / class
   / with_stmt
-  / for_stmt
+  / for
   / try_stmt
   / while_stmt
   / match_stmt
@@ -227,6 +227,14 @@ while_stmt <- ('while' SPACE named_expression _ ':' _ suite)
   return ast<WhileStmt>(LOC, 
     ac_expr(V0), ac_stmt(V1), VS.size() > 2 ? ac_stmt(V2) : nullptr
   );
+}
+for <- decorators? for_stmt {
+  if (VS.size() > 1) {
+    auto s = dynamic_pointer_cast<ForStmt>(ac_stmt(V1));
+    s->attributes = ac<vector<ExprPtr>>(V0);
+    return static_pointer_cast<Stmt>(s);
+  }
+  return ac_stmt(V0);
 }
 for_stmt <- ('for' SPACE star_targets)
             (SPACE 'in' SPACE star_expressions _ ':' _ suite)
