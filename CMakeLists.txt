@@ -95,6 +95,7 @@ ExternalProject_Add(bdwgc
     CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
         -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DBUILD_SHARED_LIBS=OFF
         -Denable_threads=ON
         -Denable_large_config=ON
