@@ -30,7 +30,7 @@ ExternalProject_Add(zlibng
     BUILD_IN_SOURCE 1
     UPDATE_DISCONNECTED TRUE
     WORKING_DIRECTORY <SOURCE_DIR>
-    CONFIGURE_COMMAND ./configure --64 --static --zlib-compat --prefix=<INSTALL_DIR>
+    CONFIGURE_COMMAND "CFLAGS=-fPIC" ./configure --64 --static --zlib-compat --prefix=<INSTALL_DIR>
     BUILD_COMMAND make -j${CONCURRENCY})
 ExternalProject_Get_Property(zlibng INSTALL_DIR)
 set(ZLIB ${INSTALL_DIR}/lib/libz.a)
@@ -40,7 +40,7 @@ ExternalProject_Add(libbacktrace
     BUILD_IN_SOURCE 1
     UPDATE_DISCONNECTED TRUE
     WORKING_DIRECTORY <SOURCE_DIR>
-    CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR>
+    CONFIGURE_COMMAND "CFLAGS=-fPIC" ./configure --prefix=<INSTALL_DIR>
     BUILD_COMMAND make -j${CONCURRENCY})
 ExternalProject_Get_Property(libbacktrace INSTALL_DIR)
 set(BACKTRACE ${INSTALL_DIR}/lib/libbacktrace.a)
@@ -61,7 +61,7 @@ ExternalProject_Add(xz
     BUILD_IN_SOURCE 1
     UPDATE_DISCONNECTED TRUE
     WORKING_DIRECTORY <SOURCE_DIR>
-    CONFIGURE_COMMAND ./configure
+    CONFIGURE_COMMAND ./configure "CFLAGS=-fPIC"
         --disable-xz 
         --disable-xzdec 
         --disable-lzmadec 
@@ -80,6 +80,7 @@ ExternalProject_Add(htslib
     UPDATE_DISCONNECTED TRUE
     WORKING_DIRECTORY <SOURCE_DIR>
     CONFIGURE_COMMAND ./configure
+        "CFLAGS=-fPIC"
         --disable-libcurl 
         --without-libdeflate 
         --prefix=<INSTALL_DIR>
