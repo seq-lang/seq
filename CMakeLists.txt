@@ -51,7 +51,7 @@ ExternalProject_Add(bz2
     UPDATE_DISCONNECTED TRUE
     WORKING_DIRECTORY <SOURCE_DIR>
     CONFIGURE_COMMAND ""
-    BUILD_COMMAND make CFLAGS="-Wall -Winline -O2 -g -D_FILE_OFFSET_BITS=64 -fPIC" -j${CONCURRENCY}
+    BUILD_COMMAND make "CFLAGS=-Wall -Winline -O2 -g -D_FILE_OFFSET_BITS=64 -fPIC" -j${CONCURRENCY}
     INSTALL_COMMAND make install PREFIX=<INSTALL_DIR>)
 ExternalProject_Get_Property(bz2 INSTALL_DIR)
 set(BZ2 ${INSTALL_DIR}/lib/libbz2.a)
