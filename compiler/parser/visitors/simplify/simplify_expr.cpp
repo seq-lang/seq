@@ -797,7 +797,8 @@ ExprPtr SimplifyVisitor::transformFString(string value) {
           code = code.substr(0, code.size() - 1);
           items.push_back(N<StringExpr>(format("{}=", code)));
         }
-        items.push_back(N<CallExpr>(N<IdExpr>("str"), parseExpr(code, offset)));
+        items.push_back(
+            N<CallExpr>(N<IdExpr>("str"), parseExpr(ctx->cache, code, offset)));
       }
       braceStart = i + 1;
     }

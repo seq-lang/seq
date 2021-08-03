@@ -44,6 +44,7 @@ struct DocShared {
   nlohmann::json j;
   unordered_map<string, shared_ptr<DocContext>> modules;
   string argv0;
+  shared_ptr<Cache> cache;
   DocShared() : itemID(1) {}
 };
 

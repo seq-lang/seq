@@ -31,9 +31,10 @@ namespace ast {
 json DocVisitor::apply(const string &argv0, const vector<string> &files) {
   auto shared = make_shared<DocShared>();
   shared->argv0 = argv0;
+  shared->cache = make_shared<ast::Cache>(argv0);
 
   auto stdlib = getImportFile(argv0, "internal", "", true, "");
-  auto ast = ast::parseFile(stdlib->path);
+  auto ast = ast::parseFile(shared->cache, stdlib->path);
   shared->modules[""] = make_shared<DocContext>(shared);
   shared->modules[""]->setFilename(stdlib->path);
   for (auto &s : vector<string>{"void", "byte", "float", "bool", "int", "str", "pyobj",
@@ -51,7 +52,7 @@ json DocVisitor::apply(const string &argv0, const vector<string> &files) {
   for (auto &f : files) {
     realpath(f.c_str(), abs);
     ctx->setFilename(abs);
-    ast = ast::parseFile(abs);
+    ast = ast::parseFile(shared->cache, abs);
     DocVisitor(ctx).transformModule(move(ast));
   }
 
@@ -327,7 +328,7 @@ void DocVisitor::visit(ImportStmt *stmt) {
   if (it == ctx->shared->modules.end()) {
     ictx = make_shared<DocContext>(ctx->shared);
     ictx->setFilename(file->path);
-    auto tmp = parseFile(file->path);
+    auto tmp = parseFile(ctx->shared->cache, file->path);
     DocVisitor(ictx).transformModule(move(tmp));
   } else {
     ictx = it->second;

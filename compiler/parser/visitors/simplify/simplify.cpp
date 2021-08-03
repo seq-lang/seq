@@ -109,11 +109,11 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
         "@__internal__\n@tuple\nclass pyobj:\n  p: Ptr[byte]\n"
         "@__internal__\n@tuple\nclass str:\n  ptr: Ptr[byte]\n  len: int\n";
     SimplifyVisitor(stdlib, preamble)
-        .transform(parseCode(stdlibPath->path, baseTypeCode));
+        .transform(parseCode(stdlib->cache, stdlibPath->path, baseTypeCode));
     // Load the standard library
     stdlib->setFilename(stdlibPath->path);
-    stmts.push_back(
-        SimplifyVisitor(stdlib, preamble).transform(parseFile(stdlibPath->path)));
+    stmts.push_back(SimplifyVisitor(stdlib, preamble)
+                        .transform(parseFile(stdlib->cache, stdlibPath->path)));
     // Add __argv__ variable as __argv__: Array[str]
     preamble->globals.push_back(
         SimplifyVisitor(stdlib, preamble)

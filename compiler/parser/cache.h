@@ -49,6 +49,7 @@ namespace ast {
 
 /// Forward declarations
 struct SimplifyContext;
+class SimplifyVisitor;
 struct TypeContext;
 struct TranslateContext;
 
@@ -183,6 +184,14 @@ struct Cache : public std::enable_shared_from_this<Cache> {
   shared_ptr<TranslateContext> codegenCtx;
   /// Set of function realizations that are to be translated to IR.
   set<std::pair<string, string>> pendingRealizations;
+
+  /// Custom operators
+  unordered_map<string, std::pair<bool, std::function<StmtPtr(ast::SimplifyVisitor *,
+                                                              ast::CustomStmt *)>>>
+      customBlockStmts;
+  unordered_map<string,
+                std::function<StmtPtr(ast::SimplifyVisitor *, ast::CustomStmt *)>>
+      customExprStmts;
 
 public:
   explicit Cache(string argv0 = "");

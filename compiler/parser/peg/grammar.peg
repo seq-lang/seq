@@ -68,6 +68,12 @@ small_stmt <-
   / raise_stmt
   / print_stmt
   / import_stmt
+  / NAME SPACE expressions {
+    auto kwd = ac<string>(V0);
+    if (!CTX.hasCustomExprStmt(kwd)) 
+      throw peg::parse_error("keyword not recognized");
+    return any(ast<CustomStmt>(LOC, kwd, ac_expr(V1), nullptr));
+  }
   / expressions { return any(ast<ExprStmt>(LOC, ac_expr(V0))); }
 assignment <-
   / id _ ':' _ expression (_ '=' _ star_expressions)? {
@@ -196,6 +202,7 @@ compound_stmt <-
   / try_stmt
   / while_stmt
   / match_stmt
+  / custom_stmt
 if_stmt <- ('if' SPACE named_expression _ ':' _ suite)
            (SAMEDENT 'elif' SPACE named_expression _ ':' _ suite)* 
            (SAMEDENT 'else' _ ':' _ suite)? {
@@ -365,6 +372,19 @@ case <-
   / 'case' SPACE expression _ ':' _ suite {
     return MatchStmt::MatchCase{ac_expr(V0), nullptr, ac_stmt(V1)};
   }
+custom_stmt <-
+  / NAME SPACE expression _ ':' _ suite {
+    auto kwd = ac<string>(V0);
+    if (!CTX.hasCustomStmtKeyword(kwd, true)) 
+      throw peg::parse_error("keyword not recognized");
+    return ast<CustomStmt>(LOC, kwd, ac_expr(V1), ac_stmt(V2));
+  } 
+  / NAME _ ':' _ suite {
+    auto kwd = ac<string>(V0);
+    if (!CTX.hasCustomStmtKeyword(kwd, false)) 
+      throw peg::parse_error("keyword not recognized");
+    return ast<CustomStmt>(LOC, kwd, nullptr, ac_stmt(V2));
+  } 
 
 ########################################################################################
 # (2) Expressions

@@ -21,7 +21,7 @@ namespace seq {
 namespace ast {
 
 #define ACCEPT(X)                                                                      \
-  using Stmt::toString; \
+  using Stmt::toString;                                                                \
   StmtPtr clone() const override;                                                      \
   void accept(X &visitor) override
 
@@ -270,11 +270,13 @@ struct ForStmt : public Stmt {
   ExprPtr iter;
   StmtPtr suite;
   StmtPtr elseSuite;
+  vector<ExprPtr> attributes;
 
   /// Indicates if iter was wrapped with __iter__() call.
   bool wrapped;
 
-  ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite = nullptr);
+  ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite = nullptr,
+          vector<ExprPtr> attributes = {});
   ForStmt(const ForStmt &stmt);
 
   string toString(int indent) const override;
@@ -530,10 +532,11 @@ struct WithStmt : public Stmt {
 /// Custom block statement (foo: ...).
 /// @example: pt_tree: pass
 struct CustomStmt : public Stmt {
-  ExprPtr head;
+  string keyword;
+  ExprPtr expr;
   StmtPtr suite;
 
-  CustomStmt(ExprPtr head, StmtPtr suite);
+  CustomStmt(string keyword, ExprPtr expr, StmtPtr suite);
   CustomStmt(const CustomStmt &stmt);
 
   string toString(int indent) const override;

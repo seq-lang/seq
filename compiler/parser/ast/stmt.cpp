@@ -152,13 +152,14 @@ string WhileStmt::toString(int indent) const {
 }
 ACCEPT_IMPL(WhileStmt, ASTVisitor);
 
-ForStmt::ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite)
+ForStmt::ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite,
+                 vector<ExprPtr> attributes)
     : Stmt(), var(move(var)), iter(move(iter)), suite(move(suite)),
-      elseSuite(move(elseSuite)), wrapped(false) {}
+      elseSuite(move(elseSuite)), attributes(move(attributes)), wrapped(false) {}
 ForStmt::ForStmt(const ForStmt &stmt)
     : Stmt(stmt), var(ast::clone(stmt.var)), iter(ast::clone(stmt.iter)),
       suite(ast::clone(stmt.suite)), elseSuite(ast::clone(stmt.elseSuite)),
-      wrapped(stmt.wrapped) {}
+      attributes(ast::clone(stmt.attributes)), wrapped(stmt.wrapped) {}
 string ForStmt::toString(int indent) const {
   string pad = indent > 0 ? ("\n" + string(indent + INDENT_SIZE, ' ')) : " ";
   if (elseSuite && elseSuite->firstInBlock())
@@ -396,14 +397,16 @@ string WithStmt::toString(int indent) const {
 }
 ACCEPT_IMPL(WithStmt, ASTVisitor);
 
-CustomStmt::CustomStmt(ExprPtr head, StmtPtr suite)
-    : Stmt(), head(move(head)), suite(move(suite)) {}
+CustomStmt::CustomStmt(string keyword, ExprPtr expr, StmtPtr suite)
+    : Stmt(), keyword(move(keyword)), expr(move(expr)), suite(move(suite)) {}
 CustomStmt::CustomStmt(const CustomStmt &stmt)
-    : Stmt(stmt), head(ast::clone(stmt.head)), suite(ast::clone(stmt.suite)) {}
+    : Stmt(stmt), keyword(stmt.keyword), expr(ast::clone(stmt.expr)),
+      suite(ast::clone(stmt.suite)) {}
 string CustomStmt::toString(int indent) const {
   string pad = indent > 0 ? ("\n" + string(indent + INDENT_SIZE, ' ')) : " ";
-  return format("(custom {}{}{})", head->toString(), pad,
-                suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1));
+  return format("(custom-{} {}{}{})", keyword,
+                expr ? format(" #:expr {}", expr->toString()) : "", pad,
+                suite ? suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1) : "");
 }
 ACCEPT_IMPL(CustomStmt, ASTVisitor);
 

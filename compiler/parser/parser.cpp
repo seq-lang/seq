@@ -50,8 +50,24 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
     if (file != "-")
       realpath(file.c_str(), abs);
 
-    ast::StmtPtr codeStmt =
-        isCode ? ast::parseCode(abs, code, startLine) : ast::parseFile(abs);
+    auto cache = make_shared<ast::Cache>(argv0);
+    cache->customBlockStmts["foo_block"] = {
+        true, [](auto *vs, auto *stmt) {
+          return vs->transform(vs->template N<ast::SuiteStmt>(
+              vector<ast::StmtPtr>{vs->template N<ast::AssignStmt>(
+                                       vs->template N<ast::IdExpr>("_foo"), stmt->expr),
+                                   stmt->suite},
+              true));
+        }};
+    cache->customExprStmts["foo_expr"] = [](auto *vs, auto *stmt) {
+      return vs->transform(
+          vs->template N<ast::SuiteStmt>(vs->template N<ast::PrintStmt>(
+              vector<ast::ExprPtr>{vs->template N<ast::BinaryExpr>(
+                  stmt->expr, "+", vs->template N<ast::IntExpr>(10))},
+              false)));
+    };
+    ast::StmtPtr codeStmt = isCode ? ast::parseCode(cache, abs, code, startLine)
+                                   : ast::parseFile(cache, abs);
     if (_dbg_level) {
       auto fo = fopen("_dump.sexp", "w");
       fmt::print(fo, "{}\n", codeStmt->toString(0));
@@ -59,8 +75,6 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
     }
 
     using namespace std::chrono;
-
-    auto cache = make_shared<ast::Cache>(argv0);
     cache->module0 = file;
     if (isTest)
       cache->testFlags = isTest;

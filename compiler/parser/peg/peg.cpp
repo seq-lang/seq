@@ -53,8 +53,8 @@ shared_ptr<peg::Grammar> initParser() {
 }
 
 template <typename T>
-T parseCode(const string &file, string code, int line_offset, int col_offset,
-            const string &rule) {
+T parseCode(const shared_ptr<Cache> &cache, const string &file, string code,
+            int line_offset, int col_offset, const string &rule) {
   using namespace std::chrono;
   auto t = high_resolution_clock::now();
 
@@ -68,7 +68,7 @@ T parseCode(const string &file, string code, int line_offset, int col_offset,
     errors.push_back({line, col, msg});
   };
   T result = nullptr;
-  auto ctx = make_any<ParseContext>(0, line_offset, col_offset);
+  auto ctx = make_any<ParseContext>(cache, 0, line_offset, col_offset);
   auto r = (*g)[rule].parse_and_get_value(code.c_str(), code.size(), ctx, result,
                                           file.c_str(), log);
   auto ret = r.ret && r.len == code.size();
@@ -86,15 +86,18 @@ T parseCode(const string &file, string code, int line_offset, int col_offset,
   return result;
 }
 
-StmtPtr parseCode(const string &file, const string &code, int line_offset) {
-  return parseCode<StmtPtr>(file, code + "\n", line_offset, 0, "program");
+StmtPtr parseCode(const shared_ptr<Cache> &cache, const string &file,
+                  const string &code, int line_offset) {
+  return parseCode<StmtPtr>(cache, file, code + "\n", line_offset, 0, "program");
 }
 
-ExprPtr parseExpr(const string &code, const seq::SrcInfo &offset) {
-  return parseCode<ExprPtr>(offset.file, code, offset.line, offset.col, "fstring");
+ExprPtr parseExpr(const shared_ptr<Cache> &cache, const string &code,
+                  const seq::SrcInfo &offset) {
+  return parseCode<ExprPtr>(cache, offset.file, code, offset.line, offset.col,
+                            "fstring");
 }
 
-StmtPtr parseFile(const string &file) {
+StmtPtr parseFile(const shared_ptr<Cache> &cache, const string &file) {
   string code;
   if (file == "-") {
     for (string line; getline(cin, line);)
@@ -108,7 +111,7 @@ StmtPtr parseFile(const string &file) {
     fin.close();
   }
 
-  auto result = parseCode(file, code);
+  auto result = parseCode(cache, file, code);
   // LOG("peg/{} :=  {}", file, result ? result->toString(0) : "<nullptr>");
   // throw;
   // LOG("fmt := {}", FormatVisitor::apply(result));

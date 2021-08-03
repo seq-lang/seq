@@ -825,7 +825,17 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
 }
 
 void SimplifyVisitor::visit(CustomStmt *stmt) {
-  error("invalid block: {}", stmt->head->toString());
+  if (stmt->suite) {
+    auto fn = ctx->cache->customBlockStmts.find(stmt->keyword);
+    seqassert(fn != ctx->cache->customBlockStmts.end(), "unknown keyword {}",
+              stmt->keyword);
+    resultStmt = fn->second.second(this, stmt);
+  } else {
+    auto fn = ctx->cache->customExprStmts.find(stmt->keyword);
+    seqassert(fn != ctx->cache->customExprStmts.end(), "unknown keyword {}",
+              stmt->keyword);
+    resultStmt = fn->second(this, stmt);
+  }
 }
 
 /**************************************************************************************/
@@ -1167,7 +1177,7 @@ void SimplifyVisitor::transformNewImport(const ImportFile &file) {
   ictx->isStdlibLoading = ctx->isStdlibLoading;
   ictx->moduleName = file;
   auto import = ctx->cache->imports.insert({file.path, {file.path, ictx}}).first;
-  StmtPtr sf = parseFile(file.path);
+  StmtPtr sf = parseFile(ctx->cache, file.path);
   auto sn = SimplifyVisitor(ictx, preamble).transform(sf);
 
   // If we are loading standard library, we won't wrap imports in functions as we
@@ -1274,7 +1284,7 @@ StmtPtr SimplifyVisitor::transformLLVMDefinition(const Stmt *codeStmt) {
       string exprCode = code.substr(braceStart, i - braceStart);
       auto offset = getSrcInfo();
       offset.col += i;
-      auto expr = transform(parseExpr(exprCode, offset).get(), true);
+      auto expr = transform(parseExpr(ctx->cache, exprCode, offset).get(), true);
       if (!expr->isType() && !expr->isStaticExpr)
         error(expr, "not a type or static expression", expr->toString());
       items.push_back(N<ExprStmt>(move(expr)));
