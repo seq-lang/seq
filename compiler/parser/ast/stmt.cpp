@@ -65,10 +65,10 @@ void SuiteStmt::flatten(StmtPtr s, vector<StmtPtr> &stmts) {
     return;
   auto suite = const_cast<SuiteStmt *>(s->getSuite());
   if (!suite || suite->ownBlock)
-    stmts.push_back(move(s));
+    stmts.push_back(s);
   else {
     for (auto &ss : suite->stmts)
-      stmts.push_back(move(ss));
+      stmts.push_back(ss);
   }
 }
 
@@ -219,7 +219,7 @@ string ImportStmt::toString(int) const {
     va.push_back(a.toString());
   return format("(import {}{}{}{}{}{})", from->toString(),
                 as.empty() ? "" : format(" #:as '{}", as),
-                what ? format(" #:what {}", from->toString()) : "",
+                what ? format(" #:what {}", what->toString()) : "",
                 dots ? format(" #:dots {}", dots) : "",
                 va.empty() ? "" : format(" #:args ({})", join(va)),
                 ret ? format(" #:ret {}", ret->toString()) : "");

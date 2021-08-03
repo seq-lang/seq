@@ -311,9 +311,8 @@ void TranslateVisitor::visit(TryStmt *stmt) {
   transform(stmt->suite);
   ctx->popSeries();
 
-  ir::SeriesFlow *finallySeries = nullptr;
+  auto finallySeries = make<ir::SeriesFlow>(stmt, "finally");
   if (stmt->finally) {
-    finallySeries = make<ir::SeriesFlow>(stmt, "finally");
     ctx->addSeries(finallySeries);
     transform(stmt->finally);
     ctx->popSeries();

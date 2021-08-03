@@ -37,7 +37,11 @@
     return ast<TupleExpr>(LOC, VS.transform<ExprPtr>());
   }
 }
-program <- statements (_ EOL)* !.
+program <- (statements (_ EOL)* / (_ EOL)*) !. {
+  if (VS.empty())
+    return ast<SuiteStmt>(LOC);
+  return ac_stmt(V0);
+}
 fstring <- star_expressions _ !.
 
 # Macros
@@ -45,11 +49,11 @@ list(c, e)  <- e (_ c _ e)*
 tlist(c, e) <- e (_ c _ e)* (_ <c>)?
 
 statements <- ((_ EOL)* statement)+ { 
-  return ast<SuiteStmt>(LOC, VS.transform<StmtPtr>()); 
+  return ast<SuiteStmt>(LOC, VS.transform<StmtPtr>());
 }
 statement <- SAMEDENT compound_stmt / SAMEDENT simple_stmt
 simple_stmt <- tlist(';', small_stmt) _ EOL { 
-  return ast<SuiteStmt>(LOC, VS.transform<StmtPtr>()); 
+  return ast<SuiteStmt>(LOC, VS.transform<StmtPtr>());
 }
 small_stmt <-
   / assignment
@@ -83,7 +87,7 @@ assignment <-
     );
   }
 augassign <- <
-  '+' / '-' / '*' / '@' / '/' / '%' / '&' / '|' / '^' / '<<' / '>>' / '**' / '//'
+  '+' / '-' / '**' / '*' / '@' / '//' / '/' / '%' / '&' / '|' / '^' / '<<' / '>>'
 > {
   return VS.token_to_string();
 }
@@ -114,7 +118,7 @@ raise_stmt <- 'raise' (SPACE expression)? {
   return ast<ThrowStmt>(LOC, !VS.empty() ? ac_expr(V0) : nullptr); 
 }
 print_stmt <-
-  / 'print' SPACE expression (_ ',' _ expression)* (_ <','>)? {
+  / 'print' SPACE star_expression (_ ',' _ star_expression)* (_ <','>)? {
     return ast<PrintStmt>(LOC, VS.transform<ExprPtr>(), !VS.tokens.empty());
   }
   / 'print' _ &EOL { return ast<PrintStmt>(LOC, vector<ExprPtr>{}, false); }
@@ -126,7 +130,7 @@ import_name <- 'import' SPACE list(',', as_name) {
     })
   );
 }
-as_name <- primary (SPACE 'as' SPACE NAME)? { 
+as_name <- dot_name (SPACE 'as' SPACE NAME)? { 
   return pair(ac_expr(V0), VS.size() > 1 ? ac<string>(V1) : ""); 
 }
 import_from <- 
@@ -162,11 +166,11 @@ from_id <-
     return tuple(
       ac_expr(V0), 
       ac<SemVals>(V1).transform<Param>(), 
-      VS.size() > 2 ? ac_expr(V2) : nullptr
+      VS.size() > 2 ? ac_expr(V2) : ast<IdExpr>(LOC, "void")
     ); 
   }
   / dot_name { return tuple(ac_expr(V0), vector<Param>{}, (ExprPtr)nullptr); }
-dot_name <- atom (_ '.' _ NAME)* {
+dot_name <- id (_ '.' _ NAME)* {
   if (VS.size() == 1) 
     return ac_expr(V0);
   auto dot = ast<DotExpr>(LOC, ac_expr(V0), ac<string>(V1));
@@ -178,7 +182,11 @@ from_params <- '(' _ tlist(',', from_param)? _ ')' { return VS; }
 from_param <- expression { return Param{"", ac_expr(V0), nullptr}; }
 #TODO expand import logic / param { return ac<Param>(V0); }
 
-suite <- simple_stmt / (_ EOL)+ &INDENT statements (_ EOL)* &DEDENT
+suite <- (simple_stmt / (_ EOL)+ &INDENT statements (_ EOL)* &DEDENT) {
+  auto s = ac_stmt(V0);
+  dynamic_pointer_cast<SuiteStmt>(s)->ownBlock = true;
+  return s;
+}
 compound_stmt <-
   / function
   / if_stmt
@@ -208,16 +216,16 @@ if_stmt <- ('if' SPACE named_expression _ ':' _ suite)
   return stmt;
 }
 while_stmt <- ('while' SPACE named_expression _ ':' _ suite)
-              (SAMEDENT 'else' _ ':' _ suite)?  {
+              (SAMEDENT 'else' (SPACE 'not' SPACE 'break')*  _ ':' _ suite)?  {
   return ast<WhileStmt>(LOC, 
     ac_expr(V0), ac_stmt(V1), VS.size() > 2 ? ac_stmt(V2) : nullptr
   );
 }
 for_stmt <- ('for' SPACE star_targets)
             (SPACE 'in' SPACE star_expressions _ ':' _ suite)
-            (SAMEDENT 'else' _ ':' _ suite)? {
+            (SAMEDENT 'else' (SPACE 'not' SPACE 'break')* _ ':' _ suite)? {
   return ast<ForStmt>(LOC, 
-    ac_expr(V0), ac_expr(V1), ac_stmt(V2), VS.size() > 3 ? ac_stmt(V2) : nullptr
+    ac_expr(V0), ac_expr(V1), ac_stmt(V2), VS.size() > 3 ? ac_stmt(VS[3]) : nullptr
   );
 }
 with_stmt <- 'with' SPACE (with_parens_item / with_item) _ ':' _ suite {
@@ -376,7 +384,7 @@ lambdef <- 'lambda' SPACE list(',', NAME) _ ':' _ expression {
   );
 }
 pipe <- 
-  / disjunction ((_ EOL _ / _) <'|>' / '||>'> (_ EOL _ / _) disjunction)+ {
+  / disjunction (_ <'|>' / '||>'> _ disjunction)+ {
     vector<PipeExpr::Pipe> v;
     for (int i = 0; i < VS.size(); i++)
       v.push_back(PipeExpr::Pipe{i ? VS.token_to_string(i - 1) : "", ac_expr(VS[i])});
@@ -486,8 +494,9 @@ atom <-
       ast<IntExpr>(LOC, ac<string>(V0)), ast<IntExpr>(LOC, ac<string>(V1))
     );
   }
-  / FLOAT NAME? { 
-    return ast<FloatExpr>(LOC, ac<string>(V0), VS.size() > 1 ? ac<string>(V1) : ""); 
+  / FLOAT { 
+    // Right now suffixes are _not_ supported
+    return ast<FloatExpr>(LOC, ac<string>(V0), ""); 
   }
   / INT NAME? { 
     return ast<IntExpr>(LOC, ac<string>(V0), VS.size() > 1 ? ac<string>(V1) : ""); 
@@ -619,7 +628,21 @@ NAME <-
   / keyword [a-zA-Z_0-9]+ { return string(VS.sv()); }
   / !keyword <[a-zA-Z_] [a-zA-Z_0-9]*> { return VS.token_to_string(); }
 STRING <- <NAME? STR> {
-  return pair(ac<string>(VS.size() > 1 ? V1 : V0), VS.size() > 1 ? ac<string>(V0) : "");
+  auto p = pair(
+    ac<string>(VS.size() > 1 ? V1 : V0), 
+    VS.size() > 1 ? ac<string>(V0) : ""
+  );
+  if (p.second != "r" && p.second != "R") 
+    try {
+      p.first = unescape(p.first);
+    } catch (std::invalid_argument &e) {
+      throw peg::parse_error("invalid code in a string");
+    } catch (std::out_of_range &) {
+      throw peg::parse_error("invalid code in a string");
+    }
+  else
+    p.second = "";
+  return p;
 }
 STR <- < 
   '"""' (!'"""' CHAR)*       '"""'   /  '\'\'\'' (!'\'\'\'' CHAR)*     '\'\'\'' /

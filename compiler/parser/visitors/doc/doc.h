@@ -24,6 +24,20 @@
 namespace seq {
 namespace ast {
 
+struct xjson {
+  struct json_value {};
+  struct json_dict : public json_value {
+    unordered_map<string, xjson *> values;
+  };
+  struct json_string : public json_value {
+    string value;
+  };
+
+  string key;
+  json_value *value;
+  // virtual string toString() const = 0;
+};
+
 struct DocContext;
 struct DocShared {
   int itemID;

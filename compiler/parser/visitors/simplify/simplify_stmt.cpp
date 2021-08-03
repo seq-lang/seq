@@ -297,7 +297,7 @@ void SimplifyVisitor::visit(GlobalStmt *stmt) {
 
 void SimplifyVisitor::visit(ImportStmt *stmt) {
   seqassert(!ctx->inClass(), "imports within a class");
-  if (stmt->from->isId("C")) {
+  if (stmt->from && stmt->from->isId("C")) {
     /// Handle C imports
     if (auto i = stmt->what->getId())
       resultStmt = transformCImport(i->value, stmt->args, stmt->ret.get(), stmt->as);
@@ -307,7 +307,7 @@ void SimplifyVisitor::visit(ImportStmt *stmt) {
     else
       seqassert(false, "invalid C import statement");
     return;
-  } else if (stmt->from->isId("python") && stmt->what) {
+  } else if (stmt->from && stmt->from->isId("python") && stmt->what) {
     resultStmt =
         transformPythonImport(stmt->what.get(), stmt->args, stmt->ret.get(), stmt->as);
     return;
@@ -315,17 +315,17 @@ void SimplifyVisitor::visit(ImportStmt *stmt) {
 
   // Transform import a.b.c.d to "a/b/c/d".
   vector<string> dirs; // Path components
-  Expr *e = stmt->from.get();
-  while (auto d = e->getDot()) {
-    dirs.push_back(d->member);
-    e = d->expr.get();
-  }
-  if (!e->getId() || !stmt->args.empty() || stmt->ret ||
-      (stmt->what && !stmt->what->getId()))
-    error("invalid import statement");
-  // We have an empty stmt->from in "from .. import".
-  if (!e->getId()->value.empty())
+  if (stmt->from) {
+    Expr *e = stmt->from.get();
+    while (auto d = e->getDot()) {
+      dirs.push_back(d->member);
+      e = d->expr.get();
+    }
+    if (!e->getId() || !stmt->args.empty() || stmt->ret ||
+        (stmt->what && !stmt->what->getId()))
+      error("invalid import statement");
     dirs.push_back(e->getId()->value);
+  }
   // Handle dots (e.g. .. in from ..m import x).
   seqassert(stmt->dots >= 0, "negative dots in ImportStmt");
   for (int i = 0; i < stmt->dots - 1; i++)
@@ -513,7 +513,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
       if ((isEnclosedFunc || attr.has(Attr::Capture)) && !isClassMember)
         ctx->captures.emplace_back(std::map<string, string>{});
       suite = SimplifyVisitor(ctx, preamble).transform(stmt->suite);
-      if (isEnclosedFunc) {
+      if ((isEnclosedFunc || attr.has(Attr::Capture)) && !isClassMember) {
         captures = ctx->captures.back();
         ctx->captures.pop_back();
       }
@@ -1586,7 +1586,7 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
 
 vector<const Stmt *> SimplifyVisitor::getClassMethods(const Stmt *s) {
   vector<const Stmt *> v;
-  if (!s)
+  if (!s || dynamic_cast<const PassStmt *>(s))
     return v;
   if (auto sp = s->getSuite()) {
     for (const auto &ss : sp->stmts)
@@ -1595,7 +1595,7 @@ vector<const Stmt *> SimplifyVisitor::getClassMethods(const Stmt *s) {
   } else if (s->getExpr() && s->getExpr()->expr->getString()) {
     /// Those are doc-strings, ignore them.
   } else if (!s->getFunction() && !s->getClass()) {
-    seqassert(false, "only function and class definitions are allowed within classes");
+    error("only function and class definitions are allowed within classes");
   } else {
     v.push_back(s);
   }

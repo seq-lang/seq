@@ -109,7 +109,7 @@ StmtPtr parseFile(const string &file) {
   }
 
   auto result = parseCode(file, code);
-  // LOG("peg/{} := {}", file, result ? result->toString(0) : "<nullptr>");
+  // LOG("peg/{} :=  {}", file, result ? result->toString(0) : "<nullptr>");
   // throw;
   // LOG("fmt := {}", FormatVisitor::apply(result));
   return result;

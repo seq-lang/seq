@@ -24,29 +24,63 @@ find_package(LLVM REQUIRED CONFIG PATHS ${SEQ_DEP} NO_DEFAULT_PATH)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-set(ZLIB ${SEQ_DEP}/lib/libz.a)
-if (NOT EXISTS ${ZLIB})
-    message(FATAL_ERROR "Cannot find ${ZLIB}")
-endif ()
-message(STATUS "Found zlib: ${ZLIB}")
+include(ExternalProject)
+ExternalProject_Add(zlibng
+        URL https://github.com/zlib-ng/zlib-ng/archive/2.0.2.tar.gz
+        BUILD_IN_SOURCE 1
+        UPDATE_DISCONNECTED TRUE
+        WORKING_DIRECTORY <SOURCE_DIR>
+        CONFIGURE_COMMAND ./configure --64 --static --zlib-compat --prefix=<INSTALL_DIR>
+        BUILD_COMMAND make -j${CONCURRENCY})
+ExternalProject_Get_Property(zlibng INSTALL_DIR)
+set(ZLIB ${INSTALL_DIR}/lib/libz.a)
 
-set(BDWGC ${SEQ_DEP}/lib/libgc.a)
-if (NOT EXISTS ${BDWGC})
-    message(FATAL_ERROR "Cannot find ${BDWGC}")
-endif ()
-message(STATUS "Found bdwgc: ${BDWGC}")
+ExternalProject_Add(libbacktrace
+        GIT_REPOSITORY https://github.com/seq-lang/libbacktrace
+        BUILD_IN_SOURCE 1
+        UPDATE_DISCONNECTED TRUE
+        WORKING_DIRECTORY <SOURCE_DIR>
+        CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR>
+        BUILD_COMMAND make -j${CONCURRENCY})
+ExternalProject_Get_Property(libbacktrace INSTALL_DIR)
+set(BACKTRACE ${INSTALL_DIR}/lib/libbacktrace.a)
 
-if (APPLE)
-    set(OMPLIB ${SEQ_DEP}/lib/libomp.dylib)
-else ()
-    set(OMPLIB ${SEQ_DEP}/lib/libomp.so)
-endif ()
-if (NOT EXISTS ${OMPLIB})
-    message(FATAL_ERROR "Cannot find ${OMPLIB}")
-endif ()
-message(STATUS "Found OpenMP: ${OMPLIB}")
+ExternalProject_Add(bdwgc
+        GIT_REPOSITORY https://github.com/ivmai/bdwgc
+        GIT_TAG d0ba209660ea8c663e06d9a68332ba5f42da54ba
+        UPDATE_DISCONNECTED TRUE
+        CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_BUILD_TYPE=Release
+        -DBUILD_SHARED_LIBS=OFF
+        -Denable_threads=ON
+        -Denable_large_config=ON
+        -Denable_thread_local_alloc=ON)
+ExternalProject_Get_Property(bdwgc INSTALL_DIR)
+set(BDWGC ${INSTALL_DIR}/lib/libgc.a)
+
+ExternalProject_Add(openmp
+        GIT_REPOSITORY https://github.com/llvm-mirror/openmp
+        GIT_TAG release_60
+        UPDATE_DISCONNECTED TRUE
+        CMAKE_ARGS
+        -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_BUILD_TYPE=Release
+        -DOPENMP_ENABLE_LIBOMPTARGET=0)
 add_library(seqomp SHARED IMPORTED)
+add_dependencies(seqomp openmp)
+ExternalProject_Get_Property(openmp INSTALL_DIR)
+if (APPLE)
+    set(OMPLIB ${INSTALL_DIR}/lib/libomp.dylib)
+else ()
+    set(OMPLIB ${INSTALL_DIR}/lib/libomp.so)
+endif ()
 set_target_properties(seqomp PROPERTIES IMPORTED_LOCATION ${OMPLIB})
+add_custom_command(TARGET openmp POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${OMPLIB} ${CMAKE_BINARY_DIR})
+
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 if (APPLE)
@@ -76,6 +110,7 @@ set(SEQRT_FILES runtime/lib.h
         runtime/sw/intersw.h
         runtime/sw/intersw.cpp)
 add_library(seqrt SHARED ${SEQRT_FILES})
+add_dependencies(seqrt zlibng bdwgc libbacktrace)
 target_compile_options(seqrt PRIVATE -mavx)
 target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include runtime)
 if (APPLE)
@@ -83,7 +118,6 @@ if (APPLE)
 else ()
     target_link_libraries(seqrt PUBLIC seqomp ${STATIC_LIBCPP} -Wl,--whole-archive ${ZLIB} ${BDWGC} -Wl,--no-whole-archive)
 endif ()
-set(BACKTRACE ${SEQ_DEP}/lib/libbacktrace.a)
 target_link_libraries(seqrt PUBLIC ${BACKTRACE})
 
 # Seq compiler library
@@ -239,6 +273,9 @@ set(SEQ_CPPFILES
         compiler/util/fmt/format.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
 target_sources(seq PRIVATE ${SEQ_CPPFILES} rules.cpp)
+# if (CMAKE_BUILD_TYPE MATCHES Debug)
+#     set_source_files_properties(rules.cpp compiler/parser/peg/peg.cpp PROPERTIES COMPILE_FLAGS "-O2")
+# endif ()
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 if (APPLE)
     target_link_libraries(seq ${LLVM_LIBS} dl seqrt)

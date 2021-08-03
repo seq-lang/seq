@@ -84,6 +84,8 @@ namespace ast {
 vector<string> split(const string &str, char delim);
 /// Escape a C string (replace \n with \\n etc.).
 string escape(const string &str);
+/// Unescape a C string (replace \\n with \n etc.).
+string unescape(const string &str);
 /// Escape an F-string braces (replace { and } with {{ and }}).
 string escapeFStringBraces(const string &str, int start, int len);
 /// True if a string str starts with a prefix.

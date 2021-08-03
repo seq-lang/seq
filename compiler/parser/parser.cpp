@@ -52,6 +52,11 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
 
     ast::StmtPtr codeStmt =
         isCode ? ast::parseCode(abs, code, startLine) : ast::parseFile(abs);
+    if (_dbg_level) {
+      auto fo = fopen("_dump.sexp", "w");
+      fmt::print(fo, "{}\n", codeStmt->toString(0));
+      fclose(fo);
+    }
 
     using namespace std::chrono;
 
@@ -74,11 +79,11 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
                 _ocaml_time) /
                    1000.0);
       if (_dbg_level) {
-        auto fo = fopen("_dump_simplify.seq", "w");
-        fmt::print(fo, "{}", ast::FormatVisitor::apply(transformed, cache));
+        auto fo = fopen("_dump_simplify.sexp", "w");
+        fmt::print(fo, "{}\n", transformed->toString(0));
         fclose(fo);
-        fo = fopen("_dump_simplify.sexp", "w");
-        fmt::print(fo, "{}\n", transformed->toString());
+        fo = fopen("_dump_simplify.seq", "w");
+        fmt::print(fo, "{}", ast::FormatVisitor::apply(transformed, cache));
         fclose(fo);
       }
     }
@@ -95,7 +100,7 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
         fmt::print(fo, "{}", ast::FormatVisitor::apply(typechecked, cache));
         fclose(fo);
         fo = fopen("_dump_typecheck.sexp_", "w");
-        fmt::print(fo, "{}\n", typechecked->toString());
+        fmt::print(fo, "{}\n", typechecked->toString(0));
         fclose(fo);
       }
     }
@@ -126,14 +131,15 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
     }
     return nullptr;
   } catch (exc::ParserException &e) {
-    for (int i = 0; i < e.messages.size(); i++) {
-      if (isTest) {
-        LOG("ERROR: {}", e.messages[i]);
-      } else {
-        compilationError(e.messages[i], e.locations[i].file, e.locations[i].line,
-                         e.locations[i].col, /*terminate=*/false);
+    for (int i = 0; i < e.messages.size(); i++)
+      if (!e.messages[i].empty()) {
+        if (isTest) {
+          LOG("ERROR: {}", e.messages[i]);
+        } else {
+          compilationError(e.messages[i], e.locations[i].file, e.locations[i].line,
+                           e.locations[i].col, /*terminate=*/false);
+        }
       }
-    }
     return nullptr;
   }
 }

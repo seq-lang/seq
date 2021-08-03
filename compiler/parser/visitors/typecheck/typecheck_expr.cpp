@@ -733,12 +733,14 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
     return nullptr;
 
   // Extract a static integer value from a compatible expression.
-  auto getInt = [](int64_t *o, const ExprPtr &e) {
+  auto getInt = [&](int64_t *o, const ExprPtr &e) {
     if (!e)
       return true;
     if (e->isStaticExpr) {
-      seqassert(e->staticEvaluation.first, "{} not evaluated", e->toString());
-      *o = e->staticEvaluation.second;
+      auto et = transform(e->clone());
+      seqassert(et->isStaticExpr && et->staticEvaluation.first, "{} not evaluated",
+                e->toString());
+      *o = et->staticEvaluation.second;
       return true;
     }
     if (auto ei = e->getInt()) {

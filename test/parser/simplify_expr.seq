@@ -38,7 +38,7 @@ print 2e2 #: 200
 print 2.e-2 #: 0.02
 
 #%% float_error,barebones
-print 5.__str__() #! ERROR: parsing error: '__str__'
+print 5.__str__() #! ERROR: syntax error
 
 #%% string,barebones
 print 'kthxbai', "kthxbai" #: kthxbai kthxbai
@@ -304,11 +304,11 @@ seq_print(1, name="56", 2) #! ERROR: unnamed argument after a named argument
 
 #%% call_err_2,barebones
 x = (1, 2)
-seq_print(1, name=*x) #! ERROR: named star-expressions not allowed
+seq_print(1, name=*x) #! ERROR: syntax error
 
 #%% call_err_3,barebones
 x = (1, 2)
-seq_print(1, name=**x) #! ERROR: parsing error: '**'
+seq_print(1, name=**x) #! ERROR: syntax error
 
 #%% call_collections
 from collections import namedtuple as nt

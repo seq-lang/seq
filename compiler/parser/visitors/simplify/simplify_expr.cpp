@@ -65,7 +65,7 @@ void SimplifyVisitor::visit(StringExpr *expr) {
   string concat;
   int realStrings = 0;
   for (auto &p : expr->strings) {
-    if (p.second == "f") {
+    if (p.second == "f" || p.second == "F") {
       /// F-strings
       exprs.push_back(transformFString(p.first));
     } else if (!p.second.empty()) {
@@ -82,6 +82,8 @@ void SimplifyVisitor::visit(StringExpr *expr) {
   }
   if (realStrings == expr->strings.size())
     resultExpr = N<StringExpr>(concat);
+  else if (exprs.size() == 1)
+    resultExpr = exprs[0];
   else
     resultExpr =
         transform(N<CallExpr>(N<DotExpr>(N<IdExpr>("str"), "cat"), move(exprs)));
@@ -837,7 +839,6 @@ ExprPtr SimplifyVisitor::makeAnonFn(vector<StmtPtr> &&stmts,
   if (s)
     return N<StmtExpr>(move(s), transform(N<IdExpr>(name)));
   return transform(N<IdExpr>(name));
-  //  return N<CallExpr>(N<IdExpr>(name), move(args));
 }
 
 } // namespace ast

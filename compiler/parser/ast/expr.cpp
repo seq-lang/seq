@@ -64,8 +64,9 @@ IntExpr::IntExpr(const string &value, string suffix)
       this->value += c;
 }
 string IntExpr::toString() const {
-  return wrapType(format("int {}{}", value,
-                         suffix.empty() ? "" : format(" #:suffix \"{}\"", suffix)));
+  return wrapType(format("int {}{}{}", value,
+                         suffix.empty() ? "" : format(" #:suffix \"{}\"", suffix),
+                         staticEvaluation.first ? " #:static" : ""));
 }
 ACCEPT_IMPL(IntExpr, ASTVisitor);
 

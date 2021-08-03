@@ -43,78 +43,6 @@ if [ ! -f "${INSTALLDIR}/bin/llc" ]; then
   "${INSTALLDIR}/bin/llvm-config" --cmakedir
 fi
 
-# OCaml
-OCAML_VERSION='4.07.1'
-OCAMLBUILD_VERSION='0.12.0'
-if [ ! -d "${SRCDIR}/ocaml-${OCAML_VERSION}" ]; then
-  curl -L "https://github.com/ocaml/ocaml/archive/${OCAML_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
-fi
-if [ ! -f "${INSTALLDIR}/bin/ocamlbuild" ]; then
-  cd "${SRCDIR}/ocaml-${OCAML_VERSION}"
-  ./configure \
-      -cc "${CC} -Wno-implicit-function-declaration" \
-      -fPIC \
-      -no-pthread \
-      -no-debugger \
-      -no-debug-runtime \
-      -prefix "${INSTALLDIR}"
-  make -j "${JOBS}" world.opt
-  make install
-  export PATH="${INSTALLDIR}/bin:${PATH}"
-
-  curl -L "https://github.com/ocaml/ocamlbuild/archive/${OCAMLBUILD_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
-  cd "${SRCDIR}/ocamlbuild-${OCAMLBUILD_VERSION}"
-  make configure \
-    PREFIX="${INSTALLDIR}" \
-    OCAMLBUILD_BINDIR="${INSTALLDIR}/bin" \
-    OCAMLBUILD_LIBDIR="${INSTALLDIR}/lib" \
-    OCAMLBUILD_MANDIR="${INSTALLDIR}/man"
-  make -j "${JOBS}"
-  make install
-  "${INSTALLDIR}/bin/ocaml" -version
-  "${INSTALLDIR}/bin/ocamlbuild" -version
-fi
-
-export PATH=${INSTALLDIR}/bin:${PATH}
-
-# Menhir
-MENHIR_VERSION='20190924'
-if [ ! -d "${SRCDIR}/menhir-${MENHIR_VERSION}" ]; then
-  curl -L "https://gitlab.inria.fr/fpottier/menhir/-/archive/${MENHIR_VERSION}/menhir-${MENHIR_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
-fi
-cd "${SRCDIR}/menhir-${MENHIR_VERSION}"
-make PREFIX="${INSTALLDIR}" all -j "${JOBS}"
-make PREFIX="${INSTALLDIR}" install
-"${INSTALLDIR}/bin/menhir" --version
-[ ! -f "${INSTALLDIR}/share/menhir/menhirLib.cmx" ] && die "Menhir library not found"
-
-if [ "${USE_ZLIBNG}" = '1' ] ; then
-    # zlib-ng
-    ZLIBNG_VERSION='2.0.2'
-    curl -L "https://github.com/zlib-ng/zlib-ng/archive/${ZLIBNG_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
-    cd "${SRCDIR}/zlib-ng-${ZLIBNG_VERSION}"
-    CFLAGS="-fPIC" ./configure \
-        --64 \
-        --zlib-compat \
-        --prefix="${INSTALLDIR}"
-    make -j "${JOBS}"
-    make install
-    [ ! -f "${INSTALLDIR}/lib/libz.a" ] && die "zlib (zlib-ng) library not found"
-else
-    # zlib
-    ZLIB_VERSION='1.2.11'
-    curl -L "https://zlib.net/zlib-${ZLIB_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
-    cd "${SRCDIR}/zlib-${ZLIB_VERSION}"
-    CFLAGS="-fPIC" ./configure \
-        --64 \
-        --static \
-        --shared \
-        --prefix="${INSTALLDIR}"
-    make -j "${JOBS}"
-    make install
-    [ ! -f "${INSTALLDIR}/lib/libz.a" ] && die "zlib library not found"
-fi
-
 # libdeflate
 LIBDEFLATE_VERSION='1.7'
 curl -L "https://github.com/ebiggers/libdeflate/archive/refs/tags/v${LIBDEFLATE_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
@@ -122,21 +50,6 @@ cd "${SRCDIR}/libdeflate-${LIBDEFLATE_VERSION}"
 make -j "${JOBS}" -e libdeflate.a CFLAGS="-fPIC" PREFIX="${INSTALLDIR}"
 install -m644 libdeflate.a "${INSTALLDIR}/lib"
 install -m644 libdeflate.h "${INSTALLDIR}/include"
-
-# bdwgc
-BDWGC_VERSION='8.0.4'
-curl -L "https://github.com/ivmai/bdwgc/releases/download/v${BDWGC_VERSION}/gc-${BDWGC_VERSION}.tar.gz" | tar zxf - -C "${SRCDIR}"
-cd "${SRCDIR}/gc-${BDWGC_VERSION}"
-./configure \
-    CFLAGS="-fPIC" \
-    --enable-threads=posix \
-    --enable-large-config \
-    --enable-thread-local-alloc \
-    --prefix="${INSTALLDIR}"
-    # --enable-handle-fork=yes --disable-shared --enable-static
-make -j "${JOBS}" LDFLAGS=-static
-make install
-[ ! -f "${INSTALLDIR}/lib/libgc.a" ] && die "gc library not found"
 
 # htslib
 HTSLIB_VERSION='1.12'

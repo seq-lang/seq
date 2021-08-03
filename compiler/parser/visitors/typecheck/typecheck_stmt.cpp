@@ -324,8 +324,7 @@ void TypecheckVisitor::visit(IfStmt *stmt) {
   if (ifSuite)
     stmt->done &= stmt->cond->done && ifSuite->done;
   if (stmt->elseSuite && includeElse) {
-    elseSuite =  transformElse ? transform(stmt->elseSuite)
-                                                       : move(stmt->elseSuite);
+    elseSuite = transformElse ? transform(stmt->elseSuite) : move(stmt->elseSuite);
     stmt->done &= elseSuite->done;
   }
   if (!ifSuite && !elseSuite)
@@ -347,8 +346,10 @@ void TypecheckVisitor::visit(TryStmt *stmt) {
     c.suite = transform(c.suite);
     stmt->done &= (c.exc ? c.exc->done : true) && c.suite->done;
   }
-  stmt->finally = transform(stmt->finally);
-  stmt->done &= stmt->finally->done;
+  if (stmt->finally) {
+    stmt->finally = transform(stmt->finally);
+    stmt->done &= stmt->finally->done;
+  }
 }
 
 void TypecheckVisitor::visit(ThrowStmt *stmt) {

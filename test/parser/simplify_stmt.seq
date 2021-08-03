@@ -72,11 +72,11 @@ a, *b, c, *d = 1,2,3,4,5 #! ERROR: multiple unpack expressions
 
 #%% assign_err_2,barebones
 a = [1, 2, 3]
-a[1]: int = 3 #! ERROR: parsing error: ':'
+a[1]: int = 3 #! ERROR: syntax error
 
 #%% assign_err_3,barebones
 a = 5
-a.x: int = 3 #! ERROR: parsing error: ':'
+a.x: int = 3 #! ERROR: syntax error
 
 #%% assign_err_4,barebones
 *x = range(5) #! ERROR: invalid assignment
@@ -386,7 +386,7 @@ print sp(65)  #: 65
 
 #%% import_c_dylib_error,barebones
 from C import "".seq_print(str) as sp
-sp("hi!") #! ERROR: parsing error: '"'
+sp("hi!") #! ERROR: syntax error
 
 #%% import,barebones
 import a  #: a
@@ -437,14 +437,13 @@ from a.b.rec1_err import bar
 
 #%% import_err_1,barebones
 class Foo:
-    import bar #! ERROR: parsing error: 'import'
+    import bar #! ERROR: only function and class definitions are allowed within classes
 
 #%% import_err_2,barebones
-import "".a.b.c #! ERROR: parsing error: '"'
+import "".a.b.c #! ERROR: syntax error
 
 #%% import_err_3,barebones
-# TODO: this currently works. Needs parser changes...
-# from a.b import foo() # ERROR: invalid import statement
+from a.b import foo() #! ERROR: invalid import statement
 
 #%% import_err_4,barebones
 from a.b.c import hai.hey #! ERROR: invalid import statement
@@ -477,11 +476,11 @@ def foo(a, b=1, *c, *d):
 
 #%% function_err_0d,barebones
 def foo(a, b=1, *c: int):
-    pass #! ERROR: parsing error: ':'
+    pass #! ERROR: invalid *args
 
 #%% function_err_0e,barebones
 def foo(a, b=1, *c = 1):
-    pass #! ERROR: parsing error: '='
+    pass #! ERROR: invalid *args
 
 #%% function_err_0f,barebones
 def foo(a, b=1, **c, **kwargs):
@@ -489,11 +488,11 @@ def foo(a, b=1, **c, **kwargs):
 
 #%% function_err_0g,barebones
 def foo(a, b=1, **c: int):
-    pass #! ERROR: parsing error: ':'
+    pass #! ERROR: invalid **kwargs
 
 #%% function_err_0h,barebones
 def foo(a, b=1, **c = 1):
-    pass #! ERROR: parsing error: '='
+    pass #! ERROR: invalid **kwargs
 
 #%% function_err_0i,barebones
 def foo(a, **c, d):
@@ -652,7 +651,7 @@ class Foo:
 #%% class_err_8,barebones
 class Foo:
     while True: pass
-#! ERROR: parsing error: 'while'
+#! ERROR: only function and class definitions are allowed within classes
 
 #%% class_err_9,barebones
 class F[T: str]:
