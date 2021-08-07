@@ -130,13 +130,19 @@ struct Reduction {
   };
 
   Kind kind = Kind::NONE;
-  types::Type *type = nullptr;
   Var *shared = nullptr;
+
+  types::Type *getType() {
+    auto *ptrType = cast<types::PointerType>(shared->getType());
+    seqassert(ptrType, "expected shared var to be of pointer type");
+    return ptrType->getBase();
+  }
 
   Value *getInitial() {
     if (!*this)
       return nullptr;
-    auto *M = type->getModule();
+    auto *M = shared->getModule();
+    auto *type = getType();
 
     if (isA<types::IntType>(type)) {
       switch (kind) {
@@ -221,6 +227,7 @@ struct Reduction {
   Value *generateAtomicReduction(Value *ptr, Value *arg, Var *loc, Var *gtid,
                                  ReductionLocks &locks) {
     auto *M = ptr->getModule();
+    auto *type = getType();
     std::string func = "";
 
     if (isA<types::IntType>(type)) {
@@ -319,13 +326,14 @@ struct Reduction {
         ompModule);
     seqassert(critEnd, "critical end function not found");
 
-    // TODO: wrap in try-finally
     auto *critEnter = util::call(
         critBegin, {M->Nr<VarValue>(loc), M->Nr<VarValue>(gtid), M->Nr<VarValue>(lck)});
     auto *operation = generateNonAtomicReduction(ptr, arg);
     auto *critExit = util::call(
         critEnd, {M->Nr<VarValue>(loc), M->Nr<VarValue>(gtid), M->Nr<VarValue>(lck)});
-    return util::series(critEnter, operation, critExit);
+    // make sure the unlock is in a finally-block
+    return util::series(critEnter, M->Nr<TryCatchFlow>(util::series(operation),
+                                                       util::series(critExit)));
   }
 
   operator bool() const { return kind != Kind::NONE; }
@@ -438,9 +446,7 @@ struct ReductionIdentifier : public util::Operator {
       if (!deref)
         return {};
 
-      // TODO: check for other uses of 'shared'?
-
-      Reduction reduction = {rf.kind, type, shared};
+      Reduction reduction = {rf.kind, shared};
       if (!reduction.getInitial())
         return {};
 
@@ -458,10 +464,13 @@ struct ReductionIdentifier : public util::Operator {
   void handle(CallInstr *v) override {
     if (auto reduction = getReductionFromCall(v)) {
       auto it = reductions.find(reduction.shared->getId());
-      // if we've seen the var before, mark it as invalid via empty reduction
-      reductions.emplace(reduction.shared->getId(),
-                         (it == reductions.end()) ? reduction : Reduction());
-      getReduction(reduction.shared);
+      // if we've seen the var before, make sure it's consistent
+      // otherwise mark as invalid via an empty reduction
+      if (it == reductions.end()) {
+        reductions.emplace(reduction.shared->getId(), reduction);
+      } else if (it->second && it->second.kind != reduction.kind) {
+        it->second = {};
+      }
     }
   }
 };
@@ -470,7 +479,7 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
   struct SharedInfo {
     unsigned memb;       // member index in template's `extra` arg
     Var *local;          // the local var we create to store current value
-    Reduction reduction; // the actual reduction we're performing, or empty if none
+    Reduction reduction; // the reduction we're performing, or empty if none
   };
 
   BodiedFunc *parent;
