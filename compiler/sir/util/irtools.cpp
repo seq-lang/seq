@@ -1,5 +1,7 @@
 #include "irtools.h"
 
+#include <iterator>
+
 namespace seq {
 namespace ir {
 namespace util {
@@ -92,6 +94,11 @@ bool isMagicMethodCall(const Value *value) {
 }
 
 Value *makeTuple(const std::vector<Value *> &args, Module *M) {
+  if (!M) {
+    seqassert(!args.empty(), "unknown module for empty tuple construction");
+    M = args[0]->getModule();
+  }
+
   std::vector<types::Type *> types;
   for (auto *arg : args) {
     types.push_back(arg->getType());
@@ -106,6 +113,8 @@ VarValue *makeVar(Value *x, SeriesFlow *flow, BodiedFunc *parent, bool prepend) 
   const bool global = (parent == nullptr);
   auto *M = x->getModule();
   auto *v = M->Nr<Var>(x->getType(), global);
+  if (global)
+    v->setName("_anon_global");
   auto *a = M->Nr<AssignInstr>(v, x);
   if (prepend) {
     flow->insert(flow->begin(), a);
@@ -167,6 +176,38 @@ const Func *getFunc(const Value *x) {
     }
   }
   return nullptr;
+}
+
+Value *ptrLoad(Value *ptr) {
+  auto *M = ptr->getModule();
+  auto *deref = (*ptr)[*M->getInt(0)];
+  seqassert(deref, "pointer getitem not found");
+  return deref;
+}
+
+Value *ptrStore(Value *ptr, Value *val) {
+  auto *M = ptr->getModule();
+  auto *setitem =
+      M->getOrRealizeMethod(ptr->getType(), Module::SETITEM_MAGIC_NAME,
+                            {ptr->getType(), M->getIntType(), val->getType()});
+  seqassert(setitem, "pointer setitem not found");
+  return call(setitem, {ptr, M->getInt(0), val});
+}
+
+Value *tupleGet(Value *tuple, unsigned index) {
+  auto *M = tuple->getModule();
+  return M->Nr<ExtractInstr>(tuple, "item" + std::to_string(index + 1));
+}
+
+Value *tupleStore(Value *tuple, unsigned index, Value *val) {
+  auto *M = tuple->getModule();
+  auto *type = cast<types::RecordType>(tuple->getType());
+  seqassert(type, "argument is not a tuple");
+  std::vector<Value *> newElements;
+  for (unsigned i = 0; i < std::distance(type->begin(), type->end()); i++) {
+    newElements.push_back(i == index ? val : tupleGet(tuple, i));
+  }
+  return makeTuple(newElements, M);
 }
 
 BodiedFunc *getStdlibFunc(Value *x, const std::string &name,

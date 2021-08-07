@@ -65,8 +65,7 @@ struct OutlineReplacer : public Operator {
     auto *M = v->getModule();
     if (modVars.count(v->getVar()->getId()) > 0) {
       // var -> pointer dereference
-      auto *deref = (*M->Nr<VarValue>(mappedVar(v->getVar())))[*M->getInt(0)];
-      seqassert(deref, "pointer getitem not found");
+      auto *deref = util::ptrLoad(M->Nr<VarValue>(mappedVar(v->getVar())));
       saw(deref);
       v->replaceAll(deref);
     }
@@ -91,11 +90,7 @@ struct OutlineReplacer : public Operator {
     if (modVars.count(v->getLhs()->getId()) > 0) {
       // store in pointer
       Var *newVar = mappedVar(v->getLhs());
-      auto *fn = M->getOrRealizeMethod(
-          newVar->getType(), Module::SETITEM_MAGIC_NAME,
-          {newVar->getType(), M->getIntType(), v->getLhs()->getType()});
-      seqassert(fn, "pointer setitem not found");
-      auto *setitem = call(fn, {M->Nr<VarValue>(newVar), M->getInt(0), v->getRhs()});
+      auto *setitem = util::ptrStore(M->Nr<VarValue>(newVar), v->getRhs());
       saw(setitem);
       v->replaceAll(setitem);
     }

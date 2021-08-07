@@ -56,9 +56,9 @@ bool isMagicMethodCall(const Value *value);
 
 /// Constructs a new tuple.
 /// @param args vector of tuple contents
-/// @param M the module
+/// @param M the module; inferred from elements if null
 /// @return value represents a tuple with the given contents
-Value *makeTuple(const std::vector<Value *> &args, Module *M);
+Value *makeTuple(const std::vector<Value *> &args, Module *M = nullptr);
 
 /// Constructs and assigns a new variable.
 /// @param x the value to assign to the new variable
@@ -147,6 +147,31 @@ Func *getFunc(Value *x);
 /// @param x the value
 /// @return the function represented by the given value, or null if none
 const Func *getFunc(const Value *x);
+
+/// Loads value from a pointer.
+/// @param ptr the pointer
+/// @return the value pointed to by the argument
+Value *ptrLoad(Value *ptr);
+
+/// Stores a value into a pointer.
+/// @param ptr the pointer
+/// @param val the value to store
+/// @return "__setitem__" call representing the store
+Value *ptrStore(Value *ptr, Value *val);
+
+/// Gets value from a tuple at the given index.
+/// @param tuple the tuple
+/// @param index the 0-based index
+/// @return tuple element at the given index
+Value *tupleGet(Value *tuple, unsigned index);
+
+/// Stores value in a tuple at the given index. Since tuples are immutable,
+/// a new instance is returned with the appropriate element replaced.
+/// @param tuple the tuple
+/// @param index the 0-based index
+/// @param val the value to store
+/// @return new tuple instance with the given value inserted
+Value *tupleStore(Value *tuple, unsigned index, Value *val);
 
 /// Gets a bodied standard library function from a value.
 /// @param x the value

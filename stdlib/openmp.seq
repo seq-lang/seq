@@ -33,6 +33,14 @@ DEFAULT_LOC = Ident(i32(0), i32(2), i32(0), i32(0), DEFAULT_SRC)
 def _default_loc():
     return __ptr__(DEFAULT_LOC)
 
+def _critical_begin(loc_ref: Ptr[Ident], gtid: int, lck: cobj):
+    from C import __kmpc_critical(Ptr[Ident], i32, cobj)
+    __kmpc_critical(loc_ref, i32(gtid), lck)
+
+def _critical_end(loc_ref: Ptr[Ident], gtid: int, lck: cobj):
+    from C import __kmpc_end_critical(Ptr[Ident], i32, cobj)
+    __kmpc_end_critical(loc_ref, i32(gtid), lck)
+
 def _single_begin(loc_ref: Ptr[Ident], gtid: int):
     from C import __kmpc_single(Ptr[Ident], i32) -> i32
     return int(__kmpc_single(loc_ref, i32(gtid)))
@@ -73,6 +81,10 @@ def _barrier(loc_ref: Ptr[Ident], gtid: int):
     from C import __kmpc_barrier(Ptr[Ident], i32)
     __kmpc_barrier(loc_ref, i32(gtid))
 
+def _flush(loc_ref: Ptr[Ident]):
+    from C import __kmpc_flush(Ptr[Ident])
+    __kmpc_flush(loc_ref)
+
 def _static_init(loc_ref: Ptr[Ident], gtid: int, schedtype: int, loop: range, incr: int, chunk: int):
     from C import __kmpc_for_static_init_8(Ptr[Ident], i32, i32, Ptr[i32], Ptr[int], Ptr[int], Ptr[int], int, int)
     last = i32(0)
@@ -80,29 +92,130 @@ def _static_init(loc_ref: Ptr[Ident], gtid: int, schedtype: int, loop: range, in
     upper = len(loop) - 1
     stride = 1
     __kmpc_for_static_init_8(loc_ref, i32(gtid), i32(schedtype), __ptr__(last), __ptr__(lower), __ptr__(upper), __ptr__(stride), incr, chunk)
-    return range(loop._get(lower), loop._get(upper + 1), loop.step)
+    return bool(last), range(loop._get(lower), loop._get(upper + 1), loop.step)
 
 def _static_fini(loc_ref: Ptr[Ident], gtid: int):
     from C import __kmpc_for_static_fini(Ptr[Ident], i32)
     __kmpc_for_static_fini(loc_ref, i32(gtid))
+
+def _dynamic_init(loc_ref: Ptr[Ident], gtid: int, schedtype: int, loop: range, chunk: int):
+    from C import __kmpc_dispatch_init_8(Ptr[Ident], i32, i32, int, int, int, int)
+    lower = 0
+    upper = len(loop) - 1
+    stride = 1
+    __kmpc_dispatch_init_8(loc_ref, i32(gtid), i32(schedtype), lower, upper, stride, chunk)
+
+def _dynamic_next(loc_ref: Ptr[Ident], gtid: int, loop: range):
+    from C import __kmpc_dispatch_next_8(Ptr[Ident], i32, Ptr[i32], Ptr[int], Ptr[int], Ptr[int]) -> i32
+    last = i32(0)
+    lower = 0
+    upper = 0
+    stride = 0
+    more = __kmpc_dispatch_next_8(loc_ref, i32(gtid), __ptr__(last), __ptr__(lower), __ptr__(upper), __ptr__(stride))
+    return bool(more), bool(last), range(loop._get(lower), loop._get(upper + 1), loop.step)
+
+def _reduce[T](loc_ref: Ptr[Ident], gtid: int, reduce_data: T, reduce_func: cobj, lck: cobj):
+    from internal.gc import sizeof
+    from C import __kmpc_reduce(Ptr[Ident], i32, i32, int, cobj, cobj, cobj) -> i32
+    num_vars = staticlen(reduce_data)
+    reduce_size = sizeof[T]()
+    return int(__kmpc_reduce(loc_ref, i32(gtid), i32(num_vars), reduce_size, __ptr__(reduce_data).as_byte(), reduce_func, lck))
+
+def _end_reduce(loc_ref: Ptr[Ident], gtid: int, lck: cobj):
+    from C import __kmpc_end_reduce(Ptr[Ident], i32, cobj)
+    __kmpc_end_reduce(loc_ref, i32(gtid), lck)
+
+def _reduce_nowait[T](loc_ref: Ptr[Ident], gtid: int, reduce_data: T, reduce_func: cobj, lck: cobj):
+    from internal.gc import sizeof
+    from C import __kmpc_reduce_nowait(Ptr[Ident], i32, i32, int, cobj, cobj, cobj) -> i32
+    num_vars = staticlen(reduce_data)
+    reduce_size = sizeof[T]()
+    return int(__kmpc_reduce_nowait(loc_ref, i32(gtid), i32(num_vars), reduce_size, __ptr__(reduce_data).as_byte(), reduce_func, lck))
+
+def _end_reduce_nowait(loc_ref: Ptr[Ident], gtid: int, lck: cobj):
+    from C import __kmpc_end_reduce_nowait(Ptr[Ident], i32, cobj)
+    __kmpc_end_reduce_nowait(loc_ref, i32(gtid), lck)
 
 def _fork_call(microtask: cobj, args):
     from C import __kmpc_fork_call(Ptr[Ident], i32, cobj, ...)
     loc_ref = _default_loc()  # TODO: pass real loc?
     __kmpc_fork_call(loc_ref, i32(1), microtask, __ptr__(args))
 
+
 def _static_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
-    def _static_loop_body_stub(i, args):
+    def _loop_loc_and_gtid(loc_ref: Ptr[Ident], gtid: int):
+        pass
+
+    def _loop_body_stub(i, args):
+        pass
+
+    def _loop_schedule():
+        return (1 << 30) | 35  # nonmonotonic, dynamic chunked
+
+    def _loop_chunk():
+        return 1
+
+    def _loop_shared_updates(args):
+        pass
+
+    def _loop_reductions(args):
         pass
 
     start, stop, step, extra = args[0]
     gtid = int(gtid_ptr[0])
     loc_ref = _default_loc()
+    _loop_loc_and_gtid(loc_ref, gtid)
     loop = range(start, stop, step)
-    subloop = _static_init(loc_ref, gtid, schedtype=34, loop=loop, incr=1, chunk=1)
+    schedule = _loop_schedule()
+    chunk = _loop_chunk()
+
+    last, subloop = _static_init(loc_ref, gtid, schedtype=schedule, loop=loop, incr=1, chunk=chunk)
     for i in subloop:
-        _static_loop_body_stub(i, extra)
+        _loop_body_stub(i, extra)
     _static_fini(loc_ref, gtid)
+    if last:
+        _loop_shared_updates(extra)
+
+    _loop_reductions(extra)
+
+def _dynamic_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
+    def _loop_loc_and_gtid(loc_ref: Ptr[Ident], gtid: int):
+        pass
+
+    def _loop_body_stub(i, args):
+        pass
+
+    def _loop_schedule():
+        return (1 << 30) | 35  # nonmonotonic, dynamic chunked
+
+    def _loop_chunk():
+        return 1
+
+    def _loop_shared_updates(args):
+        pass
+
+    def _loop_reductions(args):
+        pass
+
+    start, stop, step, extra = args[0]
+    gtid = int(gtid_ptr[0])
+    loc_ref = _default_loc()
+    _loop_loc_and_gtid(loc_ref, gtid)
+    loop = range(start, stop, step)
+    schedule = _loop_schedule()
+    chunk = _loop_chunk()
+
+    _dynamic_init(loc_ref, gtid, schedtype=schedule, loop=loop, chunk=chunk)
+    while True:
+        more, last, subloop = _dynamic_next(loc_ref, gtid, loop)
+        if not more:
+            break
+        for i in subloop:
+            _loop_body_stub(i, extra)
+        if last:
+            _loop_shared_updates(extra)
+
+    _loop_reductions(extra)
 
 # P = privates; tuple of types
 # S = shareds; tuple of pointers
@@ -198,16 +311,6 @@ def get_dynamic():
 def get_cancellation():
     from C import omp_get_cancellation() -> i32
     return bool(omp_get_cancellation())
-
-''' # deprecated
-def set_nested(nested: bool = True):
-    from C import omp_set_nested(i32)
-    omp_set_nested(i32(1 if nested else 0))
-
-def get_nested():
-    from C import omp_get_nested() -> i32
-    return bool(omp_get_nested())
-'''
 
 def set_schedule(kind: str, chunk_size: int = 0):
     from C import omp_set_schedule(i32, i32)
@@ -336,3 +439,62 @@ def ordered(func):
             finally:
                 _ordered_end(loc, gtid)
     return _wrapper
+
+def _push_num_threads(num_threads: int):
+    from C import __kmpc_push_num_threads(Ptr[Ident], i32, i32)
+    gtid = get_thread_num()
+    loc = _default_loc()
+    __kmpc_push_num_threads(loc, i32(gtid), i32(num_threads))
+
+@llvm
+def _atomic_int_add(a: Ptr[int], b: int) -> void:
+    %old = atomicrmw add i64* %a, i64 %b monotonic
+    ret void
+
+def _atomic_int_mul(a: Ptr[int], b: int):
+    from C import __kmpc_atomic_fixed8_mul(Ptr[Ident], i32, Ptr[int], int)
+    __kmpc_atomic_fixed8_mul(_default_loc(), i32(0), a, b)
+
+@llvm
+def _atomic_int_and(a: Ptr[int], b: int) -> void:
+    %old = atomicrmw and i64* %a, i64 %b monotonic
+    ret void
+
+@llvm
+def _atomic_int_or(a: Ptr[int], b: int) -> void:
+    %old = atomicrmw or i64* %a, i64 %b monotonic
+    ret void
+
+@llvm
+def _atomic_int_xor(a: Ptr[int], b: int) -> void:
+    %old = atomicrmw xor i64* %a, i64 %b monotonic
+    ret void
+
+@llvm
+def _atomic_int_min(a: Ptr[int], b: int) -> void:
+    %old = atomicrmw min i64* %a, i64 %b monotonic
+    ret void
+
+@llvm
+def _atomic_int_max(a: Ptr[int], b: int) -> void:
+    %old = atomicrmw max i64* %a, i64 %b monotonic
+    ret void
+
+@llvm
+def _atomic_float_add(a: Ptr[float], b: float) -> void:
+    # TODO: update this to 'atomicrmw fadd' when upgrading to newer LLVM
+    from C import __kmpc_atomic_float8_add(Ptr[Ident], i32, Ptr[float], float)
+    __kmpc_atomic_float8_add(_default_loc(), i32(get_thread_num()), a, b)
+
+def _atomic_float_mul(a: Ptr[float], b: float):
+    from C import __kmpc_atomic_float8_mul(Ptr[Ident], i32, Ptr[float], float)
+    __kmpc_atomic_float8_mul(_default_loc(), i32(get_thread_num()), a, b)
+
+def _atomic_float_min(a: Ptr[float], b: float):
+    from C import __kmpc_atomic_float8_min(Ptr[Ident], i32, Ptr[float], float)
+    __kmpc_atomic_float8_min(_default_loc(), i32(get_thread_num()), a, b)
+
+@llvm
+def _atomic_float_max(a: Ptr[float], b: float) -> void:
+    from C import __kmpc_atomic_float8_max(Ptr[Ident], i32, Ptr[float], float)
+    __kmpc_atomic_float8_max(_default_loc(), i32(get_thread_num()), a, b)

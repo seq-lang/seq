@@ -1,6 +1,8 @@
 #include "openmp.h"
 
+#include <algorithm>
 #include <iterator>
+#include <limits>
 
 #include "sir/util/cloning.h"
 #include "sir/util/irtools.h"
@@ -12,6 +14,7 @@ namespace transform {
 namespace parallel {
 namespace {
 const std::string ompModule = "std.openmp";
+const std::string builtinModule = "std.internal.builtin";
 
 struct OMPTypes {
   types::Type *i32 = nullptr;
@@ -35,6 +38,47 @@ struct OMPTypes {
   }
 };
 
+int getScheduleCode(const std::string &schedule = "static", bool chunked = false,
+                    bool monotonic = false) {
+  // codes from "enum sched_type" at
+  // https://github.com/llvm/llvm-project/blob/main/openmp/runtime/src/kmp.h
+  int modifier = monotonic ? (1 << 29) : (1 << 30);
+  if (schedule == "static") {
+    if (chunked)
+      return 33;
+    else
+      return 34;
+  } else if (schedule == "dynamic") {
+    return 35 | modifier;
+  } else if (schedule == "guided") {
+    return 36 | modifier;
+  } else if (schedule == "runtime") {
+    if (chunked) {
+      // error
+    }
+    return 37 | modifier;
+  } else if (schedule == "auto") {
+    if (chunked) {
+      // error
+    }
+    return 38 | modifier;
+  }
+  return getScheduleCode(); // default
+}
+
+struct OMPSched {
+  int threads;
+  bool dynamic;
+  int chunk;
+  int code;
+
+  OMPSched() : threads(0), dynamic(false), chunk(1), code(getScheduleCode()) {}
+};
+
+OMPSched getScedule(ImperativeForFlow *v) {
+  return {}; // TODO
+}
+
 Var *getVarFromOutlinedArg(Value *arg) {
   if (auto *val = cast<VarValue>(arg)) {
     return val->getVar();
@@ -46,38 +90,516 @@ Var *getVarFromOutlinedArg(Value *arg) {
   return nullptr;
 }
 
-Value *tget(Value *tuple, unsigned idx) {
-  auto *M = tuple->getModule();
-  return M->Nr<ExtractInstr>(tuple, "item" + std::to_string(idx));
-}
+// we create the locks lazily to avoid them when they're not needed
+struct ReductionLocks {
+  Var *mainLock =
+      nullptr; // lock used in calls to _reduce_no_wait and _end_reduce_no_wait
+  Var *critLock = nullptr; // lock used in reduction critical sections
 
-struct StaticLoopTemplateReplacer : public util::Operator {
+  Var *createLock(Module *M) {
+    auto *main = cast<BodiedFunc>(M->getMainFunc());
+    auto *lck = util::alloc(M->getByteType(), 32);
+    auto *val = util::makeVar(lck, cast<SeriesFlow>(main->getBody()),
+                              /*parent=*/nullptr, /*prepend=*/true);
+    return val->getVar();
+  }
+
+  Var *getMainLock(Module *M) {
+    if (!mainLock)
+      mainLock = createLock(M);
+    return mainLock;
+  }
+
+  Var *getCritLock(Module *M) {
+    if (!critLock)
+      critLock = createLock(M);
+    return critLock;
+  }
+};
+
+struct Reduction {
+  enum Kind {
+    NONE,
+    ADD,
+    MUL,
+    AND,
+    OR,
+    XOR,
+    MIN,
+    MAX,
+  };
+
+  Kind kind = Kind::NONE;
+  types::Type *type = nullptr;
+  Var *shared = nullptr;
+
+  Value *getInitial() {
+    if (!*this)
+      return nullptr;
+    auto *M = type->getModule();
+
+    if (isA<types::IntType>(type)) {
+      switch (kind) {
+      case Kind::ADD:
+        return M->getInt(0);
+      case Kind::MUL:
+        return M->getInt(1);
+      case Kind::AND:
+        return M->getInt(~0);
+      case Kind::OR:
+        return M->getInt(0);
+      case Kind::XOR:
+        return M->getInt(0);
+      case Kind::MIN:
+        return M->getInt(std::numeric_limits<int64_t>::max());
+      case Kind::MAX:
+        return M->getInt(std::numeric_limits<int64_t>::min());
+      default:
+        return nullptr;
+      }
+    } else if (isA<types::FloatType>(type)) {
+      switch (kind) {
+      case Kind::ADD:
+        return M->getFloat(0.);
+      case Kind::MUL:
+        return M->getFloat(1.);
+      case Kind::MIN:
+        return M->getInt(std::numeric_limits<double>::max());
+      case Kind::MAX:
+        return M->getInt(std::numeric_limits<double>::min());
+      default:
+        return nullptr;
+      }
+    }
+
+    auto *init = (*type)();
+    if (!init->getType()->is(type))
+      return nullptr;
+    return init;
+  }
+
+  Value *generateNonAtomicReduction(Value *ptr, Value *arg) {
+    auto *M = ptr->getModule();
+    Value *lhs = util::ptrLoad(ptr);
+    Value *result = nullptr;
+    switch (kind) {
+    case Kind::ADD:
+      result = *lhs + *arg;
+      break;
+    case Kind::MUL:
+      result = *lhs * *arg;
+      break;
+    case Kind::AND:
+      result = *lhs & *arg;
+      break;
+    case Kind::OR:
+      result = *lhs | *arg;
+      break;
+    case Kind::XOR:
+      result = *lhs ^ *arg;
+      break;
+    case Kind::MIN: {
+      auto *tup = util::makeTuple({lhs, arg});
+      auto *fn = M->getOrRealizeFunc("min", {tup->getType()}, {}, builtinModule);
+      seqassert(fn, "min function not found");
+      result = util::call(fn, {tup});
+      break;
+    }
+    case Kind::MAX: {
+      auto *tup = util::makeTuple({lhs, arg});
+      auto *fn = M->getOrRealizeFunc("max", {tup->getType()}, {}, builtinModule);
+      seqassert(fn, "max function not found");
+      result = util::call(fn, {tup});
+      break;
+    }
+    default:
+      return nullptr;
+    }
+    return util::ptrStore(ptr, result);
+  }
+
+  Value *generateAtomicReduction(Value *ptr, Value *arg, Var *loc, Var *gtid,
+                                 ReductionLocks &locks) {
+    auto *M = ptr->getModule();
+    std::string func = "";
+
+    if (isA<types::IntType>(type)) {
+      switch (kind) {
+      case Kind::ADD:
+        func = "_atomic_int_add";
+        break;
+      case Kind::MUL:
+        func = "_atomic_int_mul";
+        break;
+      case Kind::AND:
+        func = "_atomic_int_and";
+        break;
+      case Kind::OR:
+        func = "_atomic_int_or";
+        break;
+      case Kind::XOR:
+        func = "_atomic_int_xor";
+        break;
+      case Kind::MIN:
+        func = "_atomic_int_min";
+        break;
+      case Kind::MAX:
+        func = "_atomic_int_max";
+        break;
+      default:
+        break;
+      }
+    } else if (isA<types::FloatType>(type)) {
+      switch (kind) {
+      case Kind::ADD:
+        func = "_atomic_float_add";
+        break;
+      case Kind::MUL:
+        func = "_atomic_float_mul";
+        break;
+      case Kind::MIN:
+        func = "_atomic_float_min";
+        break;
+      case Kind::MAX:
+        func = "_atomic_float_max";
+        break;
+      default:
+        break;
+      }
+    }
+
+    if (!func.empty()) {
+      auto *atomicOp =
+          M->getOrRealizeFunc(func, {ptr->getType(), arg->getType()}, {}, ompModule);
+      seqassert(atomicOp, "atomic op '{}' not found", func);
+      return util::call(atomicOp, {ptr, arg});
+    }
+
+    switch (kind) {
+    case Kind::ADD:
+      func = "__atomic_add__";
+      break;
+    case Kind::MUL:
+      func = "__atomic_mul__";
+      break;
+    case Kind::AND:
+      func = "__atomic_and__";
+      break;
+    case Kind::OR:
+      func = "__atomic_or__";
+      break;
+    case Kind::XOR:
+      func = "__atomic_xor__";
+      break;
+    case Kind::MIN:
+      func = "__atomic_min__";
+      break;
+    case Kind::MAX:
+      func = "__atomic_max__";
+      break;
+    default:
+      break;
+    }
+
+    if (!func.empty()) {
+      auto *atomicOp =
+          M->getOrRealizeMethod(arg->getType(), func, {ptr->getType(), arg->getType()});
+      if (atomicOp)
+        return util::call(atomicOp, {ptr, arg});
+    }
+
+    seqassert(loc && gtid, "loc and/or gtid are null");
+    auto *lck = locks.getCritLock(M);
+    auto *critBegin = M->getOrRealizeFunc(
+        "_critical_begin", {loc->getType(), gtid->getType(), lck->getType()}, {},
+        ompModule);
+    seqassert(critBegin, "critical begin function not found");
+    auto *critEnd = M->getOrRealizeFunc(
+        "_critical_end", {loc->getType(), gtid->getType(), lck->getType()}, {},
+        ompModule);
+    seqassert(critEnd, "critical end function not found");
+
+    // TODO: wrap in try-finally
+    auto *critEnter = util::call(
+        critBegin, {M->Nr<VarValue>(loc), M->Nr<VarValue>(gtid), M->Nr<VarValue>(lck)});
+    auto *operation = generateNonAtomicReduction(ptr, arg);
+    auto *critExit = util::call(
+        critEnd, {M->Nr<VarValue>(loc), M->Nr<VarValue>(gtid), M->Nr<VarValue>(lck)});
+    return util::series(critEnter, operation, critExit);
+  }
+
+  operator bool() const { return kind != Kind::NONE; }
+};
+
+struct ReductionFunction {
+  std::string name;
+  Reduction::Kind kind;
+  bool method;
+};
+
+struct ReductionIdentifier : public util::Operator {
+  std::vector<Var *> shareds;
+  std::unordered_map<id_t, Reduction> reductions;
+
+  explicit ReductionIdentifier(std::vector<Var *> shareds)
+      : util::Operator(), shareds(std::move(shareds)), reductions() {}
+
+  bool isShared(Var *shared) {
+    for (auto *v : shareds) {
+      if (shared->getId() == v->getId())
+        return true;
+    }
+    return false;
+  }
+
+  bool isSharedDeref(Var *shared, Value *v) {
+    auto *M = v->getModule();
+    auto *ptrType = cast<types::PointerType>(shared->getType());
+    seqassert(ptrType, "expected shared var to be of pointer type");
+    auto *type = ptrType->getBase();
+
+    if (util::isCallOf(v, Module::GETITEM_MAGIC_NAME, {ptrType, M->getIntType()}, type,
+                       /*method=*/true)) {
+      auto *call = cast<CallInstr>(v);
+      auto *var = util::getVar(call->front());
+      return util::isConst<int64_t>(call->back(), 0) && var &&
+             var->getId() == shared->getId();
+    }
+
+    return false;
+  }
+
+  Reduction getReductionFromCall(CallInstr *v) {
+    auto *M = v->getModule();
+    auto *func = util::getFunc(v->getCallee());
+    if (v->numArgs() != 3 || !func ||
+        func->getUnmangledName() != Module::SETITEM_MAGIC_NAME)
+      return {};
+
+    std::vector<Value *> args(v->begin(), v->end());
+    Value *self = args[0];
+    Value *idx = args[1];
+    Value *item = args[2];
+
+    Var *shared = util::getVar(self);
+    if (!shared || !isShared(shared) || !util::isConst<int64_t>(idx, 0))
+      return {};
+
+    auto *ptrType = cast<types::PointerType>(shared->getType());
+    seqassert(ptrType, "expected shared var to be of pointer type");
+    auto *type = ptrType->getBase();
+
+    // double-check the call
+    if (!util::isCallOf(v, Module::SETITEM_MAGIC_NAME,
+                        {self->getType(), idx->getType(), item->getType()},
+                        M->getVoidType(), /*method=*/true))
+      return {};
+
+    const std::vector<ReductionFunction> reductionFunctions = {
+        {Module::ADD_MAGIC_NAME, Reduction::Kind::ADD, true},
+        {Module::MUL_MAGIC_NAME, Reduction::Kind::MUL, true},
+        {Module::AND_MAGIC_NAME, Reduction::Kind::AND, true},
+        {Module::OR_MAGIC_NAME, Reduction::Kind::OR, true},
+        {Module::XOR_MAGIC_NAME, Reduction::Kind::XOR, true},
+        {"min", Reduction::Kind::MIN, false},
+        {"max", Reduction::Kind::MAX, false},
+    };
+
+    for (auto &rf : reductionFunctions) {
+      if (rf.method) {
+        if (!util::isCallOf(item, rf.name, {type, type}, type, /*method=*/true))
+          continue;
+      } else {
+        if (!util::isCallOf(item, rf.name, {M->getTupleType({type, type})}, type,
+                            /*method=*/false))
+          continue;
+      }
+
+      auto *callRHS = cast<CallInstr>(item);
+      if (!rf.method) {
+        callRHS = cast<CallInstr>(callRHS->front()); // this will be Tuple.__new__
+        if (!callRHS || callRHS->numArgs() != 2)
+          continue;
+      }
+
+      auto *arg1 = callRHS->front();
+      auto *arg2 = callRHS->back();
+      Value *deref = nullptr;
+      Value *other = nullptr;
+
+      if (isSharedDeref(shared, arg1)) {
+        deref = arg1;
+        other = arg2;
+      } else if (isSharedDeref(shared, arg2)) {
+        deref = arg2;
+        other = arg1;
+      }
+
+      if (!deref)
+        return {};
+
+      // TODO: check for other uses of 'shared'?
+
+      Reduction reduction = {rf.kind, type, shared};
+      if (!reduction.getInitial())
+        return {};
+
+      return reduction;
+    }
+
+    return {};
+  }
+
+  Reduction getReduction(Var *shared) {
+    auto it = reductions.find(shared->getId());
+    return (it != reductions.end()) ? it->second : Reduction();
+  }
+
+  void handle(CallInstr *v) override {
+    if (auto reduction = getReductionFromCall(v)) {
+      auto it = reductions.find(reduction.shared->getId());
+      // if we've seen the var before, mark it as invalid via empty reduction
+      reductions.emplace(reduction.shared->getId(),
+                         (it == reductions.end()) ? reduction : Reduction());
+      getReduction(reduction.shared);
+    }
+  }
+};
+
+struct ImperativeLoopTemplateReplacer : public util::Operator {
+  struct SharedInfo {
+    unsigned memb;       // member index in template's `extra` arg
+    Var *local;          // the local var we create to store current value
+    Reduction reduction; // the actual reduction we're performing, or empty if none
+  };
+
+  BodiedFunc *parent;
   CallInstr *replacement;
   Var *loopVar;
+  OMPSched *sched;
+  ReductionIdentifier *reds;
+  std::vector<SharedInfo> sharedInfo;
+  ReductionLocks locks;
+  Var *locRef;
+  Var *gtid;
 
-  StaticLoopTemplateReplacer(CallInstr *replacement, Var *loopVar)
-      : util::Operator(), replacement(replacement), loopVar(loopVar) {}
+  ImperativeLoopTemplateReplacer(BodiedFunc *parent, CallInstr *replacement,
+                                 Var *loopVar, OMPSched *sched,
+                                 ReductionIdentifier *reds)
+      : util::Operator(), parent(parent), replacement(replacement), loopVar(loopVar),
+        sched(sched), reds(reds), sharedInfo(), locks(), locRef(nullptr),
+        gtid(nullptr) {}
+
+  unsigned numReductions() {
+    unsigned num = 0;
+    for (auto &info : sharedInfo) {
+      if (info.reduction)
+        num += 1;
+    }
+    return num;
+  }
+
+  Value *getReductionTuple() {
+    auto *M = parent->getModule();
+    std::vector<Value *> elements;
+    for (auto &info : sharedInfo) {
+      if (info.reduction)
+        elements.push_back(M->Nr<PointerValue>(info.local));
+    }
+    return util::makeTuple(elements, M);
+  }
+
+  BodiedFunc *makeReductionFunc() {
+    auto *M = parent->getModule();
+    auto *tupleType = getReductionTuple()->getType();
+    auto *argType = M->getPointerType(tupleType);
+    auto *funcType = M->getFuncType(M->getVoidType(), {argType, argType});
+    auto *reducer = M->Nr<BodiedFunc>("__omp_reducer");
+    reducer->realize(funcType, {"lhs", "rhs"});
+
+    auto *lhsVar = reducer->arg_front();
+    auto *rhsVar = reducer->arg_back();
+    auto *body = M->Nr<SeriesFlow>();
+    unsigned next = 0;
+    for (auto &info : sharedInfo) {
+      if (info.reduction) {
+        auto *lhs = util::ptrLoad(M->Nr<VarValue>(lhsVar));
+        auto *rhs = util::ptrLoad(M->Nr<VarValue>(rhsVar));
+        auto *lhsElem = util::tupleGet(lhs, next);
+        auto *rhsElem = util::tupleGet(rhs, next);
+        body->push_back(
+            info.reduction.generateNonAtomicReduction(lhsElem, util::ptrLoad(rhsElem)));
+        ++next;
+      }
+    }
+    reducer->setBody(body);
+    return reducer;
+  }
 
   void handle(CallInstr *v) override {
     auto *M = v->getModule();
     auto *func = util::getFunc(v->getCallee());
-    if (func && func->getUnmangledName() == "_static_loop_body_stub") {
+    if (!func)
+      return;
+    auto name = func->getUnmangledName();
+
+    if (name == "_loop_loc_and_gtid") {
+      seqassert(v->numArgs() == 2 && isA<VarValue>(v->front()) &&
+                    isA<VarValue>(v->back()),
+                "unexpected loop loc and gtid stub");
+      locRef = util::getVar(v->front());
+      gtid = util::getVar(v->back());
+    }
+
+    if (name == "_loop_body_stub") {
       seqassert(replacement, "unexpected double replacement");
       seqassert(v->numArgs() == 2 && isA<VarValue>(v->front()) &&
                     isA<VarValue>(v->back()),
                 "unexpected loop body stub");
+
+      auto *outlinedFunc = util::getFunc(replacement->getCallee());
 
       // the template passes the new loop var and extra args
       // to the body stub for convenience
       auto *newLoopVar = util::getVar(v->front());
       auto *extras = util::getVar(v->back());
 
-      std::vector<Value *> newArgs;
-      unsigned next = 1;
+      std::vector<Value *>
+          newArgs; // the new args based on what is passed to template func
+      auto outlinedArgs = outlinedFunc->arg_begin(); // arg vars of *outlined func*
+      unsigned next = 0; // next index in "extra" args tuple, passed to template
+      // `arg` is an argument of the original outlined func call
       for (auto *arg : *replacement) {
         if (getVarFromOutlinedArg(arg)->getId() != loopVar->getId()) {
-          auto *val = M->Nr<VarValue>(extras);
-          newArgs.push_back(tget(val, next++));
+          Value *newArg = nullptr;
+
+          // shared vars will be stored in a new var
+          if (isA<PointerValue>(arg)) {
+            types::Type *base = cast<types::PointerType>(arg->getType())->getBase();
+
+            // get extras again since we'll be inserting the new var before extras local
+            Var *lastArg = parent->arg_back(); // ptr to {start, stop, step, extras}
+            Value *val = util::tupleGet(util::ptrLoad(M->Nr<VarValue>(lastArg)), 3);
+            Value *initVal = util::ptrLoad(util::tupleGet(val, next));
+
+            Reduction reduction = reds->getReduction(*outlinedArgs);
+            if (reduction) {
+              initVal = reduction.getInitial();
+              seqassert(initVal && initVal->getType()->is(base),
+                        "unknown reduction init value");
+            }
+
+            VarValue *newVar = util::makeVar(
+                initVal, cast<SeriesFlow>(parent->getBody()), parent, /*prepend=*/true);
+            sharedInfo.push_back({next, newVar->getVar(), reduction});
+
+            newArg = M->Nr<PointerValue>(newVar->getVar());
+            ++next;
+          } else {
+            newArg = util::tupleGet(M->Nr<VarValue>(extras), next++);
+          }
+
+          newArgs.push_back(newArg);
         } else {
           if (isA<VarValue>(arg)) {
             newArgs.push_back(M->Nr<VarValue>(newLoopVar));
@@ -87,10 +609,111 @@ struct StaticLoopTemplateReplacer : public util::Operator {
             seqassert(false, "unknown outline var");
           }
         }
+
+        ++outlinedArgs;
       }
 
-      v->replaceAll(util::call(util::getFunc(replacement->getCallee()), newArgs));
+      v->replaceAll(util::call(outlinedFunc, newArgs));
       replacement = nullptr;
+    }
+
+    if (name == "_loop_shared_updates") {
+      // for all non-reduction shareds, set the final values
+      // this will be similar to OpenMP's "lastprivate"
+      seqassert(replacement == nullptr, "bad visit order in template");
+      seqassert(v->numArgs() == 1 && isA<VarValue>(v->front()),
+                "unexpected shared updates stub");
+      auto *extras = util::getVar(v->front());
+      auto *series = M->Nr<SeriesFlow>();
+
+      for (auto &info : sharedInfo) {
+        if (info.reduction)
+          continue;
+
+        auto *finalValue = M->Nr<VarValue>(info.local);
+        auto *val = M->Nr<VarValue>(extras);
+        auto *origPtr = util::tupleGet(val, info.memb);
+        series->push_back(util::ptrStore(origPtr, finalValue));
+      }
+
+      v->replaceAll(series);
+    }
+
+    if (name == "_loop_reductions") {
+      seqassert(replacement == nullptr && locRef && gtid,
+                "bad visit order in template");
+      seqassert(v->numArgs() == 1 && isA<VarValue>(v->front()),
+                "unexpected shared updates stub");
+      if (numReductions() == 0)
+        return;
+
+      auto *M = parent->getModule();
+      auto *extras = util::getVar(v->front());
+      auto *reductionTuple = getReductionTuple();
+      auto *reducer = makeReductionFunc();
+      auto *lck = locks.getMainLock(M);
+      auto *reducerType = reducer->getType();
+      auto *rawMethod = M->getOrRealizeMethod(reducerType, "__raw__", {reducerType});
+      auto *rawReducer = util::call(rawMethod, {M->Nr<VarValue>(reducer)});
+
+      auto *reduceNoWait = M->getOrRealizeFunc("_reduce_nowait",
+                                               {locRef->getType(), gtid->getType(),
+                                                reductionTuple->getType(),
+                                                rawReducer->getType(), lck->getType()},
+                                               {}, ompModule);
+      seqassert(reduceNoWait, "reduce nowait function not found");
+      auto *reduceNoWaitEnd = M->getOrRealizeFunc(
+          "_end_reduce_nowait", {locRef->getType(), gtid->getType(), lck->getType()},
+          {}, ompModule);
+      seqassert(reduceNoWaitEnd, "end reduce nowait function not found");
+
+      auto *series = M->Nr<SeriesFlow>();
+      auto *tupleVal = util::makeVar(reductionTuple, series, parent);
+      auto *reduceCode =
+          util::call(reduceNoWait, {M->Nr<VarValue>(locRef), M->Nr<VarValue>(gtid),
+                                    tupleVal, rawReducer, M->Nr<VarValue>(lck)});
+      auto *codeVar = util::makeVar(reduceCode, series, parent)->getVar();
+      seqassert(codeVar->getType()->is(M->getIntType()), "wrong reduce code type");
+
+      auto *sectionNonAtomic = M->Nr<SeriesFlow>();
+      auto *sectionAtomic = M->Nr<SeriesFlow>();
+
+      for (auto &info : sharedInfo) {
+        if (info.reduction) {
+          Value *ptr = util::tupleGet(M->Nr<VarValue>(extras), info.memb);
+          Value *arg = M->Nr<VarValue>(info.local);
+          sectionNonAtomic->push_back(
+              info.reduction.generateNonAtomicReduction(ptr, arg));
+        }
+      }
+      sectionNonAtomic->push_back(
+          util::call(reduceNoWaitEnd, {M->Nr<VarValue>(locRef), M->Nr<VarValue>(gtid),
+                                       M->Nr<VarValue>(lck)}));
+
+      for (auto &info : sharedInfo) {
+        if (info.reduction) {
+          Value *ptr = util::tupleGet(M->Nr<VarValue>(extras), info.memb);
+          Value *arg = M->Nr<VarValue>(info.local);
+          sectionAtomic->push_back(
+              info.reduction.generateAtomicReduction(ptr, arg, locRef, gtid, locks));
+        }
+      }
+
+      // make: if code == 1 { sectionNonAtomic } elif code == 2 { sectionAtomic }
+      auto *theSwitch = M->Nr<IfFlow>(
+          *M->Nr<VarValue>(codeVar) == *M->getInt(1), sectionNonAtomic,
+          util::series(M->Nr<IfFlow>(*M->Nr<VarValue>(codeVar) == *M->getInt(2),
+                                     sectionAtomic)));
+      series->push_back(theSwitch);
+      v->replaceAll(series);
+    }
+
+    if (name == "_loop_schedule") {
+      v->replaceAll(M->getInt(sched->code));
+    }
+
+    if (name == "_loop_chunk") {
+      v->replaceAll(M->getInt(sched->chunk));
     }
   }
 };
@@ -112,15 +735,15 @@ struct TaskLoopBodyStubReplacer : public util::Operator {
       // the template passes the privs and shareds to the body stub for convenience
       auto *privatesTuple = v->front();
       auto *sharedsTuple = v->back();
-      unsigned privatesNext = 1;
-      unsigned sharedsNext = 1;
+      unsigned privatesNext = 0;
+      unsigned sharedsNext = 0;
       std::vector<Value *> newArgs;
 
       for (auto *arg : *replacement) {
         if (isA<VarValue>(arg)) {
-          newArgs.push_back(tget(privatesTuple, privatesNext++));
+          newArgs.push_back(util::tupleGet(privatesTuple, privatesNext++));
         } else if (isA<PointerValue>(arg)) {
-          newArgs.push_back(tget(sharedsTuple, sharedsNext++));
+          newArgs.push_back(util::tupleGet(sharedsTuple, sharedsNext++));
         } else {
           seqassert(false, "unknown outline var");
         }
@@ -166,8 +789,8 @@ struct TaskLoopRoutineStubReplacer : public util::Operator {
       auto *privatesTuple = args[1];
       auto *sharedsTuple = args[2];
 
-      unsigned privatesNext = 1;
-      unsigned sharedsNext = 1;
+      unsigned privatesNext = 0;
+      unsigned sharedsNext = 0;
 
       bool needNewPrivates = false;
       bool needNewShareds = false;
@@ -177,7 +800,7 @@ struct TaskLoopRoutineStubReplacer : public util::Operator {
 
       for (auto *val : privates) {
         if (getVarFromOutlinedArg(val)->getId() != loopVar->getId()) {
-          newPrivates.push_back(tget(privatesTuple, privatesNext));
+          newPrivates.push_back(util::tupleGet(privatesTuple, privatesNext));
         } else {
           newPrivates.push_back(newLoopVar);
           needNewPrivates = true;
@@ -187,7 +810,7 @@ struct TaskLoopRoutineStubReplacer : public util::Operator {
 
       for (auto *val : shareds) {
         if (getVarFromOutlinedArg(val)->getId() != loopVar->getId()) {
-          newShareds.push_back(tget(sharedsTuple, sharedsNext));
+          newShareds.push_back(util::tupleGet(sharedsTuple, sharedsNext));
         } else {
           newShareds.push_back(M->Nr<PointerValue>(util::getVar(newLoopVar)));
           needNewShareds = true;
@@ -277,8 +900,19 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
     return;
 
   // set up args to pass fork_call
+  auto sched = getScedule(v);
   Var *loopVar = v->getVar();
   OMPTypes types(M);
+
+  // shared argument vars
+  std::vector<Var *> shareds;
+  unsigned i = 0;
+  for (auto it = outline.func->arg_begin(); it != outline.func->arg_end(); ++it) {
+    if (outline.argKinds[i++] == util::OutlineResult::ArgKind::MODIFIED)
+      shareds.push_back(*it);
+  }
+  ReductionIdentifier reds(shareds);
+  outline.func->accept(reds);
 
   // gather extra arguments
   std::vector<Value *> extraArgs;
@@ -296,13 +930,16 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
       types.i32ptr, types.i32ptr,
       M->getPointerType(M->getTupleType(
           {intType, intType, intType, M->getTupleType(extraArgTypes)}))};
-  auto *templateFunc = M->getOrRealizeFunc("_static_loop_outline_template",
-                                           templateFuncArgs, {}, ompModule);
+  auto *templateFunc =
+      M->getOrRealizeFunc(sched.dynamic ? "_dynamic_loop_outline_template"
+                                        : "_static_loop_outline_template",
+                          templateFuncArgs, {}, ompModule);
   seqassert(templateFunc, "static loop outline template not found");
 
   util::CloneVisitor cv(M);
-  templateFunc = cast<BodiedFunc>(cv.clone(templateFunc));
-  StaticLoopTemplateReplacer rep(outline.call, loopVar);
+  templateFunc = cast<Func>(cv.clone(templateFunc));
+  ImperativeLoopTemplateReplacer rep(cast<BodiedFunc>(templateFunc), outline.call,
+                                     loopVar, &sched, &reds);
   templateFunc->accept(rep);
 
   // raw template func
@@ -321,8 +958,16 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   std::vector<types::Type *> forkArgTypes = {types.i8ptr, forkExtra->getType()};
   auto *forkFunc = M->getOrRealizeFunc("_fork_call", forkArgTypes, {}, ompModule);
   seqassert(forkFunc, "fork call function not found");
-
   auto *fork = util::call(forkFunc, {rawTemplateFunc, forkExtra});
+
+  if (sched.threads > 0) {
+    auto *pushNumThreadsFunc =
+        M->getOrRealizeFunc("_push_num_threads", {intType}, {}, ompModule);
+    seqassert(pushNumThreadsFunc, "push num threads func not found");
+    auto *pushNumThreads = util::call(pushNumThreadsFunc, {M->getInt(sched.threads)});
+    insertBefore(pushNumThreads);
+  }
+
   v->replaceAll(fork);
 }
 
