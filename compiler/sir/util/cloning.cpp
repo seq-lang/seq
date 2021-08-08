@@ -134,7 +134,7 @@ void CloneVisitor::visit(const ForFlow *v) {
   loop->setIter(clone(v->getIter()));
   loop->setBody(clone(v->getBody()));
   loop->setVar(clone(v->getVar()));
-  loop->setAsync(v->isAsync());
+  loop->setParallel(v->isParallel());
   result = loop;
 }
 
@@ -145,7 +145,7 @@ void CloneVisitor::visit(const ImperativeForFlow *v) {
   loop->setBody(clone(v->getBody()));
   loop->setVar(clone(v->getVar()));
   loop->setEnd(clone(v->getEnd()));
-  loop->setAsync(v->isAsync());
+  loop->setParallel(v->isParallel());
   result = loop;
 }
 

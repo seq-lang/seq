@@ -119,8 +119,8 @@ private:
   Value *body;
   /// the variable
   Var *var;
-  /// true if async for
-  bool async;
+  /// true if parallel for
+  bool parallel;
 
 public:
   static const char NodeId;
@@ -130,9 +130,10 @@ public:
   /// @param body the body
   /// @param var the variable
   /// @param name the flow's name
-  ForFlow(Value *iter, Flow *body, Var *var, bool async = false, std::string name = "")
+  ForFlow(Value *iter, Flow *body, Var *var, bool parallel = false,
+          std::string name = "")
       : AcceptorExtend(std::move(name)), iter(iter), body(body), var(var),
-        async(async) {}
+        parallel(parallel) {}
 
   /// @return the iter
   Value *getIter() { return iter; }
@@ -158,11 +159,11 @@ public:
   /// @param c the new var
   void setVar(Var *c) { var = c; }
 
-  /// @return true if async
-  bool isAsync() const { return async; }
-  /// Sets async status.
-  /// @param a true if async
-  void setAsync(bool a = true) { async = a; }
+  /// @return true if parallel
+  bool isParallel() const { return parallel; }
+  /// Sets parallel status.
+  /// @param a true if parallel
+  void setParallel(bool a = true) { parallel = a; }
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {iter, body}; }
@@ -185,8 +186,8 @@ private:
   Value *body;
   /// the variable, must be integer type
   Var *var;
-  /// true if async for
-  bool async;
+  /// true if parallel for
+  bool parallel;
 
 public:
   static const char NodeId;
@@ -199,9 +200,9 @@ public:
   /// @param var the end variable, must be integer
   /// @param name the flow's name
   ImperativeForFlow(Value *start, int64_t step, Value *end, Flow *body, Var *var,
-                    bool async = false, std::string name = "")
+                    bool parallel = false, std::string name = "")
       : AcceptorExtend(std::move(name)), start(start), step(step), end(end), body(body),
-        var(var), async(async) {}
+        var(var), parallel(parallel) {}
 
   /// @return the start value
   Value *getStart() const { return start; }
@@ -237,11 +238,11 @@ public:
   /// @param c the new var
   void setVar(Var *c) { var = c; }
 
-  /// @return true if async
-  bool isAsync() const { return async; }
-  /// Sets async status.
-  /// @param a true if async
-  void setAsync(bool a = true) { async = a; }
+  /// @return true if parallel
+  bool isParallel() const { return parallel; }
+  /// Sets parallel status.
+  /// @param a true if parallel
+  void setParallel(bool a = true) { parallel = a; }
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {start, end, body}; }

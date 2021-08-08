@@ -838,7 +838,7 @@ struct TaskLoopRoutineStubReplacer : public util::Operator {
 } // namespace
 
 void OpenMPPass::handle(ForFlow *v) {
-  if (!v->isAsync())
+  if (!v->isParallel())
     return;
   auto *M = v->getModule();
   auto *parent = cast<BodiedFunc>(getParentFunc());
@@ -897,7 +897,7 @@ void OpenMPPass::handle(ForFlow *v) {
 }
 
 void OpenMPPass::handle(ImperativeForFlow *v) {
-  if (!v->isAsync())
+  if (!v->isParallel())
     return;
   auto *M = v->getModule();
   auto *parent = cast<BodiedFunc>(getParentFunc());
