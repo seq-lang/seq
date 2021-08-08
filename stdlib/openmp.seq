@@ -85,6 +85,9 @@ def _flush(loc_ref: Ptr[Ident]):
     from C import __kmpc_flush(Ptr[Ident])
     __kmpc_flush(loc_ref)
 
+def flush():
+    _flush(_default_loc())
+
 def _static_init(loc_ref: Ptr[Ident], gtid: int, schedtype: int, loop: range, incr: int, chunk: int):
     from C import __kmpc_for_static_init_8(Ptr[Ident], i32, i32, Ptr[i32], Ptr[int], Ptr[int], Ptr[int], int, int)
     last = i32(0)
