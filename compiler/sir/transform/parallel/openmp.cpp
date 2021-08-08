@@ -487,6 +487,7 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
   Var *loopVar;
   OMPSched *sched;
   ReductionIdentifier *reds;
+  int64_t step;
   std::vector<SharedInfo> sharedInfo;
   ReductionLocks locks;
   Var *locRef;
@@ -495,9 +496,9 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
 
   ImperativeLoopTemplateReplacer(BodiedFunc *parent, CallInstr *replacement,
                                  Var *loopVar, OMPSched *sched,
-                                 ReductionIdentifier *reds)
+                                 ReductionIdentifier *reds, int64_t step)
       : util::Operator(), parent(parent), replacement(replacement), loopVar(loopVar),
-        sched(sched), reds(reds), sharedInfo(), locks(), locRef(nullptr),
+        sched(sched), reds(reds), step(step), sharedInfo(), locks(), locRef(nullptr),
         reductionLocRef(nullptr), gtid(nullptr) {}
 
   unsigned numReductions() {
@@ -552,6 +553,10 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
     if (!func)
       return;
     auto name = func->getUnmangledName();
+
+    if (name == "_loop_step") {
+      v->replaceAll(M->getInt(step));
+    }
 
     if (name == "_loop_loc_and_gtid") {
       seqassert(v->numArgs() == 3 &&
@@ -951,7 +956,7 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   util::CloneVisitor cv(M);
   templateFunc = cast<Func>(cv.clone(templateFunc));
   ImperativeLoopTemplateReplacer rep(cast<BodiedFunc>(templateFunc), outline.call,
-                                     loopVar, &sched, &reds);
+                                     loopVar, &sched, &reds, v->getStep());
   templateFunc->accept(rep);
 
   // raw template func

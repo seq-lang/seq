@@ -177,6 +177,9 @@ def _fork_call(microtask: cobj, args):
 
 
 def _static_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
+    def _loop_step(step: int):
+        return step
+
     def _loop_loc_and_gtid(loc_ref: Ptr[Ident], reduction_loc_ref: Ptr[Ident], gtid: int):
         pass
 
@@ -196,6 +199,7 @@ def _static_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
         pass
 
     start, stop, step, extra = args[0]
+    step = _loop_step(step)  # optimization to pass a static step
     gtid = int(gtid_ptr[0])
     loc_ref = _default_loc()
     static_loop_loc_ref = _static_loop_loc()
@@ -206,7 +210,7 @@ def _static_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
     chunk = _loop_chunk()
 
     last, subloop = _static_init(static_loop_loc_ref, gtid, schedtype=schedule, loop=loop, incr=1, chunk=chunk)
-    for i in subloop:
+    for i in range(subloop.start, subloop.stop, step):
         _loop_body_stub(i, extra)
     _static_fini(static_loop_loc_ref, gtid)
     if last:
@@ -215,6 +219,9 @@ def _static_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
     _loop_reductions(extra)
 
 def _dynamic_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
+    def _loop_step(step: int):
+        return step
+
     def _loop_loc_and_gtid(loc_ref: Ptr[Ident], reduction_loc_ref: Ptr[Ident], gtid: int):
         pass
 
@@ -234,6 +241,7 @@ def _dynamic_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args)
         pass
 
     start, stop, step, extra = args[0]
+    step = _loop_step(step)  # optimization to pass a static step
     gtid = int(gtid_ptr[0])
     loc_ref = _default_loc()
     reduction_loc_ref = _reduction_loc()
@@ -247,7 +255,7 @@ def _dynamic_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args)
         more, last, subloop = _dynamic_next(loc_ref, gtid, loop)
         if not more:
             break
-        for i in subloop:
+        for i in range(subloop.start, subloop.stop, step):
             _loop_body_stub(i, extra)
         if last:
             _loop_shared_updates(extra)
