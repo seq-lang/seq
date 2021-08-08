@@ -573,8 +573,7 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
       auto *newLoopVar = util::getVar(v->front());
       auto *extras = util::getVar(v->back());
 
-      std::vector<Value *>
-          newArgs; // the new args based on what is passed to template func
+      std::vector<Value *> newArgs;
       auto outlinedArgs = outlinedFunc->arg_begin(); // arg vars of *outlined func*
       unsigned next = 0; // next index in "extra" args tuple, passed to template
       // `arg` is an argument of the original outlined func call
