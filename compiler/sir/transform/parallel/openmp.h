@@ -9,7 +9,7 @@ namespace parallel {
 
 class OpenMPPass : public OperatorPass {
 public:
-  const std::string KEY = "core-parallel-openmp";
+  static const std::string KEY;
   std::string getKey() const override { return KEY; }
 
   void handle(ForFlow *) override;

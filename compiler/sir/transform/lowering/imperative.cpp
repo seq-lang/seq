@@ -11,6 +11,8 @@ namespace ir {
 namespace transform {
 namespace lowering {
 
+const std::string ImperativeForFlowLowering::KEY = "core-imperative-for-lowering";
+
 void ImperativeForFlowLowering::handle(ForFlow *v) {
   auto *M = v->getModule();
 

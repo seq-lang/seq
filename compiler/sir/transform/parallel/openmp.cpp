@@ -845,6 +845,8 @@ struct TaskLoopRoutineStubReplacer : public util::Operator {
 };
 } // namespace
 
+const std::string OpenMPPass::KEY = "core-parallel-openmp";
+
 void OpenMPPass::handle(ForFlow *v) {
   if (!v->isParallel())
     return;

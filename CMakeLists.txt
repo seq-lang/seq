@@ -219,6 +219,7 @@ set(SEQ_HPPFILES
         compiler/sir/transform/folding/folding.h
         compiler/sir/transform/folding/rule.h
         compiler/sir/transform/lowering/imperative.h
+        compiler/sir/transform/lowering/pipeline.h
         compiler/sir/transform/manager.h
         compiler/sir/transform/parallel/openmp.h
         compiler/sir/transform/pass.h
@@ -300,6 +301,7 @@ set(SEQ_CPPFILES
         compiler/sir/transform/folding/const_prop.cpp
         compiler/sir/transform/folding/folding.cpp
         compiler/sir/transform/lowering/imperative.cpp
+        compiler/sir/transform/lowering/pipeline.cpp
         compiler/sir/transform/manager.cpp
         compiler/sir/transform/parallel/openmp.cpp
         compiler/sir/transform/pass.cpp

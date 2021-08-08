@@ -13,7 +13,7 @@ private:
   int numReplacements = 0;
 
 public:
-  const std::string KEY = "core-cleanup-dce";
+  static const std::string KEY;
   std::string getKey() const override { return KEY; }
 
   void run(Module *m) override;

@@ -102,10 +102,12 @@ public:
 
   /// Registers a pass and appends it to the execution order.
   /// @param pass the pass
+  /// @param insertBefore insert pass before the pass with this given key
   /// @param reqs keys of passes that must be run before the current one
   /// @param invalidates keys of passes that are invalidated by the current one
   /// @return unique'd key for the added pass, or empty string if not added
   std::string registerPass(std::unique_ptr<Pass> pass,
+                           const std::string &insertBefore = "",
                            std::vector<std::string> reqs = {},
                            std::vector<std::string> invalidates = {});
 

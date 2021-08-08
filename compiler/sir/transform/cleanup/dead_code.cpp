@@ -12,6 +12,8 @@ BoolConst *boolConst(Value *v) { return cast<BoolConst>(v); }
 IntConst *intConst(Value *v) { return cast<IntConst>(v); }
 } // namespace
 
+const std::string DeadCodeCleanupPass::KEY = "core-cleanup-dce";
+
 void DeadCodeCleanupPass::run(Module *m) {
   numReplacements = 0;
   OperatorPass::run(m);

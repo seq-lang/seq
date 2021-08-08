@@ -126,6 +126,8 @@ std::unique_ptr<CFGraph> buildCFGraph(const BodiedFunc *f) {
   return ret;
 }
 
+const std::string CFAnalysis::KEY = "core-analyses-cfg";
+
 std::unique_ptr<Result> CFAnalysis::run(const Module *m) {
   auto res = std::make_unique<CFResult>();
   if (const auto *main = cast<BodiedFunc>(m->getMainFunc())) {

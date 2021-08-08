@@ -16,7 +16,7 @@ private:
   std::string globalVarsKey;
 
 public:
-  const std::string KEY = "core-folding-const-prop";
+  static const std::string KEY;
 
   /// Constructs a constant propagation pass.
   /// @param reachingDefKey the reaching definition analysis' key

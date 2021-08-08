@@ -1983,7 +1983,6 @@ void LLVMVisitor::callStage(const PipelineFlow::Stage *stage) {
   value = call(f, args);
 }
 
-// TODO: handle parallel stages with new OpenMP integration
 void LLVMVisitor::codegenPipeline(
     const std::vector<const PipelineFlow::Stage *> &stages, unsigned where) {
   if (where >= stages.size()) {
@@ -2000,7 +1999,6 @@ void LLVMVisitor::codegenPipeline(
 
   auto *prevStage = stages[where - 1];
   const bool generator = prevStage->isGenerator();
-  // const bool parallel = prevStage->isParallel();
 
   if (generator) {
     auto *generatorType = cast<types::GeneratorType>(prevStage->getOutputType());

@@ -40,6 +40,8 @@ void inspect(Value *v, InspectionResult &r) {
 }
 } // namespace
 
+const std::string StrAdditionOptimization::KEY = "core-pythonic-str-addition-opt";
+
 void StrAdditionOptimization::handle(CallInstr *v) {
   auto *M = v->getModule();
 

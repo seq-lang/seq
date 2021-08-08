@@ -62,7 +62,7 @@ private:
   std::string cfAnalysisKey;
 
 public:
-  const std::string KEY = "core-analyses-rd";
+  static const std::string KEY;
 
   /// Initializes a reaching definition analysis.
   /// @param cfAnalysisKey the control-flow analysis key

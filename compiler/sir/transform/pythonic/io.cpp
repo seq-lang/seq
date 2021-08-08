@@ -85,6 +85,8 @@ void optimizeWrite(CallInstr *v) {
 }
 } // namespace
 
+const std::string IOCatOptimization::KEY = "core-pythonic-io-cat-opt";
+
 void IOCatOptimization::handle(CallInstr *v) {
   if (util::getStdlibFunc(v->getCallee(), "print")) {
     optimizePrint(v);

@@ -20,7 +20,7 @@ private:
   cleanup::DeadCodeCleanupPass *dce;
 
 public:
-  const std::string KEY = "core-folding-pass-group";
+  static const std::string KEY;
   std::string getKey() const override { return KEY; }
 
   /// @param reachingDefPass the key of the reaching definitions pass

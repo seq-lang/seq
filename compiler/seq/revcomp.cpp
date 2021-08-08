@@ -267,6 +267,8 @@ std::ostream &KmerRevcomp::doFormat(std::ostream &os) const {
   return os << "(revcomp " << *kmer << ")";
 }
 
+const std::string KmerRevcompInterceptor::KEY = "seq-kmer-revcomp-interceptor";
+
 void KmerRevcompInterceptor::run(Module *M) {
   for (auto *var : *M) {
     if (auto *func = cast<BodiedFunc>(var)) {

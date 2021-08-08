@@ -9,6 +9,8 @@ namespace ir {
 namespace transform {
 namespace folding {
 
+const std::string FoldingPassGroup::KEY = "core-folding-pass-group";
+
 FoldingPassGroup::FoldingPassGroup(const std::string &reachingDefPass,
                                    const std::string &globalVarPass) {
   auto canonUnique = std::make_unique<cleanup::CanonicalizationPass>();

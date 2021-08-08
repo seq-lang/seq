@@ -15,7 +15,7 @@ public:
   /// Constructs a canonicalization pass
   CanonicalizationPass() : OperatorPass(/*childrenFirst=*/true) {}
 
-  const std::string KEY = "core-cleanup-canon";
+  static const std::string KEY;
   std::string getKey() const override { return KEY; }
 
   void run(Module *m) override;

@@ -320,6 +320,8 @@ struct CanonConstSub : public RewriteRule {
 };
 } // namespace
 
+const std::string CanonicalizationPass::KEY = "core-cleanup-canon";
+
 void CanonicalizationPass::run(Module *m) {
   registerStandardRules(m);
   Rewriter::reset();
