@@ -595,8 +595,8 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
             types::Type *base = cast<types::PointerType>(arg->getType())->getBase();
 
             // get extras again since we'll be inserting the new var before extras local
-            Var *lastArg = parent->arg_back(); // ptr to {start, stop, step, extras}
-            Value *val = util::tupleGet(util::ptrLoad(M->Nr<VarValue>(lastArg)), 3);
+            Var *lastArg = parent->arg_back(); // ptr to {start, stop, extras}
+            Value *val = util::tupleGet(util::ptrLoad(M->Nr<VarValue>(lastArg)), 2);
             Value *initVal = util::ptrLoad(util::tupleGet(val, next));
 
             Reduction reduction = reds->getReduction(*outlinedArgs);
@@ -945,8 +945,8 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   auto *intType = M->getIntType();
   std::vector<types::Type *> templateFuncArgs = {
       types.i32ptr, types.i32ptr,
-      M->getPointerType(M->getTupleType(
-          {intType, intType, intType, M->getTupleType(extraArgTypes)}))};
+      M->getPointerType(
+          M->getTupleType({intType, intType, M->getTupleType(extraArgTypes)}))};
   auto *templateFunc =
       M->getOrRealizeFunc(sched.dynamic ? "_dynamic_loop_outline_template"
                                         : "_static_loop_outline_template",
@@ -966,8 +966,7 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   auto *rawTemplateFunc = util::call(rawMethod, {M->Nr<VarValue>(templateFunc)});
 
   // fork call
-  std::vector<Value *> forkExtraArgs = {v->getStart(), v->getEnd(),
-                                        M->getInt(v->getStep())};
+  std::vector<Value *> forkExtraArgs = {v->getStart(), v->getEnd()};
   for (auto *arg : extraArgs) {
     forkExtraArgs.push_back(arg);
   }
