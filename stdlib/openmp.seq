@@ -2,6 +2,27 @@
 # Ref: https://github.com/llvm/llvm-project/tree/main/openmp
 Routine = Function[[i32, cobj], i32]
 
+_KMP_IDENT_IMB = 0x01
+_KMP_IDENT_KMPC = 0x02
+_KMP_IDENT_AUTOPAR = 0x08
+_KMP_IDENT_ATOMIC_REDUCE = 0x10
+_KMP_IDENT_BARRIER_EXPL = 0x20
+_KMP_IDENT_BARRIER_IMPL = 0x0040
+_KMP_IDENT_BARRIER_IMPL_MASK = 0x01C0
+_KMP_IDENT_BARRIER_IMPL_FOR = 0x0040
+_KMP_IDENT_BARRIER_IMPL_SECTIONS = 0x00C0
+_KMP_IDENT_BARRIER_IMPL_SINGLE = 0x0140
+_KMP_IDENT_BARRIER_IMPL_WORKSHARE = 0x01C0
+_KMP_IDENT_WORK_LOOP = 0x200
+_KMP_IDENT_WORK_SECTIONS = 0x400
+_KMP_IDENT_WORK_DISTRIBUTE = 0x800
+_KMP_IDENT_ATOMIC_HINT_MASK = 0xFF0000
+_KMP_IDENT_ATOMIC_HINT_UNCONTENDED = 0x010000
+_KMP_IDENT_ATOMIC_HINT_CONTENDED = 0x020000
+_KMP_IDENT_ATOMIC_HINT_NONSPECULATIVE = 0x040000
+_KMP_IDENT_ATOMIC_HINT_SPECULATIVE = 0x080000
+_KMP_IDENT_OPENMP_SPEC_VERSION_MASK = 0xFF000000
+
 @tuple
 class Ident:
     reserved_1: i32
@@ -9,6 +30,9 @@ class Ident:
     reserved_2: i32
     reserved_3: i32
     psource: cobj
+
+    def __new__(flags: int = 0, source: str = ";unknown;unknown;0;0;;"):
+        return Ident(i32(0), i32(flags | _KMP_IDENT_KMPC), i32(0), i32(0), source.ptr)
 
 @tuple
 class LRData:
@@ -27,11 +51,18 @@ class TaskWithPrivates[T]:
     task: Task
     data: T
 
-DEFAULT_SRC = ";unknown;unknown;0;0;;".ptr
-DEFAULT_LOC = Ident(i32(0), i32(2), i32(0), i32(0), DEFAULT_SRC)
+_DEFAULT_IDENT = Ident()
+_STATIC_LOOP_IDENT = Ident(_KMP_IDENT_WORK_LOOP)
+_REDUCTION_IDENT = Ident(_KMP_IDENT_ATOMIC_REDUCE)
 
 def _default_loc():
-    return __ptr__(DEFAULT_LOC)
+    return __ptr__(_DEFAULT_IDENT)
+
+def _static_loop_loc():
+    return __ptr__(_STATIC_LOOP_IDENT)
+
+def _reduction_loc():
+    return __ptr__(_REDUCTION_IDENT)
 
 def _critical_begin(loc_ref: Ptr[Ident], gtid: int, lck: cobj):
     from C import __kmpc_critical(Ptr[Ident], i32, cobj)
@@ -146,7 +177,7 @@ def _fork_call(microtask: cobj, args):
 
 
 def _static_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
-    def _loop_loc_and_gtid(loc_ref: Ptr[Ident], gtid: int):
+    def _loop_loc_and_gtid(loc_ref: Ptr[Ident], reduction_loc_ref: Ptr[Ident], gtid: int):
         pass
 
     def _loop_body_stub(i, args):
@@ -167,22 +198,24 @@ def _static_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
     start, stop, step, extra = args[0]
     gtid = int(gtid_ptr[0])
     loc_ref = _default_loc()
-    _loop_loc_and_gtid(loc_ref, gtid)
+    static_loop_loc_ref = _static_loop_loc()
+    reduction_loc_ref = _reduction_loc()
+    _loop_loc_and_gtid(loc_ref, reduction_loc_ref, gtid)
     loop = range(start, stop, step)
     schedule = _loop_schedule()
     chunk = _loop_chunk()
 
-    last, subloop = _static_init(loc_ref, gtid, schedtype=schedule, loop=loop, incr=1, chunk=chunk)
+    last, subloop = _static_init(static_loop_loc_ref, gtid, schedtype=schedule, loop=loop, incr=1, chunk=chunk)
     for i in subloop:
         _loop_body_stub(i, extra)
-    _static_fini(loc_ref, gtid)
+    _static_fini(static_loop_loc_ref, gtid)
     if last:
         _loop_shared_updates(extra)
 
     _loop_reductions(extra)
 
 def _dynamic_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
-    def _loop_loc_and_gtid(loc_ref: Ptr[Ident], gtid: int):
+    def _loop_loc_and_gtid(loc_ref: Ptr[Ident], reduction_loc_ref: Ptr[Ident], gtid: int):
         pass
 
     def _loop_body_stub(i, args):
@@ -203,7 +236,8 @@ def _dynamic_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args)
     start, stop, step, extra = args[0]
     gtid = int(gtid_ptr[0])
     loc_ref = _default_loc()
-    _loop_loc_and_gtid(loc_ref, gtid)
+    reduction_loc_ref = _reduction_loc()
+    _loop_loc_and_gtid(loc_ref, reduction_loc_ref, gtid)
     loop = range(start, stop, step)
     schedule = _loop_schedule()
     chunk = _loop_chunk()

@@ -490,6 +490,7 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
   std::vector<SharedInfo> sharedInfo;
   ReductionLocks locks;
   Var *locRef;
+  Var *reductionLocRef;
   Var *gtid;
 
   ImperativeLoopTemplateReplacer(BodiedFunc *parent, CallInstr *replacement,
@@ -497,7 +498,7 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
                                  ReductionIdentifier *reds)
       : util::Operator(), parent(parent), replacement(replacement), loopVar(loopVar),
         sched(sched), reds(reds), sharedInfo(), locks(), locRef(nullptr),
-        gtid(nullptr) {}
+        reductionLocRef(nullptr), gtid(nullptr) {}
 
   unsigned numReductions() {
     unsigned num = 0;
@@ -553,11 +554,14 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
     auto name = func->getUnmangledName();
 
     if (name == "_loop_loc_and_gtid") {
-      seqassert(v->numArgs() == 2 && isA<VarValue>(v->front()) &&
-                    isA<VarValue>(v->back()),
+      seqassert(v->numArgs() == 3 &&
+                    std::all_of(v->begin(), v->end(),
+                                [](auto x) { return isA<VarValue>(x); }),
                 "unexpected loop loc and gtid stub");
-      locRef = util::getVar(v->front());
-      gtid = util::getVar(v->back());
+      std::vector<Value *> args(v->begin(), v->end());
+      locRef = util::getVar(args[0]);
+      reductionLocRef = util::getVar(args[1]);
+      gtid = util::getVar(args[2]);
     }
 
     if (name == "_loop_body_stub") {
@@ -648,7 +652,7 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
     }
 
     if (name == "_loop_reductions") {
-      seqassert(replacement == nullptr && locRef && gtid,
+      seqassert(replacement == nullptr && reductionLocRef && gtid,
                 "bad visit order in template");
       seqassert(v->numArgs() == 1 && isA<VarValue>(v->front()),
                 "unexpected shared updates stub");
@@ -664,22 +668,22 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
       auto *rawMethod = M->getOrRealizeMethod(reducerType, "__raw__", {reducerType});
       auto *rawReducer = util::call(rawMethod, {M->Nr<VarValue>(reducer)});
 
-      auto *reduceNoWait = M->getOrRealizeFunc("_reduce_nowait",
-                                               {locRef->getType(), gtid->getType(),
-                                                reductionTuple->getType(),
-                                                rawReducer->getType(), lck->getType()},
-                                               {}, ompModule);
+      auto *reduceNoWait = M->getOrRealizeFunc(
+          "_reduce_nowait",
+          {reductionLocRef->getType(), gtid->getType(), reductionTuple->getType(),
+           rawReducer->getType(), lck->getType()},
+          {}, ompModule);
       seqassert(reduceNoWait, "reduce nowait function not found");
       auto *reduceNoWaitEnd = M->getOrRealizeFunc(
-          "_end_reduce_nowait", {locRef->getType(), gtid->getType(), lck->getType()},
-          {}, ompModule);
+          "_end_reduce_nowait",
+          {reductionLocRef->getType(), gtid->getType(), lck->getType()}, {}, ompModule);
       seqassert(reduceNoWaitEnd, "end reduce nowait function not found");
 
       auto *series = M->Nr<SeriesFlow>();
       auto *tupleVal = util::makeVar(reductionTuple, series, parent);
-      auto *reduceCode =
-          util::call(reduceNoWait, {M->Nr<VarValue>(locRef), M->Nr<VarValue>(gtid),
-                                    tupleVal, rawReducer, M->Nr<VarValue>(lck)});
+      auto *reduceCode = util::call(reduceNoWait, {M->Nr<VarValue>(reductionLocRef),
+                                                   M->Nr<VarValue>(gtid), tupleVal,
+                                                   rawReducer, M->Nr<VarValue>(lck)});
       auto *codeVar = util::makeVar(reduceCode, series, parent)->getVar();
       seqassert(codeVar->getType()->is(M->getIntType()), "wrong reduce code type");
 
@@ -695,8 +699,8 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
         }
       }
       sectionNonAtomic->push_back(
-          util::call(reduceNoWaitEnd, {M->Nr<VarValue>(locRef), M->Nr<VarValue>(gtid),
-                                       M->Nr<VarValue>(lck)}));
+          util::call(reduceNoWaitEnd, {M->Nr<VarValue>(reductionLocRef),
+                                       M->Nr<VarValue>(gtid), M->Nr<VarValue>(lck)}));
 
       for (auto &info : sharedInfo) {
         if (info.reduction) {
