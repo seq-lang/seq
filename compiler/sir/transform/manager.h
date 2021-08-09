@@ -92,12 +92,10 @@ private:
 public:
   static const int PASS_IT_MAX;
 
-  explicit PassManager(bool addStandardPasses = true,
-                       std::vector<std::string> disabled = {})
+  explicit PassManager(bool debug = false, std::vector<std::string> disabled = {})
       : km(), passes(), analyses(), executionOrder(), results(),
         disabled(std::move(disabled)) {
-    if (addStandardPasses)
-      registerStandardPasses();
+    registerStandardPasses(debug);
   }
 
   /// Registers a pass and appends it to the execution order.
@@ -139,7 +137,7 @@ public:
 
 private:
   void runPass(Module *module, const std::string &name);
-  void registerStandardPasses();
+  void registerStandardPasses(bool debug = false);
   void runAnalysis(Module *module, const std::string &name);
   void invalidate(const std::string &key);
 };

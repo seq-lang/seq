@@ -141,27 +141,32 @@ void PassManager::invalidate(const std::string &key) {
   }
 }
 
-void PassManager::registerStandardPasses() {
-  // Pythonic
-  registerPass(std::make_unique<pythonic::DictArithmeticOptimization>());
-  registerPass(std::make_unique<pythonic::StrAdditionOptimization>());
-  registerPass(std::make_unique<pythonic::IOCatOptimization>());
+void PassManager::registerStandardPasses(bool debug) {
+  if (debug) {
+    registerPass(std::make_unique<lowering::PipelineLowering>());
+    registerPass(std::make_unique<parallel::OpenMPPass>());
+  } else {
+    // Pythonic
+    registerPass(std::make_unique<pythonic::DictArithmeticOptimization>());
+    registerPass(std::make_unique<pythonic::StrAdditionOptimization>());
+    registerPass(std::make_unique<pythonic::IOCatOptimization>());
 
-  // lowering
-  registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());
-  registerPass(std::make_unique<lowering::PipelineLowering>());
+    // lowering
+    registerPass(std::make_unique<lowering::PipelineLowering>());
+    registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());
 
-  // folding
-  auto cfgKey = registerAnalysis(std::make_unique<analyze::dataflow::CFAnalysis>());
-  auto rdKey = registerAnalysis(std::make_unique<analyze::dataflow::RDAnalysis>(cfgKey),
-                                {cfgKey});
-  auto globalKey =
-      registerAnalysis(std::make_unique<analyze::module::GlobalVarsAnalyses>());
-  registerPass(std::make_unique<folding::FoldingPassGroup>(rdKey, globalKey),
-               /*insertBefore=*/"", {rdKey, globalKey}, {rdKey, cfgKey, globalKey});
+    // folding
+    auto cfgKey = registerAnalysis(std::make_unique<analyze::dataflow::CFAnalysis>());
+    auto rdKey = registerAnalysis(
+        std::make_unique<analyze::dataflow::RDAnalysis>(cfgKey), {cfgKey});
+    auto globalKey =
+        registerAnalysis(std::make_unique<analyze::module::GlobalVarsAnalyses>());
+    registerPass(std::make_unique<folding::FoldingPassGroup>(rdKey, globalKey),
+                 /*insertBefore=*/"", {rdKey, globalKey}, {rdKey, cfgKey, globalKey});
 
-  // parallel
-  registerPass(std::make_unique<parallel::OpenMPPass>());
+    // parallel
+    registerPass(std::make_unique<parallel::OpenMPPass>());
+  }
 }
 
 } // namespace transform

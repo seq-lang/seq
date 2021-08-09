@@ -11,32 +11,35 @@ namespace ir {
 namespace transform {
 namespace lowering {
 namespace {
+Value *callStage(Module *M, PipelineFlow::Stage *stage, Value *last) {
+  std::vector<Value *> args;
+  for (auto *arg : *stage) {
+    args.push_back(arg ? arg : last);
+  }
+  return M->Nr<CallInstr>(stage->getCallee(), args);
+}
+
 Value *convertPipelineToForLoopsHelper(Module *M, BodiedFunc *parent,
                                        const std::vector<PipelineFlow::Stage *> &stages,
                                        unsigned idx = 0, Value *last = nullptr) {
   if (idx >= stages.size())
     return last;
+
   auto *stage = stages[idx];
-  Value *next = nullptr;
+  if (idx == 0)
+    return convertPipelineToForLoopsHelper(M, parent, stages, idx + 1,
+                                           stage->getCallee());
 
-  if (last) {
-    std::vector<Value *> args;
-    for (auto *arg : *stage) {
-      args.push_back(arg ? arg : last);
-    }
-    next = M->Nr<CallInstr>(stage->getCallee(), args);
-  } else {
-    next = stage->getCallee();
-  }
-
-  if (stage->isGenerator()) {
-    auto *var = M->Nr<Var>(stage->getOutputElementType());
+  auto *prev = stages[idx - 1];
+  if (prev->isGenerator()) {
+    auto *var = M->Nr<Var>(prev->getOutputElementType());
     parent->push_back(var);
-    auto *body = convertPipelineToForLoopsHelper(M, parent, stages, idx + 1,
-                                                 M->Nr<VarValue>(var));
-    return M->Nr<ForFlow>(next, util::series(body), var, stage->isParallel());
+    auto *body = convertPipelineToForLoopsHelper(
+        M, parent, stages, idx + 1, callStage(M, stage, M->Nr<VarValue>(var)));
+    return M->Nr<ForFlow>(last, util::series(body), var, prev->isParallel());
   } else {
-    return convertPipelineToForLoopsHelper(M, parent, stages, idx + 1, next);
+    return convertPipelineToForLoopsHelper(M, parent, stages, idx + 1,
+                                           callStage(M, stage, last));
   }
 }
 
