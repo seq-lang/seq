@@ -7,6 +7,7 @@ namespace ir {
 namespace transform {
 namespace lowering {
 
+/// Converts pipelines to for-loops
 class PipelineLowering : public OperatorPass {
 public:
   static const std::string KEY;

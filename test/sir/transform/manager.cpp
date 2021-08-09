@@ -53,7 +53,8 @@ int DummyPass::runCounter = 0;
 TEST_F(SIRCoreTest, PassManagerNoInvalidations) {
   int counter = 0;
 
-  auto manager = std::make_unique<transform::PassManager>(false);
+  auto manager =
+      std::make_unique<transform::PassManager>(transform::PassManager::Init::EMPTY);
   manager->registerAnalysis(std::make_unique<DummyAnalysis>(counter));
   manager->registerPass(std::make_unique<DummyPass>(counter, ANALYSIS_KEY), "",
                         {ANALYSIS_KEY});
@@ -66,7 +67,8 @@ TEST_F(SIRCoreTest, PassManagerNoInvalidations) {
 TEST_F(SIRCoreTest, PassManagerInvalidations) {
   int counter = 0;
 
-  auto manager = std::make_unique<transform::PassManager>(false);
+  auto manager =
+      std::make_unique<transform::PassManager>(transform::PassManager::Init::EMPTY);
   manager->registerAnalysis(std::make_unique<DummyAnalysis>(counter));
   manager->registerPass(std::make_unique<DummyPass>(counter, ANALYSIS_KEY), "",
                         {ANALYSIS_KEY}, {ANALYSIS_KEY});

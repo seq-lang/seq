@@ -637,7 +637,6 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
     if (name == "_loop_shared_updates") {
       // for all non-reduction shareds, set the final values
       // this will be similar to OpenMP's "lastprivate"
-      seqassert(replacement == nullptr, "bad visit order in template");
       seqassert(v->numArgs() == 1 && isA<VarValue>(v->front()),
                 "unexpected shared updates stub");
       auto *extras = util::getVar(v->front());
@@ -657,8 +656,7 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
     }
 
     if (name == "_loop_reductions") {
-      seqassert(replacement == nullptr && reductionLocRef && gtid,
-                "bad visit order in template");
+      seqassert(reductionLocRef && gtid, "bad visit order in template");
       seqassert(v->numArgs() == 1 && isA<VarValue>(v->front()),
                 "unexpected shared updates stub");
       if (numReductions() == 0)
@@ -789,7 +787,7 @@ struct TaskLoopRoutineStubReplacer : public util::Operator {
     auto *func = util::getFunc(v);
     if (func && func->getUnmangledName() == "_routine_stub") {
       util::CloneVisitor cv(M);
-      auto *newRoutine = cv.clone(func);
+      auto *newRoutine = cv.forceClone(func);
       TaskLoopBodyStubReplacer rep(replacement);
       newRoutine->accept(rep);
       v->setVar(newRoutine);
@@ -885,7 +883,7 @@ void OpenMPPass::handle(ForFlow *v) {
   seqassert(templateFunc, "task loop outline template not found");
 
   util::CloneVisitor cv(M);
-  templateFunc = cast<BodiedFunc>(cv.clone(templateFunc));
+  templateFunc = cast<BodiedFunc>(cv.forceClone(templateFunc));
   TaskLoopRoutineStubReplacer rep(privates, shareds, outline.call, loopVar);
   templateFunc->accept(rep);
 
@@ -956,7 +954,7 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   seqassert(templateFunc, "static loop outline template not found");
 
   util::CloneVisitor cv(M);
-  templateFunc = cast<Func>(cv.clone(templateFunc));
+  templateFunc = cast<Func>(cv.forceClone(templateFunc));
   ImperativeLoopTemplateReplacer rep(cast<BodiedFunc>(templateFunc), outline.call,
                                      loopVar, &sched, &reds, v->getStep());
   templateFunc->accept(rep);

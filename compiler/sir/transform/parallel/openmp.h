@@ -9,6 +9,9 @@ namespace parallel {
 
 class OpenMPPass : public OperatorPass {
 public:
+  /// Constructs an OpenMP pass.
+  OpenMPPass() : OperatorPass(/*childrenFirst=*/true) {}
+
   static const std::string KEY;
   std::string getKey() const override { return KEY; }
 

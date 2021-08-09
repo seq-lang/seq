@@ -1539,6 +1539,7 @@ void LLVMVisitor::visit(const WhileFlow *x) {
 }
 
 void LLVMVisitor::visit(const ForFlow *x) {
+  seqassert(!x->isParallel(), "parallel for-loop not lowered");
   llvm::Type *loopVarType = getLLVMType(x->getVar()->getType());
   llvm::Value *loopVar = vars[x->getVar()];
   seqassert(loopVar, "{} loop variable not found", *x);
@@ -1597,6 +1598,7 @@ void LLVMVisitor::visit(const ForFlow *x) {
 }
 
 void LLVMVisitor::visit(const ImperativeForFlow *x) {
+  seqassert(!x->isParallel(), "parallel for-loop not lowered");
   llvm::Value *loopVar = vars[x->getVar()];
   seqassert(loopVar, "{} loop variable not found", *x);
   seqassert(x->getStep() != 0, "step cannot be 0");

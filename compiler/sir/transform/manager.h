@@ -90,13 +90,32 @@ private:
   std::vector<std::string> disabled;
 
 public:
+  /// PassManager initialization mode.
+  enum Init {
+    EMPTY,
+    DEBUG,
+    RELEASE,
+  };
+
   static const int PASS_IT_MAX;
 
-  explicit PassManager(bool debug = false, std::vector<std::string> disabled = {})
+  explicit PassManager(Init init, std::vector<std::string> disabled = {})
       : km(), passes(), analyses(), executionOrder(), results(),
         disabled(std::move(disabled)) {
-    registerStandardPasses(debug);
+    switch (init) {
+    case Init::EMPTY:
+      break;
+    case Init::DEBUG:
+      registerStandardPasses(true);
+      break;
+    case Init::RELEASE:
+      registerStandardPasses(false);
+      break;
+    }
   }
+
+  explicit PassManager(bool debug = false, std::vector<std::string> disabled = {})
+      : PassManager(debug ? Init::DEBUG : Init::RELEASE, std::move(disabled)) {}
 
   /// Registers a pass and appends it to the execution order.
   /// @param pass the pass
