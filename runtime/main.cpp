@@ -1,4 +1,5 @@
 #include "dsl/plugins.h"
+#include "parser/cache.h"
 #include "parser/parser.h"
 #include "seq/seq.h"
 #include "sir/llvm/llvisitor.h"
@@ -107,7 +108,8 @@ ProcessResult processSource(const std::vector<const char *> &args) {
     defmap.emplace(name, value);
   }
 
-  auto *module = seq::parse(args[0], input.c_str(), /*code=*/"", /*isCode=*/false,
+  auto cache = make_shared<seq::ast::Cache>(args[0]);
+  auto *module = seq::parse(cache, input.c_str(), /*code=*/"", /*isCode=*/false,
                             /*isTest=*/false, /*startLine=*/0, defmap);
   if (!module)
     return {{}, {}};

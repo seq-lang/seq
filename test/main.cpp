@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <vector>
 
+#include "parser/cache.h"
 #include "parser/common.h"
 #include "parser/parser.h"
 #include "seq/seq.h"
@@ -181,7 +182,8 @@ public:
       auto file = getFilename(get<0>(GetParam()));
       auto code = get<3>(GetParam());
       auto startLine = get<4>(GetParam());
-      auto *module = parse(argv0, file, code, !code.empty(),
+      auto cache = make_shared<seq::ast::Cache>(argv0);
+      auto *module = parse(cache, file, code, !code.empty(),
                            /* isTest */ 1 + get<5>(GetParam()), startLine);
       if (!module)
         exit(EXIT_FAILURE);

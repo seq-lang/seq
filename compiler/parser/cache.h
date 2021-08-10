@@ -97,6 +97,8 @@ struct Cache : public std::enable_shared_from_this<Cache> {
   string module0;
   /// LLVM module.
   seq::ir::Module *module = nullptr;
+  /// Flag if JIT is active
+  bool isJIT = false;
 
   /// Table of imported files that maps an absolute filename to a Import structure.
   /// By convention, the key of Seq standard library is "".
@@ -179,7 +181,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
   /// corresponding Function instance.
   unordered_map<string, Function> functions;
 
-  /// Pointer to the later contexts needed for IR API access.
+  /// Pointer to the later contexts needed for JIT and IR API access.
   shared_ptr<TypeContext> typeCtx;
   shared_ptr<TranslateContext> codegenCtx;
   /// Set of function realizations that are to be translated to IR.

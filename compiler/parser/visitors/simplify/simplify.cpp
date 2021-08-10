@@ -127,26 +127,31 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     cache->age++;
   }
 
-  auto ctx = make_shared<SimplifyContext>(file, cache);
-  // static_pointer_cast<SimplifyContext>(cache->imports[STDLIB_IMPORT].ctx);
-  cache->imports[file] = cache->imports[MAIN_IMPORT] = {file, ctx};
-  ctx->setFilename(file);
-  ctx->moduleName = {ImportFile::PACKAGE, file, MODULE_MAIN};
-  // Load the command-line defines.
-  unordered_map<string, pair<string, int64_t>> newDefines;
-  for (auto &d : defines) {
-    try {
-      auto canName = ctx->generateCanonicalName(d.first);
-      newDefines[canName] = {d.second.first, stoll(d.second.first)};
-      ctx->add(SimplifyItem::Type, d.first, canName, false, true);
-    } catch (...) {
-      ast::error(format("parameter '{}' is not a valid integer", d.first).c_str());
+  shared_ptr<SimplifyContext> ctx = nullptr;
+  if (!in(cache->imports, MAIN_IMPORT)) {
+    ctx = make_shared<SimplifyContext>(file, cache);
+    // static_pointer_cast<SimplifyContext>(cache->imports[STDLIB_IMPORT].ctx);
+    cache->imports[file] = cache->imports[MAIN_IMPORT] = {file, ctx};
+    ctx->setFilename(file);
+    ctx->moduleName = {ImportFile::PACKAGE, file, MODULE_MAIN};
+    // Load the command-line defines.
+    unordered_map<string, pair<string, int64_t>> newDefines;
+    for (auto &d : defines) {
+      try {
+        auto canName = ctx->generateCanonicalName(d.first);
+        newDefines[canName] = {d.second.first, stoll(d.second.first)};
+        ctx->add(SimplifyItem::Type, d.first, canName, false, true);
+      } catch (...) {
+        ast::error(format("parameter '{}' is not a valid integer", d.first).c_str());
+      }
     }
+    defines = newDefines;
+    // Prepend __name__ = "__main__".
+    stmts.push_back(make_shared<AssignStmt>(make_shared<IdExpr>("__name__"),
+                                            make_shared<StringExpr>(MODULE_MAIN)));
+  } else {
+    ctx = cache->imports[MAIN_IMPORT].ctx;
   }
-  defines = newDefines;
-  // Prepend __name__ = "__main__".
-  stmts.push_back(make_shared<AssignStmt>(make_shared<IdExpr>("__name__"),
-                                          make_shared<StringExpr>(MODULE_MAIN)));
   // Transform the input node.
   stmts.emplace_back(SimplifyVisitor(ctx, preamble).transform(node));
 
