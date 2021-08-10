@@ -316,8 +316,8 @@ def _task_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
         return priv, shared
 
     iterable, priv, shared = args[0]
-    P = typeof(priv)
-    S = typeof(shared)
+    P = type(priv)
+    S = type(shared)
 
     gtid = int(gtid_ptr[0])
     loc_ref = _default_loc()

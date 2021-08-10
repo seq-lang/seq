@@ -127,5 +127,5 @@ def print(*args, sep=' ', end='\n', file=_stdout, flush=False):
     if flush:
         fflush(fp)
 
-
+from openmp import Ident as __OMPIdent
 from internal.dlopen import dlsym as _dlsym
