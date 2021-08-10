@@ -293,6 +293,25 @@ void TranslateVisitor::visit(ForStmt *stmt) {
   auto var = make<ir::Var>(stmt, getType(stmt->var->getType()), false, varName);
   ctx->getBase()->push_back(var);
   auto bodySeries = make<ir::SeriesFlow>(stmt, "body");
+
+  bool isPar = false;
+  string parArgs;
+  if (stmt->attributes.size()) {
+    seqassert(stmt->attributes.size() == 1, "can only accept @par attribute");
+    auto attr = stmt->attributes[0];
+    if (auto a = attr->getId()) {
+      seqassert(a->value == "par", "can only accept @par attribute");
+      isPar = true;
+    } else if (auto c = attr->getCall()) {
+      seqassert(c->expr->getId() && c->expr->getId()->value == "par",
+                "can only accept @par attribute");
+      seqassert(c->args.size() == 1 && c->args[0].value->getString(),
+                "can only accept single string @par argument");
+      isPar = true;
+      parArgs = c->args[0].value->getString()->getValue();
+    }
+  }
+
   auto loop = make<ir::ForFlow>(stmt, transform(stmt->iter), bodySeries, var);
   ctx->add(TranslateItem::Var, varName, var);
   ctx->addSeries(cast<ir::SeriesFlow>(loop->getBody()));
