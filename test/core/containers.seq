@@ -109,6 +109,12 @@ def test_list():
     assert l5.index(33) == 3
     l5 *= 0
     assert len(l5) == 0
+
+    l6 = []
+    l6.extend('abc')
+    l6.extend(['xyz'])
+    l6.extend('')
+    assert l6 == ['a', 'b', 'c', 'xyz']
 test_list()
 
 @test
