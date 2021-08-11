@@ -222,6 +222,7 @@ set(SEQ_HPPFILES
         compiler/sir/transform/lowering/pipeline.h
         compiler/sir/transform/manager.h
         compiler/sir/transform/parallel/openmp.h
+        compiler/sir/transform/parallel/schedule.h
         compiler/sir/transform/pass.h
         compiler/sir/transform/pythonic/dict.h
         compiler/sir/transform/pythonic/io.h
@@ -304,6 +305,7 @@ set(SEQ_CPPFILES
         compiler/sir/transform/lowering/pipeline.cpp
         compiler/sir/transform/manager.cpp
         compiler/sir/transform/parallel/openmp.cpp
+        compiler/sir/transform/parallel/schedule.cpp
         compiler/sir/transform/pass.cpp
         compiler/sir/transform/pythonic/dict.cpp
         compiler/sir/transform/pythonic/io.cpp

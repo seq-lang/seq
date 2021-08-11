@@ -121,6 +121,8 @@ private:
   Var *var;
   /// true if parallel for
   bool parallel;
+  /// parallel loop schedule
+  std::string schedule;
 
 public:
   static const char NodeId;
@@ -131,9 +133,9 @@ public:
   /// @param var the variable
   /// @param name the flow's name
   ForFlow(Value *iter, Flow *body, Var *var, bool parallel = false,
-          std::string name = "")
+          std::string schedule = "", std::string name = "")
       : AcceptorExtend(std::move(name)), iter(iter), body(body), var(var),
-        parallel(parallel) {}
+        parallel(parallel), schedule(std::move(schedule)) {}
 
   /// @return the iter
   Value *getIter() { return iter; }
@@ -165,6 +167,12 @@ public:
   /// @param a true if parallel
   void setParallel(bool a = true) { parallel = a; }
 
+  /// @return the parallel loop schedule; empty if none
+  std::string getSchedule() const { return schedule; }
+  /// Sets the parallel loop schedule
+  /// @param s the schedule string (e.g. OpenMP pragma)
+  void setSchedule(const std::string &s) { schedule = s; }
+
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {iter, body}; }
   int doReplaceUsedValue(id_t id, Value *newValue) override;
@@ -188,6 +196,8 @@ private:
   Var *var;
   /// true if parallel for
   bool parallel;
+  /// parallel loop schedule
+  std::string schedule;
 
 public:
   static const char NodeId;
@@ -200,9 +210,10 @@ public:
   /// @param var the end variable, must be integer
   /// @param name the flow's name
   ImperativeForFlow(Value *start, int64_t step, Value *end, Flow *body, Var *var,
-                    bool parallel = false, std::string name = "")
+                    bool parallel = false, std::string schedule = "",
+                    std::string name = "")
       : AcceptorExtend(std::move(name)), start(start), step(step), end(end), body(body),
-        var(var), parallel(parallel) {}
+        var(var), parallel(parallel), schedule(std::move(schedule)) {}
 
   /// @return the start value
   Value *getStart() const { return start; }
@@ -243,6 +254,12 @@ public:
   /// Sets parallel status.
   /// @param a true if parallel
   void setParallel(bool a = true) { parallel = a; }
+
+  /// @return the parallel loop schedule; empty if none
+  std::string getSchedule() const { return schedule; }
+  /// Sets the parallel loop schedule
+  /// @param s the schedule string (e.g. OpenMP pragma)
+  void setSchedule(const std::string &s) { schedule = s; }
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {start, end, body}; }

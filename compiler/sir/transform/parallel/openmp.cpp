@@ -1,4 +1,5 @@
 #include "openmp.h"
+#include "schedule.h"
 
 #include <algorithm>
 #include <iterator>
@@ -37,47 +38,6 @@ struct OMPTypes {
     seqassert(task, "openmp.Task type not found");
   }
 };
-
-int getScheduleCode(const std::string &schedule = "static", bool chunked = false,
-                    bool monotonic = false) {
-  // codes from "enum sched_type" at
-  // https://github.com/llvm/llvm-project/blob/main/openmp/runtime/src/kmp.h
-  int modifier = monotonic ? (1 << 29) : (1 << 30);
-  if (schedule == "static") {
-    if (chunked)
-      return 33;
-    else
-      return 34;
-  } else if (schedule == "dynamic") {
-    return 35 | modifier;
-  } else if (schedule == "guided") {
-    return 36 | modifier;
-  } else if (schedule == "runtime") {
-    if (chunked) {
-      // error
-    }
-    return 37 | modifier;
-  } else if (schedule == "auto") {
-    if (chunked) {
-      // error
-    }
-    return 38 | modifier;
-  }
-  return getScheduleCode(); // default
-}
-
-struct OMPSched {
-  int threads;
-  bool dynamic;
-  int chunk;
-  int code;
-
-  OMPSched() : threads(0), dynamic(false), chunk(1), code(getScheduleCode()) {}
-};
-
-OMPSched getScedule(ImperativeForFlow *v) {
-  return {}; // TODO
-}
 
 Var *getVarFromOutlinedArg(Value *arg) {
   if (auto *val = cast<VarValue>(arg)) {
@@ -728,7 +688,7 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
     }
 
     if (name == "_loop_chunk") {
-      v->replaceAll(M->getInt(sched->chunk));
+      v->replaceAll(sched->chunk.getValue(M));
     }
   }
 };
@@ -917,7 +877,11 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
     return;
 
   // set up args to pass fork_call
-  auto sched = getScedule(v);
+  std::vector<Var *> globals;
+  for (auto *global : *M) {
+    globals.push_back(global);
+  }
+  auto sched = getScedule(v, globals);
   Var *loopVar = v->getVar();
   OMPTypes types(M);
 
@@ -976,11 +940,11 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   seqassert(forkFunc, "fork call function not found");
   auto *fork = util::call(forkFunc, {rawTemplateFunc, forkExtra});
 
-  if (sched.threads > 0) {
+  if (!sched.threads.isLiteral || sched.threads.val.intVal > 0) {
     auto *pushNumThreadsFunc =
         M->getOrRealizeFunc("_push_num_threads", {intType}, {}, ompModule);
     seqassert(pushNumThreadsFunc, "push num threads func not found");
-    auto *pushNumThreads = util::call(pushNumThreadsFunc, {M->getInt(sched.threads)});
+    auto *pushNumThreads = util::call(pushNumThreadsFunc, {sched.threads.getValue(M)});
     insertBefore(pushNumThreads);
   }
 

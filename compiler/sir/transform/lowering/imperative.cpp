@@ -73,7 +73,8 @@ void ImperativeForFlowLowering::handle(ForFlow *v) {
     return;
 
   v->replaceAll(M->N<ImperativeForFlow>(v->getSrcInfo(), start, step, end, v->getBody(),
-                                        v->getVar(), v->isParallel()));
+                                        v->getVar(), v->isParallel(),
+                                        v->getSchedule()));
 }
 
 } // namespace lowering

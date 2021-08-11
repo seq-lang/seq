@@ -16,7 +16,7 @@ Value *callStage(Module *M, PipelineFlow::Stage *stage, Value *last) {
   for (auto *arg : *stage) {
     args.push_back(arg ? arg : last);
   }
-  return M->Nr<CallInstr>(stage->getCallee(), args);
+  return M->N<CallInstr>(stage->getCallee()->getSrcInfo(), stage->getCallee(), args);
 }
 
 Value *convertPipelineToForLoopsHelper(Module *M, BodiedFunc *parent,
@@ -36,7 +36,8 @@ Value *convertPipelineToForLoopsHelper(Module *M, BodiedFunc *parent,
     parent->push_back(var);
     auto *body = convertPipelineToForLoopsHelper(
         M, parent, stages, idx + 1, callStage(M, stage, M->Nr<VarValue>(var)));
-    return M->Nr<ForFlow>(last, util::series(body), var, prev->isParallel());
+    return M->N<ForFlow>(last->getSrcInfo(), last, util::series(body), var,
+                         prev->isParallel());
   } else {
     return convertPipelineToForLoopsHelper(M, parent, stages, idx + 1,
                                            callStage(M, stage, last));
