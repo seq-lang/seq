@@ -175,8 +175,10 @@ class List[T]:
 
     def __iter__(self):
         i = 0
-        while i < self.len:
-            yield self.arr[i]
+        N = self.len
+        p = self.arr.ptr
+        while i < N:
+            yield p[i]
             i += 1
 
     def __reversed__(self):
