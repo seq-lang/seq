@@ -36,6 +36,7 @@ struct OMPSched {
   OMPSched();
 };
 
+OMPSched getScedule(ForFlow *v, const std::vector<Var *> &vars = {});
 OMPSched getScedule(ImperativeForFlow *v, const std::vector<Var *> &vars = {});
 
 } // namespace parallel

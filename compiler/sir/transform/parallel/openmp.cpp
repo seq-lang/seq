@@ -818,6 +818,11 @@ void OpenMPPass::handle(ForFlow *v) {
     return;
 
   // set up args to pass fork_call
+  std::vector<Var *> globals;
+  for (auto *global : *M) {
+    globals.push_back(global);
+  }
+  auto sched = getScedule(v, globals);
   Var *loopVar = v->getVar();
   OMPTypes types(M);
 
@@ -859,8 +864,16 @@ void OpenMPPass::handle(ForFlow *v) {
   std::vector<types::Type *> forkArgTypes = {types.i8ptr, forkExtra->getType()};
   auto *forkFunc = M->getOrRealizeFunc("_fork_call", forkArgTypes, {}, ompModule);
   seqassert(forkFunc, "fork call function not found");
-
   auto *fork = util::call(forkFunc, {rawTemplateFunc, forkExtra});
+
+  if (!sched.threads.isLiteral || sched.threads.val.intVal > 0) {
+    auto *pushNumThreadsFunc =
+        M->getOrRealizeFunc("_push_num_threads", {M->getIntType()}, {}, ompModule);
+    seqassert(pushNumThreadsFunc, "push num threads func not found");
+    auto *pushNumThreads = util::call(pushNumThreadsFunc, {sched.threads.getValue(M)});
+    insertBefore(pushNumThreads);
+  }
+
   v->replaceAll(fork);
 }
 

@@ -174,11 +174,9 @@ OMPSched::Param makeParam(const std::string &arg, int ifNotFound,
     return {std::stoi(arg)};
   }
 }
-} // namespace
 
-OMPSched::OMPSched() : threads(0), dynamic(false), chunk(1), code(getScheduleCode()) {}
-
-OMPSched getScedule(ImperativeForFlow *v, const std::vector<Var *> &vars) {
+template <typename LoopType>
+OMPSched getSceduleCore(LoopType *v, const std::vector<Var *> &vars) {
   auto src = v->getSrcInfo();
   auto str = v->getSchedule();
   if (str.empty())
@@ -230,6 +228,17 @@ OMPSched getScedule(ImperativeForFlow *v, const std::vector<Var *> &vars) {
     }
   }
   return result;
+}
+} // namespace
+
+OMPSched::OMPSched() : threads(0), dynamic(false), chunk(1), code(getScheduleCode()) {}
+
+OMPSched getScedule(ForFlow *v, const std::vector<Var *> &vars) {
+  return getSceduleCore(v, vars);
+}
+
+OMPSched getScedule(ImperativeForFlow *v, const std::vector<Var *> &vars) {
+  return getSceduleCore(v, vars);
 }
 
 } // namespace parallel
