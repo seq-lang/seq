@@ -27,7 +27,6 @@ struct OMPSched {
     }
   };
 
-  bool setThreads;
   Param threads;
   bool dynamic;
   Param chunk;
