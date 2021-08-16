@@ -62,11 +62,11 @@ ExternalProject_Add(xz
     UPDATE_DISCONNECTED TRUE
     WORKING_DIRECTORY <SOURCE_DIR>
     CONFIGURE_COMMAND ./configure "CFLAGS=-fPIC"
-        --disable-xz 
-        --disable-xzdec 
-        --disable-lzmadec 
-        --disable-lzmainfo 
-        --disable-shared 
+        --disable-xz
+        --disable-xzdec
+        --disable-lzmadec
+        --disable-lzmainfo
+        --disable-shared
         --enable-pic
         --prefix=<INSTALL_DIR>
     BUILD_COMMAND make -j${CONCURRENCY})
@@ -81,8 +81,8 @@ ExternalProject_Add(htslib
     WORKING_DIRECTORY <SOURCE_DIR>
     CONFIGURE_COMMAND ./configure
         "CFLAGS=-fPIC"
-        --disable-libcurl 
-        --without-libdeflate 
+        --disable-libcurl
+        --without-libdeflate
         --prefix=<INSTALL_DIR>
     BUILD_COMMAND make -j${CONCURRENCY})
 ExternalProject_Get_Property(htslib INSTALL_DIR)
@@ -137,9 +137,14 @@ endif ()
 
 add_executable(peg2cpp compiler/util/peg2cpp.cpp compiler/util/peglib.h)
 add_custom_command(
-    OUTPUT  rules.cpp
-    COMMAND peg2cpp ${CMAKE_SOURCE_DIR}/compiler/parser/peg/grammar.peg rules.cpp
+    OUTPUT  seq_rules.cpp
+    COMMAND peg2cpp ${CMAKE_SOURCE_DIR}/compiler/parser/peg/grammar.peg seq_rules.cpp seq
     DEPENDS peg2cpp compiler/parser/peg/grammar.peg
+)
+add_custom_command(
+    OUTPUT  omp_rules.cpp
+    COMMAND peg2cpp ${CMAKE_SOURCE_DIR}/compiler/parser/peg/openmp.peg omp_rules.cpp omp
+    DEPENDS peg2cpp compiler/parser/peg/openmp.peg
 )
 
 # Seq runtime library
@@ -323,10 +328,10 @@ set(SEQ_CPPFILES
         compiler/util/common.cpp
         compiler/util/fmt/format.cpp)
 add_library(seq SHARED ${SEQ_HPPFILES})
-target_sources(seq PRIVATE ${SEQ_CPPFILES} rules.cpp)
-# if (CMAKE_BUILD_TYPE MATCHES Debug)
-#     set_source_files_properties(rules.cpp compiler/parser/peg/peg.cpp PROPERTIES COMPILE_FLAGS "-O2")
-# endif ()
+target_sources(seq PRIVATE ${SEQ_CPPFILES} seq_rules.cpp omp_rules.cpp)
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+    set_source_files_properties(seq_rules.cpp compiler/parser/peg/peg.cpp PROPERTIES COMPILE_FLAGS "-O2")
+endif ()
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 if (APPLE)
     target_link_libraries(seq ${LLVM_LIBS} dl seqrt)

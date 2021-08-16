@@ -28,5 +28,8 @@ ExprPtr parseExpr(const shared_ptr<Cache> &cache, const string &code,
 /// Parse a Seq file.
 StmtPtr parseFile(const shared_ptr<Cache> &cache, const string &file);
 
+/// Parse a OpenMP clause.
+vector<CallExpr::Arg> parseOpenMP(const shared_ptr<Cache> &cache, const string &code);
+
 } // namespace ast
 } // namespace seq

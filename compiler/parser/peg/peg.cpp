@@ -27,10 +27,13 @@ using namespace std;
 namespace seq {
 namespace ast {
 
+static shared_ptr<peg::Grammar> grammar(nullptr);
+static shared_ptr<peg::Grammar> ompGrammar(nullptr);
+
 shared_ptr<peg::Grammar> initParser() {
   auto g = make_shared<peg::Grammar>();
-  init_rules(*g);
-  init_actions(*g);
+  init_seq_rules(*g);
+  init_seq_actions(*g);
   ~(*g)["NLP"] <= peg::usr([](const char *s, size_t n, peg::SemanticValues &, any &dt) {
     return any_cast<ParseContext &>(dt).parens ? 0 : (n >= 1 && s[0] == '\\' ? 1 : -1);
   });
@@ -59,9 +62,10 @@ T parseCode(const shared_ptr<Cache> &cache, const string &file, string code,
   auto t = high_resolution_clock::now();
 
   // Initialize
-  static shared_ptr<peg::Grammar> g(nullptr);
-  if (!g)
-    g = initParser();
+  if (!grammar) {
+    LOG("initializing...");
+    grammar = initParser();
+  }
 
   vector<tuple<size_t, size_t, string>> errors;
   auto log = [&](size_t line, size_t col, const string &msg) {
@@ -69,8 +73,8 @@ T parseCode(const shared_ptr<Cache> &cache, const string &file, string code,
   };
   T result = nullptr;
   auto ctx = make_any<ParseContext>(cache, 0, line_offset, col_offset);
-  auto r = (*g)[rule].parse_and_get_value(code.c_str(), code.size(), ctx, result,
-                                          file.c_str(), log);
+  auto r = (*grammar)[rule].parse_and_get_value(code.c_str(), code.size(), ctx, result,
+                                                file.c_str(), log);
   auto ret = r.ret && r.len == code.size();
   if (!ret)
     r.error_info.output_log(log, code.c_str(), code.size());
@@ -115,6 +119,40 @@ StmtPtr parseFile(const shared_ptr<Cache> &cache, const string &file) {
   // LOG("peg/{} :=  {}", file, result ? result->toString(0) : "<nullptr>");
   // throw;
   // LOG("fmt := {}", FormatVisitor::apply(result));
+  return result;
+}
+
+shared_ptr<peg::Grammar> initOpenMPParser() {
+  auto g = make_shared<peg::Grammar>();
+  init_omp_rules(*g);
+  init_omp_actions(*g);
+  for (auto &x : *g) {
+    auto v = peg::LinkReferences(*g, x.second.params);
+    x.second.accept(v);
+  }
+  (*g)["pragma"].enablePackratParsing = true;
+  return g;
+}
+
+vector<CallExpr::Arg> parseOpenMP(const shared_ptr<Cache> &cache, const string &code) {
+  if (!ompGrammar)
+    ompGrammar = initOpenMPParser();
+
+  vector<tuple<size_t, size_t, string>> errors;
+  auto log = [&](size_t line, size_t col, const string &msg) {
+    errors.push_back({line, col, msg});
+  };
+  vector<CallExpr::Arg> result;
+  auto ctx = make_any<ParseContext>(cache, 0, 0, 0);
+  auto r = (*ompGrammar)["pragma"].parse_and_get_value(code.c_str(), code.size(), ctx,
+                                                       result, "", log);
+  auto ret = r.ret && r.len == code.size();
+  if (!ret)
+    r.error_info.output_log(log, code.c_str(), code.size());
+  exc::ParserException ex;
+  if (!errors.empty()) {
+    /// TODO: decide to report errors or just ignore them
+  }
   return result;
 }
 

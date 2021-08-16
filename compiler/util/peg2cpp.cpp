@@ -999,8 +999,10 @@ int main(int argc, char **argv) {
   ifs.close();
 
   string start;
-  peg::Rules dummy = {{"NLP", peg::usr([](const char *, size_t, peg::SemanticValues &,
-                                          any &) -> size_t { return -1; })}};
+  peg::Rules dummy = {};
+  if (string(argv[3]) == "seq")
+    dummy["NLP"] = peg::usr([](const char *, size_t, peg::SemanticValues &,
+                               any &) -> size_t { return -1; });
   bool enablePackratParsing;
   string preamble;
   peg::Log log = [](size_t line, size_t col, const string &msg) {
@@ -1070,19 +1072,21 @@ int main(int argc, char **argv) {
   fmt::print(fout, "// clang-format off\n");
   fmt::print(fout, "#pragma clang diagnostic push\n");
   fmt::print(fout, "#pragma clang diagnostic ignored \"-Wreturn-type\"\n");
-  fmt::print(fout, "{}\n", preamble.substr(1, preamble.size() - 2));
+  if (!preamble.empty())
+    fmt::print(fout, "{}\n", preamble.substr(1, preamble.size() - 2));
   string rules_preamble = "  using namespace peg;\n"
                           "  using peg::seq;\n"
                           "  using vc = vector<pair<char32_t, char32_t>>;\n";
-  fmt::print(fout, "void init_rules(peg::Grammar &P) {{\n{}\n{}\n}}\n", rules_preamble,
-             rules);
+  fmt::print(fout, "void init_{}_rules(peg::Grammar &P) {{\n{}\n{}\n}}\n", argv[3],
+             rules_preamble, rules);
   string act;
   for (auto &c : actions)
     if (c == '\n')
       act += "\n  ";
     else
       act += c;
-  fmt::print(fout, "void init_actions(peg::Grammar &P) {{\n  {}\n}}\n", act);
+  fmt::print(fout, "void init_{}_actions(peg::Grammar &P) {{\n  {}\n}}\n", argv[3],
+             act);
   fmt::print(fout, "// clang-format on\n");
   fmt::print(fout, "#pragma clang diagnostic pop\n");
   fclose(fout);

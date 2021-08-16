@@ -270,13 +270,14 @@ struct ForStmt : public Stmt {
   ExprPtr iter;
   StmtPtr suite;
   StmtPtr elseSuite;
-  vector<ExprPtr> attributes;
+  ExprPtr decorator;
+  vector<CallExpr::Arg> ompArgs;
 
   /// Indicates if iter was wrapped with __iter__() call.
   bool wrapped;
 
   ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite = nullptr,
-          vector<ExprPtr> attributes = {});
+          ExprPtr decorator = nullptr, vector<CallExpr::Arg> ompArgs = {});
   ForStmt(const ForStmt &stmt);
 
   string toString(int indent) const override;

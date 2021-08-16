@@ -48,5 +48,7 @@ struct ParseContext {
 } // namespace ast
 } // namespace seq
 
-void init_rules(peg::Grammar &);
-void init_actions(peg::Grammar &);
+void init_seq_rules(peg::Grammar &);
+void init_seq_actions(peg::Grammar &);
+void init_omp_rules(peg::Grammar &);
+void init_omp_actions(peg::Grammar &);

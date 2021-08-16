@@ -15,6 +15,7 @@
 #include "parser/common.h"
 #include "parser/visitors/translate/translate.h"
 #include "parser/visitors/translate/translate_ctx.h"
+#include "sir/transform/parallel/schedule.h"
 #include "sir/util/cloning.h"
 
 using fmt::format;
@@ -288,29 +289,19 @@ void TranslateVisitor::visit(WhileStmt *stmt) {
 }
 
 void TranslateVisitor::visit(ForStmt *stmt) {
+  // OMPSched os;
+  // for (auto &o : stmt->ompArgs) {
+  //   if (o.name == "num_threads")
+
+  // }
+
   seqassert(stmt->var->getId(), "expected IdExpr, got {}", stmt->var->toString());
   auto varName = stmt->var->getId()->value;
   auto var = make<ir::Var>(stmt, getType(stmt->var->getType()), false, varName);
   ctx->getBase()->push_back(var);
   auto bodySeries = make<ir::SeriesFlow>(stmt, "body");
 
-  bool isPar = false;
-  string parArgs;
-  for (auto &attr : stmt->attributes) {
-    if (auto a = attr->getId()) {
-      if (a->value == "par")
-        isPar = true;
-    } else if (auto c = attr->getCall()) {
-      if (c->expr->getId() && c->expr->getId()->value == "par" && c->args.size() == 1 &&
-          c->args[0].value->getString()) {
-        isPar = true;
-        parArgs = c->args[0].value->getString()->getValue();
-      }
-    }
-  }
-
-  auto loop =
-      make<ir::ForFlow>(stmt, transform(stmt->iter), bodySeries, var, isPar, parArgs);
+  auto loop = make<ir::ForFlow>(stmt, transform(stmt->iter), bodySeries, var);
   ctx->add(TranslateItem::Var, varName, var);
   ctx->addSeries(cast<ir::SeriesFlow>(loop->getBody()));
   transform(stmt->suite);

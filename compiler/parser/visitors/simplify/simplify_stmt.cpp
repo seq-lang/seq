@@ -178,6 +178,35 @@ void SimplifyVisitor::visit(WhileStmt *stmt) {
 }
 
 void SimplifyVisitor::visit(ForStmt *stmt) {
+  vector<CallExpr::Arg> ompArgs;
+  if (stmt->decorator) {
+    ExprPtr callee = stmt->decorator;
+    if (auto c = callee->getCall())
+      callee = c->expr;
+    if (!callee || !callee->isId("par"))
+      error("for loop can only take parallel decorator");
+
+    if (auto c = stmt->decorator->getCall())
+      for (auto &a : c->args) {
+        if (a.name.empty()) {
+          if (auto s = a.value->getString()) {
+            auto oa = parseOpenMP(ctx->cache, s->getValue());
+            ompArgs.insert(ompArgs.end(), oa.begin(), oa.end());
+          } else {
+            error("expected an openmp pragma string");
+          }
+        } else {
+          if (a.name == "schedule" && !a.value->getString())
+            error("schedule must be a static string");
+          else if (!in(set<string>{"num_threads", "chunk_size", "schedule"}, a.name))
+            error("unknown openmp directive {}", a.name);
+          ompArgs.push_back({a.name, transform(a.value)});
+        }
+      }
+  }
+  for (auto &o : ompArgs)
+    LOG("{} -> {}", o.name, o.value->toString());
+
   string breakVar;
   auto iter = transform(stmt->iter); // needs in-advance transformation to prevent
                                      // name clashes with the iterator variable
@@ -192,7 +221,7 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
   if (auto i = stmt->var->getId()) {
     ctx->add(SimplifyItem::Var, i->value, ctx->generateCanonicalName(i->value));
     forStmt = N<ForStmt>(transform(stmt->var), clone(iter), transform(stmt->suite),
-                         nullptr, stmt->attributes);
+                         nullptr, stmt->decorator, ompArgs);
   } else {
     string varName = ctx->cache->getTemporaryVar("for");
     ctx->add(SimplifyItem::Var, varName, varName);
@@ -201,7 +230,7 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
     stmts.push_back(N<AssignStmt>(clone(stmt->var), clone(var), nullptr, true));
     stmts.push_back(clone(stmt->suite));
     forStmt = N<ForStmt>(clone(var), clone(iter), transform(N<SuiteStmt>(move(stmts))),
-                         nullptr, stmt->attributes);
+                         nullptr, stmt->decorator, ompArgs);
   }
   ctx->popBlock();
   ctx->loops.pop_back();

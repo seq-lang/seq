@@ -153,18 +153,20 @@ string WhileStmt::toString(int indent) const {
 ACCEPT_IMPL(WhileStmt, ASTVisitor);
 
 ForStmt::ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite, StmtPtr elseSuite,
-                 vector<ExprPtr> attributes)
+                 ExprPtr decorator, vector<CallExpr::Arg> ompArgs)
     : Stmt(), var(move(var)), iter(move(iter)), suite(move(suite)),
-      elseSuite(move(elseSuite)), attributes(move(attributes)), wrapped(false) {}
+      elseSuite(move(elseSuite)), decorator(move(decorator)), ompArgs(move(ompArgs)),
+      wrapped(false) {}
 ForStmt::ForStmt(const ForStmt &stmt)
     : Stmt(stmt), var(ast::clone(stmt.var)), iter(ast::clone(stmt.iter)),
       suite(ast::clone(stmt.suite)), elseSuite(ast::clone(stmt.elseSuite)),
-      attributes(ast::clone(stmt.attributes)), wrapped(stmt.wrapped) {}
+      decorator(ast::clone(stmt.decorator)), ompArgs(ast::clone_nop(stmt.ompArgs)),
+      wrapped(stmt.wrapped) {}
 string ForStmt::toString(int indent) const {
   string pad = indent > 0 ? ("\n" + string(indent + INDENT_SIZE, ' ')) : " ";
   string attr;
-  for (auto &a : attributes)
-    attr += " " + a->toString();
+  if (decorator)
+    attr += " " + decorator->toString();
   if (!attr.empty())
     attr = " #:attr" + attr;
   if (elseSuite && elseSuite->firstInBlock())

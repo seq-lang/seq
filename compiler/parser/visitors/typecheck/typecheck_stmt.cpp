@@ -244,6 +244,9 @@ void TypecheckVisitor::visit(WhileStmt *stmt) {
 }
 
 void TypecheckVisitor::visit(ForStmt *stmt) {
+  for (auto &o : stmt->ompArgs)
+    o.value = transform(o.value);
+
   stmt->iter = transform(stmt->iter);
   // Extract the type of the for variable.
   if (!stmt->iter->getType()->canRealize())
