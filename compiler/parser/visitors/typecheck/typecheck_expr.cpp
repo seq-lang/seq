@@ -154,8 +154,7 @@ void TypecheckVisitor::visit(TupleExpr *expr) {
       expr->items[ai] = transform(expr->items[ai]);
     }
   auto name = generateTupleStub(expr->items.size());
-  resultExpr = transform(
-      N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"), clone(expr->items)));
+  resultExpr = transform(N<CallExpr>(N<DotExpr>(name, "__new__"), clone(expr->items)));
 }
 
 void TypecheckVisitor::visit(GeneratorExpr *expr) {
@@ -463,7 +462,7 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
 }
 
 void TypecheckVisitor::visit(SliceExpr *expr) {
-  ExprPtr none = N<CallExpr>(N<DotExpr>(N<IdExpr>(TYPE_OPTIONAL), "__new__"));
+  ExprPtr none = N<CallExpr>(N<DotExpr>(TYPE_OPTIONAL, "__new__"));
   resultExpr = transform(N<CallExpr>(N<IdExpr>(TYPE_SLICE),
                                      expr->start ? move(expr->start) : clone(none),
                                      expr->stop ? move(expr->stop) : clone(none),
@@ -778,8 +777,7 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
       te.push_back(N<DotExpr>(clone(expr), classItem->second.fields[i].name));
     }
     return transform(N<CallExpr>(
-        N<DotExpr>(N<IdExpr>(format(TYPE_TUPLE "{}", te.size())), "__new__"),
-        move(te)));
+        N<DotExpr>(format(TYPE_TUPLE "{}", te.size()), "__new__"), move(te)));
   }
   return nullptr;
 }
@@ -1150,7 +1148,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         // Case 2: wrap ints with float().
         if (extraStage && args[si].value->getEllipsis()) {
           // Check if this is a pipe call...
-          *extraStage = N<DotExpr>(N<IdExpr>("float"), "__new__");
+          *extraStage = N<DotExpr>("float", "__new__");
           return oldExpr;
         }
         args[si].value =
@@ -1161,7 +1159,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         // Case 3: wrap expected optionals with Optional().
         if (extraStage && args[si].value->getEllipsis()) {
           // Check if this is a pipe call...
-          *extraStage = N<DotExpr>(N<IdExpr>(TYPE_OPTIONAL), "__new__");
+          *extraStage = N<DotExpr>(TYPE_OPTIONAL, "__new__");
           return oldExpr;
         }
         args[si].value =
@@ -1485,9 +1483,9 @@ string TypecheckVisitor::generateFunctionStub(int n) {
     //   return __internal__.fn_new[Function.N[TR, ...]](what)
     params.emplace_back(
         Param{"what", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte"))});
-    stmts.push_back(N<ReturnStmt>(N<CallExpr>(
-        N<IndexExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "fn_new"), clone(type)),
-        N<IdExpr>("what"))));
+    stmts.push_back(N<ReturnStmt>(
+        N<CallExpr>(N<IndexExpr>(N<DotExpr>("__internal__", "fn_new"), clone(type)),
+                    N<IdExpr>("what"))));
     fns.emplace_back(make_shared<FunctionStmt>("__new__", clone(type), vector<Param>{},
                                                move(params),
                                                N<SuiteStmt>(move(stmts))));
@@ -1503,8 +1501,8 @@ string TypecheckVisitor::generateFunctionStub(int n) {
     // def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]:
     //   return __internal__.fn_raw(self)
     params.emplace_back(Param{"self", clone(type)});
-    stmts.push_back(N<ReturnStmt>(N<CallExpr>(
-        N<DotExpr>(N<IdExpr>("__internal__"), "fn_raw"), N<IdExpr>("self"))));
+    stmts.push_back(N<ReturnStmt>(
+        N<CallExpr>(N<DotExpr>("__internal__", "fn_raw"), N<IdExpr>("self"))));
     fns.emplace_back(make_shared<FunctionStmt>(
         "__raw__", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte")), vector<Param>{},
         move(params), N<SuiteStmt>(move(stmts))));
@@ -1513,10 +1511,9 @@ string TypecheckVisitor::generateFunctionStub(int n) {
     // def __str__(self: Function.N[TR, T1, ..., TN]) -> str:
     //   return __internal__.raw_type_str(self.__raw__(), "function")
     params.emplace_back(Param{"self", clone(type)});
-    stmts.push_back(
-        N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "raw_type_str"),
-                                  N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__raw__")),
-                                  N<StringExpr>("function"))));
+    stmts.push_back(N<ReturnStmt>(N<CallExpr>(
+        N<DotExpr>("__internal__", "raw_type_str"),
+        N<CallExpr>(N<DotExpr>("self", "__raw__")), N<StringExpr>("function"))));
     fns.emplace_back(make_shared<FunctionStmt>("__str__", N<IdExpr>("str"),
                                                vector<Param>{}, move(params),
                                                N<SuiteStmt>(move(stmts))));
@@ -1587,9 +1584,9 @@ void TypecheckVisitor::generateFnCall(int n) {
         "__call__", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
         N<SuiteStmt>(N<IfStmt>(
             N<CallExpr>(N<IdExpr>("isinstance"), N<IdExpr>("TR"), N<IdExpr>("void")),
-            N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__call__.void"),
-                                    clone_nop(callArgs))),
-            N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__call__.ret"),
+            N<ExprStmt>(
+                N<CallExpr>(N<DotExpr>("self", "__call__.void"), clone_nop(callArgs))),
+            N<ReturnStmt>(N<CallExpr>(N<DotExpr>("self", "__call__.ret"),
                                       clone_nop(callArgs)))))));
     // Parse this function in a clean context.
 

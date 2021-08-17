@@ -368,8 +368,7 @@ void TypecheckVisitor::visit(ThrowStmt *stmt) {
     vector<CallExpr::Arg> args;
     args.emplace_back(CallExpr::Arg{"", N<StringExpr>(tc->name)});
     args.emplace_back(CallExpr::Arg{
-        "", N<DotExpr>(N<DotExpr>(N<IdExpr>(var),
-                                  ctx->cache->classes[tc->name].fields[0].name),
+        "", N<DotExpr>(N<DotExpr>(var, ctx->cache->classes[tc->name].fields[0].name),
                        "msg")});
     args.emplace_back(CallExpr::Arg{"", N<StringExpr>(ctx->bases.back().name)});
     args.emplace_back(CallExpr::Arg{"", N<StringExpr>(stmt->getSrcInfo().file)});

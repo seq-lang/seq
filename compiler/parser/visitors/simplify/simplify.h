@@ -77,8 +77,7 @@ public:
   ///        Each value is passed as a string (integer part is ignored).
   ///        The method will replace this map with a map that links canonical names
   ///        to their string and integer values.
-  static StmtPtr apply(shared_ptr<Cache> cache, const shared_ptr<Stmt> &node,
-                       const string &file,
+  static StmtPtr apply(shared_ptr<Cache> cache, const StmtPtr &node, const string &file,
                        unordered_map<string, pair<string, int64_t>> &defines,
                        bool barebones = false);
 
@@ -376,8 +375,7 @@ private:
   ///            def _lambda(a, b): return a+b
   ///          and returns
   ///            _lambda(b).
-  ExprPtr makeAnonFn(vector<StmtPtr> &&stmts,
-                     const vector<string> &argNames = vector<string>{});
+  ExprPtr makeAnonFn(vector<StmtPtr> stmts, const vector<string> &argNames = {});
 
   /// Transforms a simple assignment:
   ///   a[x] = b -> a.__setitem__(x, b)

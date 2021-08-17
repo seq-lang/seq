@@ -211,7 +211,7 @@ struct StringExpr : public Expr {
   vector<pair<string, string>> strings;
 
   explicit StringExpr(string value, string prefix = "");
-  explicit StringExpr(vector<pair<string, string>> &&strings);
+  explicit StringExpr(vector<pair<string, string>> strings);
   StringExpr(const StringExpr &expr) = default;
 
   string toString() const override;
@@ -266,7 +266,7 @@ struct KeywordStarExpr : public Expr {
 struct TupleExpr : public Expr {
   vector<ExprPtr> items;
 
-  explicit TupleExpr(vector<ExprPtr> &&items);
+  explicit TupleExpr(vector<ExprPtr> items);
   TupleExpr(const TupleExpr &expr);
 
   string toString() const override;
@@ -280,7 +280,7 @@ struct TupleExpr : public Expr {
 struct ListExpr : public Expr {
   vector<ExprPtr> items;
 
-  explicit ListExpr(vector<ExprPtr> &&items);
+  explicit ListExpr(vector<ExprPtr> items);
   ListExpr(const ListExpr &expr);
 
   string toString() const override;
@@ -294,7 +294,7 @@ struct ListExpr : public Expr {
 struct SetExpr : public Expr {
   vector<ExprPtr> items;
 
-  explicit SetExpr(vector<ExprPtr> &&items);
+  explicit SetExpr(vector<ExprPtr> items);
   SetExpr(const SetExpr &expr);
 
   string toString() const override;
@@ -311,7 +311,7 @@ struct DictExpr : public Expr {
   };
   vector<DictItem> items;
 
-  explicit DictExpr(vector<DictItem> &&items);
+  explicit DictExpr(vector<DictItem> items);
   DictExpr(const DictExpr &expr);
 
   string toString() const override;
@@ -339,7 +339,7 @@ struct GeneratorExpr : public Expr {
   ExprPtr expr;
   vector<GeneratorBody> loops;
 
-  GeneratorExpr(GeneratorKind kind, ExprPtr expr, vector<GeneratorBody> &&loops);
+  GeneratorExpr(GeneratorKind kind, ExprPtr expr, vector<GeneratorBody> loops);
   GeneratorExpr(const GeneratorExpr &expr);
 
   string toString() const override;
@@ -352,7 +352,7 @@ struct DictGeneratorExpr : public Expr {
   ExprPtr key, expr;
   vector<GeneratorBody> loops;
 
-  DictGeneratorExpr(ExprPtr key, ExprPtr expr, vector<GeneratorBody> &&loops);
+  DictGeneratorExpr(ExprPtr key, ExprPtr expr, vector<GeneratorBody> loops);
   DictGeneratorExpr(const DictGeneratorExpr &expr);
 
   string toString() const override;
@@ -412,7 +412,7 @@ struct BinaryExpr : public Expr {
 struct ChainBinaryExpr : public Expr {
   vector<std::pair<string, ExprPtr>> exprs;
 
-  ChainBinaryExpr(vector<std::pair<string, ExprPtr>> &&exprs);
+  ChainBinaryExpr(vector<std::pair<string, ExprPtr>> exprs);
   ChainBinaryExpr(const ChainBinaryExpr &expr);
 
   string toString() const override;
@@ -435,7 +435,7 @@ struct PipeExpr : public Expr {
   /// Example: for a |> b |> c, inTypes[1] is typeof(a |> b).
   vector<types::TypePtr> inTypes;
 
-  explicit PipeExpr(vector<Pipe> &&items);
+  explicit PipeExpr(vector<Pipe> items);
   PipeExpr(const PipeExpr &expr);
 
   string toString() const override;
@@ -472,12 +472,12 @@ struct CallExpr : public Expr {
   /// True if type-checker has processed and re-ordered args.
   bool ordered;
 
-  CallExpr(ExprPtr expr, vector<Arg> &&a);
-  /// One-argument unnamed call constructor (expr(arg1)).
-  explicit CallExpr(ExprPtr expr, ExprPtr arg1 = nullptr, ExprPtr arg2 = nullptr,
-                    ExprPtr arg3 = nullptr);
-  /// Multi-argument unnamed call constructor (expr(exprArgs...)).
-  CallExpr(ExprPtr expr, vector<ExprPtr> &&exprArgs);
+  CallExpr(ExprPtr expr, vector<Arg> args = {});
+  /// Convenience constructors
+  CallExpr(ExprPtr expr, vector<ExprPtr> args);
+  template <typename... Ts>
+  CallExpr(ExprPtr expr, ExprPtr arg, Ts... args)
+      : CallExpr(expr, vector<ExprPtr>{arg, args...}) {}
   CallExpr(const CallExpr &expr);
 
   string toString() const override;
@@ -493,6 +493,8 @@ struct DotExpr : public Expr {
   string member;
 
   DotExpr(ExprPtr expr, string member);
+  /// Convenience constructor.
+  DotExpr(string left, string member);
   DotExpr(const DotExpr &expr);
 
   string toString() const override;
@@ -538,7 +540,7 @@ struct LambdaExpr : public Expr {
   vector<string> vars;
   ExprPtr expr;
 
-  LambdaExpr(vector<string> &&vars, ExprPtr expr);
+  LambdaExpr(vector<string> vars, ExprPtr expr);
   LambdaExpr(const LambdaExpr &);
 
   string toString() const override;
@@ -590,7 +592,7 @@ struct StmtExpr : public Expr {
   vector<shared_ptr<Stmt>> stmts;
   ExprPtr expr;
 
-  StmtExpr(vector<shared_ptr<Stmt>> &&stmts, ExprPtr expr);
+  StmtExpr(vector<shared_ptr<Stmt>> stmts, ExprPtr expr);
   StmtExpr(shared_ptr<Stmt> stmt, ExprPtr expr);
   StmtExpr(shared_ptr<Stmt> stmt, shared_ptr<Stmt> stmt2, ExprPtr expr);
   StmtExpr(const StmtExpr &expr);
@@ -632,7 +634,7 @@ struct InstantiateExpr : Expr {
   ExprPtr typeExpr;
   vector<ExprPtr> typeParams;
 
-  InstantiateExpr(ExprPtr typeExpr, vector<ExprPtr> &&typeParams);
+  InstantiateExpr(ExprPtr typeExpr, vector<ExprPtr> typeParams);
   /// Convenience constructor for a single type parameter.
   InstantiateExpr(ExprPtr typeExpr, ExprPtr typeParam);
   InstantiateExpr(const InstantiateExpr &expr);

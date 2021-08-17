@@ -68,11 +68,11 @@ struct SimplifyContext : public Context<SimplifyItem> {
     /// Declaration AST of a base-defining class (or nullptr otherwise) for
     /// automatically annotating "self" and other parameters. For example, for
     /// class Foo[T, N: int]: ..., AST is Foo[T, N: int]
-    shared_ptr<Expr> ast;
+    ExprPtr ast;
     /// Tracks function attributes (e.g. if it has @atomic or @test attributes).
     int attributes;
 
-    explicit Base(string name, shared_ptr<Expr> ast = nullptr, int attributes = 0);
+    explicit Base(string name, ExprPtr ast = nullptr, int attributes = 0);
     bool isType() const { return ast != nullptr; }
   };
   /// A stack of bases enclosing the current statement (the topmost base is the last

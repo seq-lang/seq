@@ -62,10 +62,8 @@ T parseCode(const shared_ptr<Cache> &cache, const string &file, string code,
   auto t = high_resolution_clock::now();
 
   // Initialize
-  if (!grammar) {
-    LOG("initializing...");
+  if (!grammar)
     grammar = initParser();
-  }
 
   vector<tuple<size_t, size_t, string>> errors;
   auto log = [&](size_t line, size_t col, const string &msg) {

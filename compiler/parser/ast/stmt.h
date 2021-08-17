@@ -87,15 +87,10 @@ struct SuiteStmt : public Stmt {
   bool ownBlock;
 
   /// These constructors flattens the provided statement vector (see flatten() below).
-  explicit SuiteStmt(vector<StmtPtr> &&stmts, bool ownBlock = false);
-  /// Single-statement suite constructor.
-  explicit SuiteStmt(StmtPtr stmt, bool ownBlock = false);
-  /// Two-statement suite constructor.
-  SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, bool ownBlock = false);
-  /// Three-statement suite constructor.
-  SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, StmtPtr stmt3, bool o = false);
-  /// Empty suite constructor;
-  SuiteStmt();
+  explicit SuiteStmt(vector<StmtPtr> stmts = {}, bool ownBlock = false);
+  /// Convenience constructor
+  template <typename... Ts>
+  SuiteStmt(StmtPtr stmt, Ts... stmts) : stmts({stmt, stmts...}) {}
   SuiteStmt(const SuiteStmt &stmt);
 
   string toString(int indent) const override;
@@ -194,7 +189,7 @@ struct PrintStmt : public Stmt {
   /// True if there is a dangling comma after print: print a,
   bool isInline;
 
-  explicit PrintStmt(vector<ExprPtr> &&items, bool isInline);
+  explicit PrintStmt(vector<ExprPtr> items, bool isInline);
   PrintStmt(const PrintStmt &stmt);
 
   string toString(int indent) const override;
@@ -318,7 +313,7 @@ struct MatchStmt : public Stmt {
   ExprPtr what;
   vector<MatchCase> cases;
 
-  MatchStmt(ExprPtr what, vector<MatchCase> &&cases);
+  MatchStmt(ExprPtr what, vector<MatchCase> cases);
   MatchStmt(const MatchStmt &stmt);
 
   string toString(int indent) const override;
@@ -347,8 +342,8 @@ struct ImportStmt : public Stmt {
   /// Function return type for C imports.
   ExprPtr ret;
 
-  ImportStmt(ExprPtr from, ExprPtr what, vector<Param> &&args = vector<Param>{},
-             ExprPtr ret = nullptr, string as = "", int dots = 0);
+  ImportStmt(ExprPtr from, ExprPtr what, vector<Param> args = {}, ExprPtr ret = nullptr,
+             string as = "", int dots = 0);
   ImportStmt(const ImportStmt &stmt);
 
   string toString(int indent) const override;
@@ -377,7 +372,7 @@ struct TryStmt : public Stmt {
   /// nullptr if there is no finally block.
   StmtPtr finally;
 
-  TryStmt(StmtPtr suite, vector<Catch> &&catches, StmtPtr finally = nullptr);
+  TryStmt(StmtPtr suite, vector<Catch> catches, StmtPtr finally = nullptr);
   TryStmt(const TryStmt &stmt);
 
   string toString(int indent) const override;
@@ -458,9 +453,9 @@ struct FunctionStmt : public Stmt {
   Attr attributes;
   vector<ExprPtr> decorators;
 
-  FunctionStmt(string name, ExprPtr ret, vector<Param> &&generics, vector<Param> &&args,
+  FunctionStmt(string name, ExprPtr ret, vector<Param> generics, vector<Param> args,
                StmtPtr suite, Attr attributes = Attr(),
-               vector<ExprPtr> &&decorators = vector<ExprPtr>());
+               vector<ExprPtr> decorators = {});
   FunctionStmt(const FunctionStmt &stmt);
 
   string toString(int indent) const override;
@@ -488,8 +483,8 @@ struct ClassStmt : public Stmt {
   Attr attributes;
   vector<ExprPtr> decorators;
 
-  ClassStmt(string n, vector<Param> &&g, vector<Param> &&a, StmtPtr s,
-            Attr attributes = Attr(), vector<ExprPtr> &&decorators = vector<ExprPtr>());
+  ClassStmt(string name, vector<Param> generics, vector<Param> args, StmtPtr suite,
+            Attr attributes = Attr(), vector<ExprPtr> decorators = {});
   ClassStmt(const ClassStmt &stmt);
 
   string toString(int indent) const override;
@@ -522,8 +517,8 @@ struct WithStmt : public Stmt {
   vector<string> vars;
   StmtPtr suite;
 
-  WithStmt(vector<ExprPtr> &&items, vector<string> &&vars, StmtPtr suite);
-  WithStmt(vector<pair<ExprPtr, ExprPtr>> &&items, StmtPtr suite);
+  WithStmt(vector<ExprPtr> items, vector<string> vars, StmtPtr suite);
+  WithStmt(vector<pair<ExprPtr, ExprPtr>> items, StmtPtr suite);
   WithStmt(const WithStmt &stmt);
 
   string toString(int indent) const override;

@@ -29,26 +29,11 @@ Stmt::Stmt() : done(false), age(-1) {}
 Stmt::Stmt(const seq::SrcInfo &s) : done(false) { setSrcInfo(s); }
 string Stmt::toString() const { return toString(-1); }
 
-SuiteStmt::SuiteStmt(vector<StmtPtr> &&stmts, bool ownBlock)
+SuiteStmt::SuiteStmt(vector<StmtPtr> stmts, bool ownBlock)
     : Stmt(), ownBlock(ownBlock) {
   for (auto &s : stmts)
     flatten(move(s), this->stmts);
 }
-SuiteStmt::SuiteStmt(StmtPtr stmt, bool ownBlock) : Stmt(), ownBlock(ownBlock) {
-  flatten(move(stmt), this->stmts);
-}
-SuiteStmt::SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, bool ownBlock)
-    : Stmt(), ownBlock(ownBlock) {
-  flatten(move(stmt1), this->stmts);
-  flatten(move(stmt2), this->stmts);
-}
-SuiteStmt::SuiteStmt(StmtPtr stmt1, StmtPtr stmt2, StmtPtr stmt3, bool o)
-    : Stmt(), ownBlock(o) {
-  flatten(move(stmt1), this->stmts);
-  flatten(move(stmt2), this->stmts);
-  flatten(move(stmt3), this->stmts);
-}
-SuiteStmt::SuiteStmt() : Stmt(), ownBlock(false) {}
 SuiteStmt::SuiteStmt(const SuiteStmt &stmt)
     : Stmt(stmt), stmts(ast::clone(stmt.stmts)), ownBlock(stmt.ownBlock) {}
 string SuiteStmt::toString(int indent) const {
@@ -102,7 +87,7 @@ DelStmt::DelStmt(const DelStmt &stmt) : Stmt(stmt), expr(ast::clone(stmt.expr)) 
 string DelStmt::toString(int) const { return format("(del {})", expr->toString()); }
 ACCEPT_IMPL(DelStmt, ASTVisitor);
 
-PrintStmt::PrintStmt(vector<ExprPtr> &&items, bool isInline)
+PrintStmt::PrintStmt(vector<ExprPtr> items, bool isInline)
     : Stmt(), items(move(items)), isInline(isInline) {}
 PrintStmt::PrintStmt(const PrintStmt &stmt)
     : Stmt(stmt), items(ast::clone(stmt.items)), isInline(stmt.isInline) {}
@@ -198,7 +183,7 @@ MatchStmt::MatchCase MatchStmt::MatchCase::clone() const {
   return {ast::clone(pattern), ast::clone(guard), ast::clone(suite)};
 }
 
-MatchStmt::MatchStmt(ExprPtr what, vector<MatchStmt::MatchCase> &&cases)
+MatchStmt::MatchStmt(ExprPtr what, vector<MatchStmt::MatchCase> cases)
     : Stmt(), what(move(what)), cases(move(cases)) {}
 MatchStmt::MatchStmt(const MatchStmt &stmt)
     : Stmt(stmt), what(ast::clone(stmt.what)), cases(ast::clone_nop(stmt.cases)) {}
@@ -214,7 +199,7 @@ string MatchStmt::toString(int indent) const {
 }
 ACCEPT_IMPL(MatchStmt, ASTVisitor);
 
-ImportStmt::ImportStmt(ExprPtr from, ExprPtr what, vector<Param> &&args, ExprPtr ret,
+ImportStmt::ImportStmt(ExprPtr from, ExprPtr what, vector<Param> args, ExprPtr ret,
                        string as, int dots)
     : Stmt(), from(move(from)), what(move(what)), as(move(as)), dots(dots),
       args(move(args)), ret(move(ret)) {}
@@ -238,7 +223,7 @@ TryStmt::Catch TryStmt::Catch::clone() const {
   return {var, ast::clone(exc), ast::clone(suite)};
 }
 
-TryStmt::TryStmt(StmtPtr suite, vector<Catch> &&catches, StmtPtr finally)
+TryStmt::TryStmt(StmtPtr suite, vector<Catch> catches, StmtPtr finally)
     : Stmt(), suite(move(suite)), catches(move(catches)), finally(move(finally)) {}
 TryStmt::TryStmt(const TryStmt &stmt)
     : Stmt(stmt), suite(ast::clone(stmt.suite)), catches(ast::clone_nop(stmt.catches)),
@@ -296,9 +281,9 @@ const string Attr::Extend = "extend";
 const string Attr::Tuple = "tuple";
 const string Attr::Test = "std.internal.attributes.test";
 
-FunctionStmt::FunctionStmt(string name, ExprPtr ret, vector<Param> &&generics,
-                           vector<Param> &&args, StmtPtr suite, Attr attributes,
-                           vector<ExprPtr> &&decorators)
+FunctionStmt::FunctionStmt(string name, ExprPtr ret, vector<Param> generics,
+                           vector<Param> args, StmtPtr suite, Attr attributes,
+                           vector<ExprPtr> decorators)
     : Stmt(), name(move(name)), ret(move(ret)), generics(move(generics)),
       args(move(args)), suite(move(suite)), attributes(move(attributes)),
       decorators(move(decorators)) {}
@@ -335,10 +320,10 @@ string FunctionStmt::signature() const {
 }
 bool FunctionStmt::hasAttr(const string &attr) const { return attributes.has(attr); }
 
-ClassStmt::ClassStmt(string name, vector<Param> &&g, vector<Param> &&a, StmtPtr s,
-                     Attr attributes, vector<ExprPtr> &&decorators)
-    : Stmt(), name(move(name)), generics(move(g)), args(move(a)), suite(move(s)),
-      attributes(move(attributes)), decorators(move(decorators)) {}
+ClassStmt::ClassStmt(string name, vector<Param> generics, vector<Param> args,
+                     StmtPtr suite, Attr attributes, vector<ExprPtr> decorators)
+    : Stmt(), name(move(name)), generics(move(generics)), args(move(args)),
+      suite(move(suite)), attributes(move(attributes)), decorators(move(decorators)) {}
 ClassStmt::ClassStmt(const ClassStmt &stmt)
     : Stmt(stmt), name(stmt.name), generics(ast::clone_nop(stmt.generics)),
       args(ast::clone_nop(stmt.args)), suite(ast::clone(stmt.suite)),
@@ -371,11 +356,11 @@ string YieldFromStmt::toString(int) const {
 }
 ACCEPT_IMPL(YieldFromStmt, ASTVisitor);
 
-WithStmt::WithStmt(vector<ExprPtr> &&items, vector<string> &&vars, StmtPtr suite)
-    : Stmt(), items(move(items)), vars(vars), suite(move(suite)) {
+WithStmt::WithStmt(vector<ExprPtr> items, vector<string> vars, StmtPtr suite)
+    : Stmt(), items(move(items)), vars(move(vars)), suite(move(suite)) {
   assert(items.size() == vars.size());
 }
-WithStmt::WithStmt(vector<pair<ExprPtr, ExprPtr>> &&itemVarPairs, StmtPtr suite)
+WithStmt::WithStmt(vector<pair<ExprPtr, ExprPtr>> itemVarPairs, StmtPtr suite)
     : Stmt(), suite(move(suite)) {
   for (auto &i : itemVarPairs) {
     items.push_back(move(i.first));

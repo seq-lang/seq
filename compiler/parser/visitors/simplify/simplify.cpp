@@ -58,9 +58,9 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     stdlib->setFilename(stdlibPath->path);
     cache->imports[STDLIB_IMPORT] = {stdlibPath->path, stdlib};
 
-    // Add __internal class that will store functions needed by other internal classes.
-    // We will call them as __internal.fn because directly calling fn will result in a
-    // unresolved dependency cycle.
+    // Add __internal__ class that will store functions needed by other internal
+    // classes. We will call them as __internal__.fn because directly calling fn will
+    // result in a unresolved dependency cycle.
     {
       auto name = "__internal__";
       auto canonical = stdlib->generateCanonicalName(name);
@@ -92,10 +92,10 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
         generics.emplace_back(Param{genName, make_shared<IdExpr>("int"), nullptr});
       else
         generics.emplace_back(Param{genName, nullptr, nullptr});
-      auto c = make_shared<ClassStmt>(canonical, move(generics), vector<Param>(),
-                                      nullptr, Attr({Attr::Internal, Attr::Tuple}));
-      preamble->types.emplace_back(clone(c));
-      cache->classes[canonical].ast = move(c);
+      cache->classes[canonical].ast =
+          make_shared<ClassStmt>(canonical, generics, vector<Param>(), nullptr,
+                                 Attr({Attr::Internal, Attr::Tuple}));
+      preamble->types.emplace_back(clone(cache->classes[canonical].ast));
     }
     // Reserve the following static identifiers.
     for (auto name : {"staticlen", "compile_error", "isinstance", "hasattr"})
@@ -152,14 +152,14 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
 
   auto suite = make_shared<SuiteStmt>();
   for (auto &s : preamble->types)
-    suite->stmts.push_back(move(s));
+    suite->stmts.push_back(s);
   for (auto &s : preamble->globals)
-    suite->stmts.push_back(move(s));
+    suite->stmts.push_back(s);
   for (auto &s : preamble->functions)
-    suite->stmts.push_back(move(s));
+    suite->stmts.push_back(s);
   for (auto &s : stmts)
-    suite->stmts.push_back(move(s));
-  return move(suite);
+    suite->stmts.push_back(s);
+  return suite;
 }
 
 StmtPtr SimplifyVisitor::apply(shared_ptr<SimplifyContext> ctx, const StmtPtr &node,
@@ -174,14 +174,14 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<SimplifyContext> ctx, const StmtPtr &n
     ctx->cache->age = oldAge;
   auto suite = make_shared<SuiteStmt>();
   for (auto &s : preamble->types)
-    suite->stmts.push_back(move(s));
+    suite->stmts.push_back(s);
   for (auto &s : preamble->globals)
-    suite->stmts.push_back(move(s));
+    suite->stmts.push_back(s);
   for (auto &s : preamble->functions)
-    suite->stmts.push_back(move(s));
+    suite->stmts.push_back(s);
   for (auto &s : stmts)
-    suite->stmts.push_back(move(s));
-  return move(suite);
+    suite->stmts.push_back(s);
+  return suite;
 }
 
 SimplifyVisitor::SimplifyVisitor(shared_ptr<SimplifyContext> ctx,
