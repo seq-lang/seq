@@ -44,6 +44,7 @@ ExternalProject_Add(libbacktrace
     BUILD_COMMAND make -j${CONCURRENCY})
 ExternalProject_Get_Property(libbacktrace INSTALL_DIR)
 set(BACKTRACE ${INSTALL_DIR}/lib/libbacktrace.a)
+set(BACKTRACE_INCLUDE ${INSTALL_DIR}/include)
 
 ExternalProject_Add(bz2
     URL https://www.sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
@@ -102,6 +103,8 @@ ExternalProject_Add(bdwgc
         -Denable_thread_local_alloc=ON
         -Denable_handle_fork=ON)
 ExternalProject_Get_Property(bdwgc INSTALL_DIR)
+add_custom_command(TARGET bdwgc POST_BUILD
+    COMMAND mkdir -p ${INSTALL_DIR}/lib; [[ -e ${INSTALL_DIR}/lib64/libgc.a ]] && cp ${INSTALL_DIR}/lib64/libgc.a ${INSTALL_DIR}/lib)
 set(BDWGC ${INSTALL_DIR}/lib/libgc.a)
 
 ExternalProject_Add(openmp
@@ -136,6 +139,7 @@ else ()
 endif ()
 
 add_executable(peg2cpp compiler/util/peg2cpp.cpp compiler/util/peglib.h)
+target_link_libraries(peg2cpp Threads::Threads)
 add_custom_command(
     OUTPUT  seq_rules.cpp
     COMMAND peg2cpp ${CMAKE_SOURCE_DIR}/compiler/parser/peg/grammar.peg seq_rules.cpp seq
@@ -161,14 +165,13 @@ set(SEQRT_FILES runtime/lib.h
 add_library(seqrt SHARED ${SEQRT_FILES})
 add_dependencies(seqrt zlibng bdwgc libbacktrace bz2 htslib xz)
 target_compile_options(seqrt PRIVATE -mavx)
-target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include runtime)
+target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include ${BACKTRACE_INCLUDE} runtime)
 target_link_libraries(seqrt PUBLIC seqomp ${BACKTRACE} ${STATIC_LIBCPP})
 if (APPLE)
     target_link_libraries(seqrt PUBLIC -Wl,-force_load,${BZ2} -Wl,-force_load,${LZMA} -Wl,-force_load,${ZLIB} -Wl,-force_load,${BDWGC} -Wl,-force_load,${HTSLIB})
 else ()
-    target_link_libraries(seqrt PUBLIC -Wl,--whole-archive ${BZ2} ${LZMA} ${ZLIB} ${BDWGC} ${HTSLIB} -Wl,--no-whole-archive)
+    target_link_libraries(seqrt PUBLIC -Wl,--whole-archive ${BZ2} ${LZMA} ${ZLIB} ${HTSLIB} ${BDWGC} -Wl,--no-whole-archive)
 endif ()
-target_link_libraries(seqrt PUBLIC ${BACKTRACE})
 
 # Seq compiler library
 include_directories(${LLVM_INCLUDE_DIRS})
@@ -372,7 +375,7 @@ set(SEQ_TEST_CPPFILES
         test/types.cpp)
 add_executable(seqtest ${SEQ_TEST_CPPFILES})
 target_include_directories(seqtest PRIVATE ${SEQ_DEP}/include test/sir)
-target_link_libraries(seqtest seq gtest_main)
+target_link_libraries(seqtest seq seqrt gtest_main)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
 
 include(GoogleTest)
