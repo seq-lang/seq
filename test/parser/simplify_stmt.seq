@@ -389,6 +389,9 @@ from C import "".seq_print(str) as sp
 sp("hi!") #! ERROR: syntax error
 
 #%% import,barebones
+zoo, _zoo = 1, 1
+print zoo, _zoo, __name__  #: 1 1 __main__
+
 import a  #: a
 a.foo() #: a.foo
 
@@ -398,15 +401,18 @@ b() #: a.bar
 
 import a.b
 print a.b.c #: a.b.c
-a.b.har() #: a.b.har
+a.b.har() #: a.b.har a.b.__init__ a.b.c
 
 print a.b.A.B.b_foo().__add__(1) #: a.b.A.B.b_foo()
 #: 2
 
 from a.b import *
-har() #: a.b.har
-a.b.har() #: a.b.har
+har() #: a.b.har a.b.__init__ a.b.c
+a.b.har() #: a.b.har a.b.__init__ a.b.c
 fx() #: a.foo
+
+from a import *
+print zoo, _zoo, __name__  #: 5 1 __main__
 
 #%% import_order,barebones
 def foo():

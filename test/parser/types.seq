@@ -888,3 +888,20 @@ for i in e:
     if isinstance(i, str):
         if i == 'bar': break
     print i
+
+#%% type_loc,barebones
+a = 1
+T = type(a)
+print T.__class__  #: int
+
+#%% empty_tuple,barebones
+T = type(())  # only errors with empty tuple type
+p = Ptr[T](cobj())
+print p.__class__  #: Ptr[Tuple]
+
+print [a for a in ()]  #: []
+
+def foo(*args):
+    return [a for a in args]
+args, result = ((), [()])
+print list(foo(*args)) == result  #: False

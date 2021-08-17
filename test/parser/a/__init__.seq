@@ -3,3 +3,6 @@ def foo():
 def bar():
     print 'a.bar'
 print 'a'
+
+zoo = 5
+_zoo = 3

@@ -388,7 +388,7 @@ void SimplifyVisitor::visit(ImportStmt *stmt) {
     seqassert(stmt->as.empty(), "renamed star-import");
     // Just copy all symbols from import's context here.
     for (auto &i : *(import.ctx))
-      if (i.second.front().second->isGlobal()) {
+      if (!startswith(i.first, "_") && i.second.front().second->isGlobal()) {
         ctx->add(i.first, i.second.front().second);
         ctx->add(i.second.front().second->canonicalName, i.second.front().second);
       }
@@ -824,7 +824,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
   if (!extension) {
     // Update the cached AST.
     seqassert(c, "not a class AST for {}", canonicalName);
-    preamble->types.push_back(clone(ctx->cache->classes[canonicalName].ast));
+    preamble->globals.push_back(clone(ctx->cache->classes[canonicalName].ast));
     c->suite = clone(suite);
   }
   vector<StmtPtr> stmts;
@@ -909,7 +909,7 @@ StmtPtr SimplifyVisitor::transformAssignment(const Expr *lhs, const Expr *rhs,
              canonical, global);
     if (ctx->isToplevel()) {
       if (r && r->isType()) {
-        preamble->types.push_back(N<AssignStmt>(N<IdExpr>(canonical), clone(r)));
+        preamble->globals.push_back(N<AssignStmt>(N<IdExpr>(canonical), clone(r)));
       } else {
         preamble->globals.push_back(N<AssignStmt>(N<IdExpr>(canonical), nullptr, t));
         return r ? N<UpdateStmt>(l, r) : nullptr;
@@ -1188,8 +1188,13 @@ void SimplifyVisitor::transformNewImport(const ImportFile &file) {
   ictx->isStdlibLoading = ctx->isStdlibLoading;
   ictx->moduleName = file;
   auto import = ctx->cache->imports.insert({file.path, {file.path, ictx}}).first;
-  StmtPtr sf = parseFile(ctx->cache, file.path);
-  auto sn = SimplifyVisitor(ictx, preamble).transform(sf);
+  // __name__ = <import name> (set the Python's __name__ variable)
+  auto sn =
+      SimplifyVisitor(ictx, preamble)
+          .transform(N<SuiteStmt>(N<AssignStmt>(N<IdExpr>("__name__"),
+                                                N<StringExpr>(ictx->moduleName.module),
+                                                nullptr, true),
+                                  parseFile(ctx->cache, file.path)));
 
   // If we are loading standard library, we won't wrap imports in functions as we
   // assume that standard library has no recursive imports. We will just append the
@@ -1207,15 +1212,12 @@ void SimplifyVisitor::transformNewImport(const ImportFile &file) {
         N<IdExpr>(importDoneVar = importVar + "_done"), N<BoolExpr>(false)));
     ctx->cache->globals.insert(importDoneVar);
     vector<StmtPtr> stmts;
-    stmts.push_back(nullptr);
-    // __name__ = <import name> (set the Python's __name__ variable)
-    stmts.push_back(
-        N<AssignStmt>(N<IdExpr>("__name__"), N<StringExpr>(ictx->moduleName.module)));
+    stmts.push_back(nullptr); // placeholder to be filled later!
     vector<string> globalVars;
     // We need to wrap all imported top-level statements (not signatures! they have
     // already been handled and are in the preamble) into a function. We also take the
     // list of global variables so that we can access them via "global" statement.
-    auto processStmt = [&](StmtPtr &s) {
+    auto processStmt = [&](StmtPtr s) {
       if (s->getAssign() && s->getAssign()->lhs->getId()) { // a = ... globals
         auto a = const_cast<AssignStmt *>(s->getAssign());
         auto val = ictx->find(a->lhs->getId()->value);

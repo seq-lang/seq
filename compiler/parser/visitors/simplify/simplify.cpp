@@ -68,7 +68,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       // Generate an AST for each POD type. All of them are tuples.
       cache->classes[canonical].ast =
           make_shared<ClassStmt>(canonical, vector<Param>(), vector<Param>(), nullptr);
-      preamble->types.emplace_back(clone(cache->classes[canonical].ast));
+      preamble->globals.emplace_back(clone(cache->classes[canonical].ast));
     }
     // Add simple POD types to the preamble (these types are defined in LLVM and we
     // cannot properly define them in Seq)
@@ -79,7 +79,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       cache->classes[canonical].ast =
           make_shared<ClassStmt>(canonical, vector<Param>(), vector<Param>(), nullptr,
                                  Attr({Attr::Internal, Attr::Tuple}));
-      preamble->types.emplace_back(clone(cache->classes[canonical].ast));
+      preamble->globals.emplace_back(clone(cache->classes[canonical].ast));
     }
     // Add generic POD types to the preamble
     for (auto &name :
@@ -95,7 +95,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       cache->classes[canonical].ast =
           make_shared<ClassStmt>(canonical, generics, vector<Param>(), nullptr,
                                  Attr({Attr::Internal, Attr::Tuple}));
-      preamble->types.emplace_back(clone(cache->classes[canonical].ast));
+      preamble->globals.emplace_back(clone(cache->classes[canonical].ast));
     }
     // Reserve the following static identifiers.
     for (auto name : {"staticlen", "compile_error", "isinstance", "hasattr"})
@@ -145,8 +145,10 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   }
   defines = newDefines;
   // Prepend __name__ = "__main__".
-  stmts.push_back(make_shared<AssignStmt>(make_shared<IdExpr>("__name__"),
-                                          make_shared<StringExpr>(MODULE_MAIN)));
+  stmts.push_back(
+      SimplifyVisitor(ctx, preamble)
+          .transform(make_shared<AssignStmt>(make_shared<IdExpr>("__name__"),
+                                             make_shared<StringExpr>(MODULE_MAIN))));
   // Transform the input node.
   stmts.emplace_back(SimplifyVisitor(ctx, preamble).transform(node));
 
