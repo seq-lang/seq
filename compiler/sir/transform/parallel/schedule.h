@@ -1,42 +1,24 @@
 #pragma once
 
-#include "sir/sir.h"
-
 namespace seq {
 namespace ir {
+
+class Value;
+
 namespace transform {
 namespace parallel {
 
 struct OMPSched {
-  struct Param {
-    bool isLiteral;
-    union {
-      int intVal;
-      Var *varVal;
-    } val;
-
-    Param(int intVal) : isLiteral(true), val() { val.intVal = intVal; }
-    Param(Var *varVal) : isLiteral(false), val() { val.varVal = varVal; }
-
-    Value *getValue(Module *M) {
-      if (isLiteral) {
-        return M->getInt(val.intVal);
-      } else {
-        return M->Nr<VarValue>(val.varVal);
-      }
-    }
-  };
-
-  Param threads;
-  bool dynamic;
-  Param chunk;
   int code;
+  bool dynamic;
+  Value *threads;
+  Value *chunk;
 
-  OMPSched();
+  explicit OMPSched(int code = -1, bool dynamic = false, Value *threads = nullptr,
+                    Value *chunk = nullptr);
+  explicit OMPSched(const OMPSched &s)
+      : code(s.code), dynamic(s.dynamic), threads(s.threads), chunk(s.chunk) {}
 };
-
-OMPSched getScedule(ForFlow *v, const std::vector<Var *> &vars = {});
-OMPSched getScedule(ImperativeForFlow *v, const std::vector<Var *> &vars = {});
 
 } // namespace parallel
 } // namespace transform

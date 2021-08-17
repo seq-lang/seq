@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "base.h"
+#include "transform/parallel/schedule.h"
 #include "value.h"
 #include "var.h"
 
@@ -119,10 +120,8 @@ private:
   Value *body;
   /// the variable
   Var *var;
-  /// true if parallel for
-  bool parallel;
-  /// parallel loop schedule
-  std::string schedule;
+  /// parallel loop schedule, or null if none
+  std::unique_ptr<transform::parallel::OMPSched> schedule;
 
 public:
   static const char NodeId;
@@ -132,10 +131,11 @@ public:
   /// @param body the body
   /// @param var the variable
   /// @param name the flow's name
-  ForFlow(Value *iter, Flow *body, Var *var, bool parallel = false,
-          std::string schedule = "", std::string name = "")
+  ForFlow(Value *iter, Flow *body, Var *var,
+          std::unique_ptr<transform::parallel::OMPSched> schedule = {},
+          std::string name = "")
       : AcceptorExtend(std::move(name)), iter(iter), body(body), var(var),
-        parallel(parallel), schedule(std::move(schedule)) {}
+        schedule(std::move(schedule)) {}
 
   /// @return the iter
   Value *getIter() { return iter; }
@@ -162,16 +162,25 @@ public:
   void setVar(Var *c) { var = c; }
 
   /// @return true if parallel
-  bool isParallel() const { return parallel; }
+  bool isParallel() const { return bool(schedule); }
   /// Sets parallel status.
   /// @param a true if parallel
-  void setParallel(bool a = true) { parallel = a; }
+  void setParallel(bool a = true) {
+    if (a)
+      schedule = std::make_unique<transform::parallel::OMPSched>();
+    else
+      schedule = std::unique_ptr<transform::parallel::OMPSched>();
+  }
 
-  /// @return the parallel loop schedule; empty if none
-  std::string getSchedule() const { return schedule; }
+  /// @return the parallel loop schedule, or null if none
+  transform::parallel::OMPSched *getSchedule() { return schedule.get(); }
+  /// @return the parallel loop schedule, or null if none
+  const transform::parallel::OMPSched *getSchedule() const { return schedule.get(); }
   /// Sets the parallel loop schedule
   /// @param s the schedule string (e.g. OpenMP pragma)
-  void setSchedule(const std::string &s) { schedule = s; }
+  void setSchedule(std::unique_ptr<transform::parallel::OMPSched> s) {
+    schedule = std::move(s);
+  }
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {iter, body}; }
@@ -194,10 +203,8 @@ private:
   Value *body;
   /// the variable, must be integer type
   Var *var;
-  /// true if parallel for
-  bool parallel;
-  /// parallel loop schedule
-  std::string schedule;
+  /// parallel loop schedule, or null if none
+  std::unique_ptr<transform::parallel::OMPSched> schedule;
 
 public:
   static const char NodeId;
@@ -210,10 +217,10 @@ public:
   /// @param var the end variable, must be integer
   /// @param name the flow's name
   ImperativeForFlow(Value *start, int64_t step, Value *end, Flow *body, Var *var,
-                    bool parallel = false, std::string schedule = "",
+                    std::unique_ptr<transform::parallel::OMPSched> schedule = {},
                     std::string name = "")
       : AcceptorExtend(std::move(name)), start(start), step(step), end(end), body(body),
-        var(var), parallel(parallel), schedule(std::move(schedule)) {}
+        var(var), schedule(std::move(schedule)) {}
 
   /// @return the start value
   Value *getStart() const { return start; }
@@ -250,16 +257,25 @@ public:
   void setVar(Var *c) { var = c; }
 
   /// @return true if parallel
-  bool isParallel() const { return parallel; }
+  bool isParallel() const { return bool(schedule); }
   /// Sets parallel status.
   /// @param a true if parallel
-  void setParallel(bool a = true) { parallel = a; }
+  void setParallel(bool a = true) {
+    if (a)
+      schedule = std::make_unique<transform::parallel::OMPSched>();
+    else
+      schedule = std::unique_ptr<transform::parallel::OMPSched>();
+  }
 
-  /// @return the parallel loop schedule; empty if none
-  std::string getSchedule() const { return schedule; }
+  /// @return the parallel loop schedule, or null if none
+  transform::parallel::OMPSched *getSchedule() { return schedule.get(); }
+  /// @return the parallel loop schedule, or null if none
+  const transform::parallel::OMPSched *getSchedule() const { return schedule.get(); }
   /// Sets the parallel loop schedule
   /// @param s the schedule string (e.g. OpenMP pragma)
-  void setSchedule(const std::string &s) { schedule = s; }
+  void setSchedule(std::unique_ptr<transform::parallel::OMPSched> s) {
+    schedule = std::move(s);
+  }
 
 protected:
   std::vector<Value *> doGetUsedValues() const override { return {start, end, body}; }

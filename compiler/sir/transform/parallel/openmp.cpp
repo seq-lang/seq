@@ -688,7 +688,7 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
     }
 
     if (name == "_loop_chunk") {
-      v->replaceAll(sched->chunk.getValue(M));
+      v->replaceAll(sched->chunk); // TODO: read from global
     }
   }
 };
@@ -818,11 +818,7 @@ void OpenMPPass::handle(ForFlow *v) {
     return;
 
   // set up args to pass fork_call
-  std::vector<Var *> globals;
-  for (auto *global : *M) {
-    globals.push_back(global);
-  }
-  auto sched = getScedule(v, globals);
+  auto *sched = v->getSchedule();
   Var *loopVar = v->getVar();
   OMPTypes types(M);
 
@@ -866,11 +862,11 @@ void OpenMPPass::handle(ForFlow *v) {
   seqassert(forkFunc, "fork call function not found");
   auto *fork = util::call(forkFunc, {rawTemplateFunc, forkExtra});
 
-  if (!sched.threads.isLiteral || sched.threads.val.intVal > 0) {
+  if (sched->threads) {
     auto *pushNumThreadsFunc =
         M->getOrRealizeFunc("_push_num_threads", {M->getIntType()}, {}, ompModule);
     seqassert(pushNumThreadsFunc, "push num threads func not found");
-    auto *pushNumThreads = util::call(pushNumThreadsFunc, {sched.threads.getValue(M)});
+    auto *pushNumThreads = util::call(pushNumThreadsFunc, {sched->threads});
     insertBefore(pushNumThreads);
   }
 
@@ -890,11 +886,7 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
     return;
 
   // set up args to pass fork_call
-  std::vector<Var *> globals;
-  for (auto *global : *M) {
-    globals.push_back(global);
-  }
-  auto sched = getScedule(v, globals);
+  auto *sched = v->getSchedule();
   Var *loopVar = v->getVar();
   OMPTypes types(M);
 
@@ -925,15 +917,15 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
       M->getPointerType(
           M->getTupleType({intType, intType, M->getTupleType(extraArgTypes)}))};
   auto *templateFunc =
-      M->getOrRealizeFunc(sched.dynamic ? "_dynamic_loop_outline_template"
-                                        : "_static_loop_outline_template",
+      M->getOrRealizeFunc(sched->dynamic ? "_dynamic_loop_outline_template"
+                                         : "_static_loop_outline_template",
                           templateFuncArgs, {}, ompModule);
   seqassert(templateFunc, "static loop outline template not found");
 
   util::CloneVisitor cv(M);
   templateFunc = cast<Func>(cv.forceClone(templateFunc));
   ImperativeLoopTemplateReplacer rep(cast<BodiedFunc>(templateFunc), outline.call,
-                                     loopVar, &sched, &reds, v->getStep());
+                                     loopVar, sched, &reds, v->getStep());
   templateFunc->accept(rep);
 
   // raw template func
@@ -953,11 +945,11 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   seqassert(forkFunc, "fork call function not found");
   auto *fork = util::call(forkFunc, {rawTemplateFunc, forkExtra});
 
-  if (!sched.threads.isLiteral || sched.threads.val.intVal > 0) {
+  if (sched->threads) {
     auto *pushNumThreadsFunc =
         M->getOrRealizeFunc("_push_num_threads", {intType}, {}, ompModule);
     seqassert(pushNumThreadsFunc, "push num threads func not found");
-    auto *pushNumThreads = util::call(pushNumThreadsFunc, {sched.threads.getValue(M)});
+    auto *pushNumThreads = util::call(pushNumThreadsFunc, {sched->threads});
     insertBefore(pushNumThreads);
   }
 

@@ -60,6 +60,9 @@ const std::string ImperativeForFlowLowering::KEY = "core-imperative-for-lowering
 void ImperativeForFlowLowering::handle(ForFlow *v) {
   auto *M = v->getModule();
   auto *iter = v->getIter();
+  std::unique_ptr<parallel::OMPSched> sched;
+  if (v->isParallel())
+    sched = std::make_unique<parallel::OMPSched>(*v->getSchedule());
 
   if (auto *rangeCall = getRangeIter(iter)) {
     auto it = rangeCall->begin();
@@ -98,8 +101,7 @@ void ImperativeForFlowLowering::handle(ForFlow *v) {
       return;
 
     v->replaceAll(M->N<ImperativeForFlow>(v->getSrcInfo(), start, step, end,
-                                          v->getBody(), v->getVar(), v->isParallel(),
-                                          v->getSchedule()));
+                                          v->getBody(), v->getVar(), std::move(sched)));
   } else if (auto *list = getListIter(iter)) {
     // convert:
     //   for a in list:
@@ -125,9 +127,8 @@ void ImperativeForFlowLowering::handle(ForFlow *v) {
     auto *oldLoopVar = v->getVar();
     auto *newLoopVar = M->Nr<Var>(M->getIntType());
     parent->push_back(newLoopVar);
-    auto *replacement =
-        M->N<ImperativeForFlow>(v->getSrcInfo(), M->getInt(0), 1, lenVar, body,
-                                newLoopVar, v->isParallel(), v->getSchedule());
+    auto *replacement = M->N<ImperativeForFlow>(
+        v->getSrcInfo(), M->getInt(0), 1, lenVar, body, newLoopVar, std::move(sched));
     series->push_back(replacement);
     body->insert(
         body->begin(),

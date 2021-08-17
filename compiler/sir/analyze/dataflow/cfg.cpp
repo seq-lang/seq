@@ -37,7 +37,7 @@ Value *convertPipelineToForLoopsHelper(analyze::dataflow::CFGraph *cfg,
         cfg, stages, idx + 1, callStage(cfg, stage, cfg->N<VarValue>(var)));
     auto *series = cfg->N<SeriesFlow>();
     series->push_back(body);
-    return cfg->N<ForFlow>(last, series, var, prev->isParallel());
+    return cfg->N<ForFlow>(last, series, var);
   } else {
     return convertPipelineToForLoopsHelper(cfg, stages, idx + 1,
                                            callStage(cfg, stage, last));

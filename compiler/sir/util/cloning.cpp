@@ -129,25 +129,32 @@ void CloneVisitor::visit(const WhileFlow *v) {
 }
 
 void CloneVisitor::visit(const ForFlow *v) {
-  auto *loop = Nt(v, nullptr, nullptr, nullptr, false);
+  auto *loop = Nt(v, nullptr, nullptr, nullptr,
+                  std::unique_ptr<transform::parallel::OMPSched>());
   forceRemap(v, loop);
   loop->setIter(clone(v->getIter()));
   loop->setBody(clone(v->getBody()));
   loop->setVar(clone(v->getVar()));
-  loop->setParallel(v->isParallel());
-  loop->setSchedule(v->getSchedule());
+  if (auto *sched = v->getSchedule()) {
+    loop->setSchedule(std::make_unique<transform::parallel::OMPSched>(
+        sched->code, sched->dynamic, clone(sched->threads), clone(sched->chunk)));
+  }
+
   result = loop;
 }
 
 void CloneVisitor::visit(const ImperativeForFlow *v) {
-  auto *loop = Nt(v, nullptr, v->getStep(), nullptr, nullptr, nullptr, false);
+  auto *loop = Nt(v, nullptr, v->getStep(), nullptr, nullptr, nullptr,
+                  std::unique_ptr<transform::parallel::OMPSched>());
   forceRemap(v, loop);
   loop->setStart(clone(v->getStart()));
   loop->setBody(clone(v->getBody()));
   loop->setVar(clone(v->getVar()));
   loop->setEnd(clone(v->getEnd()));
-  loop->setParallel(v->isParallel());
-  loop->setSchedule(v->getSchedule());
+  if (auto *sched = v->getSchedule()) {
+    loop->setSchedule(std::make_unique<transform::parallel::OMPSched>(
+        sched->code, sched->dynamic, clone(sched->threads), clone(sched->chunk)));
+  }
   result = loop;
 }
 
