@@ -748,9 +748,8 @@ ExprPtr SimplifyVisitor::transformInt(const string &value, const string &suffix)
   }
   /// Custom suffix sfx: use int.__suffix_sfx__(str) call.
   /// NOTE: you cannot neither use binary (0bXXX) format here.
-  return transform(
-      N<CallExpr>(N<DotExpr>("int", format("__suffix_{}__", suffix)),
-                  N<StringExpr>(value)));
+  return transform(N<CallExpr>(N<DotExpr>("int", format("__suffix_{}__", suffix)),
+                               N<StringExpr>(value)));
 }
 
 ExprPtr SimplifyVisitor::transformFloat(const string &value, const string &suffix) {
@@ -763,9 +762,8 @@ ExprPtr SimplifyVisitor::transformFloat(const string &value, const string &suffi
     error("integer {} out of range", value);
   }
   /// Custom suffix sfx: use float.__suffix_sfx__(str) call.
-  return transform(
-      N<CallExpr>(N<DotExpr>("float", format("__suffix_{}__", suffix)),
-                  N<StringExpr>(value)));
+  return transform(N<CallExpr>(N<DotExpr>("float", format("__suffix_{}__", suffix)),
+                               N<StringExpr>(value)));
 }
 
 ExprPtr SimplifyVisitor::transformFString(string value) {
