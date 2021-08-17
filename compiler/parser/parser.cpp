@@ -51,21 +51,6 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
       realpath(file.c_str(), abs);
 
     auto cache = make_shared<ast::Cache>(argv0);
-    cache->customBlockStmts["foo_block"] = {
-        true, [](auto *vs, auto *stmt) {
-          return vs->transform(vs->template N<ast::SuiteStmt>(
-              vector<ast::StmtPtr>{vs->template N<ast::AssignStmt>(
-                                       vs->template N<ast::IdExpr>("_foo"), stmt->expr),
-                                   stmt->suite},
-              true));
-        }};
-    cache->customExprStmts["foo_expr"] = [](auto *vs, auto *stmt) {
-      return vs->transform(
-          vs->template N<ast::SuiteStmt>(vs->template N<ast::PrintStmt>(
-              vector<ast::ExprPtr>{vs->template N<ast::BinaryExpr>(
-                  stmt->expr, "+", vs->template N<ast::IntExpr>(10))},
-              false)));
-    };
     ast::StmtPtr codeStmt = isCode ? ast::parseCode(cache, abs, code, startLine)
                                    : ast::parseFile(cache, abs);
     if (_dbg_level) {

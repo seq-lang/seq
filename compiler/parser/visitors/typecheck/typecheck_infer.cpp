@@ -54,13 +54,11 @@ types::TypePtr TypecheckVisitor::realize(types::TypePtr typ) {
 types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
   seqassert(type->canRealize(), "{} not realizable", type->toString());
 
-  // We are still not done with type creation...
+  // We are still not done with type creation... (e.g. class X: x: List[X])
   for (auto &m : ctx->cache->classes[type->name].fields)
     if (!m.type)
       return nullptr;
-
-  if (startswith(type->name, TYPE_CALLABLE))
-    error("realizing trait");
+  seqassert(!startswith(type->name, TYPE_CALLABLE), "realizing callable trait");
 
   auto realizedName = type->realizedTypeName();
   try {
@@ -152,7 +150,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
           "maximum realization depth exceeded (recursive static function?)",
           getSrcInfo().file, getSrcInfo().line, getSrcInfo().col);
 
-    // Special cases: Tuple.(__iter__, __getitem__, __contains__).
+    // Special cases: Tuple.(__iter__, __getitem__).
     if (startswith(type->funcName, TYPE_TUPLE) &&
         (endswith(type->funcName, ".__iter__") ||
          endswith(type->funcName, ".__getitem__")) &&
@@ -201,8 +199,8 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       StmtPtr realized = nullptr;
       if (!isInternal) {
         auto inferred = inferTypes(move(ast->suite));
-        LOG_TYPECHECK("realized {} in {} iterations", type->realizedName(),
-                      inferred.first);
+        // if (inferred.first > 1)
+        // fmt::print("{:03}: {}\n", inferred.first, type->realizedName());
         realized = move(inferred.second);
         // Return type was not specified and the function returned nothing.
         if (!ast->ret && type->args[0]->getUnbound())

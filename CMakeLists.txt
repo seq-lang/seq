@@ -104,7 +104,7 @@ ExternalProject_Add(bdwgc
         -Denable_handle_fork=ON)
 ExternalProject_Get_Property(bdwgc INSTALL_DIR)
 add_custom_command(TARGET bdwgc POST_BUILD
-    COMMAND mkdir -p ${INSTALL_DIR}/lib; [[ -e ${INSTALL_DIR}/lib64/libgc.a ]] && cp ${INSTALL_DIR}/lib64/libgc.a ${INSTALL_DIR}/lib)
+    VERBATIM COMMAND mkdir -p ${INSTALL_DIR}/lib && \[\[ -f ${INSTALL_DIR}/lib64/libgc.a \]\] && cp ${INSTALL_DIR}/lib64/libgc.a ${INSTALL_DIR}/lib || true)
 set(BDWGC ${INSTALL_DIR}/lib/libgc.a)
 
 ExternalProject_Add(openmp

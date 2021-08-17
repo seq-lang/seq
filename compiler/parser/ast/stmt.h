@@ -90,7 +90,7 @@ struct SuiteStmt : public Stmt {
   explicit SuiteStmt(vector<StmtPtr> stmts = {}, bool ownBlock = false);
   /// Convenience constructor
   template <typename... Ts>
-  SuiteStmt(StmtPtr stmt, Ts... stmts) : stmts({stmt, stmts...}) {}
+  SuiteStmt(StmtPtr stmt, Ts... stmts) : stmts({stmt, stmts...}), ownBlock(false) {}
   SuiteStmt(const SuiteStmt &stmt);
 
   string toString(int indent) const override;

@@ -21,7 +21,6 @@ using fmt::format;
 using std::deque;
 using std::dynamic_pointer_cast;
 using std::get;
-using std::move;
 using std::ostream;
 using std::stack;
 using std::static_pointer_cast;
@@ -34,7 +33,7 @@ using namespace types;
 StmtPtr TypecheckVisitor::transform(const StmtPtr &stmt_) {
   auto &stmt = const_cast<StmtPtr &>(stmt_);
   if (!stmt || stmt->done)
-    return move(stmt);
+    return stmt;
   TypecheckVisitor v(ctx);
   v.setSrcInfo(stmt->getSrcInfo());
   auto oldAge = ctx->age;
@@ -42,17 +41,17 @@ StmtPtr TypecheckVisitor::transform(const StmtPtr &stmt_) {
   stmt->accept(v);
   ctx->age = oldAge;
   if (v.resultStmt)
-    stmt = move(v.resultStmt);
+    stmt = v.resultStmt;
   if (!v.prependStmts->empty()) {
     if (stmt)
-      v.prependStmts->push_back(move(stmt));
+      v.prependStmts->push_back(stmt);
     bool done = true;
     for (auto &s : *(v.prependStmts))
       done &= s->done;
-    stmt = N<SuiteStmt>(move(*v.prependStmts));
+    stmt = N<SuiteStmt>(*v.prependStmts);
     stmt->done = done;
   }
-  return move(stmt);
+  return stmt;
 }
 
 void TypecheckVisitor::defaultVisit(Stmt *s) {
@@ -66,10 +65,10 @@ void TypecheckVisitor::visit(SuiteStmt *stmt) {
   stmt->done = true;
   for (auto &s : stmt->stmts)
     if (auto t = transform(s)) {
-      stmts.push_back(move(t));
+      stmts.push_back(t);
       stmt->done &= stmts.back()->done;
     }
-  stmt->stmts = move(stmts);
+  stmt->stmts = stmts;
 }
 
 void TypecheckVisitor::visit(PassStmt *stmt) { stmt->done = true; }
@@ -128,7 +127,7 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
     bool noReturn = false;
     auto oldRhsType = stmt->rhs->type;
     if (auto nb = transformBinary(b, stmt->isAtomic, &noReturn))
-      stmt->rhs = move(nb);
+      stmt->rhs = nb;
     unify(oldRhsType, stmt->rhs->type);
     if (stmt->rhs->getBinary()) { // still BinaryExpr: will be transformed later.
       unify(stmt->lhs->type, stmt->rhs->type);
@@ -136,7 +135,7 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
     } else if (noReturn) { // remove assignment, call update function instead
                            // (__i***__ or __atomic_***__)
       bool done = stmt->rhs->done;
-      resultStmt = N<ExprStmt>(move(stmt->rhs));
+      resultStmt = N<ExprStmt>(stmt->rhs);
       resultStmt->done = done;
       return;
     }
@@ -156,9 +155,8 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
     if (auto method = ctx->findBestMethod(
             stmt->lhs.get(), format("__atomic_{}__", c->expr->getId()->value),
             {{"", ptrTyp}, {"", rhsTyp}})) {
-      resultStmt = transform(N<ExprStmt>(N<CallExpr>(N<IdExpr>(method->funcName),
-                                                     N<PtrExpr>(move(stmt->lhs)),
-                                                     move(c->args[1].value))));
+      resultStmt = transform(N<ExprStmt>(N<CallExpr>(
+          N<IdExpr>(method->funcName), N<PtrExpr>(stmt->lhs), c->args[1].value)));
       return;
     }
   }
@@ -171,8 +169,8 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
         ctx->instantiateGeneric(stmt->lhs.get(), ctx->findInternal("Ptr"), {lhsClass});
     if (auto m = ctx->findBestMethod(stmt->lhs.get(), "__atomic_xchg__",
                                      {{"", ptrType}, {"", rhsClass}})) {
-      resultStmt = transform(N<ExprStmt>(N<CallExpr>(
-          N<IdExpr>(m->funcName), N<PtrExpr>(move(stmt->lhs)), move(stmt->rhs))));
+      resultStmt = transform(N<ExprStmt>(
+          N<CallExpr>(N<IdExpr>(m->funcName), N<PtrExpr>(stmt->lhs), stmt->rhs)));
       return;
     }
     stmt->isAtomic = false;
@@ -192,9 +190,8 @@ void TypecheckVisitor::visit(AssignMemberStmt *stmt) {
     auto member = ctx->findMember(lhsClass->name, stmt->member);
     if (!member && lhsClass->name == TYPE_OPTIONAL) {
       // Unwrap optional and look up there:
-      resultStmt = transform(
-          N<AssignMemberStmt>(N<CallExpr>(N<IdExpr>(FN_UNWRAP), move(stmt->lhs)),
-                              stmt->member, move(stmt->rhs)));
+      resultStmt = transform(N<AssignMemberStmt>(
+          N<CallExpr>(N<IdExpr>(FN_UNWRAP), stmt->lhs), stmt->member, stmt->rhs));
       return;
     }
     if (!member)
@@ -217,7 +214,7 @@ void TypecheckVisitor::visit(ReturnStmt *stmt) {
     if (stmt->expr->getType()->getFunc() &&
         !(base.returnType->getClass() &&
           startswith(base.returnType->getClass()->name, TYPE_FUNCTION)))
-      stmt->expr = partializeFunction(move(stmt->expr));
+      stmt->expr = partializeFunction(stmt->expr);
     unify(base.returnType, stmt->expr->type);
     auto retTyp = stmt->expr->getType()->getClass();
     stmt->done = stmt->expr->done;
@@ -258,7 +255,7 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
     // Unroll a separate suite for each tuple member.
     auto block = N<SuiteStmt>();
     auto tupleVar = ctx->cache->getTemporaryVar("tuple");
-    block->stmts.push_back(N<AssignStmt>(N<IdExpr>(tupleVar), move(stmt->iter)));
+    block->stmts.push_back(N<AssignStmt>(N<IdExpr>(tupleVar), stmt->iter));
 
     auto cntVar = ctx->cache->getTemporaryVar("idx");
     vector<StmtPtr> forBlock;
@@ -269,18 +266,18 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
       stmts.push_back(clone(stmt->suite));
       forBlock.push_back(
           N<IfStmt>(N<BinaryExpr>(N<IdExpr>(cntVar), "==", N<IntExpr>(ai)),
-                    N<SuiteStmt>(move(stmts), true)));
+                    N<SuiteStmt>(stmts, true)));
     }
     block->stmts.push_back(
         N<ForStmt>(N<IdExpr>(cntVar),
                    N<CallExpr>(N<IdExpr>("std.internal.types.range.range"),
                                N<IntExpr>(tuple->args.size())),
-                   N<SuiteStmt>(move(forBlock))));
-    resultStmt = transform(move(block));
+                   N<SuiteStmt>(forBlock)));
+    resultStmt = transform(block);
   } else {
     // Case 2: iterating a generator. Standard for loop logic.
     if (iterType->name != "Generator" && !stmt->wrapped) {
-      stmt->iter = transform(N<CallExpr>(N<DotExpr>(move(stmt->iter), "__iter__")));
+      stmt->iter = transform(N<CallExpr>(N<DotExpr>(stmt->iter, "__iter__")));
       stmt->wrapped = true;
     }
     TypePtr varType = ctx->addUnbound(stmt->var.get(), ctx->typecheckLevel);
@@ -313,29 +310,29 @@ void TypecheckVisitor::visit(IfStmt *stmt) {
     } else if (!stmt->cond->staticEvaluation.first) {
       stmt->done = false; // do not typecheck this suite yet
       transformElse = false;
-      ifSuite = move(stmt->ifSuite);
+      ifSuite = stmt->ifSuite;
     } else {
       if ((stmt->ifSuite = transform(stmt->ifSuite)))
-        ifSuite = move(stmt->ifSuite);
+        ifSuite = stmt->ifSuite;
       includeElse = false;
     }
   } else {
     if (stmt->cond->type->getClass() && !stmt->cond->type->is("bool"))
-      stmt->cond = transform(N<CallExpr>(N<DotExpr>(move(stmt->cond), "__bool__")));
+      stmt->cond = transform(N<CallExpr>(N<DotExpr>(stmt->cond, "__bool__")));
     ifSuite = transform(stmt->ifSuite);
   }
   if (ifSuite)
     stmt->done &= stmt->cond->done && ifSuite->done;
   if (stmt->elseSuite && includeElse) {
-    elseSuite = transformElse ? transform(stmt->elseSuite) : move(stmt->elseSuite);
+    elseSuite = transformElse ? transform(stmt->elseSuite) : stmt->elseSuite;
     stmt->done &= elseSuite->done;
   }
   if (!ifSuite && !elseSuite)
     resultStmt = transform(N<PassStmt>());
   else if (!ifSuite && elseSuite)
-    resultStmt = move(elseSuite);
+    resultStmt = elseSuite;
   else if (ifSuite)
-    stmt->ifSuite = move(ifSuite), stmt->elseSuite = move(elseSuite);
+    stmt->ifSuite = ifSuite, stmt->elseSuite = elseSuite;
 }
 
 void TypecheckVisitor::visit(TryStmt *stmt) {
@@ -374,12 +371,12 @@ void TypecheckVisitor::visit(ThrowStmt *stmt) {
     args.emplace_back(CallExpr::Arg{"", N<StringExpr>(stmt->getSrcInfo().file)});
     args.emplace_back(CallExpr::Arg{"", N<IntExpr>(stmt->getSrcInfo().line)});
     args.emplace_back(CallExpr::Arg{"", N<IntExpr>(stmt->getSrcInfo().col)});
-    resultStmt = transform(N<SuiteStmt>(
-        N<AssignStmt>(N<IdExpr>(var), move(stmt->expr)),
-        N<AssignMemberStmt>(N<IdExpr>(var),
-                            ctx->cache->classes[tc->name].fields[0].name,
-                            N<CallExpr>(N<IdExpr>(TYPE_EXCHEADER), move(args))),
-        N<ThrowStmt>(N<IdExpr>(var), true)));
+    resultStmt = transform(
+        N<SuiteStmt>(N<AssignStmt>(N<IdExpr>(var), stmt->expr),
+                     N<AssignMemberStmt>(N<IdExpr>(var),
+                                         ctx->cache->classes[tc->name].fields[0].name,
+                                         N<CallExpr>(N<IdExpr>(TYPE_EXCHEADER), args)),
+                     N<ThrowStmt>(N<IdExpr>(var), true)));
   } else {
     stmt->done = false;
   }
