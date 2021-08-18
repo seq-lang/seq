@@ -18,8 +18,8 @@ struct OMPSched {
 
   explicit OMPSched(int code = -1, bool dynamic = false, Value *threads = nullptr,
                     Value *chunk = nullptr);
-  explicit OMPSched(const std::string &code, bool dynamic = false,
-                    Value *threads = nullptr, Value *chunk = nullptr);
+  explicit OMPSched(const std::string &code, Value *threads = nullptr,
+                    Value *chunk = nullptr);
   explicit OMPSched(const OMPSched &s)
       : code(s.code), dynamic(s.dynamic), threads(s.threads), chunk(s.chunk) {}
 };

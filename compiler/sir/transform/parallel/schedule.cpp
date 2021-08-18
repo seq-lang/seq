@@ -57,10 +57,9 @@ OMPSched::OMPSched(int code, bool dynamic, Value *threads, Value *chunk)
     code = getScheduleCode();
 }
 
-OMPSched::OMPSched(const string &code, bool dynamic, Value *threads, Value *chunk)
-    : dynamic(dynamic), threads(threads), chunk(chunk) {
-  this->code = getScheduleCode(code, chunk != nullptr);
-}
+OMPSched::OMPSched(const std::string &schedule, Value *threads, Value *chunk)
+    : code(getScheduleCode(schedule, chunk != nullptr)),
+      dynamic(isScheduleDynamic(schedule)), threads(threads), chunk(chunk) {}
 
 } // namespace parallel
 } // namespace transform

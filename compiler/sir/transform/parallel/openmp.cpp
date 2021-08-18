@@ -881,7 +881,8 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   auto *body = cast<SeriesFlow>(v->getBody());
   if (!parent || !body)
     return;
-  auto outline = util::outlineRegion(parent, body, /*allowOutflows=*/false);
+  auto outline = util::outlineRegion(parent, body, /*allowOutflows=*/false,
+                                     /*outlineGlobals=*/true);
   if (!outline)
     return;
 

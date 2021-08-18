@@ -101,21 +101,24 @@ struct Outliner : public Operator {
   BodiedFunc *parent;
   SeriesFlow *flowRegion;
   decltype(flowRegion->begin()) begin, end;
+  bool outlineGlobals;              // whether to outline globals that are modified
   bool inRegion;                    // are we in the outlined region?
   bool invalid;                     // if we can't outline for whatever reason
   std::unordered_set<id_t> inVars;  // vars used inside region
   std::unordered_set<id_t> outVars; // vars used outside region
   std::unordered_set<id_t>
-      modifiedInVars;               // vars modified (assigned or address'd) in region
-  std::unordered_set<id_t> inLoops; // loops contained in region
+      modifiedInVars; // vars modified (assigned or address'd) in region
+  std::unordered_set<id_t> globalsToOutline; // modified global vars to outline
+  std::unordered_set<id_t> inLoops;          // loops contained in region
   std::vector<Value *>
       outFlows; // control flows that need to be handled externally (e.g. return)
 
   Outliner(BodiedFunc *parent, SeriesFlow *flowRegion,
-           decltype(flowRegion->begin()) begin, decltype(flowRegion->begin()) end)
+           decltype(flowRegion->begin()) begin, decltype(flowRegion->begin()) end,
+           bool outlineGlobals)
       : Operator(), parent(parent), flowRegion(flowRegion), begin(begin), end(end),
-        inRegion(false), invalid(false), inVars(), outVars(), modifiedInVars(),
-        inLoops(), outFlows() {}
+        outlineGlobals(outlineGlobals), inRegion(false), invalid(false), inVars(),
+        outVars(), modifiedInVars(), globalsToOutline(), inLoops(), outFlows() {}
 
   bool isEnclosingLoopInRegion(id_t loopId = -1) {
     int d = depth();
@@ -180,13 +183,21 @@ struct Outliner : public Operator {
   }
 
   void handle(AssignInstr *v) override {
-    if (inRegion)
-      modifiedInVars.insert(v->getLhs()->getId());
+    if (inRegion) {
+      auto *var = v->getLhs();
+      modifiedInVars.insert(var->getId());
+      if (outlineGlobals && var->isGlobal())
+        globalsToOutline.insert(var->getId());
+    }
   }
 
   void handle(PointerValue *v) override {
-    if (inRegion)
-      modifiedInVars.insert(v->getVar()->getId());
+    if (inRegion) {
+      auto *var = v->getVar();
+      modifiedInVars.insert(var->getId());
+      if (outlineGlobals && var->isGlobal())
+        globalsToOutline.insert(var->getId());
+    }
   }
 
   void visit(SeriesFlow *v) override {
@@ -249,9 +260,9 @@ struct Outliner : public Operator {
 
   // mod = shared AND modified in region
   std::unordered_set<id_t> getModVars() {
-    std::unordered_set<id_t> modVars;
-    for (auto id : getSharedVars()) {
-      if (modifiedInVars.count(id) > 0)
+    std::unordered_set<id_t> modVars, shared = getSharedVars();
+    for (auto id : modifiedInVars) {
+      if (globalsToOutline.count(id) > 0 || shared.count(id) > 0)
         modVars.insert(id);
     }
     return modVars;
@@ -273,6 +284,7 @@ struct Outliner : public Operator {
     //   - Modified+shared variables will be passed as pointers
     unsigned idx = 0;
     auto shared = getSharedVars();
+    shared.insert(globalsToOutline.begin(), globalsToOutline.end());
     auto mod = getModVars();
     for (auto id : shared) {
       Var *var = M->getVar(id);
@@ -281,7 +293,7 @@ struct Outliner : public Operator {
       const bool isMod = (mod.count(id) > 0);
       types::Type *type = isMod ? M->getPointerType(var->getType()) : var->getType();
       argTypes.push_back(type);
-      argNames.push_back(std::to_string(idx++));
+      argNames.push_back(var->getName());
       argKinds.push_back(isMod ? OutlineResult::ArgKind::MODIFIED
                                : OutlineResult::ArgKind::CONSTANT);
     }
@@ -364,17 +376,19 @@ struct Outliner : public Operator {
 
 OutlineResult outlineRegion(BodiedFunc *parent, SeriesFlow *series,
                             decltype(series->begin()) begin,
-                            decltype(series->end()) end, bool allowOutflows) {
+                            decltype(series->end()) end, bool allowOutflows,
+                            bool outlineGlobals) {
   if (begin == end)
     return {};
-  Outliner outliner(parent, series, begin, end);
+  Outliner outliner(parent, series, begin, end, outlineGlobals);
   parent->accept(outliner);
   return outliner.outline(allowOutflows);
 }
 
-OutlineResult outlineRegion(BodiedFunc *parent, SeriesFlow *series,
-                            bool allowOutflows) {
-  return outlineRegion(parent, series, series->begin(), series->end(), allowOutflows);
+OutlineResult outlineRegion(BodiedFunc *parent, SeriesFlow *series, bool allowOutflows,
+                            bool outlineGlobals) {
+  return outlineRegion(parent, series, series->begin(), series->end(), allowOutflows,
+                       outlineGlobals);
 }
 
 } // namespace util
