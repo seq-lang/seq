@@ -218,7 +218,8 @@ def _static_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
 
     last, subloop = _static_init(static_loop_loc_ref, gtid, schedtype=schedule, loop=loop, incr=1, chunk=chunk)
     i = subloop.start
-    while (step >= 0 and i < subloop.stop) or (step < 0 and i > subloop.stop):
+    stop = min(subloop.stop, loop.stop)
+    while (step >= 0 and i < stop) or (step < 0 and i > stop):
         _loop_body_stub(i, extra)
         i += step
     _static_fini(static_loop_loc_ref, gtid)

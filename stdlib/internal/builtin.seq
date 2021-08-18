@@ -41,6 +41,9 @@ def min(*args):
         else:
             x.destroy()
         raise ValueError("empty sequence")
+    elif staticlen(args) == 2:
+        a, b = args
+        return a if a <= b else b
     else:
         m = args[0]
         for i in args:
@@ -62,6 +65,9 @@ def max(*args):
         else:
             x.destroy()
         raise ValueError("empty sequence")
+    elif staticlen(args) == 2:
+        a, b = args
+        return a if a >= b else b
     else:
         m = args[0]
         for i in args:
