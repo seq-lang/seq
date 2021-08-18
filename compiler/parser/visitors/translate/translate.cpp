@@ -20,6 +20,7 @@
 
 using fmt::format;
 using seq::ir::cast;
+using seq::ir::transform::parallel::OMPSched;
 using std::function;
 using std::get;
 using std::make_shared;
@@ -289,11 +290,25 @@ void TranslateVisitor::visit(WhileStmt *stmt) {
 }
 
 void TranslateVisitor::visit(ForStmt *stmt) {
-  // OMPSched os;
-  // for (auto &o : stmt->ompArgs) {
-  //   if (o.name == "num_threads")
-
-  // }
+  unique_ptr<OMPSched> os = nullptr;
+  ir::Value *threads = nullptr, *chunk = nullptr;
+  string schedule = "static";
+  for (auto &o : stmt->ompArgs) {
+    if (o.name == "parallel")
+      os = make_unique<OMPSched>();
+    else if (o.name == "num_threads")
+      threads = transform(o.value);
+    else if (o.name == "chunk_size")
+      chunk = transform(o.value);
+    else if (o.name == "schedule") {
+      seqassert(o.value->getString(), "schedule must be a string");
+      schedule = o.value->getString()->getValue();
+    } else {
+      seqassert(false, "unexpected {} in openmp clause", o.name);
+    }
+  }
+  if (os)
+    os = make_unique<OMPSched>(schedule, false, threads, chunk);
 
   seqassert(stmt->var->getId(), "expected IdExpr, got {}", stmt->var->toString());
   auto varName = stmt->var->getId()->value;
@@ -302,6 +317,8 @@ void TranslateVisitor::visit(ForStmt *stmt) {
   auto bodySeries = make<ir::SeriesFlow>(stmt, "body");
 
   auto loop = make<ir::ForFlow>(stmt, transform(stmt->iter), bodySeries, var);
+  if (os)
+    loop->setSchedule(move(os));
   ctx->add(TranslateItem::Var, varName, var);
   ctx->addSeries(cast<ir::SeriesFlow>(loop->getBody()));
   transform(stmt->suite);

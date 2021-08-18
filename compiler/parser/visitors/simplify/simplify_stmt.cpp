@@ -185,7 +185,7 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
       callee = c->expr;
     if (!callee || !callee->isId("par"))
       error("for loop can only take parallel decorator");
-
+    ompArgs.push_back({"parallel", transform(N<BoolExpr>(true))});
     if (auto c = stmt->decorator->getCall())
       for (auto &a : c->args) {
         if (a.name.empty()) {
