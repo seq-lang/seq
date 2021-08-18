@@ -801,21 +801,23 @@ struct TaskLoopRoutineStubReplacer : public util::Operator {
     }
   }
 };
+
+template <typename T> void unpar(T *v) { v->setParallel(false); }
 } // namespace
 
 const std::string OpenMPPass::KEY = "core-parallel-openmp";
 
 void OpenMPPass::handle(ForFlow *v) {
   if (!v->isParallel())
-    return;
+    return unpar(v);
   auto *M = v->getModule();
   auto *parent = cast<BodiedFunc>(getParentFunc());
   auto *body = cast<SeriesFlow>(v->getBody());
   if (!parent || !body)
-    return;
+    return unpar(v);
   auto outline = util::outlineRegion(parent, body, /*allowOutflows=*/false);
   if (!outline)
-    return;
+    return unpar(v);
 
   // set up args to pass fork_call
   auto *sched = v->getSchedule();
@@ -875,16 +877,16 @@ void OpenMPPass::handle(ForFlow *v) {
 
 void OpenMPPass::handle(ImperativeForFlow *v) {
   if (!v->isParallel())
-    return;
+    return unpar(v);
   auto *M = v->getModule();
   auto *parent = cast<BodiedFunc>(getParentFunc());
   auto *body = cast<SeriesFlow>(v->getBody());
   if (!parent || !body)
-    return;
+    return unpar(v);
   auto outline = util::outlineRegion(parent, body, /*allowOutflows=*/false,
                                      /*outlineGlobals=*/true);
   if (!outline)
-    return;
+    return unpar(v);
 
   // set up args to pass fork_call
   auto *sched = v->getSchedule();
