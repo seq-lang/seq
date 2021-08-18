@@ -128,8 +128,9 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   }
 
   auto ctx = make_shared<SimplifyContext>(file, cache);
-  // static_pointer_cast<SimplifyContext>(cache->imports[STDLIB_IMPORT].ctx);
-  cache->imports[file] = cache->imports[MAIN_IMPORT] = {file, ctx};
+  cache->imports[file].filename = file;
+  cache->imports[file].ctx = ctx;
+  cache->imports[MAIN_IMPORT] = {file, ctx};
   ctx->setFilename(file);
   ctx->moduleName = {ImportFile::PACKAGE, file, MODULE_MAIN};
   // Load the command-line defines.
@@ -153,8 +154,6 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   stmts.emplace_back(SimplifyVisitor(ctx, preamble).transform(node));
 
   auto suite = make_shared<SuiteStmt>();
-  for (auto &s : preamble->types)
-    suite->stmts.push_back(s);
   for (auto &s : preamble->globals)
     suite->stmts.push_back(s);
   for (auto &s : preamble->functions)
@@ -175,8 +174,6 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<SimplifyContext> ctx, const StmtPtr &n
   if (atAge != -1)
     ctx->cache->age = oldAge;
   auto suite = make_shared<SuiteStmt>();
-  for (auto &s : preamble->types)
-    suite->stmts.push_back(s);
   for (auto &s : preamble->globals)
     suite->stmts.push_back(s);
   for (auto &s : preamble->functions)

@@ -106,7 +106,7 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
 
     t = high_resolution_clock::now();
     auto *module = ast::TranslateVisitor::apply(cache, move(typechecked));
-    module->setSrcInfo({abs, 0, 0, 0, 0});
+    module->setSrcInfo({abs, 0, 0, 0});
 
     if (!isTest)
       LOG_TIME("[T] translate   = {:.1f}",

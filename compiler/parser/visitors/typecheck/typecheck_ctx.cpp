@@ -88,7 +88,7 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const Expr *expr, int level,
   LOG_TYPECHECK("[ub] new {}: {} ({})", t->debugString(true), expr->toString(),
                 setActive);
   if (setActive && allowActivation)
-    activeUnbounds[t] = FormatVisitor::apply(expr);
+    activeUnbounds[t] = cache->getContent(expr->getSrcInfo());
   return t;
 }
 
@@ -115,7 +115,7 @@ types::TypePtr TypeContext::instantiate(const Expr *expr, types::TypePtr type,
         if (activate && allowActivation)
           activeUnbounds[i.second] =
               format("{} of {} in {}", l->genericName.empty() ? "?" : l->genericName,
-                     type->toString(), FormatVisitor::apply(expr));
+                     type->toString(), cache->getContent(expr->getSrcInfo()));
       }
     }
   }

@@ -905,3 +905,24 @@ def foo(*args):
     return [a for a in args]
 args, result = ((), [()])
 print list(foo(*args)) == result  #: False
+
+
+#%% type_error_reporting
+# TODO: imporove this certainly
+def tee(iterable, n=2):
+    from collections import deque
+    it = iter(iterable)
+    deques = [deque() for i in range(n)]
+    def gen(mydeque):
+        while True:
+            if not mydeque:             # when the local deque is empty
+                if it.done():
+                    return
+                newval = it.next()
+                for d in deques:        # load it to all the deques
+                    d.append(newval)
+            yield mydeque.popleft()
+    return list(gen(d) for d in deques)
+it = [1,2,3,4]
+a, b = tee(it) #!   ERROR: cannot typecheck the program
+#!   ERROR: while realizing tee (arguments tee[List[int],int])

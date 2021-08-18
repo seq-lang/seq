@@ -89,6 +89,8 @@ struct Cache : public std::enable_shared_from_this<Cache> {
     shared_ptr<SimplifyContext> ctx;
     /// Unique import variable for checking already loaded imports.
     string importVar;
+    /// File content (line:col indexable)
+    vector<string> content;
   };
 
   /// Absolute path of seqc executable (if available).
@@ -202,6 +204,8 @@ public:
 
   /// Generate a unique SrcInfo for internally generated AST nodes.
   SrcInfo generateSrcInfo();
+  /// Get file contents at the given location.
+  string getContent(const SrcInfo &info);
 
   /// Realization API.
 

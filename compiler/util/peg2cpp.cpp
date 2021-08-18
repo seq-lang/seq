@@ -1017,9 +1017,8 @@ int main(int argc, char **argv) {
   string loc_preamble = "  auto LI = VS.line_info();\n"
                         "  auto LOC = seq::SrcInfo(\n"
                         "    VS.path, LI.first + CTX.line_offset,\n"
-                        "    LI.first + CTX.line_offset,\n"
                         "    LI.second + CTX.col_offset,\n"
-                        "    LI.second + CTX.col_offset);\n";
+                        "    VS.sv().size());\n";
 
   for (auto &[name, def] : *grammar) {
     auto op = def.get_core_operator();

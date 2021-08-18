@@ -44,7 +44,7 @@ const SrcInfo *getSrcInfo(const Node *x) {
   if (auto *srcInfo = x->getAttribute<SrcInfoAttribute>()) {
     return &srcInfo->info;
   } else {
-    static SrcInfo defaultSrcInfo("<internal>", 0, 0, 0, 0);
+    static SrcInfo defaultSrcInfo("<internal>", 0, 0, 0);
     return &defaultSrcInfo;
   }
 }

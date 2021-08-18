@@ -51,7 +51,6 @@ class SimplifyVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
   /// This approach also allows us to generate global types without having to
   /// worry about initialization order.
   struct Preamble {
-    vector<StmtPtr> types;
     vector<StmtPtr> globals;
     vector<StmtPtr> functions;
   };

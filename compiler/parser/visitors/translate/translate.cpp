@@ -39,7 +39,7 @@ ir::Module *TranslateVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
 
   char buf[PATH_MAX + 1];
   realpath(cache->module0.c_str(), buf);
-  main->setSrcInfo({string(buf), 0, 0, 0, 0});
+  main->setSrcInfo({string(buf), 0, 0, 0});
 
   auto block = cache->module->Nr<ir::SeriesFlow>("body");
   main->setBody(block);

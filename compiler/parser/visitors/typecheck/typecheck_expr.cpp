@@ -406,10 +406,10 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
         findGenerics(expr->typeParams[i].get());
         auto nctx = ctx; // To capture ctx without capturing this...
         if (expr->typeParams[i]->isStaticExpr &&
-            expr->typeParams[i]->staticEvaluation.first)
+            expr->typeParams[i]->staticEvaluation.first) {
           unify(generics[i].type,
                 make_shared<StaticType>(expr->typeParams[i]->staticEvaluation.second));
-        else if (expr->typeParams[i]->getId())
+        } else if (expr->typeParams[i]->getId())
           unify(generics[i].type, staticGenerics[0].type);
         else
           unify(generics[i].type,

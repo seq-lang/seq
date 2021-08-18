@@ -109,6 +109,7 @@ public:
   virtual shared_ptr<RecordType> getHeterogenousTuple() { return nullptr; }
 
   virtual bool is(const string &s);
+  bool isStaticType();
 };
 typedef shared_ptr<Type> TypePtr;
 
@@ -201,7 +202,7 @@ struct ClassType : public Type {
     string niceName;
     // Unique generic ID.
     int id;
-    // Pointer to realized tupe (or generic LinkType).
+    // Pointer to realized type (or generic LinkType).
     TypePtr type;
     // Default value that is used if a generic is not realized (e.g. [T=int]).
     shared_ptr<Expr> deflt;

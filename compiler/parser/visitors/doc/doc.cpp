@@ -259,7 +259,7 @@ void DocVisitor::visit(ClassStmt *stmt) {
 }
 
 json DocVisitor::jsonify(const seq::SrcInfo &s) {
-  json j{s.line, s.endLine};
+  json j{s.line, s.len};
   // j["file"] = s.file;
   // j["line"] = s.line;
   // j["col"] = s.col;

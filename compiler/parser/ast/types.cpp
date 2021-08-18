@@ -37,6 +37,14 @@ TypePtr Type::follow() { return shared_from_this(); }
 vector<shared_ptr<Type>> Type::getUnbounds() const { return {}; }
 string Type::toString() const { return debugString(false); }
 bool Type::is(const string &s) { return getClass() && getClass()->name == s; }
+bool Type::isStaticType() {
+  auto t = follow();
+  if (t->getStatic())
+    return true;
+  if (auto l = t->getLink())
+    return l->isStatic;
+  return false;
+}
 
 LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic,
                    string genericName)
@@ -59,15 +67,15 @@ int LinkType::unify(Type *typ, Unification *undo) {
     return -1;
   } else {
     // Case 3: Unbound unification
+    if (isStaticType() != typ->isStaticType())
+      return -1;
     if (auto t = typ->getLink()) {
       if (t->kind == Link)
         return t->type->unify(this, undo);
       else if (t->kind == Generic)
         return -1;
       else {
-        if (isStatic != t->isStatic)
-          return -1;
-        else if (id == t->id)
+        if (id == t->id)
           // Identical unbound types get a score of 1
           return 1;
         else if (id < t->id)
@@ -622,9 +630,8 @@ int StaticType::unify(Type *typ, Unification *us) {
     return s1;
   } else if (auto tl = typ->getLink()) {
     return tl->unify(this, us);
-  } else {
-    return -1;
   }
+  return -1;
 }
 TypePtr StaticType::generalize(int atLevel) {
   auto e = generics;

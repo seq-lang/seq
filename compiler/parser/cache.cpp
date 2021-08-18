@@ -29,7 +29,22 @@ string Cache::getTemporaryVar(const string &prefix, char sigil) {
 }
 
 SrcInfo Cache::generateSrcInfo() {
-  return {FILE_GENERATED, generatedSrcInfoCount, generatedSrcInfoCount++, 0, 0};
+  return {FILE_GENERATED, generatedSrcInfoCount, generatedSrcInfoCount++, 0};
+}
+
+string Cache::getContent(const SrcInfo &info) {
+  auto i = imports.find(info.file);
+  if (i == imports.end())
+    return "";
+  int line = info.line - 1;
+  if (line < 0 || line >= i->second.content.size())
+    return "";
+  auto s = i->second.content[line];
+  int col = info.col - 1;
+  if (col < 0 || col >= s.size())
+    return "";
+  int len = info.len;
+  return s.substr(col, len);
 }
 
 types::ClassTypePtr Cache::findClass(const string &name) const {

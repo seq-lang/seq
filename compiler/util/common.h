@@ -54,15 +54,16 @@ void _seqassert(const char *expr_str, const char *file, int line,
 namespace seq {
 struct SrcInfo {
   std::string file;
-  int line, endLine;
-  int col, endCol;
+  int line;
+  int col;
+  int len;
   int id; /// used to differentiate different
-  SrcInfo(std::string file, int line, int endLine, int col, int endCol)
-      : file(std::move(file)), line(line), endLine(endLine), col(col), endCol(endCol) {
+  SrcInfo(std::string file, int line, int col, int len)
+      : file(std::move(file)), line(line), col(col), len(len) {
     static int _id(0);
     id = _id++;
   };
-  SrcInfo() : SrcInfo("", 0, 0, 0, 0){};
+  SrcInfo() : SrcInfo("", 0, 0, 0){};
   friend std::ostream &operator<<(std::ostream &out, const seq::SrcInfo &c) {
     char buf[PATH_MAX + 1];
     strncpy(buf, c.file.c_str(), PATH_MAX);

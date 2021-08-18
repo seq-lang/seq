@@ -79,8 +79,7 @@ T parseCode(const shared_ptr<Cache> &cache, const string &file, string code,
   exc::ParserException ex;
   if (!errors.empty()) {
     for (auto &e : errors)
-      ex.track(fmt::format("{}", get<2>(e)),
-               SrcInfo(file, get<0>(e), get<0>(e), get<1>(e), get<1>(e)));
+      ex.track(fmt::format("{}", get<2>(e)), SrcInfo(file, get<0>(e), get<1>(e), 0));
     throw ex;
     return nullptr;
   }
@@ -100,19 +99,25 @@ ExprPtr parseExpr(const shared_ptr<Cache> &cache, const string &code,
 }
 
 StmtPtr parseFile(const shared_ptr<Cache> &cache, const string &file) {
+  vector<string> lines;
   string code;
   if (file == "-") {
-    for (string line; getline(cin, line);)
+    for (string line; getline(cin, line);) {
+      lines.push_back(line);
       code += line + "\n";
+    }
   } else {
     ifstream fin(file);
     if (!fin)
       error(fmt::format("cannot open {}", file).c_str());
-    for (string line; getline(fin, line);)
+    for (string line; getline(fin, line);) {
+      lines.push_back(line);
       code += line + "\n";
+    }
     fin.close();
   }
 
+  cache->imports[file].content = lines;
   auto result = parseCode(cache, file, code);
   // LOG("peg/{} :=  {}", file, result ? result->toString(0) : "<nullptr>");
   // throw;
