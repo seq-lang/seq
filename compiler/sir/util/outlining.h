@@ -50,10 +50,12 @@ struct OutlineResult {
 /// @param begin start of outlining
 /// @param end end of outlining (non-inclusive like standard iterators)
 /// @param allowOutflows allow outlining regions with "out-flows"
+/// @param outlineGlobals outline globals as arguments to outlined function
 /// @return the result of outlining
 OutlineResult outlineRegion(BodiedFunc *parent, SeriesFlow *series,
                             decltype(series->begin()) begin,
-                            decltype(series->end()) end, bool allowOutflows = true);
+                            decltype(series->end()) end, bool allowOutflows = true,
+                            bool outlineGlobals = false);
 
 /// Outlines a series flow from its parent function. The outlined code
 /// will be replaced by a call to the outlined function, and possibly
@@ -61,9 +63,10 @@ OutlineResult outlineRegion(BodiedFunc *parent, SeriesFlow *series,
 /// @param parent the function containing the series flow
 /// @param series the series flow on which outlining will happen
 /// @param allowOutflows allow outlining regions with "out-flows"
+/// @param outlineGlobals outline globals as arguments to outlined function
 /// @return the result of outlining
 OutlineResult outlineRegion(BodiedFunc *parent, SeriesFlow *series,
-                            bool allowOutflows = true);
+                            bool allowOutflows = true, bool outlineGlobals = false);
 
 } // namespace util
 } // namespace ir

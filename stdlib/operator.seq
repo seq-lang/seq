@@ -195,12 +195,10 @@ def imul(a, b):
     return a
 __imul__ = imul
 
-'''
 def imatmul(a, b):
     a @= b
     return a
 __imatmul__ = imatmul
-'''
 
 def ior(a, b):
     a |= b

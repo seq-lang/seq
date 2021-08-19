@@ -308,7 +308,7 @@ void TranslateVisitor::visit(ForStmt *stmt) {
     }
   }
   if (os)
-    os = make_unique<OMPSched>(schedule, false, threads, chunk);
+    os = make_unique<OMPSched>(schedule, threads, chunk);
 
   seqassert(stmt->var->getId(), "expected IdExpr, got {}", stmt->var->toString());
   auto varName = stmt->var->getId()->value;

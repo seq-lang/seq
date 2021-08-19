@@ -437,12 +437,10 @@ def test_ops():
     assert operator.__matmul__(x, y) == 'matmul'
     assert n_matmul == 2
 
-    ''' TODO: matmul
     assert imatmul(x, y) is x
     assert n_imatmul == 1
     assert operator.__imatmul__(x, y) is x
     assert n_imatmul == 2
-    '''
 
     assert truediv(x, y) == 'truediv'
     assert n_truediv == 1

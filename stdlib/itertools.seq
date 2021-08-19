@@ -414,15 +414,18 @@ def tee[T](iterable: Generator[T], n: int = 2):
     Return n independent iterators from a single iterable.
     """
     from collections import deque
+    it = iter(iterable)
     deques = [deque[T]() for i in range(n)]
-    def gen(iterable, deques, mydeque):
+    def gen(mydeque):
         while True:
-            if not mydeque:  # when the local deque is empty
-                if iterable.__done__() or iterable.done():
+            if not mydeque:             # when the local deque is empty
+                if it.__done__():
                     return
-                newval = iterable.next()
-                for d in deques:  # load it to all the deques
+                it.__resume__()
+                if it.__done__():
+                    return
+                newval = it.next()
+                for d in deques:        # load it to all the deques
                     d.append(newval)
-            x = mydeque.popleft()
-            yield x
-    return [gen(iterable, deques, d) for d in deques]
+            yield mydeque.popleft()
+    return [gen(d) for d in deques]
