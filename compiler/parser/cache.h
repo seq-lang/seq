@@ -175,7 +175,10 @@ struct Cache : public std::enable_shared_from_this<Cache> {
     /// FunctionRealization instance.
     unordered_map<string, shared_ptr<FunctionRealization>> realizations;
 
-    Function() : ast(nullptr) {}
+    /// Unrealized function type.
+    types::FuncTypePtr type;
+
+    Function() : ast(nullptr), type(nullptr) {}
   };
   /// Function lookup table that maps a canonical function identifier to the
   /// corresponding Function instance.

@@ -343,11 +343,14 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
       unify(expr->items[i].expr->type, (*ec)->type);
     expr->items[i].expr = *ec;
     inType = expr->items[i].expr->getType();
+    if (auto rt = realize(inType))
+      unify(inType, rt);
+    else
+      expr->done = false;
     expr->inTypes.push_back(inType);
     // Do not extract the generator type in the last stage of a pipeline.
     if (i < expr->items.size() - 1)
       inType = getIterableType(inType);
-    expr->done &= expr->items[i].expr->done;
   }
   unify(expr->type, (hasGenerator ? ctx->findInternal("void") : inType));
 }

@@ -298,7 +298,7 @@ private:
   types::TypePtr unify(types::TypePtr &a, const types::TypePtr &b);
   types::TypePtr realizeType(types::ClassType *typ);
   types::TypePtr realizeFunc(types::FuncType *typ);
-  std::pair<int, StmtPtr> inferTypes(StmtPtr &&stmt, bool keepLast = false);
+  std::pair<int, StmtPtr> inferTypes(StmtPtr stmt, bool keepLast, const string &name);
   seq::ir::types::Type *getLLVMType(const types::ClassType *t);
 
   friend struct Cache;

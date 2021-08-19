@@ -41,7 +41,9 @@ string SuiteStmt::toString(int indent) const {
   string s;
   for (int i = 0; i < stmts.size(); i++)
     if (stmts[i])
-      s += (i ? pad : "") + stmts[i]->toString(indent >= 0 ? indent + INDENT_SIZE : -1);
+      s += (i ? pad : "") +
+           stmts[i]->toString(indent >= 0 ? indent + INDENT_SIZE : -1) +
+           (stmts[i]->done ? "*" : "");
   return format("(suite {}{}{})", ownBlock ? "#:own " : "", pad, s);
 }
 ACCEPT_IMPL(SuiteStmt, ASTVisitor);

@@ -46,8 +46,20 @@ TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts,
   for (auto &d : defines)
     ctx->add(TypecheckItem::Type, d.first, make_shared<StaticType>(d.second.second),
              true);
-  auto infer = v.inferTypes(stmts->clone(), true);
-  // fmt::print("{:03}: <top>\n", infer.first);
+  auto infer = v.inferTypes(stmts->clone(), true, "<top>");
+  for (auto &f : cache->functions) {
+    auto &attr = f.second.ast->attributes;
+    if (f.second.realizations.empty() &&
+        (attr.has(Attr::ForceRealize) ||
+         (attr.has(Attr::C) && !attr.has(Attr::CVarArg)))) {
+      seqassert(f.second.type && f.second.type->canRealize(), "cannot realize {}",
+                f.first);
+      auto e = make_shared<IdExpr>(f.second.type->funcName);
+      auto t = ctx->instantiate(e.get(), f.second.type, nullptr, false)->getFunc();
+      v.realize(t);
+      seqassert(!f.second.realizations.empty(), "cannot realize {}", f.first);
+    }
+  }
   return move(infer.second);
 }
 

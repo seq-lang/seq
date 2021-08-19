@@ -338,7 +338,7 @@ void TypecheckVisitor::visit(IfStmt *stmt) {
 void TypecheckVisitor::visit(TryStmt *stmt) {
   vector<TryStmt::Catch> catches;
   stmt->suite = transform(stmt->suite);
-  stmt->done &= stmt->suite->done;
+  stmt->done = stmt->suite->done;
   for (auto &c : stmt->catches) {
     c.exc = transformType(c.exc);
     if (!c.var.empty())
@@ -378,24 +378,13 @@ void TypecheckVisitor::visit(ThrowStmt *stmt) {
                                          N<CallExpr>(N<IdExpr>(TYPE_EXCHEADER), args)),
                      N<ThrowStmt>(N<IdExpr>(var), true)));
   } else {
-    stmt->done = false;
+    stmt->done = stmt->expr->done;
   }
 }
 
 void TypecheckVisitor::visit(FunctionStmt *stmt) {
   auto &attr = stmt->attributes;
-  if (auto t = ctx->findInVisited(stmt->name).second) {
-    // We realize built-ins and extern C function when we see them for the second time
-    // (to avoid preamble realization).
-    if (attr.has(Attr::ForceRealize) ||
-        (attr.has(Attr::C) && !attr.has(Attr::CVarArg))) {
-      if (!t->canRealize())
-        error("builtins and external functions must be realizable");
-
-      auto typ = ctx->instantiate(N<IdExpr>(stmt->name).get(), t);
-      auto r = realize(typ->getFunc());
-      unify(typ, r);
-    }
+  if (ctx->findInVisited(stmt->name).second) {
     stmt->done = true;
     return;
   }
@@ -455,6 +444,9 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   }
   // Construct the type.
   auto typ = make_shared<FuncType>(baseType, stmt->name, explicits);
+  if (attr.has(Attr::ForceRealize) || (attr.has(Attr::C) && !attr.has(Attr::CVarArg)))
+    if (!typ->canRealize())
+      error("builtins and external functions must be realizable");
   if (isClassMember && attr.has(Attr::Method))
     typ->funcParent = ctx->find(attr.parentClass)->type;
   typ->setSrcInfo(stmt->getSrcInfo());
@@ -475,8 +467,10 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   // Update visited table.
   ctx->bases[0].visitedAsts[stmt->name] = {TypecheckItem::Func, typ};
   ctx->add(TypecheckItem::Func, stmt->name, typ);
+  ctx->cache->functions[stmt->name].type = typ;
   LOG_REALIZE("[stmt] added func {}: {} (base={})", stmt->name, typ->debugString(1),
               ctx->getBase());
+  stmt->done = true;
 }
 
 void TypecheckVisitor::visit(ClassStmt *stmt) {

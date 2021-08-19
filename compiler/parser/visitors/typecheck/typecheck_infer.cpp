@@ -24,7 +24,6 @@ using fmt::format;
 using std::deque;
 using std::dynamic_pointer_cast;
 using std::get;
-using std::move;
 using std::ostream;
 using std::stack;
 using std::static_pointer_cast;
@@ -198,10 +197,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
 
       StmtPtr realized = nullptr;
       if (!isInternal) {
-        auto inferred = inferTypes(move(ast->suite));
-        // if (inferred.first > 1)
-        // fmt::print("{:03}: {}\n", inferred.first, type->realizedName());
-        realized = move(inferred.second);
+        realized = inferTypes(ast->suite, false, type->realizedName()).second;
         // Return type was not specified and the function returned nothing.
         if (!ast->ret && type->args[0]->getUnbound())
           unify(type->args[0], ctx->findInternal("void"));
@@ -248,7 +244,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
           args.emplace_back(Param{varName, nullptr, nullptr});
         }
         r->ast = Nx<FunctionStmt>(ast, type->realizedName(), nullptr, vector<Param>(),
-                                  move(args), move(realized), ast->attributes);
+                                  args, realized, ast->attributes);
         ctx->cache->functions[type->funcName].realizations[type->realizedName()] = r;
       } else {
         ctx->cache->functions[type->funcName].realizations[oldKey] =
@@ -272,22 +268,22 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
   }
 }
 
-pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
-  if (!stmt)
+pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr result, bool keepLast,
+                                                const string &name) {
+  if (!result)
     return {0, nullptr};
-  StmtPtr result = move(stmt);
 
   // We keep running typecheck transformations until there are no more unbound
   // types. It is assumed that the unbound count will decrease in each
   // iteration--- if not, the program cannot be type-checked.
-  // TODO: this can be probably optimized one day...
   int minUnbound = ctx->cache->unboundCount;
   int iter = 0;
   ctx->addBlock();
-  for (int prevSize = INT_MAX;; iter++, ctx->iteration++) {
+  for (int prevSize = INT_MAX;; ctx->iteration++) {
     LOG_TYPECHECK("== iter {} ==========================================", iter);
     ctx->typecheckLevel++;
     result = TypecheckVisitor(ctx).transform(result);
+    iter++;
     ctx->typecheckLevel--;
 
     int newUnbounds = 0;
@@ -303,10 +299,15 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
       ++i;
     }
     ctx->activeUnbounds = newActiveUnbounds;
-
-    if (ctx->activeUnbounds.empty() || !newUnbounds) {
+    if (result->done) {
+      seqassert(ctx->activeUnbounds.empty() || !newUnbounds,
+                "inconsistent stmt->done with unbound count in {}", name);
       break;
     } else {
+      // if ((newUnbounds >= prevSize)) {
+      //   LOG("-- {} / {} / {} / {}", name, newUnbounds, prevSize, result->done);
+      //   LOG("-- {}", result->toString(0));
+      // }
       if (newUnbounds >= prevSize) {
         map<int, pair<seq::SrcInfo, string>> v;
         for (auto &ub : ctx->activeUnbounds)
@@ -324,88 +325,11 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
       prevSize = newUnbounds;
     }
   }
-  // Last pass; TODO: detect if it is needed...
-  //  ctx->addBlock();
-  LOG_TYPECHECK("== iter {} ==========================================", ++iter);
-  for (int i = 0; i < 1; i++, iter++) {
-    ctx->typecheckLevel++;
-    result = TypecheckVisitor(ctx).transform(result);
-    ctx->typecheckLevel--;
-  }
   if (!keepLast)
     ctx->popBlock();
-  return {iter, move(result)};
+
+  return {iter, result};
 }
-//
-//
-// pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
-//  if (!stmt)
-//    return {-1, nullptr};
-//  StmtPtr result = move(stmt);
-//
-//  // Keep running typecheck inference until we are done (meaning that there are no
-//  more
-//  // unbound types and all transformations and variable substitutions are done). It
-//  is
-//  // assumed that the number of unbound types will decrease in each iteration. If
-//  this
-//  // does not happen, the types of a given program cannot be inferred.
-//  ctx->typecheckLevel++;
-//  auto oldIter = ctx->iteration;
-//  ctx->iteration = 0;
-//  int prevUnbound = ctx->cache->unboundCount;
-//  int prevSize = INT_MAX;
-//  while (ctx->iteration < TYPECHECK_MAX_ITERATIONS) {
-//    ctx->addBlock();
-//    result = TypecheckVisitor(ctx).transform(result);
-//
-//    // Clean up unified unbound variables and check if there are new unbound
-//    variables. int newUnboundSize = 0; set<types::TypePtr> newActiveUnbounds; for
-//    (auto i = ctx->activeUnbounds.begin(); i != ctx->activeUnbounds.end();) {
-//      auto l = (*i)->getLink();
-//      assert(l);
-//      if (l->kind == LinkType::Unbound) {
-//        newActiveUnbounds.insert(*i);
-//        if (l->id >= prevUnbound)
-//          newUnboundSize++;
-//      }
-//      ++i;
-//    }
-//    ctx->activeUnbounds = newActiveUnbounds;
-//    seqassert(!result->done || ctx->activeUnbounds.empty(),
-//              "inconsistent stmt->done with unbound count");
-//    if (result && result->done) {
-//      if (!keepLast)
-//        ctx->popBlock();
-//      break;
-//    }
-//    if (newUnboundSize >= prevSize) {
-//      // Number of unbound types either increased or stayed the same: we cannot
-//      // typecheck this program!
-//      vector<TypePtr> unresolved;
-//      string errorMsg;
-//      for (auto &ub : ctx->activeUnbounds)
-//        if (ub->getUnbound()->id >= prevUnbound) {
-//          unresolved.emplace_back(ub);
-//          errorMsg +=
-//              fmt::format("- {}:{}:{}: unresolved type\n", ub->getSrcInfo().file,
-//                          ub->getSrcInfo().line, ub->getSrcInfo().col);
-//          LOG_TYPECHECK("[inferTypes] dangling {} @ {}", ub->toString(),
-//                        ub->getSrcInfo());
-//        }
-//      error(unresolved[0], "cannot resolve {} unbound variables:\n{}",
-//            unresolved.size(), errorMsg);
-//    }
-//    prevSize = newUnboundSize;
-//    LOG_TYPECHECK("=========================== {}",
-//                  ctx->bases.back().type ? ctx->bases.back().type->toString() :
-//                  "-");
-//    ctx->iteration++;
-//  }
-//  std::swap(ctx->iteration, oldIter);
-//  ctx->typecheckLevel--;
-//  return make_pair(oldIter, move(result));
-//}
 
 ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   auto realizedName = t->realizedTypeName();

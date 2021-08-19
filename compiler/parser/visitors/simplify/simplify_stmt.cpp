@@ -589,7 +589,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   // Do not clone suite: the suite will be accessed later trough the cache.
   preamble->functions.push_back(N<FunctionStmt>(canonicalName, clone(f->ret),
                                                 clone_nop(f->generics),
-                                                clone_nop(f->args), nullptr, attr));
+                                                clone_nop(f->args), suite, attr));
   // Make sure to cache this (generic) AST for later realization.
   ctx->cache->functions[canonicalName].ast = f;
 
@@ -1193,7 +1193,7 @@ void SimplifyVisitor::transformNewImport(const ImportFile &file) {
       SimplifyVisitor(ictx, preamble)
           .transform(N<SuiteStmt>(N<AssignStmt>(N<IdExpr>("__name__"),
                                                 N<StringExpr>(ictx->moduleName.module),
-                                                nullptr, true),
+                                                N<IdExpr>("str"), true),
                                   parseFile(ctx->cache, file.path)));
 
   // If we are loading standard library, we won't wrap imports in functions as we
@@ -1204,7 +1204,7 @@ void SimplifyVisitor::transformNewImport(const ImportFile &file) {
   } else {
     // Generate import function identifier.
     string importVar = import->second.importVar =
-               ctx->cache->getTemporaryVar("import", '.'),
+               ctx->cache->getTemporaryVar(format("import_{}", file.module), '.'),
            importDoneVar;
     // import_done = False (global variable that indicates if an import has been
     // loaded)
@@ -1242,14 +1242,11 @@ void SimplifyVisitor::transformNewImport(const ImportFile &file) {
     for (auto &g : globalVars)
       const_cast<SuiteStmt *>(stmts[0]->getSuite())->stmts.push_back(N<GlobalStmt>(g));
     // Add a def import(): ... manually to the cache and to the preamble (it won't be
-    // transformed here!) and set ATTR_FORCE_REALIZE to realize it during the
-    // type-checking even if it is not called.
-    ctx->cache->functions[importVar].ast =
-        N<FunctionStmt>(importVar, nullptr, vector<Param>{}, vector<Param>{},
-                        N<SuiteStmt>(stmts), Attr({Attr::ForceRealize}));
-    preamble->functions.push_back(N<FunctionStmt>(importVar, nullptr, vector<Param>{},
-                                                  vector<Param>{}, nullptr,
-                                                  Attr({Attr::ForceRealize})));
+    // transformed here!).
+    ctx->cache->functions[importVar].ast = N<FunctionStmt>(
+        importVar, nullptr, vector<Param>{}, vector<Param>{}, N<SuiteStmt>(stmts));
+    preamble->functions.push_back(N<FunctionStmt>(
+        importVar, nullptr, vector<Param>{}, vector<Param>{}, N<SuiteStmt>(stmts)));
   }
 }
 

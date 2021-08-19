@@ -32,8 +32,9 @@ void Expr::setType(types::TypePtr t) { this->type = move(t); }
 bool Expr::isType() const { return isTypeExpr; }
 void Expr::markType() { isTypeExpr = true; }
 string Expr::wrapType(const string &sexpr) const {
-  return format("({}{})", sexpr,
-                type ? format(" #:type \"{}\"", type->toString()) : "");
+  return format("({}{}){}", sexpr,
+                type ? format(" #:type \"{}\"", type->toString()) : "",
+                done ? "*" : "");
 }
 
 Param::Param(string name, ExprPtr type, ExprPtr deflt)
