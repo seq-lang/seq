@@ -196,16 +196,13 @@ def _static_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
     def _loop_schedule():
         return (1 << 30) | 35  # nonmonotonic, dynamic chunked
 
-    def _loop_chunk():
-        return 1
-
     def _loop_shared_updates(args):
         pass
 
     def _loop_reductions(args):
         pass
 
-    start, stop, extra = args[0]
+    chunk, start, stop, extra = args[0]
     step = _loop_step()
     gtid = int(gtid_ptr[0])
     loc_ref = _default_loc()
@@ -214,7 +211,6 @@ def _static_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args):
     _loop_loc_and_gtid(loc_ref, reduction_loc_ref, gtid)
     loop = range(start, stop, step)
     schedule = _loop_schedule()
-    chunk = _loop_chunk()
 
     last, subloop = _static_init(static_loop_loc_ref, gtid, schedtype=schedule, loop=loop, incr=1, chunk=chunk)
     i = subloop.start
@@ -241,16 +237,13 @@ def _dynamic_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args)
     def _loop_schedule():
         return (1 << 30) | 35  # nonmonotonic, dynamic chunked
 
-    def _loop_chunk():
-        return 1
-
     def _loop_shared_updates(args):
         pass
 
     def _loop_reductions(args):
         pass
 
-    start, stop, extra = args[0]
+    chunk, start, stop, extra = args[0]
     step = _loop_step()
     gtid = int(gtid_ptr[0])
     loc_ref = _default_loc()
@@ -258,7 +251,6 @@ def _dynamic_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args)
     _loop_loc_and_gtid(loc_ref, reduction_loc_ref, gtid)
     loop = range(start, stop, step)
     schedule = _loop_schedule()
-    chunk = _loop_chunk()
 
     _dynamic_init(loc_ref, gtid, schedtype=schedule, loop=loop, chunk=chunk)
     while True:

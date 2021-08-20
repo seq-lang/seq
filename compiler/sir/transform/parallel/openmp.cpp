@@ -139,7 +139,7 @@ struct Reduction {
     }
 
     auto *init = (*type)();
-    if (!init->getType()->is(type))
+    if (!init || !init->getType()->is(type))
       return nullptr;
     return init;
   }
@@ -555,8 +555,8 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
             types::Type *base = cast<types::PointerType>(arg->getType())->getBase();
 
             // get extras again since we'll be inserting the new var before extras local
-            Var *lastArg = parent->arg_back(); // ptr to {start, stop, extras}
-            Value *val = util::tupleGet(util::ptrLoad(M->Nr<VarValue>(lastArg)), 2);
+            Var *lastArg = parent->arg_back(); // ptr to {chunk, start, stop, extras}
+            Value *val = util::tupleGet(util::ptrLoad(M->Nr<VarValue>(lastArg)), 3);
             Value *initVal = util::ptrLoad(util::tupleGet(val, next));
 
             Reduction reduction = reds->getReduction(*outlinedArgs);
@@ -685,10 +685,6 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
 
     if (name == "_loop_schedule") {
       v->replaceAll(M->getInt(sched->code));
-    }
-
-    if (name == "_loop_chunk") {
-      v->replaceAll(sched->chunk); // TODO: read from global
     }
   }
 };
@@ -864,7 +860,7 @@ void OpenMPPass::handle(ForFlow *v) {
   seqassert(forkFunc, "fork call function not found");
   auto *fork = util::call(forkFunc, {rawTemplateFunc, forkExtra});
 
-  if (sched->threads) {
+  if (sched->threads && sched->threads->getType()->is(M->getIntType())) {
     auto *pushNumThreadsFunc =
         M->getOrRealizeFunc("_push_num_threads", {M->getIntType()}, {}, ompModule);
     seqassert(pushNumThreadsFunc, "push num threads func not found");
@@ -917,8 +913,8 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   auto *intType = M->getIntType();
   std::vector<types::Type *> templateFuncArgs = {
       types.i32ptr, types.i32ptr,
-      M->getPointerType(
-          M->getTupleType({intType, intType, M->getTupleType(extraArgTypes)}))};
+      M->getPointerType(M->getTupleType(
+          {intType, intType, intType, M->getTupleType(extraArgTypes)}))};
   auto *templateFunc =
       M->getOrRealizeFunc(sched->dynamic ? "_dynamic_loop_outline_template"
                                          : "_static_loop_outline_template",
@@ -938,7 +934,9 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   auto *rawTemplateFunc = util::call(rawMethod, {M->Nr<VarValue>(templateFunc)});
 
   // fork call
-  std::vector<Value *> forkExtraArgs = {v->getStart(), v->getEnd()};
+  auto *chunk = (sched->chunk && sched->chunk->getType()->is(intType)) ? sched->chunk
+                                                                       : M->getInt(1);
+  std::vector<Value *> forkExtraArgs = {chunk, v->getStart(), v->getEnd()};
   for (auto *arg : extraArgs) {
     forkExtraArgs.push_back(arg);
   }
@@ -948,7 +946,7 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   seqassert(forkFunc, "fork call function not found");
   auto *fork = util::call(forkFunc, {rawTemplateFunc, forkExtra});
 
-  if (sched->threads) {
+  if (sched->threads && sched->threads->getType()->is(intType)) {
     auto *pushNumThreadsFunc =
         M->getOrRealizeFunc("_push_num_threads", {intType}, {}, ompModule);
     seqassert(pushNumThreadsFunc, "push num threads func not found");
