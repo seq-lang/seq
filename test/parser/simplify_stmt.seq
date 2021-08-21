@@ -426,6 +426,11 @@ bar() #: a
 #: a.bar
 foo() #: a.foo
 
+#%% import_class,barebones
+import sys
+z = str(sys)[:20]
+print z  #: <module 'sys' from '
+print z.maxsize  #: 9223372036854775807
 
 #%% import_rec,barebones
 from a.b.rec1 import bar

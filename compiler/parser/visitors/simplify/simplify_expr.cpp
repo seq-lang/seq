@@ -92,21 +92,24 @@ void SimplifyVisitor::visit(IdExpr *expr) {
   auto val = ctx->find(expr->value);
   if (!val)
     error("identifier '{}' not found", expr->value);
+  auto canonicalName = val->canonicalName;
+  if (val->isImport())
+    canonicalName = ctx->cache->imports[val->canonicalName].importVar + "_var";
 
   // If we are accessing an outer non-global variable, raise an error unless
   // we are capturing variables (in that case capture it).
   bool captured = false;
-  auto newName = val->canonicalName;
-  if (val->isVar()) {
+  auto newName = canonicalName;
+  if (val->isVar() || val->isImport()) {
     if (ctx->getBase() != val->getBase() && !val->isGlobal()) {
       if (!ctx->captures.empty()) {
         captured = true;
-        if (!in(ctx->captures.back(), val->canonicalName)) {
-          ctx->captures.back()[val->canonicalName] = newName =
-              ctx->generateCanonicalName(val->canonicalName);
+        if (!in(ctx->captures.back(), canonicalName)) {
+          ctx->captures.back()[canonicalName] = newName =
+              ctx->generateCanonicalName(canonicalName);
           ctx->cache->reverseIdentifierLookup[newName] = newName;
         }
-        newName = ctx->captures.back()[val->canonicalName];
+        newName = ctx->captures.back()[canonicalName];
       } else {
         error("cannot access non-global variable '{}'",
               ctx->cache->reverseIdentifierLookup[expr->value]);
@@ -632,7 +635,7 @@ void SimplifyVisitor::visit(DotExpr *expr) {
     string importName, itemName;
     shared_ptr<SimplifyItem> val = nullptr;
     for (int i = int(chain.size()) - 1; i >= 0; i--) {
-      auto s = join(chain, "/", 0, i + 1);
+      auto s = join(chain, ".", 0, i + 1);
       val = ctx->find(s);
       if (val && val->isImport()) {
         importName = val->canonicalName;
