@@ -51,7 +51,8 @@ Value *Type::doConstruct(std::vector<Value *> args) {
     argTypes.push_back(a->getType());
 
   auto *fn = module->getOrRealizeMethod(this, Module::NEW_MAGIC_NAME, argTypes);
-  seqassert(fn, "could not realize {} new function", *this);
+  if (!fn)
+    return nullptr;
 
   return module->Nr<CallInstr>(module->Nr<VarValue>(fn), args);
 }
@@ -121,7 +122,8 @@ Value *RefType::doConstruct(std::vector<Value *> args) {
 
   auto *series = module->Nr<SeriesFlow>();
   auto *newFn = module->getOrRealizeMethod(this, Module::NEW_MAGIC_NAME, {});
-  seqassert(newFn, "could not realize {} new function", *this);
+  if (!newFn)
+    return nullptr;
 
   auto *newValue = module->Nr<CallInstr>(module->Nr<VarValue>(newFn));
   series->push_back(newValue);
@@ -134,7 +136,8 @@ Value *RefType::doConstruct(std::vector<Value *> args) {
   }
 
   auto *initFn = module->getOrRealizeMethod(this, Module::INIT_MAGIC_NAME, argTypes);
-  seqassert(initFn, "could not realize {} init function", *this);
+  if (!initFn)
+    return nullptr;
 
   return module->Nr<FlowInstr>(
       series, module->Nr<CallInstr>(module->Nr<VarValue>(initFn), newArgs));
