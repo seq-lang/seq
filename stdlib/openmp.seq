@@ -258,6 +258,7 @@ def _dynamic_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args)
     _loop_loc_and_gtid(loc_ref, reduction_loc_ref, gtid)
     loop = range(start, stop, step)
     schedule = _loop_schedule()
+    ordered = _loop_ordered()
 
     _dynamic_init(loc_ref, gtid, schedtype=schedule, loop=loop, chunk=chunk)
     while True:
@@ -268,7 +269,7 @@ def _dynamic_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args)
         while (step >= 0 and i < subloop.stop) or (step < 0 and i > subloop.stop):
             _loop_body_stub(i, extra)
             i += step
-            if _loop_ordered():
+            if ordered:
                 _dynamic_fini(loc_ref, gtid)
         if last:
             _loop_shared_updates(extra)
