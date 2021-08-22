@@ -37,7 +37,7 @@ Value *convertPipelineToForLoopsHelper(Module *M, BodiedFunc *parent,
     auto *body = convertPipelineToForLoopsHelper(
         M, parent, stages, idx + 1, callStage(M, stage, M->Nr<VarValue>(var)));
     auto *loop = M->N<ForFlow>(last->getSrcInfo(), last, util::series(body), var);
-    if (prev->isParallel())
+    if (stage->isParallel())
       loop->setParallel();
     return loop;
   } else {
