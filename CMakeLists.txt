@@ -108,7 +108,7 @@ set(SEQRT_FILES runtime/lib.h
         runtime/sw/intersw.h
         runtime/sw/intersw.cpp)
 add_library(seqrt SHARED ${SEQRT_FILES})
-target_compile_options(seqrt PRIVATE -mavx)
+set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS -mavx)
 target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include runtime)
 target_link_libraries(seqrt PUBLIC seqomp ${BZ2} ${LZMA} ${BACKTRACE} ${STATIC_LIBCPP})
 if (APPLE)
