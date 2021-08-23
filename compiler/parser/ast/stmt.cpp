@@ -44,7 +44,8 @@ string SuiteStmt::toString(int indent) const {
       s += (i ? pad : "") +
            stmts[i]->toString(indent >= 0 ? indent + INDENT_SIZE : -1) +
            (stmts[i]->done ? "*" : "");
-  return format("(suite {}{}{})", ownBlock ? "#:own " : "", pad, s);
+  return format("(suite{}{})", ownBlock ? " #:own " : "",
+                s.empty() ? s : " " + pad + s);
 }
 ACCEPT_IMPL(SuiteStmt, ASTVisitor);
 void SuiteStmt::flatten(StmtPtr s, vector<StmtPtr> &stmts) {
@@ -58,9 +59,6 @@ void SuiteStmt::flatten(StmtPtr s, vector<StmtPtr> &stmts) {
       stmts.push_back(ss);
   }
 }
-
-string PassStmt::toString(int) const { return "(pass)"; }
-ACCEPT_IMPL(PassStmt, ASTVisitor);
 
 string BreakStmt::toString(int) const { return "(break)"; }
 ACCEPT_IMPL(BreakStmt, ASTVisitor);
@@ -296,20 +294,21 @@ FunctionStmt::FunctionStmt(const FunctionStmt &stmt)
       decorators(ast::clone(stmt.decorators)) {}
 string FunctionStmt::toString(int indent) const {
   string pad = indent > 0 ? ("\n" + string(indent + INDENT_SIZE, ' ')) : " ";
-  string gs;
+  vector<string> gs;
   for (auto &a : generics)
-    gs += " " + a.toString();
-  string as;
+    gs.push_back(a.toString());
+  vector<string> as;
   for (auto &a : args)
-    as += " " + a.toString();
+    as.push_back(a.toString());
   vector<string> attr;
   for (auto &a : decorators)
     attr.push_back(format("(dec {})", a->toString()));
-  return format(
-      "(fn '{} ({}){}{} (attr {}){}{})", name, as,
-      ret ? " #:ret " + ret->toString() : "",
-      !generics.empty() ? format(" #:generics ({})", gs) : "", join(attr, " "), pad,
-      suite ? suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1) : "(pass)");
+  return format("(fn '{} ({}){}{}{}{}{})", name, join(as, " "),
+                ret ? " #:ret " + ret->toString() : "",
+                !generics.empty() ? format(" #:generics ({})", join(gs, " ")) : "",
+                attr.empty() ? "" : format(" (attr {})", join(attr, " ")), pad,
+                suite ? suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1)
+                      : "(suite)");
 }
 ACCEPT_IMPL(FunctionStmt, ASTVisitor);
 string FunctionStmt::signature() const {
@@ -332,19 +331,21 @@ ClassStmt::ClassStmt(const ClassStmt &stmt)
       attributes(stmt.attributes), decorators(ast::clone(stmt.decorators)) {}
 string ClassStmt::toString(int indent) const {
   string pad = indent > 0 ? ("\n" + string(indent + INDENT_SIZE, ' ')) : " ";
-  string gs;
+  vector<string> gs;
   for (auto &a : generics)
-    gs += " " + a.toString();
+    gs.push_back(a.toString());
   string as;
-  for (auto &a : args)
-    as += " " + a.toString();
+  for (int i = 0; i < args.size(); i++)
+    as += (i ? pad : "") + args[i].toString();
   vector<string> attr;
   for (auto &a : decorators)
     attr.push_back(format("(dec {})", a->toString()));
-  return format(
-      "(class '{} ({}){} (attr {}){}{})", name, as,
-      !generics.empty() ? format(" #:generics ({})", gs) : "", join(attr, " "), pad,
-      suite ? suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1) : "(pass)");
+  return format("(class '{}{}{}{}{}{})", name,
+                !generics.empty() ? format(" #:generics ({})", join(gs, " ")) : "",
+                attr.empty() ? "" : format(" (attr {})", join(attr, " ")),
+                as.empty() ? as : pad + as, pad,
+                suite ? suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1)
+                      : "(suite)");
 }
 ACCEPT_IMPL(ClassStmt, ASTVisitor);
 bool ClassStmt::isRecord() const { return hasAttr(Attr::Tuple); }

@@ -98,8 +98,11 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
         auto fo = fopen("_dump_typecheck.seq", "w");
         fmt::print(fo, "{}", ast::FormatVisitor::apply(typechecked, cache));
         fclose(fo);
-        fo = fopen("_dump_typecheck.sexp_", "w");
+        fo = fopen("_dump_typecheck.sexp", "w");
         fmt::print(fo, "{}\n", typechecked->toString(0));
+        for (auto &f : cache->functions)
+          for (auto &r : f.second.realizations)
+            fmt::print(fo, "{}\n", r.second->ast->toString(0));
         fclose(fo);
       }
     }

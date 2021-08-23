@@ -34,24 +34,28 @@ namespace ast {
 using namespace types;
 
 types::TypePtr TypecheckVisitor::realize(types::TypePtr typ) {
-  if (!typ || !typ->getClass() || !typ->canRealize()) {
+  if (!typ || !typ->canRealize()) {
     return nullptr;
+  } else if (typ->getStatic()) {
+    return typ;
   } else if (auto f = typ->getFunc()) {
     auto ret = realizeFunc(f.get());
     if (ret)
       realizeType(ret->getClass().get());
     return ret;
-  } else {
-    auto t = realizeType(typ->getClass().get());
+  } else if (auto c = typ->getClass()) {
+    auto t = realizeType(c.get());
     if (auto p = typ->getPartial())
       return make_shared<PartialType>(t->getRecord(), p->func, p->known);
     else
       return t;
+  } else {
+    return nullptr;
   }
 }
 
 types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
-  seqassert(type->canRealize(), "{} not realizable", type->toString());
+  seqassert(type && type->canRealize(), "{} not realizable", type->toString());
 
   // We are still not done with type creation... (e.g. class X: x: List[X])
   for (auto &m : ctx->cache->classes[type->name].fields)
@@ -69,12 +73,11 @@ types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
       realizedType = type->getClass();
       // Realize generics
       for (auto &e : realizedType->generics)
-        if (!e.type->getStatic())
-          if (!realize(e.type))
-            return nullptr;
+        if (!realize(e.type))
+          return nullptr;
       realizedName = realizedType->realizedTypeName();
 
-      LOG_TYPECHECK("[realize] ty {} -> {}", type->name, realizedName);
+      LOG_REALIZE("[realize] ty {} -> {}", type->name, realizedName);
       // Realizations are stored in the top-most base.
       ctx->bases[0].visitedAsts[realizedName] = {TypecheckItem::Type, realizedType};
       auto r = ctx->cache->classes[realizedType->name].realizations[realizedName] =
@@ -301,14 +304,13 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr result, bool keepLast,
     ctx->activeUnbounds = newActiveUnbounds;
     if (result->done) {
       seqassert(ctx->activeUnbounds.empty() || !newUnbounds,
-                "inconsistent stmt->done with unbound count in {}", name);
+                "inconsistent stmt->done with unbound count in {} ({} / {})", name,
+                ctx->activeUnbounds.size(), newUnbounds);
       break;
     } else {
-      // if ((newUnbounds >= prevSize)) {
-      //   LOG("-- {} / {} / {} / {}", name, newUnbounds, prevSize, result->done);
-      //   LOG("-- {}", result->toString(0));
-      // }
       if (newUnbounds >= prevSize) {
+        // LOG("-- {} / {} / {} / {}", name, newUnbounds, prevSize, result->done);
+        // LOG("-- {}", result->toString(0));
         map<int, pair<seq::SrcInfo, string>> v;
         for (auto &ub : ctx->activeUnbounds)
           if (ub.first->getLink()->id >= minUnbound) {

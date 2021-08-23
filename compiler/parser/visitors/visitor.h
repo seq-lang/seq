@@ -66,7 +66,6 @@ public:
   virtual void visit(AssignMemberStmt *);
   virtual void visit(UpdateStmt *);
   virtual void visit(SuiteStmt *);
-  virtual void visit(PassStmt *);
   virtual void visit(BreakStmt *);
   virtual void visit(ContinueStmt *);
   virtual void visit(ExprStmt *);

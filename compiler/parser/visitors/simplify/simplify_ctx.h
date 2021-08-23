@@ -37,12 +37,9 @@ struct SimplifyItem {
   string canonicalName;
   /// True if an object is global.
   bool global;
-  /// True if an object is a static type object (e.g. N in [N: int]).
-  bool staticType;
 
 public:
-  SimplifyItem(Kind k, string base, string canonicalName, bool global = false,
-               bool stat = false);
+  SimplifyItem(Kind k, string base, string canonicalName, bool global = false);
 
   /// Convenience getters.
   string getBase() const { return base; }
@@ -51,7 +48,6 @@ public:
   bool isFunc() const { return kind == Func; }
   bool isType() const { return kind == Type; }
   bool isImport() const { return kind == Import; }
-  bool isStatic() const { return isType() && staticType; }
 };
 
 /**
@@ -104,8 +100,7 @@ public:
   using Context<SimplifyItem>::add;
   /// Convenience method for adding an object to the context.
   shared_ptr<SimplifyItem> add(SimplifyItem::Kind kind, const string &name,
-                               const string &canonicalName = "", bool global = false,
-                               bool stat = false);
+                               const string &canonicalName = "", bool global = false);
   shared_ptr<SimplifyItem> find(const string &name) const override;
 
   /// Return a canonical name of the top-most base, or an empty string if this is a

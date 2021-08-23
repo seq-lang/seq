@@ -30,14 +30,9 @@ struct TypecheckItem {
   enum Kind { Func, Type, Var } kind;
   /// Item's type.
   types::TypePtr type;
-  /// True if an object is a static type object (e.g. N in [N: int]).
-  bool staticType;
 
-  TypecheckItem(Kind k, types::TypePtr type, bool staticType = false)
-      : kind(k), type(move(type)), staticType(staticType) {}
-
+  TypecheckItem(Kind k, types::TypePtr type) : kind(k), type(move(type)) {}
   bool isType() const { return kind == Type; }
-  bool isStatic() const { return isType() && staticType; }
 };
 
 /**
@@ -86,7 +81,7 @@ public:
   using Context<TypecheckItem>::add;
   /// Convenience method for adding an object to the context.
   shared_ptr<TypecheckItem> add(TypecheckItem::Kind kind, const string &name,
-                                types::TypePtr type = nullptr, bool stat = false);
+                                types::TypePtr type = nullptr);
   shared_ptr<TypecheckItem> find(const string &name) const override;
   /// Find an internal type. Assumes that it exists.
   types::TypePtr findInternal(const string &name) const;

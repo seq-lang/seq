@@ -247,8 +247,6 @@ void FormatVisitor::visit(SuiteStmt *stmt) {
                          pad());
 }
 
-void FormatVisitor::visit(PassStmt *stmt) { result = keyword("pass"); }
-
 void FormatVisitor::visit(BreakStmt *stmt) { result = keyword("break"); }
 
 void FormatVisitor::visit(ContinueStmt *stmt) { result = keyword("continue"); }

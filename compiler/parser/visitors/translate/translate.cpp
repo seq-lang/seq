@@ -232,8 +232,6 @@ void TranslateVisitor::visit(SuiteStmt *stmt) {
     transform(s);
 }
 
-void TranslateVisitor::visit(PassStmt *stmt) {}
-
 void TranslateVisitor::visit(BreakStmt *stmt) { result = make<ir::BreakInstr>(stmt); }
 
 void TranslateVisitor::visit(ContinueStmt *stmt) {

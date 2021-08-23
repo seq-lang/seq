@@ -94,13 +94,11 @@ public:
   ExprPtr transform(const ExprPtr &expr) override;
   /// Transform an AST statement node.
   StmtPtr transform(const StmtPtr &stmt) override;
-  /// Transform an AST statement node (pointer convenience method).
-  StmtPtr transform(const Stmt *stmt);
   /// Transform an AST expression node.
-  ExprPtr transform(const Expr *expr, bool allowTypes = false);
+  ExprPtr transform(const ExprPtr &expr, bool allowTypes, bool allowAssign = true);
   /// Transform an AST type expression node.
   /// @raise ParserException if a node does not describe a type (use transform instead).
-  ExprPtr transformType(const Expr *expr);
+  ExprPtr transformType(const ExprPtr &expr);
 
 private:
   /// These functions just clone a given node (nothing to be simplified).
@@ -381,8 +379,8 @@ private:
   ///   a.x = b -> AssignMemberStmt
   ///   a : type = b -> AssignStmt
   ///   a = b -> AssignStmt or UpdateStmt if a exists in the same scope (or is global)
-  StmtPtr transformAssignment(const Expr *lhs, const Expr *rhs, const Expr *type,
-                              bool shadow, bool mustExist);
+  StmtPtr transformAssignment(const ExprPtr &lhs, const ExprPtr &rhs,
+                              const ExprPtr &type, bool shadow, bool mustExist);
   /// Unpack an assignment expression lhs = rhs into a list of simple assignment
   /// expressions (either a = b, or a.x = b, or a[x] = b).
   /// Used to handle various Python unpacking rules, such as:
@@ -393,8 +391,8 @@ private:
   ///   a, b = c, d + foo() -> tmp = (c, d + foo); a = tmp[0]; b = tmp[1].
   /// Processes each assignment recursively to support cases like:
   ///   a, (b, c) = d
-  void unpackAssignments(const Expr *lhs, const Expr *rhs, vector<StmtPtr> &stmts,
-                         bool shadow, bool mustExist);
+  void unpackAssignments(ExprPtr lhs, ExprPtr rhs, vector<StmtPtr> &stmts, bool shadow,
+                         bool mustExist);
   /// Transform a match...case pattern to a series of if statements as follows:
   ///   - Int pattern
   ///     case 1: ... ->
@@ -490,7 +488,7 @@ private:
   // Return a list of all function statements within a given class suite. Checks each
   // suite recursively, and assumes that each statement is either a function or a
   // doc-string.
-  vector<const Stmt *> getClassMethods(const Stmt *s);
+  vector<StmtPtr> getClassMethods(const StmtPtr &s);
 };
 
 } // namespace ast

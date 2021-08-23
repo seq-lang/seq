@@ -26,7 +26,6 @@ using std::move;
 using std::ostream;
 using std::pair;
 using std::stack;
-using std::static_pointer_cast;
 
 namespace seq {
 namespace ast {
@@ -52,7 +51,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     if (!stdlibPath ||
         stdlibPath->path.substr(stdlibPath->path.size() - 12) != "__init__.seq")
       ast::error("cannot load standard library");
-    if (barebones)
+    if (true || barebones)
       stdlibPath->path =
           stdlibPath->path.substr(0, stdlibPath->path.size() - 5) + "test__.seq";
     stdlib->setFilename(stdlibPath->path);
@@ -87,11 +86,13 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       auto canonical = stdlib->generateCanonicalName(name);
       stdlib->add(SimplifyItem::Type, name, canonical, true);
       vector<Param> generics;
-      auto genName = stdlib->generateCanonicalName("T");
-      if (string(name) == "Int" || string(name) == "UInt")
-        generics.emplace_back(Param{genName, make_shared<IdExpr>("int"), nullptr});
+      auto isInt = string(name) == "Int" || string(name) == "UInt";
+      if (isInt)
+        generics.emplace_back(Param{stdlib->generateCanonicalName("N"),
+                                    make_shared<IdExpr>("int"), nullptr});
       else
-        generics.emplace_back(Param{genName, nullptr, nullptr});
+        generics.emplace_back(
+            Param{stdlib->generateCanonicalName("T"), nullptr, nullptr});
       cache->classes[canonical].ast =
           make_shared<ClassStmt>(canonical, generics, vector<Param>(), nullptr,
                                  Attr({Attr::Internal, Attr::Tuple}));
@@ -139,7 +140,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     try {
       auto canName = ctx->generateCanonicalName(d.first);
       newDefines[canName] = {d.second.first, stoll(d.second.first)};
-      ctx->add(SimplifyItem::Type, d.first, canName, false, true);
+      ctx->add(SimplifyItem::Type, d.first, canName, false);
     } catch (...) {
       ast::error(format("parameter '{}' is not a valid integer", d.first).c_str());
     }

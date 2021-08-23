@@ -44,8 +44,7 @@ TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts,
   cache->typeCtx = ctx;
   TypecheckVisitor v(ctx);
   for (auto &d : defines)
-    ctx->add(TypecheckItem::Type, d.first, make_shared<StaticType>(d.second.second),
-             true);
+    ctx->add(TypecheckItem::Type, d.first, make_shared<StaticType>(d.second.second));
   auto infer = v.inferTypes(stmts->clone(), true, "<top>");
   for (auto &f : cache->functions) {
     auto &attr = f.second.ast->attributes;
@@ -71,6 +70,7 @@ TypePtr TypecheckVisitor::unify(TypePtr &a, const TypePtr &b) {
   if (a->unify(b.get(), &undo) >= 0)
     return a;
   undo.undo();
+  LOG("{} / {}", a->debugString(true), b->debugString(true));
   a->unify(b.get(), &undo);
   error("cannot unify {} and {}", a->toString(), b->toString());
   return nullptr;

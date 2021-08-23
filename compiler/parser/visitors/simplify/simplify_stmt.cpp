@@ -18,24 +18,21 @@
 #include "parser/visitors/simplify/simplify.h"
 
 using fmt::format;
+using std::dynamic_pointer_cast;
 
 namespace seq {
 namespace ast {
 
-StmtPtr SimplifyVisitor::transform(const Stmt *stmt) {
+StmtPtr SimplifyVisitor::transform(const StmtPtr &stmt) {
   if (!stmt)
     return nullptr;
 
   SimplifyVisitor v(ctx, preamble);
   v.setSrcInfo(stmt->getSrcInfo());
-  const_cast<Stmt *>(stmt)->accept(v);
+  const_cast<Stmt *>(stmt.get())->accept(v);
   if (v.resultStmt)
     v.resultStmt->age = ctx->cache->age;
   return v.resultStmt;
-}
-
-StmtPtr SimplifyVisitor::transform(const StmtPtr &stmt) {
-  return transform(stmt.get());
 }
 
 void SimplifyVisitor::defaultVisit(Stmt *s) { resultStmt = s->clone(); }
@@ -82,14 +79,12 @@ void SimplifyVisitor::visit(AssignStmt *stmt) {
   if (stmt->rhs && stmt->rhs->getBinary() && stmt->rhs->getBinary()->inPlace) {
     /// Case 1: a += b
     seqassert(!stmt->type, "invalid AssignStmt {}", stmt->toString());
-    stmts.push_back(
-        transformAssignment(stmt->lhs.get(), stmt->rhs.get(), nullptr, false, true));
+    stmts.push_back(transformAssignment(stmt->lhs, stmt->rhs, nullptr, false, true));
   } else if (stmt->type) {
     /// Case 2:
-    stmts.push_back(transformAssignment(stmt->lhs.get(), stmt->rhs.get(),
-                                        stmt->type.get(), true, false));
+    stmts.push_back(transformAssignment(stmt->lhs, stmt->rhs, stmt->type, true, false));
   } else {
-    unpackAssignments(stmt->lhs.get(), stmt->rhs.get(), stmts, stmt->shadow, false);
+    unpackAssignments(stmt->lhs, stmt->rhs, stmts, stmt->shadow, false);
   }
   resultStmt = stmts.size() == 1 ? stmts[0] : N<SuiteStmt>(stmts);
 }
@@ -276,7 +271,7 @@ void SimplifyVisitor::visit(TryStmt *stmt) {
       var = ctx->generateCanonicalName(ctch.var);
       ctx->add(SimplifyItem::Var, ctch.var, var);
     }
-    catches.push_back({var, transformType(ctch.exc.get()), transform(ctch.suite)});
+    catches.push_back({var, transformType(ctch.exc), transform(ctch.suite)});
     ctx->popBlock();
   }
   resultStmt = N<TryStmt>(suite, catches, transform(stmt->finally));
@@ -484,13 +479,12 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   vector<Param> newGenerics;
   for (auto &g : stmt->generics) {
     auto genName = ctx->generateCanonicalName(g.name);
-    ctx->add(SimplifyItem::Type, g.name, genName, false, g.type != nullptr);
     if (g.type && !g.type->isId("int"))
       error("only integer static generics are supported");
-    newGenerics.emplace_back(Param{genName, transformType(g.type.get()),
-                                   g.deflt && g.deflt->getNone()
-                                       ? clone(g.deflt)
-                                       : transform(g.deflt.get(), true)});
+    ctx->add(g.type ? SimplifyItem::Var : SimplifyItem::Type, g.name, genName, false);
+    newGenerics.emplace_back(Param{
+        genName, transformType(g.type),
+        g.deflt && g.deflt->getNone() ? clone(g.deflt) : transform(g.deflt, true)});
   }
   // Parse function arguments and add them to the context.
   vector<Param> args;
@@ -516,10 +510,10 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     if (!a.deflt && defaultsStarted && !stars)
       error("non-default argument '{}' after a default argument", varName);
     defaultsStarted |= bool(a.deflt);
-    auto typeAst = transformType(a.type.get());
+    auto typeAst = transformType(a.type);
     // If the first argument of a class method is self and if it has no type, add it.
     if (!typeAst && isClassMember && ia == 0 && a.name == "self")
-      typeAst = transformType(ctx->bases[ctx->bases.size() - 2].ast.get());
+      typeAst = transformType(ctx->bases[ctx->bases.size() - 2].ast);
 
     auto name = ctx->generateCanonicalName(varName);
     args.emplace_back(Param{string(stars, '*') + name, typeAst, transform(a.deflt)});
@@ -534,7 +528,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   // Parse the return type.
   if (!stmt->ret && attr.has(Attr::LLVM))
     error("LLVM functions must have a return type");
-  auto ret = transformType(stmt->ret.get());
+  auto ret = transformType(stmt->ret);
   // Parse function body.
   StmtPtr suite = nullptr;
   std::map<string, string> captures;
@@ -700,7 +694,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
   string canonicalName;
   const ClassStmt *originalAST = nullptr;
   auto classItem =
-      make_shared<SimplifyItem>(SimplifyItem::Type, "", "", ctx->isToplevel(), false);
+      make_shared<SimplifyItem>(SimplifyItem::Type, "", "", ctx->isToplevel());
   if (!extension) {
     classItem->canonicalName = canonicalName =
         ctx->generateCanonicalName(name, !attr.has(Attr::Internal));
@@ -748,10 +742,10 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
     genAst.push_back(N<IdExpr>(genName));
     // Extension generic might not have static type annotation: lift it up from the
     // original AST.
-    ctx->add(SimplifyItem::Type, stmt->generics[gi].name, genName, false,
-             originalAST->generics[gi].type != nullptr);
+    ctx->add(originalAST->generics[gi].type ? SimplifyItem::Var : SimplifyItem::Type,
+             stmt->generics[gi].name, genName, true);
     newGenerics.emplace_back(
-        Param{genName, transformType(originalAST->generics[gi].type.get()), nullptr});
+        Param{genName, transformType(originalAST->generics[gi].type), nullptr});
   }
   ctx->bases.back().ast = make_shared<IndexExpr>(N<IdExpr>(name), N<TupleExpr>(genAst));
 
@@ -766,7 +760,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
       if (seenMembers.find(a.name) != seenMembers.end())
         error(a.type, "'{}' declared twice", a.name);
       seenMembers.insert(a.name);
-      args.emplace_back(Param{a.name, transformType(a.type.get()), nullptr});
+      args.emplace_back(Param{a.name, transformType(a.type), nullptr});
       ctx->cache->classes[canonicalName].fields.push_back({a.name, nullptr});
     }
     // Now that we are done with arguments, add record type to the context.
@@ -824,7 +818,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
       suite->stmts.push_back(transform(
           codegenMagic(m, ctx->bases.back().ast.get(), stmt->args, isRecord)));
   }
-  for (auto sp : getClassMethods(stmt->suite.get()))
+  for (auto sp : getClassMethods(stmt->suite))
     if (sp && !sp->getClass())
       suite->stmts.push_back(transform(sp));
   ctx->bases.pop_back();
@@ -842,7 +836,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
   stmts.emplace_back(N<ClassStmt>(canonicalName, clone_nop(c->generics),
                                   vector<Param>{}, suite, Attr({Attr::Extend})));
   // Parse nested classes
-  for (auto sp : getClassMethods(stmt->suite.get()))
+  for (auto sp : getClassMethods(stmt->suite))
     if (sp && sp->getClass()) {
       // Add dummy base to fix nested class' name.
       ctx->bases.emplace_back(SimplifyContext::Base(canonicalName));
@@ -869,8 +863,8 @@ void SimplifyVisitor::visit(CustomStmt *stmt) {
 
 /**************************************************************************************/
 
-StmtPtr SimplifyVisitor::transformAssignment(const Expr *lhs, const Expr *rhs,
-                                             const Expr *type, bool shadow,
+StmtPtr SimplifyVisitor::transformAssignment(const ExprPtr &lhs, const ExprPtr &rhs,
+                                             const ExprPtr &type, bool shadow,
                                              bool mustExist) {
   if (auto ei = lhs->getIndex()) {
     seqassert(!type, "unexpected type annotation");
@@ -892,6 +886,7 @@ StmtPtr SimplifyVisitor::transformAssignment(const Expr *lhs, const Expr *rhs,
           error("variable '{}' is not global", e->value);
       }
     }
+
     // Function and type aliases are not normal assignments. They are treated like a
     // simple context renames.
     // Note: x = Ptr[byte] is not a simple alias, and is handled separately below.
@@ -933,7 +928,7 @@ StmtPtr SimplifyVisitor::transformAssignment(const Expr *lhs, const Expr *rhs,
   }
 }
 
-void SimplifyVisitor::unpackAssignments(const Expr *lhs, const Expr *rhs,
+void SimplifyVisitor::unpackAssignments(ExprPtr lhs, ExprPtr rhs,
                                         vector<StmtPtr> &stmts, bool shadow,
                                         bool mustExist) {
   vector<ExprPtr> leftSide;
@@ -949,13 +944,13 @@ void SimplifyVisitor::unpackAssignments(const Expr *lhs, const Expr *rhs,
   }
 
   // Prepare the right-side expression
-  auto srcPos = rhs;
+  auto srcPos = rhs.get();
   ExprPtr newRhs = nullptr; // This expression must not be deleted until the very end.
   if (!rhs->getId()) { // Store any non-trivial right-side expression (assign = rhs).
     auto var = ctx->cache->getTemporaryVar("assign");
     newRhs = Nx<IdExpr>(srcPos, var);
-    stmts.push_back(transformAssignment(newRhs.get(), rhs, nullptr, shadow, mustExist));
-    rhs = newRhs.get();
+    stmts.push_back(transformAssignment(newRhs, rhs, nullptr, shadow, mustExist));
+    rhs = newRhs;
   }
 
   // Process each assignment until the fist StarExpr (if any).
@@ -966,7 +961,7 @@ void SimplifyVisitor::unpackAssignments(const Expr *lhs, const Expr *rhs,
     // Transformation: leftSide_st = rhs[st]
     auto rightSide = Nx<IndexExpr>(srcPos, rhs->clone(), Nx<IntExpr>(srcPos, st));
     // Recursively process the assignment (as we can have cases like (a, (b, c)) = d).
-    unpackAssignments(leftSide[st].get(), rightSide.get(), stmts, shadow, mustExist);
+    unpackAssignments(leftSide[st], rightSide, stmts, shadow, mustExist);
   }
   // If there is a StarExpr, process it and the remaining assignments after it (if
   // any).
@@ -980,8 +975,8 @@ void SimplifyVisitor::unpackAssignments(const Expr *lhs, const Expr *rhs,
                           ? nullptr
                           : Nx<IntExpr>(srcPos, -leftSide.size() + st + 1),
                       nullptr));
-    unpackAssignments(leftSide[st]->getStar()->what.get(), rightSide.get(), stmts,
-                      shadow, mustExist);
+    unpackAssignments(leftSide[st]->getStar()->what, rightSide, stmts, shadow,
+                      mustExist);
     st += 1;
     // Keep going till the very end. Remaining assignments use negative indices (-1,
     // -2 etc) as we are not sure how big is StarExpr.
@@ -990,7 +985,7 @@ void SimplifyVisitor::unpackAssignments(const Expr *lhs, const Expr *rhs,
         error(leftSide[st], "multiple unpack expressions");
       rightSide = Nx<IndexExpr>(srcPos, rhs->clone(),
                                 Nx<IntExpr>(srcPos, -leftSide.size() + st));
-      unpackAssignments(leftSide[st].get(), rightSide.get(), stmts, shadow, mustExist);
+      unpackAssignments(leftSide[st], rightSide, stmts, shadow, mustExist);
     }
   }
 }
@@ -1090,7 +1085,7 @@ StmtPtr SimplifyVisitor::transformCImport(const string &name, const vector<Param
   }
   auto f = N<FunctionStmt>(name, ret ? ret->clone() : N<IdExpr>("void"),
                            vector<Param>(), fnArgs, nullptr, attr);
-  StmtPtr tf = transform(f.get()); // Already in the preamble
+  StmtPtr tf = transform(f); // Already in the preamble
   if (!altName.empty())
     ctx->add(altName, ctx->find(name));
   return tf;
@@ -1304,9 +1299,7 @@ StmtPtr SimplifyVisitor::transformLLVMDefinition(const Stmt *codeStmt) {
       string exprCode = code.substr(braceStart, i - braceStart);
       auto offset = getSrcInfo();
       offset.col += i;
-      auto expr = transform(parseExpr(ctx->cache, exprCode, offset).get(), true);
-      if (!expr->isType() && !expr->isStaticExpr)
-        error(expr, "not a type or static expression", expr->toString());
+      auto expr = transform(parseExpr(ctx->cache, exprCode, offset), true);
       items.push_back(N<ExprStmt>(expr));
       braceStart = i + 1;
       finalCode += '}';
@@ -1613,13 +1606,13 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
   return t;
 }
 
-vector<const Stmt *> SimplifyVisitor::getClassMethods(const Stmt *s) {
-  vector<const Stmt *> v;
-  if (!s || dynamic_cast<const PassStmt *>(s))
+vector<StmtPtr> SimplifyVisitor::getClassMethods(const StmtPtr &s) {
+  vector<StmtPtr> v;
+  if (!s)
     return v;
   if (auto sp = s->getSuite()) {
     for (const auto &ss : sp->stmts)
-      for (auto u : getClassMethods(ss.get()))
+      for (auto u : getClassMethods(ss))
         v.push_back(u);
   } else if (s->getExpr() && s->getExpr()->expr->getString()) {
     /// Those are doc-strings, ignore them.

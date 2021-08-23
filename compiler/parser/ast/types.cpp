@@ -69,6 +69,10 @@ int LinkType::unify(Type *typ, Unification *undo) {
     // Case 3: Unbound unification
     if (isStaticType() != typ->isStaticType())
       return -1;
+    if (auto ts = typ->getStatic()) {
+      if (ts->staticExpr && ts->staticExpr->getId())
+        return unify(ts->generics[0].type.get(), undo);
+    }
     if (auto t = typ->getLink()) {
       if (t->kind == Link)
         return t->type->unify(this, undo);
@@ -116,13 +120,16 @@ TypePtr LinkType::generalize(int atLevel) {
     return type->generalize(atLevel);
   }
 }
-TypePtr LinkType::instantiate(int atLevel, int &unboundCount,
-                              unordered_map<int, TypePtr> &cache) {
+TypePtr LinkType::instantiate(int atLevel, int *unboundCount,
+                              unordered_map<int, TypePtr> *cache) {
   if (kind == Generic) {
-    if (cache.find(id) != cache.end())
-      return cache[id];
-    return cache[id] = make_shared<LinkType>(Unbound, unboundCount++, atLevel, nullptr,
-                                             isStatic, genericName);
+    if (cache && cache->find(id) != cache->end())
+      return (*cache)[id];
+    auto t = make_shared<LinkType>(Unbound, unboundCount ? (*unboundCount)++ : id,
+                                   atLevel, nullptr, isStatic, genericName);
+    if (cache)
+      (*cache)[id] = t;
+    return t;
   } else if (kind == Unbound) {
     return shared_from_this();
   } else {
@@ -188,8 +195,10 @@ bool LinkType::occurs(Type *typ, Type::Unification *undo) {
       return false;
     }
   } else if (auto ts = typ->getStatic()) {
-    return std::any_of(ts->generics.begin(), ts->generics.end(),
-                       [&](auto &g) { return g.type && occurs(g.type.get(), undo); });
+    for (auto &g : ts->generics)
+      if (g.type && occurs(g.type.get(), undo))
+        return true;
+    return false;
   }
   if (auto tc = typ->getClass()) {
     for (auto &g : tc->generics)
@@ -241,8 +250,8 @@ TypePtr ClassType::generalize(int atLevel) {
   c->setSrcInfo(getSrcInfo());
   return c;
 }
-TypePtr ClassType::instantiate(int atLevel, int &unboundCount,
-                               unordered_map<int, TypePtr> &cache) {
+TypePtr ClassType::instantiate(int atLevel, int *unboundCount,
+                               unordered_map<int, TypePtr> *cache) {
   auto g = generics;
   for (auto &t : g)
     t.type = t.type ? t.type->instantiate(atLevel, unboundCount, cache) : nullptr;
@@ -369,8 +378,8 @@ TypePtr RecordType::generalize(int atLevel) {
     t = t->generalize(atLevel);
   return make_shared<RecordType>(c, a);
 }
-TypePtr RecordType::instantiate(int atLevel, int &unboundCount,
-                                unordered_map<int, TypePtr> &cache) {
+TypePtr RecordType::instantiate(int atLevel, int *unboundCount,
+                                unordered_map<int, TypePtr> *cache) {
   auto c = static_pointer_cast<ClassType>(
       this->ClassType::instantiate(atLevel, unboundCount, cache));
   auto a = args;
@@ -450,14 +459,14 @@ TypePtr FuncType::generalize(int atLevel) {
       static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)), funcName,
       g, p);
 }
-TypePtr FuncType::instantiate(int atLevel, int &unboundCount,
-                              unordered_map<int, TypePtr> &cache) {
+TypePtr FuncType::instantiate(int atLevel, int *unboundCount,
+                              unordered_map<int, TypePtr> *cache) {
   auto g = funcGenerics;
   for (auto &t : g)
     if (t.type) {
       t.type = t.type->instantiate(atLevel, unboundCount, cache);
-      if (cache.find(t.id) == cache.end())
-        cache[t.id] = t.type;
+      if (cache && cache->find(t.id) == cache->end())
+        (*cache)[t.id] = t.type;
     }
   auto p = funcParent ? funcParent->instantiate(atLevel, unboundCount, cache) : nullptr;
   return make_shared<FuncType>(
@@ -558,8 +567,8 @@ TypePtr PartialType::generalize(int atLevel) {
       static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)), func,
       known);
 }
-TypePtr PartialType::instantiate(int atLevel, int &unboundCount,
-                                 unordered_map<int, TypePtr> &cache) {
+TypePtr PartialType::instantiate(int atLevel, int *unboundCount,
+                                 unordered_map<int, TypePtr> *cache) {
   return make_shared<PartialType>(
       static_pointer_cast<RecordType>(
           this->RecordType::instantiate(atLevel, unboundCount, cache)),
@@ -589,43 +598,55 @@ string PartialType::realizedName() const {
   return fmt::format("{}{}", name, s.empty() ? "" : fmt::format("[{}]", s));
 }
 
-StaticType::StaticType(vector<ClassType::Generic> generics,
-                       pair<shared_ptr<Expr>, EvalFn> staticExpr,
+StaticType::StaticType(shared_ptr<Expr> expr, shared_ptr<TypeContext> ctx)
+    : staticExpr(move(expr)), typeCtx(move(ctx)) {
+  if (staticExpr->staticEvaluation.first) {
+    staticEvaluation = staticExpr->staticEvaluation;
+  } else {
+    unordered_set<string> seen;
+    parseExpr(staticExpr, seen);
+  }
+}
+StaticType::StaticType(vector<ClassType::Generic> generics, shared_ptr<Expr> staticExpr,
+                       shared_ptr<TypeContext> typeCtx,
                        pair<bool, int> staticEvaluation)
     : generics(move(generics)), staticEvaluation(move(staticEvaluation)),
-      staticExpr(move(staticExpr)) {
-  seqassert(!staticExpr.first ||
-                (!staticExpr.first->getId() && !staticExpr.first->getInt()),
-            "invalid complex static expression");
+      staticExpr(move(staticExpr)), typeCtx(move(typeCtx)) {
+  seqassert(!staticExpr || !staticExpr->getInt(), "invalid complex static expression");
 }
-StaticType::StaticType(int i) : staticEvaluation(true, i) {
-  staticExpr = {nullptr,
-                [](const StaticType *t) { return t->staticEvaluation.second; }};
-}
+StaticType::StaticType(int i)
+    : staticEvaluation(true, i), staticExpr(nullptr), typeCtx(nullptr) {}
 int StaticType::unify(Type *typ, Unification *us) {
   if (auto t = typ->getStatic()) {
+    if (canRealize())
+      staticEvaluation = {true, evaluate()};
+    if (t->canRealize())
+      t->staticEvaluation = {true, t->evaluate()};
     // Check if both types are already evaluated.
     if (staticEvaluation.first && t->staticEvaluation.first)
       return staticEvaluation == t->staticEvaluation ? 2 : -1;
+    else if (staticEvaluation.first && !t->staticEvaluation.first)
+      return typ->unify(this, us);
 
+    // Right now, *this is not evaluated
+    // Let us see can we unify it with other _if_ it is a simple IdExpr?
+    if (staticExpr->getId() && t->staticEvaluation.first) {
+      return generics[0].type->unify(typ, us);
+    }
+
+    // At this point, *this is a complex expression (e.g. A+1).
+    seqassert(!generics.empty(), "unevaluated simple expression");
     if (generics.size() != t->generics.size())
       return -1;
-    // We assume that both expressions are simple or both expressions are complex.
-    assert(generics.empty() || staticExpr.first);
 
     int s1 = 2, s;
-    if (!generics.empty()) {
-      if (staticExpr.first->toString() != t->staticExpr.first->toString())
+    if (!(staticExpr->getId() && t->staticExpr->getId()) &&
+        staticExpr->toString() != t->staticExpr->toString())
+      return -1;
+    for (int i = 0; i < generics.size(); i++) {
+      if ((s = generics[i].type->unify(t->generics[i].type.get(), us)) == -1)
         return -1;
-      for (int i = 0; i < generics.size(); i++) {
-        if ((s = generics[i].type->unify(t->generics[i].type.get(), us)) == -1)
-          return -1;
-        s1 += s;
-      }
-    } else {
-      seqassert(staticEvaluation.first && t->staticEvaluation.first,
-                "unevaluated simple expression");
-      return staticEvaluation == t->staticEvaluation ? 2 : -1;
+      s1 += s;
     }
     return s1;
   } else if (auto tl = typ->getLink()) {
@@ -637,18 +658,16 @@ TypePtr StaticType::generalize(int atLevel) {
   auto e = generics;
   for (auto &t : e)
     t.type = t.type ? t.type->generalize(atLevel) : nullptr;
-  auto c = make_shared<StaticType>(
-      e, std::make_pair(clone(staticExpr.first), staticExpr.second), staticEvaluation);
+  auto c = make_shared<StaticType>(e, staticExpr, typeCtx, staticEvaluation);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
-TypePtr StaticType::instantiate(int atLevel, int &unboundCount,
-                                unordered_map<int, TypePtr> &cache) {
+TypePtr StaticType::instantiate(int atLevel, int *unboundCount,
+                                unordered_map<int, TypePtr> *cache) {
   auto e = generics;
   for (auto &t : e)
     t.type = t.type ? t.type->instantiate(atLevel, unboundCount, cache) : nullptr;
-  auto c = make_shared<StaticType>(
-      e, std::make_pair(clone(staticExpr.first), staticExpr.second), staticEvaluation);
+  auto c = make_shared<StaticType>(e, staticExpr, typeCtx, staticEvaluation);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -672,8 +691,15 @@ bool StaticType::isInstantiated() const { return staticEvaluation.first; }
 string StaticType::debugString(bool debug) const {
   if (staticEvaluation.first)
     return fmt::format("{}", staticEvaluation.second);
-  return fmt::format("Static[{}]",
-                     staticExpr.first ? FormatVisitor::apply(staticExpr.first) : "");
+  if (debug) {
+    vector<string> s;
+    for (auto &g : generics)
+      s.push_back(g.type->debugString(debug));
+    return fmt::format("Static[{};{};{}:{}]", join(s, ","), staticExpr->toString(),
+                       staticEvaluation.first, staticEvaluation.second);
+  } else
+    return fmt::format("Static[{}]",
+                       staticExpr ? FormatVisitor::apply(staticExpr) : "");
 }
 string StaticType::realizedName() const {
   seqassert(canRealize(), "cannot realize {}", toString());
@@ -681,8 +707,45 @@ string StaticType::realizedName() const {
   for (auto &e : generics)
     deps.push_back(e.type->realizedName());
   if (!staticEvaluation.first) // If not already evaluated, evaluate!
-    const_cast<StaticType *>(this)->staticEvaluation = {true, staticExpr.second(this)};
+    const_cast<StaticType *>(this)->staticEvaluation = {true, evaluate()};
   return fmt::format("{}", staticEvaluation.second);
+}
+int StaticType::evaluate() const {
+  if (staticEvaluation.first)
+    return staticEvaluation.second;
+  typeCtx->addBlock();
+  for (auto &g : generics)
+    typeCtx->add(TypecheckItem::Type, g.name, g.type);
+  auto en = TypecheckVisitor(typeCtx).transform(staticExpr->clone());
+  seqassert(en->isStaticExpr && en->staticEvaluation.first, "{} cannot be evaluated",
+            en->toString());
+  typeCtx->popBlock();
+  return en->staticEvaluation.second;
+}
+void StaticType::parseExpr(const ExprPtr &e, unordered_set<string> &seen) {
+  if (auto ei = e->getId()) {
+    if (!in(seen, ei->value)) {
+      auto val = typeCtx->find(ei->value);
+      seqassert(val && val->type->isStaticType(), "invalid static expression");
+      auto genTyp = val->type->follow();
+      auto id = genTyp->getLink() ? genTyp->getLink()->id
+                : genTyp->getStatic()->generics.empty()
+                    ? 0
+                    : genTyp->getStatic()->generics[0].id;
+      generics.emplace_back(ClassType::Generic(
+          ei->value, typeCtx->cache->reverseIdentifierLookup[ei->value], genTyp, id));
+      seen.insert(ei->value);
+    }
+  } else if (auto eu = e->getUnary()) {
+    parseExpr(eu->expr, seen);
+  } else if (auto eb = e->getBinary()) {
+    parseExpr(eb->lexpr, seen);
+    parseExpr(eb->rexpr, seen);
+  } else if (auto ef = e->getIf()) {
+    parseExpr(ef->cond, seen);
+    parseExpr(ef->ifexpr, seen);
+    parseExpr(ef->elsexpr, seen);
+  }
 }
 
 } // namespace types

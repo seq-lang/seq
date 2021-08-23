@@ -44,8 +44,9 @@ public:
   /// All of these are non-const in TypeCheck visitor.
   ExprPtr transform(const ExprPtr &e) override;
   StmtPtr transform(const StmtPtr &s) override;
-  ExprPtr transform(ExprPtr &e, bool allowTypes, bool allowVoid = false);
-  ExprPtr transformType(ExprPtr &expr);
+  ExprPtr transform(ExprPtr &e, bool allowTypes, bool allowVoid = false,
+                    bool allowActivation = true);
+  ExprPtr transformType(ExprPtr &expr, bool allowActivation = true);
   types::TypePtr realize(types::TypePtr typ);
 
 private:
@@ -122,7 +123,6 @@ public:
   void visit(StmtExpr *) override;
 
   void visit(SuiteStmt *) override;
-  void visit(PassStmt *) override;
   void visit(BreakStmt *) override;
   void visit(ContinueStmt *) override;
   void visit(ExprStmt *) override;

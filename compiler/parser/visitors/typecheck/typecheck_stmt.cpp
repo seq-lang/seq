@@ -71,8 +71,6 @@ void TypecheckVisitor::visit(SuiteStmt *stmt) {
   stmt->stmts = stmts;
 }
 
-void TypecheckVisitor::visit(PassStmt *stmt) { stmt->done = true; }
-
 void TypecheckVisitor::visit(BreakStmt *stmt) { stmt->done = true; }
 
 void TypecheckVisitor::visit(ContinueStmt *stmt) { stmt->done = true; }
@@ -119,6 +117,8 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
 
 void TypecheckVisitor::visit(UpdateStmt *stmt) {
   stmt->lhs = transform(stmt->lhs);
+  if (stmt->lhs->isStaticExpr)
+    error("cannot update static expression");
 
   // Case 1: Check for atomic and in-place updates (a += b).
   // In-place updates (a += b) are stored as Update(a, Binary(a + b, inPlace=true)).
@@ -126,6 +126,8 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
   if (b && b->inPlace) {
     bool noReturn = false;
     auto oldRhsType = stmt->rhs->type;
+    b->lexpr = transform(b->lexpr);
+    b->rexpr = transform(b->rexpr);
     if (auto nb = transformBinary(b, stmt->isAtomic, &noReturn))
       stmt->rhs = nb;
     unify(oldRhsType, stmt->rhs->type);
@@ -328,7 +330,7 @@ void TypecheckVisitor::visit(IfStmt *stmt) {
     stmt->done &= elseSuite->done;
   }
   if (!ifSuite && !elseSuite)
-    resultStmt = transform(N<PassStmt>());
+    resultStmt = transform(N<SuiteStmt>());
   else if (!ifSuite && elseSuite)
     resultStmt = elseSuite;
   else if (ifSuite)
@@ -399,12 +401,10 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
     auto parentClass = ctx->find(attr.parentClass)->type->getClass();
     seqassert(parentClass, "parent class not set");
     for (int i = 0; i < parentClassAST->generics.size(); i++) {
-      auto gen = parentClass->generics[i].type->getLink();
-      generics.push_back(make_shared<LinkType>(
-          LinkType::Unbound, parentClass->generics[i].id, ctx->typecheckLevel - 1,
-          nullptr, gen->isStatic, gen->genericName));
-      ctx->add(TypecheckItem::Type, parentClassAST->generics[i].name, generics.back(),
-               gen->isStatic);
+      // Keep the same ID
+      generics.push_back(parentClass->generics[i].type->instantiate(
+          ctx->typecheckLevel - 1, nullptr, nullptr));
+      ctx->add(TypecheckItem::Type, parentClassAST->generics[i].name, generics.back());
     }
   }
   for (const auto &i : stmt->generics)
@@ -436,7 +436,7 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
     ctx->typecheckLevel--;
   }
   // Generalize generics.
-  for (auto &g : generics) {
+  for (auto g : generics) {
     seqassert(g && g->getLink() && g->getLink()->kind != types::LinkType::Link,
               "generic has been unified");
     if (g->getLink()->kind == LinkType::Unbound)
@@ -468,8 +468,8 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   ctx->bases[0].visitedAsts[stmt->name] = {TypecheckItem::Func, typ};
   ctx->add(TypecheckItem::Func, stmt->name, typ);
   ctx->cache->functions[stmt->name].type = typ;
-  LOG_REALIZE("[stmt] added func {}: {} (base={})", stmt->name, typ->debugString(1),
-              ctx->getBase());
+  LOG_TYPECHECK("[stmt] added func {}: {} (base={})", stmt->name, typ->debugString(1),
+                ctx->getBase());
   stmt->done = true;
 }
 
@@ -511,11 +511,12 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
     // Remove lingering generics.
     for (const auto &g : stmt->generics) {
       auto val = ctx->find(g.name);
-      seqassert(val && val->type && val->type->getLink() &&
-                    val->type->getLink()->kind != types::LinkType::Link,
+      seqassert(val, "cannot find generic {}", g.name);
+      auto t = val->type;
+      seqassert(t && t->getLink() && t->getLink()->kind != types::LinkType::Link,
                 "generic has been unified");
-      if (val->type->getLink()->kind == LinkType::Unbound)
-        val->type->getLink()->kind = LinkType::Generic;
+      if (t->getLink()->kind == LinkType::Unbound)
+        t->getLink()->kind = LinkType::Generic;
       ctx->remove(g.name);
     }
 
@@ -532,13 +533,19 @@ vector<types::ClassType::Generic>
 TypecheckVisitor::parseGenerics(const vector<Param> &generics, int level) {
   auto genericTypes = vector<ClassType::Generic>();
   for (const auto &g : generics) {
-    auto typ = ctx->addUnbound(N<IdExpr>(g.name).get(), level, true, bool(g.type));
+    TypePtr typ = ctx->addUnbound(N<IdExpr>(g.name).get(), level, true, bool(g.type));
+    auto typId = ctx->cache->unboundCount - 1;
     typ->getLink()->genericName = ctx->cache->reverseIdentifierLookup[g.name];
-    genericTypes.emplace_back(
-        ClassType::Generic(g.name, typ->getLink()->genericName, typ->generalize(level),
-                           ctx->cache->unboundCount - 1, clone(g.deflt)));
+    // if (g.type) {
+    //   typ = make_shared<StaticType>(
+    //       vector<ClassType::Generic>{{g.name, typ->getLink()->genericName, typ,
+    //                                   ctx->cache->unboundCount++, clone(g.deflt)}},
+    //       N<IdExpr>(g.name), ctx);
+    // }
+    genericTypes.push_back({g.name, ctx->cache->reverseIdentifierLookup[g.name],
+                            typ->generalize(level), typId, clone(g.deflt)});
     LOG_REALIZE("[generic] {} -> {} {}", g.name, typ->toString(), bool(g.type));
-    ctx->add(TypecheckItem::Type, g.name, typ, bool(g.type));
+    ctx->add(TypecheckItem::Type, g.name, typ);
   }
   return genericTypes;
 }

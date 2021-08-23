@@ -30,8 +30,8 @@ TypeContext::TypeContext(shared_ptr<Cache> cache)
 }
 
 shared_ptr<TypecheckItem> TypeContext::add(TypecheckItem::Kind kind, const string &name,
-                                           types::TypePtr type, bool stat) {
-  auto t = make_shared<TypecheckItem>(kind, type, stat);
+                                           types::TypePtr type) {
+  auto t = make_shared<TypecheckItem>(kind, type);
   add(name, t);
   return t;
 }
@@ -102,7 +102,7 @@ types::TypePtr TypeContext::instantiate(const Expr *expr, types::TypePtr type,
           !(g.type->getLink() && g.type->getLink()->kind == types::LinkType::Generic)) {
         genericCache[g.id] = g.type;
       }
-  auto t = type->instantiate(getLevel(), cache->unboundCount, genericCache);
+  auto t = type->instantiate(getLevel(), &(cache->unboundCount), &genericCache);
   for (auto &i : genericCache) {
     if (auto l = i.second->getLink()) {
       if (l->kind != types::LinkType::Unbound)

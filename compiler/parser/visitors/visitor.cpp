@@ -50,7 +50,6 @@ void ASTVisitor::visit(InstantiateExpr *expr) { defaultVisit(expr); }
 void ASTVisitor::visit(StmtExpr *expr) { defaultVisit(expr); }
 
 void ASTVisitor::visit(SuiteStmt *stmt) { defaultVisit(stmt); }
-void ASTVisitor::visit(PassStmt *stmt) { defaultVisit(stmt); }
 void ASTVisitor::visit(BreakStmt *stmt) { defaultVisit(stmt); }
 void ASTVisitor::visit(ContinueStmt *stmt) { defaultVisit(stmt); }
 void ASTVisitor::visit(ExprStmt *stmt) { defaultVisit(stmt); }

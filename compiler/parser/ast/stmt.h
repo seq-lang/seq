@@ -106,16 +106,6 @@ struct SuiteStmt : public Stmt {
   static void flatten(StmtPtr s, vector<StmtPtr> &stmts);
 };
 
-/// Pass statement.
-/// @example pass
-struct PassStmt : public Stmt {
-  PassStmt() = default;
-  PassStmt(const PassStmt &stmt) = default;
-
-  string toString(int indent) const override;
-  ACCEPT(ASTVisitor);
-};
-
 /// Break statement.
 /// @example break
 struct BreakStmt : public Stmt {
