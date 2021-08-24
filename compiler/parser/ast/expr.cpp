@@ -32,8 +32,13 @@ void Expr::setType(types::TypePtr t) { this->type = move(t); }
 bool Expr::isType() const { return isTypeExpr; }
 void Expr::markType() { isTypeExpr = true; }
 string Expr::wrapType(const string &sexpr) const {
-  return format("({}{}){}", sexpr,
+  return format("({}{}{}){}", sexpr,
                 type ? format(" #:type \"{}\"", type->toString()) : "",
+                isStaticExpr ? format(" #:static {}",
+                                      staticEvaluation.first
+                                          ? std::to_string(staticEvaluation.second)
+                                          : "-")
+                             : "",
                 done ? "*" : "");
 }
 
@@ -65,9 +70,8 @@ IntExpr::IntExpr(const string &value, string suffix)
       this->value += c;
 }
 string IntExpr::toString() const {
-  return wrapType(format("int {}{}{}", value,
-                         suffix.empty() ? "" : format(" #:suffix \"{}\"", suffix),
-                         staticEvaluation.first ? " #:static" : ""));
+  return wrapType(format("int {}{}", value,
+                         suffix.empty() ? "" : format(" #:suffix \"{}\"", suffix)));
 }
 ACCEPT_IMPL(IntExpr, ASTVisitor);
 

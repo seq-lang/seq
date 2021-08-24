@@ -45,8 +45,8 @@ public:
   ExprPtr transform(const ExprPtr &e) override;
   StmtPtr transform(const StmtPtr &s) override;
   ExprPtr transform(ExprPtr &e, bool allowTypes, bool allowVoid = false,
-                    bool allowActivation = true);
-  ExprPtr transformType(ExprPtr &expr, bool allowActivation = true);
+                    bool disableActivation = false);
+  ExprPtr transformType(ExprPtr &expr, bool disableActivation = false);
   types::TypePtr realize(types::TypePtr typ);
 
 private:

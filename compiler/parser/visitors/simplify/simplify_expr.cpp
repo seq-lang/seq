@@ -97,14 +97,12 @@ void SimplifyVisitor::visit(IdExpr *expr) {
   if (!val)
     error("identifier '{}' not found", expr->value);
   auto canonicalName = val->canonicalName;
-  if (val->isImport())
-    canonicalName = ctx->cache->imports[val->canonicalName].importVar + "_var";
 
   // If we are accessing an outer non-global variable, raise an error unless
   // we are capturing variables (in that case capture it).
   bool captured = false;
   auto newName = canonicalName;
-  if (val->isVar() || val->isImport()) {
+  if (val->isVar()) {
     if (ctx->getBase() != val->getBase() && !val->isGlobal()) {
       if (!ctx->captures.empty()) {
         captured = true;
@@ -297,7 +295,7 @@ void SimplifyVisitor::visit(BinaryExpr *expr) {
                  ? clone(expr->rexpr)
                  : transform(expr->rexpr, false,
                              /*allowAssign*/ expr->op != "&&" && expr->op != "||");
-  resultExpr = N<BinaryExpr>(lhs, expr->op, rhs);
+  resultExpr = N<BinaryExpr>(lhs, expr->op, rhs, expr->inPlace);
 }
 
 void SimplifyVisitor::visit(ChainBinaryExpr *expr) {
@@ -558,17 +556,17 @@ void SimplifyVisitor::visit(DotExpr *expr) {
     string importName, itemName;
     shared_ptr<SimplifyItem> val = nullptr;
     for (int i = int(chain.size()) - 1; i >= 0; i--) {
-      auto s = join(chain, ".", 0, i + 1);
+      auto s = join(chain, "/", 0, i + 1);
       val = ctx->find(s);
       if (val && val->isImport()) {
-        importName = val->canonicalName;
+        importName = val->importPath;
         importEnd = i + 1;
         break;
       }
     }
     // a.b.c is completely import name
     if (importEnd == chain.size()) {
-      resultExpr = N<IdExpr>(importName);
+      resultExpr = transform(N<IdExpr>(val->canonicalName));
       return;
     }
     auto fctx = importName.empty() ? ctx : ctx->cache->imports[importName].ctx;

@@ -1,5 +1,3 @@
-import internal.gc as gc
-
 @extend
 class Generator[T]:
     @__internal__

@@ -70,7 +70,7 @@ TypePtr TypecheckVisitor::unify(TypePtr &a, const TypePtr &b) {
   if (a->unify(b.get(), &undo) >= 0)
     return a;
   undo.undo();
-  LOG("{} / {}", a->debugString(true), b->debugString(true));
+  // LOG("{} / {}", a->debugString(true), b->debugString(true));
   a->unify(b.get(), &undo);
   error("cannot unify {} and {}", a->toString(), b->toString());
   return nullptr;

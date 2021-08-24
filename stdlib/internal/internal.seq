@@ -1,4 +1,4 @@
-import internal.gc as gc
+from internal.gc import free
 from C import seq_check_errno() -> str
 from C import seq_print(str)
 from C import exit(int)
@@ -129,7 +129,7 @@ class __internal__:
         str.memcpy(buf + where, pstr.ptr, pstr.len)
         where += pstr.len
         buf[where] = byte(62) # '>'
-        gc.free(pstr.ptr)
+        free(pstr.ptr)
         return str(buf, total)
 
     def tuple_str(strs: Ptr[str], names: Ptr[str], n: int) -> str:

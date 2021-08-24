@@ -30,13 +30,15 @@ namespace ast {
  */
 struct SimplifyItem {
   /// Object kind (function, class, variable, or import).
-  enum Kind { Func, Type, Var, Import } kind;
+  enum Kind { Func, Type, Var } kind;
   /// Object's base function
   string base;
   /// Object's unique identifier (canonical name)
   string canonicalName;
   /// True if an object is global.
   bool global;
+  /// Non-empty string if a variable is import variable
+  string importPath;
 
 public:
   SimplifyItem(Kind k, string base, string canonicalName, bool global = false);
@@ -47,7 +49,7 @@ public:
   bool isVar() const { return kind == Var; }
   bool isFunc() const { return kind == Func; }
   bool isType() const { return kind == Type; }
-  bool isImport() const { return kind == Import; }
+  bool isImport() const { return !importPath.empty(); }
 };
 
 /**

@@ -399,12 +399,16 @@ from a import foo, bar as b
 foo() #: a.foo
 b() #: a.bar
 
+print str(a)[:9], str(a)[-16:] #: <module ' a/__init__.seq'>
+
 import a.b
 print a.b.c #: a.b.c
 a.b.har() #: a.b.har a.b.__init__ a.b.c
 
 print a.b.A.B.b_foo().__add__(1) #: a.b.A.B.b_foo()
 #: 2
+
+print str(a.b)[:9], str(a.b)[-18:] #: <module ' a/b/__init__.seq'>
 
 from a.b import *
 har() #: a.b.har a.b.__init__ a.b.c
@@ -426,11 +430,10 @@ bar() #: a
 #: a.bar
 foo() #: a.foo
 
-#%% import_class,barebones
+#%% import_class
 import sys
-z = str(sys)[:20]
-print z  #: <module 'sys' from '
-print z.maxsize  #: 9223372036854775807
+print str(sys)[:20]  #: <module 'sys' from '
+print sys.maxsize  #: 9223372036854775807
 
 #%% import_rec,barebones
 from a.b.rec1 import bar
@@ -541,7 +544,9 @@ a = 5
 @llvm
 def foo() -> int:
     a{=a}
-#! ERROR: not a type or static expression
+foo()
+#!   ERROR: not a type or static expression
+#!   ERROR: while realizing foo (arguments foo)
 
 #%% function_llvm_err_4,barebones
 a = 5

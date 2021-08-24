@@ -271,10 +271,10 @@ f[:,0] #: ((start: None, stop: None, step: None), 0)
 Ptr['s'] #! ERROR: expected type parameters
 
 #%% index_error_2,barebones
-Ptr[int, 's'] #! ERROR: expected type parameters
+Ptr[int, 's'] #! ERROR: expected 1 generics
 
 #%% index_error_3,barebones
-Ptr[1, 's'] #! ERROR: expected type parameters
+Ptr[1, 's'] #! ERROR: expected 1 generics
 
 #%% call_ptr,barebones
 v = 5

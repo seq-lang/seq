@@ -1,5 +1,5 @@
 from internal.attributes import commutative
-import internal.gc as gc
+from internal.gc import alloc_atomic, free
 
 from C import seq_str_float(float) -> str
 from C import strtod(cobj, Ptr[cobj]) -> float
@@ -275,7 +275,7 @@ class float:
         n = s.__len__()
         need_dyn_alloc = (n >= buf.__len__())
 
-        p = gc.alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
+        p = alloc_atomic(n + 1) if need_dyn_alloc else buf.ptr
         str.memcpy(p, s.ptr, n)
         p[n] = byte(0)
 
@@ -283,7 +283,7 @@ class float:
         result = strtod(p, __ptr__(end))
 
         if need_dyn_alloc:
-            gc.free(p)
+            free(p)
 
         if end != p + n:
             raise ValueError("could not convert string to float: " + s)

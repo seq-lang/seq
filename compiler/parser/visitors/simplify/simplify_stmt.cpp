@@ -71,7 +71,7 @@ void SimplifyVisitor::visit(BreakStmt *stmt) {
 }
 
 void SimplifyVisitor::visit(ExprStmt *stmt) {
-  resultStmt = N<ExprStmt>(transform(stmt->expr));
+  resultStmt = N<ExprStmt>(transform(stmt->expr, true));
 }
 
 void SimplifyVisitor::visit(AssignStmt *stmt) {
@@ -378,17 +378,15 @@ void SimplifyVisitor::visit(ImportStmt *stmt) {
   if (!stmt->what) {
     // Case 1: import foo
     auto name = stmt->as.empty() ? path : stmt->as;
-    if (!ctx->isStdlibLoading) {
-      auto var = importVar + "_var";
-      preamble->globals.push_back(N<AssignStmt>(N<IdExpr>(var), nullptr));
-      resultStmt =
-          N<SuiteStmt>(N<UpdateStmt>(N<IdExpr>(var),
-                                     transform(N<CallExpr>(N<IdExpr>("Import"),
-                                                           N<StringExpr>(file->module),
-                                                           N<StringExpr>(file->path)))),
-                       resultStmt);
-    }
-    ctx->add(SimplifyItem::Import, name, file->path);
+    auto var = importVar + "_var";
+    resultStmt = N<SuiteStmt>(
+        resultStmt, transform(N<AssignStmt>(N<IdExpr>(var),
+                                            N<CallExpr>(N<IdExpr>("Import"),
+                                                        N<StringExpr>(file->module),
+                                                        N<StringExpr>(file->path)),
+                                            N<IdExpr>("Import"))));
+    ctx->add(SimplifyItem::Var, name, var);
+    ctx->find(name)->importPath = file->path;
   } else if (stmt->what->isId("*")) {
     // Case 2: from foo import *
     seqassert(stmt->as.empty(), "renamed star-import");

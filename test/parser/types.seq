@@ -316,9 +316,8 @@ def foo():
         yield
         i += 1
 a = list(foo())
-#!     ERROR: expression with void type
-#!     ERROR: while realizing std.internal.types.ptr.List.__init__
-#!     ERROR: while realizing std.__init__.list
+#!   ERROR: expression with void type
+#!   ERROR: while realizing std.internal.types.ptr.List.__init__
 
 #%% instantiate_swap,barebones
 class Foo[T, U]:

@@ -36,7 +36,7 @@ ExprPtr TypecheckVisitor::transform(const ExprPtr &expr) {
 }
 
 ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes, bool allowVoid,
-                                    bool allowActivation) {
+                                    bool disableActivation) {
   if (!expr)
     return nullptr;
   auto typ = expr->type;
@@ -44,14 +44,16 @@ ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes, bool allowVo
     TypecheckVisitor v(ctx, prependStmts);
     v.allowVoidExpr = allowVoid;
     auto oldActivation = ctx->allowActivation;
-    ctx->allowActivation = allowActivation;
+    if (disableActivation)
+      ctx->allowActivation = false;
     v.setSrcInfo(expr->getSrcInfo());
     expr->accept(v);
     if (v.resultExpr)
       expr = v.resultExpr;
     seqassert(expr->type, "type not set for {}", expr->toString());
     unify(typ, expr->type);
-    ctx->allowActivation = oldActivation;
+    if (disableActivation)
+      ctx->allowActivation = oldActivation;
   }
   if (auto rt = realize(typ))
     unify(typ, rt);
@@ -61,8 +63,8 @@ ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes, bool allowVo
   return expr;
 }
 
-ExprPtr TypecheckVisitor::transformType(ExprPtr &expr, bool allowActivation) {
-  expr = transform(const_cast<ExprPtr &>(expr), true, false, allowActivation);
+ExprPtr TypecheckVisitor::transformType(ExprPtr &expr, bool disableActivation) {
+  expr = transform(const_cast<ExprPtr &>(expr), true, false, disableActivation);
   if (expr) {
     if (!expr->isType())
       error("expected type expression");
@@ -195,8 +197,8 @@ void TypecheckVisitor::visit(IfExpr *expr) {
       unify(expr->type, resultExpr->getType());
     } else {
       auto i = clone(expr->ifexpr), e = clone(expr->elsexpr);
-      i = transform(i, false, allowVoidExpr, false);
-      e = transform(e, false, allowVoidExpr, false);
+      i = transform(i, false, allowVoidExpr, /*disableActivation*/ true);
+      e = transform(e, false, allowVoidExpr, /*disableActivation*/ true);
       unify(expr->type, ctx->addUnbound(expr, ctx->typecheckLevel));
       if ((expr->isStaticExpr = i->isStaticExpr && e->isStaticExpr))
         unify(expr->type, ctx->findInternal("int"));
@@ -222,8 +224,8 @@ void TypecheckVisitor::visit(UnaryExpr *expr) {
   expr->expr = transform(expr->expr);
   if (expr->expr->isStaticExpr &&
       (expr->op == "-" || expr->op == "+" || expr->op == "!")) {
-    expr->isStaticExpr = true;
     unify(expr->type, ctx->findInternal("int"));
+    expr->isStaticExpr = true;
     if (expr->expr->staticEvaluation.first) {
       int value = expr->expr->staticEvaluation.second;
       if (expr->op == "+")
@@ -727,14 +729,14 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
   auto getInt = [&](int64_t *o, const ExprPtr &e) {
     if (!e)
       return true;
-    if (e->isStaticExpr) {
-      auto et = transform(e->clone());
-      seqassert(et->isStaticExpr && et->staticEvaluation.first, "{} not evaluated",
+    auto f = transform(clone(e));
+    if (f->isStaticExpr) {
+      seqassert(f->isStaticExpr && f->staticEvaluation.first, "{} not evaluated",
                 e->toString());
-      *o = et->staticEvaluation.second;
+      *o = f->staticEvaluation.second;
       return true;
     }
-    if (auto ei = e->getInt()) {
+    if (auto ei = f->getInt()) {
       *o = ei->intValue;
       return true;
     }
@@ -1296,7 +1298,7 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
     // equality.
     expr->isStaticExpr = true;
     expr->args[0].value =
-        transform(expr->args[0].value, true, true, /*allowActivation*/ false);
+        transform(expr->args[0].value, true, true, /*disableActivation*/ true);
     auto typ = expr->args[0].value->type;
     if (!typ) {
       return {true, nullptr};
@@ -1306,7 +1308,8 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
       } else if (expr->args[1].value->getNone() && expr->args[0].value->isType()) {
         return {true, transform(N<BoolExpr>(typ->is("T.None")))};
       } else {
-        expr->args[1].value = transformType(expr->args[1].value, false);
+        expr->args[1].value =
+            transformType(expr->args[1].value, /*disableActivation*/ true);
         auto t = expr->args[1].value->type;
         return {true, transform(N<BoolExpr>(typ->unify(t.get(), nullptr) >= 0))};
       }
@@ -1324,7 +1327,8 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
   } else if (val == "hasattr") {
     expr->isStaticExpr = true;
     auto member = expr->args[1].value->getString()->getValue();
-    expr->args[0].value = transformType(expr->args[0].value, false);
+    expr->args[0].value =
+        transformType(expr->args[0].value, /*disableActivation*/ true);
     auto typ = expr->args[0].value->getType()->getClass();
     if (!typ)
       return {true, nullptr};

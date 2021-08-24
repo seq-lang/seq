@@ -201,6 +201,16 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       StmtPtr realized = nullptr;
       if (!isInternal) {
         realized = inferTypes(ast->suite, false, type->realizedName()).second;
+        if (ast->attributes.has(Attr::LLVM)) {
+          auto s = realized->getSuite();
+          for (int i = 1; i < s->stmts.size(); i++) {
+            seqassert(s->stmts[i]->getExpr(), "invalid LLVM definition {}: {}",
+                      type->toString(), s->stmts[i]->toString());
+            auto e = s->stmts[i]->getExpr()->expr;
+            if (!e->isType() && !e->isStaticExpr)
+              error(e, "not a type or static expression");
+          }
+        }
         // Return type was not specified and the function returned nothing.
         if (!ast->ret && type->args[0]->getUnbound())
           unify(type->args[0], ctx->findInternal("void"));

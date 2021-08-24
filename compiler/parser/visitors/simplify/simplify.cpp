@@ -51,7 +51,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     if (!stdlibPath ||
         stdlibPath->path.substr(stdlibPath->path.size() - 12) != "__init__.seq")
       ast::error("cannot load standard library");
-    if (true || barebones)
+    if (barebones)
       stdlibPath->path =
           stdlibPath->path.substr(0, stdlibPath->path.size() - 5) + "test__.seq";
     stdlib->setFilename(stdlibPath->path);
