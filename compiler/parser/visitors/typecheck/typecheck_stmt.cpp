@@ -96,6 +96,15 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
                                : ctx->addUnbound(stmt->lhs.get(), ctx->typecheckLevel));
     ctx->add(kind = TypecheckItem::Var, lhs, stmt->lhs->type);
     stmt->done = realize(stmt->lhs->type) != nullptr;
+  } else if (stmt->type && stmt->type->getType()->isStaticType()) {
+    if (!stmt->rhs->isStaticExpr)
+      error("right-hand side is not a static expression");
+    seqassert(stmt->rhs->staticEvaluation.first, "static not evaluated");
+    unify(stmt->type->type,
+          make_shared<StaticType>(stmt->rhs->staticEvaluation.second));
+    unify(stmt->lhs->type, stmt->type->getType());
+    ctx->add(kind = TypecheckItem::Var, lhs, stmt->lhs->type);
+    stmt->done = realize(stmt->lhs->type) != nullptr;
   } else { // Case 2: Normal assignment
     if (stmt->type && stmt->type->getType()->getClass()) {
       auto t = ctx->instantiate(stmt->type.get(), stmt->type->getType());
@@ -118,7 +127,7 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
 void TypecheckVisitor::visit(UpdateStmt *stmt) {
   stmt->lhs = transform(stmt->lhs);
   if (stmt->lhs->isStaticExpr)
-    error("cannot update static expression");
+    error("cannot modify static expression");
 
   // Case 1: Check for atomic and in-place updates (a += b).
   // In-place updates (a += b) are stored as Update(a, Binary(a + b, inPlace=true)).
@@ -536,12 +545,6 @@ TypecheckVisitor::parseGenerics(const vector<Param> &generics, int level) {
     TypePtr typ = ctx->addUnbound(N<IdExpr>(g.name).get(), level, true, bool(g.type));
     auto typId = ctx->cache->unboundCount - 1;
     typ->getLink()->genericName = ctx->cache->reverseIdentifierLookup[g.name];
-    // if (g.type) {
-    //   typ = make_shared<StaticType>(
-    //       vector<ClassType::Generic>{{g.name, typ->getLink()->genericName, typ,
-    //                                   ctx->cache->unboundCount++, clone(g.deflt)}},
-    //       N<IdExpr>(g.name), ctx);
-    // }
     genericTypes.push_back({g.name, ctx->cache->reverseIdentifierLookup[g.name],
                             typ->generalize(level), typId, clone(g.deflt)});
     LOG_REALIZE("[generic] {} -> {} {}", g.name, typ->toString(), bool(g.type));

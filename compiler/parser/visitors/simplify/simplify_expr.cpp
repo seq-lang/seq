@@ -354,6 +354,12 @@ void SimplifyVisitor::visit(IndexExpr *expr) {
         format(expr->expr->isId("Callable") ? TYPE_CALLABLE "{}" : TYPE_FUNCTION "{}",
                t ? int(t->items.size()) - 1 : 0));
     e->markType();
+  } else if (expr->expr->isId("Static")) {
+    if (!expr->index->isId("int"))
+      error("only static integers are supported");
+    resultExpr = N<IdExpr>("staticint");
+    resultExpr->markType();
+    return;
   } else {
     e = transform(expr->expr, true);
   }

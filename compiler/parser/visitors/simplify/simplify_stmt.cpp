@@ -904,6 +904,8 @@ StmtPtr SimplifyVisitor::transformAssignment(const ExprPtr &lhs, const ExprPtr &
     auto canonical = ctx->generateCanonicalName(e->value);
     auto l = N<IdExpr>(canonical);
     bool global = ctx->isToplevel();
+    if (t && t->isId("staticint"))
+      global = false; // static variables are _not_ globals!
     // ctx->moduleName != MODULE_MAIN;
     // ⚠️ TODO: should we make __main__ top-level variables NOT global by default?
     // Problem: a = [1]; def foo(): a.append(2) won't work anymore as in Python.
@@ -912,7 +914,7 @@ StmtPtr SimplifyVisitor::transformAssignment(const ExprPtr &lhs, const ExprPtr &
     // Handle type aliases as well!
     ctx->add(r && r->isType() ? SimplifyItem::Type : SimplifyItem::Var, e->value,
              canonical, global);
-    if (ctx->isToplevel()) {
+    if (global) {
       if (r && r->isType()) {
         preamble->globals.push_back(N<AssignStmt>(N<IdExpr>(canonical), clone(r)));
       } else {

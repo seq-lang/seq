@@ -111,6 +111,12 @@ void TypecheckVisitor::visit(IdExpr *expr) {
     generateFunctionStub(std::stoi(expr->value.substr(10)));
   else if (startswith(expr->value, TYPE_CALLABLE))
     generateCallableStub(std::stoi(expr->value.substr(10)));
+  else if (expr->value == "staticint") {
+    TypePtr typ = ctx->addUnbound(expr, ctx->getLevel(), true, true);
+    unify(expr->type, typ);
+    expr->done = true;
+    return;
+  }
   auto val = ctx->find(expr->value);
   seqassert(val, "cannot find IdExpr '{}' ({})", expr->value, expr->getSrcInfo());
 
