@@ -185,7 +185,7 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
       for (auto &a : c->args) {
         if (a.name.empty()) {
           if (auto s = a.value->getString()) {
-            auto oa = parseOpenMP(ctx->cache, s->getValue());
+            auto oa = parseOpenMP(ctx->cache, s->getValue(), s->getSrcInfo());
             ompArgs.insert(ompArgs.end(), oa.begin(), oa.end());
           } else {
             error("expected an openmp pragma string");
@@ -193,7 +193,8 @@ void SimplifyVisitor::visit(ForStmt *stmt) {
         } else {
           if (a.name == "schedule" && !a.value->getString())
             error("schedule must be a static string");
-          else if (!in(set<string>{"num_threads", "chunk_size", "schedule"}, a.name))
+          else if (!in(set<string>{"num_threads", "chunk_size", "schedule", "ordered"},
+                       a.name))
             error("unknown openmp directive {}", a.name);
           ompArgs.push_back({a.name, transform(a.value)});
         }

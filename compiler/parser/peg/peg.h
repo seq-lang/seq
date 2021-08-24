@@ -29,7 +29,8 @@ ExprPtr parseExpr(const shared_ptr<Cache> &cache, const string &code,
 StmtPtr parseFile(const shared_ptr<Cache> &cache, const string &file);
 
 /// Parse a OpenMP clause.
-vector<CallExpr::Arg> parseOpenMP(const shared_ptr<Cache> &cache, const string &code);
+vector<CallExpr::Arg> parseOpenMP(const shared_ptr<Cache> &cache, const string &code,
+                                  const seq::SrcInfo &loc);
 
 } // namespace ast
 } // namespace seq

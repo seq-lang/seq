@@ -137,7 +137,8 @@ shared_ptr<peg::Grammar> initOpenMPParser() {
   return g;
 }
 
-vector<CallExpr::Arg> parseOpenMP(const shared_ptr<Cache> &cache, const string &code) {
+vector<CallExpr::Arg> parseOpenMP(const shared_ptr<Cache> &cache, const string &code,
+                                  const seq::SrcInfo &loc) {
   if (!ompGrammar)
     ompGrammar = initOpenMPParser();
 
@@ -154,7 +155,8 @@ vector<CallExpr::Arg> parseOpenMP(const shared_ptr<Cache> &cache, const string &
     r.error_info.output_log(log, code.c_str(), code.size());
   exc::ParserException ex;
   if (!errors.empty()) {
-    /// TODO: decide to report errors or just ignore them
+    ex.track(fmt::format("openmp {}", get<2>(errors[0])), loc);
+    throw ex;
   }
   return result;
 }

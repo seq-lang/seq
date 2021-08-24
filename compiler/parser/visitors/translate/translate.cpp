@@ -291,6 +291,7 @@ void TranslateVisitor::visit(ForStmt *stmt) {
   unique_ptr<OMPSched> os = nullptr;
   ir::Value *threads = nullptr, *chunk = nullptr;
   string schedule = "static";
+  bool ordered = false;
   for (auto &o : stmt->ompArgs) {
     if (o.name == "parallel")
       os = make_unique<OMPSched>();
@@ -298,7 +299,11 @@ void TranslateVisitor::visit(ForStmt *stmt) {
       threads = transform(o.value);
     else if (o.name == "chunk_size")
       chunk = transform(o.value);
-    else if (o.name == "schedule") {
+    else if (o.name == "ordered") {
+      seqassert(o.value->isStaticExpr && o.value->staticEvaluation.first,
+                "ordered openmp not static");
+      ordered = o.value->staticEvaluation.second;
+    } else if (o.name == "schedule") {
       seqassert(o.value->getString(), "schedule must be a string");
       schedule = o.value->getString()->getValue();
     } else {
@@ -306,7 +311,7 @@ void TranslateVisitor::visit(ForStmt *stmt) {
     }
   }
   if (os)
-    os = make_unique<OMPSched>(schedule, threads, chunk);
+    os = make_unique<OMPSched>(schedule, threads, chunk, ordered);
 
   seqassert(stmt->var->getId(), "expected IdExpr, got {}", stmt->var->toString());
   auto varName = stmt->var->getId()->value;
