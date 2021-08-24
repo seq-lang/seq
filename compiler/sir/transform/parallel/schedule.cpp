@@ -10,21 +10,10 @@ namespace ir {
 namespace transform {
 namespace parallel {
 namespace {
-bool isValidSchedule(const std::string &schedule) {
-  return schedule == "static" || schedule == "dynamic" || schedule == "guided" ||
-         schedule == "runtime" || schedule == "auto";
-}
-
-bool isScheduleChunkable(const std::string &schedule) {
-  return schedule == "static" || schedule == "dynamic" || schedule == "guided";
-}
-
-bool isScheduleDynamic(const std::string &schedule) { return schedule != "static"; }
-
 int getScheduleCode(const std::string &schedule = "static", bool chunked = false,
                     bool ordered = false, bool monotonic = false) {
   // codes from "enum sched_type" at
-  // https://github.com/llvm/llvm-project/blob/main/openmp/runtime/src/kmp.h 1073741891
+  // https://github.com/llvm/llvm-project/blob/main/openmp/runtime/src/kmp.h
   int modifier = monotonic ? (1 << 29) : (1 << 30);
   if (schedule == "static") {
     if (chunked) {
@@ -51,15 +40,17 @@ int getScheduleCode(const std::string &schedule = "static", bool chunked = false
 }
 } // namespace
 
-OMPSched::OMPSched(int code, bool dynamic, Value *threads, Value *chunk)
-    : code(code), dynamic(dynamic), threads(threads), chunk(chunk) {
+OMPSched::OMPSched(int code, bool dynamic, Value *threads, Value *chunk, bool ordered)
+    : code(code), dynamic(dynamic), threads(threads), chunk(chunk), ordered(ordered) {
   if (code < 0)
-    code = getScheduleCode();
+    this->code = getScheduleCode();
 }
 
-OMPSched::OMPSched(const std::string &schedule, Value *threads, Value *chunk)
-    : code(getScheduleCode(schedule, chunk != nullptr)),
-      dynamic(isScheduleDynamic(schedule)), threads(threads), chunk(chunk) {}
+OMPSched::OMPSched(const std::string &schedule, Value *threads, Value *chunk,
+                   bool ordered)
+    : code(getScheduleCode(schedule, chunk != nullptr, ordered)),
+      dynamic((schedule != "static") || ordered), threads(threads), chunk(chunk),
+      ordered(ordered) {}
 
 } // namespace parallel
 } // namespace transform

@@ -686,6 +686,10 @@ struct ImperativeLoopTemplateReplacer : public util::Operator {
     if (name == "_loop_schedule") {
       v->replaceAll(M->getInt(sched->code));
     }
+
+    if (name == "_loop_ordered") {
+      v->replaceAll(M->getBool(sched->ordered));
+    }
   }
 };
 

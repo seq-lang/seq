@@ -164,7 +164,7 @@ set(SEQRT_FILES runtime/lib.h
         runtime/sw/intersw.cpp)
 add_library(seqrt SHARED ${SEQRT_FILES})
 add_dependencies(seqrt zlibng bdwgc libbacktrace bz2 htslib xz)
-target_compile_options(seqrt PRIVATE -mavx)
+set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS -mavx)
 target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include ${BACKTRACE_INCLUDE} runtime)
 target_link_libraries(seqrt PUBLIC seqomp ${BACKTRACE} ${STATIC_LIBCPP})
 if (APPLE)

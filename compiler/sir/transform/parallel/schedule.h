@@ -15,13 +15,15 @@ struct OMPSched {
   bool dynamic;
   Value *threads;
   Value *chunk;
+  bool ordered;
 
   explicit OMPSched(int code = -1, bool dynamic = false, Value *threads = nullptr,
-                    Value *chunk = nullptr);
+                    Value *chunk = nullptr, bool ordered = false);
   explicit OMPSched(const std::string &code, Value *threads = nullptr,
-                    Value *chunk = nullptr);
-  explicit OMPSched(const OMPSched &s)
-      : code(s.code), dynamic(s.dynamic), threads(s.threads), chunk(s.chunk) {}
+                    Value *chunk = nullptr, bool ordered = false);
+  OMPSched(const OMPSched &s)
+      : code(s.code), dynamic(s.dynamic), threads(s.threads), chunk(s.chunk),
+        ordered(s.ordered) {}
 };
 
 } // namespace parallel
