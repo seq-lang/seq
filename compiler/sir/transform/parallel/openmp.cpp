@@ -876,7 +876,7 @@ void OpenMPPass::handle(ForFlow *v) {
 }
 
 void OpenMPPass::handle(ImperativeForFlow *v) {
-  if (!v->isParallel())
+  if (!v->isParallel() || v->getStep() == 0)
     return unpar(v);
   auto *M = v->getModule();
   auto *parent = cast<BodiedFunc>(getParentFunc());
@@ -914,16 +914,22 @@ void OpenMPPass::handle(ImperativeForFlow *v) {
   }
 
   // template call
+  std::string templateFuncName;
+  if (sched->dynamic) {
+    templateFuncName = "_dynamic_loop_outline_template";
+  } else if (sched->chunk) {
+    templateFuncName = "_static_chunked_loop_outline_template";
+  } else {
+    templateFuncName = "_static_loop_outline_template";
+  }
   auto *intType = M->getIntType();
   std::vector<types::Type *> templateFuncArgs = {
       types.i32ptr, types.i32ptr,
       M->getPointerType(M->getTupleType(
           {intType, intType, intType, M->getTupleType(extraArgTypes)}))};
   auto *templateFunc =
-      M->getOrRealizeFunc(sched->dynamic ? "_dynamic_loop_outline_template"
-                                         : "_static_loop_outline_template",
-                          templateFuncArgs, {}, ompModule);
-  seqassert(templateFunc, "static loop outline template not found");
+      M->getOrRealizeFunc(templateFuncName, templateFuncArgs, {}, ompModule);
+  seqassert(templateFunc, "imperative loop outline template not found");
 
   util::CloneVisitor cv(M);
   templateFunc = cast<Func>(cv.forceClone(templateFunc));
