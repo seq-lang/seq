@@ -392,20 +392,13 @@ void FormatVisitor::visit(FunctionStmt *fstmt) {
     args.push_back(fmt::format(
         "{}{}{}", a.name, a.type ? fmt::format(": {}", transform(a.type)) : "",
         a.deflt ? fmt::format(" = {}", transform(a.deflt)) : ""));
-  vector<string> generics;
-  for (auto &a : fstmt->generics)
-    generics.push_back(fmt::format(
-        "{}{}{}", a.name, a.type ? fmt::format(": {}", transform(a.type)) : "",
-        a.deflt ? fmt::format(" = {}", transform(a.deflt)) : ""));
   auto body = transform(fstmt->suite.get(), 1);
   auto name = fmt::format("{}{}{}", typeStart, fstmt->name, typeEnd);
   name = fmt::format("{}{}{}", exprStart, name, exprEnd);
   result += fmt::format(
-      "{}{} {}{}({}){}:{}{}",
+      "{}{} {}({}){}:{}{}",
       attrs.size() ? join(attrs, newline() + pad()) + newline() + pad() : "",
-      keyword("def"), name,
-      generics.size() ? fmt::format("[{}]", fmt::join(generics, ", ")) : "",
-      fmt::join(args, ", "),
+      keyword("def"), name, fmt::join(args, ", "),
       fstmt->ret ? fmt::format(" -> {}", transform(fstmt->ret)) : "", newline(),
       body.empty() ? fmt::format("{}", keyword("pass")) : body);
 }

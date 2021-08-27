@@ -216,7 +216,7 @@ if 1:
     print '1' #: 1
 
 #%% static_if,barebones
-def foo[N: int](x):
+def foo(x, N: Static[int]):
     if isinstance(x, int):
         return x + 1
     elif isinstance(x, float):
@@ -229,12 +229,12 @@ def foo[N: int](x):
         return 'len ' + str(x.__len__())
     else:
         compile_error('invalid type')
-print foo[1](1) #: 2
-print foo[1](2.0) #: 1.41421
-print foo[1]((1, 'bar')) #: foo: bar
-print foo[1]((1, 2)) #: len 2
-print foo[3]((1, 2)) #: ()
-print foo[1]((1, 2, 3)) #: (3)
+print foo(N=1, x=1) #: 2
+print foo(N=1, x=2.0) #: 1.41421
+print foo(N=1, x=(1, 'bar')) #: foo: bar
+print foo(N=1, x=(1, 2)) #: len 2
+print foo(N=3, x=(1, 2)) #: ()
+print foo(N=1, x=(1, 2, 3)) #: (3)
 
 #%% try_throw,barebones
 class MyError:

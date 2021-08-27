@@ -2,7 +2,7 @@ from bisect import bisect_right, bisect_left, insort
 from collections import deque
 
 @extend
-class deque[T]:
+class deque:
     def _idx_check(self, idx: int, msg: str):
         if self._head == self._tail or idx >= len(self) or idx < 0:
             raise IndexError(msg)

@@ -103,7 +103,7 @@ def do_shorts(opts: List[Tuple[str, str]], optstring: str, shortopts: str, args:
 def getopt(
     args: List[str],
     shortopts: str,
-    longopts: List[str] = List[str]()
+    longopts: List[str] = []
 ):
     """
     Parses command line options and parameter list.  args is the
@@ -139,8 +139,8 @@ def getopt(
     processing stops as soon as a non-option argument is encountered.
     """
 
-    opts = List[Tuple[str, str]]()
-    prog_args = List[str]()
+    opts = []
+    prog_args = []
 
     # Allow options after non-option arguments?
     all_options_first = False

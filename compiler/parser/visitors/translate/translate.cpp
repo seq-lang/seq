@@ -420,13 +420,15 @@ void TranslateVisitor::transformFunction(types::FuncType *type, FunctionStmt *as
   vector<int> indices;
   vector<SrcInfo> srcInfos;
   vector<seq::ir::types::Type *> types;
-  for (int i = 1; i < type->args.size(); i++) {
-    if (!type->args[i]->getFunc()) {
-      types.push_back(getType(type->args[i]));
-      names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i - 1].name]);
-      indices.push_back(i - 1);
+  for (int i = 0, j = 1; i < ast->args.size(); i++)
+    if (!ast->args[i].generic) {
+      if (!type->args[j]->getFunc()) {
+        types.push_back(getType(type->args[j]));
+        names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i].name]);
+        indices.push_back(i);
+      }
+      j++;
     }
-  }
   if (ast->hasAttr(Attr::CVarArg)) {
     types.pop_back();
     names.pop_back();
@@ -465,17 +467,21 @@ void TranslateVisitor::transformLLVMFunction(types::FuncType *type, FunctionStmt
                                              ir::Func *func) {
   vector<string> names;
   vector<seq::ir::types::Type *> types;
-  for (int i = 1; i < type->args.size(); i++) {
-    types.push_back(getType(type->args[i]));
-    names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i - 1].name]);
-  }
+  vector<int> indices;
+  for (int i = 0, j = 1; i < ast->args.size(); i++)
+    if (!ast->args[i].generic) {
+      types.push_back(getType(type->args[j]));
+      names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i].name]);
+      indices.push_back(i);
+      j++;
+    }
   auto irType = ctx->getModule()->unsafeGetFuncType(type->realizedName(),
                                                     getType(type->args[0]), types);
   irType->setAstType(type->getFunc());
   auto f = cast<ir::LLVMFunc>(func);
   f->realize(irType, names);
-  for (int i = 0; i < ast->args.size(); i++)
-    func->getArgVar(names[i])->setSrcInfo(ast->args[i].getSrcInfo());
+  for (int i = 0; i < names.size(); i++)
+    func->getArgVar(names[i])->setSrcInfo(ast->args[indices[i]].getSrcInfo());
 
   seqassert(ast->suite->firstInBlock() && ast->suite->firstInBlock()->getExpr() &&
                 ast->suite->firstInBlock()->getExpr()->expr->getString(),

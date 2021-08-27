@@ -1,6 +1,6 @@
 #%% none,barebones
 @extend
-class Optional[T]:
+class Optional:
     def __str__(self):
         return 'OPTIONAL: ' + ('-' if not self else self.__invert__().__str__())
 
@@ -67,13 +67,13 @@ f"a{{b + 3}" #! ERROR: f-string braces are not balanced
 #%% prefix_str,barebones
 @extend
 class str:
-    def __prefix_pfx__[N: int](s: str):
+    def __prefix_pfx__[N: Static[int]](s: str):
         return 'PFX ' + s
 print pfx'HELLO' #: PFX HELLO
 
 @extend
 class str:
-    def __prefix_pxf__[N: int](s: str):
+    def __prefix_pxf__(s: str, N: Static[int]):
         return 'PXF ' + s + " " + str(N)
 print pxf'HELLO' #: PXF HELLO 5
 
@@ -152,7 +152,7 @@ print d  #: {0: 9}
 
 #%% comprehension_opt,barebones
 @extend
-class List[T]:
+class List:
     def __init__(self, dummy: bool, other):
         if hasattr(other, '__len__'):
             print 'optimize', other.__len__()
@@ -268,7 +268,10 @@ f[:,:] #: ((start: None, stop: None, step: None), (start: None, stop: None, step
 f[:,0] #: ((start: None, stop: None, step: None), 0)
 
 #%% index_error,barebones
-Ptr['s'] #! ERROR: expected type parameters
+Ptr['s'] #! ERROR: expected type or static parameters
+
+#%% index_error_static,barebones
+Ptr[1] #! ERROR: cannot unify T and 1
 
 #%% index_error_2,barebones
 Ptr[int, 's'] #! ERROR: expected 1 generics

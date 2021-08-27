@@ -430,22 +430,20 @@ struct Attr {
   bool has(const string &attr) const;
 };
 
-/// Function statement (@(attributes...) def name[generics...](args...) -> ret: suite).
+/// Function statement (@(attributes...) def name[funcs...](args...) -> ret: suite).
 /// @example: @decorator
 ///           def foo[T=int, U: int](a, b: int = 0) -> list[T]: pass
 struct FunctionStmt : public Stmt {
   string name;
   /// nullptr if return type is not specified.
   ExprPtr ret;
-  vector<Param> generics;
   vector<Param> args;
   StmtPtr suite;
   Attr attributes;
   vector<ExprPtr> decorators;
 
-  FunctionStmt(string name, ExprPtr ret, vector<Param> generics, vector<Param> args,
-               StmtPtr suite, Attr attributes = Attr(),
-               vector<ExprPtr> decorators = {});
+  FunctionStmt(string name, ExprPtr ret, vector<Param> args, StmtPtr suite,
+               Attr attributes = Attr(), vector<ExprPtr> decorators = {});
   FunctionStmt(const FunctionStmt &stmt);
 
   string toString(int indent) const override;
@@ -467,14 +465,13 @@ struct FunctionStmt : public Stmt {
 ///              def __new__() -> F[T]: ...
 struct ClassStmt : public Stmt {
   string name;
-  vector<Param> generics;
   vector<Param> args;
   StmtPtr suite;
   Attr attributes;
   vector<ExprPtr> decorators;
 
-  ClassStmt(string name, vector<Param> generics, vector<Param> args, StmtPtr suite,
-            Attr attributes = Attr(), vector<ExprPtr> decorators = {});
+  ClassStmt(string name, vector<Param> args, StmtPtr suite, Attr attributes = Attr(),
+            vector<ExprPtr> decorators = {});
   ClassStmt(const ClassStmt &stmt);
 
   string toString(int indent) const override;

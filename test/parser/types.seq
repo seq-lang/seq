@@ -152,9 +152,9 @@ print b2.foo().a                    #: 222
 # explicit realization:
 def m7[T,S]():
     print "works"
-m7[str,float]()                     #: works
-m7[str,float]()                     #: works
-m7[float,str]()                     #: works
+m7(str,float)                       #: works
+m7(str,float)                       #: works
+m7(float,str)                       #: works
 
 #%% recursive,barebones
 def foo(a):
@@ -195,12 +195,12 @@ print rec3('x', 's').__class__  #: str
 def f[T](x: T) -> T:
     def g[T](z):
         return z(T())
-    return g[T](f[T])
+    return g(f, T=T)
 print f(1.2).__class__ #: float
 print f('s').__class__ #: str
 
 def f[T](x: T):
-    return f[T](x - 1) if x else 1
+    return f(x - 1, T) if x else 1
 print f(1) #: 1
 print f(1.1).__class__ #: int
 
@@ -221,8 +221,8 @@ rec3(1, 's')
 def fx[T](x: T) -> T:
     def g[T](z):
         return z(T())
-    return g[T](fx)
-print fx[float].__class__, fx(1).__class__ #: fx[float;float] int
+    return g(fx, T)
+print fx(1.1).__class__, fx(1).__class__ #: float int
 
 #%% optionals,barebones
 y = None
@@ -331,16 +331,16 @@ class Foo[T, U]:
 print Foo[int, bool](), Foo[bool, int]() #: 0 False False 0
 
 #%% static,barebones
-class Num[N_: int]:
+class Num[N_: Static[int]]:
     def __str__(self):
         return f'[{N_}]'
     def __init__(self):
         pass
-def foo[N: int]():
+def foo[N: Static[int]]():
     print Num[N*2]()
-foo[3]() #: [6]
+foo(3) #: [6]
 
-class XX[N_: int]:
+class XX[N_: Static[int]]:
     a: Num[N_*2]
     def __init__(self):
         self.a = Num()
@@ -348,13 +348,13 @@ y = XX[5]()
 print y.a, y.__class__, y.a.__class__ #: [10] XX[5] Num[10]
 
 @tuple
-class FooBar[N: int]:
+class FooBar[N: Static[int]]:
     x: Int[N]
 z = FooBar(i32(5))
 print z, z.__class__, z.x.__class__ #: (x: 5) FooBar[32] Int[32]
 
 @tuple
-class Foo[N: int]:
+class Foo[N: Static[int]]:
     x: Int[2*N]
     def __new__(x: Int[2*N]) -> Foo[N]:
         return (x,)
@@ -362,12 +362,12 @@ foo = Foo[10](Int[20](0))
 print foo.__class__, foo.x.__class__ #: Foo[10] Int[20]
 
 #%% static_2,barebones
-class Num[N: int]:
+class Num[N: Static[int]]:
     def __str__(self):
         return f'~{N}'
     def __init__(self):
         pass
-class Foo[T, A: int, B: int]:
+class Foo[T, A: Static[int], B: Static[int]]:
     a: Num[A+B]
     b: Num[A-B]
     c: Num[A if A > 3 else B]
@@ -396,9 +396,9 @@ test3(zi) #! ERROR: cannot unify
 
 #%% static_fail_3,barebones
 zi = Int[32](6)
-def test3[N](i: Int[N]):
+def test3[N: Static[int]](i: Int[N]):
     print int(i)
-test3[int](1) #! ERROR: cannot unify
+test3(1, int) #! ERROR: expected static expression
 # TODO: nicer error message!
 
 #%% nested_fn_generic,barebones
@@ -414,18 +414,18 @@ def f[U](x: U, y):
     return g(y, x)
 x, y = 1, 'haha'
 print f(x, y).__class__ #: Tuple[str,int]
-print f[str]('aa', 1.1).__class__ #: Tuple[float,str]
+print f('aa', 1.1, U=str).__class__ #: Tuple[float,str]
 
 #%% nested_fn_generic_error,barebones
 def f[U](x: U, y): # ('u, 'a) -> tuple['a, 'u]
     def g[T, U](x: T, y: U): # ('t, 'u) -> tuple['t, 'u]
         return (x, y)
     return g(y, x)
-print f[int](1.1, 1).__class__ #! ERROR: cannot unify float and int
+print f(1.1, 1, int).__class__ #! ERROR: cannot unify float and int
 
 #%% fn_realization,barebones
 def ff[T](x: T, y: tuple[T]):
-      print ff[str].__class__ #: ff[str;str,Tuple[str]]
+      print ff(T=str,...).__class__ #: ff[str;str,Tuple[str]]
       return x
 x = ff(1, (1,))
 print x, x.__class__ #: 1 int
@@ -435,22 +435,22 @@ def fg[T](x:T):
     def g[T](y):
         z = T()
         return z
-    print fg[str].__class__  #: fg[str;str]
-    print g[T](1).__class__ #: int
+    print fg(T=str,...).__class__  #: fg[str;str]
+    print g(1, T).__class__ #: int
 fg(1)
 print fg(1).__class__ #: void
 
 def f[T](x: T):
-    print f[T](x).__class__  #: int
+    print f(x, T).__class__  #: int
     print f(x).__class__      #: int
-    print f[int](x).__class__ #: int
+    print f(x, int).__class__ #: int
     return x
 print f(1), f(1).__class__ #: 1 int
-print f[int](1).__class__ #: int
+print f(1, int).__class__ #: int
 
 #%% fn_realization_error,barebones
 def f[T](x: T):
-    print f[int](x).__class__
+    print f(x, int).__class__
     return x
 f('s')
 #!   ERROR: cannot unify str and int
@@ -476,7 +476,7 @@ class A[T]:
             def foo[W](t: V, u: V, v: V, w: W):
                 return (t, u, v, w)
 
-print A.B.C[bool].foo[str].__class__ #: A.B.C.foo[str;bool,bool,bool,str]
+print A.B.C[bool].foo(W=str, ...).__class__ #: A.B.C.foo[str;bool,bool,bool,str]
 print A.B.C.foo(1,1,1,True) #: (1, 1, 1, True)
 print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
 print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
@@ -637,10 +637,10 @@ a.foo(1) #! ERROR: cannot typecheck the program
 def fun[T, R](x, y: T) -> R:
    	def ffi[T, R, Z](x: T, y: R, z: Z):
    		return (x, y, z)
-   	yy = ffi[bool, R, str](False, byte(2), 's')
-   	yz = ffi[int, R, str](1, byte(2), 's')
+   	yy = ffi(False, byte(2), 's', T=bool, Z=str, R=R)
+   	yz = ffi(1, byte(2), 's', T=int, Z=str, R=R)
    	return byte(1)
-print fun[float,byte](2, 1.1).__class__ #: byte
+print fun(2, 1.1, float, byte).__class__ #: byte
 
 #%% return_auto_deduction_err,barebones
 def fun[T, R](x, y: T) -> R:
@@ -705,7 +705,7 @@ class X[T]:
         return (x+x, y+y)
 y = X[X[int]]()
 print y.__class__ #: X[X[int]]
-print X[float].foo[int].__class__ #: X.foo[int;X[float],float,int]
+print X[float].foo(U=int, ...).__class__ #: X.foo[int;X[float],float,int]
 # print y.foo[float].__class__
 print X[int]().foo(1, 's') #: (2, ss)
 
@@ -714,31 +714,31 @@ class X[T]:
     def foo[U](self, x, y: U):
         return (x+x, y+y)
 y = X[X[int]]()
-print y.foo[float].__class__ #: X.foo[float;X[X[int]],?,float]
-print y.foo[float](1, 2.2) #: (2, 4.4)
+print y.foo(U=float,...).__class__ #: X.foo[X[X[int]],...,...]
+print y.foo(1, 2.2, float) #: (2, 4.4)
 
 #%% forward,barebones
 def foo(f, x):
-    f[type(x)](x)
+    f(x, type(x))
     print f.__class__
 def bar[T](x):
     print x, T.__class__
 foo(bar, 1)
 #: 1 int
 #: bar[...]
-foo(bar[int], 1)
+foo(bar(T=int,...), 1)
 #: 1 int
 #: bar[...]
-foo(bar[str], 's')
+foo(bar(T=str,...), 's')
 #: s str
 #: bar[...]
 z = bar
-z[int]('s')
+z('s', int)
 #: s int
-z[str](1)
+z(1, T=str)
 #: 1 str
 
-zz = bar[int]
+zz = bar(T=int,...)
 zz(1)
 #: 1 int
 # zz('s') # TODO: zz = foo[int] is update stmt, messes up everything... :/

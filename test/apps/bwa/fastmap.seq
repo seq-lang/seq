@@ -14,7 +14,7 @@ def open_index_file(basename, mode):
 def index_load(basename):
     from pickle import load
     with open_index_file(basename, 'rb') as jar:
-        return load[FMIndex](jar)
+        return load(jar, FMIndex)
 
 #@prefetch
 def fastmap(rec, fmi, out):

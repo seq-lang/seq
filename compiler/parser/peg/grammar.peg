@@ -300,11 +300,13 @@ extern <- (empty_line* EXTERNDENT (!EOL .)* EOL empty_line*)+ {
 ~empty_line <- [ \t]* EOL
 function_def <-
   / 'def' SPACE NAME _ generics _ params (_ '->' _ expression)? _ ':' {
+    auto params = ac<SemVals>(V2).transform<Param>();
+    for (auto &p: ac<vector<Param>>(V1))
+      params.push_back(p);
     return ast<FunctionStmt>(LOC,
       ac<string>(V0),
       VS.size() == 4 ? ac_expr(VS[3]) : nullptr,
-      ac<SemVals>(V1).transform<Param>(),
-      ac<SemVals>(V2).transform<Param>(),
+      params,
       nullptr
     );
   }
@@ -312,7 +314,6 @@ function_def <-
     return ast<FunctionStmt>(LOC,
       ac<string>(V0),
       VS.size() == 3 ? ac_expr(VS[2]) : nullptr,
-      vector<Param>{},
       ac<SemVals>(V1).transform<Param>(),
       nullptr
     );
@@ -328,7 +329,16 @@ param <-
 param_name <- <'**' / '*'>? _ NAME {
   return (!VS.tokens.empty() ? VS.token_to_string() : "") + ac<string>(V0);
 }
-generics <- '[' _ tlist(',', param) _ ']' { return VS; }
+generics <- '[' _ tlist(',', param) _ ']' { 
+  vector<Param> params;
+  for (auto &p: VS) {
+    auto v = ac<Param>(p);
+    v.generic = true;
+    if (!v.type) v.type = ast<IdExpr>(LOC, "type");
+    params.push_back(v);
+  }
+  return params; 
+}
 decorators <- decorator+ {
   return VS.transform<ExprPtr>();
 }
@@ -365,12 +375,10 @@ class_def <- 'class' SPACE NAME _ generics? _ ':' _ suite {
       }
     suite->stmts.push_back(i);
   }
-  return ast<ClassStmt>(LOC,
-    ac<string>(V0),
-    VS.size() == 3 ? ac<SemVals>(V1).transform<Param>() : vector<Param>{},
-    move(args),
-    suite
-  );
+  if (VS.size() == 3)
+    for (auto &p: ac<vector<Param>>(V1))
+      args.push_back(p);
+  return ast<ClassStmt>(LOC, ac<string>(V0), move(args), suite);
 }
 match_stmt <- 'match' SPACE expression _ ':' (_ EOL)+
               &INDENT (SAMEDENT case)+ (_ EOL)* &DEDENT {

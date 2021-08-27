@@ -281,31 +281,24 @@ const string Attr::Extend = "extend";
 const string Attr::Tuple = "tuple";
 const string Attr::Test = "std.internal.attributes.test";
 
-FunctionStmt::FunctionStmt(string name, ExprPtr ret, vector<Param> generics,
-                           vector<Param> args, StmtPtr suite, Attr attributes,
-                           vector<ExprPtr> decorators)
-    : Stmt(), name(move(name)), ret(move(ret)), generics(move(generics)),
-      args(move(args)), suite(move(suite)), attributes(move(attributes)),
-      decorators(move(decorators)) {}
+FunctionStmt::FunctionStmt(string name, ExprPtr ret, vector<Param> args, StmtPtr suite,
+                           Attr attributes, vector<ExprPtr> decorators)
+    : Stmt(), name(move(name)), ret(move(ret)), args(move(args)), suite(move(suite)),
+      attributes(move(attributes)), decorators(move(decorators)) {}
 FunctionStmt::FunctionStmt(const FunctionStmt &stmt)
     : Stmt(stmt), name(stmt.name), ret(ast::clone(stmt.ret)),
-      generics(ast::clone_nop(stmt.generics)), args(ast::clone_nop(stmt.args)),
-      suite(ast::clone(stmt.suite)), attributes(stmt.attributes),
-      decorators(ast::clone(stmt.decorators)) {}
+      args(ast::clone_nop(stmt.args)), suite(ast::clone(stmt.suite)),
+      attributes(stmt.attributes), decorators(ast::clone(stmt.decorators)) {}
 string FunctionStmt::toString(int indent) const {
   string pad = indent > 0 ? ("\n" + string(indent + INDENT_SIZE, ' ')) : " ";
-  vector<string> gs;
-  for (auto &a : generics)
-    gs.push_back(a.toString());
   vector<string> as;
   for (auto &a : args)
     as.push_back(a.toString());
   vector<string> attr;
   for (auto &a : decorators)
     attr.push_back(format("(dec {})", a->toString()));
-  return format("(fn '{} ({}){}{}{}{}{})", name, join(as, " "),
+  return format("(fn '{} ({}){}{}{}{})", name, join(as, " "),
                 ret ? " #:ret " + ret->toString() : "",
-                !generics.empty() ? format(" #:generics ({})", join(gs, " ")) : "",
                 attr.empty() ? "" : format(" (attr {})", join(attr, " ")), pad,
                 suite ? suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1)
                       : "(suite)");
@@ -313,35 +306,29 @@ string FunctionStmt::toString(int indent) const {
 ACCEPT_IMPL(FunctionStmt, ASTVisitor);
 string FunctionStmt::signature() const {
   vector<string> s;
-  for (auto &a : generics)
-    s.push_back(a.name);
   for (auto &a : args)
     s.push_back(a.type ? a.type->toString() : "-");
   return format("{}", join(s, ":"));
 }
 bool FunctionStmt::hasAttr(const string &attr) const { return attributes.has(attr); }
 
-ClassStmt::ClassStmt(string name, vector<Param> generics, vector<Param> args,
-                     StmtPtr suite, Attr attributes, vector<ExprPtr> decorators)
-    : Stmt(), name(move(name)), generics(move(generics)), args(move(args)),
-      suite(move(suite)), attributes(move(attributes)), decorators(move(decorators)) {}
+ClassStmt::ClassStmt(string name, vector<Param> args, StmtPtr suite, Attr attributes,
+                     vector<ExprPtr> decorators)
+    : Stmt(), name(move(name)), args(move(args)), suite(move(suite)),
+      attributes(move(attributes)), decorators(move(decorators)) {}
 ClassStmt::ClassStmt(const ClassStmt &stmt)
-    : Stmt(stmt), name(stmt.name), generics(ast::clone_nop(stmt.generics)),
-      args(ast::clone_nop(stmt.args)), suite(ast::clone(stmt.suite)),
-      attributes(stmt.attributes), decorators(ast::clone(stmt.decorators)) {}
+    : Stmt(stmt), name(stmt.name), args(ast::clone_nop(stmt.args)),
+      suite(ast::clone(stmt.suite)), attributes(stmt.attributes),
+      decorators(ast::clone(stmt.decorators)) {}
 string ClassStmt::toString(int indent) const {
   string pad = indent > 0 ? ("\n" + string(indent + INDENT_SIZE, ' ')) : " ";
-  vector<string> gs;
-  for (auto &a : generics)
-    gs.push_back(a.toString());
   string as;
   for (int i = 0; i < args.size(); i++)
     as += (i ? pad : "") + args[i].toString();
   vector<string> attr;
   for (auto &a : decorators)
     attr.push_back(format("(dec {})", a->toString()));
-  return format("(class '{}{}{}{}{}{})", name,
-                !generics.empty() ? format(" #:generics ({})", join(gs, " ")) : "",
+  return format("(class '{}{}{}{}{})", name,
                 attr.empty() ? "" : format(" (attr {})", join(attr, " ")),
                 as.empty() ? as : pad + as, pad,
                 suite ? suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1)

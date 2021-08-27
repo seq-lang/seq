@@ -1,9 +1,7 @@
-from bio.seq import seq, _preprocess_seq_pattern
+from bio.seq import seq, _preprocess_seq_pattern, Kmer
 
-@tuple
-class Kmer[K: int]:
-    x: UInt[2*K]
-
+@extend
+class Kmer:
     def __new__() -> Kmer[K]:
         return Kmer[K](0)
 
@@ -239,14 +237,14 @@ class Kmer[K: int]:
     def as_int(self):
         return self.x
 
-    def __match__[N: int](self: Kmer[N], pattern: str):
+    def __match__(self, pattern: str):
         WILD = byte(95)
         p = pattern.ptr
         n = pattern.len
         star = _preprocess_seq_pattern(pattern)
         nt4 = seq._nt4_table()
         if star >= 0:
-            m = N
+            m = len(self)
             if m < n - 1:
                 return False
             i = 0
@@ -261,7 +259,7 @@ class Kmer[K: int]:
                 i += 1
             return True
         else:
-            if N != n:
+            if len(self) != n:
                 return False
             i = 0
             while i < n:
@@ -272,5 +270,5 @@ class Kmer[K: int]:
 
 @extend
 class str:
-    def __prefix_k__[N: int](s: str) -> Kmer[N]:
+    def __prefix_k__(s: str, N: Static[int]) -> Kmer[N]:
         return Kmer[N](s)

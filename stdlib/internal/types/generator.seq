@@ -1,5 +1,5 @@
 @extend
-class Generator[T]:
+class Generator:
     @__internal__
     def __promise__(self) -> Ptr[T]:
         pass

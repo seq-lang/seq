@@ -10,7 +10,7 @@ import gzip
 
 fmi = None
 with gzip.open(argv[1], 'rb') as jar:
-    fmi = load[FMIndex](jar)
+    fmi = load(jar, FMIndex)
 
 step = 20
 n = 0

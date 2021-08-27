@@ -33,9 +33,7 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
   StmtPtr resultStmt;
 
 public:
-  static StmtPtr apply(shared_ptr<Cache> cache, StmtPtr stmts,
-                       const unordered_map<string, pair<string, int64_t>> &defines =
-                           unordered_map<string, pair<string, int64_t>>());
+  static StmtPtr apply(shared_ptr<Cache> cache, StmtPtr stmts);
 
 public:
   explicit TypecheckVisitor(shared_ptr<TypeContext> ctx,
@@ -288,9 +286,6 @@ private:
   ///       return Partial.N<mask>.__new__(self.ptr, self.a1, a2, ...) # (see above)
   string generatePartialStub(const vector<char> &mask, types::FuncType *fn);
   void generateFnCall(int n);
-  /// Create generic types for type or function generics and add them to the context.
-  vector<types::ClassType::Generic> parseGenerics(const vector<Param> &generics,
-                                                  int level);
   /// Make an empty partial call fn(...) for a function fn.
   ExprPtr partializeFunction(ExprPtr expr);
 

@@ -77,7 +77,7 @@ public:
   ///        The method will replace this map with a map that links canonical names
   ///        to their string and integer values.
   static StmtPtr apply(shared_ptr<Cache> cache, const StmtPtr &node, const string &file,
-                       unordered_map<string, pair<string, int64_t>> &defines,
+                       const unordered_map<string, string> &defines,
                        bool barebones = false);
 
   /// Static method that applies SimplifyStage on a given AST node after the standard

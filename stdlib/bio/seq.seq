@@ -35,6 +35,10 @@ def _preprocess_seq_pattern(pattern: str):
     return star
 
 @tuple
+class Kmer[K: Static[int]]:
+    x: UInt[2*K]
+
+@tuple
 class seq:
     len: int
     ptr: Ptr[byte]
@@ -50,7 +54,7 @@ class seq:
 
 @extend
 class str:
-    def __prefix_s__[N: int = 0](s: str) -> seq:
+    def __prefix_s__(s: str, N: Static[int] = 0) -> seq:
         return seq(s)
 
 @tuple
@@ -172,8 +176,8 @@ class seq:
     def __contains__(self, other: seq):
         return str(other) in str(self)
 
-    def __contains__[K](self, kmer: K):
-        for k in self.kmers[K](step=1):
+    def __contains__[K: Static[int]](self, kmer: Kmer[K]):
+        for k in self.kmers(step=1, K=K):
             if k == kmer:
                 return True
         return False
@@ -283,33 +287,33 @@ class seq:
             yield self._slice_direct(i,i+1)
             i -= 1
 
-    def kmers[K](self, step: int = 1):
+    def kmers(self, step: int = 1, K: Static[int]):
         '''
-        Iterator over k-mers (type `K`) of the given sequence
+        Iterator over k-mers (size `K`) of the given sequence
         with the specified step size. Note that k-mers spanning
         ambiguous bases will be skipped.
         '''
-        for pos, kmer in self.kmers_with_pos[K](step):
+        for pos, kmer in self.kmers_with_pos(step, K):
             yield kmer
 
-    def kmers_canonical[K](self):
+    def kmers_canonical(self, K: Static[int]):
         '''
-        Iterator over canonical k-mers (type `K`) of the given sequence.
+        Iterator over canonical k-mers (size `K`) of the given sequence.
         Note that k-mers spanning ambiguous bases will be skipped.
         A canonical k-mer is defined to be the minimum of a k-mer and
         its reverse complement.
         '''
-        k = K.len()
+        k = K
         n = len(self)
-        x0 = K()
-        x1 = K()
+        x0 = Kmer[K]()
+        x1 = Kmer[K]()
         i = 0
         l = 0
         while i < n:
             c = int(seq._nt4_table()[int(self._at(i))])
             if c < 4:
-                x0 = K(x0.as_int() << K(2).as_int() | K(c).as_int())
-                x1 = K(x1.as_int() >> K(2).as_int() | K(3 - c).as_int() << K((k - 1)*2).as_int())
+                x0 = Kmer[K](x0.as_int() << Kmer[K](2).as_int() | Kmer[K](c).as_int())
+                x1 = Kmer[K](x1.as_int() >> Kmer[K](2).as_int() | Kmer[K](3 - c).as_int() << Kmer[K]((k - 1)*2).as_int())
                 l += 1
                 if l >= k:
                     yield x0 if x0 < x1 else x1
@@ -317,23 +321,23 @@ class seq:
                 l = 0
             i += 1
 
-    def kmers_canonical_with_pos[K](self):
+    def kmers_canonical_with_pos(self, K: Static[int]):
         '''
         Iterator over (0-based index, canonical k-mer) tuples of the given
         sequence with the specified step size. Note that k-mers
         spanning ambiguous bases will be skipped.
         '''
-        k = K.len()
+        k = K
         n = len(self)
-        x0 = K()
-        x1 = K()
+        x0 = Kmer[K]()
+        x1 = Kmer[K]()
         i = 0
         l = 0
         while i < n:
             c = int(seq._nt4_table()[int(self._at(i))])
             if c < 4:
-                x0 = K(x0.as_int() << K(2).as_int() | K(c).as_int())
-                x1 = K(x1.as_int() >> K(2).as_int() | K(3 - c).as_int() << K((k - 1)*2).as_int())
+                x0 = Kmer[K](x0.as_int() << Kmer[K](2).as_int() | Kmer[K](c).as_int())
+                x1 = Kmer[K](x1.as_int() >> Kmer[K](2).as_int() | Kmer[K](3 - c).as_int() << Kmer[K]((k - 1)*2).as_int())
                 l += 1
                 if l >= k:
                     yield (i - k + 1, x0 if x0 < x1 else x1)
@@ -341,7 +345,7 @@ class seq:
                 l = 0
             i += 1
 
-    def kmers_with_pos[K](self, step: int = 1):
+    def kmers_with_pos(self, step: int = 1, K: Static[int]):
         '''
         Iterator over (0-based index, k-mer) tuples of the given
         sequence with the specified step size. Note that k-mers
@@ -349,17 +353,17 @@ class seq:
         '''
         # This function is intentionally written this way. It could be simplified,
         # but this version was found to be the most performant due to inlining etc.
-        k = K.len()
+        k = K
         if self.len >= 0:
             n = self.len
             i = 0
-            kmer = K()
+            kmer = Kmer[K]()
             refresh = True
             while i + k <= n:
                 if refresh:
                     sub = self._slice_fwd(i, i + k)
                     if not sub.N():
-                        kmer = K._make_fwd(sub.ptr, k)
+                        kmer = Kmer[K]._make_fwd(sub.ptr, k)
                         refresh = step >= k
                         yield (i, kmer)
                 else:
@@ -373,13 +377,13 @@ class seq:
         else:
             n = -self.len
             i = 0
-            kmer = K()
+            kmer = Kmer[K]()
             refresh = True
             while i + k <= n:
                 if refresh:
                     sub = self._slice_rev(i, i + k)
                     if not sub.N():
-                        kmer = K._make_rev(sub.ptr, k)
+                        kmer = Kmer[K]._make_rev(sub.ptr, k)
                         refresh = step >= k
                         yield (i, kmer)
                 else:
@@ -391,24 +395,24 @@ class seq:
                         refresh = True
                 i += step
 
-    def _kmers_revcomp[K](self, step: int):
-        for pos, kmer in self._kmers_revcomp_with_pos[K](step):
+    def _kmers_revcomp(self, step: int, K: Static[int]):
+        for pos, kmer in self._kmers_revcomp_with_pos(step, K):
             yield kmer
 
-    def _kmers_revcomp_with_pos[K](self, step: int):
+    def _kmers_revcomp_with_pos(self, step: int, K: Static[int]):
         # This function is intentionally written this way. It could be simplified,
         # but this version was found to be the most performant due to inlining etc.
-        k = K.len()
+        k = K
         if self.len >= 0:
             n = self.len
             i = step * ((n - k) // step) + k - 1
-            kmer = K()
+            kmer = Kmer[K]()
             refresh = True
             while i + 1 - k >= 0:
                 if refresh:
                     sub = self._slice_fwd(i + 1 - k, i + 1)
                     if not sub.N():
-                        kmer = K._make_rev(sub.ptr, k)
+                        kmer = Kmer[K]._make_rev(sub.ptr, k)
                         refresh = step >= k
                         yield (i - k + 1, kmer)
                 else:
@@ -422,13 +426,13 @@ class seq:
         else:
             n = -self.len
             i = step * ((n - k) // step) + k - 1
-            kmer = K()
+            kmer = Kmer[K]()
             refresh = True
             while i + 1 - k >= 0:
                 if refresh:
                     sub = self._slice_rev(i + 1 - k, i + 1)
                     if not sub.N():
-                        kmer = K._make_fwd(sub.ptr, k)
+                        kmer = Kmer[K]._make_fwd(sub.ptr, k)
                         refresh = step >= k
                         yield (i - k + 1, kmer)
                 else:

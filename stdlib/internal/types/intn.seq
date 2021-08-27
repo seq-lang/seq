@@ -1,31 +1,31 @@
 from internal.attributes import commutative, associative, distributive
 
-def check_N[N: int]():
+def check_N(N: Static[int]):
     if N <= 0:
         compile_error("N must be greater than 0")
     pass
 
 @extend
-class Int[N]:
+class Int:
     def __new__() -> Int[N]:
-        check_N[N]()
+        check_N(N)
         return Int[N](0)
     def __new__(what: Int[N]) -> Int[N]:
-        check_N[N]()
+        check_N(N)
         return what
     def __new__(what: int) -> Int[N]:
-        check_N[N]()
+        check_N(N)
         if N < 64:
-            return __internal__.int_trunc[64,N](what)
+            return __internal__.int_trunc(what, 64, N)
         elif N == 64:
             return what
         else:
-            return __internal__.int_sext[64,N](what)
+            return __internal__.int_sext(what, 64, N)
     @llvm
     def __new__(what: UInt[N]) -> Int[N]:
         ret i{=N} %what
     def __new__(what: str) -> Int[N]:
-        check_N[N]()
+        check_N(N)
         ret = Int[N]()
         i = 0
         sign = Int[N](1)
@@ -40,11 +40,11 @@ class Int[N]:
         return sign * ret
     def __int__(self) -> int:
         if N > 64:
-            return __internal__.int_trunc[N,64](self)
+            return __internal__.int_trunc(self, N, 64)
         elif N == 64:
             return self
         else:
-            return __internal__.int_sext[N,64](self)
+            return __internal__.int_sext(self, N, 64)
     def __copy__(self) -> Int[N]:
         return self
     def __hash__(self) -> int:
@@ -184,34 +184,34 @@ class Int[N]:
         return N
 
 @extend
-class UInt[N]:
+class UInt:
     def __new__() -> UInt[N]:
-        check_N[N]()
+        check_N(N)
         return UInt[N](0)
     def __new__(what: UInt[N]) -> UInt[N]:
-        check_N[N]()
+        check_N(N)
         return what
     def __new__(what: int) -> UInt[N]:
-        check_N[N]()
+        check_N(N)
         if N < 64:
-            return UInt[N](__internal__.int_trunc[64,N](what))
+            return UInt[N](__internal__.int_trunc(what, 64, N))
         elif N == 64:
             return UInt[N](Int[N](what))
         else:
-            return UInt[N](__internal__.int_zext[64,N](what))
+            return UInt[N](__internal__.int_zext(what, 64, N))
     @llvm
     def __new__(what: Int[N]) -> UInt[N]:
         ret i{=N} %what
     def __new__(what: str) -> UInt[N]:
-        check_N[N]()
+        check_N(N)
         return UInt[N](Int[N](what))
     def __int__(self) -> int:
         if N > 64:
-            return __internal__.int_trunc[N,64](self)
+            return __internal__.int_trunc(self, N, 64)
         elif N == 64:
             return Int[64](self)
         else:
-            return __internal__.int_zext[N,64](self)
+            return __internal__.int_zext(self, N, 64)
     def __copy__(self) -> UInt[N]:
         return self
     def __hash__(self) -> int:

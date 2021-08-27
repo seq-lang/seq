@@ -475,22 +475,17 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   if (attr.has(Attr::Test))
     ctx->bases.back().attributes |= FLAG_TEST;
   // Add generic identifiers to the context
-  vector<Param> newGenerics;
-  for (auto &g : stmt->generics) {
-    auto genName = ctx->generateCanonicalName(g.name);
-    if (g.type && !g.type->isId("int"))
-      error("only integer static generics are supported");
-    ctx->add(g.type ? SimplifyItem::Var : SimplifyItem::Type, g.name, genName, false);
-    newGenerics.emplace_back(Param{
-        genName, transformType(g.type),
-        g.deflt && g.deflt->getNone() ? clone(g.deflt) : transform(g.deflt, true)});
-  }
+  unordered_set<string> seenArgs;
   // Parse function arguments and add them to the context.
   vector<Param> args;
-  unordered_set<string> seenArgs;
   bool defaultsStarted = false, hasStarArg = false, hasKwArg = false;
+  // Add generics first
   for (int ia = 0; ia < stmt->args.size(); ia++) {
     auto &a = stmt->args[ia];
+    // check if this is a generic!
+    if (a.type && (a.type->isId("type") || a.type->isId("TypeVar") ||
+                   (a.type->getIndex() && a.type->getIndex()->expr->isId("Static"))))
+      a.generic = true;
     string varName = a.name;
     int stars = trimStars(varName);
     if (stars == 2) {
@@ -502,27 +497,39 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
         error("invalid *args");
       hasStarArg = true;
     }
-
     if (in(seenArgs, varName))
       error("'{}' declared twice", varName);
     seenArgs.insert(varName);
-    if (!a.deflt && defaultsStarted && !stars)
+    if (!a.deflt && defaultsStarted && !stars && !a.generic)
       error("non-default argument '{}' after a default argument", varName);
     defaultsStarted |= bool(a.deflt);
-    auto typeAst = transformType(a.type);
-    // If the first argument of a class method is self and if it has no type, add it.
-    if (!typeAst && isClassMember && ia == 0 && a.name == "self")
-      typeAst = transformType(ctx->bases[ctx->bases.size() - 2].ast);
 
+    auto typeAst = a.type;
+    if (!typeAst && isClassMember && ia == 0 && a.name == "self")
+      typeAst = ctx->bases[ctx->bases.size() - 2].ast;
+
+    // First add all generics!
     auto name = ctx->generateCanonicalName(varName);
-    args.emplace_back(Param{string(stars, '*') + name, typeAst, transform(a.deflt)});
+    args.emplace_back(Param{string(stars, '*') + name, typeAst, a.deflt, a.generic});
+    if (a.generic) {
+      if (a.type->getIndex() && a.type->getIndex()->expr->isId("Static"))
+        ctx->add(SimplifyItem::Var, varName, name);
+      else
+        ctx->add(SimplifyItem::Type, varName, name);
+    }
+  }
+  for (auto &a : args) {
+    a.type = transformType(a.type);
+    a.deflt = transform(a.deflt, true);
   }
   // Delay adding to context to prevent "def foo(a, b=a)"
-  for (int ia = 0; ia < stmt->args.size(); ia++) {
-    string varName = stmt->args[ia].name, canName = args[ia].name;
-    trimStars(varName);
-    trimStars(canName);
-    ctx->add(SimplifyItem::Var, varName, canName);
+  for (auto &a : args) {
+    if (!a.generic) {
+      string canName = a.name;
+      trimStars(canName);
+      ctx->add(SimplifyItem::Var, ctx->cache->reverseIdentifierLookup[canName],
+               canName);
+    }
   }
   // Parse the return type.
   if (!stmt->ret && attr.has(Attr::LLVM))
@@ -589,11 +596,9 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
       args.push_back(kw);
     partialArgs.emplace_back(CallExpr::Arg{"", N<EllipsisExpr>()});
   }
-  auto f = N<FunctionStmt>(canonicalName, ret, newGenerics, args, suite, attr);
-  // Do not clone suite: the suite will be accessed later trough the cache.
-  preamble->functions.push_back(N<FunctionStmt>(canonicalName, clone(f->ret),
-                                                clone_nop(f->generics),
-                                                clone_nop(f->args), suite, attr));
+  auto f = N<FunctionStmt>(canonicalName, ret, args, suite, attr);
+  preamble->functions.push_back(
+      N<FunctionStmt>(canonicalName, clone(f->ret), clone_nop(f->args), suite, attr));
   // Make sure to cache this (generic) AST for later realization.
   ctx->cache->functions[canonicalName].ast = f;
 
@@ -691,7 +696,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
 
   // Generate/find class' canonical name (unique ID) and AST
   string canonicalName;
-  const ClassStmt *originalAST = nullptr;
+  ClassStmt *originalAST = nullptr;
   auto classItem =
       make_shared<SimplifyItem>(SimplifyItem::Type, "", "", ctx->isToplevel());
   if (!extension) {
@@ -715,8 +720,8 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
     if (astIter == ctx->cache->classes.end())
       error("cannot extend type alias or an instantiation ({})", name);
     originalAST = astIter->second.ast.get();
-    if (originalAST->generics.size() != stmt->generics.size())
-      error("generics do not match");
+    if (stmt->args.size())
+      error("extensions cannot be generic or declare members");
   }
 
   // Add the class base.
@@ -728,40 +733,45 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
   // Add generics, if any, to the context.
   ctx->addBlock();
   vector<ExprPtr> genAst;
-  vector<Param> newGenerics;
-  for (int gi = 0; gi < stmt->generics.size(); gi++) {
-    if (stmt->generics[gi].deflt)
-      error("default generics not supported in classes");
-    if (stmt->generics[gi].type && !stmt->generics[gi].type->isId("int"))
-      error("only integer static generics are supported");
-    // Extension generic names might not match the original class generic names.
-    // Make sure to use canonical names.
-    auto genName = extension ? originalAST->generics[gi].name
-                             : ctx->generateCanonicalName(stmt->generics[gi].name);
-    genAst.push_back(N<IdExpr>(genName));
-    // Extension generic might not have static type annotation: lift it up from the
-    // original AST.
-    ctx->add(originalAST->generics[gi].type ? SimplifyItem::Var : SimplifyItem::Type,
-             stmt->generics[gi].name, genName, true);
-    newGenerics.emplace_back(
-        Param{genName, transformType(originalAST->generics[gi].type), nullptr});
+  vector<Param> args;
+  unordered_set<string> seenMembers;
+  vector<Param> memberArgs;
+  for (auto &a : (extension ? originalAST : stmt)->args) {
+    seqassert(a.type, "no type provided for '{}'", a.name);
+    if (a.type && (a.type->isId("type") || a.type->isId("TypeVar") ||
+                   (a.type->getIndex() && a.type->getIndex()->expr->isId("Static"))))
+      a.generic = true;
+    if (seenMembers.find(a.name) != seenMembers.end())
+      error(a.type, "'{}' declared twice", a.name);
+    seenMembers.insert(a.name);
+    if (a.generic) {
+      auto varName = extension ? a.name : ctx->generateCanonicalName(a.name);
+      auto name = extension ? ctx->cache->reverseIdentifierLookup[a.name] : a.name;
+      if (a.type->getIndex() && a.type->getIndex()->expr->isId("Static"))
+        ctx->add(SimplifyItem::Var, name, varName, true);
+      else
+        ctx->add(SimplifyItem::Type, name, varName, true);
+      genAst.push_back(N<IdExpr>(varName));
+      args.emplace_back(Param{varName, a.type, a.deflt, a.generic});
+    } else {
+      args.emplace_back(Param{a.name, a.type, a.deflt});
+      if (!extension) {
+        ctx->cache->classes[canonicalName].fields.push_back({a.name, nullptr});
+        memberArgs.emplace_back(Param{a.name, a.type, a.deflt});
+      }
+    }
   }
-  ctx->bases.back().ast = make_shared<IndexExpr>(N<IdExpr>(name), N<TupleExpr>(genAst));
+  if (!genAst.empty())
+    ctx->bases.back().ast =
+        make_shared<IndexExpr>(N<IdExpr>(name), N<TupleExpr>(genAst));
+  for (auto &a : args) {
+    a.type = transformType(a.type);
+    a.deflt = transform(a.deflt, true);
+  }
 
   // Parse class members (arguments) and methods.
-  vector<Param> args;
   auto suite = N<SuiteStmt>();
   if (!extension) {
-    // Check if members are declared many times.
-    unordered_set<string> seenMembers;
-    for (const auto &a : stmt->args) {
-      seqassert(a.type, "no type provided for '{}'", a.name);
-      if (seenMembers.find(a.name) != seenMembers.end())
-        error(a.type, "'{}' declared twice", a.name);
-      seenMembers.insert(a.name);
-      args.emplace_back(Param{a.name, transformType(a.type), nullptr});
-      ctx->cache->classes[canonicalName].fields.push_back({a.name, nullptr});
-    }
     // Now that we are done with arguments, add record type to the context.
     // However, we need to unroll a block/base, add it, and add the unrolled
     // block/base back.
@@ -774,7 +784,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
         format("{}{}", ctx->moduleName.status == ImportFile::STDLIB ? "std::" : "::",
                ctx->moduleName.module);
     ctx->cache->classes[canonicalName].ast =
-        N<ClassStmt>(canonicalName, newGenerics, args, N<SuiteStmt>(), attr);
+        N<ClassStmt>(canonicalName, args, N<SuiteStmt>(), attr);
     vector<StmtPtr> fns;
     ExprPtr codeType = ctx->bases.back().ast->clone();
     vector<string> magics{};
@@ -815,7 +825,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
     // Codegen default magic methods and add them to the final AST.
     for (auto &m : magics)
       suite->stmts.push_back(transform(
-          codegenMagic(m, ctx->bases.back().ast.get(), stmt->args, isRecord)));
+          codegenMagic(m, ctx->bases.back().ast.get(), memberArgs, isRecord)));
   }
   for (auto sp : getClassMethods(stmt->suite))
     if (sp && !sp->getClass())
@@ -832,8 +842,8 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
     c->suite = clone(suite);
   }
   vector<StmtPtr> stmts;
-  stmts.emplace_back(N<ClassStmt>(canonicalName, clone_nop(c->generics),
-                                  vector<Param>{}, suite, Attr({Attr::Extend})));
+  stmts.emplace_back(
+      N<ClassStmt>(canonicalName, vector<Param>{}, suite, Attr({Attr::Extend})));
   // Parse nested classes
   for (auto sp : getClassMethods(stmt->suite))
     if (sp && sp->getClass()) {
@@ -904,17 +914,16 @@ StmtPtr SimplifyVisitor::transformAssignment(const ExprPtr &lhs, const ExprPtr &
     auto canonical = ctx->generateCanonicalName(e->value);
     auto l = N<IdExpr>(canonical);
     bool global = ctx->isToplevel();
-    if (t && t->isId("staticint"))
-      global = false; // static variables are _not_ globals!
+    bool isStatic = t && t->getIndex() && t->getIndex()->expr->isId("Static");
     // ctx->moduleName != MODULE_MAIN;
     // ⚠️ TODO: should we make __main__ top-level variables NOT global by default?
     // Problem: a = [1]; def foo(): a.append(2) won't work anymore as in Python.
-    if (global)
+    if (global && !isStatic)
       ctx->cache->globals.insert(canonical);
     // Handle type aliases as well!
     ctx->add(r && r->isType() ? SimplifyItem::Type : SimplifyItem::Var, e->value,
              canonical, global);
-    if (global) {
+    if (global && !isStatic) {
       if (r && r->isType()) {
         preamble->globals.push_back(N<AssignStmt>(N<IdExpr>(canonical), clone(r)));
       } else {
@@ -1084,8 +1093,8 @@ StmtPtr SimplifyVisitor::transformCImport(const string &name, const vector<Param
                 args[ai].type->clone(), nullptr});
     }
   }
-  auto f = N<FunctionStmt>(name, ret ? ret->clone() : N<IdExpr>("void"),
-                           vector<Param>(), fnArgs, nullptr, attr);
+  auto f = N<FunctionStmt>(name, ret ? ret->clone() : N<IdExpr>("void"), fnArgs,
+                           nullptr, attr);
   StmtPtr tf = transform(f); // Already in the preamble
   if (!altName.empty())
     ctx->add(altName, ctx->find(name));
@@ -1129,8 +1138,8 @@ StmtPtr SimplifyVisitor::transformCDLLImport(const Expr *dylib, const string &na
   for (int i = 0; i < args.size(); i++)
     params.emplace_back(Param{format("a{}", i), clone(args[i].type)});
   return transform(N<FunctionStmt>(altName.empty() ? name : altName,
-                                   ret ? ret->clone() : nullptr, vector<Param>(),
-                                   params, N<SuiteStmt>(stmts)));
+                                   ret ? ret->clone() : nullptr, params,
+                                   N<SuiteStmt>(stmts)));
 }
 
 StmtPtr SimplifyVisitor::transformPythonImport(const Expr *what,
@@ -1183,8 +1192,8 @@ StmtPtr SimplifyVisitor::transformPythonImport(const Expr *what,
     retStmt = N<ReturnStmt>(retExpr);
   // Return a wrapper function
   return transform(N<FunctionStmt>(altName.empty() ? name : altName,
-                                   ret ? ret->clone() : nullptr, vector<Param>(),
-                                   params, N<SuiteStmt>(call, retStmt)));
+                                   ret ? ret->clone() : nullptr, params,
+                                   N<SuiteStmt>(call, retStmt)));
 }
 
 void SimplifyVisitor::transformNewImport(const ImportFile &file) {
@@ -1250,10 +1259,10 @@ void SimplifyVisitor::transformNewImport(const ImportFile &file) {
       const_cast<SuiteStmt *>(stmts[0]->getSuite())->stmts.push_back(N<GlobalStmt>(g));
     // Add a def import(): ... manually to the cache and to the preamble (it won't be
     // transformed here!).
-    ctx->cache->functions[importVar].ast = N<FunctionStmt>(
-        importVar, nullptr, vector<Param>{}, vector<Param>{}, N<SuiteStmt>(stmts));
-    preamble->functions.push_back(N<FunctionStmt>(
-        importVar, nullptr, vector<Param>{}, vector<Param>{}, N<SuiteStmt>(stmts)));
+    ctx->cache->functions[importVar].ast =
+        N<FunctionStmt>(importVar, nullptr, vector<Param>{}, N<SuiteStmt>(stmts));
+    preamble->functions.push_back(
+        N<FunctionStmt>(importVar, nullptr, vector<Param>{}, N<SuiteStmt>(stmts)));
   }
 }
 
@@ -1356,10 +1365,9 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
     fargs.emplace_back(Param{"self", typExpr->clone()});
     fargs.emplace_back(Param{"index", I("int")});
     ret = !args.empty() ? clone(args[0].type) : I("void");
-    stmts.emplace_back(N<ReturnStmt>(N<CallExpr>(
-        N<IndexExpr>(N<DotExpr>(I("__internal__"), "tuple_getitem"),
-                     N<TupleExpr>(vector<ExprPtr>{typExpr->clone(), ret->clone()})),
-        I("self"), I("index"))));
+    stmts.emplace_back(N<ReturnStmt>(
+        N<CallExpr>(N<DotExpr>(I("__internal__"), "tuple_getitem"), I("self"),
+                    I("index"), typExpr->clone(), ret->clone())));
   } else if (op == "iter") {
     // Tuples: def __iter__(self: T) -> Generator[T]:
     //           yield self.aI ...
@@ -1568,8 +1576,8 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
         auto name = typExpr->getIndex() ? typExpr->getIndex()->expr->getId() : nullptr;
         stmts.push_back(N<ExprStmt>(N<CallExpr>(
             N<DotExpr>(I("n"), "__setitem__"), N<IntExpr>(i),
-            N<StringExpr>(name && !startswith(name->value, TYPE_TUPLE) ? args[i].name
-                                                                       : ""))));
+            N<StringExpr>(
+                name && startswith(name->value, TYPE_TUPLE) ? "" : args[i].name))));
       }
       stmts.emplace_back(N<ReturnStmt>(N<CallExpr>(
           N<DotExpr>(I("__internal__"), "tuple_str"), N<DotExpr>(I("a"), "ptr"),
@@ -1601,7 +1609,7 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
     seqassert(false, "invalid magic {}", op);
   }
 #undef I
-  auto t = make_shared<FunctionStmt>(format("__{}__", op), ret, vector<Param>{}, fargs,
+  auto t = make_shared<FunctionStmt>(format("__{}__", op), ret, fargs,
                                      N<SuiteStmt>(stmts), attr);
   t->setSrcInfo(ctx->cache->generateSrcInfo());
   return t;

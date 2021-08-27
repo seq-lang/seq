@@ -1,37 +1,37 @@
 from bio import *
 
-def ground_truth_kmers[K](s: seq, step: int = 1):
-    return {revcomp_with_pos(t) for t in s.kmers_with_pos[K](step)}
+def ground_truth_kmers(s: seq, step: int = 1, K: Static[int]):
+    return {revcomp_with_pos(t) for t in s.kmers_with_pos(step, K)}
 
 # test kmers |> revcomp optimization
 @test
-def test[K](s: seq):
+def test(s: seq, K: Static[int]):
     fail = False
-    for step in range(1, K.len() + 2):
-        result1 = set[tuple[int,K]]()
-        s |> kmers_with_pos[K](step) |> revcomp_with_pos |> result1.add
-        if result1 != ground_truth_kmers[K](s, step):
+    for step in range(1, K + 2):
+        result1 = set[tuple[int,Kmer[K]]]()
+        s |> kmers_with_pos(step, K) |> revcomp_with_pos |> result1.add
+        if result1 != ground_truth_kmers(s, step, K):
             fail = True
 
-        result1 = set[tuple[int,K]]()
-        ~s |> kmers_with_pos[K](step) |> revcomp_with_pos(...) |> result1.add
-        if result1 != ground_truth_kmers[K](~s, step):
+        result1 = set[tuple[int,Kmer[K]]]()
+        ~s |> kmers_with_pos(step, K) |> revcomp_with_pos(...) |> result1.add
+        if result1 != ground_truth_kmers(~s, step, K):
             fail = True
 
-        result2 = set[K]()
-        s |> kmers[K](step) |> revcomp() |> result2.add
-        if result2 != {t[1] for t in ground_truth_kmers[K](s, step)}:
+        result2 = set[Kmer[K]]()
+        s |> kmers(step, K) |> revcomp() |> result2.add
+        if result2 != {t[1] for t in ground_truth_kmers(s, step, K)}:
             fail = True
 
-        result2 = set[K]()
-        ~s |> kmers[K](step) |> revcomp |> result2.add
-        if result2 != {t[1] for t in ground_truth_kmers[K](~s, step)}:
+        result2 = set[Kmer[K]]()
+        ~s |> kmers(step, K) |> revcomp |> result2.add
+        if result2 != {t[1] for t in ground_truth_kmers(~s, step, K)}:
             fail = True
     assert not fail
 
-def test_all[K](s: list[seq]):
+def test_all(s: list[seq], K: Static[int]):
     for a in s:
-        test[K](a)
+        test(a, K)
 
 v = [   s'C',
         s'GA',
@@ -134,23 +134,23 @@ v = [   s'C',
         s'AACCTCAGTCGGGCAGGCCATGGCGCGAAATGACTCGAGTAGACTCCATCTCTAAGGAGCGGAGCTGTTGCAACTAGGGTGACACACAGCTCGCCATGA',
         s'TATTGCAAGGCCCTACGCGGCTACGTCTCAATATATCCTATGGGCCGCAGCGTTCGGCCAATTCACATGGATGAGACATGGGTCCAAAATTTGCGGGATA'   ]
 
-test_all[Kmer[1]](v)
-test_all[Kmer[2]](v)
-test_all[Kmer[3]](v)
-test_all[Kmer[4]](v)
-test_all[Kmer[5]](v)
-test_all[Kmer[6]](v)
-test_all[Kmer[7]](v)
-test_all[Kmer[8]](v)
-test_all[Kmer[9]](v)
-test_all[Kmer[10]](v)
-test_all[Kmer[11]](v)
-test_all[Kmer[12]](v)
-test_all[Kmer[13]](v)
-test_all[Kmer[14]](v)
-test_all[Kmer[15]](v)
-test_all[Kmer[16]](v)
-test_all[Kmer[17]](v)
-test_all[Kmer[18]](v)
-test_all[Kmer[19]](v)
-test_all[Kmer[20]](v)
+test_all(v, 1)
+test_all(v, 2)
+test_all(v, 3)
+test_all(v, 4)
+test_all(v, 5)
+test_all(v, 6)
+test_all(v, 7)
+test_all(v, 8)
+test_all(v, 9)
+test_all(v, 10)
+test_all(v, 11)
+test_all(v, 12)
+test_all(v, 13)
+test_all(v, 14)
+test_all(v, 15)
+test_all(v, 16)
+test_all(v, 17)
+test_all(v, 18)
+test_all(v, 19)
+test_all(v, 20)

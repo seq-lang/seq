@@ -26,7 +26,7 @@ class __internal__:
         return idx
 
     def tuple_getitem[T, E](t: T, idx: int) -> E:
-        return __internal__._tuple_getitem_llvm[T, E](t, __internal__.tuple_fix_index(idx, staticlen(t)))
+        return __internal__._tuple_getitem_llvm(t, __internal__.tuple_fix_index(idx, staticlen(t)), T, E)
 
     @llvm
     def fn_new[T](ptr: Ptr[byte]) -> T:
@@ -39,17 +39,17 @@ class __internal__:
         ret i8* %0
 
     @llvm
-    def int_sext[F: int, T: int](what) -> Int[T]:
+    def int_sext(what, F: Static[int], T: Static[int]) -> Int[T]:
         %0 = sext i{=F} %what to i{=T}
         ret i{=T} %0
 
     @llvm
-    def int_zext[F: int, T: int](what) -> Int[T]:
+    def int_zext(what, F: Static[int], T: Static[int]) -> Int[T]:
         %0 = zext i{=F} %what to i{=T}
         ret i{=T} %0
 
     @llvm
-    def int_trunc[F: int, T: int](what) -> Int[T]:
+    def int_trunc(what, F: Static[int], T: Static[int]) -> Int[T]:
         %0 = trunc i{=F} %what to i{=T}
         ret i{=T} %0
 

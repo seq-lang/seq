@@ -115,8 +115,8 @@ class Set[K]:
         f = khash.__ac_fsize(n)
         flags_copy = Ptr[u32](f)
         keys_copy = Ptr[K](n)
-        str.memcpy(flags_copy.as_byte(), self._flags.as_byte(), f * gc.sizeof[u32]())
-        str.memcpy(keys_copy.as_byte(), self._keys.as_byte(), n * gc.sizeof[K]())
+        str.memcpy(flags_copy.as_byte(), self._flags.as_byte(), f * gc.sizeof(u32))
+        str.memcpy(keys_copy.as_byte(), self._keys.as_byte(), n * gc.sizeof(K))
         return Set[K](n, self._size, self._n_occupied, self._upper_bound, flags_copy, keys_copy)
 
     def __str__(self):
@@ -303,7 +303,7 @@ class Set[K]:
                 i += 1
 
             if self._n_buckets < new_n_buckets:
-                self._keys = Ptr[K](gc.realloc(self._keys.as_byte(), new_n_buckets * gc.sizeof[K]()))
+                self._keys = Ptr[K](gc.realloc(self._keys.as_byte(), new_n_buckets * gc.sizeof(K)))
 
         if j:
             j = 0
@@ -332,7 +332,7 @@ class Set[K]:
                 j += 1
 
             if self._n_buckets > new_n_buckets:
-                self._keys = Ptr[K](gc.realloc(self._keys.as_byte(), new_n_buckets * gc.sizeof[K]()))
+                self._keys = Ptr[K](gc.realloc(self._keys.as_byte(), new_n_buckets * gc.sizeof(K)))
 
             self._flags = new_flags
             self._n_buckets = new_n_buckets

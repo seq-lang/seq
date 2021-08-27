@@ -37,14 +37,10 @@ TypecheckVisitor::TypecheckVisitor(shared_ptr<TypeContext> ctx,
   prependStmts = stmts ? stmts : make_shared<vector<StmtPtr>>();
 }
 
-StmtPtr
-TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts,
-                        const unordered_map<string, pair<string, int64_t>> &defines) {
+StmtPtr TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto ctx = make_shared<TypeContext>(cache);
   cache->typeCtx = ctx;
   TypecheckVisitor v(ctx);
-  for (auto &d : defines)
-    ctx->add(TypecheckItem::Type, d.first, make_shared<StaticType>(d.second.second));
   auto infer = v.inferTypes(stmts->clone(), true, "<top>");
   for (auto &f : cache->functions) {
     auto &attr = f.second.ast->attributes;

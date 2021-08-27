@@ -66,11 +66,8 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
 
     auto t = high_resolution_clock::now();
 
-    unordered_map<string, pair<string, int64_t>> newDefines;
-    for (auto &d : defines)
-      newDefines[d.first] = {d.second, 0};
-    auto transformed = ast::SimplifyVisitor::apply(cache, move(codeStmt), abs,
-                                                   newDefines, (isTest > 1));
+    auto transformed =
+        ast::SimplifyVisitor::apply(cache, move(codeStmt), abs, defines, (isTest > 1));
     if (!isTest) {
       LOG_TIME("[T] ocaml = {:.1f}", _ocaml_time / 1000.0);
       LOG_TIME("[T] simplify = {:.1f}",
@@ -88,8 +85,7 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
     }
 
     t = high_resolution_clock::now();
-    auto typechecked =
-        ast::TypecheckVisitor::apply(cache, move(transformed), newDefines);
+    auto typechecked = ast::TypecheckVisitor::apply(cache, move(transformed));
     if (!isTest) {
       LOG_TIME("[T] typecheck = {:.1f}",
                duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /

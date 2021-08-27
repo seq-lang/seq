@@ -34,7 +34,7 @@ using namespace types;
 
 StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
                                const string &file,
-                               unordered_map<string, pair<string, int64_t>> &defines,
+                               const unordered_map<string, string> &defines,
                                bool barebones) {
   vector<StmtPtr> stmts;
   auto preamble = make_shared<Preamble>();
@@ -66,7 +66,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       stdlib->add(SimplifyItem::Type, name, canonical, true);
       // Generate an AST for each POD type. All of them are tuples.
       cache->classes[canonical].ast =
-          make_shared<ClassStmt>(canonical, vector<Param>(), vector<Param>(), nullptr);
+          make_shared<ClassStmt>(canonical, vector<Param>(), nullptr);
       preamble->globals.emplace_back(clone(cache->classes[canonical].ast));
     }
     // Add simple POD types to the preamble (these types are defined in LLVM and we
@@ -75,9 +75,8 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       auto canonical = stdlib->generateCanonicalName(name);
       stdlib->add(SimplifyItem::Type, name, canonical, true);
       // Generate an AST for each POD type. All of them are tuples.
-      cache->classes[canonical].ast =
-          make_shared<ClassStmt>(canonical, vector<Param>(), vector<Param>(), nullptr,
-                                 Attr({Attr::Internal, Attr::Tuple}));
+      cache->classes[canonical].ast = make_shared<ClassStmt>(
+          canonical, vector<Param>(), nullptr, Attr({Attr::Internal, Attr::Tuple}));
       preamble->globals.emplace_back(clone(cache->classes[canonical].ast));
     }
     // Add generic POD types to the preamble
@@ -88,18 +87,21 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
       vector<Param> generics;
       auto isInt = string(name) == "Int" || string(name) == "UInt";
       if (isInt)
-        generics.emplace_back(Param{stdlib->generateCanonicalName("N"),
-                                    make_shared<IdExpr>("int"), nullptr});
-      else
         generics.emplace_back(
-            Param{stdlib->generateCanonicalName("T"), nullptr, nullptr});
-      cache->classes[canonical].ast =
-          make_shared<ClassStmt>(canonical, generics, vector<Param>(), nullptr,
-                                 Attr({Attr::Internal, Attr::Tuple}));
+            Param{stdlib->generateCanonicalName("N"),
+                  make_shared<IndexExpr>(make_shared<IdExpr>("Static"),
+                                         make_shared<IdExpr>("int")),
+                  nullptr, true});
+      else
+        generics.emplace_back(Param{stdlib->generateCanonicalName("T"),
+                                    make_shared<IdExpr>("type"), nullptr, true});
+      cache->classes[canonical].ast = make_shared<ClassStmt>(
+          canonical, generics, nullptr, Attr({Attr::Internal, Attr::Tuple}));
       preamble->globals.emplace_back(clone(cache->classes[canonical].ast));
     }
     // Reserve the following static identifiers.
-    for (auto name : {"staticlen", "compile_error", "isinstance", "hasattr"})
+    for (auto name :
+         {"staticlen", "compile_error", "isinstance", "hasattr", "type", "TypeVar"})
       stdlib->generateCanonicalName(name);
 
     // This code must be placed in a preamble (these are not POD types but are
@@ -134,24 +136,19 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
   cache->imports[MAIN_IMPORT] = {file, ctx};
   ctx->setFilename(file);
   ctx->moduleName = {ImportFile::PACKAGE, file, MODULE_MAIN};
+  auto before = make_shared<SuiteStmt>();
   // Load the command-line defines.
-  unordered_map<string, pair<string, int64_t>> newDefines;
   for (auto &d : defines) {
-    try {
-      auto canName = ctx->generateCanonicalName(d.first);
-      newDefines[canName] = {d.second.first, stoll(d.second.first)};
-      ctx->add(SimplifyItem::Type, d.first, canName, false);
-    } catch (...) {
-      ast::error(format("parameter '{}' is not a valid integer", d.first).c_str());
-    }
+    before->stmts.push_back(make_shared<AssignStmt>(
+        make_shared<IdExpr>(d.first), make_shared<IntExpr>(d.second),
+        make_shared<IndexExpr>(make_shared<IdExpr>("Static"),
+                               make_shared<IdExpr>("int"))));
   }
-  defines = newDefines;
   // Prepend __name__ = "__main__".
-  stmts.push_back(
-      SimplifyVisitor(ctx, preamble)
-          .transform(make_shared<AssignStmt>(make_shared<IdExpr>("__name__"),
-                                             make_shared<StringExpr>(MODULE_MAIN))));
+  before->stmts.push_back(make_shared<AssignStmt>(
+      make_shared<IdExpr>("__name__"), make_shared<StringExpr>(MODULE_MAIN)));
   // Transform the input node.
+  stmts.emplace_back(SimplifyVisitor(ctx, preamble).transform(before));
   stmts.emplace_back(SimplifyVisitor(ctx, preamble).transform(node));
 
   auto suite = make_shared<SuiteStmt>();

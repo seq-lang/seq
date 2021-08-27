@@ -170,10 +170,13 @@ void DocVisitor::visit(FunctionStmt *stmt) {
 
   vector<json> args;
   vector<string> generics;
-  for (auto &g : stmt->generics) {
-    ctx->add(g.name, make_shared<int>(0));
-    generics.push_back(g.name);
-  }
+  for (auto &a : stmt->args)
+    if (a.generic || (a.type && (a.type->isId("type") || a.type->isId("TypeVar") ||
+                                 (a.type->getIndex() &&
+                                  a.type->getIndex()->expr->isId("Static"))))) {
+      ctx->add(a.name, make_shared<int>(0));
+      generics.push_back(a.name);
+    }
   for (auto &a : stmt->args) {
     json j;
     j["name"] = a.name;
@@ -196,8 +199,8 @@ void DocVisitor::visit(FunctionStmt *stmt) {
   j["args"] = args;
   string docstr;
   flatten(move(const_cast<FunctionStmt *>(stmt)->suite), &docstr);
-  for (auto &g : stmt->generics)
-    ctx->remove(g.name);
+  for (auto &g : generics)
+    ctx->remove(g);
   if (!docstr.empty() && !isLLVM)
     j["doc"] = docstr;
   ctx->shared->j[to_string(id)] = j;
@@ -213,10 +216,13 @@ void DocVisitor::visit(ClassStmt *stmt) {
 
   vector<json> args;
   vector<string> generics;
-  for (auto &g : stmt->generics) {
-    ctx->add(g.name, make_shared<int>(0));
-    generics.push_back(g.name);
-  }
+  for (auto &a : stmt->args)
+    if (a.generic || (a.type && (a.type->isId("type") || a.type->isId("TypeVar") ||
+                                 (a.type->getIndex() &&
+                                  a.type->getIndex()->expr->isId("Static"))))) {
+      ctx->add(a.name, make_shared<int>(0));
+      generics.push_back(a.name);
+    }
   for (auto &a : stmt->args) {
     json ja;
     ja["name"] = a.name;
@@ -249,8 +255,8 @@ void DocVisitor::visit(ClassStmt *stmt) {
         ctx->remove(ff->name);
     }
   }
-  for (auto &g : stmt->generics)
-    ctx->remove(g.name);
+  for (auto &g : generics)
+    ctx->remove(g);
   j["members"] = members;
   if (!docstr.empty())
     j["doc"] = docstr;

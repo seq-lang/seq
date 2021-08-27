@@ -176,16 +176,16 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       isInternal |= ast->suite == nullptr;
       // Add function arguments.
       if (!isInternal)
-        for (int i = 1; i < type->args.size(); i++) {
-          seqassert(type->args[i] && type->args[i]->getUnbounds().empty(),
-                    "unbound argument {}", type->args[i]->toString());
-
-          string varName = ast->args[i - 1].name;
-          trimStars(varName);
-          ctx->add(
-              TypecheckItem::Var, varName,
-              make_shared<LinkType>(type->args[i]->generalize(ctx->typecheckLevel)));
-        }
+        for (int i = 0, j = 1; i < ast->args.size(); i++)
+          if (!ast->args[i].generic) {
+            seqassert(type->args[j] && type->args[j]->getUnbounds().empty(),
+                      "unbound argument {}", type->args[j]->toString());
+            string varName = ast->args[i].name;
+            trimStars(varName);
+            ctx->add(TypecheckItem::Var, varName,
+                     make_shared<LinkType>(
+                         type->args[j++]->generalize(ctx->typecheckLevel)));
+          }
 
       // Need to populate realization table in advance to make recursive functions
       // work.
@@ -248,16 +248,17 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
         r->ir->setGlobal();
         ctx->cache->pendingRealizations.insert({type->funcName, type->realizedName()});
 
-        seqassert(!type || ast->args.size() == type->args.size() - 1,
+        seqassert(!type || ast->args.size() ==
+                               type->args.size() + type->funcGenerics.size() - 1,
                   "type/AST argument mismatch");
         vector<Param> args;
         for (auto &i : ast->args) {
           string varName = i.name;
           trimStars(varName);
-          args.emplace_back(Param{varName, nullptr, nullptr});
+          args.emplace_back(Param{varName, nullptr, nullptr, i.generic});
         }
-        r->ast = Nx<FunctionStmt>(ast, type->realizedName(), nullptr, vector<Param>(),
-                                  args, realized, ast->attributes);
+        r->ast = Nx<FunctionStmt>(ast, type->realizedName(), nullptr, args, realized,
+                                  ast->attributes);
         ctx->cache->functions[type->funcName].realizations[type->realizedName()] = r;
       } else {
         ctx->cache->functions[type->funcName].realizations[oldKey] =
@@ -313,9 +314,15 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr result, bool keepLast,
     }
     ctx->activeUnbounds = newActiveUnbounds;
     if (result->done) {
-      seqassert(ctx->activeUnbounds.empty() || !newUnbounds,
-                "inconsistent stmt->done with unbound count in {} ({} / {})", name,
-                ctx->activeUnbounds.size(), newUnbounds);
+      auto goodState = ctx->activeUnbounds.empty() || !newUnbounds;
+      // if (!goodState) {
+      //   for (auto &c : ctx->activeUnbounds) {
+      //     LOG("{}:{}", c.first->debugString(true), c.second);
+      //   }
+      //   LOG("{}\n", result->toString(0));
+      // }
+      seqassert(goodState, "inconsistent stmt->done with unbound count in {} ({} / {})",
+                name, ctx->activeUnbounds.size(), newUnbounds);
       break;
     } else {
       if (newUnbounds >= prevSize) {

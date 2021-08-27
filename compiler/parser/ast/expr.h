@@ -128,8 +128,10 @@ struct Param : public seq::SrcObject {
   string name;
   ExprPtr type;
   ExprPtr deflt;
+  bool generic;
 
-  explicit Param(string name = "", ExprPtr type = nullptr, ExprPtr deflt = nullptr);
+  explicit Param(string name = "", ExprPtr type = nullptr, ExprPtr deflt = nullptr,
+                 bool generic = false);
 
   string toString() const;
   Param clone() const;

@@ -178,7 +178,7 @@ def test_comparison_operator():
             return self.x > other.x
     data = [random() for i in range(100)]
     target = list(reversed(sorted(data)))
-    assert hsort[LT](data) == target
+    assert hsort(data, LT) == target
 
 test_heapify()
 test_naive_nbest()

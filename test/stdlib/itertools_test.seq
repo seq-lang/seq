@@ -354,7 +354,7 @@ def test_permutations_from_cpython():
 test_permutations_from_cpython()
 
 @extend
-class List[T]:
+class List:
     def __lt__(self, other: List[T]):
         if len(self) != len(other):
             return len(self) < len(other)

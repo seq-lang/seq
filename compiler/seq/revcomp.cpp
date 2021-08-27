@@ -274,7 +274,7 @@ void KmerRevcompInterceptor::run(Module *M) {
     if (auto *func = cast<BodiedFunc>(var)) {
       if (func->getUnmangledName() == Module::INVERT_MAGIC_NAME) {
         auto *kmerType = func->getParentType();
-        if (kmerType && kmerType->getName().rfind("std.bio.kmer.Kmer", 0) == 0 &&
+        if (kmerType && kmerType->getName().rfind("std.bio.seq.Kmer", 0) == 0 &&
             std::distance(func->arg_begin(), func->arg_end()) == 1) {
           // sanity check
           if (func->isGenerator() ||

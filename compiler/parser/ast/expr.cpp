@@ -42,13 +42,16 @@ string Expr::wrapType(const string &sexpr) const {
                 done ? "*" : "");
 }
 
-Param::Param(string name, ExprPtr type, ExprPtr deflt)
-    : name(move(name)), type(move(type)), deflt(move(deflt)) {}
+Param::Param(string name, ExprPtr type, ExprPtr deflt, bool generic)
+    : name(move(name)), type(move(type)), deflt(move(deflt)), generic(generic) {}
 string Param::toString() const {
-  return format("({}{}{})", name, type ? " #:type " + type->toString() : "",
-                deflt ? " #:default " + deflt->toString() : "");
+  return format("({}{}{}{})", name, type ? " #:type " + type->toString() : "",
+                deflt ? " #:default " + deflt->toString() : "",
+                generic ? " #:generic" : "");
 }
-Param Param::clone() const { return Param(name, ast::clone(type), ast::clone(deflt)); }
+Param Param::clone() const {
+  return Param(name, ast::clone(type), ast::clone(deflt), generic);
+}
 
 NoneExpr::NoneExpr() : Expr() {}
 string NoneExpr::toString() const { return wrapType("none"); }

@@ -1,7 +1,7 @@
 from C import seq_str_ptr(Ptr[byte]) -> str
 
 @extend
-class Ptr[T]:
+class Ptr:
     @__internal__
     def __new__(sz: int) -> Ptr[T]:
         pass

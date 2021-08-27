@@ -32,7 +32,7 @@ def test_pickle[T](x: T):
     jar.close()
 
     jar = gzopen(path, 'rb')
-    y = pickle.load[T](jar)
+    y = pickle.load(jar, T)
     jar.close()
 
     assert x == y
@@ -50,7 +50,7 @@ def test_non_atomic_list_pickle[T](x: list[list[T]]):
         v.clear()
 
     jar = gzopen(path, 'rb')
-    y = pickle.load[list[list[T]]](jar)
+    y = pickle.load(jar, list[list[T]])
     jar.close()
 
     assert y == copy
@@ -68,7 +68,7 @@ def test_non_atomic_dict_pickle[T](x: dict[str, list[T]]):
         v.clear()
 
     jar = gzopen(path, 'rb')
-    y = pickle.load[dict[str, list[T]]](jar)
+    y = pickle.load(jar, dict[str, list[T]])
     jar.close()
 
     assert y == copy
@@ -86,7 +86,7 @@ def test_non_atomic_set_pickle(x: set[A]):
         a.v.clear()
 
     jar = gzopen(path, 'rb')
-    y = pickle.load[set[A]](jar)
+    y = pickle.load(jar, set[A])
     jar.close()
 
     assert y == copy

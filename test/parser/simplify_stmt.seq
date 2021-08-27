@@ -518,9 +518,9 @@ def foo():
     def bar(): pass #! ERROR: builtins must be defined at the toplevel
 
 #%% function_err_2,barebones
-def f[T: str]():
+def f[T: Static[float]]():
     pass
-#! ERROR: only integer static generics are supported
+#! ERROR: only static integers are supported
 
 #%% function_err_3,barebones
 def f(a, b=a):
@@ -589,7 +589,7 @@ def f[T]():
     def g():
         return T()
     g()
-f[int]() #! ERROR: identifier 'T' not found
+f(int) #! ERROR: identifier 'T' not found
 
 #%% class_err_1,barebones
 @extend
@@ -645,12 +645,7 @@ class Foo[T, U]:
 @extend
 class Foo[T]:
     pass
-#! ERROR: generics do not match
-
-#%% class_err_6,barebones
-class Foo[U = int]:
-    pass
-#! ERROR: default generics not supported in classes
+#! ERROR: extensions cannot be generic or declare members
 
 #%% class_err_7,barebones
 class Foo:
@@ -670,9 +665,9 @@ class Foo:
 #! ERROR: only function and class definitions are allowed within classes
 
 #%% class_err_9,barebones
-class F[T: str]:
+class F[T: Static[str]]:
     pass
-#! ERROR: only integer static generics are supported
+#! ERROR: only static integers are supported
 
 #%% class_err_10,barebones
 def foo[T]():

@@ -9,10 +9,10 @@ from C import seq_gc_remove_roots(cobj, cobj)
 from C import seq_gc_clear_roots()
 from C import seq_gc_exclude_static_roots(cobj, cobj)
 
-def sizeof[T]():
+def sizeof(T: type):
     return T.__elemsize__
 
-def atomic[T]():
+def atomic(T: type):
     return T.__atomic__
 
 def alloc(sz: int):

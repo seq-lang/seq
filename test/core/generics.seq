@@ -76,9 +76,9 @@ a2.m4("x")                          # EXPECT: 1 2 3 x x
 a1.m5()                             # EXPECT: 42 3.14 hello
 a2.m5()                             # EXPECT: 1 2 3
 print A.m6(v1)                      # EXPECT: world
-m7[str,float]()                     # EXPECT: works
-m7[str,float]()                     # EXPECT: works
-m7[float,str]()                     # EXPECT: works
+m7(str,float)                       # EXPECT: works
+m7(str,float)                       # EXPECT: works
+m7(float,str)                       # EXPECT: works
 f(99)                               # EXPECT: 99
 print b1.foo().a                    # EXPECT: 111
 print b2.foo().a                    # EXPECT: 222
