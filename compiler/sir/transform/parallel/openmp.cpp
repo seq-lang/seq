@@ -130,9 +130,9 @@ struct Reduction {
       case Kind::MUL:
         return M->getFloat(1.);
       case Kind::MIN:
-        return M->getInt(std::numeric_limits<double>::max());
+        return M->getFloat(std::numeric_limits<double>::max());
       case Kind::MAX:
-        return M->getInt(std::numeric_limits<double>::min());
+        return M->getFloat(std::numeric_limits<double>::min());
       default:
         return nullptr;
       }
