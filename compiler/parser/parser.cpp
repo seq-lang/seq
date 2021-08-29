@@ -123,7 +123,8 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
     return module;
   } catch (exc::SeqException &e) {
     if (isTest) {
-      LOG("ERROR: {}", e.what());
+      _level = 0;
+      LOG("{}", e.what());
     } else {
       compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
                        e.getSrcInfo().col);
@@ -133,7 +134,8 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
     for (int i = 0; i < e.messages.size(); i++)
       if (!e.messages[i].empty()) {
         if (isTest) {
-          LOG("ERROR: {}", e.messages[i]);
+          _level = 0;
+          LOG("{}", e.messages[i]);
         } else {
           compilationError(e.messages[i], e.locations[i].file, e.locations[i].line,
                            e.locations[i].col, /*terminate=*/false);

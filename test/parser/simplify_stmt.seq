@@ -2,10 +2,10 @@
 pass
 
 #%% continue_error,barebones
-continue #! ERROR: continue outside of a loop
+continue #! continue outside of a loop
 
 #%% break_error,barebones
-break #! ERROR: break outside of a loop
+break #! break outside of a loop
 
 #%% assign,barebones
 a = 1
@@ -68,18 +68,18 @@ f[1] = -8
 print f.a #: 12
 
 #%% assign_err_1,barebones
-a, *b, c, *d = 1,2,3,4,5 #! ERROR: multiple unpack expressions
+a, *b, c, *d = 1,2,3,4,5 #! multiple unpack expressions
 
 #%% assign_err_2,barebones
 a = [1, 2, 3]
-a[1]: int = 3 #! ERROR: syntax error
+a[1]: int = 3 #! syntax error
 
 #%% assign_err_3,barebones
 a = 5
-a.x: int = 3 #! ERROR: syntax error
+a.x: int = 3 #! syntax error
 
 #%% assign_err_4,barebones
-*x = range(5) #! ERROR: invalid assignment
+*x = range(5) #! invalid assignment
 
 #%% assign_err_5,barebones
 try:
@@ -101,7 +101,7 @@ print a #: s
 #%% assign_err_must_exist,barebones
 a = 1
 def foo():
-    a += 2 #! ERROR: variable 'a' is not global
+    a += 2 #! variable 'a' is not global
 
 #%% assign_rename,barebones
 y = int
@@ -113,10 +113,10 @@ x = foo
 print x(1) #: 2
 
 #%% assign_err_6,barebones
-x = bar #! ERROR: identifier 'bar' not found
+x = bar #! identifier 'bar' not found
 
 #%% assign_err_7,barebones
-foo() += bar #! ERROR: invalid assignment
+foo() += bar #! invalid assignment
 
 #%% assign_update_eq,barebones
 a = 5
@@ -145,7 +145,7 @@ print f #: 9
 #%% del,barebones
 a = 5
 del a
-print a #! ERROR: identifier 'a' not found
+print a #! identifier 'a' not found
 
 #%% del_index,barebones
 y = [1, 2]
@@ -154,7 +154,7 @@ print y #: [2]
 
 #%% del_error,barebones
 a = [1]
-del a.ptr #! ERROR: invalid del statement
+del a.ptr #! invalid del statement
 
 #%% assert,barebones
 assert True
@@ -185,13 +185,13 @@ def foo(i, j):
 print 3 |> foo(1)  #: 4
 
 #%% return_fail,barebones
-return #! ERROR: expected function body
+return #! expected function body
 
 #%% yield_fail,barebones
-yield 5 #! ERROR: expected function body
+yield 5 #! expected function body
 
 #%% yield_fail_2,barebones
-(yield) #! ERROR: expected function body
+(yield) #! expected function body
 
 #%% while_else,barebones
 a = 1
@@ -282,12 +282,12 @@ foo(range(10)) #: else
 #%% match_err_1,barebones
 match [1, 2]:
     case [1, ..., 2, ..., 3]: pass
-#! ERROR: cannot have multiple ranges in a pattern
+#! cannot have multiple ranges in a pattern
 
 #%% match_err_2,barebones
 match [1, 2]:
     case 1 | ...: pass
-#! ERROR: unexpected ellipsis expression
+#! unexpected ellipsis expression
 
 #%% global,barebones
 a = 1
@@ -300,23 +300,23 @@ print a  #: 1 2
 
 #%% global_err,barebones
 a = 1
-global a #! ERROR: global outside of a function
+global a #! global outside of a function
 
 #%% global_err_2,barebones
 def foo():
-    global b #! ERROR: identifier 'b' not found
+    global b #! identifier 'b' not found
 
 #%% global_err_3,barebones
 def foo():
     b = 1
     def bar():
-        global b #! ERROR: not a top-level variable
+        global b #! not a top-level variable
 
 #%% global_err_4,barebones
 a = 1
 def foo():
     a += 1
-foo()  #! ERROR: variable 'a' is not global
+foo()  #! variable 'a' is not global
 
 #%% global_ref,barebones
 a = [1]
@@ -386,7 +386,7 @@ print sp(65)  #: 65
 
 #%% import_c_dylib_error,barebones
 from C import "".seq_print(str) as sp
-sp("hi!") #! ERROR: syntax error
+sp("hi!") #! syntax error
 
 #%% import,barebones
 zoo, _zoo = 1, 1
@@ -447,38 +447,38 @@ bar()
 
 #%% import_rec_err,barebones
 from a.b.rec1_err import bar
-#! ERROR: symbol 'bar' not found in
+#! symbol 'bar' not found in
 
 #%% import_err_1,barebones
 class Foo:
-    import bar #! ERROR: only function and class definitions are allowed within classes
+    import bar #! only function and class definitions are allowed within classes
 
 #%% import_err_2,barebones
-import "".a.b.c #! ERROR: syntax error
+import "".a.b.c #! syntax error
 
 #%% import_err_3,barebones
-from a.b import foo() #! ERROR: invalid import statement
+from a.b import foo() #! invalid import statement
 
 #%% import_err_4,barebones
-from a.b.c import hai.hey #! ERROR: invalid import statement
+from a.b.c import hai.hey #! invalid import statement
 
 #%% import_err_4_x,barebones
-import whatever #! ERROR: cannot locate import 'whatever'
+import whatever #! cannot locate import 'whatever'
 
 #%% import_err_5,barebones
 import a.b
-print a.b.x #! ERROR: identifier 'x' not found in
+print a.b.x #! identifier 'x' not found in
 
 #%% import_err_6,barebones
-from a.b import whatever #! ERROR: symbol 'whatever' not found in
+from a.b import whatever #! symbol 'whatever' not found in
 
 #%% function_err_0,barebones
 def foo(a, b, a):
-    pass #! ERROR: 'a' declared twice
+    pass #! 'a' declared twice
 
 #%% function_err_0b,barebones
 def foo(a, b=1, c):
-    pass #! ERROR: non-default argument 'c' after a default argument
+    pass #! non-default argument 'c' after a default argument
 
 #%% function_err_0b_ok,barebones
 def foo(a, b=1, *c):
@@ -486,58 +486,58 @@ def foo(a, b=1, *c):
 
 #%% function_err_0c,barebones
 def foo(a, b=1, *c, *d):
-    pass #! ERROR: invalid *args
+    pass #! invalid *args
 
 #%% function_err_0d,barebones
 def foo(a, b=1, *c: int):
-    pass #! ERROR: invalid *args
+    pass #! invalid *args
 
 #%% function_err_0e,barebones
 def foo(a, b=1, *c = 1):
-    pass #! ERROR: invalid *args
+    pass #! invalid *args
 
 #%% function_err_0f,barebones
 def foo(a, b=1, **c, **kwargs):
-    pass #! ERROR: invalid **kwargs
+    pass #! invalid **kwargs
 
 #%% function_err_0g,barebones
 def foo(a, b=1, **c: int):
-    pass #! ERROR: invalid **kwargs
+    pass #! invalid **kwargs
 
 #%% function_err_0h,barebones
 def foo(a, b=1, **c = 1):
-    pass #! ERROR: invalid **kwargs
+    pass #! invalid **kwargs
 
 #%% function_err_0i,barebones
 def foo(a, **c, d):
-    pass #! ERROR: invalid **kwargs
+    pass #! invalid **kwargs
 
 #%% function_err_1,barebones
 def foo():
     @__force__
-    def bar(): pass #! ERROR: builtins must be defined at the toplevel
+    def bar(): pass #! builtins must be defined at the toplevel
 
 #%% function_err_2,barebones
 def f[T: Static[float]]():
     pass
-#! ERROR: only static integers are supported
+#! only static integers are supported
 
 #%% function_err_3,barebones
 def f(a, b=a):
     pass
-#! ERROR: identifier 'a' not found
+#! identifier 'a' not found
 
 #%% function_llvm_err_1,barebones
 @llvm
 def foo():
     blah
-#! ERROR: LLVM functions must have a return type
+#! LLVM functions must have a return type
 
 #%% function_llvm_err_2,barebones
 @llvm
 def foo() -> int:
     a{={=}}
-#! ERROR: invalid LLVM substitution
+#! invalid LLVM substitution
 
 #%% function_llvm_err_3,barebones
 a = 5
@@ -545,15 +545,15 @@ a = 5
 def foo() -> int:
     a{=a}
 foo()
-#!   ERROR: not a type or static expression
-#!   ERROR: while realizing foo (arguments foo)
+#! not a type or static expression
+#! while realizing foo (arguments foo)
 
 #%% function_llvm_err_4,barebones
 a = 5
 @llvm
 def foo() -> int:
     a{=a
-#! ERROR: invalid LLVM substitution
+#! invalid LLVM substitution
 
 #%% function_self,barebones
 class Foo:
@@ -566,7 +566,7 @@ print f.foo() #: F
 class Foo:
     def foo(self):
         return 'F'
-Foo.foo(1) #! ERROR: cannot unify int and Foo
+Foo.foo(1) #! cannot unify int and Foo
 
 #%% function_nested,barebones
 def foo(v):
@@ -589,28 +589,28 @@ def f[T]():
     def g():
         return T()
     g()
-f(int) #! ERROR: identifier 'T' not found
+f(int) #! identifier 'T' not found
 
 #%% class_err_1,barebones
 @extend
 @foo
 class Foo:
     pass
-#! ERROR: extend cannot be combined with other decorators
+#! extend cannot be combined with other decorators
 
 #%% class_err_1b,barebones
 size_t = i32
 @extend
 class size_t:
     pass
-#! ERROR: cannot extend type alias or an instantiation (size_t)
+#! cannot extend type alias or an instantiation (size_t)
 
 #%% class_err_2,barebones
 def foo():
     @extend
     class Foo:
         pass
-#! ERROR: extend is only allowed at the toplevel
+#! extend is only allowed at the toplevel
 
 #%% class_nested,barebones
 class Foo:
@@ -631,13 +631,13 @@ print z.bar, z.b.__bool__(), z.c.foo, m.x.bar  #: 2 False 1 2
 class Foo:
     class Bar:
         b: Ptr[Bar]
-#! ERROR: identifier 'Bar' not found
+#! identifier 'Bar' not found
 
 #%% class_err_4,barebones
 @extend
 class Foo:
     pass
-#! ERROR: cannot find type 'Foo' to extend
+#! cannot find type 'Foo' to extend
 
 #%% class_err_5,barebones
 class Foo[T, U]:
@@ -645,42 +645,42 @@ class Foo[T, U]:
 @extend
 class Foo[T]:
     pass
-#! ERROR: extensions cannot be generic or declare members
+#! extensions cannot be generic or declare members
 
 #%% class_err_7,barebones
 class Foo:
     a: int
     a: int
-#! ERROR: 'a' declared twice
+#! 'a' declared twice
 
 #%% class_err_tuple_no_recursive,barebones
 @tuple
 class Foo:
     a: Foo
-#! ERROR: identifier 'Foo' not found
+#! identifier 'Foo' not found
 
 #%% class_err_8,barebones
 class Foo:
     while True: pass
-#! ERROR: only function and class definitions are allowed within classes
+#! only function and class definitions are allowed within classes
 
 #%% class_err_9,barebones
 class F[T: Static[str]]:
     pass
-#! ERROR: only static integers are supported
+#! only static integers are supported
 
 #%% class_err_10,barebones
 def foo[T]():
     class A:
         x: T
-#! ERROR: identifier 'T' not found (cannot access outer function identifiers)
+#! identifier 'T' not found (cannot access outer function identifiers)
 
 #%% class_err_11,barebones
 def foo(x):
     class A:
         def bar():
             print x
-#! ERROR: cannot access non-global variable 'x'
+#! cannot access non-global variable 'x'
 
 #%% class_err_12,barebones
 def foo(x):
@@ -688,7 +688,7 @@ def foo(x):
     class A:
         def bar():
             print T()
-#! ERROR: identifier 'T' not found (cannot access outer function identifiers)
+#! identifier 'T' not found (cannot access outer function identifiers)
 
 #%% recursive_class,barebones
 class Node[T]:
@@ -786,9 +786,9 @@ print 0 in sponge #: False
 class Foo:
     pass
 print Foo().__getitem__(1)
-#!     ERROR: expression with void type
-#!     ERROR: while realizing __internal__.tuple_getitem
-#!     ERROR: while realizing Foo.__getitem__
+#! expression with void type
+#! while realizing __internal__.tuple_getitem
+#! while realizing Foo.__getitem__
 
 #%% magic_empty_tuple,barebones
 @tuple
@@ -800,27 +800,27 @@ print list(Foo().__iter__())  #: []
 @tuple(eq=False)
 class Foo:
     x: int
-Foo(1).__eq__(Foo(1)) #! ERROR: cannot find '__eq__' in Foo
+Foo(1).__eq__(Foo(1)) #! cannot find '__eq__' in Foo
 
 #%% magic_err_5,barebones
 @tuple(pickle=False)
 class Foo:
     x: int
 p = Ptr[byte]()
-Foo(1).__pickle__(p) #! ERROR: cannot find '__pickle__' in Foo
+Foo(1).__pickle__(p) #! cannot find '__pickle__' in Foo
 
 #%% magic_err_6,barebones
 @tuple(container=False)
 class Foo:
     x: int
-Foo(1).__getitem__(0) #! ERROR: cannot find '__getitem__' in Foo
+Foo(1).__getitem__(0) #! cannot find '__getitem__' in Foo
 
 #%% magic_err_7,barebones
 @tuple(python=False)
 class Foo:
     x: int
 p = Ptr[byte]()
-Foo(1).__to_py__(p) #! ERROR: cannot find '__to_py__' in Foo
+Foo(1).__to_py__(p) #! cannot find '__to_py__' in Foo
 
 #%% python
 from python import os

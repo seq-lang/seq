@@ -527,17 +527,18 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
       }
     {
       ctx->typecheckLevel++;
-      for (auto ai = 0; ai < stmt->args.size(); ai++)
+      for (auto ai = 0, aj = 0; ai < stmt->args.size(); ai++)
         if (!stmt->args[ai].generic) {
           auto si = stmt->args[ai].type->getSrcInfo();
-          ctx->cache->classes[stmt->name].fields[ai].type =
+          ctx->cache->classes[stmt->name].fields[aj].type =
               transformType(stmt->args[ai].type)
                   ->getType()
                   ->generalize(ctx->typecheckLevel - 1);
-          ctx->cache->classes[stmt->name].fields[ai].type->setSrcInfo(si);
+          ctx->cache->classes[stmt->name].fields[aj].type->setSrcInfo(si);
           if (stmt->isRecord())
             typ->getRecord()->args.push_back(
-                ctx->cache->classes[stmt->name].fields[ai].type);
+                ctx->cache->classes[stmt->name].fields[aj].type);
+          aj++;
         }
       ctx->typecheckLevel--;
     }

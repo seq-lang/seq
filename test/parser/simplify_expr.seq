@@ -30,7 +30,7 @@ class int:
 print 123_456test #: TEST: 123456
 
 #%% int_error,barebones
-print 1844674407_3709551999 #! ERROR: integer 18446744073709551999 out of range
+print 1844674407_3709551999 #! integer 18446744073709551999 out of range
 
 #%% float,barebones
 print 5.15 #: 5.15
@@ -38,7 +38,7 @@ print 2e2 #: 200
 print 2.e-2 #: 0.02
 
 #%% float_error,barebones
-print 5.__str__() #! ERROR: syntax error
+print 5.__str__() #! syntax error
 
 #%% string,barebones
 print 'kthxbai', "kthxbai" #: kthxbai kthxbai
@@ -59,10 +59,10 @@ c = f'and this is {a} followed by {b}'
 print c, f'{b}{a}', f'. {1+a=} .. {b} ...' #: and this is 1 followed by 2 21 . 1+a=2 .. 2 ...
 
 #%% fstring_error,barebones
-f"a{b + 3}}" #! ERROR: f-string braces are not balanced
+f"a{b + 3}}" #! f-string braces are not balanced
 
 #%% fstring_error_2,barebones
-f"a{{b + 3}" #! ERROR: f-string braces are not balanced
+f"a{{b + 3}" #! f-string braces are not balanced
 
 #%% prefix_str,barebones
 @extend
@@ -87,7 +87,7 @@ print r'a\tb' #: a\tb
 print R'\n\r\t\\' #: \n\r\t\\
 
 #%% id_fstring_error,barebones
-f"a{b + 3}" #! ERROR: identifier 'b' not found
+f"a{b + 3}" #! identifier 'b' not found
 
 #%% id_access,barebones
 def foo():
@@ -114,7 +114,7 @@ print z
 
 #%% star_err,barebones
 a = (1, 2, 3)
-print *a #! ERROR: cannot use star-expression
+print *a #! cannot use star-expression
 
 #%% list,barebones
 a = [4, 5, 6]
@@ -239,7 +239,7 @@ print True == (b == 15) #: True
 #%% pipe_error,barebones
 def b(a, b, c, d):
     pass
-1 |> b(1, ..., 2, ...)  #! ERROR: unexpected ellipsis expression
+1 |> b(1, ..., 2, ...)  #! unexpected ellipsis expression
 
 #%% index_normal,barebones
 t: tuple[int, int] = (1, 2)
@@ -268,16 +268,16 @@ f[:,:] #: ((start: None, stop: None, step: None), (start: None, stop: None, step
 f[:,0] #: ((start: None, stop: None, step: None), 0)
 
 #%% index_error,barebones
-Ptr['s'] #! ERROR: expected type or static parameters
+Ptr['s'] #! expected type or static parameters
 
 #%% index_error_static,barebones
-Ptr[1] #! ERROR: cannot unify T and 1
+Ptr[1] #! cannot unify T and 1
 
 #%% index_error_2,barebones
-Ptr[int, 's'] #! ERROR: expected 1 generics
+Ptr[int, 's'] #! expected 1 generics
 
 #%% index_error_3,barebones
-Ptr[1, 's'] #! ERROR: expected 1 generics
+Ptr[1, 's'] #! expected 1 generics
 
 #%% call_ptr,barebones
 v = 5
@@ -285,14 +285,14 @@ p = __ptr__(v)
 print p[0] #: 5
 
 #%% call_ptr_error,barebones
-__ptr__(1) #! ERROR: __ptr__ only accepts a single argument (variable identifier)
+__ptr__(1) #! __ptr__ only accepts a single argument (variable identifier)
 
 #%% call_ptr_error_2,barebones
-__ptr__(v) #! ERROR: __ptr__ only accepts a single argument (variable identifier)
+__ptr__(v) #! __ptr__ only accepts a single argument (variable identifier)
 
 #%% call_ptr_error_3,barebones
 v = 1
-__ptr__(v, 1) #! ERROR: __ptr__ only accepts a single argument (variable identifier)
+__ptr__(v, 1) #! __ptr__ only accepts a single argument (variable identifier)
 
 #%% call_array,barebones
 a = __array__[int](2)
@@ -300,18 +300,18 @@ a[0] = a[1] = 5
 print a[0], a[1] #: 5 5
 
 #%% call_array_error,barebones
-a = __array__[int](2, 3) #! ERROR: __array__ only accepts a single argument (size)
+a = __array__[int](2, 3) #! __array__ only accepts a single argument (size)
 
 #%% call_err_1,barebones
-seq_print(1, name="56", 2) #! ERROR: unnamed argument after a named argument
+seq_print(1, name="56", 2) #! unnamed argument after a named argument
 
 #%% call_err_2,barebones
 x = (1, 2)
-seq_print(1, name=*x) #! ERROR: syntax error
+seq_print(1, name=*x) #! syntax error
 
 #%% call_err_3,barebones
 x = (1, 2)
-seq_print(1, name=**x) #! ERROR: syntax error
+seq_print(1, name=**x) #! syntax error
 
 #%% call_collections
 from collections import namedtuple as nt
@@ -334,7 +334,7 @@ f2 = partial(foo, y=2)
 f2(1, 2) #: 1 2 2
 
 #%% ellipsis_err,barebones
-... #! ERROR: unexpected ellipsis expression
+... #! unexpected ellipsis expression
 
 #%% lambda,barebones
 l = lambda a, b: a + b
@@ -388,33 +388,33 @@ def foo(x):
     return x * x
 if False or (x := foo(4)):
     pass
-#! ERROR: assignment expression in a short-circuiting subexpression
+#! assignment expression in a short-circuiting subexpression
 
 #%% walrus_err_1b,barebones
 def foo(x):
     return x * x
 if False and (x := foo(4)):
     pass
-#! ERROR: assignment expression in a short-circuiting subexpression
+#! assignment expression in a short-circuiting subexpression
 
 #%% walrus_err_2,barebones
 def foo(x):
     return x * x
 y = (x := foo(4)) if True else 0
-#! ERROR: assignment expression in a short-circuiting subexpression
+#! assignment expression in a short-circuiting subexpression
 
 #%% walrus_err_2b,barebones
 def foo(x):
     return x * x
 y = 0 if True else (x := foo(4))
-#! ERROR: assignment expression in a short-circuiting subexpression
+#! assignment expression in a short-circuiting subexpression
 
 #%% range_err,barebones
-1 ... 3 #! ERROR: unexpected pattern range expression
+1 ... 3 #! unexpected pattern range expression
 
 
 #%% callable_error,barebones
-def foo(x: Callable[[]]): pass  #! ERROR: invalid Callable type declaration
+def foo(x: Callable[[]]): pass  #! invalid Callable type declaration
 
 #%% unpack_specials,barebones
 x, = 1,

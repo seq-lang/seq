@@ -214,8 +214,8 @@ def rec3(x, y): #- ('a, 'b) -> 'b
     else:
         return y
 rec3(1, 's')
-#!   ERROR: cannot unify int and str
-#!   ERROR: while realizing rec3 (arguments rec3[int,str])
+#! cannot unify int and str
+#! while realizing rec3 (arguments rec3[int,str])
 
 #%% instantiate_function_2,barebones
 def fx[T](x: T) -> T:
@@ -298,7 +298,7 @@ print h(list(map(lambda i: i-1, map(lambda i: i+2, range(5)))))
 #%% func_unify_error,barebones
 def foo(x:int):
     print x
-z = 1 & foo #! ERROR: cannot unify foo[...] and int
+z = 1 & foo #! cannot unify foo[...] and int
 
 #%% void_error,barebones
 def foo():
@@ -306,7 +306,7 @@ def foo():
 def bar(x):
     print 'bar'
 a = foo()
-bar(a) #! ERROR: expression with void type
+bar(a) #! expression with void type
 
 #%% void_error_2,barebones
 def foo():
@@ -316,8 +316,8 @@ def foo():
         yield
         i += 1
 a = list(foo())
-#!   ERROR: expression with void type
-#!   ERROR: while realizing std.internal.types.ptr.List.__init__
+#! expression with void type
+#! while realizing std.internal.types.ptr.List.__init__
 
 #%% instantiate_swap,barebones
 class Foo[T, U]:
@@ -385,20 +385,20 @@ print Foo[int, 3, 4](), Foo[int, 5, 4]()
 #%% static_fail,barebones
 def test(i: Int[32]):
     print int(i)
-test(Int[5](1)) #! ERROR: cannot unify Int[5] and Int[32]
+test(Int[5](1)) #! cannot unify Int[5] and Int[32]
 
 #%% static_fail_2,barebones
 zi = Int[32](6)
 def test3[N](i: Int[N]):
     print int(i)
-test3(zi) #! ERROR: cannot unify
+test3(zi) #! cannot unify
 # TODO: nicer error message!
 
 #%% static_fail_3,barebones
 zi = Int[32](6)
 def test3[N: Static[int]](i: Int[N]):
     print int(i)
-test3(1, int) #! ERROR: expected static expression
+test3(1, int) #! expected static expression
 # TODO: nicer error message!
 
 #%% nested_fn_generic,barebones
@@ -421,11 +421,11 @@ def f[U](x: U, y): # ('u, 'a) -> tuple['a, 'u]
     def g[T, U](x: T, y: U): # ('t, 'u) -> tuple['t, 'u]
         return (x, y)
     return g(y, x)
-print f(1.1, 1, int).__class__ #! ERROR: cannot unify float and int
+print f(1.1, 1, int).__class__ #! cannot unify float and int
 
 #%% fn_realization,barebones
 def ff[T](x: T, y: tuple[T]):
-      print ff(T=str,...).__class__ #: ff[str;str,Tuple[str]]
+      print ff(T=str,...).__class__ #: ff[str,Tuple[str],str]
       return x
 x = ff(1, (1,))
 print x, x.__class__ #: 1 int
@@ -435,7 +435,7 @@ def fg[T](x:T):
     def g[T](y):
         z = T()
         return z
-    print fg(T=str,...).__class__  #: fg[str;str]
+    print fg(T=str,...).__class__  #: fg[str,str]
     print g(1, T).__class__ #: int
 fg(1)
 print fg(1).__class__ #: void
@@ -453,8 +453,8 @@ def f[T](x: T):
     print f(x, int).__class__
     return x
 f('s')
-#!   ERROR: cannot unify str and int
-#!   ERROR: while realizing f
+#! cannot unify str and int
+#! while realizing f
 
 #%% nested_class_error,barebones
 class X:
@@ -464,7 +464,7 @@ class X:
         def bar(self, x):
             return x
 y = X.Y()
-y.foo(1) #! ERROR: cannot find 'foo' in X.Y
+y.foo(1) #! cannot find 'foo' in X.Y
 
 #%% nested_deep_class,barebones
 class A[T]:
@@ -476,7 +476,7 @@ class A[T]:
             def foo[W](t: V, u: V, v: V, w: W):
                 return (t, u, v, w)
 
-print A.B.C[bool].foo(W=str, ...).__class__ #: A.B.C.foo[str;bool,bool,bool,str]
+print A.B.C[bool].foo(W=str, ...).__class__ #: A.B.C.foo[bool,bool,bool,str,str]
 print A.B.C.foo(1,1,1,True) #: (1, 1, 1, True)
 print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
 print A.B.C.foo('x', 'x', 'x', 'x') #: (x, x, x, x)
@@ -494,7 +494,7 @@ class A[T]:
             c: V
             def foo[W](t: V, u: V, v: V, w: W):
                 return (t, u, v, w)
-print A.B.C[str].foo(1,1,1,True) #! ERROR: cannot unify int and str
+print A.B.C[str].foo(1,1,1,True) #! cannot unify int and str
 
 #%% nested_deep_class_error_2,barebones
 class A[T]:
@@ -505,7 +505,7 @@ class A[T]:
             c: V
             def foo[W](t: V, u: V, v: V, w: W):
                 return (t, u, v, w)
-print A.B[int].C[float].foo(1,1,1,True) #! ERROR: cannot find 'C' in A.B[int]
+print A.B[int].C[float].foo(1,1,1,True) #! cannot find 'C' in A.B[int]
 
 #%% nested_class_function,barebones
 def f(x):
@@ -631,7 +631,7 @@ class A[T]:
     y: T
     def foo(self, y): self.y = y
 a = A()
-a.foo(1) #! ERROR: cannot typecheck the program
+a.foo(1) #! cannot typecheck the program
 
 #%% return_deduction,barebones
 def fun[T, R](x, y: T) -> R:
@@ -645,7 +645,7 @@ print fun(2, 1.1, float, byte).__class__ #: byte
 #%% return_auto_deduction_err,barebones
 def fun[T, R](x, y: T) -> R:
    	return byte(1)
-print fun(2, 1.1).__class__ #! ERROR: cannot typecheck the program
+print fun(2, 1.1).__class__ #! cannot typecheck the program
 
 #%% random
 # shuffle used to fail before for some reason (sth about unbound variables)...
@@ -705,7 +705,7 @@ class X[T]:
         return (x+x, y+y)
 y = X[X[int]]()
 print y.__class__ #: X[X[int]]
-print X[float].foo(U=int, ...).__class__ #: X.foo[int;X[float],float,int]
+print X[float].foo(U=int, ...).__class__ #: X.foo[X[float],float,int,int]
 # print y.foo[float].__class__
 print X[int]().foo(1, 's') #: (2, ss)
 
@@ -759,8 +759,8 @@ def frec(x, y):
         return frec(y, x)
     return grec(x, y) if bl(y) else 2
 print frec(1, 2).__class__, frec('s', 1).__class__
-#!   ERROR: expression with void type
-#!   ERROR: while realizing frec (arguments frec[int,int])
+#! expression with void type
+#! while realizing frec (arguments frec[int,int])
 
 #%% return_fn,barebones
 def retfn(a):
@@ -923,5 +923,54 @@ def tee(iterable, n=2):
             yield mydeque.popleft()
     return list(gen(d) for d in deques)
 it = [1,2,3,4]
-a, b = tee(it) #!   ERROR: cannot typecheck the program
-#!   ERROR: while realizing tee (arguments tee[List[int],int])
+a, b = tee(it) #! cannot typecheck the program
+#! while realizing tee (arguments tee[List[int],int])
+
+#%% new_syntax,barebones
+def foo[T,U](x: type, y, z: Static[int] = 10):
+    print T.__class__, U.__class__, x.__class__, y.__class__, Int[z+1].__class__
+    return List[x]()
+print foo(T=int,U=str,...).__class__ #: foo[T1,x,z,int,str]
+print foo(T=int,U=str,z=5,x=bool,...).__class__ #: foo[T1,bool,5,int,str]
+print foo(float,3,T=int,U=str,z=5).__class__ #: List[float]
+foo(float,1,10,str,int) #: str int float int Int[11]
+
+
+class Foo[T,U: Static[int]]:
+    a: T
+    b: Static[int]
+    c: Int[U]
+    d: type
+    e: List[d]
+    f: UInt[b]
+print Foo[5,int,float,6].__class__ #: Foo[5,int,float,6]
+print Foo(1.1, 10i32, [False], 10u66).__class__ #: Foo[66,bool,float,32]
+
+
+def foo[N: Static[int]]():
+    print Int[N].__class__, N
+x: Static[int] = 5
+y: Static[int] = 105 - x * 2
+foo(y-x) #: Int[90] 90
+
+if 1.1+2.2 > 0:
+    x: Static[int] = 88
+    print x #: 88
+print x #: 5
+x : Static[int] = 3
+print x #: 3
+
+def fox(N: Static[int] = 4):
+    print Int[N].__class__, N
+fox(5) #: Int[5] 5
+fox() #: Int[4] 4
+
+#%% new_syntax_err,barebones
+class Foo[T,U: Static[int]]:
+    a: T
+    b: Static[int]
+    c: Int[U]
+    d: type
+    e: List[d]
+    f: UInt[b]
+print Foo[float,6].__class__ #! expected 4 generics and/or statics

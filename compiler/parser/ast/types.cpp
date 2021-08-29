@@ -528,7 +528,7 @@ string FuncType::debugString(bool debug) const {
   for (int ai = debug ? 0 : 1; ai < args.size(); ai++)
     as.push_back(args[ai]->debugString(debug));
   string a = join(as, ",");
-  s = s.empty() ? a : join(vector<string>{s, a}, ";");
+  s = s.empty() ? a : join(vector<string>{a, s}, ",");
   return fmt::format("{}{}", funcName, s.empty() ? "" : fmt::format("[{}]", s));
 }
 string FuncType::realizedName() const {
@@ -543,7 +543,7 @@ string FuncType::realizedName() const {
     as.push_back(args[ai]->getFunc() ? args[ai]->getFunc()->realizedName()
                                      : args[ai]->realizedName());
   string a = join(as, ",");
-  s = s.empty() ? a : join(vector<string>{s, a}, ";");
+  s = s.empty() ? a : join(vector<string>{a, s}, ",");
   return fmt::format("{}{}{}", funcParent ? funcParent->realizedName() + ":" : "",
                      funcName, s.empty() ? "" : fmt::format("[{}]", s));
 }

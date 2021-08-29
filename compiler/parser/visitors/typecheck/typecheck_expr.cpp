@@ -1054,7 +1054,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     calleeFn = expr->expr->type->getFunc();
     FunctionStmt *ast = ctx->cache->functions[calleeFn->funcName].ast.get();
     for (int i = 0, j = 0; i < ast->args.size(); i++)
-      known.push_back(ast->args[i].generic ? 1 : pc->known[j++]);
+      known.push_back(ast->args[i].generic ? 0 : pc->known[j++]);
     seqassert(calleeFn, "not a function: {}", expr->expr->type->toString());
   } else if (!callee->getFunc()) {
     // Case 3: callee is not a named function. Route it through a __call__ method.

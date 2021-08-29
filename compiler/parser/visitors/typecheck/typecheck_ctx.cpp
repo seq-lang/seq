@@ -273,7 +273,7 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
       score = -1;
       break;
     }
-    //    LOG("{} {} / {}", typ->toString(), method->toString(), score);
+    // LOG("{} {} / {}", typ->toString(), method->toString(), score);
     if (score >= 0)
       scores.emplace_back(std::make_pair(score, mi));
   }
@@ -290,7 +290,7 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
   return methods[scores[0].second];
 }
 
-int TypeContext::reorderNamedArgs(types::RecordType *func,
+int TypeContext::reorderNamedArgs(types::FuncType *func,
                                   const vector<CallExpr::Arg> &args,
                                   ReorderDoneFn onDone, ReorderErrorFn onError,
                                   const vector<char> &known) {
@@ -302,9 +302,7 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
   int score = 0;
 
   // 0. Find *args and **kwargs
-  FunctionStmt *ast = nullptr;
-  if (auto fn = func->getFunc())
-    ast = cache->functions[fn->funcName].ast.get();
+  FunctionStmt *ast = cache->functions[func->funcName].ast.get();
   assert(ast);
 
   // True if there is a trailing ellipsis (full partial: fn(all_args, ...))
@@ -342,7 +340,7 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
       namedArgs[args[ai].name] = ai;
     }
   }
-  score = 2 * int(slots.size());
+  score += 2 * int(slots.size() - func->funcGenerics.size());
 
   for (auto ai : vector<int>{std::max(starArgIndex, kwstarArgIndex),
                              std::min(starArgIndex, kwstarArgIndex)})
@@ -389,7 +387,8 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
   // 5. Fill in the default arguments
   for (auto i = 0; i < ast->args.size(); i++)
     if (slots[i].empty() && i != starArgIndex && i != kwstarArgIndex) {
-      if ((ast && ast->args[i].deflt) || (!known.empty() && known[i]))
+      if (!ast->args[i].generic &&
+          ((ast && ast->args[i].deflt) || (!known.empty() && known[i])))
         score -= 2;
       else if (!partial && !ast->args[i].generic)
         return onError(format("missing argument '{}'",

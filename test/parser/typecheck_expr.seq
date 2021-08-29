@@ -16,7 +16,7 @@ print a.__class__ #: str
 
 #%% none_unbound,barebones
 a = None
-#! ERROR: cannot typecheck the program
+#! cannot typecheck the program
 
 #%% id_static,barebones
 def foo[N: Static[int]]():
@@ -170,7 +170,7 @@ except ValueError as e:
 def foo2(a: int):
     print a
     return 1
-None |> foo2 #! ERROR: cannot typecheck the program
+None |> foo2 #! cannot typecheck the program
 # Explanation: None can also be Optional[Generator[int]]
 # We cannot decide if this is a generator to be unrolled in a pipe,
 # or just an argument to be passed to a function.
@@ -178,15 +178,15 @@ None |> foo2 #! ERROR: cannot typecheck the program
 #%% instantiate_err,barebones
 def foo[N]():
     return N()
-foo(int, float)  #! ERROR: too many arguments
+foo(int, float)  #! too many arguments
 
 #%% instantiate_err_2,barebones
 def foo[N, T]():
     return N()
-foo(int)  #! ERROR: cannot typecheck the program
+foo(int)  #! cannot typecheck the program
 
 #%% instantiate_err_3,barebones
-Ptr[int, float]()  #! ERROR: expected 1 generics
+Ptr[int, float]()  #! expected 1 generics
 
 #%% slice,barebones
 z = [1, 2, 3, 4, 5]
@@ -206,11 +206,11 @@ print a[3:5] #: ()
 
 #%% static_index_err,barebones
 a = (1, 2)
-a[5] #! ERROR: tuple index 5 out of bounds (len: 2)
+a[5] #! tuple index 5 out of bounds (len: 2)
 
 #%% static_index_err_2,barebones
 a = (1, 2)
-a[-3] #! ERROR: tuple index -1 out of bounds (len: 2)
+a[-3] #! tuple index -1 out of bounds (len: 2)
 
 #%% index_func_instantiate,barebones
 class X:
@@ -231,7 +231,7 @@ print l, l.__class__ #: [(str, 1, True, 5.15)] List[Tuple[str,int,bool,float]]
 
 #%% dot_case_1,barebones
 a = []
-print a[0].loop()  #! ERROR: cannot find 'loop' in int
+print a[0].loop()  #! cannot find 'loop' in int
 a.append(5)
 
 #%% dot_case_2,barebones
@@ -245,7 +245,7 @@ print a.len #: 1
 
 #%% dot_case_4_err,barebones
 a = [5]
-a.foo #! ERROR: cannot find 'foo' in List[int]
+a.foo #! cannot find 'foo' in List[int]
 
 #%% dot_case_6,barebones
 class Foo:
@@ -297,7 +297,7 @@ class Foo:
         print 'foo'
     def method(self, a):
         print a
-Foo().clsmethod() #! ERROR: too many arguments for Foo.clsmethod (expected maximum 0, got 1)
+Foo().clsmethod() #! too many arguments for Foo.clsmethod (expected maximum 0, got 1)
 
 #%% call,barebones
 def foo(a, b, c='hi'):
@@ -348,17 +348,17 @@ print Moo(1) #: Moo.__new__
 #%% call_err_2,barebones
 class A:
     a: A
-a = A() #! ERROR: recursive default arguments
+a = A() #! recursive default arguments
 
 #%% call_err_3,barebones
 class G[T]:
     t: T
 class A:
     ga: G[A]
-a = A() #! ERROR: recursive default arguments
+a = A() #! recursive default arguments
 
 #%% call_err_4,barebones
-seq_print(1, name="56", name=2) #! ERROR: repeated named argument 'name'
+seq_print(1, name="56", name=2) #! repeated named argument 'name'
 
 #%% call_partial,barebones
 def foo(i, j, k):
@@ -446,7 +446,7 @@ p(1, z=5)
 q = p(zh=43, ...)
 q(1)
 r = q(5, 38, ...)
-r(1, a=1) #! ERROR: too many arguments for foo[T1,T2,T3] (expected maximum 3, got 2)
+r(1, a=1) #! too many arguments for foo[T1,T2,T3] (expected maximum 3, got 2)
 
 #%% call_kwargs,barebones
 def kwhatever(**kwargs):
@@ -525,10 +525,10 @@ print hasattr([1, 2], "__getitem__", str)
 #: False
 
 #%% staticlen_err,barebones
-print staticlen([1, 2]) #! ERROR: List[int] is not a tuple type
+print staticlen([1, 2]) #! List[int] is not a tuple type
 
 #%% compile_error,barebones
-compile_error("woo-hoo") #! ERROR: custom error: woo-hoo
+compile_error("woo-hoo") #! custom error: woo-hoo
 
 #%% stack_alloc,barebones
 a = __array__[int](2)
@@ -599,7 +599,7 @@ print tuple((j, i) for i, j in ((1, 'a'), (2, 'b'), (3, 'c')))
 #: ((a, 1), (b, 2), (c, 3))
 
 #%% static_unify,barebones
-def foo(x: Callable[[1,2], 3]): pass  #! ERROR: cannot unify TR and 3
+def foo(x: Callable[[1,2], 3]): pass  #! cannot unify TR and 3
 
 #%% static_unify_2,barebones
-def foo(x: List[1]): pass  #! ERROR: cannot unify T and 1
+def foo(x: List[1]): pass  #! cannot unify T and 1
