@@ -16,7 +16,7 @@ def test_fast(K: Static[int]):
     global n
     n = 0
     with timing(f'{K}-mer (fast)'):
-        FASTA(argv[1]) |> seqs |> kmers(step=1, K=K) |> revcomp |> update
+        FASTA(argv[1]) |> seqs |> kmers(step=1, k=K) |> revcomp |> update
     print n
 
 
@@ -25,7 +25,7 @@ def test_slow(K: Static[int]):
     n = 0
     with timing(f'{K}-mer (slow)'):
         for a in seqs(FASTA(argv[1])):
-            for b in kmers(a, step=1, K=K):
+            for b in kmers(a, step=1, k=K):
                 c = revcomp(b)
                 update(c)
     print n

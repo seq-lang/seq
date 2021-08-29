@@ -16,7 +16,7 @@ with gzip.open(argv[1] + '.index', 'rb') as jar:
 
 candidates = Dict[int,int]()  # position -> count mapping
 for record in FASTQ(argv[2]):
-    for pos,kmer in record.read.kmers_with_pos(K=K, step=1):
+    for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
         found = index.get(min(kmer, ~kmer), -1)
         if found > 0:
             candidates.increment(found - pos)

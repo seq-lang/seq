@@ -37,14 +37,14 @@ print list((~s).kmers_with_pos(4, 3))  # EXPECT: [(8, GTC)]
 s = s'AGACCTNTAGC'
 print list(s.split(k=100, step=1))         # EXPECT: []
 print list((~s).split(k=100, step=1))      # EXPECT: []
-print list(s.kmers(step=1, K=100))         # EXPECT: []
-print list((~s).kmers(step=1, K=100))      # EXPECT: []
+print list(s.kmers(step=1, k=100))         # EXPECT: []
+print list((~s).kmers(step=1, k=100))      # EXPECT: []
 
 s = s'TAGCC'
 print list(s.split(k=5, step=17))         # EXPECT: [TAGCC]
 print list((~s).split(k=5, step=17))      # EXPECT: [GGCTA]
-print list(s.kmers(step=17, K=5))         # EXPECT: [TAGCC]
-print list((~s).kmers(step=17, K=5))      # EXPECT: [GGCTA]
+print list(s.kmers(step=17, k=5))         # EXPECT: [TAGCC]
+print list((~s).kmers(step=17, k=5))      # EXPECT: [GGCTA]
 
 k1 = Kmer[K](s'ACGTA')
 k2 = Kmer[K](s'ATGTT')
@@ -160,7 +160,7 @@ def test_kmer_revcomp(path: str, K: Static[int]):
                 v1.append(str(~y).upper())
 
     for x in FASTA(path, fai=False):
-        for y in x.seq.kmers(step=1, K=K):
+        for y in x.seq.kmers(step=1, k=K):
             v2.append(str(~y).upper())
 
     '''
@@ -200,7 +200,7 @@ def test_kmer_iteration(path: str, K: Static[int]):
                         v1.append(str(y).upper())
 
             for x in FASTA(path, fai=False):
-                for y in (~(x.seq) if rc else x.seq).kmers(step=step, K=K):
+                for y in (~(x.seq) if rc else x.seq).kmers(step=step, k=K):
                     v2.append(str(y).upper())
 
             assert v1 == v2

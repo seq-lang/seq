@@ -124,7 +124,7 @@ def index_make(rec: FASTARecord):
     assert len(s) >= K
     v = List(len(s) - W + 1)
     print('reading k-mers...', file=stderr)
-    for pos, kmer in s.kmers_with_pos(step=1, K=K):
+    for pos, kmer in s.kmers_with_pos(step=1, k=K):
         v.append((kmer, pos))
     print('sorting...', file=stderr)
     v.sort()

@@ -11,7 +11,7 @@ import gzip
 index = {}
 
 for record in FASTA(argv[1]):
-    for pos,kmer in record.seq.kmers_with_pos(K=32, step=1):
+    for pos,kmer in record.seq.kmers_with_pos(k=32, step=1):
         index[min(kmer, ~kmer)] = pos
 
 with gzip.open(argv[1] + '.index', 'wb') as jar:

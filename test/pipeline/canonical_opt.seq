@@ -4,26 +4,26 @@ from bio import *
 @test
 def test(s: seq, K: Static[int]):
     got1 = list[Kmer[K]]()
-    s |> kmers(1, K=K) |> canonical |> got1.append
-    exp1 = [min(k, ~k) for k in s.kmers(step=1, K=K)]
+    s |> kmers(1, k=K) |> canonical |> got1.append
+    exp1 = [min(k, ~k) for k in s.kmers(step=1, k=K)]
     assert got1 == exp1
 
     got2 = list[tuple[int,Kmer[K]]]()
-    s |> kmers_with_pos(step=1, K=K) |> canonical_with_pos |> got2.append
-    exp2 = [(i, min(k, ~k)) for i,k in s.kmers_with_pos(step=1, K=K)]
+    s |> kmers_with_pos(step=1, k=K) |> canonical_with_pos |> got2.append
+    exp2 = [(i, min(k, ~k)) for i,k in s.kmers_with_pos(step=1, k=K)]
     assert got2 == exp2
 
     # test revcomp'd seq
     s = ~s
 
     got1 = list[Kmer[K]]()
-    s |> kmers(step=1, K=K) |> canonical |> got1.append
-    exp1 = [min(k, ~k) for k in s.kmers(step=1, K=K)]
+    s |> kmers(step=1, k=K) |> canonical |> got1.append
+    exp1 = [min(k, ~k) for k in s.kmers(step=1, k=K)]
     assert got1 == exp1
 
     got2 = list[tuple[int,Kmer[K]]]()
-    s |> kmers_with_pos(1, K=K) |> canonical_with_pos |> got2.append
-    exp2 = [(i, min(k, ~k)) for i,k in s.kmers_with_pos(step=1, K=K)]
+    s |> kmers_with_pos(1, k=K) |> canonical_with_pos |> got2.append
+    exp2 = [(i, min(k, ~k)) for i,k in s.kmers_with_pos(step=1, k=K)]
     assert got2 == exp2
 
 def test_all(s: list[seq], K: Static[int]):

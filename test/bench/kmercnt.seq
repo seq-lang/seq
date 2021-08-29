@@ -13,5 +13,5 @@ def print_hist(h, N = 256):
 
 with timing('k-mer counting'), FASTQ(argv[1], copy=False, validate=False) as fastq:
     h = {}
-    fastq |> seqs |> kmers(step=1, K=31) |> canonical |> h.increment
+    fastq |> seqs |> kmers(step=1, k=31) |> canonical |> h.increment
     print_hist(h)
