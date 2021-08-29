@@ -1069,6 +1069,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   vector<ExprPtr> typeArgs;
   int typeArgCount = 0;
   bool isPartial = false;
+  int ellipsisStage = -1;
   if (expr->ordered)
     args = expr->args;
   else
@@ -1086,8 +1087,11 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
               typeArgCount += typeArgs.back() != nullptr;
             } else if (si == starArgIndex && !(partial && slots[si].empty())) {
               vector<ExprPtr> extra;
-              for (auto &e : slots[si])
+              for (auto &e : slots[si]) {
                 extra.push_back(expr->args[e].value);
+                if (extra.back()->getEllipsis())
+                  ellipsisStage = args.size();
+              }
               args.push_back({"", transform(N<TupleExpr>(extra))});
             } else if (si == kwstarArgIndex && !(partial && slots[si].empty())) {
               vector<string> names;
@@ -1095,6 +1099,8 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
               for (auto &e : slots[si]) {
                 names.emplace_back(expr->args[e].name);
                 values.emplace_back(CallExpr::Arg{"", expr->args[e].value});
+                if (values.back().value->getEllipsis())
+                  ellipsisStage = args.size();
               }
               auto kwName = generateTupleStub(names.size(), "KwTuple", names);
               args.push_back({"", transform(N<CallExpr>(N<IdExpr>(kwName), values))});
@@ -1162,13 +1168,24 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     return e;
   }
 
+  // Check if ellipsis is in the *args/*kwArgs
+  if (extraStage && ellipsisStage != -1) {
+    *extraStage = args[ellipsisStage].value;
+    args[ellipsisStage].value = N<EllipsisExpr>();
+    const_cast<CallExpr *>(oldExpr->getCall())->args = args;
+    const_cast<CallExpr *>(oldExpr->getCall())->ordered = true;
+    deactivateUnbounds(calleeFn.get());
+    return oldExpr;
+  }
+
   vector<TypePtr> replacements(calleeFn->args.size() - 1, nullptr);
   for (int si = 0; si < calleeFn->args.size() - 1; si++) {
     auto expectedTyp = calleeFn->args[si + 1];
     auto expectedClass = expectedTyp->getClass();
     auto argClass = args[si].value->getType()->getClass();
-    if (args[si].value->isType())
-      error("unexpected type expression");
+    if (args[si].value->isType()) {
+      args[si].value = transform(N<CallExpr>(args[si].value, N<EllipsisExpr>()));
+    }
 
     unordered_set<string> hints = {"Generator", "float", TYPE_OPTIONAL};
     bool mightChange =

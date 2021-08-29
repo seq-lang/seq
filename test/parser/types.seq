@@ -974,3 +974,17 @@ class Foo[T,U: Static[int]]:
     e: List[d]
     f: UInt[b]
 print Foo[float,6].__class__ #! expected 4 generics and/or statics
+
+#%% partial_star_args,barebones
+iter(['A', 'C']) |> print
+#: A
+#: C
+iter(range(4)) |> print('x', ..., 1)
+#: x 0 1
+#: x 1 1
+#: x 2 1
+#: x 3 1
+
+#%% type_arg_transform,barebones
+print list(map(str, range(5)))
+#: [0, 1, 2, 3, 4]
