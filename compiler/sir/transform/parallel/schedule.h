@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include "sir/value.h"
 
 namespace seq {
 namespace ir {
@@ -24,6 +24,9 @@ struct OMPSched {
   OMPSched(const OMPSched &s)
       : code(s.code), dynamic(s.dynamic), threads(s.threads), chunk(s.chunk),
         ordered(s.ordered) {}
+
+  std::vector<Value *> getUsedValues() const;
+  int replaceUsedValue(id_t id, Value *newValue);
 };
 
 } // namespace parallel

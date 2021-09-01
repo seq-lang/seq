@@ -183,7 +183,7 @@ public:
   }
 
 protected:
-  std::vector<Value *> doGetUsedValues() const override { return {iter, body}; }
+  std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(id_t id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {var}; }
@@ -278,7 +278,7 @@ public:
   }
 
 protected:
-  std::vector<Value *> doGetUsedValues() const override { return {start, end, body}; }
+  std::vector<Value *> doGetUsedValues() const override;
   int doReplaceUsedValue(id_t id, Value *newValue) override;
 
   std::vector<Var *> doGetUsedVariables() const override { return {var}; }

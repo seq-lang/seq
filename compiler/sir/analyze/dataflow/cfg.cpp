@@ -206,6 +206,11 @@ void CFVisitor::visit(const WhileFlow *v) {
 }
 
 void CFVisitor::visit(const ForFlow *v) {
+  if (v->isParallel()) {
+    for (auto *v : v->getSchedule()->getUsedValues()) {
+      process(v);
+    }
+  }
   auto *original = graph->getCurrentBlock();
   auto *end = graph->newBlock("endFor");
 
@@ -234,6 +239,11 @@ void CFVisitor::visit(const ForFlow *v) {
 }
 
 void CFVisitor::visit(const ImperativeForFlow *v) {
+  if (v->isParallel()) {
+    for (auto *v : v->getSchedule()->getUsedValues()) {
+      process(v);
+    }
+  }
   auto *original = graph->getCurrentBlock();
   auto *end = graph->newBlock("endFor");
 
