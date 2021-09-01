@@ -109,7 +109,7 @@ set(BDWGC ${INSTALL_DIR}/lib/libgc.a)
 
 ExternalProject_Add(openmp
         GIT_REPOSITORY https://github.com/llvm-mirror/openmp
-        GIT_TAG release_60
+        GIT_TAG release_90
         UPDATE_DISCONNECTED TRUE
         CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
