@@ -408,7 +408,7 @@ print z.__class__ #: ff[float,...,str]
 #%% call_arguments_partial,barebones
 def doo[R, T](a: Callable[[T], R], b: Generator[T], c: Optional[T], d: T):
     print R.__class__, T.__class__
-    print a.__class__, b.__class__
+    print a.__class__[:8], b.__class__
     for i in b:
         print a(i)
     print c, c.__class__
@@ -417,7 +417,7 @@ def doo[R, T](a: Callable[[T], R], b: Generator[T], c: Optional[T], d: T):
 l = [1, 2, 3]
 doo(b=l, d=Optional(5), c=l[0], a=lambda x: x+1)
 #: int int
-#: ._lambda_30[...] Generator[int]
+#: ._lambda Generator[int]
 #: 2
 #: 3
 #: 4
@@ -428,7 +428,7 @@ l = [1]
 def adder(a, b): return a+b
 doo(b=l, d=Optional(5), c=l[0], a=adder(b=4, ...))
 #: int int
-#: adder[...,int] Generator[int]
+#: adder[.. Generator[int]
 #: 5
 #: 1 Optional[int]
 #: 5 int
