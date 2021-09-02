@@ -1,22 +1,22 @@
 @extend
 class Optional:
     def __new__() -> Optional[T]:
-        if isinstance(T, Tuple):
+        if isinstance(T, ByVal):
             return __internal__.opt_tuple_new(T)
         else:
             return __internal__.opt_ref_new(T)
     def __new__(what: T) -> Optional[T]:
-        if isinstance(T, Tuple):
+        if isinstance(T, ByVal):
             return __internal__.opt_tuple_new_arg(what, T)
         else:
             return __internal__.opt_ref_new_arg(what, T)
     def __bool__(self) -> bool:
-        if isinstance(T, Tuple):
+        if isinstance(T, ByVal):
             return __internal__.opt_tuple_bool(self, T)
         else:
             return __internal__.opt_ref_bool(self, T)
     def __invert__(self) -> T:
-        if isinstance(T, Tuple):
+        if isinstance(T, ByVal):
             return __internal__.opt_tuple_invert(self, T)
         else:
             return __internal__.opt_ref_invert(self, T)

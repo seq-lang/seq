@@ -149,3 +149,8 @@ class Array[T]:
 class List[T]:
     arr: Array[T]
     len: int
+
+@extend
+class NoneType:
+    def __new__() -> NoneType:
+        return ()

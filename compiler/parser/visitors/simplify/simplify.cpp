@@ -71,7 +71,7 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
     }
     // Add simple POD types to the preamble (these types are defined in LLVM and we
     // cannot properly define them in Seq)
-    for (auto &name : {"void", "bool", "byte", "int", "float"}) {
+    for (auto &name : {"void", "bool", "byte", "int", "float", "NoneType"}) {
       auto canonical = stdlib->generateCanonicalName(name);
       stdlib->add(SimplifyItem::Type, name, canonical, true);
       // Generate an AST for each POD type. All of them are tuples.
@@ -93,15 +93,16 @@ StmtPtr SimplifyVisitor::apply(shared_ptr<Cache> cache, const StmtPtr &node,
                                          make_shared<IdExpr>("int")),
                   nullptr, true});
       else
-        generics.emplace_back(Param{stdlib->generateCanonicalName("T"),
-                                    make_shared<IdExpr>("type"), nullptr, true});
+        generics.emplace_back(Param{
+            stdlib->generateCanonicalName("T"), make_shared<IdExpr>("type"),
+            name == TYPE_OPTIONAL ? make_shared<IdExpr>("NoneType") : nullptr, true});
       cache->classes[canonical].ast = make_shared<ClassStmt>(
           canonical, generics, nullptr, Attr({Attr::Internal, Attr::Tuple}));
       preamble->globals.emplace_back(clone(cache->classes[canonical].ast));
     }
     // Reserve the following static identifiers.
-    for (auto name :
-         {"staticlen", "compile_error", "isinstance", "hasattr", "type", "TypeVar"})
+    for (auto name : {"staticlen", "compile_error", "isinstance", "hasattr", "type",
+                      "TypeVar", "Callable"})
       stdlib->generateCanonicalName(name);
 
     // This code must be placed in a preamble (these are not POD types but are

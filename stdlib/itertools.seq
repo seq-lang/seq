@@ -274,48 +274,25 @@ def starmap(function, iterable):
     for args in iterable:
         yield function(*args)
 
-def groupby(iterable, key = Optional[int]()):
+def groupby[T](iterable: Generator[T], key: Callable[[T], S] = NoneType, S: type = NoneType):
     """
     Make an iterator that returns consecutive keys and groups from the iterable.
     """
-    if not isinstance(key, Optional):
-        currkey = None
-        group = []
+    currkey = None
+    group = []
 
-        for currvalue in iterable:
-            k = key(currvalue)
-
-            if currkey is None:
-                currkey = k
-
-            if k != ~currkey:
-                yield ~currkey, group
-                currkey = k
-                group = []
-
-            group.append(currvalue)
-
-        if currkey is not None:
+    for currvalue in iterable:
+        k = currvalue if isinstance(key, NoneType) else key(currvalue)
+        if currkey is None:
+            currkey = k
+        if k != ~currkey:
             yield ~currkey, group
-    else:
-        currkey = None
-        group = []
+            currkey = k
+            group = []
+        group.append(currvalue)
+    if currkey is not None:
+        yield ~currkey, group
 
-        for currvalue in iterable:
-            k = currvalue
-
-            if currkey is None:
-                currkey = k
-
-            if k != ~currkey:
-                yield ~currkey, group
-                currkey = k
-                group = []
-
-            group.append(currvalue)
-
-        if currkey is not None:
-            yield ~currkey, group
 
 @tuple
 class zip_longest:

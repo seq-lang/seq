@@ -57,8 +57,7 @@ ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes, bool allowVo
   }
   if (auto rt = realize(typ))
     unify(typ, rt);
-  if (!expr->isType() && !allowVoid &&
-      (expr->type->is("void") || expr->type->is("T.None")))
+  if (!expr->isType() && !allowVoid && expr->type->is("void"))
     error("expression with void type");
   return expr;
 }
@@ -66,9 +65,15 @@ ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes, bool allowVo
 ExprPtr TypecheckVisitor::transformType(ExprPtr &expr, bool disableActivation) {
   expr = transform(const_cast<ExprPtr &>(expr), true, false, disableActivation);
   if (expr) {
-    if (!expr->isType())
-      error("expected type expression");
-    auto t = ctx->instantiate(expr.get(), expr->getType());
+    TypePtr t = nullptr;
+    if (!expr->isType()) {
+      if (expr->isStaticExpr)
+        t = make_shared<StaticType>(expr, ctx);
+      else
+        error("expected type expression");
+    } else {
+      t = ctx->instantiate(expr.get(), expr->getType());
+    }
     expr->setType(t);
   }
   return expr;
@@ -109,8 +114,13 @@ void TypecheckVisitor::visit(IdExpr *expr) {
     generateTupleStub(std::stoi(expr->value.substr(7)));
   else if (startswith(expr->value, TYPE_FUNCTION))
     generateFunctionStub(std::stoi(expr->value.substr(10)));
-  else if (startswith(expr->value, TYPE_CALLABLE))
-    generateCallableStub(std::stoi(expr->value.substr(10)));
+  else if (expr->value == "Callable") { // Empty Callable references
+    auto typ = ctx->addUnbound(expr, ctx->typecheckLevel);
+    typ->getLink()->trait = make_shared<CallableTrait>(vector<TypePtr>{});
+    unify(expr->type, typ);
+    expr->markType();
+    return;
+  }
   auto val = ctx->find(expr->value);
   seqassert(val, "cannot find IdExpr '{}' ({})", expr->value, expr->getSrcInfo());
 
@@ -397,27 +407,41 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
 }
 
 void TypecheckVisitor::visit(InstantiateExpr *expr) {
-  expr->typeExpr = transformType(expr->typeExpr);
-  TypePtr typ = ctx->instantiate(expr->typeExpr.get(), expr->typeExpr->getType());
-  seqassert(typ->getClass(), "unknown type");
-  auto &generics = typ->getClass()->generics;
-  if (expr->typeParams.size() != generics.size())
-    error("expected {} generics and/or statics", generics.size());
-
-  for (int i = 0; i < expr->typeParams.size(); i++) {
-    auto e = clone(expr->typeParams[i]); // need original expr w/o types
-    expr->typeParams[i] = transform(expr->typeParams[i], true);
-    TypePtr t = nullptr;
-    if (expr->typeParams[i]->isStaticExpr) {
-      t = make_shared<StaticType>(e, ctx);
-    } else {
-      if (!expr->typeParams[i]->isType())
-        error("expected type or static parameters");
-      t = ctx->instantiate(expr->typeParams[i].get(), expr->typeParams[i]->getType());
+  if (expr->typeExpr->getId() &&
+      startswith(expr->typeExpr->getId()->value, TYPE_CALLABLE)) {
+    vector<TypePtr> types;
+    for (int i = 0; i < expr->typeParams.size(); i++) {
+      expr->typeParams[i] = transformType(expr->typeParams[i]);
+      if (expr->typeParams[i]->type->isStaticType())
+        error("unexpected static type");
+      types.push_back(expr->typeParams[i]->type);
     }
-    unify(generics[i].type, t);
+    auto typ = ctx->addUnbound(expr, ctx->typecheckLevel);
+    typ->getLink()->trait = make_shared<CallableTrait>(types);
+    unify(expr->type, typ);
+  } else {
+    expr->typeExpr = transformType(expr->typeExpr);
+    TypePtr typ = ctx->instantiate(expr->typeExpr.get(), expr->typeExpr->getType());
+    seqassert(typ->getClass(), "unknown type");
+    auto &generics = typ->getClass()->generics;
+    if (expr->typeParams.size() != generics.size())
+      error("expected {} generics and/or statics", generics.size());
+
+    for (int i = 0; i < expr->typeParams.size(); i++) {
+      auto e = clone(expr->typeParams[i]); // need original expr w/o types
+      expr->typeParams[i] = transform(expr->typeParams[i], true);
+      TypePtr t = nullptr;
+      if (expr->typeParams[i]->isStaticExpr) {
+        t = make_shared<StaticType>(e, ctx);
+      } else {
+        if (!expr->typeParams[i]->isType())
+          error("expected type or static parameters");
+        t = ctx->instantiate(expr->typeParams[i].get(), expr->typeParams[i]->getType());
+      }
+      unify(generics[i].type, t);
+    }
+    unify(expr->type, typ);
   }
-  unify(expr->type, typ);
   expr->markType();
 
   // If this is realizable, use the realized name (e.g. use Id("Ptr[byte]") instead of
@@ -539,12 +563,11 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
 
   // Case 0: simple transformations
   if (expr->op == "&&") {
-    return transform(N<IfExpr>(N<CallExpr>(N<DotExpr>(expr->lexpr, "__bool__")),
+    return transform(N<IfExpr>(expr->lexpr,
                                N<CallExpr>(N<DotExpr>(expr->rexpr, "__bool__")),
                                N<BoolExpr>(false)));
   } else if (expr->op == "||") {
-    return transform(N<IfExpr>(N<CallExpr>(N<DotExpr>(expr->lexpr, "__bool__")),
-                               N<BoolExpr>(true),
+    return transform(N<IfExpr>(expr->lexpr, N<BoolExpr>(true),
                                N<CallExpr>(N<DotExpr>(expr->rexpr, "__bool__"))));
   } else if (expr->op == "not in") {
     return transform(N<CallExpr>(
@@ -558,8 +581,7 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
     else if (expr->lexpr->getNone())
       return transform(N<BinaryExpr>(expr->rexpr, "is", expr->lexpr));
   } else if (expr->op == "is not") {
-    return transform(N<CallExpr>(
-        N<DotExpr>(N<BinaryExpr>(expr->lexpr, "is", expr->rexpr), "__invert__")));
+    return transform(N<UnaryExpr>("!", N<BinaryExpr>(expr->lexpr, "is", expr->rexpr)));
   }
 
   if (expr->lexpr->getType()->getUnbound() ||
@@ -576,9 +598,15 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
       // ... return False if lhs is not an Optional...
       return transform(N<BoolExpr>(false));
     else
-      // ... or return lhs.__bool__.__invert__()
-      return transform(N<CallExpr>(
-          N<DotExpr>(N<CallExpr>(N<DotExpr>(expr->lexpr, "__bool__")), "__invert__")));
+      // ... or return isinstance(lhs, Optional[NoneType]) or lhs.__bool__.__invert__()
+      return transform(
+          // N<BinaryExpr>(
+          //   N<CallExpr>(N<IdExpr>("isinstance"), expr->lexpr,
+          //               N<InstantiateExpr>(N<IdExpr>(TYPE_OPTIONAL),
+          //                                  vector<ExprPtr>{N<IdExpr>("NoneType")})),
+          //   "||",
+          N<CallExpr>(N<DotExpr>(N<CallExpr>(N<DotExpr>(expr->lexpr, "__bool__")),
+                                 "__invert__")));
   }
 
   // Check the type equality (operand types and __raw__ pointers must match).
@@ -651,7 +679,7 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
   if (!method)
     error("cannot find magic '{}' in {}", magic, lt->toString());
 
-  return transform(N<CallExpr>(N<IdExpr>(method->funcName), expr->lexpr, expr->rexpr));
+  return transform(N<CallExpr>(N<IdExpr>(method->ast->name), expr->lexpr, expr->rexpr));
 }
 
 namespace {
@@ -770,11 +798,6 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
 }
 
 ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *args) {
-  auto isMethod = [&](const FuncType *f) {
-    auto ast = ctx->cache->functions[f->funcName].ast.get();
-    return ast->attributes.has(Attr::Method);
-  };
-
   if (expr->member == "__class__") {
     expr->expr = transform(expr->expr, true, true, true);
     unify(expr->type, ctx->findInternal("str"));
@@ -862,7 +885,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
       argTypes.emplace_back(make_pair(a.name, a.value->getType()));
     if (auto bestMethod =
             ctx->findBestMethod(expr->expr.get(), expr->member, argTypes)) {
-      ExprPtr e = N<IdExpr>(bestMethod->funcName);
+      ExprPtr e = N<IdExpr>(bestMethod->ast->name);
       auto t = ctx->instantiate(expr, bestMethod, typ.get());
       unify(e->type, t);
       unify(expr->type, e->type);
@@ -871,7 +894,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
       e = transform(e); // Visit IdExpr and realize it if necessary.
       // Remove lingering unbound variables from expr->expr (typ) instantiation
       // if we accessed a method that does not reference any generic in typ.
-      if (isType && !isMethod(bestMethod.get()))
+      if (isType && !bestMethod->ast->attributes.has(Attr::Method))
         deactivateUnbounds(typ.get());
       return e;
     }
@@ -912,7 +935,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   // object method access and transform accordingly.
   if (expr->expr->isType()) {
     // Class method access: Type.method.
-    auto name = bestMethod->funcName;
+    auto name = bestMethod->ast->name;
     auto val = ctx->find(name);
     seqassert(val, "cannot find method '{}'", name);
     ExprPtr e = N<IdExpr>(name);
@@ -922,7 +945,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     e = transform(e); // Visit IdExpr and realize it if necessary.
     // Remove lingering unbound variables from expr->expr (typ) instantiation
     // if we accessed a method that does not reference any generic in typ.
-    if (!isMethod(bestMethod.get()))
+    if (!bestMethod->ast->attributes.has(Attr::Method))
       deactivateUnbounds(typ.get());
     return e;
   } else {
@@ -932,9 +955,9 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     for (int i = 0; i < std::max(1, (int)bestMethod->args.size() - 2); i++)
       methodArgs.push_back(N<EllipsisExpr>());
     // Handle @property methods.
-    if (ctx->cache->functions[bestMethod->funcName].ast->attributes.has(Attr::Property))
+    if (bestMethod->ast->attributes.has(Attr::Property))
       methodArgs.pop_back();
-    ExprPtr e = N<CallExpr>(N<IdExpr>(bestMethod->funcName), methodArgs);
+    ExprPtr e = N<CallExpr>(N<IdExpr>(bestMethod->ast->name), methodArgs);
     return transform(e, false, allowVoidExpr);
   }
 }
@@ -1050,19 +1073,16 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   } else if (auto pc = callee->getPartial()) {
     ExprPtr var = N<IdExpr>(partialVar = ctx->cache->getTemporaryVar("pt"));
     expr->expr = transform(N<StmtExpr>(N<AssignStmt>(clone(var), expr->expr),
-                                       N<IdExpr>(pc->func->funcName)));
+                                       N<IdExpr>(pc->func->ast->name)));
     calleeFn = expr->expr->type->getFunc();
-    FunctionStmt *ast = ctx->cache->functions[calleeFn->funcName].ast.get();
-    for (int i = 0, j = 0; i < ast->args.size(); i++)
-      known.push_back(ast->args[i].generic ? 0 : pc->known[j++]);
+    for (int i = 0, j = 0; i < calleeFn->ast->args.size(); i++)
+      known.push_back(calleeFn->ast->args[i].generic ? 0 : pc->known[j++]);
     seqassert(calleeFn, "not a function: {}", expr->expr->type->toString());
   } else if (!callee->getFunc()) {
     // Case 3: callee is not a named function. Route it through a __call__ method.
     ExprPtr newCall = N<CallExpr>(N<DotExpr>(expr->expr, "__call__"), expr->args);
     return transform(newCall, false, allowVoidExpr);
   }
-
-  FunctionStmt *ast = ctx->cache->functions[calleeFn->funcName].ast.get();
 
   // Handle named and default arguments
   vector<CallExpr::Arg> args;
@@ -1081,7 +1101,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
           ctx->addBlock(); // add generics for default arguments.
           addFunctionGenerics(calleeFn->getFunc().get());
           for (int si = 0, pi = 0; si < slots.size(); si++) {
-            if (ast->args[si].generic) {
+            if (calleeFn->ast->args[si].generic) {
               typeArgs.push_back(slots[si].empty() ? nullptr
                                                    : expr->args[slots[si][0]].value);
               typeArgCount += typeArgs.back() != nullptr;
@@ -1116,11 +1136,11 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
               } else if (partial) {
                 args.push_back({"", transform(N<EllipsisExpr>())});
               } else {
-                auto es = ast->args[si].deflt->toString();
+                auto es = calleeFn->ast->args[si].deflt->toString();
                 if (in(ctx->defaultCallDepth, es))
                   error("recursive default arguments");
                 ctx->defaultCallDepth.insert(es);
-                args.push_back({"", transform(clone(ast->args[si].deflt))});
+                args.push_back({"", transform(clone(calleeFn->ast->args[si].deflt))});
                 ctx->defaultCallDepth.erase(es);
               }
             } else {
@@ -1188,8 +1208,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     }
 
     unordered_set<string> hints = {"Generator", "float", TYPE_OPTIONAL};
-    bool mightChange =
-        expectedClass && (expectedClass->isTrait || in(hints, expectedClass->name));
+    bool mightChange = expectedClass && in(hints, expectedClass->name);
     if (mightChange) {
       if (!argClass) {
         // Case 0: argument type not yet known.
@@ -1221,21 +1240,10 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         args[si].value =
             transform(N<CallExpr>(N<IdExpr>(TYPE_OPTIONAL), args[si].value));
         unify(args[si].value->type, expectedClass);
-      } else if (startswith(expectedClass->name, TYPE_CALLABLE)) {
-        // Case 4: allow any callable to match Callable[] signature.
-        if (argClass && !argClass->getFunc() && !argClass->getPartial())
-          args[si].value = transform(N<DotExpr>(args[si].value, "__call__"));
-        unify(args[si].value->type, expectedTyp);
-        if (args[si].value->type->getFunc())
-          args[si].value = partializeFunction(args[si].value);
-        if (auto pt = args[si].value->type->getPartial()) {
-          unify(expectedClass->generics[0].type, pt->func->args[0]);
-          for (int pi = 0, gi = 1; pi < pt->known.size(); pi++)
-            if (!pt->known[pi])
-              unify(expectedClass->generics[gi++].type, pt->func->args[pi + 1]);
-        }
       } else {
         // Case 5: normal unification.
+        if (args[si].value->type->getFunc())
+          args[si].value = partializeFunction(args[si].value);
         unify(args[si].value->type, expectedTyp);
       }
     } else if (expectedClass && argClass && argClass->name == TYPE_OPTIONAL &&
@@ -1247,8 +1255,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       }
       args[si].value = transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), args[si].value));
       unify(args[si].value->type, expectedTyp);
-    } else if (calleeFn->funcName == "Ptr.__new_fn__") {
-      // if (argClass && argClass->getFunc())
+    } else if (calleeFn->ast->name == "Ptr.__new_fn__") {
       if (auto pt = argClass->getPartial())
         expectedTyp = pt->func;
       else if (argClass->getFunc())
@@ -1271,9 +1278,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       // Case 8: normal unification.
       unify(args[si].value->type, expectedTyp);
     }
-    replacements[si] = !expectedClass || expectedClass->hasTrait()
-                           ? args[si].value->type
-                           : expectedTyp;
+    replacements[si] = !expectedClass ? args[si].value->type : expectedTyp;
   }
 
   // Realize arguments.
@@ -1283,19 +1288,18 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       unify(rt, a.value->type);
       a.value = transform(a.value);
     }
-    if (auto pt = a.value->type->getPartial())
-      if (auto rt = realize(pt->func))
-        unify(rt, pt->func);
     expr->done &= a.value->done;
   }
 
   // Handle default generics (calleeFn.g. foo[S, T=int]) only if all arguments were
   // unified.
+  // TODO: remove once the proper partial handling of overloaded functions land
   if (unificationsDone)
-    for (int i = 0, j = 0; i < ast->args.size(); i++)
-      if (ast->args[i].generic) {
-        if (ast->args[i].deflt && calleeFn->funcGenerics[j].type->getUnbound()) {
-          auto de = transform(ast->args[i].deflt, true);
+    for (int i = 0, j = 0; i < calleeFn->ast->args.size(); i++)
+      if (calleeFn->ast->args[i].generic) {
+        if (calleeFn->ast->args[i].deflt &&
+            calleeFn->funcGenerics[j].type->getUnbound()) {
+          auto de = transform(calleeFn->ast->args[i].deflt, true);
           TypePtr t = nullptr;
           if (de->isStaticExpr)
             t = make_shared<StaticType>(de, ctx);
@@ -1317,6 +1321,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     unify(rt, static_pointer_cast<Type>(calleeFn));
     expr->expr = transform(expr->expr);
   }
+
   expr->done &= expr->expr->done;
 
   // Emit the final call.
@@ -1372,21 +1377,25 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
     // Make sure not to activate new unbound here, as we just need to check type
     // equality.
     expr->isStaticExpr = true;
-    expr->args[0].value =
-        transform(expr->args[0].value, true, true, /*disableActivation*/ true);
-    auto typ = expr->args[0].value->type;
-    if (!typ) {
+    expr->type = unify(expr->type, ctx->findInternal("bool"));
+    expr->args[0].value = transform(expr->args[0].value, true, true);
+    auto typ = expr->args[0].value->type->getClass();
+    if (!typ || !typ->canRealize()) {
       return {true, nullptr};
     } else {
+      expr->args[0].value = transform(expr->args[0].value, true, true); // to realize it
       if (expr->args[1].value->isId("Tuple") || expr->args[1].value->isId("tuple")) {
+        return {true, transform(N<BoolExpr>(startswith(typ->name, TYPE_TUPLE)))};
+      } else if (expr->args[1].value->isId("ByVal")) {
         return {true, transform(N<BoolExpr>(typ->getRecord() != nullptr))};
-      } else if (expr->args[1].value->getNone() && expr->args[0].value->isType()) {
-        return {true, transform(N<BoolExpr>(typ->is("T.None")))};
+      } else if (expr->args[1].value->isId("ByRef")) {
+        return {true, transform(N<BoolExpr>(typ->getRecord() == nullptr))};
       } else {
         expr->args[1].value =
             transformType(expr->args[1].value, /*disableActivation*/ true);
         auto t = expr->args[1].value->type;
-        return {true, transform(N<BoolExpr>(typ->unify(t.get(), nullptr) >= 0))};
+        auto unifyOK = typ->unify(t.get(), nullptr) >= 0;
+        return {true, transform(N<BoolExpr>(unifyOK))};
       }
     }
   } else if (val == "staticlen") {
@@ -1483,27 +1492,6 @@ string TypecheckVisitor::generateTupleStub(int len, const string &name,
                                   FILE_GENERATED, 0);
     stmt = TypecheckVisitor(ctx).transform(stmt);
     prependStmts->push_back(stmt);
-  }
-  return typeName;
-}
-
-string TypecheckVisitor::generateCallableStub(int n) {
-  auto typeName = format(TYPE_CALLABLE "{}", n);
-  if (!ctx->find(typeName)) {
-    auto baseType = make_shared<RecordType>(typeName, typeName);
-    baseType->isTrait = true;
-    for (int i = 0; i <= n; i++) {
-      baseType->generics.emplace_back(ClassType::Generic(
-          !i ? "TR" : format("T{}", i), !i ? "TR" : format("T{}", i),
-          make_shared<LinkType>(LinkType::Generic, ctx->cache->unboundCount++),
-          ctx->cache->unboundCount));
-      baseType->generics.back().type->getLink()->genericName =
-          baseType->generics.back().niceName;
-      baseType->args.emplace_back(baseType->generics.back().type);
-    }
-    ctx->cache->classes[typeName] = Cache::Class();
-    ctx->addToplevel(typeName,
-                     make_shared<TypecheckItem>(TypecheckItem::Type, baseType));
   }
   return typeName;
 }

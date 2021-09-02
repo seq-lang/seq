@@ -97,10 +97,7 @@ void TranslateVisitor::visit(CallExpr *expr) {
   auto ft = expr->expr->type->getFunc();
   seqassert(ft, "not calling function: {}", ft->toString());
   auto callee = transform(expr->expr);
-  auto ast =
-      ctx->cache->functions[ft->funcName].realizations[ft->realizedName()]->ast.get();
-  seqassert(ast, "function {} has no ast", ft->realizedName());
-  bool isVariardic = ast->hasAttr(Attr::CVarArg);
+  bool isVariardic = ft->ast->hasAttr(Attr::CVarArg);
   vector<ir::Value *> items;
   for (int i = 0; i < expr->args.size(); i++) {
     seqassert(!expr->args[i].value->getEllipsis(), "ellipsis not elided");
@@ -446,7 +443,7 @@ void TranslateVisitor::transformFunction(types::FuncType *type, FunctionStmt *as
   func->setAttribute(make_unique<ir::KeyValueAttribute>(attr));
   for (int i = 0; i < names.size(); i++)
     func->getArgVar(names[i])->setSrcInfo(ast->args[indices[i]].getSrcInfo());
-  func->setUnmangledName(ctx->cache->reverseIdentifierLookup[type->funcName]);
+  func->setUnmangledName(ctx->cache->reverseIdentifierLookup[type->ast->name]);
   if (!ast->attributes.has(Attr::C) && !ast->attributes.has(Attr::Internal)) {
     ctx->addBlock();
     for (auto i = 0; i < names.size(); i++)
@@ -523,7 +520,7 @@ void TranslateVisitor::transformLLVMFunction(types::FuncType *type, FunctionStmt
   f->setLLVMBody(join(lines, "\n"));
   f->setLLVMDeclarations(declare);
   f->setLLVMLiterals(literals);
-  func->setUnmangledName(ctx->cache->reverseIdentifierLookup[type->funcName]);
+  func->setUnmangledName(ctx->cache->reverseIdentifierLookup[type->ast->name]);
 }
 
 } // namespace ast

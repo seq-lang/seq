@@ -521,13 +521,13 @@ slice <-
   / expression { return ac_expr(V0); }
 slice_part <- expression? { return VS.size() ? V0 : make_any<ExprPtr>(nullptr); }
 atom <-
-  / 'True' { return ast<BoolExpr>(LOC, true); }
-  / 'False' { return ast<BoolExpr>(LOC, false);}
-  / 'None' { return ast<NoneExpr>(LOC); }
   / STRING (SPACE STRING)* {
     return ast<StringExpr>(LOC, VS.transform<pair<string, string>>());
   }
   / id { return ac_expr(V0); }
+  / 'True' { return ast<BoolExpr>(LOC, true); }
+  / 'False' { return ast<BoolExpr>(LOC, false);}
+  / 'None' { return ast<NoneExpr>(LOC); }
   / INT _ '...' _ INT {
     return ast<RangeExpr>(LOC,
       ast<IntExpr>(LOC, ac<string>(V0)), ast<IntExpr>(LOC, ac<string>(V1))

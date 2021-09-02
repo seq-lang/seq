@@ -91,7 +91,7 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
                                  const vector<types::TypePtr> &args,
                                  const vector<types::TypePtr> &generics,
                                  types::ClassTypePtr parentClass) {
-  auto e = make_shared<IdExpr>(type->funcName);
+  auto e = make_shared<IdExpr>(type->ast->name);
   e->type = type;
   type = typeCtx->instantiate(e.get(), type, parentClass.get(), false)->getFunc();
   if (args.size() != type->args.size())
@@ -119,7 +119,7 @@ ir::Func *Cache::realizeFunction(types::FuncTypePtr type,
     auto pr = pendingRealizations; // copy it as it might be modified
     for (auto &fn : pr)
       TranslateVisitor(codegenCtx).transform(functions[fn.first].ast->clone());
-    return functions[rtv->getFunc()->funcName].realizations[rtv->realizedName()]->ir;
+    return functions[rtv->getFunc()->ast->name].realizations[rtv->realizedName()]->ir;
   }
   return nullptr;
 }

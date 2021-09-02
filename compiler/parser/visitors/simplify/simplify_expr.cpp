@@ -92,8 +92,8 @@ void SimplifyVisitor::visit(StringExpr *expr) {
 }
 
 void SimplifyVisitor::visit(IdExpr *expr) {
-  if (in(set<string>{"type", "TypeVar"}, expr->value)) {
-    resultExpr = N<IdExpr>("type");
+  if (in(set<string>{"type", "TypeVar", "Callable"}, expr->value)) {
+    resultExpr = N<IdExpr>(expr->value == "TypeVar" ? "type" : expr->value);
     resultExpr->markType();
     return;
   }
@@ -412,7 +412,8 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     auto lhs = transform(expr->args[0].value, true);
     ExprPtr type;
     if (expr->args[1].value->isId("Tuple") || expr->args[1].value->isId("tuple") ||
-        (lhs->isType() && expr->args[1].value->getNone()))
+        (lhs->isType() && expr->args[1].value->getNone()) ||
+        expr->args[1].value->isId("ByVal") || expr->args[1].value->isId("ByRef"))
       type = expr->args[1].value->clone();
     else
       type = transformType(expr->args[1].value);

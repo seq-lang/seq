@@ -32,6 +32,8 @@ void Type::Unification::undo() {
     assert(leveled[i].first->kind == LinkType::Unbound);
     leveled[i].first->level = leveled[i].second;
   }
+  for (auto &t : traits)
+    t->trait = nullptr;
 }
 TypePtr Type::follow() { return shared_from_this(); }
 vector<shared_ptr<Type>> Type::getUnbounds() const { return {}; }
@@ -46,16 +48,23 @@ bool Type::isStaticType() {
   return false;
 }
 
+bool Trait::canRealize() const { return false; }
+bool Trait::isInstantiated() const { return false; }
+string Trait::debugString(bool debug) const { return ""; }
+string Trait::realizedName() const { return ""; }
+
 LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic,
-                   string genericName)
+                   shared_ptr<Trait> trait, TypePtr defaultType, string genericName)
     : kind(kind), id(id), level(level), type(move(type)), isStatic(isStatic),
-      genericName(move(genericName)) {
+      trait(move(trait)), genericName(move(genericName)),
+      defaultType(move(defaultType)) {
   seqassert((this->type && kind == Link) || (!this->type && kind == Generic) ||
                 (!this->type && kind == Unbound),
             "inconsistent link state");
 }
 LinkType::LinkType(TypePtr type)
-    : kind(Link), id(0), level(0), type(move(type)), isStatic(false) {
+    : kind(Link), id(0), level(0), type(move(type)), isStatic(false), trait(nullptr),
+      defaultType(nullptr) {
   seqassert(this->type, "link to nullptr");
 }
 int LinkType::unify(Type *typ, Unification *undo) {
@@ -79,17 +88,21 @@ int LinkType::unify(Type *typ, Unification *undo) {
       else if (t->kind == Generic)
         return -1;
       else {
-        if (id == t->id)
+        if (id == t->id) {
           // Identical unbound types get a score of 1
           return 1;
-        else if (id < t->id)
+        } else if (id < t->id) {
           // Always merge a newer type into the older type (e.g. keep the types with
           // lower IDs around).
           return t->unify(this, undo);
+        }
       }
     }
     // Ensure that we do not have recursive unification! (e.g. unify ?1 with list[?1])
     if (occurs(typ, undo))
+      return -1;
+
+    if (trait && trait->unify(typ, undo) == -1)
       return -1;
 
     // ⚠️ Unification: destructive part.
@@ -103,6 +116,11 @@ int LinkType::unify(Type *typ, Unification *undo) {
                     typ->getLink()->id <= id,
                 "type unification is not consistent");
       type = typ->follow();
+      if (auto t = type->getLink())
+        if (trait && t->kind == Unbound && !t->trait) {
+          undo->traits.push_back(t.get());
+          t->trait = trait;
+        }
     }
     return 0;
   }
@@ -112,7 +130,10 @@ TypePtr LinkType::generalize(int atLevel) {
     return shared_from_this();
   } else if (kind == Unbound) {
     if (level >= atLevel)
-      return make_shared<LinkType>(Generic, id, 0, nullptr, isStatic, genericName);
+      return make_shared<LinkType>(
+          Generic, id, 0, nullptr, isStatic,
+          trait ? static_pointer_cast<Trait>(trait->generalize(atLevel)) : nullptr,
+          defaultType ? defaultType->generalize(atLevel) : nullptr, genericName);
     else
       return shared_from_this();
   } else {
@@ -125,8 +146,13 @@ TypePtr LinkType::instantiate(int atLevel, int *unboundCount,
   if (kind == Generic) {
     if (cache && cache->find(id) != cache->end())
       return (*cache)[id];
-    auto t = make_shared<LinkType>(Unbound, unboundCount ? (*unboundCount)++ : id,
-                                   atLevel, nullptr, isStatic, genericName);
+    auto t = make_shared<LinkType>(
+        Unbound, unboundCount ? (*unboundCount)++ : id, atLevel, nullptr, isStatic,
+        trait ? static_pointer_cast<Trait>(
+                    trait->instantiate(atLevel, unboundCount, cache))
+              : nullptr,
+        defaultType ? defaultType->instantiate(atLevel, unboundCount, cache) : nullptr,
+        genericName);
     if (cache)
       (*cache)[id] = t;
     return t;
@@ -161,7 +187,8 @@ bool LinkType::isInstantiated() const {
 }
 string LinkType::debugString(bool debug) const {
   if (kind == Unbound || kind == Generic)
-    return debug ? fmt::format("{}{}", kind == Unbound ? '?' : '#', id)
+    return debug ? fmt::format("{}{}{}", kind == Unbound ? '?' : '#', id,
+                               trait ? ":" + trait->debugString(debug) : "")
                  : (genericName.empty() ? "?" : genericName);
   else
     return type->debugString(debug);
@@ -183,6 +210,8 @@ bool LinkType::occurs(Type *typ, Type::Unification *undo) {
   if (auto tl = typ->getLink()) {
     if (tl->kind == Unbound) {
       if (tl->id == id)
+        return true;
+      if (tl->trait && occurs(tl->trait.get(), undo))
         return true;
       if (undo && tl->level > level) {
         undo->leveled.emplace_back(make_pair(tl.get(), tl->level));
@@ -215,11 +244,9 @@ bool LinkType::occurs(Type *typ, Type::Unification *undo) {
 }
 
 ClassType::ClassType(string name, string niceName, vector<Generic> generics)
-    : name(move(name)), niceName(move(niceName)), generics(move(generics)),
-      isTrait(false) {}
+    : name(move(name)), niceName(move(niceName)), generics(move(generics)) {}
 ClassType::ClassType(const ClassTypePtr &base)
-    : name(base->name), niceName(base->niceName), generics(base->generics),
-      isTrait(base->isTrait) {}
+    : name(base->name), niceName(base->niceName), generics(base->generics) {}
 int ClassType::unify(Type *typ, Unification *us) {
   if (auto tc = typ->getClass()) {
     // Check names.
@@ -246,7 +273,6 @@ TypePtr ClassType::generalize(int atLevel) {
   for (auto &t : g)
     t.type = t.type ? t.type->generalize(atLevel) : nullptr;
   auto c = make_shared<ClassType>(name, niceName, g);
-  c->isTrait = isTrait;
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -256,7 +282,6 @@ TypePtr ClassType::instantiate(int atLevel, int *unboundCount,
   for (auto &t : g)
     t.type = t.type ? t.type->instantiate(atLevel, unboundCount, cache) : nullptr;
   auto c = make_shared<ClassType>(name, niceName, g);
-  c->isTrait = isTrait;
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -270,8 +295,6 @@ vector<TypePtr> ClassType::getUnbounds() const {
   return u;
 }
 bool ClassType::canRealize() const {
-  if (isTrait)
-    return false;
   return std::all_of(generics.begin(), generics.end(),
                      [](auto &t) { return !t.type || t.type->canRealize(); });
 }
@@ -290,8 +313,6 @@ string ClassType::debugString(bool debug) const {
     n = "Tuple";
   if (startswith(n, TYPE_FUNCTION))
     n = "Function";
-  if (startswith(n, TYPE_CALLABLE))
-    n = "Callable";
   return fmt::format("{}{}", n, gs.empty() ? "" : fmt::format("[{}]", join(gs, ",")));
 }
 string ClassType::realizedName() const {
@@ -301,12 +322,6 @@ string ClassType::realizedName() const {
       gs.push_back(a.type->realizedName());
   string s = join(gs, ",");
   return fmt::format("{}{}", name, s.empty() ? "" : fmt::format("[{}]", s));
-}
-bool ClassType::hasTrait() const {
-  for (auto &a : generics)
-    if (a.type && a.type->getClass() && a.type->getClass()->hasTrait())
-      return true;
-  return isTrait;
 }
 string ClassType::realizedTypeName() const { return this->ClassType::realizedName(); }
 
@@ -325,33 +340,6 @@ int RecordType::unify(Type *typ, Unification *us) {
       return generics[0].type->unify(t64.get(), us);
     }
     int s1 = 2, s;
-    // Handle Callable[...]<->Function[...].
-    if (startswith(tr->name, TYPE_CALLABLE) && startswith(name, TYPE_FUNCTION))
-      return tr->unify(this, us);
-    if (startswith(name, TYPE_CALLABLE) && startswith(tr->name, TYPE_FUNCTION)) {
-      if (tr->generics.size() != generics.size())
-        return -1;
-      for (int i = 0; i < generics.size(); i++) {
-        if ((s = generics[i].type->unify(tr->generics[i].type.get(), us)) == -1)
-          return -1;
-        s1 += s;
-      }
-      return s1;
-    }
-    // Handle Callable[...]<->Partial[...].
-    if (startswith(tr->name, TYPE_CALLABLE) && !tr->getFunc() && getPartial())
-      return tr->unify(this, us);
-    if (startswith(name, TYPE_CALLABLE) && !getFunc() && tr->getPartial()) {
-      vector<int> zeros;
-      for (int pi = 9; pi < tr->name.size() && tr->name[pi] != '.'; pi++)
-        if (tr->name[pi] == '0')
-          zeros.emplace_back(pi - 9);
-      // Just check if the number of generics matches. The rest will be done in
-      // transformCall() procedure.
-      if (zeros.size() + 1 != args.size())
-        return -1;
-      return s1;
-    }
     if (args.size() != tr->args.size())
       return -1;
     for (int i = 0; i < args.size(); i++) {
@@ -423,9 +411,9 @@ shared_ptr<RecordType> RecordType::getHeterogenousTuple() {
   return nullptr;
 }
 
-FuncType::FuncType(const shared_ptr<RecordType> &baseType, string funcName,
+FuncType::FuncType(const shared_ptr<RecordType> &baseType, FunctionStmt *ast,
                    vector<Generic> funcGenerics, TypePtr funcParent)
-    : RecordType(*baseType), funcName(move(funcName)), funcGenerics(move(funcGenerics)),
+    : RecordType(*baseType), ast(ast), funcGenerics(move(funcGenerics)),
       funcParent(move(funcParent)) {}
 int FuncType::unify(Type *typ, Unification *us) {
   if (this == typ)
@@ -433,14 +421,14 @@ int FuncType::unify(Type *typ, Unification *us) {
   int s1 = 2, s = 0;
   if (auto t = typ->getFunc()) {
     // Check if names and parents match.
-    if (funcName != t->funcName || (bool(funcParent) ^ bool(t->funcParent)))
+    if (ast->name != t->ast->name || (bool(funcParent) ^ bool(t->funcParent)))
       return -1;
     if (funcParent && (s = funcParent->unify(t->funcParent.get(), us)) == -1)
       return -1;
     s1 += s;
     // Check if function generics match.
     seqassert(funcGenerics.size() == t->funcGenerics.size(),
-              "generic size mismatch for {}", funcName);
+              "generic size mismatch for {}", ast->name);
     for (int i = 0; i < funcGenerics.size(); i++) {
       if ((s = funcGenerics[i].type->unify(t->funcGenerics[i].type.get(), us)) == -1)
         return -1;
@@ -456,8 +444,8 @@ TypePtr FuncType::generalize(int atLevel) {
     t.type = t.type ? t.type->generalize(atLevel) : nullptr;
   auto p = funcParent ? funcParent->generalize(atLevel) : nullptr;
   return make_shared<FuncType>(
-      static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)), funcName,
-      g, p);
+      static_pointer_cast<RecordType>(this->RecordType::generalize(atLevel)), ast, g,
+      p);
 }
 TypePtr FuncType::instantiate(int atLevel, int *unboundCount,
                               unordered_map<int, TypePtr> *cache) {
@@ -472,7 +460,7 @@ TypePtr FuncType::instantiate(int atLevel, int *unboundCount,
   return make_shared<FuncType>(
       static_pointer_cast<RecordType>(
           this->RecordType::instantiate(atLevel, unboundCount, cache)),
-      funcName, g, p);
+      ast, g, p);
 }
 vector<TypePtr> FuncType::getUnbounds() const {
   vector<TypePtr> u;
@@ -495,9 +483,7 @@ vector<TypePtr> FuncType::getUnbounds() const {
 bool FuncType::canRealize() const {
   // Important: return type does not have to be realized.
   for (int ai = 1; ai < args.size(); ai++)
-    if (!args[ai]->getFunc() &&
-        (!args[ai]->canRealize() ||
-         (args[ai]->getClass() && args[ai]->getClass()->hasTrait())))
+    if (!args[ai]->getFunc() && !args[ai]->canRealize())
       return false;
   return std::all_of(funcGenerics.begin(), funcGenerics.end(),
                      [](auto &a) { return !a.type || a.type->canRealize(); }) &&
@@ -529,7 +515,7 @@ string FuncType::debugString(bool debug) const {
     as.push_back(args[ai]->debugString(debug));
   string a = join(as, ",");
   s = s.empty() ? a : join(vector<string>{a, s}, ",");
-  return fmt::format("{}{}", funcName, s.empty() ? "" : fmt::format("[{}]", s));
+  return fmt::format("{}{}", ast->name, s.empty() ? "" : fmt::format("[{}]", s));
 }
 string FuncType::realizedName() const {
   vector<string> gs;
@@ -545,7 +531,7 @@ string FuncType::realizedName() const {
   string a = join(as, ",");
   s = s.empty() ? a : join(vector<string>{a, s}, ",");
   return fmt::format("{}{}{}", funcParent ? funcParent->realizedName() + ":" : "",
-                     funcName, s.empty() ? "" : fmt::format("[{}]", s));
+                     ast->name, s.empty() ? "" : fmt::format("[{}]", s));
 }
 
 PartialType::PartialType(const shared_ptr<RecordType> &baseType,
@@ -586,7 +572,8 @@ string PartialType::debugString(bool debug) const {
       as.emplace_back("...");
     else
       as.emplace_back(gs[gi++]);
-  return fmt::format("{}[{}]", func->funcName, join(as, ","));
+  return fmt::format("{}[{}]", !debug ? func->ast->name : func->debugString(debug),
+                     join(as, ","));
 }
 string PartialType::realizedName() const {
   vector<string> gs;
@@ -746,6 +733,79 @@ void StaticType::parseExpr(const ExprPtr &e, unordered_set<string> &seen) {
     parseExpr(ef->ifexpr, seen);
     parseExpr(ef->elsexpr, seen);
   }
+}
+
+CallableTrait::CallableTrait(vector<TypePtr> args) : args(move(args)) {}
+int CallableTrait::unify(Type *typ, Unification *us) {
+  if (auto tr = typ->getRecord()) {
+    if (tr->name == "NoneType")
+      return 1;
+    if (args.empty())
+      return (startswith(tr->name, TYPE_FUNCTION) || tr->getPartial()) ? 1 : -1;
+    if (startswith(tr->name, TYPE_FUNCTION)) {
+      // Handle Callable[...]<->Function[...].
+      if (args.size() != tr->args.size())
+        return -1;
+      for (int i = 0; i < args.size(); i++) {
+        if (args[i]->unify(tr->args[i].get(), us) == -1)
+          return -1;
+      }
+      return 1;
+    } else if (auto pt = tr->getPartial()) {
+      // Handle Callable[...]<->Partial[...].
+      vector<int> zeros;
+      for (int pi = 9; pi < tr->name.size() && tr->name[pi] != '.'; pi++)
+        if (tr->name[pi] == '0')
+          zeros.emplace_back(pi - 9);
+      if (zeros.size() + 1 != args.size())
+        return -1;
+      if (args[0]->unify(pt->func->args[0].get(), us) == -1)
+        return -1;
+      for (int pi = 0, gi = 1; pi < pt->known.size(); pi++)
+        if (!pt->known[pi])
+          if (args[gi++]->unify(pt->func->args[pi + 1].get(), us) == -1)
+            return -1;
+      return 1;
+    }
+  } else if (auto tl = typ->getLink()) {
+    if (tl->kind == LinkType::Link)
+      return unify(tl->type.get(), us);
+    if (tl->kind == LinkType::Unbound) {
+      if (tl->trait) {
+        auto tt = dynamic_cast<CallableTrait *>(tl->trait.get());
+        if (!tt || tt->args.size() != args.size())
+          return -1;
+        for (int i = 0; i < args.size(); i++)
+          if (args[i]->unify(tt->args[i].get(), us) == -1)
+            return -1;
+      }
+      return 1;
+    }
+  }
+  return -1;
+}
+TypePtr CallableTrait::generalize(int atLevel) {
+  auto g = args;
+  for (auto &t : g)
+    t = t ? t->generalize(atLevel) : nullptr;
+  auto c = make_shared<CallableTrait>(g);
+  c->setSrcInfo(getSrcInfo());
+  return c;
+}
+TypePtr CallableTrait::instantiate(int atLevel, int *unboundCount,
+                                   unordered_map<int, TypePtr> *cache) {
+  auto g = args;
+  for (auto &t : g)
+    t = t ? t->instantiate(atLevel, unboundCount, cache) : nullptr;
+  auto c = make_shared<CallableTrait>(g);
+  c->setSrcInfo(getSrcInfo());
+  return c;
+}
+string CallableTrait::debugString(bool debug) const {
+  vector<string> gs;
+  for (auto &a : args)
+    gs.push_back(a->debugString(debug));
+  return fmt::format("Callable[{}]", join(gs, ","));
 }
 
 } // namespace types

@@ -988,3 +988,31 @@ iter(range(4)) |> print('x', ..., 1)
 #%% type_arg_transform,barebones
 print list(map(str, range(5)))
 #: [0, 1, 2, 3, 4]
+
+
+#%% traits,barebones
+def t[T](x: T, key: Optional[Callable[[T], S]] = None, S: type = NoneType):
+    if isinstance(S, NoneType):
+        return x
+    else:
+        return (~key)(x)
+print t(5) #: 5
+print t(6, lambda x: f'#{x}') #: #6
+
+z: Callable[[int],int] = lambda x: x+1
+print z(5) #: 6
+
+def foo[T](x: T, func: Optional[Callable[[], T]] = None) -> T:
+    return x
+print foo(1) #: 1
+
+#%% traits_error,barebones
+def t[T](x: T, key: Optional[Callable[[T], S]] = None, S: type = NoneType):
+    if isinstance(S, NoneType):
+        return x
+    else:
+        return (~key)(x)
+print t(6, Optional(1)) #! cannot unify Optional[int] and Optional[T]
+
+#%% traits_error_2,barebones
+z: Callable[[int],int] = 4 #! cannot unify ? and int

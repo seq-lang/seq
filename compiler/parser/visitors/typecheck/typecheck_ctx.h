@@ -63,8 +63,6 @@ struct TypeContext : public Context<TypecheckItem> {
   /// something goes wrong.
   /// If type checking is successful, all of them should be  resolved.
   std::map<types::TypePtr, string> activeUnbounds;
-  /// The current type-checking iteration.
-  int iteration;
   /// If set, no type will be activated. Useful for temporary instantiations.
   bool allowActivation;
   /// The age of the currently parsed statement.

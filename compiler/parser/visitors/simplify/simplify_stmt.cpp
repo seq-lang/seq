@@ -1260,9 +1260,10 @@ void SimplifyVisitor::transformNewImport(const ImportFile &file) {
     // Add a def import(): ... manually to the cache and to the preamble (it won't be
     // transformed here!).
     ctx->cache->functions[importVar].ast =
-        N<FunctionStmt>(importVar, nullptr, vector<Param>{}, N<SuiteStmt>(stmts));
-    preamble->functions.push_back(
-        N<FunctionStmt>(importVar, nullptr, vector<Param>{}, N<SuiteStmt>(stmts)));
+        N<FunctionStmt>(importVar, nullptr, vector<Param>{}, N<SuiteStmt>(stmts),
+                        Attr({Attr::ForceRealize}));
+    preamble->functions.push_back(ctx->cache->functions[importVar].ast->clone());
+    ;
   }
 }
 

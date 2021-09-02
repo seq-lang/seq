@@ -23,7 +23,7 @@ namespace seq {
 namespace ast {
 
 TypeContext::TypeContext(shared_ptr<Cache> cache)
-    : Context<TypecheckItem>(""), cache(move(cache)), typecheckLevel(0), iteration(0),
+    : Context<TypecheckItem>(""), cache(move(cache)), typecheckLevel(0),
       allowActivation(true), age(0), realizationDepth(0) {
   stack.push_front(vector<string>());
   bases.push_back({"", nullptr, nullptr});
@@ -199,8 +199,6 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
   vector<pair<int, int>> scores;
   for (int mi = 0; mi < methods.size(); mi++) {
     auto method = instantiate(expr, methods[mi], typ.get(), false)->getFunc();
-    FunctionStmt *ast = cache->functions[method->funcName].ast.get();
-    seqassert(ast, "{} does not have ast", method->funcName);
     vector<types::TypePtr> reordered;
     vector<CallExpr::Arg> callArgs;
     for (auto &a : args) {
@@ -230,12 +228,11 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
       auto argType = reordered[ai];
       if (!argType)
         continue;
-      auto expectedType =
-          ast->args[ai].generic ? method->generics[gi++].type : method->args[mi++];
+      auto expectedType = method->ast->args[ai].generic ? method->generics[gi++].type
+                                                        : method->args[mi++];
       auto expectedClass = expectedType->getClass();
       // Ignore traits, *args/**kwargs and default arguments.
-      if (expectedClass &&
-          (expectedClass->isTrait || expectedClass->name == "Generator"))
+      if (expectedClass && expectedClass->name == "Generator")
         continue;
       // LOG("<~> {} {}", argType->toString(), expectedType->toString());
       auto argClass = argType->getClass();
@@ -247,7 +244,7 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
         score += u + 3;
         continue;
       }
-      if (!ast->args[ai].generic) {
+      if (!method->ast->args[ai].generic) {
         // Unification failed: maybe we need to wrap an argument?
         if (expectedClass && expectedClass->name == TYPE_OPTIONAL && argClass &&
             argClass->name != expectedClass->name) {
@@ -302,19 +299,16 @@ int TypeContext::reorderNamedArgs(types::FuncType *func,
   int score = 0;
 
   // 0. Find *args and **kwargs
-  FunctionStmt *ast = cache->functions[func->funcName].ast.get();
-  assert(ast);
-
   // True if there is a trailing ellipsis (full partial: fn(all_args, ...))
   bool partial = !args.empty() && args.back().value->getEllipsis() &&
                  !args.back().value->getEllipsis()->isPipeArg &&
                  args.back().name.empty();
 
   int starArgIndex = -1, kwstarArgIndex = -1;
-  for (int i = 0; ast && i < ast->args.size(); i++) {
-    if ((known.empty() || !known[i]) && startswith(ast->args[i].name, "**"))
+  for (int i = 0; i < func->ast->args.size(); i++) {
+    if ((known.empty() || !known[i]) && startswith(func->ast->args[i].name, "**"))
       kwstarArgIndex = i, score -= 2;
-    else if ((known.empty() || !known[i]) && startswith(ast->args[i].name, "*"))
+    else if ((known.empty() || !known[i]) && startswith(func->ast->args[i].name, "*"))
       starArgIndex = i, score -= 2;
   }
   seqassert(known.empty() || starArgIndex == -1 || !known[starArgIndex],
@@ -324,8 +318,9 @@ int TypeContext::reorderNamedArgs(types::FuncType *func,
 
   // 1. Assign positional arguments to slots
   // Each slot contains a list of arg's indices
-  vector<vector<int>> slots(ast->args.size());
-  seqassert(known.empty() || ast->args.size() == known.size(), "bad 'known' string");
+  vector<vector<int>> slots(func->ast->args.size());
+  seqassert(known.empty() || func->ast->args.size() == known.size(),
+            "bad 'known' string");
   vector<int> extra;
   std::map<string, int> namedArgs, extraNamedArgs; // keep the map--- we need it sorted!
   for (int ai = 0, si = 0; ai < args.size() - partial; ai++) {
@@ -351,14 +346,10 @@ int TypeContext::reorderNamedArgs(types::FuncType *func,
 
   // 2. Assign named arguments to slots
   if (!namedArgs.empty()) {
-    if (!ast)
-      return onError(format("unexpected named argument '{}' "
-                            "(function pointers cannot have named arguments)",
-                            namedArgs.begin()->first));
     std::map<string, int> slotNames;
-    for (int i = 0; i < ast->args.size(); i++)
+    for (int i = 0; i < func->ast->args.size(); i++)
       if (known.empty() || !known[i]) {
-        slotNames[cache->reverseIdentifierLookup[ast->args[i].name]] = i;
+        slotNames[cache->reverseIdentifierLookup[func->ast->args[i].name]] = i;
       }
     for (auto &n : namedArgs) {
       if (!in(slotNames, n.first))
@@ -373,7 +364,8 @@ int TypeContext::reorderNamedArgs(types::FuncType *func,
   // 3. Fill in *args, if present
   if (!extra.empty() && starArgIndex == -1)
     return onError(format("too many arguments for {} (expected maximum {}, got {})",
-                          func->toString(), ast->args.size(), args.size() - partial));
+                          func->toString(), func->ast->args.size(),
+                          args.size() - partial));
   if (starArgIndex != -1)
     slots[starArgIndex] = extra;
 
@@ -385,14 +377,14 @@ int TypeContext::reorderNamedArgs(types::FuncType *func,
       slots[kwstarArgIndex].push_back(e.second);
 
   // 5. Fill in the default arguments
-  for (auto i = 0; i < ast->args.size(); i++)
+  for (auto i = 0; i < func->ast->args.size(); i++)
     if (slots[i].empty() && i != starArgIndex && i != kwstarArgIndex) {
-      if (!ast->args[i].generic &&
-          ((ast && ast->args[i].deflt) || (!known.empty() && known[i])))
+      if (!func->ast->args[i].generic &&
+          (func->ast->args[i].deflt || (!known.empty() && known[i])))
         score -= 2;
-      else if (!partial && !ast->args[i].generic)
+      else if (!partial && !func->ast->args[i].generic)
         return onError(format("missing argument '{}'",
-                              cache->reverseIdentifierLookup[ast->args[i].name]));
+                              cache->reverseIdentifierLookup[func->ast->args[i].name]));
     }
   return score + onDone(starArgIndex, kwstarArgIndex, slots, partial);
 }

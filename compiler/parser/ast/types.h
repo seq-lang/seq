@@ -20,6 +20,7 @@ namespace seq {
 namespace ast {
 
 struct Expr;
+struct FunctionStmt;
 struct TypeContext;
 
 namespace types {
@@ -48,6 +49,8 @@ struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
     vector<LinkType *> linked;
     /// List of unbound types whose level has been changed.
     vector<pair<LinkType *, int>> leveled;
+    /// List of assigned traits.
+    vector<LinkType *> traits;
 
   public:
     /// Undo the unification step.
@@ -114,6 +117,13 @@ public:
 };
 typedef shared_ptr<Type> TypePtr;
 
+struct Trait : public Type {
+  bool canRealize() const override;
+  bool isInstantiated() const override;
+  virtual string debugString(bool debug) const override;
+  string realizedName() const override;
+};
+
 /**
  * A basic type-inference building block.
  * LinkType is a metatype (or a type state) that describes the current information about
@@ -139,12 +149,17 @@ struct LinkType : public Type {
   TypePtr type;
   /// True if a type is a static type (e.g. N in Int[N: int]).
   bool isStatic;
+  /// Optional trait that unbound type requires prior to unification.
+  shared_ptr<Trait> trait;
   /// The generic name of a generic type, if applicable. Used for pretty-printing.
   string genericName;
+  /// Type that will be used if an unbound is not resolved.
+  TypePtr defaultType;
 
 public:
   LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
-           bool isStatic = false, string genericName = "");
+           bool isStatic = false, shared_ptr<Trait> trait = nullptr,
+           TypePtr defaultType = nullptr, string genericName = "");
   /// Convenience constructor for linked types.
   explicit LinkType(TypePtr type);
 
@@ -205,13 +220,9 @@ struct ClassType : public Type {
     int id;
     // Pointer to realized type (or generic LinkType).
     TypePtr type;
-    // Default value that is used if a generic is not realized (e.g. [T=int]).
-    shared_ptr<Expr> deflt;
 
-    Generic(string name, string niceName, TypePtr type, int id,
-            shared_ptr<Expr> deflt = nullptr)
-        : name(move(name)), niceName(move(niceName)), id(id), type(move(type)),
-          deflt(move(deflt)) {}
+    Generic(string name, string niceName, TypePtr type, int id)
+        : name(move(name)), niceName(move(niceName)), id(id), type(move(type)) {}
   };
 
   /// Canonical type name.
@@ -220,9 +231,6 @@ struct ClassType : public Type {
   string niceName;
   /// List of generics, if present.
   vector<Generic> generics;
-  /// True if this class is just supposed to be type-checked upon
-  /// (not supposed to be instantiated).
-  bool isTrait;
 
   explicit ClassType(string name, string niceName,
                      vector<Generic> generics = vector<Generic>());
@@ -240,8 +248,6 @@ public:
   bool isInstantiated() const override;
   string debugString(bool debug) const override;
   string realizedName() const override;
-  /// True if a class is a trait or has a generic that is a trait.
-  virtual bool hasTrait() const;
   /// Convenience function to get the name of realized type
   /// (needed if a subclass realizes something else as well).
   virtual string realizedTypeName() const;
@@ -289,15 +295,15 @@ public:
  * ⚠️ This is not a function pointer (Function[...]) type.
  */
 struct FuncType : public RecordType {
-  /// Canonical name of a (generic) function.
-  string funcName;
+  /// Canonical AST node.
+  FunctionStmt *ast;
   /// Function generics (e.g. T in def foo[T](...)).
   vector<ClassType::Generic> funcGenerics;
   /// Enclosing class or a function.
   TypePtr funcParent;
 
 public:
-  FuncType(const shared_ptr<RecordType> &baseType, string funcName,
+  FuncType(const shared_ptr<RecordType> &baseType, FunctionStmt *ast,
            vector<ClassType::Generic> funcGenerics = vector<ClassType::Generic>(),
            TypePtr funcParent = nullptr);
 
@@ -398,6 +404,18 @@ public:
 
 private:
   void parseExpr(const shared_ptr<Expr> &e, unordered_set<string> &seen);
+};
+
+struct CallableTrait : public Trait {
+  vector<TypePtr> args;
+
+public:
+  explicit CallableTrait(vector<TypePtr> args);
+  int unify(Type *typ, Unification *undo) override;
+  TypePtr generalize(int atLevel) override;
+  TypePtr instantiate(int atLevel, int *unboundCount,
+                      unordered_map<int, TypePtr> *cache) override;
+  string debugString(bool debug) const override;
 };
 
 } // namespace types

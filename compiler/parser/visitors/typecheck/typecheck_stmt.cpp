@@ -167,7 +167,7 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
             stmt->lhs.get(), format("__atomic_{}__", c->expr->getId()->value),
             {{"", ptrTyp}, {"", rhsTyp}})) {
       resultStmt = transform(N<ExprStmt>(N<CallExpr>(
-          N<IdExpr>(method->funcName), N<PtrExpr>(stmt->lhs), c->args[1].value)));
+          N<IdExpr>(method->ast->name), N<PtrExpr>(stmt->lhs), c->args[1].value)));
       return;
     }
   }
@@ -181,7 +181,7 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
     if (auto m = ctx->findBestMethod(stmt->lhs.get(), "__atomic_xchg__",
                                      {{"", ptrType}, {"", rhsClass}})) {
       resultStmt = transform(N<ExprStmt>(
-          N<CallExpr>(N<IdExpr>(m->funcName), N<PtrExpr>(stmt->lhs), stmt->rhs)));
+          N<CallExpr>(N<IdExpr>(m->ast->name), N<PtrExpr>(stmt->lhs), stmt->rhs)));
       return;
     }
     stmt->isAtomic = false;
@@ -311,39 +311,26 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
 }
 
 void TypecheckVisitor::visit(IfStmt *stmt) {
-  stmt->done = true;
-  bool includeElse = true, transformElse = true;
   stmt->cond = transform(stmt->cond);
-  StmtPtr ifSuite(nullptr), elseSuite(nullptr);
   if (stmt->cond->isStaticExpr) {
-    if (stmt->cond->staticEvaluation.first && !stmt->cond->staticEvaluation.second) {
-      ; // do not include this suite
-    } else if (!stmt->cond->staticEvaluation.first) {
+    if (!stmt->cond->staticEvaluation.first) {
       stmt->done = false; // do not typecheck this suite yet
-      transformElse = false;
-      ifSuite = stmt->ifSuite;
+      return;
     } else {
-      if ((stmt->ifSuite = transform(stmt->ifSuite)))
-        ifSuite = stmt->ifSuite;
-      includeElse = false;
+      resultStmt = transform(stmt->cond->staticEvaluation.second ? stmt->ifSuite
+                                                                 : stmt->elseSuite);
+      if (!resultStmt)
+        resultStmt = transform(N<SuiteStmt>());
+      return;
     }
   } else {
     if (stmt->cond->type->getClass() && !stmt->cond->type->is("bool"))
       stmt->cond = transform(N<CallExpr>(N<DotExpr>(stmt->cond, "__bool__")));
-    ifSuite = transform(stmt->ifSuite);
+    stmt->ifSuite = transform(stmt->ifSuite);
+    stmt->elseSuite = transform(stmt->elseSuite);
+    stmt->done = stmt->cond->done && (!stmt->ifSuite || stmt->ifSuite->done) &&
+                 (!stmt->elseSuite || stmt->elseSuite->done);
   }
-  if (ifSuite)
-    stmt->done &= stmt->cond->done && ifSuite->done;
-  if (stmt->elseSuite && includeElse) {
-    elseSuite = transformElse ? transform(stmt->elseSuite) : stmt->elseSuite;
-    stmt->done &= elseSuite->done;
-  }
-  if (!ifSuite && !elseSuite)
-    resultStmt = transform(N<SuiteStmt>());
-  else if (!ifSuite && elseSuite)
-    resultStmt = elseSuite;
-  else if (ifSuite)
-    stmt->ifSuite = ifSuite, stmt->elseSuite = elseSuite;
 }
 
 void TypecheckVisitor::visit(TryStmt *stmt) {
@@ -405,12 +392,17 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   auto explicits = vector<ClassType::Generic>();
   for (const auto &a : stmt->args)
     if (a.generic) {
-      TypePtr t = ctx->addUnbound(N<IdExpr>(a.name).get(), ctx->typecheckLevel, true,
-                                  !a.type->isId("type"));
+      auto t = ctx->addUnbound(N<IdExpr>(a.name).get(), ctx->typecheckLevel, true,
+                               !a.type->isId("type"));
       auto typId = ctx->cache->unboundCount - 1;
-      t->getLink()->genericName = ctx->cache->reverseIdentifierLookup[a.name];
+      t->genericName = ctx->cache->reverseIdentifierLookup[a.name];
+      if (a.deflt) {
+        auto dt = clone(a.deflt);
+        dt = transformType(dt);
+        t->defaultType = dt->type;
+      }
       explicits.push_back({a.name, ctx->cache->reverseIdentifierLookup[a.name],
-                           t->generalize(ctx->typecheckLevel), typId, clone(a.deflt)});
+                           t->generalize(ctx->typecheckLevel), typId});
       LOG_REALIZE("[generic] {} -> {}", a.name, t->toString());
       ctx->add(TypecheckItem::Type, a.name, t);
     }
@@ -451,20 +443,23 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
                                                   ctx->typecheckLevel));
         generics.push_back(baseType->args[aj++]);
       } else if (!stmt->args[ai].generic) {
-        unify(baseType->args[aj++], transformType(stmt->args[ai].type)->getType());
+        unify(baseType->args[aj], transformType(stmt->args[ai].type)->getType());
+        generics.push_back(baseType->args[aj]);
+        aj++;
       }
     }
     ctx->typecheckLevel--;
   }
   // Generalize generics.
   for (auto g : generics) {
-    seqassert(g && g->getLink() && g->getLink()->kind != types::LinkType::Link,
-              "generic has been unified");
-    if (g->getLink()->kind == LinkType::Unbound)
-      g->getLink()->kind = LinkType::Generic;
+    // seqassert(g && g->getLink() && g->getLink()->kind != types::LinkType::Link,
+    // "generic has been unified");
+    for (auto &u : g->getUnbounds())
+      u->getUnbound()->kind = LinkType::Generic;
   }
   // Construct the type.
-  auto typ = make_shared<FuncType>(baseType, stmt->name, explicits);
+  auto typ = make_shared<FuncType>(
+      baseType, ctx->cache->functions[stmt->name].ast.get(), explicits);
   if (attr.has(Attr::ForceRealize) || (attr.has(Attr::C) && !attr.has(Attr::CVarArg)))
     if (!typ->canRealize())
       error("builtins and external functions must be realizable");
@@ -515,13 +510,17 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
     // Parse class fields.
     for (const auto &a : stmt->args)
       if (a.generic) {
-        TypePtr t = ctx->addUnbound(N<IdExpr>(a.name).get(), ctx->typecheckLevel, true,
-                                    !a.type->isId("type"));
+        auto t = ctx->addUnbound(N<IdExpr>(a.name).get(), ctx->typecheckLevel, true,
+                                 !a.type->isId("type"));
         auto typId = ctx->cache->unboundCount - 1;
         t->getLink()->genericName = ctx->cache->reverseIdentifierLookup[a.name];
+        if (a.deflt) {
+          auto dt = clone(a.deflt);
+          dt = transformType(dt);
+          t->defaultType = dt->type;
+        }
         typ->generics.push_back({a.name, ctx->cache->reverseIdentifierLookup[a.name],
-                                 t->generalize(ctx->typecheckLevel), typId,
-                                 clone(a.deflt)});
+                                 t->generalize(ctx->typecheckLevel), typId});
         LOG_REALIZE("[generic] {} -> {}", a.name, t->toString());
         ctx->add(TypecheckItem::Type, a.name, t);
       }

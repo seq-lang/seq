@@ -16,7 +16,11 @@ print a.__class__ #: str
 
 #%% none_unbound,barebones
 a = None
+
+#%% list_unbound,barebones
+a = []
 #! cannot typecheck the program
+
 
 #%% id_static,barebones
 def foo[N: Static[int]]():
@@ -170,10 +174,11 @@ except ValueError as e:
 def foo2(a: int):
     print a
     return 1
-None |> foo2 #! cannot typecheck the program
+None |> foo2 #! cannot unify int and NoneType
 # Explanation: None can also be Optional[Generator[int]]
 # We cannot decide if this is a generator to be unrolled in a pipe,
 # or just an argument to be passed to a function.
+# So this will default to NoneType at the end.
 
 #%% instantiate_err,barebones
 def foo[N]():
@@ -506,9 +511,11 @@ print isinstance({1, 2}, List), isinstance({1, 2}, Set[float])
 print isinstance(Optional(5), Optional[int]), isinstance(Optional(), Optional)
 #: True True
 print isinstance(Optional(), Optional[int]), isinstance(Optional('s'), Optional[int])
-#: True False
+#: False False
 print isinstance(None, Optional), isinstance(None, Optional[int])
-#: True True
+#: True False
+print isinstance(None, Optional[NoneType])
+#: True
 print isinstance({1, 2}, List)
 #: False
 
@@ -599,7 +606,7 @@ print tuple((j, i) for i, j in ((1, 'a'), (2, 'b'), (3, 'c')))
 #: ((a, 1), (b, 2), (c, 3))
 
 #%% static_unify,barebones
-def foo(x: Callable[[1,2], 3]): pass  #! cannot unify TR and 3
+def foo(x: Callable[[1,2], 3]): pass  #! unexpected static type
 
 #%% static_unify_2,barebones
 def foo(x: List[1]): pass  #! cannot unify T and 1
