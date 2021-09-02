@@ -52,8 +52,19 @@ int WhileFlow::doReplaceUsedValue(id_t id, Value *newValue) {
 
 const char ForFlow::NodeId = 0;
 
+std::vector<Value *> ForFlow::doGetUsedValues() const {
+  std::vector<Value *> ret;
+  if (isParallel())
+    ret = getSchedule()->getUsedValues();
+  ret.push_back(iter);
+  ret.push_back(body);
+  return ret;
+}
+
 int ForFlow::doReplaceUsedValue(id_t id, Value *newValue) {
   auto count = 0;
+  if (isParallel())
+    count += getSchedule()->replaceUsedValue(id, newValue);
   if (iter->getId() == id) {
     iter = newValue;
     ++count;
@@ -77,8 +88,20 @@ int ForFlow::doReplaceUsedVariable(id_t id, Var *newVar) {
 
 const char ImperativeForFlow::NodeId = 0;
 
+std::vector<Value *> ImperativeForFlow::doGetUsedValues() const {
+  std::vector<Value *> ret;
+  if (isParallel())
+    ret = getSchedule()->getUsedValues();
+  ret.push_back(start);
+  ret.push_back(end);
+  ret.push_back(body);
+  return ret;
+}
+
 int ImperativeForFlow::doReplaceUsedValue(id_t id, Value *newValue) {
   auto count = 0;
+  if (isParallel())
+    count += getSchedule()->replaceUsedValue(id, newValue);
   if (body->getId() == id) {
     auto *f = cast<Flow>(newValue);
     seqassert(f, "{} is not a flow", *newValue);

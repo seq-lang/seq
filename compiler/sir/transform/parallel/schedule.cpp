@@ -52,6 +52,28 @@ OMPSched::OMPSched(const std::string &schedule, Value *threads, Value *chunk,
       dynamic((schedule != "static") || ordered), threads(threads), chunk(chunk),
       ordered(ordered) {}
 
+std::vector<Value *> OMPSched::getUsedValues() const {
+  std::vector<Value *> ret;
+  if (threads)
+    ret.push_back(threads);
+  if (chunk)
+    ret.push_back(chunk);
+  return ret;
+}
+
+int OMPSched::replaceUsedValue(id_t id, Value *newValue) {
+  auto count = 0;
+  if (threads && threads->getId() == id) {
+    threads = newValue;
+    ++count;
+  }
+  if (chunk && chunk->getId() == id) {
+    chunk = newValue;
+    ++count;
+  }
+  return count;
+}
+
 } // namespace parallel
 } // namespace transform
 } // namespace ir

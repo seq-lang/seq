@@ -395,6 +395,7 @@ INSTANTIATE_TEST_SUITE_P(
             "transform/for_lowering.seq",
             "transform/io_opt.seq",
             "transform/inlining.seq",
+            "transform/omp.seq",
             "transform/outlining.seq",
             "transform/str_opt.seq"
         ),

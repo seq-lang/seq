@@ -441,7 +441,7 @@ private:
 public:
   explicit CFVisitor(analyze::dataflow::CFGraph *graph) : graph(graph) {}
 
-  void visit(const BodiedFunc *f) override { process(f->getBody()); }
+  void visit(const BodiedFunc *f) override;
 
   DEFAULT_VISIT(VarValue)
   DEFAULT_VISIT(PointerValue)

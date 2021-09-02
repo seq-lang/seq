@@ -146,6 +146,15 @@ std::unique_ptr<Result> CFAnalysis::run(const Module *m) {
   return res;
 }
 
+void CFVisitor::visit(const BodiedFunc *f) {
+  auto *blk = graph->getCurrentBlock();
+  for (auto it = f->arg_begin(); it != f->arg_end(); it++) {
+    blk->push_back(graph->N<analyze::dataflow::SyntheticAssignInstr>(
+        const_cast<Var *>(*it), const_cast<VarValue *>(graph->N<VarValue>(*it))));
+  }
+  process(f->getBody());
+}
+
 void CFVisitor::visit(const SeriesFlow *v) {
   for (auto *c : *v) {
     process(c);
@@ -197,6 +206,11 @@ void CFVisitor::visit(const WhileFlow *v) {
 }
 
 void CFVisitor::visit(const ForFlow *v) {
+  if (v->isParallel()) {
+    for (auto *v : v->getSchedule()->getUsedValues()) {
+      process(v);
+    }
+  }
   auto *original = graph->getCurrentBlock();
   auto *end = graph->newBlock("endFor");
 
@@ -225,15 +239,21 @@ void CFVisitor::visit(const ForFlow *v) {
 }
 
 void CFVisitor::visit(const ImperativeForFlow *v) {
+  if (v->isParallel()) {
+    for (auto *v : v->getSchedule()->getUsedValues()) {
+      process(v);
+    }
+  }
   auto *original = graph->getCurrentBlock();
   auto *end = graph->newBlock("endFor");
 
   auto *loopBegin = graph->newBlock("forBegin", true);
   original->successors_insert(loopBegin);
-  process(v->getStart());
   loopBegin->push_back(graph->N<analyze::dataflow::SyntheticAssignInstr>(
       const_cast<Var *>(v->getVar()), const_cast<Value *>(v->getStart()),
       analyze::dataflow::SyntheticAssignInstr::KNOWN));
+  process(v->getStart());
+  process(v->getEnd());
 
   auto *loopCheck = graph->newBlock("forCheck");
   graph->getCurrentBlock()->successors_insert(loopCheck);
@@ -390,7 +410,9 @@ void CFVisitor::visit(const ThrowInstr *v) {
 
 void CFVisitor::visit(const FlowInstr *v) {
   process(v->getFlow());
-  process(v);
+  if (v->getValue())
+    process(v->getValue());
+  defaultInsert(v);
 }
 
 void CFVisitor::visit(const dsl::CustomInstr *v) {
