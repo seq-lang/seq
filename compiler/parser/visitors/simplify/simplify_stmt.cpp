@@ -1104,12 +1104,7 @@ StmtPtr SimplifyVisitor::transformCImport(const string &name, const vector<Param
 StmtPtr SimplifyVisitor::transformCDLLImport(const Expr *dylib, const string &name,
                                              const vector<Param> &args, const Expr *ret,
                                              const string &altName) {
-  vector<StmtPtr> stmts;
-  // fptr = _dlsym(dylib, "name")
-  stmts.push_back(
-      N<AssignStmt>(N<IdExpr>("fptr"), N<CallExpr>(N<IdExpr>("_dlsym"), dylib->clone(),
-                                                   N<StringExpr>(name))));
-  // Prepare Function[args...]
+  // name : Function[args] = _dlsym(dylib, "name", Fn=Function[args])
   vector<ExprPtr> fnArgs{N<ListExpr>(vector<ExprPtr>{}),
                          ret ? ret->clone() : N<IdExpr>("void")};
   for (const auto &a : args) {
@@ -1118,28 +1113,12 @@ StmtPtr SimplifyVisitor::transformCDLLImport(const Expr *dylib, const string &na
     seqassert(a.type, "missing type");
     const_cast<ListExpr *>(fnArgs[0]->getList())->items.emplace_back(clone(a.type));
   }
-  // f = Function[args...](fptr)
-  stmts.emplace_back(N<AssignStmt>(
-      N<IdExpr>("f"),
-      N<CallExpr>(N<IndexExpr>(N<IdExpr>("Function"), N<TupleExpr>(fnArgs)),
-                  N<IdExpr>("fptr"))));
-  // Check if a return type is void or not
-  bool isVoid = !ret || (ret->getId() && ret->getId()->value == "void");
-  fnArgs.clear();
-  for (int i = 0; i < args.size(); i++)
-    fnArgs.emplace_back(N<IdExpr>(format("a{}", i)));
-  // f(args...)
-  if (!isVoid)
-    stmts.push_back(N<ReturnStmt>(N<CallExpr>(N<IdExpr>("f"), fnArgs)));
-  else
-    stmts.push_back(N<ExprStmt>(N<CallExpr>(N<IdExpr>("f"), fnArgs)));
-  vector<Param> params;
-  // Prepare final FunctionStmt and transform it
-  for (int i = 0; i < args.size(); i++)
-    params.emplace_back(Param{format("a{}", i), clone(args[i].type)});
-  return transform(N<FunctionStmt>(altName.empty() ? name : altName,
-                                   ret ? ret->clone() : nullptr, params,
-                                   N<SuiteStmt>(stmts)));
+  auto type = N<IndexExpr>(N<IdExpr>("Function"), N<TupleExpr>(fnArgs));
+  return transform(N<AssignStmt>(
+      N<IdExpr>(altName.empty() ? name : altName),
+      N<CallExpr>(N<IdExpr>("_dlsym"), vector<CallExpr::Arg>{{"", dylib->clone()},
+                                                             {"", N<StringExpr>(name)},
+                                                             {"Fn", type}})));
 }
 
 StmtPtr SimplifyVisitor::transformPythonImport(const Expr *what,
