@@ -39,10 +39,10 @@ TypePtr Type::follow() { return shared_from_this(); }
 vector<shared_ptr<Type>> Type::getUnbounds() const { return {}; }
 string Type::toString() const { return debugString(false); }
 bool Type::is(const string &s) { return getClass() && getClass()->name == s; }
-bool Type::isStaticType() {
+char Type::isStaticType() {
   auto t = follow();
-  if (t->getStatic())
-    return true;
+  if (auto s = t->getStatic())
+    return char(s->expr->staticValue.type);
   if (auto l = t->getLink())
     return l->isStatic;
   return false;
@@ -53,7 +53,7 @@ bool Trait::isInstantiated() const { return false; }
 string Trait::debugString(bool debug) const { return ""; }
 string Trait::realizedName() const { return ""; }
 
-LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic,
+LinkType::LinkType(Kind kind, int id, int level, TypePtr type, char isStatic,
                    shared_ptr<Trait> trait, TypePtr defaultType, string genericName)
     : kind(kind), id(id), level(level), type(move(type)), isStatic(isStatic),
       trait(move(trait)), genericName(move(genericName)),
@@ -63,7 +63,7 @@ LinkType::LinkType(Kind kind, int id, int level, TypePtr type, bool isStatic,
             "inconsistent link state");
 }
 LinkType::LinkType(TypePtr type)
-    : kind(Link), id(0), level(0), type(move(type)), isStatic(false), trait(nullptr),
+    : kind(Link), id(0), level(0), type(move(type)), isStatic(0), trait(nullptr),
       defaultType(nullptr) {
   seqassert(this->type, "link to nullptr");
 }
@@ -79,7 +79,7 @@ int LinkType::unify(Type *typ, Unification *undo) {
     if (isStaticType() != typ->isStaticType())
       return -1;
     if (auto ts = typ->getStatic()) {
-      if (ts->staticExpr && ts->staticExpr->getId())
+      if (ts->expr->getId())
         return unify(ts->generics[0].type.get(), undo);
     }
     if (auto t = typ->getLink()) {
@@ -585,39 +585,38 @@ string PartialType::realizedName() const {
   return fmt::format("{}{}", name, s.empty() ? "" : fmt::format("[{}]", s));
 }
 
-StaticType::StaticType(shared_ptr<Expr> expr, shared_ptr<TypeContext> ctx)
-    : staticExpr(move(expr)), typeCtx(move(ctx)) {
-  if (staticExpr->staticEvaluation.first) {
-    staticEvaluation = staticExpr->staticEvaluation;
-  } else {
+StaticType::StaticType(shared_ptr<Expr> e, shared_ptr<TypeContext> ctx)
+    : expr(e->clone()), typeCtx(move(ctx)) {
+  // seqassert(expr->isStatic(), "{} is not a static expression", expr->toString());
+  if (!expr->isStatic() || !expr->staticValue.evaluated) {
     unordered_set<string> seen;
-    parseExpr(staticExpr, seen);
+    parseExpr(expr, seen);
   }
 }
-StaticType::StaticType(vector<ClassType::Generic> generics, shared_ptr<Expr> staticExpr,
-                       shared_ptr<TypeContext> typeCtx,
-                       pair<bool, int> staticEvaluation)
-    : generics(move(generics)), staticEvaluation(move(staticEvaluation)),
-      staticExpr(move(staticExpr)), typeCtx(move(typeCtx)) {
-  seqassert(!staticExpr || !staticExpr->getInt(), "invalid complex static expression");
+StaticType::StaticType(vector<ClassType::Generic> generics, shared_ptr<Expr> e,
+                       shared_ptr<TypeContext> typeCtx)
+    : generics(move(generics)), expr(e->clone()), typeCtx(move(typeCtx)) {
+  // seqassert(!expr || !expr->getInt(), "invalid complex static expression: {}",
+  //           expr ? expr->toString() : "-");
 }
-StaticType::StaticType(int i)
-    : staticEvaluation(true, i), staticExpr(nullptr), typeCtx(nullptr) {}
+StaticType::StaticType(int64_t i) : expr(make_shared<IntExpr>(i)), typeCtx(nullptr) {}
 int StaticType::unify(Type *typ, Unification *us) {
   if (auto t = typ->getStatic()) {
     if (canRealize())
-      staticEvaluation = {true, evaluate()};
+      expr->staticValue = evaluate();
     if (t->canRealize())
-      t->staticEvaluation = {true, t->evaluate()};
+      t->expr->staticValue = t->evaluate();
     // Check if both types are already evaluated.
-    if (staticEvaluation.first && t->staticEvaluation.first)
-      return staticEvaluation == t->staticEvaluation ? 2 : -1;
-    else if (staticEvaluation.first && !t->staticEvaluation.first)
+    if (expr->staticValue.type != t->expr->staticValue.type)
+      return -1;
+    if (expr->staticValue.evaluated && t->expr->staticValue.evaluated)
+      return expr->staticValue == t->expr->staticValue ? 2 : -1;
+    else if (expr->staticValue.evaluated && !t->expr->staticValue.evaluated)
       return typ->unify(this, us);
 
     // Right now, *this is not evaluated
     // Let us see can we unify it with other _if_ it is a simple IdExpr?
-    if (staticExpr->getId() && t->staticEvaluation.first) {
+    if (expr->getId() && t->expr->staticValue.evaluated) {
       return generics[0].type->unify(typ, us);
     }
 
@@ -627,8 +626,7 @@ int StaticType::unify(Type *typ, Unification *us) {
       return -1;
 
     int s1 = 2, s;
-    if (!(staticExpr->getId() && t->staticExpr->getId()) &&
-        staticExpr->toString() != t->staticExpr->toString())
+    if (!(expr->getId() && t->expr->getId()) && expr->toString() != t->expr->toString())
       return -1;
     for (int i = 0; i < generics.size(); i++) {
       if ((s = generics[i].type->unify(t->generics[i].type.get(), us)) == -1)
@@ -645,7 +643,7 @@ TypePtr StaticType::generalize(int atLevel) {
   auto e = generics;
   for (auto &t : e)
     t.type = t.type ? t.type->generalize(atLevel) : nullptr;
-  auto c = make_shared<StaticType>(e, staticExpr, typeCtx, staticEvaluation);
+  auto c = make_shared<StaticType>(e, expr, typeCtx);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -654,7 +652,7 @@ TypePtr StaticType::instantiate(int atLevel, int *unboundCount,
   auto e = generics;
   for (auto &t : e)
     t.type = t.type ? t.type->instantiate(atLevel, unboundCount, cache) : nullptr;
-  auto c = make_shared<StaticType>(e, staticExpr, typeCtx, staticEvaluation);
+  auto c = make_shared<StaticType>(e, expr, typeCtx);
   c->setSrcInfo(getSrcInfo());
   return c;
 }
@@ -668,48 +666,48 @@ vector<TypePtr> StaticType::getUnbounds() const {
   return u;
 }
 bool StaticType::canRealize() const {
-  if (!staticEvaluation.first)
+  if (!expr->staticValue.evaluated)
     for (auto &t : generics)
       if (t.type && !t.type->canRealize())
         return false;
   return true;
 }
-bool StaticType::isInstantiated() const { return staticEvaluation.first; }
+bool StaticType::isInstantiated() const { return expr->staticValue.evaluated; }
 string StaticType::debugString(bool debug) const {
-  if (staticEvaluation.first)
-    return fmt::format("{}", staticEvaluation.second);
+  if (expr->staticValue.evaluated)
+    return expr->staticValue.toString();
   if (debug) {
     vector<string> s;
     for (auto &g : generics)
       s.push_back(g.type->debugString(debug));
-    return fmt::format("Static[{};{};{}:{}]", join(s, ","), staticExpr->toString(),
-                       staticEvaluation.first, staticEvaluation.second);
-  } else
-    return fmt::format("Static[{}]",
-                       staticExpr ? FormatVisitor::apply(staticExpr) : "");
+    return fmt::format("Static[{};{}]", join(s, ","), expr->toString());
+  } else {
+    return fmt::format("Static[{}]", FormatVisitor::apply(expr));
+  }
 }
 string StaticType::realizedName() const {
   seqassert(canRealize(), "cannot realize {}", toString());
   vector<string> deps;
   for (auto &e : generics)
     deps.push_back(e.type->realizedName());
-  if (!staticEvaluation.first) // If not already evaluated, evaluate!
-    const_cast<StaticType *>(this)->staticEvaluation = {true, evaluate()};
-  return fmt::format("{}", staticEvaluation.second);
+  if (!expr->staticValue.evaluated) // If not already evaluated, evaluate!
+    const_cast<StaticType *>(this)->expr->staticValue = evaluate();
+  return expr->staticValue.toString();
 }
-int StaticType::evaluate() const {
-  if (staticEvaluation.first)
-    return staticEvaluation.second;
+StaticValue StaticType::evaluate() const {
+  if (expr->staticValue.evaluated)
+    return expr->staticValue;
   typeCtx->addBlock();
   for (auto &g : generics)
     typeCtx->add(TypecheckItem::Type, g.name, g.type);
-  auto en = TypecheckVisitor(typeCtx).transform(staticExpr->clone());
-  seqassert(en->isStaticExpr && en->staticEvaluation.first, "{} cannot be evaluated",
+  auto en = TypecheckVisitor(typeCtx).transform(expr->clone());
+  seqassert(en->isStatic() && en->staticValue.evaluated, "{} cannot be evaluated",
             en->toString());
   typeCtx->popBlock();
-  return en->staticEvaluation.second;
+  return en->staticValue;
 }
 void StaticType::parseExpr(const ExprPtr &e, unordered_set<string> &seen) {
+  e->type = nullptr;
   if (auto ei = e->getId()) {
     if (!in(seen, ei->value)) {
       auto val = typeCtx->find(ei->value);

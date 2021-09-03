@@ -209,7 +209,7 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
             seqassert(s->stmts[i]->getExpr(), "invalid LLVM definition {}: {}",
                       type->toString(), s->stmts[i]->toString());
             auto e = s->stmts[i]->getExpr()->expr;
-            if (!e->isType() && !e->isStaticExpr)
+            if (!e->isType() && !e->isStatic())
               error(e, "not a type or static expression");
           }
         }
@@ -396,11 +396,11 @@ ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
 
   ir::types::Type *handle = nullptr;
   vector<ir::types::Type *> types;
-  vector<int> statics;
+  vector<StaticValue *> statics;
   for (auto &m : t->generics)
     if (auto s = m.type->getStatic()) {
-      seqassert(s->staticEvaluation.first, "static not realized");
-      statics.push_back(s->staticEvaluation.second);
+      seqassert(s->expr->staticValue.evaluated, "static not realized");
+      statics.push_back(&(s->expr->staticValue));
     } else {
       types.push_back(getLLVM(m.type));
     }
@@ -420,8 +420,9 @@ ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   } else if (name == "str") {
     handle = module->getStringType();
   } else if (name == "Int" || name == "UInt") {
-    assert(statics.size() == 1 && types.empty());
-    handle = module->Nr<ir::types::IntNType>(statics[0], name == "Int");
+    assert(statics.size() == 1 && statics[0]->type == StaticValue::INT &&
+           types.empty());
+    handle = module->Nr<ir::types::IntNType>(statics[0]->getInt(), name == "Int");
   } else if (name == "Ptr") {
     assert(types.size() == 1 && statics.empty());
     handle = module->unsafeGetPointerType(types[0]);

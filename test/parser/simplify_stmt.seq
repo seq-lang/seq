@@ -520,7 +520,7 @@ def foo():
 #%% function_err_2,barebones
 def f[T: Static[float]]():
     pass
-#! only static integers are supported
+#! only static integers and strings are supported
 
 #%% function_err_3,barebones
 def f(a, b=a):
@@ -665,9 +665,9 @@ class Foo:
 #! only function and class definitions are allowed within classes
 
 #%% class_err_9,barebones
-class F[T: Static[str]]:
+class F[T: Static[float]]:
     pass
-#! only static integers are supported
+#! only static integers and strings are supported
 
 #%% class_err_10,barebones
 def foo[T]():

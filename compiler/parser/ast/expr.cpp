@@ -25,21 +25,45 @@ namespace seq {
 namespace ast {
 
 Expr::Expr()
-    : type(nullptr), isTypeExpr(false), isStaticExpr(false), staticEvaluation{false, 0},
+    : type(nullptr), isTypeExpr(false), staticValue(StaticValue::NOT_STATIC),
       done(false) {}
 types::TypePtr Expr::getType() const { return type; }
 void Expr::setType(types::TypePtr t) { this->type = move(t); }
 bool Expr::isType() const { return isTypeExpr; }
 void Expr::markType() { isTypeExpr = true; }
 string Expr::wrapType(const string &sexpr) const {
-  return format("({}{}{}){}", sexpr,
-                type ? format(" #:type \"{}\"", type->toString()) : "",
-                isStaticExpr ? format(" #:static {}",
-                                      staticEvaluation.first
-                                          ? std::to_string(staticEvaluation.second)
-                                          : "-")
-                             : "",
-                done ? "*" : "");
+  return format(
+      "({}{}){}", sexpr, type ? format(" #:type \"{}\"", type->toString()) : "",
+      // Uncommenting this breaks static unification...
+      // staticValue.type ? format(" #:static {}", staticValue.toString()) : "",
+      done ? "*" : "");
+}
+bool Expr::isStatic() const { return staticValue.type != StaticValue::NOT_STATIC; }
+
+StaticValue::StaticValue(StaticValue::Type t) : value(), type(t), evaluated(false) {}
+StaticValue::StaticValue(int64_t i) : value(i), type(INT), evaluated(true) {}
+StaticValue::StaticValue(string s) : value(move(s)), type(STRING), evaluated(true) {}
+
+bool StaticValue::operator==(const StaticValue &s) const {
+  if (type != s.type || s.evaluated != evaluated)
+    return false;
+  return s.evaluated ? value == s.value : true;
+}
+string StaticValue::toString() const {
+  if (type == StaticValue::NOT_STATIC)
+    return "";
+  if (!evaluated)
+    return type == StaticValue::STRING ? "str" : "int";
+  return type == StaticValue::STRING ? "\"" + escape(std::get<string>(value)) + "\""
+                                     : std::to_string(std::get<int64_t>(value));
+}
+int64_t StaticValue::getInt() const {
+  seqassert(type == StaticValue::INT, "not an int");
+  return std::get<int64_t>(value);
+}
+string StaticValue::getString() const {
+  seqassert(type == StaticValue::STRING, "not a string");
+  return std::get<string>(value);
 }
 
 Param::Param(string name, ExprPtr type, ExprPtr deflt, bool generic)
@@ -57,14 +81,15 @@ NoneExpr::NoneExpr() : Expr() {}
 string NoneExpr::toString() const { return wrapType("none"); }
 ACCEPT_IMPL(NoneExpr, ASTVisitor);
 
-BoolExpr::BoolExpr(bool value) : Expr(), value(value) {}
+BoolExpr::BoolExpr(bool value) : Expr(), value(value) {
+  staticValue = StaticValue(value);
+}
 string BoolExpr::toString() const { return wrapType(format("bool {}", int(value))); }
 ACCEPT_IMPL(BoolExpr, ASTVisitor);
 
-IntExpr::IntExpr(long long intValue)
+IntExpr::IntExpr(int64_t intValue)
     : Expr(), value(std::to_string(intValue)), intValue(intValue) {
-  isStaticExpr = true;
-  staticEvaluation = {true, intValue};
+  staticValue = StaticValue(intValue);
 }
 IntExpr::IntExpr(const string &value, string suffix)
     : Expr(), value(), suffix(move(suffix)), intValue(0) {
@@ -88,11 +113,12 @@ string FloatExpr::toString() const {
 }
 ACCEPT_IMPL(FloatExpr, ASTVisitor);
 
-StringExpr::StringExpr(vector<pair<string, string>> strings)
-    : Expr(), strings(move(strings)) {}
-StringExpr::StringExpr(string value, string prefix) : Expr() {
-  strings.push_back({value, prefix});
+StringExpr::StringExpr(vector<pair<string, string>> s) : Expr(), strings(move(s)) {
+  if (strings.size() == 1 && strings.back().second.empty())
+    staticValue = StaticValue(strings.back().first);
 }
+StringExpr::StringExpr(string value, string prefix)
+    : StringExpr(vector<pair<string, string>>{{value, prefix}}) {}
 string StringExpr::toString() const {
   vector<string> s;
   for (auto &vp : strings)

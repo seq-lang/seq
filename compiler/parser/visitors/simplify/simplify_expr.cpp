@@ -359,8 +359,8 @@ void SimplifyVisitor::visit(IndexExpr *expr) {
                t ? int(t->items.size()) - 1 : 0));
     e->markType();
   } else if (expr->expr->isId("Static")) {
-    if (!expr->index->isId("int"))
-      error("only static integers are supported");
+    if (!expr->index->isId("int") && !expr->index->isId("str"))
+      error("only static integers and strings are supported");
     resultExpr = expr->clone();
     resultExpr->markType();
     return;

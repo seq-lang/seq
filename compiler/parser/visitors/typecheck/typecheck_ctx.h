@@ -104,7 +104,7 @@ public:
   /// @param setActive If True, add it to activeUnbounds.
   /// @param isStatic True if this is a static integer unbound.
   shared_ptr<types::LinkType> addUnbound(const Expr *expr, int level,
-                                         bool setActive = true, bool isStatic = false);
+                                         bool setActive = true, char staticType = 0);
   /// Call `type->instantiate`.
   /// Prepare the generic instantiation table with the given generics parameter.
   /// Example: when instantiating List[T].foo, generics=List[int].foo will ensure that

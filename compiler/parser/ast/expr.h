@@ -11,6 +11,7 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "parser/ast/types.h"
@@ -42,6 +43,21 @@ struct TupleExpr;
 struct UnaryExpr;
 struct Stmt;
 
+struct StaticValue {
+  std::variant<int64_t, string> value;
+  enum Type { NOT_STATIC = 0, STRING = 1, INT = 2 } type;
+  bool evaluated;
+
+  explicit StaticValue(Type);
+  // Static(bool);
+  explicit StaticValue(int64_t);
+  explicit StaticValue(string);
+  bool operator==(const StaticValue &s) const;
+  string toString() const;
+  int64_t getInt() const;
+  string getString() const;
+};
+
 /**
  * A Seq AST expression.
  * Each AST expression is intended to be instantiated as a shared_ptr.
@@ -65,10 +81,7 @@ struct Expr : public seq::SrcObject {
   ///   a if cond else b
   ///     (note: cond is static, and is true if non-zero, false otherwise).
   ///     (note: both branches will be evaluated).
-  bool isStaticExpr;
-  /// Static evaluation state: first pair member indicates if an expression is already
-  /// evaluated. If so, second pair member stores the evaluation value.s
-  pair<bool, int> staticEvaluation;
+  StaticValue staticValue;
   /// Flag that indicates if all types in an expression are inferred (i.e. if a
   /// type-checking procedure was successful).
   bool done;
@@ -93,6 +106,8 @@ public:
   bool isType() const;
   /// Marks a node as a type expression.
   void markType();
+  /// True if a node is static expression.
+  bool isStatic() const;
 
   /// Allow pretty-printing to C++ streams.
   friend std::ostream &operator<<(std::ostream &out, const Expr &expr) {
@@ -174,7 +189,7 @@ struct IntExpr : public Expr {
   /// Parsed value and sign for "normal" 64-bit integers.
   int64_t intValue;
 
-  explicit IntExpr(long long intValue);
+  explicit IntExpr(int64_t intValue);
   explicit IntExpr(const string &value, string suffix = "");
   IntExpr(const IntExpr &expr) = default;
 

@@ -20,6 +20,7 @@ namespace seq {
 namespace ast {
 
 struct Expr;
+struct StaticValue;
 struct FunctionStmt;
 struct TypeContext;
 
@@ -113,7 +114,7 @@ public:
   virtual shared_ptr<RecordType> getHeterogenousTuple() { return nullptr; }
 
   virtual bool is(const string &s);
-  bool isStaticType();
+  char isStaticType();
 };
 typedef shared_ptr<Type> TypePtr;
 
@@ -147,8 +148,8 @@ struct LinkType : public Type {
   int level;
   /// The type to which LinkType points to. nullptr if unknown (unbound or generic).
   TypePtr type;
-  /// True if a type is a static type (e.g. N in Int[N: int]).
-  bool isStatic;
+  /// >0 if a type is a static type (e.g. N in Int[N: int]); 0 otherwise.
+  char isStatic;
   /// Optional trait that unbound type requires prior to unification.
   shared_ptr<Trait> trait;
   /// The generic name of a generic type, if applicable. Used for pretty-printing.
@@ -157,9 +158,9 @@ struct LinkType : public Type {
   TypePtr defaultType;
 
 public:
-  LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
-           bool isStatic = false, shared_ptr<Trait> trait = nullptr,
-           TypePtr defaultType = nullptr, string genericName = "");
+  LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr, char isStatic = 0,
+           shared_ptr<Trait> trait = nullptr, TypePtr defaultType = nullptr,
+           string genericName = "");
   /// Convenience constructor for linked types.
   explicit LinkType(TypePtr type);
 
@@ -367,22 +368,18 @@ struct StaticType : public Type {
   /// List of static variables that a type depends on
   /// (e.g. for A+B+2, generics are {A, B}).
   vector<ClassType::Generic> generics;
-  /// Evaluation status. If .first is true, the expression is evaluated and .second
-  /// provides the evaluated value.
-  pair<bool, int> staticEvaluation;
   /// A static expression that needs to be evaluated.
   /// Can be nullptr if there is no expression.
-  shared_ptr<Expr> staticExpr;
+  shared_ptr<Expr> expr;
   /// Type context needed for evaluation
   shared_ptr<TypeContext> typeCtx;
 
-  StaticType(vector<ClassType::Generic> generics, shared_ptr<Expr> staticExpr,
-             shared_ptr<TypeContext> typeCtx = nullptr,
-             pair<bool, int> staticEvaluation = {false, 0});
+  StaticType(vector<ClassType::Generic> generics, shared_ptr<Expr> expr,
+             shared_ptr<TypeContext> typeCtx = nullptr);
   /// Convenience function that parses expr and populates static type generics.
   StaticType(shared_ptr<Expr> expr, shared_ptr<TypeContext> ctx);
   /// Convenience function for static types whose evaluation is already known.
-  explicit StaticType(int i);
+  explicit StaticType(int64_t i);
 
 public:
   int unify(Type *typ, Unification *undo) override;
@@ -397,7 +394,7 @@ public:
   string debugString(bool debug) const override;
   string realizedName() const override;
 
-  int evaluate() const;
+  StaticValue evaluate() const;
   shared_ptr<StaticType> getStatic() override {
     return std::static_pointer_cast<StaticType>(shared_from_this());
   }

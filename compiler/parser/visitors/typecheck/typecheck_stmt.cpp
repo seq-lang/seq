@@ -97,11 +97,10 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
     ctx->add(kind = TypecheckItem::Var, lhs, stmt->lhs->type);
     stmt->done = realize(stmt->lhs->type) != nullptr;
   } else if (stmt->type && stmt->type->getType()->isStaticType()) {
-    if (!stmt->rhs->isStaticExpr)
+    if (!stmt->rhs->isStatic())
       error("right-hand side is not a static expression");
-    seqassert(stmt->rhs->staticEvaluation.first, "static not evaluated");
-    unify(stmt->type->type,
-          make_shared<StaticType>(stmt->rhs->staticEvaluation.second));
+    seqassert(stmt->rhs->staticValue.evaluated, "static not evaluated");
+    unify(stmt->type->type, make_shared<StaticType>(stmt->rhs, ctx));
     unify(stmt->lhs->type, stmt->type->getType());
     ctx->add(kind = TypecheckItem::Var, lhs, stmt->lhs->type);
     stmt->done = realize(stmt->lhs->type) != nullptr;
@@ -126,7 +125,7 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
 
 void TypecheckVisitor::visit(UpdateStmt *stmt) {
   stmt->lhs = transform(stmt->lhs);
-  if (stmt->lhs->isStaticExpr)
+  if (stmt->lhs->isStatic())
     error("cannot modify static expression");
 
   // Case 1: Check for atomic and in-place updates (a += b).
@@ -312,13 +311,17 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
 
 void TypecheckVisitor::visit(IfStmt *stmt) {
   stmt->cond = transform(stmt->cond);
-  if (stmt->cond->isStaticExpr) {
-    if (!stmt->cond->staticEvaluation.first) {
+  if (stmt->cond->isStatic()) {
+    if (!stmt->cond->staticValue.evaluated) {
       stmt->done = false; // do not typecheck this suite yet
       return;
     } else {
-      resultStmt = transform(stmt->cond->staticEvaluation.second ? stmt->ifSuite
-                                                                 : stmt->elseSuite);
+      bool isTrue = false;
+      if (stmt->cond->staticValue.type == StaticValue::STRING)
+        isTrue = !stmt->cond->staticValue.getString().empty();
+      else
+        isTrue = stmt->cond->staticValue.getInt();
+      resultStmt = transform(isTrue ? stmt->ifSuite : stmt->elseSuite);
       if (!resultStmt)
         resultStmt = transform(N<SuiteStmt>());
       return;
@@ -392,8 +395,12 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   auto explicits = vector<ClassType::Generic>();
   for (const auto &a : stmt->args)
     if (a.generic) {
+      char staticType = 0;
+      auto idx = a.type->getIndex();
+      if (idx && idx->expr->isId("Static"))
+        staticType = idx->index->isId("str") ? 1 : 2;
       auto t = ctx->addUnbound(N<IdExpr>(a.name).get(), ctx->typecheckLevel, true,
-                               !a.type->isId("type"));
+                               staticType);
       auto typId = ctx->cache->unboundCount - 1;
       t->genericName = ctx->cache->reverseIdentifierLookup[a.name];
       if (a.deflt) {
@@ -510,8 +517,12 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
     // Parse class fields.
     for (const auto &a : stmt->args)
       if (a.generic) {
+        char staticType = 0;
+        auto idx = a.type->getIndex();
+        if (idx && idx->expr->isId("Static"))
+          staticType = idx->index->isId("str") ? 1 : 2;
         auto t = ctx->addUnbound(N<IdExpr>(a.name).get(), ctx->typecheckLevel, true,
-                                 !a.type->isId("type"));
+                                 staticType);
         auto typId = ctx->cache->unboundCount - 1;
         t->getLink()->genericName = ctx->cache->reverseIdentifierLookup[a.name];
         if (a.deflt) {

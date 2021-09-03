@@ -297,9 +297,9 @@ void TranslateVisitor::visit(ForStmt *stmt) {
     else if (o.name == "chunk_size")
       chunk = transform(o.value);
     else if (o.name == "ordered") {
-      seqassert(o.value->isStaticExpr && o.value->staticEvaluation.first,
+      seqassert(o.value->isStatic() && o.value->staticValue.evaluated,
                 "ordered openmp not static");
-      ordered = o.value->staticEvaluation.second;
+      ordered = o.value->staticValue.getInt();
     } else if (o.name == "schedule") {
       seqassert(o.value->getString(), "schedule must be a string");
       schedule = o.value->getString()->getValue();
