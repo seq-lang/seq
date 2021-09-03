@@ -1446,7 +1446,14 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
   } else if (val == "staticlen") {
     expr->staticValue.type = StaticValue::INT;
     expr->args[0].value = transform(expr->args[0].value);
-    auto typ = expr->args[0].value->getType()->getClass();
+    auto typ = expr->args[0].value->getType();
+    if (auto s = typ->getStatic()) {
+      if (s->expr->staticValue.type != StaticValue::STRING)
+        error("expected a static string");
+      if (!s->expr->staticValue.evaluated)
+        return {true, nullptr};
+      return {true, transform(N<IntExpr>(s->expr->staticValue.getString().size()))};
+    }
     if (!typ->getClass())
       return {true, nullptr};
     else if (!typ->getRecord())
@@ -1455,12 +1462,15 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
       return {true, transform(N<IntExpr>(typ->getRecord()->args.size()))};
   } else if (val == "hasattr") {
     expr->staticValue.type = StaticValue::INT;
-    auto member = expr->args[1].value->getString()->getValue();
+    expr->args[1].value = transform(expr->args[1].value);
+    if (expr->args[1].value->staticValue.type != StaticValue::STRING)
+      error("expected static string");
     expr->args[0].value =
         transformType(expr->args[0].value, /*disableActivation*/ true);
     auto typ = expr->args[0].value->getType()->getClass();
-    if (!typ)
+    if (!typ || !expr->args[1].value->staticValue.evaluated)
       return {true, nullptr};
+    auto member = expr->args[1].value->staticValue.getString();
     vector<pair<string, TypePtr>> args{{string(), typ}};
     for (int i = 2; i < expr->args.size(); i++) {
       expr->args[i].value = transformType(expr->args[i].value);
@@ -1475,7 +1485,12 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
           ctx->findBestMethod(expr->args[0].value.get(), member, args, true) != nullptr;
     return {true, transform(N<BoolExpr>(exists))};
   } else if (val == "compile_error") {
-    error("custom error: {}", expr->args[0].value->getString()->getValue());
+    expr->args[0].value = transform(expr->args[0].value);
+    if (expr->args[0].value->staticValue.type != StaticValue::STRING)
+      error("expected static string");
+    if (!expr->args[0].value->staticValue.evaluated)
+      return {true, nullptr};
+    error("custom error: {}", expr->args[0].value->staticValue.getString());
   } else if (val == "type") {
     expr->args[0].value = transform(expr->args[0].value);
     unify(expr->type, expr->args[0].value->getType());
@@ -1488,6 +1503,14 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
       return {true, resultExpr};
     }
     return {true, nullptr};
+  } else if (val == "getattr") {
+    expr->args[1].value = transform(expr->args[1].value);
+    if (expr->args[1].value->staticValue.type != StaticValue::STRING)
+      error("expected static string");
+    if (!expr->args[1].value->staticValue.evaluated)
+      return {true, nullptr};
+    return {true, transform(N<DotExpr>(expr->args[0].value,
+                                       expr->args[1].value->staticValue.getString()))};
   }
   return {false, nullptr};
 }

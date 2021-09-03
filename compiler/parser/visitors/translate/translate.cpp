@@ -286,29 +286,20 @@ void TranslateVisitor::visit(WhileStmt *stmt) {
 
 void TranslateVisitor::visit(ForStmt *stmt) {
   unique_ptr<OMPSched> os = nullptr;
-  ir::Value *threads = nullptr, *chunk = nullptr;
-  string schedule = "static";
-  bool ordered = false;
-  for (auto &o : stmt->ompArgs) {
-    if (o.name == "parallel")
-      os = make_unique<OMPSched>();
-    else if (o.name == "num_threads")
-      threads = transform(o.value);
-    else if (o.name == "chunk_size")
-      chunk = transform(o.value);
-    else if (o.name == "ordered") {
-      seqassert(o.value->isStatic() && o.value->staticValue.evaluated,
-                "ordered openmp not static");
-      ordered = o.value->staticValue.getInt();
-    } else if (o.name == "schedule") {
-      seqassert(o.value->getString(), "schedule must be a string");
-      schedule = o.value->getString()->getValue();
-    } else {
-      seqassert(false, "unexpected {} in openmp clause", o.name);
-    }
-  }
-  if (os)
+  if (stmt->decorator) {
+    os = make_unique<OMPSched>();
+    auto c = stmt->decorator->getCall();
+    seqassert(c, "for par is not a call: {}", stmt->decorator->toString());
+    auto fc = c->expr->getType()->getFunc();
+    seqassert(fc && fc->ast->name == "std.openmp.for_par", "for par is not a function");
+    auto schedule =
+        fc->funcGenerics[0].type->getStatic()->expr->staticValue.getString();
+    bool ordered = fc->funcGenerics[1].type->getStatic()->expr->staticValue.getInt();
+    auto threads = transform(c->args[0].value);
+    auto chunk = transform(c->args[1].value);
     os = make_unique<OMPSched>(schedule, threads, chunk, ordered);
+    LOG("parsed {}", stmt->decorator->toString());
+  }
 
   seqassert(stmt->var->getId(), "expected IdExpr, got {}", stmt->var->toString());
   auto varName = stmt->var->getId()->value;

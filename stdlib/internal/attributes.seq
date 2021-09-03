@@ -29,3 +29,5 @@ def associative():
 @__attribute__
 def distributive():
     pass
+
+def for_par(): pass

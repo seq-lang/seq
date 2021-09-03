@@ -692,6 +692,7 @@ string StaticType::realizedName() const {
     deps.push_back(e.type->realizedName());
   if (!expr->staticValue.evaluated) // If not already evaluated, evaluate!
     const_cast<StaticType *>(this)->expr->staticValue = evaluate();
+  assert(expr->staticValue.evaluated);
   return expr->staticValue.toString();
 }
 StaticValue StaticType::evaluate() const {

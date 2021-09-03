@@ -43,7 +43,6 @@ bool Expr::isStatic() const { return staticValue.type != StaticValue::NOT_STATIC
 StaticValue::StaticValue(StaticValue::Type t) : value(), type(t), evaluated(false) {}
 StaticValue::StaticValue(int64_t i) : value(i), type(INT), evaluated(true) {}
 StaticValue::StaticValue(string s) : value(move(s)), type(STRING), evaluated(true) {}
-
 bool StaticValue::operator==(const StaticValue &s) const {
   if (type != s.type || s.evaluated != evaluated)
     return false;

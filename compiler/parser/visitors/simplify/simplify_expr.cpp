@@ -433,10 +433,8 @@ void SimplifyVisitor::visit(CallExpr *expr) {
         !expr->args[1].name.empty())
       error("hasattr accepts at least two arguments");
     auto s = transform(expr->args[1].value);
-    if (!s->getString())
-      error("hasattr requires the second string to be a compile-time string");
     auto arg = N<CallExpr>(N<IdExpr>("type"), expr->args[0].value);
-    vector<ExprPtr> args{transformType(arg), s};
+    vector<ExprPtr> args{transformType(arg), transform(s)};
     for (int i = 2; i < expr->args.size(); i++)
       args.push_back(transformType(expr->args[i].value));
     resultExpr = N<CallExpr>(clone(expr->expr), args);
@@ -447,9 +445,7 @@ void SimplifyVisitor::visit(CallExpr *expr) {
     if (expr->args.size() != 1)
       error("compile_error accepts a single argument");
     auto s = transform(expr->args[0].value);
-    if (!s->getString())
-      error("compile_error requires the second string to be a compile-time string");
-    resultExpr = N<CallExpr>(clone(expr->expr), s);
+    resultExpr = N<CallExpr>(clone(expr->expr), transform(s));
     return;
   }
   // 7. tuple(i for i in j)
@@ -487,6 +483,16 @@ void SimplifyVisitor::visit(CallExpr *expr) {
       error("type only accepts two arguments");
     resultExpr = N<CallExpr>(clone(expr->expr), transform(expr->args[0].value, true));
     resultExpr->markType();
+    return;
+  }
+  // 9. getattr(v, "id")
+  if (expr->expr->isId("getattr")) {
+    if (expr->args.size() != 2 || !expr->args[0].name.empty() ||
+        !expr->args[1].name.empty())
+      error("getattr accepts at least two arguments");
+    auto s = transform(expr->args[1].value);
+    vector<ExprPtr> args{transform(expr->args[0].value), transform(s)};
+    resultExpr = N<CallExpr>(clone(expr->expr), args);
     return;
   }
 
