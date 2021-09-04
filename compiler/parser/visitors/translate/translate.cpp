@@ -298,7 +298,7 @@ void TranslateVisitor::visit(ForStmt *stmt) {
     auto threads = transform(c->args[0].value);
     auto chunk = transform(c->args[1].value);
     os = make_unique<OMPSched>(schedule, threads, chunk, ordered);
-    LOG("parsed {}", stmt->decorator->toString());
+    LOG_TYPECHECK("parsed {}", stmt->decorator->toString());
   }
 
   seqassert(stmt->var->getId(), "expected IdExpr, got {}", stmt->var->toString());
