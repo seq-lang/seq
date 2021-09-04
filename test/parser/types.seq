@@ -1076,3 +1076,9 @@ print z.__class__ #: Generator[int]
 
 zx: float = 1
 print zx.__class__, zx #: float 1
+
+def test(v: Optional[int]):
+    v = ~v if v else 3 # TODO: force upcast to int if safe
+    print v.__class__
+test(5) #: Optional[int]
+test(None) #: Optional[int]

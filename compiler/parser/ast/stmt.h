@@ -469,9 +469,10 @@ struct ClassStmt : public Stmt {
   StmtPtr suite;
   Attr attributes;
   vector<ExprPtr> decorators;
+  vector<ExprPtr> baseClasses;
 
   ClassStmt(string name, vector<Param> args, StmtPtr suite, Attr attributes = Attr(),
-            vector<ExprPtr> decorators = {});
+            vector<ExprPtr> decorators = {}, vector<ExprPtr> baseClasses = {});
   ClassStmt(const ClassStmt &stmt);
 
   string toString(int indent) const override;

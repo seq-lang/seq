@@ -727,60 +727,6 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
   return transform(N<CallExpr>(N<IdExpr>(method->ast->name), expr->lexpr, expr->rexpr));
 }
 
-namespace {
-int64_t translateIndex(int64_t idx, int64_t len, bool clamp = false) {
-  if (idx < 0)
-    idx += len;
-
-  if (clamp) {
-    if (idx < 0)
-      idx = 0;
-    if (idx > len)
-      idx = len;
-  } else if (idx < 0 || idx >= len) {
-    throw exc::SeqException("tuple index " + std::to_string(idx) +
-                            " out of bounds (len: " + std::to_string(len) + ")");
-  }
-
-  return idx;
-}
-
-int64_t sliceAdjustIndices(int64_t length, int64_t *start, int64_t *stop,
-                           int64_t step) {
-  if (step == 0)
-    throw exc::SeqException("slice step cannot be 0");
-
-  if (*start < 0) {
-    *start += length;
-    if (*start < 0) {
-      *start = (step < 0) ? -1 : 0;
-    }
-  } else if (*start >= length) {
-    *start = (step < 0) ? length - 1 : length;
-  }
-
-  if (*stop < 0) {
-    *stop += length;
-    if (*stop < 0) {
-      *stop = (step < 0) ? -1 : 0;
-    }
-  } else if (*stop >= length) {
-    *stop = (step < 0) ? length - 1 : length;
-  }
-
-  if (step < 0) {
-    if (*stop < *start) {
-      return (*start - *stop - 1) / (-step) + 1;
-    }
-  } else {
-    if (*start < *stop) {
-      return (*stop - *start - 1) / step + 1;
-    }
-  }
-  return 0;
-}
-} // namespace
-
 ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &expr,
                                                     ExprPtr &index) {
   if (!tuple->getRecord() ||
@@ -1676,6 +1622,55 @@ bool TypecheckVisitor::wrapExpr(ExprPtr &expr, TypePtr expectedType,
   }
   unify(expr->type, expectedType);
   return true;
+}
+
+int64_t TypecheckVisitor::translateIndex(int64_t idx, int64_t len, bool clamp) {
+  if (idx < 0)
+    idx += len;
+  if (clamp) {
+    if (idx < 0)
+      idx = 0;
+    if (idx > len)
+      idx = len;
+  } else if (idx < 0 || idx >= len) {
+    error("tuple index {} out of bounds (len: {})", idx, len);
+  }
+  return idx;
+}
+
+int64_t TypecheckVisitor::sliceAdjustIndices(int64_t length, int64_t *start,
+                                             int64_t *stop, int64_t step) {
+  if (step == 0)
+    error("slice step cannot be 0");
+
+  if (*start < 0) {
+    *start += length;
+    if (*start < 0) {
+      *start = (step < 0) ? -1 : 0;
+    }
+  } else if (*start >= length) {
+    *start = (step < 0) ? length - 1 : length;
+  }
+
+  if (*stop < 0) {
+    *stop += length;
+    if (*stop < 0) {
+      *stop = (step < 0) ? -1 : 0;
+    }
+  } else if (*stop >= length) {
+    *stop = (step < 0) ? length - 1 : length;
+  }
+
+  if (step < 0) {
+    if (*stop < *start) {
+      return (*start - *stop - 1) / (-step) + 1;
+    }
+  } else {
+    if (*start < *stop) {
+      return (*stop - *start - 1) / step + 1;
+    }
+  }
+  return 0;
 }
 
 } // namespace ast

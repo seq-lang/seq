@@ -487,11 +487,11 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     string varName = a.name;
     int stars = trimStars(varName);
     if (stars == 2) {
-      if (hasKwArg || a.type || a.deflt || ia != stmt->args.size() - 1)
+      if (hasKwArg || a.deflt || ia != stmt->args.size() - 1)
         error("invalid **kwargs");
       hasKwArg = true;
     } else if (stars == 1) {
-      if (hasStarArg || a.type || a.deflt)
+      if (hasStarArg || a.deflt)
         error("invalid *args");
       hasStarArg = true;
     }
@@ -517,7 +517,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     }
   }
   for (auto &a : args) {
-    a.type = transformType(a.type);
+    a.type = transformType(a.type, false);
     a.deflt = transform(a.deflt, true);
   }
   // Delay adding to context to prevent "def foo(a, b=a)"
@@ -532,7 +532,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   // Parse the return type.
   if (!stmt->ret && attr.has(Attr::LLVM))
     error("LLVM functions must have a return type");
-  auto ret = transformType(stmt->ret);
+  auto ret = transformType(stmt->ret, false);
   // Parse function body.
   StmtPtr suite = nullptr;
   std::map<string, string> captures;
@@ -763,7 +763,7 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
     ctx->bases.back().ast =
         make_shared<IndexExpr>(N<IdExpr>(name), N<TupleExpr>(genAst));
   for (auto &a : args) {
-    a.type = transformType(a.type);
+    a.type = transformType(a.type, false);
     a.deflt = transform(a.deflt, true);
   }
 
@@ -881,10 +881,10 @@ StmtPtr SimplifyVisitor::transformAssignment(const ExprPtr &lhs, const ExprPtr &
     seqassert(!type, "unexpected type annotation");
     return N<AssignMemberStmt>(transform(ed->expr), ed->member, transform(rhs, false));
   } else if (auto e = lhs->getId()) {
-    ExprPtr t = transformType(type);
+    ExprPtr t = transformType(type, false);
     if (!shadow && !t) {
       auto val = ctx->find(e->value);
-      if (val && val->isVar()) {
+      if (e->value != "_" && val && val->isVar()) {
         if (val->getBase() == ctx->getBase())
           return N<UpdateStmt>(transform(lhs, false), transform(rhs, true),
                                !ctx->bases.empty() &&

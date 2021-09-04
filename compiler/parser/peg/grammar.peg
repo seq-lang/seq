@@ -362,7 +362,18 @@ class <- decorators? class_def {
   }
   return ac_stmt(V0);
 }
-class_def <- 'class' SPACE NAME _ generics? _ ':' _ suite {
+base_class_args <- '(' _ tlist(',', expression)? _ ')' {
+  return VS.transform<ExprPtr>();
+}
+class_args <-
+  / generics _ base_class_args { return make_pair(ac<vector<Param>>(V0), ac<vector<ExprPtr>>(V1)); }
+  / generics { return make_pair(ac<vector<Param>>(V0), vector<ExprPtr>{}); }
+  / base_class_args { return make_pair(vector<Param>{}, ac<vector<ExprPtr>>(V0)); }
+class_def <- 'class' SPACE NAME _ class_args? _ ':' _ suite {
+  vector<Param> generics;
+  vector<ExprPtr> baseClasses;
+  if (VS.size() == 3)
+    std::tie(generics, baseClasses) = ac<pair<vector<Param>, vector<ExprPtr>>>(V1);
   vector<Param> args;
   auto suite = make_shared<SuiteStmt>();
   auto s = const_cast<SuiteStmt*>(ac_stmt(VS.size() == 3 ? V2 : V1)->getSuite());
@@ -375,10 +386,11 @@ class_def <- 'class' SPACE NAME _ generics? _ ':' _ suite {
       }
     suite->stmts.push_back(i);
   }
-  if (VS.size() == 3)
-    for (auto &p: ac<vector<Param>>(V1))
-      args.push_back(p);
-  return ast<ClassStmt>(LOC, ac<string>(V0), move(args), suite);
+  for (auto &p: generics)
+    args.push_back(p);
+  return ast<ClassStmt>(LOC, 
+    ac<string>(V0), move(args), suite, Attr(), vector<ExprPtr>{}, baseClasses
+  );
 }
 match_stmt <- 'match' SPACE expression _ ':' (_ EOL)+
               &INDENT (SAMEDENT case)+ (_ EOL)* &DEDENT {

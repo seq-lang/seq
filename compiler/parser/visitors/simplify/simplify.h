@@ -98,7 +98,7 @@ public:
   ExprPtr transform(const ExprPtr &expr, bool allowTypes, bool allowAssign = true);
   /// Transform an AST type expression node.
   /// @raise ParserException if a node does not describe a type (use transform instead).
-  ExprPtr transformType(const ExprPtr &expr);
+  ExprPtr transformType(const ExprPtr &expr, bool allowTypeOf = true);
 
 private:
   /// These functions just clone a given node (nothing to be simplified).

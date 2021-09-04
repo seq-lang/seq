@@ -41,8 +41,11 @@ ExprPtr SimplifyVisitor::transform(const ExprPtr &expr, bool allowTypes,
   return v.resultExpr;
 }
 
-ExprPtr SimplifyVisitor::transformType(const ExprPtr &expr) {
+ExprPtr SimplifyVisitor::transformType(const ExprPtr &expr, bool allowTypeOf) {
+  auto oldTypeOf = ctx->allowTypeOf;
+  ctx->allowTypeOf = allowTypeOf;
   auto e = transform(expr, true);
+  ctx->allowTypeOf = oldTypeOf;
   if (e && !e->isType())
     error("expected type expression");
   return e;
@@ -481,6 +484,8 @@ void SimplifyVisitor::visit(CallExpr *expr) {
   if (expr->expr->isId("type")) {
     if (expr->args.size() != 1 || !expr->args[0].name.empty())
       error("type only accepts two arguments");
+    if (!ctx->allowTypeOf)
+      error("type() not allowed in definitions");
     resultExpr = N<CallExpr>(clone(expr->expr), transform(expr->args[0].value, true));
     resultExpr->markType();
     return;

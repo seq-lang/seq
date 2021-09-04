@@ -313,22 +313,28 @@ string FunctionStmt::signature() const {
 bool FunctionStmt::hasAttr(const string &attr) const { return attributes.has(attr); }
 
 ClassStmt::ClassStmt(string name, vector<Param> args, StmtPtr suite, Attr attributes,
-                     vector<ExprPtr> decorators)
+                     vector<ExprPtr> decorators, vector<ExprPtr> baseClasses)
     : Stmt(), name(move(name)), args(move(args)), suite(move(suite)),
-      attributes(move(attributes)), decorators(move(decorators)) {}
+      attributes(move(attributes)), decorators(move(decorators)),
+      baseClasses(move(baseClasses)) {}
 ClassStmt::ClassStmt(const ClassStmt &stmt)
     : Stmt(stmt), name(stmt.name), args(ast::clone_nop(stmt.args)),
       suite(ast::clone(stmt.suite)), attributes(stmt.attributes),
-      decorators(ast::clone(stmt.decorators)) {}
+      decorators(ast::clone(stmt.decorators)),
+      baseClasses(ast::clone(stmt.baseClasses)) {}
 string ClassStmt::toString(int indent) const {
   string pad = indent > 0 ? ("\n" + string(indent + INDENT_SIZE, ' ')) : " ";
+  vector<string> bases;
+  for (auto &b : baseClasses)
+    bases.push_back(b->toString());
   string as;
   for (int i = 0; i < args.size(); i++)
     as += (i ? pad : "") + args[i].toString();
   vector<string> attr;
   for (auto &a : decorators)
     attr.push_back(format("(dec {})", a->toString()));
-  return format("(class '{}{}{}{}{})", name,
+  return format("(class '{}{}{}{}{}{})", name,
+                bases.empty() ? "" : format(" (bases {})", join(bases, " ")),
                 attr.empty() ? "" : format(" (attr {})", join(attr, " ")),
                 as.empty() ? as : pad + as, pad,
                 suite ? suite->toString(indent >= 0 ? indent + INDENT_SIZE : -1)

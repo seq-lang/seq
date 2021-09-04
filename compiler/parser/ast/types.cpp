@@ -192,6 +192,7 @@ string LinkType::debugString(bool debug) const {
                  : (genericName.empty() ? "?" : genericName);
   else
     return type->debugString(debug);
+  // fmt::format("{}->{}", id, type->debugString(debug));
 }
 string LinkType::realizedName() const {
   if (kind == Unbound)

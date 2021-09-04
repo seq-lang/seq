@@ -565,9 +565,9 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
         ctx->remove(g.name);
       }
 
-    LOG_REALIZE("[class] {} -> {}", stmt->name, typ->toString());
+    LOG_REALIZE("[class] {} -> {}", stmt->name, typ->debugString(1));
     for (auto &m : ctx->cache->classes[stmt->name].fields)
-      LOG_REALIZE("       - member: {}: {}", m.name, m.type->toString());
+      LOG_REALIZE("       - member: {}: {}", m.name, m.type->debugString(1));
   }
   stmt->done = true;
 }

@@ -27,8 +27,8 @@ SimplifyItem::SimplifyItem(Kind k, string base, string canonicalName, bool globa
 
 SimplifyContext::SimplifyContext(string filename, shared_ptr<Cache> cache)
     : Context<SimplifyItem>(move(filename)), cache(move(cache)),
-      isStdlibLoading(false), moduleName{ImportFile::PACKAGE, "", ""}, canAssign(true) {
-}
+      isStdlibLoading(false), moduleName{ImportFile::PACKAGE, "", ""}, canAssign(true),
+      allowTypeOf(true) {}
 
 SimplifyContext::Base::Base(string name, shared_ptr<Expr> ast, int attributes)
     : name(move(name)), ast(move(ast)), attributes(attributes) {}

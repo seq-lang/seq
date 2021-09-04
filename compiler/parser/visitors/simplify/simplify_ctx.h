@@ -95,6 +95,8 @@ struct SimplifyContext : public Context<SimplifyItem> {
   /// Tracks if we are in a dependent part of a short-circuiting expression (e.g. b in a
   /// and b) to disallow assignment expressions there.
   bool canAssign;
+  /// Allow type() expressions.
+  bool allowTypeOf;
 
 public:
   SimplifyContext(string filename, shared_ptr<Cache> cache);

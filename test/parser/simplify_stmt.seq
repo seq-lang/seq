@@ -488,20 +488,12 @@ def foo(a, b=1, *c):
 def foo(a, b=1, *c, *d):
     pass #! invalid *args
 
-#%% function_err_0d,barebones
-def foo(a, b=1, *c: int):
-    pass #! invalid *args
-
 #%% function_err_0e,barebones
 def foo(a, b=1, *c = 1):
     pass #! invalid *args
 
 #%% function_err_0f,barebones
 def foo(a, b=1, **c, **kwargs):
-    pass #! invalid **kwargs
-
-#%% function_err_0g,barebones
-def foo(a, b=1, **c: int):
     pass #! invalid **kwargs
 
 #%% function_err_0h,barebones
@@ -878,3 +870,18 @@ def foo():
     return str(pyfoo3())
 print foo() #: 3
 
+#%% typeof_definition_error,barebones
+a = 1
+class X:
+    b: type(a) #! type() not allowed in definitions
+
+#%% typeof_definition_error_2,barebones
+def foo(a)->type(a): pass #! type() not allowed in definitions
+
+#%% typeof_definition_error_3,barebones
+a=1
+b: type(a) = 1 #! type() not allowed in definitions
+
+#%% assign_underscore,barebones
+_ = 5
+_ = 's'
