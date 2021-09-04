@@ -1245,85 +1245,17 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
 
   vector<TypePtr> replacements(calleeFn->args.size() - 1, nullptr);
   for (int si = 0; si < calleeFn->args.size() - 1; si++) {
-    auto expectedTyp = calleeFn->args[si + 1];
-    auto expectedClass = expectedTyp->getClass();
-    auto argClass = args[si].value->getType()->getClass();
-    if (args[si].value->isType()) {
-      args[si].value = transform(N<CallExpr>(args[si].value, N<EllipsisExpr>()));
-    }
+    bool isPipeArg = extraStage && args[si].value->getEllipsis();
+    auto orig = args[si].value.get();
+    if (!wrapExpr(args[si].value, calleeFn->args[si + 1], calleeFn))
+      unificationsDone = false;
 
-    unordered_set<string> hints = {"Generator", "float", TYPE_OPTIONAL};
-    bool mightChange = expectedClass && in(hints, expectedClass->name);
-    if (mightChange) {
-      if (!argClass) {
-        // Case 0: argument type not yet known.
-        unificationsDone = false;
-      } else if (expectedClass->name == "Generator" && argClass &&
-                 argClass->name != expectedClass->name && !extraStage) {
-        // Case 1: wrap expected generators with iter().
-        // Note: do not do this in pipelines (TODO: why?).
-        args[si].value = transform(N<CallExpr>(N<DotExpr>(args[si].value, "__iter__")));
-        unify(args[si].value->type, expectedClass);
-      } else if (expectedClass->name == "float" && argClass &&
-                 argClass->name == "int") {
-        // Case 2: wrap ints with float().
-        if (extraStage && args[si].value->getEllipsis()) {
-          // Check if this is a pipe call...
-          *extraStage = N<DotExpr>("float", "__new__");
-          return oldExpr;
-        }
-        args[si].value = transform(N<CallExpr>(N<IdExpr>("float"), args[si].value));
-        unify(args[si].value->type, expectedClass);
-      } else if (expectedClass->name == TYPE_OPTIONAL && argClass &&
-                 argClass->name != expectedClass->name) {
-        // Case 3: wrap expected optionals with Optional().
-        if (extraStage && args[si].value->getEllipsis()) {
-          // Check if this is a pipe call...
-          *extraStage = N<DotExpr>(TYPE_OPTIONAL, "__new__");
-          return oldExpr;
-        }
-        args[si].value =
-            transform(N<CallExpr>(N<IdExpr>(TYPE_OPTIONAL), args[si].value));
-        unify(args[si].value->type, expectedClass);
-      } else {
-        // Case 5: normal unification.
-        if (args[si].value->type->getFunc())
-          args[si].value = partializeFunction(args[si].value);
-        unify(args[si].value->type, expectedTyp);
-      }
-    } else if (expectedClass && argClass && argClass->name == TYPE_OPTIONAL &&
-               argClass->name != expectedClass->name) { // unwrap optional
-      // Case 6: Optional unwrapping.
-      if (extraStage && args[si].value->getEllipsis()) {
-        *extraStage = N<IdExpr>(FN_UNWRAP);
-        return oldExpr;
-      }
-      args[si].value = transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), args[si].value));
-      unify(args[si].value->type, expectedTyp);
-    } else if (calleeFn->ast->name == "Ptr.__new_fn__") {
-      if (auto pt = argClass->getPartial())
-        expectedTyp = pt->func;
-      else if (argClass->getFunc())
-        expectedTyp = argClass->getFunc();
-      else
-        error("expected a realizable function");
-      // construct Fn type
-      if (auto rt = realize(expectedTyp))
-        unify(rt, expectedTyp);
-      else
-        error("expected a realizable function");
-      expectedClass = expectedTyp->getClass();
-    } else if (argClass && argClass->getFunc() &&
-               !(expectedClass && startswith(expectedClass->name, TYPE_FUNCTION))) {
-      // Case 7: wrap raw Seq functions into Partial(...) call for easy realization.
-      args[si].value = partializeFunction(args[si].value);
-      //      LOG("{}", args[si].value->toString());
-      unify(args[si].value->type, expectedTyp);
-    } else {
-      // Case 8: normal unification.
-      unify(args[si].value->type, expectedTyp);
+    replacements[si] = !calleeFn->args[si + 1]->getClass() ? args[si].value->type
+                                                           : calleeFn->args[si + 1];
+    if (isPipeArg && orig != args[si].value.get()) {
+      *extraStage = args[si].value;
+      return oldExpr;
     }
-    replacements[si] = !expectedClass ? args[si].value->type : expectedTyp;
   }
 
   // Realize arguments.
@@ -1712,6 +1644,38 @@ ExprPtr TypecheckVisitor::partializeFunction(ExprPtr expr) {
             "bad partial transformation");
   call->type = N<PartialType>(call->type->getRecord(), fn, mask);
   return call;
+}
+
+bool TypecheckVisitor::wrapExpr(ExprPtr &expr, TypePtr expectedType,
+                                const FuncTypePtr &callee) {
+  auto expectedClass = expectedType->getClass();
+  auto exprClass = expr->getType()->getClass();
+  if (expr->isType())
+    expr = transform(N<CallExpr>(expr, N<EllipsisExpr>()));
+
+  unordered_set<string> hints = {"Generator", "float", TYPE_OPTIONAL};
+  if (!exprClass && expectedClass && in(hints, expectedClass->name)) {
+    return false; // argument type not yet known.
+  } else if (expectedClass && expectedClass->name == "Generator" &&
+             exprClass->name != expectedClass->name && !expr->getEllipsis()) {
+    // Note: do not do this in pipelines (TODO: why?).
+    expr = transform(N<CallExpr>(N<DotExpr>(expr, "__iter__")));
+  } else if (expectedClass && expectedClass->name == "float" &&
+             exprClass->name == "int") {
+    expr = transform(N<CallExpr>(N<IdExpr>("float"), expr));
+  } else if (expectedClass && expectedClass->name == TYPE_OPTIONAL &&
+             exprClass->name != expectedClass->name) {
+    expr = transform(N<CallExpr>(N<IdExpr>(TYPE_OPTIONAL), expr));
+  } else if (expectedClass && exprClass && exprClass->name == TYPE_OPTIONAL &&
+             exprClass->name != expectedClass->name) { // unwrap optional
+    expr = transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), expr));
+  } else if (exprClass && expr->type->getFunc() &&
+             !(expectedClass && startswith(expectedClass->name, TYPE_FUNCTION))) {
+    // Case 7: wrap raw Seq functions into Partial(...) call for easy realization.
+    expr = partializeFunction(expr);
+  }
+  unify(expr->type, expectedType);
+  return true;
 }
 
 } // namespace ast

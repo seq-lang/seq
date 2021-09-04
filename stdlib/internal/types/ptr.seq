@@ -15,9 +15,6 @@ class Ptr:
     @llvm
     def __new__(other: Ptr[T]) -> Ptr[T]:
         ret {=T}* %other
-    # Works only for functions
-    def __new_fn__(other) -> Ptr[byte]:
-        return other
     @llvm
     def __int__(self) -> int:
         %0 = ptrtoint {=T}* %self to i64

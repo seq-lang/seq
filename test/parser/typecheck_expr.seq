@@ -174,7 +174,10 @@ except ValueError as e:
 def foo2(a: int):
     print a
     return 1
-None |> foo2 #! cannot unify int and NoneType
+try:
+    None |> foo2
+except ValueError:
+    print 'exception' #: exception
 # Explanation: None can also be Optional[Generator[int]]
 # We cannot decide if this is a generator to be unrolled in a pipe,
 # or just an argument to be passed to a function.
