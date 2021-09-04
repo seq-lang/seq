@@ -1650,7 +1650,7 @@ bool TypecheckVisitor::wrapExpr(ExprPtr &expr, TypePtr expectedType,
                                 const FuncTypePtr &callee) {
   auto expectedClass = expectedType->getClass();
   auto exprClass = expr->getType()->getClass();
-  if (expr->isType())
+  if (callee && expr->isType())
     expr = transform(N<CallExpr>(expr, N<EllipsisExpr>()));
 
   unordered_set<string> hints = {"Generator", "float", TYPE_OPTIONAL};
@@ -1669,7 +1669,7 @@ bool TypecheckVisitor::wrapExpr(ExprPtr &expr, TypePtr expectedType,
   } else if (expectedClass && exprClass && exprClass->name == TYPE_OPTIONAL &&
              exprClass->name != expectedClass->name) { // unwrap optional
     expr = transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), expr));
-  } else if (exprClass && expr->type->getFunc() &&
+  } else if (callee && exprClass && expr->type->getFunc() &&
              !(expectedClass && startswith(expectedClass->name, TYPE_FUNCTION))) {
     // Case 7: wrap raw Seq functions into Partial(...) call for easy realization.
     expr = partializeFunction(expr);

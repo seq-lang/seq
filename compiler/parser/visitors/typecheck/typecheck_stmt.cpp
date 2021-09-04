@@ -108,7 +108,7 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
     if (stmt->type && stmt->type->getType()->getClass()) {
       auto t = ctx->instantiate(stmt->type.get(), stmt->type->getType());
       unify(stmt->lhs->type, t);
-      wrapOptionalIfNeeded(stmt->lhs->getType(), stmt->rhs);
+      wrapExpr(stmt->rhs, stmt->lhs->getType(), nullptr);
       unify(stmt->lhs->type, stmt->rhs->type);
     }
     auto type = stmt->rhs->getType();
@@ -186,7 +186,7 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
     stmt->isAtomic = false;
   }
   // Case 4: handle optionals if needed.
-  wrapOptionalIfNeeded(stmt->lhs->getType(), stmt->rhs);
+  wrapExpr(stmt->rhs, stmt->lhs->getType(), nullptr);
   unify(stmt->lhs->type, stmt->rhs->type);
   stmt->done = stmt->rhs->done;
 }
@@ -209,7 +209,7 @@ void TypecheckVisitor::visit(AssignMemberStmt *stmt) {
     if (lhsClass->getRecord())
       error("tuple element '{}' is read-only", stmt->member);
     auto typ = ctx->instantiate(stmt->lhs.get(), member, lhsClass.get());
-    wrapOptionalIfNeeded(typ, stmt->rhs);
+    wrapExpr(stmt->rhs, typ, nullptr);
     unify(stmt->rhs->type, typ);
     stmt->done = stmt->rhs->done;
   }
@@ -219,7 +219,7 @@ void TypecheckVisitor::visit(ReturnStmt *stmt) {
   stmt->expr = transform(stmt->expr);
   if (stmt->expr) {
     auto &base = ctx->bases.back();
-    wrapOptionalIfNeeded(base.returnType, stmt->expr);
+    wrapExpr(stmt->expr, base.returnType, nullptr);
 
     if (stmt->expr->getType()->getFunc() &&
         !(base.returnType->getClass() &&
