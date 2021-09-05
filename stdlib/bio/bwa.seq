@@ -1,4 +1,4 @@
-from bio import CIGAR
+from bio import seq, CIGAR
 
 from os import getenv as _getenv
 BWA_LIB = _getenv('BWA_LIB')

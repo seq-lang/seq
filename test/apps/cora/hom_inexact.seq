@@ -12,7 +12,7 @@
 from sys import argv, stderr, exit
 from pickle import dump, load
 from util import K, BitSet
-from bio import FASTA, Locus
+from bio import FASTA, Locus, Kmer
 import gzip, itertools
 
 MAX_MISMATCHES = 3

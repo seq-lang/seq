@@ -8,7 +8,7 @@
 
 from sys import argv, stderr, exit
 from time import timing
-from bio import Block, FASTARecord, FASTQRecord, FASTQ, FASTA, blocks
+from bio import Block, FASTARecord, FASTQRecord, FASTQ, FASTA, blocks, Kmer
 
 K: Static[int] = 32  # sample
 W: Static[int] = 14  # window
@@ -155,7 +155,7 @@ def index_make(rec: FASTARecord):
 def index_load(basename):
     from pickle import load
     with open_index_file(basename, 'rb') as jar:
-        return load[GenomeIndex](jar)
+        return load(jar, T=GenomeIndex)
 
 def preprocess_reads(block: Block[FASTQRecord]):
     print(f'processing block of size {len(block)}...', file=stderr)
