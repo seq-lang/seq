@@ -20,7 +20,7 @@ message(STATUS "Dependency directory: ${SEQ_DEP}")
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-find_package(LLVM REQUIRED CONFIG PATHS ${SEQ_DEP} NO_DEFAULT_PATH)
+find_package(LLVM REQUIRED)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
@@ -335,7 +335,35 @@ target_sources(seq PRIVATE ${SEQ_CPPFILES} seq_rules.cpp omp_rules.cpp)
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     set_source_files_properties(seq_rules.cpp compiler/parser/peg/peg.cpp PROPERTIES COMPILE_FLAGS "-O2")
 endif ()
-llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
+llvm_map_components_to_libnames(LLVM_LIBS
+        AllTargetsAsmParsers
+        AllTargetsCodeGens
+        AllTargetsDescs
+        AllTargetsInfos
+        AggressiveInstCombine
+        Analysis
+        AsmParser
+        BitWriter
+        CodeGen
+        Core
+        Coroutines
+        Extensions
+        IPO
+        IRReader
+        InstCombine
+        Instrumentation
+        MC
+        MCJIT
+        ObjCARCOpts
+        OrcJIT
+        Remarks
+        ScalarOpts
+        Support
+        Target
+        TransformUtils
+        Vectorize
+        Passes)
+
 if (APPLE)
     target_link_libraries(seq ${LLVM_LIBS} dl seqrt)
 else ()
