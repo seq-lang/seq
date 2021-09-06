@@ -7,6 +7,7 @@
 
 #include "llvm/CodeGen/CommandFlags.h"
 
+#include "coro/Coroutines.h"
 #include "sir/dsl/codegen.h"
 #include "util/common.h"
 
@@ -266,7 +267,7 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
     machine->adjustPassManager(pmb);
   }
 
-  llvm::addCoroutinePassesToExtensionPoints(pmb);
+  coro::addCoroutinePassesToExtensionPoints(pmb);
   pmb.populateModulePassManager(*pm);
   pmb.populateFunctionPassManager(*fpm);
 

@@ -215,6 +215,13 @@ set(SEQ_HPPFILES
         compiler/sir/flow.h
         compiler/sir/func.h
         compiler/sir/instr.h
+        compiler/sir/llvm/coro/CoroCleanup.h
+        compiler/sir/llvm/coro/CoroEarly.h
+        compiler/sir/llvm/coro/CoroElide.h
+        compiler/sir/llvm/coro/CoroInstr.h
+        compiler/sir/llvm/coro/CoroInternal.h
+        compiler/sir/llvm/coro/CoroSplit.h
+        compiler/sir/llvm/coro/Coroutines.h
         compiler/sir/llvm/llvisitor.h
         compiler/sir/llvm/llvm.h
         compiler/sir/module.h
@@ -301,6 +308,12 @@ set(SEQ_CPPFILES
         compiler/sir/flow.cpp
         compiler/sir/func.cpp
         compiler/sir/instr.cpp
+        compiler/sir/llvm/coro/CoroCleanup.cpp
+        compiler/sir/llvm/coro/CoroEarly.cpp
+        compiler/sir/llvm/coro/CoroElide.cpp
+        compiler/sir/llvm/coro/CoroFrame.cpp
+        compiler/sir/llvm/coro/CoroSplit.cpp
+        compiler/sir/llvm/coro/Coroutines.cpp
         compiler/sir/llvm/llvisitor.cpp
         compiler/sir/module.cpp
         compiler/sir/transform/cleanup/canonical.cpp
@@ -346,7 +359,6 @@ llvm_map_components_to_libnames(LLVM_LIBS
         BitWriter
         CodeGen
         Core
-        Coroutines
         Extensions
         IPO
         IRReader
