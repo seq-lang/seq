@@ -141,7 +141,7 @@ make install
 
 # bdwgc
 cd "${SRCDIR}"
-git clone https://github.com/seq-lang/bdwgc
+git clone https://github.com/ivmai/bdwgc
 cd bdwgc
 git clone git://github.com/ivmai/libatomic_ops.git
 ./autogen.sh
@@ -185,7 +185,7 @@ make install
 # [ ! -f "${INSTALLDIR}/lib/libomp.so" ] && die "openmp library not found"
 
 # libbacktrace
-git clone https://github.com/seq-lang/libbacktrace "${SRCDIR}/libbacktrace"
+git clone https://github.com/ianlancetaylor/libbacktrace "${SRCDIR}/libbacktrace"
 cd "${SRCDIR}/libbacktrace"
 CFLAGS="-fPIC" ./configure --prefix="${INSTALLDIR}"
 make -j "${JOBS}"
