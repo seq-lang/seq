@@ -10,6 +10,7 @@
 # snap_index_count_of_bases(Ptr[byte]) -> int     --  extract count of genome bases
 
 from hashtable import SNAPHashTable
+from bio import Kmer
 
 class GenomeIndex[K]:
     hash_tables: Array[SNAPHashTable[Kmer[16],u32]]
