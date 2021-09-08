@@ -112,6 +112,8 @@ struct Cache : public std::enable_shared_from_this<Cache> {
   struct Class {
     /// Generic (unrealized) class template AST.
     shared_ptr<ClassStmt> ast;
+    /// Non-simplified AST. Used for base class instantiation.
+    shared_ptr<ClassStmt> originalAst;
 
     /// A class function method.
     struct ClassMethod {
@@ -151,7 +153,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
     /// ClassRealization instance.
     unordered_map<string, shared_ptr<ClassRealization>> realizations;
 
-    Class() : ast(nullptr) {}
+    Class() : ast(nullptr), originalAst(nullptr) {}
   };
   /// Class lookup table that maps a canonical class identifier to the corresponding
   /// Class instance.

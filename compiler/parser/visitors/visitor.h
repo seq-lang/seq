@@ -145,5 +145,74 @@ struct CallbackASTVisitor : public ASTVisitor, public SrcObject {
   }
 };
 
+/**
+ * Replacement AST visitor.
+ * Replaces expressions with transformed values.
+ */
+struct ReplaceASTVisitor : public ASTVisitor {
+  virtual void transform(shared_ptr<Expr> &expr) = 0;
+  virtual void transform(shared_ptr<Stmt> &stmt) = 0;
+
+  void visit(NoneExpr *) override;
+  void visit(BoolExpr *) override;
+  void visit(IntExpr *) override;
+  void visit(FloatExpr *) override;
+  void visit(StringExpr *) override;
+  void visit(IdExpr *) override;
+  void visit(StarExpr *) override;
+  void visit(KeywordStarExpr *) override;
+  void visit(TupleExpr *) override;
+  void visit(ListExpr *) override;
+  void visit(SetExpr *) override;
+  void visit(DictExpr *) override;
+  void visit(GeneratorExpr *) override;
+  void visit(DictGeneratorExpr *) override;
+  void visit(IfExpr *) override;
+  void visit(UnaryExpr *) override;
+  void visit(BinaryExpr *) override;
+  void visit(ChainBinaryExpr *) override;
+  void visit(PipeExpr *) override;
+  void visit(IndexExpr *) override;
+  void visit(CallExpr *) override;
+  void visit(DotExpr *) override;
+  void visit(SliceExpr *) override;
+  void visit(EllipsisExpr *) override;
+  void visit(LambdaExpr *) override;
+  void visit(YieldExpr *) override;
+  void visit(AssignExpr *) override;
+  void visit(RangeExpr *) override;
+  void visit(PtrExpr *) override;
+  void visit(TupleIndexExpr *) override;
+  void visit(StackAllocExpr *) override;
+  void visit(InstantiateExpr *) override;
+  void visit(StmtExpr *) override;
+
+  void visit(AssignMemberStmt *) override;
+  void visit(UpdateStmt *) override;
+  void visit(SuiteStmt *) override;
+  void visit(BreakStmt *) override;
+  void visit(ContinueStmt *) override;
+  void visit(ExprStmt *) override;
+  void visit(AssignStmt *) override;
+  void visit(DelStmt *) override;
+  void visit(PrintStmt *) override;
+  void visit(ReturnStmt *) override;
+  void visit(YieldStmt *) override;
+  void visit(AssertStmt *) override;
+  void visit(WhileStmt *) override;
+  void visit(ForStmt *) override;
+  void visit(IfStmt *) override;
+  void visit(MatchStmt *) override;
+  void visit(ImportStmt *) override;
+  void visit(TryStmt *) override;
+  void visit(GlobalStmt *) override;
+  void visit(ThrowStmt *) override;
+  void visit(FunctionStmt *) override;
+  void visit(ClassStmt *) override;
+  void visit(YieldFromStmt *) override;
+  void visit(WithStmt *) override;
+  void visit(CustomStmt *) override;
+};
+
 } // namespace ast
 } // namespace seq

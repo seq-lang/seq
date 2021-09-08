@@ -97,6 +97,8 @@ struct SimplifyContext : public Context<SimplifyItem> {
   bool canAssign;
   /// Allow type() expressions.
   bool allowTypeOf;
+  /// Replacement expressions.
+  unordered_map<string, ExprPtr> *substitutions;
 
 public:
   SimplifyContext(string filename, shared_ptr<Cache> cache);

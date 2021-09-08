@@ -95,6 +95,14 @@ void SimplifyVisitor::visit(StringExpr *expr) {
 }
 
 void SimplifyVisitor::visit(IdExpr *expr) {
+  if (ctx->substitutions) {
+    auto it = ctx->substitutions->find(expr->value);
+    if (it != ctx->substitutions->end()) {
+      resultExpr = transform(it->second, true);
+      return;
+    }
+  }
+
   if (in(set<string>{"type", "TypeVar", "Callable"}, expr->value)) {
     resultExpr = N<IdExpr>(expr->value == "TypeVar" ? "type" : expr->value);
     resultExpr->markType();

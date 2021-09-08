@@ -71,8 +71,10 @@ small_stmt <-
   / expressions &(_ ';' / _ EOL)  { return any(ast<ExprStmt>(LOC, ac_expr(V0))); }
   / NAME SPACE expressions {
     auto kwd = ac<string>(V0);
-    if (!CTX.hasCustomExprStmt(kwd))
-      throw peg::parse_error("keyword not recognized");
+    if (!CTX.hasCustomExprStmt(kwd)) {
+      auto s = "keyword '" + kwd + "' not recognized";
+      throw peg::parse_error(s.c_str());
+    }
     return any(ast<CustomStmt>(LOC, kwd, ac_expr(V1), nullptr));
   }
 assignment <-
@@ -406,14 +408,18 @@ case <-
 custom_stmt <-
   / NAME SPACE expression _ ':' _ suite {
     auto kwd = ac<string>(V0);
-    if (!CTX.hasCustomStmtKeyword(kwd, true))
-      throw peg::parse_error("keyword not recognized");
+    if (!CTX.hasCustomStmtKeyword(kwd, true)) {
+      auto s = "keyword '" + kwd + "' not recognized";
+      throw peg::parse_error(s.c_str());
+    }
     return ast<CustomStmt>(LOC, kwd, ac_expr(V1), ac_stmt(V2));
   }
   / NAME _ ':' _ suite {
     auto kwd = ac<string>(V0);
-    if (!CTX.hasCustomStmtKeyword(kwd, false))
-      throw peg::parse_error("keyword not recognized");
+    if (!CTX.hasCustomStmtKeyword(kwd, false)) {
+      auto s = "keyword '" + kwd + "' not recognized";
+      throw peg::parse_error(s.c_str());
+    }
     return ast<CustomStmt>(LOC, kwd, nullptr, ac_stmt(V2));
   }
 
@@ -429,11 +435,15 @@ expression <-
   }
   / pipe { return ac_expr(V0); }
 # TODO: make it more pythonic
-lambdef <- 'lambda' SPACE list(',', NAME) _ ':' _ expression {
-  return ast<LambdaExpr>(LOC,
-    VS.transform<string>(0, VS.size() - 1), ac_expr(VS.back())
-  );
-}
+lambdef <- 
+  / 'lambda' SPACE list(',', NAME) _ ':' _ expression {
+    return ast<LambdaExpr>(LOC,
+      VS.transform<string>(0, VS.size() - 1), ac_expr(VS.back())
+    );
+  }
+  / 'lambda' _ ':' _ expression {
+    return ast<LambdaExpr>(LOC, vector<string>{}, ac_expr(VS.back()));
+  }
 pipe <-
   / disjunction (_ <'|>' / '||>'> _ disjunction)+ {
     vector<PipeExpr::Pipe> v;

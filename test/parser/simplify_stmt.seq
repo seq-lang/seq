@@ -885,3 +885,68 @@ b: type(a) = 1 #! type() not allowed in definitions
 #%% assign_underscore,barebones
 _ = 5
 _ = 's'
+
+#%% inherit_class,barebones
+class defdict[K,V](Dict[K,V]):
+    fx: Function[[],V]
+    def __init__(self, d: Dict[K,V], fx: Function[[], V]):
+        self.__init__()
+        for k,v in d.items(): self[k] = v
+        self.fx = fx
+    def __getitem__(self, key: K) -> V:
+        if key in self:
+            return self.values[self.keys.index(key)]
+        else:
+            self[key] = self.fx()
+            return self[key]
+z = defdict({'ha':1}, lambda: -1)
+print z
+print z['he']
+print z
+#: {ha: 1}
+#: -1
+#: {ha: 1, he: -1}
+
+class Foo:
+    x: int
+    def foo(self):
+        return f'foo {self.x}'
+class Bar[T]:
+    y: T
+    def bar(self):
+        return f'bar {self.y}/{self.y.__class__}'
+class FooBarBaz[T](Foo, Bar[T]):
+    def baz(self):
+        return f'baz! {self.foo()} {self.bar()}'
+print FooBarBaz[str]().foo() #: foo 0
+print FooBarBaz[float]().bar() #: bar 0/float
+print FooBarBaz[str]().baz() #: baz! foo 0 bar /str
+
+#%% inherit_class_2,barebones
+class defdict(Dict[str,float]):
+    def __init__(self, d: Dict[str, float]):
+        self.__init__(d.items())
+z = defdict()
+z[1.1] #! cannot unify float and str
+
+
+#%% inherit_class_err_1,barebones
+class defdict(Array[int]):
+    pass #! tuples cannot inherit reference classes (and vice versa)
+
+#%% inherit_class_err_2,barebones
+@tuple
+class defdict(int):
+    pass #! cannot inherit internal types
+
+#%% inherit_class_err_3,barebones
+class defdict(Dict[int, float, float]):
+    pass #! wrong number of generics
+
+#%% inherit_class_err_4,barebones
+class Foo:
+    x: int
+class Bar:
+    x: float
+class FooBar(Foo, Bar):
+    pass #! 'x' declared twice

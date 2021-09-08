@@ -23,6 +23,36 @@ using std::dynamic_pointer_cast;
 namespace seq {
 namespace ast {
 
+struct ReplacementVisitor : ReplaceASTVisitor {
+  const unordered_map<string, ExprPtr> *table;
+  void transform(ExprPtr &e) override {
+    if (!e)
+      return;
+    ReplacementVisitor v;
+    v.table = table;
+    e->accept(v);
+    if (auto i = e->getId()) {
+      auto it = table->find(i->value);
+      if (it != table->end())
+        e = it->second->clone();
+    }
+  }
+  void transform(StmtPtr &e) override {
+    if (!e)
+      return;
+    ReplacementVisitor v;
+    v.table = table;
+    e->accept(v);
+  }
+};
+template <typename T> T replace(const T &e, const unordered_map<string, ExprPtr> &s) {
+  ReplacementVisitor v;
+  v.table = &s;
+  auto ep = clone(e);
+  v.transform(ep);
+  return ep;
+}
+
 StmtPtr SimplifyVisitor::transform(const StmtPtr &stmt) {
   if (!stmt)
     return nullptr;
@@ -503,8 +533,10 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     defaultsStarted |= bool(a.deflt);
 
     auto typeAst = a.type;
-    if (!typeAst && isClassMember && ia == 0 && a.name == "self")
+    if (!typeAst && isClassMember && ia == 0 && a.name == "self") {
       typeAst = ctx->bases[ctx->bases.size() - 2].ast;
+      attr.set(".changedSelf");
+    }
 
     // First add all generics!
     auto name = ctx->generateCanonicalName(varName);
@@ -728,12 +760,59 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
   ctx->bases.emplace_back(SimplifyContext::Base(canonicalName));
   ctx->bases.back().ast = make_shared<IdExpr>(name);
 
+  if (extension && !stmt->baseClasses.empty())
+    error("extensions cannot inherit other classes");
+  vector<ClassStmt *> baseASTs;
+  vector<Param> args;
+  vector<unordered_map<string, ExprPtr>> substitutions;
+  vector<int> argSubstitutions;
+  unordered_set<string> seenMembers;
+  for (auto &baseClass : stmt->baseClasses) {
+    string bcName;
+    vector<ExprPtr> subs;
+    if (auto i = baseClass->getId())
+      bcName = i->value;
+    else if (auto e = baseClass->getIndex()) {
+      if (auto i = e->expr->getId()) {
+        bcName = i->value;
+        subs = e->index->getTuple() ? e->index->getTuple()->items
+                                    : vector<ExprPtr>{e->index};
+      }
+    }
+    bcName = transformType(N<IdExpr>(bcName))->getId()->value;
+    if (bcName.empty() || !in(ctx->cache->classes, bcName))
+      error(baseClass.get(), "invalid base class");
+    baseASTs.push_back(ctx->cache->classes[bcName].ast.get());
+    if (baseASTs.back()->attributes.has(Attr::Tuple) != isRecord)
+      error("tuples cannot inherit reference classes (and vice versa)");
+    if (baseASTs.back()->attributes.has(Attr::Internal))
+      error("cannot inherit internal types");
+    int si = 0;
+    substitutions.push_back({});
+    for (auto &a : baseASTs.back()->args)
+      if (a.generic) {
+        if (si >= subs.size())
+          error(baseClass.get(), "wrong number of generics");
+        substitutions.back()[a.name] = clone(subs[si++]);
+      }
+    if (si != subs.size())
+      error(baseClass.get(), "wrong number of generics");
+    for (auto &a : baseASTs.back()->args)
+      if (!a.generic) {
+        if (seenMembers.find(a.name) != seenMembers.end())
+          error(a.type, "'{}' declared twice", a.name);
+        seenMembers.insert(a.name);
+        args.emplace_back(Param{a.name, a.type, a.deflt});
+        argSubstitutions.push_back(substitutions.size() - 1);
+        if (!extension)
+          ctx->cache->classes[canonicalName].fields.push_back({a.name, nullptr});
+      }
+  }
+
   // Add generics, if any, to the context.
   ctx->addBlock();
   vector<ExprPtr> genAst;
-  vector<Param> args;
-  unordered_set<string> seenMembers;
-  vector<Param> memberArgs;
+  substitutions.push_back({});
   for (auto &a : (extension ? originalAST : stmt)->args) {
     seqassert(a.type, "no type provided for '{}'", a.name);
     if (a.type && (a.type->isId("type") || a.type->isId("TypeVar") ||
@@ -753,18 +832,29 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
       args.emplace_back(Param{varName, a.type, a.deflt, a.generic});
     } else {
       args.emplace_back(Param{a.name, a.type, a.deflt});
-      if (!extension) {
+      if (!extension)
         ctx->cache->classes[canonicalName].fields.push_back({a.name, nullptr});
-        memberArgs.emplace_back(Param{a.name, a.type, a.deflt});
-      }
     }
+    argSubstitutions.push_back(substitutions.size() - 1);
   }
   if (!genAst.empty())
     ctx->bases.back().ast =
         make_shared<IndexExpr>(N<IdExpr>(name), N<TupleExpr>(genAst));
-  for (auto &a : args) {
-    a.type = transformType(a.type, false);
-    a.deflt = transform(a.deflt, true);
+  vector<Param> memberArgs;
+  for (auto &s : substitutions)
+    for (auto &i : s)
+      i.second = transform(i.second, true);
+  for (int ai = 0; ai < args.size(); ai++) {
+    auto &a = args[ai];
+    if (argSubstitutions[ai] == substitutions.size() - 1) {
+      a.type = transformType(a.type, false);
+      a.deflt = transform(a.deflt, true);
+    } else {
+      a.type = replace(a.type, substitutions[argSubstitutions[ai]]);
+      a.deflt = replace(a.deflt, substitutions[argSubstitutions[ai]]);
+    }
+    if (!a.generic)
+      memberArgs.push_back(a);
   }
 
   // Parse class members (arguments) and methods.
@@ -821,13 +911,39 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
         magics.emplace_back("add");
     }
     // Codegen default magic methods and add them to the final AST.
-    for (auto &m : magics)
-      suite->stmts.push_back(transform(
-          codegenMagic(m, ctx->bases.back().ast.get(), memberArgs, isRecord)));
+    for (auto &m : magics) {
+      transform(codegenMagic(m, ctx->bases.back().ast.get(), memberArgs, isRecord));
+      suite->stmts.push_back(preamble->functions.back());
+    }
   }
+  for (int ai = 0; ai < baseASTs.size(); ai++)
+    for (auto sp : getClassMethods(baseASTs[ai]->suite))
+      if (auto f = sp->getFunction()) {
+        if (f->attributes.has("autogenerated"))
+          continue;
+        auto subs = substitutions[ai];
+        auto newName = ctx->generateCanonicalName(
+            ctx->cache->reverseIdentifierLookup[f->name], true);
+        auto nf = std::dynamic_pointer_cast<FunctionStmt>(replace(sp, subs));
+        subs[nf->name] = N<IdExpr>(newName);
+        nf->name = newName;
+        suite->stmts.push_back(nf);
+        nf->attributes.parentClass = ctx->bases.back().name;
+
+        // check original ast...
+        if (nf->attributes.has(".changedSelf"))
+          nf->args[0].type = transformType(ctx->bases.back().ast);
+        preamble->functions.push_back(clone(nf));
+        ctx->cache->functions[newName].ast = nf;
+        ctx->cache->classes[ctx->bases.back().name]
+            .methods[ctx->cache->reverseIdentifierLookup[f->name]]
+            .push_back({newName, nullptr, ctx->cache->age});
+      }
   for (auto sp : getClassMethods(stmt->suite))
-    if (sp && !sp->getClass())
-      suite->stmts.push_back(transform(sp));
+    if (sp && !sp->getClass()) {
+      transform(sp);
+      suite->stmts.push_back(preamble->functions.back());
+    }
   ctx->bases.pop_back();
   ctx->bases = move(oldBases);
   ctx->popBlock();
@@ -836,12 +952,14 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
   if (!extension) {
     // Update the cached AST.
     seqassert(c, "not a class AST for {}", canonicalName);
-    preamble->globals.push_back(clone(ctx->cache->classes[canonicalName].ast));
+    preamble->globals.push_back(c->clone());
     c->suite = clone(suite);
+    // if (stmt->baseClasses.size())
+    // LOG("{} -> {}", stmt->name, c->toString(0));
   }
-  vector<StmtPtr> stmts;
-  stmts.emplace_back(
-      N<ClassStmt>(canonicalName, vector<Param>{}, suite, Attr({Attr::Extend})));
+  auto cls = N<ClassStmt>(canonicalName, vector<Param>{}, N<SuiteStmt>(),
+                          Attr({Attr::Extend}), vector<ExprPtr>{}, vector<ExprPtr>{});
+  vector<StmtPtr> stmts{cls};
   // Parse nested classes
   for (auto sp : getClassMethods(stmt->suite))
     if (sp && sp->getClass()) {
@@ -928,6 +1046,9 @@ StmtPtr SimplifyVisitor::transformAssignment(const ExprPtr &lhs, const ExprPtr &
         preamble->globals.push_back(N<AssignStmt>(N<IdExpr>(canonical), nullptr, t));
         return r ? N<UpdateStmt>(l, r) : nullptr;
       }
+    } else if (isStatic) {
+      preamble->globals.push_back(
+          N<AssignStmt>(N<IdExpr>(canonical), clone(r), clone(t)));
     }
     return N<AssignStmt>(l, r, t);
   } else {
@@ -1206,18 +1327,19 @@ void SimplifyVisitor::transformNewImport(const ImportFile &file) {
     ctx->cache->globals.insert(importDoneVar);
     vector<StmtPtr> stmts;
     stmts.push_back(nullptr); // placeholder to be filled later!
-    vector<string> globalVars;
     // We need to wrap all imported top-level statements (not signatures! they have
     // already been handled and are in the preamble) into a function. We also take the
     // list of global variables so that we can access them via "global" statement.
     auto processStmt = [&](StmtPtr s) {
       if (s->getAssign() && s->getAssign()->lhs->getId()) { // a = ... globals
         auto a = const_cast<AssignStmt *>(s->getAssign());
+        bool isStatic =
+            a->type && a->type->getIndex() && a->type->getIndex()->expr->isId("Static");
         auto val = ictx->find(a->lhs->getId()->value);
         seqassert(val, "cannot locate '{}' in imported file {}",
                   s->getAssign()->lhs->getId()->value, file.path);
-        if (val->kind == SimplifyItem::Var && val->global && val->base.empty()) {
-          globalVars.emplace_back(val->canonicalName);
+        if (val->kind == SimplifyItem::Var && val->global && val->base.empty() &&
+            !isStatic) {
           stmts.push_back(N<UpdateStmt>(a->lhs, a->rhs));
         } else {
           stmts.push_back(s);
@@ -1232,8 +1354,6 @@ void SimplifyVisitor::transformNewImport(const ImportFile &file) {
     else
       processStmt(sn);
     stmts[0] = N<SuiteStmt>();
-    for (auto &g : globalVars)
-      const_cast<SuiteStmt *>(stmts[0]->getSuite())->stmts.push_back(N<GlobalStmt>(g));
     // Add a def import(): ... manually to the cache and to the preamble (it won't be
     // transformed here!).
     ctx->cache->functions[importVar].ast =
@@ -1309,6 +1429,7 @@ StmtPtr SimplifyVisitor::codegenMagic(const string &op, const Expr *typExpr,
   vector<Param> fargs;
   vector<StmtPtr> stmts;
   Attr attr;
+  attr.set("autogenerated");
   if (op == "new") {
     // Classes: @internal def __new__() -> T
     // Tuples: @internal def __new__(a1: T1, ..., aN: TN) -> T
