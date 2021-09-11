@@ -104,6 +104,93 @@ public:
     }
   }
 };
+
+/**
+ * Sometimes coroutine lowering produces hard-to-analyze loops involving
+ * function pointer comparisons. This pass puts them into a somewhat
+ * easier-to-analyze form.
+ */
+struct CoroBranchSimplifier : public llvm::LoopPass {
+  static char ID;
+  CoroBranchSimplifier() : llvm::LoopPass(ID) {}
+
+  static llvm::Value *getNonNullOperand(llvm::Value *op1, llvm::Value *op2) {
+    auto *ptr = llvm::dyn_cast<llvm::PointerType>(op1->getType());
+    if (!ptr || !ptr->getElementType()->isFunctionTy())
+      return nullptr;
+
+    auto *c1 = llvm::dyn_cast<llvm::Constant>(op1);
+    auto *c2 = llvm::dyn_cast<llvm::Constant>(op2);
+    const bool isNull1 = (c1 && c1->isNullValue());
+    const bool isNull2 = (c2 && c2->isNullValue());
+    if (!(isNull1 ^ isNull2))
+      return nullptr;
+    return isNull1 ? op2 : op1;
+  }
+
+  bool runOnLoop(llvm::Loop *loop, llvm::LPPassManager &lpm) override {
+    if (auto *exit = loop->getExitingBlock()) {
+      if (auto *br = llvm::dyn_cast<llvm::BranchInst>(exit->getTerminator())) {
+        if (!br->isConditional() || br->getNumSuccessors() != 2 ||
+            loop->contains(br->getSuccessor(0)) || !loop->contains(br->getSuccessor(1)))
+          return false;
+
+        auto *cond = br->getCondition();
+        if (auto *cmp = llvm::dyn_cast<llvm::CmpInst>(cond)) {
+          if (cmp->getPredicate() != llvm::CmpInst::Predicate::ICMP_EQ)
+            return false;
+
+          if (auto *f = getNonNullOperand(cmp->getOperand(0), cmp->getOperand(1))) {
+            if (auto *sel = llvm::dyn_cast<llvm::SelectInst>(f)) {
+              if (auto *g =
+                      getNonNullOperand(sel->getTrueValue(), sel->getFalseValue())) {
+                // If we can deduce that g is not null, we can replace the condition.
+                if (auto *phi = llvm::dyn_cast<llvm::PHINode>(g)) {
+                  bool ok = true;
+                  for (unsigned i = 0; i < phi->getNumIncomingValues(); i++) {
+                    auto *phiBlock = phi->getIncomingBlock(i);
+                    auto *phiValue = phi->getIncomingValue(i);
+
+                    if (auto *c = llvm::dyn_cast<llvm::Constant>(phiValue)) {
+                      if (c->isNullValue()) {
+                        ok = false;
+                        break;
+                      }
+                    } else {
+                      // There is no way for the value to be null if the incoming phi
+                      // value is predicated on this exit condition, which checks for a
+                      // non-null function pointer.
+
+                      if (phiBlock != exit || phiValue != f) {
+                        ok = false;
+                        break;
+                      }
+                    }
+                  }
+                  if (!ok)
+                    return false;
+
+                  br->setCondition(sel->getCondition());
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+};
+
+void addCoroutineBranchSimplifier(const llvm::PassManagerBuilder &builder,
+                                  llvm::legacy::PassManagerBase &pm) {
+  pm.add(new CoroBranchSimplifier());
+}
+
+char CoroBranchSimplifier::ID = 0;
+llvm::RegisterPass<CoroBranchSimplifier> X("coro-br-simpl",
+                                           "Coroutine Branch Simplifier");
 } // namespace
 
 llvm::DIFile *LLVMVisitor::DebugInfo::getFile(const std::string &path) {
@@ -268,6 +355,11 @@ void LLVMVisitor::runLLVMOptimizationPasses() {
   }
 
   coro::addCoroutinePassesToExtensionPoints(pmb);
+  if (!db.debug) {
+    pmb.addExtension(llvm::PassManagerBuilder::EP_LateLoopOptimizations,
+                     addCoroutineBranchSimplifier);
+  }
+
   pmb.populateModulePassManager(*pm);
   pmb.populateFunctionPassManager(*fpm);
 
