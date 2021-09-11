@@ -407,7 +407,8 @@ public:
       Offset = OptimizedStructLayoutField::FlexibleOffset;
     }
 
-    Fields.push_back({FieldSize, Offset, Ty, 0, *FieldAlignment, TyAlignment});
+    if (FieldSize > 0)
+      Fields.push_back({FieldSize, Offset, Ty, 0, *FieldAlignment, TyAlignment});
     return Fields.size() - 1;
   }
 

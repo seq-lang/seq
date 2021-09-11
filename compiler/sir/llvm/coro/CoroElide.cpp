@@ -54,8 +54,7 @@ struct CoroCaptureTracker : public CaptureTracker {
 
   bool shouldExplore(const Use *U) override {
     Instruction *I = cast<Instruction>(U->getUser());
-    if (isa<CallBase>(I)) {
-      auto *C = cast<CallBase>(I);
+    if (auto *C = dyn_cast<CallBase>(I)) {
       const bool Explore = isa<Function>(C->getCalledOperand()) &&
                            !C->doesNotCapture(C->getArgOperandNo(U));
       return Explore;
