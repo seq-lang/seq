@@ -18,7 +18,8 @@ message(STATUS "Dependency directory: ${SEQ_DEP}")
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-find_package(LLVM REQUIRED CONFIG PATHS ${SEQ_DEP} NO_DEFAULT_PATH)
+find_package(LLVM REQUIRED)
+
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 include(${CMAKE_SOURCE_DIR}/scripts/deps.cmake)
@@ -44,7 +45,7 @@ add_custom_command(
     DEPENDS peg2cpp compiler/parser/peg/openmp.peg)
 
 # Seq runtime library
-set(SEQRT_FILES 
+set(SEQRT_FILES
     runtime/lib.h
     runtime/lib.cpp
     runtime/exc.cpp
@@ -62,19 +63,19 @@ target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include ${backtrace_SOURCE_D
 target_link_libraries(seqrt PRIVATE omp backtrace ${STATIC_LIBCPP})
 if(APPLE)
     target_link_libraries(seqrt PRIVATE
-        -Wl,-force_load,$<TARGET_FILE:bz2>  
-        -Wl,-force_load,$<TARGET_FILE:liblzma>  
-        -Wl,-force_load,$<TARGET_FILE:zlibstatic>  
+        -Wl,-force_load,$<TARGET_FILE:bz2>
+        -Wl,-force_load,$<TARGET_FILE:liblzma>
+        -Wl,-force_load,$<TARGET_FILE:zlibstatic>
         -Wl,-force_load,$<TARGET_FILE:gc>
         -Wl,-force_load,$<TARGET_FILE:htslib> )
 else()
-    target_link_libraries(seqrt PRIVATE 
-        -Wl,--whole-archive 
-        $<TARGET_FILE:bz2> 
-        $<TARGET_FILE:liblzma> 
-        $<TARGET_FILE:zlibstatic> 
+    target_link_libraries(seqrt PRIVATE
+        -Wl,--whole-archive
+        $<TARGET_FILE:bz2>
+        $<TARGET_FILE:liblzma>
+        $<TARGET_FILE:zlibstatic>
         $<TARGET_FILE:gc>
-        $<TARGET_FILE:htslib> 
+        $<TARGET_FILE:htslib>
         -Wl,--no-whole-archive)
 endif()
 add_custom_command(TARGET seqrt POST_BUILD
@@ -122,6 +123,13 @@ set(SEQ_HPPFILES
     compiler/sir/flow.h
     compiler/sir/func.h
     compiler/sir/instr.h
+    compiler/sir/llvm/coro/CoroCleanup.h
+    compiler/sir/llvm/coro/CoroEarly.h
+    compiler/sir/llvm/coro/CoroElide.h
+    compiler/sir/llvm/coro/CoroInstr.h
+    compiler/sir/llvm/coro/CoroInternal.h
+    compiler/sir/llvm/coro/CoroSplit.h
+    compiler/sir/llvm/coro/Coroutines.h
     compiler/sir/llvm/llvisitor.h
     compiler/sir/llvm/llvm.h
     compiler/sir/module.h
@@ -208,6 +216,12 @@ set(SEQ_CPPFILES
     compiler/sir/flow.cpp
     compiler/sir/func.cpp
     compiler/sir/instr.cpp
+    compiler/sir/llvm/coro/CoroCleanup.cpp
+    compiler/sir/llvm/coro/CoroEarly.cpp
+    compiler/sir/llvm/coro/CoroElide.cpp
+    compiler/sir/llvm/coro/CoroFrame.cpp
+    compiler/sir/llvm/coro/CoroSplit.cpp
+    compiler/sir/llvm/coro/Coroutines.cpp
     compiler/sir/llvm/llvisitor.cpp
     compiler/sir/module.cpp
     compiler/sir/transform/cleanup/canonical.cpp
@@ -242,7 +256,33 @@ target_sources(seq PRIVATE ${SEQ_CPPFILES} seq_rules.cpp omp_rules.cpp)
 if(CMAKE_BUILD_TYPE MATCHES Debug)
     set_source_files_properties(seq_rules.cpp compiler/parser/peg/peg.cpp PROPERTIES COMPILE_FLAGS "-O2")
 endif()
-llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
+llvm_map_components_to_libnames(LLVM_LIBS
+    AllTargetsAsmParsers
+    AllTargetsCodeGens
+    AllTargetsDescs
+    AllTargetsInfos
+    AggressiveInstCombine
+    Analysis
+    AsmParser
+    BitWriter
+    CodeGen
+    Core
+    Extensions
+    IPO
+    IRReader
+    InstCombine
+    Instrumentation
+    MC
+    MCJIT
+    ObjCARCOpts
+    OrcJIT
+    Remarks
+    ScalarOpts
+    Support
+    Target
+    TransformUtils
+    Vectorize
+    Passes)
 if(APPLE)
     target_link_libraries(seq PRIVATE ${LLVM_LIBS} dl seqrt)
 else()

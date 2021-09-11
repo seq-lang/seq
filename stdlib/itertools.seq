@@ -123,6 +123,7 @@ class islice:
             for i, element in zip(range(b + 1, stopx), iterable):
                 pass
 
+@inline
 def count(start = 0, step = 1):
     """
     Return a count object whose ``__next__`` method returns consecutive values.
@@ -132,6 +133,7 @@ def count(start = 0, step = 1):
         yield n
         n += step
 
+@inline
 def repeat(object, times: Optional[int] = None):
     """
     Make an iterator that returns a given object over and over again.
@@ -143,6 +145,7 @@ def repeat(object, times: Optional[int] = None):
         for i in range(~times):
             yield object
 
+@inline
 def cycle(iterable):
     """
     Cycles repeatedly through an iterable.
@@ -155,6 +158,7 @@ def cycle(iterable):
         for element in saved:
               yield element
 
+@inline
 def compress(data, selectors):
     """
     Return data elements corresponding to true selector elements.
@@ -165,6 +169,7 @@ def compress(data, selectors):
         if s:
             yield d
 
+@inline
 def dropwhile(predicate, iterable):
     """
     Drop items from the iterable while predicate(item) is true.
@@ -177,6 +182,7 @@ def dropwhile(predicate, iterable):
         if b:
             yield x
 
+@inline
 def takewhile(predicate, iterable):
     """
     Return successive entries from an iterable as long as the predicate evaluates to true for each entry.
@@ -187,6 +193,7 @@ def takewhile(predicate, iterable):
         else:
             break
 
+@inline
 def filterfalse(predicate, iterable):
     """
     Return those items of iterable for which function(item) is false.
@@ -237,6 +244,7 @@ class accumulate:
     Make an iterator that returns accumulated sums, or accumulated results
     of other binary functions (specified via the optional func argument).
     """
+    @inline
     def __new__(iterable, func = lambda a, b: a + b, initial = 0):
         total = initial
         yield total
@@ -244,6 +252,7 @@ class accumulate:
             total = func(total, element)
             yield total
 
+    @inline
     def __new__(iterable, func = lambda a, b: a + b):
         total = None
         for element in iterable:
@@ -256,16 +265,19 @@ class chain:
     Make an iterator that returns elements from the first iterable until it is exhausted,
     then proceeds to the next iterable, until all of the iterables are exhausted.
     """
+    @inline
     def __new__(*iterables):
         for it in iterables:
             for element in it:
                 yield element
 
+    @inline
     def from_iterable(iterables):
         for it in iterables:
             for element in it:
                 yield element
 
+@inline
 def starmap(function, iterable):
     """
     Return an iterator whose values are returned from the function
@@ -274,6 +286,7 @@ def starmap(function, iterable):
     for args in iterable:
         yield function(*args)
 
+@inline
 def groupby[T](iterable: Generator[T], key: Callable[[T], S] = NoneType, S: type = NoneType):
     """
     Make an iterator that returns consecutive keys and groups from the iterable.
@@ -302,6 +315,7 @@ class zip_longest:
     with fillvalue. Iteration continues until the longest iterable is
     exhausted.
     """
+    @inline
     def __new__(*args, fillvalue):
         if staticlen(args) == 2:
             a = iter(args[0])
@@ -342,6 +356,7 @@ class zip_longest:
                         values.append(it.next())
                 yield values
 
+    @inline
     def __new__(*args):
         def get_next(it):
             if it.__done__() or it.done():
@@ -367,6 +382,7 @@ class product:
     """
     Cartesian product of input iterables.
     """
+    @inline
     def __new__(*args):
         if staticlen(args) == 0:
             yield ()
@@ -376,6 +392,7 @@ class product:
                 for b in product(*rest):
                     yield (a, *b)
 
+    @inline
     def __new__(*args, repeat: int):
         if repeat < 0:
             raise ValueError("repeat argument cannot be negative")
