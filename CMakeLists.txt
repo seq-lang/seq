@@ -1,6 +1,5 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.14)
 project(Seq)
-include(ExternalProject)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden -pedantic -Wall -Wno-return-type-c-linkage -Wno-gnu-zero-variadic-macro-arguments")
@@ -19,11 +18,9 @@ message(STATUS "Dependency directory: ${SEQ_DEP}")
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-
 find_package(LLVM REQUIRED CONFIG PATHS ${SEQ_DEP} NO_DEFAULT_PATH)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-
 include(${CMAKE_SOURCE_DIR}/scripts/deps.cmake)
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
@@ -59,18 +56,19 @@ set(SEQRT_FILES
     runtime/sw/intersw.h
     runtime/sw/intersw.cpp)
 add_library(seqrt SHARED ${SEQRT_FILES})
+add_dependencies(seqrt bz2 liblzma zlibstatic gc htslib backtrace)
 set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS -mavx)
 target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include ${backtrace_SOURCE_DIR} runtime)
-target_link_libraries(seqrt PUBLIC omp backtrace ${STATIC_LIBCPP})
+target_link_libraries(seqrt PRIVATE omp backtrace ${STATIC_LIBCPP})
 if(APPLE)
-    target_link_libraries(seqrt PUBLIC 
+    target_link_libraries(seqrt PRIVATE
         -Wl,-force_load,$<TARGET_FILE:bz2>  
         -Wl,-force_load,$<TARGET_FILE:liblzma>  
         -Wl,-force_load,$<TARGET_FILE:zlibstatic>  
         -Wl,-force_load,$<TARGET_FILE:gc>
         -Wl,-force_load,$<TARGET_FILE:htslib> )
 else()
-    target_link_libraries(seqrt PUBLIC 
+    target_link_libraries(seqrt PRIVATE 
         -Wl,--whole-archive 
         $<TARGET_FILE:bz2> 
         $<TARGET_FILE:liblzma> 
@@ -246,9 +244,9 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 endif()
 llvm_map_components_to_libnames(LLVM_LIBS support core passes irreader x86asmparser x86info x86codegen mcjit orcjit ipo coroutines)
 if(APPLE)
-    target_link_libraries(seq ${LLVM_LIBS} dl seqrt)
+    target_link_libraries(seq PRIVATE ${LLVM_LIBS} dl seqrt)
 else()
-    target_link_libraries(seq ${STATIC_LIBCPP} ${LLVM_LIBS} dl seqrt)
+    target_link_libraries(seq PRIVATE ${STATIC_LIBCPP} ${LLVM_LIBS} dl seqrt)
 endif()
 
 # Seq command-line tool

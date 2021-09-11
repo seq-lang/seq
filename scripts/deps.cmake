@@ -63,8 +63,7 @@ if(backtrace_ADDED)
     configure_file(
         ${CMAKE_SOURCE_DIR}/scripts/backtrace-config.h.cmake
         ${backtrace_SOURCE_DIR}/config.h)
-    add_library(backtrace
-        OBJECT EXCLUDE_FROM_ALL 
+    add_library(backtrace STATIC
         "${backtrace_SOURCE_DIR}/atomic.c"
         "${backtrace_SOURCE_DIR}/backtrace.c"
         "${backtrace_SOURCE_DIR}/dwarf.c"
@@ -87,7 +86,7 @@ CPMAddPackage(
     URL "https://www.sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"
     DOWNLOAD_ONLY YES)
 if(bz2_ADDED)
-    add_library (bz2 STATIC
+    add_library(bz2 STATIC
         "${bz2_SOURCE_DIR}/blocksort.c" 
         "${bz2_SOURCE_DIR}/huffman.c" 
         "${bz2_SOURCE_DIR}/crctable.c" 
@@ -110,13 +109,14 @@ if(htslib_ADDED)
         ${CMAKE_SOURCE_DIR}/scripts/htslib-config.h.cmake
         ${htslib_SOURCE_DIR}/config.h
         COPYONLY)
-    write_file(${htslib_SOURCE_DIR}/version.h "#define HTS_VERSION_TEXT \"${CPM_PACKAGE_htslib_VERSION}\"")
+    write_file(${htslib_SOURCE_DIR}/version.h 
+        "#define HTS_VERSION_TEXT \"${CPM_PACKAGE_htslib_VERSION}\"")
     write_file(${htslib_SOURCE_DIR}/config_vars.h 
         "#define HTS_CC \"\"\n"
         "#define HTS_CPPFLAGS \"\"\n"
         "#define HTS_CFLAGS \"\"\n"
         "#define HTS_LDFLAGS \"\"\n"
-        "#define HTS_LIBS \"-llzma -lbz2 -lz \"\n")
+        "#define HTS_LIBS \"\"\n")
     add_library(htslib STATIC
         "${htslib_SOURCE_DIR}/kfunc.c"
         "${htslib_SOURCE_DIR}/kstring.c"
