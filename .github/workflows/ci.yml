@@ -107,15 +107,21 @@ jobs:
       - name: Linux Setup
         if: startsWith(matrix.os, 'ubuntu')
         run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 12
           echo "LIBEXT=so" >> $GITHUB_ENV
           echo "OS_NAME=linux" >> $GITHUB_ENV
+          echo "LLVM_DIR=$(llvm-config --cmakedir)" >> $GITHUB_ENV
 
       - name: macOS Setup
         if: startsWith(matrix.os, 'macos')
         run: |
           brew install automake
+          brew install llvm@12
           echo "LIBEXT=dylib" >> $GITHUB_ENV
           echo "OS_NAME=osx" >> $GITHUB_ENV
+          echo "LLVM_DIR=$(/usr/local/opt/llvm/bin/llvm-config --cmakedir)" >> $GITHUB_ENV
 
       - name: Set up Python
         run: |
@@ -125,26 +131,11 @@ jobs:
           which pip
           echo "SEQ_PYTHON=$(python test/python/find-python-library.py)" >> $GITHUB_ENV
 
-      - name: Cache Dependencies
-        id: cache-deps
-        uses: actions/cache@v2
-        with:
-          path: deps
-          key: ${{ runner.os }}-deps-${{ secrets.CACHE_VERSION }}
-
-      - name: Build Dependencies
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: ./scripts/deps.sh 2
-        env:
-          CC: clang
-          CXX: clang++
-
       - name: Build
         run: |
           mkdir build
           ln -s $(pwd)/deps/lib/libomp.${LIBEXT} $(pwd)/build/libomp.${LIBEXT}
           (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
-                                -DSEQ_DEP=$(pwd)/../deps \
                                 -DCMAKE_C_COMPILER=${CC} \
                                 -DCMAKE_CXX_COMPILER=${CXX})
           cmake --build build --config Release -- VERBOSE=1
