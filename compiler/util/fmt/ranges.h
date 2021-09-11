@@ -209,8 +209,8 @@ private:
 
     formatting_tuple<Char> &formatting;
     std::size_t &i;
-    typename std::add_lvalue_reference<decltype(
-        std::declval<FormatContext>().out())>::type out;
+    typename std::add_lvalue_reference<
+        decltype(std::declval<FormatContext>().out())>::type out;
   };
 
 public:
