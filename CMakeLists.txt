@@ -54,8 +54,8 @@ set(SEQRT_FILES
 add_library(seqrt SHARED ${SEQRT_FILES})
 add_dependencies(seqrt bz2 liblzma zlibstatic gc htslib backtrace)
 set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS -mavx)
-target_include_directories(seqrt PRIVATE ${backtrace_SOURCE_DIR} runtime)
-target_link_libraries(seqrt PRIVATE omp backtrace ${STATIC_LIBCPP})
+target_include_directories(seqrt PRIVATE ${backtrace_SOURCE_DIR} "${gc_SOURCE_DIR}/include" runtime)
+target_link_libraries(seqrt PRIVATE omp backtrace ${STATIC_LIBCPP} LLVMSupport)
 if(APPLE)
     target_link_libraries(seqrt PRIVATE
         -Wl,-force_load,$<TARGET_FILE:bz2>
@@ -314,7 +314,7 @@ set(SEQ_TEST_CPPFILES
     test/sir/var.cpp
     test/types.cpp)
 add_executable(seqtest ${SEQ_TEST_CPPFILES})
-target_include_directories(seqtest PRIVATE test/sir)
+target_include_directories(seqtest PRIVATE test/sir "${gc_SOURCE_DIR}/include")
 target_link_libraries(seqtest seq seqrt gtest_main)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
 

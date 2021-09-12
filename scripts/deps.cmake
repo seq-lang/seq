@@ -1,4 +1,4 @@
-set(CPM_DOWNLOAD_VERSION 0.32.3) 
+set(CPM_DOWNLOAD_VERSION 0.32.3)
 set(CPM_DOWNLOAD_LOCATION "${CMAKE_BINARY_DIR}/cmake/CPM_${CPM_DOWNLOAD_VERSION}.cmake")
 if(NOT (EXISTS ${CPM_DOWNLOAD_LOCATION}))
     message(STATUS "Downloading CPM.cmake...")
@@ -7,15 +7,17 @@ endif()
 include(${CPM_DOWNLOAD_LOCATION})
 
 CPMAddPackage(
+    NAME zlibng
     GITHUB_REPOSITORY "zlib-ng/zlib-ng"
     VERSION 2.0.5
     GIT_TAG 2.0.5
-    OPTIONS "HAVE_OFF64_T ON" 
+    OPTIONS "HAVE_OFF64_T ON"
             "ZLIB_COMPAT ON"
-            "ZLIB_ENABLE_TESTS OFF"            
+            "ZLIB_ENABLE_TESTS OFF"
             "CMAKE_POSITION_INDEPENDENT_CODE ON")
 set_target_properties(zlib PROPERTIES EXCLUDE_FROM_ALL ON)
 CPMAddPackage(
+    NAME xz
     GIT_REPOSITORY "https://git.tukaani.org/xz.git"
     VERSION 5.2.5
     OPTIONS "BUILD_SHARED_LIBS OFF"
@@ -23,6 +25,7 @@ CPMAddPackage(
 set_target_properties(xz PROPERTIES EXCLUDE_FROM_ALL ON)
 set_target_properties(xzdec PROPERTIES EXCLUDE_FROM_ALL ON)
 CPMAddPackage(
+    NAME bdwgc
     GITHUB_REPOSITORY "ivmai/bdwgc"
     VERSION 8.0.5
     GIT_TAG d0ba209660ea8c663e06d9a68332ba5f42da54ba
@@ -34,6 +37,7 @@ CPMAddPackage(
             "enable_handle_fork ON")
 set_target_properties(cord PROPERTIES EXCLUDE_FROM_ALL ON)
 CPMAddPackage(
+    NAME openmp
     GITHUB_REPOSITORY "llvm-mirror/openmp"
     VERSION 9.0
     GIT_TAG release_90
@@ -87,12 +91,12 @@ CPMAddPackage(
     DOWNLOAD_ONLY YES)
 if(bz2_ADDED)
     add_library(bz2 STATIC
-        "${bz2_SOURCE_DIR}/blocksort.c" 
-        "${bz2_SOURCE_DIR}/huffman.c" 
-        "${bz2_SOURCE_DIR}/crctable.c" 
-        "${bz2_SOURCE_DIR}/randtable.c" 
-        "${bz2_SOURCE_DIR}/compress.c" 
-        "${bz2_SOURCE_DIR}/decompress.c" 
+        "${bz2_SOURCE_DIR}/blocksort.c"
+        "${bz2_SOURCE_DIR}/huffman.c"
+        "${bz2_SOURCE_DIR}/crctable.c"
+        "${bz2_SOURCE_DIR}/randtable.c"
+        "${bz2_SOURCE_DIR}/compress.c"
+        "${bz2_SOURCE_DIR}/decompress.c"
         "${bz2_SOURCE_DIR}/bzlib.c"
         "${bz2_SOURCE_DIR}/libbz2.def")
     set_target_properties(bz2 PROPERTIES
@@ -109,9 +113,9 @@ if(htslib_ADDED)
         ${CMAKE_SOURCE_DIR}/scripts/htslib-config.h.cmake
         ${htslib_SOURCE_DIR}/config.h
         COPYONLY)
-    write_file(${htslib_SOURCE_DIR}/version.h 
+    write_file(${htslib_SOURCE_DIR}/version.h
         "#define HTS_VERSION_TEXT \"${CPM_PACKAGE_htslib_VERSION}\"")
-    write_file(${htslib_SOURCE_DIR}/config_vars.h 
+    write_file(${htslib_SOURCE_DIR}/config_vars.h
         "#define HTS_CC \"\"\n"
         "#define HTS_CPPFLAGS \"\"\n"
         "#define HTS_CFLAGS \"\"\n"
@@ -162,8 +166,8 @@ if(htslib_ADDED)
         "${htslib_SOURCE_DIR}/htscodecs/htscodecs/rANS_static.c"
         "${htslib_SOURCE_DIR}/htscodecs/htscodecs/rle.c"
         "${htslib_SOURCE_DIR}/htscodecs/htscodecs/tokenise_name3.c")
-    target_include_directories(htslib BEFORE PRIVATE "${htslib_SOURCE_DIR}")
-    set_target_properties(htslib PROPERTIES 
+    target_include_directories(htslib BEFORE PRIVATE "${htslib_SOURCE_DIR}" "${xz_SOURCE_DIR}/src/liblzma/api")
+    set_target_properties(htslib PROPERTIES
         POSITION_INDEPENDENT_CODE ON
         VISIBILITY_INLINES_HIDDEN ON)
 endif()
