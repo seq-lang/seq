@@ -11,11 +11,6 @@ include_directories(compiler)
 # set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 # set(CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
 
-if(NOT DEFINED SEQ_DEP)
-    message(FATAL_ERROR "You must set SEQ_DEP environment variable")
-endif()
-message(STATUS "Dependency directory: ${SEQ_DEP}")
-
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 find_package(LLVM REQUIRED)
@@ -59,7 +54,7 @@ set(SEQRT_FILES
 add_library(seqrt SHARED ${SEQRT_FILES})
 add_dependencies(seqrt bz2 liblzma zlibstatic gc htslib backtrace)
 set_source_files_properties(runtime/sw/intersw.cpp PROPERTIES COMPILE_FLAGS -mavx)
-target_include_directories(seqrt PRIVATE ${SEQ_DEP}/include ${backtrace_SOURCE_DIR} runtime)
+target_include_directories(seqrt PRIVATE ${backtrace_SOURCE_DIR} runtime)
 target_link_libraries(seqrt PRIVATE omp backtrace ${STATIC_LIBCPP})
 if(APPLE)
     target_link_libraries(seqrt PRIVATE
@@ -319,7 +314,7 @@ set(SEQ_TEST_CPPFILES
     test/sir/var.cpp
     test/types.cpp)
 add_executable(seqtest ${SEQ_TEST_CPPFILES})
-target_include_directories(seqtest PRIVATE ${SEQ_DEP}/include test/sir)
+target_include_directories(seqtest PRIVATE test/sir)
 target_link_libraries(seqtest seq seqrt gtest_main)
 target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
 
