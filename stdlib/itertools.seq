@@ -1,6 +1,3 @@
-import math
-import collections
-
 def combinations(pool, r: int):
     """
     Return successive r-length combinations of elements in the iterable.
