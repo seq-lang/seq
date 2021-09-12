@@ -112,7 +112,7 @@ jobs:
           sudo ./llvm.sh 12
           echo "LIBEXT=so" >> $GITHUB_ENV
           echo "OS_NAME=linux" >> $GITHUB_ENV
-          echo "LLVM_DIR=$(llvm-config --cmakedir)" >> $GITHUB_ENV
+          echo "LLVM_DIR=$(llvm-config-12 --cmakedir)" >> $GITHUB_ENV
 
       - name: macOS Setup
         if: startsWith(matrix.os, 'macos')
