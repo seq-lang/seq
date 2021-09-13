@@ -8,7 +8,6 @@ namespace {
 struct GetUsedGlobals : public util::Operator {
   std::vector<Var *> vars;
   void preHook(Node *v) override {
-    auto used = v->getUsedVariables();
     for (auto *var : v->getUsedVariables()) {
       if (!isA<Func>(var) && var->isGlobal())
         vars.push_back(var);
