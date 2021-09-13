@@ -67,28 +67,28 @@ class float:
     def __xor__(self, i: int): print 'xor'; return 0
 # double assignment to disable propagation
 def f(x): return x
-a = 1.0
-a = 5.0
-a + 1 #: add
+a = f(1.0)
+a = f(5.0)
+a + f(1) #: add
 # wrap in function to disable canonicalization
 a - f(1) #: sub
-a * 2 #: mul
-a ** 2 #: pow
-a // 2 #: div
-a / 2 #: truediv
-a @ 1 #: matmul
-a % 1 #: mod
-a < 1 #: lt
-a <= 1 #: le
-a > 1 #: gt
-a >= 1 #: ge
-a == 1 #: eq
-a != 1 #: ne
-a << 1 #: lshift
-a >> 1 #: rshift
-a & 1 #: and
-a | 1 #: or
-a ^ 1 #: xor
+a * f(2) #: mul
+a ** f(2) #: pow
+a // f(2) #: div
+a / f(2) #: truediv
+a @ f(1) #: matmul
+a % f(1) #: mod
+a < f(1) #: lt
+a <= f(1) #: le
+a > f(1) #: gt
+a >= f(1) #: ge
+a == f(1) #: eq
+a != f(1) #: ne
+a << f(1) #: lshift
+a >> f(1) #: rshift
+a & f(1) #: and
+a | f(1) #: or
+a ^ f(1) #: xor
 
 #%% binary_rmagic,barebones
 class Foo[T]:
