@@ -131,6 +131,7 @@ set(SEQ_HPPFILES
     compiler/sir/sir.h
     compiler/sir/transform/cleanup/canonical.h
     compiler/sir/transform/cleanup/dead_code.h
+    compiler/sir/transform/cleanup/global_demote.h
     compiler/sir/transform/cleanup/replacer.h
     compiler/sir/transform/folding/const_fold.h
     compiler/sir/transform/folding/const_prop.h
@@ -221,6 +222,7 @@ set(SEQ_CPPFILES
     compiler/sir/module.cpp
     compiler/sir/transform/cleanup/canonical.cpp
     compiler/sir/transform/cleanup/dead_code.cpp
+    compiler/sir/transform/cleanup/global_demote.cpp
     compiler/sir/transform/cleanup/replacer.cpp
     compiler/sir/transform/folding/const_fold.cpp
     compiler/sir/transform/folding/const_prop.cpp

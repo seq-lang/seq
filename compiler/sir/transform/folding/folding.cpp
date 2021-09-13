@@ -2,7 +2,6 @@
 
 #include "const_fold.h"
 #include "const_prop.h"
-#include "sir/transform/cleanup/dead_code.h"
 
 namespace seq {
 namespace ir {
@@ -13,14 +12,17 @@ const std::string FoldingPassGroup::KEY = "core-folding-pass-group";
 
 FoldingPassGroup::FoldingPassGroup(const std::string &reachingDefPass,
                                    const std::string &globalVarPass) {
+  auto gdUnique = std::make_unique<cleanup::GlobalDemotionPass>();
   auto canonUnique = std::make_unique<cleanup::CanonicalizationPass>();
   auto fpUnique = std::make_unique<FoldingPass>();
   auto dceUnique = std::make_unique<cleanup::DeadCodeCleanupPass>();
 
+  gd = gdUnique.get();
   canon = canonUnique.get();
   fp = fpUnique.get();
   dce = dceUnique.get();
 
+  push_back(std::move(gdUnique));
   push_back(std::make_unique<ConstPropPass>(reachingDefPass, globalVarPass));
   push_back(std::move(canonUnique));
   push_back(std::move(fpUnique));
@@ -28,8 +30,8 @@ FoldingPassGroup::FoldingPassGroup(const std::string &reachingDefPass,
 }
 
 bool FoldingPassGroup::shouldRepeat() const {
-  return canon->getNumReplacements() != 0 || fp->getNumReplacements() != 0 ||
-         dce->getNumReplacements() != 0;
+  return gd->getNumDemotions() != 0 || canon->getNumReplacements() != 0 ||
+         fp->getNumReplacements() != 0 || dce->getNumReplacements() != 0;
 }
 
 } // namespace folding

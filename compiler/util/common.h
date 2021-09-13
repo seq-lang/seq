@@ -38,6 +38,11 @@ extern int _level;
     if (_dbg_level & (1 << 4))                                                         \
       DBG(c, ##__VA_ARGS__);                                                           \
   }
+#define LOG_IR(c, ...)                                                                 \
+  {                                                                                    \
+    if (_dbg_level & (1 << 6))                                                         \
+      DBG(c, ##__VA_ARGS__);                                                           \
+  }
 #define CAST(s, T) dynamic_cast<T *>(s.get())
 
 #ifndef NDEBUG

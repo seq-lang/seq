@@ -4,6 +4,7 @@
 
 #include "sir/transform/cleanup/canonical.h"
 #include "sir/transform/cleanup/dead_code.h"
+#include "sir/transform/cleanup/global_demote.h"
 
 namespace seq {
 namespace ir {
@@ -15,6 +16,7 @@ class FoldingPass;
 /// Group of constant folding passes.
 class FoldingPassGroup : public PassGroup {
 private:
+  cleanup::GlobalDemotionPass *gd;
   cleanup::CanonicalizationPass *canon;
   FoldingPass *fp;
   cleanup::DeadCodeCleanupPass *dce;

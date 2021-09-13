@@ -721,7 +721,6 @@ void LLVMVisitor::visit(const Module *x) {
       continue;
 
     if (auto *f = cast<Func>(var)) {
-      //            LOG("{}", f->getName());
       makeLLVMFunction(f);
       funcs.insert(f, func);
     } else {

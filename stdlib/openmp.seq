@@ -57,12 +57,15 @@ _REDUCTION_IDENT = Ident(_KMP_IDENT_ATOMIC_REDUCE)
 
 def _default_loc():
     return __ptr__(_DEFAULT_IDENT)
+_default_loc()
 
 def _static_loop_loc():
     return __ptr__(_STATIC_LOOP_IDENT)
+_static_loop_loc()
 
 def _reduction_loc():
     return __ptr__(_REDUCTION_IDENT)
+_reduction_loc()
 
 def _critical_begin(loc_ref: Ptr[Ident], gtid: int, lck: cobj):
     from C import __kmpc_critical(Ptr[Ident], i32, cobj)
