@@ -25,9 +25,11 @@ public:
   static const std::string KEY;
   std::string getKey() const override { return KEY; }
 
+  /// @param sideEffectsPass the key of the side effects pass
   /// @param reachingDefPass the key of the reaching definitions pass
   /// @param globalVarPass the key of the global variables pass
-  FoldingPassGroup(const std::string &reachingDefPass,
+  FoldingPassGroup(const std::string &sideEffectsPass,
+                   const std::string &reachingDefPass,
                    const std::string &globalVarPass);
 
   bool shouldRepeat() const override;

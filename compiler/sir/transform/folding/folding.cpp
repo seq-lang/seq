@@ -10,12 +10,13 @@ namespace folding {
 
 const std::string FoldingPassGroup::KEY = "core-folding-pass-group";
 
-FoldingPassGroup::FoldingPassGroup(const std::string &reachingDefPass,
+FoldingPassGroup::FoldingPassGroup(const std::string &sideEffectsPass,
+                                   const std::string &reachingDefPass,
                                    const std::string &globalVarPass) {
   auto gdUnique = std::make_unique<cleanup::GlobalDemotionPass>();
   auto canonUnique = std::make_unique<cleanup::CanonicalizationPass>();
   auto fpUnique = std::make_unique<FoldingPass>();
-  auto dceUnique = std::make_unique<cleanup::DeadCodeCleanupPass>();
+  auto dceUnique = std::make_unique<cleanup::DeadCodeCleanupPass>(sideEffectsPass);
 
   gd = gdUnique.get();
   canon = canonUnique.get();

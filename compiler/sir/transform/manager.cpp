@@ -9,6 +9,7 @@
 #include "sir/analyze/dataflow/cfg.h"
 #include "sir/analyze/dataflow/reaching.h"
 #include "sir/analyze/module/global_vars.h"
+#include "sir/analyze/module/side_effect.h"
 
 #include "sir/transform/folding/folding.h"
 #include "sir/transform/lowering/imperative.h"
@@ -156,13 +157,16 @@ void PassManager::registerStandardPasses(bool debug) {
     registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());
 
     // folding
+    auto seKey =
+        registerAnalysis(std::make_unique<analyze::module::SideEffectAnalysis>());
     auto cfgKey = registerAnalysis(std::make_unique<analyze::dataflow::CFAnalysis>());
     auto rdKey = registerAnalysis(
         std::make_unique<analyze::dataflow::RDAnalysis>(cfgKey), {cfgKey});
     auto globalKey =
         registerAnalysis(std::make_unique<analyze::module::GlobalVarsAnalyses>());
-    registerPass(std::make_unique<folding::FoldingPassGroup>(rdKey, globalKey),
-                 /*insertBefore=*/"", {rdKey, globalKey}, {rdKey, cfgKey, globalKey});
+    registerPass(std::make_unique<folding::FoldingPassGroup>(seKey, rdKey, globalKey),
+                 /*insertBefore=*/"", {seKey, rdKey, globalKey},
+                 {seKey, rdKey, cfgKey, globalKey});
 
     // parallel
     registerPass(std::make_unique<parallel::OpenMPPass>());

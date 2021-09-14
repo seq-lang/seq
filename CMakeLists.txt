@@ -110,6 +110,7 @@ set(SEQ_HPPFILES
     compiler/sir/analyze/dataflow/dominator.h
     compiler/sir/analyze/dataflow/reaching.h
     compiler/sir/analyze/module/global_vars.h
+    compiler/sir/analyze/module/side_effect.h
     compiler/sir/attribute.h
     compiler/sir/base.h
     compiler/sir/const.h
@@ -206,6 +207,7 @@ set(SEQ_CPPFILES
     compiler/sir/analyze/dataflow/dominator.cpp
     compiler/sir/analyze/dataflow/reaching.cpp
     compiler/sir/analyze/module/global_vars.cpp
+    compiler/sir/analyze/module/side_effect.cpp
     compiler/sir/base.cpp
     compiler/sir/const.cpp
     compiler/sir/dsl/nodes.cpp
