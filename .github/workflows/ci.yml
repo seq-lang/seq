@@ -15,6 +15,7 @@ jobs:
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux2014_x86_64
     steps:
       - name: Check
         if: contains(github.ref, 'tags/v')
@@ -44,50 +45,8 @@ jobs:
           name: release_url
           path: release_url.txt
 
-  precise:
-    runs-on: ubuntu-latest
-    name: Seq CI (ubuntu-precise)
-    needs: [ release ]
-    steps:
-      - uses: actions/checkout@v2
 
-      - name: Cache Dependencies
-        id: cache-deps
-        uses: actions/cache@v2
-        with:
-          path: deps
-          key: ubuntu-precise-deps-${{ secrets.CACHE_VERSION }}
 
-      - name: Main
-        uses: ./.github/actions/build-precise
-
-      - name: Load Release URL File
-        if: contains(github.ref, 'tags/v')
-        uses: actions/download-artifact@v1
-        with:
-          name: release_url
-
-      - name: Get Release URL
-        id: get_release_url
-        if: contains(github.ref, 'tags/v')
-        run: |
-          echo ::set-output name=file_name::${REPOSITORY_NAME##*/}-${TAG_REF_NAME##*/v} # RepositoryName-v1.0.0
-          value=`cat release_url/release_url.txt`
-          echo ::set-output name=upload_url::$value
-        env:
-          TAG_REF_NAME: ${{ github.ref }}
-          REPOSITORY_NAME: ${{ github.repository }}
-
-      - name: Upload Release Asset
-        if: contains(github.ref, 'tags/v')
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.get_release_url.outputs.upload_url }}
-          asset_path: ./seq-linux-x86_64.tar.gz
-          asset_name: seq-linux-x86_64.tar.gz
-          asset_content_type: application/gzip
 
   main:
     strategy:
@@ -96,6 +55,9 @@ jobs:
           - ubuntu-latest
           - macos-latest
     runs-on: ${{ matrix.os }}
+    container:
+      - image: quay.io/pypa/manylinux2014_x86_64
+      - if: ${{ matrix.os == 'ubuntu-latest' }}
     name: Seq CI
     needs: [ release ]
     steps:
@@ -103,7 +65,6 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: '3.8'
-
       - name: Linux Setup
         if: startsWith(matrix.os, 'ubuntu')
         run: |
@@ -113,7 +74,6 @@ jobs:
           echo "LIBEXT=so" >> $GITHUB_ENV
           echo "OS_NAME=linux" >> $GITHUB_ENV
           echo "LLVM_DIR=$(llvm-config-12 --cmakedir)" >> $GITHUB_ENV
-
       - name: macOS Setup
         if: startsWith(matrix.os, 'macos')
         run: |
@@ -122,7 +82,6 @@ jobs:
           echo "LIBEXT=dylib" >> $GITHUB_ENV
           echo "OS_NAME=osx" >> $GITHUB_ENV
           echo "LLVM_DIR=$(/usr/local/opt/llvm/bin/llvm-config --cmakedir)" >> $GITHUB_ENV
-
       - name: Set up Python
         run: |
           python -m pip install --upgrade pip setuptools wheel
@@ -130,7 +89,6 @@ jobs:
           which python
           which pip
           echo "SEQ_PYTHON=$(python test/python/find-python-library.py)" >> $GITHUB_ENV
-
       - name: Build
         run: |
           mkdir build
@@ -142,7 +100,6 @@ jobs:
         env:
           CC: clang
           CXX: clang++
-
       - name: Test
         run: |
           echo $SEQ_PYTHON
@@ -154,14 +111,12 @@ jobs:
         env:
           SEQ_PATH: ./stdlib
           PYTHONPATH: ./test/python
-
       - name: Build Documentation
         run: |
           python -m pip install --upgrade pip
           pip install wheel sphinx sphinxcontrib-napoleon sphinx-rtd-theme breathe exhale
           (cd docs/sphinx && python docgen.py ../../stdlib)
           make -C docs/sphinx html
-
       - name: Deploy Documentation
         if: github.ref == 'refs/heads/master'
         uses: peaceiris/actions-gh-pages@v3
@@ -170,12 +125,6 @@ jobs:
           publish_dir: ./docs/sphinx/_build/html
           cname: docs.seq-lang.org
           force_orphan: true
-
-      - name: Artifact Environment
-        run: |
-          echo "SEQ_BUILD_ARCHIVE=seq-$(uname -s | awk '{print tolower($0)}')-$(uname -m).tar.gz" >> $GITHUB_ENV
-          echo "SEQ_DEP_ARCHIVE=seq-deps-${OS_NAME}.tar.bz2" >> $GITHUB_ENV
-
       - name: Prepare Artifacts
         run: |
           mkdir -p seq-deploy/bin seq-deploy/lib/seq
@@ -183,18 +132,18 @@ jobs:
           cp build/libseq*.${LIBEXT} seq-deploy/lib/seq/
           cp deps/lib/libomp.${LIBEXT} seq-deploy/lib/seq/
           cp -r stdlib seq-deploy/lib/seq/
-          tar -czf ${SEQ_BUILD_ARCHIVE} seq-deploy
-          tar -cjf ${SEQ_DEP_ARCHIVE} deps
+          tar -czf seq-distrib.tar.gz seq-deploy
           du -sh seq-deploy
-          du -sh deps
-          ls -lah ${SEQ_DEP_ARCHIVE}
-
+      - name: Upload nightly artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: seq-${{ github.branch }}-${{ matrix.os }}
+          path: ./seq-distrib.tar.gz
       - name: Load Release URL File
         if: contains(github.ref, 'tags/v')
         uses: actions/download-artifact@v1
         with:
           name: release_url
-
       - name: Get Release URL
         id: get_release_url
         if: contains(github.ref, 'tags/v')
@@ -205,14 +154,13 @@ jobs:
         env:
           TAG_REF_NAME: ${{ github.ref }}
           REPOSITORY_NAME: ${{ github.repository }}
-
       - name: Upload Release Asset
-        if: contains(github.ref, 'tags/v') && startsWith(matrix.os, 'macos')
+        if: contains(github.ref, 'tags/v')
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_release_url.outputs.upload_url }}
-          asset_path: ./seq-darwin-x86_64.tar.gz
-          asset_name: seq-darwin-x86_64.tar.gz
+          asset_path: ./seq-distrib.tar.gz
+          asset_name: seq-${{ matrix.os }}-x86_64.tar.gz
           asset_content_type: application/gzip

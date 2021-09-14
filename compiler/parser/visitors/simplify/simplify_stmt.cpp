@@ -161,23 +161,21 @@ void SimplifyVisitor::visit(YieldFromStmt *stmt) {
 }
 
 void SimplifyVisitor::visit(AssertStmt *stmt) {
-  seqassert(!stmt->message || stmt->message->getString(),
-            "assert message not a string");
-
+  ExprPtr msg = N<StringExpr>("");
+  if (stmt->message)
+    msg = N<CallExpr>(N<IdExpr>("str"), clone(stmt->message));
   if (ctx->getLevel() && ctx->bases.back().attributes & FLAG_TEST)
-    resultStmt = transform(N<IfStmt>(
-        N<UnaryExpr>("!", clone(stmt->expr)),
-        N<ExprStmt>(N<CallExpr>(
-            N<DotExpr>("__internal__", "seq_assert_test"),
-            N<StringExpr>(stmt->getSrcInfo().file), N<IntExpr>(stmt->getSrcInfo().line),
-            stmt->message ? clone(stmt->message) : N<StringExpr>("")))));
+    resultStmt = transform(
+        N<IfStmt>(N<UnaryExpr>("!", clone(stmt->expr)),
+                  N<ExprStmt>(N<CallExpr>(N<DotExpr>("__internal__", "seq_assert_test"),
+                                          N<StringExpr>(stmt->getSrcInfo().file),
+                                          N<IntExpr>(stmt->getSrcInfo().line), msg))));
   else
-    resultStmt = transform(N<IfStmt>(
-        N<UnaryExpr>("!", clone(stmt->expr)),
-        N<ThrowStmt>(N<CallExpr>(
-            N<DotExpr>("__internal__", "seq_assert"),
-            N<StringExpr>(stmt->getSrcInfo().file), N<IntExpr>(stmt->getSrcInfo().line),
-            stmt->message ? clone(stmt->message) : N<StringExpr>("")))));
+    resultStmt = transform(
+        N<IfStmt>(N<UnaryExpr>("!", clone(stmt->expr)),
+                  N<ThrowStmt>(N<CallExpr>(N<DotExpr>("__internal__", "seq_assert"),
+                                           N<StringExpr>(stmt->getSrcInfo().file),
+                                           N<IntExpr>(stmt->getSrcInfo().line), msg))));
 }
 
 void SimplifyVisitor::visit(WhileStmt *stmt) {
