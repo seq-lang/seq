@@ -21,6 +21,7 @@ class Int:
             return what
         else:
             return __internal__.int_sext(what, 64, N)
+    @pure
     @llvm
     def __new__(what: UInt[N]) -> Int[N]:
         ret i{=N} %what
@@ -49,10 +50,12 @@ class Int:
         return self
     def __hash__(self) -> int:
         return int(self)
+    @pure
     @llvm
     def __float__(self) -> float:
         %0 = sitofp i{=N} %self to double
         ret double %0
+    @pure
     @llvm
     def __bool__(self) -> bool:
         %0 = icmp ne i{=N} %self, 0
@@ -60,24 +63,29 @@ class Int:
         ret i8 %1
     def __pos__(self) -> Int[N]:
         return self
+    @pure
     @llvm
     def __neg__(self) -> Int[N]:
         %0 = sub i{=N} 0, %self
         ret i{=N} %0
+    @pure
     @llvm
     def __invert__(self) -> Int[N]:
         %0 = xor i{=N} %self, -1
         ret i{=N} %0
+    @pure
     @commutative
     @associative
     @llvm
     def __add__(self, other: Int[N]) -> Int[N]:
         %0 = add i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @llvm
     def __sub__(self, other: Int[N]) -> Int[N]:
         %0 = sub i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @commutative
     @associative
     @distributive
@@ -85,70 +93,84 @@ class Int:
     def __mul__(self, other: Int[N]) -> Int[N]:
         %0 = mul i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @llvm
     def __floordiv__(self, other: Int[N]) -> Int[N]:
         %0 = sdiv i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @llvm
     def __truediv__(self, other: Int[N]) -> float:
         %0 = sitofp i{=N} %self to double
         %1 = sitofp i{=N} %other to double
         %2 = fdiv double %0, %1
         ret double %2
+    @pure
     @llvm
     def __mod__(self, other: Int[N]) -> Int[N]:
         %0 = srem i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @llvm
     def __lshift__(self, other: Int[N]) -> Int[N]:
         %0 = shl i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @llvm
     def __rshift__(self, other: Int[N]) -> Int[N]:
         %0 = ashr i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @llvm
     def __eq__(self, other: Int[N]) -> bool:
         %0 = icmp eq i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @pure
     @llvm
     def __ne__(self, other: Int[N]) -> bool:
         %0 = icmp ne i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @pure
     @llvm
     def __lt__(self, other: Int[N]) -> bool:
         %0 = icmp slt i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @pure
     @llvm
     def __gt__(self, other: Int[N]) -> bool:
         %0 = icmp sgt i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @pure
     @llvm
     def __le__(self, other: Int[N]) -> bool:
         %0 = icmp sle i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @pure
     @llvm
     def __ge__(self, other: Int[N]) -> bool:
         %0 = icmp sge i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @pure
     @commutative
     @associative
     @llvm
     def __and__(self, other: Int[N]) -> Int[N]:
         %0 = and i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @commutative
     @associative
     @llvm
     def __or__(self, other: Int[N]) -> Int[N]:
         %0 = or i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @commutative
     @associative
     @llvm
@@ -177,6 +199,7 @@ class Int:
         ret i{=N} %3
     def __str__(self) -> str:
         return seq_str_int(int(self))
+    @pure
     @llvm
     def _popcnt(self) -> Int[N]:
         declare i{=N} @llvm.ctpop.i{=N}(i{=N})
@@ -203,6 +226,7 @@ class UInt:
             return UInt[N](Int[N](what))
         else:
             return UInt[N](__internal__.int_zext(what, 64, N))
+    @pure
     @llvm
     def __new__(what: Int[N]) -> UInt[N]:
         ret i{=N} %what
@@ -220,10 +244,12 @@ class UInt:
         return self
     def __hash__(self) -> int:
         return int(self)
+    @pure
     @llvm
     def __float__(self) -> float:
         %0 = uitofp i{=N} %self to double
         ret double %0
+    @pure
     @llvm
     def __bool__(self) -> bool:
         %0 = icmp ne i{=N} %self, 0
@@ -231,24 +257,29 @@ class UInt:
         ret i8 %1
     def __pos__(self) -> UInt[N]:
         return self
+    @pure
     @llvm
     def __neg__(self) -> UInt[N]:
         %0 = sub i{=N} 0, %self
         ret i{=N} %0
+    @pure
     @llvm
     def __invert__(self) -> UInt[N]:
         %0 = xor i{=N} %self, -1
         ret i{=N} %0
+    @pure
     @commutative
     @associative
     @llvm
     def __add__(self, other: UInt[N]) -> UInt[N]:
         %0 = add i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @llvm
     def __sub__(self, other: UInt[N]) -> UInt[N]:
         %0 = sub i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @commutative
     @associative
     @distributive
@@ -256,70 +287,84 @@ class UInt:
     def __mul__(self, other: UInt[N]) -> UInt[N]:
         %0 = mul i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @llvm
     def __floordiv__(self, other: UInt[N]) -> UInt[N]:
         %0 = udiv i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @llvm
     def __truediv__(self, other: UInt[N]) -> float:
         %0 = uitofp i{=N} %self to double
         %1 = uitofp i{=N} %other to double
         %2 = fdiv double %0, %1
         ret double %2
+    @pure
     @llvm
     def __mod__(self, other: UInt[N]) -> UInt[N]:
         %0 = urem i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @llvm
     def __lshift__(self, other: UInt[N]) -> UInt[N]:
         %0 = shl i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @llvm
     def __rshift__(self, other: UInt[N]) -> UInt[N]:
         %0 = lshr i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @llvm
     def __eq__(self, other: UInt[N]) -> bool:
         %0 = icmp eq i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @pure
     @llvm
     def __ne__(self, other: UInt[N]) -> bool:
         %0 = icmp ne i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @pure
     @llvm
     def __lt__(self, other: UInt[N]) -> bool:
         %0 = icmp ult i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @pure
     @llvm
     def __gt__(self, other: UInt[N]) -> bool:
         %0 = icmp ugt i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @pure
     @llvm
     def __le__(self, other: UInt[N]) -> bool:
         %0 = icmp ule i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @pure
     @llvm
     def __ge__(self, other: UInt[N]) -> bool:
         %0 = icmp uge i{=N} %self, %other
         %1 = zext i1 %0 to i8
         ret i8 %1
+    @pure
     @commutative
     @associative
     @llvm
     def __and__(self, other: UInt[N]) -> UInt[N]:
         %0 = and i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @commutative
     @associative
     @llvm
     def __or__(self, other: UInt[N]) -> UInt[N]:
         %0 = or i{=N} %self, %other
         ret i{=N} %0
+    @pure
     @commutative
     @associative
     @llvm
