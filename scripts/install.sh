@@ -3,8 +3,8 @@ set -e
 set -o pipefail
 
 SEQ_INSTALL_DIR=~/.seq
-OS=`uname -s | awk '{print tolower($0)}'`
-ARCH=`uname -m`
+OS=$(uname -s | awk '{print tolower($0)}')
+ARCH="$(uname -m)"
 
 if [ "$OS" != "linux" ] && [ "$OS" != "darwin" ]; then
   echo "error: Pre-built binaries only exist for Linux and macOS." >&2
@@ -20,22 +20,24 @@ SEQ_BUILD_ARCHIVE=seq-$OS-$ARCH.tar.gz
 
 mkdir -p $SEQ_INSTALL_DIR
 cd $SEQ_INSTALL_DIR
-curl -L https://github.com/seq-lang/seq/releases/latest/download/$SEQ_BUILD_ARCHIVE | tar zxvf - --strip-components=1
+curl -L https://github.com/seq-lang/seq/releases/latest/download/"$SEQ_BUILD_ARCHIVE" | tar zxvf - --strip-components=1
 
-EXPORT_COMMAND="export PATH=`pwd`/bin:\$PATH"
+EXPORT_COMMAND="export PATH=$(pwd)/bin:\$PATH"
 echo "PATH export command:"
 echo "  $EXPORT_COMMAND"
 
 update_profile () {
-  if ! grep -F -q "$EXPORT_COMMAND" $1; then
+  if ! grep -F -q "$EXPORT_COMMAND" "$1"; then
     read -p "Update PATH in $1? [y/n] " -n 1 -r
     echo
 
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-      echo "Updating $1"
-      echo >> $1
-      echo "# Seq compiler path (added by install script)" >> $1
-      echo $EXPORT_COMMAND >> $1
+      { 
+        echo Updating "$1"
+        echo "# Seq compiler path (added by install script)" >> "$1"
+        echo "$EXPORT_COMMAND"
+      }
+      echo >> "$1"
     else
       echo "Skipping."
     fi
@@ -62,5 +64,5 @@ else
   echo "Don't know how to update configuration file for shell $SHELL"
 fi
 
-echo "Seq successfully installed at: `pwd`"
+echo "Seq successfully installed at: $(pwd)"
 echo "Open a new terminal session or update your PATH to use seqc"
