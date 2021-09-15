@@ -571,3 +571,38 @@ def test_global_fold_non_const():
     assert c == 52
     assert op_count1 == op_count2
 test_global_fold_non_const()
+
+some_global = 42
+@test
+def test_side_effect_analysis():
+    @pure
+    @test
+    def foo():
+        assert False
+        return some_global
+
+    def bar():
+        a = 1
+        b = 2
+        c = 3
+        return foo()
+
+    def baz():
+        global some_global
+        some_global += 1
+        return some_global
+
+    def fab():
+        return baz()
+
+    foo()
+    x = foo()
+    bar()
+    y = bar()
+    assert baz() == 43
+    baz()
+    assert some_global == 44
+    assert fab() == 45
+    fab()
+    assert some_global == 46
+test_side_effect_analysis()

@@ -23,17 +23,24 @@ struct VarUseAnalyzer : public util::Operator {
 
 struct SideEfectAnalyzer : public util::ConstVisitor {
   static const std::string PURE_ATTR;
-  std::unordered_map<id_t, bool> result;
-  bool last;
+  static const std::string NON_PURE_ATTR;
 
-  SideEfectAnalyzer() : util::ConstVisitor(), result(), last(true) {}
+  VarUseAnalyzer &vua;
+  std::unordered_map<id_t, bool> result;
+  bool exprSE;
+  bool funcSE;
+
+  SideEfectAnalyzer(VarUseAnalyzer &vua)
+      : util::ConstVisitor(), vua(vua), result(), exprSE(true), funcSE(false) {}
 
   template <typename T> bool has(const T *v) {
     return result.find(v->getId()) != result.end();
   }
 
-  template <typename T> void set(const T *v, bool hasSideEffect) {
-    result[v->getId()] = last = hasSideEffect;
+  template <typename T>
+  void set(const T *v, bool hasSideEffect, bool hasFuncSideEffect = false) {
+    result[v->getId()] = exprSE = hasSideEffect;
+    funcSE |= hasFuncSideEffect;
   }
 
   template <typename T> bool process(const T *v) {
@@ -42,7 +49,8 @@ struct SideEfectAnalyzer : public util::ConstVisitor {
     if (has(v))
       return result[v->getId()];
     v->accept(*this);
-    return last;
+    seqassert(has(v), "node not added to results");
+    return result[v->getId()];
   }
 
   void visit(const Module *v) override {
@@ -56,11 +64,13 @@ struct SideEfectAnalyzer : public util::ConstVisitor {
 
   void visit(const BodiedFunc *v) override {
     const bool pure = util::hasAttribute(v, PURE_ATTR);
-    set(v, !pure); // avoid infinite recursion
-    bool s = process(v->getBody());
-    if (pure)
-      s = false;
-    set(v, s);
+    const bool nonPure = util::hasAttribute(v, NON_PURE_ATTR);
+    set(v, !pure, !pure); // avoid infinite recursion
+    bool oldFuncSE = funcSE;
+    funcSE = false;
+    process(v->getBody());
+    set(v, nonPure || (funcSE && !pure));
+    funcSE = oldFuncSE;
   }
 
   void visit(const ExternalFunc *v) override {
@@ -122,10 +132,13 @@ struct SideEfectAnalyzer : public util::ConstVisitor {
 
   void visit(const PipelineFlow *v) override {
     bool s = false;
+    bool callSE = false;
     for (auto &stage : *v) {
       // make sure we're treating this as a call
       if (auto *f = util::getFunc(stage.getCallee())) {
-        s |= process(f);
+        bool stageCallSE = process(f);
+        callSE |= stageCallSE;
+        s |= stageCallSE;
       } else {
         // unknown function
         process(stage.getCallee());
@@ -136,10 +149,13 @@ struct SideEfectAnalyzer : public util::ConstVisitor {
         s |= process(arg);
       }
     }
-    set(v, s);
+    set(v, s, callSE);
   }
 
-  void visit(const dsl::CustomFlow *v) override { set(v, v->hasSideEffect()); }
+  void visit(const dsl::CustomFlow *v) override {
+    bool s = v->hasSideEffect();
+    set(v, s, s);
+  }
 
   void visit(const IntConst *v) override { set(v, false); }
 
@@ -152,8 +168,14 @@ struct SideEfectAnalyzer : public util::ConstVisitor {
   void visit(const dsl::CustomConst *v) override { set(v, false); }
 
   void visit(const AssignInstr *v) override {
-    process(v->getRhs());
-    set(v, true);
+    auto id = v->getLhs()->getId();
+    auto it1 = vua.varCounts.find(id);
+    auto it2 = vua.varAssignCounts.find(id);
+    auto count1 = (it1 != vua.varCounts.end()) ? it1->second : 0;
+    auto count2 = (it2 != vua.varAssignCounts.end()) ? it2->second : 0;
+
+    bool s = (count1 != count2);
+    set(v, s | process(v->getRhs()), s & v->getLhs()->isGlobal());
   }
 
   void visit(const ExtractInstr *v) override { set(v, process(v->getVal())); }
@@ -161,22 +183,24 @@ struct SideEfectAnalyzer : public util::ConstVisitor {
   void visit(const InsertInstr *v) override {
     process(v->getLhs());
     process(v->getRhs());
-    set(v, true);
+    set(v, true, true);
   }
 
   void visit(const CallInstr *v) override {
     bool s = false;
+    bool callSE = true;
     for (auto *x : *v) {
       s |= process(x);
     }
     if (auto *f = util::getFunc(v->getCallee())) {
-      s |= process(f);
+      callSE = process(f);
+      s |= callSE;
     } else {
       // unknown function
       process(v->getCallee());
       s = true;
     }
-    set(v, s);
+    set(v, s, callSE);
   }
 
   void visit(const StackAllocInstr *v) override { set(v, false); }
@@ -206,17 +230,21 @@ struct SideEfectAnalyzer : public util::ConstVisitor {
 
   void visit(const ThrowInstr *v) override {
     process(v->getValue());
-    set(v, true);
+    set(v, true, true);
   }
 
   void visit(const FlowInstr *v) override {
     set(v, process(v->getFlow()) | process(v->getValue()));
   }
 
-  void visit(const dsl::CustomInstr *v) override { set(v, v->hasSideEffect()); }
+  void visit(const dsl::CustomInstr *v) override {
+    bool s = v->hasSideEffect();
+    set(v, s, s);
+  }
 };
 
 const std::string SideEfectAnalyzer::PURE_ATTR = "std.internal.attributes.pure";
+const std::string SideEfectAnalyzer::NON_PURE_ATTR = "std.internal.attributes.nonpure";
 } // namespace
 
 const std::string SideEffectAnalysis::KEY = "core-analyses-side-effect";
@@ -226,26 +254,12 @@ bool SideEffectResult::hasSideEffect(Value *v) const {
   return it == result.end() || it->second;
 }
 
-long SideEffectResult::getUsageCount(Var *v) const {
-  auto it = varCounts.find(v->getId());
-  return (it == varCounts.end()) ? 0 : it->second;
-}
-
-bool SideEffectResult::isOnlyAssigned(Var *v) const {
-  auto it1 = varCounts.find(v->getId());
-  auto it2 = varAssignCounts.find(v->getId());
-  auto count1 = (it1 != varCounts.end()) ? it1->second : 0;
-  auto count2 = (it2 != varAssignCounts.end()) ? it2->second : 0;
-  return count1 == count2;
-}
-
 std::unique_ptr<Result> SideEffectAnalysis::run(const Module *m) {
   VarUseAnalyzer vua;
   const_cast<Module *>(m)->accept(vua);
-  SideEfectAnalyzer sea;
+  SideEfectAnalyzer sea(vua);
   m->accept(sea);
-  return std::make_unique<SideEffectResult>(sea.result, vua.varCounts,
-                                            vua.varAssignCounts);
+  return std::make_unique<SideEffectResult>(sea.result);
 }
 
 } // namespace module

@@ -12,26 +12,12 @@ namespace module {
 struct SideEffectResult : public Result {
   /// mapping of ID to bool indicating whether the node has side effects
   std::unordered_map<id_t, bool> result;
-  /// mapping of variable ID to number of times it is used in the module
-  std::unordered_map<id_t, long> varCounts;
-  /// mapping of variable ID to number of times it is assigned in the module
-  std::unordered_map<id_t, long> varAssignCounts;
 
-  SideEffectResult(std::unordered_map<id_t, bool> result,
-                   std::unordered_map<id_t, long> varCounts,
-                   std::unordered_map<id_t, long> varAssignCounts)
-      : result(std::move(result)), varCounts(std::move(varCounts)),
-        varAssignCounts(std::move(varAssignCounts)) {}
+  SideEffectResult(std::unordered_map<id_t, bool> result) : result(std::move(result)) {}
 
   /// @param v the value to check
   /// @return true if the node has side effects (false positives allowed)
   bool hasSideEffect(Value *v) const;
-  /// @param v the var to check
-  /// @return the number of times the given variable is used
-  long getUsageCount(Var *v) const;
-  /// @param v the var to check
-  /// @return true if this variable is only ever assigned
-  bool isOnlyAssigned(Var *v) const;
 };
 
 class SideEffectAnalysis : public Analysis {

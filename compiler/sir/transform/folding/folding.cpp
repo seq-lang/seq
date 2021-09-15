@@ -14,7 +14,7 @@ FoldingPassGroup::FoldingPassGroup(const std::string &sideEffectsPass,
                                    const std::string &reachingDefPass,
                                    const std::string &globalVarPass) {
   auto gdUnique = std::make_unique<cleanup::GlobalDemotionPass>();
-  auto canonUnique = std::make_unique<cleanup::CanonicalizationPass>();
+  auto canonUnique = std::make_unique<cleanup::CanonicalizationPass>(sideEffectsPass);
   auto fpUnique = std::make_unique<FoldingPass>();
   auto dceUnique = std::make_unique<cleanup::DeadCodeCleanupPass>(sideEffectsPass);
 

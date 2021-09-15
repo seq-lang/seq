@@ -1,12 +1,16 @@
+@nonpure
 def __outline_begin__():
     pass
 
+@nonpure
 def __outline_end__():
     pass
 
+@nonpure
 def __outline_successes__():
     return 0
 
+@nonpure
 def __outline_failures__():
     return 0
 
