@@ -122,15 +122,6 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
 
     _isTest = isTest;
     return module;
-  } catch (exc::SeqException &e) {
-    if (isTest) {
-      _level = 0;
-      LOG("{}", e.what());
-    } else {
-      compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
-                       e.getSrcInfo().col);
-    }
-    return nullptr;
   } catch (exc::ParserException &e) {
     for (int i = 0; i < e.messages.size(); i++)
       if (!e.messages[i].empty()) {

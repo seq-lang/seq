@@ -5,10 +5,12 @@ from C import exit(int)
 
 @extend
 class __internal__:
+    @pure
     @llvm
     def class_raw(obj) -> Ptr[byte]:
         ret i8* %obj
 
+    @pure
     @llvm
     def _tuple_getitem_llvm[T, E](t: T, idx: int) -> E:
         %x = alloca {=T}
@@ -28,26 +30,31 @@ class __internal__:
     def tuple_getitem[T, E](t: T, idx: int) -> E:
         return __internal__._tuple_getitem_llvm(t, __internal__.tuple_fix_index(idx, staticlen(t)), T, E)
 
+    @pure
     @llvm
     def fn_new[T](ptr: Ptr[byte]) -> T:
         %0 = bitcast i8* %ptr to {=T}
         ret {=T} %0
 
+    @pure
     @llvm
     def fn_raw[T](fn: T) -> Ptr[byte]:
         %0 = bitcast {=T} %fn to i8*
         ret i8* %0
 
+    @pure
     @llvm
     def int_sext(what, F: Static[int], T: Static[int]) -> Int[T]:
         %0 = sext i{=F} %what to i{=T}
         ret i{=T} %0
 
+    @pure
     @llvm
     def int_zext(what, F: Static[int], T: Static[int]) -> Int[T]:
         %0 = zext i{=F} %what to i{=T}
         ret i{=T} %0
 
+    @pure
     @llvm
     def int_trunc(what, F: Static[int], T: Static[int]) -> Int[T]:
         %0 = trunc i{=F} %what to i{=T}
@@ -70,40 +77,48 @@ class __internal__:
         if msg:
             raise OSError(prefix + msg)
 
+    @pure
     @llvm
     def opt_tuple_new[T]() -> Optional[T]:
         ret { i1, {=T} } { i1 false, {=T} undef }
 
+    @pure
     @llvm
     def opt_ref_new[T]() -> Optional[T]:
         ret i8* null
 
+    @pure
     @llvm
     def opt_tuple_new_arg[T](what: T) -> Optional[T]:
         %0 = insertvalue { i1, {=T} } { i1 true, {=T} undef }, {=T} %what, 1
         ret { i1, {=T} } %0
 
+    @pure
     @llvm
     def opt_ref_new_arg[T](what: T) -> Optional[T]:
         ret i8* %what
 
+    @pure
     @llvm
     def opt_tuple_bool[T](what: Optional[T]) -> bool:
         %0 = extractvalue { i1, {=T} } %what, 0
         %1 = zext i1 %0 to i8
         ret i8 %1
 
+    @pure
     @llvm
     def opt_ref_bool[T](what: Optional[T]) -> bool:
         %0 = icmp ne i8* %what, null
         %1 = zext i1 %0 to i8
         ret i8 %1
 
+    @pure
     @llvm
     def opt_tuple_invert[T](what: Optional[T]) -> T:
         %0 = extractvalue { i1, {=T} } %what, 1
         ret {=T} %0
 
+    @pure
     @llvm
     def opt_ref_invert[T](what: Optional[T]) -> T:
         ret i8* %what

@@ -99,20 +99,4 @@ void compilationError(const std::string &msg, const std::string &file = "",
 
 void compilationWarning(const std::string &msg, const std::string &file = "",
                         int line = 0, int col = 0, bool terminate = false);
-
-namespace exc {
-class SeqException : public SrcObject, public std::runtime_error {
-public:
-  SeqException(const std::string &msg, SrcInfo info) noexcept
-      : SrcObject(), std::runtime_error(msg) {
-    setSrcInfo(std::move(info));
-  }
-
-  explicit SeqException(const std::string &msg) noexcept : SeqException(msg, {}) {}
-
-  SeqException(const SeqException &e) noexcept
-      : SrcObject(e), std::runtime_error(e) // NOLINT
-  {}
-};
-} // namespace exc
 } // namespace seq

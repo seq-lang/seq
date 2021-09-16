@@ -19,6 +19,10 @@ def pure():
     pass
 
 @__attribute__
+def nonpure():
+    pass
+
+@__attribute__
 def commutative():
     pass
 

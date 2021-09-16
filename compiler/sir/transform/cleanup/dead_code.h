@@ -16,6 +16,8 @@ private:
 public:
   static const std::string KEY;
 
+  /// Constructs a dead code elimination pass
+  /// @param sideEffectsKey the side effect analysis' key
   DeadCodeCleanupPass(std::string sideEffectsKey)
       : OperatorPass(), sideEffectsKey(std::move(sideEffectsKey)), numReplacements(0) {}
 

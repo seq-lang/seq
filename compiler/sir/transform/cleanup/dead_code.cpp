@@ -28,20 +28,9 @@ void DeadCodeCleanupPass::handle(SeriesFlow *v) {
       LOG_IR("[{}] no side effect, deleting: {}", KEY, **it);
       numReplacements++;
       it = v->erase(it);
-      continue;
+    } else {
+      ++it;
     }
-
-    if (auto *assign = cast<AssignInstr>(*it)) {
-      if (r->isOnlyAssigned(assign->getLhs()) && !r->hasSideEffect(assign->getRhs())) {
-        LOG_IR("[{}] no RHS side effect on only-assigned var {}, deleting: {}", KEY,
-               *assign->getLhs(), *assign->getRhs());
-        numReplacements++;
-        it = v->erase(it);
-        continue;
-      }
-    }
-
-    ++it;
   }
 }
 

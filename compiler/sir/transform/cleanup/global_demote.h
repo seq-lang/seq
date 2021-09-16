@@ -17,6 +17,7 @@ private:
 public:
   static const std::string KEY;
 
+  /// Constructs a global variable demotion pass
   GlobalDemotionPass() : Pass(), numDemotions(0) {}
 
   std::string getKey() const override { return KEY; }
