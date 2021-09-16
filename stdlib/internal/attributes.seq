@@ -30,4 +30,7 @@ def associative():
 def distributive():
     pass
 
-def for_par(): pass
+@__attribute__
+def C():
+    pass
+

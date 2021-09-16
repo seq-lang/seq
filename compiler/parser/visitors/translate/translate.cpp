@@ -429,8 +429,10 @@ void TranslateVisitor::transformFunction(types::FuncType *type, FunctionStmt *as
   // TODO: refactor IR attribute API
   map<string, string> attr;
   attr[".module"] = ast->attributes.module;
-  for (auto &a : ast->attributes.customAttr)
+  for (auto &a : ast->attributes.customAttr) {
+    // LOG("{} -> {}", ast->name, a);
     attr[a] = "";
+  }
   func->setAttribute(make_unique<ir::KeyValueAttribute>(attr));
   for (int i = 0; i < names.size(); i++)
     func->getArgVar(names[i])->setSrcInfo(ast->args[indices[i]].getSrcInfo());

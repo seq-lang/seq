@@ -1,5 +1,6 @@
 # Core library
 
+from internal.attributes import *
 from internal.types.ptr import *
 from internal.types.str import *
 from internal.types.int import *

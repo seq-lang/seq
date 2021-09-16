@@ -378,6 +378,11 @@ puts("hello".ptr) #: hello
 from C import atoi(cobj) -> int as s2i
 print s2i("11".ptr) #: 11
 
+@C
+def log(x: float) -> float:
+    pass
+print log(5.5)  #: 1.70475
+
 #%% import_c_dylib,barebones
 from internal.dlopen import dlext
 RT = "./libseqrt." + dlext()

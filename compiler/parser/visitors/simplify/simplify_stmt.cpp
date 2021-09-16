@@ -536,6 +536,15 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
       attr.set(".changedSelf");
     }
 
+    if (attr.has(Attr::C)) {
+      if (a.deflt)
+        error("C functions do not accept default argument");
+      if (stars != 1 && !typeAst)
+        error("C functions require explicit type annotations");
+      if (stars == 1)
+        attr.set(Attr::CVarArg);
+    }
+
     // First add all generics!
     auto name = ctx->generateCanonicalName(varName);
     args.emplace_back(Param{string(stars, '*') + name, typeAst, a.deflt, a.generic});
@@ -560,7 +569,7 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
     }
   }
   // Parse the return type.
-  if (!stmt->ret && attr.has(Attr::LLVM))
+  if (!stmt->ret && (attr.has(Attr::LLVM) || attr.has(Attr::C)))
     error("LLVM functions must have a return type");
   auto ret = transformType(stmt->ret, false);
   // Parse function body.
@@ -568,9 +577,11 @@ void SimplifyVisitor::visit(FunctionStmt *stmt) {
   std::map<string, string> captures;
   if (!attr.has(Attr::Internal) && !attr.has(Attr::C)) {
     ctx->addBlock();
-    if (attr.has(Attr::LLVM))
+    if (attr.has(Attr::LLVM)) {
       suite = transformLLVMDefinition(stmt->suite->firstInBlock());
-    else {
+    } else if (attr.has(Attr::C)) {
+      ;
+    } else {
       if ((isEnclosedFunc || attr.has(Attr::Capture)) && !isClassMember)
         ctx->captures.emplace_back(std::map<string, string>{});
       suite = SimplifyVisitor(ctx, preamble).transform(stmt->suite);
