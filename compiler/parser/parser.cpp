@@ -7,6 +7,7 @@
  */
 
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -142,8 +143,16 @@ void generateDocstr(const string &argv0) {
   string s;
   while (std::getline(std::cin, s))
     files.push_back(s);
-  auto j = ast::DocVisitor::apply(argv0, files);
-  fmt::print("{}\n", j.dump());
+  try {
+    auto j = ast::DocVisitor::apply(argv0, files);
+    fmt::print("{}\n", j->toString());
+  } catch (exc::ParserException &e) {
+    for (int i = 0; i < e.messages.size(); i++)
+      if (!e.messages[i].empty()) {
+        compilationError(e.messages[i], e.locations[i].file, e.locations[i].line,
+                         e.locations[i].col, /*terminate=*/false);
+      }
+  }
 }
 
 } // namespace seq
