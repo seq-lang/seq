@@ -1,7 +1,5 @@
 from internal.attributes import commutative, associative
 
-from C import seq_str_bool(bool) -> str
-
 @extend
 class bool:
     def __new__() -> bool:
@@ -9,7 +7,7 @@ class bool:
     def __new__[T](what: T) -> bool: # lowest priority!
         return what.__bool__()
     def __str__(self) -> str:
-        return seq_str_bool(self)
+        return "True" if self else "False"
     def __copy__(self) -> bool:
         return self
     def __bool__(self) -> bool:

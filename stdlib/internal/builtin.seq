@@ -1,5 +1,4 @@
 from internal.gc import alloc_atomic, free
-from C import strtoll(cobj, Ptr[cobj], i32) -> int
 
 @tuple
 class object:
@@ -245,6 +244,7 @@ def repr(x):
 @extend
 class int:
     def _from_str(s: str, base: int):
+        from C import strtoll(cobj, Ptr[cobj], i32) -> int
         if base < 0 or base > 36 or base == 1:
             raise ValueError("int() base must be >= 2 and <= 36, or 0")
 

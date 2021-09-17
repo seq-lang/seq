@@ -1,7 +1,11 @@
 from internal.attributes import commutative, associative, distributive
 
-from C import seq_str_int(int) -> str
-from C import seq_str_uint(int) -> str
+@pure
+@C
+def seq_str_int(a: int) -> str: pass
+@pure
+@C
+def seq_str_uint(a: int) -> str: pass
 
 @extend
 class int:

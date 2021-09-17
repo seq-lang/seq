@@ -1,7 +1,11 @@
 # Primarily for internal use. Regular users should not use this module.
 
-from C import seq_alloc(int) -> cobj
-from C import seq_alloc_atomic(int) -> cobj
+@pure
+@C
+def seq_alloc(a: int) -> cobj: pass
+@pure
+@C
+def seq_alloc_atomic(a: int) -> cobj: pass
 from C import seq_realloc(cobj, int) -> cobj
 from C import seq_free(cobj)
 from C import seq_gc_add_roots(cobj, cobj)

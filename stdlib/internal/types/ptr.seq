@@ -1,4 +1,6 @@
-from C import seq_str_ptr(Ptr[byte]) -> str
+@pure
+@C
+def seq_str_ptr(a: Ptr[byte]) -> str: pass
 
 @extend
 class Ptr:

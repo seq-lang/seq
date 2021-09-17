@@ -1,4 +1,6 @@
-from C import strlen(cobj) -> int
+@pure
+@C
+def strlen(a: cobj) -> int: pass
 
 @extend
 class str:

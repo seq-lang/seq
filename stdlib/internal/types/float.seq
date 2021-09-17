@@ -1,8 +1,9 @@
 from internal.attributes import commutative
 from internal.gc import alloc_atomic, free
 
-from C import seq_str_float(float) -> str
-from C import strtod(cobj, Ptr[cobj]) -> float
+@pure
+@C
+def seq_str_float(a: float) -> str: pass
 
 @extend
 class float:
@@ -304,6 +305,7 @@ class float:
         return x
 
     def __new__(s: str) -> float:
+        from C import strtod(cobj, Ptr[cobj]) -> float
         buf = __array__[byte](32)
         n = s.__len__()
         need_dyn_alloc = (n >= buf.__len__())

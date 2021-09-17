@@ -1,5 +1,7 @@
 from internal.gc import free
-from C import seq_check_errno() -> str
+@pure
+@C
+def seq_check_errno() -> str: pass
 from C import seq_print(str)
 from C import exit(int)
 
