@@ -166,7 +166,7 @@ if(htslib_ADDED)
         "${htslib_SOURCE_DIR}/htscodecs/htscodecs/rANS_static.c"
         "${htslib_SOURCE_DIR}/htscodecs/htscodecs/rle.c"
         "${htslib_SOURCE_DIR}/htscodecs/htscodecs/tokenise_name3.c")
-    target_include_directories(htslib BEFORE PRIVATE "${htslib_SOURCE_DIR}" "${xz_SOURCE_DIR}/src/liblzma/api")
+    target_include_directories(htslib BEFORE PRIVATE "${htslib_SOURCE_DIR}" "${bz2_SOURCE_DIR}" "${xz_SOURCE_DIR}/src/liblzma/api")
     set_target_properties(htslib PROPERTIES
         POSITION_INDEPENDENT_CODE ON
         VISIBILITY_INLINES_HIDDEN ON)
