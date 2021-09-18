@@ -849,6 +849,21 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
   if (!genAst.empty())
     ctx->bases.back().ast =
         make_shared<IndexExpr>(N<IdExpr>(name), N<TupleExpr>(genAst));
+
+  vector<StmtPtr> stmts{nullptr}; // Will be filled later!
+  // Parse nested classes
+  for (auto sp : getClassMethods(stmt->suite))
+    if (sp && sp->getClass()) {
+      // Add dummy base to fix nested class' name.
+      ctx->bases.emplace_back(SimplifyContext::Base(canonicalName));
+      ctx->bases.back().ast = make_shared<IdExpr>(name);
+      auto origName = sp->getClass()->name;
+      stmts.emplace_back(transform(sp));
+      ctx->add(origName,
+               ctx->find(stmts.back()->getSuite()->stmts[0]->getClass()->name));
+      ctx->bases.pop_back();
+    }
+
   vector<Param> memberArgs;
   for (auto &s : substitutions)
     for (auto &i : s)
@@ -966,18 +981,8 @@ void SimplifyVisitor::visit(ClassStmt *stmt) {
     // if (stmt->baseClasses.size())
     // LOG("{} -> {}", stmt->name, c->toString(0));
   }
-  auto cls = N<ClassStmt>(canonicalName, vector<Param>{}, N<SuiteStmt>(),
+  stmts[0] = N<ClassStmt>(canonicalName, vector<Param>{}, N<SuiteStmt>(),
                           Attr({Attr::Extend}), vector<ExprPtr>{}, vector<ExprPtr>{});
-  vector<StmtPtr> stmts{cls};
-  // Parse nested classes
-  for (auto sp : getClassMethods(stmt->suite))
-    if (sp && sp->getClass()) {
-      // Add dummy base to fix nested class' name.
-      ctx->bases.emplace_back(SimplifyContext::Base(canonicalName));
-      ctx->bases.back().ast = make_shared<IdExpr>(name);
-      stmts.emplace_back(transform(sp));
-      ctx->bases.pop_back();
-    }
   resultStmt = N<SuiteStmt>(stmts);
 }
 
