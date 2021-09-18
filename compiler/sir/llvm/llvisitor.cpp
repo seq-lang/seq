@@ -392,23 +392,21 @@ void LLVMVisitor::runLLVMPipeline() {
 
 void LLVMVisitor::writeToObjectFile(const std::string &filename) {
   runLLVMPipeline();
+
+  std::error_code err;
+  auto out =
+      std::make_unique<llvm::ToolOutputFile>(filename, err, llvm::sys::fs::OF_None);
+  if (err)
+    compilationError(err.message());
+  llvm::raw_pwrite_stream *os = &out->os();
+
   auto &llvmtm = static_cast<llvm::LLVMTargetMachine &>(*machine);
   auto *mmiwp = new llvm::MachineModuleInfoWrapperPass(&llvmtm);
   llvm::legacy::PassManager pm;
 
-  llvm::Triple moduleTriple(module->getTargetTriple());
-  llvm::TargetLibraryInfoImpl tlii(moduleTriple);
+  llvm::TargetLibraryInfoImpl tlii(llvm::Triple(module->getTargetTriple()));
   pm.add(new llvm::TargetLibraryInfoWrapperPass(tlii));
-
-  std::error_code err;
-  auto out =
-      std::make_unique<llvm::ToolOutputFile>(filename, err, llvm::sys::fs::F_None);
-  if (err) {
-    compilationError(err.message());
-  }
-  llvm::raw_pwrite_stream *os = &out->os();
-  seqassert(!machine->addPassesToEmitFile(pm, *os, nullptr,
-                                          llvm::codegen::getFileType(),
+  seqassert(!machine->addPassesToEmitFile(pm, *os, nullptr, llvm::CGFT_ObjectFile,
                                           /*DisableVerify=*/true, mmiwp),
             "could not add passes");
   const_cast<llvm::TargetLoweringObjectFile *>(llvmtm.getObjFileLowering())
