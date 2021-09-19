@@ -5,7 +5,7 @@ set -e
 cd /github/workspace
 yum -y update
 yum -y install centos-release-scl wget python3 llvm-toolset-7
-scl enable llvm-toolset-7 bash
+source scl_source enable llvm-toolset-7
 
 # env
 export CC=clang
