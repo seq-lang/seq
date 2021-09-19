@@ -13,10 +13,8 @@ if [ -n "${1}" ]; then export JOBS="${1}"; fi
 echo "Using ${JOBS} cores..."
 
 LLVM_BRANCH="release/12.x"
-if [ ! -d "${SRCDIR}" ]; then
-  git clone --depth 1 -b release/12.x https://github.com/llvm/llvm-project "${SRCDIR}"
-fi
 if [ ! -f "${INSTALLDIR}/bin/llvm-config" ]; then
+  git clone --depth 1 -b "${LLVM_BRANCH}" https://github.com/llvm/llvm-project "${SRCDIR}"
   mkdir -p "${SRCDIR}/llvm/build"
   cd "${SRCDIR}/llvm/build"
   cmake .. \
