@@ -51,6 +51,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Cache Dependencies
+        id: cache-deps
+        uses: actions/cache@v2
+        with:
+          path: llvm
+          key: manylinux-deps-${{ secrets.CACHE_VERSION }}
+
       - name: Main
         uses: ./.github/actions/build-manylinux
 
@@ -127,7 +134,6 @@ jobs:
       - name: Build
         run: |
           mkdir build
-          ln -s $(pwd)/deps/lib/libomp.${LIBEXT} $(pwd)/build/libomp.${LIBEXT}
           (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
                                 -DCMAKE_C_COMPILER=${CC} \
                                 -DCMAKE_CXX_COMPILER=${CXX})
@@ -167,20 +173,16 @@ jobs:
       - name: Artifact Environment
         run: |
           echo "SEQ_BUILD_ARCHIVE=seq-$(uname -s | awk '{print tolower($0)}')-$(uname -m).tar.gz" >> $GITHUB_ENV
-          echo "SEQ_DEP_ARCHIVE=seq-deps-${OS_NAME}.tar.bz2" >> $GITHUB_ENV
 
       - name: Prepare Artifacts
         run: |
           mkdir -p seq-deploy/bin seq-deploy/lib/seq
           cp build/seqc seq-deploy/bin/
           cp build/libseq*.${LIBEXT} seq-deploy/lib/seq/
-          cp deps/lib/libomp.${LIBEXT} seq-deploy/lib/seq/
+          cp build/libomp.${LIBEXT} seq-deploy/lib/seq/
           cp -r stdlib seq-deploy/lib/seq/
           tar -czf ${SEQ_BUILD_ARCHIVE} seq-deploy
-          tar -cjf ${SEQ_DEP_ARCHIVE} deps
           du -sh seq-deploy
-          du -sh deps
-          ls -lah ${SEQ_DEP_ARCHIVE}
 
       - name: Load Release URL File
         if: contains(github.ref, 'tags/v')
