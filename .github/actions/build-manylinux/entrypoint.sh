@@ -20,8 +20,8 @@ fi
 
 # build
 mkdir build
+export LLVM_DIR=$(llvm/bin/llvm-config --cmakedir)
 (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
-                      -DLLVM_DIR=$(llvm/bin/llvm-config --cmakedir) \
                       -DCMAKE_C_COMPILER=${CC} \
                       -DCMAKE_CXX_COMPILER=${CXX})
 cmake --build build --config Release -- VERBOSE=1
