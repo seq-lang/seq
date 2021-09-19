@@ -5,11 +5,10 @@ set -e
 cd /github/workspace
 yum -y update
 yum -y install centos-release-scl wget python3 llvm-toolset-7
-source scl_source enable llvm-toolset-7
 
 # env
-export CC=clang
-export CXX=clang++
+export CC=/opt/rh/llvm-toolset-7/root/usr/bin/clang
+export CXX=/opt/rh/llvm-toolset-7/root/usr/bin/clang++
 export PYTHONPATH=$(pwd)/test/python
 export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
 python3 -m pip install numpy
