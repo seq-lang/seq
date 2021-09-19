@@ -4,7 +4,7 @@ set -e
 # setup
 cd /github/workspace
 yum -y update
-yum -y install python3
+yum -y install python3 python3-devel
 
 # env
 export PYTHONPATH=$(pwd)/test/python
