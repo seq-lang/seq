@@ -4,7 +4,7 @@ set -e
 # setup
 cd /github/workspace
 yum -y update
-yum -y install wget python3 llvm-toolset-7
+yum -y install python3 llvm-toolset-7
 
 # env
 export CC=/opt/rh/llvm-toolset-7/root/usr/bin/clang
