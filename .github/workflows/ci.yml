@@ -56,7 +56,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: llvm
-          key: manylinux-deps-${{ secrets.CACHE_VERSION }}
+          key: manylinux-llvm
 
       - name: Main
         uses: ./.github/actions/build-manylinux
@@ -107,21 +107,15 @@ jobs:
       - name: Linux Setup
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 12
           echo "LIBEXT=so" >> $GITHUB_ENV
           echo "OS_NAME=linux" >> $GITHUB_ENV
-          echo "LLVM_DIR=$(llvm-config-12 --cmakedir)" >> $GITHUB_ENV
 
       - name: macOS Setup
         if: startsWith(matrix.os, 'macos')
         run: |
           brew install automake
-          brew install llvm@12
           echo "LIBEXT=dylib" >> $GITHUB_ENV
           echo "OS_NAME=osx" >> $GITHUB_ENV
-          echo "LLVM_DIR=$(/usr/local/opt/llvm/bin/llvm-config --cmakedir)" >> $GITHUB_ENV
 
       - name: Set up Python
         run: |
@@ -131,10 +125,25 @@ jobs:
           which pip
           echo "SEQ_PYTHON=$(python test/python/find-python-library.py)" >> $GITHUB_ENV
 
+      - name: Cache Dependencies
+        id: cache-deps
+        uses: actions/cache@v2
+        with:
+          path: llvm
+          key: ${{ runner.os }}-llvm
+
+      - name: Build Dependencies
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: ./scripts/deps.sh 2
+        env:
+          CC: clang
+          CXX: clang++
+
       - name: Build
         run: |
           mkdir build
           (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
+                                -DLLVM_DIR=$(llvm/bin/llvm-config --cmakedir) \
                                 -DCMAKE_C_COMPILER=${CC} \
                                 -DCMAKE_CXX_COMPILER=${CXX})
           cmake --build build --config Release -- VERBOSE=1

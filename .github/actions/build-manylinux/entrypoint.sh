@@ -4,16 +4,10 @@ set -e
 # setup
 cd /github/workspace
 yum -y update
-yum -y install wget python3
-
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-bash miniconda.sh -b -p miniconda
-eval "$(miniconda/bin/conda shell.bash hook)"
-conda init
-conda install -y -c conda-forge clang-12
+yum -y install centos-release-scl wget python3 llvm-toolset-7
+scl enable llvm-toolset-7 bash
 
 # env
-cp miniconda/bin/clang-cpp miniconda/bin/clang++
 export CC=clang
 export CXX=clang++
 export PYTHONPATH=$(pwd)/test/python
