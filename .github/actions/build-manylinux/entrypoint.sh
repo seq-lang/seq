@@ -4,11 +4,9 @@ set -e
 # setup
 cd /github/workspace
 yum -y update
-yum -y install python3 llvm-toolset-7
+yum -y install python3
 
 # env
-export CC=/opt/rh/llvm-toolset-7/root/usr/bin/clang
-export CXX=/opt/rh/llvm-toolset-7/root/usr/bin/clang++
 export PYTHONPATH=$(pwd)/test/python
 export SEQ_PYTHON=$(python3 test/python/find-python-library.py)
 python3 -m pip install numpy
@@ -20,6 +18,8 @@ fi
 
 # build
 mkdir build
+export CC="$(pwd)/llvm/bin/clang"
+export CXX="$(pwd)/llvm/bin/clang++"
 export LLVM_DIR=$(llvm/bin/llvm-config --cmakedir)
 (cd build && cmake .. -DCMAKE_BUILD_TYPE=Release \
                       -DCMAKE_C_COMPILER=${CC} \
