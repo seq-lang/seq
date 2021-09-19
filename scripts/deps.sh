@@ -4,8 +4,8 @@ set -e
 export CC="${CC:-clang}"
 export CXX="${CXX:-clang++}"
 
-export INSTALLDIR="llvm"
-export SRCDIR="llvm-project"
+export INSTALLDIR="${PWD}/llvm"
+export SRCDIR="${PWD}/llvm-project"
 mkdir -p "${INSTALLDIR}" "${SRCDIR}"
 
 export JOBS=1
