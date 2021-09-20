@@ -201,11 +201,10 @@ reference sequence:
 
     from sys import argv
     from bio import *
-    K = Kmer[32]
     index = {}
 
     for record in FASTA(argv[1]):
-        for pos,kmer in record.seq.kmers_with_pos[K](step=1):
+        for pos,kmer in record.seq.kmers_with_pos(k=32, step=1):
             index[kmer] = pos
 
 Of course, there will be k-mers that appear multiple times, but let's ignore this
@@ -221,11 +220,10 @@ the minimum of a k-mer and its reverse complement:
 
     from sys import argv
     from bio import *
-    K = Kmer[32]
     index = {}
 
     for record in FASTA(argv[1]):
-        for pos,kmer in record.seq.kmers_with_pos[K](step=1):
+        for pos,kmer in record.seq.kmers_with_pos(k=32, step=1):
             index[min(kmer, ~kmer)] = pos  # <--
 
 (We'll have to use canonical k-mers when querying the index too, of course.)
@@ -273,11 +271,10 @@ Full code listing
     import pickle
     import gzip
 
-    K = Kmer[32]
     index = {}
 
     for record in FASTA(argv[1]):
-        for pos,kmer in record.seq.kmers_with_pos[K](step=1):
+        for pos,kmer in record.seq.kmers_with_pos(k=32, step=1):
             index[min(kmer, ~kmer)] = pos
 
     with gzip.open(argv[1] + '.index', 'wb') as jar:
@@ -302,11 +299,11 @@ The first step is to load the index:
     import pickle
     import gzip
 
-    K = Kmer[32]
+    K: Static[int] = 32
     index = None
 
     with gzip.open(argv[1] + '.index', 'rb') as jar:
-        index = pickle.load[dict[K,int]](jar)
+        index = pickle.load(jar, T=Dict[Kmer[K],int])
 
 Now we can iterate over our reads and query k-mers in the index. We need
 a way to keep track of candidate mapping positions as we process the
@@ -322,7 +319,7 @@ read:
 
     candidates = Dict[int,int]()  # position -> count mapping
     for record in FASTQ(argv[2]):
-        for pos,kmer in record.read.kmers_with_pos[K](step=1):
+        for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
                 candidates.increment(found - pos)
@@ -380,15 +377,15 @@ Full code listing
     import pickle
     import gzip
 
-    K = Kmer[32]
+    K: Static[int] = 32
     index = None
 
     with gzip.open(argv[1] + '.index', 'rb') as jar:
-        index = pickle.load[dict[K,int]](jar)
+        index = pickle.load(jar, T=Dict[Kmer[K],int])
 
     candidates = Dict[int,int]()  # position -> count mapping
     for record in FASTQ(argv[2]):
-        for pos,kmer in record.read.kmers_with_pos[K](step=1):
+        for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
                 candidates.increment(found - pos)
@@ -440,9 +437,9 @@ For now, we'll use a simple ``query.align(target)``:
 
 .. code:: seq
 
-    candidates = Dict[int,int]()
+    candidates = Dict[int,int]()  # position -> count mapping
     for record in FASTQ(argv[2]):
-        for pos,kmer in record.read.kmers_with_pos[K](step=1):
+        for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
                 candidates.increment(found - pos)
@@ -509,19 +506,19 @@ Full code listing
     import pickle
     import gzip
 
-    K = Kmer[32]
-    index = None
-
     reference = s''
     for record in FASTA(argv[1]):
         reference = record.seq
 
-    with gzip.open(argv[1] + '.index', 'rb') as jar:
-        index = pickle.load[dict[K,int]](jar)
+    K: Static[int] = 32
+    index = None
 
-    candidates = Dict[int,int]()
+    with gzip.open(argv[1] + '.index', 'rb') as jar:
+        index = pickle.load(jar, T=Dict[Kmer[K],int])
+
+    candidates = Dict[int,int]()  # position -> count mapping
     for record in FASTQ(argv[2]):
-        for pos,kmer in record.read.kmers_with_pos[K](step=1):
+        for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
                 candidates.increment(found - pos)
@@ -552,8 +549,8 @@ We can write this as a pipeline in Seq as follows:
 .. code:: seq
 
     def find_candidates(record):
-        candidates = Dict[int,int]()
-        for pos,kmer in record.read.kmers_with_pos[K](step=1):
+        candidates = Dict[int,int]()  # position -> count mapping
+        for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
                 candidates.increment(found - pos)
@@ -649,19 +646,19 @@ Full code listing
     import pickle
     import gzip
 
-    K = Kmer[32]
-    index = None
-
     reference = s''
     for record in FASTA(argv[1]):
         reference = record.seq
 
+    K: Static[int] = 32
+    index = None
+
     with gzip.open(argv[1] + '.index', 'rb') as jar:
-        index = pickle.load[dict[K,int]](jar)
+        index = pickle.load(jar, T=Dict[Kmer[K],int])
 
     def find_candidates(record):
-        candidates = Dict[int,int]()
-        for pos,kmer in record.read.kmers_with_pos[K](step=1):
+        candidates = Dict[int,int]()  # position -> count mapping
+        for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
                 candidates.increment(found - pos)
@@ -734,19 +731,19 @@ Full code listing
     import pickle
     import gzip
 
-    K = Kmer[32]
-    index = None
-
     reference = s''
     for record in FASTA(argv[1]):
         reference = record.seq
 
+    K: Static[int] = 32
+    index = None
+
     with gzip.open(argv[1] + '.index', 'rb') as jar:
-        index = pickle.load[dict[K,int]](jar)
+        index = pickle.load(jar, T=Dict[Kmer[K],int])
 
     def find_candidates(record):
-        candidates = Dict[int,int]()
-        for pos,kmer in record.read.kmers_with_pos[K](step=1):
+        candidates = Dict[int,int]()  # position -> count mapping
+        for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
                 candidates.increment(found - pos)

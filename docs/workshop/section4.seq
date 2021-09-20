@@ -16,7 +16,7 @@ K: Static[int] = 32
 index = None
 
 with gzip.open(argv[1] + '.index', 'rb') as jar:
-    index = pickle.load(jar, T=dict[Kmer[K],int])
+    index = pickle.load(jar, T=Dict[Kmer[K],int])
 
 candidates = Dict[int,int]()  # position -> count mapping
 for record in FASTQ(argv[2]):
