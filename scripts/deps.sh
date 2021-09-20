@@ -28,13 +28,15 @@ if [ ! -f "${INSTALLDIR}/bin/llvm-config" ]; then
   make install
 
   # clang
-  mkdir -p "${SRCDIR}/clang/build"
-  cd "${SRCDIR}/clang/build"
-  cmake .. \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_INSTALL_PREFIX="${INSTALLDIR}"
-  make -j "${JOBS}"
-  make install
+  if ! command -v clang &> /dev/null; then
+    mkdir -p "${SRCDIR}/clang/build"
+    cd "${SRCDIR}/clang/build"
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX="${INSTALLDIR}"
+    make -j "${JOBS}"
+    make install
+  fi
 
   "${INSTALLDIR}/bin/llvm-config" --cmakedir
 fi
