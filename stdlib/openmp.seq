@@ -99,6 +99,10 @@ def _ordered_end(loc_ref: Ptr[Ident], gtid: int):
     from C import __kmpc_end_ordered(Ptr[Ident], i32)
     __kmpc_end_ordered(loc_ref, i32(gtid))
 
+def _taskwait(loc_ref: Ptr[Ident], gtid: int):
+    from C import __kmpc_omp_taskwait(Ptr[Ident], i32)
+    __kmpc_omp_taskwait(loc_ref, i32(gtid))
+
 def _taskgroup_begin(loc_ref: Ptr[Ident], gtid: int):
     from C import __kmpc_taskgroup(Ptr[Ident], i32)
     __kmpc_taskgroup(loc_ref, i32(gtid))
@@ -109,11 +113,7 @@ def _taskgroup_end(loc_ref: Ptr[Ident], gtid: int):
 
 def _task_alloc(loc_ref: Ptr[Ident], gtid: int, flags: int, size_of_task: int, size_of_shareds: int, task_entry: Routine):
     from C import __kmpc_omp_task_alloc(Ptr[Ident], i32, i32, int, int, Routine) -> cobj
-    from internal.gc import add_roots
-    task_handle = __kmpc_omp_task_alloc(loc_ref, i32(gtid), i32(flags), size_of_task, size_of_shareds, task_entry)
-    base_offset = size_of_task - size_of_shareds
-    add_roots(task_handle + base_offset, task_handle + size_of_task)
-    return task_handle
+    return __kmpc_omp_task_alloc(loc_ref, i32(gtid), i32(flags), size_of_task, size_of_shareds, task_entry)
 
 def _task_run(loc_ref: Ptr[Ident], gtid: int, new_task: cobj):
     from C import __kmpc_omp_task(Ptr[Ident], i32, cobj) -> i32
@@ -333,7 +333,7 @@ def _dynamic_loop_outline_template(gtid_ptr: Ptr[i32], btid_ptr: Ptr[i32], args)
 # P = privates; tuple of types
 # S = shareds; tuple of pointers
 def _spawn_and_run_task[P,S](loc_ref: Ptr[Ident], gtid: int, routine: cobj, priv: P, shared: S):
-    from internal.gc import sizeof
+    from internal.gc import sizeof, add_roots
 
     TaskThunk = TaskWithPrivates[P]
     flags = 1
@@ -346,9 +346,11 @@ def _spawn_and_run_task[P,S](loc_ref: Ptr[Ident], gtid: int, routine: cobj, priv
     if staticlen(shared) != 0:
         shared_ptr = task[0].task.shareds
         str.memcpy(shared_ptr, __ptr__(shared).as_byte(), size_of_shareds)
+        add_roots(shared_ptr, shared_ptr + size_of_shareds)
     if staticlen(priv) != 0:
         priv_ptr = task.as_byte() + sizeof(Task)
         str.memcpy(priv_ptr, __ptr__(priv).as_byte(), size_of_privs)
+        add_roots(priv_ptr, priv_ptr + size_of_privs)
 
     _task_run(loc_ref, gtid, task.as_byte())
 

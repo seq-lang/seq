@@ -1,3 +1,4 @@
+@tuple
 class Block[T]:
     '''
     Represents a block of data; useful in parallelization to batch data
@@ -5,9 +6,8 @@ class Block[T]:
     _data: Ptr[T]
     _size: int
 
-    def __init__(self, size: int):
-        self._data = Ptr[T](size)
-        self._size = 0
+    def __new__(size: int):
+        return Block[T](Ptr[T](size), 0)
 
     def __iter__(self):
         data = self._data
@@ -33,7 +33,7 @@ class Block[T]:
 
     def _add(self, elem: T):
         self._data[self._size] = elem
-        self._size += 1
+        return Block[T](self._data, self._size + 1)
 
 def _blocks[T](g: Generator[T], size: int):
     b = Block[T](size)
@@ -41,7 +41,7 @@ def _blocks[T](g: Generator[T], size: int):
         if len(b) == size:
             yield b
             b = Block[T](size)
-        b._add(a)
+        b = b._add(a)
     if b:
         yield b
 
