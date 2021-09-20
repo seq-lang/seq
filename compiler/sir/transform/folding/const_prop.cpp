@@ -8,14 +8,13 @@ namespace seq {
 namespace ir {
 namespace transform {
 namespace folding {
-
 namespace {
-
 bool okConst(Value *v) {
   return v && (isA<IntConst>(v) || isA<FloatConst>(v) || isA<BoolConst>(v));
 }
-
 } // namespace
+
+const std::string ConstPropPass::KEY = "core-folding-const-prop";
 
 void ConstPropPass::handle(VarValue *v) {
   auto *M = v->getModule();

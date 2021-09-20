@@ -23,15 +23,15 @@ namespace seq {
 namespace ast {
 
 TypeContext::TypeContext(shared_ptr<Cache> cache)
-    : Context<TypecheckItem>(""), cache(move(cache)), typecheckLevel(0), iteration(0),
+    : Context<TypecheckItem>(""), cache(move(cache)), typecheckLevel(0),
       allowActivation(true), age(0), realizationDepth(0) {
   stack.push_front(vector<string>());
   bases.push_back({"", nullptr, nullptr});
 }
 
 shared_ptr<TypecheckItem> TypeContext::add(TypecheckItem::Kind kind, const string &name,
-                                           types::TypePtr type, bool stat) {
-  auto t = make_shared<TypecheckItem>(kind, type, stat);
+                                           types::TypePtr type) {
+  auto t = make_shared<TypecheckItem>(kind, type);
   add(name, t);
   return t;
 }
@@ -81,14 +81,16 @@ string TypeContext::getBase() const {
 }
 
 shared_ptr<types::LinkType> TypeContext::addUnbound(const Expr *expr, int level,
-                                                    bool setActive, bool isStatic) {
+                                                    bool setActive, char staticType) {
   auto t = make_shared<types::LinkType>(types::LinkType::Unbound, cache->unboundCount++,
-                                        level, nullptr, isStatic);
+                                        level, nullptr, staticType);
+  // if (t->id == 7815)
+  // LOG("debug");
   t->setSrcInfo(expr->getSrcInfo());
   LOG_TYPECHECK("[ub] new {}: {} ({})", t->debugString(true), expr->toString(),
                 setActive);
   if (setActive && allowActivation)
-    activeUnbounds[t] = FormatVisitor::apply(expr);
+    activeUnbounds[t] = cache->getContent(expr->getSrcInfo());
   return t;
 }
 
@@ -102,7 +104,7 @@ types::TypePtr TypeContext::instantiate(const Expr *expr, types::TypePtr type,
           !(g.type->getLink() && g.type->getLink()->kind == types::LinkType::Generic)) {
         genericCache[g.id] = g.type;
       }
-  auto t = type->instantiate(getLevel(), cache->unboundCount, genericCache);
+  auto t = type->instantiate(getLevel(), &(cache->unboundCount), &genericCache);
   for (auto &i : genericCache) {
     if (auto l = i.second->getLink()) {
       if (l->kind != types::LinkType::Unbound)
@@ -115,7 +117,7 @@ types::TypePtr TypeContext::instantiate(const Expr *expr, types::TypePtr type,
         if (activate && allowActivation)
           activeUnbounds[i.second] =
               format("{} of {} in {}", l->genericName.empty() ? "?" : l->genericName,
-                     type->toString(), FormatVisitor::apply(expr));
+                     type->toString(), cache->getContent(expr->getSrcInfo()));
       }
     }
   }
@@ -182,13 +184,14 @@ types::TypePtr TypeContext::findMember(const string &typeName,
 
 types::FuncTypePtr
 TypeContext::findBestMethod(const Expr *expr, const string &member,
-                            const vector<pair<string, types::TypePtr>> &args) {
+                            const vector<pair<string, types::TypePtr>> &args,
+                            bool checkSingle) {
   auto typ = expr->getType()->getClass();
   seqassert(typ, "not a class");
   auto methods = findMethod(typ->name, member);
   if (methods.empty())
     return nullptr;
-  if (methods.size() == 1) // methods is not overloaded
+  if (methods.size() == 1 && !checkSingle) // methods is not overloaded
     return methods[0];
 
   // Calculate the unification score for each available methods and pick the one with
@@ -199,17 +202,18 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
     vector<types::TypePtr> reordered;
     vector<CallExpr::Arg> callArgs;
     for (auto &a : args) {
-      callArgs.push_back({a.first, make_unique<NoneExpr>()}); // dummy expression
+      callArgs.push_back({a.first, make_shared<NoneExpr>()}); // dummy expression
       callArgs.back().value->setType(a.second);
     }
     auto score = reorderNamedArgs(
         method.get(), callArgs,
         [&](int s, int k, const vector<vector<int>> &slots, bool _) {
-          for (int si = 0; si < slots.size(); si++)
+          for (int si = 0; si < slots.size(); si++) {
             // Ignore *args, *kwargs and default arguments
             reordered.emplace_back(si == s || si == k || slots[si].size() != 1
                                        ? nullptr
                                        : args[slots[si][0]].second);
+          }
           return 0;
         },
         [](const string &) { return -1; });
@@ -220,14 +224,17 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
     //   Optional unwrap gets the score of 1.
     //   Optional wrap gets the score of 2.
     //   Successful unification gets the score of 3 (highest priority).
-    for (int ai = 0; ai < reordered.size(); ai++) {
-      auto expectedType = method->args[ai + 1];
-      auto expectedClass = expectedType->getClass();
+    for (int ai = 0, mi = 1, gi = 0; ai < reordered.size(); ai++) {
       auto argType = reordered[ai];
-      // Ignore traits, *args/**kwargs and default arguments.
-      if (!argType || (expectedClass &&
-                       (expectedClass->isTrait || expectedClass->name == "Generator")))
+      if (!argType)
         continue;
+      auto expectedType = method->ast->args[ai].generic ? method->generics[gi++].type
+                                                        : method->args[mi++];
+      auto expectedClass = expectedType->getClass();
+      // Ignore traits, *args/**kwargs and default arguments.
+      if (expectedClass && expectedClass->name == "Generator")
+        continue;
+      // LOG("<~> {} {}", argType->toString(), expectedType->toString());
       auto argClass = argType->getClass();
 
       types::Type::Unification undo;
@@ -237,31 +244,33 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
         score += u + 3;
         continue;
       }
-      // Unification failed: maybe we need to wrap an argument?
-      if (expectedClass && expectedClass->name == TYPE_OPTIONAL && argClass &&
-          argClass->name != expectedClass->name) {
-        u = argType->unify(expectedClass->generics[0].type.get(), &undo);
-        undo.undo();
-        if (u >= 0) {
-          score += u + 2;
-          continue;
+      if (!method->ast->args[ai].generic) {
+        // Unification failed: maybe we need to wrap an argument?
+        if (expectedClass && expectedClass->name == TYPE_OPTIONAL && argClass &&
+            argClass->name != expectedClass->name) {
+          u = argType->unify(expectedClass->generics[0].type.get(), &undo);
+          undo.undo();
+          if (u >= 0) {
+            score += u + 2;
+            continue;
+          }
         }
-      }
-      // ... or unwrap it (less ideal)?
-      if (argClass && argClass->name == TYPE_OPTIONAL && expectedClass &&
-          argClass->name != expectedClass->name) {
-        u = argClass->generics[0].type->unify(expectedType.get(), &undo);
-        undo.undo();
-        if (u >= 0) {
-          score += u;
-          continue;
+        // ... or unwrap it (less ideal)?
+        if (argClass && argClass->name == TYPE_OPTIONAL && expectedClass &&
+            argClass->name != expectedClass->name) {
+          u = argClass->generics[0].type->unify(expectedType.get(), &undo);
+          undo.undo();
+          if (u >= 0) {
+            score += u;
+            continue;
+          }
         }
       }
       // This method cannot be selected, ignore it.
       score = -1;
       break;
     }
-    //    LOG("{} {} / {}", typ->toString(), method->toString(), score);
+    // LOG("{} {} / {}", typ->toString(), method->toString(), score);
     if (score >= 0)
       scores.emplace_back(std::make_pair(score, mi));
   }
@@ -278,7 +287,7 @@ TypeContext::findBestMethod(const Expr *expr, const string &member,
   return methods[scores[0].second];
 }
 
-int TypeContext::reorderNamedArgs(types::RecordType *func,
+int TypeContext::reorderNamedArgs(types::FuncType *func,
                                   const vector<CallExpr::Arg> &args,
                                   ReorderDoneFn onDone, ReorderErrorFn onError,
                                   const vector<char> &known) {
@@ -290,20 +299,16 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
   int score = 0;
 
   // 0. Find *args and **kwargs
-  FunctionStmt *ast = nullptr;
-  if (auto fn = func->getFunc())
-    ast = cache->functions[fn->funcName].ast.get();
-
   // True if there is a trailing ellipsis (full partial: fn(all_args, ...))
   bool partial = !args.empty() && args.back().value->getEllipsis() &&
                  !args.back().value->getEllipsis()->isPipeArg &&
                  args.back().name.empty();
 
   int starArgIndex = -1, kwstarArgIndex = -1;
-  for (int i = 0; ast && i < ast->args.size(); i++) {
-    if ((known.empty() || !known[i]) && startswith(ast->args[i].name, "**"))
+  for (int i = 0; i < func->ast->args.size(); i++) {
+    if ((known.empty() || !known[i]) && startswith(func->ast->args[i].name, "**"))
       kwstarArgIndex = i, score -= 2;
-    else if ((known.empty() || !known[i]) && startswith(ast->args[i].name, "*"))
+    else if ((known.empty() || !known[i]) && startswith(func->ast->args[i].name, "*"))
       starArgIndex = i, score -= 2;
   }
   seqassert(known.empty() || starArgIndex == -1 || !known[starArgIndex],
@@ -313,8 +318,8 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
 
   // 1. Assign positional arguments to slots
   // Each slot contains a list of arg's indices
-  vector<vector<int>> slots(func->args.size() - 1);
-  seqassert(known.empty() || func->args.size() - 1 == known.size(),
+  vector<vector<int>> slots(func->ast->args.size());
+  seqassert(known.empty() || func->ast->args.size() == known.size(),
             "bad 'known' string");
   vector<int> extra;
   std::map<string, int> namedArgs, extraNamedArgs; // keep the map--- we need it sorted!
@@ -330,7 +335,7 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
       namedArgs[args[ai].name] = ai;
     }
   }
-  score = 2 * int(slots.size());
+  score += 2 * int(slots.size() - func->funcGenerics.size());
 
   for (auto ai : vector<int>{std::max(starArgIndex, kwstarArgIndex),
                              std::min(starArgIndex, kwstarArgIndex)})
@@ -341,14 +346,10 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
 
   // 2. Assign named arguments to slots
   if (!namedArgs.empty()) {
-    if (!ast)
-      return onError(format("unexpected named argument '{}' "
-                            "(function pointers cannot have named arguments)",
-                            namedArgs.begin()->first));
     std::map<string, int> slotNames;
-    for (int i = 0; i < ast->args.size(); i++)
+    for (int i = 0; i < func->ast->args.size(); i++)
       if (known.empty() || !known[i]) {
-        slotNames[cache->reverseIdentifierLookup[ast->args[i].name]] = i;
+        slotNames[cache->reverseIdentifierLookup[func->ast->args[i].name]] = i;
       }
     for (auto &n : namedArgs) {
       if (!in(slotNames, n.first))
@@ -362,8 +363,8 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
 
   // 3. Fill in *args, if present
   if (!extra.empty() && starArgIndex == -1)
-    return onError(format("too many arguments for {} (expected {}, got {})",
-                          func->toString(), func->args.size() - 1,
+    return onError(format("too many arguments for {} (expected maximum {}, got {})",
+                          func->toString(), func->ast->args.size(),
                           args.size() - partial));
   if (starArgIndex != -1)
     slots[starArgIndex] = extra;
@@ -376,13 +377,14 @@ int TypeContext::reorderNamedArgs(types::RecordType *func,
       slots[kwstarArgIndex].push_back(e.second);
 
   // 5. Fill in the default arguments
-  for (auto i = 0; i < func->args.size() - 1; i++)
+  for (auto i = 0; i < func->ast->args.size(); i++)
     if (slots[i].empty() && i != starArgIndex && i != kwstarArgIndex) {
-      if ((ast && ast->args[i].deflt) || (!known.empty() && known[i]))
+      if (!func->ast->args[i].generic &&
+          (func->ast->args[i].deflt || (!known.empty() && known[i])))
         score -= 2;
-      else if (!partial)
+      else if (!partial && !func->ast->args[i].generic)
         return onError(format("missing argument '{}'",
-                              cache->reverseIdentifierLookup[ast->args[i].name]));
+                              cache->reverseIdentifierLookup[func->ast->args[i].name]));
     }
   return score + onDone(starArgIndex, kwstarArgIndex, slots, partial);
 }

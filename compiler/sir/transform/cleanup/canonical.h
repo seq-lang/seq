@@ -11,11 +11,16 @@ namespace cleanup {
 /// Canonicalization pass that flattens nested series
 /// flows, puts operands in a predefined order, etc.
 class CanonicalizationPass : public OperatorPass, public Rewriter {
+private:
+  std::string sideEffectsKey;
+
 public:
   /// Constructs a canonicalization pass
-  CanonicalizationPass() : OperatorPass(/*childrenFirst=*/true) {}
+  /// @param sideEffectsKey the side effect analysis' key
+  CanonicalizationPass(const std::string &sideEffectsKey)
+      : OperatorPass(/*childrenFirst=*/true), sideEffectsKey(sideEffectsKey) {}
 
-  const std::string KEY = "core-cleanup-canon";
+  static const std::string KEY;
   std::string getKey() const override { return KEY; }
 
   void run(Module *m) override;

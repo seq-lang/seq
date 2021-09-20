@@ -37,17 +37,11 @@ TypecheckVisitor::TypecheckVisitor(shared_ptr<TypeContext> ctx,
   prependStmts = stmts ? stmts : make_shared<vector<StmtPtr>>();
 }
 
-StmtPtr
-TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts,
-                        const unordered_map<string, pair<string, int64_t>> &defines) {
+StmtPtr TypecheckVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
   auto ctx = make_shared<TypeContext>(cache);
   cache->typeCtx = ctx;
   TypecheckVisitor v(ctx);
-  for (auto &d : defines)
-    ctx->add(TypecheckItem::Type, d.first, make_shared<StaticType>(d.second.second),
-             true);
-  auto infer = v.inferTypes(stmts->clone(), true);
-  LOG_TYPECHECK("realized <toplevel> in {} iterations", infer.first);
+  auto infer = v.inferTypes(stmts->clone(), true, "<top>");
   return move(infer.second);
 }
 
@@ -59,6 +53,7 @@ TypePtr TypecheckVisitor::unify(TypePtr &a, const TypePtr &b) {
   if (a->unify(b.get(), &undo) >= 0)
     return a;
   undo.undo();
+  // LOG("{} / {}", a->debugString(true), b->debugString(true));
   a->unify(b.get(), &undo);
   error("cannot unify {} and {}", a->toString(), b->toString());
   return nullptr;

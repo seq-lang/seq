@@ -35,7 +35,7 @@ def _sort_list(self, key, algorithm: str):
         raise ValueError("Algorithm '" + algorithm + "' does not exist")
 
 @extend
-class List[T]:
+class List:
     def sort(
         self,
         key = Optional[int](),

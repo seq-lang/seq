@@ -158,8 +158,8 @@ class X[T]:
             return a + b + c
 
         add_one = add(1, ...)
-        add_two = add[int](3, c=-1, ...)
-        print add[int](1, 2, 3)
+        add_two = add(3, c=-1, ...)
+        print add(1, 2, 3)
         print add_one(5, 0)
         print 42 |> add_two
 

@@ -42,7 +42,9 @@ def get_mems(n, s, sa, lcp, min_size, anchors):
       d[bio.fmindex._enc(s._at(sa[i] - 1)) if sa[i] else 4].append(i)
       i += 1
     if n.lcp >= min_size:
-      for a, ap in itertools.product(range(5), range(5), False):
+      for a, ap in itertools.product(range(5), range(5)):
+        if a == ap:
+          continue
         for posp, pos in itertools.product(d[a], n.data[ap]):
           a, b = sa[posp], sa[pos]
           if a > b: a, b = b, a
@@ -129,7 +131,7 @@ def anchor(x, y, sa, lcp, anchors, xs, xe, ys, ye, depth = 0):
 def avid(x, y):
   # Construct SA & LCP
   t = time.time()
-  s = seq(f'{x}X{y}')
+  s = bio.seq(f'{x}X{y}')
   sa = s.suffix_array()
   lcp = s.lcp(sa)
   print(f'LCP & SA done... {time.time()-t}')

@@ -16,12 +16,20 @@ print a.__class__ #: str
 
 #%% none_unbound,barebones
 a = None
-#! ERROR: cannot typecheck the program
+
+#%% list_unbound,barebones
+a = []
+#! cannot typecheck the program
+
 
 #%% id_static,barebones
-def foo[N: int]():
+def foo[N: Static[int]]():
     print N
-foo[5]() #: 5
+foo(5) #: 5
+
+def fox(N: Static[int]):
+    print N
+fox(6) #: 6
 
 #%% if,barebones
 y = 1 if True else 2
@@ -29,11 +37,11 @@ print y.__class__ #: int
 
 a = None
 b = 5
-z = a if True else b
+z = a if bool(True) else b # needs bool to prevent static evaluation
 print z, z.__class__ #: None Optional[int]
 
 zz = 1.11 if True else None
-print zz, zz.__class__ #: 1.11 Optional[float]
+print zz, zz.__class__ #: 1.11 float
 
 #%% binary,barebones
 @extend
@@ -59,28 +67,28 @@ class float:
     def __xor__(self, i: int): print 'xor'; return 0
 # double assignment to disable propagation
 def f(x): return x
-a = 1.0
-a = 5.0
-a + 1 #: add
+a = f(1.0)
+a = f(5.0)
+a + f(1) #: add
 # wrap in function to disable canonicalization
 a - f(1) #: sub
-a * 2 #: mul
-a ** 2 #: pow
-a // 2 #: div
-a / 2 #: truediv
-a @ 1 #: matmul
-a % 1 #: mod
-a < 1 #: lt
-a <= 1 #: le
-a > 1 #: gt
-a >= 1 #: ge
-a == 1 #: eq
-a != 1 #: ne
-a << 1 #: lshift
-a >> 1 #: rshift
-a & 1 #: and
-a | 1 #: or
-a ^ 1 #: xor
+a * f(2) #: mul
+a ** f(2) #: pow
+a // f(2) #: div
+a / f(2) #: truediv
+a @ f(1) #: matmul
+a % f(1) #: mod
+a < f(1) #: lt
+a <= f(1) #: le
+a > f(1) #: gt
+a >= f(1) #: ge
+a == f(1) #: eq
+a != f(1) #: ne
+a << f(1) #: lshift
+a >> f(1) #: rshift
+a & f(1) #: and
+a | f(1) #: or
+a ^ f(1) #: xor
 
 #%% binary_rmagic,barebones
 class Foo[T]:
@@ -108,8 +116,8 @@ print moo() and False #: moo
 #%% binary_is,barebones
 print 5 is None #: False
 print None is None #: True
-print (None if True else 1) is None #: True
-print (None if False else 1) is None #: False
+print (None if bool(True) else 1) is None #: True
+print (None if bool(False) else 1) is None #: False
 
 print 5 is 5.0 #: False
 print 5 is 6 #: False
@@ -166,23 +174,27 @@ except ValueError as e:
 def foo2(a: int):
     print a
     return 1
-None |> foo2 #! ERROR: cannot typecheck the program
+try:
+    None |> foo2
+except ValueError:
+    print 'exception' #: exception
 # Explanation: None can also be Optional[Generator[int]]
 # We cannot decide if this is a generator to be unrolled in a pipe,
 # or just an argument to be passed to a function.
+# So this will default to NoneType at the end.
 
 #%% instantiate_err,barebones
 def foo[N]():
     return N()
-foo[int, float]()  #! ERROR: expected 1 generics
+foo(int, float)  #! too many arguments
 
 #%% instantiate_err_2,barebones
 def foo[N, T]():
     return N()
-foo[int]()  #! ERROR: expected 2 generics
+foo(int)  #! cannot typecheck the program
 
 #%% instantiate_err_3,barebones
-Ptr[int, float]()  #! ERROR: expected 1 generics
+Ptr[int, float]()  #! expected 1 generics
 
 #%% slice,barebones
 z = [1, 2, 3, 4, 5]
@@ -202,18 +214,18 @@ print a[3:5] #: ()
 
 #%% static_index_err,barebones
 a = (1, 2)
-a[5] #! ERROR: tuple index 5 out of bounds (len: 2)
+a[5] #! tuple index 5 out of bounds (len: 2)
 
 #%% static_index_err_2,barebones
 a = (1, 2)
-a[-3] #! ERROR: tuple index -1 out of bounds (len: 2)
+a[-3] #! tuple index -1 out of bounds (len: 2)
 
 #%% index_func_instantiate,barebones
 class X:
     def foo[T](self, x: T):
         print x.__class__, x
 x = X()
-x.foo[int](5) #: int 5
+x.foo(5, int) #: int 5
 
 #%% index,barebones
 l = [1, 2, 3]
@@ -227,7 +239,7 @@ print l, l.__class__ #: [(str, 1, True, 5.15)] List[Tuple[str,int,bool,float]]
 
 #%% dot_case_1,barebones
 a = []
-print a[0].loop()  #! ERROR: cannot find 'loop' in int
+print a[0].loop()  #! cannot find 'loop' in int
 a.append(5)
 
 #%% dot_case_2,barebones
@@ -241,7 +253,7 @@ print a.len #: 1
 
 #%% dot_case_4_err,barebones
 a = [5]
-a.foo #! ERROR: cannot find 'foo' in List[int]
+a.foo #! cannot find 'foo' in List[int]
 
 #%% dot_case_6,barebones
 class Foo:
@@ -293,7 +305,7 @@ class Foo:
         print 'foo'
     def method(self, a):
         print a
-Foo().clsmethod() #! ERROR: too many arguments for Foo.clsmethod (expected 0, got 1)
+Foo().clsmethod() #! too many arguments for Foo.clsmethod (expected maximum 0, got 1)
 
 #%% call,barebones
 def foo(a, b, c='hi'):
@@ -320,9 +332,9 @@ foo(b=2.2, c=12u, a=1) #: foo 1 2.2 12
 f = Foo() #: Foo.__init__
 print f.foo(a=5) #: Foo.foo 5
 #: s
-print f.bar[int](a=1) #: Foo.bar 1
+print f.bar(a=1, T=int) #: Foo.bar 1
 #: int
-print Foo.bar[float](Foo(), 1.1) #: Foo.__init__
+print Foo.bar(Foo(), 1.1, T=float) #: Foo.__init__
 #: Foo.bar 1.1
 #: float
 print Foo.bar(Foo(), 's') #: Foo.__init__
@@ -344,17 +356,17 @@ print Moo(1) #: Moo.__new__
 #%% call_err_2,barebones
 class A:
     a: A
-a = A() #! ERROR: recursive default arguments
+a = A() #! recursive default arguments
 
 #%% call_err_3,barebones
 class G[T]:
     t: T
 class A:
     ga: G[A]
-a = A() #! ERROR: recursive default arguments
+a = A() #! recursive default arguments
 
 #%% call_err_4,barebones
-seq_print(1, name="56", name=2) #! ERROR: repeated named argument 'name'
+seq_print(1, name="56", name=2) #! repeated named argument 'name'
 
 #%% call_partial,barebones
 def foo(i, j, k):
@@ -399,7 +411,7 @@ print z.__class__ #: ff[float,...,str]
 #%% call_arguments_partial,barebones
 def doo[R, T](a: Callable[[T], R], b: Generator[T], c: Optional[T], d: T):
     print R.__class__, T.__class__
-    print a.__class__, b.__class__
+    print a.__class__[:8], b.__class__
     for i in b:
         print a(i)
     print c, c.__class__
@@ -408,7 +420,7 @@ def doo[R, T](a: Callable[[T], R], b: Generator[T], c: Optional[T], d: T):
 l = [1, 2, 3]
 doo(b=l, d=Optional(5), c=l[0], a=lambda x: x+1)
 #: int int
-#: ._lambda_22[...] Generator[int]
+#: ._lambda Generator[int]
 #: 2
 #: 3
 #: 4
@@ -419,7 +431,7 @@ l = [1]
 def adder(a, b): return a+b
 doo(b=l, d=Optional(5), c=l[0], a=adder(b=4, ...))
 #: int int
-#: adder[...,int] Generator[int]
+#: adder[.. Generator[int]
 #: 5
 #: 1 Optional[int]
 #: 5 int
@@ -442,7 +454,7 @@ p(1, z=5)
 q = p(zh=43, ...)
 q(1)
 r = q(5, 38, ...)
-r(1, a=1) #! ERROR: too many arguments for foo[T1,T2,T3] (expected 3, got 2)
+r(1, a=1) #! too many arguments for foo[T1,T2,T3] (expected maximum 3, got 2)
 
 #%% call_kwargs,barebones
 def kwhatever(**kwargs):
@@ -502,25 +514,31 @@ print isinstance({1, 2}, List), isinstance({1, 2}, Set[float])
 print isinstance(Optional(5), Optional[int]), isinstance(Optional(), Optional)
 #: True True
 print isinstance(Optional(), Optional[int]), isinstance(Optional('s'), Optional[int])
-#: True False
+#: False False
 print isinstance(None, Optional), isinstance(None, Optional[int])
-#: True True
+#: True False
+print isinstance(None, Optional[NoneType])
+#: True
 print isinstance({1, 2}, List)
 #: False
 
 print staticlen((1, 2, 3)), staticlen((1, )), staticlen('hehe')
 #: 3 1 2
 
-print hasattr(typeof([1, 2]), "__getitem__")
+print hasattr([1, 2], "__getitem__")
+#: True
+print hasattr(type([1, 2]), "__getitem__")
 #: True
 print hasattr(int, "__getitem__")
 #: False
+print hasattr([1, 2], "__getitem__", str)
+#: False
 
 #%% staticlen_err,barebones
-print staticlen([1, 2]) #! ERROR: List[int] is not a tuple type
+print staticlen([1, 2]) #! List[int] is not a tuple type
 
 #%% compile_error,barebones
-compile_error("woo-hoo") #! ERROR: custom error: woo-hoo
+compile_error("woo-hoo") #! custom error: woo-hoo
 
 #%% stack_alloc,barebones
 a = __array__[int](2)
@@ -528,9 +546,9 @@ print a.__class__ #: Array[int]
 
 #%% typeof,barebones
 a = 5
-z = List[typeof(a)]()
+z = List[type(a)]()
 z.append(6)
-print z.__class__, z, typeof(1.1).__class__  #: List[int] [6] float
+print z.__class__, z, type(1.1).__class__  #: List[int] [6] float
 
 #%% ptr,barebones
 v = 5
@@ -589,3 +607,9 @@ t = tuple(i+1 for i in (1,2,3))
 print t #: (2, 3, 4)
 print tuple((j, i) for i, j in ((1, 'a'), (2, 'b'), (3, 'c')))
 #: ((a, 1), (b, 2), (c, 3))
+
+#%% static_unify,barebones
+def foo(x: Callable[[1,2], 3]): pass  #! unexpected static type
+
+#%% static_unify_2,barebones
+def foo(x: List[1]): pass  #! cannot unify T and 1

@@ -1,5 +1,6 @@
 #include "dead_code.h"
 
+#include "sir/analyze/module/side_effect.h"
 #include "sir/util/cloning.h"
 
 namespace seq {
@@ -12,9 +13,25 @@ BoolConst *boolConst(Value *v) { return cast<BoolConst>(v); }
 IntConst *intConst(Value *v) { return cast<IntConst>(v); }
 } // namespace
 
+const std::string DeadCodeCleanupPass::KEY = "core-cleanup-dce";
+
 void DeadCodeCleanupPass::run(Module *m) {
   numReplacements = 0;
   OperatorPass::run(m);
+}
+
+void DeadCodeCleanupPass::handle(SeriesFlow *v) {
+  auto *r = getAnalysisResult<analyze::module::SideEffectResult>(sideEffectsKey);
+  auto it = v->begin();
+  while (it != v->end()) {
+    if (!r->hasSideEffect(*it)) {
+      LOG_IR("[{}] no side effect, deleting: {}", KEY, **it);
+      numReplacements++;
+      it = v->erase(it);
+    } else {
+      ++it;
+    }
+  }
 }
 
 void DeadCodeCleanupPass::handle(IfFlow *v) {

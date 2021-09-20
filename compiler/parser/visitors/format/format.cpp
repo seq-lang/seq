@@ -84,7 +84,7 @@ void FormatVisitor::visit(FloatExpr *expr) {
 }
 
 void FormatVisitor::visit(StringExpr *expr) {
-  result = renderExpr(expr, "\"{}\"", escape(expr->value));
+  result = renderExpr(expr, "\"{}\"", escape(expr->getValue()));
 }
 
 void FormatVisitor::visit(IdExpr *expr) {
@@ -216,10 +216,6 @@ void FormatVisitor::visit(SliceExpr *expr) {
 
 void FormatVisitor::visit(EllipsisExpr *expr) { result = renderExpr(expr, "..."); }
 
-void FormatVisitor::visit(TypeOfExpr *expr) {
-  result = renderExpr(expr, "{}({})", keyword("typeof"), transform(expr->expr));
-}
-
 void FormatVisitor::visit(PtrExpr *expr) {
   result = renderExpr(expr, "__ptr__({})", transform(expr->expr));
 }
@@ -239,6 +235,10 @@ void FormatVisitor::visit(StmtExpr *expr) {
                       transform(expr->expr));
 }
 
+void FormatVisitor::visit(AssignExpr *expr) {
+  result = renderExpr(expr, "({} := {})", transform(expr->var), transform(expr->expr));
+}
+
 void FormatVisitor::visit(SuiteStmt *stmt) {
   for (int i = 0; i < stmt->stmts.size(); i++)
     result += transform(stmt->stmts[i]);
@@ -246,8 +246,6 @@ void FormatVisitor::visit(SuiteStmt *stmt) {
     result = fmt::format("{}# block_begin{}{}{}# block_end", pad(), newline(), result,
                          pad());
 }
-
-void FormatVisitor::visit(PassStmt *stmt) { result = keyword("pass"); }
 
 void FormatVisitor::visit(BreakStmt *stmt) { result = keyword("break"); }
 
@@ -307,19 +305,11 @@ void FormatVisitor::visit(ForStmt *stmt) {
 }
 
 void FormatVisitor::visit(IfStmt *stmt) {
-  string ifs;
-  string prefix = "";
-  for (int i = 0; i < stmt->ifs.size(); i++) {
-    if (stmt->ifs[i].cond)
-      ifs += fmt::format("{}{} {}:{}{}", i ? pad() : "", keyword(prefix + "if"),
-                         transform(stmt->ifs[i].cond), newline(),
-                         transform(stmt->ifs[i].suite.get(), 1));
-    else
-      ifs += fmt::format("{}{}:{}{}", pad(), keyword("else"), newline(),
-                         transform(stmt->ifs[i].suite.get(), 1));
-    prefix = "el";
-  }
-  result = ifs;
+  result = fmt::format("{} {}:{}{}{}", keyword("if"), transform(stmt->cond), newline(),
+                       transform(stmt->ifSuite.get(), 1),
+                       stmt->elseSuite ? format("{}:{}{}", keyword("else"), newline(),
+                                                transform(stmt->elseSuite.get(), 1))
+                                       : "");
 }
 
 void FormatVisitor::visit(MatchStmt *stmt) {
@@ -402,20 +392,13 @@ void FormatVisitor::visit(FunctionStmt *fstmt) {
     args.push_back(fmt::format(
         "{}{}{}", a.name, a.type ? fmt::format(": {}", transform(a.type)) : "",
         a.deflt ? fmt::format(" = {}", transform(a.deflt)) : ""));
-  vector<string> generics;
-  for (auto &a : fstmt->generics)
-    generics.push_back(fmt::format(
-        "{}{}{}", a.name, a.type ? fmt::format(": {}", transform(a.type)) : "",
-        a.deflt ? fmt::format(" = {}", transform(a.deflt)) : ""));
   auto body = transform(fstmt->suite.get(), 1);
   auto name = fmt::format("{}{}{}", typeStart, fstmt->name, typeEnd);
   name = fmt::format("{}{}{}", exprStart, name, exprEnd);
   result += fmt::format(
-      "{}{} {}{}({}){}:{}{}",
+      "{}{} {}({}){}:{}{}",
       attrs.size() ? join(attrs, newline() + pad()) + newline() + pad() : "",
-      keyword("def"), name,
-      generics.size() ? fmt::format("[{}]", fmt::join(generics, ", ")) : "",
-      fmt::join(args, ", "),
+      keyword("def"), name, fmt::join(args, ", "),
       fstmt->ret ? fmt::format(" -> {}", transform(fstmt->ret)) : "", newline(),
       body.empty() ? fmt::format("{}", keyword("pass")) : body);
 }

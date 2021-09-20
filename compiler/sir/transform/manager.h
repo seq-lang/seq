@@ -90,22 +90,41 @@ private:
   std::vector<std::string> disabled;
 
 public:
+  /// PassManager initialization mode.
+  enum Init {
+    EMPTY,
+    DEBUG,
+    RELEASE,
+  };
+
   static const int PASS_IT_MAX;
 
-  explicit PassManager(bool addStandardPasses = true,
-                       std::vector<std::string> disabled = {})
+  explicit PassManager(Init init, std::vector<std::string> disabled = {})
       : km(), passes(), analyses(), executionOrder(), results(),
         disabled(std::move(disabled)) {
-    if (addStandardPasses)
-      registerStandardPasses();
+    switch (init) {
+    case Init::EMPTY:
+      break;
+    case Init::DEBUG:
+      registerStandardPasses(true);
+      break;
+    case Init::RELEASE:
+      registerStandardPasses(false);
+      break;
+    }
   }
+
+  explicit PassManager(bool debug = false, std::vector<std::string> disabled = {})
+      : PassManager(debug ? Init::DEBUG : Init::RELEASE, std::move(disabled)) {}
 
   /// Registers a pass and appends it to the execution order.
   /// @param pass the pass
+  /// @param insertBefore insert pass before the pass with this given key
   /// @param reqs keys of passes that must be run before the current one
   /// @param invalidates keys of passes that are invalidated by the current one
   /// @return unique'd key for the added pass, or empty string if not added
   std::string registerPass(std::unique_ptr<Pass> pass,
+                           const std::string &insertBefore = "",
                            std::vector<std::string> reqs = {},
                            std::vector<std::string> invalidates = {});
 
@@ -137,7 +156,7 @@ public:
 
 private:
   void runPass(Module *module, const std::string &name);
-  void registerStandardPasses();
+  void registerStandardPasses(bool debug = false);
   void runAnalysis(Module *module, const std::string &name);
   void invalidate(const std::string &key);
 };

@@ -2,35 +2,33 @@ from bio import *
 
 # test kmers |> canonical optimization
 @test
-def test[K](s: seq):
-    K = Kmer[5]
-
-    got1 = list[K]()
-    s |> kmers[K](1) |> canonical |> got1.append
-    exp1 = [min(k, ~k) for k in s.kmers[K](step=1)]
+def test(s: seq, K: Static[int]):
+    got1 = list[Kmer[K]]()
+    s |> kmers(1, k=K) |> canonical |> got1.append
+    exp1 = [min(k, ~k) for k in s.kmers(step=1, k=K)]
     assert got1 == exp1
 
-    got2 = list[tuple[int,K]]()
-    s |> kmers_with_pos[K](step=1) |> canonical_with_pos |> got2.append
-    exp2 = [(i, min(k, ~k)) for i,k in s.kmers_with_pos[K](step=1)]
+    got2 = list[tuple[int,Kmer[K]]]()
+    s |> kmers_with_pos(step=1, k=K) |> canonical_with_pos |> got2.append
+    exp2 = [(i, min(k, ~k)) for i,k in s.kmers_with_pos(step=1, k=K)]
     assert got2 == exp2
 
     # test revcomp'd seq
     s = ~s
 
-    got1 = list[K]()
-    s |> kmers[K](step=1) |> canonical |> got1.append
-    exp1 = [min(k, ~k) for k in s.kmers[K](step=1)]
+    got1 = list[Kmer[K]]()
+    s |> kmers(step=1, k=K) |> canonical |> got1.append
+    exp1 = [min(k, ~k) for k in s.kmers(step=1, k=K)]
     assert got1 == exp1
 
-    got2 = list[tuple[int,K]]()
-    s |> kmers_with_pos[K](1) |> canonical_with_pos |> got2.append
-    exp2 = [(i, min(k, ~k)) for i,k in s.kmers_with_pos[K](step=1)]
+    got2 = list[tuple[int,Kmer[K]]]()
+    s |> kmers_with_pos(1, k=K) |> canonical_with_pos |> got2.append
+    exp2 = [(i, min(k, ~k)) for i,k in s.kmers_with_pos(step=1, k=K)]
     assert got2 == exp2
 
-def test_all[K](s: list[seq]):
+def test_all(s: list[seq], K: Static[int]):
     for a in s:
-        test[K](a)
+        test(a, K)
 
 v = [   s'C',
         s'GA',
@@ -133,23 +131,23 @@ v = [   s'C',
         s'AACCTCAGTCGGGCAGGCCATGGCGCGAAATGACTCGAGTAGACTCCATCTCTAAGGAGCGGAGCTGTTGCAACTAGGGTGACACACAGCTCGCCATGA',
         s'TATTGCAAGGCCCTACGCGGCTACGTCTCAATATATCCTATGGGCCGCAGCGTTCGGCCAATTCACATGGATGAGACATGGGTCCAAAATTTGCGGGATA'   ]
 
-test_all[Kmer[1]](v)
-test_all[Kmer[2]](v)
-test_all[Kmer[3]](v)
-test_all[Kmer[4]](v)
-test_all[Kmer[5]](v)
-test_all[Kmer[6]](v)
-test_all[Kmer[7]](v)
-test_all[Kmer[8]](v)
-test_all[Kmer[9]](v)
-test_all[Kmer[10]](v)
-test_all[Kmer[11]](v)
-test_all[Kmer[12]](v)
-test_all[Kmer[13]](v)
-test_all[Kmer[14]](v)
-test_all[Kmer[15]](v)
-test_all[Kmer[16]](v)
-test_all[Kmer[17]](v)
-test_all[Kmer[18]](v)
-test_all[Kmer[19]](v)
-test_all[Kmer[20]](v)
+test_all(v, 1)
+test_all(v, 2)
+test_all(v, 3)
+test_all(v, 4)
+test_all(v, 5)
+test_all(v, 6)
+test_all(v, 7)
+test_all(v, 8)
+test_all(v, 9)
+test_all(v, 10)
+test_all(v, 11)
+test_all(v, 12)
+test_all(v, 13)
+test_all(v, 14)
+test_all(v, 15)
+test_all(v, 16)
+test_all(v, 17)
+test_all(v, 18)
+test_all(v, 19)
+test_all(v, 20)

@@ -1,4 +1,4 @@
-from bio import CIGAR
+from bio import seq, CIGAR
 
 from os import getenv as _getenv
 BWA_LIB = _getenv('BWA_LIB')
@@ -281,7 +281,7 @@ class BWA:
         ar = mem_alnreg_v()
         mem_align1(__ptr__(ar), self.opt, self.p[0]._bwt, self.p[0]._bns, self.p[0]._pac, i32(len(s)), p)
         # marshal to GC:
-        n_bytes = ar.n * gc.sizeof[mem_alnreg_t]()
+        n_bytes = ar.n * gc.sizeof(mem_alnreg_t)
         copy = gc.alloc_atomic(n_bytes)
         str.memcpy(copy.as_byte(), ar.a.as_byte(), n_bytes)
         free(ar.a.as_byte())

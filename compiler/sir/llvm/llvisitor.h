@@ -135,15 +135,15 @@ private:
                   std::unordered_map<std::string, llvm::DICompositeType *> &cache);
 
   /// GC allocation functions
-  llvm::Function *makeAllocFunc(bool atomic);
+  llvm::FunctionCallee makeAllocFunc(bool atomic);
   /// Personality function for exception handling
-  llvm::Function *makePersonalityFunc();
+  llvm::FunctionCallee makePersonalityFunc();
   /// Exception allocation function
-  llvm::Function *makeExcAllocFunc();
+  llvm::FunctionCallee makeExcAllocFunc();
   /// Exception throw function
-  llvm::Function *makeThrowFunc();
+  llvm::FunctionCallee makeThrowFunc();
   /// Program termination function
-  llvm::Function *makeTerminateFunc();
+  llvm::FunctionCallee makeTerminateFunc();
 
   // Try-catch types and utilities
   llvm::StructType *getTypeInfoType();
@@ -154,13 +154,13 @@ private:
   int getTypeIdx(types::Type *catchType = nullptr);
 
   // General function helpers
-  llvm::Value *call(llvm::Value *callee, llvm::ArrayRef<llvm::Value *> args);
+  llvm::Value *call(llvm::FunctionCallee callee, llvm::ArrayRef<llvm::Value *> args);
   void makeLLVMFunction(const Func *);
   void makeYield(llvm::Value *value = nullptr, bool finalYield = false);
   std::string buildLLVMCodeString(const LLVMFunc *);
   void callStage(const PipelineFlow::Stage *stage);
   void codegenPipeline(const std::vector<const PipelineFlow::Stage *> &stages,
-                       llvm::Value *syncReg, unsigned where = 0);
+                       unsigned where = 0);
 
   // Loop and try-catch state
   void enterLoop(LoopData data);
@@ -172,7 +172,6 @@ private:
 
   // LLVM passes
   void applyDebugTransformations();
-  void applyGCTransformations();
   void runLLVMOptimizationPasses();
   void runLLVMPipeline();
 
@@ -182,7 +181,7 @@ public:
   llvm::LLVMContext &getContext() { return context; }
   llvm::IRBuilder<> &getBuilder() { return builder; }
   llvm::Module *getModule() { return module.get(); }
-  llvm::Function *getFunc() { return func; }
+  llvm::FunctionCallee getFunc() { return func; }
   llvm::BasicBlock *getBlock() { return block; }
   llvm::Value *getValue() { return value; }
   Cache<Var, llvm::Value> &getVars() { return vars; }

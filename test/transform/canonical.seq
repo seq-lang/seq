@@ -3,29 +3,35 @@ class Vec[T]:
     x: T
     y: T
 
+    @pure
     def __abs__(self):
         return ((self.x * self.x) + (self.y * self.y)) ** 0.5
 
+    @pure
     @commutative
     @associative
     def __add__(self, other: Vec[T]):
         print 'vec add', self, other
         return Vec[T](self.x + other.x, self.y + other.y)
 
+    @pure
     @commutative
     @associative
     def __add__(self, other: T):
         print 'vec add', self, other
         return Vec[T](self.x + other, self.y + other)
 
+    @pure
     def __sub__(self, other: Vec[T]):
         print 'vec sub', self, other
         return Vec[T](self.x - other.x, self.y - other.y)
 
+    @pure
     def __sub__(self, other: T):
         print 'vec sub', self, other
         return Vec[T](self.x - other, self.y - other)
 
+    @pure
     @commutative
     @associative
     @distributive
@@ -33,6 +39,7 @@ class Vec[T]:
         print 'vec mul', self, other
         return Vec[T](self.x * other.x, self.y * other.y)
 
+    @pure
     @commutative
     @associative
     @distributive
@@ -40,28 +47,34 @@ class Vec[T]:
         print 'vec mul', self, other
         return Vec[T](self.x * other, self.y * other)
 
+    @pure
     @commutative
     def __eq__(self, other: Vec[T]):
         print 'vec eq', self, other
         return abs(self) == abs(other)
 
+    @pure
     @commutative
     def __ne__(self, other: Vec[T]):
         print 'vec ne', self, other
         return abs(self) != abs(other)
 
+    @pure
     def __lt__(self, other: Vec[T]):
         print 'vec lt', self, other
         return abs(self) < abs(other)
 
+    @pure
     def __le__(self, other: Vec[T]):
         print 'vec le', self, other
         return abs(self) <= abs(other)
 
+    @pure
     def __gt__(self, other: Vec[T]):
         print 'vec gt', self, other
         return abs(self) > abs(other)
 
+    @pure
     def __ge__(self, other: Vec[T]):
         print 'vec ge', self, other
         return abs(self) >= abs(other)

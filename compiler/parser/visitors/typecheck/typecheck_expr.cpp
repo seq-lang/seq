@@ -22,7 +22,6 @@ using fmt::format;
 using std::deque;
 using std::dynamic_pointer_cast;
 using std::get;
-using std::move;
 using std::ostream;
 using std::stack;
 using std::static_pointer_cast;
@@ -32,43 +31,52 @@ namespace ast {
 
 using namespace types;
 
-ExprPtr TypecheckVisitor::transform(const ExprPtr &expr_) {
-  auto &expr = const_cast<ExprPtr &>(expr_);
-  expr = transform(expr, false);
-  return move(expr);
+ExprPtr TypecheckVisitor::transform(const ExprPtr &expr) {
+  return transform(const_cast<ExprPtr &>(expr), false);
 }
 
-ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes, bool allowVoid) {
+ExprPtr TypecheckVisitor::transform(ExprPtr &expr, bool allowTypes, bool allowVoid,
+                                    bool disableActivation) {
   if (!expr)
     return nullptr;
   auto typ = expr->type;
   if (!expr->done) {
     TypecheckVisitor v(ctx, prependStmts);
     v.allowVoidExpr = allowVoid;
+    auto oldActivation = ctx->allowActivation;
+    if (disableActivation)
+      ctx->allowActivation = false;
     v.setSrcInfo(expr->getSrcInfo());
     expr->accept(v);
     if (v.resultExpr)
-      expr = move(v.resultExpr);
+      expr = v.resultExpr;
     seqassert(expr->type, "type not set for {}", expr->toString());
     unify(typ, expr->type);
+    if (disableActivation)
+      ctx->allowActivation = oldActivation;
   }
   if (auto rt = realize(typ))
     unify(typ, rt);
-  if (!expr->isType() && !allowVoid &&
-      (expr->type->is("void") || expr->type->is("T.None")))
+  if (!expr->isType() && !allowVoid && expr->type && expr->type->is("void"))
     error("expression with void type");
-  return move(expr);
+  return expr;
 }
 
-ExprPtr TypecheckVisitor::transformType(ExprPtr &expr) {
-  expr = transform(const_cast<ExprPtr &>(expr), true);
+ExprPtr TypecheckVisitor::transformType(ExprPtr &expr, bool disableActivation) {
+  expr = transform(const_cast<ExprPtr &>(expr), true, false, disableActivation);
   if (expr) {
-    if (!expr->isType())
-      error("expected type expression");
-    auto t = ctx->instantiate(expr.get(), expr->getType());
+    TypePtr t = nullptr;
+    if (!expr->isType()) {
+      if (expr->isStatic())
+        t = make_shared<StaticType>(expr, ctx);
+      else
+        error("expected type expression");
+    } else {
+      t = ctx->instantiate(expr.get(), expr->getType());
+    }
     expr->setType(t);
   }
-  return move(expr);
+  return expr;
 }
 
 void TypecheckVisitor::defaultVisit(Expr *e) {
@@ -80,14 +88,11 @@ void TypecheckVisitor::defaultVisit(Expr *e) {
 void TypecheckVisitor::visit(BoolExpr *expr) {
   unify(expr->type, ctx->findInternal("bool"));
   expr->done = true;
-  expr->isStaticExpr = true;
-  expr->staticEvaluation = {true, int(expr->value)};
 }
 
 void TypecheckVisitor::visit(IntExpr *expr) {
   unify(expr->type, ctx->findInternal("int"));
   expr->done = true;
-  expr->staticEvaluation = {true, expr->intValue};
 }
 
 void TypecheckVisitor::visit(FloatExpr *expr) {
@@ -105,23 +110,33 @@ void TypecheckVisitor::visit(IdExpr *expr) {
     generateTupleStub(std::stoi(expr->value.substr(7)));
   else if (startswith(expr->value, TYPE_FUNCTION))
     generateFunctionStub(std::stoi(expr->value.substr(10)));
-  else if (startswith(expr->value, TYPE_CALLABLE))
-    generateCallableStub(std::stoi(expr->value.substr(10)));
-  auto val = ctx->find(expr->value);
-  seqassert(val, "cannot find IdExpr '{}' ({})", expr->value, expr->getSrcInfo());
-  if (val->isStatic()) {
-    // Evaluate the static expression.
-    seqassert(val->type->getStatic(), "{} does not have static type", expr->value);
-    val->type->getStatic()->staticEvaluation = {
-        true, val->type->getStatic()->staticExpr.second(val->type->getStatic().get())};
-    expr->staticEvaluation = {true, val->type->getStatic()->staticEvaluation.second};
-    resultExpr = transform(N<IntExpr>(expr->staticEvaluation.second));
+  else if (expr->value == "Callable") { // Empty Callable references
+    auto typ = ctx->addUnbound(expr, ctx->typecheckLevel);
+    typ->getLink()->trait = make_shared<CallableTrait>(vector<TypePtr>{});
+    unify(expr->type, typ);
+    expr->markType();
     return;
   }
-  if (val->isType())
-    expr->markType();
+  auto val = ctx->find(expr->value);
+  seqassert(val, "cannot find IdExpr '{}' ({})", expr->value, expr->getSrcInfo());
+
   auto t = ctx->instantiate(expr, val->type);
-  unify(expr->type, t);
+  expr->type = unify(expr->type, t);
+  if (val->type->isStaticType()) {
+    expr->staticValue.type = StaticValue::Type(val->type->isStaticType());
+    auto s = val->type->getStatic();
+    seqassert(!expr->staticValue.evaluated, "expected unevaluated expression: {}",
+              expr->toString());
+    if (s && s->expr->staticValue.evaluated) {
+      if (s->expr->staticValue.type == StaticValue::STRING)
+        resultExpr = transform(N<StringExpr>(s->expr->staticValue.getString()));
+      else
+        resultExpr = transform(N<IntExpr>(s->expr->staticValue.getInt()));
+    }
+    return;
+  } else if (val->isType()) {
+    expr->markType();
+  }
 
   // Check if we can realize the type.
   if (auto rt = realize(expr->type)) {
@@ -154,8 +169,7 @@ void TypecheckVisitor::visit(TupleExpr *expr) {
       expr->items[ai] = transform(expr->items[ai]);
     }
   auto name = generateTupleStub(expr->items.size());
-  resultExpr = transform(
-      N<CallExpr>(N<DotExpr>(N<IdExpr>(name), "__new__"), clone(expr->items)));
+  resultExpr = transform(N<CallExpr>(N<DotExpr>(name, "__new__"), clone(expr->items)));
 }
 
 void TypecheckVisitor::visit(GeneratorExpr *expr) {
@@ -173,7 +187,7 @@ void TypecheckVisitor::visit(GeneratorExpr *expr) {
 
   auto block = N<SuiteStmt>();
   auto tupleVar = ctx->cache->getTemporaryVar("tuple");
-  block->stmts.push_back(N<AssignStmt>(N<IdExpr>(tupleVar), move(gen)));
+  block->stmts.push_back(N<AssignStmt>(N<IdExpr>(tupleVar), gen));
 
   vector<ExprPtr> items;
   for (int ai = 0; ai < tuple->args.size(); ai++)
@@ -181,99 +195,183 @@ void TypecheckVisitor::visit(GeneratorExpr *expr) {
         N<StmtExpr>(N<AssignStmt>(clone(expr->loops[0].vars),
                                   N<IndexExpr>(N<IdExpr>(tupleVar), N<IntExpr>(ai))),
                     clone(expr->expr)));
-  resultExpr = transform(N<StmtExpr>(move(block), N<TupleExpr>(move(items))));
+  resultExpr = transform(N<StmtExpr>(block, N<TupleExpr>(items)));
 }
 
 void TypecheckVisitor::visit(IfExpr *expr) {
   expr->cond = transform(expr->cond);
+  if (expr->cond->isStatic()) {
+    if (expr->cond->staticValue.evaluated) {
+      bool isTrue = false;
+      if (expr->cond->staticValue.type == StaticValue::STRING)
+        isTrue = !expr->cond->staticValue.getString().empty();
+      else
+        isTrue = expr->cond->staticValue.getInt();
+      resultExpr =
+          transform(isTrue ? expr->ifexpr : expr->elsexpr, false, allowVoidExpr);
+      unify(expr->type, resultExpr->getType());
+    } else {
+      auto i = clone(expr->ifexpr), e = clone(expr->elsexpr);
+      i = transform(i, false, allowVoidExpr, /*disableActivation*/ true);
+      e = transform(e, false, allowVoidExpr, /*disableActivation*/ true);
+      unify(expr->type, ctx->addUnbound(expr, ctx->typecheckLevel));
+      if (i->isStatic() && e->isStatic()) {
+        expr->staticValue.type = i->staticValue.type;
+        unify(expr->type,
+              ctx->findInternal(expr->staticValue.type == StaticValue::INT ? "int"
+                                                                           : "str"));
+      }
+      expr->done = false; // do not typecheck this suite yet
+    }
+    return;
+  }
+
   expr->ifexpr = transform(expr->ifexpr, false, allowVoidExpr);
   expr->elsexpr = transform(expr->elsexpr, false, allowVoidExpr);
-
-  if (expr->isStaticExpr) {
-    if (expr->cond->staticEvaluation.first && expr->ifexpr->staticEvaluation.first &&
-        expr->elsexpr->staticEvaluation.first) {
-      resultExpr = transform(N<IntExpr>(expr->cond->staticEvaluation.second
-                                            ? expr->ifexpr->staticEvaluation.second
-                                            : expr->elsexpr->staticEvaluation.second));
-    }
-  } else {
-    if (expr->cond->type->getClass() && !expr->cond->type->is("bool"))
-      expr->cond = transform(N<CallExpr>(N<DotExpr>(move(expr->cond), "__bool__")));
-    wrapOptionalIfNeeded(expr->ifexpr->getType(), expr->elsexpr);
-    wrapOptionalIfNeeded(expr->elsexpr->getType(), expr->ifexpr);
-    unify(expr->type, expr->ifexpr->getType());
-    unify(expr->type, expr->elsexpr->getType());
-    expr->ifexpr = transform(expr->ifexpr);
-    expr->elsexpr = transform(expr->elsexpr);
-    expr->done = expr->cond->done && expr->ifexpr->done && expr->elsexpr->done;
-  }
+  if (expr->cond->type->getClass() && !expr->cond->type->is("bool"))
+    expr->cond = transform(N<CallExpr>(N<DotExpr>(expr->cond, "__bool__")));
+  wrapOptionalIfNeeded(expr->ifexpr->getType(), expr->elsexpr);
+  wrapOptionalIfNeeded(expr->elsexpr->getType(), expr->ifexpr);
+  unify(expr->type, expr->ifexpr->getType());
+  unify(expr->type, expr->elsexpr->getType());
+  expr->ifexpr = transform(expr->ifexpr);
+  expr->elsexpr = transform(expr->elsexpr);
+  expr->done = expr->cond->done && expr->ifexpr->done && expr->elsexpr->done;
 }
 
 void TypecheckVisitor::visit(UnaryExpr *expr) {
-  seqassert(expr->isStaticExpr && (expr->op == "-" || expr->op == "!"),
-            "non-static unary expression");
-  // Evaluate a static expression.
   expr->expr = transform(expr->expr);
-  unify(expr->type, ctx->findInternal("int"));
-  if (expr->expr->staticEvaluation.first) {
-    int value = expr->expr->staticEvaluation.second;
-    if (expr->op == "-")
-      value = -value;
-    else // if (expr->op == "!")
-      value = !bool(value);
-    if (expr->op == "!")
-      resultExpr = transform(N<BoolExpr>(bool(value)));
+  if (expr->expr->isStatic()) {
+    if (expr->expr->staticValue.type == StaticValue::STRING) {
+      if (expr->op == "!") {
+        if (expr->expr->staticValue.evaluated) {
+          resultExpr =
+              transform(N<BoolExpr>(expr->expr->staticValue.getString().empty()));
+        } else {
+          unify(expr->type, ctx->findInternal("bool"));
+          if (!expr->isStatic())
+            expr->staticValue.type = StaticValue::INT;
+        }
+        return;
+      }
+    } else if (expr->op == "-" || expr->op == "+" || expr->op == "!") {
+      if (expr->expr->staticValue.evaluated) {
+        int value = expr->expr->staticValue.getInt();
+        if (expr->op == "+")
+          ;
+        else if (expr->op == "-")
+          value = -value;
+        else
+          value = !bool(value);
+        if (expr->op == "!")
+          resultExpr = transform(N<BoolExpr>(bool(value)));
+        else
+          resultExpr = transform(N<IntExpr>(value));
+      } else {
+        unify(expr->type, ctx->findInternal("int"));
+        if (!expr->isStatic())
+          expr->staticValue.type = StaticValue::INT;
+      }
+      return;
+    }
+  }
+  if (expr->op == "!") {
+    resultExpr = transform(N<CallExpr>(N<DotExpr>(
+        N<CallExpr>(N<DotExpr>(clone(expr->expr), "__bool__")), "__invert__")));
+  } else {
+    string magic;
+    if (expr->op == "~")
+      magic = "invert";
+    else if (expr->op == "+")
+      magic = "pos";
+    else if (expr->op == "-")
+      magic = "neg";
     else
-      resultExpr = transform(N<IntExpr>(value));
+      error("invalid unary operator '{}'", expr->op);
+    magic = format("__{}__", magic);
+    resultExpr = transform(N<CallExpr>(N<DotExpr>(clone(expr->expr), magic)));
   }
 }
 
 void TypecheckVisitor::visit(BinaryExpr *expr) {
-  if (expr->isStaticExpr) {
-    // Evaluate a static expression.
+  static unordered_map<StaticValue::Type, unordered_set<string>> staticOps = {
+      {StaticValue::INT,
+       {"<", "<=", ">", ">=", "==", "!=", "&&", "||", "+", "-", "*", "//", "%"}},
+      {StaticValue::STRING, {"==", "!=", "+"}}};
+  if (!(startswith(expr->op, "is") && expr->lexpr->getNone()))
     expr->lexpr = transform(expr->lexpr);
+  if (!(startswith(expr->op, "is") && expr->rexpr->getNone()))
     expr->rexpr = transform(expr->rexpr);
-    unify(expr->type, ctx->findInternal("int"));
-    if (expr->lexpr->staticEvaluation.first && expr->rexpr->staticEvaluation.first) {
-      int lvalue = expr->lexpr->staticEvaluation.second;
-      int rvalue = expr->rexpr->staticEvaluation.second;
-      if (expr->op == "<")
-        lvalue = lvalue < rvalue;
-      else if (expr->op == "<=")
-        lvalue = lvalue <= rvalue;
-      else if (expr->op == ">")
-        lvalue = lvalue > rvalue;
-      else if (expr->op == ">=")
-        lvalue = lvalue >= rvalue;
-      else if (expr->op == "==")
-        lvalue = lvalue == rvalue;
-      else if (expr->op == "!=")
-        lvalue = lvalue != rvalue;
-      else if (expr->op == "&&")
-        lvalue = lvalue && rvalue;
-      else if (expr->op == "||")
-        lvalue = lvalue || rvalue;
-      else if (expr->op == "+")
-        lvalue = lvalue + rvalue;
-      else if (expr->op == "-")
-        lvalue = lvalue - rvalue;
-      else if (expr->op == "*")
-        lvalue = lvalue * rvalue;
-      else if (expr->op == "//") {
-        if (!rvalue)
-          error("static division by zero");
-        lvalue = lvalue / rvalue;
-      } else if (expr->op == "%") {
-        if (!rvalue)
-          error("static division by zero");
-        lvalue = lvalue % rvalue;
+  if (expr->lexpr->isStatic() && expr->rexpr->isStatic() &&
+      expr->lexpr->staticValue.type == expr->rexpr->staticValue.type &&
+      in(staticOps[expr->rexpr->staticValue.type], expr->op)) {
+    if (expr->rexpr->staticValue.type == StaticValue::STRING) {
+      if (expr->op == "+") {
+        if (expr->lexpr->staticValue.evaluated && expr->rexpr->staticValue.evaluated) {
+          resultExpr = transform(N<StringExpr>(expr->lexpr->staticValue.getString() +
+                                               expr->rexpr->staticValue.getString()));
+        } else {
+          if (!expr->isStatic())
+            expr->staticValue.type = StaticValue::STRING;
+          unify(expr->type, ctx->findInternal("str"));
+        }
       } else {
-        seqassert(false, "unknown static operator {}", expr->op);
+        if (expr->lexpr->staticValue.evaluated && expr->rexpr->staticValue.evaluated) {
+          bool eq = expr->lexpr->staticValue.getString() ==
+                    expr->rexpr->staticValue.getString();
+          resultExpr = transform(N<BoolExpr>(expr->op == "==" ? eq : !eq));
+        } else {
+          if (!expr->isStatic())
+            expr->staticValue.type = StaticValue::INT;
+          unify(expr->type, ctx->findInternal("bool"));
+        }
       }
-      if (in(set<string>{"==", "!=", "<", "<=", ">", ">=", "&&", "||"}, expr->op))
-        resultExpr = transform(N<BoolExpr>(bool(lvalue)));
-      else
-        resultExpr = transform(N<IntExpr>(lvalue));
+    } else {
+      if (expr->lexpr->staticValue.evaluated && expr->rexpr->staticValue.evaluated) {
+        int64_t lvalue = expr->lexpr->staticValue.getInt();
+        int64_t rvalue = expr->rexpr->staticValue.getInt();
+        if (expr->op == "<")
+          lvalue = lvalue < rvalue;
+        else if (expr->op == "<=")
+          lvalue = lvalue <= rvalue;
+        else if (expr->op == ">")
+          lvalue = lvalue > rvalue;
+        else if (expr->op == ">=")
+          lvalue = lvalue >= rvalue;
+        else if (expr->op == "==")
+          lvalue = lvalue == rvalue;
+        else if (expr->op == "!=")
+          lvalue = lvalue != rvalue;
+        else if (expr->op == "&&")
+          lvalue = lvalue && rvalue;
+        else if (expr->op == "||")
+          lvalue = lvalue || rvalue;
+        else if (expr->op == "+")
+          lvalue = lvalue + rvalue;
+        else if (expr->op == "-")
+          lvalue = lvalue - rvalue;
+        else if (expr->op == "*")
+          lvalue = lvalue * rvalue;
+        else if (expr->op == "//") {
+          if (!rvalue)
+            error("static division by zero");
+          lvalue = lvalue / rvalue;
+        } else if (expr->op == "%") {
+          if (!rvalue)
+            error("static division by zero");
+          lvalue = lvalue % rvalue;
+        } else {
+          seqassert(false, "unknown static operator {}", expr->op); // TODO!
+        }
+        if (in(set<string>{"==", "!=", "<", "<=", ">", ">=", "&&", "||"}, expr->op))
+          resultExpr = transform(N<BoolExpr>(bool(lvalue)));
+        else
+          resultExpr = transform(N<IntExpr>(lvalue));
+      } else {
+        if (!expr->isStatic())
+          expr->staticValue.type = StaticValue::INT;
+        unify(expr->type, ctx->findInternal("int"));
+      }
     }
   } else {
     resultExpr = transformBinary(expr);
@@ -291,8 +389,8 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
     }
     return t;
   };
-  // List of output types (for a|>b|>c, this list is type(a), type(a|>b), type(a|>b|>c).
-  // These types are raw types (i.e. generator types are preserved).
+  // List of output types (for a|>b|>c, this list is type(a), type(a|>b),
+  // type(a|>b|>c). These types are raw types (i.e. generator types are preserved).
   expr->inTypes.clear();
   expr->items[0].expr = transform(expr->items[0].expr);
 
@@ -330,132 +428,78 @@ void TypecheckVisitor::visit(PipeExpr *expr) {
     } else {
       // If this is not a CallExpr, make it a call expression with a single input
       // argument:
-      expr->items[i].expr =
-          N<CallExpr>(move(expr->items[i].expr), N<EllipsisExpr>(true));
+      expr->items[i].expr = N<CallExpr>(expr->items[i].expr, N<EllipsisExpr>(true));
       ec = &expr->items[i].expr;
       inTypePos = 0;
     }
 
     if (auto nn = transformCall((CallExpr *)(ec->get()), inType, &prepend))
-      *ec = move(nn);
+      *ec = nn;
     if (prepend) { // Prepend the stage and rewind the loop (yes, the current
                    // expression will get parsed twice).
-      expr->items.insert(expr->items.begin() + i, {"|>", move(prepend)});
+      expr->items.insert(expr->items.begin() + i, {"|>", prepend});
       i--;
       continue;
     }
     if ((*ec)->type)
       unify(expr->items[i].expr->type, (*ec)->type);
-    expr->items[i].expr = move(*ec);
+    expr->items[i].expr = *ec;
     inType = expr->items[i].expr->getType();
+    if (auto rt = realize(inType))
+      unify(inType, rt);
+    else
+      expr->done = false;
     expr->inTypes.push_back(inType);
     // Do not extract the generator type in the last stage of a pipeline.
     if (i < expr->items.size() - 1)
       inType = getIterableType(inType);
-    expr->done &= expr->items[i].expr->done;
   }
   unify(expr->type, (hasGenerator ? ctx->findInternal("void") : inType));
 }
 
 void TypecheckVisitor::visit(InstantiateExpr *expr) {
-  expr->typeExpr = transform(expr->typeExpr, true);
-  TypePtr typ = nullptr;
-  if (auto tp = expr->typeExpr->type->getPartial())
-    typ = tp->func;
-  else
-    typ = ctx->instantiate(expr->typeExpr.get(), expr->typeExpr->getType());
-  seqassert(typ->getFunc() || typ->getClass(), "unknown type");
-  auto &generics =
-      typ->getFunc() ? typ->getFunc()->funcGenerics : typ->getClass()->generics;
-  if (expr->typeParams.size() != generics.size())
-    error("expected {} generics", generics.size());
+  if (expr->typeExpr->getId() &&
+      startswith(expr->typeExpr->getId()->value, TYPE_CALLABLE)) {
+    vector<TypePtr> types;
+    for (int i = 0; i < expr->typeParams.size(); i++) {
+      expr->typeParams[i] = transformType(expr->typeParams[i]);
+      if (expr->typeParams[i]->type->isStaticType())
+        error("unexpected static type");
+      types.push_back(expr->typeParams[i]->type);
+    }
+    auto typ = ctx->addUnbound(expr, ctx->typecheckLevel);
+    typ->getLink()->trait = make_shared<CallableTrait>(types);
+    unify(expr->type, typ);
+  } else {
+    expr->typeExpr = transformType(expr->typeExpr);
+    TypePtr typ = ctx->instantiate(expr->typeExpr.get(), expr->typeExpr->getType());
+    seqassert(typ->getClass(), "unknown type");
+    auto &generics = typ->getClass()->generics;
+    if (expr->typeParams.size() != generics.size())
+      error("expected {} generics and/or statics", generics.size());
 
-  for (int i = 0; i < expr->typeParams.size(); i++) {
-    if (expr->typeParams[i]->isStaticExpr) {
-      if (auto ei = expr->typeParams[i]->getId()) {
-        // Case 1: Generic static (e.g. N in a [N:int] scope).
-        auto val = ctx->find(ei->value);
-        seqassert(val && val->isStatic(), "invalid static expression");
-        auto t = ctx->instantiate(ei, val->type);
-        unify(generics[i].type, t);
-      } else {
-        // Case 2: Static expression (e.g. 32 or N+5).
-        // Get the dependent types and create the underlying StaticType.
-        unordered_set<string> seen;
-        vector<ClassType::Generic> staticGenerics;
-        std::function<void(Expr *)> findGenerics = [&](Expr *e) -> void {
-          if (auto ei = e->getId()) {
-            if (!in(seen, ei->value)) {
-              auto val = ctx->find(ei->value);
-              seqassert(val && val->isStatic(), "invalid static expression");
-              auto genTyp = val->type->follow();
-              staticGenerics.emplace_back(ClassType::Generic(
-                  ei->value, ctx->cache->reverseIdentifierLookup[ei->value], genTyp,
-                  genTyp->getLink() ? genTyp->getLink()->id
-                  : genTyp->getStatic()->generics.empty()
-                      ? 0
-                      : genTyp->getStatic()->generics[0].id));
-              seen.insert(ei->value);
-            }
-          } else if (auto eu = e->getUnary()) {
-            findGenerics(eu->expr.get());
-          } else if (auto eb = e->getBinary()) {
-            findGenerics(eb->lexpr.get());
-            findGenerics(eb->rexpr.get());
-          } else if (auto ef = e->getIf()) {
-            findGenerics(ef->cond.get());
-            findGenerics(ef->ifexpr.get());
-            findGenerics(ef->elsexpr.get());
-          }
-        };
-        findGenerics(expr->typeParams[i].get());
-        auto nctx = ctx; // To capture ctx without capturing this...
-        if (expr->typeParams[i]->isStaticExpr &&
-            expr->typeParams[i]->staticEvaluation.first)
-          unify(generics[i].type,
-                make_shared<StaticType>(expr->typeParams[i]->staticEvaluation.second));
-        else if (expr->typeParams[i]->getId())
-          unify(generics[i].type, staticGenerics[0].type);
-        else
-          unify(generics[i].type,
-                make_shared<StaticType>(
-                    staticGenerics,
-                    std::make_pair(
-                        expr->typeParams[i]->clone(),
-                        [nctx](const StaticType *t) -> int {
-                          if (t->staticEvaluation.first)
-                            return t->staticEvaluation.second;
-                          nctx->addBlock();
-                          for (auto &g : t->generics)
-                            nctx->add(TypecheckItem::Type, g.name, g.type, true);
-                          auto en = TypecheckVisitor(nctx).transform(
-                              t->staticExpr.first->clone());
-                          seqassert(en->isStaticExpr && en->staticEvaluation.first,
-                                    "{} cannot be evaluated", en->toString());
-                          nctx->popBlock();
-                          return en->staticEvaluation.second;
-                        }),
-                    std::make_pair(false, 0)));
-      }
-    } else {
-      seqassert(expr->typeParams[i]->isType(), "not a type: {}",
-                expr->typeParams[i]->toString());
+    for (int i = 0; i < expr->typeParams.size(); i++) {
       expr->typeParams[i] = transform(expr->typeParams[i], true);
-      auto t =
-          ctx->instantiate(expr->typeParams[i].get(), expr->typeParams[i]->getType());
+      TypePtr t = nullptr;
+      if (expr->typeParams[i]->isStatic()) {
+        t = make_shared<StaticType>(expr->typeParams[i], ctx);
+      } else {
+        if (!expr->typeParams[i]->isType())
+          error("expected type or static parameters");
+        t = ctx->instantiate(expr->typeParams[i].get(), expr->typeParams[i]->getType());
+      }
       unify(generics[i].type, t);
     }
+    unify(expr->type, typ);
   }
-  unify(expr->type, typ);
-  if (expr->typeExpr->isType())
-    expr->markType();
+  expr->markType();
 
   // If this is realizable, use the realized name (e.g. use Id("Ptr[byte]") instead of
   // Instantiate(Ptr, {byte})).
   if (auto rt = realize(expr->type)) {
     unify(expr->type, rt);
     resultExpr = N<IdExpr>(expr->type->realizedName());
-    unify(resultExpr->type, typ);
+    unify(resultExpr->type, rt);
     resultExpr->done = true;
     if (expr->typeExpr->isType())
       resultExpr->markType();
@@ -463,36 +507,34 @@ void TypecheckVisitor::visit(InstantiateExpr *expr) {
 }
 
 void TypecheckVisitor::visit(SliceExpr *expr) {
-  ExprPtr none = N<CallExpr>(N<DotExpr>(N<IdExpr>(TYPE_OPTIONAL), "__new__"));
-  resultExpr = transform(N<CallExpr>(N<IdExpr>(TYPE_SLICE),
-                                     expr->start ? move(expr->start) : clone(none),
-                                     expr->stop ? move(expr->stop) : clone(none),
-                                     expr->step ? move(expr->step) : clone(none)));
+  ExprPtr none = N<CallExpr>(N<DotExpr>(TYPE_OPTIONAL, "__new__"));
+  resultExpr = transform(N<CallExpr>(
+      N<IdExpr>(TYPE_SLICE), expr->start ? expr->start : clone(none),
+      expr->stop ? expr->stop : clone(none), expr->step ? expr->step : clone(none)));
 }
 
 void TypecheckVisitor::visit(IndexExpr *expr) {
+  if (expr->expr->isId("Static")) {
+    TypePtr typ =
+        ctx->addUnbound(expr, ctx->getLevel(), true, expr->index->isId("str") ? 1 : 2);
+    unify(expr->type, typ);
+    expr->done = true;
+    return;
+  }
+
   expr->expr = transform(expr->expr, true);
   auto typ = expr->expr->getType();
-  if (typ->getFunc() || typ->getPartial()) {
-    // Case 1: function instantiation
-    vector<ExprPtr> it;
-    if (auto et = const_cast<TupleExpr *>(expr->index->getTuple()))
-      for (auto &i : et->items)
-        it.push_back(move(i));
-    else
-      it.push_back(move(expr->index));
-    resultExpr = transform(N<InstantiateExpr>(move(expr->expr), move(it)));
-  } else if (auto c = typ->getClass()) {
-    // Case 2: check if this is a static tuple access...
+  seqassert(!expr->expr->isType(), "index not converted to instantiate");
+  if (auto c = typ->getClass()) {
+    // Case 1: check if this is a static tuple access...
     resultExpr = transformStaticTupleIndex(c.get(), expr->expr, expr->index);
     if (!resultExpr) {
-      // Case 3: ... and if not, just call __getitem__.
-      ExprPtr e =
-          N<CallExpr>(N<DotExpr>(move(expr->expr), "__getitem__"), move(expr->index));
+      // Case 2: ... and if not, just call __getitem__.
+      ExprPtr e = N<CallExpr>(N<DotExpr>(expr->expr, "__getitem__"), expr->index);
       resultExpr = transform(e, false, allowVoidExpr);
     }
   } else {
-    // Case 4: type is still unknown.
+    // Case 3: type is still unknown.
     // expr->index = transform(expr->index);
     unify(expr->type, ctx->addUnbound(expr, ctx->typecheckLevel));
   }
@@ -517,19 +559,6 @@ void TypecheckVisitor::visit(StackAllocExpr *expr) {
 
 void TypecheckVisitor::visit(EllipsisExpr *expr) {
   unify(expr->type, ctx->addUnbound(expr, ctx->typecheckLevel));
-}
-
-void TypecheckVisitor::visit(TypeOfExpr *expr) {
-  expr->expr = transform(expr->expr);
-  unify(expr->type, expr->expr->type);
-
-  if (auto rt = realize(expr->type)) {
-    unify(expr->type, rt);
-    resultExpr = N<IdExpr>(expr->type->realizedName());
-    unify(resultExpr->type, expr->type);
-    resultExpr->done = true;
-    resultExpr->markType();
-  }
 }
 
 void TypecheckVisitor::visit(PtrExpr *expr) {
@@ -567,7 +596,7 @@ void TypecheckVisitor::wrapOptionalIfNeeded(const TypePtr &targetType, ExprPtr &
   auto t1 = targetType->getClass();
   auto t2 = e->getType()->getClass();
   if (t1 && t2 && t1->name == TYPE_OPTIONAL && t1->name != t2->name)
-    e = transform(N<CallExpr>(N<IdExpr>(TYPE_OPTIONAL), move(e)));
+    e = transform(N<CallExpr>(N<IdExpr>(TYPE_OPTIONAL), e));
 }
 
 ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
@@ -583,8 +612,28 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
   if (noReturn)
     *noReturn = false;
 
-  expr->lexpr = transform(expr->lexpr);
-  expr->rexpr = expr->rexpr->getNone() ? move(expr->rexpr) : transform(expr->rexpr);
+  // Case 0: simple transformations
+  if (expr->op == "&&") {
+    return transform(N<IfExpr>(expr->lexpr,
+                               N<CallExpr>(N<DotExpr>(expr->rexpr, "__bool__")),
+                               N<BoolExpr>(false)));
+  } else if (expr->op == "||") {
+    return transform(N<IfExpr>(expr->lexpr, N<BoolExpr>(true),
+                               N<CallExpr>(N<DotExpr>(expr->rexpr, "__bool__"))));
+  } else if (expr->op == "not in") {
+    return transform(N<CallExpr>(
+        N<DotExpr>(N<CallExpr>(N<DotExpr>(expr->rexpr, "__contains__"), expr->lexpr),
+                   "__invert__")));
+  } else if (expr->op == "in") {
+    return transform(N<CallExpr>(N<DotExpr>(expr->rexpr, "__contains__"), expr->lexpr));
+  } else if (expr->op == "is") {
+    if (expr->lexpr->getNone() && expr->rexpr->getNone())
+      return transform(N<BoolExpr>(true));
+    else if (expr->lexpr->getNone())
+      return transform(N<BinaryExpr>(expr->rexpr, "is", expr->lexpr));
+  } else if (expr->op == "is not") {
+    return transform(N<UnaryExpr>("!", N<BinaryExpr>(expr->lexpr, "is", expr->rexpr)));
+  }
 
   if (expr->lexpr->getType()->getUnbound() ||
       (expr->op != "is" && expr->rexpr->getType()->getUnbound())) {
@@ -596,15 +645,13 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
 
   // Check if this is a "a is None" expression. If so, ...
   if (expr->op == "is" && expr->rexpr->getNone()) {
-    if (expr->rexpr->getNone()) {
-      if (expr->lexpr->getType()->getClass()->name != TYPE_OPTIONAL)
-        // ... return False if lhs is not an Optional...
-        return transform(N<BoolExpr>(false));
-      else
-        // ... or return lhs.__bool__.__invert__()
-        return transform(N<CallExpr>(N<DotExpr>(
-            N<CallExpr>(N<DotExpr>(move(expr->lexpr), "__bool__")), "__invert__")));
-    }
+    if (expr->lexpr->getType()->getClass()->name != TYPE_OPTIONAL)
+      // ... return False if lhs is not an Optional...
+      return transform(N<BoolExpr>(false));
+    else
+      // ... or return lhs.__bool__.__invert__()
+      return transform(N<CallExpr>(
+          N<DotExpr>(N<CallExpr>(N<DotExpr>(expr->lexpr, "__bool__")), "__invert__")));
   }
 
   // Check the type equality (operand types and __raw__ pointers must match).
@@ -618,18 +665,18 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
       return nullptr;
     } else if (!lc->getRecord() && !rc->getRecord()) {
       return transform(
-          N<BinaryExpr>(N<CallExpr>(N<DotExpr>(move(expr->lexpr), "__raw__")),
-                        "==", N<CallExpr>(N<DotExpr>(move(expr->rexpr), "__raw__"))));
+          N<BinaryExpr>(N<CallExpr>(N<DotExpr>(expr->lexpr, "__raw__")),
+                        "==", N<CallExpr>(N<DotExpr>(expr->rexpr, "__raw__"))));
     } else if (lc->getClass()->name == TYPE_OPTIONAL) {
-      return transform(N<CallExpr>(N<DotExpr>(move(expr->lexpr), "__is_optional__"),
-                                   move(expr->rexpr)));
+      return transform(
+          N<CallExpr>(N<DotExpr>(expr->lexpr, "__is_optional__"), expr->rexpr));
     } else if (rc->getClass()->name == TYPE_OPTIONAL) {
-      return transform(N<CallExpr>(N<DotExpr>(move(expr->rexpr), "__is_optional__"),
-                                   move(expr->lexpr)));
+      return transform(
+          N<CallExpr>(N<DotExpr>(expr->rexpr, "__is_optional__"), expr->lexpr));
     } else if (lc->realizedName() != rc->realizedName()) {
       return transform(N<BoolExpr>(false));
     } else {
-      return transform(N<BinaryExpr>(move(expr->lexpr), "==", move(expr->rexpr)));
+      return transform(N<BinaryExpr>(expr->lexpr, "==", expr->rexpr));
     }
   }
 
@@ -651,7 +698,7 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
     method = ctx->findBestMethod(expr->lexpr.get(), format("__atomic_{}__", magic),
                                  {{"", ptrlt}, {"", rt}});
     if (method) {
-      expr->lexpr = N<PtrExpr>(move(expr->lexpr));
+      expr->lexpr = N<PtrExpr>(expr->lexpr);
       if (noReturn)
         *noReturn = true;
     }
@@ -677,63 +724,8 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
   if (!method)
     error("cannot find magic '{}' in {}", magic, lt->toString());
 
-  return transform(
-      N<CallExpr>(N<IdExpr>(method->funcName), move(expr->lexpr), move(expr->rexpr)));
+  return transform(N<CallExpr>(N<IdExpr>(method->ast->name), expr->lexpr, expr->rexpr));
 }
-
-namespace {
-int64_t translateIndex(int64_t idx, int64_t len, bool clamp = false) {
-  if (idx < 0)
-    idx += len;
-
-  if (clamp) {
-    if (idx < 0)
-      idx = 0;
-    if (idx > len)
-      idx = len;
-  } else if (idx < 0 || idx >= len) {
-    throw exc::SeqException("tuple index " + std::to_string(idx) +
-                            " out of bounds (len: " + std::to_string(len) + ")");
-  }
-
-  return idx;
-}
-
-int64_t sliceAdjustIndices(int64_t length, int64_t *start, int64_t *stop,
-                           int64_t step) {
-  if (step == 0)
-    throw exc::SeqException("slice step cannot be 0");
-
-  if (*start < 0) {
-    *start += length;
-    if (*start < 0) {
-      *start = (step < 0) ? -1 : 0;
-    }
-  } else if (*start >= length) {
-    *start = (step < 0) ? length - 1 : length;
-  }
-
-  if (*stop < 0) {
-    *stop += length;
-    if (*stop < 0) {
-      *stop = (step < 0) ? -1 : 0;
-    }
-  } else if (*stop >= length) {
-    *stop = (step < 0) ? length - 1 : length;
-  }
-
-  if (step < 0) {
-    if (*stop < *start) {
-      return (*start - *stop - 1) / (-step) + 1;
-    }
-  } else {
-    if (*start < *stop) {
-      return (*stop - *start - 1) / step + 1;
-    }
-  }
-  return 0;
-}
-} // namespace
 
 ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &expr,
                                                     ExprPtr &index) {
@@ -746,15 +738,16 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
     return nullptr;
 
   // Extract a static integer value from a compatible expression.
-  auto getInt = [](int64_t *o, const ExprPtr &e) {
+  auto getInt = [&](int64_t *o, const ExprPtr &e) {
     if (!e)
       return true;
-    if (e->isStaticExpr) {
-      seqassert(e->staticEvaluation.first, "{} not evaluated", e->toString());
-      *o = e->staticEvaluation.second;
+    auto f = transform(clone(e));
+    if (f->staticValue.type == StaticValue::INT) {
+      seqassert(f->staticValue.evaluated, "{} not evaluated", e->toString());
+      *o = f->staticValue.getInt();
       return true;
     }
-    if (auto ei = e->getInt()) {
+    if (auto ei = f->getInt()) {
       *o = ei->intValue;
       return true;
     }
@@ -770,7 +763,7 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
     int i = translateIndex(start, stop);
     if (i < 0 || i >= stop)
       error("tuple index out of range (expected 0..{}, got {})", stop, i);
-    return transform(N<DotExpr>(move(expr), classItem->second.fields[i].name));
+    return transform(N<DotExpr>(expr, classItem->second.fields[i].name));
   } else if (auto es = CAST(index, SliceExpr)) {
     if (!getInt(&start, es->start) || !getInt(&stop, es->stop) ||
         !getInt(&step, es->step))
@@ -788,21 +781,15 @@ ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &e
         error("tuple index out of range (expected 0..{}, got {})", sz, i);
       te.push_back(N<DotExpr>(clone(expr), classItem->second.fields[i].name));
     }
-    return transform(N<CallExpr>(
-        N<DotExpr>(N<IdExpr>(format(TYPE_TUPLE "{}", te.size())), "__new__"),
-        move(te)));
+    return transform(
+        N<CallExpr>(N<DotExpr>(format(TYPE_TUPLE "{}", te.size()), "__new__"), te));
   }
   return nullptr;
 }
 
 ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *args) {
-  auto isMethod = [&](const FuncType *f) {
-    auto ast = ctx->cache->functions[f->funcName].ast.get();
-    return ast->attributes.has(Attr::Method);
-  };
-
   if (expr->member == "__class__") {
-    expr->expr = transform(expr->expr, true, true);
+    expr->expr = transform(expr->expr, true, true, true);
     unify(expr->type, ctx->findInternal("str"));
     if (auto f = expr->expr->type->getFunc())
       return transform(N<StringExpr>(f->toString()));
@@ -827,23 +814,49 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     generateFnCall(typ->generics.size() - 1);
   auto methods = ctx->findMethod(typ->name, expr->member);
   if (methods.empty()) {
+    auto findGeneric = [this](ClassType *c, const string &m) -> TypePtr {
+      for (auto &g : c->generics) {
+        if (ctx->cache->reverseIdentifierLookup[g.name] == m)
+          return g.type;
+      }
+      return nullptr;
+    };
     if (auto member = ctx->findMember(typ->name, expr->member)) {
-      // Case 2: Object member access.
+      // Case 2(a): Object member access.
       auto t = ctx->instantiate(expr, member, typ.get());
       unify(expr->type, t);
       expr->done = expr->expr->done && realize(expr->type) != nullptr;
       return nullptr;
+    } else if (auto t = findGeneric(typ.get(), expr->member)) {
+      // Case 2(b): Object generic access.
+      unify(expr->type, t);
+      if (!t->isStaticType())
+        expr->markType();
+      else
+        expr->staticValue.type = StaticValue::Type(t->isStaticType());
+      if (auto rt = realize(expr->type)) {
+        unify(expr->type, rt);
+        ExprPtr e;
+        if (!t->isStaticType())
+          e = N<IdExpr>(t->realizedName());
+        else if (t->getStatic()->expr->staticValue.type == StaticValue::STRING)
+          e = transform(N<StringExpr>(t->getStatic()->expr->staticValue.getString()));
+        else
+          e = transform(N<IntExpr>(t->getStatic()->expr->staticValue.getInt()));
+        return transform(e);
+      }
+      return nullptr;
     } else if (typ->name == TYPE_OPTIONAL) {
       // Case 3: Transform optional.member to unwrap(optional).member.
-      auto d = N<DotExpr>(
-          transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), move(expr->expr))), expr->member);
+      auto d = N<DotExpr>(transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), expr->expr)),
+                          expr->member);
       if (auto dd = transformDot(d.get(), args))
         return dd;
       return d;
     } else if (typ->name == "pyobj") {
       // Case 4: Transform pyobj.member to pyobj._getattr("member").
-      return transform(N<CallExpr>(N<DotExpr>(move(expr->expr), "_getattr"),
-                                   N<StringExpr>(expr->member)));
+      return transform(
+          N<CallExpr>(N<DotExpr>(expr->expr, "_getattr"), N<StringExpr>(expr->member)));
     } else {
       // For debugging purposes:
       ctx->findMethod(typ->name, expr->member);
@@ -863,16 +876,16 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
       argTypes.emplace_back(make_pair(a.name, a.value->getType()));
     if (auto bestMethod =
             ctx->findBestMethod(expr->expr.get(), expr->member, argTypes)) {
-      ExprPtr e = N<IdExpr>(bestMethod->funcName);
+      ExprPtr e = N<IdExpr>(bestMethod->ast->name);
       auto t = ctx->instantiate(expr, bestMethod, typ.get());
       unify(e->type, t);
       unify(expr->type, e->type);
       if (!isType)
-        args->insert(args->begin(), {"", move(expr->expr)}); // self variable
+        args->insert(args->begin(), {"", expr->expr}); // self variable
       e = transform(e); // Visit IdExpr and realize it if necessary.
       // Remove lingering unbound variables from expr->expr (typ) instantiation
       // if we accessed a method that does not reference any generic in typ.
-      if (isType && !isMethod(bestMethod.get()))
+      if (isType && !bestMethod->ast->attributes.has(Attr::Method))
         deactivateUnbounds(typ.get());
       return e;
     }
@@ -913,7 +926,7 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
   // object method access and transform accordingly.
   if (expr->expr->isType()) {
     // Class method access: Type.method.
-    auto name = bestMethod->funcName;
+    auto name = bestMethod->ast->name;
     auto val = ctx->find(name);
     seqassert(val, "cannot find method '{}'", name);
     ExprPtr e = N<IdExpr>(name);
@@ -923,20 +936,19 @@ ExprPtr TypecheckVisitor::transformDot(DotExpr *expr, vector<CallExpr::Arg> *arg
     e = transform(e); // Visit IdExpr and realize it if necessary.
     // Remove lingering unbound variables from expr->expr (typ) instantiation
     // if we accessed a method that does not reference any generic in typ.
-    if (!isMethod(bestMethod.get()))
+    if (!bestMethod->ast->attributes.has(Attr::Method))
       deactivateUnbounds(typ.get());
     return e;
   } else {
     // Object access: y.method. Transform y.method to a partial call
     // typeof(t).foo(y, ...).
-    vector<ExprPtr> methodArgs;
-    methodArgs.push_back(move(expr->expr));
+    vector<ExprPtr> methodArgs{expr->expr};
     for (int i = 0; i < std::max(1, (int)bestMethod->args.size() - 2); i++)
       methodArgs.push_back(N<EllipsisExpr>());
     // Handle @property methods.
-    if (ctx->cache->functions[bestMethod->funcName].ast->attributes.has(Attr::Property))
+    if (bestMethod->ast->attributes.has(Attr::Property))
       methodArgs.pop_back();
-    ExprPtr e = N<CallExpr>(N<IdExpr>(bestMethod->funcName), move(methodArgs));
+    ExprPtr e = N<CallExpr>(N<IdExpr>(bestMethod->ast->name), methodArgs);
     return transform(e, false, allowVoidExpr);
   }
 }
@@ -953,7 +965,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
                                         ExprPtr *extraStage) {
   auto special = transformSpecialCall(expr);
   if (special.first)
-    return move(special.second);
+    return special.second;
 
   ExprPtr oldExpr = nullptr;
   if (extraStage)
@@ -993,7 +1005,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       ai--;
     } else {
       // Case 3: Normal argument
-      expr->args[ai].value = transform(expr->args[ai].value);
+      expr->args[ai].value = transform(expr->args[ai].value, true);
       // Unbound inType might become a generator that will need to be extracted, so
       // don't unify it yet.
       if (inType && !inType->getUnbound() && expr->args[ai].value->getEllipsis() &&
@@ -1015,14 +1027,16 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   // partial call).
   ExprPtr *lhs = &expr->expr;
   // Make sure to check for instantiation DotExpr (e.g. a.b[T]) as well.
-  if (auto ei = const_cast<IndexExpr *>(
-          expr->expr->getIndex())) // A potential function instantiation
+  if (auto ei = const_cast<IndexExpr *>(expr->expr->getIndex())) {
+    // A potential function instantiation
     lhs = &ei->expr;
-  else if (auto eii = CAST(expr->expr, InstantiateExpr)) // Real instantiation
+  } else if (auto eii = CAST(expr->expr, InstantiateExpr)) {
+    // Real instantiation
     lhs = &eii->typeExpr;
+  }
   if (auto ed = const_cast<DotExpr *>((*lhs)->getDot())) {
     if (auto edt = transformDot(ed, &expr->args))
-      *lhs = move(edt);
+      *lhs = edt;
   }
   expr->expr = transform(expr->expr, true);
 
@@ -1037,41 +1051,39 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   } else if (expr->expr->isType()) {
     if (callee->getRecord()) {
       // Case 2a: Tuple constructor. Transform to: t.__new__(args)
-      return transform(
-          N<CallExpr>(N<DotExpr>(move(expr->expr), "__new__"), move(expr->args)));
+      return transform(N<CallExpr>(N<DotExpr>(expr->expr, "__new__"), expr->args));
     } else {
       // Case 2b: Type constructor. Transform to a StmtExpr:
       //   c = t.__new__(); c.__init__(args); c
       ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("v"));
       return transform(N<StmtExpr>(
-          N<AssignStmt>(clone(var),
-                        N<CallExpr>(N<DotExpr>(move(expr->expr), "__new__"))),
-          N<ExprStmt>(
-              N<CallExpr>(N<DotExpr>(clone(var), "__init__"), move(expr->args))),
+          N<AssignStmt>(clone(var), N<CallExpr>(N<DotExpr>(expr->expr, "__new__"))),
+          N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__init__"), expr->args)),
           clone(var)));
     }
   } else if (auto pc = callee->getPartial()) {
-    known = pc->known;
     ExprPtr var = N<IdExpr>(partialVar = ctx->cache->getTemporaryVar("pt"));
-    expr->expr = transform(N<StmtExpr>(N<AssignStmt>(clone(var), move(expr->expr)),
-                                       N<IdExpr>(pc->func->funcName)));
+    expr->expr = transform(N<StmtExpr>(N<AssignStmt>(clone(var), expr->expr),
+                                       N<IdExpr>(pc->func->ast->name)));
     calleeFn = expr->expr->type->getFunc();
+    for (int i = 0, j = 0; i < calleeFn->ast->args.size(); i++)
+      known.push_back(calleeFn->ast->args[i].generic ? 0 : pc->known[j++]);
     seqassert(calleeFn, "not a function: {}", expr->expr->type->toString());
   } else if (!callee->getFunc()) {
     // Case 3: callee is not a named function. Route it through a __call__ method.
-    ExprPtr newCall =
-        N<CallExpr>(N<DotExpr>(move(expr->expr), "__call__"), move(expr->args));
+    ExprPtr newCall = N<CallExpr>(N<DotExpr>(expr->expr, "__call__"), expr->args);
     return transform(newCall, false, allowVoidExpr);
   }
 
-  FunctionStmt *ast = ctx->cache->functions[calleeFn->funcName].ast.get();
-
   // Handle named and default arguments
   vector<CallExpr::Arg> args;
+  vector<ExprPtr> typeArgs;
+  int typeArgCount = 0;
   bool isPartial = false;
+  int ellipsisStage = -1;
   if (expr->ordered)
-    args = move(expr->args);
-  else {
+    args = expr->args;
+  else
     ctx->reorderNamedArgs(
         calleeFn.get(), expr->args,
         [&](int starArgIndex, int kwstarArgIndex, const vector<vector<int>> &slots,
@@ -1080,21 +1092,29 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
           ctx->addBlock(); // add generics for default arguments.
           addFunctionGenerics(calleeFn->getFunc().get());
           for (int si = 0, pi = 0; si < slots.size(); si++) {
-            if (si == starArgIndex && !(partial && slots[si].empty())) {
+            if (calleeFn->ast->args[si].generic) {
+              typeArgs.push_back(slots[si].empty() ? nullptr
+                                                   : expr->args[slots[si][0]].value);
+              typeArgCount += typeArgs.back() != nullptr;
+            } else if (si == starArgIndex && !(partial && slots[si].empty())) {
               vector<ExprPtr> extra;
-              for (auto &e : slots[si])
-                extra.push_back(move(expr->args[e].value));
-              args.push_back({"", transform(N<TupleExpr>(move(extra)))});
+              for (auto &e : slots[si]) {
+                extra.push_back(expr->args[e].value);
+                if (extra.back()->getEllipsis())
+                  ellipsisStage = args.size();
+              }
+              args.push_back({"", transform(N<TupleExpr>(extra))});
             } else if (si == kwstarArgIndex && !(partial && slots[si].empty())) {
               vector<string> names;
               vector<CallExpr::Arg> values;
               for (auto &e : slots[si]) {
                 names.emplace_back(expr->args[e].name);
-                values.emplace_back(CallExpr::Arg{"", move(expr->args[e].value)});
+                values.emplace_back(CallExpr::Arg{"", expr->args[e].value});
+                if (values.back().value->getEllipsis())
+                  ellipsisStage = args.size();
               }
               auto kwName = generateTupleStub(names.size(), "KwTuple", names);
-              args.push_back(
-                  {"", transform(N<CallExpr>(N<IdExpr>(kwName), move(values)))});
+              args.push_back({"", transform(N<CallExpr>(N<IdExpr>(kwName), values))});
             } else if (slots[si].empty()) {
               if (!known.empty() && known[si]) {
                 // Manual call to transformStaticTupleIndex needed because otherwise
@@ -1103,20 +1123,20 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
                 ExprPtr it = N<IntExpr>(pi++);
                 auto ex = transformStaticTupleIndex(callee.get(), id, it);
                 seqassert(ex, "partial indexing failed");
-                args.push_back({"", move(ex)});
+                args.push_back({"", ex});
               } else if (partial) {
                 args.push_back({"", transform(N<EllipsisExpr>())});
               } else {
-                auto es = ast->args[si].deflt->toString();
+                auto es = calleeFn->ast->args[si].deflt->toString();
                 if (in(ctx->defaultCallDepth, es))
                   error("recursive default arguments");
                 ctx->defaultCallDepth.insert(es);
-                args.push_back({"", transform(clone(ast->args[si].deflt))});
+                args.push_back({"", transform(clone(calleeFn->ast->args[si].deflt))});
                 ctx->defaultCallDepth.erase(es);
               }
             } else {
               seqassert(slots[si].size() == 1, "call transformation failed");
-              args.push_back({"", move(expr->args[slots[si][0]].value)});
+              args.push_back({"", expr->args[slots[si][0]].value});
             }
           }
           ctx->popBlock();
@@ -1127,8 +1147,6 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
           return -1;
         },
         known);
-    expr->ordered = true;
-  }
   if (isPartial) {
     deactivateUnbounds(expr->args.back().value->getType().get());
     expr->args.pop_back();
@@ -1136,102 +1154,54 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
 
   // Typecheck given arguments with the expected (signature) types.
   bool unificationsDone = true;
+  assert((expr->ordered && typeArgs.empty()) ||
+         (!expr->ordered && typeArgs.size() == calleeFn->funcGenerics.size()));
+  for (int si = 0; !expr->ordered && si < calleeFn->funcGenerics.size(); si++)
+    if (typeArgs[si]) {
+      auto t = typeArgs[si]->type;
+      if (calleeFn->funcGenerics[si].type->isStaticType()) {
+        if (!typeArgs[si]->isStatic())
+          error("expected static expression");
+        t = make_shared<StaticType>(typeArgs[si], ctx);
+      }
+      unify(t, calleeFn->funcGenerics[si].type);
+    }
+  expr->ordered = true;
+  // Special case: function instantiation
+  if (isPartial && typeArgCount && typeArgCount == expr->args.size()) {
+    for (auto &a : args) {
+      seqassert(a.value->getEllipsis(), "expected ellipsis");
+      deactivateUnbounds(a.value->getType().get());
+    }
+    auto e = transform(expr->expr);
+    unify(expr->type, e->getType());
+    // LOG("-- {} / {}", e->toString(), e->type->debugString(true));
+    return e;
+  }
+
+  // Check if ellipsis is in the *args/*kwArgs
+  if (extraStage && ellipsisStage != -1) {
+    *extraStage = args[ellipsisStage].value;
+    args[ellipsisStage].value = N<EllipsisExpr>();
+    const_cast<CallExpr *>(oldExpr->getCall())->args = args;
+    const_cast<CallExpr *>(oldExpr->getCall())->ordered = true;
+    deactivateUnbounds(calleeFn.get());
+    return oldExpr;
+  }
+
   vector<TypePtr> replacements(calleeFn->args.size() - 1, nullptr);
   for (int si = 0; si < calleeFn->args.size() - 1; si++) {
-    auto expectedTyp = calleeFn->args[si + 1];
-    auto expectedClass = expectedTyp->getClass();
-    auto argClass = args[si].value->getType()->getClass();
+    bool isPipeArg = extraStage && args[si].value->getEllipsis();
+    auto orig = args[si].value.get();
+    if (!wrapExpr(args[si].value, calleeFn->args[si + 1], calleeFn))
+      unificationsDone = false;
 
-    unordered_set<string> hints = {"Generator", "float", TYPE_OPTIONAL};
-    bool mightChange =
-        expectedClass && (expectedClass->isTrait || in(hints, expectedClass->name));
-    if (mightChange) {
-      if (!argClass) {
-        // Case 0: argument type not yet known.
-        unificationsDone = false;
-      } else if (expectedClass->name == "Generator" && argClass &&
-                 argClass->name != expectedClass->name && !extraStage) {
-        // Case 1: wrap expected generators with iter().
-        // Note: do not do this in pipelines (TODO: why?).
-        args[si].value =
-            transform(N<CallExpr>(N<DotExpr>(move(args[si].value), "__iter__")));
-        unify(args[si].value->type, expectedClass);
-      } else if (expectedClass->name == "float" && argClass &&
-                 argClass->name == "int") {
-        // Case 2: wrap ints with float().
-        if (extraStage && args[si].value->getEllipsis()) {
-          // Check if this is a pipe call...
-          *extraStage = N<DotExpr>(N<IdExpr>("float"), "__new__");
-          return oldExpr;
-        }
-        args[si].value =
-            transform(N<CallExpr>(N<IdExpr>("float"), move(args[si].value)));
-        unify(args[si].value->type, expectedClass);
-      } else if (expectedClass->name == TYPE_OPTIONAL && argClass &&
-                 argClass->name != expectedClass->name) {
-        // Case 3: wrap expected optionals with Optional().
-        if (extraStage && args[si].value->getEllipsis()) {
-          // Check if this is a pipe call...
-          *extraStage = N<DotExpr>(N<IdExpr>(TYPE_OPTIONAL), "__new__");
-          return oldExpr;
-        }
-        args[si].value =
-            transform(N<CallExpr>(N<IdExpr>(TYPE_OPTIONAL), move(args[si].value)));
-        unify(args[si].value->type, expectedClass);
-      } else if (ast && startswith(expectedClass->name, TYPE_CALLABLE)) {
-        // Case 4: allow any callable to match Callable[] signature.
-        if (argClass && !argClass->getFunc() && !argClass->getPartial())
-          args[si].value = transform(N<DotExpr>(move(args[si].value), "__call__"));
-        unify(args[si].value->type, expectedTyp);
-        if (args[si].value->type->getFunc())
-          args[si].value = partializeFunction(move(args[si].value));
-        if (auto pt = args[si].value->type->getPartial()) {
-          unify(expectedClass->generics[0].type, pt->func->args[0]);
-          for (int pi = 0, gi = 1; pi < pt->known.size(); pi++)
-            if (!pt->known[pi])
-              unify(expectedClass->generics[gi++].type, pt->func->args[pi + 1]);
-        }
-      } else {
-        // Case 5: normal unification.
-        unify(args[si].value->type, expectedTyp);
-      }
-    } else if (expectedClass && argClass && argClass->name == TYPE_OPTIONAL &&
-               argClass->name != expectedClass->name) { // unwrap optional
-      // Case 6: Optional unwrapping.
-      if (extraStage && args[si].value->getEllipsis()) {
-        *extraStage = N<IdExpr>(FN_UNWRAP);
-        return oldExpr;
-      }
-      args[si].value =
-          transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), move(args[si].value)));
-      unify(args[si].value->type, expectedTyp);
-    } else if (calleeFn->funcName == "Ptr.__new_fn__") {
-      // if (argClass && argClass->getFunc())
-      if (auto pt = argClass->getPartial())
-        expectedTyp = pt->func;
-      else if (argClass->getFunc())
-        expectedTyp = argClass->getFunc();
-      else
-        error("expected a realizable function");
-      // construct Fn type
-      if (auto rt = realize(expectedTyp))
-        unify(rt, expectedTyp);
-      else
-        error("expected a realizable function");
-      expectedClass = expectedTyp->getClass();
-    } else if (argClass && argClass->getFunc() &&
-               !(expectedClass && startswith(expectedClass->name, TYPE_FUNCTION))) {
-      // Case 7: wrap raw Seq functions into Partial(...) call for easy realization.
-      args[si].value = partializeFunction(move(args[si].value));
-      //      LOG("{}", args[si].value->toString());
-      unify(args[si].value->type, expectedTyp);
-    } else {
-      // Case 8: normal unification.
-      unify(args[si].value->type, expectedTyp);
+    replacements[si] = !calleeFn->args[si + 1]->getClass() ? args[si].value->type
+                                                           : calleeFn->args[si + 1];
+    if (isPipeArg && orig != args[si].value.get()) {
+      *extraStage = args[si].value;
+      return oldExpr;
     }
-    replacements[si] = !expectedClass || expectedClass->hasTrait()
-                           ? args[si].value->type
-                           : expectedTyp;
   }
 
   // Realize arguments.
@@ -1241,19 +1211,27 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       unify(rt, a.value->type);
       a.value = transform(a.value);
     }
-    if (auto pt = a.value->type->getPartial())
-      if (auto rt = realize(pt->func))
-        unify(rt, pt->func);
     expr->done &= a.value->done;
   }
 
   // Handle default generics (calleeFn.g. foo[S, T=int]) only if all arguments were
   // unified.
+  // TODO: remove once the proper partial handling of overloaded functions land
   if (unificationsDone)
-    for (int i = 0; i < calleeFn->funcGenerics.size(); i++)
-      if (ast->generics[i].deflt && calleeFn->funcGenerics[i].type->getUnbound())
-        unify(calleeFn->funcGenerics[i].type,
-              transformType(ast->generics[i].deflt)->getType());
+    for (int i = 0, j = 0; i < calleeFn->ast->args.size(); i++)
+      if (calleeFn->ast->args[i].generic) {
+        if (calleeFn->ast->args[i].deflt &&
+            calleeFn->funcGenerics[j].type->getUnbound()) {
+          auto de = transform(calleeFn->ast->args[i].deflt, true);
+          TypePtr t = nullptr;
+          if (de->isStatic())
+            t = make_shared<StaticType>(de, ctx);
+          else
+            t = de->getType();
+          unify(calleeFn->funcGenerics[j].type, t);
+        }
+        j++;
+      }
   for (int si = 0; si < replacements.size(); si++)
     if (replacements[si]) {
       if (replacements[si]->getFunc())
@@ -1266,6 +1244,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     unify(rt, static_pointer_cast<Type>(calleeFn));
     expr->expr = transform(expr->expr);
   }
+
   expr->done &= expr->expr->done;
 
   // Emit the final call.
@@ -1283,33 +1262,31 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     vector<ExprPtr> newArgs;
     for (auto &r : args)
       if (!r.value->getEllipsis())
-        newArgs.push_back(move(r.value));
+        newArgs.push_back(r.value);
 
     string var = ctx->cache->getTemporaryVar("partial");
     ExprPtr call = nullptr;
     if (!partialVar.empty()) {
-      auto stmts = move(const_cast<StmtExpr *>(expr->expr->getStmtExpr())->stmts);
-      stmts.push_back(N<AssignStmt>(
-          N<IdExpr>(var), N<CallExpr>(N<IdExpr>(partialTypeName), move(newArgs))));
-      call = N<StmtExpr>(move(stmts), N<IdExpr>(var));
+      auto stmts = const_cast<StmtExpr *>(expr->expr->getStmtExpr())->stmts;
+      stmts.push_back(N<AssignStmt>(N<IdExpr>(var),
+                                    N<CallExpr>(N<IdExpr>(partialTypeName), newArgs)));
+      call = N<StmtExpr>(stmts, N<IdExpr>(var));
     } else {
-      call = N<StmtExpr>(
-          N<AssignStmt>(N<IdExpr>(var),
-                        N<CallExpr>(N<IdExpr>(partialTypeName), move(newArgs))),
-          N<IdExpr>(var));
+      call =
+          N<StmtExpr>(N<AssignStmt>(N<IdExpr>(var),
+                                    N<CallExpr>(N<IdExpr>(partialTypeName), newArgs)),
+                      N<IdExpr>(var));
     }
     call = transform(call, false, allowVoidExpr);
     seqassert(call->type->getRecord() &&
                   startswith(call->type->getRecord()->name, partialTypeName) &&
                   !call->type->getPartial(),
               "bad partial transformation");
-    call->type = N<PartialType>(call->type->getRecord(), calleeFn,
-                                //->generalize(ctx->typecheckLevel)->getFunc(),
-                                newMask);
+    call->type = N<PartialType>(call->type->getRecord(), calleeFn, newMask);
     return call;
   } else {
     // Case 2. Normal function call.
-    expr->args = move(args);
+    expr->args = args;
     unify(expr->type, calleeFn->args[0]); // function return type
     return nullptr;
   }
@@ -1322,29 +1299,39 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
   if (val == "isinstance") {
     // Make sure not to activate new unbound here, as we just need to check type
     // equality.
-    auto oldActivation = ctx->allowActivation;
-    ctx->allowActivation = false;
+    expr->staticValue.type = StaticValue::INT;
+    expr->type = unify(expr->type, ctx->findInternal("bool"));
     expr->args[0].value = transform(expr->args[0].value, true, true);
-    ctx->allowActivation = oldActivation;
-    auto typ = expr->args[0].value->type;
-    if (!typ) {
+    auto typ = expr->args[0].value->type->getClass();
+    if (!typ || !typ->canRealize()) {
       return {true, nullptr};
     } else {
+      expr->args[0].value = transform(expr->args[0].value, true, true); // to realize it
       if (expr->args[1].value->isId("Tuple") || expr->args[1].value->isId("tuple")) {
+        return {true, transform(N<BoolExpr>(startswith(typ->name, TYPE_TUPLE)))};
+      } else if (expr->args[1].value->isId("ByVal")) {
         return {true, transform(N<BoolExpr>(typ->getRecord() != nullptr))};
-      } else if (expr->args[1].value->getNone() && expr->args[0].value->isType()) {
-        return {true, transform(N<BoolExpr>(typ->is("T.None")))};
+      } else if (expr->args[1].value->isId("ByRef")) {
+        return {true, transform(N<BoolExpr>(typ->getRecord() == nullptr))};
       } else {
-        ctx->allowActivation = false;
-        expr->args[1].value = transformType(expr->args[1].value);
-        ctx->allowActivation = oldActivation;
+        expr->args[1].value =
+            transformType(expr->args[1].value, /*disableActivation*/ true);
         auto t = expr->args[1].value->type;
-        return {true, transform(N<BoolExpr>(typ->unify(t.get(), nullptr) >= 0))};
+        auto unifyOK = typ->unify(t.get(), nullptr) >= 0;
+        return {true, transform(N<BoolExpr>(unifyOK))};
       }
     }
   } else if (val == "staticlen") {
+    expr->staticValue.type = StaticValue::INT;
     expr->args[0].value = transform(expr->args[0].value);
-    auto typ = expr->args[0].value->getType()->getClass();
+    auto typ = expr->args[0].value->getType();
+    if (auto s = typ->getStatic()) {
+      if (s->expr->staticValue.type != StaticValue::STRING)
+        error("expected a static string");
+      if (!s->expr->staticValue.evaluated)
+        return {true, nullptr};
+      return {true, transform(N<IntExpr>(s->expr->staticValue.getString().size()))};
+    }
     if (!typ->getClass())
       return {true, nullptr};
     else if (!typ->getRecord())
@@ -1352,20 +1339,56 @@ pair<bool, ExprPtr> TypecheckVisitor::transformSpecialCall(CallExpr *expr) {
     else
       return {true, transform(N<IntExpr>(typ->getRecord()->args.size()))};
   } else if (val == "hasattr") {
-    auto member = expr->args[1].value->getString()->value;
-    auto oldActivation = ctx->allowActivation;
-    ctx->allowActivation = false;
-    expr->args[0].value = transformType(expr->args[0].value);
+    expr->staticValue.type = StaticValue::INT;
+    expr->args[1].value = transform(expr->args[1].value);
+    if (expr->args[1].value->staticValue.type != StaticValue::STRING)
+      error("expected static string");
+    expr->args[0].value =
+        transformType(expr->args[0].value, /*disableActivation*/ true);
     auto typ = expr->args[0].value->getType()->getClass();
-    ctx->allowActivation = oldActivation;
-    if (!typ)
+    if (!typ || !expr->args[1].value->staticValue.evaluated)
       return {true, nullptr};
-    else
-      return {true, transform(N<BoolExpr>(
-                        !ctx->findMethod(typ->getClass()->name, member).empty() ||
-                        ctx->findMember(typ->getClass()->name, member)))};
+    auto member = expr->args[1].value->staticValue.getString();
+    vector<pair<string, TypePtr>> args{{string(), typ}};
+    for (int i = 2; i < expr->args.size(); i++) {
+      expr->args[i].value = transformType(expr->args[i].value);
+      if (!expr->args[i].value->getType()->getClass())
+        return {true, nullptr};
+      args.push_back({string(), expr->args[i].value->getType()});
+    }
+    bool exists = !ctx->findMethod(typ->getClass()->name, member).empty() ||
+                  ctx->findMember(typ->getClass()->name, member);
+    if (exists && args.size() > 1)
+      exists &=
+          ctx->findBestMethod(expr->args[0].value.get(), member, args, true) != nullptr;
+    return {true, transform(N<BoolExpr>(exists))};
   } else if (val == "compile_error") {
-    error("custom error: {}", expr->args[0].value->getString()->value);
+    expr->args[0].value = transform(expr->args[0].value);
+    if (expr->args[0].value->staticValue.type != StaticValue::STRING)
+      error("expected static string");
+    if (!expr->args[0].value->staticValue.evaluated)
+      return {true, nullptr};
+    error("custom error: {}", expr->args[0].value->staticValue.getString());
+  } else if (val == "type") {
+    expr->args[0].value = transform(expr->args[0].value);
+    unify(expr->type, expr->args[0].value->getType());
+    if (auto rt = realize(expr->type)) {
+      unify(expr->type, rt);
+      auto resultExpr = N<IdExpr>(expr->type->realizedName());
+      unify(resultExpr->type, expr->type);
+      resultExpr->done = true;
+      resultExpr->markType();
+      return {true, resultExpr};
+    }
+    return {true, nullptr};
+  } else if (val == "getattr") {
+    expr->args[1].value = transform(expr->args[1].value);
+    if (expr->args[1].value->staticValue.type != StaticValue::STRING)
+      error("expected static string");
+    if (!expr->args[1].value->staticValue.evaluated)
+      return {true, nullptr};
+    return {true, transform(N<DotExpr>(expr->args[0].value,
+                                       expr->args[1].value->staticValue.getString()))};
   }
   return {false, nullptr};
 }
@@ -1374,27 +1397,18 @@ void TypecheckVisitor::addFunctionGenerics(const FuncType *t) {
   for (auto p = t->funcParent; p;) {
     if (auto f = p->getFunc()) {
       for (auto &g : f->funcGenerics)
-        if (auto s = g.type->getStatic())
-          ctx->add(TypecheckItem::Type, g.name, s, true);
-        else if (!g.name.empty())
-          ctx->add(TypecheckItem::Type, g.name, g.type);
+        ctx->add(TypecheckItem::Type, g.name, g.type);
       p = f->funcParent;
     } else {
       auto c = p->getClass();
       seqassert(c, "not a class: {}", p->toString());
       for (auto &g : c->generics)
-        if (auto s = g.type->getStatic())
-          ctx->add(TypecheckItem::Type, g.name, s, true);
-        else if (!g.name.empty())
-          ctx->add(TypecheckItem::Type, g.name, g.type);
+        ctx->add(TypecheckItem::Type, g.name, g.type);
       break;
     }
   }
   for (auto &g : t->funcGenerics)
-    if (auto s = g.type->getStatic())
-      ctx->add(TypecheckItem::Type, g.name, s, true);
-    else if (!g.name.empty())
-      ctx->add(TypecheckItem::Type, g.name, g.type);
+    ctx->add(TypecheckItem::Type, g.name, g.type);
 }
 
 string TypecheckVisitor::generateTupleStub(int len, const string &name,
@@ -1412,40 +1426,18 @@ string TypecheckVisitor::generateTupleStub(int len, const string &name,
   }
   auto typeName = format("{}{}", name, hasSuffix ? format(".N{}{}", len, suffix) : "");
   if (!ctx->find(typeName)) {
-    vector<Param> generics, args;
-    for (int i = 1; i <= len; i++) {
-      generics.emplace_back(Param{format("T{}", i), nullptr, nullptr});
-      args.emplace_back(Param{names[i - 1], N<IdExpr>(format("T{}", i)), nullptr});
-    }
-    StmtPtr stmt = make_unique<ClassStmt>(typeName, move(generics), move(args), nullptr,
-                                          Attr({Attr::Tuple}));
+    vector<Param> args;
+    for (int i = 1; i <= len; i++)
+      args.emplace_back(Param(names[i - 1], N<IdExpr>(format("T{}", i)), nullptr));
+    for (int i = 1; i <= len; i++)
+      args.emplace_back(Param(format("T{}", i), N<IdExpr>("type"), nullptr, true));
+    StmtPtr stmt = make_shared<ClassStmt>(typeName, args, nullptr, Attr({Attr::Tuple}));
     stmt->setSrcInfo(ctx->cache->generateSrcInfo());
 
     stmt = SimplifyVisitor::apply(ctx->cache->imports[STDLIB_IMPORT].ctx, stmt,
                                   FILE_GENERATED, 0);
     stmt = TypecheckVisitor(ctx).transform(stmt);
-    prependStmts->push_back(move(stmt));
-  }
-  return typeName;
-}
-
-string TypecheckVisitor::generateCallableStub(int n) {
-  auto typeName = format(TYPE_CALLABLE "{}", n);
-  if (!ctx->find(typeName)) {
-    auto baseType = make_shared<RecordType>(typeName, typeName);
-    baseType->isTrait = true;
-    for (int i = 0; i <= n; i++) {
-      baseType->generics.emplace_back(ClassType::Generic(
-          !i ? "TR" : format("T{}", i), !i ? "TR" : format("T{}", i),
-          make_shared<LinkType>(LinkType::Generic, ctx->cache->unboundCount++),
-          ctx->cache->unboundCount));
-      baseType->generics.back().type->getLink()->genericName =
-          baseType->generics.back().niceName;
-      baseType->args.emplace_back(baseType->generics.back().type);
-    }
-    ctx->cache->classes[typeName] = Cache::Class();
-    ctx->addToplevel(typeName,
-                     make_shared<TypecheckItem>(TypecheckItem::Type, baseType));
+    prependStmts->push_back(stmt);
   }
   return typeName;
 }
@@ -1454,19 +1446,17 @@ string TypecheckVisitor::generateFunctionStub(int n) {
   seqassert(n >= 0, "invalid n");
   auto typeName = format(TYPE_FUNCTION "{}", n);
   if (!ctx->find(typeName)) {
-    vector<Param> generics;
-    generics.emplace_back(Param{"TR", nullptr, nullptr});
-    vector<ExprPtr> genericNames;
-    genericNames.emplace_back(N<IdExpr>("TR"));
+    vector<ExprPtr> genericNames{N<IdExpr>("TR")};
     // TODO: remove this args hack
     vector<Param> args;
     args.emplace_back(Param{"ret", N<IdExpr>("TR"), nullptr});
     for (int i = 1; i <= n; i++) {
       genericNames.emplace_back(N<IdExpr>(format("T{}", i)));
-      generics.emplace_back(Param{format("T{}", i), nullptr, nullptr});
       args.emplace_back(Param{format("a{}", i), N<IdExpr>(format("T{}", i)), nullptr});
     }
-    ExprPtr type = N<IndexExpr>(N<IdExpr>(typeName), N<TupleExpr>(move(genericNames)));
+    for (auto &g : genericNames)
+      args.emplace_back(Param(g->getId()->value, N<IdExpr>("type"), nullptr, true));
+    ExprPtr type = N<IndexExpr>(N<IdExpr>(typeName), N<TupleExpr>(genericNames));
 
     vector<StmtPtr> fns;
     vector<Param> params;
@@ -1475,46 +1465,41 @@ string TypecheckVisitor::generateFunctionStub(int n) {
     //   return __internal__.fn_new[Function.N[TR, ...]](what)
     params.emplace_back(
         Param{"what", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte"))});
-    stmts.push_back(N<ReturnStmt>(N<CallExpr>(
-        N<IndexExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "fn_new"), clone(type)),
-        N<IdExpr>("what"))));
-    fns.emplace_back(make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{},
-                                               move(params),
-                                               N<SuiteStmt>(move(stmts))));
+    stmts.push_back(N<ReturnStmt>(N<CallExpr>(N<DotExpr>("__internal__", "fn_new"),
+                                              N<IdExpr>("what"), clone(type))));
+    fns.emplace_back(
+        make_shared<FunctionStmt>("__new__", clone(type), params, N<SuiteStmt>(stmts)));
     params.clear();
     stmts.clear();
     // def __new__(what: Function.N[TR, T1, ..., TN]) -> Function.N[TR, T1, ..., TN]:
     //   return what
     params.emplace_back(Param{"what", clone(type)});
     fns.emplace_back(
-        make_unique<FunctionStmt>("__new__", clone(type), vector<Param>{}, move(params),
+        make_shared<FunctionStmt>("__new__", clone(type), params,
                                   N<SuiteStmt>(N<ReturnStmt>(N<IdExpr>("what")))));
     params.clear();
     // def __raw__(self: Function.N[TR, T1, ..., TN]) -> Ptr[byte]:
     //   return __internal__.fn_raw(self)
     params.emplace_back(Param{"self", clone(type)});
-    stmts.push_back(N<ReturnStmt>(N<CallExpr>(
-        N<DotExpr>(N<IdExpr>("__internal__"), "fn_raw"), N<IdExpr>("self"))));
-    fns.emplace_back(make_unique<FunctionStmt>(
-        "__raw__", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte")), vector<Param>{},
-        move(params), N<SuiteStmt>(move(stmts))));
+    stmts.push_back(N<ReturnStmt>(
+        N<CallExpr>(N<DotExpr>("__internal__", "fn_raw"), N<IdExpr>("self"))));
+    fns.emplace_back(make_shared<FunctionStmt>(
+        "__raw__", N<IndexExpr>(N<IdExpr>("Ptr"), N<IdExpr>("byte")), params,
+        N<SuiteStmt>(stmts)));
     params.clear();
     stmts.clear();
     // def __str__(self: Function.N[TR, T1, ..., TN]) -> str:
     //   return __internal__.raw_type_str(self.__raw__(), "function")
     params.emplace_back(Param{"self", clone(type)});
-    stmts.push_back(
-        N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("__internal__"), "raw_type_str"),
-                                  N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__raw__")),
-                                  N<StringExpr>("function"))));
-    fns.emplace_back(make_unique<FunctionStmt>("__str__", N<IdExpr>("str"),
-                                               vector<Param>{}, move(params),
-                                               N<SuiteStmt>(move(stmts))));
+    stmts.push_back(N<ReturnStmt>(N<CallExpr>(
+        N<DotExpr>("__internal__", "raw_type_str"),
+        N<CallExpr>(N<DotExpr>("self", "__raw__")), N<StringExpr>("function"))));
+    fns.emplace_back(
+        N<FunctionStmt>("__str__", N<IdExpr>("str"), params, N<SuiteStmt>(stmts)));
     params.clear();
     stmts.clear();
     // class Function.N[TR, T1, ..., TN]
-    StmtPtr stmt = make_unique<ClassStmt>(typeName, move(generics), move(args),
-                                          N<SuiteStmt>(move(fns)),
+    StmtPtr stmt = make_shared<ClassStmt>(typeName, args, N<SuiteStmt>(fns),
                                           Attr({Attr::Internal, Attr::Tuple}));
     stmt->setSrcInfo(ctx->cache->generateSrcInfo());
 
@@ -1522,7 +1507,7 @@ string TypecheckVisitor::generateFunctionStub(int n) {
     stmt = SimplifyVisitor::apply(ctx->cache->imports[STDLIB_IMPORT].ctx, stmt,
                                   FILE_GENERATED, 0);
     stmt = TypecheckVisitor(ctx).transform(stmt);
-    prependStmts->push_back(move(stmt));
+    prependStmts->push_back(stmt);
   }
   return typeName;
 }
@@ -1550,10 +1535,6 @@ void TypecheckVisitor::generateFnCall(int n) {
 
   auto typeName = format(TYPE_FUNCTION "{}", n);
   if (!in(ctx->cache->classes[typeName].methods, "__call__")) {
-    vector<Param> generics;
-    generics.emplace_back(Param{format("TR"), nullptr, nullptr});
-    for (int i = 1; i <= n; i++)
-      generics.emplace_back(Param{format("T{}", i), nullptr, nullptr});
     vector<Param> params;
     vector<StmtPtr> fns;
     params.emplace_back(Param{"self", nullptr});
@@ -1567,29 +1548,28 @@ void TypecheckVisitor::generateFnCall(int n) {
     string llvmNonVoid =
         format("%0 = call {{=TR}} %self({})\nret {{=TR}} %0", join(llvmArgs, ", "));
     string llvmVoid = format("call {{=TR}} %self({})\nret void", join(llvmArgs, ", "));
-    fns.emplace_back(make_unique<FunctionStmt>(
-        "__call__.void", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
+    fns.emplace_back(make_shared<FunctionStmt>(
+        "__call__.void", N<IdExpr>("TR"), clone_nop(params),
         N<SuiteStmt>(N<ExprStmt>(N<StringExpr>(llvmVoid))), Attr({Attr::LLVM})));
-    fns.emplace_back(make_unique<FunctionStmt>(
-        "__call__.ret", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
+    fns.emplace_back(make_shared<FunctionStmt>(
+        "__call__.ret", N<IdExpr>("TR"), clone_nop(params),
         N<SuiteStmt>(N<ExprStmt>(N<StringExpr>(llvmNonVoid))), Attr({Attr::LLVM})));
-    fns.emplace_back(make_unique<FunctionStmt>(
-        "__call__", N<IdExpr>("TR"), vector<Param>{}, clone_nop(params),
+    fns.emplace_back(make_shared<FunctionStmt>(
+        "__call__", N<IdExpr>("TR"), clone_nop(params),
         N<SuiteStmt>(N<IfStmt>(
             N<CallExpr>(N<IdExpr>("isinstance"), N<IdExpr>("TR"), N<IdExpr>("void")),
-            N<ExprStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__call__.void"),
-                                    clone_nop(callArgs))),
-            nullptr,
-            N<ReturnStmt>(N<CallExpr>(N<DotExpr>(N<IdExpr>("self"), "__call__.ret"),
+            N<ExprStmt>(
+                N<CallExpr>(N<DotExpr>("self", "__call__.void"), clone_nop(callArgs))),
+            N<ReturnStmt>(N<CallExpr>(N<DotExpr>("self", "__call__.ret"),
                                       clone_nop(callArgs)))))));
     // Parse this function in a clean context.
 
-    StmtPtr stmt = N<ClassStmt>(typeName, move(generics), vector<Param>{},
-                                N<SuiteStmt>(move(fns)), Attr({Attr::Extend}));
+    StmtPtr stmt = N<ClassStmt>(typeName, vector<Param>{}, N<SuiteStmt>(fns),
+                                Attr({Attr::Extend}));
     stmt = SimplifyVisitor::apply(ctx->cache->imports[STDLIB_IMPORT].ctx, stmt,
                                   FILE_GENERATED, 0);
     stmt = TypecheckVisitor(ctx).transform(stmt);
-    prependStmts->push_back(move(stmt));
+    prependStmts->push_back(stmt);
   }
 }
 
@@ -1610,6 +1590,87 @@ ExprPtr TypecheckVisitor::partializeFunction(ExprPtr expr) {
             "bad partial transformation");
   call->type = N<PartialType>(call->type->getRecord(), fn, mask);
   return call;
+}
+
+bool TypecheckVisitor::wrapExpr(ExprPtr &expr, TypePtr expectedType,
+                                const FuncTypePtr &callee) {
+  auto expectedClass = expectedType->getClass();
+  auto exprClass = expr->getType()->getClass();
+  if (callee && expr->isType())
+    expr = transform(N<CallExpr>(expr, N<EllipsisExpr>()));
+
+  unordered_set<string> hints = {"Generator", "float", TYPE_OPTIONAL};
+  if (!exprClass && expectedClass && in(hints, expectedClass->name)) {
+    return false; // argument type not yet known.
+  } else if (expectedClass && expectedClass->name == "Generator" &&
+             exprClass->name != expectedClass->name && !expr->getEllipsis()) {
+    // Note: do not do this in pipelines (TODO: why?).
+    expr = transform(N<CallExpr>(N<DotExpr>(expr, "__iter__")));
+  } else if (expectedClass && expectedClass->name == "float" &&
+             exprClass->name == "int") {
+    expr = transform(N<CallExpr>(N<IdExpr>("float"), expr));
+  } else if (expectedClass && expectedClass->name == TYPE_OPTIONAL &&
+             exprClass->name != expectedClass->name) {
+    expr = transform(N<CallExpr>(N<IdExpr>(TYPE_OPTIONAL), expr));
+  } else if (expectedClass && exprClass && exprClass->name == TYPE_OPTIONAL &&
+             exprClass->name != expectedClass->name) { // unwrap optional
+    expr = transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), expr));
+  } else if (callee && exprClass && expr->type->getFunc() &&
+             !(expectedClass && startswith(expectedClass->name, TYPE_FUNCTION))) {
+    // Case 7: wrap raw Seq functions into Partial(...) call for easy realization.
+    expr = partializeFunction(expr);
+  }
+  unify(expr->type, expectedType);
+  return true;
+}
+
+int64_t TypecheckVisitor::translateIndex(int64_t idx, int64_t len, bool clamp) {
+  if (idx < 0)
+    idx += len;
+  if (clamp) {
+    if (idx < 0)
+      idx = 0;
+    if (idx > len)
+      idx = len;
+  } else if (idx < 0 || idx >= len) {
+    error("tuple index {} out of bounds (len: {})", idx, len);
+  }
+  return idx;
+}
+
+int64_t TypecheckVisitor::sliceAdjustIndices(int64_t length, int64_t *start,
+                                             int64_t *stop, int64_t step) {
+  if (step == 0)
+    error("slice step cannot be 0");
+
+  if (*start < 0) {
+    *start += length;
+    if (*start < 0) {
+      *start = (step < 0) ? -1 : 0;
+    }
+  } else if (*start >= length) {
+    *start = (step < 0) ? length - 1 : length;
+  }
+
+  if (*stop < 0) {
+    *stop += length;
+    if (*stop < 0) {
+      *stop = (step < 0) ? -1 : 0;
+    }
+  } else if (*stop >= length) {
+    *stop = (step < 0) ? length - 1 : length;
+  }
+
+  if (step < 0) {
+    if (*stop < *start) {
+      return (*start - *stop - 1) / (-step) + 1;
+    }
+  } else {
+    if (*start < *stop) {
+      return (*stop - *start - 1) / step + 1;
+    }
+  }
+  return 0;
 }
 
 } // namespace ast

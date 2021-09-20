@@ -16,13 +16,12 @@ private:
   std::string globalVarsKey;
 
 public:
-  const std::string KEY = "core-folding-const-prop";
+  static const std::string KEY;
 
   /// Constructs a constant propagation pass.
   /// @param reachingDefKey the reaching definition analysis' key
-  explicit ConstPropPass(std::string reachingDefKey, std::string globalVarsKey)
-      : reachingDefKey(std::move(reachingDefKey)),
-        globalVarsKey(std::move(globalVarsKey)) {}
+  ConstPropPass(const std::string &reachingDefKey, const std::string &globalVarsKey)
+      : reachingDefKey(reachingDefKey), globalVarsKey(globalVarsKey) {}
 
   std::string getKey() const override { return KEY; }
   void handle(VarValue *v) override;

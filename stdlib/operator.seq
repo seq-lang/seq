@@ -12,9 +12,9 @@ __gt__ = gt
 __ge__ = ge
 
 def not_(a):
-    if hasattr(typeof(a), "__bool__"):
+    if hasattr(a, "__bool__"):
         return not bool(a)
-    elif hasattr(typeof(a), "__len__"):
+    elif hasattr(a, "__len__"):
         return len(a) == 0
     else:
         compile_error("argument has no __bool__ or __len__ methods")
@@ -138,9 +138,9 @@ def setitem(a, b, c):
 __setitem__ = setitem
 
 def length_hint(a, default=0):
-    if hasattr(typeof(a), "__len__"):
+    if hasattr(a, "__len__"):
         return len(a)
-    elif hasattr(typeof(a), "__length_hint__"):
+    elif hasattr(a, "__length_hint__"):
         return a.__length_hint__()
     else:
         return default
@@ -195,12 +195,10 @@ def imul(a, b):
     return a
 __imul__ = imul
 
-'''
 def imatmul(a, b):
     a @= b
     return a
 __imatmul__ = imatmul
-'''
 
 def ior(a, b):
     a |= b

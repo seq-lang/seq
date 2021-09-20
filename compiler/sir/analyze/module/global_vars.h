@@ -16,7 +16,7 @@ struct GlobalVarsResult : public Result {
 };
 
 class GlobalVarsAnalyses : public Analysis {
-  const std::string KEY = "core-analyses-global-vars";
+  static const std::string KEY;
   std::string getKey() const override { return KEY; }
 
   std::unique_ptr<Result> run(const Module *m) override;

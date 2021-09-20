@@ -188,5 +188,5 @@ class seq:
 
 @extend
 class str:
-    def __prefix_p__[N: int = 0](s: str) -> pseq:
+    def __prefix_p__(s: str, N: Static[int] = 0) -> pseq:
         return pseq(s)

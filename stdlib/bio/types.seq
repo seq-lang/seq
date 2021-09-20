@@ -5,7 +5,7 @@ class byte:
         return _byte_comp_table.ptr[int(self)]
 
 @extend
-class Dict[K,V]:
+class Dict:
     def prefetch(self, key: K):
         if self._n_buckets:
             from internal.types.collections.dict import _dict_hash
@@ -17,6 +17,6 @@ class Dict[K,V]:
             (self._flags + (i >> 4)).__prefetch_r1__()
 
 @extend
-class List[T]:
+class List:
     def prefetch(self, idx: int):
         (self.arr.ptr + idx).__prefetch_r3__()

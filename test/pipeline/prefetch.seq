@@ -44,35 +44,35 @@ def lookup5(kmer, idx, v):
     v.append((kmer, idx[kmer]))
     return 0
 
-K = Kmer[3]
+K: Static[int] = 3
 
 @test
 def test_prefetch_transformation(s):
-    idx1 = MyIndex[K](K())
-    idx2 = MyIndex[K](K())
-    idx3 = MyIndex[K](K())
-    idx4 = MyIndex[K](K())
-    idx5 = MyIndex[K](K())
-    idx6 = MyIndex[K](K())
-    v1 = list[tuple[K, int]]()
-    v2 = list[tuple[K, int]]()
-    v3 = list[tuple[K, int]]()
-    v4 = list[tuple[K, int]]()
-    v5 = list[tuple[K, int]]()
-    v6 = list[tuple[K, int]]()
+    idx1 = MyIndex(Kmer[K]())
+    idx2 = MyIndex(Kmer[K]())
+    idx3 = MyIndex(Kmer[K]())
+    idx4 = MyIndex(Kmer[K]())
+    idx5 = MyIndex(Kmer[K]())
+    idx6 = MyIndex(Kmer[K]())
+    v1 = []
+    v2 = []
+    v3 = []
+    v4: List[Tuple[Kmer[K], int]] = []
+    v5: List[Tuple[Kmer[K], int]] = []
+    v6: List[Tuple[Kmer[K], int]] = []
     s = s'ACGTACGTAAAACGTACGTAAAACGTACGT'
 
     def my_kmers(s):
-        return s.kmers[K](1)
+        return s.kmers(1, K)
 
-    s |> kmers[K](1) |> lookup1(idx1) |> v1.append
-    s |> kmers[K](1) |> lookup2(idx2) |> v2.append
-    s |> kmers[K](1) |> lookup3(idx3) |> v3.append
+    s |> kmers(1, K) |> lookup1(idx1) |> v1.append
+    s |> kmers(1, K) |> lookup2(idx2) |> v2.append
+    s |> kmers(1, K) |> lookup3(idx3) |> v3.append
     my_kmers(s) |> lookup4(idx4, v4)
-    s |> kmers[K](1) |> lookup5(idx5, v5)
+    s |> kmers(1, K) |> lookup5(idx5, v5)
 
     def pass_prefetch_func_by_arg(s, lookup, idx, v):
-        s |> kmers[K](1) |> lookup(idx) |> v.append
+        s |> kmers(1, K) |> lookup(idx) |> v.append
 
     pass_prefetch_func_by_arg(s, lookup3, idx6, v6)
 
@@ -81,7 +81,7 @@ def test_prefetch_transformation(s):
     assert set(v1) == set(v4)
     assert set(v1) == set(v5)
     assert set(v1) == set(v6)
-    assert idx1.getitem_calls == len(s) - (len(K()) - 1)
+    assert idx1.getitem_calls == len(s) - (K - 1)
     assert idx1.prefetch_calls == 0
     assert idx1.getitem_calls == idx2.getitem_calls
     assert idx3.getitem_calls == 5 * idx1.getitem_calls

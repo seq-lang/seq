@@ -2,7 +2,6 @@ INSERTION_SORT_THRESHOLD = 24
 NINTHER_THRESHOLD = 128
 PARTIAL_INSERTION_SORT_LIMIT = 8
 
-from math import floor, log2
 from algorithms.insertionsort import _insertion_sort
 from algorithms.heapsort import _heap_sort
 

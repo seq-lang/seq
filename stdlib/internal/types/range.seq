@@ -44,9 +44,12 @@ class range:
             return False
         return (idx - start) % step == 0
 
+    def _index(self, n: int):
+        return (n - self.start) // self.step
+
     def index(self, n: int):
         if n in self:
-            return (n - self.start) // self.step
+            return self._index(n)
         else:
             raise ValueError(str(n) + ' is not in range')
 

@@ -5,7 +5,7 @@
 # <queries> and <targets> are text files of the same length with one sequence per line.
 from time import TimeInterval
 from sys import argv
-from bio import seqs
+from bio import seqs, inter_align
 from math import sqrt
 from statistics import mean, stdev
 queries = argv[1]

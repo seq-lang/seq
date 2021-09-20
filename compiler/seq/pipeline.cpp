@@ -86,6 +86,10 @@ Value *replaceStageFunc(PipelineFlow::Stage &stage, Func *schedFunc,
 }
 } // namespace
 
+const std::string PipelineSubstitutionOptimization::KEY = "seq-pipeline-subst-opt";
+const std::string PipelinePrefetchOptimization::KEY = "seq-pipeline-prefetch-opt";
+const std::string PipelineInterAlignOptimization::KEY = "seq-pipeline-inter-align-opt";
+
 /*
  * Substitution optimizations
  */

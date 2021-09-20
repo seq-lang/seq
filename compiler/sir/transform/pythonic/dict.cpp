@@ -61,6 +61,8 @@ GetCall analyzeGet(CallInstr *call) {
 }
 } // namespace
 
+const std::string DictArithmeticOptimization::KEY = "core-pythonic-dict-arithmetic-opt";
+
 void DictArithmeticOptimization::handle(CallInstr *v) {
   auto *M = v->getModule();
 

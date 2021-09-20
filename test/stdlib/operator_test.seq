@@ -1,4 +1,5 @@
 from operator import *
+import operator
 
 def apply1(f, x, expected):
     return f(x) == expected
@@ -253,60 +254,60 @@ def test_comparisons():
     assert apply2(eq, 1, 1, True)
     assert apply2(eq, 1, 1.1, False)
 
-    assert apply2(__eq__, 1, 2, False)
-    assert apply2(__eq__, 2, 1, False)
-    assert apply2(__eq__, 1, 1, True)
-    assert apply2(__eq__, 1, 1.1, False)
+    assert apply2(operator.__eq__, 1, 2, False)
+    assert apply2(operator.__eq__, 2, 1, False)
+    assert apply2(operator.__eq__, 1, 1, True)
+    assert apply2(operator.__eq__, 1, 1.1, False)
 
     assert apply2(ne, 1, 2, True)
     assert apply2(ne, 2, 1, True)
     assert apply2(ne, 1, 1, False)
     assert apply2(ne, 1, 1.1, True)
 
-    assert apply2(__ne__, 1, 2, True)
-    assert apply2(__ne__, 2, 1, True)
-    assert apply2(__ne__, 1, 1, False)
-    assert apply2(__ne__, 1, 1.1, True)
+    assert apply2(operator.__ne__, 1, 2, True)
+    assert apply2(operator.__ne__, 2, 1, True)
+    assert apply2(operator.__ne__, 1, 1, False)
+    assert apply2(operator.__ne__, 1, 1.1, True)
 
     assert apply2(lt, 1, 2, True)
     assert apply2(lt, 2, 1, False)
     assert apply2(lt, 1, 1, False)
     assert apply2(lt, 1, 1.1, True)
 
-    assert apply2(__lt__, 1, 2, True)
-    assert apply2(__lt__, 2, 1, False)
-    assert apply2(__lt__, 1, 1, False)
-    assert apply2(__lt__, 1, 1.1, True)
+    assert apply2(operator.__lt__, 1, 2, True)
+    assert apply2(operator.__lt__, 2, 1, False)
+    assert apply2(operator.__lt__, 1, 1, False)
+    assert apply2(operator.__lt__, 1, 1.1, True)
 
     assert apply2(le, 1, 2, True)
     assert apply2(le, 2, 1, False)
     assert apply2(le, 1, 1, True)
     assert apply2(le, 1, 1.1, True)
 
-    assert apply2(__le__, 1, 2, True)
-    assert apply2(__le__, 2, 1, False)
-    assert apply2(__le__, 1, 1, True)
-    assert apply2(__le__, 1, 1.1, True)
+    assert apply2(operator.__le__, 1, 2, True)
+    assert apply2(operator.__le__, 2, 1, False)
+    assert apply2(operator.__le__, 1, 1, True)
+    assert apply2(operator.__le__, 1, 1.1, True)
 
     assert apply2(gt, 1, 2, False)
     assert apply2(gt, 2, 1, True)
     assert apply2(gt, 1, 1, False)
     assert apply2(gt, 1, 1.1, False)
 
-    assert apply2(__gt__, 1, 2, False)
-    assert apply2(__gt__, 2, 1, True)
-    assert apply2(__gt__, 1, 1, False)
-    assert apply2(__gt__, 1, 1.1, False)
+    assert apply2(operator.__gt__, 1, 2, False)
+    assert apply2(operator.__gt__, 2, 1, True)
+    assert apply2(operator.__gt__, 1, 1, False)
+    assert apply2(operator.__gt__, 1, 1.1, False)
 
     assert apply2(ge, 1, 2, False)
     assert apply2(ge, 2, 1, True)
     assert apply2(ge, 1, 1, True)
     assert apply2(ge, 1, 1.1, False)
 
-    assert apply2(__ge__, 1, 2, False)
-    assert apply2(__ge__, 2, 1, True)
-    assert apply2(__ge__, 1, 1, True)
-    assert apply2(__ge__, 1, 1.1, False)
+    assert apply2(operator.__ge__, 1, 2, False)
+    assert apply2(operator.__ge__, 2, 1, True)
+    assert apply2(operator.__ge__, 1, 1, True)
+    assert apply2(operator.__ge__, 1, 1.1, False)
 
     assert apply2(eq, C(), C(), False)
     assert n_eq == 1
@@ -321,17 +322,17 @@ def test_comparisons():
     assert apply2(ge, C(), C(), False)
     assert n_ge == 1
 
-    assert apply2(__eq__, C(), C(), False)
+    assert apply2(operator.__eq__, C(), C(), False)
     assert n_eq == 2
-    assert apply2(__ne__, C(), C(), False)
+    assert apply2(operator.__ne__, C(), C(), False)
     assert n_ne == 2
-    assert apply2(__lt__, C(), C(), False)
+    assert apply2(operator.__lt__, C(), C(), False)
     assert n_lt == 2
-    assert apply2(__le__, C(), C(), False)
+    assert apply2(operator.__le__, C(), C(), False)
     assert n_le == 2
-    assert apply2(__gt__, C(), C(), False)
+    assert apply2(operator.__gt__, C(), C(), False)
     assert n_gt == 2
-    assert apply2(__ge__, C(), C(), False)
+    assert apply2(operator.__ge__, C(), C(), False)
     assert n_ge == 2
 test_comparisons()
 
@@ -374,165 +375,161 @@ def test_ops():
 
     assert abs(x) == 'abs'
     assert n_abs == 1
-    assert __abs__(x) == 'abs'
+    assert operator.__abs__(x) == 'abs'
     assert n_abs == 2
 
-    ''' TODO: +x gets converted to x by parser
     assert pos(x) == 'pos'
     assert n_pos == 1
-    assert __pos__(x) == 'pos'
+    assert operator.__pos__(x) == 'pos'
     assert n_pos == 2
-    '''
 
     assert neg(x) == 'neg'
     assert n_neg == 1
-    assert __neg__(x) == 'neg'
+    assert operator.__neg__(x) == 'neg'
     assert n_neg == 2
 
     assert inv(x) == 'inv'
     assert n_inv == 1
-    assert __inv__(x) == 'inv'
+    assert operator.__inv__(x) == 'inv'
     assert n_inv == 2
     assert invert(x) == 'inv'
     assert n_inv == 3
-    assert __invert__(x) == 'inv'
+    assert operator.__invert__(x) == 'inv'
     assert n_inv == 4
 
     assert index(x) == 'index'
     assert n_index == 1
-    assert __index__(x) == 'index'
+    assert operator.__index__(x) == 'index'
     assert n_index == 2
 
     assert add(x, y) == 'add'
     assert n_add == 1
-    assert __add__(x, y) == 'add'
+    assert operator.__add__(x, y) == 'add'
     assert n_add == 2
 
     assert iadd(x, y) is x
     assert n_iadd == 1
-    assert __iadd__(x, y) is x
+    assert operator.__iadd__(x, y) is x
     assert n_iadd == 2
 
     assert sub(x, y) == 'sub'
     assert n_sub == 1
-    assert __sub__(x, y) == 'sub'
+    assert operator.__sub__(x, y) == 'sub'
     assert n_sub == 2
 
     assert isub(x, y) is x
     assert n_isub == 1
-    assert __isub__(x, y) is x
+    assert operator.__isub__(x, y) is x
     assert n_isub == 2
 
     assert mul(x, y) == 'mul'
     assert n_mul == 1
-    assert __mul__(x, y) == 'mul'
+    assert operator.__mul__(x, y) == 'mul'
     assert n_mul == 2
 
     assert imul(x, y) is x
     assert n_imul == 1
-    assert __imul__(x, y) is x
+    assert operator.__imul__(x, y) is x
     assert n_imul == 2
 
     assert matmul(x, y) == 'matmul'
     assert n_matmul == 1
-    assert __matmul__(x, y) == 'matmul'
+    assert operator.__matmul__(x, y) == 'matmul'
     assert n_matmul == 2
 
-    ''' TODO: matmul
     assert imatmul(x, y) is x
     assert n_imatmul == 1
-    assert __imatmul__(x, y) is x
+    assert operator.__imatmul__(x, y) is x
     assert n_imatmul == 2
-    '''
 
     assert truediv(x, y) == 'truediv'
     assert n_truediv == 1
-    assert __truediv__(x, y) == 'truediv'
+    assert operator.__truediv__(x, y) == 'truediv'
     assert n_truediv == 2
 
     assert itruediv(x, y) is x
     assert n_itruediv == 1
-    assert __itruediv__(x, y) is x
+    assert operator.__itruediv__(x, y) is x
     assert n_itruediv == 2
 
     assert floordiv(x, y) == 'floordiv'
     assert n_floordiv == 1
-    assert __floordiv__(x, y) == 'floordiv'
+    assert operator.__floordiv__(x, y) == 'floordiv'
     assert n_floordiv == 2
 
     assert ifloordiv(x, y) is x
     assert n_ifloordiv == 1
-    assert __ifloordiv__(x, y) is x
+    assert operator.__ifloordiv__(x, y) is x
     assert n_ifloordiv == 2
 
     assert mod(x, y) == 'mod'
     assert n_mod == 1
-    assert __mod__(x, y) == 'mod'
+    assert operator.__mod__(x, y) == 'mod'
     assert n_mod == 2
 
     assert imod(x, y) is x
     assert n_imod == 1
-    assert __imod__(x, y) is x
+    assert operator.__imod__(x, y) is x
     assert n_imod == 2
 
     assert pow(x, y) == 'pow'
     assert n_pow == 1
-    assert __pow__(x, y) == 'pow'
+    assert operator.__pow__(x, y) == 'pow'
     assert n_pow == 2
 
     assert ipow(x, y) is x
     assert n_ipow == 1
-    assert __ipow__(x, y) is x
+    assert operator.__ipow__(x, y) is x
     assert n_ipow == 2
 
     assert and_(x, y) == 'and'
     assert n_and == 1
-    assert __and__(x, y) == 'and'
+    assert operator.__and__(x, y) == 'and'
     assert n_and == 2
 
     assert iand(x, y) is x
     assert n_iand == 1
-    assert __iand__(x, y) is x
+    assert operator.__iand__(x, y) is x
     assert n_iand == 2
 
     assert or_(x, y) == 'or'
     assert n_or == 1
-    assert __or__(x, y) == 'or'
+    assert operator.__or__(x, y) == 'or'
     assert n_or == 2
 
     assert ior(x, y) is x
     assert n_ior == 1
-    assert __ior__(x, y) is x
+    assert operator.__ior__(x, y) is x
     assert n_ior == 2
 
     assert xor(x, y) == 'xor'
     assert n_xor == 1
-    assert __xor__(x, y) == 'xor'
+    assert operator.__xor__(x, y) == 'xor'
     assert n_xor == 2
 
     assert ixor(x, y) is x
     assert n_ixor == 1
-    assert __ixor__(x, y) is x
+    assert operator.__ixor__(x, y) is x
     assert n_ixor == 2
 
     assert lshift(x, y) == 'lshift'
     assert n_lshift == 1
-    assert __lshift__(x, y) == 'lshift'
+    assert operator.__lshift__(x, y) == 'lshift'
     assert n_lshift == 2
 
     assert ilshift(x, y) is x
     assert n_ilshift == 1
-    assert __ilshift__(x, y) is x
+    assert operator.__ilshift__(x, y) is x
     assert n_ilshift == 2
 
     assert rshift(x, y) == 'rshift'
     assert n_rshift == 1
-    assert __rshift__(x, y) == 'rshift'
+    assert operator.__rshift__(x, y) == 'rshift'
     assert n_rshift == 2
 
     assert irshift(x, y) is x
     assert n_irshift == 1
-    assert __irshift__(x, y) is x
+    assert operator.__irshift__(x, y) is x
     assert n_irshift == 2
 test_ops()
 
@@ -553,11 +550,11 @@ class B3:
 @test
 def test_sequence_ops():
     assert concat([1,2], [3,4]) == [1,2,3,4]
-    assert __concat__([1,2], [3,4]) == [1,2,3,4]
+    assert operator.__concat__([1,2], [3,4]) == [1,2,3,4]
     assert contains([1,2,3], 2)
     assert not contains([1,2,3], 0)
-    assert __contains__([1,2,3], 2)
-    assert not __contains__([1,2,3], 0)
+    assert operator.__contains__([1,2,3], 2)
+    assert not operator.__contains__([1,2,3], 0)
     assert countOf([1,2,1,1], 1) == 3
 
     v = [1,2,3]

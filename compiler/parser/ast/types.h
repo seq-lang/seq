@@ -20,6 +20,9 @@ namespace seq {
 namespace ast {
 
 struct Expr;
+struct StaticValue;
+struct FunctionStmt;
+struct TypeContext;
 
 namespace types {
 
@@ -47,6 +50,8 @@ struct Type : public seq::SrcObject, public std::enable_shared_from_this<Type> {
     vector<LinkType *> linked;
     /// List of unbound types whose level has been changed.
     vector<pair<LinkType *, int>> leveled;
+    /// List of assigned traits.
+    vector<LinkType *> traits;
 
   public:
     /// Undo the unification step.
@@ -76,8 +81,8 @@ public:
   /// @param cache A reference to a lookup table to ensure that all instances of a
   ///              generic point to the same unbound type (e.g. dict[T, list[T]] should
   ///              be instantiated as dict[?1, list[?1]]).
-  virtual shared_ptr<Type> instantiate(int atLevel, int &unboundCount,
-                                       unordered_map<int, shared_ptr<Type>> &cache) = 0;
+  virtual shared_ptr<Type> instantiate(int atLevel, int *unboundCount,
+                                       unordered_map<int, shared_ptr<Type>> *cache) = 0;
 
 public:
   /// Get the final type (follow through all LinkType links).
@@ -109,8 +114,16 @@ public:
   virtual shared_ptr<RecordType> getHeterogenousTuple() { return nullptr; }
 
   virtual bool is(const string &s);
+  char isStaticType();
 };
 typedef shared_ptr<Type> TypePtr;
+
+struct Trait : public Type {
+  bool canRealize() const override;
+  bool isInstantiated() const override;
+  virtual string debugString(bool debug) const override;
+  string realizedName() const override;
+};
 
 /**
  * A basic type-inference building block.
@@ -135,22 +148,27 @@ struct LinkType : public Type {
   int level;
   /// The type to which LinkType points to. nullptr if unknown (unbound or generic).
   TypePtr type;
-  /// True if a type is a static type (e.g. N in Int[N: int]).
-  bool isStatic;
+  /// >0 if a type is a static type (e.g. N in Int[N: int]); 0 otherwise.
+  char isStatic;
+  /// Optional trait that unbound type requires prior to unification.
+  shared_ptr<Trait> trait;
   /// The generic name of a generic type, if applicable. Used for pretty-printing.
   string genericName;
+  /// Type that will be used if an unbound is not resolved.
+  TypePtr defaultType;
 
 public:
-  LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
-           bool isStatic = false, string genericName = "");
+  LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr, char isStatic = 0,
+           shared_ptr<Trait> trait = nullptr, TypePtr defaultType = nullptr,
+           string genericName = "");
   /// Convenience constructor for linked types.
   explicit LinkType(TypePtr type);
 
 public:
   int unify(Type *typ, Unification *undodo) override;
   TypePtr generalize(int atLevel) override;
-  TypePtr instantiate(int atLevel, int &unboundCount,
-                      unordered_map<int, TypePtr> &cache) override;
+  TypePtr instantiate(int atLevel, int *unboundCount,
+                      unordered_map<int, TypePtr> *cache) override;
 
 public:
   TypePtr follow() override;
@@ -201,15 +219,11 @@ struct ClassType : public Type {
     string niceName;
     // Unique generic ID.
     int id;
-    // Pointer to realized tupe (or generic LinkType).
+    // Pointer to realized type (or generic LinkType).
     TypePtr type;
-    // Default value that is used if a generic is not realized (e.g. [T=int]).
-    shared_ptr<Expr> deflt;
 
-    Generic(string name, string niceName, TypePtr type, int id,
-            shared_ptr<Expr> deflt = nullptr)
-        : name(move(name)), niceName(move(niceName)), id(id), type(move(type)),
-          deflt(move(deflt)) {}
+    Generic(string name, string niceName, TypePtr type, int id)
+        : name(move(name)), niceName(move(niceName)), id(id), type(move(type)) {}
   };
 
   /// Canonical type name.
@@ -218,9 +232,6 @@ struct ClassType : public Type {
   string niceName;
   /// List of generics, if present.
   vector<Generic> generics;
-  /// True if this class is just supposed to be type-checked upon
-  /// (not supposed to be instantiated).
-  bool isTrait;
 
   explicit ClassType(string name, string niceName,
                      vector<Generic> generics = vector<Generic>());
@@ -229,8 +240,8 @@ struct ClassType : public Type {
 public:
   int unify(Type *typ, Unification *undo) override;
   TypePtr generalize(int atLevel) override;
-  TypePtr instantiate(int atLevel, int &unboundCount,
-                      unordered_map<int, TypePtr> &cache) override;
+  TypePtr instantiate(int atLevel, int *unboundCount,
+                      unordered_map<int, TypePtr> *cache) override;
 
 public:
   vector<TypePtr> getUnbounds() const override;
@@ -238,8 +249,6 @@ public:
   bool isInstantiated() const override;
   string debugString(bool debug) const override;
   string realizedName() const override;
-  /// True if a class is a trait or has a generic that is a trait.
-  virtual bool hasTrait() const;
   /// Convenience function to get the name of realized type
   /// (needed if a subclass realizes something else as well).
   virtual string realizedTypeName() const;
@@ -265,8 +274,8 @@ struct RecordType : public ClassType {
 public:
   int unify(Type *typ, Unification *undo) override;
   TypePtr generalize(int atLevel) override;
-  TypePtr instantiate(int atLevel, int &unboundCount,
-                      unordered_map<int, TypePtr> &cache) override;
+  TypePtr instantiate(int atLevel, int *unboundCount,
+                      unordered_map<int, TypePtr> *cache) override;
 
 public:
   vector<TypePtr> getUnbounds() const override;
@@ -287,23 +296,23 @@ public:
  * ⚠️ This is not a function pointer (Function[...]) type.
  */
 struct FuncType : public RecordType {
-  /// Canonical name of a (generic) function.
-  string funcName;
+  /// Canonical AST node.
+  FunctionStmt *ast;
   /// Function generics (e.g. T in def foo[T](...)).
   vector<ClassType::Generic> funcGenerics;
   /// Enclosing class or a function.
   TypePtr funcParent;
 
 public:
-  FuncType(const shared_ptr<RecordType> &baseType, string funcName,
+  FuncType(const shared_ptr<RecordType> &baseType, FunctionStmt *ast,
            vector<ClassType::Generic> funcGenerics = vector<ClassType::Generic>(),
            TypePtr funcParent = nullptr);
 
 public:
   int unify(Type *typ, Unification *undo) override;
   TypePtr generalize(int atLevel) override;
-  TypePtr instantiate(int atLevel, int &unboundCount,
-                      unordered_map<int, TypePtr> &cache) override;
+  TypePtr instantiate(int atLevel, int *unboundCount,
+                      unordered_map<int, TypePtr> *cache) override;
 
 public:
   vector<TypePtr> getUnbounds() const override;
@@ -338,8 +347,8 @@ public:
 public:
   int unify(Type *typ, Unification *us) override;
   TypePtr generalize(int atLevel) override;
-  TypePtr instantiate(int atLevel, int &unboundCount,
-                      unordered_map<int, TypePtr> &cache) override;
+  TypePtr instantiate(int atLevel, int *unboundCount,
+                      unordered_map<int, TypePtr> *cache) override;
 
   string debugString(bool debug) const override;
   string realizedName() const override;
@@ -356,30 +365,27 @@ typedef shared_ptr<FuncType> FuncTypePtr;
  * to a static expression.
  */
 struct StaticType : public Type {
-  typedef std::function<int(const StaticType *)> EvalFn;
   /// List of static variables that a type depends on
   /// (e.g. for A+B+2, generics are {A, B}).
   vector<ClassType::Generic> generics;
+  /// A static expression that needs to be evaluated.
+  /// Can be nullptr if there is no expression.
+  shared_ptr<Expr> expr;
+  /// Type context needed for evaluation
+  shared_ptr<TypeContext> typeCtx;
 
-  /// Evaluation status. If .first is true, the expression is evaluated and .second
-  /// provides the evaluated value.
-  pair<bool, int> staticEvaluation;
-  /// A static expression that needs to be evaluated. .first is a pointer to such
-  /// expression, while .second is a function that evaluates it. .first can be nullptr
-  /// if there is no expression (assuming that staticEvaluation.first is set).
-  pair<unique_ptr<Expr>, EvalFn> staticExpr;
-
-  StaticType(vector<ClassType::Generic> generics,
-             pair<unique_ptr<Expr>, EvalFn> staticExpr,
-             pair<bool, int> staticEvaluation);
+  StaticType(vector<ClassType::Generic> generics, shared_ptr<Expr> expr,
+             shared_ptr<TypeContext> typeCtx = nullptr);
+  /// Convenience function that parses expr and populates static type generics.
+  StaticType(shared_ptr<Expr> expr, shared_ptr<TypeContext> ctx);
   /// Convenience function for static types whose evaluation is already known.
-  explicit StaticType(int i);
+  explicit StaticType(int64_t i);
 
 public:
   int unify(Type *typ, Unification *undo) override;
   TypePtr generalize(int atLevel) override;
-  TypePtr instantiate(int atLevel, int &unboundCount,
-                      unordered_map<int, TypePtr> &cache) override;
+  TypePtr instantiate(int atLevel, int *unboundCount,
+                      unordered_map<int, TypePtr> *cache) override;
 
 public:
   vector<TypePtr> getUnbounds() const override;
@@ -388,9 +394,25 @@ public:
   string debugString(bool debug) const override;
   string realizedName() const override;
 
+  StaticValue evaluate() const;
   shared_ptr<StaticType> getStatic() override {
     return std::static_pointer_cast<StaticType>(shared_from_this());
   }
+
+private:
+  void parseExpr(const shared_ptr<Expr> &e, unordered_set<string> &seen);
+};
+
+struct CallableTrait : public Trait {
+  vector<TypePtr> args;
+
+public:
+  explicit CallableTrait(vector<TypePtr> args);
+  int unify(Type *typ, Unification *undo) override;
+  TypePtr generalize(int atLevel) override;
+  TypePtr instantiate(int atLevel, int *unboundCount,
+                      unordered_map<int, TypePtr> *cache) override;
+  string debugString(bool debug) const override;
 };
 
 } // namespace types

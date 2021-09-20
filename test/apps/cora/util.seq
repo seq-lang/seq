@@ -1,4 +1,4 @@
-K = Kmer[64]
+K: Static[int] = 64
 
 @tuple
 class BitSet:

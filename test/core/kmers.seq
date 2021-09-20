@@ -1,53 +1,53 @@
 from bio import *
 
-K = Kmer[5]
+K: Static[int] = 5
 
 s = s'ACGTAACGTA'
 print s                       # EXPECT: ACGTAACGTA
-print list(s.kmers[K](1))     # EXPECT: [ACGTA, CGTAA, GTAAC, TAACG, AACGT, ACGTA]
+print list(s.kmers(1, K))     # EXPECT: [ACGTA, CGTAA, GTAAC, TAACG, AACGT, ACGTA]
 print list(s.split(5, 1))     # EXPECT: [ACGTA, CGTAA, GTAAC, TAACG, AACGT, ACGTA]
 print ~s                      # EXPECT: TACGTTACGT
-print list((~s).kmers[K](1))  # EXPECT: [TACGT, ACGTT, CGTTA, GTTAC, TTACG, TACGT]
+print list((~s).kmers(1, K))  # EXPECT: [TACGT, ACGTT, CGTTA, GTTAC, TTACG, TACGT]
 print list((~s).split(5, 1))  # EXPECT: [TACGT, ACGTT, CGTTA, GTTAC, TTACG, TACGT]
 
 s = s'AANGGCCAGTC'
-print list(s.kmers_with_pos[Kmer[2]](1))  # EXPECT: [(0, AA), (3, GG), (4, GC), (5, CC), (6, CA), (7, AG), (8, GT), (9, TC)]
-print list(~s |> kmers_with_pos[Kmer[2]](1))  # EXPECT: [(0, GA), (1, AC), (2, CT), (3, TG), (4, GG), (5, GC), (6, CC), (9, TT)]
+print list(s.kmers_with_pos(1, 2))  # EXPECT: [(0, AA), (3, GG), (4, GC), (5, CC), (6, CA), (7, AG), (8, GT), (9, TC)]
+print list(~s |> kmers_with_pos(1, 2))  # EXPECT: [(0, GA), (1, AC), (2, CT), (3, TG), (4, GG), (5, GC), (6, CC), (9, TT)]
 
 s = s'AGACCTTAGC'
 print s  # EXPECT: AGACCTTAGC
-print list(s.kmers[Kmer[3]](1))  # EXPECT: [AGA, GAC, ACC, CCT, CTT, TTA, TAG, AGC]
-print list(s.kmers[Kmer[3]](2))  # EXPECT: [AGA, ACC, CTT, TAG]
-print list(s.kmers[Kmer[3]](4))  # EXPECT: [AGA, CTT]
+print list(s.kmers(1, 3))  # EXPECT: [AGA, GAC, ACC, CCT, CTT, TTA, TAG, AGC]
+print list(s.kmers(2, 3))  # EXPECT: [AGA, ACC, CTT, TAG]
+print list(s.kmers(4, 3))  # EXPECT: [AGA, CTT]
 print ~s  # EXPECT: GCTAAGGTCT
-print list((~s).kmers[Kmer[3]](1))  # EXPECT: [GCT, CTA, TAA, AAG, AGG, GGT, GTC, TCT]
-print list((~s).kmers[Kmer[3]](2))  # EXPECT: [GCT, TAA, AGG, GTC]
-print list((~s).kmers[Kmer[3]](4))  # EXPECT: [GCT, AGG]
+print list((~s).kmers(1, 3))  # EXPECT: [GCT, CTA, TAA, AAG, AGG, GGT, GTC, TCT]
+print list((~s).kmers(2, 3))  # EXPECT: [GCT, TAA, AGG, GTC]
+print list((~s).kmers(4, 3))  # EXPECT: [GCT, AGG]
 
 s = s'AGACCTNTAGNC'
 print s  # EXPECT: AGACCTNTAGNC
-print list(s.kmers_with_pos[Kmer[3]](1))  # EXPECT: [(0, AGA), (1, GAC), (2, ACC), (3, CCT), (7, TAG)]
-print list(s.kmers_with_pos[Kmer[3]](2))  # EXPECT: [(0, AGA), (2, ACC)]
-print list(s.kmers_with_pos[Kmer[3]](4))  # EXPECT: [(0, AGA)]
+print list(s.kmers_with_pos(1, 3))  # EXPECT: [(0, AGA), (1, GAC), (2, ACC), (3, CCT), (7, TAG)]
+print list(s.kmers_with_pos(2, 3))  # EXPECT: [(0, AGA), (2, ACC)]
+print list(s.kmers_with_pos(4, 3))  # EXPECT: [(0, AGA)]
 print ~s  # EXPECT: GNCTANAGGTCT
-print list((~s).kmers_with_pos[Kmer[3]](1))  # EXPECT: [(2, CTA), (6, AGG), (7, GGT), (8, GTC), (9, TCT)]
-print list((~s).kmers_with_pos[Kmer[3]](2))  # EXPECT: [(2, CTA), (6, AGG), (8, GTC)]
-print list((~s).kmers_with_pos[Kmer[3]](4))  # EXPECT: [(8, GTC)]
+print list((~s).kmers_with_pos(1, 3))  # EXPECT: [(2, CTA), (6, AGG), (7, GGT), (8, GTC), (9, TCT)]
+print list((~s).kmers_with_pos(2, 3))  # EXPECT: [(2, CTA), (6, AGG), (8, GTC)]
+print list((~s).kmers_with_pos(4, 3))  # EXPECT: [(8, GTC)]
 
 s = s'AGACCTNTAGC'
 print list(s.split(k=100, step=1))         # EXPECT: []
 print list((~s).split(k=100, step=1))      # EXPECT: []
-print list(s.kmers[Kmer[100]](step=1))     # EXPECT: []
-print list((~s).kmers[Kmer[100]](step=1))  # EXPECT: []
+print list(s.kmers(step=1, k=100))         # EXPECT: []
+print list((~s).kmers(step=1, k=100))      # EXPECT: []
 
 s = s'TAGCC'
 print list(s.split(k=5, step=17))         # EXPECT: [TAGCC]
 print list((~s).split(k=5, step=17))      # EXPECT: [GGCTA]
-print list(s.kmers[Kmer[5]](step=17))     # EXPECT: [TAGCC]
-print list((~s).kmers[Kmer[5]](step=17))  # EXPECT: [GGCTA]
+print list(s.kmers(step=17, k=5))         # EXPECT: [TAGCC]
+print list((~s).kmers(step=17, k=5))      # EXPECT: [GGCTA]
 
-k1 = K(s'ACGTA')
-k2 = K(s'ATGTT')
+k1 = Kmer[K](s'ACGTA')
+k2 = Kmer[K](s'ATGTT')
 
 print [k1[i] for i in range(len(k1))]  # EXPECT: [A, C, G, T, A]
 print [k2[-i - 1] for i in range(len(k2))]  # EXPECT: [T, T, G, T, A]
@@ -73,8 +73,8 @@ else:
     print k1 - k2
     print k2 - k1
 
-k1 = K(s'ACGTA')
-k2 = K(s'ACGTA')
+k1 = Kmer[K](s'ACGTA')
+k2 = Kmer[K](s'ACGTA')
 print k1 - k2  # EXPECT: 0
 print k2 - k1  # EXPECT: 0
 
@@ -150,7 +150,7 @@ def test_base_counts():
 test_base_counts()
 
 @test
-def test_kmer_revcomp[K: int](path: str):
+def test_kmer_revcomp(path: str, K: Static[int]):
     v1 = []
     v2 = []
 
@@ -160,7 +160,7 @@ def test_kmer_revcomp[K: int](path: str):
                 v1.append(str(~y).upper())
 
     for x in FASTA(path, fai=False):
-        for y in x.seq.kmers[Kmer[K]](step=1):
+        for y in x.seq.kmers(step=1, k=K):
             v2.append(str(~y).upper())
 
     '''
@@ -173,22 +173,22 @@ def test_kmer_revcomp[K: int](path: str):
     assert v1 == v2
 
 testfile = 'test/data/MT-human.fa'
-test_kmer_revcomp[1](testfile)
-test_kmer_revcomp[2](testfile)
-test_kmer_revcomp[3](testfile)
-test_kmer_revcomp[4](testfile)
-test_kmer_revcomp[5](testfile)
-test_kmer_revcomp[25](testfile)
-test_kmer_revcomp[32](testfile)
-test_kmer_revcomp[31](testfile)
-test_kmer_revcomp[33](testfile)
-test_kmer_revcomp[64](testfile)
-test_kmer_revcomp[65](testfile)
-test_kmer_revcomp[129](testfile)
-test_kmer_revcomp[1000](testfile)
+test_kmer_revcomp(testfile, 1)
+test_kmer_revcomp(testfile, 2)
+test_kmer_revcomp(testfile, 3)
+test_kmer_revcomp(testfile, 4)
+test_kmer_revcomp(testfile, 5)
+test_kmer_revcomp(testfile, 25)
+test_kmer_revcomp(testfile, 32)
+test_kmer_revcomp(testfile, 31)
+test_kmer_revcomp(testfile, 33)
+test_kmer_revcomp(testfile, 64)
+test_kmer_revcomp(testfile, 65)
+test_kmer_revcomp(testfile, 129)
+test_kmer_revcomp(testfile, 1000)
 
 @test
-def test_kmer_iteration[K: int](path: str):
+def test_kmer_iteration(path: str, K: Static[int]):
     for rc in (True, False):
         for step in range(1, K + 2):
             v1 = []
@@ -200,21 +200,21 @@ def test_kmer_iteration[K: int](path: str):
                         v1.append(str(y).upper())
 
             for x in FASTA(path, fai=False):
-                for y in (~(x.seq) if rc else x.seq).kmers[Kmer[K]](step=step):
+                for y in (~(x.seq) if rc else x.seq).kmers(step=step, k=K):
                     v2.append(str(y).upper())
 
             assert v1 == v2
 
 testfile = 'test/data/MT-human.fa'
-test_kmer_iteration[1](testfile)
-test_kmer_iteration[2](testfile)
-test_kmer_iteration[3](testfile)
-test_kmer_iteration[4](testfile)
-test_kmer_iteration[5](testfile)
-test_kmer_iteration[25](testfile)
-test_kmer_iteration[32](testfile)
-test_kmer_iteration[31](testfile)
-test_kmer_iteration[33](testfile)
-test_kmer_iteration[64](testfile)
-test_kmer_iteration[65](testfile)
-test_kmer_iteration[129](testfile)
+test_kmer_iteration(testfile, 1)
+test_kmer_iteration(testfile, 2)
+test_kmer_iteration(testfile, 3)
+test_kmer_iteration(testfile, 4)
+test_kmer_iteration(testfile, 5)
+test_kmer_iteration(testfile, 25)
+test_kmer_iteration(testfile, 32)
+test_kmer_iteration(testfile, 31)
+test_kmer_iteration(testfile, 33)
+test_kmer_iteration(testfile, 64)
+test_kmer_iteration(testfile, 65)
+test_kmer_iteration(testfile, 129)

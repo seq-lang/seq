@@ -10,42 +10,46 @@ namespace ir {
 namespace analyze {
 namespace dataflow {
 namespace {
-const Value *
-convertPipelineToForLoopsHelper(analyze::dataflow::CFGraph *cfg,
-                                const std::vector<const PipelineFlow::Stage *> &stages,
-                                unsigned idx = 0, const Value *last = nullptr) {
+// TODO: this logic is very similar to lowering/pipeline -- unify somehow?
+Value *callStage(analyze::dataflow::CFGraph *cfg, PipelineFlow::Stage *stage,
+                 Value *last) {
+  std::vector<Value *> args;
+  for (auto *arg : *stage) {
+    args.push_back(arg ? arg : last);
+  }
+  return cfg->N<CallInstr>(stage->getCallee(), args);
+}
+
+Value *convertPipelineToForLoopsHelper(analyze::dataflow::CFGraph *cfg,
+                                       std::vector<PipelineFlow::Stage *> &stages,
+                                       unsigned idx = 0, Value *last = nullptr) {
   if (idx >= stages.size())
     return last;
-  auto *stage = stages[idx];
-  Value *next = nullptr;
-  if (last) {
-    std::vector<Value *> args;
-    for (auto *arg : *stage) {
-      args.push_back(const_cast<Value *>(arg ? arg : last));
-    }
-    next = cfg->N<CallInstr>(const_cast<Value *>(stage->getCallee()), args);
-  } else {
-    next = const_cast<Value *>(stage->getCallee());
-  }
-  if (stage->isGenerator()) {
-    auto *var = cfg->N<Var>(stage->getOutputElementType());
-    auto *body = const_cast<Value *>(
-        convertPipelineToForLoopsHelper(cfg, stages, idx + 1, cfg->N<VarValue>(var)));
-    auto *s = cfg->N<SeriesFlow>();
-    s->push_back(body);
 
-    return cfg->N<ForFlow>(next, s, var);
+  auto *stage = stages[idx];
+  if (idx == 0)
+    return convertPipelineToForLoopsHelper(cfg, stages, idx + 1, stage->getCallee());
+
+  auto *prev = stages[idx - 1];
+  if (prev->isGenerator()) {
+    auto *var = cfg->N<Var>(prev->getOutputElementType());
+    auto *body = convertPipelineToForLoopsHelper(
+        cfg, stages, idx + 1, callStage(cfg, stage, cfg->N<VarValue>(var)));
+    auto *series = cfg->N<SeriesFlow>();
+    series->push_back(body);
+    return cfg->N<ForFlow>(last, series, var);
   } else {
-    return convertPipelineToForLoopsHelper(cfg, stages, idx + 1, next);
+    return convertPipelineToForLoopsHelper(cfg, stages, idx + 1,
+                                           callStage(cfg, stage, last));
   }
 }
 } // namespace
 
 const Value *convertPipelineToForLoops(analyze::dataflow::CFGraph *cfg,
                                        const PipelineFlow *p) {
-  std::vector<const PipelineFlow::Stage *> stages;
+  std::vector<PipelineFlow::Stage *> stages;
   for (const auto &stage : *p) {
-    stages.push_back(&stage);
+    stages.push_back(const_cast<PipelineFlow::Stage *>(&stage));
   }
   return convertPipelineToForLoopsHelper(cfg, stages);
 }
@@ -126,6 +130,8 @@ std::unique_ptr<CFGraph> buildCFGraph(const BodiedFunc *f) {
   return ret;
 }
 
+const std::string CFAnalysis::KEY = "core-analyses-cfg";
+
 std::unique_ptr<Result> CFAnalysis::run(const Module *m) {
   auto res = std::make_unique<CFResult>();
   if (const auto *main = cast<BodiedFunc>(m->getMainFunc())) {
@@ -200,6 +206,11 @@ void CFVisitor::visit(const WhileFlow *v) {
 }
 
 void CFVisitor::visit(const ForFlow *v) {
+  if (v->isParallel()) {
+    for (auto *v : v->getSchedule()->getUsedValues()) {
+      process(v);
+    }
+  }
   auto *original = graph->getCurrentBlock();
   auto *end = graph->newBlock("endFor");
 
@@ -228,6 +239,11 @@ void CFVisitor::visit(const ForFlow *v) {
 }
 
 void CFVisitor::visit(const ImperativeForFlow *v) {
+  if (v->isParallel()) {
+    for (auto *v : v->getSchedule()->getUsedValues()) {
+      process(v);
+    }
+  }
   auto *original = graph->getCurrentBlock();
   auto *end = graph->newBlock("endFor");
 

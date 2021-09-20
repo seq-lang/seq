@@ -11,6 +11,7 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "parser/ast/types.h"
@@ -42,12 +43,28 @@ struct TupleExpr;
 struct UnaryExpr;
 struct Stmt;
 
+struct StaticValue {
+  std::variant<int64_t, string> value;
+  enum Type { NOT_STATIC = 0, STRING = 1, INT = 2 } type;
+  bool evaluated;
+
+  explicit StaticValue(Type);
+  // Static(bool);
+  explicit StaticValue(int64_t);
+  explicit StaticValue(string);
+  bool operator==(const StaticValue &s) const;
+  string toString() const;
+  int64_t getInt() const;
+  string getString() const;
+};
+
 /**
  * A Seq AST expression.
- * Each AST expression owns its children and is intended to be instantiated as a
- * unique_ptr.
+ * Each AST expression is intended to be instantiated as a shared_ptr.
  */
 struct Expr : public seq::SrcObject {
+  typedef Expr base_type;
+
   // private:
   /// Type of the expression. nullptr by default.
   types::TypePtr type;
@@ -64,10 +81,7 @@ struct Expr : public seq::SrcObject {
   ///   a if cond else b
   ///     (note: cond is static, and is true if non-zero, false otherwise).
   ///     (note: both branches will be evaluated).
-  bool isStaticExpr;
-  /// Static evaluation state: first pair member indicates if an expression is already
-  /// evaluated. If so, second pair member stores the evaluation value.s
-  pair<bool, int> staticEvaluation;
+  StaticValue staticValue;
   /// Flag that indicates if all types in an expression are inferred (i.e. if a
   /// type-checking procedure was successful).
   bool done;
@@ -79,7 +93,7 @@ public:
   /// Convert a node to an S-expression.
   virtual string toString() const = 0;
   /// Deep copy a node.
-  virtual unique_ptr<Expr> clone() const = 0;
+  virtual shared_ptr<Expr> clone() const = 0;
   /// Accept an AST visitor.
   virtual void accept(ASTVisitor &visitor) = 0;
 
@@ -92,6 +106,8 @@ public:
   bool isType() const;
   /// Marks a node as a type expression.
   void markType();
+  /// True if a node is static expression.
+  bool isStatic() const;
 
   /// Allow pretty-printing to C++ streams.
   friend std::ostream &operator<<(std::ostream &out, const Expr &expr) {
@@ -120,15 +136,17 @@ protected:
   /// Add a type to S-expression string.
   string wrapType(const string &sexpr) const;
 };
-using ExprPtr = unique_ptr<Expr>;
+using ExprPtr = shared_ptr<Expr>;
 
 /// Function signature parameter helper node (name: type = deflt).
 struct Param : public seq::SrcObject {
   string name;
   ExprPtr type;
   ExprPtr deflt;
+  bool generic;
 
-  explicit Param(string name = "", ExprPtr type = nullptr, ExprPtr deflt = nullptr);
+  explicit Param(string name = "", ExprPtr type = nullptr, ExprPtr deflt = nullptr,
+                 bool generic = false);
 
   string toString() const;
   Param clone() const;
@@ -171,7 +189,7 @@ struct IntExpr : public Expr {
   /// Parsed value and sign for "normal" 64-bit integers.
   int64_t intValue;
 
-  explicit IntExpr(long long intValue);
+  explicit IntExpr(int64_t intValue);
   explicit IntExpr(const string &value, string suffix = "");
   IntExpr(const IntExpr &expr) = default;
 
@@ -186,11 +204,16 @@ struct IntExpr : public Expr {
 /// @example 13.15z
 /// @example e-12
 struct FloatExpr : public Expr {
-  double value;
+  /// Expression value is stored as a string that is parsed during the simplify stage.
+  string value;
   /// Number suffix (e.g. "u" for "123u").
   string suffix;
 
-  explicit FloatExpr(double value, string suffix = "");
+  /// Parsed value for 64-bit floats.
+  double floatValue;
+
+  explicit FloatExpr(double floatValue);
+  explicit FloatExpr(const string &value, string suffix = "");
   FloatExpr(const FloatExpr &expr) = default;
 
   string toString() const override;
@@ -201,16 +224,18 @@ struct FloatExpr : public Expr {
 /// @example s'ACGT'
 /// @example "fff"
 struct StringExpr : public Expr {
-  string value;
-  string prefix;
+  // Vector of {value, prefix} strings.
+  vector<pair<string, string>> strings;
 
   explicit StringExpr(string value, string prefix = "");
+  explicit StringExpr(vector<pair<string, string>> strings);
   StringExpr(const StringExpr &expr) = default;
 
   string toString() const override;
   ACCEPT(ASTVisitor);
 
   const StringExpr *getString() const override { return this; }
+  string getValue() const;
 };
 
 /// Identifier expression (value).
@@ -258,7 +283,7 @@ struct KeywordStarExpr : public Expr {
 struct TupleExpr : public Expr {
   vector<ExprPtr> items;
 
-  explicit TupleExpr(vector<ExprPtr> &&items);
+  explicit TupleExpr(vector<ExprPtr> items);
   TupleExpr(const TupleExpr &expr);
 
   string toString() const override;
@@ -272,7 +297,7 @@ struct TupleExpr : public Expr {
 struct ListExpr : public Expr {
   vector<ExprPtr> items;
 
-  explicit ListExpr(vector<ExprPtr> &&items);
+  explicit ListExpr(vector<ExprPtr> items);
   ListExpr(const ListExpr &expr);
 
   string toString() const override;
@@ -286,7 +311,7 @@ struct ListExpr : public Expr {
 struct SetExpr : public Expr {
   vector<ExprPtr> items;
 
-  explicit SetExpr(vector<ExprPtr> &&items);
+  explicit SetExpr(vector<ExprPtr> items);
   SetExpr(const SetExpr &expr);
 
   string toString() const override;
@@ -303,7 +328,7 @@ struct DictExpr : public Expr {
   };
   vector<DictItem> items;
 
-  explicit DictExpr(vector<DictItem> &&items);
+  explicit DictExpr(vector<DictItem> items);
   DictExpr(const DictExpr &expr);
 
   string toString() const override;
@@ -331,7 +356,7 @@ struct GeneratorExpr : public Expr {
   ExprPtr expr;
   vector<GeneratorBody> loops;
 
-  GeneratorExpr(GeneratorKind kind, ExprPtr expr, vector<GeneratorBody> &&loops);
+  GeneratorExpr(GeneratorKind kind, ExprPtr expr, vector<GeneratorBody> loops);
   GeneratorExpr(const GeneratorExpr &expr);
 
   string toString() const override;
@@ -344,7 +369,7 @@ struct DictGeneratorExpr : public Expr {
   ExprPtr key, expr;
   vector<GeneratorBody> loops;
 
-  DictGeneratorExpr(ExprPtr key, ExprPtr expr, vector<GeneratorBody> &&loops);
+  DictGeneratorExpr(ExprPtr key, ExprPtr expr, vector<GeneratorBody> loops);
   DictGeneratorExpr(const DictGeneratorExpr &expr);
 
   string toString() const override;
@@ -404,7 +429,7 @@ struct BinaryExpr : public Expr {
 struct ChainBinaryExpr : public Expr {
   vector<std::pair<string, ExprPtr>> exprs;
 
-  ChainBinaryExpr(vector<std::pair<string, ExprPtr>> &&exprs);
+  ChainBinaryExpr(vector<std::pair<string, ExprPtr>> exprs);
   ChainBinaryExpr(const ChainBinaryExpr &expr);
 
   string toString() const override;
@@ -427,7 +452,7 @@ struct PipeExpr : public Expr {
   /// Example: for a |> b |> c, inTypes[1] is typeof(a |> b).
   vector<types::TypePtr> inTypes;
 
-  explicit PipeExpr(vector<Pipe> &&items);
+  explicit PipeExpr(vector<Pipe> items);
   PipeExpr(const PipeExpr &expr);
 
   string toString() const override;
@@ -464,12 +489,12 @@ struct CallExpr : public Expr {
   /// True if type-checker has processed and re-ordered args.
   bool ordered;
 
-  CallExpr(ExprPtr expr, vector<Arg> &&a);
-  /// One-argument unnamed call constructor (expr(arg1)).
-  explicit CallExpr(ExprPtr expr, ExprPtr arg1 = nullptr, ExprPtr arg2 = nullptr,
-                    ExprPtr arg3 = nullptr);
-  /// Multi-argument unnamed call constructor (expr(exprArgs...)).
-  CallExpr(ExprPtr expr, vector<ExprPtr> &&exprArgs);
+  CallExpr(ExprPtr expr, vector<Arg> args = {});
+  /// Convenience constructors
+  CallExpr(ExprPtr expr, vector<ExprPtr> args);
+  template <typename... Ts>
+  CallExpr(ExprPtr expr, ExprPtr arg, Ts... args)
+      : CallExpr(expr, vector<ExprPtr>{arg, args...}) {}
   CallExpr(const CallExpr &expr);
 
   string toString() const override;
@@ -485,6 +510,8 @@ struct DotExpr : public Expr {
   string member;
 
   DotExpr(ExprPtr expr, string member);
+  /// Convenience constructor.
+  DotExpr(string left, string member);
   DotExpr(const DotExpr &expr);
 
   string toString() const override;
@@ -524,25 +551,13 @@ struct EllipsisExpr : public Expr {
   const EllipsisExpr *getEllipsis() const override { return this; }
 };
 
-/// Type-of expression (typeof expr).
-/// @example typeof(5)
-struct TypeOfExpr : public Expr {
-  ExprPtr expr;
-
-  explicit TypeOfExpr(ExprPtr expr);
-  TypeOfExpr(const TypeOfExpr &n);
-
-  string toString() const override;
-  ACCEPT(ASTVisitor);
-};
-
 /// Lambda expression (lambda (vars)...: expr).
 /// @example lambda a, b: a + b
 struct LambdaExpr : public Expr {
   vector<string> vars;
   ExprPtr expr;
 
-  LambdaExpr(vector<string> &&vars, ExprPtr expr);
+  LambdaExpr(vector<string> vars, ExprPtr expr);
   LambdaExpr(const LambdaExpr &);
 
   string toString() const override;
@@ -591,12 +606,12 @@ struct RangeExpr : public Expr {
 /// (to support short-circuiting).
 /// @example (a = 1; b = 2; a + b)
 struct StmtExpr : public Expr {
-  vector<unique_ptr<Stmt>> stmts;
+  vector<shared_ptr<Stmt>> stmts;
   ExprPtr expr;
 
-  StmtExpr(vector<unique_ptr<Stmt>> &&stmts, ExprPtr expr);
-  StmtExpr(unique_ptr<Stmt> stmt, ExprPtr expr);
-  StmtExpr(unique_ptr<Stmt> stmt, unique_ptr<Stmt> stmt2, ExprPtr expr);
+  StmtExpr(vector<shared_ptr<Stmt>> stmts, ExprPtr expr);
+  StmtExpr(shared_ptr<Stmt> stmt, ExprPtr expr);
+  StmtExpr(shared_ptr<Stmt> stmt, shared_ptr<Stmt> stmt2, ExprPtr expr);
   StmtExpr(const StmtExpr &expr);
 
   string toString() const override;
@@ -636,7 +651,7 @@ struct InstantiateExpr : Expr {
   ExprPtr typeExpr;
   vector<ExprPtr> typeParams;
 
-  InstantiateExpr(ExprPtr typeExpr, vector<ExprPtr> &&typeParams);
+  InstantiateExpr(ExprPtr typeExpr, vector<ExprPtr> typeParams);
   /// Convenience constructor for a single type parameter.
   InstantiateExpr(ExprPtr typeExpr, ExprPtr typeParam);
   InstantiateExpr(const InstantiateExpr &expr);

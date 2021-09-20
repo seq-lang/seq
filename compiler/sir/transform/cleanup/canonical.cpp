@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include "sir/analyze/module/side_effect.h"
 #include "sir/transform/rewrite.h"
 #include "sir/util/irtools.h"
 
@@ -54,34 +55,6 @@ NodeRanker::Rank getRank(Node *node) {
   NodeRanker ranker;
   node->accept(ranker);
   return ranker.getRank();
-}
-
-struct PurityChecker : public util::Operator {
-  bool result = true;
-
-  void defaultVisit(Node *node) override {
-    if (!isA<Const>(node))
-      result = false;
-  }
-
-  void handle(VarValue *v) override {}
-
-  void handle(CallInstr *v) override {
-    if (util::isMagicMethodCall(v))
-      return;
-
-    auto *fn = util::getFunc(v->getCallee());
-    if (!fn || !util::hasAttribute(fn, "std.internal.attributes.pure"))
-      result = false;
-  }
-
-  bool isPure() { return result; }
-};
-
-bool isPure(Node *node) {
-  PurityChecker pc;
-  node->accept(pc);
-  return pc.isPure();
 }
 
 bool isCommutativeOp(Func *fn) {
@@ -320,6 +293,8 @@ struct CanonConstSub : public RewriteRule {
 };
 } // namespace
 
+const std::string CanonicalizationPass::KEY = "core-cleanup-canon";
+
 void CanonicalizationPass::run(Module *m) {
   registerStandardRules(m);
   Rewriter::reset();
@@ -327,7 +302,8 @@ void CanonicalizationPass::run(Module *m) {
 }
 
 void CanonicalizationPass::handle(CallInstr *v) {
-  if (isPure(v))
+  auto *r = getAnalysisResult<analyze::module::SideEffectResult>(sideEffectsKey);
+  if (!r->hasSideEffect(v))
     rewrite(v);
 }
 

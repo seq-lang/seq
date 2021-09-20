@@ -10,7 +10,7 @@ namespace cleanup {
 /// Cleanup pass that physically replaces nodes.
 class ReplaceCleanupPass : public Pass {
 public:
-  const std::string KEY = "core-cleanup-physical-replace";
+  static const std::string KEY;
   std::string getKey() const override { return KEY; }
   void run(Module *module) override;
 };

@@ -30,19 +30,18 @@ namespace ast {
  */
 struct SimplifyItem {
   /// Object kind (function, class, variable, or import).
-  enum Kind { Func, Type, Var, Import } kind;
+  enum Kind { Func, Type, Var } kind;
   /// Object's base function
   string base;
   /// Object's unique identifier (canonical name)
   string canonicalName;
   /// True if an object is global.
   bool global;
-  /// True if an object is a static type object (e.g. N in [N: int]).
-  bool staticType;
+  /// Non-empty string if a variable is import variable
+  string importPath;
 
 public:
-  SimplifyItem(Kind k, string base, string canonicalName, bool global = false,
-               bool stat = false);
+  SimplifyItem(Kind k, string base, string canonicalName, bool global = false);
 
   /// Convenience getters.
   string getBase() const { return base; }
@@ -50,8 +49,7 @@ public:
   bool isVar() const { return kind == Var; }
   bool isFunc() const { return kind == Func; }
   bool isType() const { return kind == Type; }
-  bool isImport() const { return kind == Import; }
-  bool isStatic() const { return isType() && staticType; }
+  bool isImport() const { return !importPath.empty(); }
 };
 
 /**
@@ -68,11 +66,11 @@ struct SimplifyContext : public Context<SimplifyItem> {
     /// Declaration AST of a base-defining class (or nullptr otherwise) for
     /// automatically annotating "self" and other parameters. For example, for
     /// class Foo[T, N: int]: ..., AST is Foo[T, N: int]
-    shared_ptr<Expr> ast;
+    ExprPtr ast;
     /// Tracks function attributes (e.g. if it has @atomic or @test attributes).
     int attributes;
 
-    explicit Base(string name, shared_ptr<Expr> ast = nullptr, int attributes = 0);
+    explicit Base(string name, ExprPtr ast = nullptr, int attributes = 0);
     bool isType() const { return ast != nullptr; }
   };
   /// A stack of bases enclosing the current statement (the topmost base is the last
@@ -97,6 +95,10 @@ struct SimplifyContext : public Context<SimplifyItem> {
   /// Tracks if we are in a dependent part of a short-circuiting expression (e.g. b in a
   /// and b) to disallow assignment expressions there.
   bool canAssign;
+  /// Allow type() expressions.
+  bool allowTypeOf;
+  /// Replacement expressions.
+  unordered_map<string, ExprPtr> *substitutions;
 
 public:
   SimplifyContext(string filename, shared_ptr<Cache> cache);
@@ -104,8 +106,7 @@ public:
   using Context<SimplifyItem>::add;
   /// Convenience method for adding an object to the context.
   shared_ptr<SimplifyItem> add(SimplifyItem::Kind kind, const string &name,
-                               const string &canonicalName = "", bool global = false,
-                               bool stat = false);
+                               const string &canonicalName = "", bool global = false);
   shared_ptr<SimplifyItem> find(const string &name) const override;
 
   /// Return a canonical name of the top-most base, or an empty string if this is a

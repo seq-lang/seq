@@ -55,7 +55,7 @@ def test_fmindex(FMD: bool):
         pickle.dump(fmi, jar)
 
     with gzip.open('build/fmi.bin', 'rb') as jar:
-        fmi = pickle.load[FMIndex](jar)
+        fmi = pickle.load(jar, FMIndex)
 
     assert fmi.sequence(1, 20, rid=0) == fmi.sequence(1, 20, name='chrA') == s'CCTCCCCGTTCGCTGGACC'
     assert fmi.sequence(1, 20, rid=3) == fmi.sequence(1, 20, name='chrD') == s'GCCGTGACCACCCCGCGAG'
@@ -74,7 +74,7 @@ def test_fmdindex():
         pickle.dump(fmi, jar)
 
     with gzip.open('build/fmi.bin', 'rb') as jar:
-        fmi = pickle.load[FMDIndex](jar)
+        fmi = pickle.load(jar, FMDIndex)
 
     assert fmi.sequence(1, 20, rid=0) == fmi.sequence(1, 20, name='chrA') == s'CCTCCCCGTTCGCTGGACC'
     assert fmi.sequence(1, 20, rid=3) == fmi.sequence(1, 20, name='chrD') == s'GCCGTGACCACCCCGCGAG'
@@ -91,7 +91,7 @@ def test_smems[FM](fmi: FM, path: str):
         pickle.dump(fmi, jar)
 
     with gzip.open('build/fmi.bin', 'rb') as jar:
-        fmi = pickle.load[FM](jar)
+        fmi = pickle.load(jar, FM)
 
     q = s'ACCAAACCCAGCTACGCAAAATCTTAGCATACTCCTCAATTACCCACATAGGATGAATAA'
     v = [[(name, pos, is_rev, ref[rid].seq[pos:pos + len(smem)]) for rid, name, pos, is_rev in fmi.biresults(smem)] for smem in fmi.smems(q, x=20, min_intv=1)[1]]
@@ -108,5 +108,5 @@ test_fmindex(FMD=False)
 test_fmdindex()
 
 path = 'test/data/seqs2.fasta'
-test_smems[FMIndex](FMIndex(path, FMD=True), path)
-test_smems[FMDIndex](FMDIndex(path), path)
+test_smems(FMIndex(path, FMD=True), path)
+test_smems(FMDIndex(path), path)

@@ -129,21 +129,38 @@ void CloneVisitor::visit(const WhileFlow *v) {
 }
 
 void CloneVisitor::visit(const ForFlow *v) {
-  auto *loop = Nt(v, nullptr, nullptr, nullptr);
+  auto *loop = Nt(v, nullptr, nullptr, nullptr,
+                  std::unique_ptr<transform::parallel::OMPSched>());
   forceRemap(v, loop);
   loop->setIter(clone(v->getIter()));
   loop->setBody(clone(v->getBody()));
   loop->setVar(clone(v->getVar()));
+  if (auto *sched = v->getSchedule()) {
+    auto schedCloned = std::make_unique<transform::parallel::OMPSched>(*sched);
+    for (auto *val : sched->getUsedValues()) {
+      schedCloned->replaceUsedValue(val->getId(), clone(val));
+    }
+    loop->setSchedule(std::move(schedCloned));
+  }
+
   result = loop;
 }
 
 void CloneVisitor::visit(const ImperativeForFlow *v) {
-  auto *loop = Nt(v, nullptr, v->getStep(), nullptr, nullptr, nullptr);
+  auto *loop = Nt(v, nullptr, v->getStep(), nullptr, nullptr, nullptr,
+                  std::unique_ptr<transform::parallel::OMPSched>());
   forceRemap(v, loop);
   loop->setStart(clone(v->getStart()));
   loop->setBody(clone(v->getBody()));
   loop->setVar(clone(v->getVar()));
   loop->setEnd(clone(v->getEnd()));
+  if (auto *sched = v->getSchedule()) {
+    auto schedCloned = std::make_unique<transform::parallel::OMPSched>(*sched);
+    for (auto *val : sched->getUsedValues()) {
+      schedCloned->replaceUsedValue(val->getId(), clone(val));
+    }
+    loop->setSchedule(std::move(schedCloned));
+  }
   result = loop;
 }
 

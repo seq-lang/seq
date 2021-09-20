@@ -54,7 +54,7 @@ class A:
         zs = str(_unwrap(z)) if z else 'None'
         return xs, ys, zs
 
-    # TODO: def bar[S](self: A, x: S, y: S, z: optional[typeof(S() + 0.0)] = None)
+    # TODO: def bar[S](self: A, x: S, y: S, z: optional[type(S() + 0.0)] = None)
     def bar[S](self: A, x: S, y: S, z: optional[S] = None):
         xs = str(x)
         ys = str(y)

@@ -1,7 +1,11 @@
 # Primarily for internal use. Regular users should not use this module.
 
-from C import seq_alloc(int) -> cobj
-from C import seq_alloc_atomic(int) -> cobj
+@pure
+@C
+def seq_alloc(a: int) -> cobj: pass
+@pure
+@C
+def seq_alloc_atomic(a: int) -> cobj: pass
 from C import seq_realloc(cobj, int) -> cobj
 from C import seq_free(cobj)
 from C import seq_gc_add_roots(cobj, cobj)
@@ -9,10 +13,10 @@ from C import seq_gc_remove_roots(cobj, cobj)
 from C import seq_gc_clear_roots()
 from C import seq_gc_exclude_static_roots(cobj, cobj)
 
-def sizeof[T]():
+def sizeof(T: type):
     return T.__elemsize__
 
-def atomic[T]():
+def atomic(T: type):
     return T.__atomic__
 
 def alloc(sz: int):

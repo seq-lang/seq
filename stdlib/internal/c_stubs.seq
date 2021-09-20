@@ -1,74 +1,186 @@
 # Seq runtime functions
 from C import seq_print(str)
 from C import seq_print_full(str, cobj)
-from C import seq_strdup(cobj) -> str
-from C import seq_stdin() -> cobj
-from C import seq_stdout() -> cobj
-from C import seq_stderr() -> cobj
-from C import seq_env() -> Ptr[cobj]
-from C import seq_time() -> int
-from C import seq_time_monotonic() -> int
-from C import seq_pid() -> int
-from C import seq_lock_new() -> cobj
+@pure
+@C
+def seq_strdup(a: cobj) -> str: pass
+@pure
+@C
+def seq_stdin() -> cobj: pass
+@pure
+@C
+def seq_stdout() -> cobj: pass
+@pure
+@C
+def seq_stderr() -> cobj: pass
+@pure
+@C
+def seq_env() -> Ptr[cobj]: pass
+@pure
+@C
+def seq_time() -> int: pass
+@pure
+@C
+def seq_time_monotonic() -> int: pass
+@pure
+@C
+def seq_pid() -> int: pass
+@pure
+@C
+def seq_lock_new() -> cobj: pass
 from C import seq_lock_acquire(cobj, bool, float) -> bool
 from C import seq_lock_release(cobj)
-from C import seq_rlock_new() -> cobj
+@pure
+@C
+def seq_rlock_new() -> cobj: pass
 from C import seq_rlock_acquire(cobj, bool, float) -> bool
 from C import seq_rlock_release(cobj)
-from C import seq_i32_to_float(i32) -> float
+@pure
+@C
+def seq_i32_to_float(a: i32) -> float: pass
 
 # <ctype.h>
-from C import isdigit(int) -> int
-from C import isspace(int) -> int
-from C import isupper(int) -> int
-from C import islower(int) -> int
-from C import toupper(int) -> int
-from C import tolower(int) -> int
-from C import isalnum(int) -> int
-from C import isalpha(int) -> int
-from C import istitle(int) -> int
+@pure
+@C
+def isdigit(a: int) -> int: pass
+@pure
+@C
+def isspace(a: int) -> int: pass
+@pure
+@C
+def isupper(a: int) -> int: pass
+@pure
+@C
+def islower(a: int) -> int: pass
+@pure
+@C
+def toupper(a: int) -> int: pass
+@pure
+@C
+def tolower(a: int) -> int: pass
+@pure
+@C
+def isalnum(a: int) -> int: pass
+@pure
+@C
+def isalpha(a: int) -> int: pass
+@pure
+@C
+def istitle(a: int) -> int: pass
 
 # <math.h>
-from C import ceil(float) -> float
-from C import floor(float) -> float
-from C import fabs(float) -> float
-from C import fmod(float, float) -> float
-from C import exp(float) -> float
-from C import expm1(float) -> float
-from C import ldexp(float, int) -> float
-from C import log(float) -> float
-from C import log2(float) -> float
-from C import log10(float) -> float
-from C import sqrt(float) -> float
-from C import pow(float, float) -> float
-from C import round(float) -> float
-from C import acos(float) -> float
-from C import asin(float) -> float
-from C import atan(float) -> float
-from C import atan2(float, float) -> float
-from C import cos(float) -> float
-from C import sin(float) -> float
-from C import tan(float) -> float
-from C import cosh(float) -> float
-from C import sinh(float) -> float
-from C import tanh(float) -> float
-from C import acosh(float) -> float
-from C import asinh(float) -> float
-from C import atanh(float) -> float
-from C import copysign(float, float) -> float
-from C import log1p(float) -> float
-from C import trunc(float) -> float
-from C import log2(float) -> float
-from C import erf(float) -> float
-from C import erfc(float) -> float
-from C import tgamma(float) -> float
-from C import lgamma(float) -> float
-from C import remainder(float, float) -> float
+@pure
+@C
+def ceil(a: float) -> float: pass
+@pure
+@C
+def floor(a: float) -> float: pass
+@pure
+@C
+def fabs(a: float) -> float: pass
+@pure
+@C
+def fmod(a: float, b: float) -> float: pass
+@pure
+@C
+def exp(a: float) -> float: pass
+@pure
+@C
+def expm1(a: float) -> float: pass
+@pure
+@C
+def ldexp(a: float, b: int) -> float: pass
+@pure
+@C
+def log(a: float) -> float: pass
+@pure
+@C
+def log2(a: float) -> float: pass
+@pure
+@C
+def log10(a: float) -> float: pass
+@pure
+@C
+def sqrt(a: float) -> float: pass
+@pure
+@C
+def pow(a: float, b: float) -> float: pass
+@pure
+@C
+def round(a: float) -> float: pass
+@pure
+@C
+def acos(a: float) -> float: pass
+@pure
+@C
+def asin(a: float) -> float: pass
+@pure
+@C
+def atan(a: float) -> float: pass
+@pure
+@C
+def atan2(a: float, b: float) -> float: pass
+@pure
+@C
+def cos(a: float) -> float: pass
+@pure
+@C
+def sin(a: float) -> float: pass
+@pure
+@C
+def tan(a: float) -> float: pass
+@pure
+@C
+def cosh(a: float) -> float: pass
+@pure
+@C
+def sinh(a: float) -> float: pass
+@pure
+@C
+def tanh(a: float) -> float: pass
+@pure
+@C
+def acosh(a: float) -> float: pass
+@pure
+@C
+def asinh(a: float) -> float: pass
+@pure
+@C
+def atanh(a: float) -> float: pass
+@pure
+@C
+def copysign(a: float, b: float) -> float: pass
+@pure
+@C
+def log1p(a: float) -> float: pass
+@pure
+@C
+def trunc(a: float) -> float: pass
+@pure
+@C
+def log2(a: float) -> float: pass
+@pure
+@C
+def erf(a: float) -> float: pass
+@pure
+@C
+def erfc(a: float) -> float: pass
+@pure
+@C
+def tgamma(a: float) -> float: pass
+@pure
+@C
+def lgamma(a: float) -> float: pass
+@pure
+@C
+def remainder(a: float, b: float) -> float: pass
 from C import frexp(float, Ptr[Int[32]]) -> float
 from C import modf(float, Ptr[float]) -> float
 
 # <stdio.h>
-from C import ferror(cobj) -> i32
+@pure
+@C
+def ferror(a: cobj) -> i32: pass
 from C import fgetc(cobj) -> i32
 from C import fopen(cobj, cobj) -> cobj
 from C import fclose(cobj) -> int
@@ -84,7 +196,9 @@ from C import getline(Ptr[cobj], Ptr[int], cobj) -> int
 from C import exit(int)
 from C import system(cobj) -> int
 from C import free(cobj)
-from C import atoi(cobj) -> int
+@pure
+@C
+def atoi(a: cobj) -> int: pass
 
 # <zlib.h>
 from C import gzopen(cobj, cobj) -> cobj
@@ -96,9 +210,3 @@ from C import gzread(cobj, cobj, u32) -> i32
 from C import gzwrite(cobj, cobj, u32) -> i32
 from C import gztell(cobj) -> int
 from C import gzseek(cobj, int, i32) -> int
-
-# OpenMP
-from C import omp_get_num_threads() -> i32
-from C import omp_get_thread_num() -> i32
-from C import omp_get_max_threads() -> i32
-from C import omp_get_num_procs() -> i32

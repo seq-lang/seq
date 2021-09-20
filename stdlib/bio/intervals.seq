@@ -96,7 +96,7 @@ class IntervalTree:
     def _append(self, intv: Interval):
         if self.n >= self.m:
             m = (3 * self.m)//2 + 1
-            self.a = Ptr[Interval](realloc(self.a.as_byte(), m * sizeof[Interval]()))
+            self.a = Ptr[Interval](realloc(self.a.as_byte(), m * sizeof(Interval)))
             self.m = m
         self.a[self.n] = intv
         self.n += 1

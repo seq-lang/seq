@@ -1,29 +1,6 @@
 from bisect import bisect_right, bisect_left, insort
 from collections import deque
 
-@extend
-class deque[T]:
-    def _idx_check(self, idx: int, msg: str):
-        if self._head == self._tail or idx >= len(self) or idx < 0:
-            raise IndexError(msg)
-
-    @property
-    def left(self):
-        self._idx_check(0, "list index out of range")
-        return self._arr[self._head]
-
-    def __getitem__(self, idx: int):
-        if idx < 0:
-            idx += len(self)
-        self._idx_check(idx, "list index out of range")
-        if self._head <= self._tail:
-            return self._arr[self._head + idx]
-        elif self._head + idx < len(self._arr):
-            return self._arr[self._head + idx]
-        else:
-            idx -= len(self._arr) - self._head
-            assert 0 <= idx < self._tail
-            return self._arr[idx]
 
 DEFAULT_LOAD_FACTOR = 1000
 class SortedList[T]:

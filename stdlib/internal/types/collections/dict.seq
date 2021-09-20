@@ -86,9 +86,9 @@ class Dict[K,V]:
         flags_copy = Ptr[u32](f)
         keys_copy = Ptr[K](n)
         vals_copy = Ptr[V](n)
-        str.memcpy(flags_copy.as_byte(), self._flags.as_byte(), f * gc.sizeof[u32]())
-        str.memcpy(keys_copy.as_byte(), self._keys.as_byte(), n * gc.sizeof[K]())
-        str.memcpy(vals_copy.as_byte(), self._vals.as_byte(), n * gc.sizeof[V]())
+        str.memcpy(flags_copy.as_byte(), self._flags.as_byte(), f * gc.sizeof(u32))
+        str.memcpy(keys_copy.as_byte(), self._keys.as_byte(), n * gc.sizeof(K))
+        str.memcpy(vals_copy.as_byte(), self._vals.as_byte(), n * gc.sizeof(V))
         return Dict[K,V](n, self._size, self._n_occupied, self._upper_bound, flags_copy, keys_copy, vals_copy)
 
     def __str__(self):
@@ -238,8 +238,8 @@ class Dict[K,V]:
                 i += 1
 
             if self._n_buckets < new_n_buckets:
-                self._keys = Ptr[K](gc.realloc(self._keys.as_byte(), new_n_buckets * gc.sizeof[K]()))
-                self._vals = Ptr[V](gc.realloc(self._vals.as_byte(), new_n_buckets * gc.sizeof[V]()))
+                self._keys = Ptr[K](gc.realloc(self._keys.as_byte(), new_n_buckets * gc.sizeof(K)))
+                self._vals = Ptr[V](gc.realloc(self._vals.as_byte(), new_n_buckets * gc.sizeof(V)))
 
         if j:
             j = 0
@@ -271,8 +271,8 @@ class Dict[K,V]:
                 j += 1
 
             if self._n_buckets > new_n_buckets:
-                self._keys = Ptr[K](gc.realloc(self._keys.as_byte(), new_n_buckets * gc.sizeof[K]()))
-                self._vals = Ptr[V](gc.realloc(self._vals.as_byte(), new_n_buckets * gc.sizeof[V]()))
+                self._keys = Ptr[K](gc.realloc(self._keys.as_byte(), new_n_buckets * gc.sizeof(K)))
+                self._vals = Ptr[V](gc.realloc(self._vals.as_byte(), new_n_buckets * gc.sizeof(V)))
 
             self._flags = new_flags
             self._n_buckets = new_n_buckets

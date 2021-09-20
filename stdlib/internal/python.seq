@@ -1,41 +1,40 @@
 import os
 from internal.dlopen import dlext
-LD = os.getenv('SEQ_PYTHON', default='libpython.' + dlext())
 
-from C import LD.PyUnicode_AsEncodedString(cobj, cobj, cobj) -> cobj
-from C import LD.PyBytes_AsString(cobj) -> cobj
-from C import LD.PyErr_Fetch(Ptr[cobj], Ptr[cobj], Ptr[cobj])
-from C import LD.PyObject_GetAttrString(cobj, cobj) -> cobj
-from C import LD.PyObject_GetAttr(cobj, cobj) -> cobj
-from C import LD.PyObject_Str(cobj) -> cobj
-from C import LD.PyRun_SimpleString(cobj)
-from C import LD.Py_IncRef(cobj)
-from C import LD.Py_DecRef(cobj)
-from C import LD.PyObject_Call(cobj, cobj, cobj) -> cobj
-from C import LD.PyObject_SetAttrString(cobj, cobj, cobj) -> cobj
-from C import LD.PyObject_Length(cobj) -> int
-from C import LD.Py_Initialize()
-from C import LD.PyImport_ImportModule(cobj) -> cobj
-from C import LD.PyLong_FromLong(int) -> cobj
-from C import LD.PyLong_AsLong(cobj) -> int
-from C import LD.PyFloat_FromDouble(float) -> cobj
-from C import LD.PyFloat_AsDouble(cobj) -> float
-from C import LD.PyBool_FromLong(int) -> cobj
-from C import LD.PyObject_IsTrue(cobj) -> int
-from C import LD.PyUnicode_DecodeFSDefaultAndSize(cobj, int) -> cobj
-from C import LD.PyTuple_New(int) -> cobj
-from C import LD.PyTuple_SetItem(cobj, int, cobj)
-from C import LD.PyTuple_GetItem(cobj, int) -> cobj
-from C import LD.PyList_New(int) -> cobj
-from C import LD.PyList_SetItem(cobj, int, cobj) -> cobj
-from C import LD.PyList_GetItem(cobj, int) -> cobj
-from C import LD.PySet_New(cobj) -> cobj
-from C import LD.PySet_Add(cobj, cobj) -> cobj
-from C import LD.PyDict_New() -> cobj
-from C import LD.PyDict_SetItem(cobj, cobj, cobj) -> cobj
-from C import LD.PyDict_Next(cobj, Ptr[int], Ptr[cobj], Ptr[cobj]) -> int
-from C import LD.PyObject_GetIter(cobj) -> cobj
-from C import LD.PyIter_Next(cobj) -> cobj
+PyUnicode_AsEncodedString = Function[[cobj, cobj, cobj], cobj](cobj())
+PyBytes_AsString = Function[[cobj], cobj](cobj())
+PyErr_Fetch = Function[[Ptr[cobj], Ptr[cobj], Ptr[cobj]], void](cobj())
+PyObject_GetAttrString = Function[[cobj, cobj], cobj](cobj())
+PyObject_GetAttr = Function[[cobj, cobj], cobj](cobj())
+PyObject_Str = Function[[cobj], cobj](cobj())
+PyRun_SimpleString = Function[[cobj], void](cobj())
+Py_IncRef = Function[[cobj], void](cobj())
+Py_DecRef = Function[[cobj], void](cobj())
+PyObject_Call = Function[[cobj, cobj, cobj], cobj](cobj())
+PyObject_SetAttrString = Function[[cobj, cobj, cobj], cobj](cobj())
+PyObject_Length = Function[[cobj], int](cobj())
+Py_Initialize = Function[[], void](cobj())
+PyImport_ImportModule = Function[[cobj], cobj](cobj())
+PyLong_FromLong = Function[[int], cobj](cobj())
+PyLong_AsLong = Function[[cobj], int](cobj())
+PyFloat_FromDouble = Function[[float], cobj](cobj())
+PyFloat_AsDouble = Function[[cobj], float](cobj())
+PyBool_FromLong = Function[[int], cobj](cobj())
+PyObject_IsTrue = Function[[cobj], int](cobj())
+PyUnicode_DecodeFSDefaultAndSize = Function[[cobj, int], cobj](cobj())
+PyTuple_New = Function[[int], cobj](cobj())
+PyTuple_SetItem = Function[[cobj, int, cobj], void](cobj())
+PyTuple_GetItem = Function[[cobj, int], cobj](cobj())
+PyList_New = Function[[int], cobj](cobj())
+PyList_SetItem = Function[[cobj, int, cobj], cobj](cobj())
+PyList_GetItem = Function[[cobj, int], cobj](cobj())
+PySet_New = Function[[cobj], cobj](cobj())
+PySet_Add = Function[[cobj, cobj], cobj](cobj())
+PyDict_New = Function[[], cobj](cobj())
+PyDict_SetItem = Function[[cobj, cobj, cobj], cobj](cobj())
+PyDict_Next = Function[[cobj, Ptr[int], Ptr[cobj], Ptr[cobj]], int](cobj())
+PyObject_GetIter = Function[[cobj], cobj](cobj())
+PyIter_Next = Function[[cobj], cobj](cobj())
 
 _PY_MODULE_CACHE = Dict[str, pyobj]()
 
@@ -44,6 +43,78 @@ def init():
     global _PY_INITIALIZED
     if _PY_INITIALIZED:
         return
+
+    LD = os.getenv('SEQ_PYTHON', default='libpython.' + dlext())
+
+    global PyUnicode_AsEncodedString
+    PyUnicode_AsEncodedString = _dlsym(LD, "PyUnicode_AsEncodedString")
+    global PyBytes_AsString
+    PyBytes_AsString = _dlsym(LD, "PyBytes_AsString")
+    global PyErr_Fetch
+    PyErr_Fetch = _dlsym(LD, "PyErr_Fetch")
+    global PyObject_GetAttrString
+    PyObject_GetAttrString = _dlsym(LD, "PyObject_GetAttrString")
+    global PyObject_GetAttr
+    PyObject_GetAttr = _dlsym(LD, "PyObject_GetAttr")
+    global PyObject_Str
+    PyObject_Str = _dlsym(LD, "PyObject_Str")
+    global PyRun_SimpleString
+    PyRun_SimpleString = _dlsym(LD, "PyRun_SimpleString")
+    global Py_IncRef
+    Py_IncRef = _dlsym(LD, "Py_IncRef")
+    global Py_DecRef
+    Py_DecRef = _dlsym(LD, "Py_DecRef")
+    global PyObject_Call
+    PyObject_Call = _dlsym(LD, "PyObject_Call")
+    global PyObject_SetAttrString
+    PyObject_SetAttrString = _dlsym(LD, "PyObject_SetAttrString")
+    global PyObject_Length
+    PyObject_Length = _dlsym(LD, "PyObject_Length")
+    global Py_Initialize
+    Py_Initialize = _dlsym(LD, "Py_Initialize")
+    global PyImport_ImportModule
+    PyImport_ImportModule = _dlsym(LD, "PyImport_ImportModule")
+    global PyLong_FromLong
+    PyLong_FromLong = _dlsym(LD, "PyLong_FromLong")
+    global PyLong_AsLong
+    PyLong_AsLong = _dlsym(LD, "PyLong_AsLong")
+    global PyFloat_FromDouble
+    PyFloat_FromDouble = _dlsym(LD, "PyFloat_FromDouble")
+    global PyFloat_AsDouble
+    PyFloat_AsDouble = _dlsym(LD, "PyFloat_AsDouble")
+    global PyBool_FromLong
+    PyBool_FromLong = _dlsym(LD, "PyBool_FromLong")
+    global PyObject_IsTrue
+    PyObject_IsTrue = _dlsym(LD, "PyObject_IsTrue")
+    global PyUnicode_DecodeFSDefaultAndSize
+    PyUnicode_DecodeFSDefaultAndSize = _dlsym(LD, "PyUnicode_DecodeFSDefaultAndSize")
+    global PyTuple_New
+    PyTuple_New = _dlsym(LD, "PyTuple_New")
+    global PyTuple_SetItem
+    PyTuple_SetItem = _dlsym(LD, "PyTuple_SetItem")
+    global PyTuple_GetItem
+    PyTuple_GetItem = _dlsym(LD, "PyTuple_GetItem")
+    global PyList_New
+    PyList_New = _dlsym(LD, "PyList_New")
+    global PyList_SetItem
+    PyList_SetItem = _dlsym(LD, "PyList_SetItem")
+    global PyList_GetItem
+    PyList_GetItem = _dlsym(LD, "PyList_GetItem")
+    global PySet_New
+    PySet_New = _dlsym(LD, "PySet_New")
+    global PySet_Add
+    PySet_Add = _dlsym(LD, "PySet_Add")
+    global PyDict_New
+    PyDict_New = _dlsym(LD, "PyDict_New")
+    global PyDict_SetItem
+    PyDict_SetItem = _dlsym(LD, "PyDict_SetItem")
+    global PyDict_Next
+    PyDict_Next = _dlsym(LD, "PyDict_Next")
+    global PyObject_GetIter
+    PyObject_GetIter = _dlsym(LD, "PyObject_GetIter")
+    global PyIter_Next
+    PyIter_Next = _dlsym(LD, "PyIter_Next")
+
     Py_Initialize()
     _PY_INITIALIZED = True
 
@@ -215,7 +286,7 @@ class str:
         return r
 
 @extend
-class List[T]:
+class List:
     def __to_py__(self) -> pyobj:
         pylist = PyList_New(len(self))
         pyobj.exc_check()
@@ -232,11 +303,11 @@ class List[T]:
         for i in range(n):
             elem = pyobj(PyList_GetItem(v.p, i))
             pyobj.exc_check()
-            t.append(get[T](elem))
+            t.append(get(elem, T))
         return t
 
 @extend
-class Dict[K, V]:
+class Dict:
     def __to_py__(self) -> pyobj:
         pydict = PyDict_New()
         pyobj.exc_check()
@@ -252,13 +323,13 @@ class Dict[K, V]:
         v_ptr = cobj()
         while PyDict_Next(d.p, __ptr__(pos), __ptr__(k_ptr), __ptr__(v_ptr)):
             pyobj.exc_check()
-            k = get[K](pyobj(k_ptr))
-            v = get[V](pyobj(v_ptr))
+            k = get(pyobj(k_ptr), K)
+            v = get(pyobj(v_ptr), V)
             b[k] = v
         return b
 
 @extend
-class Set[K]:
+class Set:
     def __to_py__(self) -> pyobj:
         pyset = PySet_New(cobj())
         pyobj.exc_check()

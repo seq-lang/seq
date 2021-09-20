@@ -55,9 +55,9 @@ def test_sort2(name, sort):
                 fail = True
     assert not fail
 
-test_sort2('qsort   :', qsort_inplace[int,int])
-test_sort2('heapsort:', heap_sort_inplace[int,int])
-test_sort2('pdqsort :', pdq_sort_inplace[int,int])
+test_sort2('qsort   :', qsort_inplace)
+test_sort2('heapsort:', heap_sort_inplace)
+test_sort2('pdqsort :', pdq_sort_inplace)
 # test_sort2('timsort :', tim_sort_inplace[int,int])
 
 # test standard sort routines

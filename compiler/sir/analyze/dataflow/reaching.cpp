@@ -132,6 +132,8 @@ bool RDInspector::calculateOut(CFBlock *blk) {
   return res;
 }
 
+const std::string RDAnalysis::KEY = "core-analyses-rd";
+
 std::unique_ptr<Result> RDAnalysis::run(const Module *m) {
   auto *cfgResult = getAnalysisResult<CFResult>(cfAnalysisKey);
   auto ret = std::make_unique<RDResult>(cfgResult);

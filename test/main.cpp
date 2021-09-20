@@ -256,14 +256,12 @@ TEST_P(SeqTest, Run) {
 
   if (!expects.first.empty()) {
     vector<string> results = splitLines(output);
+    for (unsigned i = 0; i < min(results.size(), expects.first.size()); i++)
+      if (expects.second)
+        EXPECT_EQ(results[i].substr(0, expects.first[i].size()), expects.first[i]);
+      else
+        EXPECT_EQ(results[i], expects.first[i]);
     EXPECT_EQ(results.size(), expects.first.size());
-    if (expects.first.size() == results.size()) {
-      for (unsigned i = 0; i < expects.first.size(); i++)
-        if (expects.second)
-          EXPECT_EQ(results[i].substr(0, expects.first[i].size()), expects.first[i]);
-        else
-          EXPECT_EQ(results[i], expects.first[i]);
-    }
   }
 }
 auto getTypeTests(const vector<string> &files) {
@@ -307,7 +305,6 @@ INSTANTIATE_TEST_SUITE_P(
       "parser/simplify_stmt.seq",
       "parser/typecheck_expr.seq",
       "parser/typecheck_stmt.seq",
-      "parser/statements.seq",
       "parser/types.seq",
       "parser/llvm.seq"
     })),
@@ -398,6 +395,7 @@ INSTANTIATE_TEST_SUITE_P(
             "transform/for_lowering.seq",
             "transform/io_opt.seq",
             "transform/inlining.seq",
+            "transform/omp.seq",
             "transform/outlining.seq",
             "transform/str_opt.seq"
         ),

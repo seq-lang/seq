@@ -49,6 +49,7 @@ namespace ast {
 
 /// Forward declarations
 struct SimplifyContext;
+class SimplifyVisitor;
 struct TypeContext;
 struct TranslateContext;
 
@@ -88,6 +89,8 @@ struct Cache : public std::enable_shared_from_this<Cache> {
     shared_ptr<SimplifyContext> ctx;
     /// Unique import variable for checking already loaded imports.
     string importVar;
+    /// File content (line:col indexable)
+    vector<string> content;
   };
 
   /// Absolute path of seqc executable (if available).
@@ -108,7 +111,9 @@ struct Cache : public std::enable_shared_from_this<Cache> {
   /// Stores class data for each class (type) in the source code.
   struct Class {
     /// Generic (unrealized) class template AST.
-    unique_ptr<ClassStmt> ast;
+    shared_ptr<ClassStmt> ast;
+    /// Non-simplified AST. Used for base class instantiation.
+    shared_ptr<ClassStmt> originalAst;
 
     /// A class function method.
     struct ClassMethod {
@@ -148,7 +153,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
     /// ClassRealization instance.
     unordered_map<string, shared_ptr<ClassRealization>> realizations;
 
-    Class() : ast(nullptr) {}
+    Class() : ast(nullptr), originalAst(nullptr) {}
   };
   /// Class lookup table that maps a canonical class identifier to the corresponding
   /// Class instance.
@@ -156,7 +161,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
 
   struct Function {
     /// Generic (unrealized) function template AST.
-    unique_ptr<FunctionStmt> ast;
+    shared_ptr<FunctionStmt> ast;
 
     /// A function realization.
     struct FunctionRealization {
@@ -164,7 +169,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
       types::FuncTypePtr type;
       /// Realized function AST (stored here for later realization in code generations
       /// stage).
-      unique_ptr<FunctionStmt> ast;
+      shared_ptr<FunctionStmt> ast;
       /// IR function pointer.
       ir::Func *ir;
     };
@@ -172,7 +177,10 @@ struct Cache : public std::enable_shared_from_this<Cache> {
     /// FunctionRealization instance.
     unordered_map<string, shared_ptr<FunctionRealization>> realizations;
 
-    Function() : ast(nullptr) {}
+    /// Unrealized function type.
+    types::FuncTypePtr type;
+
+    Function() : ast(nullptr), type(nullptr) {}
   };
   /// Function lookup table that maps a canonical function identifier to the
   /// corresponding Function instance.
@@ -184,6 +192,14 @@ struct Cache : public std::enable_shared_from_this<Cache> {
   /// Set of function realizations that are to be translated to IR.
   set<std::pair<string, string>> pendingRealizations;
 
+  /// Custom operators
+  unordered_map<string, std::pair<bool, std::function<StmtPtr(ast::SimplifyVisitor *,
+                                                              ast::CustomStmt *)>>>
+      customBlockStmts;
+  unordered_map<string,
+                std::function<StmtPtr(ast::SimplifyVisitor *, ast::CustomStmt *)>>
+      customExprStmts;
+
 public:
   explicit Cache(string argv0 = "");
 
@@ -193,6 +209,8 @@ public:
 
   /// Generate a unique SrcInfo for internally generated AST nodes.
   SrcInfo generateSrcInfo();
+  /// Get file contents at the given location.
+  string getContent(const SrcInfo &info);
 
   /// Realization API.
 
