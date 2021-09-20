@@ -116,7 +116,7 @@ ProcessResult processSource(const std::vector<const char *> &args) {
   auto t = std::chrono::high_resolution_clock::now();
 
   std::vector<std::string> disabledOptsVec(disabledOpts);
-  seq::ir::transform::PassManager pm(/*addStandardPasses=*/!isDebug, disabledOptsVec);
+  seq::ir::transform::PassManager pm(isDebug, disabledOptsVec);
   seq::PluginManager plm(&pm, isDebug);
 
   // load Seq

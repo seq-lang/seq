@@ -1,4 +1,3 @@
-#include <array>
 #include <cassert>
 #include <cerrno>
 #include <chrono>
@@ -10,11 +9,9 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <mutex>
 #include <string>
 #include <unistd.h>
-#include <unordered_map>
 #include <unwind.h>
 #include <vector>
 
@@ -210,24 +207,6 @@ SEQ_FUNC void *seq_stdin() { return stdin; }
 SEQ_FUNC void *seq_stdout() { return stdout; }
 
 SEQ_FUNC void *seq_stderr() { return stderr; }
-
-/*
- * dlopen
- */
-
-static std::unordered_map<std::string, void *> dlopen_handles;
-
-SEQ_FUNC void *seq_get_handle(const char *c) {
-  auto it = dlopen_handles.find(std::string(c));
-  if (it != dlopen_handles.end())
-    return it->second;
-  else
-    return nullptr;
-}
-
-SEQ_FUNC void seq_set_handle(const char *c, void *h) {
-  dlopen_handles[std::string(c)] = h;
-}
 
 /*
  * Threading

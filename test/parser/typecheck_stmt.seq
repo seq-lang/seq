@@ -28,7 +28,7 @@ print a  #: []
 
 #%% assign_type_err,barebones
 a = 5
-a = 3.3  #! ERROR: cannot unify int and float
+a = 3.3  #! cannot unify float and int
 
 #%% assign_atomic,barebones
 i = 1
@@ -130,13 +130,13 @@ print fo.x #: 6
 #%% assign_member_err_1,barebones
 class Foo:
     x: Optional[int]
-Foo().y = 5 #! ERROR: cannot find 'y' in Foo
+Foo().y = 5 #! cannot find 'y' in Foo
 
 #%% assign_member_err_2,barebones
 @tuple
 class Foo:
     x: Optional[int]
-Foo().x = 5 #! ERROR: tuple element 'x' is read-only
+Foo().x = 5 #! tuple element 'x' is read-only
 
 #%% return,barebones
 def foo():
@@ -194,13 +194,13 @@ for i in range(10):
 #%% for_error,barebones
 for i in 1:
     pass
-#! ERROR: cannot find '__iter__' in int
+#! cannot find '__iter__' in int
 
 #%% for_void_error,barebones
 def foo(): yield
 for i in foo():
     pass
-#! ERROR: expression with void type
+#! expression with void type
 
 #%% if,barebones
 for a, b in [(1, 2), (3, 3), (5, 4)]:
@@ -216,7 +216,7 @@ if 1:
     print '1' #: 1
 
 #%% static_if,barebones
-def foo[N: int](x):
+def foo(x, N: Static[int]):
     if isinstance(x, int):
         return x + 1
     elif isinstance(x, float):
@@ -225,16 +225,16 @@ def foo[N: int](x):
         return f'foo: {x[1]}'
     elif isinstance(x, Tuple) and (N >= 3 or staticlen(x) > 2):
         return x[2:]
-    elif hasattr(typeof(x), '__len__'):
+    elif hasattr(x, '__len__'):
         return 'len ' + str(x.__len__())
     else:
         compile_error('invalid type')
-print foo[1](1) #: 2
-print foo[1](2.0) #: 1.41421
-print foo[1]((1, 'bar')) #: foo: bar
-print foo[1]((1, 2)) #: len 2
-print foo[3]((1, 2)) #: ()
-print foo[1]((1, 2, 3)) #: (3)
+print foo(N=1, x=1) #: 2
+print foo(N=1, x=2.0) #: 1.41421
+print foo(N=1, x=(1, 'bar')) #: foo: bar
+print foo(N=1, x=(1, 2)) #: len 2
+print foo(N=3, x=(1, 2)) #: ()
+print foo(N=1, x=(1, 2, 3)) #: (3)
 
 #%% try_throw,barebones
 class MyError:
@@ -266,13 +266,13 @@ except MyError as e:
     print e._hdr[0], e._hdr[1] #: MyError foo!
 
 #%% throw_error,barebones
-raise 'hello' #! ERROR: cannot throw non-exception (first object member must be of type ExcHeader)
+raise 'hello' #! cannot throw non-exception (first object member must be of type ExcHeader)
 
 #%% function_builtin_error,barebones
 @__force__
 def foo(x):
     pass
-#! ERROR: builtins and external functions must be realizable
+#! builtins and external functions must be realizable
 
 #%% extend,barebones
 @extend

@@ -87,6 +87,8 @@ public:
   virtual Value *doClone(util::CloneVisitor &cv) const = 0;
   /// @return the control-flow builder
   virtual std::unique_ptr<codegen::CFBuilder> getCFBuilder() const = 0;
+  /// @return true if this flow has side effects
+  virtual bool hasSideEffect() const { return true; }
 
   /// Format the DSL node.
   /// @param os the output stream
@@ -112,6 +114,8 @@ public:
   virtual Value *doClone(util::CloneVisitor &cv) const = 0;
   /// @return the control-flow builder
   virtual std::unique_ptr<codegen::CFBuilder> getCFBuilder() const = 0;
+  /// @return true if this instruction has side effects
+  virtual bool hasSideEffect() const { return true; }
 
   /// Format the DSL node.
   /// @param os the output stream

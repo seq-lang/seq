@@ -1,5 +1,6 @@
 # Core library
 
+from internal.attributes import *
 from internal.types.ptr import *
 from internal.types.str import *
 from internal.types.int import *
@@ -98,34 +99,9 @@ class str:
             return str(self.ptr + start, length)
         else:
             raise ValueError("nope")
-def list(t):
-    return List(t.__iter__())
-def iter(t):
-    return t.__iter__()
-def len(t):
-    return t.__len__()
-
-from C import seq_stdout() -> cobj
-from C import fflush(cobj)
-_stdout = seq_stdout()
-def print(*args, sep=' ', end='\n', file=_stdout, flush=False):
-    """
-    Print args to the text stream file.
-    """
-    fp = cobj()
-    if isinstance(file, Ptr[byte]):
-        fp = file
-    else:
-        fp = file.fp
-    i = 0
-    for a in args:
-        if i:
-            seq_print_full(str(sep), fp)
-        seq_print_full(str(a), fp)
-        i += 1
-    seq_print_full(str(end), fp)
-    if flush:
-        fflush(fp)
 
 
+from internal.builtin import *
+
+from openmp import Ident as __OMPIdent, for_par
 from internal.dlopen import dlsym as _dlsym

@@ -1,7 +1,7 @@
 import internal.gc as gc
 
 @extend
-class List[T]:
+class List:
     def __init__(self, arr: Array[T], len: int):
         self.arr = arr
         self.len = len
@@ -28,7 +28,7 @@ class List[T]:
 
     # Dummy __init__ used for list comprehension optimization
     def __init__(self, dummy: bool, other):
-        if hasattr(typeof(other), '__len__'):
+        if hasattr(other, '__len__'):
             self.__init__(other.__len__())
         else:
             self.__init__()
@@ -151,7 +151,7 @@ class List[T]:
                         lim = self.__len__() - cur - 1
                     str.memmove((self.arr.ptr + (cur - i)).as_byte(),
                                 (self.arr.ptr + (cur + 1)).as_byte(),
-                                lim * gc.sizeof[T]())
+                                lim * gc.sizeof(T))
                     cur += step
                     i += 1
 
@@ -159,7 +159,7 @@ class List[T]:
                 if cur < self.__len__():
                     str.memmove((self.arr.ptr + (cur - length)).as_byte(),
                                 (self.arr.ptr + cur).as_byte(),
-                                (self.__len__() - cur) * gc.sizeof[T]())
+                                (self.__len__() - cur) * gc.sizeof(T))
 
                 self.len -= length
                 # self._resize(self.__len__())
@@ -175,8 +175,10 @@ class List[T]:
 
     def __iter__(self):
         i = 0
-        while i < self.len:
-            yield self.arr[i]
+        N = self.len
+        p = self.arr.ptr
+        while i < N:
+            yield p[i]
             i += 1
 
     def __reversed__(self):
@@ -224,7 +226,7 @@ class List[T]:
         len0 = self.__len__()
         new_cap = n * len0
         if self.arr.len < new_cap:
-            p = Ptr[T](gc.realloc(self.arr.ptr.as_byte(), new_cap * gc.sizeof[T]()))
+            p = Ptr[T](gc.realloc(self.arr.ptr.as_byte(), new_cap * gc.sizeof(T)))
             self.arr = Array[T](p, new_cap)
 
         idx = len0
@@ -333,7 +335,7 @@ class List[T]:
             raise IndexError(msg)
 
     def _resize(self, new_cap: int):
-        p = Ptr[T](gc.realloc(self.arr.ptr.as_byte(), new_cap * gc.sizeof[T]()))
+        p = Ptr[T](gc.realloc(self.arr.ptr.as_byte(), new_cap * gc.sizeof(T)))
         self.arr = Array[T](p, new_cap)
 
     def _resize_if_full(self):
@@ -371,12 +373,12 @@ class List[T]:
 
         if d < 0:
             tail = L - ihigh
-            str.memmove((a.arr.ptr + (ihigh + d)).as_byte(), (a.arr.ptr + ihigh).as_byte(), tail * gc.sizeof[T]())
+            str.memmove((a.arr.ptr + (ihigh + d)).as_byte(), (a.arr.ptr + ihigh).as_byte(), tail * gc.sizeof(T))
             a._resize(L + d)
         elif d > 0:
             k = L
             a._resize(k + d)
-            str.memmove((a.arr.ptr + (ihigh + d)).as_byte(), (a.arr.ptr + ihigh).as_byte(), (k - ihigh) * gc.sizeof[T]())
+            str.memmove((a.arr.ptr + (ihigh + d)).as_byte(), (a.arr.ptr + ihigh).as_byte(), (k - ihigh) * gc.sizeof(T))
 
         k = 0
         while k < n:

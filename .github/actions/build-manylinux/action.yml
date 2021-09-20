@@ -1,0 +1,5 @@
+name: manylinux build
+description: Builds Seq on manylinux
+runs:
+  using: docker
+  image: Dockerfile

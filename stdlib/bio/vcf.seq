@@ -619,11 +619,11 @@ def bcf_array_to_object(data: cobj, type_code: i32, n: i32, count: i64, scalar: 
 
     else:
         if type_code == BCF_BT_INT8:
-            return bcf_num_array_to_object[i8](data, BCF_BT_INT8, n, i8(bcf_int8_vector_end), i8(bcf_int8_missing))
+            return bcf_num_array_to_object(data, BCF_BT_INT8, n, i8(bcf_int8_vector_end), i8(bcf_int8_missing), T=i8)
         elif type_code == BCF_BT_INT16:
-            return bcf_num_array_to_object[i16](data, BCF_BT_INT16, n, i16(bcf_int16_vector_end), i16(bcf_int16_missing))
+            return bcf_num_array_to_object(data, BCF_BT_INT16, n, i16(bcf_int16_vector_end), i16(bcf_int16_missing), T=i16)
         elif type_code == BCF_BT_INT32:
-            return bcf_num_array_to_object[i32](data, BCF_BT_INT32, n, i32(bcf_int32_vector_end), i32(bcf_int32_missing))
+            return bcf_num_array_to_object(data, BCF_BT_INT32, n, i32(bcf_int32_vector_end), i32(bcf_int32_missing), T=i32)
         elif type_code == BCF_BT_FLOAT:
             arr = List[float]()
             nums = Ptr[i32](data)

@@ -53,6 +53,8 @@ bool DominatorInspector::isDominated(const Value *v, const Value *dominator) {
   return sets[vBlock->getId()].find(dBlock->getId()) != sets[vBlock->getId()].end();
 }
 
+const std::string DominatorAnalysis::KEY = "core-analyses-dominator";
+
 std::unique_ptr<Result> DominatorAnalysis::run(const Module *m) {
   auto *cfgResult = getAnalysisResult<CFResult>(cfAnalysisKey);
   auto ret = std::make_unique<DominatorResult>(cfgResult);

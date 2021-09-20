@@ -1,4 +1,6 @@
-from C import strlen(cobj) -> int
+@pure
+@C
+def strlen(a: cobj) -> int: pass
 
 @extend
 class str:
@@ -68,7 +70,7 @@ class str:
         return not self.__eq__(other)
     def cat(*args):
         total = 0
-        if staticlen(args) == 1 and hasattr(typeof(args[0]), "__iter__") and hasattr(typeof(args[0]), "__len__"):
+        if staticlen(args) == 1 and hasattr(args[0], "__iter__") and hasattr(args[0], "__len__"):
             for s in args[0]:
                 if not isinstance(s, str):
                     compile_error("not a string")
@@ -79,7 +81,7 @@ class str:
                 str.memcpy(p + n, s.ptr, s.len)
                 n += s.len
             return str(p, total)
-        elif staticlen(args) == 1 and hasattr(typeof(args[0]), "__iter__"):
+        elif staticlen(args) == 1 and hasattr(args[0], "__iter__"):
             sz = 10
             p = cobj(sz)
             n = 0

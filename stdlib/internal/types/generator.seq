@@ -1,7 +1,5 @@
-import internal.gc as gc
-
 @extend
-class Generator[T]:
+class Generator:
     @__internal__
     def __promise__(self) -> Ptr[T]:
         pass
@@ -18,9 +16,11 @@ class Generator[T]:
 
     def __iter__(self) -> Generator[T]:
         return self
+    @pure
     @llvm
     def __raw__(self) -> Ptr[byte]:
         ret i8* %self
+    @pure
     @llvm
     def __done__(self) -> bool:
         declare i1 @llvm.coro.done(i8* nocapture readonly)

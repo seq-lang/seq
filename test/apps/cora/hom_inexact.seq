@@ -12,7 +12,7 @@
 from sys import argv, stderr, exit
 from pickle import dump, load
 from util import K, BitSet
-from bio import FASTA, Locus
+from bio import FASTA, Locus, Kmer
 import gzip, itertools
 
 MAX_MISMATCHES = 3
@@ -31,7 +31,7 @@ if not (1 <= num_mismatches <= MAX_MISMATCHES):
 num_seeds = num_mismatches + 1
 bitsets = None
 with gzip.open(argv[3] + '.reps_bitsets', 'rb') as reps:
-    bitsets = load[List[BitSet]](reps)
+    bitsets = load(reps, List[BitSet])
 
 class MapSegment[K]:
     locus: Locus
@@ -103,7 +103,7 @@ def process_signal(t):
             for seed_no in range(num_seeds):
                 d.clear()
                 for tid, rec in enumerate(ref):
-                    for pos, kmer in rec.seq.kmers_with_pos[K](1):
+                    for pos, kmer in rec.seq.kmers_with_pos(1, K):
                         if not (bitsets[tid][pos] and
                                 signal_match(extract_signal(seed_no, kmer), signal1, signal2)):
                             continue
@@ -115,7 +115,7 @@ def process_signal(t):
                             pos = -pos
 
                         s = segment_code(seed_no, kmer)
-                        m: Optional = MapSegment[K](Locus(tid, pos))
+                        m: Optional = MapSegment[Kmer[K]](Locus(tid, pos))
                         p = d.setdefault(s, m)
 
                         if m is not p:
@@ -127,7 +127,7 @@ def process_signal(t):
                         d[s] = m
 
                         if add_pal:
-                            m_rev = MapSegment[K](Locus(tid, -pos))
+                            m_rev = MapSegment[Kmer[K]](Locus(tid, -pos))
                             target = m.next  # don't compare with m, since m == ~m_rev
                             while target is not None:
                                 compare_and_report(m_rev, target, seed_no, precompact)

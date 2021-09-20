@@ -143,22 +143,23 @@ llvm::Value *codegenRevCompBySIMD(const unsigned k, llvm::Value *self,
     comp = builder.CreateZExt(comp, ty);
   }
 
-  auto *vecTy = llvm::VectorType::get(builder.getInt8Ty(), m);
-  std::vector<unsigned> shufMask;
+  auto *vecTy = llvm::VectorType::get(builder.getInt8Ty(), m, false);
+  std::vector<int> shufMask;
   for (unsigned i = 0; i < m; i++)
     shufMask.push_back(m - 1 - i);
 
-  llvm::Value *vec = llvm::UndefValue::get(llvm::VectorType::get(ty, 1));
+  llvm::Value *vec = llvm::UndefValue::get(llvm::VectorType::get(ty, 1, false));
   vec = builder.CreateInsertElement(vec, comp, (uint64_t)0);
   vec = builder.CreateBitCast(vec, vecTy);
   // shuffle reverses bytes
-  vec = builder.CreateShuffleVector(vec, llvm::UndefValue::get(vecTy), shufMask);
+  vec = builder.CreateShuffleVector(vec, shufMask);
 
   // shifts reverse 2-bit chunks in each byte
-  llvm::Value *shift1 = llvm::ConstantVector::getSplat(m, builder.getInt8(6));
-  llvm::Value *shift2 = llvm::ConstantVector::getSplat(m, builder.getInt8(2));
-  llvm::Value *mask1 = llvm::ConstantVector::getSplat(m, builder.getInt8(0x0c));
-  llvm::Value *mask2 = llvm::ConstantVector::getSplat(m, builder.getInt8(0x30));
+  auto ec = llvm::ElementCount::get(m, false);
+  llvm::Value *shift1 = llvm::ConstantVector::getSplat(ec, builder.getInt8(6));
+  llvm::Value *shift2 = llvm::ConstantVector::getSplat(ec, builder.getInt8(2));
+  llvm::Value *mask1 = llvm::ConstantVector::getSplat(ec, builder.getInt8(0x0c));
+  llvm::Value *mask2 = llvm::ConstantVector::getSplat(ec, builder.getInt8(0x30));
 
   llvm::Value *vec1 = builder.CreateLShr(vec, shift1);
   llvm::Value *vec2 = builder.CreateShl(vec, shift1);
@@ -171,7 +172,7 @@ llvm::Value *codegenRevCompBySIMD(const unsigned k, llvm::Value *self,
   vec = builder.CreateOr(vec, vec3);
   vec = builder.CreateOr(vec, vec4);
 
-  vec = builder.CreateBitCast(vec, llvm::VectorType::get(ty, 1));
+  vec = builder.CreateBitCast(vec, llvm::VectorType::get(ty, 1, false));
   llvm::Value *result = builder.CreateExtractElement(vec, (uint64_t)0);
   if (w != 2 * k) {
     seqassert(w > 2 * k, "cannot calculate rev comp by simd");
@@ -267,12 +268,14 @@ std::ostream &KmerRevcomp::doFormat(std::ostream &os) const {
   return os << "(revcomp " << *kmer << ")";
 }
 
+const std::string KmerRevcompInterceptor::KEY = "seq-kmer-revcomp-interceptor";
+
 void KmerRevcompInterceptor::run(Module *M) {
   for (auto *var : *M) {
     if (auto *func = cast<BodiedFunc>(var)) {
       if (func->getUnmangledName() == Module::INVERT_MAGIC_NAME) {
         auto *kmerType = func->getParentType();
-        if (kmerType && kmerType->getName().rfind("std.bio.kmer.Kmer", 0) == 0 &&
+        if (kmerType && kmerType->getName().rfind("std.bio.seq.Kmer", 0) == 0 &&
             std::distance(func->arg_begin(), func->arg_end()) == 1) {
           // sanity check
           if (func->isGenerator() ||

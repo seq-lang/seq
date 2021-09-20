@@ -17,7 +17,7 @@ public:
   /// Constructs a folding pass.
   FoldingPass() : OperatorPass(/*childrenFirst=*/true) {}
 
-  const std::string KEY = "core-folding-const-fold";
+  static const std::string KEY;
   std::string getKey() const override { return KEY; }
 
   void run(Module *m) override;

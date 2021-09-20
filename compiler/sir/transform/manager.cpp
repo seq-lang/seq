@@ -9,10 +9,13 @@
 #include "sir/analyze/dataflow/cfg.h"
 #include "sir/analyze/dataflow/reaching.h"
 #include "sir/analyze/module/global_vars.h"
+#include "sir/analyze/module/side_effect.h"
 
 #include "sir/transform/folding/folding.h"
 #include "sir/transform/lowering/imperative.h"
+#include "sir/transform/lowering/pipeline.h"
 #include "sir/transform/manager.h"
+#include "sir/transform/parallel/openmp.h"
 #include "sir/transform/pythonic/dict.h"
 #include "sir/transform/pythonic/io.h"
 #include "sir/transform/pythonic/str.h"
@@ -39,6 +42,7 @@ std::string PassManager::KeyManager::getUniqueKey(const std::string &key) {
 }
 
 std::string PassManager::registerPass(std::unique_ptr<Pass> pass,
+                                      const std::string &insertBefore,
                                       std::vector<std::string> reqs,
                                       std::vector<std::string> invalidates) {
   std::string key = pass->getKey();
@@ -54,7 +58,14 @@ std::string PassManager::registerPass(std::unique_ptr<Pass> pass,
   passes.insert(std::make_pair(
       key, PassMetadata(std::move(pass), std::move(reqs), std::move(invalidates))));
   passes[key].pass->setManager(this);
-  executionOrder.push_back(key);
+  if (insertBefore.empty()) {
+    executionOrder.push_back(key);
+  } else {
+    auto it = std::find(executionOrder.begin(), executionOrder.end(), insertBefore);
+    seqassert(it != executionOrder.end(), "pass with key '{}' not found in manager",
+              insertBefore);
+    executionOrder.insert(it, key);
+  }
   return key;
 }
 
@@ -64,13 +75,13 @@ std::string PassManager::registerAnalysis(std::unique_ptr<analyze::Analysis> ana
   std::string key = analysis->getKey();
   if (isDisabled(key))
     return "";
+  key = km.getUniqueKey(key);
 
   for (const auto &req : reqs) {
     assert(deps.find(req) != deps.end());
     deps[req].push_back(key);
   }
 
-  key = km.getUniqueKey(key);
   analyses.insert(
       std::make_pair(key, AnalysisMetadata(std::move(analysis), std::move(reqs))));
   analyses[key].analysis->setManager(this);
@@ -131,23 +142,35 @@ void PassManager::invalidate(const std::string &key) {
   }
 }
 
-void PassManager::registerStandardPasses() {
-  // Pythonic
-  registerPass(std::make_unique<pythonic::DictArithmeticOptimization>());
-  registerPass(std::make_unique<pythonic::StrAdditionOptimization>());
-  registerPass(std::make_unique<pythonic::IOCatOptimization>());
+void PassManager::registerStandardPasses(bool debug) {
+  if (debug) {
+    registerPass(std::make_unique<lowering::PipelineLowering>());
+    registerPass(std::make_unique<parallel::OpenMPPass>());
+  } else {
+    // Pythonic
+    registerPass(std::make_unique<pythonic::DictArithmeticOptimization>());
+    registerPass(std::make_unique<pythonic::StrAdditionOptimization>());
+    registerPass(std::make_unique<pythonic::IOCatOptimization>());
 
-  // lowering
-  registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());
+    // lowering
+    registerPass(std::make_unique<lowering::PipelineLowering>());
+    registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());
 
-  // folding
-  auto cfgKey = registerAnalysis(std::make_unique<analyze::dataflow::CFAnalysis>());
-  auto rdKey = registerAnalysis(std::make_unique<analyze::dataflow::RDAnalysis>(cfgKey),
-                                {cfgKey});
-  auto globalKey =
-      registerAnalysis(std::make_unique<analyze::module::GlobalVarsAnalyses>());
-  registerPass(std::make_unique<folding::FoldingPassGroup>(rdKey, globalKey),
-               {rdKey, globalKey}, {rdKey, cfgKey, globalKey});
+    // folding
+    auto seKey =
+        registerAnalysis(std::make_unique<analyze::module::SideEffectAnalysis>());
+    auto cfgKey = registerAnalysis(std::make_unique<analyze::dataflow::CFAnalysis>());
+    auto rdKey = registerAnalysis(
+        std::make_unique<analyze::dataflow::RDAnalysis>(cfgKey), {cfgKey});
+    auto globalKey =
+        registerAnalysis(std::make_unique<analyze::module::GlobalVarsAnalyses>());
+    registerPass(std::make_unique<folding::FoldingPassGroup>(seKey, rdKey, globalKey),
+                 /*insertBefore=*/"", {seKey, rdKey, globalKey},
+                 {seKey, rdKey, cfgKey, globalKey});
+
+    // parallel
+    registerPass(std::make_unique<parallel::OpenMPPass>());
+  }
 }
 
 } // namespace transform

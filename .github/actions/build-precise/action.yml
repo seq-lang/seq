@@ -1,5 +1,0 @@
-name: Ubuntu 12.04 build
-description: Builds Seq on Ubuntu 12.04
-runs:
-  using: docker
-  image: Dockerfile

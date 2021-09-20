@@ -30,14 +30,9 @@ struct TypecheckItem {
   enum Kind { Func, Type, Var } kind;
   /// Item's type.
   types::TypePtr type;
-  /// True if an object is a static type object (e.g. N in [N: int]).
-  bool staticType;
 
-  TypecheckItem(Kind k, types::TypePtr type, bool staticType = false)
-      : kind(k), type(move(type)), staticType(staticType) {}
-
+  TypecheckItem(Kind k, types::TypePtr type) : kind(k), type(move(type)) {}
   bool isType() const { return kind == Type; }
-  bool isStatic() const { return isType() && staticType; }
 };
 
 /**
@@ -68,8 +63,6 @@ struct TypeContext : public Context<TypecheckItem> {
   /// something goes wrong.
   /// If type checking is successful, all of them should be  resolved.
   std::map<types::TypePtr, string> activeUnbounds;
-  /// The current type-checking iteration.
-  int iteration;
   /// If set, no type will be activated. Useful for temporary instantiations.
   bool allowActivation;
   /// The age of the currently parsed statement.
@@ -86,7 +79,7 @@ public:
   using Context<TypecheckItem>::add;
   /// Convenience method for adding an object to the context.
   shared_ptr<TypecheckItem> add(TypecheckItem::Kind kind, const string &name,
-                                types::TypePtr type = nullptr, bool stat = false);
+                                types::TypePtr type = nullptr);
   shared_ptr<TypecheckItem> find(const string &name) const override;
   /// Find an internal type. Assumes that it exists.
   types::TypePtr findInternal(const string &name) const;
@@ -111,7 +104,7 @@ public:
   /// @param setActive If True, add it to activeUnbounds.
   /// @param isStatic True if this is a static integer unbound.
   shared_ptr<types::LinkType> addUnbound(const Expr *expr, int level,
-                                         bool setActive = true, bool isStatic = false);
+                                         bool setActive = true, char staticType = 0);
   /// Call `type->instantiate`.
   /// Prepare the generic instantiation table with the given generics parameter.
   /// Example: when instantiating List[T].foo, generics=List[int].foo will ensure that
@@ -140,7 +133,8 @@ public:
   /// If multiple equally good methods are found, return the first one.
   /// Return nullptr if no methods were found.
   types::FuncTypePtr findBestMethod(const Expr *expr, const string &member,
-                                    const vector<pair<string, types::TypePtr>> &args);
+                                    const vector<pair<string, types::TypePtr>> &args,
+                                    bool checkSingle = false);
 
   typedef std::function<int(int, int, const vector<vector<int>> &, bool)> ReorderDoneFn;
   typedef std::function<int(string)> ReorderErrorFn;
@@ -151,7 +145,7 @@ public:
   /// Score is -1 if the given arguments cannot be reordered.
   /// @param known Bitmask that indicated if an argument is already provided
   ///              (partial function) or not.
-  int reorderNamedArgs(types::RecordType *func, const vector<CallExpr::Arg> &args,
+  int reorderNamedArgs(types::FuncType *func, const vector<CallExpr::Arg> &args,
                        ReorderDoneFn onDone, ReorderErrorFn onError,
                        const vector<char> &known = vector<char>());
 

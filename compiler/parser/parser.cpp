@@ -7,13 +7,14 @@
  */
 
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
 
 #include "parser/cache.h"
-#include "parser/ocaml/ocaml.h"
 #include "parser/parser.h"
+#include "parser/peg/peg.h"
 #include "parser/visitors/doc/doc.h"
 #include "parser/visitors/format/format.h"
 #include "parser/visitors/simplify/simplify.h"
@@ -44,29 +45,31 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
       _dbg_level |= s.find('r') != string::npos ? (1 << 2) : 0; // realize
       _dbg_level |= s.find('T') != string::npos ? (1 << 4) : 0; // type-check
       _dbg_level |= s.find('l') != string::npos ? (1 << 5) : 0; // lexer
+      _dbg_level |= s.find('i') != string::npos ? (1 << 6) : 0; // IR
     }
 
     char abs[PATH_MAX + 1] = {'-', 0};
     if (file != "-")
       realpath(file.c_str(), abs);
 
-    ast::StmtPtr codeStmt =
-        isCode ? ast::parseCode(abs, code, startLine) : ast::parseFile(abs);
+    auto cache = make_shared<ast::Cache>(argv0);
+    ast::StmtPtr codeStmt = isCode ? ast::parseCode(cache, abs, code, startLine)
+                                   : ast::parseFile(cache, abs);
+    if (_dbg_level) {
+      auto fo = fopen("_dump.sexp", "w");
+      fmt::print(fo, "{}\n", codeStmt->toString(0));
+      fclose(fo);
+    }
 
     using namespace std::chrono;
-
-    auto cache = make_shared<ast::Cache>(argv0);
     cache->module0 = file;
     if (isTest)
       cache->testFlags = isTest;
 
     auto t = high_resolution_clock::now();
 
-    unordered_map<string, pair<string, int64_t>> newDefines;
-    for (auto &d : defines)
-      newDefines[d.first] = {d.second, 0};
-    auto transformed = ast::SimplifyVisitor::apply(cache, move(codeStmt), abs,
-                                                   newDefines, (isTest > 1));
+    auto transformed =
+        ast::SimplifyVisitor::apply(cache, move(codeStmt), abs, defines, (isTest > 1));
     if (!isTest) {
       LOG_TIME("[T] ocaml = {:.1f}", _ocaml_time / 1000.0);
       LOG_TIME("[T] simplify = {:.1f}",
@@ -74,18 +77,17 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
                 _ocaml_time) /
                    1000.0);
       if (_dbg_level) {
-        auto fo = fopen("_dump_simplify.seq", "w");
-        fmt::print(fo, "{}", ast::FormatVisitor::apply(transformed, cache));
+        auto fo = fopen("_dump_simplify.sexp", "w");
+        fmt::print(fo, "{}\n", transformed->toString(0));
         fclose(fo);
-        fo = fopen("_dump_simplify.sexp", "w");
-        fmt::print(fo, "{}\n", transformed->toString());
+        fo = fopen("_dump_simplify.seq", "w");
+        fmt::print(fo, "{}", ast::FormatVisitor::apply(transformed, cache));
         fclose(fo);
       }
     }
 
     t = high_resolution_clock::now();
-    auto typechecked =
-        ast::TypecheckVisitor::apply(cache, move(transformed), newDefines);
+    auto typechecked = ast::TypecheckVisitor::apply(cache, move(transformed));
     if (!isTest) {
       LOG_TIME("[T] typecheck = {:.1f}",
                duration_cast<milliseconds>(high_resolution_clock::now() - t).count() /
@@ -94,15 +96,18 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
         auto fo = fopen("_dump_typecheck.seq", "w");
         fmt::print(fo, "{}", ast::FormatVisitor::apply(typechecked, cache));
         fclose(fo);
-        fo = fopen("_dump_typecheck.sexp_", "w");
-        fmt::print(fo, "{}\n", typechecked->toString());
+        fo = fopen("_dump_typecheck.sexp", "w");
+        fmt::print(fo, "{}\n", typechecked->toString(0));
+        for (auto &f : cache->functions)
+          for (auto &r : f.second.realizations)
+            fmt::print(fo, "{}\n", r.second->ast->toString(0));
         fclose(fo);
       }
     }
 
     t = high_resolution_clock::now();
     auto *module = ast::TranslateVisitor::apply(cache, move(typechecked));
-    module->setSrcInfo({abs, 0, 0, 0, 0});
+    module->setSrcInfo({abs, 0, 0, 0});
 
     if (!isTest)
       LOG_TIME("[T] translate   = {:.1f}",
@@ -118,23 +123,17 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
 
     _isTest = isTest;
     return module;
-  } catch (exc::SeqException &e) {
-    if (isTest) {
-      LOG("ERROR: {}", e.what());
-    } else {
-      compilationError(e.what(), e.getSrcInfo().file, e.getSrcInfo().line,
-                       e.getSrcInfo().col);
-    }
-    return nullptr;
   } catch (exc::ParserException &e) {
-    for (int i = 0; i < e.messages.size(); i++) {
-      if (isTest) {
-        LOG("ERROR: {}", e.messages[i]);
-      } else {
-        compilationError(e.messages[i], e.locations[i].file, e.locations[i].line,
-                         e.locations[i].col, /*terminate=*/false);
+    for (int i = 0; i < e.messages.size(); i++)
+      if (!e.messages[i].empty()) {
+        if (isTest) {
+          _level = 0;
+          LOG("{}", e.messages[i]);
+        } else {
+          compilationError(e.messages[i], e.locations[i].file, e.locations[i].line,
+                           e.locations[i].col, /*terminate=*/false);
+        }
       }
-    }
     return nullptr;
   }
 }
@@ -144,8 +143,16 @@ void generateDocstr(const string &argv0) {
   string s;
   while (std::getline(std::cin, s))
     files.push_back(s);
-  auto j = ast::DocVisitor::apply(argv0, files);
-  fmt::print("{}\n", j.dump());
+  try {
+    auto j = ast::DocVisitor::apply(argv0, files);
+    fmt::print("{}\n", j->toString());
+  } catch (exc::ParserException &e) {
+    for (int i = 0; i < e.messages.size(); i++)
+      if (!e.messages[i].empty()) {
+        compilationError(e.messages[i], e.locations[i].file, e.locations[i].line,
+                         e.locations[i].col, /*terminate=*/false);
+      }
+  }
 }
 
 } // namespace seq

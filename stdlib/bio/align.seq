@@ -116,7 +116,7 @@ class CIGAR:
 
     def __copy__(self) -> CIGAR:
         p = Ptr[u32](self._len)
-        str.memcpy(p.as_byte(), self._data.as_byte(), self._len * sizeof[u32]())
+        str.memcpy(p.as_byte(), self._data.as_byte(), self._len * sizeof(u32))
         return CIGAR(p, self._len)
 
     def __bool__(self):
@@ -492,7 +492,7 @@ def _interaln_sort_pairs_len_ext(pairs_array: Ptr[SeqPair], tmp_array: Ptr[SeqPa
     num_pairs128 = 0
     num_pairs16  = 0
     num_pairs1   = 0
-    str.memset(hist.as_byte(), byte(0), (_MAX_SEQ_LEN8 + _MAX_SEQ_LEN16 + 1) * sizeof[i32]())
+    str.memset(hist.as_byte(), byte(0), (_MAX_SEQ_LEN8 + _MAX_SEQ_LEN16 + 1) * sizeof(i32))
 
     hist2 = hist + _MAX_SEQ_LEN8
     hist3 = hist + (_MAX_SEQ_LEN8 + _MAX_SEQ_LEN16)
@@ -653,8 +653,8 @@ def _interaln_flush(pairs_array: Ptr[SeqPair],
         j = _interaln_queue(coro, pairs_array, seq_buf_ref, seq_buf_qer, tmp_pending, j, params)
         i += 1
     m = j
-    str.memcpy(pending.as_byte(), tmp_pending.as_byte(), m * sizeof[Generator[InterAlignYield]]())
-    str.memset(tmp_pending.as_byte(), byte(0), m * sizeof[Generator[InterAlignYield]]())
+    str.memcpy(pending.as_byte(), tmp_pending.as_byte(), m * sizeof(Generator[InterAlignYield]))
+    str.memset(tmp_pending.as_byte(), byte(0), m * sizeof(Generator[InterAlignYield]))
     return m
 
 @inline

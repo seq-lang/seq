@@ -21,7 +21,6 @@ using fmt::format;
 using std::deque;
 using std::dynamic_pointer_cast;
 using std::get;
-using std::move;
 using std::ostream;
 using std::stack;
 using std::static_pointer_cast;
@@ -34,7 +33,7 @@ using namespace types;
 StmtPtr TypecheckVisitor::transform(const StmtPtr &stmt_) {
   auto &stmt = const_cast<StmtPtr &>(stmt_);
   if (!stmt || stmt->done)
-    return move(stmt);
+    return stmt;
   TypecheckVisitor v(ctx);
   v.setSrcInfo(stmt->getSrcInfo());
   auto oldAge = ctx->age;
@@ -42,17 +41,17 @@ StmtPtr TypecheckVisitor::transform(const StmtPtr &stmt_) {
   stmt->accept(v);
   ctx->age = oldAge;
   if (v.resultStmt)
-    stmt = move(v.resultStmt);
+    stmt = v.resultStmt;
   if (!v.prependStmts->empty()) {
     if (stmt)
-      v.prependStmts->push_back(move(stmt));
+      v.prependStmts->push_back(stmt);
     bool done = true;
     for (auto &s : *(v.prependStmts))
       done &= s->done;
-    stmt = N<SuiteStmt>(move(*v.prependStmts));
+    stmt = N<SuiteStmt>(*v.prependStmts);
     stmt->done = done;
   }
-  return move(stmt);
+  return stmt;
 }
 
 void TypecheckVisitor::defaultVisit(Stmt *s) {
@@ -66,13 +65,11 @@ void TypecheckVisitor::visit(SuiteStmt *stmt) {
   stmt->done = true;
   for (auto &s : stmt->stmts)
     if (auto t = transform(s)) {
-      stmts.push_back(move(t));
+      stmts.push_back(t);
       stmt->done &= stmts.back()->done;
     }
-  stmt->stmts = move(stmts);
+  stmt->stmts = stmts;
 }
-
-void TypecheckVisitor::visit(PassStmt *stmt) { stmt->done = true; }
 
 void TypecheckVisitor::visit(BreakStmt *stmt) { stmt->done = true; }
 
@@ -99,11 +96,19 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
                                : ctx->addUnbound(stmt->lhs.get(), ctx->typecheckLevel));
     ctx->add(kind = TypecheckItem::Var, lhs, stmt->lhs->type);
     stmt->done = realize(stmt->lhs->type) != nullptr;
+  } else if (stmt->type && stmt->type->getType()->isStaticType()) {
+    if (!stmt->rhs->isStatic())
+      error("right-hand side is not a static expression");
+    seqassert(stmt->rhs->staticValue.evaluated, "static not evaluated");
+    unify(stmt->type->type, make_shared<StaticType>(stmt->rhs, ctx));
+    unify(stmt->lhs->type, stmt->type->getType());
+    ctx->add(kind = TypecheckItem::Var, lhs, stmt->lhs->type);
+    stmt->done = realize(stmt->lhs->type) != nullptr;
   } else { // Case 2: Normal assignment
     if (stmt->type && stmt->type->getType()->getClass()) {
       auto t = ctx->instantiate(stmt->type.get(), stmt->type->getType());
       unify(stmt->lhs->type, t);
-      wrapOptionalIfNeeded(stmt->lhs->getType(), stmt->rhs);
+      wrapExpr(stmt->rhs, stmt->lhs->getType(), nullptr);
       unify(stmt->lhs->type, stmt->rhs->type);
     }
     auto type = stmt->rhs->getType();
@@ -120,6 +125,8 @@ void TypecheckVisitor::visit(AssignStmt *stmt) {
 
 void TypecheckVisitor::visit(UpdateStmt *stmt) {
   stmt->lhs = transform(stmt->lhs);
+  if (stmt->lhs->isStatic())
+    error("cannot modify static expression");
 
   // Case 1: Check for atomic and in-place updates (a += b).
   // In-place updates (a += b) are stored as Update(a, Binary(a + b, inPlace=true)).
@@ -127,8 +134,10 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
   if (b && b->inPlace) {
     bool noReturn = false;
     auto oldRhsType = stmt->rhs->type;
+    b->lexpr = transform(b->lexpr);
+    b->rexpr = transform(b->rexpr);
     if (auto nb = transformBinary(b, stmt->isAtomic, &noReturn))
-      stmt->rhs = move(nb);
+      stmt->rhs = nb;
     unify(oldRhsType, stmt->rhs->type);
     if (stmt->rhs->getBinary()) { // still BinaryExpr: will be transformed later.
       unify(stmt->lhs->type, stmt->rhs->type);
@@ -136,7 +145,7 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
     } else if (noReturn) { // remove assignment, call update function instead
                            // (__i***__ or __atomic_***__)
       bool done = stmt->rhs->done;
-      resultStmt = N<ExprStmt>(move(stmt->rhs));
+      resultStmt = N<ExprStmt>(stmt->rhs);
       resultStmt->done = done;
       return;
     }
@@ -156,9 +165,8 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
     if (auto method = ctx->findBestMethod(
             stmt->lhs.get(), format("__atomic_{}__", c->expr->getId()->value),
             {{"", ptrTyp}, {"", rhsTyp}})) {
-      resultStmt = transform(N<ExprStmt>(N<CallExpr>(N<IdExpr>(method->funcName),
-                                                     N<PtrExpr>(move(stmt->lhs)),
-                                                     move(c->args[1].value))));
+      resultStmt = transform(N<ExprStmt>(N<CallExpr>(
+          N<IdExpr>(method->ast->name), N<PtrExpr>(stmt->lhs), c->args[1].value)));
       return;
     }
   }
@@ -171,14 +179,14 @@ void TypecheckVisitor::visit(UpdateStmt *stmt) {
         ctx->instantiateGeneric(stmt->lhs.get(), ctx->findInternal("Ptr"), {lhsClass});
     if (auto m = ctx->findBestMethod(stmt->lhs.get(), "__atomic_xchg__",
                                      {{"", ptrType}, {"", rhsClass}})) {
-      resultStmt = transform(N<ExprStmt>(N<CallExpr>(
-          N<IdExpr>(m->funcName), N<PtrExpr>(move(stmt->lhs)), move(stmt->rhs))));
+      resultStmt = transform(N<ExprStmt>(
+          N<CallExpr>(N<IdExpr>(m->ast->name), N<PtrExpr>(stmt->lhs), stmt->rhs)));
       return;
     }
     stmt->isAtomic = false;
   }
   // Case 4: handle optionals if needed.
-  wrapOptionalIfNeeded(stmt->lhs->getType(), stmt->rhs);
+  wrapExpr(stmt->rhs, stmt->lhs->getType(), nullptr);
   unify(stmt->lhs->type, stmt->rhs->type);
   stmt->done = stmt->rhs->done;
 }
@@ -192,9 +200,8 @@ void TypecheckVisitor::visit(AssignMemberStmt *stmt) {
     auto member = ctx->findMember(lhsClass->name, stmt->member);
     if (!member && lhsClass->name == TYPE_OPTIONAL) {
       // Unwrap optional and look up there:
-      resultStmt = transform(
-          N<AssignMemberStmt>(N<CallExpr>(N<IdExpr>(FN_UNWRAP), move(stmt->lhs)),
-                              stmt->member, move(stmt->rhs)));
+      resultStmt = transform(N<AssignMemberStmt>(
+          N<CallExpr>(N<IdExpr>(FN_UNWRAP), stmt->lhs), stmt->member, stmt->rhs));
       return;
     }
     if (!member)
@@ -202,7 +209,7 @@ void TypecheckVisitor::visit(AssignMemberStmt *stmt) {
     if (lhsClass->getRecord())
       error("tuple element '{}' is read-only", stmt->member);
     auto typ = ctx->instantiate(stmt->lhs.get(), member, lhsClass.get());
-    wrapOptionalIfNeeded(typ, stmt->rhs);
+    wrapExpr(stmt->rhs, typ, nullptr);
     unify(stmt->rhs->type, typ);
     stmt->done = stmt->rhs->done;
   }
@@ -212,12 +219,12 @@ void TypecheckVisitor::visit(ReturnStmt *stmt) {
   stmt->expr = transform(stmt->expr);
   if (stmt->expr) {
     auto &base = ctx->bases.back();
-    wrapOptionalIfNeeded(base.returnType, stmt->expr);
+    wrapExpr(stmt->expr, base.returnType, nullptr);
 
     if (stmt->expr->getType()->getFunc() &&
         !(base.returnType->getClass() &&
           startswith(base.returnType->getClass()->name, TYPE_FUNCTION)))
-      stmt->expr = partializeFunction(move(stmt->expr));
+      stmt->expr = partializeFunction(stmt->expr);
     unify(base.returnType, stmt->expr->type);
     auto retTyp = stmt->expr->getType()->getClass();
     stmt->done = stmt->expr->done;
@@ -244,6 +251,9 @@ void TypecheckVisitor::visit(WhileStmt *stmt) {
 }
 
 void TypecheckVisitor::visit(ForStmt *stmt) {
+  if (stmt->decorator)
+    stmt->decorator = transform(stmt->decorator, false, true);
+
   stmt->iter = transform(stmt->iter);
   // Extract the type of the for variable.
   if (!stmt->iter->getType()->canRealize())
@@ -255,7 +265,7 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
     // Unroll a separate suite for each tuple member.
     auto block = N<SuiteStmt>();
     auto tupleVar = ctx->cache->getTemporaryVar("tuple");
-    block->stmts.push_back(N<AssignStmt>(N<IdExpr>(tupleVar), move(stmt->iter)));
+    block->stmts.push_back(N<AssignStmt>(N<IdExpr>(tupleVar), stmt->iter));
 
     auto cntVar = ctx->cache->getTemporaryVar("idx");
     vector<StmtPtr> forBlock;
@@ -266,18 +276,18 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
       stmts.push_back(clone(stmt->suite));
       forBlock.push_back(
           N<IfStmt>(N<BinaryExpr>(N<IdExpr>(cntVar), "==", N<IntExpr>(ai)),
-                    N<SuiteStmt>(move(stmts), true)));
+                    N<SuiteStmt>(stmts, true)));
     }
     block->stmts.push_back(
         N<ForStmt>(N<IdExpr>(cntVar),
                    N<CallExpr>(N<IdExpr>("std.internal.types.range.range"),
                                N<IntExpr>(tuple->args.size())),
-                   N<SuiteStmt>(move(forBlock))));
-    resultStmt = transform(move(block));
+                   N<SuiteStmt>(forBlock)));
+    resultStmt = transform(block);
   } else {
     // Case 2: iterating a generator. Standard for loop logic.
     if (iterType->name != "Generator" && !stmt->wrapped) {
-      stmt->iter = transform(N<CallExpr>(N<DotExpr>(move(stmt->iter), "__iter__")));
+      stmt->iter = transform(N<CallExpr>(N<DotExpr>(stmt->iter, "__iter__")));
       stmt->wrapped = true;
     }
     TypePtr varType = ctx->addUnbound(stmt->var.get(), ctx->typecheckLevel);
@@ -300,50 +310,36 @@ void TypecheckVisitor::visit(ForStmt *stmt) {
 }
 
 void TypecheckVisitor::visit(IfStmt *stmt) {
-  seqassert(stmt->ifs.size() == 1 || (stmt->ifs.size() == 2 && !stmt->ifs[1].cond),
-            "if not simplified");
-
-  stmt->done = true;
-  vector<IfStmt::If> ifs;
-  bool includeElse = true, transformElse = true;
-  auto cond = transform(stmt->ifs[0].cond);
-  if (cond->isStaticExpr) {
-    if (cond->staticEvaluation.first && !cond->staticEvaluation.second) {
-      ; // do not include this suite
-    } else if (!cond->staticEvaluation.first) {
+  stmt->cond = transform(stmt->cond);
+  if (stmt->cond->isStatic()) {
+    if (!stmt->cond->staticValue.evaluated) {
       stmt->done = false; // do not typecheck this suite yet
-      transformElse = false;
-      ifs.emplace_back(IfStmt::If{move(cond), move(stmt->ifs[0].suite)});
+      return;
     } else {
-      if ((stmt->ifs[0].suite = transform(stmt->ifs[0].suite))) {
-        ifs.emplace_back(IfStmt::If{move(cond), move(stmt->ifs[0].suite)});
-      }
-      includeElse = false;
+      bool isTrue = false;
+      if (stmt->cond->staticValue.type == StaticValue::STRING)
+        isTrue = !stmt->cond->staticValue.getString().empty();
+      else
+        isTrue = stmt->cond->staticValue.getInt();
+      resultStmt = transform(isTrue ? stmt->ifSuite : stmt->elseSuite);
+      if (!resultStmt)
+        resultStmt = transform(N<SuiteStmt>());
+      return;
     }
   } else {
-    if (cond->type->getClass() && !cond->type->is("bool"))
-      cond = transform(N<CallExpr>(N<DotExpr>(move(cond), "__bool__")));
-    ifs.emplace_back(IfStmt::If{move(cond), transform(stmt->ifs[0].suite)});
+    if (stmt->cond->type->getClass() && !stmt->cond->type->is("bool"))
+      stmt->cond = transform(N<CallExpr>(N<DotExpr>(stmt->cond, "__bool__")));
+    stmt->ifSuite = transform(stmt->ifSuite);
+    stmt->elseSuite = transform(stmt->elseSuite);
+    stmt->done = stmt->cond->done && (!stmt->ifSuite || stmt->ifSuite->done) &&
+                 (!stmt->elseSuite || stmt->elseSuite->done);
   }
-  if (!ifs.empty())
-    stmt->done &= ifs.back().cond->done && ifs.back().suite->done;
-  if (stmt->ifs.size() == 2 && includeElse) {
-    ifs.emplace_back(IfStmt::If{nullptr, transformElse ? transform(stmt->ifs[1].suite)
-                                                       : move(stmt->ifs[1].suite)});
-    stmt->done &= ifs.back().suite->done;
-  }
-  if (!ifs.empty() && !ifs[0].cond)
-    resultStmt = move(ifs[0].suite);
-  else if (!ifs.empty())
-    stmt->ifs = move(ifs);
-  else
-    resultStmt = transform(N<PassStmt>());
 }
 
 void TypecheckVisitor::visit(TryStmt *stmt) {
   vector<TryStmt::Catch> catches;
   stmt->suite = transform(stmt->suite);
-  stmt->done &= stmt->suite->done;
+  stmt->done = stmt->suite->done;
   for (auto &c : stmt->catches) {
     c.exc = transformType(c.exc);
     if (!c.var.empty())
@@ -351,8 +347,10 @@ void TypecheckVisitor::visit(TryStmt *stmt) {
     c.suite = transform(c.suite);
     stmt->done &= (c.exc ? c.exc->done : true) && c.suite->done;
   }
-  stmt->finally = transform(stmt->finally);
-  stmt->done &= stmt->finally->done;
+  if (stmt->finally) {
+    stmt->finally = transform(stmt->finally);
+    stmt->done &= stmt->finally->done;
+  }
 }
 
 void TypecheckVisitor::visit(ThrowStmt *stmt) {
@@ -368,67 +366,75 @@ void TypecheckVisitor::visit(ThrowStmt *stmt) {
     vector<CallExpr::Arg> args;
     args.emplace_back(CallExpr::Arg{"", N<StringExpr>(tc->name)});
     args.emplace_back(CallExpr::Arg{
-        "", N<DotExpr>(N<DotExpr>(N<IdExpr>(var),
-                                  ctx->cache->classes[tc->name].fields[0].name),
+        "", N<DotExpr>(N<DotExpr>(var, ctx->cache->classes[tc->name].fields[0].name),
                        "msg")});
     args.emplace_back(CallExpr::Arg{"", N<StringExpr>(ctx->bases.back().name)});
     args.emplace_back(CallExpr::Arg{"", N<StringExpr>(stmt->getSrcInfo().file)});
     args.emplace_back(CallExpr::Arg{"", N<IntExpr>(stmt->getSrcInfo().line)});
     args.emplace_back(CallExpr::Arg{"", N<IntExpr>(stmt->getSrcInfo().col)});
-    resultStmt = transform(N<SuiteStmt>(
-        N<AssignStmt>(N<IdExpr>(var), move(stmt->expr)),
-        N<AssignMemberStmt>(N<IdExpr>(var),
-                            ctx->cache->classes[tc->name].fields[0].name,
-                            N<CallExpr>(N<IdExpr>(TYPE_EXCHEADER), move(args))),
-        N<ThrowStmt>(N<IdExpr>(var), true)));
+    resultStmt = transform(
+        N<SuiteStmt>(N<AssignStmt>(N<IdExpr>(var), stmt->expr),
+                     N<AssignMemberStmt>(N<IdExpr>(var),
+                                         ctx->cache->classes[tc->name].fields[0].name,
+                                         N<CallExpr>(N<IdExpr>(TYPE_EXCHEADER), args)),
+                     N<ThrowStmt>(N<IdExpr>(var), true)));
   } else {
-    stmt->done = false;
+    stmt->done = stmt->expr->done;
   }
 }
 
 void TypecheckVisitor::visit(FunctionStmt *stmt) {
   auto &attr = stmt->attributes;
-  if (auto t = ctx->findInVisited(stmt->name).second) {
-    // We realize built-ins and extern C function when we see them for the second time
-    // (to avoid preamble realization).
-    if (attr.has(Attr::ForceRealize) ||
-        (attr.has(Attr::C) && !attr.has(Attr::CVarArg))) {
-      if (!t->canRealize())
-        error("builtins and external functions must be realizable");
-
-      auto typ = ctx->instantiate(N<IdExpr>(stmt->name).get(), t);
-      auto r = realize(typ->getFunc());
-      unify(typ, r);
-    }
+  if (ctx->findInVisited(stmt->name).second) {
     stmt->done = true;
     return;
   }
 
   // Parse preamble.
   bool isClassMember = !attr.parentClass.empty();
-  auto explicits = parseGenerics(stmt->generics, ctx->typecheckLevel); // level down
+  auto explicits = vector<ClassType::Generic>();
+  for (const auto &a : stmt->args)
+    if (a.generic) {
+      char staticType = 0;
+      auto idx = a.type->getIndex();
+      if (idx && idx->expr->isId("Static"))
+        staticType = idx->index->isId("str") ? 1 : 2;
+      auto t = ctx->addUnbound(N<IdExpr>(a.name).get(), ctx->typecheckLevel, true,
+                               staticType);
+      auto typId = ctx->cache->unboundCount - 1;
+      t->genericName = ctx->cache->reverseIdentifierLookup[a.name];
+      if (a.deflt) {
+        auto dt = clone(a.deflt);
+        dt = transformType(dt);
+        t->defaultType = dt->type;
+      }
+      explicits.push_back({a.name, ctx->cache->reverseIdentifierLookup[a.name],
+                           t->generalize(ctx->typecheckLevel), typId});
+      LOG_REALIZE("[generic] {} -> {}", a.name, t->toString());
+      ctx->add(TypecheckItem::Type, a.name, t);
+    }
   vector<TypePtr> generics;
   if (isClassMember && attr.has(Attr::Method)) {
     // Fetch parent class generics.
     auto parentClassAST = ctx->cache->classes[attr.parentClass].ast.get();
     auto parentClass = ctx->find(attr.parentClass)->type->getClass();
     seqassert(parentClass, "parent class not set");
-    for (int i = 0; i < parentClassAST->generics.size(); i++) {
-      auto gen = parentClass->generics[i].type->getLink();
-      generics.push_back(make_shared<LinkType>(
-          LinkType::Unbound, parentClass->generics[i].id, ctx->typecheckLevel - 1,
-          nullptr, gen->isStatic, gen->genericName));
-      ctx->add(TypecheckItem::Type, parentClassAST->generics[i].name, generics.back(),
-               gen->isStatic);
-    }
+    for (int i = 0, j = 0; i < parentClassAST->args.size(); i++)
+      if (parentClassAST->args[i].generic) {
+        // Keep the same ID
+        generics.push_back(parentClass->generics[j++].type->instantiate(
+            ctx->typecheckLevel - 1, nullptr, nullptr));
+        ctx->add(TypecheckItem::Type, parentClassAST->args[i].name, generics.back());
+      }
   }
-  for (const auto &i : stmt->generics)
+  for (const auto &i : explicits)
     generics.push_back(ctx->find(i.name)->type);
   // Add function arguments.
-  auto baseType =
-      ctx->instantiate(N<IdExpr>(stmt->name).get(),
-                       ctx->find(generateFunctionStub(stmt->args.size()))->type)
-          ->getRecord();
+  auto baseType = ctx->instantiate(N<IdExpr>(stmt->name).get(),
+                                   ctx->find(generateFunctionStub(stmt->args.size() -
+                                                                  explicits.size()))
+                                       ->type)
+                      ->getRecord();
   {
     ctx->typecheckLevel++;
     if (stmt->ret) {
@@ -438,27 +444,32 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
             ctx->addUnbound(N<IdExpr>("<return>").get(), ctx->typecheckLevel));
       generics.push_back(baseType->args[0]);
     }
-    for (int ai = 0; ai < stmt->args.size(); ai++) {
-      if (!stmt->args[ai].type) {
-        unify(
-            baseType->args[ai + 1],
-            ctx->addUnbound(N<IdExpr>(stmt->args[ai].name).get(), ctx->typecheckLevel));
-        generics.push_back(baseType->args[ai + 1]);
-      } else {
-        unify(baseType->args[ai + 1], transformType(stmt->args[ai].type)->getType());
+    for (int ai = 0, aj = 1; ai < stmt->args.size(); ai++) {
+      if (!stmt->args[ai].generic && !stmt->args[ai].type) {
+        unify(baseType->args[aj], ctx->addUnbound(N<IdExpr>(stmt->args[ai].name).get(),
+                                                  ctx->typecheckLevel));
+        generics.push_back(baseType->args[aj++]);
+      } else if (!stmt->args[ai].generic) {
+        unify(baseType->args[aj], transformType(stmt->args[ai].type)->getType());
+        generics.push_back(baseType->args[aj]);
+        aj++;
       }
     }
     ctx->typecheckLevel--;
   }
   // Generalize generics.
-  for (auto &g : generics) {
-    seqassert(g && g->getLink() && g->getLink()->kind != types::LinkType::Link,
-              "generic has been unified");
-    if (g->getLink()->kind == LinkType::Unbound)
-      g->getLink()->kind = LinkType::Generic;
+  for (auto g : generics) {
+    // seqassert(g && g->getLink() && g->getLink()->kind != types::LinkType::Link,
+    // "generic has been unified");
+    for (auto &u : g->getUnbounds())
+      u->getUnbound()->kind = LinkType::Generic;
   }
   // Construct the type.
-  auto typ = make_shared<FuncType>(baseType, stmt->name, explicits);
+  auto typ = make_shared<FuncType>(
+      baseType, ctx->cache->functions[stmt->name].ast.get(), explicits);
+  if (attr.has(Attr::ForceRealize) || (attr.has(Attr::C) && !attr.has(Attr::CVarArg)))
+    if (!typ->canRealize())
+      error("builtins and external functions must be realizable");
   if (isClassMember && attr.has(Attr::Method))
     typ->funcParent = ctx->find(attr.parentClass)->type;
   typ->setSrcInfo(stmt->getSrcInfo());
@@ -479,8 +490,10 @@ void TypecheckVisitor::visit(FunctionStmt *stmt) {
   // Update visited table.
   ctx->bases[0].visitedAsts[stmt->name] = {TypecheckItem::Func, typ};
   ctx->add(TypecheckItem::Func, stmt->name, typ);
-  LOG_REALIZE("[stmt] added func {}: {} (base={})", stmt->name, typ->debugString(1),
-              ctx->getBase());
+  ctx->cache->functions[stmt->name].type = typ;
+  LOG_TYPECHECK("[stmt] added func {}: {} (base={})", stmt->name, typ->debugString(1),
+                ctx->getBase());
+  stmt->done = true;
 }
 
 void TypecheckVisitor::visit(ClassStmt *stmt) {
@@ -502,55 +515,61 @@ void TypecheckVisitor::visit(ClassStmt *stmt) {
     ctx->bases[0].visitedAsts[stmt->name] = {TypecheckItem::Type, typ};
 
     // Parse class fields.
-    typ->generics = parseGenerics(stmt->generics, ctx->typecheckLevel);
+    for (const auto &a : stmt->args)
+      if (a.generic) {
+        char staticType = 0;
+        auto idx = a.type->getIndex();
+        if (idx && idx->expr->isId("Static"))
+          staticType = idx->index->isId("str") ? 1 : 2;
+        auto t = ctx->addUnbound(N<IdExpr>(a.name).get(), ctx->typecheckLevel, true,
+                                 staticType);
+        auto typId = ctx->cache->unboundCount - 1;
+        t->getLink()->genericName = ctx->cache->reverseIdentifierLookup[a.name];
+        if (a.deflt) {
+          auto dt = clone(a.deflt);
+          dt = transformType(dt);
+          t->defaultType = dt->type;
+        }
+        typ->generics.push_back({a.name, ctx->cache->reverseIdentifierLookup[a.name],
+                                 t->generalize(ctx->typecheckLevel), typId});
+        LOG_REALIZE("[generic] {} -> {}", a.name, t->toString());
+        ctx->add(TypecheckItem::Type, a.name, t);
+      }
     {
       ctx->typecheckLevel++;
-      for (auto ai = 0; ai < stmt->args.size(); ai++) {
-        auto si = stmt->args[ai].type->getSrcInfo();
-        ctx->cache->classes[stmt->name].fields[ai].type =
-            transformType(stmt->args[ai].type)
-                ->getType()
-                ->generalize(ctx->typecheckLevel - 1);
-        ctx->cache->classes[stmt->name].fields[ai].type->setSrcInfo(si);
-        if (stmt->isRecord())
-          typ->getRecord()->args.push_back(
-              ctx->cache->classes[stmt->name].fields[ai].type);
-      }
+      for (auto ai = 0, aj = 0; ai < stmt->args.size(); ai++)
+        if (!stmt->args[ai].generic) {
+          auto si = stmt->args[ai].type->getSrcInfo();
+          ctx->cache->classes[stmt->name].fields[aj].type =
+              transformType(stmt->args[ai].type)
+                  ->getType()
+                  ->generalize(ctx->typecheckLevel - 1);
+          ctx->cache->classes[stmt->name].fields[aj].type->setSrcInfo(si);
+          if (stmt->isRecord())
+            typ->getRecord()->args.push_back(
+                ctx->cache->classes[stmt->name].fields[aj].type);
+          aj++;
+        }
       ctx->typecheckLevel--;
     }
     // Remove lingering generics.
-    for (const auto &g : stmt->generics) {
-      auto val = ctx->find(g.name);
-      seqassert(val && val->type && val->type->getLink() &&
-                    val->type->getLink()->kind != types::LinkType::Link,
-                "generic has been unified");
-      if (val->type->getLink()->kind == LinkType::Unbound)
-        val->type->getLink()->kind = LinkType::Generic;
-      ctx->remove(g.name);
-    }
+    for (const auto &g : stmt->args)
+      if (g.generic) {
+        auto val = ctx->find(g.name);
+        seqassert(val, "cannot find generic {}", g.name);
+        auto t = val->type;
+        seqassert(t && t->getLink() && t->getLink()->kind != types::LinkType::Link,
+                  "generic has been unified");
+        if (t->getLink()->kind == LinkType::Unbound)
+          t->getLink()->kind = LinkType::Generic;
+        ctx->remove(g.name);
+      }
 
-    LOG_REALIZE("[class] {} -> {}", stmt->name, typ->toString());
+    LOG_REALIZE("[class] {} -> {}", stmt->name, typ->debugString(1));
     for (auto &m : ctx->cache->classes[stmt->name].fields)
-      LOG_REALIZE("       - member: {}: {}", m.name, m.type->toString());
+      LOG_REALIZE("       - member: {}: {}", m.name, m.type->debugString(1));
   }
   stmt->done = true;
-}
-
-/**************************************************************************************/
-
-vector<types::ClassType::Generic>
-TypecheckVisitor::parseGenerics(const vector<Param> &generics, int level) {
-  auto genericTypes = vector<ClassType::Generic>();
-  for (const auto &g : generics) {
-    auto typ = ctx->addUnbound(N<IdExpr>(g.name).get(), level, true, bool(g.type));
-    typ->getLink()->genericName = ctx->cache->reverseIdentifierLookup[g.name];
-    genericTypes.emplace_back(
-        ClassType::Generic(g.name, typ->getLink()->genericName, typ->generalize(level),
-                           ctx->cache->unboundCount - 1, clone(g.deflt)));
-    LOG_REALIZE("[generic] {} -> {} {}", g.name, typ->toString(), bool(g.type));
-    ctx->add(TypecheckItem::Type, g.name, typ, bool(g.type));
-  }
-  return genericTypes;
 }
 
 } // namespace ast

@@ -24,7 +24,6 @@ using fmt::format;
 using std::deque;
 using std::dynamic_pointer_cast;
 using std::get;
-using std::move;
 using std::ostream;
 using std::stack;
 using std::static_pointer_cast;
@@ -35,32 +34,36 @@ namespace ast {
 using namespace types;
 
 types::TypePtr TypecheckVisitor::realize(types::TypePtr typ) {
-  if (!typ || !typ->getClass() || !typ->canRealize()) {
+  if (!typ || !typ->canRealize()) {
     return nullptr;
+  } else if (typ->getStatic()) {
+    return typ;
   } else if (auto f = typ->getFunc()) {
     auto ret = realizeFunc(f.get());
     if (ret)
       realizeType(ret->getClass().get());
     return ret;
-  } else {
-    auto t = realizeType(typ->getClass().get());
-    if (auto p = typ->getPartial())
+  } else if (auto c = typ->getClass()) {
+    auto t = realizeType(c.get());
+    if (auto p = typ->getPartial()) {
+      if (auto rt = realize(p->func))
+        unify(rt, p->func);
       return make_shared<PartialType>(t->getRecord(), p->func, p->known);
-    else
+    } else {
       return t;
+    }
+  } else {
+    return nullptr;
   }
 }
 
 types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
-  seqassert(type->canRealize(), "{} not realizable", type->toString());
+  seqassert(type && type->canRealize(), "{} not realizable", type->toString());
 
-  // We are still not done with type creation...
+  // We are still not done with type creation... (e.g. class X: x: List[X])
   for (auto &m : ctx->cache->classes[type->name].fields)
     if (!m.type)
       return nullptr;
-
-  if (startswith(type->name, TYPE_CALLABLE))
-    error("realizing trait");
 
   auto realizedName = type->realizedTypeName();
   try {
@@ -72,12 +75,11 @@ types::TypePtr TypecheckVisitor::realizeType(types::ClassType *type) {
       realizedType = type->getClass();
       // Realize generics
       for (auto &e : realizedType->generics)
-        if (!e.type->getStatic())
-          if (!realize(e.type))
-            return nullptr;
+        if (!realize(e.type))
+          return nullptr;
       realizedName = realizedType->realizedTypeName();
 
-      LOG_TYPECHECK("[realize] ty {} -> {}", type->name, realizedName);
+      LOG_REALIZE("[realize] ty {} -> {}", type->name, realizedName);
       // Realizations are stored in the top-most base.
       ctx->bases[0].visitedAsts[realizedName] = {TypecheckItem::Type, realizedType};
       auto r = ctx->cache->classes[realizedType->name].realizations[realizedName] =
@@ -128,8 +130,8 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
 
   try {
     auto it =
-        ctx->cache->functions[type->funcName].realizations.find(type->realizedName());
-    if (it != ctx->cache->functions[type->funcName].realizations.end())
+        ctx->cache->functions[type->ast->name].realizations.find(type->realizedName());
+    if (it != ctx->cache->functions[type->ast->name].realizations.end())
       return it->second->type;
 
     // Set up bases. Ensure that we have proper parent bases even during a realization
@@ -152,22 +154,22 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
           "maximum realization depth exceeded (recursive static function?)",
           getSrcInfo().file, getSrcInfo().line, getSrcInfo().col);
 
-    // Special cases: Tuple.(__iter__, __getitem__, __contains__).
-    if (startswith(type->funcName, TYPE_TUPLE) &&
-        (endswith(type->funcName, ".__iter__") ||
-         endswith(type->funcName, ".__getitem__")) &&
+    // Special cases: Tuple.(__iter__, __getitem__).
+    if (startswith(type->ast->name, TYPE_TUPLE) &&
+        (endswith(type->ast->name, ".__iter__") ||
+         endswith(type->ast->name, ".__getitem__")) &&
         type->args[1]->getHeterogenousTuple())
       error("cannot iterate a heterogeneous tuple");
 
-    LOG_REALIZE("[realize] fn {} -> {} : base {} ; depth = {}", type->funcName,
+    LOG_REALIZE("[realize] fn {} -> {} : base {} ; depth = {}", type->ast->name,
                 type->realizedName(), ctx->getBase(), depth);
     {
       _level++;
       ctx->realizationDepth++;
       ctx->addBlock();
       ctx->typecheckLevel++;
-      ctx->bases.push_back({type->funcName, type->getFunc(), type->args[0]});
-      auto clonedAst = ctx->cache->functions[type->funcName].ast->clone();
+      ctx->bases.push_back({type->ast->name, type->getFunc(), type->args[0]});
+      auto clonedAst = ctx->cache->functions[type->ast->name].ast->clone();
       auto *ast = (FunctionStmt *)clonedAst.get();
       addFunctionGenerics(type);
 
@@ -176,22 +178,22 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       isInternal |= ast->suite == nullptr;
       // Add function arguments.
       if (!isInternal)
-        for (int i = 1; i < type->args.size(); i++) {
-          seqassert(type->args[i] && type->args[i]->getUnbounds().empty(),
-                    "unbound argument {}", type->args[i]->toString());
-
-          string varName = ast->args[i - 1].name;
-          trimStars(varName);
-          ctx->add(
-              TypecheckItem::Var, varName,
-              make_shared<LinkType>(type->args[i]->generalize(ctx->typecheckLevel)));
-        }
+        for (int i = 0, j = 1; i < ast->args.size(); i++)
+          if (!ast->args[i].generic) {
+            seqassert(type->args[j] && type->args[j]->getUnbounds().empty(),
+                      "unbound argument {}", type->args[j]->toString());
+            string varName = ast->args[i].name;
+            trimStars(varName);
+            ctx->add(TypecheckItem::Var, varName,
+                     make_shared<LinkType>(
+                         type->args[j++]->generalize(ctx->typecheckLevel)));
+          }
 
       // Need to populate realization table in advance to make recursive functions
       // work.
       auto oldKey = type->realizedName();
       auto r =
-          ctx->cache->functions[type->funcName].realizations[type->realizedName()] =
+          ctx->cache->functions[type->ast->name].realizations[type->realizedName()] =
               make_shared<Cache::Function::FunctionRealization>();
       r->type = type->getFunc();
       // Realizations are stored in the top-most base.
@@ -200,10 +202,17 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
 
       StmtPtr realized = nullptr;
       if (!isInternal) {
-        auto inferred = inferTypes(move(ast->suite));
-        LOG_TYPECHECK("realized {} in {} iterations", type->realizedName(),
-                      inferred.first);
-        realized = move(inferred.second);
+        realized = inferTypes(ast->suite, false, type->realizedName()).second;
+        if (ast->attributes.has(Attr::LLVM)) {
+          auto s = realized->getSuite();
+          for (int i = 1; i < s->stmts.size(); i++) {
+            seqassert(s->stmts[i]->getExpr(), "invalid LLVM definition {}: {}",
+                      type->toString(), s->stmts[i]->toString());
+            auto e = s->stmts[i]->getExpr()->expr;
+            if (!e->isType() && !e->isStatic())
+              error(e, "not a type or static expression");
+          }
+        }
         // Return type was not specified and the function returned nothing.
         if (!ast->ret && type->args[0]->getUnbound())
           unify(type->args[0], ctx->findInternal("void"));
@@ -216,10 +225,10 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
       // Create and store IR node and a realized AST to be used
       // during the code generation.
       if (!in(ctx->cache->pendingRealizations,
-              make_pair(type->funcName, type->realizedName()))) {
+              make_pair(type->ast->name, type->realizedName()))) {
         if (ast->attributes.has(Attr::Internal)) {
           // This is either __new__, Ptr.__new__, etc.
-          r->ir = ctx->cache->module->Nr<ir::InternalFunc>(type->funcName);
+          r->ir = ctx->cache->module->Nr<ir::InternalFunc>(type->ast->name);
         } else if (ast->attributes.has(Attr::LLVM)) {
           r->ir = ctx->cache->module->Nr<ir::LLVMFunc>(type->realizedName());
         } else if (ast->attributes.has(Attr::C)) {
@@ -239,22 +248,23 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
           r->ir->setParentType(getLLVMType(parent->getClass().get()));
         }
         r->ir->setGlobal();
-        ctx->cache->pendingRealizations.insert({type->funcName, type->realizedName()});
+        ctx->cache->pendingRealizations.insert({type->ast->name, type->realizedName()});
 
-        seqassert(!type || ast->args.size() == type->args.size() - 1,
+        seqassert(!type || ast->args.size() ==
+                               type->args.size() + type->funcGenerics.size() - 1,
                   "type/AST argument mismatch");
         vector<Param> args;
         for (auto &i : ast->args) {
           string varName = i.name;
           trimStars(varName);
-          args.emplace_back(Param{varName, nullptr, nullptr});
+          args.emplace_back(Param{varName, nullptr, nullptr, i.generic});
         }
-        r->ast = Nx<FunctionStmt>(ast, type->realizedName(), nullptr, vector<Param>(),
-                                  move(args), move(realized), ast->attributes);
-        ctx->cache->functions[type->funcName].realizations[type->realizedName()] = r;
+        r->ast = Nx<FunctionStmt>(ast, type->realizedName(), nullptr, args, realized,
+                                  ast->attributes);
+        ctx->cache->functions[type->ast->name].realizations[type->realizedName()] = r;
       } else {
-        ctx->cache->functions[type->funcName].realizations[oldKey] =
-            ctx->cache->functions[type->funcName].realizations[type->realizedName()];
+        ctx->cache->functions[type->ast->name].realizations[oldKey] =
+            ctx->cache->functions[type->ast->name].realizations[type->realizedName()];
       }
       ctx->bases[0].visitedAsts[type->realizedName()] = {TypecheckItem::Func,
                                                          type->getFunc()};
@@ -268,29 +278,44 @@ types::TypePtr TypecheckVisitor::realizeFunc(types::FuncType *type) {
     ctx->bases.insert(ctx->bases.end(), oldBases.begin(), oldBases.end());
     return type->getFunc();
   } catch (exc::ParserException &e) {
-    e.trackRealize(fmt::format("{} (arguments {})", type->funcName, type->toString()),
+    e.trackRealize(fmt::format("{} (arguments {})", type->ast->name, type->toString()),
                    getSrcInfo());
     throw;
   }
 }
 
-pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
-  if (!stmt)
+pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr result, bool keepLast,
+                                                const string &name) {
+  if (!result)
     return {0, nullptr};
-  StmtPtr result = move(stmt);
 
   // We keep running typecheck transformations until there are no more unbound
   // types. It is assumed that the unbound count will decrease in each
   // iteration--- if not, the program cannot be type-checked.
-  // TODO: this can be probably optimized one day...
   int minUnbound = ctx->cache->unboundCount;
-  int iter = 0;
   ctx->addBlock();
-  for (int prevSize = INT_MAX;; iter++, ctx->iteration++) {
-    LOG_TYPECHECK("== iter {} ==========================================", iter);
+  int iteration = 0;
+  for (int prevSize = INT_MAX;;) {
+    LOG_TYPECHECK("== iter {} ==========================================", iteration);
     ctx->typecheckLevel++;
     result = TypecheckVisitor(ctx).transform(result);
+    iteration++;
     ctx->typecheckLevel--;
+
+    if (iteration == 1 && name == "<top>")
+      for (auto &f : ctx->cache->functions) {
+        auto &attr = f.second.ast->attributes;
+        if (f.second.realizations.empty() &&
+            (attr.has(Attr::ForceRealize) ||
+             (attr.has(Attr::C) && !attr.has(Attr::CVarArg)))) {
+          seqassert(f.second.type && f.second.type->canRealize(), "cannot realize {}",
+                    f.first);
+          auto e = make_shared<IdExpr>(f.second.type->ast->name);
+          auto t = ctx->instantiate(e.get(), f.second.type, nullptr, false)->getFunc();
+          realize(t);
+          seqassert(!f.second.realizations.empty(), "cannot realize {}", f.first);
+        }
+      }
 
     int newUnbounds = 0;
     std::map<types::TypePtr, string> newActiveUnbounds;
@@ -305,109 +330,56 @@ pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
       ++i;
     }
     ctx->activeUnbounds = newActiveUnbounds;
-
-    if (ctx->activeUnbounds.empty() || !newUnbounds) {
+    if (result->done) {
+      auto goodState = ctx->activeUnbounds.empty() || !newUnbounds;
+      if (!goodState) {
+        LOG_TYPECHECK("inconsistent stmt->done with unbound count in {} ({} / {})",
+                      name, ctx->activeUnbounds.size(), newUnbounds);
+        for (auto &c : ctx->activeUnbounds)
+          LOG_TYPECHECK("{}:{}", c.first->debugString(true), c.second);
+        LOG_TYPECHECK("{}\n", result->toString(0));
+        error("cannot typecheck the program (compiler bug)");
+      }
       break;
     } else {
       if (newUnbounds >= prevSize) {
-        map<int, pair<seq::SrcInfo, string>> v;
-        for (auto &ub : ctx->activeUnbounds)
-          if (ub.first->getLink()->id >= minUnbound) {
-            v[ub.first->getLink()->id] = {ub.first->getSrcInfo(), ub.second};
-            LOG_TYPECHECK("dangling ?{} ({})", ub.first->getLink()->id, minUnbound);
+        bool fixed = false;
+        for (auto &ub : ctx->activeUnbounds) {
+          if (auto u = ub.first->getLink()) {
+            if (u->id >= minUnbound && u->defaultType) {
+              fixed = true;
+              LOG_TYPECHECK("applying default generic: {} := {}", u->id,
+                            u->defaultType->toString());
+              unify(u->defaultType, u);
+            }
           }
-        for (auto &ub : v) {
-          seq::compilationError(format("cannot infer the type of {}", ub.second.second),
-                                ub.second.first.file, ub.second.first.line,
-                                ub.second.first.col, /*terminate=*/false);
         }
-        error("cannot typecheck the program");
+        if (!fixed) {
+          map<int, pair<seq::SrcInfo, string>> v;
+          for (auto &ub : ctx->activeUnbounds)
+            if (ub.first->getLink()->id >= minUnbound) {
+              v[ub.first->getLink()->id] = {ub.first->getSrcInfo(), ub.second};
+              LOG_TYPECHECK("dangling ?{} ({})", ub.first->getLink()->id, minUnbound);
+            }
+          for (auto &ub : v) {
+            seq::compilationError(
+                format("cannot infer the type of {}", ub.second.second),
+                ub.second.first.file, ub.second.first.line, ub.second.first.col,
+                /*terminate=*/false);
+            LOG_TYPECHECK("cannot infer {} / {}", ub.first, ub.second.second);
+          }
+          LOG_TYPECHECK("-- {}", result->toString(0));
+          error("cannot typecheck the program");
+        }
       }
       prevSize = newUnbounds;
     }
   }
-  // Last pass; TODO: detect if it is needed...
-  //  ctx->addBlock();
-  LOG_TYPECHECK("== iter {} ==========================================", ++iter);
-  for (int i = 0; i < 1; i++, iter++) {
-    ctx->typecheckLevel++;
-    result = TypecheckVisitor(ctx).transform(result);
-    ctx->typecheckLevel--;
-  }
   if (!keepLast)
     ctx->popBlock();
-  return {iter, move(result)};
+
+  return {iteration, result};
 }
-//
-//
-// pair<int, StmtPtr> TypecheckVisitor::inferTypes(StmtPtr &&stmt, bool keepLast) {
-//  if (!stmt)
-//    return {-1, nullptr};
-//  StmtPtr result = move(stmt);
-//
-//  // Keep running typecheck inference until we are done (meaning that there are no
-//  more
-//  // unbound types and all transformations and variable substitutions are done). It
-//  is
-//  // assumed that the number of unbound types will decrease in each iteration. If
-//  this
-//  // does not happen, the types of a given program cannot be inferred.
-//  ctx->typecheckLevel++;
-//  auto oldIter = ctx->iteration;
-//  ctx->iteration = 0;
-//  int prevUnbound = ctx->cache->unboundCount;
-//  int prevSize = INT_MAX;
-//  while (ctx->iteration < TYPECHECK_MAX_ITERATIONS) {
-//    ctx->addBlock();
-//    result = TypecheckVisitor(ctx).transform(result);
-//
-//    // Clean up unified unbound variables and check if there are new unbound
-//    variables. int newUnboundSize = 0; set<types::TypePtr> newActiveUnbounds; for
-//    (auto i = ctx->activeUnbounds.begin(); i != ctx->activeUnbounds.end();) {
-//      auto l = (*i)->getLink();
-//      assert(l);
-//      if (l->kind == LinkType::Unbound) {
-//        newActiveUnbounds.insert(*i);
-//        if (l->id >= prevUnbound)
-//          newUnboundSize++;
-//      }
-//      ++i;
-//    }
-//    ctx->activeUnbounds = newActiveUnbounds;
-//    seqassert(!result->done || ctx->activeUnbounds.empty(),
-//              "inconsistent stmt->done with unbound count");
-//    if (result && result->done) {
-//      if (!keepLast)
-//        ctx->popBlock();
-//      break;
-//    }
-//    if (newUnboundSize >= prevSize) {
-//      // Number of unbound types either increased or stayed the same: we cannot
-//      // typecheck this program!
-//      vector<TypePtr> unresolved;
-//      string errorMsg;
-//      for (auto &ub : ctx->activeUnbounds)
-//        if (ub->getUnbound()->id >= prevUnbound) {
-//          unresolved.emplace_back(ub);
-//          errorMsg +=
-//              fmt::format("- {}:{}:{}: unresolved type\n", ub->getSrcInfo().file,
-//                          ub->getSrcInfo().line, ub->getSrcInfo().col);
-//          LOG_TYPECHECK("[inferTypes] dangling {} @ {}", ub->toString(),
-//                        ub->getSrcInfo());
-//        }
-//      error(unresolved[0], "cannot resolve {} unbound variables:\n{}",
-//            unresolved.size(), errorMsg);
-//    }
-//    prevSize = newUnboundSize;
-//    LOG_TYPECHECK("=========================== {}",
-//                  ctx->bases.back().type ? ctx->bases.back().type->toString() :
-//                  "-");
-//    ctx->iteration++;
-//  }
-//  std::swap(ctx->iteration, oldIter);
-//  ctx->typecheckLevel--;
-//  return make_pair(oldIter, move(result));
-//}
 
 ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   auto realizedName = t->realizedTypeName();
@@ -424,11 +396,11 @@ ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
 
   ir::types::Type *handle = nullptr;
   vector<ir::types::Type *> types;
-  vector<int> statics;
+  vector<StaticValue *> statics;
   for (auto &m : t->generics)
     if (auto s = m.type->getStatic()) {
-      seqassert(s->staticEvaluation.first, "static not realized");
-      statics.push_back(s->staticEvaluation.second);
+      seqassert(s->expr->staticValue.evaluated, "static not realized");
+      statics.push_back(&(s->expr->staticValue));
     } else {
       types.push_back(getLLVM(m.type));
     }
@@ -448,8 +420,9 @@ ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   } else if (name == "str") {
     handle = module->getStringType();
   } else if (name == "Int" || name == "UInt") {
-    assert(statics.size() == 1 && types.empty());
-    handle = module->Nr<ir::types::IntNType>(statics[0], name == "Int");
+    assert(statics.size() == 1 && statics[0]->type == StaticValue::INT &&
+           types.empty());
+    handle = module->Nr<ir::types::IntNType>(statics[0]->getInt(), name == "Int");
   } else if (name == "Ptr") {
     assert(types.size() == 1 && statics.empty());
     handle = module->unsafeGetPointerType(types[0]);
@@ -459,6 +432,12 @@ ir::types::Type *TypecheckVisitor::getLLVMType(const types::ClassType *t) {
   } else if (name == TYPE_OPTIONAL) {
     assert(types.size() == 1 && statics.empty());
     handle = module->unsafeGetOptionalType(types[0]);
+  } else if (name == "NoneType") {
+    assert(types.empty() && statics.empty());
+    auto record =
+        ir::cast<ir::types::RecordType>(module->unsafeGetMemberedType(realizedName));
+    record->realize({}, {});
+    handle = record;
   } else if (startswith(name, TYPE_FUNCTION)) {
     types.clear();
     for (auto &m : const_cast<ClassType *>(t)->getRecord()->args)

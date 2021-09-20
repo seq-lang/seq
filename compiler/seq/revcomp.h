@@ -26,7 +26,7 @@ public:
 };
 
 class KmerRevcompInterceptor : public ir::transform::Pass {
-  const std::string KEY = "seq-kmer-revcomp-interceptor";
+  static const std::string KEY;
   std::string getKey() const override { return KEY; }
   void run(ir::Module *) override;
 };

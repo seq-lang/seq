@@ -1,5 +1,4 @@
 from internal.gc import alloc_atomic, free
-from C import strtoll(cobj, Ptr[cobj], i32) -> int
 
 @tuple
 class object:
@@ -29,7 +28,7 @@ def print(*args, sep: str = ' ', end: str = '\n', file=_stdout, flush: bool = Fa
 def min(*args):
     if staticlen(args) == 0:
         raise ValueError("empty sequence")
-    elif staticlen(args) == 1 and hasattr(typeof(args[0]), "__iter__"):
+    elif staticlen(args) == 1 and hasattr(args[0], "__iter__"):
         x = args[0].__iter__()
         if not x.done():
             s = x.next()
@@ -41,6 +40,9 @@ def min(*args):
         else:
             x.destroy()
         raise ValueError("empty sequence")
+    elif staticlen(args) == 2:
+        a, b = args
+        return a if a <= b else b
     else:
         m = args[0]
         for i in args:
@@ -50,7 +52,7 @@ def min(*args):
 def max(*args):
     if staticlen(args) == 0:
         raise ValueError("empty sequence")
-    elif staticlen(args) == 1 and hasattr(typeof(args[0]), "__iter__"):
+    elif staticlen(args) == 1 and hasattr(args[0], "__iter__"):
         x = args[0].__iter__()
         if not x.done():
             s = x.next()
@@ -62,6 +64,9 @@ def max(*args):
         else:
             x.destroy()
         raise ValueError("empty sequence")
+    elif staticlen(args) == 2:
+        a, b = args
+        return a if a >= b else b
     else:
         m = args[0]
         for i in args:
@@ -239,6 +244,7 @@ def repr(x):
 @extend
 class int:
     def _from_str(s: str, base: int):
+        from C import strtoll(cobj, Ptr[cobj], i32) -> int
         if base < 0 or base > 36 or base == 1:
             raise ValueError("int() base must be >= 2 and <= 36, or 0")
 

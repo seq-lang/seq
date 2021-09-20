@@ -447,7 +447,7 @@ def _stage1_sort[X](T: Ptr[X], SA: Ptr[int], C: Ptr[int], B: Ptr[int], n: int, k
             assert j + 1 < n
             B[int(T[j + 1])] += 1
             if flags & 16:
-                D = Ptr[int](alloc_atomic(2 * k * sizeof[int]()))
+                D = Ptr[int](alloc_atomic(2 * k * sizeof(int)))
                 i = 0
                 j = 0
                 while i < k:
@@ -531,12 +531,12 @@ def _suffixsort[X](T: Ptr[X], SA: Ptr[int], fs: int, n: int, k: int, isbwt: bool
     Cp = Ptr[int]()
     Bp = Ptr[int]()
     if k <= 256:
-        Cp = Ptr[int](alloc_atomic(k * sizeof[int]()))
+        Cp = Ptr[int](alloc_atomic(k * sizeof(int)))
         if k <= fs:
             B = SA + (n + fs - k)
             flags = 1
         else:
-            Bp = Ptr[int](alloc_atomic(k * sizeof[int]()))
+            Bp = Ptr[int](alloc_atomic(k * sizeof(int)))
             flags = 3
     elif k <= fs:
         C = SA + (n + fs - k)
@@ -544,13 +544,13 @@ def _suffixsort[X](T: Ptr[X], SA: Ptr[int], fs: int, n: int, k: int, isbwt: bool
             B = C + (-k)
             flags = 0
         elif k <= 1024:
-            Bp = Ptr[int](alloc_atomic(k * sizeof[int]()))
+            Bp = Ptr[int](alloc_atomic(k * sizeof(int)))
             flags = 2
         else:
             B = C
             flags = 64 | 8
     else:
-        Cp = Ptr[int](alloc_atomic(k * sizeof[int]()))
+        Cp = Ptr[int](alloc_atomic(k * sizeof(int)))
         Bp = Cp
         flags = 4 | 8
     if 2 <= n // k:
@@ -639,10 +639,10 @@ def _suffixsort[X](T: Ptr[X], SA: Ptr[int], fs: int, n: int, k: int, isbwt: bool
             SA[i] = RA[SA[i]]
             i += 1
         if flags & 4:
-            Cp = Ptr[int](alloc_atomic(k * sizeof[int]()))
+            Cp = Ptr[int](alloc_atomic(k * sizeof(int)))
             Bp = Cp
         if flags & 2:
-            Bp = Ptr[int](alloc_atomic(k * sizeof[int]()))
+            Bp = Ptr[int](alloc_atomic(k * sizeof(int)))
 
     # stage 3
     pidx = 0
@@ -666,7 +666,7 @@ def _suffixsort[X](T: Ptr[X], SA: Ptr[int], fs: int, n: int, k: int, isbwt: bool
 def _saisxx(T: Ptr[byte], n: int, k: int = 256) -> Ptr[int]:
     if n < 0 or k <= 0:
         raise ValueError("need n >= 0 and k > 0!")
-    SA = Ptr[int](alloc_atomic((n + 1) * sizeof[int]()))
+    SA = Ptr[int](alloc_atomic((n + 1) * sizeof(int)))
     if n <= 1:
         if n == 1:
             SA[0] = 0
@@ -684,7 +684,7 @@ def _saisxx_bwt(T: Ptr[byte], n: int, k: int = 256) -> Ptr[byte]:
         U[0] = T[0]
         U[1] = byte(36)  # $
         return U
-    A = Ptr[int](alloc_atomic((n + 1) * sizeof[int]()))
+    A = Ptr[int](alloc_atomic((n + 1) * sizeof(int)))
     pidx = _suffixsort(T, A, 0, n, k, True)
     if 0 <= pidx:
         U[0] = T[n - 1]

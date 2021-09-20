@@ -10,14 +10,22 @@ namespace cleanup {
 /// Cleanup pass that removes dead code.
 class DeadCodeCleanupPass : public OperatorPass {
 private:
-  int numReplacements = 0;
+  std::string sideEffectsKey;
+  int numReplacements;
 
 public:
-  const std::string KEY = "core-cleanup-dce";
+  static const std::string KEY;
+
+  /// Constructs a dead code elimination pass
+  /// @param sideEffectsKey the side effect analysis' key
+  DeadCodeCleanupPass(std::string sideEffectsKey)
+      : OperatorPass(), sideEffectsKey(std::move(sideEffectsKey)), numReplacements(0) {}
+
   std::string getKey() const override { return KEY; }
 
   void run(Module *m) override;
 
+  void handle(SeriesFlow *v) override;
   void handle(IfFlow *v) override;
   void handle(WhileFlow *v) override;
   void handle(ImperativeForFlow *v) override;

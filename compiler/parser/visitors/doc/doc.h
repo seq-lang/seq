@@ -19,17 +19,37 @@
 #include "parser/common.h"
 #include "parser/ctx.h"
 #include "parser/visitors/visitor.h"
-#include "util/nlohmann/json.hpp"
 
 namespace seq {
 namespace ast {
 
+struct json {
+  // values={str -> null} -> string value
+  // values={i -> json} -> list (if list=true)
+  // values={...} -> dictionary
+  unordered_map<string, shared_ptr<json>> values;
+  bool list;
+
+  json();
+  json(const string &s);
+  json(const string &s, const string &v);
+  json(const vector<shared_ptr<json>> &vs);
+  json(const vector<string> &vs);
+  json(const unordered_map<string, string> &vs);
+  string toString();
+  shared_ptr<json> get(const string &s);
+  shared_ptr<json> set(const string &s, const string &value);
+  shared_ptr<json> set(const string &s, const shared_ptr<json> &value);
+};
+
 struct DocContext;
 struct DocShared {
   int itemID;
-  nlohmann::json j;
+  shared_ptr<json> j;
   unordered_map<string, shared_ptr<DocContext>> modules;
   string argv0;
+  shared_ptr<Cache> cache;
+  unordered_map<int, vector<string>> generics;
   DocShared() : itemID(1) {}
 };
 
@@ -42,20 +62,20 @@ struct DocContext : public Context<int> {
   shared_ptr<int> find(const string &s) const override;
 };
 
-struct DocVisitor : public CallbackASTVisitor<nlohmann::json, string> {
+struct DocVisitor : public CallbackASTVisitor<shared_ptr<json>, string> {
   shared_ptr<DocContext> ctx;
-  nlohmann::json resultExpr;
+  shared_ptr<json> resultExpr;
   string resultStmt;
 
 public:
   explicit DocVisitor(shared_ptr<DocContext> ctx) : ctx(move(ctx)) {}
-  static nlohmann::json apply(const string &argv0, const vector<string> &files);
+  static shared_ptr<json> apply(const string &argv0, const vector<string> &files);
 
-  nlohmann::json transform(const ExprPtr &e) override;
+  shared_ptr<json> transform(const ExprPtr &e) override;
   string transform(const StmtPtr &e) override;
 
   void transformModule(StmtPtr stmt);
-  nlohmann::json jsonify(const seq::SrcInfo &s);
+  shared_ptr<json> jsonify(const seq::SrcInfo &s);
   vector<StmtPtr> flatten(StmtPtr stmt, string *docstr = nullptr, bool deep = true);
 
 public:

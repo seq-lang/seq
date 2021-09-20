@@ -12,7 +12,7 @@ namespace pythonic {
 /// _do_op_throws as well as getters.
 class DictArithmeticOptimization : public OperatorPass {
 public:
-  const std::string KEY = "core-pythonic-dict-arithmetic-opt";
+  static const std::string KEY;
   std::string getKey() const override { return KEY; }
   void handle(CallInstr *v) override;
 };

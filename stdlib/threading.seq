@@ -41,10 +41,12 @@ class RLock:
         self.release()
 
 def active_count():
-    return int(_C.omp_get_num_threads())
+    from openmp import get_num_threads
+    return get_num_threads()
 
 def get_native_id():
-    return int(_C.omp_get_thread_num())
+    from openmp import get_thread_num
+    return get_thread_num()
 
 def get_ident():
     return get_native_id() + 1

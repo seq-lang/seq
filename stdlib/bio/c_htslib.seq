@@ -11,17 +11,39 @@ from C import sam_itr_querys(cobj, cobj, cobj) -> cobj
 from C import sam_read1(cobj, cobj, cobj) -> i32
 from C import bam_read1(cobj, cobj) -> i32
 from C import bam_init1() -> cobj
-from C import bam_cigar2qlen(int, Ptr[u32]) -> int
-from C import bam_cigar2rlen(int, Ptr[u32]) -> int
-from C import bam_aux_get(cobj, Ptr[byte]) -> Ptr[u8]
-from C import bam_aux2i(Ptr[u8]) -> int
-from C import bam_aux2f(Ptr[u8]) -> float
-from C import bam_aux2A(Ptr[u8]) -> byte
-from C import bam_aux2Z(Ptr[u8]) -> Ptr[byte]
-from C import bam_auxB_len(Ptr[u8]) -> u32
-from C import bam_auxB2i(Ptr[u8], u32) -> int
-from C import bam_auxB2f(Ptr[u8], u32) -> float
-from C import bam_endpos(cobj) -> int
+@pure
+@C
+def bam_cigar2qlen(a: int, b: Ptr[u32]) -> int: pass
+@pure
+@C
+def bam_cigar2rlen(a: int, b: Ptr[u32]) -> int: pass
+@pure
+@C
+def bam_aux_get(a: cobj, b: Ptr[byte]) -> Ptr[u8]: pass
+@pure
+@C
+def bam_aux2i(a: Ptr[u8]) -> int: pass
+@pure
+@C
+def bam_aux2f(a: Ptr[u8]) -> float: pass
+@pure
+@C
+def bam_aux2A(a: Ptr[u8]) -> byte: pass
+@pure
+@C
+def bam_aux2Z(a: Ptr[u8]) -> Ptr[byte]: pass
+@pure
+@C
+def bam_auxB_len(a: Ptr[u8]) -> u32: pass
+@pure
+@C
+def bam_auxB2i(a: Ptr[u8], b: u32) -> int: pass
+@pure
+@C
+def bam_auxB2f(a: Ptr[u8], b: u32) -> float: pass
+@pure
+@C
+def bam_endpos(a: cobj) -> int: pass
 from C import sam_hdr_destroy(cobj)
 from C import bam_destroy1(cobj)
 
@@ -48,11 +70,19 @@ from C import bcf_empty(cobj)
 from C import bcf_dup(cobj) -> cobj
 from C import bcf_get_info_values(cobj, cobj, Ptr[byte], Ptr[cobj], Ptr[i32], i32) -> i32
 
-from C import hts_version() -> cobj
+@pure
+@C
+def hts_version() -> cobj: pass
 
-from C import seq_get_htsfile_fp(cobj) -> cobj
-from C import seq_is_htsfile_cram(cobj) -> bool
-from C import seq_is_htsfile_bgzf(cobj) -> bool
+@pure
+@C
+def seq_get_htsfile_fp(a: cobj) -> cobj: pass
+@pure
+@C
+def seq_is_htsfile_cram(a: cobj) -> bool: pass
+@pure
+@C
+def seq_is_htsfile_bgzf(a: cobj) -> bool: pass
 
 # Seq HTSlib
 def sam_itr_next(file: cobj, itr: cobj, r: cobj) -> int:

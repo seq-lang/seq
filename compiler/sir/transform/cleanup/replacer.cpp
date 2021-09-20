@@ -11,6 +11,8 @@ namespace ir {
 namespace transform {
 namespace cleanup {
 
+const std::string ReplaceCleanupPass::KEY = "core-cleanup-physical-replace";
+
 void ReplaceCleanupPass::run(Module *module) {
   std::unordered_set<Value *> valuesToDelete;
   std::unordered_set<types::Type *> typesToDelete;

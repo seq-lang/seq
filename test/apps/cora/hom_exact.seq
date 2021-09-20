@@ -24,7 +24,7 @@ if len(argv) != 3:
 
 path = argv[1]
 num_kmers = sum(2 if kmer == ~kmer else 1  # palindromes added twice
-                for rec in FASTA(path) for kmer in rec.seq.kmers[K](1))
+                for rec in FASTA(path) for kmer in rec.seq.kmers(1, K))
 print 'num_kmers:', num_kmers
 kmer_list = List(num_kmers)
 
@@ -40,7 +40,7 @@ bitsets = []  # markers for equivalence class representatives
 for tid, rec in enumerate(FASTA(path)):
     print 'processing', rec.name
     bitsets.append(BitSet(len(rec.seq)))
-    for pos, kmer in rec.seq.kmers_with_pos[K](1):
+    for pos, kmer in rec.seq.kmers_with_pos(1, K):
         kmer_rev = ~kmer
         add_pal = (kmer == kmer_rev)
         if kmer_rev < kmer:

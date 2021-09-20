@@ -26,21 +26,21 @@ def split(self: seq, k: int, step: int):
     '''
     return self.split(k, step)
 
-def kmers[K](self: seq, step: int):
+def kmers(self: seq, step: int, k: Static[int]):
     '''
-    Iterator over k-mers (type `K`) of the given sequence
+    Iterator over k-mers (size `k`) of the given sequence
     with the specified step size. Note that k-mers spanning
     ambiguous bases will be skipped.
     '''
-    return self.kmers[K](step)
+    return self.kmers(step, k)
 
-def kmers_with_pos[K](self: seq, step: int):
+def kmers_with_pos(self: seq, step: int, k: Static[int]):
     '''
     Iterator over (0-based index, k-mer) tuples of the given
     sequence with the specified step size. Note that k-mers
     spanning ambiguous bases will be skipped.
     '''
-    return self.kmers_with_pos[K](step)
+    return self.kmers_with_pos(step, k)
 
 def revcomp(s):
     '''
@@ -57,10 +57,10 @@ def revcomp_with_pos(t):
     return (t[0], ~t[1])
 
 def _kmers_revcomp_with_pos[K](self: seq, step: int):
-    return self._kmers_revcomp_with_pos[K](step)
+    return self._kmers_revcomp_with_pos(step, K.k)
 
 def _kmers_revcomp[K](self: seq, step: int):
-    return self._kmers_revcomp[K](step)
+    return self._kmers_revcomp(step, K.k)
 
 def canonical(k):
     '''
@@ -78,13 +78,13 @@ def canonical_with_pos(t):
     return (t[0], canonical(t[1]))
 
 def _kmers_canonical[K](self: seq):
-    return self.kmers_canonical[K]()
+    return self.kmers_canonical(K.k)
 
 def _kmers_canonical_with_pos[K](self: seq):
-    return self.kmers_canonical_with_pos[K]()
+    return self.kmers_canonical_with_pos(K.k)
 
 def base[K,T](kmer: K, idx: int, b: T):
-    U = typeof(kmer.as_int())
+    U = type(kmer.as_int())
     if idx < 0:
         idx += len(kmer)
     idx = K.len() - idx - 1

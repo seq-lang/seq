@@ -186,6 +186,8 @@ auto typeConvert(Module *m, std::string magic, types::Type *fromType,
 }
 } // namespace
 
+const std::string FoldingPass::KEY = "core-folding-const-fold";
+
 void FoldingPass::run(Module *m) {
   registerStandardRules(m);
   Rewriter::reset();

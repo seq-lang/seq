@@ -57,13 +57,21 @@ public:
     messages.push_back(msg);
     locations.push_back(info);
   }
+  ParserException() noexcept : ParserException("", {}) {}
   explicit ParserException(const string &msg) noexcept : ParserException(msg, {}) {}
-  ParserException(const ParserException &e) noexcept : std::runtime_error(e) {}
+  ParserException(const ParserException &e) noexcept
+      : std::runtime_error(e), locations(e.locations), messages(e.messages) {}
 
   /// Add an error message to the current stack trace
   void trackRealize(const string &msg, const SrcInfo &info) {
     locations.push_back(info);
     messages.push_back(fmt::format("while realizing {}", msg));
+  }
+
+  /// Add an error message to the current stack trace
+  void track(const string &msg, const SrcInfo &info) {
+    locations.push_back(info);
+    messages.push_back(msg);
   }
 };
 } // namespace exc
@@ -76,6 +84,8 @@ namespace ast {
 vector<string> split(const string &str, char delim);
 /// Escape a C string (replace \n with \\n etc.).
 string escape(const string &str);
+/// Unescape a C string (replace \\n with \n etc.).
+string unescape(const string &str);
 /// Escape an F-string braces (replace { and } with {{ and }}).
 string escapeFStringBraces(const string &str, int start, int len);
 /// True if a string str starts with a prefix.
@@ -136,6 +146,12 @@ bool in(const unordered_map<K, V> &m, const U &item) {
   auto f = m.find(item);
   return f != m.end();
 }
+/// @return vector c transformed by the function f.
+template <typename T, typename F> auto vmap(const std::vector<T> &c, F &&f) {
+  std::vector<typename std::result_of<F(const T &)>::type> ret;
+  std::transform(std::begin(c), std::end(c), std::inserter(ret, std::end(ret)), f);
+  return ret;
+}
 
 /// AST utilities
 
@@ -145,7 +161,7 @@ void error(const char *format);
 void error(const SrcInfo &info, const char *format);
 
 /// Clones a pointer even if it is a nullptr.
-template <typename T> auto clone(const unique_ptr<T> &t) {
+template <typename T> auto clone(const shared_ptr<T> &t) {
   return t ? t->clone() : nullptr;
 }
 
@@ -182,7 +198,7 @@ struct ImportFile {
 /// Find an import file what given an executable path (argv0) either in the standard
 /// library or relative to a file relativeTo. Set forceStdlib for searching only the
 /// standard library.
-unique_ptr<ImportFile> getImportFile(const string &argv0, const string &what,
+shared_ptr<ImportFile> getImportFile(const string &argv0, const string &what,
                                      const string &relativeTo, bool forceStdlib = false,
                                      const string &module0 = "");
 

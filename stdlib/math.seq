@@ -359,6 +359,7 @@ def gcd(a: float, b: float) -> float:
         a, b = b%a, a
     return b
 
+@pure
 def frexp(x: float) -> Tuple[float, int]:
     """
     frexp(float) -> Tuple[float, int]
@@ -371,6 +372,7 @@ def frexp(x: float) -> Tuple[float, int]:
     res = _C.frexp(float(x), __ptr__(tmp))
     return (res, int(tmp))
 
+@pure
 def modf(x: float) -> Tuple[float, float]:
     """
     modf(float) -> Tuple[float, float]

@@ -94,14 +94,13 @@ public:
   void visit(DotExpr *) override;
   void visit(SliceExpr *) override;
   void visit(EllipsisExpr *) override;
-  void visit(TypeOfExpr *) override;
   void visit(PtrExpr *) override;
   void visit(LambdaExpr *) override;
   void visit(YieldExpr *) override;
   void visit(StmtExpr *expr) override;
+  void visit(AssignExpr *expr) override;
 
   void visit(SuiteStmt *) override;
-  void visit(PassStmt *) override;
   void visit(BreakStmt *) override;
   void visit(UpdateStmt *) override;
   void visit(ContinueStmt *) override;

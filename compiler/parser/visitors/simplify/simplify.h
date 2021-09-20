@@ -51,7 +51,6 @@ class SimplifyVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
   /// This approach also allows us to generate global types without having to
   /// worry about initialization order.
   struct Preamble {
-    vector<StmtPtr> types;
     vector<StmtPtr> globals;
     vector<StmtPtr> functions;
   };
@@ -77,9 +76,8 @@ public:
   ///        Each value is passed as a string (integer part is ignored).
   ///        The method will replace this map with a map that links canonical names
   ///        to their string and integer values.
-  static StmtPtr apply(shared_ptr<Cache> cache, const unique_ptr<Stmt> &node,
-                       const string &file,
-                       unordered_map<string, pair<string, int64_t>> &defines,
+  static StmtPtr apply(shared_ptr<Cache> cache, const StmtPtr &node, const string &file,
+                       const unordered_map<string, string> &defines,
                        bool barebones = false);
 
   /// Static method that applies SimplifyStage on a given AST node after the standard
@@ -96,13 +94,11 @@ public:
   ExprPtr transform(const ExprPtr &expr) override;
   /// Transform an AST statement node.
   StmtPtr transform(const StmtPtr &stmt) override;
-  /// Transform an AST statement node (pointer convenience method).
-  StmtPtr transform(const Stmt *stmt);
   /// Transform an AST expression node.
-  ExprPtr transform(const Expr *expr, bool allowTypes = false);
+  ExprPtr transform(const ExprPtr &expr, bool allowTypes, bool allowAssign = true);
   /// Transform an AST type expression node.
   /// @raise ParserException if a node does not describe a type (use transform instead).
-  ExprPtr transformType(const Expr *expr);
+  ExprPtr transformType(const ExprPtr &expr, bool allowTypeOf = true);
 
 private:
   /// These functions just clone a given node (nothing to be simplified).
@@ -115,6 +111,8 @@ public:
   void visit(NoneExpr *) override;
   /// See transformInt for details of integer transformation.
   void visit(IntExpr *) override;
+  /// See transformFloat for details of integer transformation.
+  void visit(FloatExpr *) override;
   /// String is transformed if it is an F-string or a custom-prefix string.
   /// Custom prefix strings are transformed to:
   ///   pfx'foo' -> str.__prefix_pfx__[len(foo)]('foo').
@@ -209,8 +207,6 @@ public:
   void visit(SliceExpr *) override;
   /// Disallow ellipsis except in a call expression.
   void visit(EllipsisExpr *) override;
-  /// TypeOf expressions will be handled during the type-checking stage.
-  void visit(TypeOfExpr *) override;
   /// Ensure that a yield is in a function.
   void visit(YieldExpr *) override;
   /// Transform lambda a, b: a+b+c to:
@@ -354,6 +350,8 @@ private:
   ///   123i56 -> Int[56]("123")  (same for UInt)
   ///   123pf -> int.__suffix_pf__("123")
   ExprPtr transformInt(const string &value, const string &suffix);
+  /// Converts a float string to double.
+  ExprPtr transformFloat(const string &value, const string &suffix);
   /// Converts a Python-like F-string (f"foo {x+1} bar") to a concatenation:
   ///   str.cat("foo ", str(x + 1), " bar").
   /// Also supports "{x=}" specifier (that prints the raw expression as well).
@@ -374,16 +372,15 @@ private:
   ///            def _lambda(a, b): return a+b
   ///          and returns
   ///            _lambda(b).
-  ExprPtr makeAnonFn(vector<StmtPtr> &&stmts,
-                     const vector<string> &argNames = vector<string>{});
+  ExprPtr makeAnonFn(vector<StmtPtr> stmts, const vector<string> &argNames = {});
 
   /// Transforms a simple assignment:
   ///   a[x] = b -> a.__setitem__(x, b)
   ///   a.x = b -> AssignMemberStmt
   ///   a : type = b -> AssignStmt
   ///   a = b -> AssignStmt or UpdateStmt if a exists in the same scope (or is global)
-  StmtPtr transformAssignment(const Expr *lhs, const Expr *rhs, const Expr *type,
-                              bool shadow, bool mustExist);
+  StmtPtr transformAssignment(const ExprPtr &lhs, const ExprPtr &rhs,
+                              const ExprPtr &type, bool shadow, bool mustExist);
   /// Unpack an assignment expression lhs = rhs into a list of simple assignment
   /// expressions (either a = b, or a.x = b, or a[x] = b).
   /// Used to handle various Python unpacking rules, such as:
@@ -394,8 +391,8 @@ private:
   ///   a, b = c, d + foo() -> tmp = (c, d + foo); a = tmp[0]; b = tmp[1].
   /// Processes each assignment recursively to support cases like:
   ///   a, (b, c) = d
-  void unpackAssignments(const Expr *lhs, const Expr *rhs, vector<StmtPtr> &stmts,
-                         bool shadow, bool mustExist);
+  void unpackAssignments(ExprPtr lhs, ExprPtr rhs, vector<StmtPtr> &stmts, bool shadow,
+                         bool mustExist);
   /// Transform a match...case pattern to a series of if statements as follows:
   ///   - Int pattern
   ///     case 1: ... ->
@@ -491,7 +488,7 @@ private:
   // Return a list of all function statements within a given class suite. Checks each
   // suite recursively, and assumes that each statement is either a function or a
   // doc-string.
-  vector<const Stmt *> getClassMethods(const Stmt *s);
+  vector<StmtPtr> getClassMethods(const StmtPtr &s);
 };
 
 } // namespace ast

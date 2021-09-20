@@ -3,7 +3,7 @@ cat_count = 0
 # c/p from str.seq
 def old_cat(*args):
     total = 0
-    if staticlen(args) == 1 and hasattr(typeof(args[0]), "__iter__") and hasattr(typeof(args[0]), "__len__"):
+    if staticlen(args) == 1 and hasattr(args[0], "__iter__") and hasattr(args[0], "__len__"):
         for s in args[0]:
             if not isinstance(s, str):
                 compile_error("not a string")
@@ -14,7 +14,7 @@ def old_cat(*args):
             str.memcpy(p + n, s.ptr, s.len)
             n += s.len
         return str(p, total)
-    elif staticlen(args) == 1 and hasattr(typeof(args[0]), "__iter__"):
+    elif staticlen(args) == 1 and hasattr(args[0], "__iter__"):
         sz = 10
         p = cobj(sz)
         n = 0
@@ -53,18 +53,18 @@ class str:
 def test_str_optimization():
     assert 'hello ' + 'world' == "hello world"  # no opt: just adding 2 strs
     assert cat_count == 0
-    assert 'a' + 'b' + 'c' == 'abc'
-    assert cat_count == 1
+    # assert 'a' + 'b' + 'c' == 'abc' # superseded by string statics
+    # assert cat_count == 1
     assert 'a' * 2 == 'aa'  # no opt: mul instead of add
-    assert cat_count == 1
-    assert 'a' + ('b' + 'c') == 'abc'
-    assert cat_count == 2
-    assert 'a' + ('b' + ('c' + 'd')) == 'abcd'
-    assert cat_count == 3
+    assert cat_count == 0
+    # assert 'a' + ('b' + 'c') == 'abc'
+    # assert cat_count == 2
+    # assert 'a' + ('b' + ('c' + 'd')) == 'abcd'
+    # assert cat_count == 3
 
     a = 'a'
     b = 'b'
     c = 'c'
     assert (a*2 + b*3 + c*4) == 'aabbbcccc'
-    assert cat_count == 4
+    assert cat_count == 1
 test_str_optimization()

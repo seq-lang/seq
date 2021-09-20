@@ -47,7 +47,7 @@ private:
   std::string cfAnalysisKey;
 
 public:
-  const std::string KEY = "core-analyses-dominator";
+  static const std::string KEY;
 
   /// Initializes a dominator analysis.
   /// @param cfAnalysisKey the control-flow analysis key

@@ -15,16 +15,18 @@
 #include "parser/common.h"
 #include "parser/visitors/translate/translate.h"
 #include "parser/visitors/translate/translate_ctx.h"
+#include "sir/transform/parallel/schedule.h"
 #include "sir/util/cloning.h"
 
 using fmt::format;
 using seq::ir::cast;
+using seq::ir::transform::parallel::OMPSched;
 using std::function;
 using std::get;
-using std::make_unique;
+using std::make_shared;
 using std::move;
+using std::shared_ptr;
 using std::stack;
-using std::unique_ptr;
 using std::vector;
 
 namespace seq {
@@ -38,7 +40,7 @@ ir::Module *TranslateVisitor::apply(shared_ptr<Cache> cache, StmtPtr stmts) {
 
   char buf[PATH_MAX + 1];
   realpath(cache->module0.c_str(), buf);
-  main->setSrcInfo({string(buf), 0, 0, 0, 0});
+  main->setSrcInfo({string(buf), 0, 0, 0});
 
   auto block = cache->module->Nr<ir::SeriesFlow>("body");
   main->setBody(block);
@@ -70,11 +72,11 @@ void TranslateVisitor::visit(IntExpr *expr) {
 }
 
 void TranslateVisitor::visit(FloatExpr *expr) {
-  result = make<ir::FloatConst>(expr, expr->value, getType(expr->getType()));
+  result = make<ir::FloatConst>(expr, expr->floatValue, getType(expr->getType()));
 }
 
 void TranslateVisitor::visit(StringExpr *expr) {
-  result = make<ir::StringConst>(expr, expr->value, getType(expr->getType()));
+  result = make<ir::StringConst>(expr, expr->getValue(), getType(expr->getType()));
 }
 
 void TranslateVisitor::visit(IdExpr *expr) {
@@ -95,10 +97,7 @@ void TranslateVisitor::visit(CallExpr *expr) {
   auto ft = expr->expr->type->getFunc();
   seqassert(ft, "not calling function: {}", ft->toString());
   auto callee = transform(expr->expr);
-  auto ast =
-      ctx->cache->functions[ft->funcName].realizations[ft->realizedName()]->ast.get();
-  seqassert(ast, "function {} has no ast", ft->realizedName());
-  bool isVariardic = ast->hasAttr(Attr::CVarArg);
+  bool isVariardic = ft->ast->hasAttr(Attr::CVarArg);
   vector<ir::Value *> items;
   for (int i = 0; i < expr->args.size(); i++) {
     seqassert(!expr->args[i].value->getEllipsis(), "ellipsis not elided");
@@ -230,8 +229,6 @@ void TranslateVisitor::visit(SuiteStmt *stmt) {
     transform(s);
 }
 
-void TranslateVisitor::visit(PassStmt *stmt) {}
-
 void TranslateVisitor::visit(BreakStmt *stmt) { result = make<ir::BreakInstr>(stmt); }
 
 void TranslateVisitor::visit(ContinueStmt *stmt) {
@@ -288,12 +285,31 @@ void TranslateVisitor::visit(WhileStmt *stmt) {
 }
 
 void TranslateVisitor::visit(ForStmt *stmt) {
+  unique_ptr<OMPSched> os = nullptr;
+  if (stmt->decorator) {
+    os = make_unique<OMPSched>();
+    auto c = stmt->decorator->getCall();
+    seqassert(c, "for par is not a call: {}", stmt->decorator->toString());
+    auto fc = c->expr->getType()->getFunc();
+    seqassert(fc && fc->ast->name == "std.openmp.for_par", "for par is not a function");
+    auto schedule =
+        fc->funcGenerics[0].type->getStatic()->expr->staticValue.getString();
+    bool ordered = fc->funcGenerics[1].type->getStatic()->expr->staticValue.getInt();
+    auto threads = transform(c->args[0].value);
+    auto chunk = transform(c->args[1].value);
+    os = make_unique<OMPSched>(schedule, threads, chunk, ordered);
+    LOG_TYPECHECK("parsed {}", stmt->decorator->toString());
+  }
+
   seqassert(stmt->var->getId(), "expected IdExpr, got {}", stmt->var->toString());
   auto varName = stmt->var->getId()->value;
   auto var = make<ir::Var>(stmt, getType(stmt->var->getType()), false, varName);
   ctx->getBase()->push_back(var);
   auto bodySeries = make<ir::SeriesFlow>(stmt, "body");
+
   auto loop = make<ir::ForFlow>(stmt, transform(stmt->iter), bodySeries, var);
+  if (os)
+    loop->setSchedule(move(os));
   ctx->add(TranslateItem::Var, varName, var);
   ctx->addSeries(cast<ir::SeriesFlow>(loop->getBody()));
   transform(stmt->suite);
@@ -302,24 +318,20 @@ void TranslateVisitor::visit(ForStmt *stmt) {
 }
 
 void TranslateVisitor::visit(IfStmt *stmt) {
-  if (!stmt->ifs[0].cond) {
-    transform(stmt->ifs[0].suite);
-  } else {
-    auto cond = transform(stmt->ifs[0].cond);
-    auto trueSeries = make<ir::SeriesFlow>(stmt, "ifstmt_true");
-    ctx->addSeries(trueSeries);
-    transform(stmt->ifs[0].suite);
-    ctx->popSeries();
+  auto cond = transform(stmt->cond);
+  auto trueSeries = make<ir::SeriesFlow>(stmt, "ifstmt_true");
+  ctx->addSeries(trueSeries);
+  transform(stmt->ifSuite);
+  ctx->popSeries();
 
-    ir::SeriesFlow *falseSeries = nullptr;
-    if (stmt->ifs.size() > 1) {
-      falseSeries = make<ir::SeriesFlow>(stmt, "ifstmt_false");
-      ctx->addSeries(falseSeries);
-      transform(stmt->ifs[1].suite);
-      ctx->popSeries();
-    }
-    result = make<ir::IfFlow>(stmt, cond, trueSeries, falseSeries);
+  ir::SeriesFlow *falseSeries = nullptr;
+  if (stmt->elseSuite) {
+    falseSeries = make<ir::SeriesFlow>(stmt, "ifstmt_false");
+    ctx->addSeries(falseSeries);
+    transform(stmt->elseSuite);
+    ctx->popSeries();
   }
+  result = make<ir::IfFlow>(stmt, cond, trueSeries, falseSeries);
 }
 
 void TranslateVisitor::visit(TryStmt *stmt) {
@@ -328,9 +340,8 @@ void TranslateVisitor::visit(TryStmt *stmt) {
   transform(stmt->suite);
   ctx->popSeries();
 
-  ir::SeriesFlow *finallySeries = nullptr;
+  auto finallySeries = make<ir::SeriesFlow>(stmt, "finally");
   if (stmt->finally) {
-    finallySeries = make<ir::SeriesFlow>(stmt, "finally");
     ctx->addSeries(finallySeries);
     transform(stmt->finally);
     ctx->popSeries();
@@ -397,13 +408,15 @@ void TranslateVisitor::transformFunction(types::FuncType *type, FunctionStmt *as
   vector<int> indices;
   vector<SrcInfo> srcInfos;
   vector<seq::ir::types::Type *> types;
-  for (int i = 1; i < type->args.size(); i++) {
-    if (!type->args[i]->getFunc()) {
-      types.push_back(getType(type->args[i]));
-      names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i - 1].name]);
-      indices.push_back(i - 1);
+  for (int i = 0, j = 1; i < ast->args.size(); i++)
+    if (!ast->args[i].generic) {
+      if (!type->args[j]->getFunc()) {
+        types.push_back(getType(type->args[j]));
+        names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i].name]);
+        indices.push_back(i);
+      }
+      j++;
     }
-  }
   if (ast->hasAttr(Attr::CVarArg)) {
     types.pop_back();
     names.pop_back();
@@ -416,12 +429,14 @@ void TranslateVisitor::transformFunction(types::FuncType *type, FunctionStmt *as
   // TODO: refactor IR attribute API
   map<string, string> attr;
   attr[".module"] = ast->attributes.module;
-  for (auto &a : ast->attributes.customAttr)
+  for (auto &a : ast->attributes.customAttr) {
+    // LOG("{} -> {}", ast->name, a);
     attr[a] = "";
+  }
   func->setAttribute(make_unique<ir::KeyValueAttribute>(attr));
   for (int i = 0; i < names.size(); i++)
     func->getArgVar(names[i])->setSrcInfo(ast->args[indices[i]].getSrcInfo());
-  func->setUnmangledName(ctx->cache->reverseIdentifierLookup[type->funcName]);
+  func->setUnmangledName(ctx->cache->reverseIdentifierLookup[type->ast->name]);
   if (!ast->attributes.has(Attr::C) && !ast->attributes.has(Attr::Internal)) {
     ctx->addBlock();
     for (auto i = 0; i < names.size(); i++)
@@ -442,23 +457,33 @@ void TranslateVisitor::transformLLVMFunction(types::FuncType *type, FunctionStmt
                                              ir::Func *func) {
   vector<string> names;
   vector<seq::ir::types::Type *> types;
-  for (int i = 1; i < type->args.size(); i++) {
-    types.push_back(getType(type->args[i]));
-    names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i - 1].name]);
-  }
+  vector<int> indices;
+  for (int i = 0, j = 1; i < ast->args.size(); i++)
+    if (!ast->args[i].generic) {
+      types.push_back(getType(type->args[j]));
+      names.push_back(ctx->cache->reverseIdentifierLookup[ast->args[i].name]);
+      indices.push_back(i);
+      j++;
+    }
   auto irType = ctx->getModule()->unsafeGetFuncType(type->realizedName(),
                                                     getType(type->args[0]), types);
   irType->setAstType(type->getFunc());
   auto f = cast<ir::LLVMFunc>(func);
   f->realize(irType, names);
-  for (int i = 0; i < ast->args.size(); i++)
-    func->getArgVar(names[i])->setSrcInfo(ast->args[i].getSrcInfo());
+  // TODO: refactor IR attribute API
+  map<string, string> attr;
+  attr[".module"] = ast->attributes.module;
+  for (auto &a : ast->attributes.customAttr)
+    attr[a] = "";
+  func->setAttribute(make_unique<ir::KeyValueAttribute>(attr));
+  for (int i = 0; i < names.size(); i++)
+    func->getArgVar(names[i])->setSrcInfo(ast->args[indices[i]].getSrcInfo());
 
   seqassert(ast->suite->firstInBlock() && ast->suite->firstInBlock()->getExpr() &&
                 ast->suite->firstInBlock()->getExpr()->expr->getString(),
             "LLVM function does not begin with a string");
   std::istringstream sin(
-      ast->suite->firstInBlock()->getExpr()->expr->getString()->value);
+      ast->suite->firstInBlock()->getExpr()->expr->getString()->getValue());
   vector<ir::types::Generic> literals;
   auto &ss = ast->suite->getSuite()->stmts;
   for (int i = 1; i < ss.size(); i++) {
@@ -494,7 +519,7 @@ void TranslateVisitor::transformLLVMFunction(types::FuncType *type, FunctionStmt
   f->setLLVMBody(join(lines, "\n"));
   f->setLLVMDeclarations(declare);
   f->setLLVMLiterals(literals);
-  func->setUnmangledName(ctx->cache->reverseIdentifierLookup[type->funcName]);
+  func->setUnmangledName(ctx->cache->reverseIdentifierLookup[type->ast->name]);
 }
 
 } // namespace ast

@@ -33,9 +33,7 @@ class TypecheckVisitor : public CallbackASTVisitor<ExprPtr, StmtPtr> {
   StmtPtr resultStmt;
 
 public:
-  static StmtPtr apply(shared_ptr<Cache> cache, StmtPtr stmts,
-                       const unordered_map<string, pair<string, int64_t>> &defines =
-                           unordered_map<string, pair<string, int64_t>>());
+  static StmtPtr apply(shared_ptr<Cache> cache, StmtPtr stmts);
 
 public:
   explicit TypecheckVisitor(shared_ptr<TypeContext> ctx,
@@ -44,8 +42,9 @@ public:
   /// All of these are non-const in TypeCheck visitor.
   ExprPtr transform(const ExprPtr &e) override;
   StmtPtr transform(const StmtPtr &s) override;
-  ExprPtr transform(ExprPtr &e, bool allowTypes, bool allowVoid = false);
-  ExprPtr transformType(ExprPtr &expr);
+  ExprPtr transform(ExprPtr &e, bool allowTypes, bool allowVoid = false,
+                    bool disableActivation = false);
+  ExprPtr transformType(ExprPtr &expr, bool disableActivation = false);
   types::TypePtr realize(types::TypePtr typ);
 
 private:
@@ -113,9 +112,6 @@ public:
   void visit(StackAllocExpr *) override;
   /// Type-checks it with a new unbound type.
   void visit(EllipsisExpr *) override;
-  /// Transform a TypeOf expression typeof(expr) to a canonical name:
-  ///   IdExpr("foo[bar,baz]").
-  void visit(TypeOfExpr *) override;
   /// Type-checks __ptr__(expr) with Ptr[typeof(T)].
   void visit(PtrExpr *) override;
   /// Unifies a function return type with a Generator[T] where T is a new unbound type.
@@ -125,7 +121,6 @@ public:
   void visit(StmtExpr *) override;
 
   void visit(SuiteStmt *) override;
-  void visit(PassStmt *) override;
   void visit(BreakStmt *) override;
   void visit(ContinueStmt *) override;
   void visit(ExprStmt *) override;
@@ -254,6 +249,7 @@ private:
   ///   hasattr(type, string) -> evaluates to bool
   ///   staticlen(var) -> evaluates to int
   ///   compile_error(string) -> raises a compiler error
+  ///   type(type) -> IdExpr(instantiated_type_name)
   ///
   /// Note: This is the most evil method in the whole parser suite. 🤦🏻‍
   ExprPtr transformCall(CallExpr *expr, const types::TypePtr &inType = nullptr,
@@ -290,9 +286,6 @@ private:
   ///       return Partial.N<mask>.__new__(self.ptr, self.a1, a2, ...) # (see above)
   string generatePartialStub(const vector<char> &mask, types::FuncType *fn);
   void generateFnCall(int n);
-  /// Create generic types for type or function generics and add them to the context.
-  vector<types::ClassType::Generic> parseGenerics(const vector<Param> &generics,
-                                                  int level);
   /// Make an empty partial call fn(...) for a function fn.
   ExprPtr partializeFunction(ExprPtr expr);
 
@@ -300,8 +293,14 @@ private:
   types::TypePtr unify(types::TypePtr &a, const types::TypePtr &b);
   types::TypePtr realizeType(types::ClassType *typ);
   types::TypePtr realizeFunc(types::FuncType *typ);
-  std::pair<int, StmtPtr> inferTypes(StmtPtr &&stmt, bool keepLast = false);
+  std::pair<int, StmtPtr> inferTypes(StmtPtr stmt, bool keepLast, const string &name);
   seq::ir::types::Type *getLLVMType(const types::ClassType *t);
+
+  bool wrapExpr(ExprPtr &expr, types::TypePtr expectedType,
+                const types::FuncTypePtr &callee);
+  int64_t translateIndex(int64_t idx, int64_t len, bool clamp = false);
+  int64_t sliceAdjustIndices(int64_t length, int64_t *start, int64_t *stop,
+                             int64_t step);
 
   friend struct Cache;
 };

@@ -29,6 +29,8 @@ struct GlobalVarAnalyzer : public util::Operator {
 };
 } // namespace
 
+const std::string GlobalVarsAnalyses::KEY = "core-analyses-global-vars";
+
 std::unique_ptr<Result> GlobalVarsAnalyses::run(const Module *m) {
   GlobalVarAnalyzer gva;
   gva.visit(const_cast<Module *>(m)); // TODO: any way around this cast?

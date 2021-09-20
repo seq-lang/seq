@@ -18,7 +18,7 @@ def open_index_file(basename, mode):
 def index_load(basename):
     from pickle import load
     with open_index_file(basename, 'rb') as jar:
-        return load[GenomeIndex](jar)
+        return load(jar, GenomeIndex)
 
 def main_index(basename):
     from pickle import dump

@@ -10,16 +10,16 @@ def dist_fast(k1, k2):
 
 def dist_slow(k1, k2):
     d = 0
-    for i in range(typeof(k1).len()):
+    for i in range(type(k1).len()):
         if k1[i] != k2[i]:
             d += 1
     return d
 
-def test[K](use_slow_dist):
+def test(use_slow_dist, K: Static[int]):
     n = 0
-    with timing(f'{K.len()}-mer ({use_slow_dist=})'):
+    with timing(f'{K}-mer ({use_slow_dist=})'):
         for s in FASTA(argv[1]) |> seqs:
-            for kmer in s |> kmers[K](1):
+            for kmer in s |> kmers(1, K):
                 d = 0
                 rckmer = ~kmer
                 if use_slow_dist:
@@ -30,15 +30,15 @@ def test[K](use_slow_dist):
     print n
 
 print 'start'
-test[Kmer[4]](False)
-test[Kmer[4]](True)
-test[Kmer[8]](False)
-test[Kmer[8]](True)
-test[Kmer[16]](False)
-test[Kmer[16]](True)
-test[Kmer[32]](False)
-test[Kmer[32]](True)
-test[Kmer[64]](False)
-test[Kmer[64]](True)
-test[Kmer[128]](False)
-test[Kmer[128]](True)
+test(False, 4)
+test(True, 4)
+test(False, 8)
+test(True, 8)
+test(False, 16)
+test(True, 16)
+test(False, 32)
+test(True, 32)
+test(False, 64)
+test(True, 64)
+test(False, 128)
+test(True, 128)
