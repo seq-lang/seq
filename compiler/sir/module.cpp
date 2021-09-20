@@ -118,8 +118,13 @@ Func *Module::getOrRealizeMethod(types::Type *parent, const std::string &methodN
   auto method = cache->findMethod(cls.get(), methodName, generateDummyNames(args));
   if (!method)
     return nullptr;
-  return cache->realizeFunction(method, translateArgs(args),
-                                translateGenerics(generics), cls);
+  try {
+    return cache->realizeFunction(method, translateArgs(args),
+                                  translateGenerics(generics), cls);
+  } catch (const exc::ParserException &e) {
+    LOG_IR("getOrRealizeMethod parser error: {}", e.what());
+    return nullptr;
+  }
 }
 
 Func *Module::getOrRealizeFunc(const std::string &funcName,
@@ -133,7 +138,12 @@ Func *Module::getOrRealizeFunc(const std::string &funcName,
     return nullptr;
   auto arg = translateArgs(args);
   auto gens = translateGenerics(generics);
-  return cache->realizeFunction(func, arg, gens);
+  try {
+    return cache->realizeFunction(func, arg, gens);
+  } catch (const exc::ParserException &e) {
+    LOG_IR("getOrRealizeFunc parser error: {}", e.what());
+    return nullptr;
+  }
 }
 
 types::Type *Module::getOrRealizeType(const std::string &typeName,
@@ -144,7 +154,12 @@ types::Type *Module::getOrRealizeType(const std::string &typeName,
   auto type = cache->findClass(fqName);
   if (!type)
     return nullptr;
-  return cache->realizeType(type, translateGenerics(generics));
+  try {
+    return cache->realizeType(type, translateGenerics(generics));
+  } catch (const exc::ParserException &e) {
+    LOG_IR("getOrRealizeType parser error: {}", e.what());
+    return nullptr;
+  }
 }
 
 types::Type *Module::getVoidType() {
