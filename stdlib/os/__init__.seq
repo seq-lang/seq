@@ -53,3 +53,11 @@ environ = EnvMap()
 
 def getenv(key: str, default: str = ""):
     return environ[key] if key in environ else default
+
+
+def mkdir(name: str, mode: int = 0x1FF) -> int:
+    # TODO: use errno
+    from C import mkdir(cobj, int) -> int
+    ret = mkdir(name.ptr, mode)
+    if ret != 0:
+        raise OSError("mkdir failed")

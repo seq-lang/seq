@@ -615,14 +615,28 @@ class Foo:
     class Bar:
         bar: int
         b: Optional[Foo.Bar]
-        c: Optional[Foo]
+        c: Optional[int]
         class Moo:
-            x: Foo.Bar
+            # TODO: allow nested class reference to the upclass
+            # x: Foo.Bar
+            x: int
 y = Foo(1)
-z = Foo.Bar(2, None, y)
-m = Foo.Bar.Moo(z)
+z = Foo.Bar(2, None, 4)
+m = Foo.Bar.Moo(5)
 print y.foo #: 1
-print z.bar, z.b.__bool__(), z.c.foo, m.x.bar  #: 2 False 1 2
+print z.bar, z.b.__bool__(), z.c, m.x  #: 2 False 4 5
+
+#%% class_nested_2,barebones
+@tuple
+class Foo:
+    @tuple
+    class Bar:
+        x: int
+    x: int
+    b: Bar
+    c: Foo.Bar
+f = Foo(5, Foo.Bar(6), Foo.Bar(7))
+print(f) #: (x: 5, b: (x: 6), c: (x: 7))
 
 #%% class_nested_err,barebones
 class Foo:

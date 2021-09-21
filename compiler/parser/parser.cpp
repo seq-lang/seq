@@ -44,8 +44,9 @@ ir::Module *parse(const string &argv0, const string &file, const string &code,
       _dbg_level |= s.find('t') != string::npos ? (1 << 0) : 0; // time
       _dbg_level |= s.find('r') != string::npos ? (1 << 2) : 0; // realize
       _dbg_level |= s.find('T') != string::npos ? (1 << 4) : 0; // type-check
-      _dbg_level |= s.find('l') != string::npos ? (1 << 5) : 0; // lexer
+      _dbg_level |= s.find('L') != string::npos ? (1 << 5) : 0; // lexer
       _dbg_level |= s.find('i') != string::npos ? (1 << 6) : 0; // IR
+      _dbg_level |= s.find('l') != string::npos ? (1 << 7) : 0; // User-level debugging
     }
 
     char abs[PATH_MAX + 1] = {'-', 0};
