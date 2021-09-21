@@ -173,13 +173,18 @@ int runMode(const std::vector<const char *> &args) {
       "l", llvm::cl::desc("Load and link the specified library"));
   llvm::cl::list<std::string> seqArgs(llvm::cl::ConsumeAfter,
                                       llvm::cl::desc("<program arguments>..."));
-
+  auto start_t = std::chrono::high_resolution_clock::now();
   auto result = processSource(args);
   if (!result.visitor)
     return EXIT_FAILURE;
   std::vector<std::string> libsVec(libs);
   std::vector<std::string> argsVec(seqArgs);
   argsVec.insert(argsVec.begin(), result.input);
+  LOG_USER("compiler took: {:.2f} seconds",
+           std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::high_resolution_clock::now() - start_t)
+                   .count() /
+               1000.0);
   result.visitor->run(argsVec, libsVec);
   return EXIT_SUCCESS;
 }
