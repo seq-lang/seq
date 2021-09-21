@@ -323,7 +323,7 @@ Standard fare:
     a = 10
     while a > 0:  # prints even numbers from 9 to 1
         a -= 1
-        if i % 2 == 1:
+        if a % 2 == 1:
             continue
         print a
 
@@ -347,7 +347,7 @@ Comprehensions are a nifty, Pythonic way to create collections:
 .. code:: seq
 
     l = [i for i in range(5)]  # type: List[int]; l is [0, 1, 2, 3, 4]
-    l = [i for i in range(15) if i % 1 == 1 if i > 10]  # type: List[int]; l is [11, 13]
+    l = [i for i in range(15) if i % 2 == 1 if i > 10]  # type: List[int]; l is [11, 13]
     l = [i * j for i in range(5) for j in range(5) if i == j]  # l is [0, 1, 4, 9, 16]
 
     s = {abs(i - j) for i in range(5) for j in range(5)}  # s is {0, 1, 2, 3, 4}
@@ -501,7 +501,7 @@ Functions are defined as follows:
 
     def foo(a, b, c):
         return a + b + c
-    print foo(1, 2, 3)  # prints 5
+    print foo(1, 2, 3)  # prints 6
 
 How about procedures? Well, don't return anything meaningful:
 
@@ -625,7 +625,7 @@ receives a value, as in Python.
 
 .. code:: seq
 
-    def mysum[T](start: T) -> T:
+    def mysum[T](start: T):
         m = start
         while True:
             a = (yield)  # receives the input of coroutine.send() call
