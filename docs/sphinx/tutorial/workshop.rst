@@ -317,12 +317,13 @@ read:
 
 .. code:: seq
 
-    candidates = Dict[int,int]()  # position -> count mapping
+    candidates = {}  # position -> count mapping
     for record in FASTQ(argv[2]):
         for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
-                candidates.increment(found - pos)
+                loc = found - pos
+                candidates[loc] = candidates.get(loc, 0) + 1
 
         for pos,count in candidates.items():
             if count > 1:
@@ -383,12 +384,13 @@ Full code listing
     with gzip.open(argv[1] + '.index', 'rb') as jar:
         index = pickle.load(jar, T=Dict[Kmer[K],int])
 
-    candidates = Dict[int,int]()  # position -> count mapping
+    candidates = {}  # position -> count mapping
     for record in FASTQ(argv[2]):
         for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
-                candidates.increment(found - pos)
+                loc = found - pos
+                candidates[loc] = candidates.get(loc, 0) + 1
 
         for pos,count in candidates.items():
             if count > 1:
@@ -437,12 +439,13 @@ For now, we'll use a simple ``query.align(target)``:
 
 .. code:: seq
 
-    candidates = Dict[int,int]()  # position -> count mapping
+    candidates = {}  # position -> count mapping
     for record in FASTQ(argv[2]):
         for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
-                candidates.increment(found - pos)
+                loc = found - pos
+                candidates[loc] = candidates.get(loc, 0) + 1
 
         for pos,count in candidates.items():
             if count > 1:
@@ -516,12 +519,13 @@ Full code listing
     with gzip.open(argv[1] + '.index', 'rb') as jar:
         index = pickle.load(jar, T=Dict[Kmer[K],int])
 
-    candidates = Dict[int,int]()  # position -> count mapping
+    candidates = {}  # position -> count mapping
     for record in FASTQ(argv[2]):
         for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
-                candidates.increment(found - pos)
+                loc = found - pos
+                candidates[loc] = candidates.get(loc, 0) + 1
 
         for pos,count in candidates.items():
             if count > 1:
@@ -549,11 +553,12 @@ We can write this as a pipeline in Seq as follows:
 .. code:: seq
 
     def find_candidates(record):
-        candidates = Dict[int,int]()  # position -> count mapping
+        candidates = {}  # position -> count mapping
         for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
-                candidates.increment(found - pos)
+                loc = found - pos
+                candidates[loc] = candidates.get(loc, 0) + 1
         for pos,count in candidates.items():
             if count > 1:
                 yield record, pos
@@ -657,11 +662,12 @@ Full code listing
         index = pickle.load(jar, T=Dict[Kmer[K],int])
 
     def find_candidates(record):
-        candidates = Dict[int,int]()  # position -> count mapping
+        candidates = {}  # position -> count mapping
         for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
-                candidates.increment(found - pos)
+                loc = found - pos
+                candidates[loc] = candidates.get(loc, 0) + 1
         for pos,count in candidates.items():
             if count > 1:
                 yield record, pos
@@ -742,11 +748,12 @@ Full code listing
         index = pickle.load(jar, T=Dict[Kmer[K],int])
 
     def find_candidates(record):
-        candidates = Dict[int,int]()  # position -> count mapping
+        candidates = {}  # position -> count mapping
         for pos,kmer in record.read.kmers_with_pos(k=K, step=1):
             found = index.get(min(kmer, ~kmer), -1)
             if found > 0:
-                candidates.increment(found - pos)
+                loc = found - pos
+                candidates[loc] = candidates.get(loc, 0) + 1
         for pos,count in candidates.items():
             if count > 1:
                 yield record, pos
