@@ -217,6 +217,7 @@ Parallel FASTQ processing
     def process(s: seq):
         ...
 
+    # OMP_NUM_THREADS environment variable controls threads
     FASTQ('reads.fq') |> iter ||> process
 
     # Sometimes batching reads into blocks can improve performance,
