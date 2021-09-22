@@ -36,7 +36,7 @@ def align_and_output(t):
     query = record.read
     target = reference[pos:pos + len(query)]
     alignment = query.align(target)
-    print record.name, pos + 1, alignment.score, alignment.cigar
+    print(record.name, pos + 1, alignment.score, alignment.cigar)
 
 with timing('mapping'):
     FASTQ(argv[2]) |> iter |> find_candidates |> align_and_output

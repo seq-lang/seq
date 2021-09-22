@@ -31,6 +31,6 @@ for record in FASTQ(argv[2]):
             query = record.read
             target = reference[pos:pos + len(query)]
             alignment = query.align(target)
-            print record.name, pos + 1, alignment.score, alignment.cigar
+            print(record.name, pos + 1, alignment.score, alignment.cigar)
 
     candidates.clear()

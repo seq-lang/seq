@@ -138,7 +138,7 @@ on a single line:
     from sys import argv
     from bio import *
     for record in FASTQ(argv[1]):
-        print record.name, record.seq
+        print(record.name, record.seq)
 
 Now we can run this Seq program:
 
@@ -183,7 +183,7 @@ Full code listing
     from sys import argv
     from bio import *
     for record in FASTQ(argv[1]):
-        print record.name, record.seq
+        print(record.name, record.seq)
 
 
 Section 2: Building an index
@@ -327,7 +327,7 @@ read:
 
         for pos,count in candidates.items():
             if count > 1:
-                print record.name, pos + 1
+                print(record.name, pos + 1)
 
         candidates.clear()
 
@@ -394,7 +394,7 @@ Full code listing
 
         for pos,count in candidates.items():
             if count > 1:
-                print record.name, pos + 1
+                print(record.name, pos + 1)
 
         candidates.clear()
 
@@ -453,7 +453,7 @@ For now, we'll use a simple ``query.align(target)``:
                 query = record.read
                 target = reference[pos:pos + len(query)]
                 alignment = query.align(target)
-                print record.name, pos + 1, alignment.score, alignment.cigar
+                print(record.name, pos + 1, alignment.score, alignment.cigar)
 
         candidates.clear()
 
@@ -532,7 +532,7 @@ Full code listing
                 query = record.read
                 target = reference[pos:pos + len(query)]
                 alignment = query.align(target)
-                print record.name, pos + 1, alignment.score, alignment.cigar
+                print(record.name, pos + 1, alignment.score, alignment.cigar)
 
         candidates.clear()
 
@@ -568,7 +568,7 @@ We can write this as a pipeline in Seq as follows:
         query = record.read
         target = reference[pos:pos + len(query)]
         alignment = query.align(target)
-        print record.name, pos + 1, alignment.score, alignment.cigar
+        print(record.name, pos + 1, alignment.score, alignment.cigar)
 
 Notice that ``find_candidates`` *yields* candidate alignments to ``align_and_output``,
 which then performs alignment and prints the results. In Seq, all values generated
@@ -677,7 +677,7 @@ Full code listing
         query = record.read
         target = reference[pos:pos + len(query)]
         alignment = query.align(target)
-        print record.name, pos + 1, alignment.score, alignment.cigar
+        print(record.name, pos + 1, alignment.score, alignment.cigar)
 
     with timing('mapping'):
         FASTQ(argv[2]) |> iter |> find_candidates |> align_and_output
@@ -764,7 +764,7 @@ Full code listing
         query = record.read
         target = reference[pos:pos + len(query)]
         alignment = query.align(target)
-        print record.name, pos + 1, alignment.score, alignment.cigar
+        print(record.name, pos + 1, alignment.score, alignment.cigar)
 
     with timing('mapping'):
         FASTQ(argv[2]) |> iter |> find_candidates |> align_and_output

@@ -24,6 +24,6 @@ for record in FASTQ(argv[2]):
 
     for pos,count in candidates.items():
         if count > 1:
-            print record.name, pos + 1
+            print(record.name, pos + 1)
 
     candidates.clear()
