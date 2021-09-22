@@ -11,6 +11,7 @@ Source code is available `on GitHub <https://github.com/seq-lang/seq>`_. You can
    intro
    tutorial/index
    cookbook
+   parallel
    python
    embed
    build
