@@ -95,6 +95,10 @@ html_theme = 'sphinx_book_theme'
 # documentation.
 #
 html_theme_options = {
+    "repository_url": "https://github.com/seq-lang/seq",
+    "repository_branch": "develop",
+    "path_to_docs": "docs/sphinx/",
+    "use_repository_button": True,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

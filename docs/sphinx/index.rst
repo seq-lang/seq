@@ -1,9 +1,9 @@
-**Seq** — a language for bioinformatics
-=======================================
+**Seq** — a Python implementation for bioinformatics
+====================================================
 
-Seq is a programming language for computational genomics and bioinformatics. With a Python-compatible syntax and a host of domain-specific features and optimizations, Seq makes writing high-performance genomics software as easy as writing Python code, and achieves performance comparable to (and in many cases better than) C/C++.
+Seq is a Pythonic language for computational genomics and bioinformatics. With a Python-compatible syntax and a host of domain-specific features and optimizations, Seq makes writing high-performance genomics software as easy as writing Python code, and achieves performance comparable to (and in many cases better than) C/C++.
 
-Source code is available `on GitHub <https://github.com/seq-lang/seq>`_. You can also learn more about Seq from `our paper <https://dl.acm.org/citation.cfm?id=3360551>`_ or by visiting our `Gitter chatroom <https://gitter.im/seq-lang/Seq?utm_source=share-link&utm_medium=link&utm_campaign=share-link>`_.
+Questions, comments or suggestions? Visit our `Gitter chatroom <https://gitter.im/seq-lang/Seq?utm_source=share-link&utm_medium=link&utm_campaign=share-link>`_.
 
 .. toctree::
    :maxdepth: 1
@@ -17,8 +17,22 @@ Source code is available `on GitHub <https://github.com/seq-lang/seq>`_. You can
    build
    stdlib/index
 
+News
+----
+
+What's new in 0.11?
+^^^^^^^^^^^^^^^^^^^
+
+Version 0.11 again includes a number of upgrades to the parser, type system and compiler backend:
+
+- Parallelism and multithreading support with OpenMP (e.g. ``@par for i in range(10): ...``)
+- New PEG parser
+- Improved compile-time static evaluation
+- Upgrade to LLVM 12 (from LLVM 6)
+- A few changes to the ``bio`` module, particularly with ``seq.kmers()``, which now takes a length argument as in ``s.kmers(k=12, step=1)``
+
 What's new in 0.10?
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 Version 0.10 brings a slew of improvements to the language and compiler, including:
 
@@ -34,6 +48,10 @@ Version 0.10 brings a slew of improvements to the language and compiler, includi
 
 Frequently Asked Questions
 --------------------------
+
+    *Can I use Seq for general-purpose computing?*
+
+Yes! While the Seq project started with a narrow focus on bioinformatics, it has grown to encompass much of Python's syntax, semantics and modules, making it a useful tool beyond just bioinformatics, particularly when large datasets need to be processed with Python.
 
     *What is the goal of Seq?*
 
