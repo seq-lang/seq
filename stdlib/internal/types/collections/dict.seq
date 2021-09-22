@@ -36,11 +36,6 @@ class Dict[K,V]:
         for k,v in g:
             self[k] = v
 
-    def __init__(self, g: Tuple[K,V]):
-        self._init()
-        k, v = g
-        self[k] = v
-
     def __getitem__(self, key: K) -> V:
         x = self._kh_get(key)
         if x != self._kh_end():
