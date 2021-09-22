@@ -13,8 +13,12 @@ Python shared library:
 
     export SEQ_PYTHON=/path/to/libpython.X.Y.so
 
-For example, with a ``brew``-installed Python 3.8 on macOS, this might be
-``/usr/local/Cellar/python@3.8/3.8.8_1/Frameworks/Python.framework/Versions/3.8/lib/libpython3.8.dylib``.
+For example, with a ``brew``-installed Python 3.9 on macOS, this might be
+
+.. code-block:: bash
+
+    /usr/local/opt/python@3.9/Frameworks/Python.framework/Versions/3.9/lib/libpython3.9.dylib
+
 Note that only Python versions 3.6 and later are supported.
 
 ``from python import``

@@ -1,14 +1,14 @@
 Calling Seq from C/C++
 ======================
 
-Calling C/C++ from Seq is quite easy with ``cimport``, but Seq can also be called from C/C++ code. To make a Seq function externally visible, simply annotate it with ``@export``:
+Calling C/C++ from Seq is quite easy with ``from C import``, but Seq can also be called from C/C++ code. To make a Seq function externally visible, simply annotate it with ``@export``:
 
 .. code-block:: seq
 
     @export
     def foo(n: int):
         for i in range(n):
-            print i * i
+            print(i * i)
         return n * n
 
 Note that only top-level, non-generic functions can be exported. Now we can create a shared library containing ``foo`` (assuming source file *foo.seq*):
