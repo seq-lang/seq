@@ -18,7 +18,7 @@ Note that only top-level, non-generic functions can be exported. Now we can crea
     seqc build -o foo.o foo.seq
     gcc -shared -lseqrt -lomp foo.o -o libfoo.so
 
-(The last command might require an additional ``-L/path/to/seqrt/lib/`` argumment if ``libseqrt`` is not installed on a standard path.)
+(The last command might require an additional ``-L/path/to/seqrt/lib/`` argument if ``libseqrt`` is not installed on a standard path.)
 
 Now we can call ``foo`` from a C program:
 

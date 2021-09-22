@@ -73,6 +73,6 @@ Compile-time definitions
 .. code-block:: seq
 
     from bio import *
-    print Kmer[SEED_LEN]()
+    print(Kmer[SEED_LEN]())
 
 ``SEED_LEN`` can be specified on the command line as such: ``seqc run -DSEED_LEN=10 myprogram.seq``.
