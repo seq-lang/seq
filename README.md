@@ -49,7 +49,7 @@ def fib(n):
 fib(1000)
 ```
 
-This prime counting example showcases Seq's [OpenMP](https://www.openmp.org/) support, enabled with the addition of one line.
+This prime counting example showcases Seq's [OpenMP](https://www.openmp.org/) support, enabled with the addition of one line. The `@par` annotation tells the compiler to parallelize the following for-loop, in this case using a dynamic schedule, chunk size of 100, and 16 threads.
 
 ```python
 from sys import argv
@@ -71,8 +71,6 @@ for i in range(2, limit):
 
 print(total)
 ```
-
-The `@par` annotation tells the compiler to ______. In practice, the single `@par` line can provide a _____.
 
 Here is an example showcasing some of Seq's bioinformatics features, which include native sequence and k-mer types.
 
