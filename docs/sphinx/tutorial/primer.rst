@@ -12,12 +12,10 @@ First and foremost, Seq supports both Python 2 and Python 3 printing:
 
 .. code:: seq
 
-    print 'hello world'  # Python 2 style works
+    print('hello world')
 
     from sys import stderr
     print('hello world', end='', file=stderr)  # Python 3 style also works
-
-Use whichever you prefer!
 
 Comments
 --------
@@ -34,7 +32,7 @@ Comments
 Literals
 --------
 
-Seq is a strongly typed language like C++, Java or C#. That means each
+Seq is a strongly typed language like C++, Java, or C#. That means each
 expression must have a type that can be inferred at the compile-time.
 
 .. code:: seq
@@ -92,7 +90,7 @@ only if a tuple is homogenous (all types are the same) or if the value
 of the index is known at compile-time.
 
 You can, however, iterate over heterogenous tuples in Seq. This is achieved
-by unrolling the loop to accomodate the different types.
+by unrolling the loop to accommodate the different types.
 
 .. code:: seq
 
@@ -106,12 +104,12 @@ by unrolling the loop to accomodate the different types.
     u = (1, 2, 3)  # type: Tuple[int, int, int].
     u[x]  # works because tuple members share the same type regardless of x
     for i in u:  # works
-        print i
+        print(i)
 
     # Also works
     v = (42, 'x', 3.14)
     for i in v:
-        print i
+        print(i)
 
 .. note::
     Tuples are **immutable**. ``a = (1, 2); a[1] = 1`` will not
@@ -233,7 +231,7 @@ Seq supports most of Python's tuple unpacking syntax:
     *sth, a, b = (1.1, 2, 3.3, 4)  # error: this only works on homogenous tuples for now
 
     (x, y), *pff, z = [1, 2], 'this'
-    print x, y, pff, z # x is 1, y is 2, pff is an empty tuple --- () ---, and z is "this"
+    print(x, y, pff, z) # x is 1, y is 2, pff is an empty tuple --- () ---, and z is "this"
 
     s, *q = 'XYZ'  # works on strings as well; s is "X" and q is "YZ"
 
@@ -248,11 +246,11 @@ Seq supports the standard Python conditional syntax:
 .. code:: seq
 
     if a or b or some_cond():
-        print 1
+        print(1)
     elif whatever() or 1 < a <= b < c < 4:  # oh yes, we do support chained comparisons
-        print 'meh...'
+        print('meh...')
     else:
-        print 'lo and behold!'
+        print('lo and behold!')
 
     if x: y()
 
@@ -266,29 +264,29 @@ But lo and behold! Seq extends the Python conditional syntax with a
 
     match a + some_heavy_expr():  # assuming that the type of this expression is int
         case 1:  # is it 1?
-            print 'hi'
+            print('hi')
         case 2 ... 10:  # is it 2, 3, 4, 5, 6, 7, 8, 9 or 10?
-            print 'wow!'
+            print('wow!')
         case _:  # "default" case
-            print 'meh...'
+            print('meh...')
 
     match bool_expr():  # now it's a bool expression
         case True: ...
         case False: ...
 
     match str_expr():  # now it's a str expression
-        case 'abc': print "it's ABC time!"
+        case 'abc': print("it's ABC time!")
         case 'def' | 'ghi':  # you can chain multiple rules with "|" operator
-            print "it's not ABC time!"
-        case s if len(s) > 10: print "so looong!"  # conditional match expression
+            print("it's not ABC time!")
+        case s if len(s) > 10: print("so looong!")  # conditional match expression
         case _: assert False
 
     match some_tuple:  # assuming typeof(some_tuple) is Tuple[int, int]
         case (1, 2): ...
         case (a, _) if a == 42:  # you can do away with useless terms with an underscore
-            print 'hitchhiker!'
+            print('hitchhiker!')
         case (a, 50 ... 100) | (10 ... 20, b):  # you can nest match expressions
-            print 'complex!'
+            print('complex!')
 
     match list_foo():
         case []:  # [] actually works here
@@ -302,7 +300,7 @@ But lo and behold! Seq extends the Python conditional syntax with a
         case [..., w] if w < 0:  # matches a list that ends with a negative integer
             ...
         case [...] as l:  # any other list; binds variable l to it
-            print l
+            print(l)
 
     match sequence:  # of type seq
         case 'ACGT': ...
@@ -325,15 +323,15 @@ Standard fare:
         a -= 1
         if a % 2 == 1:
             continue
-        print a
+        print(a)
 
     for i in range(10):  # prints numbers from 0 to 7, inclusive
-        print i
+        print(i)
         if i > 6: break
 
 ``for`` construct can iterate over any generator, which means any object
 that implements the ``__iter__`` magic method. In practice, generators,
-lists, sets, dictionaries, homogenous tuples, ranges and many more types
+lists, sets, dictionaries, homogenous tuples, ranges, and many more types
 implement this method, so you don't need to worry. If you need to
 implement one yourself, just keep in mind that ``__iter__`` is a
 generator and not a function.
@@ -359,7 +357,7 @@ on):
 .. code:: seq
 
     g = (i for i in range(10))
-    print List[int](g)  # prints number from 0 to 9, inclusive
+    print(List[int](g))  # prints number from 0 to 9, inclusive
 
 Exception handling
 ~~~~~~~~~~~~~~~~~~
@@ -375,11 +373,11 @@ Seq:
     try:
         throwable()
     except ValueError as e:
-        print "we caught the exception"
+        print("we caught the exception")
     except:
-        print "ouch, we're in a deep trouble"
+        print("ouch, we're in deep trouble")
     finally:
-        print "whatever, it's done"
+        print("whatever, it's done")
 
 .. note::
     Right now, Seq cannot catch multiple exceptions in one
@@ -417,11 +415,11 @@ That means that the following Pythonic pattern won't compile:
          x = 1
     else:
          x = 2
-    print x  # x is defined separately in if/else blocks; it is not accessible here!
+    print(x)  # x is defined separately in if/else blocks; it is not accessible here!
 
     for i in range(10):
          ...
-    print i  # error: i is only accessible within the for loop block
+    print(i)  # error: i is only accessible within the for loop block
 
 In Seq, you can rewrite that as:
 
@@ -434,7 +432,7 @@ In Seq, you can rewrite that as:
     # or even better
     x = 1 if cond() else 2
 
-    print x
+    print(x)
 
 Another important difference between Seq and Python is that, in Seq, variables
 cannot change types. So this won't compile:
@@ -452,21 +450,21 @@ modify such variables:
 
     g = 5
     def foo():
-         print g
+        print(g)
     foo()  # works, prints 5
 
     def foo2():
-         g += 2  # error: cannot access g
-         print g
+        g += 2  # error: cannot access g
+        print(g)
 
     def foo3():
-         global g
-         g += 2
-         print g
+        global g
+        g += 2
+        print(g)
     foo3()  # works, prints 7
     foo3()  # works, prints 9
 
-As a rule, use ``global`` whenever you are need to access variables that
+As a rule, use ``global`` whenever you need to access variables that
 are not defined within the function.
 
 Imports
@@ -501,20 +499,20 @@ Functions are defined as follows:
 
     def foo(a, b, c):
         return a + b + c
-    print foo(1, 2, 3)  # prints 6
+    print(foo(1, 2, 3))  # prints 6
 
 How about procedures? Well, don't return anything meaningful:
 
 .. code:: seq
 
     def proc(a, b):
-        print a, 'followed by', b
+        print(a, 'followed by', b)
     proc(1, 's')
 
     def proc2(a, b):
         if a == 5:
             return
-        print a, 'followed by', b
+        print(a, 'followed by', b)
     proc2(1, 's')
     proc2(5, 's')  # this prints nothing
 
@@ -545,7 +543,7 @@ Default arguments? Named arguments? You bet:
 .. code:: seq
 
     def foo(a, b: int, c: float = 1.0, d: str = 'hi'):
-        print a, b, c, d
+        print(a, b, c, d)
     foo(1, 2)  # prints "1 2 1.0 hi"
     foo(1, d='foo', b=1)  # prints "1 1 1.0 foo"
 
@@ -555,7 +553,7 @@ How about optional arguments? We support that too:
 
     # type of b promoted to Optional[int]
     def foo(a, b: int = None):
-        print a, b + 1
+        print(a, b + 1)
 
     foo(1, 2)  # prints "1 3"
     foo(1)  # raises ValueError, since b is None
@@ -576,7 +574,7 @@ that generic function:
 .. code:: seq
 
     def foo(x):
-        print x  # print relies on typeof(x).__str__(x) method to print the representation of x
+        print(x)  # print relies on typeof(x).__str__(x) method to print the representation of x
     foo(1)  # Seq automatically generates foo(x: int) and calls int.__str__ when needed
     foo('s')  # Seq automatically generates foo(x: str) and calls str.__str__ when needed
     foo([1, 2])  # Seq automatically generates foo(x: List[int]) and calls List[int].__str__ when needed
@@ -588,14 +586,14 @@ specifiers:
 .. code:: seq
 
     def foo[T](x: List[T]):
-        print x
+        print(x)
     foo([1, 2])  # prints [1, 2]
     foo(['s', 'u'])  # prints [s, u]
     foo(5)  # error: 5 is not a list!
     foo[int](['s', 'u'])  # fails: T is int, so foo expects List[int] but it got List[str]
 
     def foo[R](x) -> R:
-        print x
+        print(x)
         return 1
     foo[int](4)  # prints 4, returns 1
     foo[str](4)  # error: return type is str, but foo returns int!
@@ -616,8 +614,8 @@ Seq supports generators, and they are fast! Really, really fast!
         while i < 10:
             yield i
             i += 1
-    print List[int](gen(0))  # prints [0, 1, ..., 9]
-    print List[int](gen(10))  # prints []
+    print(List[int](gen(0)))  # prints [0, 1, ..., 9]
+    print(List[int](gen(10)))  # prints []
 
 You can also use ``yield`` to implement coroutines: ``yield``
 suspends the function, while ``(yield)`` (yes, parentheses are required)
@@ -661,7 +659,7 @@ functions and generators to form a pipeline:
 
 
     def echo(s):
-        print s
+        print(s)
     def gen(i):
         for i in range(i):
             yield i
@@ -731,7 +729,7 @@ described in the first section, you can do:
 .. code:: seq
 
     from python import mymodule.myfunction(str) -> int as foo
-    print foo("bar")
+    print(foo("bar"))
 
 Often you want to execute more complex Python code within Seq. To that
 end, you can use Seq's ``@python`` annotation:
@@ -747,7 +745,7 @@ end, you can use Seq's ``@python`` annotation:
         data = np.array(i)
         eigenvalues, _ = scipy.linalg.eig(data)
         return list(eigenvalues)
-    print scipy_here_i_come([[1.0, 2.0], [3.0, 4.0]])  # [-0.372281, 5.37228] with some warnings...
+    print(scipy_here_i_come([[1.0, 2.0], [3.0, 4.0]]))  # [-0.372281, 5.37228] with some warnings...
 
 Seq will automatically bridge any object that implements the ``__to_py__``
 and ``__from_py__`` magic methods. All standard Seq types already
@@ -770,7 +768,7 @@ Python's dataclasses).
             self.x, self.y = x, y
 
         def method(self):
-            print self.x, self.y
+            print(self.x, self.y)
 
     f = Foo(1, 2)
     f.method()  # prints "1 2"
@@ -796,7 +794,7 @@ Unlike Python, Seq supports method overloading:
             self.x, self.y = 0, 0
 
         def method(self: Foo):
-            print self.x, self.y
+            print(self.x, self.y)
 
     Foo().method()  # prints "0 0"
     Foo(1, 2).method()  # prints "1 2"
@@ -841,7 +839,7 @@ Seq also supports pass-by-value types via the ``@tuple`` annotation:
 
     p = Point(1, 2)
     q = p  # this is a copy!
-    print (p.x, p.y), (q.x, q.y)  # (1, 2), (1, 2)
+    print((p.x, p.y), (q.x, q.y))  # (1, 2), (1, 2)
 
 However, **by-value objects are immutable!**. The following code will
 not compile:
@@ -870,7 +868,7 @@ You can also add methods to types:
             return self.x + self.y
 
     p = Point()  # p is (0, 1)
-    print p.some_method()  # 1
+    print(p.some_method())  # 1
 
 Type extensions
 ~~~~~~~~~~~~~~~
@@ -900,7 +898,7 @@ the compile time:
         def __add__(self: int, other: str) -> int:
             return self + int(other)
 
-    print 5 + '4'  # 9
+    print(5 + '4')  # 9
 
 Magic methods
 ~~~~~~~~~~~~~
@@ -935,9 +933,9 @@ accessible with Seq. This can be done with the ``@llvm`` attribute:
         %res = add {=T} %a, %b
         ret {=T} %res
 
-    print llvm_add(3, 4)  # 7
-    print llvm_add(i8(5), i8(6))  # 11
+    print(llvm_add(3, 4))  # 7
+    print(llvm_add(i8(5), i8(6)))  # 11
 
 --------------
 
-Issues, feedback or comments regarding this tutorial? Let us know `on GitHub <https://github.com/seq-lang/seq>`__.
+Issues, feedback, or comments regarding this tutorial? Let us know `on GitHub <https://github.com/seq-lang/seq>`__.
