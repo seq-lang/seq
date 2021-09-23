@@ -2,18 +2,13 @@
 
 Thank you for considering contributing to Seq! This document contains some helpful information for getting started. The best place to ask questions or get feedback is [our Gitter chatroom](https://gitter.im/seq-lang/Seq). For a high-level outline of the features we aim to add in the future, check the [roadmap](https://github.com/seq-lang/seq/wiki/Roadmap).
 
-## An overview
-
-The [compiler internals documentation](https://seq-lang.org/internals.html) is probably a good starting point if you plan on modifying the compiler. If you have any specific questions, please don't hesitate to ask on Gitter.
-
 ## Development workflow
 
 All development is done on the [`develop`](https://github.com/seq-lang/seq/tree/develop) branch. Just before release, we bump the version number, merge into [`master`](https://github.com/seq-lang/seq/tree/master) and tag the build with a tag of the form `vX.Y.Z` where `X`, `Y` and `Z` are the [SemVer](https://semver.org) major, minor and patch numbers, respectively. Our Travis CI build script automatically builds and deploys tagged commits as a new GitHub release via our trusty [@SeqBot](https://github.com/seqbot). It also builds and deploys the documentation to our website.
 
 ## Coding standards
 
-- All C++ code should be formatted with [ClangFormat](https://clang.llvm.org/docs/ClangFormat.html) using the LLVM style guide.
-- All OCaml code should be formatted with [OCamlFormat](https://github.com/ocaml-ppx/ocamlformat) using the Jane Street style guide.
+All C++ code should be formatted with [ClangFormat](https://clang.llvm.org/docs/ClangFormat.html) using the `.clang-format` file in the root of the repository.
 
 ## Writing tests
 
@@ -37,7 +32,7 @@ my_test()
 Example:
 
 ```python
-print 2 + 2  # EXPECT: 4
+print(2 + 2)  # EXPECT: 4
 ```
 
 **Semantics:** The source file is scanned for `EXPECT`s, executed, then the output is compared to the "expected" output. Note that if you have, for example, an `EXPECT` in a loop, you will need to duplicate it however many times the loop is executed. Using `EXPECT` is helpful mainly in cases where you need to test control flow, **otherwise prefer the new style**.
