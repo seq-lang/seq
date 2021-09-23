@@ -48,7 +48,7 @@ expression must have a type that can be inferred at the compile-time.
     b = 1.12  # type: float. Seq's float is identical to C's double.
     c = 5u  # type: int, but unsigned
     d = Int[8](12)  # 8-bit signed integer; you can go all the way to Int[2048]
-    e = Int[8](200)  # 8-bit unsigned integer
+    e = UInt[8](200)  # 8-bit unsigned integer
     f = byte(3)  # a byte is C's char; equivalent to Int[8]
 
     h = 0x12AF  # hexadecimal integers are also welcome
@@ -162,7 +162,7 @@ Assignments and operators
 .. code:: seq
 
     a = 1 + 2  # this is 3
-    a = 1.__add__(2)  # you can use a function call instead of an operator; this is also 3
+    a = (1).__add__(2)  # you can use a function call instead of an operator; this is also 3
     a = int.__add__(1, 2)  # this is equivalent to the previous line
     b = 5 / 2.0  # this is 2.5
     c = 5 // 2  # this is 2; // is an integer division
