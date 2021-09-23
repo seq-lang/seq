@@ -14,10 +14,10 @@ Subsequence extraction
 
     # explicit for-loop
     for subseq in myseq.split(sublen, stride):
-        print subseq
+        print(subseq)
 
     # pipelined
-    myseq |> split(sublen, stride) |> echo
+    myseq |> split(sublen, stride) |> print
 
 k-mer extraction
 ----------------
@@ -25,15 +25,14 @@ k-mer extraction
 .. code-block:: seq
 
     myseq = s'CAATAGAGACTAAGCATTAT'
-    K = Kmer[5]
     stride = 2
 
     # explicit for-loop
-    for subseq in myseq.kmers[K](stride):
-        print subseq
+    for subseq in myseq.kmers(stride, k=5):
+        print(subseq)
 
     # pipelined
-    myseq |> kmers[K](stride) |> echo
+    myseq |> kmers(stride, k=5) |> print
 
 Reverse complementation
 -----------------------
@@ -42,11 +41,11 @@ Reverse complementation
 
     # sequences
     s = s'GGATC'
-    print ~s     # GATCC
+    print(~s)     # GATCC
 
     # k-mers
     k = k'GGATC'
-    print ~k     # GATCC
+    print(~k)     # GATCC
 
 k-mer Hamming distance
 ----------------------
@@ -69,22 +68,22 @@ k-mer Hamming neighbors
                 if kmer[i] != b:
                     yield kmer |> base(i, b)
 
-    print list(neighbors(k'AGC'))  # CGC, GGC, etc.
+    print(list(neighbors(k'AGC')))  # CGC, GGC, etc.
 
 k-mer minimizer
 ---------------
 
 .. code-block:: seq
 
-    def minimizer[K](s):
-        assert len(s) >= K.len()
-        kmer_min = K(s)
-        for kmer in s[1:].kmers[K](1):
+    def minimizer(s, k: Static[int]):
+        assert len(s) >= k
+        kmer_min = Kmer[k](s[:k])
+        for kmer in s[1:].kmers(k=k, step=1):
             kmer = min(kmer, ~kmer)
             if kmer < kmer_min: kmer_min = kmer
         return kmer_min
 
-    print minimizer[Kmer[10]](s'ACGTACGTACGT')
+    print(minimizer(s'ACGTACGTACGT', 10))
 
 de Bruijn edge
 --------------
@@ -96,8 +95,8 @@ de Bruijn edge
         b = b >> s'A'           # shift right to A: [GAG]C -> A[GAG]
         return a == b           # suffix of a == prefix of b
 
-    print de_bruijn_edge(k'TGAG', k'GAGC')  # True
-    print de_bruijn_edge(k'TCAG', k'GAGC')  # False
+    print(de_bruijn_edge(k'TGAG', k'GAGC'))  # True
+    print(de_bruijn_edge(k'TCAG', k'GAGC'))  # False
 
 Count bases
 -----------
@@ -124,6 +123,8 @@ Count bases
             case 'T*': return count_bases(s[1:]) + (0,0,0,1)
             case _: return BaseCount(0,0,0,0)
 
+    print(count_bases(s'ACCGGGTTTT'))  # (A: 1, C: 2, G: 3, T: 4)
+
 Spaced seed search
 ------------------
 
@@ -137,6 +138,9 @@ Spaced seed search
                 return has_spaced_acgt(s[1:])
             case _:
                 return False
+
+    print(has_spaced_acgt(s'AAATCTGTTAAA'))  # True
+    print(has_spaced_acgt(s'ACGTACGTACGT'))  # False
 
 Reverse-complement palindrome
 -----------------------------
@@ -152,6 +156,9 @@ Reverse-complement palindrome
             case _:
                 return False
 
+    print is_own_revcomp(s'ACGT')  # True
+    print is_own_revcomp(s'ATTA')  # False
+
 Sequence alignment
 ------------------
 
@@ -161,12 +168,12 @@ Sequence alignment
     s1 = s'CGCGAGTCTT'
     s2 = s'CGCAGAGTT'
     aln = s1 @ s2
-    print aln.cigar, aln.score
+    print(aln.cigar, aln.score)  # 3M1I6M -3
 
     # custom parameters
     # match = 2; mismatch = 4; gap1(k) = 2k + 4; gap2(k) = k + 13
     aln = s1.align(s2, a=2, b=4, gapo=4, gape=2, gapo2=13, gape2=1)
-    print aln.cigar, aln.score
+    print(aln.cigar, aln.score)  # 3M1D3M2I2M 2
 
 Reading FASTA/FASTQ
 -------------------
@@ -175,22 +182,22 @@ Reading FASTA/FASTQ
 
     # iterate over everything
     for r in FASTA('genome.fa'):
-        print r.name
-        print r.seq
+        print(r.name)
+        print(r.seq)
 
     # iterate over sequences
     for s in FASTA('genome.fa') |> seqs:
-        print s
+        print(s)
 
     # iterate over everything
     for r in FASTQ('reads.fq'):
-        print r.name
-        print r.read
-        print r.qual
+        print(r.name)
+        print(r.read)
+        print(r.qual)
 
     # iterate over sequences
     for s in FASTQ('reads.fq') |> seqs:
-        print s
+        print(s)
 
 Reading paired-end FASTQ
 ------------------------
@@ -198,9 +205,9 @@ Reading paired-end FASTQ
 .. code-block:: seq
 
     for r1, r2 in zip(FASTQ('reads_1.fq'), FASTQ('reads_2.fq')):
-        print r1.name, r2.name
-        print r1.read, r2.read
-        print r1.qual, r2.qual
+        print(r1.name, r2.name)
+        print(r1.read, r2.read)
+        print(r1.qual, r2.qual)
 
 Parallel FASTQ processing
 -------------------------
@@ -224,12 +231,12 @@ Reading SAM/BAM/CRAM
 
     # iterate over everything
     for r in SAM('alignments.sam'):
-        print r.name
-        print r.read
-        print r.pos
-        print r.mapq
-        print r.cigar
-        print r.reversed
+        print(r.name)
+        print(r.read)
+        print(r.pos)
+        print(r.mapq)
+        print(r.cigar)
+        print(r.reversed)
         # etc.
 
     for r in BAM('alignments.bam'):
@@ -240,13 +247,13 @@ Reading SAM/BAM/CRAM
 
     # iterate over sequences
     for s in SAM('alignments.sam') |> seqs:
-        print s
+        print(s)
 
     for s in BAM('alignments.bam') |> seqs:
-        print s
+        print(s)
 
     for s in CRAM('alignments.cram') |> seqs:
-        print s
+        print(s)
 
 DNA to protein translation
 --------------------------
@@ -255,7 +262,7 @@ DNA to protein translation
 
     dna = s'AGGTCTAACGGC'
     protein = dna |> translate
-    print protein  # RSNG
+    print(protein)  # RSNG
 
 Reading protein sequences from FASTA
 ------------------------------------
@@ -263,4 +270,4 @@ Reading protein sequences from FASTA
 .. code-block:: seq
 
     for s in pFASTA('seqs.fasta') |> seqs:
-        print s
+        print(s)

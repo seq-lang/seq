@@ -5,4 +5,4 @@
 from sys import argv
 from bio import *
 for record in FASTQ(argv[1]):
-    print record.name, record.seq
+    print(record.name, record.seq)

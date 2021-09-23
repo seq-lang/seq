@@ -37,7 +37,7 @@ What's new in 0.10?
 Version 0.10 brings a slew of improvements to the language and compiler, including:
 
 - Nearly all of Python's syntax is now supported, including empty collections (``[]``, ``{}``), lambda functions (``lambda``), ``*args``/``**kwargs``, ``None`` and much more
-- Compiler error messages now pinpoint exactly where an error occured with compile-time backtraces
+- Compiler error messages now pinpoint exactly where an error occurred with compile-time backtraces
 - Runtime exceptions now include backtraces with file names and line numbers in debug mode
 - GDB and LLDB support
 - Various syntax updates to further close the gap with Python

@@ -37,71 +37,60 @@ Learn more by following the [tutorial](https://docs.seq-lang.org/tutorial) or fr
 
 ## Examples
 
-Seq is a Python-compatible language, and the vast majority of Python programs should work without any modifications:
+Seq is a Python-compatible language, and many Python programs should work with few if any modifications:
 
 ```python
-def check_prime(n):
-    if n > 1:
-        for i in range(2, n):
-            if n % i == 0:
-                return False
-        return True
-    else:
-        return False
-
-n = 1009
-print n, 'is', 'a' if check_prime(n) else 'not a', 'prime'
+def fib(n):
+    a, b = 0, 1
+    while a < n:
+        print(a, end=' ')
+        a, b = b, a+b
+    print()
+fib(1000)
 ```
 
-Here is an example showcasing Seq's bioinformatics features:
+This prime counting example showcases Seq's [OpenMP](https://www.openmp.org/) support, enabled with the addition of one line. The `@par` annotation tells the compiler to parallelize the following for-loop, in this case using a dynamic schedule, chunk size of 100, and 16 threads.
 
 ```python
-s = s'ACGTACGT'    # sequence literal
-print s[2:5]       # subsequence
-print ~s           # reverse complement
-kmer = Kmer[8](s)  # convert to k-mer
-K2 = Kmer[2]       # type definition
+from sys import argv
+
+def is_prime(n):
+    factors = 0
+    for i in range(2, n):
+        if n % i == 0:
+            factors += 1
+    return factors == 0
+
+limit = int(argv[1])
+total = 0
+
+@par(schedule='dynamic', chunk_size=100, num_threads=16)
+for i in range(2, limit):
+    if is_prime(i):
+        total += 1
+
+print(total)
+```
+
+Here is an example showcasing some of Seq's bioinformatics features, which include native sequence and k-mer types.
+
+```python
+from bio import *
+s = s'ACGTACGT'     # sequence literal
+print(s[2:5])       # subsequence
+print(~s)           # reverse complement
+kmer = Kmer[8](s)   # convert to k-mer
 
 # iterate over length-3 subsequences
 # with step 2
 for sub in s.split(3, step=2):
-    print sub[-1]  # last base
+    print(sub[-1])  # last base
 
     # iterate over 2-mers with step 1
-    for kmer in sub.kmers[K2](step=1):
-        print ~kmer  # '~' also works on k-mers
+    # for kmer in sub.kmers[K2](step=1):
+    for kmer in sub.kmers(step=1, k=2):
+        print(~kmer)  # '~' also works on k-mers
 ```
-
-Seq provides native sequence and k-mer types, e.g. a 8-mer is represented by `Kmer[8]` as above.
-
-Here is a more complex example that counts occurrences of subsequences from a FASTQ file (`argv[2]`) in sequences obtained from a FASTA file (`argv[1]`) using an FM-index:
-
-```python
-from sys import argv
-from bio.fmindex import FMIndex
-fmi = FMIndex(argv[1])
-k, step, n = 20, 20, 0
-
-def add(count: int):
-    global n
-    n += count
-
-@prefetch
-def search(s: seq, fmi: FMIndex):
-    intv = fmi.interval(s[-1])
-    s = s[:-1]  # trim last base
-    while s and intv:
-        # backwards-extend intv
-        intv = fmi[intv, s[-1]]
-        s = s[:-1]  # trim last
-    # return count of occurrences
-    return len(intv)
-
-FASTQ(argv[2]) |> seqs |> split(k, step) |> search(fmi) |> add
-print 'total:', n
-```
-
-The `@prefetch` annotation tells the compiler to perform a coroutine-based pipeline transformation to make the FM-index queries faster, by overlapping the cache miss latency from one query with other useful work. In practice, the single `@prefetch` line can provide a 2x performance improvement.
 
 ## Install
 
