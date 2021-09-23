@@ -55,7 +55,7 @@ k-mer Hamming distance
     k1 = k'ACGTC'
     k2 = k'ACTTA'
     #        ^ ^
-    print abs(k1 - k2)  # Hamming distance = 2
+    print(abs(k1 - k2))  # Hamming distance = 2
 
 k-mer Hamming neighbors
 -----------------------
@@ -156,8 +156,8 @@ Reverse-complement palindrome
             case _:
                 return False
 
-    print is_own_revcomp(s'ACGT')  # True
-    print is_own_revcomp(s'ATTA')  # False
+    print(is_own_revcomp(s'ACGT'))  # True
+    print(is_own_revcomp(s'ATTA'))  # False
 
 Sequence alignment
 ------------------
