@@ -583,22 +583,22 @@ specifiers:
 
 .. code:: seq
 
-    def foo[T](x: List[T]):
+    def foo(x: List[T], T: type):
         print(x)
-    foo([1, 2])  # prints [1, 2]
-    foo(['s', 'u'])  # prints [s, u]
-    foo(5)  # error: 5 is not a list!
-    foo[int](['s', 'u'])  # fails: T is int, so foo expects List[int] but it got List[str]
+    foo([1, 2])           # prints [1, 2]
+    foo(['s', 'u'])       # prints [s, u]
+    foo(5)                # error: 5 is not a list!
+    foo(['s', 'u'], int)  # fails: T is int, so foo expects List[int] but it got List[str]
 
-    def foo[R](x) -> R:
+    def foo(x, R: type) -> R:
         print(x)
         return 1
-    foo[int](4)  # prints 4, returns 1
-    foo[str](4)  # error: return type is str, but foo returns int!
+    foo(4, int)  # prints 4, returns 1
+    foo(4, str)  # error: return type is str, but foo returns int!
 
 
 .. note::
-    Coming from C++? ``foo[T, U](x: T) -> U: ...`` is roughly the same as
+    Coming from C++? ``foo(x: List[T], T: type): ...`` is roughly the same as
     ``template<typename T, typename U> U foo(T x) { ... }``.
 
 Generators
