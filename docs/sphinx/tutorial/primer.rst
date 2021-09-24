@@ -15,7 +15,7 @@ First and foremost, Seq supports both Python 2 and Python 3 printing:
     print('hello world')
 
     from sys import stderr
-    print('hello world', end='', file=stderr)  # Python 3 style also works
+    print('hello world', end='', file=stderr)
 
 Comments
 --------
@@ -25,7 +25,7 @@ Comments
     # Seq comments start with "# 'and go until the end of the line
 
     """
-    There are no multi-line comments. You can (ab)use docstring operator (''')
+    There are no multi-line comments. You can (ab)use the docstring operator (''')
     if you really need them.
     """
 
@@ -121,12 +121,13 @@ Containers
 .. code:: seq
 
     l = [1, 2, 3]  # type: List[int]; a list of integers
-    s = {1.1, 3.3, 2.2, 3.3}  # type: Set[float]; a set of integers
+    s = {1.1, 3.3, 2.2, 3.3}  # type: Set[float]; a set of floats
     d = {1: 'hi', 2: 'ola', 3: 'zdravo'}  # type: Dict[int, str]; a simple dictionary
 
-    ln = []  # an empty list whose type is deduced based on usage
+    ln = []  # an empty list whose type is inferred based on usage
     ln = List[int]()  # an empty list with explicit element types
-    dn = Dict[int, float]()  # an empty dictionary; {} does not (yet) work
+    dn = {}  # an empty dict whose type is inferred based on usage
+    dn = Dict[int, float]()  # an empty dictionary with explicit element types
 
 Because Seq is strongly typed, these won't compile:
 
@@ -134,10 +135,10 @@ Because Seq is strongly typed, these won't compile:
 
     l = [1, 's']  # is it a List[int] or List[str]? you cannot mix-and-match types
     d = {1: 'hi'}
-    d[2] = 3  # d is a Dict[int, str]; 3 is clearly not a string.
+    d[2] = 3  # d is a Dict[int, str]; the assigned value must be a str
 
-    t = (1, 2.2)
-    List[int](t)  # compiler error: t is not homogenous
+    t = (1, 2.2)  # Tuple[int, float]
+    List[int](t)  # compile error: t is not homogenous
 
     lp = [1, 2.1, 3, 5]  # compile error: Seq will not automatically cast a float to an int
 
@@ -247,7 +248,7 @@ Seq supports the standard Python conditional syntax:
 
     if a or b or some_cond():
         print(1)
-    elif whatever() or 1 < a <= b < c < 4:  # oh yes, we do support chained comparisons
+    elif whatever() or 1 < a <= b < c < 4:  # chained comparisons are supported
         print('meh...')
     else:
         print('lo and behold!')
@@ -256,9 +257,8 @@ Seq supports the standard Python conditional syntax:
 
     a = b if sth() else c  # ternary conditional operator
 
-But lo and behold! Seq extends the Python conditional syntax with a
-``match`` statement, which is inspired by Rust's ``match`` statement
-(and luckily not by C's ``switch``):
+Seq extends the Python conditional syntax with a ``match`` statement, which is 
+inspired by Rust's:
 
 .. code:: seq
 
@@ -276,12 +276,12 @@ But lo and behold! Seq extends the Python conditional syntax with a
 
     match str_expr():  # now it's a str expression
         case 'abc': print("it's ABC time!")
-        case 'def' | 'ghi':  # you can chain multiple rules with "|" operator
+        case 'def' | 'ghi':  # you can chain multiple rules with the "|" operator
             print("it's not ABC time!")
         case s if len(s) > 10: print("so looong!")  # conditional match expression
         case _: assert False
 
-    match some_tuple:  # assuming typeof(some_tuple) is Tuple[int, int]
+    match some_tuple:  # assuming type of some_tuple is Tuple[int, int]
         case (1, 2): ...
         case (a, _) if a == 42:  # you can do away with useless terms with an underscore
             print('hitchhiker!')
@@ -289,7 +289,7 @@ But lo and behold! Seq extends the Python conditional syntax with a
             print('complex!')
 
     match list_foo():
-        case []:  # [] actually works here
+        case []:  # [] matches an empty list
             ...
         case [1, 2, 3]:  # make sure that list_foo() returns List[int] though!
             ...
@@ -299,8 +299,8 @@ But lo and behold! Seq extends the Python conditional syntax with a
             ...
         case [..., w] if w < 0:  # matches a list that ends with a negative integer
             ...
-        case [...] as l:  # any other list; binds variable l to it
-            print(l)
+        case [...]:  # any other list
+            ...
 
     match sequence:  # of type seq
         case 'ACGT': ...
@@ -478,7 +478,7 @@ You can import functions and classes from another Seq module by doing:
     import foo
 
     foo.useful1()
-    p = foo.Type()
+    p = foo.FooType()
 
     # Create bar.seq with a bunch of useful methods
     from bar import x, y
@@ -544,8 +544,8 @@ Default arguments? Named arguments? You bet:
 
     def foo(a, b: int, c: float = 1.0, d: str = 'hi'):
         print(a, b, c, d)
-    foo(1, 2)  # prints "1 2 1.0 hi"
-    foo(1, d='foo', b=1)  # prints "1 1 1.0 foo"
+    foo(1, 2)  # prints "1 2 1 hi"
+    foo(1, d='foo', b=1)  # prints "1 1 1 foo"
 
 How about optional arguments? We support that too:
 
@@ -652,21 +652,19 @@ functions and generators to form a pipeline:
     2 |> add1  # 3; equivalent to add1(2)
 
     def calc(x, y):
-        return x + y ** 2
+        return x + y**2
     2 |> calc(3)  # 11; equivalent to calc(2, 3)
     2 |> calc(..., 3)  # 11; equivalent to calc(2, 3)
     2 |> calc(3, ...)  # 7; equivalent to calc(3, 2)
 
-
-    def echo(s):
-        print(s)
     def gen(i):
         for i in range(i):
             yield i
-    5 |> gen |> echo  # prints 0, 1, 2, 3, 4
-    range(1, 4) |> gen |> echo  # prints (0), (0, 1), (0, 1, 2), (0, 1, 2, 3) without parentheses
-    [1, 2, 3] |> echo   # prints 1, 2, 3
-    range(1000000000) |> echo  # not only prints all those numbers, but it uses almost no memory at all
+    5 |> gen |> print # prints 0 1 2 3 4 separated by newline
+    range(1, 4) |> iter |> gen |> print(end=' ')  # prints 0 0 1 0 1 2 without newline
+    [1, 2, 3] |> print   # prints [1, 2, 3]
+    range(100000000) |> print  # prints range(0, 100000000)
+    range(100000000) |> iter |> print  # not only prints all those numbers, but it uses almost no memory at all
 
 Seq will chain anything that implements ``__iter__``; however, use
 generators as much as possible because the compiler will optimize out
@@ -678,8 +676,8 @@ operator:
 
 .. code:: seq
 
-    range(100000) ||> echo  # prints all these numbers, probably in random order
-    range(100000) ||> process ||> clean  # runs process in parallel, and then cleans data in parallel
+    range(100000) |> iter ||> print  # prints all these numbers, probably in random order
+    range(100000) |> iter ||> process ||> clean  # runs process in parallel, and then cleans data in parallel
 
 In the last example, Seq will automatically schedule the ``process`` and
 ``clean`` functions to execute as soon as possible. You can control the
@@ -823,10 +821,10 @@ Classes create objects that are passed by reference:
     p = Point(1, 2)
     q = p  # this is a reference!
     p.x = 2
-    (p.x, p.y), (q.x, q.y)  # (2, 2), (2, 2)
+    print((p.x, p.y), (q.x, q.y))  # (2, 2), (2, 2)
 
 If you need to copy an object's contents, implement the ``__copy__`` magic
-method and use ``p = copy(q)`` instead.
+method and use ``q = copy(p)`` instead.
 
 Seq also supports pass-by-value types via the ``@tuple`` annotation:
 
@@ -861,8 +859,8 @@ You can also add methods to types:
         x: int
         y: int
 
-        def __new__(self) -> Point:  # types are constructed via __new__, not __init__
-            return (0, 1)  # and __new__ returns a tuple representation of type's members
+        def __new__():          # types are constructed via __new__, not __init__
+            return Point(0, 1) # and __new__ returns a tuple representation of type's members
 
         def some_method(self):
             return self.x + self.y
@@ -892,7 +890,7 @@ the compile time:
 
     f.cool()  # works!
 
-    # how about we add a support for adding integers and strings?
+    # how about we add support for adding integers and strings?
     @extend
     class int:
         def __add__(self: int, other: str) -> int:
