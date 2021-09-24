@@ -136,7 +136,7 @@ Because Seq is strongly typed, these won't compile:
     d[2] = 3  # d is a Dict[int, str]; the assigned value must be a str
 
     t = (1, 2.2)  # Tuple[int, float]
-    List[int](t)  # compile error: t is not homogenous
+    lt = list(t)  # compile error: t is not homogenous
 
     lp = [1, 2.1, 3, 5]  # compile error: Seq will not automatically cast a float to an int
 
@@ -145,7 +145,7 @@ This will work, though:
 .. code:: seq
 
     u = (1, 2, 3)
-    List[int](u)  # works: u is homogenous
+    lu = list(u)  # works: u is homogenous
 
 .. note::
     Dictionaries and sets are unordered and are based on
@@ -355,7 +355,7 @@ on):
 .. code:: seq
 
     g = (i for i in range(10))
-    print(List[int](g))  # prints number from 0 to 9, inclusive
+    print(list(g))  # prints number from 0 to 9, inclusive
 
 Exception handling
 ~~~~~~~~~~~~~~~~~~
@@ -612,8 +612,8 @@ Seq supports generators, and they are fast! Really, really fast!
         while i < 10:
             yield i
             i += 1
-    print(List[int](gen(0)))  # prints [0, 1, ..., 9]
-    print(List[int](gen(10)))  # prints []
+    print(list(gen(0)))  # prints [0, 1, ..., 9]
+    print(list(gen(10)))  # prints []
 
 You can also use ``yield`` to implement coroutines: ``yield``
 suspends the function, while ``(yield)`` (yes, parentheses are required)
