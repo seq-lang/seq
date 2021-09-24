@@ -8,8 +8,6 @@ programming language (QBASIC doesn't count).
 Printing
 --------
 
-First and foremost, Seq supports both Python 2 and Python 3 printing:
-
 .. code:: seq
 
     print('hello world')
