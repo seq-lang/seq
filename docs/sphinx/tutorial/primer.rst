@@ -83,7 +83,7 @@ Tuples
     t[1]  # type: float
     u = (1, )  # type: Tuple[int]
 
-As all types must be known at the compile time, tuple indexing works
+As all types must be known at compile time, tuple indexing works
 only if a tuple is homogenous (all types are the same) or if the value
 of the index is known at compile-time.
 
@@ -96,7 +96,7 @@ by unrolling the loop to accommodate the different types.
     t[1]  # works because 1 is a constant int
 
     x = int(argv[1])
-    t[x]  # compile error: x is not known at the compile time
+    t[x]  # compile error: x is not known at compile time
 
     # This is a homogenous tuple (all member types are the same)
     u = (1, 2, 3)  # type: Tuple[int, int, int].
@@ -870,8 +870,7 @@ Type extensions
 ~~~~~~~~~~~~~~~
 
 Suppose you have a class that lacks a method or an operator that might
-be really useful. You can extend that class and add the method at
-the compile time:
+be really useful. You can extend that class and add the method at compile time:
 
 .. code:: seq
 
