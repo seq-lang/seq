@@ -26,7 +26,7 @@ namespace ast {
  *  - All imports are flattened making the resulting AST a self-containing (but fairly
  *    large) AST.
  *  - All identifiers are normalized (no two distinct objects share the same name).
- *  - Variardic classes (Tuple.N and Function.N) are generated.
+ *  - Variadic classes (Tuple.N and Function.N) are generated.
  *  - Any AST node that can be trivially represented as a set of "simpler" nodes
  *    type is transformed accordingly. If a transformation requires a type information,
  *    it is delayed until the next transformation stage (type-checking).
