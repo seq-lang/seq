@@ -12,7 +12,8 @@ const std::string FoldingPassGroup::KEY = "core-folding-pass-group";
 
 FoldingPassGroup::FoldingPassGroup(const std::string &sideEffectsPass,
                                    const std::string &reachingDefPass,
-                                   const std::string &globalVarPass) {
+                                   const std::string &globalVarPass,
+                                   bool runGlobalDemotion) {
   auto gdUnique = std::make_unique<cleanup::GlobalDemotionPass>();
   auto canonUnique = std::make_unique<cleanup::CanonicalizationPass>(sideEffectsPass);
   auto fpUnique = std::make_unique<FoldingPass>();
@@ -23,7 +24,8 @@ FoldingPassGroup::FoldingPassGroup(const std::string &sideEffectsPass,
   fp = fpUnique.get();
   dce = dceUnique.get();
 
-  push_back(std::move(gdUnique));
+  if (runGlobalDemotion)
+    push_back(std::move(gdUnique));
   push_back(std::make_unique<ConstPropPass>(reachingDefPass, globalVarPass));
   push_back(std::move(canonUnique));
   push_back(std::move(fpUnique));

@@ -1,4 +1,6 @@
-from C import seq_is_macos() -> bool
+@pure
+@C
+def seq_is_macos() -> bool: pass
 
 # <dlfcn.h>
 from C import dlerror() -> cobj as c_dlerror
@@ -8,7 +10,6 @@ from C import dlclose(cobj) -> i32 as c_dlclose
 RTLD_NOW = 2
 RTLD_GLOBAL = 8 if seq_is_macos() else 256
 
-@pure
 def dlext():
     if seq_is_macos():
         return 'dylib'

@@ -145,6 +145,7 @@ void PassManager::invalidate(const std::string &key) {
 void PassManager::registerStandardPasses(bool debug) {
   if (debug) {
     registerPass(std::make_unique<lowering::PipelineLowering>());
+    registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());
     registerPass(std::make_unique<parallel::OpenMPPass>());
   } else {
     // Pythonic
@@ -157,19 +158,29 @@ void PassManager::registerStandardPasses(bool debug) {
     registerPass(std::make_unique<lowering::ImperativeForFlowLowering>());
 
     // folding
-    auto seKey =
-        registerAnalysis(std::make_unique<analyze::module::SideEffectAnalysis>());
+    auto seKey1 =
+        registerAnalysis(std::make_unique<analyze::module::SideEffectAnalysis>(
+            /*globalAssignmentHasSideEffects=*/true));
+    auto seKey2 =
+        registerAnalysis(std::make_unique<analyze::module::SideEffectAnalysis>(
+            /*globalAssignmentHasSideEffects=*/false));
     auto cfgKey = registerAnalysis(std::make_unique<analyze::dataflow::CFAnalysis>());
     auto rdKey = registerAnalysis(
         std::make_unique<analyze::dataflow::RDAnalysis>(cfgKey), {cfgKey});
     auto globalKey =
         registerAnalysis(std::make_unique<analyze::module::GlobalVarsAnalyses>());
-    registerPass(std::make_unique<folding::FoldingPassGroup>(seKey, rdKey, globalKey),
-                 /*insertBefore=*/"", {seKey, rdKey, globalKey},
-                 {seKey, rdKey, cfgKey, globalKey});
+    registerPass(std::make_unique<folding::FoldingPassGroup>(
+                     seKey1, rdKey, globalKey, /*runGlobalDemoton=*/false),
+                 /*insertBefore=*/"", {seKey1, rdKey, globalKey},
+                 {seKey1, rdKey, cfgKey, globalKey});
 
     // parallel
     registerPass(std::make_unique<parallel::OpenMPPass>());
+
+    registerPass(std::make_unique<folding::FoldingPassGroup>(seKey2, rdKey, globalKey,
+                                                             /*runGlobalDemoton=*/true),
+                 /*insertBefore=*/"", {seKey2, rdKey, globalKey},
+                 {seKey2, rdKey, cfgKey, globalKey});
   }
 }
 

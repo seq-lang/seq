@@ -21,7 +21,19 @@ struct SideEffectResult : public Result {
 };
 
 class SideEffectAnalysis : public Analysis {
+private:
+  /// true if assigning to a global variable automatically has side effects
+  bool globalAssignmentHasSideEffects;
+
+public:
   static const std::string KEY;
+
+  /// Constructs a side effect analysis.
+  /// @param globalAssignmentHasSideEffects true if global variable assignment
+  /// automatically has side effects
+  explicit SideEffectAnalysis(bool globalAssignmentHasSideEffects = true)
+      : Analysis(), globalAssignmentHasSideEffects(globalAssignmentHasSideEffects){};
+
   std::string getKey() const override { return KEY; }
 
   std::unique_ptr<Result> run(const Module *m) override;

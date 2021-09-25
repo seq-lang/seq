@@ -26,12 +26,19 @@ struct SideEfectAnalyzer : public util::ConstVisitor {
   static const std::string NON_PURE_ATTR;
 
   VarUseAnalyzer &vua;
+  bool globalAssignmentHasSideEffects;
   std::unordered_map<id_t, bool> result;
   bool exprSE;
   bool funcSE;
 
-  SideEfectAnalyzer(VarUseAnalyzer &vua)
-      : util::ConstVisitor(), vua(vua), result(), exprSE(true), funcSE(false) {}
+  // We have to sometimes be careful with globals since future
+  // IR passes might introduce globals that we've eliminated
+  // or demoted earlier. Hence the distinction with whether
+  // global assignments are considered to have side effects.
+  SideEfectAnalyzer(VarUseAnalyzer &vua, bool globalAssignmentHasSideEffects)
+      : util::ConstVisitor(), vua(vua),
+        globalAssignmentHasSideEffects(globalAssignmentHasSideEffects), result(),
+        exprSE(true), funcSE(false) {}
 
   template <typename T> bool has(const T *v) {
     return result.find(v->getId()) != result.end();
@@ -174,8 +181,13 @@ struct SideEfectAnalyzer : public util::ConstVisitor {
     auto count1 = (it1 != vua.varCounts.end()) ? it1->second : 0;
     auto count2 = (it2 != vua.varAssignCounts.end()) ? it2->second : 0;
 
+    bool g = v->getLhs()->isGlobal();
     bool s = (count1 != count2);
-    set(v, s | process(v->getRhs()), s & v->getLhs()->isGlobal());
+    if (globalAssignmentHasSideEffects) {
+      set(v, s | g | process(v->getRhs()), g);
+    } else {
+      set(v, s | process(v->getRhs()), s & g);
+    }
   }
 
   void visit(const ExtractInstr *v) override { set(v, process(v->getVal())); }
@@ -257,7 +269,7 @@ bool SideEffectResult::hasSideEffect(Value *v) const {
 std::unique_ptr<Result> SideEffectAnalysis::run(const Module *m) {
   VarUseAnalyzer vua;
   const_cast<Module *>(m)->accept(vua);
-  SideEfectAnalyzer sea(vua);
+  SideEfectAnalyzer sea(vua, globalAssignmentHasSideEffects);
   m->accept(sea);
   return std::make_unique<SideEffectResult>(sea.result);
 }

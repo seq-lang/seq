@@ -29,8 +29,8 @@ public:
   /// @param reachingDefPass the key of the reaching definitions pass
   /// @param globalVarPass the key of the global variables pass
   FoldingPassGroup(const std::string &sideEffectsPass,
-                   const std::string &reachingDefPass,
-                   const std::string &globalVarPass);
+                   const std::string &reachingDefPass, const std::string &globalVarPass,
+                   bool runGlobalDemotion = true);
 
   bool shouldRepeat() const override;
 };

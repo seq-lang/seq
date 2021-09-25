@@ -728,7 +728,7 @@ void LLVMVisitor::visit(const Module *x) {
       } else {
         auto *storage = new llvm::GlobalVariable(
             *module, llvmType, /*isConstant=*/false,
-            llvm::GlobalVariable::InternalLinkage,
+            llvm::GlobalVariable::PrivateLinkage,
             llvm::Constant::getNullValue(llvmType), var->getName());
         vars.insert(var, storage);
 
