@@ -76,7 +76,7 @@ class FASTQReader:
     def _iter_core(self, file, seqs: bool) -> Generator[FASTQRecord]:
         line = 0
         name, read, qual = "", s"", ""
-        for a in file._iter():
+        for a in file._iter_trim_newline():
             x = line % 4
             if x == 0:
                 if self.validate and a[0] != "@":

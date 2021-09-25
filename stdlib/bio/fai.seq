@@ -54,7 +54,7 @@ class FAIReader:
         return 6 if self.fastq else 5
 
     def __iter__(self):
-        for lnum, l in enumerate(self.file._iter()):
+        for lnum, l in enumerate(self.file._iter_trim_newline()):
             line = copy(l) if self.copy else l
             rec: FAIRecord = self._FAIRecord_from_str(line, lnum + 1)
             yield rec

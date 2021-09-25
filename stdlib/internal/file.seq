@@ -79,7 +79,15 @@ class File:
     def _iter(self):
         self._ensure_open()
         while True:
-            # pass pointers to individual class fields:
+            rd = _C.getline(Ptr[Ptr[byte]](self.__raw__() + 8), Ptr[int](self.__raw__()), self.fp)
+            if rd != -1:
+                yield str(self.buf, rd)
+            else:
+                break
+
+    def _iter_trim_newline(self):
+        self._ensure_open()
+        while True:
             rd = _C.getline(Ptr[Ptr[byte]](self.__raw__() + 8), Ptr[int](self.__raw__()), self.fp)
             if rd != -1:
                 if self.buf[rd - 1] == byte(10):
@@ -174,7 +182,15 @@ class gzFile:
     def _iter(self):
         self._ensure_open()
         while True:
-            # pass pointers to individual class fields:
+            rd = self._getline()
+            if rd != -1:
+                yield str(self.buf, rd)
+            else:
+                break
+
+    def _iter_trim_newline(self):
+        self._ensure_open()
+        while True:
             rd = self._getline()
             if rd != -1:
                 if self.buf[rd - 1] == byte(10):

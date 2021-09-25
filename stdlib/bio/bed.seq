@@ -92,7 +92,7 @@ class BEDReader:
         # store header as a list of str
         h = List[str]()
         with gzopen(path, "r") as file:
-            for a in file._iter():
+            for a in file._iter_trim_newline():
                 if BEDReader.is_line_header(a):
                     h_line = copy(a)
                     h.append(h_line)
@@ -107,7 +107,7 @@ class BEDReader:
     def __iter__(self):
         i = 0
         buf = List[str](capacity=12)
-        for line in self.file._iter():
+        for line in self.file._iter_trim_newline():
             if i < len(self.header):
                 i += 1
                 continue

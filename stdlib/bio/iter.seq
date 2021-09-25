@@ -41,12 +41,12 @@ class SeqReader:
 
     def __iter__(self):
         if self.gzip:
-            for a in self.gzfile._iter():
+            for a in self.gzfile._iter_trim_newline():
                 s = self._preprocess(a)
                 assert s.len >= 0
                 yield s
         else:
-            for a in self.file._iter():
+            for a in self.file._iter_trim_newline():
                 s = self._preprocess(a)
                 assert s.len >= 0
                 yield s

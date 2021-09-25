@@ -95,7 +95,7 @@ class FASTAReader:
             n = 0
             m = 0
             prev_header = ''
-            for a in file._iter():
+            for a in file._iter_trim_newline():
                 if a == "": continue
                 if a[0] == ">":
                     if n > 0:
@@ -137,7 +137,7 @@ class FASTAReader:
             n = 0
             curname = ""
 
-            for a in file._iter():
+            for a in file._iter_trim_newline():
                 if a == "": continue
                 if a[0] == ">":
                     if n > 0:
@@ -202,7 +202,7 @@ class FASTAReader:
             n = 0
             p = Ptr[byte](m)
 
-            for a in file._iter():
+            for a in file._iter_trim_newline():
                 if not a or a[0] == ">":
                     break
                 p, n, m = FASTAReader._append(p, n, m, a, self.validate)
@@ -293,7 +293,7 @@ class pFASTAReader:
         n = 0
         curname = ""
 
-        for a in file._iter():
+        for a in file._iter_trim_newline():
             if a == "": continue
             if a[0] == ">":
                 if n > 0:
