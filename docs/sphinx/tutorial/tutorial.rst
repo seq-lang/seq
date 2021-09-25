@@ -20,13 +20,13 @@ Sequences can be seamlessly converted between these various types:
     # (a) split into subsequences of length 3
     #     with a step of 2
     for sub in dna.split(3, step=2):
-        print sub
-        print ~sub  # reverse complement
+        print(sub)
+        print(~sub)  # reverse complement
 
     # (b) split into 5-mers with step 1 (default)
-    for kmer in dna.kmers[Kmer[5]]():
-        print kmer
-        print ~kmer  # reverse complement
+    for kmer in dna.kmers(k=5):
+        print(kmer)
+        print(~kmer)  # reverse complement
 
     # (c) convert entire sequence to 12-mer
     kmer = Kmer[12](dna)
@@ -36,15 +36,15 @@ Seq also supports a ``pseq`` type for protein sequences:
 .. code-block:: seq
 
     protein = p'HEAGAWGHE'           # pseq literal
-    print list(protein.split(3, 3))  # [HEA, GAW, GHE]
-    print s'ACCATGACA' |> translate  # TMT
+    print(list(protein.split(3, 3)))  # [HEA, GAW, GHE]
+    print(s'ACCATGACA' |> translate)  # TMT
 
 In practice, sequences would be read from e.g. a FASTQ file:
 
 .. code-block:: seq
 
     for record in FASTQ('input.fq'):
-        print 'processing', record.name
+        print('processing', record.name)
         process(record.seq)
 
 If you only care about the sequences, you can also do this:
@@ -86,20 +86,20 @@ Seq provides the conventional ``match`` construct, which works on integers, list
     def describe(n: int):
         match n:
             case m if m < 0:
-                print 'negative'
+                print('negative')
             case 0:
-                print 'zero'
+                print('zero')
             case m if 0 < m < 10:
-                print 'small'
+                print('small')
             case _:
-                print 'large'
+                print('large')
 
 A novel aspect of Seq's ``match`` statement is that it also works on sequences, and allows for concise recursive representations of several sequence operations such as subsequence search, reverse complementation tests and base counting, as shown in this example:
 
 .. code-block:: seq
 
     # (a)
-    def has_spaced_acgt(s: seq) -> bool:
+    def has_spaced_acgt(s: seq):
         match s:
             case 'A_C_G_T*':
                 return True
@@ -109,7 +109,7 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
                 return False
 
     # (b)
-    def is_own_revcomp(s: seq) -> bool:
+    def is_own_revcomp(s: seq):
         match s:
             case 'A*T' or 'T*A' or 'C*G' or 'G*C':
                 return is_own_revcomp(s[1:-1])
@@ -131,7 +131,7 @@ A novel aspect of Seq's ``match`` statement is that it also works on sequences, 
             a2, c2, g2, t2 = other
             return (a1 + a2, c1 + c2, g1 + g2, t1 + t2)
 
-    def count_bases(s: seq) -> BaseCount:
+    def count_bases(s):
         match s:
             case 'A*': return count_bases(s[1:]) + (1,0,0,0)
             case 'C*': return count_bases(s[1:]) + (0,1,0,0)
@@ -162,16 +162,16 @@ Here's an example of pipeline usage, which shows the same two loops from above, 
 
     # (a) split into subsequences of length 3
     #     with a stride of 2
-    dna |> split(..., 3, 2) |> echo
+    dna |> split(..., 3, 2) |> print
 
     # (b) split into 5-mers with stride 1
     def f(kmer):
-        print kmer
-        print ~kmer
+        print(kmer)
+        print(~kmer)
 
-    dna |> kmers[Kmer[5]](1) |> f
+    dna |> kmers(1, k=5) |> f
 
-First, note that ``split`` is a Seq standard library function that takes three arguments: the sequence to split, the subsequence length and the stride; ``split(..., 3, 2)`` is a partial call of ``split`` that produces a new single-argument function ``f(x)`` which produces ``split(x, 3, 2)``. The undefined argument(s) in a partial call can be implicit, as in the second example: ``kmers`` (also a standard library function) is a generic function parameterized by the target :math:`k`-mer type and takes as arguments the sequence to :math:`k`-merize and the stride; since just one of the two arguments is provided, the first is implicitly replaced by ``...`` to produce a partial call (i.e. the expression is equivalent to ``kmers[Kmer[5]](..., 1)``). Both ``split`` and ``kmers`` are themselves generators that yield subsequences and :math:`k`-mers respectively, which are passed sequentially to the last stage of the enclosing pipeline in the two examples.
+First, note that ``split`` is a Seq standard library function that takes three arguments: the sequence to split, the subsequence length and the stride; ``split(..., 3, 2)`` is a partial call of ``split`` that produces a new single-argument function ``f(x)`` which produces ``split(x, 3, 2)``. The undefined argument(s) in a partial call can be implicit, as in the second example: ``kmers`` (also a standard library function) is a generic function parameterized by the target :math:`k`-mer type and takes as arguments the sequence to :math:`k`-merize and the stride; since just one of the two arguments is provided, the first is implicitly replaced by ``...`` to produce a partial call (i.e. the expression is equivalent to ``kmers(..., 1, k=5)``). Both ``split`` and ``kmers`` are themselves generators that yield subsequences and :math:`k`-mers respectively, which are passed sequentially to the last stage of the enclosing pipeline in the two examples.
 
 .. caution::
     The Seq compiler may perform optimizations that change the order of elements passed through a pipeline. Therefore, it is best to not rely on order when using pipelines. If order needs to be maintained, consider using a regular loop or passing an index alongside each element sent through the pipeline.
@@ -187,12 +187,12 @@ Aligning sequences is very straightforward in Seq, and supports numerous options
     s1 = s'CGCGAGTCTT'
     s2 = s'CGCAGAGTT'
     aln = s1 @ s2
-    print aln.cigar, aln.score
+    print(aln.cigar, aln.score)
 
     # custom parameters
     # match = 2; mismatch = 4; gap1(k) = 2k + 4; gap2(k) = k + 13
     aln = s1.align(s2, a=2, b=4, gapo=4, gape=2, gapo2=13, gape2=1)
-    print aln.cigar, aln.score
+    print(aln.cigar, aln.score)
 
 Here is the list of options supported by the ``align()`` method; all are optional (default is global alignment):
 
@@ -228,7 +228,7 @@ Seq uses `ksw2 <https://github.com/lh3/ksw2>`_ as its default alignment kernel. 
     def process(t):
         query, target = t
         score = query.align(target, a=1, b=2, ambig=0, gapo=2, gape=1, zdrop=100, bandwidth=100, end_bonus=5)
-        print query, target, score
+        print(query, target, score)
 
     zip(seqs('queries.txt'), seqs('targets.txt')) |> process
 
@@ -262,7 +262,7 @@ Now, if we were to process data in a pipeline as such:
     @prefetch
     def process(read: seq, index: MyIndex):
         ...
-        for kmer in read.kmers[Kmer[20]](step):
+        for kmer in read.kmers(step, k=20):
             hits_fwd = index[kmer]
             hits_rev = index[~kmer]
             ...
@@ -279,11 +279,10 @@ As a concrete example, consider Seq's built-in FM-index type, ``FMIndex``, and a
     from bio.fmindex import FMIndex
 
     fmi = FMIndex('/path/to/genome.fa')
-    k = 20
-    step = 20
-    n = 0
+    k, step, n = 20, 20, 0
 
     def update(count: int):
+        global n
         n += count
 
     @prefetch
@@ -295,8 +294,8 @@ As a concrete example, consider Seq's built-in FM-index type, ``FMIndex``, and a
             s = s[:-1]                      # trim off last base of sequence
         return len(intv)                    # return count of sequence in index
 
-    FASTQ('/path/to/reads.fq') |> seqs |> split(k, step=step) |> find(fmi) |> update
-    print f'{n=}'
+    FASTQ('/path/to/reads.fq') |> seqs |> split(k, step) |> find(fmi) |> update
+    print('total:', n)
 
 That single ``@prefetch`` line can have a significant impact, especially for larger ``k``. Here is a graph of the performance of this exact snippet for various ``k`` using hg19 as the reference:
 
@@ -319,16 +318,16 @@ CPython and many other implementations alike cannot take advantage of parallelis
 
     # (a) split into subsequences of length 3
     #     with a stride of 2
-    dna |> split(..., 3, 2) ||> echo
+    dna |> split(..., 3, 2) ||> print
 
     # (b) split into 5-mers with stride 1
     def f(kmer):
-        print kmer
-        print ~kmer
+        print(kmer)
+        print(~kmer)
 
-    dna |> kmers[Kmer[5]](1) ||> f
+    dna |> kmers(1, k=5) ||> f
 
-Internally, the Seq compiler uses `Tapir <http://cilk.mit.edu/tapir/>`_ with an OpenMP task backend to generate code for parallel pipelines. Logically, parallel pipe operators are similar to parallel-for loops: the portion of the pipeline after the parallel pipe is outlined into a new function that is called by the OpenMP runtime task spawning routines (as in ``#pragma omp task`` in C++), and a synchronization point (``#pragma omp taskwait``) is added after the outlined segment. Lastly, the entire program is implicitly placed in an OpenMP parallel region (``#pragma omp parallel``) that is guarded by a "single" directive (``#pragma omp single``) so that the serial portions are still executed by one thread (this is required by OpenMP as tasks must be bound to an enclosing parallel region).
+Internally, the Seq compiler uses an OpenMP task backend to generate code for parallel pipelines. Logically, parallel pipe operators are similar to parallel-for loops: the portion of the pipeline after the parallel pipe is outlined into a new function that is called by the OpenMP runtime task spawning routines (as in ``#pragma omp task`` in C++), and a synchronization point (``#pragma omp taskwait``) is added after the outlined segment. Lastly, the entire program is implicitly placed in an OpenMP parallel region (``#pragma omp parallel``) that is guarded by a "single" directive (``#pragma omp single``) so that the serial portions are still executed by one thread (this is required by OpenMP as tasks must be bound to an enclosing parallel region).
 
 Type extensions
 ^^^^^^^^^^^^^^^
@@ -344,14 +343,14 @@ Seq provides an ``@extend`` annotation that allows programmers to add and modify
                 yield i
 
         def __truediv__(self, other: int):
-            print 'caught int div!'
+            print('caught int div!')
             return 42
 
     for i in (5).to(10):
-        print i  # 5, 6, ..., 10
+        print(i)  # 5, 6, ..., 10
 
     # prints 'caught int div!' then '42'
-    print 2 / 3
+    print(2 / 3)
 
 Note that all type extensions are performed strictly at compile time and incur no runtime overhead.
 
@@ -390,7 +389,7 @@ Now BWA can be used in Seq as such:
         for reg in bwa.align(read.read):
             if reg.secondary >= 0: continue
             aln = bwa.reg2aln(read.read, reg)
-            print read.name, '-' if aln.rev else '+', bwa.name(aln), aln.pos, aln.mapq, aln.cigar, aln.NM
+            print(read.name, '-' if aln.rev else '+', bwa.name(aln), aln.pos, aln.mapq, aln.cigar, aln.NM)
 
 This program can be invoked as ``seqc run example.seq /path/to/hg19.fa /path/to/reads.fq``.
 

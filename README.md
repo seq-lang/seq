@@ -87,7 +87,6 @@ for sub in s.split(3, step=2):
     print(sub[-1])  # last base
 
     # iterate over 2-mers with step 1
-    # for kmer in sub.kmers[K2](step=1):
     for kmer in sub.kmers(step=1, k=2):
         print(~kmer)  # '~' also works on k-mers
 ```

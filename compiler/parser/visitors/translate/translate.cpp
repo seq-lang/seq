@@ -97,11 +97,11 @@ void TranslateVisitor::visit(CallExpr *expr) {
   auto ft = expr->expr->type->getFunc();
   seqassert(ft, "not calling function: {}", ft->toString());
   auto callee = transform(expr->expr);
-  bool isVariardic = ft->ast->hasAttr(Attr::CVarArg);
+  bool isVariadic = ft->ast->hasAttr(Attr::CVarArg);
   vector<ir::Value *> items;
   for (int i = 0; i < expr->args.size(); i++) {
     seqassert(!expr->args[i].value->getEllipsis(), "ellipsis not elided");
-    if (i + 1 == expr->args.size() && isVariardic) {
+    if (i + 1 == expr->args.size() && isVariadic) {
       auto call = expr->args[i].value->getCall();
       seqassert(call && call->expr->getId() &&
                     startswith(call->expr->getId()->value, TYPE_TUPLE),
