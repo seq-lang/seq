@@ -417,6 +417,199 @@ def test_deque():
 test_deque()
 
 @test
+def test_counter():
+    from collections import Counter
+
+    # main
+    c = Counter('abcaba')
+    assert c == Counter({'a':3 , 'b': 2, 'c': 1})
+    assert len(c) == 3
+    assert sum(c.values()) == 6
+    assert set(c.values()) == {1, 2, 3}
+    assert set(c.keys()) == {'a','b','c'}
+    assert set(c.items()) == {('a',3), ('b',2), ('c',1)}
+    assert c['b'] == 2
+    assert c['z'] == 0
+    assert c.__contains__('b')
+    assert not c.__contains__('z')
+    assert c.get('b', 10) == 2
+    assert c.get('z', 10) == 10
+    assert c == {'a':3 , 'b': 2, 'c': 1}
+    assert c.most_common() == [('a', 3), ('b', 2), ('c', 1)]
+    for i in range(5):
+        assert c.most_common(i) == [('a', 3), ('b', 2), ('c', 1)][:i]
+
+    c['a'] += 1         # increment an existing value
+    c['b'] -= 2         # sub existing value to zero
+    del c['c']          # remove an entry
+    del c['c']          # make sure that del doesn't raise KeyError
+    c['d'] -= 2         # sub from a missing value
+    c['e'] = -5         # directly assign a missing value
+    c['f'] += 4         # add to a missing value
+
+    assert dict(c) == {'a':4, 'b':0, 'd':-2, 'e':-5, 'f':4}
+    assert c.pop('f') == 4
+    assert 'f' not in c
+    for i in range(3):
+        elem, cnt = c.popitem()
+        assert elem not in c
+    c.clear()
+    assert c == {}
+    c.update({'a':5, 'b':3})
+    c.update({'c': 1})
+    c.update(Counter('a' * 50 + 'b' * 30))
+    c.update()
+    c.update('a' * 500 + 'b' * 300)
+    c.update('cdc')
+    assert c == {'a':555, 'b':333, 'c':3, 'd':1}
+
+    assert c.setdefault('d',5) == 1
+    assert c['d'] == 1
+    assert c.setdefault('e', 5) == 5
+    assert c['e'] == 5
+
+
+    # total
+    c = Counter({'a':10, 'b':5, 'c':0})
+    assert c.total() == 15
+
+
+    # conversions
+    s = 'she sells sea shells by the sea shore'
+    assert sorted(Counter(s).elements()) == sorted(s)
+    assert sorted(Counter(s)) == sorted(set(s))
+    assert dict(Counter(s)) == dict(Counter(s).items())
+    assert set(Counter(s)) == set(s)
+
+
+    # in invariant
+    c = Counter({'a':10, 'b':-2, 'c':0})
+    for elem in c:
+        assert elem in c
+
+
+    # multiset
+    c = Counter({'a':10, 'b':-2, 'c':0}) + Counter()
+    assert dict(c) == {'a':10}
+
+    from random import randrange
+    elements = 'abcd'
+    for i in range(1000):
+        # test random pairs of multisets
+        p = Counter(dict((elem, randrange(-2,4)) for elem in elements))
+        p.update({'e':1, 'f':-1, 'g':0})
+        q = Counter(dict((elem, randrange(-2,4)) for elem in elements))
+        q.update({'h':1, 'i':-1, 'j':0})
+
+        result = p + q
+        for x in elements:
+            assert max(0, p[x] + q[x]) == result[x]
+        assert all(x>0 for x in result.values())
+
+        result = p - q
+        for x in elements:
+            assert max(0, p[x] - q[x]) == result[x]
+        assert all(x>0 for x in result.values())
+
+        result = p | q
+        for x in elements:
+            assert max(0, p[x], q[x]) == result[x]
+        assert all(x>0 for x in result.values())
+
+        result = p & q
+        for x in elements:
+            assert max(0, min(p[x], q[x])) == result[x]
+        assert all(x>0 for x in result.values())
+
+    elements = 'abcdef'
+    for i in range(100):
+        # verify that random multisets with no repeats are exactly like sets
+        p = Counter(dict((elem, randrange(0, 2)) for elem in elements))
+        q = Counter(dict((elem, randrange(0, 2)) for elem in elements))
+
+        counter_result = p - q
+        set_result = set(p.elements()) - set(q.elements())
+        assert counter_result == dict.fromkeys(set_result, 1)
+
+        counter_result = p | q
+        set_result = set(p.elements()) | set(q.elements())
+        assert counter_result == dict.fromkeys(set_result, 1)
+
+        counter_result = p & q
+        set_result = set(p.elements()) & set(q.elements())
+        assert counter_result == dict.fromkeys(set_result, 1)
+
+
+    # in-place
+    elements = 'abcd'
+    for i in range(1000):
+        # test random pairs of multisets
+        p = Counter(dict((elem, randrange(-2,4)) for elem in elements))
+        p.update({'e':1, 'f':-1, 'g':0})
+        q = Counter(dict((elem, randrange(-2,4)) for elem in elements))
+        q.update({'h':1, 'i':-1, 'j':0})
+
+        c = p.copy()
+        c_id = id(c)
+        regular_result = c + q
+        inplace_result = c.__iadd__(q)
+        assert inplace_result == regular_result
+        assert id(inplace_result) == c_id
+
+        c = p.copy()
+        c_id = id(c)
+        regular_result = c - q
+        inplace_result = c.__isub__(q)
+        assert inplace_result == regular_result
+        assert id(inplace_result) == c_id
+
+        c = p.copy()
+        c_id = id(c)
+        regular_result = c | q
+        inplace_result = c.__ior__(q)
+        assert inplace_result == regular_result
+        assert id(inplace_result) == c_id
+
+        c = p.copy()
+        c_id = id(c)
+        regular_result = c & q
+        inplace_result = c.__iand__(q)
+        assert inplace_result == regular_result
+        assert id(inplace_result) == c_id
+
+
+    # subtract
+    c = Counter({'a':-5, 'b':0, 'c':5, 'd':10, 'e':15,'g':40})
+    c.subtract({'a':1, 'b':2, 'c':-3, 'd':10, 'e':20, 'f':30, 'h':-50})
+    assert c == Counter({'a':-6, 'b':-2, 'c':8, 'd':0, 'e':-5, 'f':-30, 'g':40, 'h':50})
+    c = Counter({'a':-5, 'b':0, 'c':5, 'd':10, 'e':15,'g':40})
+    c.subtract(Counter({'a':1, 'b':2, 'c':-3, 'd':10, 'e':20, 'f':30, 'h':-50}))
+    assert c == Counter({'a':-6, 'b':-2, 'c':8, 'd':0, 'e':-5, 'f':-30, 'g':40, 'h':50})
+
+    c = Counter('aaabbcd')
+    c.subtract('aaaabbcce')
+    assert c == Counter({'a':-1, 'b':0, 'c':-1, 'd':1, 'e':-1})
+
+    c = Counter()
+    c.subtract({'self':42})
+    assert list(c.items()) == [('self', -42)]
+    c = Counter()
+    c.subtract({'iterable':42})
+    assert list(c.items()) == [('iterable', -42)]
+
+
+    # unary
+    c = Counter({'a':-5, 'b':0, 'c':5, 'd':10, 'e':15, 'g':40})
+    assert dict(+c) == {'c':5, 'd':10, 'e':15, 'g':40}
+    assert dict(-c) == {'a':5}
+
+
+    # equality
+    assert Counter({'a':3, 'b':2}) == Counter('ababa')
+    assert Counter({'a':3, 'b':2}) != Counter('babab')
+test_counter()
+
+@test
 def test_interval_tree():
     from bio.intervals import IntervalTree
     t = IntervalTree()

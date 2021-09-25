@@ -28,6 +28,30 @@ class Dict[K,V]:
         self._keys = Ptr[K]()
         self._vals = Ptr[V]()
 
+    def _init_from(self, other):
+        n = other._n_buckets
+
+        if n == 0:
+            self._init()
+            return
+
+        f = khash.__ac_fsize(n)
+        self._n_buckets = n
+        self._size = other._size
+        self._n_occupied = other._n_occupied
+        self._upper_bound = other._upper_bound
+
+        flags_copy = Ptr[u32](f)
+        keys_copy = Ptr[K](n)
+        vals_copy = Ptr[V](n)
+        str.memcpy(flags_copy.as_byte(), other._flags.as_byte(), f * gc.sizeof(u32))
+        str.memcpy(keys_copy.as_byte(), other._keys.as_byte(), n * gc.sizeof(K))
+        str.memcpy(vals_copy.as_byte(), other._vals.as_byte(), n * gc.sizeof(V))
+
+        self._flags = flags_copy
+        self._keys = keys_copy
+        self._vals = vals_copy
+
     def __init__(self):
         self._init()
 
@@ -35,6 +59,9 @@ class Dict[K,V]:
         self._init()
         for k,v in g:
             self[k] = v
+
+    def __init__(self, other: Dict[K,V]):
+        self._init_from(other)
 
     def __getitem__(self, key: K) -> V:
         x = self._kh_get(key)
@@ -151,6 +178,11 @@ class Dict[K,V]:
             self._kh_del(x)
             return v
         raise KeyError(str(key))
+
+    def popitem(self):
+        for k in self:
+            return (k, self.pop(k))
+        raise KeyError('dictionary is empty')
 
     def clear(self):
         self._kh_clear()

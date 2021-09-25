@@ -5,6 +5,12 @@ class object:
     def __str__(self):
         return '<object>'
 
+def id(x):
+    if isinstance(x, ByRef):
+        return int(x.__raw__())
+    else:
+        return 0
+
 _stdout = _C.seq_stdout()
 def print(*args, sep: str = ' ', end: str = '\n', file=_stdout, flush: bool = False):
     """
