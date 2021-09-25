@@ -19,7 +19,7 @@ Sequences can be seamlessly converted between these various types:
 
     # (a) split into subsequences of length 3
     #     with a step of 2
-    for sub in dna.split(3, step=2):
+    for sub in dna.split(k=3, step=2):
         print(sub)
         print(~sub)  # reverse complement
 
@@ -38,6 +38,8 @@ Seq also supports a ``pseq`` type for protein sequences:
     protein = p'HEAGAWGHE'           # pseq literal
     print(list(protein.split(3, 3)))  # [HEA, GAW, GHE]
     print(s'ACCATGACA' |> translate)  # TMT
+
+.. Note:: What's the difference between sequences and :math:`k`-mers in Seq? Sequences have arbitrary length and allow for ambiguous bases like ``N``. :math:`k`-mers, on the other hand, have a length that is fixed and must be known at compile time, only allowing for ``ACGT`` bases. :math:`k`-mers can therefore be represented internally as 2-bit encoded integers, making them compact and very efficient to manipulate.
 
 In practice, sequences would be read from e.g. a FASTQ file:
 
@@ -162,16 +164,16 @@ Here's an example of pipeline usage, which shows the same two loops from above, 
 
     # (a) split into subsequences of length 3
     #     with a stride of 2
-    dna |> split(..., 3, 2) |> print
+    dna |> split(..., k=3, step=2) |> print
 
     # (b) split into 5-mers with stride 1
     def f(kmer):
         print(kmer)
         print(~kmer)
 
-    dna |> kmers(1, k=5) |> f
+    dna |> kmers(k=5, step=1) |> f
 
-First, note that ``split`` is a Seq standard library function that takes three arguments: the sequence to split, the subsequence length and the stride; ``split(..., 3, 2)`` is a partial call of ``split`` that produces a new single-argument function ``f(x)`` which produces ``split(x, 3, 2)``. The undefined argument(s) in a partial call can be implicit, as in the second example: ``kmers`` (also a standard library function) is a generic function parameterized by the target :math:`k`-mer type and takes as arguments the sequence to :math:`k`-merize and the stride; since just one of the two arguments is provided, the first is implicitly replaced by ``...`` to produce a partial call (i.e. the expression is equivalent to ``kmers(..., 1, k=5)``). Both ``split`` and ``kmers`` are themselves generators that yield subsequences and :math:`k`-mers respectively, which are passed sequentially to the last stage of the enclosing pipeline in the two examples.
+First, note that ``split`` is a Seq standard library function that takes three arguments: the sequence to split, the subsequence length and the stride; ``split(..., k=3, step=2)`` is a partial call of ``split`` that produces a new single-argument function ``f(x)`` which produces ``split(x, k=3, step=2)``. The undefined argument(s) in a partial call can be implicit, as in the second example: ``kmers`` (also a standard library function) is a generic function parameterized by the target :math:`k`-mer type and takes as arguments the sequence to :math:`k`-merize and the stride; since just one of the two arguments is provided, the first is implicitly replaced by ``...`` to produce a partial call (i.e. the expression is equivalent to ``kmers(..., k=5, step=1)``). Both ``split`` and ``kmers`` are themselves generators that yield subsequences and :math:`k`-mers respectively, which are passed sequentially to the last stage of the enclosing pipeline in the two examples.
 
 .. caution::
     The Seq compiler may perform optimizations that change the order of elements passed through a pipeline. Therefore, it is best to not rely on order when using pipelines. If order needs to be maintained, consider using a regular loop or passing an index alongside each element sent through the pipeline.
@@ -262,7 +264,7 @@ Now, if we were to process data in a pipeline as such:
     @prefetch
     def process(read: seq, index: MyIndex):
         ...
-        for kmer in read.kmers(step, k=20):
+        for kmer in read.kmers(k=20, step=step):
             hits_fwd = index[kmer]
             hits_rev = index[~kmer]
             ...
@@ -318,14 +320,14 @@ CPython and many other implementations alike cannot take advantage of parallelis
 
     # (a) split into subsequences of length 3
     #     with a stride of 2
-    dna |> split(..., 3, 2) ||> print
+    dna |> split(..., k=3, step=2) ||> print
 
     # (b) split into 5-mers with stride 1
     def f(kmer):
         print(kmer)
         print(~kmer)
 
-    dna |> kmers(1, k=5) ||> f
+    dna |> kmers(k=5, step=1) ||> f
 
 Internally, the Seq compiler uses an OpenMP task backend to generate code for parallel pipelines. Logically, parallel pipe operators are similar to parallel-for loops: the portion of the pipeline after the parallel pipe is outlined into a new function that is called by the OpenMP runtime task spawning routines (as in ``#pragma omp task`` in C++), and a synchronization point (``#pragma omp taskwait``) is added after the outlined segment. Lastly, the entire program is implicitly placed in an OpenMP parallel region (``#pragma omp parallel``) that is guarded by a "single" directive (``#pragma omp single``) so that the serial portions are still executed by one thread (this is required by OpenMP as tasks must be bound to an enclosing parallel region).
 
@@ -359,7 +361,7 @@ Other types
 
 Seq provides arbitrary-width signed and unsigned integers up to ``Int[512]`` and ``UInt[512]``, respectively (note that ``int`` is an ``Int[64]``). Typedefs for common bit widths are provided in the standard library, such as ``i8``, ``i16``, ``u32``, ``u64`` etc.
 
-The ``ptr[T]`` type in Seq also corresponds to a raw C pointer (e.g. ``ptr[byte]`` is equivalent to ``char*`` in C). The ``array[T]`` type represents a fixed-length array (essentially a pointer with a length).
+The ``Ptr[T]`` type in Seq also corresponds to a raw C pointer (e.g. ``Ptr[byte]`` is equivalent to ``char*`` in C). The ``array[T]`` type represents a fixed-length array (essentially a pointer with a length).
 
 Seq also provides ``__ptr__`` for obtaining a pointer to a variable (as in ``__ptr__(myvar)``) and ``__array__`` for declaring stack-allocated arrays (as in ``__array__[int](10)``).
 
