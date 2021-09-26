@@ -135,6 +135,29 @@ class deque[T]:
             assert 0 <= idx < self._tail
             return self._arr[idx]
 
+@tuple
+class _CounterItem[T]:
+    element: T
+    count: int
+
+    def __eq__(self, other: _CounterItem[T]):
+        return self.count == other.count
+
+    def __ne__(self, other: _CounterItem[T]):
+        return self.count != other.count
+
+    def __lt__(self, other: _CounterItem[T]):
+        return self.count < other.count
+
+    def __gt__(self, other: _CounterItem[T]):
+        return self.count > other.count
+
+    def __le__(self, other: _CounterItem[T]):
+        return self.count <= other.count
+
+    def __ge__(self, other: _CounterItem[T]):
+        return self.count >= other.count
+
 class Counter[T](Dict[T,int]):
     def _add(self, element: T):
         self.increment(element)
@@ -154,16 +177,43 @@ class Counter[T](Dict[T,int]):
             for i in range(v):
                 yield k
 
-    def most_common(self, n: Optional[int] = None):
+    def most_common(self, n: Optional[int] = None) -> List[Tuple[T,int]]:
+        if len(self) == 0:
+            return List[_CounterItem](capacity=0)
+
         if n is None:
-            v = List[Tuple[T,int]](capacity=len(self))
+            v = List[_CounterItem](capacity=len(self))
             for t in self.items():
                 v.append(t)
-            v.sort(key=lambda t: -t[1])
+            v.sort(reverse=True)
             return v
         else:
-            from heapq import nlargest
-            return nlargest(n, self.items(), key=lambda t: t[1])
+            from heapq import heapify, heapreplace
+            m = ~n
+
+            if m == 1:
+                top: Optional[_CounterItem] = None
+                for t in self.items():
+                    if top is None or t[1] > top.count:
+                        top = t
+                return [~top]
+
+            if m <= 0:
+                return List[_CounterItem](capacity=0)
+
+            result = List[_CounterItem](capacity=m)
+            for t in self.items():
+                if len(result) < m:
+                    result.append(t)
+                    if len(result) == m:
+                        heapify(result)
+                else:
+                    if result[0] < t:
+                        heapreplace(result, t)
+
+            result.sort(reverse=True)
+            return result
+
 
     def subtract(self, elements: Generator[T]):
         for a in elements:

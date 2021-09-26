@@ -492,7 +492,7 @@ def test_counter():
     c = Counter({'a':10, 'b':-2, 'c':0}) + Counter()
     assert dict(c) == {'a':10}
 
-    from random import randrange
+    from random import randrange, randint
     elements = 'abcd'
     for i in range(1000):
         # test random pairs of multisets
@@ -607,6 +607,31 @@ def test_counter():
     # equality
     assert Counter({'a':3, 'b':2}) == Counter('ababa')
     assert Counter({'a':3, 'b':2}) != Counter('babab')
+
+
+    # most common
+    c = Counter({v:k for k,v in enumerate('hgfedcba')})
+    q = [(v,k) for k,v in enumerate('hgfedcba')][::-1]
+    assert c.most_common() == q
+    for i in range(10):
+        assert c.most_common(i) == q[:i]
+
+    for limit in range(100):
+        for samples in range(100):
+            for most_common in range(100):
+                data = [randint(0, limit) for _ in range(samples)]
+                d = Counter(data)
+                exp = sorted(d.values(), reverse=True)[:most_common]
+                got = [v for k,v in d.most_common(most_common)]
+                assert exp == got
+
+    for limit in range(100):
+        for samples in range(100):
+            data = [randint(0, limit) for _ in range(samples)]
+            d = Counter(data)
+            exp = sorted(d.values(), reverse=True)
+            got = [v for k,v in d.most_common()]
+            assert exp == got
 test_counter()
 
 @test
