@@ -233,7 +233,47 @@ SAM('test/data/toy.sam') |> iter |> print3
 # EXPECT: 1 13 x6 TAATTAAGTCTACAGAGCAACTA 23M 36
 
 print '-'  # EXPECT: -
+SAM('test/data/toy.sam', num_threads=2) |> iter |> print3
+# EXPECT: 0 6 r001 TTAGATAAAGAGGATACTG 8M4I4M1D3M 22
+# EXPECT: [12561, 2, 20, 112]
+# EXPECT: Array[int]
+# EXPECT: aux tag not of array type 'f'
+# EXPECT: aux array index out of range
+# EXPECT: aux tag not of type 'Z'
+# EXPECT: 0 8 r002 AAAAGATAAGGGATAAA 1S2I6M1P1I1P1I4M2I 18
+# EXPECT: 0 8 r003 AGCTAA 5H6M 14
+# EXPECT: 0 15 r004 ATAGCTCTCAGC 6M14N1I5M 40
+# EXPECT: 0 28 r003 TAGGC 6H5M 33
+# EXPECT: 0 36 r001 CAGCGCCAT 9M 45
+# EXPECT: 1 0 x1 AGGTTTTATAAAACAAATAA 20M 20
+# EXPECT: 1 1 x2 GGTTTTATAAAACAAATAATT 21M 22
+# EXPECT: 1 5 x3 TTATAAAACAAATAATTAAGTCTACA 9M4I13M 27
+# EXPECT: 1 9 x4 CAAATAATTAAGTCTACAGAGCAAC 25M 34
+# EXPECT: 1 11 x5 AATAATTAAGTCTACAGAGCAACT 24M 35
+# EXPECT: 1 13 x6 TAATTAAGTCTACAGAGCAACTA 23M 36
+
+print '-'  # EXPECT: -
 BAM('test/data/toy.bam') |> iter |> print3
+# EXPECT: 0 6 r001 TTAGATAAAGAGGATACTG 8M4I4M1D3M 22
+# EXPECT: [12561, 2, 20, 112]
+# EXPECT: Array[int]
+# EXPECT: aux tag not of array type 'f'
+# EXPECT: aux array index out of range
+# EXPECT: aux tag not of type 'Z'
+# EXPECT: 0 8 r002 AAAAGATAAGGGATAAA 1S2I6M1P1I1P1I4M2I 18
+# EXPECT: 0 8 r003 AGCTAA 5H6M 14
+# EXPECT: 0 15 r004 ATAGCTCTCAGC 6M14N1I5M 40
+# EXPECT: 0 28 r003 TAGGC 6H5M 33
+# EXPECT: 0 36 r001 CAGCGCCAT 9M 45
+# EXPECT: 1 0 x1 AGGTTTTATAAAACAAATAA 20M 20
+# EXPECT: 1 1 x2 GGTTTTATAAAACAAATAATT 21M 22
+# EXPECT: 1 5 x3 TTATAAAACAAATAATTAAGTCTACA 9M4I13M 27
+# EXPECT: 1 9 x4 CAAATAATTAAGTCTACAGAGCAAC 25M 34
+# EXPECT: 1 11 x5 AATAATTAAGTCTACAGAGCAACT 24M 35
+# EXPECT: 1 13 x6 TAATTAAGTCTACAGAGCAACTA 23M 36
+
+print '-'  # EXPECT: -
+BAM('test/data/toy.bam', num_threads=2) |> iter |> print3
 # EXPECT: 0 6 r001 TTAGATAAAGAGGATACTG 8M4I4M1D3M 22
 # EXPECT: [12561, 2, 20, 112]
 # EXPECT: Array[int]
@@ -294,6 +334,26 @@ BAM('test/data/toy.bam', copy=False) |> iter |> print3
 
 print '-'  # EXPECT: -
 CRAM('test/data/toy.cram') |> iter |> print3
+# EXPECT: 0 6 r001 TTAGATAAAGAGGATACTG 8M4I4M1D3M 22
+# EXPECT: [12561, 2, 20, 112]
+# EXPECT: Array[int]
+# EXPECT: aux tag not of array type 'f'
+# EXPECT: aux array index out of range
+# EXPECT: aux tag not of type 'Z'
+# EXPECT: 0 8 r002 AAAAGATAAGGGATAAA 1S2I6M1P1I1P1I4M2I 18
+# EXPECT: 0 8 r003 AGCTAA 5H6M 14
+# EXPECT: 0 15 r004 ATAGCTCTCAGC 6M14N1I5M 40
+# EXPECT: 0 28 r003 TAGGC 6H5M 33
+# EXPECT: 0 36 r001 CAGCGCCAT 9M 45
+# EXPECT: 1 0 x1 AGGTTTTATAAAACAAATAA 20M 20
+# EXPECT: 1 1 x2 GGTTTTATAAAACAAATAATT 21M 22
+# EXPECT: 1 5 x3 TTATAAAACAAATAATTAAGTCTACA 9M4I13M 27
+# EXPECT: 1 9 x4 CAAATAATTAAGTCTACAGAGCAAC 25M 34
+# EXPECT: 1 11 x5 AATAATTAAGTCTACAGAGCAACT 24M 35
+# EXPECT: 1 13 x6 TAATTAAGTCTACAGAGCAACTA 23M 36
+
+print '-'  # EXPECT: -
+CRAM('test/data/toy.cram', num_threads=2) |> iter |> print3
 # EXPECT: 0 6 r001 TTAGATAAAGAGGATACTG 8M4I4M1D3M 22
 # EXPECT: [12561, 2, 20, 112]
 # EXPECT: Array[int]
@@ -618,14 +678,14 @@ test_fasta_with_fai()
 def L(a): return [x for x in a]
 
 @test
-def test_parse_vcf_basic():
+def test_parse_vcf_basic(num_threads = 0):
     path = 'test/data/toy.vcf'
-    pos = [record.pos for record in VCF(path)]
-    chroms = [record.chrom for record in VCF(path)]
-    id = [record.id for record in VCF(path)]
-    ref = [record.ref for record in VCF(path)]
-    alts = [list(record.alts) for record in VCF(path)]
-    qual = [record.qual for record in VCF(path)]
+    pos = [record.pos for record in VCF(path, num_threads=num_threads)]
+    chroms = [record.chrom for record in VCF(path, num_threads=num_threads)]
+    id = [record.id for record in VCF(path, num_threads=num_threads)]
+    ref = [record.ref for record in VCF(path, num_threads=num_threads)]
+    alts = [list(record.alts) for record in VCF(path, num_threads=num_threads)]
+    qual = [record.qual for record in VCF(path, num_threads=num_threads)]
 
     assert chroms == ['20'] * 6
     assert pos == [14369, 17329, 1110695, 1230236, 1234566, 1235236]
@@ -682,8 +742,10 @@ def test_parse_vcf_info():
     AF_full = [info_list(record, 'AF') for record in VCF(path)]
     assert [[str(x) for x in a] for a in AF_full] == [['0.5'], ['0.017'], ['0.333', '0.667'], list[str](), list[str](), list[str]()]
 
-# test_parse_vcf_basic()
+test_parse_vcf_basic()
+test_parse_vcf_basic(num_threads=1)
+test_parse_vcf_basic(num_threads=2)
 #test_parse_vcf_samples()
 #test_parse_vcf_filters()
 #test_parse_vcf_format()
-# test_parse_vcf_info()
+test_parse_vcf_info()
