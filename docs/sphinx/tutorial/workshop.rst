@@ -41,7 +41,7 @@ Let's download this data into a new folder called ``data``:
 
 .. code:: bash
 
-    curl -L http://seq.csail.mit.edu/data.tar.gz | tar zxf - -C .
+    curl -L https://www.dropbox.com/s/8lsngqvn0tzjn1o/data.tar.gz | tar zxf - -C .
 
 What does this data actually look like? Let's take a look:
 
