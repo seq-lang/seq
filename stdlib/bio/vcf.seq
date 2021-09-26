@@ -1065,11 +1065,14 @@ class BCFReader:
     _copy: bool
     _unpack_all: bool
 
-    def __init__(self, path: str, unpack_all: bool, copy: bool):
+    def __init__(self, path: str, unpack_all: bool, copy: bool, num_threads: int):
         path_c_str = path.c_str()
         file = hts_open(path_c_str, "rb".c_str())
         if not file:
             raise IOError("file " + path + " could not be opened")
+
+        if num_threads:
+            hts_set_threads(file, i32(num_threads))
 
         bcf_clear(self.__raw__())
         self._file = file
@@ -1135,8 +1138,8 @@ class BCFReader:
 
 VCFReader = BCFReader
 
-def BCF(path: str, unpack_all: bool = True, copy: bool = True):
-    return BCFReader(path, unpack_all, copy)
+def BCF(path: str, unpack_all: bool = True, copy: bool = True, num_threads: int = 0):
+    return BCFReader(path, unpack_all, copy, num_threads)
 
-def VCF(path: str, unpack_all: bool = True, copy: bool = True):
-    return VCFReader(path, unpack_all, copy)
+def VCF(path: str, unpack_all: bool = True, copy: bool = True, num_threads: int = 0):
+    return VCFReader(path, unpack_all, copy, num_threads)

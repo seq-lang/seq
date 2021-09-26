@@ -1,5 +1,6 @@
 # <htslib.h>
 from C import hts_open(cobj, cobj) -> cobj
+from C import hts_set_threads(cobj, i32) -> i32
 from C import hts_close(cobj)
 from C import hts_idx_destroy(cobj)
 from C import hts_itr_destroy(cobj)

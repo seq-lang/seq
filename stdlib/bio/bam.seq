@@ -514,7 +514,7 @@ class BAMReader:
     _itr: cobj
     _contigs: List[Contig]
 
-    def __init__(self, path: str, region: str, copy: bool):
+    def __init__(self, path: str, region: str, copy: bool, num_threads: int):
         path_c_str, region_c_str = path.c_str(), region.c_str()
 
         file = hts_open(path_c_str, "rb".c_str())
@@ -525,6 +525,9 @@ class BAMReader:
         if not idx:
             hts_close(file)
             raise IOError("unable to open BAM/CRAM index for " + path)
+
+        if num_threads:
+            hts_set_threads(file, i32(num_threads))
 
         hdr = sam_hdr_read(file)
         itr = sam_itr_querys(idx, hdr, region_c_str)
@@ -608,12 +611,15 @@ class SAMReader:
     _hdr: cobj
     _contigs: List[Contig]
 
-    def __init__(self, path: str, copy: bool):
+    def __init__(self, path: str, copy: bool, num_threads: int):
         path_c_str = path.c_str()
 
         file = hts_open(path_c_str, "r".c_str())
         if not file:
             raise IOError("file " + path + " could not be opened")
+
+        if num_threads:
+            hts_set_threads(file, i32(num_threads))
 
         hdr = sam_hdr_read(file)
         self._aln = _bam1_t()
@@ -672,11 +678,11 @@ class SAMReader:
 
 CRAMReader = BAMReader
 
-def SAM(path: str, copy: bool = True):
-    return SAMReader(path, copy)
+def SAM(path: str, copy: bool = True, num_threads: int = 0):
+    return SAMReader(path, copy, num_threads)
 
-def BAM(path: str, region: str = ".", copy: bool = True):
-    return BAMReader(path, region, copy)
+def BAM(path: str, region: str = ".", copy: bool = True, num_threads: int = 0):
+    return BAMReader(path, region, copy, num_threads)
 
-def CRAM(path: str, region: str = ".", copy: bool = True):
-    return CRAMReader(path, region, copy)
+def CRAM(path: str, region: str = ".", copy: bool = True, num_threads: int = 0):
+    return CRAMReader(path, region, copy, num_threads)
