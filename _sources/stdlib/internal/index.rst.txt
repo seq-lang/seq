@@ -1,0 +1,21 @@
+.. seq:module:: internal
+
+internal
+========
+
+.. toctree::
+
+   __init_test__
+   attributes
+   box
+   builtin
+   c_stubs
+   dlopen
+   file
+   gc
+   internal
+   khash
+   python
+   sort
+   str
+   types/index

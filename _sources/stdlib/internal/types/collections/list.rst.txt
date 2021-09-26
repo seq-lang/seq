@@ -1,0 +1,117 @@
+.. seq:module:: internal.types.collections.list
+
+:seq:mod:`internal.types.collections.list`
+------------------------------------------
+
+Source code: `internal/types/collections/list.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/collections/list.seq>`_
+
+.. seq:extension:: List[T]
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(arr : Array[T], len : int)
+         :noindex:
+
+      .. seq:method:: __init__(it : Generator[T])
+         :noindex:
+
+      .. seq:method:: __init__(capacity : int)
+         :noindex:
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(other : List[T])
+         :noindex:
+
+      .. seq:method:: __init__(dummy : bool, other)
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __getitem__(idx : int)
+         :noindex:
+
+      .. seq:method:: __setitem__(idx : int, val : T)
+         :noindex:
+
+      .. seq:method:: __delitem__(idx : int)
+         :noindex:
+
+      .. seq:method:: __eq__(other : List[T])
+         :noindex:
+
+      .. seq:method:: __ne__(other : List[T])
+         :noindex:
+
+      .. seq:method:: __getitem__(s : Slice)
+         :noindex:
+
+      .. seq:method:: __setitem__(s : Slice, other)
+         :noindex:
+
+      .. seq:method:: __delitem__(s : Slice)
+         :noindex:
+
+      .. seq:method:: __contains__(x : T)
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __reversed__()
+         :noindex:
+
+      .. seq:method:: __add__(other : List[T])
+         :noindex:
+
+      .. seq:method:: __iadd__(other : List[T])
+         :noindex:
+
+      .. seq:method:: __mul__(n : int)
+         :noindex:
+
+      .. seq:method:: __imul__(n : int)
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __hash__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: append(x : T)
+
+      .. seq:method:: extend(itr : Generator[T])
+
+      .. seq:method:: insert(idx : int, x : T)
+
+      .. seq:method:: pop(idx : int = -1)
+
+      .. seq:method:: remove(x : T)
+
+      .. seq:method:: clear()
+
+      .. seq:method:: index(x : T)
+
+      .. seq:method:: count(x : T)
+
+      .. seq:method:: reverse()
+
+
+
+.. seq:data:: list
+
+
+
+
+

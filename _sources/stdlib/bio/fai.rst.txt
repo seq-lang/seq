@@ -1,0 +1,63 @@
+.. seq:module:: bio.fai
+
+:seq:mod:`bio.fai`
+------------------
+
+Source code: `bio/fai.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/fai.seq>`_
+
+.. seq:class:: FAIRecord
+
+   **Properties:**
+
+      .. seq:attribute:: name
+
+      .. seq:attribute:: length
+
+      .. seq:attribute:: offset
+
+      .. seq:attribute:: line_bases
+
+      .. seq:attribute:: line_width
+
+      .. seq:attribute:: qual_offset
+
+
+
+.. seq:data:: FAI_COL_NAMES
+
+
+
+.. seq:class:: FAIReader
+
+   **Properties:**
+
+      .. seq:attribute:: file
+
+      .. seq:attribute:: num_necessary_cols
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(path : str, fastq : bool, validate : bool, copy : bool)
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __enter__()
+         :noindex:
+
+      .. seq:method:: __exit__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: close()
+
+
+
+.. seq:function:: FAI(path : str, fastq : bool = False, validate : bool = True, copy : bool = True)
+
+
+
+
+

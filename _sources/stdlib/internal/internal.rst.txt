@@ -1,0 +1,30 @@
+.. seq:module:: internal.internal
+
+:seq:mod:`internal.internal`
+----------------------------
+
+Source code: `internal/internal.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/internal.seq>`_
+
+.. seq:function:: seq_check_errno()
+
+
+
+.. seq:function:: seq_print( : str)
+
+
+
+.. seq:function:: exit( : int)
+
+
+
+.. seq:class:: Import
+
+   **Magic methods:**
+
+      .. seq:method:: __str__()
+         :noindex:
+
+
+
+
+

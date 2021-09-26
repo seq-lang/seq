@@ -1,0 +1,44 @@
+.. seq:module:: internal.types.array
+
+:seq:mod:`internal.types.array`
+-------------------------------
+
+Source code: `internal/types/array.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/array.seq>`_
+
+.. seq:extension:: Array[T]
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(ptr : Ptr[T], sz : int)
+         :noindex:
+
+      .. seq:method:: __new__(sz : int)
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __getitem__(index : int)
+         :noindex:
+
+      .. seq:method:: __setitem__(index : int, what : T)
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: slice(s : int, e : int)
+
+
+
+.. seq:data:: array
+
+
+
+
+

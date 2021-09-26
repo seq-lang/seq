@@ -1,0 +1,309 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>internal.gc &#8212; Seq 0.11.0 documentation</title>
+    
+  <link href="../../_static/css/theme.css" rel="stylesheet" />
+  <link href="../../_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    
+  <link rel="preload" as="script" href="../../_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="internal.internal" href="internal.html" />
+    <link rel="prev" title="internal.file" href="file.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../parallel.html">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cookbook.html">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../build.html">Building from Source</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Standard Library Reference</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="file.html"
+                        title="previous chapter"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.file</span></code></a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="internal.html"
+                        title="next chapter"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.internal</span></code></a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="../../_sources/stdlib/internal/gc.rst.txt"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.rst</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/seq-lang/seq"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+  <span class="target" id="module-internal.gc"></span><div class="section" id="internal-gc">
+<h1><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.gc</span></code><a class="headerlink" href="#internal-gc" title="Permalink to this headline">¶</a></h1>
+<p>Source code: <a class="reference external" href="https://github.com/seq-lang/seq/blob/master/stdlib/internal/gc.seq">internal/gc.seq</a></p>
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.seq_alloc">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">seq_alloc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.seq_alloc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.seq_alloc_atomic">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">seq_alloc_atomic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.seq_alloc_atomic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.seq_realloc">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">seq_realloc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">int</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.seq_realloc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.seq_free">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">seq_free</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.seq_free" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.seq_gc_add_roots">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">seq_gc_add_roots</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.seq_gc_add_roots" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.seq_gc_remove_roots">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">seq_gc_remove_roots</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.seq_gc_remove_roots" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.seq_gc_clear_roots">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">seq_gc_clear_roots</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.seq_gc_clear_roots" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.seq_gc_exclude_static_roots">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">seq_gc_exclude_static_roots</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.seq_gc_exclude_static_roots" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.sizeof">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">sizeof</span></span><span class="sig-name descname"><span class="pre">[T]</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.sizeof" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.atomic">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">atomic</span></span><span class="sig-name descname"><span class="pre">[T]</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.atomic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.alloc">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">alloc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sz</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.alloc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.alloc_atomic">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">alloc_atomic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sz</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.alloc_atomic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.realloc">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">realloc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">cobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sz</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.realloc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.free">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">free</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">cobj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.free" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.add_roots">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">add_roots</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">cobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">cobj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.add_roots" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.remove_roots">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">remove_roots</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">cobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">cobj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.remove_roots" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.clear_roots">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">clear_roots</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.clear_roots" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.gc.exclude_static_roots">
+<span class="sig-prename descclassname"><span class="pre">internal.gc.</span></span><span class="sig-name descname"><span class="pre">exclude_static_roots</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">cobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">cobj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.gc.exclude_static_roots" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+              </div>
+              
+        
+            
+
+
+
+<div class='prev-next-bottom'>
+    
+    <div id="prev">
+        <a class="left-prev" href="file.html" title="previous page">
+            <i class="prevnext-label fas fa-angle-left"></i>
+            <div class="prevnext-info">
+                <p class="prevnext-label">previous</p>
+                <p class="prevnext-title"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.file</span></code></p>
+            </div>
+        </a>
+    </div>
+     <div id="next">
+        <a class="right-next" href="internal.html" title="next page">
+            <div class="prevnext-info">
+                <p class="prevnext-label">next</p>
+                <p class="prevnext-title"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.internal</span></code></p>
+            </div>
+            <i class="prevnext-label fas fa-angle-right"></i>
+        </a>
+     </div>
+
+</div>
+        
+        </div>
+    </div>
+    <footer class="footer">
+    <div class="container">
+      <p>
+        
+          By seq-lang<br/>
+        
+            &copy; Copyright 2019-2021, seq-lang.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="../../_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

@@ -1,0 +1,60 @@
+.. seq:module:: ..sortedlist
+
+:seq:mod:`..sortedlist`
+-----------------------
+
+Source code: `sortedlist.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./sortedlist.seq>`_
+
+.. seq:data:: DEFAULT_LOAD_FACTOR
+
+
+
+.. seq:class:: SortedList[T]
+
+   **Properties:**
+
+      .. seq:attribute:: left
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: clear()
+
+            
+                    Remove all values from sorted list.
+                    Runtime complexity: `O(n)`
+            
+
+
+      .. seq:method:: add(value : T)
+
+            
+                    Add `value` to sorted list.
+                    Runtime complexity: `O(log(n))` -- approximate.
+                    >>> sl = SortedList()
+                    >>> sl.add(3)
+                    >>> sl.add(1)
+                    >>> sl.add(2)
+                    >>> sl
+                    SortedList([1, 2, 3])
+                    :param value: value to add to sorted list
+            
+
+
+
+
+
+

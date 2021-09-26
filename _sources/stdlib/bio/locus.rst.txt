@@ -1,0 +1,112 @@
+.. seq:module:: bio.locus
+
+:seq:mod:`bio.locus`
+--------------------
+
+Source code: `bio/locus.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/locus.seq>`_
+
+.. seq:class:: Contig
+
+   
+       Representation of a contig, consisting of an ID, name and length.
+   
+
+   **Properties:**
+
+      .. seq:attribute:: tid
+
+      .. seq:attribute:: name
+
+      .. seq:attribute:: len
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(tid : int, name : str, len : int)
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __eq__(other : Contig)
+         :noindex:
+
+      .. seq:method:: __ne__(other : Contig)
+         :noindex:
+
+      .. seq:method:: __lt__(other : Contig)
+         :noindex:
+
+      .. seq:method:: __gt__(other : Contig)
+         :noindex:
+
+      .. seq:method:: __le__(other : Contig)
+         :noindex:
+
+      .. seq:method:: __ge__(other : Contig)
+         :noindex:
+
+      .. seq:method:: __hash__()
+         :noindex:
+
+
+
+.. seq:class:: Locus
+
+   
+       Representation of a locus, consisting of a contig ID and 0-based position.
+   
+
+   **Properties:**
+
+      .. seq:attribute:: tid
+
+      .. seq:attribute:: pos
+
+      .. seq:attribute:: reversed
+
+            
+                    Whether this locus is on the reverse strand
+            
+
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(tid : int, pos : int)
+         :noindex:
+
+            
+                    Constructs a `Locus` with specified contig ID and 0-based position.
+                    Negative positions indicate loci on the reverse strand.
+            
+
+
+      .. seq:method:: __lt__(other : Locus)
+         :noindex:
+
+      .. seq:method:: __gt__(other : Locus)
+         :noindex:
+
+      .. seq:method:: __le__(other : Locus)
+         :noindex:
+
+      .. seq:method:: __ge__(other : Locus)
+         :noindex:
+
+      .. seq:method:: __invert__()
+         :noindex:
+
+            
+                    Returns the corresponding `Locus` on the reverse strand
+            
+
+
+      .. seq:method:: __str__()
+         :noindex:
+
+
+
+
+

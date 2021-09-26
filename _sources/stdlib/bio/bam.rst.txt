@@ -1,0 +1,480 @@
+.. seq:module:: bio.bam
+
+:seq:mod:`bio.bam`
+------------------
+
+Source code: `bio/bam.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/bam.seq>`_
+
+.. seq:data:: BAM_FPAIRED
+
+
+
+.. seq:data:: BAM_FPROPER_PAIR
+
+
+
+.. seq:data:: BAM_FUNMAP
+
+
+
+.. seq:data:: BAM_FMUNMAP
+
+
+
+.. seq:data:: BAM_FREVERSE
+
+
+
+.. seq:data:: BAM_FMREVERSE
+
+
+
+.. seq:data:: BAM_FREAD1
+
+
+
+.. seq:data:: BAM_FREAD2
+
+
+
+.. seq:data:: BAM_FSECONDARY
+
+
+
+.. seq:data:: BAM_FQCFAIL
+
+
+
+.. seq:data:: BAM_FDUP
+
+
+
+.. seq:data:: BAM_FSUPPLEMENTARY
+
+
+
+.. seq:data:: AUX_TYPE_INT8
+
+
+
+.. seq:data:: AUX_TYPE_UINT8
+
+
+
+.. seq:data:: AUX_TYPE_INT16
+
+
+
+.. seq:data:: AUX_TYPE_UINT16
+
+
+
+.. seq:data:: AUX_TYPE_INT32
+
+
+
+.. seq:data:: AUX_TYPE_UINT32
+
+
+
+.. seq:data:: AUX_TYPE_FLOAT
+
+
+
+.. seq:data:: AUX_TYPE_DOUBLE
+
+
+
+.. seq:data:: AUX_TYPE_CHAR
+
+
+
+.. seq:data:: AUX_TYPE_STRING
+
+
+
+.. seq:data:: AUX_TYPE_ARRAY
+
+
+
+.. seq:data:: AUX_TYPE_INT
+
+
+
+.. seq:class:: SAMAux
+
+   **Properties:**
+
+      .. seq:attribute:: tag_type
+
+            
+                    String representing the type of this tag.
+            
+                      - "int": use ``i`` property for int value
+                      - "float": use ``f`` property for float value
+                      - "char": use ``A`` property for byte value
+                      - "string": use ``Z`` property for string value
+                      - "Array[int]": use ``B_len`` for array length and either ``B2i(index)`` to access elements
+                      - "Array[float]": use ``B_len`` for array length and either ``B2f(index)`` to access elements
+            
+
+
+      .. seq:attribute:: i
+
+            
+                    Int value of this tag
+            
+
+
+      .. seq:attribute:: f
+
+            
+                    Float value of this tag
+            
+
+
+      .. seq:attribute:: A
+
+            
+                    Byte value of this tag
+            
+
+
+      .. seq:attribute:: Z
+
+            
+                    String value of this tag
+            
+
+
+      .. seq:attribute:: B_len
+
+            
+                    Array length of this tag
+            
+
+
+   **Magic methods:**
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: B2i(idx : int)
+
+            
+                    `idx`th element of integer array comprising this tag
+            
+
+
+      .. seq:method:: B2f(idx : int)
+
+            
+                    `idx`th element of float array comprising this tag
+            
+
+
+
+
+.. seq:class:: SAMRecord
+
+   **Properties:**
+
+      .. seq:attribute:: name
+
+            
+                    Read name of this record
+            
+
+
+      .. seq:attribute:: query_name
+
+            
+                    Alias of `name`
+            
+
+
+      .. seq:attribute:: read
+
+      .. seq:attribute:: seq
+
+            
+                    Record sequence
+            
+
+
+      .. seq:attribute:: qual
+
+            
+                    Record quality string
+            
+
+
+      .. seq:attribute:: cigar
+
+            
+                    Record `CIGAR`
+            
+
+
+      .. seq:attribute:: tid
+
+            
+                    Record contig ID
+            
+
+
+      .. seq:attribute:: flag
+
+            
+                    Record flag
+            
+
+
+      .. seq:attribute:: pos
+
+            
+                    Record position (0-based)
+            
+
+
+      .. seq:attribute:: locus
+
+            
+                    Record `Locus` consisting of `tid` and `pos`
+            
+
+
+      .. seq:attribute:: mate_tid
+
+            
+                    Contig ID in mate's record
+            
+
+
+      .. seq:attribute:: mate_pos
+
+            
+                    Position in mate's record (0-based)
+            
+
+
+      .. seq:attribute:: mate_locus
+
+            
+                    Record `Locus` of mate's record consisting of `mate_tid` and `mate_pos`
+            
+
+
+      .. seq:attribute:: mapq
+
+            
+                    Record's mapping quality
+            
+
+
+      .. seq:attribute:: insert_size
+
+            
+                    Record's insert size
+            
+
+
+      .. seq:attribute:: paired
+
+            
+                    Whether this record is paired
+            
+
+
+      .. seq:attribute:: proper_pair
+
+            
+                    Whether this record and its pair form a proper pair
+            
+
+
+      .. seq:attribute:: unmapped
+
+            
+                    Whether this record is unmapped
+            
+
+
+      .. seq:attribute:: mate_unmapped
+
+            
+                    Whether mate's record is unmapped
+            
+
+
+      .. seq:attribute:: reversed
+
+            
+                    Whether this record is reverse complemented on the reference
+            
+
+
+      .. seq:attribute:: mate_reversed
+
+            
+                    Whether this record's mate is reverse complemented on the reference
+            
+
+
+      .. seq:attribute:: read1
+
+            
+                    Whether this is the first read in the pair
+            
+
+
+      .. seq:attribute:: read2
+
+            
+                    Whether this is the second read in the pair
+            
+
+
+      .. seq:attribute:: secondary
+
+            
+                    Whether this is a seconday alignment
+            
+
+
+      .. seq:attribute:: qc_fail
+
+            
+                    Whether this record failed quality control checks
+            
+
+
+      .. seq:attribute:: duplicate
+
+            
+                    Whether this record is marked as a duplicate
+            
+
+
+      .. seq:attribute:: supplementary
+
+            
+                    Whether this record is supplementary
+            
+
+
+      .. seq:attribute:: endpos
+
+            
+                    The rightmost base position of an alignment on the reference genome
+            
+
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(htslib_record : _bam1_t)
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: aux(tag : str)
+
+            
+                    Returns the auxiliary tag with the specified key.
+            
+
+
+
+
+.. seq:class:: BAMReader
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(path : str, region : str, copy : bool, num_threads : int)
+         :noindex:
+
+      .. seq:method:: __blocks__(size : int)
+         :noindex:
+
+      .. seq:method:: __seqs__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __enter__()
+         :noindex:
+
+      .. seq:method:: __exit__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: seek(region : str)
+
+      .. seq:method:: close()
+
+      .. seq:method:: contigs()
+
+      .. seq:method:: contig(rid : int)
+
+
+
+.. seq:class:: SAMReader
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(path : str, copy : bool, num_threads : int)
+         :noindex:
+
+      .. seq:method:: __seqs__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __blocks__(size : int)
+         :noindex:
+
+      .. seq:method:: __enter__()
+         :noindex:
+
+      .. seq:method:: __exit__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: close()
+
+      .. seq:method:: contigs()
+
+      .. seq:method:: contig(rid : int)
+
+
+
+.. seq:data:: CRAMReader
+
+
+
+.. seq:function:: SAM(path : str, copy : bool = True, num_threads : int = 0)
+
+
+
+.. seq:function:: BAM(path : str, region : str = ".", copy : bool = True, num_threads : int = 0)
+
+
+
+.. seq:function:: CRAM(path : str, region : str = ".", copy : bool = True, num_threads : int = 0)
+
+
+
+
+

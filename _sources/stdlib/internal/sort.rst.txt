@@ -1,0 +1,25 @@
+.. seq:module:: internal.sort
+
+:seq:mod:`internal.sort`
+------------------------
+
+Source code: `internal/sort.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/sort.seq>`_
+
+.. seq:function:: sorted[T](v : Generator[T], key = Optional[int](), algorithm : Optional[str] = None, reverse : bool = False)
+
+   
+       Return a sorted list of the elements in v
+   
+
+
+
+.. seq:extension:: List[T]
+
+   **Methods:**
+
+      .. seq:method:: sort(key = Optional[int](), algorithm : Optional[str] = None, reverse : bool = False)
+
+
+
+
+

@@ -1,0 +1,541 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bio.align &#8212; Seq 0.11.0 documentation</title>
+    
+  <link href="../../_static/css/theme.css" rel="stylesheet" />
+  <link href="../../_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    
+  <link rel="preload" as="script" href="../../_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="bio.bam" href="bam.html" />
+    <link rel="prev" title="bio" href="index.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../parallel.html">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cookbook.html">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../build.html">Building from Source</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Standard Library Reference</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">bio</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="bam.html"
+                        title="next chapter"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">bio.bam</span></code></a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="../../_sources/stdlib/bio/align.rst.txt"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.rst</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/seq-lang/seq"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+  <span class="target" id="module-bio.align"></span><div class="section" id="bio-align">
+<h1><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">bio.align</span></code><a class="headerlink" href="#bio-align" title="Permalink to this headline">¶</a></h1>
+<p>Source code: <a class="reference external" href="https://github.com/seq-lang/seq/blob/master/stdlib/bio/align.seq">bio/align.seq</a></p>
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.align.CIGAR">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">CIGAR</span></span><a class="headerlink" href="#bio.align.CIGAR" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.align.Alignment">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">Alignment</span></span><a class="headerlink" href="#bio.align.Alignment" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__str__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.align.seq_align">
+<span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">seq_align</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">seq,</span>&#160; <span class="pre">:</span> <span class="pre">seq,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[i8],</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[Alignment]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.align.seq_align" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.align.seq_align_dual">
+<span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">seq_align_dual</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">seq,</span>&#160; <span class="pre">:</span> <span class="pre">seq,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[i8],</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[Alignment]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.align.seq_align_dual" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.align.seq_align_splice">
+<span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">seq_align_splice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">seq,</span>&#160; <span class="pre">:</span> <span class="pre">seq,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[i8],</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[Alignment]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.align.seq_align_splice" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.align.seq_align_global">
+<span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">seq_align_global</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">seq,</span>&#160; <span class="pre">:</span> <span class="pre">seq,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[i8],</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">bool,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[Alignment]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.align.seq_align_global" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.align.seq_align_default">
+<span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">seq_align_default</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">seq,</span>&#160; <span class="pre">:</span> <span class="pre">seq,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[Alignment]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.align.seq_align_default" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.align.seq_palign">
+<span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">seq_palign</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">pseq,</span>&#160; <span class="pre">:</span> <span class="pre">pseq,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[i8],</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[Alignment]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.align.seq_palign" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.align.seq_palign_dual">
+<span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">seq_palign_dual</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">pseq,</span>&#160; <span class="pre">:</span> <span class="pre">pseq,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[i8],</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[Alignment]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.align.seq_palign_dual" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.align.seq_palign_global">
+<span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">seq_palign_global</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">pseq,</span>&#160; <span class="pre">:</span> <span class="pre">pseq,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[i8],</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">i8,</span>&#160; <span class="pre">:</span> <span class="pre">int,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[Alignment]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.align.seq_palign_global" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.align.seq_palign_default">
+<span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">seq_palign_default</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">pseq,</span>&#160; <span class="pre">:</span> <span class="pre">pseq,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[Alignment]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.align.seq_palign_default" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.align.SubMat">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">SubMat</span></span><a class="headerlink" href="#bio.align.SubMat" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div><p>Substitution matrix for amino acid alignment</p>
+</div></blockquote>
+<p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__str__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq extension">
+<dt class="sig sig-object seq" id="id0">
+<em class="property"><span class="pre">extension</span> </em><span class="sig-name descname"><span class="pre">CIGAR</span></span><a class="headerlink" href="#id0" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Properties:</strong></p>
+<blockquote>
+<div><dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.align.CIGAR.qlen">
+<span class="sig-name descname"><span class="pre">qlen</span></span><a class="headerlink" href="#bio.align.CIGAR.qlen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.align.CIGAR.rlen">
+<span class="sig-name descname"><span class="pre">rlen</span></span><a class="headerlink" href="#bio.align.CIGAR.rlen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+<p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__eq__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="bio.align.CIGAR"><span class="pre">CIGAR</span></a></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__ne__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="bio.align.CIGAR"><span class="pre">CIGAR</span></a></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__copy__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__bool__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cigar</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__getitem__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__str__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__reversed__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq extension">
+<dt class="sig sig-object seq" id="id1">
+<em class="property"><span class="pre">extension</span> </em><span class="sig-name descname"><span class="pre">Alignment</span></span><a class="headerlink" href="#id1" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Properties:</strong></p>
+<blockquote>
+<div><dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.align.Alignment.cigar">
+<span class="sig-name descname"><span class="pre">cigar</span></span><a class="headerlink" href="#bio.align.Alignment.cigar" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.align.Alignment.score">
+<span class="sig-name descname"><span class="pre">score</span></span><a class="headerlink" href="#bio.align.Alignment.score" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+<p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cigar</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__bool__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq extension">
+<dt class="sig sig-object seq" id="bio.align.seq">
+<em class="property"><span class="pre">extension</span> </em><span class="sig-name descname"><span class="pre">seq</span></span><a class="headerlink" href="#bio.align.seq" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__matmul__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#bio.align.seq" title="bio.align.seq"><span class="pre">seq</span></a></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+<p><strong>Methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq" id="bio.align.seq.align">
+<span class="sig-name descname"><span class="pre">align</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#bio.align.seq" title="bio.align.seq"><span class="pre">seq</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ambig</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gapo</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gape</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gapo2</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gape2</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bandwidth</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zdrop</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_bonus</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score_only</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">generic_sc</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">approx_max</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">approx_drop</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ext_only</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rev_cigar</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">splice</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">splice_fwd</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">splice_rev</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">splice_flank</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.align.seq.align" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs Smith-Waterman alignment against another sequence.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><cite>a</cite>: match score</p></li>
+<li><p><cite>b</cite>: mismatch score</p></li>
+<li><p><cite>ambig</cite>: ambiguous (i.e. N) match score</p></li>
+<li><p><cite>gapo</cite>: gap open cost</p></li>
+<li><p><cite>gape</cite>: gap extension cost</p></li>
+<li><p><cite>gapo2</cite>: 2nd gap open cost for dual gap cost function</p></li>
+<li><p><cite>gape2</cite>: 2nd gap extension cost for dual gap cost function</p></li>
+<li><p><cite>bandwidth</cite>: bandwidth for DP alignment</p></li>
+<li><p><cite>zdrop</cite>: off-diagonal drop-off to stop extension</p></li>
+<li><p><cite>end_bonus</cite>: score bonus for reaching end of DP matrix</p></li>
+<li><p><cite>score_only</cite>: if true, don’t compute CIGAR</p></li>
+<li><p><cite>right</cite>: if true, right-align gaps</p></li>
+<li><p><cite>approx_max</cite>: if true, approximate max</p></li>
+<li><p><cite>approx_drop</cite>: if true, approximate Z-drop</p></li>
+<li><p><cite>rev_cigar</cite>: if true, reverse CIGAR in output</p></li>
+<li><p><cite>ext_only</cite>: if true, perform extension alignment</p></li>
+<li><p><cite>splice</cite>: if true, perform spliced alignment</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq extension">
+<dt class="sig sig-object seq" id="bio.align.pseq">
+<em class="property"><span class="pre">extension</span> </em><span class="sig-name descname"><span class="pre">pseq</span></span><a class="headerlink" href="#bio.align.pseq" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__matmul__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#bio.align.pseq" title="bio.align.pseq"><span class="pre">pseq</span></a></span></em><span class="sig-paren">)</span></dt>
+<dd><blockquote>
+<div><p>Performs Smith-Waterman alignment against another sequence.
+Uses Blosum-62, gap open cost 11 and gap extend cost 1.</p>
+</div></blockquote>
+</dd></dl>
+
+</div></blockquote>
+<p><strong>Methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq" id="bio.align.pseq.align">
+<span class="sig-name descname"><span class="pre">align</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#bio.align.pseq" title="bio.align.pseq"><span class="pre">pseq</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">mat</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#bio.align.SubMat" title="bio.align.SubMat"><span class="pre">SubMat</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">gapo</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gape</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gapo2</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gape2</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bandwidth</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zdrop</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_bonus</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score_only</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">generic_sc</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">approx_max</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">approx_drop</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ext_only</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rev_cigar</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.align.pseq.align" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs Smith-Waterman alignment against another sequence.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><cite>mat</cite>: score matrix</p></li>
+<li><p><cite>gapo</cite>: gap open cost</p></li>
+<li><p><cite>gape</cite>: gap extension cost</p></li>
+<li><p><cite>gapo2</cite>: 2nd gap open cost for dual gap cost function</p></li>
+<li><p><cite>gape2</cite>: 2nd gap extension cost for dual gap cost function</p></li>
+<li><p><cite>bandwidth</cite>: bandwidth for DP alignment</p></li>
+<li><p><cite>zdrop</cite>: off-diagonal drop-off to stop extension</p></li>
+<li><p><cite>end_bonus</cite>: score bonus for reaching end of DP matrix</p></li>
+<li><p><cite>score_only</cite>: if true, don’t compute CIGAR</p></li>
+<li><p><cite>right</cite>: if true, right-align gaps</p></li>
+<li><p><cite>approx_max</cite>: if true, approximate max</p></li>
+<li><p><cite>approx_drop</cite>: if true, approximate Z-drop</p></li>
+<li><p><cite>rev_cigar</cite>: if true, reverse CIGAR in output</p></li>
+<li><p><cite>ext_only</cite>: if true, perform extension alignment</p></li>
+</ul>
+</div></blockquote>
+</dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.align.InterAlignParams">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">InterAlignParams</span></span><a class="headerlink" href="#bio.align.InterAlignParams" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ambig</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gapo</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gape</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score_only</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bandwidth</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zdrop</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_bonus</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.align.SeqPair">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">SeqPair</span></span><a class="headerlink" href="#bio.align.SeqPair" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">len1</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">len2</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flags</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.align.InterAlignYield">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.align.</span></span><span class="sig-name descname"><span class="pre">InterAlignYield</span></span><a class="headerlink" href="#bio.align.InterAlignYield" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#bio.align.seq" title="bio.align.seq"><span class="pre">seq</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#bio.align.seq" title="bio.align.seq"><span class="pre">seq</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">extz_only</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rev_cigar</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+</div>
+
+
+              </div>
+              
+        
+            
+
+
+
+<div class='prev-next-bottom'>
+    
+    <div id="prev">
+        <a class="left-prev" href="index.html" title="previous page">
+            <i class="prevnext-label fas fa-angle-left"></i>
+            <div class="prevnext-info">
+                <p class="prevnext-label">previous</p>
+                <p class="prevnext-title">bio</p>
+            </div>
+        </a>
+    </div>
+     <div id="next">
+        <a class="right-next" href="bam.html" title="next page">
+            <div class="prevnext-info">
+                <p class="prevnext-label">next</p>
+                <p class="prevnext-title"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">bio.bam</span></code></p>
+            </div>
+            <i class="prevnext-label fas fa-angle-right"></i>
+        </a>
+     </div>
+
+</div>
+        
+        </div>
+    </div>
+    <footer class="footer">
+    <div class="container">
+      <p>
+        
+          By seq-lang<br/>
+        
+            &copy; Copyright 2019-2021, seq-lang.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="../../_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

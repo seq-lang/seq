@@ -1,0 +1,199 @@
+.. seq:module:: internal.builtin
+
+:seq:mod:`internal.builtin`
+---------------------------
+
+Source code: `internal/builtin.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/builtin.seq>`_
+
+.. seq:class:: object
+
+   **Magic methods:**
+
+      .. seq:method:: __str__()
+         :noindex:
+
+
+
+.. seq:function:: id(x)
+
+
+
+.. seq:function:: print(*args, sep : str = " ", end : str = "\n", file = _stdout, flush : bool = False)
+
+   
+       Print args to the text stream file.
+   
+
+
+
+.. seq:function:: min(*args)
+
+
+
+.. seq:function:: max(*args)
+
+
+
+.. seq:function:: len(x)
+
+   
+       Return the length of x
+   
+
+
+
+.. seq:function:: iter(x)
+
+   
+       Return an iterator for the given object
+   
+
+
+
+.. seq:function:: copy(x)
+
+   
+       Return a copy of x
+   
+
+
+
+.. seq:function:: abs(x)
+
+   
+       Return the absolute value of x
+   
+
+
+
+.. seq:function:: hash(x)
+
+   
+       Returns hashed value only for immutable objects
+   
+
+
+
+.. seq:function:: ord(s : str)
+
+   
+       Return an integer representing the Unicode code point of s
+   
+
+
+
+.. seq:function:: chr(i : int)
+
+   
+       Return a string representing a character whose Unicode
+       code point is an integer
+   
+
+
+
+.. seq:function:: next[T](g : Generator[T], default : Optional[T] = None)
+
+   
+       Return the next item from g
+   
+
+
+
+.. seq:function:: any(x)
+
+   
+       Returns True if any item in x is true,
+       False otherwise
+   
+
+
+
+.. seq:function:: all(x)
+
+   
+       Returns True when all elements in x are true,
+       False otherwise
+   
+
+
+
+.. seq:function:: zip(*args)
+
+   
+       Returns a zip object, which is an iterator of tuples
+       that aggregates elements based on the iterables passed
+   
+
+
+
+.. seq:function:: filter[T](f : Callable[T, bool], x : Generator[T])
+
+   
+       Returns all a from the iterable x that are filtered by f
+   
+
+
+
+.. seq:function:: map(f, *args)
+
+   
+       Applies a function on all a in x and returns map object
+   
+
+
+
+.. seq:function:: enumerate(x, start : int = 0)
+
+   
+       Creates a tuple containing a count (from start which defaults
+       to 0) and the values obtained from iterating over x
+   
+
+
+
+.. seq:function:: echo(x)
+
+   
+       Print and return argument
+   
+
+
+
+.. seq:function:: reversed(x)
+
+   
+       Return an iterator that accesses x in the reverse order
+   
+
+
+
+.. seq:function:: round(x, n)
+
+   
+       Return the x rounded off to the given
+       n digits after the decimal point.
+   
+
+
+
+.. seq:function:: sum(xi)
+
+   
+       Return the sum of the items added together from xi
+   
+
+
+
+.. seq:function:: repr(x)
+
+       Return the string representation of x
+   
+
+
+
+.. seq:extension:: int
+
+
+
+
+

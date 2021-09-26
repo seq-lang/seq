@@ -1,0 +1,89 @@
+.. seq:module:: bio.intervals
+
+:seq:mod:`bio.intervals`
+------------------------
+
+Source code: `bio/intervals.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/intervals.seq>`_
+
+.. seq:class:: Interval
+
+   **Properties:**
+
+      .. seq:attribute:: start
+
+      .. seq:attribute:: end
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(st : int, en : int, chrom_id : int)
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: with_max(max : int)
+
+
+
+.. seq:class:: IntervalTree
+
+   
+       Interval tree data structure.
+       Adapted from [cgranges](https://github.com/lh3/cgranges).
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __contains__(chrom : str)
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+            
+                    Iterator over all intervals in the tree
+            
+
+
+   **Methods:**
+
+      .. seq:method:: add(chrom : str, start : int, end : int)
+
+            
+                    Adds an interval to the tree. An interval is a chromosome name `chrom` and
+                    0-based `start` and `end` (non-inclusive) positions.
+            
+
+
+      .. seq:method:: index()
+
+            
+                    Indexes the tree for querying.
+            
+
+
+      .. seq:method:: overlap(chrom : str, start : int, end : int)
+
+            
+                    Yields all `Interval`s overlapping the argument interval.
+            
+
+
+
+
+
+

@@ -1,0 +1,242 @@
+.. seq:module:: internal.types.error
+
+:seq:mod:`internal.types.error`
+-------------------------------
+
+Source code: `internal/types/error.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/error.seq>`_
+
+.. seq:class:: ExcHeader
+
+
+
+.. seq:exception:: OSError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:exception:: IOError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:exception:: ValueError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:exception:: IndexError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:exception:: KeyError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:exception:: CError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:exception:: PyError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(message : str, pytype : str)
+         :noindex:
+
+
+
+.. seq:exception:: TypeError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:exception:: ZeroDivisionError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:exception:: AttributeError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:exception:: NotImplementedError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:class:: StopIteration
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:exception:: AssertionError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:class:: SystemExit
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+      .. seq:attribute:: status
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(status : int)
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+      .. seq:method:: __init__(message : str, status : int)
+         :noindex:
+
+
+
+
+

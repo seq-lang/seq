@@ -1,0 +1,69 @@
+.. seq:module:: internal.types.str
+
+:seq:mod:`internal.types.str`
+-----------------------------
+
+Source code: `internal/types/str.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/str.seq>`_
+
+.. seq:function:: strlen(a : cobj)
+
+
+
+.. seq:extension:: str
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(l : int, p : Ptr[byte])
+         :noindex:
+
+      .. seq:method:: __new__(p : Ptr[byte], l : int)
+         :noindex:
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __new__[T](what : T)
+         :noindex:
+
+      .. seq:method:: __str__(what : str)
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __add__(other : str)
+         :noindex:
+
+      .. seq:method:: __eq__(other : str)
+         :noindex:
+
+      .. seq:method:: __match__(other : str)
+         :noindex:
+
+      .. seq:method:: __ne__(other : str)
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: memcpy(dest : Ptr[byte], src : Ptr[byte], len : int)
+
+      .. seq:method:: memmove(dest : Ptr[byte], src : Ptr[byte], len : int)
+
+      .. seq:method:: memset(dest : Ptr[byte], val : byte, len : int)
+
+      .. seq:method:: c_str()
+
+      .. seq:method:: from_ptr(t : cobj)
+
+      .. seq:method:: cat(*args)
+
+
+
+
+

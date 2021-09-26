@@ -1,0 +1,428 @@
+.. seq:module:: ..statistics
+
+:seq:mod:`..statistics`
+-----------------------
+
+Source code: `statistics.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./statistics.seq>`_
+
+.. seq:exception:: StatisticsError
+
+   **Properties:**
+
+      .. seq:attribute:: message
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(message : str)
+         :noindex:
+
+
+
+.. seq:function:: median[T](data : List[T])
+
+   
+       Return the median (middle value) of numeric data.
+   
+       When the number of data points is odd, return the middle data point.
+       When the number of data points is even, the median is interpolated by
+       taking the average of the two middle values
+   
+
+
+
+.. seq:function:: median_low[T](data : List[T])
+
+   
+       Return the low median of numeric data.
+   
+       When the number of data points is odd, the middle value is returned.
+       When it is even, the smaller of the two middle values is returned.
+   
+
+
+
+.. seq:function:: median_high[T](data : List[T])
+
+   
+       Return the high median of data.
+   
+       When the number of data points is odd, the middle value is returned.
+       When it is even, the larger of the two middle values is returned.
+   
+
+
+
+.. seq:function:: median_grouped[T, S](data : List[T], interval : S = 1)
+
+   
+       Return the 50th percentile (median) of grouped continuous data.
+   
+
+
+
+.. seq:function:: mode[T](data : List[T])
+
+   
+       Return the most common data point from discrete or nominal data.
+   
+
+
+
+.. seq:function:: multimode[T](data : List[T])
+
+   
+       Return a list of the most frequently occurring values.
+   
+       Will return more than one result if there are multiple modes
+       or an empty list if *data* is empty.
+   
+
+
+
+.. seq:function:: quantiles[T](data : List[T], n : int = 4, method : str = "exclusive")
+
+   
+       Divide *data* into *n* continuous intervals with equal probability.
+   
+       Returns a list of (n - 1) cut points separating the intervals.
+   
+       Set *n* to 4 for quartiles (the default).  Set *n* to 10 for deciles.
+       Set *n* to 100 for percentiles which gives the 99 cuts points that
+       separate *data* in to 100 equal sized groups.
+   
+       The *data* can be any iterable containing sample.
+       The cut points are linearly interpolated between data points.
+   
+       If *method* is set to *inclusive*, *data* is treated as population
+       data.  The minimum value is treated as the 0th percentile and the
+       maximum value is treated as the 100th percentile.
+   
+
+
+
+.. seq:function:: mean(data : List[float])
+
+   
+       Return the sample arithmetic mean of data.
+   
+       TODO/CAVEATS
+         - Assumes input is floats
+         - Does not address NAN or INF
+   
+
+
+
+.. seq:function:: geometric_mean(data : List[float])
+
+   
+       Convert data to floats and compute the geometric mean.
+   
+       Raises a StatisticsError if the input dataset is empty,
+   
+       TODO/CAVEATS:
+         - Assumes input is a list of floats
+         - Uses mean instead of fmean for now
+         - Does not handle data that contains a zero, or if it contains a negative value.
+   
+
+
+
+.. seq:function:: harmonic_mean(data : List[float])
+
+   
+       Return the harmonic mean of data.
+   
+       The harmonic mean, sometimes called the subcontrary mean, is the
+       reciprocal of the arithmetic mean of the reciprocals of the data,
+       and is often appropriate when averaging quantities which are rates
+       or ratios.
+   
+
+
+
+.. seq:function:: pvariance(data : List[float], mu : Optional[float] = None)
+
+   
+       Return the population variance of `data`.
+   
+       Should contain atleast one value.
+       The optional argument mu, if given, should be the mean of
+       the data. If it is missing or None, the mean is automatically calculated.
+   
+       TODO/CAVEATS:
+         - Assumes input is a list of floats
+   
+
+
+
+.. seq:function:: pstdev(data : List[float], mu : Optional[float] = None)
+
+   
+       Return the square root of the population variance.
+   
+
+
+
+.. seq:function:: variance(data : List[float], xbar : Optional[float] = None)
+
+   
+       Return the sample variance of data.
+   
+       Shoulw contain atleast two values.
+       The optional argument xbar, if given, should be the mean of
+       the data. If it is missing or None, the mean is automatically calculated.
+   
+
+
+
+.. seq:function:: stdev(data, xbar : Optional[float] = None)
+
+   
+       Return the square root of the sample variance.
+   
+
+
+
+.. seq:class:: NormalDist
+
+   
+       Normal distribution of a random variable
+   
+
+   **Properties:**
+
+      .. seq:attribute:: mean
+
+            
+                    Arithmetic mean of the normal distribution.
+            
+
+
+      .. seq:attribute:: median
+
+            
+                    Return the median of the normal distribution
+            
+
+
+      .. seq:attribute:: mode
+
+            
+                    Return the mode of the normal distribution
+            
+                    The mode is the value x where which the probability density
+                    function (pdf) takes its maximum value.
+            
+
+
+      .. seq:attribute:: stdev
+
+            
+                    Standard deviation of the normal distribution.
+            
+
+
+      .. seq:attribute:: variance
+
+            
+                    Square of the standard deviation.
+            
+
+
+   **Magic methods:**
+
+      .. seq:method:: __eq__(other : NormalDist)
+         :noindex:
+
+      .. seq:method:: __init__(mu : float, sigma : float)
+         :noindex:
+
+      .. seq:method:: __init__(mu : int, sigma : int)
+         :noindex:
+
+      .. seq:method:: __init__(mu : float, sigma : int)
+         :noindex:
+
+      .. seq:method:: __init__(mu : int, sigma : float)
+         :noindex:
+
+      .. seq:method:: __init__(mu : float)
+         :noindex:
+
+      .. seq:method:: __init__(mu : int)
+         :noindex:
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __add__(x1 : NormalDist, x2 : NormalDist)
+         :noindex:
+
+            
+                    Add a constant or another NormalDist instance.
+                    If *other* is a constant, translate mu by the constant,
+                    leaving sigma unchanged.
+                    If *other* is a NormalDist, add both the means and the variances.
+                    Mathematically, this works only if the two distributions are
+                    independent or if they are jointly normally distributed.
+            
+
+
+      .. seq:method:: __add__(x1 : NormalDist, x2 : float)
+         :noindex:
+
+            
+                    Add a constant or another NormalDist instance.
+                    If *other* is a constant, translate mu by the constant,
+                    leaving sigma unchanged.
+                    If *other* is a NormalDist, add both the means and the variances.
+                    Mathematically, this works only if the two distributions are
+                    independent or if they are jointly normally distributed.
+            
+
+
+      .. seq:method:: __sub__(x1 : NormalDist, x2 : NormalDist)
+         :noindex:
+
+            
+                    Subtract a constant or another NormalDist instance.
+                    If *other* is a constant, translate by the constant mu,
+                    leaving sigma unchanged.
+                    If *other* is a NormalDist, subtract the means and add the variances.
+                    Mathematically, this works only if the two distributions are
+                    independent or if they are jointly normally distributed.
+            
+
+
+      .. seq:method:: __sub__(x1 : NormalDist, x2 : float)
+         :noindex:
+
+            
+                    Subtract a constant or another NormalDist instance.
+                    If *other* is a constant, translate by the constant mu,
+                    leaving sigma unchanged.
+                    If *other* is a NormalDist, subtract the means and add the variances.
+                    Mathematically, this works only if the two distributions are
+                    independent or if they are jointly normally distributed.
+            
+
+
+      .. seq:method:: __mul__(x1 : NormalDist, x2 : float)
+         :noindex:
+
+            
+                    Multiply both mu and sigma by a constant.
+                    Used for rescaling, perhaps to change measurement units.
+                    Sigma is scaled with the absolute value of the constant.
+            
+
+
+      .. seq:method:: __truediv__(x1 : NormalDist, x2 : float)
+         :noindex:
+
+            
+                    Divide both mu and sigma by a constant.
+                    Used for rescaling, perhaps to change measurement units.
+                    Sigma is scaled with the absolute value of the constant.
+            
+
+
+      .. seq:method:: __pos__(x1 : NormalDist)
+         :noindex:
+
+      .. seq:method:: __neg__(x1 : NormalDist)
+         :noindex:
+
+      .. seq:method:: __radd__(x1 : NormalDist, x2 : float)
+         :noindex:
+
+      .. seq:method:: __rsub__(x1 : NormalDist, x2 : NormalDist)
+         :noindex:
+
+      .. seq:method:: __rmul__(x1 : NormalDist, x2 : float)
+         :noindex:
+
+      .. seq:method:: __eq__(x1 : NormalDist, x2 : NormalDist)
+         :noindex:
+
+      .. seq:method:: __hash__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: pdf(x)
+
+            
+                    Probability density function.  P(x <= X < x+dx) / dx
+            
+
+
+      .. seq:method:: cdf(x)
+
+            
+                    Cumulative distribution function.  P(X <= x)
+            
+
+
+      .. seq:method:: inv_cdf(p : float)
+
+            
+                    Inverse cumulative distribution function.  x : P(X <= x) = p
+            
+                    Finds the value of the random variable such that the probability of
+                    the variable being less than or equal to that value equals the given
+                    probability.
+            
+
+
+      .. seq:method:: quantiles(n : int = 4)
+
+            
+                    Divide into *n* continuous intervals with equal probability.
+            
+                    Returns a list of (n - 1) cut points separating the intervals.
+            
+                    Set *n* to 4 for quartiles (the default).  Set *n* to 10 for deciles.
+                    Set *n* to 100 for percentiles which gives the 99 cuts points that
+                    separate the normal distribution in to 100 equal sized groups.
+            
+
+
+      .. seq:method:: overlap(other : NormalDist)
+
+            
+                    Compute the overlapping coefficient (OVL) between two normal distributions.
+            
+                    Measures the agreement between two normal probability distributions.
+                    Returns a value between 0.0 and 1.0 giving the overlapping area in
+                    the two underlying probability density functions.
+            
+
+
+      .. seq:method:: samples(n : int)
+
+            
+                    Generate *n* samples for a given mean and standard deviation.
+            
+
+
+      .. seq:method:: from_samples(data : List[float])
+
+            
+                    Make a normal distribution instance from sample data.
+                    TODO/CAVEATS:
+                      - Assumes input is a list of floats
+                      - Uses mean instead of fmean for now
+            
+
+
+
+
+
+

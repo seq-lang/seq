@@ -1,0 +1,242 @@
+.. seq:module:: bio.align
+
+:seq:mod:`bio.align`
+--------------------
+
+Source code: `bio/align.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/align.seq>`_
+
+.. seq:class:: CIGAR
+
+
+
+.. seq:class:: Alignment
+
+   **Magic methods:**
+
+      .. seq:method:: __str__()
+         :noindex:
+
+
+
+.. seq:function:: seq_align( : seq,  : seq,  : Ptr[i8],  : i8,  : i8,  : int,  : int,  : int,  : int,  : Ptr[Alignment])
+
+
+
+.. seq:function:: seq_align_dual( : seq,  : seq,  : Ptr[i8],  : i8,  : i8,  : i8,  : i8,  : int,  : int,  : int,  : int,  : Ptr[Alignment])
+
+
+
+.. seq:function:: seq_align_splice( : seq,  : seq,  : Ptr[i8],  : i8,  : i8,  : i8,  : i8,  : int,  : int,  : Ptr[Alignment])
+
+
+
+.. seq:function:: seq_align_global( : seq,  : seq,  : Ptr[i8],  : i8,  : i8,  : int,  : bool,  : Ptr[Alignment])
+
+
+
+.. seq:function:: seq_align_default( : seq,  : seq,  : Ptr[Alignment])
+
+
+
+.. seq:function:: seq_palign( : pseq,  : pseq,  : Ptr[i8],  : i8,  : i8,  : int,  : int,  : int,  : int,  : Ptr[Alignment])
+
+
+
+.. seq:function:: seq_palign_dual( : pseq,  : pseq,  : Ptr[i8],  : i8,  : i8,  : i8,  : i8,  : int,  : int,  : int,  : int,  : Ptr[Alignment])
+
+
+
+.. seq:function:: seq_palign_global( : pseq,  : pseq,  : Ptr[i8],  : i8,  : i8,  : int,  : Ptr[Alignment])
+
+
+
+.. seq:function:: seq_palign_default( : pseq,  : pseq,  : Ptr[Alignment])
+
+
+
+.. seq:class:: SubMat
+
+   
+       Substitution matrix for amino acid alignment
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(d : Dict[Tuple[str, str], int])
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+
+
+.. seq:extension:: CIGAR
+
+   **Properties:**
+
+      .. seq:attribute:: qlen
+
+      .. seq:attribute:: rlen
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __eq__(other : CIGAR)
+         :noindex:
+
+      .. seq:method:: __ne__(other : CIGAR)
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __new__(cigar : str)
+         :noindex:
+
+      .. seq:method:: __getitem__(idx : int)
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __reversed__()
+         :noindex:
+
+
+
+.. seq:extension:: Alignment
+
+   **Properties:**
+
+      .. seq:attribute:: cigar
+
+      .. seq:attribute:: score
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __new__(cigar : str, score : int)
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+
+
+.. seq:extension:: seq
+
+   **Magic methods:**
+
+      .. seq:method:: __matmul__(other : seq)
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: align(other : seq, a : int = 2, b : int = 4, ambig : int = 0, gapo : int = 4, gape : int = 2, gapo2 : int = -1, gape2 : int = -1, bandwidth : int = -1, zdrop : int = -1, end_bonus : int = 0, score_only : bool = False, right : bool = False, generic_sc : bool = False, approx_max : bool = False, approx_drop : bool = False, ext_only : bool = False, rev_cigar : bool = False, splice : bool = False, splice_fwd : bool = False, splice_rev : bool = False, splice_flank : bool = False)
+
+            
+                    Performs Smith-Waterman alignment against another sequence.
+            
+                      - `a`: match score
+                      - `b`: mismatch score
+                      - `ambig`: ambiguous (i.e. N) match score
+                      - `gapo`: gap open cost
+                      - `gape`: gap extension cost
+                      - `gapo2`: 2nd gap open cost for dual gap cost function
+                      - `gape2`: 2nd gap extension cost for dual gap cost function
+                      - `bandwidth`: bandwidth for DP alignment
+                      - `zdrop`: off-diagonal drop-off to stop extension
+                      - `end_bonus`: score bonus for reaching end of DP matrix
+                      - `score_only`: if true, don’t compute CIGAR
+                      - `right`: if true, right-align gaps
+                      - `approx_max`: if true, approximate max
+                      - `approx_drop`: if true, approximate Z-drop
+                      - `rev_cigar`: if true, reverse CIGAR in output
+                      - `ext_only`: if true, perform extension alignment
+                      - `splice`: if true, perform spliced alignment
+            
+
+
+
+
+.. seq:extension:: pseq
+
+   **Magic methods:**
+
+      .. seq:method:: __matmul__(other : pseq)
+         :noindex:
+
+            
+                    Performs Smith-Waterman alignment against another sequence.
+                    Uses Blosum-62, gap open cost 11 and gap extend cost 1.
+            
+
+
+   **Methods:**
+
+      .. seq:method:: align(other : pseq, mat : SubMat, gapo : int = 4, gape : int = 2, gapo2 : int = -1, gape2 : int = -1, bandwidth : int = -1, zdrop : int = -1, end_bonus : int = 0, score_only : bool = False, right : bool = False, generic_sc : bool = False, approx_max : bool = False, approx_drop : bool = False, ext_only : bool = False, rev_cigar : bool = False)
+
+            
+                    Performs Smith-Waterman alignment against another sequence.
+            
+                      - `mat`: score matrix
+                      - `gapo`: gap open cost
+                      - `gape`: gap extension cost
+                      - `gapo2`: 2nd gap open cost for dual gap cost function
+                      - `gape2`: 2nd gap extension cost for dual gap cost function
+                      - `bandwidth`: bandwidth for DP alignment
+                      - `zdrop`: off-diagonal drop-off to stop extension
+                      - `end_bonus`: score bonus for reaching end of DP matrix
+                      - `score_only`: if true, don’t compute CIGAR
+                      - `right`: if true, right-align gaps
+                      - `approx_max`: if true, approximate max
+                      - `approx_drop`: if true, approximate Z-drop
+                      - `rev_cigar`: if true, reverse CIGAR in output
+                      - `ext_only`: if true, perform extension alignment
+            
+
+
+
+
+.. seq:class:: InterAlignParams
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(a : int, b : int, ambig : int, gapo : int, gape : int, score_only : bool, bandwidth : int, zdrop : int, end_bonus : int)
+         :noindex:
+
+
+
+.. seq:class:: SeqPair
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(id : int, len1 : int, len2 : int, flags : int)
+         :noindex:
+
+
+
+.. seq:class:: InterAlignYield
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(query : seq, target : seq, extz_only : bool, rev_cigar : bool)
+         :noindex:
+
+
+
+
+

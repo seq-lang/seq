@@ -1,0 +1,54 @@
+.. seq:module:: algorithms.timsort
+
+:seq:mod:`algorithms.timsort`
+-----------------------------
+
+Source code: `algorithms/timsort.seq <https://github.com/seq-lang/seq/blob/master/stdlib/algorithms/timsort.seq>`_
+
+.. seq:data:: BLOCK_SIZE
+
+
+
+.. seq:data:: CACHELINE_SIZE
+
+
+
+.. seq:data:: MIN_GALLOP
+
+
+
+.. seq:function:: tim_sort_array[S, T](collection : Array[T], size : int, keyf : Callable[T, S])
+
+   
+           Timsort
+           By Tim Peters, published at https://github.com/python/cpython/blob/master/Objects/listobject.c#L2187
+   
+           Sorts the array inplace.
+   
+
+
+
+.. seq:function:: tim_sort_inplace[S, T](collection : List[T], keyf : Callable[T, S])
+
+   
+           Timsort
+           By Tim Peters, published at https://github.com/python/cpython/blob/master/Objects/listobject.c#L2187
+   
+           Sorts the list inplace.
+   
+
+
+
+.. seq:function:: tim_sort[S, T](collection : List[T], keyf : Callable[T, S])
+
+   
+           Timsort
+           By Tim Peters, published at https://github.com/python/cpython/blob/master/Objects/listobject.c#L2187
+   
+           Returns a sorted list.
+   
+
+
+
+
+

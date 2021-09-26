@@ -1,0 +1,598 @@
+.. seq:module:: bio.fmindex
+
+:seq:mod:`bio.fmindex`
+----------------------
+
+Source code: `bio/fmindex.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/fmindex.seq>`_
+
+.. seq:class:: bntann
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(name : str, anno : str, offset : int, len : int)
+         :noindex:
+
+
+
+.. seq:class:: bntamb
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(offset : int, amb : byte)
+         :noindex:
+
+
+
+.. seq:class:: bntseq
+
+   
+       Arbitrary-length 2-bit packed sequence, adapted from BWA
+   
+
+   **Properties:**
+
+      .. seq:attribute:: _n_holes
+
+   **Magic methods:**
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(path : str)
+         :noindex:
+
+      .. seq:method:: __init__(sequence : seq)
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: get_pac(pac : Ptr[u8], l : int)
+
+      .. seq:method:: depos(pos : int)
+
+      .. seq:method:: pos2rid(pos : int)
+
+      .. seq:method:: intv2rid(rb : int, re : int)
+
+      .. seq:method:: cnt_ambi(pos : int, len : int)
+
+      .. seq:method:: get_seq(lo : int, hi : int)
+
+
+
+.. seq:class:: FMInterval
+
+   
+       FM-index interval
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+
+
+.. seq:class:: FMDInterval
+
+   
+       FMD-index interval
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __invert__()
+         :noindex:
+
+            
+                    `FMDInterval` for the reverse complemented sequence
+            
+
+
+   **Methods:**
+
+      .. seq:method:: forward()
+
+            
+                    Forward-direction `FMInterval` corresponding to this interval
+            
+
+
+      .. seq:method:: revcomp()
+
+            
+                    Reverse-direction `FMInterval` corresponding to this interval
+            
+
+
+
+
+.. seq:class:: SMEM
+
+   
+       Super-Maximal Exact Match (SMEM)
+   
+
+   **Properties:**
+
+      .. seq:attribute:: interval
+
+            
+                    Corresponding `FMDInterval`
+            
+
+
+      .. seq:attribute:: start
+
+            
+                    SMEM start position on query (0-based)
+            
+
+
+      .. seq:attribute:: stop
+
+            
+                    SMEM stop position on query (non-inclusive; 0-based)
+            
+
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(interval : FMDInterval, start : int, stop : int)
+         :noindex:
+
+      .. seq:method:: __new__(interval : FMDInterval)
+         :noindex:
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+
+
+.. seq:function:: smems(self, q : seq, x : int = 0, min_intv : int = 1, min_seed : int = 1, mems : Optional[List[SMEM]] = None, prev : Optional[List[SMEM]] = None, curr : Optional[List[SMEM]] = None)
+
+   
+       Returns a list of SMEMs given an FsM-index or FMD-index (`self`), a
+       query sequence (`q`) and a start position (`x`; 0-based).
+       Adapted from BWA-MEM's `bwt_smem1a()`.
+   
+
+
+
+.. seq:data:: OCC_INTV_SHIFT
+
+
+
+.. seq:data:: OCC_INTERVAL
+
+
+
+.. seq:data:: OCC_INTV_MASK
+
+
+
+.. seq:class:: FMDIndex
+
+   
+       FMD-index: a bi-directional FM-index. Based on BWA-MEM's implementation.
+       Note that this implementation *does* perform SA-compression.
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(path : str)
+         :noindex:
+
+            
+                    Constructs an FM-index from the FASTA file at the specified path
+            
+
+
+      .. seq:method:: __init__(sequence : seq)
+         :noindex:
+
+            
+                    Constructs an FM-index from the specified sequence
+            
+
+
+      .. seq:method:: __getitem__(x : Tuple[FMInterval, seq])
+         :noindex:
+
+            
+                    Equivalent to `self.update(x[0], x[1])`.
+            
+
+
+      .. seq:method:: __getitem__(x : Tuple[FMDInterval, seq])
+         :noindex:
+
+            
+                    Equivalent to `self.biupdate(x[0], x[1])`.
+            
+
+
+      .. seq:method:: __getitem__(intv : FMInterval)
+         :noindex:
+
+            
+                    Iterator over all 0-based positions from specified interval
+            
+
+
+      .. seq:method:: __getitem__(s : seq)
+         :noindex:
+
+            
+                    Iterator over all 0-based positions at which the given
+                    sequence appears
+            
+
+
+   **Methods:**
+
+      .. seq:method:: occ(k : int, c : seq)
+
+            
+                    FM-index *occ* operation
+            
+
+
+      .. seq:method:: less(c : seq)
+
+            
+                    FM-index *less* operation
+            
+
+
+      .. seq:method:: interval(c : seq)
+
+            
+                    `FMInterval` corresponding to given length-1 sequence
+            
+
+
+      .. seq:method:: biinterval(c : seq)
+
+            
+                    `FMDInterval` corresponding to given length-1 sequence
+            
+
+
+      .. seq:method:: smems(q : seq, x : int = 0, min_intv : int = 1, min_seed : int = 1, mems : Optional[List[SMEM]] = None, prev : Optional[List[SMEM]] = None, curr : Optional[List[SMEM]] = None)
+
+            
+                    See `smems` function
+            
+
+
+      .. seq:method:: update(intv : FMInterval, c : seq)
+
+            
+                    Returns given `FMInterval` extended by base `c`
+            
+
+
+      .. seq:method:: biupdate(intv : FMDInterval, c : seq)
+
+            
+                    Returns given `FMDInterval` extended by base `c`
+            
+
+
+      .. seq:method:: count(s : seq)
+
+            
+                    Returns how many times the given sequence appears in the index
+            
+
+
+      .. seq:method:: results(intv : FMInterval, both_strands : bool = False)
+
+            
+                    Iterator over tuples (contig ID (`int`), contig name (`str`), 0-based position (`int`), reversed? (`bool`))
+                    tuples corresponding to specified interval. `both_strands` determines whether to
+                    include reverse complemented results.
+            
+
+
+      .. seq:method:: loci(intv : FMInterval, both_strands : bool = True)
+
+            
+                    Iterator over `Locus` values contained in the specified interval.
+                    `both_strands` determines whether to include reverse complemented results.
+            
+
+
+      .. seq:method:: biresults(smem : SMEM)
+
+            
+                    Iterator over tuples (contig ID (`int`), contig name (`str`), 0-based position (`int`), reversed? (`bool`))
+                    tuples corresponding to specified interval.
+            
+
+
+      .. seq:method:: biloci(intv : FMDInterval)
+
+            
+                    Iterator over `Locus` values contained in the specified interval.
+            
+
+
+      .. seq:method:: locate(s : seq, both_strands : bool = False)
+
+            
+                    `results` of interval corresponding to given sequence
+            
+
+
+      .. seq:method:: sequence(start : int, stop : int, rid : int = -1, name : str = "")
+
+            
+                    Obtains the underlying sequence from this index given 0-based `start` and `stop`
+                    (non-inclusive) positions and either contig ID `rid` or contig name `name`.
+                    Note that ambiguous bases are randomly replaced with A/C/G/T.
+            
+
+
+      .. seq:method:: contigs()
+
+            
+                    Iterator over `Contig`s contained in this index
+            
+
+
+      .. seq:method:: contig(rid : int)
+
+            
+                    Returns the `Contig` with the specified ID
+            
+
+
+
+
+.. seq:class:: FMIndex
+
+   
+       FM-index data structure.
+       Note that this implementation *does not* perform SA-compression.
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(s : seq)
+         :noindex:
+
+            
+                    Constructs an FM-index from the specified sequence
+            
+
+
+      .. seq:method:: __init__(path : str)
+         :noindex:
+
+            
+                    Constructs an FM-index from the FASTA file at the specified path
+            
+
+
+      .. seq:method:: __init__(path : str, FMD : bool)
+         :noindex:
+
+            
+                    Constructs an FM-index from the FASTA file at the specified path.
+                    `FMD` controls whether this index should be bi-directional.
+            
+
+
+      .. seq:method:: __getitem__(x : Tuple[FMInterval, seq])
+         :noindex:
+
+            
+                    Equivalent to `self.update(x[0], x[1])`.
+            
+
+
+      .. seq:method:: __getitem__(x : Tuple[FMDInterval, seq])
+         :noindex:
+
+            
+                    Equivalent to `self.biupdate(x[0], x[1])`.
+            
+
+
+      .. seq:method:: __prefetch__(x : Tuple[FMInterval, seq])
+         :noindex:
+
+      .. seq:method:: __prefetch__(x : Tuple[FMDInterval, seq])
+         :noindex:
+
+      .. seq:method:: __getitem__(intv : FMInterval)
+         :noindex:
+
+            
+                    Iterator over all 0-based positions from specified interval
+            
+
+
+      .. seq:method:: __getitem__(s : seq)
+         :noindex:
+
+            
+                    Iterator over all 0-based positions at which the given
+                    sequence appears
+            
+
+
+   **Methods:**
+
+      .. seq:method:: occ(k : int, c : seq)
+
+            
+                    FM-index *occ* operation
+            
+
+
+      .. seq:method:: less(c : seq)
+
+            
+                    FM-index *less* operation
+            
+
+
+      .. seq:method:: interval(c : seq)
+
+            
+                    `FMInterval` corresponding to given length-1 sequence
+            
+
+
+      .. seq:method:: biinterval(c : seq)
+
+            
+                    `FMDInterval` corresponding to given length-1 sequence
+            
+
+
+      .. seq:method:: smems(q : seq, x : int = 0, min_intv : int = 1, min_seed : int = 1, mems : Optional[List[SMEM]] = None, prev : Optional[List[SMEM]] = None, curr : Optional[List[SMEM]] = None)
+
+            
+                    See `smems` function
+            
+
+
+      .. seq:method:: update(intv : FMInterval, c : seq)
+
+            
+                    Returns given `FMInterval` extended by base `c`
+            
+
+
+      .. seq:method:: biupdate(intv : FMDInterval, c : seq)
+
+            
+                    Returns given `FMDInterval` extended by base `c`
+            
+
+
+      .. seq:method:: count(s : seq)
+
+            
+                    Returns how many times the given sequence appears in the index
+            
+
+
+      .. seq:method:: results(intv : FMInterval)
+
+            
+                    Iterator over tuples (contig ID (`int`), contig name (`str`), 0-based position (`int`), reversed? (`bool`))
+                    tuples corresponding to specified interval. `both_strands` determines whether to
+                    include reverse complemented results.
+            
+
+
+      .. seq:method:: loci(intv : FMInterval)
+
+            
+                    Iterator over `Locus` values contained in the specified interval.
+                    `both_strands` determines whether to include reverse complemented results.
+            
+
+
+      .. seq:method:: biresults(smem : SMEM)
+
+            
+                    Iterator over tuples (contig ID (`int`), contig name (`str`), 0-based position (`int`), reversed? (`bool`))
+                    tuples corresponding to specified interval.
+            
+
+
+      .. seq:method:: biloci(intv : FMDInterval)
+
+            
+                    Iterator over `Locus` values contained in the specified interval.
+            
+
+
+      .. seq:method:: locate(s : seq)
+
+            
+                    `results` of interval corresponding to given sequence
+            
+
+
+      .. seq:method:: sequence(start : int, stop : int, rid : int = -1, name : str = "")
+
+            
+                    Obtains the underlying sequence from this index given 0-based `start` and `stop`
+                    (non-inclusive) positions and either contig ID `rid` or contig name `name`.
+                    Note that ambiguous bases are randomly replaced with A/C/G/T.
+            
+
+
+      .. seq:method:: contigs()
+
+            
+                    Iterator over `Contig`s contained in this index
+            
+
+
+      .. seq:method:: contig(rid : int)
+
+            
+                    Returns the `Contig` with the specified ID
+            
+
+
+
+
+
+

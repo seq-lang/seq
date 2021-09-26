@@ -1,0 +1,87 @@
+.. seq:module:: ..bisect
+
+:seq:mod:`..bisect`
+-------------------
+
+Source code: `bisect.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./bisect.seq>`_
+
+.. seq:function:: bisect_left(a, x, lo : int = 0, hi : int = -1)
+
+   
+       Return the index where to insert item x in list a, assuming a is sorted.
+   
+       The return value i is such that all e in a[:i] have e < x, and all e in
+       a[i:] have e >= x.  So if x already appears in the list, a.insert(x) will
+       insert just before the leftmost x already there.
+   
+       Optional args lo (default 0) and hi (default len(a)) bound the
+       slice of a to be searched.
+   
+       Default values: lo=0, high=None
+       For now seq will use len(a) instead of None
+   
+
+
+
+.. seq:function:: bisect_right(a, x, lo : int = 0, hi : int = -1)
+
+   
+       Return the index where to insert item x in list a, assuming a is sorted.
+   
+       The return value i is such that all e in a[:i] have e <= x, and all e in
+       a[i:] have e > x.  So if x already appears in the list, a.insert(x) will
+       insert just after the rightmost x already there.
+   
+       Optional args lo (default 0) and hi (default len(a)) bound the
+       slice of a to be searched.
+   
+       Default values: lo=0, high=None
+       For now seq will use len(a) instead of None
+   
+
+
+
+.. seq:function:: bisect(a, x, lo : int = 0, hi : int = -1)
+
+   
+       bisect = bisect_right
+   
+
+
+
+.. seq:function:: insort_left(a, x, lo : int = 0, hi : int = -1)
+
+   
+       Insert item x in list a, and keep it sorted assuming a is sorted.
+   
+       If x is already in a, insert it to the left of the leftmost x.
+   
+       Default values: lo=0, high=None
+       For now seq will use len(a) instead of None
+   
+
+
+
+.. seq:function:: insort_right(a, x, lo : int = 0, hi : int = -1)
+
+   
+       Insert item x in list a, and keep it sorted assuming a is sorted.
+   
+       If x is already in a, insert it to the right of the rightmost x.
+   
+       Default values: lo=0, high=None
+       For now seq will use len(a) instead of None
+   
+
+
+
+.. seq:function:: insort(a, x, lo : int = 0, hi : int = -1)
+
+   
+       insort = insort_right
+   
+
+
+
+
+

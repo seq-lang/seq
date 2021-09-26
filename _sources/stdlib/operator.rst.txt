@@ -1,0 +1,217 @@
+.. seq:module:: ..operator
+
+:seq:mod:`..operator`
+---------------------
+
+Source code: `operator.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./operator.seq>`_
+
+.. seq:data:: lt
+
+
+
+.. seq:data:: le
+
+
+
+.. seq:data:: eq
+
+
+
+.. seq:data:: ne
+
+
+
+.. seq:data:: gt
+
+
+
+.. seq:data:: ge
+
+
+
+.. seq:function:: not_(a)
+
+
+
+.. seq:function:: truth(a)
+
+
+
+.. seq:function:: is_(a, b)
+
+
+
+.. seq:function:: is_not(a, b)
+
+
+
+.. seq:function:: abs(a)
+
+
+
+.. seq:function:: add(a, b)
+
+
+
+.. seq:function:: and_(a, b)
+
+
+
+.. seq:function:: floordiv(a, b)
+
+
+
+.. seq:function:: index(a)
+
+
+
+.. seq:function:: inv(a)
+
+
+
+.. seq:data:: invert
+
+
+
+.. seq:function:: lshift(a, b)
+
+
+
+.. seq:function:: mod(a, b)
+
+
+
+.. seq:function:: mul(a, b)
+
+
+
+.. seq:function:: matmul(a, b)
+
+
+
+.. seq:function:: neg(a)
+
+
+
+.. seq:function:: or_(a, b)
+
+
+
+.. seq:function:: pos(a)
+
+
+
+.. seq:function:: pow(a, b)
+
+
+
+.. seq:function:: rshift(a, b)
+
+
+
+.. seq:function:: sub(a, b)
+
+
+
+.. seq:function:: truediv(a, b)
+
+
+
+.. seq:function:: xor(a, b)
+
+
+
+.. seq:function:: concat(a, b)
+
+
+
+.. seq:function:: contains(a, b)
+
+
+
+.. seq:function:: countOf(a, b)
+
+
+
+.. seq:function:: delitem(a, b)
+
+
+
+.. seq:function:: getitem(a, b)
+
+
+
+.. seq:function:: indexOf(a, b)
+
+
+
+.. seq:function:: setitem(a, b, c)
+
+
+
+.. seq:function:: length_hint(a, default = 0)
+
+
+
+.. seq:function:: itemgetter(*items)
+
+
+
+.. seq:function:: iadd(a, b)
+
+
+
+.. seq:function:: iand(a, b)
+
+
+
+.. seq:function:: iconcat(a, b)
+
+
+
+.. seq:function:: ifloordiv(a, b)
+
+
+
+.. seq:function:: ilshift(a, b)
+
+
+
+.. seq:function:: imod(a, b)
+
+
+
+.. seq:function:: imul(a, b)
+
+
+
+.. seq:function:: imatmul(a, b)
+
+
+
+.. seq:function:: ior(a, b)
+
+
+
+.. seq:function:: ipow(a, b)
+
+
+
+.. seq:function:: irshift(a, b)
+
+
+
+.. seq:function:: isub(a, b)
+
+
+
+.. seq:function:: itruediv(a, b)
+
+
+
+.. seq:function:: ixor(a, b)
+
+
+
+
+

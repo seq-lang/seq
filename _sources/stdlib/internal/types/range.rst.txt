@@ -1,0 +1,54 @@
+.. seq:module:: internal.types.range
+
+:seq:mod:`internal.types.range`
+-------------------------------
+
+Source code: `internal/types/range.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/range.seq>`_
+
+.. seq:class:: range
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(start : int, stop : int, step : int)
+         :noindex:
+
+      .. seq:method:: __new__(start : int, stop : int)
+         :noindex:
+
+      .. seq:method:: __new__(stop : int)
+         :noindex:
+
+      .. seq:method:: __getitem__(idx : int)
+         :noindex:
+
+      .. seq:method:: __getitem__(s : Slice)
+         :noindex:
+
+      .. seq:method:: __contains__(idx : int)
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __reversed__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: index(n : int)
+
+      .. seq:method:: count(n : int)
+
+
+
+
+

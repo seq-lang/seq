@@ -1,0 +1,54 @@
+.. seq:module:: ..time
+
+:seq:mod:`..time`
+-----------------
+
+Source code: `time.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./time.seq>`_
+
+.. seq:function:: time()
+
+
+
+.. seq:class:: TimeInterval
+
+   
+       Utility class for timing Seq code
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __enter__()
+         :noindex:
+
+      .. seq:method:: __exit__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: report(msg = "", memory = False)
+
+      .. seq:method:: elapsed()
+
+      .. seq:method:: tick(msg, memory = False)
+
+
+
+.. seq:function:: timing(msg : str = "")
+
+   
+       Example usage:
+   
+       .. code-block:: seq
+   
+           from time import timing
+           with timing('foo function'):
+               foo()  # prints runtime of foo
+   
+
+
+
+
+

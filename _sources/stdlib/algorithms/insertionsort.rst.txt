@@ -1,0 +1,36 @@
+.. seq:module:: algorithms.insertionsort
+
+:seq:mod:`algorithms.insertionsort`
+-----------------------------------
+
+Source code: `algorithms/insertionsort.seq <https://github.com/seq-lang/seq/blob/master/stdlib/algorithms/insertionsort.seq>`_
+
+.. seq:function:: insertion_sort_array[S, T](collection : Array[T], size : int, keyf : Callable[T, S])
+
+   
+           Insertion Sort
+           Sorts the array inplace.
+   
+
+
+
+.. seq:function:: insertion_sort_inplace[S, T](collection : List[T], keyf : Callable[T, S])
+
+   
+           Insertion Sort
+           Sorts the list inplace.
+   
+
+
+
+.. seq:function:: insertion_sort[S, T](collection : List[T], keyf : Callable[T, S])
+
+   
+           Insertion Sort
+           Returns the sorted list.
+   
+
+
+
+
+

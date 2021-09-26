@@ -1,0 +1,130 @@
+.. seq:module:: internal.types.ptr
+
+:seq:mod:`internal.types.ptr`
+-----------------------------
+
+Source code: `internal/types/ptr.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/ptr.seq>`_
+
+.. seq:function:: seq_str_ptr(a : Ptr[byte])
+
+
+
+.. seq:extension:: Ptr[T]
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(sz : int)
+         :noindex:
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __new__(other : Ptr[byte])
+         :noindex:
+
+      .. seq:method:: __new__(other : Ptr[T])
+         :noindex:
+
+      .. seq:method:: __int__()
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __getitem__(index : int)
+         :noindex:
+
+      .. seq:method:: __setitem__(index : int, what : T)
+         :noindex:
+
+      .. seq:method:: __add__(other : int)
+         :noindex:
+
+      .. seq:method:: __sub__(other : Ptr[T])
+         :noindex:
+
+      .. seq:method:: __eq__(other : Ptr[T])
+         :noindex:
+
+      .. seq:method:: __ne__(other : Ptr[T])
+         :noindex:
+
+      .. seq:method:: __lt__(other : Ptr[T])
+         :noindex:
+
+      .. seq:method:: __gt__(other : Ptr[T])
+         :noindex:
+
+      .. seq:method:: __le__(other : Ptr[T])
+         :noindex:
+
+      .. seq:method:: __ge__(other : Ptr[T])
+         :noindex:
+
+      .. seq:method:: __prefetch_r0__()
+         :noindex:
+
+      .. seq:method:: __prefetch_r1__()
+         :noindex:
+
+      .. seq:method:: __prefetch_r2__()
+         :noindex:
+
+      .. seq:method:: __prefetch_r3__()
+         :noindex:
+
+      .. seq:method:: __prefetch_w0__()
+         :noindex:
+
+      .. seq:method:: __prefetch_w1__()
+         :noindex:
+
+      .. seq:method:: __prefetch_w2__()
+         :noindex:
+
+      .. seq:method:: __prefetch_w3__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: as_byte()
+
+
+
+.. seq:data:: ptr
+
+
+
+.. seq:data:: Jar
+
+
+
+.. seq:data:: cobj
+
+
+
+.. seq:class:: Array[T]
+
+
+
+.. seq:class:: List[T]
+
+
+
+.. seq:extension:: NoneType
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+
+
+
+

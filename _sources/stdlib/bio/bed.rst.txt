@@ -1,0 +1,84 @@
+.. seq:module:: bio.bed
+
+:seq:mod:`bio.bed`
+------------------
+
+Source code: `bio/bed.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/bed.seq>`_
+
+.. seq:class:: BEDRecord
+
+   **Properties:**
+
+      .. seq:attribute:: chrom
+
+      .. seq:attribute:: chrom_start
+
+      .. seq:attribute:: chrom_end
+
+      .. seq:attribute:: misc
+
+      .. seq:attribute:: score
+
+      .. seq:attribute:: strand
+
+      .. seq:attribute:: thick_start
+
+      .. seq:attribute:: thick_end
+
+      .. seq:attribute:: item_rgb
+
+      .. seq:attribute:: block_count
+
+      .. seq:attribute:: block_sizes
+
+      .. seq:attribute:: block_starts
+
+      .. seq:attribute:: num_cols
+
+      .. seq:attribute:: __len__
+
+   **Magic methods:**
+
+      .. seq:method:: __len__()
+         :noindex:
+
+
+
+.. seq:class:: BEDReader
+
+   **Properties:**
+
+      .. seq:attribute:: file
+
+      .. seq:attribute:: header
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(path : str, validate : bool, copy : bool)
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __enter__()
+         :noindex:
+
+      .. seq:method:: __exit__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: init_header(path : str)
+
+      .. seq:method:: is_line_header(line : str)
+
+      .. seq:method:: close()
+
+
+
+.. seq:function:: BED(path : str, validate : bool = True, copy : bool = True)
+
+
+
+
+

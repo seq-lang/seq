@@ -1,0 +1,47 @@
+.. seq:module:: internal.types.generator
+
+:seq:mod:`internal.types.generator`
+-----------------------------------
+
+Source code: `internal/types/generator.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/generator.seq>`_
+
+.. seq:extension:: Generator[T]
+
+   **Magic methods:**
+
+      .. seq:method:: __promise__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __raw__()
+         :noindex:
+
+      .. seq:method:: __done__()
+         :noindex:
+
+      .. seq:method:: __resume__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: done()
+
+      .. seq:method:: next()
+
+      .. seq:method:: send(what : T)
+
+      .. seq:method:: destroy()
+
+
+
+.. seq:data:: generator
+
+
+
+
+

@@ -1,0 +1,79 @@
+.. seq:module:: internal.__init_test__
+
+:seq:mod:`internal.__init_test__`
+---------------------------------
+
+Source code: `internal/__init_test__.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/__init_test__.seq>`_
+
+.. seq:function:: next[T](g : Generator[T], default : Optional[T] = None)
+
+
+
+.. seq:function:: seq_print_full( : str,  : cobj)
+
+
+
+.. seq:class:: Set[T]
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: add(what : T)
+
+
+
+.. seq:class:: Dict[K,V]
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __contains__(key : K)
+         :noindex:
+
+      .. seq:method:: __getitem__(key : K)
+         :noindex:
+
+      .. seq:method:: __setitem__(key : K, val : V)
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: items()
+
+
+
+.. seq:extension:: str
+
+   **Magic methods:**
+
+      .. seq:method:: __getitem__(idx : int)
+         :noindex:
+
+      .. seq:method:: __getitem__(s : Slice)
+         :noindex:
+
+
+
+
+

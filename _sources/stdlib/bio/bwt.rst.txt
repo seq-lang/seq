@@ -1,0 +1,57 @@
+.. seq:module:: bio.bwt
+
+:seq:mod:`bio.bwt`
+------------------
+
+Source code: `bio/bwt.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/bwt.seq>`_
+
+.. seq:extension:: seq
+
+   **Methods:**
+
+      .. seq:method:: suffix_array()
+
+            
+                    Suffix array of this sequence as a list of integers
+            
+
+
+      .. seq:method:: bwt()
+
+            
+                    Burrows-Wheeler transform of this sequence (contains `$`)
+            
+
+
+      .. seq:method:: lcp(sa : List[int])
+
+            
+                    Longest common prefix array based on suffix array
+                    [https://rahmannlab.gitlab.io/algorithmen-auf-sequenzen/pdfs/skript-aas.pdf](https://rahmannlab.gitlab.io/algorithmen-auf-sequenzen/pdfs/skript-aas.pdf), p. 61
+            
+
+
+
+
+.. seq:extension:: pseq
+
+   **Methods:**
+
+      .. seq:method:: suffix_array()
+
+            
+                    Suffix array of this sequence as a list of integers
+            
+
+
+      .. seq:method:: bwt()
+
+            
+                    Burrows-Wheeler transform of this sequence (contains `$`)
+            
+
+
+
+
+
+

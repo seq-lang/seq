@@ -1,0 +1,64 @@
+.. seq:module:: bio.iter
+
+:seq:mod:`bio.iter`
+-------------------
+
+Source code: `bio/iter.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/iter.seq>`_
+
+.. seq:class:: SeqReader
+
+   
+       Parser for a plain txt-based sequence format, with one sequence per line.
+   
+   
+
+   **Properties:**
+
+      .. seq:attribute:: file
+
+      .. seq:attribute:: gzfile
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(path : str, validate : bool, gzip : bool, copy : bool)
+         :noindex:
+
+      .. seq:method:: __seqs__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __blocks__(size : int)
+         :noindex:
+
+      .. seq:method:: __enter__()
+         :noindex:
+
+      .. seq:method:: __exit__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: close()
+
+
+
+.. seq:function:: Seqs(path : str, validate : bool = True, gzip : bool = True, copy : bool = True)
+
+
+
+.. seq:extension:: str
+
+   **Magic methods:**
+
+      .. seq:method:: __seqs__()
+         :noindex:
+
+      .. seq:method:: __blocks__(size : int)
+         :noindex:
+
+
+
+
+

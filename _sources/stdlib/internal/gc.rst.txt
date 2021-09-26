@@ -1,0 +1,81 @@
+.. seq:module:: internal.gc
+
+:seq:mod:`internal.gc`
+----------------------
+
+Source code: `internal/gc.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/gc.seq>`_
+
+.. seq:function:: seq_alloc(a : int)
+
+
+
+.. seq:function:: seq_alloc_atomic(a : int)
+
+
+
+.. seq:function:: seq_realloc( : cobj,  : int)
+
+
+
+.. seq:function:: seq_free( : cobj)
+
+
+
+.. seq:function:: seq_gc_add_roots( : cobj,  : cobj)
+
+
+
+.. seq:function:: seq_gc_remove_roots( : cobj,  : cobj)
+
+
+
+.. seq:function:: seq_gc_clear_roots()
+
+
+
+.. seq:function:: seq_gc_exclude_static_roots( : cobj,  : cobj)
+
+
+
+.. seq:function:: sizeof[T]()
+
+
+
+.. seq:function:: atomic[T]()
+
+
+
+.. seq:function:: alloc(sz : int)
+
+
+
+.. seq:function:: alloc_atomic(sz : int)
+
+
+
+.. seq:function:: realloc(p : cobj, sz : int)
+
+
+
+.. seq:function:: free(p : cobj)
+
+
+
+.. seq:function:: add_roots(start : cobj, end : cobj)
+
+
+
+.. seq:function:: remove_roots(start : cobj, end : cobj)
+
+
+
+.. seq:function:: clear_roots()
+
+
+
+.. seq:function:: exclude_static_roots(start : cobj, end : cobj)
+
+
+
+
+

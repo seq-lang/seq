@@ -1,0 +1,179 @@
+.. seq:module:: ..openmp
+
+:seq:mod:`..openmp`
+-------------------
+
+Source code: `openmp.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./openmp.seq>`_
+
+.. seq:data:: Routine
+
+
+
+.. seq:class:: Lock
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+
+
+.. seq:class:: Ident
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(flags : int = 0, source : str = ";unknown;unknown;0;0;;")
+         :noindex:
+
+
+
+.. seq:class:: LRData
+
+
+
+.. seq:class:: Task
+
+
+
+.. seq:class:: TaskWithPrivates[T]
+
+
+
+.. seq:function:: flush()
+
+
+
+.. seq:function:: get_num_threads()
+
+
+
+.. seq:function:: get_thread_num()
+
+
+
+.. seq:function:: get_max_threads()
+
+
+
+.. seq:function:: get_num_procs()
+
+
+
+.. seq:function:: set_num_threads(num_threads : int)
+
+
+
+.. seq:function:: in_parallel()
+
+
+
+.. seq:function:: set_dynamic(dynamic_threads : bool = True)
+
+
+
+.. seq:function:: get_dynamic()
+
+
+
+.. seq:function:: get_cancellation()
+
+
+
+.. seq:function:: set_schedule(kind : str, chunk_size : int = 0)
+
+
+
+.. seq:function:: get_schedule()
+
+
+
+.. seq:function:: get_thread_limit()
+
+
+
+.. seq:function:: set_max_active_levels(max_levels : int)
+
+
+
+.. seq:function:: get_max_active_levels()
+
+
+
+.. seq:function:: get_level()
+
+
+
+.. seq:function:: get_ancestor_thread_num(level : int)
+
+
+
+.. seq:function:: get_team_size(level : int)
+
+
+
+.. seq:function:: get_active_level()
+
+
+
+.. seq:function:: in_final()
+
+
+
+.. seq:function:: get_proc_bind()
+
+
+
+.. seq:function:: set_default_device(device_num : int)
+
+
+
+.. seq:function:: get_default_device()
+
+
+
+.. seq:function:: get_num_devices()
+
+
+
+.. seq:function:: get_num_teams()
+
+
+
+.. seq:function:: get_team_num()
+
+
+
+.. seq:function:: is_initial_device()
+
+
+
+.. seq:function:: get_wtime()
+
+
+
+.. seq:function:: get_wtick()
+
+
+
+.. seq:function:: single(func)
+
+
+
+.. seq:function:: master(func)
+
+
+
+.. seq:function:: ordered(func)
+
+
+
+.. seq:function:: critical(func)
+
+
+
+.. seq:function:: for_par[schedule, ordered](num_threads : int = -1, chunk_size : int = -1)
+
+
+
+
+

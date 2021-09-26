@@ -1,0 +1,126 @@
+.. seq:module:: bio.kmer
+
+:seq:mod:`bio.kmer`
+-------------------
+
+Source code: `bio/kmer.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/kmer.seq>`_
+
+.. seq:extension:: Kmer[k]
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __new__(kmer : Kmer[k])
+         :noindex:
+
+      .. seq:method:: __new__(p : Ptr[byte], L : int, b : bool)
+         :noindex:
+
+      .. seq:method:: __new__(s : seq)
+         :noindex:
+
+      .. seq:method:: __new__(s : seq, rc : bool)
+         :noindex:
+
+      .. seq:method:: __new__(s : seq)
+         :noindex:
+
+      .. seq:method:: __new__(s : str)
+         :noindex:
+
+      .. seq:method:: __new__(n : int)
+         :noindex:
+
+      .. seq:method:: __int__()
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __invert__()
+         :noindex:
+
+      .. seq:method:: __getitem__(idx : int)
+         :noindex:
+
+      .. seq:method:: __lshift__(s : seq)
+         :noindex:
+
+      .. seq:method:: __rshift__(s : seq)
+         :noindex:
+
+      .. seq:method:: __sub__(other : Kmer[k])
+         :noindex:
+
+            
+                    Hamming distance algorithm:
+                      input: kmer1, kmer2
+                      mask1 = 0101...0101  (same bit width as encoded kmer)
+                      mask2 = 1010...1010  (same bit width as encoded kmer)
+                      popcnt(
+                        (((kmer1 & mask1) ^ (kmer2 & mask1)) << 1) |
+                        ((kmer1 & mask2) ^ (kmer2 & mask2))
+                      )
+            
+
+
+      .. seq:method:: __hash__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __eq__(other : Kmer[k])
+         :noindex:
+
+      .. seq:method:: __ne__(other : Kmer[k])
+         :noindex:
+
+      .. seq:method:: __lt__(other : Kmer[k])
+         :noindex:
+
+      .. seq:method:: __gt__(other : Kmer[k])
+         :noindex:
+
+      .. seq:method:: __le__(other : Kmer[k])
+         :noindex:
+
+      .. seq:method:: __ge__(other : Kmer[k])
+         :noindex:
+
+      .. seq:method:: __contains__(s : seq)
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __match__(pattern : str)
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: len()
+
+      .. seq:method:: as_int()
+
+
+
+.. seq:extension:: str
+
+   **Magic methods:**
+
+      .. seq:method:: __prefix_k__[n](s : str)
+         :noindex:
+
+
+
+
+

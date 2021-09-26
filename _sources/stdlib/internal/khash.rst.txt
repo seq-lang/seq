@@ -1,0 +1,9 @@
+.. seq:module:: internal.khash
+
+:seq:mod:`internal.khash`
+-------------------------
+
+Source code: `internal/khash.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/khash.seq>`_
+
+
+

@@ -1,0 +1,487 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bio.bwa &#8212; Seq 0.11.0 documentation</title>
+    
+  <link href="../../_static/css/theme.css" rel="stylesheet" />
+  <link href="../../_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    
+  <link rel="preload" as="script" href="../../_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="bio.bwt" href="bwt.html" />
+    <link rel="prev" title="bio.builtin" href="builtin.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../parallel.html">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cookbook.html">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../build.html">Building from Source</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Standard Library Reference</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="builtin.html"
+                        title="previous chapter"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">bio.builtin</span></code></a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="bwt.html"
+                        title="next chapter"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">bio.bwt</span></code></a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="../../_sources/stdlib/bio/bwa.rst.txt"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.rst</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/seq-lang/seq"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+  <span class="target" id="module-bio.bwa"></span><div class="section" id="bio-bwa">
+<h1><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">bio.bwa</span></code><a class="headerlink" href="#bio-bwa" title="Permalink to this headline">¶</a></h1>
+<p>Source code: <a class="reference external" href="https://github.com/seq-lang/seq/blob/master/stdlib/bio/bwa.seq">bio/bwa.seq</a></p>
+<dl class="seq data">
+<dt class="sig sig-object seq" id="bio.bwa.BWA_LIB">
+<span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">BWA_LIB</span></span><a class="headerlink" href="#bio.bwa.BWA_LIB" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.bwa.bntann1_t">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">bntann1_t</span></span><a class="headerlink" href="#bio.bwa.bntann1_t" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.bwa.bntamb1_t">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">bntamb1_t</span></span><a class="headerlink" href="#bio.bwa.bntamb1_t" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.bwa.bntseq_t">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">bntseq_t</span></span><a class="headerlink" href="#bio.bwa.bntseq_t" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">mem_alnreg_t</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Properties:</strong></p>
+<blockquote>
+<div><dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.rb">
+<span class="sig-name descname"><span class="pre">rb</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.rb" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.re">
+<span class="sig-name descname"><span class="pre">re</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.re" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.qb">
+<span class="sig-name descname"><span class="pre">qb</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.qb" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.qe">
+<span class="sig-name descname"><span class="pre">qe</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.qe" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.rid">
+<span class="sig-name descname"><span class="pre">rid</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.rid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.score">
+<span class="sig-name descname"><span class="pre">score</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.score" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.true_score">
+<span class="sig-name descname"><span class="pre">true_score</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.true_score" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.sub">
+<span class="sig-name descname"><span class="pre">sub</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.sub" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.alt_score">
+<span class="sig-name descname"><span class="pre">alt_score</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.alt_score" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.csub">
+<span class="sig-name descname"><span class="pre">csub</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.csub" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.sub_n">
+<span class="sig-name descname"><span class="pre">sub_n</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.sub_n" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.w">
+<span class="sig-name descname"><span class="pre">w</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.w" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.seedcov">
+<span class="sig-name descname"><span class="pre">seedcov</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.seedcov" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.secondary">
+<span class="sig-name descname"><span class="pre">secondary</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.secondary" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_t.secondary_all">
+<span class="sig-name descname"><span class="pre">secondary_all</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_t.secondary_all" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.bwa.mem_aln_t">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">mem_aln_t</span></span><a class="headerlink" href="#bio.bwa.mem_aln_t" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Properties:</strong></p>
+<blockquote>
+<div><dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_aln_t.pos">
+<span class="sig-name descname"><span class="pre">pos</span></span><a class="headerlink" href="#bio.bwa.mem_aln_t.pos" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_aln_t.rid">
+<span class="sig-name descname"><span class="pre">rid</span></span><a class="headerlink" href="#bio.bwa.mem_aln_t.rid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_aln_t.rev">
+<span class="sig-name descname"><span class="pre">rev</span></span><a class="headerlink" href="#bio.bwa.mem_aln_t.rev" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_aln_t.alt">
+<span class="sig-name descname"><span class="pre">alt</span></span><a class="headerlink" href="#bio.bwa.mem_aln_t.alt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_aln_t.mapq">
+<span class="sig-name descname"><span class="pre">mapq</span></span><a class="headerlink" href="#bio.bwa.mem_aln_t.mapq" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_aln_t.NM">
+<span class="sig-name descname"><span class="pre">NM</span></span><a class="headerlink" href="#bio.bwa.mem_aln_t.NM" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_aln_t.cigar">
+<span class="sig-name descname"><span class="pre">cigar</span></span><a class="headerlink" href="#bio.bwa.mem_aln_t.cigar" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_aln_t.score">
+<span class="sig-name descname"><span class="pre">score</span></span><a class="headerlink" href="#bio.bwa.mem_aln_t.score" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_aln_t.sub">
+<span class="sig-name descname"><span class="pre">sub</span></span><a class="headerlink" href="#bio.bwa.mem_aln_t.sub" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq attribute">
+<dt class="sig sig-object seq" id="bio.bwa.mem_aln_t.alt_score">
+<span class="sig-name descname"><span class="pre">alt_score</span></span><a class="headerlink" href="#bio.bwa.mem_aln_t.alt_score" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.bwa.mem_alnreg_v">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">mem_alnreg_v</span></span><a class="headerlink" href="#bio.bwa.mem_alnreg_v" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__getitem__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__len__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.bwa.bwaidx_t">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">bwaidx_t</span></span><a class="headerlink" href="#bio.bwa.bwaidx_t" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq" id="bio.bwa.bwaidx_t.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">aln</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#bio.bwa.mem_aln_t" title="bio.bwa.mem_aln_t"><span class="pre">mem_aln_t</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.bwa.bwaidx_t.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.bwa.mem_opt_init">
+<span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">mem_opt_init</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#bio.bwa.mem_opt_init" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.bwa.bwa_fill_scmat">
+<span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">bwa_fill_scmat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">i32,</span>&#160; <span class="pre">:</span> <span class="pre">i32,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[i8]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.bwa.bwa_fill_scmat" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.bwa.bwa_idx_load">
+<span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">bwa_idx_load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">i32</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.bwa.bwa_idx_load" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.bwa.mem_align1">
+<span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">mem_align1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">Ptr[mem_alnreg_v],</span>&#160; <span class="pre">:</span> <span class="pre">cobj,</span>&#160; <span class="pre">:</span> <span class="pre">cobj,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[bntseq_t],</span>&#160; <span class="pre">:</span> <span class="pre">cobj,</span>&#160; <span class="pre">:</span> <span class="pre">i32,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[byte]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.bwa.mem_align1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.bwa.mem_reg2aln">
+<span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">mem_reg2aln</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">Ptr[mem_aln_t],</span>&#160; <span class="pre">:</span> <span class="pre">cobj,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[bntseq_t],</span>&#160; <span class="pre">:</span> <span class="pre">cobj,</span>&#160; <span class="pre">:</span> <span class="pre">i32,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[byte],</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[mem_alnreg_t]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.bwa.mem_reg2aln" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="bio.bwa.options">
+<span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">options</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">match_score</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mismatch_score</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">open_del</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">open_ins</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extend_del</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extend_ins</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bandwidth</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zdrop</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clip_penalty</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">(5,</span> <span class="pre">5)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unpaired_penalty</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">17</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.bwa.options" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq class">
+<dt class="sig sig-object seq" id="bio.bwa.BWA">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">bio.bwa.</span></span><span class="sig-name descname"><span class="pre">BWA</span></span><a class="headerlink" href="#bio.bwa.BWA" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hint</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__new__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">opt</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">cobj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hint</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+<p><strong>Methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq" id="bio.bwa.BWA.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">aln</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#bio.bwa.mem_aln_t" title="bio.bwa.mem_aln_t"><span class="pre">mem_aln_t</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.bwa.BWA.name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="bio.bwa.BWA.reg2aln">
+<span class="sig-name descname"><span class="pre">reg2aln</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">seq</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reg</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#bio.bwa.mem_alnreg_t" title="bio.bwa.mem_alnreg_t"><span class="pre">mem_alnreg_t</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.bwa.BWA.reg2aln" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="bio.bwa.BWA.align">
+<span class="sig-name descname"><span class="pre">align</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">seq</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bio.bwa.BWA.align" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+</div>
+
+
+              </div>
+              
+        
+            
+
+
+
+<div class='prev-next-bottom'>
+    
+    <div id="prev">
+        <a class="left-prev" href="builtin.html" title="previous page">
+            <i class="prevnext-label fas fa-angle-left"></i>
+            <div class="prevnext-info">
+                <p class="prevnext-label">previous</p>
+                <p class="prevnext-title"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">bio.builtin</span></code></p>
+            </div>
+        </a>
+    </div>
+     <div id="next">
+        <a class="right-next" href="bwt.html" title="next page">
+            <div class="prevnext-info">
+                <p class="prevnext-label">next</p>
+                <p class="prevnext-title"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">bio.bwt</span></code></p>
+            </div>
+            <i class="prevnext-label fas fa-angle-right"></i>
+        </a>
+     </div>
+
+</div>
+        
+        </div>
+    </div>
+    <footer class="footer">
+    <div class="container">
+      <p>
+        
+          By seq-lang<br/>
+        
+            &copy; Copyright 2019-2021, seq-lang.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="../../_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

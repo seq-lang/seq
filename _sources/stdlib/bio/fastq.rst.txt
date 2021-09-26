@@ -1,0 +1,65 @@
+.. seq:module:: bio.fastq
+
+:seq:mod:`bio.fastq`
+--------------------
+
+Source code: `bio/fastq.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/fastq.seq>`_
+
+.. seq:class:: FASTQRecord
+
+   **Properties:**
+
+      .. seq:attribute:: header
+
+      .. seq:attribute:: name
+
+      .. seq:attribute:: comment
+
+      .. seq:attribute:: read
+
+      .. seq:attribute:: seq
+
+      .. seq:attribute:: qual
+
+
+
+.. seq:class:: FASTQReader
+
+   **Properties:**
+
+      .. seq:attribute:: file
+
+      .. seq:attribute:: gzfile
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(path : str, validate : bool, gzip : bool, copy : bool)
+         :noindex:
+
+      .. seq:method:: __seqs__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __blocks__(size : int)
+         :noindex:
+
+      .. seq:method:: __enter__()
+         :noindex:
+
+      .. seq:method:: __exit__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: close()
+
+
+
+.. seq:function:: FASTQ(path : str, validate : bool = True, gzip : bool = True, copy : bool = True)
+
+
+
+
+

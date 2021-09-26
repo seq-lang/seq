@@ -1,0 +1,157 @@
+.. seq:module:: bio.bwa
+
+:seq:mod:`bio.bwa`
+------------------
+
+Source code: `bio/bwa.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/bwa.seq>`_
+
+.. seq:data:: BWA_LIB
+
+
+
+.. seq:class:: bntann1_t
+
+
+
+.. seq:class:: bntamb1_t
+
+
+
+.. seq:class:: bntseq_t
+
+
+
+.. seq:class:: mem_alnreg_t
+
+   **Properties:**
+
+      .. seq:attribute:: rb
+
+      .. seq:attribute:: re
+
+      .. seq:attribute:: qb
+
+      .. seq:attribute:: qe
+
+      .. seq:attribute:: rid
+
+      .. seq:attribute:: score
+
+      .. seq:attribute:: true_score
+
+      .. seq:attribute:: sub
+
+      .. seq:attribute:: alt_score
+
+      .. seq:attribute:: csub
+
+      .. seq:attribute:: sub_n
+
+      .. seq:attribute:: w
+
+      .. seq:attribute:: seedcov
+
+      .. seq:attribute:: secondary
+
+      .. seq:attribute:: secondary_all
+
+
+
+.. seq:class:: mem_aln_t
+
+   **Properties:**
+
+      .. seq:attribute:: pos
+
+      .. seq:attribute:: rid
+
+      .. seq:attribute:: rev
+
+      .. seq:attribute:: alt
+
+      .. seq:attribute:: mapq
+
+      .. seq:attribute:: NM
+
+      .. seq:attribute:: cigar
+
+      .. seq:attribute:: score
+
+      .. seq:attribute:: sub
+
+      .. seq:attribute:: alt_score
+
+
+
+.. seq:class:: mem_alnreg_v
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __getitem__(idx : int)
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+
+
+.. seq:class:: bwaidx_t
+
+   **Methods:**
+
+      .. seq:method:: name(aln : mem_aln_t)
+
+
+
+.. seq:function:: mem_opt_init()
+
+
+
+.. seq:function:: bwa_fill_scmat( : i32,  : i32,  : Ptr[i8])
+
+
+
+.. seq:function:: bwa_idx_load( : cobj,  : i32)
+
+
+
+.. seq:function:: mem_align1( : Ptr[mem_alnreg_v],  : cobj,  : cobj,  : Ptr[bntseq_t],  : cobj,  : i32,  : Ptr[byte])
+
+
+
+.. seq:function:: mem_reg2aln( : Ptr[mem_aln_t],  : cobj,  : Ptr[bntseq_t],  : cobj,  : i32,  : Ptr[byte],  : Ptr[mem_alnreg_t])
+
+
+
+.. seq:function:: options(match_score : int = 1, mismatch_score : int = 4, open_del : int = 6, open_ins : int = 6, extend_del : int = 1, extend_ins : int = 1, bandwidth : int = 100, zdrop : int = 100, clip_penalty : Tuple[int, int] = (5, 5), unpaired_penalty : int = 17)
+
+
+
+.. seq:class:: BWA
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(hint : str)
+         :noindex:
+
+      .. seq:method:: __new__(opt : cobj, hint : str)
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: name(aln : mem_aln_t)
+
+      .. seq:method:: reg2aln(s : seq, reg : mem_alnreg_t)
+
+      .. seq:method:: align(s : seq)
+
+
+
+
+

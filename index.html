@@ -1,0 +1,306 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seq — a Python implementation for bioinformatics &#8212; Seq 0.11.0 documentation</title>
+    
+  <link href="_static/css/theme.css" rel="stylesheet" />
+  <link href="_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    
+  <link rel="preload" as="script" href="_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Getting Started" href="intro.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        
+<h3><a href="#">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parallel.html">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cookbook.html">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html">Building from Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stdlib/index.html">Standard Library Reference</a></li>
+</ul>
+
+  <h4>Next topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="next chapter">Getting Started</a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="_sources/index.rst.txt"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.rst</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/seq-lang/seq"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+            <div class="tocsection onthispage pt-5 pb-3">
+                <i class="fas fa-list"></i> Contents
+            </div>
+            <nav id="bd-toc-nav" aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#news">
+   News
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#what-s-new-in-0-11">
+     What’s new in 0.11?
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#what-s-new-in-0-10">
+     What’s new in 0.10?
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#frequently-asked-questions">
+   Frequently Asked Questions
+  </a>
+ </li>
+</ul>
+
+            </nav>
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+  <div class="section" id="seq-a-python-implementation-for-bioinformatics">
+<h1><strong>Seq</strong> — a Python implementation for bioinformatics<a class="headerlink" href="#seq-a-python-implementation-for-bioinformatics" title="Permalink to this headline">¶</a></h1>
+<p>Seq is a Pythonic language for computational genomics and bioinformatics. With a Python-compatible syntax and a host of domain-specific features and optimizations, Seq makes writing high-performance genomics software as easy as writing Python code, and achieves performance comparable to (and in many cases better than) C/C++.</p>
+<p>Questions, comments or suggestions? Visit our <a class="reference external" href="https://gitter.im/seq-lang/Seq?utm_source=share-link&amp;utm_medium=link&amp;utm_campaign=share-link">Gitter chatroom</a>.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parallel.html">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cookbook.html">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html">Building from Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stdlib/index.html">Standard Library Reference</a></li>
+</ul>
+</div>
+<div class="section" id="news">
+<h2>News<a class="headerlink" href="#news" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="what-s-new-in-0-11">
+<h3>What’s new in 0.11?<a class="headerlink" href="#what-s-new-in-0-11" title="Permalink to this headline">¶</a></h3>
+<p>Version 0.11 again includes a number of upgrades to the parser, type system and compiler backend:</p>
+<ul class="simple">
+<li><p>Parallelism and multithreading support with OpenMP (e.g. <code class="docutils literal notranslate"><span class="pre">&#64;par</span> <span class="pre">for</span> <span class="pre">i</span> <span class="pre">in</span> <span class="pre">range(10):</span> <span class="pre">...</span></code>)</p></li>
+<li><p>New PEG parser</p></li>
+<li><p>Improved compile-time static evaluation</p></li>
+<li><p>Upgrade to LLVM 12 (from LLVM 6)</p></li>
+<li><p>A few changes to the <code class="docutils literal notranslate"><span class="pre">bio</span></code> module, particularly with <code class="docutils literal notranslate"><span class="pre">seq.kmers()</span></code>, which now takes a length argument as in <code class="docutils literal notranslate"><span class="pre">s.kmers(k=12,</span> <span class="pre">step=1)</span></code></p></li>
+</ul>
+</div>
+<div class="section" id="what-s-new-in-0-10">
+<h3>What’s new in 0.10?<a class="headerlink" href="#what-s-new-in-0-10" title="Permalink to this headline">¶</a></h3>
+<p>Version 0.10 brings a slew of improvements to the language and compiler, including:</p>
+<ul class="simple">
+<li><p>Nearly all of Python’s syntax is now supported, including empty collections (<code class="docutils literal notranslate"><span class="pre">[]</span></code>, <code class="docutils literal notranslate"><span class="pre">{}</span></code>), lambda functions (<code class="docutils literal notranslate"><span class="pre">lambda</span></code>), <code class="docutils literal notranslate"><span class="pre">*args</span></code>/<code class="docutils literal notranslate"><span class="pre">**kwargs</span></code>, <code class="docutils literal notranslate"><span class="pre">None</span></code> and much more</p></li>
+<li><p>Compiler error messages now pinpoint exactly where an error occurred with compile-time backtraces</p></li>
+<li><p>Runtime exceptions now include backtraces with file names and line numbers in debug mode</p></li>
+<li><p>GDB and LLDB support</p></li>
+<li><p>Various syntax updates to further close the gap with Python</p></li>
+<li><p>Numerous standard library improvements</p></li>
+</ul>
+<div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<p>The default compilation and execution mode is now “debug”, which disables most optimizations. Pass the <code class="docutils literal notranslate"><span class="pre">-release</span></code> argument to <code class="docutils literal notranslate"><span class="pre">seqc</span></code> to enable optimizations.</p>
+</div>
+</div>
+</div>
+<div class="section" id="frequently-asked-questions">
+<h2>Frequently Asked Questions<a class="headerlink" href="#frequently-asked-questions" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p><em>Can I use Seq for general-purpose computing?</em></p>
+</div></blockquote>
+<p>Yes! While the Seq project started with a narrow focus on bioinformatics, it has grown to encompass much of Python’s syntax, semantics and modules, making it a useful tool beyond just bioinformatics, particularly when large datasets need to be processed with Python.</p>
+<blockquote>
+<div><p><em>What is the goal of Seq?</em></p>
+</div></blockquote>
+<p>One of the main focuses of Seq is to bridge the gap between usability and performance in the fields of bioinformatics and computational genomics, which have an unfortunate reputation for hard-to-use, buggy or generally poorly-written software. Seq aims to make writing high-performance genomics or bioinformatics software substantially easier, and to provide a common, unified framework for the development of such software.</p>
+<blockquote>
+<div><p><em>Why do we need a whole new language? Why not a library?</em></p>
+</div></blockquote>
+<p>There are many great bioinformatics libraries on the market today, including <a class="reference external" href="https://biopython.org">Biopython</a> for Python, <a class="reference external" href="https://www.seqan.de">SeqAn</a> for C++ and <a class="reference external" href="https://biojulia.net">BioJulia</a> for Julia. In fact, Seq offers a lot of the same functionality found in these libraries. The advantages of having a domain-specific language and compiler, however, are the higher-level constructs and optimizations like <a class="reference internal" href="tutorial/tutorial.html#pipeline"><span class="std std-ref">Pipelines</span></a>, <a class="reference internal" href="tutorial/tutorial.html#match"><span class="std std-ref">Sequence matching</span></a>, <a class="reference internal" href="tutorial/tutorial.html#interalign"><span class="std std-ref">Inter-sequence alignment</span></a> and <a class="reference internal" href="tutorial/tutorial.html#prefetch"><span class="std std-ref">Genomic index prefetching</span></a>, which are difficult to replicate in a library, as they often involve large-scale program transformations/optimizations. A domain-specific language also allows us to explore different backends like GPU, TPU or FPGA in a systematic way, in conjunction with these various constructs/optimizations, which is ongoing work.</p>
+<blockquote>
+<div><p><em>What about interoperability with other languages and frameworks?</em></p>
+</div></blockquote>
+<p>Interoperability is and will continue to be a priority for the Seq project. We don’t want using Seq to render you unable to use all the other great frameworks and libraries that exist. Seq already supports interoperability with C/C++ and Python (see <a class="reference internal" href="tutorial/primer.html#interop"><span class="std std-ref">Foreign function interface (FFI)</span></a>).</p>
+<blockquote>
+<div><p><em>I want to contribute! How do I get started?</em></p>
+</div></blockquote>
+<p>Great! Check out our <a class="reference external" href="https://github.com/seq-lang/seq/blob/master/CONTRIBUTING.md">contribution guidelines</a> and <a class="reference external" href="https://github.com/seq-lang/seq/issues">open issues</a> to get started. Also don’t hesitate to drop by our <a class="reference external" href="https://gitter.im/seq-lang/Seq?utm_source=share-link&amp;utm_medium=link&amp;utm_campaign=share-link">Gitter chatroom</a> if you have any questions.</p>
+<blockquote>
+<div><p><em>What is planned for the future?</em></p>
+</div></blockquote>
+<p>See the <a class="reference external" href="https://github.com/seq-lang/seq/wiki/Roadmap">roadmap</a> for information about this.</p>
+</div>
+</div>
+
+
+              </div>
+              
+        
+            
+
+
+
+<div class='prev-next-bottom'>
+    
+     <div id="next">
+        <a class="right-next" href="intro.html" title="next page">
+            <div class="prevnext-info">
+                <p class="prevnext-label">next</p>
+                <p class="prevnext-title">Getting Started</p>
+            </div>
+            <i class="prevnext-label fas fa-angle-right"></i>
+        </a>
+     </div>
+
+</div>
+        
+        </div>
+    </div>
+    <footer class="footer">
+    <div class="container">
+      <p>
+        
+          By seq-lang<br/>
+        
+            &copy; Copyright 2019-2021, seq-lang.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

@@ -1,0 +1,62 @@
+.. seq:module:: ..heapq
+
+:seq:mod:`..heapq`
+------------------
+
+Source code: `heapq.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./heapq.seq>`_
+
+.. seq:function:: heappush[T](heap : List[T], item : T)
+
+   Push item onto heap, maintaining the heap invariant.
+
+
+
+.. seq:function:: heappop[T](heap : List[T])
+
+   Pop the smallest item off the heap, maintaining the heap invariant.
+
+
+
+.. seq:function:: heapreplace[T](heap : List[T], item : T)
+
+   
+       Pop and return the current smallest value, and add the new item.
+       This is more efficient than heappop() followed by heappush(), and can be
+       more appropriate when using a fixed-size heap.  Note that the value
+       returned may be larger than item!  That constrains reasonable uses of
+       this routine unless written as part of a conditional replacement:
+       ``if item > heap[0]: item = heapreplace(heap, item)``.
+   
+
+
+
+.. seq:function:: heappushpop[T](heap : List[T], item : T)
+
+   Fast version of a heappush followed by a heappop.
+
+
+
+.. seq:function:: heapify[T](x : List[T])
+
+   Transform list into a heap, in-place, in $O(len(x))$ time.
+
+
+
+.. seq:function:: nsmallest[T](n : int, iterable : Generator[T], key = Optional[int]())
+
+   Find the n smallest elements in a dataset.
+       Equivalent to:  sorted(iterable, key=key)[:n]
+   
+
+
+
+.. seq:function:: nlargest[T](n : int, iterable : Generator[T], key = Optional[int]())
+
+   Find the n largest elements in a dataset.
+       Equivalent to:  sorted(iterable, key=key, reverse=True)[:n]
+   
+
+
+
+
+

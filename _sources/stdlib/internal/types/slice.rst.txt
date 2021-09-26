@@ -1,0 +1,23 @@
+.. seq:module:: internal.types.slice
+
+:seq:mod:`internal.types.slice`
+-------------------------------
+
+Source code: `internal/types/slice.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/slice.seq>`_
+
+.. seq:class:: Slice
+
+   **Methods:**
+
+      .. seq:method:: adjust_indices(length : int)
+
+      .. seq:method:: adjust_indices_helper(length : int, start : int, stop : int, step : int)
+
+
+
+.. seq:data:: slice
+
+
+
+
+

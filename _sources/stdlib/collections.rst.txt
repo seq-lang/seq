@@ -1,0 +1,163 @@
+.. seq:module:: ..collections
+
+:seq:mod:`..collections`
+------------------------
+
+Source code: `collections.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./collections.seq>`_
+
+.. seq:class:: deque[T]
+
+   **Properties:**
+
+      .. seq:attribute:: maxlen
+
+      .. seq:attribute:: left
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(arr : Array[T], head : int, tail : int, maxlen : int)
+         :noindex:
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(maxlen : int)
+         :noindex:
+
+      .. seq:method:: __init__(it : Generator[T])
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __contains__(x : T)
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __getitem__(idx : int)
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: appendleft(x : T)
+
+      .. seq:method:: append(x : T)
+
+      .. seq:method:: popleft()
+
+      .. seq:method:: pop()
+
+      .. seq:method:: clear()
+
+      .. seq:method:: copy()
+
+
+
+.. seq:class:: Counter[T]
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(elements : Generator[T])
+         :noindex:
+
+      .. seq:method:: __init__(other : Counter[T])
+         :noindex:
+
+      .. seq:method:: __init__(other : Dict[T, int])
+         :noindex:
+
+      .. seq:method:: __getitem__(key : T)
+         :noindex:
+
+      .. seq:method:: __delitem__(key : T)
+         :noindex:
+
+      .. seq:method:: __eq__(other : Counter[T])
+         :noindex:
+
+      .. seq:method:: __ne__(other : Counter[T])
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __iadd__(other : Counter[T])
+         :noindex:
+
+      .. seq:method:: __isub__(other : Counter[T])
+         :noindex:
+
+      .. seq:method:: __iand__(other : Counter[T])
+         :noindex:
+
+      .. seq:method:: __ior__(other : Counter[T])
+         :noindex:
+
+      .. seq:method:: __pos__()
+         :noindex:
+
+      .. seq:method:: __neg__()
+         :noindex:
+
+      .. seq:method:: __add__(other : Counter[T])
+         :noindex:
+
+      .. seq:method:: __sub__(other : Counter[T])
+         :noindex:
+
+      .. seq:method:: __and__(other : Counter[T])
+         :noindex:
+
+      .. seq:method:: __or__(other : Counter[T])
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: elements()
+
+      .. seq:method:: most_common(n : Optional[int] = None)
+
+      .. seq:method:: subtract(elements : Generator[T])
+
+      .. seq:method:: subtract(other : Counter[T])
+
+      .. seq:method:: subtract(other : Dict[T, int])
+
+      .. seq:method:: update(elements : Generator[T])
+
+      .. seq:method:: update(other : Counter[T])
+
+      .. seq:method:: update(other : Dict[T, int])
+
+      .. seq:method:: update()
+
+      .. seq:method:: total()
+
+
+
+.. seq:extension:: Dict[K,V]
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(other : Counter[K])
+         :noindex:
+
+
+
+.. seq:function:: namedtuple()
+
+
+
+
+

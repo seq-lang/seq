@@ -1,0 +1,123 @@
+.. seq:module:: internal.types.collections.set
+
+:seq:mod:`internal.types.collections.set`
+-----------------------------------------
+
+Source code: `internal/types/collections/set.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/collections/set.seq>`_
+
+.. seq:class:: Set[K]
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(g : Generator[K])
+         :noindex:
+
+      .. seq:method:: __sub__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __isub__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __and__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __iand__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __or__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __ior__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __xor__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __ixor__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __contains__(key : K)
+         :noindex:
+
+      .. seq:method:: __eq__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __ne__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __le__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __ge__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __lt__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __gt__(other : Set[K])
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: resize(new_n_buckets : int)
+
+      .. seq:method:: add(key : K)
+
+      .. seq:method:: update(other : Set[K])
+
+      .. seq:method:: remove(key : K)
+
+      .. seq:method:: pop()
+
+      .. seq:method:: discard(key : K)
+
+      .. seq:method:: difference(other : Set[K])
+
+      .. seq:method:: difference_update(other : Set[K])
+
+      .. seq:method:: intersection(other : Set[K])
+
+      .. seq:method:: intersection_update(other : Set[K])
+
+      .. seq:method:: symmetric_difference(other : Set[K])
+
+      .. seq:method:: symmetric_difference_update(other : Set[K])
+
+      .. seq:method:: union(other : Set[K])
+
+      .. seq:method:: isdisjoint(other : Set[K])
+
+      .. seq:method:: issubset(other : Set[K])
+
+      .. seq:method:: issuperset(other : Set[K])
+
+      .. seq:method:: clear()
+
+      .. seq:method:: copy()
+
+
+
+.. seq:data:: set
+
+
+
+
+

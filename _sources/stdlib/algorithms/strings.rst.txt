@@ -1,0 +1,80 @@
+.. seq:module:: algorithms.strings
+
+:seq:mod:`algorithms.strings`
+-----------------------------
+
+Source code: `algorithms/strings.seq <https://github.com/seq-lang/seq/blob/master/stdlib/algorithms/strings.seq>`_
+
+.. seq:function:: filter_overlaps(v : Generator[int], n : int)
+
+
+
+.. seq:function:: rfilter_overlaps(v : Generator[int], n : int)
+
+
+
+.. seq:function:: string_search_slow(text : str, pattern : str)
+
+   
+       Return a list containing the non-overlapping position of each index
+       the pattern is found.
+   
+
+
+
+.. seq:function:: rstring_search_slow(text : str, pattern : str)
+
+   
+       Return a list containing the non-overlapping position of each index
+       the pattern is found from right to left.
+   
+
+
+
+.. seq:function:: string_search_rabin_karp(text : str, pattern : str, prime : int = 645419)
+
+   
+       Return a list containing the position of each index
+       the pattern is found.
+   
+
+
+
+.. seq:function:: computeLPArray(pattern : str, len_pat : int)
+
+   
+       Return a list containing the length of the maximum matching
+       proper prefix of the pattern[0, 1, ..., i]
+   
+
+
+
+.. seq:function:: string_search_KMP(text : str, pattern : str)
+
+   
+       Knuth-Morris-Pratt algorithm
+       Return a list containing the position of each index
+       the pattern is found.
+   
+
+
+
+.. seq:function:: replace_interleave(self, new : str, maxcount : int)
+
+   
+       Returns a string inserting the 'new' string everywhere.
+   
+
+
+
+.. seq:function:: replace_delete_substring(self, old : str, new : str, maxcount : int)
+
+   
+       Returns a string deleting any instances of the 'old' string in self and
+       replaceing it with the 'new' string.
+   
+
+
+
+
+

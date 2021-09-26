@@ -1,0 +1,308 @@
+.. seq:module:: internal.python
+
+:seq:mod:`internal.python`
+--------------------------
+
+Source code: `internal/python.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/python.seq>`_
+
+.. seq:data:: PyUnicode_AsEncodedString
+
+
+
+.. seq:data:: PyBytes_AsString
+
+
+
+.. seq:data:: PyErr_Fetch
+
+
+
+.. seq:data:: PyObject_GetAttrString
+
+
+
+.. seq:data:: PyObject_GetAttr
+
+
+
+.. seq:data:: PyObject_Str
+
+
+
+.. seq:data:: PyRun_SimpleString
+
+
+
+.. seq:data:: Py_IncRef
+
+
+
+.. seq:data:: Py_DecRef
+
+
+
+.. seq:data:: PyObject_Call
+
+
+
+.. seq:data:: PyObject_SetAttrString
+
+
+
+.. seq:data:: PyObject_Length
+
+
+
+.. seq:data:: Py_Initialize
+
+
+
+.. seq:data:: PyImport_ImportModule
+
+
+
+.. seq:data:: PyLong_FromLong
+
+
+
+.. seq:data:: PyLong_AsLong
+
+
+
+.. seq:data:: PyFloat_FromDouble
+
+
+
+.. seq:data:: PyFloat_AsDouble
+
+
+
+.. seq:data:: PyBool_FromLong
+
+
+
+.. seq:data:: PyObject_IsTrue
+
+
+
+.. seq:data:: PyUnicode_DecodeFSDefaultAndSize
+
+
+
+.. seq:data:: PyTuple_New
+
+
+
+.. seq:data:: PyTuple_SetItem
+
+
+
+.. seq:data:: PyTuple_GetItem
+
+
+
+.. seq:data:: PyList_New
+
+
+
+.. seq:data:: PyList_SetItem
+
+
+
+.. seq:data:: PyList_GetItem
+
+
+
+.. seq:data:: PySet_New
+
+
+
+.. seq:data:: PySet_Add
+
+
+
+.. seq:data:: PyDict_New
+
+
+
+.. seq:data:: PyDict_SetItem
+
+
+
+.. seq:data:: PyDict_Next
+
+
+
+.. seq:data:: PyObject_GetIter
+
+
+
+.. seq:data:: PyIter_Next
+
+
+
+.. seq:function:: init()
+
+
+
+.. seq:function:: ensure_initialized()
+
+
+
+.. seq:extension:: pyobj
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(p : Ptr[byte])
+         :noindex:
+
+      .. seq:method:: __getitem__(t)
+         :noindex:
+
+      .. seq:method:: __add__(t)
+         :noindex:
+
+      .. seq:method:: __setitem__(name : str, val : pyobj)
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __to_py__()
+         :noindex:
+
+      .. seq:method:: __from_py__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __call__(*args, **kwargs)
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: to_str(errors : str, empty : str = "")
+
+      .. seq:method:: exc_check()
+
+      .. seq:method:: exc_wrap(_retval)
+
+      .. seq:method:: incref()
+
+      .. seq:method:: decref()
+
+      .. seq:method:: get[T]()
+
+
+
+.. seq:function:: none()
+
+
+
+.. seq:function:: py(x)
+
+
+
+.. seq:function:: get[T](x : pyobj)
+
+
+
+.. seq:extension:: int
+
+   **Magic methods:**
+
+      .. seq:method:: __to_py__()
+         :noindex:
+
+      .. seq:method:: __from_py__(i : pyobj)
+         :noindex:
+
+
+
+.. seq:extension:: float
+
+   **Magic methods:**
+
+      .. seq:method:: __to_py__()
+         :noindex:
+
+      .. seq:method:: __from_py__(d : pyobj)
+         :noindex:
+
+
+
+.. seq:extension:: bool
+
+   **Magic methods:**
+
+      .. seq:method:: __to_py__()
+         :noindex:
+
+      .. seq:method:: __from_py__(b : pyobj)
+         :noindex:
+
+
+
+.. seq:extension:: byte
+
+   **Magic methods:**
+
+      .. seq:method:: __to_py__()
+         :noindex:
+
+      .. seq:method:: __from_py__(c : pyobj)
+         :noindex:
+
+
+
+.. seq:extension:: str
+
+   **Magic methods:**
+
+      .. seq:method:: __to_py__()
+         :noindex:
+
+      .. seq:method:: __from_py__(s : pyobj)
+         :noindex:
+
+
+
+.. seq:extension:: List[T]
+
+   **Magic methods:**
+
+      .. seq:method:: __to_py__()
+         :noindex:
+
+      .. seq:method:: __from_py__(v : pyobj)
+         :noindex:
+
+
+
+.. seq:extension:: Dict[K,V]
+
+   **Magic methods:**
+
+      .. seq:method:: __to_py__()
+         :noindex:
+
+      .. seq:method:: __from_py__(d : pyobj)
+         :noindex:
+
+
+
+.. seq:extension:: Set[K]
+
+   **Magic methods:**
+
+      .. seq:method:: __to_py__()
+         :noindex:
+
+
+
+
+

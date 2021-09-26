@@ -1,0 +1,63 @@
+.. seq:module:: ..threading
+
+:seq:mod:`..threading`
+----------------------
+
+Source code: `threading.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./threading.seq>`_
+
+.. seq:class:: Lock
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __enter__()
+         :noindex:
+
+      .. seq:method:: __exit__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: acquire(block : bool = True, timeout : float = -1.0)
+
+      .. seq:method:: release()
+
+
+
+.. seq:class:: RLock
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __enter__()
+         :noindex:
+
+      .. seq:method:: __exit__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: acquire(block : bool = True, timeout : float = -1.0)
+
+      .. seq:method:: release()
+
+
+
+.. seq:function:: active_count()
+
+
+
+.. seq:function:: get_native_id()
+
+
+
+.. seq:function:: get_ident()
+
+
+
+
+

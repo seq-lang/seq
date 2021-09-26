@@ -1,0 +1,13 @@
+.. seq:module:: internal.box
+
+:seq:mod:`internal.box`
+-----------------------
+
+Source code: `internal/box.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/box.seq>`_
+
+.. seq:class:: Box[T]
+
+
+
+
+

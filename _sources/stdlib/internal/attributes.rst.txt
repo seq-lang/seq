@@ -1,0 +1,49 @@
+.. seq:module:: internal.attributes
+
+:seq:mod:`internal.attributes`
+------------------------------
+
+Source code: `internal/attributes.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/attributes.seq>`_
+
+.. seq:function:: test()
+
+
+
+.. seq:function:: export()
+
+
+
+.. seq:function:: inline()
+
+
+
+.. seq:function:: noinline()
+
+
+
+.. seq:function:: pure()
+
+
+
+.. seq:function:: nonpure()
+
+
+
+.. seq:function:: commutative()
+
+
+
+.. seq:function:: associative()
+
+
+
+.. seq:function:: distributive()
+
+
+
+.. seq:function:: C()
+
+
+
+
+

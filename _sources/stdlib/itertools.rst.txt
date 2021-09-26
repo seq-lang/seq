@@ -1,0 +1,206 @@
+.. seq:module:: ..itertools
+
+:seq:mod:`..itertools`
+----------------------
+
+Source code: `itertools.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./itertools.seq>`_
+
+.. seq:function:: combinations(pool, r : int)
+
+   
+       Return successive r-length combinations of elements in the iterable.
+   
+       combinations(range(4), 3) --> (0,1,2), (0,1,3), (0,2,3), (1,2,3)
+   
+
+
+
+.. seq:function:: combinations_with_replacement(pool, r : int)
+
+   
+       Return successive r-length combinations of elements in the iterable
+       allowing individual elements to have successive repeats.
+   
+
+
+
+.. seq:class:: islice
+
+   
+       Make an iterator that returns selected elements from the iterable.
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __new__[T](iterable : Generator[T], stop : Optional[int])
+         :noindex:
+
+      .. seq:method:: __new__[T](iterable : Generator[T], start : Optional[int], stop : Optional[int], step : Optional[int] = None)
+         :noindex:
+
+
+
+.. seq:function:: count(start = 0, step = 1)
+
+   
+       Return a count object whose ``__next__`` method returns consecutive values.
+   
+
+
+
+.. seq:function:: repeat(object, times : Optional[int] = None)
+
+   
+       Make an iterator that returns a given object over and over again.
+   
+
+
+
+.. seq:function:: cycle(iterable)
+
+   
+       Cycles repeatedly through an iterable.
+   
+
+
+
+.. seq:function:: compress(data, selectors)
+
+   
+       Return data elements corresponding to true selector elements.
+       Forms a shorter iterator from selected data elements using the selectors to
+       choose the data elements.
+   
+
+
+
+.. seq:function:: dropwhile(predicate, iterable)
+
+   
+       Drop items from the iterable while predicate(item) is true.
+       Afterwards, return every element until the iterable is exhausted.
+   
+
+
+
+.. seq:function:: takewhile(predicate, iterable)
+
+   
+       Return successive entries from an iterable as long as the predicate evaluates to true for each entry.
+   
+
+
+
+.. seq:function:: filterfalse(predicate, iterable)
+
+   
+       Return those items of iterable for which function(item) is false.
+   
+
+
+
+.. seq:function:: permutations(pool, r : Optional[int] = None)
+
+   
+       Return successive r-length permutations of elements in the iterable.
+   
+
+
+
+.. seq:class:: accumulate
+
+   
+       Make an iterator that returns accumulated sums, or accumulated results
+       of other binary functions (specified via the optional func argument).
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(iterable, func = lambda a, b: (a + b), initial = 0)
+         :noindex:
+
+      .. seq:method:: __new__(iterable, func = lambda a, b: (a + b))
+         :noindex:
+
+
+
+.. seq:class:: chain
+
+   
+       Make an iterator that returns elements from the first iterable until it is exhausted,
+       then proceeds to the next iterable, until all of the iterables are exhausted.
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(*iterables)
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: from_iterable(iterables)
+
+
+
+.. seq:function:: starmap(function, iterable)
+
+   
+       Return an iterator whose values are returned from the function
+       evaluated with an argument tuple taken from the given sequence.
+   
+
+
+
+.. seq:function:: groupby[S, T](iterable : Generator[T], key : Callable[T, S] = NoneType)
+
+   
+       Make an iterator that returns consecutive keys and groups from the iterable.
+   
+
+
+
+.. seq:class:: zip_longest
+
+   
+       Make an iterator that aggregates elements from each of the iterables.
+       If the iterables are of uneven length, missing values are filled-in
+       with fillvalue. Iteration continues until the longest iterable is
+       exhausted.
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(*args, fillvalue)
+         :noindex:
+
+      .. seq:method:: __new__(*args)
+         :noindex:
+
+
+
+.. seq:class:: product
+
+   
+       Cartesian product of input iterables.
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(*args)
+         :noindex:
+
+      .. seq:method:: __new__(*args, repeat : int)
+         :noindex:
+
+
+
+.. seq:function:: tee[T](iterable : Generator[T], n : int = 2)
+
+   
+       Return n independent iterators from a single iterable.
+   
+
+
+
+
+

@@ -1,0 +1,389 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Parallelism and Multithreading &#8212; Seq 0.11.0 documentation</title>
+    
+  <link href="_static/css/theme.css" rel="stylesheet" />
+  <link href="_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    
+  <link rel="preload" as="script" href="_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Calling Python from Seq" href="python.html" />
+    <link rel="prev" title="Workshop" href="tutorial/workshop.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        
+<h3><a href="index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cookbook.html">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html">Building from Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stdlib/index.html">Standard Library Reference</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="tutorial/workshop.html"
+                        title="previous chapter">Workshop</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="python.html"
+                        title="next chapter">Calling Python from Seq</a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="_sources/parallel.rst.txt"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.rst</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/seq-lang/seq"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+            <div class="tocsection onthispage pt-5 pb-3">
+                <i class="fas fa-list"></i> Contents
+            </div>
+            <nav id="bd-toc-nav" aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#different-kinds-of-loops">
+   Different kinds of loops
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#custom-reductions">
+   Custom reductions
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#openmp-constructs">
+   OpenMP constructs
+  </a>
+ </li>
+</ul>
+
+            </nav>
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+  <div class="section" id="parallelism-and-multithreading">
+<h1>Parallelism and Multithreading<a class="headerlink" href="#parallelism-and-multithreading" title="Permalink to this headline">¶</a></h1>
+<p>Seq supports parallelism and multithreading via OpenMP out of the box. Here’s an example:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="nd">@par</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">threading</span> <span class="k">as</span> <span class="nn">thr</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;hello from thread&#39;</span><span class="p">,</span> <span class="n">thr</span><span class="o">.</span><span class="n">get_ident</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>By default, parallel loops will use all available threads, or use the number of threads
+specified by the <code class="docutils literal notranslate"><span class="pre">OMP_NUM_THREADS</span></code> environment variable. A specific thread number can
+be given directly on the <code class="docutils literal notranslate"><span class="pre">&#64;par</span></code> line as well:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="nd">@par</span><span class="p">(</span><span class="n">num_threads</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">threading</span> <span class="k">as</span> <span class="nn">thr</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;hello from thread&#39;</span><span class="p">,</span> <span class="n">thr</span><span class="o">.</span><span class="n">get_ident</span><span class="p">())</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">&#64;par</span></code> supports several OpenMP parameters, including:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">num_threads</span></code> (int): the number of threads to use when running the loop</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">schedule</span></code> (str): either <em>static</em>, <em>dynamic</em>, <em>guided</em>, <em>auto</em> or <em>runtime</em></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chunk_size</span></code> (int): chunk size when partitioning loop iterations</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ordered</span></code> (bool): whether the loop iterations should be executed in the same order</p></li>
+</ul>
+<p>Other OpenMP parameters like <code class="docutils literal notranslate"><span class="pre">private</span></code>, <code class="docutils literal notranslate"><span class="pre">shared</span></code> or <code class="docutils literal notranslate"><span class="pre">reduction</span></code>, are inferred
+automatically by the compiler. For example, the following loop</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="nd">@par</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+    <span class="n">a</span> <span class="o">+=</span> <span class="n">foo</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>will automatically generate a reduction for variable <code class="docutils literal notranslate"><span class="pre">a</span></code>.</p>
+<p>Here is an example that finds the sum of prime numbers up to a user-defined limit, using
+a parallel loop on 16 threads with a dynamic schedule and chunk size of 100:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span class="n">argv</span>
+
+<span class="k">def</span> <span class="nf">is_prime</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="n">factors</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="o">%</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">factors</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">factors</span> <span class="o">==</span> <span class="mi">0</span>
+
+<span class="n">limit</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">total</span> <span class="o">=</span> <span class="mi">0</span>
+
+<span class="nd">@par</span><span class="p">(</span><span class="n">schedule</span><span class="o">=</span><span class="s1">&#39;dynamic&#39;</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">limit</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">is_prime</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+        <span class="n">total</span> <span class="o">+=</span> <span class="mi">1</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">total</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Static schedules work best when each loop iteration takes roughly the same amount of time,
+whereas dynamic schedules are superior when each iteration varies in duration. Since counting
+the factors of an integer takes more time for larger integers, we use a dynamic schedule here.</p>
+<p><code class="docutils literal notranslate"><span class="pre">&#64;par</span></code> also supports C/C++ OpenMP pragma strings. For example, the <code class="docutils literal notranslate"><span class="pre">&#64;par</span></code> line in the
+above example can also be written as:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># same as: @par(schedule=&#39;dynamic&#39;, chunk_size=100, num_threads=16)</span>
+<span class="nd">@par</span><span class="p">(</span><span class="s1">&#39;schedule(dynamic, 100) num_threads(16)&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="different-kinds-of-loops">
+<h2>Different kinds of loops<a class="headerlink" href="#different-kinds-of-loops" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">for</span></code>-loops can iterate over arbitrary generators, but OpenMP’s parallel loop construct only
+applies to <em>imperative</em> for-loops of the form <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">i</span> <span class="pre">in</span> <span class="pre">range(a,</span> <span class="pre">b,</span> <span class="pre">c)</span></code> (where <code class="docutils literal notranslate"><span class="pre">c</span></code> is constant).
+For general parallel for-loops of the form <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">i</span> <span class="pre">in</span> <span class="pre">some_generator()</span></code>, a task-based approach is
+used instead, where each loop iteration is executed as an independent task.</p>
+<p>The Seq compiler also converts iterations over lists (<code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">a</span> <span class="pre">in</span> <span class="pre">some_list</span></code>) to imperative
+for-loops, meaning these loops can be executed using OpenMP’s loop parallelism.</p>
+</div>
+<div class="section" id="custom-reductions">
+<h2>Custom reductions<a class="headerlink" href="#custom-reductions" title="Permalink to this headline">¶</a></h2>
+<p>Seq can automatically generate efficient reductions for <code class="docutils literal notranslate"><span class="pre">int</span></code> and <code class="docutils literal notranslate"><span class="pre">float</span></code> values. For other
+data types, user-defined reductions can be specified. A class that supports reductions must
+include:</p>
+<ul class="simple">
+<li><p>A default constructor that represents the <em>zero value</em></p></li>
+<li><p>An <code class="docutils literal notranslate"><span class="pre">__add__</span></code> method (assuming <code class="docutils literal notranslate"><span class="pre">+</span></code> is used as the reduction operator)</p></li>
+</ul>
+<p>Here is an example for reducing a new <code class="docutils literal notranslate"><span class="pre">Vector</span></code> type:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="nd">@tuple</span>
+<span class="k">class</span> <span class="nc">Vector</span><span class="p">:</span>
+    <span class="n">x</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">y</span><span class="p">:</span> <span class="nb">int</span>
+
+    <span class="k">def</span> <span class="nf">__new__</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">Vector</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Vector</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Vector</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+
+<span class="n">v</span> <span class="o">=</span> <span class="n">Vector</span><span class="p">()</span>
+<span class="nd">@par</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">v</span> <span class="o">+=</span> <span class="n">Vector</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>  <span class="c1"># (x: 4950, y: 4950)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="openmp-constructs">
+<h2>OpenMP constructs<a class="headerlink" href="#openmp-constructs" title="Permalink to this headline">¶</a></h2>
+<p>All of OpenMP’s API functions are accessible directly in Seq. For example:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">openmp</span> <span class="k">as</span> <span class="nn">omp</span>
+<span class="k">print</span><span class="p">(</span><span class="n">omp</span><span class="o">.</span><span class="n">get_num_threads</span><span class="p">())</span>
+<span class="n">omp</span><span class="o">.</span><span class="n">set_num_threads</span><span class="p">(</span><span class="mi">32</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>OpenMP’s <em>critical</em>, <em>master</em>, <em>single</em> and <em>ordered</em> constructs can be applied via the
+corresponding decorators:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">openmp</span> <span class="k">as</span> <span class="nn">omp</span>
+
+<span class="nd">@omp</span><span class="o">.</span><span class="n">critical</span>
+<span class="k">def</span> <span class="nf">only_run_by_one_thread_at_a_time</span><span class="p">():</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;critical!&#39;</span><span class="p">,</span> <span class="n">omp</span><span class="o">.</span><span class="n">get_thread_num</span><span class="p">())</span>
+
+<span class="nd">@omp</span><span class="o">.</span><span class="n">master</span>
+<span class="k">def</span> <span class="nf">only_run_by_master_thread</span><span class="p">():</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;master!&#39;</span><span class="p">,</span> <span class="n">omp</span><span class="o">.</span><span class="n">get_thread_num</span><span class="p">())</span>
+
+<span class="nd">@omp</span><span class="o">.</span><span class="n">single</span>
+<span class="k">def</span> <span class="nf">only_run_by_single_thread</span><span class="p">():</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;single!&#39;</span><span class="p">,</span> <span class="n">omp</span><span class="o">.</span><span class="n">get_thread_num</span><span class="p">())</span>
+
+<span class="nd">@omp</span><span class="o">.</span><span class="n">ordered</span>
+<span class="k">def</span> <span class="nf">run_ordered_by_iteration</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;ordered!&#39;</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+
+<span class="nd">@par</span><span class="p">(</span><span class="n">ordered</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">only_run_by_one_thread_at_a_time</span><span class="p">()</span>
+    <span class="n">only_run_by_master_thread</span><span class="p">()</span>
+    <span class="n">only_run_by_single_thread</span><span class="p">()</span>
+    <span class="n">run_ordered_by_iteration</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For finer-grained locking, consider using the locks from the <code class="docutils literal notranslate"><span class="pre">threading</span></code> module:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">threading</span> <span class="k">import</span> <span class="n">Lock</span>
+<span class="n">lock</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>  <span class="c1"># or RLock for re-entrant lock</span>
+
+<span class="nd">@par</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">lock</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;only one thread at a time allowed here&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+              </div>
+              
+        
+            
+
+
+
+<div class='prev-next-bottom'>
+    
+    <div id="prev">
+        <a class="left-prev" href="tutorial/workshop.html" title="previous page">
+            <i class="prevnext-label fas fa-angle-left"></i>
+            <div class="prevnext-info">
+                <p class="prevnext-label">previous</p>
+                <p class="prevnext-title">Workshop</p>
+            </div>
+        </a>
+    </div>
+     <div id="next">
+        <a class="right-next" href="python.html" title="next page">
+            <div class="prevnext-info">
+                <p class="prevnext-label">next</p>
+                <p class="prevnext-title">Calling Python from Seq</p>
+            </div>
+            <i class="prevnext-label fas fa-angle-right"></i>
+        </a>
+     </div>
+
+</div>
+        
+        </div>
+    </div>
+    <footer class="footer">
+    <div class="container">
+      <p>
+        
+          By seq-lang<br/>
+        
+            &copy; Copyright 2019-2021, seq-lang.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

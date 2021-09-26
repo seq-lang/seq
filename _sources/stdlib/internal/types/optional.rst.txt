@@ -1,0 +1,41 @@
+.. seq:module:: internal.types.optional
+
+:seq:mod:`internal.types.optional`
+----------------------------------
+
+Source code: `internal/types/optional.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/optional.seq>`_
+
+.. seq:extension:: Optional[T]
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __new__(what : T)
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __invert__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __is_optional__(other : Optional[T])
+         :noindex:
+
+
+
+.. seq:data:: optional
+
+
+
+.. seq:function:: unwrap[T](opt : Optional[T])
+
+
+
+
+

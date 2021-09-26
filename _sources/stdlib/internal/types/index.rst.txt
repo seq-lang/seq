@@ -1,0 +1,21 @@
+.. seq:module:: internal.types
+
+internal.types
+========
+
+.. toctree::
+
+   array
+   bool
+   byte
+   collections/index
+   error
+   float
+   generator
+   int
+   intn
+   optional
+   ptr
+   range
+   slice
+   str

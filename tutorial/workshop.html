@@ -1,0 +1,963 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workshop &#8212; Seq 0.11.0 documentation</title>
+    
+  <link href="../_static/css/theme.css" rel="stylesheet" />
+  <link href="../_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    
+  <link rel="preload" as="script" href="../_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Parallelism and Multithreading" href="../parallel.html" />
+    <link rel="prev" title="Tutorial" href="tutorial.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../intro.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../parallel.html">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cookbook.html">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../build.html">Building from Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../stdlib/index.html">Standard Library Reference</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="tutorial.html"
+                        title="previous chapter">Tutorial</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../parallel.html"
+                        title="next chapter">Parallelism and Multithreading</a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="../_sources/tutorial/workshop.rst.txt"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.rst</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/seq-lang/seq"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+            <div class="tocsection onthispage pt-5 pb-3">
+                <i class="fas fa-list"></i> Contents
+            </div>
+            <nav id="bd-toc-nav" aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#code-listings">
+   Code Listings
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#getting-started">
+   Getting Started
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#section-1-reading-sequences-from-disk">
+   Section 1: Reading sequences from disk
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#full-code-listing">
+     Full code listing
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#section-2-building-an-index">
+   Section 2: Building an index
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#section2-code">
+     Full code listing
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#section-3-finding-k-mer-matches">
+   Section 3: Finding k-mer matches
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#section3-code">
+     Full code listing
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#section-4-smith-waterman-alignment-and-cigar-strings">
+   Section 4: Smith-Waterman alignment and CIGAR strings
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#section4-code">
+     Full code listing
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#section-5-pipelines">
+   Section 5: Pipelines
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#optional-parallelism">
+     (Optional) Parallelism
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#section5-code">
+     Full code listing
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#section-6-domain-specific-optimizations">
+   Section 6: Domain-specific optimizations
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#section6-code">
+     Full code listing
+    </a>
+   </li>
+  </ul>
+ </li>
+</ul>
+
+            </nav>
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+  <div class="section" id="workshop">
+<h1>Workshop<a class="headerlink" href="#workshop" title="Permalink to this headline">¶</a></h1>
+<p>In this workshop, we will build a toy read mapper called <em>SeqMap</em> to
+showcase some of Seq’s domain-specific features and optimizations.</p>
+<div class="section" id="code-listings">
+<h2>Code Listings<a class="headerlink" href="#code-listings" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><strong>Section 1</strong>: <a class="reference internal" href="#section1-code"><span class="std std-ref">Full code listing</span></a> ｜ <a class="reference download internal" download="" href="../_downloads/18cf528541999fb2c108fb89b8637836/section1.seq"><code class="xref download docutils literal notranslate"><span class="pre">click</span> <span class="pre">to</span> <span class="pre">download</span></code></a></p></li>
+<li><p><strong>Section 2</strong>: <a class="reference internal" href="#section2-code"><span class="std std-ref">Full code listing</span></a> ｜ <a class="reference download internal" download="" href="../_downloads/eb6d1169d2f2dd49499e26ba92be80c4/section2.seq"><code class="xref download docutils literal notranslate"><span class="pre">click</span> <span class="pre">to</span> <span class="pre">download</span></code></a></p></li>
+<li><p><strong>Section 3</strong>: <a class="reference internal" href="#section3-code"><span class="std std-ref">Full code listing</span></a> ｜ <a class="reference download internal" download="" href="../_downloads/78f7bb6be845c7950ae64d91d9a0df3c/section3.seq"><code class="xref download docutils literal notranslate"><span class="pre">click</span> <span class="pre">to</span> <span class="pre">download</span></code></a></p></li>
+<li><p><strong>Section 4</strong>: <a class="reference internal" href="#section4-code"><span class="std std-ref">Full code listing</span></a> ｜ <a class="reference download internal" download="" href="../_downloads/d98a4eec5f06e77a752535c634d1b98e/section4.seq"><code class="xref download docutils literal notranslate"><span class="pre">click</span> <span class="pre">to</span> <span class="pre">download</span></code></a></p></li>
+<li><p><strong>Section 5</strong>: <a class="reference internal" href="#section5-code"><span class="std std-ref">Full code listing</span></a> ｜ <a class="reference download internal" download="" href="../_downloads/ad5da7523376d2b3e2fe58ad5ee9c22b/section5.seq"><code class="xref download docutils literal notranslate"><span class="pre">click</span> <span class="pre">to</span> <span class="pre">download</span></code></a></p></li>
+<li><p><strong>Section 6</strong>: <a class="reference internal" href="#section6-code"><span class="std std-ref">Full code listing</span></a> ｜ <a class="reference download internal" download="" href="../_downloads/6ab79d9135318bbb62645cc219ac7234/section6.seq"><code class="xref download docutils literal notranslate"><span class="pre">click</span> <span class="pre">to</span> <span class="pre">download</span></code></a></p></li>
+</ul>
+</div>
+<div class="section" id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
+<p>If you don’t have Seq installed already, you can install it with one bash command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>/bin/bash -c <span class="s2">&quot;</span><span class="k">$(</span>curl -fsSL https://seq-lang.org/install.sh<span class="k">)</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<p>Be sure to restart the shell for <code class="docutils literal notranslate"><span class="pre">seqc</span></code> to be added to your <code class="docutils literal notranslate"><span class="pre">PATH</span></code> (or add it manually).</p>
+<p>Now, let’s create a new directory to house our Seq code and test data:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir seqmap
+<span class="nb">cd</span> seqmap
+</pre></div>
+</div>
+<p>We’ll test <em>SeqMap</em> on the following data:</p>
+<ul class="simple">
+<li><p>Chromosome 22 as the reference sequence (<code class="docutils literal notranslate"><span class="pre">chr22.fa</span></code>, 52MB)</p></li>
+<li><p>A simulated set of 1 million 101bp reads (<code class="docutils literal notranslate"><span class="pre">reads.fastq</span></code>, 251MB)</p></li>
+</ul>
+<p>Let’s download this data into a new folder called <code class="docutils literal notranslate"><span class="pre">data</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl -L https://www.dropbox.com/s/8lsngqvn0tzjn1o/data.tar.gz <span class="p">|</span> tar zxf - -C .
+</pre></div>
+</div>
+<p>What does this data actually look like? Let’s take a look:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>head data/reads.fq
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>@chr22_16993648_16994131_1:0:0_2:0:0_0/1
+CTACCAAACACCTACTTCGTTTCCTAACATCACTTTAATTTTATCTTAGAGGAATTCTTTTCCCTATCCCATTAAGTTATGGGAGATGGGGCCAGGCATGG
++
+55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555
+@chr22_28253010_28253558_1:0:0_0:0:0_1/1
+AGTGTTTTGCCTGTGGCTAGACTAAAAATAAGGAATGAGGGGGGTATCTTCCACTCTTGCCCTCTCATCACCCTATTCCCTATATCCAGAACTCAGAGTCC
++
+55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555
+@chr22_21656192_21656802_0:0:0_2:0:0_2/1
+ATAGCGTGGATTCCTATGACATCAAGGAGCTATTTTATTTGGTAAAACGAAAAAGCACAATAATGAACGAACGCAAGCACTGAAACAGTGGAGACACCTAG
+</pre></div>
+</div>
+<p>Each <a class="reference external" href="https://en.wikipedia.org/wiki/FASTQ_format">FASTQ</a> record consists of four lines:</p>
+<ul class="simple">
+<li><p>Read name, starting with <code class="docutils literal notranslate"><span class="pre">&#64;</span></code>. Notice that since this data is simulated, the read name includes the
+location on the genome where the read comes from; this will be useful later!</p></li>
+<li><p>Read sequence. This is a DNA sequence consisting of <code class="docutils literal notranslate"><span class="pre">ACGT</span></code> bases and possibly <code class="docutils literal notranslate"><span class="pre">N</span></code>, indicating an
+ambiguous base.</p></li>
+<li><p>Separator (<code class="docutils literal notranslate"><span class="pre">+</span></code>)</p></li>
+<li><p>Read quality scores. This is a string of characters as long as the read sequence, where each character
+indicates the “quality” of the corresponding base in the read sequence. We won’t be using it here.</p></li>
+</ul>
+<p>What about the reference sequence <a class="reference external" href="https://en.wikipedia.org/wiki/FASTA_format">FASTA</a> file?</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>head data/chr22.fa
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>&gt;chr22
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+</pre></div>
+</div>
+<p>FASTQ records start with the sequence name (prefixed with <code class="docutils literal notranslate"><span class="pre">&gt;</span></code>) followed by the sequence itself, split
+across multiple lines. But why are all the bases <code class="docutils literal notranslate"><span class="pre">N</span></code>? Chromosomal sequences often have their starts
+and ends masked with <code class="docutils literal notranslate"><span class="pre">N</span></code>’s to cover repetitive <a class="reference external" href="https://en.wikipedia.org/wiki/Telomere">telomeric</a> sequences.
+Since we usually don’t want to include such regions in our analyses, they are masked in the file. Let’s
+look a bit further down:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>head -n <span class="m">1000000</span> data/chr22.fa <span class="p">|</span> tail -n <span class="m">10</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>tattaaaggaaaaaactgtatgaaatagtacatttctcataattctcatt
+ttgtaaaaataaagtacttatctatggacataatgagaaaatgactcaag
+gtaccaagagtttagccattagctataccagtggattataagcaaattct
+gttACGTGCATGCACTCACCTACGCATGTTCATGTATTCATACATACGTA
+CATAATTTTTTAAATTTTCTTTTATAGACAAGCAATAGCTTTATAATCTC
+TATAATCAGTAAAAATAAGTAAGTggctggacgcagtggctcacacctgt
+aatctcagcactttgggaggctgaggagggcagattatgaggtcagaaga
+tcaagaccatcctggctaacacagtgaaaccccatctctactaaaaatac
+aaaaaattagccacgcgtggtggcacgcgcctgtagtcccagctactggg
+gaggctgaggcaggaaaatcgcttgaacccgggaggcagaggttgcggtg
+</pre></div>
+</div>
+<p>Now we can see the usual <code class="docutils literal notranslate"><span class="pre">ACGT</span></code> bases. The fact that some bases are lowercase indicates that they
+are a part of some repetitive element or region. Seq will handle these different uppercase and lowercase
+characters automatically, so we don’t need to worry about them.</p>
+<p>You might notice an additional file called <code class="docutils literal notranslate"><span class="pre">chr22.fa.fai</span></code>: this is a FASTA index file that includes
+information about each sequence contained in the file for easier parsing. We won’t use it directly,
+but Seq uses it internally to make FASTA parsing more efficient.</p>
+</div>
+<div class="section" id="section-1-reading-sequences-from-disk">
+<h2>Section 1: Reading sequences from disk<a class="headerlink" href="#section-1-reading-sequences-from-disk" title="Permalink to this headline">¶</a></h2>
+<p>The first step of processing any kind of sequencing data is to read it from disk.
+Seq has builtin support for many of the standard file formats such as FASTA, FASTQ,
+SAM, BAM, etc.</p>
+<p>Let’s write a program to read our FASTQ file and print each record’s name and sequence
+on a single line:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span class="n">argv</span>
+<span class="kn">from</span> <span class="nn">bio</span> <span class="k">import</span> <span class="o">*</span>
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTQ</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">seq</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now we can run this Seq program:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>seqc run section1.seq data/reads.fq &gt; out.txt
+</pre></div>
+</div>
+<p>and view the results:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>head out.txt
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>chr22_16993648_16994131_1:0:0_2:0:0_0/1 CTACCAAACACCTACTTCGTTTCCTAACATCACTTTAATTTTATCTTAGAGGAATTCTTTTCCCTATCCCATTAAGTTATGGGAGATGGGGCCAGGCATGG
+chr22_28253010_28253558_1:0:0_0:0:0_1/1 AGTGTTTTGCCTGTGGCTAGACTAAAAATAAGGAATGAGGGGGGTATCTTCCACTCTTGCCCTCTCATCACCCTATTCCCTATATCCAGAACTCAGAGTCC
+chr22_21656192_21656802_0:0:0_2:0:0_2/1 ATAGCGTGGATTCCTATGACATCAAGGAGCTATTTTATTTGGTAAAACGAAAAAGCACAATAATGAACGAACGCAAGCACTGAAACAGTGGAGACACCTAG
+chr22_44541236_44541725_0:1:0_0:0:0_3/1 CTCTCTGTCTCTCTCTCTCCCCTAGGTCAGGGTGGTCCCTGGGGAGGCCCCTGGGTTACCCCAAGACAGGTGGGAGGTGCTTCCTACCCGACCCTCTTCCT
+chr22_39607671_39608139_0:0:0_2:0:0_4/1 ATTGGCTCAGAGTTCAGCAGGCTGTACCAGCATGGCGCCAGTGTCTGCTCCTGGTGAGGCCTTACGGACGTTACAATAACGGCGGAAGGCAAAGGCGGAGC
+chr22_35577703_35578255_3:0:0_1:0:0_5/1 TGCCATGGTGGTTAGCTGCACCCATCAACCTGTCATCTACATTAGGTATTTTTCCTAATGCTATCCCTCCCCTAGCACCCTACCCTCTGATAGGCCCTGGT
+chr22_46059124_46059578_1:0:0_1:0:0_6/1 AATCAGTACCAAACAATATATGGATATTATTGGCACTTTGTGCTCCCTCTGCCTGAACTGGGAATTCCTCTATTAGTTTTGACATTATCTGGTATTGAACC
+chr22_31651867_31652385_2:0:0_2:0:0_7/1 ATCTAGTGACAGTAAGTGGCTGATAAAGTGAGCTGCCATTACATAGTCATCATCTTTAATAGAAGTTAACACATACTGAGTTTCTACTATATTGGGTCTTT
+chr22_24816466_24817026_1:0:0_1:0:0_8/1 CACCTCTAGGGCTCAAGGGGCAGTTCCTCCATTCCTCAGCAGTGGCGCCTGTGGAACTGTGTCCTGAGGCCAGGGGGTGGTCAGGCAGGGCCTGGAGTGGC
+chr22_27496272_27496752_1:0:0_1:0:0_9/1 CTTAGCCCCATTAAACACTGGCAGGGCTGAATTGTCTGCTGCCATCCATCACACCTTCTCCCCTAGCCTGGTTTCTTACCTACCTGGAAGCCGTCCCTTTT
+</pre></div>
+</div>
+<p>Pretty straightforward! FASTA files can be read in a very similar way.</p>
+<div class="section" id="full-code-listing">
+<span id="section1-code"></span><h3>Full code listing<a class="headerlink" href="#full-code-listing" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference download internal" download="" href="../_downloads/18cf528541999fb2c108fb89b8637836/section1.seq"><code class="xref download docutils literal notranslate"><span class="pre">click</span> <span class="pre">to</span> <span class="pre">download</span></code></a></p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># SeqMap</span>
+<span class="c1"># Seq workshop -- Section 1</span>
+<span class="c1"># Reads and prints a FASTQ file.</span>
+<span class="c1"># Usage: seqc run section1.seq &lt;FASTQ path&gt;</span>
+<span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span class="n">argv</span>
+<span class="kn">from</span> <span class="nn">bio</span> <span class="k">import</span> <span class="o">*</span>
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTQ</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">seq</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="section-2-building-an-index">
+<h2>Section 2: Building an index<a class="headerlink" href="#section-2-building-an-index" title="Permalink to this headline">¶</a></h2>
+<p>Our goal is to find a “mapping” on the genome for each read. Comparing to every
+position on the reference sequence would take far too long. An alternative is
+to create an index of the k-mers from the reference sequence and use it to guide
+the mapping process.</p>
+<p>Let’s build a dictionary that maps each k-mer to its position (“locus”) on the
+reference sequence:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span class="n">argv</span>
+<span class="kn">from</span> <span class="nn">bio</span> <span class="k">import</span> <span class="o">*</span>
+<span class="n">index</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTA</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">kmer</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">seq</span><span class="o">.</span><span class="n">kmers_with_pos</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">index</span><span class="p">[</span><span class="n">kmer</span><span class="p">]</span> <span class="o">=</span> <span class="n">pos</span>
+</pre></div>
+</div>
+<p>Of course, there will be k-mers that appear multiple times, but let’s ignore this
+detail for now and just store the latest position we see for each k-mer.</p>
+<p>Another important issue is <em>reverse complementation</em>: some of our reads will map
+in the reverse direction rather than in the forward direction. For this reason,
+let’s build our index in such a way that a k-mer is considered “equal” to its
+reverse complement. One easy way to do this is by using “canonical” k-mers, i.e.
+the minimum of a k-mer and its reverse complement:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span class="n">argv</span>
+<span class="kn">from</span> <span class="nn">bio</span> <span class="k">import</span> <span class="o">*</span>
+<span class="n">index</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTA</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">kmer</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">seq</span><span class="o">.</span><span class="n">kmers_with_pos</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">index</span><span class="p">[</span><span class="nb">min</span><span class="p">(</span><span class="n">kmer</span><span class="p">,</span> <span class="o">~</span><span class="n">kmer</span><span class="p">)]</span> <span class="o">=</span> <span class="n">pos</span>  <span class="c1"># &lt;--</span>
+</pre></div>
+</div>
+<p>(We’ll have to use canonical k-mers when querying the index too, of course.)</p>
+<p>Now we have our index as a dictionary (<code class="docutils literal notranslate"><span class="pre">index</span></code>), but we don’t want to build it
+each time we perform read mapping, since it only depends on the (fixed) reference
+sequence. So, as a last step, let’s dump the index to a file using the <code class="docutils literal notranslate"><span class="pre">pickle</span></code>
+module:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+
+<span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.index&#39;</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">jar</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">jar</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Run the program:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>seqc run section2.seq data/chr22.fa
+</pre></div>
+</div>
+<p>Now we should see a new file <code class="docutils literal notranslate"><span class="pre">data/chr22.fa.index</span></code> which stores our
+serialized index.</p>
+<p>The nice thing is we should only have to build our index once!</p>
+<div class="section" id="section2-code">
+<span id="id1"></span><h3>Full code listing<a class="headerlink" href="#section2-code" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference download internal" download="" href="../_downloads/eb6d1169d2f2dd49499e26ba92be80c4/section2.seq"><code class="xref download docutils literal notranslate"><span class="pre">click</span> <span class="pre">to</span> <span class="pre">download</span></code></a></p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># SeqMap</span>
+<span class="c1"># Seq workshop -- Section 2</span>
+<span class="c1"># Reads and constructs a hash table index from an input</span>
+<span class="c1"># FASTA file.</span>
+<span class="c1"># Usage: seqc run section2.seq &lt;FASTA path&gt;</span>
+<span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span class="n">argv</span>
+<span class="kn">from</span> <span class="nn">bio</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+
+<span class="n">index</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTA</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">kmer</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">seq</span><span class="o">.</span><span class="n">kmers_with_pos</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">index</span><span class="p">[</span><span class="nb">min</span><span class="p">(</span><span class="n">kmer</span><span class="p">,</span> <span class="o">~</span><span class="n">kmer</span><span class="p">)]</span> <span class="o">=</span> <span class="n">pos</span>
+
+<span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.index&#39;</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">jar</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">jar</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="section-3-finding-k-mer-matches">
+<h2>Section 3: Finding k-mer matches<a class="headerlink" href="#section-3-finding-k-mer-matches" title="Permalink to this headline">¶</a></h2>
+<p>At this point, we have an index we can load from disk. Let’s use it
+to find candidate mappings for our reads.</p>
+<p>We’ll split each read into k-mers and report a mapping if at least two
+k-mers support a particular locus.</p>
+<p>The first step is to load the index:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span class="n">argv</span>
+<span class="kn">from</span> <span class="nn">bio</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+
+<span class="n">K</span><span class="p">:</span> <span class="n">Static</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="n">index</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.index&#39;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">jar</span><span class="p">:</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">jar</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="n">Dict</span><span class="p">[</span><span class="nb">Kmer</span><span class="p">[</span><span class="n">K</span><span class="p">],</span><span class="nb">int</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>Now we can iterate over our reads and query k-mers in the index. We need
+a way to keep track of candidate mapping positions as we process the
+k-mers of a read: we can do this using a new dictionary, <code class="docutils literal notranslate"><span class="pre">candidates</span></code>,
+which maps candidate alignment positions to the number of k-mers supporting
+the given position.</p>
+<p>Then, we just iterate over <code class="docutils literal notranslate"><span class="pre">candidates</span></code> and output positions supported by
+2 or more k-mers. Finally, we clear <code class="docutils literal notranslate"><span class="pre">candidates</span></code> before processing the next
+read:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">candidates</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># position -&gt; count mapping</span>
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTQ</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">kmer</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">kmers_with_pos</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">kmer</span><span class="p">,</span> <span class="o">~</span><span class="n">kmer</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">loc</span> <span class="o">=</span> <span class="n">found</span> <span class="o">-</span> <span class="n">pos</span>
+            <span class="n">candidates</span><span class="p">[</span><span class="n">loc</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidates</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">count</span> <span class="ow">in</span> <span class="n">candidates</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">candidates</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Run the program:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>seqc run section3.seq data/chr22.fa data/reads.fq &gt; out.txt
+</pre></div>
+</div>
+<p>Let’s take a look at the output:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>head out.txt
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>chr22_16993648_16994131_1:0:0_2:0:0_0/1 16993648
+chr22_28253010_28253558_1:0:0_0:0:0_1/1 28253010
+chr22_44541236_44541725_0:1:0_0:0:0_3/1 44541236
+chr22_31651867_31652385_2:0:0_2:0:0_7/1 31651867
+chr22_21584577_21585142_1:0:0_1:0:0_a/1 21584577
+chr22_46629499_46629977_0:0:0_2:0:0_b/1 47088563
+chr22_46629499_46629977_0:0:0_2:0:0_b/1 51103174
+chr22_46629499_46629977_0:0:0_2:0:0_b/1 46795988
+chr22_16269615_16270134_0:0:0_1:0:0_c/1 50577316
+chr22_16269615_16270134_0:0:0_1:0:0_c/1 16269615
+</pre></div>
+</div>
+<p>Notice that most positions we reported match the position from the read
+name (the first integer after the <code class="docutils literal notranslate"><span class="pre">_</span></code>); not bad!</p>
+<div class="section" id="section3-code">
+<span id="id2"></span><h3>Full code listing<a class="headerlink" href="#section3-code" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference download internal" download="" href="../_downloads/78f7bb6be845c7950ae64d91d9a0df3c/section3.seq"><code class="xref download docutils literal notranslate"><span class="pre">click</span> <span class="pre">to</span> <span class="pre">download</span></code></a></p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># SeqMap</span>
+<span class="c1"># Seq workshop -- Section 3</span>
+<span class="c1"># Reads index constructed in Section 2 and looks up k-mers from</span>
+<span class="c1"># input reads to find candidate mappings.</span>
+<span class="c1"># Usage: seqc run section3.seq &lt;FASTA path&gt; &lt;FASTQ path&gt;</span>
+<span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span class="n">argv</span>
+<span class="kn">from</span> <span class="nn">bio</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+
+<span class="n">K</span><span class="p">:</span> <span class="n">Static</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="n">index</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.index&#39;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">jar</span><span class="p">:</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">jar</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="n">Dict</span><span class="p">[</span><span class="nb">Kmer</span><span class="p">[</span><span class="n">K</span><span class="p">],</span><span class="nb">int</span><span class="p">])</span>
+
+<span class="n">candidates</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># position -&gt; count mapping</span>
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTQ</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">kmer</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">kmers_with_pos</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">kmer</span><span class="p">,</span> <span class="o">~</span><span class="n">kmer</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">loc</span> <span class="o">=</span> <span class="n">found</span> <span class="o">-</span> <span class="n">pos</span>
+            <span class="n">candidates</span><span class="p">[</span><span class="n">loc</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidates</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">count</span> <span class="ow">in</span> <span class="n">candidates</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">candidates</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="section-4-smith-waterman-alignment-and-cigar-strings">
+<h2>Section 4: Smith-Waterman alignment and CIGAR strings<a class="headerlink" href="#section-4-smith-waterman-alignment-and-cigar-strings" title="Permalink to this headline">¶</a></h2>
+<p>We now have the ability to report mapping <em>positions</em> for each read,
+but usually we want <em>alignments</em>, which include information about
+mismatches, insertions and deletions.</p>
+<p>Luckily, Seq makes sequence alignment easy: to align sequence <code class="docutils literal notranslate"><span class="pre">q</span></code>
+against sequence <code class="docutils literal notranslate"><span class="pre">t</span></code>, you can just do:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">aln</span> <span class="o">=</span> <span class="n">q</span> <span class="o">@</span> <span class="n">t</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">aln</span></code> is a tuple of alignment score and CIGAR string (a <em>CIGAR string</em> is
+a way of encoding an alignment result, and consists of operations such as <code class="docutils literal notranslate"><span class="pre">M</span></code>
+for match/mismatch, <code class="docutils literal notranslate"><span class="pre">I</span></code> for insertion and <code class="docutils literal notranslate"><span class="pre">D</span></code> for deletion, accompanied
+by the number of associated bases; for example, <code class="docutils literal notranslate"><span class="pre">3M2I4M</span></code> indicates 3 (mis)matches
+followed by a length-2 insertion followed by 4 (mis)matches).</p>
+<p>By default, <a class="reference external" href="https://en.wikipedia.org/wiki/Levenshtein_distance">Levenshtein distance</a> is
+used, meaning mismatch and gap costs are both 1, while match costs are zero. More
+control over alignment parameters can be achieved using the <code class="docutils literal notranslate"><span class="pre">align</span></code> method:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">aln</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">ambig</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">gapo</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">gape</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">a</span></code> is the match score, <code class="docutils literal notranslate"><span class="pre">b</span></code> is the mismatch cost, <code class="docutils literal notranslate"><span class="pre">ambig</span></code> is the
+ambiguous base (<code class="docutils literal notranslate"><span class="pre">N</span></code>) match score, <code class="docutils literal notranslate"><span class="pre">gapo</span></code> is the gap open cost and <code class="docutils literal notranslate"><span class="pre">gape</span></code>
+the gap extension cost (i.e. a gap of length <code class="docutils literal notranslate"><span class="pre">k</span></code> costs <code class="docutils literal notranslate"><span class="pre">gapo</span> <span class="pre">+</span> <span class="pre">(k</span> <span class="pre">*</span> <span class="pre">gape)</span></code>).
+There are many more parameters as well, controlling factors like alignment bandwidth,
+Z-drop, global/extension alignment and more; check the
+<a class="reference external" href="https://docs.seq-lang.org/stdlib/bio/align.html#bio.align.seq.align">standard library reference</a>
+for further details.</p>
+<p>For now, we’ll use a simple <code class="docutils literal notranslate"><span class="pre">query.align(target)</span></code>:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">candidates</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># position -&gt; count mapping</span>
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTQ</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">kmer</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">kmers_with_pos</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">kmer</span><span class="p">,</span> <span class="o">~</span><span class="n">kmer</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">loc</span> <span class="o">=</span> <span class="n">found</span> <span class="o">-</span> <span class="n">pos</span>
+            <span class="n">candidates</span><span class="p">[</span><span class="n">loc</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidates</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">count</span> <span class="ow">in</span> <span class="n">candidates</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c1"># get query, target and align:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">read</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="n">reference</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">query</span><span class="p">)]</span>
+            <span class="n">alignment</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">alignment</span><span class="o">.</span><span class="n">score</span><span class="p">,</span> <span class="n">alignment</span><span class="o">.</span><span class="n">cigar</span><span class="p">)</span>
+
+    <span class="n">candidates</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Run the program:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>seqc run section4.seq data/chr22.fa data/reads.fq &gt; out.txt
+</pre></div>
+</div>
+<p>And let’s take a look at the output once again:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>head out.txt
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>chr22_16993648_16994131_1:0:0_2:0:0_0/1 16993648 196 101M
+chr22_28253010_28253558_1:0:0_0:0:0_1/1 28253010 196 101M
+chr22_44541236_44541725_0:1:0_0:0:0_3/1 44541236 196 101M
+chr22_31651867_31652385_2:0:0_2:0:0_7/1 31651867 190 101M
+chr22_21584577_21585142_1:0:0_1:0:0_a/1 21584577 196 101M
+chr22_46629499_46629977_0:0:0_2:0:0_b/1 47088563 110 20M1I4M1D76M
+chr22_46629499_46629977_0:0:0_2:0:0_b/1 51103174 134 20M1I4M1D76M
+chr22_46629499_46629977_0:0:0_2:0:0_b/1 46795988 128 20M1I4M1D76M
+chr22_16269615_16270134_0:0:0_1:0:0_c/1 50577316 118 101M
+chr22_16269615_16270134_0:0:0_1:0:0_c/1 16269615 202 101M
+</pre></div>
+</div>
+<p>Most of the alignments contain only matches or mismatches (<code class="docutils literal notranslate"><span class="pre">M</span></code>), which
+is to be expected as insertions and deletions are far less common. In fact,
+the three mappings containing indels appear to be incorrect!</p>
+<p>A more thorough mapping scheme would also look at alignment scores before
+reporting mappings, although for the purposes of this workshop we’ll ignore
+such improvements.</p>
+<div class="section" id="section4-code">
+<span id="id3"></span><h3>Full code listing<a class="headerlink" href="#section4-code" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference download internal" download="" href="../_downloads/d98a4eec5f06e77a752535c634d1b98e/section4.seq"><code class="xref download docutils literal notranslate"><span class="pre">click</span> <span class="pre">to</span> <span class="pre">download</span></code></a></p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># SeqMap</span>
+<span class="c1"># Seq workshop -- Section 4</span>
+<span class="c1"># Reads index constructed in Section 2 and looks up k-mers from</span>
+<span class="c1"># input reads to find candidate mappings, then performs alignment.</span>
+<span class="c1"># Usage: seqc run section4.seq &lt;FASTA path&gt; &lt;FASTQ path&gt;</span>
+<span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span class="n">argv</span>
+<span class="kn">from</span> <span class="nn">bio</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+
+<span class="n">reference</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;&#39;</span>
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTA</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="n">reference</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">seq</span>
+
+<span class="n">K</span><span class="p">:</span> <span class="n">Static</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="n">index</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.index&#39;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">jar</span><span class="p">:</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">jar</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="n">Dict</span><span class="p">[</span><span class="nb">Kmer</span><span class="p">[</span><span class="n">K</span><span class="p">],</span><span class="nb">int</span><span class="p">])</span>
+
+<span class="n">candidates</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># position -&gt; count mapping</span>
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTQ</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">kmer</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">kmers_with_pos</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">kmer</span><span class="p">,</span> <span class="o">~</span><span class="n">kmer</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">loc</span> <span class="o">=</span> <span class="n">found</span> <span class="o">-</span> <span class="n">pos</span>
+            <span class="n">candidates</span><span class="p">[</span><span class="n">loc</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidates</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">count</span> <span class="ow">in</span> <span class="n">candidates</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">read</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="n">reference</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">query</span><span class="p">)]</span>
+            <span class="n">alignment</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">alignment</span><span class="o">.</span><span class="n">score</span><span class="p">,</span> <span class="n">alignment</span><span class="o">.</span><span class="n">cigar</span><span class="p">)</span>
+
+    <span class="n">candidates</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="section-5-pipelines">
+<h2>Section 5: Pipelines<a class="headerlink" href="#section-5-pipelines" title="Permalink to this headline">¶</a></h2>
+<p>Pipelines are a very convenient Seq construct for expressing a variety
+of algorithms and applications. In fact, <em>SeqMap</em> can be thought of as
+a pipeline with the following stages:</p>
+<ul class="simple">
+<li><p>read a record from the FASTQ file,</p></li>
+<li><p>find candidate alignments by querying the index,</p></li>
+<li><p>perform alignment for mappings supported by 2+ k-mers and output results.</p></li>
+</ul>
+<p>We can write this as a pipeline in Seq as follows:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">find_candidates</span><span class="p">(</span><span class="n">record</span><span class="p">):</span>
+    <span class="n">candidates</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># position -&gt; count mapping</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">kmer</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">kmers_with_pos</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">kmer</span><span class="p">,</span> <span class="o">~</span><span class="n">kmer</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">loc</span> <span class="o">=</span> <span class="n">found</span> <span class="o">-</span> <span class="n">pos</span>
+            <span class="n">candidates</span><span class="p">[</span><span class="n">loc</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidates</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">count</span> <span class="ow">in</span> <span class="n">candidates</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">record</span><span class="p">,</span> <span class="n">pos</span>
+
+<span class="k">def</span> <span class="nf">align_and_output</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+    <span class="n">record</span><span class="p">,</span> <span class="n">pos</span> <span class="o">=</span> <span class="n">t</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">read</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">reference</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">query</span><span class="p">)]</span>
+    <span class="n">alignment</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">alignment</span><span class="o">.</span><span class="n">score</span><span class="p">,</span> <span class="n">alignment</span><span class="o">.</span><span class="n">cigar</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Notice that <code class="docutils literal notranslate"><span class="pre">find_candidates</span></code> <em>yields</em> candidate alignments to <code class="docutils literal notranslate"><span class="pre">align_and_output</span></code>,
+which then performs alignment and prints the results. In Seq, all values generated
+from one stage of a pipeline are passed to the next. The Seq compiler performs many
+domain-specific optimizations on pipelines, one of which we focus on in the next section.</p>
+<div class="section" id="optional-parallelism">
+<h3>(Optional) Parallelism<a class="headerlink" href="#optional-parallelism" title="Permalink to this headline">¶</a></h3>
+<p>Parallelism can be achieved using the parallel pipe operator, <code class="docutils literal notranslate"><span class="pre">||&gt;</span></code>, which
+tells the compiler that all subsequent stages can be executed in parallel:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">FASTQ</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">|&gt;</span> <span class="nb">iter</span> <span class="o">||&gt;</span> <span class="n">find_candidates</span> <span class="o">|&gt;</span> <span class="n">align_and_output</span>
+</pre></div>
+</div>
+<p>Since the full program also involves loading the index, let’s time the main
+pipeline using the <code class="docutils literal notranslate"><span class="pre">timing</span></code> module:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">timing</span>
+<span class="k">with</span> <span class="n">timing</span><span class="p">(</span><span class="s1">&#39;mapping&#39;</span><span class="p">):</span>
+    <span class="n">FASTQ</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">|&gt;</span> <span class="nb">iter</span> <span class="o">||&gt;</span> <span class="n">find_candidates</span> <span class="o">|&gt;</span> <span class="n">align_and_output</span>
+</pre></div>
+</div>
+<p>We can try this for different numbers of threads:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">1</span>
+seqc run section5.seq data/chr22.fa data/reads.fq &gt; out.txt
+<span class="c1"># mapping took 48.2858s</span>
+
+<span class="nb">export</span> <span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">2</span>
+seqc run section5.seq data/chr22.fa data/reads.fq &gt; out.txt
+<span class="c1"># mapping took 35.886s</span>
+</pre></div>
+</div>
+<p>Often, batching reads into larger blocks and processing those blocks in parallel can
+yield better performance, especially if each read is quick to process. This is also
+very easy to do in Seq:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">process_block</span><span class="p">(</span><span class="n">block</span><span class="p">):</span>
+    <span class="n">block</span> <span class="o">|&gt;</span> <span class="nb">iter</span> <span class="o">|&gt;</span> <span class="n">find_candidates</span> <span class="o">|&gt;</span> <span class="n">align_and_output</span>
+
+<span class="k">with</span> <span class="n">timing</span><span class="p">(</span><span class="s1">&#39;mapping&#39;</span><span class="p">):</span>
+    <span class="n">FASTQ</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">|&gt;</span> <span class="n">blocks</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">2000</span><span class="p">)</span> <span class="o">||&gt;</span> <span class="n">process_block</span>
+</pre></div>
+</div>
+<p>And now:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span> <span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">1</span>
+seqc run section5.seq data/chr22.fa data/reads.fq &gt; out.txt
+<span class="c1"># mapping took 48.2858s</span>
+
+<span class="nb">export</span> <span class="nv">OMP_NUM_THREADS</span><span class="o">=</span><span class="m">2</span>
+seqc run section5.seq data/chr22.fa data/reads.fq &gt; out.txt
+<span class="c1"># mapping took 25.2648s</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="section5-code">
+<span id="id4"></span><h3>Full code listing<a class="headerlink" href="#section5-code" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference download internal" download="" href="../_downloads/ad5da7523376d2b3e2fe58ad5ee9c22b/section5.seq"><code class="xref download docutils literal notranslate"><span class="pre">click</span> <span class="pre">to</span> <span class="pre">download</span></code></a></p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># SeqMap</span>
+<span class="c1"># Seq workshop -- Section 5</span>
+<span class="c1"># Reads index constructed in Section 2 and looks up k-mers from</span>
+<span class="c1"># input reads to find candidate mappings, then performs alignment.</span>
+<span class="c1"># Implemented with Seq pipelines.</span>
+<span class="c1"># Usage: seqc run section5.seq &lt;FASTA path&gt; &lt;FASTQ path&gt;</span>
+<span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span class="n">argv</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">timing</span>
+<span class="kn">from</span> <span class="nn">bio</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+
+<span class="n">reference</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;&#39;</span>
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTA</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="n">reference</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">seq</span>
+
+<span class="n">K</span><span class="p">:</span> <span class="n">Static</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="n">index</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.index&#39;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">jar</span><span class="p">:</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">jar</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="n">Dict</span><span class="p">[</span><span class="nb">Kmer</span><span class="p">[</span><span class="n">K</span><span class="p">],</span><span class="nb">int</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">find_candidates</span><span class="p">(</span><span class="n">record</span><span class="p">):</span>
+    <span class="n">candidates</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># position -&gt; count mapping</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">kmer</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">kmers_with_pos</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">kmer</span><span class="p">,</span> <span class="o">~</span><span class="n">kmer</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">loc</span> <span class="o">=</span> <span class="n">found</span> <span class="o">-</span> <span class="n">pos</span>
+            <span class="n">candidates</span><span class="p">[</span><span class="n">loc</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidates</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">count</span> <span class="ow">in</span> <span class="n">candidates</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">record</span><span class="p">,</span> <span class="n">pos</span>
+
+<span class="k">def</span> <span class="nf">align_and_output</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+    <span class="n">record</span><span class="p">,</span> <span class="n">pos</span> <span class="o">=</span> <span class="n">t</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">read</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">reference</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">query</span><span class="p">)]</span>
+    <span class="n">alignment</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">alignment</span><span class="o">.</span><span class="n">score</span><span class="p">,</span> <span class="n">alignment</span><span class="o">.</span><span class="n">cigar</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">timing</span><span class="p">(</span><span class="s1">&#39;mapping&#39;</span><span class="p">):</span>
+    <span class="n">FASTQ</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">|&gt;</span> <span class="nb">iter</span> <span class="o">|&gt;</span> <span class="n">find_candidates</span> <span class="o">|&gt;</span> <span class="n">align_and_output</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="section-6-domain-specific-optimizations">
+<h2>Section 6: Domain-specific optimizations<a class="headerlink" href="#section-6-domain-specific-optimizations" title="Permalink to this headline">¶</a></h2>
+<p>Seq already performs numerous domain-specific optimizations under the hood.
+However, we can give the compiler a hint in this case to perform one more:
+<em>inter-sequence alignment</em>. This optimization entails batching sequences
+prior to alignment, then aligning multiple pairs using a very fast SIMD
+optimized alignment kernel.</p>
+<p>In Seq, we just need one additional function annotation to tell the compiler
+to perform this optimization:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="nd">@inter_align</span>
+<span class="k">def</span> <span class="nf">align_and_output</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>Let’s run the program with and without this optimization:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># without @inter_align</span>
+<span class="n">seqc</span> <span class="n">run</span> <span class="n">section5</span><span class="o">.</span><span class="n">seq</span> <span class="n">data</span><span class="o">/</span><span class="n">chr22</span><span class="o">.</span><span class="n">fa</span> <span class="n">data</span><span class="o">/</span><span class="n">reads</span><span class="o">.</span><span class="n">fq</span> <span class="o">&gt;</span> <span class="n">out</span><span class="o">.</span><span class="n">txt</span>
+<span class="c1"># mapping took 43.4457s</span>
+
+<span class="c1"># with @inter_align</span>
+<span class="n">seqc</span> <span class="n">run</span> <span class="n">section6</span><span class="o">.</span><span class="n">seq</span> <span class="n">data</span><span class="o">/</span><span class="n">chr22</span><span class="o">.</span><span class="n">fa</span> <span class="n">data</span><span class="o">/</span><span class="n">reads</span><span class="o">.</span><span class="n">fq</span> <span class="o">&gt;</span> <span class="n">out</span><span class="o">.</span><span class="n">txt</span>
+<span class="c1"># mapping took 32.3241s</span>
+</pre></div>
+</div>
+<p>(The timings with inter-sequence alignment will depend on the SIMD instruction
+sets your CPU supports; these numbers are from using AVX2.)</p>
+<div class="section" id="section6-code">
+<span id="id5"></span><h3>Full code listing<a class="headerlink" href="#section6-code" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference download internal" download="" href="../_downloads/6ab79d9135318bbb62645cc219ac7234/section6.seq"><code class="xref download docutils literal notranslate"><span class="pre">click</span> <span class="pre">to</span> <span class="pre">download</span></code></a></p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># SeqMap</span>
+<span class="c1"># Seq workshop -- Section 6</span>
+<span class="c1"># Reads index constructed in Section 2 and looks up k-mers from</span>
+<span class="c1"># input reads to find candidate mappings, then performs alignment.</span>
+<span class="c1"># Implemented with Seq pipelines using inter-seq. alignment.</span>
+<span class="c1"># Usage: seqc run section6.seq &lt;FASTA path&gt; &lt;FASTQ path&gt;</span>
+<span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span class="n">argv</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">timing</span>
+<span class="kn">from</span> <span class="nn">bio</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+
+<span class="n">reference</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;&#39;</span>
+<span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTA</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+    <span class="n">reference</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">seq</span>
+
+<span class="n">K</span><span class="p">:</span> <span class="n">Static</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="n">index</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.index&#39;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">jar</span><span class="p">:</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">jar</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="n">Dict</span><span class="p">[</span><span class="nb">Kmer</span><span class="p">[</span><span class="n">K</span><span class="p">],</span><span class="nb">int</span><span class="p">])</span>
+
+<span class="k">def</span> <span class="nf">find_candidates</span><span class="p">(</span><span class="n">record</span><span class="p">):</span>
+    <span class="n">candidates</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># position -&gt; count mapping</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">kmer</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">kmers_with_pos</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">K</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="n">index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">kmer</span><span class="p">,</span> <span class="o">~</span><span class="n">kmer</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">found</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">loc</span> <span class="o">=</span> <span class="n">found</span> <span class="o">-</span> <span class="n">pos</span>
+            <span class="n">candidates</span><span class="p">[</span><span class="n">loc</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidates</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">pos</span><span class="p">,</span><span class="n">count</span> <span class="ow">in</span> <span class="n">candidates</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">record</span><span class="p">,</span> <span class="n">pos</span>
+
+<span class="nd">@inter_align</span>
+<span class="k">def</span> <span class="nf">align_and_output</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+    <span class="n">record</span><span class="p">,</span> <span class="n">pos</span> <span class="o">=</span> <span class="n">t</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">read</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">reference</span><span class="p">[</span><span class="n">pos</span><span class="p">:</span><span class="n">pos</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">query</span><span class="p">)]</span>
+    <span class="n">alignment</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">alignment</span><span class="o">.</span><span class="n">score</span><span class="p">,</span> <span class="n">alignment</span><span class="o">.</span><span class="n">cigar</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">timing</span><span class="p">(</span><span class="s1">&#39;mapping&#39;</span><span class="p">):</span>
+    <span class="n">FASTQ</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">|&gt;</span> <span class="nb">iter</span> <span class="o">|&gt;</span> <span class="n">find_candidates</span> <span class="o">|&gt;</span> <span class="n">align_and_output</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+              </div>
+              
+        
+            
+
+
+
+<div class='prev-next-bottom'>
+    
+    <div id="prev">
+        <a class="left-prev" href="tutorial.html" title="previous page">
+            <i class="prevnext-label fas fa-angle-left"></i>
+            <div class="prevnext-info">
+                <p class="prevnext-label">previous</p>
+                <p class="prevnext-title">Tutorial</p>
+            </div>
+        </a>
+    </div>
+     <div id="next">
+        <a class="right-next" href="../parallel.html" title="next page">
+            <div class="prevnext-info">
+                <p class="prevnext-label">next</p>
+                <p class="prevnext-title">Parallelism and Multithreading</p>
+            </div>
+            <i class="prevnext-label fas fa-angle-right"></i>
+        </a>
+     </div>
+
+</div>
+        
+        </div>
+    </div>
+    <footer class="footer">
+    <div class="container">
+      <p>
+        
+          By seq-lang<br/>
+        
+            &copy; Copyright 2019-2021, seq-lang.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="../_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

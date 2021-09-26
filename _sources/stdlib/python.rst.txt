@@ -1,0 +1,9 @@
+.. seq:module:: ..python
+
+:seq:mod:`..python`
+-------------------
+
+Source code: `python.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./python.seq>`_
+
+
+

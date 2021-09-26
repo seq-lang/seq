@@ -1,0 +1,572 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>math &#8212; Seq 0.11.0 documentation</title>
+    
+  <link href="../_static/css/theme.css" rel="stylesheet" />
+  <link href="../_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    
+  <link rel="preload" as="script" href="../_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="openmp" href="openmp.html" />
+    <link rel="prev" title="itertools" href="itertools.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../intro.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../parallel.html">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cookbook.html">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../build.html">Building from Source</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Standard Library Reference</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="itertools.html"
+                        title="previous chapter"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">itertools</span></code></a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="openmp.html"
+                        title="next chapter"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">openmp</span></code></a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="../_sources/stdlib/math.rst.txt"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.rst</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/seq-lang/seq"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+  <span class="target" id="module-..math"></span><div class="section" id="math">
+<h1><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">math</span></code><a class="headerlink" href="#math" title="Permalink to this headline">¶</a></h1>
+<p>Source code: <a class="reference external" href="https://github.com/seq-lang/seq/blob/master/stdlib/./math.seq">math.seq</a></p>
+<dl class="seq data">
+<dt class="sig sig-object seq" id="math.e">
+<span id="..math.e"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">e</span></span><a class="headerlink" href="#math.e" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq data">
+<dt class="sig sig-object seq" id="math.pi">
+<span id="..math.pi"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">pi</span></span><a class="headerlink" href="#math.pi" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq data">
+<dt class="sig sig-object seq" id="math.tau">
+<span id="..math.tau"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">tau</span></span><a class="headerlink" href="#math.tau" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq data">
+<dt class="sig sig-object seq" id="math.inf">
+<span id="..math.inf"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">inf</span></span><a class="headerlink" href="#math.inf" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq data">
+<dt class="sig sig-object seq" id="math.nan">
+<span id="..math.nan"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">nan</span></span><a class="headerlink" href="#math.nan" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.factorial">
+<span id="..math.factorial"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">factorial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.factorial" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.isnan">
+<span id="..math.isnan"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">isnan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.isnan" title="Permalink to this definition">¶</a></dt>
+<dd><p>isnan(float) -&gt; bool</p>
+<p>Return True if float arg is a NaN, else False.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.isinf">
+<span id="..math.isinf"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">isinf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.isinf" title="Permalink to this definition">¶</a></dt>
+<dd><p>isinf(float) -&gt; bool:</p>
+<p>Return True if float arg is an INF, else False.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.isfinite">
+<span id="..math.isfinite"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">isfinite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.isfinite" title="Permalink to this definition">¶</a></dt>
+<dd><p>isfinite(float) -&gt; bool</p>
+<p>Return True if x is neither an infinity nor a NaN,
+and False otherwise.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.ceil">
+<span id="..math.ceil"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">ceil</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.ceil" title="Permalink to this definition">¶</a></dt>
+<dd><p>ceil(float) -&gt; float</p>
+<p>Return the ceiling of x as an Integral.
+This is the smallest integer &gt;= x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.floor">
+<span id="..math.floor"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">floor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.floor" title="Permalink to this definition">¶</a></dt>
+<dd><p>floor(float) -&gt; float</p>
+<p>Return the floor of x as an Integral.
+This is the largest integer &lt;= x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.fabs">
+<span id="..math.fabs"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">fabs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.fabs" title="Permalink to this definition">¶</a></dt>
+<dd><p>fabs(float) -&gt; float</p>
+<p>Returns the absolute value of a floating point number.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.fmod">
+<span id="..math.fmod"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">fmod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.fmod" title="Permalink to this definition">¶</a></dt>
+<dd><p>fmod(float, float) -&gt; float</p>
+<p>Returns the remainder of x divided by y.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.exp">
+<span id="..math.exp"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">exp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.exp" title="Permalink to this definition">¶</a></dt>
+<dd><p>exp(float) -&gt; float</p>
+<p>Returns the value of e raised to the xth power.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.expm1">
+<span id="..math.expm1"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">expm1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.expm1" title="Permalink to this definition">¶</a></dt>
+<dd><p>expm1(float) -&gt; float</p>
+<p>Return e raised to the power x, minus 1. expm1 provides
+a way to compute this quantity to full precision.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.ldexp">
+<span id="..math.ldexp"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">ldexp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">i</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.ldexp" title="Permalink to this definition">¶</a></dt>
+<dd><p>ldexp(float, int) -&gt; float</p>
+<p>Returns x multiplied by 2 raised to the power of exponent.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.log">
+<span id="..math.log"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>log(float) -&gt; float</p>
+<p>Returns the natural logarithm (base-e logarithm) of x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.log2">
+<span id="..math.log2"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">log2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.log2" title="Permalink to this definition">¶</a></dt>
+<dd><p>log2(float) -&gt; float</p>
+<p>Return the base-2 logarithm of x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.log10">
+<span id="..math.log10"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">log10</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.log10" title="Permalink to this definition">¶</a></dt>
+<dd><p>log10(float) -&gt; float</p>
+<p>Returns the common logarithm (base-10 logarithm) of x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.degrees">
+<span id="..math.degrees"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">degrees</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.degrees" title="Permalink to this definition">¶</a></dt>
+<dd><p>degrees(float) -&gt; float</p>
+<p>Convert angle x from radians to degrees.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.radians">
+<span id="..math.radians"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">radians</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.radians" title="Permalink to this definition">¶</a></dt>
+<dd><p>radians(float) -&gt; float</p>
+<p>Convert angle x from degrees to radians.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.sqrt">
+<span id="..math.sqrt"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">sqrt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.sqrt" title="Permalink to this definition">¶</a></dt>
+<dd><p>sqrt(float) -&gt; float</p>
+<p>Returns the square root of x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.pow">
+<span id="..math.pow"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">pow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.pow" title="Permalink to this definition">¶</a></dt>
+<dd><p>pow(float, float) -&gt; float</p>
+<p>Returns x raised to the power of y.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.acos">
+<span id="..math.acos"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">acos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.acos" title="Permalink to this definition">¶</a></dt>
+<dd><p>acos(float) -&gt; float</p>
+<p>Returns the arc cosine of x in radians.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.asin">
+<span id="..math.asin"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">asin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.asin" title="Permalink to this definition">¶</a></dt>
+<dd><p>asin(float) -&gt; float</p>
+<p>Returns the arc sine of x in radians.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.atan">
+<span id="..math.atan"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">atan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.atan" title="Permalink to this definition">¶</a></dt>
+<dd><p>atan(float) -&gt; float</p>
+<p>Returns the arc tangent of x in radians.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.atan2">
+<span id="..math.atan2"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">atan2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.atan2" title="Permalink to this definition">¶</a></dt>
+<dd><p>atan2(float, float) -&gt; float</p>
+<p>Returns the arc tangent in radians of y/x based
+on the signs of both values to determine the
+correct quadrant.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.cos">
+<span id="..math.cos"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">cos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.cos" title="Permalink to this definition">¶</a></dt>
+<dd><p>cos(float) -&gt; float</p>
+<p>Returns the cosine of a radian angle x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.sin">
+<span id="..math.sin"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">sin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.sin" title="Permalink to this definition">¶</a></dt>
+<dd><p>sin(float) -&gt; float</p>
+<p>Returns the sine of a radian angle x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.hypot">
+<span id="..math.hypot"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">hypot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.hypot" title="Permalink to this definition">¶</a></dt>
+<dd><p>hypot(float, float) -&gt; float</p>
+<p>Return the Euclidean norm.
+This is the length of the vector from the
+origin to point (x, y).</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.tan">
+<span id="..math.tan"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">tan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.tan" title="Permalink to this definition">¶</a></dt>
+<dd><p>tan(float) -&gt; float</p>
+<p>Return the tangent of a radian angle x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.cosh">
+<span id="..math.cosh"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">cosh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.cosh" title="Permalink to this definition">¶</a></dt>
+<dd><p>cosh(float) -&gt; float</p>
+<p>Returns the hyperbolic cosine of x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.sinh">
+<span id="..math.sinh"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">sinh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.sinh" title="Permalink to this definition">¶</a></dt>
+<dd><p>sinh(float) -&gt; float</p>
+<p>Returns the hyperbolic sine of x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.tanh">
+<span id="..math.tanh"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">tanh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.tanh" title="Permalink to this definition">¶</a></dt>
+<dd><p>tanh(float) -&gt; float</p>
+<p>Returns the hyperbolic tangent of x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.acosh">
+<span id="..math.acosh"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">acosh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.acosh" title="Permalink to this definition">¶</a></dt>
+<dd><p>acosh(float) -&gt; float</p>
+<p>Return the inverse hyperbolic cosine of x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.asinh">
+<span id="..math.asinh"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">asinh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.asinh" title="Permalink to this definition">¶</a></dt>
+<dd><p>asinh(float) -&gt; float</p>
+<p>Return the inverse hyperbolic sine of x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.atanh">
+<span id="..math.atanh"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">atanh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.atanh" title="Permalink to this definition">¶</a></dt>
+<dd><p>atanh(float) -&gt; float</p>
+<p>Return the inverse hyperbolic tangent of x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.copysign">
+<span id="..math.copysign"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">copysign</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.copysign" title="Permalink to this definition">¶</a></dt>
+<dd><p>copysign(float, float) -&gt; float</p>
+<p>Return a float with the magnitude (absolute value) of
+x but the sign of y.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.log1p">
+<span id="..math.log1p"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">log1p</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.log1p" title="Permalink to this definition">¶</a></dt>
+<dd><p>log1p(float) -&gt; float</p>
+<p>Return the natural logarithm of 1+x (base e).</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.trunc">
+<span id="..math.trunc"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">trunc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.trunc" title="Permalink to this definition">¶</a></dt>
+<dd><p>trunc(float) -&gt; float</p>
+<p>Return the Real value x truncated to an Integral
+(usually an integer).</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.erf">
+<span id="..math.erf"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">erf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.erf" title="Permalink to this definition">¶</a></dt>
+<dd><p>erf(float) -&gt; float</p>
+<p>Return the error function at x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.erfc">
+<span id="..math.erfc"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">erfc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.erfc" title="Permalink to this definition">¶</a></dt>
+<dd><p>erfc(float) -&gt; float</p>
+<p>Return the complementary error function at x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.gamma">
+<span id="..math.gamma"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">gamma</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.gamma" title="Permalink to this definition">¶</a></dt>
+<dd><p>gamma(float) -&gt; float</p>
+<p>Return the Gamma function at x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.lgamma">
+<span id="..math.lgamma"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">lgamma</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.lgamma" title="Permalink to this definition">¶</a></dt>
+<dd><p>lgamma(float) -&gt; float</p>
+<p>Return the natural logarithm of
+the absolute value of the Gamma function at x.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.remainder">
+<span id="..math.remainder"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">remainder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.remainder" title="Permalink to this definition">¶</a></dt>
+<dd><p>remainder(float, float) -&gt; float</p>
+<p>Return the IEEE 754-style remainder of x with respect to y.
+For finite x and finite nonzero y, this is the difference
+x - n*y, where n is the closest integer to the exact value
+of the quotient x / y. If x / y is exactly halfway between
+two consecutive integers, the nearest even integer is used
+for n.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.gcd">
+<span id="..math.gcd"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">gcd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.gcd" title="Permalink to this definition">¶</a></dt>
+<dd><p>gcd(float, float) -&gt; float</p>
+<p>returns greatest common divisor of x and y.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.frexp">
+<span id="..math.frexp"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">frexp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.frexp" title="Permalink to this definition">¶</a></dt>
+<dd><p>frexp(float) -&gt; Tuple[float, int]</p>
+<p>The returned value is the mantissa and the integer pointed
+to by exponent is the exponent. The resultant value is
+x = mantissa * 2 ^ exponent.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.modf">
+<span id="..math.modf"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">modf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.modf" title="Permalink to this definition">¶</a></dt>
+<dd><p>modf(float) -&gt; Tuple[float, float]</p>
+<p>The returned value is the fraction component (part after
+the decimal), and sets integer to the integer component.</p>
+</dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="math.isclose">
+<span id="..math.isclose"></span><span class="sig-prename descclassname"><span class="pre">math.</span></span><span class="sig-name descname"><span class="pre">isclose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#math.isclose" title="Permalink to this definition">¶</a></dt>
+<dd><p>isclose(float, float) -&gt; bool</p>
+<p>Return True if a is close in value to b, and False otherwise.
+For the values to be considered close, the difference between them
+must be smaller than at least one of the tolerances.</p>
+<p>Unlike python, rel_tol and abs_tol are set to default for now.</p>
+</dd></dl>
+
+</div>
+
+
+              </div>
+              
+        
+            
+
+
+
+<div class='prev-next-bottom'>
+    
+    <div id="prev">
+        <a class="left-prev" href="itertools.html" title="previous page">
+            <i class="prevnext-label fas fa-angle-left"></i>
+            <div class="prevnext-info">
+                <p class="prevnext-label">previous</p>
+                <p class="prevnext-title"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">itertools</span></code></p>
+            </div>
+        </a>
+    </div>
+     <div id="next">
+        <a class="right-next" href="openmp.html" title="next page">
+            <div class="prevnext-info">
+                <p class="prevnext-label">next</p>
+                <p class="prevnext-title"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">openmp</span></code></p>
+            </div>
+            <i class="prevnext-label fas fa-angle-right"></i>
+        </a>
+     </div>
+
+</div>
+        
+        </div>
+    </div>
+    <footer class="footer">
+    <div class="container">
+      <p>
+        
+          By seq-lang<br/>
+        
+            &copy; Copyright 2019-2021, seq-lang.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="../_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

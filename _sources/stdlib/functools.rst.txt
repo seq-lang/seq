@@ -1,0 +1,13 @@
+.. seq:module:: ..functools
+
+:seq:mod:`..functools`
+----------------------
+
+Source code: `functools.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./functools.seq>`_
+
+.. seq:function:: partial()
+
+
+
+
+

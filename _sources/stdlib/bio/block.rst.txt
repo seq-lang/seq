@@ -1,0 +1,46 @@
+.. seq:module:: bio.block
+
+:seq:mod:`bio.block`
+--------------------
+
+Source code: `bio/block.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/block.seq>`_
+
+.. seq:class:: Block[T]
+
+   
+       Represents a block of data; useful in parallelization to batch data
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(size : int)
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __getitem__(idx : int)
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+
+
+.. seq:function:: blocks(x, size : int)
+
+   
+       Partitions the given object into blocks of the specified size
+       by calling the `__blocks__` magic method.
+   
+
+
+
+
+

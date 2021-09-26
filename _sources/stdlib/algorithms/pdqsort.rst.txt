@@ -1,0 +1,54 @@
+.. seq:module:: algorithms.pdqsort
+
+:seq:mod:`algorithms.pdqsort`
+-----------------------------
+
+Source code: `algorithms/pdqsort.seq <https://github.com/seq-lang/seq/blob/master/stdlib/algorithms/pdqsort.seq>`_
+
+.. seq:data:: INSERTION_SORT_THRESHOLD
+
+
+
+.. seq:data:: NINTHER_THRESHOLD
+
+
+
+.. seq:data:: PARTIAL_INSERTION_SORT_LIMIT
+
+
+
+.. seq:function:: pdq_sort_array[S, T](collection : Array[T], size : int, keyf : Callable[T, S])
+
+   
+           Pattern-defeating Quicksort
+           By Orson Peters, published at https://github.com/orlp/pdqsort
+   
+           Sorts the array inplace.
+   
+
+
+
+.. seq:function:: pdq_sort_inplace[S, T](collection : List[T], keyf : Callable[T, S])
+
+   
+           Pattern-defeating Quicksort
+           By Orson Peters, published at https://github.com/orlp/pdqsort
+   
+           Sorts the list inplace.
+   
+
+
+
+.. seq:function:: pdq_sort[S, T](collection : List[T], keyf : Callable[T, S])
+
+   
+           Pattern-defeating Quicksort
+           By Orson Peters, published at https://github.com/orlp/pdqsort
+   
+           Returns a sorted list.
+   
+
+
+
+
+

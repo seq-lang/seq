@@ -1,0 +1,69 @@
+.. seq:module:: internal.types.bool
+
+:seq:mod:`internal.types.bool`
+------------------------------
+
+Source code: `internal/types/bool.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/bool.seq>`_
+
+.. seq:extension:: bool
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __new__[T](what : T)
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __hash__()
+         :noindex:
+
+      .. seq:method:: __invert__()
+         :noindex:
+
+      .. seq:method:: __eq__(other : bool)
+         :noindex:
+
+      .. seq:method:: __ne__(other : bool)
+         :noindex:
+
+      .. seq:method:: __lt__(other : bool)
+         :noindex:
+
+      .. seq:method:: __gt__(other : bool)
+         :noindex:
+
+      .. seq:method:: __le__(other : bool)
+         :noindex:
+
+      .. seq:method:: __ge__(other : bool)
+         :noindex:
+
+      .. seq:method:: __and__(other : bool)
+         :noindex:
+
+      .. seq:method:: __or__(other : bool)
+         :noindex:
+
+      .. seq:method:: __xor__(other : bool)
+         :noindex:
+
+      .. seq:method:: __int__()
+         :noindex:
+
+      .. seq:method:: __float__()
+         :noindex:
+
+
+
+
+

@@ -1,0 +1,64 @@
+.. seq:module:: internal.types.byte
+
+:seq:mod:`internal.types.byte`
+------------------------------
+
+Source code: `internal/types/byte.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/byte.seq>`_
+
+.. seq:function:: seq_str_byte(a : byte)
+
+
+
+.. seq:extension:: byte
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __new__(b : byte)
+         :noindex:
+
+      .. seq:method:: __new__(i : int)
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __eq__(other : byte)
+         :noindex:
+
+      .. seq:method:: __ne__(other : byte)
+         :noindex:
+
+      .. seq:method:: __lt__(other : byte)
+         :noindex:
+
+      .. seq:method:: __gt__(other : byte)
+         :noindex:
+
+      .. seq:method:: __le__(other : byte)
+         :noindex:
+
+      .. seq:method:: __ge__(other : byte)
+         :noindex:
+
+      .. seq:method:: __repr__()
+         :noindex:
+
+      .. seq:method:: __int__()
+         :noindex:
+
+      .. seq:method:: __float__()
+         :noindex:
+
+
+
+
+

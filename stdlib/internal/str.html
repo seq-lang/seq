@@ -1,0 +1,656 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>internal.str &#8212; Seq 0.11.0 documentation</title>
+    
+  <link href="../../_static/css/theme.css" rel="stylesheet" />
+  <link href="../../_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    
+  <link rel="preload" as="script" href="../../_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="internal.types" href="types/index.html" />
+    <link rel="prev" title="internal.sort" href="sort.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../parallel.html">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cookbook.html">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../build.html">Building from Source</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Standard Library Reference</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="sort.html"
+                        title="previous chapter"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.sort</span></code></a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="types/index.html"
+                        title="next chapter">internal.types</a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="../../_sources/stdlib/internal/str.rst.txt"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.rst</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/seq-lang/seq"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+  <span class="target" id="module-internal.str"></span><div class="section" id="internal-str">
+<h1><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.str</span></code><a class="headerlink" href="#internal-str" title="Permalink to this headline">¶</a></h1>
+<p>Source code: <a class="reference external" href="https://github.com/seq-lang/seq/blob/master/stdlib/internal/str.seq">internal/str.seq</a></p>
+<dl class="seq extension">
+<dt class="sig sig-object seq" id="internal.str.str">
+<em class="property"><span class="pre">extension</span> </em><span class="sig-name descname"><span class="pre">str</span></span><a class="headerlink" href="#internal.str.str" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__hash__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__lt__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__le__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__gt__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__ge__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__repr__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__getitem__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__getitem__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Slice</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__iter__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__reversed__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__mul__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__copy__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+<dl class="seq extension">
+<dt class="sig sig-object seq" id="id0">
+<em class="property"><span class="pre">extension</span> </em><span class="sig-name descname"><span class="pre">str</span></span><a class="headerlink" href="#id0" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Magic methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq">
+<span class="sig-name descname"><span class="pre">__contains__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pattern</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+</div></blockquote>
+<p><strong>Methods:</strong></p>
+<blockquote>
+<div><dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.join">
+<span class="sig-name descname"><span class="pre">join</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">l</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Generator</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.join" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="id1">
+<span class="sig-name descname"><span class="pre">join</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">l</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.isdigit">
+<span class="sig-name descname"><span class="pre">isdigit</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.isdigit" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.isdigit() -&gt; bool</p>
+<p>Return True if all characters in str are digits
+and there is at least one character in str, False otherwise.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.islower">
+<span class="sig-name descname"><span class="pre">islower</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.islower" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.islower() -&gt; bool</p>
+<p>Return True if all cased characters in str are lowercase and there is
+at least one cased character in str, False otherwise.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.isupper">
+<span class="sig-name descname"><span class="pre">isupper</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.isupper" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.isupper() -&gt; bool</p>
+<p>Return True if all cased characters in str are uppercase and there is
+at least one cased character in str, False otherwise.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.isalnum">
+<span class="sig-name descname"><span class="pre">isalnum</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.isalnum" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.isalnum() -&gt; bool</p>
+<p>Return True if all characters in str are alphanumeric
+and there is at least one character in str, False otherwise.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.isalpha">
+<span class="sig-name descname"><span class="pre">isalpha</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.isalpha" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.isalpha() -&gt; bool</p>
+<p>Return True if all characters in str are alphabetic
+and there is at least one character in str, False otherwise.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.isspace">
+<span class="sig-name descname"><span class="pre">isspace</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.isspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.isspace() -&gt; bool</p>
+<p>Return True if all characters in str are whitespace
+and there is at least one character in str, False otherwise.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.istitle">
+<span class="sig-name descname"><span class="pre">istitle</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.istitle" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.istitle() -&gt; bool</p>
+<p>Return True if str is a titlecased string and there is at least one
+character in str, i.e. uppercase characters may only follow uncased
+characters and lowercase characters only cased ones. Return False
+otherwise.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.capitalize">
+<span class="sig-name descname"><span class="pre">capitalize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.capitalize" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.capitalize() -&gt; copy of str</p>
+<p>Return a copy of str with only its first character capitalized (ASCII)
+and the rest lower-cased.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.isdecimal">
+<span class="sig-name descname"><span class="pre">isdecimal</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.isdecimal" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.isdecimal() -&gt; bool</p>
+<p>Return True if str is a decimal string, False otherwise.
+str is a decimal string if all characters in str are decimal and
+there is at least one character in str.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.lower">
+<span class="sig-name descname"><span class="pre">lower</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.lower" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.lower() -&gt; copy of str</p>
+<p>Return a copy of str with all ASCII characters converted to lowercase.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.upper">
+<span class="sig-name descname"><span class="pre">upper</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.upper" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.upper() -&gt; copy of str</p>
+<p>Return a copy of str with all ASCII characters converted to uppercase.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.isascii">
+<span class="sig-name descname"><span class="pre">isascii</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.isascii" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.isascii() -&gt; bool</p>
+<p>Return True if str is empty or all characters in str are ASCII,
+False otherwise.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.casefold">
+<span class="sig-name descname"><span class="pre">casefold</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.casefold" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.casefold() -&gt; copy of str</p>
+<p>Return a version of the string suitable for caseless comparisons.</p>
+<p>Unlike Python, casefold() deals with just ASCII characters.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.swapcase">
+<span class="sig-name descname"><span class="pre">swapcase</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.swapcase" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.swapcase() -&gt; copy of str</p>
+<p>Return a copy of str with uppercase ASCII characters converted
+to lowercase ASCII and vice versa.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.title">
+<span class="sig-name descname"><span class="pre">title</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.title" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.title() -&gt; copy of str</p>
+<p>Return a titlecased version of str, i.e. ASCII words start with uppercase
+characters, all remaining cased characters have lowercase.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.isnumeric">
+<span class="sig-name descname"><span class="pre">isnumeric</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.isnumeric" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.isdecimal() -&gt; bool</p>
+<p>Return True if the string is a numeric string, False otherwise.
+A string is numeric if all characters in the string are numeric
+and there is at least one character in the string.</p>
+<p>Unlike Python, isnumeric() deals with just ASCII characters.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.ljust">
+<span class="sig-name descname"><span class="pre">ljust</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fillchar</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.ljust" title="Permalink to this definition">¶</a></dt>
+<dd><p>ljust(width[, fillchar]) -&gt; string</p>
+<p>Return a left-justified string of length width.</p>
+<p>Padding is done using the specified fill character (default is a space).</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.rjust">
+<span class="sig-name descname"><span class="pre">rjust</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fillchar</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.rjust" title="Permalink to this definition">¶</a></dt>
+<dd><p>rjust(width[, fillchar]) -&gt; string</p>
+<p>Return a right-justified string of length width.</p>
+<p>Padding is done using the specified fill character (default is a space).</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.center">
+<span class="sig-name descname"><span class="pre">center</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fillchar</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.center" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.center(width[, fillchar]) -&gt; string</p>
+<p>Return str centered in a string of length width. Padding is
+done using the specified fill character (default is a space)</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.zfill">
+<span class="sig-name descname"><span class="pre">zfill</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">width</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.zfill" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.zfill(width) -&gt; string</p>
+<p>Pad a numeric string str with zeros on the left, to fill a field
+of the specified width.  The string str is never truncated.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.count">
+<span class="sig-name descname"><span class="pre">count</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sub</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0x7fffffffffffffff</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.count" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.count(sub[, start[, end]]) -&gt; int</p>
+<p>Return the number of occurrences of subsection sub in
+bytes str[start:end].  Optional arguments start and end are interpreted
+as in slice notation.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.find">
+<span class="sig-name descname"><span class="pre">find</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sub</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0x7fffffffffffffff</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.find" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.find(sub [,start [,end]]) -&gt; int</p>
+<p>Return the lowest index in str where substring sub is found,
+such that sub is contained within str[start:end].  Optional
+arguments start and end are interpreted as in slice notation.</p>
+<p>Return -1 on failure.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.rfind">
+<span class="sig-name descname"><span class="pre">rfind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sub</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0x7fffffffffffffff</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.rfind" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.rfind(sub [,start [,end]]) -&gt; int</p>
+<p>Return the highest index in str where substring sub is found,
+such that sub is contained within str[start:end].  Optional
+arguments start and end are interpreted as in slice notation.</p>
+<p>Return -1 on failure.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.isidentifier">
+<span class="sig-name descname"><span class="pre">isidentifier</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.isidentifier" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.isidentifier() -&gt; bool</p>
+<p>Return True if the string is a valid identifier, False otherwise.
+Unlike Python, isidentifier() deals with just ASCII characters.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.isprintable">
+<span class="sig-name descname"><span class="pre">isprintable</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.isprintable" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.isprintable() -&gt; bool</p>
+<p>Return True if the string is printable or empty, False otherwise.
+Unlike Python, isprintable() deals with just ASCII characters.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.lstrip">
+<span class="sig-name descname"><span class="pre">lstrip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chars</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.lstrip" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.lstrip([chars]) -&gt; string</p>
+<p>Return a copy of the string str with leading whitespace removed.
+If chars is given, remove characters in chars instead.
+Unlike Python, lstrip() deals with just ASCII characters.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.rstrip">
+<span class="sig-name descname"><span class="pre">rstrip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chars</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.rstrip" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.rstrip([chars]) -&gt; string</p>
+<p>Return a copy of the string str with trailing whitespace removed.
+If chars is given, remove characters in chars instead.
+Unlike Python, lstrip() deals with just ASCII characters.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.strip">
+<span class="sig-name descname"><span class="pre">strip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">chars</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.strip" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.strip([chars]) -&gt; string</p>
+<p>Return a copy of the string str with leading and trailing
+whitespace removed.
+If chars is given, remove characters in chars instead.
+Unlike Python, lstrip() deals with just ASCII characters.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.partition">
+<span class="sig-name descname"><span class="pre">partition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.partition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Search for the separator sep in str, and return the part before it,
+the separator itself, and the part after it.  If the separator is not
+found, return str and two empty strings.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.rpartition">
+<span class="sig-name descname"><span class="pre">rpartition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.rpartition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Search for the separator sep in str, starting at the end of str, and return
+the part before it, the separator itself, and the part after it.  If the
+separator is not found, return two empty strings and str.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.split">
+<span class="sig-name descname"><span class="pre">split</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxsplit</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.split" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.split([sep [,maxsplit]]) -&gt; list of strings</p>
+<p>Return a list of the words in the string str, using sep as the
+delimiter string.  If maxsplit is given, at most maxsplit
+splits are done. If sep is not specified, any
+whitespace string is a separator and empty strings are removed
+from the result.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.rsplit">
+<span class="sig-name descname"><span class="pre">rsplit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sep</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxsplit</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.rsplit" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.rsplit([sep [,maxsplit]]) -&gt; list of strings</p>
+<p>Return a list of the words in the string str, using sep as the
+delimiter string, starting at the end of the string and working
+to the front.  If maxsplit is given, at most maxsplit splits are
+done. If sep is not specified, any whitespace string
+is a separator.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.splitlines">
+<span class="sig-name descname"><span class="pre">splitlines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">keepends</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.splitlines" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.splitlines([keepends]) -&gt; list of strings</p>
+<p>Return a list of the lines in str, breaking at line boundaries.
+Line breaks are not included in the resulting list unless keepends
+is given and true.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.startswith">
+<span class="sig-name descname"><span class="pre">startswith</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0x7fffffffffffffff</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.startswith" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.startswith(prefix[, start[, end]]) -&gt; bool</p>
+<p>Return True if str starts with the specified prefix, False otherwise.
+With optional start, test str beginning at that position.
+With optional end, stop comparing str at that position.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.endswith">
+<span class="sig-name descname"><span class="pre">endswith</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">suffix</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0x7fffffffffffffff</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.endswith" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.endswith(prefix[, start[, end]]) -&gt; bool</p>
+<p>Return True if str ends with the specified suffix, False otherwise.
+With optional start, test str beginning at that position.
+With optional end, stop comparing str at that position.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.index">
+<span class="sig-name descname"><span class="pre">index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sub</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0x7fffffffffffffff</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.index(sub [,start [,end]]) -&gt; int</p>
+<p>Like str.find() but raise ValueError when the substring is not found.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.rindex">
+<span class="sig-name descname"><span class="pre">rindex</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sub</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">0x7fffffffffffffff</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.rindex" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.index(sub [,start [,end]]) -&gt; int</p>
+<p>Like str.find() but raise ValueError when the substring is not found.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.replace">
+<span class="sig-name descname"><span class="pre">replace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">old</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">new</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#id0" title="internal.str.str"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxcount</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.replace" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.replace(old, new[, count]) -&gt; string</p>
+<p>Return a copy of string str with all occurrences of substring
+old replaced by new.  If the optional argument maxcount is
+given, only the first maxcount occurrences are replaced.</p>
+<p>For now, maxcount is required.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.expandtabs">
+<span class="sig-name descname"><span class="pre">expandtabs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tabsize</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">8</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.expandtabs" title="Permalink to this definition">¶</a></dt>
+<dd><p>str.expandtabs([tabsize]) -&gt; string</p>
+<p>Return a copy of str where all tab characters are expanded using spaces.
+If tabsize is not given, a tab size of 8 characters is assumed.</p>
+</dd></dl>
+
+<dl class="seq method">
+<dt class="sig sig-object seq" id="internal.str.str.translate">
+<span class="sig-name descname"><span class="pre">translate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.str.str.translate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a copy with each character mapped by the given translation table.</p>
+<p>Unlike Python, translate() currently does not allow the translation
+table to be a bytes object of length 256.</p>
+<p>As well, None implemented yet until None and be placed inside the table
+with other strings. Use: {‘a’: ‘’} to replace a string for now</p>
+</dd></dl>
+
+</div></blockquote>
+</dd></dl>
+
+</div>
+
+
+              </div>
+              
+        
+            
+
+
+
+<div class='prev-next-bottom'>
+    
+    <div id="prev">
+        <a class="left-prev" href="sort.html" title="previous page">
+            <i class="prevnext-label fas fa-angle-left"></i>
+            <div class="prevnext-info">
+                <p class="prevnext-label">previous</p>
+                <p class="prevnext-title"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.sort</span></code></p>
+            </div>
+        </a>
+    </div>
+     <div id="next">
+        <a class="right-next" href="types/index.html" title="next page">
+            <div class="prevnext-info">
+                <p class="prevnext-label">next</p>
+                <p class="prevnext-title">internal.types</p>
+            </div>
+            <i class="prevnext-label fas fa-angle-right"></i>
+        </a>
+     </div>
+
+</div>
+        
+        </div>
+    </div>
+    <footer class="footer">
+    <div class="container">
+      <p>
+        
+          By seq-lang<br/>
+        
+            &copy; Copyright 2019-2021, seq-lang.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="../../_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

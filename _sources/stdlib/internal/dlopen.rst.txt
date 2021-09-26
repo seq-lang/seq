@@ -1,0 +1,57 @@
+.. seq:module:: internal.dlopen
+
+:seq:mod:`internal.dlopen`
+--------------------------
+
+Source code: `internal/dlopen.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/dlopen.seq>`_
+
+.. seq:function:: seq_is_macos()
+
+
+
+.. seq:function:: c_dlerror()
+
+
+
+.. seq:function:: c_dlopen( : cobj,  : int)
+
+
+
+.. seq:function:: c_dlsym( : cobj,  : cobj)
+
+
+
+.. seq:function:: c_dlclose( : cobj)
+
+
+
+.. seq:data:: RTLD_NOW
+
+
+
+.. seq:data:: RTLD_GLOBAL
+
+
+
+.. seq:function:: dlext()
+
+
+
+.. seq:function:: dlerror()
+
+
+
+.. seq:function:: dlopen(name : str, flag : int = (RTLD_NOW | RTLD_GLOBAL))
+
+
+
+.. seq:function:: dlsym[Fn](lib : str, name : str)
+
+
+
+.. seq:function:: dlclose(handle : cobj)
+
+
+
+
+

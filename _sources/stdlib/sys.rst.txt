@@ -1,0 +1,33 @@
+.. seq:module:: ..sys
+
+:seq:mod:`..sys`
+----------------
+
+Source code: `sys.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./sys.seq>`_
+
+.. seq:data:: argv
+
+
+
+.. seq:data:: stdin
+
+
+
+.. seq:data:: stdout
+
+
+
+.. seq:data:: stderr
+
+
+
+.. seq:function:: exit(status : int = 0)
+
+
+
+.. seq:data:: maxsize
+
+
+
+
+

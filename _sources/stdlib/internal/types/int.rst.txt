@@ -1,0 +1,207 @@
+.. seq:module:: internal.types.int
+
+:seq:mod:`internal.types.int`
+-----------------------------
+
+Source code: `internal/types/int.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/int.seq>`_
+
+.. seq:function:: seq_str_int(a : int)
+
+
+
+.. seq:function:: seq_str_uint(a : int)
+
+
+
+.. seq:extension:: int
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __new__[T](what : T)
+         :noindex:
+
+      .. seq:method:: __int__()
+         :noindex:
+
+      .. seq:method:: __float__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __hash__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __pos__()
+         :noindex:
+
+      .. seq:method:: __neg__()
+         :noindex:
+
+      .. seq:method:: __abs__()
+         :noindex:
+
+      .. seq:method:: __lshift__(other : int)
+         :noindex:
+
+      .. seq:method:: __rshift__(other : int)
+         :noindex:
+
+      .. seq:method:: __add__(b : int)
+         :noindex:
+
+      .. seq:method:: __add__(other : float)
+         :noindex:
+
+      .. seq:method:: __sub__(b : int)
+         :noindex:
+
+      .. seq:method:: __sub__(other : float)
+         :noindex:
+
+      .. seq:method:: __mul__(b : int)
+         :noindex:
+
+      .. seq:method:: __mul__(other : float)
+         :noindex:
+
+      .. seq:method:: __floordiv__(b : int)
+         :noindex:
+
+      .. seq:method:: __floordiv__(other : float)
+         :noindex:
+
+      .. seq:method:: __truediv__(other : int)
+         :noindex:
+
+      .. seq:method:: __truediv__(other : float)
+         :noindex:
+
+      .. seq:method:: __mod__(a : int, b : int)
+         :noindex:
+
+      .. seq:method:: __mod__(other : float)
+         :noindex:
+
+      .. seq:method:: __invert__(a : int)
+         :noindex:
+
+      .. seq:method:: __and__(a : int, b : int)
+         :noindex:
+
+      .. seq:method:: __or__(a : int, b : int)
+         :noindex:
+
+      .. seq:method:: __xor__(a : int, b : int)
+         :noindex:
+
+      .. seq:method:: __bitreverse__(a : int)
+         :noindex:
+
+      .. seq:method:: __bswap__(a : int)
+         :noindex:
+
+      .. seq:method:: __ctpop__(a : int)
+         :noindex:
+
+      .. seq:method:: __ctlz__(a : int)
+         :noindex:
+
+      .. seq:method:: __cttz__(a : int)
+         :noindex:
+
+      .. seq:method:: __eq__(a : int, b : int)
+         :noindex:
+
+      .. seq:method:: __eq__(b : float)
+         :noindex:
+
+      .. seq:method:: __ne__(a : int, b : int)
+         :noindex:
+
+      .. seq:method:: __ne__(b : float)
+         :noindex:
+
+      .. seq:method:: __lt__(a : int, b : int)
+         :noindex:
+
+      .. seq:method:: __lt__(b : float)
+         :noindex:
+
+      .. seq:method:: __gt__(a : int, b : int)
+         :noindex:
+
+      .. seq:method:: __gt__(b : float)
+         :noindex:
+
+      .. seq:method:: __le__(a : int, b : int)
+         :noindex:
+
+      .. seq:method:: __le__(b : float)
+         :noindex:
+
+      .. seq:method:: __ge__(a : int, b : int)
+         :noindex:
+
+      .. seq:method:: __ge__(b : float)
+         :noindex:
+
+      .. seq:method:: __new__(s : str)
+         :noindex:
+
+      .. seq:method:: __new__(s : str, base : int)
+         :noindex:
+
+      .. seq:method:: __pow__(exp : int)
+         :noindex:
+
+      .. seq:method:: __pow__(exp : float)
+         :noindex:
+
+      .. seq:method:: __atomic_xchg__(d : Ptr[int], b : int)
+         :noindex:
+
+      .. seq:method:: __atomic_add__(d : Ptr[int], b : int)
+         :noindex:
+
+      .. seq:method:: __atomic_sub__(d : Ptr[int], b : int)
+         :noindex:
+
+      .. seq:method:: __atomic_and__(d : Ptr[int], b : int)
+         :noindex:
+
+      .. seq:method:: __atomic_nand__(d : Ptr[int], b : int)
+         :noindex:
+
+      .. seq:method:: __atomic_or__(d : Ptr[int], b : int)
+         :noindex:
+
+      .. seq:method:: __atomic_xor__(b : int)
+         :noindex:
+
+      .. seq:method:: __atomic_min__(d : Ptr[int], b : int)
+         :noindex:
+
+      .. seq:method:: __atomic_max__(d : Ptr[int], b : int)
+         :noindex:
+
+      .. seq:method:: __match__(i : int)
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: popcnt()
+
+
+
+
+

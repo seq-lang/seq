@@ -1,0 +1,589 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cookbook &#8212; Seq 0.11.0 documentation</title>
+    
+  <link href="_static/css/theme.css" rel="stylesheet" />
+  <link href="_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    
+  <link rel="preload" as="script" href="_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Building from Source" href="build.html" />
+    <link rel="prev" title="Calling Seq from C/C++" href="embed.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        
+<h3><a href="index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parallel.html">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html">Building from Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stdlib/index.html">Standard Library Reference</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="embed.html"
+                        title="previous chapter">Calling Seq from C/C++</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="build.html"
+                        title="next chapter">Building from Source</a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="_sources/cookbook.rst.txt"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.rst</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/seq-lang/seq"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+            <div class="tocsection onthispage pt-5 pb-3">
+                <i class="fas fa-list"></i> Contents
+            </div>
+            <nav id="bd-toc-nav" aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#subsequence-extraction">
+   Subsequence extraction
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#k-mer-extraction">
+   k-mer extraction
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#reverse-complementation">
+   Reverse complementation
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#k-mer-hamming-distance">
+   k-mer Hamming distance
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#k-mer-hamming-neighbors">
+   k-mer Hamming neighbors
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#k-mer-minimizer">
+   k-mer minimizer
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#de-bruijn-edge">
+   de Bruijn edge
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#count-bases">
+   Count bases
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#spaced-seed-search">
+   Spaced seed search
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#reverse-complement-palindrome">
+   Reverse-complement palindrome
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#sequence-alignment">
+   Sequence alignment
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#reading-fasta-fastq">
+   Reading FASTA/FASTQ
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#reading-paired-end-fastq">
+   Reading paired-end FASTQ
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#parallel-fastq-processing">
+   Parallel FASTQ processing
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#reading-sam-bam-cram">
+   Reading SAM/BAM/CRAM
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#dna-to-protein-translation">
+   DNA to protein translation
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#reading-protein-sequences-from-fasta">
+   Reading protein sequences from FASTA
+  </a>
+ </li>
+</ul>
+
+            </nav>
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+  <div class="section" id="cookbook">
+<h1><a class="toc-backref" href="#id1">Cookbook</a><a class="headerlink" href="#cookbook" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="contents">
+<p class="topic-title">Contents</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#cookbook" id="id1">Cookbook</a></p>
+<ul>
+<li><p><a class="reference internal" href="#subsequence-extraction" id="id2">Subsequence extraction</a></p></li>
+<li><p><a class="reference internal" href="#k-mer-extraction" id="id3">k-mer extraction</a></p></li>
+<li><p><a class="reference internal" href="#reverse-complementation" id="id4">Reverse complementation</a></p></li>
+<li><p><a class="reference internal" href="#k-mer-hamming-distance" id="id5">k-mer Hamming distance</a></p></li>
+<li><p><a class="reference internal" href="#k-mer-hamming-neighbors" id="id6">k-mer Hamming neighbors</a></p></li>
+<li><p><a class="reference internal" href="#k-mer-minimizer" id="id7">k-mer minimizer</a></p></li>
+<li><p><a class="reference internal" href="#de-bruijn-edge" id="id8">de Bruijn edge</a></p></li>
+<li><p><a class="reference internal" href="#count-bases" id="id9">Count bases</a></p></li>
+<li><p><a class="reference internal" href="#spaced-seed-search" id="id10">Spaced seed search</a></p></li>
+<li><p><a class="reference internal" href="#reverse-complement-palindrome" id="id11">Reverse-complement palindrome</a></p></li>
+<li><p><a class="reference internal" href="#sequence-alignment" id="id12">Sequence alignment</a></p></li>
+<li><p><a class="reference internal" href="#reading-fasta-fastq" id="id13">Reading FASTA/FASTQ</a></p></li>
+<li><p><a class="reference internal" href="#reading-paired-end-fastq" id="id14">Reading paired-end FASTQ</a></p></li>
+<li><p><a class="reference internal" href="#parallel-fastq-processing" id="id15">Parallel FASTQ processing</a></p></li>
+<li><p><a class="reference internal" href="#reading-sam-bam-cram" id="id16">Reading SAM/BAM/CRAM</a></p></li>
+<li><p><a class="reference internal" href="#dna-to-protein-translation" id="id17">DNA to protein translation</a></p></li>
+<li><p><a class="reference internal" href="#reading-protein-sequences-from-fasta" id="id18">Reading protein sequences from FASTA</a></p></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="subsequence-extraction">
+<h2><a class="toc-backref" href="#id2">Subsequence extraction</a><a class="headerlink" href="#subsequence-extraction" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">myseq</span>  <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;CAATAGAGACTAAGCATTAT&#39;</span>
+<span class="n">sublen</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">stride</span> <span class="o">=</span> <span class="mi">2</span>
+
+<span class="c1"># explicit for-loop</span>
+<span class="k">for</span> <span class="n">subseq</span> <span class="ow">in</span> <span class="n">myseq</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">sublen</span><span class="p">,</span> <span class="n">stride</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">subseq</span><span class="p">)</span>
+
+<span class="c1"># pipelined</span>
+<span class="n">myseq</span> <span class="o">|&gt;</span> <span class="n">split</span><span class="p">(</span><span class="n">sublen</span><span class="p">,</span> <span class="n">stride</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="k">print</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="k-mer-extraction">
+<h2><a class="toc-backref" href="#id3">k-mer extraction</a><a class="headerlink" href="#k-mer-extraction" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">myseq</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;CAATAGAGACTAAGCATTAT&#39;</span>
+<span class="n">stride</span> <span class="o">=</span> <span class="mi">2</span>
+
+<span class="c1"># explicit for-loop</span>
+<span class="k">for</span> <span class="n">subseq</span> <span class="ow">in</span> <span class="n">myseq</span><span class="o">.</span><span class="n">kmers</span><span class="p">(</span><span class="n">stride</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">subseq</span><span class="p">)</span>
+
+<span class="c1"># pipelined</span>
+<span class="n">myseq</span> <span class="o">|&gt;</span> <span class="n">kmers</span><span class="p">(</span><span class="n">stride</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="k">print</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="reverse-complementation">
+<h2><a class="toc-backref" href="#id4">Reverse complementation</a><a class="headerlink" href="#reverse-complementation" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># sequences</span>
+<span class="n">s</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;GGATC&#39;</span>
+<span class="k">print</span><span class="p">(</span><span class="o">~</span><span class="n">s</span><span class="p">)</span>     <span class="c1"># GATCC</span>
+
+<span class="c1"># k-mers</span>
+<span class="n">k</span> <span class="o">=</span> <span class="sa">k</span><span class="s1">&#39;GGATC&#39;</span>
+<span class="k">print</span><span class="p">(</span><span class="o">~</span><span class="n">k</span><span class="p">)</span>     <span class="c1"># GATCC</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="k-mer-hamming-distance">
+<h2><a class="toc-backref" href="#id5">k-mer Hamming distance</a><a class="headerlink" href="#k-mer-hamming-distance" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">k1</span> <span class="o">=</span> <span class="sa">k</span><span class="s1">&#39;ACGTC&#39;</span>
+<span class="n">k2</span> <span class="o">=</span> <span class="sa">k</span><span class="s1">&#39;ACTTA&#39;</span>
+<span class="c1">#        ^ ^</span>
+<span class="k">print</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">k1</span> <span class="o">-</span> <span class="n">k2</span><span class="p">))</span>  <span class="c1"># Hamming distance = 2</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="k-mer-hamming-neighbors">
+<h2><a class="toc-backref" href="#id6">k-mer Hamming neighbors</a><a class="headerlink" href="#k-mer-hamming-neighbors" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">neighbors</span><span class="p">(</span><span class="n">kmer</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">kmer</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="p">(</span><span class="sa">k</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="sa">k</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="sa">k</span><span class="s1">&#39;G&#39;</span><span class="p">,</span> <span class="sa">k</span><span class="s1">&#39;T&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">kmer</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="n">b</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">kmer</span> <span class="o">|&gt;</span> <span class="n">base</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">neighbors</span><span class="p">(</span><span class="sa">k</span><span class="s1">&#39;AGC&#39;</span><span class="p">)))</span>  <span class="c1"># CGC, GGC, etc.</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="k-mer-minimizer">
+<h2><a class="toc-backref" href="#id7">k-mer minimizer</a><a class="headerlink" href="#k-mer-minimizer" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">minimizer</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="n">Static</span><span class="p">[</span><span class="nb">int</span><span class="p">]):</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">k</span>
+    <span class="n">kmer_min</span> <span class="o">=</span> <span class="nb">Kmer</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">s</span><span class="p">[:</span><span class="n">k</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">kmer</span> <span class="ow">in</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">kmers</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">kmer</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">kmer</span><span class="p">,</span> <span class="o">~</span><span class="n">kmer</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">kmer</span> <span class="o">&lt;</span> <span class="n">kmer_min</span><span class="p">:</span> <span class="n">kmer_min</span> <span class="o">=</span> <span class="n">kmer</span>
+    <span class="k">return</span> <span class="n">kmer_min</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">minimizer</span><span class="p">(</span><span class="sa">s</span><span class="s1">&#39;ACGTACGTACGT&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="de-bruijn-edge">
+<h2><a class="toc-backref" href="#id8">de Bruijn edge</a><a class="headerlink" href="#de-bruijn-edge" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">de_bruijn_edge</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">a</span> <span class="o">|&gt;</span> <span class="n">base</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="sa">k</span><span class="s1">&#39;A&#39;</span><span class="p">)</span>  <span class="c1"># reset first base: [T]GAG -&gt; [A]GAG</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">b</span> <span class="o">&gt;&gt;</span> <span class="sa">s</span><span class="s1">&#39;A&#39;</span>           <span class="c1"># shift right to A: [GAG]C -&gt; A[GAG]</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">==</span> <span class="n">b</span>           <span class="c1"># suffix of a == prefix of b</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">de_bruijn_edge</span><span class="p">(</span><span class="sa">k</span><span class="s1">&#39;TGAG&#39;</span><span class="p">,</span> <span class="sa">k</span><span class="s1">&#39;GAGC&#39;</span><span class="p">))</span>  <span class="c1"># True</span>
+<span class="k">print</span><span class="p">(</span><span class="n">de_bruijn_edge</span><span class="p">(</span><span class="sa">k</span><span class="s1">&#39;TCAG&#39;</span><span class="p">,</span> <span class="sa">k</span><span class="s1">&#39;GAGC&#39;</span><span class="p">))</span>  <span class="c1"># False</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="count-bases">
+<h2><a class="toc-backref" href="#id9">Count bases</a><a class="headerlink" href="#count-bases" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="nd">@tuple</span>
+<span class="k">class</span> <span class="nc">BaseCount</span><span class="p">:</span>
+    <span class="n">A</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">C</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">G</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">T</span><span class="p">:</span> <span class="nb">int</span>
+
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">BaseCount</span><span class="p">):</span>
+        <span class="n">a1</span><span class="p">,</span> <span class="n">c1</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">t1</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="n">a2</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">t2</span> <span class="o">=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">a1</span> <span class="o">+</span> <span class="n">a2</span><span class="p">,</span> <span class="n">c1</span> <span class="o">+</span> <span class="n">c2</span><span class="p">,</span> <span class="n">g1</span> <span class="o">+</span> <span class="n">g2</span><span class="p">,</span> <span class="n">t1</span> <span class="o">+</span> <span class="n">t2</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">count_bases</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">match</span> <span class="n">s</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s1">&#39;A*&#39;</span><span class="p">:</span> <span class="k">return</span> <span class="n">count_bases</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">case</span> <span class="s1">&#39;C*&#39;</span><span class="p">:</span> <span class="k">return</span> <span class="n">count_bases</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">case</span> <span class="s1">&#39;G*&#39;</span><span class="p">:</span> <span class="k">return</span> <span class="n">count_bases</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">case</span> <span class="s1">&#39;T*&#39;</span><span class="p">:</span> <span class="k">return</span> <span class="n">count_bases</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">case</span> <span class="n">_</span><span class="p">:</span> <span class="k">return</span> <span class="n">BaseCount</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">count_bases</span><span class="p">(</span><span class="sa">s</span><span class="s1">&#39;ACCGGGTTTT&#39;</span><span class="p">))</span>  <span class="c1"># (A: 1, C: 2, G: 3, T: 4)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="spaced-seed-search">
+<h2><a class="toc-backref" href="#id10">Spaced seed search</a><a class="headerlink" href="#spaced-seed-search" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">has_spaced_acgt</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">match</span> <span class="n">s</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s1">&#39;A_C_G_T*&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">case</span> <span class="n">t</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">has_spaced_acgt</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="k">case</span> <span class="n">_</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">has_spaced_acgt</span><span class="p">(</span><span class="sa">s</span><span class="s1">&#39;AAATCTGTTAAA&#39;</span><span class="p">))</span>  <span class="c1"># True</span>
+<span class="k">print</span><span class="p">(</span><span class="n">has_spaced_acgt</span><span class="p">(</span><span class="sa">s</span><span class="s1">&#39;ACGTACGTACGT&#39;</span><span class="p">))</span>  <span class="c1"># False</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="reverse-complement-palindrome">
+<h2><a class="toc-backref" href="#id11">Reverse-complement palindrome</a><a class="headerlink" href="#reverse-complement-palindrome" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">is_own_revcomp</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">match</span> <span class="n">s</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s1">&#39;A*T&#39;</span> <span class="o">|</span> <span class="s1">&#39;T*A&#39;</span> <span class="o">|</span> <span class="s1">&#39;C*G&#39;</span> <span class="o">|</span> <span class="s1">&#39;G*C&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">is_own_revcomp</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">case</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">case</span> <span class="n">_</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">is_own_revcomp</span><span class="p">(</span><span class="sa">s</span><span class="s1">&#39;ACGT&#39;</span><span class="p">))</span>  <span class="c1"># True</span>
+<span class="k">print</span><span class="p">(</span><span class="n">is_own_revcomp</span><span class="p">(</span><span class="sa">s</span><span class="s1">&#39;ATTA&#39;</span><span class="p">))</span>  <span class="c1"># False</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="sequence-alignment">
+<h2><a class="toc-backref" href="#id12">Sequence alignment</a><a class="headerlink" href="#sequence-alignment" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># default parameters</span>
+<span class="n">s1</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;CGCGAGTCTT&#39;</span>
+<span class="n">s2</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;CGCAGAGTT&#39;</span>
+<span class="n">aln</span> <span class="o">=</span> <span class="n">s1</span> <span class="o">@</span> <span class="n">s2</span>
+<span class="k">print</span><span class="p">(</span><span class="n">aln</span><span class="o">.</span><span class="n">cigar</span><span class="p">,</span> <span class="n">aln</span><span class="o">.</span><span class="n">score</span><span class="p">)</span>  <span class="c1"># 3M1I6M -3</span>
+
+<span class="c1"># custom parameters</span>
+<span class="c1"># match = 2; mismatch = 4; gap1(k) = 2k + 4; gap2(k) = k + 13</span>
+<span class="n">aln</span> <span class="o">=</span> <span class="n">s1</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">s2</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">gapo</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">gape</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">gapo2</span><span class="o">=</span><span class="mi">13</span><span class="p">,</span> <span class="n">gape2</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">aln</span><span class="o">.</span><span class="n">cigar</span><span class="p">,</span> <span class="n">aln</span><span class="o">.</span><span class="n">score</span><span class="p">)</span>  <span class="c1"># 3M1D3M2I2M 2</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="reading-fasta-fastq">
+<h2><a class="toc-backref" href="#id13">Reading FASTA/FASTQ</a><a class="headerlink" href="#reading-fasta-fastq" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># iterate over everything</span>
+<span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">FASTA</span><span class="p">(</span><span class="s1">&#39;genome.fa&#39;</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">seq</span><span class="p">)</span>
+
+<span class="c1"># iterate over sequences</span>
+<span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">FASTA</span><span class="p">(</span><span class="s1">&#39;genome.fa&#39;</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">seqs</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+<span class="c1"># iterate over everything</span>
+<span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">FASTQ</span><span class="p">(</span><span class="s1">&#39;reads.fq&#39;</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">read</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">qual</span><span class="p">)</span>
+
+<span class="c1"># iterate over sequences</span>
+<span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">FASTQ</span><span class="p">(</span><span class="s1">&#39;reads.fq&#39;</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">seqs</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="reading-paired-end-fastq">
+<h2><a class="toc-backref" href="#id14">Reading paired-end FASTQ</a><a class="headerlink" href="#reading-paired-end-fastq" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">r1</span><span class="p">,</span> <span class="n">r2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">FASTQ</span><span class="p">(</span><span class="s1">&#39;reads_1.fq&#39;</span><span class="p">),</span> <span class="n">FASTQ</span><span class="p">(</span><span class="s1">&#39;reads_2.fq&#39;</span><span class="p">)):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r1</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">r2</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r1</span><span class="o">.</span><span class="n">read</span><span class="p">,</span> <span class="n">r2</span><span class="o">.</span><span class="n">read</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r1</span><span class="o">.</span><span class="n">qual</span><span class="p">,</span> <span class="n">r2</span><span class="o">.</span><span class="n">qual</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="parallel-fastq-processing">
+<h2><a class="toc-backref" href="#id15">Parallel FASTQ processing</a><a class="headerlink" href="#parallel-fastq-processing" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">seq</span><span class="p">):</span>
+    <span class="o">...</span>
+
+<span class="c1"># OMP_NUM_THREADS environment variable controls threads</span>
+<span class="n">FASTQ</span><span class="p">(</span><span class="s1">&#39;reads.fq&#39;</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="nb">iter</span> <span class="o">||&gt;</span> <span class="n">process</span>
+
+<span class="c1"># Sometimes batching reads into blocks can improve performance,</span>
+<span class="c1"># especially if each is quick to process.</span>
+<span class="n">FASTQ</span><span class="p">(</span><span class="s1">&#39;reads.fq&#39;</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">blocks</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span> <span class="o">||&gt;</span> <span class="nb">iter</span> <span class="o">|&gt;</span> <span class="n">process</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="reading-sam-bam-cram">
+<h2><a class="toc-backref" href="#id16">Reading SAM/BAM/CRAM</a><a class="headerlink" href="#reading-sam-bam-cram" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># iterate over everything</span>
+<span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">SAM</span><span class="p">(</span><span class="s1">&#39;alignments.sam&#39;</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">read</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">pos</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">mapq</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">cigar</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">reversed</span><span class="p">)</span>
+    <span class="c1"># etc.</span>
+
+<span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">BAM</span><span class="p">(</span><span class="s1">&#39;alignments.bam&#39;</span><span class="p">):</span>
+    <span class="c1"># ...</span>
+
+<span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">CRAM</span><span class="p">(</span><span class="s1">&#39;alignments.cram&#39;</span><span class="p">):</span>
+    <span class="c1"># ...</span>
+
+<span class="c1"># iterate over sequences</span>
+<span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">SAM</span><span class="p">(</span><span class="s1">&#39;alignments.sam&#39;</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">seqs</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">BAM</span><span class="p">(</span><span class="s1">&#39;alignments.bam&#39;</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">seqs</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">CRAM</span><span class="p">(</span><span class="s1">&#39;alignments.cram&#39;</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">seqs</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="dna-to-protein-translation">
+<h2><a class="toc-backref" href="#id17">DNA to protein translation</a><a class="headerlink" href="#dna-to-protein-translation" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">dna</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;AGGTCTAACGGC&#39;</span>
+<span class="n">protein</span> <span class="o">=</span> <span class="n">dna</span> <span class="o">|&gt;</span> <span class="n">translate</span>
+<span class="k">print</span><span class="p">(</span><span class="n">protein</span><span class="p">)</span>  <span class="c1"># RSNG</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="reading-protein-sequences-from-fasta">
+<h2><a class="toc-backref" href="#id18">Reading protein sequences from FASTA</a><a class="headerlink" href="#reading-protein-sequences-from-fasta" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">pFASTA</span><span class="p">(</span><span class="s1">&#39;seqs.fasta&#39;</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">seqs</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+              </div>
+              
+        
+            
+
+
+
+<div class='prev-next-bottom'>
+    
+    <div id="prev">
+        <a class="left-prev" href="embed.html" title="previous page">
+            <i class="prevnext-label fas fa-angle-left"></i>
+            <div class="prevnext-info">
+                <p class="prevnext-label">previous</p>
+                <p class="prevnext-title">Calling Seq from C/C++</p>
+            </div>
+        </a>
+    </div>
+     <div id="next">
+        <a class="right-next" href="build.html" title="next page">
+            <div class="prevnext-info">
+                <p class="prevnext-label">next</p>
+                <p class="prevnext-title">Building from Source</p>
+            </div>
+            <i class="prevnext-label fas fa-angle-right"></i>
+        </a>
+     </div>
+
+</div>
+        
+        </div>
+    </div>
+    <footer class="footer">
+    <div class="container">
+      <p>
+        
+          By seq-lang<br/>
+        
+            &copy; Copyright 2019-2021, seq-lang.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

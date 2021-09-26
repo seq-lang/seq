@@ -1,0 +1,9 @@
+.. seq:module:: bio.prefetch
+
+:seq:mod:`bio.prefetch`
+-----------------------
+
+Source code: `bio/prefetch.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/prefetch.seq>`_
+
+
+

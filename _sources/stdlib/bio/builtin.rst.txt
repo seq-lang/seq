@@ -1,0 +1,102 @@
+.. seq:module:: bio.builtin
+
+:seq:mod:`bio.builtin`
+----------------------
+
+Source code: `bio/builtin.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/builtin.seq>`_
+
+.. seq:function:: prefetch()
+
+
+
+.. seq:function:: inter_align()
+
+
+
+.. seq:function:: seqs(x)
+
+   
+       Returns an iterator over sequences from the specified
+       object by invoking the `__seqs__` magic method.
+   
+       `__seqs__` is defined for most common formats, like
+       FASTA, FASTQ, SAM and BAM.
+   
+
+
+
+.. seq:function:: split(self : seq, k : int, step : int)
+
+   
+       Iterator over length-`k` subsequences of the given sequence
+       with the specified step size.
+   
+
+
+
+.. seq:function:: kmers[k](self : seq, step : int)
+
+   
+       Iterator over k-mers (size `k`) of the given sequence
+       with the specified step size. Note that k-mers spanning
+       ambiguous bases will be skipped.
+   
+
+
+
+.. seq:function:: kmers_with_pos[k](self : seq, step : int)
+
+   
+       Iterator over (0-based index, k-mer) tuples of the given
+       sequence with the specified step size. Note that k-mers
+       spanning ambiguous bases will be skipped.
+   
+
+
+
+.. seq:function:: revcomp(s)
+
+   
+       Returns the reverse complement of the argument sequence or k-mer.
+   
+
+
+
+.. seq:function:: revcomp_with_pos(t)
+
+   
+       Returns the reverse complement of the argument sequence or k-mer,
+       where the argument also contains a position (e.g. as yielded by
+       `kmers_with_pos`).
+   
+
+
+
+.. seq:function:: canonical(k)
+
+   
+       Returns the minimum of a sequence / k-mer and its reverse complement.
+   
+
+
+
+.. seq:function:: canonical_with_pos(t)
+
+   
+       Returns the minimum of a sequence / k-mer and its reverse complement,
+       where the argument also contains a position (e.g. as yielded by
+       `kmers_with_pos`).
+   
+
+
+
+.. seq:function:: base[K, T](kmer : K, idx : int, b : T)
+
+   
+       Returns a new k-mer equal to `K` but with the base at index `idx` set to `b`
+   
+
+
+
+
+

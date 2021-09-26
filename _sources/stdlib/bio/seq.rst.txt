@@ -1,0 +1,242 @@
+.. seq:module:: bio.seq
+
+:seq:mod:`bio.seq`
+------------------
+
+Source code: `bio/seq.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/seq.seq>`_
+
+.. seq:class:: Kmer[k]
+
+
+
+.. seq:class:: seq
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(s : str)
+         :noindex:
+
+      .. seq:method:: __new__(p : Ptr[byte], l : int)
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+
+
+.. seq:extension:: str
+
+   **Magic methods:**
+
+      .. seq:method:: __prefix_s__[N](s : str)
+         :noindex:
+
+
+
+.. seq:class:: BaseCounts
+
+   
+       Representation of base counts of a sequence
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+            
+                    Base counts of empty sequence (i.e. all zero)
+            
+
+
+      .. seq:method:: __add__(other : BaseCounts)
+         :noindex:
+
+            
+                    Adds corresponding base counts
+            
+
+
+      .. seq:method:: __sub__(other : BaseCounts)
+         :noindex:
+
+            
+                    Subtracts corresponding base counts
+            
+
+
+      .. seq:method:: __str__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: add(A : bool = False, C : bool = False, G : bool = False, T : bool = False, N : bool = False)
+
+            
+                    Increments the specified base counts
+            
+
+
+
+
+.. seq:extension:: seq
+
+   **Properties:**
+
+      .. seq:attribute:: bases
+
+            
+                    `BaseCount` for this sequence
+            
+
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(s : str)
+         :noindex:
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __eq__(other : seq)
+         :noindex:
+
+      .. seq:method:: __ne__(other : seq)
+         :noindex:
+
+      .. seq:method:: __to_py__()
+         :noindex:
+
+      .. seq:method:: __from_py__(s : pyobj)
+         :noindex:
+
+      .. seq:method:: __lt__(other : seq)
+         :noindex:
+
+      .. seq:method:: __le__(other : seq)
+         :noindex:
+
+      .. seq:method:: __gt__(other : seq)
+         :noindex:
+
+      .. seq:method:: __ge__(other : seq)
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __contains__(other : seq)
+         :noindex:
+
+      .. seq:method:: __contains__[k](kmer : Kmer[k])
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __hash__()
+         :noindex:
+
+      .. seq:method:: __getitem__(idx : int)
+         :noindex:
+
+      .. seq:method:: __getitem__(s : Slice)
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __reversed__()
+         :noindex:
+
+      .. seq:method:: __int__()
+         :noindex:
+
+      .. seq:method:: __invert__()
+         :noindex:
+
+            
+                    Reverse complemented sequence
+            
+
+
+      .. seq:method:: __reversed__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: split(k : int, step : int = 1)
+
+            
+                    Iterator over length-`k` subsequences of the given sequence
+                    with the specified step size.
+            
+
+
+      .. seq:method:: kmers[k](step : int = 1)
+
+            
+                    Iterator over k-mers (size `K`) of the given sequence
+                    with the specified step size. Note that k-mers spanning
+                    ambiguous bases will be skipped.
+            
+
+
+      .. seq:method:: kmers_canonical[k]()
+
+            
+                    Iterator over canonical k-mers (size `K`) of the given sequence.
+                    Note that k-mers spanning ambiguous bases will be skipped.
+                    A canonical k-mer is defined to be the minimum of a k-mer and
+                    its reverse complement.
+            
+
+
+      .. seq:method:: kmers_canonical_with_pos[k]()
+
+            
+                    Iterator over (0-based index, canonical k-mer) tuples of the given
+                    sequence with the specified step size. Note that k-mers
+                    spanning ambiguous bases will be skipped.
+            
+
+
+      .. seq:method:: kmers_with_pos[k](step : int = 1)
+
+            
+                    Iterator over (0-based index, k-mer) tuples of the given
+                    sequence with the specified step size. Note that k-mers
+                    spanning ambiguous bases will be skipped.
+            
+
+
+      .. seq:method:: N()
+
+            
+                    Returns whether this sequence contains ambiguous bases.
+                    An ambiguous base is defined to be a non-ACGT base.
+            
+
+
+
+
+.. seq:extension:: seq
+
+   **Magic methods:**
+
+      .. seq:method:: __match__(pattern : str)
+         :noindex:
+
+
+
+
+

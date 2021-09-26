@@ -1,0 +1,45 @@
+.. seq:module:: ..string
+
+:seq:mod:`..string`
+-------------------
+
+Source code: `string.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./string.seq>`_
+
+.. seq:data:: ascii_letters
+
+
+
+.. seq:data:: ascii_lowercase
+
+
+
+.. seq:data:: ascii_uppercase
+
+
+
+.. seq:data:: digits
+
+
+
+.. seq:data:: hexdigits
+
+
+
+.. seq:data:: octdigits
+
+
+
+.. seq:data:: punctuation
+
+
+
+.. seq:data:: printable
+
+
+
+.. seq:data:: whitespace
+
+
+
+
+

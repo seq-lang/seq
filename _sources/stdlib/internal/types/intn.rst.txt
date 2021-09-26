@@ -1,0 +1,267 @@
+.. seq:module:: internal.types.intn
+
+:seq:mod:`internal.types.intn`
+------------------------------
+
+Source code: `internal/types/intn.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/intn.seq>`_
+
+.. seq:function:: check_N[N]()
+
+
+
+.. seq:extension:: Int[N]
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __new__(what : Int[N])
+         :noindex:
+
+      .. seq:method:: __new__(what : int)
+         :noindex:
+
+      .. seq:method:: __new__(what : UInt[N])
+         :noindex:
+
+      .. seq:method:: __new__(what : str)
+         :noindex:
+
+      .. seq:method:: __int__()
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __hash__()
+         :noindex:
+
+      .. seq:method:: __float__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __pos__()
+         :noindex:
+
+      .. seq:method:: __neg__()
+         :noindex:
+
+      .. seq:method:: __invert__()
+         :noindex:
+
+      .. seq:method:: __add__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __sub__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __mul__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __floordiv__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __truediv__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __mod__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __lshift__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __rshift__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __eq__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __ne__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __lt__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __gt__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __le__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __ge__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __and__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __or__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __xor__(other : Int[N])
+         :noindex:
+
+      .. seq:method:: __pickle__(dest : Ptr[byte])
+         :noindex:
+
+      .. seq:method:: __unpickle__(src : Ptr[byte])
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: popcnt()
+
+      .. seq:method:: len()
+
+
+
+.. seq:extension:: UInt[N]
+
+   **Magic methods:**
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __new__(what : UInt[N])
+         :noindex:
+
+      .. seq:method:: __new__(what : int)
+         :noindex:
+
+      .. seq:method:: __new__(what : Int[N])
+         :noindex:
+
+      .. seq:method:: __new__(what : str)
+         :noindex:
+
+      .. seq:method:: __int__()
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __hash__()
+         :noindex:
+
+      .. seq:method:: __float__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __pos__()
+         :noindex:
+
+      .. seq:method:: __neg__()
+         :noindex:
+
+      .. seq:method:: __invert__()
+         :noindex:
+
+      .. seq:method:: __add__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __sub__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __mul__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __floordiv__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __truediv__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __mod__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __lshift__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __rshift__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __eq__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __ne__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __lt__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __gt__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __le__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __ge__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __and__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __or__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __xor__(other : UInt[N])
+         :noindex:
+
+      .. seq:method:: __pickle__(dest : Ptr[byte])
+         :noindex:
+
+      .. seq:method:: __unpickle__(src : Ptr[byte])
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: popcnt()
+
+      .. seq:method:: len()
+
+
+
+.. seq:data:: i8
+
+
+
+.. seq:data:: i16
+
+
+
+.. seq:data:: i32
+
+
+
+.. seq:data:: i64
+
+
+
+.. seq:data:: u8
+
+
+
+.. seq:data:: u16
+
+
+
+.. seq:data:: u32
+
+
+
+.. seq:data:: u64
+
+
+
+
+

@@ -1,0 +1,36 @@
+.. seq:module:: algorithms.heapsort
+
+:seq:mod:`algorithms.heapsort`
+------------------------------
+
+Source code: `algorithms/heapsort.seq <https://github.com/seq-lang/seq/blob/master/stdlib/algorithms/heapsort.seq>`_
+
+.. seq:function:: heap_sort_array[S, T](collection : Array[T], size : int, keyf : Callable[T, S])
+
+   
+           Heap Sort
+           Sorts the array inplace.
+   
+
+
+
+.. seq:function:: heap_sort_inplace[S, T](collection : List[T], keyf : Callable[T, S])
+
+   
+           Heap Sort
+           Sorts the list inplace.
+   
+
+
+
+.. seq:function:: heap_sort[S, T](collection : List[T], keyf : Callable[T, S])
+
+   
+           Heap Sort
+           Returns a sorted list.
+   
+
+
+
+
+

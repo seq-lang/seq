@@ -1,0 +1,97 @@
+.. seq:module:: internal.file
+
+:seq:mod:`internal.file`
+------------------------
+
+Source code: `internal/file.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/file.seq>`_
+
+.. seq:class:: File
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(fp : cobj)
+         :noindex:
+
+      .. seq:method:: __init__(path : str, mode : str)
+         :noindex:
+
+      .. seq:method:: __enter__()
+         :noindex:
+
+      .. seq:method:: __exit__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __file_write_gen__[T](g : Generator[T])
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: readlines()
+
+      .. seq:method:: write(s : str)
+
+      .. seq:method:: read(sz : int)
+
+      .. seq:method:: tell()
+
+      .. seq:method:: seek(offset : int, whence : int)
+
+      .. seq:method:: flush()
+
+      .. seq:method:: close()
+
+
+
+.. seq:class:: gzFile
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(fp : cobj)
+         :noindex:
+
+      .. seq:method:: __init__(path : str, mode : str)
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __enter__()
+         :noindex:
+
+      .. seq:method:: __exit__()
+         :noindex:
+
+      .. seq:method:: __file_write_gen__[T](g : Generator[T])
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: close()
+
+      .. seq:method:: readlines()
+
+      .. seq:method:: write(s : str)
+
+      .. seq:method:: tell()
+
+      .. seq:method:: seek(offset : int, whence : int)
+
+
+
+.. seq:function:: open(path : str, mode : str = "r")
+
+
+
+.. seq:function:: gzopen(path : str, mode : str = "r")
+
+
+
+.. seq:function:: is_binary(path : str)
+
+
+
+
+

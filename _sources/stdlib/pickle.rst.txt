@@ -1,0 +1,133 @@
+.. seq:module:: ..pickle
+
+:seq:mod:`..pickle`
+-------------------
+
+Source code: `pickle.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./pickle.seq>`_
+
+.. seq:function:: pickle[T](x : T, jar : Jar)
+
+
+
+.. seq:function:: unpickle[T](jar : Jar)
+
+
+
+.. seq:function:: dump[T](x : T, f)
+
+
+
+.. seq:function:: load[T](f)
+
+
+
+.. seq:extension:: int
+
+   **Magic methods:**
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+
+
+.. seq:extension:: float
+
+   **Magic methods:**
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+
+
+.. seq:extension:: bool
+
+   **Magic methods:**
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+
+
+.. seq:extension:: byte
+
+   **Magic methods:**
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+
+
+.. seq:extension:: str
+
+   **Magic methods:**
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+
+
+.. seq:extension:: seq
+
+   **Magic methods:**
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+
+
+.. seq:extension:: List[T]
+
+   **Magic methods:**
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+
+
+.. seq:extension:: Dict[K,V]
+
+   **Magic methods:**
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+
+
+.. seq:extension:: Set[K]
+
+   **Magic methods:**
+
+      .. seq:method:: __pickle__(jar : Jar)
+         :noindex:
+
+      .. seq:method:: __unpickle__(jar : Jar)
+         :noindex:
+
+
+
+
+

@@ -1,0 +1,13 @@
+.. seq:module:: algorithms
+
+algorithms
+========
+
+.. toctree::
+
+   heapsort
+   insertionsort
+   pdqsort
+   qsort
+   strings
+   timsort

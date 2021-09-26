@@ -1,0 +1,107 @@
+.. seq:module:: bio.pseq
+
+:seq:mod:`bio.pseq`
+-------------------
+
+Source code: `bio/pseq.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/pseq.seq>`_
+
+.. seq:class:: pseq
+
+   
+       Amino acid sequence
+   
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(p : cobj, n : int)
+         :noindex:
+
+      .. seq:method:: __new__(s : str)
+         :noindex:
+
+      .. seq:method:: __eq__(other : pseq)
+         :noindex:
+
+      .. seq:method:: __ne__(other : pseq)
+         :noindex:
+
+      .. seq:method:: __lt__(other : pseq)
+         :noindex:
+
+      .. seq:method:: __le__(other : pseq)
+         :noindex:
+
+      .. seq:method:: __gt__(other : pseq)
+         :noindex:
+
+      .. seq:method:: __ge__(other : pseq)
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __bool__()
+         :noindex:
+
+      .. seq:method:: __hash__()
+         :noindex:
+
+      .. seq:method:: __getitem__(idx : int)
+         :noindex:
+
+      .. seq:method:: __getitem__(s : Slice)
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __reversed__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: split(k : int, step : int)
+
+            
+                    Iterator over length-`k` subsequences of the given sequence
+                    with the specified step size.
+            
+
+
+
+
+.. seq:function:: translate(s : seq, table : Optional[Dict[seq, pseq]] = None)
+
+   
+       Performs DNA to amino acid translation. An optional mapping from
+       length-3 DNA sequences to amino acids can be given via `table`,
+       otherwise the standard mapping is assumed.
+   
+
+
+
+.. seq:extension:: seq
+
+   **Methods:**
+
+      .. seq:method:: translate()
+
+
+
+.. seq:extension:: str
+
+   **Magic methods:**
+
+      .. seq:method:: __prefix_p__[N](s : str)
+         :noindex:
+
+
+
+
+

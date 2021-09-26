@@ -1,0 +1,641 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tutorial &#8212; Seq 0.11.0 documentation</title>
+    
+  <link href="../_static/css/theme.css" rel="stylesheet" />
+  <link href="../_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    
+  <link rel="preload" as="script" href="../_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Workshop" href="workshop.html" />
+    <link rel="prev" title="Language Primer" href="primer.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../intro.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../parallel.html">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cookbook.html">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../build.html">Building from Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../stdlib/index.html">Standard Library Reference</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="primer.html"
+                        title="previous chapter">Language Primer</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="workshop.html"
+                        title="next chapter">Workshop</a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="../_sources/tutorial/tutorial.rst.txt"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.rst</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/seq-lang/seq"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+            <div class="tocsection onthispage pt-5 pb-3">
+                <i class="fas fa-list"></i> Contents
+            </div>
+            <nav id="bd-toc-nav" aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#bio-specific-features">
+   Bio-specific features
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#genomic-types">
+     Genomic types
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sequence-matching">
+     Sequence matching
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#pipelines">
+     Pipelines
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#sequence-alignment">
+     Sequence alignment
+    </a>
+    <ul class="nav section-nav flex-column">
+     <li class="toc-h4 nav-item toc-entry">
+      <a class="reference internal nav-link" href="#inter-sequence-alignment">
+       Inter-sequence alignment
+      </a>
+     </li>
+    </ul>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#genomic-index-prefetching">
+     Genomic index prefetching
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#other-features">
+   Other features
+  </a>
+  <ul class="nav section-nav flex-column">
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#parallelism">
+     Parallelism
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#type-extensions">
+     Type extensions
+    </a>
+   </li>
+   <li class="toc-h3 nav-item toc-entry">
+    <a class="reference internal nav-link" href="#other-types">
+     Other types
+    </a>
+   </li>
+  </ul>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#calling-bwa-from-seq">
+   Calling BWA from Seq
+  </a>
+ </li>
+</ul>
+
+            </nav>
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+  <div class="section" id="tutorial">
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="bio-specific-features">
+<h2>Bio-specific features<a class="headerlink" href="#bio-specific-features" title="Permalink to this headline">¶</a></h2>
+<p>Seq’s <code class="docutils literal notranslate"><span class="pre">bio</span></code> module contains all the following functions, types, and methods. The code snippets below should be preceded with <code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">bio</span> <span class="pre">import</span> <span class="pre">*</span></code>, although we omit that line for simplicity below.</p>
+<div class="section" id="genomic-types">
+<h3>Genomic types<a class="headerlink" href="#genomic-types" title="Permalink to this headline">¶</a></h3>
+<p>Seq’s namesake type is indeed the sequence type: <code class="docutils literal notranslate"><span class="pre">seq</span></code>. A <code class="docutils literal notranslate"><span class="pre">seq</span></code> object represents a DNA sequence of any length and—on top of general-purpose string functionality—provides methods for performing common sequence operations such as splitting into subsequences, reverse complementation and <span class="math notranslate nohighlight">\(k\)</span>-mer extraction. Alongside the <code class="docutils literal notranslate"><span class="pre">seq</span></code> type are <span class="math notranslate nohighlight">\(k\)</span>-mer types, where e.g. <code class="docutils literal notranslate"><span class="pre">Kmer[1]</span></code> represents a 1-mer, <code class="docutils literal notranslate"><span class="pre">Kmer[2]</span></code> a 2-mer and so on, up to <code class="docutils literal notranslate"><span class="pre">Kmer[1024]</span></code>.</p>
+<p>Sequences can be seamlessly converted between these various types:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">dna</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;ACGTACGTACGT&#39;</span>  <span class="c1"># sequence literal</span>
+
+<span class="c1"># (a) split into subsequences of length 3</span>
+<span class="c1">#     with a step of 2</span>
+<span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">dna</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="o">~</span><span class="n">sub</span><span class="p">)</span>  <span class="c1"># reverse complement</span>
+
+<span class="c1"># (b) split into 5-mers with step 1 (default)</span>
+<span class="k">for</span> <span class="n">kmer</span> <span class="ow">in</span> <span class="n">dna</span><span class="o">.</span><span class="n">kmers</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">kmer</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="o">~</span><span class="n">kmer</span><span class="p">)</span>  <span class="c1"># reverse complement</span>
+
+<span class="c1"># (c) convert entire sequence to 12-mer</span>
+<span class="n">kmer</span> <span class="o">=</span> <span class="nb">Kmer</span><span class="p">[</span><span class="mi">12</span><span class="p">](</span><span class="n">dna</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Seq also supports a <code class="docutils literal notranslate"><span class="pre">pseq</span></code> type for protein sequences:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">protein</span> <span class="o">=</span> <span class="sa">p</span><span class="s1">&#39;HEAGAWGHE&#39;</span>           <span class="c1"># pseq literal</span>
+<span class="k">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">protein</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)))</span>  <span class="c1"># [HEA, GAW, GHE]</span>
+<span class="k">print</span><span class="p">(</span><span class="sa">s</span><span class="s1">&#39;ACCATGACA&#39;</span> <span class="o">|&gt;</span> <span class="n">translate</span><span class="p">)</span>  <span class="c1"># TMT</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>What’s the difference between sequences and <span class="math notranslate nohighlight">\(k\)</span>-mers in Seq? Sequences have arbitrary length and allow for ambiguous bases like <code class="docutils literal notranslate"><span class="pre">N</span></code>. <span class="math notranslate nohighlight">\(k\)</span>-mers, on the other hand, have a length that is fixed and must be known at compile time, only allowing for <code class="docutils literal notranslate"><span class="pre">ACGT</span></code> bases. <span class="math notranslate nohighlight">\(k\)</span>-mers can therefore be represented internally as 2-bit encoded integers, making them compact and very efficient to manipulate.</p>
+</div>
+<p>In practice, sequences would be read from e.g. a FASTQ file:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">FASTQ</span><span class="p">(</span><span class="s1">&#39;input.fq&#39;</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;processing&#39;</span><span class="p">,</span> <span class="n">record</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">process</span><span class="p">(</span><span class="n">record</span><span class="o">.</span><span class="n">seq</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you only care about the sequences, you can also do this:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">read</span> <span class="ow">in</span> <span class="n">FASTQ</span><span class="p">(</span><span class="s1">&#39;input.fq&#39;</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">seqs</span><span class="p">:</span>
+    <span class="n">process</span><span class="p">(</span><span class="n">read</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Common formats like FASTQ, FASTA, SAM, BAM and CRAM are supported. The <code class="docutils literal notranslate"><span class="pre">FASTQ</span></code> and <code class="docutils literal notranslate"><span class="pre">FASTA</span></code> parsers support several additional options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">validate</span></code> (<code class="docutils literal notranslate"><span class="pre">True</span></code> by default): Perform data validation as sequences are read</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gzip</span></code> (<code class="docutils literal notranslate"><span class="pre">True</span></code> by default): Perform I/O using zlib, supporting gzip’d files (note that plain text files will still work with this enabled)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fai</span></code> (<code class="docutils literal notranslate"><span class="pre">True</span></code> by default; FASTA only): Look for a <code class="docutils literal notranslate"><span class="pre">.fai</span></code> file to determine sequence lengths before reading</p></li>
+</ul>
+<p>For example:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">read</span> <span class="ow">in</span> <span class="n">FASTQ</span><span class="p">(</span><span class="s1">&#39;input.fq&#39;</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">gzip</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">seqs</span><span class="p">:</span>
+    <span class="n">process</span><span class="p">(</span><span class="n">read</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To read protein sequences, you can use <code class="docutils literal notranslate"><span class="pre">pFASTA</span></code>, which has the same interface as <code class="docutils literal notranslate"><span class="pre">FASTA</span></code> (but does not support <code class="docutils literal notranslate"><span class="pre">fai</span></code>):</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pFASTA</span><span class="p">(</span><span class="s1">&#39;input.fa&#39;</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">seqs</span><span class="p">:</span>
+    <span class="n">process</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="sequence-matching">
+<span id="match"></span><h3>Sequence matching<a class="headerlink" href="#sequence-matching" title="Permalink to this headline">¶</a></h3>
+<p>Seq provides the conventional <code class="docutils literal notranslate"><span class="pre">match</span></code> construct, which works on integers, lists, strings and tuples. Here’s a simple example:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">describe</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">match</span> <span class="n">n</span><span class="p">:</span>
+        <span class="k">case</span> <span class="n">m</span> <span class="k">if</span> <span class="n">m</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;negative&#39;</span><span class="p">)</span>
+        <span class="k">case</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;zero&#39;</span><span class="p">)</span>
+        <span class="k">case</span> <span class="n">m</span> <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">m</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;small&#39;</span><span class="p">)</span>
+        <span class="k">case</span> <span class="n">_</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;large&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A novel aspect of Seq’s <code class="docutils literal notranslate"><span class="pre">match</span></code> statement is that it also works on sequences, and allows for concise recursive representations of several sequence operations such as subsequence search, reverse complementation tests and base counting, as shown in this example:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># (a)</span>
+<span class="k">def</span> <span class="nf">has_spaced_acgt</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">seq</span><span class="p">):</span>
+    <span class="k">match</span> <span class="n">s</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s1">&#39;A_C_G_T*&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">case</span> <span class="n">t</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">has_spaced_acgt</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+        <span class="k">case</span> <span class="n">_</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+<span class="c1"># (b)</span>
+<span class="k">def</span> <span class="nf">is_own_revcomp</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">seq</span><span class="p">):</span>
+    <span class="k">match</span> <span class="n">s</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s1">&#39;A*T&#39;</span> <span class="ow">or</span> <span class="s1">&#39;T*A&#39;</span> <span class="ow">or</span> <span class="s1">&#39;C*G&#39;</span> <span class="ow">or</span> <span class="s1">&#39;G*C&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">is_own_revcomp</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">case</span> <span class="sa">s</span><span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">case</span> <span class="n">_</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+<span class="c1"># (c)</span>
+<span class="nd">@tuple</span>
+<span class="k">class</span> <span class="nc">BaseCount</span><span class="p">:</span>
+    <span class="n">A</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">C</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">G</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">T</span><span class="p">:</span> <span class="nb">int</span>
+
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">BaseCount</span><span class="p">):</span>
+        <span class="n">a1</span><span class="p">,</span> <span class="n">c1</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">t1</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="n">a2</span><span class="p">,</span> <span class="n">c2</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">t2</span> <span class="o">=</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">a1</span> <span class="o">+</span> <span class="n">a2</span><span class="p">,</span> <span class="n">c1</span> <span class="o">+</span> <span class="n">c2</span><span class="p">,</span> <span class="n">g1</span> <span class="o">+</span> <span class="n">g2</span><span class="p">,</span> <span class="n">t1</span> <span class="o">+</span> <span class="n">t2</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">count_bases</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">match</span> <span class="n">s</span><span class="p">:</span>
+        <span class="k">case</span> <span class="s1">&#39;A*&#39;</span><span class="p">:</span> <span class="k">return</span> <span class="n">count_bases</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">case</span> <span class="s1">&#39;C*&#39;</span><span class="p">:</span> <span class="k">return</span> <span class="n">count_bases</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">case</span> <span class="s1">&#39;G*&#39;</span><span class="p">:</span> <span class="k">return</span> <span class="n">count_bases</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">case</span> <span class="s1">&#39;T*&#39;</span><span class="p">:</span> <span class="k">return</span> <span class="n">count_bases</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">case</span> <span class="n">_</span><span class="p">:</span> <span class="k">return</span> <span class="n">BaseCount</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Example (a) checks if a given sequence contains the subsequence <code class="docutils literal notranslate"><span class="pre">A_C_G_T</span></code>, where <code class="docutils literal notranslate"><span class="pre">_</span></code> is a wildcard base.</p></li>
+<li><p>Example (b) checks if the given sequence is its own reverse complement.</p></li>
+<li><p>Example (c) counts how many times each base appears in the given sequence.</p></li>
+</ul>
+<p>Sequence patterns consist of literal <code class="docutils literal notranslate"><span class="pre">ACGT</span></code> characters, single-base wildcards (<code class="docutils literal notranslate"><span class="pre">_</span></code>) or “zero or more” wildcards (<code class="docutils literal notranslate"><span class="pre">...</span></code>) that match zero or more of any base.</p>
+</div>
+<div class="section" id="pipelines">
+<span id="pipeline"></span><h3>Pipelines<a class="headerlink" href="#pipelines" title="Permalink to this headline">¶</a></h3>
+<p>Pipelining is a natural model for thinking about processing genomic data, as sequences are typically processed in stages (e.g. read from input file, split into <span class="math notranslate nohighlight">\(k\)</span>-mers, query <span class="math notranslate nohighlight">\(k\)</span>-mers in index, perform full dynamic programming alignment, output results to file), and are almost always independent of one another as far as this processing is concerned. Because of this, Seq supports a pipe operator: <code class="docutils literal notranslate"><span class="pre">|&gt;</span></code>, similar to F#’s pipe and R’s <code class="docutils literal notranslate"><span class="pre">magrittr</span></code> (<code class="docutils literal notranslate"><span class="pre">%&gt;%</span></code>).</p>
+<p>Pipeline stages in Seq can be regular functions or generators. In the case of standard functions, the function is simply applied to the input data and the result is carried to the remainder of the pipeline, akin to F#’s functional piping. If, on the other hand, a stage is a generator, the values yielded by the generator are passed lazily to the remainder of the pipeline, which in many ways mirrors how piping is implemented in Bash. Note that Seq ensures that generator pipelines do not collect any data unless explicitly requested, thus allowing the processing of terabytes of data in a streaming fashion with no memory and minimal CPU overhead.</p>
+<p>Here’s an example of pipeline usage, which shows the same two loops from above, but as pipelines:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">dna</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;ACGTACGTACGT&#39;</span>  <span class="c1"># sequence literal</span>
+
+<span class="c1"># (a) split into subsequences of length 3</span>
+<span class="c1">#     with a stride of 2</span>
+<span class="n">dna</span> <span class="o">|&gt;</span> <span class="n">split</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="k">print</span>
+
+<span class="c1"># (b) split into 5-mers with stride 1</span>
+<span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">kmer</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">kmer</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="o">~</span><span class="n">kmer</span><span class="p">)</span>
+
+<span class="n">dna</span> <span class="o">|&gt;</span> <span class="n">kmers</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">f</span>
+</pre></div>
+</div>
+<p>First, note that <code class="docutils literal notranslate"><span class="pre">split</span></code> is a Seq standard library function that takes three arguments: the sequence to split, the subsequence length and the stride; <code class="docutils literal notranslate"><span class="pre">split(...,</span> <span class="pre">k=3,</span> <span class="pre">step=2)</span></code> is a partial call of <code class="docutils literal notranslate"><span class="pre">split</span></code> that produces a new single-argument function <code class="docutils literal notranslate"><span class="pre">f(x)</span></code> which produces <code class="docutils literal notranslate"><span class="pre">split(x,</span> <span class="pre">k=3,</span> <span class="pre">step=2)</span></code>. The undefined argument(s) in a partial call can be implicit, as in the second example: <code class="docutils literal notranslate"><span class="pre">kmers</span></code> (also a standard library function) is parameterized by the target <span class="math notranslate nohighlight">\(k\)</span>-mer type and takes as arguments the sequence to <span class="math notranslate nohighlight">\(k\)</span>-merize, the <span class="math notranslate nohighlight">\(k\)</span>-mer length, and the stride; since just two of the three arguments are provided, the first is implicitly replaced by <code class="docutils literal notranslate"><span class="pre">...</span></code> to produce a partial call (i.e. the expression is equivalent to <code class="docutils literal notranslate"><span class="pre">kmers(...,</span> <span class="pre">k=5,</span> <span class="pre">step=1)</span></code>). Both <code class="docutils literal notranslate"><span class="pre">split</span></code> and <code class="docutils literal notranslate"><span class="pre">kmers</span></code> are themselves generators that yield subsequences and <span class="math notranslate nohighlight">\(k\)</span>-mers respectively, which are passed sequentially to the last stage of the enclosing pipeline in the two examples.</p>
+<div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<p>The Seq compiler may perform optimizations that change the order of elements passed through a pipeline. Therefore, it is best to not rely on order when using pipelines. If order needs to be maintained, consider using a regular loop or passing an index alongside each element sent through the pipeline.</p>
+</div>
+</div>
+<div class="section" id="sequence-alignment">
+<h3>Sequence alignment<a class="headerlink" href="#sequence-alignment" title="Permalink to this headline">¶</a></h3>
+<p>Aligning sequences is very straightforward in Seq, and supports numerous options/variants:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># default parameters</span>
+<span class="n">s1</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;CGCGAGTCTT&#39;</span>
+<span class="n">s2</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;CGCAGAGTT&#39;</span>
+<span class="n">aln</span> <span class="o">=</span> <span class="n">s1</span> <span class="o">@</span> <span class="n">s2</span>
+<span class="k">print</span><span class="p">(</span><span class="n">aln</span><span class="o">.</span><span class="n">cigar</span><span class="p">,</span> <span class="n">aln</span><span class="o">.</span><span class="n">score</span><span class="p">)</span>
+
+<span class="c1"># custom parameters</span>
+<span class="c1"># match = 2; mismatch = 4; gap1(k) = 2k + 4; gap2(k) = k + 13</span>
+<span class="n">aln</span> <span class="o">=</span> <span class="n">s1</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">s2</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">gapo</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">gape</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">gapo2</span><span class="o">=</span><span class="mi">13</span><span class="p">,</span> <span class="n">gape2</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">aln</span><span class="o">.</span><span class="n">cigar</span><span class="p">,</span> <span class="n">aln</span><span class="o">.</span><span class="n">score</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Here is the list of options supported by the <code class="docutils literal notranslate"><span class="pre">align()</span></code> method; all are optional (default is global alignment):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">a</span></code>: match score</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">b</span></code>: mismatch score</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ambig</span></code>: ambiguous (i.e. N) match score</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gapo</span></code>: gap open cost</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gape</span></code>: gap extension cost</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gapo2</span></code>: 2nd gap open cost for dual gap cost function</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gape2</span></code>: 2nd gap extension cost for dual gap cost function</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bandwidth</span></code>: bandwidth for DP alignment</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">zdrop</span></code>: off-diagonal drop-off to stop extension</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">score_only</span></code>: if true, don’t compute CIGAR</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">right</span></code>: if true, right-align gaps</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">approx_max</span></code>: if true, approximate max</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">approx_drop</span></code>: if true, approximate Z-drop</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rev_cigar</span></code>: if true, reverse CIGAR in output</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ext_only</span></code>: if true, perform extension alignment</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">splice</span></code>: if true, perform spliced alignment</p></li>
+</ul>
+<p>Note that all costs/scores are positive by convention.</p>
+<div class="section" id="inter-sequence-alignment">
+<span id="interalign"></span><h4>Inter-sequence alignment<a class="headerlink" href="#inter-sequence-alignment" title="Permalink to this headline">¶</a></h4>
+<p>Seq uses <a class="reference external" href="https://github.com/lh3/ksw2">ksw2</a> as its default alignment kernel. ksw2 does a good job of applying SIMD parallelization to align a single pair of sequences, which is referred to as <em>intra-sequence</em> alignment. However, we can often get better performance by aligning multiple sequences at once, referred to as <em>inter-sequence</em> alignment. Inter-sequence alignment is usually more cumbersome to program in general-purpose languages because many sequences need to be batched before performing the alignment. However, in Seq, inter-sequence alignment is as easy as intra-sequence, using the <code class="docutils literal notranslate"><span class="pre">&#64;inter_align</span></code> annotation:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="nd">@inter_align</span>
+<span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+    <span class="n">query</span><span class="p">,</span> <span class="n">target</span> <span class="o">=</span> <span class="n">t</span>
+    <span class="n">score</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ambig</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">gapo</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">gape</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">zdrop</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">bandwidth</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">end_bonus</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">score</span><span class="p">)</span>
+
+<span class="nb">zip</span><span class="p">(</span><span class="n">seqs</span><span class="p">(</span><span class="s1">&#39;queries.txt&#39;</span><span class="p">),</span> <span class="n">seqs</span><span class="p">(</span><span class="s1">&#39;targets.txt&#39;</span><span class="p">))</span> <span class="o">|&gt;</span> <span class="n">process</span>
+</pre></div>
+</div>
+<p>Internally, the Seq compiler performs pipeline transformations when sequence alignment is performed within a function tagged <code class="docutils literal notranslate"><span class="pre">&#64;inter_align</span></code>, so as to suspend execution of the calling function, batch sequences that need to be aligned, perform inter-sequence alignment and return the results to the suspended functions. Note that the inter-sequence alignment kernel used by Seq is adapted from <a class="reference external" href="https://github.com/bwa-mem2/bwa-mem2">BWA-MEM2</a>.</p>
+</div>
+</div>
+<div class="section" id="genomic-index-prefetching">
+<span id="prefetch"></span><h3>Genomic index prefetching<a class="headerlink" href="#genomic-index-prefetching" title="Permalink to this headline">¶</a></h3>
+<p>Large genomic indices—ranging from several to tens or even hundreds of gigabytes—used in many applications result in extremely poor cache performance and, ultimately, a substantial fraction of stalled memory-bound cycles. For this reason, Seq performs pipeline optimizations to enable data prefetching and to hide memory latencies. You, the user, must provide just:</p>
+<ul class="simple">
+<li><p>a <code class="docutils literal notranslate"><span class="pre">__prefetch__</span></code> magic method definition in the index class, which is logically similar to <code class="docutils literal notranslate"><span class="pre">__getitem__</span></code> (indexing construct) but performs a prefetch instead of actually loading the requested value (and can simply delegate to <code class="docutils literal notranslate"><span class="pre">__prefetch__</span></code> methods of built-in types);</p></li>
+<li><p>a one-line <code class="docutils literal notranslate"><span class="pre">&#64;prefetch</span></code> annotation on functions that should perform prefetching.</p></li>
+</ul>
+<p>In particular, a typical prefetch-friendly index class would look like this:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyIndex</span><span class="p">:</span>  <span class="c1"># abstract k-mer index</span>
+    <span class="o">...</span>
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kmer</span><span class="p">:</span> <span class="nb">Kmer</span><span class="p">[</span><span class="mi">20</span><span class="p">]):</span>
+        <span class="c1"># standard __getitem__</span>
+    <span class="k">def</span> <span class="nf">__prefetch__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kmer</span><span class="p">:</span> <span class="nb">Kmer</span><span class="p">[</span><span class="mi">20</span><span class="p">]):</span>
+        <span class="c1"># similar to __getitem__, but performs prefetch</span>
+</pre></div>
+</div>
+<p>Now, if we were to process data in a pipeline as such:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="nd">@prefetch</span>
+<span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="n">read</span><span class="p">:</span> <span class="nb">seq</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="n">MyIndex</span><span class="p">):</span>
+    <span class="o">...</span>
+    <span class="k">for</span> <span class="n">kmer</span> <span class="ow">in</span> <span class="n">read</span><span class="o">.</span><span class="n">kmers</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">):</span>
+        <span class="n">hits_fwd</span> <span class="o">=</span> <span class="n">index</span><span class="p">[</span><span class="n">kmer</span><span class="p">]</span>
+        <span class="n">hits_rev</span> <span class="o">=</span> <span class="n">index</span><span class="p">[</span><span class="o">~</span><span class="n">kmer</span><span class="p">]</span>
+        <span class="o">...</span>
+    <span class="k">return</span> <span class="n">x</span>
+
+<span class="n">FASTQ</span><span class="p">(</span><span class="s2">&quot;reads.fq&quot;</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">seqs</span> <span class="o">|&gt;</span> <span class="n">process</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">postprocess</span>
+</pre></div>
+</div>
+<p>The Seq compiler will perform pipeline transformations to overlap cache misses in <code class="docutils literal notranslate"><span class="pre">MyIndex</span></code> with other useful work, increasing overall throughput. In our benchmarks, we often find these transformations to improve performance by 50% to 2×. However, the improvement is dataset- and application-dependent (and can potentially even decrease performance, although we rarely observed this), so users are encouraged to experiment with it for their own use case.</p>
+<p>As a concrete example, consider Seq’s built-in FM-index type, <code class="docutils literal notranslate"><span class="pre">FMIndex</span></code>, and a toy application that counts occurences of 20-mers from an input FASTQ. <code class="docutils literal notranslate"><span class="pre">FMIndex</span></code> provides end-to-end search methods like <code class="docutils literal notranslate"><span class="pre">locate()</span></code> and <code class="docutils literal notranslate"><span class="pre">count()</span></code>, but we can take advantage of Seq’s prefetch optimization by working with FM-index intervals:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">bio.fmindex</span> <span class="k">import</span> <span class="n">FMIndex</span>
+
+<span class="n">fmi</span> <span class="o">=</span> <span class="n">FMIndex</span><span class="p">(</span><span class="s1">&#39;/path/to/genome.fa&#39;</span><span class="p">)</span>
+<span class="n">k</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">0</span>
+
+<span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="n">count</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">global</span> <span class="n">n</span>
+    <span class="n">n</span> <span class="o">+=</span> <span class="n">count</span>
+
+<span class="nd">@prefetch</span>
+<span class="k">def</span> <span class="nf">find</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">seq</span><span class="p">,</span> <span class="n">fmi</span><span class="p">:</span> <span class="n">FMIndex</span><span class="p">):</span>
+    <span class="n">intv</span> <span class="o">=</span> <span class="n">fmi</span><span class="o">.</span><span class="n">interval</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>          <span class="c1"># initial FM-index interval</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>                          <span class="c1"># trim off last base of sequence</span>
+    <span class="k">while</span> <span class="n">s</span> <span class="ow">and</span> <span class="n">intv</span><span class="p">:</span>
+        <span class="n">intv</span> <span class="o">=</span> <span class="n">fmi</span><span class="p">[</span><span class="n">intv</span><span class="p">,</span> <span class="n">s</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>         <span class="c1"># backwards extend FM-index interval</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>                      <span class="c1"># trim off last base of sequence</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">intv</span><span class="p">)</span>                    <span class="c1"># return count of sequence in index</span>
+
+<span class="n">FASTQ</span><span class="p">(</span><span class="s1">&#39;/path/to/reads.fq&#39;</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">seqs</span> <span class="o">|&gt;</span> <span class="n">split</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">step</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">find</span><span class="p">(</span><span class="n">fmi</span><span class="p">)</span> <span class="o">|&gt;</span> <span class="n">update</span>
+<span class="k">print</span><span class="p">(</span><span class="s1">&#39;total:&#39;</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>That single <code class="docutils literal notranslate"><span class="pre">&#64;prefetch</span></code> line can have a significant impact, especially for larger <code class="docutils literal notranslate"><span class="pre">k</span></code>. Here is a graph of the performance of this exact snippet for various <code class="docutils literal notranslate"><span class="pre">k</span></code> using hg19 as the reference:</p>
+<a class="reference internal image-reference" href="../_images/prefetch.png"><img alt="prefetch performance" class="align-center" src="../_images/prefetch.png" style="width: 500px;" /></a>
+</div>
+</div>
+<div class="section" id="other-features">
+<h2>Other features<a class="headerlink" href="#other-features" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="parallelism">
+<h3>Parallelism<a class="headerlink" href="#parallelism" title="Permalink to this headline">¶</a></h3>
+<p>CPython and many other implementations alike cannot take advantage of parallelism due to the infamous global interpreter lock, a mutex that protects accesses to Python objects, preventing multiple threads from executing Python bytecode at once. Unlike CPython, Seq has no such restriction and supports full multithreading. To this end, Seq supports a <em>parallel</em> pipe operator <code class="docutils literal notranslate"><span class="pre">||&gt;</span></code>, which is semantically similar to the standard pipe operator except that it allows the elements sent through it to be processed in parallel by the remainder of the pipeline. Hence, turning a serial program into a parallel one often requires the addition of just a single character in Seq. Further, a single pipeline can contain multiple parallel pipes, resulting in nested parallelism. As an example, here are the same two pipelines as above, but parallelized:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="n">dna</span> <span class="o">=</span> <span class="sa">s</span><span class="s1">&#39;ACGTACGTACGT&#39;</span>  <span class="c1"># sequence literal</span>
+
+<span class="c1"># (a) split into subsequences of length 3</span>
+<span class="c1">#     with a stride of 2</span>
+<span class="n">dna</span> <span class="o">|&gt;</span> <span class="n">split</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">||&gt;</span> <span class="k">print</span>
+
+<span class="c1"># (b) split into 5-mers with stride 1</span>
+<span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">kmer</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">kmer</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="o">~</span><span class="n">kmer</span><span class="p">)</span>
+
+<span class="n">dna</span> <span class="o">|&gt;</span> <span class="n">kmers</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">||&gt;</span> <span class="n">f</span>
+</pre></div>
+</div>
+<p>Internally, the Seq compiler uses an OpenMP task backend to generate code for parallel pipelines. Logically, parallel pipe operators are similar to parallel-for loops: the portion of the pipeline after the parallel pipe is outlined into a new function that is called by the OpenMP runtime task spawning routines (as in <code class="docutils literal notranslate"><span class="pre">#pragma</span> <span class="pre">omp</span> <span class="pre">task</span></code> in C++), and a synchronization point (<code class="docutils literal notranslate"><span class="pre">#pragma</span> <span class="pre">omp</span> <span class="pre">taskwait</span></code>) is added after the outlined segment. Lastly, the entire program is implicitly placed in an OpenMP parallel region (<code class="docutils literal notranslate"><span class="pre">#pragma</span> <span class="pre">omp</span> <span class="pre">parallel</span></code>) that is guarded by a “single” directive (<code class="docutils literal notranslate"><span class="pre">#pragma</span> <span class="pre">omp</span> <span class="pre">single</span></code>) so that the serial portions are still executed by one thread (this is required by OpenMP as tasks must be bound to an enclosing parallel region).</p>
+</div>
+<div class="section" id="type-extensions">
+<h3>Type extensions<a class="headerlink" href="#type-extensions" title="Permalink to this headline">¶</a></h3>
+<p>Seq provides an <code class="docutils literal notranslate"><span class="pre">&#64;extend</span></code> annotation that allows programmers to add and modify methods of various types at compile time, including built-in types like <code class="docutils literal notranslate"><span class="pre">int</span></code> or <code class="docutils literal notranslate"><span class="pre">str</span></code>. This actually allows much of the functionality of built-in types to be implemented in Seq as type extensions in the standard library. Here is an example where the <code class="docutils literal notranslate"><span class="pre">int</span></code> type is extended to include a <code class="docutils literal notranslate"><span class="pre">to</span></code> method that generates integers in a specified range, as well as to override the <code class="docutils literal notranslate"><span class="pre">__mul__</span></code> magic method to “intercept” integer multiplications:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="nd">@extend</span>
+<span class="k">class</span> <span class="nc">int</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">yield</span> <span class="n">i</span>
+
+    <span class="k">def</span> <span class="nf">__truediv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;caught int div!&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">42</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>  <span class="c1"># 5, 6, ..., 10</span>
+
+<span class="c1"># prints &#39;caught int div!&#39; then &#39;42&#39;</span>
+<span class="k">print</span><span class="p">(</span><span class="mi">2</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that all type extensions are performed strictly at compile time and incur no runtime overhead.</p>
+</div>
+<div class="section" id="other-types">
+<h3>Other types<a class="headerlink" href="#other-types" title="Permalink to this headline">¶</a></h3>
+<p>Seq provides arbitrary-width signed and unsigned integers up to <code class="docutils literal notranslate"><span class="pre">Int[512]</span></code> and <code class="docutils literal notranslate"><span class="pre">UInt[512]</span></code>, respectively (note that <code class="docutils literal notranslate"><span class="pre">int</span></code> is an <code class="docutils literal notranslate"><span class="pre">Int[64]</span></code>). Typedefs for common bit widths are provided in the standard library, such as <code class="docutils literal notranslate"><span class="pre">i8</span></code>, <code class="docutils literal notranslate"><span class="pre">i16</span></code>, <code class="docutils literal notranslate"><span class="pre">u32</span></code>, <code class="docutils literal notranslate"><span class="pre">u64</span></code> etc.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">Ptr[T]</span></code> type in Seq also corresponds to a raw C pointer (e.g. <code class="docutils literal notranslate"><span class="pre">Ptr[byte]</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">char*</span></code> in C). The <code class="docutils literal notranslate"><span class="pre">array[T]</span></code> type represents a fixed-length array (essentially a pointer with a length).</p>
+<p>Seq also provides <code class="docutils literal notranslate"><span class="pre">__ptr__</span></code> for obtaining a pointer to a variable (as in <code class="docutils literal notranslate"><span class="pre">__ptr__(myvar)</span></code>) and <code class="docutils literal notranslate"><span class="pre">__array__</span></code> for declaring stack-allocated arrays (as in <code class="docutils literal notranslate"><span class="pre">__array__[int](10)</span></code>).</p>
+</div>
+</div>
+<div class="section" id="calling-bwa-from-seq">
+<h2>Calling BWA from Seq<a class="headerlink" href="#calling-bwa-from-seq" title="Permalink to this headline">¶</a></h2>
+<p>Seq provides a built-in module for interfacing with BWA. To use this module, simply build a shared BWA library and set <code class="docutils literal notranslate"><span class="pre">BWA_LIB</span></code> accordingly:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/lh3/bwa
+<span class="nb">cd</span> bwa
+make
+gcc -shared -o libbwa.so *.o -lz
+<span class="nb">export</span> <span class="nv">BWA_LIB</span><span class="o">=</span><span class="sb">`</span><span class="nb">pwd</span><span class="sb">`</span>/libbwa.so
+</pre></div>
+</div>
+<p>Now BWA can be used in Seq as such:</p>
+<div class="highlight-seq notranslate"><div class="highlight"><pre><span></span><span class="c1"># Implementation of https://github.com/lh3/bwa/blob/master/example.c</span>
+<span class="kn">from</span> <span class="nn">sys</span> <span class="k">import</span> <span class="n">argv</span>
+<span class="kn">from</span> <span class="nn">bio.bwa</span> <span class="k">import</span> <span class="o">*</span>
+
+<span class="n">bwa</span> <span class="o">=</span> <span class="n">BWA</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="k">for</span> <span class="n">read</span> <span class="ow">in</span> <span class="n">FASTQ</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
+    <span class="k">for</span> <span class="n">reg</span> <span class="ow">in</span> <span class="n">bwa</span><span class="o">.</span><span class="n">align</span><span class="p">(</span><span class="n">read</span><span class="o">.</span><span class="n">read</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">reg</span><span class="o">.</span><span class="n">secondary</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span> <span class="k">continue</span>
+        <span class="n">aln</span> <span class="o">=</span> <span class="n">bwa</span><span class="o">.</span><span class="n">reg2aln</span><span class="p">(</span><span class="n">read</span><span class="o">.</span><span class="n">read</span><span class="p">,</span> <span class="n">reg</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">read</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span> <span class="k">if</span> <span class="n">aln</span><span class="o">.</span><span class="n">rev</span> <span class="k">else</span> <span class="s1">&#39;+&#39;</span><span class="p">,</span> <span class="n">bwa</span><span class="o">.</span><span class="n">name</span><span class="p">(</span><span class="n">aln</span><span class="p">),</span> <span class="n">aln</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="n">aln</span><span class="o">.</span><span class="n">mapq</span><span class="p">,</span> <span class="n">aln</span><span class="o">.</span><span class="n">cigar</span><span class="p">,</span> <span class="n">aln</span><span class="o">.</span><span class="n">NM</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This program can be invoked as <code class="docutils literal notranslate"><span class="pre">seqc</span> <span class="pre">run</span> <span class="pre">example.seq</span> <span class="pre">/path/to/hg19.fa</span> <span class="pre">/path/to/reads.fq</span></code>.</p>
+<p>BWA options can be passed via <code class="docutils literal notranslate"><span class="pre">BWA(options(...),</span> <span class="pre">...)</span></code>. For example, to set a mismatch score of 5, use <code class="docutils literal notranslate"><span class="pre">BWA(options(mismatch_score=5),</span> <span class="pre">&quot;hg19.fa&quot;)</span></code>. Valid options are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">match_score</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mismatch_score</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">open_del</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">open_ins</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">extend_del</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">extend_ins</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bandwidth</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">zdrop</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">clip_penalty</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">unpaired_penalty</span></code></p></li>
+</ul>
+<p>Consult the BWA documentation for a detailed description of each of these.</p>
+</div>
+</div>
+
+
+              </div>
+              
+        
+            
+
+
+
+<div class='prev-next-bottom'>
+    
+    <div id="prev">
+        <a class="left-prev" href="primer.html" title="previous page">
+            <i class="prevnext-label fas fa-angle-left"></i>
+            <div class="prevnext-info">
+                <p class="prevnext-label">previous</p>
+                <p class="prevnext-title">Language Primer</p>
+            </div>
+        </a>
+    </div>
+     <div id="next">
+        <a class="right-next" href="workshop.html" title="next page">
+            <div class="prevnext-info">
+                <p class="prevnext-label">next</p>
+                <p class="prevnext-title">Workshop</p>
+            </div>
+            <i class="prevnext-label fas fa-angle-right"></i>
+        </a>
+     </div>
+
+</div>
+        
+        </div>
+    </div>
+    <footer class="footer">
+    <div class="container">
+      <p>
+        
+          By seq-lang<br/>
+        
+            &copy; Copyright 2019-2021, seq-lang.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="../_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

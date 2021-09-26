@@ -1,0 +1,33 @@
+.. seq:module:: bio.types
+
+:seq:mod:`bio.types`
+--------------------
+
+Source code: `bio/types.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/types.seq>`_
+
+.. seq:extension:: byte
+
+   **Methods:**
+
+      .. seq:method:: comp()
+
+
+
+.. seq:extension:: Dict[K,V]
+
+   **Methods:**
+
+      .. seq:method:: prefetch(key : K)
+
+
+
+.. seq:extension:: List[T]
+
+   **Methods:**
+
+      .. seq:method:: prefetch(idx : int)
+
+
+
+
+

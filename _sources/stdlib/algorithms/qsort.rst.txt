@@ -1,0 +1,42 @@
+.. seq:module:: algorithms.qsort
+
+:seq:mod:`algorithms.qsort`
+---------------------------
+
+Source code: `algorithms/qsort.seq <https://github.com/seq-lang/seq/blob/master/stdlib/algorithms/qsort.seq>`_
+
+.. seq:function:: qsort_array[S, T](collection : Array[T], size : int, keyf : Callable[T, S])
+
+   
+           Pattern-defeating Quicksort
+           By Orson Peters, published at https://github.com/orlp/pdqsort
+   
+           Sorts the array inplace.
+   
+
+
+
+.. seq:function:: qsort_inplace[S, T](collection : List[T], keyf : Callable[T, S])
+
+   
+           Pattern-defeating Quicksort
+           By Orson Peters, published at https://github.com/orlp/pdqsort
+   
+           Sorts the list inplace.
+   
+
+
+
+.. seq:function:: qsort[S, T](collection : List[T], keyf : Callable[T, S])
+
+   
+           Pattern-defeating Quicksort
+           By Orson Peters, published at https://github.com/orlp/pdqsort
+   
+           Returns a sorted list.
+   
+
+
+
+
+

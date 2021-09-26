@@ -1,0 +1,3954 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Index &#8212; Seq 0.11.0 documentation</title>
+    
+  <link href="_static/css/theme.css" rel="stylesheet" />
+  <link href="_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    
+  <link rel="preload" as="script" href="_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        
+<h3><a href="index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parallel.html">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cookbook.html">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build.html">Building from Source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stdlib/index.html">Standard Library Reference</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/seq-lang/seq"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#Symbols"><strong>Symbols</strong></a>
+ | <a href="#_"><strong>_</strong></a>
+ | <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#J"><strong>J</strong></a>
+ | <a href="#K"><strong>K</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
+ | <a href="#O"><strong>O</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#Q"><strong>Q</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
+ | <a href="#X"><strong>X</strong></a>
+ | <a href="#Z"><strong>Z</strong></a>
+ 
+</div>
+<h2 id="Symbols">Symbols</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    ..bisect
+
+      <ul>
+        <li><a href="stdlib/bisect.html#module-..bisect">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..collections
+
+      <ul>
+        <li><a href="stdlib/collections.html#module-..collections">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..functools
+
+      <ul>
+        <li><a href="stdlib/functools.html#module-..functools">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..getopt
+
+      <ul>
+        <li><a href="stdlib/getopt.html#module-..getopt">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..gzip
+
+      <ul>
+        <li><a href="stdlib/gzip.html#module-..gzip">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..heapq
+
+      <ul>
+        <li><a href="stdlib/heapq.html#module-..heapq">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..itertools
+
+      <ul>
+        <li><a href="stdlib/itertools.html#module-..itertools">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..math
+
+      <ul>
+        <li><a href="stdlib/math.html#module-..math">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..openmp
+
+      <ul>
+        <li><a href="stdlib/openmp.html#module-..openmp">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..operator
+
+      <ul>
+        <li><a href="stdlib/operator.html#module-..operator">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    ..pickle
+
+      <ul>
+        <li><a href="stdlib/pickle.html#module-..pickle">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..python
+
+      <ul>
+        <li><a href="stdlib/python.html#module-..python">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..random
+
+      <ul>
+        <li><a href="stdlib/random.html#module-..random">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..sortedlist
+
+      <ul>
+        <li><a href="stdlib/sortedlist.html#module-..sortedlist">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..statistics
+
+      <ul>
+        <li><a href="stdlib/statistics.html#module-..statistics">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..string
+
+      <ul>
+        <li><a href="stdlib/string.html#module-..string">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..sys
+
+      <ul>
+        <li><a href="stdlib/sys.html#module-..sys">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..threading
+
+      <ul>
+        <li><a href="stdlib/threading.html#module-..threading">module</a>
+</li>
+      </ul></li>
+      <li>
+    ..time
+
+      <ul>
+        <li><a href="stdlib/time.html#module-..time">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="_">_</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.__len__">__len__ (bio.bed.BEDRecord attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFReader._bcf_hdr">_bcf_hdr (bio.vcf.BCFReader attribute)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.bntseq._n_holes">_n_holes (bio.fmindex.bntseq attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMAux.A">A (bio.bam.SAMAux attribute)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.abs">abs() (in module ..operator)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/builtin.html#internal.builtin.abs">(in module internal.builtin)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/itertools.html#itertools.accumulate">accumulate (class in ..itertools)</a>
+</li>
+      <li><a href="stdlib/math.html#math.acos">acos() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.acos">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.acosh">acosh() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.acosh">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/threading.html#threading.Lock.acquire">acquire() (..threading.Lock method)</a>
+
+      <ul>
+        <li><a href="stdlib/threading.html#threading.RLock.acquire">(..threading.RLock method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/threading.html#threading.active_count">active_count() (in module ..threading)</a>
+</li>
+      <li><a href="stdlib/sortedlist.html#sortedlist.SortedList.add">add() (..sortedlist.SortedList method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/intervals.html#bio.intervals.IntervalTree.add">(bio.intervals.IntervalTree method)</a>
+</li>
+        <li><a href="stdlib/bio/seq.html#bio.seq.BaseCounts.add">(bio.seq.BaseCounts method)</a>
+</li>
+        <li><a href="stdlib/operator.html#operator.add">(in module ..operator)</a>
+</li>
+        <li><a href="stdlib/internal/__init_test__.html#internal.__init_test__.Set.add">(internal.__init_test__.Set method)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.add">(internal.types.collections.set.Set method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.add_roots">add_roots() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/internal/types/slice.html#internal.types.slice.Slice.adjust_indices">adjust_indices() (internal.types.slice.Slice method)</a>
+</li>
+      <li><a href="stdlib/internal/types/slice.html#internal.types.slice.Slice.adjust_indices_helper">adjust_indices_helper() (internal.types.slice.Slice method)</a>
+</li>
+      <li>
+    algorithms
+
+      <ul>
+        <li><a href="stdlib/algorithms/index.html#module-algorithms">module</a>
+</li>
+      </ul></li>
+      <li>
+    algorithms.heapsort
+
+      <ul>
+        <li><a href="stdlib/algorithms/heapsort.html#module-algorithms.heapsort">module</a>
+</li>
+      </ul></li>
+      <li>
+    algorithms.insertionsort
+
+      <ul>
+        <li><a href="stdlib/algorithms/insertionsort.html#module-algorithms.insertionsort">module</a>
+</li>
+      </ul></li>
+      <li>
+    algorithms.pdqsort
+
+      <ul>
+        <li><a href="stdlib/algorithms/pdqsort.html#module-algorithms.pdqsort">module</a>
+</li>
+      </ul></li>
+      <li>
+    algorithms.qsort
+
+      <ul>
+        <li><a href="stdlib/algorithms/qsort.html#module-algorithms.qsort">module</a>
+</li>
+      </ul></li>
+      <li>
+    algorithms.strings
+
+      <ul>
+        <li><a href="stdlib/algorithms/strings.html#module-algorithms.strings">module</a>
+</li>
+      </ul></li>
+      <li>
+    algorithms.timsort
+
+      <ul>
+        <li><a href="stdlib/algorithms/timsort.html#module-algorithms.timsort">module</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/align.html#bio.align.pseq.align">align() (bio.align.pseq method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/align.html#bio.align.seq.align">(bio.align.seq method)</a>
+</li>
+        <li><a href="stdlib/bio/bwa.html#bio.bwa.BWA.align">(bio.bwa.BWA method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/align.html#bio.align.Alignment">Alignment (class in bio.align)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.all">all() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordSample.alleles">alleles (bio.vcf.VCFRecordSample attribute)</a>
+</li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.alloc">alloc() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.alloc_atomic">alloc_atomic() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_aln_t.alt">alt (bio.bwa.mem_aln_t attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_aln_t.alt_score">alt_score (bio.bwa.mem_aln_t attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.alt_score">(bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecord.alts">alts (bio.vcf.VCFRecord attribute)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.and_">and_() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.any">any() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/collections.html#collections.deque.append">append() (..collections.deque method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/types/collections/list.html#internal.types.collections.list.List.append">(internal.types.collections.list.List method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/collections.html#collections.deque.appendleft">appendleft() (..collections.deque method)</a>
+</li>
+      <li><a href="stdlib/sys.html#sys.argv">argv (in module ..sys)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFAux.arr">arr (bio.vcf.BCFAux attribute)</a>
+</li>
+      <li><a href="stdlib/internal/types/ptr.html#internal.types.ptr.Array">Array (class in internal.types.ptr)</a>
+</li>
+      <li><a href="stdlib/internal/types/array.html#internal.types.array.array">array (in module internal.types.array)</a>
+</li>
+      <li><a href="stdlib/internal/types/ptr.html#internal.types.ptr.Ptr.as_byte">as_byte() (internal.types.ptr.Ptr method)</a>
+</li>
+      <li><a href="stdlib/bio/kmer.html#bio.kmer.Kmer.as_int">as_int() (bio.kmer.Kmer method)</a>
+</li>
+      <li><a href="stdlib/string.html#string.ascii_letters">ascii_letters (in module ..string)</a>
+</li>
+      <li><a href="stdlib/string.html#string.ascii_lowercase">ascii_lowercase (in module ..string)</a>
+</li>
+      <li><a href="stdlib/string.html#string.ascii_uppercase">ascii_uppercase (in module ..string)</a>
+</li>
+      <li><a href="stdlib/math.html#math.asin">asin() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.asin">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.asinh">asinh() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.asinh">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.AssertionError">AssertionError</a>
+</li>
+      <li><a href="stdlib/internal/attributes.html#internal.attributes.associative">associative() (in module internal.attributes)</a>
+</li>
+      <li><a href="stdlib/math.html#math.atan">atan() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.atan">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.atan2">atan2() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.atan2">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.atanh">atanh() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.atanh">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.atoi">atoi() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.atomic">atomic() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.AttributeError">AttributeError</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderRecord.attrs">attrs (bio.vcf.BCFHeaderRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.aux">aux() (bio.bam.SAMRecord method)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.AUX_TYPE_ARRAY">AUX_TYPE_ARRAY (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.AUX_TYPE_CHAR">AUX_TYPE_CHAR (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.AUX_TYPE_DOUBLE">AUX_TYPE_DOUBLE (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.AUX_TYPE_FLOAT">AUX_TYPE_FLOAT (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.AUX_TYPE_INT">AUX_TYPE_INT (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.AUX_TYPE_INT16">AUX_TYPE_INT16 (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.AUX_TYPE_INT32">AUX_TYPE_INT32 (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.AUX_TYPE_INT8">AUX_TYPE_INT8 (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.AUX_TYPE_STRING">AUX_TYPE_STRING (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.AUX_TYPE_UINT16">AUX_TYPE_UINT16 (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.AUX_TYPE_UINT32">AUX_TYPE_UINT32 (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.AUX_TYPE_UINT8">AUX_TYPE_UINT8 (in module bio.bam)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMAux.B2f">B2f() (bio.bam.SAMAux method)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMAux.B2i">B2i() (bio.bam.SAMAux method)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMAux.B_len">B_len (bio.bam.SAMAux attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM">BAM() (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_aux2A">bam_aux2A() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_aux2f">bam_aux2f() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_aux2i">bam_aux2i() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_aux2Z">bam_aux2Z() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_aux_get">bam_aux_get() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_auxB2f">bam_auxB2f() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_auxB2i">bam_auxB2i() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_auxB_len">bam_auxB_len() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_cigar2qlen">bam_cigar2qlen() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_cigar2rlen">bam_cigar2rlen() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_destroy1">bam_destroy1() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_endpos">bam_endpos() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM_FDUP">BAM_FDUP (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM_FMREVERSE">BAM_FMREVERSE (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM_FMUNMAP">BAM_FMUNMAP (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM_FPAIRED">BAM_FPAIRED (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM_FPROPER_PAIR">BAM_FPROPER_PAIR (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM_FQCFAIL">BAM_FQCFAIL (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM_FREAD1">BAM_FREAD1 (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM_FREAD2">BAM_FREAD2 (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM_FREVERSE">BAM_FREVERSE (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM_FSECONDARY">BAM_FSECONDARY (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM_FSUPPLEMENTARY">BAM_FSUPPLEMENTARY (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAM_FUNMAP">BAM_FUNMAP (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_init1">bam_init1() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bam_read1">bam_read1() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAMReader">BAMReader (class in bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/builtin.html#bio.builtin.base">base() (in module bio.builtin)</a>
+</li>
+      <li><a href="stdlib/bio/seq.html#bio.seq.BaseCounts">BaseCounts (class in bio.seq)</a>
+</li>
+      <li><a href="stdlib/bio/seq.html#bio.seq.seq.bases">bases (bio.seq.seq attribute)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF">BCF() (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_array_to_object">bcf_array_to_object() (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_AUX_NONE">BCF_AUX_NONE (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_BT_CHAR">BCF_BT_CHAR (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_BT_FLOAT">BCF_BT_FLOAT (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_BT_INT16">BCF_BT_INT16 (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_BT_INT32">BCF_BT_INT32 (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_BT_INT8">BCF_BT_INT8 (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_BT_NULL">BCF_BT_NULL (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_clear">bcf_clear() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_destroy">bcf_destroy() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_DT_CTG">BCF_DT_CTG (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_DT_ID">BCF_DT_ID (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_DT_SAMPLE">BCF_DT_SAMPLE (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_dup">bcf_dup() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_empty">bcf_empty() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_float_is_missing">bcf_float_is_missing() (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_float_is_vector_end">bcf_float_is_vector_end() (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_float_missing">bcf_float_missing (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_float_vector_end">bcf_float_vector_end (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_get_fmt">bcf_get_fmt() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_get_fmt_id">bcf_get_fmt_id() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_get_format_values">bcf_get_format_values() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_get_info">bcf_get_info() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_get_info_id">bcf_get_info_id() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_get_info_values">bcf_get_info_values() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_get_value_count">bcf_get_value_count() (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_get_variant_type">bcf_get_variant_type() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_get_variant_types">bcf_get_variant_types() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_gt_allele">bcf_gt_allele() (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_has_filter">bcf_has_filter() (in module bio.c_htslib)</a>, <a href="stdlib/bio/c_htslib.html#id1">[1]</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_hdr_destroy">bcf_hdr_destroy() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_hdr_id2int">bcf_hdr_id2int() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_hdr_read">bcf_hdr_read() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_HL_CTG">BCF_HL_CTG (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_HL_FLT">BCF_HL_FLT (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_HL_FMT">BCF_HL_FMT (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_HL_GEN">BCF_HL_GEN (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_HL_INFO">BCF_HL_INFO (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_HL_STR">BCF_HL_STR (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_hrec_format">bcf_hrec_format() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_HT_FLAG">BCF_HT_FLAG (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_HT_INT">BCF_HT_INT (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_HT_REAL">BCF_HT_REAL (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_HT_STR">BCF_HT_STR (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_info_get_value">bcf_info_get_value() (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_init">bcf_init() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_int16_missing">bcf_int16_missing (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_int16_vector_end">bcf_int16_vector_end (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_int32_missing">bcf_int32_missing (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_int32_vector_end">bcf_int32_vector_end (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_int8_missing">bcf_int8_missing (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_int8_vector_end">bcf_int8_vector_end (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_is_snp">bcf_is_snp() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_read">bcf_read() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_str_missing">bcf_str_missing (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.bcf_str_vector_end">bcf_str_vector_end (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFMetadata.bcf_type">bcf_type (bio.vcf.BCFMetadata attribute)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_UN_ALL">BCF_UN_ALL (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_UN_FLT">BCF_UN_FLT (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_UN_FMT">BCF_UN_FMT (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_UN_IND">BCF_UN_IND (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_UN_INFO">BCF_UN_INFO (in module bio.vcf)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_UN_SHR">BCF_UN_SHR (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_UN_STR">BCF_UN_STR (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.bcf_unpack">bcf_unpack() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_VL_A">BCF_VL_A (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_VL_FIXED">BCF_VL_FIXED (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_VL_G">BCF_VL_G (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_VL_R">BCF_VL_R (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCF_VL_VAR">BCF_VL_VAR (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFAux">BCFAux (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeader">BCFHeader (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderContigs">BCFHeaderContigs (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderMetaData">BCFHeaderMetaData (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderRecord">BCFHeaderRecord (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderSamples">BCFHeaderSamples (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFMetadata">BCFMetadata (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFReader">BCFReader (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BED">BED() (in module bio.bed)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDReader">BEDReader (class in bio.bed)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord">BEDRecord (class in bio.bed)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.betavariate">betavariate() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.betavariate">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.biinterval">biinterval() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.biinterval">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.biloci">biloci() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.biloci">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+      <li>
+    bio
+
+      <ul>
+        <li><a href="stdlib/bio/index.html#module-bio">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.align
+
+      <ul>
+        <li><a href="stdlib/bio/align.html#module-bio.align">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.bam
+
+      <ul>
+        <li><a href="stdlib/bio/bam.html#module-bio.bam">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.bed
+
+      <ul>
+        <li><a href="stdlib/bio/bed.html#module-bio.bed">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.block
+
+      <ul>
+        <li><a href="stdlib/bio/block.html#module-bio.block">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.builtin
+
+      <ul>
+        <li><a href="stdlib/bio/builtin.html#module-bio.builtin">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.bwa
+
+      <ul>
+        <li><a href="stdlib/bio/bwa.html#module-bio.bwa">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.bwt
+
+      <ul>
+        <li><a href="stdlib/bio/bwt.html#module-bio.bwt">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.c_htslib
+
+      <ul>
+        <li><a href="stdlib/bio/c_htslib.html#module-bio.c_htslib">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.fai
+
+      <ul>
+        <li><a href="stdlib/bio/fai.html#module-bio.fai">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.fasta
+
+      <ul>
+        <li><a href="stdlib/bio/fasta.html#module-bio.fasta">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.fastq
+
+      <ul>
+        <li><a href="stdlib/bio/fastq.html#module-bio.fastq">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.fmindex
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#module-bio.fmindex">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.intervals
+
+      <ul>
+        <li><a href="stdlib/bio/intervals.html#module-bio.intervals">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.iter
+
+      <ul>
+        <li><a href="stdlib/bio/iter.html#module-bio.iter">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.kmer
+
+      <ul>
+        <li><a href="stdlib/bio/kmer.html#module-bio.kmer">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.locus
+
+      <ul>
+        <li><a href="stdlib/bio/locus.html#module-bio.locus">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.prefetch
+
+      <ul>
+        <li><a href="stdlib/bio/prefetch.html#module-bio.prefetch">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.pseq
+
+      <ul>
+        <li><a href="stdlib/bio/pseq.html#module-bio.pseq">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.seq
+
+      <ul>
+        <li><a href="stdlib/bio/seq.html#module-bio.seq">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.types
+
+      <ul>
+        <li><a href="stdlib/bio/types.html#module-bio.types">module</a>
+</li>
+      </ul></li>
+      <li>
+    bio.vcf
+
+      <ul>
+        <li><a href="stdlib/bio/vcf.html#module-bio.vcf">module</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.biresults">biresults() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.biresults">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bisect.html#bisect.bisect">bisect() (in module ..bisect)</a>
+</li>
+      <li><a href="stdlib/bisect.html#bisect.bisect_left">bisect_left() (in module ..bisect)</a>
+</li>
+      <li><a href="stdlib/bisect.html#bisect.bisect_right">bisect_right() (in module ..bisect)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.bit_length">bit_length() (..random.Random method)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.biupdate">biupdate() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.biupdate">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/block.html#bio.block.Block">Block (class in bio.block)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.block_count">block_count (bio.bed.BEDRecord attribute)</a>
+</li>
+      <li><a href="stdlib/algorithms/timsort.html#algorithms.timsort.BLOCK_SIZE">BLOCK_SIZE (in module algorithms.timsort)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.block_sizes">block_sizes (bio.bed.BEDRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.block_starts">block_starts (bio.bed.BEDRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/block.html#bio.block.blocks">blocks() (in module bio.block)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.bntamb">bntamb (class in bio.fmindex)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.bntamb1_t">bntamb1_t (class in bio.bwa)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.bntann">bntann (class in bio.fmindex)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.bntann1_t">bntann1_t (class in bio.bwa)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.bntseq">bntseq (class in bio.fmindex)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.bntseq_t">bntseq_t (class in bio.bwa)</a>
+</li>
+      <li><a href="stdlib/internal/box.html#internal.box.Box">Box (class in internal.box)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.BWA">BWA (class in bio.bwa)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.bwa_fill_scmat">bwa_fill_scmat() (in module bio.bwa)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.bwa_idx_load">bwa_idx_load() (in module bio.bwa)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.BWA_LIB">BWA_LIB (in module bio.bwa)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.bwaidx_t">bwaidx_t (class in bio.bwa)</a>
+</li>
+      <li><a href="stdlib/bio/bwt.html#bio.bwt.pseq.bwt">bwt() (bio.bwt.pseq method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bwt.html#bio.bwt.seq.bwt">(bio.bwt.seq method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/internal/attributes.html#internal.attributes.C">C() (in module internal.attributes)</a>
+</li>
+      <li><a href="stdlib/internal/dlopen.html#internal.dlopen.c_dlclose">c_dlclose() (in module internal.dlopen)</a>
+</li>
+      <li><a href="stdlib/internal/dlopen.html#internal.dlopen.c_dlerror">c_dlerror() (in module internal.dlopen)</a>
+</li>
+      <li><a href="stdlib/internal/dlopen.html#internal.dlopen.c_dlopen">c_dlopen() (in module internal.dlopen)</a>
+</li>
+      <li><a href="stdlib/internal/dlopen.html#internal.dlopen.c_dlsym">c_dlsym() (in module internal.dlopen)</a>
+</li>
+      <li><a href="stdlib/internal/types/str.html#internal.types.str.str.c_str">c_str() (internal.types.str.str method)</a>
+</li>
+      <li><a href="stdlib/algorithms/timsort.html#algorithms.timsort.CACHELINE_SIZE">CACHELINE_SIZE (in module algorithms.timsort)</a>
+</li>
+      <li><a href="stdlib/bio/builtin.html#bio.builtin.canonical">canonical() (in module bio.builtin)</a>
+</li>
+      <li><a href="stdlib/bio/builtin.html#bio.builtin.canonical_with_pos">canonical_with_pos() (in module bio.builtin)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.capitalize">capitalize() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.casefold">casefold() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/types/str.html#internal.types.str.str.cat">cat() (internal.types.str.str method)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist.cdf">cdf() (..statistics.NormalDist method)</a>
+</li>
+      <li><a href="stdlib/math.html#math.ceil">ceil() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.ceil">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.center">center() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.CError">CError</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.chain">chain (class in ..itertools)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.char_p">char_p (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.char_pp">char_pp (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.check_header_id">check_header_id() (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/internal/types/intn.html#internal.types.intn.check_N">check_N() (in module internal.types.intn)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.choice">choice() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.choice">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/random.html#random.Random.choices">choices() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.choices">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.chr">chr() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.chrom">chrom (bio.bed.BEDRecord attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecord.chrom">(bio.vcf.VCFRecord attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.chrom_end">chrom_end (bio.bed.BEDRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.chrom_start">chrom_start (bio.bed.BEDRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.Alignment.cigar">cigar (bio.align.Alignment attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.cigar">(bio.bam.SAMRecord attribute)</a>
+</li>
+        <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_aln_t.cigar">(bio.bwa.mem_aln_t attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/align.html#bio.align.CIGAR">CIGAR (class in bio.align)</a>
+</li>
+      <li><a href="stdlib/collections.html#collections.deque.clear">clear() (..collections.deque method)</a>
+
+      <ul>
+        <li><a href="stdlib/sortedlist.html#sortedlist.SortedList.clear">(..sortedlist.SortedList method)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.clear">(internal.types.collections.dict.Dict method)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/list.html#internal.types.collections.list.List.clear">(internal.types.collections.list.List method)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.clear">(internal.types.collections.set.Set method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.clear_roots">clear_roots() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAMReader.close">close() (bio.bam.BAMReader method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bam.html#bio.bam.SAMReader.close">(bio.bam.SAMReader method)</a>
+</li>
+        <li><a href="stdlib/bio/bed.html#bio.bed.BEDReader.close">(bio.bed.BEDReader method)</a>
+</li>
+        <li><a href="stdlib/bio/fai.html#bio.fai.FAIReader.close">(bio.fai.FAIReader method)</a>
+</li>
+        <li><a href="stdlib/bio/fasta.html#bio.fasta.FASTAReader.close">(bio.fasta.FASTAReader method)</a>
+</li>
+        <li><a href="stdlib/bio/fasta.html#bio.fasta.pFASTAReader.close">(bio.fasta.pFASTAReader method)</a>
+</li>
+        <li><a href="stdlib/bio/fastq.html#bio.fastq.FASTQReader.close">(bio.fastq.FASTQReader method)</a>
+</li>
+        <li><a href="stdlib/bio/iter.html#bio.iter.SeqReader.close">(bio.iter.SeqReader method)</a>
+</li>
+        <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFReader.close">(bio.vcf.BCFReader method)</a>
+</li>
+        <li><a href="stdlib/internal/file.html#internal.file.File.close">(internal.file.File method)</a>
+</li>
+        <li><a href="stdlib/internal/file.html#internal.file.gzFile.close">(internal.file.gzFile method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.bntseq.cnt_ambi">cnt_ambi() (bio.fmindex.bntseq method)</a>
+</li>
+      <li><a href="stdlib/internal/types/ptr.html#internal.types.ptr.cobj">cobj (in module internal.types.ptr)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.combinations">combinations() (in module ..itertools)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.combinations_with_replacement">combinations_with_replacement() (in module ..itertools)</a>
+</li>
+      <li><a href="stdlib/bio/fasta.html#bio.fasta.FASTARecord.comment">comment (bio.fasta.FASTARecord attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fastq.html#bio.fastq.FASTQRecord.comment">(bio.fastq.FASTQRecord attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/attributes.html#internal.attributes.commutative">commutative() (in module internal.attributes)</a>
+</li>
+      <li><a href="stdlib/bio/types.html#bio.types.byte.comp">comp() (bio.types.byte method)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.compress">compress() (in module ..itertools)</a>
+</li>
+      <li><a href="stdlib/algorithms/strings.html#algorithms.strings.computeLPArray">computeLPArray() (in module algorithms.strings)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.concat">concat() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.contains">contains() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecord.contig">contig (bio.vcf.VCFRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/locus.html#bio.locus.Contig">Contig (class in bio.locus)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAMReader.contig">contig() (bio.bam.BAMReader method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bam.html#bio.bam.SAMReader.contig">(bio.bam.SAMReader method)</a>
+</li>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.contig">(bio.fmindex.FMDIndex method)</a>
+</li>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.contig">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeader.contigs">contigs (bio.vcf.BCFHeader attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAMReader.contigs">contigs() (bio.bam.BAMReader method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bam.html#bio.bam.SAMReader.contigs">(bio.bam.SAMReader method)</a>
+</li>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.contigs">(bio.fmindex.FMDIndex method)</a>
+</li>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.contigs">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/collections.html#collections.deque.copy">copy() (..collections.deque method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/builtin.html#internal.builtin.copy">(in module internal.builtin)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.copy">(internal.types.collections.dict.Dict method)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.copy">(internal.types.collections.set.Set method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.copysign">copysign() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.copysign">(in module internal.c_stubs)</a>
+</li>
+        <li><a href="stdlib/internal/types/float.html#internal.types.float.float.copysign">(internal.types.float.float method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.cos">cos() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.cos">(in module internal.c_stubs)</a>
+</li>
+        <li><a href="stdlib/internal/types/float.html#internal.types.float.float.cos">(internal.types.float.float method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.cosh">cosh() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.cosh">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.count">count() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.count">(bio.fmindex.FMIndex method)</a>
+</li>
+        <li><a href="stdlib/itertools.html#itertools.count">(in module ..itertools)</a>
+</li>
+        <li><a href="stdlib/internal/str.html#internal.str.str.count">(internal.str.str method)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/list.html#internal.types.collections.list.List.count">(internal.types.collections.list.List method)</a>
+</li>
+        <li><a href="stdlib/internal/types/range.html#internal.types.range.range.count">(internal.types.range.range method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/collections.html#collections.Counter">Counter (class in ..collections)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.countOf">countOf() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.CRAM">CRAM() (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.CRAMReader">CRAMReader (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.critical">critical() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.csub">csub (bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.cycle">cycle() (in module ..itertools)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/internal/python.html#internal.python.pyobj.decref">decref() (internal.python.pyobj method)</a>
+</li>
+      <li><a href="stdlib/sortedlist.html#sortedlist.DEFAULT_LOAD_FACTOR">DEFAULT_LOAD_FACTOR (in module ..sortedlist)</a>
+</li>
+      <li><a href="stdlib/math.html#math.degrees">degrees() (in module ..math)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.delitem">delitem() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.bntseq.depos">depos() (bio.fmindex.bntseq method)</a>
+</li>
+      <li><a href="stdlib/collections.html#collections.deque">deque (class in ..collections)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFMetadata.description">description (bio.vcf.BCFMetadata attribute)</a>
+</li>
+      <li><a href="stdlib/internal/types/generator.html#internal.types.generator.Generator.destroy">destroy() (internal.types.generator.Generator method)</a>
+</li>
+      <li><a href="stdlib/internal/__init_test__.html#internal.__init_test__.Dict">Dict (class in internal.__init_test__)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict">(class in internal.types.collections.dict)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.dict">dict (in module internal.types.collections.dict)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.difference">difference() (internal.types.collections.set.Set method)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.difference_update">difference_update() (internal.types.collections.set.Set method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/string.html#string.digits">digits (in module ..string)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.discard">discard() (internal.types.collections.set.Set method)</a>
+</li>
+      <li><a href="stdlib/internal/attributes.html#internal.attributes.distributive">distributive() (in module internal.attributes)</a>
+</li>
+      <li><a href="stdlib/internal/dlopen.html#internal.dlopen.dlclose">dlclose() (in module internal.dlopen)</a>
+</li>
+      <li><a href="stdlib/internal/dlopen.html#internal.dlopen.dlerror">dlerror() (in module internal.dlopen)</a>
+</li>
+      <li><a href="stdlib/internal/dlopen.html#internal.dlopen.dlext">dlext() (in module internal.dlopen)</a>
+</li>
+      <li><a href="stdlib/internal/dlopen.html#internal.dlopen.dlopen">dlopen() (in module internal.dlopen)</a>
+</li>
+      <li><a href="stdlib/internal/dlopen.html#internal.dlopen.dlsym">dlsym() (in module internal.dlopen)</a>
+</li>
+      <li><a href="stdlib/getopt.html#getopt.do_longs">do_longs() (in module ..getopt)</a>
+</li>
+      <li><a href="stdlib/getopt.html#getopt.do_shorts">do_shorts() (in module ..getopt)</a>
+</li>
+      <li><a href="stdlib/internal/types/generator.html#internal.types.generator.Generator.done">done() (internal.types.generator.Generator method)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.dropwhile">dropwhile() (in module ..itertools)</a>
+</li>
+      <li><a href="stdlib/pickle.html#pickle.dump">dump() (in module ..pickle)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.duplicate">duplicate (bio.bam.SAMRecord attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/math.html#math.e">e (in module ..math)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.echo">echo() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/time.html#time.TimeInterval.elapsed">elapsed() (..time.TimeInterval method)</a>
+</li>
+      <li><a href="stdlib/collections.html#collections.Counter.elements">elements() (..collections.Counter method)</a>
+</li>
+      <li><a href="stdlib/bio/intervals.html#bio.intervals.Interval.end">end (bio.intervals.Interval attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.endpos">endpos (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.endswith">endswith() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.ensure_initialized">ensure_initialized() (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.enumerate">enumerate() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.eq">eq (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/math.html#math.erf">erf() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.erf">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.erfc">erfc() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.erfc">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/python.html#internal.python.pyobj.exc_check">exc_check() (internal.python.pyobj method)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.pyobj.exc_wrap">exc_wrap() (internal.python.pyobj method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.ExcHeader">ExcHeader (class in internal.types.error)</a>
+</li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.exclude_static_roots">exclude_static_roots() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/sys.html#sys.exit">exit() (in module ..sys)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.exit">(in module internal.c_stubs)</a>
+</li>
+        <li><a href="stdlib/internal/internal.html#internal.internal.exit">(in module internal.internal)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.exp">exp() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.exp">(in module internal.c_stubs)</a>
+</li>
+        <li><a href="stdlib/internal/types/float.html#internal.types.float.float.exp">(internal.types.float.float method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/float.html#internal.types.float.float.exp2">exp2() (internal.types.float.float method)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.expandtabs">expandtabs() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/math.html#math.expm1">expm1() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.expm1">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/attributes.html#internal.attributes.export">export() (in module internal.attributes)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.expovariate">expovariate() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.expovariate">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/collections/list.html#internal.types.collections.list.List.extend">extend() (internal.types.collections.list.List method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMAux.f">f (bio.bam.SAMAux attribute)</a>
+</li>
+      <li><a href="stdlib/math.html#math.fabs">fabs() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.fabs">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.factorial">factorial() (in module ..math)</a>
+</li>
+      <li><a href="stdlib/bio/fai.html#bio.fai.FAI">FAI() (in module bio.fai)</a>
+</li>
+      <li><a href="stdlib/bio/fai.html#bio.fai.FAI_COL_NAMES">FAI_COL_NAMES (in module bio.fai)</a>
+</li>
+      <li><a href="stdlib/bio/fai.html#bio.fai.FAIReader">FAIReader (class in bio.fai)</a>
+</li>
+      <li><a href="stdlib/bio/fai.html#bio.fai.FAIRecord">FAIRecord (class in bio.fai)</a>
+</li>
+      <li><a href="stdlib/bio/fasta.html#bio.fasta.FASTA">FASTA() (in module bio.fasta)</a>
+</li>
+      <li><a href="stdlib/bio/fasta.html#bio.fasta.FASTAReader">FASTAReader (class in bio.fasta)</a>
+</li>
+      <li><a href="stdlib/bio/fasta.html#bio.fasta.FASTARecord">FASTARecord (class in bio.fasta)</a>
+</li>
+      <li><a href="stdlib/bio/fastq.html#bio.fastq.FASTQ">FASTQ() (in module bio.fastq)</a>
+</li>
+      <li><a href="stdlib/bio/fastq.html#bio.fastq.FASTQReader">FASTQReader (class in bio.fastq)</a>
+</li>
+      <li><a href="stdlib/bio/fastq.html#bio.fastq.FASTQRecord">FASTQRecord (class in bio.fastq)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.fclose">fclose() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.ferror">ferror() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.fflush">fflush() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.fgetc">fgetc() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.fgets">fgets() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDReader.file">file (bio.bed.BEDReader attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fai.html#bio.fai.FAIReader.file">(bio.fai.FAIReader attribute)</a>
+</li>
+        <li><a href="stdlib/bio/fasta.html#bio.fasta.FASTAReader.file">(bio.fasta.FASTAReader attribute)</a>
+</li>
+        <li><a href="stdlib/bio/fasta.html#bio.fasta.pFASTAReader.file">(bio.fasta.pFASTAReader attribute)</a>
+</li>
+        <li><a href="stdlib/bio/fastq.html#bio.fastq.FASTQReader.file">(bio.fastq.FASTQReader attribute)</a>
+</li>
+        <li><a href="stdlib/bio/iter.html#bio.iter.SeqReader.file">(bio.iter.SeqReader attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/file.html#internal.file.File">File (class in internal.file)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.filter">filter() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/algorithms/strings.html#algorithms.strings.filter_overlaps">filter_overlaps() (in module algorithms.strings)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.filterfalse">filterfalse() (in module ..itertools)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeader.filters">filters (bio.vcf.BCFHeader attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/internal/str.html#internal.str.str.find">find() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.flag">flag (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/math.html#math.floor">floor() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.floor">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/operator.html#operator.floordiv">floordiv() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.flush">flush() (in module ..openmp)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/file.html#internal.file.File.flush">(internal.file.File method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/float.html#internal.types.float.float.fma">fma() (internal.types.float.float method)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex">FMDIndex (class in bio.fmindex)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDInterval">FMDInterval (class in bio.fmindex)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex">FMIndex (class in bio.fmindex)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMInterval">FMInterval (class in bio.fmindex)</a>
+</li>
+      <li><a href="stdlib/math.html#math.fmod">fmod() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.fmod">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.fopen">fopen() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.for_par">for_par() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeader.formats">formats (bio.vcf.BCFHeader attribute)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDInterval.forward">forward() (bio.fmindex.FMDInterval method)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.fread">fread() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.free">free() (in module internal.c_stubs)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/gc.html#internal.gc.free">(in module internal.gc)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.frexp">frexp() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.frexp">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/random.html#random.Random.from_bytes_big">from_bytes_big() (..random.Random method)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.chain.from_iterable">from_iterable() (..itertools.chain method)</a>
+</li>
+      <li><a href="stdlib/internal/types/str.html#internal.types.str.str.from_ptr">from_ptr() (internal.types.str.str method)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist.from_samples">from_samples() (..statistics.NormalDist method)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.fromkeys">fromkeys() (internal.types.collections.dict.Dict method)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.fseek">fseek() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.ftell">ftell() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.fwrite">fwrite() (in module internal.c_stubs)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/math.html#math.gamma">gamma() (in module ..math)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.gammavariate">gammavariate() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.gammavariate">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/random.html#random.Random.gauss">gauss() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.gauss">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.gcd">gcd() (in module ..math)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.ge">ge (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/types/generator.html#internal.types.generator.generator">generator (in module internal.types.generator)</a>
+</li>
+      <li><a href="stdlib/random.html#random.RandomGenerator.genrand_int32">genrand_int32() (..random.RandomGenerator method)</a>
+</li>
+      <li><a href="stdlib/random.html#random.RandomGenerator.genrand_res53">genrand_res53() (..random.RandomGenerator method)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.geometric_mean">geometric_mean() (in module ..statistics)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderRecord.get">get() (bio.vcf.BCFHeaderRecord method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/python.html#internal.python.get">(in module internal.python)</a>
+</li>
+        <li><a href="stdlib/internal/python.html#internal.python.pyobj.get">(internal.python.pyobj method)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.get">(internal.types.collections.dict.Dict method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/openmp.html#openmp.get_active_level">get_active_level() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_ancestor_thread_num">get_ancestor_thread_num() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_cancellation">get_cancellation() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_default_device">get_default_device() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_dynamic">get_dynamic() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordInfo.get_flag">get_flag() (bio.vcf.VCFRecordInfo method)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordInfo.get_float">get_float() (bio.vcf.VCFRecordInfo method)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordInfo.get_floats">get_floats() (bio.vcf.VCFRecordInfo method)</a>
+</li>
+      <li><a href="stdlib/threading.html#threading.get_ident">get_ident() (in module ..threading)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordInfo.get_int">get_int() (bio.vcf.VCFRecordInfo method)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordInfo.get_ints">get_ints() (bio.vcf.VCFRecordInfo method)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_level">get_level() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_max_active_levels">get_max_active_levels() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_max_threads">get_max_threads() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/threading.html#threading.get_native_id">get_native_id() (in module ..threading)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_num_devices">get_num_devices() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_num_procs">get_num_procs() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_num_teams">get_num_teams() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_num_threads">get_num_threads() (in module ..openmp)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.bntseq.get_pac">get_pac() (bio.fmindex.bntseq method)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_proc_bind">get_proc_bind() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_schedule">get_schedule() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.bntseq.get_seq">get_seq() (bio.fmindex.bntseq method)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordInfo.get_str">get_str() (bio.vcf.VCFRecordInfo method)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_team_num">get_team_num() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_team_size">get_team_size() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_thread_limit">get_thread_limit() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_thread_num">get_thread_num() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_wtick">get_wtick() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.get_wtime">get_wtime() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.getitem">getitem() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.getline">getline() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/getopt.html#getopt.getopt">getopt() (in module ..getopt)</a>
+</li>
+      <li><a href="stdlib/getopt.html#getopt.GetoptError">GetoptError</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.getrandbits">getrandbits() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.getrandbits">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/random.html#random.RandomGenerator.gettimeofday">gettimeofday() (..random.RandomGenerator method)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.groupby">groupby() (in module ..itertools)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.gt">gt (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.gzclose">gzclose() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.gzerror">gzerror() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/bio/fasta.html#bio.fasta.FASTAReader.gzfile">gzfile (bio.fasta.FASTAReader attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fasta.html#bio.fasta.pFASTAReader.gzfile">(bio.fasta.pFASTAReader attribute)</a>
+</li>
+        <li><a href="stdlib/bio/fastq.html#bio.fastq.FASTQReader.gzfile">(bio.fastq.FASTQReader attribute)</a>
+</li>
+        <li><a href="stdlib/bio/iter.html#bio.iter.SeqReader.gzfile">(bio.iter.SeqReader attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/file.html#internal.file.gzFile">gzFile (class in internal.file)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.gzgetc">gzgetc() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.gzgets">gzgets() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.gzopen">gzopen() (in module internal.c_stubs)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/file.html#internal.file.gzopen">(in module internal.file)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.gzread">gzread() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.gzseek">gzseek() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.gztell">gztell() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.gzwrite">gzwrite() (in module internal.c_stubs)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/statistics.html#statistics.harmonic_mean">harmonic_mean() (in module ..statistics)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.hash">hash() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderRecord.hdr_type">hdr_type (bio.vcf.BCFHeaderRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDReader.header">header (bio.bed.BEDReader attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fasta.html#bio.fasta.FASTARecord.header">(bio.fasta.FASTARecord attribute)</a>
+</li>
+        <li><a href="stdlib/bio/fastq.html#bio.fastq.FASTQRecord.header">(bio.fastq.FASTQRecord attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/algorithms/heapsort.html#algorithms.heapsort.heap_sort">heap_sort() (in module algorithms.heapsort)</a>
+</li>
+      <li><a href="stdlib/algorithms/heapsort.html#algorithms.heapsort.heap_sort_array">heap_sort_array() (in module algorithms.heapsort)</a>
+</li>
+      <li><a href="stdlib/algorithms/heapsort.html#algorithms.heapsort.heap_sort_inplace">heap_sort_inplace() (in module algorithms.heapsort)</a>
+</li>
+      <li><a href="stdlib/heapq.html#heapq.heapify">heapify() (in module ..heapq)</a>
+</li>
+      <li><a href="stdlib/heapq.html#heapq.heappop">heappop() (in module ..heapq)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/heapq.html#heapq.heappush">heappush() (in module ..heapq)</a>
+</li>
+      <li><a href="stdlib/heapq.html#heapq.heappushpop">heappushpop() (in module ..heapq)</a>
+</li>
+      <li><a href="stdlib/heapq.html#heapq.heapreplace">heapreplace() (in module ..heapq)</a>
+</li>
+      <li><a href="stdlib/string.html#string.hexdigits">hexdigits (in module ..string)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.hts_close">hts_close() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.hts_idx_destroy">hts_idx_destroy() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.hts_itr_destroy">hts_itr_destroy() (in module bio.c_htslib)</a>, <a href="stdlib/bio/c_htslib.html#id0">[1]</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.hts_itr_next">hts_itr_next() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.hts_open">hts_open() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.hts_set_threads">hts_set_threads() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.hts_version">hts_version() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/math.html#math.hypot">hypot() (in module ..math)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMAux.i">i (bio.bam.SAMAux attribute)</a>
+</li>
+      <li><a href="stdlib/internal/types/intn.html#internal.types.intn.i16">i16 (in module internal.types.intn)</a>
+</li>
+      <li><a href="stdlib/internal/types/intn.html#internal.types.intn.i32">i32 (in module internal.types.intn)</a>
+</li>
+      <li><a href="stdlib/internal/types/intn.html#internal.types.intn.i64">i64 (in module internal.types.intn)</a>
+</li>
+      <li><a href="stdlib/internal/types/intn.html#internal.types.intn.i8">i8 (in module internal.types.intn)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.iadd">iadd() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.iand">iand() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.iconcat">iconcat() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecord.id">id (bio.vcf.VCFRecord attribute)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.id">id() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.Ident">Ident (class in ..openmp)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.ifloordiv">ifloordiv() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.ilshift">ilshift() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.imatmul">imatmul() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.imod">imod() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/internal.html#internal.internal.Import">Import (class in internal.internal)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.imul">imul() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.in_final">in_final() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.in_parallel">in_parallel() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.pyobj.incref">incref() (internal.python.pyobj method)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.increment">increment() (internal.types.collections.dict.Dict method)</a>
+</li>
+      <li><a href="stdlib/bio/intervals.html#bio.intervals.IntervalTree.index">index() (bio.intervals.IntervalTree method)</a>
+
+      <ul>
+        <li><a href="stdlib/operator.html#operator.index">(in module ..operator)</a>
+</li>
+        <li><a href="stdlib/internal/str.html#internal.str.str.index">(internal.str.str method)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/list.html#internal.types.collections.list.List.index">(internal.types.collections.list.List method)</a>
+</li>
+        <li><a href="stdlib/internal/types/range.html#internal.types.range.range.index">(internal.types.range.range method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.IndexError">IndexError</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.indexOf">indexOf() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/math.html#math.inf">inf (in module ..math)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeader.info">info (bio.vcf.BCFHeader attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecord.info">(bio.vcf.VCFRecord attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/python.html#internal.python.init">init() (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/random.html#random.RandomGenerator.init_by_array">init_by_array() (..random.RandomGenerator method)</a>
+</li>
+      <li><a href="stdlib/random.html#random.RandomGenerator.init_genrand">init_genrand() (..random.RandomGenerator method)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDReader.init_header">init_header() (bio.bed.BEDReader method)</a>
+</li>
+      <li><a href="stdlib/internal/attributes.html#internal.attributes.inline">inline() (in module internal.attributes)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/list.html#internal.types.collections.list.List.insert">insert() (internal.types.collections.list.List method)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.insert_size">insert_size (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/algorithms/insertionsort.html#algorithms.insertionsort.insertion_sort">insertion_sort() (in module algorithms.insertionsort)</a>
+</li>
+      <li><a href="stdlib/algorithms/insertionsort.html#algorithms.insertionsort.insertion_sort_array">insertion_sort_array() (in module algorithms.insertionsort)</a>
+</li>
+      <li><a href="stdlib/algorithms/insertionsort.html#algorithms.insertionsort.insertion_sort_inplace">insertion_sort_inplace() (in module algorithms.insertionsort)</a>
+</li>
+      <li><a href="stdlib/algorithms/pdqsort.html#algorithms.pdqsort.INSERTION_SORT_THRESHOLD">INSERTION_SORT_THRESHOLD (in module algorithms.pdqsort)</a>
+</li>
+      <li><a href="stdlib/bisect.html#bisect.insort">insort() (in module ..bisect)</a>
+</li>
+      <li><a href="stdlib/bisect.html#bisect.insort_left">insort_left() (in module ..bisect)</a>
+</li>
+      <li><a href="stdlib/bisect.html#bisect.insort_right">insort_right() (in module ..bisect)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.INT16_MIN">INT16_MIN (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.INT32_MIN">INT32_MIN (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.INT8_MIN">INT8_MIN (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/builtin.html#bio.builtin.inter_align">inter_align() (in module bio.builtin)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.InterAlignParams">InterAlignParams (class in bio.align)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.InterAlignYield">InterAlignYield (class in bio.align)</a>
+</li>
+      <li>
+    internal
+
+      <ul>
+        <li><a href="stdlib/internal/index.html#module-internal">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.__init_test__
+
+      <ul>
+        <li><a href="stdlib/internal/__init_test__.html#module-internal.__init_test__">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.attributes
+
+      <ul>
+        <li><a href="stdlib/internal/attributes.html#module-internal.attributes">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.box
+
+      <ul>
+        <li><a href="stdlib/internal/box.html#module-internal.box">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.builtin
+
+      <ul>
+        <li><a href="stdlib/internal/builtin.html#module-internal.builtin">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.c_stubs
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#module-internal.c_stubs">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.dlopen
+
+      <ul>
+        <li><a href="stdlib/internal/dlopen.html#module-internal.dlopen">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.file
+
+      <ul>
+        <li><a href="stdlib/internal/file.html#module-internal.file">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.gc
+
+      <ul>
+        <li><a href="stdlib/internal/gc.html#module-internal.gc">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.internal
+
+      <ul>
+        <li><a href="stdlib/internal/internal.html#module-internal.internal">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.khash
+
+      <ul>
+        <li><a href="stdlib/internal/khash.html#module-internal.khash">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.python
+
+      <ul>
+        <li><a href="stdlib/internal/python.html#module-internal.python">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.sort
+
+      <ul>
+        <li><a href="stdlib/internal/sort.html#module-internal.sort">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.str
+
+      <ul>
+        <li><a href="stdlib/internal/str.html#module-internal.str">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types
+
+      <ul>
+        <li><a href="stdlib/internal/types/index.html#module-internal.types">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.array
+
+      <ul>
+        <li><a href="stdlib/internal/types/array.html#module-internal.types.array">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.bool
+
+      <ul>
+        <li><a href="stdlib/internal/types/bool.html#module-internal.types.bool">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.byte
+
+      <ul>
+        <li><a href="stdlib/internal/types/byte.html#module-internal.types.byte">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    internal.types.collections
+
+      <ul>
+        <li><a href="stdlib/internal/types/collections/index.html#module-internal.types.collections">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.collections.dict
+
+      <ul>
+        <li><a href="stdlib/internal/types/collections/dict.html#module-internal.types.collections.dict">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.collections.list
+
+      <ul>
+        <li><a href="stdlib/internal/types/collections/list.html#module-internal.types.collections.list">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.collections.set
+
+      <ul>
+        <li><a href="stdlib/internal/types/collections/set.html#module-internal.types.collections.set">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.error
+
+      <ul>
+        <li><a href="stdlib/internal/types/error.html#module-internal.types.error">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.float
+
+      <ul>
+        <li><a href="stdlib/internal/types/float.html#module-internal.types.float">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.generator
+
+      <ul>
+        <li><a href="stdlib/internal/types/generator.html#module-internal.types.generator">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.int
+
+      <ul>
+        <li><a href="stdlib/internal/types/int.html#module-internal.types.int">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.intn
+
+      <ul>
+        <li><a href="stdlib/internal/types/intn.html#module-internal.types.intn">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.optional
+
+      <ul>
+        <li><a href="stdlib/internal/types/optional.html#module-internal.types.optional">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.ptr
+
+      <ul>
+        <li><a href="stdlib/internal/types/ptr.html#module-internal.types.ptr">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.range
+
+      <ul>
+        <li><a href="stdlib/internal/types/range.html#module-internal.types.range">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.slice
+
+      <ul>
+        <li><a href="stdlib/internal/types/slice.html#module-internal.types.slice">module</a>
+</li>
+      </ul></li>
+      <li>
+    internal.types.str
+
+      <ul>
+        <li><a href="stdlib/internal/types/str.html#module-internal.types.str">module</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.intersection">intersection() (internal.types.collections.set.Set method)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.intersection_update">intersection_update() (internal.types.collections.set.Set method)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.SMEM.interval">interval (bio.fmindex.SMEM attribute)</a>
+</li>
+      <li><a href="stdlib/bio/intervals.html#bio.intervals.Interval">Interval (class in bio.intervals)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.interval">interval() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.interval">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/intervals.html#bio.intervals.IntervalTree">IntervalTree (class in bio.intervals)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.bntseq.intv2rid">intv2rid() (bio.fmindex.bntseq method)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.inv">inv() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist.inv_cdf">inv_cdf() (..statistics.NormalDist method)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.invert">invert (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.IOError">IOError</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.ior">ior() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.ipow">ipow() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.irshift">irshift() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.is_">is_() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFAux.is_array">is_array (bio.vcf.BCFAux attribute)</a>
+</li>
+      <li><a href="stdlib/internal/file.html#internal.file.is_binary">is_binary() (in module internal.file)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.is_gt_fmt">is_gt_fmt() (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.is_initial_device">is_initial_device() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDReader.is_line_header">is_line_header() (bio.bed.BEDReader method)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.is_not">is_not() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.isalnum">isalnum() (in module internal.c_stubs)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/str.html#internal.str.str.isalnum">(internal.str.str method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.isalpha">isalpha() (in module internal.c_stubs)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/str.html#internal.str.str.isalpha">(internal.str.str method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.isascii">isascii() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/math.html#math.isclose">isclose() (in module ..math)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.isdecimal">isdecimal() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.isdigit">isdigit() (in module internal.c_stubs)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/str.html#internal.str.str.isdigit">(internal.str.str method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.isdisjoint">isdisjoint() (internal.types.collections.set.Set method)</a>
+</li>
+      <li><a href="stdlib/math.html#math.isfinite">isfinite() (in module ..math)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.isidentifier">isidentifier() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/math.html#math.isinf">isinf() (in module ..math)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.islice">islice (class in ..itertools)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.islower">islower() (in module internal.c_stubs)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/str.html#internal.str.str.islower">(internal.str.str method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.isnan">isnan() (in module ..math)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.isnumeric">isnumeric() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.isprintable">isprintable() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.isspace">isspace() (in module internal.c_stubs)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/str.html#internal.str.str.isspace">(internal.str.str method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.issubset">issubset() (internal.types.collections.set.Set method)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.issuperset">issuperset() (internal.types.collections.set.Set method)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.istitle">istitle() (in module internal.c_stubs)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/str.html#internal.str.str.istitle">(internal.str.str method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/operator.html#operator.isub">isub() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.isupper">isupper() (in module internal.c_stubs)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/str.html#internal.str.str.isupper">(internal.str.str method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.item_rgb">item_rgb (bio.bed.BEDRecord attribute)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.itemgetter">itemgetter() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/__init_test__.html#internal.__init_test__.Dict.items">items() (internal.__init_test__.Dict method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.items">(internal.types.collections.dict.Dict method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.iter">iter() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderRecord.iteritems">iteritems() (bio.vcf.BCFHeaderRecord method)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderRecord.iterkeys">iterkeys() (bio.vcf.BCFHeaderRecord method)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderRecord.itervalues">itervalues() (bio.vcf.BCFHeaderRecord method)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.itruediv">itruediv() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.ixor">ixor() (in module ..operator)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="J">J</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/internal/types/ptr.html#internal.types.ptr.Jar">Jar (in module internal.types.ptr)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/internal/str.html#id1">join() (internal.str.str method)</a>, <a href="stdlib/internal/str.html#internal.str.str.join">[1]</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderRecord.key">key (bio.vcf.BCFHeaderRecord attribute)</a>
+</li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.KeyError">KeyError</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.keys">keys() (internal.types.collections.dict.Dict method)</a>
+</li>
+      <li><a href="stdlib/bio/seq.html#bio.seq.Kmer">Kmer (class in bio.seq)</a>
+</li>
+      <li><a href="stdlib/bio/seq.html#bio.seq.seq.kmers">kmers() (bio.seq.seq method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/builtin.html#bio.builtin.kmers">(in module bio.builtin)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/seq.html#bio.seq.seq.kmers_canonical">kmers_canonical() (bio.seq.seq method)</a>
+</li>
+      <li><a href="stdlib/bio/seq.html#bio.seq.seq.kmers_canonical_with_pos">kmers_canonical_with_pos() (bio.seq.seq method)</a>
+</li>
+      <li><a href="stdlib/bio/seq.html#bio.seq.seq.kmers_with_pos">kmers_with_pos() (bio.seq.seq method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/builtin.html#bio.builtin.kmers_with_pos">(in module bio.builtin)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bwt.html#bio.bwt.seq.lcp">lcp() (bio.bwt.seq method)</a>
+</li>
+      <li><a href="stdlib/math.html#math.ldexp">ldexp() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.ldexp">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/operator.html#operator.le">le (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/collections.html#collections.deque.left">left (..collections.deque attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/sortedlist.html#sortedlist.SortedList.left">(..sortedlist.SortedList attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/locus.html#bio.locus.Contig.len">len (bio.locus.Contig attribute)</a>
+</li>
+      <li><a href="stdlib/bio/kmer.html#bio.kmer.Kmer.len">len() (bio.kmer.Kmer method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/builtin.html#internal.builtin.len">(in module internal.builtin)</a>
+</li>
+        <li><a href="stdlib/internal/types/intn.html#internal.types.intn.Int.len">(internal.types.intn.Int method)</a>
+</li>
+        <li><a href="stdlib/internal/types/intn.html#internal.types.intn.UInt.len">(internal.types.intn.UInt method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/fai.html#bio.fai.FAIRecord.length">length (bio.fai.FAIRecord attribute)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.length_hint">length_hint() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.less">less() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.less">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.lgamma">lgamma() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.lgamma">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/fai.html#bio.fai.FAIRecord.line_bases">line_bases (bio.fai.FAIRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/fai.html#bio.fai.FAIRecord.line_width">line_width (bio.fai.FAIRecord attribute)</a>
+</li>
+      <li><a href="stdlib/internal/types/ptr.html#internal.types.ptr.List">List (class in internal.types.ptr)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/list.html#internal.types.collections.list.list">list (in module internal.types.collections.list)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.ljust">ljust() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/pickle.html#pickle.load">load() (in module ..pickle)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.locate">locate() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.locate">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.loci">loci() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.loci">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/openmp.html#openmp.Lock">Lock (class in ..openmp)</a>
+
+      <ul>
+        <li><a href="stdlib/threading.html#threading.Lock">(class in ..threading)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.locus">locus (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/locus.html#bio.locus.Locus">Locus (class in bio.locus)</a>
+</li>
+      <li><a href="stdlib/math.html#math.log">log() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.log">(in module internal.c_stubs)</a>
+</li>
+        <li><a href="stdlib/internal/types/float.html#internal.types.float.float.log">(internal.types.float.float method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.log10">log10() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.log10">(in module internal.c_stubs)</a>
+</li>
+        <li><a href="stdlib/internal/types/float.html#internal.types.float.float.log10">(internal.types.float.float method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.log1p">log1p() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.log1p">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.log2">log2() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#id0">(in module internal.c_stubs)</a>, <a href="stdlib/internal/c_stubs.html#internal.c_stubs.log2">[1]</a>
+</li>
+        <li><a href="stdlib/internal/types/float.html#internal.types.float.float.log2">(internal.types.float.float method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/random.html#random.LOG4">LOG4 (in module ..random)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.lognormvariate">lognormvariate() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.lognormvariate">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/getopt.html#getopt.long_has_args">long_has_args() (in module ..getopt)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.lower">lower() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.LRData">LRData (class in ..openmp)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.lshift">lshift() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.lstrip">lstrip() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.lt">lt (in module ..operator)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/random.html#random.M">M (in module ..random)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.map">map() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.mapq">mapq (bio.bam.SAMRecord attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_aln_t.mapq">(bio.bwa.mem_aln_t attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/openmp.html#openmp.master">master() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.mate_locus">mate_locus (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.mate_pos">mate_pos (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.mate_reversed">mate_reversed (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.mate_tid">mate_tid (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.mate_unmapped">mate_unmapped (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.matmul">matmul() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.max">max() (in module internal.builtin)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/types/float.html#internal.types.float.float.max">(internal.types.float.float method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/collections.html#collections.deque.maxlen">maxlen (..collections.deque attribute)</a>
+</li>
+      <li><a href="stdlib/sys.html#sys.maxsize">maxsize (in module ..sys)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist.mean">mean (..statistics.NormalDist attribute)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.mean">mean() (in module ..statistics)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist.median">median (..statistics.NormalDist attribute)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.median">median() (in module ..statistics)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.median_grouped">median_grouped() (in module ..statistics)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.median_high">median_high() (in module ..statistics)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.median_low">median_low() (in module ..statistics)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_align1">mem_align1() (in module bio.bwa)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_aln_t">mem_aln_t (class in bio.bwa)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t">mem_alnreg_t (class in bio.bwa)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_v">mem_alnreg_v (class in bio.bwa)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_opt_init">mem_opt_init() (in module bio.bwa)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_reg2aln">mem_reg2aln() (in module bio.bwa)</a>
+</li>
+      <li><a href="stdlib/internal/types/str.html#internal.types.str.str.memcpy">memcpy() (internal.types.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/types/str.html#internal.types.str.str.memmove">memmove() (internal.types.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/types/str.html#internal.types.str.str.memset">memset() (internal.types.str.str method)</a>
+</li>
+      <li><a href="stdlib/getopt.html#getopt.GetoptError.message">message (..getopt.GetoptError attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/statistics.html#statistics.StatisticsError.message">(..statistics.StatisticsError attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.AssertionError.message">(internal.types.error.AssertionError attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.AttributeError.message">(internal.types.error.AttributeError attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.CError.message">(internal.types.error.CError attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.IndexError.message">(internal.types.error.IndexError attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.IOError.message">(internal.types.error.IOError attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.KeyError.message">(internal.types.error.KeyError attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.NotImplementedError.message">(internal.types.error.NotImplementedError attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.OSError.message">(internal.types.error.OSError attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.PyError.message">(internal.types.error.PyError attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.StopIteration.message">(internal.types.error.StopIteration attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.SystemExit.message">(internal.types.error.SystemExit attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.TypeError.message">(internal.types.error.TypeError attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.ValueError.message">(internal.types.error.ValueError attribute)</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#internal.types.error.ZeroDivisionError.message">(internal.types.error.ZeroDivisionError attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.METADATA_TYPES">METADATA_TYPES (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.min">min() (in module internal.builtin)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/types/float.html#internal.types.float.float.min">(internal.types.float.float method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/algorithms/timsort.html#algorithms.timsort.MIN_GALLOP">MIN_GALLOP (in module algorithms.timsort)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.misc">misc (bio.bed.BEDRecord attribute)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.mod">mod() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist.mode">mode (..statistics.NormalDist attribute)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.mode">mode() (in module ..statistics)</a>
+</li>
+      <li><a href="stdlib/math.html#math.modf">modf() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.modf">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li>
+    module
+
+      <ul>
+        <li><a href="stdlib/bisect.html#module-..bisect">..bisect</a>
+</li>
+        <li><a href="stdlib/collections.html#module-..collections">..collections</a>
+</li>
+        <li><a href="stdlib/functools.html#module-..functools">..functools</a>
+</li>
+        <li><a href="stdlib/getopt.html#module-..getopt">..getopt</a>
+</li>
+        <li><a href="stdlib/gzip.html#module-..gzip">..gzip</a>
+</li>
+        <li><a href="stdlib/heapq.html#module-..heapq">..heapq</a>
+</li>
+        <li><a href="stdlib/itertools.html#module-..itertools">..itertools</a>
+</li>
+        <li><a href="stdlib/math.html#module-..math">..math</a>
+</li>
+        <li><a href="stdlib/openmp.html#module-..openmp">..openmp</a>
+</li>
+        <li><a href="stdlib/operator.html#module-..operator">..operator</a>
+</li>
+        <li><a href="stdlib/pickle.html#module-..pickle">..pickle</a>
+</li>
+        <li><a href="stdlib/python.html#module-..python">..python</a>
+</li>
+        <li><a href="stdlib/random.html#module-..random">..random</a>
+</li>
+        <li><a href="stdlib/sortedlist.html#module-..sortedlist">..sortedlist</a>
+</li>
+        <li><a href="stdlib/statistics.html#module-..statistics">..statistics</a>
+</li>
+        <li><a href="stdlib/string.html#module-..string">..string</a>
+</li>
+        <li><a href="stdlib/sys.html#module-..sys">..sys</a>
+</li>
+        <li><a href="stdlib/threading.html#module-..threading">..threading</a>
+</li>
+        <li><a href="stdlib/time.html#module-..time">..time</a>
+</li>
+        <li><a href="stdlib/algorithms/index.html#module-algorithms">algorithms</a>
+</li>
+        <li><a href="stdlib/algorithms/heapsort.html#module-algorithms.heapsort">algorithms.heapsort</a>
+</li>
+        <li><a href="stdlib/algorithms/insertionsort.html#module-algorithms.insertionsort">algorithms.insertionsort</a>
+</li>
+        <li><a href="stdlib/algorithms/pdqsort.html#module-algorithms.pdqsort">algorithms.pdqsort</a>
+</li>
+        <li><a href="stdlib/algorithms/qsort.html#module-algorithms.qsort">algorithms.qsort</a>
+</li>
+        <li><a href="stdlib/algorithms/strings.html#module-algorithms.strings">algorithms.strings</a>
+</li>
+        <li><a href="stdlib/algorithms/timsort.html#module-algorithms.timsort">algorithms.timsort</a>
+</li>
+        <li><a href="stdlib/bio/index.html#module-bio">bio</a>
+</li>
+        <li><a href="stdlib/bio/align.html#module-bio.align">bio.align</a>
+</li>
+        <li><a href="stdlib/bio/bam.html#module-bio.bam">bio.bam</a>
+</li>
+        <li><a href="stdlib/bio/bed.html#module-bio.bed">bio.bed</a>
+</li>
+        <li><a href="stdlib/bio/block.html#module-bio.block">bio.block</a>
+</li>
+        <li><a href="stdlib/bio/builtin.html#module-bio.builtin">bio.builtin</a>
+</li>
+        <li><a href="stdlib/bio/bwa.html#module-bio.bwa">bio.bwa</a>
+</li>
+        <li><a href="stdlib/bio/bwt.html#module-bio.bwt">bio.bwt</a>
+</li>
+        <li><a href="stdlib/bio/c_htslib.html#module-bio.c_htslib">bio.c_htslib</a>
+</li>
+        <li><a href="stdlib/bio/fai.html#module-bio.fai">bio.fai</a>
+</li>
+        <li><a href="stdlib/bio/fasta.html#module-bio.fasta">bio.fasta</a>
+</li>
+        <li><a href="stdlib/bio/fastq.html#module-bio.fastq">bio.fastq</a>
+</li>
+        <li><a href="stdlib/bio/fmindex.html#module-bio.fmindex">bio.fmindex</a>
+</li>
+        <li><a href="stdlib/bio/intervals.html#module-bio.intervals">bio.intervals</a>
+</li>
+        <li><a href="stdlib/bio/iter.html#module-bio.iter">bio.iter</a>
+</li>
+        <li><a href="stdlib/bio/kmer.html#module-bio.kmer">bio.kmer</a>
+</li>
+        <li><a href="stdlib/bio/locus.html#module-bio.locus">bio.locus</a>
+</li>
+        <li><a href="stdlib/bio/prefetch.html#module-bio.prefetch">bio.prefetch</a>
+</li>
+        <li><a href="stdlib/bio/pseq.html#module-bio.pseq">bio.pseq</a>
+</li>
+        <li><a href="stdlib/bio/seq.html#module-bio.seq">bio.seq</a>
+</li>
+        <li><a href="stdlib/bio/types.html#module-bio.types">bio.types</a>
+</li>
+        <li><a href="stdlib/bio/vcf.html#module-bio.vcf">bio.vcf</a>
+</li>
+        <li><a href="stdlib/internal/index.html#module-internal">internal</a>
+</li>
+        <li><a href="stdlib/internal/__init_test__.html#module-internal.__init_test__">internal.__init_test__</a>
+</li>
+        <li><a href="stdlib/internal/attributes.html#module-internal.attributes">internal.attributes</a>
+</li>
+        <li><a href="stdlib/internal/box.html#module-internal.box">internal.box</a>
+</li>
+        <li><a href="stdlib/internal/builtin.html#module-internal.builtin">internal.builtin</a>
+</li>
+        <li><a href="stdlib/internal/c_stubs.html#module-internal.c_stubs">internal.c_stubs</a>
+</li>
+        <li><a href="stdlib/internal/dlopen.html#module-internal.dlopen">internal.dlopen</a>
+</li>
+        <li><a href="stdlib/internal/file.html#module-internal.file">internal.file</a>
+</li>
+        <li><a href="stdlib/internal/gc.html#module-internal.gc">internal.gc</a>
+</li>
+        <li><a href="stdlib/internal/internal.html#module-internal.internal">internal.internal</a>
+</li>
+        <li><a href="stdlib/internal/khash.html#module-internal.khash">internal.khash</a>
+</li>
+        <li><a href="stdlib/internal/python.html#module-internal.python">internal.python</a>
+</li>
+        <li><a href="stdlib/internal/sort.html#module-internal.sort">internal.sort</a>
+</li>
+        <li><a href="stdlib/internal/str.html#module-internal.str">internal.str</a>
+</li>
+        <li><a href="stdlib/internal/types/index.html#module-internal.types">internal.types</a>
+</li>
+        <li><a href="stdlib/internal/types/array.html#module-internal.types.array">internal.types.array</a>
+</li>
+        <li><a href="stdlib/internal/types/bool.html#module-internal.types.bool">internal.types.bool</a>
+</li>
+        <li><a href="stdlib/internal/types/byte.html#module-internal.types.byte">internal.types.byte</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/index.html#module-internal.types.collections">internal.types.collections</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/dict.html#module-internal.types.collections.dict">internal.types.collections.dict</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/list.html#module-internal.types.collections.list">internal.types.collections.list</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/set.html#module-internal.types.collections.set">internal.types.collections.set</a>
+</li>
+        <li><a href="stdlib/internal/types/error.html#module-internal.types.error">internal.types.error</a>
+</li>
+        <li><a href="stdlib/internal/types/float.html#module-internal.types.float">internal.types.float</a>
+</li>
+        <li><a href="stdlib/internal/types/generator.html#module-internal.types.generator">internal.types.generator</a>
+</li>
+        <li><a href="stdlib/internal/types/int.html#module-internal.types.int">internal.types.int</a>
+</li>
+        <li><a href="stdlib/internal/types/intn.html#module-internal.types.intn">internal.types.intn</a>
+</li>
+        <li><a href="stdlib/internal/types/optional.html#module-internal.types.optional">internal.types.optional</a>
+</li>
+        <li><a href="stdlib/internal/types/ptr.html#module-internal.types.ptr">internal.types.ptr</a>
+</li>
+        <li><a href="stdlib/internal/types/range.html#module-internal.types.range">internal.types.range</a>
+</li>
+        <li><a href="stdlib/internal/types/slice.html#module-internal.types.slice">internal.types.slice</a>
+</li>
+        <li><a href="stdlib/internal/types/str.html#module-internal.types.str">internal.types.str</a>
+</li>
+        <li><a href="stdlib/os/index.html#module-os">os</a>
+</li>
+        <li><a href="stdlib/os/path.html#module-os.path">os.path</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/collections.html#collections.Counter.most_common">most_common() (..collections.Counter method)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.mul">mul() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.multimode">multimode() (in module ..statistics)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/random.html#random.N">N (in module ..random)</a>
+</li>
+      <li><a href="stdlib/bio/seq.html#bio.seq.seq.N">N() (bio.seq.seq method)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecord.n_info">n_info (bio.vcf.VCFRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.name">name (bio.bam.SAMRecord attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fai.html#bio.fai.FAIRecord.name">(bio.fai.FAIRecord attribute)</a>
+</li>
+        <li><a href="stdlib/bio/fasta.html#bio.fasta.FASTARecord.name">(bio.fasta.FASTARecord attribute)</a>
+</li>
+        <li><a href="stdlib/bio/fasta.html#bio.fasta.pFASTARecord.name">(bio.fasta.pFASTARecord attribute)</a>
+</li>
+        <li><a href="stdlib/bio/fastq.html#bio.fastq.FASTQRecord.name">(bio.fastq.FASTQRecord attribute)</a>
+</li>
+        <li><a href="stdlib/bio/locus.html#bio.locus.Contig.name">(bio.locus.Contig attribute)</a>
+</li>
+        <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFMetadata.name">(bio.vcf.BCFMetadata attribute)</a>
+</li>
+        <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordSample.name">(bio.vcf.VCFRecordSample attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.BWA.name">name() (bio.bwa.BWA method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bwa.html#bio.bwa.bwaidx_t.name">(bio.bwa.bwaidx_t method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/collections.html#collections.namedtuple">namedtuple() (in module ..collections)</a>
+</li>
+      <li><a href="stdlib/math.html#math.nan">nan (in module ..math)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.ne">ne (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/types/float.html#internal.types.float.float.nearbyint">nearbyint() (internal.types.float.float method)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.neg">neg() (in module ..operator)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/internal/__init_test__.html#internal.__init_test__.next">next() (in module internal.__init_test__)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/builtin.html#internal.builtin.next">(in module internal.builtin)</a>
+</li>
+        <li><a href="stdlib/internal/types/generator.html#internal.types.generator.Generator.next">(internal.types.generator.Generator method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/algorithms/pdqsort.html#algorithms.pdqsort.NINTHER_THRESHOLD">NINTHER_THRESHOLD (in module algorithms.pdqsort)</a>
+</li>
+      <li><a href="stdlib/heapq.html#heapq.nlargest">nlargest() (in module ..heapq)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_aln_t.NM">NM (bio.bwa.mem_aln_t attribute)</a>
+</li>
+      <li><a href="stdlib/internal/attributes.html#internal.attributes.noinline">noinline() (in module internal.attributes)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.none">none() (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/attributes.html#internal.attributes.nonpure">nonpure() (in module internal.attributes)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist">NormalDist (class in ..statistics)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.normalvariate">normalvariate() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.normalvariate">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/operator.html#operator.not_">not_() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.NotImplementedError">NotImplementedError</a>
+</li>
+      <li><a href="stdlib/heapq.html#heapq.nsmallest">nsmallest() (in module ..heapq)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.num_cols">num_cols (bio.bed.BEDRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/fai.html#bio.fai.FAIReader.num_necessary_cols">num_necessary_cols (bio.fai.FAIReader attribute)</a>
+</li>
+      <li><a href="stdlib/random.html#random.NV_MAGICCONST">NV_MAGICCONST (in module ..random)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.object">object (class in internal.builtin)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.occ">occ() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.occ">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.OCC_INTERVAL">OCC_INTERVAL (in module bio.fmindex)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.OCC_INTV_MASK">OCC_INTV_MASK (in module bio.fmindex)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.OCC_INTV_SHIFT">OCC_INTV_SHIFT (in module bio.fmindex)</a>
+</li>
+      <li><a href="stdlib/string.html#string.octdigits">octdigits (in module ..string)</a>
+</li>
+      <li><a href="stdlib/bio/fai.html#bio.fai.FAIRecord.offset">offset (bio.fai.FAIRecord attribute)</a>
+</li>
+      <li><a href="stdlib/gzip.html#gzip.open">open() (in module ..gzip)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/file.html#internal.file.open">(in module internal.file)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/optional.html#internal.types.optional.optional">optional (in module internal.types.optional)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.options">options() (in module bio.bwa)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.or_">or_() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.ord">ord() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.ordered">ordered() (in module ..openmp)</a>
+</li>
+      <li>
+    os
+
+      <ul>
+        <li><a href="stdlib/os/index.html#module-os">module</a>
+</li>
+      </ul></li>
+      <li>
+    os.path
+
+      <ul>
+        <li><a href="stdlib/os/path.html#module-os.path">module</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.OSError">OSError</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist.overlap">overlap() (..statistics.NormalDist method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/intervals.html#bio.intervals.IntervalTree.overlap">(bio.intervals.IntervalTree method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.paired">paired (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.paretovariate">paretovariate() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.paretovariate">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/functools.html#functools.partial">partial() (in module ..functools)</a>
+</li>
+      <li><a href="stdlib/algorithms/pdqsort.html#algorithms.pdqsort.PARTIAL_INSERTION_SORT_LIMIT">PARTIAL_INSERTION_SORT_LIMIT (in module algorithms.pdqsort)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.partition">partition() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist.pdf">pdf() (..statistics.NormalDist method)</a>
+</li>
+      <li><a href="stdlib/algorithms/pdqsort.html#algorithms.pdqsort.pdq_sort">pdq_sort() (in module algorithms.pdqsort)</a>
+</li>
+      <li><a href="stdlib/algorithms/pdqsort.html#algorithms.pdqsort.pdq_sort_array">pdq_sort_array() (in module algorithms.pdqsort)</a>
+</li>
+      <li><a href="stdlib/algorithms/pdqsort.html#algorithms.pdqsort.pdq_sort_inplace">pdq_sort_inplace() (in module algorithms.pdqsort)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.permutations">permutations() (in module ..itertools)</a>
+</li>
+      <li><a href="stdlib/bio/fasta.html#bio.fasta.pFASTA">pFASTA() (in module bio.fasta)</a>
+</li>
+      <li><a href="stdlib/bio/fasta.html#bio.fasta.pFASTAReader">pFASTAReader (class in bio.fasta)</a>
+</li>
+      <li><a href="stdlib/bio/fasta.html#bio.fasta.pFASTARecord">pFASTARecord (class in bio.fasta)</a>
+</li>
+      <li><a href="stdlib/math.html#math.pi">pi (in module ..math)</a>
+</li>
+      <li><a href="stdlib/pickle.html#pickle.pickle">pickle() (in module ..pickle)</a>
+</li>
+      <li><a href="stdlib/collections.html#collections.deque.pop">pop() (..collections.deque method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.pop">(internal.types.collections.dict.Dict method)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/list.html#internal.types.collections.list.List.pop">(internal.types.collections.list.List method)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.pop">(internal.types.collections.set.Set method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/int.html#internal.types.int.int.popcnt">popcnt() (internal.types.int.int method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/types/intn.html#internal.types.intn.Int.popcnt">(internal.types.intn.Int method)</a>
+</li>
+        <li><a href="stdlib/internal/types/intn.html#internal.types.intn.UInt.popcnt">(internal.types.intn.UInt method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.popitem">popitem() (internal.types.collections.dict.Dict method)</a>
+</li>
+      <li><a href="stdlib/collections.html#collections.deque.popleft">popleft() (..collections.deque method)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.pos">pos (bio.bam.SAMRecord attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_aln_t.pos">(bio.bwa.mem_aln_t attribute)</a>
+</li>
+        <li><a href="stdlib/bio/locus.html#bio.locus.Locus.pos">(bio.locus.Locus attribute)</a>
+</li>
+        <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecord.pos">(bio.vcf.VCFRecord attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/operator.html#operator.pos">pos() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.bntseq.pos2rid">pos2rid() (bio.fmindex.bntseq method)</a>
+</li>
+      <li><a href="stdlib/math.html#math.pow">pow() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/operator.html#operator.pow">(in module ..operator)</a>
+</li>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.pow">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/types.html#bio.types.Dict.prefetch">prefetch() (bio.types.Dict method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/types.html#bio.types.List.prefetch">(bio.types.List method)</a>
+</li>
+        <li><a href="stdlib/bio/builtin.html#bio.builtin.prefetch">(in module bio.builtin)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.print">print() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/string.html#string.printable">printable (in module ..string)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.product">product (class in ..itertools)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.proper_pair">proper_pair (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/pseq.html#bio.pseq.pseq">pseq (class in bio.pseq)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/statistics.html#statistics.pstdev">pstdev() (in module ..statistics)</a>
+</li>
+      <li><a href="stdlib/internal/types/ptr.html#internal.types.ptr.ptr">ptr (in module internal.types.ptr)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.ptr_off">ptr_off() (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/string.html#string.punctuation">punctuation (in module ..string)</a>
+</li>
+      <li><a href="stdlib/internal/attributes.html#internal.attributes.pure">pure() (in module internal.attributes)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.pvariance">pvariance() (in module ..statistics)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.py">py() (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.Py_DecRef">Py_DecRef (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.Py_IncRef">Py_IncRef (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.Py_Initialize">Py_Initialize (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyBool_FromLong">PyBool_FromLong (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyBytes_AsString">PyBytes_AsString (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyDict_New">PyDict_New (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyDict_Next">PyDict_Next (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyDict_SetItem">PyDict_SetItem (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyErr_Fetch">PyErr_Fetch (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.PyError">PyError</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyFloat_AsDouble">PyFloat_AsDouble (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyFloat_FromDouble">PyFloat_FromDouble (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyImport_ImportModule">PyImport_ImportModule (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyIter_Next">PyIter_Next (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyList_GetItem">PyList_GetItem (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyList_New">PyList_New (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyList_SetItem">PyList_SetItem (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyLong_AsLong">PyLong_AsLong (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyLong_FromLong">PyLong_FromLong (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyObject_Call">PyObject_Call (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyObject_GetAttr">PyObject_GetAttr (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyObject_GetAttrString">PyObject_GetAttrString (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyObject_GetIter">PyObject_GetIter (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyObject_IsTrue">PyObject_IsTrue (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyObject_Length">PyObject_Length (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyObject_SetAttrString">PyObject_SetAttrString (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyObject_Str">PyObject_Str (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyRun_SimpleString">PyRun_SimpleString (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PySet_Add">PySet_Add (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PySet_New">PySet_New (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyTuple_GetItem">PyTuple_GetItem (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyTuple_New">PyTuple_New (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyTuple_SetItem">PyTuple_SetItem (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyUnicode_AsEncodedString">PyUnicode_AsEncodedString (in module internal.python)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.PyUnicode_DecodeFSDefaultAndSize">PyUnicode_DecodeFSDefaultAndSize (in module internal.python)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Q">Q</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.qb">qb (bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.qc_fail">qc_fail (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.qe">qe (bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.CIGAR.qlen">qlen (bio.align.CIGAR attribute)</a>
+</li>
+      <li><a href="stdlib/algorithms/qsort.html#algorithms.qsort.qsort">qsort() (in module algorithms.qsort)</a>
+</li>
+      <li><a href="stdlib/algorithms/qsort.html#algorithms.qsort.qsort_array">qsort_array() (in module algorithms.qsort)</a>
+</li>
+      <li><a href="stdlib/algorithms/qsort.html#algorithms.qsort.qsort_inplace">qsort_inplace() (in module algorithms.qsort)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.qual">qual (bio.bam.SAMRecord attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fastq.html#bio.fastq.FASTQRecord.qual">(bio.fastq.FASTQRecord attribute)</a>
+</li>
+        <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecord.qual">(bio.vcf.VCFRecord attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/fai.html#bio.fai.FAIRecord.qual_offset">qual_offset (bio.fai.FAIRecord attribute)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist.quantiles">quantiles() (..statistics.NormalDist method)</a>
+
+      <ul>
+        <li><a href="stdlib/statistics.html#statistics.quantiles">(in module ..statistics)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.query_name">query_name (bio.bam.SAMRecord attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/math.html#math.radians">radians() (in module ..math)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.randint">randint() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.randint">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/random.html#random.Random">Random (class in ..random)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.random">random() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.random">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/random.html#random.RandomGenerator.random_seed_time_pid">random_seed_time_pid() (..random.RandomGenerator method)</a>
+</li>
+      <li><a href="stdlib/random.html#random.RandomGenerator">RandomGenerator (class in ..random)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.randrange">randrange() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.randrange">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/range.html#internal.types.range.range">range (class in internal.types.range)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.rb">rb (bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.re">re (bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.read">read (bio.bam.SAMRecord attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fastq.html#bio.fastq.FASTQRecord.read">(bio.fastq.FASTQRecord attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/file.html#internal.file.File.read">read() (internal.file.File method)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.read1">read1 (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.read2">read2 (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/internal/file.html#internal.file.File.readlines">readlines() (internal.file.File method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/file.html#internal.file.gzFile.readlines">(internal.file.gzFile method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.realloc">realloc() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFMetadata.record">record (bio.vcf.BCFMetadata attribute)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecord.ref">ref (bio.vcf.VCFRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.BWA.reg2aln">reg2aln() (bio.bwa.BWA method)</a>
+</li>
+      <li><a href="stdlib/threading.html#threading.Lock.release">release() (..threading.Lock method)</a>
+
+      <ul>
+        <li><a href="stdlib/threading.html#threading.RLock.release">(..threading.RLock method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.remainder">remainder() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.remainder">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/collections/list.html#internal.types.collections.list.List.remove">remove() (internal.types.collections.list.List method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.remove">(internal.types.collections.set.Set method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.remove_roots">remove_roots() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.repeat">repeat() (in module ..itertools)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.replace">replace() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/algorithms/strings.html#algorithms.strings.replace_delete_substring">replace_delete_substring() (in module algorithms.strings)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/algorithms/strings.html#algorithms.strings.replace_interleave">replace_interleave() (in module algorithms.strings)</a>
+</li>
+      <li><a href="stdlib/time.html#time.TimeInterval.report">report() (..time.TimeInterval method)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.repr">repr() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.resize">resize() (internal.types.collections.dict.Dict method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.resize">(internal.types.collections.set.Set method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.results">results() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.results">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_aln_t.rev">rev (bio.bwa.mem_aln_t attribute)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDInterval.revcomp">revcomp() (bio.fmindex.FMDInterval method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/builtin.html#bio.builtin.revcomp">(in module bio.builtin)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/builtin.html#bio.builtin.revcomp_with_pos">revcomp_with_pos() (in module bio.builtin)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/list.html#internal.types.collections.list.List.reverse">reverse() (internal.types.collections.list.List method)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.reversed">reversed (bio.bam.SAMRecord attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/locus.html#bio.locus.Locus.reversed">(bio.locus.Locus attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.reversed">reversed() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/algorithms/strings.html#algorithms.strings.rfilter_overlaps">rfilter_overlaps() (in module algorithms.strings)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.rfind">rfind() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_aln_t.rid">rid (bio.bwa.mem_aln_t attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.rid">(bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.rindex">rindex() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/types/float.html#internal.types.float.float.rint">rint() (internal.types.float.float method)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.rjust">rjust() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.CIGAR.rlen">rlen (bio.align.CIGAR attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecord.rlen">(bio.vcf.VCFRecord attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/threading.html#threading.RLock">RLock (class in ..threading)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.round">round() (in module internal.builtin)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.round">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/openmp.html#openmp.Routine">Routine (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.rpartition">rpartition() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.rshift">rshift() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.rsplit">rsplit() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/algorithms/strings.html#algorithms.strings.rstring_search_slow">rstring_search_slow() (in module algorithms.strings)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.rstrip">rstrip() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/dlopen.html#internal.dlopen.RTLD_GLOBAL">RTLD_GLOBAL (in module internal.dlopen)</a>
+</li>
+      <li><a href="stdlib/internal/dlopen.html#internal.dlopen.RTLD_NOW">RTLD_NOW (in module internal.dlopen)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAM">SAM() (in module bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.sam_hdr_destroy">sam_hdr_destroy() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.sam_hdr_read">sam_hdr_read() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.sam_index_load">sam_index_load() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.sam_itr_next">sam_itr_next() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.sam_itr_querys">sam_itr_querys() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.sam_read1">sam_read1() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMAux">SAMAux (class in bio.bam)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.sample">sample() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.sample">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeader.samples">samples (bio.vcf.BCFHeader attribute)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist.samples">samples() (..statistics.NormalDist method)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMReader">SAMReader (class in bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord">SAMRecord (class in bio.bam)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.Alignment.score">score (bio.align.Alignment attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.score">(bio.bed.BEDRecord attribute)</a>
+</li>
+        <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_aln_t.score">(bio.bwa.mem_aln_t attribute)</a>
+</li>
+        <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.score">(bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.secondary">secondary (bio.bam.SAMRecord attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.secondary">(bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.secondary_all">secondary_all (bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.seed">seed() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.RandomGenerator.seed">(..random.RandomGenerator method)</a>
+</li>
+        <li><a href="stdlib/random.html#random.seed">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.seedcov">seedcov (bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.BAMReader.seek">seek() (bio.bam.BAMReader method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/file.html#internal.file.File.seek">(internal.file.File method)</a>
+</li>
+        <li><a href="stdlib/internal/file.html#internal.file.gzFile.seek">(internal.file.gzFile method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/generator.html#internal.types.generator.Generator.send">send() (internal.types.generator.Generator method)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.seq">seq (bio.bam.SAMRecord attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fasta.html#bio.fasta.FASTARecord.seq">(bio.fasta.FASTARecord attribute)</a>
+</li>
+        <li><a href="stdlib/bio/fasta.html#bio.fasta.pFASTARecord.seq">(bio.fasta.pFASTARecord attribute)</a>
+</li>
+        <li><a href="stdlib/bio/fastq.html#bio.fastq.FASTQRecord.seq">(bio.fastq.FASTQRecord attribute)</a>
+</li>
+        <li><a href="stdlib/bio/seq.html#bio.seq.seq">(class in bio.seq)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/align.html#bio.align.seq_align">seq_align() (in module bio.align)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.seq_align_default">seq_align_default() (in module bio.align)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.seq_align_dual">seq_align_dual() (in module bio.align)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.seq_align_global">seq_align_global() (in module bio.align)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.seq_align_splice">seq_align_splice() (in module bio.align)</a>
+</li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.seq_alloc">seq_alloc() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.seq_alloc_atomic">seq_alloc_atomic() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/internal/internal.html#internal.internal.seq_check_errno">seq_check_errno() (in module internal.internal)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_env">seq_env() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.seq_free">seq_free() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.seq_gc_add_roots">seq_gc_add_roots() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.seq_gc_clear_roots">seq_gc_clear_roots() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.seq_gc_exclude_static_roots">seq_gc_exclude_static_roots() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.seq_gc_remove_roots">seq_gc_remove_roots() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.seq_get_htsfile_fp">seq_get_htsfile_fp() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_i32_to_float">seq_i32_to_float() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.seq_is_htsfile_bgzf">seq_is_htsfile_bgzf() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/bio/c_htslib.html#bio.c_htslib.seq_is_htsfile_cram">seq_is_htsfile_cram() (in module bio.c_htslib)</a>
+</li>
+      <li><a href="stdlib/internal/dlopen.html#internal.dlopen.seq_is_macos">seq_is_macos() (in module internal.dlopen)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_lock_acquire">seq_lock_acquire() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_lock_new">seq_lock_new() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_lock_release">seq_lock_release() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.seq_palign">seq_palign() (in module bio.align)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.seq_palign_default">seq_palign_default() (in module bio.align)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.seq_palign_dual">seq_palign_dual() (in module bio.align)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.seq_palign_global">seq_palign_global() (in module bio.align)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_pid">seq_pid() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_print">seq_print() (in module internal.c_stubs)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/internal.html#internal.internal.seq_print">(in module internal.internal)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/__init_test__.html#internal.__init_test__.seq_print_full">seq_print_full() (in module internal.__init_test__)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_print_full">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.seq_realloc">seq_realloc() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_rlock_acquire">seq_rlock_acquire() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_rlock_new">seq_rlock_new() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_rlock_release">seq_rlock_release() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_stderr">seq_stderr() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_stdin">seq_stdin() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_stdout">seq_stdout() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/types/byte.html#internal.types.byte.seq_str_byte">seq_str_byte() (in module internal.types.byte)</a>
+</li>
+      <li><a href="stdlib/internal/types/float.html#internal.types.float.seq_str_float">seq_str_float() (in module internal.types.float)</a>
+</li>
+      <li><a href="stdlib/internal/types/int.html#internal.types.int.seq_str_int">seq_str_int() (in module internal.types.int)</a>
+</li>
+      <li><a href="stdlib/internal/types/ptr.html#internal.types.ptr.seq_str_ptr">seq_str_ptr() (in module internal.types.ptr)</a>
+</li>
+      <li><a href="stdlib/internal/types/int.html#internal.types.int.seq_str_uint">seq_str_uint() (in module internal.types.int)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_strdup">seq_strdup() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_time">seq_time() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.seq_time_monotonic">seq_time_monotonic() (in module internal.c_stubs)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/align.html#bio.align.SeqPair">SeqPair (class in bio.align)</a>
+</li>
+      <li><a href="stdlib/bio/iter.html#bio.iter.SeqReader">SeqReader (class in bio.iter)</a>
+</li>
+      <li><a href="stdlib/bio/builtin.html#bio.builtin.seqs">seqs() (in module bio.builtin)</a>
+</li>
+      <li><a href="stdlib/bio/iter.html#bio.iter.Seqs">Seqs() (in module bio.iter)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.sequence">sequence() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.sequence">(bio.fmindex.FMIndex method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/__init_test__.html#internal.__init_test__.Set">Set (class in internal.__init_test__)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set">(class in internal.types.collections.set)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.set">set (in module internal.types.collections.set)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.set_default_device">set_default_device() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.set_dynamic">set_dynamic() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.set_max_active_levels">set_max_active_levels() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.set_num_threads">set_num_threads() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.set_schedule">set_schedule() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.setdefault">setdefault() (internal.types.collections.dict.Dict method)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.setitem">setitem() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/random.html#random.SG_MAGICCONST">SG_MAGICCONST (in module ..random)</a>
+</li>
+      <li><a href="stdlib/getopt.html#getopt.short_has_arg">short_has_arg() (in module ..getopt)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.shuffle">shuffle() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.shuffle">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.sin">sin() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.sin">(in module internal.c_stubs)</a>
+</li>
+        <li><a href="stdlib/internal/types/float.html#internal.types.float.float.sin">(internal.types.float.float method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/openmp.html#openmp.single">single() (in module ..openmp)</a>
+</li>
+      <li><a href="stdlib/math.html#math.sinh">sinh() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.sinh">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/gc.html#internal.gc.sizeof">sizeof() (in module internal.gc)</a>
+</li>
+      <li><a href="stdlib/internal/types/slice.html#internal.types.slice.Slice">Slice (class in internal.types.slice)</a>
+</li>
+      <li><a href="stdlib/internal/types/slice.html#internal.types.slice.slice">slice (in module internal.types.slice)</a>
+</li>
+      <li><a href="stdlib/internal/types/array.html#internal.types.array.Array.slice">slice() (internal.types.array.Array method)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.SMEM">SMEM (class in bio.fmindex)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.smems">smems() (bio.fmindex.FMDIndex method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.smems">(bio.fmindex.FMIndex method)</a>
+</li>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.smems">(in module bio.fmindex)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/sort.html#internal.sort.List.sort">sort() (internal.sort.List method)</a>
+</li>
+      <li><a href="stdlib/internal/sort.html#internal.sort.sorted">sorted() (in module internal.sort)</a>
+</li>
+      <li><a href="stdlib/sortedlist.html#sortedlist.SortedList">SortedList (class in ..sortedlist)</a>
+</li>
+      <li><a href="stdlib/bio/pseq.html#bio.pseq.pseq.split">split() (bio.pseq.pseq method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/seq.html#bio.seq.seq.split">(bio.seq.seq method)</a>
+</li>
+        <li><a href="stdlib/bio/builtin.html#bio.builtin.split">(in module bio.builtin)</a>
+</li>
+        <li><a href="stdlib/internal/str.html#internal.str.str.split">(internal.str.str method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/os/path.html#os.path.splitext">splitext() (in module os.path)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.splitlines">splitlines() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/math.html#math.sqrt">sqrt() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.sqrt">(in module internal.c_stubs)</a>
+</li>
+        <li><a href="stdlib/internal/types/float.html#internal.types.float.float.sqrt">(internal.types.float.float method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/itertools.html#itertools.starmap">starmap() (in module ..itertools)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.SMEM.start">start (bio.fmindex.SMEM attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/intervals.html#bio.intervals.Interval.start">(bio.intervals.Interval attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.startswith">startswith() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.StatisticsError">StatisticsError</a>
+</li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.SystemExit.status">status (internal.types.error.SystemExit attribute)</a>
+</li>
+      <li><a href="stdlib/sys.html#sys.stderr">stderr (in module ..sys)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist.stdev">stdev (..statistics.NormalDist attribute)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.stdev">stdev() (in module ..statistics)</a>
+</li>
+      <li><a href="stdlib/sys.html#sys.stdin">stdin (in module ..sys)</a>
+</li>
+      <li><a href="stdlib/sys.html#sys.stdout">stdout (in module ..sys)</a>
+</li>
+      <li><a href="stdlib/bio/fmindex.html#bio.fmindex.SMEM.stop">stop (bio.fmindex.SMEM attribute)</a>
+</li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.StopIteration">StopIteration (class in internal.types.error)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.strand">strand (bio.bed.BEDRecord attribute)</a>
+</li>
+      <li><a href="stdlib/algorithms/strings.html#algorithms.strings.string_search_KMP">string_search_KMP() (in module algorithms.strings)</a>
+</li>
+      <li><a href="stdlib/algorithms/strings.html#algorithms.strings.string_search_rabin_karp">string_search_rabin_karp() (in module algorithms.strings)</a>
+</li>
+      <li><a href="stdlib/algorithms/strings.html#algorithms.strings.string_search_slow">string_search_slow() (in module algorithms.strings)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.strip">strip() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/types/str.html#internal.types.str.strlen">strlen() (in module internal.types.str)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_aln_t.sub">sub (bio.bwa.mem_aln_t attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.sub">(bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/operator.html#operator.sub">sub() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.sub_n">sub_n (bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      <li><a href="stdlib/bio/align.html#bio.align.SubMat">SubMat (class in bio.align)</a>
+</li>
+      <li><a href="stdlib/collections.html#collections.Counter.subtract">subtract() (..collections.Counter method)</a>, <a href="stdlib/collections.html#id0">[1]</a>, <a href="stdlib/collections.html#id1">[2]</a>
+</li>
+      <li><a href="stdlib/bio/bwt.html#bio.bwt.pseq.suffix_array">suffix_array() (bio.bwt.pseq method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/bwt.html#bio.bwt.seq.suffix_array">(bio.bwt.seq method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.sum">sum() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.supplementary">supplementary (bio.bam.SAMRecord attribute)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.swapcase">swapcase() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.symmetric_difference">symmetric_difference() (internal.types.collections.set.Set method)</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.symmetric_difference_update">symmetric_difference_update() (internal.types.collections.set.Set method)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.system">system() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.SystemExit">SystemExit (class in internal.types.error)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMAux.tag_type">tag_type (bio.bam.SAMAux attribute)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.takewhile">takewhile() (in module ..itertools)</a>
+</li>
+      <li><a href="stdlib/math.html#math.tan">tan() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.tan">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/math.html#math.tanh">tanh() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.tanh">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/openmp.html#openmp.Task">Task (class in ..openmp)</a>
+</li>
+      <li><a href="stdlib/openmp.html#openmp.TaskWithPrivates">TaskWithPrivates (class in ..openmp)</a>
+</li>
+      <li><a href="stdlib/math.html#math.tau">tau (in module ..math)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.tee">tee() (in module ..itertools)</a>
+</li>
+      <li><a href="stdlib/internal/file.html#internal.file.File.tell">tell() (internal.file.File method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/file.html#internal.file.gzFile.tell">(internal.file.gzFile method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/attributes.html#internal.attributes.test">test() (in module internal.attributes)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.tgamma">tgamma() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.thick_end">thick_end (bio.bed.BEDRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/bed.html#bio.bed.BEDRecord.thick_start">thick_start (bio.bed.BEDRecord attribute)</a>
+</li>
+      <li><a href="stdlib/time.html#time.TimeInterval.tick">tick() (..time.TimeInterval method)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.tid">tid (bio.bam.SAMRecord attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/locus.html#bio.locus.Contig.tid">(bio.locus.Contig attribute)</a>
+</li>
+        <li><a href="stdlib/bio/locus.html#bio.locus.Locus.tid">(bio.locus.Locus attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/algorithms/timsort.html#algorithms.timsort.tim_sort">tim_sort() (in module algorithms.timsort)</a>
+</li>
+      <li><a href="stdlib/algorithms/timsort.html#algorithms.timsort.tim_sort_array">tim_sort_array() (in module algorithms.timsort)</a>
+</li>
+      <li><a href="stdlib/algorithms/timsort.html#algorithms.timsort.tim_sort_inplace">tim_sort_inplace() (in module algorithms.timsort)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/time.html#time.time">time() (in module ..time)</a>
+</li>
+      <li><a href="stdlib/time.html#time.TimeInterval">TimeInterval (class in ..time)</a>
+</li>
+      <li><a href="stdlib/time.html#time.timing">timing() (in module ..time)</a>
+</li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.title">title() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/python.html#internal.python.pyobj.to_str">to_str() (internal.python.pyobj method)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.tolower">tolower() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/collections.html#collections.Counter.total">total() (..collections.Counter method)</a>
+</li>
+      <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.toupper">toupper() (in module internal.c_stubs)</a>
+</li>
+      <li><a href="stdlib/bio/pseq.html#bio.pseq.seq.translate">translate() (bio.pseq.seq method)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/pseq.html#bio.pseq.translate">(in module bio.pseq)</a>
+</li>
+        <li><a href="stdlib/internal/str.html#internal.str.str.translate">(internal.str.str method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/random.html#random.Random.triangular">triangular() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.triangular">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.true_score">true_score (bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      <li><a href="stdlib/operator.html#operator.truediv">truediv() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/math.html#math.trunc">trunc() (in module ..math)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/c_stubs.html#internal.c_stubs.trunc">(in module internal.c_stubs)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/operator.html#operator.truth">truth() (in module ..operator)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.try_unpack">try_unpack() (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/random.html#random.TWOPI">TWOPI (in module ..random)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFAux.type_code">type_code (bio.vcf.BCFAux attribute)</a>
+
+      <ul>
+        <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderMetaData.type_code">(bio.vcf.BCFHeaderMetaData attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.TypeError">TypeError</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/internal/types/intn.html#internal.types.intn.u16">u16 (in module internal.types.intn)</a>
+</li>
+      <li><a href="stdlib/internal/types/intn.html#internal.types.intn.u32">u32 (in module internal.types.intn)</a>
+</li>
+      <li><a href="stdlib/internal/types/intn.html#internal.types.intn.u64">u64 (in module internal.types.intn)</a>
+</li>
+      <li><a href="stdlib/internal/types/intn.html#internal.types.intn.u8">u8 (in module internal.types.intn)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.uniform">uniform() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.uniform">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.union">union() (internal.types.collections.set.Set method)</a>
+</li>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMRecord.unmapped">unmapped (bio.bam.SAMRecord attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/pickle.html#pickle.unpickle">unpickle() (in module ..pickle)</a>
+</li>
+      <li><a href="stdlib/internal/types/optional.html#internal.types.optional.unwrap">unwrap() (in module internal.types.optional)</a>
+</li>
+      <li><a href="stdlib/collections.html#collections.Counter.update">update() (..collections.Counter method)</a>, <a href="stdlib/collections.html#id2">[1]</a>, <a href="stdlib/collections.html#id3">[2]</a>, <a href="stdlib/collections.html#id4">[3]</a>
+
+      <ul>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMDIndex.update">(bio.fmindex.FMDIndex method)</a>
+</li>
+        <li><a href="stdlib/bio/fmindex.html#bio.fmindex.FMIndex.update">(bio.fmindex.FMIndex method)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.update">(internal.types.collections.dict.Dict method)</a>
+</li>
+        <li><a href="stdlib/internal/types/collections/set.html#internal.types.collections.set.Set.update">(internal.types.collections.set.Set method)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/internal/str.html#internal.str.str.upper">upper() (internal.str.str method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFAux.val">val (bio.vcf.BCFAux attribute)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.BCFHeaderRecord.value">value (bio.vcf.BCFHeaderRecord attribute)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VALUE_TYPES">VALUE_TYPES (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.ValueError">ValueError</a>
+</li>
+      <li><a href="stdlib/internal/types/collections/dict.html#internal.types.collections.dict.Dict.values">values() (internal.types.collections.dict.Dict method)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.NormalDist.variance">variance (..statistics.NormalDist attribute)</a>
+</li>
+      <li><a href="stdlib/statistics.html#statistics.variance">variance() (in module ..statistics)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCF">VCF() (in module bio.vcf)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFReader">VCFReader (in module bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecord">VCFRecord (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordFilter">VCFRecordFilter (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordFormat">VCFRecordFormat (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordInfo">VCFRecordInfo (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordSample">VCFRecordSample (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/bio/vcf.html#bio.vcf.VCFRecordSamples">VCFRecordSamples (class in bio.vcf)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.vonmisesvariate">vonmisesvariate() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.vonmisesvariate">(in module ..random)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bwa.html#bio.bwa.mem_alnreg_t.w">w (bio.bwa.mem_alnreg_t attribute)</a>
+</li>
+      <li><a href="stdlib/random.html#random.Random.weibullvariate">weibullvariate() (..random.Random method)</a>
+
+      <ul>
+        <li><a href="stdlib/random.html#random.weibullvariate">(in module ..random)</a>
+</li>
+      </ul></li>
+      <li><a href="stdlib/string.html#string.whitespace">whitespace (in module ..string)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/intervals.html#bio.intervals.Interval.with_max">with_max() (bio.intervals.Interval method)</a>
+</li>
+      <li><a href="stdlib/bio/fasta.html#bio.fasta.FASTAReader.write">write() (bio.fasta.FASTAReader method)</a>
+
+      <ul>
+        <li><a href="stdlib/internal/file.html#internal.file.File.write">(internal.file.File method)</a>
+</li>
+        <li><a href="stdlib/internal/file.html#internal.file.gzFile.write">(internal.file.gzFile method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="X">X</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/operator.html#operator.xor">xor() (in module ..operator)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Z">Z</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/bio/bam.html#bio.bam.SAMAux.Z">Z (bio.bam.SAMAux attribute)</a>
+</li>
+      <li><a href="stdlib/internal/types/error.html#internal.types.error.ZeroDivisionError">ZeroDivisionError</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="stdlib/internal/str.html#internal.str.str.zfill">zfill() (internal.str.str method)</a>
+</li>
+      <li><a href="stdlib/internal/builtin.html#internal.builtin.zip">zip() (in module internal.builtin)</a>
+</li>
+      <li><a href="stdlib/itertools.html#itertools.zip_longest">zip_longest (class in ..itertools)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+
+
+              </div>
+              
+        
+            
+
+
+
+<div class='prev-next-bottom'>
+    
+
+</div>
+        
+        </div>
+    </div>
+    <footer class="footer">
+    <div class="container">
+      <p>
+        
+          By seq-lang<br/>
+        
+            &copy; Copyright 2019-2021, seq-lang.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

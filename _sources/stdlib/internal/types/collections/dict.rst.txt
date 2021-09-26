@@ -1,0 +1,92 @@
+.. seq:module:: internal.types.collections.dict
+
+:seq:mod:`internal.types.collections.dict`
+------------------------------------------
+
+Source code: `internal/types/collections/dict.seq <https://github.com/seq-lang/seq/blob/master/stdlib/internal/types/collections/dict.seq>`_
+
+.. seq:class:: Dict[K,V]
+
+   **Magic methods:**
+
+      .. seq:method:: __init__()
+         :noindex:
+
+      .. seq:method:: __init__(g : Generator[Tuple[K, V]])
+         :noindex:
+
+      .. seq:method:: __init__(other : Dict[K, V])
+         :noindex:
+
+      .. seq:method:: __getitem__(key : K)
+         :noindex:
+
+      .. seq:method:: __setitem__(key : K, val : V)
+         :noindex:
+
+      .. seq:method:: __delitem__(key : K)
+         :noindex:
+
+      .. seq:method:: __contains__(key : K)
+         :noindex:
+
+      .. seq:method:: __eq__(other : Dict[K, V])
+         :noindex:
+
+      .. seq:method:: __ne__(other : Dict[K, V])
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __copy__()
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+      .. seq:method:: __dict_do_op_throws__[F, Z](key : K, other : Z, op : F)
+         :noindex:
+
+      .. seq:method:: __dict_do_op__[F, Z](key : K, other : Z, dflt : V, op : F)
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: resize(new_n_buckets : int)
+
+      .. seq:method:: get(key : K, s : V)
+
+      .. seq:method:: setdefault(key : K, val : V)
+
+      .. seq:method:: increment[T](key : K, by : T = 1)
+
+      .. seq:method:: update(other : Dict[K, V])
+
+      .. seq:method:: pop(key : K)
+
+      .. seq:method:: popitem()
+
+      .. seq:method:: clear()
+
+      .. seq:method:: items()
+
+      .. seq:method:: keys()
+
+      .. seq:method:: values()
+
+      .. seq:method:: copy()
+
+      .. seq:method:: fromkeys[KS, V](ks : KS, v : V)
+
+
+
+.. seq:data:: dict
+
+
+
+
+

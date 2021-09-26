@@ -1,0 +1,221 @@
+.. seq:module:: bio.c_htslib
+
+:seq:mod:`bio.c_htslib`
+-----------------------
+
+Source code: `bio/c_htslib.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/c_htslib.seq>`_
+
+.. seq:function:: hts_open( : cobj,  : cobj)
+
+
+
+.. seq:function:: hts_set_threads( : cobj,  : i32)
+
+
+
+.. seq:function:: hts_close( : cobj)
+
+
+
+.. seq:function:: hts_idx_destroy( : cobj)
+
+
+
+.. seq:function:: hts_itr_destroy( : cobj)
+
+
+
+.. seq:function:: hts_itr_destroy( : cobj)
+
+
+
+.. seq:function:: hts_itr_next( : cobj,  : cobj,  : cobj,  : cobj)
+
+
+
+.. seq:function:: sam_index_load( : cobj,  : cobj)
+
+
+
+.. seq:function:: sam_hdr_read( : cobj)
+
+
+
+.. seq:function:: sam_itr_querys( : cobj,  : cobj,  : cobj)
+
+
+
+.. seq:function:: sam_read1( : cobj,  : cobj,  : cobj)
+
+
+
+.. seq:function:: bam_read1( : cobj,  : cobj)
+
+
+
+.. seq:function:: bam_init1()
+
+
+
+.. seq:function:: bam_cigar2qlen(a : int, b : Ptr[u32])
+
+
+
+.. seq:function:: bam_cigar2rlen(a : int, b : Ptr[u32])
+
+
+
+.. seq:function:: bam_aux_get(a : cobj, b : Ptr[byte])
+
+
+
+.. seq:function:: bam_aux2i(a : Ptr[u8])
+
+
+
+.. seq:function:: bam_aux2f(a : Ptr[u8])
+
+
+
+.. seq:function:: bam_aux2A(a : Ptr[u8])
+
+
+
+.. seq:function:: bam_aux2Z(a : Ptr[u8])
+
+
+
+.. seq:function:: bam_auxB_len(a : Ptr[u8])
+
+
+
+.. seq:function:: bam_auxB2i(a : Ptr[u8], b : u32)
+
+
+
+.. seq:function:: bam_auxB2f(a : Ptr[u8], b : u32)
+
+
+
+.. seq:function:: bam_endpos(a : cobj)
+
+
+
+.. seq:function:: sam_hdr_destroy( : cobj)
+
+
+
+.. seq:function:: bam_destroy1( : cobj)
+
+
+
+.. seq:function:: bcf_hdr_read( : cobj)
+
+
+
+.. seq:function:: bcf_read( : cobj,  : cobj,  : cobj)
+
+
+
+.. seq:function:: bcf_unpack( : cobj,  : i32)
+
+
+
+.. seq:function:: bcf_hdr_destroy( : cobj)
+
+
+
+.. seq:function:: bcf_init()
+
+
+
+.. seq:function:: bcf_destroy( : cobj)
+
+
+
+.. seq:function:: bcf_get_variant_types( : cobj)
+
+
+
+.. seq:function:: bcf_get_variant_type( : cobj,  : i32)
+
+
+
+.. seq:function:: bcf_is_snp( : cobj)
+
+
+
+.. seq:function:: bcf_has_filter( : cobj,  : cobj,  : cobj)
+
+
+
+.. seq:function:: bcf_get_fmt( : cobj,  : cobj,  : cobj)
+
+
+
+.. seq:function:: bcf_get_info( : cobj,  : cobj,  : cobj)
+
+
+
+.. seq:function:: bcf_get_fmt_id( : cobj,  : i32)
+
+
+
+.. seq:function:: bcf_get_info_id( : cobj,  : i32)
+
+
+
+.. seq:function:: bcf_get_format_values( : cobj,  : cobj,  : cobj,  : cobj,  : cobj,  : i32)
+
+
+
+.. seq:function:: bcf_hdr_id2int( : cobj,  : i32,  : cobj)
+
+
+
+.. seq:function:: bcf_has_filter( : cobj,  : cobj,  : cobj)
+
+
+
+.. seq:function:: bcf_hrec_format( : cobj,  : cobj)
+
+
+
+.. seq:function:: bcf_clear( : cobj)
+
+
+
+.. seq:function:: bcf_empty( : cobj)
+
+
+
+.. seq:function:: bcf_dup( : cobj)
+
+
+
+.. seq:function:: bcf_get_info_values( : cobj,  : cobj,  : Ptr[byte],  : Ptr[cobj],  : Ptr[i32],  : i32)
+
+
+
+.. seq:function:: hts_version()
+
+
+
+.. seq:function:: seq_get_htsfile_fp(a : cobj)
+
+
+
+.. seq:function:: seq_is_htsfile_cram(a : cobj)
+
+
+
+.. seq:function:: seq_is_htsfile_bgzf(a : cobj)
+
+
+
+.. seq:function:: sam_itr_next(file : cobj, itr : cobj, r : cobj)
+
+
+
+
+

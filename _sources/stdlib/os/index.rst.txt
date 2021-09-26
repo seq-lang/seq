@@ -1,0 +1,8 @@
+.. seq:module:: os
+
+os
+========
+
+.. toctree::
+
+   path

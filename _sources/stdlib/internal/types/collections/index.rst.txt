@@ -1,0 +1,10 @@
+.. seq:module:: internal.types.collections
+
+internal.types.collections
+========
+
+.. toctree::
+
+   dict
+   list
+   set

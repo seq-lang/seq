@@ -1,0 +1,654 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>internal.c_stubs &#8212; Seq 0.11.0 documentation</title>
+    
+  <link href="../../_static/css/theme.css" rel="stylesheet" />
+  <link href="../../_static/css/index.c5995385ac14fb8791e8eb36b4908be2.css" rel="stylesheet" />
+
+    
+  <link rel="stylesheet"
+    href="../../_static/vendor/fontawesome/5.13.0/css/all.min.css">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="../../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2">
+
+    
+      
+
+    
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-book-theme.css?digest=c3fdc42140077d1ad13ad2f1588a4309" />
+    
+  <link rel="preload" as="script" href="../../_static/js/index.1c5a1a01449ed65a7b51.js">
+
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx-book-theme.12a9622fbb08dcb3a2a40b2c02b83a57.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="internal.dlopen" href="dlopen.html" />
+    <link rel="prev" title="internal.builtin" href="builtin.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docsearch:language" content="en" />
+    
+  </head>
+  <body data-spy="scroll" data-target="#bd-toc-nav" data-offset="80">
+    
+    <div class="container-fluid" id="banner"></div>
+
+    
+
+    <div class="container-xl">
+      <div class="row">
+          
+<div class="col-12 col-md-3 bd-sidebar site-navigation show" id="site-navigation">
+    
+        
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorial/index.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../parallel.html">Parallelism and Multithreading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../python.html">Calling Python from Seq</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../embed.html">Calling Seq from C/C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cookbook.html">Cookbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../build.html">Building from Source</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Standard Library Reference</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="builtin.html"
+                        title="previous chapter"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.builtin</span></code></a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="dlopen.html"
+                        title="next chapter"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.dlopen</span></code></a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+</div>
+
+
+          
+
+
+          
+<main class="col py-md-3 pl-md-4 bd-content overflow-auto" role="main">
+    
+    <div class="topbar container-xl fixed-top">
+    <div class="topbar-contents row">
+        <div class="col-12 col-md-3 bd-topbar-whitespace site-navigation show"></div>
+        <div class="col pl-md-4 topbar-main">
+            
+            <button id="navbar-toggler" class="navbar-toggler ml-0" type="button" data-toggle="collapse"
+                data-toggle="tooltip" data-placement="bottom" data-target=".site-navigation" aria-controls="navbar-menu"
+                aria-expanded="true" aria-label="Toggle navigation" aria-controls="site-navigation"
+                title="Toggle navigation" data-toggle="tooltip" data-placement="left">
+                <i class="fas fa-bars"></i>
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-up"></i>
+            </button>
+            
+            
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn" aria-label="Download this page"><i
+            class="fas fa-download"></i></button>
+
+    <div class="dropdown-buttons">
+        <!-- ipynb file if we had a myst markdown file -->
+        
+        <!-- Download raw file -->
+        <a class="dropdown-buttons" href="../../_sources/stdlib/internal/c_stubs.rst.txt"><button type="button"
+                class="btn btn-secondary topbarbtn" title="Download source file" data-toggle="tooltip"
+                data-placement="left">.rst</button></a>
+        <!-- Download PDF via print -->
+        <button type="button" id="download-print" class="btn btn-secondary topbarbtn" title="Print to PDF"
+            onClick="window.print()" data-toggle="tooltip" data-placement="left">.pdf</button>
+    </div>
+</div>
+
+            <!-- Source interaction buttons -->
+
+<div class="dropdown-buttons-trigger">
+    <button id="dropdown-buttons-trigger" class="btn btn-secondary topbarbtn"
+        aria-label="Connect with source repository"><i class="fab fa-github"></i></button>
+    <div class="dropdown-buttons sourcebuttons">
+        <a class="repository-button"
+            href="https://github.com/seq-lang/seq"><button type="button" class="btn btn-secondary topbarbtn"
+                data-toggle="tooltip" data-placement="left" title="Source repository"><i
+                    class="fab fa-github"></i>repository</button></a>
+        
+        
+    </div>
+</div>
+
+            <!-- Full screen (wrap in <a> to have style consistency -->
+
+<a class="full-screen-button"><button type="button" class="btn btn-secondary topbarbtn" data-toggle="tooltip"
+        data-placement="bottom" onclick="toggleFullScreen()" aria-label="Fullscreen mode"
+        title="Fullscreen mode"><i
+            class="fas fa-expand"></i></button></a>
+
+            <!-- Launch buttons -->
+
+        </div>
+
+        <!-- Table of contents -->
+        <div class="d-none d-md-block col-md-2 bd-toc show">
+            
+        </div>
+    </div>
+</div>
+    <div id="main-content" class="row">
+        <div class="col-12 col-md-9 pl-md-3 pr-md-0">
+        
+              <div>
+                
+  <span class="target" id="module-internal.c_stubs"></span><div class="section" id="internal-c-stubs">
+<h1><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.c_stubs</span></code><a class="headerlink" href="#internal-c-stubs" title="Permalink to this headline">¶</a></h1>
+<p>Source code: <a class="reference external" href="https://github.com/seq-lang/seq/blob/master/stdlib/internal/c_stubs.seq">internal/c_stubs.seq</a></p>
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_print">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_print</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">str</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_print" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_print_full">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_print_full</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">str</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_print_full" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_strdup">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_strdup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">cobj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_strdup" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_stdin">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_stdin</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_stdin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_stdout">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_stdout</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_stdout" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_stderr">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_stderr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_stderr" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_env">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_env</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_env" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_time">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_time</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_time" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_time_monotonic">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_time_monotonic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_time_monotonic" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_pid">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_pid</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_pid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_lock_new">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_lock_new</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_lock_new" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_lock_acquire">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_lock_acquire</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">bool</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">float</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_lock_acquire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_lock_release">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_lock_release</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_lock_release" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_rlock_new">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_rlock_new</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_rlock_new" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_rlock_acquire">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_rlock_acquire</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">bool</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">float</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_rlock_acquire" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_rlock_release">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_rlock_release</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_rlock_release" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.seq_i32_to_float">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">seq_i32_to_float</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">i32</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.seq_i32_to_float" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.isdigit">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">isdigit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.isdigit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.isspace">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">isspace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.isspace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.isupper">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">isupper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.isupper" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.islower">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">islower</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.islower" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.toupper">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">toupper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.toupper" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.tolower">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">tolower</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.tolower" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.isalnum">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">isalnum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.isalnum" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.isalpha">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">isalpha</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.isalpha" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.istitle">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">istitle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.istitle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.ceil">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">ceil</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.ceil" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.floor">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">floor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.floor" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.fabs">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">fabs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.fabs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.fmod">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">fmod</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.fmod" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.exp">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">exp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.exp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.expm1">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">expm1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.expm1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.ldexp">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">ldexp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.ldexp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.log">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">log</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.log" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.log2">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">log2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.log2" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.log10">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">log10</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.log10" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.sqrt">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">sqrt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.sqrt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.pow">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">pow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.pow" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.round">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">round</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.round" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.acos">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">acos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.acos" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.asin">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">asin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.asin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.atan">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">atan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.atan" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.atan2">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">atan2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.atan2" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.cos">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">cos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.cos" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.sin">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">sin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.sin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.tan">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">tan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.tan" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.cosh">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">cosh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.cosh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.sinh">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">sinh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.sinh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.tanh">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">tanh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.tanh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.acosh">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">acosh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.acosh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.asinh">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">asinh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.asinh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.atanh">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">atanh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.atanh" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.copysign">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">copysign</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.copysign" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.log1p">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">log1p</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.log1p" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.trunc">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">trunc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.trunc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="id0">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">log2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id0" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.erf">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">erf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.erf" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.erfc">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">erfc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.erfc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.tgamma">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">tgamma</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.tgamma" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.lgamma">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">lgamma</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.lgamma" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.remainder">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">remainder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.remainder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.frexp">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">frexp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">float,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[Int[__new__]]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.frexp" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.modf">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">modf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">float,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[float]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.modf" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.ferror">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">ferror</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">cobj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.ferror" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.fgetc">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">fgetc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.fgetc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.fopen">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">fopen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.fopen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.fclose">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">fclose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.fclose" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.fread">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">fread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">int</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">int</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.fread" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.fwrite">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">fwrite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">int</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">int</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.fwrite" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.ftell">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">ftell</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.ftell" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.fseek">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">fseek</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">int</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">i32</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.fseek" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.fgets">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">fgets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">int</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.fgets" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.fflush">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">fflush</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.fflush" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.getline">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">getline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">Ptr[cobj],</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[int],</span>&#160; <span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.getline" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.exit">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">exit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">int</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.exit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.system">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">system</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.system" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.free">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">free</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.free" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.atoi">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">atoi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">cobj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.atoi" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.gzopen">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">gzopen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.gzopen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.gzerror">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">gzerror</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj,</span>&#160; <span class="pre">:</span> <span class="pre">Ptr[i32]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.gzerror" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.gzgetc">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">gzgetc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.gzgetc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.gzgets">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">gzgets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">i32</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.gzgets" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.gzclose">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">gzclose</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.gzclose" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.gzread">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">gzread</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">u32</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.gzread" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.gzwrite">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">gzwrite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">u32</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.gzwrite" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.gztell">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">gztell</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.gztell" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="seq function">
+<dt class="sig sig-object seq" id="internal.c_stubs.gzseek">
+<span class="sig-prename descclassname"><span class="pre">internal.c_stubs.</span></span><span class="sig-name descname"><span class="pre">gzseek</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">:</span> <span class="pre">cobj</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">int</span></em>, <em class="sig-param"><span class="pre">:</span> <span class="pre">i32</span></em><span class="sig-paren">)</span><a class="headerlink" href="#internal.c_stubs.gzseek" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+              </div>
+              
+        
+            
+
+
+
+<div class='prev-next-bottom'>
+    
+    <div id="prev">
+        <a class="left-prev" href="builtin.html" title="previous page">
+            <i class="prevnext-label fas fa-angle-left"></i>
+            <div class="prevnext-info">
+                <p class="prevnext-label">previous</p>
+                <p class="prevnext-title"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.builtin</span></code></p>
+            </div>
+        </a>
+    </div>
+     <div id="next">
+        <a class="right-next" href="dlopen.html" title="next page">
+            <div class="prevnext-info">
+                <p class="prevnext-label">next</p>
+                <p class="prevnext-title"><code class="xref seq seq-mod docutils literal notranslate"><span class="pre">internal.dlopen</span></code></p>
+            </div>
+            <i class="prevnext-label fas fa-angle-right"></i>
+        </a>
+     </div>
+
+</div>
+        
+        </div>
+    </div>
+    <footer class="footer">
+    <div class="container">
+      <p>
+        
+          By seq-lang<br/>
+        
+            &copy; Copyright 2019-2021, seq-lang.<br/>
+      </p>
+    </div>
+  </footer>
+</main>
+
+
+      </div>
+    </div>
+  
+  <script src="../../_static/js/index.1c5a1a01449ed65a7b51.js"></script>
+
+  
+  </body>
+</html>

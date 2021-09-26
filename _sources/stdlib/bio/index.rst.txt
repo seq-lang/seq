@@ -1,0 +1,28 @@
+.. seq:module:: bio
+
+bio
+========
+
+.. toctree::
+
+   align
+   bam
+   bed
+   block
+   builtin
+   bwa
+   bwt
+   c_htslib
+   fai
+   fasta
+   fastq
+   fmindex
+   intervals
+   iter
+   kmer
+   locus
+   prefetch
+   pseq
+   seq
+   types
+   vcf

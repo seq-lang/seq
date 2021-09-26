@@ -1,0 +1,13 @@
+.. seq:module:: ..gzip
+
+:seq:mod:`..gzip`
+-----------------
+
+Source code: `gzip.seq <https://github.com/seq-lang/seq/blob/master/stdlib/./gzip.seq>`_
+
+.. seq:function:: open(path : str, mode : str = "r")
+
+
+
+
+

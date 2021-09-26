@@ -1,0 +1,559 @@
+.. seq:module:: bio.vcf
+
+:seq:mod:`bio.vcf`
+------------------
+
+Source code: `bio/vcf.seq <https://github.com/seq-lang/seq/blob/master/stdlib/bio/vcf.seq>`_
+
+.. seq:data:: BCF_UN_STR
+
+
+
+.. seq:data:: BCF_UN_FLT
+
+
+
+.. seq:data:: BCF_UN_INFO
+
+
+
+.. seq:data:: BCF_UN_SHR
+
+
+
+.. seq:data:: BCF_UN_FMT
+
+
+
+.. seq:data:: BCF_UN_IND
+
+
+
+.. seq:data:: BCF_UN_ALL
+
+
+
+.. seq:data:: BCF_HL_FLT
+
+
+
+.. seq:data:: BCF_HL_INFO
+
+
+
+.. seq:data:: BCF_HL_FMT
+
+
+
+.. seq:data:: BCF_HL_CTG
+
+
+
+.. seq:data:: BCF_HL_STR
+
+
+
+.. seq:data:: BCF_HL_GEN
+
+
+
+.. seq:data:: BCF_HT_FLAG
+
+
+
+.. seq:data:: BCF_HT_INT
+
+
+
+.. seq:data:: BCF_HT_REAL
+
+
+
+.. seq:data:: BCF_HT_STR
+
+
+
+.. seq:data:: BCF_VL_FIXED
+
+
+
+.. seq:data:: BCF_VL_VAR
+
+
+
+.. seq:data:: BCF_VL_A
+
+
+
+.. seq:data:: BCF_VL_G
+
+
+
+.. seq:data:: BCF_VL_R
+
+
+
+.. seq:data:: BCF_DT_ID
+
+
+
+.. seq:data:: BCF_DT_CTG
+
+
+
+.. seq:data:: BCF_DT_SAMPLE
+
+
+
+.. seq:data:: BCF_BT_NULL
+
+
+
+.. seq:data:: BCF_BT_INT8
+
+
+
+.. seq:data:: BCF_BT_INT16
+
+
+
+.. seq:data:: BCF_BT_INT32
+
+
+
+.. seq:data:: BCF_BT_FLOAT
+
+
+
+.. seq:data:: BCF_BT_CHAR
+
+
+
+.. seq:data:: BCF_AUX_NONE
+
+
+
+.. seq:data:: INT8_MIN
+
+
+
+.. seq:data:: INT16_MIN
+
+
+
+.. seq:data:: INT32_MIN
+
+
+
+.. seq:data:: bcf_int8_vector_end
+
+
+
+.. seq:data:: bcf_int16_vector_end
+
+
+
+.. seq:data:: bcf_int32_vector_end
+
+
+
+.. seq:data:: bcf_str_vector_end
+
+
+
+.. seq:data:: bcf_int8_missing
+
+
+
+.. seq:data:: bcf_int16_missing
+
+
+
+.. seq:data:: bcf_int32_missing
+
+
+
+.. seq:data:: bcf_float_missing
+
+
+
+.. seq:data:: bcf_float_vector_end
+
+
+
+.. seq:data:: bcf_str_missing
+
+
+
+.. seq:function:: ptr_off[T](base : Ptr[byte], byte_offset : int)
+
+
+
+.. seq:data:: char_pp
+
+
+
+.. seq:data:: char_p
+
+
+
+.. seq:function:: check_header_id(hdr : Ptr[_bcf_hdr_t], h1_type : i32, id : i32)
+
+
+
+.. seq:function:: is_gt_fmt(hdr : Ptr[_bcf_hdr_t], fmt_id : i32)
+
+
+
+.. seq:function:: bcf_float_is_missing(f : i32)
+
+
+
+.. seq:function:: bcf_float_is_vector_end(f : i32)
+
+
+
+.. seq:function:: bcf_gt_allele(val : int)
+
+
+
+.. seq:class:: BCFHeaderMetaData
+
+   **Properties:**
+
+      .. seq:attribute:: type_code
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(bcf_hdr : Ptr[_bcf_hdr_t], _type_code : int)
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+
+
+.. seq:class:: BCFHeaderContigs
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(bcf_hdr : Ptr[_bcf_hdr_t])
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+
+
+.. seq:class:: BCFHeaderSamples
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(bcf_hdr : Ptr[_bcf_hdr_t])
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __getitem__(index : int)
+         :noindex:
+
+
+
+.. seq:data:: METADATA_TYPES
+
+
+
+.. seq:class:: BCFHeaderRecord
+
+   **Properties:**
+
+      .. seq:attribute:: hdr_type
+
+      .. seq:attribute:: key
+
+      .. seq:attribute:: value
+
+      .. seq:attribute:: attrs
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(bcf_hdr : Ptr[_bcf_hdr_t], bcf_hrec : Ptr[_bcf_hrec_t])
+         :noindex:
+
+      .. seq:method:: __getitem__(key : str)
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: get(key : str)
+
+      .. seq:method:: iterkeys()
+
+      .. seq:method:: itervalues()
+
+      .. seq:method:: iteritems()
+
+
+
+.. seq:class:: BCFHeader
+
+   **Properties:**
+
+      .. seq:attribute:: info
+
+      .. seq:attribute:: filters
+
+      .. seq:attribute:: formats
+
+      .. seq:attribute:: contigs
+
+      .. seq:attribute:: samples
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(bcf_hdr : Ptr[_bcf_hdr_t])
+         :noindex:
+
+      .. seq:method:: __new__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+
+
+.. seq:data:: VALUE_TYPES
+
+
+
+.. seq:class:: BCFMetadata
+
+   **Properties:**
+
+      .. seq:attribute:: name
+
+      .. seq:attribute:: bcf_type
+
+      .. seq:attribute:: record
+
+      .. seq:attribute:: description
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(bcf_hdr : Ptr[_bcf_hdr_t], _type_code : int, _id : int)
+         :noindex:
+
+
+
+.. seq:class:: BCFAux
+
+   **Properties:**
+
+      .. seq:attribute:: val
+
+      .. seq:attribute:: arr
+
+      .. seq:attribute:: type_code
+
+      .. seq:attribute:: is_array
+
+
+
+.. seq:function:: bcf_get_value_count(bcf1 : Ptr[_bcf1_t], bcf_hdr : Ptr[_bcf_hdr_t], h1_type : i32, id : i32, sample : i32)
+
+
+
+.. seq:function:: bcf_array_to_object(data : cobj, type_code : i32, n : i32, count : i64, scalar : i32)
+
+
+
+.. seq:function:: bcf_info_get_value(bcf1 : Ptr[_bcf1_t], bcf_hdr : Ptr[_bcf_hdr_t], info : Ptr[_bcf_info_t])
+
+
+
+.. seq:function:: try_unpack(bcf1 : Ptr[_bcf1_t], mode : i32)
+
+
+
+.. seq:class:: VCFRecordInfo
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(bcf1 : Ptr[_bcf1_t], bcf_hdr : Ptr[_bcf_hdr_t])
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: get_int(key : str)
+
+      .. seq:method:: get_ints(key : str)
+
+      .. seq:method:: get_float(key : str)
+
+      .. seq:method:: get_floats(key : str)
+
+      .. seq:method:: get_str(key : str)
+
+      .. seq:method:: get_flag(key : str)
+
+
+
+.. seq:class:: VCFRecordSample
+
+   **Properties:**
+
+      .. seq:attribute:: name
+
+      .. seq:attribute:: alleles
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(bcf1 : Ptr[_bcf1_t], bcf_hdr : Ptr[_bcf_hdr_t], index : int)
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+
+
+.. seq:class:: VCFRecordSamples
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(bcf1 : Ptr[_bcf1_t], bcf_hdr : Ptr[_bcf_hdr_t])
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __getitem__(key : str)
+         :noindex:
+
+
+
+.. seq:class:: VCFRecordFormat
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(bcf1 : Ptr[_bcf1_t], bcf_hdr : Ptr[_bcf_hdr_t])
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __getitem__(key : str)
+         :noindex:
+
+
+
+.. seq:class:: VCFRecordFilter
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(bcf1 : Ptr[_bcf1_t], bcf_hdr : Ptr[_bcf_hdr_t])
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __getitem__(key : str)
+         :noindex:
+
+      .. seq:method:: __len__()
+         :noindex:
+
+
+
+.. seq:class:: VCFRecord
+
+   **Properties:**
+
+      .. seq:attribute:: info
+
+      .. seq:attribute:: n_info
+
+      .. seq:attribute:: chrom
+
+      .. seq:attribute:: contig
+
+      .. seq:attribute:: pos
+
+      .. seq:attribute:: qual
+
+      .. seq:attribute:: ref
+
+      .. seq:attribute:: alts
+
+      .. seq:attribute:: id
+
+      .. seq:attribute:: rlen
+
+   **Magic methods:**
+
+      .. seq:method:: __new__(bcf1 : Ptr[_bcf1_t], bcf_hdr : Ptr[_bcf_hdr_t])
+         :noindex:
+
+      .. seq:method:: __str__()
+         :noindex:
+
+
+
+.. seq:class:: BCFReader
+
+   **Properties:**
+
+      .. seq:attribute:: _bcf_hdr
+
+   **Magic methods:**
+
+      .. seq:method:: __init__(path : str, unpack_all : bool, copy : bool, num_threads : int)
+         :noindex:
+
+      .. seq:method:: __iter__()
+         :noindex:
+
+      .. seq:method:: __enter__()
+         :noindex:
+
+      .. seq:method:: __exit__()
+         :noindex:
+
+   **Methods:**
+
+      .. seq:method:: close()
+
+
+
+.. seq:data:: VCFReader
+
+
+
+.. seq:function:: BCF(path : str, unpack_all : bool = True, copy : bool = True, num_threads : int = 0)
+
+
+
+.. seq:function:: VCF(path : str, unpack_all : bool = True, copy : bool = True, num_threads : int = 0)
+
+
+
+
+
