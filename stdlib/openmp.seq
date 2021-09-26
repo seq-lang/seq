@@ -24,6 +24,21 @@ _KMP_IDENT_ATOMIC_HINT_SPECULATIVE = 0x080000
 _KMP_IDENT_OPENMP_SPEC_VERSION_MASK = 0xFF000000
 
 @tuple
+class Lock:
+    a1: i32
+    a2: i32
+    a3: i32
+    a4: i32
+    a5: i32
+    a6: i32
+    a7: i32
+    a8: i32
+
+    def __new__():
+        z = i32(0)
+        return Lock(z, z, z, z, z, z, z, z)
+
+@tuple
 class Ident:
     reserved_1: i32
     flags: i32
@@ -576,6 +591,18 @@ def ordered(func):
                 func(*args, **kwargs)
             finally:
                 _ordered_end(loc, gtid)
+    return _wrapper
+
+_default_lock = Lock()
+def critical(func):
+    def _wrapper(*args, **kwargs):
+        gtid = get_thread_num()
+        loc = _default_loc()
+        _critical_begin(loc, gtid, __ptr__(_default_lock).as_byte())
+        try:
+            func(*args, **kwargs)
+        finally:
+            _critical_end(loc, gtid, __ptr__(_default_lock).as_byte())
     return _wrapper
 
 def _push_num_threads(num_threads: int):

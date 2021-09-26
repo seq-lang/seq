@@ -154,10 +154,13 @@ def test_omp_ranges():
     lock = thr.Lock()
     seen = set()
 
+    @omp.critical
+    def add(seen, i):
+        seen.add(i)
+
     @par
     for i in range(3, 123, 7):
-        with lock:
-            seen.add(i)
+        add(seen, i)
     assert seen == set(range(3, 123, 7))
     seen.clear()
 
@@ -170,8 +173,7 @@ def test_omp_ranges():
 
     @par(num_threads=nt)
     for i in range(-3, -123, -7):
-        with lock:
-            seen.add(i)
+        add(seen, i)
     assert seen == set(range(-3, -123, -7))
     seen.clear()
 
@@ -184,8 +186,7 @@ def test_omp_ranges():
 
     @par(chunk_size=12)
     for i in range(-3, -123, 7):
-        with lock:
-            seen.add(i)
+        add(seen, i)
     assert seen == set(range(-3, -123, 7))
     seen.clear()
 
@@ -198,8 +199,7 @@ def test_omp_ranges():
 
     @par(chunk_size=10000)
     for i in range(3, 123, 7):
-        with lock:
-            seen.add(i)
+        add(seen, i)
     assert seen == set(range(3, 123, 7))
     seen.clear()
 
@@ -212,8 +212,7 @@ def test_omp_ranges():
 
     @par(chunk_size=10000, num_threads=nt)
     for i in range(-3, -123, -7):
-        with lock:
-            seen.add(i)
+        add(seen, i)
     assert seen == set(range(-3, -123, -7))
     seen.clear()
 
@@ -226,8 +225,7 @@ def test_omp_ranges():
 
     @par(schedule='dynamic', chunk_size=12)
     for i in range(3, 123, 7):
-        with lock:
-            seen.add(i)
+        add(seen, i)
     assert seen == set(range(3, 123, 7))
     seen.clear()
 
@@ -240,8 +238,7 @@ def test_omp_ranges():
 
     @par(schedule='dynamic', chunk_size=12, num_threads=nt)
     for i in range(-3, -123, -7):
-        with lock:
-            seen.add(i)
+        add(seen, i)
     assert seen == set(range(-3, -123, -7))
     seen.clear()
 
@@ -452,6 +449,28 @@ def test_omp_reductions():
     assert b == expected(N, 0, int.__xor__)
     assert my_global == g + expected(N, 0, int.__add__)
 
+another_global = 0
+@test
+def test_omp_critical():
+    @omp.critical
+    def foo(i):
+        global another_global
+        another_global += i
+
+    @omp.critical
+    def bar(i):
+        global another_global
+        another_global += i
+
+    global another_global
+    for n in (99999, 100000, 100001):
+        another_global = 0
+        @par(schedule='dynamic')
+        for i in range(n):
+            foo(i)
+            bar(i)
+        assert another_global == 2*sum(range(n))
+
 @test
 def test_omp_non_imperative():
     def squares(N):
@@ -498,6 +517,7 @@ test_omp_api()
 test_omp_schedules()
 test_omp_ranges()
 test_omp_reductions()
+test_omp_critical()
 test_omp_non_imperative()
 test_omp_transform(111, 222, 333)
 test_omp_transform(111.1, 222.2, 333.3)

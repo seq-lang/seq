@@ -129,12 +129,16 @@ All of OpenMP's API functions are accessible directly in Seq. For example:
     print(omp.get_num_threads())
     omp.set_num_threads(32)
 
-OpenMP's *master*, *single* and *ordered* constructs can be applied via the corresponding
-decorators:
+OpenMP's *critical*, *master*, *single* and *ordered* constructs can be applied via the
+corresponding decorators:
 
 .. code-block:: seq
 
     import openmp as omp
+
+    @omp.critical
+    def only_run_by_one_thread_at_a_time():
+        print('critical!', omp.get_thread_num())
 
     @omp.master
     def only_run_by_master_thread():
@@ -150,6 +154,19 @@ decorators:
 
     @par(ordered=True)
     for i in range(100):
+        only_run_by_one_thread_at_a_time()
         only_run_by_master_thread()
         only_run_by_single_thread()
         run_ordered_by_iteration(i)
+
+For finer-grained locking, consider using the locks from the ``threading`` module:
+
+.. code-block:: seq
+
+    from threading import Lock
+    lock = Lock()  # or RLock for re-entrant lock
+
+    @par
+    for i in range(100):
+        with lock:
+            print('only one thread at a time allowed here')
