@@ -334,7 +334,7 @@ Internally, the Seq compiler uses an OpenMP task backend to generate code for pa
 Type extensions
 ^^^^^^^^^^^^^^^
 
-Seq provides an ``@extend`` annotation that allows programmers to add and modify methods of various types at compile time, including built-in types like ``int`` or ``str``. This actually allows much of the functionality of built-in types to be implemented in Seq as type extensions in the standard library. Here is an example where the ``int`` type is extended to include a ``to`` method that generates integers in a specified range, as well as to override the ``__truediv__`` magic method to "intercept" integer multiplications:
+Seq provides an ``@extend`` annotation that allows programmers to add and modify methods of various types at compile time, including built-in types like ``int`` or ``str``. This actually allows much of the functionality of built-in types to be implemented in Seq as type extensions in the standard library. Here is an example where the ``int`` type is extended to include a ``to`` method that generates integers in a specified range, as well as to override the ``__truediv__`` magic method to "intercept" integer divisions:
 
 .. code-block:: seq
 
