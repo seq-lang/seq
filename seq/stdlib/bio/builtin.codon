@@ -140,7 +140,7 @@ def _is_iupac_aa(b: byte) -> bool:
 def _validate_str_as_seq(s: str, copy: bool = False):
     def ensure_valid(b: byte, i: int):
         if not _is_iupac_nt(b):
-            raise ValueError(f"invalid base {repr(b)} at position {i} of sequence")
+            raise ValueError(f"invalid base '{str(b)}' at position {i} of sequence")
     p = s.ptr
     n = s.len
     i = 0
@@ -162,7 +162,7 @@ def _validate_str_as_seq(s: str, copy: bool = False):
 def _validate_str_as_qual(s: str, copy: bool = False):
     def ensure_valid(b: byte, i: int):
         if not (byte(0x21) <= b <= byte(0x7e)):
-            raise ValueError(f"invalid quality score {repr(b)} at position {i} of quality score string")
+            raise ValueError(f"invalid quality score '{str(b)}' at position {i} of quality score string")
     p = s.ptr
     n = s.len
     i = 0

@@ -1,0 +1,32 @@
+from bio import *
+import pickle
+
+@test
+def test_pickle[T](x: T):
+    import gzip
+    path = 'build/testjar.bin'
+    jar = gzip.open(path, 'wb')
+    pickle.dump(x, jar)
+    jar.close()
+
+    jar = gzopen(path, 'rb')
+    y = pickle.load(jar, T)
+    jar.close()
+
+    assert x == y
+
+K = Kmer[8]
+test_pickle(s'ACGTAAGG')
+test_pickle(~s'ACGTAAGG')
+test_pickle(K(s'ACGTAAGG'))
+test_pickle([K(s'ACGTAAGG'), K(s'TATCTGTT')])
+test_pickle(list[K]())
+test_pickle({K(s'ACGTAAGG'), K(s'CATTTTTA')})
+test_pickle({~s'ACGTAAGG'})
+test_pickle({K(s'ACGTAAGG'), K(s'TTTTGGTT')})
+test_pickle(set[K]())
+test_pickle({K(s'ACGTAAGG'): 99, K(s'TTATTCTT'): 42})
+test_pickle(dict[K,K]())
+test_pickle({~s'ACGTAAGG': ~s'ACGTAAGG'})
+test_pickle((42, 3.14, True, byte(90), s'ACGTAAGG', K(s'ACGTAAGG')))
+test_pickle({i32(42): [[{s'ACG', s'ACGTAGCG', ~s'ACGTAGCG'}, {s'ACG', s'ACGTAGCG', ~s'ACGTAGCG'}], list[set[seq]](), [set[seq]()], [{~s''}, {s'', s'GCGC'}]]})

@@ -166,6 +166,13 @@ class CIGAR:
         v.append("')")
         return str.cat(v)
 
+    def __str__(self):
+        v = List[str](capacity=len(self)*2)
+        for op in self:
+            v.append(str(op[0]))
+            v.append(str(op[1]))
+        return str.cat(v)
+
     def __reversed__(self):
         n = self._len
         p = Ptr[u32](n)
@@ -193,6 +200,9 @@ class Alignment:
 
     def __bool__(self):
         return self._score != _ALIGN_SCORE_NEG_INF
+
+    def __repr__(self):
+        return f"Alignment('{self.cigar.__str__()}', {self.score})"
 
 def _validate_match(m: int):
     if m < 0 or m >= 128:

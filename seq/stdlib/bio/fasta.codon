@@ -64,7 +64,7 @@ class FASTAReader:
     def _check(b: byte, i: int):
         from bio.builtin import _is_iupac_nt
         if not _is_iupac_nt(b):
-            raise ValueError(f"invalid base {repr(b)} at position {i} of sequence")
+            raise ValueError(f"invalid base '{str(b)}' at position {i} of sequence")
 
     def _append(p: Ptr[byte], n: int, m: int, s: str, validate: bool):
         if n + s.len > m:
@@ -267,7 +267,7 @@ class pFASTAReader:
     def _check(b: byte, i: int):
         from bio.builtin import _is_iupac_aa
         if not _is_iupac_aa(b):
-            raise ValueError(f"invalid amino acid {repr(b)} at position {i} of sequence")
+            raise ValueError(f"invalid amino acid '{str(b)}' at position {i} of sequence")
 
     def _append(p: Ptr[byte], n: int, m: int, s: str, validate: bool):
         if n + s.len > m:

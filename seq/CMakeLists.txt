@@ -134,3 +134,17 @@ endif()
 target_include_directories(seq PRIVATE "${CODON_PATH}/include" ${LLVM_INCLUDE_DIRS})
 target_link_directories(seq PRIVATE "${CODON_PATH}/lib/codon")
 target_link_libraries(seq PRIVATE codonrt codonc)
+
+# Download and unpack googletest at configure time
+include(FetchContent)
+FetchContent_Declare(googletest
+  URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip)
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+enable_testing()
+add_executable(seqtest test/main.cpp)
+target_include_directories(seqtest PRIVATE "${CODON_PATH}/include" ${LLVM_INCLUDE_DIRS})
+target_link_directories(seqtest PRIVATE "${CODON_PATH}/lib/codon")
+target_link_libraries(seqtest codonrt codonc gtest_main)
+target_compile_definitions(seqtest PRIVATE TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
