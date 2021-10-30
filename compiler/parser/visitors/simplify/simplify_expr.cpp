@@ -718,7 +718,7 @@ ExprPtr SimplifyVisitor::transformFloat(const string &value, const string &suffi
       return expr;
     }
   } catch (std::out_of_range &) {
-    error("integer {} out of range", value);
+    error("float {} out of range", value);
   }
   /// Custom suffix sfx: use float.__suffix_sfx__(str) call.
   return transform(N<CallExpr>(N<DotExpr>("float", format("__suffix_{}__", suffix)),

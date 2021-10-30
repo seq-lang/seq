@@ -721,10 +721,20 @@ ExprPtr TypecheckVisitor::transformBinary(BinaryExpr *expr, bool isAtomic,
     if (method)
       swap(expr->lexpr, expr->rexpr);
   }
-  if (!method)
-    error("cannot find magic '{}' in {}", magic, lt->toString());
-
-  return transform(N<CallExpr>(N<IdExpr>(method->ast->name), expr->lexpr, expr->rexpr));
+  if (method) {
+    return transform(
+        N<CallExpr>(N<IdExpr>(method->ast->name), expr->lexpr, expr->rexpr));
+  } else if (lt->is("pyobj")) {
+    return transform(N<CallExpr>(N<CallExpr>(N<DotExpr>(expr->lexpr, "_getattr"),
+                                             N<StringExpr>(format("__{}__", magic))),
+                                 expr->rexpr));
+  } else if (rt->is("pyobj")) {
+    return transform(N<CallExpr>(N<CallExpr>(N<DotExpr>(expr->rexpr, "_getattr"),
+                                             N<StringExpr>(format("__r{}__", magic))),
+                                 expr->lexpr));
+  }
+  error("cannot find magic '{}' in {}", magic, lt->toString());
+  return nullptr;
 }
 
 ExprPtr TypecheckVisitor::transformStaticTupleIndex(ClassType *tuple, ExprPtr &expr,
@@ -1057,8 +1067,11 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
       //   c = t.__new__(); c.__init__(args); c
       ExprPtr var = N<IdExpr>(ctx->cache->getTemporaryVar("v"));
       return transform(N<StmtExpr>(
-          N<AssignStmt>(clone(var), N<CallExpr>(N<DotExpr>(expr->expr, "__new__"))),
-          N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__init__"), expr->args)),
+          N<SuiteStmt>(
+              N<AssignStmt>(clone(var), N<CallExpr>(N<DotExpr>(expr->expr, "__new__"))),
+              N<ExprStmt>(N<CallExpr>(N<IdExpr>("std.internal.gc.register_finalizer"),
+                                      clone(var))),
+              N<ExprStmt>(N<CallExpr>(N<DotExpr>(clone(var), "__init__"), expr->args))),
           clone(var)));
     }
   } else if (auto pc = callee->getPartial()) {

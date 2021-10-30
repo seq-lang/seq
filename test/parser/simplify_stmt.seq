@@ -856,6 +856,11 @@ print np.transpose(a)
 n = np.array([[1, 2], [3, 4]])
 print n[0], n[0][0] + 1 #: [1 2] 2
 
+a = np.array([1,2,3])
+print(a + 1) #: [2 3 4]
+print(a - 1) #: [0 1 2]
+print(1 - a) #: [ 0 -1 -2]
+
 #%% python_import_fn
 from python import re.split(str, str) -> List[str] as rs
 print rs(r'\W+', 'Words, words, words.')  #: [Words, words, words, ]
