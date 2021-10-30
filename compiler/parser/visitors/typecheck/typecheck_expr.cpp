@@ -1079,8 +1079,13 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     expr->expr = transform(N<StmtExpr>(N<AssignStmt>(clone(var), expr->expr),
                                        N<IdExpr>(pc->func->ast->name)));
     calleeFn = expr->expr->type->getFunc();
-    for (int i = 0, j = 0; i < calleeFn->ast->args.size(); i++)
-      known.push_back(calleeFn->ast->args[i].generic ? 0 : pc->known[j++]);
+    for (int i = 0, j = 0; i < pc->known.size(); i++)
+      if (pc->func->ast->args[i].generic) {
+        if (pc->known[i])
+          unify(calleeFn->funcGenerics[j].type, pc->func->funcGenerics[j].type);
+        j++;
+      }
+    known = pc->known;
     seqassert(calleeFn, "not a function: {}", expr->expr->type->toString());
   } else if (!callee->getFunc()) {
     // Case 3: callee is not a named function. Route it through a __call__ method.
@@ -1094,6 +1099,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   int typeArgCount = 0;
   bool isPartial = false;
   int ellipsisStage = -1;
+  auto newMask = vector<char>(calleeFn->ast->args.size(), 1);
   if (expr->ordered)
     args = expr->args;
   else
@@ -1109,6 +1115,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
               typeArgs.push_back(slots[si].empty() ? nullptr
                                                    : expr->args[slots[si][0]].value);
               typeArgCount += typeArgs.back() != nullptr;
+              newMask[si] = slots[si].empty() ? 0 : 1;
             } else if (si == starArgIndex && !(partial && slots[si].empty())) {
               vector<ExprPtr> extra;
               for (auto &e : slots[si]) {
@@ -1139,6 +1146,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
                 args.push_back({"", ex});
               } else if (partial) {
                 args.push_back({"", transform(N<EllipsisExpr>())});
+                newMask[si] = 0;
               } else {
                 auto es = calleeFn->ast->args[si].deflt->toString();
                 if (in(ctx->defaultCallDepth, es))
@@ -1169,6 +1177,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   bool unificationsDone = true;
   assert((expr->ordered && typeArgs.empty()) ||
          (!expr->ordered && typeArgs.size() == calleeFn->funcGenerics.size()));
+  // LOG("-- {}", calleeFn->debugString(1));
   for (int si = 0; !expr->ordered && si < calleeFn->funcGenerics.size(); si++)
     if (typeArgs[si]) {
       auto t = typeArgs[si]->type;
@@ -1188,7 +1197,6 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
     }
     auto e = transform(expr->expr);
     unify(expr->type, e->getType());
-    // LOG("-- {} / {}", e->toString(), e->type->debugString(true));
     return e;
   }
 
@@ -1230,7 +1238,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   // Handle default generics (calleeFn.g. foo[S, T=int]) only if all arguments were
   // unified.
   // TODO: remove once the proper partial handling of overloaded functions land
-  if (unificationsDone)
+  if (unificationsDone) {
     for (int i = 0, j = 0; i < calleeFn->ast->args.size(); i++)
       if (calleeFn->ast->args[i].generic) {
         if (calleeFn->ast->args[i].deflt &&
@@ -1245,6 +1253,7 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
         }
         j++;
       }
+  }
   for (int si = 0; si < replacements.size(); si++)
     if (replacements[si]) {
       if (replacements[si]->getFunc())
@@ -1261,15 +1270,10 @@ ExprPtr TypecheckVisitor::transformCall(CallExpr *expr, const types::TypePtr &in
   expr->done &= expr->expr->done;
 
   // Emit the final call.
-  vector<char> newMask;
-  if (isPartial)
-    newMask = vector<char>(calleeFn->args.size() - 1, 1);
-  for (int si = 0; si < calleeFn->args.size() - 1; si++)
-    if (args[si].value->getEllipsis() && !args[si].value->getEllipsis()->isPipeArg)
-      newMask[si] = 0;
-  if (!newMask.empty()) {
+  if (isPartial) {
     // Case 1: partial call.
     // Transform calleeFn(args...) to Partial.N<known>.<calleeFn>(args...).
+
     auto partialTypeName = generatePartialStub(newMask, calleeFn->getFunc().get());
     deactivateUnbounds(calleeFn.get());
     vector<ExprPtr> newArgs;
@@ -1528,14 +1532,15 @@ string TypecheckVisitor::generateFunctionStub(int n) {
 string TypecheckVisitor::generatePartialStub(const vector<char> &mask,
                                              types::FuncType *fn) {
   string strMask(mask.size(), '1');
+  int tupleSize = 0;
   for (int i = 0; i < mask.size(); i++)
     if (!mask[i])
       strMask[i] = '0';
-  auto typeName = format(TYPE_PARTIAL "{}", strMask);
-  if (!ctx->find(typeName)) {
-    auto tupleSize = std::count_if(mask.begin(), mask.end(), [](char c) { return c; });
+    else if (!fn->ast->args[i].generic)
+      tupleSize++;
+  auto typeName = format(TYPE_PARTIAL "{}.{}", strMask, fn->ast->name);
+  if (!ctx->find(typeName))
     generateTupleStub(tupleSize, typeName, {}, false);
-  }
   return typeName;
 }
 
@@ -1589,7 +1594,14 @@ void TypecheckVisitor::generateFnCall(int n) {
 ExprPtr TypecheckVisitor::partializeFunction(ExprPtr expr) {
   auto fn = expr->getType()->getFunc();
   seqassert(fn, "not a function: {}", expr->getType()->toString());
-  vector<char> mask(fn->args.size() - 1, 0);
+  vector<char> mask(fn->ast->args.size(), 0);
+  for (int i = 0, j = 0; i < fn->ast->args.size(); i++)
+    if (fn->ast->args[i].generic) {
+      // TODO: better detection of user-provided args...?
+      if (!fn->funcGenerics[j].type->getUnbound())
+        mask[i] = 1;
+      j++;
+    }
   auto partialTypeName = generatePartialStub(mask, fn.get());
   deactivateUnbounds(fn.get());
   string var = ctx->cache->getTemporaryVar("partial");

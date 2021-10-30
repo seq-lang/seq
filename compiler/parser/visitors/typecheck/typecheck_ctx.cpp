@@ -84,8 +84,8 @@ shared_ptr<types::LinkType> TypeContext::addUnbound(const Expr *expr, int level,
                                                     bool setActive, char staticType) {
   auto t = make_shared<types::LinkType>(types::LinkType::Unbound, cache->unboundCount++,
                                         level, nullptr, staticType);
-  // if (t->id == 7815)
-  // LOG("debug");
+  // if (t->id == 8052)
+  //   LOG("debug");
   t->setSrcInfo(expr->getSrcInfo());
   LOG_TYPECHECK("[ub] new {}: {} ({})", t->debugString(true), expr->toString(),
                 setActive);

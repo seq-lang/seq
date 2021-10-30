@@ -7,8 +7,8 @@ class List:
         self.len = len
 
     def __init__(self, it: Generator[T]):
-        self.arr = Array[T](10)
         self.len = 0
+        self.arr = Array[T](10)
         for i in it:
             self.append(i)
 

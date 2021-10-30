@@ -219,14 +219,14 @@ void TypecheckVisitor::visit(ReturnStmt *stmt) {
   stmt->expr = transform(stmt->expr);
   if (stmt->expr) {
     auto &base = ctx->bases.back();
-    wrapExpr(stmt->expr, base.returnType, nullptr);
+    if (!base.returnType->getUnbound())
+      wrapExpr(stmt->expr, base.returnType, nullptr);
 
     if (stmt->expr->getType()->getFunc() &&
         !(base.returnType->getClass() &&
           startswith(base.returnType->getClass()->name, TYPE_FUNCTION)))
       stmt->expr = partializeFunction(stmt->expr);
     unify(base.returnType, stmt->expr->type);
-    auto retTyp = stmt->expr->getType()->getClass();
     stmt->done = stmt->expr->done;
   } else {
     stmt->done = true;
