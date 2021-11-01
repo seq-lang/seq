@@ -19,6 +19,8 @@ class byte:
         return seq_str_byte(self)
     def __copy__(self) -> byte:
         return self
+    def __deepcopy__(self) -> byte:
+        return self
     @pure
     @llvm
     def __bool__(self) -> bool:

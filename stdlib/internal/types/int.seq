@@ -17,6 +17,8 @@ class int:
         return what.__int__()
     def __int__(self) -> int:
         return self
+    def __deepcopy__(self) -> int:
+        return self
     @pure
     @llvm
     def __float__(self) -> float:

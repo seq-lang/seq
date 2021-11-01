@@ -273,7 +273,11 @@ class _bcf1_t:
 
     def __copy__(self):
         pos, rlen, rid, qual, n_info_allele, n_fmt_sample, shared, indiv, d, max_unpack, unpacked, unpacked_size_0, unpacked_size_1, unpacked_size_2, errcode = self
-        return _bcf1_t(pos, rlen, rid, qual, n_info_allele, n_fmt_sample, copy(shared), copy(indiv), _bcf_dec_t(), max_unpack, unpacked, unpacked_size_0, unpacked_size_1, unpacked_size_2, errcode)
+        return _bcf1_t(
+            pos, rlen, rid, qual, n_info_allele, n_fmt_sample, shared.__copy__(),
+            indiv.__copy__(), _bcf_dec_t(), max_unpack, unpacked, unpacked_size_0,
+            unpacked_size_1, unpacked_size_2, errcode
+        )
 
 # functions below adapted from HTSlib's vcf.h:
 #define bcf_hdr_id2length(hdr,type,int_id)  ((hdr)->id[BCF_DT_ID][int_id].val->info[type]>>8 & 0xf)

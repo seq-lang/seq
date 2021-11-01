@@ -93,7 +93,7 @@ def iter(x):
 
 def copy(x):
     """
-    Return a copy of x
+    Return a shallow copy of x
     """
     return x.__copy__()
 
