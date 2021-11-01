@@ -24,7 +24,8 @@ namespace ast {
 
 TypeContext::TypeContext(shared_ptr<Cache> cache)
     : Context<TypecheckItem>(""), cache(move(cache)), typecheckLevel(0),
-      allowActivation(true), age(0), realizationDepth(0) {
+      allowActivation(true), age(0), realizationDepth(0), blockLevel(0),
+      returnEarly(false) {
   stack.push_front(vector<string>());
   bases.push_back({"", nullptr, nullptr});
 }
