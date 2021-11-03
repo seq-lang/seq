@@ -11,8 +11,8 @@
 #include <unistd.h>
 #include <vector>
 
-#include "codon/parser/common.h"
-#include "codon/parser/parser.h"
+#include "codon/compiler/compiler.h"
+#include "codon/compiler/error.h"
 #include "codon/sir/llvm/llvisitor.h"
 #include "codon/sir/transform/manager.h"
 #include "codon/sir/transform/pass.h"
@@ -20,6 +20,7 @@
 #include "codon/sir/util/irtools.h"
 #include "codon/sir/util/outlining.h"
 #include "codon/util/common.h"
+
 #include "gtest/gtest.h"
 
 using namespace codon;
@@ -110,32 +111,27 @@ public:
       close(out_pipe[1]);
 
       auto file = getFilename(get<0>(GetParam()));
+      bool debug = get<1>(GetParam());
       auto code = get<3>(GetParam());
       auto startLine = get<4>(GetParam());
-      auto *module = parse(argv0, file, code, !code.empty(),
-                           /* isTest */ 1 + get<5>(GetParam()), startLine);
-      if (!module)
-        exit(EXIT_FAILURE);
+      int testFlags = 1 + get<5>(GetParam());
 
-      PluginManager plm;
-      std::string errMsg;
-      if (!plm.load(".", &errMsg)) {
-        fprintf(stderr, "failed to load seq plugin: %s\n", errMsg.c_str());
-        exit(EXIT_FAILURE);
-      }
+      auto compiler = std::make_unique<Compiler>(
+          argv0, debug, /*disabledPasses=*/std::vector<std::string>{}, /*isTest=*/true);
+      llvm::handleAllErrors(code.empty()
+                                ? compiler->parseFile(file, testFlags)
+                                : compiler->parseCode(file, code, startLine, testFlags),
+                            [](const error::ParserErrorInfo &e) {
+                              for (auto &msg : e) {
+                                getLogger().level = 0;
+                                printf("%s\n", msg.getMessage().c_str());
+                              }
+                              fflush(stdout);
+                              exit(EXIT_FAILURE);
+                            });
 
-      const bool debug = get<1>(GetParam());
-      ir::transform::PassManager pm;
-      for (const auto *plugin : plm) {
-        plugin->dsl->addIRPasses(&pm, debug);
-      }
-      pm.run(module);
-
-      ir::LLVMVisitor visitor(debug);
-      visitor.setPluginManager(&plm);
-      visitor.visit(module);
-      visitor.run({file});
-
+      llvm::cantFail(compiler->compile());
+      compiler->getLLVMVisitor()->run({file});
       fflush(stdout);
       exit(EXIT_SUCCESS);
     } else {
