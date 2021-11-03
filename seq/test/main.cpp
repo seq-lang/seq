@@ -118,6 +118,7 @@ public:
 
       auto compiler = std::make_unique<Compiler>(
           argv0, debug, /*disabledPasses=*/std::vector<std::string>{}, /*isTest=*/true);
+      llvm::cantFail(compiler->load("."));
       llvm::handleAllErrors(code.empty()
                                 ? compiler->parseFile(file, testFlags)
                                 : compiler->parseCode(file, code, startLine, testFlags),
