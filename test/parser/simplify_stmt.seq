@@ -970,7 +970,7 @@ print fp #: (a: 6, b: s)
 
 #%% inherit_class_err_1,barebones
 class defdict(Array[int]):
-    pass #! tuples cannot inherit reference classes (and vice versa)
+    pass #! reference classes cannot inherit by-value classes
 
 #%% inherit_class_err_2,barebones
 @tuple
