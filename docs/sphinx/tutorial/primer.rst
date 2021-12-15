@@ -692,13 +692,13 @@ Let's import some C functions:
 
 .. code:: seq
 
-    from C import pow(float) -> float
-    pow(2.0)  # 4.0
+    from C import pow(float, float) -> float
+    pow(2.0, 2.0)  # 4.0
 
     # Import and rename function
     from C import puts(cobj) -> void as print_line  # type cobj is C's pointer (void*, char*, etc.)
     print_line("hi!".c_str())  # prints "hi!".
-                               # Note .ptr at the end of string--- needed to cast Seq's string to char*.
+                               # Note .c_str() at the end of string--- needed to cast Seq's string to char*.
 
 ``from C import`` only works if the symbol is available to the program. If you
 are running your programs via ``seqc``, you can link dynamic libraries
