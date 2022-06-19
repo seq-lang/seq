@@ -6,6 +6,10 @@
 #include "codon/sir/util/irtools.h"
 #include "codon/sir/util/matching.h"
 
+#ifndef seqassertn
+#define seqassertn seqassert
+#endif
+
 namespace seq {
 
 using namespace codon::ir;
@@ -75,7 +79,7 @@ llvm::Value *codegenRevCompByBitShift(const unsigned k, llvm::Value *self,
   }
 
   if (w != 2 * k) {
-    seqassert(w > 2 * k, "cannot calculate rev comp by bit shift");
+    seqassertn(w > 2 * k, "cannot calculate rev comp by bit shift");
     result = builder.CreateLShr(result, w - (2 * k));
     result = builder.CreateTrunc(result, kmerType);
   }
@@ -175,7 +179,7 @@ llvm::Value *codegenRevCompBySIMD(const unsigned k, llvm::Value *self,
   vec = builder.CreateBitCast(vec, llvm::VectorType::get(ty, 1, false));
   llvm::Value *result = builder.CreateExtractElement(vec, (uint64_t)0);
   if (w != 2 * k) {
-    seqassert(w > 2 * k, "cannot calculate rev comp by simd");
+    seqassertn(w > 2 * k, "cannot calculate rev comp by simd");
     result = builder.CreateLShr(result, w - (2 * k));
     result = builder.CreateTrunc(result, kmerType);
   }
@@ -206,8 +210,8 @@ public:
 
 llvm::Value *LLVMRevcomp::buildValue(LLVMVisitor *visitor) {
   auto generics = kmer->getType()->getGenerics();
-  seqassert(generics.size() == 1 && generics[0].isStatic(),
-            "k-mer type should have single int generic");
+  seqassertn(generics.size() == 1 && generics[0].isStatic(),
+             "k-mer type should have single int generic");
   const unsigned k = generics[0].getStaticValue();
 
   visitor->process(kmer);
@@ -217,8 +221,8 @@ llvm::Value *LLVMRevcomp::buildValue(LLVMVisitor *visitor) {
   llvm::Type *llvmKmerType = value->getType();
   value = builder.CreateExtractValue(value, 0); // extract int from struct
   auto *llvmIntType = llvm::dyn_cast<llvm::IntegerType>(value->getType());
-  seqassert(llvmIntType && llvmIntType->getBitWidth() == 2 * k,
-            "unexpected k-mer type");
+  seqassertn(llvmIntType && llvmIntType->getBitWidth() == 2 * k,
+             "unexpected k-mer type");
   llvm::Value *revcomp = codegenRevCompHeuristic(k, value, builder);
   llvm::Value *result = llvm::UndefValue::get(llvmKmerType);
   result = builder.CreateInsertValue(result, revcomp, 0);

@@ -588,7 +588,7 @@ def _interaln_queue(coro: Generator[InterAlignYield],
                     params: InterAlignParams) -> int:
     coro.__resume__()  # resume coro to get next sequence to align
     if not coro.__done__():
-        t, s, aln = coro.__promise__()[0]  # coro yields seqs to align
+        t, s, aln = (*coro.__promise__()[0], )  # coro yields seqs to align
         flags = aln.score  # flags are sent via score field to save space
 
         # demote to intra-sequence alignment if too long
@@ -612,7 +612,7 @@ def _interaln_queue(coro: Generator[InterAlignYield],
             coro.__resume__()
             if coro.__done__():
                 return m
-            t, s, aln = coro.__promise__()[0]  # coro yields seqs to align
+            t, s, aln = (*coro.__promise__()[0], )  # coro yields seqs to align
             flags = aln.score  # flags are sent via score field to save space
 
         pending[m] = coro

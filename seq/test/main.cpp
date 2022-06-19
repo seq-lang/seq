@@ -21,6 +21,9 @@
 #include "codon/sir/util/outlining.h"
 #include "codon/util/common.h"
 
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+
 #include "gtest/gtest.h"
 
 using namespace codon;
@@ -118,7 +121,9 @@ public:
 
       auto compiler = std::make_unique<Compiler>(
           argv0, debug, /*disabledPasses=*/std::vector<std::string>{}, /*isTest=*/true);
-      llvm::cantFail(compiler->load("."));
+      auto root = llvm::sys::path::parent_path(argv0).str();
+
+      llvm::cantFail(compiler->load(root + "/.."));
       llvm::handleAllErrors(code.empty()
                                 ? compiler->parseFile(file, testFlags)
                                 : compiler->parseCode(file, code, startLine, testFlags),

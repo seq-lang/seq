@@ -55,7 +55,7 @@ class FAIReader:
 
     def __iter__(self):
         for lnum, l in enumerate(self.file._iter_trim_newline()):
-            line = copy(l) if self.copy else l
+            line = l.__ptrcopy__() if self.copy else l
             rec: FAIRecord = self._FAIRecord_from_str(line, lnum + 1)
             yield rec
         self.close()

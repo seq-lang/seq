@@ -94,7 +94,7 @@ class BEDReader:
         with gzopen(path, "r") as file:
             for a in file._iter_trim_newline():
                 if BEDReader.is_line_header(a):
-                    h_line = copy(a)
+                    h_line = a.__ptrcopy__()
                     h.append(h_line)
                 else:
                     break
@@ -158,18 +158,18 @@ class BEDReader:
         block_starts = None
 
         chrom = a[0]
-        if self.copy: chrom = copy(chrom)
+        if self.copy: chrom = chrom.__ptrcopy__()
         chrom_start = self._get_int_from_bed(a[1], "chromStart", lnum)
         chrom_end = self._get_int_from_bed(a[2], "chromEnd", lnum)
         if n >= 4:
             name = a[3]
-            if self.copy: name = copy(name)
+            if self.copy: name = name.__ptrcopy__()
         if n >= 5: score = self._get_score_from_bed(a[4], "score", lnum)
         if n >= 6:
             strand = a[5]
             if strand != '+' and strand != '-':
                 raise ValueError(f"Strand must be '+'' or '-'; got {strand}, line: {lnum}")
-            if self.copy: strand = copy(strand)
+            if self.copy: strand = strand.__ptrcopy__()
         if n >= 7: thick_start = self._get_int_from_bed(a[6], "thickStart", lnum)
         if n >= 8: thick_end = self._get_int_from_bed(a[7], "thickEnd", lnum)
         if n >= 9:

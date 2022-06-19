@@ -71,7 +71,7 @@ class FASTQReader:
         if self.validate:
             return _validate_str_as_qual(a, self.copy)
         else:
-            return copy(a) if self.copy else a
+            return a.__ptrcopy__() if self.copy else a
 
     def _iter_core(self, file, seqs: bool) -> Generator[FASTQRecord]:
         line = 0
@@ -81,7 +81,7 @@ class FASTQReader:
             if x == 0:
                 if self.validate and a[0] != "@":
                     raise ValueError(f"sequence name on line {line + 1} of FASTQ does not begin with '@'")
-                name = copy(a[1:]) if self.copy else a[1:]
+                name = a[1:].__ptrcopy__() if self.copy else a[1:]
             elif x == 1:
                 read = self._preprocess_read(a)
                 if seqs:

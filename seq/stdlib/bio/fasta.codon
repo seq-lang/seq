@@ -106,7 +106,7 @@ class FASTAReader:
                             fai_name = self.fai[idx - 1].name
                             header_check(rec_name, fai_name)
                         yield rec
-                    prev_header = copy(a[1:])
+                    prev_header = a[1:].__ptrcopy__()
                     n = self.fai[idx].length
                     p = Ptr[byte](n)
                     m = 0
@@ -142,7 +142,7 @@ class FASTAReader:
                 if a[0] == ">":
                     if n > 0:
                         yield (curname, copy(seq(p, n)) if self.copy else seq(p, n))
-                    curname = copy(a[1:])
+                    curname = a[1:].__ptrcopy__()
                     n = 0
                 else:
                     p, n, m = FASTAReader._append(p, n, m, a, self.validate)
@@ -298,7 +298,7 @@ class pFASTAReader:
             if a[0] == ">":
                 if n > 0:
                     yield (curname, copy(pseq(p, n)) if self.copy else pseq(p, n))
-                curname = copy(a[1:])
+                curname = a[1:].__ptrcopy__()
                 n = 0
             else:
                 p, n, m = pFASTAReader._append(p, n, m, a, self.validate)
