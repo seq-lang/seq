@@ -246,6 +246,8 @@ void PipelinePrefetchOptimization::handle(PipelineFlow *p) {
   for (auto it = p->begin(); it != p->end(); ++it) {
     if (auto *func = getStageFunc(*it)) {
       if (!it->isGenerator() && util::hasAttribute(func, "std.bio.builtin.prefetch")) {
+        LOG_USER("applying prefetch on {}", func->getName());
+
         // transform prefetch'ing function
         auto *clone = cast<BodiedFunc>(cv.forceClone(func));
         util::setReturnType(clone, M->getGeneratorType(util::getReturnType(clone)));
@@ -509,6 +511,8 @@ void PipelineInterAlignOptimization::handle(PipelineFlow *p) {
       if (!it->isGenerator() &&
           util::hasAttribute(func, "std.bio.builtin.inter_align") &&
           util::getReturnType(func)->is(M->getVoidType())) {
+        LOG_USER("applying inter_align on {}", func->getName());
+
         // transform aligning function
         InterAlignFunctionTransformer aft(&types);
         auto *clone = cast<BodiedFunc>(cv.forceClone(func));

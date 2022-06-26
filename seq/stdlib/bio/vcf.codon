@@ -59,12 +59,15 @@ bcf_str_missing      = 0x07
 def ptr_off[T](base: Ptr[byte], byte_offset: int) -> Ptr[T]:
     return Ptr[T](base + byte_offset)
 
+char_pp = Ptr[Ptr[byte]]
+char_p  = Ptr[byte]
+
 # l and m are size_t, assume i64
 @tuple
 class _kstring_t:
     _l: int
     _m: int
-    _s: cobj
+    _s: char_p
 
     def __copy__(self) -> _kstring_t:
         p = Ptr[byte](self._l)
@@ -74,11 +77,11 @@ class _kstring_t:
 @tuple
 class _bcf_hrec_t:
     _type: i32
-    _key: cobj
-    _value: cobj
+    _key: char_p
+    _value: char_p
     _nkeys: i32
-    _keys: Ptr[cobj]
-    _vals: Ptr[cobj]
+    _keys: char_pp
+    _vals: char_pp
 
 @tuple
 class _bcf_idinfo_t:
@@ -108,7 +111,7 @@ class _bcf_idinfo_t:
 
 @tuple
 class _bcf_idpair_t:
-    _key: cobj
+    _key: char_p
     _val: Ptr[_bcf_idinfo_t]
 
 @tuple
@@ -122,7 +125,7 @@ class _bcf_hdr_t:
     _dict0: Ptr[cobj]
     _dict1: Ptr[cobj]
     _dict2: Ptr[cobj]
-    _samples: Ptr[cobj]
+    _samples: char_pp
     _hrec: Ptr[Ptr[_bcf_hrec_t]]
     _nhrec: i32
     _dirty: i32
@@ -218,9 +221,9 @@ class _bcf_dec_t:
     _m_flt: i32
     _n_flt: i32
     _flt: Ptr[i32]
-    _id: cobj
-    _als: cobj
-    _allele: Ptr[cobj]
+    _id: char_p
+    _als: char_p
+    _allele: char_pp
     _info: Ptr[_bcf_info_t]
     _fmt: Ptr[_bcf_fmt_t]
     _var: Ptr[_variant_t]
@@ -231,7 +234,7 @@ class _bcf_dec_t:
 
     def __new__() -> _bcf_dec_t:
         return (i32(0), i32(0), i32(0), i32(0), i32(0), i32(0), i32(0), Ptr[i32](),
-                cobj(), cobj(), Ptr[cobj](), Ptr[_bcf_info_t](), Ptr[_bcf_fmt_t](),
+                char_p(), char_p(), char_pp(), Ptr[_bcf_info_t](), Ptr[_bcf_fmt_t](),
                 Ptr[_variant_t](), i32(0), i32(-1), i32(0), i32(0))
 
 @tuple
@@ -612,13 +615,13 @@ def bcf_array_to_object(data: cobj, type_code: i32, n: i32, count: i64, scalar: 
         return none_ret
 
     if type_code == BCF_BT_CHAR:
-        datac = cobj(data)
+        datac = char_p(data)
         # check null terminator
         b: str = ""
         if datac[int(n)-1] == byte(bcf_str_vector_end):
             b = str.from_ptr(datac)
         else:
-            copied_datac = cobj(int(n) + 1)
+            copied_datac = char_p(int(n) + 1)
             for i in range(int(n)):
                 copied_datac[i] = datac[i]
             copied_datac[int(n)] = byte(0)
