@@ -9,7 +9,7 @@ def _dynamic_coroutine_scheduler[A,B,T,C](value: A, coro: B, states: Array[Gener
         while True:
             g = states[i]
             if g.done():
-                if not isinstance(T, void):
+                if not isinstance(T, None):
                     yield g.next()
                 g.destroy()
                 states[i] = coro(value, *args)
@@ -24,7 +24,7 @@ def _dynamic_coroutine_scheduler_drain[T](states: Array[Generator[T]], N: int):
         g = states[i]
         while not g.done():
             g.next()
-        if not isinstance(T, void):
+        if not isinstance(T, None):
             yield g.next()
         g.destroy()
         i += 1

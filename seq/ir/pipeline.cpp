@@ -312,7 +312,7 @@ void PipelinePrefetchOptimization::handle(PipelineFlow *p) {
         *it = stage;
 
         if (std::distance(it, p->end()) == 1 &&
-            !util::getReturnType(func)->is(M->getVoidType())) {
+            !util::getReturnType(func)->is(M->getNoneType())) {
           Func *dummyFunc =
               M->getOrRealizeFunc("_dummy_prefetch_terminal_stage",
                                   {stage.getOutputElementType()}, {}, prefetchModule);
@@ -510,7 +510,7 @@ void PipelineInterAlignOptimization::handle(PipelineFlow *p) {
     if (auto *func = getStageFunc(*it)) {
       if (!it->isGenerator() &&
           util::hasAttribute(func, "std.bio.builtin.inter_align") &&
-          util::getReturnType(func)->is(M->getVoidType())) {
+          util::getReturnType(func)->is(M->getNoneType())) {
         LOG_USER("applying inter_align on {}", func->getName());
 
         // transform aligning function
