@@ -1,3 +1,7 @@
+## Work on the Seq compiler is being continued in [Codon](https://github.com/exaloop/codon), a general, extensible, high-performance Python compiler. Seq's bioinformatics libraries, features and optimizations are still available and being maintained as [a plugin](https://github.com/exaloop/seq) for Codon.
+
+---
+
 <p align="center">
  <img src="docs/sphinx/logo.png?raw=true" width="200" alt="Seq"/>
 </p>
